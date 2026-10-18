@@ -1978,8 +1978,8 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
 });
 
 // The character dialogs of the cog menu and the page of a user with no character (ADR 0029 step
-// 7.2), French first: the creation form, the switch list (a long name) and the creation page are
-// never cut, fr and en, 1280x800 and 2560x1440.
+// 7.2), French first: the creation form with its details, the rename dialog and the switch list (a
+// long name) and the creation page are never cut, fr and en, 1280x800 and 2560x1440.
 test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", async ({
   page,
 }) => {
@@ -2021,10 +2021,18 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
 
   for (const lang of ["fr", "en"] as const) {
     if (lang === "en") await chooseLanguage(page, "en");
-    const [switchHint, newHint] =
+    const [switchHint, newHint, renameHint] =
       lang === "fr"
-        ? [/^Changer de personnage/, "Créer un nouveau personnage"]
-        : [/^Switch character/, "Create a new character"];
+        ? [
+            /^Changer de personnage/,
+            "Créer un nouveau personnage",
+            "Renommer le personnage joué",
+          ]
+        : [
+            /^Switch character/,
+            "Create a new character",
+            "Rename the character you play",
+          ];
     for (const vp of [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
@@ -2041,6 +2049,14 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
       await expectNoClippedText(dialog, `new character form, ${where}`);
       await expectWholeWords(dialog, `new character form, ${where}`);
       await snap(page, `character-form-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+
+      settings = await openSettings(page);
+      await settings.getByRole("button", { name: renameHint }).click();
+      await expect(dialog.getByTestId("rename-form")).toBeVisible();
+      await expectNoClippedText(dialog, `rename dialog, ${where}`);
+      await snap(page, `character-rename-${lang}-${vp.width}x${vp.height}`);
       await page.keyboard.press("Escape");
       await expect(dialog).toBeHidden();
 
@@ -2083,5 +2099,489 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
       );
       await snap(page, `create-page-${lang}-${vp.width}x${vp.height}`);
     }
+  }
+});
+
+// ADR 0030 step 7 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the level-up prompt on
+// the character card, at its widest (a hit die to roll, a second level owed, the manual entry
+// open), is never cut from 1280 to 2560, and each button says one word (ADR 0027 step 3).
+test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    page.evaluate(
+      async ([m, u, b]) =>
+        (
+          await fetch(u as string, {
+            method: m as string,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(b),
+          })
+        ).ok,
+      [method, url, body] as const,
+    );
+  // A level 1 bard (made current), then 2,500 XP: levels 2 and 3 owe a d6 each (Table 25).
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Aldéric de la Tour-d'Auvergne-Lesparre",
+      class: "bard",
+      raceCode: "half_elf",
+      str: 10,
+      dex: 15,
+      con: 12,
+      int: 14,
+      wis: 9,
+      cha: 16,
+      hpMax: 6,
+      xp: 0,
+    }),
+  ).toBe(true);
+  expect(await call("POST", "/api/xp", { base: 2500, bonus: false })).toBe(
+    true,
+  );
+  await page.reload();
+  await chooseLanguage(page, "fr");
+  const prompt = page.getByTestId("level-up");
+  await expect(prompt.getByTestId("level-up-title")).toHaveText(
+    "Niveau 2 atteint",
+  );
+  await expect(prompt.getByTestId("level-up-more")).toBeVisible();
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    const where = `fr, ${vp.width}x${vp.height}`;
+    await expectNoClippedText(prompt, `level-up prompt, ${where}`);
+    await expectWholeWords(prompt, `level-up prompt, ${where}`);
+    await prompt
+      .getByRole("button", { name: "Saisir le dé lancé à la table" })
+      .click();
+    await expect(prompt.getByTestId("level-up-die")).toBeVisible();
+    await expectNoClippedText(prompt, `level-up manual entry, ${where}`);
+    await expectWholeWords(prompt, `level-up manual entry, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `level-up-fr-${vp.width}x${vp.height}`);
+    await prompt.getByRole("button", { name: "Fermer", exact: true }).click();
+  }
+});
+
+// ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
+// attack card's rate, "spécialisée" tag and point-blank checkbox, and the weapon editor's Catégorie
+// and Spécialisée controls, none of them cut. Screenshot of the weapon editor at both sizes.
+test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    page.evaluate(
+      async ([m, u, b]) => {
+        const r = await fetch(u as string, {
+          method: m as string,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(b),
+        });
+        return r.ok || `${r.status} ${await r.text()}`;
+      },
+      [method, url, body] as const,
+    );
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Borin Gueule-de-Fer",
+      class: "fighter",
+      raceCode: "human",
+      str: 18,
+      strExceptional: 50,
+      dex: 14,
+      con: 15,
+      int: 10,
+      wis: 10,
+      cha: 9,
+      hpMax: 10,
+      xp: 0,
+    }),
+  ).toBe(true);
+  for (const w of [
+    {
+      name: { en: "Long Sword", fr: "Épée longue" },
+      damage_sm: "1d8",
+      damage_l: "1d12",
+      kind: "melee",
+      weapon_type: "long_sword",
+      specialized: true,
+    },
+    {
+      name: { en: "Heavy Crossbow", fr: "Arbalète lourde" },
+      damage_sm: "1d4",
+      damage_l: "1d6",
+      kind: "missile",
+      ammo_kind: "bolt",
+      weapon_type: "heavy_crossbow",
+      specialized: true,
+    },
+  ])
+    expect(await call("POST", "/api/weapons", w), w.name.en).toBe(true);
+  await page.reload();
+  await expect(page.getByTestId("str-value")).toHaveText("18/50");
+
+  await openWorkspace(page, "Act");
+  await openWeapons(page);
+  const f = page.getByRole("form", { name: "Attaque" });
+  for (const weapon of ["Long Sword", "Heavy Crossbow"]) {
+    await chooseLanguage(page, "en");
+    await chooseWeapon(page, weapon);
+    await chooseLanguage(page, "fr");
+    await expect(f.getByTestId("tile-specialized")).toHaveText("spécialisée");
+    await expect(f.getByTestId("tile-rate")).toContainText("att.");
+    if (weapon === "Heavy Crossbow")
+      await expect(f.getByTestId("point-blank")).toBeVisible();
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${weapon}, fr, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(
+        page.getByTestId("character"),
+        `character card, ${where}`,
+      );
+      await expectNoClippedText(
+        page.getByTestId("str-value"),
+        `Strength tile, ${where}`,
+      );
+      await expectNoClippedText(f, `attack card, ${where}`);
+      if (weapon === "Heavy Crossbow")
+        await snap(page, `fighter-crossbow-fr-${vp.width}x${vp.height}`);
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
+  }
+
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Inventory");
+  await chooseLanguage(page, "fr");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await page
+      .getByTestId("weapon-long_sword")
+      .getByRole("button", { name: "Modifier Épée longue" })
+      .click();
+    const wf = page.getByTestId("weapon-form");
+    await expect(wf.getByLabel("Catégorie")).toBeVisible();
+    await expect(wf.getByLabel("Spécialisée")).toBeChecked();
+    const where = `weapon editor, fr, ${vp.width}x${vp.height}`;
+    await expectNoClippedText(wf, where);
+    await snap(page, `fighter-weapon-editor-fr-${vp.width}x${vp.height}`);
+    await wf.getByRole("button", { name: "Annuler" }).click();
+    await expect(wf).toBeHidden();
+  }
+});
+
+// The mage's Learn control (ADR 0030 step 20) in the lookup's detail: the button, then the
+// roll's answer (and "in the spellbook" once learned), uncut in French at 1280x800 and 2560x1440.
+test("mage: the lookup's Learn button and its answer uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  const created = await page.evaluate(async () => {
+    const r = await fetch("/api/characters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Mordenkainen l'Archimage de Greyhawk",
+        class: "mage",
+        raceCode: "human",
+        str: 9,
+        dex: 12,
+        con: 11,
+        int: 19,
+        wis: 12,
+        cha: 10,
+        hpMax: 4,
+        xp: 0,
+      }),
+    });
+    return r.ok || `${r.status} ${await r.text()}`;
+  });
+  expect(created).toBe(true);
+  await page.reload();
+  await openWorkspace(page, "Spells");
+  await chooseLanguage(page, "fr");
+  await page
+    .getByRole("combobox", { name: "Rechercher des sorts..." })
+    .fill("Sleep");
+  const detail = page.getByTestId("spell-detail");
+  const learn = detail.getByTestId("learn-spell");
+  // The search settles on Sleep before the click (the first row is selected meanwhile).
+  await expect(detail.getByRole("heading")).toHaveText("Sommeil");
+  await expect(learn.getByRole("button", { name: /^Apprendre/ })).toBeVisible();
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expectNoClippedText(
+      learn,
+      `Learn button, fr, ${vp.width}x${vp.height}`,
+    );
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  // The failure's answer, the longest one (with the server's retry level): the dice are real, so
+  // the response is fixed here; the server's own failure is a Go test (learnsvc).
+  await page.route("**/api/character/spellbook/learn", (route) =>
+    route.fulfill({
+      json: {
+        spellId: "sleep",
+        spellLevel: 1,
+        roll: 97,
+        chance: 95,
+        learned: false,
+        characterLevel: 1,
+        retryLevel: 2,
+      },
+    }),
+  );
+  await learn.getByRole("button", { name: /^Apprendre/ }).click();
+  await expect(learn.getByTestId("learn-result")).toContainText("niveau 2");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(learn, `Learn failure, fr, ${where}`);
+    await snap(page, `mage-learn-failed-fr-${where}`);
+  }
+  await page.unroute("**/api/character/spellbook/learn");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const answered = page.waitForResponse("**/api/character/spellbook/learn");
+  await learn.getByRole("button", { name: /^Apprendre/ }).click();
+  const real = (await (await answered).json()) as { roll: number };
+  await expect(learn.getByTestId("learn-result")).toContainText(
+    String(real.roll),
+  );
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(learn, `Learn answer, fr, ${where}`);
+    await expectNoClippedText(
+      page.getByTestId("character"),
+      `mage character card, fr, ${where}`,
+    );
+    await snap(page, `mage-learn-fr-${where}`);
+  }
+});
+
+// The cleric's screens (ADR 0030 steps 14 and 16) uncut in French at 1280x800 and 2560x1440: the
+// Turning tab (Table 61 at the realized level, the longest outcome labels), the turning result card
+// and its journal row, and a cast's spell failure on the result card. Wisdom 9 gives a spell
+// failure chance; the failed cast is a fixed response (the dice are real; the failure itself is a
+// Go test, castsvc).
+test("cleric: turning panel, turning result and spell failure uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  const created = await page.evaluate(async () => {
+    const r = await fetch("/api/characters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Frère Anselme de la Haute-Marche",
+        class: "cleric",
+        raceCode: "human",
+        str: 12,
+        dex: 10,
+        con: 13,
+        int: 10,
+        wis: 9,
+        cha: 11,
+        hpMax: 8,
+        xp: 0,
+      }),
+    });
+    if (!r.ok) return `${r.status} ${await r.text()}`;
+    const p = await fetch("/api/spells/prepared", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spells: ["bless"] }),
+    });
+    return p.ok || `${p.status} ${await p.text()}`;
+  });
+  expect(created).toBe(true);
+  await page.reload();
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Renvoi" }).click();
+  const turning = page.getByTestId("turn-undead");
+  await expect(turning.getByTestId("turn-cell-skeleton")).toBeVisible();
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expectNoClippedText(
+      turning,
+      `turning panel, fr, ${vp.width}x${vp.height}`,
+    );
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await turning.getByRole("button", { name: "Repousser : Squelette" }).click();
+  const turned = page.getByTestId("turn-result");
+  await expect(turned).toContainText("Clerc de niveau 1");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(turned, `turning result, fr, ${where}`);
+    await expectNoClippedText(
+      page.getByTestId("card-header"),
+      `turning card header, fr, ${where}`,
+    );
+    await expectNoClippedText(combatLog(page), `turning journal, fr, ${where}`);
+    await snap(page, `cleric-turn-fr-${where}`);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.route("**/api/spells/*/cast", (route) =>
+    route.fulfill({
+      json: {
+        entryId: 999_999,
+        source: "cast",
+        spellId: "bless",
+        name: "Bless",
+        level: 1,
+        casterLevel: 1,
+        slotIndex: 0,
+        untracked: [],
+        failure: { d100: 12, chance: 20, failed: true },
+      },
+    }),
+  );
+  await page.getByRole("tab", { name: "Sorts" }).click();
+  await page.getByRole("button", { name: "Lancer Bless" }).click();
+  const failure = page.getByTestId("cast-failure");
+  await expect(failure).toHaveAttribute("data-failed", "true");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(failure, `spell failure, fr, ${where}`);
+    await snap(page, `cleric-spell-failure-fr-${where}`);
+  }
+  await page.unroute("**/api/spells/*/cast");
+});
+
+// The thief's screens (ADR 0030 steps 1, 17 and 19) uncut in French at 1280x800 and 2560x1440: the
+// creation form's skill points and armour fields, the Skills tab's thieving skills with the
+// budget warnings (70 points at 1st, 40 in one skill: both breached) and the attack card's backstab
+// option.
+test("thief: creation fields, thieving skills with the budget warnings and backstab uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const settings = await openSettings(page);
+  await settings
+    .getByRole("button", { name: "Créer un nouveau personnage" })
+    .click();
+  const form = page
+    .getByTestId("character-dialog")
+    .getByTestId("character-form");
+  await form.getByLabel("Classe").selectOption({ label: "Voleur" });
+  const entry = form.getByTestId("thief-skills-entry");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(entry, `thief creation fields, fr, ${where}`);
+    await snap(page, `thief-form-fr-${where}`);
+  }
+  await page.keyboard.press("Escape");
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const call = (method: string, url: string, body: unknown) =>
+    page.evaluate(
+      async ([m, u, b]) => {
+        const r = await fetch(u as string, {
+          method: m as string,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(b),
+        });
+        return r.ok || `${r.status} ${await r.text()}`;
+      },
+      [method, url, body] as const,
+    );
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Vex Main-Légère de la Basse-Ville",
+      class: "thief",
+      raceCode: "halfling",
+      str: 16,
+      dex: 17,
+      con: 12,
+      int: 11,
+      wis: 9,
+      cha: 10,
+      hpMax: 5,
+      xp: 0,
+      skillArmor: "padded_studded_leather",
+      skillPoints: { find_remove_traps: 40, hide_in_shadows: 30 },
+    }),
+  ).toBe(true);
+  expect(
+    await call("POST", "/api/weapons", {
+      name: { en: "Dagger", fr: "Dague" },
+      damage_sm: "1d4",
+      damage_l: "1d3",
+      kind: "melee",
+      weapon_type: "dagger",
+    }),
+  ).toBe(true);
+  await page.reload();
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  const skills = page.getByTestId("skills-blocks");
+  await expect(page.getByTestId("skill-budget")).toContainText("70 au total");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(skills, `thieving skills, fr, ${where}`);
+    await snap(page, `thief-skills-fr-${where}`);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole("tab", { name: "Armes" }).click();
+  const f = page.getByRole("form", { name: "Attaque" });
+  await f.getByTestId("backstab").check();
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(f, `backstab attack card, fr, ${where}`);
+    await snap(page, `thief-backstab-card-fr-${where}`);
   }
 });

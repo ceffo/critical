@@ -28,10 +28,13 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/dicehdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/hphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/itemhdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/learnhdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/leveluphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/resthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/skillhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellprephdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/turnhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/weaponhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/xphdl"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
@@ -151,6 +154,9 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		weaponhdl.RegisterRoutes(r, charID, bs.Weapons)
 		resthdl.RegisterRoutes(r, charID, bs.Rest)
 		xphdl.RegisterRoutes(r, charID, bs.XP)
+		leveluphdl.RegisterRoutes(r, charID, bs.LevelUp)
+		learnhdl.RegisterRoutes(r, charID, bs.Learn)
+		turnhdl.RegisterRoutes(r, charID, bs.Turn)
 		detailshdl.RegisterRoutes(r, charID, bs.Details)
 		skillhdl.RegisterRoutes(r, charID, bs.Skills)
 		dicehdl.RegisterRoutes(r, charID, bs.Dice)

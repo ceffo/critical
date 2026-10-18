@@ -21,6 +21,102 @@ func (_m *MockSpellbookStore) EXPECT() *MockSpellbookStore_Expecter {
 	return &MockSpellbookStore_Expecter{mock: &_m.Mock}
 }
 
+// AddEntry provides a mock function with given fields: ctx, characterID, spellKey
+func (_m *MockSpellbookStore) AddEntry(ctx context.Context, characterID int64, spellKey string) error {
+	ret := _m.Called(ctx, characterID, spellKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) error); ok {
+		r0 = rf(ctx, characterID, spellKey)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSpellbookStore_AddEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddEntry'
+type MockSpellbookStore_AddEntry_Call struct {
+	*mock.Call
+}
+
+// AddEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - spellKey string
+func (_e *MockSpellbookStore_Expecter) AddEntry(ctx interface{}, characterID interface{}, spellKey interface{}) *MockSpellbookStore_AddEntry_Call {
+	return &MockSpellbookStore_AddEntry_Call{Call: _e.mock.On("AddEntry", ctx, characterID, spellKey)}
+}
+
+func (_c *MockSpellbookStore_AddEntry_Call) Run(run func(ctx context.Context, characterID int64, spellKey string)) *MockSpellbookStore_AddEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSpellbookStore_AddEntry_Call) Return(_a0 error) *MockSpellbookStore_AddEntry_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSpellbookStore_AddEntry_Call) RunAndReturn(run func(context.Context, int64, string) error) *MockSpellbookStore_AddEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteLearnFailure provides a mock function with given fields: ctx, characterID, spellKey
+func (_m *MockSpellbookStore) DeleteLearnFailure(ctx context.Context, characterID int64, spellKey string) error {
+	ret := _m.Called(ctx, characterID, spellKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteLearnFailure")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) error); ok {
+		r0 = rf(ctx, characterID, spellKey)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSpellbookStore_DeleteLearnFailure_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteLearnFailure'
+type MockSpellbookStore_DeleteLearnFailure_Call struct {
+	*mock.Call
+}
+
+// DeleteLearnFailure is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - spellKey string
+func (_e *MockSpellbookStore_Expecter) DeleteLearnFailure(ctx interface{}, characterID interface{}, spellKey interface{}) *MockSpellbookStore_DeleteLearnFailure_Call {
+	return &MockSpellbookStore_DeleteLearnFailure_Call{Call: _e.mock.On("DeleteLearnFailure", ctx, characterID, spellKey)}
+}
+
+func (_c *MockSpellbookStore_DeleteLearnFailure_Call) Run(run func(ctx context.Context, characterID int64, spellKey string)) *MockSpellbookStore_DeleteLearnFailure_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSpellbookStore_DeleteLearnFailure_Call) Return(_a0 error) *MockSpellbookStore_DeleteLearnFailure_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSpellbookStore_DeleteLearnFailure_Call) RunAndReturn(run func(context.Context, int64, string) error) *MockSpellbookStore_DeleteLearnFailure_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Keys provides a mock function with given fields: ctx, characterID
 func (_m *MockSpellbookStore) Keys(ctx context.Context, characterID int64) ([]string, error) {
 	ret := _m.Called(ctx, characterID)
@@ -76,6 +172,168 @@ func (_c *MockSpellbookStore_Keys_Call) Return(_a0 []string, _a1 error) *MockSpe
 }
 
 func (_c *MockSpellbookStore_Keys_Call) RunAndReturn(run func(context.Context, int64) ([]string, error)) *MockSpellbookStore_Keys_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LearnFailure provides a mock function with given fields: ctx, characterID, spellKey
+func (_m *MockSpellbookStore) LearnFailure(ctx context.Context, characterID int64, spellKey string) (int, bool, error) {
+	ret := _m.Called(ctx, characterID, spellKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LearnFailure")
+	}
+
+	var r0 int
+	var r1 bool
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (int, bool, error)); ok {
+		return rf(ctx, characterID, spellKey)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) int); ok {
+		r0 = rf(ctx, characterID, spellKey)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) bool); ok {
+		r1 = rf(ctx, characterID, spellKey)
+	} else {
+		r1 = ret.Get(1).(bool)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64, string) error); ok {
+		r2 = rf(ctx, characterID, spellKey)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSpellbookStore_LearnFailure_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LearnFailure'
+type MockSpellbookStore_LearnFailure_Call struct {
+	*mock.Call
+}
+
+// LearnFailure is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - spellKey string
+func (_e *MockSpellbookStore_Expecter) LearnFailure(ctx interface{}, characterID interface{}, spellKey interface{}) *MockSpellbookStore_LearnFailure_Call {
+	return &MockSpellbookStore_LearnFailure_Call{Call: _e.mock.On("LearnFailure", ctx, characterID, spellKey)}
+}
+
+func (_c *MockSpellbookStore_LearnFailure_Call) Run(run func(ctx context.Context, characterID int64, spellKey string)) *MockSpellbookStore_LearnFailure_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSpellbookStore_LearnFailure_Call) Return(level int, ok bool, err error) *MockSpellbookStore_LearnFailure_Call {
+	_c.Call.Return(level, ok, err)
+	return _c
+}
+
+func (_c *MockSpellbookStore_LearnFailure_Call) RunAndReturn(run func(context.Context, int64, string) (int, bool, error)) *MockSpellbookStore_LearnFailure_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RemoveEntry provides a mock function with given fields: ctx, characterID, spellKey
+func (_m *MockSpellbookStore) RemoveEntry(ctx context.Context, characterID int64, spellKey string) error {
+	ret := _m.Called(ctx, characterID, spellKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) error); ok {
+		r0 = rf(ctx, characterID, spellKey)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSpellbookStore_RemoveEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveEntry'
+type MockSpellbookStore_RemoveEntry_Call struct {
+	*mock.Call
+}
+
+// RemoveEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - spellKey string
+func (_e *MockSpellbookStore_Expecter) RemoveEntry(ctx interface{}, characterID interface{}, spellKey interface{}) *MockSpellbookStore_RemoveEntry_Call {
+	return &MockSpellbookStore_RemoveEntry_Call{Call: _e.mock.On("RemoveEntry", ctx, characterID, spellKey)}
+}
+
+func (_c *MockSpellbookStore_RemoveEntry_Call) Run(run func(ctx context.Context, characterID int64, spellKey string)) *MockSpellbookStore_RemoveEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSpellbookStore_RemoveEntry_Call) Return(_a0 error) *MockSpellbookStore_RemoveEntry_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSpellbookStore_RemoveEntry_Call) RunAndReturn(run func(context.Context, int64, string) error) *MockSpellbookStore_RemoveEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetLearnFailure provides a mock function with given fields: ctx, characterID, spellKey, level
+func (_m *MockSpellbookStore) SetLearnFailure(ctx context.Context, characterID int64, spellKey string, level int) error {
+	ret := _m.Called(ctx, characterID, spellKey, level)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetLearnFailure")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) error); ok {
+		r0 = rf(ctx, characterID, spellKey, level)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSpellbookStore_SetLearnFailure_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetLearnFailure'
+type MockSpellbookStore_SetLearnFailure_Call struct {
+	*mock.Call
+}
+
+// SetLearnFailure is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - spellKey string
+//   - level int
+func (_e *MockSpellbookStore_Expecter) SetLearnFailure(ctx interface{}, characterID interface{}, spellKey interface{}, level interface{}) *MockSpellbookStore_SetLearnFailure_Call {
+	return &MockSpellbookStore_SetLearnFailure_Call{Call: _e.mock.On("SetLearnFailure", ctx, characterID, spellKey, level)}
+}
+
+func (_c *MockSpellbookStore_SetLearnFailure_Call) Run(run func(ctx context.Context, characterID int64, spellKey string, level int)) *MockSpellbookStore_SetLearnFailure_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(int))
+	})
+	return _c
+}
+
+func (_c *MockSpellbookStore_SetLearnFailure_Call) Return(_a0 error) *MockSpellbookStore_SetLearnFailure_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSpellbookStore_SetLearnFailure_Call) RunAndReturn(run func(context.Context, int64, string, int) error) *MockSpellbookStore_SetLearnFailure_Call {
 	_c.Call.Return(run)
 	return _c
 }

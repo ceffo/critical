@@ -5,7 +5,8 @@
 // DM may move the target before the roll or on the latest check after it. A
 // check changes no state: it is one skill_check entry of the action log, so
 // popping it only removes it. The last check of each skill is read back from
-// the log.
+// the log. It also writes a thief's skill points (ADR 0030 step 17), a
+// skill_points entry undone by its snapshot.
 package skillsvc
 
 import (
@@ -47,6 +48,13 @@ type SVC interface {
 	// 8). It is an audited amend, its own undoable step; refusals are
 	// AmendLatest's (actionlog.LatestAmender) and domain.ErrInvalidInput.
 	AdjustAbility(ctx context.Context, characterID, entryID int64, adj Adjustment) (*AbilityCheckResult, error)
+	// SetPoints sets a thief's skill points per skill, logged and undoable
+	// (ADR 0030 step 17). A *domain.FieldError for points refused (or any
+	// point of a class without thieving skills); nothing is logged then.
+	SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error)
+	// Restorers are the state keys SetPoints snapshots, with the writers
+	// that restore them.
+	Restorers() map[string]actionlog.Restorer
 }
 
 // DAL is the driven port over the skill catalog: the character's own
@@ -89,24 +97,26 @@ type Deps struct {
 	Abilities  Abilities
 	Dice       Dice
 	Log        Log
+	Points     Points
 	Tx         domain.TxRunner
 }
 
 type service struct {
-	dal   DAL
-	chars Characters
-	abils Abilities
-	dice  Dice
-	log   Log
-	tx    domain.TxRunner
+	dal    DAL
+	chars  Characters
+	abils  Abilities
+	dice   Dice
+	log    Log
+	points Points
+	tx     domain.TxRunner
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.DAL == nil || d.Characters == nil || d.Abilities == nil || d.Dice == nil || d.Log == nil || d.Tx == nil {
+	if d.DAL == nil || d.Characters == nil || d.Abilities == nil || d.Dice == nil || d.Log == nil || d.Points == nil || d.Tx == nil {
 		return nil, fmt.Errorf("skillsvc: nil dependency")
 	}
-	return &service{dal: d.DAL, chars: d.Characters, abils: d.Abilities, dice: d.Dice, log: d.Log, tx: d.Tx}, nil
+	return &service{dal: d.DAL, chars: d.Characters, abils: d.Abilities, dice: d.Dice, log: d.Log, points: d.Points, tx: d.Tx}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

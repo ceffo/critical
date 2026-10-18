@@ -5,10 +5,18 @@ import type {
   SkillCheck,
   Skills,
 } from "@/types/skills";
-import { post, request } from "./http";
+import { post, put, request } from "./http";
 
 export function fetchSkills(): Promise<Skills> {
   return request<Skills>("/api/skills");
+}
+
+/** Sets a thief's total points per skill (ADR 0030 step 17); logged (skill_points), so it is
+ * undone like any move. Answers the skills. */
+export function setSkillPoints(
+  points: Record<string, number>,
+): Promise<Skills> {
+  return put<Skills>("/api/skills/points", { points });
 }
 
 /** Rolls one check of the skill on the server; it is logged (skill_check). An adjustment moves its target. */

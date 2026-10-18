@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
 )
 
 type creator interface {
@@ -32,6 +33,14 @@ type optionsReader interface {
 type ClassOptionDTO struct {
 	Class string   `json:"class"`
 	Races []string `json:"races"`
+	// ExceptionalStrengthRaces are the races that enter an 18/xx at
+	// Strength 18 with the class (ADR 0030 step 9).
+	ExceptionalStrengthRaces []string `json:"exceptionalStrengthRaces"`
+	// Skills are the thieving skills the class enters points in and
+	// SkillArmors the armours it picks for them (ADR 0030 steps 1 and 17);
+	// empty for a class without them.
+	Skills      []string `json:"skills"`
+	SkillArmors []string `json:"skillArmors"`
 }
 
 // RangeDTO is the inclusive range an entered number must fall in.
@@ -43,11 +52,16 @@ type RangeDTO struct {
 // OptionsDTO is GET /api/characters/options: what the creation form offers
 // and the ranges the server checks.
 type OptionsDTO struct {
-	Classes    []ClassOptionDTO `json:"classes"`
-	Ability    RangeDTO         `json:"ability"`
-	HPMax      RangeDTO         `json:"hpMax"`
-	XP         RangeDTO         `json:"xp"`
-	MaxNameLen int              `json:"maxNameLength"`
+	Classes []ClassOptionDTO `json:"classes"`
+	Ability RangeDTO         `json:"ability"`
+	HPMax   RangeDTO         `json:"hpMax"`
+	XP      RangeDTO         `json:"xp"`
+	// StrExceptional is the range of an exceptional strength (1 = 18/01,
+	// 100 = 18/00).
+	StrExceptional RangeDTO `json:"strExceptional"`
+	// SkillPoints is the range of a thief's points in one skill.
+	SkillPoints RangeDTO `json:"skillPoints"`
+	MaxNameLen  int      `json:"maxNameLength"`
 }
 
 // Options is GET /api/characters/options.
@@ -58,14 +72,19 @@ func Options(svc optionsReader) render.HandlerFunc {
 			return err
 		}
 		out := OptionsDTO{
-			Classes:    make([]ClassOptionDTO, 0, len(o.Classes)),
-			Ability:    RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
-			HPMax:      RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
-			XP:         RangeDTO{Min: o.MinXP, Max: o.MaxXP},
-			MaxNameLen: o.MaxNameLen,
+			Classes:        make([]ClassOptionDTO, 0, len(o.Classes)),
+			Ability:        RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
+			HPMax:          RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
+			XP:             RangeDTO{Min: o.MinXP, Max: o.MaxXP},
+			StrExceptional: RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
+			SkillPoints:    RangeDTO{Min: 0, Max: o.MaxSkillPoints},
+			MaxNameLen:     o.MaxNameLen,
 		}
 		for _, c := range o.Classes {
-			out.Classes = append(out.Classes, ClassOptionDTO{Class: c.Class, Races: c.Races})
+			out.Classes = append(out.Classes, ClassOptionDTO{
+				Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces,
+				Skills: c.Skills, SkillArmors: c.SkillArmors,
+			})
 		}
 		render.OK(r.Context(), w, out)
 		return nil
@@ -79,13 +98,41 @@ type CreateBody struct {
 	Class string `json:"class"`
 	Race  string `json:"raceCode"`
 	Str   *int   `json:"str"`
-	Dex   *int   `json:"dex"`
-	Con   *int   `json:"con"`
-	Int   *int   `json:"int"`
-	Wis   *int   `json:"wis"`
-	Cha   *int   `json:"cha"`
-	HPMax *int   `json:"hpMax"`
-	XP    *int   `json:"xp"`
+	// StrExceptional is a fighter's 18/xx percentile (ADR 0030 step 9);
+	// absent or 0 for none.
+	StrExceptional int  `json:"strExceptional"`
+	Dex            *int `json:"dex"`
+	Con            *int `json:"con"`
+	Int            *int `json:"int"`
+	Wis            *int `json:"wis"`
+	Cha            *int `json:"cha"`
+	HPMax          *int `json:"hpMax"`
+	XP             *int `json:"xp"`
+	// SkillPoints and SkillArmor are a thief's (ADR 0030 steps 1 and 17):
+	// points by skill code, the armour worn for the skills; absent for the
+	// other classes.
+	SkillPoints map[string]int `json:"skillPoints"`
+	SkillArmor  string         `json:"skillArmor"`
+	// Details are the free-text details, in the shape GET /api/character
+	// shows them (age null for none); absent for none. A refusal names its
+	// field under "details." (details.age).
+	Details *detailshdl.DetailsDTO `json:"details"`
+}
+
+// detailsPatch is the details as the patch a new character applies: every text
+// field set (empty is none), the age and the languages when given.
+func detailsPatch(d *detailshdl.DetailsDTO) charactersvc.DetailsPatch {
+	if d == nil {
+		return charactersvc.DetailsPatch{}
+	}
+	p := charactersvc.DetailsPatch{
+		Race: &d.Race, Alignment: &d.Alignment, Age: d.Age, Sex: &d.Sex, Height: &d.Height,
+		Weight: &d.Weight, Hair: &d.Hair, Eyes: &d.Eyes,
+	}
+	if d.Languages != nil {
+		p.Languages = &d.Languages
+	}
+	return p
 }
 
 // required is the field's value, or the field error of a missing one.
@@ -97,7 +144,10 @@ func required(field string, v *int) (int, error) {
 }
 
 func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
-	n := charactersvc.NewCharacter{Name: b.Name, Class: b.Class, Race: b.Race}
+	n := charactersvc.NewCharacter{
+		Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional,
+		SkillPoints: b.SkillPoints, SkillArmor: b.SkillArmor, Details: detailsPatch(b.Details),
+	}
 	for _, f := range []struct {
 		field string
 		dst   *int

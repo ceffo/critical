@@ -3,6 +3,7 @@ import {
   formatDateTime,
   formatFactor,
   formatSigned,
+  formatStrength,
   hpPercent,
   hpTone,
 } from "./format";
@@ -50,5 +51,15 @@ describe("formatDateTime", () => {
   });
   it("is empty for a bad date", () => {
     expect(formatDateTime("nope", "fr")).toBe("");
+  });
+});
+
+describe("formatStrength (ADR 0030 step 9)", () => {
+  it("writes an 18/xx in the PHB notation", () => {
+    expect(formatStrength(17)).toBe("17");
+    expect(formatStrength(18, 0)).toBe("18");
+    expect(formatStrength(18, 5)).toBe("18/05");
+    expect(formatStrength(18, 50)).toBe("18/50");
+    expect(formatStrength(18, 100)).toBe("18/00");
   });
 });

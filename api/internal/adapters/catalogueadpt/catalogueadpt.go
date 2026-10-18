@@ -1,10 +1,10 @@
 // Package catalogueadpt reads the spell catalogue artifact (ADR 0021) from
 // the file at CRITICAL_CATALOGUE and validates it (steps 5.1 and 5.2): the
 // file must exist, carry a format this API knows (3, step 9.1, 4, step 10,
-// or 5, step 11; format 1 is retired, step 9.6.3), match the committed JSON
+// 5, step 11, or 6, step 12; format 1 is retired, step 9.6.3), match the committed JSON
 // Schema and hold no duplicate id. It maps the spells to catalogue.Catalogue
 // and hands the artifact's rule tables (the PHB rule tables, from format 4
-// the class and race tables, in format 5 the racial level limits) on as the
+// the class and race tables, from format 5 the racial level limits, in format 6 the sphere access) on as the
 // schema-checked JSON (Artifact.RuleTables): their table rules (steps 9.3,
 // 10.3 and 11.3) are ruletablesadpt's, the one reader of
 // rule-table JSON. The import into
@@ -100,6 +100,7 @@ type spellDTO struct {
 	Level        int            `json:"level"`
 	School       string         `json:"school"`
 	Sphere       string         `json:"sphere"`
+	Spheres      []string       `json:"spheres"`
 	CastingTime  string         `json:"casting_time"`
 	Range        string         `json:"range"`
 	Duration     string         `json:"duration"`
@@ -173,6 +174,7 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 			// texts in the fallback language. Its name and description are
 			// already language maps (ADR 0023).
 			ID: s.ID, Class: s.Class, Level: s.Level, School: localized.Of(s.School), Sphere: localized.Of(s.Sphere),
+			Spheres:     append([]string(nil), s.Spheres...),
 			CastingTime: localized.Of(s.CastingTime), Range: localized.Of(s.Range), Duration: localized.Of(s.Duration),
 			AreaOfEffect: localized.Of(s.AreaOfEffect), Components: localized.Of(s.Components),
 			SavingThrow: localized.Of(s.SavingThrow),

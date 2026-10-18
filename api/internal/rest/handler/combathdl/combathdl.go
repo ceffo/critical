@@ -83,6 +83,8 @@ type WeaponDTO struct {
 	AmmoKind    string         `json:"ammo_kind"`
 	// WeaponType is a code of weaponsvc.Types ("" when untyped); the UI words it.
 	WeaponType string `json:"weapon_type"`
+	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
+	Specialized bool `json:"specialized"`
 }
 
 // ListWeapons returns the character's weapons.
@@ -97,7 +99,7 @@ func ListWeapons(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 			out = append(out, WeaponDTO{
 				ID: wp.ID, Name: wp.Name, DamageSM: wp.BaseDamage, DamageL: wp.DamageLarge,
 				MagicToHit: wp.MagicToHit, MagicDamage: wp.MagicDamage, Kind: string(wp.Kind),
-				TwoHanded: wp.TwoHanded, AmmoKind: wp.AmmoKind, WeaponType: wp.Type,
+				TwoHanded: wp.TwoHanded, AmmoKind: wp.AmmoKind, WeaponType: wp.Type, Specialized: wp.Specialized,
 			})
 		}
 		render.OK(r.Context(), w, out)
@@ -115,6 +117,12 @@ type AttackRequestDTO struct {
 	// TargetSize is "sm" (small/medium, the default) or "l" (large).
 	TargetSize  string          `json:"target_size,omitempty"`
 	Situational *SituationalDTO `json:"situational,omitempty"`
+	// PointBlank is the point-blank option of a specialized launcher (ADR
+	// 0030 step 12); refused for another weapon.
+	PointBlank bool `json:"point_blank,omitempty"`
+	// Backstab is a thief's backstab (ADR 0030 step 19): +4 to hit and the
+	// damage dice multiplied by PHB Table 30; refused for another class.
+	Backstab bool `json:"backstab,omitempty"`
 }
 
 // SituationalDTO is a to-hit modifier entered at the table.
@@ -137,7 +145,8 @@ func ResolveAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		}
 		in := combatsvc.AttackRequest{
 			WeaponID: req.WeaponID, AmmoItemID: req.AmmoItemID,
-			TargetAC: req.TargetAC, TargetSize: combatsvc.TargetSize(req.TargetSize),
+			TargetAC: req.TargetAC, TargetSize: combatsvc.TargetSize(req.TargetSize), PointBlank: req.PointBlank,
+			Backstab: req.Backstab,
 		}
 		if req.Situational != nil {
 			in.Situational = &combatsvc.Situational{Value: req.Situational.Value, Label: req.Situational.Label}
@@ -374,20 +383,22 @@ type RollResultDTO struct {
 // id (ADR 0016 step 14), which the UI names it from (Detail, the stored
 // name, is the fallback).
 type ModifierDTO struct {
-	Kind   string `json:"kind"`
-	Detail string `json:"detail,omitempty"`
-	ItemID string `json:"itemId,omitempty"`
-	Value  int    `json:"value"`
+	Kind           string `json:"kind"`
+	Detail         string `json:"detail,omitempty"`
+	ItemID         string `json:"itemId,omitempty"`
+	Value          int    `json:"value"`
+	StrExceptional int    `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
 // DamageTermDTO is one contribution to the damage formula (ItemID as on
 // ModifierDTO).
 type DamageTermDTO struct {
-	Term   string  `json:"term"`
-	Kind   string  `json:"kind"`
-	Detail string  `json:"detail,omitempty"`
-	ItemID string  `json:"itemId,omitempty"`
-	Value  float64 `json:"value"`
+	Term           string  `json:"term"`
+	Kind           string  `json:"kind"`
+	Detail         string  `json:"detail,omitempty"`
+	ItemID         string  `json:"itemId,omitempty"`
+	Value          float64 `json:"value"`
+	StrExceptional int     `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
 // AmmoDTO is the ammunition an attack spent and what is left.
@@ -404,11 +415,11 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 	}
 	mods := make([]ModifierDTO, 0, len(r.Modifiers))
 	for _, m := range r.Modifiers {
-		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
+		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional})
 	}
 	terms := make([]DamageTermDTO, 0, len(r.DamageTerms))
 	for _, t := range r.DamageTerms {
-		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value})
+		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional})
 	}
 	out := RollResultDTO{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,

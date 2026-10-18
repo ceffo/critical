@@ -29,7 +29,8 @@ func TestSkills_ListWireShape(t *testing.T) {
 	assert.JSONEq(t, `{
 		"proficiencies":[{"id":"musical_instrument","ability":"dex","abilityScore":17,"modifier":-1,"target":16,
 			"last":{"entryId":7,"roll":18,"target":16,"adjustment":3,"adjustmentReason":"rope","adjustedTarget":19,"success":true}}],
-		"bardSkills":[{"id":"climb_walls","percent":85,"last":null}]}`, rec.Body.String())
+		"bardSkills":[{"id":"climb_walls","percent":85,"last":null}],
+		"thiefSkills":[]}`, rec.Body.String())
 }
 
 func TestSkills_RollWireShape(t *testing.T) {
@@ -143,5 +144,29 @@ func TestAbilityCheck_AdjustWireShape(t *testing.T) {
 	} {
 		rec = do(h, "POST", c.path, c.body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, c.name)
+	}
+}
+
+// ADR 0030 step 17: PUT /api/skills/points sets a thief's points and
+// answers the skills; points refused are a 400 naming the field, and a body
+// without points is a 400 before the service.
+func TestSkills_SetPointsWireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.skills.EXPECT().SetPoints(mock.Anything, int64(1), map[string]int{"open_locks": 45}).Return(map[string]int{"open_locks": 45}, nil).Once()
+	m.skills.EXPECT().List(mock.Anything, int64(1)).Return(&skillsvc.Skills{}, nil).Once()
+	m.skills.EXPECT().SetPoints(mock.Anything, int64(1), map[string]int{"open_locks": 96}).
+		Return(nil, &domain.FieldError{Field: "skillPoints.open_locks", Message: "out_of_range"}).Once()
+
+	rec := do(h, "PUT", "/api/skills/points", `{"points":{"open_locks":45}}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"proficiencies":[],"bardSkills":[],"thiefSkills":[]}`, rec.Body.String())
+
+	rec = do(h, "PUT", "/api/skills/points", `{"points":{"open_locks":96}}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"field":"skillPoints.open_locks"`)
+
+	for _, body := range []string{`{}`, `{"points":{"open_locks":"x"}}`, `{"points":{},"armor":"none"}`} {
+		rec = do(h, "PUT", "/api/skills/points", body)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, body)
 	}
 }

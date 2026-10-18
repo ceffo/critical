@@ -23,12 +23,56 @@ export interface SheetDifference {
   computed: number;
 }
 
+/**
+ * One level whose hit points are owed (ADR 0030 step 7): `die` the hit die's sides to roll up to
+ * the class group's name level (0 above it), `fixedGain` the gain above it (0 up to it).
+ */
+export interface PendingLevel {
+  level: number;
+  die: number;
+  fixedGain: number;
+}
+
+/** ADR 0030 step 7: the levels from the realized level up to the target, still to take. */
+export interface LevelUp {
+  /** Lowest first: the prompt offers the first one. */
+  pending: PendingLevel[];
+  /** Step 7.4: an XP correction brought the target level under the realized one (the card warns). */
+  realizedAboveTarget: boolean;
+}
+
+/**
+ * The breakdown of a level-up roll (`POST /api/character/levelup/roll`), and, without `pending`,
+ * the payload of its `level_up` log entry. `rolled` is the die as rolled or entered, `counted` its
+ * value after the Constitution 20+ floor (both null for a fixed gain).
+ */
+export interface LevelUpRecord {
+  level: number;
+  hitDie: number;
+  rolled: number | null;
+  counted: number | null;
+  conAdjustment: number;
+  gain: number;
+  fixed: boolean;
+  manual: boolean;
+  hpMaxBefore: number;
+  hpMaxAfter: number;
+}
+
+export interface LevelUpResult extends LevelUpRecord {
+  /** The levels still owed after this one. */
+  pending: PendingLevel[];
+}
+
 /** What the server's rules derive from class, race and XP (ADR 0030 steps 3 to 8). */
 export interface Derived {
   /** The starting XP plus the ledger. */
   xpTotal: number;
-  level: number;
-  /** The XP that reaches the next level; null at the last level. */
+  /** Step 3: the level the XP gives; never stored, it only drives the level-up prompt (step 7). */
+  targetLevel: number;
+  /** Step 7: the level taken, which THAC0, saves and slots (below) follow. */
+  realizedLevel: number;
+  /** The XP that reaches the target's next level; null at the last level. */
   nextLevelXp: number | null;
   thac0: number;
   /** The save targets. */
@@ -38,12 +82,110 @@ export interface Derived {
   /** Slots per day by ascending spell level (levels without a slot left out). */
   spellSlots: { level: number; count: number }[];
   sheetDifferences: SheetDifference[];
+  levelUp: LevelUp;
+  /** Step 12: the class may specialize in a weapon (the weapon editor offers the flag). */
+  specializes: boolean;
+  /** Step 20.1: what a mage or a bard may write in the spellbook; null for the other classes. */
+  spellbook: SpellbookRules | null;
+  /** Step 14: the percent chance a cast fails (low Wisdom); 0: no die. */
+  spellFailure: number;
+  /** Step 16: PHB Table 61 at the realized level, in the book's order; null for a class that does
+   * not turn undead. */
+  turning: TurningTarget[] | null;
+  /** Step 17: each thieving skill with its terms; null for a class without them. */
+  thiefSkills: ThiefSkillTerms[] | null;
+  /** Step 17: the entered points against PHB p.39's budget at the realized level (warnings). */
+  skillBudget: SkillBudgetWarning[];
+  /** Step 19: PHB Table 30's damage multiplier at the realized level; 0 without the backstab. */
+  backstab: number;
+}
+
+/** ADR 0030 step 17: percent = base + points + race + dexterity + armor, capped at 95, floored at 0. */
+export interface ThiefSkillTerms {
+  skill: string;
+  base: number;
+  points: number;
+  race: number;
+  dexterity: number;
+  armor: number;
+  percent: number;
+}
+
+/** ADR 0030 step 17: a breach of the skill point budget. `skill_points_total` has no `skill`. */
+export interface SkillBudgetWarning {
+  code: "skill_points_total" | "skill_points_per_skill";
+  skill?: string;
+  points: number;
+  limit: number;
+}
+
+/** ADR 0030 step 16: one undead type and its Table 61 cell at the cleric's level. `hdMin` 0: by
+ * type only; `hdMax` 0: "and more". `roll` is the d20 target, or `outcome` when no die is rolled. */
+export interface TurningTarget {
+  undead: string;
+  hdMin: number;
+  hdMax: number;
+  roll?: number;
+  outcome?: TurningOutcome;
+}
+
+export type TurningOutcome = "turn" | "destroy" | "destroy_more" | "cannot";
+
+/** The breakdown of a turning roll (`POST /api/character/turn-undead`, ADR 0030 step 16), also
+ * (without `entryId` and the Hit Dice) the payload of a turn_undead journal entry. */
+export interface TurnResult {
+  entryId?: number;
+  undead: string;
+  hdMin?: number;
+  hdMax?: number;
+  clericLevel: number;
+  /** The d20 target; absent when the cell needs no die. */
+  target?: number;
+  outcome?: TurningOutcome;
+  /** The turning d20; absent when the cell needs no die. */
+  d20?: number;
+  success: boolean;
+  effect?: "turn" | "destroy";
+  /** The 2d6 undead affected (turned, or destroyed for D and D*), then the 2d4 more of a D* cell
+   * (turned). */
+  affected?: number[];
+  more?: number[];
+  /** How many undead are destroyed and turned, worked out by the server (D*: both). */
+  destroyed: number;
+  turned: number;
+}
+
+/** ADR 0030 step 20.1: the class's and PHB Table 4's highest spell level, Table 4's chance to
+ * learn (percent) and its maximum spells per level (`noMaximum`: the book's "All"). */
+export interface SpellbookRules {
+  classMaxSpellLevel: number;
+  intMaxSpellLevel: number;
+  learnChance: number;
+  maxSpellsPerLevel: number;
+  noMaximum: boolean;
+}
+
+/** The breakdown of a chance-to-learn roll (`POST /api/character/spellbook/learn`, ADR 0030 step
+ * 20.2), also the payload of a spell_learn journal entry. */
+export interface LearnResult {
+  spellId: string;
+  spellLevel: number;
+  roll: number;
+  chance: number;
+  learned: boolean;
+  /** The realized level the roll was made at: a failure is refused until a higher one. */
+  characterLevel: number;
+  /** The realized level from which a failed spell may be tried again, given by the server
+   * (the next one, ADR 0030 step 20.3); 0 when learned. */
+  retryLevel: number;
 }
 
 export interface Character {
   id: number;
   name: string;
   str: number;
+  /** A warrior's exceptional strength at 18 (ADR 0030 step 9): 1 to 100 (100 = 18/00), 0 none. */
+  strExceptional: number;
   dex: number;
   con: number;
   int: number;
@@ -57,6 +199,8 @@ export interface Character {
   class: string;
   /** The PHB race the rules read ("half_elf"…), "" when none is set. */
   raceCode: string;
+  /** The armour a thief wears for its skills (ADR 0030 step 1); "" for another class. */
+  skillArmor: string;
   derived: Derived;
 
   // Details the player edits; age is null when not set. `race` is free text.
@@ -111,8 +255,24 @@ export interface ValueRange {
 
 /** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 export interface CreationOptions {
-  classes: { class: string; races: string[] }[];
+  /**
+   * `exceptionalStrengthRaces`: the races that enter an 18/xx at Strength 18 with the class (ADR
+   * 0030 step 9; a halfling fighter does not).
+   */
+  classes: {
+    class: string;
+    races: string[];
+    exceptionalStrengthRaces: string[];
+    /** The thieving skills the class enters points in (ADR 0030 step 17); empty for none. */
+    skills: string[];
+    /** The armours it picks for its skills (step 1); empty for none. */
+    skillArmors: string[];
+  }[];
   ability: ValueRange;
+  /** The 18/xx percentile's range (1 = 18/01, 100 = 18/00). */
+  strExceptional: ValueRange;
+  /** The range of a thief's points in one skill. */
+  skillPoints: ValueRange;
   hpMax: ValueRange;
   xp: ValueRange;
   maxNameLength: number;
@@ -132,4 +292,12 @@ export type NewCharacter = {
   raceCode: string;
   hpMax: number | null;
   xp: number | null;
+  /** The 18/xx percentile (ADR 0030 step 9), 0 for none. */
+  strExceptional: number;
+  /** A thief's points by skill and the armour worn for its skills (ADR 0030 steps 1 and 17);
+   * absent for the other classes. */
+  skillPoints?: Record<string, number>;
+  skillArmor?: string;
+  /** The details, as the card shows them (age null for none); a refusal's field is `details.<field>`. */
+  details?: CharacterDetails;
 } & Record<AbilityCode, number | null>;

@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-api check-web
+validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-fly-open check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -39,11 +39,12 @@ check-no-sqlite:
     fi
     echo "--- No SQLite in the server ---"
 
-# scripts/linear.sh (Linear GraphQL helper), scripts/linear-setup.sh, scripts/linear-configure.sh and the supervisor's Linear scripts (.claude/scripts) against a local stub server; no real Linear call.
+# scripts/linear.sh (Linear GraphQL helper), scripts/linear-setup.sh, scripts/linear-configure.sh, scripts/linear-import.sh and the supervisor's Linear scripts (.claude/scripts) against a local stub server; no real Linear call.
 check-linear:
     scripts/test-linear.sh
     scripts/test-ship-linear.sh
     scripts/test-linear-configure.sh
+    scripts/test-linear-import.sh
 
 # scripts/linear-ready.sh and the Linear mode of pending-questions.sh against a local stub server; no real Linear call.
 check-linear-queue:
@@ -72,6 +73,10 @@ check-release-scripts:
 check-no-tracker-ids:
     scripts/test-check-no-tracker-ids.sh
     scripts/check-no-tracker-ids.sh
+
+# The local port `just fly-open` resolves: the apps' login ports by default, an explicit port wins, a taken one is refused.
+test-fly-open:
+    scripts/test-fly-open.sh
 
 # Fail on a per-language identifier (a French or English twin of a column, field or JSON tag): texts in a
 # human language are localized_texts rows (ADR 0023). The test runs the check on rejected fixtures.
@@ -292,7 +297,7 @@ fly-smoke app commit=`git rev-parse HEAD`:
     scripts/fly-smoke.sh {{app}} {{commit}}
 
 # Through `fly proxy` on a free local port (never just dev's 8080/5173), until Ctrl-C; read-only.
-# Optional fixed port, refused when taken. E.g. `just fly-open critical-staging`, `just fly-open critical-prod`.
+# No port: the app's Google login port (staging 8091, prod 8092), else a free one. A given port wins, refused when taken. E.g. `just fly-open critical-staging`, `just fly-open critical-prod`.
 # Open a private fly app in the browser: waits until it answers, then prints the URL
 fly-open app port="":
     scripts/fly-open.sh {{app}} {{port}}
@@ -472,3 +477,9 @@ linear-setup:
 # Configure Linear for the project
 linear-configure *args:
     scripts/linear-configure.sh {{args}}
+
+# Imports the live beads and all epics into Linear (scripts/linear-import.sh): a dry run by default, which prints
+# everything it would create and writes nothing; `just linear-import --apply` writes and updates docs/beads-id-map.json.
+# Idempotent: a rerun fills in what is missing. The live run is the cutover's.
+linear-import *args:
+    scripts/linear-import.sh {{args}}

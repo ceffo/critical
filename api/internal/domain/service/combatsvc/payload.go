@@ -112,18 +112,20 @@ type critRowRecord struct {
 // ItemID is the item of an item power's contribution (ADR 0016 step 14),
 // absent otherwise and from entries logged before powers.
 type modifierRecord struct {
-	Kind   string `json:"kind"`
-	Detail string `json:"detail,omitempty"`
-	ItemID string `json:"itemId,omitempty"`
-	Value  int    `json:"value"`
+	Kind           string `json:"kind"`
+	Detail         string `json:"detail,omitempty"`
+	ItemID         string `json:"itemId,omitempty"`
+	Value          int    `json:"value"`
+	StrExceptional int    `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
 type termRecord struct {
-	Term   string  `json:"term"`
-	Kind   string  `json:"kind"`
-	Detail string  `json:"detail,omitempty"`
-	ItemID string  `json:"itemId,omitempty"`
-	Value  float64 `json:"value"`
+	Term           string  `json:"term"`
+	Kind           string  `json:"kind"`
+	Detail         string  `json:"detail,omitempty"`
+	ItemID         string  `json:"itemId,omitempty"`
+	Value          float64 `json:"value"`
+	StrExceptional int     `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
 type ammoRecord struct {
@@ -136,7 +138,7 @@ type ammoRecord struct {
 func toTermRecords(in []DamageTerm) []termRecord {
 	out := make([]termRecord, len(in))
 	for i, t := range in {
-		out[i] = termRecord{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value}
+		out[i] = termRecord{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional}
 	}
 	return out
 }
@@ -144,7 +146,7 @@ func toTermRecords(in []DamageTerm) []termRecord {
 func fromTermRecords(in []termRecord) []DamageTerm {
 	out := make([]DamageTerm, len(in))
 	for i, t := range in {
-		out[i] = DamageTerm{Term: DamageTermKind(t.Term), Kind: ModifierKind(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value}
+		out[i] = DamageTerm{Term: DamageTermKind(t.Term), Kind: ModifierKind(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional}
 	}
 	return out
 }
@@ -152,7 +154,7 @@ func fromTermRecords(in []termRecord) []DamageTerm {
 func toRecord(r *RollResult) attackRecord {
 	mods := make([]modifierRecord, len(r.Modifiers))
 	for i, m := range r.Modifiers {
-		mods[i] = modifierRecord{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value}
+		mods[i] = modifierRecord{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional}
 	}
 	terms := toTermRecords(r.DamageTerms)
 	out := attackRecord{
@@ -193,7 +195,7 @@ func toRecord(r *RollResult) attackRecord {
 func (a attackRecord) result(entryID int64) *RollResult {
 	mods := make([]Modifier, len(a.Modifiers))
 	for i, m := range a.Modifiers {
-		mods[i] = Modifier{Kind: ModifierKind(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value}
+		mods[i] = Modifier{Kind: ModifierKind(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional}
 	}
 	r := &RollResult{
 		D20Roll: a.D20Roll, D100CritRoll: a.D100CritRoll, D100MultiplierRoll: a.D100MultiplierRoll, IsCrit: a.IsCrit, CritMultiplier: a.CritMultiplier,

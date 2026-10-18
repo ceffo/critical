@@ -46,6 +46,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
@@ -71,11 +73,13 @@ type Store interface {
 }
 
 // CharacterStore is the character adapter: the sheet reads, who owns and
-// plays which character, and the details edit.
+// plays which character, the details edit and the level-up's hit points.
 type CharacterStore interface {
 	charactersvc.Reader
 	charactersvc.Owners
 	detailssvc.DAL
+	levelupsvc.DAL
+	skillsvc.Points
 }
 
 // BuffStore is the buff adapter plus the round read the action log stamps
@@ -94,9 +98,10 @@ type SpellStore interface {
 }
 
 // SpellbookStore is the spellbook adapter: each character's spellbook, read
-// by spellbookadpt's Book.
+// by spellbookadpt's Book, and written by learning a spell (learnsvc).
 type SpellbookStore interface {
 	spellbookadpt.Store
+	learnsvc.DAL
 }
 
 // Storage is every storage port the root wires into the services (ADR 0025

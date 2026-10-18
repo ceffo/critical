@@ -4,6 +4,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { formatStrength } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
@@ -11,6 +12,7 @@ import { useRollStore } from "@/stores/roll";
 import { useXpStore } from "@/stores/xp";
 import type { Character } from "@/types/character";
 import { CharacterDetails } from "./CharacterDetails";
+import { LevelUpPrompt } from "./LevelUpPrompt";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
@@ -23,15 +25,29 @@ const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
  * success colour, and the sheet value is in a tooltip on hover and keyboard focus, never under it
  * (ADR 0027 step 5.4: a click on a stat is kept for the ability check). The level and THAC0 are the
  * server's, derived from class and XP (ADR 0030 steps 3 and 5); a difference with the imported
- * sheet is listed under the abilities (step 24).
+ * sheet is listed under the abilities (step 24). A level whose hit points are owed shows its prompt
+ * there too (step 7, LevelUpPrompt).
  */
 export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   const { t, i18n } = useTranslation();
   const xp = useXpStore((s) => s.ledger);
   const character = useCharacterStore((s) => s.character);
   const strength = useBuffsStore((s) => s.strength);
-  const strBuffed = strength !== null && strength.effective !== strength.base;
+  const strBuffed =
+    strength !== null &&
+    (strength.effective !== strength.base ||
+      strength.effectiveExceptional !== strength.baseExceptional);
+  // The score in effect and the sheet's, an 18/xx as 18/50 (ADR 0030 step 9).
+  const strText = strength && {
+    effective: formatStrength(
+      strength.effective,
+      strength.effectiveExceptional,
+    ),
+    base: formatStrength(strength.base, strength.baseExceptional),
+  };
   const rollAbility = useRollStore((s) => s.rollAbility);
+  const rollLevelUp = useCharacterStore((s) => s.rollLevelUp);
+  const levelUpBusy = useCharacterStore((s) => s.levelUpBusy);
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
@@ -68,7 +84,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             }
             className="relative shrink-0 pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            {t("app.levelValue", { level: character.derived.level })}
+            {t("app.levelValue", { level: character.derived.realizedLevel })}
             {xp && (
               <span
                 aria-hidden
@@ -87,13 +103,19 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
       {character && (
         <div
           role="group"
-          className="grid grid-cols-[repeat(6,minmax(0,1fr))_minmax(0,1.35fr)] gap-1"
+          className={cn(
+            "grid gap-1",
+            // An 18/xx Strength takes a wider first tile (ADR 0030 step 9), never a cut one.
+            strength && strength.effectiveExceptional > 0
+              ? "grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(0,1fr))_minmax(0,1.35fr)]"
+              : "grid-cols-[repeat(6,minmax(0,1fr))_minmax(0,1.35fr)]",
+          )}
           aria-label={t("app.abilities")}
         >
           {ABILITIES.map((k) => {
             const isStr = k === "str" && strength !== null;
             const buffed = isStr && strBuffed;
-            const score = isStr ? strength.effective : character[k];
+            const score = isStr && strText ? strText.effective : character[k];
             const cell = (
               <>
                 <span className="text-label text-muted-foreground">
@@ -106,7 +128,17 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                   )}
                 >
                   {isStr ? (
-                    <span data-testid="str-value">{strength.effective}</span>
+                    <span data-testid="str-value">
+                      {/* An 18/xx: the percentile smaller, so the tile fits it (ADR 0030 step 9). */}
+                      {strength.effective}
+                      {strength.effectiveExceptional > 0 && (
+                        <span className="text-label">
+                          {strText?.effective.slice(
+                            String(strength.effective).length,
+                          )}
+                        </span>
+                      )}
+                    </span>
                   ) : (
                     character[k]
                   )}
@@ -150,7 +182,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                   {cell}
                 </TooltipTrigger>
                 <TooltipContent>
-                  {t("app.strTitle", { ...strength })}
+                  {t("app.strTitle", { ...strText })}
                 </TooltipContent>
               </Tooltip>
             );
@@ -164,6 +196,15 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             </span>
           </div>
         </div>
+      )}
+      {character && (
+        <LevelUpPrompt
+          levelUp={character.derived.levelUp}
+          realizedLevel={character.derived.realizedLevel}
+          targetLevel={character.derived.targetLevel}
+          busy={levelUpBusy}
+          onRoll={rollLevelUp}
+        />
       )}
       {character && character.derived.sheetDifferences.length > 0 && (
         <SheetDifferences differences={character.derived.sheetDifferences} />

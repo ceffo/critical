@@ -6,6 +6,8 @@ import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { parseWhole } from "@/lib/wholeNumber";
+import { toBody, type Draft } from "@/lib/characterDetails";
+import { skillName } from "@/lib/logSummary";
 import { cn } from "@/lib/utils";
 import {
   ABILITIES,
@@ -15,7 +17,40 @@ import {
 } from "@/types/character";
 
 type NumberField = (typeof ABILITIES)[number] | "hpMax" | "xp";
-type Field = NumberField | "name" | "class" | "raceCode";
+type Field =
+  | NumberField
+  | "name"
+  | "class"
+  | "raceCode"
+  | "strExceptional"
+  | "skillArmor"
+  | "skillPoints"
+  | `skillPoints.${string}`
+  | `details.${keyof Draft}`;
+
+/** The details the form takes, in the card's order (the card's edit checks them the same way). */
+const DETAIL_FIELDS: (keyof Draft)[] = [
+  "race",
+  "alignment",
+  "age",
+  "sex",
+  "height",
+  "weight",
+  "hair",
+  "eyes",
+];
+
+const NO_DETAILS: Draft = {
+  race: "",
+  alignment: "",
+  age: "",
+  sex: "",
+  height: "",
+  weight: "",
+  hair: "",
+  eyes: "",
+  languages: "",
+};
 
 /** The server's field names for the form's: the race is `race` in its errors. */
 const ERROR_FIELD: Record<string, Field> = { race: "raceCode" };
@@ -30,7 +65,9 @@ interface FieldError {
 /**
  * The new character form (ADR 0029 step 7.2, ADR 0030 step 1): the class (the ones the server can
  * create), the race (the ones the class admits, DMG Table 7), the name, the six ability scores as
- * on the sheet, the max HP and the starting XP. Level, THAC0 and saves are never entered: the server
+ * on the sheet, the max HP and the starting XP; a thief its skill points and the armour worn for its
+ * skills (ADR 0030 step 17: the percentages are the server's); and, optional, the details the
+ * character card shows (alignment, age, languages...), which the server checks as the card's edit. Level, THAC0 and saves are never entered: the server
  * derives them. It starts with no equipment. The server checks every value and refuses with the
  * field; the form words its code. On success the page reloads on the new character, now current.
  */
@@ -51,6 +88,12 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
     hpMax: "",
     xp: "0",
   });
+  // A warrior's 18/xx (ADR 0030 step 9), blank for none; offered at Strength 18.
+  const [strExceptional, setStrExceptional] = useState("");
+  // ADR 0030 steps 1 and 17: a thief's points by skill and the armour worn for its skills.
+  const [skillPoints, setSkillPoints] = useState<Record<string, string>>({});
+  const [skillArmor, setSkillArmor] = useState("leather");
+  const [details, setDetails] = useState<Draft>(NO_DETAILS);
   const [error, setError] = useState<FieldError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -73,7 +116,13 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
     };
   }, []);
 
-  const races = options?.classes.find((c) => c.class === cls)?.races ?? [];
+  const classOption = options?.classes.find((c) => c.class === cls);
+  const races = classOption?.races ?? [];
+  const skills = classOption?.skills ?? [];
+  const armors = classOption?.skillArmors ?? [];
+  const offersExceptional =
+    !!classOption?.exceptionalStrengthRaces.includes(race) &&
+    parseWhole(numbers.str) === 18;
   const rangeOf = (f: NumberField): ValueRange | undefined =>
     options
       ? f === "hpMax"
@@ -84,12 +133,21 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
       : undefined;
 
   const wording = (e: FieldError): string => {
+    if (e.field.startsWith("details.")) {
+      return t(`details.errors.${e.code}`, {
+        defaultValue: e.message ?? e.code,
+      });
+    }
     const r =
       e.field === "name"
         ? { max: options?.maxNameLength }
-        : e.field in numbers
-          ? rangeOf(e.field as NumberField)
-          : undefined;
+        : e.field === "strExceptional"
+          ? options?.strExceptional
+          : e.field.startsWith("skillPoints.")
+            ? options?.skillPoints
+            : e.field in numbers
+              ? rangeOf(e.field as NumberField)
+              : undefined;
     const key = `characters.errors.${e.code}`;
     const className = t(`details.classes.${cls}`, { defaultValue: cls });
     return t(key, {
@@ -113,6 +171,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
       cha: null,
       hpMax: null,
       xp: null,
+      strExceptional: 0,
     };
     for (const f of Object.keys(numbers) as NumberField[]) {
       const v = parseWhole(numbers[f]);
@@ -122,6 +181,34 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
       }
       body[f] = v;
     }
+    if (offersExceptional && strExceptional.trim() !== "") {
+      const v = parseWhole(strExceptional);
+      if (Number.isNaN(v) || v === null) {
+        setError({ field: "strExceptional", code: "out_of_range" });
+        return;
+      }
+      body.strExceptional = v;
+    }
+    if (skills.length > 0) {
+      body.skillArmor = skillArmor;
+      body.skillPoints = {};
+      for (const skill of skills) {
+        const raw = skillPoints[skill] ?? "";
+        if (raw.trim() === "") continue;
+        const v = parseWhole(raw);
+        if (Number.isNaN(v) || v === null) {
+          setError({ field: `skillPoints.${skill}`, code: "out_of_range" });
+          return;
+        }
+        body.skillPoints[skill] = v;
+      }
+    }
+    const { body: detailsBody, ageInvalid } = toBody(details);
+    if (ageInvalid) {
+      setError({ field: "details.age", code: "out_of_range" });
+      return;
+    }
+    body.details = detailsBody;
     setBusy(true);
     setError(null);
     try {
@@ -186,6 +273,35 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
           }}
         />
         {errorFor(f)}
+      </div>
+    );
+  };
+
+  const detail = (f: keyof Draft, hint?: string) => {
+    const field: Field = `details.${f}`;
+    return (
+      <div key={f} className="flex min-w-0 flex-col gap-1">
+        <label
+          htmlFor={`new-character-${field}`}
+          className={cn(labelClass, "break-words")}
+        >
+          {t(f === "race" ? "characters.raceDetail" : `details.fields.${f}`)}
+        </label>
+        <input
+          {...fieldProps(field)}
+          autoComplete="off"
+          inputMode={f === "age" ? "numeric" : undefined}
+          title={f === "race" ? t("characters.raceDetailHint") : undefined}
+          value={details[f]}
+          onChange={(e) => {
+            setDetails((d) => ({ ...d, [f]: e.target.value }));
+            setError(null);
+          }}
+        />
+        {hint && (
+          <span className="text-label text-muted-foreground">{hint}</span>
+        )}
+        {errorFor(field)}
       </div>
     );
   };
@@ -291,7 +407,98 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
             ),
           )}
         </div>
+        {offersExceptional && (
+          <div className="flex min-w-0 flex-col gap-1 sm:w-1/3">
+            <label
+              htmlFor="new-character-strExceptional"
+              className={labelClass}
+            >
+              {t("characters.strExceptional")}
+            </label>
+            <input
+              {...fieldProps("strExceptional")}
+              inputMode="numeric"
+              title={t("characters.strExceptionalHint", {
+                min: options.strExceptional.min,
+                max: options.strExceptional.max,
+              })}
+              value={strExceptional}
+              onChange={(e) => {
+                setStrExceptional(e.target.value);
+                setError(null);
+              }}
+            />
+            {errorFor("strExceptional")}
+          </div>
+        )}
       </fieldset>
+
+      {skills.length > 0 && (
+        <fieldset
+          className="flex min-w-0 flex-col gap-2"
+          data-testid="thief-skills-entry"
+        >
+          <legend className={cn(labelClass, "mb-1")}>
+            {t("characters.skillPoints")}
+          </legend>
+          <p className="text-label text-muted-foreground">
+            {t("characters.skillPointsLead")}
+          </p>
+          <div className="flex min-w-0 flex-col gap-1 sm:w-1/2">
+            <label htmlFor="new-character-skillArmor" className={labelClass}>
+              {t("characters.skillArmor")}
+            </label>
+            <select
+              {...fieldProps("skillArmor")}
+              value={skillArmor}
+              onChange={(e) => {
+                setSkillArmor(e.target.value);
+                setError(null);
+              }}
+            >
+              {armors.map((a) => (
+                <option key={a} value={a}>
+                  {t(`characters.armors.${a}`, { defaultValue: a })}
+                </option>
+              ))}
+            </select>
+            {errorFor("skillArmor")}
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {skills.map((skill) => {
+              const f: Field = `skillPoints.${skill}`;
+              return (
+                <div key={skill} className="flex min-w-0 flex-col gap-1">
+                  <label
+                    htmlFor={`new-character-${f}`}
+                    className={cn(labelClass, "break-words")}
+                  >
+                    {skillName(t, skill)}
+                  </label>
+                  <input
+                    {...fieldProps(f)}
+                    inputMode="numeric"
+                    title={t("characters.range", {
+                      min: options.skillPoints.min,
+                      max: options.skillPoints.max,
+                    })}
+                    value={skillPoints[skill] ?? ""}
+                    onChange={(e) => {
+                      setSkillPoints((p) => ({
+                        ...p,
+                        [skill]: e.target.value,
+                      }));
+                      setError(null);
+                    }}
+                  />
+                  {errorFor(f)}
+                </div>
+              );
+            })}
+          </div>
+          {errorFor("skillPoints")}
+        </fieldset>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {number("hpMax", t("characters.hpMax"))}
@@ -300,6 +507,22 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
       <p className="text-label text-muted-foreground">
         {t("characters.derivedLead")}
       </p>
+
+      <fieldset
+        className="flex min-w-0 flex-col gap-2"
+        data-testid="new-character-details"
+      >
+        <legend className={cn(labelClass, "mb-1")}>
+          {t("characters.details")}
+        </legend>
+        <p className="text-label text-muted-foreground">
+          {t("characters.detailsLead")}
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {DETAIL_FIELDS.map((f) => detail(f))}
+        </div>
+        {detail("languages", t("details.languagesHint"))}
+      </fieldset>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         {onCancel && (

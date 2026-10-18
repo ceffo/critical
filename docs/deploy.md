@@ -394,8 +394,11 @@ $fly logs -a critical-<env>
 app's `.flycast` address on port 80, bound to 127.0.0.1, waits until `/api/health` answers (a stopped
 machine or database takes a few seconds), prints `http://127.0.0.1:<port>/` and the commit, and keeps
 the proxy until Ctrl-C. Never use a fixed 8080 (or 5173, 5432): `just dev` holds those, so the proxy
-fails to bind or the browser reaches the local stack instead of fly. A port given explicitly is
-refused when taken. Rerun it any time; each run gets its own port.
+fails to bind or the browser reaches the local stack instead of fly. Without a port, `critical-staging`
+gets 8091 and `critical-prod` 8092, the ports their Google login redirects back to ("Google login"
+below); any other target gets a free port. A port given explicitly wins and is refused when taken (a
+second run of the same app finds its port held: stop the first). Short-lived: this goes away when the
+apps get public URLs.
 
 Through the `.flycast` address, fly's proxy starts a stopped machine (staging stops when idle) and
 balances between machines; the address answers on the service ports (80, and 443 with TLS), not on 8080.
@@ -434,7 +437,8 @@ $fly secrets set -a critical-<env> CRITICAL_GOOGLE_CLIENT_SECRET=-   # reads the
 While an app is private (no public IP, "Reaching a private app"), its public URL is the local end of
 the proxy: `CRITICAL_PUBLIC_URL=http://localhost:<port>`, the redirect URI
 `http://localhost:<port>/api/auth/google/callback` in the console (Google accepts `http://localhost`
-for testing), and `just fly-open critical-<env> <port>` with that fixed port, then open
+for testing), and `just fly-open critical-<env>` (its port is the default: 8091 staging, 8092 prod; the table is
+`login_port` in `scripts/fly-open.sh`, keep it equal to the secrets), then open
 `http://localhost:<port>` (not `127.0.0.1`: the host must match). Give each app its own port: the
 session cookie is named after the public URL's host and port (`critical_session_localhost_<port>`), so
 `just dev` and both tunnels can be open in one browser without logging each other out. Until the login page exists, open

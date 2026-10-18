@@ -2,7 +2,8 @@
 // (the proficiencies and bard skills with their targets and last checks),
 // POST /api/roll/skill/{id} (one check, rolled and logged on the server, with
 // an optional DM adjustment) and POST /api/roll/skill/{id}/adjust (the
-// adjustment of the latest check, after the roll); and the plain ability
+// adjustment of the latest check, after the roll), PUT /api/skills/points (a
+// thief's skill points, ADR 0030 step 17); and the plain ability
 // checks (ADR 0028): POST /api/roll/ability/{ability} and POST
 // /api/roll/ability/{entryId}/adjust.
 package skillhdl
@@ -17,6 +18,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
@@ -25,6 +28,7 @@ import (
 type Router interface {
 	Get(pattern string, h http.HandlerFunc)
 	Post(pattern string, h http.HandlerFunc)
+	Put(pattern string, h http.HandlerFunc)
 }
 
 var _ Router = (*chi.Mux)(nil)
@@ -38,11 +42,13 @@ type skillSvc interface {
 	Adjust(ctx context.Context, characterID, entryID int64, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error)
 	RollAbility(ctx context.Context, characterID int64, ability string) (*skillsvc.AbilityCheckResult, error)
 	AdjustAbility(ctx context.Context, characterID, entryID int64, adj skillsvc.Adjustment) (*skillsvc.AbilityCheckResult, error)
+	SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error)
 }
 
 // RegisterRoutes wires the skill endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc skillsvc.SVC) {
 	r.Get("/api/skills", render.Handle(List(charID, svc)))
+	r.Put("/api/skills/points", render.Handle(SetPoints(charID, svc)))
 	r.Post("/api/roll/skill/{id}", render.Handle(Roll(charID, svc)))
 	r.Post("/api/roll/skill/{id}/adjust", render.Handle(Adjust(charID, svc)))
 	// {id} is the ability key on the roll, the log entry on the adjustment
@@ -91,10 +97,28 @@ type BardSkillDTO struct {
 	Last    *LastDTO `json:"last"`
 }
 
+// ThiefSkillDTO is one thieving skill (ADR 0030 step 17): id the skill
+// code, percent = base + points + race + dexterity + armor, capped at 95 and
+// floored at 0; last is null before the first check. maxPercent is that
+// cap and maxPoints the most points one skill takes (the editor's range).
+type ThiefSkillDTO struct {
+	ID         string   `json:"id"`
+	Base       int      `json:"base"`
+	Points     int      `json:"points"`
+	Race       int      `json:"race"`
+	Dexterity  int      `json:"dexterity"`
+	Armor      int      `json:"armor"`
+	Percent    int      `json:"percent"`
+	MaxPercent int      `json:"maxPercent"`
+	MaxPoints  int      `json:"maxPoints"`
+	Last       *LastDTO `json:"last"`
+}
+
 // SkillsDTO is the GET /api/skills answer.
 type SkillsDTO struct {
 	Proficiencies []ProficiencyDTO `json:"proficiencies"`
 	BardSkills    []BardSkillDTO   `json:"bardSkills"`
+	ThiefSkills   []ThiefSkillDTO  `json:"thiefSkills"`
 }
 
 // CheckDTO is one check: target is unadjusted, adjustedTarget = target +
@@ -134,6 +158,14 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 	out := SkillsDTO{
 		Proficiencies: make([]ProficiencyDTO, 0, len(s.Proficiencies)),
 		BardSkills:    make([]BardSkillDTO, 0, len(s.BardSkills)),
+		ThiefSkills:   make([]ThiefSkillDTO, 0, len(s.ThiefSkills)),
+	}
+	for _, t := range s.ThiefSkills {
+		out.ThiefSkills = append(out.ThiefSkills, ThiefSkillDTO{
+			ID: t.Skill, Base: t.Base, Points: t.Points, Race: t.Race, Dexterity: t.Dexterity, Armor: t.Armor,
+			Percent: t.Percent, MaxPercent: ruletablesvc.MaxSkillPercent, MaxPoints: charactersvc.MaxSkillPoints,
+			Last: lastDTO(t.Last),
+		})
 	}
 	for _, p := range s.Proficiencies {
 		out.Proficiencies = append(out.Proficiencies, ProficiencyDTO{
@@ -164,6 +196,35 @@ func CheckToDTO(c *skillsvc.CheckResult) CheckDTO {
 // List returns every skill with its target and last check.
 func List(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
+		s, err := svc.List(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, ToDTO(s))
+		return nil
+	}
+}
+
+// PointsDTO is the body of PUT /api/skills/points: a thief's total points
+// per skill code; a skill left out has 0.
+type PointsDTO struct {
+	Points map[string]int `json:"points"`
+}
+
+// SetPoints sets a thief's skill points and answers the skills as GET
+// /api/skills does. Points refused are a 400 naming the field
+// (skillPoints.<skill>, or skillPoints for a class without thieving skills).
+func SetPoints(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var req PointsDTO
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&req); err != nil || req.Points == nil {
+			return render.BadRequestError("invalid request body")
+		}
+		if _, err := svc.SetPoints(r.Context(), charID(r), req.Points); err != nil {
+			return err
+		}
 		s, err := svc.List(r.Context(), charID(r))
 		if err != nil {
 			return err

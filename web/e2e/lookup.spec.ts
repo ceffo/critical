@@ -29,6 +29,10 @@ const fixtureSpells = (
     spells: unknown[];
   }
 ).spells;
+/** How many spells the catalogue under test holds: an injected spell replaces the fixture's of the
+ * same id (fixtures.ts catalogueWith). */
+const spellCount = (...lists: unknown[][]) =>
+  new Set(lists.flat().map((s) => (s as { id: string }).id)).size;
 const fixtureBook = JSON.parse(
   readFileSync(path.join(testdata, "seeds", "spellbook.json"), "utf8"),
 ) as { id: string }[];
@@ -337,7 +341,7 @@ test("lookup: the toggle defaults to Wizard; Mine is the spellbook; Priest and A
 
   await classButton(page, "All").click();
   await expect(count(page)).toHaveText(
-    `${fixtureSpells.length + named.length} spells`,
+    `${spellCount(fixtureSpells, named)} spells`,
   );
   expect(new Set(await attr(rows(page), "data-class"))).toEqual(
     new Set(["Wizard", "Priest"]),
@@ -526,7 +530,7 @@ test.describe("infinite scroll", () => {
   }) => {
     await openLookup(page);
     await classButton(page, "All").click();
-    const total = fixtureSpells.length + named.length + many.length;
+    const total = spellCount(fixtureSpells, named, many);
     await expect(count(page)).toHaveText(`${total} spells`);
     await expect(rows(page)).toHaveCount(200);
     await expect(

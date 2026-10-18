@@ -415,10 +415,15 @@ func retypeStats(ctx context.Context, tx domain.TxRunner, q storeq.Querier) erro
 }
 
 // spellRefKinds are the action-log kinds whose payload may hold a spell id.
-var spellRefKinds = []string{"cast", "exposure", "spell_prep", "buff_change", "round_advance", "time_passed"}
+var spellRefKinds = []string{"cast", "exposure", "spell_prep", "buff_change", "round_advance", "time_passed", "spell_learn"}
+
+// spellbookSnapshotPrefix starts the state key of a spellbook snapshot, "spellbook:<spell key>"
+// (learnsvc, ADR 0030 step 20.3).
+const spellbookSnapshotPrefix = "spellbook:"
 
 // StateSpellRefs returns every spell id game state holds (ADR 0021 step 5.4.3): the spellbook
-// entries of every character, the prepared spells of spell_slots, the spell_id of the active buffs (ADR 0004 step 17), the slot and buff
+// entries and the failed learns (spellbook_learn_failures) of every character, the spellId of the
+// "spellbook:<key>" snapshots and of spell_learn entries (ADR 0030 step 20), the prepared spells of spell_slots, the spell_id of the active buffs (ADR 0004 step 17), the slot and buff
 // lists in the before/after state of action_snapshots (undo and redo restore them), the spellId
 // of cast, exposure and buff entries in action_log and of the payloads of their corrections,
 // expiredSpellIds of round_advance and time_passed entries, and spells[].id of spell_prep
@@ -441,6 +446,34 @@ func StateSpellRefs(ctx context.Context, q storeq.Querier) ([]catalogue.Ref, err
 	}
 	for _, r := range book {
 		add(r.SpellKey, fmt.Sprintf("spellbook of character %d", r.CharacterID))
+	}
+
+	failures, err := q.LearnFailureRefs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("scan references: %w", err)
+	}
+	for _, r := range failures {
+		add(r.SpellKey, fmt.Sprintf("spellbook_learn_failures of character %d", r.CharacterID))
+	}
+
+	// A spellbook snapshot names its spell in the state (learnsvc spellState) and in its key.
+	type bookState struct {
+		SpellID string `json:"spellId"`
+	}
+	bookSnaps, err := q.SnapshotsWithPrefix(ctx, spellbookSnapshotPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("scan references: %w", err)
+	}
+	for _, r := range bookSnaps {
+		where := fmt.Sprintf("action_snapshots %d", r.ID)
+		for _, c := range [][2]string{{"before_state", r.BeforeState}, {"after_state", r.AfterState}} {
+			col, blob := c[0], c[1]
+			var st bookState
+			if err := decode(blob, &st); err != nil {
+				return nil, fmt.Errorf("action_snapshots %d %s: %w", r.ID, col, err)
+			}
+			add(st.SpellID, where)
+		}
 	}
 
 	slotLists, err := q.SpellSlotLists(ctx)

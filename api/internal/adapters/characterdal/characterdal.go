@@ -48,12 +48,16 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 	if err != nil {
 		return nil, err
 	}
+	points, err := decodeSkillPoints(row.SkillPoints)
+	if err != nil {
+		return nil, err
+	}
 	return &charactersvc.Character{
 		ID: row.ID, Name: row.Name,
-		Str: int(row.Str), Dex: int(row.Dex), Con: int(row.Con),
+		Str: int(row.Str), StrExceptional: int(row.StrExceptional), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
-		HPMax: int(row.HpMax), XPTotal: int(row.XpTotal),
-		Class: row.Class, Race: row.RaceCode,
+		HPMax: int(row.HpMax), RealizedLevel: int(row.RealizedLevel), XPTotal: int(row.XpTotal),
+		Class: row.Class, Race: row.RaceCode, SkillPoints: points, SkillArmor: row.SkillArmor,
 		// The figures the imported sheet stated (ADR 0030 step 24).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
 			ParaPoison: int(row.SaveParaPoison), RodStaffWand: int(row.SaveRodStaffWand),
@@ -64,6 +68,40 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 			Height: row.Height, Weight: row.Weight, Hair: row.Hair, Eyes: row.Eyes, Languages: langs,
 		},
 	}, nil
+}
+
+// SetRealizedLevel implements levelupsvc.DAL: the realized level and the
+// max HP that goes with it (ADR 0030 step 7.3). domain.ErrCharacterNotFound
+// when the row is missing.
+func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpMax int) error {
+	n, err := d.q.SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
+		RealizedLevel: sql.NullInt64{Int64: int64(realizedLevel), Valid: true}, HpMax: int64(hpMax), ID: id,
+	})
+	if err != nil {
+		return fmt.Errorf("set realized level: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
+}
+
+// SetSkillPoints implements skillsvc.Points: a thief's points per skill,
+// nil for none (ADR 0030 step 17). domain.ErrCharacterNotFound when the row
+// is missing.
+func (d *DAL) SetSkillPoints(ctx context.Context, id int64, points map[string]int) error {
+	raw, err := encodeSkillPoints(points)
+	if err != nil {
+		return err
+	}
+	n, err := d.q.SetSkillPoints(ctx, queries.SetSkillPointsParams{SkillPoints: raw, ID: id})
+	if err != nil {
+		return fmt.Errorf("set skill points: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
 }
 
 // CharactersOf implements charactersvc.Owners.
@@ -105,14 +143,20 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 	if err := d.lockUser(ctx, owner); err != nil {
 		return 0, err
 	}
+	points, err := encodeSkillPoints(c.SkillPoints)
+	if err != nil {
+		return 0, err
+	}
 	id, err := d.q.CreateCharacter(ctx, queries.CreateCharacterParams{
-		Name: c.Name, Str: int64(c.Str), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
+		Name: c.Name, Str: int64(c.Str), StrExceptional: int64(c.StrExceptional), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
 		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), XpTotal: int64(c.XPTotal),
 		Thac0Base: int64(c.Sheet.THAC0), Level: int64(c.Sheet.Level),
 		SaveParaPoison: int64(c.Sheet.Saves.ParaPoison), SaveRodStaffWand: int64(c.Sheet.Saves.RodStaffWand),
 		SavePetriPoly: int64(c.Sheet.Saves.PetriPoly), SaveBreath: int64(c.Sheet.Saves.Breath),
 		SaveSpell: int64(c.Sheet.Saves.Spell), Class: c.Class, RaceCode: c.Race,
-		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+		OwnerUserID:   uuid.NullUUID{UUID: owner, Valid: true},
+		RealizedLevel: sql.NullInt64{Int64: int64(c.RealizedLevel), Valid: true},
+		SkillPoints:   points, SkillArmor: c.SkillArmor,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create character: %w", err)
@@ -126,6 +170,10 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		if err := row.insert(ctx, id); err != nil {
 			return 0, fmt.Errorf("create character %d %s: %w", id, row.what, err)
 		}
+	}
+	// The details entered with the character, in the same transaction.
+	if err := d.UpdateDetails(ctx, id, c.Details); err != nil {
+		return 0, fmt.Errorf("create character %d: %w", id, err)
 	}
 	return id, nil
 }
@@ -189,6 +237,31 @@ func (d *DAL) CurrentCharacter(ctx context.Context, owner uuid.UUID) (int64, err
 		return 0, fmt.Errorf("current character: %w", err)
 	}
 	return id, nil
+}
+
+// decodeSkillPoints reads characters.skill_points (a JSON object from skill
+// code to points); '{}' is none (nil).
+func decodeSkillPoints(raw string) (map[string]int, error) {
+	var out map[string]int
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return nil, fmt.Errorf("decode skill points: %w", err)
+	}
+	if len(out) == 0 {
+		return nil, nil
+	}
+	return out, nil
+}
+
+// encodeSkillPoints writes characters.skill_points; nil is '{}'.
+func encodeSkillPoints(points map[string]int) (string, error) {
+	if points == nil {
+		points = map[string]int{}
+	}
+	raw, err := json.Marshal(points)
+	if err != nil {
+		return "", fmt.Errorf("encode skill points: %w", err)
+	}
+	return string(raw), nil
 }
 
 func decodeLanguages(raw string) ([]string, error) {

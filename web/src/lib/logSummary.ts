@@ -4,13 +4,14 @@ import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
+import type { LearnResult, LevelUpRecord, TurnResult } from "@/types/character";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { buffName, englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { checkAdjustedTarget } from "./skillAdjust";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
-import type { SpellExposure } from "@/types/spells";
+import type { SpellExposure, SpellFailure } from "@/types/spells";
 
 /** Payload of cast entries (castsvc castRecord). */
 export interface CastLogPayload {
@@ -64,6 +65,8 @@ export interface CastLogPayload {
   save?: { type: string; effect: string };
   /** The exposure damage served at casterLevel (as GET /api/spells serves it); absent without one. */
   exposure?: SpellExposure;
+  /** The low-Wisdom spell failure d100 (ADR 0030 step 14); absent: no die. */
+  failure?: SpellFailure;
 }
 
 /** Payload of exposure entries (castsvc exposureRecord, ADR 0008 step 16). */
@@ -139,6 +142,14 @@ function castText(
   const spell = spellName(p.spellId, p.spell);
   const head = t(`log.cast.${p.action}`, { spell, level: p.casterLevel });
   const details: string[] = [];
+  // ADR 0030 step 14: the spell failure d100 first; a failed spell has nothing else.
+  if (p.failure)
+    details.push(
+      t(p.failure.failed ? "log.cast.spellFailed" : "log.cast.spellHeld", {
+        roll: p.failure.d100,
+        chance: p.failure.chance,
+      }),
+    );
   if (p.mode) details.push(modeName(t, p.spellId, p.mode));
   if (p.buff?.applied) {
     details.push(counters(t, p.buff.rounds, p.buff.charges));
@@ -470,6 +481,133 @@ function xpChangeText(e: LogEntry, t: TFunction): string | null {
   return t("log.xp.edited", { from: was.total, to: now.total, reason });
 }
 
+/** The payload of a spell_learn entry (learnsvc record, ADR 0030 step 20.2), or null. */
+export function learnPayload(e: LogEntry): LearnResult | null {
+  if (e.kind !== "spell_learn") return null;
+  const p = e.payload as Partial<LearnResult> | null;
+  return p && typeof p.spellId === "string" && typeof p.roll === "number"
+    ? (p as LearnResult)
+    : null;
+}
+
+/** A chance-to-learn roll: the spell, the d100 against the chance, learned or failed. */
+function learnText(
+  e: LogEntry,
+  t: TFunction,
+  spellName: SpellNamer,
+): string | null {
+  const p = learnPayload(e);
+  if (!p) return null;
+  const vars = { spell: spellName(p.spellId), roll: p.roll, chance: p.chance };
+  return p.learned
+    ? t("log.learn.learned", vars)
+    : t("log.learn.failed", { ...vars, level: p.retryLevel });
+}
+
+/** The payload of a skill_points entry (skillsvc, ADR 0030 step 17): the points per skill before
+ * and after, or null. */
+export function skillPointsPayload(
+  e: LogEntry,
+): { before: Record<string, number>; after: Record<string, number> } | null {
+  if (e.kind !== "skill_points") return null;
+  const p = e.payload as {
+    before?: Record<string, number>;
+    after?: Record<string, number>;
+  } | null;
+  return p && p.before && p.after ? { before: p.before, after: p.after } : null;
+}
+
+/** "Skill points: Open Locks 30 → 45, Pick Pockets 0 → 15": each skill whose points changed. */
+function skillPointsText(e: LogEntry, t: TFunction): string | null {
+  const p = skillPointsPayload(e);
+  if (!p) return null;
+  const skills = [
+    ...new Set([...Object.keys(p.before), ...Object.keys(p.after)]),
+  ].filter((k) => (p.before[k] ?? 0) !== (p.after[k] ?? 0));
+  const changes = skills
+    .map((k) =>
+      t("log.skillPoints.change", {
+        name: skillName(t, k),
+        from: p.before[k] ?? 0,
+        to: p.after[k] ?? 0,
+      }),
+    )
+    .join(", ");
+  return t("log.skillPoints.text", { changes });
+}
+
+/** The payload of a turn_undead entry (turnsvc record, ADR 0030 step 16), or null. */
+export function turnPayload(e: LogEntry): TurnResult | null {
+  if (e.kind !== "turn_undead") return null;
+  const p = e.payload as Partial<TurnResult> | null;
+  return p && typeof p.undead === "string" && typeof p.success === "boolean"
+    ? (p as TurnResult)
+    : null;
+}
+
+/** The undead type's name (PHB Table 61 row code). */
+export function undeadName(t: TFunction, code: string): string {
+  return t(`turning.undead.${code}`, { defaultValue: code });
+}
+
+/** "Turning undead (Ghoul): 7 turned, d20 12 vs 10": the type, the result and the d20 if rolled. */
+function turnText(e: LogEntry, t: TFunction): string | null {
+  const p = turnPayload(e);
+  if (!p) return null;
+  const undead = undeadName(t, p.undead);
+  const result = !p.success
+    ? t("log.turn.failed")
+    : p.destroyed > 0 && p.turned > 0
+      ? t("log.turn.destroyedTurned", {
+          destroyed: p.destroyed,
+          turned: p.turned,
+        })
+      : p.destroyed > 0
+        ? t("log.turn.destroyed", { count: p.destroyed })
+        : t("log.turn.turned", { count: p.turned });
+  const roll =
+    p.d20 !== undefined && p.target !== undefined
+      ? t("log.turn.roll", { d20: p.d20, target: p.target })
+      : t("log.turn.noRoll");
+  return t("log.turn.text", { undead, result, roll });
+}
+
+/** The payload of a level_up entry (levelupsvc record, ADR 0030 step 7.3), or null. */
+export function levelUpPayload(e: LogEntry): LevelUpRecord | null {
+  if (e.kind !== "level_up") return null;
+  const p = e.payload as Partial<LevelUpRecord> | null;
+  return p && typeof p.gain === "number" && typeof p.level === "number"
+    ? (p as LevelUpRecord)
+    : null;
+}
+
+/** A level-up roll: the die (and the value it counts as from Constitution 20), the Constitution
+ * adjustment and the gain the server computed, or the fixed gain above the name level. */
+function levelUpText(e: LogEntry, t: TFunction): string | null {
+  const p = levelUpPayload(e);
+  if (!p) return null;
+  const hp = {
+    level: p.level,
+    gain: p.gain,
+    from: p.hpMaxBefore,
+    to: p.hpMaxAfter,
+  };
+  if (p.fixed || p.rolled === null) return t("log.levelUp.fixed", hp);
+  const die =
+    p.counted !== null && p.counted !== p.rolled
+      ? t("log.levelUp.dieRaised", {
+          die: p.hitDie,
+          rolled: p.rolled,
+          counted: p.counted,
+        })
+      : t("log.levelUp.die", { die: p.hitDie, rolled: p.rolled });
+  const con = p.conAdjustment
+    ? t("log.levelUp.con", { adjustment: formatSigned(p.conAdjustment) })
+    : "";
+  const manual = p.manual ? t("log.levelUp.manual") : "";
+  return t("log.levelUp.rolled", { ...hp, die, con, manual });
+}
+
 function attackText(
   p: RollResult,
   t: TFunction,
@@ -523,7 +661,9 @@ export function skillCheckPayload(e: LogEntry): SkillCheck | null {
     typeof p.roll === "number" &&
     typeof p.target === "number" &&
     typeof p.success === "boolean" &&
-    (p.kind === "proficiency" || p.kind === "bardSkill")
+    (p.kind === "proficiency" ||
+      p.kind === "bardSkill" ||
+      p.kind === "thiefSkill")
     ? (p as SkillCheck)
     : null;
 }
@@ -755,6 +895,14 @@ export function entryText(
   if (weaponChange) return weaponChange;
   const xpChange = xpChangeText(e, t);
   if (xpChange) return xpChange;
+  const levelUp = levelUpText(e, t);
+  if (levelUp) return levelUp;
+  const learn = learnText(e, t, spellName);
+  if (learn) return learn;
+  const turn = turnText(e, t);
+  if (turn) return turn;
+  const points = skillPointsText(e, t);
+  if (points) return points;
   const hp = hpChangeText(e, t);
   if (hp) return hp;
   const p = buffPayload(e);

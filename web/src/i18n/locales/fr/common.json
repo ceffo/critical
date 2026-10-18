@@ -21,6 +21,28 @@
         "save_breath": "JS Souffle",
         "save_spell": "JS Sorts"
       }
+    },
+    "levelUp": {
+      "title": "Niveau {{level}} atteint",
+      "rollHint": "Dé de vie d{{die}}, plus l'ajustement de CON",
+      "roll": "Lancer",
+      "rollTitle": "Lancer le dé de vie du niveau {{level}} (d{{die}})",
+      "fixedHint": "Au-delà du niveau de nom : +{{gain}} PV max, sans dé",
+      "apply": "Ajouter",
+      "applyTitle": "Ajouter +{{gain}} PV max pour le niveau {{level}}",
+      "enter": "Saisir",
+      "enterTitle": "Saisir le dé lancé à la table",
+      "dieLabel": "Dé lancé à la table, de 1 à {{die}}",
+      "confirm": "Valider",
+      "cancel": "Fermer",
+      "more_one": "+{{count}} autre niveau à lancer ensuite",
+      "more_other": "+{{count}} autres niveaux à lancer ensuite",
+      "realizedAbove": "Niveau {{realized}} acquis, l'XP donne le niveau {{target}}",
+      "realizedAboveHint": "Annulez le jet ou corrigez l'XP.",
+      "dieErrors": {
+        "out_of_range": "Saisissez un dé de 1 à {{die}}.",
+        "fixed_gain": "Ce niveau a un gain fixe, sans dé."
+      }
     }
   },
   "language": {
@@ -252,7 +274,8 @@
       "weapons": "Armes",
       "spells": "Sorts",
       "items": "Objets",
-      "skills": "Compétences"
+      "skills": "Compétences",
+      "turning": "Renvoi"
     },
     "items": {
       "list": "Objets de combat",
@@ -290,6 +313,12 @@
       "missile": "Tir"
     },
     "twoHanded": "à deux mains",
+    "specialized": "spécialisée",
+    "rate": "{{attacks}}/{{rounds}} att.",
+    "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} ce round",
+    "rateHint": "Attaques par round : {{attacks}} tous les {{rounds}} rounds ; ce round : {{count}}",
+    "pointBlank": "Bout portant",
+    "pointBlankHint": "Cible à bout portant : +2 au toucher pour un spécialiste de l’arc ou de l’arbalète",
     "sizesShort": {
       "sm": "P / M",
       "l": "G"
@@ -317,7 +346,9 @@
       "l": "G",
       "bonus": "toucher / dégâts",
       "thac0": "TAC0"
-    }
+    },
+    "backstab": "Dans le dos ×{{n}}",
+    "backstabHint": "Attaque dans le dos : {{toHit}} au toucher, dés de dégâts de l’arme ×{{n}}"
   },
   "saves": {
     "title": "Jets de sauvegarde",
@@ -954,7 +985,14 @@
     "rollDice": "Lancer",
     "addEffectLabel": "Ajouter {{name}} comme effet au niveau {{level}}",
     "exposure": "Exposition",
-    "exposureMode": "Exposition ({{mode}})"
+    "exposureMode": "Exposition ({{mode}})",
+    "learn": {
+      "button": "Apprendre",
+      "title": "Apprendre ce sort : jet de d100 sous {{chance}} % (Intelligence)",
+      "known": "Dans le grimoire",
+      "learned": "Appris : d100 {{roll}} ≤ {{chance}} %",
+      "failed": "Échec : d100 {{roll}} > {{chance}} %, à retenter au niveau {{level}}"
+    }
   },
   "result": {
     "empty": "Lancez une attaque, une sauvegarde ou un sort : le détail complet s'affiche ici.",
@@ -996,7 +1034,10 @@
       "situationalUnnamed": "Situationnel",
       "critRange": "Coup critique ({{from}}–{{to}})",
       "critPlaceholder": "Coup critique (provisoire)",
-      "race": "{{race}} (race)"
+      "race": "{{race}} (race)",
+      "specialization": "Spécialisation",
+      "point_blank": "Bout portant",
+      "backstab": "Attaque dans le dos"
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",
@@ -1078,7 +1119,10 @@
       "partSave": {
         "none": "sans sauvegarde",
         "negates": "annulé par la sauvegarde"
-      }
+      },
+      "spellFailed": "Échec du sort : l'emplacement est dépensé, rien ne se produit.",
+      "spellHeld": "Pas d'échec du sort",
+      "failureRoll": "d100 {{roll}} contre {{chance}} % (Sagesse)"
     },
     "itemHeading": "Objet utilisé : {{name}}",
     "effect": "Effet",
@@ -1120,6 +1164,7 @@
     "skill": {
       "proficiency": "Compétence · d{{die}} sous {{stat}}",
       "bardSkill": "Talent de barde · d{{die}} sous {{percent}} %",
+      "thiefSkill": "Talent de voleur · d{{die}} sous {{percent}} %",
       "success": "Réussi",
       "failure": "Échec",
       "die": "d{{die}}",
@@ -1139,6 +1184,16 @@
       "damageIfHit": "Dégâts si touché",
       "verdictTitle": "Le MJ dit",
       "verdictLabel": "Touché ou raté selon le MJ"
+    },
+    "turn": {
+      "heading": "Clerc de niveau {{level}}",
+      "target": "{{target}} ou plus au d20",
+      "auto": "Sans jet : {{outcome}}",
+      "turned": "Repoussés",
+      "destroyed": "Détruits",
+      "failed": "Échec",
+      "destroyedCount": "Détruits : {{count}} ({{dice}})",
+      "turnedCount": "Repoussés : {{count}} ({{dice}})"
     }
   },
   "log": {
@@ -1180,7 +1235,11 @@
       "exposure": "Exposition",
       "xp_add": "XP",
       "xp_edit": "XP",
-      "xp_remove": "XP"
+      "xp_remove": "XP",
+      "level_up": "Niveau",
+      "spell_learn": "Apprentissage",
+      "turn_undead": "Renvoi",
+      "skill_points": "Talents"
     },
     "status": {
       "active": "Actif",
@@ -1233,7 +1292,9 @@
       "extraSlots": "emplacements supplémentaires {{slots}}",
       "item": "Objet dépensé : {{name}} ({{left}} restant(s))",
       "attackHit": "attaque réussie (d20 {{d20}} contre CA {{ac}})",
-      "attackMiss": "attaque ratée (d20 {{d20}} contre CA {{ac}})"
+      "attackMiss": "attaque ratée (d20 {{d20}} contre CA {{ac}})",
+      "spellFailed": "échec du sort (d100 {{roll}} ≤ {{chance}} %)",
+      "spellHeld": "pas d'échec du sort (d100 {{roll}} > {{chance}} %)"
     },
     "item": {
       "rolled": "Objet utilisé : {{name}}, {{dice}} = {{total}} ({{left}} restant)",
@@ -1315,6 +1376,31 @@
       "removed": "XP retirés : {{reason}} ({{total, number}} XP)",
       "edited": "XP modifiés : {{reason}}, {{from, number}} → {{to, number}} XP",
       "editedSame": "XP modifiés : {{reason}} ({{total, number}} XP)"
+    },
+    "levelUp": {
+      "rolled": "Niveau {{level}} : {{die}}{{con}}, PV max +{{gain}} ({{from}} → {{to}}){{manual}}",
+      "fixed": "Niveau {{level}} : PV max +{{gain}}, gain fixe ({{from}} → {{to}})",
+      "die": "d{{die}} {{rolled}}",
+      "dieRaised": "d{{die}} {{rolled}} (compté {{counted}})",
+      "con": ", CON {{adjustment}}",
+      "manual": ", dé saisi"
+    },
+    "learn": {
+      "learned": "Appris : {{spell}} (d100 {{roll}} ≤ {{chance}} %)",
+      "failed": "Échec : {{spell}} (d100 {{roll}} > {{chance}} %), à retenter au niveau {{level}}"
+    },
+    "turn": {
+      "text": "Renvoi des morts-vivants ({{undead}}) : {{result}}, {{roll}}",
+      "turned": "{{count}} repoussés",
+      "destroyed": "{{count}} détruits",
+      "destroyedTurned": "{{destroyed}} détruits, {{turned}} repoussés",
+      "failed": "échec",
+      "roll": "d20 {{d20}} contre {{target}}",
+      "noRoll": "sans jet"
+    },
+    "skillPoints": {
+      "text": "Points de talent : {{changes}}",
+      "change": "{{name}} {{from}} → {{to}}"
     }
   },
   "critTable": {
@@ -1338,6 +1424,23 @@
     "none": "Aucune arme.",
     "detail": "{{sm}} · G {{l}}",
     "twoHanded": "à deux mains",
+    "types": {
+      "none": "Aucun",
+      "long_bow": "Arc long",
+      "short_bow": "Arc court",
+      "light_crossbow": "Arbalète légère",
+      "heavy_crossbow": "Arbalète lourde",
+      "hand_crossbow": "Arbalète de poing",
+      "dagger": "Dague",
+      "dart": "Fléchette",
+      "sling": "Fronde",
+      "short_sword": "Épée courte",
+      "long_sword": "Épée longue",
+      "other_melee": "Autre arme de mêlée",
+      "other_thrown": "Autre arme de jet",
+      "other_missile": "Autre arme de tir"
+    },
+    "specialized": "spécialisée",
     "kind": {
       "melee": "Mêlée",
       "missile": "Tir"
@@ -1356,7 +1459,14 @@
       "kind": "Type",
       "twoHanded": "À deux mains",
       "ammoKind": "Type de munition",
-      "ammoNone": "aucune (lancée)"
+      "ammoNone": "aucune (lancée)",
+      "weaponType": "Catégorie",
+      "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par round)",
+      "specialized": "Spécialisée",
+      "specializedHint": "Spécialisation du guerrier : +1 au toucher et +2 aux dégâts en mêlée ou lancée ; une arme de tir gagne +2 au toucher à bout portant",
+      "errors": {
+        "not_allowed": "Seul un guerrier peut se spécialiser dans une arme."
+      }
     },
     "columns": {
       "name": "Nom",
@@ -1420,7 +1530,11 @@
     },
     "languagesHint": "Séparez les langues par des virgules",
     "classes": {
-      "bard": "Barde"
+      "bard": "Barde",
+      "cleric": "Clerc",
+      "fighter": "Guerrier",
+      "mage": "Magicien",
+      "thief": "Voleur"
     },
     "language": {
       "elfique": "Elfique",
@@ -1430,7 +1544,7 @@
     },
     "errors": {
       "too_long": "Trop long.",
-      "out_of_range": "Saisissez un âge entier entre 0 et 10 000.",
+      "out_of_range": "Saisissez un âge entier entre 1 et 10 000.",
       "too_many": "Trop de langues.",
       "empty": "Une langue est vide.",
       "duplicate": "Une langue est en double."
@@ -1504,8 +1618,28 @@
       "climb_walls": "Escalade",
       "detect_noise": "Détection des bruits",
       "pick_pockets": "Vol à la tire",
-      "read_languages": "Lecture des langues"
-    }
+      "read_languages": "Lecture des langues",
+      "open_locks": "Crochetage",
+      "find_remove_traps": "Trouver/désamorcer des pièges",
+      "move_silently": "Déplacement silencieux",
+      "hide_in_shadows": "Se cacher dans l’ombre"
+    },
+    "thiefSkills": "Talents de voleur",
+    "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dextérité {{dexterity}}, armure {{armor}} ({{max}} % au plus)",
+    "budget": {
+      "skill_points_total": "Points de talent : {{points}} au total, {{limit}} au plus à ce niveau",
+      "skill_points_per_skill": "{{name}} : {{points}} points, {{limit}} au plus à ce niveau"
+    },
+    "spendPoints": "Dépenser",
+    "spendPointsHint": "Dépenser des points de talent de voleur",
+    "pointsTitle": "Points des talents de voleur",
+    "pointsLead": "Le total des points de chaque talent. Le budget de votre niveau est un avertissement, pas une limite.",
+    "pointsLabel": "Points en {{name}}",
+    "savePoints": "Enregistrer",
+    "cancelPoints": "Annuler",
+    "pointsOutOfRange": "Entrez un nombre entier de {{min}} à {{max}}.",
+    "pointsRefused": "Ces points ont été refusés.",
+    "unusable": "{{name}} : dépensez des points pour l’augmenter avant de pouvoir l’utiliser"
   },
   "dice": {
     "title": "Dés",
@@ -1586,7 +1720,17 @@
     "email_has_user": "Cette adresse e-mail a déjà un compte.",
     "already_invited": "Cette adresse e-mail a déjà une invitation en attente.",
     "invite_not_found": "Cette invitation n'est plus en attente.",
-    "user_not_found": "Cet utilisateur n'existe pas."
+    "user_not_found": "Cet utilisateur n'existe pas.",
+    "level_up_not_pending": "Ce niveau n'est plus à lancer : la fiche se met à jour.",
+    "no_spellbook": "Cette classe n'a pas de grimoire.",
+    "not_a_wizard_spell": "Seul un sort de magicien s'inscrit au grimoire.",
+    "already_in_spellbook": "Ce sort est déjà dans le grimoire.",
+    "spell_level_above_intelligence": "Niveau de sort trop élevé pour l'Intelligence du personnage.",
+    "spell_level_above_class": "Niveau de sort au-delà de ce que la classe peut apprendre.",
+    "spellbook_level_full": "Le grimoire contient déjà le maximum de sorts de ce niveau pour cette Intelligence.",
+    "spell_learn_failed_at_level": "Sort raté à ce niveau : à retenter au niveau suivant.",
+    "cannot_turn_undead": "Ce prêtre ne peut pas encore repousser ce mort-vivant.",
+    "class_cannot_turn": "Cette classe ne repousse pas les morts-vivants."
   },
   "lastShort": {
     "attack": "Attaque",
@@ -1601,8 +1745,13 @@
       "passed": "réussie",
       "failed": "échouée",
       "success": "réussi",
-      "failure": "échec"
-    }
+      "failure": "échec",
+      "turned": "repoussés",
+      "destroyed": "détruits",
+      "destroyedTurned": "détruits, {{turned}} repoussés",
+      "spellFailed": "sort raté"
+    },
+    "turn": "Renvoi {{undead}}"
   },
   "database": {
     "unavailable": "La base de données ne répond pas. Nouvel essai…",
@@ -1671,6 +1820,14 @@
     "retire": "Retirer",
     "retireHint": "Retirer {{name}} : il disparaît de vos listes, rien n'est supprimé",
     "retireMenuHint": "Retirer le personnage joué : il disparaît de vos listes, rien n'est supprimé",
+    "rename": "Renommer",
+    "renameMenuHint": "Renommer le personnage joué",
+    "renameHint": "Enregistrer le nouveau nom de {{name}}",
+    "renameTitle": "Renommer le personnage",
+    "details": "Détails",
+    "detailsLead": "Facultatif ; modifiables ensuite sur la fiche, en cliquant sur le nom.",
+    "raceDetail": "Précision de race",
+    "raceDetailHint": "Texte libre, par exemple « elfe sylvain » ; la race des règles est choisie plus haut",
     "switchTitle": "Vos personnages",
     "newTitle": "Nouveau personnage",
     "retireTitle": "Retirer le personnage",
@@ -1691,6 +1848,8 @@
     "abilities": "Caractéristiques",
     "abilitiesLead": "Les valeurs de la fiche, ajustements raciaux compris.",
     "abilityHint": "{{name}} : de {{min}} à {{max}}",
+    "strExceptional": "Force exceptionnelle (18/xx)",
+    "strExceptionalHint": "Le pourcentage d'une Force 18 de guerrier, de {{min}} à {{max}} (100 = 18/00) ; vide : aucun",
     "range": "De {{min}} à {{max}}",
     "hpMax": "PV max",
     "xp": "XP de départ",
@@ -1703,7 +1862,48 @@
       "out_of_range": "Saisissez un nombre entier de {{min}} à {{max}}.",
       "not_creatable": "Cette classe ne peut pas encore être créée.",
       "unknown": "Choisissez une des six races.",
-      "race_not_allowed": "Cette race ne peut pas être {{className}}."
+      "race_not_allowed": "Cette race ne peut pas être {{className}}.",
+      "not_allowed": "Pas de Force exceptionnelle pour ce personnage : seulement un combattant à 18 de Force, sauf un petite-gens."
+    },
+    "skillPoints": "Talents de voleur",
+    "skillPointsLead": "Les points dépensés dans chaque talent ; le serveur ajoute la base, la race, la Dextérité et l’armure.",
+    "skillArmor": "Armure portée",
+    "armors": {
+      "none": "Aucune",
+      "leather": "Cuir",
+      "padded_studded_leather": "Matelassée ou cuir clouté",
+      "elven_chain": "Cotte de mailles elfique"
     }
+  },
+  "turning": {
+    "title": "Repousser les morts-vivants",
+    "hint": "Choisissez le type de mort-vivant. Le serveur lance le d20 et les dés du nombre affecté.",
+    "hd": "{{hd}} DV",
+    "hdRange": "{{min}} à {{max}} DV",
+    "hdMore": "{{hd}} DV et plus",
+    "target": "{{target}}+",
+    "turn": "Repousser",
+    "outcome": {
+      "turn": "Repoussés (R)",
+      "destroy": "Détruits (D)",
+      "destroy_more": "Détruits, d'autres repoussés (D*)",
+      "cannot": "Impossible"
+    },
+    "undead": {
+      "skeleton": "Squelette",
+      "zombie": "Zombi",
+      "ghoul": "Goule",
+      "shadow": "Ombre",
+      "wight": "Nécrophage",
+      "ghast": "Blême",
+      "wraith": "Âme en peine",
+      "mummy": "Momie",
+      "spectre": "Spectre",
+      "vampire": "Vampire",
+      "ghost": "Fantôme",
+      "lich": "Liche",
+      "special": "Spécial"
+    },
+    "turnLabel": "Repousser : {{undead}}"
   }
 }

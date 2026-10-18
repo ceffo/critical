@@ -381,7 +381,12 @@ Steps 7.2 and 7.3 as built (the character creation item; the user approves ADR c
    creating one is choosing to play it, and the page loads again on it. It starts with nothing: no weapon,
    item, proficiency, skill or spellbook entry, no prepared spell, no buff, round 0, an empty ledger (full
    HP). Invalid input is 400 `invalid_input` with the field and a code the web words
-   (`characters.errors.<code>`, en + fr).
+   (`characters.errors.<code>`, en + fr). An optional `details` object (the shape `GET /api/character`
+   shows: `race`, `alignment`, `age` or null, `sex`, `height`, `weight`, `hair`, `eyes`, `languages`)
+   carries the character's details; they are checked by the one validation the card's edit uses
+   (`charactersvc` `Details.Apply`, which `detailssvc` calls too), and a refusal names its field under
+   `details.` (`details.age`), since `race` already names the race code. They are stored in the
+   creation's transaction.
 2. **Rename and retire.** `PATCH /api/characters/{id} {"name"?, "retired": true?}` changes one of the
    user's characters, current or not; another user's, a retired one and an unknown id are 404
    `character_not_found` (step 7.1), each written by one guarded update (no check-then-write). `retired`
@@ -401,12 +406,18 @@ Steps 7.2 and 7.3 as built (the character creation item; the user approves ADR c
    one in play), **Create** (the form) and **Retire** (confirmed, the current character). Each change
    loads the page again (`/`), which reads the current character from the database. A user with no current
    character lands on a creation page that also lists their other characters to play, the language switch
-   and Log out. Renaming has no UI yet.
+   and Log out. **Rename** sits in the same group (the current character's name, edited in a dialog):
+   renaming is rare ([ADR 0027](0027-space-follows-frequency-of-use.md) step 1.4, one click away), it
+   is a change of the character itself on the same endpoint as Retire, and outside the action log like
+   it, so it belongs with the character actions rather than on the card, whose popover edits the
+   details. The creation form also takes the details, optional, under the class's own fields: the
+   free-text race is labelled "Précision de race" / "Race detail" there, the rules race being the
+   select above it.
 
 Tests: `charactersvc` `TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent`,
 `TestCreate_RefusesInvalidInputWithFieldErrors`, `TestChange_RetireRepairsTheCurrentCharacter`,
 `TestChange_AnotherUsersCharacterIsNotFound`; `composition` `TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing`,
-`TestCreate_RefusedInputStoresNothing`, `TestCreate_SwitchAndRetire`; `characterdal`
+`TestCreate_RefusedInputStoresNothing`, `TestCreate_TheDetailsEnteredAreStored`, `TestCreate_SwitchAndRetire`; `characterdal`
 `TestCreateCharacter_TheRowThenItsStateRows`, `TestRenameRetire_NoRowIsNotFound`; web `session.test.ts`,
 e2e `characters.spec.ts`, `layout.spec.ts` ("character dialogs and the creation page uncut").
 

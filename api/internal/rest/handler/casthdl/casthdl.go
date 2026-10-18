@@ -219,6 +219,17 @@ type CastResultDTO struct {
 	// Exposure: the spell's exposure damage at the caster level, to roll
 	// each round of exposure from (absent: none; ADR 0008 step 16).
 	Exposure *spellhdl.SpellExposureDTO `json:"exposure,omitempty"`
+	// Failure: the low-Wisdom spell failure d100 (ADR 0030 step 14; absent:
+	// no die). `failed`: the spell failed (d100 at or under `chance`), its
+	// slot spent and nothing applied.
+	Failure *SpellFailureDTO `json:"failure,omitempty"`
+}
+
+// SpellFailureDTO is a cast's spell failure roll (ADR 0030 step 14).
+type SpellFailureDTO struct {
+	D100   int  `json:"d100"`
+	Chance int  `json:"chance"`
+	Failed bool `json:"failed"`
 }
 
 // ConsumedItemDTO is the item a cast spent and how many are left.
@@ -244,10 +255,11 @@ type SpellAttackDTO struct {
 // labels it by kind and detail, an item power's from its item (itemId, ADR
 // 0016 step 14).
 type SpellAttackModDTO struct {
-	Kind   string `json:"kind"`
-	Detail string `json:"detail,omitempty"`
-	ItemID string `json:"itemId,omitempty"`
-	Value  int    `json:"value"`
+	Kind           string `json:"kind"`
+	Detail         string `json:"detail,omitempty"`
+	ItemID         string `json:"itemId,omitempty"`
+	Value          int    `json:"value"`
+	StrExceptional int    `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
 // SaveDTO is the target's saving throw (the DM's side).
@@ -354,13 +366,16 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 	if c := res.Consumed; c != nil {
 		out.ConsumedItem = &ConsumedItemDTO{ItemID: c.ItemID, Name: c.Name, Remaining: c.Remaining}
 	}
+	if f := res.Failure; f != nil {
+		out.Failure = &SpellFailureDTO{D100: f.Roll, Chance: f.Chance, Failed: f.Failed}
+	}
 	if a := res.Attack; a != nil {
 		out.Attack = &SpellAttackDTO{
 			D20Roll: a.D20Roll, BaseThac0: a.BaseThac0, Modifiers: []SpellAttackModDTO{}, EffectiveThac0: a.EffectiveThac0,
 			TargetAC: a.TargetAC, TargetACNeeded: a.TargetACNeeded, Hit: a.Hit, HitMargin: a.HitMargin,
 		}
 		for _, m := range a.Modifiers {
-			out.Attack.Modifiers = append(out.Attack.Modifiers, SpellAttackModDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
+			out.Attack.Modifiers = append(out.Attack.Modifiers, SpellAttackModDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional})
 		}
 	}
 	if res.Slots != nil {

@@ -161,7 +161,7 @@ func (s *service) List(ctx context.Context, owner uuid.UUID) ([]Summary, error) 
 		if err != nil {
 			return nil, err
 		}
-		list[i].Level = c.Derived.Level
+		list[i].Level = c.Derived.RealizedLevel
 	}
 	return list, nil
 }

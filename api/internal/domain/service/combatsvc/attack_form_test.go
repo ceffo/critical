@@ -28,7 +28,7 @@ func (f *fixture) withForm(stored *combatsvc.AttackForm, weapons []combatsvc.Wea
 	f.weapons.EXPECT().List(mock.Anything, charID).Return(weapons, nil)
 	f.items.EXPECT().List(mock.Anything, charID).Return(items, nil).Maybe()
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()
-	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil).Maybe()
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil).Maybe()
 }
 
 // ADR 0002 step 12: the preview lists the same to-hit modifiers and the same

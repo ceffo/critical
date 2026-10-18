@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SpellDetail, SpellName } from "@/components/dashboard/SpellDetail";
+import { LearnSpell } from "@/components/actions/LearnSpell";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
 import { localized } from "@/i18n/localized";
@@ -329,7 +330,13 @@ export function LookupPanel() {
         className="zone-card flex min-h-0 min-w-0 flex-col overflow-y-auto px-4 pb-3.5"
       >
         {selected ? (
-          <SpellDetail key={selected.id} spell={selected} banded />
+          <>
+            <LearnSpell
+              spellId={selected.id}
+              wizard={selected.class.toLowerCase() === "wizard"}
+            />
+            <SpellDetail key={selected.id} spell={selected} banded />
+          </>
         ) : (
           <p className="pt-3.5 text-body text-muted-foreground">
             {t("lookup.noSelection")}

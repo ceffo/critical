@@ -39,3 +39,22 @@ describe("CastResultView", () => {
     expect(html).not.toContain("Only the damage is modelled");
   });
 });
+
+// ADR 0030 step 14: a cast above the failure chance shows its d100 and resolves as usual.
+describe("CastResultView spell failure", () => {
+  it("shows the d100 of a cast that held", async () => {
+    const html = await render({
+      entryId: 2,
+      source: "cast",
+      spellId: "bless",
+      name: "Bless",
+      level: 1,
+      casterLevel: 1,
+      untracked: [],
+      failure: { d100: 55, chance: 20, failed: false },
+    });
+    expect(html).toContain('data-testid="cast-failure"');
+    expect(html).toContain("55");
+    expect(html).toContain("Bless");
+  });
+});

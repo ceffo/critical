@@ -50,7 +50,7 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
 		}
-		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponKind(weapon.Kind))
+		mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponKind(weapon.Kind))
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
 		}
@@ -148,7 +148,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	if ammo != nil {
 		res.Ammo = &AmmoUse{ItemID: ammo.ID, Name: ammo.Name.Any(), Magic: ammo.MagicBonus, Remaining: ammo.Count}
 	}
-	am, err := s.attackModifiers(char, weapon, ammo, mods, req.Situational)
+	am, err := s.attackModifiers(char, weapon, ammo, mods, req.Situational, attackOptions{pointBlank: req.PointBlank, backstab: req.Backstab})
 	if err != nil {
 		return nil, err
 	}
@@ -191,6 +191,13 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	}
 	for _, f := range mods.MultipliersFrom {
 		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermDiceMult, Kind: ModBuff, Detail: f.Buff, ItemID: f.ItemID, Value: f.Value})
+	}
+	// ADR 0030 step 19: the backstab multiplies the weapon's dice (PHB
+	// Table 30 at the realized level), one more factor of ADR 0003 step 4's
+	// DiceMultiplier: before Strength and magic.
+	if req.Backstab {
+		rolled.BuffMultipliers *= float64(char.Derived.Backstab)
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermDiceMult, Kind: ModBackstab, Value: float64(char.Derived.Backstab)})
 	}
 	rolled.Terms = append(rolled.Terms, weaponTerms...)
 	rolled.Terms = append(rolled.Terms, strTerms...)

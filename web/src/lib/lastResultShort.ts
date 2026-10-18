@@ -13,6 +13,8 @@ import {
   savePayload,
   skillCheckPayload,
   skillName,
+  turnPayload,
+  undeadName,
 } from "@/lib/logSummary";
 import type { LogEntry } from "@/types/log";
 
@@ -37,8 +39,9 @@ function verdict(
   t: TFunction,
   key: string,
   tone: ShortVerdict["tone"],
+  values?: Record<string, number>,
 ): ShortVerdict {
-  return { text: t(`lastShort.verdict.${key}`), tone };
+  return { text: t(`lastShort.verdict.${key}`, values), tone };
 }
 
 /** Every log kind has a short wording; the kinds without a roll are worded by their kind label. */
@@ -109,11 +112,13 @@ export function shortResult(
     return {
       value,
       what: spell,
-      verdict: cast.attack
-        ? cast.attack.hit
-          ? verdict(t, "hit", "pass")
-          : verdict(t, "miss", "fail")
-        : null,
+      verdict: cast.failure?.failed
+        ? verdict(t, "spellFailed", "fail")
+        : cast.attack
+          ? cast.attack.hit
+            ? verdict(t, "hit", "pass")
+            : verdict(t, "miss", "fail")
+          : null,
     };
   }
   const exposure = exposurePayload(e);
@@ -122,6 +127,24 @@ export function shortResult(
       value,
       what: spellName(exposure.spellId, exposure.spell),
       verdict: null,
+    };
+  const turn = turnPayload(e);
+  if (turn)
+    return {
+      value,
+      what: t("lastShort.turn", { undead: undeadName(t, turn.undead) }),
+      verdict: !turn.success
+        ? verdict(t, "failure", "fail")
+        : verdict(
+            t,
+            turn.destroyed > 0 && turn.turned > 0
+              ? "destroyedTurned"
+              : turn.destroyed > 0
+                ? "destroyed"
+                : "turned",
+            "pass",
+            { turned: turn.turned },
+          ),
     };
   if (e.kind === "hp_change")
     return {

@@ -6,6 +6,7 @@ import {
   Desktop,
   GearSix,
   Moon,
+  PencilSimple,
   ShieldCheck,
   SignOut,
   Sun,
@@ -93,7 +94,7 @@ function Swatch({ id, light }: { id: string; light: boolean }) {
  * dark theme and the light theme. Each choice applies live and is saved; opened from the cog at the
  * left of the dice footer (ADR 0022 step 2.6). Under them the account: the logged-in email and Log
  * out (ADR 0029 step 4.4; account actions live in the cog menu), and for an admin the link to the
- * admin section (step 1.3). Above them the rare character actions (step 7.2): Switch, New and Retire,
+ * admin section (step 1.3). Above them the rare character actions (step 7.2): Switch, New, Rename and Retire,
  * each opening its dialog over the page.
  */
 export function SettingsPopover() {
@@ -130,6 +131,11 @@ export function SettingsPopover() {
       id: "new",
       hint: t("characters.newHint"),
       icon: <UserPlus aria-hidden />,
+    },
+    {
+      id: "rename",
+      hint: t("characters.renameMenuHint"),
+      icon: <PencilSimple aria-hidden />,
     },
     {
       id: "retire",

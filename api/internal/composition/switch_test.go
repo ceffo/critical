@@ -117,7 +117,7 @@ func TestSwitch_Step7_2_ARetiredCurrentCharacter(t *testing.T) {
 	require.Equal(t, http.StatusOK, one.call(root, "GET", "/api/characters", "", &rootList))
 	require.NotNil(t, rootList.CurrentID)
 	kelsen := *rootList.CurrentID
-	second, err := m.AddCharacterOf(ctx, rootID, charactersvc.Character{Name: "Second", Class: "mage", HPMax: 4})
+	second, err := m.AddCharacterOf(ctx, rootID, charactersvc.Character{Name: "Second", Class: "mage", Int: 15, HPMax: 4})
 	require.NoError(t, err)
 	require.NoError(t, m.RetireCharacter(ctx, kelsen))
 	again, _ := serverOn(t, m)

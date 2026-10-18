@@ -43,6 +43,8 @@ type WeaponDTO struct {
 	TwoHanded   bool           `json:"two_handed"`
 	AmmoKind    string         `json:"ammo_kind"`
 	WeaponType  string         `json:"weapon_type"`
+	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
+	Specialized bool `json:"specialized"`
 }
 
 // ChangeDTO is the wire shape of POST/PATCH/DELETE /api/weapons: the weapon
@@ -65,6 +67,9 @@ type WeaponBody struct {
 	TwoHanded   *bool          `json:"two_handed"`
 	AmmoKind    *string        `json:"ammo_kind"`
 	WeaponType  *string        `json:"weapon_type"`
+	// Specialized is refused (field "specialized", code "not_allowed") for a
+	// class that does not specialize (ADR 0030 step 12).
+	Specialized *bool `json:"specialized"`
 }
 
 func decodeBody(r *http.Request) (WeaponBody, error) {
@@ -83,7 +88,7 @@ func change(w http.ResponseWriter, r *http.Request, res *weaponsvc.ChangeResult)
 		Weapon: WeaponDTO{
 			ID: x.ID, Name: x.Name, DamageSM: x.DamageSM, DamageL: x.DamageL, MagicToHit: x.MagicToHit,
 			MagicDamage: x.MagicDamage, Kind: x.Kind, TwoHanded: x.TwoHanded, AmmoKind: x.AmmoKind,
-			WeaponType: x.Type,
+			WeaponType: x.Type, Specialized: x.Specialized,
 		},
 		LogEntryID: res.LogEntryID,
 	})
@@ -108,6 +113,7 @@ func Create(charID CharacterIDFunc, svc weaponsvc.SVC) render.HandlerFunc {
 			Name: b.Name, DamageSM: deref(b.DamageSM), DamageL: deref(b.DamageL),
 			MagicToHit: deref(b.MagicToHit), MagicDamage: deref(b.MagicDamage), Kind: deref(b.Kind),
 			TwoHanded: deref(b.TwoHanded), AmmoKind: deref(b.AmmoKind), Type: deref(b.WeaponType),
+			Specialized: deref(b.Specialized),
 		})
 		if err != nil {
 			return err
@@ -127,6 +133,7 @@ func Update(charID CharacterIDFunc, svc weaponsvc.SVC) render.HandlerFunc {
 		res, err := svc.Update(r.Context(), charID(r), chi.URLParam(r, "id"), weaponsvc.WeaponPatch{
 			Name: b.Name, DamageSM: b.DamageSM, DamageL: b.DamageL, MagicToHit: b.MagicToHit,
 			MagicDamage: b.MagicDamage, Kind: b.Kind, TwoHanded: b.TwoHanded, AmmoKind: b.AmmoKind, Type: b.WeaponType,
+			Specialized: b.Specialized,
 		})
 		if err != nil {
 			return err

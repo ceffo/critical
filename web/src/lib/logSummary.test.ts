@@ -743,6 +743,88 @@ describe("inventory entries", () => {
   });
 });
 
+// ADR 0030 step 7.3: a level_up entry is structured (the level, the die and its raised value, the
+// Constitution adjustment, the gain and the max HP around it); the journal words it, French first.
+describe("level-up entries", () => {
+  const roll = (over: object) =>
+    entry("level_up", {
+      level: 9,
+      hitDie: 6,
+      rolled: 4,
+      counted: 4,
+      conAdjustment: 2,
+      gain: 6,
+      fixed: false,
+      manual: false,
+      hpMaxBefore: 40,
+      hpMaxAfter: 46,
+      ...over,
+    });
+
+  it("words the die, the CON adjustment and the gain", async () => {
+    const fr = await makeT("fr");
+    const en = await makeT("en");
+    expect(entryText(roll({}), fr)).toBe(
+      "Niveau 9 : d6 4, CON +2, PV max +6 (40 → 46)",
+    );
+    expect(entryText(roll({}), en)).toBe(
+      "Level 9: d6 4, CON +2, max HP +6 (40 → 46)",
+    );
+  });
+
+  it("shows a low die raised by Constitution 20+, no CON term at 0, a die entered", async () => {
+    const fr = await makeT("fr");
+    const en = await makeT("en");
+    expect(
+      entryText(
+        roll({
+          rolled: 1,
+          counted: 2,
+          conAdjustment: 0,
+          gain: 2,
+          hpMaxAfter: 42,
+          manual: true,
+        }),
+        fr,
+      ),
+    ).toBe("Niveau 9 : d6 1 (compté 2), PV max +2 (40 → 42), dé saisi");
+    expect(
+      entryText(
+        roll({
+          rolled: 1,
+          counted: 2,
+          conAdjustment: -1,
+          gain: 1,
+          hpMaxAfter: 41,
+        }),
+        en,
+      ),
+    ).toBe("Level 9: d6 1 (counts as 2), CON −1, max HP +1 (40 → 41)");
+  });
+
+  it("words a fixed gain above the name level", async () => {
+    const fr = await makeT("fr");
+    const en = await makeT("en");
+    const fixed = roll({
+      level: 16,
+      hitDie: 0,
+      rolled: null,
+      counted: null,
+      conAdjustment: 0,
+      gain: 2,
+      fixed: true,
+      hpMaxBefore: 85,
+      hpMaxAfter: 87,
+    });
+    expect(entryText(fixed, fr)).toBe(
+      "Niveau 16 : PV max +2, gain fixe (85 → 87)",
+    );
+    expect(entryText(fixed, en)).toBe(
+      "Level 16: max HP +2, fixed gain (85 → 87)",
+    );
+  });
+});
+
 describe("cast entries", () => {
   const cast = (extra: object) =>
     entry("cast", {
@@ -1187,6 +1269,44 @@ describe("entryText for skill checks", () => {
     );
   });
 
+  it("words a thief skill check (ADR 0030 step 17) like a bard skill's (fr)", async () => {
+    const fr = await makeT("fr");
+    const thief = {
+      ...bard,
+      id: "open_locks",
+      kind: "thiefSkill",
+      roll: 40,
+      target: 55,
+      success: true,
+    };
+    expect(entryText(entry("skill_check", thief, ""), fr)).toBe(
+      "Crochetage : d100 40 contre 55, réussi",
+    );
+    const en = await makeT("en");
+    expect(entryText(entry("skill_check", thief, ""), en)).toMatch(
+      /^Open Locks: d100 40 vs 55/,
+    );
+  });
+
+  it("words a thief's skill points spent (ADR 0030 step 17): each changed skill (en, fr)", async () => {
+    const en = await makeT("en");
+    const fr = await makeT("fr");
+    const e = entry(
+      "skill_points",
+      {
+        before: { open_locks: 30, pick_pockets: 30 },
+        after: { open_locks: 45, pick_pockets: 30, climb_walls: 15 },
+      },
+      "",
+    );
+    expect(entryText(e, en)).toBe(
+      "Skill points: Open Locks 30 → 45, Climb walls 0 → 15",
+    );
+    expect(entryText(e, fr)).toBe(
+      "Points de talent : Crochetage 30 → 45, Escalade 0 → 15",
+    );
+  });
+
   it("words an adjusted check: adjusted target, original target, adjustment and reason (en, fr)", async () => {
     const en = await makeT("en");
     const fr = await makeT("fr");
@@ -1286,5 +1406,118 @@ describe("hp_change entries without a source", () => {
 
   it("keeps the player's own text when there is one", async () => {
     expect(entryText(hp(-5, "orc axe"), await makeT("en"))).toBe("orc axe");
+  });
+});
+
+// ADR 0030 step 20.2: a spell_learn entry is structured (the spell, the d100, the chance, learned
+// or not, the realized level); the journal words it, French first (the test namer falls back to
+// the id).
+describe("spell learn entries", () => {
+  const roll = (over: object) =>
+    entry("spell_learn", {
+      spellId: "sleep",
+      spellLevel: 1,
+      roll: 37,
+      chance: 65,
+      learned: true,
+      characterLevel: 3,
+      retryLevel: 0,
+      ...over,
+    });
+
+  it("words a success and a failure with the level to try again at", async () => {
+    const fr = await makeT("fr");
+    const en = await makeT("en");
+    expect(entryText(roll({}), fr)).toBe("Appris : sleep (d100 37 ≤ 65 %)");
+    expect(
+      entryText(roll({ roll: 72, learned: false, retryLevel: 4 }), fr),
+    ).toBe("Échec : sleep (d100 72 > 65 %), à retenter au niveau 4");
+    expect(entryText(roll({}), en)).toBe("Learned: sleep (d100 37 ≤ 65%)");
+    // The level comes from the server's retryLevel, never worked out here.
+    expect(entryText(roll({ learned: false, retryLevel: 6 }), fr)).toMatch(
+      /au niveau 6$/,
+    );
+  });
+});
+
+// ADR 0030 step 16: a turn_undead entry is structured (the type, the cell, the dice, the destroyed and
+// turned counts the server worked out); the journal words it, French first.
+describe("turn undead entries", () => {
+  const turn = (over: object) =>
+    entry("turn_undead", {
+      undead: "ghoul",
+      clericLevel: 3,
+      target: 10,
+      d20: 12,
+      success: true,
+      effect: "turn",
+      affected: [3, 4],
+      destroyed: 0,
+      turned: 7,
+      ...over,
+    });
+
+  it("words a rolled turn, a failure and a destroy without a roll", async () => {
+    const fr = await makeT("fr");
+    const en = await makeT("en");
+    expect(entryText(turn({}), fr)).toBe(
+      "Renvoi des morts-vivants (Goule) : 7 repoussés, d20 12 contre 10",
+    );
+    expect(
+      entryText(
+        turn({ d20: 4, success: false, effect: undefined, turned: 0 }),
+        fr,
+      ),
+    ).toBe("Renvoi des morts-vivants (Goule) : échec, d20 4 contre 10");
+    expect(
+      entryText(
+        turn({
+          undead: "skeleton",
+          target: undefined,
+          d20: undefined,
+          outcome: "destroy_more",
+          effect: "destroy",
+          more: [1, 2],
+          destroyed: 7,
+          turned: 3,
+        }),
+        en,
+      ),
+    ).toBe("Turning undead (Skeleton): 7 destroyed, 3 turned, no roll");
+    expect(
+      entryText(
+        turn({
+          target: undefined,
+          d20: undefined,
+          outcome: "destroy",
+          effect: "destroy",
+          destroyed: 7,
+          turned: 0,
+        }),
+        fr,
+      ),
+    ).toBe("Renvoi des morts-vivants (Goule) : 7 détruits, sans jet");
+  });
+});
+
+// ADR 0030 step 14: a cast with a spell failure d100 says it, failed or not.
+describe("spell failure on a cast", () => {
+  const cast = (failed: boolean) =>
+    entry("cast", {
+      action: "cast",
+      spellId: "bless",
+      spell: "Bless",
+      casterLevel: 3,
+      failure: { d100: failed ? 12 : 55, chance: 30, failed },
+    });
+
+  it("words a failed spell and a spell that held", async () => {
+    const fr = await makeT("fr");
+    expect(entryText(cast(true), fr)).toBe(
+      "Lancé : Bless: échec du sort (d100 12 ≤ 30 %)",
+    );
+    expect(entryText(cast(false), fr)).toBe(
+      "Lancé : Bless: pas d'échec du sort (d100 55 > 30 %)",
+    );
   });
 });

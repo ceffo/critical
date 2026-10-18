@@ -24,12 +24,13 @@ func (noTx) InTx(ctx context.Context, fn func(context.Context) error) error { re
 
 type fixture struct {
 	weaponsvc.Deps
-	log *mocks.MockLog
+	log   *mocks.MockLog
+	chars *mocks.MockCharacters
 }
 
 func deps(t *testing.T) fixture {
-	log := mocks.NewMockLog(t)
-	return fixture{Deps: weaponsvc.Deps{Log: log, Tx: noTx{}}, log: log}
+	log, chars := mocks.NewMockLog(t), mocks.NewMockCharacters(t)
+	return fixture{Deps: weaponsvc.Deps{Log: log, Tx: noTx{}, Chars: chars}, log: log, chars: chars}
 }
 
 func TestNew_NilDependency(t *testing.T) {

@@ -54,6 +54,38 @@ packages:
       outpkg: "mocks"
     interfaces:
       Catalog:
+  github.com/ceffo/critical/api/internal/domain/service/learnsvc:
+    config:
+      dir: "internal/domain/service/learnsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Book:
+      Spells:
+      Characters:
+      Dice:
+      Log:
+  github.com/ceffo/critical/api/internal/domain/service/turnsvc:
+    config:
+      dir: "internal/domain/service/turnsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      Characters:
+      Dice:
+      Log:
+  github.com/ceffo/critical/api/internal/domain/service/levelupsvc:
+    config:
+      dir: "internal/domain/service/levelupsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Characters:
+      Rules:
+      Dice:
+      Log:
   github.com/ceffo/critical/api/internal/domain/service/charactersvc:
     config:
       dir: "internal/domain/service/charactersvc/mocks"
@@ -131,6 +163,7 @@ packages:
       SVC:
       DAL:
       Log:
+      Characters:
   github.com/ceffo/critical/api/internal/domain/service/xpsvc:
     config:
       dir: "internal/domain/service/xpsvc/mocks"
@@ -159,6 +192,7 @@ packages:
       Abilities:
       Dice:
       Log:
+      Points:
   github.com/ceffo/critical/api/internal/domain/service/dicesvc:
     config:
       dir: "internal/domain/service/dicesvc/mocks"

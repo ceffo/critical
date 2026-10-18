@@ -175,14 +175,23 @@ func ruleTables(t *testing.T) map[string]any {
 // limits, the format-4 shape (ADR 0021 step 10).
 func format4Tables(t *testing.T) map[string]any {
 	t.Helper()
-	tables := allTables(t)
+	tables := format5Tables(t)
 	delete(tables, "race_level_limits")
 	return tables
 }
 
-// allTables reads the fixture's rule_tables (format 5: the four PHB rule
-// tables, the class and race tables and the racial level limits, ADR 0021
-// steps 10 and 11).
+// format5Tables is the fixture's rule_tables without the sphere access, the
+// format-5 shape (ADR 0021 step 11).
+func format5Tables(t *testing.T) map[string]any {
+	t.Helper()
+	tables := allTables(t)
+	delete(tables, "sphere_access")
+	return tables
+}
+
+// allTables reads the fixture's rule_tables (format 6: the four PHB rule
+// tables, the class and race tables, the racial level limits and the sphere
+// access, ADR 0021 steps 10 to 12).
 func allTables(t *testing.T) map[string]any {
 	t.Helper()
 	f, err := os.Open("../../testdata/catalogue.json")
@@ -344,19 +353,19 @@ func TestSchema_Step11_Format5LevelLimits(t *testing.T) {
 		a["format"] = 5
 		return a
 	}
-	assert.NoError(t, sch.Validate(format5(allTables(t))), "format 5 with every table")
+	assert.NoError(t, sch.Validate(format5(format5Tables(t))), "format 5 with every table")
 	assert.Error(t, sch.Validate(format5(format4Tables(t))), "format 5 without the level limits")
-	assert.Error(t, sch.Validate(format3(t, allTables(t))), "format 3 with the level limits")
-	four := format5(allTables(t))
+	assert.Error(t, sch.Validate(format3(t, format5Tables(t))), "format 3 with the level limits")
+	four := format5(format5Tables(t))
 	four["format"] = 4
 	assert.Error(t, sch.Validate(four), "format 4 with the level limits")
 	onlyLimits := ruleTables(t)
-	onlyLimits["race_level_limits"] = allTables(t)["race_level_limits"]
+	onlyLimits["race_level_limits"] = format5Tables(t)["race_level_limits"]
 	assert.Error(t, sch.Validate(format5(onlyLimits)), "format 5 without the class tables")
 	assert.Error(t, sch.Validate(format3(t, onlyLimits)), "format 3 with only the level limits")
 
 	edit := func(change func(map[string]any)) map[string]any {
-		tables := allTables(t)
+		tables := format5Tables(t)
 		change(tables)
 		return tables
 	}
@@ -379,5 +388,59 @@ func TestSchema_Step11_Format5LevelLimits(t *testing.T) {
 	}
 	for name, change := range refused {
 		assert.Error(t, sch.Validate(format5(edit(change))), name)
+	}
+}
+
+// TestSchema_Step12_Format6Spheres (ADR 0021 steps 12.1 to 12.3): format 6 is
+// format 5 plus the sphere access and every priest spell's sphere codes;
+// formats before 6 may carry neither, and a wizard spell never has codes.
+func TestSchema_Step12_Format6Spheres(t *testing.T) {
+	sch := compile(t)
+	priest := func(spheres ...any) map[string]any {
+		s := spell("p", map[string]any{"en": "x"})
+		s["class"] = "Priest"
+		s["sphere"] = "Combat"
+		if spheres != nil {
+			s["spheres"] = spheres
+		}
+		return s
+	}
+	doc := func(format int, tables any, spells ...any) map[string]any {
+		a := format3(t, tables)
+		a["format"] = format
+		a["spells"] = spells
+		return a
+	}
+	assert.NoError(t, sch.Validate(doc(6, allTables(t), priest("combat"), spell("a", map[string]any{"en": "x"}))), "format 6 with every table")
+	assert.Error(t, sch.Validate(doc(6, format5Tables(t), priest("combat"))), "format 6 without the sphere access")
+	assert.Error(t, sch.Validate(doc(6, allTables(t), priest())), "format 6 with a priest spell without codes")
+	wizard := spell("a", map[string]any{"en": "x"})
+	wizard["spheres"] = []any{"combat"}
+	assert.Error(t, sch.Validate(doc(6, allTables(t), wizard)), "format 6 with a wizard spell with codes")
+	assert.Error(t, sch.Validate(doc(5, allTables(t), priest())), "format 5 with the sphere access")
+	assert.Error(t, sch.Validate(doc(5, format5Tables(t), priest("combat"))), "format 5 with sphere codes")
+	assert.NoError(t, sch.Validate(doc(5, format5Tables(t), priest())), "format 5 as before")
+
+	empty := priest()
+	empty["spheres"] = []any{}
+	for name, p := range map[string]map[string]any{
+		"a sphere name, not a code": priest("combat", "Combat"),
+		"a sphere twice":            priest("combat", "combat"),
+		"no sphere":                 empty,
+	} {
+		assert.Error(t, sch.Validate(doc(6, allTables(t), p)), name)
+	}
+	editAccess := func(change func(map[string]any)) map[string]any {
+		tables := allTables(t)
+		change(row(tables, "sphere_access", 0))
+		return tables
+	}
+	for name, change := range map[string]func(map[string]any){
+		"a class the app lacks": func(r map[string]any) { r["class"] = "druid" },
+		"an unknown access":     func(r map[string]any) { r["access"] = "full" },
+		"a missing sphere":      func(r map[string]any) { delete(r, "sphere") },
+		"an unknown row field":  func(r map[string]any) { r["level"] = 3 },
+	} {
+		assert.Error(t, sch.Validate(doc(6, editAccess(change), priest("combat"))), name)
 	}
 }

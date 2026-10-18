@@ -6,6 +6,7 @@ package composition_test
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,8 @@ type createdSheet struct {
 	RaceCode string `json:"raceCode"`
 	HPMax    int    `json:"hpMax"`
 	Derived  struct {
-		Level            int   `json:"level"`
+		TargetLevel      int   `json:"targetLevel"`
+		RealizedLevel    int   `json:"realizedLevel"`
 		THAC0            int   `json:"thac0"`
 		SheetDifferences []any `json:"sheetDifferences"`
 	} `json:"derived"`
@@ -54,7 +56,8 @@ func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 	assert.Equal(t, "bard", got.Class)
 	assert.Equal(t, "half_elf", got.RaceCode)
 	assert.Equal(t, 6, got.HPMax)
-	assert.Equal(t, 3, got.Derived.Level, "PHB Table 25: 2,500 XP is level 3")
+	assert.Equal(t, 3, got.Derived.TargetLevel, "PHB Table 25: 2,500 XP is level 3")
+	assert.Equal(t, 3, got.Derived.RealizedLevel, "created realized at its starting level (ADR 0030 step 7.5)")
 	assert.Equal(t, 19, got.Derived.THAC0, "PHB Table 53: a level 3 rogue")
 	assert.Empty(t, got.Derived.SheetDifferences, "a created character states no sheet")
 
@@ -74,6 +77,34 @@ func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, tb.call(ann, "PATCH", "/api/characters/"+itoa(lyra), `{"retired":true}`, nil))
 }
 
+// The details entered with a new character are stored trimmed, as the
+// card's edit stores them, and GET /api/character shows them; the ones left
+// out are none.
+func TestCreate_TheDetailsEnteredAreStored(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	body := newBard[:len(newBard)-1] +
+		`,"details":{"alignment":" Neutre bon ","age":23,"eyes":"verts","languages":["Commun"," Elfique "]}}`
+	var list listView
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, &list))
+	var got struct {
+		Race      string   `json:"race"`
+		Alignment string   `json:"alignment"`
+		Age       *int     `json:"age"`
+		Eyes      string   `json:"eyes"`
+		Hair      string   `json:"hair"`
+		Languages []string `json:"languages"`
+	}
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.Equal(t, "Neutre bon", got.Alignment)
+	require.NotNil(t, got.Age)
+	assert.Equal(t, 23, *got.Age)
+	assert.Equal(t, "verts", got.Eyes)
+	assert.Empty(t, got.Hair)
+	assert.Empty(t, got.Race)
+	assert.Equal(t, []string{"Commun", "Elfique"}, got.Languages)
+}
+
 // emptied maps the nil lists of an empty sheet to their zero value.
 func emptied(s sheet) sheet {
 	if len(s.Items) == 0 {
@@ -90,19 +121,30 @@ func emptied(s sheet) sheet {
 
 // Invalid input is 400 with the field, and nothing is stored: a race the
 // class does not admit (a dwarf bard, DMG Table 7), an ability outside 3 to
-// 19, a cleric (refused until its bonus spells, ADR 0030 step 13), and an
+// 19, a class the app does not have, details the card would refuse, and an
 // entered level or THAC0 (never entered, step 1).
 func TestCreate_RefusedInputStoresNothing(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
 	for body, field := range map[string]string{
-		`{"name":"D","class":"bard","raceCode":"dwarf","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10,"hpMax":6,"xp":0}`:   "race",
-		`{"name":"D","class":"bard","raceCode":"human","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":20,"hpMax":6,"xp":0}`:   "cha",
-		`{"name":"D","class":"cleric","raceCode":"human","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10,"hpMax":6,"xp":0}`: "class",
+		`{"name":"D","class":"bard","raceCode":"dwarf","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10,"hpMax":6,"xp":0}`:    "race",
+		`{"name":"D","class":"bard","raceCode":"human","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":20,"hpMax":6,"xp":0}`:    "cha",
+		`{"name":"D","class":"paladin","raceCode":"human","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10,"hpMax":6,"xp":0}`: "class",
 	} {
 		var refused map[string]string
 		require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused), body)
 		assert.Equal(t, "invalid_input", refused["code"])
+		assert.Equal(t, field, refused["field"], body)
+	}
+	// The details are checked as the card's edit checks them, their field
+	// named under "details." (the race code is "race").
+	for body, field := range map[string]string{
+		newBard[:len(newBard)-1] + `,"details":{"age":0}}`:                                  "details.age",
+		newBard[:len(newBard)-1] + `,"details":{"languages":["Commun","commun"]}}`:          "details.languages",
+		newBard[:len(newBard)-1] + `,"details":{"race":"` + strings.Repeat("e", 41) + `"}}`: "details.race",
+	} {
+		var refused map[string]string
+		require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused), body)
 		assert.Equal(t, field, refused["field"], body)
 	}
 	for _, extra := range []string{`"level":3`, `"thac0":19`} {
@@ -163,15 +205,38 @@ func TestCreate_Options(t *testing.T) {
 	bob, _ := tb.login("bob@example.com")
 	var got struct {
 		Classes []struct {
-			Class string   `json:"class"`
-			Races []string `json:"races"`
+			Class               string   `json:"class"`
+			Races               []string `json:"races"`
+			ExceptionalStrength []string `json:"exceptionalStrengthRaces"`
+			Skills              []string `json:"skills"`
+			SkillArmors         []string `json:"skillArmors"`
 		} `json:"classes"`
-		Ability struct{ Min, Max int } `json:"ability"`
+		Ability        struct{ Min, Max int } `json:"ability"`
+		StrExceptional struct{ Min, Max int } `json:"strExceptional"`
 	}
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &got))
-	require.Len(t, got.Classes, 1)
+	require.Len(t, got.Classes, 5)
 	assert.Equal(t, "bard", got.Classes[0].Class)
 	assert.Equal(t, []string{"human", "half_elf"}, got.Classes[0].Races)
+	assert.Empty(t, got.Classes[0].ExceptionalStrength)
+	assert.Equal(t, "fighter", got.Classes[1].Class)
+	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}, got.Classes[1].Races)
+	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf"}, got.Classes[1].ExceptionalStrength, "no halfling (PHB Table 7)")
+	assert.Equal(t, "mage", got.Classes[2].Class)
+	assert.Equal(t, []string{"human", "elf", "half_elf"}, got.Classes[2].Races, "DMG Table 7")
+	assert.Empty(t, got.Classes[2].ExceptionalStrength)
+	assert.Equal(t, "cleric", got.Classes[3].Class)
+	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}, got.Classes[3].Races, "DMG Table 7")
+	assert.Empty(t, got.Classes[3].ExceptionalStrength)
+	assert.Equal(t, "thief", got.Classes[4].Class)
+	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}, got.Classes[4].Races, "DMG Table 7")
+	assert.Equal(t, []string{
+		"pick_pockets", "open_locks", "find_remove_traps", "move_silently",
+		"hide_in_shadows", "detect_noise", "climb_walls", "read_languages",
+	}, got.Classes[4].Skills, "PHB Table 26")
+	assert.Equal(t, []string{"none", "leather", "padded_studded_leather", "elven_chain"}, got.Classes[4].SkillArmors)
+	assert.Empty(t, got.Classes[0].Skills, "a bard enters no thieving skill")
+	assert.Equal(t, struct{ Min, Max int }{1, 100}, got.StrExceptional)
 	assert.Equal(t, 3, got.Ability.Min)
 	assert.Equal(t, 19, got.Ability.Max)
 }

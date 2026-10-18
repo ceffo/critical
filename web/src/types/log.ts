@@ -22,6 +22,14 @@ export type LogKind =
   | "xp_add"
   | "xp_edit"
   | "xp_remove"
+  /** A level-up roll (ADR 0030 step 7.3); popping it gives the max HP back, the level pending again. */
+  | "level_up"
+  /** A chance-to-learn roll (ADR 0030 step 20.2); popping it takes the spell out or lifts the block. */
+  | "spell_learn"
+  /** A cleric's turning undead roll (ADR 0030 step 16); it changes no state. */
+  | "turn_undead"
+  /** A thief's skill points spent on the sheet (ADR 0030 step 17); popping it gives them back. */
+  | "skill_points"
   | "spell_prep"
   | "long_rest"
   | "save"

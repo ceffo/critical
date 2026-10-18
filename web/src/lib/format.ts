@@ -49,3 +49,13 @@ export function formatDateTime(iso: string, lang: string): string {
     minute: "2-digit",
   });
 }
+
+/**
+ * A Strength score in the PHB's language-neutral notation (ADR 0030 step 9): an 18 with an
+ * exceptional percentile is 18/05, 18/50 or 18/00 (100); otherwise the plain score.
+ */
+export function formatStrength(score: number, exceptional = 0): string {
+  if (exceptional <= 0) return String(score);
+  if (exceptional >= 100) return `${score}/00`;
+  return `${score}/${String(exceptional).padStart(2, "0")}`;
+}

@@ -162,19 +162,26 @@ func GetCharacter(charID CharacterIDFunc, svc characterGetter) render.HandlerFun
 // derived block (ADR 0030 steps 3 to 8). `race` is the free-text detail the
 // player edits, `raceCode` the PHB race the rules read ("" for none).
 type CharacterDTO struct {
-	ID       int64      `json:"id"`
-	Name     string     `json:"name"`
-	Str      int        `json:"str"`
-	Dex      int        `json:"dex"`
-	Con      int        `json:"con"`
-	Int      int        `json:"int"`
-	Wis      int        `json:"wis"`
-	Cha      int        `json:"cha"`
-	HPMax    int        `json:"hpMax"`
-	XPTotal  int        `json:"xpTotal"`
-	Class    string     `json:"class"`
-	RaceCode string     `json:"raceCode"`
-	Derived  DerivedDTO `json:"derived"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Str  int    `json:"str"`
+	// StrExceptional is a fighter's 18/xx percentile (ADR 0030 step 9), 0
+	// for none.
+	StrExceptional int    `json:"strExceptional"`
+	Dex            int    `json:"dex"`
+	Con            int    `json:"con"`
+	Int            int    `json:"int"`
+	Wis            int    `json:"wis"`
+	Cha            int    `json:"cha"`
+	HPMax          int    `json:"hpMax"`
+	XPTotal        int    `json:"xpTotal"`
+	Class          string `json:"class"`
+	RaceCode       string `json:"raceCode"`
+	// SkillArmor is the armour a thief wears for its skills (ADR 0030 step
+	// 1), "" for a class without thieving skills; its points are in
+	// derived.thiefSkills.
+	SkillArmor string     `json:"skillArmor"`
+	Derived    DerivedDTO `json:"derived"`
 	detailshdl.DetailsDTO
 }
 
@@ -202,18 +209,114 @@ type SheetDifferenceDTO struct {
 }
 
 // DerivedDTO is the values the rules derive (ADR 0030 steps 3 to 8, 22.1 and
-// 24). `xpTotal` is the starting XP plus the ledger, `nextLevelXp` null at the
-// last level, `raceSaveBonus` the race's bonus per category (0: none), the
+// 24). `xpTotal` is the starting XP plus the ledger, `targetLevel` the level
+// it gives (step 3, never stored), `realizedLevel` the level taken (step 7),
+// which THAC0, saves and slots follow, `nextLevelXp` (the target's next
+// level) null at the last level, `raceSaveBonus` the race's bonus per category (0: none), the
 // slots by ascending spell level (levels without a slot left out).
 type DerivedDTO struct {
 	XPTotal          int                  `json:"xpTotal"`
-	Level            int                  `json:"level"`
+	TargetLevel      int                  `json:"targetLevel"`
+	RealizedLevel    int                  `json:"realizedLevel"`
 	NextLevelXP      *int                 `json:"nextLevelXp"`
 	THAC0            int                  `json:"thac0"`
 	Saves            SavesDTO             `json:"saves"`
 	RaceSaveBonus    SavesDTO             `json:"raceSaveBonus"`
 	SpellSlots       []SlotCountDTO       `json:"spellSlots"`
 	SheetDifferences []SheetDifferenceDTO `json:"sheetDifferences"`
+	LevelUp          LevelUpDTO           `json:"levelUp"`
+	// Specializes is ADR 0030 step 12: the class may specialize in a weapon.
+	Specializes bool `json:"specializes"`
+	// Spellbook is ADR 0030 step 20.1: the learning rules of a class with a
+	// spellbook (mage, bard); null for the others.
+	Spellbook *SpellbookRulesDTO `json:"spellbook"`
+	// SpellFailure is ADR 0030 step 14: the percent chance a cast fails (0:
+	// no die).
+	SpellFailure int `json:"spellFailure"`
+	// Turning is ADR 0030 step 16: PHB Table 61 at the realized level, the
+	// book's rows in order; null for a class that does not turn undead.
+	Turning []TurningTargetDTO `json:"turning"`
+	// ThiefSkills is ADR 0030 step 17: each thieving skill with its terms
+	// and percentage; null for a class without them.
+	ThiefSkills []ThiefSkillDTO `json:"thiefSkills"`
+	// SkillBudget is step 17's warnings on the entered points, never null.
+	SkillBudget []BudgetWarningDTO `json:"skillBudget"`
+	// Backstab is ADR 0030 step 19: PHB Table 30's damage multiplier at the
+	// realized level, 0 for a class without the backstab option.
+	Backstab int `json:"backstab"`
+}
+
+// ThiefSkillDTO is one thieving skill (ADR 0030 step 17): percent = base +
+// points + race + dexterity + armor, capped at 95 and floored at 0.
+type ThiefSkillDTO struct {
+	Skill     string `json:"skill"`
+	Base      int    `json:"base"`
+	Points    int    `json:"points"`
+	Race      int    `json:"race"`
+	Dexterity int    `json:"dexterity"`
+	Armor     int    `json:"armor"`
+	Percent   int    `json:"percent"`
+}
+
+// BudgetWarningDTO is a breach of the skill point budget (ADR 0030 step 17):
+// `code` skill_points_total (`skill` empty) or skill_points_per_skill, the
+// points and the limit at the realized level.
+type BudgetWarningDTO struct {
+	Code   string `json:"code"`
+	Skill  string `json:"skill,omitempty"`
+	Points int    `json:"points"`
+	Limit  int    `json:"limit"`
+}
+
+// TurningTargetDTO is one undead type a cleric may try to turn (ADR 0030
+// step 16): its code, its Hit Dice (`hdMin` 0: by type only, `hdMax` 0: and
+// more) and the cell at the cleric's level, `roll` the d20 target or
+// `outcome` (turn, destroy, destroy_more, cannot) when no die is rolled.
+type TurningTargetDTO struct {
+	Undead  string `json:"undead"`
+	HDMin   int    `json:"hdMin"`
+	HDMax   int    `json:"hdMax"`
+	Roll    int    `json:"roll,omitempty"`
+	Outcome string `json:"outcome,omitempty"`
+}
+
+// SpellbookRulesDTO is what a character may write in its spellbook (ADR 0030
+// step 20.1): the class's and PHB Table 4's highest spell level, Table 4's
+// chance to learn (percent) and its maximum spells per level
+// (`noMaximum`: the book's "All", `maxSpellsPerLevel` then 0).
+type SpellbookRulesDTO struct {
+	ClassMaxSpellLevel int  `json:"classMaxSpellLevel"`
+	IntMaxSpellLevel   int  `json:"intMaxSpellLevel"`
+	LearnChance        int  `json:"learnChance"`
+	MaxSpellsPerLevel  int  `json:"maxSpellsPerLevel"`
+	NoMaximum          bool `json:"noMaximum"`
+}
+
+// PendingLevelDTO is one level whose hit points are owed (ADR 0030 step 7):
+// `die` the hit die's sides to roll up to the name level (0 above it),
+// `fixedGain` the gain above it (0 up to it).
+type PendingLevelDTO struct {
+	Level     int `json:"level"`
+	Die       int `json:"die"`
+	FixedGain int `json:"fixedGain"`
+}
+
+// LevelUpDTO is ADR 0030 step 7: `pending` the levels from the realized one
+// to the target, lowest first (the prompt, one per level),
+// `realizedAboveTarget` an XP correction brought the target under the
+// realized level (step 7.4, the card warns).
+type LevelUpDTO struct {
+	Pending             []PendingLevelDTO `json:"pending"`
+	RealizedAboveTarget bool              `json:"realizedAboveTarget"`
+}
+
+// PendingDTO maps the pending levels, never null.
+func PendingDTO(p []charactersvc.PendingLevel) []PendingLevelDTO {
+	out := make([]PendingLevelDTO, 0, len(p))
+	for _, l := range p {
+		out = append(out, PendingLevelDTO{Level: l.Level, Die: l.Die, FixedGain: l.FixedGain})
+	}
+	return out
 }
 
 func savesDTO(s charactersvc.Saves) SavesDTO {
@@ -222,9 +325,35 @@ func savesDTO(s charactersvc.Saves) SavesDTO {
 
 func derivedDTO(d charactersvc.Derived) DerivedDTO {
 	out := DerivedDTO{
-		XPTotal: d.XPTotal, Level: d.Level, NextLevelXP: d.NextLevelXP, THAC0: d.THAC0,
+		XPTotal: d.XPTotal, TargetLevel: d.TargetLevel, RealizedLevel: d.RealizedLevel, NextLevelXP: d.NextLevelXP, THAC0: d.THAC0,
 		Saves: savesDTO(d.Saves), RaceSaveBonus: savesDTO(d.RaceSaveBonus),
 		SpellSlots: []SlotCountDTO{}, SheetDifferences: []SheetDifferenceDTO{},
+		LevelUp: LevelUpDTO{
+			Pending: PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
+		},
+		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
+		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab,
+	}
+	if d.ThiefSkills != nil {
+		out.ThiefSkills = make([]ThiefSkillDTO, len(d.ThiefSkills))
+		for i, s := range d.ThiefSkills {
+			out.ThiefSkills[i] = ThiefSkillDTO(s)
+		}
+	}
+	for _, w := range d.SkillBudget {
+		out.SkillBudget = append(out.SkillBudget, BudgetWarningDTO(w))
+	}
+	if d.Turning != nil {
+		out.Turning = make([]TurningTargetDTO, len(d.Turning))
+		for i, r := range d.Turning {
+			out.Turning[i] = TurningTargetDTO{Undead: r.Undead, HDMin: r.HDMin, HDMax: r.HDMax, Roll: r.Cell.Roll, Outcome: r.Cell.Outcome}
+		}
+	}
+	if b := d.Spellbook; b != nil {
+		out.Spellbook = &SpellbookRulesDTO{
+			ClassMaxSpellLevel: b.ClassMaxSpellLevel, IntMaxSpellLevel: b.IntMaxSpellLevel, LearnChance: b.LearnChance,
+			MaxSpellsPerLevel: b.MaxSpellsPerLevel, NoMaximum: b.NoMaximum,
+		}
 	}
 	for _, level := range slices.Sorted(maps.Keys(d.SpellSlots)) {
 		if n := d.SpellSlots[level]; n > 0 {
@@ -243,8 +372,8 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 	}
 	return CharacterDTO{
 		ID: c.ID, Name: c.Name,
-		Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
-		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race,
+		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
+		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race, SkillArmor: c.SkillArmor,
 		Derived: derivedDTO(c.Derived), DetailsDTO: detailshdl.ToDTO(c.Details),
 	}
 }

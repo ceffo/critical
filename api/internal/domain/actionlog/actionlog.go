@@ -51,13 +51,17 @@ const (
 	// is the one exposed, its HP delta takes the damage off his HP, so
 	// popping it gives the HP back.
 	KindExposure Kind = "exposure"
+	// KindTurnUndead is a cleric's turning undead roll (turnsvc, ADR 0030
+	// step 16). It changes no state and has no snapshots: popping it only
+	// removes it. It is never adjusted.
+	KindTurnUndead Kind = "turn_undead"
 )
 
 // RollKinds are the entries whose result replaces the dashboard's result
 // card (attack, save, cast or received spell, item use, skill check, ability
-// check, spell exposure). Only
+// check, spell exposure, turning undead). Only
 // the newest of them, the one on the card, can be adjusted after the fact.
-var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck, KindAbilityCheck, KindExposure}
+var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck, KindAbilityCheck, KindExposure, KindTurnUndead}
 
 // IsRoll reports whether k is one of RollKinds.
 func IsRoll(k Kind) bool {
@@ -192,6 +196,28 @@ const (
 	KindXPEdit   Kind = "xp_edit"
 	KindXPRemove Kind = "xp_remove"
 )
+
+// KindLevelUp is a level-up roll (levelupsvc, ADR 0030 step 7.3): the level
+// reached, the hit die and its value, the Constitution adjustment and the
+// gain. Its "realized_level" snapshot carries the realized level and its max
+// HP, so popping it makes the level-up pending again (and takes the level's
+// benefits back). Not one of RollKinds:
+// it is never adjusted after the fact.
+const KindLevelUp Kind = "level_up"
+
+// KindSpellLearn is a chance-to-learn roll (learnsvc, ADR 0030 step 20.2):
+// the spell, the d100, Table 4's chance and whether it was learned. Its
+// "spellbook:<spell key>" snapshot carries the spell's place in the
+// spellbook (known, or blocked by a failure at a level), so popping it takes
+// a learned spell out or lifts a failure's block. Not one of RollKinds: it
+// is never adjusted after the fact.
+const KindSpellLearn Kind = "spell_learn"
+
+// KindSkillPoints is a thief spending skill points on the sheet (skillsvc,
+// ADR 0030 step 17): the points per skill before and after. Its
+// "skill_points" snapshot carries the points, so popping it gives them back.
+// Not one of RollKinds: nothing is rolled.
+const KindSkillPoints Kind = "skill_points"
 
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that

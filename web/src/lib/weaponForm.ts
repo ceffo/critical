@@ -2,7 +2,7 @@
 // this only turns what was typed into the request body and flags text that is not a number.
 import { editLang, localized } from "@/i18n/localized";
 import { parseInteger, sentName } from "@/lib/itemForm";
-import type { Weapon, WeaponBody } from "@/types/combat";
+import type { Weapon, WeaponBody, WeaponType } from "@/types/combat";
 
 /**
  * What the form holds: numbers stay text until submit; the name in the UI language (ADR 0023 step
@@ -17,6 +17,10 @@ export interface WeaponDraft {
   kind: "melee" | "missile";
   two_handed: boolean;
   ammo_kind: string;
+  /** ADR 0030 step 23: the type the class rules read (the attack rate, step 11); "" none. */
+  weapon_type: WeaponType;
+  /** ADR 0030 step 12: offered to a class that specializes. */
+  specialized: boolean;
 }
 
 /** Fields of the form, named like the API's. */
@@ -31,6 +35,8 @@ export const emptyWeaponDraft: WeaponDraft = {
   kind: "melee",
   two_handed: false,
   ammo_kind: "",
+  weapon_type: "",
+  specialized: false,
 };
 
 /** The form for a weapon, its name as shown in the UI language `lang`. */
@@ -44,6 +50,8 @@ export function draftFromWeapon(w: Weapon, lang: string): WeaponDraft {
     kind: w.kind,
     two_handed: w.two_handed,
     ammo_kind: w.ammo_kind,
+    weapon_type: w.weapon_type,
+    specialized: w.specialized,
   };
 }
 
@@ -78,6 +86,8 @@ export function weaponDraftToBody(
     kind: d.kind,
     two_handed: d.two_handed,
     ammo_kind: d.kind === "missile" ? d.ammo_kind : "",
+    weapon_type: d.weapon_type,
+    specialized: d.specialized,
   };
   return { body, errors };
 }

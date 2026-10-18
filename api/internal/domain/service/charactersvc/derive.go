@@ -25,9 +25,25 @@ type Rules interface {
 	BardSpellsPerDay(level int) (map[int]int, error)
 	// WizardSpellsPerDay is PHB Table 21 by spell level (step 8).
 	WizardSpellsPerDay(level int) (map[int]int, error)
+	// HitDiceFor is the group's hit die, name level and fixed gain after it
+	// (step 7).
+	HitDiceFor(group string) (ruletablesvc.HitDiceRow, error)
 	// RaceAllows is DMG Table 7: false for a race the class does not admit
 	// (step 21, checked when a character is created).
 	RaceAllows(race, class string) (bool, error)
+	// IntelligenceFor is PHB Table 4 (step 20).
+	IntelligenceFor(score int) (ruletablesvc.IntelligenceRow, error)
+	// PriestSpellsPerDay is PHB Table 24 with the Wisdom bonus spells
+	// (step 13).
+	PriestSpellsPerDay(level, wis int) (map[int]int, error)
+	// SpellFailureFor is PHB Table 5's chance of spell failure (step 14).
+	SpellFailureFor(class string, wis int) (int, error)
+	// TurningAt is PHB Table 61 at a priest level (step 16).
+	TurningAt(level int) ([]ruletablesvc.TurningTarget, error)
+	// ThiefSkills is PHB Tables 26 to 29 on the entered points (step 17).
+	ThiefSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
+	// BackstabFor is PHB Table 30 at a thief's level (step 19).
+	BackstabFor(level int) (int, error)
 }
 
 // conSaveRaces are the races that add their PHB Table 9 bonus to the saves
@@ -37,19 +53,38 @@ type Rules interface {
 // and death magic.
 var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 
-// Derive computes the derived block of c (ADR 0030 steps 3 to 8, 22.1 and
-// 24) from its class, race, Constitution and XP total: the starting XP
-// (c.XPTotal) plus ledgerXP, what the XP ledger's entries add (ADR 0015 step
-// 1). Nothing derived is read from c.Sheet but the comparison of step 24.
+// Derive computes the derived block of c (ADR 0030 steps 3 to 8, 17, 19,
+// 22.1 and 24, and the pending level-ups of step 7). Two levels meet here (step 7):
+// the target level is step 3, the class's experience table at the XP total
+// (the starting XP, c.XPTotal, plus ledgerXP, what the XP ledger's entries
+// add; ADR 0015 step 1), never stored; the realized level is the stored one
+// (c.RealizedLevel), which only the level-up step moves. Every benefit of a
+// level (THAC0, saves, spell slots) follows the realized level; the target
+// only drives the pending level-ups and the XP progress. Nothing derived is
+// read from c.Sheet but the comparison of step 24.
 func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 	d := Derived{XPTotal: c.XPTotal + ledgerXP}
-	core, err := deriveCore(c, d.XPTotal, rules)
+	if _, err := ruletablesvc.ClassGroup(c.Class); err != nil {
+		return Derived{}, fmt.Errorf("derive: %w", err)
+	}
+	target, err := levelAt(c, d.XPTotal, rules)
 	if err != nil {
 		return Derived{}, err
 	}
-	d.Level, d.THAC0, d.Saves = core.level, core.thac0, core.saves
-	if d.Level < ruletablesvc.MaxLevel {
-		next, err := rules.XPThreshold(c.Class, d.Level+1)
+	// Step 7.5: no realized level yet (a character being created) is the
+	// target level, the one the entered max HP is for.
+	realized := c.RealizedLevel
+	if realized == 0 {
+		realized = target
+	}
+	d.TargetLevel, d.RealizedLevel = target, realized
+	core, err := coreAt(c, realized, rules)
+	if err != nil {
+		return Derived{}, err
+	}
+	d.THAC0, d.Saves = core.thac0, core.saves
+	if target < ruletablesvc.MaxLevel {
+		next, err := rules.XPThreshold(c.Class, target+1)
 		if err != nil {
 			return Derived{}, fmt.Errorf("derive %s: %w", c.Class, err)
 		}
@@ -58,37 +93,129 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 	if d.RaceSaveBonus, err = raceSaveBonus(c, rules); err != nil {
 		return Derived{}, err
 	}
-	if d.SpellSlots, err = spellSlots(c.Class, d.Level, rules); err != nil {
+	if d.SpellSlots, err = spellSlots(c, realized, rules); err != nil {
 		return Derived{}, err
+	}
+	if ruletablesvc.UsesWisdomSpells(c.Class) {
+		if d.SpellFailure, err = rules.SpellFailureFor(c.Class, c.Wis); err != nil {
+			return Derived{}, fmt.Errorf("derive %s spell failure: %w", c.Class, err)
+		}
+	}
+	if ruletablesvc.TurnsUndead(c.Class) {
+		if d.Turning, err = rules.TurningAt(realized); err != nil {
+			return Derived{}, fmt.Errorf("derive %s turning: %w", c.Class, err)
+		}
+	}
+	if ruletablesvc.HasThiefSkills(c.Class) {
+		// Step 17: the sheet's Dexterity, the entered points and armour;
+		// the budget at the realized level. No armour stored is leather,
+		// Table 29's baseline (creation always stores one).
+		armor := c.SkillArmor
+		if armor == "" {
+			armor = ruletablesvc.ArmorLeather
+		}
+		if d.ThiefSkills, err = rules.ThiefSkills(c.Race, c.Dex, armor, c.SkillPoints); err != nil {
+			return Derived{}, fmt.Errorf("derive %s skills: %w", c.Class, err)
+		}
+		d.SkillBudget = ruletablesvc.SkillPointBudget(realized, c.SkillPoints)
+	}
+	if ruletablesvc.Backstabs(c.Class) {
+		if d.Backstab, err = rules.BackstabFor(realized); err != nil {
+			return Derived{}, fmt.Errorf("derive %s backstab: %w", c.Class, err)
+		}
 	}
 	// Step 24: the sheet's figures against the rules at the sheet's own XP
 	// (the starting XP, without the ledger): the awards since the import
 	// raise the level, they are no difference with the sheet.
-	atImport := core
+	importLevel := target
 	if ledgerXP != 0 {
-		if atImport, err = deriveCore(c, c.XPTotal, rules); err != nil {
+		if importLevel, err = levelAt(c, c.XPTotal, rules); err != nil {
+			return Derived{}, err
+		}
+	}
+	atImport := core
+	if importLevel != realized {
+		if atImport, err = coreAt(c, importLevel, rules); err != nil {
 			return Derived{}, err
 		}
 	}
 	d.SheetDifferences = sheetDifferences(c.Sheet, atImport)
+	if d.LevelUp, err = levelUp(c, realized, target, rules); err != nil {
+		return Derived{}, err
+	}
+	d.Specializes = ruletablesvc.Specializes(c.Class)
+	if d.Spellbook, err = spellbookRules(c, rules); err != nil {
+		return Derived{}, err
+	}
 	return d, nil
 }
 
-// core are the values steps 3, 5 and 6 derive from the class and the XP.
+// spellbookRules is step 20.1 for a class with a spellbook (nil for the
+// others): the class's highest spell level and PHB Table 4 at the sheet's
+// Intelligence.
+func spellbookRules(c *Character, rules Rules) (*SpellbookRules, error) {
+	classMax, ok := ruletablesvc.SpellbookMaxLevel(c.Class)
+	if !ok {
+		return nil, nil
+	}
+	row, err := rules.IntelligenceFor(c.Int)
+	if err != nil {
+		return nil, fmt.Errorf("derive %s spellbook: %w", c.Class, err)
+	}
+	return &SpellbookRules{
+		ClassMaxSpellLevel: classMax, IntMaxSpellLevel: row.MaxSpellLevel, LearnChance: row.LearnChance,
+		MaxSpellsPerLevel: row.MaxSpells, NoMaximum: row.NoMaximum,
+	}, nil
+}
+
+// levelUp is step 7: a level-up is pending for each level above the
+// realized one up to the target, rolled lowest first; each is the group's
+// hit die up to its name level (step 7.1), the fixed gain above it (step
+// 7.2). A target under the realized level (an XP correction, step 7.4)
+// removes nothing: it is flagged.
+func levelUp(c *Character, realized, target int, rules Rules) (LevelUp, error) {
+	l := LevelUp{Pending: []PendingLevel{}, RealizedAboveTarget: realized > target}
+	if realized >= target {
+		return l, nil
+	}
+	group, err := ruletablesvc.ClassGroup(c.Class)
+	if err != nil {
+		return LevelUp{}, fmt.Errorf("derive level-up: %w", err)
+	}
+	hd, err := rules.HitDiceFor(group)
+	if err != nil {
+		return LevelUp{}, fmt.Errorf("derive %s level-up: %w", c.Class, err)
+	}
+	// Step 7.5: level 1's hit points are entered, never rolled.
+	for n := max(realized+1, 2); n <= target; n++ {
+		if n <= hd.NameLevel {
+			l.Pending = append(l.Pending, PendingLevel{Level: n, Die: hd.Die})
+		} else {
+			l.Pending = append(l.Pending, PendingLevel{Level: n, FixedGain: hd.GainAfter})
+		}
+	}
+	return l, nil
+}
+
+// core are the values steps 5 and 6 derive from the class at a level.
 type core struct {
 	level, thac0 int
 	saves        Saves
 }
 
-func deriveCore(c *Character, xp int, rules Rules) (core, error) {
+// levelAt is step 3: the class's experience table at xp.
+func levelAt(c *Character, xp int, rules Rules) (int, error) {
+	level, err := rules.LevelFor(c.Class, xp)
+	if err != nil {
+		return 0, fmt.Errorf("derive %s level: %w", c.Class, err)
+	}
+	return level, nil
+}
+
+func coreAt(c *Character, level int, rules Rules) (core, error) {
 	group, err := ruletablesvc.ClassGroup(c.Class)
 	if err != nil {
 		return core{}, fmt.Errorf("derive: %w", err)
-	}
-	// Step 3: the level from the class's experience table.
-	level, err := rules.LevelFor(c.Class, xp)
-	if err != nil {
-		return core{}, fmt.Errorf("derive %s level: %w", c.Class, err)
 	}
 	// Step 5: Table 53 for the group at that level.
 	thac0, err := rules.THAC0For(group, level)
@@ -121,15 +248,18 @@ func raceSaveBonus(c *Character, rules Rules) (Saves, error) {
 }
 
 // spellSlots is step 8: a bard's slots per day are PHB Table 32 at the
-// level, a mage's Table 21; fighters and thieves have none. The cleric's
-// (Table 24 plus the Wisdom bonus spells of step 13) comes with the cleric.
-func spellSlots(class string, level int, rules Rules) (map[int]int, error) {
+// level, a mage's Table 21, a cleric's Table 24 plus the Wisdom bonus spells
+// at the sheet's Wisdom (step 13); fighters and thieves have none.
+func spellSlots(c *Character, level int, rules Rules) (map[int]int, error) {
+	class := c.Class
 	var table func(int) (map[int]int, error)
 	switch class {
 	case "bard":
 		table = rules.BardSpellsPerDay
 	case "mage":
 		table = rules.WizardSpellsPerDay
+	case "cleric":
+		table = func(level int) (map[int]int, error) { return rules.PriestSpellsPerDay(level, c.Wis) }
 	case "fighter", "thief":
 		return map[int]int{}, nil
 	default:

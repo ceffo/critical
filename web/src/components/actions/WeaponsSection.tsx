@@ -3,6 +3,7 @@ import { localized } from "@/i18n/localized";
 import { useState } from "react";
 import { PencilSimple, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { useCharacterStore } from "@/stores/character";
 import { useItemsStore } from "@/stores/items";
 import { useTableStore } from "@/stores/table";
 import { deleteWeapon, patchWeapon, postCreateWeapon } from "@/api/combat";
@@ -35,6 +36,9 @@ export function WeaponsSection() {
   const weapons = useItemsStore((s) => s.weapons);
   const items = useItemsStore((s) => s.items);
   const run = useTableStore((s) => s.run);
+  const specializes = useCharacterStore(
+    (s) => s.character?.derived.specializes ?? false,
+  );
   const submit = useTableStore((s) => s.submit);
   const busy = useTableStore((s) => s.busy);
   // "add", a weapon id being edited, or nothing.
@@ -59,6 +63,7 @@ export function WeaponsSection() {
           <WeaponForm
             initial={emptyWeaponDraft}
             ammoKinds={ammoKinds}
+            specializes={specializes}
             busy={busy}
             onCancel={close}
             onSave={async (body) => {
@@ -95,6 +100,7 @@ export function WeaponsSection() {
                     initial={draftFromWeapon(w, i18n.language)}
                     editing={w}
                     ammoKinds={ammoKinds}
+                    specializes={specializes}
                     busy={busy}
                     onCancel={close}
                     onSave={async (body) => {
@@ -150,6 +156,7 @@ function WeaponRow({
         <span className="min-w-0 break-words text-label text-muted-foreground">
           <span data-testid="weapon-kind">{t(`weapons.kind.${w.kind}`)}</span>
           {w.two_handed ? ` · ${t("weapons.twoHanded")}` : ""}
+          {w.specialized ? ` · ${t("weapons.specialized")}` : ""}
           {w.ammo_kind ? ` · ${w.ammo_kind}` : ""}
         </span>
       </div>

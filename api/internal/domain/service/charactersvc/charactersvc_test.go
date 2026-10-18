@@ -36,7 +36,7 @@ type env struct {
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
-		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: mocks.NewMockRules(t),
+		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: newRules(t),
 		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{},
 	}
 	svc, err := charactersvc.NewWithConfig(charactersvc.DefaultConfig(), charactersvc.Deps{
@@ -49,7 +49,7 @@ func newEnv(t *testing.T) *env {
 
 func TestNew_NilDependency(t *testing.T) {
 	full := charactersvc.Deps{
-		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: mocks.NewMockRules(t),
+		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: newRules(t),
 		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t),
 	}
 	without := map[string]func(d *charactersvc.Deps){
@@ -71,14 +71,21 @@ func TestNew_NilDependency(t *testing.T) {
 var owner = uuid.MustParse("11111111-1111-1111-1111-111111111111")
 
 // ADR 0029 steps 7.1 and 7.3: the list is the owner's port answer, each
-// character with its derived level (ADR 0030 step 3).
-func TestList_IsTheOwnersCharactersAtTheirDerivedLevel(t *testing.T) {
+// character at its realized level (ADR 0030 step 7): Kelsen's XP gives 16,
+// level 16 is not taken yet, the list says 15.
+func TestList_IsTheOwnersCharactersAtTheirRealizedLevel(t *testing.T) {
 	e := newEnv(t)
 	e.owners.EXPECT().CharactersOf(mock.Anything, owner).
 		Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen", Class: "bard"}}, nil).Once()
 	e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(kelsen(), nil).Once()
-	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(1)).Return(0, nil).Once()
-	expectKelsenRules(e.rules, 1_293_418, 15)
+	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(1)).Return(26_582, nil).Once()
+	e.rules.EXPECT().LevelFor("bard", 1_320_000).Return(16, nil).Once()
+	e.rules.EXPECT().XPThreshold("bard", 17).Return(1_540_000, nil).Once()
+	e.rules.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
+	e.rules.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
+	e.rules.EXPECT().BardSpellsPerDay(15).Return(level15Slots, nil).Once()
+	e.rules.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
+	e.rules.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
 	got, err := e.svc.List(context.Background(), owner)
 	require.NoError(t, err)
 	assert.Equal(t, []charactersvc.Summary{{ID: 1, Name: "Kelsen", Class: "bard", Level: 15}}, got)

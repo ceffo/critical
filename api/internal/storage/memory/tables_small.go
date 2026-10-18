@@ -3,6 +3,7 @@ package memory
 import (
 	"cmp"
 	"context"
+	"maps"
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -292,4 +293,62 @@ func (p Spellbooks) Keys(ctx context.Context, characterID int64) ([]string, erro
 		return nil
 	})
 	return out, err
+}
+
+// AddEntry writes the spell at the end of the character's spellbook (a
+// spell already there stays where it is). The slice is copied: a rolled-back
+// transaction shares the one before it.
+func (p Spellbooks) AddEntry(ctx context.Context, characterID int64, spellKey string) error {
+	return p.s.write(ctx, func(t *tables) error {
+		if slices.Contains(t.spellbooks[characterID], spellKey) {
+			return nil
+		}
+		t.spellbooks[characterID] = append(slices.Clone(t.spellbooks[characterID]), spellKey)
+		return nil
+	})
+}
+
+// RemoveEntry takes the spell out of the character's spellbook.
+func (p Spellbooks) RemoveEntry(ctx context.Context, characterID int64, spellKey string) error {
+	return p.s.write(ctx, func(t *tables) error {
+		t.spellbooks[characterID] = slices.DeleteFunc(slices.Clone(t.spellbooks[characterID]),
+			func(k string) bool { return k == spellKey })
+		return nil
+	})
+}
+
+// LearnFailure returns the realized level the character failed to learn the
+// spell at; ok is false when there is none.
+func (p Spellbooks) LearnFailure(ctx context.Context, characterID int64, spellKey string) (int, bool, error) {
+	var level int
+	var ok bool
+	err := p.s.read(ctx, func(t *tables) error {
+		level, ok = t.learnFailures[characterID][spellKey]
+		return nil
+	})
+	return level, ok, err
+}
+
+// SetLearnFailure records (or replaces) the failure at level. The inner map
+// is copied: a rolled-back transaction shares the one before it.
+func (p Spellbooks) SetLearnFailure(ctx context.Context, characterID int64, spellKey string, level int) error {
+	return p.s.write(ctx, func(t *tables) error {
+		m := maps.Clone(t.learnFailures[characterID])
+		if m == nil {
+			m = map[string]int{}
+		}
+		m[spellKey] = level
+		t.learnFailures[characterID] = m
+		return nil
+	})
+}
+
+// DeleteLearnFailure lifts the failure (none: no change).
+func (p Spellbooks) DeleteLearnFailure(ctx context.Context, characterID int64, spellKey string) error {
+	return p.s.write(ctx, func(t *tables) error {
+		m := maps.Clone(t.learnFailures[characterID])
+		delete(m, spellKey)
+		t.learnFailures[characterID] = m
+		return nil
+	})
 }

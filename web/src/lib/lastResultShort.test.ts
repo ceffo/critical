@@ -236,6 +236,62 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
   xp_add: { e: entry("xp_add", null), value: null, en: "XP", fr: "XP" },
   xp_edit: { e: entry("xp_edit", null), value: null, en: "XP", fr: "XP" },
   xp_remove: { e: entry("xp_remove", null), value: null, en: "XP", fr: "XP" },
+  level_up: {
+    e: entry("level_up", {
+      level: 16,
+      hitDie: 0,
+      rolled: null,
+      counted: null,
+      conAdjustment: 0,
+      gain: 2,
+      fixed: true,
+      manual: false,
+      hpMaxBefore: 85,
+      hpMaxAfter: 87,
+    }),
+    value: "+2",
+    en: "Level",
+    fr: "Niveau",
+  },
+  spell_learn: {
+    e: entry("spell_learn", {
+      spellId: "sleep",
+      spellLevel: 1,
+      roll: 37,
+      chance: 65,
+      learned: true,
+      characterLevel: 1,
+      retryLevel: 0,
+    }),
+    value: null,
+    en: "Learn",
+    fr: "Apprentissage",
+  },
+  turn_undead: {
+    e: entry("turn_undead", {
+      undead: "ghoul",
+      clericLevel: 3,
+      target: 10,
+      d20: 12,
+      success: true,
+      effect: "turn",
+      affected: [3, 4],
+      destroyed: 0,
+      turned: 7,
+    }),
+    value: "12",
+    en: "Turning Ghoul · turned",
+    fr: "Renvoi Goule · repoussés",
+  },
+  skill_points: {
+    e: entry("skill_points", {
+      before: { open_locks: 30 },
+      after: { open_locks: 45 },
+    }),
+    value: null,
+    en: "Skills",
+    fr: "Talents",
+  },
   spell_prep: {
     e: entry("spell_prep", null),
     value: null,
@@ -277,6 +333,34 @@ describe("shortResult", () => {
       }
     });
   }
+
+  // ADR 0030 step 16.4: D* destroys the 2d6 (the row value) and turns the 2d4 (in the verdict).
+  it("words a D* turn with both counts, en and fr", async () => {
+    const e = entry("turn_undead", {
+      undead: "skeleton",
+      clericLevel: 8,
+      outcome: "destroy_more",
+      success: true,
+      effect: "destroy",
+      affected: [2, 3],
+      more: [1, 2],
+      destroyed: 5,
+      turned: 3,
+    });
+    const want = {
+      en: "Turning Skeleton · destroyed, 3 turned",
+      fr: "Renvoi Squelette · détruits, 3 repoussés",
+    };
+    for (const lng of ["en", "fr"] as const) {
+      const t = await makeT(lng);
+      const r = shortResult(e, t, (_id, name) => name ?? "", {
+        ...recordedNames,
+        item: (_id: string | undefined, name: string) => name,
+      });
+      expect(r.value?.text).toBe("5");
+      expect(`${r.what} · ${r.verdict?.text}`).toBe(want[lng]);
+    }
+  });
 
   it("colours the verdict: hit green, miss red, crit highlight; unsettled has none", async () => {
     const t = await makeT("en");

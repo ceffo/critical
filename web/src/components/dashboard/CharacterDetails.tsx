@@ -109,7 +109,7 @@ function DetailsView({
         <Row label={t("details.class")}>
           {i18n.exists(classKey) ? t(classKey) : c.class}
         </Row>
-        <Row label={t("details.level")}>{c.derived.level}</Row>
+        <Row label={t("details.level")}>{c.derived.realizedLevel}</Row>
         <Row label={t("details.raceCode")}>
           {c.raceCode === "" ? none : t(`details.races.${c.raceCode}`)}
         </Row>

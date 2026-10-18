@@ -15,7 +15,7 @@ import (
 )
 
 const bowJSON = `{"id":"long_bow","name":{"en":"Long Bow"},"damage_sm":"1d8","damage_l":"1d8","magic_to_hit":1,"magic_damage":2,
-	"kind":"missile","two_handed":true,"ammo_kind":"arrow","weapon_type":"long_bow"}`
+	"kind":"missile","two_handed":true,"ammo_kind":"arrow","weapon_type":"long_bow","specialized":false}`
 
 var longBow = weaponsvc.Weapon{
 	ID: "long_bow", Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,

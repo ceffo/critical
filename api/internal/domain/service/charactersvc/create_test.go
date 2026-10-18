@@ -3,6 +3,7 @@ package charactersvc_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -47,14 +48,15 @@ func expectLevel1Bard(e *env) {
 // as the sheet's figures the values the rules derive at its starting XP (ADR
 // 0030 step 24: it states no sheet, so it shows no difference); it becomes
 // the owner's current character in the same transaction, and the owner's
-// remembered sessions are forgotten (ADR 0029 step 4.7).
+// remembered sessions are forgotten (ADR 0029 step 4.7). Its max HP is set
+// for that level (ADR 0030 step 7.5: no level-up pending).
 func TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent(t *testing.T) {
 	e := newEnv(t)
 	e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
 	expectLevel1Bard(e)
 	want := charactersvc.Character{
 		Name: "Lyra", Class: "bard", Race: "half_elf",
-		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, XPTotal: 0,
+		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 1, XPTotal: 0,
 		Sheet:   charactersvc.Sheet{Level: 1, THAC0: 20, Saves: rogue1to4Saves},
 		Details: charactersvc.Details{Languages: []string{}},
 	}
@@ -82,7 +84,7 @@ func TestCreate_AFailedWriteChangesNothingElse(t *testing.T) {
 
 // Invalid input is refused with the field and a code the web words, before
 // anything is written: a missing or long name, a class no character may be
-// created with yet (a cleric among them: its slots need step 13), a race that
+// created with (a paladin: no such class), a race that
 // is none of the six, one the class does not admit (DMG Table 7), an ability
 // score outside 3 to 19, a max HP outside 1 to 999, a starting XP below 0.
 func TestCreate_RefusesInvalidInputWithFieldErrors(t *testing.T) {
@@ -94,8 +96,6 @@ func TestCreate_RefusesInvalidInputWithFieldErrors(t *testing.T) {
 	}{
 		{"empty name", func(n *charactersvc.NewCharacter) { n.Name = "   " }, nil, "name", "empty"},
 		{"long name", func(n *charactersvc.NewCharacter) { n.Name = strings.Repeat("é", 41) }, nil, "name", "too_long"},
-		{"cleric", func(n *charactersvc.NewCharacter) { n.Class = "cleric" }, nil, "class", "not_creatable"},
-		{"fighter", func(n *charactersvc.NewCharacter) { n.Class = "fighter" }, nil, "class", "not_creatable"},
 		{"unknown class", func(n *charactersvc.NewCharacter) { n.Class = "paladin" }, nil, "class", "not_creatable"},
 		{"no race", func(n *charactersvc.NewCharacter) { n.Race = "" }, nil, "race", "empty"},
 		{"unknown race", func(n *charactersvc.NewCharacter) { n.Race = "orc" }, nil, "race", "unknown"},
@@ -145,6 +145,121 @@ func TestCreate_AcceptsTheBounds(t *testing.T) {
 
 func ptr[T any](v T) *T { return &v }
 
+// ADR 0030 step 9: a fighter with Strength 18 enters an exceptional strength
+// of 1 to 100 or none; it is refused for any other class, any other
+// Strength and a halfling, and stored as entered.
+func TestCreate_Step9_ExceptionalStrength(t *testing.T) {
+	fighter := func(race string, str, exc int) charactersvc.NewCharacter {
+		return charactersvc.NewCharacter{
+			Name: "Brom", Class: "fighter", Race: race,
+			Str: str, StrExceptional: exc, Dex: 12, Con: 15, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+		}
+	}
+	bard := lyra()
+	bard.Str, bard.StrExceptional = 18, 50
+	for _, tt := range []struct {
+		name string
+		n    charactersvc.NewCharacter
+		code string
+	}{
+		{"above 18/00", fighter("human", 18, 101), "out_of_range"},
+		{"negative", fighter("human", 18, -1), "out_of_range"},
+		{"strength 17", fighter("human", 17, 50), "not_allowed"},
+		{"strength 19", fighter("human", 19, 50), "not_allowed"},
+		{"a halfling fighter", fighter("halfling", 18, 50), "not_allowed"},
+		{"a bard", bard, "not_allowed"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newEnv(t)
+			e.rules.EXPECT().RaceAllows(tt.n.Race, tt.n.Class).Return(true, nil).Once()
+			_, err := e.svc.Create(context.Background(), ownerID, tt.n)
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, "strExceptional", fe.Field)
+			assert.Equal(t, tt.code, fe.Message)
+			assert.Zero(t, e.tx.n, "nothing written")
+		})
+	}
+	for _, exc := range []int{0, 1, 100} {
+		t.Run(fmt.Sprintf("stored %d", exc), func(t *testing.T) {
+			e := newEnv(t)
+			e.rules.EXPECT().RaceAllows("human", "fighter").Return(true, nil).Once()
+			e.rules.EXPECT().LevelFor("fighter", 0).Return(1, nil).Once()
+			e.rules.EXPECT().XPThreshold("fighter", 2).Return(2_000, nil).Once()
+			e.rules.EXPECT().THAC0For("warrior", 1).Return(20, nil).Once()
+			e.rules.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{Group: "warrior"}, nil).Once()
+			e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
+				return c.Class == "fighter" && c.Str == 18 && c.StrExceptional == exc
+			})).Return(5, nil).Once()
+			e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(5)).Return(nil).Once()
+			e.sessions.EXPECT().ForgetUser(ownerID).Once()
+			_, err := e.svc.Create(context.Background(), ownerID, fighter("human", 18, exc))
+			require.NoError(t, err)
+		})
+	}
+}
+
+// ADR 0030 steps 1 and 17: a thief enters its armour (one of the four) and
+// its points (each a thieving skill, 0 to 95); any other class enters
+// neither. Refused before anything is written, the field named; the points
+// are stored without the zeros, with the armour.
+func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
+	thief := func(armor string, points map[string]int) charactersvc.NewCharacter {
+		return charactersvc.NewCharacter{
+			Name: "Vex", Class: "thief", Race: "halfling", Str: 10, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+			SkillArmor: armor, SkillPoints: points,
+		}
+	}
+	bardArmor, bardPoints := lyra(), lyra()
+	bardArmor.SkillArmor = "none"
+	bardPoints.SkillPoints = map[string]int{"climb_walls": 10}
+	for _, tt := range []struct {
+		name        string
+		n           charactersvc.NewCharacter
+		field, code string
+	}{
+		{"no armour", thief("", nil), "skillArmor", "empty"},
+		{"an armour Table 29 lacks", thief("plate", nil), "skillArmor", "unknown"},
+		{"an unknown skill", thief("none", map[string]int{"backstab": 10}), "skillPoints.backstab", "unknown"},
+		{"negative points", thief("none", map[string]int{"open_locks": -1}), "skillPoints.open_locks", "out_of_range"},
+		{"more than 95 points", thief("none", map[string]int{"open_locks": 96}), "skillPoints.open_locks", "out_of_range"},
+		{"a bard's armour", bardArmor, "skillArmor", "not_allowed"},
+		{"a bard's points", bardPoints, "skillPoints", "not_allowed"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newEnv(t)
+			e.rules.EXPECT().RaceAllows(tt.n.Race, tt.n.Class).Return(true, nil).Once()
+			_, err := e.svc.Create(context.Background(), ownerID, tt.n)
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, tt.field, fe.Field)
+			assert.Equal(t, tt.code, fe.Message)
+			assert.Zero(t, e.tx.n, "nothing written")
+		})
+	}
+	t.Run("stored", func(t *testing.T) {
+		e := newEnv(t)
+		e.rules.EXPECT().RaceAllows("halfling", "thief").Return(true, nil).Once()
+		e.rules.EXPECT().LevelFor("thief", 0).Return(1, nil).Once()
+		e.rules.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Once()
+		e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
+		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
+		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Once()
+		want := map[string]int{"open_locks": 30, "pick_pockets": 95}
+		e.rules.EXPECT().ThiefSkills("halfling", 17, "padded_studded_leather", want).Return(nil, nil).Once()
+		e.rules.EXPECT().BackstabFor(1).Return(2, nil).Once()
+		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
+			return c.Class == "thief" && c.SkillArmor == "padded_studded_leather" && assert.ObjectsAreEqual(want, c.SkillPoints)
+		})).Return(6, nil).Once()
+		e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(6)).Return(nil).Once()
+		e.sessions.EXPECT().ForgetUser(ownerID).Once()
+		_, err := e.svc.Create(context.Background(), ownerID, thief("padded_studded_leather", map[string]int{
+			"open_locks": 30, "pick_pockets": 95, "climb_walls": 0,
+		}))
+		require.NoError(t, err)
+	})
+}
+
 // Retiring a character retires it, then repairs the owner's current
 // character (the first one left when it was the current one), in one
 // transaction, and answers the current character after it.
@@ -192,11 +307,23 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	e := newEnv(t)
 	for _, race := range charactersvc.Races {
 		e.rules.EXPECT().RaceAllows(race, "bard").Return(race == "human" || race == "half_elf", nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "fighter").Return(race != "elf", nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "mage").Return(race == "human" || race == "elf" || race == "half_elf", nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "cleric").Return(race != "elf", nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "thief").Return(true, nil).Once()
 	}
 	got, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, charactersvc.CreationOptions{
-		Classes:    []charactersvc.ClassOption{{Class: "bard", Races: []string{"human", "half_elf"}}},
-		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP, MaxNameLen: 40,
+		Classes: []charactersvc.ClassOption{
+			{Class: "bard", Races: []string{"human", "half_elf"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}},
+			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}, Skills: []string{}, SkillArmors: []string{}},
+			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}},
+			{Class: "cleric", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}},
+			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
+			{Class: "thief", Races: charactersvc.Races, ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills, SkillArmors: ruletablesvc.ThiefArmors},
+		},
+		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
+		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40,
 	}, got)
 }

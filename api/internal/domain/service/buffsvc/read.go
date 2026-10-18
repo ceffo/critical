@@ -50,7 +50,7 @@ func (s *service) ListPowers(ctx context.Context, characterID int64) ([]ItemPowe
 // the character's base STR for a roll with a weapon of kind, and returns the
 // stacked modifiers. Used by combatsvc as a port (clean_architecture.md
 // §4.5).
-func (s *service) Aggregate(ctx context.Context, characterID int64, str int, kind WeaponKind) (BuffModifiers, error) {
+func (s *service) Aggregate(ctx context.Context, characterID int64, str BaseStrength, kind WeaponKind) (BuffModifiers, error) {
 	buffs, powers, err := s.effectSources(ctx, characterID)
 	if err != nil {
 		return BuffModifiers{}, err
@@ -73,15 +73,20 @@ func (s *service) effectSources(ctx context.Context, characterID int64) ([]BuffE
 
 // GetEffectiveStr returns the sheet's STR and the STR with active buffs.
 func (s *service) GetEffectiveStr(ctx context.Context, characterID int64) (Strength, error) {
-	base, err := s.baseStr(ctx, characterID)
+	c, err := s.chars.GetCharacter(ctx, characterID)
 	if err != nil {
-		return Strength{}, err
+		return Strength{}, fmt.Errorf("get character: %w", err)
 	}
 	buffs, err := s.dal.GetActiveBuffs(ctx, characterID)
 	if err != nil {
 		return Strength{}, fmt.Errorf("get active buffs: %w", err)
 	}
-	return Strength{Base: base, Effective: effectiveStr(buffs, base)}, nil
+	base := BaseStrengthOf(c)
+	eff := effectiveStrength(buffs, base)
+	return Strength{
+		Base: base.Score, Effective: eff.Score,
+		BaseExceptional: base.Exceptional, EffectiveExceptional: eff.Exceptional,
+	}, nil
 }
 
 // GetAbilityScore returns the sheet's score in ability a and its score in

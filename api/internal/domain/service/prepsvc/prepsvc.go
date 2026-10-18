@@ -150,14 +150,15 @@ func (s *service) limits(ctx context.Context, characterID int64) (map[int]int, e
 	return limits, err
 }
 
-// levelLimits returns the character's level and its preparation limits, the
-// slots per day of its level (ADR 0008 step 2 as amended by ADR 0030 step 8).
+// levelLimits returns the character's realized level and its preparation
+// limits, the slots per day of that level (ADR 0008 step 2 as amended by
+// ADR 0030 steps 7 and 8).
 func (s *service) levelLimits(ctx context.Context, characterID int64) (int, map[int]int, error) {
 	c, err := s.Characters.GetCharacter(ctx, characterID)
 	if err != nil {
 		return 0, nil, fmt.Errorf("get character: %w", err)
 	}
-	return c.Derived.Level, c.Derived.SpellSlots, nil
+	return c.Derived.RealizedLevel, c.Derived.SpellSlots, nil
 }
 
 func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {

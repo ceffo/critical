@@ -28,16 +28,17 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 
 	q.EXPECT().GetCharacter(ctx, int64(3)).Return(queries.GetCharacterRow{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
-		HpMax: 42, Thac0Base: 16, Level: 5, XpTotal: 1200,
+		HpMax: 42, RealizedLevel: 6, Thac0Base: 16, Level: 5, XpTotal: 1200,
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
 		Class: "bard", RaceCode: "half_elf", Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M",
 		Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
+		SkillPoints: `{}`,
 	}, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 3)
 	require.NoError(t, err)
 	assert.Equal(t, &charactersvc.Character{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
-		HPMax: 42, XPTotal: 1200, Class: "bard", Race: "half_elf",
+		HPMax: 42, RealizedLevel: 6, XPTotal: 1200, Class: "bard", Race: "half_elf",
 		// The stored level, THAC0 and saves are the sheet's figures (ADR 0030 step 24), never inputs.
 		Sheet: charactersvc.Sheet{Level: 5, THAC0: 16, Saves: charactersvc.Saves{
 			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
@@ -174,7 +175,8 @@ func TestOwners_ListAndSetCurrent(t *testing.T) {
 
 // A created character's row carries every entered value, its owner, and its
 // sheet figures in the level, THAC0 and save columns (ADR 0030 step 24); its
-// spell slots, buffs and round state follow, keyed by the new id.
+// spell slots, buffs and round state follow, keyed by the new id, then the
+// details entered with it.
 func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
@@ -184,21 +186,43 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 		Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HpMax: 6, XpTotal: 2500,
 		Thac0Base: 19, Level: 3, SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12,
 		SaveBreath: 16, SaveSpell: 15, Class: "bard", RaceCode: "half_elf",
-		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true}, RealizedLevel: sql.NullInt64{Int64: 3, Valid: true},
+		SkillPoints: `{}`,
 	}).Return(int64(7), nil).Once().NotBefore(lock)
 	slots := q.EXPECT().CreateSpellSlots(ctx, int64(7)).Return(nil).Once().NotBefore(row)
 	buffs := q.EXPECT().CreateActiveBuffs(ctx, int64(7)).Return(nil).Once().NotBefore(slots)
-	q.EXPECT().CreateRoundState(ctx, int64(7)).Return(nil).Once().NotBefore(buffs)
+	round := q.EXPECT().CreateRoundState(ctx, int64(7)).Return(nil).Once().NotBefore(buffs)
+	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
+		Alignment: "Neutral good", Age: 23, Languages: `["Elfique","Commun"]`, ID: 7,
+	}).Return(1, nil).Once().NotBefore(round)
 
 	id, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
-		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, XPTotal: 2500,
+		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 3, XPTotal: 2500,
 		Class: "bard", Race: "half_elf",
+		Details: charactersvc.Details{Alignment: "Neutral good", Age: 23, Languages: []string{"Elfique", "Commun"}},
 		Sheet: charactersvc.Sheet{Level: 3, THAC0: 19, Saves: charactersvc.Saves{
 			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
 		}},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, int64(7), id)
+}
+
+// ADR 0030 step 7.3: a level-up roll (and its undo) writes the max HP and
+// the level it is set for; no row is ErrCharacterNotFound.
+func TestSetRealizedLevel_WritesTheLevelAndItsMaxHP(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	dal := characterdal.New(q)
+	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
+		HpMax: 91, RealizedLevel: sql.NullInt64{Int64: 16, Valid: true}, ID: 3,
+	}).Return(1, nil).Once()
+	require.NoError(t, dal.SetRealizedLevel(ctx, 3, 16, 91))
+
+	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
+		HpMax: 1, RealizedLevel: sql.NullInt64{Int64: 2, Valid: true}, ID: 9,
+	}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.SetRealizedLevel(ctx, 9, 2, 1), domain.ErrCharacterNotFound)
 }
 
 // A rename or a retirement that matches no row (another user's character, a
@@ -249,4 +273,35 @@ func TestLockUser_UnknownUserIsNotAnError(t *testing.T) {
 
 	q.EXPECT().LockUser(ctx, owner).Return(uuid.Nil, assert.AnError).Once()
 	require.ErrorIs(t, dal.RetireCharacter(ctx, owner, 1), assert.AnError)
+}
+
+// A thief's skill points (ADR 0030 step 1) are stored as a JSON object by
+// skill code and read back as the same map; its armour as entered.
+func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	owner := uuid.MustParse("0b6a8c7e-5f1d-4a59-9a3e-3c2d1e0f4a11")
+	q.EXPECT().LockUser(ctx, owner).Return(owner, nil).Once()
+	q.EXPECT().CreateCharacter(ctx, queries.CreateCharacterParams{
+		Name: "Vex", Class: "thief", RaceCode: "halfling", OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+		RealizedLevel: sql.NullInt64{Int64: 1, Valid: true},
+		SkillPoints:   `{"open_locks":20,"pick_pockets":15}`, SkillArmor: "none",
+	}).Return(int64(8), nil).Once()
+	q.EXPECT().CreateSpellSlots(ctx, int64(8)).Return(nil).Once()
+	q.EXPECT().CreateActiveBuffs(ctx, int64(8)).Return(nil).Once()
+	q.EXPECT().CreateRoundState(ctx, int64(8)).Return(nil).Once()
+	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{Languages: `[]`, ID: 8}).Return(1, nil).Once()
+	points := map[string]int{"pick_pockets": 15, "open_locks": 20}
+	_, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
+		Name: "Vex", Class: "thief", Race: "halfling", RealizedLevel: 1, SkillPoints: points, SkillArmor: "none",
+	})
+	require.NoError(t, err)
+
+	q.EXPECT().GetCharacter(ctx, int64(8)).Return(queries.GetCharacterRow{
+		ID: 8, Class: "thief", Languages: `[]`, SkillPoints: `{"open_locks":20,"pick_pockets":15}`, SkillArmor: "none",
+	}, nil).Once()
+	got, err := characterdal.New(q).GetCharacter(ctx, 8)
+	require.NoError(t, err)
+	assert.Equal(t, points, got.SkillPoints)
+	assert.Equal(t, "none", got.SkillArmor)
 }

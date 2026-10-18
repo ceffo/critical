@@ -41,9 +41,22 @@ const (
 	MaxAdjustmentReasonLen   = 80
 )
 
-// MaxAdjustment is the largest adjustment, either sign, of a check of kind.
+// MinThiefSkillPercent is the least percentage a thieving skill is used at
+// (ADR 0030 step 17, PHB p.39): under it the player must spend points first.
+const MinThiefSkillPercent = 1
+
+// CodeSkillUnusable is the FieldError code of a roll of a thieving skill
+// under MinThiefSkillPercent. The web owns the wording.
+const CodeSkillUnusable = "skill_unusable"
+
+// percentKind reports a check on a d100 against a percentage: a bard skill
+// (ADR 0014 step 3) or a thieving skill (ADR 0030 step 17).
+func percentKind(k Kind) bool { return k == KindBardSkill || k == KindThiefSkill }
+
+// MaxAdjustment is the largest adjustment, either sign, of a check of kind:
+// a percentage check's is in percentage points.
 func MaxAdjustment(k Kind) int {
-	if k == KindBardSkill {
+	if percentKind(k) {
 		return MaxBardSkillAdjustment
 	}
 	return MaxProficiencyAdjustment
@@ -58,9 +71,9 @@ func AdjustedTarget(target, adjustment int) int {
 
 // Success is the verdict of a roll of a check of kind against target: a
 // proficiency per ProficiencySuccess (a natural 20 fails whatever the
-// target), a bard skill per BardSkillSuccess.
+// target), a bard or thieving skill per BardSkillSuccess.
 func Success(k Kind, roll, target int) bool {
-	if k == KindBardSkill {
+	if percentKind(k) {
 		return BardSkillSuccess(roll, target)
 	}
 	return ProficiencySuccess(roll, target)

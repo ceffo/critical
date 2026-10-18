@@ -36,7 +36,7 @@ test("character details: view, edit with a field error, save, reload", async ({
   await pop.getByLabel("Age", { exact: true }).fill("10001");
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("alert")).toHaveText(
-    "Enter a whole age between 0 and 10,000.",
+    "Enter a whole age between 1 and 10,000.",
   );
   await expect(pop.getByLabel("Race", { exact: true })).toHaveValue(
     "Sylvan half-elf",

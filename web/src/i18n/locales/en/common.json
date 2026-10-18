@@ -21,6 +21,28 @@
         "save_breath": "Save vs Breath",
         "save_spell": "Save vs Spells"
       }
+    },
+    "levelUp": {
+      "title": "Level {{level}} reached",
+      "rollHint": "Hit die d{{die}}, plus the CON adjustment",
+      "roll": "Roll",
+      "rollTitle": "Roll the hit die of level {{level}} (d{{die}})",
+      "fixedHint": "Past the name level: +{{gain}} max HP, no die",
+      "apply": "Add",
+      "applyTitle": "Add +{{gain}} max HP for level {{level}}",
+      "enter": "Enter",
+      "enterTitle": "Enter the die rolled at the table",
+      "dieLabel": "Die rolled at the table, 1 to {{die}}",
+      "confirm": "Confirm",
+      "cancel": "Close",
+      "more_one": "+{{count}} more level to roll next",
+      "more_other": "+{{count}} more levels to roll next",
+      "realizedAbove": "Level {{realized}} taken, XP gives level {{target}}",
+      "realizedAboveHint": "Undo the roll or correct the XP.",
+      "dieErrors": {
+        "out_of_range": "Enter a die from 1 to {{die}}.",
+        "fixed_gain": "This level has a fixed gain, no die."
+      }
     }
   },
   "language": {
@@ -252,7 +274,8 @@
       "weapons": "Weapons",
       "spells": "Spells",
       "items": "Items",
-      "skills": "Skills"
+      "skills": "Skills",
+      "turning": "Turning"
     },
     "items": {
       "list": "Combat items",
@@ -290,6 +313,12 @@
       "missile": "Missile"
     },
     "twoHanded": "two-handed",
+    "specialized": "specialized",
+    "rate": "{{attacks}}/{{rounds}} att.",
+    "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} this round",
+    "rateHint": "Attacks per round: {{attacks}} every {{rounds}} rounds; this round: {{count}}",
+    "pointBlank": "Point blank",
+    "pointBlankHint": "Target at point-blank range: +2 to hit with a specialized bow or crossbow",
     "sizesShort": {
       "sm": "S / M",
       "l": "L"
@@ -317,7 +346,9 @@
       "l": "L",
       "bonus": "to hit / dmg",
       "thac0": "THAC0"
-    }
+    },
+    "backstab": "Backstab ×{{n}}",
+    "backstabHint": "Backstab: {{toHit}} to hit, the weapon’s damage dice ×{{n}}"
   },
   "saves": {
     "title": "Saving Throws",
@@ -954,7 +985,14 @@
     "rollDice": "Roll",
     "addEffectLabel": "Add {{name}} as an effect at level {{level}}",
     "exposure": "Exposure",
-    "exposureMode": "Exposure ({{mode}})"
+    "exposureMode": "Exposure ({{mode}})",
+    "learn": {
+      "button": "Learn",
+      "title": "Learn this spell: d100 under {{chance}}% (Intelligence)",
+      "known": "In the spellbook",
+      "learned": "Learned: d100 {{roll}} ≤ {{chance}}%",
+      "failed": "Failed: d100 {{roll}} > {{chance}}%, try again at level {{level}}"
+    }
   },
   "result": {
     "empty": "Roll an attack or a save, or cast a spell: the full breakdown shows here.",
@@ -996,7 +1034,10 @@
       "situationalUnnamed": "Situational",
       "critRange": "Critical hit ({{from}}–{{to}})",
       "critPlaceholder": "Critical hit (placeholder)",
-      "race": "{{race}} (race)"
+      "race": "{{race}} (race)",
+      "specialization": "Specialization",
+      "point_blank": "Point blank",
+      "backstab": "Backstab"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -1078,7 +1119,10 @@
       "partSave": {
         "none": "no save",
         "negates": "save negates"
-      }
+      },
+      "spellFailed": "Spell failed: the slot is spent, nothing happens.",
+      "spellHeld": "No spell failure",
+      "failureRoll": "d100 {{roll}} against {{chance}}% (Wisdom)"
     },
     "itemHeading": "Used {{name}}",
     "effect": "Effect",
@@ -1120,6 +1164,7 @@
     "skill": {
       "proficiency": "Proficiency · d{{die}} under {{stat}}",
       "bardSkill": "Bard skill · d{{die}} under {{percent}}%",
+      "thiefSkill": "Thief skill · d{{die}} under {{percent}}%",
       "success": "Success",
       "failure": "Failure",
       "die": "d{{die}}",
@@ -1139,6 +1184,16 @@
       "damageIfHit": "Damage if it hits",
       "verdictTitle": "GM says",
       "verdictLabel": "The GM’s hit or miss"
+    },
+    "turn": {
+      "heading": "Cleric level {{level}}",
+      "target": "{{target}} or more on the d20",
+      "auto": "No roll: {{outcome}}",
+      "turned": "Turned",
+      "destroyed": "Destroyed",
+      "failed": "Failed",
+      "destroyedCount": "Destroyed: {{count}} ({{dice}})",
+      "turnedCount": "Turned: {{count}} ({{dice}})"
     }
   },
   "log": {
@@ -1180,7 +1235,11 @@
       "exposure": "Exposure",
       "xp_add": "XP",
       "xp_edit": "XP",
-      "xp_remove": "XP"
+      "xp_remove": "XP",
+      "level_up": "Level",
+      "spell_learn": "Learn",
+      "turn_undead": "Turning",
+      "skill_points": "Skills"
     },
     "status": {
       "active": "Active",
@@ -1233,7 +1292,9 @@
       "extraSlots": "extra slots {{slots}}",
       "item": "{{name}} spent ({{left}} left)",
       "attackHit": "hit (d20 {{d20}} vs AC {{ac}})",
-      "attackMiss": "missed (d20 {{d20}} vs AC {{ac}})"
+      "attackMiss": "missed (d20 {{d20}} vs AC {{ac}})",
+      "spellFailed": "spell failed (d100 {{roll}} ≤ {{chance}}%)",
+      "spellHeld": "no spell failure (d100 {{roll}} > {{chance}}%)"
     },
     "item": {
       "rolled": "Used {{name}}: {{dice}} = {{total}} ({{left}} left)",
@@ -1315,6 +1376,31 @@
       "removed": "XP removed: {{reason}} ({{total, number}} XP)",
       "edited": "XP edited: {{reason}}, {{from, number}} → {{to, number}} XP",
       "editedSame": "XP edited: {{reason}} ({{total, number}} XP)"
+    },
+    "levelUp": {
+      "rolled": "Level {{level}}: {{die}}{{con}}, max HP +{{gain}} ({{from}} → {{to}}){{manual}}",
+      "fixed": "Level {{level}}: max HP +{{gain}}, fixed gain ({{from}} → {{to}})",
+      "die": "d{{die}} {{rolled}}",
+      "dieRaised": "d{{die}} {{rolled}} (counts as {{counted}})",
+      "con": ", CON {{adjustment}}",
+      "manual": ", die entered"
+    },
+    "learn": {
+      "learned": "Learned: {{spell}} (d100 {{roll}} ≤ {{chance}}%)",
+      "failed": "Failed: {{spell}} (d100 {{roll}} > {{chance}}%), try again at level {{level}}"
+    },
+    "turn": {
+      "text": "Turning undead ({{undead}}): {{result}}, {{roll}}",
+      "turned": "{{count}} turned",
+      "destroyed": "{{count}} destroyed",
+      "destroyedTurned": "{{destroyed}} destroyed, {{turned}} turned",
+      "failed": "failed",
+      "roll": "d20 {{d20}} vs {{target}}",
+      "noRoll": "no roll"
+    },
+    "skillPoints": {
+      "text": "Skill points: {{changes}}",
+      "change": "{{name}} {{from}} → {{to}}"
     }
   },
   "critTable": {
@@ -1338,6 +1424,23 @@
     "none": "No weapons.",
     "detail": "{{sm}} · L {{l}}",
     "twoHanded": "two-handed",
+    "types": {
+      "none": "None",
+      "long_bow": "Long bow",
+      "short_bow": "Short bow",
+      "light_crossbow": "Light crossbow",
+      "heavy_crossbow": "Heavy crossbow",
+      "hand_crossbow": "Hand crossbow",
+      "dagger": "Dagger",
+      "dart": "Dart",
+      "sling": "Sling",
+      "short_sword": "Short sword",
+      "long_sword": "Long sword",
+      "other_melee": "Other melee weapon",
+      "other_thrown": "Other thrown weapon",
+      "other_missile": "Other missile weapon"
+    },
+    "specialized": "specialized",
     "kind": {
       "melee": "Melee",
       "missile": "Missile"
@@ -1356,7 +1459,14 @@
       "kind": "Kind",
       "twoHanded": "Two-handed",
       "ammoKind": "Ammo kind",
-      "ammoNone": "none (hurled)"
+      "ammoNone": "none (hurled)",
+      "weaponType": "Weapon type",
+      "weaponTypeHint": "The weapon type the class rules read (attacks per round)",
+      "specialized": "Specialized",
+      "specializedHint": "Fighter specialization: +1 to hit and +2 damage in melee or thrown; a launcher gains +2 to hit at point-blank range",
+      "errors": {
+        "not_allowed": "Only a fighter can specialize in a weapon."
+      }
     },
     "columns": {
       "name": "Name",
@@ -1420,7 +1530,11 @@
     },
     "languagesHint": "Separate languages with commas",
     "classes": {
-      "bard": "Bard"
+      "bard": "Bard",
+      "cleric": "Cleric",
+      "fighter": "Fighter",
+      "mage": "Mage",
+      "thief": "Thief"
     },
     "language": {
       "elfique": "Elvish",
@@ -1430,7 +1544,7 @@
     },
     "errors": {
       "too_long": "Too long.",
-      "out_of_range": "Enter a whole age between 0 and 10,000.",
+      "out_of_range": "Enter a whole age between 1 and 10,000.",
       "too_many": "Too many languages.",
       "empty": "A language is blank.",
       "duplicate": "A language is listed twice."
@@ -1504,8 +1618,28 @@
       "climb_walls": "Climb walls",
       "detect_noise": "Detect noise",
       "pick_pockets": "Pick pockets",
-      "read_languages": "Read languages"
-    }
+      "read_languages": "Read languages",
+      "open_locks": "Open Locks",
+      "find_remove_traps": "Find/Remove Traps",
+      "move_silently": "Move Silently",
+      "hide_in_shadows": "Hide in Shadows"
+    },
+    "thiefSkills": "Thief skills",
+    "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dexterity {{dexterity}}, armour {{armor}} ({{max}}% at most)",
+    "budget": {
+      "skill_points_total": "Skill points: {{points}} in all, at most {{limit}} at this level",
+      "skill_points_per_skill": "{{name}}: {{points}} points, at most {{limit}} at this level"
+    },
+    "spendPoints": "Spend",
+    "spendPointsHint": "Spend thieving skill points",
+    "pointsTitle": "Thieving skill points",
+    "pointsLead": "The total points in each skill. The budget at your level is a warning, not a limit.",
+    "pointsLabel": "Points in {{name}}",
+    "savePoints": "Save",
+    "cancelPoints": "Cancel",
+    "pointsOutOfRange": "Enter a whole number from {{min}} to {{max}}.",
+    "pointsRefused": "These points were refused.",
+    "unusable": "{{name}}: spend points to raise it before you can use it"
   },
   "dice": {
     "title": "Dice",
@@ -1586,7 +1720,17 @@
     "email_has_user": "This email address already has an account.",
     "already_invited": "This email address already has a pending invite.",
     "invite_not_found": "This invite is no longer pending.",
-    "user_not_found": "This user does not exist."
+    "user_not_found": "This user does not exist.",
+    "level_up_not_pending": "That level is no longer to roll: the sheet refreshes.",
+    "no_spellbook": "This class has no spellbook.",
+    "not_a_wizard_spell": "Only a wizard spell goes in the spellbook.",
+    "already_in_spellbook": "That spell is already in the spellbook.",
+    "spell_level_above_intelligence": "Spell level too high for the character's Intelligence.",
+    "spell_level_above_class": "Spell level beyond what the class can learn.",
+    "spellbook_level_full": "The spellbook already holds the most spells of that level this Intelligence allows.",
+    "spell_learn_failed_at_level": "Failed at this level: try again at the next level.",
+    "cannot_turn_undead": "This priest cannot turn that undead yet.",
+    "class_cannot_turn": "This class does not turn undead."
   },
   "lastShort": {
     "attack": "Attack",
@@ -1601,8 +1745,13 @@
       "passed": "passed",
       "failed": "failed",
       "success": "success",
-      "failure": "failed"
-    }
+      "failure": "failed",
+      "turned": "turned",
+      "destroyed": "destroyed",
+      "destroyedTurned": "destroyed, {{turned}} turned",
+      "spellFailed": "spell failed"
+    },
+    "turn": "Turning {{undead}}"
   },
   "database": {
     "unavailable": "The database is not answering. Retrying…",
@@ -1671,6 +1820,14 @@
     "retire": "Retire",
     "retireHint": "Retire {{name}}: hidden from your lists, nothing is deleted",
     "retireMenuHint": "Retire the character you play: hidden from your lists, nothing is deleted",
+    "rename": "Rename",
+    "renameMenuHint": "Rename the character you play",
+    "renameHint": "Save the new name of {{name}}",
+    "renameTitle": "Rename the character",
+    "details": "Details",
+    "detailsLead": "Optional; you can change them later on the card, by clicking the name.",
+    "raceDetail": "Race detail",
+    "raceDetailHint": "Free text, e.g. “wood elf”; the rules race is chosen above",
     "switchTitle": "Your characters",
     "newTitle": "New character",
     "retireTitle": "Retire the character",
@@ -1691,6 +1848,8 @@
     "abilities": "Abilities",
     "abilitiesLead": "The sheet's scores, racial adjustments included.",
     "abilityHint": "{{name}}: {{min}} to {{max}}",
+    "strExceptional": "Exceptional strength (18/xx)",
+    "strExceptionalHint": "A warrior's Strength 18 percentile, {{min}} to {{max}} (100 = 18/00); blank: none",
     "range": "{{min}} to {{max}}",
     "hpMax": "Max HP",
     "xp": "Starting XP",
@@ -1703,7 +1862,48 @@
       "out_of_range": "Enter a whole number from {{min}} to {{max}}.",
       "not_creatable": "This class cannot be created yet.",
       "unknown": "Pick one of the six races.",
-      "race_not_allowed": "This race cannot be a {{className}}."
+      "race_not_allowed": "This race cannot be a {{className}}.",
+      "not_allowed": "No exceptional strength for this character: only a warrior with Strength 18, not a halfling."
+    },
+    "skillPoints": "Thief skills",
+    "skillPointsLead": "The points spent in each skill; the server adds the base, race, Dexterity and armour.",
+    "skillArmor": "Armour worn",
+    "armors": {
+      "none": "None",
+      "leather": "Leather",
+      "padded_studded_leather": "Padded or studded leather",
+      "elven_chain": "Elven chain"
     }
+  },
+  "turning": {
+    "title": "Turn undead",
+    "hint": "Pick the undead type. The server rolls the d20 and the dice for how many.",
+    "hd": "{{hd}} HD",
+    "hdRange": "{{min}}–{{max}} HD",
+    "hdMore": "{{hd}}+ HD",
+    "target": "{{target}}+",
+    "turn": "Turn",
+    "outcome": {
+      "turn": "Turned (T)",
+      "destroy": "Destroyed (D)",
+      "destroy_more": "Destroyed, more turned (D*)",
+      "cannot": "Cannot turn"
+    },
+    "undead": {
+      "skeleton": "Skeleton",
+      "zombie": "Zombie",
+      "ghoul": "Ghoul",
+      "shadow": "Shadow",
+      "wight": "Wight",
+      "ghast": "Ghast",
+      "wraith": "Wraith",
+      "mummy": "Mummy",
+      "spectre": "Spectre",
+      "vampire": "Vampire",
+      "ghost": "Ghost",
+      "lich": "Lich",
+      "special": "Special"
+    },
+    "turnLabel": "Turn: {{undead}}"
   }
 }

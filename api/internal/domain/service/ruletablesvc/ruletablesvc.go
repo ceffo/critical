@@ -79,6 +79,9 @@ type Tables struct {
 	// levelLimits are the racial level limits of a format-5 catalogue (ADR
 	// 0021 step 11); nil for a format-3 or format-4 one.
 	levelLimits *LevelLimits
+	// spheres is the classes' sphere access of a format-6 catalogue (ADR
+	// 0021 step 12); nil before format 6.
+	spheres *SphereAccess
 }
 
 var _ Lookup = (*Tables)(nil)
@@ -214,6 +217,22 @@ func (t *Tables) WithLevelLimits(l *LevelLimits) *Tables {
 	out := *t
 	out.levelLimits = l
 	return &out
+}
+
+// WithSphereAccess returns a copy of t carrying the sphere access.
+func (t *Tables) WithSphereAccess(a *SphereAccess) *Tables {
+	out := *t
+	out.spheres = a
+	return &out
+}
+
+// SphereAccess returns the classes' sphere access (ADR 0030 step 15.1),
+// ErrNoSphereAccess when the catalogue is older than format 6.
+func (t *Tables) SphereAccess() (*SphereAccess, error) {
+	if t.spheres == nil {
+		return nil, ErrNoSphereAccess
+	}
+	return t.spheres, nil
 }
 
 // LevelLimits returns the racial level limits (DMG Table 7, ADR 0021 step

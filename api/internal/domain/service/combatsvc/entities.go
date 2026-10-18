@@ -17,6 +17,16 @@ const (
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
 	ModRace        ModifierKind = "race"         // the race's save bonus (ADR 0030 step 22.1), Detail = the race code
 	ModCrit        ModifierKind = "crit"         // house crit multiplier; the range is the roll's CritFrom..CritTo
+	// ModSpecialization is weapon specialization (ADR 0030 step 12): +1 to hit and +2 damage with a
+	// melee or thrown weapon, not magical; Detail is empty.
+	ModSpecialization ModifierKind = "specialization"
+	// ModPointBlank is a specialized launcher's +2 to hit at point-blank range (ADR 0030 step 12),
+	// an option of the attack request; Detail is empty.
+	ModPointBlank ModifierKind = "point_blank"
+	// ModBackstab is a thief's backstab (ADR 0030 step 19): +4 to hit and, as a dice_multiplier
+	// damage term, PHB Table 30's multiplier at the realized level. An option of the attack
+	// request; Detail is empty.
+	ModBackstab ModifierKind = "backstab"
 )
 
 // Modifier is a labeled bonus or penalty applied to a roll. ItemID is set
@@ -27,6 +37,9 @@ type Modifier struct {
 	Detail string
 	ItemID string
 	Value  int
+	// StrExceptional is a Strength modifier's 18/xx percentile (1 to 100,
+	// ADR 0030 step 9), 0 for none; the UI writes the notation.
+	StrExceptional int
 }
 
 // DamageTermKind is the place of a contribution in the damage formula
@@ -37,7 +50,7 @@ type DamageTermKind string
 // Damage formula terms.
 const (
 	TermSpells     DamageTermKind = "spells"          // × on the dice
-	TermDiceMult   DamageTermKind = "dice_multiplier" // × on the raw dice only (Power Gem ×2)
+	TermDiceMult   DamageTermKind = "dice_multiplier" // × on the raw dice only (Power Gem ×2, backstab)
 	TermWeapon     DamageTermKind = "weapon"          // + before the crit multiplier
 	TermMultiplier DamageTermKind = "multiplier"      // crit × on dice and weapon
 	TermStrength   DamageTermKind = "strength"        // + after the multipliers
@@ -52,6 +65,8 @@ type DamageTerm struct {
 	Detail string
 	ItemID string
 	Value  float64
+	// StrExceptional is as on Modifier.
+	StrExceptional int
 }
 
 // TargetSize picks the weapon's damage dice.
@@ -83,6 +98,12 @@ type AttackRequest struct {
 	TargetAC    *int
 	TargetSize  TargetSize
 	Situational *Situational
+	// PointBlank is the target at point-blank range (ADR 0030 step 12): a specialized launcher's
+	// option, refused for any other weapon. Not saved.
+	PointBlank bool
+	// Backstab is a thief's backstab (ADR 0030 step 19), refused for a class without it. Not
+	// saved: first-attack-only and surprise are the player's call.
+	Backstab bool
 }
 
 // Verdict is the GM's word on an attack against an unknown AC.
@@ -264,6 +285,8 @@ type Weapon struct {
 	TwoHanded   bool
 	AmmoKind    string // ammo item kind a missile weapon fires, e.g. "arrow"
 	Type        string // weapon type code (weaponsvc.Types); empty: none
+	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
+	Specialized bool
 }
 
 // FiresAmmo reports whether the weapon is a launcher (a bow) that spends

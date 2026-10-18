@@ -507,6 +507,103 @@ func (_c *MockCharacterStore_SetCurrentCharacter_Call) RunAndReturn(run func(con
 	return _c
 }
 
+// SetRealizedLevel provides a mock function with given fields: ctx, id, realizedLevel, hpMax
+func (_m *MockCharacterStore) SetRealizedLevel(ctx context.Context, id int64, realizedLevel int, hpMax int) error {
+	ret := _m.Called(ctx, id, realizedLevel, hpMax)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetRealizedLevel")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, int) error); ok {
+		r0 = rf(ctx, id, realizedLevel, hpMax)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_SetRealizedLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetRealizedLevel'
+type MockCharacterStore_SetRealizedLevel_Call struct {
+	*mock.Call
+}
+
+// SetRealizedLevel is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - realizedLevel int
+//   - hpMax int
+func (_e *MockCharacterStore_Expecter) SetRealizedLevel(ctx interface{}, id interface{}, realizedLevel interface{}, hpMax interface{}) *MockCharacterStore_SetRealizedLevel_Call {
+	return &MockCharacterStore_SetRealizedLevel_Call{Call: _e.mock.On("SetRealizedLevel", ctx, id, realizedLevel, hpMax)}
+}
+
+func (_c *MockCharacterStore_SetRealizedLevel_Call) Run(run func(ctx context.Context, id int64, realizedLevel int, hpMax int)) *MockCharacterStore_SetRealizedLevel_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int), args[3].(int))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_SetRealizedLevel_Call) Return(_a0 error) *MockCharacterStore_SetRealizedLevel_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_SetRealizedLevel_Call) RunAndReturn(run func(context.Context, int64, int, int) error) *MockCharacterStore_SetRealizedLevel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetSkillPoints provides a mock function with given fields: ctx, characterID, points
+func (_m *MockCharacterStore) SetSkillPoints(ctx context.Context, characterID int64, points map[string]int) error {
+	ret := _m.Called(ctx, characterID, points)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetSkillPoints")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, map[string]int) error); ok {
+		r0 = rf(ctx, characterID, points)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_SetSkillPoints_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetSkillPoints'
+type MockCharacterStore_SetSkillPoints_Call struct {
+	*mock.Call
+}
+
+// SetSkillPoints is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - points map[string]int
+func (_e *MockCharacterStore_Expecter) SetSkillPoints(ctx interface{}, characterID interface{}, points interface{}) *MockCharacterStore_SetSkillPoints_Call {
+	return &MockCharacterStore_SetSkillPoints_Call{Call: _e.mock.On("SetSkillPoints", ctx, characterID, points)}
+}
+
+func (_c *MockCharacterStore_SetSkillPoints_Call) Run(run func(ctx context.Context, characterID int64, points map[string]int)) *MockCharacterStore_SetSkillPoints_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(map[string]int))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_SetSkillPoints_Call) Return(_a0 error) *MockCharacterStore_SetSkillPoints_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_SetSkillPoints_Call) RunAndReturn(run func(context.Context, int64, map[string]int) error) *MockCharacterStore_SetSkillPoints_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateDetails provides a mock function with given fields: ctx, id, v
 func (_m *MockCharacterStore) UpdateDetails(ctx context.Context, id int64, v charactersvc.Details) error {
 	ret := _m.Called(ctx, id, v)

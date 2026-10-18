@@ -70,7 +70,7 @@ func newFixture(t *testing.T) *fixture {
 	// The limits are the character's derived slots (ADR 0030 step 8).
 	chars := mocks.NewMockCharacters(t)
 	chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
-		Return(&charactersvc.Character{Derived: charactersvc.Derived{Level: 15, SpellSlots: bardTable}}, nil).Maybe()
+		Return(&charactersvc.Character{Derived: charactersvc.Derived{RealizedLevel: 15, SpellSlots: bardTable}}, nil).Maybe()
 
 	svc, err := prepsvc.New(prepsvc.Deps{
 		Slots: f.slots, Spellbook: b, Effects: catalog(t), Items: f.items, Characters: chars, Log: f.log, Tx: f.tx,

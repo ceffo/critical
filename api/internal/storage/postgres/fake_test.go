@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
@@ -43,9 +44,11 @@ type tables struct {
 	Bard   map[string]storeq.UpsertBardSkillParams
 	// Spellbook is spellbook_entries, by spellbookKey.
 	Spellbook map[string]storeq.InsertSpellbookEntryParams
-	Texts     map[int64]localized.Text
-	Meta      *storeq.CatalogueVersionRow
-	Spells    []spellRow
+	// LearnFailures is spellbook_learn_failures (ADR 0030 step 20).
+	LearnFailures []storeq.LearnFailureRefsRow
+	Texts         map[int64]localized.Text
+	Meta          *storeq.CatalogueVersionRow
+	Spells        []spellRow
 	// Game state that refers to spells.
 	Snapshots   []snapshotRow
 	Log         []logRow
@@ -632,6 +635,20 @@ func (f *fakeStore) SnapshotsOf(_ context.Context, stateKey string) ([]storeq.Sn
 		}
 	}
 	return out, nil
+}
+
+func (f *fakeStore) SnapshotsWithPrefix(_ context.Context, prefix string) ([]storeq.SnapshotsWithPrefixRow, error) {
+	out := []storeq.SnapshotsWithPrefixRow{}
+	for _, s := range f.t.Snapshots {
+		if strings.HasPrefix(s.Key, prefix) {
+			out = append(out, storeq.SnapshotsWithPrefixRow{ID: s.ID, BeforeState: s.Before, AfterState: s.After})
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeStore) LearnFailureRefs(context.Context) ([]storeq.LearnFailureRefsRow, error) {
+	return append([]storeq.LearnFailureRefsRow{}, f.t.LearnFailures...), nil
 }
 
 func (f *fakeStore) SpellEntryPayloads(_ context.Context, kinds []string) ([]storeq.SpellEntryPayloadsRow, error) {

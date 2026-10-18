@@ -32,11 +32,14 @@ const charID = int64(1)
 func bard() *charactersvc.Character {
 	return &charactersvc.Character{
 		ID: charID, Str: 12, Dex: 17, Class: "bard", Race: "half_elf",
-		Derived: charactersvc.Derived{Level: 15, THAC0: 13, Saves: charactersvc.Saves{
+		Derived: charactersvc.Derived{RealizedLevel: 15, THAC0: 13, Saves: charactersvc.Saves{
 			ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14,
 		}},
 	}
 }
+
+// str12 is the test bard's sheet Strength as Aggregate receives it.
+var str12 = buffsvc.BaseStrength{StrScore: buffsvc.StrScore{Score: 12}}
 
 // strMods is "no buff effect" at effective STR str.
 func strMods(str int) buffsvc.BuffModifiers {
@@ -155,7 +158,7 @@ func TestResolveSavingThrow(t *testing.T) {
 				mods.SaveBonus = tt.saveBonus
 				mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Prayer", Value: tt.saveBonus}}
 			}
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil)
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil)
 			f.records()
 
 			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, tt.category)
@@ -203,7 +206,7 @@ func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
 		mods := strMods(12)
 		mods.SaveBonus = 1
 		mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Prayer", Value: 1}}
-		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil).Once()
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil).Once()
 		f.records()
 
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveRodStaffWand)
@@ -220,7 +223,7 @@ func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
 		f := newFixture(t)
 		f.withChar(dwarf())
 		f.dice.EXPECT().RollD20().Return(9).Once()
-		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil).Once()
 		f.records()
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 		require.NoError(t, err)
@@ -231,7 +234,7 @@ func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
 		f := newFixture(t)
 		f.withChar(dwarf())
 		f.dice.EXPECT().RollD20().Return(9).Once()
-		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil).Once()
 		f.records()
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveParaPoison)
 		require.NoError(t, err)
@@ -261,7 +264,7 @@ func TestResolveSavingThrow_NaturalOneAndTwentyArePlain(t *testing.T) {
 			mods := strMods(12)
 			mods.SaveBonus = tt.saveBonus
 			mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Luck", Value: tt.saveBonus}}
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil)
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil)
 			f.records()
 
 			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
@@ -288,7 +291,7 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 		f := newFixture(t)
 		f.withChar(bard())
 		f.dice.EXPECT().RollD20().Return(10)
-		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(buffsvc.BuffModifiers{}, boom)
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(buffsvc.BuffModifiers{}, boom)
 
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 		assert.Nil(t, res)
@@ -306,7 +309,7 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 		f := newFixture(t)
 		f.withChar(bard())
 		f.dice.EXPECT().RollD20().Return(10)
-		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil)
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil)
 		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, boom)
 
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)

@@ -347,6 +347,14 @@ supervisor's responsibility to monitor the ci and make sure it's in a good state
 working live with the user is never left idle while you wait on CI: as soon as it reports, prompt it
 with what it can do next, and tell it when the run it waits on is green.
 
+**Agents never wait on you unnoticed.** A report file only wakes you if the agent writes it; a developer
+working live with the user often tells the user instead. So whenever any agent is live, keep
+`.claude/scripts/fleet-watch.sh` running (`run_in_background`, one at a time): it wakes you when an
+agent is blocked, or ends a turn that speaks to the supervisor (ship, push, PR, merge) or writes its
+report. The same `Stop` hook blocks your turn while agents are live and no fleet watcher runs.
+(2026-10-18: a go-public developer committed a fix and told the user "the supervisor needs to ship
+it"; the supervisor waited on the report file and the developer sat idle, twice.)
+
 ## PR watch (never rely on remembering to check)
 
 Keep **exactly one** watcher running with `run_in_background` for all open PRs: a loop that fetches,

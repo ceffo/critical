@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stop hook: a supervisor session can't end its turn while CI it owns is pending with no watcher, or
-# red and not handled. CI = main's CI/Release/Promote runs and every open PR's checks
+# red and not handled, or while it has live agents and no fleet watcher (.claude/scripts/fleet-watch.sh). CI = main's CI/Release/Promote runs and every open PR's checks
 # (.claude/scripts/ci-state.sh). Other agents are not affected.
 #   pending + no live ci-watch.sh  -> blocked: arm .claude/scripts/ci-watch.sh (run_in_background)
 #   red, not in supervisor/ci-red-handled -> blocked: act on it, then record it there
@@ -23,6 +23,15 @@ elif [ $rc = 10 ] && [ $alive = no ]; then
   reason="CI is running and no watcher is armed:
 $state
 Start .claude/scripts/ci-watch.sh with run_in_background (it replaces any previous watcher) before ending the turn."
+fi
+# Live agents (anything but sup-*) need the fleet watcher: an agent that finished and waits on the
+# supervisor must wake it, whatever it wrote where.
+agents=$(herdr agent list 2>/dev/null | jq -r '[.result.agents[]|select(.name|startswith("sup-")|not)|.name]|join(" ")')
+fpid=$(cat "$W/fleet-watch.pid" 2>/dev/null)
+if [ -n "$agents" ] && ! { [ -n "$fpid" ] && kill -0 "$fpid" 2>/dev/null; }; then
+  reason="${reason:+$reason
+
+}Live agents ($agents) and no fleet watcher: start .claude/scripts/fleet-watch.sh with run_in_background before ending the turn. An agent waiting on you must never sit idle."
 fi
 [ -z "$reason" ] && exit 0
 jq -n --arg r "$reason" '{decision:"block",reason:$r}'

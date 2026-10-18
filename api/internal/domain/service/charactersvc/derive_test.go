@@ -342,12 +342,12 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, charactersvc.LevelUp{HPLevel: 15, Pending: []charactersvc.PendingLevel{}}, got.LevelUp)
 	})
-	// A character being created, or a stored one whose hp_level is still
-	// NULL (the level-up's boot step sets it): never the sheet's level.
-	t.Run("an unset max-HP level is the XP level, not the sheet's (step 7.5)", func(t *testing.T) {
+	// Only the create-time fallback: a stored character's NULL hp_level is
+	// resolved in the DAL to its sheet level (COALESCE(hp_level, level) in
+	// characterdal's characters.sql), so it never reaches Derive as 0.
+	t.Run("an unset max-HP level while creating is the derived level (step 7.5)", func(t *testing.T) {
 		c := kelsen()
 		c.HPLevel = 0
-		c.Sheet.Level = 12
 		r := mocks.NewMockRules(t)
 		expectKelsenRules(r, 1_293_418, 15)
 		got, err := charactersvc.Derive(c, 0, r)

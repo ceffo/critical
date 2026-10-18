@@ -98,8 +98,6 @@ func (h *harness) expectStartup(seedsDir string) {
 	search := h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once().NotBefore(imp)
 	h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once().NotBefore(search)
 	h.Auth.EXPECT().RootUser(mock.Anything).Return(nil, domain.ErrNotFound).Once().NotBefore(imp)
-	// Every max HP already has its level (ADR 0030 step 7.5): nothing to set.
-	h.Character.EXPECT().CharactersWithoutHPLevel(mock.Anything).Return(nil, nil).Once().NotBefore(imp)
 }
 
 func (h *harness) build(t *testing.T, cfg composition.Config) (*composition.BackingServices, error) {

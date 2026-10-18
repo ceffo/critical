@@ -44,12 +44,6 @@ type SVC interface {
 	// *domain.FieldError on "die" for an entered die that is out of range or
 	// not wanted (a fixed gain).
 	Roll(ctx context.Context, characterID int64, in RollInput) (*Result, error)
-	// SetUnsetLevels is step 7.5 for the characters stored before the max
-	// HP had a level (or imported since): each one's max HP is taken as set
-	// for the level its XP gives now, so no level it already reached is
-	// owed. Run once at boot; a character whose read fails is left unset
-	// (it owes nothing meanwhile) and tried again at the next boot.
-	SetUnsetLevels(ctx context.Context) error
 	// Restorers writes the hit points back when a roll's entry is popped (and
 	// again when it is redone), keyed by StateKey.
 	Restorers() map[string]actionlog.Restorer
@@ -96,12 +90,6 @@ type DAL interface {
 	// SetHitPoints sets the max HP and the level it is set for;
 	// domain.ErrCharacterNotFound for an unknown character.
 	SetHitPoints(ctx context.Context, id int64, hpMax, hpLevel int) error
-	// CharactersWithoutHPLevel lists the characters whose max HP has no
-	// level yet, by id.
-	CharactersWithoutHPLevel(ctx context.Context) ([]int64, error)
-	// SetUnsetHPLevel sets the level of a max HP that has none; a level
-	// already set is kept.
-	SetUnsetHPLevel(ctx context.Context, id int64, hpLevel int) error
 }
 
 // Characters reads the character with its derived block (the pending
@@ -154,30 +142,6 @@ func New(d Deps) (SVC, error) {
 
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
-
-// SetUnsetLevels sets each unset max HP level to the level of step 3, the
-// one the character's XP gives (ADR 0030 step 7.5), all in one transaction.
-// Nothing is logged: it is no game move and nothing to undo.
-func (s *service) SetUnsetLevels(ctx context.Context) error {
-	return s.tx.InTx(ctx, func(ctx context.Context) error {
-		ids, err := s.dal.CharactersWithoutHPLevel(ctx)
-		if err != nil {
-			return err
-		}
-		for _, id := range ids {
-			c, err := s.chars.GetCharacter(ctx, id)
-			if err != nil {
-				// A character the rules cannot derive yet (a class still
-				// to come) stays unset: it owes nothing meanwhile.
-				continue
-			}
-			if err := s.dal.SetUnsetHPLevel(ctx, id, c.Derived.Level); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
 
 // Roll reads the pending levels, rolls (or takes) the die and records the
 // gain, all in one transaction: two requests for the same level cannot both

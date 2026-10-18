@@ -158,30 +158,3 @@ func TestLevelUp_TwoLevelsAtOnceAreTwoDiceThroughTheDicePort(t *testing.T) {
 	_, err = bs.LevelUp.Roll(ctx, id, levelupsvc.RollInput{Level: 4})
 	require.ErrorIs(t, err, levelupsvc.ErrNotPending)
 }
-
-// ADR 0030 step 7.5 at boot: a character stored with no max HP level (an
-// import before it had one) gets the level its XP gives, not its sheet's
-// stored level (12 here, the XP gives 15): nothing already reached is owed,
-// and the next level the XP reaches is.
-func TestLevelUp_Step7_5_AStoredMaxHPWithNoLevelIsSetForTheXPLevelAtBoot(t *testing.T) {
-	ctx := context.Background()
-	m := memory.New()
-	id, err := m.AddCharacter(ctx, charactersvc.Character{
-		Name: "Imported", Class: "bard", Race: "half_elf", Str: 12, Dex: 17, Con: 16, Int: 14, Wis: 8, Cha: 16,
-		HPMax: 85, XPTotal: 1_293_418, Sheet: charactersvc.Sheet{Level: 12},
-	})
-	require.NoError(t, err)
-	bs, err := composition.Build(ctx, composition.MemoryStorage(m), fixtureConfig())
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
-
-	lu, maxHP, _ := levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{HPLevel: 15, Pending: []charactersvc.PendingLevel{}}, lu)
-	assert.Equal(t, 85, maxHP)
-
-	// The level is stored, not tracking the XP: crossing 1,320,000 owes level 16.
-	_, err = bs.XP.Add(ctx, id, xpsvc.EntryInput{Base: 30_000})
-	require.NoError(t, err)
-	lu, _, _ = levelUpOf(t, bs, id)
-	assert.Equal(t, []charactersvc.PendingLevel{{Level: 16, FixedGain: 2}}, lu.Pending)
-}

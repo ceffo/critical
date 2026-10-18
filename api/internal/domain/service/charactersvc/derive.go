@@ -86,9 +86,10 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 // gain above it (step 7.2). A level under the max HP's (an XP correction,
 // step 7.4) removes nothing: it is flagged.
 func levelUp(c *Character, level int, rules Rules) (LevelUp, error) {
-	// Step 7.5: no level set for the max HP (a character being created, or
-	// a stored one the level-up's boot step could not set yet) is the level
-	// of step 3, the one the entered max HP is for: nothing is owed.
+	// Step 7.5: no level set for the max HP (a character being created) is
+	// the level of step 3, the one the entered max HP is for. A stored
+	// character never gets here with 0: the DAL reads a NULL hp_level as its
+	// sheet level (the step 7.5 amendment in ADR 0030).
 	hpLevel := c.HPLevel
 	if hpLevel == 0 {
 		hpLevel = level

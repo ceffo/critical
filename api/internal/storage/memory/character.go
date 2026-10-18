@@ -41,6 +41,11 @@ func (c Characters) GetCharacter(ctx context.Context, id int64) (*charactersvc.C
 			return domain.ErrCharacterNotFound
 		}
 		ch = clone(ch)
+		// No level set for the max HP is the sheet's level, as the
+		// database's hp_level NULL (ADR 0030 step 7.5).
+		if ch.HPLevel == 0 {
+			ch.HPLevel = ch.Sheet.Level
+		}
 		out = &ch
 		return nil
 	})
@@ -56,35 +61,6 @@ func (c Characters) SetHitPoints(ctx context.Context, id int64, hpMax, hpLevel i
 			return domain.ErrCharacterNotFound
 		}
 		ch.HPMax, ch.HPLevel = hpMax, hpLevel
-		t.characters[id] = ch
-		return nil
-	})
-}
-
-// CharactersWithoutHPLevel implements levelupsvc.DAL: the characters whose
-// max HP has no level yet (0, the database's NULL; ADR 0030 step 7.5).
-func (c Characters) CharactersWithoutHPLevel(ctx context.Context) ([]int64, error) {
-	var out []int64
-	err := c.s.read(ctx, func(t *tables) error {
-		for _, id := range slices.Sorted(maps.Keys(t.characters)) {
-			if t.characters[id].HPLevel == 0 {
-				out = append(out, id)
-			}
-		}
-		return nil
-	})
-	return out, err
-}
-
-// SetUnsetHPLevel implements levelupsvc.DAL (ADR 0030 step 7.5): a level
-// already set is kept.
-func (c Characters) SetUnsetHPLevel(ctx context.Context, id int64, hpLevel int) error {
-	return c.s.write(ctx, func(t *tables) error {
-		ch, ok := t.characters[id]
-		if !ok || ch.HPLevel != 0 {
-			return nil
-		}
-		ch.HPLevel = hpLevel
 		t.characters[id] = ch
 		return nil
 	})

@@ -3,7 +3,6 @@ package levelupsvc_test
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -348,40 +347,4 @@ func TestRestorer_WritesTheHitPointsBack(t *testing.T) {
 	require.NoError(t, r.Restore(context.Background(), charID, json.RawMessage(`{"hpMax":40,"hpLevel":8}`)))
 	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`{"hpMax":0,"hpLevel":8}`)))
 	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`nope`)))
-}
-
-// ADR 0030 step 7.5: "The max HP entered for an imported or new character is
-// the max HP at its current level: hp_level starts at the level of step 3."
-// A max HP with no level yet is set for the level the XP gives (step 3),
-// never the sheet's stored level: no level already reached is owed. A
-// character the rules cannot read is left unset; nothing is logged and
-// nothing is rolled.
-func TestSetUnsetLevels_Step7_5_TheLevelTheXPGivesNotTheSheets(t *testing.T) {
-	ctx := context.Background()
-	f := newFixture(t)
-	f.dal.EXPECT().CharactersWithoutHPLevel(ctx).Return([]int64{3, 5, 8}, nil).Once()
-	imported := &charactersvc.Character{ID: 3, HPMax: 85,
-		Sheet: charactersvc.Sheet{Level: 12}, Derived: charactersvc.Derived{Level: 15}}
-	f.chars.EXPECT().GetCharacter(ctx, int64(3)).Return(imported, nil).Once()
-	f.chars.EXPECT().GetCharacter(ctx, int64(5)).Return(nil, domain.ErrCharacterNotFound).Once()
-	other := &charactersvc.Character{ID: 8, HPMax: 30,
-		Sheet: charactersvc.Sheet{Level: 9}, Derived: charactersvc.Derived{Level: 7}}
-	f.chars.EXPECT().GetCharacter(ctx, int64(8)).Return(other, nil).Once()
-	f.dal.EXPECT().SetUnsetHPLevel(ctx, int64(3), 15).Return(nil).Once()
-	f.dal.EXPECT().SetUnsetHPLevel(ctx, int64(8), 7).Return(nil).Once()
-
-	require.NoError(t, f.svc.SetUnsetLevels(ctx))
-	assert.Equal(t, 1, f.tx.n, "one transaction")
-}
-
-// A store error stops the step (the server does not start on it).
-func TestSetUnsetLevels_AStoreErrorStops(t *testing.T) {
-	ctx := context.Background()
-	f := newFixture(t)
-	boom := errors.New("pool closed")
-	f.dal.EXPECT().CharactersWithoutHPLevel(ctx).Return([]int64{3}, nil).Once()
-	f.chars.EXPECT().GetCharacter(ctx, int64(3)).Return(
-		&charactersvc.Character{ID: 3, Derived: charactersvc.Derived{Level: 15}}, nil).Once()
-	f.dal.EXPECT().SetUnsetHPLevel(ctx, int64(3), 15).Return(boom).Once()
-	require.ErrorIs(t, f.svc.SetUnsetLevels(ctx), boom)
 }

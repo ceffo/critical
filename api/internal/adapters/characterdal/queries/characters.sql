@@ -1,22 +1,12 @@
 -- level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
 -- step 24): compared with the derived values, never read as inputs.
--- hp_level is the level the max HP was last set for (ADR 0030 step 7); NULL is not set yet, which the
--- level-up service's boot step sets to the level the XP gives (step 7.5).
+-- hp_level is the level the max HP was last set for (ADR 0030 step 7); NULL is the sheet's level.
 -- name: GetCharacter :one
 SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages,
-       hp_level
+       COALESCE(hp_level, level)::BIGINT AS hp_level
 FROM characters WHERE id = $1;
-
--- The characters whose max HP has no level yet (ADR 0030 step 7.5), for the level-up's boot step.
--- name: CharactersWithoutHPLevel :many
-SELECT id FROM characters WHERE hp_level IS NULL ORDER BY id;
-
--- Sets the level of a max HP that has none yet (ADR 0030 step 7.5); a level already set is kept.
--- name: SetUnsetHPLevel :execrows
-UPDATE characters SET hp_level = sqlc.arg(hp_level)
-WHERE id = sqlc.arg(id) AND hp_level IS NULL;
 
 -- A level-up roll and its undo (ADR 0030 step 7.3): the max HP and the level it is set for.
 -- name: SetHitPoints :execrows

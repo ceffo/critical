@@ -224,52 +224,6 @@ func (_c *MockSVC_Roll_Call) RunAndReturn(run func(context.Context, int64, level
 	return _c
 }
 
-// SetUnsetLevels provides a mock function with given fields: ctx
-func (_m *MockSVC) SetUnsetLevels(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SetUnsetLevels")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockSVC_SetUnsetLevels_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetUnsetLevels'
-type MockSVC_SetUnsetLevels_Call struct {
-	*mock.Call
-}
-
-// SetUnsetLevels is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *MockSVC_Expecter) SetUnsetLevels(ctx interface{}) *MockSVC_SetUnsetLevels_Call {
-	return &MockSVC_SetUnsetLevels_Call{Call: _e.mock.On("SetUnsetLevels", ctx)}
-}
-
-func (_c *MockSVC_SetUnsetLevels_Call) Run(run func(ctx context.Context)) *MockSVC_SetUnsetLevels_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
-	})
-	return _c
-}
-
-func (_c *MockSVC_SetUnsetLevels_Call) Return(_a0 error) *MockSVC_SetUnsetLevels_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockSVC_SetUnsetLevels_Call) RunAndReturn(run func(context.Context) error) *MockSVC_SetUnsetLevels_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // NewMockSVC creates a new instance of MockSVC. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockSVC(t interface {

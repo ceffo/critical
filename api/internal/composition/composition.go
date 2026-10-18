@@ -319,12 +319,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	registerRestorers(logSvc, levelUpSvc.Restorers())
-	// A max HP with no level yet (a character stored before it had one, or
-	// seeded since) is set for the level its XP gives (ADR 0030 step 7.5).
-	if err := levelUpSvc.SetUnsetLevels(ctx); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("set the max HP levels: %w", err)
-	}
 	// Skill and ability checks change no state: their entries carry no
 	// snapshot, so there is no restorer to register. The ability check's
 	// score in effect comes from buffSvc (ADR 0028 step 2).

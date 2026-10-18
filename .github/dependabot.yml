@@ -5,6 +5,8 @@ updates:
     schedule:
       interval: weekly
     groups:
+      go-security:
+        applies-to: security-updates
       go-minor-patch:
         update-types: [minor, patch]
         # sqlc bumps change the generated DAL: each gets its own PR,
@@ -17,6 +19,9 @@ updates:
     schedule:
       interval: weekly
     groups:
+      # Security updates are otherwise one PR per package.
+      npm-security:
+        applies-to: security-updates
       npm-minor-patch:
         update-types: [minor, patch]
 

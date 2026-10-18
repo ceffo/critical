@@ -88,7 +88,7 @@ payment method is the user's decision only.
 **It stops when idle.** The cluster scales to zero (configured before this app used it): its machine
 stops with no connection and starts on the next one through `tournesol-db.flycast`, so the first
 request after an idle period waits a few seconds for PostgreSQL. Idle means no open connection for an
-hour (`FLY_SCALE_TO_ZERO=1h` on its machine): the app's pool closes connections unused for 5 minutes, so
+hour (`FLY_SCALE_TO_ZERO=1h` on its machine): the app's pool closes connections unused for 30 seconds, so
 quiet apps let it stop, and a server booting or a request arriving while it starts waits for it (up
 to 60 s per new connection) instead of failing (`docs/backend.md`, "Database"). Checked on staging, 2026-10-16: with the cluster
 stopped, a booting server got `EOF` twice, the connection started the cluster (event source `proxy` in

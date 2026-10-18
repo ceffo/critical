@@ -1671,7 +1671,9 @@
     "spell_level_above_intelligence": "Spell level too high for the character's Intelligence.",
     "spell_level_above_class": "Spell level beyond what the class can learn.",
     "spellbook_level_full": "The spellbook already holds the most spells of that level this Intelligence allows.",
-    "spell_learn_failed_at_level": "Failed at this level: try again at the next level."
+    "spell_learn_failed_at_level": "Failed at this level: try again at the next level.",
+    "cannot_turn_undead": "This priest cannot turn that undead yet.",
+    "class_cannot_turn": "This class does not turn undead."
   },
   "lastShort": {
     "attack": "Attack",

@@ -1671,7 +1671,9 @@
     "spell_level_above_intelligence": "Niveau de sort trop élevé pour l'Intelligence du personnage.",
     "spell_level_above_class": "Niveau de sort au-delà de ce que la classe peut apprendre.",
     "spellbook_level_full": "Le grimoire contient déjà le maximum de sorts de ce niveau pour cette Intelligence.",
-    "spell_learn_failed_at_level": "Sort raté à ce niveau : à retenter au niveau suivant."
+    "spell_learn_failed_at_level": "Sort raté à ce niveau : à retenter au niveau suivant.",
+    "cannot_turn_undead": "Ce prêtre ne peut pas encore repousser ce mort-vivant.",
+    "class_cannot_turn": "Cette classe ne repousse pas les morts-vivants."
   },
   "lastShort": {
     "attack": "Attaque",

@@ -145,7 +145,9 @@ one statement list (no parameters), so it may hold several statements; DDL is tr
 `TestMigrations_Step2_1_SchemaOnly`) and new files only: never rename, edit or delete an applied one.
 Data a schema change needs first (rows a `NOT NULL` would refuse) is a **data step**: Go code the run
 executes on its transaction just before that migration, only when the migration is pending
-(`migrationDataSteps`; today the owners before migration 004, "Per-character data").
+(`migrationDataSteps`; today the owners before migration 004, "Per-character data"). Its rules,
+including when a step and its queries may be deleted, are [ADR 0025](adr/0025-postgresql-storage.md)
+step 2.1.1.
 
 Before applying anything it refuses a database that records a migration the binary does not embed
 ([ADR 0024](adr/0024-deployment.md) step 6.2): the server exits with
@@ -453,9 +455,9 @@ character's row of the same id is unknown: not found).
   `(character_id, id)`, so two characters may hold the same weapon, item or skill id. Rows without an
   owner (stored before migration 002, or written by a release without it during a rolling deploy)
   are given to the seed character by the migration run itself, just before migration 004, in the
-  same transaction (`ownRows`, a data step of `Migrate`; migration files hold no data, ADR 0025 step
-  2.1): existing data keeps every count, position and field, with nothing to run by hand, and a
-  database that gets 002 and 004 in one run (production upgraded from a release before 002) starts.
+  same transaction (`ownRows`, a data step of `Migrate`, ADR 0025 step 2.1.1): existing data keeps
+  every count, position and field, with nothing to run by hand, and a
+  database that gets 002 and 004 in one run (one upgraded from a release before 002) starts.
   Rows without an owner and no seed character (the name in `character.json` changed) refuse the
   start, rather than belong to no one; nothing is migrated.
 - **Catalogue check at write time**: the spellbook seed is checked against the catalogue (a Wizard

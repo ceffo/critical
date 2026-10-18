@@ -203,7 +203,7 @@ func TestMigrationDataSteps_NameEmbeddedMigrations(t *testing.T) {
 }
 
 // The owner becomes required (ownerKeysMigration) with every row owned first, on a database
-// that gets migration 002 and the owner keys in one run (production upgraded from a release
+// that gets migration 002 and the owner keys in one run (a database upgraded from a release
 // before owners) and on one rows a release without owners wrote to during the deploy: the seed
 // character owns them all before the schema change, which would refuse a row without one.
 func TestMigrate_RowsWithoutOwnerAreOwnedBeforeTheOwnerKeys(t *testing.T) {

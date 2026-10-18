@@ -30,6 +30,9 @@ SELECT id FROM characters WHERE name = $1 ORDER BY id LIMIT 1;
 -- Rows from before each character owned its equipment (migration 002), or written by a release
 -- without it during a rolling deploy, have no owner: the migration run gives them to the seed
 -- character just before migration 004 makes the owner required (ownRows). Afterwards none exist.
+-- These queries are typed against the latest schema but run on the schema before 004: a migration
+-- that changes the columns they touch deletes them with ownRows instead, once every environment is
+-- past 004 (ADR 0025 step 2.1.1).
 -- name: CountUnowned :one
 SELECT ((SELECT COUNT(*) FROM weapons WHERE character_id IS NULL)
       + (SELECT COUNT(*) FROM items WHERE character_id IS NULL)

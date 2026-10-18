@@ -4,8 +4,8 @@
 --
 -- Every row has an owner when this runs: the migration run gives the rows without one to the seed
 -- character just before it, in the same transaction (storage/postgres ownerKeysMigration; a data
--- step in Go, since migrations hold no data, ADR 0025 step 2.1). That covers a database that gets
--- 002 and this file in one run (production upgraded from a release before 002).
+-- step in Go, since migrations hold no data, ADR 0025 step 2.1.1). That covers a database that gets
+-- 002 and this file in one run (one upgraded from a release before 002).
 --
 -- Across the rolling deploy (ADR 0024 step 5.2) the release before this one keeps working when it
 -- writes character_id (every release with migration 002): its upserts conflict on

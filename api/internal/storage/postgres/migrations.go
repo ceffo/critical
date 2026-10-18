@@ -41,7 +41,7 @@ type migrationTx interface {
 }
 
 // dataStep is data a migration needs before its schema change, written in Go on the run's
-// transaction: migration files hold no data (ADR 0025 step 2.1).
+// transaction: migration files hold no data (ADR 0025 step 2.1.1).
 type dataStep func(ctx context.Context, q storeq.Querier) error
 
 // ownerKeysMigration makes character_id required on weapons, items, proficiencies and bard

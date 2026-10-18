@@ -186,7 +186,7 @@ test("admin disables a logged-in user: session ends, enable, log in again", asyn
   const login = await player.request.post(`${stack.webUrl}/api/auth/dev`, {
     data: { email: "dan@example.com" },
   });
-  const dan = (await login.json()) as Account;
+  expect(login.ok()).toBe(true);
   // Dan is a second admin, with the admin page open.
   await pp.goto("/admin");
   await expect(pp.getByTestId("admin-user")).toHaveCount(2);

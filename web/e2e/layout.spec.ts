@@ -1675,7 +1675,7 @@ test("group headings: one shared band, French, dark and light", async ({
     ["Clair", "light", "Parchemin"],
   ] as const) {
     await chooseSetting(page, mode);
-    await chooseTheme(page, which, theme);
+    await chooseTheme(page, theme);
     await page.waitForTimeout(150); // let colour transitions settle
     const tag = `${which}-${theme.toLowerCase()}`;
     await rail.getByRole("button", { name: "Agir", exact: true }).click();

@@ -187,6 +187,52 @@ async function voidFrench(page: Page, text: string) {
   await expect(entry).toHaveAttribute("data-status", "voided");
 }
 
+test("Out of combat the timeline has no round numbers and the rows do not move; Next round and End combat switch (French)", async ({
+  page,
+  stack,
+}) => {
+  const res = await fetch(`${stack.apiUrl}/api/buffs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: "e2e Long",
+      duration: 100,
+      charges: 0,
+      effects: {},
+    }),
+  });
+  expect(res.ok).toBe(true);
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "critical.settings.v1",
+      JSON.stringify({ lang: "fr", mode: "system", amb: "arcane" }),
+    ),
+  );
+  await openDashboard(page);
+  const track = page.getByTestId("effects-track");
+  const numbers = track.getByText(/^T\d+$/);
+  const row = buffBadge(page, "e2e Long");
+  await expect(numbers).toHaveCount(0);
+  await expect(track.locator('[aria-current="step"]')).toHaveCount(0);
+  const rest = await row.boundingBox();
+  await snap(page, "timeline-out-of-combat-fr");
+
+  await page.getByRole("button", { name: "Tour suivant" }).click();
+  await expect(numbers.first()).toBeVisible();
+  await expect(track.locator('[aria-current="step"]')).toHaveText("T1");
+  expect(await row.boundingBox()).toEqual(rest);
+  await snap(page, "timeline-in-combat-fr");
+
+  await page.getByRole("button", { name: "Autres actions du tour" }).click();
+  await page.getByRole("menuitem", { name: "Fin du combat" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Confirmer" })
+    .click();
+  await expect(numbers).toHaveCount(0);
+  expect(await row.boundingBox()).toEqual(rest);
+});
+
 test("Time passes in French: '1,5' previews 90 rounds; a later Next Round must be popped first", async ({
   page,
   stack,
@@ -282,10 +328,16 @@ test("Next round moves the timeline window; a 1-turn effect shows the warning, t
   // Five rounds: the current column follows the turn, the window keeps two rounds of history.
   for (let i = 0; i < 5; i++) {
     const turn = await currentRound(page);
-    await expect(current).toHaveText(`R${turn}`);
-    await expect(track.getByText(/^R\d+$/).first()).toHaveText(
-      `R${turn === 0 ? 0 : Math.max(1, turn - 2)}`,
-    );
+    if (turn === 0) {
+      // Out of combat no round is counted: no numbers, no current column (ADR 0027 step 4.3).
+      await expect(track.getByText(/^R\d+$/)).toHaveCount(0);
+      await expect(current).toHaveCount(0);
+    } else {
+      await expect(current).toHaveText(`R${turn}`);
+      await expect(track.getByText(/^R\d+$/).first()).toHaveText(
+        `R${Math.max(1, turn - 2)}`,
+      );
+    }
     await nextTurn(page);
     await expect.poll(() => currentRound(page)).toBe(turn + 1);
   }

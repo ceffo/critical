@@ -42,6 +42,9 @@ type ResultDTO struct {
 	Chance         int    `json:"chance"`
 	Learned        bool   `json:"learned"`
 	CharacterLevel int    `json:"characterLevel"`
+	// RetryLevel is the realized level from which a failed spell may be
+	// tried again; 0 when learned.
+	RetryLevel int `json:"retryLevel"`
 }
 
 // Learn handles POST /api/character/spellbook/learn.
@@ -63,6 +66,7 @@ func Learn(charID CharacterIDFunc, svc learner) render.HandlerFunc {
 		render.OK(r.Context(), w, ResultDTO{
 			SpellID: res.SpellID, SpellLevel: res.SpellLevel, Roll: res.Roll, Chance: res.Chance,
 			Learned: res.Learned, CharacterLevel: res.CharacterLevel,
+			RetryLevel: res.RetryLevel,
 		})
 		return nil
 	}

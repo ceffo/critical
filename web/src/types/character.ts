@@ -109,6 +109,9 @@ export interface LearnResult {
   learned: boolean;
   /** The realized level the roll was made at: a failure is refused until a higher one. */
   characterLevel: number;
+  /** The realized level from which a failed spell may be tried again, given by the server
+   * (the next one, ADR 0030 step 20.3); 0 when learned. */
+  retryLevel: number;
 }
 
 export interface Character {

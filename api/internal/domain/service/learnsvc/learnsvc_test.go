@@ -185,9 +185,11 @@ func TestLearn_Step20_2_OneD100AtOrUnderTheChance(t *testing.T) {
 		before   string
 		after    string
 		failedAt int
+		retry    int
 	}{
-		{60, true, `{"spellId":"new3","known":false,"failedAtLevel":0}`, `{"spellId":"new3","known":true,"failedAtLevel":0}`, 0},
-		{61, false, `{"spellId":"new3","known":false,"failedAtLevel":0}`, `{"spellId":"new3","known":false,"failedAtLevel":5}`, 5},
+		{60, true, `{"spellId":"new3","known":false,"failedAtLevel":0}`, `{"spellId":"new3","known":true,"failedAtLevel":0}`, 0, 0},
+		// A failure at level 5 may be tried again from level 6, the next one.
+		{61, false, `{"spellId":"new3","known":false,"failedAtLevel":0}`, `{"spellId":"new3","known":false,"failedAtLevel":5}`, 5, 6},
 	} {
 		t.Run(map[bool]string{true: "learned", false: "failed"}[tc.learned], func(t *testing.T) {
 			f := newFixture(t)
@@ -212,11 +214,12 @@ func TestLearn_Step20_2_OneD100AtOrUnderTheChance(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, &learnsvc.Result{
 				SpellID: "new3", SpellLevel: 3, Roll: tc.roll, Chance: 60, Learned: tc.learned, CharacterLevel: 5,
+				RetryLevel: tc.retry,
 			}, res)
 			assert.Equal(t, 1, f.tx.n, "one transaction")
 			assert.Equal(t, actionlog.KindSpellLearn, got.Kind)
 			assert.JSONEq(t, `{"spellId":"new3","spellLevel":3,"roll":`+itoa(tc.roll)+`,"chance":60,"learned":`+
-				map[bool]string{true: "true", false: "false"}[tc.learned]+`,"characterLevel":5}`, string(got.Payload))
+				map[bool]string{true: "true", false: "false"}[tc.learned]+`,"characterLevel":5,"retryLevel":`+itoa(tc.retry)+`}`, string(got.Payload))
 			require.Len(t, got.Snapshots, 1)
 			assert.Equal(t, "spellbook:new3", got.Snapshots[0].Key)
 			assert.JSONEq(t, tc.before, string(got.Snapshots[0].Before))

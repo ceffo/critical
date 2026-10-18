@@ -28,6 +28,7 @@ type record struct {
 	Chance         int    `json:"chance"`
 	Learned        bool   `json:"learned"`
 	CharacterLevel int    `json:"characterLevel"`
+	RetryLevel     int    `json:"retryLevel"`
 }
 
 func stateKey(spellID string) string { return StateFamily + ":" + spellID }

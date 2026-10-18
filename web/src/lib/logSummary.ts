@@ -491,7 +491,7 @@ function learnText(
   const vars = { spell: spellName(p.spellId), roll: p.roll, chance: p.chance };
   return p.learned
     ? t("log.learn.learned", vars)
-    : t("log.learn.failed", { ...vars, level: p.characterLevel + 1 });
+    : t("log.learn.failed", { ...vars, level: p.retryLevel });
 }
 
 /** The payload of a level_up entry (levelupsvc record, ADR 0030 step 7.3), or null. */

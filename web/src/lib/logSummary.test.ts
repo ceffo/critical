@@ -1383,6 +1383,7 @@ describe("spell learn entries", () => {
       chance: 65,
       learned: true,
       characterLevel: 3,
+      retryLevel: 0,
       ...over,
     });
 
@@ -1390,9 +1391,13 @@ describe("spell learn entries", () => {
     const fr = await makeT("fr");
     const en = await makeT("en");
     expect(entryText(roll({}), fr)).toBe("Appris : sleep (d100 37 ≤ 65 %)");
-    expect(entryText(roll({ roll: 72, learned: false }), fr)).toBe(
-      "Échec : sleep (d100 72 > 65 %), à retenter au niveau 4",
-    );
+    expect(
+      entryText(roll({ roll: 72, learned: false, retryLevel: 4 }), fr),
+    ).toBe("Échec : sleep (d100 72 > 65 %), à retenter au niveau 4");
     expect(entryText(roll({}), en)).toBe("Learned: sleep (d100 37 ≤ 65%)");
+    // The level comes from the server's retryLevel, never worked out here.
+    expect(entryText(roll({ learned: false, retryLevel: 6 }), fr)).toMatch(
+      /au niveau 6$/,
+    );
   });
 });

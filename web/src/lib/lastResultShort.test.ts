@@ -261,6 +261,7 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
       chance: 65,
       learned: true,
       characterLevel: 1,
+      retryLevel: 0,
     }),
     value: null,
     en: "Learn",

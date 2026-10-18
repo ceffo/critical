@@ -459,7 +459,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 
     _(As built, 2026-10-18)_ `POST /api/character/spellbook/learn {spellId}` (learnsvc) answers the
     roll's breakdown (`spellId`, `spellLevel`, `roll`, `chance`, `learned`, `characterLevel`, the
-    realized level). The limits are the character's derived `spellbook` block
+    realized level, and `retryLevel`, the realized level from which a failed spell may be tried
+    again: the next one, worked out by the server; 0 when learned). The limits are the character's derived `spellbook` block
     (`classMaxSpellLevel`, `intMaxSpellLevel`, `learnChance`, `maxSpellsPerLevel`, `noMaximum`;
     null for a class without a spellbook), so the web shows them without computing them. Which
     classes keep a spellbook and their highest level is a `ruletablesvc` constant (mage 9th, bard
@@ -470,7 +471,10 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     realized level and blocks while the realized level is at or under it (an undone level-up keeps
     it blocked). The roll is a `spell_learn` journal entry whose `spellbook:<spell key>` snapshot
     (in the spellbook, failed at a level) the undo writes back: a success's undo takes the spell
-    out, a failure's lifts its block. A learned spell goes at the end of the spellbook. The web
+    out, a failure's lifts its block. The catalogue import's reference scan (ADR 0021 step 5.4.3)
+    counts the spells held in `spellbook_learn_failures`, in the `spellbook:<key>` snapshots and in
+    `spell_learn` payloads. The web shows the answer (with the server's `retryLevel`) while the
+    roll's journal entry is the top one. A learned spell goes at the end of the spellbook. The web
     offers **Apprendre** in the lookup's detail on a wizard spell, then the roll's answer or
     "Dans le grimoire". Settled: the bard's spellbook gets the same rules (the user's "yes to all").
     Tests: `TestIntelligenceFor_Step20_Table4`, `TestSpellbookMaxLevel_Step20_1` (ruletablesadpt),

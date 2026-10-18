@@ -67,6 +67,10 @@ type Result struct {
 	// CharacterLevel is the realized level the roll was made at (a failure
 	// blocks the spell until a higher one).
 	CharacterLevel int
+	// RetryLevel is the realized level from which a failed spell may be
+	// tried again, the next one (PHB: "until he advances to the next
+	// level"); 0 when the spell was learned.
+	RetryLevel int
 }
 
 // Spell is what the rules read of a catalogue spell.
@@ -175,6 +179,7 @@ func (s *service) Learn(ctx context.Context, characterID int64, spellID string) 
 		after := spellState{SpellID: spellID, Known: res.Learned}
 		if !res.Learned {
 			after.FailedAtLevel = level
+			res.RetryLevel = level + 1
 		}
 		if err := s.write(ctx, c.ID, spellID, after); err != nil {
 			return err

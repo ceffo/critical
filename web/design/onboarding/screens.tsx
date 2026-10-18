@@ -177,7 +177,9 @@ export function StepClass() {
             <div className="flex items-center gap-2 [&_svg]:size-5">
               {CLASS_ICONS[c.id]}
               <span className="text-key">{tr(c.fr, c.en)}</span>
-              <span className="ml-auto text-label text-ink-muted">{tr(c.groupFr, c.groupEn)}</span>
+              <span className="ml-auto text-label text-ink-muted">
+                {tr(c.groupFr, c.groupEn)}
+              </span>
             </div>
             <Row k={tr("Dé de vie", "Hit die")} v={c.hd} />
             <Row k={tr("Minimums", "Minimums")} v={tr(c.reqFr, c.reqEn)} />
@@ -247,10 +249,19 @@ export function StepRace() {
                 </span>
               )}
             </div>
-            <Row k={tr("Ajustements", "Adjustments")} v={tr(r.adjFr, r.adjEn)} />
-            <Row k={tr("Langue maternelle", "Native language")} v={tr(r.langFr, r.langEn)} />
+            <Row
+              k={tr("Ajustements", "Adjustments")}
+              v={tr(r.adjFr, r.adjEn)}
+            />
+            <Row
+              k={tr("Langue maternelle", "Native language")}
+              v={tr(r.langFr, r.langEn)}
+            />
             <Row k={tr("Taille", "Height")} v={tr(r.hFr, r.hEn)} />
-            <Row k={tr("Âge de départ", "Starting age")} v={tr(r.ageFr, r.ageEn)} />
+            <Row
+              k={tr("Âge de départ", "Starting age")}
+              v={tr(r.ageFr, r.ageEn)}
+            />
           </Choice>
         ))}
       </div>
@@ -315,7 +326,10 @@ export function StepScores() {
             {ROLLS.map((r, i) => {
               const ab = ABILITIES.find((a) => a.id === r.to)!;
               return (
-                <li key={i} className="flex items-center gap-2 rounded-md bg-raised px-2 py-1">
+                <li
+                  key={i}
+                  className="flex items-center gap-2 rounded-md bg-raised px-2 py-1"
+                >
                   <span className="w-5 text-label text-ink-muted">{i + 1}</span>
                   <span className="flex gap-1">
                     {r.dice.map((d, j) => (
@@ -341,7 +355,9 @@ export function StepScores() {
           <table className="w-full text-body">
             <thead>
               <tr className="text-left text-label text-ink-muted">
-                <th className="pb-1 font-medium">{tr("Caractéristique", "Ability")}</th>
+                <th className="pb-1 font-medium">
+                  {tr("Caractéristique", "Ability")}
+                </th>
                 <th className="pb-1 font-medium">{tr("Tirage", "Roll")}</th>
                 <th className="pb-1 font-medium">{tr("Race", "Race")}</th>
                 <th className="pb-1 font-medium">{tr("Score", "Score")}</th>
@@ -441,7 +457,10 @@ export function StepHp() {
           <Field
             label={tr("PV max", "Max HP")}
             value={String(sum)}
-            hint={tr("Le tirage remplit la case ; vous pouvez la changer.", "The roll fills the box; you may change it.")}
+            hint={tr(
+              "Le tirage remplit la case ; vous pouvez la changer.",
+              "The roll fills the box; you may change it.",
+            )}
           />
         </Group>
         <Group
@@ -471,17 +490,30 @@ export function StepHp() {
                   <td className="text-ink-muted tabular-nums">+{s.race}</td>
                   <td className="text-ink-muted tabular-nums">+{s.dex}</td>
                   <td>
-                    <span className={cn(fieldClass, "flex w-14 items-center tabular-nums")}>{s.points}</span>
+                    <span
+                      className={cn(
+                        fieldClass,
+                        "flex w-14 items-center tabular-nums",
+                      )}
+                    >
+                      {s.points}
+                    </span>
                   </td>
-                  <td className="text-key tabular-nums">{s.base + s.race + s.dex + s.points} %</td>
+                  <td className="text-key tabular-nums">
+                    {s.base + s.race + s.dex + s.points} %
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
           <div className="flex flex-wrap items-end gap-6">
             <div className="flex flex-col gap-1">
-              <span className={labelClass}>{tr("Armure portée", "Armour worn")}</span>
-              <span className={cn(fieldClass, "flex w-44 items-center")}>{tr("Cuir", "Leather")}</span>
+              <span className={labelClass}>
+                {tr("Armure portée", "Armour worn")}
+              </span>
+              <span className={cn(fieldClass, "flex w-44 items-center")}>
+                {tr("Cuir", "Leather")}
+              </span>
             </div>
             <p className="min-w-0 flex-1 text-label text-ink-muted">
               {tr(
@@ -521,7 +553,9 @@ function RollField({
     <div className="flex min-w-0 flex-col gap-1">
       <span className={labelClass}>{label}</span>
       <div className="flex items-center gap-2">
-        <span className={cn(fieldClass, "flex w-20 items-center tabular-nums")}>{value}</span>
+        <span className={cn(fieldClass, "flex w-20 items-center tabular-nums")}>
+          {value}
+        </span>
         <span className="text-body text-ink-muted">{unit}</span>
         <Button variant="quiet" size="sm">
           <DiceFive aria-hidden />
@@ -542,10 +576,18 @@ export function StepIdentity() {
       title={tr("Identité", "Identity")}
       lead={tr("Qui est votre personnage.", "Who your character is.")}
       nextBlocked
-      footNote={tr("Choisissez un alignement permis pour continuer.", "Pick an allowed alignment to go on.")}
+      footNote={tr(
+        "Choisissez un alignement permis pour continuer.",
+        "Pick an allowed alignment to go on.",
+      )}
     >
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-6 gap-y-5">
-        <Field label={tr("Nom", "Name")} value={CHAR.name} wide className="col-span-2 max-w-[32rem]" />
+        <Field
+          label={tr("Nom", "Name")}
+          value={CHAR.name}
+          wide
+          className="col-span-2 max-w-[32rem]"
+        />
         <Group title={tr("Alignement", "Alignment")}>
           <div className="grid grid-cols-3 gap-1.5">
             {ALIGNMENTS.map((a, i) => (
@@ -560,7 +602,13 @@ export function StepIdentity() {
                       : "text-ink-muted shadow-[inset_0_0_0_1px_var(--border)]",
                 )}
               >
-                {!a.bard && <Prohibit aria-hidden weight="bold" className="size-3.5 shrink-0" />}
+                {!a.bard && (
+                  <Prohibit
+                    aria-hidden
+                    weight="bold"
+                    className="size-3.5 shrink-0"
+                  />
+                )}
                 {tr(a.fr, a.en)}
               </span>
             ))}
@@ -573,9 +621,15 @@ export function StepIdentity() {
           </Note>
         </Group>
         <Group title={tr("Sexe", "Sex")}>
-          <Seg chosen={1} options={[tr("Masculin", "Male"), tr("Féminin", "Female")]} />
+          <Seg
+            chosen={1}
+            options={[tr("Masculin", "Male"), tr("Féminin", "Female")]}
+          />
           <p className="text-label text-ink-muted">
-            {tr("Fixe les fourchettes de taille et de poids.", "Sets the height and weight ranges.")}
+            {tr(
+              "Fixe les fourchettes de taille et de poids.",
+              "Sets the height and weight ranges.",
+            )}
           </p>
         </Group>
         <Group
@@ -584,7 +638,10 @@ export function StepIdentity() {
           right={
             <span className="flex items-center gap-1 text-body text-warning">
               <Warning aria-hidden weight="bold" className="size-4" />
-              {tr(`${extra} en plus · 3 permises`, `${extra} extra · 3 allowed`)}
+              {tr(
+                `${extra} en plus · 3 permises`,
+                `${extra} extra · 3 allowed`,
+              )}
             </span>
           }
         >
@@ -592,7 +649,9 @@ export function StepIdentity() {
             <span className="flex min-h-7 items-center gap-1.5 rounded-md bg-raised px-2 py-1 text-body">
               <Lock aria-hidden className="size-3.5" />
               {tr("Commun", "Common")}
-              <span className="text-label text-ink-muted">{tr("maternelle", "native")}</span>
+              <span className="text-label text-ink-muted">
+                {tr("maternelle", "native")}
+              </span>
             </span>
             {LANGUAGES.map((l) => (
               <span
@@ -603,7 +662,9 @@ export function StepIdentity() {
                   !l.race && !l.on && "text-ink-muted",
                 )}
               >
-                {l.on && <Check aria-hidden weight="bold" className="size-3.5" />}
+                {l.on && (
+                  <Check aria-hidden weight="bold" className="size-3.5" />
+                )}
                 {tr(l.fr, l.en)}
               </span>
             ))}
@@ -627,27 +688,50 @@ export function StepIdentity() {
               label={tr("Taille", "Height")}
               value={tr("170", "5′7″")}
               unit={tr("cm", "")}
-              range={tr("Demi-elfe féminin : 152 – 178 cm", "Female half-elf: 5′0″ – 5′10″")}
-              roll={tr("58 po + 2d6 (4 + 5) = 67 po", "58 in + 2d6 (4 + 5) = 67 in")}
+              range={tr(
+                "Demi-elfe féminin : 152 – 178 cm",
+                "Female half-elf: 5′0″ – 5′10″",
+              )}
+              roll={tr(
+                "58 po + 2d6 (4 + 5) = 67 po",
+                "58 in + 2d6 (4 + 5) = 67 in",
+              )}
             />
             <RollField
               label={tr("Poids", "Weight")}
               value={tr("48", "105")}
               unit={tr("kg", "lb")}
-              range={tr("Demi-elfe féminin : 39 – 55 kg", "Female half-elf: 88 – 121 lb")}
-              roll={tr("85 lb + 3d12 (7 + 2 + 11) = 105 lb", "85 lb + 3d12 (7 + 2 + 11) = 105 lb")}
+              range={tr(
+                "Demi-elfe féminin : 39 – 55 kg",
+                "Female half-elf: 88 – 121 lb",
+              )}
+              roll={tr(
+                "85 lb + 3d12 (7 + 2 + 11) = 105 lb",
+                "85 lb + 3d12 (7 + 2 + 11) = 105 lb",
+              )}
             />
             <RollField
               label={tr("Âge", "Age")}
               value="19"
               unit={tr("ans", "years")}
               range={tr("Demi-elfe : 16 – 185 ans", "Half-elf: 16 – 185 years")}
-              roll={tr("15 ans + 1d6 (4) = 19 ans", "15 years + 1d6 (4) = 19 years")}
+              roll={tr(
+                "15 ans + 1d6 (4) = 19 ans",
+                "15 years + 1d6 (4) = 19 years",
+              )}
             />
           </div>
         </Group>
-        <Field label={tr("Cheveux", "Hair")} value={tr("Auburn, tressés", "Auburn, braided")} wide />
-        <Field label={tr("Yeux", "Eyes")} value={tr("Vert d'eau", "Sea green")} wide />
+        <Field
+          label={tr("Cheveux", "Hair")}
+          value={tr("Auburn, tressés", "Auburn, braided")}
+          wide
+        />
+        <Field
+          label={tr("Yeux", "Eyes")}
+          value={tr("Vert d'eau", "Sea green")}
+          wide
+        />
       </div>
     </CreationFrame>
   );
@@ -655,12 +739,22 @@ export function StepIdentity() {
 
 // --- Step 6: review -----------------------------------------------------------------------
 
-function ReviewBlock({ title, children }: { title: string; children: ReactNode }) {
+function ReviewBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
   return (
     <section className="flex min-w-0 flex-col gap-2 rounded-lg bg-raised p-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="section-label">{title}</h3>
-        <Button variant="ghost" size="icon-sm" aria-label={tr("Modifier", "Edit")}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={tr("Modifier", "Edit")}
+        >
           <PencilSimple aria-hidden />
         </Button>
       </div>
@@ -692,7 +786,10 @@ export function StepReview() {
         "Check, then create: the character becomes the one you play.",
       )}
       next={tr("Créer", "Create")}
-      footNote={tr("1 avertissement, rien de bloquant.", "1 warning, nothing blocking.")}
+      footNote={tr(
+        "1 avertissement, rien de bloquant.",
+        "1 warning, nothing blocking.",
+      )}
     >
       <Note kind="warning">
         {tr(
@@ -705,7 +802,13 @@ export function StepReview() {
           <Dl
             rows={[
               [tr("Nom", "Name"), CHAR.name],
-              [tr("Classe", "Class"), tr("Barde · niveau 5 (10 000 XP)", "Bard · level 5 (10,000 XP)")],
+              [
+                tr("Classe", "Class"),
+                tr(
+                  "Barde · niveau 5 (10 000 XP)",
+                  "Bard · level 5 (10,000 XP)",
+                ),
+              ],
               [tr("Race", "Race"), tr("Demi-elfe", "Half-elf")],
               ["TAC0", "18"],
             ]}
@@ -714,18 +817,33 @@ export function StepReview() {
         <ReviewBlock title={tr("Caractéristiques", "Ability scores")}>
           <div className="grid grid-cols-6 gap-1">
             {ABILITIES.map((a) => (
-              <div key={a.id} className="flex flex-col items-center rounded-md bg-surface py-1">
-                <span className="text-label text-ink-muted">{tr(a.fr, a.en)}</span>
+              <div
+                key={a.id}
+                className="flex flex-col items-center rounded-md bg-surface py-1"
+              >
+                <span className="text-label text-ink-muted">
+                  {tr(a.fr, a.en)}
+                </span>
                 <span className="text-key tabular-nums">{a.score}</span>
               </div>
             ))}
           </div>
-          <span className="text-label text-ink-muted">{tr("Tirées · méthode V", "Rolled · method V")}</span>
+          <span className="text-label text-ink-muted">
+            {tr("Tirées · méthode V", "Rolled · method V")}
+          </span>
         </ReviewBlock>
-        <ReviewBlock title={tr("Points de vie et talents", "Hit points and skills")}>
+        <ReviewBlock
+          title={tr("Points de vie et talents", "Hit points and skills")}
+        >
           <Dl
             rows={[
-              [tr("PV max", "Max HP"), tr("20 (tirés : 5 + 3 + 6 + 2 + 4)", "20 (rolled: 5 + 3 + 6 + 2 + 4)")],
+              [
+                tr("PV max", "Max HP"),
+                tr(
+                  "20 (tirés : 5 + 3 + 6 + 2 + 4)",
+                  "20 (rolled: 5 + 3 + 6 + 2 + 4)",
+                ),
+              ],
               [tr("Escalade", "Climb walls"), "75 %"],
               [tr("Perception des bruits", "Detect noise"), "40 %"],
               [tr("Vol à la tire", "Pick pockets"), "40 %"],
@@ -741,7 +859,10 @@ export function StepReview() {
               [
                 tr("Langues", "Languages"),
                 <span key="l" className="text-warning">
-                  {tr("Commun, elfe, gnome, halfelin, orque", "Common, elf, gnome, halfling, orc")}
+                  {tr(
+                    "Commun, elfe, gnome, halfelin, orque",
+                    "Common, elf, gnome, halfling, orc",
+                  )}
                 </span>,
               ],
               [tr("Taille", "Height"), tr("1,70 m", "5′7″")],
@@ -764,7 +885,9 @@ export function Roster() {
     <div className="flex h-full flex-col gap-3 p-3">
       <header className="zone-card flex items-center gap-4 px-4 py-2">
         <Wordmark />
-        <h1 className="text-title">{tr("Vos personnages", "Your characters")}</h1>
+        <h1 className="text-title">
+          {tr("Vos personnages", "Your characters")}
+        </h1>
         <span className="flex-1" />
         <Button variant="quiet">
           <ArrowLeft aria-hidden />
@@ -780,7 +903,9 @@ export function Roster() {
             >
               <div className="flex flex-col gap-1 px-4 pt-3">
                 <div className="flex items-start gap-2">
-                  <span className="min-w-0 flex-1 text-key break-words">{c.name}</span>
+                  <span className="min-w-0 flex-1 text-key break-words">
+                    {c.name}
+                  </span>
                   {c.current && (
                     <span className="shrink-0 rounded-md bg-tint px-1.5 py-0.5 text-label font-semibold text-on-accent">
                       {tr("En jeu", "Playing")}
@@ -788,7 +913,10 @@ export function Roster() {
                   )}
                 </div>
                 <span className="text-body">
-                  {tr(`${c.classFr} · niveau ${c.level}`, `${c.classEn} · level ${c.level}`)}
+                  {tr(
+                    `${c.classFr} · niveau ${c.level}`,
+                    `${c.classEn} · level ${c.level}`,
+                  )}
                 </span>
                 <span className="text-body text-ink-muted">
                   {tr(c.raceFr, c.raceEn)}
@@ -797,7 +925,10 @@ export function Roster() {
                 {c.missing && (
                   <span className="mt-1 flex items-center gap-1 self-start rounded-md bg-raised px-1.5 py-0.5 text-label text-warning">
                     <Warning aria-hidden weight="bold" className="size-3.5" />
-                    {tr("Alignement et sexe à choisir", "Alignment and sex to pick")}
+                    {tr(
+                      "Alignement et sexe à choisir",
+                      "Alignment and sex to pick",
+                    )}
                   </span>
                 )}
                 <span className="text-body text-ink-muted">
@@ -829,7 +960,10 @@ export function Roster() {
               {tr("Créer", "Create")}
             </Button>
             <span className="text-center text-label text-ink-muted">
-              {tr("Ouvre la création en plein écran.", "Opens the full-screen creation.")}
+              {tr(
+                "Ouvre la création en plein écran.",
+                "Opens the full-screen creation.",
+              )}
             </span>
           </section>
         </div>
@@ -848,7 +982,9 @@ export function CharacterCard() {
           <span className="min-w-0 flex-1 text-title break-words underline decoration-dotted underline-offset-4">
             Kelsen Balstriel
           </span>
-          <span className="text-body text-ink-muted">{tr("Niveau 15", "Level 15")}</span>
+          <span className="text-body text-ink-muted">
+            {tr("Niveau 15", "Level 15")}
+          </span>
           <Button
             variant="ghost"
             size="icon-sm"
@@ -860,9 +996,22 @@ export function CharacterCard() {
         </div>
         <div className="flex flex-col gap-3 px-4 py-3">
           <div className="grid grid-cols-7 gap-1">
-            {["FOR 12", "DEX 17", "CON 16", "INT 14", "SAG 8", "CHA 16", "TAC0 13"].map((s) => (
-              <div key={s} className="flex flex-col items-center rounded-md bg-raised py-1">
-                <span className="text-label text-ink-muted">{s.split(" ")[0]}</span>
+            {[
+              "FOR 12",
+              "DEX 17",
+              "CON 16",
+              "INT 14",
+              "SAG 8",
+              "CHA 16",
+              "TAC0 13",
+            ].map((s) => (
+              <div
+                key={s}
+                className="flex flex-col items-center rounded-md bg-raised py-1"
+              >
+                <span className="text-label text-ink-muted">
+                  {s.split(" ")[0]}
+                </span>
                 <span className="text-key tabular-nums">{s.split(" ")[1]}</span>
               </div>
             ))}
@@ -878,16 +1027,40 @@ export function CharacterCard() {
       <section className="zone-card flex w-[30rem] flex-col self-start shadow-[var(--float-shadow)]">
         <CardHead>{tr("Détails du personnage", "Character details")}</CardHead>
         <div className="grid grid-cols-2 gap-3 px-4 py-3">
-          <Field label={tr("Nom", "Name")} value="Kelsen Balstriel" wide className="col-span-2" />
-          <Field label={tr("Alignement", "Alignment")} value={tr("Neutre bon", "Neutral good")} wide />
-          <Field label={tr("Sexe", "Sex")} value={tr("Masculin", "Male")} wide />
+          <Field
+            label={tr("Nom", "Name")}
+            value="Kelsen Balstriel"
+            wide
+            className="col-span-2"
+          />
+          <Field
+            label={tr("Alignement", "Alignment")}
+            value={tr("Neutre bon", "Neutral good")}
+            wide
+          />
+          <Field
+            label={tr("Sexe", "Sex")}
+            value={tr("Masculin", "Male")}
+            wide
+          />
           <Field label={tr("Taille", "Height")} value="1,78" unit="m" />
           <Field label={tr("Poids", "Weight")} value="72" unit="kg" />
-          <Field label={tr("Âge", "Age")} value="34" unit={tr("ans", "years")} />
-          <Field label={tr("Cheveux", "Hair")} value={tr("Noirs", "Black")} wide />
+          <Field
+            label={tr("Âge", "Age")}
+            value="34"
+            unit={tr("ans", "years")}
+          />
+          <Field
+            label={tr("Cheveux", "Hair")}
+            value={tr("Noirs", "Black")}
+            wide
+          />
           <Field
             label={tr("Langues", "Languages")}
-            value={tr("Commun, elfe, gnome, halfelin", "Common, elf, gnome, halfling")}
+            value={tr(
+              "Commun, elfe, gnome, halfelin",
+              "Common, elf, gnome, halfling",
+            )}
             wide
             className="col-span-2"
           />
@@ -904,20 +1077,25 @@ export function CharacterCard() {
 // --- The slimmed cog menu -----------------------------------------------------------------
 
 export function CogMenu() {
-  const seg = "flex min-h-7 flex-auto items-center justify-center gap-1 rounded-md px-2 py-1 text-body [&_svg]:size-4";
+  const seg =
+    "flex min-h-7 flex-auto items-center justify-center gap-1 rounded-md px-2 py-1 text-body [&_svg]:size-4";
   return (
     <div className="flex h-full flex-col justify-end gap-3 p-3">
       <section className="zone-card flex w-80 flex-col gap-3 p-4 shadow-[var(--float-shadow)]">
         <h2 className="section-label">{tr("Réglages", "Settings")}</h2>
         <div className="flex flex-col gap-2">
-          <span className="text-label text-muted-foreground">{tr("Langue", "Language")}</span>
+          <span className="text-label text-muted-foreground">
+            {tr("Langue", "Language")}
+          </span>
           <div className="flex gap-1">
             <span className={cn(seg, tr("chip", "chip-chosen"))}>English</span>
             <span className={cn(seg, tr("chip-chosen", "chip"))}>Français</span>
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-label text-muted-foreground">{tr("Apparence", "Appearance")}</span>
+          <span className="text-label text-muted-foreground">
+            {tr("Apparence", "Appearance")}
+          </span>
           <div className="flex flex-wrap gap-1">
             <span className={cn(seg, "chip-chosen")}>
               <Moon aria-hidden />
@@ -934,21 +1112,33 @@ export function CogMenu() {
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-label text-muted-foreground">{tr("Thème", "Theme")}</span>
+          <span className="text-label text-muted-foreground">
+            {tr("Thème", "Theme")}
+          </span>
           <div className="flex flex-wrap gap-1">
-            {[tr("Arcane", "Arcane"), tr("Forêt", "Forest"), tr("Braise", "Ember"), tr("Ambre", "Amber")].map(
-              (n, i) => (
-                <span key={n} className={cn(seg, i === 0 ? "chip-chosen" : "chip")}>
-                  {n}
-                </span>
-              ),
-            )}
+            {[
+              tr("Arcane", "Arcane"),
+              tr("Forêt", "Forest"),
+              tr("Braise", "Ember"),
+              tr("Ambre", "Amber"),
+            ].map((n, i) => (
+              <span
+                key={n}
+                className={cn(seg, i === 0 ? "chip-chosen" : "chip")}
+              >
+                {n}
+              </span>
+            ))}
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-label text-muted-foreground">{tr("Compte", "Account")}</span>
+          <span className="text-label text-muted-foreground">
+            {tr("Compte", "Account")}
+          </span>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="min-w-0 text-body [overflow-wrap:anywhere]">moncef.naji@gmail.com</span>
+            <span className="min-w-0 text-body [overflow-wrap:anywhere]">
+              moncef.naji@gmail.com
+            </span>
             <Button variant="quiet">
               <SignOut aria-hidden />
               {tr("Se déconnecter", "Log out")}
@@ -965,7 +1155,9 @@ export function CogMenu() {
           <GearSix aria-hidden />
         </span>
         <span className="section-label">{tr("Dés", "Dice")}</span>
-        <span className="text-body text-ink-muted">d4 · d6 · d8 · d10 · d12 · d20 · d%</span>
+        <span className="text-body text-ink-muted">
+          d4 · d6 · d8 · d10 · d12 · d20 · d%
+        </span>
       </footer>
     </div>
   );

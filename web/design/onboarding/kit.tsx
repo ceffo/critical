@@ -17,9 +17,6 @@ import { cn } from "@/lib/utils";
 import { tr } from "./lang";
 import { ABILITIES, CHAR, STEPS } from "./data";
 
-/** `?cap=1`: the width-capped variant of the creation frame (the 2560 question). */
-const CAP = new URLSearchParams(location.search).get("cap") === "1";
-
 export function Wordmark({ size = "key" }: { size?: "key" | "hero" }) {
   return (
     <div className="flex shrink-0 items-center gap-2">
@@ -75,13 +72,16 @@ export function Note({
   kind: "warning" | "refusal" | "info";
   children: ReactNode;
 }) {
-  const Icon = kind === "refusal" ? Prohibit : kind === "warning" ? Warning : Check;
+  const Icon =
+    kind === "refusal" ? Prohibit : kind === "warning" ? Warning : Check;
   return (
     <p
       className={cn(
         "flex items-start gap-2 rounded-md px-3 py-2 text-body",
-        kind === "refusal" && "bg-raised text-danger shadow-[inset_3px_0_0_var(--danger)]",
-        kind === "warning" && "bg-raised text-warning shadow-[inset_3px_0_0_var(--warning)]",
+        kind === "refusal" &&
+          "bg-raised text-danger shadow-[inset_3px_0_0_var(--danger)]",
+        kind === "warning" &&
+          "bg-raised text-warning shadow-[inset_3px_0_0_var(--warning)]",
         kind === "info" && "bg-raised text-ink-muted",
       )}
     >
@@ -163,7 +163,9 @@ export function Die({ v, dropped }: { v: number; dropped?: boolean }) {
     <span
       className={cn(
         "inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-body tabular-nums",
-        dropped ? "text-ink-muted line-through decoration-2" : "bg-raised-hover font-medium",
+        dropped
+          ? "text-ink-muted line-through decoration-2"
+          : "bg-raised-hover font-medium",
       )}
     >
       {v}
@@ -172,7 +174,13 @@ export function Die({ v, dropped }: { v: number; dropped?: boolean }) {
 }
 
 /** A card head: the section label on the band. */
-export function CardHead({ children, right }: { children: ReactNode; right?: ReactNode }) {
+export function CardHead({
+  children,
+  right,
+}: {
+  children: ReactNode;
+  right?: ReactNode;
+}) {
   return (
     <div className="card-band flex min-h-9 items-center justify-between gap-3 px-4 py-2">
       <h2 className="section-label">{children}</h2>
@@ -226,16 +234,27 @@ function StepList({ current }: { current: number }) {
                   "flex size-6 shrink-0 items-center justify-center rounded-full text-label font-semibold",
                   done && "bg-tint text-on-accent",
                   on && "shadow-[inset_0_0_0_1.5px_var(--tint)] text-tint",
-                  !done && !on && "shadow-[inset_0_0_0_1px_var(--input)] text-ink-muted",
+                  !done &&
+                    !on &&
+                    "shadow-[inset_0_0_0_1px_var(--input)] text-ink-muted",
                 )}
               >
                 {done ? <Check weight="bold" className="size-3.5" /> : i + 1}
               </span>
               <span className="flex min-w-0 flex-col">
-                <span className={cn("text-body", on ? "font-semibold" : done ? "" : "text-ink-muted")}>
+                <span
+                  className={cn(
+                    "text-body",
+                    on ? "font-semibold" : done ? "" : "text-ink-muted",
+                  )}
+                >
                   {tr(s.fr, s.en)}
                 </span>
-                {done && <span className="text-label text-ink-muted">{tr(s.doneFr, s.doneEn)}</span>}
+                {done && (
+                  <span className="text-label text-ink-muted">
+                    {tr(s.doneFr, s.doneEn)}
+                  </span>
+                )}
               </span>
             </li>
           );
@@ -255,7 +274,13 @@ export function Building({ upTo }: { upTo: number }) {
       <div className="flex flex-col gap-4 px-4 pt-3 pb-4">
         <div className="flex flex-col gap-0.5">
           <span className="text-title break-words">
-            {has(4) ? CHAR.name : <span className="text-ink-muted">{tr("Sans nom", "No name yet")}</span>}
+            {has(4) ? (
+              CHAR.name
+            ) : (
+              <span className="text-ink-muted">
+                {tr("Sans nom", "No name yet")}
+              </span>
+            )}
           </span>
           <span className="text-body text-ink-muted">
             {has(0) ? tr("Barde", "Bard") : "—"}
@@ -265,14 +290,23 @@ export function Building({ upTo }: { upTo: number }) {
         </div>
         <div className="grid grid-cols-6 gap-1">
           {ABILITIES.map((a) => (
-            <div key={a.id} className="flex flex-col items-center rounded-md bg-raised py-1">
-              <span className="text-label text-ink-muted">{tr(a.fr, a.en)}</span>
-              <span className="text-key tabular-nums">{has(2) ? a.score : dash}</span>
+            <div
+              key={a.id}
+              className="flex flex-col items-center rounded-md bg-raised py-1"
+            >
+              <span className="text-label text-ink-muted">
+                {tr(a.fr, a.en)}
+              </span>
+              <span className="text-key tabular-nums">
+                {has(2) ? a.score : dash}
+              </span>
             </div>
           ))}
         </div>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-body">
-          <dt className="text-ink-muted">{tr("Points de vie", "Hit points")}</dt>
+          <dt className="text-ink-muted">
+            {tr("Points de vie", "Hit points")}
+          </dt>
           <dd>{has(3) ? "20" : dash}</dd>
           <dt className="text-ink-muted">{tr("Talents", "Skills")}</dt>
           <dd>{has(3) ? tr("78 / 80 points", "78 / 80 points") : dash}</dd>
@@ -281,8 +315,17 @@ export function Building({ upTo }: { upTo: number }) {
           <dt className="text-ink-muted">{tr("Sexe", "Sex")}</dt>
           <dd>{has(4) ? tr("Féminin", "Female") : dash}</dd>
           <dt className="text-ink-muted">{tr("Langues", "Languages")}</dt>
-          <dd>{has(4) ? tr("Commun, elfe, gnome, halfelin, orque", "Common, elf, gnome, halfling, orc") : dash}</dd>
-          <dt className="text-ink-muted">{tr("Taille, poids", "Height, weight")}</dt>
+          <dd>
+            {has(4)
+              ? tr(
+                  "Commun, elfe, gnome, halfelin, orque",
+                  "Common, elf, gnome, halfling, orc",
+                )
+              : dash}
+          </dd>
+          <dt className="text-ink-muted">
+            {tr("Taille, poids", "Height, weight")}
+          </dt>
           <dd>{has(4) ? tr("1,70 m · 48 kg", "5′7″ · 105 lb") : dash}</dd>
           <dt className="text-ink-muted">{tr("Âge", "Age")}</dt>
           <dd>{has(4) ? tr("19 ans", "19 years") : dash}</dd>
@@ -319,10 +362,12 @@ export function CreationFrame({
   footNote?: ReactNode;
 }) {
   return (
-    <div className={cn("mx-auto flex h-full flex-col gap-3 p-3", CAP && "max-w-[1680px]")}>
+    <div className={"mx-auto flex h-full max-w-[1680px] flex-col gap-3 p-3"}>
       <header className="zone-card flex items-center gap-4 px-4 py-2">
         <Wordmark />
-        <span className="text-title">{tr("Nouveau personnage", "New character")}</span>
+        <span className="text-title">
+          {tr("Nouveau personnage", "New character")}
+        </span>
         <span className="flex-1" />
         <Button variant="quiet">
           <X aria-hidden />
@@ -339,7 +384,9 @@ export function CreationFrame({
             <h1 className="text-headline">{title}</h1>
             {lead && <p className="text-body text-ink-muted">{lead}</p>}
           </div>
-          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-4">{children}</div>
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-4">
+            {children}
+          </div>
           <div className="flex items-center gap-3 border-t border-border px-5 py-3">
             {step > 0 && (
               <Button variant="quiet" size="lg">
@@ -347,7 +394,9 @@ export function CreationFrame({
                 {tr("Retour", "Back")}
               </Button>
             )}
-            <span className="min-w-0 flex-1 text-body text-ink-muted">{footNote}</span>
+            <span className="min-w-0 flex-1 text-body text-ink-muted">
+              {footNote}
+            </span>
             <Button variant="main" size="lg" disabled={nextBlocked}>
               {next ?? tr("Suivant", "Next")}
               {!next && <ArrowRight aria-hidden />}

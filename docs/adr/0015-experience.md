@@ -1,7 +1,7 @@
 # ADR 0015: Experience
 
 **Status**: accepted, 2026-10-15 (critical-kiv.13). Step 4 amended by
-[ADR 0018](0018-transactions-and-undo.md) step 7, 2026-10-15.
+[ADR 0018](0018-transactions-and-undo.md) step 7, 2026-10-15. Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (bonus by class, level from XP), on its implementation.
 
 ## Context
 

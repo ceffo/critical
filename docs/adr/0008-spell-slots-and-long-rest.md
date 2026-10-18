@@ -1,7 +1,7 @@
 # ADR 0008: Spell slots and long rest
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.10,
-critical-qki.16, critical-qki.41 and critical-qki.42, until then in `docs/backend.md`)
+critical-qki.16, critical-qki.41 and critical-qki.42, until then in `docs/backend.md`). Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (slots and preparation per class), on its implementation.
 
 ## Context
 

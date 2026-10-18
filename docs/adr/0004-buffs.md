@@ -4,7 +4,7 @@
 critical-qki.8, critical-qki.20, critical-qki.29 and critical-qki.33, until then in
 `docs/backend.md` "Buff rules"); steps 10 and 11 and the Consequences amended and step 18 added
 2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers); step 19 (add a
-spell as an effect from the lookup) added 2026-10-16
+spell as an effect from the lookup) added 2026-10-16. Steps 7 to 10 amended for warriors by [ADR 0030](0030-classes-and-races.md) (18/xx), on its implementation.
 
 ## Context
 

@@ -2,7 +2,7 @@
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.9 and
 critical-qki.14, until then in `docs/backend.md`); amended 2026-10-16 (the adjustment moves the
-target: steps 2, 4 and 5, step 8 added); step 6 amended by 0028 (ability checks are a roll kind)
+target: steps 2, 4 and 5, step 8 added); step 6 amended by 0028 (ability checks are a roll kind). Step 1 amended by [ADR 0030](0030-classes-and-races.md) (targets derived, racial bonus), on its implementation.
 
 ## Context
 

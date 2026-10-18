@@ -1,0 +1,60 @@
+name: Dependabot auto-merge
+
+# Routine Dependabot updates merge themselves: on a Dependabot PR whose updates are all semver patch or
+# minor, this enables GitHub auto-merge (squash). GitHub then merges once the required status checks of
+# main pass (scripts/github-branch-protection.sh); red CI never merges. Anything else is left open for the
+# supervisor (.claude/agents/supervisor.md, "PR watch"): a major update gets the label `major-update`, and a
+# sqlc bump is never auto-merged because it changes the generated DAL (docs/backend.md, "Dependency bumps").
+#
+# pull_request_target, not pull_request: a Dependabot-triggered pull_request run gets a read-only token.
+# It is safe here because nothing from the PR is checked out or run; the job only reads Dependabot's
+# metadata and calls the GitHub API.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-merge:
+    name: enable auto-merge or label
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read the Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v3.1.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Classify the update
+        id: kind
+        env:
+          UPDATES: ${{ steps.meta.outputs.updated-dependencies-json }}
+        run: |
+          if jq -e 'any(.[]; .updateType == "version-update:semver-major")' <<<"$UPDATES" >/dev/null; then
+            echo "kind=major" >> "$GITHUB_OUTPUT"
+          elif jq -e 'any(.[]; .dependencyName | test("sqlc"))' <<<"$UPDATES" >/dev/null; then
+            echo "kind=sqlc" >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=routine" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Label a major update and leave it open
+        if: ${{ steps.kind.outputs.kind == 'major' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh label create major-update --color d93f0b --description "Dependabot major update: needs a human or the supervisor" 2>/dev/null || true
+          gh pr edit "$PR" --add-label major-update
+      - name: Enable auto-merge (squash)
+        if: ${{ steps.kind.outputs.kind == 'routine' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr merge "$PR" --auto --squash

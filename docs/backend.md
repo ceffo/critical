@@ -391,6 +391,8 @@ Dependabot (`.github/dependabot.yml`) opens one grouped minor/patch PR per week 
 
 When a bump's `generated code is up to date` CI job fails (sqlc or mockery changed their output), check out the Dependabot branch, run `just generate` and `just mocks`, and commit the regenerated files on it; then `just validate`. Never hand-edit generated files.
 
+Auto-merge: `.github/workflows/dependabot-auto-merge.yml` enables GitHub auto-merge (squash) on a Dependabot PR whose updates are all semver patch or minor (not sqlc), and labels a major one `major-update` and leaves it open. GitHub merges once main's required checks pass (validate, e2e, image, dev-smoke, generated code is up to date; the PR-title check is not required). Both the repository's auto-merge setting and those required checks are set once by `scripts/github-branch-protection.sh` (admin). Red, major, sqlc and conflicting PRs go through the supervisor ("PR watch" in `.claude/agents/supervisor.md`).
+
 ### Layout
 
 | Path | Contents |

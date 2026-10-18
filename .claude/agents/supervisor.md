@@ -345,6 +345,12 @@ one, and re-arm it after handling each event.
   with a clean tree, merge `origin/<db>` yourself (Bash), run the gate, push. Otherwise prompt the
   developer.
 - On CONFLICT: prompt the developer to merge `origin/<db>`.
+- On a **Dependabot** PR (author `dependabot[bot]`): routine minor/patch ones merge themselves on green CI
+  (`.github/workflows/dependabot-auto-merge.yml`); don't touch them. Act only on the rest, never with a new
+  agent role: red CI -> a developer gets the CI log (like any rework; regenerate with `just generate` /
+  `just mocks` when `generated code is up to date` fails); CONFLICTING -> `@dependabot rebase` as a PR
+  comment, or a developer if that fails; labelled `major-update`, or a sqlc bump -> a developer checks the
+  breaking notes and reworks it, and a major that changes the user's workflow goes to the user as a question.
 - Don't end a turn without the watcher or an agent wait running while something is in flight.
 
 ## When `<db>` moves

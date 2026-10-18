@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 
 	"github.com/ceffo/critical/api/internal/adapters/authdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
@@ -257,11 +258,21 @@ func (d *DAL) ListPendingInvites(ctx context.Context) ([]authsvc.Invite, error) 
 	return out, nil
 }
 
-// InsertInvite implements authsvc.DAL.
+// uniqueViolation is the Postgres SQLSTATE of a unique index violation.
+const uniqueViolation = "23505"
+
+// InsertInvite implements authsvc.DAL; an email with a pending invite is
+// authsvc.ErrAlreadyInvited.
 func (d *DAL) InsertInvite(ctx context.Context, inv authsvc.Invite) error {
 	if err := d.q.InsertInvite(ctx, queries.InsertInviteParams{
 		ID: inv.ID, Email: inv.Email, InvitedBy: inv.InvitedBy, CreatedAt: inv.CreatedAt,
 	}); err != nil {
+		// Should two invites of one email race past the service's checks, the
+		// loser hits the one-pending-invite-per-email index.
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == uniqueViolation && pqErr.Constraint == "invites_pending_email" {
+			return authsvc.ErrAlreadyInvited
+		}
 		return fmt.Errorf("insert invite: %w", err)
 	}
 	return nil

@@ -6,10 +6,12 @@ package authdal_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -199,4 +201,26 @@ func TestInvites_ListInsertCancel(t *testing.T) {
 	require.NoError(t, d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}))
 	require.NoError(t, d.CancelInvite(ctx, iid, at))
 	require.ErrorIs(t, d.CancelInvite(ctx, uid, at), domain.ErrNotFound)
+}
+
+func TestInsertInvite_Step2_1_APendingInviteIndexViolationIsAlreadyInvited(t *testing.T) {
+	q := mocks.NewMockQuerier(t)
+	p := queries.InsertInviteParams{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}
+	q.EXPECT().InsertInvite(ctx, p).Return(fmt.Errorf("exec: %w", &pq.Error{Code: "23505", Constraint: "invites_pending_email"})).Once()
+	d := authdal.New(q)
+
+	err := d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at})
+	require.ErrorIs(t, err, authsvc.ErrAlreadyInvited)
+	assert.ErrorIs(t, err, domain.ErrConflict)
+}
+
+func TestInsertInvite_Step2_1_AnotherInsertErrorIsNotAlreadyInvited(t *testing.T) {
+	q := mocks.NewMockQuerier(t)
+	p := queries.InsertInviteParams{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}
+	q.EXPECT().InsertInvite(ctx, p).Return(&pq.Error{Code: "23505", Constraint: "invites_pkey"}).Once()
+	d := authdal.New(q)
+
+	err := d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at})
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, authsvc.ErrAlreadyInvited)
 }

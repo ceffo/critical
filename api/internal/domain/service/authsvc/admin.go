@@ -118,8 +118,10 @@ func (s *service) ListInvites(ctx context.Context) ([]Invite, error) {
 }
 
 // CreateInvite implements SVC (ADR 0029 step 2.1). The checks and the
-// insert are one transaction (the writer lock serialises them), and the
-// schema allows one pending invite per email besides.
+// insert are one write transaction (ADR 0025 step 4: its first statement takes
+// the writer lock, so two invites of one email run one after the other). The
+// one-pending-invite-per-email index is the backstop should two ever race past
+// the checks: the DAL maps its violation to ErrAlreadyInvited.
 func (s *service) CreateInvite(ctx context.Context, by uuid.UUID, email string) (*Invite, error) {
 	email, err := checkEmail(email)
 	if err != nil {

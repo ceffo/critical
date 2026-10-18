@@ -3,6 +3,7 @@
 **Status**: accepted, 2026-10-15 (critical-y9e0.1; the contract between the catalogue builder in the
 private `critical-rulebooks` repo and the API importer). Amended by [ADR 0023](0023-localized-text.md):
 no per-language column or field; the `name_fr` / `description_fr` wording below is superseded.
+Step 10 (the class and race tables, format 4) is _proposed_ (critical-reul.9).
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -392,6 +393,67 @@ is only ever appended to by play.
       inventory (items, weapons), its skills, its spellbook and the spell effects, pending the
       question on items, weapons and skills; the unread crit-table seed is deleted separately.
 
+10. **The class and race tables, format 4** (_proposed_, critical-reul.9; the tables are the list of
+    [ADR 0030](0030-classes-and-races.md) step 23, the keys and rows below are this step's). Built by
+    `scripts/class_tables.py` in `critical-rulebooks` from its hand-checked `tables/`, never transcribed.
+    1. **Format 4 is format 3 plus 24 keys in `rule_tables`**, every one required; format 3 may not
+       carry any of them (the schema says both). Numbers and **language-neutral codes** only (ADR 0023):
+       no title, header, note or label text. Codes: classes `fighter mage cleric thief bard`; groups
+       `warrior priest rogue wizard`; races `dwarf elf gnome half_elf halfling` (humans have no row);
+       abilities `str dex con int wis cha`; skills `pick_pockets open_locks find_remove_traps
+       move_silently hide_in_shadows detect_noise climb_walls read_languages`; the save categories of
+       the character's columns `para_poison rod_staff_wand petri_poly breath spell`.
+    2. **Keys and rows** (every field an integer unless named; level bands are `level_min`/`level_max`
+       within 1 to 20, an open book range such as `13+` ends at 20):
+
+       | Key | PHB table | Row |
+       |---|---|---|
+       | `experience` | 14, 20, 23, 25 | `level`, and the XP that reaches it per class: `fighter`, `mage`, `cleric`, `thief`, `bard` (Table 25's one column gives both rogues); 20 rows |
+       | `hit_dice` | 14, 20, 23, 25 (Hit Dice) | `group`, `die`, `name_level` (the last level that rolls it), `gain_after` (fixed gain per level after it); 4 rows |
+       | `constitution` | 3 | `con_min`, `con_max`, `hp`, `hp_warrior` (the bracketed value), `low_die_min` (the value a low die counts as, 0 = none) |
+       | `intelligence` | 4 | `int_min`, `int_max`, `max_spell_level` (0 = none), `learn_chance`, `max_spells` (absent = the book's "All", no maximum) |
+       | `wisdom` | 5 | `wis_min`, `wis_max`, `bonus_spells` (the spell levels this score adds, not cumulative), `spell_failure` |
+       | `con_save_bonus` | 9 | `con_min`, `con_max`, `bonus` (scores outside the rows: none) |
+       | `race_requirements` | 7 | `race`, `ability`, `min`, `max`; 30 rows |
+       | `race_adjustments` | 8 | `race`, `ability`, `adjustment` (absent pair: 0) |
+       | `thac0` | 53 | `level`, `warrior`, `priest`, `rogue`, `wizard`; 20 rows |
+       | `saving_throws` | 60 | `group`, a level band, the five save targets (the warriors' level 0 and the 21+ rows are not shipped) |
+       | `warrior_attacks` | 15 | a level band, `attacks` per `rounds` |
+       | `specialist_attacks` | 35 | `weapon` (`melee light_crossbow heavy_crossbow thrown_dagger thrown_dart other_missile`), a level band, `attacks`, `rounds` |
+       | `rate_of_fire` | 45 (ROF) | `weapon_type` (ADR 0030 step 23's codes with a rate: `long_bow short_bow hand_crossbow light_crossbow heavy_crossbow dagger dart sling`), `attacks`, `rounds` |
+       | `wizard_spells` | 21 | `level`, `per_spell_level` (9 counts); 20 rows |
+       | `priest_spells` | 24 | `level`, `per_spell_level` (7 counts); 20 rows |
+       | `priest_spell_wisdom` | 24 (notes) | `spell_level`, `wis_min` |
+       | `thief_skill_base` | 26 | `skill`, `base`; 8 rows |
+       | `thief_skill_race` | 27 | `race`, `skill`, `adjustment`; 40 rows |
+       | `thief_skill_dexterity` | 28 | `dex_min`, `dex_max`, one field per skill the table has (`pick_pockets` to `hide_in_shadows`) |
+       | `thief_skill_armor` | 29 | `armor` (`none elven_chain padded_studded_leather`; leather is the baseline), `skill`, `adjustment`; 24 rows |
+       | `bard_armor_penalty` | 29 (note) | `armor` (`metal`), `adjustment`: added to the elven chain column (ADR 0030 step 1) |
+       | `bard_skill_base` | 33 | `skill`, `base`; 4 rows |
+       | `backstab` | 30 | a level band, `multiplier` |
+       | `turning_undead` | 61 | `undead` (`skeleton zombie ghoul shadow wight ghast wraith mummy spectre vampire ghost lich special`), `hd_min`/`hd_max` (both absent: by type only; `hd_max` absent: and more), `by_level`: 20 cells, one per priest level, each either `{"roll": n}` (a d20 at or above n) or `{"outcome": "turn" / "destroy" / "destroy_more" / "cannot"}`; 13 rows |
+
+    3. **Validation.** The schema checks the shape, the codes, the bounds and the fixed row counts. The
+       builder (before it writes) and the importer (at start, `ruletablesvc.NewClassTables`, a refusal
+       naming the table like step 9.3) check the rest: levels 1 to 20 once and in order; XP from 0 and
+       strictly increasing per class; ability rows ascending, without overlap, and covering 1 to 25 for
+       Constitution, Intelligence and Wisdom; every level band table covering 1 to 20 per group and per
+       weapon; every code combination (race x ability, race x skill, armour x skill, group, weapon type,
+       undead) exactly once; one turning cell kind per cell. A missing table is a startup error.
+    4. **Rollout, as step 9.6.** The API reads formats 3 and 4 first (format 3: no class tables,
+       `Tables.Classes()` is false); it lands on `main` before the builder publishes format 4 on the
+       rulebooks default branch, so a dev checkout's format-3 `.catalogue/catalogue.json` and the release
+       build keep starting. Format 3 is retired by a later item once the published artifact and the dev
+       checkouts are format 4, before any consumer of the class tables relies on them.
+    5. **The fixture carries the real numbers** (as step 9.7): `api/testdata/catalogue.json` is format 4,
+       its class tables the real artifact's row for row (`TestRealCatalogue_Step10_5_…`, skipped without a
+       format-4 `.catalogue/catalogue.json`).
+    6. **Not in format 4**: DMG Table 7 (racial level limits; the rulebooks copy is an unverified OCR, to be
+       hand-checked from the page image first), the classes each race allows (PHB chapter 2 prose), the race
+       trait texts (localized catalogue text) and the priest spells' sphere codes with the cleric's sphere
+       access (ADR 0030 steps 15 and 23). Each is a later format. The weapon type is not catalogue data
+       (ADR 0030 step 23): it belongs to the character's weapons.
+
 
 ## Consequences
 
@@ -608,3 +670,17 @@ longer validate a retired shape by mistake:
   fails validation, as does format 2 (`TestSchema_Step9_Format3RuleTables`).
 - The API's embedded copy stays identical to it (the existing test), and the rulebooks builder's copy is
   refreshed from it by `scripts/fetch-ref`.
+
+## Implementation notes (the class and race tables, format 4, 2026-10-18)
+
+Step 10, critical-reul.9: the builder's `scripts/class_tables.py` and `scripts/check` (fresh-build
+equality, the rules of 10.3, spot values against the PHB pages and ADR 0030's Kelsen example, fault
+injection on the parser, the rules and the schema); in the API, `catalogue.FormatClassTables`,
+`ruletablesadpt.Parse(format, raw)` and `ruletablesvc.NewClassTables`. Tests per step: 10.1
+`TestParse_Step10_1_ReadsFormat4`, `TestParse_Step10_1_ReadsTheClassTables` (PHB-page values) and the
+schema's `TestSchema_Step10_Format4ClassTables`; 10.2 the schema test and
+`TestParse_Step9_2_TablesBelongToFormat3Only`'s format-4 cases; 10.3
+`TestParse_Step10_3_RejectsAMissingOrBrokenClassTable` and
+`TestStartup_Step10_3_RefusesAMissingOrGappedClassTable`; 10.4 `TestParse_Step10_4_Format3HasNoClassTables`
+and the startup test's "format 3 still starts"; 10.5
+`TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables`.

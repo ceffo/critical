@@ -430,11 +430,13 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   the repo root (the nearest directory above the working directory with a `.git` entry; outside a checkout,
   against the working directory). A missing file stops the API with a message naming the path and
   `just catalogue`.
-- **Formats**: the API reads format 3 only (spells and the PHB rule tables, ADR 0021 step 9); any other,
-  the retired format 1 included, is refused, naming it and `just catalogue`. See "Rule tables" below.
-- **Without access**: `api/testdata/catalogue.json` is a small fixture, format 3, with invented text
+- **Formats**: the API reads formats 3 (spells and the PHB rule tables, ADR 0021 step 9) and 4 (format 3
+  plus the class and race tables, step 10); any other, the retired format 1 included, is refused, naming it
+  and `just catalogue`. Format 3 is read until the published artifact and the dev checkouts are format 4
+  (step 10.4). See "Rule tables" below.
+- **Without access**: `api/testdata/catalogue.json` is a small fixture, format 4, with invented text
   (every spell the `api/testdata/seeds` spellbook and spell effects use, some with French, one list, one
-  table) and the PHB's real rule-table numbers (ADR 0021 step 9.7). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
+  table) and the PHB's real rule-table and class-table numbers (ADR 0021 steps 9.7 and 10.5). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
   own database `critical_fixture`, when `.catalogue/catalogue.json` is absent (the campaign seeds refer to
   spells only the real artifact holds). The database `critical` is only ever opened with the real catalogue.
 - **Seed checks**: the spellbook seed and every `spell_effects.json` id are checked against the catalogue at
@@ -547,6 +549,16 @@ XP ledger's port). `exceptional` is the 18/xx percentile (1-99, 100 for
 18/00). Values are returned as printed in the tables. The tests check
 values against the PHB pages, not against the data; a test keeps the fixture's numbers equal to the real
 artifact's (by lookup; skipped without `.catalogue/catalogue.json`).
+
+A format-4 artifact also carries the **class and race tables** of [ADR 0030](adr/0030-classes-and-races.md)
+step 23 (ADR 0021 step 10 lists the keys and rows): XP per class, hit dice per group, Constitution,
+Intelligence and Wisdom, the Constitution save bonus, racial requirements and adjustments, THAC0, saving
+throws, warrior and specialist attacks, rates of fire, wizard and priest spells (with the Wisdom a priest
+needs for 6th and 7th level), the thieving and bard skill tables, backstab and turning undead. The same
+parser reads them at every start into `ruletablesvc.ClassTables` (`Tables.Classes()`; false for a format-3
+artifact), validated by `ruletablesvc.NewClassTables`: a missing table, a gap in a level band or in the
+scores, XP not increasing or a code twice is a startup error naming the table. The derivations that use
+them (level, THAC0, saves, slots, skills) are ADR 0030's items.
 
 ## In-memory storage (e2e mode)
 

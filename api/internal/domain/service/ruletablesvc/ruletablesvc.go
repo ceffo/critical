@@ -73,6 +73,9 @@ type Tables struct {
 	dex  []DexRow
 	bard map[int]BardRow
 	xp   []int // xp[level-1] is the threshold of that level
+	// classes are the class and race tables of a format-4 catalogue (ADR
+	// 0021 step 10); nil for a format-3 one.
+	classes *ClassTables
 }
 
 var _ Lookup = (*Tables)(nil)
@@ -194,6 +197,19 @@ func validateDex(rows []DexRow) error {
 		return errors.New("must cover scores 1..25")
 	}
 	return nil
+}
+
+// WithClasses returns a copy of t carrying the class and race tables.
+func (t *Tables) WithClasses(c *ClassTables) *Tables {
+	out := *t
+	out.classes = c
+	return &out
+}
+
+// Classes returns the class and race tables (ADR 0030 step 23), false when
+// the catalogue is format 3 and carries none.
+func (t *Tables) Classes() (*ClassTables, bool) {
+	return t.classes, t.classes != nil
 }
 
 // StrengthMods implements Lookup.

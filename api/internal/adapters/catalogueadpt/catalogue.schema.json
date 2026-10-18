@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, format 3",
-  "description": "Shape of the catalogue artifact (ADR 0021): format 3 holds the spells and the PHB rule tables (step 9). Shape only: the schema carries no book text. Format 1 (spells only) is retired and format 2 named a retracted shape: neither is valid.",
+  "title": "Critical! catalogue, formats 3 and 4",
+  "description": "Shape of the catalogue artifact (ADR 0021): format 3 holds the spells and the PHB rule tables (step 9); format 4 adds the class and race tables (step 10, ADR 0030 step 23). Shape only: the schema carries no book text. Format 1 (spells only) is retired and format 2 named a retracted shape: neither is valid.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,8 +13,11 @@
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 3 (spells and rule_tables, ADR 0021 step 9). An importer accepts exactly the formats it knows and refuses the rest.",
-      "const": 3
+      "description": "Artifact format: 3 (spells and rule_tables, ADR 0021 step 9) or 4 (format 3 plus the class and race tables, step 10). An importer accepts exactly the formats it knows and refuses the rest.",
+      "enum": [
+        3,
+        4
+      ]
     },
     "version": {
       "description": "Content version, UTC build date YYYY-MM-DD with an optional .N suffix for several builds on a day. Compared for equality only, never ordered.",
@@ -32,6 +35,90 @@
       "$ref": "#/$defs/rule_tables"
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "const": 4
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rule_tables": {
+            "required": [
+              "experience",
+              "hit_dice",
+              "constitution",
+              "intelligence",
+              "wisdom",
+              "con_save_bonus",
+              "race_requirements",
+              "race_adjustments",
+              "thac0",
+              "saving_throws",
+              "warrior_attacks",
+              "specialist_attacks",
+              "rate_of_fire",
+              "wizard_spells",
+              "priest_spells",
+              "priest_spell_wisdom",
+              "thief_skill_base",
+              "thief_skill_race",
+              "thief_skill_dexterity",
+              "thief_skill_armor",
+              "bard_armor_penalty",
+              "bard_skill_base",
+              "backstab",
+              "turning_undead"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "const": 3
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rule_tables": {
+            "properties": {
+              "experience": false,
+              "hit_dice": false,
+              "constitution": false,
+              "intelligence": false,
+              "wisdom": false,
+              "con_save_bonus": false,
+              "race_requirements": false,
+              "race_adjustments": false,
+              "thac0": false,
+              "saving_throws": false,
+              "warrior_attacks": false,
+              "specialist_attacks": false,
+              "rate_of_fire": false,
+              "wizard_spells": false,
+              "priest_spells": false,
+              "priest_spell_wisdom": false,
+              "thief_skill_base": false,
+              "thief_skill_race": false,
+              "thief_skill_dexterity": false,
+              "thief_skill_armor": false,
+              "bard_armor_penalty": false,
+              "bard_skill_base": false,
+              "backstab": false,
+              "turning_undead": false
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "text": {
       "type": "string",
@@ -149,7 +236,7 @@
       }
     },
     "rule_tables": {
-      "description": "The PHB rule tables the engine looks values up in (ADR 0021 step 9): numbers only, the columns the engine reads, rows in ascending order. Contiguity, overlap, level order and increasing XP cannot be expressed here: the builder and the importer check them.",
+      "description": "The rule tables the engine looks values up in (ADR 0021 steps 9 and 10): numbers and language-neutral codes only, the columns the engine reads, rows in ascending order. Format 3 carries the first four tables only, format 4 every table. Contiguity, overlap, level order, increasing XP and completeness of the code combinations cannot be expressed here: the builder and the importer check them.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -187,6 +274,186 @@
           "maxItems": 20,
           "items": {
             "$ref": "#/$defs/bard_experience_row"
+          }
+        },
+        "experience": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/experience_row"
+          }
+        },
+        "hit_dice": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/hit_dice_row"
+          }
+        },
+        "constitution": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/constitution_row"
+          }
+        },
+        "intelligence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/intelligence_row"
+          }
+        },
+        "wisdom": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/wisdom_row"
+          }
+        },
+        "con_save_bonus": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/con_save_bonus_row"
+          }
+        },
+        "race_requirements": {
+          "type": "array",
+          "minItems": 30,
+          "maxItems": 30,
+          "items": {
+            "$ref": "#/$defs/race_requirement_row"
+          }
+        },
+        "race_adjustments": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/race_adjustment_row"
+          }
+        },
+        "thac0": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/thac0_row"
+          }
+        },
+        "saving_throws": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/saving_throw_row"
+          }
+        },
+        "warrior_attacks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/level_rate_row"
+          }
+        },
+        "specialist_attacks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/specialist_attack_row"
+          }
+        },
+        "rate_of_fire": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/rate_of_fire_row"
+          }
+        },
+        "wizard_spells": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/wizard_spells_row"
+          }
+        },
+        "priest_spells": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/priest_spells_row"
+          }
+        },
+        "priest_spell_wisdom": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/priest_spell_wisdom_row"
+          }
+        },
+        "thief_skill_base": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/skill_base_row"
+          }
+        },
+        "thief_skill_race": {
+          "type": "array",
+          "minItems": 40,
+          "maxItems": 40,
+          "items": {
+            "$ref": "#/$defs/skill_race_row"
+          }
+        },
+        "thief_skill_dexterity": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/skill_dexterity_row"
+          }
+        },
+        "thief_skill_armor": {
+          "type": "array",
+          "minItems": 24,
+          "maxItems": 24,
+          "items": {
+            "$ref": "#/$defs/skill_armor_row"
+          }
+        },
+        "bard_armor_penalty": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/$defs/bard_armor_penalty_row"
+          }
+        },
+        "bard_skill_base": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/skill_base_row"
+          }
+        },
+        "backstab": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/backstab_row"
+          }
+        },
+        "turning_undead": {
+          "type": "array",
+          "minItems": 13,
+          "maxItems": 13,
+          "items": {
+            "$ref": "#/$defs/turning_row"
           }
         }
       }
@@ -314,6 +581,823 @@
         "xp": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "experience_row": {
+      "description": "PHB Tables 14 (Fighter), 20 (Mage), 23 (Cleric), 25 (Thief/Bard): the XP that reaches the level, per class.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "fighter",
+        "mage",
+        "cleric",
+        "thief",
+        "bard"
+      ],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "fighter": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mage": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cleric": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "thief": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bard": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "hit_dice_row": {
+      "description": "PHB Tables 14, 20, 23, 25 (Hit Dice column): the group's hit die, the last level that rolls it, and the fixed hit points gained per level after it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "group",
+        "die",
+        "name_level",
+        "gain_after"
+      ],
+      "properties": {
+        "group": {
+          "enum": [
+            "warrior",
+            "priest",
+            "rogue",
+            "wizard"
+          ]
+        },
+        "die": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 20
+        },
+        "name_level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "gain_after": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "constitution_row": {
+      "description": "PHB Table 3: hit point adjustment per die (every class, and the warriors' own), and the value a low die counts as (0 = none).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "con_min",
+        "con_max",
+        "hp",
+        "hp_warrior",
+        "low_die_min"
+      ],
+      "properties": {
+        "con_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "con_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "hp": {
+          "type": "integer"
+        },
+        "hp_warrior": {
+          "type": "integer"
+        },
+        "low_die_min": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        }
+      }
+    },
+    "intelligence_row": {
+      "description": "PHB Table 4: highest spell level (0 = none), chance to learn a spell in percent, maximum spells per level (absent = no maximum).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "int_min",
+        "int_max",
+        "max_spell_level",
+        "learn_chance"
+      ],
+      "properties": {
+        "int_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "int_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "max_spell_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "learn_chance": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "max_spells": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "wisdom_row": {
+      "description": "PHB Table 5: the bonus spells this score adds (spell levels, not cumulative) and the chance of spell failure in percent.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wis_min",
+        "wis_max",
+        "bonus_spells",
+        "spell_failure"
+      ],
+      "properties": {
+        "wis_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "wis_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "bonus_spells": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          }
+        },
+        "spell_failure": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "con_save_bonus_row": {
+      "description": "PHB Table 9: saving throw bonus by Constitution.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "con_min",
+        "con_max",
+        "bonus"
+      ],
+      "properties": {
+        "con_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "con_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "bonus": {
+          "type": "integer"
+        }
+      }
+    },
+    "race_requirement_row": {
+      "description": "PHB Table 7: the score range a race allows for an ability (before the racial adjustments).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "race",
+        "ability",
+        "min",
+        "max"
+      ],
+      "properties": {
+        "race": {
+          "enum": [
+            "dwarf",
+            "elf",
+            "gnome",
+            "half_elf",
+            "halfling"
+          ]
+        },
+        "ability": {
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ]
+        },
+        "min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        }
+      }
+    },
+    "race_adjustment_row": {
+      "description": "PHB Table 8: a race's ability adjustment (abilities not listed: 0).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "race",
+        "ability",
+        "adjustment"
+      ],
+      "properties": {
+        "race": {
+          "enum": [
+            "dwarf",
+            "elf",
+            "gnome",
+            "half_elf",
+            "halfling"
+          ]
+        },
+        "ability": {
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ]
+        },
+        "adjustment": {
+          "type": "integer"
+        }
+      }
+    },
+    "thac0_row": {
+      "description": "PHB Table 53: THAC0 per group at the level.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "warrior",
+        "priest",
+        "rogue",
+        "wizard"
+      ],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "warrior": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "priest": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "rogue": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "wizard": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        }
+      }
+    },
+    "saving_throw_row": {
+      "description": "PHB Table 60: the five save targets of a group over a level band (levels 1 to 20).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "group",
+        "level_min",
+        "level_max",
+        "para_poison",
+        "rod_staff_wand",
+        "petri_poly",
+        "breath",
+        "spell"
+      ],
+      "properties": {
+        "group": {
+          "enum": [
+            "warrior",
+            "priest",
+            "rogue",
+            "wizard"
+          ]
+        },
+        "level_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "level_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "para_poison": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "rod_staff_wand": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "petri_poly": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "breath": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "spell": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        }
+      }
+    },
+    "level_rate_row": {
+      "description": "PHB Table 15: warrior melee attacks per round over a level band, as attacks per rounds.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level_min",
+        "level_max",
+        "attacks",
+        "rounds"
+      ],
+      "properties": {
+        "level_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "level_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "attacks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rounds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "specialist_attack_row": {
+      "description": "PHB Table 35: a specialist's attacks per round with a weapon over a level band.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "weapon",
+        "level_min",
+        "level_max",
+        "attacks",
+        "rounds"
+      ],
+      "properties": {
+        "weapon": {
+          "enum": [
+            "melee",
+            "light_crossbow",
+            "heavy_crossbow",
+            "thrown_dagger",
+            "thrown_dart",
+            "other_missile"
+          ]
+        },
+        "level_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "level_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "attacks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rounds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "rate_of_fire_row": {
+      "description": "PHB Table 45 (ROF): a missile weapon type's rate of fire, as attacks per rounds.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "weapon_type",
+        "attacks",
+        "rounds"
+      ],
+      "properties": {
+        "weapon_type": {
+          "enum": [
+            "long_bow",
+            "short_bow",
+            "hand_crossbow",
+            "light_crossbow",
+            "heavy_crossbow",
+            "dagger",
+            "dart",
+            "sling"
+          ]
+        },
+        "attacks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "rounds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "wizard_spells_row": {
+      "description": "PHB Table 21: the spells a wizard of that level memorizes, spell levels 1 to 9.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "per_spell_level"
+      ],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "per_spell_level": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "priest_spells_row": {
+      "description": "PHB Table 24: the spells a priest of that level prays for, spell levels 1 to 7.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "per_spell_level"
+      ],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "per_spell_level": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "priest_spell_wisdom_row": {
+      "description": "PHB Table 24's notes: the Wisdom a priest needs to use spells of that level.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "spell_level",
+        "wis_min"
+      ],
+      "properties": {
+        "spell_level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7
+        },
+        "wis_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        }
+      }
+    },
+    "skill_base_row": {
+      "description": "PHB Table 26 (thief) or 33 (bard): a skill's base score in percent.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skill",
+        "base"
+      ],
+      "properties": {
+        "skill": {
+          "enum": [
+            "pick_pockets",
+            "open_locks",
+            "find_remove_traps",
+            "move_silently",
+            "hide_in_shadows",
+            "detect_noise",
+            "climb_walls",
+            "read_languages"
+          ]
+        },
+        "base": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "skill_race_row": {
+      "description": "PHB Table 27: a race's adjustment to a thieving skill, in percentage points.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "race",
+        "skill",
+        "adjustment"
+      ],
+      "properties": {
+        "race": {
+          "enum": [
+            "dwarf",
+            "elf",
+            "gnome",
+            "half_elf",
+            "halfling"
+          ]
+        },
+        "skill": {
+          "enum": [
+            "pick_pockets",
+            "open_locks",
+            "find_remove_traps",
+            "move_silently",
+            "hide_in_shadows",
+            "detect_noise",
+            "climb_walls",
+            "read_languages"
+          ]
+        },
+        "adjustment": {
+          "type": "integer"
+        }
+      }
+    },
+    "skill_dexterity_row": {
+      "description": "PHB Table 28: Dexterity adjustments to the five skills it changes, in percentage points (scores outside the rows: 0).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dex_min",
+        "dex_max",
+        "pick_pockets",
+        "open_locks",
+        "find_remove_traps",
+        "move_silently",
+        "hide_in_shadows"
+      ],
+      "properties": {
+        "dex_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "dex_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "pick_pockets": {
+          "type": "integer"
+        },
+        "open_locks": {
+          "type": "integer"
+        },
+        "find_remove_traps": {
+          "type": "integer"
+        },
+        "move_silently": {
+          "type": "integer"
+        },
+        "hide_in_shadows": {
+          "type": "integer"
+        }
+      }
+    },
+    "skill_armor_row": {
+      "description": "PHB Table 29: an armour's adjustment to a thieving skill, in percentage points (leather is the baseline, 0).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "armor",
+        "skill",
+        "adjustment"
+      ],
+      "properties": {
+        "armor": {
+          "enum": [
+            "none",
+            "elven_chain",
+            "padded_studded_leather"
+          ]
+        },
+        "skill": {
+          "enum": [
+            "pick_pockets",
+            "open_locks",
+            "find_remove_traps",
+            "move_silently",
+            "hide_in_shadows",
+            "detect_noise",
+            "climb_walls",
+            "read_languages"
+          ]
+        },
+        "adjustment": {
+          "type": "integer"
+        }
+      }
+    },
+    "bard_armor_penalty_row": {
+      "description": "PHB Table 29's note: the bard's extra adjustment in non-elven (metal) chain mail, added to the elven chain column.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "armor",
+        "adjustment"
+      ],
+      "properties": {
+        "armor": {
+          "enum": [
+            "metal"
+          ]
+        },
+        "adjustment": {
+          "type": "integer"
+        }
+      }
+    },
+    "backstab_row": {
+      "description": "PHB Table 30: backstab damage multiplier over a level band.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level_min",
+        "level_max",
+        "multiplier"
+      ],
+      "properties": {
+        "level_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "level_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "multiplier": {
+          "type": "integer",
+          "minimum": 2
+        }
+      }
+    },
+    "turning_row": {
+      "description": "PHB Table 61: an undead type (and its Hit Dice: hd_max absent = and more, both absent = by type only) and the cell for each priest level 1 to 20.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "undead",
+        "by_level"
+      ],
+      "properties": {
+        "undead": {
+          "enum": [
+            "skeleton",
+            "zombie",
+            "ghoul",
+            "shadow",
+            "wight",
+            "ghast",
+            "wraith",
+            "mummy",
+            "spectre",
+            "vampire",
+            "ghost",
+            "lich",
+            "special"
+          ]
+        },
+        "hd_min": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "hd_max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "by_level": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/turning_cell"
+          }
+        }
+      }
+    },
+    "turning_cell": {
+      "description": "Either roll (success on a d20 at or above it) or outcome (no die: turned, destroyed, destroyed and 2d4 more, or cannot turn).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "roll": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "outcome": {
+          "enum": [
+            "turn",
+            "destroy",
+            "destroy_more",
+            "cannot"
+          ]
+        }
+      },
+      "if": {
+        "required": [
+          "roll"
+        ]
+      },
+      "then": {
+        "properties": {
+          "outcome": false
         }
       }
     }

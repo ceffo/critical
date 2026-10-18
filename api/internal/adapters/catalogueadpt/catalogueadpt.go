@@ -1,10 +1,12 @@
 // Package catalogueadpt reads the spell catalogue artifact (ADR 0021) from
 // the file at CRITICAL_CATALOGUE and validates it (steps 5.1 and 5.2): the
-// file must exist, carry the format this API knows (3, step 9.1; format 1 is
-// retired, step 9.6.3), match the committed JSON Schema and hold no duplicate
-// id. It maps the spells to catalogue.Catalogue and hands the artifact's PHB
-// rule tables on as the schema-checked JSON (Artifact.RuleTables): their table rules (step 9.3)
-// are ruletablesadpt's, the one reader of rule-table JSON. The import into
+// file must exist, carry a format this API knows (3, step 9.1, or 4, step
+// 10; format 1 is retired, step 9.6.3), match the committed JSON Schema and
+// hold no duplicate id. It maps the spells to catalogue.Catalogue and hands
+// the artifact's rule tables (the PHB rule tables, and in format 4 the class
+// and race tables) on as the schema-checked JSON (Artifact.RuleTables): their
+// table rules (steps 9.3 and 10.3) are ruletablesadpt's, the one reader of
+// rule-table JSON. The import into
 // the database is the storage layer's.
 package catalogueadpt
 
@@ -125,7 +127,7 @@ func Parse(raw []byte) (catalogue.Catalogue, error) {
 // ParseArtifact validates artifact bytes (step 5.2): an unknown format (a
 // retired format 1 included, step 9.6.3) is refused naming it and `just
 // catalogue`, then the schema is checked (the
-// first offences are listed, a format-3 artifact's tables included), then
+// first offences are listed, the artifact's tables included), then
 // ids must be unique.
 func ParseArtifact(raw []byte) (Artifact, error) {
 	var head struct {

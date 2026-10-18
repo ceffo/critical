@@ -3,7 +3,7 @@
 **Status**: accepted, 2026-10-15; amended 2026-10-16 (DM adjustment, steps 5 to 8); 2026-10-17, by
 [ADR 0027](0027-space-follows-frequency-of-use.md) step 12 (proposed): the Skills tab no longer offers
 step 5's adjustment before the roll, every check is adjusted on the result card (step 6); step 5's
-API is unchanged
+API is unchanged. Step 3 amended by [ADR 0030](0030-classes-and-races.md) (bard skill percentages computed), on its implementation.
 
 ## Context
 

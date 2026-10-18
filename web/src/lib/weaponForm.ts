@@ -17,6 +17,8 @@ export interface WeaponDraft {
   kind: "melee" | "missile";
   two_handed: boolean;
   ammo_kind: string;
+  /** ADR 0030 step 12: offered to a class that specializes. */
+  specialized: boolean;
 }
 
 /** Fields of the form, named like the API's. */
@@ -31,6 +33,7 @@ export const emptyWeaponDraft: WeaponDraft = {
   kind: "melee",
   two_handed: false,
   ammo_kind: "",
+  specialized: false,
 };
 
 /** The form for a weapon, its name as shown in the UI language `lang`. */
@@ -44,6 +47,7 @@ export function draftFromWeapon(w: Weapon, lang: string): WeaponDraft {
     kind: w.kind,
     two_handed: w.two_handed,
     ammo_kind: w.ammo_kind,
+    specialized: w.specialized,
   };
 }
 
@@ -78,6 +82,7 @@ export function weaponDraftToBody(
     kind: d.kind,
     two_handed: d.two_handed,
     ammo_kind: d.kind === "missile" ? d.ammo_kind : "",
+    specialized: d.specialized,
   };
   return { body, errors };
 }

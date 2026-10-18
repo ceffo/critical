@@ -4,6 +4,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { formatStrength } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
@@ -32,7 +33,18 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   const xp = useXpStore((s) => s.ledger);
   const character = useCharacterStore((s) => s.character);
   const strength = useBuffsStore((s) => s.strength);
-  const strBuffed = strength !== null && strength.effective !== strength.base;
+  const strBuffed =
+    strength !== null &&
+    (strength.effective !== strength.base ||
+      strength.effectiveExceptional !== strength.baseExceptional);
+  // The score in effect and the sheet's, an 18/xx as 18/50 (ADR 0030 step 9).
+  const strText = strength && {
+    effective: formatStrength(
+      strength.effective,
+      strength.effectiveExceptional,
+    ),
+    base: formatStrength(strength.base, strength.baseExceptional),
+  };
   const rollAbility = useRollStore((s) => s.rollAbility);
   const rollLevelUp = useCharacterStore((s) => s.rollLevelUp);
   const levelUpBusy = useCharacterStore((s) => s.levelUpBusy);
@@ -97,7 +109,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
           {ABILITIES.map((k) => {
             const isStr = k === "str" && strength !== null;
             const buffed = isStr && strBuffed;
-            const score = isStr ? strength.effective : character[k];
+            const score = isStr && strText ? strText.effective : character[k];
             const cell = (
               <>
                 <span className="text-label text-muted-foreground">
@@ -110,7 +122,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                   )}
                 >
                   {isStr ? (
-                    <span data-testid="str-value">{strength.effective}</span>
+                    <span data-testid="str-value">{strText?.effective}</span>
                   ) : (
                     character[k]
                   )}
@@ -154,7 +166,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                   {cell}
                 </TooltipTrigger>
                 <TooltipContent>
-                  {t("app.strTitle", { ...strength })}
+                  {t("app.strTitle", { ...strText })}
                 </TooltipContent>
               </Tooltip>
             );

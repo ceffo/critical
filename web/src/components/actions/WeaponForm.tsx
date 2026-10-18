@@ -20,6 +20,8 @@ interface Props {
   editing?: Weapon;
   /** Ammo kinds offered as suggestions. */
   ammoKinds: string[];
+  /** The character's class specializes (ADR 0030 step 12): the form offers the flag. */
+  specializes?: boolean;
   busy: boolean;
   /** Save a body; resolves the server's rejection, or null when saved. */
   onSave: (body: WeaponBody) => Promise<ApiError | null>;
@@ -34,6 +36,7 @@ export function WeaponForm({
   initial,
   editing,
   ammoKinds,
+  specializes = false,
   busy,
   onSave,
   onCancel,
@@ -70,7 +73,13 @@ export function WeaponForm({
       return;
     }
     const rejected = await onSave(toSend);
-    if (rejected?.field) setErrors({ [rejected.field]: rejected.message });
+    // The server's message, or the wording of its code (ADR 0023: not_allowed).
+    if (rejected?.field)
+      setErrors({
+        [rejected.field]: t(`weapons.form.errors.${rejected.message}`, {
+          defaultValue: rejected.message,
+        }),
+      });
   }
 
   const field = (
@@ -183,6 +192,17 @@ export function WeaponForm({
             onChange={(e) => set("two_handed", e.target.checked)}
           />
         ))}
+        {(specializes || initial.specialized) &&
+          field("specialized", t("weapons.form.specialized"), (props) => (
+            <input
+              {...props}
+              type="checkbox"
+              className="size-5"
+              title={t("weapons.form.specializedHint")}
+              checked={draft.specialized}
+              onChange={(e) => set("specialized", e.target.checked)}
+            />
+          ))}
         {draft.kind === "missile" &&
           field(
             "ammo_kind",

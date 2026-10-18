@@ -15,7 +15,7 @@ import {
 } from "@/types/character";
 
 type NumberField = (typeof ABILITIES)[number] | "hpMax" | "xp";
-type Field = NumberField | "name" | "class" | "raceCode";
+type Field = NumberField | "name" | "class" | "raceCode" | "strExceptional";
 
 /** The server's field names for the form's: the race is `race` in its errors. */
 const ERROR_FIELD: Record<string, Field> = { race: "raceCode" };
@@ -51,6 +51,8 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
     hpMax: "",
     xp: "0",
   });
+  // A warrior's 18/xx (ADR 0030 step 9), blank for none; offered at Strength 18.
+  const [strExceptional, setStrExceptional] = useState("");
   const [error, setError] = useState<FieldError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -73,7 +75,10 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
     };
   }, []);
 
-  const races = options?.classes.find((c) => c.class === cls)?.races ?? [];
+  const classOption = options?.classes.find((c) => c.class === cls);
+  const races = classOption?.races ?? [];
+  const offersExceptional =
+    !!classOption?.exceptionalStrength && parseWhole(numbers.str) === 18;
   const rangeOf = (f: NumberField): ValueRange | undefined =>
     options
       ? f === "hpMax"
@@ -87,9 +92,11 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
     const r =
       e.field === "name"
         ? { max: options?.maxNameLength }
-        : e.field in numbers
-          ? rangeOf(e.field as NumberField)
-          : undefined;
+        : e.field === "strExceptional"
+          ? options?.strExceptional
+          : e.field in numbers
+            ? rangeOf(e.field as NumberField)
+            : undefined;
     const key = `characters.errors.${e.code}`;
     const className = t(`details.classes.${cls}`, { defaultValue: cls });
     return t(key, {
@@ -113,6 +120,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
       cha: null,
       hpMax: null,
       xp: null,
+      strExceptional: 0,
     };
     for (const f of Object.keys(numbers) as NumberField[]) {
       const v = parseWhole(numbers[f]);
@@ -121,6 +129,14 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
         return;
       }
       body[f] = v;
+    }
+    if (offersExceptional && strExceptional.trim() !== "") {
+      const v = parseWhole(strExceptional);
+      if (Number.isNaN(v) || v === null) {
+        setError({ field: "strExceptional", code: "out_of_range" });
+        return;
+      }
+      body.strExceptional = v;
     }
     setBusy(true);
     setError(null);
@@ -291,6 +307,30 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
             ),
           )}
         </div>
+        {offersExceptional && (
+          <div className="flex min-w-0 flex-col gap-1 sm:w-1/3">
+            <label
+              htmlFor="new-character-strExceptional"
+              className={labelClass}
+            >
+              {t("characters.strExceptional")}
+            </label>
+            <input
+              {...fieldProps("strExceptional")}
+              inputMode="numeric"
+              title={t("characters.strExceptionalHint", {
+                min: options.strExceptional.min,
+                max: options.strExceptional.max,
+              })}
+              value={strExceptional}
+              onChange={(e) => {
+                setStrExceptional(e.target.value);
+                setError(null);
+              }}
+            />
+            {errorFor("strExceptional")}
+          </div>
+        )}
       </fieldset>
 
       <div className="grid grid-cols-2 gap-3">

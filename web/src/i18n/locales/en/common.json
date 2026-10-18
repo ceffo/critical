@@ -312,6 +312,12 @@
       "missile": "Missile"
     },
     "twoHanded": "two-handed",
+    "specialized": "specialized",
+    "rate": "{{attacks}}/{{rounds}} att.",
+    "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} this round",
+    "rateHint": "Attacks per round: {{attacks}} every {{rounds}} rounds; this round: {{count}}",
+    "pointBlank": "Point blank",
+    "pointBlankHint": "Target at point-blank range: +2 to hit with a specialized launcher",
     "sizesShort": {
       "sm": "S / M",
       "l": "L"
@@ -1018,7 +1024,9 @@
       "situationalUnnamed": "Situational",
       "critRange": "Critical hit ({{from}}–{{to}})",
       "critPlaceholder": "Critical hit (placeholder)",
-      "race": "{{race}} (race)"
+      "race": "{{race}} (race)",
+      "specialization": "Specialization",
+      "point_blank": "Point blank"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -1369,6 +1377,7 @@
     "none": "No weapons.",
     "detail": "{{sm}} · L {{l}}",
     "twoHanded": "two-handed",
+    "specialized": "specialized",
     "kind": {
       "melee": "Melee",
       "missile": "Missile"
@@ -1387,7 +1396,12 @@
       "kind": "Kind",
       "twoHanded": "Two-handed",
       "ammoKind": "Ammo kind",
-      "ammoNone": "none (hurled)"
+      "ammoNone": "none (hurled)",
+      "specialized": "Specialized",
+      "specializedHint": "Fighter specialization: +1 to hit and +2 damage in melee or thrown; a launcher gains +2 to hit at point-blank range",
+      "errors": {
+        "not_allowed": "Only a fighter can specialize in a weapon."
+      }
     },
     "columns": {
       "name": "Name",
@@ -1451,7 +1465,8 @@
     },
     "languagesHint": "Separate languages with commas",
     "classes": {
-      "bard": "Bard"
+      "bard": "Bard",
+      "fighter": "Fighter"
     },
     "language": {
       "elfique": "Elvish",
@@ -1723,6 +1738,8 @@
     "abilities": "Abilities",
     "abilitiesLead": "The sheet's scores, racial adjustments included.",
     "abilityHint": "{{name}}: {{min}} to {{max}}",
+    "strExceptional": "Exceptional strength (18/xx)",
+    "strExceptionalHint": "A warrior's Strength 18 percentile, {{min}} to {{max}} (100 = 18/00); blank: none",
     "range": "{{min}} to {{max}}",
     "hpMax": "Max HP",
     "xp": "Starting XP",
@@ -1735,7 +1752,8 @@
       "out_of_range": "Enter a whole number from {{min}} to {{max}}.",
       "not_creatable": "This class cannot be created yet.",
       "unknown": "Pick one of the six races.",
-      "race_not_allowed": "This race cannot be a {{className}}."
+      "race_not_allowed": "This race cannot be a {{className}}.",
+      "not_allowed": "No exceptional strength for this character: only a warrior with Strength 18, not a halfling."
     }
   }
 }

@@ -5,10 +5,20 @@
 #     the image in the registry) and `all`, which prints the tag's commit and the digest staging ran (as
 #     that tag's version when one commit carries two);
 #   - promote.sh: guards, then the no-public-IP check, then the copy of the staged image by digest into the
-#     production repository (and its digest checked), then the restore point in a console machine of it, then the deploy by digest, the smoke check, the digest check and the GitHub Release;
-#     each failure stops everything after it (a refused guard calls fly not at all; no restore point, no
-#     deploy; a failed smoke or a digest mismatch, no release);
+#     production repository (and its digest checked), then the restore point in a console machine of it
+#     (the dump block kept out of the log, checked, encrypted, decryptable with the passphrase), then the
+#     deploy by digest, the smoke check, the digest check and the GitHub Release naming where the restore
+#     point is kept; each failure stops everything after it (a refused guard calls fly not at all; no
+#     passphrase, nothing; no restore point, or a cut or damaged one, no deploy; a failed smoke or a digest
+#     mismatch, no release); `prepare` and `deploy` apart (the workflow's two steps around the upload):
+#     prepare deploys nothing, deploy refuses without prepare's record, for another tag, or without
+#     RESTORE_POINT_KEPT;
 #   - restore-point.sh: what it refuses without a database (its SQL runs for real in scripts/image-smoke.sh);
+#   - restore-point-fetch.sh: the newest unexpired restore point of a version (or the one named) downloaded,
+#     decrypted and unpacked as a backup; a wrong passphrase, a missing one, a foreign tar member, an
+#     existing folder and a malformed name refused, keeping nothing;
+#   - restore-point-key.sh: a new passphrase file (mode 600) set as the production secret through stdin,
+#     never overwritten;
 #   - release-guards.sh resolve: no version, the newest (by number) v* version on main that passed staging,
 #     skipping higher ones that did not; a version asked (X.Y.Z or vX.Y.Z, the rollback) that must exist, be on
 #     main and have passed staging; a malformed one refused;
@@ -17,8 +27,10 @@
 #   - `just promote [version]`: the dispatch of promote.yml from main, with the version as its input;
 #   - promote.yml, parsed: a run from another ref than main fails saying so; by hand only (no trigger on a tag
 #     push), with an optional version input; the admin check before any secret in both jobs, the version
-#     resolved without any secret, the production environment, serialized and never cancelled, the token
-#     read only by the secret check (which fails on an empty token) and the promotion step.
+#     resolved without any secret, the production environment, serialized and never cancelled, the secrets
+#     read only by the secret check (which fails on an empty token or passphrase) and the two promote.sh
+#     steps, the restore point uploaded (90 days, encrypted file, an error when missing) between them, the
+#     deploy step refusing without an artifact id.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -70,7 +82,20 @@ case "\$1 \$2" in
     "ips list") cat "$tmp/ips" ;;
     "machine list") [ ! -f "$tmp/machines-fail" ] || exit 1; cat "$tmp/machines" ;;
     "releases --image") echo "v3 complete registry.fly.io/critical-staging@previous" ;;
-    "console -a") cat "$tmp/console-out" | sed "s/@POINT@/\$(echo "\$*" | sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p')/" ;;
+    "console -a")
+        point="\$(echo "\$*" | sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p')"
+        if [ -f "$tmp/console-out" ]; then sed "s/@POINT@/\$point/" "$tmp/console-out"; exit 0; fi
+        sum="\$(sha256sum "$tmp/point.tar" | cut -d' ' -f1)"; bytes="\$(wc -c <"$tmp/point.tar" | tr -d ' ')"
+        [ ! -f "$tmp/console-damage" ] || sum="\$(printf '0%.0s' \$(seq 64))"
+        echo "Connecting to fdaa::2... complete" >&2
+        {
+            echo "restore-point: dumping critical_prod"
+            echo "restore-point: BEGIN \$point"
+            if [ -f "$tmp/console-cut" ]; then base64 "$tmp/point.tar" | head -n 2; exit 0; fi
+            base64 "$tmp/point.tar"
+            echo "restore-point: END \$point"
+            echo "restore-point: OK \$point \$sum \$bytes"
+        } | sed 's/\$/\r/' ;;
 esac
 STUB
 cat > "$stubs/smoke" <<STUB
@@ -80,6 +105,19 @@ echo "smoke \$*" >> "$calls"
 STUB
 chmod +x "$stubs"/*
 export PATH="$stubs:$PATH" GITHUB_REPOSITORY=o/r
+# The restore point the console machine sends back: a tar of a dump (random bytes) and its table counts.
+mkdir -p "$tmp/pointsrc"
+head -c 20000 /dev/urandom >"$tmp/pointsrc/critical_prod.dump"
+printf 'characters 3\nschema_migrations 9\n' >"$tmp/pointsrc/counts.txt"
+tar -C "$tmp/pointsrc" -cf "$tmp/point.tar" critical_prod.dump counts.txt
+passphrase="test-passphrase-$RANDOM-not-a-secret"
+# decrypt <file> [passphrase]: the plaintext on stdout, with a throwaway GNUPGHOME.
+decrypt() {
+    local home; home="$(mktemp -d)"
+    GNUPGHOME="$home" gpg --batch --quiet --no-tty --pinentry-mode loopback --no-symkey-cache --passphrase-fd 3 \
+        --decrypt "$1" 3<<<"${2:-$passphrase}" 2>/dev/null
+    local s=$?; rm -rf "$home"; return "$s"
+}
 
 # put <url> <json>: what the gh stub answers for that API path.
 put() { printf '%s' "$2" > "$fx/$(printf '%s' "$1" | tr -c 'a-zA-Z0-9' '_')"; }
@@ -267,12 +305,18 @@ private='[{"Type":"private_v6","Address":"fdaa::1","Region":"global"}]'
 public='[{"Type":"v4","Address":"1.2.3.4","Region":"global"},{"Type":"private_v6","Address":"fdaa::1","Region":"global"}]'
 label='"labels":{"org.opencontainers.image.version":"1.2.3"}'
 machines="[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\",\"tag\":\"$main_sha\",$label}},{\"id\":\"m2\",\"image_ref\":{\"digest\":\"$newer\",\"tag\":\"$main_sha\",$label}}]"
-ok_console="$(printf 'Created an ephemeral machine\nrestore-point: dumping critical_prod\nrestore-point: OK @POINT@\r\n')"
 reset() {
-    echo "$private" > "$tmp/ips"; echo "$machines" > "$tmp/machines"; echo "$ok_console" > "$tmp/console-out"
-    rm -f "$tmp/smoke-fails" "$tmp/release-exists" "$tmp/machines-fail" "$tmp/image-missing" "$tmp/copy-fails" "$tmp/copy-missing"
+    echo "$private" > "$tmp/ips"; echo "$machines" > "$tmp/machines"; rm -rf "$tmp/points" "$tmp/console-out"
+    rm -f "$tmp/smoke-fails" "$tmp/release-exists" "$tmp/machines-fail" "$tmp/image-missing" "$tmp/copy-fails" "$tmp/copy-missing" \
+        "$tmp/console-damage" "$tmp/console-cut"
 }
-promote() { : > "$calls"; status=0; out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" "$tmp/repo/scripts/promote.sh" "$1" 2>&1)" || status=$?; }
+# promote [phase] <tag>: promote.sh with the passphrase and $tmp/points, RESTORE_POINT_KEPT unset by default.
+promote() {
+    : > "$calls"; status=0
+    out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" RESTORE_POINT_PASSPHRASE="${PASS-$passphrase}" RESTORE_POINT_DIR="$tmp/points" \
+        "$tmp/repo/scripts/promote.sh" "$@" 2>&1)" || status=$?
+}
+b64line="$(base64 "$tmp/point.tar" | sed -n 2p)" # a line of the dump's block: never in the log
 line() { grep -n "$1" "$calls" | head -n1 | cut -d: -f1; }
 staged="registry.fly.io/critical-staging@$newer"
 image="registry.fly.io/critical-prod@$newer"
@@ -289,7 +333,17 @@ grep -qx "fly console -a critical-prod --image $image --region yyz --vm-size sha
 grep -qx "fly deploy -c $tmp/repo/deploy/fly.prod.toml -a critical-prod --image $image --no-public-ips --yes" "$calls" \
     || fail "promote: wrong deploy call: $(grep deploy "$calls")"
 grep -qx "smoke critical-prod $main_sha" "$calls" || fail "promote: smoke not called with the app and the tag's commit"
-grep -q "^gh release create v1.2.3 --verify-tag --title v1.2.3 --generate-notes --notes .*$newer" "$calls" || fail "promote: no GitHub Release with the digest"
+grep -q "^gh release create v1.2.3 --verify-tag --title v1.2.3 --generate-notes --notes .*$newer.*$point\`, kept on the machine that ran the promotion, $tmp/points/$point.tar.gpg" "$calls" \
+    || fail "promote: no GitHub Release with the digest, the restore point and where it is kept: $(grep release "$calls")"
+[ -s "$tmp/points/$point.tar.gpg" ] || fail "promote: the restore point is not kept in RESTORE_POINT_DIR: $(ls "$tmp/points" 2>&1)"
+decrypt "$tmp/points/$point.tar.gpg" | cmp -s - "$tmp/point.tar" || fail "promote: the kept restore point does not decrypt to the dump sent"
+decrypt "$tmp/points/$point.tar.gpg" wrong-passphrase >/dev/null && fail "promote: the restore point decrypts with another passphrase"
+cmp -s "$tmp/points/$point.tar.gpg" "$tmp/point.tar" && fail "promote: the restore point is kept in clear"
+[ "$(find "$tmp/points" -type f | sed "s|$tmp/points/||" | sort | tr '\n' ' ')" = "$point.tar.gpg promote.env " ] \
+    || fail "promote: RESTORE_POINT_DIR holds more than the encrypted restore point and its record (a clear copy?): $(ls -a "$tmp/points")"
+[[ "$out" != *"$b64line"* ]] || fail "promote: the dump's block reached the log"
+[[ "$out" == *"restore-point: dumping critical_prod"* && "$out" == *"Connecting to fdaa::2"* && "$out" == *"restore-point: OK $point"* ]] \
+    || fail "promote: the console machine's own lines are not printed: $out"
 [[ "$out" == *"promote: production (critical-prod) runs 1.2.3 (commit $main_sha, $newer); promoting v1.2.3"* ]] \
     || fail "promote: what production runs is not printed: $out"
 [ "$(line '^fly machine list')" -lt "$(line '^fly ips')" ] || fail "promote: production's current version is not printed before the promotion starts"
@@ -356,11 +410,50 @@ grep -qE '^(fly (console|deploy)|docker buildx)' "$calls" && fail "promote: a pu
 PUBLIC_ACCESS_OPTION=basic-auth promote v1.2.3
 [ "$status" != 0 ] || fail "promote: PUBLIC_ACCESS_OPTION bypassed the mandatory no-public-IP check"
 
-reset; printf 'restore-point: FAIL: the database user lacks CREATEDB\n' > "$tmp/console-out"; promote v1.2.3
-[ "$status" != 0 ] && [[ "$out" == *"no restore point"* ]] || fail "promote: a failed restore point is not refused: $out"
+reset; printf 'restore-point: FAIL: pg_dump of critical_prod failed\n' > "$tmp/console-out"; promote v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"no restore point"* && "$out" == *"pg_dump of critical_prod failed"* ]] \
+    || fail "promote: a failed restore point is not refused, or its reason not printed: $out"
 grep -q '^fly deploy' "$calls" && fail "promote: deployed without a restore point"
-printf 'restore-point: OK critical_prod_pre_v1_2_3_20000101000000\n' > "$tmp/console-out"; promote v1.2.3
+printf 'restore-point: OK critical_prod_pre_v1_2_3_20000101000000 %s 10\n' "$(printf 'a%.0s' {1..64})" > "$tmp/console-out"; promote v1.2.3
 grep -q '^fly deploy' "$calls" && fail "promote: deployed on the OK line of another restore point"
+reset; touch "$tmp/console-cut"; promote v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"no restore point"* ]] && [[ "$out" != *"$b64line"* ]] && ! grep -q '^fly deploy' "$calls" \
+    || fail "promote: a cut restore point is not refused, or its block reached the log: $out"
+reset; touch "$tmp/console-damage"; promote v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"came back damaged"* ]] && ! grep -q '^fly deploy' "$calls" && [ ! -e "$tmp/points/promote.env" ] \
+    || fail "promote: a damaged restore point is not refused: $out"
+for pass in "" unset; do
+    reset
+    if [ "$pass" = unset ]; then out="$(unset RESTORE_POINT_PASSPHRASE; FLY="$stubs/fly" RESTORE_POINT_DIR="$tmp/points" "$tmp/repo/scripts/promote.sh" v1.2.3 2>&1)" && status=0 || status=$?
+    else : > "$calls"; PASS="" promote v1.2.3; fi
+    [ "$status" != 0 ] && [[ "$out" == *"RESTORE_POINT_PASSPHRASE is not set"* ]] && ! grep -qE '^(fly|docker)' "$calls" \
+        || fail "promote: no passphrase ($pass) is not refused before anything: $out"
+done
+
+# The workflow's two steps around the upload: prepare deploys nothing; deploy needs prepare's record for
+# the same tag and RESTORE_POINT_KEPT.
+reset; out_file="$tmp/github-output"; : > "$out_file"
+GITHUB_OUTPUT="$out_file" promote prepare v1.2.3
+[ "$status" = 0 ] || fail "promote prepare: exit $status: $out"
+grep -qE '^(fly deploy|smoke|gh release)' "$calls" && fail "promote prepare deployed or released: $(cat "$calls")"
+point="$(sed -n 's/^point=//p' "$out_file")"
+[[ "$point" =~ ^critical_prod_pre_v1_2_3_[0-9]{14}$ ]] && [ "$(sed -n 's/^file=//p' "$out_file")" = "$tmp/points/$point.tar.gpg" ] \
+    || fail "promote prepare: GITHUB_OUTPUT has no point= and file=: $(cat "$out_file")"
+promote deploy v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"RESTORE_POINT_KEPT does not say"* ]] && ! grep -q '^fly deploy' "$calls" \
+    || fail "promote deploy without RESTORE_POINT_KEPT: $out"
+RESTORE_POINT_KEPT="artifact 7" promote deploy v1.2.4
+[ "$status" != 0 ] && [[ "$out" == *"taken for another tag"* ]] && ! grep -q '^fly deploy' "$calls" \
+    || fail "promote deploy of another tag than prepare's: $out"
+RESTORE_POINT_KEPT="encrypted, artifact 7 of https://run" promote deploy v1.2.3
+[ "$status" = 0 ] && grep -qx "fly deploy -c $tmp/repo/deploy/fly.prod.toml -a critical-prod --image $image --no-public-ips --yes" "$calls" \
+    && grep -q "^gh release create v1.2.3 .*$point\`, encrypted, artifact 7 of https://run" "$calls" \
+    && ! grep -qE '^(fly (ips|console)|docker)' "$calls" \
+    || fail "promote deploy after prepare: exit $status, $out; $(cat "$calls")"
+rm -rf "$tmp/points"; RESTORE_POINT_KEPT="artifact 7" promote deploy v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"no restore point recorded"* ]] && ! grep -q '^fly deploy' "$calls" || fail "promote deploy without prepare: $out"
+reset; status=0; out="$(FLY="$stubs/fly" RESTORE_POINT_PASSPHRASE=x "$tmp/repo/scripts/promote.sh" prepare v1.2.3 2>&1)" || status=$?
+[ "$status" != 0 ] && [[ "$out" == *"RESTORE_POINT_DIR is not set"* ]] || fail "promote prepare without RESTORE_POINT_DIR: $out"
 
 reset; touch "$tmp/smoke-fails"; promote v1.2.3
 [ "$status" != 0 ] && [[ "$out" == *"registry.fly.io/critical-staging@previous"* ]] || fail "promote: a failed smoke check: exit $status, no releases listed: $out"
@@ -387,12 +480,106 @@ point_arg=critical_prod_pre_v1_2_3_20261017000000
 rp CRITICAL_DSN=postgres://u:p@h:5432/critical_prod; [ "$status" != 0 ] && [[ "$out" == *"no embedded migration"* ]] || fail "restore-point without the embedded migrations: $out"
 point_arg="critical_prod_pre_v1_2_3_20261017000000 001_x.sql"
 rp A=1; [ "$status" != 0 ] && [[ "$out" == *"CRITICAL_DSN is not set"* ]] || fail "restore-point without a DSN: $out"
-rp CRITICAL_DSN=postgres://u:p@h:5432/critical_prod RESTORE_POINT_KEEP=0; [ "$status" != 0 ] || fail "restore-point accepted a retention of 0"
+rp CRITICAL_DSN=postgres://u:p@h:5432/critical_prod RESTORE_POINT_CONNECT_TRIES=0; [ "$status" != 0 ] || fail "restore-point accepted 0 connection tries"
 [[ "$out" != *u:p@* ]] || fail "restore-point printed the DSN"
+rp CRITICAL_DSN=postgres://u:p@h:5432/critical_staging; [ "$status" != 0 ] && [[ "$out" == *"is not a restore point of the database 'critical_staging'"* ]] \
+    || fail "restore-point accepted a name of another database: $out"
 for m in "001_x.sql;drop" "001_x" "'001_x.sql'" "../001.sql"; do
     point_arg="critical_prod_pre_v1_2_3_20261017000000 $m"
     rp CRITICAL_DSN=postgres://u:p@h:5432/critical_prod; [ "$status" != 0 ] && [[ "$out" == *"malformed migration"* ]] || fail "restore-point accepted the migration '$m': $out"
 done
+
+# --- restore-point-fetch.sh: a restore point back from its artifact ---
+fstubs="$tmp/fetch-bin"
+mkdir -p "$fstubs" "$tmp/artifacts"
+cat > "$fstubs/gh" <<STUB
+#!/usr/bin/env bash
+case "\$1" in
+    api) shift; expr=""; url=""
+        while [ "\$#" -gt 0 ]; do case "\$1" in --jq) expr="\$2"; shift 2 ;; --paginate) shift ;; *) url="\$1"; shift ;; esac; done
+        echo "gh api \$url" >> "$calls"; jq -r "\$expr" "$tmp/artifacts.json" ;;
+    run) echo "gh \$*" >> "$calls"; shift 2; run="\$1"; shift
+        while [ "\$#" -gt 0 ]; do case "\$1" in -n) name="\$2"; shift 2 ;; -D) dir="\$2"; shift 2 ;; *) shift ;; esac; done
+        [ -d "$tmp/artifacts/\$run-\$name" ] || exit 1
+        mkdir -p "\$dir" && cp "$tmp/artifacts/\$run-\$name"/* "\$dir/" ;;
+    *) exit 1 ;;
+esac
+STUB
+printf '#!/bin/sh\necho "pg_restore $*" >> "%s"\n' "$calls" > "$fstubs/pg_restore"
+chmod +x "$fstubs"/*
+# artifact <run> <name> <tar>: the encrypted tar as the run's artifact <name>.
+artifact() {
+    local home; home="$(mktemp -d)"; mkdir -p "$tmp/artifacts/$1-$2"
+    GNUPGHOME="$home" gpg --batch --quiet --no-tty --pinentry-mode loopback --no-symkey-cache --passphrase-fd 3 \
+        --symmetric --output "$tmp/artifacts/$1-$2/$2.tar.gpg" "$3" 3<<<"$passphrase"
+    rm -rf "$home"
+}
+p1=critical_prod_pre_v1_2_3_20261001000000; p2=critical_prod_pre_v1_2_3_20261002000000
+p3=critical_prod_pre_v1_2_3_20261003000000; p4=critical_prod_pre_v1_2_30_20261004000000; p5=critical_prod_pre_v2_0_0_20261005000000
+artifact 11 "$p1" "$tmp/point.tar"; artifact 12 "$p2" "$tmp/point.tar"; artifact 14 "$p4" "$tmp/point.tar"
+cp "$tmp/point.tar" "$tmp/foreign.tar"; echo x > "$tmp/pointsrc/extra.sh"; tar -C "$tmp/pointsrc" -rf "$tmp/foreign.tar" extra.sh
+artifact 15 "$p5" "$tmp/foreign.tar"
+cat > "$tmp/artifacts.json" <<JSON
+{"artifacts":[
+ {"name":"$p1","id":1,"expired":false,"workflow_run":{"id":11}},
+ {"name":"$p2","id":2,"expired":false,"workflow_run":{"id":12}},
+ {"name":"$p3","id":3,"expired":true,"workflow_run":{"id":13}},
+ {"name":"$p4","id":4,"expired":false,"workflow_run":{"id":14}},
+ {"name":"$p5","id":5,"expired":false,"workflow_run":{"id":15}},
+ {"name":"e2e-results","id":6,"expired":false,"workflow_run":{"id":16}}]}
+JSON
+fetch() {
+    : > "$calls"; status=0
+    out="$(env PATH="$fstubs:$PATH" GH_REPO=o/r BACKUP_DIR="$tmp/bk" CRITICAL_PASSWORD_DIR="$tmp/nokeys" RESTORE_POINT_PASSPHRASE="${FPASS-$passphrase}" \
+        "$root/scripts/restore-point-fetch.sh" "$@" 2>&1)" || status=$?
+}
+fetch 1.2.3
+[ "$status" = 0 ] && grep -qx "gh run download 12 -R o/r -n $p2 -D .*" "$calls" \
+    && cmp -s "$tmp/bk/$p2/critical_prod.dump" "$tmp/pointsrc/critical_prod.dump" && cmp -s "$tmp/bk/$p2/counts.txt" "$tmp/pointsrc/counts.txt" \
+    && grep -q "^pg_restore --list .*/critical_prod.dump$" "$calls" \
+    || fail "restore-point-fetch 1.2.3: not the newest unexpired restore point of v1.2.3, unpacked and read back: exit $status, $out; $(cat "$calls")"
+[ "$(stat -c %a "$tmp/bk/$p2/critical_prod.dump")" = 600 ] && [ "$(stat -c %a "$tmp/bk")" = 700 ] || fail "restore-point-fetch: the dump is readable by others"
+[[ "$out" == *"2 tables, 12 rows"* && "$out" != *"$passphrase"* ]] || fail "restore-point-fetch: summary, or the passphrase printed: $out"
+fetch v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"exists already"* ]] || fail "restore-point-fetch: an existing folder is overwritten: $out"
+fetch "$p1"
+[ "$status" = 0 ] && grep -q "^gh run download 11 " "$calls" || fail "restore-point-fetch by name: $out"
+fetch 1.2.30
+[ "$status" = 0 ] && grep -q "^gh run download 14 " "$calls" || fail "restore-point-fetch 1.2.30 (not 1.2.3's): $out"
+for v in 9.9.9 "$p3"; do
+    fetch "$v"
+    [ "$status" != 0 ] && [[ "$out" == *"among the unexpired artifacts"* ]] || fail "restore-point-fetch $v (none, or expired): $out"
+done
+for v in 1.2 v01.2.3 "critical_staging_pre_v1_2_3_20261001000000" "$p1;x" "../x"; do
+    fetch "$v"
+    [ "$status" != 0 ] && [[ "$out" == *"is not X.Y.Z, vX.Y.Z or a restore point name"* ]] && [ ! -s "$calls" ] || fail "restore-point-fetch accepted '$v': $out"
+done
+rm -rf "$tmp/bk"; FPASS=wrong fetch 1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"could not decrypt"* ]] && [ ! -e "$tmp/bk/$p2" ] || fail "restore-point-fetch: a wrong passphrase: $out"
+FPASS="" fetch 1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"no passphrase"* ]] && [ ! -s "$calls" ] || fail "restore-point-fetch: no passphrase: $out"
+mkdir -p "$tmp/keys"; printf '%s\n' "$passphrase" > "$tmp/keys/restore-point.passphrase"
+: > "$calls"; status=0
+out="$(env PATH="$fstubs:$PATH" GH_REPO=o/r BACKUP_DIR="$tmp/bk" CRITICAL_PASSWORD_DIR="$tmp/keys" RESTORE_POINT_PASSPHRASE= \
+    "$root/scripts/restore-point-fetch.sh" 1.2.3 2>&1)" || status=$?
+[ "$status" = 0 ] && [ -s "$tmp/bk/$p2/critical_prod.dump" ] || fail "restore-point-fetch: the passphrase file is not read: $out"
+fetch 2.0.0
+[ "$status" != 0 ] && [[ "$out" == *"not critical_prod.dump and counts.txt"* ]] && [ ! -e "$tmp/bk/$p5" ] || fail "restore-point-fetch: a foreign tar member: $out"
+
+# --- restore-point-key.sh: the passphrase, made once, set as the production secret ---
+kstubs="$tmp/key-bin"
+mkdir -p "$kstubs"
+printf '#!/bin/sh\necho "gh $*" >> "%s"\ncat > "%s"\n' "$calls" "$tmp/secret" > "$kstubs/gh"
+chmod +x "$kstubs/gh"
+key() { : > "$calls"; status=0; out="$(env PATH="$kstubs:$PATH" CRITICAL_PASSWORD_DIR="$tmp/newkeys" "$root/scripts/restore-point-key.sh" 2>&1)" || status=$?; }
+key
+made="$(cat "$tmp/newkeys/restore-point.passphrase" 2>/dev/null)"
+[ "$status" = 0 ] && [ "${#made}" -ge 40 ] && [ "$(stat -c %a "$tmp/newkeys/restore-point.passphrase")" = 600 ] \
+    && [ "$(cat "$calls")" = "gh secret set RESTORE_POINT_PASSPHRASE --env production" ] && [ "$(cat "$tmp/secret")" = "$made" ] \
+    && [[ "$out" != *"$made"* ]] || fail "restore-point-key: exit $status, $out; $(cat "$calls")"
+key
+[ "$status" = 0 ] && [ "$(cat "$tmp/newkeys/restore-point.passphrase")" = "$made" ] && [ "$(cat "$tmp/secret")" = "$made" ] \
+    || fail "restore-point-key: a rerun changed the passphrase or did not set the secret again: $out"
 
 # --- require-admin.sh: who may promote ---
 perm() { put "repos/o/r/collaborators/$1/permission" "{\"permission\":\"$2\",\"role_name\":\"$2\"}"; }
@@ -513,7 +700,7 @@ check(job["permissions"] == {"contents": "write", "deployments": "read"}, "promo
 steps = job["steps"]
 a = admin_first("promote", steps)
 readers = [i for i, st in enumerate(steps) if "secrets." in str(st)]
-check([steps[i].get("name") for i in readers] == ["Check the deploy secret", "Promote"], f"promote: the token is read by {readers}")
+check([steps[i].get("name") for i in readers] == ["Check the deploy secrets", "Restore point", "Promote"], f"promote: the secrets are read by {readers}")
 check(all(i > a for i in readers), "promote: a secret is read before the admin check")
 check(all("if" not in st for st in steps), "promote: a conditional step could skip the promotion")
 for name, j in (("resolve", res), ("promote", job)):
@@ -521,16 +708,38 @@ for name, j in (("resolve", res), ("promote", job)):
     check(len(co) == 1 and co[0]["with"].get("fetch-depth") == 0 and co[0]["with"].get("persist-credentials") is False,
           f"{name}: checkout must fetch the whole history and the tags, without persisted credentials")
     check(bool(co) and "ref" not in co[0]["with"], f"{name}: the checkout must be main's (its scripts, its fly config)")
-check(steps[-1]["env"].get("PROMOTE_NEWEST") == "${{ inputs.version == '' }}",
-      "promote: promote.sh is not told when no version was asked (the newest never goes below production)")
-check("scripts/promote.sh \"$TAG\"" in steps[-1]["run"] and steps[-1]["env"].get("TAG") == "${{ needs.resolve.outputs.tag }}",
-      "promote: the last step does not promote the resolved tag")
-secret = [st for st in steps if st.get("name") == "Check the deploy secret"]
+byname = {st.get("name"): i for i, st in enumerate(steps)}
+point, upload, deploy = (steps[byname.get(n, 0)] for n in ("Restore point", "Keep the restore point", "Promote"))
+check(byname.get("Restore point", 0) < byname.get("Keep the restore point", 0) < byname.get("Promote", 0) == len(steps) - 1,
+      "promote: not restore point, then its upload, then the deploy (last)")
+check(point.get("id") == "point" and 'scripts/promote.sh prepare "$TAG"' in point.get("run", ""),
+      "promote: the restore point step does not run promote.sh prepare")
+check(point.get("env", {}).get("RESTORE_POINT_PASSPHRASE") == "${{ secrets.RESTORE_POINT_PASSPHRASE }}"
+      and point["env"].get("FLY_API_TOKEN") == "${{ secrets.FLY_API_TOKEN }}", "promote: prepare lacks the token or the passphrase")
+check("RESTORE_POINT_PASSPHRASE" not in str(deploy), "promote: the deploy step reads the passphrase")
+check(point.get("env", {}).get("PROMOTE_NEWEST") == "${{ inputs.version == '' }}",
+      "promote: promote.sh prepare is not told when no version was asked (the newest never goes below production)")
+for st in (point, deploy):
+    check(st.get("env", {}).get("TAG") == "${{ needs.resolve.outputs.tag }}", "promote: a promote.sh step does not take the resolved tag")
+    check(st.get("env", {}).get("RESTORE_POINT_DIR") == "${{ runner.temp }}/restore-point", "promote: the two steps do not share RESTORE_POINT_DIR")
+check(upload.get("id") == "upload" and upload.get("uses", "").startswith("actions/upload-artifact@")
+      and len(upload["uses"].split("@")[1]) == 40, "promote: the restore point is not uploaded by a pinned actions/upload-artifact")
+w = upload.get("with", {})
+check(w.get("name") == "${{ steps.point.outputs.point }}" and w.get("path") == "${{ steps.point.outputs.file }}"
+      and w.get("retention-days") == 90 and w.get("if-no-files-found") == "error",
+      "promote: the upload is not the encrypted file, named after the restore point, kept 90 days, an error when missing")
+check('scripts/promote.sh deploy "$TAG"' in deploy.get("run", "") and deploy.get("env", {}).get("ARTIFACT_ID") == "${{ steps.upload.outputs.artifact-id }}",
+      "promote: the last step does not deploy the resolved tag after the upload")
+r = subprocess.run(["bash", "-e", "-c", deploy.get("run", "true")], env={"ARTIFACT_ID": "", "TAG": "v1.2.3", "PATH": "/usr/bin:/bin"},
+                   capture_output=True, text=True, cwd="/")
+check(r.returncode != 0 and "not kept as an artifact" in r.stdout, "promote: the deploy step runs without an artifact id")
+secret = [st for st in steps if st.get("name") == "Check the deploy secrets"]
 run = secret[0]["run"] if secret else "exit 1"
-for token, want_ok in (("", False), ("s3cret-value", True)):
-    r = subprocess.run(["bash", "-e", "-c", run], env={"FLY_API_TOKEN": token, "PATH": "/usr/bin:/bin"}, capture_output=True, text=True)
-    check((r.returncode == 0) == want_ok, f"promote: secret check with token {token!r} exited {r.returncode}")
-    check(token == "" or token not in r.stdout + r.stderr, "promote: secret check printed the token")
+for token, phrase, want_ok in (("", "p4ss", False), ("s3cret-value", "", False), ("s3cret-value", "p4ss-phrase", True)):
+    r = subprocess.run(["bash", "-e", "-c", run], env={"FLY_API_TOKEN": token, "RESTORE_POINT_PASSPHRASE": phrase, "PATH": "/usr/bin:/bin"},
+                       capture_output=True, text=True)
+    check((r.returncode == 0) == want_ok, f"promote: secret check with token {token!r}, passphrase {phrase!r} exited {r.returncode}")
+    check(all(v == "" or v not in r.stdout + r.stderr for v in (token, phrase)), "promote: secret check printed a secret")
 if errs:
     print("\n".join("test-promotion: FAIL: " + e for e in errs), file=sys.stderr)
     sys.exit(1)

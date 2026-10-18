@@ -5,7 +5,8 @@ run-name: Promote ${{ inputs.version || 'the newest staging version' }}
 # `just promote [version]`). With no version it promotes the newest vMAJOR.MINOR.PATCH version that passed
 # staging; with one (X.Y.Z or vX.Y.Z) that version, which is also the rollback. It deploys that version's
 # image (by digest, the one staging ran, no rebuild) to production after a restore point of the production
-# database, then smoke-checks it and creates the GitHub Release. Runbook: docs/deploy.md ("Promotion").
+# database (a pg_dump, encrypted, kept as an artifact of the run: no artifact, no deploy), then smoke-checks it
+# and creates the GitHub Release. Runbook: docs/deploy.md ("Promotion").
 #
 # Only by hand: no tag push starts it. It runs main's workflow, scripts and fly config; the image and the
 # migrations it embeds are the version's. Only a repository admin may run it (scripts/require-admin.sh,
@@ -111,28 +112,62 @@ jobs:
           TRIGGERING_ACTOR: ${{ github.triggering_actor }}
         run: scripts/require-admin.sh "$ACTOR" "$TRIGGERING_ACTOR"
 
-      # A promotion is a deliberate act: a token this job cannot read fails it (step 10.4).
-      - name: Check the deploy secret
+      # A promotion is a deliberate act: a secret this job cannot read fails it (step 10.4).
+      - name: Check the deploy secrets
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          RESTORE_POINT_PASSPHRASE: ${{ secrets.RESTORE_POINT_PASSPHRASE }}
         run: |
           if [ -z "$FLY_API_TOKEN" ]; then
             echo "::error title=Promotion::FLY_API_TOKEN is empty in the production environment, so nothing was promoted. Set it as in docs/deploy.md (GitHub)."
+            exit 1
+          fi
+          if [ -z "$RESTORE_POINT_PASSPHRASE" ]; then
+            echo "::error title=Promotion::RESTORE_POINT_PASSPHRASE is empty in the production environment, so nothing was promoted: the restore point could not be encrypted. Set it with just restore-point-key (docs/deploy.md, Promotion)."
             exit 1
           fi
 
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
 
-      # Guards, no public IP, restore point, deploy, smoke check, digest, GitHub Release (scripts/promote.sh).
+      # Guards, no public IP, image copy, restore point: a pg_dump of production, encrypted (scripts/promote.sh).
+      - name: Restore point
+        id: point
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          RESTORE_POINT_PASSPHRASE: ${{ secrets.RESTORE_POINT_PASSPHRASE }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          RESTORE_POINT_DIR: ${{ runner.temp }}/restore-point
+          # No version asked: promote.sh refuses a tag older than what production runs (not a rollback).
+          PROMOTE_NEWEST: ${{ inputs.version == '' }}
+        run: |
+          flyctl auth docker
+          scripts/promote.sh prepare "$TAG"
+
+      # The restore point, kept with the run: encrypted (the repository is public, and so are its artifacts),
+      # 90 days (the longest GitHub keeps one). A failed upload fails the job: nothing is deployed.
+      - name: Keep the restore point
+        id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.point.outputs.point }}
+          path: ${{ steps.point.outputs.file }}
+          retention-days: 90
+          compression-level: 0 # encrypted, and the dump is compressed already
+          if-no-files-found: error
+
+      # Deploy, smoke check, digest, GitHub Release (scripts/promote.sh), once the restore point is kept.
       - name: Promote
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.resolve.outputs.tag }}
-          # No version asked: promote.sh refuses a tag older than what production runs (not a rollback).
-          PROMOTE_NEWEST: ${{ inputs.version == '' }}
+          RESTORE_POINT_DIR: ${{ runner.temp }}/restore-point
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          flyctl auth docker
-          scripts/promote.sh "$TAG"
+          [ -n "$ARTIFACT_ID" ] || { echo "::error title=Promotion::the restore point was not kept as an artifact, so nothing was deployed."; exit 1; }
+          RESTORE_POINT_KEPT="encrypted, artifact $ARTIFACT_ID of $RUN_URL" scripts/promote.sh deploy "$TAG"

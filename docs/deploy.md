@@ -49,10 +49,17 @@ User steps left:
       shows a `deploy-staging` deployment of the sha with the digest and the version, then "Tag the version"
       created `v<version>`; the other post-merge checks are in "Staging deploy".
 3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
-4. **CREATEDB for `critical_prod`**, the one privilege the promotion's restore point needs (ADR 0024 step
-   9.2, "Promotion" below; agreed by the user 2026-10-17, not run yet): `just fly-db-provision tournesol-db prod` (a
-   rerun: no password or secret changes; its checks accept the user's own restore points). Until then every
-   promotion stops at the restore point and deploys nothing.
+4. **The restore point's passphrase** (ADR 0024 step 9.2, "Promotion" below; user decision 2026-10-17, the
+   restore point is a backup file): `just restore-point-key` (admin, once) writes a random passphrase to
+   `~/.config/critical/restore-point.passphrase` and sets it as the `production` secret
+   `RESTORE_POINT_PASSPHRASE`. **Copy that file into your password manager**: GitHub never shows a secret back,
+   and without the passphrase no restore point can be decrypted. Until it is set every promotion fails at
+   `Check the deploy secrets`, nothing done. Then, as the cluster's superuser, drop the **leftover copy
+   databases** of the old restore points (the pipeline no longer creates or drops any; some are held by fly's
+   own `flypgadmin` sessions, which `critical_prod` cannot end): `$fly postgres connect -a tournesol-db`, `\l
+   critical_prod_pre_*`, then `DROP DATABASE "<name>" WITH (FORCE);` for each. A later `just fly-db-provision
+   tournesol-db prod` (a rerun: no password or secret changes) also removes `critical_prod`'s `CREATEDB`, which
+   only those copies needed.
 5. **The tag ruleset** (ADR 0024 step 10.2, "GitHub" below): `scripts/github-tag-ruleset.sh` (admin) was run
    2026-10-17: `release tags` (update, deletion, admin bypass) is in place. GitHub refused the other two
    rulesets, so run it once more after this change is on main: it deletes `release tag creation` and
@@ -121,9 +128,9 @@ For each environment it creates (or keeps) the login user `critical_<env>`, owne
 `critical_<env>`. CONNECT on that database belongs to its user only. Every other database of the
 cluster that accepts connections (`template1` included) keeps CONNECT for the login users it has at
 run time and loses it for PUBLIC, so a critical user reaches only its own database and the other app's
-current users keep their access. `critical_prod` also has the `CREATEDB` attribute (`critical_staging`
-has not): the promotion's restore points are copy databases it creates ("Promotion"); the checks below
-accept CONNECT on its own `critical_prod_pre_*` copies.
+current users keep their access. No critical user has `CREATEDB` (a rerun removes the one `critical_prod`
+had for the old copy-database restore points); the checks below still accept CONNECT on its own leftover
+`critical_prod_pre_*` copies until the operator drops them ("State and user steps left", step 4).
 
 **A user the other app gets later** (a `CREATE ROLE`, a `fly postgres attach` of a new app) has no
 CONNECT on the locked databases, and a rerun does not add it (the databases are already locked). Grant
@@ -192,7 +199,8 @@ Two safety nets besides the promotion's restore points ("Promotion"): a **dump**
 own machine, and the volume snapshots above as the last resort. A dump is a `pg_dump` custom-format file of
 one database (`--no-owner --no-acl`, so it restores under any user). It holds the catalogue's book text:
 it lives in `.backups/` (gitignored, folder mode 700, file mode 600), never in the repository, a workflow
-artifact, an issue or a log (ADR 0024 step 7). No workflow takes or uploads one.
+artifact, an issue or a log (ADR 0024 step 7). No workflow takes or uploads one, but for the promotion's
+restore point, which leaves the runner encrypted only ("Promotion").
 
 ```bash
 just db-backup staging                       # or prod: .backups/<env>-<UTC time>/critical_<env>.dump + counts.txt
@@ -218,8 +226,8 @@ prints table names and counts only. Run it after a backup and before a promotion
 logic of the comparison and of the cleanup is tested offline by `scripts/test-db-backup.sh` (part of `just
 validate`).
 
-**Restore `critical_prod` from a dump** (operator; the same steps as the restore point in "Rollback", with
-the dump instead of the copy). Everything written since the dump is lost: say so to the user first, and get
+**Restore `critical_prod` from a dump** (operator; a `just db-backup` folder, or a promotion's restore point
+fetched by `just restore-point-fetch`, "Rollback"). Everything written since the dump is lost: say so to the user first, and get
 their yes. Run `just db-restore-drill <dump>` first.
 
 1. Remove the app's machines: `$fly scale count 0 -a critical-prod --yes`.
@@ -298,6 +306,7 @@ new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a use
 | `staging` | `FLY_API_TOKEN` | deploy token of `critical-staging` |
 | `staging` | `RULEBOOKS_DEPLOY_KEY` | private half of the read-only deploy key (below), used by the release build |
 | `production` | `FLY_API_TOKEN` | deploy token of `critical-prod` |
+| `production` | `RESTORE_POINT_PASSPHRASE` | encrypts the promotion's restore point; set by `just restore-point-key` (user step 4 above), not by this script |
 
 The `production` environment accepts deployments from the branch `main` only (ADR 0024 step 10.2): Promote
 runs from main, and the version is its input. _Changed 2026-10-17 (promotion on demand); was: tags `v*` only,
@@ -410,8 +419,8 @@ ADR 0024 steps 3 and 4, driven by GitHub Actions (the PR title, a conventional-c
    failed staging deploy takes no version: the next release computes the same number again.
 2. Promoting is a deliberate act, on demand: `just promote` (or Actions > Promote > Run workflow, from
    `main`, version empty) promotes the **newest version that passed staging**; `just promote 1.2.3` promotes
-   that version (also the rollback). It takes a restore point of `critical_prod` (no restore point, no
-   deploy), deploys the **same image** to production, smoke-checks it and creates the GitHub Release
+   that version (also the rollback). It takes a restore point of `critical_prod`, a `pg_dump` kept encrypted as an
+   artifact of the run (no restore point kept, no deploy), deploys the **same image** to production, smoke-checks it and creates the GitHub Release
    ("Promotion" below, `.github/workflows/promote.yml`). No tag starts it: staging can run ahead of production
    for as long as wanted.
 
@@ -690,8 +699,16 @@ read an empty token), and a calling job cannot have an environment. The job pass
   `promote.sh` then prints what production runs before it changes anything: its machines' image (version
   label, commit, digest), e.g. `promote: production (critical-prod) runs 1.4.0 (commit <sha>, sha256:…);
   promoting v1.5.0`.
-- **Secret.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-prod`). An empty one **fails**
-  the run before anything else (`Promotion` error): a promotion is a deliberate act (step 10.4).
+- **Secrets.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-prod`) and
+  `RESTORE_POINT_PASSPHRASE` (the restore point's encryption, `just restore-point-key`). An empty one **fails**
+  the run before anything else (`Promotion` error, `Check the deploy secrets`): a promotion is a deliberate
+  act (step 10.4). The passphrase is read by the restore point step only.
+- **Job steps.** `Restore point` (`scripts/promote.sh prepare <tag>`: steps 1 to 4 below), `Keep the restore
+  point` (`actions/upload-artifact`, the encrypted file, an error when it is missing), `Promote`
+  (`scripts/promote.sh deploy <tag>`: steps 5 to 7, refused without the artifact's id). No step is
+  conditional: a failed upload stops the job, **no restore point kept, nothing deployed**. By hand,
+  `scripts/promote.sh <tag>` runs both halves and keeps the encrypted file on that machine
+  (`.backups/restore-points/`, or `RESTORE_POINT_DIR`).
 - **Steps**, each stopping the promotion when it fails:
   1. **Guards** (`scripts/release-guards.sh all <tag>`, again, now with the registry login): the tag is
      `vMAJOR.MINOR.PATCH`; its commit is on `origin/main`; staging ran and passed that commit as that version,
@@ -709,24 +726,30 @@ read an empty token), and a calling job cannot have an environment. The job pass
      promotion with nothing deployed. Why ("Registry" below): fly's API lets an app's deploy token use that
      app's images only.
   4. **Restore point** (`scripts/restore-point.sh`, steps 4.2 and 9.2): `fly console -a critical-prod
-     --image registry.fly.io/critical-prod@<digest> --region <primary_region> --vm-size <size> --vm-memory <mb>` (`--region` is the app's `yyz`, next to the database: without it fly picked `lax` and the restore dropped mid-transaction across regions; the `[[vm]]` of
+     --image registry.fly.io/critical-prod@<digest> --region <primary_region> --vm-size <size> --vm-memory <mb>` (`--region` is the app's `yyz`, next to the database: without it fly picked `lax` and a long transfer dropped across regions; the `[[vm]]` of
      `deploy/fly.prod.toml`: without a fly config, `fly console` fails with "invalid CPU kind ''") starts an ephemeral machine of the production app from the release image (which
      ships the PostgreSQL 17 client; the machine has the app's `CRITICAL_DSN` and does not start the
      server), uploads the script and runs it; the machine is destroyed after. The script `pg_dump`s
-     `critical_prod` and `pg_restore`s it into a new database on the same cluster,
-     **`critical_prod_pre_<tag with _>_<UTC yyyymmddhhmmss>`** (e.g. `critical_prod_pre_v1_2_3_20261017153000`:
-     the data as it was before that release), owned by `critical_prod`, CONNECT revoked from PUBLIC. It is
-     verified (the same tables and recorded migrations as `critical_prod`, rows in it, PUBLIC locked out),
-     then the copies beyond the **newest 3 complete ones** are dropped. An **incomplete copy** (a failed run's: no `schema_migrations` table, since a restore is one transaction) never counts toward that retention, so it cannot push a valid copy out; the next run drops it first, after ending any session of `critical_prod` the server still holds on it (retried; promotions are serialized, so none is mid-restore), and a failed run does the same for its own copy. A copy held by **another role's** session (a superuser's: `critical_prod` may not end it, "permission denied to terminate process") is skipped at once, the warning naming the holder (kind, role, since when), and the promotion goes on: it is never retried in a loop that loads the small database VM. By hand, as the operator (`$fly postgres connect -a tournesol-db`): `SELECT pid, usename, backend_type, application_name, client_addr, backend_start, state FROM pg_stat_activity WHERE datname = '<name>';` to see who holds it, then `DROP DATABASE "<name>" WITH (FORCE);` (ends its sessions, then drops). A lost connection to the cluster (its proxy marks the database down for some seconds when the VM is short of memory) is tried again, 5 times over about 20 s, and so is `pg_dump` (3 times); a failed statement or `pg_restore` is not. It refuses first: a name that exists, the user
-     without `CREATEDB` (user step 4 above), a projected use of `critical_prod` plus its kept copies plus
-     the new one over **300 MB** (the 1 GB volume is shared with the other app; "Disk" below), and a
-     production database that records a migration the tag's commit does not hold: the image is older than
-     the schema, its server would not start, and the rolling deploy would leave production on one machine
-     (a rollback across a migration, refused with a pointer to "Rollback", "Across a migration"). The
-     promotion reads that list from the tag's git tree, whatever is checked out. A copy that fails its
-     verification is dropped. The log shows names, counts and sizes only; `pg_restore`'s own error text
-     (which can quote rows) stays in the ephemeral machine, only the TOC entry it names and its `error:` lines are printed, every quoted string blanked, no DETAIL or CONTEXT line. The step
-     passes only on the script's last line `restore-point: OK <name>`.
+     `critical_prod` (custom format, `--no-owner --no-acl`; one read-only snapshot, light on the cluster's
+     small VM), reads it back (`pg_restore --list`: table data, the recorded migrations among it), counts every
+     table's rows (`counts.txt`, as `just db-backup` does) and sends both back on its output: a tar, in base64
+     between the lines `restore-point: BEGIN <name>` and `restore-point: END <name>`, then `restore-point: OK
+     <name> <sha256> <bytes>`. **Nothing is written on the cluster**: no copy database, no `CREATEDB`, no
+     retention to keep there. `promote.sh` keeps the block **out of the log** (the dump holds catalogue rows and
+     player data; the log of a public repository is public), checks its size and checksum, then encrypts it
+     with gpg (AES-256, `RESTORE_POINT_PASSPHRASE` through a file descriptor) into
+     **`critical_prod_pre_<tag with _>_<UTC yyyymmddhhmmss>.tar.gpg`** (e.g.
+     `critical_prod_pre_v1_2_3_20261017153000`: the data as it was before that release), decrypts it once to
+     check it, and deletes the clear copy. The next step uploads it as the run's artifact of that name, kept
+     **90 days**. A lost connection to the cluster (its proxy marks the database down for some seconds when the
+     VM is short of memory) is tried again, 5 times over about 20 s, and so is `pg_dump` (3 times); a failed
+     statement is not. It refuses first: a name that is not `critical_prod`'s, the server running in the
+     machine, and a production database that records a migration the tag's commit does not hold: the image is
+     older than the schema, its server would not start, and the rolling deploy would leave production on one
+     machine (a rollback across a migration, refused with a pointer to "Rollback", "Across a migration"). The
+     promotion reads that list from the tag's git tree, whatever is checked out. A missing, cut or damaged
+     block, or a file that does not decrypt, stops the promotion, nothing deployed. The log shows the console
+     machine's lines, names, counts and sizes only.
   5. `fly deploy -c deploy/fly.prod.toml -a critical-prod --image registry.fly.io/critical-prod@<digest>
      --no-public-ips`: rolling, one machine at a time.
   6. **Smoke** (`scripts/fly-smoke.sh critical-prod <commit>`, every machine: health with the commit, a
@@ -734,16 +757,27 @@ read an empty token), and a calling job cannot have an environment. The job pass
   7. **GitHub Release** of the tag with generated notes, naming the image digest and the restore point.
      It exists already on a rerun or a rollback (an older tag): kept.
   After a failure past the restore point it prints the app's recent releases: roll back as in "Rollback".
-- **Why a copy database** (user, 2026-10-16, "1a"): it stays inside fly and the cluster, private like
-  production itself (ADR 0024 step 7): never a GitHub artifact, a cache or a bucket. fly's daily snapshots of
-  the cluster volume cover the loss of the machine (step 9.1).
-- **Disk.** The 300 MB budget counts critical's databases only: `critical_prod` cannot size the other
-  app's databases (their CONNECT is locked) nor see the volume's free space, and PostgreSQL enforces no
-  quota. A full volume stops both apps' databases, so before a promotion when the data has grown, and
-  whenever a restore point is refused for its size, the operator looks at the volume:
-  `$fly ssh console -a tournesol-db -C "df -h /data"` (the cluster's volume is mounted at `/data`). Under
-  about 400 MB free, drop the oldest restore point by hand (`DROP DATABASE "critical_prod_pre_<…>";` as
-  the operator) or ask the user before growing the volume (it costs).
+- **Why a backup file** (user, 2026-10-17: _"yes, go with the backup file"_; was: a copy database on the same
+  cluster, user 2026-10-16, "1a"). Restoring `critical_prod` into a copy database on `tournesol-db` (shared
+  with the other app, `shared-cpu-1x`, 256 MB) ran its VM out of memory: the cluster dropped connections
+  mid-restore and three promotions failed (the last, run 39090345876). fly's own `flypgadmin` sessions also
+  held leftover copies, so `critical_prod` could not drop them. A `pg_dump` alone is light, and the file is
+  kept off the cluster, as an artifact of the Promote run: nothing paid, no scaling, no disk taken on the
+  shared volume.
+- **Encrypted, because the repository is public.** The artifacts of a public repository can be downloaded by
+  anyone signed in to GitHub, so only the gpg-encrypted file is uploaded (ADR 0024 step 7: the catalogue and
+  the players' data stay private). The passphrase is the `production` secret, read by the restore point step
+  only, and the operator's copy (`~/.config/critical/restore-point.passphrase` and the password manager).
+- **Retention: 90 days**, the longest GitHub keeps an artifact (artifact storage is free for a public
+  repository). A restore point is needed until the release after it is trusted; 90 days covers a slow
+  release cadence, and the operator's own dumps (`just db-backup prod`, "Backups") and the cluster's 30-day
+  snapshots back it up. A restore point older than that is gone: take a `just db-backup prod` before a
+  promotion you might want to undo later than that.
+- **Leftover copy databases** of the old restore points (`critical_prod_pre_*` on the cluster): the pipeline
+  no longer touches them. The operator drops them by hand as the cluster's superuser ("State and user steps
+  left", step 4): `$fly postgres connect -a tournesol-db`; `SELECT pid, usename, backend_type,
+  application_name, backend_start, state FROM pg_stat_activity WHERE datname = '<name>';` shows who holds one;
+  `DROP DATABASE "<name>" WITH (FORCE);` ends its sessions, then drops it.
 - **Registry** (tested 2026-10-17 with temporary deploy tokens of `critical-prod`, revoked after). The
   registry lets the production deploy token **read** `registry.fly.io/critical-staging@<digest>` (`docker
   manifest inspect` works; without credentials it is refused). fly's API does **not** let it **use** that
@@ -758,16 +792,22 @@ read an empty token), and a calling job cannot have an environment. The job pass
   repositories and a stubbed GitHub API (the history-not-latest reading, the newest success, a string
   payload), the version resolution and its refusals, the admin check, the environments script's rules,
   `just promote`'s dispatch, the order of the promotion's steps and what each failure prevents (fly stubbed),
-  and the workflow parsed (the admin check before any secret, the version resolved without one). The restore point's SQL runs for real in the CI `image` job
-  (`scripts/image-smoke.sh`: copies, retention, the refusals) against a throwaway PostgreSQL 17.
+  the restore point kept encrypted and out of the log (a cut or damaged one, or no passphrase, deploys
+  nothing), `prepare` and `deploy` apart, `just restore-point-fetch` and `just restore-point-key`, and the
+  workflow parsed (the admin check before any secret, the version resolved without one, the upload between
+  the two halves). The restore point runs for real in the CI `image` job (`scripts/image-smoke.sh`: the dump
+  back whole, restored into a scratch database with its counts, no database created, a lost connection, the
+  refusals) against a throwaway PostgreSQL 17.
 - **Post-run checks (user, the first real promotion; none can be faked offline).**
   1. The run is green; its log shows the guards' commit and digest, `fly-private-check: OK`, the copy to
      `registry.fly.io/critical-prod:<sha>` (the first real copy across the two repositories: the agents
      could not run it), the restore
-     point lines (`fly console` created and destroyed its machine; no server log line in between), the
-     rolling deploy, `fly-smoke: OK` with both machines, and the release.
-  2. `$fly postgres connect -a tournesol-db`, `\l critical_prod*` lists the copy, owned by `critical_prod`,
-     no `=c/` (PUBLIC) in its access privileges.
+     point lines (`fly console` created and destroyed its machine; `restore-point: ... taken (N tables ...)`,
+     the BEGIN and END lines with **nothing between them**, `restore-point: OK`, `kept encrypted`), the
+     upload, the rolling deploy, `fly-smoke: OK` with both machines, and the release, naming the artifact.
+  2. The run's page lists the artifact `critical_prod_pre_<tag>_<time>`, and `just restore-point-fetch
+     <version>` then `just db-restore-drill .backups/critical_prod_pre_<tag>_<time>/critical_prod.dump` pass
+     (the passphrase file works, and the dump restores with its counts). No new database on the cluster.
   3. `$fly machine list -a critical-prod` shows the two app machines only (the console machine is gone).
   4. The GitHub Release exists, with the digest.
   5. Actions > Promote > Run workflow from a tag (Tags > `vX.Y.Z`) fails at once in `refuse a run from another
@@ -820,30 +860,29 @@ deployed; or at the smoke check, after the deploy, and it prints the releases. T
 promotion of the older version refuses it before writing anything ("production database records migrations this
 release does not embed"). Restore
 `critical_prod` from the restore point taken **before the release being undone** (`critical_prod_pre_<that
-tag>_<time>`), then promote the older version (step 9.3). Everything written since that restore point is lost:
-say so to the user first, and get their yes.
+tag>_<time>`, an artifact of that release's Promote run, kept 90 days), then promote the older version (step
+9.3). Everything written since that restore point is lost: say so to the user first, and get their yes.
 
-1. Remove the app's machines, so no server boots on the restored database before the older release (a
-   newer one would migrate it again): `$fly scale count 0 -a critical-prod --yes`.
-2. As the cluster's operator (`$fly postgres connect -a tournesol-db`, connected to `postgres`), set the
-   current database aside and copy the restore point into its place (the restore point stays):
+1. Fetch it and prove it restores (operator, `gh` logged in, the passphrase file of `just restore-point-key`):
 
-   ```sql
-   \l critical_prod_pre_*
-   ALTER DATABASE critical_prod ALLOW_CONNECTIONS false;
-   SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'critical_prod';
-   ALTER DATABASE critical_prod RENAME TO critical_prod_failed_<yyyymmdd>;
-   CREATE DATABASE critical_prod TEMPLATE "critical_prod_pre_<tag>_<time>" OWNER critical_prod;
-   REVOKE ALL ON DATABASE critical_prod FROM PUBLIC;
-   GRANT CONNECT, TEMPORARY ON DATABASE critical_prod TO critical_prod;
+   ```bash
+   just restore-point-fetch 1.2.3     # the newest restore point taken before v1.2.3 (or its full name)
+   just db-restore-drill .backups/critical_prod_pre_v1_2_3_<time>/critical_prod.dump
    ```
 
+   `scripts/restore-point-fetch.sh` finds the unexpired artifact of that name, downloads it (`gh run
+   download`), decrypts it (`RESTORE_POINT_PASSPHRASE`, else `~/.config/critical/restore-point.passphrase`),
+   checks it holds exactly the dump and `counts.txt`, reads the dump back with `pg_restore --list`, and lays
+   it out as `just db-backup` does (`.backups/<restore point>/`, gitignored, mode 600). A wrong passphrase or
+   a damaged file keeps nothing.
+2. Restore it into `critical_prod` as "Backups" says ("Restore `critical_prod` from a dump", steps 1 to 3:
+   remove the app's machines, set the current database aside, `pg_restore` as `critical_prod` through
+   `just fly-db-proxy`, compare the counts), with the folder above.
 3. Promote the older version (above). Its deploy recreates the two machines from `deploy/fly.prod.toml`; if it
    reports no machine, `$fly scale count 2 -a critical-prod --yes` and run it again.
 4. Once production checks out, `DROP DATABASE critical_prod_failed_<yyyymmdd>;` (it takes room on the shared
    volume). Until then it accepts no connection (`ALLOW_CONNECTIONS false`, kept by the rename), so the
-   provisioning's checks, which look only at databases that accept connections, do not count it; the
-   promotion's retention and budget do not see it either (it is not a `critical_prod_pre_*` name).
+   provisioning's checks, which look only at databases that accept connections, do not count it.
 
 A restore point is also the way back from bad data without a rollback (same steps, without changing the
 release: promote the current version again in step 3).

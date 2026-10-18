@@ -4,6 +4,8 @@
 critical-qki.12 and critical-qki.39, until then in `docs/backend.md` "Damage Formula"); steps 4, 5
 and 11 amended 2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers)
 
+_Proposed amendment by [ADR 0033](0033-equipment.md) (equipment, proposed 2026-10-18), in effect once it is accepted: step 1 (a launcher's attack rolls its ammunition's dice; the launcher's own dice when the ammunition has none, ADR 0033 step 4)._
+
 ## Context
 
 A hit ([ADR 0002](0002-attack-resolution.md)) deals damage from the weapon's dice, buffs that

@@ -15,6 +15,8 @@ to 10 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR
 steps 2 and 3, [ADR 0014](0014-skill-checks.md) step 3 and [ADR 0015](0015-experience.md) steps 2
 and 3, each from its implementation.
 
+_Proposed amendment by [ADR 0033](0033-equipment.md) (equipment, proposed 2026-10-18), in effect once it is accepted: step 1 and steps 17 and 18 (the skill armour is the worn body armour; the entered field and its drop-down are removed, ADR 0033 step 14), step 23 (the weapon type also comes from the catalogue row, ADR 0033 steps 3 and 21) and the Consequences (class armour and weapon limits warned, never enforced, ADR 0033 step 20)._
+
 ## Context
 
 Until now the app manages one level 15 half-elf Bard and stores what the sheet says: level, THAC0

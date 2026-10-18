@@ -6,6 +6,8 @@ powers) added 2026-10-16 (critical-qki.45), amending [ADR 0002](0002-attack-reso
 [ADR 0003](0003-damage.md) steps 4, 5 and 11 and [ADR 0004](0004-buffs.md) steps 10 and 11 and its
 Consequences
 
+_Proposed amendment by [ADR 0033](0033-equipment.md) (equipment, proposed 2026-10-18), in effect once it is accepted: steps 1 and 4 (one possessions list with categories instead of the type label), steps 7 and 8 (weapons are pieces of the same list and editor), step 9 (powers on only while the piece is worn or wielded) and step 15 (the editor writes powers), ADR 0033 steps 1 to 9, 17 and 24 to 27._
+
 ## Context
 
 The Bard carries arrows, flasks, a wand and a Power Gem. User, 2026-10-13: *"these are all
@@ -160,7 +162,8 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     powers again. Powers come from the seed and from data migrations only: the item editor shows no
     power field and sends none, an edit or create body's `powers` key is accepted and ignored (an
     item served back as is still decodes; any other unknown key stays refused), and a created item
-    has none. An item is served with its powers, read only. A snapshot recorded before powers
+    has none. An item is served with its powers, read only. (*Proposed amendment by
+    [ADR 0033](0033-equipment.md) step 17:* the editor writes powers, validated as the seed's.) A snapshot recorded before powers
     existed has no `powers` key: popping it leaves the item's stored powers as they are, and an item
     it puts back while it is gone comes back without powers (see Consequences).
     Tests: `domain/service/itemsvc` `TestItemPowers_Step15_SnapshotCarriesThePowers`,

@@ -3,7 +3,7 @@
 // POST /api/roll/skill/{id} (one check, rolled and logged on the server, with
 // an optional DM adjustment) and POST /api/roll/skill/{id}/adjust (the
 // adjustment of the latest check, after the roll), PUT /api/skills/points (a
-// thief's skill points, ADR 0030 step 17); and the plain ability
+// thief's or a bard's skill points, ADR 0030 steps 17 and 18); and the plain ability
 // checks (ADR 0028): POST /api/roll/ability/{ability} and POST
 // /api/roll/ability/{entryId}/adjust.
 package skillhdl
@@ -90,18 +90,12 @@ type ProficiencyDTO struct {
 	Last         *LastDTO `json:"last"`
 }
 
-// BardSkillDTO is one bard skill; last is null before the first check.
-type BardSkillDTO struct {
-	ID      string   `json:"id"`
-	Percent int      `json:"percent"`
-	Last    *LastDTO `json:"last"`
-}
-
-// ThiefSkillDTO is one thieving skill (ADR 0030 step 17): id the skill
-// code, percent = base + points + race + dexterity + armor, capped at 95 and
-// floored at 0; last is null before the first check. maxPercent is that
-// cap and maxPoints the most points one skill takes (the editor's range).
-type ThiefSkillDTO struct {
+// RogueSkillDTO is one thieving skill (ADR 0030 step 17) or bard skill
+// (step 18): id the skill code, percent = base + points + race + dexterity +
+// armor, capped at 95 and floored at 0; last is null before the first
+// check. maxPercent is that cap and maxPoints the most points one skill
+// takes (the editor's range).
+type RogueSkillDTO struct {
 	ID         string   `json:"id"`
 	Base       int      `json:"base"`
 	Points     int      `json:"points"`
@@ -117,8 +111,8 @@ type ThiefSkillDTO struct {
 // SkillsDTO is the GET /api/skills answer.
 type SkillsDTO struct {
 	Proficiencies []ProficiencyDTO `json:"proficiencies"`
-	BardSkills    []BardSkillDTO   `json:"bardSkills"`
-	ThiefSkills   []ThiefSkillDTO  `json:"thiefSkills"`
+	BardSkills    []RogueSkillDTO  `json:"bardSkills"`
+	ThiefSkills   []RogueSkillDTO  `json:"thiefSkills"`
 }
 
 // CheckDTO is one check: target is unadjusted, adjustedTarget = target +
@@ -157,15 +151,11 @@ func lastDTO(l *skillsvc.LastCheck) *LastDTO {
 func ToDTO(s *skillsvc.Skills) SkillsDTO {
 	out := SkillsDTO{
 		Proficiencies: make([]ProficiencyDTO, 0, len(s.Proficiencies)),
-		BardSkills:    make([]BardSkillDTO, 0, len(s.BardSkills)),
-		ThiefSkills:   make([]ThiefSkillDTO, 0, len(s.ThiefSkills)),
+		BardSkills:    make([]RogueSkillDTO, 0, len(s.BardSkills)),
+		ThiefSkills:   make([]RogueSkillDTO, 0, len(s.ThiefSkills)),
 	}
 	for _, t := range s.ThiefSkills {
-		out.ThiefSkills = append(out.ThiefSkills, ThiefSkillDTO{
-			ID: t.Skill, Base: t.Base, Points: t.Points, Race: t.Race, Dexterity: t.Dexterity, Armor: t.Armor,
-			Percent: t.Percent, MaxPercent: ruletablesvc.MaxSkillPercent, MaxPoints: charactersvc.MaxSkillPoints,
-			Last: lastDTO(t.Last),
-		})
+		out.ThiefSkills = append(out.ThiefSkills, rogueSkillDTO(t.SkillPercent, t.Last))
 	}
 	for _, p := range s.Proficiencies {
 		out.Proficiencies = append(out.Proficiencies, ProficiencyDTO{
@@ -174,9 +164,17 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 		})
 	}
 	for _, b := range s.BardSkills {
-		out.BardSkills = append(out.BardSkills, BardSkillDTO{ID: b.ID, Percent: b.Percent, Last: lastDTO(b.Last)})
+		out.BardSkills = append(out.BardSkills, rogueSkillDTO(b.SkillPercent, b.Last))
 	}
 	return out
+}
+
+func rogueSkillDTO(p ruletablesvc.SkillPercent, last *skillsvc.LastCheck) RogueSkillDTO {
+	return RogueSkillDTO{
+		ID: p.Skill, Base: p.Base, Points: p.Points, Race: p.Race, Dexterity: p.Dexterity, Armor: p.Armor,
+		Percent: p.Percent, MaxPercent: ruletablesvc.MaxSkillPercent, MaxPoints: charactersvc.MaxSkillPoints,
+		Last: lastDTO(last),
+	}
 }
 
 // CheckToDTO maps a check to its wire shape.

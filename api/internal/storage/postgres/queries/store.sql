@@ -11,14 +11,20 @@ SELECT COUNT(*) FROM characters;
 -- name: InsertCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
-    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code,
+    skill_points
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 RETURNING id;
 
 -- The race of a character stored before races had codes (migration 007): only while it has none,
 -- so a rerun changes nothing and a race set since is kept.
 -- name: SetRaceIfUnset :exec
 UPDATE characters SET race_code = sqlc.arg(race_code) WHERE id = sqlc.arg(id) AND race_code = '';
+
+-- The skill points of a character stored before bards entered them (migration 012): only while it
+-- has none, so a rerun changes nothing and points spent since are kept.
+-- name: SetSkillPointsIfUnset :exec
+UPDATE characters SET skill_points = sqlc.arg(skill_points) WHERE id = sqlc.arg(id) AND skill_points = '{}';
 
 -- name: InsertSpellSlots :exec
 INSERT INTO spell_slots (character_id, slots) VALUES ($1, $2);

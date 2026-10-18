@@ -152,6 +152,42 @@ func raceSeedCharacter(ctx context.Context, q storeq.Querier, characterPath stri
 	return nil
 }
 
+// pointSeedCharacter gives the seed character stored before bards entered skill points the points
+// its seed names (the ones that give his sheet's percentages, ADR 0030 steps 18 and 24): the data
+// step after bardSkillsMigration. A character that already has points keeps them, so a rerun
+// changes nothing and no spend since is lost; no seed character, or a seed without points, changes
+// nothing.
+func pointSeedCharacter(ctx context.Context, q storeq.Querier, characterPath string) error {
+	c, found, err := seedfile.ReadCharacter(characterPath)
+	if err != nil || !found || len(c.SkillPoints) == 0 {
+		return err
+	}
+	owner, ok, err := seedOwner(ctx, q, characterPath)
+	if err != nil || !ok {
+		return err
+	}
+	points, err := skillPointsJSON(c.SkillPoints)
+	if err != nil {
+		return err
+	}
+	if err := q.SetSkillPointsIfUnset(ctx, storeq.SetSkillPointsIfUnsetParams{ID: owner, SkillPoints: points}); err != nil {
+		return fmt.Errorf("set the skill points of character %d: %w", owner, err)
+	}
+	return nil
+}
+
+// skillPointsJSON is points as characters.skill_points stores them ("{}" for none).
+func skillPointsJSON(points map[string]int) (string, error) {
+	if len(points) == 0 {
+		return "{}", nil
+	}
+	b, err := json.Marshal(points)
+	if err != nil {
+		return "", fmt.Errorf("marshal skill points: %w", err)
+	}
+	return string(b), nil
+}
+
 // seedCharacter inserts the character, then the rows that refer to it (its spell slots, buffs
 // and round state): the foreign keys need the character first.
 func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error {
@@ -170,13 +206,17 @@ func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error
 	if err != nil {
 		return fmt.Errorf("marshal languages: %w", err)
 	}
+	points, err := skillPointsJSON(c.SkillPoints)
+	if err != nil {
+		return err
+	}
 	charID, err := q.InsertCharacter(ctx, storeq.InsertCharacterParams{
 		Name: c.Name, Str: int64(c.Str), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
 		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), Thac0Base: int64(c.Thac0Base),
 		Level: int64(c.Level), XpTotal: int64(c.XPTotal), SaveParaPoison: int64(c.SaveParaPoison),
 		SaveRodStaffWand: int64(c.SaveRodStaffWand), SavePetriPoly: int64(c.SavePetriPoly),
 		SaveBreath: int64(c.SaveBreath), SaveSpell: int64(c.SaveSpell), Languages: string(languages),
-		RaceCode: c.Race,
+		RaceCode: c.Race, SkillPoints: points,
 	})
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)

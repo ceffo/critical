@@ -50,7 +50,7 @@ func kelsenDerived() charactersvc.Derived {
 		XPTotal: 1_293_418, TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
 		SpellSlots: level15Slots, SheetDifferences: []charactersvc.SheetDifference{},
 		LevelUp:   charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
-		Spellbook: &kelsenSpellbook,
+		Spellbook: &kelsenSpellbook, SkillBudget: []ruletablesvc.BudgetWarning{},
 	}
 }
 
@@ -458,6 +458,9 @@ var int14 = ruletablesvc.IntelligenceRow{IntMin: 14, IntMax: 14, MaxSpellLevel: 
 func newRules(t *testing.T) *mocks.MockRules {
 	r := mocks.NewMockRules(t)
 	r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
+	// A bard derives its skills (step 18), which the tests that are not
+	// about them leave empty.
+	r.EXPECT().BardSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 	return r
 }
 
@@ -488,6 +491,7 @@ func TestDerive_Step20_1_SpellbookRules(t *testing.T) {
 			r.EXPECT().SavesFor(mock.Anything, 13).Return(rogue13to16, nil).Once()
 			r.EXPECT().WizardSpellsPerDay(13).Return(map[int]int{1: 5}, nil).Maybe()
 			r.EXPECT().BardSpellsPerDay(13).Return(map[int]int{1: 3}, nil).Maybe()
+			r.EXPECT().BardSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 			if tc.want != nil {
 				r.EXPECT().IntelligenceFor(tc.score).Return(tc.row, nil).Once()
 			}
@@ -542,5 +546,58 @@ func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, got.ThiefSkills)
 		assert.Zero(t, got.Backstab)
+	})
+}
+
+// ADR 0030 step 18: a bard's skills are the rules' on its race, the sheet's
+// Dexterity, the entered points and armour (none stored is leather), and
+// the budget is the bard's (20 + 15 a level after the first, no per-skill
+// limit) at the realized level; a bard has no thieving skills or backstab.
+func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
+	skills := []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 50, Points: 40, Percent: 90}}
+	for _, tc := range []struct{ name, stored, asked string }{
+		{"the entered armour", ruletablesvc.ArmorMetal, ruletablesvc.ArmorMetal},
+		{"no armour stored is leather", "", ruletablesvc.ArmorLeather},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := kelsen()
+			c.Race, c.Dex, c.XPTotal, c.RealizedLevel = "human", 16, 0, 2
+			c.SkillPoints, c.SkillArmor = map[string]int{"climb_walls": 40}, tc.stored
+			c.Sheet = charactersvc.Sheet{}
+			r := mocks.NewMockRules(t)
+			r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
+			// 40,000 XP is level 7 in Table 25; the realized level 2 gives
+			// the budget: 20 + 15 = 35.
+			r.EXPECT().LevelFor("bard", 40_000).Return(7, nil).Once()
+			r.EXPECT().LevelFor("bard", 0).Return(1, nil).Once()
+			r.EXPECT().XPThreshold("bard", 8).Return(70_000, nil).Once()
+			r.EXPECT().THAC0For("rogue", mock.Anything).Return(20, nil)
+			r.EXPECT().SavesFor("rogue", mock.Anything).Return(ruletablesvc.SavingThrowRow{}, nil)
+			r.EXPECT().BardSpellsPerDay(mock.Anything).Return(map[int]int{}, nil)
+			r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
+			r.EXPECT().BardSkills("human", 16, tc.asked, map[string]int{"climb_walls": 40}).Return(skills, nil).Once()
+			got, err := charactersvc.Derive(c, 40_000, r)
+			require.NoError(t, err)
+			assert.Equal(t, skills, got.BardSkills)
+			assert.Nil(t, got.ThiefSkills)
+			assert.Zero(t, got.Backstab)
+			assert.Equal(t, []ruletablesvc.BudgetWarning{
+				{Code: ruletablesvc.BudgetTotal, Points: 40, Limit: 35},
+			}, got.SkillBudget, "the bard's budget at level 2, not at level 7, and no per-skill warning")
+		})
+	}
+	t.Run("a thief has no bard skills", func(t *testing.T) {
+		c := kelsen()
+		c.Class, c.XPTotal, c.RealizedLevel, c.Sheet = "thief", 0, 1, charactersvc.Sheet{}
+		r := mocks.NewMockRules(t)
+		r.EXPECT().LevelFor("thief", 0).Return(1, nil)
+		r.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Once()
+		r.EXPECT().THAC0For("rogue", 1).Return(20, nil)
+		r.EXPECT().SavesFor("rogue", 1).Return(ruletablesvc.SavingThrowRow{}, nil)
+		r.EXPECT().ThiefSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Once()
+		r.EXPECT().BackstabFor(1).Return(2, nil).Once()
+		got, err := charactersvc.Derive(c, 0, r)
+		require.NoError(t, err)
+		assert.Nil(t, got.BardSkills)
 	})
 }

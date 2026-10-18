@@ -324,3 +324,48 @@ func TestMigrate_TheSeedCharacterGetsItsRaceAfterTheRaceMigration(t *testing.T) 
 	run(append(recorded, raceMigration))
 	assert.Equal(t, "", store.t.Races[kelsen], "an applied migration runs no step")
 }
+
+// Existing data (ADR 0030 step 18, the bard's points): the seed character stored before bards
+// entered skill points gets the points its seed names right after migration 012, the points that
+// give his sheet's percentages (TestKelsen_TheSheetMatchesTheDerivedValues); another character and
+// points spent since are left as they are; a rerun (the migration applied) runs no step.
+func TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration(t *testing.T) {
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	store := newFakeStore()
+	require.NoError(t, seedOn(store, repoSeeds()))
+	kelsen := store.t.Characters[0]
+	assert.JSONEq(t, `{"climb_walls":35,"detect_noise":70,"pick_pockets":25,"read_languages":70}`, store.t.SkillPoints[kelsen],
+		"a new database seeds the points with the character")
+	other := int64(99)
+	store.t.Characters = append(store.t.Characters, other)
+	store.t.SkillPoints[kelsen], store.t.SkillPoints[other] = "{}", "{}" // as the column's default left them
+	var recorded []string
+	for _, m := range embedded {
+		if m.name != bardSkillsMigration {
+			recorded = append(recorded, m.name)
+		}
+	}
+	run := func(recorded []string) {
+		f := &fakeMigrations{recorded: recorded, store: store}
+		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
+			before, after := migrationDataSteps(repoSeeds())
+			return runMigrations(ctx, f, embedded, before, after)
+		}))
+	}
+
+	run(recorded)
+	assert.JSONEq(t, `{"climb_walls":35,"detect_noise":70,"pick_pockets":25,"read_languages":70}`, store.t.SkillPoints[kelsen],
+		"the seed's points")
+	assert.Equal(t, "{}", store.t.SkillPoints[other], "another character is not the seed's")
+
+	// Points spent since are kept, by a rerun of the step and by an applied migration.
+	store.t.SkillPoints[kelsen] = `{"climb_walls":40}`
+	require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
+		return pointSeedCharacter(ctx, store, seedfile.Path(repoSeeds(), seedfile.CharacterFile))
+	}))
+	assert.JSONEq(t, `{"climb_walls":40}`, store.t.SkillPoints[kelsen])
+	store.t.SkillPoints[kelsen] = "{}"
+	run(append(recorded, bardSkillsMigration))
+	assert.Equal(t, "{}", store.t.SkillPoints[kelsen], "an applied migration runs no step")
+}

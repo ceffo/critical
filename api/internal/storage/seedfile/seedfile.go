@@ -59,6 +59,10 @@ type Character struct {
 	SaveSpell        int      `json:"save_spell"`
 	Slots            []any    `json:"slots"`
 	Languages        []string `json:"languages"`
+	// SkillPoints are the imported bard's skill points (ADR 0030 step 18),
+	// by skill code: the points that give the sheet's percentages (step
+	// 24), checked as a bard's entered points are.
+	SkillPoints map[string]int `json:"skill_points"`
 }
 
 // ReadCharacter reads the character seed at path. ok is false when there is
@@ -74,6 +78,11 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 	if c.Race != "" && !slices.Contains(charactersvc.Races, c.Race) {
 		return Character{}, false, fmt.Errorf("character.json: race %q is not one of %v", c.Race, charactersvc.Races)
 	}
+	points, err := charactersvc.ValidSkillPoints(DefaultClass, c.SkillPoints)
+	if err != nil {
+		return Character{}, false, fmt.Errorf("character.json: skill points: %w", err)
+	}
+	c.SkillPoints = points
 	return c, c.Name != "", nil
 }
 

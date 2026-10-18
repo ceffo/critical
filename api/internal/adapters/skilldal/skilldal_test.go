@@ -26,10 +26,6 @@ func TestList_MapsRowsInTheirOrder(t *testing.T) {
 		{ID: "a", Ability: "dex", Modifier: 3},
 		{ID: "b", Ability: "int", Modifier: -2},
 	}, nil).Once()
-	q.EXPECT().ListBardSkills(ctx, int64(4)).Return([]queries.ListBardSkillsRow{
-		{ID: "x", Percent: 85},
-		{ID: "y", Percent: 50},
-	}, nil).Once()
 	dal := skilldal.New(q)
 
 	profs, err := dal.ListProficiencies(ctx, 4)
@@ -38,9 +34,6 @@ func TestList_MapsRowsInTheirOrder(t *testing.T) {
 		{ID: "a", Ability: skillsvc.AbilityDex, Modifier: 3},
 		{ID: "b", Ability: skillsvc.AbilityInt, Modifier: -2},
 	}, profs)
-	skills, err := dal.ListBardSkills(ctx, 4)
-	require.NoError(t, err)
-	assert.Equal(t, []skillsvc.BardSkillDef{{ID: "x", Percent: 85}, {ID: "y", Percent: 50}}, skills)
 }
 
 func TestList_StorageErrorsAreReturned(t *testing.T) {
@@ -48,11 +41,8 @@ func TestList_StorageErrorsAreReturned(t *testing.T) {
 	boom := errors.New("boom")
 	q := mocks.NewMockQuerier(t)
 	q.EXPECT().ListProficiencies(ctx, int64(4)).Return(nil, boom).Once()
-	q.EXPECT().ListBardSkills(ctx, int64(4)).Return(nil, boom).Once()
 	dal := skilldal.New(q)
 
 	_, err := dal.ListProficiencies(ctx, 4)
-	require.ErrorIs(t, err, boom)
-	_, err = dal.ListBardSkills(ctx, 4)
 	require.ErrorIs(t, err, boom)
 }

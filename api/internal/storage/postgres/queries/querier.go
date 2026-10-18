@@ -58,6 +58,9 @@ type Querier interface {
 	// The race of a character stored before races had codes (migration 007): only while it has none,
 	// so a rerun changes nothing and a race set since is kept.
 	SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error
+	// The skill points of a character stored before bards entered them (migration 012): only while it
+	// has none, so a rerun changes nothing and points spent since are kept.
+	SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsIfUnsetParams) error
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error
 	SnapshotsOf(ctx context.Context, stateKey string) ([]SnapshotsOfRow, error)

@@ -222,11 +222,13 @@ func TestNewDB_CapsThePool(t *testing.T) {
 
 // poolRecorder records what configurePool sets.
 type poolRecorder struct {
-	maxOpen int
-	maxIdle time.Duration
+	maxOpen      int
+	maxIdleConns int
+	maxIdle      time.Duration
 }
 
 func (p *poolRecorder) SetMaxOpenConns(n int)              { p.maxOpen = n }
+func (p *poolRecorder) SetMaxIdleConns(n int)              { p.maxIdleConns = n }
 func (p *poolRecorder) SetConnMaxIdleTime(d time.Duration) { p.maxIdle = d }
 
 // Idle connections are closed well before the fly cluster's one-hour idle stop: held forever they
@@ -237,6 +239,17 @@ func TestConfigurePool_ClosesIdleConnectionsBeforeTheClusterStops(t *testing.T) 
 	assert.Equal(t, maxOpenConns, p.maxOpen)
 	assert.Positive(t, p.maxIdle)
 	assert.Less(t, p.maxIdle, time.Hour)
+}
+
+// The shared 256 MB node cannot carry many backends: a server keeps few connections open, spare
+// ones are closed fast, yet a page load's parallel requests still fit (they queue past the cap).
+func TestConfigurePool_KeepsFewBackendsOnTheSharedNode(t *testing.T) {
+	var p poolRecorder
+	configurePool(&p)
+	assert.LessOrEqual(t, p.maxOpen, 4)
+	assert.GreaterOrEqual(t, p.maxOpen, 2, "a waiting writer holds one connection, readers need another")
+	assert.LessOrEqual(t, p.maxIdleConns, 1)
+	assert.LessOrEqual(t, p.maxIdle, time.Minute)
 }
 
 // pings answers each call with the next error of errs (nil once they run out) and counts the calls.

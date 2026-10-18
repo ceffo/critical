@@ -400,8 +400,6 @@ When a bump's `generated code is up to date` CI job fails (sqlc or mockery chang
 | `api/internal/adapters/*/queries/{db,models,querier}.go`, `*.sql.go` | sqlc output of an adapter |
 | `api/internal/adapters/*/queries/mocks/` | mockery mock of an adapter's `Querier` |
 
-<!-- br-agent-instructions-v1 -->
-
 ## Key Go Structs
 
 ```go

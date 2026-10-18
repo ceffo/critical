@@ -423,34 +423,6 @@ stat-coverage catalogue=".catalogue/catalogue.json":
     (cd api && go run ./cmd/spellstats "$cat") > "$out"
     cd web && STAT_COVERAGE_JSON="$out" npx vitest run src/lib/statCoverage.test.ts
 
-# The tracker DB is the truth: it is exported again after the pull and every changed status is printed.
-# Never `br sync --merge` here: it lets the pulled JSONL overwrite local tracker changes.
-# Supervisor: pull main in the main checkout while .beads/issues.jsonl is dirty
-sync-main:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    [ "$(git branch --show-current)" = main ] || { echo "sync-main: run it on main in the main checkout" >&2; exit 1; }
-    if [ -n "$(git status --porcelain --untracked-files=no -- . ':!.beads/issues.jsonl')" ]; then
-        echo "sync-main: changes other than .beads/issues.jsonl; commit or remove them first" >&2; exit 1
-    fi
-    br sync --flush-only >/dev/null 2>&1 || true
-    before="$(mktemp)"; cp .beads/issues.jsonl "$before"
-    git checkout -q -- .beads/issues.jsonl
-    git pull -q --ff-only
-    br sync --flush-only --force >/dev/null
-    python3 - "$before" .beads/issues.jsonl <<'PY'
-    import json, sys
-    def load(p):
-        return {j["id"]: j.get("status") for j in map(json.loads, open(p))}
-    a, b = load(sys.argv[1]), load(sys.argv[2])
-    diff = sorted((k, a.get(k), b.get(k)) for k in a.keys() | b.keys() if a.get(k) != b.get(k))
-    for k, x, y in diff:
-        print(f"CHANGED {k}: {x} -> {y}")
-    print("sync-main: tracker export identical to before the pull" if not diff else "sync-main: review the changes above")
-    PY
-    rm -f "$before"
-    git log --oneline -1
-
 # The new-themes round (docs/design/new-themes/): the candidates painted over the app, then the
 # app's theme rules (theme.test.ts) run over them; the tests pinning today's theme list fail by design.
 ui-themes: build-api

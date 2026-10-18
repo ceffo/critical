@@ -106,7 +106,7 @@ this file links it, never copies it. The decision is [ADR 0031](adr/0031-linear-
   `$LINEAR_API_KEY` or the key file written by `just linear-setup`; never in the repo).
 - Queue: `scripts/linear-ready.sh [--json]` (state Todo, no open blocker, no `needs-info` / `deferred`
   label, not an `epic`; Urgent first, then oldest). Pending questions:
-  `.claude/scripts/pending-questions.sh` (reads Linear with `CRITICAL_TRACKER=linear`).
+  `.claude/scripts/pending-questions.sh`.
 - States: Todo (open) → In Progress (claimed by the supervisor at dispatch:
   `.claude/scripts/linear-state.sh CRI-n "In Progress"`) → In Review (PR opened, by
   `.claude/scripts/ship.sh`) → Done (by Linear's GitHub integration when the PR merges; nobody closes by

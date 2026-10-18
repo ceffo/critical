@@ -308,6 +308,11 @@ export const DEFAULT_LIGHT_THEME: LightThemeId = "arcane";
 /** A primary under this chroma is near-neutral: it highlights in grey (ADR 0026 step 3.6). */
 export const NEAR_NEUTRAL_CHROMA = 0.02;
 
+/** The themes the settings list offers for an effective appearance (ADR 0026 step 4.6). */
+export function themesFor(light: boolean): readonly ThemeId[] {
+  return light ? LIGHT_THEMES : DARK_THEMES;
+}
+
 export function isMode(v: unknown): v is Mode {
   return MODES.includes(v as Mode);
 }

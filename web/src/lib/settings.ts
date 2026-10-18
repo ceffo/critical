@@ -67,6 +67,16 @@ export const DEFAULT_SETTINGS: Settings = {
   journalCollapsed: false,
 };
 
+/**
+ * The change picking `id` in the list of the shown appearance makes (ADR 0026 step 4.6): the
+ * light choice in light, the dark choice in dark, never the other one. A theme the appearance
+ * does not have changes nothing.
+ */
+export function themePatch(light: boolean, id: string): Partial<Settings> {
+  if (light) return isLightTheme(id) ? { lightTheme: id } : {};
+  return isDarkTheme(id) ? { darkTheme: id } : {};
+}
+
 function isHeight(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v) && v > 0;
 }

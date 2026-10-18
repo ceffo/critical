@@ -140,8 +140,8 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
    1. The device stores **a dark theme and a light theme** (with the language and the appearance
       mode), replacing the single `amb` of `localStorage['critical.settings.v1']`; the stored shape,
       under that key or a new versioned one, is the implementer's. The dark choice
-      is one of Arcane, Deep, Plain; the light choice one of Arcane, Parchment, Plain. The settings
-      popover offers both choices.
+      is one of Arcane, Deep, Plain; the light choice one of Arcane, Parchment, Plain. _Amended
+      2026-10-17 (step 4.6); was: the settings popover offers both choices._
    2. The appearance mode (dark | light | system) chooses which applies; "system" follows
       `prefers-color-scheme` live (unchanged). Switching mode never changes either stored choice.
    3. **A saved theme that no longer exists** is mapped **once at load and saved back**
@@ -160,6 +160,14 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
       A stored dark or light choice that is not a theme of that mode falls back to that mode's
       default. The older `critical.theme` / `critical.language` keys keep their one-time migration.
    4. They stay per-device display preferences, never sent to the API.
+   6. **The theme list follows the appearance** (user, 2026-10-17: "dark versus light, it's a bit
+      confusing. When the appearance is dark, we should only list dark themes. Likewise with light
+      and automatically when system is chosen."). The settings popover has one theme list, not two:
+      Dark lists only themes with a dark mode, Light only those with a light mode, System the
+      list of the OS's current mode, switching live when the OS does. Picking a theme saves it for
+      the shown mode only (the dark or the light choice of step 4.1); switching the appearance
+      shows and applies the other mode's remembered choice. A theme declares its modes by having a
+      palette for them (`THEMES`); a new theme appears in the lists of the modes it has.
    5. **First paint** applies the effective theme's mode before the app runs (the inline script of
       ADR 0009's Consequences), so a Deep or Parchment user sees no flash of the other mode. It
       also paints the effective theme's variables, from a copy of the chosen dark and light themes'
@@ -169,7 +177,9 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
    *Enforced by* `web/src/lib/settings.test.ts`: one case per row of the table (mapped, then saved
    back without `amb`), a wrong-mode choice falling back, and the mode switch keeping both choices;
    the e2e "settings" test of `layout.spec.ts` picks a dark and a light theme and checks both
-   survive a reload.
+   survive a reload. Step 4.6: `settings.test.ts` (the list per appearance, system following the
+   OS, a pick saving for the shown mode only) and the same e2e test (the list per appearance,
+   Dark -> Light -> Dark keeping each pick).
 5. **Component rules of the ladder** (amends ADR 0022 steps 2.4, 4.1 and 4.2).
    1. **One selection mark**: a selected row, item or rail entry is the **selected tone** (`amb-800`)
       with ink text and a **3 px tint bar** on its left edge. The rail uses it too (replaces step

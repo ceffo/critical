@@ -48,6 +48,34 @@ func (q *Queries) CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) (
 	return items, nil
 }
 
+const charactersWithoutHPLevel = `-- name: CharactersWithoutHPLevel :many
+SELECT id FROM characters WHERE hp_level IS NULL ORDER BY id
+`
+
+// The characters whose max HP has no level yet (ADR 0030 step 7.5), for the level-up's boot step.
+func (q *Queries) CharactersWithoutHPLevel(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, charactersWithoutHPLevel)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createActiveBuffs = `-- name: CreateActiveBuffs :exec
 INSERT INTO active_buffs (character_id, buffs) VALUES ($1, '[]')
 `
@@ -165,7 +193,7 @@ const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages,
-       COALESCE(hp_level, level)::BIGINT AS hp_level
+       hp_level
 FROM characters WHERE id = $1
 `
 
@@ -198,12 +226,13 @@ type GetCharacterRow struct {
 	Hair             string
 	Eyes             string
 	Languages        string
-	HpLevel          int64
+	HpLevel          sql.NullInt64
 }
 
 // level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
 // step 24): compared with the derived values, never read as inputs.
-// hp_level is the level the max HP was last set for (ADR 0030 step 7); NULL is the sheet's level.
+// hp_level is the level the max HP was last set for (ADR 0030 step 7); NULL is not set yet, which the
+// level-up service's boot step sets to the level the XP gives (step 7.5).
 func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error) {
 	row := q.db.QueryRowContext(ctx, getCharacter, id)
 	var i GetCharacterRow
@@ -379,6 +408,25 @@ type SetHitPointsParams struct {
 // A level-up roll and its undo (ADR 0030 step 7.3): the max HP and the level it is set for.
 func (q *Queries) SetHitPoints(ctx context.Context, arg SetHitPointsParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setHitPoints, arg.HpMax, arg.HpLevel, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setUnsetHPLevel = `-- name: SetUnsetHPLevel :execrows
+UPDATE characters SET hp_level = $1
+WHERE id = $2 AND hp_level IS NULL
+`
+
+type SetUnsetHPLevelParams struct {
+	HpLevel sql.NullInt64
+	ID      int64
+}
+
+// Sets the level of a max HP that has none yet (ADR 0030 step 7.5); a level already set is kept.
+func (q *Queries) SetUnsetHPLevel(ctx context.Context, arg SetUnsetHPLevelParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setUnsetHPLevel, arg.HpLevel, arg.ID)
 	if err != nil {
 		return 0, err
 	}

@@ -84,6 +84,64 @@ func (_c *MockCharacterStore_CharactersOf_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// CharactersWithoutHPLevel provides a mock function with given fields: ctx
+func (_m *MockCharacterStore) CharactersWithoutHPLevel(ctx context.Context) ([]int64, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CharactersWithoutHPLevel")
+	}
+
+	var r0 []int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]int64, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []int64); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int64)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCharacterStore_CharactersWithoutHPLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CharactersWithoutHPLevel'
+type MockCharacterStore_CharactersWithoutHPLevel_Call struct {
+	*mock.Call
+}
+
+// CharactersWithoutHPLevel is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockCharacterStore_Expecter) CharactersWithoutHPLevel(ctx interface{}) *MockCharacterStore_CharactersWithoutHPLevel_Call {
+	return &MockCharacterStore_CharactersWithoutHPLevel_Call{Call: _e.mock.On("CharactersWithoutHPLevel", ctx)}
+}
+
+func (_c *MockCharacterStore_CharactersWithoutHPLevel_Call) Run(run func(ctx context.Context)) *MockCharacterStore_CharactersWithoutHPLevel_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_CharactersWithoutHPLevel_Call) Return(_a0 []int64, _a1 error) *MockCharacterStore_CharactersWithoutHPLevel_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCharacterStore_CharactersWithoutHPLevel_Call) RunAndReturn(run func(context.Context) ([]int64, error)) *MockCharacterStore_CharactersWithoutHPLevel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateCharacter provides a mock function with given fields: ctx, owner, c
 func (_m *MockCharacterStore) CreateCharacter(ctx context.Context, owner uuid.UUID, c charactersvc.Character) (int64, error) {
 	ret := _m.Called(ctx, owner, c)
@@ -552,6 +610,54 @@ func (_c *MockCharacterStore_SetHitPoints_Call) Return(_a0 error) *MockCharacter
 }
 
 func (_c *MockCharacterStore_SetHitPoints_Call) RunAndReturn(run func(context.Context, int64, int, int) error) *MockCharacterStore_SetHitPoints_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetUnsetHPLevel provides a mock function with given fields: ctx, id, hpLevel
+func (_m *MockCharacterStore) SetUnsetHPLevel(ctx context.Context, id int64, hpLevel int) error {
+	ret := _m.Called(ctx, id, hpLevel)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetUnsetHPLevel")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int) error); ok {
+		r0 = rf(ctx, id, hpLevel)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_SetUnsetHPLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetUnsetHPLevel'
+type MockCharacterStore_SetUnsetHPLevel_Call struct {
+	*mock.Call
+}
+
+// SetUnsetHPLevel is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - hpLevel int
+func (_e *MockCharacterStore_Expecter) SetUnsetHPLevel(ctx interface{}, id interface{}, hpLevel interface{}) *MockCharacterStore_SetUnsetHPLevel_Call {
+	return &MockCharacterStore_SetUnsetHPLevel_Call{Call: _e.mock.On("SetUnsetHPLevel", ctx, id, hpLevel)}
+}
+
+func (_c *MockCharacterStore_SetUnsetHPLevel_Call) Run(run func(ctx context.Context, id int64, hpLevel int)) *MockCharacterStore_SetUnsetHPLevel_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_SetUnsetHPLevel_Call) Return(_a0 error) *MockCharacterStore_SetUnsetHPLevel_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_SetUnsetHPLevel_Call) RunAndReturn(run func(context.Context, int64, int) error) *MockCharacterStore_SetUnsetHPLevel_Call {
 	_c.Call.Return(run)
 	return _c
 }

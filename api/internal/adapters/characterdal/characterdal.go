@@ -52,7 +52,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 		ID: row.ID, Name: row.Name,
 		Str: int(row.Str), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
-		HPMax: int(row.HpMax), HPLevel: int(row.HpLevel), XPTotal: int(row.XpTotal),
+		HPMax: int(row.HpMax), HPLevel: int(row.HpLevel.Int64), XPTotal: int(row.XpTotal),
 		Class: row.Class, Race: row.RaceCode,
 		// The figures the imported sheet stated (ADR 0030 step 24).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
@@ -78,6 +78,27 @@ func (d *DAL) SetHitPoints(ctx context.Context, id int64, hpMax, hpLevel int) er
 	}
 	if n == 0 {
 		return domain.ErrCharacterNotFound
+	}
+	return nil
+}
+
+// CharactersWithoutHPLevel implements levelupsvc.DAL: the characters whose
+// max HP has no level yet (hp_level NULL, ADR 0030 step 7.5), by id.
+func (d *DAL) CharactersWithoutHPLevel(ctx context.Context) ([]int64, error) {
+	ids, err := d.q.CharactersWithoutHPLevel(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("characters without a max HP level: %w", err)
+	}
+	return ids, nil
+}
+
+// SetUnsetHPLevel implements levelupsvc.DAL: the level of a max HP that has
+// none yet (ADR 0030 step 7.5). A level already set is kept.
+func (d *DAL) SetUnsetHPLevel(ctx context.Context, id int64, hpLevel int) error {
+	if _, err := d.q.SetUnsetHPLevel(ctx, queries.SetUnsetHPLevelParams{
+		HpLevel: sql.NullInt64{Int64: int64(hpLevel), Valid: true}, ID: id,
+	}); err != nil {
+		return fmt.Errorf("set the max HP level: %w", err)
 	}
 	return nil
 }

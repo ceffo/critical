@@ -53,7 +53,9 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 	h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once().NotBefore(search)
 	root := &authsvc.User{ID: uuid.New(), Email: "root@example.com", Role: authsvc.RoleAdmin, Root: true}
 	h.Auth.EXPECT().RootUser(mock.Anything).Return(root, nil).Once().NotBefore(search)
-	h.Auth.EXPECT().AdoptUnownedCharacters(mock.Anything, root.ID).Return(nil).Once()
+	adopt := h.Auth.EXPECT().AdoptUnownedCharacters(mock.Anything, root.ID).Return(nil).Once()
+	// Then the max HP levels not set yet, after the seed (ADR 0030 step 7.5).
+	h.Character.EXPECT().CharactersWithoutHPLevel(mock.Anything).Return(nil, nil).Once().NotBefore(adopt)
 	h.Store.EXPECT().Close().Return(nil).Once()
 
 	bs, err := h.build(t, fixtureConfig())
@@ -422,6 +424,7 @@ func TestBuild_SpellCatalogueReadOnceAtStartup(t *testing.T) {
 	h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return([]spellsvc.Spell{fire}, nil).Once()
 	h.Spell.EXPECT().Details(mock.Anything, []string{"fireball"}).Return([]spellsvc.Spell{fire}, nil).Once()
 	h.Auth.EXPECT().RootUser(mock.Anything).Return(nil, domain.ErrNotFound).Once()
+	h.Character.EXPECT().CharactersWithoutHPLevel(mock.Anything).Return(nil, nil).Once()
 
 	bs, err := h.build(t, fixtureConfig())
 	require.NoError(t, err)

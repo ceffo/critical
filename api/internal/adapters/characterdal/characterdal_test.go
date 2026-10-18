@@ -28,7 +28,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 
 	q.EXPECT().GetCharacter(ctx, int64(3)).Return(queries.GetCharacterRow{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
-		HpMax: 42, HpLevel: 6, Thac0Base: 16, Level: 5, XpTotal: 1200,
+		HpMax: 42, HpLevel: sql.NullInt64{Int64: 6, Valid: true}, Thac0Base: 16, Level: 5, XpTotal: 1200,
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
 		Class: "bard", RaceCode: "half_elf", Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M",
 		Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
@@ -199,6 +199,37 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, int64(7), id)
+}
+
+// ADR 0030 step 7.5: a max HP with no level (NULL) reads as 0, never as the
+// sheet's stored level: the level comes from the XP.
+func TestGetCharacter_ANullMaxHPLevelIsUnsetNotTheSheetsLevel(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().GetCharacter(ctx, int64(3)).Return(queries.GetCharacterRow{
+		ID: 3, Class: "bard", RaceCode: "half_elf", HpMax: 85, Level: 15, Languages: `[]`,
+	}, nil).Once()
+	got, err := characterdal.New(q).GetCharacter(ctx, 3)
+	require.NoError(t, err)
+	assert.Equal(t, 0, got.HPLevel)
+	assert.Equal(t, 15, got.Sheet.Level)
+}
+
+// ADR 0030 step 7.5: the boot step lists the characters without a max HP
+// level and sets one, keeping a level already set (the query's guard).
+func TestUnsetHPLevels_ListedThenSet(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	dal := characterdal.New(q)
+	q.EXPECT().CharactersWithoutHPLevel(ctx).Return([]int64{1, 4}, nil).Once()
+	ids, err := dal.CharactersWithoutHPLevel(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []int64{1, 4}, ids)
+
+	q.EXPECT().SetUnsetHPLevel(ctx, queries.SetUnsetHPLevelParams{
+		HpLevel: sql.NullInt64{Int64: 15, Valid: true}, ID: 1,
+	}).Return(1, nil).Once()
+	require.NoError(t, dal.SetUnsetHPLevel(ctx, 1, 15))
 }
 
 // ADR 0030 step 7.3: a level-up roll (and its undo) writes the max HP and

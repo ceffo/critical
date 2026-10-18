@@ -13,6 +13,8 @@ import (
 type Querier interface {
 	// The owner's characters they have not retired, in creation order (the service derives each level).
 	CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) ([]CharactersOfRow, error)
+	// The characters whose max HP has no level yet (ADR 0030 step 7.5), for the level-up's boot step.
+	CharactersWithoutHPLevel(ctx context.Context) ([]int64, error)
 	CreateActiveBuffs(ctx context.Context, characterID int64) error
 	// A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
 	// sheet's level, THAC0 and saves the values the rules derive at its starting XP (ADR 0030 step
@@ -28,7 +30,8 @@ type Querier interface {
 	CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, error)
 	// level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
 	// step 24): compared with the derived values, never read as inputs.
-	// hp_level is the level the max HP was last set for (ADR 0030 step 7); NULL is the sheet's level.
+	// hp_level is the level the max HP was last set for (ADR 0030 step 7); NULL is not set yet, which the
+	// level-up service's boot step sets to the level the XP gives (step 7.5).
 	GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error)
 	GetCharacterDetails(ctx context.Context, id int64) (GetCharacterDetailsRow, error)
 	// Serialises the writes that move a user's current character (switch, create, retire): the
@@ -45,6 +48,8 @@ type Querier interface {
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
 	// A level-up roll and its undo (ADR 0030 step 7.3): the max HP and the level it is set for.
 	SetHitPoints(ctx context.Context, arg SetHitPointsParams) (int64, error)
+	// Sets the level of a max HP that has none yet (ADR 0030 step 7.5); a level already set is kept.
+	SetUnsetHPLevel(ctx context.Context, arg SetUnsetHPLevelParams) (int64, error)
 	UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error)
 }
 

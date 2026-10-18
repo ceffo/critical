@@ -126,7 +126,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    class, race code (one of the six, required), name (1 to 40 characters), the six scores (each **3 to
    19**: 3d6, one more or less for a racial adjustment of PHB Table 8), the max HP (1 to 999) and the
    starting XP (0 to 100,000,000). Only the classes whose entries and rules are built may be created:
-   the **bard** for now (`charactersvc.CreatableClasses`); each class item adds its own with its entries
+   the **bard** for now (`charactersvc.CreatableClasses`; the fighter and the **mage** since,
+   a created mage's spellbook starting empty and filling by step 20); each class item adds its own with its entries
    (a fighter's exceptional strength, a thief's skill points). A **cleric is refused** until step 13: its
    slots need the Wisdom bonus spells. A refusal names the field and a code (`empty`, `too_long`,
    `out_of_range`, `not_creatable`, `unknown`, `race_not_allowed`), worded by the web.
@@ -455,6 +456,29 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        unlearning); removing it is a sheet correction.
     4. The spellbook of an imported character (Kelsen's) comes in without rolls. Sheet's
        Intelligence.
+
+    _(As built, 2026-10-18)_ `POST /api/character/spellbook/learn {spellId}` (learnsvc) answers the
+    roll's breakdown (`spellId`, `spellLevel`, `roll`, `chance`, `learned`, `characterLevel`, the
+    realized level). The limits are the character's derived `spellbook` block
+    (`classMaxSpellLevel`, `intMaxSpellLevel`, `learnChance`, `maxSpellsPerLevel`, `noMaximum`;
+    null for a class without a spellbook), so the web shows them without computing them. Which
+    classes keep a spellbook and their highest level is a `ruletablesvc` constant (mage 9th, bard
+    6th); Table 4 is catalogue data. Refusals, each a code the web words: `no_spellbook`,
+    `not_a_wizard_spell`, `already_in_spellbook` (409), `spell_level_above_class`,
+    `spell_level_above_intelligence`, `spellbook_level_full`, `spell_learn_failed_at_level`. A
+    failure is stored in `spellbook_learn_failures` (migration 010, additive, no data step) at the
+    realized level and blocks while the realized level is at or under it (an undone level-up keeps
+    it blocked). The roll is a `spell_learn` journal entry whose `spellbook:<spell key>` snapshot
+    (in the spellbook, failed at a level) the undo writes back: a success's undo takes the spell
+    out, a failure's lifts its block. A learned spell goes at the end of the spellbook. The web
+    offers **Apprendre** in the lookup's detail on a wizard spell, then the roll's answer or
+    "Dans le grimoire". Settled: the bard's spellbook gets the same rules (the user's "yes to all").
+    Tests: `TestIntelligenceFor_Step20_Table4`, `TestSpellbookMaxLevel_Step20_1` (ruletablesadpt),
+    `TestDerive_Step20_1_SpellbookRules` (charactersvc), `TestLearn_Step20_1_RefusedBeforeAnyDie`,
+    `TestLearn_Step20_1_WhatIsNotRefused`, `TestLearn_Step20_2_OneD100AtOrUnderTheChance`,
+    `TestRestore_Step20_3_UndoLiftsTheBlock` (learnsvc),
+    `TestLearn_Step20_LearnFailUndoAndPrepareAMage`,
+    `TestLearn_Step20_4_TheSeedSpellbookComesInWithoutRolls` (composition).
 
 ### Races
 

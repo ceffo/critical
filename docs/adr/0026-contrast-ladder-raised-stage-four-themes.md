@@ -49,16 +49,17 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
 1. **Contrast ladder tokens** (amends ADR 0020 steps 2 and 6).
    1. **Surfaces per mode**, four tones, judged by OKLab lightness L:
 
-      | Tone (token)                          | Role                                   | Arcane / Deep / Plain dark | Arcane / Plain light | Parchment light |
-      | ------------------------------------- | -------------------------------------- | -------------------------- | -------------------- | --------------- |
-      | page (`ground`)                       | the window behind the cards            | L .10                      | L .89                | L .865          |
-      | card (`surface`)                      | every zone of ADR 0022 step 4.1        | L .25                      | L .995               | L .97           |
-      | raised (`neu-900`)                    | tiles, rows, filled chips, save rows   | L .335                     | L .915               | L .89           |
-      | hover (`neu-800`)                     | the hover of a raised row or chip      | L .405                     | L .885               | L .855          |
-      | selected (`amb-800`)                  | a selected row, the chosen chip        | L .39                      | L .88                | L .88           |
+      | Tone (token)         | Role                                 | Arcane / Deep / Plain dark | Arcane / Plain light | Parchment light |
+      | -------------------- | ------------------------------------ | -------------------------- | -------------------- | --------------- |
+      | page (`ground`)      | the window behind the cards          | L .10                      | L .89                | L .865          |
+      | card (`surface`)     | every zone of ADR 0022 step 4.1      | L .25                      | L .995               | L .97           |
+      | raised (`neu-900`)   | tiles, rows, filled chips, save rows | L .335                     | L .915               | L .89           |
+      | hover (`neu-800`)    | the hover of a raised row or chip    | L .405                     | L .885               | L .855          |
+      | selected (`amb-800`) | a selected row, the chosen chip      | L .39                      | L .88                | L .88           |
 
       The selected tone is the theme's primary hue at low chroma; hover is the neutral one step past
       raised. Ink is L .95 in dark (Deep .95), .18 in light (Parchment .24, brown-black).
+
    2. **Translucent mixes** of ink (ADR 0020 step 6's 70 / 18 / 22 %): muted text / card outline
       (`--border`) / field edge (`--input`) = **76 / 32 / 42 %** in dark, **74 / 34 / 48 %** in light,
       **76 / 34 / 50 %** in Parchment.
@@ -85,9 +86,10 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
    6. **Defaults before the app runs** (ADR 0020 step 6): `web/src/index.css` holds the Arcane light
       and dark blocks exactly as the theme code computes them, with the new mixes.
 
-   *Enforced by* `web/src/lib/theme.test.ts`: the "index.css defaults" test (step 1.6), and a ladder
+   _Enforced by_ `web/src/lib/theme.test.ts`: the "index.css defaults" test (step 1.6), and a ladder
    test that fails when a dark theme's accents leave the order of step 1.4 or a theme's tones leave
    the order page < card < raised (dark) / page < raised < card (light).
+
 2. **Non-text contrast** (amends ADR 0020 step 4), for every theme in every mode it exists in:
    1. **card on page ΔL ≥ .10** and **raised on card ΔL ≥ .07**, as OKLab lightness differences
       (absolute: light-mode steps go down). Not as WCAG ratios, which flatten dark tones.
@@ -102,24 +104,40 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
       it stands out as a filled verdict pill (step 5.5) and by hue.
    5. The card outline has no floor: with the tone step it no longer carries the boundary alone.
 
-   *Enforced by* the "contrast" describe block of `theme.test.ts`, extended with the ΔL and 3:1
+   _Enforced by_ the "contrast" describe block of `theme.test.ts`, extended with the ΔL and 3:1
    pairs, run over every theme and mode of step 3.
+
 3. **Four themes** (amends ADR 0009 step 4, ADR 0020 steps 1 and 3). The ambiance is now a
    **theme**: a hand-tuned role table per mode, not three hues fed to one generator.
    1. **The set**, each with its own role table and semantic hues (step 1.5):
 
-      | Theme     | Modes        | From          | Character                                                                                         |
-      | --------- | ------------ | ------------- | ------------------------------------------------------------------------------------------------- |
-      | Arcane    | dark, light  | Arcane        | the brand: violet-indigo primary (285), gold highlight (88), teal magic (200); retuned on the ladder |
-      | Deep      | dark only    | Ocean dark    | ink-blue page, cyan-blue primary (232), coral danger (30), jade success (168), gold highlight (85), violet magic (300) |
-      | Parchment | light only   | Amber light   | warm paper, brown-black ink, lapis primary (262), oxblood danger (27), moss success (140), ochre warning (60), gilt highlight (82), violet magic (310) |
-      | Plain     | dark, light  | Obsidian      | near-neutral: no colour but the semantic ones and the gold highlight                              |
+      | Theme     | Modes       | From        | Character                                                                                                                                              |
+      | --------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+      | Arcane    | dark, light | Arcane      | the brand: violet-indigo primary (285), gold highlight (88), teal magic (200); retuned on the ladder                                                   |
+      | Deep      | dark only   | Ocean dark  | ink-blue page, cyan-blue primary (232), coral danger (30), jade success (168), gold highlight (85), violet magic (300)                                 |
+      | Parchment | light only  | Amber light | warm paper, brown-black ink, lapis primary (262), oxblood danger (27), moss success (140), ochre warning (60), gilt highlight (82), violet magic (310) |
+      | Plain     | dark, light | Obsidian    | near-neutral: no colour but the semantic ones and the gold highlight                                                                                   |
 
       Grove, Blood, Amber dark and Ocean light are removed.
-   2. **Ids and names** (*proposed, user OK on the PR*): ids `arcane`, `deep`, `parchment`, `plain`
+
+      _Amended 2026-10-17 (the new-themes round, approved by the user as shown;
+      [`docs/design/new-themes/`](../design/new-themes/README.md)): three themes join the set, each on
+      the same ladder, mixes and raised stage, role tables in `THEMES`. The set is now seven themes._
+
+      | Theme  | Modes       | Character                                                                                                                                         |
+      | ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+      | Forest | dark, light | forest-night surfaces, emerald primary (160), lime success (128, 32° off the primary), gold highlight (88), violet magic (300)                    |
+      | Ember  | dark only   | wine surfaces (hue 12-15), crimson-rose primary (355, tint L .725 for 4.5:1 on the raised step), vermilion danger (40, 45° off), teal magic (200) |
+      | Amber  | dark only   | warm black (60-65), amber ink (85) and primary (70), orange warning (42, 28° off), lemon highlight (105), teal-blue magic (210)                   |
+
+      Ids `forest`, `ember`, `amber`; names **Forest / Forêt**, **Ember / Braise**, **Amber / Ambre**.
+      The dark list is Arcane, Deep, Plain, Forest, Ember, Amber; the light list Arcane, Parchment,
+      Plain, Forest. No touches of step 7 for them.
+
+   2. **Ids and names** (_proposed, user OK on the PR_): ids `arcane`, `deep`, `parchment`, `plain`
       (stable, language-free); display names are i18n keys (en / fr): **Arcane / Arcane**,
       **Deep / Abysses**, **Parchment / Parchemin**, **Plain / Sobre**.
-   3. **Default pair** (*proposed, user OK on the PR*): dark theme **Arcane**, light theme **Arcane**.
+   3. **Default pair** (_proposed, user OK on the PR_): dark theme **Arcane**, light theme **Arcane**.
    4. **Semantic hues are per theme** (replaces ADR 0020 step 3's "the same hues in every
       ambiance"): Parchment's danger is its own oxblood (L .48, hue 27), not the dark red flipped;
       Deep's danger is coral (hue 30) and its success jade (168). Arcane and Plain keep danger 25 and
@@ -132,35 +150,37 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
       the gold secondary for the highlight.
    7. The light-mode ramp reversal of ADR 0009 step 4 stands for every theme that has ramps.
 
-   *Enforced by* `theme.test.ts`: every theme gives the same set of variables in each mode it
+   _Enforced by_ `theme.test.ts`: every theme gives the same set of variables in each mode it
    exists in; the hue-distance rule of step 3.5; the near-neutral rule of step 3.6; and by the
    i18n key check for the eight names (en + fr). The e2e "theme" test of `layout.spec.ts`
    screenshots each theme in each of its modes, in French.
+
 4. **Stored preference** (amends ADR 0009 step 6).
    1. The device stores **a dark theme and a light theme** (with the language and the appearance
       mode), replacing the single `amb` of `localStorage['critical.settings.v1']`; the stored shape,
       under that key or a new versioned one, is the implementer's. The dark choice
-      is one of Arcane, Deep, Plain; the light choice one of Arcane, Parchment, Plain. _Amended
+      is one of Arcane, Deep, Plain, Forest, Ember, Amber; the light choice one of Arcane, Parchment, Plain, Forest. _Amended
       2026-10-17 (step 4.6); was: the settings popover offers both choices._
    2. The appearance mode (dark | light | system) chooses which applies; "system" follows
       `prefers-color-scheme` live (unchanged). Switching mode never changes either stored choice.
    3. **A saved theme that no longer exists** is mapped **once at load and saved back**
-      (*proposed, user OK on the PR*):
+      (_proposed, user OK on the PR_):
 
-      | Saved `amb`   | Dark theme | Light theme |
-      | ------------- | ---------- | ----------- |
-      | `ocean`       | Deep       | Arcane      |
-      | `ambre`       | Arcane     | Parchment   |
-      | `sylve`       | Arcane     | Arcane      |
-      | `sang`        | Arcane     | Arcane      |
-      | `obsidienne`  | Plain      | Plain       |
-      | `arcane`      | Arcane     | Arcane      |
-      | anything else | the defaults (step 3.3) |  |
+      | Saved `amb`   | Dark theme              | Light theme |
+      | ------------- | ----------------------- | ----------- |
+      | `ocean`       | Deep                    | Arcane      |
+      | `ambre`       | Arcane                  | Parchment   |
+      | `sylve`       | Arcane                  | Arcane      |
+      | `sang`        | Arcane                  | Arcane      |
+      | `obsidienne`  | Plain                   | Plain       |
+      | `arcane`      | Arcane                  | Arcane      |
+      | anything else | the defaults (step 3.3) |             |
 
       A stored dark or light choice that is not a theme of that mode falls back to that mode's
       default. The older `critical.theme` / `critical.language` keys keep their one-time migration.
+
    4. They stay per-device display preferences, never sent to the API.
-   6. **The theme list follows the appearance** (user, 2026-10-17: "dark versus light, it's a bit
+   5. **The theme list follows the appearance** (user, 2026-10-17: "dark versus light, it's a bit
       confusing. When the appearance is dark, we should only list dark themes. Likewise with light
       and automatically when system is chosen."). The settings popover has one theme list, not two:
       Dark lists only themes with a dark mode, Light only those with a light mode, System the
@@ -168,18 +188,19 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
       the shown mode only (the dark or the light choice of step 4.1); switching the appearance
       shows and applies the other mode's remembered choice. A theme declares its modes by having a
       palette for them (`THEMES`); a new theme appears in the lists of the modes it has.
-   5. **First paint** applies the effective theme's mode before the app runs (the inline script of
+   6. **First paint** applies the effective theme's mode before the app runs (the inline script of
       ADR 0009's Consequences), so a Deep or Parchment user sees no flash of the other mode. It
       also paints the effective theme's variables, from a copy of the chosen dark and light themes'
       tokens the app saves on the device (`critical.paint.v1`), so the first frame is not the default
       theme either. _Amended 2026-10-17 (the copy added); was: the mode only._
 
-   *Enforced by* `web/src/lib/settings.test.ts`: one case per row of the table (mapped, then saved
+   _Enforced by_ `web/src/lib/settings.test.ts`: one case per row of the table (mapped, then saved
    back without `amb`), a wrong-mode choice falling back, and the mode switch keeping both choices;
    the e2e "settings" test of `layout.spec.ts` picks a dark and a light theme and checks both
    survive a reload. Step 4.6: `settings.test.ts` (the list per appearance, system following the
    OS, a pick saving for the shown mode only) and the same e2e test (the list per appearance,
    Dark -> Light -> Dark keeping each pick).
+
 5. **Component rules of the ladder** (amends ADR 0022 steps 2.4, 4.1 and 4.2).
    1. **One selection mark**: a selected row, item or rail entry is the **selected tone** (`amb-800`)
       with ink text and a **3 px tint bar** on its left edge. The rail uses it too (replaces step
@@ -205,10 +226,11 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
       rows are full raised steps (save rows filled, their target number in ink); initiative is a
       plain `text-key` number.
 
-   *Enforced by* `web/src/lib/hpBar.test.ts` (step 5.4: the fill's colour role per threshold, never
-   `tint`); the journal's value colour by a unit test of its formatter (step 5.8: gold only with a
+   _Enforced by_ `web/src/lib/hpBar.test.ts` (step 5.4: the fill's colour role per threshold, never
+   `tint`; the fill classes are `bg-success`, `bg-warning`, `bg-danger`); the journal's value colour by a unit test of its formatter (step 5.8: gold only with a
    crit or max flag); the rest by the screenshots of the e2e "theme" test (each theme, each mode, FR)
    checked in review, and by `layout.spec`'s no-cut audit.
+
 6. **Raised stage** (amends ADR 0022 steps 3.2, 4.1 and 4.2).
    1. **Three elevations**: the page, the cards, and **the focused card of the activity**, one tone
       up (dark: ink at 5 % over the card; light: the card itself) with a **2 px outline** (ink at
@@ -229,7 +251,7 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
       ADR 0017 step 6 / ADR 0022 step 3.1's 120 px header at rest hold with the bands, as the round's
       shots show.
 
-   *Enforced by* `layout.spec`'s "shell" and "act panel" tests (step 6.6: the header budget, the
+   _Enforced by_ `layout.spec`'s "shell" and "act panel" tests (step 6.6: the header budget, the
    content target and the no-cut audit, in French included) and the e2e "theme" screenshots for the
    bands and the focused card; and by the "raised stage" block of `theme.test.ts`, for every theme
    and mode: the tokens of steps 6.1-6.3 in `themeVars` and the `index.css` defaults, card ≤
@@ -239,6 +261,7 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
    sub-band. The act panel's band (the band on the elevated tone) holds only ink text and the chosen
    tab's tint mark, held to 3:1 (step 2.2); the dark tint reaches 4.1-4.2:1 there. _Added
    2026-10-17 (the raised stage shipped)._
+
 7. **Parchment's touches** (amends ADR 0020 step 5), in Parchment only:
    1. **Section labels in Cinzel capitals** (`font-display`, bold, 0.06em), the card titles of step
       5.6 included. **Not on stat-tile labels** (the lookup's tiles): Cinzel's wider capitals cut
@@ -247,7 +270,7 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
    2. **A gilt outline** (`highlight`) on the latest result, instead of the tint one of step 5.2.
    3. **A visible brown outline on cards** (ink at 34 %): paper has little tone depth.
 
-   *Enforced by* the no-cut audit of `layout.spec` run on Parchment in French (step 7.1), and the
+   _Enforced by_ the no-cut audit of `layout.spec` run on Parchment in French (step 7.1), and the
    Parchment screenshots of the e2e "theme" test.
 
 ## Consequences

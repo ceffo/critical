@@ -28,7 +28,10 @@
       "arcane": "Arcane",
       "deep": "Deep",
       "parchment": "Parchment",
-      "plain": "Plain"
+      "plain": "Plain",
+      "forest": "Forest",
+      "ember": "Ember",
+      "amber": "Amber"
     }
   },
   "shell": {

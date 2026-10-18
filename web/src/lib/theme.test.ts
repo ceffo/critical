@@ -32,15 +32,25 @@ const CASES = THEMES.flatMap((t) =>
 );
 
 describe("themes (ADR 0026 step 3)", () => {
-  it("are Arcane, Deep, Parchment and Plain, Deep dark only and Parchment light only", () => {
+  it("are Arcane, Deep, Parchment, Plain, Forest, Ember and Amber, each in its approved modes", () => {
     expect(THEMES.map((t) => t.id)).toEqual([
       "arcane",
       "deep",
       "parchment",
       "plain",
+      "forest",
+      "ember",
+      "amber",
     ]);
-    expect(DARK_THEMES).toEqual(["arcane", "deep", "plain"]);
-    expect(LIGHT_THEMES).toEqual(["arcane", "parchment", "plain"]);
+    expect(DARK_THEMES).toEqual([
+      "arcane",
+      "deep",
+      "plain",
+      "forest",
+      "ember",
+      "amber",
+    ]);
+    expect(LIGHT_THEMES).toEqual(["arcane", "parchment", "plain", "forest"]);
     expect([DEFAULT_DARK_THEME, DEFAULT_LIGHT_THEME]).toEqual([
       "arcane",
       "arcane",
@@ -293,7 +303,7 @@ describe("contrast (ADR 0026 step 2, ADR 0020 step 4)", () => {
     });
   }
 
-  it("covers the six theme-modes of ADR 0026 step 3.1", () => {
+  it("covers the ten theme-modes of ADR 0026 step 3.1", () => {
     expect(CASES.map((c) => c.name)).toEqual([
       "arcane dark",
       "arcane light",
@@ -301,6 +311,10 @@ describe("contrast (ADR 0026 step 2, ADR 0020 step 4)", () => {
       "parchment light",
       "plain dark",
       "plain light",
+      "forest dark",
+      "forest light",
+      "ember dark",
+      "amber dark",
     ]);
   });
 });

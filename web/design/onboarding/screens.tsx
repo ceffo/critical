@@ -29,7 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
-import { tr } from "./lang";
+import { lt, tr } from "./lang";
 import {
   ABILITIES,
   ALIGNMENTS,
@@ -178,13 +178,13 @@ export function StepClass() {
               {CLASS_ICONS[c.id]}
               <span className="text-key">{tr(c.fr, c.en)}</span>
               <span className="ml-auto text-label text-ink-muted">
-                {tr(c.groupFr, c.groupEn)}
+                {lt(c.group)}
               </span>
             </div>
             <Row k={tr("Dé de vie", "Hit die")} v={c.hd} />
-            <Row k={tr("Minimums", "Minimums")} v={tr(c.reqFr, c.reqEn)} />
-            <Row k={tr("Alignement", "Alignment")} v={tr(c.alFr, c.alEn)} />
-            <Row k={tr("Races", "Races")} v={tr(c.racesFr, c.racesEn)} />
+            <Row k={tr("Minimums", "Minimums")} v={lt(c.req)} />
+            <Row k={tr("Alignement", "Alignment")} v={lt(c.al)} />
+            <Row k={tr("Races", "Races")} v={lt(c.races)} />
           </Choice>
         ))}
       </div>
@@ -249,19 +249,13 @@ export function StepRace() {
                 </span>
               )}
             </div>
-            <Row
-              k={tr("Ajustements", "Adjustments")}
-              v={tr(r.adjFr, r.adjEn)}
-            />
+            <Row k={tr("Ajustements", "Adjustments")} v={lt(r.adj)} />
             <Row
               k={tr("Langue maternelle", "Native language")}
-              v={tr(r.langFr, r.langEn)}
+              v={lt(r.lang)}
             />
-            <Row k={tr("Taille", "Height")} v={tr(r.hFr, r.hEn)} />
-            <Row
-              k={tr("Âge de départ", "Starting age")}
-              v={tr(r.ageFr, r.ageEn)}
-            />
+            <Row k={tr("Taille", "Height")} v={lt(r.h)} />
+            <Row k={tr("Âge de départ", "Starting age")} v={lt(r.age)} />
           </Choice>
         ))}
       </div>
@@ -339,7 +333,7 @@ export function StepScores() {
                   <span className="text-body text-ink-muted">=</span>
                   <span className="w-6 text-key tabular-nums">{total(r)}</span>
                   <ArrowRight aria-hidden className="size-3.5 text-ink-muted" />
-                  <span className="text-body">{tr(ab.nameFr, ab.nameEn)}</span>
+                  <span className="text-body">{lt(ab.name)}</span>
                 </li>
               );
             })}
@@ -367,7 +361,7 @@ export function StepScores() {
             <tbody>
               {ABILITIES.map((a) => (
                 <tr key={a.id} className="border-t border-border">
-                  <td className="py-1.5">{tr(a.nameFr, a.nameEn)}</td>
+                  <td className="py-1.5">{lt(a.name)}</td>
                   <td>
                     <span className="chip-chosen inline-flex h-6 min-w-8 items-center justify-center px-1.5 tabular-nums">
                       {a.score}
@@ -914,13 +908,13 @@ export function Roster() {
                 </div>
                 <span className="text-body">
                   {tr(
-                    `${c.classFr} · niveau ${c.level}`,
-                    `${c.classEn} · level ${c.level}`,
+                    `${c.class.fr} · niveau ${c.level}`,
+                    `${c.class.en} · level ${c.level}`,
                   )}
                 </span>
                 <span className="text-body text-ink-muted">
-                  {tr(c.raceFr, c.raceEn)}
-                  {c.alFr && ` · ${tr(c.alFr, c.alEn)}`}
+                  {lt(c.race)}
+                  {c.al.fr && ` · ${lt(c.al)}`}
                 </span>
                 {c.missing && (
                   <span className="mt-1 flex items-center gap-1 self-start rounded-md bg-raised px-1.5 py-0.5 text-label text-warning">

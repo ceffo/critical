@@ -14,7 +14,7 @@ import { BrandIcon } from "@/components/shell/BrandMark";
 import { Button } from "@/components/ui/button";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
-import { tr } from "./lang";
+import { lt, tr } from "./lang";
 import { ABILITIES, CHAR, STEPS } from "./data";
 
 export function Wordmark({ size = "key" }: { size?: "key" | "hero" }) {
@@ -252,7 +252,7 @@ function StepList({ current }: { current: number }) {
                 </span>
                 {done && (
                   <span className="text-label text-ink-muted">
-                    {tr(s.doneFr, s.doneEn)}
+                    {lt(s.done)}
                   </span>
                 )}
               </span>

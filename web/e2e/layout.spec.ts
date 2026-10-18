@@ -1692,3 +1692,55 @@ test("group headings: one shared band, French, dark and light", async ({
     await snap(page, `fr-${tag}-inventory`);
   }
 });
+
+// The spells tab in French at 1280x800 and 1920x1080: the Cast buttons of the spell list, then the
+// preparation editor, whose two columns take the act panel's whole height side by side and each
+// scroll inside themselves. Only a browser lays out the heights, so this is the check.
+test("spells tab: Cast buttons and full-height preparation columns, French, 1280 and 1920", async ({
+  page,
+  stack,
+}) => {
+  test.setTimeout(60_000);
+  const put = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spells: PREPARED }),
+  });
+  expect(put.ok).toBe(true);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const actions = page.getByRole("region", { name: "Actions" });
+  const panel = actions.getByRole("tabpanel");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+  ]) {
+    await page.setViewportSize(vp);
+    const size = `${vp.width}x${vp.height}`;
+    await actions.getByRole("tab", { name: "Sorts" }).click();
+    await expect(panel).toContainText("Niveau 1");
+    await expectNoClippedText(actions, `spell list, ${size}`);
+    await snap(page, `fr-spells-cast-${size}`);
+    await actions.getByRole("button", { name: "Préparer les sorts" }).click();
+    const form = actions.getByRole("form", {
+      name: "Préparer les sorts du jour",
+    });
+    await expect(form.getByTestId("grimoire-level-1")).toBeVisible();
+    await expectNoClippedText(actions, `preparation, ${size}`);
+    await snap(page, `fr-preparation-${size}`);
+    // Both columns end at the panel's content bottom (its 14 px padding), nothing scrolls but them.
+    const inner = (await panel.boundingBox())!;
+    for (const name of ["Préparation du jour", "Grimoire"]) {
+      const col = (await form.getByRole("region", { name }).boundingBox())!;
+      expect(
+        Math.abs(inner.y + inner.height - 14 - (col.y + col.height)),
+        `${name} bottom, ${size}`,
+      ).toBeLessThanOrEqual(2);
+    }
+    expect(
+      await panel.evaluate((el) => el.scrollHeight - el.clientHeight),
+      `act panel scroll, ${size}`,
+    ).toBeLessThanOrEqual(1);
+    await actions.getByRole("button", { name: "Annuler" }).click();
+  }
+});

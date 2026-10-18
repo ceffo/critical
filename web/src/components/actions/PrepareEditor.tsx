@@ -110,8 +110,10 @@ export function PrepareEditor({
   rows.sort((a, b) => byName(a.entry, b.entry));
 
   return (
+    // The editor fills the act panel's height; side by side, its two columns take what the
+    // toolbar leaves and each scrolls inside itself (stacked, the panel scrolls).
     <div
-      className="flex flex-col gap-3"
+      className="flex h-full min-h-0 flex-col gap-3"
       role="form"
       aria-label={t("spellSlots.prepareTitle")}
     >
@@ -189,93 +191,97 @@ export function PrepareEditor({
         </div>
       )}
 
-      {/* Two columns once the panel is wide enough (ADR 0022 step 3.2), stacked when narrow. */}
-      <div className="@container">
-        <div className="grid gap-3 @lg:grid-cols-2">
+      {/* Two columns once the panel is 28rem wide (ADR 0022 step 3.2; 1280 included), stacked when narrow. */}
+      <div className="@container min-h-0 flex-1">
+        <div className="grid gap-3 @md:h-full @md:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] @md:gap-2 @lg:grid-cols-2 @lg:gap-3">
           <section
-            className="flex min-h-64 min-w-0 flex-col gap-2 rounded-lg bg-raised p-3"
+            className="flex min-h-64 min-w-0 flex-col gap-2 rounded-lg bg-raised p-3 @md:min-h-0 @md:p-2 @lg:p-3"
             aria-label={t("spellSlots.draft")}
           >
             <h3 className="section-label">{t("spellSlots.draft")}</h3>
-            {shown.length === 0 && (
-              <p className="text-body text-muted-foreground">
-                {t("spellSlots.draftEmpty")}
-              </p>
-            )}
-            {shown.map(({ level, count, max }) => {
-              const items = rows.filter((r) => r.entry.level === level);
-              return (
-                <div key={level} data-testid={`draft-level-${level}`}>
-                  <div className="group-heading mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 px-2">
-                    <h4 className="section-label">
-                      {t("spellSlots.level", { level })}
-                    </h4>
-                    <span className="ml-auto">
-                      <Dots
-                        dots={preparedDots(count, max)}
-                        label={t("spellSlots.preparedCount", { count, max })}
-                        testId={`prepared-dots-${level}`}
-                      />
-                    </span>
-                  </div>
-                  <ul className="flex flex-col gap-0.5">
-                    {items.map(({ entry, count: copies }) => (
-                      <li
-                        key={entry.id}
-                        className="flex min-h-8 items-center gap-2 rounded-md px-2 hover:bg-raised-hover"
-                      >
-                        <NameButton
-                          name={label(entry)}
-                          onOpen={() => setDetails(entry)}
+            <div className="flex flex-col gap-2 @md:min-h-0 @md:flex-1 @md:overflow-y-auto">
+              {shown.length === 0 && (
+                <p className="text-body text-muted-foreground">
+                  {t("spellSlots.draftEmpty")}
+                </p>
+              )}
+              {shown.map(({ level, count, max }) => {
+                const items = rows.filter((r) => r.entry.level === level);
+                return (
+                  <div key={level} data-testid={`draft-level-${level}`}>
+                    <div className="group-heading mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 px-2">
+                      <h4 className="section-label">
+                        {t("spellSlots.level", { level })}
+                      </h4>
+                      <span className="ml-auto">
+                        <Dots
+                          dots={preparedDots(count, max)}
+                          label={t("spellSlots.preparedCount", { count, max })}
+                          testId={`prepared-dots-${level}`}
                         />
-                        <span className="flex shrink-0 items-center gap-1">
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            aria-label={t("spellSlots.remove", {
-                              name: label(entry),
-                            })}
-                            title={t("spellSlots.remove", {
-                              name: label(entry),
-                            })}
-                            onClick={() =>
-                              setDraft((d) => removeOne(d, entry.id))
-                            }
-                          >
-                            <Minus />
-                          </Button>
-                          <span
-                            className="min-w-5 text-center font-semibold tabular-nums"
-                            data-testid="prepared-count"
-                          >
-                            {copies}
+                      </span>
+                    </div>
+                    <ul className="flex flex-col gap-0.5">
+                      {items.map(({ entry, count: copies }) => (
+                        <li
+                          key={entry.id}
+                          className="flex min-h-8 items-center gap-2 rounded-md px-2 hover:bg-raised-hover"
+                        >
+                          <NameButton
+                            name={label(entry)}
+                            onOpen={() => setDetails(entry)}
+                          />
+                          <span className="flex shrink-0 items-center gap-1">
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label={t("spellSlots.remove", {
+                                name: label(entry),
+                              })}
+                              title={t("spellSlots.remove", {
+                                name: label(entry),
+                              })}
+                              onClick={() =>
+                                setDraft((d) => removeOne(d, entry.id))
+                              }
+                            >
+                              <Minus />
+                            </Button>
+                            <span
+                              className="min-w-5 text-center font-semibold tabular-nums"
+                              data-testid="prepared-count"
+                            >
+                              {copies}
+                            </span>
+                            <Button
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label={t("spellSlots.addCopy", {
+                                name: label(entry),
+                              })}
+                              title={t("spellSlots.addCopy", {
+                                name: label(entry),
+                              })}
+                              onClick={() =>
+                                setDraft((d) => addOne(d, entry.id))
+                              }
+                            >
+                              <Plus />
+                            </Button>
                           </span>
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            aria-label={t("spellSlots.addCopy", {
-                              name: label(entry),
-                            })}
-                            title={t("spellSlots.addCopy", {
-                              name: label(entry),
-                            })}
-                            onClick={() => setDraft((d) => addOne(d, entry.id))}
-                          >
-                            <Plus />
-                          </Button>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
           </section>
 
-          {/* Side by side, the grimoire is as tall as the preparation (it adds no height: 0 then
-              the row's full height) and its list scrolls inside; stacked, the list has a cap. */}
+          {/* Side by side, the grimoire is as tall as the preparation (both the editor's full
+              height) and its list scrolls inside; stacked, the list has a cap. */}
           <section
-            className="flex min-w-0 flex-col gap-2 rounded-lg bg-raised p-3 @lg:h-0 @lg:min-h-full"
+            className="flex min-w-0 flex-col gap-2 rounded-lg bg-raised p-3 @md:min-h-0 @md:p-2 @lg:p-3"
             aria-label={t("spellSlots.spellbook")}
           >
             <h3 className="section-label">{t("spellSlots.spellbook")}</h3>
@@ -285,7 +291,7 @@ export function PrepareEditor({
               placeholder={t("spellSlots.search")}
               aria-label={t("spellSlots.searchLabel")}
             />
-            <div className="flex max-h-80 min-h-0 flex-col gap-2 overflow-y-auto @lg:max-h-none @lg:flex-1">
+            <div className="flex max-h-80 min-h-0 flex-col gap-2 overflow-y-auto @md:max-h-none @md:flex-1">
               {grimoire.map(({ level, spells }) => (
                 <div key={level} data-testid={`grimoire-level-${level}`}>
                   <h4 className="group-heading section-label mb-1 px-2">

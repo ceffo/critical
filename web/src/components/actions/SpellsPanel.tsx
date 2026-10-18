@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CaretDown, Moon } from "@phosphor-icons/react";
+import { CaretDown, Moon, Sparkle } from "@phosphor-icons/react";
 import { localized } from "@/i18n/localized";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,7 +98,9 @@ function SlotDots({
 /**
  * "Lancer" as a split button (ADR 0027 step 10.1): the main part casts with the server's default
  * target (no `onSelf`); the arrow offers the other target the server serves for the spell
- * (`cast_target.alternate`), and shows only when the server serves one.
+ * (`cast_target.alternate`), and shows only when the server serves one. Every Cast is the same
+ * width, split or not (the main part plus the 24 px arrow), so the buttons line up down a column;
+ * it leads with the Spells icon, as Attack leads with its sword and Next turn carries its arrow.
  */
 function CastButton({
   name,
@@ -117,12 +119,13 @@ function CastButton({
       <Button
         size="lg"
         variant="main"
-        className={cn(target && "rounded-r-none")}
+        className={cn(target ? "min-w-22 rounded-r-none" : "min-w-28")}
         disabled={disabled}
         aria-label={t("spellSlots.castLabel", { name })}
         title={t("spellSlots.castLabel", { name })}
         onClick={() => onCast()}
       >
+        <Sparkle aria-hidden data-icon="inline-start" weight="fill" />
         {t("spellSlots.cast")}
       </Button>
       {target && (

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -88,7 +89,7 @@ func Deadline(d time.Duration) func(http.Handler) http.Handler {
 			}()
 			select {
 			case p := <-panicked:
-				if p.value == http.ErrAbortHandler {
+				if err, ok := p.value.(error); ok && errors.Is(err, http.ErrAbortHandler) {
 					panic(p.value)
 				}
 				panic(fmt.Sprintf("%v\n\nhandler goroutine:\n%s", p.value, p.stack))

@@ -2,6 +2,8 @@
 
 **Status**: accepted, 2026-10-15 (critical-kiv.7)
 
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: the target's armour type is optional like its AC: unknown by default, given on the attack form or corrected after the roll (ADR 0033 step 18)._
+
 ## Context
 
 At the table the GM rarely says the target's AC before the roll. Until now an attack needed one

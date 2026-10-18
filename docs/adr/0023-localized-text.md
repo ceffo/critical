@@ -2,6 +2,8 @@
 
 **Status**: accepted, 2026-10-15 (critical-sikx). Amends [ADR 0021](0021-spell-catalogue.md).
 
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: steps 9 to 12 (item and weapon names become equipment names, one kind, ADR 0033 step 1; the rules are unchanged)._
+
 ## Context
 
 User, 2026-10-15: _"we have ZERO localized text in the backend nor in the database. what is going on?

@@ -22,7 +22,7 @@ func (inlineTx) InTx(ctx context.Context, fn func(context.Context) error) error 
 
 func ptr[T any](v T) *T { return &v }
 
-var stored = charactersvc.Details{Race: "Elf", Age: 100, Languages: []string{"Elfique", "Commun"}}
+var stored = charactersvc.Details{Hair: "red", Age: 100, Languages: []string{"Elfique", "Commun"}}
 
 func newSvc(t *testing.T) (detailssvc.SVC, *mocks.MockDAL) {
 	t.Helper()
@@ -39,10 +39,10 @@ func TestNew_NilDependency(t *testing.T) {
 
 func TestUpdate_AppliesOnlyThePresentFieldsTrimmed(t *testing.T) {
 	svc, dal := newSvc(t)
-	want := charactersvc.Details{Race: "Half-elf", Age: 100, Eyes: "green", Languages: []string{"Elfique", "Commun"}}
-	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, nil)
+	want := charactersvc.Details{Hair: "Half-elf", Age: 100, Eyes: "green", Languages: []string{"Elfique", "Commun"}}
+	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, "bard", nil)
 	dal.EXPECT().UpdateDetails(mockAny, int64(1), want).Return(nil)
-	got, err := svc.Update(context.Background(), 1, detailssvc.Patch{Race: ptr("  Half-elf "), Eyes: ptr("green")})
+	got, err := svc.Update(context.Background(), 1, detailssvc.Patch{Hair: ptr("  Half-elf "), Eyes: ptr("green")})
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -50,9 +50,9 @@ func TestUpdate_AppliesOnlyThePresentFieldsTrimmed(t *testing.T) {
 func TestUpdate_ClearsTextAgeAndLanguages(t *testing.T) {
 	svc, dal := newSvc(t)
 	want := charactersvc.Details{Languages: []string{}}
-	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, nil)
+	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, "bard", nil)
 	dal.EXPECT().UpdateDetails(mockAny, int64(1), want).Return(nil)
-	got, err := svc.Update(context.Background(), 1, detailssvc.Patch{Race: ptr(""), ClearAge: true, Languages: &[]string{}})
+	got, err := svc.Update(context.Background(), 1, detailssvc.Patch{Hair: ptr(""), ClearAge: true, Languages: &[]string{}})
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -65,9 +65,6 @@ func TestUpdate_Validation(t *testing.T) {
 		field string
 		code  string
 	}{
-		{"race too long", detailssvc.Patch{Race: ptr(long(41))}, "race", detailssvc.CodeTooLong},
-		{"alignment too long", detailssvc.Patch{Alignment: ptr(long(41))}, "alignment", detailssvc.CodeTooLong},
-		{"sex too long", detailssvc.Patch{Sex: ptr(long(41))}, "sex", detailssvc.CodeTooLong},
 		{"height too long", detailssvc.Patch{Height: ptr(long(21))}, "height", detailssvc.CodeTooLong},
 		{"weight too long", detailssvc.Patch{Weight: ptr(long(21))}, "weight", detailssvc.CodeTooLong},
 		{"hair too long", detailssvc.Patch{Hair: ptr(long(41))}, "hair", detailssvc.CodeTooLong},
@@ -89,7 +86,7 @@ func TestUpdate_Validation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc, dal := newSvc(t)
-			dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, nil)
+			dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, "bard", nil)
 			_, err := svc.Update(context.Background(), 1, tt.patch)
 			var fe *domain.FieldError
 			require.True(t, errors.As(err, &fe), "got %v", err)
@@ -102,10 +99,10 @@ func TestUpdate_Validation(t *testing.T) {
 
 func TestUpdate_AcceptsTheBounds(t *testing.T) {
 	svc, dal := newSvc(t)
-	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, nil)
+	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, "bard", nil)
 	dal.EXPECT().UpdateDetails(mockAny, int64(1), mockAnyDetails).Return(nil)
 	_, err := svc.Update(context.Background(), 1, detailssvc.Patch{
-		Race: ptr(strings.Repeat("é", 40)), Height: ptr(strings.Repeat("é", 20)), Age: ptr(10_000),
+		Hair: ptr(strings.Repeat("é", 40)), Height: ptr(strings.Repeat("é", 20)), Age: ptr(10_000),
 		Languages: &[]string{strings.Repeat("é", 30)},
 	})
 	require.NoError(t, err)
@@ -113,8 +110,8 @@ func TestUpdate_AcceptsTheBounds(t *testing.T) {
 
 func TestUpdate_UnknownCharacter(t *testing.T) {
 	svc, dal := newSvc(t)
-	dal.EXPECT().GetDetails(mockAny, int64(9)).Return(charactersvc.Details{}, domain.ErrCharacterNotFound)
-	_, err := svc.Update(context.Background(), 9, detailssvc.Patch{Race: ptr("Elf")})
+	dal.EXPECT().GetDetails(mockAny, int64(9)).Return(charactersvc.Details{}, "", domain.ErrCharacterNotFound)
+	_, err := svc.Update(context.Background(), 9, detailssvc.Patch{Hair: ptr("Elf")})
 	assert.ErrorIs(t, err, domain.ErrCharacterNotFound)
 }
 
@@ -122,3 +119,23 @@ var (
 	mockAny        = mock.Anything
 	mockAnyDetails = mock.Anything // the stored value is checked elsewhere
 )
+
+// ADR 0032 step 2, the edit path: the card's alignment edit applies the class limit of the
+// character it reads (a bard: lawful good refused, lawful neutral accepted), the refusal writes
+// nothing, and the sex is a code too (step 3).
+func TestUpdate_Step2And3_AlignmentIsCheckedAgainstTheClassOnEdit(t *testing.T) {
+	svc, dal := newSvc(t)
+	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, "bard", nil).Twice()
+	_, err := svc.Update(context.Background(), 1, detailssvc.Patch{Alignment: ptr("lawful_good")})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "alignment", fe.Field)
+	assert.Equal(t, detailssvc.CodeAlignmentNotAllowed, fe.Message)
+
+	want := stored
+	want.Alignment, want.Sex = "lawful_neutral", "female"
+	dal.EXPECT().UpdateDetails(mockAny, int64(1), want).Return(nil).Once() // the one write
+	got, err := svc.Update(context.Background(), 1, detailssvc.Patch{Alignment: ptr("lawful_neutral"), Sex: ptr("female")})
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
+}

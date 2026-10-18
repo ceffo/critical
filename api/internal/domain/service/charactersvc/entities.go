@@ -202,11 +202,11 @@ type Summary struct {
 	Level int
 }
 
-// Details are the free-text facts about the character that the player edits.
-// Text fields are stored as entered, Age 0 means not set and Languages are the
-// names as entered.
+// Details are the facts about the character that the player edits. Alignment
+// and Sex are codes (ADR 0032 steps 2 and 3), "" when a migrated character
+// lacks them (Missing); the other text fields are stored as entered, Age 0
+// means not set and Languages are the names as entered.
 type Details struct {
-	Race      string
 	Alignment string
 	Age       int
 	Sex       string

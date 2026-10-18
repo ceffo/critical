@@ -141,7 +141,7 @@ type endpoint struct {
 }
 
 var endpoints = []endpoint{
-	{"PATCH character/details", "PATCH", "/api/character/details", `{"race":"Elf"}`, func(m *mocksSet, err error) {
+	{"PATCH character/details", "PATCH", "/api/character/details", `{"hair":"red"}`, func(m *mocksSet, err error) {
 		m.details.On("Update", anyArgs(3)...).Return(charactersvc.Details{}, err)
 	}},
 	{"GET skills", "GET", "/api/skills", "", func(m *mocksSet, err error) {

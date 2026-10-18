@@ -23,7 +23,8 @@ var ownerID = uuid.MustParse("0b6a8c7e-5f1d-4a59-9a3e-3c2d1e0f4a11")
 // lyra is a valid new character: a level 1 half-elf bard.
 func lyra() charactersvc.NewCharacter {
 	return charactersvc.NewCharacter{
-		Name: "  Lyra ", Class: "bard", Race: "half_elf",
+		Details: identity(),
+		Name:    "  Lyra ", Class: "bard", Race: "half_elf",
 		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, XP: 0,
 		SkillArmor: "leather",
 	}
@@ -61,7 +62,7 @@ func TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent(t *tes
 		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 1, XPTotal: 0,
 		SkillArmor: "leather",
 		Sheet:      charactersvc.Sheet{Level: 1, THAC0: 20, Saves: rogue1to4Saves},
-		Details:    charactersvc.Details{Languages: []string{}},
+		Details:    charactersvc.Details{Alignment: "neutral_good", Sex: "male", Languages: []string{}},
 	}
 	created := e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, want).Return(12, nil).Once()
 	e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(12)).Return(nil).Once().NotBefore(created)
@@ -103,6 +104,12 @@ func TestCreate_RefusesInvalidInputWithFieldErrors(t *testing.T) {
 		{"no race", func(n *charactersvc.NewCharacter) { n.Race = "" }, nil, "race", "empty"},
 		{"unknown race", func(n *charactersvc.NewCharacter) { n.Race = "orc" }, nil, "race", "unknown"},
 		{"race the class does not admit", func(n *charactersvc.NewCharacter) { n.Race = "dwarf" }, ptr(false), "race", "race_not_allowed"},
+		// ADR 0032 steps 2 and 3 at creation: required codes, and the class limit refuses.
+		{"no alignment", func(n *charactersvc.NewCharacter) { n.Details.Alignment = nil }, ptr(true), "details.alignment", "empty"},
+		{"unknown alignment", func(n *charactersvc.NewCharacter) { n.Details.Alignment = ptr("good") }, ptr(true), "details.alignment", "unknown"},
+		{"bard lawful good", func(n *charactersvc.NewCharacter) { n.Details.Alignment = ptr("lawful_good") }, ptr(true), "details.alignment", "alignment_not_allowed"},
+		{"no sex", func(n *charactersvc.NewCharacter) { n.Details.Sex = nil }, ptr(true), "details.sex", "empty"},
+		{"unknown sex", func(n *charactersvc.NewCharacter) { n.Details.Sex = ptr("x") }, ptr(true), "details.sex", "unknown"},
 		{"str 2", func(n *charactersvc.NewCharacter) { n.Str = 2 }, ptr(true), "str", "out_of_range"},
 		{"dex 20", func(n *charactersvc.NewCharacter) { n.Dex = 20 }, ptr(true), "dex", "out_of_range"},
 		{"con 0", func(n *charactersvc.NewCharacter) { n.Con = 0 }, ptr(true), "con", "out_of_range"},
@@ -154,7 +161,8 @@ func ptr[T any](v T) *T { return &v }
 func TestCreate_Step9_ExceptionalStrength(t *testing.T) {
 	fighter := func(race string, str, exc int) charactersvc.NewCharacter {
 		return charactersvc.NewCharacter{
-			Name: "Brom", Class: "fighter", Race: race,
+			Details: identity(),
+			Name:    "Brom", Class: "fighter", Race: race,
 			Str: str, StrExceptional: exc, Dex: 12, Con: 15, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
 		}
 	}
@@ -209,13 +217,15 @@ func TestCreate_Step9_ExceptionalStrength(t *testing.T) {
 func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 	thief := func(armor string, points map[string]int) charactersvc.NewCharacter {
 		return charactersvc.NewCharacter{
-			Name: "Vex", Class: "thief", Race: "halfling", Str: 10, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+			Details: identity(),
+			Name:    "Vex", Class: "thief", Race: "halfling", Str: 10, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 			SkillArmor: armor, SkillPoints: points,
 		}
 	}
 	fighter := func(armor string, points map[string]int) charactersvc.NewCharacter {
 		return charactersvc.NewCharacter{
-			Name: "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+			Details: identity(),
+			Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
 			SkillArmor: armor, SkillPoints: points,
 		}
 	}
@@ -460,14 +470,26 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 				Class: "bard", Races: []string{"human", "half_elf"}, ExceptionalStrengthRaces: []string{},
 				Skills:      []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 				SkillArmors: []string{"none", "leather", "padded_studded_leather", "elven_chain", "metal"},
+				// ADR 0032 step 2: the bard admits the five alignments with a neutral part.
+				Alignments: []string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},
 			},
-			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}, Skills: []string{}, SkillArmors: []string{}},
-			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}},
-			{Class: "cleric", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}},
+			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}, Skills: []string{}, SkillArmors: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "cleric", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}, Alignments: ruletablesvc.Alignments},
 			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
-			{Class: "thief", Races: charactersvc.Races, ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills, SkillArmors: ruletablesvc.ThiefArmors},
+			{
+				Class: "thief", Races: charactersvc.Races, ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills, SkillArmors: ruletablesvc.ThiefArmors,
+				Alignments: []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"},
+			},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
-		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40,
+		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40, Sexes: []string{"male", "female"},
 	}, got)
+}
+
+// identity is the alignment and sex every test character enters (both required, ADR 0032 steps 2
+// and 3), valid for each creatable class.
+func identity() charactersvc.DetailsPatch {
+	alignment, sex := "neutral_good", "male"
+	return charactersvc.DetailsPatch{Alignment: &alignment, Sex: &sex}
 }

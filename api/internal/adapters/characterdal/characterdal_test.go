@@ -30,7 +30,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
 		HpMax: 42, RealizedLevel: 6, Thac0Base: 16, Level: 5, XpTotal: 1200,
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
-		Class: "bard", RaceCode: "half_elf", Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M",
+		Class: "bard", RaceCode: "half_elf", Alignment: "chaotic_good", Age: 31, Sex: "male",
 		Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
 		SkillPoints: `{}`,
 	}, nil).Once()
@@ -44,7 +44,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
 		}},
 		Details: charactersvc.Details{
-			Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M",
+			Alignment: "chaotic_good", Age: 31, Sex: "male",
 			Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: []string{"Common", "Elvish"},
 		},
 	}, got)
@@ -62,7 +62,7 @@ func TestNotFound_IsErrCharacterNotFound(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
 
 	q.EXPECT().GetCharacterDetails(ctx, int64(9)).Return(queries.GetCharacterDetailsRow{}, sql.ErrNoRows).Once()
-	_, err = dal.GetDetails(ctx, 9)
+	_, _, err = dal.GetDetails(ctx, 9)
 	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
 
 	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{Languages: "[]", ID: 9}).Return(0, nil).Once()
@@ -81,29 +81,30 @@ func TestDetails_UpdateStoresWhatGetMapsBack(t *testing.T) {
 	}{
 		"languages": {
 			details: charactersvc.Details{
-				Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M", Height: "5'10", Weight: "160 lb",
+				Alignment: "chaotic_good", Age: 31, Sex: "male", Height: "5'10", Weight: "160 lb",
 				Hair: "black", Eyes: "green", Languages: []string{"Elvish", "Common"},
 			},
 			stored: `["Elvish","Common"]`, back: []string{"Elvish", "Common"},
 		},
-		"none": {details: charactersvc.Details{Race: "human"}, stored: `[]`, back: []string{}},
+		"none": {details: charactersvc.Details{Alignment: "true_neutral"}, stored: `[]`, back: []string{}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			q := mocks.NewMockQuerier(t)
 			dal := characterdal.New(q)
 			d := tc.details
 			q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
-				Race: d.Race, Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, Height: d.Height,
+				Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, Height: d.Height,
 				Weight: d.Weight, Hair: d.Hair, Eyes: d.Eyes, Languages: tc.stored, ID: 1,
 			}).Return(1, nil).Once()
 			require.NoError(t, dal.UpdateDetails(ctx, 1, d))
 
 			q.EXPECT().GetCharacterDetails(ctx, int64(1)).Return(queries.GetCharacterDetailsRow{
-				Race: d.Race, Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, Height: d.Height,
+				Class: "bard", Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, Height: d.Height,
 				Weight: d.Weight, Hair: d.Hair, Eyes: d.Eyes, Languages: tc.stored,
 			}, nil).Once()
-			got, err := dal.GetDetails(ctx, 1)
+			got, class, err := dal.GetDetails(ctx, 1)
 			require.NoError(t, err)
+			assert.Equal(t, "bard", class, "the class comes with the details")
 			d.Languages = tc.back
 			assert.Equal(t, d, got)
 		})
@@ -130,7 +131,7 @@ func TestStorageErrors_AreReturnedNotTakenForNotFound(t *testing.T) {
 	assert.NotErrorIs(t, err, domain.ErrCharacterNotFound)
 
 	q.EXPECT().GetCharacterDetails(ctx, int64(1)).Return(queries.GetCharacterDetailsRow{}, assert.AnError).Once()
-	_, err = dal.GetDetails(ctx, 1)
+	_, _, err = dal.GetDetails(ctx, 1)
 	require.ErrorIs(t, err, assert.AnError)
 
 	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{Languages: "[]", ID: 1}).Return(0, assert.AnError).Once()
@@ -139,7 +140,7 @@ func TestStorageErrors_AreReturnedNotTakenForNotFound(t *testing.T) {
 	assert.NotErrorIs(t, err, domain.ErrCharacterNotFound)
 
 	q.EXPECT().GetCharacterDetails(ctx, int64(1)).Return(queries.GetCharacterDetailsRow{Languages: "Common"}, nil).Once()
-	_, err = dal.GetDetails(ctx, 1)
+	_, _, err = dal.GetDetails(ctx, 1)
 	require.Error(t, err)
 }
 
@@ -193,13 +194,13 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 	buffs := q.EXPECT().CreateActiveBuffs(ctx, int64(7)).Return(nil).Once().NotBefore(slots)
 	round := q.EXPECT().CreateRoundState(ctx, int64(7)).Return(nil).Once().NotBefore(buffs)
 	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
-		Alignment: "Neutral good", Age: 23, Languages: `["Elfique","Commun"]`, ID: 7,
+		Alignment: "neutral_good", Age: 23, Languages: `["Elfique","Commun"]`, ID: 7,
 	}).Return(1, nil).Once().NotBefore(round)
 
 	id, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
 		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 3, XPTotal: 2500,
 		Class: "bard", Race: "half_elf",
-		Details: charactersvc.Details{Alignment: "Neutral good", Age: 23, Languages: []string{"Elfique", "Commun"}},
+		Details: charactersvc.Details{Alignment: "neutral_good", Age: 23, Languages: []string{"Elfique", "Commun"}},
 		Sheet: charactersvc.Sheet{Level: 3, THAC0: 19, Saves: charactersvc.Saves{
 			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
 		}},

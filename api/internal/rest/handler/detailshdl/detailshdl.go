@@ -1,5 +1,5 @@
 // Package detailshdl exposes PATCH /api/character/details, the character's
-// editable free-text details.
+// editable details.
 package detailshdl
 
 import (
@@ -30,9 +30,9 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc detailssvc.SVC) {
 }
 
 // DetailsDTO is the wire shape of the details, also embedded in
-// GET /api/character. age is null when not set.
+// GET /api/character. age is null when not set; alignment and sex are codes
+// (ADR 0032 steps 2 and 3), "" when missing.
 type DetailsDTO struct {
-	Race      string   `json:"race"`
 	Alignment string   `json:"alignment"`
 	Age       *int     `json:"age"`
 	Sex       string   `json:"sex"`
@@ -46,7 +46,7 @@ type DetailsDTO struct {
 // ToDTO maps the domain details to their wire shape.
 func ToDTO(d charactersvc.Details) DetailsDTO {
 	out := DetailsDTO{
-		Race: d.Race, Alignment: d.Alignment, Sex: d.Sex, Height: d.Height, Weight: d.Weight,
+		Alignment: d.Alignment, Sex: d.Sex, Height: d.Height, Weight: d.Weight,
 		Hair: d.Hair, Eyes: d.Eyes, Languages: append([]string{}, d.Languages...),
 	}
 	if d.Age > 0 {
@@ -90,7 +90,6 @@ func (f field[T]) ptr() *T {
 // Body is the PATCH body: only the fields present change, and null clears a
 // field. An age of 0 is not a clear, the service rejects it.
 type Body struct {
-	Race      field[string]   `json:"race"`
 	Alignment field[string]   `json:"alignment"`
 	Age       field[int]      `json:"age"`
 	Sex       field[string]   `json:"sex"`
@@ -103,7 +102,7 @@ type Body struct {
 
 func (b Body) patch() detailssvc.Patch {
 	p := detailssvc.Patch{
-		Race: b.Race.ptr(), Alignment: b.Alignment.ptr(), Age: b.Age.ptr(), Sex: b.Sex.ptr(),
+		Alignment: b.Alignment.ptr(), Age: b.Age.ptr(), Sex: b.Sex.ptr(),
 		Height: b.Height.ptr(), Weight: b.Weight.ptr(), Hair: b.Hair.ptr(), Eyes: b.Eyes.ptr(),
 		Languages: b.Languages.ptr(),
 	}

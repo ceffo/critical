@@ -1,5 +1,5 @@
-// Package detailssvc edits the character's free-text details (race,
-// alignment, age, sex, height, weight, hair, eyes and languages). The server
+// Package detailssvc edits the character's free-text details (alignment,
+// age, sex, height, weight, hair, eyes and languages). The server
 // validates every field and names the rejected one in a *domain.FieldError
 // whose message is a code the web maps to a localized text. The checks are
 // charactersvc.Details.Apply, shared with the creation form.
@@ -30,6 +30,8 @@ const (
 	CodeTooMany    = charactersvc.CodeTooMany
 	CodeEmpty      = charactersvc.CodeEmpty
 	CodeDuplicate  = charactersvc.CodeDuplicate
+	// CodeAlignmentNotAllowed is an alignment the character's class refuses.
+	CodeAlignmentNotAllowed = charactersvc.CodeAlignmentNotAllowed
 )
 
 // Patch holds the fields to change (charactersvc.DetailsPatch).
@@ -45,7 +47,9 @@ type SVC interface {
 
 // DAL is the driven port. Both methods join the transaction carried by ctx.
 type DAL interface {
-	GetDetails(ctx context.Context, id int64) (charactersvc.Details, error)
+	// GetDetails are the stored details and the class code of the character
+	// (the alignment limit depends on it).
+	GetDetails(ctx context.Context, id int64) (charactersvc.Details, string, error)
 	UpdateDetails(ctx context.Context, id int64, v charactersvc.Details) error
 }
 
@@ -68,11 +72,11 @@ func (s *service) Close(_ context.Context) error  { return nil }
 func (s *service) Update(ctx context.Context, id int64, p Patch) (charactersvc.Details, error) {
 	var out charactersvc.Details
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		cur, err := s.dal.GetDetails(ctx, id)
+		cur, class, err := s.dal.GetDetails(ctx, id)
 		if err != nil {
 			return err
 		}
-		next, err := cur.Apply(p)
+		next, err := cur.Apply(class, p)
 		if err != nil {
 			return err
 		}

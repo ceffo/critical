@@ -266,7 +266,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 			}},
 			Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 		},
-		Details: charactersvc.Details{Race: "Nain des collines", Languages: []string{}},
+		Details: charactersvc.Details{Alignment: "lawful_good", Languages: []string{}},
 	}, nil).Once()
 
 	rec := as(h, "ann", "GET", "/api/character", "")
@@ -274,7 +274,10 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 	var body map[string]any
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	assert.Equal(t, "dwarf", body["raceCode"])
-	assert.Equal(t, "Nain des collines", body["race"])
+	assert.NotContains(t, body, "race", "the free-text race detail is gone")
+	// ADR 0032 step 8: the sex is missing, and the bard's lawful good is kept with a warning.
+	assert.Equal(t, []any{"sex"}, body["missing"])
+	assert.Equal(t, []any{map[string]any{"code": "alignment_not_allowed", "field": "alignment"}}, body["warnings"])
 	for _, gone := range []string{"level", "thac0Base", "saveParaPoison", "saveSpell"} {
 		assert.NotContains(t, body, gone)
 	}

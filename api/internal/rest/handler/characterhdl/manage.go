@@ -41,6 +41,9 @@ type ClassOptionDTO struct {
 	// empty for a class without them.
 	Skills      []string `json:"skills"`
 	SkillArmors []string `json:"skillArmors"`
+	// Alignments are the alignment codes the class admits (ADR 0032 step 2),
+	// so the form offers only those.
+	Alignments []string `json:"alignments"`
 }
 
 // RangeDTO is the inclusive range an entered number must fall in.
@@ -62,6 +65,8 @@ type OptionsDTO struct {
 	// SkillPoints is the range of a thief's points in one skill.
 	SkillPoints RangeDTO `json:"skillPoints"`
 	MaxNameLen  int      `json:"maxNameLength"`
+	// Sexes are the sex codes (ADR 0032 step 3).
+	Sexes []string `json:"sexes"`
 }
 
 // Options is GET /api/characters/options.
@@ -79,11 +84,12 @@ func Options(svc optionsReader) render.HandlerFunc {
 			StrExceptional: RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
 			SkillPoints:    RangeDTO{Min: 0, Max: o.MaxSkillPoints},
 			MaxNameLen:     o.MaxNameLen,
+			Sexes:          o.Sexes,
 		}
 		for _, c := range o.Classes {
 			out.Classes = append(out.Classes, ClassOptionDTO{
 				Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces,
-				Skills: c.Skills, SkillArmors: c.SkillArmors,
+				Skills: c.Skills, SkillArmors: c.SkillArmors, Alignments: c.Alignments,
 			})
 		}
 		render.OK(r.Context(), w, out)
@@ -126,7 +132,7 @@ func detailsPatch(d *detailshdl.DetailsDTO) charactersvc.DetailsPatch {
 		return charactersvc.DetailsPatch{}
 	}
 	p := charactersvc.DetailsPatch{
-		Race: &d.Race, Alignment: &d.Alignment, Age: d.Age, Sex: &d.Sex, Height: &d.Height,
+		Alignment: &d.Alignment, Age: d.Age, Sex: &d.Sex, Height: &d.Height,
 		Weight: &d.Weight, Hair: &d.Hair, Eyes: &d.Eyes,
 	}
 	if d.Languages != nil {

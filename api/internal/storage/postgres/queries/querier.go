@@ -45,6 +45,8 @@ type Querier interface {
 	InsertWeapon(ctx context.Context, arg InsertWeaponParams) error
 	ItemNameKey(ctx context.Context, arg ItemNameKeyParams) (int64, error)
 	LearnFailureRefs(ctx context.Context) ([]LearnFailureRefsRow, error)
+	// The identity migration (013): every character's stored alignment and sex, to map to codes.
+	ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
 	// rollback releases it. One fixed key for the whole database.
 	LockWriters(ctx context.Context) error
@@ -55,6 +57,11 @@ type Querier interface {
 	// two share the name).
 	SeedCharacterID(ctx context.Context, name string) (int64, error)
 	SeedOffers(ctx context.Context, arg SeedOffersParams) ([]string, error)
+	// The mapped (or cleared) alignment and sex of a character, and its race detail discarded.
+	SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error
+	// The seed character's alignment and sex when it lacks them (migration 013): a value set since is
+	// kept, so a rerun changes nothing.
+	SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error
 	// The race of a character stored before races had codes (migration 007): only while it has none,
 	// so a rerun changes nothing and a race set since is kept.
 	SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error

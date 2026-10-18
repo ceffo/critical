@@ -45,7 +45,8 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Lyra", Class: "bard", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 13, Wis: 11, Cha: 17, HPMax: 4,
+		Details: identity(),
+		Name:    "Lyra", Class: "bard", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 13, Wis: 11, Cha: 17, HPMax: 4,
 		SkillArmor: ruletablesvc.ArmorMetal, SkillPoints: map[string]int{"climb_walls": 15, "detect_noise": 5},
 	})
 	require.NoError(t, err)

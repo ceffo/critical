@@ -92,7 +92,7 @@ func (t *tables) seedCharacter(path string) (id int64, ok bool, err error) {
 			ParaPoison: c.SaveParaPoison, RodStaffWand: c.SaveRodStaffWand, PetriPoly: c.SavePetriPoly,
 			Breath: c.SaveBreath, Spell: c.SaveSpell,
 		}},
-		Details: charactersvc.Details{Languages: append([]string{}, c.Languages...)},
+		Details: charactersvc.Details{Alignment: c.Alignment, Sex: c.Sex, Languages: append([]string{}, c.Languages...)},
 	}
 	t.slots[id] = slots
 	t.buffs[id] = []buffsvc.BuffEffect{}

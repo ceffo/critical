@@ -28,6 +28,8 @@ export type LogKind =
   | "spell_learn"
   /** A cleric's turning undead roll (ADR 0030 step 16); it changes no state. */
   | "turn_undead"
+  /** A thief's skill points spent on the sheet (ADR 0030 step 17); popping it gives them back. */
+  | "skill_points"
   | "spell_prep"
   | "long_rest"
   | "save"

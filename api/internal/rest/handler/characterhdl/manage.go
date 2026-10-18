@@ -35,6 +35,11 @@ type ClassOptionDTO struct {
 	// ExceptionalStrengthRaces are the races that enter an 18/xx at
 	// Strength 18 with the class (ADR 0030 step 9).
 	ExceptionalStrengthRaces []string `json:"exceptionalStrengthRaces"`
+	// Skills are the thieving skills the class enters points in and
+	// SkillArmors the armours it picks for them (ADR 0030 steps 1 and 17);
+	// empty for a class without them.
+	Skills      []string `json:"skills"`
+	SkillArmors []string `json:"skillArmors"`
 }
 
 // RangeDTO is the inclusive range an entered number must fall in.
@@ -53,7 +58,9 @@ type OptionsDTO struct {
 	// StrExceptional is the range of an exceptional strength (1 = 18/01,
 	// 100 = 18/00).
 	StrExceptional RangeDTO `json:"strExceptional"`
-	MaxNameLen     int      `json:"maxNameLength"`
+	// SkillPoints is the range of a thief's points in one skill.
+	SkillPoints RangeDTO `json:"skillPoints"`
+	MaxNameLen  int      `json:"maxNameLength"`
 }
 
 // Options is GET /api/characters/options.
@@ -69,10 +76,14 @@ func Options(svc optionsReader) render.HandlerFunc {
 			HPMax:          RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
 			XP:             RangeDTO{Min: o.MinXP, Max: o.MaxXP},
 			StrExceptional: RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
+			SkillPoints:    RangeDTO{Min: 0, Max: o.MaxSkillPoints},
 			MaxNameLen:     o.MaxNameLen,
 		}
 		for _, c := range o.Classes {
-			out.Classes = append(out.Classes, ClassOptionDTO{Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces})
+			out.Classes = append(out.Classes, ClassOptionDTO{
+				Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces,
+				Skills: c.Skills, SkillArmors: c.SkillArmors,
+			})
 		}
 		render.OK(r.Context(), w, out)
 		return nil
@@ -96,6 +107,11 @@ type CreateBody struct {
 	Cha            *int `json:"cha"`
 	HPMax          *int `json:"hpMax"`
 	XP             *int `json:"xp"`
+	// SkillPoints and SkillArmor are a thief's (ADR 0030 steps 1 and 17):
+	// points by skill code, the armour worn for the skills; absent for the
+	// other classes.
+	SkillPoints map[string]int `json:"skillPoints"`
+	SkillArmor  string         `json:"skillArmor"`
 }
 
 // required is the field's value, or the field error of a missing one.
@@ -107,7 +123,10 @@ func required(field string, v *int) (int, error) {
 }
 
 func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
-	n := charactersvc.NewCharacter{Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional}
+	n := charactersvc.NewCharacter{
+		Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional,
+		SkillPoints: b.SkillPoints, SkillArmor: b.SkillArmor,
+	}
 	for _, f := range []struct {
 		field string
 		dst   *int

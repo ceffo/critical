@@ -167,17 +167,21 @@ type CharacterDTO struct {
 	Str  int    `json:"str"`
 	// StrExceptional is a fighter's 18/xx percentile (ADR 0030 step 9), 0
 	// for none.
-	StrExceptional int        `json:"strExceptional"`
-	Dex            int        `json:"dex"`
-	Con            int        `json:"con"`
-	Int            int        `json:"int"`
-	Wis            int        `json:"wis"`
-	Cha            int        `json:"cha"`
-	HPMax          int        `json:"hpMax"`
-	XPTotal        int        `json:"xpTotal"`
-	Class          string     `json:"class"`
-	RaceCode       string     `json:"raceCode"`
-	Derived        DerivedDTO `json:"derived"`
+	StrExceptional int    `json:"strExceptional"`
+	Dex            int    `json:"dex"`
+	Con            int    `json:"con"`
+	Int            int    `json:"int"`
+	Wis            int    `json:"wis"`
+	Cha            int    `json:"cha"`
+	HPMax          int    `json:"hpMax"`
+	XPTotal        int    `json:"xpTotal"`
+	Class          string `json:"class"`
+	RaceCode       string `json:"raceCode"`
+	// SkillArmor is the armour a thief wears for its skills (ADR 0030 step
+	// 1), "" for a class without thieving skills; its points are in
+	// derived.thiefSkills.
+	SkillArmor string     `json:"skillArmor"`
+	Derived    DerivedDTO `json:"derived"`
 	detailshdl.DetailsDTO
 }
 
@@ -232,6 +236,36 @@ type DerivedDTO struct {
 	// Turning is ADR 0030 step 16: PHB Table 61 at the realized level, the
 	// book's rows in order; null for a class that does not turn undead.
 	Turning []TurningTargetDTO `json:"turning"`
+	// ThiefSkills is ADR 0030 step 17: each thieving skill with its terms
+	// and percentage; null for a class without them.
+	ThiefSkills []ThiefSkillDTO `json:"thiefSkills"`
+	// SkillBudget is step 17's warnings on the entered points, never null.
+	SkillBudget []BudgetWarningDTO `json:"skillBudget"`
+	// Backstab is ADR 0030 step 19: PHB Table 30's damage multiplier at the
+	// realized level, 0 for a class without the backstab option.
+	Backstab int `json:"backstab"`
+}
+
+// ThiefSkillDTO is one thieving skill (ADR 0030 step 17): percent = base +
+// points + race + dexterity + armor, capped at 95 and floored at 0.
+type ThiefSkillDTO struct {
+	Skill     string `json:"skill"`
+	Base      int    `json:"base"`
+	Points    int    `json:"points"`
+	Race      int    `json:"race"`
+	Dexterity int    `json:"dexterity"`
+	Armor     int    `json:"armor"`
+	Percent   int    `json:"percent"`
+}
+
+// BudgetWarningDTO is a breach of the skill point budget (ADR 0030 step 17):
+// `code` skill_points_total (`skill` empty) or skill_points_per_skill, the
+// points and the limit at the realized level.
+type BudgetWarningDTO struct {
+	Code   string `json:"code"`
+	Skill  string `json:"skill,omitempty"`
+	Points int    `json:"points"`
+	Limit  int    `json:"limit"`
 }
 
 // TurningTargetDTO is one undead type a cleric may try to turn (ADR 0030
@@ -298,6 +332,16 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 			Pending: PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
 		},
 		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
+		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab,
+	}
+	if d.ThiefSkills != nil {
+		out.ThiefSkills = make([]ThiefSkillDTO, len(d.ThiefSkills))
+		for i, s := range d.ThiefSkills {
+			out.ThiefSkills[i] = ThiefSkillDTO(s)
+		}
+	}
+	for _, w := range d.SkillBudget {
+		out.SkillBudget = append(out.SkillBudget, BudgetWarningDTO(w))
 	}
 	if d.Turning != nil {
 		out.Turning = make([]TurningTargetDTO, len(d.Turning))
@@ -329,7 +373,7 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 	return CharacterDTO{
 		ID: c.ID, Name: c.Name,
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
-		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race,
+		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race, SkillArmor: c.SkillArmor,
 		Derived: derivedDTO(c.Derived), DetailsDTO: detailshdl.ToDTO(c.Details),
 	}
 }

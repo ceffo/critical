@@ -357,15 +357,17 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	// Skill and ability checks change no state: their entries carry no
-	// snapshot, so there is no restorer to register. The ability check's
-	// score in effect comes from buffSvc (ADR 0028 step 2).
+	// snapshot. A thief's skill points spent on the sheet do: their undo
+	// writes the points back. The ability check's score in effect comes from
+	// buffSvc (ADR 0028 step 2).
 	skillSvc, err := skillsvc.New(skillsvc.Deps{
-		DAL: st.Skill, Characters: charSvc, Abilities: buffSvc, Dice: dice, Log: logSvc, Tx: tx,
+		DAL: st.Skill, Characters: charSvc, Abilities: buffSvc, Dice: dice, Log: logSvc, Points: characterDAL, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
+	registerRestorers(logSvc, skillSvc.Restorers())
 	// Free dice rolls change no state: no snapshot, no restorer.
 	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: st.Dice, Dice: dice, Log: logSvc, Tx: tx})
 	if err != nil {

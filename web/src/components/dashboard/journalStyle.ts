@@ -22,6 +22,7 @@ import {
   Sword,
   TrendUp,
   type Icon,
+  ListNumbers,
 } from "@phosphor-icons/react";
 import type { RowValue } from "@/lib/filCard";
 import type { LogKind } from "@/types/log";
@@ -51,6 +52,7 @@ export const KIND_ICONS: Record<LogKind, Icon> = {
   level_up: ArrowFatLinesUp,
   spell_learn: BookOpen,
   turn_undead: Skull,
+  skill_points: ListNumbers,
   spell_prep: BookOpen,
   long_rest: Moon,
   save: Shield,

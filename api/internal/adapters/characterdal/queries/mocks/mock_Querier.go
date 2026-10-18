@@ -786,6 +786,63 @@ func (_c *MockQuerier_SetRealizedLevel_Call) RunAndReturn(run func(context.Conte
 	return _c
 }
 
+// SetSkillPoints provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) SetSkillPoints(ctx context.Context, arg queries.SetSkillPointsParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetSkillPoints")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetSkillPointsParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetSkillPointsParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.SetSkillPointsParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_SetSkillPoints_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetSkillPoints'
+type MockQuerier_SetSkillPoints_Call struct {
+	*mock.Call
+}
+
+// SetSkillPoints is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.SetSkillPointsParams
+func (_e *MockQuerier_Expecter) SetSkillPoints(ctx interface{}, arg interface{}) *MockQuerier_SetSkillPoints_Call {
+	return &MockQuerier_SetSkillPoints_Call{Call: _e.mock.On("SetSkillPoints", ctx, arg)}
+}
+
+func (_c *MockQuerier_SetSkillPoints_Call) Run(run func(ctx context.Context, arg queries.SetSkillPointsParams)) *MockQuerier_SetSkillPoints_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.SetSkillPointsParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_SetSkillPoints_Call) Return(_a0 int64, _a1 error) *MockQuerier_SetSkillPoints_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_SetSkillPoints_Call) RunAndReturn(run func(context.Context, queries.SetSkillPointsParams) (int64, error)) *MockQuerier_SetSkillPoints_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateCharacterDetails provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) UpdateCharacterDetails(ctx context.Context, arg queries.UpdateCharacterDetailsParams) (int64, error) {
 	ret := _m.Called(ctx, arg)

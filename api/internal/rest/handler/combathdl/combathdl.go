@@ -120,6 +120,9 @@ type AttackRequestDTO struct {
 	// PointBlank is the point-blank option of a specialized launcher (ADR
 	// 0030 step 12); refused for another weapon.
 	PointBlank bool `json:"point_blank,omitempty"`
+	// Backstab is a thief's backstab (ADR 0030 step 19): +4 to hit and the
+	// damage dice multiplied by PHB Table 30; refused for another class.
+	Backstab bool `json:"backstab,omitempty"`
 }
 
 // SituationalDTO is a to-hit modifier entered at the table.
@@ -143,6 +146,7 @@ func ResolveAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		in := combatsvc.AttackRequest{
 			WeaponID: req.WeaponID, AmmoItemID: req.AmmoItemID,
 			TargetAC: req.TargetAC, TargetSize: combatsvc.TargetSize(req.TargetSize), PointBlank: req.PointBlank,
+			Backstab: req.Backstab,
 		}
 		if req.Situational != nil {
 			in.Situational = &combatsvc.Situational{Value: req.Situational.Value, Label: req.Situational.Label}

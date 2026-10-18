@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useAttackStore } from "@/stores/attack";
+import { useCharacterStore } from "@/stores/character";
 import { useBuffsStore } from "@/stores/buffs";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
@@ -42,8 +43,19 @@ const LOW_AMMO = 3;
  */
 export function AttackPanel() {
   const { t, i18n } = useTranslation();
-  const { view, load, update, attack, pointBlank, setPointBlank } =
-    useAttackStore();
+  const {
+    view,
+    load,
+    update,
+    attack,
+    pointBlank,
+    setPointBlank,
+    backstab,
+    setBackstab,
+  } = useAttackStore();
+  const backstabMultiplier = useCharacterStore(
+    (s) => s.character?.derived.backstab ?? 0,
+  );
   const rolling = useRollStore((s) => s.rolling);
   const isAdmin = useSessionStore((s) => s.me?.role === "admin");
   const weapons = useItemsStore((s) => s.weapons);
@@ -63,11 +75,13 @@ export function AttackPanel() {
     );
   }
   const { form } = view;
-  // ADR 0030 step 12: with the point-blank option on, the server's point-blank preview is shown.
+  // ADR 0030 steps 12 and 19: with an option on, the server's preview with it is shown.
   const preview =
-    pointBlank && view.preview?.pointBlank
-      ? view.preview.pointBlank
-      : view.preview;
+    backstab && view.preview?.backstab
+      ? view.preview.backstab
+      : pointBlank && view.preview?.pointBlank
+        ? view.preview.pointBlank
+        : view.preview;
   const weapon = weapons.find((w) => w.id === form.weaponId);
   const needsAmmo = Boolean(weapon?.ammo_kind);
   const ammo = view.ammoChoices.find((a) => a.itemId === form.ammoItemId);
@@ -124,6 +138,29 @@ export function AttackPanel() {
                     data-testid="point-blank"
                   />
                   {t("attack.pointBlank")}
+                </label>
+              )}
+              {view.preview?.backstab && (
+                <label
+                  className="flex w-fit items-center gap-2 text-body"
+                  title={t("attack.backstabHint", {
+                    n: backstabMultiplier,
+                    // The +4 is the server's: the backstab modifier of its preview.
+                    toHit: formatSigned(
+                      view.preview.backstab.modifiers.find(
+                        (m) => m.kind === "backstab",
+                      )?.value ?? 0,
+                    ),
+                  })}
+                >
+                  <input
+                    type="checkbox"
+                    className="size-4"
+                    checked={backstab}
+                    onChange={(e) => setBackstab(e.target.checked)}
+                    data-testid="backstab"
+                  />
+                  {t("attack.backstab", { n: backstabMultiplier })}
                 </label>
               )}
             </div>

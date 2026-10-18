@@ -40,6 +40,10 @@ type Rules interface {
 	SpellFailureFor(class string, wis int) (int, error)
 	// TurningAt is PHB Table 61 at a priest level (step 16).
 	TurningAt(level int) ([]ruletablesvc.TurningTarget, error)
+	// ThiefSkills is PHB Tables 26 to 29 on the entered points (step 17).
+	ThiefSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
+	// BackstabFor is PHB Table 30 at a thief's level (step 19).
+	BackstabFor(level int) (int, error)
 }
 
 // conSaveRaces are the races that add their PHB Table 9 bonus to the saves
@@ -49,8 +53,8 @@ type Rules interface {
 // and death magic.
 var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 
-// Derive computes the derived block of c (ADR 0030 steps 3 to 8, 22.1 and
-// 24, and the pending level-ups of step 7). Two levels meet here (step 7):
+// Derive computes the derived block of c (ADR 0030 steps 3 to 8, 17, 19,
+// 22.1 and 24, and the pending level-ups of step 7). Two levels meet here (step 7):
 // the target level is step 3, the class's experience table at the XP total
 // (the starting XP, c.XPTotal, plus ledgerXP, what the XP ledger's entries
 // add; ADR 0015 step 1), never stored; the realized level is the stored one
@@ -100,6 +104,24 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 	if ruletablesvc.TurnsUndead(c.Class) {
 		if d.Turning, err = rules.TurningAt(realized); err != nil {
 			return Derived{}, fmt.Errorf("derive %s turning: %w", c.Class, err)
+		}
+	}
+	if ruletablesvc.HasThiefSkills(c.Class) {
+		// Step 17: the sheet's Dexterity, the entered points and armour;
+		// the budget at the realized level. No armour stored is leather,
+		// Table 29's baseline (creation always stores one).
+		armor := c.SkillArmor
+		if armor == "" {
+			armor = ruletablesvc.ArmorLeather
+		}
+		if d.ThiefSkills, err = rules.ThiefSkills(c.Race, c.Dex, armor, c.SkillPoints); err != nil {
+			return Derived{}, fmt.Errorf("derive %s skills: %w", c.Class, err)
+		}
+		d.SkillBudget = ruletablesvc.SkillPointBudget(realized, c.SkillPoints)
+	}
+	if ruletablesvc.Backstabs(c.Class) {
+		if d.Backstab, err = rules.BackstabFor(realized); err != nil {
+			return Derived{}, fmt.Errorf("derive %s backstab: %w", c.Class, err)
 		}
 	}
 	// Step 24: the sheet's figures against the rules at the sheet's own XP

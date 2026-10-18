@@ -20,6 +20,62 @@ func (_m *MockRules) EXPECT() *MockRules_Expecter {
 	return &MockRules_Expecter{mock: &_m.Mock}
 }
 
+// BackstabFor provides a mock function with given fields: level
+func (_m *MockRules) BackstabFor(level int) (int, error) {
+	ret := _m.Called(level)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BackstabFor")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) (int, error)); ok {
+		return rf(level)
+	}
+	if rf, ok := ret.Get(0).(func(int) int); ok {
+		r0 = rf(level)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(level)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_BackstabFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BackstabFor'
+type MockRules_BackstabFor_Call struct {
+	*mock.Call
+}
+
+// BackstabFor is a helper method to define mock.On call
+//   - level int
+func (_e *MockRules_Expecter) BackstabFor(level interface{}) *MockRules_BackstabFor_Call {
+	return &MockRules_BackstabFor_Call{Call: _e.mock.On("BackstabFor", level)}
+}
+
+func (_c *MockRules_BackstabFor_Call) Run(run func(level int)) *MockRules_BackstabFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockRules_BackstabFor_Call) Return(_a0 int, _a1 error) *MockRules_BackstabFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_BackstabFor_Call) RunAndReturn(run func(int) (int, error)) *MockRules_BackstabFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BardSpellsPerDay provides a mock function with given fields: level
 func (_m *MockRules) BardSpellsPerDay(level int) (map[int]int, error) {
 	ret := _m.Called(level)
@@ -586,6 +642,67 @@ func (_c *MockRules_THAC0For_Call) Return(_a0 int, _a1 error) *MockRules_THAC0Fo
 }
 
 func (_c *MockRules_THAC0For_Call) RunAndReturn(run func(string, int) (int, error)) *MockRules_THAC0For_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ThiefSkills provides a mock function with given fields: race, dex, armor, points
+func (_m *MockRules) ThiefSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
+	ret := _m.Called(race, dex, armor, points)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ThiefSkills")
+	}
+
+	var r0 []ruletablesvc.SkillPercent
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)); ok {
+		return rf(race, dex, armor, points)
+	}
+	if rf, ok := ret.Get(0).(func(string, int, string, map[string]int) []ruletablesvc.SkillPercent); ok {
+		r0 = rf(race, dex, armor, points)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]ruletablesvc.SkillPercent)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string, int, string, map[string]int) error); ok {
+		r1 = rf(race, dex, armor, points)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_ThiefSkills_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ThiefSkills'
+type MockRules_ThiefSkills_Call struct {
+	*mock.Call
+}
+
+// ThiefSkills is a helper method to define mock.On call
+//   - race string
+//   - dex int
+//   - armor string
+//   - points map[string]int
+func (_e *MockRules_Expecter) ThiefSkills(race interface{}, dex interface{}, armor interface{}, points interface{}) *MockRules_ThiefSkills_Call {
+	return &MockRules_ThiefSkills_Call{Call: _e.mock.On("ThiefSkills", race, dex, armor, points)}
+}
+
+func (_c *MockRules_ThiefSkills_Call) Run(run func(race string, dex int, armor string, points map[string]int)) *MockRules_ThiefSkills_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(int), args[2].(string), args[3].(map[string]int))
+	})
+	return _c
+}
+
+func (_c *MockRules_ThiefSkills_Call) Return(_a0 []ruletablesvc.SkillPercent, _a1 error) *MockRules_ThiefSkills_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_ThiefSkills_Call) RunAndReturn(run func(string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)) *MockRules_ThiefSkills_Call {
 	_c.Call.Return(run)
 	return _c
 }

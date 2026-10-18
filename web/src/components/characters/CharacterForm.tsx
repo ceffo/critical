@@ -6,6 +6,7 @@ import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { parseWhole } from "@/lib/wholeNumber";
+import { skillName } from "@/lib/logSummary";
 import { cn } from "@/lib/utils";
 import {
   ABILITIES,
@@ -15,7 +16,15 @@ import {
 } from "@/types/character";
 
 type NumberField = (typeof ABILITIES)[number] | "hpMax" | "xp";
-type Field = NumberField | "name" | "class" | "raceCode" | "strExceptional";
+type Field =
+  | NumberField
+  | "name"
+  | "class"
+  | "raceCode"
+  | "strExceptional"
+  | "skillArmor"
+  | "skillPoints"
+  | `skillPoints.${string}`;
 
 /** The server's field names for the form's: the race is `race` in its errors. */
 const ERROR_FIELD: Record<string, Field> = { race: "raceCode" };
@@ -30,7 +39,8 @@ interface FieldError {
 /**
  * The new character form (ADR 0029 step 7.2, ADR 0030 step 1): the class (the ones the server can
  * create), the race (the ones the class admits, DMG Table 7), the name, the six ability scores as
- * on the sheet, the max HP and the starting XP. Level, THAC0 and saves are never entered: the server
+ * on the sheet, the max HP and the starting XP; a thief its skill points and the armour worn for its
+ * skills (ADR 0030 step 17: the percentages are the server's). Level, THAC0 and saves are never entered: the server
  * derives them. It starts with no equipment. The server checks every value and refuses with the
  * field; the form words its code. On success the page reloads on the new character, now current.
  */
@@ -53,6 +63,9 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
   });
   // A warrior's 18/xx (ADR 0030 step 9), blank for none; offered at Strength 18.
   const [strExceptional, setStrExceptional] = useState("");
+  // ADR 0030 steps 1 and 17: a thief's points by skill and the armour worn for its skills.
+  const [skillPoints, setSkillPoints] = useState<Record<string, string>>({});
+  const [skillArmor, setSkillArmor] = useState("leather");
   const [error, setError] = useState<FieldError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -77,6 +90,8 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
 
   const classOption = options?.classes.find((c) => c.class === cls);
   const races = classOption?.races ?? [];
+  const skills = classOption?.skills ?? [];
+  const armors = classOption?.skillArmors ?? [];
   const offersExceptional =
     !!classOption?.exceptionalStrengthRaces.includes(race) &&
     parseWhole(numbers.str) === 18;
@@ -95,9 +110,11 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
         ? { max: options?.maxNameLength }
         : e.field === "strExceptional"
           ? options?.strExceptional
-          : e.field in numbers
-            ? rangeOf(e.field as NumberField)
-            : undefined;
+          : e.field.startsWith("skillPoints.")
+            ? options?.skillPoints
+            : e.field in numbers
+              ? rangeOf(e.field as NumberField)
+              : undefined;
     const key = `characters.errors.${e.code}`;
     const className = t(`details.classes.${cls}`, { defaultValue: cls });
     return t(key, {
@@ -138,6 +155,20 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
         return;
       }
       body.strExceptional = v;
+    }
+    if (skills.length > 0) {
+      body.skillArmor = skillArmor;
+      body.skillPoints = {};
+      for (const skill of skills) {
+        const raw = skillPoints[skill] ?? "";
+        if (raw.trim() === "") continue;
+        const v = parseWhole(raw);
+        if (Number.isNaN(v) || v === null) {
+          setError({ field: `skillPoints.${skill}`, code: "out_of_range" });
+          return;
+        }
+        body.skillPoints[skill] = v;
+      }
     }
     setBusy(true);
     setError(null);
@@ -333,6 +364,73 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
           </div>
         )}
       </fieldset>
+
+      {skills.length > 0 && (
+        <fieldset
+          className="flex min-w-0 flex-col gap-2"
+          data-testid="thief-skills-entry"
+        >
+          <legend className={cn(labelClass, "mb-1")}>
+            {t("characters.skillPoints")}
+          </legend>
+          <p className="text-label text-muted-foreground">
+            {t("characters.skillPointsLead")}
+          </p>
+          <div className="flex min-w-0 flex-col gap-1 sm:w-1/2">
+            <label htmlFor="new-character-skillArmor" className={labelClass}>
+              {t("characters.skillArmor")}
+            </label>
+            <select
+              {...fieldProps("skillArmor")}
+              value={skillArmor}
+              onChange={(e) => {
+                setSkillArmor(e.target.value);
+                setError(null);
+              }}
+            >
+              {armors.map((a) => (
+                <option key={a} value={a}>
+                  {t(`characters.armors.${a}`, { defaultValue: a })}
+                </option>
+              ))}
+            </select>
+            {errorFor("skillArmor")}
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {skills.map((skill) => {
+              const f: Field = `skillPoints.${skill}`;
+              return (
+                <div key={skill} className="flex min-w-0 flex-col gap-1">
+                  <label
+                    htmlFor={`new-character-${f}`}
+                    className={cn(labelClass, "break-words")}
+                  >
+                    {skillName(t, skill)}
+                  </label>
+                  <input
+                    {...fieldProps(f)}
+                    inputMode="numeric"
+                    title={t("characters.range", {
+                      min: options.skillPoints.min,
+                      max: options.skillPoints.max,
+                    })}
+                    value={skillPoints[skill] ?? ""}
+                    onChange={(e) => {
+                      setSkillPoints((p) => ({
+                        ...p,
+                        [skill]: e.target.value,
+                      }));
+                      setError(null);
+                    }}
+                  />
+                  {errorFor(f)}
+                </div>
+              );
+            })}
+          </div>
+          {errorFor("skillPoints")}
+        </fieldset>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {number("hpMax", t("characters.hpMax"))}

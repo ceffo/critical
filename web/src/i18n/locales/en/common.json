@@ -346,7 +346,9 @@
       "l": "L",
       "bonus": "to hit / dmg",
       "thac0": "THAC0"
-    }
+    },
+    "backstab": "Backstab ×{{n}}",
+    "backstabHint": "Backstab: {{toHit}} to hit, the weapon’s damage dice ×{{n}}"
   },
   "saves": {
     "title": "Saving Throws",
@@ -1034,7 +1036,8 @@
       "critPlaceholder": "Critical hit (placeholder)",
       "race": "{{race}} (race)",
       "specialization": "Specialization",
-      "point_blank": "Point blank"
+      "point_blank": "Point blank",
+      "backstab": "Backstab"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -1161,6 +1164,7 @@
     "skill": {
       "proficiency": "Proficiency · d{{die}} under {{stat}}",
       "bardSkill": "Bard skill · d{{die}} under {{percent}}%",
+      "thiefSkill": "Thief skill · d{{die}} under {{percent}}%",
       "success": "Success",
       "failure": "Failure",
       "die": "d{{die}}",
@@ -1234,7 +1238,8 @@
       "xp_remove": "XP",
       "level_up": "Level",
       "spell_learn": "Learn",
-      "turn_undead": "Turning"
+      "turn_undead": "Turning",
+      "skill_points": "Skills"
     },
     "status": {
       "active": "Active",
@@ -1392,6 +1397,10 @@
       "failed": "failed",
       "roll": "d20 {{d20}} vs {{target}}",
       "noRoll": "no roll"
+    },
+    "skillPoints": {
+      "text": "Skill points: {{changes}}",
+      "change": "{{name}} {{from}} → {{to}}"
     }
   },
   "critTable": {
@@ -1524,7 +1533,8 @@
       "bard": "Bard",
       "cleric": "Cleric",
       "fighter": "Fighter",
-      "mage": "Mage"
+      "mage": "Mage",
+      "thief": "Thief"
     },
     "language": {
       "elfique": "Elvish",
@@ -1608,8 +1618,28 @@
       "climb_walls": "Climb walls",
       "detect_noise": "Detect noise",
       "pick_pockets": "Pick pockets",
-      "read_languages": "Read languages"
-    }
+      "read_languages": "Read languages",
+      "open_locks": "Open Locks",
+      "find_remove_traps": "Find/Remove Traps",
+      "move_silently": "Move Silently",
+      "hide_in_shadows": "Hide in Shadows"
+    },
+    "thiefSkills": "Thief skills",
+    "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dexterity {{dexterity}}, armour {{armor}} ({{max}}% at most)",
+    "budget": {
+      "skill_points_total": "Skill points: {{points}} in all, at most {{limit}} at this level",
+      "skill_points_per_skill": "{{name}}: {{points}} points, at most {{limit}} at this level"
+    },
+    "spendPoints": "Spend",
+    "spendPointsHint": "Spend thieving skill points",
+    "pointsTitle": "Thieving skill points",
+    "pointsLead": "The total points in each skill. The budget at your level is a warning, not a limit.",
+    "pointsLabel": "Points in {{name}}",
+    "savePoints": "Save",
+    "cancelPoints": "Cancel",
+    "pointsOutOfRange": "Enter a whole number from {{min}} to {{max}}.",
+    "pointsRefused": "These points were refused.",
+    "unusable": "{{name}}: spend points to raise it before you can use it"
   },
   "dice": {
     "title": "Dice",
@@ -1826,6 +1856,15 @@
       "unknown": "Pick one of the six races.",
       "race_not_allowed": "This race cannot be a {{className}}.",
       "not_allowed": "No exceptional strength for this character: only a warrior with Strength 18, not a halfling."
+    },
+    "skillPoints": "Thief skills",
+    "skillPointsLead": "The points spent in each skill; the server adds the base, race, Dexterity and armour.",
+    "skillArmor": "Armour worn",
+    "armors": {
+      "none": "None",
+      "leather": "Leather",
+      "padded_studded_leather": "Padded or studded leather",
+      "elven_chain": "Elven chain"
     }
   },
   "turning": {

@@ -283,6 +283,15 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Turning Ghoul · turned",
     fr: "Renvoi Goule · repoussés",
   },
+  skill_points: {
+    e: entry("skill_points", {
+      before: { open_locks: 30 },
+      after: { open_locks: 45 },
+    }),
+    value: null,
+    en: "Skills",
+    fr: "Talents",
+  },
   spell_prep: {
     e: entry("spell_prep", null),
     value: null,

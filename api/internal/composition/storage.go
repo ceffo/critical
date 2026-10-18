@@ -79,6 +79,7 @@ type CharacterStore interface {
 	charactersvc.Owners
 	detailssvc.DAL
 	levelupsvc.DAL
+	skillsvc.Points
 }
 
 // BuffStore is the buff adapter plus the round read the action log stamps

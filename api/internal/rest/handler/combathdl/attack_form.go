@@ -42,6 +42,9 @@ type AttackPreviewDTO struct {
 	// PointBlank is the same preview with the point-blank option (ADR 0030
 	// step 12); absent when the weapon does not allow it.
 	PointBlank *AttackPreviewDTO `json:"pointBlank,omitempty"`
+	// Backstab is the same preview with the backstab option (ADR 0030 step
+	// 19); absent for a class without it.
+	Backstab *AttackPreviewDTO `json:"backstab,omitempty"`
 }
 
 // AttackRateDTO is the held weapon's attacks per round (ADR 0030 step 11):
@@ -158,5 +161,6 @@ func toPreviewDTO(p *combatsvc.AttackPreview) *AttackPreviewDTO {
 		BaseThac0: p.BaseThac0, Modifiers: mods, EffectiveThac0: p.EffectiveThac0,
 		ToHit: p.ToHit, RollNeeded: p.RollNeeded, DamageBonus: p.DamageBonus,
 		PointBlank: toPreviewDTO(p.PointBlank),
+		Backstab:   toPreviewDTO(p.Backstab),
 	}
 }

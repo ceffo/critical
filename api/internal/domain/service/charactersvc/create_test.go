@@ -199,6 +199,67 @@ func TestCreate_Step9_ExceptionalStrength(t *testing.T) {
 	}
 }
 
+// ADR 0030 steps 1 and 17: a thief enters its armour (one of the four) and
+// its points (each a thieving skill, 0 to 95); any other class enters
+// neither. Refused before anything is written, the field named; the points
+// are stored without the zeros, with the armour.
+func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
+	thief := func(armor string, points map[string]int) charactersvc.NewCharacter {
+		return charactersvc.NewCharacter{
+			Name: "Vex", Class: "thief", Race: "halfling", Str: 10, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+			SkillArmor: armor, SkillPoints: points,
+		}
+	}
+	bardArmor, bardPoints := lyra(), lyra()
+	bardArmor.SkillArmor = "none"
+	bardPoints.SkillPoints = map[string]int{"climb_walls": 10}
+	for _, tt := range []struct {
+		name        string
+		n           charactersvc.NewCharacter
+		field, code string
+	}{
+		{"no armour", thief("", nil), "skillArmor", "empty"},
+		{"an armour Table 29 lacks", thief("plate", nil), "skillArmor", "unknown"},
+		{"an unknown skill", thief("none", map[string]int{"backstab": 10}), "skillPoints.backstab", "unknown"},
+		{"negative points", thief("none", map[string]int{"open_locks": -1}), "skillPoints.open_locks", "out_of_range"},
+		{"more than 95 points", thief("none", map[string]int{"open_locks": 96}), "skillPoints.open_locks", "out_of_range"},
+		{"a bard's armour", bardArmor, "skillArmor", "not_allowed"},
+		{"a bard's points", bardPoints, "skillPoints", "not_allowed"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newEnv(t)
+			e.rules.EXPECT().RaceAllows(tt.n.Race, tt.n.Class).Return(true, nil).Once()
+			_, err := e.svc.Create(context.Background(), ownerID, tt.n)
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, tt.field, fe.Field)
+			assert.Equal(t, tt.code, fe.Message)
+			assert.Zero(t, e.tx.n, "nothing written")
+		})
+	}
+	t.Run("stored", func(t *testing.T) {
+		e := newEnv(t)
+		e.rules.EXPECT().RaceAllows("halfling", "thief").Return(true, nil).Once()
+		e.rules.EXPECT().LevelFor("thief", 0).Return(1, nil).Once()
+		e.rules.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Once()
+		e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
+		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
+		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Once()
+		want := map[string]int{"open_locks": 30, "pick_pockets": 95}
+		e.rules.EXPECT().ThiefSkills("halfling", 17, "padded_studded_leather", want).Return(nil, nil).Once()
+		e.rules.EXPECT().BackstabFor(1).Return(2, nil).Once()
+		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
+			return c.Class == "thief" && c.SkillArmor == "padded_studded_leather" && assert.ObjectsAreEqual(want, c.SkillPoints)
+		})).Return(6, nil).Once()
+		e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(6)).Return(nil).Once()
+		e.sessions.EXPECT().ForgetUser(ownerID).Once()
+		_, err := e.svc.Create(context.Background(), ownerID, thief("padded_studded_leather", map[string]int{
+			"open_locks": 30, "pick_pockets": 95, "climb_walls": 0,
+		}))
+		require.NoError(t, err)
+	})
+}
+
 // Retiring a character retires it, then repairs the owner's current
 // character (the first one left when it was the current one), in one
 // transaction, and answers the current character after it.
@@ -249,17 +310,20 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		e.rules.EXPECT().RaceAllows(race, "fighter").Return(race != "elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "mage").Return(race == "human" || race == "elf" || race == "half_elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "cleric").Return(race != "elf", nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "thief").Return(true, nil).Once()
 	}
 	got, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, charactersvc.CreationOptions{
 		Classes: []charactersvc.ClassOption{
-			{Class: "bard", Races: []string{"human", "half_elf"}, ExceptionalStrengthRaces: []string{}},
-			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}},
-			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}},
-			{Class: "cleric", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{}},
+			{Class: "bard", Races: []string{"human", "half_elf"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}},
+			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}, Skills: []string{}, SkillArmors: []string{}},
+			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}},
+			{Class: "cleric", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}},
+			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
+			{Class: "thief", Races: charactersvc.Races, ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills, SkillArmors: ruletablesvc.ThiefArmors},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
-		MinStrExceptional: 1, MaxStrExceptional: 100, MaxNameLen: 40,
+		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40,
 	}, got)
 }

@@ -168,12 +168,14 @@ func TestCreate_Options(t *testing.T) {
 			Class               string   `json:"class"`
 			Races               []string `json:"races"`
 			ExceptionalStrength []string `json:"exceptionalStrengthRaces"`
+			Skills              []string `json:"skills"`
+			SkillArmors         []string `json:"skillArmors"`
 		} `json:"classes"`
 		Ability        struct{ Min, Max int } `json:"ability"`
 		StrExceptional struct{ Min, Max int } `json:"strExceptional"`
 	}
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &got))
-	require.Len(t, got.Classes, 4)
+	require.Len(t, got.Classes, 5)
 	assert.Equal(t, "bard", got.Classes[0].Class)
 	assert.Equal(t, []string{"human", "half_elf"}, got.Classes[0].Races)
 	assert.Empty(t, got.Classes[0].ExceptionalStrength)
@@ -186,6 +188,14 @@ func TestCreate_Options(t *testing.T) {
 	assert.Equal(t, "cleric", got.Classes[3].Class)
 	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}, got.Classes[3].Races, "DMG Table 7")
 	assert.Empty(t, got.Classes[3].ExceptionalStrength)
+	assert.Equal(t, "thief", got.Classes[4].Class)
+	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}, got.Classes[4].Races, "DMG Table 7")
+	assert.Equal(t, []string{
+		"pick_pockets", "open_locks", "find_remove_traps", "move_silently",
+		"hide_in_shadows", "detect_noise", "climb_walls", "read_languages",
+	}, got.Classes[4].Skills, "PHB Table 26")
+	assert.Equal(t, []string{"none", "leather", "padded_studded_leather", "elven_chain"}, got.Classes[4].SkillArmors)
+	assert.Empty(t, got.Classes[0].Skills, "a bard enters no thieving skill")
 	assert.Equal(t, struct{ Min, Max int }{1, 100}, got.StrExceptional)
 	assert.Equal(t, 3, got.Ability.Min)
 	assert.Equal(t, 19, got.Ability.Max)

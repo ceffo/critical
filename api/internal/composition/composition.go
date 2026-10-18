@@ -350,11 +350,13 @@ func registerRestorers(log actionlogsvc.SVC, restorers map[string]actionlog.Rest
 }
 
 // loadRuleTables parses the PHB rule tables the artifact carries (ADR 0021
-// step 9.4) with the table rules of step 9.3 (a refusal names the table), at
-// every start, whatever catalogue version the database recorded (step 9.5).
+// step 9.4), and a format-4 artifact's class and race tables (step 10), with
+// the table rules of steps 9.3 and 10.3 (a missing or broken table refuses
+// the start, naming it), at every start, whatever catalogue version the
+// database recorded (step 9.5).
 // The seeds hold no rule tables (step 9.6.3).
 func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.Tables, error) {
-	t, err := ruletablesadpt.Parse(artifact.RuleTables)
+	t, err := ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables)
 	if err != nil {
 		return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
 	}

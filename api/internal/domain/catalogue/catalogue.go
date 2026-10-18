@@ -5,14 +5,19 @@ package catalogue
 
 import "github.com/ceffo/critical/api/internal/domain/localized"
 
-// FormatRuleTables is the one artifact format this API reads (ADR 0021 step
-// 9.1): the spells and the PHB rule tables. Format 1 (spells only, the tables
-// in the seeds) is retired (step 9.6.3) and format 2 named a retracted shape:
-// both are refused like any unknown format.
+// FormatRuleTables is format 3 (ADR 0021 step 9.1): the spells and the PHB
+// rule tables. Format 1 (spells only, the tables in the seeds) is retired
+// (step 9.6.3) and format 2 named a retracted shape: both are refused like
+// any unknown format.
 const FormatRuleTables = 3
 
+// FormatClassTables is format 4 (ADR 0021 step 10): format 3 plus the class
+// and race tables of ADR 0030 step 23. The API reads formats 3 and 4 until
+// the published artifact and the dev checkouts are format 4 (step 10.4).
+const FormatClassTables = 4
+
 // Formats lists the formats this API reads, in order.
-var Formats = []int{FormatRuleTables}
+var Formats = []int{FormatRuleTables, FormatClassTables}
 
 // Catalogue is one artifact's spells: a version compared for equality only,
 // and the spells. A format-3 artifact's PHB rule tables are not part of it:

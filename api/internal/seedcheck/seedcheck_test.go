@@ -67,7 +67,7 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	assert.NotEmpty(t, artifact.Catalogue.Spells)
-	_, err = ruletablesadpt.Parse(artifact.RuleTables)
+	_, err = ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables)
 	require.NoError(t, err, "the artifact's rule tables")
 
 	effects, err := spelleffectsadpt.New(seedsDir)
@@ -94,9 +94,9 @@ func TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables(t *testin
 	require.NoError(t, err)
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.RuleTables)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables)
 	require.NoError(t, err)
 	// Compared by lookup, not row by row: the builder may group equal rows
 	// differently (one row per book line) for the same numbers.
@@ -130,6 +130,30 @@ func TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables(t *testin
 	}
 	_, err = os.Stat(filepath.Join(seedsDir, "rule_tables.json"))
 	assert.ErrorIs(t, err, os.ErrNotExist, "the seeds hold no rule tables")
+}
+
+// ADR 0021 step 10.5: the fixture's class and race tables are the real
+// artifact's, row for row (both are the builder's rows), so the PHB-page
+// value tests on the fixture check the tables the app uses. Skipped while
+// the real artifact is format 3.
+func TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables(t *testing.T) {
+	realCatalogue(t)
+	real, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	if real.Catalogue.Format < catalogue.FormatClassTables {
+		t.Skipf("the real artifact is format %d: run `just catalogue` for format %d", real.Catalogue.Format, catalogue.FormatClassTables)
+	}
+	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
+	require.NoError(t, err)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables)
+	require.NoError(t, err)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables)
+	require.NoError(t, err)
+	rc, ok := fromReal.Classes()
+	require.True(t, ok)
+	fc, ok := fromFixture.Classes()
+	require.True(t, ok)
+	assert.Equal(t, rc, fc)
 }
 
 func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {

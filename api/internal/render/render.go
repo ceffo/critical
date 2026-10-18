@@ -115,6 +115,7 @@ func fixed(msg string) func(error) string { return func(error) string { return m
 var mappings = []mapping{
 	// The login and session refusals of ADR 0029 (steps 3.7, 4, 5.2): the
 	// login callback redirects to the login page with the code instead.
+	{target: authsvc.ErrSessionExpired, status: http.StatusUnauthorized, code: "session_expired"},
 	{target: authsvc.ErrUnauthenticated, status: http.StatusUnauthorized, code: "unauthenticated"},
 	{target: authsvc.ErrCrossOrigin, status: http.StatusForbidden, code: "cross_origin"},
 	{target: authsvc.ErrStateMismatch, status: http.StatusBadRequest, code: "login_state_mismatch"},

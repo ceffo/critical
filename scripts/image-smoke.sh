@@ -75,9 +75,10 @@ grep -q "\"commit\":\"$commit\"" "$body_file" || fail "/api/health does not repo
 grep -q "\"version\":\"$version\"" "$body_file" || fail "/api/health does not report version $version: $(cat "$body_file")"
 grep -q '"status":"ok"' "$body_file" || fail "/api/health status: $(cat "$body_file")"
 
-# The login gate (ADR 0029 step 6): without a session a page goes to the login page, which is served,
-# and a data route, the catalogue and an asset of the bundle answer 401. The image runs without OAuth
-# settings, outside fly and with CRITICAL_ENV=dev, so it is in dev login mode (step 8.1).
+# The login gate (ADR 0029 step 6): without a session a page goes to the login page, which is served
+# with the static files it loads (the bundle under /assets/, the favicon), and a data route and the
+# catalogue answer 401. The image runs without OAuth settings, outside fly and with CRITICAL_ENV=dev,
+# so it is in dev login mode (step 8.1).
 for path in / /spells/deep/link; do
     out="$(get "$path" -H "Accept: text/html")"
     [ "${out%% *}" = 302 ] || fail "$path without a session: $out (want a redirect to /login)"
@@ -85,8 +86,17 @@ done
 out="$(get /login -H "Accept: text/html")"
 [ "${out%% *}" = 200 ] || fail "/login: $out"
 grep -q '<div id="root">' "$body_file" || fail "/login is not index.html"
-asset="$(docker exec "$name" sh -c 'ls /app/web/assets | grep "\.js$" | head -n1')"
-for path in /api/character /api/spells/names "/assets/$asset"; do
+# Every script and stylesheet /login names is served without a session, else the login page is blank.
+login_files="$(grep -o '\(src\|href\)="/[^"]*"' "$body_file" | sed 's/^[a-z]*="\(.*\)"$/\1/')"
+[ -n "$login_files" ] || fail "/login names no script or stylesheet"
+for path in $login_files; do
+    out="$(get "$path")"
+    [ "${out%% *}" = 200 ] || fail "$path (loaded by /login) without a session: $out"
+done
+out="$(get /api/auth/options)"
+[ "${out%% *}" = 200 ] || fail "/api/auth/options without a session: $out"
+grep -q '"devLogin":true' "$body_file" || fail "/api/auth/options: $(cat "$body_file")"
+for path in /api/character /api/spells/names; do
     out="$(get "$path")"
     [ "${out%% *}" = 401 ] || fail "$path without a session: $out"
 done

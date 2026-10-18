@@ -63,6 +63,7 @@ func RegisterRoutes(r Router, svc Service, opts Options) {
 	r.Get("/api/auth/google/callback", Callback(svc, opts))
 	r.Post("/api/auth/logout", render.Handle(Logout(svc, opts)))
 	r.Get("/api/auth/me", render.Handle(Me()))
+	r.Get("/api/auth/options", render.Handle(LoginOptions(svc)))
 	if svc.DevLoginEnabled() {
 		r.Post("/api/auth/dev", render.Handle(Dev(svc, opts)))
 	}
@@ -147,14 +148,36 @@ func Logout(svc Service, opts Options) render.HandlerFunc {
 }
 
 // Me is GET /api/auth/me: the current user, 401 without a session (how the
-// web decides to show the login page, ADR 0029 step 4.6).
+// web decides to show the login page, ADR 0029 step 4.6): session_expired
+// when the request carried a session the server no longer knows, so the
+// login page says it has ended, unauthenticated without one.
 func Me() render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		p := mw.PrincipalFrom(r.Context())
+		if p == nil && mw.StaleSession(r.Context()) {
+			return authsvc.ErrSessionExpired
+		}
 		if p == nil {
 			return authsvc.ErrUnauthenticated
 		}
 		render.OK(r.Context(), w, meDTO(p.User))
+		return nil
+	}
+}
+
+// OptionsDTO is how this server lets a user log in, for the login page's
+// buttons: Google with OAuth settings, else the dev login (ADR 0029 step 8).
+type OptionsDTO struct {
+	Google   bool `json:"google"`
+	DevLogin bool `json:"devLogin"`
+}
+
+// LoginOptions is GET /api/auth/options: the login page offers the methods it
+// lists.
+func LoginOptions(svc Service) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		dev := svc.DevLoginEnabled()
+		render.OK(r.Context(), w, OptionsDTO{Google: !dev, DevLogin: dev})
 		return nil
 	}
 }

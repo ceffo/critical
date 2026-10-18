@@ -46,8 +46,8 @@ func gated(t *testing.T) http.Handler {
 
 const unauthenticated = `{"code":"unauthenticated","error":"authentication required"}`
 
-// ADR 0029 step 6.2: without a session a data route, the catalogue and an
-// asset of the bundle answer 401 (the service mocks would fail on any call).
+// ADR 0029 step 6.2: without a session a data route and the catalogue answer
+// 401 (the service mocks would fail on any call).
 func TestGate_Step6_2_NoSessionIs401(t *testing.T) {
 	h, _ := newRouter(t)
 	for _, p := range []string{"/api/character", "/api/spells?q=armor", "/api/spells/names", "/api/nope"} {
@@ -57,11 +57,6 @@ func TestGate_Step6_2_NoSessionIs401(t *testing.T) {
 	}
 	rec := anon(h, "POST", "/api/roll/attack", "Content-Type", "application/json")
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
-
-	web := gated(t)
-	asset := anon(web, "GET", "/assets/index-a1b2.js")
-	assert.Equal(t, http.StatusUnauthorized, asset.Code)
-	assert.NotContains(t, asset.Body.String(), "console.log")
 }
 
 // Step 6.2: a page opened without a session goes to the login page.
@@ -82,6 +77,13 @@ func TestGate_Step6_1_PublicPathsReachable(t *testing.T) {
 	require.Equal(t, http.StatusOK, login.Code)
 	assert.Contains(t, login.Body.String(), "<title>critical</title>")
 	assert.Equal(t, http.StatusOK, anon(web, "GET", "/login/whatever").Code)
+	assert.Equal(t, http.StatusOK, anon(web, "GET", "/login?error=not_invited", "Accept", "text/html").Code)
+
+	// The static files the login page loads: the bundle and the favicon.
+	asset := anon(web, "GET", "/assets/index-a1b2.js")
+	require.Equal(t, http.StatusOK, asset.Code)
+	assert.Equal(t, "console.log(1)", asset.Body.String())
+	assert.Equal(t, http.StatusOK, anon(web, "GET", "/favicon.svg").Code)
 
 	health := anon(web, "GET", "/api/health")
 	require.Equal(t, http.StatusOK, health.Code)
@@ -167,6 +169,61 @@ func TestGate_Step4_4_DeadSessionRefusedAndCookieCleared(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 	c := sessionCookie(t, rec)
 	assert.Negative(t, c.MaxAge)
+}
+
+// Step 4.4: a page opened with a session the server no longer knows goes to
+// the login page saying it has ended, and /api/auth/me answers
+// session_expired for it (unauthenticated without a cookie), so the login
+// page can tell the two apart.
+func TestGate_Step4_4_DeadSessionSaysItEnded(t *testing.T) {
+	web := gated(t)
+	for _, p := range []string{"/", "/spells/42"} {
+		req := httptest.NewRequest("GET", p, nil)
+		req.Header.Set("Accept", "text/html")
+		req.AddCookie(&http.Cookie{Name: mw.SessionCookie, Value: "expired"})
+		rec := httptest.NewRecorder()
+		web.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusFound, rec.Code, p)
+		assert.Equal(t, "/login?error=session_expired", rec.Header().Get("Location"), p)
+	}
+
+	req := httptest.NewRequest("GET", "/api/auth/me", nil)
+	req.AddCookie(&http.Cookie{Name: mw.SessionCookie, Value: "expired"})
+	rec := httptest.NewRecorder()
+	web.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	assert.JSONEq(t, `{"code":"session_expired","error":"session expired: authentication required"}`, rec.Body.String())
+	assert.Negative(t, sessionCookie(t, rec).MaxAge)
+
+	me := anon(web, "GET", "/api/auth/me")
+	assert.Equal(t, http.StatusUnauthorized, me.Code)
+	assert.JSONEq(t, unauthenticated, me.Body.String())
+
+	// A data route keeps the gate's own code with a dead session.
+	req = httptest.NewRequest("GET", "/api/character", nil)
+	req.AddCookie(&http.Cookie{Name: mw.SessionCookie, Value: "expired"})
+	rec = httptest.NewRecorder()
+	web.ServeHTTP(rec, req)
+	assert.JSONEq(t, unauthenticated, rec.Body.String())
+}
+
+// Step 8: the login page offers the server's login methods, public: the
+// dev login without OAuth settings, Google with them.
+func TestLoginOptions_Step8_OneMethodPerMode(t *testing.T) {
+	for _, tc := range []struct {
+		dev  bool
+		want string
+	}{
+		{dev: true, want: `{"google":false,"devLogin":true}`},
+		{dev: false, want: `{"google":true,"devLogin":false}`},
+	} {
+		a := authmocks.NewMockSVC(t)
+		a.EXPECT().DevLoginEnabled().Return(tc.dev).Times(2)
+		h := authRouter(t, a, router.Options{})
+		rec := anon(h, "GET", "/api/auth/options")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, tc.want, rec.Body.String())
+	}
 }
 
 // Step 4.3: a request that extends the session sets the cookie again with

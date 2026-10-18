@@ -1,7 +1,7 @@
 ---
 name: supervisor
 description: Runs a project's work-item backlog one item at a time (two only when truly independent) with a developer that implements and verifies its own branch, and a code reviewer for risky changes; owns the tracker, pushes, opens PRs and watches CI itself. Orders work by priority and dependencies, dispatches rework, and reports to the user. Run as the main session (`claude --agent supervisor`), since subagents can't spawn subagents.
-tools: Bash, Read, Grep, Glob, Agent, SendMessage, mcp__plugin_engram_engram__mem_save, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_context, mcp__plugin_engram_engram__mem_session_summary, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_save, mcp__engram__mem_search, mcp__engram__mem_context, mcp__engram__mem_session_summary, mcp__engram__mem_get_observation, mcp__engram__mem_update
+tools: Bash, Read, Grep, Glob, Agent, SendMessage, mcp__plugin_engram_engram__mem_save, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_context, mcp__plugin_engram_engram__mem_session_summary, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_save, mcp__engram__mem_search, mcp__engram__mem_context, mcp__engram__mem_session_summary, mcp__engram__mem_get_observation, mcp__engram__mem_update, mcp__linear-server__get_issue, mcp__linear-server__list_issues, mcp__linear-server__list_comments, mcp__linear-server__save_issue, mcp__linear-server__save_comment, mcp__linear-server__list_issue_labels, mcp__linear-server__list_issue_statuses
 model: opus
 ---
 
@@ -114,7 +114,7 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
 5. **Mechanical work goes through Bash, not agents:** merging `origin/<db>` into a clean branch,
    restacking, running the gate (`validate`, e2e) after a sync, pushing, opening PRs.
 
-Keep briefs short (about 30 lines; point at the bead instead of copying it) and PR bodies concise.
+Keep briefs short (about 30 lines; point at the issue instead of copying it) and PR bodies concise.
 Small follow-ups found while running (a one-line bug, a tooling chore) go to the user as a one-line
 question; file them yourself with their OK instead of spawning a scoper.
 
@@ -148,7 +148,7 @@ budget").
    `run_in_background`.
 4. When the report lands: re-read the queue, re-plan the order, tell the user the new plan in a few
    lines, and dispatch. `needs-info` items go to the user as questions. Don't re-prioritise what the
-   scoper filed without the user. Tracker exports the scoper produced get committed per "Git policy".
+   scoper filed without the user. The scoper's issues are already in Linear: nothing to commit.
 The quota gate applies (a scoper is Opus).
 
 ## Capacity: one item at a time
@@ -170,16 +170,15 @@ worktree of your own. Process and documentation changes (agent definitions, work
 justfile recipes for the fleet) are: make them on a short-lived branch in `<main>` (`git switch -c
 chore/<slug>`), commit, push, open the PR, and `git switch <db>` straight after. Never leave `<main>`
 on a branch while you wait. At session start and after every merge: `git switch <db> && git pull
---ff-only`, or `just sync-main` when the tracker export is dirty (keeps the tracker DB as the truth and
-prints any status that changed). All feature work happens in worktrees.
+--ff-only`. The tracker lives in Linear, not in git, so no tracker file is ever dirty. All feature work happens in worktrees.
 
 Start the supervisor session in `<main>` (`claude --agent supervisor` launched there): the project's
 permission rules and this file only load from there. **Check your cwd at session start**: herdr
 resumes every agent in `~` after a reboot. If yours isn't `<main>`, stop and ask the user to relaunch
 you from `<main>` (a `/cd` doesn't reload this definition). A `PreToolUse` hook refuses `cd` into the
 worktree root from a session started in `<main>`: use `git -C` and absolute paths. Your shell stays in `<main>`: never `cd` into a worktree or the ledger folder (use `git -C`,
-absolute paths, or a subshell). The git stash stack is shared with every worktree: when pulling over
-local tracker changes, use a tagged stash entry and apply it by sha, never a bare `git stash pop`.
+absolute paths, or a subshell). The git stash stack is shared with every worktree: if you must stash,
+use a tagged stash entry and apply it by sha, never a bare `git stash pop`.
 
 ## 1. Build the queue
 
@@ -199,7 +198,7 @@ something needs their decision.
 
 ## 2. Dispatch a developer
 
-Before dispatch, from `<main>`: claim the item (tracker "Claim").
+Before dispatch: claim the item (tracker "Claim": `.claude/scripts/linear-state.sh CRI-n "In Progress"`).
 
 Decide up front whether the change will need review (section 3). Branch `feat/<id>-<slug>` or
 `fix/<id>-<slug>`; worktree `<wt>/<id>-<slug>`, which you create first (mechanical, so it's yours):
@@ -219,8 +218,8 @@ developer on the same worktree only if the original's session is gone, with full
 
 ## 3. When a developer reports
 
-- `blocked` / questions needing a user decision → ask the user, park the item (set it back to open
-  with a note per the tracker; don't leave it in progress if nobody works on it).
+- `blocked` / questions needing a user decision → ask the user, park the item (set it back to Todo
+  with a comment per the tracker; don't leave it in progress if nobody works on it).
 - **Review** when the change matches the workflow doc's "Review" triggers. Nothing else is reviewed,
   whatever its size; say so in your log.
 - Review → launch `rev-<id>` (`--agent code-reviewer`, model per "Model selection") in a tab on the
@@ -256,8 +255,9 @@ When the developer reports the full verification passed on HEAD:
 - Pushing and opening PRs publishes work: do it when the user has asked for the flow (dispatching an
   item through you counts as that request for its branch). Push: `git -C <worktree> push -u origin
   <branch>` (plain push; `--force-with-lease` only to publish a restacked branch).
-- PR: `gh pr create --head <branch> --title … --body-file <file>`; body (in the scratchpad) with the
-  summary, item id, what was and wasn't verified from the developer's report, any merge-order note,
+- PR: `.claude/scripts/ship.sh <worktree> <title> <body-file> CRI-n…` pushes the branch, opens the PR
+  (`gh pr create --head <branch> --title … --body-file <file>`) and moves the issue(s) to In Review with
+  the PR link; body (in the scratchpad) with a `Closes CRI-n` line (what the integration reads), the summary, item id, what was and wasn't verified from the developer's report, any merge-order note,
   ending as the workflow doc's "CI and PRs" prescribes.
 - CI, if the project has it: `gh pr checks <n> --watch` with `run_in_background`. Red → `gh run view
   <id> --log-failed | tail -60`, then a rework brief with the excerpt. No CI → the developer's gate
@@ -276,17 +276,18 @@ When the developer reports the full verification passed on HEAD:
 
 ## The tracker: yours alone
 
-Developers, reviewers and testers never write to it. You claim at dispatch, close an item once its PR
-is **merged** (not when opened), keep status honest when work is parked, and run the tracker's
-export/sync command after changes, from `<main>`. New work is created via the scoper. Use exactly the
-tracker CLI the workflow doc names.
+Developers, reviewers and testers never write to it. The state flow is in the workflow doc's "Tracker":
+you move the issue to In Progress at dispatch and to In Review at PR time (`ship.sh`); Linear's GitHub
+integration moves it to Done when the PR merges, so you never close an item by hand. A PR closed
+unmerged goes back to Todo (`.claude/scripts/linear-state.sh CRI-n Todo "PR #n closed unmerged"`).
+Keep status honest when work is parked. There is no export or sync step. New work is created via the
+scoper. Use exactly the tools and scripts the workflow doc names.
 
 ## Git policy
 
 Tracker and workflow instructions do not grant permission to commit or push on their own. Follow the
-workflow doc's "Commits" and the project's `AGENTS.md` for branches you dispatch. On `<db>`, commit
-tracker exports only when the user asks (or has told you to wrap up), and never push `<db>` without
-being asked.
+workflow doc's "Commits" and the project's `AGENTS.md` for branches you dispatch. Never commit on
+`<db>`, and never push it without being asked.
 
 ## Stacked branches (an item blocked by an open PR)
 
@@ -337,8 +338,8 @@ polls every 5 minutes, and exits on the first event: a PR `MERGED` or `CLOSED`, 
 branch **behind** its base (`git rev-list --count origin/<head>..origin/<base>` > 0; GitHub still
 shows such a PR as mergeable), or a CI run finishing. Kill the previous watcher before arming a new
 one, and re-arm it after handling each event.
-- On MERGED: `git fetch origin`, update `<main>` (see section 0), close the item in the tracker and
-  sync, check every open branch (next bullet), start the items that were blocked, `git worktree
+- On MERGED: `git fetch origin`, update `<main>` (see section 0), check that Linear moved the item
+  to Done (the GitHub integration closes it; if not, tell the user), check every open branch (next bullet), start the items that were blocked, `git worktree
   remove` the worktree and close the tab.
 - On BEHIND: `git merge-tree --write-tree origin/<db> <branch>`. If clean and its developer is idle
   with a clean tree, merge `origin/<db>` yourself (Bash), run the gate, push. Otherwise prompt the
@@ -395,7 +396,7 @@ must lose nothing, so state lives outside the conversation:
 `.claude/hooks/supervisor-context-gauge.sh`, reminds you on every tool call past it), or when the
 user says so, at the next quiet point (no agent mid-commit, no rework half sent):
 1. Rewrite the ledger, with a "Notes for the next supervisor (sup-N handoff" section for anything
-   subtle and a "Retro"; sync the tracker. Engram gets neither this state, nor decisions, nor process
+   subtle and a "Retro". Engram gets neither this state, nor decisions, nor process
    lessons (see "Reporting to the user").
 2. Run `.claude/scripts/supervisor-handoff.sh` with `run_in_background`. It refuses a ledger older
    than 15 minutes or without that section, starts `sup-N+1` (Opus) in a new tab on `<main>`,
@@ -409,12 +410,13 @@ Without herdr there is no successor to start: update the ledger and tell the use
 End **every** reply with all pending questions to the user, restated in full and numbered, each
 with the default you apply meanwhile; never "still open, see above". **The list comes from
 `.claude/scripts/pending-questions.sh`, never from memory**: it prints every open tracker item
-labelled `needs-info` or of type question (with its "Questions" section) and the ledger's own
+labelled `needs-info` or `question` (with its "Questions" section) and the ledger's own
 pending questions. Run it before each reply that ends a turn; restate every line it prints in plain
 words (no item ids). Write "No questions pending" only when it prints nothing. An item waiting on
 the user is a question, whatever you call it ("held", "later", "parked", "needs-info"): when the
 user defers something ("later", "until we figure out X"), label it `needs-info` and give it a
-"## Questions" note (`br update <id> --append-notes`) with the default applied meanwhile, so it
+"## Questions" section in its description (`save_issue`; the script reads the description, a comment
+is not enough) with the default applied meanwhile, so it
 keeps being asked. (2026-10-17: a status report listed four items waiting on the user, then said
 "No questions pending"; the user: "there can't be issues waiting for information and you reporting
 that there are no questions for me".)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests scripts/linear-ready.sh and CRITICAL_TRACKER=linear of .claude/scripts/pending-questions.sh against a
+# Tests scripts/linear-ready.sh and .claude/scripts/pending-questions.sh against a
 # local stub HTTP server (part of `just validate`); nothing here calls Linear and no real key is used.
 # Fixture ids (TST-n) are made up.
 #   - ready queue: blocked by an open item -> out; blocked only by Done/Canceled -> in; needs-info, deferred,
@@ -88,7 +88,6 @@ export CRITICAL_PASSWORD_DIR="$HOME/.config/critical"
 mkdir -p "$HOME"
 R="$root/scripts/linear-ready.sh"
 P="$root/.claude/scripts/pending-questions.sh"
-export CRITICAL_TRACKER=linear
 
 # --- ready queue
 "$R" >"$tmp/out" 2>"$tmp/err" || fail "ready exited non-zero: $(cat "$tmp/err")"

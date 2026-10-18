@@ -44,5 +44,5 @@ generation" in [docs/backend.md](docs/backend.md).
 
 ## Tracker
 
-Beads, with the `br` CLI. Only the supervisor and the scoper write to it; commands and rules are in
-the "Tracker" section of [docs/agent-workflow.md](docs/agent-workflow.md).
+Linear (team `CRI`, issues `CRI-<n>`). Only the supervisor and the scoper write to it; tools, states and rules
+are in the "Tracker" section of [docs/agent-workflow.md](docs/agent-workflow.md).

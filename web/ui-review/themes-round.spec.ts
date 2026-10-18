@@ -8,7 +8,7 @@ import { annotate, audit, seedMockTable } from "./paint";
 import { VIEWPORTS, focus, translator, webDir } from "./table";
 
 /**
- * The new-themes round (critical-4jaw, docs/design/new-themes/README.md): the candidate themes of
+ * The new-themes round (docs/design/new-themes/README.md): the candidate themes of
  * candidate-themes.ts painted over the real app (the mock-up round's seeded table, French, Act ·
  * Weapons) at both layout viewports, through the app's own themeVars. Every shot goes through the
  * no-cut audit. Output: docs/design/new-themes/shots/ (PNG). Run with `just ui-themes`.

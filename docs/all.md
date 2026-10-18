@@ -34,7 +34,7 @@ critical/
 
 - Commit after each meaningful unit of work (passing tests, working endpoint, etc.)
 - Commit message format: `<type>: <short description>` (e.g. `feat: HP ledger append endpoint`)
-- Always run `br sync --flush-only` before committing to export bead state
+- End the subject with the Linear issue, e.g. `feat: HP ledger append endpoint (CRI-42)`
 - Never commit broken tests or failing builds
 
 ## Key Domain Vocabulary
@@ -49,7 +49,7 @@ critical/
 - **Round Counter**: manually advanced by the player; Next Round, End combat and passing time are in [ADR 0005](adr/0005-rounds-and-time.md)
 - **THAC0**: "To Hit Armor Class 0"; lower is better. The attack math is in [ADR 0002](adr/0002-attack-resolution.md)
 - **Spell Slot**: a prepared spell instance, cast once per day; reset on long rest ([ADR 0008](adr/0008-spell-slots-and-long-rest.md))
-- **Vertical Slice**: one bead covers schema + Go engine + REST endpoint + React panel for one feature
+- **Vertical Slice**: one Linear issue covers schema + Go engine + REST endpoint + React panel for one feature
 
 ## Phase 1 Scope (MVP for the 2026-10-17 game)
 

@@ -33,3 +33,11 @@ export function createCharacter(body: NewCharacter): Promise<CharacterList> {
 export function retireCharacter(id: number): Promise<CharacterList> {
   return patch<CharacterList>(`/api/characters/${id}`, { retired: true });
 }
+
+/** Renames one of the user's characters (ADR 0029 step 7.3); the server trims and checks the name. */
+export function renameCharacter(
+  id: number,
+  name: string,
+): Promise<CharacterList> {
+  return patch<CharacterList>(`/api/characters/${id}`, { name });
+}

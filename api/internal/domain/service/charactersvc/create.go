@@ -84,6 +84,9 @@ type NewCharacter struct {
 	// ruletablesvc.ThiefArmors. Empty for the other classes.
 	SkillPoints map[string]int
 	SkillArmor  string
+	// Details are the free-text details entered with the character, checked
+	// as the card's edit checks them (Details.Apply); nil fields stay unset.
+	Details DetailsPatch
 }
 
 // Change is a rename (Name) or a retirement (Retired true) of a character;
@@ -157,10 +160,14 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 	if n.XP < MinStartingXP || n.XP > MaxStartingXP {
 		return Character{}, &domain.FieldError{Field: "xp", Message: CodeOutOfRange}
 	}
+	details, err := newDetails(n.Details)
+	if err != nil {
+		return Character{}, err
+	}
 	return Character{
 		Name: name, Class: n.Class, Race: n.Race,
 		Str: n.Str, StrExceptional: n.StrExceptional, Dex: n.Dex, Con: n.Con, Int: n.Int, Wis: n.Wis, Cha: n.Cha,
-		HPMax: n.HPMax, XPTotal: n.XP, Details: Details{Languages: []string{}},
+		HPMax: n.HPMax, XPTotal: n.XP, Details: details,
 		SkillPoints: points, SkillArmor: n.SkillArmor,
 	}, nil
 }

@@ -175,7 +175,8 @@ func TestOwners_ListAndSetCurrent(t *testing.T) {
 
 // A created character's row carries every entered value, its owner, and its
 // sheet figures in the level, THAC0 and save columns (ADR 0030 step 24); its
-// spell slots, buffs and round state follow, keyed by the new id.
+// spell slots, buffs and round state follow, keyed by the new id, then the
+// details entered with it.
 func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
@@ -190,11 +191,15 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 	}).Return(int64(7), nil).Once().NotBefore(lock)
 	slots := q.EXPECT().CreateSpellSlots(ctx, int64(7)).Return(nil).Once().NotBefore(row)
 	buffs := q.EXPECT().CreateActiveBuffs(ctx, int64(7)).Return(nil).Once().NotBefore(slots)
-	q.EXPECT().CreateRoundState(ctx, int64(7)).Return(nil).Once().NotBefore(buffs)
+	round := q.EXPECT().CreateRoundState(ctx, int64(7)).Return(nil).Once().NotBefore(buffs)
+	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
+		Alignment: "Neutral good", Age: 23, Languages: `["Elfique","Commun"]`, ID: 7,
+	}).Return(1, nil).Once().NotBefore(round)
 
 	id, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
 		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 3, XPTotal: 2500,
 		Class: "bard", Race: "half_elf",
+		Details: charactersvc.Details{Alignment: "Neutral good", Age: 23, Languages: []string{"Elfique", "Commun"}},
 		Sheet: charactersvc.Sheet{Level: 3, THAC0: 19, Saves: charactersvc.Saves{
 			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
 		}},
@@ -285,6 +290,7 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	q.EXPECT().CreateSpellSlots(ctx, int64(8)).Return(nil).Once()
 	q.EXPECT().CreateActiveBuffs(ctx, int64(8)).Return(nil).Once()
 	q.EXPECT().CreateRoundState(ctx, int64(8)).Return(nil).Once()
+	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{Languages: `[]`, ID: 8}).Return(1, nil).Once()
 	points := map[string]int{"pick_pockets": 15, "open_locks": 20}
 	_, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
 		Name: "Vex", Class: "thief", Race: "halfling", RealizedLevel: 1, SkillPoints: points, SkillArmor: "none",

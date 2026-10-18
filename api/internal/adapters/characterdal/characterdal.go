@@ -171,6 +171,10 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 			return 0, fmt.Errorf("create character %d %s: %w", id, row.what, err)
 		}
 	}
+	// The details entered with the character, in the same transaction.
+	if err := d.UpdateDetails(ctx, id, c.Details); err != nil {
+		return 0, fmt.Errorf("create character %d: %w", id, err)
+	}
 	return id, nil
 }
 

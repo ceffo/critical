@@ -1,12 +1,17 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Archive, Play, X } from "@phosphor-icons/react";
+import { Archive, PencilSimple, Play, X } from "@phosphor-icons/react";
 import {
   fetchCharacters,
+  fetchCreationOptions,
+  renameCharacter,
   retireCharacter,
   switchCharacter,
 } from "@/api/characters";
+import { ApiError } from "@/api/http";
+import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogClose,
@@ -199,8 +204,120 @@ function RetireConfirm({ onCancel }: { onCancel: () => void }) {
   );
 }
 
+/**
+ * Renaming the character in play (ADR 0029 step 7.3): its name, edited in place. The server trims and
+ * checks it and refuses with a code the form words; on success the page loads again with the new name.
+ */
+function RenameForm({ onCancel }: { onCancel: () => void }) {
+  const { t } = useTranslation();
+  const { list, error: loadError } = useCharacters();
+  const [maxName, setMaxName] = useState<number | null>(null);
+  const [name, setName] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const current = list?.characters.find((c) => c.id === list.currentId);
+
+  useEffect(() => {
+    let live = true;
+    fetchCreationOptions().then(
+      (o) => live && setMaxName(o.maxNameLength),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const submit = async (e: FormEvent, id: number, value: string) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await renameCharacter(id, value);
+      reloadOnCurrent();
+    } catch (err) {
+      setBusy(false);
+      setError(
+        err instanceof ApiError && err.field === "name"
+          ? t(`characters.errors.${err.message}`, {
+              max: maxName,
+              defaultValue: err.message,
+            })
+          : message(err),
+      );
+    }
+  };
+
+  if (loadError)
+    return (
+      <p role="alert" className="text-body text-danger">
+        {loadError}
+      </p>
+    );
+  if (!list)
+    return <p className="text-body text-muted-foreground">{t("loading")}</p>;
+  if (!current)
+    return (
+      <p className="text-body text-muted-foreground">{t("characters.none")}</p>
+    );
+  const value = name ?? current.name;
+  return (
+    <form
+      noValidate
+      onSubmit={(e) => void submit(e, current.id, value)}
+      className="flex flex-col gap-4"
+      data-testid="rename-form"
+    >
+      <div className="flex min-w-0 flex-col gap-1">
+        <label htmlFor="rename-character-name" className={labelClass}>
+          {t("characters.name")}
+        </label>
+        <input
+          id="rename-character-name"
+          autoComplete="off"
+          autoFocus
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "rename-character-error" : undefined}
+          className={cn(fieldClass, error && "border-destructive")}
+          value={value}
+          onChange={(e) => {
+            setName(e.target.value);
+            setError(null);
+          }}
+        />
+        {error && (
+          <p
+            id="rename-character-error"
+            role="alert"
+            className="text-label text-destructive"
+            data-testid="field-error"
+          >
+            {error}
+          </p>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button type="button" variant="quiet" onClick={onCancel}>
+          {t("characters.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          variant="main"
+          disabled={busy}
+          aria-label={t("characters.renameHint", { name: current.name })}
+          title={t("characters.renameHint", { name: current.name })}
+        >
+          <PencilSimple aria-hidden />
+          {t("characters.rename")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 /** Which character dialog the cog menu opened. */
-export type CharacterDialog = "switch" | "new" | "retire";
+export type CharacterDialog = "switch" | "new" | "rename" | "retire";
 
 /** One of the cog menu's character dialogs (ADR 0029 step 7.2: rare actions, in the cog menu). */
 export function CharacterDialogs({
@@ -214,11 +331,13 @@ export function CharacterDialogs({
   const titles: Record<CharacterDialog, string> = {
     switch: t("characters.switchTitle"),
     new: t("characters.newTitle"),
+    rename: t("characters.renameTitle"),
     retire: t("characters.retireTitle"),
   };
   const bodies: Record<CharacterDialog, ReactNode> = {
     switch: <CharacterList />,
     new: <CharacterForm onCancel={onClose} />,
+    rename: <RenameForm onCancel={onClose} />,
     retire: <RetireConfirm onCancel={onClose} />,
   };
   return (

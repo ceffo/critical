@@ -298,4 +298,6 @@ export type NewCharacter = {
    * absent for the other classes. */
   skillPoints?: Record<string, number>;
   skillArmor?: string;
+  /** The details, as the card shows them (age null for none); a refusal's field is `details.<field>`. */
+  details?: CharacterDetails;
 } & Record<AbilityCode, number | null>;

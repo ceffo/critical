@@ -96,16 +96,18 @@ type ProficiencyDTO struct {
 // check. maxPercent is that cap and maxPoints the most points one skill
 // takes (the editor's range).
 type RogueSkillDTO struct {
-	ID         string   `json:"id"`
-	Base       int      `json:"base"`
-	Points     int      `json:"points"`
-	Race       int      `json:"race"`
-	Dexterity  int      `json:"dexterity"`
-	Armor      int      `json:"armor"`
-	Percent    int      `json:"percent"`
-	MaxPercent int      `json:"maxPercent"`
-	MaxPoints  int      `json:"maxPoints"`
-	Last       *LastDTO `json:"last"`
+	ID         string `json:"id"`
+	Base       int    `json:"base"`
+	Points     int    `json:"points"`
+	Race       int    `json:"race"`
+	Dexterity  int    `json:"dexterity"`
+	Armor      int    `json:"armor"`
+	Percent    int    `json:"percent"`
+	MaxPercent int    `json:"maxPercent"`
+	MaxPoints  int    `json:"maxPoints"`
+	// Usable is false while the skill cannot be rolled (a thieving skill under 1%, PHB p.39).
+	Usable bool     `json:"usable"`
+	Last   *LastDTO `json:"last"`
 }
 
 // SkillsDTO is the GET /api/skills answer.
@@ -155,7 +157,7 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 		ThiefSkills:   make([]RogueSkillDTO, 0, len(s.ThiefSkills)),
 	}
 	for _, t := range s.ThiefSkills {
-		out.ThiefSkills = append(out.ThiefSkills, rogueSkillDTO(t.SkillPercent, t.Last))
+		out.ThiefSkills = append(out.ThiefSkills, rogueSkillDTO(skillsvc.KindThiefSkill, t.SkillPercent, t.Last))
 	}
 	for _, p := range s.Proficiencies {
 		out.Proficiencies = append(out.Proficiencies, ProficiencyDTO{
@@ -164,16 +166,16 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 		})
 	}
 	for _, b := range s.BardSkills {
-		out.BardSkills = append(out.BardSkills, rogueSkillDTO(b.SkillPercent, b.Last))
+		out.BardSkills = append(out.BardSkills, rogueSkillDTO(skillsvc.KindBardSkill, b.SkillPercent, b.Last))
 	}
 	return out
 }
 
-func rogueSkillDTO(p ruletablesvc.SkillPercent, last *skillsvc.LastCheck) RogueSkillDTO {
+func rogueSkillDTO(kind skillsvc.Kind, p ruletablesvc.SkillPercent, last *skillsvc.LastCheck) RogueSkillDTO {
 	return RogueSkillDTO{
 		ID: p.Skill, Base: p.Base, Points: p.Points, Race: p.Race, Dexterity: p.Dexterity, Armor: p.Armor,
 		Percent: p.Percent, MaxPercent: ruletablesvc.MaxSkillPercent, MaxPoints: charactersvc.MaxSkillPoints,
-		Last: lastDTO(last),
+		Usable: skillsvc.SkillUsable(kind, p.Percent), Last: lastDTO(last),
 	}
 }
 

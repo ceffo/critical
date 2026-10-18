@@ -307,9 +307,8 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 		switch armor := *c.SkillArmor; {
 		case armor == "":
 			return 0, &domain.FieldError{Field: "skillArmor", Message: CodeEmpty}
-		// BardArmors holds every class's armours; the class's own list is
-		// checked once the character is read.
-		case !slices.Contains(ruletablesvc.BardArmors, armor):
+		// The class's own armours are checked once the character is read.
+		case !ruletablesvc.IsSkillArmor(armor):
 			return 0, &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
 		}
 	}

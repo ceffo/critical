@@ -42,6 +42,8 @@ export interface RogueSkill {
   /** The cap on the percentage, and the most points one skill takes (ADR 0030 steps 17, 18). */
   maxPercent: number;
   maxPoints: number;
+  /** False while the server says the skill cannot be rolled. */
+  usable: boolean;
   last: LastCheck | null;
 }
 

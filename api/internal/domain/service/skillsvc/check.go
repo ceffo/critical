@@ -199,7 +199,7 @@ func (s *service) check(ctx context.Context, characterID int64, id string, adj A
 	}
 	// ADR 0030 step 17 (PHB p.39): a thieving skill under 1% cannot be used
 	// until points raise it, whatever the DM's adjustment.
-	if rec.Kind == KindThiefSkill && rec.Target < MinThiefSkillPercent {
+	if !SkillUsable(rec.Kind, rec.Target) {
 		return checkRecord{}, &domain.FieldError{Field: "id", Message: CodeSkillUnusable}
 	}
 	rec.Roll = s.dice.RollDie(rec.Die)

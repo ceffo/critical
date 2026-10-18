@@ -110,11 +110,11 @@ export function SkillsTab() {
         <div className="flex min-w-0 flex-col gap-2">
           {rows(
             classKind,
-            // ADR 0030 steps 17 and 18: the server's percentage; its terms in the tooltip. A
-            // thieving skill under 1% waits for points (PHB p.39).
+            // ADR 0030 steps 17 and 18: the server's percentage; its terms in the tooltip. The
+            // server says which skill cannot be rolled yet.
             classSkills.map((s) => ({
               id: s.id,
-              unusable: classKind === "thiefSkill" && s.percent < 1,
+              unusable: !s.usable,
               value: (
                 <span
                   className="text-right font-semibold whitespace-nowrap tabular-nums"

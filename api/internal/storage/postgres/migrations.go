@@ -74,11 +74,13 @@ const weaponTypeMigration = "005_weapon_type.sql"
 func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
 	characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
 	weaponsPath := seedfile.Path(seedsDir, seedfile.WeaponsFile)
-	return map[string]dataStep{
+	before = map[string]dataStep{
 		ownerKeysMigration: func(ctx context.Context, q storeq.Querier) error { return ownRows(ctx, q, characterPath) },
-	}, map[string]dataStep{
+	}
+	after = map[string]dataStep{
 		weaponTypeMigration: func(ctx context.Context, q storeq.Querier) error { return typeSeedWeapons(ctx, q, weaponsPath) },
 	}
+	return before, after
 }
 
 func embeddedMigrations() ([]migration, error) {

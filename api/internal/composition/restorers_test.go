@@ -52,6 +52,18 @@ func TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage(t *testing.T) {
 		{"a level-up roll's realized level", "realized_level", `{"realizedLevel":15,"hpMax":85}`, func(h *harness) {
 			h.Character.EXPECT().SetRealizedLevel(mock.Anything, characterID, 15, 85).Return(nil).Once()
 		}},
+		{"a learned spell (family spellbook) taken out", "spellbook:sleep", `{"spellId":"sleep","known":false,"failedAtLevel":0}`, func(h *harness) {
+			h.Spellbook.EXPECT().RemoveEntry(mock.Anything, characterID, "sleep").Return(nil).Once()
+			h.Spellbook.EXPECT().DeleteLearnFailure(mock.Anything, characterID, "sleep").Return(nil).Once()
+		}},
+		{"a spell back in the spellbook (family spellbook)", "spellbook:sleep", `{"spellId":"sleep","known":true,"failedAtLevel":0}`, func(h *harness) {
+			h.Spellbook.EXPECT().AddEntry(mock.Anything, characterID, "sleep").Return(nil).Once()
+			h.Spellbook.EXPECT().DeleteLearnFailure(mock.Anything, characterID, "sleep").Return(nil).Once()
+		}},
+		{"an older learn failure put back (family spellbook)", "spellbook:light", `{"spellId":"light","known":false,"failedAtLevel":4}`, func(h *harness) {
+			h.Spellbook.EXPECT().RemoveEntry(mock.Anything, characterID, "light").Return(nil).Once()
+			h.Spellbook.EXPECT().SetLearnFailure(mock.Anything, characterID, "light", 4).Return(nil).Once()
+		}},
 		{"an XP entry added by hand (family xp)", "xp:12", `{"id":12,"absent":true}`, func(h *harness) {
 			h.XP.EXPECT().Delete(mock.Anything, characterID, int64(12)).Return(nil).Once()
 		}},

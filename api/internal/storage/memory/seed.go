@@ -44,7 +44,9 @@ func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string) e
 		if err := t.seedSkills(owner, seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
 			return fmt.Errorf("seed skills: %w", err)
 		}
-		t.spellbooks[owner] = append([]string{}, spellbook...)
+		if len(t.spellbooks[owner]) == 0 { // once, while it has none (as the database's seed)
+			t.spellbooks[owner] = append([]string{}, spellbook...)
+		}
 		return nil
 	})
 }

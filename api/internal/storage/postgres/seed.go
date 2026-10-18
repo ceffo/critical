@@ -18,9 +18,9 @@ import (
 // into an empty characters table. The other seeds are the starting set of the seed character,
 // the character character.json names (seedOwner): its weapons and items only while it has none
 // (once it has some, only the names of weapons and items are reconciled, reconcileName), its
-// skills reconciled by id, its spellbook reconciled by key with spellbook (the spellbook seed's
-// catalogue keys, in order, checked against the catalogue by the caller before anything is
-// written). A character created later starts with nothing. Rows without an owner (stored before
+// skills reconciled by id, its spellbook (spellbook: the spellbook seed's catalogue keys, in
+// order, checked against the catalogue by the caller before anything is written) only while it
+// has none. A character created later starts with nothing. Rows without an owner (stored before
 // each character owned its equipment, or written by the release before during a rolling deploy)
 // are given to the seed character first. A missing character file is ignored. A missing weapons,
 // items or skills file while the seed character has none is an error: its sheet would be empty.
@@ -401,16 +401,23 @@ func seedSkills(ctx context.Context, q storeq.Querier, owner int64, seedPath str
 	return nil
 }
 
-// seedSpellbook reconciles the seed character's spellbook with the spellbook seed by key, as the
-// skills are: a key it lacks is added, a key it has takes the seed's position, an entry the seed
-// no longer lists is kept, and a second run changes nothing. keys were checked against the
-// catalogue by the caller (spellbookadpt.ReadSeed), so only catalogue spells are written.
+// seedSpellbook writes the spellbook seed as the seed character's spellbook, once: only while
+// that character has none, as its weapons and items (spells are then learned and removed in the
+// app, ADR 0030 step 20, never by the seed). keys were checked against the catalogue by the
+// caller (spellbookadpt.ReadSeed), so only catalogue spells are written.
 func seedSpellbook(ctx context.Context, q storeq.Querier, owner int64, keys []string) error {
+	count, err := q.CountSpellbookEntries(ctx, owner)
+	if err != nil {
+		return fmt.Errorf("count spellbook entries: %w", err)
+	}
+	if count > 0 {
+		return nil
+	}
 	for i, k := range keys {
-		if err := q.UpsertSpellbookEntry(ctx, storeq.UpsertSpellbookEntryParams{
+		if err := q.InsertSpellbookEntry(ctx, storeq.InsertSpellbookEntryParams{
 			CharacterID: owner, SpellKey: k, Position: int64(i),
 		}); err != nil {
-			return fmt.Errorf("upsert spellbook entry %q: %w", k, err)
+			return fmt.Errorf("insert spellbook entry %q: %w", k, err)
 		}
 	}
 	return nil

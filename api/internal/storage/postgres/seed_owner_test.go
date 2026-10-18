@@ -153,15 +153,18 @@ func TestSeed_NoSeedCharacter(t *testing.T) {
 	})
 }
 
-// The spellbook seed is reconciled by key, as the skills are: a key the seed character lacks is
-// added, a key it has takes the seed's position, an entry the seed no longer lists is kept.
-func TestSeed_SpellbookReconciledByKey(t *testing.T) {
+// The spellbook seed is applied once, while the seed character has no spellbook, as its weapons
+// and items: a later start writes nothing, whatever the seed now lists (a spell the app removed
+// is not added back, the order stays the stored one).
+func TestSeed_SpellbookAppliedOnce(t *testing.T) {
 	f := newFakeStore()
 	require.NoError(t, seedBookOn(f, repoSeeds(), []string{"alarm", "sleep"}))
 	id := f.t.Characters[0]
 	require.Equal(t, []string{"alarm", "sleep"}, f.spellbookOf(id))
 
-	require.NoError(t, seedBookOn(f, repoSeeds(), []string{"web", "alarm"}))
-	assert.Equal(t, []string{"web", "alarm", "sleep"}, f.spellbookOf(id),
-		"web added first, alarm moved second, sleep kept at its place")
+	delete(f.t.Spellbook, spellbookKey(id, "sleep")) // removed in the app
+	before := copyTables(f.t)
+	require.NoError(t, seedBookOn(f, repoSeeds(), []string{"web", "sleep", "alarm"}))
+	assert.Equal(t, before, f.t, "a second start writes nothing")
+	assert.Equal(t, []string{"alarm"}, f.spellbookOf(id))
 }

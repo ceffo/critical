@@ -168,6 +168,17 @@ func (q *Queries) CountSkills(ctx context.Context, characterID int64) (int64, er
 	return count, err
 }
 
+const countSpellbookEntries = `-- name: CountSpellbookEntries :one
+SELECT COUNT(*) FROM spellbook_entries WHERE character_id = $1
+`
+
+func (q *Queries) CountSpellbookEntries(ctx context.Context, characterID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countSpellbookEntries, characterID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUnowned = `-- name: CountUnowned :one
 SELECT ((SELECT COUNT(*) FROM weapons WHERE character_id IS NULL)
       + (SELECT COUNT(*) FROM items WHERE character_id IS NULL)
@@ -353,6 +364,21 @@ type InsertSpellSlotsParams struct {
 
 func (q *Queries) InsertSpellSlots(ctx context.Context, arg InsertSpellSlotsParams) error {
 	_, err := q.db.ExecContext(ctx, insertSpellSlots, arg.CharacterID, arg.Slots)
+	return err
+}
+
+const insertSpellbookEntry = `-- name: InsertSpellbookEntry :exec
+INSERT INTO spellbook_entries (character_id, spell_key, position) VALUES ($1, $2, $3)
+`
+
+type InsertSpellbookEntryParams struct {
+	CharacterID int64
+	SpellKey    string
+	Position    int64
+}
+
+func (q *Queries) InsertSpellbookEntry(ctx context.Context, arg InsertSpellbookEntryParams) error {
+	_, err := q.db.ExecContext(ctx, insertSpellbookEntry, arg.CharacterID, arg.SpellKey, arg.Position)
 	return err
 }
 
@@ -993,22 +1019,6 @@ func (q *Queries) UpsertSpell(ctx context.Context, arg UpsertSpellParams) error 
 		arg.Components,
 		arg.SavingThrow,
 	)
-	return err
-}
-
-const upsertSpellbookEntry = `-- name: UpsertSpellbookEntry :exec
-INSERT INTO spellbook_entries (character_id, spell_key, position) VALUES ($1, $2, $3)
-ON CONFLICT (character_id, spell_key) DO UPDATE SET position = excluded.position
-`
-
-type UpsertSpellbookEntryParams struct {
-	CharacterID int64
-	SpellKey    string
-	Position    int64
-}
-
-func (q *Queries) UpsertSpellbookEntry(ctx context.Context, arg UpsertSpellbookEntryParams) error {
-	_, err := q.db.ExecContext(ctx, upsertSpellbookEntry, arg.CharacterID, arg.SpellKey, arg.Position)
 	return err
 }
 

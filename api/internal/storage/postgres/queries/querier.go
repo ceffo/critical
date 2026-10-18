@@ -21,6 +21,7 @@ type Querier interface {
 	CountItems(ctx context.Context, characterID int64) (int64, error)
 	CountKeyedSpells(ctx context.Context) (int64, error)
 	CountSkills(ctx context.Context, characterID int64) (int64, error)
+	CountSpellbookEntries(ctx context.Context, characterID int64) (int64, error)
 	// Rows from before each character owned its equipment, or written by the release before during a
 	// rolling deploy, have no owner: the seed gives them to the seed character.
 	CountUnowned(ctx context.Context) (int64, error)
@@ -33,6 +34,7 @@ type Querier interface {
 	InsertItem(ctx context.Context, arg InsertItemParams) error
 	InsertRoundState(ctx context.Context, characterID int64) error
 	InsertSpellSlots(ctx context.Context, arg InsertSpellSlotsParams) error
+	InsertSpellbookEntry(ctx context.Context, arg InsertSpellbookEntryParams) error
 	InsertText(ctx context.Context, arg InsertTextParams) error
 	InsertWeapon(ctx context.Context, arg InsertWeaponParams) error
 	ItemNameKey(ctx context.Context, arg ItemNameKeyParams) (int64, error)
@@ -60,7 +62,6 @@ type Querier interface {
 	UpsertBardSkill(ctx context.Context, arg UpsertBardSkillParams) error
 	UpsertProficiency(ctx context.Context, arg UpsertProficiencyParams) error
 	UpsertSpell(ctx context.Context, arg UpsertSpellParams) error
-	UpsertSpellbookEntry(ctx context.Context, arg UpsertSpellbookEntryParams) error
 	UpsertText(ctx context.Context, arg UpsertTextParams) error
 	WeaponNameKey(ctx context.Context, arg WeaponNameKeyParams) (int64, error)
 }

@@ -91,9 +91,11 @@ ON CONFLICT (character_id, id) DO UPDATE SET position = excluded.position, abili
 INSERT INTO bard_skills (character_id, id, position, percent) VALUES (sqlc.arg(character_id)::bigint, @id, @position, @percent)
 ON CONFLICT (character_id, id) DO UPDATE SET position = excluded.position, percent = excluded.percent;
 
--- name: UpsertSpellbookEntry :exec
-INSERT INTO spellbook_entries (character_id, spell_key, position) VALUES ($1, $2, $3)
-ON CONFLICT (character_id, spell_key) DO UPDATE SET position = excluded.position;
+-- name: CountSpellbookEntries :one
+SELECT COUNT(*) FROM spellbook_entries WHERE character_id = $1;
+
+-- name: InsertSpellbookEntry :exec
+INSERT INTO spellbook_entries (character_id, spell_key, position) VALUES ($1, $2, $3);
 
 -- name: NextTextKey :one
 SELECT (COALESCE(MAX(text_id), 0) + 1)::bigint AS next_key FROM localized_texts;

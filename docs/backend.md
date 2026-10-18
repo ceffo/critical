@@ -383,7 +383,7 @@ The seed files are read and checked by `api/internal/storage/seedfile` (the spel
 At startup, in one transaction (`Seed`): `character.json` only into an empty `characters` table;
 the other files are the starting set of the **seed character** ("Per-character data" below):
 weapons and items only while that character has none (then only their names are reconciled, ADR
-0023 step 10), skills reconciled by id, the spellbook reconciled by key.
+0023 step 10), skills reconciled by id, the spellbook only while that character has none.
 
 ## Per-character data
 
@@ -395,9 +395,10 @@ character's row of the same id is unknown: not found).
 
 - **Seed character**: the character `character.json` names (the lowest id of that name). The seed
   files are its starting set; a character created later starts with nothing. The spellbook seed is
-  reconciled like the skills (a key it lacks is added, a key it has takes the seed's position, an
-  entry the seed no longer lists is kept), so adding a learned spell to `seeds/spellbook.json` still
-  reaches the seed character on the next start.
+  applied once, like the weapons and items: only while the seed character has no spellbook entry
+  (decided 2026-10-18 in review: spells are learned and removed in the app, [ADR 0030](adr/0030-classes-and-races.md)
+  step 20, so a start must never re-add a removed spell or reset the order). Editing
+  `seeds/spellbook.json` afterwards changes nothing for an existing character.
 - **Rows without an owner** (stored before migration 002, or written by the release before during a
   rolling deploy) are given to the seed character at every start, before the seeds are applied:
   existing data keeps every count, position and field, with nothing to run by hand. Rows without an

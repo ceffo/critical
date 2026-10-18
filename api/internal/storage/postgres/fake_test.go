@@ -38,7 +38,7 @@ type tables struct {
 	Profs  map[string]storeq.UpsertProficiencyParams
 	Bard   map[string]storeq.UpsertBardSkillParams
 	// Spellbook is spellbook_entries, by spellbookKey.
-	Spellbook map[string]storeq.UpsertSpellbookEntryParams
+	Spellbook map[string]storeq.InsertSpellbookEntryParams
 	Texts     map[int64]localized.Text
 	Meta      *storeq.CatalogueVersionRow
 	Spells    []spellRow
@@ -83,7 +83,7 @@ func newFakeStore() *fakeStore {
 		Weapons: map[string]storeq.InsertWeaponParams{}, Items: map[string]storeq.InsertItemParams{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
-		Names: map[int64]string{}, Spellbook: map[string]storeq.UpsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -355,16 +355,24 @@ func spellbookKey(characterID int64, spellKey string) string {
 	return fmt.Sprintf("%d|%s", characterID, spellKey)
 }
 
-func (f *fakeStore) UpsertSpellbookEntry(_ context.Context, arg storeq.UpsertSpellbookEntryParams) error {
+func (f *fakeStore) CountSpellbookEntries(_ context.Context, characterID int64) (int64, error) {
+	return count(f.t.Spellbook, func(e storeq.InsertSpellbookEntryParams) bool { return e.CharacterID == characterID }), nil
+}
+
+func (f *fakeStore) InsertSpellbookEntry(_ context.Context, arg storeq.InsertSpellbookEntryParams) error {
 	if err := f.hasCharacter(arg.CharacterID); err != nil {
 		return err
 	}
-	f.t.Spellbook[spellbookKey(arg.CharacterID, arg.SpellKey)] = arg
+	key := spellbookKey(arg.CharacterID, arg.SpellKey)
+	if _, ok := f.t.Spellbook[key]; ok {
+		return fmt.Errorf("duplicate key spellbook_entries %s", key)
+	}
+	f.t.Spellbook[key] = arg
 	return nil
 }
 
 func (f *fakeStore) SpellbookRefs(context.Context) ([]storeq.SpellbookRefsRow, error) {
-	rows := make([]storeq.UpsertSpellbookEntryParams, 0, len(f.t.Spellbook))
+	rows := make([]storeq.InsertSpellbookEntryParams, 0, len(f.t.Spellbook))
 	for _, e := range f.t.Spellbook {
 		rows = append(rows, e)
 	}

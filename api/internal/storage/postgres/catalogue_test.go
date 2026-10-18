@@ -404,7 +404,7 @@ func TestImportCatalogue_Step4_3_DeletesAnUnreferencedRemovedSpell(t *testing.T)
 // plantState writes game state referring to spells in every place step 5.4.3 scans.
 func (f *fakeStore) plantState() {
 	f.t.Characters = append(f.t.Characters, 1)
-	f.t.Spellbook[spellbookKey(1, "burning_hands")] = storeq.UpsertSpellbookEntryParams{CharacterID: 1, SpellKey: "burning_hands"}
+	f.t.Spellbook[spellbookKey(1, "burning_hands")] = storeq.InsertSpellbookEntryParams{CharacterID: 1, SpellKey: "burning_hands"}
 	f.t.Slots[1] = `[{"level":1,"prepared_spell_id":"sleep","prepared_spell_name":"Sleep","used":false},{"level":1,"prepared_spell_name":"","used":false}]`
 	f.t.Buffs[1] = `[{"id":"a","name":"Stoneskin","spell_id":"stoneskin"},{"id":"b","name":"Gem"}]`
 	f.t.Log = []logRow{

@@ -216,7 +216,7 @@ func (d classDTO) present() bool {
 // (a missing one names it); the rules are ruletablesvc.NewClassTables'.
 func (d classDTO) classes() (*ruletablesvc.ClassTables, error) {
 	if m := d.missing(); len(m) > 0 {
-		return nil, fmt.Errorf("format 4 needs the class and race tables, missing: %s", strings.Join(m, ", "))
+		return nil, fmt.Errorf("formats 4 and 5 need the class and race tables, missing: %s", strings.Join(m, ", "))
 	}
 	turning := make([]ruletablesvc.TurningRow, len(d.TurningUndead))
 	for i, r := range d.TurningUndead {

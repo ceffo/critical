@@ -1,6 +1,6 @@
 // Package main is the root-admin script (ADR 0029 step 5.1), run locally by
-// `just root-admin <email>` against a DSN: the local compose database, or
-// staging and production through `fly proxy` (docs/deploy.md).
+// `just root-admin <email>` against a DSN (the local compose database), and in a deployed machine by
+// `just fly-root-admin <app> <email>` (docs/deploy.md).
 package main
 
 import (

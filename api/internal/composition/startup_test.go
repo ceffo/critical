@@ -27,7 +27,9 @@ import (
 // services closes the store once.
 func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	// The seeds' character.json names the owner of rows a migration finds
+	// without one.
+	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds).Return(nil).Once()
 	var book []string
 	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).
 		RunAndReturn(func(_ context.Context, _ string, b []string) error {
@@ -77,20 +79,20 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 		want    string
 	}{
 		{"migrate (the unknown-migration guard's refusal travels this way)", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything).Return(boom).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(boom).Once()
 		}, "migrate: boom"},
 		{"seed", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(boom).Once()
 		}, "seed: boom"},
 		{"no character", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Character.EXPECT().FirstID(mock.Anything).Return(int64(0), boom).Once()
 		}, "resolve character: boom"},
 		{"catalogue import", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "boom"},
@@ -125,7 +127,7 @@ func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, raw, 0o600))
 
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once() // no Seed or ImportCatalogue expectation: a call fails the test
 
 	_, err = h.build(t, composition.Config{SeedsDir: seeds, Catalogue: fixtureCatalogue})
@@ -177,7 +179,7 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 func refusedStart(t *testing.T, cfg composition.Config) error {
 	t.Helper()
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once()
 	_, err := h.build(t, cfg)
 	require.Error(t, err)
@@ -215,7 +217,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3 and 4")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3, 4 and 5")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -272,7 +274,7 @@ func TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable(t *testing
 	}
 }
 
-// ADR 0021 step 10.3: a format-4 artifact missing a class or race table, or
+// ADR 0021 step 10.3: a format-4 or -5 artifact missing a class or race table, or
 // with one that breaks the rules the schema cannot check (a gap in a level
 // band or in the scores, XP not increasing, a code twice), refuses the start,
 // naming the artifact and the table. A format-3 artifact still starts (step
@@ -325,6 +327,40 @@ func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
 	})
 }
 
+// ADR 0021 steps 11.3 and 11.4: a format-5 artifact without its racial level
+// limits, or with limits that break the rules the schema cannot check (a race
+// and class twice), refuses the start, naming the artifact and the table. A
+// format-4 artifact, without them, still starts.
+func TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits(t *testing.T) {
+	tables := func(d map[string]any) map[string]any { return d["rule_tables"].(map[string]any) }
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"the table missing", func(d map[string]any) { delete(tables(d), "race_level_limits") }, "race_level_limits"},
+		{"a race and class twice", func(d map[string]any) {
+			tables(d)["race_level_limits"].([]any)[1].(map[string]any)["class"] = "fighter"
+		}, "rule_tables: race_level_limits table: \"dwarf fighter\" twice"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			artifact := writeArtifact(t, tc.mutate)
+			err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+			require.ErrorContains(t, err, tc.want)
+			require.ErrorContains(t, err, "spell catalogue "+artifact)
+		})
+	}
+
+	t.Run("format 4 still starts", func(t *testing.T) {
+		artifact := writeArtifact(t, func(d map[string]any) {
+			d["format"] = 4
+			delete(tables(d), "race_level_limits")
+		})
+		assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact}))
+	})
+}
+
 // The spellbook seed is checked against the catalogue before anything is
 // written: a spell the catalogue does not hold refuses the start with the seed
 // not run, so no character ever stores it.
@@ -341,7 +377,7 @@ func TestBuild_ASpellbookSeedTheCatalogueRefusesIsRefusedBeforeTheSeed(t *testin
 		[]byte(`[{"id":"magic_rocket","name":"Magic Rocket","level":1}]`), 0o600))
 
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once()
 	cfg := fixtureConfig()
 	cfg.SeedsDir = seeds

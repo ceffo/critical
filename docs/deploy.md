@@ -88,7 +88,7 @@ payment method is the user's decision only.
 **It stops when idle.** The cluster scales to zero (configured before this app used it): its machine
 stops with no connection and starts on the next one through `tournesol-db.flycast`, so the first
 request after an idle period waits a few seconds for PostgreSQL. Idle means no open connection for an
-hour (`FLY_SCALE_TO_ZERO=1h` on its machine): the app's pool closes connections unused for 5 minutes, so
+hour (`FLY_SCALE_TO_ZERO=1h` on its machine): the app's pool closes connections unused for 30 seconds, so
 quiet apps let it stop, and a server booting or a request arriving while it starts waits for it (up
 to 60 s per new connection) instead of failing (`docs/backend.md`, "Database"). Checked on staging, 2026-10-16: with the cluster
 stopped, a booting server got `EOF` twice, the connection started the cluster (event source `proxy` in
@@ -439,14 +439,18 @@ session cookie is named after the public URL's host and port (`critical_session_
 `http://localhost:<port>/api/auth/google/start` to log in; the callback brings the browser back to the app.
 
 **Root admin.** Only invited emails and the root admin can log in, and invites come with the admin
-section. Set the root admin once per database with the script (ADR 0029 step 5.1), through the
-database proxy ("Reaching a database"), after the release with the login has started once (its
-migration creates the tables):
+section. Set the root admin once per database with the script (ADR 0029 step 5.1), after the release with the
+login has started once (its migration creates the tables). One command per app:
 
 ```bash
-just fly-db-proxy tournesol-db                     # prints the local port; leave it running
-CRITICAL_DSN='postgres://critical_<env>:<password>@localhost:<port>/critical_<env>?sslmode=disable' just root-admin <your Google email>
+just fly-root-admin critical-staging <your Google email>
+just fly-root-admin critical-prod <your Google email>
 ```
+
+It runs the image's `/app/critical-rootadmin` inside the app's machine (`fly ssh console`), so it uses the
+machine's own `CRITICAL_DSN` secret: the DSN never reaches your machine and nothing is pasted. When no
+machine is running (staging stops when idle) it starts one first. (`just root-admin <email>` is the local
+form, on `CRITICAL_DSN` or the `just dev` database.)
 
 It creates the user as an admin with no Google account; your first Google login with that email binds
 it. A rerun with the same email changes nothing. With another email it refuses once the root has logged

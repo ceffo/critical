@@ -341,8 +341,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     - backstab multipliers (Table 30);
     - turning undead (Table 61);
     - races: ability requirements (Table 7), adjustments (Table 8), classes allowed (PHB chapter 2,
-      as class codes) and level limits (DMG Table 7; the rulebooks copy of this table is an
-      unverified OCR and must be hand-checked before it is shipped); each race's trait texts, one
+      as class codes) and level limits (DMG Table 7, hand-checked from the page image and shipped
+      by format 5, [ADR 0021](0021-spell-catalogue.md) step 11); each race's trait texts, one
       row per language ([ADR 0023](0023-localized-text.md));
     - each priest spell's spheres as **language-neutral codes** (e.g. `all`, `combat`,
       `elemental_fire`, `thought`), beside the localized sphere text the catalogue already carries

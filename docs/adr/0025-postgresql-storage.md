@@ -72,6 +72,29 @@ flowchart TD
       statements only copy rows while rebuilding a table; nothing is lost by dropping them. Data
       comes from the seeds and the catalogue import at boot ([ADR 0021](0021-spell-catalogue.md)
       step 5) and, for existing data, from the copy tool of step 9.
+      1. **Data steps** (_added 2026-10-17, decided by the supervisor for the per-character keys
+         contract migration; the user approves ADR changes at merge_). A schema change that existing
+         rows would refuse (a `NOT NULL`, a stricter key) may need those rows fixed first. That fix
+         is a **data step**: Go code the migration run executes just before that migration.
+         1. It runs on the migration run's own transaction, after the writer lock (step 3.1): one
+            commit or rollback for the step and the migration together, and no write by another
+            machine slips in between.
+         2. It runs only while its migration is pending. A database that already records the
+            migration never runs it, and a fresh database finds nothing to fix.
+         3. It only corrects rows already stored (e.g. gives an owner to rows without one). It never
+            inserts seed or catalogue data: that stays the seeds' and the import's job at boot.
+         4. Its queries are sqlc queries, type-checked against the **latest** schema while they run
+            on the schema as it is just before their migration. A later migration that drops or
+            changes a column they read or write breaks the step for a database still before it. Such
+            a migration deletes the step and its queries instead, which is allowed once every
+            environment is past the step's migration (local dev databases included, or told to
+            reset). The step and its queries may be deleted at the same point even when nothing
+            forces it.
+         5. Today: the owners given to unowned weapons, items, proficiencies and bard skills before
+            migration 004 (`storage/postgres` `ownRows`; `docs/backend.md`, "Per-character data").
+            Tests: `TestMigrate_ADataStepRunsJustBeforeItsPendingMigration`,
+            `TestMigrationDataSteps_NameEmbeddedMigrations`,
+            `TestMigrate_RowsWithoutOwnerAreOwnedBeforeTheOwnerKeys`.
    2. Migrations after the baseline are new files only, never an edited applied one, and are
       schema-only too.
    3. The per-migration SQLite tests are deleted with the squash. An ADR that cites one of them

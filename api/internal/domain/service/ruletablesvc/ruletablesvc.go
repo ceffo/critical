@@ -76,6 +76,9 @@ type Tables struct {
 	// classes are the class and race tables of a format-4 catalogue (ADR
 	// 0021 step 10); nil for a format-3 one.
 	classes *ClassTables
+	// levelLimits are the racial level limits of a format-5 catalogue (ADR
+	// 0021 step 11); nil for a format-3 or format-4 one.
+	levelLimits *LevelLimits
 }
 
 var _ Lookup = (*Tables)(nil)
@@ -204,6 +207,19 @@ func (t *Tables) WithClasses(c *ClassTables) *Tables {
 	out := *t
 	out.classes = c
 	return &out
+}
+
+// WithLevelLimits returns a copy of t carrying the racial level limits.
+func (t *Tables) WithLevelLimits(l *LevelLimits) *Tables {
+	out := *t
+	out.levelLimits = l
+	return &out
+}
+
+// LevelLimits returns the racial level limits (DMG Table 7, ADR 0021 step
+// 11), false when the catalogue is format 3 or 4 and carries none.
+func (t *Tables) LevelLimits() (*LevelLimits, bool) {
+	return t.levelLimits, t.levelLimits != nil
 }
 
 // Classes returns the class and race tables (ADR 0030 step 23), false when

@@ -123,7 +123,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 // through the ports of st, so tests drive it with mocks.
 func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error) {
 	db := st.Store
-	if err := db.Migrate(ctx); err != nil {
+	if err := db.Migrate(ctx, cfg.SeedsDir); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}

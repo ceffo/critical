@@ -134,6 +134,13 @@ refuse_out="$(timeout 60 docker run --rm --network "$name" \
 [[ "$refuse_out" == *"CRITICAL_ENV=dev"* ]] || fail "the refusal does not name CRITICAL_ENV=dev: $refuse_out"
 echo "image-smoke: without OAuth settings nor CRITICAL_ENV=dev the image refuses to start: $refuse_out"
 
+# The root-admin script (run in a machine by scripts/fly-root-admin.sh) sets the root with the machine's own
+# CRITICAL_DSN, is idempotent, and prints no DSN.
+ra_out="$(docker exec "$name" /app/critical-rootadmin smoke-root@example.com 2>&1)" || fail "root-admin: $ra_out"
+ra_again="$(docker exec "$name" /app/critical-rootadmin smoke-root@example.com 2>&1)" || fail "root-admin rerun: $ra_again"
+[[ "$ra_out$ra_again" != *critical:critical* ]] || fail "root-admin printed the DSN"
+echo "image-smoke: root-admin: $ra_out"
+
 uid="$(docker exec "$name" id -u)"
 [ "$uid" != 0 ] || fail "the server runs as root"
 docker inspect -f '{{json .Config.Healthcheck.Test}}' "$name" | grep -q '/api/health' ||

@@ -4,7 +4,7 @@
 
 - **Language**: Go (latest stable)
 - **HTTP**: standard `net/http` or `chi` router
-- **Database**: PostgreSQL ([ADR 0025](adr/0025-postgresql-storage.md)) through `database/sql` and the `github.com/lib/pq` driver (sqlc's `database/sql` output binds arrays with `pq.Array`). `storage/postgres.Open` opens the pool from `CRITICAL_DSN` (a PostgreSQL URL or connection string) and every new connection of its pool, the first one at boot included, waits up to 60 s for a database that is stopped or starting, retrying exactly SQLSTATE 57P03 ("starting up"), EOF during the handshake (what Flycast answers while the cluster starts) and network errors (refused, reset, timeout) except a DNS name that does not exist; everything else fails at once: any other PostgreSQL error (wrong password, missing database), an unknown host, `pq.ErrSSLNotSupported` (sslmode=require without TLS), TLS and certificate errors, any other driver error (`retryable` in `postgres.go`); a SIGINT/SIGTERM during the boot's wait stops the server at once; the pool closes a connection idle for 5 minutes, so it never holds the fly cluster awake nor reuses a connection across the cluster's idle stop; in development it is the docker compose service `postgres` ("Development database" below), on fly the cluster of [ADR 0024](adr/0024-deployment.md) step 2. The server binary links no SQLite driver (`just check-no-sqlite`, part of `just validate`).
+- **Database**: PostgreSQL ([ADR 0025](adr/0025-postgresql-storage.md)) through `database/sql` and the `github.com/lib/pq` driver (sqlc's `database/sql` output binds arrays with `pq.Array`). `storage/postgres.Open` opens the pool from `CRITICAL_DSN` (a PostgreSQL URL or connection string) and every new connection of its pool, the first one at boot included, waits up to 60 s for a database that is stopped or starting, retrying exactly SQLSTATE 57P03 ("starting up"), EOF during the handshake (what Flycast answers while the cluster starts) and network errors (refused, reset, timeout) except a DNS name that does not exist; everything else fails at once: any other PostgreSQL error (wrong password, missing database), an unknown host, `pq.ErrSSLNotSupported` (sslmode=require without TLS), TLS and certificate errors, any other driver error (`retryable` in `postgres.go`); a SIGINT/SIGTERM during the boot's wait stops the server at once; the pool holds at most 4 connections per server, keeps 1 idle and closes a connection idle for 30 seconds (the shared fly node has 256 MB), so it never holds the fly cluster awake nor reuses a connection across the cluster's idle stop; in development it is the docker compose service `postgres` ("Development database" below), on fly the cluster of [ADR 0024](adr/0024-deployment.md) step 2. The server binary links no SQLite driver (`just check-no-sqlite`, part of `just validate`).
 - **Writer lock**: every write transaction (`InTx`) runs at READ COMMITTED and takes one transaction-level advisory lock (`pg_advisory_xact_lock`, one fixed key; the sqlc query `LockWriters`) as its first statement ([ADR 0025](adr/0025-postgresql-storage.md) step 4). A second writer waits until the first commits or rolls back, then reads its result, so the action stack's stale expected top is refused as a normal 409, never a 500. The commit or the rollback releases the lock; nothing else does. A stricter isolation level would break this (the snapshot would predate the lock). Write paths must go through a transaction, never read-then-write on the bare pool; reads outside a transaction take no lock.
 - **Migrations**: simple sequential SQL files, applied at startup and recorded in `schema_migrations`
   ("Migrations at startup" below)
@@ -143,6 +143,11 @@ one statement list (no parameters), so it may hold several statements; DDL is tr
 `BIGINT` integers, `TIMESTAMPTZ` timestamps; 0/1 flags and JSON stay checked `BIGINT` and `TEXT`
 (the file says why). Migrations are schema only (no `INSERT`, `UPDATE` or `DELETE`,
 `TestMigrations_Step2_1_SchemaOnly`) and new files only: never rename, edit or delete an applied one.
+Data a schema change needs first (rows a `NOT NULL` would refuse) is a **data step**: Go code the run
+executes on its transaction just before that migration, only when the migration is pending
+(`migrationDataSteps`; today the owners before migration 004, "Per-character data"). Its rules,
+including when a step and its queries may be deleted, are [ADR 0025](adr/0025-postgresql-storage.md)
+step 2.1.1.
 
 Before applying anything it refuses a database that records a migration the binary does not embed
 ([ADR 0024](adr/0024-deployment.md) step 6.2): the server exits with
@@ -453,11 +458,15 @@ character's row of the same id is unknown: not found).
   (decided 2026-10-18 in review: spells are learned and removed in the app, [ADR 0030](adr/0030-classes-and-races.md)
   step 20, so a start must never re-add a removed spell or reset the order). Editing
   `seeds/spellbook.json` afterwards changes nothing for an existing character.
-- **Rows without an owner** (stored before migration 002, or written by the release before during a
-  rolling deploy) are given to the seed character at every start, before the seeds are applied:
-  existing data keeps every count, position and field, with nothing to run by hand. Rows without an
-  owner and no seed character (the name in `character.json` changed) refuse the start, rather than
-  belong to no one.
+- **Every row has an owner** (migration 004): `character_id` is `NOT NULL` and the primary keys are
+  `(character_id, id)`, so two characters may hold the same weapon, item or skill id. Rows without an
+  owner (stored before migration 002, or written by a release without it during a rolling deploy)
+  are given to the seed character by the migration run itself, just before migration 004, in the
+  same transaction (`ownRows`, a data step of `Migrate`, ADR 0025 step 2.1.1): existing data keeps
+  every count, position and field, with nothing to run by hand, and a
+  database that gets 002 and 004 in one run (one upgraded from a release before 002) starts.
+  Rows without an owner and no seed character (the name in `character.json` changed) refuse the
+  start, rather than belong to no one; nothing is migrated.
 - **Catalogue check at write time**: the spellbook seed is checked against the catalogue (a Wizard
   spell, its English name and level, each once) before the seed writes anything, so `Build` loads
   the catalogue artifact and checks the seeds before it seeds. Reading a spellbook names each entry
@@ -465,12 +474,13 @@ character's row of the same id is unknown: not found).
   holds (`StateSpellRefs`, ADR 0021 step 5.4.3).
 - **Undo**: snapshot keys stay `items:<id>` and `weapons:<id>`; a restorer writes the row of the
   popped entry's character (the `characterID` every `Restorer` receives).
-- **Expand now, contract later** (the migrations are additive across a rolling deploy, ADR 0024 step
-  5.2): migration 002 adds `character_id` nullable, with a unique index on `(character_id, id)`,
-  and keeps the single-column primary keys the release before still upserts on. Until a later
-  migration makes `character_id NOT NULL` and the primary keys `(character_id, id)` (once no release
-  without the column runs), an item, weapon or skill id is unique across characters in the
-  database; the in-memory store already keys them per character.
+- **Expand, then contract** (the migrations are additive across a rolling deploy, ADR 0024 step
+  5.2): migration 002 added `character_id` nullable, with a unique index on `(character_id, id)`,
+  and kept the single-column primary keys the release before still upserted on. Migration 004 is
+  the contract step: `NOT NULL`, and the 002 indexes become the primary keys. During its rolling
+  deploy a release with 002 keeps working (it always writes the owner and upserts on
+  `(character_id, id)`); a release from before 002 fails only its inserts of weapons and items (no
+  owner) for the minutes both run. The in-memory store keys these rows per character too.
 
 ## Spell catalogue
 
@@ -484,13 +494,15 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   the repo root (the nearest directory above the working directory with a `.git` entry; outside a checkout,
   against the working directory). A missing file stops the API with a message naming the path and
   `just catalogue`.
-- **Formats**: the API reads formats 3 (spells and the PHB rule tables, ADR 0021 step 9) and 4 (format 3
-  plus the class and race tables, step 10); any other, the retired format 1 included, is refused, naming it
-  and `just catalogue`. Format 3 is read until the published artifact and the dev checkouts are format 4
-  (step 10.4). See "Rule tables" below.
-- **Without access**: `api/testdata/catalogue.json` is a small fixture, format 4, with invented text
+- **Formats**: the API reads formats 3 (spells and the PHB rule tables, ADR 0021 step 9), 4 (format 3
+  plus the class and race tables, step 10) and 5 (format 4 plus the racial level limits of DMG Table 7,
+  step 11); any other, the retired format 1 included, is refused, naming it and `just catalogue`. Formats 3
+  and 4 are read until the published artifact and the dev checkouts are format 5 (steps 10.4 and 11.4). See
+  "Rule tables" below.
+- **Without access**: `api/testdata/catalogue.json` is a small fixture, format 5, with invented text
   (every spell the `api/testdata/seeds` spellbook and spell effects use, some with French, one list, one
-  table) and the PHB's real rule-table and class-table numbers (ADR 0021 steps 9.7 and 10.5). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
+  table) and the books' real rule-table, class-table and level-limit numbers (ADR 0021 steps 9.7, 10.5 and
+  11.5). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
   own database `critical_fixture`, when `.catalogue/catalogue.json` is absent (the campaign seeds refer to
   spells only the real artifact holds). The database `critical` is only ever opened with the real catalogue.
 - **Seed checks**: the spellbook seed and every `spell_effects.json` id are checked against the catalogue at
@@ -617,6 +629,13 @@ parser reads them at every start into `ruletablesvc.ClassTables` (`Tables.Classe
 artifact), validated by `ruletablesvc.NewClassTables`: a missing table, a gap in a level band or in the
 scores, XP not increasing or a code twice is a startup error naming the table. The derivations that use
 them (level, THAC0, saves, slots, skills) are ADR 0030's items.
+
+A format-5 artifact adds the **racial level limits** of DMG Table 7 (ADR 0021 step 11, `race_level_limits`):
+one row per race and class, read into `ruletablesvc.LevelLimits` (`Tables.LevelLimits()`; false for a format-3
+or format-4 artifact) and validated by `ruletablesvc.NewLevelLimits` (each race and class once, a level within
+0 to 20). `LevelLimits.Limit(race, class)` gives the cell: `MaxLevel`, `Unlimited` (the book's U) or neither
+(the book's dash: the race cannot belong to the class); a human has no row. Shown on the race card, never
+enforced (ADR 0030 step 21).
 
 ## In-memory storage (e2e mode)
 

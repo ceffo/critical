@@ -629,7 +629,9 @@ export function skillCheckPayload(e: LogEntry): SkillCheck | null {
     typeof p.roll === "number" &&
     typeof p.target === "number" &&
     typeof p.success === "boolean" &&
-    (p.kind === "proficiency" || p.kind === "bardSkill")
+    (p.kind === "proficiency" ||
+      p.kind === "bardSkill" ||
+      p.kind === "thiefSkill")
     ? (p as SkillCheck)
     : null;
 }

@@ -346,7 +346,9 @@
       "l": "L",
       "bonus": "to hit / dmg",
       "thac0": "THAC0"
-    }
+    },
+    "backstab": "Backstab ×{{n}}",
+    "backstabHint": "Backstab: +4 to hit, the weapon’s damage dice ×{{n}}"
   },
   "saves": {
     "title": "Saving Throws",
@@ -1034,7 +1036,8 @@
       "critPlaceholder": "Critical hit (placeholder)",
       "race": "{{race}} (race)",
       "specialization": "Specialization",
-      "point_blank": "Point blank"
+      "point_blank": "Point blank",
+      "backstab": "Backstab"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -1524,7 +1527,8 @@
       "bard": "Bard",
       "cleric": "Cleric",
       "fighter": "Fighter",
-      "mage": "Mage"
+      "mage": "Mage",
+      "thief": "Thief"
     },
     "language": {
       "elfique": "Elvish",
@@ -1608,7 +1612,17 @@
       "climb_walls": "Climb walls",
       "detect_noise": "Detect noise",
       "pick_pockets": "Pick pockets",
-      "read_languages": "Read languages"
+      "read_languages": "Read languages",
+      "open_locks": "Open Locks",
+      "find_remove_traps": "Find/Remove Traps",
+      "move_silently": "Move Silently",
+      "hide_in_shadows": "Hide in Shadows"
+    },
+    "thiefSkills": "Thief skills",
+    "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dexterity {{dexterity}}, armour {{armor}} (95% at most)",
+    "budget": {
+      "skill_points_total": "Skill points: {{points}} in all, at most {{limit}} at this level",
+      "skill_points_per_skill": "{{name}}: {{points}} points, at most {{limit}} at this level"
     }
   },
   "dice": {
@@ -1826,6 +1840,15 @@
       "unknown": "Pick one of the six races.",
       "race_not_allowed": "This race cannot be a {{className}}.",
       "not_allowed": "No exceptional strength for this character: only a warrior with Strength 18, not a halfling."
+    },
+    "skillPoints": "Thief skills",
+    "skillPointsLead": "The points spent in each skill; the server adds the base, race, Dexterity and armour.",
+    "skillArmor": "Armour worn",
+    "armors": {
+      "none": "None",
+      "leather": "Leather",
+      "padded_studded_leather": "Padded or studded leather",
+      "elven_chain": "Elven chain"
     }
   },
   "turning": {

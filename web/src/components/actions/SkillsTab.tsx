@@ -3,13 +3,21 @@ import { useTranslation } from "react-i18next";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
+import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/lib/logSummary";
 import { formatSigned } from "@/lib/format";
 import type { SkillKind } from "@/types/skills";
 
+const HEADINGS: Record<SkillKind, string> = {
+  proficiency: "skills.proficiencies",
+  bardSkill: "skills.bardSkills",
+  thiefSkill: "skills.thiefSkills",
+};
+
 /**
  * Skills tab of the Act panel (ADR 0014; layout ADR 0027 step 12): the non-weapon proficiencies
- * (d20 at or under the target) and the bard skills (d100 at or under the percentage), side by side
+ * (d20 at or under the target) and the bard or thief skills (d100 at or under the percentage; a
+ * thief's computed by the server, ADR 0030 step 17, with a budget warning), side by side
  * when the panel holds two 16rem columns, stacked otherwise. Each row is one button that rolls the
  * check on the server; a proficiency shows its ability with the modifier as a pill, a bard skill its
  * percentage. The target, the verdict and the DM's adjustment are on the result card, after the
@@ -21,6 +29,7 @@ export function SkillsTab() {
   const fetchSkills = useSkillsStore((s) => s.fetchSkills);
   const { rollSkill, rolling } = useRollStore();
   const logEntries = useLogStore((s) => s.entries);
+  const budget = useCharacterStore((s) => s.character?.derived.skillBudget);
   // A check, an undo or an effect (any new log state) can change the abilities in effect.
   useEffect(() => {
     void fetchSkills();
@@ -28,9 +37,7 @@ export function SkillsTab() {
 
   if (!skills) return null;
   const rows = (kind: SkillKind, list: { id: string; value: ReactNode }[]) => {
-    const label = t(
-      kind === "proficiency" ? "skills.proficiencies" : "skills.bardSkills",
-    );
+    const label = t(HEADINGS[kind]);
     const id = `skills-${kind}`;
     return (
       <section aria-labelledby={id} className="flex min-w-0 flex-col gap-2">
@@ -81,16 +88,59 @@ export function SkillsTab() {
           ),
         })),
       )}
-      {rows(
-        "bardSkill",
-        skills.bardSkills.map((b) => ({
-          id: b.id,
-          value: (
-            <span className="text-right font-semibold whitespace-nowrap tabular-nums">
-              {t("skills.percent", { value: b.percent })}
-            </span>
-          ),
-        })),
+      {(skills.bardSkills.length > 0 || skills.thiefSkills.length === 0) &&
+        rows(
+          "bardSkill",
+          skills.bardSkills.map((b) => ({
+            id: b.id,
+            value: (
+              <span className="text-right font-semibold whitespace-nowrap tabular-nums">
+                {t("skills.percent", { value: b.percent })}
+              </span>
+            ),
+          })),
+        )}
+      {skills.thiefSkills.length > 0 && (
+        <div className="flex min-w-0 flex-col gap-2">
+          {rows(
+            "thiefSkill",
+            // ADR 0030 step 17: the server's percentage; its terms in the tooltip.
+            skills.thiefSkills.map((s) => ({
+              id: s.id,
+              value: (
+                <span
+                  className="text-right font-semibold whitespace-nowrap tabular-nums"
+                  title={t("skills.thiefTerms", {
+                    base: s.base,
+                    points: s.points,
+                    race: formatSigned(s.race),
+                    dexterity: formatSigned(s.dexterity),
+                    armor: formatSigned(s.armor),
+                  })}
+                  data-testid={`thief-percent-${s.id}`}
+                >
+                  {t("skills.percent", { value: s.percent })}
+                </span>
+              ),
+            })),
+          )}
+          {budget && budget.length > 0 && (
+            <ul
+              className="flex flex-col gap-1 px-2.5 text-body text-warning"
+              data-testid="skill-budget"
+            >
+              {budget.map((w) => (
+                <li key={w.code + (w.skill ?? "")} className="break-words">
+                  {t(`skills.budget.${w.code}`, {
+                    name: w.skill ? skillName(t, w.skill) : "",
+                    points: w.points,
+                    limit: w.limit,
+                  })}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );

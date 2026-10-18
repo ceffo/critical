@@ -160,6 +160,77 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   await snap(page, "fighter-attack-fr");
 });
 
+// The thief (ADR 0030 steps 1, 17 and 19), what only a browser proves: the skill points and armour
+// fields of the creation form reaching the server, the Skills tab showing the server's percentages,
+// a skill roll's result card, and the attack card's backstab option reaching the roll's breakdown.
+// The rules (Tables 26 to 30, the cap, the budget, the refusals, the dice counts) are Go tests
+// (ruletablesadpt, charactersvc, skillsvc, combatsvc, composition thief_test.go).
+test("create a thief, roll a skill, backstab", async ({ page }) => {
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const settings = await openSettings(page);
+  await settings
+    .getByRole("button", { name: "Créer un nouveau personnage" })
+    .click();
+  const form = page
+    .getByTestId("character-dialog")
+    .getByTestId("character-form");
+  await form.getByLabel("Nom").fill("Vex");
+  await form.getByLabel("Classe").selectOption({ label: "Voleur" });
+  await form.getByLabel("Race").selectOption({ label: "Petite-gens" });
+  for (const [ability, score] of [
+    ["FOR", "16"],
+    ["DEX", "17"],
+    ["CON", "12"],
+    ["INT", "11"],
+    ["SAG", "9"],
+    ["CHA", "10"],
+  ])
+    await form.getByLabel(ability, { exact: true }).fill(score);
+  await form.getByLabel("Armure portée").selectOption({ label: "Aucune" });
+  await form.getByLabel("Crochetage").fill("30");
+  await form.getByLabel("Vol à la tire").fill("30");
+  await form.getByLabel("PV max").fill("5");
+  await snap(page, "new-thief-form-fr");
+  await form
+    .getByRole("button", { name: "Créer ce personnage et le jouer" })
+    .click();
+  await expect(page.getByTestId("character")).toContainText("Vex");
+
+  // 10 + 30 + 5 (halfling) + 10 (Dexterity 17) + 0 (no armour) = 55, the server's.
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("55 %");
+  await page.getByTestId("skill-open_locks").click();
+  await expect(
+    page.getByTestId("skill-result").getByTestId("skill-vs"),
+  ).toHaveText(/^\d+ contre 55\u00a0%$/);
+
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Inventory");
+  await page.getByRole("button", { name: "Add weapon" }).click();
+  const wf = page.getByTestId("weapon-form");
+  await wf.getByLabel("Name").fill("Dagger");
+  await wf.getByLabel("Damage S-M").fill("1d4");
+  await wf.getByLabel("Damage Large").fill("1d3");
+  await wf.getByRole("button", { name: "Add", exact: true }).click();
+  await openWorkspace(page, "Act");
+  await openWeapons(page);
+  const f = attackForm(page);
+  await f.getByTestId("backstab").check();
+  await f.getByLabel("Target AC").fill("-10");
+  await f.getByRole("button", { name: "Attack", exact: true }).click();
+  const result = page
+    .getByRole("region", { name: "Detail", exact: true })
+    .getByTestId("attack-result");
+  await expect(result).toContainText("Backstab");
+  await expect(f.getByTestId("backstab")).not.toBeChecked();
+  await chooseLanguage(page, "fr");
+  await snap(page, "thief-backstab-fr");
+});
+
 // The mage (ADR 0030 steps 8 and 20), what only a browser proves: the class in the creation form,
 // the lookup's Learn button reaching the server's roll and its answer on screen, the learned spell
 // in the preparation editor, then its Cast button. The rules (Table 4's refusals and chance, the

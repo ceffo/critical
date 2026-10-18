@@ -2467,3 +2467,105 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
   }
   await page.unroute("**/api/spells/*/cast");
 });
+
+// The thief's screens (ADR 0030 steps 1, 17 and 19) uncut in French at 1280x800 and 2560x1440: the
+// creation form's skill points and armour fields, the Skills tab's thieving skills with the
+// budget warnings (70 points at 1st, 40 in one skill: both breached) and the attack card's backstab
+// option.
+test("thief: creation fields, thieving skills with the budget warnings and backstab uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const settings = await openSettings(page);
+  await settings
+    .getByRole("button", { name: "Créer un nouveau personnage" })
+    .click();
+  const form = page
+    .getByTestId("character-dialog")
+    .getByTestId("character-form");
+  await form.getByLabel("Classe").selectOption({ label: "Voleur" });
+  const entry = form.getByTestId("thief-skills-entry");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(entry, `thief creation fields, fr, ${where}`);
+    await snap(page, `thief-form-fr-${where}`);
+  }
+  await page.keyboard.press("Escape");
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const call = (method: string, url: string, body: unknown) =>
+    page.evaluate(
+      async ([m, u, b]) => {
+        const r = await fetch(u as string, {
+          method: m as string,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(b),
+        });
+        return r.ok || `${r.status} ${await r.text()}`;
+      },
+      [method, url, body] as const,
+    );
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Vex Main-Légère de la Basse-Ville",
+      class: "thief",
+      raceCode: "halfling",
+      str: 16,
+      dex: 17,
+      con: 12,
+      int: 11,
+      wis: 9,
+      cha: 10,
+      hpMax: 5,
+      xp: 0,
+      skillArmor: "padded_studded_leather",
+      skillPoints: { find_remove_traps: 40, hide_in_shadows: 30 },
+    }),
+  ).toBe(true);
+  expect(
+    await call("POST", "/api/weapons", {
+      name: { en: "Dagger", fr: "Dague" },
+      damage_sm: "1d4",
+      damage_l: "1d3",
+      kind: "melee",
+      weapon_type: "dagger",
+    }),
+  ).toBe(true);
+  await page.reload();
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  const skills = page.getByTestId("skills-blocks");
+  await expect(page.getByTestId("skill-budget")).toContainText("70 au total");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(skills, `thieving skills, fr, ${where}`);
+    await snap(page, `thief-skills-fr-${where}`);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole("tab", { name: "Armes" }).click();
+  const f = page.getByRole("form", { name: "Attaque" });
+  await f.getByTestId("backstab").check();
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(f, `backstab attack card, fr, ${where}`);
+    await snap(page, `thief-backstab-card-fr-${where}`);
+  }
+});

@@ -5,7 +5,7 @@
 
 export type Ability = "str" | "dex" | "con" | "int" | "wis" | "cha";
 
-export type SkillKind = "proficiency" | "bardSkill";
+export type SkillKind = "proficiency" | "bardSkill" | "thiefSkill";
 
 /** The newest non-voided check of a skill, with the adjustment and verdict in effect. */
 export interface LastCheck {
@@ -35,9 +35,23 @@ export interface BardSkill {
   last: LastCheck | null;
 }
 
+/** A thieving skill (ADR 0030 step 17): percent = base + points + race + dexterity + armor,
+ * capped at 95 and floored at 0, computed by the server. */
+export interface ThiefSkill {
+  id: string;
+  base: number;
+  points: number;
+  race: number;
+  dexterity: number;
+  armor: number;
+  percent: number;
+  last: LastCheck | null;
+}
+
 export interface Skills {
   proficiencies: Proficiency[];
   bardSkills: BardSkill[];
+  thiefSkills: ThiefSkill[];
 }
 
 /** One check as POST /api/roll/skill/{id} and POST /api/roll/skill/{id}/adjust return it, and the

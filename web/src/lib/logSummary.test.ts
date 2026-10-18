@@ -1269,6 +1269,21 @@ describe("entryText for skill checks", () => {
     );
   });
 
+  it("words a thief skill check (ADR 0030 step 17) like a bard skill's (fr)", async () => {
+    const fr = await makeT("fr");
+    const thief = {
+      ...bard,
+      id: "open_locks",
+      kind: "thiefSkill",
+      roll: 40,
+      target: 55,
+      success: true,
+    };
+    expect(entryText(entry("skill_check", thief, ""), fr)).toBe(
+      "Crochetage : d100 40 contre 55, réussi",
+    );
+  });
+
   it("words an adjusted check: adjusted target, original target, adjustment and reason (en, fr)", async () => {
     const en = await makeT("en");
     const fr = await makeT("fr");

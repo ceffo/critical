@@ -15,7 +15,8 @@ export type ModifierKind =
   | "race"
   | "crit"
   | "specialization"
-  | "point_blank";
+  | "point_blank"
+  | "backstab";
 
 export interface Modifier {
   kind: ModifierKind;
@@ -152,6 +153,8 @@ export interface AttackRequest {
   situational?: { value: number; label: string };
   /** A specialized launcher's point-blank option (ADR 0030 step 12); refused for another weapon. */
   point_blank?: boolean;
+  /** A thief's backstab (ADR 0030 step 19); refused for another class. */
+  backstab?: boolean;
 }
 
 /** The attack form's last choices, kept on the server (combathdl AttackFormDTO). */
@@ -190,6 +193,8 @@ export interface AttackPreview {
   damageBonus: number;
   /** The same preview with the point-blank option (ADR 0030 step 12); absent when not offered. */
   pointBlank?: AttackPreview;
+  /** The same preview with the backstab option (ADR 0030 step 19); absent for another class. */
+  backstab?: AttackPreview;
 }
 
 /** The weapon in hand's attacks per round (ADR 0030 step 11): `attacks` every `rounds` rounds. */

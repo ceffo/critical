@@ -39,9 +39,10 @@ check-no-sqlite:
     fi
     echo "--- No SQLite in the server ---"
 
-# scripts/linear.sh (Linear GraphQL helper) and scripts/linear-setup.sh against a local stub server; no real Linear call.
+# scripts/linear.sh (Linear GraphQL helper), scripts/linear-setup.sh and the supervisor's Linear scripts (.claude/scripts) against a local stub server; no real Linear call.
 check-linear:
     scripts/test-linear.sh
+    scripts/test-ship-linear.sh
 
 # The CI slow-job skip rule (scripts/test-ci-skip-slow.sh): docs-only paths and the ci-skip label.
 check-ci-skip:

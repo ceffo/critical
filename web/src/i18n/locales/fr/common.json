@@ -1525,6 +1525,7 @@
   },
   "apiError": {
     "character_not_found": "Ce personnage n'existe plus.",
+    "no_character": "Vous n'avez pas encore de personnage : créez le premier.",
     "weapon_not_found": "Cette arme n'existe plus.",
     "item_not_found": "Cet objet n'existe plus.",
     "item_empty": "Cet objet est vide.",

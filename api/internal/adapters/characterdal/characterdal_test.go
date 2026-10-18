@@ -8,7 +8,9 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
@@ -24,7 +26,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
 
-	q.EXPECT().GetCharacter(ctx, int64(3)).Return(queries.Character{
+	q.EXPECT().GetCharacter(ctx, int64(3)).Return(queries.GetCharacterRow{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
 		HpMax: 42, Thac0Base: 16, Level: 5, XpTotal: 1200,
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
@@ -51,13 +53,9 @@ func TestNotFound_IsErrCharacterNotFound(t *testing.T) {
 	q := mocks.NewMockQuerier(t)
 	dal := characterdal.New(q)
 
-	q.EXPECT().GetCharacter(ctx, int64(9)).Return(queries.Character{}, sql.ErrNoRows).Once()
+	q.EXPECT().GetCharacter(ctx, int64(9)).Return(queries.GetCharacterRow{}, sql.ErrNoRows).Once()
 	got, err := dal.GetCharacter(ctx, 9)
 	assert.Nil(t, got)
-	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
-
-	q.EXPECT().GetFirstCharacterID(ctx).Return(0, sql.ErrNoRows).Once()
-	_, err = dal.FirstID(ctx)
 	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
 
 	q.EXPECT().GetCharacterDetails(ctx, int64(9)).Return(queries.GetCharacterDetailsRow{}, sql.ErrNoRows).Once()
@@ -66,16 +64,6 @@ func TestNotFound_IsErrCharacterNotFound(t *testing.T) {
 
 	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{Languages: "[]", ID: 9}).Return(0, nil).Once()
 	require.ErrorIs(t, dal.UpdateDetails(ctx, 9, charactersvc.Details{}), domain.ErrCharacterNotFound)
-}
-
-func TestFirstID_IsTheQueriedID(t *testing.T) {
-	ctx := context.Background()
-	q := mocks.NewMockQuerier(t)
-
-	q.EXPECT().GetFirstCharacterID(ctx).Return(4, nil).Once()
-	id, err := characterdal.New(q).FirstID(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, int64(4), id)
 }
 
 // What UpdateDetails stores for a character is what GetDetails maps back:
@@ -126,14 +114,15 @@ func TestStorageErrors_AreReturnedNotTakenForNotFound(t *testing.T) {
 	q := mocks.NewMockQuerier(t)
 	dal := characterdal.New(q)
 
-	q.EXPECT().GetCharacter(ctx, int64(1)).Return(queries.Character{}, assert.AnError).Once()
+	q.EXPECT().GetCharacter(ctx, int64(1)).Return(queries.GetCharacterRow{}, assert.AnError).Once()
 	_, err := dal.GetCharacter(ctx, 1)
 	require.ErrorIs(t, err, assert.AnError)
 	assert.NotErrorIs(t, err, domain.ErrCharacterNotFound)
 
-	q.EXPECT().GetFirstCharacterID(ctx).Return(0, assert.AnError).Once()
-	_, err = dal.FirstID(ctx)
+	q.EXPECT().SetCurrentCharacter(ctx, mock.Anything).Return(0, assert.AnError).Once()
+	err = dal.SetCurrentCharacter(ctx, uuid.New(), 1)
 	require.ErrorIs(t, err, assert.AnError)
+	assert.NotErrorIs(t, err, domain.ErrCharacterNotFound)
 
 	q.EXPECT().GetCharacterDetails(ctx, int64(1)).Return(queries.GetCharacterDetailsRow{}, assert.AnError).Once()
 	_, err = dal.GetDetails(ctx, 1)
@@ -147,4 +136,33 @@ func TestStorageErrors_AreReturnedNotTakenForNotFound(t *testing.T) {
 	q.EXPECT().GetCharacterDetails(ctx, int64(1)).Return(queries.GetCharacterDetailsRow{Languages: "Common"}, nil).Once()
 	_, err = dal.GetDetails(ctx, 1)
 	require.Error(t, err)
+}
+
+// The owner's characters map row by row; the set-current update that matches
+// no row (a character of another user, retired or unknown) is
+// ErrCharacterNotFound.
+func TestOwners_ListAndSetCurrent(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	dal := characterdal.New(q)
+	owner := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+
+	q.EXPECT().CharactersOf(ctx, uuid.NullUUID{UUID: owner, Valid: true}).Return([]queries.CharactersOfRow{
+		{ID: 1, Name: "Kelsen", Class: "bard", Level: 15}, {ID: 4, Name: "Other", Class: "fighter", Level: 2},
+	}, nil).Once()
+	list, err := dal.CharactersOf(ctx, owner)
+	require.NoError(t, err)
+	assert.Equal(t, []charactersvc.Summary{
+		{ID: 1, Name: "Kelsen", Class: "bard", Level: 15}, {ID: 4, Name: "Other", Class: "fighter", Level: 2},
+	}, list)
+
+	q.EXPECT().SetCurrentCharacter(ctx, queries.SetCurrentCharacterParams{
+		CharacterID: sql.NullInt64{Int64: 4, Valid: true}, UserID: owner,
+	}).Return(1, nil).Once()
+	require.NoError(t, dal.SetCurrentCharacter(ctx, owner, 4))
+
+	q.EXPECT().SetCurrentCharacter(ctx, queries.SetCurrentCharacterParams{
+		CharacterID: sql.NullInt64{Int64: 9, Valid: true}, UserID: owner,
+	}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.SetCurrentCharacter(ctx, owner, 9), domain.ErrCharacterNotFound)
 }

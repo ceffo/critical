@@ -76,6 +76,53 @@ func (_c *MockDAL_AcceptInvite_Call) RunAndReturn(run func(context.Context, uuid
 	return _c
 }
 
+// AdoptUnownedCharacters provides a mock function with given fields: ctx, userID
+func (_m *MockDAL) AdoptUnownedCharacters(ctx context.Context, userID uuid.UUID) error {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdoptUnownedCharacters")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_AdoptUnownedCharacters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AdoptUnownedCharacters'
+type MockDAL_AdoptUnownedCharacters_Call struct {
+	*mock.Call
+}
+
+// AdoptUnownedCharacters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uuid.UUID
+func (_e *MockDAL_Expecter) AdoptUnownedCharacters(ctx interface{}, userID interface{}) *MockDAL_AdoptUnownedCharacters_Call {
+	return &MockDAL_AdoptUnownedCharacters_Call{Call: _e.mock.On("AdoptUnownedCharacters", ctx, userID)}
+}
+
+func (_c *MockDAL_AdoptUnownedCharacters_Call) Run(run func(ctx context.Context, userID uuid.UUID)) *MockDAL_AdoptUnownedCharacters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockDAL_AdoptUnownedCharacters_Call) Return(_a0 error) *MockDAL_AdoptUnownedCharacters_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_AdoptUnownedCharacters_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockDAL_AdoptUnownedCharacters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteSession provides a mock function with given fields: ctx, id
 func (_m *MockDAL) DeleteSession(ctx context.Context, id string) error {
 	ret := _m.Called(ctx, id)

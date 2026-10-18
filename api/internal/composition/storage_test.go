@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -49,7 +50,7 @@ func TestPostgresStorage_EveryAdapterRunsOnTheCallersTransaction(t *testing.T) {
 	ctx := postgres.WithTx(context.Background(), conn{})
 	s := postgresStorage(&postgres.DB{})
 	calls := map[string]func(){
-		"Character":    func() { _, _ = s.Character.FirstID(ctx) },
+		"Character":    func() { _, _ = s.Character.CharactersOf(ctx, uuid.New()) },
 		"HP":           func() { _, _ = s.HP.GetMaxHP(ctx, 1) },
 		"Log":          func() { _, _ = s.Log.HPTotal(ctx, 1) },
 		"Buff":         func() { _, _ = s.Buff.GetActiveBuffs(ctx, 1) },

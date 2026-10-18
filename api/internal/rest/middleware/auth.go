@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
 
@@ -247,4 +248,37 @@ func ClearSessionCookie(w http.ResponseWriter, name string, secure bool) {
 	http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure on HTTPS only: dev login runs on plain HTTP (ADR 0029 step 4.2)
 		Name: name, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
 	})
+}
+
+type characterKey struct{}
+
+// CurrentCharacter is the one character resolver of the router (ADR 0029
+// step 7): every per-character route acts on the current character of the
+// request's user, which the gate's principal carries (read with the session,
+// so it costs no query of its own, ADR 0025 step 10). A user with no current
+// character is refused with charactersvc.ErrNoCurrentCharacter, whose stable
+// code the web turns into "create your first character"; without a principal
+// the request is unauthenticated (the gate lets no such request through to a
+// data route).
+func CurrentCharacter(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		p := PrincipalFrom(ctx)
+		switch {
+		case p == nil:
+			render.Error(ctx, w, authsvc.ErrUnauthenticated)
+			return
+		case p.User.CurrentCharacterID == 0:
+			render.Error(ctx, w, charactersvc.ErrNoCurrentCharacter)
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, characterKey{}, p.User.CurrentCharacterID)))
+	})
+}
+
+// CharacterID is the character the request acts on, set by CurrentCharacter;
+// 0 on a route it does not guard.
+func CharacterID(r *http.Request) int64 {
+	id, _ := r.Context().Value(characterKey{}).(int64)
+	return id
 }

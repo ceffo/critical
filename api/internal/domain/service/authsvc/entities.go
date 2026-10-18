@@ -20,6 +20,9 @@ const (
 
 // User is a person who can log in (step 1.1). GoogleSubject is empty until
 // the first Google login binds it; LastLogin is nil before any login.
+// CurrentCharacterID is the character the user plays (step 7.2), 0 when they
+// have none: it is read through the user's ownership (a character they do not
+// own, or retired, is none) and never written by UpdateUser.
 type User struct {
 	ID            uuid.UUID
 	Email         string
@@ -29,6 +32,9 @@ type User struct {
 	Disabled      bool
 	LastLogin     *time.Time
 	CreatedAt     time.Time
+	// CurrentCharacterID is read only: it changes through the characters'
+	// own port (charactersvc), which checks the ownership.
+	CurrentCharacterID int64
 }
 
 // Invite authorises an email to log in through Google (step 2.1).

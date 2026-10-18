@@ -112,6 +112,9 @@ func (s *Store) Close() error { return nil }
 func (t *tables) save() *tables {
 	c := *t
 	c.characters = maps.Clone(t.characters)
+	c.owners = maps.Clone(t.owners)
+	c.retired = maps.Clone(t.retired)
+	c.current = maps.Clone(t.current)
 	c.slots = maps.Clone(t.slots)
 	c.buffs = maps.Clone(t.buffs)
 	c.rounds = maps.Clone(t.rounds)

@@ -75,7 +75,18 @@ func twoCharacters(t *testing.T) (bs *composition.BackingServices, seeded, other
 		Name: "Other", Class: "bard", Level: 1, Str: 10, Dex: 10, Con: 10, Int: 10, Wis: 10, Cha: 10, HPMax: 6, Thac0Base: 20,
 	})
 	require.NoError(t, err)
-	return bs, bs.CharacterID, other
+	return bs, rootCharacter(t, bs), other
+}
+
+// rootCharacter logs the root admin in through the dev login (the fixture
+// has no OAuth settings), which gives them the seeded character, and returns
+// it: their current character.
+func rootCharacter(t *testing.T, bs *composition.BackingServices) int64 {
+	t.Helper()
+	s, err := bs.Auth.DevLogin(context.Background(), "")
+	require.NoError(t, err)
+	require.NotZero(t, s.User.CurrentCharacterID, "the root admin plays the seeded character")
+	return s.User.CurrentCharacterID
 }
 
 // Each character owns its items, weapons, proficiencies, bard skills and

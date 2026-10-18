@@ -51,13 +51,18 @@ type damageReader interface {
 	ExposureAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.ExposureAt, error)
 }
 
-// RegisterRoutes wires spell endpoints onto r.
+// RegisterRoutes wires the spell endpoints of the current character onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars characterGetter, damage damageReader) {
 	r.Get("/api/spells/slots", render.Handle(GetSlots(charID, svc)))
 	r.Get("/api/spells", render.Handle(Search(charID, svc, chars, damage)))
+	r.Get("/api/spells/{id}", render.Handle(Get(charID, svc, chars, damage)))
+}
+
+// RegisterSharedRoutes wires the catalogue's reference reads, which no
+// character owns (ADR 0029 step 7.5), onto r.
+func RegisterSharedRoutes(r Router, svc spellsvc.SVC) {
 	r.Get("/api/spells/filters", render.Handle(FilterOptions(svc)))
 	r.Get("/api/spells/names", render.Handle(Names(svc)))
-	r.Get("/api/spells/{id}", render.Handle(Get(charID, svc, chars, damage)))
 }
 
 // TextDTO is a text in human languages (ADR 0023 step 6): body by language

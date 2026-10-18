@@ -121,12 +121,12 @@ func TestGate_Step6_1_PublicPathsReachable(t *testing.T) {
 	a := authmocks.NewMockSVC(t)
 	a.EXPECT().DevLoginEnabled().Return(true).Once()
 	a.EXPECT().DevLogin(mock.Anything, "").Return(&authsvc.NewSession{
-		Token: "tok", Expires: time.Now().Add(time.Hour), User: authsvc.User{ID: uuid.Nil, Email: "dev@localhost", Role: authsvc.RoleAdmin, Root: true},
+		Token: "tok", Expires: time.Now().Add(time.Hour), User: authsvc.User{ID: uuid.Nil, Email: "dev@localhost", Role: authsvc.RoleAdmin, Root: true, CurrentCharacterID: 1},
 	}, nil).Once()
 	h := authRouter(t, a, router.Options{})
 	dev := anon(h, "POST", "/api/auth/dev")
 	require.Equal(t, http.StatusOK, dev.Code)
-	assert.JSONEq(t, `{"id":"00000000-0000-0000-0000-000000000000","email":"dev@localhost","role":"admin","root":true}`, dev.Body.String())
+	assert.JSONEq(t, `{"id":"00000000-0000-0000-0000-000000000000","email":"dev@localhost","role":"admin","root":true,"currentCharacterId":1}`, dev.Body.String())
 	c := sessionCookie(t, dev)
 	assert.Equal(t, "tok", c.Value)
 }
@@ -134,7 +134,7 @@ func TestGate_Step6_1_PublicPathsReachable(t *testing.T) {
 func authRouter(t *testing.T, a authsvc.SVC, opts router.Options) http.Handler {
 	t.Helper()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return router.New(log, &composition.BackingServices{CharacterID: 1, Auth: a}, opts)
+	return router.New(log, &composition.BackingServices{Auth: a}, opts)
 }
 
 func sessionCookie(t *testing.T, rec *httptest.ResponseRecorder) *http.Cookie {
@@ -264,7 +264,7 @@ func TestGate_Step4_3_ExtendedSessionRefreshesTheCookie(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"id":"00000000-0000-0000-0000-000000000000","email":"ann@example.com","role":"player","root":false}`, rec.Body.String())
+	assert.JSONEq(t, `{"id":"00000000-0000-0000-0000-000000000000","email":"ann@example.com","role":"player","root":false,"currentCharacterId":null}`, rec.Body.String())
 	c := sessionCookie(t, rec)
 	assert.Equal(t, "tok", c.Value)
 	assert.Greater(t, c.MaxAge, 29*24*3600)
@@ -322,7 +322,7 @@ func TestGate_Step4_5_ConfiguredHost(t *testing.T) {
 // closed.
 func TestGate_Step6_2_NoAuthServiceFailsClosed(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	h := router.New(log, &composition.BackingServices{CharacterID: 1}, router.Options{})
+	h := router.New(log, &composition.BackingServices{}, router.Options{})
 	assert.Equal(t, http.StatusUnauthorized, do(h, "GET", "/api/character", "").Code)
 	assert.Equal(t, http.StatusOK, do(h, "GET", "/api/health", "").Code)
 }

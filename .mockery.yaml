@@ -61,6 +61,8 @@ packages:
     interfaces:
       SVC:
       Reader:
+      Owners:
+      Sessions:
   github.com/ceffo/critical/api/internal/domain/service/combatsvc:
     config:
       dir: "internal/domain/service/combatsvc/mocks"

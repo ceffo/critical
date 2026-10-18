@@ -19,6 +19,7 @@ describe("readSession", () => {
       email: "ann@example.com",
       role: "admin",
       root: true,
+      currentCharacterId: 1,
     };
     const fetch = answers([200, me]);
     expect(await readSession()).toEqual({ kind: "in", me });

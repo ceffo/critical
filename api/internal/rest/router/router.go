@@ -113,23 +113,36 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		authhdl.RegisterRoutes(r, bs.Auth, authOpts)
 	}
 
-	charID := func(_ *http.Request) int64 { return bs.CharacterID }
+	// Shared by every user: no character owns them (ADR 0029 step 7.5).
+	spellhdl.RegisterSharedRoutes(r, bs.Spells)
+	combathdl.RegisterSharedRoutes(r, bs.Combat)
+	xphdl.RegisterSharedRoutes(r, bs.XP)
+	// The user's characters: a session, no current character needed.
+	characterhdl.RegisterUserRoutes(r, bs.Character)
 
-	characterhdl.RegisterRoutes(r, charID, bs.Character)
-	hphdl.RegisterRoutes(r, charID, bs.HP)
-	actionloghdl.RegisterRoutes(r, charID, bs.Log)
-	buffhdl.RegisterRoutes(r, charID, bs.Buffs)
-	spellhdl.RegisterRoutes(r, charID, bs.Spells, bs.Character, bs.Cast)
-	spellprephdl.RegisterRoutes(r, charID, bs.Prep)
-	casthdl.RegisterRoutes(r, charID, bs.Cast)
-	combathdl.RegisterRoutes(r, charID, bs.Combat)
-	itemhdl.RegisterRoutes(r, charID, bs.Items)
-	weaponhdl.RegisterRoutes(r, charID, bs.Weapons)
-	resthdl.RegisterRoutes(r, charID, bs.Rest)
-	xphdl.RegisterRoutes(r, charID, bs.XP)
-	detailshdl.RegisterRoutes(r, charID, bs.Details)
-	skillhdl.RegisterRoutes(r, charID, bs.Skills)
-	dicehdl.RegisterRoutes(r, charID, bs.Dice)
+	// Every other route acts on the current character of the request's user
+	// (ADR 0029 step 7): mw.CurrentCharacter is the one resolver, a route
+	// mounted here gets it.
+	r.Group(func(r chi.Router) {
+		r.Use(mw.CurrentCharacter)
+		charID := mw.CharacterID
+
+		characterhdl.RegisterRoutes(r, charID, bs.Character)
+		hphdl.RegisterRoutes(r, charID, bs.HP)
+		actionloghdl.RegisterRoutes(r, charID, bs.Log)
+		buffhdl.RegisterRoutes(r, charID, bs.Buffs)
+		spellhdl.RegisterRoutes(r, charID, bs.Spells, bs.Character, bs.Cast)
+		spellprephdl.RegisterRoutes(r, charID, bs.Prep)
+		casthdl.RegisterRoutes(r, charID, bs.Cast)
+		combathdl.RegisterRoutes(r, charID, bs.Combat)
+		itemhdl.RegisterRoutes(r, charID, bs.Items)
+		weaponhdl.RegisterRoutes(r, charID, bs.Weapons)
+		resthdl.RegisterRoutes(r, charID, bs.Rest)
+		xphdl.RegisterRoutes(r, charID, bs.XP)
+		detailshdl.RegisterRoutes(r, charID, bs.Details)
+		skillhdl.RegisterRoutes(r, charID, bs.Skills)
+		dicehdl.RegisterRoutes(r, charID, bs.Dice)
+	})
 
 	return r
 }

@@ -27,6 +27,14 @@ type Character struct {
 	Details Details
 }
 
+// Summary is a character in its owner's list (ADR 0029 step 7.2).
+type Summary struct {
+	ID    int64
+	Name  string
+	Class string
+	Level int
+}
+
 // Details are the free-text facts about the character that the player edits.
 // Text fields are stored as entered, Age 0 means not set and Languages are the
 // names as entered.

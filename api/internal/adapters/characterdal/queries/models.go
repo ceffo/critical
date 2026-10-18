@@ -3,33 +3,3 @@
 //   sqlc v1.31.1
 
 package queries
-
-type Character struct {
-	ID               int64
-	Name             string
-	Str              int64
-	Dex              int64
-	Con              int64
-	Int              int64
-	Wis              int64
-	Cha              int64
-	HpMax            int64
-	Thac0Base        int64
-	Level            int64
-	XpTotal          int64
-	SaveParaPoison   int64
-	SaveRodStaffWand int64
-	SavePetriPoly    int64
-	SaveBreath       int64
-	SaveSpell        int64
-	Class            string
-	Race             string
-	Alignment        string
-	Age              int64
-	Sex              string
-	Height           string
-	Weight           string
-	Hair             string
-	Eyes             string
-	Languages        string
-}

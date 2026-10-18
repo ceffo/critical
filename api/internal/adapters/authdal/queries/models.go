@@ -5,7 +5,6 @@
 package queries
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,15 +16,4 @@ type Session struct {
 	CreatedAt time.Time
 	LastUsed  time.Time
 	ExpiresAt time.Time
-}
-
-type User struct {
-	ID            uuid.UUID
-	Email         string
-	GoogleSubject sql.NullString
-	Role          string
-	IsRoot        bool
-	Disabled      bool
-	LastLogin     sql.NullTime
-	CreatedAt     time.Time
 }

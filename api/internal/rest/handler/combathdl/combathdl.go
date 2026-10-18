@@ -43,7 +43,7 @@ type combatSvc interface {
 	SetCritTable(ctx context.Context, rows []combatsvc.CritRow) (combatsvc.CritTable, error)
 }
 
-// RegisterRoutes wires combat endpoints onto r.
+// RegisterRoutes wires the combat endpoints of the current character onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Post("/api/roll/attack", render.Handle(ResolveAttack(charID, svc)))
 	r.Post("/api/roll/attack/{id}/adjust", render.Handle(AdjustAttack(charID, svc)))
@@ -54,6 +54,11 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Get("/api/weapons", render.Handle(ListWeapons(charID, svc)))
 	r.Get("/api/attack/form", render.Handle(GetAttackForm(charID, svc)))
 	r.Patch("/api/attack/form", render.Handle(UpdateAttackForm(charID, svc)))
+}
+
+// RegisterSharedRoutes wires the house crit table, which no character owns,
+// onto r.
+func RegisterSharedRoutes(r Router, svc combatsvc.SVC) {
 	r.Get("/api/crit-table", render.Handle(GetCritTable(svc)))
 	r.Put("/api/crit-table", render.Handle(PutCritTable(svc)))
 }

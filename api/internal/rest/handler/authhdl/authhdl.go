@@ -98,16 +98,23 @@ func RegisterRoutes(r Router, svc Service, opts Options) {
 	}
 }
 
-// MeDTO is the current user (ADR 0029 step 4.6).
+// MeDTO is the current user (ADR 0029 step 4.6), with their current
+// character's id (step 7.2; null when they have none).
 type MeDTO struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
-	Root  bool   `json:"root"`
+	ID                 string `json:"id"`
+	Email              string `json:"email"`
+	Role               string `json:"role"`
+	Root               bool   `json:"root"`
+	CurrentCharacterID *int64 `json:"currentCharacterId"`
 }
 
 func meDTO(u authsvc.User) MeDTO {
-	return MeDTO{ID: u.ID.String(), Email: u.Email, Role: string(u.Role), Root: u.Root}
+	d := MeDTO{ID: u.ID.String(), Email: u.Email, Role: string(u.Role), Root: u.Root}
+	if u.CurrentCharacterID != 0 {
+		id := u.CurrentCharacterID
+		d.CurrentCharacterID = &id
+	}
+	return d
 }
 
 // Start is GET /api/auth/google/start: the state and verifier go into the

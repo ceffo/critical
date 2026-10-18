@@ -58,7 +58,8 @@ func (s *service) SetRole(ctx context.Context, userID uuid.UUID, role Role) erro
 	})
 }
 
-// SetRootAdmin implements SVC (ADR 0029 step 5.1).
+// SetRootAdmin implements SVC (ADR 0029 step 5.1), and gives the root admin
+// the characters without an owner (step 5.3).
 func (s *service) SetRootAdmin(ctx context.Context, email string) (*User, error) {
 	email = NormalizeEmail(email)
 	if !strings.Contains(email, "@") {
@@ -70,8 +71,8 @@ func (s *service) SetRootAdmin(ctx context.Context, email string) (*User, error)
 		root, err := s.dal.RootUser(ctx)
 		switch {
 		case err == nil && root.Email == email:
-			out = root
-			return nil
+			out, err = s.adoptAsRoot(ctx, root)
+			return err
 		case err == nil && root.GoogleSubject != "":
 			return ErrRootTaken
 		case err == nil:
@@ -91,16 +92,55 @@ func (s *service) SetRootAdmin(ctx context.Context, email string) (*User, error)
 		switch {
 		case err == nil:
 			u.Root, u.Role, u.Disabled = true, RoleAdmin, false
-			out = u
-			return s.dal.UpdateUser(ctx, *u)
+			if err := s.dal.UpdateUser(ctx, *u); err != nil {
+				return err
+			}
 		case !errors.Is(err, domain.ErrNotFound):
 			return err
+		default:
+			u = &User{ID: s.newID(), Email: email, Role: RoleAdmin, Root: true, CreatedAt: s.now()}
+			if err := s.dal.InsertUser(ctx, *u); err != nil {
+				return err
+			}
 		}
-		out = &User{ID: s.newID(), Email: email, Role: RoleAdmin, Root: true, CreatedAt: s.now()}
-		return s.dal.InsertUser(ctx, *out)
+		// Step 5.3: the characters without an owner are the root admin's.
+		out, err = s.adoptAsRoot(ctx, u)
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// AdoptUnownedCharacters implements SVC (ADR 0029 steps 5.3 and 7.2).
+func (s *service) AdoptUnownedCharacters(ctx context.Context) error {
+	var rootID uuid.UUID
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		root, err := s.dal.RootUser(ctx)
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		rootID = root.ID
+		return s.dal.AdoptUnownedCharacters(ctx, root.ID)
+	})
+	if rootID != uuid.Nil {
+		s.sessions.forgetUser(rootID)
+	}
+	return err
+}
+
+// ForgetUser implements SVC (ADR 0029 step 4.7).
+func (s *service) ForgetUser(userID uuid.UUID) { s.sessions.forgetUser(userID) }
+
+// adoptAsRoot gives the characters without an owner to u, the root admin
+// just made, and returns u read again (with its current character).
+func (s *service) adoptAsRoot(ctx context.Context, u *User) (*User, error) {
+	if err := s.dal.AdoptUnownedCharacters(ctx, u.ID); err != nil {
+		return nil, err
+	}
+	return s.dal.UserByID(ctx, u.ID)
 }

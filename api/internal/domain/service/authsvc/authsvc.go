@@ -76,6 +76,17 @@ type SVC interface {
 	// (ErrRootTaken) unless that root never logged in (no subject), which is
 	// then disabled and loses the flag.
 	SetRootAdmin(ctx context.Context, email string) (*User, error)
+	// AdoptUnownedCharacters gives every character without an owner to the
+	// root admin, and makes the first of them current when the root admin has
+	// none (ADR 0029 steps 5.3 and 7.2): the start-up runs it, so the
+	// characters stored before characters had owners are the root admin's.
+	// Without a root admin it does nothing. SetRootAdmin and the dev login do
+	// the same for the root admin they make.
+	AdoptUnownedCharacters(ctx context.Context) error
+	// ForgetUser drops what this server remembers of the user's sessions
+	// (step 4.7), so its next request reads the user again: the user's
+	// current character changed.
+	ForgetUser(userID uuid.UUID)
 }
 
 // DAL is the storage port over users, invites and sessions. A missing row is
@@ -99,6 +110,10 @@ type DAL interface {
 	ExtendSession(ctx context.Context, id string, lastUsed, expires time.Time) error
 	DeleteSession(ctx context.Context, id string) error
 	DeleteUserSessions(ctx context.Context, userID uuid.UUID) error
+	// AdoptUnownedCharacters gives every character without an owner to the
+	// user, then makes the user's first character (lowest id, not retired)
+	// current when the user has no current character.
+	AdoptUnownedCharacters(ctx context.Context, userID uuid.UUID) error
 }
 
 // IdentityProvider is Google's OpenID Connect (step 3.1): the authorisation

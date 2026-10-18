@@ -35,10 +35,13 @@ func notFound(err error, what string) error {
 	return fmt.Errorf("%s: %w", what, err)
 }
 
-func user(r queries.User) *authsvc.User {
+// user maps a user read; every read has the columns of UserByIDRow (the
+// other rows convert to it).
+func user(r queries.UserByIDRow) *authsvc.User {
 	u := &authsvc.User{
 		ID: r.ID, Email: r.Email, GoogleSubject: r.GoogleSubject.String, Role: authsvc.Role(r.Role),
 		Root: r.IsRoot, Disabled: r.Disabled, CreatedAt: r.CreatedAt,
+		CurrentCharacterID: r.CurrentCharacterID.Int64,
 	}
 	if r.LastLogin.Valid {
 		t := r.LastLogin.Time
@@ -71,7 +74,7 @@ func (d *DAL) UserBySubject(ctx context.Context, subject string) (*authsvc.User,
 	if err != nil {
 		return nil, notFound(err, "user by subject")
 	}
-	return user(r), nil
+	return user(queries.UserByIDRow(r)), nil
 }
 
 // UserByEmail implements authsvc.DAL.
@@ -80,7 +83,7 @@ func (d *DAL) UserByEmail(ctx context.Context, email string) (*authsvc.User, err
 	if err != nil {
 		return nil, notFound(err, "user by email")
 	}
-	return user(r), nil
+	return user(queries.UserByIDRow(r)), nil
 }
 
 // RootUser implements authsvc.DAL.
@@ -89,7 +92,7 @@ func (d *DAL) RootUser(ctx context.Context) (*authsvc.User, error) {
 	if err != nil {
 		return nil, notFound(err, "root user")
 	}
-	return user(r), nil
+	return user(queries.UserByIDRow(r)), nil
 }
 
 // InsertUser implements authsvc.DAL.
@@ -181,6 +184,17 @@ func (d *DAL) DeleteSession(ctx context.Context, id string) error {
 func (d *DAL) DeleteUserSessions(ctx context.Context, userID uuid.UUID) error {
 	if err := d.q.DeleteUserSessions(ctx, userID); err != nil {
 		return fmt.Errorf("delete user sessions: %w", err)
+	}
+	return nil
+}
+
+// AdoptUnownedCharacters implements authsvc.DAL.
+func (d *DAL) AdoptUnownedCharacters(ctx context.Context, userID uuid.UUID) error {
+	if err := d.q.AdoptUnownedCharacters(ctx, uuid.NullUUID{UUID: userID, Valid: true}); err != nil {
+		return fmt.Errorf("adopt unowned characters: %w", err)
+	}
+	if err := d.q.SetFirstCurrentCharacter(ctx, userID); err != nil {
+		return fmt.Errorf("set first current character: %w", err)
 	}
 	return nil
 }

@@ -6,12 +6,17 @@ package queries
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
-	GetCharacter(ctx context.Context, id int64) (Character, error)
+	// The owner's characters they have not retired, in creation order.
+	CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) ([]CharactersOfRow, error)
+	GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error)
 	GetCharacterDetails(ctx context.Context, id int64) (GetCharacterDetailsRow, error)
-	GetFirstCharacterID(ctx context.Context) (int64, error)
+	// Only a character the user owns and has not retired: none updated is an unknown character.
+	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
 	UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error)
 }
 

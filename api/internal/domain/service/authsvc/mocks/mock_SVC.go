@@ -25,6 +25,52 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
+// AdoptUnownedCharacters provides a mock function with given fields: ctx
+func (_m *MockSVC) AdoptUnownedCharacters(ctx context.Context) error {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdoptUnownedCharacters")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSVC_AdoptUnownedCharacters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AdoptUnownedCharacters'
+type MockSVC_AdoptUnownedCharacters_Call struct {
+	*mock.Call
+}
+
+// AdoptUnownedCharacters is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockSVC_Expecter) AdoptUnownedCharacters(ctx interface{}) *MockSVC_AdoptUnownedCharacters_Call {
+	return &MockSVC_AdoptUnownedCharacters_Call{Call: _e.mock.On("AdoptUnownedCharacters", ctx)}
+}
+
+func (_c *MockSVC_AdoptUnownedCharacters_Call) Run(run func(ctx context.Context)) *MockSVC_AdoptUnownedCharacters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AdoptUnownedCharacters_Call) Return(_a0 error) *MockSVC_AdoptUnownedCharacters_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSVC_AdoptUnownedCharacters_Call) RunAndReturn(run func(context.Context) error) *MockSVC_AdoptUnownedCharacters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Authenticate provides a mock function with given fields: ctx, token
 func (_m *MockSVC) Authenticate(ctx context.Context, token string) (*authsvc.Principal, error) {
 	ret := _m.Called(ctx, token)
@@ -290,6 +336,39 @@ func (_c *MockSVC_FinishLogin_Call) Return(_a0 *authsvc.NewSession, _a1 error) *
 
 func (_c *MockSVC_FinishLogin_Call) RunAndReturn(run func(context.Context, authsvc.FinishLogin) (*authsvc.NewSession, error)) *MockSVC_FinishLogin_Call {
 	_c.Call.Return(run)
+	return _c
+}
+
+// ForgetUser provides a mock function with given fields: userID
+func (_m *MockSVC) ForgetUser(userID uuid.UUID) {
+	_m.Called(userID)
+}
+
+// MockSVC_ForgetUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ForgetUser'
+type MockSVC_ForgetUser_Call struct {
+	*mock.Call
+}
+
+// ForgetUser is a helper method to define mock.On call
+//   - userID uuid.UUID
+func (_e *MockSVC_Expecter) ForgetUser(userID interface{}) *MockSVC_ForgetUser_Call {
+	return &MockSVC_ForgetUser_Call{Call: _e.mock.On("ForgetUser", userID)}
+}
+
+func (_c *MockSVC_ForgetUser_Call) Run(run func(userID uuid.UUID)) *MockSVC_ForgetUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ForgetUser_Call) Return() *MockSVC_ForgetUser_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockSVC_ForgetUser_Call) RunAndReturn(run func(uuid.UUID)) *MockSVC_ForgetUser_Call {
+	_c.Run(run)
 	return _c
 }
 

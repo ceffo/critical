@@ -207,3 +207,28 @@ func TestAuthenticate_Step4_7_ALookupInFlightDuringDisablingIsNotKept(t *testing
 	_, err := e.svc.Authenticate(context.Background(), "tok")
 	require.ErrorIs(t, err, authsvc.ErrUnauthenticated)
 }
+
+// Step 7.2: the server that changes a user's current character (ForgetUser,
+// called by the character service once it committed) or gives the root admin
+// the characters without an owner forgets the user's sessions at once, so the
+// next request plays the new character.
+func TestAuthenticate_Step7_2_ACurrentCharacterChangeForgetsAtOnce(t *testing.T) {
+	e := newClockEnv(t)
+	before := *player
+	before.CurrentCharacterID = 1
+	e.expectLookup(now.Add(time.Hour), &before)
+	assert.Equal(t, int64(1), e.auth(t).User.CurrentCharacterID)
+
+	after := before
+	after.CurrentCharacterID = 2
+	e.svc.ForgetUser(userID)
+	e.expectLookup(now.Add(time.Hour), &after)
+	assert.Equal(t, int64(2), e.auth(t).User.CurrentCharacterID, "read again at once")
+
+	r := *root
+	e.dal.EXPECT().RootUser(mock.Anything).Return(&r, nil).Once()
+	e.dal.EXPECT().AdoptUnownedCharacters(mock.Anything, userID).Return(nil).Once()
+	require.NoError(t, e.svc.AdoptUnownedCharacters(context.Background()))
+	e.expectLookup(now.Add(time.Hour), &after)
+	e.auth(t)
+}

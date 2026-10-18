@@ -418,7 +418,9 @@ _"1 for now"_.
   dump first.
 - **Consequences**: the cluster stops when idle (scale to zero, as configured before this app used
   it) and starts on the next connection through its `.flycast` address, so the first request after an
-  idle period waits for PostgreSQL to start.
+  idle period waits for PostgreSQL to start. _Amended 2026-10-18 ([ADR 0025](0025-postgresql-storage.md)
+  step 10): it waits at most its 8-second deadline, then answers 503 `database_unavailable`, and the web
+  retries the read until PostgreSQL is up; a server booting still waits up to 60 seconds._
 - **Reversible**: if the other app's data is no longer needed, its volume can be freed and a cluster
   of this app's own created as first planned; the DSN secrets are the only thing to change.
 

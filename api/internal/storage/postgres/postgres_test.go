@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -252,37 +254,123 @@ func TestConfigurePool_KeepsFewBackendsOnTheSharedNode(t *testing.T) {
 	assert.LessOrEqual(t, p.maxIdle, time.Minute)
 }
 
-// pings answers each call with the next error of errs (nil once they run out) and counts the calls.
-type pings struct {
-	errs  []error
-	calls int
+// timeoutErr is a net.Error that timed out, as a dial timeout reports.
+type timeoutErr struct{}
+
+func (timeoutErr) Error() string   { return "i/o timeout" }
+func (timeoutErr) Timeout() bool   { return true }
+func (timeoutErr) Temporary() bool { return true }
+
+// fakeConn is a driver connection whose Exec succeeds until it is dead, then reports
+// driver.ErrBadConn, as lib/pq does once PostgreSQL has shut the connection (FATAL 57P01, EOF).
+type fakeConn struct {
+	dead   *bool
+	closed *atomic.Int32
 }
 
-func (p *pings) ping(context.Context) error {
-	p.calls++
-	if len(p.errs) == 0 {
-		return nil
+func (c fakeConn) Prepare(string) (driver.Stmt, error) { return nil, errors.New("not used") }
+func (c fakeConn) Begin() (driver.Tx, error)           { return nil, errors.New("not used") }
+
+func (c fakeConn) Close() error {
+	c.closed.Add(1)
+	return nil
+}
+
+func (c fakeConn) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
+	if *c.dead {
+		return nil, driver.ErrBadConn
 	}
-	err := p.errs[0]
-	p.errs = p.errs[1:]
-	return err
+	return driver.RowsAffected(0), nil
 }
 
-// A database that is still starting (connection refused, then "the database system is starting
-// up") is waited for: the server does not exit on its first failed connection.
-func TestWaitForDatabase_RetriesWhileTheDatabaseStarts(t *testing.T) {
-	p := &pings{errs: []error{refused, starting}}
-	require.NoError(t, waitForDatabase(context.Background(), p.ping, time.Millisecond))
-	assert.Equal(t, 3, p.calls)
+// fakeConnector answers each Connect with the next error of errs (a fresh live connection once
+// they run out, or always err when set) and counts the calls. Safe for the gate's probe. With
+// stall set, a Connect blocks until stall is closed, ignoring its context, as a handshake with a
+// database that accepted the connection and never answers.
+type fakeConnector struct {
+	mu     sync.Mutex
+	errs   []error
+	err    error
+	calls  int
+	stall  chan struct{}
+	closed atomic.Int32
 }
 
-// An error waiting cannot fix (a wrong password) is returned at once.
-func TestWaitForDatabase_FailsFastOnAnotherPostgresError(t *testing.T) {
-	auth := &pq.Error{Code: "28P01", Message: "password authentication failed"}
-	p := &pings{errs: []error{auth}}
-	err := waitForDatabase(context.Background(), p.ping, time.Millisecond)
-	require.ErrorIs(t, err, auth)
-	assert.Equal(t, 1, p.calls)
+func (f *fakeConnector) Connect(context.Context) (driver.Conn, error) {
+	f.mu.Lock()
+	f.calls++
+	stall := f.stall
+	var err error
+	switch {
+	case len(f.errs) > 0:
+		err, f.errs = f.errs[0], f.errs[1:]
+	case f.err != nil:
+		err = f.err
+	}
+	f.mu.Unlock()
+	if stall != nil {
+		<-stall
+	}
+	if err != nil {
+		// As lib/pq: a nil *conn with the error, a non-nil driver.Conn whose Close panics.
+		return (*fakeConn)(nil), err
+	}
+	return fakeConn{dead: new(bool), closed: &f.closed}, nil
+}
+
+func (f *fakeConnector) Driver() driver.Driver { return nil }
+
+func (f *fakeConnector) set(errs []error, err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.errs, f.err = errs, err
+}
+
+func (f *fakeConnector) count() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.calls
+}
+
+var (
+	refused  = &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
+	starting = &pq.Error{Code: cannotConnectNow, Message: "the database system is starting up"}
+)
+
+// testGate is a gate over inner retrying every millisecond, closed with the test.
+func testGate(t *testing.T, inner driver.Connector, wait time.Duration) *gate {
+	t.Helper()
+	g := newGate(inner, wait, time.Millisecond, time.Second)
+	t.Cleanup(func() { _ = g.Close() })
+	return g
+}
+
+// A server booting while the cluster starts waits for it: its first connection is retried
+// through "connection refused" and "the database system is starting up". The probe's own
+// connection only proves the database answers, and is closed.
+func TestGate_WaitsForAStartingDatabase(t *testing.T) {
+	inner := &fakeConnector{errs: []error{refused, starting}}
+	pool := sql.OpenDB(testGate(t, inner, time.Minute))
+	t.Cleanup(func() { _ = pool.Close() })
+	require.NoError(t, pool.PingContext(context.Background()))
+	assert.Equal(t, 4, inner.count(), "refused, then the probe: starting, connected; then connected")
+	assert.Equal(t, int32(1), inner.closed.Load())
+}
+
+// An error waiting cannot fix (a wrong password, a DSN that cannot work: sslmode=require against a
+// server without TLS, a host name that does not exist) is returned at once: a wrong DSN stops the
+// server at boot instead of after the whole wait.
+func TestGate_FailsFastOnWhatWaitingCannotFix(t *testing.T) {
+	for _, wrong := range []error{
+		&pq.Error{Code: "28P01", Message: "password authentication failed"},
+		pq.ErrSSLNotSupported,
+		&net.OpError{Op: "dial", Net: "tcp", Err: &net.DNSError{Err: "no such host", Name: "typo.flycast", IsNotFound: true}},
+	} {
+		inner := &fakeConnector{errs: []error{wrong}}
+		_, err := testGate(t, inner, time.Minute).Connect(context.Background())
+		require.ErrorIs(t, err, wrong)
+		assert.Equal(t, 1, inner.count())
+	}
 }
 
 // Exactly what a stopped or starting cluster answers is retried; everything waiting cannot fix
@@ -321,98 +409,134 @@ func TestRetryable_OnlyWhatAStartingDatabaseGives(t *testing.T) {
 	}
 }
 
-// A DSN that cannot work (sslmode=require against a server without TLS, a host name that does not
-// exist) fails on the first attempt.
-func TestWaitForDatabase_FailsFastOnAWrongDSN(t *testing.T) {
-	for _, wrong := range []error{
-		pq.ErrSSLNotSupported,
-		&net.OpError{Op: "dial", Net: "tcp", Err: &net.DNSError{Err: "no such host", Name: "typo.flycast", IsNotFound: true}},
-	} {
-		p := &pings{errs: []error{wrong}}
-		err := waitForDatabase(context.Background(), p.ping, time.Millisecond)
-		require.ErrorIs(t, err, wrong)
-		assert.Equal(t, 1, p.calls)
+// While the database does not answer, a burst of connections (a page load's parallel requests)
+// puts one attempt per retry on it, the probe's, not one per request; when it answers, every
+// waiting connection is made.
+func TestGate_ABurstDuringAnOutageDialsOnlyThroughTheProbe(t *testing.T) {
+	inner := &fakeConnector{err: refused}
+	g := newGate(inner, time.Minute, 20*time.Millisecond, time.Second)
+	t.Cleanup(func() { _ = g.Close() })
+	_, err := g.Connect(contextWithTimeout(t, 5*time.Millisecond))
+	require.ErrorIs(t, err, ErrUnavailable)
+	require.Equal(t, 1, inner.count(), "the first attempt failed and put the gate down")
+
+	const burst = 20
+	var wg sync.WaitGroup
+	errs := make(chan error, burst)
+	for range burst {
+		wg.Go(func() {
+			conn, err := g.Connect(context.Background())
+			if err == nil {
+				err = conn.Close()
+			}
+			errs <- err
+		})
 	}
+	time.Sleep(70 * time.Millisecond)
+	before := inner.count()
+	assert.LessOrEqual(t, before, 1+4, "only the probe dials, once per retry")
+	inner.set(nil, nil)
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		require.NoError(t, err)
+	}
+	assert.LessOrEqual(t, inner.count(), before+1+burst)
 }
 
-// timeoutErr is a net.Error that timed out, as a dial timeout reports.
-type timeoutErr struct{}
+func contextWithTimeout(t *testing.T, d time.Duration) context.Context {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	t.Cleanup(cancel)
+	return ctx
+}
 
-func (timeoutErr) Error() string   { return "i/o timeout" }
-func (timeoutErr) Timeout() bool   { return true }
-func (timeoutErr) Temporary() bool { return true }
-
-// The wait is bounded: when the context ends, the last error is returned.
-func TestWaitForDatabase_GivesUpWhenTheContextEnds(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	p := &pings{errs: []error{refused, refused, refused, refused}}
-	ping := func(c context.Context) error {
-		if p.calls == 2 {
-			cancel()
-		}
-		return p.ping(c)
-	}
-	err := waitForDatabase(ctx, ping, time.Millisecond)
+// A connection asked for while the database is down waits no longer than its caller's context (a
+// request's deadline), then fails as unavailable, naming the last error.
+func TestGate_AWaitEndsWithTheCallersContext(t *testing.T) {
+	inner := &fakeConnector{err: refused}
+	g := testGate(t, inner, time.Minute)
+	started := time.Now()
+	_, err := g.Connect(contextWithTimeout(t, 30*time.Millisecond))
+	require.ErrorIs(t, err, ErrUnavailable)
 	require.ErrorIs(t, err, refused)
-	assert.Equal(t, 3, p.calls)
+	assert.Less(t, time.Since(started), 500*time.Millisecond)
 }
 
-// fakeConn is a driver connection whose Exec succeeds until it is dead, then reports
-// driver.ErrBadConn, as lib/pq does once PostgreSQL has shut the connection (FATAL 57P01, EOF).
-type fakeConn struct{ dead *bool }
-
-func (c fakeConn) Prepare(string) (driver.Stmt, error) { return nil, errors.New("not used") }
-func (c fakeConn) Close() error                        { return nil }
-func (c fakeConn) Begin() (driver.Tx, error)           { return nil, errors.New("not used") }
-
-func (c fakeConn) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
-	if *c.dead {
-		return nil, driver.ErrBadConn
-	}
-	return driver.RowsAffected(0), nil
+// Waiting is bounded by the gate's wait even when the caller's context has no deadline.
+func TestGate_GivesUpAfterItsWait(t *testing.T) {
+	inner := &fakeConnector{err: refused}
+	_, err := testGate(t, inner, 20*time.Millisecond).Connect(context.Background())
+	require.ErrorIs(t, err, ErrUnavailable)
+	require.ErrorIs(t, err, refused)
 }
 
-// fakeConnector answers each Connect with the next error of errs (a fresh live connection once
-// they run out) and counts the calls.
-type fakeConnector struct {
-	errs  []error
-	calls int
+// A database that accepts the connection but never answers (a starved node) holds no caller past
+// its context, even though the driver does not watch it during the handshake; the connection that
+// arrives late is closed.
+func TestGate_AStalledHandshakeEndsWithTheCallersContext(t *testing.T) {
+	inner := &fakeConnector{stall: make(chan struct{})}
+	g := testGate(t, inner, time.Minute)
+	started := time.Now()
+	_, err := g.Connect(contextWithTimeout(t, 30*time.Millisecond))
+	require.ErrorIs(t, err, ErrUnavailable)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Less(t, time.Since(started), 500*time.Millisecond)
+	close(inner.stall)
+	assert.Eventually(t, func() bool { return inner.closed.Load() == 1 }, time.Second, time.Millisecond)
 }
 
-func (f *fakeConnector) Connect(context.Context) (driver.Conn, error) {
-	f.calls++
-	if len(f.errs) > 0 {
-		err := f.errs[0]
-		f.errs = f.errs[1:]
-		if err != nil {
-			return nil, err
-		}
-	}
-	return fakeConn{dead: new(bool)}, nil
+// An attempt that fails after its caller gave up (a stalled handshake timing out) is dropped
+// without touching the connection lib/pq returns with the error (a nil *conn).
+func TestGate_ALateFailedAttemptIsDropped(t *testing.T) {
+	inner := &fakeConnector{stall: make(chan struct{}), err: timeoutErr{}}
+	g := testGate(t, inner, time.Minute)
+	_, err := g.Connect(contextWithTimeout(t, 20*time.Millisecond))
+	require.ErrorIs(t, err, ErrUnavailable)
+	close(inner.stall)
+	time.Sleep(20 * time.Millisecond)
+	assert.Zero(t, inner.closed.Load())
 }
 
-func (f *fakeConnector) Driver() driver.Driver { return nil }
+// One attempt is bounded by attemptTimeout (lib/pq's connect_timeout), unless the DSN sets its
+// own.
+func TestConnectConfig_BoundsOneAttempt(t *testing.T) {
+	cfg, err := connectConfig("postgres://u:p@db.flycast:5432/critical?sslmode=disable")
+	require.NoError(t, err)
+	assert.Equal(t, attemptTimeout, cfg.ConnectTimeout)
 
-var (
-	refused  = &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
-	starting = &pq.Error{Code: cannotConnectNow, Message: "the database system is starting up"}
-)
+	cfg, err = connectConfig("postgres://u:p@db.flycast:5432/critical?sslmode=disable&connect_timeout=2")
+	require.NoError(t, err)
+	assert.Equal(t, 2*time.Second, cfg.ConnectTimeout)
+}
 
-// A server booting while the cluster starts waits for it: its first connection is retried
-// through "connection refused" and "the database system is starting up".
-func TestWaitingConnector_WaitsForAStartingDatabase(t *testing.T) {
-	inner := &fakeConnector{errs: []error{refused, starting}}
-	pool := sql.OpenDB(waitingConnector{Connector: inner, wait: time.Minute, retryEvery: time.Millisecond})
-	t.Cleanup(func() { _ = pool.Close() })
-	require.NoError(t, pool.PingContext(context.Background()))
-	assert.Equal(t, 3, inner.calls)
+// When the probe meets an error waiting cannot fix (the password changed during the outage), the
+// waiting connections try again and get that error instead of waiting out their time.
+func TestGate_AProbeThatCannotSucceedReleasesTheWaiters(t *testing.T) {
+	auth := &pq.Error{Code: "28P01", Message: "password authentication failed"}
+	inner := &fakeConnector{errs: []error{refused, auth}, err: auth}
+	_, err := testGate(t, inner, time.Minute).Connect(context.Background())
+	require.ErrorIs(t, err, auth)
+}
+
+// Closing the pool stops the probe.
+func TestGate_ClosingStopsTheProbe(t *testing.T) {
+	inner := &fakeConnector{err: refused}
+	g := testGate(t, inner, time.Minute)
+	_, err := g.Connect(contextWithTimeout(t, 5*time.Millisecond))
+	require.ErrorIs(t, err, ErrUnavailable)
+	require.NoError(t, g.Close())
+	time.Sleep(10 * time.Millisecond)
+	after := inner.count()
+	time.Sleep(20 * time.Millisecond)
+	assert.Equal(t, after, inner.count())
 }
 
 // The cluster stopped while the pool held a connection: the next statement finds it dead, and the
 // pool opens a new one, which waits for the restarting cluster, instead of failing the request.
-func TestWaitingConnector_ADeadPooledConnectionIsReplacedNotAnError(t *testing.T) {
+func TestGate_ADeadPooledConnectionIsReplacedNotAnError(t *testing.T) {
 	inner := &fakeConnector{}
-	pool := sql.OpenDB(waitingConnector{Connector: inner, wait: time.Minute, retryEvery: time.Millisecond})
+	pool := sql.OpenDB(testGate(t, inner, time.Minute))
 	t.Cleanup(func() { _ = pool.Close() })
 	pool.SetMaxOpenConns(1)
 	conn, err := pool.Conn(context.Background())
@@ -422,30 +546,21 @@ func TestWaitingConnector_ADeadPooledConnectionIsReplacedNotAnError(t *testing.T
 	require.NoError(t, conn.Close())
 
 	*dead = true
-	inner.errs = []error{refused, starting}
+	inner.set([]error{refused, starting}, nil)
 	_, err = pool.ExecContext(context.Background(), "SELECT 1")
 	require.NoError(t, err)
-	assert.Equal(t, 4, inner.calls, "one first connection, then refused, starting, connected")
+	assert.Equal(t, 5, inner.count(), "one first connection, then refused, the probe's starting and connected, connected")
 }
 
 // A server stopped (SIGINT/SIGTERM) while its first connection waits for the database stops
 // waiting at once instead of after the whole wait.
 func TestOpenPool_StopsWaitingWhenTheContextEnds(t *testing.T) {
-	inner := &fakeConnector{errs: []error{refused, refused, refused, refused, refused, refused}}
+	inner := &fakeConnector{err: refused}
 	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(20*time.Millisecond, cancel)
 	started := time.Now()
-	_, err := openPool(ctx, waitingConnector{Connector: inner, wait: time.Minute, retryEvery: time.Second})
+	_, err := openPool(ctx, newGate(inner, time.Minute, time.Second, time.Second))
 	require.Error(t, err)
 	assert.Less(t, time.Since(started), 500*time.Millisecond)
-	assert.Equal(t, 1, inner.calls)
-}
-
-// Waiting is bounded by the connector's wait even when the caller's context has no deadline.
-func TestWaitingConnector_GivesUpAfterItsWait(t *testing.T) {
-	inner := &fakeConnector{errs: []error{refused, refused, refused, refused, refused, refused}}
-	c := waitingConnector{Connector: inner, wait: 20 * time.Millisecond, retryEvery: 5 * time.Millisecond}
-	_, err := c.Connect(context.Background())
-	require.ErrorIs(t, err, refused)
-	assert.Less(t, inner.calls, 7)
+	assert.Equal(t, 1, inner.count())
 }

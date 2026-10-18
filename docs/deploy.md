@@ -89,8 +89,10 @@ payment method is the user's decision only.
 stops with no connection and starts on the next one through `tournesol-db.flycast`, so the first
 request after an idle period waits a few seconds for PostgreSQL. Idle means no open connection for an
 hour (`FLY_SCALE_TO_ZERO=1h` on its machine): the app's pool closes connections unused for 30 seconds, so
-quiet apps let it stop, and a server booting or a request arriving while it starts waits for it (up
-to 60 s per new connection) instead of failing (`docs/backend.md`, "Database"). Checked on staging, 2026-10-16: with the cluster
+quiet apps let it stop, and a server booting while it starts waits for it (up to 60 s) instead of
+failing; a request arriving meanwhile waits at most its 8 s deadline, then fails, and the next one is
+served once PostgreSQL is up. While the database does not answer, one probe per server retries every
+second; requests do not dial (`docs/backend.md`, "Database"). Checked on staging, 2026-10-16: with the cluster
 stopped, a booting server got `EOF` twice, the connection started the cluster (event source `proxy` in
 `fly machine status`) and the server listened 5 s after its start; with the cluster stopped under a
 running server holding pooled connections, the next database read answered 200 in 2.6 s. A DSN that

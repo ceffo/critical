@@ -56,11 +56,40 @@ type Options struct {
 func (o Options) sessionCookie() string { return mw.SessionCookieName(o.App) }
 func (o Options) loginCookie() string   { return mw.CookieName(LoginCookie, o.App) }
 
+// StartPath and CallbackPath are the Google login's two browser navigations.
+const (
+	StartPath    = loginCookiePath + "/start"
+	CallbackPath = loginCookiePath + "/callback"
+)
+
+// CodeLoginTimeout is the login page's code for a Google login that did not
+// finish within the request deadline (Google or the database too slow).
+const CodeLoginTimeout = "login_timeout"
+
+// LateAnswers are the answers of the Google login's navigations when they
+// pass the request deadline (mw.Deadline): the login cookie is dropped and the
+// browser goes to the login page with CodeLoginTimeout, never to a JSON error
+// (ADR 0025 step 10.1, ADR 0029 step 3.7).
+func LateAnswers(opts Options) map[string]http.Handler {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dropLoginCookie(w, opts)
+		http.Redirect(w, r, mw.LoginPath+"?error="+CodeLoginTimeout, http.StatusFound)
+	})
+	return map[string]http.Handler{StartPath: h, CallbackPath: h}
+}
+
+func dropLoginCookie(w http.ResponseWriter, opts Options) {
+	http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure on HTTPS only: dev login runs on plain HTTP (ADR 0029 step 4.2)
+		Name: opts.loginCookie(), Path: loginCookiePath, MaxAge: -1, HttpOnly: true, Secure: opts.Secure,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
 // RegisterRoutes wires the auth endpoints onto r. POST /api/auth/dev exists
 // only in dev login mode (ADR 0029 step 8.2: else 404).
 func RegisterRoutes(r Router, svc Service, opts Options) {
-	r.Get("/api/auth/google/start", render.Handle(Start(svc, opts)))
-	r.Get("/api/auth/google/callback", Callback(svc, opts))
+	r.Get(StartPath, render.Handle(Start(svc, opts)))
+	r.Get(CallbackPath, Callback(svc, opts))
 	r.Post("/api/auth/logout", render.Handle(Logout(svc, opts)))
 	r.Get("/api/auth/me", render.Handle(Me()))
 	r.Get("/api/auth/options", render.Handle(LoginOptions(svc)))
@@ -108,10 +137,7 @@ func Callback(svc Service, opts Options) http.HandlerFunc {
 		if c, err := r.Cookie(opts.loginCookie()); err == nil {
 			state, verifier, _ = strings.Cut(c.Value, ".")
 		}
-		http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure on HTTPS only: dev login runs on plain HTTP (ADR 0029 step 4.2)
-			Name: opts.loginCookie(), Path: loginCookiePath, MaxAge: -1, HttpOnly: true, Secure: opts.Secure,
-			SameSite: http.SameSiteLaxMode,
-		})
+		dropLoginCookie(w, opts)
 		q := r.URL.Query()
 		s, err := svc.FinishLogin(r.Context(), authsvc.FinishLogin{
 			Code: q.Get("code"), State: q.Get("state"), ExpectedState: state, Verifier: verifier,

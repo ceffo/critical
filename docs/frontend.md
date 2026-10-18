@@ -418,6 +418,12 @@ flowchart TD
   `nextRound`; the journal's Undo button and Ctrl+Z are the one global undo, ADR 0018 step 3): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …, "code": …}`, parsed by `api/http.ts`) are shown in `Notices` (`role="alert"`): a known code in the
   player's language (`apiError.*`), else the server text verbatim.
+- An unavailable database (`database_unavailable`, 503; [ADR 0025](adr/0025-postgresql-storage.md) step
+  10.4) is handled in `api/http.ts`, never by a panel: reads are retried every 3 s for a minute
+  (`MAX_READ_MS`; no attempt starts after it), writes are never resent and are refused in the browser
+  while the database is unavailable, and after a write that got the code writes stay refused until the
+  whole sheet is reloaded (`setReload`, registered by `App`) with no request failing meanwhile. State in `stores/database.ts`; one banner, `components/shell/DatabaseBanner.tsx`
+  (top centre, `role="status"`); `Notices` does not repeat that error.
 - The journal groups entries by the turn the server stamped (`lib/groupByRound.ts`); the current
   turn always has a group. Display helpers live in `lib/format.ts` (no game rules).
 - Native `<input>`/`<select>` use `fieldClass` (`components/dashboard/fieldStyles.ts`, on the card with the field edge) and sit in

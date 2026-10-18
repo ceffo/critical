@@ -1,6 +1,7 @@
 package router_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -306,6 +307,8 @@ func TestServiceErrorsMapToStatusAndBody(t *testing.T) {
 		{"not found", fmt.Errorf("%w: x", domain.ErrNotFound), 404, `{"code":"not_found","error":"not found: x"}`},
 		{"character not found", domain.ErrCharacterNotFound, 404, `{"code":"character_not_found","error":"character not found"}`},
 		{"unknown", errors.New("boom"), 500, `{"code":"internal","error":"boom"}`},
+		{"database unavailable", fmt.Errorf("query hp: %w: dial tcp: connection refused", domain.ErrUnavailable), 503, `{"code":"database_unavailable","error":"database unavailable"}`},
+		{"a deadline is not the database", fmt.Errorf("idp: %w", context.DeadlineExceeded), 500, `{"code":"internal","error":"idp: context deadline exceeded"}`},
 	}
 	for _, ep := range endpoints {
 		for _, e := range errs {

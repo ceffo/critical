@@ -52,6 +52,8 @@
       "email_unverified": "Your Google account's email address is not verified. Verify it with Google, then log in again.",
       "login_state_mismatch": "The login took too long or was started in another tab. Try again.",
       "login_failed": "Google login did not complete. Try again.",
+      "login_timeout": "The login took too long to complete. Try again in a moment.",
+      "database_unavailable": "The database is not answering, so the login could not complete. Try again in a moment.",
       "unknown": "The login did not complete. Try again."
     }
   },
@@ -1552,7 +1554,8 @@
     "not_invited": "This Google account is not invited. Ask an admin for an invite.",
     "user_disabled": "This account is disabled. Ask an admin.",
     "root_admin_protected": "The root administrator cannot be disabled or demoted.",
-    "root_admin_taken": "Another user is already the root administrator."
+    "root_admin_taken": "Another user is already the root administrator.",
+    "database_unavailable": "The database is not answering. Try again in a moment."
   },
   "lastShort": {
     "attack": "Attack",
@@ -1569,5 +1572,9 @@
       "success": "success",
       "failure": "failed"
     }
+  },
+  "database": {
+    "unavailable": "The database is not answering. Retrying…",
+    "uncertainWrite": "Your last action may not have been saved. Actions resume once the sheet is reloaded: check the journal before trying again."
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { setReload } from "@/api/http";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/dashboard/Header";
 import { InventoryPanel } from "@/components/actions/InventoryPanel";
@@ -11,6 +12,7 @@ import { Identity } from "@/components/dashboard/Identity";
 import { Notices } from "@/components/dashboard/Notices";
 import { DiceComposer } from "@/components/dashboard/DiceComposer";
 import { ActStage } from "@/components/shell/ActStage";
+import { DatabaseBanner } from "@/components/shell/DatabaseBanner";
 import { Rail } from "@/components/shell/Rail";
 import { SettingsPopover } from "@/components/shell/SettingsPopover";
 import { XpPanel } from "@/components/xp/XpPanel";
@@ -86,10 +88,17 @@ function App() {
     void refresh();
     void fetchXp();
     void loadSpellNames();
+    // After a write the database may or may not have saved, the whole sheet is read again before
+    // writes are allowed (ADR 0025 step 10.4).
+    setReload(() =>
+      Promise.all([loadCharacter(), refresh(), fetchXp(), loadSpellNames()]),
+    );
+    return () => setReload(null);
   }, [loadCharacter, refresh, fetchXp, loadSpellNames]);
 
   return (
     <div className="flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">
+      <DatabaseBanner />
       <Header />
       <div className="flex min-h-0 flex-1 gap-3">
         <aside

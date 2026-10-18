@@ -1869,3 +1869,41 @@ test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", a
     await snap(page, `login-fr-dark-${dark}`);
   }
 });
+
+// ADR 0022 step 1 for the database banner (ADR 0025 step 10.4), French first: with both of its
+// lines (a write whose outcome is unknown), it wraps and is never cut, fr and en, 1280x800 to
+// 2560x1440.
+test("database banner: both lines uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  const unavailable = {
+    status: 503,
+    contentType: "application/json",
+    body: JSON.stringify({
+      code: "database_unavailable",
+      error: "database unavailable",
+    }),
+  };
+  await page.route("**/api/hp/event", (route) => route.fulfill(unavailable));
+  await page.route("**/api/character", (route) => route.fulfill(unavailable));
+  await recordHp(page, "damage", 4, "e2e lost blow");
+  const banner = page.getByTestId("database-banner");
+  await expect(banner).toContainText(
+    "Your last action may not have been saved",
+  );
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(banner, `database banner, ${where}`);
+      if (lang === "fr")
+        await snap(page, `database-banner-${where.replace(", ", "-")}`);
+    }
+  }
+});

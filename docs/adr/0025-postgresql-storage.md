@@ -228,6 +228,59 @@ flowchart TD
    `sqlite_sequence` too, not only past the highest id copied: an undo restores a deleted row under
    its old id.
 
+10. **Requests are bounded** (_added 2026-10-18, user: "the backend has to be smarter than that about
+    the db connections", after production became unusable while the shared 256 MB node of
+    [ADR 0024](0024-deployment.md) step 2 was starved of memory: "every click takes a minute"; proposed
+    by the implementer, accepted by the supervisor, the user approves ADR changes at merge_).
+    1. **A deadline per request.** Every request answers within 8 seconds (`router.RequestDeadline`).
+       Its context ends then, which ends every wait on the database (a connection of the pool, the
+       database starting, a statement); and since lib/pq keeps waiting for a statement already sent to a
+       server that stopped answering, the client gets its answer at the deadline even when the handler is
+       still stuck, from a buffered response (`middleware.Deadline`). The handler's late response is
+       dropped; a handler that returns after the deadline with a server error (its statement cut by the
+       context) gets the deadline's answer too, and a panic raised after the deadline is logged. The
+       Google login's browser navigations (`/api/auth/google/start` and `/callback`) answer the deadline
+       as the login callback answers a refusal ([ADR 0029](0029-users-login-and-access.md) step 3.7): the
+       login page with the code `login_timeout`, never a JSON error (Google or the database too slow).
+    2. **`database_unavailable`, HTTP 503.** A request the database could not serve in time (the
+       deadline passed, or no connection within it) answers `{"code": "database_unavailable"}` with 503,
+       from the domain sentinel `domain.ErrUnavailable` in the central error table, and only from it: a
+       deadline passed elsewhere (an identity provider too slow) is not the database. The login callback
+       redirects with it as its code (the login page words it). A write that answers it may or may not be saved: one cut before its COMMIT is rolled
+       back; one whose COMMIT was sent is unknown to the server too.
+    3. **A connection gate.** One connection attempt is bounded to 5 seconds, the handshake included
+       (lib/pq's `connect_timeout` unless the DSN sets one). Once an attempt fails as a stopped or
+       starting database fails, one probe per server retries every second and the other connections wait
+       for it without dialling: an outage costs the database one attempt per second per server, not one
+       per request. The boot still waits up to 60 seconds for the cluster's idle stop.
+    4. **The web.** On `database_unavailable` the web shows one banner ("the database is not answering,
+       retrying") and retries a read every 3 seconds for a minute: no attempt starts after it, so a read
+       ends within about a minute and one request deadline. It never resends a write.
+       While the banner shows, every write is refused in the browser without reaching the server; after a
+       write that got `database_unavailable` (its outcome unknown) writes stay refused until the database
+       answers **and the whole sheet has been read again**, so the journal shows whether that write was
+       saved before the player can act again: a second click cannot record the same action twice. That
+       reload fails closed: if any request fails while it runs (the stores catch their own errors), writes
+       stay refused and it runs again on the next answer.
+    5. **The catalogue is read once per server.** The spell catalogue only changes at an import, which
+       only runs at boot ([ADR 0021](0021-spell-catalogue.md) step 5): each server reads it, texts
+       included, right after its import and serves it from memory. During a rolling deploy a server of the
+       previous version serves its own artifact's catalogue until it is replaced.
+    6. **Sessions** are trusted for 10 seconds per server ([ADR 0029](0029-users-login-and-access.md)
+       step 4.7).
+
+    Tests: `storage/postgres` `TestGate_WaitsForAStartingDatabase`, `TestGate_FailsFastOnWhatWaitingCannotFix`,
+    `TestGate_ABurstDuringAnOutageDialsOnlyThroughTheProbe`, `TestGate_AWaitEndsWithTheCallersContext`,
+    `TestGate_AStalledHandshakeEndsWithTheCallersContext`, `TestGate_ALateFailedAttemptIsDropped`,
+    `TestConnectConfig_BoundsOneAttempt`; `middleware` `TestDeadline_AHandlerStuckPastTheDeadlineAnswersAtTheDeadline`,
+    `TestDeadline_AServerErrorAfterTheDeadlineIsTheDeadlinesAnswer`, `TestDeadline_APanicAfterTheDeadlineIsLogged`,
+    `TestDeadline_AListedPathGetsItsOwnLateAnswer`;
+    `router` `TestRouter_EveryRequestHasADeadline`, `TestServiceErrorsMapToStatusAndBody`,
+    `TestGoogleCallback_Step3_7_PastTheDeadlineGoesToTheLoginPage`, `TestGoogleCallback_Step3_7_SessionOrRefusalCode`; `spelldal`
+    `TestCatalogue_SearchFiltersClassAndLevelsInTheCataloguesOrder`; `composition`
+    `TestBuild_SpellCatalogueReadOnceAtStartup`; the web's `src/api/http.unavailable.test.ts` and the
+    e2e `database.spec.ts` and `layout.spec.ts` ("database banner").
+
 ## Consequences
 
 - **Order of the work.** The tests stop opening a database first, still on SQLite (composition,
@@ -250,4 +303,7 @@ flowchart TD
   staging is felt by production, and the cluster has one node, so its failure stops both. Accepted
   for a single-user tool on a free allowance.
 - **Not covered**: the multi-user model (users, roles, per-player characters), connection pooling
-  beyond the driver's pool, read replicas.
+  beyond the driver's pool and the gate of step 10.3, read replicas.
+- **Bounded requests** (step 10): a database slower than 8 seconds on a request is an error, never a
+  wait; a cold start of the idle-stopped cluster longer than that fails the first reads, which the web
+  retries until it answers.

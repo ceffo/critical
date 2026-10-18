@@ -119,7 +119,10 @@ one item and gets a test that fails on the old code, per the house rule.
    5. A disabled user is refused, with the same kind of message, and no session is created.
    6. `last login` is set at every successful login.
    7. Refusals (unknown email, disabled, bad state, unverified email) answer with a redirect to the login
-      page and a stable code, never a stack trace; the code is worded in the web (en + fr).
+      page and a stable code, never a stack trace; the code is worded in the web (en + fr). So do a
+      database that cannot serve the login (`database_unavailable`) and a login still running at the
+      request deadline (`login_timeout`; _added 2026-10-18 by [ADR 0025](0025-postgresql-storage.md)
+      step 10.1_): the browser never lands on a JSON error.
 
 ```mermaid
 sequenceDiagram
@@ -171,6 +174,21 @@ sequenceDiagram
       mutation is a non-GET.
    6. The current user is `GET /api/auth/me` (email, role, root flag, current character id); it answers
       401 without a session, which is how the web decides to show the login page.
+   7. **A server trusts a session it found valid for 10 seconds** (_added 2026-10-18 by the database
+      resilience change, see [ADR 0025](0025-postgresql-storage.md) step 10; the user approves ADR
+      changes at merge_), never past the session's expiry: the requests of a page load read the session
+      and its user once instead of once each. The server that logs a session out, disables its user or
+      changes the user's role forgets it at once, so on that server step 4.4 holds as written: a request
+      that read the session before the change and finishes after it does not put it back. On the
+      other production server a logout, a disabling or a role change takes effect **within 10 seconds**:
+      the window accepted for that saving (the servers share no channel but the database). An answer from
+      the cache never extends the session (step 4.3 writes on a read of the database only); a failed
+      lookup is never remembered. Tests: `authsvc` `TestAuthenticate_Step4_7_TrustedForTheCacheTTL`,
+      `TestAuthenticate_Step4_7_NeverPastTheSessionsExpiry`, `TestAuthenticate_Step4_7_LogoutForgetsAtOnce`,
+      `TestAuthenticate_Step4_7_DisablingForgetsAtOnce`, `TestAuthenticate_Step4_7_ARoleChangeForgetsAtOnce`,
+      `TestAuthenticate_Step4_7_TheCacheNeverReportsAnExtension`, `TestAuthenticate_Step4_7_AFailureIsNotCached`,
+      `TestAuthenticate_Step4_7_ALookupInFlightDuringLogoutIsNotKept`,
+      `TestAuthenticate_Step4_7_ALookupInFlightDuringDisablingIsNotKept`.
 5. **The root admin.**
    1. Exactly **one** user is the root admin: the flag is a column, kept in the database. It is set by a
       **committed script run locally against a DSN** (`just root-admin <email>`), never by hosting

@@ -264,6 +264,12 @@ When the developer reports the full verification passed on HEAD:
 - CI, if the project has it: `gh pr checks <n> --watch` with `run_in_background`. Red → `gh run view
   <id> --log-failed | tail -60`, then a rework brief with the excerpt. No CI → the developer's gate
   is the gate; say so.
+- **Greptile review gate** (user, 2026-10-18: "you must wait for the greptile review and handle
+  feedback and not merge right away"): never arm auto-merge or merge before the `Greptile Review`
+  check has completed and you have read its findings (`gh api repos/<repo>/pulls/<n>/comments` and
+  its summary comment). Treat them like a reviewer's: fix valid ones (a rework round, or yourself for
+  a process PR), reply on the thread with why for the ones you reject, then merge. Log each PR's
+  findings in `<wt>/supervisor/greptile-eval.md` (useful / noise / missed by our reviewer).
 - Done from your side. **Never merge** unless the user explicitly tells you to for that PR.
 - A PR that changes a design decision (an ADR, an API or data contract, a schema) is the user's
   call: before it merges, tell them in a few plain lines what changes and why, even when CI is green
@@ -467,8 +473,9 @@ You groom; the user isn't your tool. Settle the design choices a developer or re
 yourself, against the ADRs, the workflow doc's hard rules and the user's stated intent, and report
 what you decided. Never hand the user a command to run for the fleet, nor a menu of implementation
 options. Ask only what the workflow doc or this file reserves for the user (an ADR or contract change
-before merge, their local workflow, their data), and grep the user log first. Never relay a designer's
-or scoper's questions: they ask the user in their own tab. Never ask the user to do an action that is
+before merge, their local workflow, their data), and grep the user log first. Never relay the questions of an
+interactive designer or scoper: they ask the user in their own tab. An autonomous scoper has no tab:
+its open questions are `needs-info` items, restated through `pending-questions.sh` like any other. Never ask the user to do an action that is
 yours (merge, close, clean up): when the auto-mode classifier denies one, raise it as a **blocking**
 issue in the same reply, with the exact grant needed, and fix the permission setup right away (user,
 2026-10-18: "STOP asking the user to be your tool for actions that are under your responsibility").

@@ -30,6 +30,11 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   `just e2e` green (separate from `just validate`, which only lints/typechecks the e2e TS files).
   List the screenshot paths (`web/e2e-results/screens/<spec>/<name>.png`) in the report. First run
   on a machine: `just e2e-install` (Playwright Chromium).
+- **Visual QA before committing (hard rule):** a UI change is proven by the developer, never by the
+  user. Look at the screenshots you produced (open the png with your file-reading tool), at 1920x1080
+  and 2560x1440 as well as the spec's sizes, with real scrollbars shown (headless Chromium with
+  `ignoreDefaultArgs: ['--hide-scrollbars']`; never a visible window, see "Hard rules"), and keep an
+  automated check (`layout.spec`) that would fail on the defect.
 - **e2e budget (hard rule):** the whole suite stays under 5 minutes on CI, absolute (the job times out
   at 6). e2e is for what only a browser proves: wiring, navigation, persistence across reload, one
   happy path per user flow, plus the screenshots. Rules, edge cases and error branches belong in Go

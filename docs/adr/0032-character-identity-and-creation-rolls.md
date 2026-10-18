@@ -1,7 +1,7 @@
 # ADR 0032: Character identity and creation rolls
 
 **Status**: accepted 2026-10-18 (decisions from the user's triage of the onboarding epic, the same
-day; steps or parts marked _(proposed)_ are details this ADR adds and await the user's OK in
+day; the six defaults proposed in the first round were accepted by the supervisor; the one part still marked _(proposed)_ (bare height and weight units in step 8) awaits the user's OK in
 review). Not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
 step 7.5 on level 1 hit points) and [ADR 0029](0029-users-login-and-access.md) steps 7.2 and 7.3
 (character actions leave the cog menu; creation is a full-screen route).
@@ -82,7 +82,7 @@ flowchart LR
      neutral, neutral evil) are allowed and the four others refused;
    - **thief**: PHB chapter 3, Thief: any alignment except lawful good;
    - **fighter**: any (PHB chapter 3, Fighter). **Mage**: no limit stated. **Cleric**: the book ties a priest's
-     alignment to the deity's, which the app does not model; no limit is checked _(proposed)_.
+     alignment to the deity's, which the app does not model; no limit is checked.
 
    Refusals, field `alignment`: `empty` (missing at creation, or an edit that clears it),
    `unknown` (not one of the nine), `alignment_not_allowed` (the class limit; the response names the
@@ -100,7 +100,7 @@ flowchart LR
    1. **Native language, automatic.** The race's own language is always among the character's
       languages, added by the server and not removable: dwarf, elf, gnome and halfling each their own
       (PHB chapter 2); human and half-elf have none of their own (the book: humans start knowing
-      their regional language, half-elves have no language of their own), so Common _(proposed)_.
+      their regional language, half-elves have no language of their own), so Common.
       It does not count against the limit of item 2.
    2. **The count (PHB Table 4).** The additional languages a character may know are Table 4's
       "# of Lang." for its Intelligence score (score 1: none; 2 to 8: 1; 9 to 11: 2; 12 to 13: 3;
@@ -108,7 +108,7 @@ flowchart LR
       Going over is a **warning, never a refusal**: `languages_over_limit` with `count` and
       `limit`. The same warning is read again when the Intelligence score is later edited below the
       languages known.
-   3. **Offered, not restricted** _(proposed)_: the form offers the whole catalogue with the
+   3. **Offered, not restricted**: the form offers the whole catalogue with the
       race's PHB list marked, since the book lets the DM allow any other language; the server accepts
       any catalogue language. Refusals, field `languages`: `unknown` (not in the catalogue),
       `duplicate`.
@@ -139,9 +139,9 @@ flowchart LR
       refusal is `race_required` or `sex_required` on the rolled field.
 6. **Ability scores: roll or type.** The player either types the six scores or picks one of the
    six methods of DMG chapter 1 (the PHB's chapter 1 lists the same six) and the server rolls. The
-   method is the player's choice per character, not a campaign setting _(proposed: the DMG has the
+   method is the player's choice per character, not a campaign setting (the DMG has the
    DM choose; at a table of many players with one DM this is the table's to agree, not the app's to
-   enforce)_. What the server rolls, and what the player arranges, per method (a "d6 roll" below is
+   enforce). What the server rolls, and what the player arranges, per method (a "d6 roll" below is
    one die; `3d6` is three of them added):
 
    | Method | The server rolls | The player |
@@ -200,7 +200,7 @@ flowchart LR
    ignoring case, accents and punctuation**:
    1. alignment: the nine names in en and fr, their usual abbreviations (LG, NE, loyal bon ...) and
       "neutral" / "neutre" alone as true neutral; sex: male and female in en and fr, and "M" / "F" /
-      "H" _(proposed)_; languages: each item of a list (separated by commas, semicolons, "and" and
+      "H"; languages: each item of a list (separated by commas, semicolons, "and" and
       "et") that names a catalogue language in either language, so Kelsen's French words become
       codes; height, weight and age: a number, with or without a recognised unit (cm, m, feet-inches,
       kg, lb, years / ans; a bare height under 3 reads as metres, a bare weight as kilograms

@@ -7,7 +7,52 @@ package queries
 
 import (
 	"context"
+	"database/sql"
+
+	"github.com/google/uuid"
 )
+
+const charactersOf = `-- name: CharactersOf :many
+SELECT id, name, class, level FROM characters
+WHERE owner_user_id = $1 AND NOT retired
+ORDER BY id
+`
+
+type CharactersOfRow struct {
+	ID    int64
+	Name  string
+	Class string
+	Level int64
+}
+
+// The owner's characters they have not retired, in creation order.
+func (q *Queries) CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) ([]CharactersOfRow, error) {
+	rows, err := q.db.QueryContext(ctx, charactersOf, ownerUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharactersOfRow{}
+	for rows.Next() {
+		var i CharactersOfRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Class,
+			&i.Level,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
@@ -16,9 +61,39 @@ SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_tot
 FROM characters WHERE id = $1
 `
 
-func (q *Queries) GetCharacter(ctx context.Context, id int64) (Character, error) {
+type GetCharacterRow struct {
+	ID               int64
+	Name             string
+	Str              int64
+	Dex              int64
+	Con              int64
+	Int              int64
+	Wis              int64
+	Cha              int64
+	HpMax            int64
+	Thac0Base        int64
+	Level            int64
+	XpTotal          int64
+	SaveParaPoison   int64
+	SaveRodStaffWand int64
+	SavePetriPoly    int64
+	SaveBreath       int64
+	SaveSpell        int64
+	Class            string
+	Race             string
+	Alignment        string
+	Age              int64
+	Sex              string
+	Height           string
+	Weight           string
+	Hair             string
+	Eyes             string
+	Languages        string
+}
+
+func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error) {
 	row := q.db.QueryRowContext(ctx, getCharacter, id)
-	var i Character
+	var i GetCharacterRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -85,15 +160,26 @@ func (q *Queries) GetCharacterDetails(ctx context.Context, id int64) (GetCharact
 	return i, err
 }
 
-const getFirstCharacterID = `-- name: GetFirstCharacterID :one
-SELECT id FROM characters ORDER BY id LIMIT 1
+const setCurrentCharacter = `-- name: SetCurrentCharacter :execrows
+UPDATE users SET current_character_id = $1
+WHERE users.id = $2 AND EXISTS (
+    SELECT 1 FROM characters c
+    WHERE c.id = $1 AND c.owner_user_id = $2 AND NOT c.retired
+)
 `
 
-func (q *Queries) GetFirstCharacterID(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getFirstCharacterID)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+type SetCurrentCharacterParams struct {
+	CharacterID sql.NullInt64
+	UserID      uuid.UUID
+}
+
+// Only a character the user owns and has not retired: none updated is an unknown character.
+func (q *Queries) SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setCurrentCharacter, arg.CharacterID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateCharacterDetails = `-- name: UpdateCharacterDetails :execrows

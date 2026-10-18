@@ -6,6 +6,8 @@ export interface Me {
   email: string;
   role: "admin" | "player";
   root: boolean;
+  /** The character every per-character request acts on (ADR 0029 step 7.2); null: the user has none yet. */
+  currentCharacterId: number | null;
 }
 
 /** How the server lets a user log in (`GET /api/auth/options`): Google with OAuth settings, else the dev login. */

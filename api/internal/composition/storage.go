@@ -70,12 +70,12 @@ type Store interface {
 	Close() error
 }
 
-// CharacterStore is the character adapter: the sheet reads, the details edit
-// and the single-character mode's id.
+// CharacterStore is the character adapter: the sheet reads, who owns and
+// plays which character, and the details edit.
 type CharacterStore interface {
 	charactersvc.Reader
+	charactersvc.Owners
 	detailssvc.DAL
-	FirstID(ctx context.Context) (int64, error)
 }
 
 // BuffStore is the buff adapter plus the round read the action log stamps

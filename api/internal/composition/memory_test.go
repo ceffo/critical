@@ -28,10 +28,11 @@ func TestNew_Step8_1_InMemoryOpensNoDatabase(t *testing.T) {
 	_, err = os.Stat(dsn)
 	assert.ErrorIs(t, err, os.ErrNotExist, "nothing is created at the DSN")
 
-	ch, err := bs.Character.GetCharacter(ctx, bs.CharacterID)
+	id := rootCharacter(t, bs)
+	ch, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, "Test Bard", ch.Name)
-	hp, err := bs.HP.GetState(ctx, bs.CharacterID)
+	hp, err := bs.HP.GetState(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, 85, hp.CurrentHp)
 }

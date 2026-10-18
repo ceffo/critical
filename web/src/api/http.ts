@@ -1,6 +1,7 @@
 import i18n from "@/i18n";
 import { loginUrl } from "@/lib/session";
 import { useDatabaseStore } from "@/stores/database";
+import { useSessionStore } from "@/stores/session";
 
 /** The login endpoints: their callers decide where to go, a 401 there never redirects. */
 const AUTH_PREFIX = "/api/auth/";
@@ -157,6 +158,21 @@ async function probe() {
   }
 }
 
+/** The header naming the character the page shows (ADR 0029 step 7.2): the server acts on that one or on none. */
+export const CHARACTER_HEADER = "X-Character-Id";
+
+/** The code of a request for a character that is not the user's current one any more (switched elsewhere). */
+export const CHARACTER_CHANGED = "character_changed";
+
+/** init with the character the page shows (the session's current character), when it has one. */
+function withCharacter(init?: RequestInit): RequestInit | undefined {
+  const id = useSessionStore.getState().me?.currentCharacterId;
+  if (id == null) return init;
+  const headers = new Headers(init?.headers);
+  headers.set(CHARACTER_HEADER, String(id));
+  return { ...init, headers };
+}
+
 const isRead = (init?: RequestInit) =>
   !init?.method || init.method === "GET" || init.method === "HEAD";
 
@@ -172,6 +188,10 @@ const isRead = (init?: RequestInit) =>
  * A 401 from a data route means the session ended while the app ran (it starts only with one): the
  * login page shows, saying so (ADR 0029 step 4.4). The login endpoints (`/api/auth/*`: dev login, log
  * out) navigate on their own, so their 401 only throws.
+ *
+ * Every request names the character the page shows; the server refuses one for another character than
+ * the user's current one (`character_changed`: switched in another tab or on the other server) without
+ * reading or writing anything, and the page reloads to show the current character (ADR 0029 step 7.2).
  */
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   try {
@@ -189,7 +209,7 @@ async function send<T>(url: string, init?: RequestInit): Promise<T> {
     throw unavailableError();
   }
   for (;;) {
-    const res = await fetch(url, init);
+    const res = await fetch(url, withCharacter(init));
     if (res.ok) {
       void markAnswered();
       return res.json() as Promise<T>;
@@ -198,6 +218,7 @@ async function send<T>(url: string, init?: RequestInit): Promise<T> {
     const err = new ApiError(message, res.status, field, code);
     if (res.status === 401 && !url.startsWith(AUTH_PREFIX))
       globalThis.location.assign(loginUrl("session_expired"));
+    if (code === CHARACTER_CHANGED) globalThis.location.reload();
     if (code !== UNAVAILABLE) {
       if (res.status < 500) void markAnswered();
       throw err;

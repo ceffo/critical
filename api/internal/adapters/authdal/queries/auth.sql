@@ -1,14 +1,29 @@
+-- Every user read carries the user's current character (ADR 0029 step 7.2) through its ownership:
+-- a character the user does not own, or retired, is no current character (NULL).
+
 -- name: UserByID :one
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users WHERE id = $1;
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+FROM users u
+LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
+WHERE u.id = $1;
 
 -- name: UserBySubject :one
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users WHERE google_subject = $1;
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+FROM users u
+LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
+WHERE u.google_subject = $1;
 
 -- name: UserByEmail :one
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users WHERE email = $1;
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+FROM users u
+LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
+WHERE u.email = $1;
 
 -- name: RootUser :one
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users WHERE is_root;
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+FROM users u
+LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
+WHERE u.is_root;
 
 -- name: InsertUser :exec
 INSERT INTO users (id, email, google_subject, role, is_root, disabled, last_login, created_at)
@@ -38,3 +53,23 @@ DELETE FROM sessions WHERE id = $1;
 
 -- name: DeleteUserSessions :exec
 DELETE FROM sessions WHERE user_id = $1;
+
+-- name: AdoptUnownedCharacters :exec
+UPDATE characters SET owner_user_id = $1 WHERE owner_user_id IS NULL;
+
+-- name: SetFirstCurrentCharacter :exec
+-- The user's first character they own and have not retired becomes current, unless the current one
+-- is such a character: a NULL current, a retired one and another user's are all repaired.
+UPDATE users SET current_character_id = (
+    SELECT min(c.id) FROM characters c WHERE c.owner_user_id = users.id AND NOT c.retired
+) WHERE users.id = $1 AND NOT EXISTS (
+    SELECT 1 FROM characters c
+    WHERE c.id = users.current_character_id AND c.owner_user_id = users.id AND NOT c.retired
+);
+
+-- name: MoveCharacters :exec
+-- Every character of one user becomes another's (a root admin that never logged in moves).
+UPDATE characters SET owner_user_id = sqlc.arg(to_user) WHERE owner_user_id = sqlc.arg(from_user);
+
+-- name: ClearCurrentCharacter :exec
+UPDATE users SET current_character_id = NULL WHERE id = $1;

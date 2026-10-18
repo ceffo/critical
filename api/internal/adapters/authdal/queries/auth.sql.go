@@ -31,6 +31,24 @@ func (q *Queries) AcceptInvite(ctx context.Context, arg AcceptInviteParams) (int
 	return result.RowsAffected()
 }
 
+const adoptUnownedCharacters = `-- name: AdoptUnownedCharacters :exec
+UPDATE characters SET owner_user_id = $1 WHERE owner_user_id IS NULL
+`
+
+func (q *Queries) AdoptUnownedCharacters(ctx context.Context, ownerUserID uuid.NullUUID) error {
+	_, err := q.db.ExecContext(ctx, adoptUnownedCharacters, ownerUserID)
+	return err
+}
+
+const clearCurrentCharacter = `-- name: ClearCurrentCharacter :exec
+UPDATE users SET current_character_id = NULL WHERE id = $1
+`
+
+func (q *Queries) ClearCurrentCharacter(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, clearCurrentCharacter, id)
+	return err
+}
+
 const deleteSession = `-- name: DeleteSession :exec
 DELETE FROM sessions WHERE id = $1
 `
@@ -117,6 +135,21 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
 	return err
 }
 
+const moveCharacters = `-- name: MoveCharacters :exec
+UPDATE characters SET owner_user_id = $1 WHERE owner_user_id = $2
+`
+
+type MoveCharactersParams struct {
+	ToUser   uuid.NullUUID
+	FromUser uuid.NullUUID
+}
+
+// Every character of one user becomes another's (a root admin that never logged in moves).
+func (q *Queries) MoveCharacters(ctx context.Context, arg MoveCharactersParams) error {
+	_, err := q.db.ExecContext(ctx, moveCharacters, arg.ToUser, arg.FromUser)
+	return err
+}
+
 const pendingInvite = `-- name: PendingInvite :one
 SELECT id, email, invited_by, created_at FROM invites
 WHERE email = $1 AND cancelled IS NULL AND accepted_by IS NULL
@@ -142,12 +175,27 @@ func (q *Queries) PendingInvite(ctx context.Context, email string) (PendingInvit
 }
 
 const rootUser = `-- name: RootUser :one
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users WHERE is_root
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+FROM users u
+LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
+WHERE u.is_root
 `
 
-func (q *Queries) RootUser(ctx context.Context) (User, error) {
+type RootUserRow struct {
+	ID                 uuid.UUID
+	Email              string
+	GoogleSubject      sql.NullString
+	Role               string
+	IsRoot             bool
+	Disabled           bool
+	LastLogin          sql.NullTime
+	CreatedAt          time.Time
+	CurrentCharacterID sql.NullInt64
+}
+
+func (q *Queries) RootUser(ctx context.Context) (RootUserRow, error) {
 	row := q.db.QueryRowContext(ctx, rootUser)
-	var i User
+	var i RootUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -157,6 +205,7 @@ func (q *Queries) RootUser(ctx context.Context) (User, error) {
 		&i.Disabled,
 		&i.LastLogin,
 		&i.CreatedAt,
+		&i.CurrentCharacterID,
 	)
 	return i, err
 }
@@ -176,6 +225,22 @@ func (q *Queries) SessionByID(ctx context.Context, id string) (Session, error) {
 		&i.ExpiresAt,
 	)
 	return i, err
+}
+
+const setFirstCurrentCharacter = `-- name: SetFirstCurrentCharacter :exec
+UPDATE users SET current_character_id = (
+    SELECT min(c.id) FROM characters c WHERE c.owner_user_id = users.id AND NOT c.retired
+) WHERE users.id = $1 AND NOT EXISTS (
+    SELECT 1 FROM characters c
+    WHERE c.id = users.current_character_id AND c.owner_user_id = users.id AND NOT c.retired
+)
+`
+
+// The user's first character they own and have not retired becomes current, unless the current one
+// is such a character: a NULL current, a retired one and another user's are all repaired.
+func (q *Queries) SetFirstCurrentCharacter(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, setFirstCurrentCharacter, id)
+	return err
 }
 
 const updateUser = `-- name: UpdateUser :execrows
@@ -207,12 +272,27 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int64, 
 }
 
 const userByEmail = `-- name: UserByEmail :one
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users WHERE email = $1
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+FROM users u
+LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
+WHERE u.email = $1
 `
 
-func (q *Queries) UserByEmail(ctx context.Context, email string) (User, error) {
+type UserByEmailRow struct {
+	ID                 uuid.UUID
+	Email              string
+	GoogleSubject      sql.NullString
+	Role               string
+	IsRoot             bool
+	Disabled           bool
+	LastLogin          sql.NullTime
+	CreatedAt          time.Time
+	CurrentCharacterID sql.NullInt64
+}
+
+func (q *Queries) UserByEmail(ctx context.Context, email string) (UserByEmailRow, error) {
 	row := q.db.QueryRowContext(ctx, userByEmail, email)
-	var i User
+	var i UserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -222,17 +302,36 @@ func (q *Queries) UserByEmail(ctx context.Context, email string) (User, error) {
 		&i.Disabled,
 		&i.LastLogin,
 		&i.CreatedAt,
+		&i.CurrentCharacterID,
 	)
 	return i, err
 }
 
 const userByID = `-- name: UserByID :one
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users WHERE id = $1
+
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+FROM users u
+LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
+WHERE u.id = $1
 `
 
-func (q *Queries) UserByID(ctx context.Context, id uuid.UUID) (User, error) {
+type UserByIDRow struct {
+	ID                 uuid.UUID
+	Email              string
+	GoogleSubject      sql.NullString
+	Role               string
+	IsRoot             bool
+	Disabled           bool
+	LastLogin          sql.NullTime
+	CreatedAt          time.Time
+	CurrentCharacterID sql.NullInt64
+}
+
+// Every user read carries the user's current character (ADR 0029 step 7.2) through its ownership:
+// a character the user does not own, or retired, is no current character (NULL).
+func (q *Queries) UserByID(ctx context.Context, id uuid.UUID) (UserByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, userByID, id)
-	var i User
+	var i UserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -242,17 +341,33 @@ func (q *Queries) UserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Disabled,
 		&i.LastLogin,
 		&i.CreatedAt,
+		&i.CurrentCharacterID,
 	)
 	return i, err
 }
 
 const userBySubject = `-- name: UserBySubject :one
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users WHERE google_subject = $1
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+FROM users u
+LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
+WHERE u.google_subject = $1
 `
 
-func (q *Queries) UserBySubject(ctx context.Context, googleSubject sql.NullString) (User, error) {
+type UserBySubjectRow struct {
+	ID                 uuid.UUID
+	Email              string
+	GoogleSubject      sql.NullString
+	Role               string
+	IsRoot             bool
+	Disabled           bool
+	LastLogin          sql.NullTime
+	CreatedAt          time.Time
+	CurrentCharacterID sql.NullInt64
+}
+
+func (q *Queries) UserBySubject(ctx context.Context, googleSubject sql.NullString) (UserBySubjectRow, error) {
 	row := q.db.QueryRowContext(ctx, userBySubject, googleSubject)
-	var i User
+	var i UserBySubjectRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -262,6 +377,7 @@ func (q *Queries) UserBySubject(ctx context.Context, googleSubject sql.NullStrin
 		&i.Disabled,
 		&i.LastLogin,
 		&i.CreatedAt,
+		&i.CurrentCharacterID,
 	)
 	return i, err
 }

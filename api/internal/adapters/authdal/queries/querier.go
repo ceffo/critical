@@ -13,18 +13,27 @@ import (
 
 type Querier interface {
 	AcceptInvite(ctx context.Context, arg AcceptInviteParams) (int64, error)
+	AdoptUnownedCharacters(ctx context.Context, ownerUserID uuid.NullUUID) error
+	ClearCurrentCharacter(ctx context.Context, id uuid.UUID) error
 	DeleteSession(ctx context.Context, id string) error
 	DeleteUserSessions(ctx context.Context, userID uuid.UUID) error
 	ExtendSession(ctx context.Context, arg ExtendSessionParams) error
 	InsertSession(ctx context.Context, arg InsertSessionParams) error
 	InsertUser(ctx context.Context, arg InsertUserParams) error
+	// Every character of one user becomes another's (a root admin that never logged in moves).
+	MoveCharacters(ctx context.Context, arg MoveCharactersParams) error
 	PendingInvite(ctx context.Context, email string) (PendingInviteRow, error)
-	RootUser(ctx context.Context) (User, error)
+	RootUser(ctx context.Context) (RootUserRow, error)
 	SessionByID(ctx context.Context, id string) (Session, error)
+	// The user's first character they own and have not retired becomes current, unless the current one
+	// is such a character: a NULL current, a retired one and another user's are all repaired.
+	SetFirstCurrentCharacter(ctx context.Context, id uuid.UUID) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (int64, error)
-	UserByEmail(ctx context.Context, email string) (User, error)
-	UserByID(ctx context.Context, id uuid.UUID) (User, error)
-	UserBySubject(ctx context.Context, googleSubject sql.NullString) (User, error)
+	UserByEmail(ctx context.Context, email string) (UserByEmailRow, error)
+	// Every user read carries the user's current character (ADR 0029 step 7.2) through its ownership:
+	// a character the user does not own, or retired, is no current character (NULL).
+	UserByID(ctx context.Context, id uuid.UUID) (UserByIDRow, error)
+	UserBySubject(ctx context.Context, googleSubject sql.NullString) (UserBySubjectRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

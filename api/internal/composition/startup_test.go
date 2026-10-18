@@ -12,18 +12,22 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
 // The steps run in the order migrate, seed, import the catalogue, read the
-// spell catalogue once, find the character; the import is told the fixture's catalogue and every spell the
+// spell catalogue once, give the characters without an owner to the root
+// admin (ADR 0029 step 5.3); the import is told the fixture's catalogue and every spell the
 // seeds refer to, so it cannot remove one (ADR 0021 step 5.4.3). Closing the
 // services closes the store once.
 func TestBuild_StartupStepsRunInOrder(t *testing.T) {
@@ -46,12 +50,13 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 		}).Once()
 	search := h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once()
 	h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once().NotBefore(search)
-	h.Character.EXPECT().FirstID(mock.Anything).Return(characterID, nil).Once()
+	root := &authsvc.User{ID: uuid.New(), Email: "root@example.com", Role: authsvc.RoleAdmin, Root: true}
+	h.Auth.EXPECT().RootUser(mock.Anything).Return(root, nil).Once().NotBefore(search)
+	h.Auth.EXPECT().AdoptUnownedCharacters(mock.Anything, root.ID).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once()
 
 	bs, err := h.build(t, fixtureConfig())
 	require.NoError(t, err)
-	assert.Equal(t, characterID, bs.CharacterID)
 	assert.NotEmpty(t, cat.Spells)
 	assert.Contains(t, book, "alarm", "the seed gets the spellbook seed, checked against the catalogue")
 	assert.Contains(t, refs, catalogue.Ref{ID: "alarm", Where: "spellbook seed"})
@@ -88,14 +93,14 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(boom).Once()
 		}, "seed: boom"},
-		{"no character", func(h *harness) {
+		{"adopting the characters without an owner", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once()
 			h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once()
-			h.Character.EXPECT().FirstID(mock.Anything).Return(int64(0), boom).Once()
-		}, "resolve character: boom"},
+			h.Auth.EXPECT().RootUser(mock.Anything).Return(nil, boom).Once()
+		}, "give the characters without an owner to the root admin: boom"},
 		{"spell catalogue read", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
@@ -179,7 +184,7 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 	bs, err := h.build(t, cfg)
 	require.NoError(t, err)
 	defer func() { require.NoError(t, bs.Close(ctx)) }()
-	l, err := bs.XP.Get(ctx, bs.CharacterID)
+	l, err := bs.XP.Get(ctx, characterID)
 	require.NoError(t, err)
 	require.NotNil(t, l.NextThreshold)
 	return *l.NextThreshold
@@ -407,7 +412,7 @@ func TestBuild_SpellCatalogueReadOnceAtStartup(t *testing.T) {
 	fire := spellsvc.Spell{ID: "fireball", Class: "Wizard", Level: 3}
 	h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return([]spellsvc.Spell{fire}, nil).Once()
 	h.Spell.EXPECT().Details(mock.Anything, []string{"fireball"}).Return([]spellsvc.Spell{fire}, nil).Once()
-	h.Character.EXPECT().FirstID(mock.Anything).Return(characterID, nil).Once()
+	h.Auth.EXPECT().RootUser(mock.Anything).Return(nil, domain.ErrNotFound).Once()
 
 	bs, err := h.build(t, fixtureConfig())
 	require.NoError(t, err)

@@ -25,6 +25,12 @@ import (
 type tables struct {
 	characters   map[int64]charactersvc.Character
 	characterSeq int64
+	// owners and retired are the characters' owner (none: nobody's yet) and
+	// retired flag (ADR 0029 step 7); current is each user's current
+	// character, read through the ownership.
+	owners  map[int64]uuid.UUID
+	retired map[int64]bool
+	current map[uuid.UUID]int64
 
 	slots  map[int64][]spellsvc.SpellSlot
 	buffs  map[int64][]buffsvc.BuffEffect
@@ -77,6 +83,9 @@ type tables struct {
 func newTables() *tables {
 	return &tables{
 		characters:    map[int64]charactersvc.Character{},
+		owners:        map[int64]uuid.UUID{},
+		retired:       map[int64]bool{},
+		current:       map[uuid.UUID]int64{},
 		slots:         map[int64][]spellsvc.SpellSlot{},
 		buffs:         map[int64][]buffsvc.BuffEffect{},
 		rounds:        map[int64]roundState{},

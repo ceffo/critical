@@ -51,13 +51,14 @@ import (
 const testSession = "test-session"
 
 // signedIn is an auth service (dev login mode) for which testSession is a
-// session of an admin; any other token is no session.
+// session of an admin whose current character is 1; any other token is no
+// session.
 func signedIn(t *testing.T) *authmocks.MockSVC {
 	t.Helper()
 	a := authmocks.NewMockSVC(t)
 	a.EXPECT().DevLoginEnabled().Return(true).Maybe()
 	a.EXPECT().Authenticate(mock.Anything, testSession).Return(&authsvc.Principal{
-		User: authsvc.User{Email: "ann@example.com", Role: authsvc.RoleAdmin},
+		User: authsvc.User{Email: "ann@example.com", Role: authsvc.RoleAdmin, CurrentCharacterID: 1},
 	}, nil).Maybe()
 	a.EXPECT().Authenticate(mock.Anything, mock.Anything).Return(nil, authsvc.ErrUnauthenticated).Maybe()
 	return a
@@ -82,6 +83,18 @@ type mocksSet struct {
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 	t.Helper()
+	return newRouterWith(t, signedIn(t))
+}
+
+// newRouterWith is newRouter over the auth service a.
+func newRouterWith(t *testing.T, a authsvc.SVC) (http.Handler, *mocksSet) {
+	t.Helper()
+	return newRouterOpts(t, a, router.Options{Commit: "abc123"})
+}
+
+// newRouterOpts is newRouterWith with the router's options.
+func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handler, *mocksSet) {
+	t.Helper()
 	m := &mocksSet{
 		char:    charmocks.NewMockSVC(t),
 		hp:      hpmocks.NewMockSVC(t),
@@ -99,12 +112,11 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 		dice:    dicemocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
-		CharacterID: 1,
-		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
-		XP: m.xp, Details: m.details, Skills: m.skills, Dice: m.dice, Auth: signedIn(t),
+		Character: m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
+		XP: m.xp, Details: m.details, Skills: m.skills, Dice: m.dice, Auth: a,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return router.New(log, bs, router.Options{Commit: "abc123"}), m
+	return router.New(log, bs, opts), m
 }
 
 func anyArgs(n int) []any {

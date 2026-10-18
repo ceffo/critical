@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 )
@@ -206,4 +207,77 @@ func TestAuthenticate_Step4_7_ALookupInFlightDuringDisablingIsNotKept(t *testing
 	e.dal.EXPECT().SessionByID(mock.Anything, authsvc.SessionID("tok")).Return(nil, notFound()).Once()
 	_, err := e.svc.Authenticate(context.Background(), "tok")
 	require.ErrorIs(t, err, authsvc.ErrUnauthenticated)
+}
+
+// Step 7.2: the server that changes a user's current character (ForgetUser,
+// called by the character service once it committed) or gives the root admin
+// the characters without an owner forgets the user's sessions at once, so the
+// next request plays the new character.
+func TestAuthenticate_Step7_2_ACurrentCharacterChangeForgetsAtOnce(t *testing.T) {
+	e := newClockEnv(t)
+	before := *player
+	before.CurrentCharacterID = 1
+	e.expectLookup(now.Add(time.Hour), &before)
+	assert.Equal(t, int64(1), e.auth(t).User.CurrentCharacterID)
+
+	after := before
+	after.CurrentCharacterID = 2
+	e.svc.ForgetUser(userID)
+	e.expectLookup(now.Add(time.Hour), &after)
+	assert.Equal(t, int64(2), e.auth(t).User.CurrentCharacterID, "read again at once")
+
+	r := *root
+	e.dal.EXPECT().RootUser(mock.Anything).Return(&r, nil).Once()
+	e.dal.EXPECT().AdoptUnownedCharacters(mock.Anything, userID).Return(nil).Once()
+	require.NoError(t, e.svc.AdoptUnownedCharacters(context.Background()))
+	e.expectLookup(now.Add(time.Hour), &after)
+	e.auth(t)
+}
+
+// Step 7.2: the current character as the database holds it, for a request
+// that shows another one than this server remembers (a switch made on the
+// other server): read at once, and the user's remembered sessions are
+// forgotten, so their next request reads the user again.
+func TestFreshCurrentCharacter_Step7_2_ReadsTheDatabaseAndForgetsAStaleSession(t *testing.T) {
+	e := newClockEnv(t)
+	before := *player
+	before.CurrentCharacterID = 1
+	e.expectLookup(now.Add(time.Hour), &before)
+	p := e.auth(t)
+	assert.Equal(t, int64(1), e.auth(t).User.CurrentCharacterID, "remembered: no second lookup")
+
+	after := before
+	after.CurrentCharacterID = 2
+	e.dal.EXPECT().UserByID(mock.Anything, userID).Return(&after, nil).Once()
+	got, err := e.svc.FreshCurrentCharacter(context.Background(), p)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), got)
+
+	e.expectLookup(now.Add(time.Hour), &after)
+	assert.Equal(t, int64(2), e.auth(t).User.CurrentCharacterID, "the stale session is read again")
+}
+
+// Step 7.2: when the database agrees with the remembered session, it stays
+// remembered; a user deleted meanwhile is unauthenticated, and a database
+// error is returned as is (its chain maps to 503 when it is unavailable).
+func TestFreshCurrentCharacter_Step7_2_KeepsAnAgreeingSession(t *testing.T) {
+	e := newClockEnv(t)
+	u := *player
+	u.CurrentCharacterID = 1
+	e.expectLookup(now.Add(time.Hour), &u)
+	p := e.auth(t)
+	same := u
+	e.dal.EXPECT().UserByID(mock.Anything, userID).Return(&same, nil).Once()
+	got, err := e.svc.FreshCurrentCharacter(context.Background(), p)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), got)
+	assert.Equal(t, int64(1), e.auth(t).User.CurrentCharacterID, "still remembered: no lookup")
+
+	e.dal.EXPECT().UserByID(mock.Anything, userID).Return(nil, domain.ErrNotFound).Once()
+	_, err = e.svc.FreshCurrentCharacter(context.Background(), p)
+	require.ErrorIs(t, err, authsvc.ErrUnauthenticated)
+
+	e.dal.EXPECT().UserByID(mock.Anything, userID).Return(nil, domain.ErrUnavailable).Once()
+	_, err = e.svc.FreshCurrentCharacter(context.Background(), p)
+	require.ErrorIs(t, err, domain.ErrUnavailable)
 }

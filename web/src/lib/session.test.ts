@@ -57,7 +57,13 @@ describe("login page refusal wording", () => {
 describe("startFor", () => {
   const me = {
     kind: "in" as const,
-    me: { id: "u", email: "a@b.c", role: "player" as const, root: false },
+    me: {
+      id: "u",
+      email: "a@b.c",
+      role: "player" as const,
+      root: false,
+      currentCharacterId: 1,
+    },
   };
 
   it("shows the app with a session", () => {

@@ -83,6 +83,100 @@ func (_c *MockQuerier_AcceptInvite_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
+// AdoptUnownedCharacters provides a mock function with given fields: ctx, ownerUserID
+func (_m *MockQuerier) AdoptUnownedCharacters(ctx context.Context, ownerUserID uuid.NullUUID) error {
+	ret := _m.Called(ctx, ownerUserID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdoptUnownedCharacters")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.NullUUID) error); ok {
+		r0 = rf(ctx, ownerUserID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_AdoptUnownedCharacters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AdoptUnownedCharacters'
+type MockQuerier_AdoptUnownedCharacters_Call struct {
+	*mock.Call
+}
+
+// AdoptUnownedCharacters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ownerUserID uuid.NullUUID
+func (_e *MockQuerier_Expecter) AdoptUnownedCharacters(ctx interface{}, ownerUserID interface{}) *MockQuerier_AdoptUnownedCharacters_Call {
+	return &MockQuerier_AdoptUnownedCharacters_Call{Call: _e.mock.On("AdoptUnownedCharacters", ctx, ownerUserID)}
+}
+
+func (_c *MockQuerier_AdoptUnownedCharacters_Call) Run(run func(ctx context.Context, ownerUserID uuid.NullUUID)) *MockQuerier_AdoptUnownedCharacters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.NullUUID))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_AdoptUnownedCharacters_Call) Return(_a0 error) *MockQuerier_AdoptUnownedCharacters_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_AdoptUnownedCharacters_Call) RunAndReturn(run func(context.Context, uuid.NullUUID) error) *MockQuerier_AdoptUnownedCharacters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ClearCurrentCharacter provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) ClearCurrentCharacter(ctx context.Context, id uuid.UUID) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClearCurrentCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_ClearCurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClearCurrentCharacter'
+type MockQuerier_ClearCurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// ClearCurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockQuerier_Expecter) ClearCurrentCharacter(ctx interface{}, id interface{}) *MockQuerier_ClearCurrentCharacter_Call {
+	return &MockQuerier_ClearCurrentCharacter_Call{Call: _e.mock.On("ClearCurrentCharacter", ctx, id)}
+}
+
+func (_c *MockQuerier_ClearCurrentCharacter_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockQuerier_ClearCurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_ClearCurrentCharacter_Call) Return(_a0 error) *MockQuerier_ClearCurrentCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_ClearCurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockQuerier_ClearCurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteSession provides a mock function with given fields: ctx, id
 func (_m *MockQuerier) DeleteSession(ctx context.Context, id string) error {
 	ret := _m.Called(ctx, id)
@@ -318,6 +412,53 @@ func (_c *MockQuerier_InsertUser_Call) RunAndReturn(run func(context.Context, qu
 	return _c
 }
 
+// MoveCharacters provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) MoveCharacters(ctx context.Context, arg queries.MoveCharactersParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MoveCharacters")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.MoveCharactersParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_MoveCharacters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MoveCharacters'
+type MockQuerier_MoveCharacters_Call struct {
+	*mock.Call
+}
+
+// MoveCharacters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.MoveCharactersParams
+func (_e *MockQuerier_Expecter) MoveCharacters(ctx interface{}, arg interface{}) *MockQuerier_MoveCharacters_Call {
+	return &MockQuerier_MoveCharacters_Call{Call: _e.mock.On("MoveCharacters", ctx, arg)}
+}
+
+func (_c *MockQuerier_MoveCharacters_Call) Run(run func(ctx context.Context, arg queries.MoveCharactersParams)) *MockQuerier_MoveCharacters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.MoveCharactersParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_MoveCharacters_Call) Return(_a0 error) *MockQuerier_MoveCharacters_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_MoveCharacters_Call) RunAndReturn(run func(context.Context, queries.MoveCharactersParams) error) *MockQuerier_MoveCharacters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PendingInvite provides a mock function with given fields: ctx, email
 func (_m *MockQuerier) PendingInvite(ctx context.Context, email string) (queries.PendingInviteRow, error) {
 	ret := _m.Called(ctx, email)
@@ -376,22 +517,22 @@ func (_c *MockQuerier_PendingInvite_Call) RunAndReturn(run func(context.Context,
 }
 
 // RootUser provides a mock function with given fields: ctx
-func (_m *MockQuerier) RootUser(ctx context.Context) (queries.User, error) {
+func (_m *MockQuerier) RootUser(ctx context.Context) (queries.RootUserRow, error) {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RootUser")
 	}
 
-	var r0 queries.User
+	var r0 queries.RootUserRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (queries.User, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) (queries.RootUserRow, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) queries.User); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) queries.RootUserRow); ok {
 		r0 = rf(ctx)
 	} else {
-		r0 = ret.Get(0).(queries.User)
+		r0 = ret.Get(0).(queries.RootUserRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
@@ -421,12 +562,12 @@ func (_c *MockQuerier_RootUser_Call) Run(run func(ctx context.Context)) *MockQue
 	return _c
 }
 
-func (_c *MockQuerier_RootUser_Call) Return(_a0 queries.User, _a1 error) *MockQuerier_RootUser_Call {
+func (_c *MockQuerier_RootUser_Call) Return(_a0 queries.RootUserRow, _a1 error) *MockQuerier_RootUser_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_RootUser_Call) RunAndReturn(run func(context.Context) (queries.User, error)) *MockQuerier_RootUser_Call {
+func (_c *MockQuerier_RootUser_Call) RunAndReturn(run func(context.Context) (queries.RootUserRow, error)) *MockQuerier_RootUser_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -484,6 +625,53 @@ func (_c *MockQuerier_SessionByID_Call) Return(_a0 queries.Session, _a1 error) *
 }
 
 func (_c *MockQuerier_SessionByID_Call) RunAndReturn(run func(context.Context, string) (queries.Session, error)) *MockQuerier_SessionByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetFirstCurrentCharacter provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) SetFirstCurrentCharacter(ctx context.Context, id uuid.UUID) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetFirstCurrentCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_SetFirstCurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetFirstCurrentCharacter'
+type MockQuerier_SetFirstCurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// SetFirstCurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockQuerier_Expecter) SetFirstCurrentCharacter(ctx interface{}, id interface{}) *MockQuerier_SetFirstCurrentCharacter_Call {
+	return &MockQuerier_SetFirstCurrentCharacter_Call{Call: _e.mock.On("SetFirstCurrentCharacter", ctx, id)}
+}
+
+func (_c *MockQuerier_SetFirstCurrentCharacter_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockQuerier_SetFirstCurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_SetFirstCurrentCharacter_Call) Return(_a0 error) *MockQuerier_SetFirstCurrentCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_SetFirstCurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockQuerier_SetFirstCurrentCharacter_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -546,22 +734,22 @@ func (_c *MockQuerier_UpdateUser_Call) RunAndReturn(run func(context.Context, qu
 }
 
 // UserByEmail provides a mock function with given fields: ctx, email
-func (_m *MockQuerier) UserByEmail(ctx context.Context, email string) (queries.User, error) {
+func (_m *MockQuerier) UserByEmail(ctx context.Context, email string) (queries.UserByEmailRow, error) {
 	ret := _m.Called(ctx, email)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserByEmail")
 	}
 
-	var r0 queries.User
+	var r0 queries.UserByEmailRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (queries.User, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) (queries.UserByEmailRow, error)); ok {
 		return rf(ctx, email)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) queries.User); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) queries.UserByEmailRow); ok {
 		r0 = rf(ctx, email)
 	} else {
-		r0 = ret.Get(0).(queries.User)
+		r0 = ret.Get(0).(queries.UserByEmailRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
@@ -592,33 +780,33 @@ func (_c *MockQuerier_UserByEmail_Call) Run(run func(ctx context.Context, email 
 	return _c
 }
 
-func (_c *MockQuerier_UserByEmail_Call) Return(_a0 queries.User, _a1 error) *MockQuerier_UserByEmail_Call {
+func (_c *MockQuerier_UserByEmail_Call) Return(_a0 queries.UserByEmailRow, _a1 error) *MockQuerier_UserByEmail_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_UserByEmail_Call) RunAndReturn(run func(context.Context, string) (queries.User, error)) *MockQuerier_UserByEmail_Call {
+func (_c *MockQuerier_UserByEmail_Call) RunAndReturn(run func(context.Context, string) (queries.UserByEmailRow, error)) *MockQuerier_UserByEmail_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UserByID provides a mock function with given fields: ctx, id
-func (_m *MockQuerier) UserByID(ctx context.Context, id uuid.UUID) (queries.User, error) {
+func (_m *MockQuerier) UserByID(ctx context.Context, id uuid.UUID) (queries.UserByIDRow, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserByID")
 	}
 
-	var r0 queries.User
+	var r0 queries.UserByIDRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (queries.User, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (queries.UserByIDRow, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) queries.User); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) queries.UserByIDRow); ok {
 		r0 = rf(ctx, id)
 	} else {
-		r0 = ret.Get(0).(queries.User)
+		r0 = ret.Get(0).(queries.UserByIDRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
@@ -649,33 +837,33 @@ func (_c *MockQuerier_UserByID_Call) Run(run func(ctx context.Context, id uuid.U
 	return _c
 }
 
-func (_c *MockQuerier_UserByID_Call) Return(_a0 queries.User, _a1 error) *MockQuerier_UserByID_Call {
+func (_c *MockQuerier_UserByID_Call) Return(_a0 queries.UserByIDRow, _a1 error) *MockQuerier_UserByID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_UserByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (queries.User, error)) *MockQuerier_UserByID_Call {
+func (_c *MockQuerier_UserByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (queries.UserByIDRow, error)) *MockQuerier_UserByID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UserBySubject provides a mock function with given fields: ctx, googleSubject
-func (_m *MockQuerier) UserBySubject(ctx context.Context, googleSubject sql.NullString) (queries.User, error) {
+func (_m *MockQuerier) UserBySubject(ctx context.Context, googleSubject sql.NullString) (queries.UserBySubjectRow, error) {
 	ret := _m.Called(ctx, googleSubject)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UserBySubject")
 	}
 
-	var r0 queries.User
+	var r0 queries.UserBySubjectRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, sql.NullString) (queries.User, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, sql.NullString) (queries.UserBySubjectRow, error)); ok {
 		return rf(ctx, googleSubject)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, sql.NullString) queries.User); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, sql.NullString) queries.UserBySubjectRow); ok {
 		r0 = rf(ctx, googleSubject)
 	} else {
-		r0 = ret.Get(0).(queries.User)
+		r0 = ret.Get(0).(queries.UserBySubjectRow)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, sql.NullString) error); ok {
@@ -706,12 +894,12 @@ func (_c *MockQuerier_UserBySubject_Call) Run(run func(ctx context.Context, goog
 	return _c
 }
 
-func (_c *MockQuerier_UserBySubject_Call) Return(_a0 queries.User, _a1 error) *MockQuerier_UserBySubject_Call {
+func (_c *MockQuerier_UserBySubject_Call) Return(_a0 queries.UserBySubjectRow, _a1 error) *MockQuerier_UserBySubject_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_UserBySubject_Call) RunAndReturn(run func(context.Context, sql.NullString) (queries.User, error)) *MockQuerier_UserBySubject_Call {
+func (_c *MockQuerier_UserBySubject_Call) RunAndReturn(run func(context.Context, sql.NullString) (queries.UserBySubjectRow, error)) *MockQuerier_UserBySubject_Call {
 	_c.Call.Return(run)
 	return _c
 }

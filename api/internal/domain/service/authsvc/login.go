@@ -131,11 +131,23 @@ func (s *service) DevLogin(ctx context.Context, email string) (*NewSession, erro
 		if u.Disabled {
 			return ErrUserDisabled
 		}
-		out, err = s.login(ctx, u, isNew)
-		return err
+		if out, err = s.login(ctx, u, isNew); err != nil || !u.Root {
+			return err
+		}
+		// Step 5.3: the root admin the dev login makes (or finds) gets the
+		// characters without an owner, as `just root-admin` gives them.
+		root, err := s.adoptAsRoot(ctx, u)
+		if err != nil {
+			return err
+		}
+		out.User = *root
+		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	if out.User.Root {
+		s.sessions.forgetUser(out.User.ID)
 	}
 	return out, nil
 }

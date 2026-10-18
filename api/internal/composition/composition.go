@@ -38,14 +38,13 @@ import (
 	"github.com/ceffo/critical/api/internal/storage/postgres"
 )
 
-// BackingServices holds every business service plus the storage handle and the
-// resolved character id (single-character mode). Routers select which slices
-// to mount.
+// BackingServices holds every business service plus the storage handle.
+// Routers select which slices to mount; the character a request acts on comes
+// from its user (ADR 0029 step 7), never from here.
 type BackingServices struct {
 	// DB is the PostgreSQL handle, set by New on a database only (nil when
 	// built over mocks or in memory).
-	DB          *postgres.DB
-	CharacterID int64
+	DB *postgres.DB
 
 	Character charactersvc.SVC
 	HP        hpsvc.SVC
@@ -188,16 +187,26 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 
-	charID, err := characterDAL.FirstID(ctx)
+	authSvc, err := newAuth(st, cfg)
 	if err != nil {
 		_ = db.Close()
-		return nil, fmt.Errorf("resolve character: %w", err)
+		return nil, err
+	}
+	// The characters stored before characters had owners (the seed
+	// character) are the root admin's once there is one (ADR 0029 step 5.3).
+	if err := authSvc.AdoptUnownedCharacters(ctx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("give the characters without an owner to the root admin: %w", err)
 	}
 
 	// Each character's spellbook, named from the catalogue.
 	spellbook := spellbookadpt.New(st.Spellbook, cat)
 
-	charSvc, err := charactersvc.New(characterDAL)
+	// Choosing the current character is no game move: it runs on the store's
+	// transactions, outside the action log.
+	charSvc, err := charactersvc.New(charactersvc.Deps{
+		Reader: characterDAL, Owners: characterDAL, Tx: db, Sessions: authSvc,
+	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -310,31 +319,24 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 
-	authSvc, err := newAuth(st, cfg)
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-
 	return &BackingServices{
-		CharacterID: charID,
-		Character:   charSvc,
-		HP:          hpSvc,
-		Log:         logSvc,
-		Buffs:       buffSvc,
-		Spells:      spellSvc,
-		Prep:        prepSvc,
-		Cast:        castSvc,
-		Combat:      combatSvc,
-		Items:       itemSvc,
-		Weapons:     weaponSvc,
-		Rest:        restSvc,
-		XP:          xpSvc,
-		Details:     detailsSvc,
-		Skills:      skillSvc,
-		Dice:        diceSvc,
-		Auth:        authSvc,
-		store:       db,
+		Character: charSvc,
+		HP:        hpSvc,
+		Log:       logSvc,
+		Buffs:     buffSvc,
+		Spells:    spellSvc,
+		Prep:      prepSvc,
+		Cast:      castSvc,
+		Combat:    combatSvc,
+		Items:     itemSvc,
+		Weapons:   weaponSvc,
+		Rest:      restSvc,
+		XP:        xpSvc,
+		Details:   detailsSvc,
+		Skills:    skillSvc,
+		Dice:      diceSvc,
+		Auth:      authSvc,
+		store:     db,
 		services: []domain.Service{
 			authSvc, charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc, detailsSvc, diceSvc,
 		},

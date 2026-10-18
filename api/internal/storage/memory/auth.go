@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -48,6 +50,7 @@ func (p Auth) findUser(ctx context.Context, what string, match func(authsvc.User
 		for _, u := range t.users {
 			if match(u) {
 				out = copyUser(u)
+				out.CurrentCharacterID = t.currentOf(u.ID)
 				return nil
 			}
 		}
@@ -101,6 +104,7 @@ func (p Auth) InsertUser(ctx context.Context, u authsvc.User) error {
 		if err := t.checkUser(u); err != nil {
 			return err
 		}
+		u.CurrentCharacterID = 0
 		t.users[u.ID] = *copyUser(u)
 		return nil
 	})
@@ -114,7 +118,7 @@ func (p Auth) UpdateUser(ctx context.Context, u authsvc.User) error {
 		if !ok {
 			return fmt.Errorf("%w: user %s", domain.ErrNotFound, u.ID)
 		}
-		u.Email, u.CreatedAt = old.Email, old.CreatedAt
+		u.Email, u.CreatedAt, u.CurrentCharacterID = old.Email, old.CreatedAt, 0
 		if err := t.checkUser(u); err != nil {
 			return err
 		}
@@ -207,6 +211,54 @@ func (p Auth) DeleteUserSessions(ctx context.Context, userID uuid.UUID) error {
 				delete(t.sessions, id)
 			}
 		}
+		return nil
+	})
+}
+
+// currentOf is the user's current character as the database reads it: one
+// the user owns and has not retired, else 0.
+func (t *tables) currentOf(userID uuid.UUID) int64 {
+	id, ok := t.current[userID]
+	if !ok || t.owners[id] != userID || t.retired[id] {
+		return 0
+	}
+	return id
+}
+
+// AdoptUnownedCharacters implements authsvc.DAL.
+func (p Auth) AdoptUnownedCharacters(ctx context.Context, userID uuid.UUID) error {
+	return p.s.write(ctx, func(t *tables) error {
+		if _, ok := t.users[userID]; !ok {
+			return fmt.Errorf("%w: characters of unknown user %s", errConstraint, userID)
+		}
+		var first int64
+		for _, id := range slices.Sorted(maps.Keys(t.characters)) {
+			if _, owned := t.owners[id]; !owned {
+				t.owners[id] = userID
+			}
+			if first == 0 && t.owners[id] == userID && !t.retired[id] {
+				first = id
+			}
+		}
+		if t.currentOf(userID) == 0 && first != 0 {
+			t.current[userID] = first
+		}
+		return nil
+	})
+}
+
+// MoveCharacters implements authsvc.DAL.
+func (p Auth) MoveCharacters(ctx context.Context, from, to uuid.UUID) error {
+	return p.s.write(ctx, func(t *tables) error {
+		if _, ok := t.users[to]; !ok {
+			return fmt.Errorf("%w: characters of unknown user %s", errConstraint, to)
+		}
+		for id, owner := range t.owners {
+			if owner == from {
+				t.owners[id] = to
+			}
+		}
+		delete(t.current, from)
 		return nil
 	})
 }

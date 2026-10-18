@@ -10,20 +10,23 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 )
 
-// DAL is the implementation of charactersvc.Reader and detailssvc.DAL over
-// the sqlc-generated queries.
+// DAL is the implementation of charactersvc.Reader, charactersvc.Owners and
+// detailssvc.DAL over the sqlc-generated queries.
 type DAL struct {
 	q queries.Querier
 }
 
 var (
 	_ charactersvc.Reader = (*DAL)(nil)
+	_ charactersvc.Owners = (*DAL)(nil)
 	_ detailssvc.DAL      = (*DAL)(nil)
 )
 
@@ -64,17 +67,32 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 	}, nil
 }
 
-// FirstID returns the id of the first row in characters; used at startup when
-// the app runs in single-character mode. Returns ErrCharacterNotFound when empty.
-func (d *DAL) FirstID(ctx context.Context) (int64, error) {
-	id, err := d.q.GetFirstCharacterID(ctx)
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, domain.ErrCharacterNotFound
-	}
+// CharactersOf implements charactersvc.Owners.
+func (d *DAL) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charactersvc.Summary, error) {
+	rows, err := d.q.CharactersOf(ctx, uuid.NullUUID{UUID: owner, Valid: true})
 	if err != nil {
-		return 0, fmt.Errorf("first character id: %w", err)
+		return nil, fmt.Errorf("characters of %s: %w", owner, err)
 	}
-	return id, nil
+	out := make([]charactersvc.Summary, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, charactersvc.Summary{ID: r.ID, Name: r.Name, Class: r.Class, Level: int(r.Level)})
+	}
+	return out, nil
+}
+
+// SetCurrentCharacter implements charactersvc.Owners: the update matches only
+// a character the user owns and has not retired.
+func (d *DAL) SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
+	n, err := d.q.SetCurrentCharacter(ctx, queries.SetCurrentCharacterParams{
+		CharacterID: sql.NullInt64{Int64: id, Valid: true}, UserID: owner,
+	})
+	if err != nil {
+		return fmt.Errorf("set current character: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
 }
 
 func decodeLanguages(raw string) ([]string, error) {

@@ -407,24 +407,43 @@ func TestSetRole_PromotesAndDemotes(t *testing.T) {
 	require.ErrorIs(t, e.svc.SetRole(context.Background(), userID, "dm"), domain.ErrInvalidInput)
 }
 
-// Step 5.1: the script creates the root admin as an admin with no subject.
+// expectAdopt expects the root admin id to get the characters without an
+// owner after write, then to be read back as readBack (its current character
+// set).
+func (e *env) expectAdopt(id uuid.UUID, readBack authsvc.User, after *mock.Call) {
+	adopt := e.dal.EXPECT().AdoptUnownedCharacters(mock.Anything, id).Return(nil).Once()
+	if after != nil {
+		adopt.NotBefore(after)
+	}
+	e.dal.EXPECT().UserByID(mock.Anything, id).Return(&readBack, nil).Once().NotBefore(adopt)
+}
+
+// Step 5.1: the script creates the root admin as an admin with no subject;
+// step 5.3: the characters without an owner (Kelsen) become theirs, the first
+// one current, in the same transaction.
 func TestSetRootAdmin_CreatesTheRoot(t *testing.T) {
 	e := newEnv(t, true)
 	e.dal.EXPECT().RootUser(mock.Anything).Return(nil, notFound()).Once()
 	e.dal.EXPECT().UserByEmail(mock.Anything, "root@example.com").Return(nil, notFound()).Once()
 	want := authsvc.User{ID: newID, Email: "root@example.com", Role: authsvc.RoleAdmin, Root: true, CreatedAt: now}
-	e.dal.EXPECT().InsertUser(mock.Anything, want).Return(nil).Once()
+	insert := e.dal.EXPECT().InsertUser(mock.Anything, want).Return(nil).Once()
+	adopted := want
+	adopted.CurrentCharacterID = 1
+	e.expectAdopt(newID, adopted, insert)
 
 	got, err := e.svc.SetRootAdmin(context.Background(), " Root@Example.com ")
 	require.NoError(t, err)
-	assert.Equal(t, want, *got)
+	assert.Equal(t, adopted, *got)
+	assert.Equal(t, 1, e.tx.n, "one transaction")
 }
 
-// Step 5.1: run again with the same email it changes nothing.
+// Step 5.1: run again with the same email it changes nothing but giving the
+// root admin the characters still without an owner (step 5.3).
 func TestSetRootAdmin_Idempotent(t *testing.T) {
 	e := newEnv(t, true)
 	r := *root
 	e.dal.EXPECT().RootUser(mock.Anything).Return(&r, nil).Once()
+	e.expectAdopt(root.ID, *root, nil)
 	got, err := e.svc.SetRootAdmin(context.Background(), "root@example.com")
 	require.NoError(t, err)
 	assert.Equal(t, *root, *got)
@@ -442,6 +461,8 @@ func TestSetRootAdmin_RefusesToMoveABoundRoot(t *testing.T) {
 
 // Step 5.1: a root that never logged in moves to the new email (an existing
 // user is promoted); the old row loses the flag and is disabled, never deleted.
+// Step 5.3: the characters it was given (Kelsen, after a typo) move with the
+// flag, before the new root's current character is set, in one transaction.
 func TestSetRootAdmin_MovesAnUnboundRoot(t *testing.T) {
 	e := newEnv(t, true)
 	old := authsvc.User{ID: otherID, Email: "typo@example.com", Role: authsvc.RoleAdmin, Root: true}
@@ -453,11 +474,32 @@ func TestSetRootAdmin_MovesAnUnboundRoot(t *testing.T) {
 	e.dal.EXPECT().UserByEmail(mock.Anything, "ann@example.com").Return(&u, nil).Once()
 	promoted := *player
 	promoted.Role, promoted.Root = authsvc.RoleAdmin, true
-	e.dal.EXPECT().UpdateUser(mock.Anything, promoted).Return(nil).Once().NotBefore(first)
+	update := e.dal.EXPECT().UpdateUser(mock.Anything, promoted).Return(nil).Once().NotBefore(first)
+	move := e.dal.EXPECT().MoveCharacters(mock.Anything, otherID, player.ID).Return(nil).Once().NotBefore(update)
+	playing := promoted
+	playing.CurrentCharacterID = 1
+	e.expectAdopt(player.ID, playing, move)
 
 	got, err := e.svc.SetRootAdmin(context.Background(), "ann@example.com")
 	require.NoError(t, err)
-	assert.Equal(t, promoted, *got)
+	assert.Equal(t, playing, *got, "the new root plays the moved character")
+	assert.Equal(t, 1, e.tx.n, "one transaction")
+}
+
+// Step 5.3: a failed move leaves the transaction body: the old root keeps
+// its characters and the flag (the transaction rolls back).
+func TestSetRootAdmin_MoveFailureAborts(t *testing.T) {
+	e := newEnv(t, true)
+	old := authsvc.User{ID: otherID, Email: "typo@example.com", Role: authsvc.RoleAdmin, Root: true}
+	e.dal.EXPECT().RootUser(mock.Anything).Return(&old, nil).Once()
+	e.dal.EXPECT().UpdateUser(mock.Anything, mock.Anything).Return(nil).Twice()
+	e.dal.EXPECT().DeleteUserSessions(mock.Anything, otherID).Return(nil).Once()
+	u := *player
+	e.dal.EXPECT().UserByEmail(mock.Anything, "ann@example.com").Return(&u, nil).Once()
+	e.dal.EXPECT().MoveCharacters(mock.Anything, otherID, player.ID).Return(assert.AnError).Once()
+
+	_, err := e.svc.SetRootAdmin(context.Background(), "ann@example.com")
+	require.ErrorIs(t, err, assert.AnError)
 }
 
 // Step 8.1: the dev login with no email logs in as the root admin.
@@ -469,10 +511,13 @@ func TestDevLogin_NoEmailIsTheRootAdmin(t *testing.T) {
 	logged.LastLogin = ptr(now)
 	e.dal.EXPECT().UpdateUser(mock.Anything, logged).Return(nil).Once()
 	e.expectSession(userID, "tok-1")
+	read := logged
+	read.CurrentCharacterID = 4
+	e.expectAdopt(userID, read, nil)
 
 	got, err := e.svc.DevLogin(context.Background(), "")
 	require.NoError(t, err)
-	assert.Equal(t, logged, got.User)
+	assert.Equal(t, read, got.User, "the user as read back, with the current character")
 }
 
 // Step 8.1: on a database with no root admin (a first run after a clone, or
@@ -483,11 +528,15 @@ func TestDevLogin_CreatesARootAdminOnAnEmptyDatabase(t *testing.T) {
 	e.dal.EXPECT().RootUser(mock.Anything).Return(nil, notFound()).Once()
 	e.dal.EXPECT().UserByEmail(mock.Anything, authsvc.DevEmail).Return(nil, notFound()).Once()
 	want := authsvc.User{ID: newID, Email: authsvc.DevEmail, Role: authsvc.RoleAdmin, Root: true, LastLogin: ptr(now), CreatedAt: now}
-	e.dal.EXPECT().InsertUser(mock.Anything, want).Return(nil).Once()
+	insert := e.dal.EXPECT().InsertUser(mock.Anything, want).Return(nil).Once()
 	e.expectSession(newID, "tok-1")
+	adopted := want
+	adopted.CurrentCharacterID = 1
+	e.expectAdopt(newID, adopted, insert)
 
-	_, err := e.svc.DevLogin(context.Background(), "")
+	got, err := e.svc.DevLogin(context.Background(), "")
 	require.NoError(t, err)
+	assert.Equal(t, int64(1), got.User.CurrentCharacterID, "step 5.3: the seed character is the new root admin's")
 }
 
 // Step 8.1: a named email (the e2e suite's) is created as an admin without an
@@ -544,10 +593,33 @@ func TestDevLogin_ExistingDevEmailBecomesRootWhenThereIsNone(t *testing.T) {
 	e.dal.EXPECT().RootUser(mock.Anything).Return(nil, notFound()).Once()
 	u := authsvc.User{ID: otherID, Email: authsvc.DevEmail, Role: authsvc.RolePlayer, Disabled: true}
 	e.dal.EXPECT().UserByEmail(mock.Anything, authsvc.DevEmail).Return(&u, nil).Once()
-	e.dal.EXPECT().UpdateUser(mock.Anything, authsvc.User{
-		ID: otherID, Email: authsvc.DevEmail, Role: authsvc.RoleAdmin, Root: true, LastLogin: ptr(now),
-	}).Return(nil).Once()
+	made := authsvc.User{ID: otherID, Email: authsvc.DevEmail, Role: authsvc.RoleAdmin, Root: true, LastLogin: ptr(now)}
+	update := e.dal.EXPECT().UpdateUser(mock.Anything, made).Return(nil).Once()
 	e.expectSession(otherID, "tok-1")
+	e.expectAdopt(otherID, made, update)
 	_, err := e.svc.DevLogin(context.Background(), "")
 	require.NoError(t, err)
+}
+
+// Step 5.3: at start-up the characters without an owner go to the root admin
+// (the characters stored before characters had owners), in one transaction.
+func TestAdoptUnownedCharacters_Step5_3_GivesThemToTheRootAdmin(t *testing.T) {
+	e := newEnv(t, true)
+	r := *root
+	find := e.dal.EXPECT().RootUser(mock.Anything).Return(&r, nil).Once()
+	e.dal.EXPECT().AdoptUnownedCharacters(mock.Anything, root.ID).Return(nil).Once().NotBefore(find)
+	require.NoError(t, e.svc.AdoptUnownedCharacters(context.Background()))
+	assert.Equal(t, 1, e.tx.n)
+}
+
+// Step 5.3: without a root admin the characters stay without an owner until
+// one exists (the root-admin script or the dev login gives them then).
+func TestAdoptUnownedCharacters_Step5_3_NoRootAdminChangesNothing(t *testing.T) {
+	e := newEnv(t, true)
+	e.dal.EXPECT().RootUser(mock.Anything).Return(nil, notFound()).Once()
+	require.NoError(t, e.svc.AdoptUnownedCharacters(context.Background()))
+
+	e = newEnv(t, true)
+	e.dal.EXPECT().RootUser(mock.Anything).Return(nil, assert.AnError).Once()
+	require.ErrorIs(t, e.svc.AdoptUnownedCharacters(context.Background()), assert.AnError)
 }

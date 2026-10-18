@@ -1525,6 +1525,8 @@
   },
   "apiError": {
     "character_not_found": "This character no longer exists.",
+    "no_character": "You have no character yet: create your first one.",
+    "character_changed": "Your character was changed elsewhere: the page reloads to show it.",
     "weapon_not_found": "That weapon no longer exists.",
     "item_not_found": "That item no longer exists.",
     "item_empty": "That item is empty.",

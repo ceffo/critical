@@ -2,8 +2,11 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -14,12 +17,13 @@ import (
 )
 
 // Characters is the character port: the sheet reads (charactersvc.Reader),
-// the details edit (detailssvc.DAL), the maximum HP (hpsvc.DAL) and the
-// single-character mode's id.
+// who owns and plays which character (charactersvc.Owners), the details edit
+// (detailssvc.DAL) and the maximum HP (hpsvc.DAL).
 type Characters struct{ s *Store }
 
 var (
 	_ charactersvc.Reader = Characters{}
+	_ charactersvc.Owners = Characters{}
 	_ detailssvc.DAL      = Characters{}
 	_ hpsvc.DAL           = Characters{}
 )
@@ -42,19 +46,33 @@ func (c Characters) GetCharacter(ctx context.Context, id int64) (*charactersvc.C
 	return out, err
 }
 
-// FirstID returns the lowest character id, or domain.ErrCharacterNotFound
-// when there is none.
-func (c Characters) FirstID(ctx context.Context) (int64, error) {
-	var first int64
+// CharactersOf implements charactersvc.Owners.
+func (c Characters) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charactersvc.Summary, error) {
+	out := []charactersvc.Summary{}
 	err := c.s.read(ctx, func(t *tables) error {
-		if len(t.characters) == 0 {
-			return domain.ErrCharacterNotFound
+		for _, id := range slices.Sorted(maps.Keys(t.characters)) {
+			if t.owners[id] != owner || owner == uuid.Nil || t.retired[id] {
+				continue
+			}
+			ch := t.characters[id]
+			out = append(out, charactersvc.Summary{ID: id, Name: ch.Name, Class: ch.Class, Level: ch.Level})
 		}
-		ids := slices.Sorted(maps.Keys(t.characters))
-		first = ids[0]
 		return nil
 	})
-	return first, err
+	return out, err
+}
+
+// SetCurrentCharacter implements charactersvc.Owners.
+func (c Characters) SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
+	return c.s.write(ctx, func(t *tables) error {
+		_, known := t.users[owner]
+		_, exists := t.characters[id]
+		if !known || !exists || owner == uuid.Nil || t.owners[id] != owner || t.retired[id] {
+			return domain.ErrCharacterNotFound
+		}
+		t.current[owner] = id
+		return nil
+	})
 }
 
 // GetDetails returns the editable details, or domain.ErrCharacterNotFound.
@@ -91,6 +109,38 @@ func (c Characters) GetMaxHP(ctx context.Context, characterID int64) (int, error
 		return 0, err
 	}
 	return ch.HPMax, nil
+}
+
+// AddCharacterOf is AddCharacter for a character owner owns (a user of the
+// store).
+func (s *Store) AddCharacterOf(ctx context.Context, owner uuid.UUID, c charactersvc.Character) (int64, error) {
+	var id int64
+	err := s.InTx(ctx, func(ctx context.Context) error {
+		var err error
+		if id, err = s.AddCharacter(ctx, c); err != nil {
+			return err
+		}
+		return s.write(ctx, func(t *tables) error {
+			if _, ok := t.users[owner]; !ok {
+				return fmt.Errorf("%w: character of unknown user %s", errConstraint, owner)
+			}
+			t.owners[id] = owner
+			return nil
+		})
+	})
+	return id, err
+}
+
+// RetireCharacter retires the character (ADR 0029 step 7.3): its owner's
+// lists no longer show it. There is no endpoint for it yet.
+func (s *Store) RetireCharacter(ctx context.Context, id int64) error {
+	return s.write(ctx, func(t *tables) error {
+		if _, ok := t.characters[id]; !ok {
+			return domain.ErrCharacterNotFound
+		}
+		t.retired[id] = true
+		return nil
+	})
 }
 
 // AddCharacter stores a new character from the sheet c (its id is assigned)

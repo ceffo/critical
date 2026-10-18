@@ -37,7 +37,7 @@ func webBuild(t *testing.T) string {
 func webRouter(t *testing.T, web http.Handler) http.Handler {
 	t.Helper()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return router.New(log, &composition.BackingServices{CharacterID: 1, Auth: signedIn(t)}, router.Options{Web: web, Commit: "abc123", Version: "1.2.3"})
+	return router.New(log, &composition.BackingServices{Auth: signedIn(t)}, router.Options{Web: web, Commit: "abc123", Version: "1.2.3"})
 }
 
 const notFoundBody = `{"code":"not_found","error":"not found: /api/nope"}`
@@ -135,7 +135,7 @@ func TestHealth_Step1_4_ReportsTheBuildVersion(t *testing.T) {
 // them as unknown.
 func TestHealth_Step1_4_UnknownWithoutABuildIdentity(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	h := router.New(log, &composition.BackingServices{CharacterID: 1}, router.Options{})
+	h := router.New(log, &composition.BackingServices{}, router.Options{})
 	rec := do(h, "GET", "/api/health", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"status":"ok","commit":"unknown","version":"unknown"}`, rec.Body.String())

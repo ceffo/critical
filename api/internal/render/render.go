@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -135,6 +136,12 @@ var mappings = []mapping{
 	{target: authsvc.ErrUserDisabled, status: http.StatusForbidden, code: "user_disabled"},
 	{target: authsvc.ErrRootProtected, status: http.StatusConflict, code: "root_admin_protected"},
 	{target: authsvc.ErrRootTaken, status: http.StatusConflict, code: "root_admin_taken"},
+	// A user with no current character (ADR 0029 step 7.2): the web offers
+	// to create the first one.
+	{target: charactersvc.ErrNoCurrentCharacter, status: http.StatusNotFound, code: "no_character"},
+	// A request for a character that is not the current one any more: the
+	// web reloads (step 7.2).
+	{target: charactersvc.ErrCharacterChanged, status: http.StatusConflict, code: "character_changed"},
 	{target: buffsvc.ErrNoInitiative, status: http.StatusConflict, code: "no_initiative"},
 	{target: buffsvc.ErrInitiativeNotOnTop, status: http.StatusConflict, code: "initiative_not_on_top"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
-import { ApiError, request } from "./http";
+import { useSessionStore } from "@/stores/session";
+import { ApiError, CHARACTER_HEADER, post, request } from "./http";
 
 function respond(status: number, body: unknown) {
   vi.stubGlobal(
@@ -15,6 +16,7 @@ function respond(status: number, body: unknown) {
 
 afterEach(async () => {
   vi.unstubAllGlobals();
+  useSessionStore.getState().setMe(null);
   await i18n.changeLanguage("en");
 });
 
@@ -88,5 +90,50 @@ describe("an ended session", () => {
     respond(409, { code: "no_initiative", error: "x" });
     await request("/api/x").catch(() => undefined);
     expect(assign).not.toHaveBeenCalled();
+  });
+});
+
+describe("the character the page shows (ADR 0029 step 7.2)", () => {
+  const me = (currentCharacterId: number | null) =>
+    useSessionStore.getState().setMe({
+      id: "u",
+      email: "ann@example.com",
+      role: "player",
+      root: false,
+      currentCharacterId,
+    });
+  const sentHeaders = () =>
+    new Headers(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit | undefined)?.headers,
+    );
+
+  it("names it on every request, keeping the request's own headers", async () => {
+    me(7);
+    respond(200, {});
+    await post("/api/hp/event", { delta: -1 });
+    expect(sentHeaders().get(CHARACTER_HEADER)).toBe("7");
+    expect(sentHeaders().get("Content-Type")).toBe("application/json");
+  });
+
+  it("names none when the user has no character yet", async () => {
+    me(null);
+    respond(200, {});
+    await request("/api/characters");
+    expect(sentHeaders().has(CHARACTER_HEADER)).toBe(false);
+  });
+
+  it("reloads the page when the character changed elsewhere", async () => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", { reload, assign: vi.fn() });
+    me(7);
+    respond(409, {
+      code: "character_changed",
+      error: "current character changed: conflict",
+    });
+    const err = await request("/api/hp/event", { method: "POST" }).catch(
+      (e: unknown) => e,
+    );
+    expect((err as ApiError).code).toBe("character_changed");
+    expect(reload).toHaveBeenCalledOnce();
   });
 });

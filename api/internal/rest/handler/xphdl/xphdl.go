@@ -35,13 +35,18 @@ type xpSvc interface {
 	Delete(ctx context.Context, characterID, entryID int64) (*xpsvc.Ledger, error)
 }
 
-// RegisterRoutes wires the XP endpoints onto r.
+// RegisterRoutes wires the XP endpoints of the current character onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc xpsvc.SVC) {
 	r.Get("/api/xp", render.Handle(Get(charID, svc)))
-	r.Get("/api/xp/preview", render.Handle(Preview(svc)))
 	r.Post("/api/xp", render.Handle(Add(charID, svc)))
 	r.Patch("/api/xp/{id}", render.Handle(Update(charID, svc)))
 	r.Delete("/api/xp/{id}", render.Handle(Delete(charID, svc)))
+}
+
+// RegisterSharedRoutes wires the XP preview, a computation on no character's
+// data, onto r.
+func RegisterSharedRoutes(r Router, svc xpsvc.SVC) {
+	r.Get("/api/xp/preview", render.Handle(Preview(svc)))
 }
 
 // AmountDTO is what one entry adds.

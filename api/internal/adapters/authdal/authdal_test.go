@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/authdal"
@@ -27,24 +28,27 @@ var (
 	iid = uuid.MustParse("22222222-2222-2222-2222-222222222222")
 )
 
-// A row maps to a user: NULL subject and last login are the zero values.
+// A row maps to a user: NULL subject, last login and current character are
+// the zero values.
 func TestUserReads_MapRowsAndNotFound(t *testing.T) {
 	q := mocks.NewMockQuerier(t)
-	q.EXPECT().UserBySubject(ctx, sql.NullString{String: "g-1", Valid: true}).Return(queries.User{
+	q.EXPECT().UserBySubject(ctx, sql.NullString{String: "g-1", Valid: true}).Return(queries.UserBySubjectRow{
 		ID: uid, Email: "ann@example.com", GoogleSubject: sql.NullString{String: "g-1", Valid: true},
 		Role: "admin", IsRoot: true, LastLogin: sql.NullTime{Time: at, Valid: true}, CreatedAt: at,
+		CurrentCharacterID: sql.NullInt64{Int64: 7, Valid: true},
 	}, nil).Once()
-	q.EXPECT().UserByEmail(ctx, "bob@example.com").Return(queries.User{
+	q.EXPECT().UserByEmail(ctx, "bob@example.com").Return(queries.UserByEmailRow{
 		ID: uid, Email: "bob@example.com", Role: "player", Disabled: true, CreatedAt: at,
 	}, nil).Once()
-	q.EXPECT().UserByID(ctx, uid).Return(queries.User{}, sql.ErrNoRows).Once()
-	q.EXPECT().RootUser(ctx).Return(queries.User{}, sql.ErrNoRows).Once()
+	q.EXPECT().UserByID(ctx, uid).Return(queries.UserByIDRow{}, sql.ErrNoRows).Once()
+	q.EXPECT().RootUser(ctx).Return(queries.RootUserRow{}, sql.ErrNoRows).Once()
 	d := authdal.New(q)
 
 	u, err := d.UserBySubject(ctx, "g-1")
 	require.NoError(t, err)
 	assert.Equal(t, authsvc.User{
 		ID: uid, Email: "ann@example.com", GoogleSubject: "g-1", Role: authsvc.RoleAdmin, Root: true, LastLogin: &at, CreatedAt: at,
+		CurrentCharacterID: 7,
 	}, *u)
 
 	u, err = d.UserByEmail(ctx, "bob@example.com")
@@ -125,4 +129,33 @@ func TestSessions_RoundTrip(t *testing.T) {
 	require.NoError(t, d.ExtendSession(ctx, "h", exp, exp))
 	require.NoError(t, d.DeleteSession(ctx, "h"))
 	require.NoError(t, d.DeleteUserSessions(ctx, uid))
+}
+
+// Adopting gives the unowned characters to the user, then sets their first
+// character current (the query keeps one already set).
+func TestAdoptUnownedCharacters_OwnsThenSetsTheFirstCurrent(t *testing.T) {
+	q := mocks.NewMockQuerier(t)
+	adopt := q.EXPECT().AdoptUnownedCharacters(ctx, uuid.NullUUID{UUID: uid, Valid: true}).Return(nil).Once()
+	q.EXPECT().SetFirstCurrentCharacter(ctx, uid).Return(nil).Once().NotBefore(adopt)
+	require.NoError(t, authdal.New(q).AdoptUnownedCharacters(ctx, uid))
+
+	q = mocks.NewMockQuerier(t)
+	q.EXPECT().AdoptUnownedCharacters(ctx, uuid.NullUUID{UUID: uid, Valid: true}).Return(assert.AnError).Once()
+	require.ErrorIs(t, authdal.New(q).AdoptUnownedCharacters(ctx, uid), assert.AnError)
+}
+
+// Moving gives every character of one user to another, then clears the first
+// one's current character; a failure stops before the clear.
+func TestMoveCharacters_ReownsThenClearsTheOldCurrent(t *testing.T) {
+	to := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+	q := mocks.NewMockQuerier(t)
+	move := q.EXPECT().MoveCharacters(ctx, queries.MoveCharactersParams{
+		FromUser: uuid.NullUUID{UUID: uid, Valid: true}, ToUser: uuid.NullUUID{UUID: to, Valid: true},
+	}).Return(nil).Once()
+	q.EXPECT().ClearCurrentCharacter(ctx, uid).Return(nil).Once().NotBefore(move)
+	require.NoError(t, authdal.New(q).MoveCharacters(ctx, uid, to))
+
+	q = mocks.NewMockQuerier(t)
+	q.EXPECT().MoveCharacters(ctx, mock.Anything).Return(assert.AnError).Once()
+	require.ErrorIs(t, authdal.New(q).MoveCharacters(ctx, uid, to), assert.AnError)
 }

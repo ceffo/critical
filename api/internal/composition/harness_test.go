@@ -12,6 +12,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	compmocks "github.com/ceffo/critical/api/internal/composition/mocks"
+	"github.com/ceffo/critical/api/internal/domain"
 	actionlogmocks "github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
 	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	combatmocks "github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
@@ -88,14 +89,15 @@ func newHarness(t *testing.T) *harness {
 }
 
 // expectStartup expects the steps a successful start takes on the store, in
-// order, and the lookup of the single character.
+// order, ending with the root admin's adoption of the characters without an
+// owner (no root admin here: nothing to adopt).
 func (h *harness) expectStartup(seedsDir string) {
 	migrate := h.Store.EXPECT().Migrate(mock.Anything, seedsDir).Return(nil).Once()
 	seed := h.Store.EXPECT().Seed(mock.Anything, seedsDir, mock.Anything).Return(nil).Once().NotBefore(migrate)
 	imp := h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once().NotBefore(seed)
 	search := h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once().NotBefore(imp)
 	h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once().NotBefore(search)
-	h.Character.EXPECT().FirstID(mock.Anything).Return(characterID, nil).Once().NotBefore(imp)
+	h.Auth.EXPECT().RootUser(mock.Anything).Return(nil, domain.ErrNotFound).Once().NotBefore(imp)
 }
 
 func (h *harness) build(t *testing.T, cfg composition.Config) (*composition.BackingServices, error) {

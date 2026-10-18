@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"net/url"
 	pathpkg "path"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
 
@@ -247,4 +250,90 @@ func ClearSessionCookie(w http.ResponseWriter, name string, secure bool) {
 	http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure on HTTPS only: dev login runs on plain HTTP (ADR 0029 step 4.2)
 		Name: name, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
 	})
+}
+
+type characterKey struct{}
+
+// CharacterHeader carries the character the web shows (ADR 0029 step 7.2):
+// the request acts on that one, or on none.
+const CharacterHeader = "X-Character-Id"
+
+// FreshCharacters reads a user's current character from the database
+// (authsvc.SVC satisfies it).
+type FreshCharacters interface {
+	FreshCurrentCharacter(ctx context.Context, p *authsvc.Principal) (int64, error)
+}
+
+// CurrentCharacter is the one character resolver of the router (ADR 0029
+// step 7): every per-character route acts on the current character of the
+// request's user, which the gate's principal carries (read with the session,
+// so it costs no query of its own, ADR 0025 step 10). A user with no current
+// character is refused with charactersvc.ErrNoCurrentCharacter, whose stable
+// code the web turns into "create your first character"; without a principal
+// the request is unauthenticated (the gate lets no such request through to a
+// data route).
+//
+// The web names the character it shows in CharacterHeader, and a request
+// that names one acts on it or on none: a read or a write never lands on
+// another character than the one on screen. The principal may be up to
+// authsvc.SessionCacheTTL old (the user switched on the other server): when
+// the named character is not the remembered one, the user's current
+// character is read from the database (one query, only then), and a request
+// whose character is still not the current one is refused with
+// charactersvc.ErrCharacterChanged before any service runs. A request
+// without the header (an API client with no screen) acts on the remembered
+// current character.
+func CurrentCharacter(fresh FreshCharacters) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			p := PrincipalFrom(ctx)
+			if p == nil {
+				render.Error(ctx, w, authsvc.ErrUnauthenticated)
+				return
+			}
+			id, err := resolveCharacter(r, fresh, p)
+			if err != nil {
+				render.Error(ctx, w, err)
+				return
+			}
+			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, characterKey{}, id)))
+		})
+	}
+}
+
+// resolveCharacter is the character r acts on.
+func resolveCharacter(r *http.Request, fresh FreshCharacters, p *authsvc.Principal) (int64, error) {
+	current := p.User.CurrentCharacterID
+	raw := r.Header.Get(CharacterHeader)
+	if raw == "" {
+		if current == 0 {
+			return 0, charactersvc.ErrNoCurrentCharacter
+		}
+		return current, nil
+	}
+	shown, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || shown <= 0 {
+		return 0, domain.FieldErrorf(CharacterHeader, "%q is not a character id", raw)
+	}
+	if shown == current {
+		return shown, nil
+	}
+	if fresh == nil {
+		return 0, charactersvc.ErrCharacterChanged
+	}
+	if current, err = fresh.FreshCurrentCharacter(r.Context(), p); err != nil {
+		return 0, err
+	}
+	if shown != current {
+		return 0, charactersvc.ErrCharacterChanged
+	}
+	return shown, nil
+}
+
+// CharacterID is the character the request acts on, set by CurrentCharacter;
+// 0 on a route it does not guard.
+func CharacterID(r *http.Request) int64 {
+	id, _ := r.Context().Value(characterKey{}).(int64)
+	return id
 }

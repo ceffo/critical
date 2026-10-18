@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -44,9 +46,21 @@ func seeded(t *testing.T) (*memory.Store, int64) {
 	require.NoError(t, err)
 	require.NoError(t, s.Seed(ctx, seedsDir, book))
 	require.NoError(t, s.ImportCatalogue(ctx, artifact.Catalogue, nil))
-	id, err := s.Characters().FirstID(ctx)
+	return s, seedCharacter(t, s)
+}
+
+// seedCharacter is the seeded character's id, read as its owner reads it: a
+// user adopts the characters without an owner and finds it current.
+func seedCharacter(t *testing.T, s *memory.Store) int64 {
+	t.Helper()
+	ctx := context.Background()
+	u := authsvc.User{ID: uuid.New(), Email: "seed-owner@example.com", Role: authsvc.RoleAdmin}
+	require.NoError(t, s.Auth().InsertUser(ctx, u))
+	require.NoError(t, s.Auth().AdoptUnownedCharacters(ctx, u.ID))
+	got, err := s.Auth().UserByID(ctx, u.ID)
 	require.NoError(t, err)
-	return s, id
+	require.NotZero(t, got.CurrentCharacterID)
+	return got.CurrentCharacterID
 }
 
 func entry(characterID int64, kind actionlog.Kind) actionlog.NewEntry {

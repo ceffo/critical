@@ -110,6 +110,9 @@ function DetailsView({
       {t("details.missing")}
     </span>
   );
+  // A value that is not a code (an old release's free text) reads as missing, never as a raw key.
+  const alignmentKnown = i18n.exists(`details.alignments.${c.alignment}`);
+  const sexKnown = i18n.exists(`details.sexes.${c.sex}`);
   const alignmentWarning = c.warnings.some(
     (w) => w.code === "alignment_not_allowed" && w.field === "alignment",
   );
@@ -124,7 +127,7 @@ function DetailsView({
           {c.raceCode === "" ? none : t(`details.races.${c.raceCode}`)}
         </Row>
         <Row label={t("details.fields.alignment")}>
-          {c.alignment === "" ? (
+          {c.alignment === "" || !alignmentKnown ? (
             toPick
           ) : (
             <>
@@ -146,7 +149,7 @@ function DetailsView({
           {c.age === null ? none : c.age}
         </Row>
         <Row label={t("details.fields.sex")}>
-          {c.sex === "" ? toPick : t(`details.sexes.${c.sex}`)}
+          {c.sex === "" || !sexKnown ? toPick : t(`details.sexes.${c.sex}`)}
         </Row>
         {TEXT_FIELDS.map((f) => (
           <Row key={f} label={t(`details.fields.${f}`)}>

@@ -45,6 +45,7 @@ type DetailsDTO struct {
 
 // ToDTO maps the domain details to their wire shape.
 func ToDTO(d charactersvc.Details) DetailsDTO {
+	d = d.Coded()
 	out := DetailsDTO{
 		Alignment: d.Alignment, Sex: d.Sex, Height: d.Height, Weight: d.Weight,
 		Hair: d.Hair, Eyes: d.Eyes, Languages: append([]string{}, d.Languages...),

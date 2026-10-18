@@ -98,3 +98,27 @@ func TestDetails_Step8_MissingAndKeptAlignmentWarning(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "lawful_good", got.Alignment)
 }
+
+func TestApply_Step8_KeptForbiddenAlignmentDoesNotBlockOtherEdits(t *testing.T) {
+	thief := charactersvc.Details{Alignment: "lawful_good", Sex: "male"}
+	got, err := thief.Apply("thief", charactersvc.DetailsPatch{Alignment: str("lawful_good"), Hair: str("red")})
+	require.NoError(t, err, "the unchanged alignment passes")
+	assert.Equal(t, "red", got.Hair)
+
+	neutral := charactersvc.Details{Alignment: "lawful_good"}
+	_, err = neutral.Apply("bard", charactersvc.DetailsPatch{Alignment: str("lawful_evil")})
+	require.Error(t, err, "a change to a forbidden alignment stays refused")
+}
+
+func TestDetails_Step8_ANonCodeReadsAsMissing(t *testing.T) {
+	d := charactersvc.Details{Alignment: "Chaotic Good", Sex: "Homme"}
+	assert.Equal(t, []string{"alignment", "sex"}, d.Missing())
+	assert.Empty(t, d.Warnings("thief"), "no warning for a value that is not a code")
+	assert.Equal(t, charactersvc.Details{}, d.Coded())
+}
+
+func TestEveryCreatableClassHasADecidedAlignmentList(t *testing.T) {
+	for _, class := range charactersvc.CreatableClasses {
+		assert.True(t, ruletablesvc.HasAlignmentRule(class), "%s: decide its alignments in alignmentLimits", class)
+	}
+}

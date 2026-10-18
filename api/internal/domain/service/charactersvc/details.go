@@ -67,9 +67,25 @@ type DetailsPatch struct {
 	Languages *[]string
 }
 
-// Missing lists the required fields the details leave empty (ADR 0032 step
-// 8.2), in the card's order; a migrated character may lack them.
+// Coded is d with an alignment or sex that is not a code blanked: during a
+// rolling deploy (ADR 0024) the old release keeps writing free text there
+// after the identity migration ran, and such a value reads as missing, never
+// as a code (ADR 0032 step 8.2).
+func (d Details) Coded() Details {
+	if !slices.Contains(ruletablesvc.Alignments, d.Alignment) {
+		d.Alignment = ""
+	}
+	if !slices.Contains(Sexes, d.Sex) {
+		d.Sex = ""
+	}
+	return d
+}
+
+// Missing lists the required fields the details leave empty or hold as a
+// non-code (ADR 0032 step 8.2), in the card's order; a migrated character may
+// lack them.
 func (d Details) Missing() []string {
+	d = d.Coded()
 	out := []string{}
 	if d.Alignment == "" {
 		out = append(out, FieldAlignment)
@@ -91,6 +107,7 @@ type Warning struct {
 // alignment its class no longer admits, kept because it is the player's own
 // recorded choice.
 func (d Details) Warnings(class string) []Warning {
+	d = d.Coded()
 	out := []Warning{}
 	if d.Alignment != "" && !ruletablesvc.AlignmentAllowed(class, d.Alignment) {
 		out = append(out, Warning{Code: CodeAlignmentNotAllowed, Field: FieldAlignment})
@@ -150,7 +167,8 @@ func (d Details) Apply(class string, p DetailsPatch) (Details, error) {
 		if err := code(FieldAlignment, a, ruletablesvc.Alignments); err != nil {
 			return d, err
 		}
-		if !ruletablesvc.AlignmentAllowed(class, a) {
+		// A kept forbidden alignment (step 8.4) stays: only a change to one is refused.
+		if a != d.Alignment && !ruletablesvc.AlignmentAllowed(class, a) {
 			return d, &domain.FieldError{Field: FieldAlignment, Message: CodeAlignmentNotAllowed}
 		}
 		cur.Alignment = a

@@ -139,3 +139,19 @@ func TestUpdate_Step2And3_AlignmentIsCheckedAgainstTheClassOnEdit(t *testing.T) 
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 }
+
+func TestUpdate_Step8_AKeptForbiddenAlignmentDoesNotBlockAnUnrelatedEdit(t *testing.T) {
+	svc, dal := newSvc(t)
+	kept := stored
+	kept.Alignment, kept.Sex = "lawful_good", "male"
+	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(kept, "thief", nil).Times(3)
+	want := kept
+	want.Hair = "black"
+	dal.EXPECT().UpdateDetails(mockAny, int64(1), want).Return(nil).Twice()
+	_, err := svc.Update(context.Background(), 1, detailssvc.Patch{Hair: ptr("black")})
+	require.NoError(t, err)
+	_, err = svc.Update(context.Background(), 1, detailssvc.Patch{Alignment: ptr("lawful_good"), Hair: ptr("black")})
+	require.NoError(t, err, "the card's full submit sends the stored alignment")
+	_, err = svc.Update(context.Background(), 1, detailssvc.Patch{Alignment: ptr("lawful_good2")})
+	require.Error(t, err)
+}

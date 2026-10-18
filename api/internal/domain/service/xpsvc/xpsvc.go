@@ -69,10 +69,11 @@ type Log interface {
 	actionlog.Recorder
 }
 
-// Thresholds is PHB Table 25 (Thief/Bard column): the XP that reaches a
-// level, an error outside the table.
+// Thresholds is the class's experience table (PHB Tables 14, 20, 23 and
+// 25): the XP that reaches a level, an error outside the table or for an
+// unknown class.
 type Thresholds interface {
-	BardXPThreshold(level int) (int, error)
+	XPThreshold(class string, level int) (int, error)
 }
 
 // Deps are the service's collaborators. Now is optional (time.Now).

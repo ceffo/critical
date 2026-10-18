@@ -1,7 +1,7 @@
 # ADR 0015: Experience
 
 **Status**: accepted, 2026-10-15 (critical-kiv.13). Step 4 amended by
-[ADR 0018](0018-transactions-and-undo.md) step 7, 2026-10-15. Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (bonus by class, level from XP), on its implementation; step 3 implemented 2026-10-18 (`L` is the level ADR 0030 step 3 derives from the total, so it never exceeds 20 and reaching a threshold raises it), step 2 not yet (still the bard's rule).
+[ADR 0018](0018-transactions-and-undo.md) step 7, 2026-10-15. Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (bonus by class, level from XP), on its implementation; step 3 implemented 2026-10-18 (`L` is the level ADR 0030 step 3 derives from the total, so it never exceeds 20 and reaching a threshold raises it; `T` is the character's class table, e.g. Table 20 for a mage), step 2 not yet (still the bard's rule).
 
 ## Context
 
@@ -45,7 +45,7 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    nothing but `toNext` (0) and the progress (full): no level-up. `levels` lists 8 consecutive
    levels from `L - 2`, kept inside 1 to 20, each with its threshold and a status (`past`,
    `current`, `next`, `ahead`).
-   Tests: `TestComputeProgress_FromTable25`, `TestBardXPThreshold` (ruletablesadpt, against the
+   Tests: `TestComputeProgress_FromTheClassTable`, `TestBardXPThreshold` (ruletablesadpt, against the
    PHB page), `TestParse_Step9_3_RejectsBrokenTables` (ruletablesadpt).
 4. **The ledger is on the action stack.** Adding, editing (base, bonus, reason, session) and
    deleting an entry each write the `xp_entries` table and record one action-log entry in the same

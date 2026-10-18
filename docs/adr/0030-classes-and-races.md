@@ -129,12 +129,15 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    class's experience table is at or under the XP total ([ADR 0015](0015-experience.md) step 1):
    fighter PHB Table 14 (Fighter column), mage Table 20, cleric Table 23 (Cleric column), thief and
    bard Table 25. The tables stop at 20, so does the level (as ADR 0015 step 3 today). This level
-   feeds ADR 0015 step 3's progress (`L` is no longer the sheet's) and every step below. Reaching a
-   threshold raises the level at once; the new hit points wait for the roll (step 7). The race's
-   level limit is shown, not enforced (step 21). Amends ADR 0015 step 3 ("no level-up").
+   feeds ADR 0015 step 3's progress (`L` is no longer the sheet's, and `T` is the class's table, not
+   `bard_experience`) and every step below. Reaching a threshold raises the level at once; the new
+   hit points wait for the roll (step 7). The race's level limit is shown, not enforced (step 21).
+   Amends ADR 0015 step 3 ("no level-up").
    Tests: `TestLevelFor_Step3_HighestThresholdAtOrUnderTheXP`, `TestXPThreshold_ByClass`
    (ruletablesadpt, against the PHB pages), `TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal`,
    `TestList_IsTheOwnersCharactersAtTheirDerivedLevel` (charactersvc),
+   `TestComputeProgress_FromTheClassTable`, `TestGet_ProgressFromTheCharactersClassTable` (xpsvc: a
+   mage's progress reads Table 20),
    `TestDerived_AnXPAwardCrossingALevelChangesEverythingAtOnce` (composition: an award crossing a
    threshold changes the level, THAC0, saves and slots at once; its undo brings them back).
 4. **XP bonus by prime requisites.** A character earns the 10% bonus of [ADR 0015](0015-experience.md)

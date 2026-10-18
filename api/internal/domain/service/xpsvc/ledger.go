@@ -30,9 +30,9 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 		entries[i].BonusAmount, entries[i].Total = a.BonusAmount, a.Total
 	}
 	total := LedgerTotal(c.XPTotal, entries)
-	// The level is the one the rules derive from that total (ADR 0030 step
-	// 3, amending ADR 0015 step 3).
-	progress, err := ComputeProgress(c.Derived.Level, total, s.table)
+	// The level is the one the rules derive from that total, and the
+	// thresholds are the class's (ADR 0030 step 3, amending ADR 0015 step 3).
+	progress, err := ComputeProgress(c.Class, c.Derived.Level, total, s.table)
 	if err != nil {
 		return nil, err
 	}

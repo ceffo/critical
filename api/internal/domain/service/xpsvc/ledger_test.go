@@ -39,7 +39,7 @@ func newFixture(t *testing.T) fixture {
 	t.Helper()
 	f := fixture{dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), log: mocks.NewMockLog(t), tx: &recordingTx{}}
 	svc, err := xpsvc.New(xpsvc.Deps{
-		DAL: f.dal, Characters: f.chars, Thresholds: table25{}, Log: f.log, Tx: f.tx,
+		DAL: f.dal, Characters: f.chars, Thresholds: xpTables{}, Log: f.log, Tx: f.tx,
 		Now: func() time.Time { return today },
 	})
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func newFixture(t *testing.T) fixture {
 
 func (f fixture) sheet(dex, cha, level, xp int) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
-		Return(&charactersvc.Character{ID: 1, Dex: dex, Cha: cha, XPTotal: xp, Derived: charactersvc.Derived{Level: level}}, nil)
+		Return(&charactersvc.Character{ID: 1, Class: "bard", Dex: dex, Cha: cha, XPTotal: xp, Derived: charactersvc.Derived{Level: level}}, nil)
 }
 
 // recorded captures the one action-log entry a write records.
@@ -93,6 +93,25 @@ func TestGet_NotEligibleBelow16(t *testing.T) {
 	got, err := f.svc.Get(context.Background(), 1)
 	require.NoError(t, err)
 	assert.False(t, got.BonusEligible)
+}
+
+// ADR 0030 step 3: the progress reads the character's class table. A mage
+// at 2,600 XP is level 2 of Table 20 (2,500 / 5,000), not the bard's 1,250 /
+// 2,500.
+func TestGet_ProgressFromTheCharactersClassTable(t *testing.T) {
+	f := newFixture(t)
+	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
+		Return(&charactersvc.Character{ID: 1, Class: "mage", XPTotal: 2_600, Derived: charactersvc.Derived{Level: 2}}, nil)
+	f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+
+	got, err := f.svc.Get(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, 2_500, got.CurrentFloor)
+	assert.Equal(t, 5_000, *got.NextThreshold)
+	assert.Equal(t, 2_400, got.ToNext)
+	assert.Equal(t, 4, got.ProgressPercent)
+	assert.Equal(t, mageCells(1, xpsvc.CellPast, xpsvc.CellCurrent, xpsvc.CellNext,
+		xpsvc.CellAhead, xpsvc.CellAhead, xpsvc.CellAhead, xpsvc.CellAhead, xpsvc.CellAhead), got.Levels)
 }
 
 // ADR 0015 step 4 (amended by ADR 0018): an add is one transaction whose

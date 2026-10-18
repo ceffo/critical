@@ -159,14 +159,15 @@ func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 // threshold, which shows which rule tables a start took.
 const level16XP = 1320000
 
-// setLevel16XP sets the level-16 XP of the artifact's rule_tables.
+// setLevel16XP sets the bard level-16 XP of the artifact's class experience
+// table (rule_tables.experience), the one the ledger and the level read.
 func setLevel16XP(tables map[string]any, xp int) {
-	rows := tables["bard_experience"].([]any)
+	rows := tables["experience"].([]any)
 	row := rows[15].(map[string]any)
 	if row["level"] != float64(16) {
-		panic("bard_experience row 15 is not level 16")
+		panic("experience row 15 is not level 16")
 	}
-	row["xp"] = xp
+	row["bard"] = xp
 }
 
 // nextThreshold starts the root on the artifact at cfg.Catalogue and reads the

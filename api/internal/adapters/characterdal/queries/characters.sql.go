@@ -268,6 +268,19 @@ func (q *Queries) GetCharacterDetails(ctx context.Context, id int64) (GetCharact
 	return i, err
 }
 
+const lockUser = `-- name: LockUser :one
+SELECT id FROM users WHERE id = $1 FOR UPDATE
+`
+
+// Serialises the writes that move a user's current character (switch, create, retire): the
+// later one waits for the earlier one's commit, then sees its effect (READ COMMITTED).
+func (q *Queries) LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, lockUser, id)
+	var id_2 uuid.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const renameCharacter = `-- name: RenameCharacter :execrows
 UPDATE characters SET name = $1
 WHERE id = $2 AND owner_user_id = $3 AND NOT retired

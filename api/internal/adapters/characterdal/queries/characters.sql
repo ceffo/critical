@@ -21,6 +21,11 @@ SELECT id, name, class FROM characters
 WHERE owner_user_id = $1 AND NOT retired
 ORDER BY id;
 
+-- name: LockUser :one
+-- Serialises the writes that move a user's current character (switch, create, retire): the
+-- later one waits for the earlier one's commit, then sees its effect (READ COMMITTED).
+SELECT id FROM users WHERE id = $1 FOR UPDATE;
+
 -- name: SetCurrentCharacter :execrows
 -- Only a character the user owns and has not retired: none updated is an unknown character.
 UPDATE users SET current_character_id = sqlc.arg(character_id)

@@ -28,10 +28,12 @@ const (
 	MaxAbility = 19
 	// MaxNameLen is the longest name, in characters.
 	MaxNameLen = 40
-	// MaxHPMax is the highest max HP entered.
+	// MinHPMax and MaxHPMax bound the max HP entered.
+	MinHPMax = 1
 	MaxHPMax = 999
-	// MaxStartingXP is the highest starting XP entered (more than any
-	// class's level 20 threshold).
+	// MinStartingXP and MaxStartingXP bound the starting XP entered (the
+	// highest is more than any class's level 20 threshold).
+	MinStartingXP = 0
 	MaxStartingXP = 100_000_000
 )
 
@@ -118,10 +120,10 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 			return Character{}, &domain.FieldError{Field: a.field, Message: CodeOutOfRange}
 		}
 	}
-	if n.HPMax < 1 || n.HPMax > MaxHPMax {
+	if n.HPMax < MinHPMax || n.HPMax > MaxHPMax {
 		return Character{}, &domain.FieldError{Field: "hpMax", Message: CodeOutOfRange}
 	}
-	if n.XP < 0 || n.XP > MaxStartingXP {
+	if n.XP < MinStartingXP || n.XP > MaxStartingXP {
 		return Character{}, &domain.FieldError{Field: "xp", Message: CodeOutOfRange}
 	}
 	return Character{
@@ -214,14 +216,16 @@ type ClassOption struct {
 type CreationOptions struct {
 	Classes                []ClassOption
 	MinAbility, MaxAbility int
-	MaxHPMax, MaxXP        int
+	MinHPMax, MaxHPMax     int
+	MinXP, MaxXP           int
 	MaxNameLen             int
 }
 
 // CreationOptions reads the races of each creatable class from the rules.
 func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 	out := CreationOptions{
-		MinAbility: MinAbility, MaxAbility: MaxAbility, MaxHPMax: MaxHPMax, MaxXP: MaxStartingXP,
+		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
+		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MaxNameLen: MaxNameLen, Classes: make([]ClassOption, 0, len(CreatableClasses)),
 	}
 	for _, class := range CreatableClasses {

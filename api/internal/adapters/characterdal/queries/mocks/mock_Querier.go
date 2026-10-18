@@ -452,6 +452,65 @@ func (_c *MockQuerier_GetCharacterDetails_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// LockUser provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LockUser")
+	}
+
+	var r0 uuid.UUID
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (uuid.UUID, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) uuid.UUID); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(uuid.UUID)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_LockUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LockUser'
+type MockQuerier_LockUser_Call struct {
+	*mock.Call
+}
+
+// LockUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockQuerier_Expecter) LockUser(ctx interface{}, id interface{}) *MockQuerier_LockUser_Call {
+	return &MockQuerier_LockUser_Call{Call: _e.mock.On("LockUser", ctx, id)}
+}
+
+func (_c *MockQuerier_LockUser_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockQuerier_LockUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_LockUser_Call) Return(_a0 uuid.UUID, _a1 error) *MockQuerier_LockUser_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_LockUser_Call) RunAndReturn(run func(context.Context, uuid.UUID) (uuid.UUID, error)) *MockQuerier_LockUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RenameCharacter provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) RenameCharacter(ctx context.Context, arg queries.RenameCharacterParams) (int64, error) {
 	ret := _m.Called(ctx, arg)

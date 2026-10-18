@@ -60,8 +60,8 @@ func Options(svc optionsReader) render.HandlerFunc {
 		out := OptionsDTO{
 			Classes:    make([]ClassOptionDTO, 0, len(o.Classes)),
 			Ability:    RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
-			HPMax:      RangeDTO{Min: 1, Max: o.MaxHPMax},
-			XP:         RangeDTO{Min: 0, Max: o.MaxXP},
+			HPMax:      RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
+			XP:         RangeDTO{Min: o.MinXP, Max: o.MaxXP},
 			MaxNameLen: o.MaxNameLen,
 		}
 		for _, c := range o.Classes {

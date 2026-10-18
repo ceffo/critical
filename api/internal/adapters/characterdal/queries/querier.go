@@ -29,6 +29,9 @@ type Querier interface {
 	// step 24): compared with the derived values, never read as inputs.
 	GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error)
 	GetCharacterDetails(ctx context.Context, id int64) (GetCharacterDetailsRow, error)
+	// Serialises the writes that move a user's current character (switch, create, retire): the
+	// later one waits for the earlier one's commit, then sees its effect (READ COMMITTED).
+	LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	RenameCharacter(ctx context.Context, arg RenameCharacterParams) (int64, error)
 	// The user's first character they own and have not retired becomes current, unless the current

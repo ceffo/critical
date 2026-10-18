@@ -82,6 +82,9 @@ func (d *DAL) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charactersvc
 // SetCurrentCharacter implements charactersvc.Owners: the update matches only
 // a character the user owns and has not retired.
 func (d *DAL) SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
+	if err := d.lockUser(ctx, owner); err != nil {
+		return err
+	}
 	n, err := d.q.SetCurrentCharacter(ctx, queries.SetCurrentCharacterParams{
 		CharacterID: sql.NullInt64{Int64: id, Valid: true}, UserID: owner,
 	})
@@ -99,6 +102,9 @@ func (d *DAL) SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id int64
 // sheet's figures are c.Sheet (the derived values, ADR 0030 step 24); the
 // details start empty.
 func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c charactersvc.Character) (int64, error) {
+	if err := d.lockUser(ctx, owner); err != nil {
+		return 0, err
+	}
 	id, err := d.q.CreateCharacter(ctx, queries.CreateCharacterParams{
 		Name: c.Name, Str: int64(c.Str), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
 		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), XpTotal: int64(c.XPTotal),
@@ -140,6 +146,9 @@ func (d *DAL) RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, na
 
 // RetireCharacter implements charactersvc.Owners.
 func (d *DAL) RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
+	if err := d.lockUser(ctx, owner); err != nil {
+		return err
+	}
 	n, err := d.q.RetireCharacter(ctx, queries.RetireCharacterParams{
 		ID: id, OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
 	})
@@ -156,6 +165,16 @@ func (d *DAL) RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) er
 func (d *DAL) RepairCurrentCharacter(ctx context.Context, owner uuid.UUID) error {
 	if err := d.q.RepairCurrentCharacter(ctx, owner); err != nil {
 		return fmt.Errorf("repair current character: %w", err)
+	}
+	return nil
+}
+
+// lockUser takes the user's row lock until the transaction ends, so that a
+// switch, a creation and a retirement of one user run one after the other.
+// An unknown user is no lock to take: the guarded update then matches nothing.
+func (d *DAL) lockUser(ctx context.Context, owner uuid.UUID) error {
+	if _, err := d.q.LockUser(ctx, owner); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("lock user %s: %w", owner, err)
 	}
 	return nil
 }

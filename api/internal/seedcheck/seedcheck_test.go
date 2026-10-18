@@ -230,6 +230,20 @@ func TestRepoSeeds_EveryWeaponIsTyped(t *testing.T) {
 	}
 }
 
+// The web's WEAPON_TYPES is the same list as weaponsvc.Types, in the same order: the code list has
+// one owner (Go) and this copy cannot drift.
+func TestWebWeaponTypes_MatchTheServicesList(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "src", "types", "combat.ts"))
+	require.NoError(t, err)
+	m := regexp.MustCompile(`(?s)export const WEAPON_TYPES = \[(.*?)\] as const`).FindSubmatch(raw)
+	require.NotNil(t, m, "WEAPON_TYPES not found in web/src/types/combat.ts")
+	var codes []string
+	for _, q := range regexp.MustCompile(`"([a-z_]+)"`).FindAllSubmatch(m[1], -1) {
+		codes = append(codes, string(q[1]))
+	}
+	assert.Equal(t, weaponsvc.Types, codes)
+}
+
 func TestRepoSeeds_ItemsReferenceRealWeapons(t *testing.T) {
 	var weapons []struct {
 		ID       string `json:"id"`

@@ -51,6 +51,12 @@ UPDATE proficiencies SET character_id = sqlc.arg(character_id)::bigint WHERE cha
 -- name: AdoptBardSkills :exec
 UPDATE bard_skills SET character_id = sqlc.arg(character_id)::bigint WHERE character_id IS NULL;
 
+-- The weapons stored before migration 005 have no type: the data step run just after it gives the
+-- seeded ones theirs, never replacing a type already set (typeSeedWeapons). Delete it with its step
+-- once every environment is past 005 (ADR 0025 step 2.1.1).
+-- name: TypeWeaponIfUntyped :exec
+UPDATE weapons SET weapon_type = @weapon_type WHERE id = @id AND weapon_type = '';
+
 -- name: CountWeapons :one
 SELECT COUNT(*) FROM weapons WHERE character_id = sqlc.arg(character_id)::bigint;
 

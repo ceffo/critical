@@ -60,15 +60,24 @@ func (d *DB) Migrate(ctx context.Context, seedsDir string) error {
 		return err
 	}
 	return d.migrations(ctx, func(tx migrationTx) error {
-		return runMigrations(ctx, tx, embedded, migrationDataSteps(seedsDir))
+		before, after := migrationDataSteps(seedsDir)
+		return runMigrations(ctx, tx, embedded, before, after)
 	})
 }
 
-// migrationDataSteps are the data steps run just before the named migrations.
-func migrationDataSteps(seedsDir string) map[string]dataStep {
+// weaponTypeMigration adds weapons.weapon_type. Right after it the run types the seeded weapons
+// already stored (typeSeedWeapons), which hold ” (the column's default).
+const weaponTypeMigration = "005_weapon_type.sql"
+
+// migrationDataSteps are the data steps run just before the named migrations, then those run just
+// after the named migrations.
+func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
 	characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
+	weaponsPath := seedfile.Path(seedsDir, seedfile.WeaponsFile)
 	return map[string]dataStep{
 		ownerKeysMigration: func(ctx context.Context, q storeq.Querier) error { return ownRows(ctx, q, characterPath) },
+	}, map[string]dataStep{
+		weaponTypeMigration: func(ctx context.Context, q storeq.Querier) error { return typeSeedWeapons(ctx, q, weaponsPath) },
 	}
 }
 
@@ -94,9 +103,9 @@ func embeddedMigrations() ([]migration, error) {
 //
 // Before applying anything it refuses a database that records a migration the binary does not
 // embed (ADR 0024 step 6.2): an older binary does not undo a newer schema, so it must not run on
-// one. A pending migration with a data step in steps gets it run just before it, in the same
-// transaction.
-func runMigrations(ctx context.Context, tx migrationTx, embedded []migration, steps map[string]dataStep) error {
+// one. A pending migration with a data step in steps gets it run just before it, and one in after
+// just after it (it needs the migration's columns), in the same transaction.
+func runMigrations(ctx context.Context, tx migrationTx, embedded []migration, steps, after map[string]dataStep) error {
 	if err := tx.Lock(ctx); err != nil {
 		return fmt.Errorf("take the writer lock: %w", err)
 	}
@@ -140,6 +149,11 @@ func runMigrations(ctx context.Context, tx migrationTx, embedded []migration, st
 		}
 		if err := tx.Apply(ctx, m); err != nil {
 			return fmt.Errorf("apply %s: %w", m.name, err)
+		}
+		if step, ok := after[m.name]; ok {
+			if err := step(ctx, tx.Store()); err != nil {
+				return fmt.Errorf("after %s: %w", m.name, err)
+			}
 		}
 	}
 	return nil

@@ -94,7 +94,7 @@ func migrations(names ...string) []migration {
 func TestMigrate_Step6_2_RefusesMigrationsTheBinaryDoesNotEmbed(t *testing.T) {
 	f := &fakeMigrations{recorded: []string{"001_baseline.sql", "999_newer_b.sql", "998_newer_a.sql"}}
 
-	err := runMigrations(context.Background(), f, migrations("001_baseline.sql", "002_next.sql"), nil)
+	err := runMigrations(context.Background(), f, migrations("001_baseline.sql", "002_next.sql"), nil, nil)
 
 	require.ErrorIs(t, err, ErrUnknownMigrations)
 	assert.ErrorContains(t, err, "998_newer_a.sql, 999_newer_b.sql")
@@ -111,10 +111,10 @@ func TestMigrate_Step6_2_AcceptsADatabaseItsBinaryMigrated(t *testing.T) {
 	require.NotEmpty(t, embedded)
 	f := &fakeMigrations{}
 
-	require.NoError(t, runMigrations(context.Background(), f, embedded, nil), "fresh database")
+	require.NoError(t, runMigrations(context.Background(), f, embedded, nil, nil), "fresh database")
 	require.Len(t, f.recorded, len(embedded))
 	f.steps = nil
-	require.NoError(t, runMigrations(context.Background(), f, embedded, nil), "fully migrated database")
+	require.NoError(t, runMigrations(context.Background(), f, embedded, nil, nil), "fully migrated database")
 	assert.Equal(t, []string{"lock", "ensure table", "applied"}, f.steps, "nothing applied again")
 }
 
@@ -125,7 +125,7 @@ func TestMigrate_Step3_1_LocksThenAppliesThePendingInOrder(t *testing.T) {
 	f := &fakeMigrations{recorded: []string{"001_baseline.sql"}}
 
 	require.NoError(t, runMigrations(context.Background(), f,
-		migrations("003_c.sql", "001_baseline.sql", "010_d.sql", "002_b.sql"), nil))
+		migrations("003_c.sql", "001_baseline.sql", "010_d.sql", "002_b.sql"), nil, nil))
 
 	assert.Equal(t, []string{"lock", "ensure table", "applied", "apply 002_b.sql", "apply 003_c.sql", "apply 010_d.sql"}, f.steps)
 }
@@ -135,7 +135,7 @@ func TestMigrate_Step3_1_LocksThenAppliesThePendingInOrder(t *testing.T) {
 func TestMigrate_AFailingMigrationStopsTheRun(t *testing.T) {
 	f := &fakeMigrations{applyErr: errors.New("syntax error")}
 
-	err := runMigrations(context.Background(), f, migrations("001_baseline.sql", "002_b.sql"), nil)
+	err := runMigrations(context.Background(), f, migrations("001_baseline.sql", "002_b.sql"), nil, nil)
 
 	require.ErrorContains(t, err, "apply 001_baseline.sql: syntax error")
 	assert.Equal(t, []string{"lock", "ensure table", "applied", "apply 001_baseline.sql"}, f.steps)
@@ -178,11 +178,11 @@ func TestMigrate_ADataStepRunsJustBeforeItsPendingMigration(t *testing.T) {
 		}
 	}
 	f := &fakeMigrations{recorded: []string{"001_baseline.sql"}, store: newFakeStore()}
-	require.NoError(t, runMigrations(context.Background(), f, migrations("001_baseline.sql", "002_b.sql", "003_c.sql"), steps(f, nil)))
+	require.NoError(t, runMigrations(context.Background(), f, migrations("001_baseline.sql", "002_b.sql", "003_c.sql"), steps(f, nil), nil))
 	assert.Equal(t, []string{"lock", "ensure table", "applied", "apply 002_b.sql", "step 003", "apply 003_c.sql"}, f.steps)
 
 	f = &fakeMigrations{recorded: []string{"001_baseline.sql"}, store: newFakeStore()}
-	err := runMigrations(context.Background(), f, migrations("001_baseline.sql", "002_b.sql", "003_c.sql"), steps(f, errors.New("boom")))
+	err := runMigrations(context.Background(), f, migrations("001_baseline.sql", "002_b.sql", "003_c.sql"), steps(f, errors.New("boom")), nil)
 	require.ErrorContains(t, err, "before 003_c.sql: boom")
 	assert.Equal(t, []string{"lock", "ensure table", "applied", "apply 002_b.sql", "step 003"}, f.steps)
 }
@@ -195,10 +195,13 @@ func TestMigrationDataSteps_NameEmbeddedMigrations(t *testing.T) {
 	for _, m := range embedded {
 		names[m.name] = true
 	}
-	steps := migrationDataSteps(repoSeeds())
-	require.Contains(t, steps, ownerKeysMigration)
-	for name := range steps {
-		assert.True(t, names[name], "data step for %s, which is not embedded", name)
+	before, after := migrationDataSteps(repoSeeds())
+	require.Contains(t, before, ownerKeysMigration)
+	require.Contains(t, after, weaponTypeMigration)
+	for _, steps := range []map[string]dataStep{before, after} {
+		for name := range steps {
+			assert.True(t, names[name], "data step for %s, which is not embedded", name)
+		}
 	}
 }
 
@@ -222,7 +225,58 @@ func TestMigrate_RowsWithoutOwnerAreOwnedBeforeTheOwnerKeys(t *testing.T) {
 	}
 
 	require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-		return runMigrations(ctx, f, embedded, migrationDataSteps(repoSeeds()))
+		before, after := migrationDataSteps(repoSeeds())
+		return runMigrations(ctx, f, embedded, before, after)
 	}))
 	assert.Equal(t, store.everyRowOwnedBy(id), ownedAtApply, "every row owned when the owner becomes required")
+}
+
+// The weapons stored before weapon types get the seeds' type after migration 005, for every
+// character holding one; a type already set is kept, and a rerun changes nothing.
+func TestMigrate_SeededWeaponsAreTypedAfterTheWeaponTypeMigration(t *testing.T) {
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	store := newFakeStore()
+	require.NoError(t, seedOn(store, repoSeeds()))
+	owner := store.t.Characters[0]
+	// A second character holds a seeded id untyped, and a weapon the owner typed differently.
+	other := int64(99)
+	store.t.Characters = append(store.t.Characters, other)
+	store.t.Weapons[rowKey(other, "dagger")] = storeq.InsertWeaponParams{CharacterID: other, ID: "dagger", Kind: "melee"}
+	store.t.Weapons[rowKey(other, "mace")] = storeq.InsertWeaponParams{CharacterID: other, ID: "mace", Kind: "melee", WeaponType: "short_sword"}
+	store.t.Weapons[rowKey(other, "homebrew")] = storeq.InsertWeaponParams{CharacterID: other, ID: "homebrew", Kind: "melee"}
+	for k, w := range store.t.Weapons {
+		if w.CharacterID == owner {
+			w.WeaponType = "" // as the column's default left them
+			store.t.Weapons[k] = w
+		}
+	}
+	var recorded []string
+	for _, m := range embedded {
+		if m.name != weaponTypeMigration {
+			recorded = append(recorded, m.name)
+		}
+	}
+	run := func() {
+		f := &fakeMigrations{recorded: recorded, store: store}
+		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
+			before, after := migrationDataSteps(repoSeeds())
+			return runMigrations(ctx, f, embedded, before, after)
+		}))
+	}
+	typeOf := func(c int64, id string) string { return store.t.Weapons[rowKey(c, id)].WeaponType }
+
+	run()
+	assert.Equal(t, "long_sword", typeOf(owner, "longsword"))
+	assert.Equal(t, "short_bow", typeOf(owner, "shortbow"))
+	assert.Equal(t, "dagger", typeOf(other, "dagger"), "every character's seeded weapon")
+	assert.Equal(t, "short_sword", typeOf(other, "mace"), "a type already set is kept")
+	assert.Equal(t, "", typeOf(other, "homebrew"), "a weapon the seeds do not know stays untyped")
+
+	// Applied already: no step runs, even with an untyped seeded weapon present.
+	store.t.Weapons[rowKey(other, "longsword")] = storeq.InsertWeaponParams{CharacterID: other, ID: "longsword", Kind: "melee"}
+	f := &fakeMigrations{recorded: append(recorded, weaponTypeMigration), store: store}
+	steps, afterSteps := migrationDataSteps(repoSeeds())
+	require.NoError(t, runMigrations(context.Background(), f, embedded, steps, afterSteps))
+	assert.Equal(t, "", typeOf(other, "longsword"), "an applied migration runs no step")
 }

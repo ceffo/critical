@@ -278,6 +278,16 @@ func count[R any](table map[string]R, keep func(R) bool) int64 {
 	return n
 }
 
+func (f *fakeStore) TypeWeaponIfUntyped(_ context.Context, arg storeq.TypeWeaponIfUntypedParams) error {
+	for k, w := range f.t.Weapons {
+		if w.ID == arg.ID && w.WeaponType == "" {
+			w.WeaponType = arg.WeaponType
+			f.t.Weapons[k] = w
+		}
+	}
+	return nil
+}
+
 func (f *fakeStore) InsertWeapon(_ context.Context, arg storeq.InsertWeaponParams) error {
 	if !slices.Contains([]string{"melee", "missile"}, arg.Kind) || (arg.TwoHanded != 0 && arg.TwoHanded != 1) {
 		return fmt.Errorf("check violation: weapon %q kind %q two_handed %d", arg.ID, arg.Kind, arg.TwoHanded)

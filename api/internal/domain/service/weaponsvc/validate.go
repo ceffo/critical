@@ -35,8 +35,9 @@ const (
 	TypeOtherMissile  = "other_missile"
 )
 
-// Types is every weapon type code, in display order. The migration's CHECK and the web's list
-// repeat it; a test keeps the seeds and the contract in line.
+// Types is every weapon type code, in display order, and the one owner of the list (the column has
+// no CHECK). The web's WEAPON_TYPES
+// repeats it; seedcheck's tests keep it and the seeds in line.
 var Types = []string{
 	TypeLongBow, TypeShortBow, TypeLightCrossbow, TypeHeavyCrossbow, TypeHandCrossbow, TypeDagger,
 	TypeDart, TypeSling, TypeShortSword, TypeLongSword, TypeOtherMelee, TypeOtherThrown, TypeOtherMissile,

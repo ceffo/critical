@@ -272,7 +272,8 @@ flowchart TD
   4.1). A row is the spell's name (wrapping, never cut; "×N" for copies left) and its split Cast
   button, or "Used"; a blank extra slot's spell picker stands in for its name; the cast inputs a
   spell needs (target AC, item spent, cast-time mode, split of the extra slots) sit with the Cast
-  button and wrap under the name together when narrow. Cast (`variant="main"`, `lg`) casts with the
+  button and wrap under the name together when narrow. Cast (`variant="main"`, `lg`, the Spells
+  sparkle before "Cast", every Cast the same width split or not so they line up) casts with the
   server's default target (no `onSelf`); its arrow (`ui/dropdown-menu`) offers only the other target
   the spellbook entry's `cast_target` serves (`alternate`: "On me" sends `onSelf: true`, "On an
   ally" `onSelf: false`) and shows only when the server serves one (a defensive buff it can put on
@@ -290,12 +291,13 @@ flowchart TD
 - Spell preparation (`PrepareEditor.tsx`, ADR 0027 step 11): Prepare turns the Spells tab into the
   editor in the same space (no popup; the daily list and its buttons are hidden). Top row: the level
   filter (one chip per level the server gives a limit above 0, multi-select, none = all; it filters
-  both columns), then Cancel and Save (`main`). Two columns from 32rem: TODAY'S PREPARATION, starting
+  both columns), then Cancel and Save (`main`). Two columns from 28rem (1280x800 included), each the act panel's
+  full height and scrolling inside itself (stacked below 28rem, the panel scrolls): TODAY'S PREPARATION, starting
   from today's slots (ids no longer in the spellbook listed as removed, never sent), one group per
   level with the dots of `lib/slotDots.ts` `preparedDots` (prepared in `magic`, an outline per slot
   left, a `danger` dot per spell beyond the limit) and per spell its name (opening the details popup)
   and − count + (the last − removes it); the GRIMOIRE, search box and spells grouped by level with a
-  quiet Add, as tall as the preparation with its list scrolling inside. The draft's counts and the gate
+  quiet Add, its list scrolling under the search box. The draft's counts and the gate
   are `lib/prepareDraft.ts` (`levelBudgets`, `overBudget`): Save is disabled, with "Too many spells at
   level N", while a level holds more than the server's count; the server still refuses such a save.
 - Spells activity, spell lookup (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives

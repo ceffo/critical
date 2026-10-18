@@ -244,6 +244,8 @@ async function expectHeaderLayout(page: Page, where: string) {
     `turn label over its number, ${where}`,
   ).toBeLessThanOrEqual(turn.y + 1);
   const next = await box(page.getByRole("button", { name: "Tour suivant" }));
+  // Next turn is an `lg` primary action, 32 px (ADR 0017 step 5, ADR 0027 step 1.2).
+  expect(Math.round(next.height), `Tour suivant height, ${where}`).toBe(32);
   const init = page.getByTestId("initiative-value");
   expect(
     (await box(init)).y,
@@ -1746,5 +1748,75 @@ test("group headings: one shared band, French, dark and light", async ({
     await rail.getByRole("button", { name: "Inventaire", exact: true }).click();
     await expectNoClippedText(page.locator("main"), `inventory, ${tag}`);
     await snap(page, `fr-${tag}-inventory`);
+  }
+});
+
+// The spells tab in French at 1280x800 and 1920x1080: the Cast buttons of the spell list, then the
+// preparation editor, whose two columns take the act panel's whole height side by side and each
+// scroll inside themselves. Only a browser lays out the heights, so this is the check.
+test("spells tab: Cast buttons and full-height preparation columns, French, 1280 and 1920", async ({
+  page,
+  stack,
+}) => {
+  test.setTimeout(60_000);
+  const put = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spells: PREPARED }),
+  });
+  expect(put.ok).toBe(true);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const actions = page.getByRole("region", { name: "Actions" });
+  const panel = actions.getByRole("tabpanel");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+  ]) {
+    await page.setViewportSize(vp);
+    const size = `${vp.width}x${vp.height}`;
+    await actions.getByRole("tab", { name: "Sorts" }).click();
+    await expect(panel).toContainText("Niveau 1");
+    await expectNoClippedText(actions, `spell list, ${size}`);
+    await snap(page, `fr-spells-cast-${size}`);
+    await actions.getByRole("button", { name: "Préparer les sorts" }).click();
+    const form = actions.getByRole("form", {
+      name: "Préparer les sorts du jour",
+    });
+    await expect(form.getByTestId("grimoire-level-1")).toBeVisible();
+    await expectNoClippedText(actions, `preparation, ${size}`);
+    // The grimoire search's placeholder fits its field (the audit does not see placeholders).
+    const search = form.getByRole("textbox", {
+      name: "Chercher dans le grimoire",
+    });
+    const fit = await search.evaluate((el) => {
+      const input = el as HTMLInputElement;
+      const s = getComputedStyle(input);
+      const ctx = document.createElement("canvas").getContext("2d")!;
+      ctx.font = `${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
+      const room =
+        input.clientWidth -
+        parseFloat(s.paddingLeft) -
+        parseFloat(s.paddingRight);
+      return { text: ctx.measureText(input.placeholder).width, room };
+    });
+    expect(fit.text, `search placeholder fits, ${size}`).toBeLessThanOrEqual(
+      fit.room,
+    );
+    await snap(page, `fr-preparation-${size}`);
+    // Both columns end at the panel's content bottom (its 14 px padding), nothing scrolls but them.
+    const inner = (await panel.boundingBox())!;
+    for (const name of ["Préparation du jour", "Grimoire"]) {
+      const col = (await form.getByRole("region", { name }).boundingBox())!;
+      expect(
+        Math.abs(inner.y + inner.height - 14 - (col.y + col.height)),
+        `${name} bottom, ${size}`,
+      ).toBeLessThanOrEqual(2);
+    }
+    expect(
+      await panel.evaluate((el) => el.scrollHeight - el.clientHeight),
+      `act panel scroll, ${size}`,
+    ).toBeLessThanOrEqual(1);
+    await actions.getByRole("button", { name: "Annuler" }).click();
   }
 });

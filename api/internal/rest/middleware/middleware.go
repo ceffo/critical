@@ -17,6 +17,7 @@ import (
 
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/render"
 )
 
@@ -63,7 +64,8 @@ func Recoverer(next http.Handler) http.Handler {
 // database that stopped answering (a node starved of memory) is not bounded by
 // it: lib/pq only asks the server to cancel it, and keeps waiting for the
 // answer. So the handler runs on its own goroutine against a buffered response,
-// and at d the client gets the error at once, rendered by the central mapping;
+// and at d the client gets domain.ErrUnavailable at once (503
+// database_unavailable, by the central mapping);
 // the handler finishes whenever its driver call returns, and its late response
 // is dropped (its writes fail with http.ErrHandlerTimeout).
 //
@@ -97,7 +99,7 @@ func Deadline(d time.Duration) func(http.Handler) http.Handler {
 				bw.copyTo(w)
 			case <-ctx.Done():
 				bw.expire()
-				render.Error(ctx, w, fmt.Errorf("request deadline of %s: %w", d, ctx.Err()))
+				render.Error(ctx, w, fmt.Errorf("%w: request deadline of %s: %w", domain.ErrUnavailable, d, ctx.Err()))
 			}
 		})
 	}

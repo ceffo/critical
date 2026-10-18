@@ -75,6 +75,10 @@ func Error(ctx context.Context, w http.ResponseWriter, err error) {
 	JSON(ctx, w, status, body)
 }
 
+// CodeUnavailable is the error code of a request the database could not serve
+// in time (503).
+const CodeUnavailable = "database_unavailable"
+
 // CodeBadRequest is the error code of a request that could not be parsed.
 const CodeBadRequest = "bad_request"
 
@@ -113,6 +117,12 @@ func fixed(msg string) func(error) string { return func(error) string { return m
 // is transport-layer code and may depend inward on the service packages, while
 // services never import render, so layering holds without widening domain.
 var mappings = []mapping{
+	// A request the database could not serve within its deadline: stopped,
+	// starting or starved (the connection gate of storage/postgres, the
+	// request deadline of middleware.Deadline). The web retries reads and
+	// shows the state; it never resends a write by itself.
+	{target: domain.ErrUnavailable, status: http.StatusServiceUnavailable, code: CodeUnavailable, message: fixed("database unavailable")},
+	{target: context.DeadlineExceeded, status: http.StatusServiceUnavailable, code: CodeUnavailable, message: fixed("database unavailable")},
 	// The login and session refusals of ADR 0029 (steps 3.7, 4, 5.2): the
 	// login callback redirects to the login page with the code instead.
 	{target: authsvc.ErrUnauthenticated, status: http.StatusUnauthorized, code: "unauthenticated"},

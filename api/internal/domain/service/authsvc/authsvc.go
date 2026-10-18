@@ -132,6 +132,8 @@ type service struct {
 	now      func() time.Time
 	newID    func() uuid.UUID
 	newToken func() (string, error)
+	// sessions are the sessions this server found valid recently.
+	sessions *sessionCache
 }
 
 // New constructs the service.
@@ -139,7 +141,10 @@ func New(d Deps) (SVC, error) {
 	if d.DAL == nil || d.Tx == nil {
 		return nil, fmt.Errorf("authsvc: nil dependency")
 	}
-	s := &service{dal: d.DAL, tx: d.Tx, idp: d.Provider, now: d.Now, newID: d.NewID, newToken: d.NewToken}
+	s := &service{
+		dal: d.DAL, tx: d.Tx, idp: d.Provider, now: d.Now, newID: d.NewID, newToken: d.NewToken,
+		sessions: &sessionCache{},
+	}
 	if s.now == nil {
 		s.now = time.Now
 	}

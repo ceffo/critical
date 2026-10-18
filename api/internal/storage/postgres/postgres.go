@@ -19,6 +19,7 @@ import (
 
 	"github.com/lib/pq" // PostgreSQL driver
 
+	"github.com/ceffo/critical/api/internal/domain"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 )
 
@@ -114,8 +115,9 @@ const (
 )
 
 // ErrUnavailable is what a new connection fails with when the database did not answer within the
-// caller's wait: it is stopped, starting, or too starved to accept connections.
-var ErrUnavailable = errors.New("database unavailable")
+// caller's wait: it is stopped, starting, or too starved to accept connections. It is
+// domain.ErrUnavailable, which the API answers as 503 database_unavailable.
+var ErrUnavailable = domain.ErrUnavailable
 
 // gate is the pool's driver.Connector. While the database answers, each new connection is one
 // attempt of the inner connector. Once an attempt fails as a stopped or starting database fails

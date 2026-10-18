@@ -13,6 +13,10 @@ var (
 	ErrCharacterNotFound = errors.New("character not found")
 	ErrInvalidInput      = errors.New("invalid input")
 	ErrConflict          = errors.New("conflict")
+	// ErrUnavailable is a request the database could not serve in time: it
+	// is stopped, starting or too slow to answer within the request's
+	// deadline. Nothing the request asked to write is known to be saved.
+	ErrUnavailable = errors.New("database unavailable")
 )
 
 // FieldError is an invalid-input failure tied to one request field, so the

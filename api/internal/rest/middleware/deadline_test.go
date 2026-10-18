@@ -39,7 +39,7 @@ func TestDeadline_AnswerInTimeIsSentAsWritten(t *testing.T) {
 
 // A handler held past the deadline by something that does not watch its
 // context (a statement sent to a database that stopped answering) does not
-// hold the client: the error is rendered at the deadline, and what the
+// hold the client: 503 database_unavailable is rendered at the deadline, and what the
 // handler writes afterwards is dropped.
 func TestDeadline_AHandlerStuckPastTheDeadlineAnswersAtTheDeadline(t *testing.T) {
 	release := make(chan struct{})
@@ -52,11 +52,10 @@ func TestDeadline_AHandlerStuckPastTheDeadlineAnswersAtTheDeadline(t *testing.T)
 	started := time.Now()
 	rec := serve(h)
 	assert.Less(t, time.Since(started), 500*time.Millisecond)
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
 	var body map[string]string
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-	assert.Equal(t, "internal", body["code"])
-	assert.Contains(t, body["error"], "deadline")
+	assert.Equal(t, map[string]string{"code": "database_unavailable", "error": "database unavailable"}, body)
 
 	close(release)
 	require.ErrorIs(t, <-late, http.ErrHandlerTimeout)

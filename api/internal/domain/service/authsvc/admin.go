@@ -12,6 +12,7 @@ import (
 
 // SetDisabled implements SVC (ADR 0029 steps 1.2, 4.4 and 5.2).
 func (s *service) SetDisabled(ctx context.Context, userID uuid.UUID, disabled bool) error {
+	defer s.sessions.forgetUser(userID)
 	return s.tx.InTx(ctx, func(ctx context.Context) error {
 		u, err := s.dal.UserByID(ctx, userID)
 		if err != nil {
@@ -40,6 +41,7 @@ func (s *service) SetRole(ctx context.Context, userID uuid.UUID, role Role) erro
 	if role != RoleAdmin && role != RolePlayer {
 		return domain.FieldErrorf("role", "role must be %q or %q", RoleAdmin, RolePlayer)
 	}
+	defer s.sessions.forgetUser(userID)
 	return s.tx.InTx(ctx, func(ctx context.Context) error {
 		u, err := s.dal.UserByID(ctx, userID)
 		if err != nil {
@@ -62,6 +64,7 @@ func (s *service) SetRootAdmin(ctx context.Context, email string) (*User, error)
 	if !strings.Contains(email, "@") {
 		return nil, domain.FieldErrorf("email", "%q is not an email address", email)
 	}
+	defer s.sessions.forgetAll()
 	var out *User
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		root, err := s.dal.RootUser(ctx)

@@ -1,14 +1,22 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Desktop, GearSix, Moon, SignOut, Sun } from "@phosphor-icons/react";
+import {
+  Desktop,
+  GearSix,
+  Moon,
+  ShieldCheck,
+  SignOut,
+  Sun,
+} from "@phosphor-icons/react";
 import { logout } from "@/api/auth";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { ADMIN_PATH } from "@/lib/session";
 import { LANGUAGES, themePatch } from "@/lib/settings";
 import {
   MODES,
@@ -77,7 +85,8 @@ function Swatch({ id, light }: { id: string; light: boolean }) {
  * Display preferences of this device (ADR 0009, ADR 0026 step 4): language, appearance mode, the
  * dark theme and the light theme. Each choice applies live and is saved; opened from the cog at the
  * left of the dice footer (ADR 0022 step 2.6). Under them the account: the logged-in email and Log
- * out (ADR 0029 step 4.4; account actions live in the cog menu).
+ * out (ADR 0029 step 4.4; account actions live in the cog menu), and for an admin the link to the
+ * admin section (step 1.3).
  */
 export function SettingsPopover() {
   const { t } = useTranslation();
@@ -197,6 +206,17 @@ export function SettingsPopover() {
               {t("settings.logout")}
             </Button>
           </div>
+          {me?.role === "admin" && (
+            <a
+              href={ADMIN_PATH}
+              className={cn(buttonVariants({ variant: "quiet" }), "self-start")}
+              aria-label={t("admin.openHint")}
+              title={t("admin.openHint")}
+            >
+              <ShieldCheck aria-hidden />
+              {t("admin.open")}
+            </a>
+          )}
         </div>
       </PopoverContent>
     </Popover>

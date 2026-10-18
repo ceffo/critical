@@ -36,3 +36,16 @@ export function formatTime(iso: string, lang: string): string {
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
 }
+
+/** Day, month, year and HH:MM in the UI language, in the browser's time zone; "" for a bad date. */
+export function formatDateTime(iso: string, lang: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(lang, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}

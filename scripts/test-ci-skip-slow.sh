@@ -74,6 +74,8 @@ check "docs with the ci-skip label" true pull_request "ci-skip" "$base"
 git -C "$repo" checkout -q -B empty "$base"
 check "no change" false pull_request "" "$base"
 check "no base" false push "" ""
+check "a dispatched run on main (no base)" false workflow_dispatch "" ""
+check "a dispatched run ignores a stray ci-skip" false workflow_dispatch "ci-skip" ""
 check "a zero base (new branch)" false push "" 0000000000000000000000000000000000000000
 check "an unknown base" false push "" 1111111111111111111111111111111111111111
 

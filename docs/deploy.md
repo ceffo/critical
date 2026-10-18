@@ -642,7 +642,9 @@ image, the staging deploy and the tag in one job, so two runs never compute a ve
 take the same number).
 
 - **When.** It runs on `workflow_run` of the `CI` workflow, and its job only when that run concluded
-  `success` for a `push` to `main` of this repository: a red or cancelled CI run, a pull request (a fork's
+  `success` for a `push` to `main` of this repository (or a `workflow_dispatch` of CI on `main`: a merge GitHub
+  makes with a workflow's `GITHUB_TOKEN`, i.e. the Dependabot auto-merge, starts no `push` run, so that
+  workflow dispatches CI on `main` once the PR is merged): a red or cancelled CI run, a pull request (a fork's
   branch named `main` included) and a fork never build. By hand: Actions > Release > Run workflow on `main`
   (input `version`: empty releases main's head, `X.Y.Z` redeploys that version, "Staging deploy"). It is not
   a job of `ci.yml` because CI cancels a running `main` build when a newer commit lands; release jobs are

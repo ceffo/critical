@@ -39,6 +39,17 @@ type AttackPreviewDTO struct {
 	// RollNeeded is null while the target AC is unknown.
 	RollNeeded  *int `json:"rollNeeded"`
 	DamageBonus int  `json:"damageBonus"`
+	// PointBlank is the same preview with the point-blank option (ADR 0030
+	// step 12); absent when the weapon does not allow it.
+	PointBlank *AttackPreviewDTO `json:"pointBlank,omitempty"`
+}
+
+// AttackRateDTO is the held weapon's attacks per round (ADR 0030 step 11):
+// attacks every rounds rounds, thisRound in the current round.
+type AttackRateDTO struct {
+	Attacks   int `json:"attacks"`
+	Rounds    int `json:"rounds"`
+	ThisRound int `json:"thisRound"`
 }
 
 // AttackFormViewDTO is the body of GET and PATCH /api/attack/form.
@@ -47,6 +58,8 @@ type AttackFormViewDTO struct {
 	AmmoFromDefault bool              `json:"ammoFromDefault"`
 	AmmoChoices     []AmmoChoiceDTO   `json:"ammoChoices"`
 	Preview         *AttackPreviewDTO `json:"preview"`
+	// AttackRate is absent when the weapon shows no rate (ADR 0030 step 11.3).
+	AttackRate *AttackRateDTO `json:"attackRate,omitempty"`
 	// MaxRealAC is the highest armor class the rules allow; the UI stops
 	// the target AC stepper there (docs/adr/0012 step 7).
 	MaxRealAC int `json:"maxRealAc"`
@@ -126,15 +139,24 @@ func toFormViewDTO(v *combatsvc.AttackFormView) AttackFormViewDTO {
 	for _, a := range v.AmmoChoices {
 		out.AmmoChoices = append(out.AmmoChoices, AmmoChoiceDTO{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Count: a.Count})
 	}
-	if p := v.Preview; p != nil {
-		mods := make([]ModifierDTO, 0, len(p.Modifiers))
-		for _, m := range p.Modifiers {
-			mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
-		}
-		out.Preview = &AttackPreviewDTO{
-			BaseThac0: p.BaseThac0, Modifiers: mods, EffectiveThac0: p.EffectiveThac0,
-			ToHit: p.ToHit, RollNeeded: p.RollNeeded, DamageBonus: p.DamageBonus,
-		}
+	out.Preview = toPreviewDTO(v.Preview)
+	if r := v.AttackRate; r != nil {
+		out.AttackRate = &AttackRateDTO{Attacks: r.Attacks, Rounds: r.Rounds, ThisRound: r.ThisRound}
 	}
 	return out
+}
+
+func toPreviewDTO(p *combatsvc.AttackPreview) *AttackPreviewDTO {
+	if p == nil {
+		return nil
+	}
+	mods := make([]ModifierDTO, 0, len(p.Modifiers))
+	for _, m := range p.Modifiers {
+		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
+	}
+	return &AttackPreviewDTO{
+		BaseThac0: p.BaseThac0, Modifiers: mods, EffectiveThac0: p.EffectiveThac0,
+		ToHit: p.ToHit, RollNeeded: p.RollNeeded, DamageBonus: p.DamageBonus,
+		PointBlank: toPreviewDTO(p.PointBlank),
+	}
 }

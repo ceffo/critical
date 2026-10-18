@@ -83,6 +83,8 @@ type WeaponDTO struct {
 	AmmoKind    string         `json:"ammo_kind"`
 	// WeaponType is a code of weaponsvc.Types ("" when untyped); the UI words it.
 	WeaponType string `json:"weapon_type"`
+	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
+	Specialized bool `json:"specialized"`
 }
 
 // ListWeapons returns the character's weapons.
@@ -97,7 +99,7 @@ func ListWeapons(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 			out = append(out, WeaponDTO{
 				ID: wp.ID, Name: wp.Name, DamageSM: wp.BaseDamage, DamageL: wp.DamageLarge,
 				MagicToHit: wp.MagicToHit, MagicDamage: wp.MagicDamage, Kind: string(wp.Kind),
-				TwoHanded: wp.TwoHanded, AmmoKind: wp.AmmoKind, WeaponType: wp.Type,
+				TwoHanded: wp.TwoHanded, AmmoKind: wp.AmmoKind, WeaponType: wp.Type, Specialized: wp.Specialized,
 			})
 		}
 		render.OK(r.Context(), w, out)
@@ -115,6 +117,9 @@ type AttackRequestDTO struct {
 	// TargetSize is "sm" (small/medium, the default) or "l" (large).
 	TargetSize  string          `json:"target_size,omitempty"`
 	Situational *SituationalDTO `json:"situational,omitempty"`
+	// PointBlank is the point-blank option of a specialized launcher (ADR
+	// 0030 step 12); refused for another weapon.
+	PointBlank bool `json:"point_blank,omitempty"`
 }
 
 // SituationalDTO is a to-hit modifier entered at the table.
@@ -137,7 +142,7 @@ func ResolveAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		}
 		in := combatsvc.AttackRequest{
 			WeaponID: req.WeaponID, AmmoItemID: req.AmmoItemID,
-			TargetAC: req.TargetAC, TargetSize: combatsvc.TargetSize(req.TargetSize),
+			TargetAC: req.TargetAC, TargetSize: combatsvc.TargetSize(req.TargetSize), PointBlank: req.PointBlank,
 		}
 		if req.Situational != nil {
 			in.Situational = &combatsvc.Situational{Value: req.Situational.Value, Label: req.Situational.Label}

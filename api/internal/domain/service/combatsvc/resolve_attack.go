@@ -148,7 +148,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	if ammo != nil {
 		res.Ammo = &AmmoUse{ItemID: ammo.ID, Name: ammo.Name.Any(), Magic: ammo.MagicBonus, Remaining: ammo.Count}
 	}
-	am, err := s.attackModifiers(char, weapon, ammo, mods, req.Situational)
+	am, err := s.attackModifiers(char, weapon, ammo, mods, req.Situational, req.PointBlank)
 	if err != nil {
 		return nil, err
 	}

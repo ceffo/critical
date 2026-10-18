@@ -17,6 +17,12 @@ const (
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
 	ModRace        ModifierKind = "race"         // the race's save bonus (ADR 0030 step 22.1), Detail = the race code
 	ModCrit        ModifierKind = "crit"         // house crit multiplier; the range is the roll's CritFrom..CritTo
+	// ModSpecialization is weapon specialization (ADR 0030 step 12): +1 to hit and +2 damage with a
+	// melee or thrown weapon, not magical; Detail is empty.
+	ModSpecialization ModifierKind = "specialization"
+	// ModPointBlank is a specialized launcher's +2 to hit at point-blank range (ADR 0030 step 12),
+	// an option of the attack request; Detail is empty.
+	ModPointBlank ModifierKind = "point_blank"
 )
 
 // Modifier is a labeled bonus or penalty applied to a roll. ItemID is set
@@ -83,6 +89,9 @@ type AttackRequest struct {
 	TargetAC    *int
 	TargetSize  TargetSize
 	Situational *Situational
+	// PointBlank is the target at point-blank range (ADR 0030 step 12): a specialized launcher's
+	// option, refused for any other weapon. Not saved.
+	PointBlank bool
 }
 
 // Verdict is the GM's word on an attack against an unknown AC.
@@ -264,6 +273,8 @@ type Weapon struct {
 	TwoHanded   bool
 	AmmoKind    string // ammo item kind a missile weapon fires, e.g. "arrow"
 	Type        string // weapon type code (weaponsvc.Types); empty: none
+	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
+	Specialized bool
 }
 
 // FiresAmmo reports whether the weapon is a launcher (a bow) that spends

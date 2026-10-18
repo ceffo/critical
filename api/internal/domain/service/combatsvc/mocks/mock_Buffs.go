@@ -82,6 +82,63 @@ func (_c *MockBuffs_Aggregate_Call) RunAndReturn(run func(context.Context, int64
 	return _c
 }
 
+// GetRound provides a mock function with given fields: ctx, characterID
+func (_m *MockBuffs) GetRound(ctx context.Context, characterID int64) (int, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRound")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (int, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) int); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockBuffs_GetRound_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRound'
+type MockBuffs_GetRound_Call struct {
+	*mock.Call
+}
+
+// GetRound is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockBuffs_Expecter) GetRound(ctx interface{}, characterID interface{}) *MockBuffs_GetRound_Call {
+	return &MockBuffs_GetRound_Call{Call: _e.mock.On("GetRound", ctx, characterID)}
+}
+
+func (_c *MockBuffs_GetRound_Call) Run(run func(ctx context.Context, characterID int64)) *MockBuffs_GetRound_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockBuffs_GetRound_Call) Return(_a0 int, _a1 error) *MockBuffs_GetRound_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockBuffs_GetRound_Call) RunAndReturn(run func(context.Context, int64) (int, error)) *MockBuffs_GetRound_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockBuffs creates a new instance of MockBuffs. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockBuffs(t interface {

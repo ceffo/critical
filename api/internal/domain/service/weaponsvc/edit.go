@@ -34,6 +34,7 @@ type changeRecord struct {
 	TwoHanded   bool          `json:"two_handed"`
 	AmmoKind    string        `json:"ammo_kind"`
 	Type        string        `json:"weapon_type"`
+	Specialized bool          `json:"specialized,omitempty"`
 	Changes     []FieldChange `json:"changes,omitempty"`
 }
 
@@ -41,7 +42,8 @@ func record(w Weapon, changes []FieldChange) changeRecord {
 	return changeRecord{
 		WeaponID: w.ID, Name: w.Name.Any(), DamageSM: w.DamageSM, DamageL: w.DamageL,
 		MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: w.Kind,
-		TwoHanded: w.TwoHanded, AmmoKind: w.AmmoKind, Type: w.Type, Changes: changes,
+		TwoHanded: w.TwoHanded, AmmoKind: w.AmmoKind, Type: w.Type, Specialized: w.Specialized,
+		Changes: changes,
 	}
 }
 
@@ -102,8 +104,12 @@ func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput)
 	w := clean(Weapon{
 		Name: in.Name, DamageSM: in.DamageSM, DamageL: in.DamageL, MagicToHit: in.MagicToHit,
 		MagicDamage: in.MagicDamage, Kind: in.Kind, TwoHanded: in.TwoHanded, AmmoKind: in.AmmoKind, Type: in.Type,
+		Specialized: in.Specialized,
 	})
 	if err := w.Validate(); err != nil {
+		return nil, err
+	}
+	if err := s.checkSpecialized(ctx, characterID, w, false); err != nil {
 		return nil, err
 	}
 	var res *ChangeResult
@@ -179,6 +185,9 @@ func (s *service) Update(ctx context.Context, characterID int64, id string, p We
 		if p.Type != nil {
 			w.Type = *p.Type
 		}
+		if p.Specialized != nil {
+			w.Specialized = *p.Specialized
+		}
 		w = clean(w)
 		// Switching to melee drops the ammo kind unless the edit sets one
 		// (which Validate then refuses).
@@ -186,6 +195,9 @@ func (s *service) Update(ctx context.Context, characterID int64, id string, p We
 			w.AmmoKind = ""
 		}
 		if err := w.Validate(); err != nil {
+			return err
+		}
+		if err := s.checkSpecialized(ctx, characterID, w, old.Specialized); err != nil {
 			return err
 		}
 		changes := diff(old, w)
@@ -256,5 +268,23 @@ func diff(a, b Weapon) []FieldChange {
 	add("two_handed", strconv.FormatBool(a.TwoHanded), strconv.FormatBool(b.TwoHanded))
 	add("ammo_kind", a.AmmoKind, b.AmmoKind)
 	add("weapon_type", a.Type, b.Type)
+	add("specialized", strconv.FormatBool(a.Specialized), strconv.FormatBool(b.Specialized))
 	return out
+}
+
+// checkSpecialized refuses a newly specialized weapon (ADR 0030 step 12) for a
+// character whose class does not specialize: field "specialized", code
+// CodeNotAllowed. A weapon that was already specialized stays as it is.
+func (s *service) checkSpecialized(ctx context.Context, characterID int64, w Weapon, was bool) error {
+	if !w.Specialized || was {
+		return nil
+	}
+	c, err := s.chars.GetCharacter(ctx, characterID)
+	if err != nil {
+		return fmt.Errorf("get character: %w", err)
+	}
+	if !c.Derived.Specializes {
+		return fieldErr("specialized", CodeNotAllowed)
+	}
+	return nil
 }

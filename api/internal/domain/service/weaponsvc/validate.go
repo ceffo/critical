@@ -16,6 +16,10 @@ const (
 	maxDiceSides = 1000
 )
 
+// CodeNotAllowed is a specialized weapon for a class that does not specialize
+// (ADR 0030 step 12), a language-neutral code the web translates (ADR 0023).
+const CodeNotAllowed = "not_allowed"
+
 // Weapon types: the fixed list of language-neutral codes the class rules read (ADR 0030 step 23).
 // The empty string is a weapon with no type. Display names come from the frontend's i18n
 // (ADR 0023), never from here.

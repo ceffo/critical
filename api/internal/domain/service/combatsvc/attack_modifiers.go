@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -49,10 +50,27 @@ func strDetail(mods buffsvc.BuffModifiers) string {
 	}
 }
 
+// Weapon specialization (ADR 0030 step 12, PHB "Effects of Specialization").
+const (
+	specializationToHit  = 1 // melee or thrown weapon
+	specializationDamage = 2 // melee or thrown weapon, after the multipliers like Strength
+	pointBlankToHit      = 2 // launcher, at point-blank range
+)
+
+// PointBlankAllowed reports whether an attack with weapon may take the
+// point-blank option (ADR 0030 step 12): a specialized weapon that fires
+// ammunition.
+func (w Weapon) PointBlankAllowed() bool { return w.Specialized && w.FiresAmmo() }
+
 // attackModifiers lists the to-hit modifiers in the order of ADR 0002 steps
 // 4 to 9 (Strength, Dexterity, weapon or buff "+N", ammunition, buffs,
-// situational). A nil or zero situational adds nothing.
-func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, sit *Situational) (attackMods, error) {
+// situational), weapon specialization after the weapon's magic (ADR 0030
+// step 12). A nil or zero situational adds nothing. pointBlank is the
+// point-blank option, ErrInvalidInput for a weapon that does not allow it.
+func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, sit *Situational, pointBlank bool) (attackMods, error) {
+	if pointBlank && !weapon.PointBlankAllowed() {
+		return attackMods{}, fmt.Errorf("%w: point blank needs a specialized weapon that fires ammunition", domain.ErrInvalidInput)
+	}
 	out := attackMods{modifiers: []Modifier{}}
 	add := func(m Modifier) { out.modifiers = append(out.modifiers, m) }
 
@@ -98,6 +116,19 @@ func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, a
 		add(Modifier{Kind: ModAmmoMagic, Detail: ammo.Name.Any(), ItemID: ammo.ID, Value: ammo.MagicBonus})
 		out.ammoDmg = ammo.MagicBonus
 		out.weaponTerms = append(out.weaponTerms, DamageTerm{Term: TermWeapon, Kind: ModAmmoMagic, Detail: ammo.Name.Any(), ItemID: ammo.ID, Value: float64(ammo.MagicBonus)})
+	}
+
+	// ADR 0030 step 12: specialization, not magical (never a "+N" of step 6).
+	// A melee or thrown weapon gets +1 to hit and +2 damage (added after the
+	// multipliers, with Strength); a launcher gets no damage, and +2 to hit
+	// only at point-blank range.
+	switch {
+	case weapon.Specialized && !weapon.FiresAmmo():
+		add(Modifier{Kind: ModSpecialization, Value: specializationToHit})
+		out.strDmg += specializationDamage
+		out.strTerms = append(out.strTerms, DamageTerm{Term: TermStrength, Kind: ModSpecialization, Value: specializationDamage})
+	case pointBlank:
+		add(Modifier{Kind: ModPointBlank, Value: pointBlankToHit})
 	}
 
 	// ADR 0002 step 8: one modifier per buff; step 9: the situational one.

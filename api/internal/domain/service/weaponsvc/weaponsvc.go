@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
 // ErrWeaponNotFound is returned when a weapon id is unknown.
@@ -55,24 +56,32 @@ type Log interface {
 	actionlog.Recorder
 }
 
+// Characters reads the character whose weapons change: a specialized weapon
+// needs a class that specializes (ADR 0030 step 12, Derived.Specializes).
+type Characters interface {
+	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+}
+
 // Deps are the collaborators besides the DAL.
 type Deps struct {
-	Log Log
-	Tx  domain.TxRunner
+	Log   Log
+	Tx    domain.TxRunner
+	Chars Characters
 }
 
 type service struct {
-	dal DAL
-	log Log
-	tx  domain.TxRunner
+	dal   DAL
+	log   Log
+	tx    domain.TxRunner
+	chars Characters
 }
 
 // New constructs the service.
 func New(dal DAL, d Deps) (SVC, error) {
-	if dal == nil || d.Log == nil || d.Tx == nil {
+	if dal == nil || d.Log == nil || d.Tx == nil || d.Chars == nil {
 		return nil, fmt.Errorf("weaponsvc: nil dependency")
 	}
-	return &service{dal: dal, log: d.Log, tx: d.Tx}, nil
+	return &service{dal: dal, log: d.Log, tx: d.Tx, chars: d.Chars}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

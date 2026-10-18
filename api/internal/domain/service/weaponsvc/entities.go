@@ -24,6 +24,9 @@ type Weapon struct {
 	TwoHanded   bool
 	AmmoKind    string
 	Type        string // weapon type code (Types, ADR 0030 step 23); empty: none
+	// Specialized is the fighter's weapon specialization (ADR 0030 step 12),
+	// refused for a class that does not specialize.
+	Specialized bool
 }
 
 // WeaponInput is a new weapon.
@@ -38,6 +41,7 @@ type WeaponInput struct {
 	TwoHanded   bool
 	AmmoKind    string
 	Type        string
+	Specialized bool
 }
 
 // WeaponPatch is an edit: only the set (non-nil) fields change.
@@ -54,6 +58,7 @@ type WeaponPatch struct {
 	TwoHanded   *bool
 	AmmoKind    *string
 	Type        *string
+	Specialized *bool
 }
 
 // ChangeResult is one add, edit or remove: the weapon as it is now (as it

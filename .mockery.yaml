@@ -142,6 +142,7 @@ packages:
       SVC:
       DAL:
       Log:
+      Characters:
   github.com/ceffo/critical/api/internal/domain/service/xpsvc:
     config:
       dir: "internal/domain/service/xpsvc/mocks"

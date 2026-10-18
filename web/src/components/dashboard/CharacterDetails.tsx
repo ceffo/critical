@@ -10,6 +10,7 @@ import {
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import {
   TEXT_FIELDS,
+  hasAlignmentWarning,
   languageKey,
   toBody,
   toDraft,
@@ -113,9 +114,7 @@ function DetailsView({
   // A value that is not a code (an old release's free text) reads as missing, never as a raw key.
   const alignmentKnown = i18n.exists(`details.alignments.${c.alignment}`);
   const sexKnown = i18n.exists(`details.sexes.${c.sex}`);
-  const alignmentWarning = c.warnings.some(
-    (w) => w.code === "alignment_not_allowed" && w.field === "alignment",
-  );
+  const alignmentWarning = hasAlignmentWarning(c);
   return (
     <>
       <dl className="flex flex-col gap-2">
@@ -186,16 +185,22 @@ function DetailsForm({
   // The lists the picks are made from come from the server (ADR 0032 conventions): the class's
   // admitted alignments and the sexes.
   const [options, setOptions] = useState<CreationOptions | null>(null);
+  const [optionsFailed, setOptionsFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
     fetchCreationOptions().then(
-      (o) => live && setOptions(o),
-      () => undefined,
+      (o) => {
+        if (!live) return;
+        setOptions(o);
+        setOptionsFailed(false);
+      },
+      () => live && setOptionsFailed(true),
     );
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
   const alignments =
     options?.classes.find((c) => c.class === character.class)?.alignments ?? [];
   const sexes = options?.sexes ?? [];
@@ -298,6 +303,25 @@ function DetailsForm({
 
   return (
     <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-3">
+      {optionsFailed && (
+        <div
+          role="alert"
+          data-testid="details-options-error"
+          className="flex flex-wrap items-center gap-2 text-label text-danger"
+        >
+          {t("details.optionsError")}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setOptionsFailed(false);
+              setAttempt((n) => n + 1);
+            }}
+          >
+            {t("details.optionsRetry")}
+          </Button>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         {pick("alignment", alignments)}
         {input("age", { inputMode: "numeric" })}

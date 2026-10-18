@@ -1571,6 +1571,8 @@
     },
     "missing": "À choisir",
     "pick": "Choisir…",
+    "optionsError": "Les choix n'ont pas pu être chargés.",
+    "optionsRetry": "Réessayer",
     "alignments": {
       "lawful_good": "Loyal bon",
       "neutral_good": "Neutre bon",

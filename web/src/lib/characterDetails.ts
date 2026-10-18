@@ -64,3 +64,15 @@ export function languageKey(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 }
+
+/**
+ * Whether the class no longer admits the character's alignment. `warnings` is absent from the
+ * answer of a release that predates it (a rolling deploy, ADR 0024): absent reads as none.
+ */
+export function hasAlignmentWarning(c: {
+  warnings?: { code: string; field: string }[];
+}): boolean {
+  return (c.warnings ?? []).some(
+    (w) => w.code === "alignment_not_allowed" && w.field === "alignment",
+  );
+}

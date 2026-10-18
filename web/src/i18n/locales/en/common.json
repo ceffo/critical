@@ -1571,6 +1571,8 @@
     },
     "missing": "To pick",
     "pick": "Pick…",
+    "optionsError": "The choices could not be loaded.",
+    "optionsRetry": "Retry",
     "alignments": {
       "lawful_good": "Lawful good",
       "neutral_good": "Neutral good",

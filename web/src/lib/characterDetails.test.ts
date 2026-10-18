@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { languageKey, toBody, toDraft } from "./characterDetails";
+import {
+  hasAlignmentWarning,
+  languageKey,
+  toBody,
+  toDraft,
+} from "./characterDetails";
 
 const details = {
   alignment: "neutral_good",
@@ -46,5 +51,17 @@ describe("languageKey", () => {
   it("drops case and accents", () => {
     expect(languageKey("Élfique")).toBe("elfique");
     expect(languageKey("Haut Elfique")).toBe("hautelfique");
+  });
+});
+
+describe("hasAlignmentWarning", () => {
+  it("reads the warning, and an answer without `warnings` (the previous release) as none", () => {
+    expect(
+      hasAlignmentWarning({
+        warnings: [{ code: "alignment_not_allowed", field: "alignment" }],
+      }),
+    ).toBe(true);
+    expect(hasAlignmentWarning({ warnings: [] })).toBe(false);
+    expect(hasAlignmentWarning({})).toBe(false);
   });
 });

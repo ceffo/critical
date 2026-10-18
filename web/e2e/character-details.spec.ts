@@ -113,3 +113,35 @@ test.describe("a character lacking its alignment and sex", () => {
     await expectNoClippedText(pop, "the card with its identity picked");
   });
 });
+
+// A rolling deploy (ADR 0024): the page may meet an old server whose character answer has no
+// `warnings`/`missing`, and the choices' request can fail. The card still opens; the form says the
+// choices did not load and Retry fetches them.
+test("details card: an answer without warnings opens, failed choices show an error and retry", async ({
+  page,
+}) => {
+  await page.route("**/api/character", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const res = await route.fetch();
+    const body = await res.json();
+    delete body.warnings;
+    delete body.missing;
+    await route.fulfill({ response: res, json: body });
+  });
+  let fail = true;
+  await page.route("**/api/characters/options", (route) =>
+    fail ? route.abort() : route.fallback(),
+  );
+  await openDashboard(page);
+  await page.getByTestId("details-trigger").click();
+  const pop = page.getByTestId("details-popover");
+  await expect(pop.getByText("Bard", { exact: true })).toBeVisible();
+  await pop.getByRole("button", { name: "Edit" }).click();
+  await expect(pop.getByTestId("details-options-error")).toBeVisible();
+  fail = false;
+  await pop.getByRole("button", { name: "Retry" }).click();
+  await expect(pop.getByTestId("details-options-error")).toHaveCount(0);
+  await expect(
+    pop.getByLabel("Alignment").getByRole("option", { name: "Neutral good" }),
+  ).toHaveCount(1);
+});

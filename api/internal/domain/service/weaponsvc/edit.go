@@ -109,7 +109,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput)
 	if err := w.Validate(); err != nil {
 		return nil, err
 	}
-	if err := s.checkSpecialized(ctx, characterID, w, false); err != nil {
+	if err := s.checkSpecialized(ctx, characterID, w); err != nil {
 		return nil, err
 	}
 	var res *ChangeResult
@@ -197,7 +197,7 @@ func (s *service) Update(ctx context.Context, characterID int64, id string, p We
 		if err := w.Validate(); err != nil {
 			return err
 		}
-		if err := s.checkSpecialized(ctx, characterID, w, old.Specialized); err != nil {
+		if err := s.checkSpecialized(ctx, characterID, w); err != nil {
 			return err
 		}
 		changes := diff(old, w)
@@ -272,11 +272,11 @@ func diff(a, b Weapon) []FieldChange {
 	return out
 }
 
-// checkSpecialized refuses a newly specialized weapon (ADR 0030 step 12) for a
+// checkSpecialized refuses a specialized weapon (ADR 0030 step 12) for a
 // character whose class does not specialize: field "specialized", code
-// CodeNotAllowed. A weapon that was already specialized stays as it is.
-func (s *service) checkSpecialized(ctx context.Context, characterID int64, w Weapon, was bool) error {
-	if !w.Specialized || was {
+// CodeNotAllowed.
+func (s *service) checkSpecialized(ctx context.Context, characterID int64, w Weapon) error {
+	if !w.Specialized {
 		return nil
 	}
 	c, err := s.chars.GetCharacter(ctx, characterID)

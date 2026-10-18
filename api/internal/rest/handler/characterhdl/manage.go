@@ -32,9 +32,9 @@ type optionsReader interface {
 type ClassOptionDTO struct {
 	Class string   `json:"class"`
 	Races []string `json:"races"`
-	// ExceptionalStrength is whether the class enters an 18/xx at Strength
-	// 18 (ADR 0030 step 9).
-	ExceptionalStrength bool `json:"exceptionalStrength"`
+	// ExceptionalStrengthRaces are the races that enter an 18/xx at
+	// Strength 18 with the class (ADR 0030 step 9).
+	ExceptionalStrengthRaces []string `json:"exceptionalStrengthRaces"`
 }
 
 // RangeDTO is the inclusive range an entered number must fall in.
@@ -72,7 +72,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 			MaxNameLen:     o.MaxNameLen,
 		}
 		for _, c := range o.Classes {
-			out.Classes = append(out.Classes, ClassOptionDTO{Class: c.Class, Races: c.Races, ExceptionalStrength: c.ExceptionalStrength})
+			out.Classes = append(out.Classes, ClassOptionDTO{Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces})
 		}
 		render.OK(r.Context(), w, out)
 		return nil

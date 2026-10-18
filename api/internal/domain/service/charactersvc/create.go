@@ -240,9 +240,9 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 type ClassOption struct {
 	Class string
 	Races []string
-	// ExceptionalStrength is whether the class enters an 18/xx at Strength
-	// 18 (ADR 0030 step 9).
-	ExceptionalStrength bool
+	// ExceptionalStrengthRaces are the races of Races that enter an 18/xx
+	// at Strength 18 with the class (ADR 0030 step 9), empty for none.
+	ExceptionalStrengthRaces []string
 }
 
 // CreationOptions are what the creation form offers: the creatable classes
@@ -267,11 +267,10 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		MaxNameLen: MaxNameLen, Classes: make([]ClassOption, 0, len(CreatableClasses)),
 	}
 	for _, class := range CreatableClasses {
-		group, err := ruletablesvc.ClassGroup(class)
-		if err != nil {
+		if _, err := ruletablesvc.ClassGroup(class); err != nil {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
-		opt := ClassOption{Class: class, Races: []string{}, ExceptionalStrength: ruletablesvc.HasExceptionalStrength(group)}
+		opt := ClassOption{Class: class, Races: []string{}, ExceptionalStrengthRaces: []string{}}
 		for _, race := range Races {
 			ok, err := s.rules.RaceAllows(race, class)
 			if err != nil {
@@ -279,6 +278,9 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			}
 			if ok {
 				opt.Races = append(opt.Races, race)
+				if ruletablesvc.ExceptionalStrengthAllowed(class, race, 18) {
+					opt.ExceptionalStrengthRaces = append(opt.ExceptionalStrengthRaces, race)
+				}
 			}
 		}
 		out.Classes = append(out.Classes, opt)

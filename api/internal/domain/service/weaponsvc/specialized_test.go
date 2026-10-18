@@ -99,10 +99,11 @@ func TestUpdate_Step12_SpecializedFlag(t *testing.T) {
 		assert.Contains(t, string(got.Payload), `{"field":"specialized","before":"false","after":"true"}`)
 		assert.Contains(t, string(got.Snapshots[0].After), `"specialized":true`)
 	})
-	t.Run("already specialized", func(t *testing.T) {
+	t.Run("already specialized: the class is checked again", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		f := deps(t) // no GetCharacter expected
+		f := deps(t)
 		svc, _ := weaponsvc.New(dal, f.Deps)
+		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(character(true), nil)
 		spec := sword
 		spec.Specialized = true
 		dal.EXPECT().Get(mock.Anything, int64(1), "sword").Return(spec, nil)

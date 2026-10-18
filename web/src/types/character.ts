@@ -160,8 +160,15 @@ export interface ValueRange {
 
 /** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 export interface CreationOptions {
-  /** `exceptionalStrength`: the class enters an 18/xx at Strength 18 (ADR 0030 step 9). */
-  classes: { class: string; races: string[]; exceptionalStrength: boolean }[];
+  /**
+   * `exceptionalStrengthRaces`: the races that enter an 18/xx at Strength 18 with the class (ADR
+   * 0030 step 9; a halfling fighter does not).
+   */
+  classes: {
+    class: string;
+    races: string[];
+    exceptionalStrengthRaces: string[];
+  }[];
   ability: ValueRange;
   /** The 18/xx percentile's range (1 = 18/01, 100 = 18/00). */
   strExceptional: ValueRange;

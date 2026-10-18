@@ -78,7 +78,8 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
   const classOption = options?.classes.find((c) => c.class === cls);
   const races = classOption?.races ?? [];
   const offersExceptional =
-    !!classOption?.exceptionalStrength && parseWhole(numbers.str) === 18;
+    !!classOption?.exceptionalStrengthRaces.includes(race) &&
+    parseWhole(numbers.str) === 18;
   const rangeOf = (f: NumberField): ValueRange | undefined =>
     options
       ? f === "hpMax"

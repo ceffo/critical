@@ -253,8 +253,8 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, charactersvc.CreationOptions{
 		Classes: []charactersvc.ClassOption{
-			{Class: "bard", Races: []string{"human", "half_elf"}},
-			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrength: true},
+			{Class: "bard", Races: []string{"human", "half_elf"}, ExceptionalStrengthRaces: []string{}},
+			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
 		MinStrExceptional: 1, MaxStrExceptional: 100, MaxNameLen: 40,

@@ -334,7 +334,7 @@ point="$(sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p' "$calls" | head -n1
 grep -qx "docker buildx imagetools create --prefer-index=false --progress none -t registry.fly.io/critical-hit:$main_sha $staged" "$calls" \
     || fail "promote: wrong copy call: $(grep buildx "$calls")"
 grep -qx "docker manifest inspect $image" "$calls" || fail "promote: the copy's digest is not checked"
-grep -qx "fly console -a critical-hit --image $image --region yyz --vm-size shared-cpu-1x --vm-memory 512 --file-local /tmp/restore-point.sh=$tmp/repo/scripts/restore-point.sh -C sh /tmp/restore-point.sh $point 001_baseline.sql 002_more.sql" "$calls" \
+grep -qx "fly console -a critical-hit -c $tmp/repo/deploy/fly.prod.toml --image $image --region yyz --vm-size shared-cpu-1x --vm-memory 512 --file-local /tmp/restore-point.sh=$tmp/repo/scripts/restore-point.sh -C sh /tmp/restore-point.sh $point 001_baseline.sql 002_more.sql" "$calls" \
     || fail "promote: wrong console call: $(grep console "$calls")"
 grep -qx "fly deploy -c $tmp/repo/deploy/fly.prod.toml -a critical-hit --image $image --no-public-ips --yes" "$calls" \
     || fail "promote: wrong deploy call: $(grep deploy "$calls")"

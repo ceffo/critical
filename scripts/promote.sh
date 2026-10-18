@@ -75,6 +75,7 @@ prepare() {
 [ -n "${RESTORE_POINT_PASSPHRASE:-}" ] || fail "RESTORE_POINT_PASSPHRASE is not set: the restore point could not be encrypted, nothing promoted (docs/deploy.md, \"Promotion\")"
 command -v gpg >/dev/null || fail "gpg is missing: the restore point could not be encrypted, nothing promoted"
 # The console machine's size: the app's, from its fly config (fly console does not read it without -c).
+# -c also matters on the very first promotion: without it fly reads the config from the app's machines and fails when it has none.
 vm_size="$(sed -n 's/^ *size = "\(.*\)"$/\1/p' "$config")"
 vm_memory="$(sed -n 's/^ *memory = "\([0-9]*\)mb"$/\1/p' "$config")"
 [ -n "$vm_size" ] && [ -n "$vm_memory" ] || fail "no [[vm]] size and memory (in mb) in $config"
@@ -128,7 +129,7 @@ migrations="$(git -C "$root" ls-tree --name-only "$sha" api/internal/storage/pos
 echo "promote: restore point $point (fly console on $app, image $digest)"
 # fly console may not pass the remote exit status through: the script's last line is the proof. Its stdout
 # carries the dump: it goes to a file, never to the log.
-"$fly" console -a "$app" --image "$image" --region "$region" --vm-size "$vm_size" --vm-memory "$vm_memory" \
+"$fly" console -a "$app" -c "$config" --image "$image" --region "$region" --vm-size "$vm_size" --vm-memory "$vm_memory" \
     --file-local "/tmp/restore-point.sh=$here/restore-point.sh" \
     -C "sh /tmp/restore-point.sh $point ${migrations% }" </dev/null >"$work/console.out" 2>"$work/console.err" || true
 tr -d '\r' <"$work/console.out" >"$work/console.txt"

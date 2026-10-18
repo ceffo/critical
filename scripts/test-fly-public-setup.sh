@@ -99,9 +99,15 @@ grep -qx "fly ips release 1.2.3.4 -a critical-hit-staging" "$calls" && grep -qx 
 [ "$(jq length "$tmp/ips")" = 1 ] || fail "go-public: the app is not private again"
 echo '[{"Type":"private_v6","Address":"fdaa::1"},{"Type":"shared_v4","Address":"1.2.3.4"},{"Type":"v6","Address":"2a09::1"}]' > "$tmp/ips"
 run "$root/scripts/fly-go-public.sh" critical-hit-staging
-# The addresses that already existed are not released by a rerun (nothing was allocated by it).
+# A rerun that fails the gate releases every public address, also those of an earlier run.
 [ "$status" != 0 ] || fail "go-public: a failing gate check was accepted"
-grep -q 'ips release' "$calls" && fail "go-public: released addresses it did not allocate"
+grep -qx "fly ips release 1.2.3.4 -a critical-hit-staging" "$calls" && grep -qx "fly ips release 2a09::1 -a critical-hit-staging" "$calls" \
+    || fail "go-public: a rerun did not release the earlier addresses: $(cat "$calls")"
+[ "$(jq length "$tmp/ips")" = 1 ] || fail "go-public: the app is not private again after a rerun"
+# A dedicated IPv4 (paid) fails the script before the gate check.
+echo '[{"Type":"private_v6","Address":"fdaa::1"},{"Type":"v4","Address":"9.9.9.9"},{"Type":"shared_v4","Address":"1.2.3.4"},{"Type":"v6","Address":"2a09::1"}]' > "$tmp/ips"
+run "$root/scripts/fly-go-public.sh" critical-hit-staging
+[ "$status" != 0 ] && ! grep -q '^gate ' "$calls" || fail "go-public: a dedicated IPv4 was accepted: $(cat "$calls")"
 echo '[{"Type":"private_v6","Address":"fdaa::1"}]' > "$tmp/ips"
 echo '[]' > "$tmp/machines"
 run "$root/scripts/fly-go-public.sh" critical-hit-staging

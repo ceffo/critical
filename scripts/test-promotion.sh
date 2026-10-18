@@ -137,7 +137,7 @@ cd "$tmp/repo"
 git config user.email t@example.com
 git config user.name test
 mkdir -p scripts deploy
-cp "$root"/scripts/{release-guards,promote,restore-point,fly-private-check,fly-access-check}.sh scripts/
+cp "$root"/scripts/{release-guards,promote,restore-point,prod-db,fly-private-check,fly-access-check}.sh scripts/
 cp "$root"/deploy/fly.{staging,prod}.toml deploy/
 mkdir -p api/internal/storage/postgres/migrations
 touch api/internal/storage/postgres/migrations/{001_baseline,002_more}.sql

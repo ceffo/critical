@@ -24,7 +24,8 @@ fail() { echo "restore-point-fetch: FAIL: $*" >&2; exit 1; }
 want="${1:?$usage}"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(dirname "$here")"
-db="critical_prod" # the database keeps the environment name; the app was renamed (ADR 0024 step 8.5)
+source "$here/prod-db.sh"
+db="$prod_db"
 
 if [[ "$want" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
     prefix="${db}_pre_v${BASH_REMATCH[1]}_${BASH_REMATCH[2]}_${BASH_REMATCH[3]}_"

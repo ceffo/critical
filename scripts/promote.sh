@@ -62,7 +62,8 @@ fail() { echo "promote: FAIL: $*" >&2; exit 1; }
 app="$(sed -n 's/^app = "\(.*\)"$/\1/p' "$config")"
 staging_app="$(sed -n 's/^app = "\(.*\)"$/\1/p' "$root/deploy/fly.staging.toml")"
 [ -n "$app" ] && [ -n "$staging_app" ] || fail "no app in $config or deploy/fly.staging.toml"
-db="critical_prod" # the database keeps the environment name; the app was renamed (ADR 0024 step 8.5, scripts/fly-db-provision.sh)
+source "$here/prod-db.sh"
+db="$prod_db"
 points="${RESTORE_POINT_DIR:-}"
 if [ -z "$points" ]; then
     [ "$phase" = all ] || fail "RESTORE_POINT_DIR is not set: where the restore point is written and read"

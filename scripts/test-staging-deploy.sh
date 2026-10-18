@@ -79,7 +79,7 @@ grep -q '^smoke' "$calls" && fail "smoke-checked an app that has a public IP"
 echo "$private" > "$tmp/ips"
 run_deploy A=1
 [ "$status" = 0 ] || fail "private app: exit $status: $out"
-grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-hit-staging --image registry.fly.io/critical-hit-staging:$sha --yes" "$calls" \
+grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-hit-staging --image registry.fly.io/critical-hit-staging:$sha --no-public-ips --yes" "$calls" \
     || fail "private app: wrong deploy call: $(cat "$calls")"
 grep -qx "smoke critical-hit-staging $sha" "$calls" || fail "private app: smoke check not called with app and sha"
 [ "$gh_out" = "digest=$digest" ] || fail "private app: output is '$gh_out'"
@@ -94,11 +94,11 @@ run_version() {
 }
 run_version 1.4.0
 [ "$status" = 0 ] || fail "version: exit $status: $out"
-grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-hit-staging --image registry.fly.io/critical-hit-staging:v1.4.0 --yes" "$calls" \
+grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-hit-staging --image registry.fly.io/critical-hit-staging:v1.4.0 --no-public-ips --yes" "$calls" \
     || fail "version: not the version's image: $(cat "$calls")"
 grep -qx "smoke critical-hit-staging $sha 1.4.0" "$calls" || fail "version: smoke check not called with the version"
 run_version ""
-grep -qx "smoke critical-hit-staging $sha" "$calls" && grep -q "critical-hit-staging:$sha --yes" "$calls" || fail "empty version: not the sha's image: $(cat "$calls")"
+grep -qx "smoke critical-hit-staging $sha" "$calls" && grep -q "critical-hit-staging:$sha --no-public-ips --yes" "$calls" || fail "empty version: not the sha's image: $(cat "$calls")"
 for v in v1.4.0 1.4 'x'; do
     run_version "$v"
     [ "$status" != 0 ] && [ ! -s "$calls" ] || fail "version '$v': accepted, or called fly"
@@ -178,7 +178,7 @@ done
 # --- the config of the image's commit is the one deployed ---
 printf 'app = "other-app"\n' > "$tmp/image.toml"
 run_deploy STAGING_CONFIG="$tmp/image.toml"
-grep -qx "fly deploy -c $tmp/image.toml -a other-app --image registry.fly.io/other-app:$sha --yes" "$calls" \
+grep -qx "fly deploy -c $tmp/image.toml -a other-app --image registry.fly.io/other-app:$sha --no-public-ips --yes" "$calls" \
     || fail "STAGING_CONFIG: not deployed with that config: $(cat "$calls")"
 
 # --- the workflows, parsed (not grepped) ---

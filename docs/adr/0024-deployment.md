@@ -242,7 +242,7 @@ flowchart LR
       the apps may have **public IPs** and a public hostname.
    3. Every deploy job (staging and production) runs a check before and after deploying. While the
       release has no gate: it fails if the app has a public IP (_amended 2026-10-16 (user): for
-      production with no bypass; only staging's honours the `PUBLIC_ACCESS_OPTION` variable_). With the
+      production with no bypass; only staging's honoured the `PUBLIC_ACCESS_OPTION` variable, since superseded: see the next paragraph_). With the
       gate: the **gate check** replaces the no-public-IP check, a request without a session to the
       catalogue and to a data route must answer 401 and only the public paths of ADR 0029 step 6.1 may
       answer 200; any other answer fails the deploy. The check reaches the app as in step 10.5.
@@ -461,7 +461,7 @@ private until access control is decided, so production's no-public-IP check is m
 
 - **Step 4.2**: the promotion takes a restore point, a verified copy database (step 9.2); no restore
   point, no deploy.
-- **Step 8.3**: production's check has no bypass; staging's still honours `PUBLIC_ACCESS_OPTION`.
+- **Step 8.3** (superseded): production's check had no bypass; staging's honoured `PUBLIC_ACCESS_OPTION`. The gate check replaced both.
 - **Step 9.2**: answered, the restore point `critical_prod_pre_<tag>_<UTC time>`, newest 3 kept, a 300 MB
   budget for `critical_prod` and its copies, made from an ephemeral console machine of the release image.
 - **Step 9.3**: restore by copying the restore point into the place of `critical_prod`.

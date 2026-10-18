@@ -136,6 +136,31 @@ restore_point "$name-console" critical_pre_v0_0_7_20260101000007 -e RESTORE_POIN
 copies="$(sql "SELECT string_agg(datname, ' ' ORDER BY datname) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")"
 [ "$copies" = "critical_pre_v0_0_3_20260101000003 critical_pre_v0_0_7_20260101000007" ] ||
     fail "after incomplete copies: '$copies', want the valid 3 and the new 7 only"
-echo "image-smoke: restore points OK (copies, retention, refusals, a release older than the schema)"
+# An incomplete copy held by another role's session (in production, a superuser's: the script's user cannot
+# end it) is skipped at once, warned about once, kept, and the promotion goes on.
+sql "CREATE ROLE smoke_holder LOGIN" >/dev/null
+sql "CREATE DATABASE critical_pre_v0_0_9_20260101000010 TEMPLATE template0" >/dev/null
+docker exec -d "$db" psql -X -q -U smoke_holder -d critical_pre_v0_0_9_20260101000010 -c 'SELECT pg_sleep(120)'
+sleep 1
+restore_point "$name-console" critical_pre_v0_0_8_20260101000008 -e RESTORE_POINT_KEEP=2
+[ "$rp_status" = 0 ] && [[ "$rp_out" == *"restore-point: OK critical_pre_v0_0_8_20260101000008"* ]] ||
+    fail "restore point 8 beside a held incomplete copy: exit $rp_status: $rp_out"
+[ "$(grep -c 'critical_pre_v0_0_9_20260101000010 is held by a session this user cannot end: .* of smoke_holder' <<<"$rp_out")" = 1 ] ||
+    fail "the held copy was not reported once, with its holder: $rp_out"
+copies="$(sql "SELECT string_agg(datname, ' ' ORDER BY datname) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")"
+[ "$copies" = "critical_pre_v0_0_7_20260101000007 critical_pre_v0_0_8_20260101000008 critical_pre_v0_0_9_20260101000010" ] ||
+    fail "after a held incomplete copy: '$copies', want the valid 7 and 8 and the held copy"
+sql "DROP DATABASE critical_pre_v0_0_9_20260101000010 WITH (FORCE)" >/dev/null
+# The cluster unreachable for a few seconds (its proxy marks it down when the VM is short of memory): the
+# connection is tried again and the restore point is taken.
+docker network disconnect "$name" "$db"
+(sleep 3 && docker network connect "$name" "$db") &
+reconnect=$!
+restore_point "$name-console" critical_pre_v0_0_10_20260101000011 -e RESTORE_POINT_KEEP=2
+wait "$reconnect"
+[ "$rp_status" = 0 ] && [[ "$rp_out" == *"restore-point: OK critical_pre_v0_0_10_20260101000011"* ]] &&
+    [[ "$rp_out" == *"the connection to the database failed (try 1 of 5)"* ]] ||
+    fail "restore point 10 across a lost connection: exit $rp_status: $rp_out"
+echo "image-smoke: restore points OK (copies, retention, refusals, a release older than the schema, a held copy, a lost connection)"
 
 echo "image-smoke: OK ($image, commit $commit, uid $uid, port $port)"

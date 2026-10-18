@@ -34,6 +34,8 @@ services:
         COMMIT: ${COMMIT:-unknown}
     environment:
       CRITICAL_DSN: postgres://critical:critical@postgres:5432/critical?sslmode=disable
+      # A local run: the dev login, no OAuth settings (ADR 0029 step 8.2; without it the server refuses to start).
+      CRITICAL_ENV: dev
     depends_on:
       postgres:
         condition: service_healthy

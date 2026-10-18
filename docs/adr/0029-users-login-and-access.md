@@ -157,7 +157,10 @@ sequenceDiagram
       system's secure generator), the user, the creation time, the last use and the expiry. The cookie
       holds only the id; nothing about the user is in it.
    2. The cookie is `HttpOnly`, `Secure` (not in dev login mode over plain HTTP), `SameSite=Lax`, path
-      `/`, with no domain, so it is host-only.
+      `/`, with no domain, so it is host-only. Its **name is per app**, `critical_session_<app>` with `<app>` the public
+      URL's host and port (in dev login mode `dev_<listen port>`): browsers send a cookie to every port
+      of a host, so apps opened on one host (`just dev` and the tunnels to the hosted apps, all on
+      `localhost`) would otherwise log each other out and send one app's token to another.
    3. A session lasts **30 days and is extended while used**: a request more than a day after the last
       extension pushes the expiry to 30 days from now.
    4. **Logout** (`POST /api/auth/logout`) deletes the session and the cookie. **Disabling a user deletes
@@ -215,7 +218,10 @@ sequenceDiagram
    2. **Staging and production refuse to start** without the OAuth settings: the server reads the
       environment name and, when it is not `dev`, a missing or partial setting is a start-up error
       (the process exits before listening), so dev login can never be reachable on a hosted app. When
-      the OAuth settings are set, `/api/auth/dev` does not exist (404).
+      the OAuth settings are set, `/api/auth/dev` does not exist (404). The environment name is `CRITICAL_ENV`; the dev login is
+      an explicit opt-in, `CRITICAL_ENV=dev`, set only by local runs (`just dev`, the e2e stacks, the
+      image smoke test). Unset, the server fails closed: no OAuth settings, no start. On fly.io
+      (`FLY_APP_NAME`) `CRITICAL_ENV=dev` is itself refused.
    3. The Google client secret is a fly secret of each app ([ADR 0024](0024-deployment.md) step 10); the
       root admin is not.
 9. **Concurrency.** The single writer lock ([ADR 0025](0025-postgresql-storage.md) step 4) stays. Users

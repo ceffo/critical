@@ -12,9 +12,33 @@ import (
 	"github.com/ceffo/critical/api/internal/render"
 )
 
-// SessionCookie is the name of the session cookie (ADR 0029 step 4.2). It
-// holds the session's random token and nothing about the user.
+// SessionCookie is the session cookie's base name (ADR 0029 step 4.2). It
+// holds the session's random token and nothing about the user. A server
+// names its cookie SessionCookieName(app), so the apps one browser reaches
+// on the same host keep separate sessions.
 const SessionCookie = "critical_session"
+
+// SessionCookieName is the session cookie of the app identified by app (its
+// public host and port, or its local dev port): browsers send a cookie to
+// every port of a host, so `just dev` on localhost:5173 and a hosted app
+// tunnelled to localhost:<port> would otherwise share one cookie, log each
+// other out and send one app's token to the other. Empty app is the base
+// name. Characters a cookie name cannot hold become '_'.
+func SessionCookieName(app string) string { return CookieName(SessionCookie, app) }
+
+// CookieName is base suffixed with app, as SessionCookieName.
+func CookieName(base, app string) string {
+	if app == "" {
+		return base
+	}
+	b := []byte(app)
+	for i, c := range b {
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '-' && c != '.' {
+			b[i] = '_'
+		}
+	}
+	return base + "_" + string(b)
+}
 
 // LoginPath is the login page, the one public page (ADR 0029 step 6.1): a
 // page request without a session is redirected there, and it and everything
@@ -34,6 +58,16 @@ type GateConfig struct {
 	Host string
 	// Secure marks cookies Secure (HTTPS; ADR 0029 step 4.2).
 	Secure bool
+	// Cookie is the session cookie's name (SessionCookieName); empty is
+	// SessionCookie.
+	Cookie string
+}
+
+func (c GateConfig) cookie() string {
+	if c.Cookie == "" {
+		return SessionCookie
+	}
+	return c.Cookie
 }
 
 // Public reports whether path is served without a session (ADR 0029 step
@@ -68,15 +102,16 @@ func Gate(auth Authenticator, cfg GateConfig) func(http.Handler) http.Handler {
 				render.Error(ctx, w, authsvc.ErrCrossOrigin)
 				return
 			}
-			p, err := principal(r, auth)
+			name := cfg.cookie()
+			p, err := principal(r, name, auth)
 			switch {
 			case errors.Is(err, authsvc.ErrUnauthenticated):
-				ClearSessionCookie(w, cfg.Secure)
+				ClearSessionCookie(w, name, cfg.Secure)
 			case err != nil:
 				render.Error(ctx, w, err)
 				return
 			case p != nil && p.Extended:
-				SetSessionCookie(w, cookieToken(r), p.Expires, cfg.Secure)
+				SetSessionCookie(w, name, CookieToken(r, name), p.Expires, cfg.Secure)
 			}
 			if p != nil {
 				r = r.WithContext(WithPrincipal(ctx, p))
@@ -102,8 +137,9 @@ func isNavigation(r *http.Request) bool {
 		strings.Contains(r.Header.Get("Accept"), "text/html")
 }
 
-func cookieToken(r *http.Request) string {
-	c, err := r.Cookie(SessionCookie)
+// CookieToken is the value of the cookie name, empty without one.
+func CookieToken(r *http.Request, name string) string {
+	c, err := r.Cookie(name)
 	if err != nil {
 		return ""
 	}
@@ -112,8 +148,8 @@ func cookieToken(r *http.Request) string {
 
 // principal is the session's user; nil with no error when the request has no
 // session cookie.
-func principal(r *http.Request, auth Authenticator) (*authsvc.Principal, error) {
-	token := cookieToken(r)
+func principal(r *http.Request, name string, auth Authenticator) (*authsvc.Principal, error) {
+	token := CookieToken(r, name)
 	if token == "" {
 		return nil, nil
 	}
@@ -158,18 +194,18 @@ func PrincipalFrom(ctx context.Context) *authsvc.Principal {
 	return p
 }
 
-// SetSessionCookie sets the session cookie (ADR 0029 step 4.2): HttpOnly,
-// SameSite=Lax, path /, host-only (no domain), Secure on HTTPS.
-func SetSessionCookie(w http.ResponseWriter, token string, expires time.Time, secure bool) {
+// SetSessionCookie sets the session cookie name (ADR 0029 step 4.2):
+// HttpOnly, SameSite=Lax, path /, host-only (no domain), Secure on HTTPS.
+func SetSessionCookie(w http.ResponseWriter, name, token string, expires time.Time, secure bool) {
 	http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure on HTTPS only: dev login runs on plain HTTP (ADR 0029 step 4.2)
-		Name: SessionCookie, Value: token, Path: "/", Expires: expires,
+		Name: name, Value: token, Path: "/", Expires: expires,
 		MaxAge: int(time.Until(expires).Seconds()), HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
 	})
 }
 
-// ClearSessionCookie deletes the session cookie.
-func ClearSessionCookie(w http.ResponseWriter, secure bool) {
+// ClearSessionCookie deletes the session cookie name.
+func ClearSessionCookie(w http.ResponseWriter, name string, secure bool) {
 	http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure on HTTPS only: dev login runs on plain HTTP (ADR 0029 step 4.2)
-		Name: SessionCookie, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
+		Name: name, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode,
 	})
 }

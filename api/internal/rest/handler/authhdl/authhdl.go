@@ -37,16 +37,24 @@ type Service interface {
 	Logout(ctx context.Context, token string) error
 }
 
-// LoginCookie holds a started Google login's state and PKCE verifier for
-// authsvc.LoginStateLifetime (ADR 0029 step 3.1), on the login's paths only.
+// LoginCookie is the base name of the cookie holding a started Google
+// login's state and PKCE verifier for authsvc.LoginStateLifetime (ADR 0029
+// step 3.1), on the login's paths only; suffixed per app like the session
+// cookie (mw.CookieName).
 const LoginCookie = "critical_login"
 
 const loginCookiePath = "/api/auth/google"
 
-// Options are the cookie settings: Secure on HTTPS (ADR 0029 step 4.2).
+// Options are the cookie settings: Secure on HTTPS (ADR 0029 step 4.2), and
+// the app the cookies are named for (mw.SessionCookieName; empty, the base
+// names).
 type Options struct {
 	Secure bool
+	App    string
 }
+
+func (o Options) sessionCookie() string { return mw.SessionCookieName(o.App) }
+func (o Options) loginCookie() string   { return mw.CookieName(LoginCookie, o.App) }
 
 // RegisterRoutes wires the auth endpoints onto r. POST /api/auth/dev exists
 // only in dev login mode (ADR 0029 step 8.2: else 404).
@@ -81,7 +89,7 @@ func Start(svc Service, opts Options) render.HandlerFunc {
 			return err
 		}
 		http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure on HTTPS only: dev login runs on plain HTTP (ADR 0029 step 4.2)
-			Name: LoginCookie, Value: ls.State + "." + ls.Verifier, Path: loginCookiePath,
+			Name: opts.loginCookie(), Value: ls.State + "." + ls.Verifier, Path: loginCookiePath,
 			MaxAge: int(authsvc.LoginStateLifetime / time.Second), HttpOnly: true, Secure: opts.Secure,
 			SameSite: http.SameSiteLaxMode,
 		})
@@ -96,11 +104,11 @@ func Start(svc Service, opts Options) render.HandlerFunc {
 func Callback(svc Service, opts Options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var state, verifier string
-		if c, err := r.Cookie(LoginCookie); err == nil {
+		if c, err := r.Cookie(opts.loginCookie()); err == nil {
 			state, verifier, _ = strings.Cut(c.Value, ".")
 		}
 		http.SetCookie(w, &http.Cookie{ //nolint:gosec // Secure on HTTPS only: dev login runs on plain HTTP (ADR 0029 step 4.2)
-			Name: LoginCookie, Path: loginCookiePath, MaxAge: -1, HttpOnly: true, Secure: opts.Secure,
+			Name: opts.loginCookie(), Path: loginCookiePath, MaxAge: -1, HttpOnly: true, Secure: opts.Secure,
 			SameSite: http.SameSiteLaxMode,
 		})
 		q := r.URL.Query()
@@ -119,7 +127,7 @@ func Callback(svc Service, opts Options) http.HandlerFunc {
 			http.Redirect(w, r, mw.LoginPath+"?error="+url.QueryEscape(code), http.StatusFound)
 			return
 		}
-		mw.SetSessionCookie(w, s.Token, s.Expires, opts.Secure)
+		mw.SetSessionCookie(w, opts.sessionCookie(), s.Token, s.Expires, opts.Secure)
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 }
@@ -127,12 +135,12 @@ func Callback(svc Service, opts Options) http.HandlerFunc {
 // Logout is POST /api/auth/logout: the session and the cookie are deleted.
 func Logout(svc Service, opts Options) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		if c, err := r.Cookie(mw.SessionCookie); err == nil {
-			if err := svc.Logout(r.Context(), c.Value); err != nil {
+		if token := mw.CookieToken(r, opts.sessionCookie()); token != "" {
+			if err := svc.Logout(r.Context(), token); err != nil {
 				return err
 			}
 		}
-		mw.ClearSessionCookie(w, opts.Secure)
+		mw.ClearSessionCookie(w, opts.sessionCookie(), opts.Secure)
 		render.OK(r.Context(), w, struct{}{})
 		return nil
 	}
@@ -168,7 +176,7 @@ func Dev(svc Service, opts Options) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		mw.SetSessionCookie(w, s.Token, s.Expires, opts.Secure)
+		mw.SetSessionCookie(w, opts.sessionCookie(), s.Token, s.Expires, opts.Secure)
 		render.OK(r.Context(), w, meDTO(s.User))
 		return nil
 	}

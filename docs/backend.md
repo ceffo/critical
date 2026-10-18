@@ -173,7 +173,7 @@ The loop, from the checkout root (each worktree is its own compose project, with
 | `just dev-reset` | `just stop`, then deletes the databases (compose volume `critical-pg`). The next start migrates, seeds and imports the catalogue again. |
 | `just dev-smoke` | Proof of the above on free ports and a throwaway compose project (needs docker, ~1 min). Run it after changing the justfile, `docker-compose.yml`, `api/.air.toml`, `scripts/dev.sh` or the start-up of the storage. CI job `dev-smoke`. |
 
-Login: `just dev` runs without OAuth settings, so the server has the dev login and the app logs in
+Login: `just dev` runs without OAuth settings and with `CRITICAL_ENV=dev`, so the server has the dev login and the app logs in
 by itself as the root admin (`dev@localhost`, created on the first start of an empty database, also
 after `just dev-reset`): nothing to set up ("Accounts and login" below).
 
@@ -223,21 +223,27 @@ gate `middleware.Gate`.
   answer 401 `unauthenticated`; a page (a GET asking for `text/html`) redirects to `/login`. A new
   route is protected by default. The gate reads the session once and puts the user in the request
   context (`middleware.PrincipalFrom`); handlers and services never read the cookie.
-- **Sessions** (step 4): cookie `critical_session` (HttpOnly, SameSite=Lax, path `/`, host-only,
+- **Sessions** (step 4): cookie `critical_session_<app>` (HttpOnly, SameSite=Lax, path `/`, host-only,
   `Secure` when the public URL is https) holding a 256-bit random token; the table stores its SHA-256,
   never the token. 30 days, extended (one write) when used more than a day after the last extension.
   A mutation whose `Origin` (else `Referer`) names another host than the app's is refused 403
   `cross_origin`; a request with neither (curl, tests) passes, SameSite=Lax keeps the cookie off
-  cross-site subrequests.
+  cross-site subrequests. `<app>` is the public URL's host and port (`critical-hit.fly.dev`,
+  `localhost_8091`), in dev login mode `dev_<listen port>` (`dev_8080`): browsers send a cookie to
+  every port of a host, so with one name `just dev` on `localhost:5173` and a hosted app opened with
+  `just fly-open` on another localhost port would log each other out and hand one app's token to the
+  other.
 - **Endpoints**: `GET /api/auth/google/start` (state and PKCE verifier in the 10-minute cookie
-  `critical_login`, redirect to Google), `GET /api/auth/google/callback` (session and redirect to `/`,
+  `critical_login_<app>`, redirect to Google), `GET /api/auth/google/callback` (session and redirect to `/`,
   or a refusal to `/login?error=<code>`), `POST /api/auth/logout`, `GET /api/auth/me`
   (`{id, email, role, root}` or 401), and in dev login mode only `POST /api/auth/dev` (`{"email": …}`
   optional: none is the root admin, created as `dev@localhost` on a database without one; an unknown
   email is created as an admin).
 - **Settings**: `CRITICAL_GOOGLE_CLIENT_ID`, `CRITICAL_GOOGLE_CLIENT_SECRET`, `CRITICAL_PUBLIC_URL`:
-  all three, the Google login; none, the dev login; partial, a start-up error. On fly.io
-  (`FLY_APP_NAME`) none is a start-up error too (step 8.2). Runbook: docs/deploy.md, "Login on the
+  all three, the Google login; partial, a start-up error. None is the dev login only with the explicit
+  opt-in `CRITICAL_ENV=dev` (set by `just dev`, the e2e stacks, image-smoke and the compose `critical`
+  service); without it the server refuses to start (step 8.2: fails closed, e.g. the image run outside
+  fly). On fly.io (`FLY_APP_NAME`) `CRITICAL_ENV=dev` is refused, so the dev login cannot exist there. Runbook: docs/deploy.md, "Login on the
   hosted apps".
 - **Root admin** (step 5): `just root-admin <email>` (`api/cmd/rootadmin`) on `CRITICAL_DSN`, unset:
   the local database `just dev` uses. The schema allows one root, and a root is an enabled admin.

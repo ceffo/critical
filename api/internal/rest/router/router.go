@@ -51,6 +51,9 @@ type Options struct {
 	Host string
 	// SecureCookies marks the session cookies Secure (HTTPS, step 4.2).
 	SecureCookies bool
+	// CookieApp names the auth cookies of this app (mw.SessionCookieName):
+	// its public host and port, or its dev port. Empty, the base names.
+	CookieApp string
 }
 
 // unknown is what /api/health reports for a build identity that was not set.
@@ -77,7 +80,9 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	if bs.Auth != nil {
 		auth = bs.Auth
 	}
-	r.Use(mw.Gate(auth, mw.GateConfig{Host: opts.Host, Secure: opts.SecureCookies}))
+	r.Use(mw.Gate(auth, mw.GateConfig{
+		Host: opts.Host, Secure: opts.SecureCookies, Cookie: mw.SessionCookieName(opts.CookieApp),
+	}))
 
 	r.Get("/api/health", func(w http.ResponseWriter, req *http.Request) {
 		render.OK(req.Context(), w, map[string]string{
@@ -87,7 +92,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	r.NotFound(notFound(opts.Web))
 
 	if bs.Auth != nil {
-		authhdl.RegisterRoutes(r, bs.Auth, authhdl.Options{Secure: opts.SecureCookies})
+		authhdl.RegisterRoutes(r, bs.Auth, authhdl.Options{Secure: opts.SecureCookies, App: opts.CookieApp})
 	}
 
 	charID := func(_ *http.Request) int64 { return bs.CharacterID }

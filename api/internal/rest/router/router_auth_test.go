@@ -328,3 +328,51 @@ func TestLogout_Step4_4_DeletesSessionAndCookie(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Negative(t, sessionCookie(t, rec).MaxAge)
 }
+
+// The auth cookies are named per app (mw.SessionCookieName): browsers send a
+// cookie to every port of a host, so `just dev` and a hosted app tunnelled to
+// another localhost port must not read, clear or overwrite each other's
+// session, and one app's token never reaches the other's server.
+func TestSessionCookie_NamedPerApp(t *testing.T) {
+	const own = "critical_session_localhost_8091"
+	assert.Equal(t, own, mw.SessionCookieName("localhost:8091"))
+	assert.Equal(t, "critical_session_critical-hit.fly.dev", mw.SessionCookieName("critical-hit.fly.dev"))
+
+	a := authmocks.NewMockSVC(t)
+	a.EXPECT().DevLoginEnabled().Return(true).Once()
+	a.EXPECT().Authenticate(mock.Anything, "mine").Return(&authsvc.Principal{
+		User: authsvc.User{Email: "ann@example.com", Role: authsvc.RolePlayer},
+	}, nil).Once()
+	a.EXPECT().DevLogin(mock.Anything, "").Return(&authsvc.NewSession{Token: "new", Expires: time.Now().Add(time.Hour)}, nil).Once()
+	a.EXPECT().StartLogin(mock.Anything).Return(&authsvc.LoginStart{URL: "https://accounts.example/auth", State: "st", Verifier: "ver"}, nil).Once()
+	h := authRouter(t, a, router.Options{CookieApp: "localhost:8091"})
+
+	// Another app's cookie (the dev stack on 5173, the base name) is not this
+	// app's: never looked up (the mock refuses any other token), never cleared.
+	req := httptest.NewRequest("GET", "/api/auth/me", nil)
+	req.AddCookie(&http.Cookie{Name: "critical_session_dev_8080", Value: "theirs"})
+	req.AddCookie(&http.Cookie{Name: mw.SessionCookie, Value: "old"})
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	assert.Empty(t, rec.Header().Values("Set-Cookie"), "another app's cookie is left alone")
+
+	req = httptest.NewRequest("GET", "/api/auth/me", nil)
+	req.AddCookie(&http.Cookie{Name: "critical_session_dev_8080", Value: "theirs"})
+	req.AddCookie(&http.Cookie{Name: own, Value: "mine"})
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	rec = anon(h, "POST", "/api/auth/dev")
+	require.Equal(t, http.StatusOK, rec.Code)
+	cookies := rec.Result().Cookies()
+	require.Len(t, cookies, 1)
+	assert.Equal(t, own, cookies[0].Name)
+	assert.Equal(t, "new", cookies[0].Value)
+
+	rec = anon(h, "GET", "/api/auth/google/start")
+	cookies = rec.Result().Cookies()
+	require.Len(t, cookies, 1)
+	assert.Equal(t, "critical_login_localhost_8091", cookies[0].Name)
+}

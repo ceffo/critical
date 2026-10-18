@@ -56,15 +56,24 @@ export interface Stack {
   webUrl: string;
   /** Base URL of this stack's own Go API. */
   apiUrl: string;
-  /** The session cookie's value: the stack's dev login (ADR 0029 step 8.1). */
-  session: string;
+  /** The session cookie: the stack's dev login (ADR 0029 step 8.1). */
+  session: SessionCookie;
 }
 
-/** The API's session cookie (ADR 0029 step 4.2). */
-const sessionCookie = "critical_session";
+/** A session cookie's name and value. */
+interface SessionCookie {
+  name: string;
+  value: string;
+}
 
-/** Logs into the API through its dev login (no OAuth settings: the root admin) and returns the session token. */
-async function devLogin(apiUrl: string): Promise<string> {
+/**
+ * The API's session cookie (ADR 0029 step 4.2) is named per app, `critical_session_<app>` (each stack's
+ * API port), so the name is read from the dev login's answer.
+ */
+const sessionCookiePrefix = "critical_session";
+
+/** Logs into the API through its dev login (no OAuth settings: the root admin) and returns the session cookie. */
+async function devLogin(apiUrl: string): Promise<SessionCookie> {
   const res = await fetch(`${apiUrl}/api/auth/dev`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -74,13 +83,13 @@ async function devLogin(apiUrl: string): Promise<string> {
   for (const c of res.headers.getSetCookie()) {
     const [pair] = c.split(";");
     const [name, value] = pair.split("=");
-    if (name === sessionCookie && value) return value;
+    if (name.startsWith(sessionCookiePrefix) && value) return { name, value };
   }
   throw new Error("dev login: no session cookie");
 }
 
 const nodeFetch = globalThis.fetch;
-let signedIn: { apiUrl: string; session: string } | null = null;
+let signedIn: { apiUrl: string; session: SessionCookie } | null = null;
 
 /**
  * Every request a spec sends to its stack's API from Node carries the stack's session, as the browser's do:
@@ -98,7 +107,7 @@ globalThis.fetch = (input, init) => {
   const headers = new Headers(
     init?.headers ?? (input instanceof Request ? input.headers : undefined),
   );
-  headers.set("Cookie", `${sessionCookie}=${signedIn.session}`);
+  headers.set("Cookie", `${signedIn.session.name}=${signedIn.session.value}`);
   return nodeFetch(input, { ...init, headers });
 };
 
@@ -264,6 +273,8 @@ export const test = base.extend<
       env: {
         ...env,
         CRITICAL_STORAGE: "memory",
+        // The dev login (ADR 0029 step 8.2): no OAuth settings in the e2e runs.
+        CRITICAL_ENV: "dev",
         CRITICAL_SEEDS_DIR: await seedsWith(tmp, character),
         CRITICAL_CATALOGUE: await catalogueWith(tmp, extraSpells.rows),
         CRITICAL_ADDR: `127.0.0.1:${apiPort}`,
@@ -295,8 +306,8 @@ export const test = base.extend<
   context: async ({ context, stack }, provide) => {
     await context.addCookies([
       {
-        name: sessionCookie,
-        value: stack.session,
+        name: stack.session.name,
+        value: stack.session.value,
         domain: new URL(stack.webUrl).hostname,
         path: "/",
         httpOnly: true,

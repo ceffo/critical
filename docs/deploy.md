@@ -399,9 +399,10 @@ gets those steps then.
 
 ## Login on the hosted apps (ADR 0029)
 
-The server refuses to start on fly.io without the Google login's settings (ADR 0029 step 8.2): a
-machine with `FLY_APP_NAME` set and no OAuth settings exits before it listens, so a hosted app never
-has the dev login. **Set these secrets on each app before the first deploy of a release that carries
+The server refuses to start without the Google login's settings unless `CRITICAL_ENV=dev` (ADR 0029
+step 8.2), and on fly.io (`FLY_APP_NAME` set) it refuses `CRITICAL_ENV=dev` too: a machine with no
+OAuth settings exits before it listens, so a hosted app never has the dev login. Never set
+`CRITICAL_ENV` on a hosted app. **Set these secrets on each app before the first deploy of a release that carries
 the login** (a staging deploy without them fails its start and its smoke, and nothing reaches
 production):
 
@@ -423,7 +424,9 @@ While an app is private (no public IP, "Reaching a private app"), its public URL
 the proxy: `CRITICAL_PUBLIC_URL=http://localhost:<port>`, the redirect URI
 `http://localhost:<port>/api/auth/google/callback` in the console (Google accepts `http://localhost`
 for testing), and `just fly-open critical-<env> <port>` with that fixed port, then open
-`http://localhost:<port>` (not `127.0.0.1`: the host must match). Until the login page exists, open
+`http://localhost:<port>` (not `127.0.0.1`: the host must match). Give each app its own port: the
+session cookie is named after the public URL's host and port (`critical_session_localhost_<port>`), so
+`just dev` and both tunnels can be open in one browser without logging each other out. Until the login page exists, open
 `http://localhost:<port>/api/auth/google/start` to log in; the callback brings the browser back to the app.
 
 **Root admin.** Only invited emails and the root admin can log in, and invites come with the admin

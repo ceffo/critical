@@ -8,7 +8,10 @@
 #
 # Behind the login gate (ADR 0029 step 6, ADR 0024 step 8.3 as amended) the smoke has no session:
 # /api/character with an unknown session cookie must answer 401 `unauthenticated` (the session
-# lookup is the database read), and / must redirect a browser to /login, which serves the web app.
+# lookup is the database read). The session cookie is named per app, critical_session_<app>; the
+# smoke reads <app> from the login cookie GET /api/auth/google/start sets (critical_login_<app>,
+# read-only: no row is written), and falls back to the bare name. And / must redirect a browser to
+# /login, which serves the web app.
 # A release from before the gate (a rollback) answers 200 on both instead, which is accepted.
 #
 #   scripts/fly-smoke.sh <app> <commit> [version]
@@ -68,7 +71,9 @@ for m in $machines; do
     echo "fly-smoke: machine $m /api/health 200 $(cat "$body") after $((SECONDS - start)) s"
 
     start=$SECONDS
-    code="$(get "$m" /api/character -H "Cookie: critical_session=fly-smoke")"
+    suffix="$(curl -sS -m 70 -o /dev/null -D - -H "fly-force-instance-id: $m" "$base/api/auth/google/start" 2>/dev/null |
+        tr -d '\r' | sed -n 's/^[Ss]et-[Cc]ookie: critical_login\(_[^=]*\)=.*/\1/p' | head -n1 || true)"
+    code="$(get "$m" /api/character -H "Cookie: critical_session$suffix=fly-smoke")"
     case "$code" in
         401) grep -q '"code":"unauthenticated"' "$body" || fail "machine $m /api/character 401 without the gate's code: $(cat "$body")"
              echo "fly-smoke: machine $m /api/character 401 behind the login gate (session lookup: database read) in $((SECONDS - start)) s" ;;

@@ -6,10 +6,18 @@ import (
 	"testing"
 )
 
+// devEnv is clearEnv plus CRITICAL_ENV=dev, the dev login of local runs,
+// which needs no OAuth setting.
+func devEnv(t *testing.T) {
+	t.Helper()
+	clearEnv(t)
+	t.Setenv("CRITICAL_ENV", EnvDev)
+}
+
 // clearEnv unsets the vars for the test and restores them afterwards.
 func clearEnv(t *testing.T) {
 	t.Helper()
-	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE", "CRITICAL_WEB_DIR", "CRITICAL_STORAGE", "FLY_APP_NAME", "CRITICAL_GOOGLE_CLIENT_ID", "CRITICAL_GOOGLE_CLIENT_SECRET", "CRITICAL_PUBLIC_URL"} {
+	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE", "CRITICAL_WEB_DIR", "CRITICAL_STORAGE", "CRITICAL_ENV", "FLY_APP_NAME", "CRITICAL_GOOGLE_CLIENT_ID", "CRITICAL_GOOGLE_CLIENT_SECRET", "CRITICAL_PUBLIC_URL"} {
 		t.Setenv(k, "") // registers restore of the original value
 		_ = os.Unsetenv(k)
 	}
@@ -19,18 +27,18 @@ func clearEnv(t *testing.T) {
 const devDSN = "postgres://critical:critical@localhost:5432/critical?sslmode=disable"
 
 func TestLoadConfig_Defaults(t *testing.T) {
-	clearEnv(t)
+	devEnv(t)
 	cfg, err := loadConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg != (Config{DSN: devDSN, SeedsDir: "seeds", Addr: ":8080", Catalogue: ".catalogue/catalogue.json"}) {
+	if cfg != (Config{DSN: devDSN, SeedsDir: "seeds", Addr: ":8080", Catalogue: ".catalogue/catalogue.json", Env: EnvDev}) {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 }
 
 func TestLoadConfig_Overrides(t *testing.T) {
-	clearEnv(t)
+	devEnv(t)
 	t.Setenv("CRITICAL_DSN", "postgres://u:p@db:5432/x")
 	t.Setenv("CRITICAL_SEEDS_DIR", "/tmp/seeds")
 	t.Setenv("CRITICAL_ADDR", ":9999")
@@ -40,7 +48,7 @@ func TestLoadConfig_Overrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Config{DSN: "postgres://u:p@db:5432/x", SeedsDir: "/tmp/seeds", Addr: ":9999", Catalogue: "/srv/catalogue.json", WebDir: "/app/web"}
+	want := Config{DSN: "postgres://u:p@db:5432/x", SeedsDir: "/tmp/seeds", Addr: ":9999", Catalogue: "/srv/catalogue.json", WebDir: "/app/web", Env: EnvDev}
 	if cfg != want {
 		t.Fatalf("overrides not applied: %+v", cfg)
 	}
@@ -48,7 +56,7 @@ func TestLoadConfig_Overrides(t *testing.T) {
 
 // Empty-but-set vars fall back to the default (same as the old os.Getenv chain).
 func TestLoadConfig_EmptyUsesDefault(t *testing.T) {
-	clearEnv(t)
+	devEnv(t)
 	t.Setenv("CRITICAL_DSN", "")
 	cfg, err := loadConfig()
 	if err != nil || cfg.DSN != devDSN {
@@ -74,7 +82,7 @@ func TestConfigValidate_RejectsEmpty(t *testing.T) {
 // every machine of staging and production) and in the production image
 // (CRITICAL_WEB_DIR), and any other value is refused.
 func TestConfigValidate_Step8_3_InMemoryStorageOnlyOutsideFlyAndTheImage(t *testing.T) {
-	base := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c"}
+	base := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c", Env: EnvDev}
 	with := func(f func(*Config)) Config {
 		c := base
 		f(&c)
@@ -87,11 +95,14 @@ func TestConfigValidate_Step8_3_InMemoryStorageOnlyOutsideFlyAndTheImage(t *test
 	}{
 		{"database by default", base, true},
 		{"memory for e2e", with(func(c *Config) { c.Storage = StorageMemory }), true},
-		{"memory on fly", with(func(c *Config) { c.Storage, c.FlyApp = StorageMemory, "critical-prod" }), false},
+		{"memory on fly", with(func(c *Config) {
+			c.Storage, c.FlyApp, c.Env = StorageMemory, "critical-prod", ""
+			c.GoogleClientID, c.GoogleClientSecret, c.PublicURL = "id", "secret", "https://critical-hit.fly.dev"
+		}), false},
 		{"memory in the production image", with(func(c *Config) { c.Storage, c.WebDir = StorageMemory, "/app/web" }), false},
 		{"unknown storage", with(func(c *Config) { c.Storage = "sqlite" }), false},
 		{"database on fly", with(func(c *Config) {
-			c.FlyApp, c.WebDir = "critical-prod", "/app/web"
+			c.FlyApp, c.WebDir, c.Env = "critical-prod", "/app/web", ""
 			c.GoogleClientID, c.GoogleClientSecret, c.PublicURL = "id", "secret", "https://critical-hit.fly.dev"
 		}), true},
 	}
@@ -107,7 +118,7 @@ func TestConfigValidate_Step8_3_InMemoryStorageOnlyOutsideFlyAndTheImage(t *test
 // The storage and the fly marker are read from the environment, and the
 // refusal is loadConfig's, before anything is opened.
 func TestLoadConfig_InMemoryStorage(t *testing.T) {
-	clearEnv(t)
+	devEnv(t)
 	t.Setenv("CRITICAL_STORAGE", "memory")
 	cfg, err := loadConfig()
 	if err != nil || cfg.Storage != StorageMemory {
@@ -147,31 +158,38 @@ func TestResolveFromRepoRoot(t *testing.T) {
 	}
 }
 
-// ADR 0029 step 8.2: on a hosted app (FLY_APP_NAME, set by fly on every
-// machine) a missing or partial OAuth setting stops the start; locally none
-// is the dev login, a partial one is refused too, and all three select the
-// Google login with the redirect, host and Secure cookies of the public URL.
-func TestConfigAuth_Step8_2_HostedAppRefusesToStartWithoutOAuth(t *testing.T) {
+// ADR 0029 step 8.2: the dev login exists only when the environment is dev
+// (CRITICAL_ENV=dev) and no OAuth setting is set; anywhere else (unset or
+// another environment, the image run outside fly included) a missing or
+// partial OAuth setting stops the start. On a hosted app (FLY_APP_NAME, set by
+// fly on every machine) the dev environment itself is refused. All three
+// settings select the Google login with the redirect, host and Secure cookies
+// of the public URL.
+func TestConfigAuth_Step8_2_RefusesToStartWithoutOAuthUnlessDev(t *testing.T) {
 	base := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c"}
 	full := func(c Config) Config {
 		c.GoogleClientID, c.GoogleClientSecret, c.PublicURL = "id", "secret", "https://critical-hit.fly.dev"
 		return c
 	}
+	dev := base
+	dev.Env = EnvDev
 	onFly := base
 	onFly.FlyApp = "critical-hit"
 
-	if err := onFly.Validate(); err == nil {
-		t.Fatal("fly without OAuth settings must not start")
+	refused := map[string]Config{
+		"no settings, no environment (fails closed)": base,
+		"no settings, another environment":           func() Config { c := base; c.Env = "staging"; return c }(),
+		"no settings, the image outside fly":         func() Config { c := base; c.WebDir = "/app/web"; return c }(),
+		"no settings on fly":                         onFly,
+		"dev environment on fly, no settings":        func() Config { c := onFly; c.Env = EnvDev; return c }(),
+		"dev environment on fly, with settings":      func() Config { c := full(onFly); c.Env = EnvDev; return c }(),
+		"partial setting on fly":                     func() Config { c := onFly; c.GoogleClientID = "id"; return c }(),
+		"partial setting in dev":                     func() Config { c := dev; c.PublicURL = "http://localhost:8080"; return c }(),
 	}
-	partial := onFly
-	partial.GoogleClientID = "id"
-	if err := partial.Validate(); err == nil {
-		t.Fatal("fly with a partial OAuth setting must not start")
-	}
-	localPartial := base
-	localPartial.PublicURL = "http://localhost:8080"
-	if err := localPartial.Validate(); err == nil {
-		t.Fatal("a partial OAuth setting must not start locally either")
+	for name, c := range refused {
+		if err := c.Validate(); err == nil {
+			t.Errorf("%s: must not start", name)
+		}
 	}
 	for _, bad := range []string{"critical-hit.fly.dev", "ftp://x", "https://x/app", "https://"} {
 		c := full(onFly)
@@ -181,20 +199,39 @@ func TestConfigAuth_Step8_2_HostedAppRefusesToStartWithoutOAuth(t *testing.T) {
 		}
 	}
 
-	dev, err := base.auth()
-	if err != nil || dev.google != nil || dev.secure || dev.host != "" {
-		t.Fatalf("no settings locally must be the dev login, got %+v, %v", dev, err)
+	d, err := dev.auth()
+	if err != nil || d.google != nil || d.secure || d.host != "" || d.cookieApp != "dev_1" {
+		t.Fatalf("no settings in dev must be the dev login, got %+v, %v", d, err)
+	}
+	devImage := dev
+	devImage.WebDir = "/app/web"
+	if err := devImage.Validate(); err != nil {
+		t.Fatalf("the image with CRITICAL_ENV=dev (image-smoke) must start: %v", err)
 	}
 	g, err := full(onFly).auth()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if g.google == nil || g.google.RedirectURL != "https://critical-hit.fly.dev/api/auth/google/callback" ||
-		g.google.ClientID != "id" || g.google.ClientSecret != "secret" || g.host != "critical-hit.fly.dev" || !g.secure {
+		g.google.ClientID != "id" || g.google.ClientSecret != "secret" || g.host != "critical-hit.fly.dev" || !g.secure ||
+		g.cookieApp != "critical-hit.fly.dev" {
 		t.Fatalf("unexpected Google login config: %+v %+v", g, g.google)
 	}
 	local, err := Config{GoogleClientID: "id", GoogleClientSecret: "s", PublicURL: "http://localhost:8080/"}.auth()
-	if err != nil || local.secure || local.host != "localhost:8080" {
+	if err != nil || local.secure || local.host != "localhost:8080" || local.cookieApp != "localhost:8080" {
 		t.Fatalf("plain HTTP public URL: %+v, %v", local, err)
+	}
+}
+
+// The dev login's opt-in is read from the environment: without
+// CRITICAL_ENV=dev and without OAuth settings loadConfig refuses.
+func TestLoadConfig_Step8_2_DevLoginNeedsCriticalEnvDev(t *testing.T) {
+	clearEnv(t)
+	if _, err := loadConfig(); err == nil {
+		t.Fatal("no OAuth settings and no CRITICAL_ENV must not start")
+	}
+	t.Setenv("CRITICAL_ENV", EnvDev)
+	if _, err := loadConfig(); err != nil {
+		t.Fatalf("CRITICAL_ENV=dev must start in dev login mode: %v", err)
 	}
 }

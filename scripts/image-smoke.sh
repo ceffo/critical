@@ -47,6 +47,7 @@ docker exec "$db" pg_isready -h 127.0.0.1 -U critical -d critical >/dev/null ||
 docker run -d --name "$name" --network "$name" -p 127.0.0.1::8080 \
     -e CRITICAL_DSN="postgres://critical:critical@$db:5432/critical?sslmode=disable" \
     -v "$root/api/testdata/seeds:/fixture-seeds:ro" -e CRITICAL_SEEDS_DIR=/fixture-seeds \
+    -e CRITICAL_ENV=dev \
     "$image" >/dev/null
 port="$(docker port "$name" 8080/tcp | head -n1 | sed 's/.*://')"
 base="http://127.0.0.1:$port"
@@ -74,7 +75,7 @@ grep -q '"status":"ok"' "$body_file" || fail "/api/health status: $(cat "$body_f
 
 # The login gate (ADR 0029 step 6): without a session a page goes to the login page, which is served,
 # and a data route, the catalogue and an asset of the bundle answer 401. The image runs without OAuth
-# settings and outside fly, so it is in dev login mode (step 8.1).
+# settings, outside fly and with CRITICAL_ENV=dev, so it is in dev login mode (step 8.1).
 for path in / /spells/deep/link; do
     out="$(get "$path" -H "Accept: text/html")"
     [ "${out%% *}" = 302 ] || fail "$path without a session: $out (want a redirect to /login)"
@@ -89,9 +90,9 @@ for path in /api/character /api/spells/names "/assets/$asset"; do
 done
 
 out="$(curl -sS -o "$body_file" -D - -X POST -H 'Content-Type: application/json' -d '{}' "$base/api/auth/dev")"
-session="$(sed -n 's/^[Ss]et-[Cc]ookie: critical_session=\([^;]*\).*/\1/p' <<<"$out" | head -n1)"
-[ -n "$session" ] || fail "dev login: no session cookie: $out"
-cookie="critical_session=$session"
+# The session cookie is named per app: critical_session_dev_<listen port> in dev login mode.
+cookie="$(sed -n 's/^[Ss]et-[Cc]ookie: \(critical_session_dev_8080=[^;]*\).*/\1/p' <<<"$out" | head -n1)"
+[ -n "${cookie#*=}" ] || fail "dev login: no critical_session_dev_8080 cookie: $out"
 
 for path in / /spells/deep/link; do
     out="$(get "$path" -H "Cookie: $cookie")"
@@ -104,6 +105,16 @@ out="$(get /api/character -H "Cookie: $cookie")"
 out="$(get /api/nope -H "Cookie: $cookie")"
 [ "$out" = "404 application/json" ] || fail "/api/nope: $out"
 grep -q '"code":"not_found"' "$body_file" || fail "/api/nope body: $(cat "$body_file")"
+
+# Fails closed (ADR 0029 step 8.2): the image with no OAuth settings, outside fly and without
+# CRITICAL_ENV=dev refuses to start, before listening and before touching the database.
+refuse_status=0
+refuse_out="$(timeout 60 docker run --rm --network "$name" \
+    -e CRITICAL_DSN="postgres://critical:critical@$db:5432/critical?sslmode=disable" "$image" 2>&1)" || refuse_status=$?
+[ "$refuse_status" != 0 ] && [ "$refuse_status" != 124 ] ||
+    fail "the image without OAuth settings and without CRITICAL_ENV=dev started (exit $refuse_status): $refuse_out"
+[[ "$refuse_out" == *"CRITICAL_ENV=dev"* ]] || fail "the refusal does not name CRITICAL_ENV=dev: $refuse_out"
+echo "image-smoke: without OAuth settings nor CRITICAL_ENV=dev the image refuses to start: $refuse_out"
 
 uid="$(docker exec "$name" id -u)"
 [ "$uid" != 0 ] || fail "the server runs as root"

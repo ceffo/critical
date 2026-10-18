@@ -267,6 +267,21 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Learn",
     fr: "Apprentissage",
   },
+  turn_undead: {
+    e: entry("turn_undead", {
+      undead: "ghoul",
+      clericLevel: 3,
+      target: 10,
+      d20: 12,
+      success: true,
+      effect: "turn",
+      affected: [3, 4],
+      count: 7,
+    }),
+    value: "12",
+    en: "Turning Ghoul · turned",
+    fr: "Renvoi Goule · repoussés",
+  },
   spell_prep: {
     e: entry("spell_prep", null),
     value: null,

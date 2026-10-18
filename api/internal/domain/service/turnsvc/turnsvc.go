@@ -86,6 +86,9 @@ type Result struct {
 	// Affected are the 2d6 undead affected on a success (nil otherwise);
 	// More the 2d4 more of a D* cell (nil otherwise).
 	Affected, More []int
+	// Count is how many undead are turned or destroyed: the 2d6 plus the
+	// 2d4 of a D* cell (0 on a failure).
+	Count int
 }
 
 type service struct{ Deps }
@@ -149,6 +152,9 @@ func (s *service) Turn(ctx context.Context, characterID int64, undead string) (*
 		if row.Cell.Outcome == "destroy_more" {
 			res.More = []int{s.Dice.RollDie(moreDie), s.Dice.RollDie(moreDie)}
 		}
+		for _, v := range append(append([]int{}, res.Affected...), res.More...) {
+			res.Count += v
+		}
 	}
 	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
 		payload, err := json.Marshal(recordOf(res))
@@ -181,11 +187,12 @@ type record struct {
 	Effect      string `json:"effect,omitempty"`
 	Affected    []int  `json:"affected,omitempty"`
 	More        []int  `json:"more,omitempty"`
+	Count       int    `json:"count"`
 }
 
 func recordOf(r *Result) record {
 	return record{
 		Undead: r.Undead, ClericLevel: r.ClericLevel, Target: r.Cell.Roll, Outcome: r.Cell.Outcome,
-		D20: r.D20, Success: r.Success, Effect: r.Effect, Affected: r.Affected, More: r.More,
+		D20: r.D20, Success: r.Success, Effect: r.Effect, Affected: r.Affected, More: r.More, Count: r.Count,
 	}
 }

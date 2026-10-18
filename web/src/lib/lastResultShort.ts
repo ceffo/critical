@@ -13,6 +13,8 @@ import {
   savePayload,
   skillCheckPayload,
   skillName,
+  turnPayload,
+  undeadName,
 } from "@/lib/logSummary";
 import type { LogEntry } from "@/types/log";
 
@@ -109,11 +111,13 @@ export function shortResult(
     return {
       value,
       what: spell,
-      verdict: cast.attack
-        ? cast.attack.hit
-          ? verdict(t, "hit", "pass")
-          : verdict(t, "miss", "fail")
-        : null,
+      verdict: cast.failure?.failed
+        ? verdict(t, "spellFailed", "fail")
+        : cast.attack
+          ? cast.attack.hit
+            ? verdict(t, "hit", "pass")
+            : verdict(t, "miss", "fail")
+          : null,
     };
   }
   const exposure = exposurePayload(e);
@@ -122,6 +126,19 @@ export function shortResult(
       value,
       what: spellName(exposure.spellId, exposure.spell),
       verdict: null,
+    };
+  const turn = turnPayload(e);
+  if (turn)
+    return {
+      value,
+      what: t("lastShort.turn", { undead: undeadName(t, turn.undead) }),
+      verdict: !turn.success
+        ? verdict(t, "failure", "fail")
+        : verdict(
+            t,
+            turn.effect === "destroy" ? "destroyed" : "turned",
+            "pass",
+          ),
     };
   if (e.kind === "hp_change")
     return {

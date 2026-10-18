@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Backpack,
   ListChecks,
+  Skull,
   Sparkle,
   Sword,
   type Icon,
@@ -15,15 +16,18 @@ import { AttackPanel } from "./AttackPanel";
 import { SpellsPanel } from "./SpellsPanel";
 import { ItemsTab } from "./ItemsTab";
 import { SkillsTab } from "./SkillsTab";
+import { TurnUndeadPanel } from "./TurnUndeadPanel";
+import { useCharacterStore } from "@/stores/character";
 import { combatItems } from "@/lib/combatItems";
 
 /**
  * The act panel of the Act activity (ADR 0022 step 2.5): tabs with icons and no panel title (the
  * rail names the activity): Weapons, Spells (with the spells left), Items (with how many there
- * are), Skills (proficiency and bard skill checks). Inventory and spell lookup are activities of
+ * are), Skills (proficiency and bard skill checks), and Undead for a class that turns them (ADR 0030
+ * step 16). Inventory and spell lookup are activities of
  * their own in the rail (App.tsx); saving throws live in the character card.
  */
-const TABS = ["weapons", "spells", "items", "skills"] as const;
+const TABS = ["weapons", "spells", "items", "skills", "turning"] as const;
 type TabId = (typeof TABS)[number];
 
 const TAB_ICONS: Record<TabId, Icon> = {
@@ -31,6 +35,7 @@ const TAB_ICONS: Record<TabId, Icon> = {
   spells: Sparkle,
   items: Backpack,
   skills: ListChecks,
+  turning: Skull,
 };
 
 export function ActionArea({
@@ -40,6 +45,8 @@ export function ActionArea({
 }) {
   const { t } = useTranslation();
   const [active, setActive] = useState<TabId>("weapons");
+  const turns = useCharacterStore((s) => s.character?.derived.turning != null);
+  const tabs = TABS.filter((id) => id !== "turning" || turns);
   const spellsLeft = useSpellStore(
     (s) => s.slots.filter((slot) => !slot.used).length,
   );
@@ -67,7 +74,7 @@ export function ActionArea({
         aria-label={t("actions.label")}
         className="card-band flex shrink-0 flex-wrap items-center gap-1 px-4"
       >
-        {TABS.map((id) => {
+        {tabs.map((id) => {
           const TabIcon = TAB_ICONS[id];
           return (
             <button
@@ -111,6 +118,7 @@ export function ActionArea({
         {active === "spells" && <SpellsPanel />}
         {active === "items" && <ItemsTab onManage={onOpenInventory} />}
         {active === "skills" && <SkillsTab />}
+        {active === "turning" && turns && <TurnUndeadPanel />}
       </div>
     </section>
   );

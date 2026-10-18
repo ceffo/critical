@@ -274,7 +274,8 @@
       "weapons": "Armes",
       "spells": "Sorts",
       "items": "Objets",
-      "skills": "Compétences"
+      "skills": "Compétences",
+      "turning": "Morts-vivants"
     },
     "items": {
       "list": "Objets de combat",
@@ -1115,7 +1116,10 @@
       "partSave": {
         "none": "sans sauvegarde",
         "negates": "annulé par la sauvegarde"
-      }
+      },
+      "spellFailed": "Échec du sort : l'emplacement est dépensé, rien ne se produit.",
+      "spellHeld": "Pas d'échec du sort",
+      "failureRoll": "d100 {{roll}} contre {{chance}} % (Sagesse)"
     },
     "itemHeading": "Objet utilisé : {{name}}",
     "effect": "Effet",
@@ -1176,6 +1180,17 @@
       "damageIfHit": "Dégâts si touché",
       "verdictTitle": "Le MJ dit",
       "verdictLabel": "Touché ou raté selon le MJ"
+    },
+    "turn": {
+      "heading": "Clerc de niveau {{level}}",
+      "target": "{{target}} ou plus au d20",
+      "auto": "Sans jet : {{outcome}}",
+      "turned": "Repoussés",
+      "destroyed": "Détruits",
+      "failed": "Échec",
+      "affected": "Morts-vivants affectés",
+      "affectedDice": "2d6 : {{dice}}",
+      "moreDice": "2d4 de plus : {{dice}}"
     }
   },
   "log": {
@@ -1219,7 +1234,8 @@
       "xp_edit": "XP",
       "xp_remove": "XP",
       "level_up": "Niveau",
-      "spell_learn": "Apprentissage"
+      "spell_learn": "Apprentissage",
+      "turn_undead": "Renvoi"
     },
     "status": {
       "active": "Actif",
@@ -1272,7 +1288,9 @@
       "extraSlots": "emplacements supplémentaires {{slots}}",
       "item": "Objet dépensé : {{name}} ({{left}} restant(s))",
       "attackHit": "attaque réussie (d20 {{d20}} contre CA {{ac}})",
-      "attackMiss": "attaque ratée (d20 {{d20}} contre CA {{ac}})"
+      "attackMiss": "attaque ratée (d20 {{d20}} contre CA {{ac}})",
+      "spellFailed": "échec du sort (d100 {{roll}} ≤ {{chance}} %)",
+      "spellHeld": "pas d'échec du sort (d100 {{roll}} > {{chance}} %)"
     },
     "item": {
       "rolled": "Objet utilisé : {{name}}, {{dice}} = {{total}} ({{left}} restant)",
@@ -1366,6 +1384,14 @@
     "learn": {
       "learned": "Appris : {{spell}} (d100 {{roll}} ≤ {{chance}} %)",
       "failed": "Échec : {{spell}} (d100 {{roll}} > {{chance}} %), à retenter au niveau {{level}}"
+    },
+    "turn": {
+      "text": "Renvoi des morts-vivants ({{undead}}) : {{result}}, {{roll}}",
+      "turned": "{{count}} repoussés",
+      "destroyed": "{{count}} détruits",
+      "failed": "échec",
+      "roll": "d20 {{d20}} contre {{target}}",
+      "noRoll": "sans jet"
     }
   },
   "critTable": {
@@ -1496,6 +1522,7 @@
     "languagesHint": "Séparez les langues par des virgules",
     "classes": {
       "bard": "Barde",
+      "cleric": "Clerc",
       "fighter": "Guerrier",
       "mage": "Magicien"
     },
@@ -1688,8 +1715,12 @@
       "passed": "réussie",
       "failed": "échouée",
       "success": "réussi",
-      "failure": "échec"
-    }
+      "failure": "échec",
+      "turned": "repoussés",
+      "destroyed": "détruits",
+      "spellFailed": "sort raté"
+    },
+    "turn": "Renvoi {{undead}}"
   },
   "database": {
     "unavailable": "La base de données ne répond pas. Nouvel essai…",
@@ -1795,5 +1826,36 @@
       "race_not_allowed": "Cette race ne peut pas être {{className}}.",
       "not_allowed": "Pas de Force exceptionnelle pour ce personnage : seulement un combattant à 18 de Force, sauf un petite-gens."
     }
+  },
+  "turning": {
+    "title": "Repousser les morts-vivants",
+    "hint": "Choisissez le type de mort-vivant. Le serveur lance le d20 et les dés du nombre affecté.",
+    "hd": "{{hd}} DV",
+    "hdRange": "{{min}} à {{max}} DV",
+    "hdMore": "{{hd}} DV et plus",
+    "target": "{{target}}+",
+    "turn": "Repousser",
+    "outcome": {
+      "turn": "Repoussés (R)",
+      "destroy": "Détruits (D)",
+      "destroy_more": "Détruits, 2d4 de plus (D*)",
+      "cannot": "Impossible"
+    },
+    "undead": {
+      "skeleton": "Squelette",
+      "zombie": "Zombi",
+      "ghoul": "Goule",
+      "shadow": "Ombre",
+      "wight": "Nécrophage",
+      "ghast": "Blême",
+      "wraith": "Âme en peine",
+      "mummy": "Momie",
+      "spectre": "Spectre",
+      "vampire": "Vampire",
+      "ghost": "Fantôme",
+      "lich": "Liche",
+      "special": "Spécial"
+    },
+    "turnLabel": "Repousser : {{undead}}"
   }
 }

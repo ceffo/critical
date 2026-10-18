@@ -375,6 +375,16 @@ export interface CastResult {
   attack?: CastAttack;
   /** The exposure damage at casterLevel, to roll each round of exposure from; absent: none. */
   exposure?: SpellExposure;
+  /** The low-Wisdom spell failure d100 (ADR 0030 step 14); absent: no die. `failed`: the slot is
+   * spent and nothing else applies. */
+  failure?: SpellFailure;
+}
+
+/** A cast's spell failure roll (ADR 0030 step 14): failed when the d100 is at or under the chance. */
+export interface SpellFailure {
+  d100: number;
+  chance: number;
+  failed: boolean;
 }
 
 /** The body of POST /api/spells/exposure (casthdl ExposureRequestDTO). */

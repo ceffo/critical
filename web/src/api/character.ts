@@ -2,6 +2,7 @@ import type {
   Character,
   CharacterDetails,
   LevelUpResult,
+  TurnResult,
 } from "@/types/character";
 import { patch, post, request } from "./http";
 
@@ -28,4 +29,10 @@ export function rollLevelUp(
     "/api/character/levelup/roll",
     die === undefined ? { level } : { level, die },
   );
+}
+
+/** Turn the undead of a PHB Table 61 row (ADR 0030 step 16): the server reads the cell at the
+ * realized level and rolls; a refusal (a dash, a class that cannot turn) is an ApiError. */
+export function turnUndead(undead: string): Promise<TurnResult> {
+  return post<TurnResult>("/api/character/turn-undead", { undead });
 }

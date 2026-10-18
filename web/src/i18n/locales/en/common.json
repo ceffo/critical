@@ -274,7 +274,8 @@
       "weapons": "Weapons",
       "spells": "Spells",
       "items": "Items",
-      "skills": "Skills"
+      "skills": "Skills",
+      "turning": "Undead"
     },
     "items": {
       "list": "Combat items",
@@ -1115,7 +1116,10 @@
       "partSave": {
         "none": "no save",
         "negates": "save negates"
-      }
+      },
+      "spellFailed": "Spell failed: the slot is spent, nothing happens.",
+      "spellHeld": "No spell failure",
+      "failureRoll": "d100 {{roll}} against {{chance}}% (Wisdom)"
     },
     "itemHeading": "Used {{name}}",
     "effect": "Effect",
@@ -1176,6 +1180,17 @@
       "damageIfHit": "Damage if it hits",
       "verdictTitle": "GM says",
       "verdictLabel": "The GM’s hit or miss"
+    },
+    "turn": {
+      "heading": "Cleric level {{level}}",
+      "target": "{{target}} or more on the d20",
+      "auto": "No roll: {{outcome}}",
+      "turned": "Turned",
+      "destroyed": "Destroyed",
+      "failed": "Failed",
+      "affected": "Undead affected",
+      "affectedDice": "2d6: {{dice}}",
+      "moreDice": "2d4 more: {{dice}}"
     }
   },
   "log": {
@@ -1219,7 +1234,8 @@
       "xp_edit": "XP",
       "xp_remove": "XP",
       "level_up": "Level",
-      "spell_learn": "Learn"
+      "spell_learn": "Learn",
+      "turn_undead": "Turning"
     },
     "status": {
       "active": "Active",
@@ -1272,7 +1288,9 @@
       "extraSlots": "extra slots {{slots}}",
       "item": "{{name}} spent ({{left}} left)",
       "attackHit": "hit (d20 {{d20}} vs AC {{ac}})",
-      "attackMiss": "missed (d20 {{d20}} vs AC {{ac}})"
+      "attackMiss": "missed (d20 {{d20}} vs AC {{ac}})",
+      "spellFailed": "spell failed (d100 {{roll}} ≤ {{chance}}%)",
+      "spellHeld": "no spell failure (d100 {{roll}} > {{chance}}%)"
     },
     "item": {
       "rolled": "Used {{name}}: {{dice}} = {{total}} ({{left}} left)",
@@ -1366,6 +1384,14 @@
     "learn": {
       "learned": "Learned: {{spell}} (d100 {{roll}} ≤ {{chance}}%)",
       "failed": "Failed: {{spell}} (d100 {{roll}} > {{chance}}%), try again at level {{level}}"
+    },
+    "turn": {
+      "text": "Turning undead ({{undead}}): {{result}}, {{roll}}",
+      "turned": "{{count}} turned",
+      "destroyed": "{{count}} destroyed",
+      "failed": "failed",
+      "roll": "d20 {{d20}} vs {{target}}",
+      "noRoll": "no roll"
     }
   },
   "critTable": {
@@ -1496,6 +1522,7 @@
     "languagesHint": "Separate languages with commas",
     "classes": {
       "bard": "Bard",
+      "cleric": "Cleric",
       "fighter": "Fighter",
       "mage": "Mage"
     },
@@ -1688,8 +1715,12 @@
       "passed": "passed",
       "failed": "failed",
       "success": "success",
-      "failure": "failed"
-    }
+      "failure": "failed",
+      "turned": "turned",
+      "destroyed": "destroyed",
+      "spellFailed": "spell failed"
+    },
+    "turn": "Turning {{undead}}"
   },
   "database": {
     "unavailable": "The database is not answering. Retrying…",
@@ -1795,5 +1826,36 @@
       "race_not_allowed": "This race cannot be a {{className}}.",
       "not_allowed": "No exceptional strength for this character: only a warrior with Strength 18, not a halfling."
     }
+  },
+  "turning": {
+    "title": "Turn undead",
+    "hint": "Pick the undead type. The server rolls the d20 and the dice for how many.",
+    "hd": "{{hd}} HD",
+    "hdRange": "{{min}}–{{max}} HD",
+    "hdMore": "{{hd}}+ HD",
+    "target": "{{target}}+",
+    "turn": "Turn",
+    "outcome": {
+      "turn": "Turned (T)",
+      "destroy": "Destroyed (D)",
+      "destroy_more": "Destroyed, 2d4 more (D*)",
+      "cannot": "Cannot turn"
+    },
+    "undead": {
+      "skeleton": "Skeleton",
+      "zombie": "Zombie",
+      "ghoul": "Ghoul",
+      "shadow": "Shadow",
+      "wight": "Wight",
+      "ghast": "Ghast",
+      "wraith": "Wraith",
+      "mummy": "Mummy",
+      "spectre": "Spectre",
+      "vampire": "Vampire",
+      "ghost": "Ghost",
+      "lich": "Lich",
+      "special": "Special"
+    },
+    "turnLabel": "Turn: {{undead}}"
   }
 }

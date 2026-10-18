@@ -4,14 +4,14 @@ import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
-import type { LearnResult, LevelUpRecord } from "@/types/character";
+import type { LearnResult, LevelUpRecord, TurnResult } from "@/types/character";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { buffName, englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { checkAdjustedTarget } from "./skillAdjust";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
-import type { SpellExposure } from "@/types/spells";
+import type { SpellExposure, SpellFailure } from "@/types/spells";
 
 /** Payload of cast entries (castsvc castRecord). */
 export interface CastLogPayload {
@@ -65,6 +65,8 @@ export interface CastLogPayload {
   save?: { type: string; effect: string };
   /** The exposure damage served at casterLevel (as GET /api/spells serves it); absent without one. */
   exposure?: SpellExposure;
+  /** The low-Wisdom spell failure d100 (ADR 0030 step 14); absent: no die. */
+  failure?: SpellFailure;
 }
 
 /** Payload of exposure entries (castsvc exposureRecord, ADR 0008 step 16). */
@@ -140,6 +142,14 @@ function castText(
   const spell = spellName(p.spellId, p.spell);
   const head = t(`log.cast.${p.action}`, { spell, level: p.casterLevel });
   const details: string[] = [];
+  // ADR 0030 step 14: the spell failure d100 first; a failed spell has nothing else.
+  if (p.failure)
+    details.push(
+      t(p.failure.failed ? "log.cast.spellFailed" : "log.cast.spellHeld", {
+        roll: p.failure.d100,
+        chance: p.failure.chance,
+      }),
+    );
   if (p.mode) details.push(modeName(t, p.spellId, p.mode));
   if (p.buff?.applied) {
     details.push(counters(t, p.buff.rounds, p.buff.charges));
@@ -494,6 +504,37 @@ function learnText(
     : t("log.learn.failed", { ...vars, level: p.retryLevel });
 }
 
+/** The payload of a turn_undead entry (turnsvc record, ADR 0030 step 16), or null. */
+export function turnPayload(e: LogEntry): TurnResult | null {
+  if (e.kind !== "turn_undead") return null;
+  const p = e.payload as Partial<TurnResult> | null;
+  return p && typeof p.undead === "string" && typeof p.success === "boolean"
+    ? (p as TurnResult)
+    : null;
+}
+
+/** The undead type's name (PHB Table 61 row code). */
+export function undeadName(t: TFunction, code: string): string {
+  return t(`turning.undead.${code}`, { defaultValue: code });
+}
+
+/** "Turning undead (Ghoul): 7 turned, d20 12 vs 10": the type, the result and the d20 if rolled. */
+function turnText(e: LogEntry, t: TFunction): string | null {
+  const p = turnPayload(e);
+  if (!p) return null;
+  const undead = undeadName(t, p.undead);
+  const result = p.success
+    ? t(p.effect === "destroy" ? "log.turn.destroyed" : "log.turn.turned", {
+        count: p.count,
+      })
+    : t("log.turn.failed");
+  const roll =
+    p.d20 !== undefined && p.target !== undefined
+      ? t("log.turn.roll", { d20: p.d20, target: p.target })
+      : t("log.turn.noRoll");
+  return t("log.turn.text", { undead, result, roll });
+}
+
 /** The payload of a level_up entry (levelupsvc record, ADR 0030 step 7.3), or null. */
 export function levelUpPayload(e: LogEntry): LevelUpRecord | null {
   if (e.kind !== "level_up") return null;
@@ -819,6 +860,8 @@ export function entryText(
   if (levelUp) return levelUp;
   const learn = learnText(e, t, spellName);
   if (learn) return learn;
+  const turn = turnText(e, t);
+  if (turn) return turn;
   const hp = hpChangeText(e, t);
   if (hp) return hp;
   const p = buffPayload(e);

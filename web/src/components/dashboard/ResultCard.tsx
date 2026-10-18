@@ -59,9 +59,14 @@ import type { RollResult, SaveCategory } from "@/types/combat";
 import type { UseResult } from "@/types/items";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
+import type { TurnResult } from "@/types/character";
 import { dieName } from "@/lib/diceFormula";
 import { fieldClass } from "./fieldStyles";
-import { CastResultView, ExposureResultView } from "./CastResultView";
+import {
+  CastResultView,
+  ExposureResultView,
+  SpellFailureLine,
+} from "./CastResultView";
 import { ExposureControls } from "./ExposureControls";
 
 const labelClass = "text-label text-muted-foreground";
@@ -196,9 +201,74 @@ function CardBody({
       return <AbilityResult check={model.check} interactive={interactive} />;
     case "dice":
       return <DiceResult roll={model.roll} />;
+    case "turn":
+      return <TurnResultView turn={model.turn} />;
     case "info":
       return <InfoResult info={model.info} />;
   }
+}
+
+/**
+ * Turning undead (ADR 0030 step 16): the cleric's level, the d20 against the cell's target (or the
+ * cell's outcome when no die is rolled), the verdict and the dice of how many, all as the server
+ * recorded them.
+ */
+function TurnResultView({ turn: r }: { turn: TurnResult }) {
+  const { t } = useTranslation();
+  const verdictText = r.success
+    ? t(r.effect === "destroy" ? "result.turn.destroyed" : "result.turn.turned")
+    : t("result.turn.failed");
+  return (
+    <div className="flex flex-col gap-3" data-testid="turn-result">
+      <div className="text-body text-muted-foreground">
+        {t("result.turn.heading", { level: r.clericLevel })}
+      </div>
+      {r.d20 !== undefined && r.target !== undefined ? (
+        <div className="flex items-center gap-3">
+          <HexDie value={r.d20} label={t("fil.d20", { value: r.d20 })} />
+          <ResultLine
+            verdict={
+              <Verdict ok={r.success} yes={verdictText} no={verdictText} />
+            }
+          >
+            <span className="text-body">
+              {t("result.turn.target", { target: r.target })}
+            </span>
+          </ResultLine>
+        </div>
+      ) : (
+        <ResultLine
+          verdict={
+            <Verdict ok={r.success} yes={verdictText} no={verdictText} />
+          }
+        >
+          <span className="text-body">
+            {t("result.turn.auto", {
+              outcome: t(`turning.outcome.${r.outcome ?? "cannot"}`),
+            })}
+          </span>
+        </ResultLine>
+      )}
+      {r.success && (
+        <dl className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2">
+          <Fact label={t("result.turn.affected")}>
+            <span data-testid="turn-count">{r.count}</span>
+          </Fact>
+        </dl>
+      )}
+      {r.affected && r.affected.length > 0 && (
+        <p className="text-body text-muted-foreground" data-testid="turn-dice">
+          {t("result.turn.affectedDice", { dice: r.affected.join(" + ") })}
+          {r.more && r.more.length > 0 && (
+            <>
+              {" · "}
+              {t("result.turn.moreDice", { dice: r.more.join(" + ") })}
+            </>
+          )}
+        </p>
+      )}
+    </div>
+  );
 }
 
 /** The natural die of a roll in a hexagon, the handoff's d20 shape. */
@@ -1175,6 +1245,7 @@ function CastEntry({
           ? t("log.cast.received", { spell, level: c.casterLevel })
           : t("log.cast.cast", { spell })}
       </div>
+      {c.failure && <SpellFailureLine failure={c.failure} />}
       {c.mode && (
         <p className="text-body" data-testid="cast-entry-mode">
           {t("result.cast.mode", { mode: modeName(t, c.spellId, c.mode) })}

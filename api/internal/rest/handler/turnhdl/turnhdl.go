@@ -36,7 +36,8 @@ type TurnBody struct {
 // ResultDTO is the turn's full breakdown (step 16.5): the row, the cleric's
 // level, the cell (`target` the d20 number or `outcome` turn, destroy,
 // destroy_more), the d20 (0: none), the result and its `effect` (turn or
-// destroy), the 2d6 `affected` and the 2d4 `more` of a D* cell.
+// destroy), the 2d6 `affected`, the 2d4 `more` of a D* cell and `count`,
+// how many undead that makes.
 type ResultDTO struct {
 	EntryID     int64  `json:"entryId"`
 	Undead      string `json:"undead"`
@@ -50,6 +51,7 @@ type ResultDTO struct {
 	Effect      string `json:"effect,omitempty"`
 	Affected    []int  `json:"affected"`
 	More        []int  `json:"more"`
+	Count       int    `json:"count"`
 }
 
 // Turn handles POST /api/character/turn-undead.
@@ -71,7 +73,7 @@ func Turn(charID CharacterIDFunc, svc turner) render.HandlerFunc {
 		out := ResultDTO{
 			EntryID: res.EntryID, Undead: res.Undead, HDMin: res.HDMin, HDMax: res.HDMax, ClericLevel: res.ClericLevel,
 			Target: res.Cell.Roll, Outcome: res.Cell.Outcome, D20: res.D20, Success: res.Success, Effect: res.Effect,
-			Affected: append([]int{}, res.Affected...), More: append([]int{}, res.More...),
+			Affected: append([]int{}, res.Affected...), More: append([]int{}, res.More...), Count: res.Count,
 		}
 		render.OK(r.Context(), w, out)
 		return nil

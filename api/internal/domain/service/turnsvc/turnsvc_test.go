@@ -79,7 +79,7 @@ func TestTurn_Step16_TheCellDecidesTheDice(t *testing.T) {
 		{
 			"a number, at it: turned", "wight",
 			[]int{20, 13, 6, 2, 6, 5},
-			turnsvc.Result{Undead: "wight", HDMin: 5, HDMax: 5, Cell: ruletablesvc.TurningCell{Roll: 13}, D20: 13, Success: true, Effect: turnsvc.EffectTurn, Affected: []int{2, 5}},
+			turnsvc.Result{Undead: "wight", HDMin: 5, HDMax: 5, Cell: ruletablesvc.TurningCell{Roll: 13}, D20: 13, Success: true, Effect: turnsvc.EffectTurn, Affected: []int{2, 5}, Count: 7},
 		},
 		{
 			"a number, under it: no 2d6", "wight",
@@ -89,17 +89,17 @@ func TestTurn_Step16_TheCellDecidesTheDice(t *testing.T) {
 		{
 			"T: turned with no d20", "skeleton",
 			[]int{6, 3, 6, 4},
-			turnsvc.Result{Undead: "skeleton", HDMin: 1, HDMax: 1, Cell: ruletablesvc.TurningCell{Outcome: "turn"}, Success: true, Effect: turnsvc.EffectTurn, Affected: []int{3, 4}},
+			turnsvc.Result{Undead: "skeleton", HDMin: 1, HDMax: 1, Cell: ruletablesvc.TurningCell{Outcome: "turn"}, Success: true, Effect: turnsvc.EffectTurn, Affected: []int{3, 4}, Count: 7},
 		},
 		{
 			"D: destroyed with no d20", "ghoul",
 			[]int{6, 1, 6, 6},
-			turnsvc.Result{Undead: "ghoul", HDMin: 2, HDMax: 2, Cell: ruletablesvc.TurningCell{Outcome: "destroy"}, Success: true, Effect: turnsvc.EffectDestroy, Affected: []int{1, 6}},
+			turnsvc.Result{Undead: "ghoul", HDMin: 2, HDMax: 2, Cell: ruletablesvc.TurningCell{Outcome: "destroy"}, Success: true, Effect: turnsvc.EffectDestroy, Affected: []int{1, 6}, Count: 7},
 		},
 		{
 			"D*: destroyed, 2d4 more", "shadow",
 			[]int{6, 2, 6, 3, 4, 1, 4, 4},
-			turnsvc.Result{Undead: "shadow", HDMin: 3, HDMax: 4, Cell: ruletablesvc.TurningCell{Outcome: "destroy_more"}, Success: true, Effect: turnsvc.EffectDestroy, Affected: []int{2, 3}, More: []int{1, 4}},
+			turnsvc.Result{Undead: "shadow", HDMin: 3, HDMax: 4, Cell: ruletablesvc.TurningCell{Outcome: "destroy_more"}, Success: true, Effect: turnsvc.EffectDestroy, Affected: []int{2, 3}, More: []int{1, 4}, Count: 10},
 		},
 	}
 	for _, tc := range tests {
@@ -119,6 +119,7 @@ func TestTurn_Step16_TheCellDecidesTheDice(t *testing.T) {
 			assert.Equal(t, tc.undead, payload["undead"])
 			assert.InDelta(t, 4, payload["clericLevel"], 0)
 			assert.Equal(t, want.Success, payload["success"])
+			assert.InDelta(t, want.Count, payload["count"], 0)
 		})
 	}
 	assert.True(t, actionlog.IsRoll(actionlog.KindTurnUndead), "a roll entry: it takes the result card")

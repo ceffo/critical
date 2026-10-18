@@ -195,8 +195,9 @@ const (
 
 // KindLevelUp is a level-up roll (levelupsvc, ADR 0030 step 7.3): the level
 // reached, the hit die and its value, the Constitution adjustment and the
-// gain. Its "hit_points" snapshot carries the max HP and the level it is set
-// for, so popping it makes the level-up pending again. Not one of RollKinds:
+// gain. Its "realized_level" snapshot carries the realized level and its max
+// HP, so popping it makes the level-up pending again (and takes the level's
+// benefits back). Not one of RollKinds:
 // it is never adjusted after the fact.
 const KindLevelUp Kind = "level_up"
 

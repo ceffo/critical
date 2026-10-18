@@ -18,7 +18,7 @@ import (
 
 // Characters is the character port: the sheet reads (charactersvc.Reader),
 // who owns and plays which character (charactersvc.Owners), the details edit
-// (detailssvc.DAL), the maximum HP (hpsvc.DAL) and the level-up's hit points
+// (detailssvc.DAL), the maximum HP (hpsvc.DAL) and the realized level
 // (levelupsvc.DAL).
 type Characters struct{ s *Store }
 
@@ -41,10 +41,10 @@ func (c Characters) GetCharacter(ctx context.Context, id int64) (*charactersvc.C
 			return domain.ErrCharacterNotFound
 		}
 		ch = clone(ch)
-		// No level set for the max HP is the sheet's level, as the
-		// database's hp_level NULL (ADR 0030 step 7.5).
-		if ch.HPLevel == 0 {
-			ch.HPLevel = ch.Sheet.Level
+		// No realized level is the sheet's level, as the database's
+		// realized_level NULL (ADR 0030 step 7.5).
+		if ch.RealizedLevel == 0 {
+			ch.RealizedLevel = ch.Sheet.Level
 		}
 		out = &ch
 		return nil
@@ -52,15 +52,15 @@ func (c Characters) GetCharacter(ctx context.Context, id int64) (*charactersvc.C
 	return out, err
 }
 
-// SetHitPoints implements levelupsvc.DAL (ADR 0030 step 7.3), or returns
-// domain.ErrCharacterNotFound.
-func (c Characters) SetHitPoints(ctx context.Context, id int64, hpMax, hpLevel int) error {
+// SetRealizedLevel implements levelupsvc.DAL (ADR 0030 step 7.3), or
+// returns domain.ErrCharacterNotFound.
+func (c Characters) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpMax int) error {
 	return c.s.write(ctx, func(t *tables) error {
 		ch, ok := t.characters[id]
 		if !ok {
 			return domain.ErrCharacterNotFound
 		}
-		ch.HPMax, ch.HPLevel = hpMax, hpLevel
+		ch.RealizedLevel, ch.HPMax = realizedLevel, hpMax
 		t.characters[id] = ch
 		return nil
 	})

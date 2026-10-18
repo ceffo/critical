@@ -72,7 +72,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             }
             className="relative shrink-0 pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            {t("app.levelValue", { level: character.derived.level })}
+            {t("app.levelValue", { level: character.derived.realizedLevel })}
             {xp && (
               <span
                 aria-hidden
@@ -172,7 +172,8 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
       {character && (
         <LevelUpPrompt
           levelUp={character.derived.levelUp}
-          level={character.derived.level}
+          realizedLevel={character.derived.realizedLevel}
+          targetLevel={character.derived.targetLevel}
           busy={levelUpBusy}
           onRoll={rollLevelUp}
         />

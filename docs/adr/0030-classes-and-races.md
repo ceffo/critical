@@ -5,10 +5,12 @@ user on 2026-10-17, so each stated default is decided). Steps or parts marked _(
 details this ADR adds beyond the triage and the answers; they await the user's OK in review.
 Implemented 2026-10-18: steps 2, 3, 5 and 6, step 8 for the bard and the mage, step 22.1 for the
 Rod/Staff/Wand and Spells saves, step 24 for the level, THAC0 and saves, and the race code of step 1
-(each with its "Tests:" line); step 7 (the level-up roll) implemented 2026-10-18, its proposals
-(7.1's gain of at least 1, 7.3's current HP, 7.4) as built and described there; the rest is not
+(each with its "Tests:" line); step 7 (realized and target levels, the level-up roll) implemented
+2026-10-18 as rewritten by the
+user's ruling that day; the rest is not
 implemented. Amends [ADR 0002](0002-attack-resolution.md) step 2, [ADR 0004](0004-buffs.md) steps 7
-to 10 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR 0008](0008-spell-slots-and-long-rest.md)
+to 10 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR
+0008](0008-spell-slots-and-long-rest.md)
 steps 2 and 3, [ADR 0014](0014-skill-checks.md) step 3 and [ADR 0015](0015-experience.md) steps 2
 and 3, each from its implementation.
 
@@ -137,35 +139,40 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 
    Tests: `TestClassGroup_Step2` (ruletablesadpt), `TestDerive_Step2_TheClassGroupPicksTheRows`
    (charactersvc).
-3. **Level from XP.** The level is the highest level `L` from 1 to 20 whose threshold `T(L)` in the
+3. **Level from XP.** The target level (step 7) is the highest level `L` from 1 to 20 whose
+   threshold `T(L)` in the
    class's experience table is at or under the XP total ([ADR 0015](0015-experience.md) step 1):
    fighter PHB Table 14 (Fighter column), mage Table 20, cleric Table 23 (Cleric column), thief and
    bard Table 25. The tables stop at 20, so does the level (as ADR 0015 step 3 today). This level
    feeds ADR 0015 step 3's progress (`L` is no longer the sheet's, and `T` is the class's table, not
-   `bard_experience`) and every step below. Reaching a threshold raises the level at once; the new
-   hit points wait for the roll (step 7). The race's level limit is shown, not enforced (step 21).
+   `bard_experience`) and step 7's prompt. Reaching a threshold makes a level-up pending; the
+   level's benefits (steps 5, 6, 8 and the hit points) follow the realized level of step 7, so they
+   wait for the level-up step. The race's level limit is shown, not enforced (step 21).
    Amends ADR 0015 step 3 ("no level-up").
    Tests: `TestLevelFor_Step3_HighestThresholdAtOrUnderTheXP`, `TestXPThreshold_ByClass`
    (ruletablesadpt, against the PHB pages), `TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal`,
-   `TestList_IsTheOwnersCharactersAtTheirDerivedLevel` (charactersvc),
+   `TestList_IsTheOwnersCharactersAtTheirRealizedLevel` (charactersvc),
    `TestComputeProgress_FromTheClassTable`, `TestGet_ProgressFromTheCharactersClassTable` (xpsvc: a
    mage's progress reads Table 20),
-   `TestDerived_AnXPAwardCrossingALevelChangesEverythingAtOnce` (composition: an award crossing a
-   threshold changes the level, THAC0, saves and slots at once; its undo brings them back).
+   `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP` (composition: an award crossing a
+   threshold raises the target level only; THAC0, saves and slots change with the level-up rolls,
+   and the undo brings them back).
 4. **XP bonus by prime requisites.** A character earns the 10% bonus of [ADR 0015](0015-experience.md)
    step 1 when every prime requisite of the class is 16 or more (PHB chapter 3, each class's
    description): fighter Strength (18/xx counts as 18), mage Intelligence, cleric Wisdom, thief
    Dexterity, bard Dexterity and Charisma. Read from the sheet's scores, as ADR 0015 step 2, which
    this generalises (it was the Bard's rule alone).
 5. **THAC0.** The THAC0 is the PHB Table 53 (Calculated THAC0s) value for the class group at the
-   level: warriors improve 1 point a level, priests 2 every 3 levels, rogues 1 every 2, wizards 1
+   realized level (step 7): warriors improve 1 point a level, priests 2 every 3 levels, rogues 1
+   every 2, wizards 1
    every 3 (Table 54; DMG Tables 37 and 38 are the same). It replaces the sheet's `thac0_base` as
    "the character's THAC0" of [ADR 0002](0002-attack-resolution.md) step 2; every to-hit modifier
    there is unchanged.
    Tests: `TestTHAC0For_Step5_Table53` (ruletablesadpt), `TestDerive_Step5_THAC0FromTable53`
    (charactersvc); the attack reads it (`TestResolveAttack`, combatsvc, on the derived THAC0).
 6. **Saving throws.** The target of each of the five categories of [ADR 0006](0006-saving-throws.md)
-   step 1 is the PHB Table 60 (DMG Table 46) row for the class group and level: priests 1-3, 4-6,
+   step 1 is the PHB Table 60 (DMG Table 46) row for the class group and realized level (step 7):
+   priests 1-3, 4-6,
    …; rogues 1-4, 5-8, …; warriors 1-2, 3-4, …; wizards 1-5, 6-10, … (the warriors' level 0 row is
    unused: a character starts at level 1). The race's bonus (step 22) is one named modifier on the
    roll, like a buff's `save_bonus` (ADR 0006 step 1): it moves the roll, never the target. Amends
@@ -176,83 +183,99 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 
 ### Hit points
 
-7. **Level-up roll.** The character keeps the level its max HP was last set for (`hp_level`). When
-   the level of step 3 is above it, a level-up is pending and the app prompts for it (the
-   character card shows a prompt, e.g. "level up: roll HP", one per pending level; the server
-   sends the pending levels, the web words it). Each roll is one request:
+7. **Level-up: realized and target levels** (rewritten 2026-10-18 by the user's ruling: "there is
+   two levels then. one is the realized level, and the derived is the target level [...] we have
+   to split them since there is a manual step for executing the transition"). Two levels:
+   - the **target level** is step 3, the level the XP gives. It is never stored and grants
+     nothing: it drives the level-up prompt and the XP progress (ADR 0015 step 3);
+   - the **realized level** is stored and only the level-up step moves it (a roll or a manual
+     entry, and their undo and redo). **Every benefit of a level follows the realized level**:
+     the max HP, the THAC0 (step 5), the saves (step 6), the spell slots and preparation limits
+     (step 8), the caster level and the level the character card and the character list show.
+     DMG chapter 8's optional training rule (p. 49) makes the same split: XP makes a level
+     possible, a further step makes it real.
+
+   When the target level is above the realized one, a level-up is pending and the character card
+   prompts for it, one prompt per pending level, lowest first (the server sends the pending
+   levels, the web words them). Each level is one request:
    1. **Up to the name level** (warriors and priests through level 9, wizards and rogues through
       10; Tables 14, 20, 23 and 25, Hit Dice column): one hit die of the group (warrior d10, priest
       d8, rogue d6, wizard d4) rolled through the dice port, plus the Constitution hit point
       adjustment of PHB Table 3: warriors take the bracketed value, every other class at most +2.
       At Constitution 20 and more, Table 3's footnotes raise low dice (a 1 counts as 2 at 20; 1 and
       2 count as 3 at 21-22; 1 to 3 count as 4 at 23 and up): the die shown is the one rolled, the
-      gain uses the raised value. _(proposed: the gain is at least 1, a low die with a negative
-      adjustment never lowers or keeps the max HP.)_
+      gain uses the raised value. The gain is at least 1: a low die with a negative adjustment
+      never lowers or keeps the max HP (PHB: no hit die ever yields less than 1).
    2. **Above the name level**: a fixed gain, no die and no Constitution bonus (warrior +3, priest
       +2, rogue +2, wizard +1; PHB chapter 3, each group's hit points paragraph). The prompt still
       appears; the "roll" records the fixed gain.
    3. **Recorded as one transaction** ([ADR 0018](0018-transactions-and-undo.md)): a `level_up`
       entry with the level reached, the die and its raised value (or none), the Constitution
-      adjustment and the gain; the max HP rises by the gain and `hp_level` by 1, snapshotted for
-      undo. _(proposed: the current HP rises by the same gain, as an HP ledger entry of
-      [ADR 0007](0007-hp-ledger.md), so the damage already taken is kept.)_ Several pending levels
-      are rolled one by one, lowest first.
-   4. _(proposed)_ An XP correction that brings the level below `hp_level` removes nothing: the
-      card warns (code plus `hp_level` and the XP level, e.g. "max HP rolled for level N, XP gives
-      level M") until the player undoes the roll or
-      the XP comes back. Level drain stays out of scope.
-   5. The max HP entered for an imported or new character is the max HP at its current level:
-      `hp_level` starts at the level of step 3. Level 1 hit points are entered, never rolled here.
-   **Amendment to step 7.5 (2026-10-18, awaiting the user's OK in the PR):** for a character that
-   existed before `hp_level`, the starting `hp_level` is its stored sheet `level`, not the level of
-   step 3. Reason: the max HP of an imported character was entered for its sheet level. If the
-   ledger XP has already crossed a threshold above that level, the HP for the new levels were never
-   added. Taking the XP level would skip them; taking the sheet level prompts for them on the first
-   load (Kelsen's sheet says 15, so if his XP is at 1,320,000 or more he gets the level-16 +2 prompt). A
-   character created in the app is unchanged: it stores the level its starting XP gives, and
-   `hp_level` is set to the same level.
-   _(As built, 2026-10-18)_ `characters.hp_level` is a nullable column (migration 008, additive, no
-   data step): NULL is the character's stored sheet `level`, the level its entered max HP is for
-   (the amendment above). The derived block's `levelUp` carries `hpLevel`, the `pending`
-   levels lowest first, each with the group's die up to the name level or the fixed gain after it
-   (`die` or `fixedGain`), and `hpAboveLevel` (step 7.4: the card warns, nothing is removed).
-   `POST /api/character/levelup/roll {level, die?}` rolls one level: `level` must be the lowest
-   pending one, else 409 `level_up_not_pending` and nothing is rolled (a stale page or a double
-   click cannot roll a level twice; the check and the write are one transaction). `die` is the
-   manual entry, the die rolled at the table (1 to the die's sides, field `die`, code
+      adjustment and the gain; the realized level rises by 1 and the max HP by the gain,
+      snapshotted for undo. Current HP is `hp_max` plus the HP ledger's SUM
+      ([ADR 0007](0007-hp-ledger.md) step 2), so it rises by the same gain and the damage already
+      taken is kept, with no extra HP entry (one would count the gain twice). Several pending
+      levels are taken one by one, lowest first; nothing applies before its own roll.
+   4. An XP correction that brings the target level below the realized one removes nothing: the
+      benefits stay the realized level's and the card warns ("level N taken, XP gives level M")
+      until the player undoes the roll or the XP comes back. Level drain stays out of scope.
+   5. The max HP entered for an imported or new character is the max HP at its realized level,
+      which starts at the imported sheet's level, or for a character created in the app at the
+      level its starting XP gives. Level 1 hit points are entered, never rolled here.
+   6. Out of scope: the DMG's "never more than one level per award" (p. 49); several pending levels
+      are all offered, one at a time. Spells prepared in a slot a level gave stay prepared when
+      that level-up is undone: like any drop of a slot limit, the preparation shows over the limit
+      and can be unprepared.
+
+   _(As built, 2026-10-18)_ `characters.realized_level` is a nullable column (migration 008,
+   additive, no data step): NULL is the stored sheet `level`, read with
+   `COALESCE(realized_level, level)`, so nothing is copied. The sheet `level` is not itself the
+   realized level because step 24 compares it, as imported, with the rules at the import XP; a
+   level-up must not turn into a sheet difference. A created character stores `realized_level` with
+   its sheet figures. In Go the derived block carries `TargetLevel` and `RealizedLevel`
+   (`charactersvc.Derived`; no bare level where both meet); the API's `derived` carries
+   `targetLevel` and `realizedLevel`, and `levelUp` carries the `pending` levels (each with the
+   group's `die` up to the name level or the `fixedGain` after it) and `realizedAboveTarget`
+   (step 7.4). The XP ledger's progress (`/api/xp`) reads the target level.
+   `POST /api/character/levelup/roll {level, die?}` takes one level: `level` must be the lowest
+   pending one (realized + 1), else 409 `level_up_not_pending` and nothing is rolled (a stale page
+   or a double click cannot take a level twice; the check and the write are one transaction).
+   `die` is the manual entry, the die rolled at the table (1 to the die's sides, field `die`, code
    `out_of_range`; refused with `fixed_gain` above the name level); the server applies the rest of
    step 7.1 to it. Table 3's plain column already holds the non-warrior value (at most +2), the
-   bracketed one is `hp_warrior`. The gain is at least 1 (7.1's proposal, as built). The answer is
-   the full breakdown (`level`, `hitDie`, `rolled`, `counted`, `conAdjustment`, `gain`, `fixed`,
-   `manual`, `hpMaxBefore`, `hpMaxAfter`, `pending`); the `level_up` entry's payload is the same
-   without `pending`, worded by the web (en, fr), and its `hit_points` snapshot holds `hpMax` and
-   `hpLevel`, which undo writes back (the level is pending again) and redo replays. 7.3's proposal
-   is settled without an extra HP entry: current HP is `hp_max` plus the ledger's SUM
-   ([ADR 0007](0007-hp-ledger.md) step 2), so raising `hp_max` raises current HP by the gain and
-   keeps the damage taken; a +gain HP entry on top would count it twice (and the heal cap would
-   clip it). The `level_up` entry has HP delta 0 and is not a roll kind (never adjusted after it).
-   Tests: `TestHitDiceFor_Step7_TheGroupsDieNameLevelAndFixedGain`, `TestConstitutionFor_Step7_1_Table3`
+   bracketed one is `hp_warrior`. The answer is the full breakdown (`level`, `hitDie`, `rolled`,
+   `counted`, `conAdjustment`, `gain`, `fixed`, `manual`, `hpMaxBefore`, `hpMaxAfter`, `pending`);
+   the `level_up` entry's payload is the same without `pending`, worded by the web (en, fr), and
+   its `realized_level` snapshot holds `realizedLevel` and `hpMax`, which undo writes back (the
+   level is pending again and its benefits go) and redo replays. The `level_up` entry has HP delta
+   0 and is not a roll kind (never adjusted after it).
+   Tests: `TestHitDiceFor_Step7_TheGroupsDieNameLevelAndFixedGain`,
+   `TestConstitutionFor_Step7_1_Table3`
    (ruletablesadpt, against the PHB pages); `TestDerive_Step7_PendingLevelUps`,
-   `TestDerive_Step7_4_ALevelUnderTheMaxHPsIsFlagged`,
+   `TestDerive_Step7_4_ATargetUnderTheRealizedLevelIsFlagged`,
+   `TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal` (the benefits are the realized level's),
    `TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent` (7.5) (charactersvc);
    `TestRoll_Step7_1_OneHitDieOfTheGroupPlusTheConstitutionAdjustment`,
    `TestRoll_Step7_1_WarriorsTakeTheBracketedAdjustment`, `TestRoll_Step7_1_LowDiceRaisedFromConstitution20`,
    `TestRoll_Step7_1_TheGainIsAtLeastOne`, `TestRoll_Step7_2_AFixedGainAboveTheNameLevel`,
-   `TestRoll_Step7_3_OneTransactionWithTheHitPointsSnapshot`,
+   `TestRoll_Step7_3_OneTransactionWithTheRealizedLevelSnapshot`,
    `TestRoll_Step7_3_TwoLevelsAtOnceAreTwoRollsLowestFirst`,
    `TestRoll_RefusesALevelThatIsNotTheLowestPending`, `TestRoll_TheManualEntryTakesTheDieRolledAtTheTable`,
-   `TestRestorer_WritesTheHitPointsBack` (levelupsvc);
+   `TestRestorer_WritesTheRealizedLevelBack` (levelupsvc);
+   `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP`,
    `TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain`,
    `TestLevelUp_TwoLevelsAtOnceAreTwoDiceThroughTheDicePort`,
    `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (composition);
-   `TestSetHitPoints_WritesTheMaxHPAndItsLevel` (characterdal); `TestLevelUp_*` (router);
-   `LevelUpPrompt.test.tsx`, `logSummary.test.ts` "level-up entries" (web); `web/e2e/xp.spec.ts`
-   "level up: …" and `web/e2e/layout.spec.ts` "level-up prompt: …".
+   `TestGetCharacter_MapsEveryColumn`, `TestSetRealizedLevel_WritesTheLevelAndItsMaxHP` (characterdal);
+   `TestLevelUp_*` (router); `LevelUpPrompt.test.tsx`, `logSummary.test.ts` "level-up entries"
+   (web); `web/e2e/xp.spec.ts` "level up: …" and `web/e2e/layout.spec.ts` "level-up prompt: …".
 
 ### Spells
 
-8. **Spell slot limits.** The number of slots of a spell level ([ADR 0008](0008-spell-slots-and-long-rest.md)
-   step 2) is, at the character's level: bard PHB Table 32, mage Table 21, cleric Table 24 plus the
+8. **Spell slot limits.** The number of slots of a spell level ([ADR
+   0008](0008-spell-slots-and-long-rest.md)
+   step 2) is, at the character's realized level (step 7): bard PHB Table 32, mage Table 21, cleric
+   Table 24 plus the
    Wisdom bonus spells (step 13). Fighters and thieves have none and are refused a preparation.
    Amends ADR 0008 step 2 (it named the Bard's table only). A mage prepares from his spellbook as
    the Bard does (ADR 0008 step 3); a cleric from the spheres (step 15).

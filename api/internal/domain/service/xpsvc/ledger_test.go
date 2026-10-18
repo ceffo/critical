@@ -49,7 +49,7 @@ func newFixture(t *testing.T) fixture {
 
 func (f fixture) sheet(dex, cha, level, xp int) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
-		Return(&charactersvc.Character{ID: 1, Class: "bard", Dex: dex, Cha: cha, XPTotal: xp, Derived: charactersvc.Derived{Level: level}}, nil)
+		Return(&charactersvc.Character{ID: 1, Class: "bard", Dex: dex, Cha: cha, XPTotal: xp, Derived: charactersvc.Derived{TargetLevel: level}}, nil)
 }
 
 // recorded captures the one action-log entry a write records.
@@ -101,7 +101,7 @@ func TestGet_NotEligibleBelow16(t *testing.T) {
 func TestGet_ProgressFromTheCharactersClassTable(t *testing.T) {
 	f := newFixture(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
-		Return(&charactersvc.Character{ID: 1, Class: "mage", XPTotal: 2_600, Derived: charactersvc.Derived{Level: 2}}, nil)
+		Return(&charactersvc.Character{ID: 1, Class: "mage", XPTotal: 2_600, Derived: charactersvc.Derived{TargetLevel: 2}}, nil)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 
 	got, err := f.svc.Get(context.Background(), 1)

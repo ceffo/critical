@@ -729,26 +729,26 @@ func (_c *MockQuerier_SetCurrentCharacter_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
-// SetHitPoints provides a mock function with given fields: ctx, arg
-func (_m *MockQuerier) SetHitPoints(ctx context.Context, arg queries.SetHitPointsParams) (int64, error) {
+// SetRealizedLevel provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) SetRealizedLevel(ctx context.Context, arg queries.SetRealizedLevelParams) (int64, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SetHitPoints")
+		panic("no return value specified for SetRealizedLevel")
 	}
 
 	var r0 int64
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.SetHitPointsParams) (int64, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetRealizedLevelParams) (int64, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.SetHitPointsParams) int64); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetRealizedLevelParams) int64); ok {
 		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.SetHitPointsParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, queries.SetRealizedLevelParams) error); ok {
 		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
@@ -757,31 +757,31 @@ func (_m *MockQuerier) SetHitPoints(ctx context.Context, arg queries.SetHitPoint
 	return r0, r1
 }
 
-// MockQuerier_SetHitPoints_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHitPoints'
-type MockQuerier_SetHitPoints_Call struct {
+// MockQuerier_SetRealizedLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetRealizedLevel'
+type MockQuerier_SetRealizedLevel_Call struct {
 	*mock.Call
 }
 
-// SetHitPoints is a helper method to define mock.On call
+// SetRealizedLevel is a helper method to define mock.On call
 //   - ctx context.Context
-//   - arg queries.SetHitPointsParams
-func (_e *MockQuerier_Expecter) SetHitPoints(ctx interface{}, arg interface{}) *MockQuerier_SetHitPoints_Call {
-	return &MockQuerier_SetHitPoints_Call{Call: _e.mock.On("SetHitPoints", ctx, arg)}
+//   - arg queries.SetRealizedLevelParams
+func (_e *MockQuerier_Expecter) SetRealizedLevel(ctx interface{}, arg interface{}) *MockQuerier_SetRealizedLevel_Call {
+	return &MockQuerier_SetRealizedLevel_Call{Call: _e.mock.On("SetRealizedLevel", ctx, arg)}
 }
 
-func (_c *MockQuerier_SetHitPoints_Call) Run(run func(ctx context.Context, arg queries.SetHitPointsParams)) *MockQuerier_SetHitPoints_Call {
+func (_c *MockQuerier_SetRealizedLevel_Call) Run(run func(ctx context.Context, arg queries.SetRealizedLevelParams)) *MockQuerier_SetRealizedLevel_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(queries.SetHitPointsParams))
+		run(args[0].(context.Context), args[1].(queries.SetRealizedLevelParams))
 	})
 	return _c
 }
 
-func (_c *MockQuerier_SetHitPoints_Call) Return(_a0 int64, _a1 error) *MockQuerier_SetHitPoints_Call {
+func (_c *MockQuerier_SetRealizedLevel_Call) Return(_a0 int64, _a1 error) *MockQuerier_SetRealizedLevel_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_SetHitPoints_Call) RunAndReturn(run func(context.Context, queries.SetHitPointsParams) (int64, error)) *MockQuerier_SetHitPoints_Call {
+func (_c *MockQuerier_SetRealizedLevel_Call) RunAndReturn(run func(context.Context, queries.SetRealizedLevelParams) (int64, error)) *MockQuerier_SetRealizedLevel_Call {
 	_c.Call.Return(run)
 	return _c
 }

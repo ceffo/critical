@@ -61,7 +61,7 @@ const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-    class, race_code, owner_user_id, hp_level
+    class, race_code, owner_user_id, realized_level
 ) VALUES (
     $1, $2, $3, $4, $5, $6,
     $7, $8, $9, $10, $11,
@@ -91,13 +91,13 @@ type CreateCharacterParams struct {
 	Class            string
 	RaceCode         string
 	OwnerUserID      uuid.NullUUID
-	HpLevel          sql.NullInt64
+	RealizedLevel    sql.NullInt64
 }
 
 // A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
 // sheet's level, THAC0 and saves the values the rules derive at its starting XP (ADR 0030 step
-// 24: a created character states no sheet, so it shows no difference), and its max HP set for that
-// level (step 7.5). Its details start empty.
+// 24: a created character states no sheet, so it shows no difference), realized at that level with
+// its max HP for it (step 7.5). Its details start empty.
 func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, createCharacter,
 		arg.Name,
@@ -119,7 +119,7 @@ func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams
 		arg.Class,
 		arg.RaceCode,
 		arg.OwnerUserID,
-		arg.HpLevel,
+		arg.RealizedLevel,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -165,7 +165,7 @@ const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages,
-       COALESCE(hp_level, level)::BIGINT AS hp_level
+       COALESCE(realized_level, level)::BIGINT AS realized_level
 FROM characters WHERE id = $1
 `
 
@@ -198,12 +198,13 @@ type GetCharacterRow struct {
 	Hair             string
 	Eyes             string
 	Languages        string
-	HpLevel          int64
+	RealizedLevel    int64
 }
 
 // level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
 // step 24): compared with the derived values, never read as inputs.
-// hp_level is the level the max HP was last set for (ADR 0030 step 7); NULL is the sheet's level.
+// realized_level is the level the character has taken (ADR 0030 step 7); NULL is the sheet's level
+// (step 7.5), which stays the imported figure step 24 compares.
 func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error) {
 	row := q.db.QueryRowContext(ctx, getCharacter, id)
 	var i GetCharacterRow
@@ -236,7 +237,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.Hair,
 		&i.Eyes,
 		&i.Languages,
-		&i.HpLevel,
+		&i.RealizedLevel,
 	)
 	return i, err
 }
@@ -365,20 +366,20 @@ func (q *Queries) SetCurrentCharacter(ctx context.Context, arg SetCurrentCharact
 	return result.RowsAffected()
 }
 
-const setHitPoints = `-- name: SetHitPoints :execrows
-UPDATE characters SET hp_max = $1, hp_level = $2
+const setRealizedLevel = `-- name: SetRealizedLevel :execrows
+UPDATE characters SET realized_level = $1, hp_max = $2
 WHERE id = $3
 `
 
-type SetHitPointsParams struct {
-	HpMax   int64
-	HpLevel sql.NullInt64
-	ID      int64
+type SetRealizedLevelParams struct {
+	RealizedLevel sql.NullInt64
+	HpMax         int64
+	ID            int64
 }
 
-// A level-up roll and its undo (ADR 0030 step 7.3): the max HP and the level it is set for.
-func (q *Queries) SetHitPoints(ctx context.Context, arg SetHitPointsParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, setHitPoints, arg.HpMax, arg.HpLevel, arg.ID)
+// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
+func (q *Queries) SetRealizedLevel(ctx context.Context, arg SetRealizedLevelParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setRealizedLevel, arg.RealizedLevel, arg.HpMax, arg.ID)
 	if err != nil {
 		return 0, err
 	}

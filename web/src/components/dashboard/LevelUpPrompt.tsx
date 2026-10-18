@@ -15,18 +15,22 @@ import type { LevelUp } from "@/types/character";
  * The level-up prompt of the character card (ADR 0030 step 7): the lowest level whose hit points
  * are owed, one at a time. Up to the name level the server rolls the hit die ("Lancer"), or takes
  * the die rolled at the table ("Saisir", the manual entry); above it the gain is fixed ("Ajouter").
- * Every number comes from the server; the card only words them. When an XP correction brought the
- * level under the max HP's (step 7.4), it warns instead.
+ * Every number comes from the server; the card only words them. The realized level (the one taken,
+ * whose benefits apply) moves only through this prompt; the target level is the one the XP gives.
+ * When an XP correction brought the target under the realized level (step 7.4), it warns instead.
  */
 export function LevelUpPrompt({
   levelUp,
-  level,
+  realizedLevel,
+  targetLevel,
   busy,
   onRoll,
 }: {
   levelUp: LevelUp;
+  /** The level taken (step 7), for the step 7.4 warning. */
+  realizedLevel: number;
   /** The level the XP gives (step 3), for the step 7.4 warning. */
-  level: number;
+  targetLevel: number;
   busy: boolean;
   onRoll: (level: number, die?: number) => Promise<ApiError | null>;
 }) {
@@ -37,7 +41,7 @@ export function LevelUpPrompt({
   const next = levelUp.pending[0];
 
   if (!next) {
-    if (!levelUp.hpAboveLevel) return null;
+    if (!levelUp.realizedAboveTarget) return null;
     return (
       <div
         role="status"
@@ -45,9 +49,14 @@ export function LevelUpPrompt({
         className="flex flex-col gap-0.5 rounded-md bg-raised px-2.5 py-1.5 text-body"
       >
         <p className="font-semibold text-warning">
-          {t("app.levelUp.hpAbove", { hpLevel: levelUp.hpLevel, level })}
+          {t("app.levelUp.realizedAbove", {
+            realized: realizedLevel,
+            target: targetLevel,
+          })}
         </p>
-        <p className="text-muted-foreground">{t("app.levelUp.hpAboveHint")}</p>
+        <p className="text-muted-foreground">
+          {t("app.levelUp.realizedAboveHint")}
+        </p>
       </div>
     );
   }

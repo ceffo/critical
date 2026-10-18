@@ -21,17 +21,17 @@ func (_m *MockDAL) EXPECT() *MockDAL_Expecter {
 	return &MockDAL_Expecter{mock: &_m.Mock}
 }
 
-// SetHitPoints provides a mock function with given fields: ctx, id, hpMax, hpLevel
-func (_m *MockDAL) SetHitPoints(ctx context.Context, id int64, hpMax int, hpLevel int) error {
-	ret := _m.Called(ctx, id, hpMax, hpLevel)
+// SetRealizedLevel provides a mock function with given fields: ctx, id, realizedLevel, hpMax
+func (_m *MockDAL) SetRealizedLevel(ctx context.Context, id int64, realizedLevel int, hpMax int) error {
+	ret := _m.Called(ctx, id, realizedLevel, hpMax)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SetHitPoints")
+		panic("no return value specified for SetRealizedLevel")
 	}
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, int64, int, int) error); ok {
-		r0 = rf(ctx, id, hpMax, hpLevel)
+		r0 = rf(ctx, id, realizedLevel, hpMax)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -39,33 +39,33 @@ func (_m *MockDAL) SetHitPoints(ctx context.Context, id int64, hpMax int, hpLeve
 	return r0
 }
 
-// MockDAL_SetHitPoints_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHitPoints'
-type MockDAL_SetHitPoints_Call struct {
+// MockDAL_SetRealizedLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetRealizedLevel'
+type MockDAL_SetRealizedLevel_Call struct {
 	*mock.Call
 }
 
-// SetHitPoints is a helper method to define mock.On call
+// SetRealizedLevel is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id int64
+//   - realizedLevel int
 //   - hpMax int
-//   - hpLevel int
-func (_e *MockDAL_Expecter) SetHitPoints(ctx interface{}, id interface{}, hpMax interface{}, hpLevel interface{}) *MockDAL_SetHitPoints_Call {
-	return &MockDAL_SetHitPoints_Call{Call: _e.mock.On("SetHitPoints", ctx, id, hpMax, hpLevel)}
+func (_e *MockDAL_Expecter) SetRealizedLevel(ctx interface{}, id interface{}, realizedLevel interface{}, hpMax interface{}) *MockDAL_SetRealizedLevel_Call {
+	return &MockDAL_SetRealizedLevel_Call{Call: _e.mock.On("SetRealizedLevel", ctx, id, realizedLevel, hpMax)}
 }
 
-func (_c *MockDAL_SetHitPoints_Call) Run(run func(ctx context.Context, id int64, hpMax int, hpLevel int)) *MockDAL_SetHitPoints_Call {
+func (_c *MockDAL_SetRealizedLevel_Call) Run(run func(ctx context.Context, id int64, realizedLevel int, hpMax int)) *MockDAL_SetRealizedLevel_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(int64), args[2].(int), args[3].(int))
 	})
 	return _c
 }
 
-func (_c *MockDAL_SetHitPoints_Call) Return(_a0 error) *MockDAL_SetHitPoints_Call {
+func (_c *MockDAL_SetRealizedLevel_Call) Return(_a0 error) *MockDAL_SetRealizedLevel_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockDAL_SetHitPoints_Call) RunAndReturn(run func(context.Context, int64, int, int) error) *MockDAL_SetHitPoints_Call {
+func (_c *MockDAL_SetRealizedLevel_Call) RunAndReturn(run func(context.Context, int64, int, int) error) *MockDAL_SetRealizedLevel_Call {
 	_c.Call.Return(run)
 	return _c
 }

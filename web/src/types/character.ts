@@ -33,13 +33,12 @@ export interface PendingLevel {
   fixedGain: number;
 }
 
-/** ADR 0030 step 7: the level the max HP was last set for and the levels still to roll. */
+/** ADR 0030 step 7: the levels from the realized level up to the target, still to take. */
 export interface LevelUp {
-  hpLevel: number;
   /** Lowest first: the prompt offers the first one. */
   pending: PendingLevel[];
-  /** Step 7.4: an XP correction brought the level under `hpLevel` (the card warns). */
-  hpAboveLevel: boolean;
+  /** Step 7.4: an XP correction brought the target level under the realized one (the card warns). */
+  realizedAboveTarget: boolean;
 }
 
 /**
@@ -69,8 +68,11 @@ export interface LevelUpResult extends LevelUpRecord {
 export interface Derived {
   /** The starting XP plus the ledger. */
   xpTotal: number;
-  level: number;
-  /** The XP that reaches the next level; null at the last level. */
+  /** Step 3: the level the XP gives; never stored, it only drives the level-up prompt (step 7). */
+  targetLevel: number;
+  /** Step 7: the level taken, which THAC0, saves and slots (below) follow. */
+  realizedLevel: number;
+  /** The XP that reaches the target's next level; null at the last level. */
   nextLevelXp: number | null;
   thac0: number;
   /** The save targets. */

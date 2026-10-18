@@ -224,6 +224,12 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
     "Level 2 reached",
   );
 
+  // The card shows the realized level: the XP gives 3, nothing is taken yet.
+  const cardLevel = page
+    .getByRole("complementary", { name: "Character" })
+    .getByRole("button", { name: /^Level \d+$/ });
+  await expect(cardLevel).toHaveText("Level 1");
+
   // 3 damage first: 3 / 6.
   await recordHp(page, "damage", 3, "e2e rat");
   await expect.poll(() => hp(page)).toEqual([3, 6]);
@@ -235,6 +241,7 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
   await expect(prompt.getByTestId("level-up-title")).toHaveText(
     "Level 3 reached",
   );
+  await expect(cardLevel).toHaveText("Level 2");
   const [, rolledMax] = await hp(page);
   const gain = rolledMax - 6;
   expect(gain).toBeGreaterThanOrEqual(1);
@@ -252,6 +259,7 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
   await expect(prompt.getByTestId("level-up-title")).toHaveText(
     "Level 2 reached",
   );
+  await expect(cardLevel).toHaveText("Level 1");
   await page.getByTestId("redo").click();
   await expect.poll(() => hp(page)).toEqual([3 + gain, 6 + gain]);
   await expect(prompt.getByTestId("level-up-title")).toHaveText(
@@ -299,7 +307,7 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
   await chooseLanguage(page, "fr");
   await expect(page.getByTestId("level-up")).toHaveCount(0);
   await expect(page.getByTestId("level-up-warning")).toContainText(
-    "PV max lancés pour le niveau 2, l'XP donne le niveau 1",
+    "Niveau 2 acquis, l'XP donne le niveau 1",
   );
   await expect.poll(() => hp(page)).toEqual([7, 10]);
   await snap(page, "level-up-warning-fr");

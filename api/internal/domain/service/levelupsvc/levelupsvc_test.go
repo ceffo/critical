@@ -28,7 +28,7 @@ import (
 // and no Constitution bonus." Step 7.3: "Recorded as one transaction: a
 // level_up entry with the level reached, the die and its raised value (or
 // none), the Constitution adjustment and the gain; the max HP rises by the
-// gain and hp_level by 1, snapshotted for undo. [...] Several pending levels
+// gain and the realized level by 1, snapshotted for undo. [...] Several pending levels
 // are rolled one by one, lowest first."
 
 // recordingTx runs the unit of work directly and counts the transactions.
@@ -65,12 +65,12 @@ func newFixture(t *testing.T) fixture {
 
 const charID = int64(4)
 
-// character is a class's character whose max HP (hpMax) is set for hpLevel,
-// owing pending.
-func character(class string, con, hpMax, hpLevel int, pending ...charactersvc.PendingLevel) *charactersvc.Character {
+// character is a class's character realized at realizedLevel with max HP
+// hpMax, owing pending.
+func character(class string, con, hpMax, realizedLevel int, pending ...charactersvc.PendingLevel) *charactersvc.Character {
 	return &charactersvc.Character{
-		ID: charID, Class: class, Con: con, HPMax: hpMax, HPLevel: hpLevel,
-		Derived: charactersvc.Derived{LevelUp: charactersvc.LevelUp{HPLevel: hpLevel, Pending: pending}},
+		ID: charID, Class: class, Con: con, HPMax: hpMax, RealizedLevel: realizedLevel,
+		Derived: charactersvc.Derived{RealizedLevel: realizedLevel, LevelUp: charactersvc.LevelUp{Pending: pending}},
 	}
 }
 
@@ -109,7 +109,7 @@ func TestRoll_Step7_1_OneHitDieOfTheGroupPlusTheConstitutionAdjustment(t *testin
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", 16, 40, 8, d6(9)), nil).Once()
 	f.dice.EXPECT().RollDie(6).Return(4).Once()
 	f.rules.EXPECT().ConstitutionFor(16).Return(con(2, 2, 0), nil).Once()
-	f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 46, 9).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 9, 46).Return(nil).Once()
 	f.recorded()
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 9})
@@ -137,7 +137,7 @@ func TestRoll_Step7_1_WarriorsTakeTheBracketedAdjustment(t *testing.T) {
 			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character(tc.class, 18, 20, 2, tc.pending), nil).Once()
 			f.dice.EXPECT().RollDie(tc.die).Return(5).Once()
 			f.rules.EXPECT().ConstitutionFor(18).Return(con(2, 4, 0), nil).Once()
-			f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 20+5+tc.adj, 3).Return(nil).Once()
+			f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 3, 20+5+tc.adj).Return(nil).Once()
 			f.recorded()
 
 			got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 3})
@@ -169,7 +169,7 @@ func TestRoll_Step7_1_LowDiceRaisedFromConstitution20(t *testing.T) {
 			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", tc.con, 30, 4, d6(5)), nil).Once()
 			f.dice.EXPECT().RollDie(6).Return(tc.rolled).Once()
 			f.rules.EXPECT().ConstitutionFor(tc.con).Return(con(2, 6, tc.floor), nil).Once()
-			f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 30+tc.counted+2, 5).Return(nil).Once()
+			f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 5, 30+tc.counted+2).Return(nil).Once()
 			f.recorded()
 
 			got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 5})
@@ -188,7 +188,7 @@ func TestRoll_Step7_1_TheGainIsAtLeastOne(t *testing.T) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", 3, 10, 2, d6(3)), nil).Once()
 	f.dice.EXPECT().RollDie(6).Return(1).Once()
 	f.rules.EXPECT().ConstitutionFor(3).Return(con(-2, -2, 0), nil).Once()
-	f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 11, 3).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 3, 11).Return(nil).Once()
 	f.recorded()
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 3})
@@ -203,7 +203,7 @@ func TestRoll_Step7_2_AFixedGainAboveTheNameLevel(t *testing.T) {
 	f := newFixture(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).
 		Return(character("bard", 18, 85, 15, charactersvc.PendingLevel{Level: 16, FixedGain: 2}), nil).Once()
-	f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 87, 16).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 16, 87).Return(nil).Once()
 	f.recorded()
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 16})
@@ -214,15 +214,15 @@ func TestRoll_Step7_2_AFixedGainAboveTheNameLevel(t *testing.T) {
 }
 
 // Step 7.3: one transaction, one level_up entry whose payload is the
-// breakdown and whose "hit_points" snapshot holds the max HP and its level
-// before and after; no HP delta (current HP is the max HP plus the ledger,
+// breakdown and whose "realized_level" snapshot holds the realized level and
+// its max HP before and after; no HP delta (current HP is the max HP plus the ledger,
 // so it rises with the max HP and the damage taken is kept).
-func TestRoll_Step7_3_OneTransactionWithTheHitPointsSnapshot(t *testing.T) {
+func TestRoll_Step7_3_OneTransactionWithTheRealizedLevelSnapshot(t *testing.T) {
 	f := newFixture(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", 16, 40, 8, d6(9), d6(10)), nil).Once()
 	f.dice.EXPECT().RollDie(6).Return(3).Once()
 	f.rules.EXPECT().ConstitutionFor(16).Return(con(2, 2, 0), nil).Once()
-	f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 45, 9).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 9, 45).Return(nil).Once()
 	rec := f.recorded()
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 9})
@@ -239,8 +239,8 @@ func TestRoll_Step7_3_OneTransactionWithTheHitPointsSnapshot(t *testing.T) {
 		"fixed":false,"manual":false,"hpMaxBefore":40,"hpMaxAfter":45}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, levelupsvc.StateKey, e.Snapshots[0].Key)
-	assert.JSONEq(t, `{"hpMax":40,"hpLevel":8}`, string(e.Snapshots[0].Before))
-	assert.JSONEq(t, `{"hpMax":45,"hpLevel":9}`, string(e.Snapshots[0].After))
+	assert.JSONEq(t, `{"realizedLevel":8,"hpMax":40}`, string(e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"realizedLevel":9,"hpMax":45}`, string(e.Snapshots[0].After))
 }
 
 // Step 7.3: two levels gained at once are two rolls, one per request, lowest
@@ -254,8 +254,8 @@ func TestRoll_Step7_3_TwoLevelsAtOnceAreTwoRollsLowestFirst(t *testing.T) {
 	f.dice.EXPECT().RollDie(6).Return(3).Once()
 	f.dice.EXPECT().RollDie(6).Return(5).Once()
 	f.rules.EXPECT().ConstitutionFor(16).Return(con(2, 2, 0), nil).Twice()
-	f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 45, 9).Return(nil).Once()
-	f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 52, 10).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 9, 45).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 10, 52).Return(nil).Once()
 	rec := f.recorded()
 
 	first, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 9})
@@ -303,7 +303,7 @@ func TestRoll_TheManualEntryTakesTheDieRolledAtTheTable(t *testing.T) {
 		f := newFixture(t)
 		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", 16, 40, 8, d6(9)), nil).Once()
 		f.rules.EXPECT().ConstitutionFor(16).Return(con(2, 2, 0), nil).Once()
-		f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 48, 9).Return(nil).Once()
+		f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 9, 48).Return(nil).Once()
 		rec := f.recorded()
 
 		got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 9, Die: intp(6)})
@@ -337,14 +337,14 @@ func TestRoll_TheManualEntryTakesTheDieRolledAtTheTable(t *testing.T) {
 	}
 }
 
-// Undo (and redo) write a hit points snapshot back: the max HP and its level,
-// so a popped roll's level is pending again. A broken snapshot is an error.
-func TestRestorer_WritesTheHitPointsBack(t *testing.T) {
+// Undo (and redo) write a realized level snapshot back: the level and its max
+// HP, so a popped roll's level is pending again. A broken snapshot is an error.
+func TestRestorer_WritesTheRealizedLevelBack(t *testing.T) {
 	f := newFixture(t)
 	r := f.svc.Restorers()[levelupsvc.StateKey]
 	require.NotNil(t, r)
-	f.dal.EXPECT().SetHitPoints(mock.Anything, charID, 40, 8).Return(nil).Once()
-	require.NoError(t, r.Restore(context.Background(), charID, json.RawMessage(`{"hpMax":40,"hpLevel":8}`)))
-	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`{"hpMax":0,"hpLevel":8}`)))
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 8, 40).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, json.RawMessage(`{"realizedLevel":8,"hpMax":40}`)))
+	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`{"realizedLevel":8,"hpMax":0}`)))
 	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`nope`)))
 }

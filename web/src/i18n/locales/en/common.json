@@ -37,8 +37,8 @@
       "cancel": "Close",
       "more_one": "+{{count}} more level to roll next",
       "more_other": "+{{count}} more levels to roll next",
-      "hpAbove": "Max HP rolled for level {{hpLevel}}, XP gives level {{level}}",
-      "hpAboveHint": "Undo the roll or correct the XP.",
+      "realizedAbove": "Level {{realized}} taken, XP gives level {{target}}",
+      "realizedAboveHint": "Undo the roll or correct the XP.",
       "dieErrors": {
         "out_of_range": "Enter a die from 1 to {{die}}.",
         "fixed_gain": "This level has a fixed gain, no die."

@@ -1,10 +1,10 @@
-// Package levelupsvc owns the level-up roll (ADR 0030 step 7): when the
-// level a character's XP gives is above the level its max HP was last set
-// for, each pending level's hit points are rolled on the server (or entered
-// from the die the player rolled at the table), lowest level first, one
-// request each. A roll raises the max HP by its gain and the max HP's level
-// by 1, in one action-log transaction whose snapshot the journal's Undo
-// writes back (ADR 0018).
+// Package levelupsvc owns the level-up step (ADR 0030 step 7): when the
+// target level a character's XP gives is above its realized level, each
+// pending level is taken by rolling its hit points on the server (or
+// entering the die the player rolled at the table), lowest level first, one
+// request each. A roll raises the max HP by its gain and the realized level
+// by 1 (so the level's THAC0, saves and slots apply), in one action-log
+// transaction whose snapshot the journal's Undo writes back (ADR 0018).
 package levelupsvc
 
 import (
@@ -32,9 +32,9 @@ const (
 	CodeFixedGain = "fixed_gain"
 )
 
-// StateKey is the action-log state key of a character's hit points: the max
-// HP and the level it is set for.
-const StateKey = "hit_points"
+// StateKey is the action-log state key of a character's realized level and
+// the max HP that goes with it.
+const StateKey = "realized_level"
 
 // SVC is the driver port.
 type SVC interface {
@@ -44,7 +44,7 @@ type SVC interface {
 	// *domain.FieldError on "die" for an entered die that is out of range or
 	// not wanted (a fixed gain).
 	Roll(ctx context.Context, characterID int64, in RollInput) (*Result, error)
-	// Restorers writes the hit points back when a roll's entry is popped (and
+	// Restorers writes the realized level and max HP back when a roll's entry is popped (and
 	// again when it is redone), keyed by StateKey.
 	Restorers() map[string]actionlog.Restorer
 }
@@ -85,11 +85,11 @@ type Result struct {
 	Pending []charactersvc.PendingLevel
 }
 
-// DAL writes a character's hit points. It joins the ctx transaction.
+// DAL writes a character's realized level. It joins the ctx transaction.
 type DAL interface {
-	// SetHitPoints sets the max HP and the level it is set for;
-	// domain.ErrCharacterNotFound for an unknown character.
-	SetHitPoints(ctx context.Context, id int64, hpMax, hpLevel int) error
+	// SetRealizedLevel sets the realized level and the max HP that goes
+	// with it; domain.ErrCharacterNotFound for an unknown character.
+	SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpMax int) error
 }
 
 // Characters reads the character with its derived block (the pending
@@ -162,9 +162,9 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 		}
 		res.Pending = pending[1:]
 		res.HPMaxBefore, res.HPMaxAfter = c.HPMax, c.HPMax+res.Gain
-		before := hitPoints{HPMax: c.HPMax, HPLevel: c.Derived.LevelUp.HPLevel}
-		after := hitPoints{HPMax: res.HPMaxAfter, HPLevel: res.Level}
-		if err := s.dal.SetHitPoints(ctx, characterID, after.HPMax, after.HPLevel); err != nil {
+		before := realized{RealizedLevel: c.Derived.RealizedLevel, HPMax: c.HPMax}
+		after := realized{RealizedLevel: res.Level, HPMax: res.HPMaxAfter}
+		if err := s.dal.SetRealizedLevel(ctx, characterID, after.RealizedLevel, after.HPMax); err != nil {
 			return err
 		}
 		return s.record(ctx, characterID, *res, before, after)

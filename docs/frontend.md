@@ -408,7 +408,9 @@ flowchart TD
   the fixed gain, how many more levels follow, and one-word buttons: Roll (the server rolls the
   die) and Enter (the die rolled at the table, an inline number field), or Add for a fixed gain;
   `POST /api/character/levelup/roll` with the level shown, then the table refresh re-reads the
-  character; a level under the max HP's (`hpAboveLevel`) is a warning instead); "HIT POINTS"
+  character; a target level under the realized one (`realizedAboveTarget`) is a warning instead;
+  the card's level is `derived.realizedLevel`, the level taken, whose THAC0, saves and slots
+  apply; the XP card shows the target level the XP gives); "HIT POINTS"
   with the newest HP change still in force on the right (a long one drops under the label and
   wraps, never cut), current over max, and the bar (`lib/hpBar.ts` `hpBarModel`): the scale runs
   from the server's `floor` (-10) to max, a hatched dying zone (`hatch-danger`) below 0 filled from

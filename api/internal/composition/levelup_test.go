@@ -79,7 +79,7 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	require.NoError(t, err)
 	owed := []charactersvc.PendingLevel{{Level: 16, FixedGain: 2}, {Level: 17, FixedGain: 2}}
 	lu, maxHP, current := levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{HPLevel: 15, Pending: owed}, lu)
+	assert.Equal(t, charactersvc.LevelUp{Pending: owed}, lu)
 	assert.Equal(t, 85, maxHP)
 	assert.Equal(t, 75, current)
 
@@ -88,7 +88,7 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	assert.Equal(t, 2, got.Gain)
 	assert.True(t, got.Fixed)
 	lu, maxHP, current = levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{HPLevel: 16, Pending: owed[1:]}, lu)
+	assert.Equal(t, charactersvc.LevelUp{Pending: owed[1:]}, lu)
 	assert.Equal(t, 87, maxHP)
 	assert.Equal(t, 77, current, "the damage taken is kept")
 	entries, err := bs.Log.List(ctx, id, 1)
@@ -97,7 +97,7 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 
 	undoTop(t, bs, id)
 	lu, maxHP, current = levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{HPLevel: 15, Pending: owed}, lu, "the level-up is pending again")
+	assert.Equal(t, charactersvc.LevelUp{Pending: owed}, lu, "the level-up is pending again")
 	assert.Equal(t, 85, maxHP)
 	assert.Equal(t, 75, current)
 
@@ -106,7 +106,7 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	_, err = bs.Log.Redo(ctx, id, redo.ID)
 	require.NoError(t, err)
 	lu, maxHP, _ = levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{HPLevel: 16, Pending: owed[1:]}, lu)
+	assert.Equal(t, charactersvc.LevelUp{Pending: owed[1:]}, lu)
 	assert.Equal(t, 87, maxHP)
 
 	// Undoing the roll, then the award: the level and the max HP are back
@@ -114,7 +114,7 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	undoTop(t, bs, id)
 	undoTop(t, bs, id)
 	lu, maxHP, _ = levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{HPLevel: 15, Pending: []charactersvc.PendingLevel{}}, lu)
+	assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}}, lu)
 	assert.Equal(t, 85, maxHP)
 }
 
@@ -138,7 +138,7 @@ func TestLevelUp_TwoLevelsAtOnceAreTwoDiceThroughTheDicePort(t *testing.T) {
 	})
 	require.NoError(t, err)
 	lu, _, _ := levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{HPLevel: 1, Pending: []charactersvc.PendingLevel{}}, lu)
+	assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}}, lu)
 
 	_, err = bs.XP.Add(ctx, id, xpsvc.EntryInput{Base: 2_500})
 	require.NoError(t, err)

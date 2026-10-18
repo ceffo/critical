@@ -55,7 +55,7 @@ func TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent(t *tes
 	expectLevel1Bard(e)
 	want := charactersvc.Character{
 		Name: "Lyra", Class: "bard", Race: "half_elf",
-		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, HPLevel: 1, XPTotal: 0,
+		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 1, XPTotal: 0,
 		Sheet:   charactersvc.Sheet{Level: 1, THAC0: 20, Saves: rogue1to4Saves},
 		Details: charactersvc.Details{Languages: []string{}},
 	}

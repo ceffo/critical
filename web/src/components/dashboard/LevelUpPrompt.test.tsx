@@ -6,7 +6,12 @@ import { resources } from "@/i18n";
 import type { LevelUp } from "@/types/character";
 import { LevelUpPrompt } from "./LevelUpPrompt";
 
-async function render(levelUp: LevelUp, lng: string, level = 15) {
+async function render(
+  levelUp: LevelUp,
+  lng: string,
+  realizedLevel = 15,
+  targetLevel = 15,
+) {
   const inst = i18next.createInstance();
   await inst.init({
     lng,
@@ -19,7 +24,8 @@ async function render(levelUp: LevelUp, lng: string, level = 15) {
     <I18nextProvider i18n={inst}>
       <LevelUpPrompt
         levelUp={levelUp}
-        level={level}
+        realizedLevel={realizedLevel}
+        targetLevel={targetLevel}
         busy={false}
         onRoll={() => Promise.resolve(null)}
       />
@@ -32,31 +38,29 @@ async function render(levelUp: LevelUp, lng: string, level = 15) {
 describe("LevelUpPrompt (ADR 0030 step 7)", () => {
   it("prompts for the lowest pending level's hit die", async () => {
     const lu: LevelUp = {
-      hpLevel: 8,
       pending: [
         { level: 9, die: 6, fixedGain: 0 },
         { level: 10, die: 6, fixedGain: 0 },
       ],
-      hpAboveLevel: false,
+      realizedAboveTarget: false,
     };
-    const fr = await render(lu, "fr", 10);
+    const fr = await render(lu, "fr", 8, 10);
     expect(fr).toContain("Niveau 9 atteint");
     expect(fr).toContain("Dé de vie d6, plus l&#x27;ajustement de CON");
     expect(fr).toContain(">Lancer<");
     expect(fr).toContain(">Saisir<");
     expect(fr).toContain("+1 autre niveau à lancer ensuite");
-    const en = await render(lu, "en", 10);
+    const en = await render(lu, "en", 8, 10);
     expect(en).toContain("Level 9 reached");
     expect(en).toContain(">Roll<");
   });
 
   it("offers the fixed gain above the name level, with no die to enter", async () => {
     const lu: LevelUp = {
-      hpLevel: 15,
       pending: [{ level: 16, die: 0, fixedGain: 2 }],
-      hpAboveLevel: false,
+      realizedAboveTarget: false,
     };
-    const fr = await render(lu, "fr", 16);
+    const fr = await render(lu, "fr", 15, 16);
     expect(fr).toContain("Niveau 16 atteint");
     expect(fr).toContain("Au-delà du niveau de nom : +2 PV max, sans dé");
     expect(fr).toContain(">Ajouter<");
@@ -66,17 +70,17 @@ describe("LevelUpPrompt (ADR 0030 step 7)", () => {
 
   it("shows nothing when no level is owed", async () => {
     expect(
-      await render({ hpLevel: 15, pending: [], hpAboveLevel: false }, "fr"),
+      await render({ pending: [], realizedAboveTarget: false }, "fr"),
     ).toBe("");
   });
 
-  it("warns when the XP gives a level under the max HP's (step 7.4)", async () => {
-    const lu: LevelUp = { hpLevel: 16, pending: [], hpAboveLevel: true };
-    expect(await render(lu, "fr")).toContain(
-      "PV max lancés pour le niveau 16, l&#x27;XP donne le niveau 15",
+  it("warns when the XP gives a level under the realized one (step 7.4)", async () => {
+    const lu: LevelUp = { pending: [], realizedAboveTarget: true };
+    expect(await render(lu, "fr", 16, 15)).toContain(
+      "Niveau 16 acquis, l&#x27;XP donne le niveau 15",
     );
-    expect(await render(lu, "en")).toContain(
-      "Max HP rolled for level 16, XP gives level 15",
+    expect(await render(lu, "en", 16, 15)).toContain(
+      "Level 16 taken, XP gives level 15",
     );
   });
 });

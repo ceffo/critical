@@ -37,8 +37,8 @@
       "cancel": "Fermer",
       "more_one": "+{{count}} autre niveau à lancer ensuite",
       "more_other": "+{{count}} autres niveaux à lancer ensuite",
-      "hpAbove": "PV max lancés pour le niveau {{hpLevel}}, l'XP donne le niveau {{level}}",
-      "hpAboveHint": "Annulez le jet ou corrigez l'XP.",
+      "realizedAbove": "Niveau {{realized}} acquis, l'XP donne le niveau {{target}}",
+      "realizedAboveHint": "Annulez le jet ou corrigez l'XP.",
       "dieErrors": {
         "out_of_range": "Saisissez un dé de 1 à {{die}}.",
         "fixed_gain": "Ce niveau a un gain fixe, sans dé."

@@ -3,8 +3,8 @@
 // +10 percent prime-requisite bonus and the progress towards the next level
 // from PHB Table 25. Every add, edit and delete is one action-log
 // transaction with the entry's snapshot, so the journal's Undo pops it (ADR
-// 0015 step 4, ADR 0018 scope). Levelling up is not modelled, the level stays
-// the sheet's.
+// 0015 step 4, ADR 0018 scope). The level is derived from the total (ADR 0030
+// step 3); the hit points a new level owes are levelupsvc's (step 7).
 package xpsvc
 
 import (

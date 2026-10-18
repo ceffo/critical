@@ -5,7 +5,9 @@ user on 2026-10-17, so each stated default is decided). Steps or parts marked _(
 details this ADR adds beyond the triage and the answers; they await the user's OK in review.
 Implemented 2026-10-18: steps 2, 3, 5 and 6, step 8 for the bard and the mage, step 22.1 for the
 Rod/Staff/Wand and Spells saves, step 24 for the level, THAC0 and saves, and the race code of step 1
-(each with its "Tests:" line); the rest is not implemented. Amends [ADR 0002](0002-attack-resolution.md) step 2, [ADR 0004](0004-buffs.md) steps 7
+(each with its "Tests:" line); step 7 (the level-up roll) implemented 2026-10-18, its proposals
+(7.1's gain of at least 1, 7.3's current HP, 7.4) as built and described there; the rest is not
+implemented. Amends [ADR 0002](0002-attack-resolution.md) step 2, [ADR 0004](0004-buffs.md) steps 7
 to 10 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR 0008](0008-spell-slots-and-long-rest.md)
 steps 2 and 3, [ADR 0014](0014-skill-checks.md) step 3 and [ADR 0015](0015-experience.md) steps 2
 and 3, each from its implementation.
@@ -201,6 +203,44 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
       the XP comes back. Level drain stays out of scope.
    5. The max HP entered for an imported or new character is the max HP at its current level:
       `hp_level` starts at the level of step 3. Level 1 hit points are entered, never rolled here.
+   _(As built, 2026-10-18)_ `characters.hp_level` is a nullable column (migration 008, additive, no
+   data step): NULL is the character's stored sheet `level`, the level its entered max HP is for
+   (step 7.5: Kelsen's sheet level; a character created in the app stores the level its starting XP
+   gives, and its `hp_level` too). The derived block's `levelUp` carries `hpLevel`, the `pending`
+   levels lowest first, each with the group's die up to the name level or the fixed gain after it
+   (`die` or `fixedGain`), and `hpAboveLevel` (step 7.4: the card warns, nothing is removed).
+   `POST /api/character/levelup/roll {level, die?}` rolls one level: `level` must be the lowest
+   pending one, else 409 `level_up_not_pending` and nothing is rolled (a stale page or a double
+   click cannot roll a level twice; the check and the write are one transaction). `die` is the
+   manual entry, the die rolled at the table (1 to the die's sides, field `die`, code
+   `out_of_range`; refused with `fixed_gain` above the name level); the server applies the rest of
+   step 7.1 to it. Table 3's plain column already holds the non-warrior value (at most +2), the
+   bracketed one is `hp_warrior`. The gain is at least 1 (7.1's proposal, as built). The answer is
+   the full breakdown (`level`, `hitDie`, `rolled`, `counted`, `conAdjustment`, `gain`, `fixed`,
+   `manual`, `hpMaxBefore`, `hpMaxAfter`, `pending`); the `level_up` entry's payload is the same
+   without `pending`, worded by the web (en, fr), and its `hit_points` snapshot holds `hpMax` and
+   `hpLevel`, which undo writes back (the level is pending again) and redo replays. 7.3's proposal
+   is settled without an extra HP entry: current HP is `hp_max` plus the ledger's SUM
+   ([ADR 0007](0007-hp-ledger.md) step 2), so raising `hp_max` raises current HP by the gain and
+   keeps the damage taken; a +gain HP entry on top would count it twice (and the heal cap would
+   clip it). The `level_up` entry has HP delta 0 and is not a roll kind (never adjusted after it).
+   Tests: `TestHitDiceFor_Step7_TheGroupsDieNameLevelAndFixedGain`, `TestConstitutionFor_Step7_1_Table3`
+   (ruletablesadpt, against the PHB pages); `TestDerive_Step7_PendingLevelUps`,
+   `TestDerive_Step7_4_ALevelUnderTheMaxHPsIsFlagged`,
+   `TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent` (7.5) (charactersvc);
+   `TestRoll_Step7_1_OneHitDieOfTheGroupPlusTheConstitutionAdjustment`,
+   `TestRoll_Step7_1_WarriorsTakeTheBracketedAdjustment`, `TestRoll_Step7_1_LowDiceRaisedFromConstitution20`,
+   `TestRoll_Step7_1_TheGainIsAtLeastOne`, `TestRoll_Step7_2_AFixedGainAboveTheNameLevel`,
+   `TestRoll_Step7_3_OneTransactionWithTheHitPointsSnapshot`,
+   `TestRoll_Step7_3_TwoLevelsAtOnceAreTwoRollsLowestFirst`,
+   `TestRoll_RefusesALevelThatIsNotTheLowestPending`, `TestRoll_TheManualEntryTakesTheDieRolledAtTheTable`,
+   `TestRestorer_WritesTheHitPointsBack` (levelupsvc);
+   `TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain`,
+   `TestLevelUp_TwoLevelsAtOnceAreTwoDiceThroughTheDicePort`,
+   `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (composition);
+   `TestSetHitPoints_WritesTheMaxHPAndItsLevel` (characterdal); `TestLevelUp_*` (router);
+   `LevelUpPrompt.test.tsx`, `logSummary.test.ts` "level-up entries" (web); `web/e2e/xp.spec.ts`
+   "level up: …" and `web/e2e/layout.spec.ts` "level-up prompt: …".
 
 ### Spells
 

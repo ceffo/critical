@@ -57,7 +57,7 @@ flowchart TD
   end
   subgraph B["Below the header: character card clamp(280px, 21vw, 384px) | rail 68 px | stage 1fr"]
     subgraph C["Character card (aside 'Character'), scrolls on its own"]
-      ID["Identity: name (text-key) with the class under it, level right-aligned on the name line; abilities, THAC0"]
+      ID["Identity: name (text-key) with the class under it, level right-aligned on the name line; abilities, THAC0; the level-up prompt when one is owed"]
       HP["HpBar: HIT POINTS"]
       QH["QuickHp: HP CHANGE, amount (aria-label only), Damage / Healing on one line"]
       CC["ChargeCards"]
@@ -403,7 +403,12 @@ flowchart TD
 - Character card (`Identity`, `HpBar`, `QuickHp`, `ChargeCards`, `Saves` in `components/dashboard/`,
   ADR 0022 step 2.3, ADR 0027 step 5), `clamp(280px, 21vw, 384px)` wide, beside every activity, in this order, grouped by spacing and section labels
   (no rules): identity (name, level, abilities in seven cells, effective STR with the sheet value
-  in a tooltip when buffed, THAC0); "HIT POINTS"
+  in a tooltip when buffed, THAC0; then, only while the server's `derived.levelUp.pending` is not
+  empty, the level-up prompt `LevelUpPrompt` (ADR 0030 step 7): "Level N reached", the hit die or
+  the fixed gain, how many more levels follow, and one-word buttons: Roll (the server rolls the
+  die) and Enter (the die rolled at the table, an inline number field), or Add for a fixed gain;
+  `POST /api/character/levelup/roll` with the level shown, then the table refresh re-reads the
+  character; a level under the max HP's (`hpAboveLevel`) is a warning instead); "HIT POINTS"
   with the newest HP change still in force on the right (a long one drops under the label and
   wraps, never cut), current over max, and the bar (`lib/hpBar.ts` `hpBarModel`): the scale runs
   from the server's `floor` (-10) to max, a hatched dying zone (`hatch-danger`) below 0 filled from

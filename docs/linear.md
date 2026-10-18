@@ -17,7 +17,7 @@ the import reads the same file; change the mapping there, never in a copy.
 | chore / docs / question | labels of those names |
 | task | no label |
 
-Team `CRI`; project "critical" belongs to it. Process labels: `epic`, `needs-info`, `risky`, `deferred`,
+Team `CRI`; project "critical-app" belongs to it. Process labels: `epic`, `needs-info`, `risky`, `deferred`,
 `chore`, `docs`, `question`, plus the area labels still in use (`mvp-saturday`, `backend`, `frontend`, `infra`,
 `data-prep`, `tooling`). The built-in workflow states are enough; none is created.
 

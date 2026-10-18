@@ -1,7 +1,7 @@
 {
   "_comment": "The one place the beads -> Linear mapping is written. Read by scripts/linear-configure.sh (the workspace shape) and by the import and the agents' scripts; described in docs/linear.md. Change it here only.",
   "team": "CRI",
-  "project": "critical",
+  "project": "critical-app",
   "priority": {
     "P0": {"name": "Urgent", "linear": 1},
     "P1": {"name": "High", "linear": 2},

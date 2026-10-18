@@ -36,15 +36,16 @@ rel_head=$(jq -r --arg s "$head_sha" '[.[]|select(.workflowName=="Release" and .
 [ -z "$ci_head" ] && [ -n "$head_sha" ] && ! jq -e --arg s "$head_sha" 'any(.[];.workflowName=="CI" and .headSha==$s)' <<<"$runs" >/dev/null \
   && flag PENDING "ci-$head_sha" "main CI for ${head_sha:0:7} not started yet"
 
-prs=$(gh pr list --state open --json number,headRefOid,statusCheckRollup 2>&1) \
+prs=$(gh pr list --state open --json number,headRefOid,author,statusCheckRollup 2>&1) \
   || { echo "ERROR gh pr list: $(head -c 200 <<<"$prs")"; exit 20; }
 while IFS= read -r p; do
   [ -n "$p" ] || continue
   n=$(jq -r .number <<<"$p"); sha=$(jq -r '.headRefOid[0:7]' <<<"$p")
+  who=""; [ "$(jq -r .author.login <<<"$p")" = app/dependabot ] && who=" (dependabot)"
   np=$(jq '[.statusCheckRollup[]|select((.status // "COMPLETED")!="COMPLETED")]|length' <<<"$p")
   bad=$(jq -r '[.statusCheckRollup[]|select((.status // "COMPLETED")=="COMPLETED")|select(((.conclusion // .state)|IN("SUCCESS","SKIPPED","NEUTRAL","CANCELLED"))|not)|.name // .context]|join(",")' <<<"$p")
-  [ -n "$bad" ] && flag RED "pr$n@$sha" "PR #$n @$sha failing: $bad"
-  [ "$np" -gt 0 ] && [ -z "$bad" ] && flag PENDING "pr$n" "PR #$n @$sha: $np check(s) running"
+  [ -n "$bad" ] && flag RED "pr$n@$sha" "PR #$n$who @$sha failing: $bad"
+  [ "$np" -gt 0 ] && [ -z "$bad" ] && flag PENDING "pr$n" "PR #$n$who @$sha: $np check(s) running"
 done < <(jq -c '.[]' <<<"$prs")
 
 [ "$red" = 1 ] && exit 20

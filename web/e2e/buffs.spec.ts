@@ -15,7 +15,7 @@ import {
   turnGroup,
 } from "./helpers";
 
-test("Next turn then void restores the round, the durations and the expired buff", async ({
+test("Next round then void restores the round, the durations and the expired buff", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -34,8 +34,8 @@ test("Next turn then void restores the round, the durations and the expired buff
   await expect(buffBadge(page, "e2e Haste")).toHaveCount(0);
   await expect(
     buffBadge(page, "e2e Bless").getByTestId("buff-rounds"),
-  ).toHaveText("2 turns");
-  const advance = `Turn ${r0} → ${r0 + 1} — expired: e2e Haste`;
+  ).toHaveText("2 rounds");
+  const advance = `Round ${r0} → ${r0 + 1} — expired: e2e Haste`;
   // Logged with its initiative as one transaction, in the round it opens.
   await expect(
     turnGroup(page, r0 + 1)
@@ -49,10 +49,10 @@ test("Next turn then void restores the round, the durations and the expired buff
   await expect(page.getByRole("status")).toHaveCount(0);
   await expect(
     buffBadge(page, "e2e Haste").getByTestId("buff-rounds"),
-  ).toHaveText("1 turn");
+  ).toHaveText("1 round");
   await expect(
     buffBadge(page, "e2e Bless").getByTestId("buff-rounds"),
-  ).toHaveText("3 turns");
+  ).toHaveText("3 rounds");
 
   await expectNoReload(page);
   await snap(page, "next-round-voided");
@@ -69,12 +69,12 @@ test("editing a buff's remaining rounds is logged and voidable", async ({
     .getByRole("button", { name: "Edit e2e Strength" })
     .click();
   const form = page.getByRole("form", { name: "Edit e2e Strength" });
-  await form.getByLabel("Turns").fill("4");
+  await form.getByLabel("Rounds").fill("4");
   await form.getByRole("button", { name: "Save" }).click();
 
   await expect(
     buffBadge(page, "e2e Strength").getByTestId("buff-rounds"),
-  ).toHaveText("4 turns");
+  ).toHaveText("4 rounds");
   const edit = logEntry(page, "e2e Strength: 10 rd → 4 rd");
   await expect(edit).toBeVisible();
   await snap(page, "edit-rounds");
@@ -82,7 +82,7 @@ test("editing a buff's remaining rounds is logged and voidable", async ({
   await undoEntry(page, "e2e Strength: 10 rd → 4 rd");
   await expect(
     buffBadge(page, "e2e Strength").getByTestId("buff-rounds"),
-  ).toHaveText("10 turns");
+  ).toHaveText("10 rounds");
 
   await expectNoReload(page);
   await snap(page, "edit-rounds-voided");
@@ -260,7 +260,7 @@ test("a saved buff is added from the Saved effect tab, deleting it leaves active
   await expect(buffBadge(page, "e2e Hammer form")).toHaveCount(2);
   await expect(
     buffBadge(page, "e2e Hammer form").last().getByTestId("buff-rounds"),
-  ).toHaveText("10 turns");
+  ).toHaveText("10 rounds");
   await expect(saved).toBeHidden();
 
   // Delete the template: the active buffs stay.

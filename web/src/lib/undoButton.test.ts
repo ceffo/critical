@@ -58,7 +58,7 @@ describe("undoButtonState", () => {
   it("names the action on top, worded from its payload, en and fr", async () => {
     expect(undoButtonState(7, [initiative], false, await makeT("en"))).toEqual({
       disabled: false,
-      label: "Undo: Initiative 4 (d10) for turn 2 (Ctrl+Z / ⌘Z)",
+      label: "Undo: Initiative 4 (d10) for round 2 (Ctrl+Z / ⌘Z)",
     });
     expect(undoButtonState(7, [initiative], false, await makeT("fr"))).toEqual({
       disabled: false,
@@ -81,14 +81,14 @@ describe("undoButtonState", () => {
     const rolled: LogEntry = { ...initiative, transactionId: 6 };
     const entries = [rolled, advance];
     expect(undoButtonState(7, entries, false, await makeT("en")).label).toBe(
-      "Undo: Turn 1 → 2 (Ctrl+Z / ⌘Z)",
+      "Undo: Round 1 → 2 (Ctrl+Z / ⌘Z)",
     );
     expect(undoButtonState(7, entries, false, await makeT("fr")).label).toBe(
       "Annuler : Tour 1 → 2 (Ctrl+Z / ⌘Z)",
     );
     // A first entry older than the listed ones: named by the entry on top.
     expect(undoButtonState(7, [rolled], false, await makeT("en")).label).toBe(
-      "Undo: Initiative 4 (d10) for turn 2 (Ctrl+Z / ⌘Z)",
+      "Undo: Initiative 4 (d10) for round 2 (Ctrl+Z / ⌘Z)",
     );
   });
 
@@ -185,7 +185,7 @@ describe("redoButtonState", () => {
     };
     expect(redoButtonState(advance, false, await makeT("en"))).toEqual({
       disabled: false,
-      label: "Redo: Turn 1 → 2 (Ctrl+Shift+Z / ⇧⌘Z)",
+      label: "Redo: Round 1 → 2 (Ctrl+Shift+Z / ⇧⌘Z)",
     });
     expect(redoButtonState(advance, false, await makeT("fr"))).toEqual({
       disabled: false,

@@ -59,11 +59,11 @@ export function combatLog(page: Page): Locator {
   return page.getByRole("region", { name: "Journal", exact: true });
 }
 
-/** The journal's group of turn n ("Turn 3"; turn 0 is "Out of combat"). */
+/** The journal's group of turn n ("Round 3"; turn 0 is "Out of combat"). */
 export function turnGroup(page: Page, n: number | string): Locator {
   const turn = Number(n);
   return combatLog(page).getByRole("region", {
-    name: turn > 0 ? `Turn ${turn}` : "Out of combat",
+    name: turn > 0 ? `Round ${turn}` : "Out of combat",
     exact: true,
   });
 }
@@ -116,7 +116,7 @@ export async function addBuff(page: Page, buff: NewBuff) {
   const popover = await openAddEffect(page, "New effect");
   const form = popover.getByRole("form", { name: "Add effect" });
   await form.getByLabel("Buff name").fill(buff.name);
-  await form.getByLabel("Turns").fill(String(buff.rounds ?? 0));
+  await form.getByLabel("Rounds").fill(String(buff.rounds ?? 0));
   await form.getByLabel("Charges").fill(String(buff.charges ?? 0));
   for (const [i, [key, value]] of (buff.effects ?? []).entries()) {
     await form.getByRole("button", { name: "Effect", exact: true }).click();
@@ -212,15 +212,15 @@ export async function chooseLanguage(page: Page, lang: "en" | "fr") {
 
 /** Next turn from the turn block (English UI). */
 export async function nextTurn(page: Page) {
-  await page.getByRole("button", { name: "Next turn" }).click();
+  await page.getByRole("button", { name: "Next round" }).click();
 }
 
 /** Open the turn block's ⋯ menu and pick an action (English UI). */
 export async function turnMenu(
   page: Page,
-  item: "Time passes…" | "Set turn number…" | "End combat",
+  item: "Time passes…" | "Set round number…" | "End combat",
 ) {
-  await page.getByRole("button", { name: "More turn actions" }).click();
+  await page.getByRole("button", { name: "More round actions" }).click();
   await page.getByRole("menuitem", { name: item }).click();
 }
 

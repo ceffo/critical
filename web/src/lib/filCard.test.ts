@@ -485,7 +485,7 @@ describe("cardHeader", () => {
     ["save", savePayload, "Save", "Spells"],
     ["cast", castPayload, "Cast", "Magic Missile"],
     ["item_use", usePayload, "Item", "Wand of lightning"],
-    ["initiative", { round: 3, d10: 7 }, "Initiative", "Turn 3"],
+    ["initiative", { round: 3, d10: 7 }, "Initiative", "Round 3"],
     ["buff_change", { action: "dismiss", buff: "Haste" }, "Buff", ""],
   ] as const)(
     "%s: tag %s, subtitle %s",
@@ -495,7 +495,7 @@ describe("cardHeader", () => {
       const h = cardHeader(kind, cardModel(e, t), e, t, "en");
       expect(h.tag).toBe(tag);
       expect(h.subtitle).toBe(subtitle);
-      expect(h.when).toMatch(/^T3 · \d\d:\d\d/);
+      expect(h.when).toMatch(/^R3 · \d\d:\d\d/);
     },
   );
 

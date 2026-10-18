@@ -247,7 +247,7 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   await snap(page, "ice-storm-sleet-received");
 
   // Dice steps (ADR 0008 step 15): Incendiary Cloud from a level 12 caster rolls each turn on its
-  // own, the two smoke turns without dice.
+  // own, the two smoke rounds without dice.
   const receive = async (name: string, level: string) => {
     const p = await receivePicker(page);
     await p.getByLabel("Search for a spell cast on me").fill(name);
@@ -257,14 +257,14 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   };
   await receive("Incendiary Cloud", "12");
   const cloud = card.getByTestId("cast-damage");
-  await expect(cloud).toContainText("5 turns, one roll each");
-  const turns = cloud.getByTestId("cast-damage-roll");
-  await expect(turns).toHaveCount(5);
-  await expect(turns.nth(0)).toHaveText("Turn 1no damage");
-  await expect(turns.nth(1)).toHaveText("Turn 2no damage");
-  await expect(turns.nth(2)).toContainText("Turn 312d2");
-  await expect(turns.nth(3)).toContainText("Turn 412d4");
-  await expect(turns.nth(4)).toContainText("Turn 512d2");
+  await expect(cloud).toContainText("5 rounds, one roll each");
+  const rounds = cloud.getByTestId("cast-damage-roll");
+  await expect(rounds).toHaveCount(5);
+  await expect(rounds.nth(0)).toHaveText("Round 1no damage");
+  await expect(rounds.nth(1)).toHaveText("Round 2no damage");
+  await expect(rounds.nth(2)).toContainText("Round 312d2");
+  await expect(rounds.nth(3)).toContainText("Round 412d4");
+  await expect(rounds.nth(4)).toContainText("Round 512d2");
   await snap(page, "incendiary-cloud-received");
 
   // Chain Lightning from a level 15 caster: twelve strikes, 12d6 down to 1d6, at 1280 wide.
@@ -279,17 +279,17 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   await snap(page, "chain-lightning-received-1280");
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  // The journal card of the earlier Incendiary Cloud shows the same turns.
+  // The journal card of the earlier Incendiary Cloud shows the same rounds.
   await logEntry(page, "Incendiary Cloud").getByTestId("log-select").click();
   const entry = card.getByTestId("cast-entry");
   await expect(
     entry
       .getByTestId("cast-entry-instances")
       .getByRole("listitem")
-      .filter({ hasText: /^Turn/ }),
+      .filter({ hasText: /^Round/ }),
   ).toHaveCount(5);
-  await expect(entry).toContainText("Turn 1no damage");
-  await expect(entry).toContainText("Turn 5");
+  await expect(entry).toContainText("Round 1no damage");
+  await expect(entry).toContainText("Round 5");
   await snap(page, "incendiary-cloud-journal");
 
   // Exposure modes (ADR 0008 step 16): Wall of Fire from a level 11 caster, passing through rolls
@@ -338,7 +338,7 @@ test("Strength cast on me by a party wizard, found by its French name; a saved e
   await expect(buffBadge(page, "Strength")).toBeVisible();
   await expect(
     buffBadge(page, "Strength").getByTestId("buff-rounds"),
-  ).toContainText("540 turns");
+  ).toContainText("540 rounds");
   await expect.poll(() => effectiveStr(page)).toBeGreaterThan(before);
   await expect(
     logEntry(page, "Strength cast on me (caster level 9)"),
@@ -374,7 +374,7 @@ test("Strength cast on me by a party wizard, found by its French name; a saved e
   );
 });
 
-test("after Next turn the journal Undo is not on the cast until Next turn is popped", async ({
+test("after Next round the journal Undo is not on the cast until Next round is popped", async ({
   page,
   stack,
 }) => {
@@ -383,12 +383,12 @@ test("after Next turn the journal Undo is not on the cast until Next turn is pop
   await page.getByRole("button", { name: "Cast Stoneskin" }).click();
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
   await nextTurn(page);
-  await expect(logEntry(page, "Turn 0 → 1")).toBeVisible();
+  await expect(logEntry(page, "Round 0 → 1")).toBeVisible();
 
   await expectUndoOn(page, "Cast Stoneskin", true);
   await snap(page, "undo-not-on-the-cast-after-next-round");
 
-  await undoNextTurn(page, logEntry(page, "Turn 0 → 1"));
+  await undoNextTurn(page, logEntry(page, "Round 0 → 1"));
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
   await undoEntry(page, "Cast Stoneskin");
   await expect(buffBadge(page, "Stoneskin")).toHaveCount(0);

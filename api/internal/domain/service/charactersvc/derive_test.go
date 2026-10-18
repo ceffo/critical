@@ -209,17 +209,58 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, map[int]int{1: 5, 6: 2}, got.SpellSlots)
 	})
-	t.Run("cleric: not implemented yet", func(t *testing.T) {
+	t.Run("cleric: Table 24 with the bonus spells at the sheet's Wisdom", func(t *testing.T) {
 		c := kelsen()
-		c.Class, c.RealizedLevel = "cleric", 13
-		r := newRules(t)
-		r.EXPECT().LevelFor("cleric", 1_293_418).Return(13, nil).Once()
-		r.EXPECT().XPThreshold("cleric", 14).Return(1_350_000, nil).Once()
-		r.EXPECT().THAC0For("priest", 13).Return(12, nil).Once()
-		r.EXPECT().SavesFor("priest", 13).Return(rogue13to16, nil).Once()
-		_, err := charactersvc.Derive(c, 0, r)
-		require.ErrorContains(t, err, "not implemented")
+		c.Class, c.RealizedLevel, c.Wis = "cleric", 13, 16
+		r := clericRules(t, 13)
+		r.EXPECT().PriestSpellsPerDay(13, 16).Return(map[int]int{1: 8, 5: 2}, nil).Once()
+		r.EXPECT().SpellFailureFor("cleric", 16).Return(0, nil).Once()
+		r.EXPECT().TurningAt(13).Return(nil, nil).Once()
+		got, err := charactersvc.Derive(c, 0, r)
+		require.NoError(t, err)
+		assert.Equal(t, map[int]int{1: 8, 5: 2}, got.SpellSlots)
 	})
+}
+
+// clericRules is a level-lvl cleric's level, THAC0 and saves.
+func clericRules(t *testing.T, lvl int) *mocks.MockRules {
+	t.Helper()
+	r := newRules(t)
+	r.EXPECT().LevelFor("cleric", 1_293_418).Return(lvl, nil).Once()
+	r.EXPECT().XPThreshold("cleric", lvl+1).Return(1_350_000, nil).Once()
+	r.EXPECT().THAC0For("priest", lvl).Return(12, nil).Once()
+	r.EXPECT().SavesFor("priest", lvl).Return(rogue13to16, nil).Once()
+	return r
+}
+
+// ADR 0030 steps 13, 14 and 16 on the derived values: a cleric's slots and
+// spell failure follow the sheet's Wisdom and his turning the realized level
+// (never the XP target); the other classes read none of it.
+func TestDerive_Steps13to16_TheClericsWisdomAndTurning(t *testing.T) {
+	turning := []ruletablesvc.TurningTarget{{Undead: "skeleton", HDMin: 1, HDMax: 1, Cell: ruletablesvc.TurningCell{Roll: 7}}}
+	c := kelsen()
+	c.Class, c.RealizedLevel, c.Wis = "cleric", 2, 9
+	r := clericRules(t, 2)
+	r.EXPECT().PriestSpellsPerDay(2, 9).Return(map[int]int{1: 2}, nil).Once()
+	r.EXPECT().SpellFailureFor("cleric", 9).Return(20, nil).Once()
+	r.EXPECT().TurningAt(2).Return(turning, nil).Once()
+	got, err := charactersvc.Derive(c, 0, r)
+	require.NoError(t, err)
+	assert.Equal(t, 20, got.SpellFailure)
+	assert.Equal(t, turning, got.Turning)
+
+	m := kelsen()
+	m.Class, m.RealizedLevel = "mage", 13
+	rm := newRules(t)
+	rm.EXPECT().LevelFor("mage", 1_293_418).Return(13, nil).Once()
+	rm.EXPECT().XPThreshold("mage", 14).Return(1_500_000, nil).Once()
+	rm.EXPECT().THAC0For("wizard", 13).Return(16, nil).Once()
+	rm.EXPECT().SavesFor("wizard", 13).Return(rogue13to16, nil).Once()
+	rm.EXPECT().WizardSpellsPerDay(13).Return(map[int]int{1: 5}, nil).Once()
+	got, err = charactersvc.Derive(m, 0, rm)
+	require.NoError(t, err)
+	assert.Zero(t, got.SpellFailure, "a mage has no spell failure")
+	assert.Nil(t, got.Turning, "a mage does not turn undead")
 }
 
 func ruleGroup(t *testing.T, class string) string {

@@ -17,9 +17,10 @@ import (
 // 1): the bard's and the fighter's rules are built (the fighter enters an
 // exceptional strength, step 9), the mage's too (its spellbook starts empty
 // and fills by learning, step 20). Each class item adds its class here with
-// its own entries (a thief's skill points); a cleric waits for its bonus
-// spells (step 13), without which its spell slots cannot be derived.
-var CreatableClasses = []string{"bard", "fighter", "mage"}
+// its own entries (a thief's skill points). The cleric enters nothing more:
+// its slots, spell failure and turning follow its Wisdom and level (steps 13
+// to 16).
+var CreatableClasses = []string{"bard", "fighter", "mage", "cleric"}
 
 // The ranges a new character's entered values must fall in.
 const (

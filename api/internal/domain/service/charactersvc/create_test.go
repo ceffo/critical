@@ -84,7 +84,7 @@ func TestCreate_AFailedWriteChangesNothingElse(t *testing.T) {
 
 // Invalid input is refused with the field and a code the web words, before
 // anything is written: a missing or long name, a class no character may be
-// created with yet (a cleric among them: its slots need step 13), a race that
+// created with (a paladin: no such class), a race that
 // is none of the six, one the class does not admit (DMG Table 7), an ability
 // score outside 3 to 19, a max HP outside 1 to 999, a starting XP below 0.
 func TestCreate_RefusesInvalidInputWithFieldErrors(t *testing.T) {
@@ -96,7 +96,6 @@ func TestCreate_RefusesInvalidInputWithFieldErrors(t *testing.T) {
 	}{
 		{"empty name", func(n *charactersvc.NewCharacter) { n.Name = "   " }, nil, "name", "empty"},
 		{"long name", func(n *charactersvc.NewCharacter) { n.Name = strings.Repeat("é", 41) }, nil, "name", "too_long"},
-		{"cleric", func(n *charactersvc.NewCharacter) { n.Class = "cleric" }, nil, "class", "not_creatable"},
 		{"unknown class", func(n *charactersvc.NewCharacter) { n.Class = "paladin" }, nil, "class", "not_creatable"},
 		{"no race", func(n *charactersvc.NewCharacter) { n.Race = "" }, nil, "race", "empty"},
 		{"unknown race", func(n *charactersvc.NewCharacter) { n.Race = "orc" }, nil, "race", "unknown"},
@@ -249,6 +248,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		e.rules.EXPECT().RaceAllows(race, "bard").Return(race == "human" || race == "half_elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "fighter").Return(race != "elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "mage").Return(race == "human" || race == "elf" || race == "half_elf", nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "cleric").Return(race != "elf", nil).Once()
 	}
 	got, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
@@ -257,6 +257,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 			{Class: "bard", Races: []string{"human", "half_elf"}, ExceptionalStrengthRaces: []string{}},
 			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}},
 			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}},
+			{Class: "cleric", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{}},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
 		MinStrExceptional: 1, MaxStrExceptional: 100, MaxNameLen: 40,

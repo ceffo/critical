@@ -92,15 +92,15 @@ func emptied(s sheet) sheet {
 
 // Invalid input is 400 with the field, and nothing is stored: a race the
 // class does not admit (a dwarf bard, DMG Table 7), an ability outside 3 to
-// 19, a cleric (refused until its bonus spells, ADR 0030 step 13), and an
+// 19, a class the app does not have, and an
 // entered level or THAC0 (never entered, step 1).
 func TestCreate_RefusedInputStoresNothing(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
 	for body, field := range map[string]string{
-		`{"name":"D","class":"bard","raceCode":"dwarf","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10,"hpMax":6,"xp":0}`:   "race",
-		`{"name":"D","class":"bard","raceCode":"human","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":20,"hpMax":6,"xp":0}`:   "cha",
-		`{"name":"D","class":"cleric","raceCode":"human","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10,"hpMax":6,"xp":0}`: "class",
+		`{"name":"D","class":"bard","raceCode":"dwarf","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10,"hpMax":6,"xp":0}`:    "race",
+		`{"name":"D","class":"bard","raceCode":"human","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":20,"hpMax":6,"xp":0}`:    "cha",
+		`{"name":"D","class":"paladin","raceCode":"human","str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10,"hpMax":6,"xp":0}`: "class",
 	} {
 		var refused map[string]string
 		require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused), body)
@@ -173,7 +173,7 @@ func TestCreate_Options(t *testing.T) {
 		StrExceptional struct{ Min, Max int } `json:"strExceptional"`
 	}
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &got))
-	require.Len(t, got.Classes, 3)
+	require.Len(t, got.Classes, 4)
 	assert.Equal(t, "bard", got.Classes[0].Class)
 	assert.Equal(t, []string{"human", "half_elf"}, got.Classes[0].Races)
 	assert.Empty(t, got.Classes[0].ExceptionalStrength)
@@ -183,6 +183,9 @@ func TestCreate_Options(t *testing.T) {
 	assert.Equal(t, "mage", got.Classes[2].Class)
 	assert.Equal(t, []string{"human", "elf", "half_elf"}, got.Classes[2].Races, "DMG Table 7")
 	assert.Empty(t, got.Classes[2].ExceptionalStrength)
+	assert.Equal(t, "cleric", got.Classes[3].Class)
+	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}, got.Classes[3].Races, "DMG Table 7")
+	assert.Empty(t, got.Classes[3].ExceptionalStrength)
 	assert.Equal(t, struct{ Min, Max int }{1, 100}, got.StrExceptional)
 	assert.Equal(t, 3, got.Ability.Min)
 	assert.Equal(t, 19, got.Ability.Max)

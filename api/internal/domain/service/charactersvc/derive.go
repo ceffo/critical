@@ -33,6 +33,13 @@ type Rules interface {
 	RaceAllows(race, class string) (bool, error)
 	// IntelligenceFor is PHB Table 4 (step 20).
 	IntelligenceFor(score int) (ruletablesvc.IntelligenceRow, error)
+	// PriestSpellsPerDay is PHB Table 24 with the Wisdom bonus spells
+	// (step 13).
+	PriestSpellsPerDay(level, wis int) (map[int]int, error)
+	// SpellFailureFor is PHB Table 5's chance of spell failure (step 14).
+	SpellFailureFor(class string, wis int) (int, error)
+	// TurningAt is PHB Table 61 at a priest level (step 16).
+	TurningAt(level int) ([]ruletablesvc.TurningTarget, error)
 }
 
 // conSaveRaces are the races that add their PHB Table 9 bonus to the saves
@@ -82,8 +89,18 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 	if d.RaceSaveBonus, err = raceSaveBonus(c, rules); err != nil {
 		return Derived{}, err
 	}
-	if d.SpellSlots, err = spellSlots(c.Class, realized, rules); err != nil {
+	if d.SpellSlots, err = spellSlots(c, realized, rules); err != nil {
 		return Derived{}, err
+	}
+	if ruletablesvc.UsesWisdomSpells(c.Class) {
+		if d.SpellFailure, err = rules.SpellFailureFor(c.Class, c.Wis); err != nil {
+			return Derived{}, fmt.Errorf("derive %s spell failure: %w", c.Class, err)
+		}
+	}
+	if ruletablesvc.TurnsUndead(c.Class) {
+		if d.Turning, err = rules.TurningAt(realized); err != nil {
+			return Derived{}, fmt.Errorf("derive %s turning: %w", c.Class, err)
+		}
 	}
 	// Step 24: the sheet's figures against the rules at the sheet's own XP
 	// (the starting XP, without the ledger): the awards since the import
@@ -209,15 +226,18 @@ func raceSaveBonus(c *Character, rules Rules) (Saves, error) {
 }
 
 // spellSlots is step 8: a bard's slots per day are PHB Table 32 at the
-// level, a mage's Table 21; fighters and thieves have none. The cleric's
-// (Table 24 plus the Wisdom bonus spells of step 13) comes with the cleric.
-func spellSlots(class string, level int, rules Rules) (map[int]int, error) {
+// level, a mage's Table 21, a cleric's Table 24 plus the Wisdom bonus spells
+// at the sheet's Wisdom (step 13); fighters and thieves have none.
+func spellSlots(c *Character, level int, rules Rules) (map[int]int, error) {
+	class := c.Class
 	var table func(int) (map[int]int, error)
 	switch class {
 	case "bard":
 		table = rules.BardSpellsPerDay
 	case "mage":
 		table = rules.WizardSpellsPerDay
+	case "cleric":
+		table = func(level int) (map[int]int, error) { return rules.PriestSpellsPerDay(level, c.Wis) }
 	case "fighter", "thief":
 		return map[int]int{}, nil
 	default:

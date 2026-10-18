@@ -5,6 +5,7 @@ package composition
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
@@ -219,6 +220,15 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
+	// What a character prepares from: a cleric's sphere-open priest spells
+	// (ADR 0030 step 15; no sphere access before catalogue format 6), every
+	// other class's spellbook.
+	sphereAccess, err := ruleTables.SphereAccess()
+	if err != nil && !errors.Is(err, ruletablesvc.ErrNoSphereAccess) {
+		_ = db.Close()
+		return nil, err
+	}
+	prepSource := spellbookadpt.NewSpheres(spellbook, charSvc, sphereAccess, cat)
 	// The action log stamps entries with the round read straight from
 	// buffdal (buffsvc itself records into the log, so it cannot be the
 	// log's dependency). Services that record snapshots register their
@@ -256,13 +266,13 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
-	spellSvc, err := spellsvc.New(spellDAL, catalogue, spellbook)
+	spellSvc, err := spellsvc.New(spellDAL, catalogue, prepSource)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	prepSvc, err := prepsvc.New(prepsvc.Deps{
-		Slots: spellDAL, Spellbook: spellbook, Effects: effects, Items: itemSvc,
+		Slots: spellDAL, Spellbook: prepSource, Effects: effects, Items: itemSvc,
 		Characters: charSvc, Log: logSvc, Tx: tx,
 	})
 	if err != nil {

@@ -31,6 +31,9 @@ type castRecord struct {
 	// Save is the target's saving throw; absent on casts logged before it
 	// was recorded.
 	Save *saveRecord `json:"save,omitempty"`
+	// Failure is the low-Wisdom spell failure roll (ADR 0030 step 14);
+	// absent when no die was rolled.
+	Failure *failureRecord `json:"failure,omitempty"`
 	// Exposure is the exposure damage served at the caster level, so the
 	// journal's cast card rolls an exposure from it (ADR 0008 step 16);
 	// absent without one.
@@ -67,6 +70,14 @@ type itemRecord struct {
 	ItemID    string `json:"itemId"`
 	Name      string `json:"name"`
 	Remaining int    `json:"remaining"`
+}
+
+// failureRecord is a cast's spell failure d100: failed at or under the
+// chance.
+type failureRecord struct {
+	D100   int  `json:"d100"`
+	Chance int  `json:"chance"`
+	Failed bool `json:"failed"`
 }
 
 // attackRecord is a spell's to-hit roll.
@@ -126,6 +137,9 @@ func toRecord(res CastResult) castRecord {
 	}
 	if a := res.Attack; a != nil {
 		r.Attack = &attackRecord{D20: a.D20Roll, TargetAC: a.TargetAC, Hit: a.Hit}
+	}
+	if f := res.Failure; f != nil {
+		r.Failure = &failureRecord{D100: f.Roll, Chance: f.Chance, Failed: f.Failed}
 	}
 	return r
 }

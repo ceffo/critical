@@ -66,7 +66,8 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   (`postgres://critical:critical@localhost:<port>/critical_fixture?sslmode=disable`, or a database you
   create with `docker compose exec postgres createdb -U critical <name>`), `CRITICAL_SEEDS_DIR`,
   `CRITICAL_CATALOGUE` (the fixture `api/testdata/catalogue.json` with `api/testdata/seeds`, or the real
-  `.catalogue/catalogue.json` with `seeds/`) and `CRITICAL_ADDR` on a free port (never the user's data).
+  `.catalogue/catalogue.json` with `seeds/`), `CRITICAL_ENV=dev` (the dev login; without it and
+  without OAuth settings the server refuses to start) and `CRITICAL_ADDR` on a free port (never the user's data).
   `just dev-reset` in the worktree removes its database afterwards. Exercise endpoints with `curl`.
 - UI: `just e2e [spec args]` builds the API and runs the Playwright suite headlessly (Chromium,
   1440x900). Every test gets its own API (in-memory storage, no database) + Vite on free ports with the

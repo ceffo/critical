@@ -17,6 +17,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	logmocks "github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
+	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	buffmocks "github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
@@ -40,8 +42,25 @@ import (
 	weaponmocks "github.com/ceffo/critical/api/internal/domain/service/weaponsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	xpmocks "github.com/ceffo/critical/api/internal/domain/service/xpsvc/mocks"
+	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 	"github.com/ceffo/critical/api/internal/rest/router"
 )
+
+// testSession is the session token do sends; signedIn's service accepts it.
+const testSession = "test-session"
+
+// signedIn is an auth service (dev login mode) for which testSession is a
+// session of an admin; any other token is no session.
+func signedIn(t *testing.T) *authmocks.MockSVC {
+	t.Helper()
+	a := authmocks.NewMockSVC(t)
+	a.EXPECT().DevLoginEnabled().Return(true).Maybe()
+	a.EXPECT().Authenticate(mock.Anything, testSession).Return(&authsvc.Principal{
+		User: authsvc.User{Email: "ann@example.com", Role: authsvc.RoleAdmin},
+	}, nil).Maybe()
+	a.EXPECT().Authenticate(mock.Anything, mock.Anything).Return(nil, authsvc.ErrUnauthenticated).Maybe()
+	return a
+}
 
 type mocksSet struct {
 	char    *charmocks.MockSVC
@@ -81,7 +100,7 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 	bs := &composition.BackingServices{
 		CharacterID: 1,
 		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
-		XP: m.xp, Details: m.details, Skills: m.skills, Dice: m.dice,
+		XP: m.xp, Details: m.details, Skills: m.skills, Dice: m.dice, Auth: signedIn(t),
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs, router.Options{Commit: "abc123"}), m
@@ -264,8 +283,10 @@ var endpoints = []endpoint{
 	}},
 }
 
+// do sends a request with the test session's cookie (signedIn).
 func do(h http.Handler, method, path, body string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req.AddCookie(&http.Cookie{Name: mw.SessionCookie, Value: testSession})
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec

@@ -63,6 +63,7 @@ func TestPostgresStorage_EveryAdapterRunsOnTheCallersTransaction(t *testing.T) {
 		"Skill":        func() { _, _ = s.Skill.ListProficiencies(ctx, 1) },
 		"Spellbook":    func() { _, _ = s.Spellbook.Keys(ctx, 1) },
 		"Dice":         func() { _, _ = s.Dice.List(ctx, 1) },
+		"Auth":         func() { _, _ = s.Auth.RootUser(ctx) },
 	}
 
 	fields := reflect.TypeFor[Storage]()

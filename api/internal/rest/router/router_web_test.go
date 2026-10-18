@@ -37,7 +37,7 @@ func webBuild(t *testing.T) string {
 func webRouter(t *testing.T, web http.Handler) http.Handler {
 	t.Helper()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return router.New(log, &composition.BackingServices{CharacterID: 1}, router.Options{Web: web, Commit: "abc123", Version: "1.2.3"})
+	return router.New(log, &composition.BackingServices{CharacterID: 1, Auth: signedIn(t)}, router.Options{Web: web, Commit: "abc123", Version: "1.2.3"})
 }
 
 const notFoundBody = `{"code":"not_found","error":"not found: /api/nope"}`

@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/caarlos0/env/v11"
 
+	"github.com/ceffo/critical/api/internal/adapters/googleadpt"
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/rest/handler/webhdl"
 	"github.com/ceffo/critical/api/internal/rest/router"
@@ -45,10 +48,31 @@ type Config struct {
 	// FlyApp is set by fly.io on every machine it runs (FLY_APP_NAME): the
 	// in-memory storage is refused there (ADR 0025 step 8.3).
 	FlyApp string `env:"FLY_APP_NAME"`
+	// Env is the environment name (ADR 0029 step 8.2). Only EnvDev means
+	// anything: it opts into the dev login when no OAuth setting is set.
+	// Unset or any other value, a missing OAuth setting stops the start, so
+	// the image run anywhere without settings fails closed. `just dev`, the
+	// e2e stacks and image-smoke set it; it is refused on fly.io.
+	Env string `env:"CRITICAL_ENV"`
+	// The Google login's OAuth client and the app's public URL (ADR 0029
+	// step 8): all three set, Google login; none set, the dev login, only
+	// with Env=EnvDev and never on a hosted app (FlyApp set); a partial
+	// setting is refused everywhere. On fly they are the app's secrets,
+	// never in fly.toml.
+	GoogleClientID     string `env:"CRITICAL_GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string `env:"CRITICAL_GOOGLE_CLIENT_SECRET"`
+	// PublicURL is the address users open (https://<host>, no path): the
+	// Google redirect is PublicURL/api/auth/google/callback, the CSRF check
+	// compares with its host, and https makes the cookies Secure.
+	PublicURL string `env:"CRITICAL_PUBLIC_URL"`
 }
 
 // StorageMemory is the CRITICAL_STORAGE value of the in-memory storage.
 const StorageMemory = "memory"
+
+// EnvDev is the CRITICAL_ENV value of a local run (`just dev`, e2e,
+// image-smoke): the only environment where the dev login may exist.
+const EnvDev = "dev"
 
 // commit is the commit the binary was built from, reported by /api/health
 // (ADR 0024 step 1.4). The image build sets it with
@@ -74,7 +98,74 @@ func (c Config) Validate() error {
 	case c.Catalogue == "":
 		return errors.New("CRITICAL_CATALOGUE must not be empty")
 	}
-	return c.validateStorage()
+	if err := c.validateStorage(); err != nil {
+		return err
+	}
+	_, err := c.auth()
+	return err
+}
+
+// authConfig is the login mode the settings select.
+type authConfig struct {
+	// google is nil in dev login mode.
+	google *googleadpt.Config
+	host   string
+	secure bool
+	// cookieApp names the auth cookies (middleware.SessionCookieName): the
+	// public URL's host and port, or "dev_<listen port>" in dev login mode,
+	// so apps reached on one host (localhost) keep separate sessions.
+	cookieApp string
+}
+
+// auth checks the OAuth settings (ADR 0029 step 8): all or none. None is the
+// dev login, which needs the explicit opt-in CRITICAL_ENV=dev (step 8.2: when
+// the environment is not dev, missing OAuth is a start-up error). On a hosted
+// app (FLY_APP_NAME, which fly.io sets on every machine of staging and
+// production) the dev environment itself is refused, so the dev login can
+// never be reachable there.
+func (c Config) auth() (authConfig, error) {
+	set := 0
+	for _, v := range []string{c.GoogleClientID, c.GoogleClientSecret, c.PublicURL} {
+		if v != "" {
+			set++
+		}
+	}
+	switch {
+	case c.Env == EnvDev && c.FlyApp != "":
+		return authConfig{}, fmt.Errorf("CRITICAL_ENV=%s is for local runs only, refused on fly.io (app %s)", EnvDev, c.FlyApp)
+	case set == 0 && c.FlyApp != "":
+		return authConfig{}, fmt.Errorf("CRITICAL_GOOGLE_CLIENT_ID, CRITICAL_GOOGLE_CLIENT_SECRET and CRITICAL_PUBLIC_URL are required on fly.io (app %s): the dev login is for local runs only (docs/deploy.md)", c.FlyApp)
+	case set == 0 && c.Env != EnvDev:
+		return authConfig{}, fmt.Errorf("CRITICAL_GOOGLE_CLIENT_ID, CRITICAL_GOOGLE_CLIENT_SECRET and CRITICAL_PUBLIC_URL are required unless CRITICAL_ENV=%s (the dev login of local runs; got CRITICAL_ENV=%q)", EnvDev, c.Env)
+	case set == 0:
+		return authConfig{cookieApp: "dev_" + listenPort(c.Addr)}, nil
+	case set < 3:
+		return authConfig{}, errors.New("CRITICAL_GOOGLE_CLIENT_ID, CRITICAL_GOOGLE_CLIENT_SECRET and CRITICAL_PUBLIC_URL must be set together (all for the Google login, none for the dev login)")
+	}
+	u, err := url.Parse(c.PublicURL)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" ||
+		(u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
+		return authConfig{}, fmt.Errorf("CRITICAL_PUBLIC_URL must be http(s)://<host>[:port] with no path, got %q", c.PublicURL)
+	}
+	base := u.Scheme + "://" + u.Host
+	return authConfig{
+		google: &googleadpt.Config{
+			ClientID: c.GoogleClientID, ClientSecret: c.GoogleClientSecret,
+			RedirectURL: base + "/api/auth/google/callback",
+		},
+		host:      u.Host,
+		secure:    u.Scheme == "https",
+		cookieApp: u.Host,
+	}, nil
+}
+
+// listenPort is the port of a listen address (":8080", "127.0.0.1:8080"),
+// the address itself when it has none.
+func listenPort(addr string) string {
+	if _, port, err := net.SplitHostPort(addr); err == nil {
+		return port
+	}
+	return addr
 }
 
 // validateStorage accepts the database (CRITICAL_STORAGE unset) or the
@@ -136,8 +227,14 @@ func Start() error {
 	if err != nil {
 		return err
 	}
+	auth, err := cfg.auth()
+	if err != nil {
+		return err
+	}
 	// A bad web dir stops the server before it touches the database.
-	opts := router.Options{Commit: commit, Version: version}
+	opts := router.Options{
+		Commit: commit, Version: version, Host: auth.host, SecureCookies: auth.secure, CookieApp: auth.cookieApp,
+	}
 	if cfg.WebDir != "" {
 		web, werr := webhdl.New(cfg.WebDir)
 		if werr != nil {
@@ -158,6 +255,7 @@ func Start() error {
 	bs, err := composition.New(ctx, composition.Config{
 		DSN: cfg.DSN, InMemory: cfg.Storage == StorageMemory,
 		SeedsDir: cfg.SeedsDir, Catalogue: resolveFromRepoRoot(cfg.Catalogue, cwd),
+		Google: auth.google,
 	})
 	if err != nil {
 		return err
@@ -169,6 +267,12 @@ func Start() error {
 			log.Warn("composition close", "error", cerr)
 		}
 	}()
+
+	if auth.google == nil {
+		log.Warn("auth: CRITICAL_ENV=dev without OAuth settings, dev login enabled (POST /api/auth/dev); never on a hosted app")
+	} else {
+		log.Info("auth: Google login", "public_url", cfg.PublicURL)
+	}
 
 	srvCfg := server.DefaultConfig()
 	srvCfg.Addr = cfg.Addr

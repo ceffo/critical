@@ -1521,7 +1521,16 @@
     "too_many_favourites": "Too many favourite rolls: remove one first.",
     "no_exposure": "That spell deals no exposure damage.",
     "spell_not_an_effect": "That spell adds no effect to track.",
-    "spell_not_found": "That spell is not in the catalogue."
+    "spell_not_found": "That spell is not in the catalogue.",
+    "unauthenticated": "You are not logged in, or your session has ended. Log in again.",
+    "cross_origin": "This request came from another site and was refused.",
+    "login_state_mismatch": "The login took too long or was started elsewhere. Try again.",
+    "login_failed": "Google login did not complete. Try again.",
+    "email_unverified": "Your Google account's email address is not verified.",
+    "not_invited": "This Google account is not invited. Ask an admin for an invite.",
+    "user_disabled": "This account is disabled. Ask an admin.",
+    "root_admin_protected": "The root administrator cannot be disabled or demoted.",
+    "root_admin_taken": "Another user is already the root administrator."
   },
   "lastShort": {
     "attack": "Attack",

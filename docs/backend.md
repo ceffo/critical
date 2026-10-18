@@ -173,6 +173,10 @@ The loop, from the checkout root (each worktree is its own compose project, with
 | `just dev-reset` | `just stop`, then deletes the databases (compose volume `critical-pg`). The next start migrates, seeds and imports the catalogue again. |
 | `just dev-smoke` | Proof of the above on free ports and a throwaway compose project (needs docker, ~1 min). Run it after changing the justfile, `docker-compose.yml`, `api/.air.toml`, `scripts/dev.sh` or the start-up of the storage. CI job `dev-smoke`. |
 
+Login: `just dev` runs without OAuth settings and with `CRITICAL_ENV=dev`, so the server has the dev login and the app logs in
+by itself as the root admin (`dev@localhost`, created on the first start of an empty database, also
+after `just dev-reset`): nothing to set up ("Accounts and login" below).
+
 First run after a clone: `cd web && npm ci`, optionally `just catalogue` (real spells, database
 `critical`; without it the fixture catalogue and database `critical_fixture` are used and the start
 says so), then `just dev`. Open http://localhost:5173.
@@ -205,6 +209,49 @@ What `scripts/dev.sh` guarantees:
 - files in `.dev/` (apart from `run/` and `tmp/`) are never touched. A SQLite `.dev/critical.db` left
   from before the engine switch is no longer read: the copy tool that moved it into PostgreSQL is
   retired ([ADR 0025](adr/0025-postgresql-storage.md) step 9.5).
+
+## Accounts and login
+
+[ADR 0029](adr/0029-users-login-and-access.md) on the server: `authsvc` (users, invites, sessions,
+the Google login, the dev login, the root admin), `authdal` (sqlc, migration 003: `users`, `invites`,
+`sessions`), `googleadpt` (OpenID Connect: code exchange with PKCE, ID token verified with Google's
+keys, fetched at the first login and cached; nothing at start-up), `authhdl` (`/api/auth/*`) and the
+gate `middleware.Gate`.
+
+- **Gate** (step 6): one middleware on the router, with one allow-list (`middleware.Public`): `/login`
+  and everything under it, `/api/auth/*`, `/api/health`. Without a session `/api/*` and any asset
+  answer 401 `unauthenticated`; a page (a GET asking for `text/html`) redirects to `/login`. A new
+  route is protected by default. The gate reads the session once and puts the user in the request
+  context (`middleware.PrincipalFrom`); handlers and services never read the cookie.
+- **Sessions** (step 4): cookie `critical_session_<app>` (HttpOnly, SameSite=Lax, path `/`, host-only,
+  `Secure` when the public URL is https) holding a 256-bit random token; the table stores its SHA-256,
+  never the token. 30 days, extended (one write) when used more than a day after the last extension.
+  A mutation whose `Origin` (else `Referer`) names another host than the app's is refused 403
+  `cross_origin`; a request with neither (curl, tests) passes, SameSite=Lax keeps the cookie off
+  cross-site subrequests. `<app>` is the public URL's host and port (`critical-hit.fly.dev`,
+  `localhost_8091`), in dev login mode `dev_<listen port>` (`dev_8080`): browsers send a cookie to
+  every port of a host, so with one name `just dev` on `localhost:5173` and a hosted app opened with
+  `just fly-open` on another localhost port would log each other out and hand one app's token to the
+  other.
+- **Endpoints**: `GET /api/auth/google/start` (state and PKCE verifier in the 10-minute cookie
+  `critical_login_<app>`, redirect to Google), `GET /api/auth/google/callback` (session and redirect to `/`,
+  or a refusal to `/login?error=<code>`), `POST /api/auth/logout`, `GET /api/auth/me`
+  (`{id, email, role, root}` or 401), and in dev login mode only `POST /api/auth/dev` (`{"email": …}`
+  optional: none is the root admin, created as `dev@localhost` on a database without one; an unknown
+  email is created as an admin).
+- **Settings**: `CRITICAL_GOOGLE_CLIENT_ID`, `CRITICAL_GOOGLE_CLIENT_SECRET`, `CRITICAL_PUBLIC_URL`:
+  all three, the Google login; partial, a start-up error. None is the dev login only with the explicit
+  opt-in `CRITICAL_ENV=dev` (set by `just dev`, the e2e stacks, image-smoke and the compose `critical`
+  service); without it the server refuses to start (step 8.2: fails closed, e.g. the image run outside
+  fly). On fly.io (`FLY_APP_NAME`) `CRITICAL_ENV=dev` is refused, so the dev login cannot exist there. Runbook: docs/deploy.md, "Login on the
+  hosted apps".
+- **Root admin** (step 5): `just root-admin <email>` (`api/cmd/rootadmin`) on `CRITICAL_DSN`, unset:
+  the local database `just dev` uses. The schema allows one root, and a root is an enabled admin.
+- **Error codes**: `unauthenticated`, `cross_origin`, `login_state_mismatch`, `login_failed`,
+  `email_unverified`, `not_invited`, `user_disabled`, `root_admin_protected`, `root_admin_taken`
+  (`internal/render`, worded by the web's `apiError.*`).
+- **Web, until the login page exists**: `web/src/api/auth.ts` gets a session before the app's first
+  request: `GET /api/auth/me`, else the dev login, else the browser goes to the Google login.
 
 ## DAL code generation
 
@@ -514,8 +561,10 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
 - **Smoke check**: `scripts/image-smoke.sh <image> <commit> <version>` runs the image on the fixture seeds (the fixture
   catalogue knows only their spells) and a throwaway PostgreSQL container of its own (`postgres:17-alpine` on a
   private network, no volume; the image refuses the in-memory storage), so the boot migrates, seeds and imports
-  into an empty database. It checks health with the commit and the version, `/` and a deep link returning
-  `index.html`, the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. Then it runs
+  into an empty database. It checks health with the commit and the version, the login gate without a session (`/` and
+  a deep link redirect to `/login`, which is `index.html`; `/api/character`, the catalogue and a bundle
+  asset answer 401), then through the dev login `/` and a deep link returning `index.html`, a data read,
+  the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. Then it runs
   `scripts/restore-point.sh` in a second container of the image started without its entrypoint (as the
   promotion's console machine is): a restore point of that database comes back whole (checksum, size, the
   dump and its table counts), creates no database, restores into a scratch database with the same counts, and

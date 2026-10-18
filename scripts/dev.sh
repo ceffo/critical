@@ -162,6 +162,8 @@ cmd_start() {
         cd api
         export CRITICAL_DSN="postgres://critical:critical@localhost:$pg_port/$db?sslmode=disable"
         export CRITICAL_SEEDS_DIR="$seeds" CRITICAL_CATALOGUE="$catalogue" CRITICAL_ADDR=":$api_port"
+        # The dev login (ADR 0029 step 8.2): without OAuth settings the server only starts in dev.
+        export CRITICAL_ENV=dev
         exec setsid go tool air -c .air.toml -tmp_dir "$dev_dir/tmp" \
             -build.cmd "go build -o $bin ./cmd/api" -build.entrypoint "$bin"
     ) &

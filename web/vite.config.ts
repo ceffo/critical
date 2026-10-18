@@ -17,6 +17,13 @@ export default defineConfig({
     host: true,
     allowedHosts: [".ts.net"],
     // `just dev` runs the API on :8080; forward /api to it (in the image the API serves the app itself).
-    proxy: { "/api": process.env.CRITICAL_API_URL ?? "http://localhost:8080" },
+    // The browser's Host is kept (the string shorthand would rewrite it): the API's CSRF check compares
+    // it with the Origin of every mutation (ADR 0029 step 4.5).
+    proxy: {
+      "/api": {
+        target: process.env.CRITICAL_API_URL ?? "http://localhost:8080",
+        changeOrigin: false,
+      },
+    },
   },
 });

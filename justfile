@@ -132,6 +132,21 @@ dev-smoke:
 dev-reset: stop
     docker compose down --volumes
 
+# Set the one root admin (ADR 0029 step 5.1) by email, on the database at CRITICAL_DSN; unset, the local
+# database `just dev` uses (critical with the real catalogue, else critical_fixture). The server must have run
+# once on it (migrations). Idempotent; another email is refused once the root has logged in. Staging and
+# production through `fly proxy`: docs/deploy.md ("Root admin"). Local dev needs none: the dev login makes one.
+root-admin email:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -z "${CRITICAL_DSN:-}" ]; then
+        db=critical_fixture
+        if [ -z "${CRITICAL_DEV_FIXTURE:-}" ] && [ -f .catalogue/catalogue.json ]; then db=critical; fi
+        export CRITICAL_DSN="postgres://critical:critical@localhost:${CRITICAL_PG_PORT:-5432}/$db?sslmode=disable"
+        echo "root-admin: CRITICAL_DSN is not set: using the local database $db (just dev's)"
+    fi
+    cd api && go run ./cmd/rootadmin "{{email}}"
+
 # --- Code Generation ---
 
 # Regenerate mockery mocks for all service ports (run from api/ so Go module resolves)

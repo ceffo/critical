@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
+	"github.com/ceffo/critical/api/internal/adapters/googleadpt"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
@@ -16,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -59,6 +61,8 @@ type BackingServices struct {
 	Details   detailssvc.SVC
 	Skills    skillsvc.SVC
 	Dice      dicesvc.SVC
+	// Auth is the login, the sessions and the users (ADR 0029).
+	Auth authsvc.SVC
 
 	services []domain.Service
 	store    Store
@@ -80,6 +84,10 @@ type Config struct {
 	// Dice replaces the crypto dice (tests that need known rolls). Nil in
 	// production.
 	Dice Dice
+	// Google is the OAuth client of the Google login (ADR 0029 step 3). Nil
+	// runs the dev login instead (step 8.1); cmd/api refuses nil on a hosted
+	// app (step 8.2).
+	Google *googleadpt.Config
 }
 
 // Dice is every dice port the services take (diceadpt satisfies it).
@@ -293,6 +301,12 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 
+	authSvc, err := newAuth(st, cfg)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
 	return &BackingServices{
 		CharacterID: charID,
 		Character:   charSvc,
@@ -310,11 +324,42 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		Details:     detailsSvc,
 		Skills:      skillSvc,
 		Dice:        diceSvc,
+		Auth:        authSvc,
 		store:       db,
 		services: []domain.Service{
-			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc, detailsSvc, diceSvc,
+			authSvc, charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc, detailsSvc, diceSvc,
 		},
 	}, nil
+}
+
+// newAuth builds the login service over st: with Google when cfg.Google is
+// set, else in dev login mode (ADR 0029 step 8.1).
+func newAuth(st Storage, cfg Config) (authsvc.SVC, error) {
+	deps := authsvc.Deps{DAL: st.Auth, Tx: st.Store}
+	if cfg.Google != nil {
+		p, err := googleadpt.New(*cfg.Google)
+		if err != nil {
+			return nil, err
+		}
+		deps.Provider = p
+	}
+	return authsvc.New(deps)
+}
+
+// OpenAuth opens the PostgreSQL database at dsn for the root-admin script
+// (ADR 0029 step 5.1): the users only, no migration, seed or catalogue. The
+// server must have migrated the database before. close releases it.
+func OpenAuth(ctx context.Context, dsn string) (svc authsvc.SVC, closeDB func() error, err error) {
+	db, err := postgres.Open(ctx, dsn)
+	if err != nil {
+		return nil, nil, fmt.Errorf("open db: %w", err)
+	}
+	svc, err = newAuth(postgresStorage(db), Config{})
+	if err != nil {
+		_ = db.Close()
+		return nil, nil, err
+	}
+	return svc, db.Close, nil
 }
 
 // Close shuts down every service in reverse order, then closes the DB.

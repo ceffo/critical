@@ -598,6 +598,11 @@ outside `ui/`).
   free port proxying `/api` to it; both are stopped afterwards. A test cannot plant rows behind the API:
   an old stored shape is served by intercepting the response (`page.route`). No fixed ports, `.dev/` is never
   touched, so parallel runs/worktrees don't collide. `page.goto("/")` opens that test's dashboard.
+- **Login:** the stack logs in through the API's dev login ([ADR 0029](adr/0029-users-login-and-access.md)
+  step 8.1, the root admin) before the test: the browser context starts with the session cookie, and a
+  spec's own `fetch` to `stack.apiUrl` carries it too (`fixtures.ts` wraps Node's `fetch` for that
+  stack). The web server keeps the browser's `Host` when it proxies `/api`, as the API's CSRF check
+  compares it with the `Origin` of every mutation.
 - **Selectors:** `getByRole` / `getByLabel` with the English accessible name first (give panels
   `role="group"` + `aria-label` from an i18n key if needed); `data-testid` only for non-semantic regions
   (e.g. `hp-value`).

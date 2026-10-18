@@ -110,6 +110,21 @@ for (const screen of SCREENS)
       }
       await page.close();
     }
+// The 2560 question: the creation frame capped at 1680 px and centred, beside the full-width shots.
+for (const screen of ["3-scores", "5-identity"]) {
+  const page = await browser.newPage({ viewport: { width: 2560, height: 1440 }, deviceScaleFactor: 1 });
+  await page.goto(`${base}?screen=${screen}&lang=fr&cap=1`);
+  await page.waitForSelector("body[data-ready] #root *");
+  await page.evaluate(() => document.fonts.ready);
+  const out = path.join(outDir, `${screen}--fr-2560x1440-capped.png`);
+  await page.screenshot({ path: out });
+  const r = await page.evaluate(audit);
+  if (r.clipped.length || r.pageScroll) {
+    failed++;
+    console.error(`FAIL ${path.relative(root, out)}`, r);
+  } else console.log(`ok   ${path.relative(root, out)}`);
+  await page.close();
+}
 await browser.close();
 await server.close();
 if (failed) {

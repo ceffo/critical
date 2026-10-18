@@ -17,6 +17,9 @@ import { cn } from "@/lib/utils";
 import { tr } from "./lang";
 import { ABILITIES, CHAR, STEPS } from "./data";
 
+/** `?cap=1`: the width-capped variant of the creation frame (the 2560 question). */
+const CAP = new URLSearchParams(location.search).get("cap") === "1";
+
 export function Wordmark({ size = "key" }: { size?: "key" | "hero" }) {
   return (
     <div className="flex shrink-0 items-center gap-2">
@@ -257,7 +260,7 @@ export function Building({ upTo }: { upTo: number }) {
           <span className="text-body text-ink-muted">
             {has(0) ? tr("Barde", "Bard") : "—"}
             {has(1) ? tr(" · Demi-elfe", " · Half-elf") : ""}
-            {has(0) ? tr(" · niveau 3", " · level 3") : ""}
+            {has(0) ? tr(" · niveau 5", " · level 5") : ""}
           </span>
         </div>
         <div className="grid grid-cols-6 gap-1">
@@ -270,9 +273,9 @@ export function Building({ upTo }: { upTo: number }) {
         </div>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-body">
           <dt className="text-ink-muted">{tr("Points de vie", "Hit points")}</dt>
-          <dd>{has(3) ? "14" : dash}</dd>
+          <dd>{has(3) ? "20" : dash}</dd>
           <dt className="text-ink-muted">{tr("Talents", "Skills")}</dt>
-          <dd>{has(3) ? tr("48 / 50 points", "48 / 50 points") : dash}</dd>
+          <dd>{has(3) ? tr("78 / 80 points", "78 / 80 points") : dash}</dd>
           <dt className="text-ink-muted">{tr("Alignement", "Alignment")}</dt>
           <dd>{has(4) ? tr("Neutre bon", "Neutral good") : dash}</dd>
           <dt className="text-ink-muted">{tr("Sexe", "Sex")}</dt>
@@ -316,7 +319,7 @@ export function CreationFrame({
   footNote?: ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col gap-3 p-3">
+    <div className={cn("mx-auto flex h-full flex-col gap-3 p-3", CAP && "max-w-[1680px]")}>
       <header className="zone-card flex items-center gap-4 px-4 py-2">
         <Wordmark />
         <span className="text-title">{tr("Nouveau personnage", "New character")}</span>

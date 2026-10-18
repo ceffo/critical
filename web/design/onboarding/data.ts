@@ -1,4 +1,4 @@
-// The mock-ups' data: a half-elf bard created at 2 500 XP (level 3), with PHB values (Tables 4,
+// The mock-ups' data: a half-elf bard created at level 5 (10 000 XP, the level's lowest), with PHB values (Tables 4,
 // 8, 10, 11; DMG chapter 1 method V; ADR 0030 step 18's bard budget: 20 + 15 per level after 1).
 // The rolls are fixed so every screenshot shows the same breakdown.
 
@@ -7,10 +7,10 @@ export const CHAR = {
 };
 
 export const STEPS = [
-  { id: "class", fr: "Classe", en: "Class", doneFr: "Barde · niveau 3", doneEn: "Bard · level 3" },
+  { id: "class", fr: "Classe", en: "Class", doneFr: "Barde · niveau 5", doneEn: "Bard · level 5" },
   { id: "race", fr: "Race", en: "Race", doneFr: "Demi-elfe", doneEn: "Half-elf" },
   { id: "scores", fr: "Caractéristiques", en: "Ability scores", doneFr: "Méthode V", doneEn: "Method V" },
-  { id: "hp", fr: "Points de vie et talents", en: "Hit points and skills", doneFr: "14 PV · 48 points", doneEn: "14 HP · 48 points" },
+  { id: "hp", fr: "Points de vie et talents", en: "Hit points and skills", doneFr: "20 PV · 78 points", doneEn: "20 HP · 78 points" },
   { id: "identity", fr: "Identité", en: "Identity", doneFr: "Aëlwyn", doneEn: "Aëlwyn" },
   { id: "review", fr: "Récapitulatif", en: "Review", doneFr: "", doneEn: "" },
 ] as const;
@@ -157,24 +157,32 @@ export const LANGUAGES = [
   { fr: "Draconique", en: "Draconic", race: false, on: false },
 ] as const;
 
-/** The HP roll of a level 3 bard (rogue d6), Constitution 13 (no adjustment). */
+/** The HP roll of a level 5 bard (rogue d6), Constitution 13 (no adjustment). */
 export const HP_ROWS = [
   { level: 1, die: 5 },
   { level: 2, die: 3 },
   { level: 3, die: 6 },
+  { level: 4, die: 2 },
+  { level: 5, die: 4 },
 ] as const;
 
 /** Bard skills (ADR 0030 step 18): base, race (half-elf), Dexterity 15, armour (leather), points. */
 export const BARD_SKILLS = [
-  { fr: "Escalade", en: "Climb walls", base: 50, race: 0, dex: 0, points: 15 },
-  { fr: "Perception des bruits", en: "Detect noise", base: 20, race: 0, dex: 0, points: 15 },
-  { fr: "Vol à la tire", en: "Pick pockets", base: 10, race: 10, dex: 0, points: 10 },
-  { fr: "Lecture des langues", en: "Read languages", base: 5, race: 0, dex: 0, points: 8 },
+  { fr: "Escalade", en: "Climb walls", base: 50, race: 0, dex: 0, points: 25 },
+  { fr: "Perception des bruits", en: "Detect noise", base: 20, race: 0, dex: 0, points: 20 },
+  { fr: "Vol à la tire", en: "Pick pockets", base: 10, race: 10, dex: 0, points: 20 },
+  { fr: "Lecture des langues", en: "Read languages", base: 5, race: 0, dex: 0, points: 13 },
 ] as const;
 
 export const ROSTER = [
   { name: "Kelsen Balstriel", classFr: "Barde", classEn: "Bard", level: 15, raceFr: "Demi-elfe", raceEn: "Half-elf", alFr: "Neutre bon", alEn: "Neutral good", hp: "77 / 85", current: true, missing: false },
-  { name: "Aëlwyn de Valcourt-Lestrange", classFr: "Barde", classEn: "Bard", level: 3, raceFr: "Demi-elfe", raceEn: "Half-elf", alFr: "Neutre bon", alEn: "Neutral good", hp: "14 / 14", current: false, missing: false },
+  { name: "Aëlwyn de Valcourt-Lestrange", classFr: "Barde", classEn: "Bard", level: 5, raceFr: "Demi-elfe", raceEn: "Half-elf", alFr: "Neutre bon", alEn: "Neutral good", hp: "20 / 20", current: false, missing: false },
   { name: "Thorgrim Barbe-de-Fer", classFr: "Guerrier", classEn: "Fighter", level: 4, raceFr: "Nain", raceEn: "Dwarf", alFr: "", alEn: "", hp: "31 / 38", current: false, missing: true },
   { name: "Mirelle des Hautes-Brumes", classFr: "Magicien", classEn: "Mage", level: 7, raceFr: "Elfe", raceEn: "Elf", alFr: "Chaotique bon", alEn: "Chaotic good", hp: "19 / 19", current: false, missing: false },
+] as const;
+
+/** The bard's (rogue) XP table, PHB Table 25: the lowest XP of each level, 1 to 20. */
+export const BARD_LEVEL_XP = [
+  0, 1250, 2500, 5000, 10000, 20000, 40000, 70000, 110000, 160000, 220000, 440000, 660000,
+  880000, 1100000, 1320000, 1540000, 1760000, 1980000, 2200000,
 ] as const;

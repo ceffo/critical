@@ -43,6 +43,7 @@ import {
   ROLLS,
   ROSTER,
   STEPS,
+  BARD_LEVEL_XP,
   total,
 } from "./data";
 import {
@@ -185,20 +186,38 @@ export function StepClass() {
           </Choice>
         ))}
       </div>
-      <Group title={tr("Expérience de départ", "Starting experience")}>
-        <div className="flex flex-wrap items-end gap-6">
-          <Field label={tr("XP de départ", "Starting XP")} value="2 500" />
-          <div className="flex flex-col">
-            <span className={labelClass}>{tr("Niveau", "Level")}</span>
-            <span className="text-key">3</span>
-          </div>
-          <p className="max-w-[36rem] text-body text-ink-muted">
+      <Group title={tr("Niveau de départ", "Starting level")}>
+        <div className="flex flex-wrap items-center gap-4">
+          <Seg chosen={0} options={[tr("Niveau", "Level"), tr("XP", "XP")]} />
+          <p className="text-body text-ink-muted">
             {tr(
-              "0 pour un personnage débutant. Le niveau, le TAC0 et les jets de protection en découlent.",
-              "0 for a beginning character. The level, THAC0 and saving throws follow from it.",
+              "Choisissez un niveau : il vaut le minimum d'XP de ce niveau pour la classe. Ou saisissez les XP exacts de votre fiche.",
+              "Pick a level: it counts as the class's lowest XP for that level. Or type the exact XP from your sheet.",
             )}
           </p>
         </div>
+        <div className="flex flex-wrap gap-1">
+          {BARD_LEVEL_XP.map((_, i) => (
+            <span
+              key={i}
+              className={cn(
+                "flex h-8 min-w-9 items-center justify-center rounded-md px-2 text-body tabular-nums",
+                i === 4 ? "chip-chosen font-semibold" : "chip",
+              )}
+            >
+              {i + 1}
+            </span>
+          ))}
+        </div>
+        <p className="text-body">
+          {tr("Niveau 5", "Level 5")}
+          <span className="text-ink-muted">
+            {tr(
+              " · 10 000 XP, le minimum du niveau 5 pour un barde. Le TAC0, les jets de protection et les points de vie en découlent ; 1 pour un personnage débutant.",
+              " · 10,000 XP, a bard's lowest for level 5. THAC0, saving throws and hit points follow from it; 1 for a beginning character.",
+            )}
+          </span>
+        </p>
       </Group>
     </CreationFrame>
   );
@@ -368,8 +387,8 @@ export function StepHp() {
       step={3}
       title={tr("Points de vie et talents", "Hit points and skills")}
       lead={tr(
-        "Ce que la classe demande en plus : les PV du niveau 1 au niveau 3, et les points des talents de barde.",
-        "What the class adds: the hit points from level 1 to level 3, and the bard skill points.",
+        "Ce que la classe demande en plus : les PV du niveau 1 au niveau 5, et les points des talents de barde.",
+        "What the class adds: the hit points from level 1 to level 5, and the bard skill points.",
       )}
     >
       <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-5">
@@ -413,6 +432,12 @@ export function StepHp() {
               </tr>
             </tbody>
           </table>
+          <p className="text-label text-ink-muted">
+            {tr(
+              "Un dé de vie par niveau, du niveau 1 au niveau 5 de départ.",
+              "One hit die per level, from level 1 to the starting level 5.",
+            )}
+          </p>
           <Field
             label={tr("PV max", "Max HP")}
             value={String(sum)}
@@ -423,7 +448,7 @@ export function StepHp() {
           title={tr("Talents de barde", "Bard skills")}
           right={
             <span className="text-body tabular-nums">
-              {tr(`${pts} / 50 points`, `${pts} / 50 points`)}
+              {tr(`${pts} / 80 points`, `${pts} / 80 points`)}
             </span>
           }
         >
@@ -460,8 +485,8 @@ export function StepHp() {
             </div>
             <p className="min-w-0 flex-1 text-label text-ink-muted">
               {tr(
-                "Budget au niveau 3 : 20 + 2 × 15. Le dépasser est un avertissement, pas un refus.",
-                "Budget at level 3: 20 + 2 × 15. Going over is a warning, not a refusal.",
+                "Budget au niveau 5 : 20 + 4 × 15. Le dépasser est un avertissement, pas un refus.",
+                "Budget at level 5: 20 + 4 × 15. Going over is a warning, not a refusal.",
               )}
             </p>
           </div>
@@ -680,9 +705,9 @@ export function StepReview() {
           <Dl
             rows={[
               [tr("Nom", "Name"), CHAR.name],
-              [tr("Classe", "Class"), tr("Barde · niveau 3 (2 500 XP)", "Bard · level 3 (2,500 XP)")],
+              [tr("Classe", "Class"), tr("Barde · niveau 5 (10 000 XP)", "Bard · level 5 (10,000 XP)")],
               [tr("Race", "Race"), tr("Demi-elfe", "Half-elf")],
-              ["TAC0", "19"],
+              ["TAC0", "18"],
             ]}
           />
         </ReviewBlock>
@@ -700,11 +725,11 @@ export function StepReview() {
         <ReviewBlock title={tr("Points de vie et talents", "Hit points and skills")}>
           <Dl
             rows={[
-              [tr("PV max", "Max HP"), tr("14 (tirés : 5 + 3 + 6)", "14 (rolled: 5 + 3 + 6)")],
-              [tr("Escalade", "Climb walls"), "65 %"],
-              [tr("Perception des bruits", "Detect noise"), "35 %"],
-              [tr("Vol à la tire", "Pick pockets"), "30 %"],
-              [tr("Lecture des langues", "Read languages"), "13 %"],
+              [tr("PV max", "Max HP"), tr("20 (tirés : 5 + 3 + 6 + 2 + 4)", "20 (rolled: 5 + 3 + 6 + 2 + 4)")],
+              [tr("Escalade", "Climb walls"), "75 %"],
+              [tr("Perception des bruits", "Detect noise"), "40 %"],
+              [tr("Vol à la tire", "Pick pockets"), "40 %"],
+              [tr("Lecture des langues", "Read languages"), "18 %"],
             ]}
           />
         </ReviewBlock>

@@ -154,11 +154,13 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   it implements (code comment and commit). Each numbered step gets one named test that fails on the
   old code. Dice mocks give every roll a distinct value and assert exact call counts, so a reused
   or missing roll fails the test. If code and design disagree, stop and report; don't pick one.
-- **No tracker ids in the code.** No bead/ticket id (`critical-…`, `qki.…`) in source, comments, test
+- **No tracker ids in the code.** No bead/ticket id (`CRI-<n>`, `critical-…`, `qki.…`) in source, comments, test
   names, strings, config or seeds. Code says what it does and why; the link to the work item lives in
   the commit message and the PR only. (User rule, 2026-10-14.) Enforced by `just check-no-tracker-ids`
-  (part of `just validate`), which reads the ids from `.beads/issues.jsonl` and scans everything but
-  `.beads/`, `docs/` and lock files.
+  (part of `just validate`; `scripts/test-check-no-tracker-ids.sh` plants ids in throwaway trees). Linear
+  ids are matched by pattern; old bead ids are read from `.beads/issues.jsonl` while the archive exists
+  and from `docs/beads-id-map.json` (the cutover's id map) after it. It scans everything but `.beads/`,
+  `docs/` and lock files.
 - **No throwaway code.** Data processing and verification are done by committed, deterministic, rerunnable
   scripts or tests; never by throwaway code whose result we rely on. (User rule, 2026-10-15.)
 - **No special case per spell, item or buff.** Model the mechanic generically and drive it from the

@@ -56,21 +56,12 @@ check-release-scripts:
     scripts/test-db-backup.sh
     scripts/test-major.sh
 
-# Fail on any work-item id (a bead: critical-<id>, <id>.N) in code, tests, seeds or config. Code
-# says what it does and why; the link to the work item lives in commits and PRs only
-# (docs/agent-workflow.md, "Hard rules for implementers"). The ids come from .beads/issues.jsonl;
-# docs (ADR history, workflow examples) and lock files are not scanned.
+# Fail on any work-item id (Linear CRI-<n>, or an old bead id) in code, tests, seeds or config. The test
+# plants ids in throwaway trees; the id sources are in the script header (docs/agent-workflow.md,
+# "Hard rules for implementers").
 check-no-tracker-ids:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    ids=$(grep -o '"id":"critical-[a-z0-9]*' .beads/issues.jsonl | sed 's/.*"critical-//' | sort -u | paste -sd'|')
-    if [ -z "$ids" ]; then echo "no tracker ids in .beads/issues.jsonl, cannot check"; exit 1; fi
-    pattern="\bcritical-($ids)\b|\bcritical-[a-z0-9]{3}\.[0-9]+\b|\b($ids)\.[0-9]+\b"
-    if git grep -nIE "$pattern" -- . ':!.beads' ':!docs' ':!api/go.sum' ':!web/package-lock.json'; then
-        echo "error: tracker ids above. Say what the code does; the work item goes in the commit message."
-        exit 1
-    fi
-    echo "--- No tracker ids ---"
+    scripts/test-check-no-tracker-ids.sh
+    scripts/check-no-tracker-ids.sh
 
 # Fail on a per-language identifier (a French or English twin of a column, field or JSON tag): texts in a
 # human language are localized_texts rows (ADR 0023). The test runs the check on rejected fixtures.

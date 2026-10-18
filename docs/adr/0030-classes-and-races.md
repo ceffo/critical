@@ -203,10 +203,17 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
       the XP comes back. Level drain stays out of scope.
    5. The max HP entered for an imported or new character is the max HP at its current level:
       `hp_level` starts at the level of step 3. Level 1 hit points are entered, never rolled here.
+   **Amendment to step 7.5 (2026-10-18, awaiting the user's OK in the PR):** for a character that
+   existed before `hp_level`, the starting `hp_level` is its stored sheet `level`, not the level of
+   step 3. Reason: the max HP of an imported character was entered for its sheet level. If the
+   ledger XP has already crossed a threshold above that level, the HP for the new levels were never
+   added. Taking the XP level would skip them; taking the sheet level prompts for them on the first
+   load (Kelsen's sheet says 15, so if his XP is at 1,320,000 or more he gets the level-16 +2 prompt). A
+   character created in the app is unchanged: it stores the level its starting XP gives, and
+   `hp_level` is set to the same level.
    _(As built, 2026-10-18)_ `characters.hp_level` is a nullable column (migration 008, additive, no
    data step): NULL is the character's stored sheet `level`, the level its entered max HP is for
-   (step 7.5: Kelsen's sheet level; a character created in the app stores the level its starting XP
-   gives, and its `hp_level` too). The derived block's `levelUp` carries `hpLevel`, the `pending`
+   (the amendment above). The derived block's `levelUp` carries `hpLevel`, the `pending`
    levels lowest first, each with the group's die up to the name level or the fixed gain after it
    (`die` or `fixedGain`), and `hpAboveLevel` (step 7.4: the card warns, nothing is removed).
    `POST /api/character/levelup/roll {level, die?}` rolls one level: `level` must be the lowest

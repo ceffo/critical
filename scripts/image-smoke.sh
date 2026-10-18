@@ -124,6 +124,18 @@ RP_MIGRATIONS=000_older.sql restore_point "$name-console" critical_pre_v0_0_6_20
     [[ "$rp_out" == *"Across a migration"* ]] || fail "a release older than the schema was not refused: $rp_out"
 [ "$(sql "SELECT count(*) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")" = 2 ] || fail "a refused restore point left a database"
 [[ "$rp_out" != *critical:critical* ]] || fail "restore-point printed the DSN"
+# Incomplete copies left by failed runs (empty databases, one newer than every valid copy, one with a session
+# still open on it) are dropped, do not count toward the retention, and never push a valid copy out.
+sql "CREATE DATABASE critical_pre_v0_0_9_20260101000009 TEMPLATE template0" >/dev/null
+sql "CREATE DATABASE critical_pre_v0_0_1_20260101000001 TEMPLATE template0" >/dev/null
+docker exec -d "$db" psql -X -q -U critical -d critical_pre_v0_0_1_20260101000001 -c 'SELECT pg_sleep(120)'
+sleep 1
+restore_point "$name-console" critical_pre_v0_0_7_20260101000007 -e RESTORE_POINT_KEEP=2
+[ "$rp_status" = 0 ] && [[ "$rp_out" == *"restore-point: OK critical_pre_v0_0_7_20260101000007"* ]] ||
+    fail "restore point 7 beside incomplete copies: exit $rp_status: $rp_out"
+copies="$(sql "SELECT string_agg(datname, ' ' ORDER BY datname) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")"
+[ "$copies" = "critical_pre_v0_0_3_20260101000003 critical_pre_v0_0_7_20260101000007" ] ||
+    fail "after incomplete copies: '$copies', want the valid 3 and the new 7 only"
 echo "image-smoke: restore points OK (copies, retention, refusals, a release older than the schema)"
 
 echo "image-smoke: OK ($image, commit $commit, uid $uid, port $port)"

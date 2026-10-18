@@ -236,7 +236,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3, 4 and 5")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3, 4, 5 and 6")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -338,6 +338,7 @@ func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
 	// refuses the start, naming `just catalogue`.
 	t.Run("format 3 is refused", func(t *testing.T) {
 		artifact := writeArtifact(t, func(d map[string]any) {
+			asFormat5(d)
 			d["format"] = 3
 			for k := range tables(d) {
 				if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" {
@@ -379,11 +380,39 @@ func TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits(t *testing.T) {
 
 	t.Run("format 4 still starts", func(t *testing.T) {
 		artifact := writeArtifact(t, func(d map[string]any) {
+			asFormat5(d)
 			d["format"] = 4
 			delete(tables(d), "race_level_limits")
 		})
 		assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact}))
 	})
+}
+
+// asFormat5 turns the format-6 fixture into a format-5 artifact: no sphere
+// access, no sphere codes (ADR 0021 step 12).
+func asFormat5(d map[string]any) {
+	d["format"] = 5
+	delete(d["rule_tables"].(map[string]any), "sphere_access")
+	for _, s := range d["spells"].([]any) {
+		delete(s.(map[string]any), "spheres")
+	}
+}
+
+// ADR 0021 steps 12.3 and 12.4: a format-6 artifact with a broken sphere
+// access (a sphere twice) refuses the start, naming the table; a format-5
+// artifact, without it, still starts (its clerics prepare nothing until
+// `just catalogue` fetches format 6).
+func TestStartup_Step12_RefusesABrokenSphereAccessAndStillReadsFormat5(t *testing.T) {
+	artifact := writeArtifact(t, func(d map[string]any) {
+		rows := d["rule_tables"].(map[string]any)["sphere_access"].([]any)
+		d["rule_tables"].(map[string]any)["sphere_access"] = append(rows, rows[0])
+	})
+	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+	require.ErrorContains(t, err, "rule_tables: sphere_access table: cleric all twice")
+	require.ErrorContains(t, err, "spell catalogue "+artifact)
+
+	five := writeArtifact(t, asFormat5)
+	assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: five}))
 }
 
 // The spellbook seed is checked against the catalogue before anything is

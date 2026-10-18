@@ -38,7 +38,7 @@ func fixtureRuleTables(t *testing.T) []byte {
 // artifact's.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	return must.Do(ruletablesadpt.Parse(catalogue.FormatLevelLimits, fixtureRuleTables(t)))
+	return must.Do(ruletablesadpt.Parse(catalogue.FormatSpheres, fixtureRuleTables(t)))
 }
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
@@ -193,11 +193,11 @@ func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Contains(t, string(good), tt.from)
-			_, err := ruletablesadpt.Parse(catalogue.FormatLevelLimits, []byte(strings.Replace(string(good), tt.from, tt.to, 1)))
+			_, err := ruletablesadpt.Parse(catalogue.FormatSpheres, []byte(strings.Replace(string(good), tt.from, tt.to, 1)))
 			require.ErrorContains(t, err, tt.table)
 		})
 	}
-	_, err := ruletablesadpt.Parse(catalogue.FormatLevelLimits, good)
+	_, err := ruletablesadpt.Parse(catalogue.FormatSpheres, good)
 	require.NoError(t, err)
 }
 
@@ -207,6 +207,9 @@ func classTablesOf(t *testing.T, format int, mutate func(map[string]any)) (*rule
 	t.Helper()
 	var doc map[string]any
 	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &doc))
+	if format < catalogue.FormatSpheres {
+		delete(doc, sphereAccess)
+	}
 	mutate(doc)
 	raw, err := json.Marshal(doc)
 	require.NoError(t, err)
@@ -295,7 +298,7 @@ func TestParse_Step10_4_Format3HasNoClassTables(t *testing.T) {
 	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &doc))
 	var classKeys []string
 	for k := range doc {
-		if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits {
+		if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits && k != sphereAccess {
 			classKeys = append(classKeys, k)
 		}
 	}
@@ -314,6 +317,9 @@ func TestParse_Step10_4_Format3HasNoClassTables(t *testing.T) {
 
 // levelLimits is the key format 5 adds to rule_tables (ADR 0021 step 11).
 const levelLimits = "race_level_limits"
+
+// sphereAccess is the key format 6 adds (ADR 0021 step 12).
+const sphereAccess = "sphere_access"
 
 // ADR 0021 step 11.1 (ADR 0030 step 21): a format-5 artifact's racial level
 // limits are read, one cell per race and class. Expected values are read
@@ -388,7 +394,7 @@ func TestParse_Step11_3_RejectsMissingOrBrokenLevelLimits(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := classTablesOf(t, catalogue.FormatLevelLimits, tc.mutate)
+			_, err := classTablesOf(t, catalogue.FormatSpheres, tc.mutate)
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
@@ -408,7 +414,7 @@ func TestParse_Step11_4_Format4HasNoLevelLimits(t *testing.T) {
 	require.ErrorContains(t, err, "format 4 carries no race_level_limits table")
 	_, err = classTablesOf(t, catalogue.FormatRuleTables, func(d map[string]any) {
 		for k := range d {
-			if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits {
+			if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits && k != sphereAccess {
 				delete(d, k)
 			}
 		}

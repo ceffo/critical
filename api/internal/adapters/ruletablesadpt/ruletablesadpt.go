@@ -25,6 +25,15 @@ type fileDTO struct {
 	// LevelLimits is DMG Table 7 (format 5, ADR 0021 step 11); nil when the
 	// artifact does not carry it.
 	LevelLimits []levelLimitDTO `json:"race_level_limits"`
+	// SphereAccess is the classes' sphere access (format 6, ADR 0021 step
+	// 12); nil when the artifact does not carry it.
+	SphereAccess []sphereAccessDTO `json:"sphere_access"`
+}
+
+type sphereAccessDTO struct {
+	Class  string `json:"class"`
+	Sphere string `json:"sphere"`
+	Access string `json:"access"`
 }
 
 // levelLimitDTO is a race_level_limits row: MaxLevel absent is the book's U
@@ -65,7 +74,7 @@ type bardDTO struct {
 // Parse maps the rule_tables JSON of an artifact of the given format to
 // validated Tables. A violation names the table. Format 4 carries every
 // class and race table (a missing one is named) but the racial level limits,
-// format 5 those too; format 3 carries none.
+// format 5 those too, format 6 also the sphere access; format 3 carries none.
 func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
@@ -104,7 +113,7 @@ func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
 	}
 	switch format {
 	case catalogue.FormatRuleTables:
-		if f.present() || f.LevelLimits != nil {
+		if f.present() || f.LevelLimits != nil || f.SphereAccess != nil {
 			return nil, errors.New("format 3 carries no class or race table")
 		}
 		return tables, nil
@@ -112,12 +121,15 @@ func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
 		if f.LevelLimits != nil {
 			return nil, errors.New("format 4 carries no race_level_limits table")
 		}
+		if f.SphereAccess != nil {
+			return nil, errors.New("format 4 carries no sphere_access table")
+		}
 		classes, err := f.classes()
 		if err != nil {
 			return nil, err
 		}
 		return tables.WithClasses(classes), nil
-	case catalogue.FormatLevelLimits:
+	case catalogue.FormatLevelLimits, catalogue.FormatSpheres:
 		classes, err := f.classes()
 		if err != nil {
 			return nil, err
@@ -126,10 +138,38 @@ func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
 		if err != nil {
 			return nil, err
 		}
-		return tables.WithClasses(classes).WithLevelLimits(limits), nil
+		tables = tables.WithClasses(classes).WithLevelLimits(limits)
+		if format == catalogue.FormatLevelLimits {
+			if f.SphereAccess != nil {
+				return nil, errors.New("format 5 carries no sphere_access table")
+			}
+			return tables, nil
+		}
+		access, err := sphereAccess(f.SphereAccess)
+		if err != nil {
+			return nil, err
+		}
+		return tables.WithSphereAccess(access), nil
 	default:
 		return nil, fmt.Errorf("unknown format %d", format)
 	}
+}
+
+// sphereAccess maps sphere_access to the validated sphere access (the rules
+// are ruletablesvc.NewSphereAccess'); format 6 requires the table.
+func sphereAccess(rows []sphereAccessDTO) (*ruletablesvc.SphereAccess, error) {
+	if len(rows) == 0 {
+		return nil, errors.New("format 6 needs the sphere_access table")
+	}
+	out := make([]ruletablesvc.SphereAccessRow, len(rows))
+	for i, r := range rows {
+		out[i] = ruletablesvc.SphereAccessRow(r)
+	}
+	a, err := ruletablesvc.NewSphereAccess(out)
+	if err != nil {
+		return nil, fmt.Errorf("sphere_access table: %w", err)
+	}
+	return a, nil
 }
 
 // levelLimits maps race_level_limits to validated level limits (the rules

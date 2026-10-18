@@ -1,5 +1,12 @@
 import { hpPercent, hpTone } from "./format";
 
+/** Bar fill per threshold band: always semantic, never the theme's primary (ADR 0026 step 5.4). */
+export const HP_BAR_FILL = {
+  good: "bg-success",
+  warn: "bg-warning",
+  bad: "bg-danger",
+} as const;
+
 /** What the HP bar draws, from the server's numbers only (display, no rules). */
 export interface HpBarModel {
   /** Fill colour band (docs/frontend.md "Display Conventions"): good > 50 %, warn 25-50 %, bad < 25 %. */

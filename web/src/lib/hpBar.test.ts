@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hpBarModel } from "./hpBar";
+import { HP_BAR_FILL, hpBarModel } from "./hpBar";
 
 describe("hpBarModel", () => {
   // Band selection: the fill colour by threshold on the served current / max.
@@ -14,6 +14,14 @@ describe("hpBarModel", () => {
   ] as const)("%d / 85 → %s", (current, tone) =>
     expect(hpBarModel(current, 85, -10, 0).tone).toBe(tone),
   );
+
+  it("fills with success, warning, danger, never the primary (ADR 0026 step 5.4)", () => {
+    expect(HP_BAR_FILL).toEqual({
+      good: "bg-success",
+      warn: "bg-warning",
+      bad: "bg-danger",
+    });
+  });
 
   it("puts the dying zone floor..0 on the left of the floor..max scale", () => {
     const m = hpBarModel(70, 90, -10, 0);

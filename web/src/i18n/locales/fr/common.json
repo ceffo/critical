@@ -28,7 +28,10 @@
       "arcane": "Arcane",
       "deep": "Abysses",
       "parchment": "Parchemin",
-      "plain": "Sobre"
+      "plain": "Sobre",
+      "forest": "Forêt",
+      "ember": "Braise",
+      "amber": "Ambre"
     }
   },
   "shell": {

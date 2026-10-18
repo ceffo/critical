@@ -772,13 +772,21 @@ test("settings: language, appearance and both themes apply live and persist acro
     /Arcane/,
     /Parchment/,
     /Plain/,
+    /Forest/,
   ]);
   await page.keyboard.press("Escape");
   await chooseSetting(page, "Dark");
   expect(await isDark(page)).toBe(true);
   await openSettings(page);
   await expect(list).toHaveAttribute("data-mode", "dark");
-  await expect(list.getByRole("radio")).toHaveText([/Arcane/, /Deep/, /Plain/]);
+  await expect(list.getByRole("radio")).toHaveText([
+    /Arcane/,
+    /Deep/,
+    /Plain/,
+    /Forest/,
+    /Ember/,
+    /Amber/,
+  ]);
   await page.keyboard.press("Escape");
   await chooseTheme(page, "Deep");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
@@ -912,8 +920,12 @@ test("theme: the main screens in dark and light, every theme in each of its mode
   await openWorkspace(page, "Act");
   await chooseLanguage(page, "fr");
   for (const [mode, which, themes] of [
-    ["Sombre", "dark", ["Arcane", "Abysses", "Sobre"]],
-    ["Clair", "light", ["Arcane", "Parchemin", "Sobre"]],
+    [
+      "Sombre",
+      "dark",
+      ["Arcane", "Abysses", "Sobre", "Forêt", "Braise", "Ambre"],
+    ],
+    ["Clair", "light", ["Arcane", "Parchemin", "Sobre", "Forêt"]],
   ] as const) {
     await chooseSetting(page, mode);
     for (const name of themes) {
@@ -1663,7 +1675,7 @@ test("group headings: one shared band, French, dark and light", async ({
     ["Clair", "light", "Parchemin"],
   ] as const) {
     await chooseSetting(page, mode);
-    await chooseTheme(page, which, theme);
+    await chooseTheme(page, theme);
     await page.waitForTimeout(150); // let colour transitions settle
     const tag = `${which}-${theme.toLowerCase()}`;
     await rail.getByRole("button", { name: "Agir", exact: true }).click();

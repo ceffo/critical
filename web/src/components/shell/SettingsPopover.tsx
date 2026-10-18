@@ -53,7 +53,7 @@ function Choice({
 }
 
 const segment =
-  "flex min-h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-2 py-1 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4";
+  "flex min-h-7 flex-auto items-center justify-center gap-1 rounded-md px-2 py-1 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4";
 
 /** A theme's swatch in its own colours for that mode: its tint on its card, ringed by its page. */
 function Swatch({ id, light }: { id: string; light: boolean }) {

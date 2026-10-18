@@ -2,19 +2,12 @@ import { useTranslation } from "react-i18next";
 import { useHpStore } from "@/stores/hp";
 import { useLogStore } from "@/stores/log";
 import { formatSigned } from "@/lib/format";
-import { hpBarModel } from "@/lib/hpBar";
+import { HP_BAR_FILL as TONE, hpBarModel } from "@/lib/hpBar";
 import { lastDamage, lastHpChange } from "@/lib/moiLog";
 import { cn } from "@/lib/utils";
 import { groupHeadClass } from "./fieldStyles";
 import { useSpellName } from "@/i18n/spellName";
 import type { HpCondition } from "@/types/hp";
-
-/** Bar fill per threshold band (display only, `lib/hpBar.ts`). */
-const TONE = {
-  good: "bg-tint",
-  warn: "bg-warning",
-  bad: "bg-danger",
-} as const;
 
 /** Condition label style; "ok" shows no label. */
 const CONDITION: Record<Exclude<HpCondition, "ok">, string> = {

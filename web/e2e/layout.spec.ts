@@ -2099,6 +2099,10 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
       );
       await snap(page, `create-page-${lang}-${vp.width}x${vp.height}`);
     }
+    // A window shorter than the form: the page itself still never scrolls, the form's card does.
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await expectNoPageScroll(page);
+    await expect(card.getByTestId("character-form")).toBeVisible();
   }
 });
 

@@ -7,7 +7,8 @@ Implemented 2026-10-18: steps 2, 3, 5 and 6, step 8 for the bard and the mage, s
 Rod/Staff/Wand and Spells saves, step 24 for the level, THAC0 and saves, and the race code of step 1
 (each with its "Tests:" line); step 7 (realized and target levels, the level-up roll) implemented
 2026-10-18 as rewritten by the
-user's ruling that day; the rest is not
+user's ruling that day; steps 9 to 12 (the fighter) implemented 2026-10-18, each with its "Tests:"
+line and as-built note; the rest is not
 implemented. Amends [ADR 0002](0002-attack-resolution.md) step 2, [ADR 0004](0004-buffs.md) steps 7
 to 10 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR
 0008](0008-spell-slots-and-long-rest.md)
@@ -293,6 +294,13 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    halfling (PHB Table 7, note: halfling fighters do not roll it). PHB Table 1's exceptional rows
    (already in the catalogue's `strength` table, `exc_min` and `exc_max`) give its hit and damage
    adjustments.
+   As built: `characters.str_exceptional` (migration 009, 0 = none); refusals on field
+   `strExceptional` with code `not_allowed` (wrong class, Strength or race) or `out_of_range`; the
+   halfling exclusion is a constant of `ruletablesvc`, not catalogue data. The UI writes it in the
+   PHB's notation (18/05, 18/50, 18/00), on the sheet and in the Strength modifier's detail.
+   Tests: `TestCreate_Step9_ExceptionalStrength` (charactersvc), `TestExceptionalStrengthAllowed_Step9`
+   (ruletablesadpt), `TestResolveAttack_Step12_SpecializedMeleeAnd18_50` (combatsvc: Table 1 at
+   18/50).
 10. **Strength spells and 18/xx (warriors only).** The book: past 18, a warrior's Strength spell
     adds tenths of a point, 10% a point, and cannot reach 19 (PHB, *Strength*, Wizard 2). The
     project keeps its stacking and gates (ADR 0004 steps 7 to 10) and only adds the warrior's scale
@@ -306,6 +314,11 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     3. No rule lowers the Strength in effect below the sheet's (ADR 0004 step 9): a percentile is
        never lost to an effect whose result would be a plain 18.
     4. Gates (ADR 0004 step 10) read 18/xx as 18.
+
+    As built: attacks and spell to-hits read Table 1 at the 18/xx in effect; `/api/stats/str` adds
+    `baseExceptional` and `effectiveExceptional`.
+    Tests: `TestAggregate_Step10_StrengthSpellsAnd18xx`, `TestAggregate_Step10_4_GatesRead18xxAs18`,
+    `TestGetEffectiveStr_Step10_TheFightersPercentile` (buffsvc).
 11. **Attacks per round.** Read from the weapon's type (step 23), shown on the attack card as a
     rate; the app does not limit the attack requests.
     1. **Melee weapon**: PHB Table 15 by the fighter's level (1 per round at 1 to 6, 3 per 2 rounds
@@ -321,6 +334,13 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        specialized or not; a long sword shows 2/1 (specialized: 5/2). _(proposed: with a half rate (3/2, 5/2) the card also shows this
     round's count, the lower one in odd rounds and the higher in even rounds of
     [ADR 0005](0005-rounds-and-time.md).)_
+
+    As built: the rate is the warriors' only (Table 15 is theirs; another class's weapon shows no
+    rate, settled 2026-10-18), read at the realized level (step 7). The attack form view carries
+    `attackRate {attacks, rounds, thisRound}`; the card writes it "3/2 att." with this round's count
+    for a half rate. The weapon editor gains the step 23 type select, without which no rate shows.
+    Tests: `TestAttackRateFor_Step11`, `TestAttackRateInRound_Step11_4` (ruletablesadpt),
+    `TestGetAttackForm_Step11_AttackRateAndPointBlank` (combatsvc).
 12. **Weapon specialization.** A per-weapon flag, fighters only (refused for another class). A
     specialized weapon adds +1 to hit and +2 to damage, each a named modifier, not magical (it does
     not count as a "+N" of ADR 0002 step 6). _(proposed: a bow or crossbow instead gets +2 to hit at
@@ -328,6 +348,24 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     thrown weapons (dagger, dart, hand axe…) get the melee +1/+2, a ruling, not book text: the book
     names only melee weapons and bows and crossbows.)_ Proficiency slots and the cost of
     specialization are not tracked.
+
+    As built (user, 2026-10-18: point-blank is a per-request flag, the bonuses generic by weapon
+    kind, which ones a launcher gets taken from the PHB). PHB p.53, *Effects of Specialization*: a
+    melee specialist gets +1 to hit and +2 damage, not magical; bow and crossbow specialists gain a
+    point-blank range category with +2 to hit and "no additional damage"; their extra attacks are
+    Table 35's, none for bows (step 11). So, by weapon kind: a weapon that fires ammunition (bow,
+    crossbow, and by the same rule a sling) gets only the point-blank +2 (modifier `point_blank`),
+    when the attack request sets `point_blank`, refused (invalid input) for any other weapon; any
+    other weapon, melee or thrown, gets +1 to hit and +2 damage (modifier `specialization`, the
+    damage added after the multipliers with Strength). The flag is never saved; the form's preview
+    carries a `pointBlank` variant so the card shows the option's numbers without computing them.
+    Missile range bands beyond point-blank are out of scope. `weapons.specialized` (migration 009)
+    is refused on field `specialized`, code `not_allowed`, for a class whose `derived.specializes`
+    is false, when the flag is turned on.
+    Tests: `TestSpecializes_Step12_FightersOnly` (ruletablesadpt), `TestCreate_Step12_SpecializedFightersOnly`,
+    `TestUpdate_Step12_SpecializedFlag` (weaponsvc), `TestResolveAttack_Step12_SpecializedMeleeAnd18_50`,
+    `TestResolveAttack_Step12_LauncherPointBlank`, `TestResolveAttack_Step12_PointBlankRefused`
+    (combatsvc).
 
 ### Cleric
 

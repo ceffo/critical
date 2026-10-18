@@ -2147,3 +2147,118 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
     await prompt.getByRole("button", { name: "Fermer", exact: true }).click();
   }
 });
+
+// ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
+// attack card's rate, "spécialisée" tag and point-blank checkbox, and the weapon editor's Catégorie
+// and Spécialisée controls, none of them cut. Screenshot of the weapon editor at both sizes.
+test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    page.evaluate(
+      async ([m, u, b]) => {
+        const r = await fetch(u as string, {
+          method: m as string,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(b),
+        });
+        return r.ok || `${r.status} ${await r.text()}`;
+      },
+      [method, url, body] as const,
+    );
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Borin Gueule-de-Fer",
+      class: "fighter",
+      raceCode: "human",
+      str: 18,
+      strExceptional: 50,
+      dex: 14,
+      con: 15,
+      int: 10,
+      wis: 10,
+      cha: 9,
+      hpMax: 10,
+      xp: 0,
+    }),
+  ).toBe(true);
+  for (const w of [
+    {
+      name: { en: "Long Sword", fr: "Épée longue" },
+      damage_sm: "1d8",
+      damage_l: "1d12",
+      kind: "melee",
+      weapon_type: "long_sword",
+      specialized: true,
+    },
+    {
+      name: { en: "Heavy Crossbow", fr: "Arbalète lourde" },
+      damage_sm: "1d4",
+      damage_l: "1d6",
+      kind: "missile",
+      ammo_kind: "bolt",
+      weapon_type: "heavy_crossbow",
+      specialized: true,
+    },
+  ])
+    expect(await call("POST", "/api/weapons", w), w.name.en).toBe(true);
+  await page.reload();
+  await expect(page.getByTestId("str-value")).toHaveText("18/50");
+
+  await openWorkspace(page, "Act");
+  await openWeapons(page);
+  const f = page.getByRole("form", { name: "Attaque" });
+  for (const weapon of ["Long Sword", "Heavy Crossbow"]) {
+    await chooseLanguage(page, "en");
+    await chooseWeapon(page, weapon);
+    await chooseLanguage(page, "fr");
+    await expect(f.getByTestId("tile-specialized")).toHaveText("spécialisée");
+    await expect(f.getByTestId("tile-rate")).toContainText("att.");
+    if (weapon === "Heavy Crossbow")
+      await expect(f.getByTestId("point-blank")).toBeVisible();
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${weapon}, fr, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(
+        page.getByTestId("character"),
+        `character card, ${where}`,
+      );
+      await expectNoClippedText(
+        page.getByTestId("str-value"),
+        `Strength tile, ${where}`,
+      );
+      await expectNoClippedText(f, `attack card, ${where}`);
+      if (weapon === "Heavy Crossbow")
+        await snap(page, `fighter-crossbow-fr-${vp.width}x${vp.height}`);
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
+  }
+
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Inventory");
+  await chooseLanguage(page, "fr");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await page
+      .getByTestId("weapon-long_sword")
+      .getByRole("button", { name: "Modifier Épée longue" })
+      .click();
+    const wf = page.getByTestId("weapon-form");
+    await expect(wf.getByLabel("Catégorie")).toBeVisible();
+    await expect(wf.getByLabel("Spécialisée")).toBeChecked();
+    const where = `weapon editor, fr, ${vp.width}x${vp.height}`;
+    await expectNoClippedText(wf, where);
+    await snap(page, `fighter-weapon-editor-fr-${vp.width}x${vp.height}`);
+    await wf.getByRole("button", { name: "Annuler" }).click();
+    await expect(wf).toBeHidden();
+  }
+});

@@ -317,7 +317,7 @@
     "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} ce round",
     "rateHint": "Attaques par round : {{attacks}} tous les {{rounds}} rounds ; ce round : {{count}}",
     "pointBlank": "Bout portant",
-    "pointBlankHint": "Cible à bout portant : +2 au toucher avec une arme de tir spécialisée",
+    "pointBlankHint": "Cible à bout portant : +2 au toucher pour un spécialiste de l’arc ou de l’arbalète",
     "sizesShort": {
       "sm": "P / M",
       "l": "G"

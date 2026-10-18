@@ -317,7 +317,7 @@
     "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} this round",
     "rateHint": "Attacks per round: {{attacks}} every {{rounds}} rounds; this round: {{count}}",
     "pointBlank": "Point blank",
-    "pointBlankHint": "Target at point-blank range: +2 to hit with a specialized launcher",
+    "pointBlankHint": "Target at point-blank range: +2 to hit with a specialized bow or crossbow",
     "sizesShort": {
       "sm": "S / M",
       "l": "L"

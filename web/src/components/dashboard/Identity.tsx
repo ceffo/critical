@@ -103,7 +103,13 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
       {character && (
         <div
           role="group"
-          className="grid grid-cols-[repeat(6,minmax(0,1fr))_minmax(0,1.35fr)] gap-1"
+          className={cn(
+            "grid gap-1",
+            // An 18/xx Strength takes a wider first tile (ADR 0030 step 9), never a cut one.
+            strength && strength.effectiveExceptional > 0
+              ? "grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(0,1fr))_minmax(0,1.35fr)]"
+              : "grid-cols-[repeat(6,minmax(0,1fr))_minmax(0,1.35fr)]",
+          )}
           aria-label={t("app.abilities")}
         >
           {ABILITIES.map((k) => {

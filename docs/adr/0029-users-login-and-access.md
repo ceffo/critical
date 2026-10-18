@@ -171,6 +171,18 @@ sequenceDiagram
       mutation is a non-GET.
    6. The current user is `GET /api/auth/me` (email, role, root flag, current character id); it answers
       401 without a session, which is how the web decides to show the login page.
+   7. **A server trusts a session it found valid for 10 seconds** (_added 2026-10-18 by the database
+      resilience change, see [ADR 0025](0025-postgresql-storage.md) step 10; the user approves ADR
+      changes at merge_), never past the session's expiry: the requests of a page load read the session
+      and its user once instead of once each. The server that logs a session out, disables its user or
+      changes the user's role forgets it at once, so on that server step 4.4 holds as written. On the
+      other production server a logout, a disabling or a role change takes effect **within 10 seconds**:
+      the window accepted for that saving (the servers share no channel but the database). An answer from
+      the cache never extends the session (step 4.3 writes on a read of the database only); a failed
+      lookup is never remembered. Tests: `authsvc` `TestAuthenticate_Step4_7_TrustedForTheCacheTTL`,
+      `TestAuthenticate_Step4_7_NeverPastTheSessionsExpiry`, `TestAuthenticate_Step4_7_LogoutForgetsAtOnce`,
+      `TestAuthenticate_Step4_7_DisablingForgetsAtOnce`, `TestAuthenticate_Step4_7_ARoleChangeForgetsAtOnce`,
+      `TestAuthenticate_Step4_7_TheCacheNeverReportsAnExtension`, `TestAuthenticate_Step4_7_AFailureIsNotCached`.
 5. **The root admin.**
    1. Exactly **one** user is the root admin: the flag is a column, kept in the database. It is set by a
       **committed script run locally against a DSN** (`just root-admin <email>`), never by hosting

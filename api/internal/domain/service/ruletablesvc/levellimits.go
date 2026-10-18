@@ -3,8 +3,10 @@ package ruletablesvc
 import "fmt"
 
 // The racial level limits of DMG Table 7 (ADR 0030 step 21), carried by
-// catalogue format 5 (ADR 0021 step 11). They are shown on the race card,
-// never enforced. Humans have no row: they have no limit in any class.
+// catalogue format 5 (ADR 0021 step 11). The levels are shown on the race
+// card, never enforced; a dash (a class the race does not admit) refuses a
+// new character of that race and class (RaceAllows). Humans have no row: they
+// have no limit in any class.
 
 // LevelLimitRow is the DMG Table 7 cell for a race in a class: the highest
 // level the race reaches (MaxLevel 1 to 20), no limit (Unlimited, the
@@ -49,4 +51,24 @@ func NewLevelLimits(rows []LevelLimitRow) (*LevelLimits, error) {
 func (l *LevelLimits) Limit(race, class string) (LevelLimitRow, bool) {
 	r, ok := l.rows[race+" "+class]
 	return r, ok
+}
+
+// RaceAllows reports whether a character of race may belong to class (DMG
+// Table 7: a dash is a race the class does not admit), the check a new
+// character's race and class pass (ADR 0030 step 21, as built for character
+// creation). Humans may belong to any class. An error is a race or class the
+// tables do not know, or a catalogue without the level limits.
+func (t *Tables) RaceAllows(race, class string) (bool, error) {
+	if race == "human" {
+		return true, nil
+	}
+	l, ok := t.LevelLimits()
+	if !ok {
+		return false, fmt.Errorf("race %s class %s: the catalogue carries no racial level limits", race, class)
+	}
+	r, ok := l.Limit(race, class)
+	if !ok {
+		return false, fmt.Errorf("race %s class %s: no racial level limit", race, class)
+	}
+	return r.Unlimited || r.MaxLevel > 0, nil
 }

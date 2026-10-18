@@ -25,6 +25,9 @@ type Rules interface {
 	BardSpellsPerDay(level int) (map[int]int, error)
 	// WizardSpellsPerDay is PHB Table 21 by spell level (step 8).
 	WizardSpellsPerDay(level int) (map[int]int, error)
+	// RaceAllows is DMG Table 7: false for a race the class does not admit
+	// (step 21, checked when a character is created).
+	RaceAllows(race, class string) (bool, error)
 }
 
 // conSaveRaces are the races that add their PHB Table 9 bonus to the saves

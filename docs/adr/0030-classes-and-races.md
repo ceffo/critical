@@ -117,6 +117,16 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    Tests: `TestRead_Refusals` ("character race not a PHB race code", seedfile),
    `TestMigrate_TheSeedCharacterGetsItsRaceAfterTheRaceMigration`, `TestSeed_TheCharacterAndItsStateRows`
    (storage/postgres).
+   _(As built for creation, 2026-10-18; ranges proposed)_ A character created in the app enters its
+   class, race code (one of the six, required), name (1 to 40 characters), the six scores (each **3 to
+   19**: 3d6, one more or less for a racial adjustment of PHB Table 8), the max HP (1 to 999) and the
+   starting XP (0 to 100,000,000). Only the classes whose entries and rules are built may be created:
+   the **bard** for now (`charactersvc.CreatableClasses`); each class item adds its own with its entries
+   (a fighter's exceptional strength, a thief's skill points). A **cleric is refused** until step 13: its
+   slots need the Wisdom bonus spells. A refusal names the field and a code (`empty`, `too_long`,
+   `out_of_range`, `not_creatable`, `unknown`, `race_not_allowed`), worded by the web.
+   Tests: `TestCreate_RefusesInvalidInputWithFieldErrors`, `TestCreate_AcceptsTheBounds` (charactersvc),
+   `TestCreate_RefusedInputStoresNothing` (composition).
 2. **Class groups.** Fighter is a warrior, mage a wizard, cleric a priest, thief and bard rogues.
    The group picks the THAC0 row (step 5), the saving throw rows (step 6), the hit dice (step 7) and
    the Constitution hit point bonus (warriors get the higher one, step 7).
@@ -336,6 +346,13 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     catalogue data (class codes and numbers); the trait texts are localized catalogue text (step
     23). _(proposed: a level above the limit, or a class the race does not allow, is a warning on
     the card: code, class, level and limit.)_
+    _(As built for creation, 2026-10-18; amends "without enforcing" for the classes a race allows)_ A
+    **new character** whose race DMG Table 7 marks with a dash in its class (a race the class does not
+    admit: a bard is a human or a half-elf) is **refused** (`race_not_allowed` on the race); humans may
+    be of any class. The creation form offers only the races the class admits. The level limits and
+    the ability requirements stay shown, not enforced, and an existing character is never refused.
+    Tests: `TestRaceAllows_Step21_TheDashOfTable7` (ruletablesadpt), `TestCreate_RefusesInvalidInputWithFieldErrors`
+    (charactersvc), `TestCreate_RefusedInputStoresNothing` (composition).
 22. **Racial effects applied.** Applied by the server:
     1. Dwarves, gnomes and halflings add their PHB Table 9 bonus (from the sheet's Constitution) to
        saves against Rod/Staff/Wand and Spells. Dwarves and halflings add it against poison too:
@@ -404,8 +421,10 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     own XP (the starting XP, without the ledger), which is the comparison at import: XP awarded
     since raises the level without making the sheet "wrong". The differences are the derived
     block's `sheetDifferences` (`value` code, `sheet`, `computed`); the character card lists them.
-    A character created in the app states no sheet: its creation (a later item) stores the
-    computed figures, or the columns go with their contract step. Kelsen's seed against the books'
+    A character created in the app states no sheet: its creation stores the figures the rules derive
+    at its starting XP in those columns (_as built 2026-10-18_), so it shows no difference.
+    Tests: `TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent` (charactersvc),
+    `TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing` (composition). Kelsen's seed against the books'
     tables and the real artifact: no difference.
     Tests: `TestDerive_Step24_SheetDifferences`, `TestDerive_KelsenMatchesHisSheet` (charactersvc),
     `TestKelsen_TheSheetMatchesTheDerivedValues` (seedcheck: seeds/character.json on the fixture's

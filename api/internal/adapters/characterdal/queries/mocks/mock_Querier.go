@@ -83,6 +83,261 @@ func (_c *MockQuerier_CharactersOf_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
+// CreateActiveBuffs provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) CreateActiveBuffs(ctx context.Context, characterID int64) error {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateActiveBuffs")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CreateActiveBuffs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateActiveBuffs'
+type MockQuerier_CreateActiveBuffs_Call struct {
+	*mock.Call
+}
+
+// CreateActiveBuffs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockQuerier_Expecter) CreateActiveBuffs(ctx interface{}, characterID interface{}) *MockQuerier_CreateActiveBuffs_Call {
+	return &MockQuerier_CreateActiveBuffs_Call{Call: _e.mock.On("CreateActiveBuffs", ctx, characterID)}
+}
+
+func (_c *MockQuerier_CreateActiveBuffs_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_CreateActiveBuffs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CreateActiveBuffs_Call) Return(_a0 error) *MockQuerier_CreateActiveBuffs_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CreateActiveBuffs_Call) RunAndReturn(run func(context.Context, int64) error) *MockQuerier_CreateActiveBuffs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateCharacter provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CreateCharacter(ctx context.Context, arg queries.CreateCharacterParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateCharacterParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateCharacterParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateCharacterParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_CreateCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCharacter'
+type MockQuerier_CreateCharacter_Call struct {
+	*mock.Call
+}
+
+// CreateCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CreateCharacterParams
+func (_e *MockQuerier_Expecter) CreateCharacter(ctx interface{}, arg interface{}) *MockQuerier_CreateCharacter_Call {
+	return &MockQuerier_CreateCharacter_Call{Call: _e.mock.On("CreateCharacter", ctx, arg)}
+}
+
+func (_c *MockQuerier_CreateCharacter_Call) Run(run func(ctx context.Context, arg queries.CreateCharacterParams)) *MockQuerier_CreateCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CreateCharacterParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CreateCharacter_Call) Return(_a0 int64, _a1 error) *MockQuerier_CreateCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_CreateCharacter_Call) RunAndReturn(run func(context.Context, queries.CreateCharacterParams) (int64, error)) *MockQuerier_CreateCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateRoundState provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) CreateRoundState(ctx context.Context, characterID int64) error {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateRoundState")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CreateRoundState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateRoundState'
+type MockQuerier_CreateRoundState_Call struct {
+	*mock.Call
+}
+
+// CreateRoundState is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockQuerier_Expecter) CreateRoundState(ctx interface{}, characterID interface{}) *MockQuerier_CreateRoundState_Call {
+	return &MockQuerier_CreateRoundState_Call{Call: _e.mock.On("CreateRoundState", ctx, characterID)}
+}
+
+func (_c *MockQuerier_CreateRoundState_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_CreateRoundState_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CreateRoundState_Call) Return(_a0 error) *MockQuerier_CreateRoundState_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CreateRoundState_Call) RunAndReturn(run func(context.Context, int64) error) *MockQuerier_CreateRoundState_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateSpellSlots provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) CreateSpellSlots(ctx context.Context, characterID int64) error {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateSpellSlots")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CreateSpellSlots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateSpellSlots'
+type MockQuerier_CreateSpellSlots_Call struct {
+	*mock.Call
+}
+
+// CreateSpellSlots is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockQuerier_Expecter) CreateSpellSlots(ctx interface{}, characterID interface{}) *MockQuerier_CreateSpellSlots_Call {
+	return &MockQuerier_CreateSpellSlots_Call{Call: _e.mock.On("CreateSpellSlots", ctx, characterID)}
+}
+
+func (_c *MockQuerier_CreateSpellSlots_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_CreateSpellSlots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CreateSpellSlots_Call) Return(_a0 error) *MockQuerier_CreateSpellSlots_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CreateSpellSlots_Call) RunAndReturn(run func(context.Context, int64) error) *MockQuerier_CreateSpellSlots_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CurrentCharacter provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CurrentCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (int64, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) int64); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_CurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CurrentCharacter'
+type MockQuerier_CurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// CurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockQuerier_Expecter) CurrentCharacter(ctx interface{}, id interface{}) *MockQuerier_CurrentCharacter_Call {
+	return &MockQuerier_CurrentCharacter_Call{Call: _e.mock.On("CurrentCharacter", ctx, id)}
+}
+
+func (_c *MockQuerier_CurrentCharacter_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockQuerier_CurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CurrentCharacter_Call) Return(_a0 int64, _a1 error) *MockQuerier_CurrentCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_CurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) (int64, error)) *MockQuerier_CurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCharacter provides a mock function with given fields: ctx, id
 func (_m *MockQuerier) GetCharacter(ctx context.Context, id int64) (queries.GetCharacterRow, error) {
 	ret := _m.Called(ctx, id)
@@ -193,6 +448,226 @@ func (_c *MockQuerier_GetCharacterDetails_Call) Return(_a0 queries.GetCharacterD
 }
 
 func (_c *MockQuerier_GetCharacterDetails_Call) RunAndReturn(run func(context.Context, int64) (queries.GetCharacterDetailsRow, error)) *MockQuerier_GetCharacterDetails_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LockUser provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LockUser")
+	}
+
+	var r0 uuid.UUID
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (uuid.UUID, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) uuid.UUID); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(uuid.UUID)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_LockUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LockUser'
+type MockQuerier_LockUser_Call struct {
+	*mock.Call
+}
+
+// LockUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockQuerier_Expecter) LockUser(ctx interface{}, id interface{}) *MockQuerier_LockUser_Call {
+	return &MockQuerier_LockUser_Call{Call: _e.mock.On("LockUser", ctx, id)}
+}
+
+func (_c *MockQuerier_LockUser_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockQuerier_LockUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_LockUser_Call) Return(_a0 uuid.UUID, _a1 error) *MockQuerier_LockUser_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_LockUser_Call) RunAndReturn(run func(context.Context, uuid.UUID) (uuid.UUID, error)) *MockQuerier_LockUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RenameCharacter provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) RenameCharacter(ctx context.Context, arg queries.RenameCharacterParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenameCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RenameCharacterParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RenameCharacterParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.RenameCharacterParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_RenameCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenameCharacter'
+type MockQuerier_RenameCharacter_Call struct {
+	*mock.Call
+}
+
+// RenameCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.RenameCharacterParams
+func (_e *MockQuerier_Expecter) RenameCharacter(ctx interface{}, arg interface{}) *MockQuerier_RenameCharacter_Call {
+	return &MockQuerier_RenameCharacter_Call{Call: _e.mock.On("RenameCharacter", ctx, arg)}
+}
+
+func (_c *MockQuerier_RenameCharacter_Call) Run(run func(ctx context.Context, arg queries.RenameCharacterParams)) *MockQuerier_RenameCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.RenameCharacterParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_RenameCharacter_Call) Return(_a0 int64, _a1 error) *MockQuerier_RenameCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_RenameCharacter_Call) RunAndReturn(run func(context.Context, queries.RenameCharacterParams) (int64, error)) *MockQuerier_RenameCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RepairCurrentCharacter provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) RepairCurrentCharacter(ctx context.Context, id uuid.UUID) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RepairCurrentCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_RepairCurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RepairCurrentCharacter'
+type MockQuerier_RepairCurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// RepairCurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockQuerier_Expecter) RepairCurrentCharacter(ctx interface{}, id interface{}) *MockQuerier_RepairCurrentCharacter_Call {
+	return &MockQuerier_RepairCurrentCharacter_Call{Call: _e.mock.On("RepairCurrentCharacter", ctx, id)}
+}
+
+func (_c *MockQuerier_RepairCurrentCharacter_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockQuerier_RepairCurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_RepairCurrentCharacter_Call) Return(_a0 error) *MockQuerier_RepairCurrentCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_RepairCurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockQuerier_RepairCurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RetireCharacter provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) RetireCharacter(ctx context.Context, arg queries.RetireCharacterParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RetireCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RetireCharacterParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RetireCharacterParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.RetireCharacterParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_RetireCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetireCharacter'
+type MockQuerier_RetireCharacter_Call struct {
+	*mock.Call
+}
+
+// RetireCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.RetireCharacterParams
+func (_e *MockQuerier_Expecter) RetireCharacter(ctx interface{}, arg interface{}) *MockQuerier_RetireCharacter_Call {
+	return &MockQuerier_RetireCharacter_Call{Call: _e.mock.On("RetireCharacter", ctx, arg)}
+}
+
+func (_c *MockQuerier_RetireCharacter_Call) Run(run func(ctx context.Context, arg queries.RetireCharacterParams)) *MockQuerier_RetireCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.RetireCharacterParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_RetireCharacter_Call) Return(_a0 int64, _a1 error) *MockQuerier_RetireCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_RetireCharacter_Call) RunAndReturn(run func(context.Context, queries.RetireCharacterParams) (int64, error)) *MockQuerier_RetireCharacter_Call {
 	_c.Call.Return(run)
 	return _c
 }

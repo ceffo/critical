@@ -131,8 +131,76 @@ func (s *Store) AddCharacterOf(ctx context.Context, owner uuid.UUID, c character
 	return id, err
 }
 
-// RetireCharacter retires the character (ADR 0029 step 7.3): its owner's
-// lists no longer show it. There is no endpoint for it yet.
+// CreateCharacter implements charactersvc.Owners.
+func (c Characters) CreateCharacter(ctx context.Context, owner uuid.UUID, ch charactersvc.Character) (int64, error) {
+	ch.Details.Languages = []string{}
+	return c.s.AddCharacterOf(ctx, owner, ch)
+}
+
+// ownedBy is the character id of owner's when owner has it and has not
+// retired it, else domain.ErrCharacterNotFound.
+func (t *tables) ownedBy(owner uuid.UUID, id int64) (charactersvc.Character, error) {
+	ch, ok := t.characters[id]
+	if !ok || owner == uuid.Nil || t.owners[id] != owner || t.retired[id] {
+		return charactersvc.Character{}, domain.ErrCharacterNotFound
+	}
+	return ch, nil
+}
+
+// RenameCharacter implements charactersvc.Owners.
+func (c Characters) RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, name string) error {
+	return c.s.write(ctx, func(t *tables) error {
+		ch, err := t.ownedBy(owner, id)
+		if err != nil {
+			return err
+		}
+		ch.Name = name
+		t.characters[id] = ch
+		return nil
+	})
+}
+
+// RetireCharacter implements charactersvc.Owners (ADR 0029 step 7.3): its
+// owner's lists no longer show it; nothing is deleted.
+func (c Characters) RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
+	return c.s.write(ctx, func(t *tables) error {
+		if _, err := t.ownedBy(owner, id); err != nil {
+			return err
+		}
+		t.retired[id] = true
+		return nil
+	})
+}
+
+// RepairCurrentCharacter implements charactersvc.Owners.
+func (c Characters) RepairCurrentCharacter(ctx context.Context, owner uuid.UUID) error {
+	return c.s.write(ctx, func(t *tables) error {
+		if _, ok := t.users[owner]; !ok || t.currentOf(owner) != 0 {
+			return nil
+		}
+		delete(t.current, owner)
+		for _, id := range slices.Sorted(maps.Keys(t.characters)) {
+			if t.owners[id] == owner && !t.retired[id] {
+				t.current[owner] = id
+				return nil
+			}
+		}
+		return nil
+	})
+}
+
+// CurrentCharacter implements charactersvc.Owners.
+func (c Characters) CurrentCharacter(ctx context.Context, owner uuid.UUID) (int64, error) {
+	var id int64
+	err := c.s.read(ctx, func(t *tables) error {
+		id = t.currentOf(owner)
+		return nil
+	})
+	return id, err
+}
+
+// RetireCharacter retires the character whoever owns it (the tests' set-up;
+// the app retires through Characters.RetireCharacter).
 func (s *Store) RetireCharacter(ctx context.Context, id int64) error {
 	return s.write(ctx, func(t *tables) error {
 		if _, ok := t.characters[id]; !ok {

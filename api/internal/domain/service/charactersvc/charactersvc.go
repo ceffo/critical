@@ -1,8 +1,9 @@
 // Package charactersvc owns read access to a character: the entered values
 // (abilities, HP max, class, race, starting XP) and the values the rules
 // derive from them (level, THAC0, saving throws, spell slots; ADR 0030 steps 3
-// to 8), and which characters a user owns and plays (ADR 0029 step 7). The
-// sheets are written via seeding in the storage layer.
+// to 8), and which characters a user owns and plays (ADR 0029 step 7):
+// creating, switching, renaming and retiring them. The seed character is
+// written by the storage layer's seeding.
 package charactersvc
 
 import (
@@ -38,6 +39,20 @@ type SVC interface {
 	// are all domain.ErrCharacterNotFound (step 7.1: a foreign character is
 	// not revealed).
 	SetCurrent(ctx context.Context, owner uuid.UUID, id int64) error
+	// Create stores a new character of the owner's and makes it their
+	// current character (ADR 0029 step 7.2); it starts with nothing (no
+	// weapon, item, proficiency, skill or spellbook). A *domain.FieldError
+	// for invalid input (see NewCharacter).
+	Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (int64, error)
+	// Change renames or retires the owner's character id (step 7.3).
+	// Another user's character, a retired one and an unknown id are all
+	// domain.ErrCharacterNotFound; retiring the current character makes the
+	// owner's first one left current (none: no current character).
+	// It returns the owner's current character after the change (0: none).
+	Change(ctx context.Context, owner uuid.UUID, id int64, c Change) (current int64, err error)
+	// CreationOptions are the classes a new character may have, the races
+	// each admits and the entered values' ranges.
+	CreationOptions(ctx context.Context) (CreationOptions, error)
 }
 
 // Reader is the read-side driven port. Per clean_architecture.md §5.4, reads
@@ -61,6 +76,21 @@ type Owners interface {
 	// domain.ErrCharacterNotFound and changes nothing (one statement: no
 	// check-then-write).
 	SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id int64) error
+	// CreateCharacter stores c (its ID is ignored) as the owner's, with no
+	// spell prepared, no buff and round 0, and returns its id.
+	CreateCharacter(ctx context.Context, owner uuid.UUID, c Character) (int64, error)
+	// RenameCharacter and RetireCharacter change the owner's character id
+	// when the owner has it and has not retired it, else return
+	// domain.ErrCharacterNotFound and change nothing (one statement each).
+	RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, name string) error
+	RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error
+	// RepairCurrentCharacter makes the owner's first character not retired
+	// current unless their current one is such a character (none left: no
+	// current character).
+	RepairCurrentCharacter(ctx context.Context, owner uuid.UUID) error
+	// CurrentCharacter is the owner's current character, read through the
+	// ownership: 0 when it is none, retired or not theirs.
+	CurrentCharacter(ctx context.Context, owner uuid.UUID) (int64, error)
 }
 
 // Sessions is the login's session cache (authsvc.SVC satisfies it): a user

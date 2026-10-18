@@ -180,7 +180,24 @@ async function expectCharacterCardLines(page: Page, where: string) {
       (await row.boundingBox())!.height,
       `${await row.getAttribute("data-save")} on one line, ${where}`,
     ).toBeLessThanOrEqual(29);
+  // The identity: the class under the name, the level right-aligned on the name's line.
+  const name = (await character.getByTestId("details-trigger").boundingBox())!;
+  const klass = (await character.getByTestId("class").boundingBox())!;
+  const level = (await character
+    .getByRole("button", { name: /^Niveau/ })
+    .boundingBox())!;
+  expect(klass.y, `class under the name, ${where}`).toBeGreaterThanOrEqual(
+    name.y + name.height - 1,
+  );
+  expect(
+    Math.abs(level.y + level.height / 2 - (name.y + 14)),
+    `level on the name's line, ${where}`,
+  ).toBeLessThanOrEqual(14);
   const hp = character.getByRole("group", { name: "Modifier les PV" });
+  await expect(
+    hp.getByText("Montant"),
+    `no visible amount label, ${where}`,
+  ).toHaveCount(0);
   const amount = (await hp.getByLabel("Montant").boundingBox())!;
   for (const name of ["Dégâts", "Soins"]) {
     const b = (await hp.getByRole("button", { name }).boundingBox())!;

@@ -30,7 +30,10 @@ WS=${HERDR_WORKSPACE_ID:-}
 snap() { herdr agent list 2>/dev/null | jq -r --arg ws "$WS" '.result.agents[]|select((.name // "sup-")|startswith("sup-")|not)|select($ws=="" or .workspace_id==$ws)|"\(.name) \(.agent_status) \(.state_change_seq) \(.tab_id)"'; }
 # The agent's last message, without herdr/Claude chrome (status bar, prompt, recap, spinner lines).
 last_msg() { herdr agent read "$1" --source recent-unwrapped --lines 40 2>/dev/null \
-  | grep -vE '^\s*$|tokens ·|───|^\s*❯|auto mode|^\s*~/|^\s*✻' | tail -10; }
+  | sed '/※ recap/,$d' | grep -vE '^\s*$|tokens ·|───|^\s*❯|auto mode|^\s*~/|^\s*✻' | tail -10; }
+# A developer/reviewer that wrote its report is finished, not waiting: its summary often ends with a
+# line for the user ("log in and confirm"), which is the supervisor's to relay, never a question.
+finished() { ! user_facing "$1" && grep -qiE 'report (is|written) (in|to)|reports/[^ ]+\.md|^\s*STATUS: done' <<<"$2"; }
 asks_user() { grep -qE '\?\s*$|\?["»)]?\s' <<<"$1" || grep -qiE "tell me|let me know|your (call|verdict|ok|go|choice)|once you('ve| have)|you run|run (this|these)|please (run|confirm|check|log in)|confirm (that|you)|waiting (on|for) you|which (one|do you)|for you to|over to you" <<<"$1"; }
 label_of() { herdr tab list 2>/dev/null | jq -r --arg t "$1" '.result.tabs[]|select(.tab_id==$t)|.label'; }
 mark() { # mark <tab> <prefix|""> : set or clear the tab's waiting prefix
@@ -43,7 +46,7 @@ user_facing() { [[ "$1" == scoper-* || "$1" == designer-* ]]; }
 while read -r n s q t; do
   [ -n "$n" ] || continue; seen[$n]=$q; state[$n]=$s
   if [ "$s" = blocked ]; then mark "$t" "⛔ "
-  elif { [ "$s" = idle ] || [ "$s" = done ]; } && asks_user "$(last_msg "$n")"; then mark "$t" "❓ "
+  elif { [ "$s" = idle ] || [ "$s" = done ]; } && m=$(last_msg "$n") && ! finished "$n" "$m" && asks_user "$m"; then mark "$t" "❓ "
   else mark "$t" ""; fi
 done < <(snap)
 fresh_report() { # the agent's report newer than the supervisor's last prompt marker for its item
@@ -68,7 +71,7 @@ while sleep 30; do
     fi
     if [ "$prev" != idle ] && [ "$prev" != done ] && { [ "$s" = idle ] || [ "$s" = done ]; }; then
       msg=$(last_msg "$n")
-      if ! user_facing "$n" && { grep -qiE 'supervisor|ship|push|pull request|\bPR\b|merge' <<<"$tail" || fresh_report "$n"; }; then
+      if ! user_facing "$n" && { finished "$n" "$msg" || grep -qiE 'supervisor|ship|push|pull request|\bPR\b|merge' <<<"$tail" || fresh_report "$n"; }; then
         mark "$t" ""; echo "NEEDS-SUPERVISOR $n"; echo "$tail"; exit 0
       fi
       if asks_user "$msg"; then

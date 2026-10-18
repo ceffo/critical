@@ -257,7 +257,7 @@ When the developer reports the full verification passed on HEAD:
   <branch>` (plain push; `--force-with-lease` only to publish a restacked branch).
 - PR: `.claude/scripts/ship.sh <worktree> <title> <body-file> CRI-n…` pushes the branch, opens the PR
   (`gh pr create --head <branch> --title … --body-file <file>`) and moves the issue(s) to In Review with
-  the PR link; body (in the scratchpad) with the summary, item id, what was and wasn't verified from the developer's report, any merge-order note,
+  the PR link; body (in the scratchpad) with a `Closes CRI-n` line (what the integration reads), the summary, item id, what was and wasn't verified from the developer's report, any merge-order note,
   ending as the workflow doc's "CI and PRs" prescribes.
 - CI, if the project has it: `gh pr checks <n> --watch` with `run_in_background`. Red → `gh run view
   <id> --log-failed | tail -60`, then a rework brief with the excerpt. No CI → the developer's gate

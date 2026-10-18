@@ -2,7 +2,7 @@
 
 **Status**: accepted, 2026-10-15 (critical-kiv.4); steps 2 and 4 amended by [ADR 0018](0018-transactions-and-undo.md)
 
-_Proposed amendment by [ADR 0033](0033-equipment.md) (equipment, proposed 2026-10-18), in effect once it is accepted: step 3 and Consequences (the initiative adds the declared action's weapon speed, casting time or item modifier, initiative effects and a situational modifier; the declaration is logged, ADR 0033 steps 15 and 16)._
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 3 and Consequences (the initiative adds the declared action's weapon speed, casting time or item modifier, initiative effects and a situational modifier; the declaration is logged, ADR 0033 steps 15 and 16)._
 
 ## Context
 
@@ -34,7 +34,7 @@ Tests live in `api/internal/domain/service/buffsvc/initiative_test.go` unless na
 3. **Lowest acts first, display only.** The initiative is the plain die: no modifier from buffs,
    abilities or weapon speed. The app orders nothing; the turn header shows the value with the hint
    "1d10, the lowest acts first".
-   (*Proposed amendment by [ADR 0033](0033-equipment.md) step 15:* the die gets the declared
+   (*Amended by [ADR 0033](0033-equipment.md) step 15:* the die gets the declared
    action's modifier (weapon speed, casting time or magic item), initiative effects and a situational
    modifier, each in the entry's breakdown.)
    Test: `TestInitiative_Step3_PlainD10NoModifier` (faces 1, 6 and 10 stored as rolled, with a

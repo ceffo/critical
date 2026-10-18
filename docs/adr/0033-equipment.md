@@ -1,7 +1,7 @@
 # ADR 0033: Equipment: one possessions list, worn / wielded / carried, the derived AC
 
-**Status**: proposed, 2026-10-18 (CRI-31, research for the epic CRI-29; the triage decisions are the
-user's, 2026-10-18; every point marked _(proposed)_ waits for the user's OK). Amends
+**Status**: accepted, 2026-10-18 (CRI-31, research for the epic CRI-29; decisions: the user's triage,
+2026-10-18, and the supervisor's acceptance of every point proposed in the research, 2026-10-18). Amends
 [ADR 0002](0002-attack-resolution.md) (steps 2, 11 and 12: the armour-type modifier),
 [ADR 0003](0003-damage.md) (step 1: a launcher's dice come from its ammunition),
 [ADR 0004](0004-buffs.md) (step 11: the `ac` sign, the `base_ac` and `initiative` effects; step
@@ -129,7 +129,7 @@ name or comment); this ADR names none yet.
    catalogue row per grip (bastard sword) is one piece with one grip; changing the grip is an edit.
 4. **Ammunition** carries its ammo kind (`arrow`, `quarrel`, `bullet`, `needle`, `blowgun_dart`;
    the hand, light and heavy quarrels share `quarrel` and differ by their dice), its damage types, its
-   damage S-M and L, and its magic (ADR 0002 step 7). _(proposed)_ A launcher's attack rolls the
+   damage S-M and L, and its magic (ADR 0002 step 7). A launcher's attack rolls the
    ammunition's dice; a launcher that has dice of its own (every weapon today, and homebrew) uses them
    when the ammunition has none. Amends ADR 0003 step 1.
 5. **Armour and shields.** A body armour carries its **base AC** (Table 46 without the shield: 10 to
@@ -147,7 +147,7 @@ name or comment); this ADR names none yet.
 6. **Three states.** Every piece is `carried` (the default), `worn` or `wielded`.
    - `worn`: body armour, a shield, a `magic` piece (a ring on a finger, a cloak, bracers, the
      Power Gem set in Kelsen's forehead). At most **one body armour** and **one shield** are worn.
-   - `wielded` (readied): weapons. _(proposed)_ The hands are not counted, but a two-handed weapon
+   - `wielded` (readied): weapons. The hands are not counted, but a two-handed weapon
      wielded with a worn shield is a warning (step 20), never a refusal.
    - `gear`, `ammunition` and the other `magic` kinds (potion, scroll, wand, rod, staff) can be
      `carried` only; a staff or rod used as a weapon is a `weapon` piece.
@@ -159,11 +159,11 @@ name or comment); this ADR names none yet.
    transaction ([ADR 0018](0018-transactions-and-undo.md)), undone and redone like every move
    ([ADR 0010](0010-action-stack-and-undo.md), [ADR 0019](0019-redo.md)). A swap is one entry with
    both pieces. The same state again logs nothing.
-8. **The attack form reads the wielded weapons.** _(proposed)_ The attack form's weapon in hand
+8. **The attack form reads the wielded weapons.** The attack form's weapon in hand
    (ADR 0002 step 12) is chosen among the wielded weapons. Picking a carried weapon there wields it
    (one `equipment_state` entry) before the form changes; putting away the weapon in hand empties
    the form's weapon.
-9. **Powers follow the state.** _(proposed)_ A piece's powers (ADR 0016 steps 9 to 14) are on only
+9. **Powers follow the state.** A piece's powers (ADR 0016 steps 9 to 14) are on only
    while it is `worn` or `wielded`; a carried ring protects nothing. Amends ADR 0016 step 9 ("as long
    as the item is carried"). Its daily use and its count (ADR 0016 steps 1 to 3) do not depend on
    the state. The conversion makes every piece that has powers `worn` (step 26), so the Power Gem
@@ -196,9 +196,9 @@ name or comment); this ADR names none yet.
 12. **Protection does not stack where the DMG says so.** An effect may carry the condition
     `without_magic_armour` (next to ADR 0004 step 18's `weapon_kind`): it counts only while the worn
     body armour has no `ac` power. A ring of protection's `ac` effect carries it (its `save_bonus`
-    does not: DMG p.148). Two worn pieces of the same catalogue code with an `ac` effect: _(proposed)_
+    does not: DMG p.148). Two worn pieces of the same catalogue code with an `ac` effect:
     only the best counts (DMG p.149's two rings), the other is shown as not adding.
-13. **The override, for the one case the model cannot hold.** _(proposed)_ The Armor spell and
+13. **The override, for the one case the model cannot hold.** The Armor spell and
     bracers are covered by `base_ac` (step 11), so they need no override. The case the model cannot
     hold is **an AC that depends on the attack form beyond melee / missile**: the **Shield spell**
     (wizard 1: a different AC against hurled missiles, against device missiles and against the rest,
@@ -206,18 +206,19 @@ name or comment); this ADR names none yet.
     optional label), one logged move (`ac_override`, before and after), cleared the same way. While
     it is set the AC shown is the override, marked as such, and the derived AC and its breakdown stay
     visible beside it. Nothing else reads the override (no rule in the app reads the character's AC
-    today). _(The alternative, per triage's example: no `base_ac` effect, and the Armor spell is the
-    override's case.)_
+    today). (Not chosen: no `base_ac` effect, with the Armor spell as the override's case, triage's
+    example.)
 
 ### Thief and bard skill armour
 
-14. **The skill armour is the worn armour.** _(proposed details)_ ADR 0030 steps 17 and 18's armour
+14. **The skill armour is the worn armour.** ADR 0030 steps 17 and 18's armour
     term reads the worn body armour's Table 29 column; with none worn, the `none` column (PHB p.39,
     bracers and cloaks included). The `skillArmor` entry (`PATCH /api/characters/{id}`, the creation
     field and the Skills tab's drop-down, CRI-24) is removed. An armour whose column is
     `none_allowed`, or `metal` for a thief, uses the `padded_studded` column (the worst one) and
-    shows the class warning (step 20) _(proposed; the alternative is the PHB chapter 3 multi-class reading (a multi-classed thief in armour a thief may not wear):
-    every skill but Open Locks and Detect Noise unusable)_. A shield changes no skill (Table 29 has no
+    shows the class warning (step 20) (not chosen: the PHB chapter 3 multi-class reading, a
+    multi-classed thief in armour a thief may not wear having every skill but Open Locks and Detect
+    Noise unusable). A shield changes no skill (Table 29 has no
     column for it).
     **Carry-over** (in the conversion, step 26): a thief or bard with no worn body armour gets one,
     worn, from its stored `skill_armor`: `leather` and an empty value (which read as leather) give
@@ -231,7 +232,7 @@ name or comment); this ADR names none yet.
 
 ### Initiative
 
-15. **Declare, roll, modify.** Amends ADR 0013 step 3 ("no modifier"). _(proposed)_ The round's
+15. **Declare, roll, modify.** Amends ADR 0013 step 3 ("no modifier"). The round's
     initiative is `d10 + the declared action's modifier + initiative effects + a situational
     modifier`; the lowest acts first, ties at the same time (PHB p.94); the app still orders nothing.
     1. **Declaration.** The player declares the next round's action at any time during the current
@@ -260,7 +261,7 @@ name or comment); this ADR names none yet.
 ### Magic bonuses from the editor
 
 17. **The editor writes powers.** Amends ADR 0016 step 15 ("powers come from the seed and from data
-    migrations only"). _(proposed)_ The equipment editor shows a piece's powers and lets the player
+    migrations only"). The equipment editor shows a piece's powers and lets the player
     add, edit and remove them: each power is a trigger (none or `min_str`) and effects from the list
     of ADR 0016 step 9 plus `base_ac` and `initiative` (step 11), with their conditions (`weapon_kind`,
     `without_magic_armour`). Validation is the seed's (ADR 0016 step 9: no Strength effect). A power
@@ -269,7 +270,7 @@ name or comment); this ADR names none yet.
     For armour and shields the editor has a **"+N" field** that is sugar for one power with the
     reserved id `magic` and one effect `ac: -N` (no trigger); the AC breakdown names it "armour
     magic" / "shield magic" (step 10). A weapon's and ammunition's magic stay their own fields (ADR
-    0002 steps 6 and 7). Ready-made rows: _(proposed)_ the editor offers templates for the common
+    0002 steps 6 and 7). Ready-made rows: the editor offers templates for the common
     protection items (ring of protection +N: `ac -N` without magic armour and `save_bonus +N`; cloak
     of protection +N: `ac -N`, `save_bonus +N`; bracers of defense AC N: `base_ac N`), as web
     constants of effect codes, not catalogue data.
@@ -277,14 +278,14 @@ name or comment); this ADR names none yet.
 ### Weapon type against armour type
 
 18. **The target's armour is given like its AC.** Amends ADR 0012 and ADR 0002 steps 11 and 12.
-    _(proposed)_ The attack form gets a **target armour**: a Table 52 row code (step 5), `natural`,
+    The attack form gets a **target armour**: a Table 52 row code (step 5), `natural`,
     or unknown (the default, as the target AC, ADR 0012 step 1). It is sticky on the form like the
     target AC and can be corrected after the roll on the latest attack, like the target AC (ADR 0002
     step 11): an audited amend, hit and crit recomputed from the stored dice, its own undoable step.
 19. **The modifier.** With a known armour row (not `natural`, not unknown), the attack gets one
     to-hit modifier `armor_type`: minus the Table 52 value (catalogue `weapon_vs_armor`) for the
-    attack's damage type against that row. _(proposed reading of PHB p.90 "applied to the
-    attacker's THAC0": plate's +3 against slashing makes the attack 3 harder.)_ The damage type is the
+    attack's damage type against that row. (The reading of PHB p.90 "applied to the
+    attacker's THAC0": plate's +3 against slashing makes the attack 3 harder.) The damage type is the
     ammunition's for a launcher, else the weapon's; with two types, the one that favours the attacker
     (PHB p.89). A weapon or ammunition with no damage type gets none. The modifier is in the preview,
     the breakdown and the log entry like every to-hit modifier, and in `hitsAc` / `critsFromAc` (ADR
@@ -292,13 +293,13 @@ name or comment); this ADR names none yet.
 
 ### Class restrictions
 
-20. **Warn, never refuse.** _(proposed list)_ Computed on read, served as codes with the piece's id,
+20. **Warn, never refuse.** Computed on read, served as codes with the piece's id,
     shown on the piece and on the AC or attack card; nothing is refused or changed:
     - wizard (mage): any worn armour or shield (`armour_not_allowed`); a wielded weapon whose type is
       not dagger, dart or sling, or whose catalogue code is not knife or quarterstaff
       (`weapon_not_allowed`);
-    - cleric: a wielded weapon with no `b` damage type (`weapon_not_allowed`) _(proposed: a P/B
-      weapon such as the morning star is allowed)_;
+    - cleric: a wielded weapon with no `b` damage type (`weapon_not_allowed`) (a P/B
+      weapon such as the morning star is allowed);
     - thief: worn armour whose Table 29 column is not `none`, `leather`, `padded_studded` or
       `elven_chain`; any worn shield; a wielded weapon outside PHB p.39's list (by catalogue code or
       weapon type);
@@ -313,7 +314,7 @@ name or comment); this ADR names none yet.
 
 ### Catalogue content
 
-21. **Format 7: equipment reference data.** Adds step 13 to ADR 0021. _(proposed)_ Format 7 is
+21. **Format 7: equipment reference data.** Adds step 13 to ADR 0021. Format 7 is
     format 6 plus a top-level `equipment` object and two `rule_tables` keys, numbers and codes only,
     names as language maps (ADR 0021 step 1, ADR 0023):
     - `equipment.weapons`: PHB Table 44's weapon rows (polearms included, the arquebus excluded:
@@ -330,7 +331,7 @@ name or comment); this ADR names none yet.
     The rates of fire stay Table 45's rule table (ADR 0030 step 23). Rollout as ADR 0021 step 12.4:
     the API reads formats 6 and 7, the fixture becomes format 7 with invented names and the real
     numbers, the builder's change is a `critical-rulebooks` item.
-22. **What is not catalogue data.** _(proposed)_ The DMG magic items (hundreds of rows whose rules
+22. **What is not catalogue data.** The DMG magic items (hundreds of rows whose rules
     are text: the app models their numbers as powers, step 17), PHB miscellaneous gear, clothing,
     provisions, tack, animals and services (no rule reads them; cost and weight are out of scope),
     helmets (part of the suit, PHB p.76). The categories and magic kinds (step 2) are codes in the
@@ -350,14 +351,14 @@ name or comment); this ADR names none yet.
     second move.
 25. **Validation.** As ADR 0016 steps 5 and 8 for the shared fields and the weapon's; for the rest:
     the category and magic kind are known codes; a speed is 0 to 20; damage types are one or two of
-    `b`, `p`, `s`; a base AC is -10 to 10 _(proposed: a negative base for the DM's special armour)_;
+    `b`, `p`, `s`; a base AC is -10 to 10 (a negative base for the DM's special armour);
     the Table 29 column and Table 52 row are known codes; a shield's bonuses are 0 to 5; an unknown
     catalogue code is refused (`unknown`). Field names and codes as ADR 0030 step 1 (`{error, field,
     code}`).
 
 ### Conversion of the existing data
 
-26. **Automatic, ids kept.** _(proposed)_ The slice that brings the one model (CRI-34) converts every
+26. **Automatic, ids kept.** The slice that brings the one model (CRI-34) converts every
     character's items and weapons in a data step (migrations hold no data, [ADR
     0025](0025-postgresql-storage.md) step 2.1.1), additive first (ADR 0024 step 5.2):
     1. Every item and weapon keeps its **id**, position order (weapons after the items, in their

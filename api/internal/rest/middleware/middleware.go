@@ -65,44 +65,71 @@ func Recoverer(next http.Handler) http.Handler {
 // it: lib/pq only asks the server to cancel it, and keeps waiting for the
 // answer. So the handler runs on its own goroutine against a buffered response,
 // and at d the client gets domain.ErrUnavailable at once (503
-// database_unavailable, by the central mapping);
-// the handler finishes whenever its driver call returns, and its late response
-// is dropped (its writes fail with http.ErrHandlerTimeout).
+// database_unavailable, by the central mapping), or, on a path listed in
+// late, that path's own answer (a browser navigation such as the login
+// callback redirects instead of showing JSON). The handler finishes whenever
+// its driver call returns, and its late response is dropped (its writes fail
+// with http.ErrHandlerTimeout).
 //
-// A panic in the handler is raised again on the request's goroutine, with the
-// handler's stack, for Recoverer.
-func Deadline(d time.Duration) func(http.Handler) http.Handler {
+// A handler that returns after d with a server error (a driver call cut by the
+// context) gets the deadline's answer too. A panic in the handler is raised
+// again on the request's goroutine, with the handler's stack, for Recoverer;
+// one raised after the client got the deadline's answer is logged.
+func Deadline(d time.Duration, late map[string]http.Handler) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx, cancel := context.WithTimeout(r.Context(), d)
 			defer cancel()
 			r = r.WithContext(ctx)
+			timedOut := func() {
+				if h, ok := late[r.URL.Path]; ok {
+					h.ServeHTTP(w, r)
+					return
+				}
+				render.Error(ctx, w, fmt.Errorf("%w: request deadline of %s: %w", domain.ErrUnavailable, d, ctx.Err()))
+			}
 			bw := &bufferedWriter{header: make(http.Header)}
 			done := make(chan struct{})
-			panicked := make(chan handlerPanic, 1)
 			go func() {
+				defer close(done)
 				defer func() {
+					var hp *handlerPanic
 					if p := recover(); p != nil {
-						panicked <- handlerPanic{value: p, stack: debug.Stack()}
+						hp = &handlerPanic{value: p, stack: debug.Stack()}
+					}
+					if bw.finish(hp) && hp != nil && !isAbort(hp.value) {
+						render.Logger(ctx).Error("panic after the request deadline",
+							"value", hp.value, "stack", string(hp.stack))
 					}
 				}()
 				next.ServeHTTP(bw, r)
-				close(done)
 			}()
 			select {
-			case p := <-panicked:
-				if err, ok := p.value.(error); ok && errors.Is(err, http.ErrAbortHandler) {
+			case <-done:
+			case <-ctx.Done():
+				if !bw.expireUnlessFinished() {
+					timedOut()
+					return
+				}
+			}
+			if p := bw.panicked(); p != nil {
+				if isAbort(p.value) {
 					panic(p.value)
 				}
 				panic(fmt.Sprintf("%v\n\nhandler goroutine:\n%s", p.value, p.stack))
-			case <-done:
-				bw.copyTo(w)
-			case <-ctx.Done():
-				bw.expire()
-				render.Error(ctx, w, fmt.Errorf("%w: request deadline of %s: %w", domain.ErrUnavailable, d, ctx.Err()))
 			}
+			if ctx.Err() != nil && bw.serverError() {
+				timedOut()
+				return
+			}
+			bw.copyTo(w)
 		})
 	}
+}
+
+func isAbort(v any) bool {
+	err, ok := v.(error)
+	return ok && errors.Is(err, http.ErrAbortHandler)
 }
 
 type handlerPanic struct {
@@ -115,10 +142,12 @@ type handlerPanic struct {
 type bufferedWriter struct {
 	header http.Header
 
-	mu      sync.Mutex
-	status  int
-	body    bytes.Buffer
-	expired bool
+	mu       sync.Mutex
+	status   int
+	body     bytes.Buffer
+	expired  bool
+	finished bool
+	panic    *handlerPanic
 }
 
 func (b *bufferedWriter) Header() http.Header { return b.header }
@@ -143,10 +172,42 @@ func (b *bufferedWriter) Write(p []byte) (int, error) {
 	return b.body.Write(p)
 }
 
-func (b *bufferedWriter) expire() {
+// finish records that the handler has returned, with its panic if it raised
+// one. It reports whether the deadline's answer was already sent (the
+// response, and the panic, reach no client).
+func (b *bufferedWriter) finish(p *handlerPanic) (late bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.expired {
+		return true
+	}
+	b.finished = true
+	b.panic = p
+	return false
+}
+
+// expireUnlessFinished drops whatever the handler writes from now on, unless
+// it has already returned: it reports whether it had.
+func (b *bufferedWriter) expireUnlessFinished() (finished bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.finished {
+		return true
+	}
 	b.expired = true
+	return false
+}
+
+func (b *bufferedWriter) panicked() *handlerPanic {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.panic
+}
+
+func (b *bufferedWriter) serverError() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.status >= http.StatusInternalServerError
 }
 
 // copyTo sends the response the handler wrote, once it has returned.

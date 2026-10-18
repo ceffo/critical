@@ -1,6 +1,7 @@
 package router_test
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log/slog"
@@ -17,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -364,6 +366,7 @@ func TestGoogleCallback_Step3_7_SessionOrRefusalCode(t *testing.T) {
 		{"bad state", authsvc.ErrStateMismatch, "/login?error=login_state_mismatch"},
 		{"unverified", authsvc.ErrEmailUnverified, "/login?error=email_unverified"},
 		{"failed", authsvc.ErrLoginFailed, "/login?error=login_failed"},
+		{"database unavailable", domain.ErrUnavailable, "/login?error=database_unavailable"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -453,4 +456,31 @@ func TestSessionCookie_NamedPerApp(t *testing.T) {
 	cookies = rec.Result().Cookies()
 	require.Len(t, cookies, 1)
 	assert.Equal(t, "critical_login_localhost_8091", cookies[0].Name)
+}
+
+// ADR 0025 step 10.1 with ADR 0029 step 3.7: a callback still running at the
+// request deadline (Google, or the database, too slow) sends the browser to the
+// login page with login_timeout and drops the login cookie, never a JSON error.
+func TestGoogleCallback_Step3_7_PastTheDeadlineGoesToTheLoginPage(t *testing.T) {
+	a := authmocks.NewMockSVC(t)
+	a.EXPECT().DevLoginEnabled().Return(false).Once()
+	release := make(chan struct{})
+	defer close(release)
+	a.EXPECT().FinishLogin(mock.Anything, mock.Anything).RunAndReturn(func(context.Context, authsvc.FinishLogin) (*authsvc.NewSession, error) {
+		<-release // a provider that does not watch the context
+		return &authsvc.NewSession{Token: "tok", Expires: time.Now().Add(time.Hour)}, nil
+	}).Once()
+	h := authRouter(t, a, router.Options{RequestDeadline: 30 * time.Millisecond})
+	req := httptest.NewRequest("GET", "/api/auth/google/callback?code=c&state=st", nil)
+	req.AddCookie(&http.Cookie{Name: "critical_login", Value: "st.ver"})
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusFound, rec.Code)
+	assert.Equal(t, "/login?error=login_timeout", rec.Header().Get("Location"))
+	var cleared bool
+	for _, ck := range rec.Result().Cookies() {
+		assert.NotEqual(t, mw.SessionCookie, ck.Name, "no session")
+		cleared = cleared || (ck.Name == "critical_login" && ck.MaxAge < 0)
+	}
+	assert.True(t, cleared, "the login cookie is dropped")
 }

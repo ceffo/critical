@@ -119,10 +119,10 @@ func fixed(msg string) func(error) string { return func(error) string { return m
 var mappings = []mapping{
 	// A request the database could not serve within its deadline: stopped,
 	// starting or starved (the connection gate of storage/postgres, the
-	// request deadline of middleware.Deadline). The web retries reads and
+	// request deadline of middleware.Deadline). Only this error: a deadline
+	// passed elsewhere (an identity provider too slow) is not the database. The web retries reads and
 	// shows the state; it never resends a write by itself.
 	{target: domain.ErrUnavailable, status: http.StatusServiceUnavailable, code: CodeUnavailable, message: fixed("database unavailable")},
-	{target: context.DeadlineExceeded, status: http.StatusServiceUnavailable, code: CodeUnavailable, message: fixed("database unavailable")},
 	// The login and session refusals of ADR 0029 (steps 3.7, 4, 5.2): the
 	// login callback redirects to the login page with the code instead.
 	{target: authsvc.ErrSessionExpired, status: http.StatusUnauthorized, code: "session_expired"},

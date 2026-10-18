@@ -27,11 +27,14 @@ func (s *service) Authenticate(ctx context.Context, token string) (*Principal, e
 	if p, ok := s.sessions.get(id, now); ok {
 		return p, nil
 	}
+	// Taken before the reads: a logout, disable or role change that ends
+	// while they run moves it on, and the answer read before is not kept.
+	gen := s.sessions.generation()
 	p, err := s.authenticate(ctx, id, now)
 	if err != nil {
 		return nil, err
 	}
-	s.sessions.put(id, p, now)
+	s.sessions.put(id, p, now, gen)
 	return p, nil
 }
 
@@ -109,6 +112,9 @@ const sessionCacheSweep = 256
 type sessionCache struct {
 	mu   sync.Mutex
 	byID map[string]cachedSession
+	// gen moves on at every forget, so a principal read before a change and
+	// put after it is not remembered.
+	gen uint64
 }
 
 type cachedSession struct {
@@ -129,15 +135,26 @@ func (c *sessionCache) get(id string, now time.Time) (*Principal, bool) {
 	return &p, true
 }
 
+// generation is the cache's current generation, to hand to put.
+func (c *sessionCache) generation() uint64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.gen
+}
+
 // put remembers p for SessionCacheTTL from now, never past the session's
-// expiry.
-func (c *sessionCache) put(id string, p *Principal, now time.Time) {
+// expiry, unless something was forgotten since gen was taken: p may then
+// predate that change.
+func (c *sessionCache) put(id string, p *Principal, now time.Time, gen uint64) {
 	until := now.Add(SessionCacheTTL)
 	if p.Expires.Before(until) {
 		until = p.Expires
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if gen != c.gen {
+		return
+	}
 	if c.byID == nil {
 		c.byID = map[string]cachedSession{}
 	}
@@ -157,6 +174,7 @@ func (c *sessionCache) put(id string, p *Principal, now time.Time) {
 func (c *sessionCache) forget(id string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.gen++
 	delete(c.byID, id)
 }
 
@@ -164,6 +182,7 @@ func (c *sessionCache) forget(id string) {
 func (c *sessionCache) forgetUser(userID uuid.UUID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.gen++
 	for k, e := range c.byID {
 		if e.p.User.ID == userID {
 			delete(c.byID, k)
@@ -175,5 +194,6 @@ func (c *sessionCache) forgetUser(userID uuid.UUID) {
 func (c *sessionCache) forgetAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.gen++
 	clear(c.byID)
 }

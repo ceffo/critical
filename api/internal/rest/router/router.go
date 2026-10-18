@@ -5,6 +5,7 @@
 package router
 
 import (
+	"cmp"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -55,6 +56,9 @@ type Options struct {
 	// CookieApp names the auth cookies of this app (mw.SessionCookieName):
 	// its public host and port, or its dev port. Empty, the base names.
 	CookieApp string
+	// RequestDeadline overrides the deadline of every request; zero is
+	// RequestDeadline.
+	RequestDeadline time.Duration
 }
 
 // RequestDeadline bounds every request: a slow or unavailable database answers
@@ -81,8 +85,13 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	r := chi.NewRouter()
 	r.Use(mw.Logger(log))
 	r.Use(mw.Recoverer)
+	authOpts := authhdl.Options{Secure: opts.SecureCookies, App: opts.CookieApp}
 	// Before the gate, which reads the session from the database.
-	r.Use(mw.Deadline(RequestDeadline))
+	var late map[string]http.Handler
+	if bs.Auth != nil {
+		late = authhdl.LateAnswers(authOpts)
+	}
+	r.Use(mw.Deadline(cmp.Or(opts.RequestDeadline, RequestDeadline), late))
 	// The one access check (ADR 0029 step 6.2): every route below, and the
 	// web app outside /api, needs a session unless mw.Public lists it.
 	var auth mw.Authenticator
@@ -101,7 +110,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	r.NotFound(notFound(opts.Web))
 
 	if bs.Auth != nil {
-		authhdl.RegisterRoutes(r, bs.Auth, authhdl.Options{Secure: opts.SecureCookies, App: opts.CookieApp})
+		authhdl.RegisterRoutes(r, bs.Auth, authOpts)
 	}
 
 	charID := func(_ *http.Request) int64 { return bs.CharacterID }

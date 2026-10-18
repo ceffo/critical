@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -148,4 +149,61 @@ func TestAuthenticate_Step4_7_AFailureIsNotCached(t *testing.T) {
 	require.ErrorIs(t, err, boom)
 	e.expectLookup(now.Add(time.Hour), player)
 	e.auth(t)
+}
+
+// midLookup starts an Authenticate of "tok" and holds it inside its read of
+// the user (the old, still valid state is read) until release is closed.
+func (e *clockEnv) midLookup(t *testing.T, u *authsvc.User) (release chan struct{}, done chan *authsvc.Principal) {
+	t.Helper()
+	reading := make(chan struct{})
+	release = make(chan struct{})
+	done = make(chan *authsvc.Principal, 1)
+	e.dal.EXPECT().SessionByID(mock.Anything, authsvc.SessionID("tok")).Return(session(now.Add(-time.Hour), now.Add(time.Hour)), nil).Once()
+	e.dal.EXPECT().UserByID(mock.Anything, userID).RunAndReturn(func(context.Context, uuid.UUID) (*authsvc.User, error) {
+		close(reading)
+		<-release
+		return u, nil
+	}).Once()
+	go func() {
+		p, err := e.svc.Authenticate(context.Background(), "tok")
+		assert.NoError(t, err)
+		done <- p
+	}()
+	<-reading
+	return release, done
+}
+
+// A request that read the session before a logout and finishes after it does
+// not put the logged-out session back: the next request reads it again.
+func TestAuthenticate_Step4_7_ALookupInFlightDuringLogoutIsNotKept(t *testing.T) {
+	e := newClockEnv(t)
+	release, done := e.midLookup(t, player)
+
+	e.dal.EXPECT().DeleteSession(mock.Anything, authsvc.SessionID("tok")).Return(nil).Once()
+	require.NoError(t, e.svc.Logout(context.Background(), "tok"))
+	close(release)
+	<-done
+
+	e.dal.EXPECT().SessionByID(mock.Anything, authsvc.SessionID("tok")).Return(nil, notFound()).Once()
+	_, err := e.svc.Authenticate(context.Background(), "tok")
+	require.ErrorIs(t, err, authsvc.ErrUnauthenticated)
+}
+
+// The same for disabling the user while their session is being read.
+func TestAuthenticate_Step4_7_ALookupInFlightDuringDisablingIsNotKept(t *testing.T) {
+	e := newClockEnv(t)
+	stale := *player
+	release, done := e.midLookup(t, &stale)
+
+	u := *player
+	e.dal.EXPECT().UserByID(mock.Anything, userID).Return(&u, nil).Once()
+	e.dal.EXPECT().UpdateUser(mock.Anything, mock.Anything).Return(nil).Once()
+	e.dal.EXPECT().DeleteUserSessions(mock.Anything, userID).Return(nil).Once()
+	require.NoError(t, e.svc.SetDisabled(context.Background(), userID, true))
+	close(release)
+	<-done
+
+	e.dal.EXPECT().SessionByID(mock.Anything, authsvc.SessionID("tok")).Return(nil, notFound()).Once()
+	_, err := e.svc.Authenticate(context.Background(), "tok")
+	require.ErrorIs(t, err, authsvc.ErrUnauthenticated)
 }

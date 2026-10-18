@@ -40,6 +40,8 @@ type Querier interface {
 	// The user's first character they own and have not retired becomes current, unless the current
 	// one is such a character (a retired current character is replaced; none left is NULL).
 	RepairCurrentCharacter(ctx context.Context, id uuid.UUID) error
+	// An undo or a redo of a skill armour change: the entry already ties it to the character.
+	RestoreSkillArmor(ctx context.Context, arg RestoreSkillArmorParams) (int64, error)
 	// Only a character the user owns and has not retired (ADR 0029 step 7.3): nothing is deleted.
 	RetireCharacter(ctx context.Context, arg RetireCharacterParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.

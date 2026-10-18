@@ -337,6 +337,24 @@ func (q *Queries) RepairCurrentCharacter(ctx context.Context, id uuid.UUID) erro
 	return err
 }
 
+const restoreSkillArmor = `-- name: RestoreSkillArmor :execrows
+UPDATE characters SET skill_armor = $1 WHERE id = $2
+`
+
+type RestoreSkillArmorParams struct {
+	SkillArmor string
+	ID         int64
+}
+
+// An undo or a redo of a skill armour change: the entry already ties it to the character.
+func (q *Queries) RestoreSkillArmor(ctx context.Context, arg RestoreSkillArmorParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, restoreSkillArmor, arg.SkillArmor, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const retireCharacter = `-- name: RetireCharacter :execrows
 UPDATE characters SET retired = TRUE
 WHERE id = $1 AND owner_user_id = $2 AND NOT retired

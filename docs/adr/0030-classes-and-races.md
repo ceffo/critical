@@ -507,10 +507,13 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestBackstab_Step19_MeleeWeaponOnly` (combatsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition).
 
     _(Armour changed after creation, 2026-10-18)_ The armour is edited later with
-    `PATCH /api/characters/{id}` `{"skillArmor": …}` (the rename's path, outside the action log: the
-    inventory does not track worn armour, so it is a field, not a move; no Undo). The same
-    checks as at creation apply (`empty`, `unknown`; `not_allowed` for a class without thieving
-    skills); the skills are derived on read, so they follow. The Skills tab's thief block holds the
+    `PATCH /api/characters/{id}` `{"skillArmor": …}` (the rename's path, in the same transaction as
+    a rename or a retirement in the same body). It is a move of the game, like spending points:
+    it moves every thief percentage, so it is logged (one `skill_armor` entry, payload
+    `{before, after}`, snapshot key `skill_armor`) and the journal's Undo gives the armour and the
+    skills back; the same armour records nothing. The same checks as at creation apply (`empty`,
+    `unknown`; `not_allowed` for a class without thieving skills, which rolls the whole change
+    back); the skills are derived on read, so they follow. The Skills tab's thief block holds the
     selector.
 
 ### Spellbook

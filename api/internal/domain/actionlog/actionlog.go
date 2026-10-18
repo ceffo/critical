@@ -219,6 +219,12 @@ const KindSpellLearn Kind = "spell_learn"
 // Not one of RollKinds: nothing is rolled.
 const KindSkillPoints Kind = "skill_points"
 
+// KindSkillArmor is a thief changing the armour it wears for its skills
+// (charactersvc, ADR 0030 step 1): the armour before and after. Its
+// "skill_armor" snapshot carries the armour, so popping it gives it back and
+// the skills with it. Not one of RollKinds: nothing is rolled.
+const KindSkillArmor Kind = "skill_armor"
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.

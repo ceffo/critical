@@ -2,6 +2,7 @@ package charactersvc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -90,8 +92,9 @@ type NewCharacter struct {
 }
 
 // Change is a rename (Name), a retirement (Retired true) or a new skill
-// armour (SkillArmor, a thief's only) of a character; nil leaves a field as it is, and Retired false retires nothing (a retired
-// character is not found, so none is brought back).
+// armour (SkillArmor, a thief's only) of a character; nil leaves a field as
+// it is, and Retired false retires nothing (a retired character is not found,
+// so none is brought back).
 type Change struct {
 	Name    *string
 	Retired *bool
@@ -281,10 +284,13 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	return id, nil
 }
 
-// Change renames and retires in one transaction, outside the action log
-// (managing one's characters is no move of the game). Retiring picks the
-// owner's next current character in the same transaction (ADR 0029 step 7.2,
-// item 6 of its 2026-10-18 amendment).
+// Change renames, re-arms and retires in one transaction. A rename and a
+// retirement are outside the action log (managing one's characters is no move
+// of the game); a new skill armour is a move (it changes the thief's
+// percentages, ADR 0030 step 1) and is one skill_armor entry with a snapshot,
+// so Undo gives the armour back; the same armour records nothing. Retiring
+// picks the owner's next current character in the same transaction (ADR 0029
+// step 7.2, item 6 of its 2026-10-18 amendment).
 func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Change) (int64, error) {
 	var name string
 	if c.Name != nil {
@@ -304,6 +310,15 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 	retire := c.Retired != nil && *c.Retired
 	var current int64
 	if err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		var before string
+		if c.SkillArmor != nil {
+			// Read before the write; a refusal below tells nothing of it.
+			ch, err := s.reader.GetCharacter(ctx, id)
+			if err != nil {
+				return err
+			}
+			before = ch.SkillArmor
+		}
 		if c.Name != nil {
 			if err := s.owners.RenameCharacter(ctx, owner, id, name); err != nil {
 				return err
@@ -321,6 +336,9 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 			}
 			if !ruletablesvc.HasThiefSkills(ch.Class) {
 				return &domain.FieldError{Field: "skillArmor", Message: CodeNotAllowed}
+			}
+			if err := s.recordArmor(ctx, id, before, *c.SkillArmor); err != nil {
+				return err
 			}
 		}
 		if retire {
@@ -341,6 +359,71 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 		s.sessions.ForgetUser(owner)
 	}
 	return current, nil
+}
+
+// recordArmor logs a change of skill armour from before to after with the
+// snapshot its restorer writes back; no change records nothing.
+func (s *service) recordArmor(ctx context.Context, id int64, before, after string) error {
+	if before == after {
+		return nil
+	}
+	payload, err := json.Marshal(armorRecord{Before: before, After: after})
+	if err != nil {
+		return fmt.Errorf("encode skill_armor payload: %w", err)
+	}
+	b, err := json.Marshal(armorState{Armor: before})
+	if err != nil {
+		return fmt.Errorf("encode skill armor snapshot: %w", err)
+	}
+	a, err := json.Marshal(armorState{Armor: after})
+	if err != nil {
+		return fmt.Errorf("encode skill armor snapshot: %w", err)
+	}
+	if _, err := s.log.Record(ctx, actionlog.NewEntry{
+		CharacterID: id, Kind: actionlog.KindSkillArmor, Payload: payload,
+		Snapshots: []actionlog.Snapshot{{Key: ArmorStateKey, Before: b, After: a}},
+	}); err != nil {
+		return fmt.Errorf("record skill_armor: %w", err)
+	}
+	return nil
+}
+
+// ArmorStateKey is the action-log state key of a thief's skill armour.
+const ArmorStateKey = "skill_armor"
+
+// armorState is the JSON encoding of a "skill_armor" snapshot, armorRecord
+// the payload of a skill_armor entry (the UI words it). Entries already in
+// the log must stay decodable: add fields, never rename.
+type armorState struct {
+	Armor string `json:"armor"`
+}
+
+type armorRecord struct {
+	Before string `json:"before"`
+	After  string `json:"after"`
+}
+
+type restoreFunc func(ctx context.Context, characterID int64, state json.RawMessage) error
+
+func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
+	return f(ctx, characterID, state)
+}
+
+// Restorers writes a thief's skill armour back: undo writes the change's
+// "before", redo its "after" (ADR 0019), inside the undo's transaction.
+func (s *service) Restorers() map[string]actionlog.Restorer {
+	return map[string]actionlog.Restorer{
+		ArmorStateKey: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
+			var st armorState
+			if err := json.Unmarshal(state, &st); err != nil {
+				return fmt.Errorf("decode skill armor snapshot: %w", err)
+			}
+			if err := s.owners.RestoreSkillArmor(ctx, characterID, st.Armor); err != nil {
+				return fmt.Errorf("restore skill armor: %w", err)
+			}
+			return nil
+		}),
+	}
 }
 
 // ClassOption is a class a new character may have and the races it admits

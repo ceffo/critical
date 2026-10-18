@@ -615,6 +615,63 @@ func (_c *MockQuerier_RepairCurrentCharacter_Call) RunAndReturn(run func(context
 	return _c
 }
 
+// RestoreSkillArmor provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) RestoreSkillArmor(ctx context.Context, arg queries.RestoreSkillArmorParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RestoreSkillArmor")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RestoreSkillArmorParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RestoreSkillArmorParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.RestoreSkillArmorParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_RestoreSkillArmor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RestoreSkillArmor'
+type MockQuerier_RestoreSkillArmor_Call struct {
+	*mock.Call
+}
+
+// RestoreSkillArmor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.RestoreSkillArmorParams
+func (_e *MockQuerier_Expecter) RestoreSkillArmor(ctx interface{}, arg interface{}) *MockQuerier_RestoreSkillArmor_Call {
+	return &MockQuerier_RestoreSkillArmor_Call{Call: _e.mock.On("RestoreSkillArmor", ctx, arg)}
+}
+
+func (_c *MockQuerier_RestoreSkillArmor_Call) Run(run func(ctx context.Context, arg queries.RestoreSkillArmorParams)) *MockQuerier_RestoreSkillArmor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.RestoreSkillArmorParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_RestoreSkillArmor_Call) Return(_a0 int64, _a1 error) *MockQuerier_RestoreSkillArmor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_RestoreSkillArmor_Call) RunAndReturn(run func(context.Context, queries.RestoreSkillArmorParams) (int64, error)) *MockQuerier_RestoreSkillArmor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RetireCharacter provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) RetireCharacter(ctx context.Context, arg queries.RetireCharacterParams) (int64, error) {
 	ret := _m.Called(ctx, arg)

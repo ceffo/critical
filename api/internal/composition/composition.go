@@ -210,32 +210,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 	// Each character's spellbook, named from the catalogue.
 	spellbook := spellbookadpt.New(st.Spellbook, cat)
 
-	// Choosing the current character is no game move: it runs on the store's
-	// transactions, outside the action log.
-	// The character's level, THAC0, saves and slots are derived from its
-	// class, race and XP total (ADR 0030 steps 3 to 8): the class tables and
-	// what the XP ledger's entries add.
-	charSvc, err := charactersvc.New(charactersvc.Deps{
-		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
-		Owners: characterDAL, Tx: db, Sessions: authSvc,
-	})
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-	// What a character prepares from: a cleric's sphere-open priest spells
-	// (ADR 0030 step 15; no sphere access before catalogue format 6), every
-	// other class's spellbook.
-	sphereAccess, err := ruleTables.SphereAccess()
-	if err != nil && !errors.Is(err, ruletablesvc.ErrNoSphereAccess) {
-		_ = db.Close()
-		return nil, err
-	}
-	prepSource, err := spheresvc.New(spheresvc.Deps{Book: spellbook, Characters: charSvc, Access: sphereAccess, Catalogue: cat})
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
 	// The action log stamps entries with the round read straight from
 	// buffdal (buffsvc itself records into the log, so it cannot be the
 	// log's dependency). Services that record snapshots register their
@@ -251,6 +225,32 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		actionlog.KindSave: combatsvc.SavePayloadView,
 	}
 	logSvc, err := actionlogsvc.New(logDAL, tx, roundReader{buffDAL}, hpDAL, logPayloadViews)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	// Choosing the current character is no game move: it runs on the store's
+	// transactions, outside the action log.
+	// The character's level, THAC0, saves and slots are derived from its
+	// class, race and XP total (ADR 0030 steps 3 to 8): the class tables and
+	// what the XP ledger's entries add.
+	charSvc, err := charactersvc.New(charactersvc.Deps{
+		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
+		Owners: characterDAL, Tx: tx, Sessions: authSvc, Log: logSvc,
+	})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	// What a character prepares from: a cleric's sphere-open priest spells
+	// (ADR 0030 step 15; no sphere access before catalogue format 6), every
+	// other class's spellbook.
+	sphereAccess, err := ruleTables.SphereAccess()
+	if err != nil && !errors.Is(err, ruletablesvc.ErrNoSphereAccess) {
+		_ = db.Close()
+		return nil, err
+	}
+	prepSource, err := spheresvc.New(spheresvc.Deps{Book: spellbook, Characters: charSvc, Access: sphereAccess, Catalogue: cat})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -368,6 +368,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	registerRestorers(logSvc, skillSvc.Restorers())
+	registerRestorers(logSvc, charSvc.Restorers())
 	// Free dice rolls change no state: no snapshot, no restorer.
 	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: st.Dice, Dice: dice, Log: logSvc, Tx: tx})
 	if err != nil {

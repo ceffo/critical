@@ -296,6 +296,24 @@ func TestThief_Step1_ChangeTheSkillArmourAfterCreation(t *testing.T) {
 	_, term := armor("pick_pockets")
 	assert.Equal(t, -20, term, "Table 29: elven chain -20 on Pick Pockets")
 
+	// The change is one skill_armor entry (a move of the game): Undo gives the
+	// armour and the skills back, Redo applies it again.
+	top, ok, err := bs.Log.TopID(ctx, id)
+	require.NoError(t, err)
+	require.True(t, ok)
+	e, err := bs.Log.Undo(ctx, id, top)
+	require.NoError(t, err)
+	assert.Equal(t, actionlog.KindSkillArmor, e.Kind)
+	c, err = bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, "none", c.SkillArmor, "the undo gives the armour back")
+	percent, _ = armor("open_locks")
+	assert.Equal(t, 55, percent)
+	_, err = bs.Log.Redo(ctx, id, top)
+	require.NoError(t, err)
+	percent, _ = armor("open_locks")
+	assert.Equal(t, 50, percent, "the redo puts it on again")
+
 	other, err := bs.Auth.DevLogin(ctx, "bob@example.com")
 	require.NoError(t, err)
 	_, err = bs.Character.Change(ctx, other.User.ID, id, charactersvc.Change{SkillArmor: new("none")})
@@ -315,4 +333,55 @@ func TestThief_Step1_ChangeTheSkillArmourAfterCreation(t *testing.T) {
 	b, err := bs.Character.GetCharacter(ctx, bard)
 	require.NoError(t, err)
 	assert.Empty(t, b.SkillArmor, "the refused write is rolled back")
+}
+
+// A change of several fields is one transaction: a rename that comes with a
+// skill armour a bard cannot have changes neither; a thief's armour and
+// retirement both apply; a retired or another user's character is not found
+// and nothing is written.
+func TestThief_Step1_ArmourChangeIsAtomicWithRenameAndRetire(t *testing.T) {
+	ctx := context.Background()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	owner := s.User.ID
+	bard, err := bs.Character.Create(ctx, owner, charactersvc.NewCharacter{
+		Name: "Lyra", Class: "bard", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 13, Wis: 11, Cha: 17, HPMax: 4,
+	})
+	require.NoError(t, err)
+	thief, err := bs.Character.Create(ctx, owner, charactersvc.NewCharacter{
+		Name: "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		SkillArmor: "none",
+	})
+	require.NoError(t, err)
+
+	_, err = bs.Character.Change(ctx, owner, bard, charactersvc.Change{Name: new("Renamed"), SkillArmor: new("leather")})
+	require.Error(t, err)
+	b, err := bs.Character.GetCharacter(ctx, bard)
+	require.NoError(t, err)
+	assert.Equal(t, "Lyra", b.Name, "the rename is rolled back with the refused armour")
+
+	_, err = bs.Character.Change(ctx, owner, thief, charactersvc.Change{SkillArmor: new("elven_chain"), Retired: new(true)})
+	require.NoError(t, err)
+	c, err := bs.Character.GetCharacter(ctx, thief)
+	require.NoError(t, err)
+	assert.Equal(t, "elven_chain", c.SkillArmor)
+	list, err := bs.Character.List(ctx, owner)
+	require.NoError(t, err)
+	for _, l := range list {
+		assert.NotEqual(t, thief, l.ID, "the thief is retired")
+	}
+
+	_, err = bs.Character.Change(ctx, owner, thief, charactersvc.Change{SkillArmor: new("none")})
+	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
+	c, err = bs.Character.GetCharacter(ctx, thief)
+	require.NoError(t, err)
+	assert.Equal(t, "elven_chain", c.SkillArmor, "a retired character is not written")
+	top, _, err := bs.Log.TopID(ctx, thief)
+	require.NoError(t, err)
+	e, err := bs.Log.Undo(ctx, thief, top)
+	require.NoError(t, err)
+	assert.Equal(t, actionlog.KindSkillArmor, e.Kind, "the refused change recorded nothing beyond the first entry")
 }

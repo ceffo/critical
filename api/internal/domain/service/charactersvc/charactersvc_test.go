@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 )
@@ -23,7 +24,16 @@ func (t *tx) InTx(ctx context.Context, fn func(context.Context) error) error {
 	return fn(ctx)
 }
 
+// recorder keeps the entries recorded in the action log.
+type recorder struct{ entries []actionlog.NewEntry }
+
+func (r *recorder) Record(_ context.Context, e actionlog.NewEntry) (int64, error) {
+	r.entries = append(r.entries, e)
+	return int64(len(r.entries)), nil
+}
+
 type env struct {
+	log      *recorder
 	svc      charactersvc.SVC
 	reader   *mocks.MockReader
 	xp       *mocks.MockXPLedger
@@ -37,10 +47,10 @@ func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
 		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: newRules(t),
-		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{},
+		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{}, log: &recorder{},
 	}
 	svc, err := charactersvc.NewWithConfig(charactersvc.DefaultConfig(), charactersvc.Deps{
-		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions,
+		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Log: e.log,
 	})
 	require.NoError(t, err)
 	e.svc = svc
@@ -50,7 +60,7 @@ func newEnv(t *testing.T) *env {
 func TestNew_NilDependency(t *testing.T) {
 	full := charactersvc.Deps{
 		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: newRules(t),
-		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t),
+		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t), Log: &recorder{},
 	}
 	without := map[string]func(d *charactersvc.Deps){
 		"reader":   func(d *charactersvc.Deps) { d.Reader = nil },
@@ -59,6 +69,7 @@ func TestNew_NilDependency(t *testing.T) {
 		"owners":   func(d *charactersvc.Deps) { d.Owners = nil },
 		"tx":       func(d *charactersvc.Deps) { d.Tx = nil },
 		"sessions": func(d *charactersvc.Deps) { d.Sessions = nil },
+		"log":      func(d *charactersvc.Deps) { d.Log = nil },
 	}
 	for name, drop := range without {
 		d := full

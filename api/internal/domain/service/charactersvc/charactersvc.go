@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
 // ErrNoCurrentCharacter is a per-character request of a user who has no
@@ -54,6 +55,9 @@ type SVC interface {
 	// CreationOptions are the classes a new character may have, the races
 	// each admits and the entered values' ranges.
 	CreationOptions(ctx context.Context) (CreationOptions, error)
+	// Restorers are the state keys Change snapshots (a thief's skill armour),
+	// with the writers an undo or a redo calls.
+	Restorers() map[string]actionlog.Restorer
 }
 
 // Reader is the read-side driven port. Per clean_architecture.md §5.4, reads
@@ -85,6 +89,9 @@ type Owners interface {
 	// domain.ErrCharacterNotFound and change nothing (one statement each).
 	RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, name string) error
 	RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error
+	// RestoreSkillArmor writes a character's skill armour back for an undo
+	// or a redo (no owner: the log already ties the entry to the character).
+	RestoreSkillArmor(ctx context.Context, id int64, armor string) error
 	// SetSkillArmor sets the armour a thief wears for its skills, with the
 	// same ownership rule as RenameCharacter.
 	SetSkillArmor(ctx context.Context, owner uuid.UUID, id int64, armor string) error
@@ -111,6 +118,9 @@ type Deps struct {
 	Owners   Owners
 	Tx       domain.TxRunner
 	Sessions Sessions
+	// Log records a skill armour change (ADR 0030 step 1); Tx must be the
+	// action-log transaction runner.
+	Log actionlog.Recorder
 }
 
 type service struct {
@@ -120,14 +130,15 @@ type service struct {
 	owners   Owners
 	tx       domain.TxRunner
 	sessions Sessions
+	log      actionlog.Recorder
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil {
+	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil || d.Log == nil {
 		return nil, errors.New("charactersvc: nil dependency")
 	}
-	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions}, nil
+	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, log: d.Log}, nil
 }
 
 // NewWithConfig is here for symmetry with the other services. There is no

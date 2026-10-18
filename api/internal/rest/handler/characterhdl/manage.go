@@ -198,9 +198,9 @@ func Create(svc creator) render.HandlerFunc {
 	}
 }
 
-// ChangeBody is the body of PATCH /api/characters/{id}: a new name, a thief's new
-// skill armour, or retired true (ADR 0029 step 7.3; a retired character never comes back
-// here).
+// ChangeBody is the body of PATCH /api/characters/{id}: a new name, a
+// thief's new skill armour (ADR 0030 step 1, logged and undoable), or retired
+// true (ADR 0029 step 7.3; a retired character never comes back here).
 type ChangeBody struct {
 	Name    *string `json:"name"`
 	Retired *bool   `json:"retired"`

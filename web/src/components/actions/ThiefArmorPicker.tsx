@@ -37,13 +37,19 @@ export function ThiefArmorPicker() {
 
   const pick = async (next: string) => {
     setSaving(true);
-    await run(() => changeSkillArmor(id, next), { character: true });
-    await fetchSkills();
-    setSaving(false);
+    try {
+      await run(() => changeSkillArmor(id, next), { character: true });
+      await fetchSkills();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-1 px-2.5">
+    <div
+      className="flex min-w-0 flex-col gap-1 px-2.5"
+      data-testid="thief-armor-picker"
+    >
       <label htmlFor="thief-armor" className={labelClass}>
         {t("characters.skillArmor")}
       </label>

@@ -292,6 +292,12 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Skills",
     fr: "Talents",
   },
+  skill_armor: {
+    e: entry("skill_armor", { before: "none", after: "elven_chain" }),
+    value: null,
+    en: "Armour",
+    fr: "Armure",
+  },
   spell_prep: {
     e: entry("spell_prep", null),
     value: null,

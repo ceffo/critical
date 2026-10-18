@@ -411,6 +411,54 @@ func (_c *MockCharacterStore_RepairCurrentCharacter_Call) RunAndReturn(run func(
 	return _c
 }
 
+// RestoreSkillArmor provides a mock function with given fields: ctx, id, armor
+func (_m *MockCharacterStore) RestoreSkillArmor(ctx context.Context, id int64, armor string) error {
+	ret := _m.Called(ctx, id, armor)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RestoreSkillArmor")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) error); ok {
+		r0 = rf(ctx, id, armor)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_RestoreSkillArmor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RestoreSkillArmor'
+type MockCharacterStore_RestoreSkillArmor_Call struct {
+	*mock.Call
+}
+
+// RestoreSkillArmor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - armor string
+func (_e *MockCharacterStore_Expecter) RestoreSkillArmor(ctx interface{}, id interface{}, armor interface{}) *MockCharacterStore_RestoreSkillArmor_Call {
+	return &MockCharacterStore_RestoreSkillArmor_Call{Call: _e.mock.On("RestoreSkillArmor", ctx, id, armor)}
+}
+
+func (_c *MockCharacterStore_RestoreSkillArmor_Call) Run(run func(ctx context.Context, id int64, armor string)) *MockCharacterStore_RestoreSkillArmor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_RestoreSkillArmor_Call) Return(_a0 error) *MockCharacterStore_RestoreSkillArmor_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_RestoreSkillArmor_Call) RunAndReturn(run func(context.Context, int64, string) error) *MockCharacterStore_RestoreSkillArmor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RetireCharacter provides a mock function with given fields: ctx, owner, id
 func (_m *MockCharacterStore) RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
 	ret := _m.Called(ctx, owner, id)

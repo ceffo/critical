@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -57,6 +58,26 @@ func TestGate_Step6_2_NoSessionIs401(t *testing.T) {
 	}
 	rec := anon(h, "POST", "/api/roll/attack", "Content-Type", "application/json")
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// Step 6.2: a path that only looks public is judged once cleaned: dot
+// segments out of /assets/ (plain or with an escaped slash) never reach an
+// /api handler without a session (the service mocks fail on any call) nor
+// return its data.
+func TestGate_Step6_2_DotSegmentsOutOfAssetsAreGated(t *testing.T) {
+	web := gated(t)
+	for _, target := range []string{"/assets/../api/character", "/assets/..%2fapi/character", "/assets/%2e%2e/api/character"} {
+		// As the server's request parser leaves it: dot segments kept, the
+		// escaped slash in RawPath.
+		u, err := url.Parse(target)
+		require.NoError(t, err)
+		req := httptest.NewRequest("GET", "/", nil)
+		req.URL, req.RequestURI = u, target
+		rec := httptest.NewRecorder()
+		web.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusUnauthorized, rec.Code, target)
+		assert.JSONEq(t, unauthenticated, rec.Body.String(), target)
+	}
 }
 
 // Step 6.2: a page opened without a session goes to the login page.

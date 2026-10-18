@@ -253,7 +253,8 @@ gate `middleware.Gate`.
   `GET /api/auth/me`), `cross_origin`, `login_state_mismatch`, `login_failed`,
   `email_unverified`, `not_invited`, `user_disabled`, `root_admin_protected`, `root_admin_taken`
   (`internal/render`, worded by the web's `apiError.*`).
-- **Public paths** (step 6.1, as amended 2026-10-18): `/login` (and under it), the static build
+- **Public paths** (step 6.1, as amended 2026-10-18), judged on the cleaned path (`/assets/../api/x` is
+  `/api/x`): `/login` (and under it), the static build
   (`/assets/*`, `/favicon.svg`: the login page is a page of the one bundle), `/api/auth/*`, `/api/health`.
   Any other page without a session redirects to `/login` (`/login?error=session_expired` when its cookie
   was stale); any other `/api` route answers 401 `unauthenticated`.

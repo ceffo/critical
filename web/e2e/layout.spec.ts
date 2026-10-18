@@ -1848,4 +1848,24 @@ test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", a
         await snap(page, `login-fr-${vp.width}x${vp.height}`);
     }
   }
+  // The dark themes (ADR 0026 step 4): the card and the refusal banner, in French, for review.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const dark of ["deep", "arcane"]) {
+    await page.evaluate((darkTheme) => {
+      localStorage.setItem(
+        "critical.settings.v1",
+        JSON.stringify({
+          lang: "fr",
+          mode: "dark",
+          darkTheme,
+          lightTheme: "arcane",
+        }),
+      );
+    }, dark);
+    await page.reload();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+    await expect(card.getByTestId("login-error")).toBeVisible();
+    await expectNoClippedText(card, `login page dark ${dark}`);
+    await snap(page, `login-fr-dark-${dark}`);
+  }
 });

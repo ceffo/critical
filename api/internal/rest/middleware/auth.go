@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	pathpkg "path"
 	"strings"
 	"time"
 
@@ -84,7 +85,9 @@ const favicon = "/favicon.svg"
 // data), the /api/auth endpoints and /api/health. Everything else needs one
 // (step 6.2): every /api data route and the catalogue; a new route is
 // protected by default.
-func Public(path string) bool {
+func Public(p string) bool {
+	// Judged on the cleaned path: "/assets/../api/character" is /api/character.
+	path := pathpkg.Clean("/" + p)
 	return path == "/api/health" ||
 		path == "/api/auth" || strings.HasPrefix(path, "/api/auth/") ||
 		path == LoginPath || strings.HasPrefix(path, LoginPath+"/") ||
@@ -136,7 +139,7 @@ func Gate(auth Authenticator, cfg GateConfig) func(http.Handler) http.Handler {
 				r = r.WithContext(WithPrincipal(ctx, p))
 			}
 			if p == nil && !Public(r.URL.Path) {
-				if !isAPI(r.URL.Path) && isNavigation(r) {
+				if !isAPI(pathpkg.Clean("/"+r.URL.Path)) && isNavigation(r) {
 					to := LoginPath
 					if stale {
 						to = ExpiredLoginPath

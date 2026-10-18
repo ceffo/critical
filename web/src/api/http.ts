@@ -1,6 +1,9 @@
 import i18n from "@/i18n";
 import { loginUrl } from "@/lib/session";
 
+/** The login endpoints: their callers decide where to go, a 401 there never redirects. */
+const AUTH_PREFIX = "/api/auth/";
+
 /**
  * An API error carrying the HTTP status and a message: the player's language when the server sent a
  * known error code ({"code": "..."}), else the server's own text ({"error": "..."}).
@@ -53,14 +56,15 @@ async function errorBody(
 
 /**
  * fetch + JSON decode; throws ApiError with the localized or server message on a non-2xx status. A
- * 401 means the session ended while the app ran (it starts only with one): the login page shows,
- * saying so (ADR 0029 step 4.4).
+ * 401 from a data route means the session ended while the app ran (it starts only with one): the
+ * login page shows, saying so (ADR 0029 step 4.4). The login endpoints (`/api/auth/*`: dev login, log
+ * out) navigate on their own, so their 401 only throws.
  */
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   if (!res.ok) {
     const { message, field, code } = await errorBody(res);
-    if (res.status === 401)
+    if (res.status === 401 && !url.startsWith(AUTH_PREFIX))
       globalThis.location.assign(loginUrl("session_expired"));
     throw new ApiError(message, res.status, field, code);
   }

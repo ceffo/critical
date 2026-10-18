@@ -72,6 +72,16 @@ describe("an ended session", () => {
     expect(assign).toHaveBeenCalledWith("/login?error=session_expired");
   });
 
+  it("leaves a 401 of the login endpoints to their caller", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { assign });
+    respond(401, { code: "unauthenticated", error: "authentication required" });
+    await request("/api/auth/logout", { method: "POST" }).catch(
+      () => undefined,
+    );
+    expect(assign).not.toHaveBeenCalled();
+  });
+
   it("stays on the page for other errors", async () => {
     const assign = vi.fn();
     vi.stubGlobal("location", { assign });

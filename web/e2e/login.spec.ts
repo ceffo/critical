@@ -31,4 +31,24 @@ test("dev login, dashboard, log out, login page", async ({ page, context }) => {
   // The session is gone: the dashboard sends back to the login page.
   await page.goto("/");
   await expect(page).toHaveURL(/\/login$/);
+
+  // Log out with a session already dead (its cookie deleted, as by a log out in another tab): the
+  // login page once, without the "session ended" message.
+  await dev.click();
+  await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
+  await context.clearCookies();
+  const navigations: string[] = [];
+  page.on("framenavigated", (f) => {
+    if (f === page.mainFrame())
+      navigations.push(new URL(f.url()).pathname + new URL(f.url()).search);
+  });
+  await page.getByTestId("settings-trigger").click();
+  await page
+    .getByTestId("settings-account")
+    .getByRole("button", { name: /^Déconnecter/ })
+    .click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(dev).toBeVisible();
+  await expect(page.getByTestId("login-error")).toHaveCount(0);
+  expect(navigations).toEqual(["/login"]);
 });

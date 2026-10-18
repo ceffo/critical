@@ -100,6 +100,12 @@ for path in /api/character /api/spells/names; do
     out="$(get "$path")"
     [ "${out%% *}" = 401 ] || fail "$path without a session: $out"
 done
+# A path that only looks public (dot segments out of /assets/, sent as is) is judged once cleaned: 401.
+for path in /assets/../api/character /assets/..%2fapi/character; do
+    out="$(get "$path" --path-as-is)"
+    [ "${out%% *}" = 401 ] || fail "$path without a session: $out"
+    grep -q '"code":"unauthenticated"' "$body_file" || fail "$path without a session: $(cat "$body_file")"
+done
 
 out="$(curl -sS -o "$body_file" -D - -X POST -H 'Content-Type: application/json' -d '{}' "$base/api/auth/dev")"
 # The session cookie is named per app: critical_session_dev_<listen port> in dev login mode.

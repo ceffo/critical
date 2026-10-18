@@ -63,4 +63,16 @@ describe("logout", () => {
     expect(fetch.mock.calls[0][1]).toMatchObject({ method: "POST" });
     expect(assign).toHaveBeenCalledWith("/login");
   });
+
+  it("with a dead session goes to the login page once, saying nothing", async () => {
+    answers([
+      401,
+      { code: "unauthenticated", error: "authentication required" },
+    ]);
+    const assign = vi.fn();
+    vi.stubGlobal("location", { assign });
+    await logout().catch(() => undefined);
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(assign).toHaveBeenCalledWith("/login");
+  });
 });

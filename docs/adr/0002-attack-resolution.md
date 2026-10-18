@@ -3,7 +3,7 @@
 **Status**: accepted, 2026-10-15 (critical-qki.35; collects the rules shipped in critical-qki.7,
 critical-qki.13, critical-qki.28, critical-qki.33 and critical-qki.34, until then in
 `docs/backend.md` "Attack Modifiers"); step 6 and the Consequences amended 2026-10-16 by
-[ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers)
+[ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers). Step 2 amended by [ADR 0030](0030-classes-and-races.md) (THAC0 derived), on its implementation.
 
 ## Context
 

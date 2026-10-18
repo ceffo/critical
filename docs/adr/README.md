@@ -19,20 +19,20 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | # | Title | Status |
 |---|---|---|
 | 0001 | [Critical hits](0001-critical-hits.md) | accepted |
-| 0002 | [Attack resolution](0002-attack-resolution.md) | accepted, step 6 and Consequences amended by 0016 |
+| 0002 | [Attack resolution](0002-attack-resolution.md) | accepted, step 6 and Consequences amended by 0016; step 2 amended by 0030 (THAC0 derived) (on implementation) |
 | 0003 | [Damage](0003-damage.md) | accepted, steps 4, 5 and 11 amended by 0016 |
-| 0004 | [Buffs](0004-buffs.md) | accepted, steps 10 and 11 and Consequences amended and step 18 added by 0016; step 19 (add as effect) added |
+| 0004 | [Buffs](0004-buffs.md) | accepted, steps 10 and 11 and Consequences amended and step 18 added by 0016; step 19 (add as effect) added; steps 7 to 10 amended for warriors by 0030 (18/xx) (on implementation) |
 | 0005 | [Rounds and time](0005-rounds-and-time.md) | accepted |
-| 0006 | [Saving throws](0006-saving-throws.md) | accepted, steps 2, 4 and 5 amended and step 8 added 2026-10-16 (the adjustment moves the target), step 6 amended by 0028 |
+| 0006 | [Saving throws](0006-saving-throws.md) | accepted, steps 2, 4 and 5 amended and step 8 added 2026-10-16 (the adjustment moves the target), step 6 amended by 0028; step 1 amended by 0030 (targets derived, racial bonus) (on implementation) |
 | 0007 | [HP ledger](0007-hp-ledger.md) | accepted, steps 2, 3, 8 and 9 amended by 0018, step 2 by 0019 |
-| 0008 | [Spell slots and long rest](0008-spell-slots-and-long-rest.md) | accepted |
+| 0008 | [Spell slots and long rest](0008-spell-slots-and-long-rest.md) | accepted; steps 2 and 3 amended by 0030 (slots and preparation per class) (on implementation) |
 | 0009 | [Dashboard layout and theme system](0009-dashboard-layout-and-theme-system.md) | accepted, steps 3 and 5 amended by 0017, step 4 replaced and step 5 amended by 0020, steps 1 and 2 replaced and steps 5 and 6 amended by 0022; steps 4 and 6 amended by 0026 (four themes, a dark and a light theme per device) |
 | 0010 | [Action stack and undo](0010-action-stack-and-undo.md) | accepted, steps 1 and 2 and Consequences amended by 0018, Consequences by 0019, step 6 amended by 0028 |
 | 0011 | [HP below zero](0011-hp-below-zero.md) | accepted |
 | 0012 | [Attack against an unknown AC](0012-attack-against-unknown-ac.md) | accepted |
 | 0013 | [Initiative](0013-initiative.md) | accepted, steps 2 and 4 amended by 0018 |
-| 0014 | [Skill checks](0014-skill-checks.md) | accepted; step 5 no longer offered by the Skills tab (API unchanged), by 0027 (proposed) |
-| 0015 | [Experience](0015-experience.md) | accepted, step 4 amended by 0018 |
+| 0014 | [Skill checks](0014-skill-checks.md) | accepted; step 5 no longer offered by the Skills tab (API unchanged), by 0027 (proposed); step 3 amended by 0030 (bard skill percentages computed) (on implementation) |
+| 0015 | [Experience](0015-experience.md) | accepted, step 4 amended by 0018; steps 2 and 3 amended by 0030 (bonus by class, level from XP) (on implementation) |
 | 0016 | [Inventory and editors](0016-inventory.md) | accepted; steps 9 to 16 (an item's own powers) added 2026-10-16 |
 | 0017 | [Type scale and density](0017-type-scale-and-density.md) | accepted, steps 2, 4, 5, 6 and 7 amended by 0022; step 6 rechecked (unchanged) by 0026; step 6 amended by 0027 (5 turn columns, effect buttons on hover) |
 | 0018 | [Every mutation is a transaction; undo pops the last one](0018-transactions-and-undo.md) | accepted, step 6 and Consequences amended by 0019 |
@@ -46,3 +46,4 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0026 | [Colour and depth: the contrast ladder, the raised stage and four themes](0026-contrast-ladder-raised-stage-four-themes.md) | accepted (user OK 2026-10-17, proposals as written); step 5.9's initiative size amended by 0027; step 6.7 added (one in-card group heading) |
 | 0027 | [Space follows frequency of use: French as the layout reference, one-word buttons and the per-screen layout pass](0027-space-follows-frequency-of-use.md) | accepted (user OK 2026-10-17, proposals as written); journal step 9.4 amended (time right-aligned) and 9.6 added (a turn's opening rows unframed) on the user's feedback |
 | 0028 | [Ability checks](0028-ability-checks.md) | accepted (user OK 2026-10-17), implemented |
+| 0030 | [Classes and races: everything derived from class, race and XP](0030-classes-and-races.md) | accepted 2026-10-17 (triage and the four questions, user "yes to all"); _(proposed)_ details await the user's OK; not implemented |

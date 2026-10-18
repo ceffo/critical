@@ -19,7 +19,7 @@ import {
   expectUndoOn,
 } from "./helpers";
 
-test("Next turn advances the counter and starts a new log group", async ({
+test("Next round advances the counter and starts a new log group", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -38,8 +38,8 @@ test("Next turn advances the counter and starts a new log group", async ({
   const newGroup = turnGroup(page, r0 + 1);
   await expect(newGroup).toContainText("current");
   await expect(newGroup.getByRole("listitem")).toHaveText([
-    /Initiative \d+ \(d10\) for turn/,
-    new RegExp(`Turn ${r0} → ${r0 + 1}`),
+    /Initiative \d+ \(d10\) for round/,
+    new RegExp(`Round ${r0} → ${r0 + 1}`),
   ]);
   await expect(newGroup.getByTestId("log-transaction")).toHaveCount(0);
   const oldGroup = turnGroup(page, r0);
@@ -73,12 +73,12 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
   const before = r0 + 2;
 
   // Set turn number: a number >= 0 through a small form in the turn menu.
-  await turnMenu(page, "Set turn number…");
-  await page.getByLabel("Turn number", { exact: true }).fill("7");
+  await turnMenu(page, "Set round number…");
+  await page.getByLabel("Round number", { exact: true }).fill("7");
   await snap(page, "set-round-form");
   await page.getByRole("button", { name: "Set", exact: true }).click();
   await expect.poll(() => currentRound(page)).toBe(7);
-  const setEntry = logEntry(page, `Turn set: ${before} → 7`);
+  const setEntry = logEntry(page, `Round set: ${before} → 7`);
   await expect(setEntry).toBeVisible();
   await expect(buffBadge(page, "e2e Haste")).toBeVisible();
 
@@ -94,19 +94,19 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
     .getByRole("button", { name: "Confirm" })
     .click();
   await expect.poll(() => currentRound(page)).toBe(0);
-  await expect(logEntry(page, "Combat ended: turn 7 → 0")).toBeVisible();
+  await expect(logEntry(page, "Combat ended: round 7 → 0")).toBeVisible();
   await expect(buffBadge(page, "e2e Haste")).toBeVisible();
   await snap(page, "end-combat");
 
   // Next Round then gives 1.
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(1);
-  // The newest "Turn 0 → 1" entry (the earlier Next Rounds also went through 0 → 1).
-  await undoNextTurn(page, logEntry(page, "Turn 0 → 1").first());
+  // The newest "Round 0 → 1" entry (the earlier Next Rounds also went through 0 → 1).
+  await undoNextTurn(page, logEntry(page, "Round 0 → 1").first());
   await expect.poll(() => currentRound(page)).toBe(0);
 
   // Voiding End combat brings round 7 back.
-  await undoEntry(page, "Combat ended: turn 7 → 0");
+  await undoEntry(page, "Combat ended: round 7 → 0");
   await expect.poll(() => currentRound(page)).toBe(7);
   await expectNoReload(page);
 });
@@ -118,10 +118,10 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   await addBuff(page, { name: "e2e Long", rounds: 150 });
   await addBuff(page, { name: "e2e Short", rounds: 60 });
   await addBuff(page, { name: "e2e Layers", charges: 3 });
-  // From 60 turns up the pill also shows hours.
+  // From 60 rounds up the pill also shows hours.
   await expect(
     buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
-  ).toHaveText("150 turns · 2 h 30");
+  ).toHaveText("150 rounds · 2 h 30");
   // One round at a time: two clicks in flight race their refreshes (an older one can land last).
   const r0 = await currentRound(page);
   await nextTurn(page);
@@ -131,15 +131,15 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   const before = r0 + 2;
   await expect(
     buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
-  ).toHaveText("148 turns · 2 h 28");
+  ).toHaveText("148 rounds · 2 h 28");
   await markNoReload(page);
 
   const form = page.getByRole("form", { name: "Time passes…" });
   await turnMenu(page, "Time passes…");
 
-  // 1.5 h = 90 turns: the server's preview says so and names the effects that would end.
+  // 1.5 h = 90 rounds: the server's preview says so and names the effects that would end.
   await form.getByLabel("Hours that pass").fill("1.5");
-  await expect(form.getByTestId("pass-time-preview")).toHaveText("= 90 turns");
+  await expect(form.getByTestId("pass-time-preview")).toHaveText("= 90 rounds");
   await expect(form.getByTestId("pass-time-ending")).toHaveText(
     "Ends: e2e Short",
   );
@@ -152,11 +152,11 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   await expect(buffBadge(page, "e2e Short")).toHaveCount(0);
   await expect(
     buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
-  ).toHaveText("58 turns");
+  ).toHaveText("58 rounds");
   await expect(
     buffBadge(page, "e2e Layers").getByTestId("buff-charges"),
   ).toHaveText("3 / 3 charges · until spent");
-  const text = `Time passed: 1.5 h (90 rd), turn ${before} → 0`;
+  const text = `Time passed: 1.5 h (90 rd), round ${before} → 0`;
   await expect(logEntry(page, text)).toContainText("expired: e2e Short");
   await snap(page, "pass-time-done");
 
@@ -165,10 +165,10 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   await expect.poll(() => currentRound(page)).toBe(before);
   await expect(
     buffBadge(page, "e2e Short").getByTestId("buff-rounds"),
-  ).toHaveText("58 turns");
+  ).toHaveText("58 rounds");
   await expect(
     buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
-  ).toHaveText("148 turns · 2 h 28");
+  ).toHaveText("148 rounds · 2 h 28");
   await expectNoReload(page);
 });
 
@@ -187,7 +187,7 @@ async function voidFrench(page: Page, text: string) {
   await expect(entry).toHaveAttribute("data-status", "voided");
 }
 
-test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be popped first", async ({
+test("Time passes in French: '1,5' previews 90 rounds; a later Next Round must be popped first", async ({
   page,
   stack,
 }) => {
@@ -269,7 +269,7 @@ const HEADER_VIEWPORTS = [
   { width: 2560, height: 1440 },
 ];
 
-test("Next turn moves the timeline window; a 1-turn effect shows the warning, then is gone", async ({
+test("Next round moves the timeline window; a 1-turn effect shows the warning, then is gone", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -279,12 +279,12 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
   const track = page.getByTestId("effects-track");
   const current = track.locator('[aria-current="step"]');
 
-  // Five turns: the current column follows the turn, the window keeps two turns of history.
+  // Five rounds: the current column follows the turn, the window keeps two rounds of history.
   for (let i = 0; i < 5; i++) {
     const turn = await currentRound(page);
-    await expect(current).toHaveText(`T${turn}`);
-    await expect(track.getByText(/^T\d+$/).first()).toHaveText(
-      `T${turn === 0 ? 0 : Math.max(1, turn - 2)}`,
+    await expect(current).toHaveText(`R${turn}`);
+    await expect(track.getByText(/^R\d+$/).first()).toHaveText(
+      `R${turn === 0 ? 0 : Math.max(1, turn - 2)}`,
     );
     await nextTurn(page);
     await expect.poll(() => currentRound(page)).toBe(turn + 1);
@@ -296,7 +296,7 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
   await expect(blink).toHaveAttribute("data-last-turn", "false");
   await nextTurn(page);
   await expect(blink).toHaveAttribute("data-last-turn", "true");
-  await expect(blink.getByTestId("buff-rounds")).toHaveText("1 turn");
+  await expect(blink.getByTestId("buff-rounds")).toHaveText("1 round");
 
   // The header at every desktop size: five turn columns (ADR 0027 step 4.3).
   for (const vp of HEADER_VIEWPORTS) {
@@ -315,7 +315,7 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
   );
 });
 
-test("Next turn rolls the initiative; one Undo pops a turn with its initiative; reroll replaces it", async ({
+test("Next round rolls the initiative; one Undo pops a round with its initiative; reroll replaces it", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -330,7 +330,7 @@ test("Next turn rolls the initiative; one Undo pops a turn with its initiative; 
   const firstId = await value.getAttribute("data-entry-id");
   const first = combatLog(page).locator(`[data-entry-id="${firstId}"]`);
   await expect(first).toContainText(
-    `Initiative ${firstValue} (d10) for turn 1`,
+    `Initiative ${firstValue} (d10) for round 1`,
   );
 
   // Next turn and the initiative it rolls are one transaction (ADR 0018): the Undo names the
@@ -338,12 +338,12 @@ test("Next turn rolls the initiative; one Undo pops a turn with its initiative; 
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(2);
   await expect(value).not.toHaveAttribute("data-entry-id", firstId ?? "");
-  await expectUndoOn(page, "Turn 1 → 2");
+  await expectUndoOn(page, "Round 1 → 2");
   await snap(page, "undo-names-next-turn");
-  await undoNextTurn(page, logEntry(page, "Turn 1 → 2"));
+  await undoNextTurn(page, logEntry(page, "Round 1 → 2"));
   await expect.poll(() => currentRound(page)).toBe(1);
   // The popped turn opening: each of its rows reads as undone.
-  for (const text of ["Turn 1 → 2", "for turn 2"]) {
+  for (const text of ["Round 1 → 2", "for round 2"]) {
     const popped = logEntry(page, text);
     await expect(popped).toHaveAttribute("data-status", "voided");
     await expect(popped).toContainText("Undone");
@@ -361,7 +361,7 @@ test("Next turn rolls the initiative; one Undo pops a turn with its initiative; 
   );
   await expect(rerolled).toHaveAttribute("data-status", "active");
   await expect(rerolled).toContainText(
-    `Initiative ${await value.textContent()} (d10) for turn 1`,
+    `Initiative ${await value.textContent()} (d10) for round 1`,
   );
 
   for (const vp of HEADER_VIEWPORTS) {

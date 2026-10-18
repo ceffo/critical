@@ -145,7 +145,7 @@ describe("dice steps", () => {
         dice(0, [2, 6]),
         dice(0, [1, 6]),
       ),
-      "in turn: 3d6, 2d6, 1d6 electricity",
+      "in round: 3d6, 2d6, 1d6 electricity",
       "successivement : 3d6, 2d6, 1d6 électricité",
     ],
     [
@@ -168,16 +168,16 @@ describe("dice steps", () => {
 
   it("labels each roll by its step: a turn for a step per round, else its number", async () => {
     const t = await makeT("en");
-    expect(rollLabel(t, "round", 3, 0)).toBe("Turn 3");
+    expect(rollLabel(t, "round", 3, 0)).toBe("Round 3");
     expect(rollLabel(t, "instance", 2, 0)).toBe("#2");
     expect(rollLabel(t, undefined, undefined, 4)).toBe("#5");
     expect(rollLabel(await makeT("fr"), "round", 3, 0)).toBe("Tour 3");
   });
 
   it.each([
-    ["round", 5, "5 turns, one roll each", "5 tours, un jet chacun"],
-    ["round", 1, "1 turn, one roll", "1 tour, un jet"],
-    ["instance", 12, "12 rolls in turn", "12 jets successifs"],
+    ["round", 5, "5 rounds, one roll each", "5 tours, un jet chacun"],
+    ["round", 1, "1 round, one roll", "1 tour, un jet"],
+    ["instance", 12, "12 rolls in round", "12 jets successifs"],
     ["instance", 1, "1 roll", "1 jet"],
   ] as const)("header of %s steps, %d", async (per, count, en, fr) => {
     expect(stepsHeader(await makeT("en"), per, count)).toBe(en);

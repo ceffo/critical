@@ -386,7 +386,7 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
       .getByTestId("spell-dice-damage")
       .getByTestId("spell-dice-formula"),
   ).toHaveText(
-    "in turn: 12d6, 11d6, 10d6, 9d6, 8d6, 7d6, 6d6, 5d6, 4d6, 3d6, 2d6, 1d6 electricity",
+    "in round: 12d6, 11d6, 10d6, 9d6, 8d6, 7d6, 6d6, 5d6, 4d6, 3d6, 2d6, 1d6 electricity",
   );
   await snap(page, "damage-dice-steps");
   await search(page).fill("incendiary cloud");

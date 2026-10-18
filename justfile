@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-linear check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-api check-web
+validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -42,6 +42,10 @@ check-no-sqlite:
 # scripts/linear.sh (Linear GraphQL helper) and scripts/linear-setup.sh against a local stub server; no real Linear call.
 check-linear:
     scripts/test-linear.sh
+
+# scripts/linear-ready.sh and the Linear mode of pending-questions.sh against a local stub server; no real Linear call.
+check-linear-queue:
+    scripts/test-linear-queue.sh
 
 # The CI slow-job skip rule (scripts/test-ci-skip-slow.sh): docs-only paths and the ci-skip label.
 check-ci-skip:

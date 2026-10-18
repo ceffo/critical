@@ -21,7 +21,7 @@
 #      `fly deploy` refuse another app's image), while the registry lets it read the staging repository;
 #   4. the restore point: scripts/restore-point.sh in an ephemeral `fly console` machine of the
 #      production app started from the copied image, a verified copy database <db>_pre_<tag>_<UTC time> of the
-#      production database on its cluster (steps 4.2, 9.2). No restore point, no deploy. It also refuses
+#      production database on its cluster (steps 4.2, 9.2), in the app's primary region. No restore point, no deploy. It also refuses
 #      a production database that records a migration the tag's commit (the image's source) does not
 #      embed: a rollback across a migration goes through the runbook instead;
 #   5. `fly deploy` of registry.fly.io/<prod app>@<digest> to the production app (rolling);
@@ -52,6 +52,10 @@ db="critical_${app#critical-}" # the database of the app (scripts/fly-db-provisi
 vm_size="$(sed -n 's/^ *size = "\(.*\)"$/\1/p' "$config")"
 vm_memory="$(sed -n 's/^ *memory = "\([0-9]*\)mb"$/\1/p' "$config")"
 [ -n "$vm_size" ] && [ -n "$vm_memory" ] || fail "no [[vm]] size and memory (in mb) in $config"
+# The console machine runs where the app does (and so the database): fly picks the nearest region otherwise,
+# and a long dump/restore across regions through fly's proxy has dropped mid-restore.
+region="$(sed -n 's/^primary_region = "\(.*\)"$/\1/p' "$config")"
+[ -n "$region" ] || fail "no primary_region in $config"
 
 guards="$("$here/release-guards.sh" all "$tag")"
 sha="$(sed -n 's/^sha=//p' <<<"$guards")"
@@ -99,7 +103,7 @@ echo "promote: restore point $point (fly console on $app, image $digest)"
 log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 # fly console may not pass the remote exit status through: the script's last line is the proof.
-"$fly" console -a "$app" --image "$image" --vm-size "$vm_size" --vm-memory "$vm_memory" \
+"$fly" console -a "$app" --image "$image" --region "$region" --vm-size "$vm_size" --vm-memory "$vm_memory" \
     --file-local "/tmp/restore-point.sh=$here/restore-point.sh" \
     -C "sh /tmp/restore-point.sh $point ${migrations% }" </dev/null 2>&1 | tee "$log" || true
 tr -d '\r' <"$log" | grep -qx "restore-point: OK $point" \

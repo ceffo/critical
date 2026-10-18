@@ -24,8 +24,12 @@
 # projected size of the database and its copies over RESTORE_POINT_BUDGET_MB (default 300; the cluster's
 # 1 GB volume is shared). The budget counts critical's databases only: this user cannot size the other
 # app's databases nor see the volume's free space, which the operator watches (docs/deploy.md,
-# "Promotion"). RESTORE_POINT_KEEP copies
-# are kept (default 3). A copy that fails its verification is dropped. Prints names, counts and sizes,
+# "Promotion"). RESTORE_POINT_KEEP complete copies
+# are kept (default 3). A copy that fails its verification is dropped (its sessions ended first: the server
+# may not have noticed yet that a dropped connection is gone). An incomplete copy left by an earlier run
+# (no public.schema_migrations: a restore is one transaction, so a failed one leaves an empty database) is
+# dropped at the start of the next run and never counts toward the retention or the budget, so it can never
+# push a valid copy out. Promotions are serialized (concurrency: deploy-production), so none is mid-restore. Prints names, counts and sizes,
 # never data or the DSN; the last line is `restore-point: OK <name>` on success.
 #
 # POSIX sh (the image's shell is busybox). Also run by scripts/image-smoke.sh against a throwaway database.
@@ -64,6 +68,31 @@ pattern="^${base}_pre_v[0-9]+_[0-9]+_[0-9]+_[0-9]{14}\$"
 
 q() { psql -X -w -q -A -t -v ON_ERROR_STOP=1 -d "$1" -c "$2"; }
 
+# dsn_of <database>: the DSN of another database of the cluster.
+dsn_of() { echo "${dsn_path%/*}/$1$dsn_query"; }
+# drop_copy <database>: DROP DATABASE after ending the sessions still on it (this user's own restore
+# connection may still be open on the server after the client died: DROP fails "being accessed by other
+# users" until the server notices), retried a few times.
+drop_copy() {
+    i=0
+    while [ "$i" -lt 5 ]; do
+        q "$dsn" "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$1' AND pid <> pg_backend_pid()" >/dev/null 2>&1 || true
+        q "$dsn" "DROP DATABASE IF EXISTS \"$1\"" >/dev/null 2>&1 && return 0
+        i=$((i + 1))
+        sleep 2
+    done
+    return 1
+}
+# copy_state <database>: complete, incomplete (no recorded migrations table: a failed restore) or unknown
+# (cannot connect: judged complete, never dropped on a guess).
+copy_state() {
+    case "$(q "$(dsn_of "$1")" "SELECT to_regclass('public.schema_migrations') IS NOT NULL" 2>/dev/null)" in
+        t) echo complete ;;
+        f) echo incomplete ;;
+        *) echo unknown ;;
+    esac
+}
+
 [ "$(q "$dsn" 'SELECT current_database()')" = "$base" ] || fail "CRITICAL_DSN does not connect to '$base'"
 [ "$(q "$dsn" 'SELECT rolcreatedb FROM pg_roles WHERE rolname = current_user')" = t ] \
     || fail "the database user lacks CREATEDB (docs/deploy.md: rerun the provisioning for prod)"
@@ -74,6 +103,17 @@ unknown="$(q "$dsn" "SELECT coalesce(string_agg(name, ' ' ORDER BY name), '') FR
                      WHERE name NOT IN (${embedded%,})")"
 [ -z "$unknown" ] || fail "$base records migrations this release does not embed ($unknown): it is older than \
 the schema and would not start on it. Roll back across a migration as docs/deploy.md says (\"Rollback\", \"Across a migration\")"
+
+# Incomplete copies of earlier failed runs go first: they hold no data, and must not count below.
+for old in $(q "$dsn" "SELECT datname FROM pg_database WHERE datname ~ '$pattern'"); do
+    if [ "$(copy_state "$old")" = incomplete ]; then
+        if drop_copy "$old"; then
+            echo "restore-point: dropped the incomplete copy $old (an earlier run failed)"
+        else
+            echo "restore-point: WARNING: could not drop the incomplete copy $old; drop it by hand (docs/deploy.md)" >&2
+        fi
+    fi
+done
 
 # Projected use: the database, the copies kept after this run (the newest keep-1), and the new copy.
 projected="$(q "$dsn" "
@@ -90,7 +130,7 @@ cleanup() {
     status=$?
     rm -rf "$work"
     if [ "$status" != 0 ] && [ -n "$created" ]; then
-        q "$dsn" "DROP DATABASE IF EXISTS \"$name\"" >/dev/null 2>&1 \
+        drop_copy "$name" \
             && echo "restore-point: dropped the incomplete copy $name" >&2 \
             || echo "restore-point: could not drop the incomplete copy $name: drop it by hand" >&2
     fi
@@ -108,10 +148,12 @@ echo "restore-point: creating $name"
 q "$dsn" "CREATE DATABASE \"$name\" TEMPLATE template0" >/dev/null
 created=1
 q "$dsn" "REVOKE ALL ON DATABASE \"$name\" FROM PUBLIC" >/dev/null
-# pg_restore's error text can quote row values (a failed COPY line, a key): only the object it names is
-# printed, the log stays in this ephemeral machine.
+# pg_restore's error text can quote row values (a failed COPY line, a key): the log stays in this ephemeral
+# machine. Printed: the TOC entry it names, and its error lines (its own class: the server's message, or the
+# lost connection) with every quoted string blanked, since the server quotes values in double quotes; the
+# DETAIL/CONTEXT lines (where "Key (id)=(5)" and the COPY line appear) are never printed.
 if ! pg_restore -w --exit-on-error --single-transaction --no-owner --no-acl -d "$copy_dsn" "$work/dump" 2>"$work/restore.log"; then
-    grep -E '^pg_restore: from TOC entry' "$work/restore.log" >&2 || true
+    grep -E '^pg_restore: (from TOC entry|error:)' "$work/restore.log" | sed -e 's/"[^"]*"/"..."/g' -e "s/'[^']*'/'...'/g" | head -n 10 >&2 || true
     fail "restoring the dump into $name failed"
 fi
 
@@ -129,10 +171,19 @@ summary="$(q "$copy_dsn" "SELECT (SELECT count(*) FROM pg_tables WHERE schemanam
 echo "restore-point: $name verified ($summary)"
 created=""
 
-# Retention: the newest $keep copies stay. A copy that cannot be dropped (in use, or not this user's) is
+# Retention: the newest $keep complete copies stay (an incomplete one is not counted: it is dropped, or
+# reported when it cannot be). A copy that cannot be dropped (in use, or not this user's) is
 # reported and kept; the budget above stops the next promotion before the volume fills.
+seen=0
 for old in $(q "$dsn" "SELECT datname FROM pg_database WHERE datname ~ '$pattern'
-                       ORDER BY substring(datname FROM '[0-9]{14}\$') DESC OFFSET $keep"); do
+                       ORDER BY substring(datname FROM '[0-9]{14}\$') DESC"); do
+    if [ "$(copy_state "$old")" = incomplete ]; then
+        drop_copy "$old" && echo "restore-point: dropped the incomplete copy $old" \
+            || echo "restore-point: WARNING: could not drop the incomplete copy $old; drop it by hand (docs/deploy.md)" >&2
+        continue
+    fi
+    seen=$((seen + 1))
+    [ "$seen" -gt "$keep" ] || continue
     if q "$dsn" "DROP DATABASE \"$old\"" >/dev/null 2>&1; then
         echo "restore-point: dropped $old (keeping the newest $keep)"
     else

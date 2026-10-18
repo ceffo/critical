@@ -709,7 +709,7 @@ read an empty token), and a calling job cannot have an environment. The job pass
      promotion with nothing deployed. Why ("Registry" below): fly's API lets an app's deploy token use that
      app's images only.
   4. **Restore point** (`scripts/restore-point.sh`, steps 4.2 and 9.2): `fly console -a critical-prod
-     --image registry.fly.io/critical-prod@<digest> --vm-size <size> --vm-memory <mb>` (the `[[vm]]` of
+     --image registry.fly.io/critical-prod@<digest> --region <primary_region> --vm-size <size> --vm-memory <mb>` (`--region` is the app's `yyz`, next to the database: without it fly picked `lax` and the restore dropped mid-transaction across regions; the `[[vm]]` of
      `deploy/fly.prod.toml`: without a fly config, `fly console` fails with "invalid CPU kind ''") starts an ephemeral machine of the production app from the release image (which
      ships the PostgreSQL 17 client; the machine has the app's `CRITICAL_DSN` and does not start the
      server), uploads the script and runs it; the machine is destroyed after. The script `pg_dump`s
@@ -717,7 +717,7 @@ read an empty token), and a calling job cannot have an environment. The job pass
      **`critical_prod_pre_<tag with _>_<UTC yyyymmddhhmmss>`** (e.g. `critical_prod_pre_v1_2_3_20261017153000`:
      the data as it was before that release), owned by `critical_prod`, CONNECT revoked from PUBLIC. It is
      verified (the same tables and recorded migrations as `critical_prod`, rows in it, PUBLIC locked out),
-     then the copies beyond the **newest 3** are dropped. It refuses first: a name that exists, the user
+     then the copies beyond the **newest 3 complete ones** are dropped. An **incomplete copy** (a failed run's: no `schema_migrations` table, since a restore is one transaction) never counts toward that retention, so it cannot push a valid copy out; the next run drops it first, after ending any session the server still holds on it (retried; promotions are serialized, so none is mid-restore), and a failed run does the same for its own copy. By hand: `DROP DATABASE "<name>";` as the operator. It refuses first: a name that exists, the user
      without `CREATEDB` (user step 4 above), a projected use of `critical_prod` plus its kept copies plus
      the new one over **300 MB** (the 1 GB volume is shared with the other app; "Disk" below), and a
      production database that records a migration the tag's commit does not hold: the image is older than
@@ -725,7 +725,7 @@ read an empty token), and a calling job cannot have an environment. The job pass
      (a rollback across a migration, refused with a pointer to "Rollback", "Across a migration"). The
      promotion reads that list from the tag's git tree, whatever is checked out. A copy that fails its
      verification is dropped. The log shows names, counts and sizes only; `pg_restore`'s own error text
-     (which can quote rows) stays in the ephemeral machine, only the object it names is printed. The step
+     (which can quote rows) stays in the ephemeral machine, only the TOC entry it names and its `error:` lines are printed, every quoted string blanked, no DETAIL or CONTEXT line. The step
      passes only on the script's last line `restore-point: OK <name>`.
   5. `fly deploy -c deploy/fly.prod.toml -a critical-prod --image registry.fly.io/critical-prod@<digest>
      --no-public-ips`: rolling, one machine at a time.

@@ -244,8 +244,10 @@ func TestConfigAuth_Step8_3_HealthLoginMode(t *testing.T) {
 	if err != nil || a.login() != "dev" {
 		t.Fatalf("dev: %q, %v", a.login(), err)
 	}
-	g := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c", FlyApp: "critical-hit",
-		GoogleClientID: "id", GoogleClientSecret: "secret", PublicURL: "https://critical-hit.fly.dev"}
+	g := Config{
+		DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c", FlyApp: "critical-hit",
+		GoogleClientID: "id", GoogleClientSecret: "secret", PublicURL: "https://critical-hit.fly.dev",
+	}
 	a, err = g.auth()
 	if err != nil || a.login() != "google" {
 		t.Fatalf("google: %q, %v", a.login(), err)

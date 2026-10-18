@@ -469,7 +469,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     (`charactersvc.ValidSkillPoints`), the budget at the realized level still only a warning. It is
     a `skill_points` entry of the action log with a `skill_points` snapshot (the points before and
     after), so it is undone and redone like any move; the same points as stored log nothing. The
-    web edits it from the Skills tab ("Spend points"). Storing totals loses no budget rule (the
+    web edits it from the Skills tab (its "Spend" button). Storing totals loses no budget rule (the
     per-skill and total caps at a level are exactly the conditions under which totals split into
     legal per-level allotments), only which level each point came from. A skill under 1% (the
     floor 0) is shown but refused before the die (`skill_unusable`): PHB p.39 says the player must

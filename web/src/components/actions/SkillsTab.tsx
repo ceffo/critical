@@ -162,6 +162,7 @@ export function SkillsTab() {
               type="button"
               size="sm"
               className="mx-2.5 w-fit"
+              title={t("skills.spendPointsHint")}
               onClick={() => setEditingPoints(true)}
               data-testid="thief-points-edit"
             >

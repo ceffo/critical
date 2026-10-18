@@ -1630,7 +1630,8 @@
       "skill_points_total": "Points de talent : {{points}} au total, {{limit}} au plus à ce niveau",
       "skill_points_per_skill": "{{name}} : {{points}} points, {{limit}} au plus à ce niveau"
     },
-    "spendPoints": "Dépenser des points",
+    "spendPoints": "Dépenser",
+    "spendPointsHint": "Dépenser des points de talent de voleur",
     "pointsTitle": "Points des talents de voleur",
     "pointsLead": "Le total des points de chaque talent. Le budget de votre niveau est un avertissement, pas une limite.",
     "pointsLabel": "Points en {{name}}",

@@ -1630,7 +1630,8 @@
       "skill_points_total": "Skill points: {{points}} in all, at most {{limit}} at this level",
       "skill_points_per_skill": "{{name}}: {{points}} points, at most {{limit}} at this level"
     },
-    "spendPoints": "Spend points",
+    "spendPoints": "Spend",
+    "spendPointsHint": "Spend thieving skill points",
     "pointsTitle": "Thieving skill points",
     "pointsLead": "The total points in each skill. The budget at your level is a warning, not a limit.",
     "pointsLabel": "Points in {{name}}",

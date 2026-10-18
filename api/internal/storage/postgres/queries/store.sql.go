@@ -461,6 +461,38 @@ func (q *Queries) ItemNameKey(ctx context.Context, arg ItemNameKeyParams) (int64
 	return name, err
 }
 
+const learnFailureRefs = `-- name: LearnFailureRefs :many
+SELECT character_id, spell_key FROM spellbook_learn_failures ORDER BY character_id, spell_key
+`
+
+type LearnFailureRefsRow struct {
+	CharacterID int64
+	SpellKey    string
+}
+
+func (q *Queries) LearnFailureRefs(ctx context.Context) ([]LearnFailureRefsRow, error) {
+	rows, err := q.db.QueryContext(ctx, learnFailureRefs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LearnFailureRefsRow{}
+	for rows.Next() {
+		var i LearnFailureRefsRow
+		if err := rows.Scan(&i.CharacterID, &i.SpellKey); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockWriters = `-- name: LockWriters :exec
 SELECT pg_advisory_xact_lock(7240531)
 `
@@ -621,6 +653,40 @@ func (q *Queries) SnapshotsOf(ctx context.Context, stateKey string) ([]Snapshots
 	items := []SnapshotsOfRow{}
 	for rows.Next() {
 		var i SnapshotsOfRow
+		if err := rows.Scan(&i.ID, &i.BeforeState, &i.AfterState); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const snapshotsWithPrefix = `-- name: SnapshotsWithPrefix :many
+SELECT id, before_state, after_state FROM action_snapshots
+WHERE state_key LIKE $1::text || '%' ORDER BY id
+`
+
+type SnapshotsWithPrefixRow struct {
+	ID          int64
+	BeforeState string
+	AfterState  string
+}
+
+func (q *Queries) SnapshotsWithPrefix(ctx context.Context, prefix string) ([]SnapshotsWithPrefixRow, error) {
+	rows, err := q.db.QueryContext(ctx, snapshotsWithPrefix, prefix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SnapshotsWithPrefixRow{}
+	for rows.Next() {
+		var i SnapshotsWithPrefixRow
 		if err := rows.Scan(&i.ID, &i.BeforeState, &i.AfterState); err != nil {
 			return nil, err
 		}

@@ -403,9 +403,9 @@ func (q *Queries) InsertText(ctx context.Context, arg InsertTextParams) error {
 
 const insertWeapon = `-- name: InsertWeapon :exec
 INSERT INTO weapons (character_id, id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind,
-                     two_handed, ammo_kind)
+                     two_handed, ammo_kind, weapon_type)
 VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8,
-        $9, $10, $11)
+        $9, $10, $11, $12)
 `
 
 type InsertWeaponParams struct {
@@ -420,6 +420,7 @@ type InsertWeaponParams struct {
 	Kind        string
 	TwoHanded   int64
 	AmmoKind    string
+	WeaponType  string
 }
 
 func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) error {
@@ -435,6 +436,7 @@ func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) erro
 		arg.Kind,
 		arg.TwoHanded,
 		arg.AmmoKind,
+		arg.WeaponType,
 	)
 	return err
 }

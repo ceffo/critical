@@ -27,7 +27,7 @@ func (q *Queries) DeleteWeapon(ctx context.Context, arg DeleteWeaponParams) (int
 }
 
 const getWeapon = `-- name: GetWeapon :one
-SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id
+SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id, weapon_type
 FROM weapons WHERE character_id = $1::bigint AND id = $2
 `
 
@@ -51,15 +51,16 @@ func (q *Queries) GetWeapon(ctx context.Context, arg GetWeaponParams) (Weapon, e
 		&i.TwoHanded,
 		&i.AmmoKind,
 		&i.CharacterID,
+		&i.WeaponType,
 	)
 	return i, err
 }
 
 const insertWeapon = `-- name: InsertWeapon :exec
 INSERT INTO weapons (character_id, id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind,
-                     two_handed, ammo_kind)
+                     two_handed, ammo_kind, weapon_type)
 VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8,
-        $9, $10, $11)
+        $9, $10, $11, $12)
 `
 
 type InsertWeaponParams struct {
@@ -74,6 +75,7 @@ type InsertWeaponParams struct {
 	Kind        string
 	TwoHanded   int64
 	AmmoKind    string
+	WeaponType  string
 }
 
 func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) error {
@@ -89,13 +91,14 @@ func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) erro
 		arg.Kind,
 		arg.TwoHanded,
 		arg.AmmoKind,
+		arg.WeaponType,
 	)
 	return err
 }
 
 const listWeapons = `-- name: ListWeapons :many
 
-SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id
+SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id, weapon_type
 FROM weapons WHERE character_id = $1::bigint ORDER BY position
 `
 
@@ -122,6 +125,7 @@ func (q *Queries) ListWeapons(ctx context.Context, characterID int64) ([]Weapon,
 			&i.TwoHanded,
 			&i.AmmoKind,
 			&i.CharacterID,
+			&i.WeaponType,
 		); err != nil {
 			return nil, err
 		}
@@ -138,8 +142,9 @@ func (q *Queries) ListWeapons(ctx context.Context, characterID int64) ([]Weapon,
 
 const updateWeapon = `-- name: UpdateWeapon :one
 UPDATE weapons SET position = $1, damage_sm = $2, damage_l = $3, magic_to_hit = $4,
-                   magic_damage = $5, kind = $6, two_handed = $7, ammo_kind = $8
-WHERE character_id = $9::bigint AND id = $10
+                   magic_damage = $5, kind = $6, two_handed = $7, ammo_kind = $8,
+                   weapon_type = $9
+WHERE character_id = $10::bigint AND id = $11
 RETURNING name
 `
 
@@ -152,6 +157,7 @@ type UpdateWeaponParams struct {
 	Kind        string
 	TwoHanded   int64
 	AmmoKind    string
+	WeaponType  string
 	CharacterID int64
 	ID          string
 }
@@ -166,6 +172,7 @@ func (q *Queries) UpdateWeapon(ctx context.Context, arg UpdateWeaponParams) (int
 		arg.Kind,
 		arg.TwoHanded,
 		arg.AmmoKind,
+		arg.WeaponType,
 		arg.CharacterID,
 		arg.ID,
 	)

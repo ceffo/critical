@@ -202,6 +202,27 @@ export interface AttackFormPatch {
   situational?: { value: number; label: string };
 }
 
+/**
+ * Weapon type codes, language-neutral (weaponsvc.Types, ADR 0030 step 23); "" is a weapon with no
+ * type. Display names come from i18n, never from here.
+ */
+export const WEAPON_TYPES = [
+  "long_bow",
+  "short_bow",
+  "light_crossbow",
+  "heavy_crossbow",
+  "hand_crossbow",
+  "dagger",
+  "dart",
+  "sling",
+  "short_sword",
+  "long_sword",
+  "other_melee",
+  "other_thrown",
+  "other_missile",
+] as const;
+export type WeaponType = (typeof WEAPON_TYPES)[number] | "";
+
 /** GET /api/weapons */
 export interface Weapon {
   id: string;
@@ -215,6 +236,7 @@ export interface Weapon {
   two_handed: boolean;
   /** Ammo item kind the weapon fires ("arrow"); empty for melee and hurled weapons. */
   ammo_kind: string;
+  weapon_type: WeaponType;
 }
 
 /** Saving throw categories accepted by POST /api/roll/save. */
@@ -252,6 +274,7 @@ export interface WeaponBody {
   kind?: "melee" | "missile";
   two_handed?: boolean;
   ammo_kind?: string;
+  weapon_type?: WeaponType;
 }
 
 /** POST/PATCH/DELETE /api/weapons (weaponhdl ChangeDTO): the weapon as it is now (as it was, for a delete). */

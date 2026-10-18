@@ -2,22 +2,23 @@
 -- columns are the whole row, so sqlc maps them to the Weapon model.
 
 -- name: ListWeapons :many
-SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id
+SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id, weapon_type
 FROM weapons WHERE character_id = sqlc.arg(character_id)::bigint ORDER BY position;
 
 -- name: GetWeapon :one
-SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id
+SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id, weapon_type
 FROM weapons WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;
 
 -- name: InsertWeapon :exec
 INSERT INTO weapons (character_id, id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind,
-                     two_handed, ammo_kind)
+                     two_handed, ammo_kind, weapon_type)
 VALUES (sqlc.arg(character_id)::bigint, @id, @position, @name, @damage_sm, @damage_l, @magic_to_hit, @magic_damage,
-        @kind, @two_handed, @ammo_kind);
+        @kind, @two_handed, @ammo_kind, @weapon_type);
 
 -- name: UpdateWeapon :one
 UPDATE weapons SET position = @position, damage_sm = @damage_sm, damage_l = @damage_l, magic_to_hit = @magic_to_hit,
-                   magic_damage = @magic_damage, kind = @kind, two_handed = @two_handed, ammo_kind = @ammo_kind
+                   magic_damage = @magic_damage, kind = @kind, two_handed = @two_handed, ammo_kind = @ammo_kind,
+                   weapon_type = @weapon_type
 WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id
 RETURNING name;
 

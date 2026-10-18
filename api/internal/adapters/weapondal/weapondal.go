@@ -53,7 +53,7 @@ func toWeapon(r queries.Weapon, name localized.Text) combatsvc.Weapon {
 		BaseDamage: r.DamageSm, DamageLarge: r.DamageL,
 		MagicToHit: int(r.MagicToHit), MagicDamage: int(r.MagicDamage),
 		Kind: combatsvc.WeaponKind(r.Kind), TwoHanded: r.TwoHanded != 0,
-		AmmoKind: r.AmmoKind,
+		AmmoKind: r.AmmoKind, Type: r.WeaponType,
 	}
 }
 
@@ -129,7 +129,7 @@ func toEdited(r queries.Weapon, name localized.Text) weaponsvc.Weapon {
 	return weaponsvc.Weapon{
 		ID: r.ID, Position: int(r.Position), Name: name, DamageSM: r.DamageSm, DamageL: r.DamageL,
 		MagicToHit: int(r.MagicToHit), MagicDamage: int(r.MagicDamage), Kind: r.Kind,
-		TwoHanded: r.TwoHanded != 0, AmmoKind: r.AmmoKind,
+		TwoHanded: r.TwoHanded != 0, AmmoKind: r.AmmoKind, Type: r.WeaponType,
 	}
 }
 
@@ -173,7 +173,7 @@ func (e *Editor) Insert(ctx context.Context, characterID int64, w weaponsvc.Weap
 	err = e.q.InsertWeapon(ctx, queries.InsertWeaponParams{
 		CharacterID: characterID, ID: w.ID, Position: int64(w.Position), Name: key, DamageSm: w.DamageSM, DamageL: w.DamageL,
 		MagicToHit: int64(w.MagicToHit), MagicDamage: int64(w.MagicDamage), Kind: w.Kind,
-		TwoHanded: b2i(w.TwoHanded), AmmoKind: w.AmmoKind,
+		TwoHanded: b2i(w.TwoHanded), AmmoKind: w.AmmoKind, WeaponType: w.Type,
 	})
 	if err != nil {
 		return fmt.Errorf("insert weapon %s: %w", w.ID, err)
@@ -187,7 +187,7 @@ func (e *Editor) Update(ctx context.Context, characterID int64, w weaponsvc.Weap
 	key, err := e.q.UpdateWeapon(ctx, queries.UpdateWeaponParams{
 		Position: int64(w.Position), DamageSm: w.DamageSM, DamageL: w.DamageL,
 		MagicToHit: int64(w.MagicToHit), MagicDamage: int64(w.MagicDamage), Kind: w.Kind,
-		TwoHanded: b2i(w.TwoHanded), AmmoKind: w.AmmoKind, CharacterID: characterID, ID: w.ID,
+		TwoHanded: b2i(w.TwoHanded), AmmoKind: w.AmmoKind, WeaponType: w.Type, CharacterID: characterID, ID: w.ID,
 	})
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("%w: %s", weaponsvc.ErrWeaponNotFound, w.ID)

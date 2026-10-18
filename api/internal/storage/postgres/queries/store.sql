@@ -63,9 +63,9 @@ SELECT ((SELECT COUNT(*) FROM proficiencies p WHERE p.character_id = sqlc.arg(ch
 
 -- name: InsertWeapon :exec
 INSERT INTO weapons (character_id, id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind,
-                     two_handed, ammo_kind)
+                     two_handed, ammo_kind, weapon_type)
 VALUES (sqlc.arg(character_id)::bigint, @id, @position, @name, @damage_sm, @damage_l, @magic_to_hit, @magic_damage,
-        @kind, @two_handed, @ammo_kind);
+        @kind, @two_handed, @ammo_kind, @weapon_type);
 
 -- name: InsertItem :exec
 INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,

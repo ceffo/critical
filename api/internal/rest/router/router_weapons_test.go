@@ -15,19 +15,19 @@ import (
 )
 
 const bowJSON = `{"id":"long_bow","name":{"en":"Long Bow"},"damage_sm":"1d8","damage_l":"1d8","magic_to_hit":1,"magic_damage":2,
-	"kind":"missile","two_handed":true,"ammo_kind":"arrow"}`
+	"kind":"missile","two_handed":true,"ammo_kind":"arrow","weapon_type":"long_bow"}`
 
 var longBow = weaponsvc.Weapon{
 	ID: "long_bow", Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
-	Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+	Kind: "missile", TwoHanded: true, AmmoKind: "arrow", Type: "long_bow",
 }
 
 func TestWeapons_Create(t *testing.T) {
 	h, m := newRouter(t)
 	m.weapons.EXPECT().Create(mock.Anything, int64(1), weaponsvc.WeaponInput{
-		Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+		Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow", Type: "long_bow",
 	}).Return(&weaponsvc.ChangeResult{Weapon: longBow, LogEntryID: 12}, nil)
-	rec := do(h, "POST", "/api/weapons", `{"name":{"en":"Long Bow"},"damage_sm":"1d8","damage_l":"1d8","magic_to_hit":1,"magic_damage":2,"kind":"missile","two_handed":true,"ammo_kind":"arrow"}`)
+	rec := do(h, "POST", "/api/weapons", `{"name":{"en":"Long Bow"},"damage_sm":"1d8","damage_l":"1d8","magic_to_hit":1,"magic_damage":2,"kind":"missile","two_handed":true,"ammo_kind":"arrow","weapon_type":"long_bow"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"weapon":`+bowJSON+`,"logEntryId":12}`, rec.Body.String())
 }

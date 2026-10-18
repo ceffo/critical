@@ -29,6 +29,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
@@ -212,6 +213,20 @@ func TestRepoSeeds_SpellbookSpellsResolve(t *testing.T) {
 	for _, id := range book {
 		_, ok := effects.Get(id)
 		assert.True(t, ok, "spellbook spell %s has no effect entry", id)
+	}
+}
+
+// Every seeded weapon carries a weapon type from the fixed list (ADR 0030 step 23).
+func TestRepoSeeds_EveryWeaponIsTyped(t *testing.T) {
+	var weapons []struct {
+		ID   string `json:"id"`
+		Type string `json:"weapon_type"`
+	}
+	readJSON(t, "weapons.json", &weapons)
+	require.NotEmpty(t, weapons)
+	for _, w := range weapons {
+		assert.NotEmpty(t, w.Type, "weapon %s has no weapon_type", w.ID)
+		assert.True(t, weaponsvc.ValidType(w.Type), "weapon %s: unknown weapon_type %q", w.ID, w.Type)
 	}
 }
 

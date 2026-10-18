@@ -3,6 +3,7 @@ package weaponsvc
 import (
 	"fmt"
 	"regexp"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
@@ -14,6 +15,35 @@ const (
 	maxDiceCount = 100
 	maxDiceSides = 1000
 )
+
+// Weapon types: the fixed list of language-neutral codes the class rules read (ADR 0030 step 23).
+// The empty string is a weapon with no type. Display names come from the frontend's i18n
+// (ADR 0023), never from here.
+const (
+	TypeLongBow       = "long_bow"
+	TypeShortBow      = "short_bow"
+	TypeLightCrossbow = "light_crossbow"
+	TypeHeavyCrossbow = "heavy_crossbow"
+	TypeHandCrossbow  = "hand_crossbow"
+	TypeDagger        = "dagger"
+	TypeDart          = "dart"
+	TypeSling         = "sling"
+	TypeShortSword    = "short_sword"
+	TypeLongSword     = "long_sword"
+	TypeOtherMelee    = "other_melee"
+	TypeOtherThrown   = "other_thrown"
+	TypeOtherMissile  = "other_missile"
+)
+
+// Types is every weapon type code, in display order. The migration's CHECK and the web's list
+// repeat it; a test keeps the seeds and the contract in line.
+var Types = []string{
+	TypeLongBow, TypeShortBow, TypeLightCrossbow, TypeHeavyCrossbow, TypeHandCrossbow, TypeDagger,
+	TypeDart, TypeSling, TypeShortSword, TypeLongSword, TypeOtherMelee, TypeOtherThrown, TypeOtherMissile,
+}
+
+// ValidType reports whether t is a weapon type code or empty (no type).
+func ValidType(t string) bool { return t == "" || slices.Contains(Types, t) }
 
 // The attack rolls the damage dice as NdM (the weapon's magic is its own
 // field), so a "+K" is refused here rather than silently dropped.
@@ -64,6 +94,9 @@ func (w Weapon) Validate() error {
 	}
 	if w.Kind == KindMelee && w.AmmoKind != "" {
 		return fieldErr("ammo_kind", "Only a missile weapon fires ammunition")
+	}
+	if !ValidType(w.Type) {
+		return fieldErr("weapon_type", "Unknown weapon type")
 	}
 	return nil
 }

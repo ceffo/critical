@@ -36,6 +36,7 @@ type snapWeapon struct {
 	Kind        string         `json:"kind"`
 	TwoHanded   bool           `json:"twoHanded"`
 	AmmoKind    string         `json:"ammoKind"`
+	Type        string         `json:"weaponType"`
 }
 
 func toSnap(id string, w *Weapon) snapWeapon {
@@ -45,7 +46,7 @@ func toSnap(id string, w *Weapon) snapWeapon {
 	return snapWeapon{
 		ID: w.ID, Position: w.Position, Name: localized.Snap{Text: w.Name}, DamageSM: w.DamageSM, DamageL: w.DamageL,
 		MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: w.Kind, TwoHanded: w.TwoHanded,
-		AmmoKind: w.AmmoKind,
+		AmmoKind: w.AmmoKind, Type: w.Type,
 	}
 }
 
@@ -53,7 +54,7 @@ func (c snapWeapon) weapon() Weapon {
 	return Weapon{
 		ID: c.ID, Position: c.Position, Name: c.Name.Text, DamageSM: c.DamageSM, DamageL: c.DamageL,
 		MagicToHit: c.MagicToHit, MagicDamage: c.MagicDamage, Kind: c.Kind, TwoHanded: c.TwoHanded,
-		AmmoKind: c.AmmoKind,
+		AmmoKind: c.AmmoKind, Type: c.Type,
 	}
 }
 

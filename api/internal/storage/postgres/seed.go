@@ -208,7 +208,7 @@ func seedWeapons(ctx context.Context, q storeq.Querier, owner int64, seedPath st
 		if err := q.InsertWeapon(ctx, storeq.InsertWeaponParams{
 			CharacterID: owner, ID: w.ID, Position: int64(i), Name: key, DamageSm: w.DamageSM, DamageL: w.DamageL,
 			MagicToHit: int64(w.MagicToHit), MagicDamage: int64(w.MagicDamage), Kind: w.Kind,
-			TwoHanded: boolInt(w.TwoHanded), AmmoKind: w.AmmoKind,
+			TwoHanded: boolInt(w.TwoHanded), AmmoKind: w.AmmoKind, WeaponType: w.WeaponType,
 		}); err != nil {
 			return fmt.Errorf("insert weapon %q: %w", w.ID, err)
 		}

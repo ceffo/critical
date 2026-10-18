@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-api check-web
+validate: check-no-tracker-ids check-linear check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -38,6 +38,10 @@ check-no-sqlite:
         echo "error: the server depends on the SQLite packages above (ADR 0025 step 1.2)"; exit 1
     fi
     echo "--- No SQLite in the server ---"
+
+# scripts/linear.sh (Linear GraphQL helper) and scripts/linear-setup.sh against a local stub server; no real Linear call.
+check-linear:
+    scripts/test-linear.sh
 
 # The CI slow-job skip rule (scripts/test-ci-skip-slow.sh): docs-only paths and the ci-skip label.
 check-ci-skip:
@@ -459,3 +463,9 @@ ui-themes: build-api
 ui-brand: build-api
     cd web && node e2e/check-browser.mjs
     cd web && npx playwright test -c playwright.ui-review.config.ts brand.spec.ts
+
+# Once, by the user: creates and checks the Linear API key (stored in ~/.config/critical/linear-api-key, mode 600,
+# exported to new shells) and confirms Linear's GitHub integration. A rerun checks and changes nothing.
+# Set up the Linear API key and the GitHub integration
+linear-setup:
+    scripts/linear-setup.sh

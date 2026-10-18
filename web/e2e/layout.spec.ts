@@ -2314,8 +2314,40 @@ test("mage: the lookup's Learn button and its answer uncut in French, 1280 to 25
     );
   }
   await page.setViewportSize({ width: 1280, height: 800 });
+  // The failure's answer, the longest one (with the server's retry level): the dice are real, so
+  // the response is fixed here; the server's own failure is a Go test (learnsvc).
+  await page.route("**/api/character/spellbook/learn", (route) =>
+    route.fulfill({
+      json: {
+        spellId: "sleep",
+        spellLevel: 1,
+        roll: 97,
+        chance: 95,
+        learned: false,
+        characterLevel: 1,
+        retryLevel: 2,
+      },
+    }),
+  );
   await learn.getByRole("button", { name: /^Apprendre/ }).click();
-  await expect(learn.getByTestId("learn-result")).toBeVisible();
+  await expect(learn.getByTestId("learn-result")).toContainText("niveau 2");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(learn, `Learn failure, fr, ${where}`);
+    await snap(page, `mage-learn-failed-fr-${where}`);
+  }
+  await page.unroute("**/api/character/spellbook/learn");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const answered = page.waitForResponse("**/api/character/spellbook/learn");
+  await learn.getByRole("button", { name: /^Apprendre/ }).click();
+  const real = (await (await answered).json()) as { roll: number };
+  await expect(learn.getByTestId("learn-result")).toContainText(
+    String(real.roll),
+  );
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },

@@ -424,13 +424,15 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     failed cast spends the slot and records only the slot snapshot, the spell and `failure` (d100,
     chance, failed); a cast above the chance carries the roll too. Step 15 reads the sphere access and
     each priest spell's sphere codes of catalogue format 6 ([ADR 0021](0021-spell-catalogue.md) step
-    12, proposed): `spellbookadpt.Spheres` serves a class with a sphere access the open priest spells
-    **at the spell levels it has slots of** (a ruling: a level without a slot offers nothing to
-    prepare), level then id order; on a format-5 catalogue there is no access and a cleric prepares
+    12, decided as built): `spellbookadpt.Spheres` serves a class with a sphere access the open priest spells
+    **at the spell levels it has slots of** (a ruling, accepted by the user: a level without a slot offers
+    nothing to prepare), level then id order; on a format-5 catalogue there is no access and a cleric prepares
     nothing. Step 16 is `POST /api/character/turn-undead` `{undead}` (a Table 61 row code); the
     breakdown and the `turn_undead` entry carry the type, the level, the cell (`target` or
-    `outcome`), the d20, `success`, `effect` (turn or destroy), the 2d6 `affected` and D*'s 2d4
-    `more`. Refusals: `cannot_turn_undead` (a dash), `class_cannot_turn`, an unknown type (400).
+    `outcome`), the d20, `success`, `effect` (turn or destroy), the 2d6 `affected`, D*'s 2d4
+    `more` and `count` (how many undead, their sum, so the web adds no rule dice). The web's Turning
+    tab lists `derived.turning` as served (a dash is not offered); the result card, the journal and
+    the header word the entry, and a cast's `failure` d100. Refusals: `cannot_turn_undead` (a dash), `class_cannot_turn`, an unknown type (400).
     Tests: `TestPriestSpellsPerDay_Step13_WisdomBonusSpells`, `TestSpellFailureFor_Step14_LowWisdom`,
     `TestTurningAt_Step16_Table61`, `TestSphereAccess_Step15_TheClericsSpheres` (ruletablesadpt),
     `TestDerive_Steps13to16_TheClericsWisdomAndTurning` (charactersvc), `TestCast_Step14_SpellFailure`

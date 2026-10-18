@@ -5,6 +5,8 @@ private `critical-rulebooks` repo and the API importer). Amended by [ADR 0023](0
 no per-language column or field; the `name_fr` / `description_fr` wording below is superseded.
 Step 10 (the class and race tables, format 4) is _proposed_ (critical-reul.9).
 Step 11 (the racial level limits of DMG Table 7, format 5) is _proposed_ (critical-reul.20).
+Step 12 (the spheres, format 6) is **decided as built**, 2026-10-18 (critical-reul.15, accepted by the
+user; the API reads formats 5 and 6, the builder publishing format 6 is a separate item).
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -491,7 +493,7 @@ is only ever appended to by play.
        chapter 2 prose as the source of "the classes each race allows" (step 10.6) is that item's decision; they
        agree for the five classes.
 
-12. **The spheres, format 6** (_proposed_, critical-reul.15; ADR 0030 steps 15 and 23). Format 6 is format 5
+12. **The spheres, format 6** (**decided as built** 2026-10-18, critical-reul.15; ADR 0030 steps 15 and 23). Format 6 is format 5
     plus two things, both numbers-and-codes only (no book text):
     1. **Each priest spell's `spheres`**: the codes of its spheres (`^[a-z]+(_[a-z]+)*$`, at least one, each
        once), one per sphere of the raw `sphere` text (which stays, localized, never parsed): `all`,

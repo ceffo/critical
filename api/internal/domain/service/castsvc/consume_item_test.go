@@ -28,13 +28,13 @@ var (
 
 func (f *fixture) gemSpellSetup(items ...itemsvc.Item) {
 	f.prepared(slot("chromatic_orb", "Chromatic Orb", 1))
-	f.items.EXPECT().List(mock.Anything).Return(items, nil)
+	f.items.EXPECT().List(mock.Anything, charID).Return(items, nil)
 }
 
 func (f *fixture) spend(it itemsvc.Item) {
 	left := it
 	left.Count--
-	f.items.EXPECT().Use(mock.Anything, it.ID).Return(left, nil).Once()
+	f.items.EXPECT().Use(mock.Anything, charID, it.ID).Return(left, nil).Once()
 }
 
 func TestCast_ConsumeItemAttackRoll_HitShowsTheItemSpent(t *testing.T) {
@@ -89,7 +89,7 @@ func TestCast_ConsumeItemAttackRoll_Refusals(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.prepared(slot("chromatic_orb", "Chromatic Orb", 1))
-			f.items.EXPECT().List(mock.Anything).Return(tt.items, nil).Maybe()
+			f.items.EXPECT().List(mock.Anything, charID).Return(tt.items, nil).Maybe()
 			_, err := f.svc.Cast(context.Background(), charID, 0, tt.req)
 			assert.ErrorIs(t, err, domain.ErrInvalidInput)
 			assert.Empty(t, f.entries, "nothing is logged; the transaction rolls the slot back")
@@ -138,7 +138,7 @@ func TestCast_ExtraSlot_AttackRollSpell(t *testing.T) {
 
 	f := newFixture(t)
 	f.prepared(extra)
-	f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{powerGem, diamonds}, nil)
+	f.items.EXPECT().List(mock.Anything, charID).Return([]itemsvc.Item{powerGem, diamonds}, nil)
 	f.spend(diamonds)
 	f.attacks.EXPECT().RollSpellToHit(mock.Anything, charID, 6).Return(&combatsvc.ToHitRoll{D20Roll: 14, TargetAC: 6, Hit: true}, nil)
 	res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{SpellID: "chromatic_orb", TargetAC: &ac})

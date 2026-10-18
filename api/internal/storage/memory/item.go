@@ -41,13 +41,15 @@ func toStored(it itemsvc.Item, row int64) (storedItem, error) {
 	return storedItem{Item: it, powers: powers, row: row}, nil
 }
 
-// List returns every item in sheet order.
-func (p Items) List(ctx context.Context) ([]itemsvc.Item, error) {
+// List returns the character's items in sheet order.
+func (p Items) List(ctx context.Context, characterID int64) ([]itemsvc.Item, error) {
 	out := []itemsvc.Item{}
 	err := p.s.read(ctx, func(t *tables) error {
 		rows := make([]storedItem, 0, len(t.items))
-		for _, r := range t.items {
-			rows = append(rows, r)
+		for k, r := range t.items {
+			if k.characterID == characterID {
+				rows = append(rows, r)
+			}
 		}
 		slices.SortFunc(rows, func(a, b storedItem) int {
 			return cmp.Or(cmp.Compare(a.Position, b.Position), cmp.Compare(a.row, b.row))
@@ -65,10 +67,10 @@ func (p Items) List(ctx context.Context) ([]itemsvc.Item, error) {
 }
 
 // Get returns one item, or an error wrapping itemsvc.ErrItemNotFound.
-func (p Items) Get(ctx context.Context, itemID string) (itemsvc.Item, error) {
+func (p Items) Get(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error) {
 	var out itemsvc.Item
 	err := p.s.read(ctx, func(t *tables) error {
-		r, ok := t.items[itemID]
+		r, ok := t.items[owned{characterID, itemID}]
 		if !ok {
 			return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 		}
@@ -79,19 +81,20 @@ func (p Items) Get(ctx context.Context, itemID string) (itemsvc.Item, error) {
 	return out, err
 }
 
-// change applies fn to the stored item itemID and returns it as read back;
-// an unknown id is an error wrapping itemsvc.ErrItemNotFound.
-func (p Items) change(ctx context.Context, itemID string, fn func(r *storedItem) error) (itemsvc.Item, error) {
+// change applies fn to the character's stored item itemID and returns it as
+// read back; an unknown id is an error wrapping itemsvc.ErrItemNotFound.
+func (p Items) change(ctx context.Context, characterID int64, itemID string, fn func(r *storedItem) error) (itemsvc.Item, error) {
+	key := owned{characterID, itemID}
 	var out itemsvc.Item
 	err := p.s.write(ctx, func(t *tables) error {
-		r, ok := t.items[itemID]
+		r, ok := t.items[key]
 		if !ok {
 			return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 		}
 		if err := fn(&r); err != nil {
 			return err
 		}
-		t.items[itemID] = r
+		t.items[key] = r
 		var err error
 		out, err = r.item()
 		return err
@@ -101,8 +104,8 @@ func (p Items) change(ctx context.Context, itemID string, fn func(r *storedItem)
 
 // Update overwrites every field of an existing item, powers and name
 // included; the row keeps its place among equal positions.
-func (p Items) Update(ctx context.Context, it itemsvc.Item) error {
-	_, err := p.change(ctx, it.ID, func(r *storedItem) error {
+func (p Items) Update(ctx context.Context, characterID int64, it itemsvc.Item) error {
+	_, err := p.change(ctx, characterID, it.ID, func(r *storedItem) error {
 		next, err := toStored(it, r.row)
 		*r = next
 		return err
@@ -112,8 +115,8 @@ func (p Items) Update(ctx context.Context, it itemsvc.Item) error {
 
 // Decrement spends one count; an item at 0 is refused with an error wrapping
 // itemsvc.ErrItemEmpty, so the count never goes below 0.
-func (p Items) Decrement(ctx context.Context, itemID string) (itemsvc.Item, error) {
-	return p.change(ctx, itemID, func(r *storedItem) error {
+func (p Items) Decrement(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error) {
+	return p.change(ctx, characterID, itemID, func(r *storedItem) error {
 		if r.Count <= 0 {
 			return fmt.Errorf("%w: %s", itemsvc.ErrItemEmpty, itemID)
 		}
@@ -123,20 +126,20 @@ func (p Items) Decrement(ctx context.Context, itemID string) (itemsvc.Item, erro
 }
 
 // Increment adds n to the count and returns the item.
-func (p Items) Increment(ctx context.Context, itemID string, n int) (itemsvc.Item, error) {
-	return p.change(ctx, itemID, func(r *storedItem) error {
+func (p Items) Increment(ctx context.Context, characterID int64, itemID string, n int) (itemsvc.Item, error) {
+	return p.change(ctx, characterID, itemID, func(r *storedItem) error {
 		r.Count += n
 		return nil
 	})
 }
 
-// ResetDaily refills every daily item to its max count.
-func (p Items) ResetDaily(ctx context.Context) error {
+// ResetDaily refills every daily item of the character to its max count.
+func (p Items) ResetDaily(ctx context.Context, characterID int64) error {
 	return p.s.write(ctx, func(t *tables) error {
-		for id, r := range t.items {
-			if r.Behaviour == itemsvc.BehaviourDaily {
+		for k, r := range t.items {
+			if k.characterID == characterID && r.Behaviour == itemsvc.BehaviourDaily {
 				r.Count = r.MaxCount
-				t.items[id] = r
+				t.items[k] = r
 			}
 		}
 		return nil
@@ -145,8 +148,8 @@ func (p Items) ResetDaily(ctx context.Context) error {
 
 // SetCount writes an item's count back (an action-log void restoring a
 // snapshot).
-func (p Items) SetCount(ctx context.Context, itemID string, count int) error {
-	_, err := p.change(ctx, itemID, func(r *storedItem) error {
+func (p Items) SetCount(ctx context.Context, characterID int64, itemID string, count int) error {
+	_, err := p.change(ctx, characterID, itemID, func(r *storedItem) error {
 		r.Count = count
 		return nil
 	})
@@ -154,28 +157,31 @@ func (p Items) SetCount(ctx context.Context, itemID string, count int) error {
 }
 
 // Delete removes an item and its name.
-func (p Items) Delete(ctx context.Context, itemID string) error {
+func (p Items) Delete(ctx context.Context, characterID int64, itemID string) error {
+	key := owned{characterID, itemID}
 	return p.s.write(ctx, func(t *tables) error {
-		if _, ok := t.items[itemID]; !ok {
+		if _, ok := t.items[key]; !ok {
 			return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 		}
-		delete(t.items, itemID)
+		delete(t.items, key)
 		return nil
 	})
 }
 
-// Insert writes a whole item (a void restoring a removed item), powers
-// included; an id the store holds is refused.
-func (p Items) Insert(ctx context.Context, it itemsvc.Item) error {
+// Insert writes a whole item for the character (a new one, or a void
+// restoring a removed one), powers included; an id the character holds is
+// refused.
+func (p Items) Insert(ctx context.Context, characterID int64, it itemsvc.Item) error {
+	key := owned{characterID, it.ID}
 	return p.s.write(ctx, func(t *tables) error {
-		if _, taken := t.items[it.ID]; taken {
+		if _, taken := t.items[key]; taken {
 			return errDuplicate("items", it.ID)
 		}
 		r, err := toStored(it, nextID(&t.rowSeq))
 		if err != nil {
 			return err
 		}
-		t.items[it.ID] = r
+		t.items[key] = r
 		return nil
 	})
 }

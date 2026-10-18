@@ -22,9 +22,9 @@ func (_m *MockQuerier) EXPECT() *MockQuerier_Expecter {
 	return &MockQuerier_Expecter{mock: &_m.Mock}
 }
 
-// DeleteWeapon provides a mock function with given fields: ctx, id
-func (_m *MockQuerier) DeleteWeapon(ctx context.Context, id string) (int64, error) {
-	ret := _m.Called(ctx, id)
+// DeleteWeapon provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) DeleteWeapon(ctx context.Context, arg queries.DeleteWeaponParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteWeapon")
@@ -32,17 +32,17 @@ func (_m *MockQuerier) DeleteWeapon(ctx context.Context, id string) (int64, erro
 
 	var r0 int64
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (int64, error)); ok {
-		return rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeleteWeaponParams) (int64, error)); ok {
+		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) int64); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeleteWeaponParams) int64); ok {
+		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, id)
+	if rf, ok := ret.Get(1).(func(context.Context, queries.DeleteWeaponParams) error); ok {
+		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -57,14 +57,14 @@ type MockQuerier_DeleteWeapon_Call struct {
 
 // DeleteWeapon is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id string
-func (_e *MockQuerier_Expecter) DeleteWeapon(ctx interface{}, id interface{}) *MockQuerier_DeleteWeapon_Call {
-	return &MockQuerier_DeleteWeapon_Call{Call: _e.mock.On("DeleteWeapon", ctx, id)}
+//   - arg queries.DeleteWeaponParams
+func (_e *MockQuerier_Expecter) DeleteWeapon(ctx interface{}, arg interface{}) *MockQuerier_DeleteWeapon_Call {
+	return &MockQuerier_DeleteWeapon_Call{Call: _e.mock.On("DeleteWeapon", ctx, arg)}
 }
 
-func (_c *MockQuerier_DeleteWeapon_Call) Run(run func(ctx context.Context, id string)) *MockQuerier_DeleteWeapon_Call {
+func (_c *MockQuerier_DeleteWeapon_Call) Run(run func(ctx context.Context, arg queries.DeleteWeaponParams)) *MockQuerier_DeleteWeapon_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(queries.DeleteWeaponParams))
 	})
 	return _c
 }
@@ -74,14 +74,14 @@ func (_c *MockQuerier_DeleteWeapon_Call) Return(_a0 int64, _a1 error) *MockQueri
 	return _c
 }
 
-func (_c *MockQuerier_DeleteWeapon_Call) RunAndReturn(run func(context.Context, string) (int64, error)) *MockQuerier_DeleteWeapon_Call {
+func (_c *MockQuerier_DeleteWeapon_Call) RunAndReturn(run func(context.Context, queries.DeleteWeaponParams) (int64, error)) *MockQuerier_DeleteWeapon_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetWeapon provides a mock function with given fields: ctx, id
-func (_m *MockQuerier) GetWeapon(ctx context.Context, id string) (queries.Weapon, error) {
-	ret := _m.Called(ctx, id)
+// GetWeapon provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) GetWeapon(ctx context.Context, arg queries.GetWeaponParams) (queries.Weapon, error) {
+	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetWeapon")
@@ -89,17 +89,17 @@ func (_m *MockQuerier) GetWeapon(ctx context.Context, id string) (queries.Weapon
 
 	var r0 queries.Weapon
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (queries.Weapon, error)); ok {
-		return rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetWeaponParams) (queries.Weapon, error)); ok {
+		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) queries.Weapon); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetWeaponParams) queries.Weapon); ok {
+		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Get(0).(queries.Weapon)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, id)
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetWeaponParams) error); ok {
+		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -114,14 +114,14 @@ type MockQuerier_GetWeapon_Call struct {
 
 // GetWeapon is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id string
-func (_e *MockQuerier_Expecter) GetWeapon(ctx interface{}, id interface{}) *MockQuerier_GetWeapon_Call {
-	return &MockQuerier_GetWeapon_Call{Call: _e.mock.On("GetWeapon", ctx, id)}
+//   - arg queries.GetWeaponParams
+func (_e *MockQuerier_Expecter) GetWeapon(ctx interface{}, arg interface{}) *MockQuerier_GetWeapon_Call {
+	return &MockQuerier_GetWeapon_Call{Call: _e.mock.On("GetWeapon", ctx, arg)}
 }
 
-func (_c *MockQuerier_GetWeapon_Call) Run(run func(ctx context.Context, id string)) *MockQuerier_GetWeapon_Call {
+func (_c *MockQuerier_GetWeapon_Call) Run(run func(ctx context.Context, arg queries.GetWeaponParams)) *MockQuerier_GetWeapon_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(queries.GetWeaponParams))
 	})
 	return _c
 }
@@ -131,7 +131,7 @@ func (_c *MockQuerier_GetWeapon_Call) Return(_a0 queries.Weapon, _a1 error) *Moc
 	return _c
 }
 
-func (_c *MockQuerier_GetWeapon_Call) RunAndReturn(run func(context.Context, string) (queries.Weapon, error)) *MockQuerier_GetWeapon_Call {
+func (_c *MockQuerier_GetWeapon_Call) RunAndReturn(run func(context.Context, queries.GetWeaponParams) (queries.Weapon, error)) *MockQuerier_GetWeapon_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -183,9 +183,9 @@ func (_c *MockQuerier_InsertWeapon_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
-// ListWeapons provides a mock function with given fields: ctx
-func (_m *MockQuerier) ListWeapons(ctx context.Context) ([]queries.Weapon, error) {
-	ret := _m.Called(ctx)
+// ListWeapons provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ListWeapons(ctx context.Context, characterID int64) ([]queries.Weapon, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListWeapons")
@@ -193,19 +193,19 @@ func (_m *MockQuerier) ListWeapons(ctx context.Context) ([]queries.Weapon, error
 
 	var r0 []queries.Weapon
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.Weapon, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.Weapon, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.Weapon); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.Weapon); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]queries.Weapon)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -220,13 +220,14 @@ type MockQuerier_ListWeapons_Call struct {
 
 // ListWeapons is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockQuerier_Expecter) ListWeapons(ctx interface{}) *MockQuerier_ListWeapons_Call {
-	return &MockQuerier_ListWeapons_Call{Call: _e.mock.On("ListWeapons", ctx)}
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ListWeapons(ctx interface{}, characterID interface{}) *MockQuerier_ListWeapons_Call {
+	return &MockQuerier_ListWeapons_Call{Call: _e.mock.On("ListWeapons", ctx, characterID)}
 }
 
-func (_c *MockQuerier_ListWeapons_Call) Run(run func(ctx context.Context)) *MockQuerier_ListWeapons_Call {
+func (_c *MockQuerier_ListWeapons_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ListWeapons_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -236,7 +237,7 @@ func (_c *MockQuerier_ListWeapons_Call) Return(_a0 []queries.Weapon, _a1 error) 
 	return _c
 }
 
-func (_c *MockQuerier_ListWeapons_Call) RunAndReturn(run func(context.Context) ([]queries.Weapon, error)) *MockQuerier_ListWeapons_Call {
+func (_c *MockQuerier_ListWeapons_Call) RunAndReturn(run func(context.Context, int64) ([]queries.Weapon, error)) *MockQuerier_ListWeapons_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -298,9 +299,9 @@ func (_c *MockQuerier_UpdateWeapon_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
-// WeaponNames provides a mock function with given fields: ctx
-func (_m *MockQuerier) WeaponNames(ctx context.Context) ([]queries.LocalizedText, error) {
-	ret := _m.Called(ctx)
+// WeaponNames provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) WeaponNames(ctx context.Context, characterID int64) ([]queries.LocalizedText, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for WeaponNames")
@@ -308,19 +309,19 @@ func (_m *MockQuerier) WeaponNames(ctx context.Context) ([]queries.LocalizedText
 
 	var r0 []queries.LocalizedText
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.LocalizedText, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.LocalizedText, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.LocalizedText); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.LocalizedText); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]queries.LocalizedText)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -335,13 +336,14 @@ type MockQuerier_WeaponNames_Call struct {
 
 // WeaponNames is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockQuerier_Expecter) WeaponNames(ctx interface{}) *MockQuerier_WeaponNames_Call {
-	return &MockQuerier_WeaponNames_Call{Call: _e.mock.On("WeaponNames", ctx)}
+//   - characterID int64
+func (_e *MockQuerier_Expecter) WeaponNames(ctx interface{}, characterID interface{}) *MockQuerier_WeaponNames_Call {
+	return &MockQuerier_WeaponNames_Call{Call: _e.mock.On("WeaponNames", ctx, characterID)}
 }
 
-func (_c *MockQuerier_WeaponNames_Call) Run(run func(ctx context.Context)) *MockQuerier_WeaponNames_Call {
+func (_c *MockQuerier_WeaponNames_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_WeaponNames_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -351,7 +353,7 @@ func (_c *MockQuerier_WeaponNames_Call) Return(_a0 []queries.LocalizedText, _a1 
 	return _c
 }
 
-func (_c *MockQuerier_WeaponNames_Call) RunAndReturn(run func(context.Context) ([]queries.LocalizedText, error)) *MockQuerier_WeaponNames_Call {
+func (_c *MockQuerier_WeaponNames_Call) RunAndReturn(run func(context.Context, int64) ([]queries.LocalizedText, error)) *MockQuerier_WeaponNames_Call {
 	_c.Call.Return(run)
 	return _c
 }

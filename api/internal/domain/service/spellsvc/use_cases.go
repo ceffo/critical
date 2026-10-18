@@ -63,10 +63,20 @@ type Page struct {
 // matches first, then prefix, then substring matches (over the names in
 // every language), keeping that order within a tier, so pages are
 // stable. Filtering runs before paging: Total and the pages are exact.
-func (s *service) Search(ctx context.Context, f Filter, p PageRequest) (Page, error) {
+func (s *service) Search(ctx context.Context, characterID int64, f Filter, p PageRequest) (Page, error) {
 	rows, err := s.reader.Search(ctx, f)
 	if err != nil {
 		return Page{}, err
+	}
+	mine := map[string]bool{}
+	if f.Mine {
+		keys, err := s.book.SpellKeys(ctx, characterID)
+		if err != nil {
+			return Page{}, fmt.Errorf("read spellbook: %w", err)
+		}
+		for _, k := range keys {
+			mine[k] = true
+		}
 	}
 	type ranked struct {
 		tier  Tier
@@ -75,7 +85,7 @@ func (s *service) Search(ctx context.Context, f Filter, p PageRequest) (Page, er
 	found := make([]ranked, 0, len(rows))
 	for _, sp := range rows {
 		t := f.tier(sp)
-		if t == TierNone || (f.Mine && !s.book.Contains(sp.ID)) || !f.matchGroups(sp) || !f.matchStats(sp.Stats) {
+		if t == TierNone || (f.Mine && !mine[sp.ID]) || !f.matchGroups(sp) || !f.matchStats(sp.Stats) {
 			continue
 		}
 		found = append(found, ranked{t, sp})

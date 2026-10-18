@@ -4,20 +4,25 @@
 
 package queries
 
+import (
+	"database/sql"
+)
+
 type Item struct {
-	ID         string
-	Position   int64
-	Name       int64
-	Type       string
-	Behaviour  string
-	MagicBonus int64
-	AmmoKind   string
-	Count      int64
-	MaxCount   int64
-	EffectDice string
-	EffectSave string
-	Notes      string
-	Powers     string
+	ID          string
+	Position    int64
+	Name        int64
+	Type        string
+	Behaviour   string
+	MagicBonus  int64
+	AmmoKind    string
+	Count       int64
+	MaxCount    int64
+	EffectDice  string
+	EffectSave  string
+	Notes       string
+	Powers      string
+	CharacterID sql.NullInt64
 }
 
 type LocalizedText struct {

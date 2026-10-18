@@ -42,7 +42,7 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 
 	var res *RollResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		weapon, err := s.weapons.Get(ctx, req.WeaponID)
+		weapon, err := s.weapons.Get(ctx, characterID, req.WeaponID)
 		if err != nil {
 			return fmt.Errorf("get weapon %s: %w", req.WeaponID, err)
 		}
@@ -58,7 +58,7 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		if err != nil {
 			return err
 		}
-		ammo, err := s.spendAmmo(ctx, weapon, req.AmmoItemID)
+		ammo, err := s.spendAmmo(ctx, characterID, weapon, req.AmmoItemID)
 		if err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 // spendAmmo uses one piece of the chosen ammunition when the weapon fires
 // it. The decrement is undone with the transaction if the ammo turns out not
 // to fit the weapon.
-func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (*itemsvc.Item, error) {
+func (s *service) spendAmmo(ctx context.Context, characterID int64, weapon Weapon, ammoID string) (*itemsvc.Item, error) {
 	if !weapon.FiresAmmo() {
 		if ammoID != "" {
 			return nil, fmt.Errorf("%w: %s does not fire ammunition", domain.ErrInvalidInput, weapon.Name.Any())
@@ -112,7 +112,7 @@ func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (
 	if ammoID == "" {
 		return nil, fmt.Errorf("%w: %s needs ammunition (%s)", domain.ErrInvalidInput, weapon.Name.Any(), weapon.AmmoKind)
 	}
-	item, err := s.items.Use(ctx, ammoID)
+	item, err := s.items.Use(ctx, characterID, ammoID)
 	if err != nil {
 		return nil, fmt.Errorf("use ammunition %s: %w", ammoID, err)
 	}
@@ -348,6 +348,6 @@ func rollDice(d Dice, dice string) (int, []DieRoll, error) {
 }
 
 // ListWeapons returns the weapons catalog in sheet order.
-func (s *service) ListWeapons(ctx context.Context) ([]Weapon, error) {
-	return s.weapons.List(ctx)
+func (s *service) ListWeapons(ctx context.Context, characterID int64) ([]Weapon, error) {
+	return s.weapons.List(ctx, characterID)
 }

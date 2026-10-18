@@ -10,12 +10,17 @@ import (
 )
 
 const decrementItem = `-- name: DecrementItem :one
-UPDATE items SET count = count - 1 WHERE id = $1 AND count > 0
-RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers
+UPDATE items SET count = count - 1 WHERE character_id = $1::bigint AND id = $2 AND count > 0
+RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id
 `
 
-func (q *Queries) DecrementItem(ctx context.Context, id string) (Item, error) {
-	row := q.db.QueryRowContext(ctx, decrementItem, id)
+type DecrementItemParams struct {
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) DecrementItem(ctx context.Context, arg DecrementItemParams) (Item, error) {
+	row := q.db.QueryRowContext(ctx, decrementItem, arg.CharacterID, arg.ID)
 	var i Item
 	err := row.Scan(
 		&i.ID,
@@ -31,29 +36,40 @@ func (q *Queries) DecrementItem(ctx context.Context, id string) (Item, error) {
 		&i.EffectSave,
 		&i.Notes,
 		&i.Powers,
+		&i.CharacterID,
 	)
 	return i, err
 }
 
 const deleteItem = `-- name: DeleteItem :one
-DELETE FROM items WHERE id = $1
+DELETE FROM items WHERE character_id = $1::bigint AND id = $2
 RETURNING name
 `
 
-func (q *Queries) DeleteItem(ctx context.Context, id string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, deleteItem, id)
+type DeleteItemParams struct {
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) DeleteItem(ctx context.Context, arg DeleteItemParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, deleteItem, arg.CharacterID, arg.ID)
 	var name int64
 	err := row.Scan(&name)
 	return name, err
 }
 
 const getItem = `-- name: GetItem :one
-SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers
-FROM items WHERE id = $1
+SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id
+FROM items WHERE character_id = $1::bigint AND id = $2
 `
 
-func (q *Queries) GetItem(ctx context.Context, id string) (Item, error) {
-	row := q.db.QueryRowContext(ctx, getItem, id)
+type GetItemParams struct {
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) GetItem(ctx context.Context, arg GetItemParams) (Item, error) {
+	row := q.db.QueryRowContext(ctx, getItem, arg.CharacterID, arg.ID)
 	var i Item
 	err := row.Scan(
 		&i.ID,
@@ -69,22 +85,24 @@ func (q *Queries) GetItem(ctx context.Context, id string) (Item, error) {
 		&i.EffectSave,
 		&i.Notes,
 		&i.Powers,
+		&i.CharacterID,
 	)
 	return i, err
 }
 
 const incrementItem = `-- name: IncrementItem :one
-UPDATE items SET count = count + $1 WHERE id = $2
-RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers
+UPDATE items SET count = count + $1 WHERE character_id = $2::bigint AND id = $3
+RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id
 `
 
 type IncrementItemParams struct {
-	N  int64
-	ID string
+	N           int64
+	CharacterID int64
+	ID          string
 }
 
 func (q *Queries) IncrementItem(ctx context.Context, arg IncrementItemParams) (Item, error) {
-	row := q.db.QueryRowContext(ctx, incrementItem, arg.N, arg.ID)
+	row := q.db.QueryRowContext(ctx, incrementItem, arg.N, arg.CharacterID, arg.ID)
 	var i Item
 	err := row.Scan(
 		&i.ID,
@@ -100,33 +118,38 @@ func (q *Queries) IncrementItem(ctx context.Context, arg IncrementItemParams) (I
 		&i.EffectSave,
 		&i.Notes,
 		&i.Powers,
+		&i.CharacterID,
 	)
 	return i, err
 }
 
 const insertItem = `-- name: InsertItem :exec
-INSERT INTO items (id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,
+                   effect_dice, effect_save, notes, powers)
+VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8, $9,
+        $10, $11, $12, $13, $14)
 `
 
 type InsertItemParams struct {
-	ID         string
-	Position   int64
-	Name       int64
-	Type       string
-	Behaviour  string
-	MagicBonus int64
-	AmmoKind   string
-	Count      int64
-	MaxCount   int64
-	EffectDice string
-	EffectSave string
-	Notes      string
-	Powers     string
+	CharacterID int64
+	ID          string
+	Position    int64
+	Name        int64
+	Type        string
+	Behaviour   string
+	MagicBonus  int64
+	AmmoKind    string
+	Count       int64
+	MaxCount    int64
+	EffectDice  string
+	EffectSave  string
+	Notes       string
+	Powers      string
 }
 
 func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
 	_, err := q.db.ExecContext(ctx, insertItem,
+		arg.CharacterID,
 		arg.ID,
 		arg.Position,
 		arg.Name,
@@ -145,11 +168,12 @@ func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
 }
 
 const itemNames = `-- name: ItemNames :many
-SELECT text_id, lang, body FROM localized_texts WHERE text_id IN (SELECT name FROM items)
+SELECT text_id, lang, body FROM localized_texts
+WHERE text_id IN (SELECT name FROM items WHERE character_id = $1::bigint)
 `
 
-func (q *Queries) ItemNames(ctx context.Context) ([]LocalizedText, error) {
-	rows, err := q.db.QueryContext(ctx, itemNames)
+func (q *Queries) ItemNames(ctx context.Context, characterID int64) ([]LocalizedText, error) {
+	rows, err := q.db.QueryContext(ctx, itemNames, characterID)
 	if err != nil {
 		return nil, err
 	}
@@ -172,12 +196,15 @@ func (q *Queries) ItemNames(ctx context.Context) ([]LocalizedText, error) {
 }
 
 const listItems = `-- name: ListItems :many
-SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers
-FROM items ORDER BY position
+
+SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id
+FROM items WHERE character_id = $1::bigint ORDER BY position
 `
 
-func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
-	rows, err := q.db.QueryContext(ctx, listItems)
+// Every query is one character's: items belong to a character (character_id). The selected
+// columns are the whole row, so sqlc maps them to the Item model.
+func (q *Queries) ListItems(ctx context.Context, characterID int64) ([]Item, error) {
+	rows, err := q.db.QueryContext(ctx, listItems, characterID)
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +226,7 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 			&i.EffectSave,
 			&i.Notes,
 			&i.Powers,
+			&i.CharacterID,
 		); err != nil {
 			return nil, err
 		}
@@ -214,25 +242,26 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 }
 
 const resetDailyItems = `-- name: ResetDailyItems :exec
-UPDATE items SET count = max_count WHERE behaviour = 'daily'
+UPDATE items SET count = max_count WHERE character_id = $1::bigint AND behaviour = 'daily'
 `
 
-func (q *Queries) ResetDailyItems(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, resetDailyItems)
+func (q *Queries) ResetDailyItems(ctx context.Context, characterID int64) error {
+	_, err := q.db.ExecContext(ctx, resetDailyItems, characterID)
 	return err
 }
 
 const setItemCount = `-- name: SetItemCount :execrows
-UPDATE items SET count = $1 WHERE id = $2
+UPDATE items SET count = $1 WHERE character_id = $2::bigint AND id = $3
 `
 
 type SetItemCountParams struct {
-	Count int64
-	ID    string
+	Count       int64
+	CharacterID int64
+	ID          string
 }
 
 func (q *Queries) SetItemCount(ctx context.Context, arg SetItemCountParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, setItemCount, arg.Count, arg.ID)
+	result, err := q.db.ExecContext(ctx, setItemCount, arg.Count, arg.CharacterID, arg.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -240,24 +269,27 @@ func (q *Queries) SetItemCount(ctx context.Context, arg SetItemCountParams) (int
 }
 
 const updateItem = `-- name: UpdateItem :one
-UPDATE items SET position = $1, type = $2, behaviour = $3, magic_bonus = $4, ammo_kind = $5, count = $6, max_count = $7, effect_dice = $8, effect_save = $9, notes = $10, powers = $11
-WHERE id = $12
+UPDATE items SET position = $1, type = $2, behaviour = $3, magic_bonus = $4,
+                 ammo_kind = $5, count = $6, max_count = $7, effect_dice = $8,
+                 effect_save = $9, notes = $10, powers = $11
+WHERE character_id = $12::bigint AND id = $13
 RETURNING name
 `
 
 type UpdateItemParams struct {
-	Position   int64
-	Type       string
-	Behaviour  string
-	MagicBonus int64
-	AmmoKind   string
-	Count      int64
-	MaxCount   int64
-	EffectDice string
-	EffectSave string
-	Notes      string
-	Powers     string
-	ID         string
+	Position    int64
+	Type        string
+	Behaviour   string
+	MagicBonus  int64
+	AmmoKind    string
+	Count       int64
+	MaxCount    int64
+	EffectDice  string
+	EffectSave  string
+	Notes       string
+	Powers      string
+	CharacterID int64
+	ID          string
 }
 
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (int64, error) {
@@ -273,6 +305,7 @@ func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (int64, 
 		arg.EffectSave,
 		arg.Notes,
 		arg.Powers,
+		arg.CharacterID,
 		arg.ID,
 	)
 	var name int64

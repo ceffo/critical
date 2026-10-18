@@ -28,10 +28,10 @@ func TestUpdate_Step11_NameEditKeepsTheOtherLanguages(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := weaponsvc.New(dal, f.Deps)
-	dal.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastardBoth, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "bastard_sword").Return(bastardBoth, nil)
 	after := bastardBoth
 	after.Name = localized.Text{"en": "Bastard Sword +2", "fr": "Épée bâtarde"}
-	dal.EXPECT().Update(mock.Anything, after).Return(nil).Once()
+	dal.EXPECT().Update(mock.Anything, int64(1), after).Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(3), nil)
 
@@ -53,17 +53,17 @@ func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) 
 	const tail = `"damageSm":"2d4","damageL":"2d8","magicToHit":2,"magicDamage":2,"kind":"melee","twoHanded":true,"ammoKind":""}`
 	t.Run("plain string", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastardBoth, nil).Once()
+		dal.EXPECT().Get(mock.Anything, int64(1), "bastard_sword").Return(bastardBoth, nil).Once()
 		want := bastardBoth
 		want.Name = localized.Text{"en": "Old sword", "fr": "Épée bâtarde +2"}
-		dal.EXPECT().Update(mock.Anything, want).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
 		require.NoError(t, restore(dal, `{"id":"bastard_sword","position":0,"name":"Old sword",`+tail))
 	})
 	t.Run("language map", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		want := bastardBoth
 		want.Name = localized.Text{"en": "Old sword"}
-		dal.EXPECT().Update(mock.Anything, want).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
 		require.NoError(t, restore(dal, `{"id":"bastard_sword","position":0,"name":{"en":"Old sword"},`+tail))
 	})
 }

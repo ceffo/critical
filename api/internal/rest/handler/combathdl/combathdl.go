@@ -36,7 +36,7 @@ type combatSvc interface {
 	AdjustAttackAC(ctx context.Context, characterID, entryID int64, targetAC int) (*combatsvc.RollResult, error)
 	SetAttackVerdict(ctx context.Context, characterID, entryID int64, hit bool) (*combatsvc.RollResult, error)
 	ClearAttackAC(ctx context.Context, characterID, entryID int64) (*combatsvc.RollResult, error)
-	ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error)
+	ListWeapons(ctx context.Context, characterID int64) ([]combatsvc.Weapon, error)
 	GetAttackForm(ctx context.Context, characterID int64) (*combatsvc.AttackFormView, error)
 	UpdateAttackForm(ctx context.Context, characterID int64, p combatsvc.AttackFormPatch) (*combatsvc.AttackFormView, error)
 	GetCritTable(ctx context.Context) (combatsvc.CritTable, error)
@@ -51,7 +51,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Post("/api/roll/attack/{id}/unknown-ac", render.Handle(ClearAttackAC(charID, svc)))
 	r.Post("/api/roll/save", render.Handle(RollSave(charID, svc)))
 	r.Post("/api/roll/save/{id}/adjust", render.Handle(AdjustSave(charID, svc)))
-	r.Get("/api/weapons", render.Handle(ListWeapons(svc)))
+	r.Get("/api/weapons", render.Handle(ListWeapons(charID, svc)))
 	r.Get("/api/attack/form", render.Handle(GetAttackForm(charID, svc)))
 	r.Patch("/api/attack/form", render.Handle(UpdateAttackForm(charID, svc)))
 	r.Get("/api/crit-table", render.Handle(GetCritTable(svc)))
@@ -72,10 +72,10 @@ type WeaponDTO struct {
 	AmmoKind    string         `json:"ammo_kind"`
 }
 
-// ListWeapons returns the weapons catalog.
-func ListWeapons(svc combatSvc) render.HandlerFunc {
+// ListWeapons returns the character's weapons.
+func ListWeapons(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		weapons, err := svc.ListWeapons(r.Context())
+		weapons, err := svc.ListWeapons(r.Context(), charID(r))
 		if err != nil {
 			return err
 		}

@@ -75,7 +75,7 @@ func TestSearch_PassesTheFilterToTheReader(t *testing.T) {
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
 	expectDetails(reader, spells)
 
-	got, err := svc.Search(context.Background(), f, spellsvc.PageRequest{})
+	got, err := svc.Search(context.Background(), 1, f, spellsvc.PageRequest{})
 	require.NoError(t, err)
 	assert.Equal(t, spells, got.Items)
 	assert.Equal(t, 1, got.Total)
@@ -114,7 +114,7 @@ func searchNames(t *testing.T, f spellsvc.Filter, spells ...spellsvc.Spell) []st
 	svc, _, reader := newSvc(t)
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
 	expectDetails(reader, spells)
-	got, err := svc.Search(context.Background(), f, spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize})
+	got, err := svc.Search(context.Background(), 1, f, spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize})
 	require.NoError(t, err)
 	out := []string{}
 	for _, s := range got.Items {
@@ -167,7 +167,7 @@ func page(t *testing.T, f spellsvc.Filter, p spellsvc.PageRequest, spells []spel
 	svc, _, reader := newSvc(t)
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
 	expectDetails(reader, spells)
-	got, err := svc.Search(context.Background(), f, p)
+	got, err := svc.Search(context.Background(), 1, f, p)
 	require.NoError(t, err)
 	return got
 }
@@ -258,7 +258,7 @@ func TestSearch_ReadsThePageTextsInOneBatch(t *testing.T) {
 	}
 	reader.EXPECT().Details(mock.Anything, []string{"S10", "S11"}).Return(full, nil).Once()
 
-	got, err := svc.Search(context.Background(), spellsvc.Filter{}, spellsvc.PageRequest{Page: 6, PageSize: 2})
+	got, err := svc.Search(context.Background(), 1, spellsvc.Filter{}, spellsvc.PageRequest{Page: 6, PageSize: 2})
 	require.NoError(t, err)
 	assert.Equal(t, full, got.Items, "the page carries the full texts Details read")
 	assert.Equal(t, 25, got.Total)

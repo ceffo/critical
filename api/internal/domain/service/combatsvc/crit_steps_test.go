@@ -25,7 +25,7 @@ func stepAttack(t *testing.T, f *fixture, ac, d20, check, mult int, mods *buffsv
 	if mods != nil {
 		m = *mods
 	}
-	f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil).Once()
+	f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil).Once()
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(m, nil).Once()
 	f.dice.EXPECT().RollD20().Return(d20).Once()

@@ -22,9 +22,9 @@ func (_m *MockQuerier) EXPECT() *MockQuerier_Expecter {
 	return &MockQuerier_Expecter{mock: &_m.Mock}
 }
 
-// DecrementItem provides a mock function with given fields: ctx, id
-func (_m *MockQuerier) DecrementItem(ctx context.Context, id string) (queries.Item, error) {
-	ret := _m.Called(ctx, id)
+// DecrementItem provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) DecrementItem(ctx context.Context, arg queries.DecrementItemParams) (queries.Item, error) {
+	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DecrementItem")
@@ -32,17 +32,17 @@ func (_m *MockQuerier) DecrementItem(ctx context.Context, id string) (queries.It
 
 	var r0 queries.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (queries.Item, error)); ok {
-		return rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DecrementItemParams) (queries.Item, error)); ok {
+		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) queries.Item); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DecrementItemParams) queries.Item); ok {
+		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Get(0).(queries.Item)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, id)
+	if rf, ok := ret.Get(1).(func(context.Context, queries.DecrementItemParams) error); ok {
+		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -57,14 +57,14 @@ type MockQuerier_DecrementItem_Call struct {
 
 // DecrementItem is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id string
-func (_e *MockQuerier_Expecter) DecrementItem(ctx interface{}, id interface{}) *MockQuerier_DecrementItem_Call {
-	return &MockQuerier_DecrementItem_Call{Call: _e.mock.On("DecrementItem", ctx, id)}
+//   - arg queries.DecrementItemParams
+func (_e *MockQuerier_Expecter) DecrementItem(ctx interface{}, arg interface{}) *MockQuerier_DecrementItem_Call {
+	return &MockQuerier_DecrementItem_Call{Call: _e.mock.On("DecrementItem", ctx, arg)}
 }
 
-func (_c *MockQuerier_DecrementItem_Call) Run(run func(ctx context.Context, id string)) *MockQuerier_DecrementItem_Call {
+func (_c *MockQuerier_DecrementItem_Call) Run(run func(ctx context.Context, arg queries.DecrementItemParams)) *MockQuerier_DecrementItem_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(queries.DecrementItemParams))
 	})
 	return _c
 }
@@ -74,14 +74,14 @@ func (_c *MockQuerier_DecrementItem_Call) Return(_a0 queries.Item, _a1 error) *M
 	return _c
 }
 
-func (_c *MockQuerier_DecrementItem_Call) RunAndReturn(run func(context.Context, string) (queries.Item, error)) *MockQuerier_DecrementItem_Call {
+func (_c *MockQuerier_DecrementItem_Call) RunAndReturn(run func(context.Context, queries.DecrementItemParams) (queries.Item, error)) *MockQuerier_DecrementItem_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// DeleteItem provides a mock function with given fields: ctx, id
-func (_m *MockQuerier) DeleteItem(ctx context.Context, id string) (int64, error) {
-	ret := _m.Called(ctx, id)
+// DeleteItem provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) DeleteItem(ctx context.Context, arg queries.DeleteItemParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteItem")
@@ -89,17 +89,17 @@ func (_m *MockQuerier) DeleteItem(ctx context.Context, id string) (int64, error)
 
 	var r0 int64
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (int64, error)); ok {
-		return rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeleteItemParams) (int64, error)); ok {
+		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) int64); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeleteItemParams) int64); ok {
+		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, id)
+	if rf, ok := ret.Get(1).(func(context.Context, queries.DeleteItemParams) error); ok {
+		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -114,14 +114,14 @@ type MockQuerier_DeleteItem_Call struct {
 
 // DeleteItem is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id string
-func (_e *MockQuerier_Expecter) DeleteItem(ctx interface{}, id interface{}) *MockQuerier_DeleteItem_Call {
-	return &MockQuerier_DeleteItem_Call{Call: _e.mock.On("DeleteItem", ctx, id)}
+//   - arg queries.DeleteItemParams
+func (_e *MockQuerier_Expecter) DeleteItem(ctx interface{}, arg interface{}) *MockQuerier_DeleteItem_Call {
+	return &MockQuerier_DeleteItem_Call{Call: _e.mock.On("DeleteItem", ctx, arg)}
 }
 
-func (_c *MockQuerier_DeleteItem_Call) Run(run func(ctx context.Context, id string)) *MockQuerier_DeleteItem_Call {
+func (_c *MockQuerier_DeleteItem_Call) Run(run func(ctx context.Context, arg queries.DeleteItemParams)) *MockQuerier_DeleteItem_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(queries.DeleteItemParams))
 	})
 	return _c
 }
@@ -131,14 +131,14 @@ func (_c *MockQuerier_DeleteItem_Call) Return(_a0 int64, _a1 error) *MockQuerier
 	return _c
 }
 
-func (_c *MockQuerier_DeleteItem_Call) RunAndReturn(run func(context.Context, string) (int64, error)) *MockQuerier_DeleteItem_Call {
+func (_c *MockQuerier_DeleteItem_Call) RunAndReturn(run func(context.Context, queries.DeleteItemParams) (int64, error)) *MockQuerier_DeleteItem_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// GetItem provides a mock function with given fields: ctx, id
-func (_m *MockQuerier) GetItem(ctx context.Context, id string) (queries.Item, error) {
-	ret := _m.Called(ctx, id)
+// GetItem provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) GetItem(ctx context.Context, arg queries.GetItemParams) (queries.Item, error) {
+	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetItem")
@@ -146,17 +146,17 @@ func (_m *MockQuerier) GetItem(ctx context.Context, id string) (queries.Item, er
 
 	var r0 queries.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (queries.Item, error)); ok {
-		return rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetItemParams) (queries.Item, error)); ok {
+		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) queries.Item); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetItemParams) queries.Item); ok {
+		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Get(0).(queries.Item)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, id)
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetItemParams) error); ok {
+		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -171,14 +171,14 @@ type MockQuerier_GetItem_Call struct {
 
 // GetItem is a helper method to define mock.On call
 //   - ctx context.Context
-//   - id string
-func (_e *MockQuerier_Expecter) GetItem(ctx interface{}, id interface{}) *MockQuerier_GetItem_Call {
-	return &MockQuerier_GetItem_Call{Call: _e.mock.On("GetItem", ctx, id)}
+//   - arg queries.GetItemParams
+func (_e *MockQuerier_Expecter) GetItem(ctx interface{}, arg interface{}) *MockQuerier_GetItem_Call {
+	return &MockQuerier_GetItem_Call{Call: _e.mock.On("GetItem", ctx, arg)}
 }
 
-func (_c *MockQuerier_GetItem_Call) Run(run func(ctx context.Context, id string)) *MockQuerier_GetItem_Call {
+func (_c *MockQuerier_GetItem_Call) Run(run func(ctx context.Context, arg queries.GetItemParams)) *MockQuerier_GetItem_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(queries.GetItemParams))
 	})
 	return _c
 }
@@ -188,7 +188,7 @@ func (_c *MockQuerier_GetItem_Call) Return(_a0 queries.Item, _a1 error) *MockQue
 	return _c
 }
 
-func (_c *MockQuerier_GetItem_Call) RunAndReturn(run func(context.Context, string) (queries.Item, error)) *MockQuerier_GetItem_Call {
+func (_c *MockQuerier_GetItem_Call) RunAndReturn(run func(context.Context, queries.GetItemParams) (queries.Item, error)) *MockQuerier_GetItem_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -297,9 +297,9 @@ func (_c *MockQuerier_InsertItem_Call) RunAndReturn(run func(context.Context, qu
 	return _c
 }
 
-// ItemNames provides a mock function with given fields: ctx
-func (_m *MockQuerier) ItemNames(ctx context.Context) ([]queries.LocalizedText, error) {
-	ret := _m.Called(ctx)
+// ItemNames provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ItemNames(ctx context.Context, characterID int64) ([]queries.LocalizedText, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ItemNames")
@@ -307,19 +307,19 @@ func (_m *MockQuerier) ItemNames(ctx context.Context) ([]queries.LocalizedText, 
 
 	var r0 []queries.LocalizedText
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.LocalizedText, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.LocalizedText, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.LocalizedText); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.LocalizedText); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]queries.LocalizedText)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -334,13 +334,14 @@ type MockQuerier_ItemNames_Call struct {
 
 // ItemNames is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockQuerier_Expecter) ItemNames(ctx interface{}) *MockQuerier_ItemNames_Call {
-	return &MockQuerier_ItemNames_Call{Call: _e.mock.On("ItemNames", ctx)}
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ItemNames(ctx interface{}, characterID interface{}) *MockQuerier_ItemNames_Call {
+	return &MockQuerier_ItemNames_Call{Call: _e.mock.On("ItemNames", ctx, characterID)}
 }
 
-func (_c *MockQuerier_ItemNames_Call) Run(run func(ctx context.Context)) *MockQuerier_ItemNames_Call {
+func (_c *MockQuerier_ItemNames_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ItemNames_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -350,14 +351,14 @@ func (_c *MockQuerier_ItemNames_Call) Return(_a0 []queries.LocalizedText, _a1 er
 	return _c
 }
 
-func (_c *MockQuerier_ItemNames_Call) RunAndReturn(run func(context.Context) ([]queries.LocalizedText, error)) *MockQuerier_ItemNames_Call {
+func (_c *MockQuerier_ItemNames_Call) RunAndReturn(run func(context.Context, int64) ([]queries.LocalizedText, error)) *MockQuerier_ItemNames_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// ListItems provides a mock function with given fields: ctx
-func (_m *MockQuerier) ListItems(ctx context.Context) ([]queries.Item, error) {
-	ret := _m.Called(ctx)
+// ListItems provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ListItems(ctx context.Context, characterID int64) ([]queries.Item, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListItems")
@@ -365,19 +366,19 @@ func (_m *MockQuerier) ListItems(ctx context.Context) ([]queries.Item, error) {
 
 	var r0 []queries.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.Item, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.Item, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.Item); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.Item); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]queries.Item)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -392,13 +393,14 @@ type MockQuerier_ListItems_Call struct {
 
 // ListItems is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockQuerier_Expecter) ListItems(ctx interface{}) *MockQuerier_ListItems_Call {
-	return &MockQuerier_ListItems_Call{Call: _e.mock.On("ListItems", ctx)}
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ListItems(ctx interface{}, characterID interface{}) *MockQuerier_ListItems_Call {
+	return &MockQuerier_ListItems_Call{Call: _e.mock.On("ListItems", ctx, characterID)}
 }
 
-func (_c *MockQuerier_ListItems_Call) Run(run func(ctx context.Context)) *MockQuerier_ListItems_Call {
+func (_c *MockQuerier_ListItems_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ListItems_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -408,22 +410,22 @@ func (_c *MockQuerier_ListItems_Call) Return(_a0 []queries.Item, _a1 error) *Moc
 	return _c
 }
 
-func (_c *MockQuerier_ListItems_Call) RunAndReturn(run func(context.Context) ([]queries.Item, error)) *MockQuerier_ListItems_Call {
+func (_c *MockQuerier_ListItems_Call) RunAndReturn(run func(context.Context, int64) ([]queries.Item, error)) *MockQuerier_ListItems_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// ResetDailyItems provides a mock function with given fields: ctx
-func (_m *MockQuerier) ResetDailyItems(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// ResetDailyItems provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ResetDailyItems(ctx context.Context, characterID int64) error {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResetDailyItems")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -438,13 +440,14 @@ type MockQuerier_ResetDailyItems_Call struct {
 
 // ResetDailyItems is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockQuerier_Expecter) ResetDailyItems(ctx interface{}) *MockQuerier_ResetDailyItems_Call {
-	return &MockQuerier_ResetDailyItems_Call{Call: _e.mock.On("ResetDailyItems", ctx)}
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ResetDailyItems(ctx interface{}, characterID interface{}) *MockQuerier_ResetDailyItems_Call {
+	return &MockQuerier_ResetDailyItems_Call{Call: _e.mock.On("ResetDailyItems", ctx, characterID)}
 }
 
-func (_c *MockQuerier_ResetDailyItems_Call) Run(run func(ctx context.Context)) *MockQuerier_ResetDailyItems_Call {
+func (_c *MockQuerier_ResetDailyItems_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ResetDailyItems_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -454,7 +457,7 @@ func (_c *MockQuerier_ResetDailyItems_Call) Return(_a0 error) *MockQuerier_Reset
 	return _c
 }
 
-func (_c *MockQuerier_ResetDailyItems_Call) RunAndReturn(run func(context.Context) error) *MockQuerier_ResetDailyItems_Call {
+func (_c *MockQuerier_ResetDailyItems_Call) RunAndReturn(run func(context.Context, int64) error) *MockQuerier_ResetDailyItems_Call {
 	_c.Call.Return(run)
 	return _c
 }

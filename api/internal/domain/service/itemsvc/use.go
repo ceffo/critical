@@ -63,7 +63,7 @@ type useRecord struct {
 func (s *service) UseItem(ctx context.Context, characterID int64, itemID string) (*UseResult, error) {
 	var res *UseResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		item, err := s.Use(ctx, itemID)
+		item, err := s.Use(ctx, characterID, itemID)
 		if err != nil {
 			return err
 		}

@@ -21,6 +21,9 @@ import (
 	itemq "github.com/ceffo/critical/api/internal/adapters/itemdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/skilldal"
 	skillq "github.com/ceffo/critical/api/internal/adapters/skilldal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
+	"github.com/ceffo/critical/api/internal/adapters/spellbookdal"
+	spellbookq "github.com/ceffo/critical/api/internal/adapters/spellbookdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	spellq "github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/textdal"
@@ -55,7 +58,9 @@ import (
 type Store interface {
 	domain.TxRunner
 	Migrate(ctx context.Context) error
-	Seed(ctx context.Context, seedsDir string) error
+	// Seed loads the seed files of seedsDir; spellbook is the spellbook
+	// seed's catalogue keys, checked against the catalogue.
+	Seed(ctx context.Context, seedsDir string, spellbook []string) error
 	ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, seedRefs []catalogue.Ref) error
 	Close() error
 }
@@ -83,6 +88,12 @@ type SpellStore interface {
 	castsvc.Texts
 }
 
+// SpellbookStore is the spellbook adapter: each character's spellbook, read
+// by spellbookadpt's Book.
+type SpellbookStore interface {
+	spellbookadpt.Store
+}
+
 // Storage is every storage port the root wires into the services (ADR 0025
 // step 6.1: the services, this root and the router are tested on mocks of
 // these).
@@ -100,6 +111,7 @@ type Storage struct {
 	Forms        combatsvc.FormStore
 	XP           xpsvc.DAL
 	Skill        skillsvc.DAL
+	Spellbook    SpellbookStore
 	Dice         dicesvc.DAL
 }
 
@@ -128,6 +140,7 @@ func storageOn(store Store, conn postgres.DBTX) Storage {
 		Forms:        attackformdal.New(formq.New(conn)),
 		XP:           xpdal.New(xpq.New(conn)),
 		Skill:        skilldal.New(skillq.New(conn)),
+		Spellbook:    spellbookdal.New(spellbookq.New(conn)),
 		Dice:         dicedal.New(diceq.New(conn)),
 	}
 }
@@ -149,6 +162,7 @@ func memoryStorage(m *memory.Store) Storage {
 		Forms:        m.Forms(),
 		XP:           m.XP(),
 		Skill:        m.Skills(),
+		Spellbook:    m.Spellbooks(),
 		Dice:         m.Dice(),
 	}
 }

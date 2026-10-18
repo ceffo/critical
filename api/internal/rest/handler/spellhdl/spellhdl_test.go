@@ -61,7 +61,7 @@ func (f fakeSvc) Get(_ context.Context, id string) (spellsvc.Spell, error) {
 	return spellsvc.Spell{}, fmt.Errorf("%w: %s", spellsvc.ErrSpellNotFound, id)
 }
 
-func (f fakeSvc) Search(_ context.Context, flt spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error) {
+func (f fakeSvc) Search(_ context.Context, _ int64, flt spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error) {
 	if f.got != nil {
 		*f.got = flt
 	}

@@ -22,9 +22,9 @@ func (_m *MockDAL) EXPECT() *MockDAL_Expecter {
 	return &MockDAL_Expecter{mock: &_m.Mock}
 }
 
-// ListBardSkills provides a mock function with given fields: ctx
-func (_m *MockDAL) ListBardSkills(ctx context.Context) ([]skillsvc.BardSkillDef, error) {
-	ret := _m.Called(ctx)
+// ListBardSkills provides a mock function with given fields: ctx, characterID
+func (_m *MockDAL) ListBardSkills(ctx context.Context, characterID int64) ([]skillsvc.BardSkillDef, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListBardSkills")
@@ -32,19 +32,19 @@ func (_m *MockDAL) ListBardSkills(ctx context.Context) ([]skillsvc.BardSkillDef,
 
 	var r0 []skillsvc.BardSkillDef
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]skillsvc.BardSkillDef, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]skillsvc.BardSkillDef, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []skillsvc.BardSkillDef); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []skillsvc.BardSkillDef); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]skillsvc.BardSkillDef)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -59,13 +59,14 @@ type MockDAL_ListBardSkills_Call struct {
 
 // ListBardSkills is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockDAL_Expecter) ListBardSkills(ctx interface{}) *MockDAL_ListBardSkills_Call {
-	return &MockDAL_ListBardSkills_Call{Call: _e.mock.On("ListBardSkills", ctx)}
+//   - characterID int64
+func (_e *MockDAL_Expecter) ListBardSkills(ctx interface{}, characterID interface{}) *MockDAL_ListBardSkills_Call {
+	return &MockDAL_ListBardSkills_Call{Call: _e.mock.On("ListBardSkills", ctx, characterID)}
 }
 
-func (_c *MockDAL_ListBardSkills_Call) Run(run func(ctx context.Context)) *MockDAL_ListBardSkills_Call {
+func (_c *MockDAL_ListBardSkills_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_ListBardSkills_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -75,14 +76,14 @@ func (_c *MockDAL_ListBardSkills_Call) Return(_a0 []skillsvc.BardSkillDef, _a1 e
 	return _c
 }
 
-func (_c *MockDAL_ListBardSkills_Call) RunAndReturn(run func(context.Context) ([]skillsvc.BardSkillDef, error)) *MockDAL_ListBardSkills_Call {
+func (_c *MockDAL_ListBardSkills_Call) RunAndReturn(run func(context.Context, int64) ([]skillsvc.BardSkillDef, error)) *MockDAL_ListBardSkills_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// ListProficiencies provides a mock function with given fields: ctx
-func (_m *MockDAL) ListProficiencies(ctx context.Context) ([]skillsvc.ProficiencyDef, error) {
-	ret := _m.Called(ctx)
+// ListProficiencies provides a mock function with given fields: ctx, characterID
+func (_m *MockDAL) ListProficiencies(ctx context.Context, characterID int64) ([]skillsvc.ProficiencyDef, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListProficiencies")
@@ -90,19 +91,19 @@ func (_m *MockDAL) ListProficiencies(ctx context.Context) ([]skillsvc.Proficienc
 
 	var r0 []skillsvc.ProficiencyDef
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]skillsvc.ProficiencyDef, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]skillsvc.ProficiencyDef, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []skillsvc.ProficiencyDef); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []skillsvc.ProficiencyDef); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]skillsvc.ProficiencyDef)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -117,13 +118,14 @@ type MockDAL_ListProficiencies_Call struct {
 
 // ListProficiencies is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockDAL_Expecter) ListProficiencies(ctx interface{}) *MockDAL_ListProficiencies_Call {
-	return &MockDAL_ListProficiencies_Call{Call: _e.mock.On("ListProficiencies", ctx)}
+//   - characterID int64
+func (_e *MockDAL_Expecter) ListProficiencies(ctx interface{}, characterID interface{}) *MockDAL_ListProficiencies_Call {
+	return &MockDAL_ListProficiencies_Call{Call: _e.mock.On("ListProficiencies", ctx, characterID)}
 }
 
-func (_c *MockDAL_ListProficiencies_Call) Run(run func(ctx context.Context)) *MockDAL_ListProficiencies_Call {
+func (_c *MockDAL_ListProficiencies_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_ListProficiencies_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -133,7 +135,7 @@ func (_c *MockDAL_ListProficiencies_Call) Return(_a0 []skillsvc.ProficiencyDef, 
 	return _c
 }
 
-func (_c *MockDAL_ListProficiencies_Call) RunAndReturn(run func(context.Context) ([]skillsvc.ProficiencyDef, error)) *MockDAL_ListProficiencies_Call {
+func (_c *MockDAL_ListProficiencies_Call) RunAndReturn(run func(context.Context, int64) ([]skillsvc.ProficiencyDef, error)) *MockDAL_ListProficiencies_Call {
 	_c.Call.Return(run)
 	return _c
 }

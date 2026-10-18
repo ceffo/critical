@@ -10,24 +10,34 @@ import (
 )
 
 const deleteWeapon = `-- name: DeleteWeapon :one
-DELETE FROM weapons WHERE id = $1
+DELETE FROM weapons WHERE character_id = $1::bigint AND id = $2
 RETURNING name
 `
 
-func (q *Queries) DeleteWeapon(ctx context.Context, id string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, deleteWeapon, id)
+type DeleteWeaponParams struct {
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) DeleteWeapon(ctx context.Context, arg DeleteWeaponParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, deleteWeapon, arg.CharacterID, arg.ID)
 	var name int64
 	err := row.Scan(&name)
 	return name, err
 }
 
 const getWeapon = `-- name: GetWeapon :one
-SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind
-FROM weapons WHERE id = $1
+SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id
+FROM weapons WHERE character_id = $1::bigint AND id = $2
 `
 
-func (q *Queries) GetWeapon(ctx context.Context, id string) (Weapon, error) {
-	row := q.db.QueryRowContext(ctx, getWeapon, id)
+type GetWeaponParams struct {
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) GetWeapon(ctx context.Context, arg GetWeaponParams) (Weapon, error) {
+	row := q.db.QueryRowContext(ctx, getWeapon, arg.CharacterID, arg.ID)
 	var i Weapon
 	err := row.Scan(
 		&i.ID,
@@ -40,16 +50,20 @@ func (q *Queries) GetWeapon(ctx context.Context, id string) (Weapon, error) {
 		&i.Kind,
 		&i.TwoHanded,
 		&i.AmmoKind,
+		&i.CharacterID,
 	)
 	return i, err
 }
 
 const insertWeapon = `-- name: InsertWeapon :exec
-INSERT INTO weapons (id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO weapons (character_id, id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind,
+                     two_handed, ammo_kind)
+VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8,
+        $9, $10, $11)
 `
 
 type InsertWeaponParams struct {
+	CharacterID int64
 	ID          string
 	Position    int64
 	Name        int64
@@ -64,6 +78,7 @@ type InsertWeaponParams struct {
 
 func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) error {
 	_, err := q.db.ExecContext(ctx, insertWeapon,
+		arg.CharacterID,
 		arg.ID,
 		arg.Position,
 		arg.Name,
@@ -79,12 +94,15 @@ func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) erro
 }
 
 const listWeapons = `-- name: ListWeapons :many
-SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind
-FROM weapons ORDER BY position
+
+SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind, character_id
+FROM weapons WHERE character_id = $1::bigint ORDER BY position
 `
 
-func (q *Queries) ListWeapons(ctx context.Context) ([]Weapon, error) {
-	rows, err := q.db.QueryContext(ctx, listWeapons)
+// Every query is one character's: weapons belong to a character (character_id). The selected
+// columns are the whole row, so sqlc maps them to the Weapon model.
+func (q *Queries) ListWeapons(ctx context.Context, characterID int64) ([]Weapon, error) {
+	rows, err := q.db.QueryContext(ctx, listWeapons, characterID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +121,7 @@ func (q *Queries) ListWeapons(ctx context.Context) ([]Weapon, error) {
 			&i.Kind,
 			&i.TwoHanded,
 			&i.AmmoKind,
+			&i.CharacterID,
 		); err != nil {
 			return nil, err
 		}
@@ -118,8 +137,9 @@ func (q *Queries) ListWeapons(ctx context.Context) ([]Weapon, error) {
 }
 
 const updateWeapon = `-- name: UpdateWeapon :one
-UPDATE weapons SET position = $1, damage_sm = $2, damage_l = $3, magic_to_hit = $4, magic_damage = $5, kind = $6, two_handed = $7, ammo_kind = $8
-WHERE id = $9
+UPDATE weapons SET position = $1, damage_sm = $2, damage_l = $3, magic_to_hit = $4,
+                   magic_damage = $5, kind = $6, two_handed = $7, ammo_kind = $8
+WHERE character_id = $9::bigint AND id = $10
 RETURNING name
 `
 
@@ -132,6 +152,7 @@ type UpdateWeaponParams struct {
 	Kind        string
 	TwoHanded   int64
 	AmmoKind    string
+	CharacterID int64
 	ID          string
 }
 
@@ -145,6 +166,7 @@ func (q *Queries) UpdateWeapon(ctx context.Context, arg UpdateWeaponParams) (int
 		arg.Kind,
 		arg.TwoHanded,
 		arg.AmmoKind,
+		arg.CharacterID,
 		arg.ID,
 	)
 	var name int64
@@ -153,11 +175,12 @@ func (q *Queries) UpdateWeapon(ctx context.Context, arg UpdateWeaponParams) (int
 }
 
 const weaponNames = `-- name: WeaponNames :many
-SELECT text_id, lang, body FROM localized_texts WHERE text_id IN (SELECT name FROM weapons)
+SELECT text_id, lang, body FROM localized_texts
+WHERE text_id IN (SELECT name FROM weapons WHERE character_id = $1::bigint)
 `
 
-func (q *Queries) WeaponNames(ctx context.Context) ([]LocalizedText, error) {
-	rows, err := q.db.QueryContext(ctx, weaponNames)
+func (q *Queries) WeaponNames(ctx context.Context, characterID int64) ([]LocalizedText, error) {
+	rows, err := q.db.QueryContext(ctx, weaponNames, characterID)
 	if err != nil {
 		return nil, err
 	}

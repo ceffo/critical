@@ -59,8 +59,8 @@ func newFixture(t *testing.T) *fixture {
 	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
-	f.dal.EXPECT().ListProficiencies(mock.Anything).Return(catalog, nil).Maybe()
-	f.dal.EXPECT().ListBardSkills(mock.Anything).Return(bardSkills, nil).Maybe()
+	f.dal.EXPECT().ListProficiencies(mock.Anything, charID).Return(catalog, nil).Maybe()
+	f.dal.EXPECT().ListBardSkills(mock.Anything, charID).Return(bardSkills, nil).Maybe()
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()
 	return f
 }

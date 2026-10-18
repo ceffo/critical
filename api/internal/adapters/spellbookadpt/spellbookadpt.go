@@ -1,12 +1,19 @@
-// Package spellbookadpt loads the Bard's spellbook (seeds/spellbook.json) and
-// serves it to prepsvc. Each entry is cross-checked against the Wizard spells
-// of the spell catalogue (id, English name and level), so a typo, a wrong
-// level or an id the catalogue does not hold is a startup error. Entities
-// live in prepsvc; this package only maps files.
+// Package spellbookadpt serves each character's spellbook to prepsvc and
+// spellsvc, and checks the spellbook seed file (seeds/spellbook.json, the
+// starting spellbook of the seed character) before the seed writes it.
+//
+// The spellbook is stored per character by catalogue key (Store); a Book
+// names each entry from the spell catalogue. The catalogue cross-check of an
+// entry (a Wizard spell of the catalogue, its English name and level) happens
+// when the entry is written: the seed file is checked by ReadSeed, and a
+// typo, a wrong level or an id the catalogue does not hold is a startup
+// error before anything is stored. Entities live in prepsvc; this package
+// only maps.
 package spellbookadpt
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -14,6 +21,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
 // FileName is the seed file under the seeds dir.
@@ -25,25 +33,70 @@ type entryDTO struct {
 	Level int    `json:"level"`
 }
 
-// Book implements prepsvc.Spellbook.
-type Book struct {
-	entries []prepsvc.SpellbookEntry
-	byID    map[string]prepsvc.SpellbookEntry
+// Store reads the stored spellbooks (spellbookdal, the in-memory store).
+type Store interface {
+	// Keys returns the catalogue keys of the character's spellbook, in the
+	// sheet's order (none for a character without a spellbook).
+	Keys(ctx context.Context, characterID int64) ([]string, error)
 }
 
-var _ prepsvc.Spellbook = (*Book)(nil)
+// Book implements prepsvc.Spellbook and spellsvc.Spellbook over the stored
+// spellbooks, named from the catalogue.
+type Book struct {
+	store  Store
+	spells map[string]catalogue.Spell
+}
 
-// New loads <seedsDir>/spellbook.json and validates it against the catalogue.
-func New(seedsDir string, cat catalogue.Catalogue) (*Book, error) {
+var (
+	_ prepsvc.Spellbook  = (*Book)(nil)
+	_ spellsvc.Spellbook = (*Book)(nil)
+)
+
+// New returns the Book over store, naming its entries from cat.
+func New(store Store, cat catalogue.Catalogue) *Book {
+	return &Book{store: store, spells: cat.ByID()}
+}
+
+// All returns the character's spellbook in the sheet's order, each entry
+// with the catalogue's English name and level. An entry the catalogue does
+// not hold (the catalogue import keeps every spell a spellbook refers to, so
+// only a catalogue file that dropped it) is an error naming it.
+func (b *Book) All(ctx context.Context, characterID int64) ([]prepsvc.SpellbookEntry, error) {
+	keys, err := b.store.Keys(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]prepsvc.SpellbookEntry, 0, len(keys))
+	for _, k := range keys {
+		s, ok := b.spells[k]
+		if !ok {
+			return nil, fmt.Errorf("spellbook of character %d: %q is not in the spell catalogue", characterID, k)
+		}
+		out = append(out, prepsvc.SpellbookEntry{ID: k, Name: s.Name.Default(), Level: s.Level})
+	}
+	return out, nil
+}
+
+// SpellKeys returns the catalogue keys of the character's spellbook
+// (spellsvc.Spellbook, the "Mine" filter).
+func (b *Book) SpellKeys(ctx context.Context, characterID int64) ([]string, error) {
+	return b.store.Keys(ctx, characterID)
+}
+
+// ReadSeed reads <seedsDir>/spellbook.json and checks it against the
+// catalogue (ParseSeed). It returns the catalogue keys in the file's order.
+func ReadSeed(seedsDir string, cat catalogue.Catalogue) ([]string, error) {
 	book, err := os.ReadFile(filepath.Join(filepath.Clean(seedsDir), FileName)) //nolint:gosec // operator-configured seeds dir
 	if err != nil {
 		return nil, fmt.Errorf("spellbook: read: %w", err)
 	}
-	return Parse(book, cat)
+	return ParseSeed(book, cat)
 }
 
-// Parse maps the spellbook file and validates it against the catalogue.
-func Parse(book []byte, cat catalogue.Catalogue) (*Book, error) {
+// ParseSeed maps a spellbook seed file and checks every entry against the
+// catalogue: a Wizard spell of the catalogue, with the catalogue's English
+// name and level, each once. It returns the keys in the file's order.
+func ParseSeed(book []byte, cat catalogue.Catalogue) ([]string, error) {
 	var entries []entryDTO
 	dec := json.NewDecoder(bytes.NewReader(book))
 	dec.DisallowUnknownFields()
@@ -52,7 +105,8 @@ func Parse(book []byte, cat catalogue.Catalogue) (*Book, error) {
 	}
 	spells := cat.ByID()
 
-	b := &Book{byID: map[string]prepsvc.SpellbookEntry{}}
+	keys := make([]string, 0, len(entries))
+	seen := map[string]bool{}
 	for _, e := range entries {
 		s, ok := spells[e.ID]
 		if !ok || s.Class != "Wizard" {
@@ -64,30 +118,11 @@ func Parse(book []byte, cat catalogue.Catalogue) (*Book, error) {
 		if s.Level != e.Level {
 			return nil, fmt.Errorf("spellbook: %q is level %d in the catalogue, not %d", e.ID, s.Level, e.Level)
 		}
-		if _, dup := b.byID[e.ID]; dup {
+		if seen[e.ID] {
 			return nil, fmt.Errorf("spellbook: duplicate spell %q", e.ID)
 		}
-		entry := prepsvc.SpellbookEntry{ID: e.ID, Name: e.Name, Level: e.Level}
-		b.entries = append(b.entries, entry)
-		b.byID[e.ID] = entry
+		seen[e.ID] = true
+		keys = append(keys, e.ID)
 	}
-	return b, nil
-}
-
-// All returns the spellbook in file order (level, then name).
-func (b *Book) All() []prepsvc.SpellbookEntry {
-	return append([]prepsvc.SpellbookEntry(nil), b.entries...)
-}
-
-// Contains reports whether the spell with catalogue key id is in the book
-// (spellsvc.Spellbook).
-func (b *Book) Contains(id string) bool {
-	_, ok := b.byID[id]
-	return ok
-}
-
-// Get returns the entry with id.
-func (b *Book) Get(id string) (prepsvc.SpellbookEntry, bool) {
-	e, ok := b.byID[id]
-	return e, ok
+	return keys, nil
 }

@@ -23,6 +23,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 )
 
+// owner is the character every call is made for: each query carries it (weapons belong to a
+// character).
+const owner = int64(4)
+
 func mocked(t *testing.T) (*mocks.MockQuerier, *textmocks.MockQuerier, textdal.Store) {
 	t.Helper()
 	q, tq := mocks.NewMockQuerier(t), textmocks.NewMockQuerier(t)
@@ -45,9 +49,9 @@ func TestGet_MapsTheRowAndItsName(t *testing.T) {
 	ctx := context.Background()
 	q, tq, texts := mocked(t)
 
-	q.EXPECT().GetWeapon(ctx, "shortbow").Return(bowRow, nil).Once()
+	q.EXPECT().GetWeapon(ctx, queries.GetWeaponParams{CharacterID: owner, ID: "shortbow"}).Return(bowRow, nil).Once()
 	tq.EXPECT().GetText(ctx, int64(12)).Return(bowNameRows(), nil).Once()
-	w, err := weapondal.New(q, texts).Get(ctx, "shortbow")
+	w, err := weapondal.New(q, texts).Get(ctx, owner, "shortbow")
 	require.NoError(t, err)
 	assert.Equal(t, combatsvc.Weapon{
 		ID: "shortbow", Name: bowName, BaseDamage: "1d6", DamageLarge: "1d6",
@@ -62,14 +66,14 @@ func TestList_MapsRowsInOrderWithTheirNames(t *testing.T) {
 	q, _, texts := mocked(t)
 	sword := queries.Weapon{ID: "longsword", Position: 1, Name: 11, DamageSm: "1d8", DamageL: "1d12", Kind: "melee"}
 
-	q.EXPECT().ListWeapons(ctx).Return([]queries.Weapon{sword, bowRow}, nil).Times(2)
-	q.EXPECT().WeaponNames(ctx).Return([]queries.LocalizedText{
+	q.EXPECT().ListWeapons(ctx, owner).Return([]queries.Weapon{sword, bowRow}, nil).Times(2)
+	q.EXPECT().WeaponNames(ctx, owner).Return([]queries.LocalizedText{
 		{TextID: 12, Lang: "en", Body: "Short Bow +2"},
 		{TextID: 11, Lang: "en", Body: "Long Sword"},
 		{TextID: 12, Lang: "fr", Body: "Arc court +2"},
 	}, nil).Times(2)
 
-	got, err := weapondal.New(q, texts).List(ctx)
+	got, err := weapondal.New(q, texts).List(ctx, owner)
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.Weapon{
 		{ID: "longsword", Name: localized.Text{"en": "Long Sword"}, BaseDamage: "1d8", DamageLarge: "1d12", Kind: combatsvc.WeaponMelee},
@@ -79,7 +83,7 @@ func TestList_MapsRowsInOrderWithTheirNames(t *testing.T) {
 		},
 	}, got)
 
-	edited, err := weapondal.NewEditor(q, texts).List(ctx)
+	edited, err := weapondal.NewEditor(q, texts).List(ctx, owner)
 	require.NoError(t, err)
 	assert.Equal(t, []weaponsvc.Weapon{
 		{ID: "longsword", Position: 1, Name: localized.Text{"en": "Long Sword"}, DamageSM: "1d8", DamageL: "1d12", Kind: "melee"},
@@ -95,10 +99,10 @@ func TestGet_UnknownIsNotFound(t *testing.T) {
 	ctx := context.Background()
 	q, _, texts := mocked(t)
 
-	q.EXPECT().GetWeapon(ctx, "nope").Return(queries.Weapon{}, sql.ErrNoRows).Times(2)
-	_, err := weapondal.New(q, texts).Get(ctx, "nope")
+	q.EXPECT().GetWeapon(ctx, queries.GetWeaponParams{CharacterID: owner, ID: "nope"}).Return(queries.Weapon{}, sql.ErrNoRows).Times(2)
+	_, err := weapondal.New(q, texts).Get(ctx, owner, "nope")
 	require.ErrorIs(t, err, combatsvc.ErrWeaponNotFound)
-	_, err = weapondal.NewEditor(q, texts).Get(ctx, "nope")
+	_, err = weapondal.NewEditor(q, texts).Get(ctx, owner, "nope")
 	require.ErrorIs(t, err, weaponsvc.ErrWeaponNotFound)
 }
 
@@ -106,9 +110,9 @@ func TestEditor_GetMapsPosition(t *testing.T) {
 	ctx := context.Background()
 	q, tq, texts := mocked(t)
 
-	q.EXPECT().GetWeapon(ctx, "shortbow").Return(bowRow, nil).Once()
+	q.EXPECT().GetWeapon(ctx, queries.GetWeaponParams{CharacterID: owner, ID: "shortbow"}).Return(bowRow, nil).Once()
 	tq.EXPECT().GetText(ctx, int64(12)).Return(bowNameRows(), nil).Once()
-	got, err := weapondal.NewEditor(q, texts).Get(ctx, "shortbow")
+	got, err := weapondal.NewEditor(q, texts).Get(ctx, owner, "shortbow")
 	require.NoError(t, err)
 	assert.Equal(t, weaponsvc.Weapon{
 		ID: "shortbow", Position: 2, Name: bowName, DamageSM: "1d6", DamageL: "1d6",
@@ -132,11 +136,11 @@ func TestEditor_InsertWritesTheNameUnderANewKeyThenTheRow(t *testing.T) {
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 30, Lang: "en", Body: "Long Bow"}).Return(nil).Once(),
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 30, Lang: "fr", Body: "Arc long"}).Return(nil).Once(),
 		q.EXPECT().InsertWeapon(ctx, queries.InsertWeaponParams{
-			ID: "long_bow", Position: 9, Name: 30, DamageSm: "1d8", DamageL: "1d8",
+			CharacterID: owner, ID: "long_bow", Position: 9, Name: 30, DamageSm: "1d8", DamageL: "1d8",
 			MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: 1, AmmoKind: "arrow",
 		}).Return(nil).Once(),
 	)
-	require.NoError(t, weapondal.NewEditor(q, texts).Insert(ctx, longBow))
+	require.NoError(t, weapondal.NewEditor(q, texts).Insert(ctx, owner, longBow))
 }
 
 // ADR 0023 step 9: Update writes every field, then replaces the name's rows
@@ -151,18 +155,18 @@ func TestEditor_UpdateAndDeleteKeepTheNameWithTheRow(t *testing.T) {
 	mock.InOrder(
 		q.EXPECT().UpdateWeapon(ctx, queries.UpdateWeaponParams{
 			Position: 9, DamageSm: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
-			Kind: "missile", TwoHanded: 0, AmmoKind: "arrow", ID: "long_bow",
+			Kind: "missile", TwoHanded: 0, AmmoKind: "arrow", CharacterID: owner, ID: "long_bow",
 		}).Return(30, nil).Once(),
 		tq.EXPECT().DeleteText(ctx, int64(30)).Return(nil).Once(),
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 30, Lang: "en", Body: "Bow"}).Return(nil).Once(),
 	)
-	require.NoError(t, e.Update(ctx, w))
+	require.NoError(t, e.Update(ctx, owner, w))
 
 	mock.InOrder(
-		q.EXPECT().DeleteWeapon(ctx, "long_bow").Return(30, nil).Once(),
+		q.EXPECT().DeleteWeapon(ctx, queries.DeleteWeaponParams{CharacterID: owner, ID: "long_bow"}).Return(30, nil).Once(),
 		tq.EXPECT().DeleteText(ctx, int64(30)).Return(nil).Once(),
 	)
-	require.NoError(t, e.Delete(ctx, "long_bow"))
+	require.NoError(t, e.Delete(ctx, owner, "long_bow"))
 }
 
 // No row updated or deleted is ErrWeaponNotFound, and no name is touched.
@@ -172,9 +176,9 @@ func TestEditor_UnknownIsNotFound(t *testing.T) {
 	e := weapondal.NewEditor(q, texts)
 
 	q.EXPECT().UpdateWeapon(ctx, mock.Anything).Return(0, sql.ErrNoRows).Once()
-	require.ErrorIs(t, e.Update(ctx, longBow), weaponsvc.ErrWeaponNotFound)
-	q.EXPECT().DeleteWeapon(ctx, "long_bow").Return(0, sql.ErrNoRows).Once()
-	require.ErrorIs(t, e.Delete(ctx, "long_bow"), weaponsvc.ErrWeaponNotFound)
+	require.ErrorIs(t, e.Update(ctx, owner, longBow), weaponsvc.ErrWeaponNotFound)
+	q.EXPECT().DeleteWeapon(ctx, queries.DeleteWeaponParams{CharacterID: owner, ID: "long_bow"}).Return(0, sql.ErrNoRows).Once()
+	require.ErrorIs(t, e.Delete(ctx, owner, "long_bow"), weaponsvc.ErrWeaponNotFound)
 }
 
 // Storage errors are returned, never taken for not found, and stop the
@@ -184,24 +188,24 @@ func TestStorageErrors_AreReturnedAndStopTheWrite(t *testing.T) {
 	q, tq, texts := mocked(t)
 	e := weapondal.NewEditor(q, texts)
 
-	q.EXPECT().GetWeapon(ctx, "x").Return(queries.Weapon{}, assert.AnError).Once()
-	_, err := weapondal.New(q, texts).Get(ctx, "x")
+	q.EXPECT().GetWeapon(ctx, queries.GetWeaponParams{CharacterID: owner, ID: "x"}).Return(queries.Weapon{}, assert.AnError).Once()
+	_, err := weapondal.New(q, texts).Get(ctx, owner, "x")
 	require.ErrorIs(t, err, assert.AnError)
 	assert.NotErrorIs(t, err, combatsvc.ErrWeaponNotFound)
 
-	q.EXPECT().ListWeapons(ctx).Return([]queries.Weapon{bowRow}, nil).Once()
-	q.EXPECT().WeaponNames(ctx).Return(nil, assert.AnError).Once()
-	_, err = e.List(ctx)
+	q.EXPECT().ListWeapons(ctx, owner).Return([]queries.Weapon{bowRow}, nil).Once()
+	q.EXPECT().WeaponNames(ctx, owner).Return(nil, assert.AnError).Once()
+	_, err = e.List(ctx, owner)
 	require.ErrorIs(t, err, assert.AnError)
 
 	tq.EXPECT().NextTextKey(ctx).Return(0, assert.AnError).Once()
-	require.ErrorIs(t, e.Insert(ctx, longBow), assert.AnError)
+	require.ErrorIs(t, e.Insert(ctx, owner, longBow), assert.AnError)
 
 	q.EXPECT().UpdateWeapon(ctx, mock.Anything).Return(0, assert.AnError).Once()
-	err = e.Update(ctx, longBow)
+	err = e.Update(ctx, owner, longBow)
 	require.ErrorIs(t, err, assert.AnError)
 	assert.NotErrorIs(t, err, weaponsvc.ErrWeaponNotFound)
 
-	q.EXPECT().DeleteWeapon(ctx, "long_bow").Return(0, assert.AnError).Once()
-	require.ErrorIs(t, e.Delete(ctx, "long_bow"), assert.AnError)
+	q.EXPECT().DeleteWeapon(ctx, queries.DeleteWeaponParams{CharacterID: owner, ID: "long_bow"}).Return(0, assert.AnError).Once()
+	require.ErrorIs(t, e.Delete(ctx, owner, "long_bow"), assert.AnError)
 }

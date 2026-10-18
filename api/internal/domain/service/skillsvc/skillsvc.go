@@ -49,11 +49,12 @@ type SVC interface {
 	AdjustAbility(ctx context.Context, characterID, entryID int64, adj Adjustment) (*AbilityCheckResult, error)
 }
 
-// DAL is the driven port over the skill catalog. Both lists come back in
-// the order of the sheet. Every method joins the ctx transaction.
+// DAL is the driven port over the skill catalog: the character's own
+// proficiencies and bard skills. Both lists come back in the order of the
+// sheet. Every method joins the ctx transaction.
 type DAL interface {
-	ListProficiencies(ctx context.Context) ([]ProficiencyDef, error)
-	ListBardSkills(ctx context.Context) ([]BardSkillDef, error)
+	ListProficiencies(ctx context.Context, characterID int64) ([]ProficiencyDef, error)
+	ListBardSkills(ctx context.Context, characterID int64) ([]BardSkillDef, error)
 }
 
 // Characters reads the sheet's ability scores.

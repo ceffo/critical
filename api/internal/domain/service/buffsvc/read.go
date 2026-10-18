@@ -58,13 +58,13 @@ func (s *service) Aggregate(ctx context.Context, characterID int64, str int, kin
 	return aggregate(buffs, powers, str, kind), nil
 }
 
-// effectSources reads the active buffs and the carried items' powers.
+// effectSources reads the character's active buffs and carried items' powers.
 func (s *service) effectSources(ctx context.Context, characterID int64) ([]BuffEffect, []ItemPower, error) {
 	buffs, err := s.dal.GetActiveBuffs(ctx, characterID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get active buffs: %w", err)
 	}
-	powers, err := s.items.ItemPowers(ctx)
+	powers, err := s.items.ItemPowers(ctx, characterID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get item powers: %w", err)
 	}

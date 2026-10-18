@@ -10,7 +10,7 @@ import (
 )
 
 const listBardSkills = `-- name: ListBardSkills :many
-SELECT id, percent FROM bard_skills ORDER BY position, id
+SELECT id, percent FROM bard_skills WHERE character_id = $1::bigint ORDER BY position, id
 `
 
 type ListBardSkillsRow struct {
@@ -18,8 +18,8 @@ type ListBardSkillsRow struct {
 	Percent int64
 }
 
-func (q *Queries) ListBardSkills(ctx context.Context) ([]ListBardSkillsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listBardSkills)
+func (q *Queries) ListBardSkills(ctx context.Context, characterID int64) ([]ListBardSkillsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listBardSkills, characterID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,8 @@ func (q *Queries) ListBardSkills(ctx context.Context) ([]ListBardSkillsRow, erro
 }
 
 const listProficiencies = `-- name: ListProficiencies :many
-SELECT id, ability, modifier FROM proficiencies ORDER BY position, id
+
+SELECT id, ability, modifier FROM proficiencies WHERE character_id = $1::bigint ORDER BY position, id
 `
 
 type ListProficienciesRow struct {
@@ -51,8 +52,9 @@ type ListProficienciesRow struct {
 	Modifier int64
 }
 
-func (q *Queries) ListProficiencies(ctx context.Context) ([]ListProficienciesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listProficiencies)
+// Proficiencies and bard skills belong to a character (character_id).
+func (q *Queries) ListProficiencies(ctx context.Context, characterID int64) ([]ListProficienciesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProficiencies, characterID)
 	if err != nil {
 		return nil, err
 	}

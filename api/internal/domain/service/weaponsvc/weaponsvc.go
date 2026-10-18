@@ -36,16 +36,18 @@ type SVC interface {
 	Restorers() map[string]actionlog.Restorer
 }
 
-// DAL is the driven port. Every method joins the transaction carried by ctx.
+// DAL is the driven port. Weapons belong to a character: every method reads
+// or writes the weapons of characterID only (another character's weapon of
+// the same id is unknown). Every method joins the transaction carried by ctx.
 type DAL interface {
-	List(ctx context.Context) ([]Weapon, error)
+	List(ctx context.Context, characterID int64) ([]Weapon, error)
 	// Get returns one weapon, or ErrWeaponNotFound.
-	Get(ctx context.Context, id string) (Weapon, error)
-	Insert(ctx context.Context, w Weapon) error
+	Get(ctx context.Context, characterID int64, id string) (Weapon, error)
+	Insert(ctx context.Context, characterID int64, w Weapon) error
 	// Update overwrites every field (position included); ErrWeaponNotFound.
-	Update(ctx context.Context, w Weapon) error
+	Update(ctx context.Context, characterID int64, w Weapon) error
 	// Delete removes a weapon; ErrWeaponNotFound.
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, characterID int64, id string) error
 }
 
 // Log is the slice of the action log weapon changes are recorded into.

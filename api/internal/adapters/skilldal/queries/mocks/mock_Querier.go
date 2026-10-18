@@ -22,9 +22,9 @@ func (_m *MockQuerier) EXPECT() *MockQuerier_Expecter {
 	return &MockQuerier_Expecter{mock: &_m.Mock}
 }
 
-// ListBardSkills provides a mock function with given fields: ctx
-func (_m *MockQuerier) ListBardSkills(ctx context.Context) ([]queries.ListBardSkillsRow, error) {
-	ret := _m.Called(ctx)
+// ListBardSkills provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ListBardSkills(ctx context.Context, characterID int64) ([]queries.ListBardSkillsRow, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListBardSkills")
@@ -32,19 +32,19 @@ func (_m *MockQuerier) ListBardSkills(ctx context.Context) ([]queries.ListBardSk
 
 	var r0 []queries.ListBardSkillsRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.ListBardSkillsRow, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListBardSkillsRow, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.ListBardSkillsRow); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListBardSkillsRow); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]queries.ListBardSkillsRow)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -59,13 +59,14 @@ type MockQuerier_ListBardSkills_Call struct {
 
 // ListBardSkills is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockQuerier_Expecter) ListBardSkills(ctx interface{}) *MockQuerier_ListBardSkills_Call {
-	return &MockQuerier_ListBardSkills_Call{Call: _e.mock.On("ListBardSkills", ctx)}
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ListBardSkills(ctx interface{}, characterID interface{}) *MockQuerier_ListBardSkills_Call {
+	return &MockQuerier_ListBardSkills_Call{Call: _e.mock.On("ListBardSkills", ctx, characterID)}
 }
 
-func (_c *MockQuerier_ListBardSkills_Call) Run(run func(ctx context.Context)) *MockQuerier_ListBardSkills_Call {
+func (_c *MockQuerier_ListBardSkills_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ListBardSkills_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -75,14 +76,14 @@ func (_c *MockQuerier_ListBardSkills_Call) Return(_a0 []queries.ListBardSkillsRo
 	return _c
 }
 
-func (_c *MockQuerier_ListBardSkills_Call) RunAndReturn(run func(context.Context) ([]queries.ListBardSkillsRow, error)) *MockQuerier_ListBardSkills_Call {
+func (_c *MockQuerier_ListBardSkills_Call) RunAndReturn(run func(context.Context, int64) ([]queries.ListBardSkillsRow, error)) *MockQuerier_ListBardSkills_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// ListProficiencies provides a mock function with given fields: ctx
-func (_m *MockQuerier) ListProficiencies(ctx context.Context) ([]queries.ListProficienciesRow, error) {
-	ret := _m.Called(ctx)
+// ListProficiencies provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ListProficiencies(ctx context.Context, characterID int64) ([]queries.ListProficienciesRow, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListProficiencies")
@@ -90,19 +91,19 @@ func (_m *MockQuerier) ListProficiencies(ctx context.Context) ([]queries.ListPro
 
 	var r0 []queries.ListProficienciesRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.ListProficienciesRow, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListProficienciesRow, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.ListProficienciesRow); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListProficienciesRow); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]queries.ListProficienciesRow)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -117,13 +118,14 @@ type MockQuerier_ListProficiencies_Call struct {
 
 // ListProficiencies is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockQuerier_Expecter) ListProficiencies(ctx interface{}) *MockQuerier_ListProficiencies_Call {
-	return &MockQuerier_ListProficiencies_Call{Call: _e.mock.On("ListProficiencies", ctx)}
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ListProficiencies(ctx interface{}, characterID interface{}) *MockQuerier_ListProficiencies_Call {
+	return &MockQuerier_ListProficiencies_Call{Call: _e.mock.On("ListProficiencies", ctx, characterID)}
 }
 
-func (_c *MockQuerier_ListProficiencies_Call) Run(run func(ctx context.Context)) *MockQuerier_ListProficiencies_Call {
+func (_c *MockQuerier_ListProficiencies_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ListProficiencies_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -133,7 +135,7 @@ func (_c *MockQuerier_ListProficiencies_Call) Return(_a0 []queries.ListProficien
 	return _c
 }
 
-func (_c *MockQuerier_ListProficiencies_Call) RunAndReturn(run func(context.Context) ([]queries.ListProficienciesRow, error)) *MockQuerier_ListProficiencies_Call {
+func (_c *MockQuerier_ListProficiencies_Call) RunAndReturn(run func(context.Context, int64) ([]queries.ListProficienciesRow, error)) *MockQuerier_ListProficiencies_Call {
 	_c.Call.Return(run)
 	return _c
 }

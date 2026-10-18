@@ -40,8 +40,10 @@ type tables struct {
 	spells    map[string]spellsvc.Spell
 	catalogue *catalogueVersion
 
-	weapons map[string]storedWeapon
-	items   map[string]storedItem
+	// weapons and items belong to a character: keyed by the character
+	// and the id, so two characters may hold the same id.
+	weapons map[owned]storedWeapon
+	items   map[owned]storedItem
 	// rowSeq orders items and weapons inserted at the same position as the
 	// database's rowid does.
 	rowSeq int64
@@ -53,8 +55,11 @@ type tables struct {
 	xp    map[int64]xpEntry
 	xpSeq int64
 
-	proficiencies []skillsvc.ProficiencyDef
-	bardSkills    []skillsvc.BardSkillDef
+	// proficiencies, bardSkills and spellbooks are each character's, by
+	// character id, in sheet order (a spellbook holds catalogue keys).
+	proficiencies map[int64][]skillsvc.ProficiencyDef
+	bardSkills    map[int64][]skillsvc.BardSkillDef
+	spellbooks    map[int64][]string
 
 	dice    map[int64]diceFavourite
 	diceSeq int64
@@ -62,18 +67,27 @@ type tables struct {
 
 func newTables() *tables {
 	return &tables{
-		characters: map[int64]charactersvc.Character{},
-		slots:      map[int64][]spellsvc.SpellSlot{},
-		buffs:      map[int64][]buffsvc.BuffEffect{},
-		rounds:     map[int64]roundState{},
-		savedBuffs: map[int64]savedBuff{},
-		spells:     map[string]spellsvc.Spell{},
-		weapons:    map[string]storedWeapon{},
-		items:      map[string]storedItem{},
-		forms:      map[int64]combatsvc.AttackForm{},
-		xp:         map[int64]xpEntry{},
-		dice:       map[int64]diceFavourite{},
+		characters:    map[int64]charactersvc.Character{},
+		slots:         map[int64][]spellsvc.SpellSlot{},
+		buffs:         map[int64][]buffsvc.BuffEffect{},
+		rounds:        map[int64]roundState{},
+		savedBuffs:    map[int64]savedBuff{},
+		spells:        map[string]spellsvc.Spell{},
+		weapons:       map[owned]storedWeapon{},
+		items:         map[owned]storedItem{},
+		proficiencies: map[int64][]skillsvc.ProficiencyDef{},
+		bardSkills:    map[int64][]skillsvc.BardSkillDef{},
+		spellbooks:    map[int64][]string{},
+		forms:         map[int64]combatsvc.AttackForm{},
+		xp:            map[int64]xpEntry{},
+		dice:          map[int64]diceFavourite{},
 	}
+}
+
+// owned is the key of a row a character owns: the character and the row's id.
+type owned struct {
+	characterID int64
+	id          string
 }
 
 // roundState is the round counter and the round's initiative of a character.

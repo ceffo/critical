@@ -14,31 +14,97 @@ import (
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
-// Seed loads character.json, weapons.json, items.json and skills.json from seedsDir into their
-// tables, in one transaction: character, weapons and items only if their table is empty (once
-// filled, only the names of weapons and items are reconciled, reconcileName), skills reconciled
-// by id. A missing character file is ignored. A missing weapons, items or skills file while its
-// table is empty is an error: the catalog would be empty. Spells are not seeds: they come from
-// the catalogue artifact (ImportCatalogue).
-func (d *DB) Seed(ctx context.Context, seedsDir string) error { return seed(ctx, d, d.q, seedsDir) }
+// Seed loads the seed files of seedsDir, in one transaction. character.json is inserted only
+// into an empty characters table. The other seeds are the starting set of the seed character,
+// the character character.json names (seedOwner): its weapons and items only while it has none
+// (once it has some, only the names of weapons and items are reconciled, reconcileName), its
+// skills reconciled by id, its spellbook (spellbook: the spellbook seed's catalogue keys, in
+// order, checked against the catalogue by the caller before anything is written) only while it
+// has none. A character created later starts with nothing. Rows without an owner (stored before
+// each character owned its equipment, or written by the release before during a rolling deploy)
+// are given to the seed character first. A missing character file is ignored. A missing weapons,
+// items or skills file while the seed character has none is an error: its sheet would be empty.
+// Spells are not seeds: they come from the catalogue artifact (ImportCatalogue).
+func (d *DB) Seed(ctx context.Context, seedsDir string, spellbook []string) error {
+	return seed(ctx, d, d.q, seedsDir, spellbook)
+}
 
 // seed is Seed over its ports: tx runs the transaction, q runs on the transaction tx carries.
-func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir string) error {
+func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir string, spellbook []string) error {
 	return tx.InTx(ctx, func(ctx context.Context) error {
-		if err := seedCharacter(ctx, q, seedfile.Path(seedsDir, seedfile.CharacterFile)); err != nil {
+		characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
+		if err := seedCharacter(ctx, q, characterPath); err != nil {
 			return fmt.Errorf("seed character: %w", err)
 		}
-		if err := seedWeapons(ctx, q, seedfile.Path(seedsDir, seedfile.WeaponsFile)); err != nil {
+		owner, ok, err := seedOwner(ctx, q, characterPath)
+		if err != nil || !ok {
+			return err
+		}
+		if err := adoptUnowned(ctx, q, owner); err != nil {
+			return err
+		}
+		if err := seedWeapons(ctx, q, owner, seedfile.Path(seedsDir, seedfile.WeaponsFile)); err != nil {
 			return fmt.Errorf("seed weapons: %w", err)
 		}
-		if err := seedItems(ctx, q, seedfile.Path(seedsDir, seedfile.ItemsFile)); err != nil {
+		if err := seedItems(ctx, q, owner, seedfile.Path(seedsDir, seedfile.ItemsFile)); err != nil {
 			return fmt.Errorf("seed items: %w", err)
 		}
-		if err := seedSkills(ctx, q, seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
+		if err := seedSkills(ctx, q, owner, seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
 			return fmt.Errorf("seed skills: %w", err)
+		}
+		if err := seedSpellbook(ctx, q, owner, spellbook); err != nil {
+			return fmt.Errorf("seed spellbook: %w", err)
 		}
 		return nil
 	})
+}
+
+// seedOwner is the seed character: the character named in character.json (the lowest id of
+// that name). ok is false when there is none (no character file, or no character of its name);
+// the equipment seeds are then not applied, and rows without an owner are an error, since
+// nothing would own them.
+func seedOwner(ctx context.Context, q storeq.Querier, characterPath string) (int64, bool, error) {
+	c, found, err := seedfile.ReadCharacter(characterPath)
+	if err != nil {
+		return 0, false, err
+	}
+	if found {
+		id, err := q.SeedCharacterID(ctx, c.Name)
+		if err == nil {
+			return id, true, nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return 0, false, fmt.Errorf("find seed character: %w", err)
+		}
+	}
+	unowned, err := q.CountUnowned(ctx)
+	if err != nil {
+		return 0, false, fmt.Errorf("count unowned rows: %w", err)
+	}
+	if unowned > 0 {
+		return 0, false, fmt.Errorf("%d weapons, items or skills have no owner and no character is named as in %s: "+
+			"they would belong to no one", unowned, characterPath)
+	}
+	return 0, false, nil
+}
+
+// adoptUnowned gives every weapon, item, proficiency and bard skill without an owner to the seed
+// character.
+func adoptUnowned(ctx context.Context, q storeq.Querier, owner int64) error {
+	for _, adopt := range []struct {
+		table string
+		run   func(context.Context, int64) error
+	}{
+		{"weapons", q.AdoptWeapons},
+		{"items", q.AdoptItems},
+		{"proficiencies", q.AdoptProficiencies},
+		{"bard_skills", q.AdoptBardSkills},
+	} {
+		if err := adopt.run(ctx, owner); err != nil {
+			return fmt.Errorf("give unowned %s to character %d: %w", adopt.table, owner, err)
+		}
+	}
+	return nil
 }
 
 // seedCharacter inserts the character, then the rows that refer to it (its spell slots, buffs
@@ -104,8 +170,8 @@ func boolInt(b bool) int64 {
 	return 0
 }
 
-func seedWeapons(ctx context.Context, q storeq.Querier, seedPath string) error {
-	count, err := q.CountWeapons(ctx)
+func seedWeapons(ctx context.Context, q storeq.Querier, owner int64, seedPath string) error {
+	count, err := q.CountWeapons(ctx, owner)
 	if err != nil {
 		return fmt.Errorf("count weapons: %w", err)
 	}
@@ -114,14 +180,14 @@ func seedWeapons(ctx context.Context, q storeq.Querier, seedPath string) error {
 		if count > 0 {
 			return nil
 		}
-		return fmt.Errorf("weapons table is empty and its seed file is unreadable (the catalog would be empty): %w", err)
+		return fmt.Errorf("the seed character has no weapons and their seed file is unreadable: %w", err)
 	}
 	if err != nil {
 		return err
 	}
 	if count > 0 {
 		for _, w := range weapons {
-			if err := reconcileName(ctx, q, weaponName, w.ID, w.Name.Trimmed()); err != nil {
+			if err := reconcileName(ctx, q, weaponName, owner, w.ID, w.Name.Trimmed()); err != nil {
 				return fmt.Errorf("weapon %q: %w", w.ID, err)
 			}
 		}
@@ -136,7 +202,7 @@ func seedWeapons(ctx context.Context, q storeq.Querier, seedPath string) error {
 			return fmt.Errorf("weapon %q: %w", w.ID, err)
 		}
 		if err := q.InsertWeapon(ctx, storeq.InsertWeaponParams{
-			ID: w.ID, Position: int64(i), Name: key, DamageSm: w.DamageSM, DamageL: w.DamageL,
+			CharacterID: owner, ID: w.ID, Position: int64(i), Name: key, DamageSm: w.DamageSM, DamageL: w.DamageL,
 			MagicToHit: int64(w.MagicToHit), MagicDamage: int64(w.MagicDamage), Kind: w.Kind,
 			TwoHanded: boolInt(w.TwoHanded), AmmoKind: w.AmmoKind,
 		}); err != nil {
@@ -146,8 +212,8 @@ func seedWeapons(ctx context.Context, q storeq.Querier, seedPath string) error {
 	return nil
 }
 
-func seedItems(ctx context.Context, q storeq.Querier, seedPath string) error {
-	count, err := q.CountItems(ctx)
+func seedItems(ctx context.Context, q storeq.Querier, owner int64, seedPath string) error {
+	count, err := q.CountItems(ctx, owner)
 	if err != nil {
 		return fmt.Errorf("count items: %w", err)
 	}
@@ -156,14 +222,14 @@ func seedItems(ctx context.Context, q storeq.Querier, seedPath string) error {
 		if count > 0 {
 			return nil
 		}
-		return fmt.Errorf("items table is empty and its seed file is unreadable (the catalog would be empty): %w", err)
+		return fmt.Errorf("the seed character has no items and their seed file is unreadable: %w", err)
 	}
 	if err != nil {
 		return err
 	}
 	if count > 0 {
 		for _, it := range items {
-			if err := reconcileName(ctx, q, itemName, it.ID, it.Name.Trimmed()); err != nil {
+			if err := reconcileName(ctx, q, itemName, owner, it.ID, it.Name.Trimmed()); err != nil {
 				return fmt.Errorf("item %q: %w", it.ID, err)
 			}
 		}
@@ -178,7 +244,7 @@ func seedItems(ctx context.Context, q storeq.Querier, seedPath string) error {
 			return fmt.Errorf("item %q: %w", it.ID, err)
 		}
 		if err := q.InsertItem(ctx, storeq.InsertItemParams{
-			ID: it.ID, Position: int64(i), Name: key, Type: it.Type, Behaviour: it.Behaviour,
+			CharacterID: owner, ID: it.ID, Position: int64(i), Name: key, Type: it.Type, Behaviour: it.Behaviour,
 			MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind, Count: int64(it.Count),
 			MaxCount: int64(it.Max()), EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes,
 			Powers: it.PowersJSON,
@@ -190,18 +256,19 @@ func seedItems(ctx context.Context, q storeq.Querier, seedPath string) error {
 }
 
 // seededName says where a weapon's or an item's name key is read and the kind its seed offers
-// are recorded under (seeded_name_languages).
+// are recorded under (seeded_name_languages). Only the seed character's weapons and items are
+// seeded, so an offer is recorded by kind and id.
 type seededName struct {
 	kind    string
-	nameKey func(ctx context.Context, q storeq.Querier, id string) (int64, error)
+	nameKey func(ctx context.Context, q storeq.Querier, owner int64, id string) (int64, error)
 }
 
 var (
-	weaponName = seededName{kind: "weapon", nameKey: func(ctx context.Context, q storeq.Querier, id string) (int64, error) {
-		return q.WeaponNameKey(ctx, id)
+	weaponName = seededName{kind: "weapon", nameKey: func(ctx context.Context, q storeq.Querier, owner int64, id string) (int64, error) {
+		return q.WeaponNameKey(ctx, storeq.WeaponNameKeyParams{CharacterID: owner, ID: id})
 	}}
-	itemName = seededName{kind: "item", nameKey: func(ctx context.Context, q storeq.Querier, id string) (int64, error) {
-		return q.ItemNameKey(ctx, id)
+	itemName = seededName{kind: "item", nameKey: func(ctx context.Context, q storeq.Querier, owner int64, id string) (int64, error) {
+		return q.ItemNameKey(ctx, storeq.ItemNameKeyParams{CharacterID: owner, ID: id})
 	}}
 )
 
@@ -235,8 +302,8 @@ func insertText(ctx context.Context, q storeq.Querier, key int64, lang, body str
 // player removed after it was given is not put back, a row the seed does not list is untouched,
 // an id the table no longer has is not added back (the player removed it), and no other field
 // changes. A second run writes nothing.
-func reconcileName(ctx context.Context, q storeq.Querier, n seededName, id string, seed localized.Text) error {
-	key, err := n.nameKey(ctx, q, id)
+func reconcileName(ctx context.Context, q storeq.Querier, n seededName, owner int64, id string, seed localized.Text) error {
+	key, err := n.nameKey(ctx, q, owner, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
@@ -297,38 +364,60 @@ func recordOffers(ctx context.Context, q storeq.Querier, n seededName, id string
 	return nil
 }
 
-// seedSkills reconciles the proficiencies and bard_skills tables with skills.json by id: a new id
-// is inserted, an existing one takes the seed's ability, modifier, percentage and position (a
-// corrected modifier, a percentage raised at level-up). Rows the seed no longer lists are kept,
-// nothing is deleted, and a second run changes nothing. A missing file is an error only while
-// both tables are empty.
-func seedSkills(ctx context.Context, q storeq.Querier, seedPath string) error {
+// seedSkills reconciles the seed character's proficiencies and bard skills with skills.json by
+// id (ADR 0014): a new id is inserted, an existing one takes the seed's ability, modifier,
+// percentage and position (a corrected modifier, a percentage raised at level-up). Rows the seed
+// no longer lists are kept, nothing is deleted, and a second run changes nothing. A missing file
+// is an error only while the character has no skill.
+func seedSkills(ctx context.Context, q storeq.Querier, owner int64, seedPath string) error {
 	seed, err := seedfile.ReadSkills(seedPath)
 	if errors.Is(err, seedfile.ErrUnreadable) {
-		count, cerr := q.CountSkills(ctx)
+		count, cerr := q.CountSkills(ctx, owner)
 		if cerr != nil {
 			return fmt.Errorf("count skills: %w", cerr)
 		}
 		if count > 0 {
 			return nil
 		}
-		return fmt.Errorf("skill tables are empty and their seed file is unreadable: %w", err)
+		return fmt.Errorf("the seed character has no skills and their seed file is unreadable: %w", err)
 	}
 	if err != nil {
 		return err
 	}
 	for i, p := range seed.Proficiencies {
 		if err := q.UpsertProficiency(ctx, storeq.UpsertProficiencyParams{
-			ID: p.ID, Position: int64(i), Ability: p.Ability, Modifier: int64(p.Modifier),
+			CharacterID: owner, ID: p.ID, Position: int64(i), Ability: p.Ability, Modifier: int64(p.Modifier),
 		}); err != nil {
 			return fmt.Errorf("upsert proficiency %q: %w", p.ID, err)
 		}
 	}
 	for i, b := range seed.BardSkills {
 		if err := q.UpsertBardSkill(ctx, storeq.UpsertBardSkillParams{
-			ID: b.ID, Position: int64(i), Percent: int64(b.Percent),
+			CharacterID: owner, ID: b.ID, Position: int64(i), Percent: int64(b.Percent),
 		}); err != nil {
 			return fmt.Errorf("upsert bard skill %q: %w", b.ID, err)
+		}
+	}
+	return nil
+}
+
+// seedSpellbook writes the spellbook seed as the seed character's spellbook, once: only while
+// that character has none, as its weapons and items (spells are then learned and removed in the
+// app, ADR 0030 step 20, never by the seed). keys were checked against the catalogue by the
+// caller (spellbookadpt.ReadSeed), so only catalogue spells are written.
+func seedSpellbook(ctx context.Context, q storeq.Querier, owner int64, keys []string) error {
+	count, err := q.CountSpellbookEntries(ctx, owner)
+	if err != nil {
+		return fmt.Errorf("count spellbook entries: %w", err)
+	}
+	if count > 0 {
+		return nil
+	}
+	for i, k := range keys {
+		if err := q.InsertSpellbookEntry(ctx, storeq.InsertSpellbookEntryParams{
+			CharacterID: owner, SpellKey: k, Position: int64(i),
+		}); err != nil {
+			return fmt.Errorf("insert spellbook entry %q: %w", k, err)
 		}
 	}
 	return nil

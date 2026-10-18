@@ -85,12 +85,12 @@ func (c snapCount) item() Item {
 // predates localized names (a plain string), that string is the fallback
 // body and the other languages the item has now are kept (ADR 0023 step
 // 11). An item that is gone has nothing to keep (ADR 0016 Consequences).
-func (s *service) keepCurrent(ctx context.Context, c snapCount) (Item, error) {
+func (s *service) keepCurrent(ctx context.Context, characterID int64, c snapCount) (Item, error) {
 	item := c.item()
 	if c.Item.Powers != nil && !c.Item.Name.Plain {
 		return item, nil
 	}
-	cur, err := s.dal.Get(ctx, c.ID)
+	cur, err := s.dal.Get(ctx, characterID, c.ID)
 	switch {
 	case errors.Is(err, ErrItemNotFound):
 		return item, nil
@@ -163,10 +163,10 @@ func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.
 // gone (a charges item its use removed) is inserted back whole when the
 // snapshot carries it; a state in which the item is gone (Absent or Removed)
 // deletes it. It runs inside the void's transaction (ctx carries
-// it). Items are not per character, so the character id is unused.
+// it). The restored item is the entry's character's.
 func (s *service) Restorers() map[string]actionlog.Restorer {
 	return map[string]actionlog.Restorer{
-		StateKeyItems: restoreFunc(func(ctx context.Context, _ int64, state json.RawMessage) error {
+		StateKeyItems: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
 			var counts []snapCount
 			if err := json.Unmarshal(state, &counts); err != nil {
 				return fmt.Errorf("decode items snapshot: %w", err)
@@ -183,24 +183,24 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 					// Gone in this state: an add's "before", a remove's
 					// "after", the "after" of a use that spent the last
 					// charge (written back by a redo, ADR 0019 step 1).
-					err = s.dal.Delete(ctx, c.ID)
+					err = s.dal.Delete(ctx, characterID, c.ID)
 				case c.Replace && c.Item != nil:
 					var item Item
-					if item, err = s.keepCurrent(ctx, c); err != nil {
+					if item, err = s.keepCurrent(ctx, characterID, c); err != nil {
 						break
 					}
-					err = s.dal.Update(ctx, item)
+					err = s.dal.Update(ctx, characterID, item)
 					if errors.Is(err, ErrItemNotFound) {
-						err = s.dal.Insert(ctx, item)
+						err = s.dal.Insert(ctx, characterID, item)
 					}
 				default:
 					// The item is inserted only when it is gone, so there
 					// are no stored powers to keep: a snapshot from before
 					// powers brings it back without them (ADR 0016
 					// Consequences).
-					err = s.dal.SetCount(ctx, c.ID, c.Count)
+					err = s.dal.SetCount(ctx, characterID, c.ID, c.Count)
 					if errors.Is(err, ErrItemNotFound) && c.Item != nil {
-						err = s.dal.Insert(ctx, c.item())
+						err = s.dal.Insert(ctx, characterID, c.item())
 					}
 				}
 				if err != nil {

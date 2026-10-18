@@ -9,12 +9,14 @@ import (
 )
 
 type Querier interface {
-	DeleteWeapon(ctx context.Context, id string) (int64, error)
-	GetWeapon(ctx context.Context, id string) (Weapon, error)
+	DeleteWeapon(ctx context.Context, arg DeleteWeaponParams) (int64, error)
+	GetWeapon(ctx context.Context, arg GetWeaponParams) (Weapon, error)
 	InsertWeapon(ctx context.Context, arg InsertWeaponParams) error
-	ListWeapons(ctx context.Context) ([]Weapon, error)
+	// Every query is one character's: weapons belong to a character (character_id). The selected
+	// columns are the whole row, so sqlc maps them to the Weapon model.
+	ListWeapons(ctx context.Context, characterID int64) ([]Weapon, error)
 	UpdateWeapon(ctx context.Context, arg UpdateWeaponParams) (int64, error)
-	WeaponNames(ctx context.Context) ([]LocalizedText, error)
+	WeaponNames(ctx context.Context, characterID int64) ([]LocalizedText, error)
 }
 
 var _ Querier = (*Queries)(nil)

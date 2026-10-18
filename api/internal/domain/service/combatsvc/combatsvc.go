@@ -39,7 +39,7 @@ type SVC interface {
 	// RollSpellToHit rolls a to-hit (no weapon, no damage, no crit) for a
 	// thrown spell; it logs nothing, the spell's own cast entry does.
 	RollSpellToHit(ctx context.Context, characterID int64, targetAC int) (*ToHitRoll, error)
-	ListWeapons(ctx context.Context) ([]Weapon, error)
+	ListWeapons(ctx context.Context, characterID int64) ([]Weapon, error)
 	// GetAttackForm returns the attack form's last choices, resolved
 	// against the catalog, with the preview of the effective THAC0.
 	GetAttackForm(ctx context.Context, characterID int64) (*AttackFormView, error)
@@ -75,8 +75,8 @@ type Dice interface {
 // Weapons is the weapons-catalog port.
 type Weapons interface {
 	// Get returns the weapon, or an error wrapping ErrWeaponNotFound.
-	Get(ctx context.Context, id string) (Weapon, error)
-	List(ctx context.Context) ([]Weapon, error)
+	Get(ctx context.Context, characterID int64, id string) (Weapon, error)
+	List(ctx context.Context, characterID int64) ([]Weapon, error)
 }
 
 // CritStore stores the house crit table. List returns no rows until one was
@@ -89,8 +89,8 @@ type CritStore interface {
 // Items spends ammunition (itemsvc) and lists the items the attack form
 // offers as ammunition. Use must join the ctx transaction.
 type Items interface {
-	Use(ctx context.Context, itemID string) (itemsvc.Item, error)
-	List(ctx context.Context) ([]itemsvc.Item, error)
+	Use(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error)
+	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
 }
 
 // FormStore keeps the attack form of each character. Get's ok is false when

@@ -27,9 +27,9 @@ func TestUse_ReturnsUpdatedItem(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, err := itemsvc.NewWithConfig(itemsvc.DefaultConfig(), dal, deps(t).Deps)
 	require.NoError(t, err)
-	dal.EXPECT().Decrement(mock.Anything, "wand").Return(itemsvc.Item{ID: "wand", Count: 3}, nil)
+	dal.EXPECT().Decrement(mock.Anything, int64(1), "wand").Return(itemsvc.Item{ID: "wand", Count: 3}, nil)
 
-	got, err := svc.Use(context.Background(), "wand")
+	got, err := svc.Use(context.Background(), 1, "wand")
 	require.NoError(t, err)
 	assert.Equal(t, 3, got.Count)
 }
@@ -38,8 +38,8 @@ func TestUse_PropagatesSentinels(t *testing.T) {
 	for _, target := range []error{itemsvc.ErrItemEmpty, itemsvc.ErrItemNotFound} {
 		dal := mocks.NewMockDAL(t)
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
-		dal.EXPECT().Decrement(mock.Anything, "x").Return(itemsvc.Item{}, fmt.Errorf("%w: x", target))
-		_, err := svc.Use(context.Background(), "x")
+		dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{}, fmt.Errorf("%w: x", target))
+		_, err := svc.Use(context.Background(), 1, "x")
 		assert.True(t, errors.Is(err, target))
 	}
 }
@@ -47,10 +47,10 @@ func TestUse_PropagatesSentinels(t *testing.T) {
 func TestResetDaily_ResetsThenLists(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().ResetDaily(mock.Anything).Return(nil)
-	dal.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Count: 1}}, nil)
+	dal.EXPECT().ResetDaily(mock.Anything, int64(1)).Return(nil)
+	dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{{ID: "gem", Count: 1}}, nil)
 
-	got, err := svc.ResetDaily(context.Background())
+	got, err := svc.ResetDaily(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, []itemsvc.Item{{ID: "gem", Count: 1}}, got)
 }
@@ -58,8 +58,8 @@ func TestResetDaily_ResetsThenLists(t *testing.T) {
 func TestResetDaily_ResetErrorSkipsList(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().ResetDaily(mock.Anything).Return(errors.New("boom"))
-	_, err := svc.ResetDaily(context.Background())
+	dal.EXPECT().ResetDaily(mock.Anything, int64(1)).Return(errors.New("boom"))
+	_, err := svc.ResetDaily(context.Background(), 1)
 	require.Error(t, err)
 }
 
@@ -98,11 +98,11 @@ func TestUse_RemovesChargesItemAtZeroOnly(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dal := mocks.NewMockDAL(t) // Delete fails the test unless expected
 			svc, _ := itemsvc.New(dal, deps(t).Deps)
-			dal.EXPECT().Decrement(mock.Anything, "x").Return(tt.item, nil)
+			dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(tt.item, nil)
 			if tt.removed {
-				dal.EXPECT().Delete(mock.Anything, "x").Return(nil).Once()
+				dal.EXPECT().Delete(mock.Anything, int64(1), "x").Return(nil).Once()
 			}
-			got, err := svc.Use(context.Background(), "x")
+			got, err := svc.Use(context.Background(), 1, "x")
 			require.NoError(t, err)
 			assert.Equal(t, tt.removed, got.Removed())
 			assert.Equal(t, tt.item.Count, got.Count)
@@ -113,9 +113,9 @@ func TestUse_RemovesChargesItemAtZeroOnly(t *testing.T) {
 func TestUse_RemoveErrorFails(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().Decrement(mock.Anything, "x").Return(itemsvc.Item{ID: "x", Behaviour: itemsvc.BehaviourCharges}, nil)
-	dal.EXPECT().Delete(mock.Anything, "x").Return(errors.New("boom"))
-	_, err := svc.Use(context.Background(), "x")
+	dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Behaviour: itemsvc.BehaviourCharges}, nil)
+	dal.EXPECT().Delete(mock.Anything, int64(1), "x").Return(errors.New("boom"))
+	_, err := svc.Use(context.Background(), 1, "x")
 	require.Error(t, err)
 }
 
@@ -150,7 +150,7 @@ func TestRestorers_WriteTheBeforeCountsBack(t *testing.T) {
 	snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Count: 0})
 	require.NoError(t, err)
 
-	dal.EXPECT().SetCount(mock.Anything, "arrows_plus3", 1).Return(nil).Once()
+	dal.EXPECT().SetCount(mock.Anything, int64(1), "arrows_plus3", 1).Return(nil).Once()
 	r := svc.Restorers()[itemsvc.StateKeyItems]
 	require.NotNil(t, r)
 	require.NoError(t, r.Restore(context.Background(), 1, snap.Before))
@@ -163,10 +163,10 @@ func TestRestorers_PutBackARemovedItem(t *testing.T) {
 	snap, err := itemsvc.UseSnapshot(wand)
 	require.NoError(t, err)
 
-	dal.EXPECT().SetCount(mock.Anything, "wand_lightning", 1).Return(fmt.Errorf("%w: wand_lightning", itemsvc.ErrItemNotFound)).Once()
+	dal.EXPECT().SetCount(mock.Anything, int64(1), "wand_lightning", 1).Return(fmt.Errorf("%w: wand_lightning", itemsvc.ErrItemNotFound)).Once()
 	back := wand
 	back.Count = 1
-	dal.EXPECT().Insert(mock.Anything, back).Return(nil).Once()
+	dal.EXPECT().Insert(mock.Anything, int64(1), back).Return(nil).Once()
 	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, snap.Before))
 }
 
@@ -174,7 +174,7 @@ func TestRestorers_PutBackARemovedItem(t *testing.T) {
 func TestRestorers_MissingItemWithoutDataFails(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().SetCount(mock.Anything, "x", 2).Return(fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
+	dal.EXPECT().SetCount(mock.Anything, int64(1), "x", 2).Return(fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
 	err := svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, json.RawMessage(`[{"id":"x","count":2}]`))
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
@@ -210,7 +210,7 @@ func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	f := deps(t)
 	svc, err := itemsvc.New(dal, f.Deps)
 	require.NoError(t, err)
-	dal.EXPECT().Decrement(mock.Anything, "wand_lightning").Return(itemsvc.Item{
+	dal.EXPECT().Decrement(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{
 		ID: "wand_lightning", Name: localized.Of("Wand of lightning"), Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4,
 		EffectDice: "6d6", EffectSave: "rod_staff_wand",
 	}, nil)
@@ -242,7 +242,7 @@ func TestUseItem_NoDiceRollsNothing(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t) // the dice mock fails the test on any call
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Decrement(mock.Anything, "gem").Return(itemsvc.Item{ID: "gem", Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 0, MaxCount: 1}, nil)
+	dal.EXPECT().Decrement(mock.Anything, int64(1), "gem").Return(itemsvc.Item{ID: "gem", Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 0, MaxCount: 1}, nil)
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
 
 	res, err := svc.UseItem(context.Background(), 1, "gem")
@@ -256,7 +256,7 @@ func TestUseItem_EmptyAndUnknownLogNothing(t *testing.T) {
 	for _, target := range []error{itemsvc.ErrItemEmpty, itemsvc.ErrItemNotFound} {
 		dal := mocks.NewMockDAL(t)
 		svc, _ := itemsvc.New(dal, deps(t).Deps) // log and dice mocks fail on any call
-		dal.EXPECT().Decrement(mock.Anything, "x").Return(itemsvc.Item{}, fmt.Errorf("%w: x", target))
+		dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{}, fmt.Errorf("%w: x", target))
 		_, err := svc.UseItem(context.Background(), 1, "x")
 		assert.True(t, errors.Is(err, target))
 	}
@@ -267,7 +267,7 @@ func TestUseItem_SpendsStockAmmo(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Decrement(mock.Anything, "arrows").Return(itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), Behaviour: itemsvc.BehaviourStock, AmmoKind: "arrow", Count: 0}, nil)
+	dal.EXPECT().Decrement(mock.Anything, int64(1), "arrows").Return(itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), Behaviour: itemsvc.BehaviourStock, AmmoKind: "arrow", Count: 0}, nil)
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(3), nil)
 	res, err := svc.UseItem(context.Background(), 1, "arrows")
 	require.NoError(t, err)
@@ -281,8 +281,8 @@ func TestUseItem_LastChargeRemovesTheItem(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Decrement(mock.Anything, "wand_lightning").Return(wand, nil)
-	dal.EXPECT().Delete(mock.Anything, "wand_lightning").Return(nil).Once()
+	dal.EXPECT().Decrement(mock.Anything, int64(1), "wand_lightning").Return(wand, nil)
+	dal.EXPECT().Delete(mock.Anything, int64(1), "wand_lightning").Return(nil).Once()
 	for _, v := range []int{6, 5, 4, 3, 2, 1} {
 		f.dice.EXPECT().RollDie(6).Return(v).Once()
 	}
@@ -304,7 +304,7 @@ func TestRestock_AddsToStockAndLogs(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Increment(mock.Anything, "arrows_plus3", 1).Return(itemsvc.Item{
+	dal.EXPECT().Increment(mock.Anything, int64(1), "arrows_plus3", 1).Return(itemsvc.Item{
 		ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 1,
 	}, nil).Once()
 	var got actionlog.NewEntry
@@ -330,7 +330,7 @@ func TestRestock_RejectsChargesAndDaily(t *testing.T) {
 		t.Run(string(b), func(t *testing.T) {
 			dal := mocks.NewMockDAL(t)
 			svc, _ := itemsvc.New(dal, deps(t).Deps) // log mock fails on any call
-			dal.EXPECT().Increment(mock.Anything, "x", 1).Return(itemsvc.Item{ID: "x", Behaviour: b, Count: 2}, nil)
+			dal.EXPECT().Increment(mock.Anything, int64(1), "x", 1).Return(itemsvc.Item{ID: "x", Behaviour: b, Count: 2}, nil)
 			_, err := svc.Restock(context.Background(), 1, "x", 1)
 			assert.ErrorIs(t, err, itemsvc.ErrNotRestockable)
 		})
@@ -349,7 +349,7 @@ func TestRestock_RejectsOutOfRangeCounts(t *testing.T) {
 func TestRestock_UnknownItem(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().Increment(mock.Anything, "nope", 2).Return(itemsvc.Item{}, fmt.Errorf("%w: nope", itemsvc.ErrItemNotFound))
+	dal.EXPECT().Increment(mock.Anything, int64(1), "nope", 2).Return(itemsvc.Item{}, fmt.Errorf("%w: nope", itemsvc.ErrItemNotFound))
 	_, err := svc.Restock(context.Background(), 1, "nope", 2)
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }

@@ -17,7 +17,7 @@ import (
 
 func TestItems_ListWireShape(t *testing.T) {
 	h, m := newRouter(t)
-	m.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{
+	m.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{{
 		ID: "arrows_plus1", Position: 0, Name: localized.Of("Arrows +1"), Type: "arrow", Behaviour: itemsvc.BehaviourStock,
 		MagicBonus: 1, AmmoKind: "arrow", Count: 18, MaxCount: 18,
 	}}, nil)
@@ -129,7 +129,7 @@ func TestItems_PowersInABodyAreIgnored(t *testing.T) {
 	rec = do(h, "POST", "/api/items", `{"name":{"en":"Gem"},"behaviour":"daily","count":1,"maxCount":1,"powers":[{"id":"x"}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	m.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{
+	m.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{{
 		ID: "power_gem_dispel", Name: localized.Of("Power Gem"), Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1,
 		Powers: []itemsvc.Power{{ID: "thunder_hammer", MinStr: new(18), Effects: buffsvc.BuffEffects{
 			WeaponBuff: new(5), Multiplier: new(2.0), WeaponKind: buffsvc.WeaponMelee,

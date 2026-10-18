@@ -15,7 +15,9 @@ type SVC interface {
 	domain.Service
 	GetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
-	Search(ctx context.Context, f Filter, p PageRequest) (Page, error)
+	// Search pages the catalogue; Filter.Mine keeps the spells of the
+	// character's spellbook.
+	Search(ctx context.Context, characterID int64, f Filter, p PageRequest) (Page, error)
 	// Get returns the catalogue spell with unique key id, every text included,
 	// or ErrSpellNotFound.
 	Get(ctx context.Context, id string) (Spell, error)
@@ -43,10 +45,11 @@ type Reader interface {
 	Details(ctx context.Context, ids []string) ([]Spell, error)
 }
 
-// Spellbook is the Bard's spellbook (the "Mine" filter).
+// Spellbook is each character's spellbook (the "Mine" filter).
 type Spellbook interface {
-	// Contains reports whether the spell with unique key id is in the book.
-	Contains(id string) bool
+	// SpellKeys is the catalogue keys of the spells in the character's
+	// spellbook.
+	SpellKeys(ctx context.Context, characterID int64) ([]string, error)
 }
 
 type service struct {

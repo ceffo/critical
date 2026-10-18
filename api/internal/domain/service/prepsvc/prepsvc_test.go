@@ -61,12 +61,10 @@ func newFixture(t *testing.T) *fixture {
 	f := &fixture{slots: mocks.NewMockSlots(t), log: mocks.NewMockLog(t), items: mocks.NewMockItems(t), tx: &passTx{}}
 
 	b := mocks.NewMockSpellbook(t)
-	b.EXPECT().Get(mock.Anything).RunAndReturn(func(id string) (prepsvc.SpellbookEntry, bool) {
-		e, ok := book[id]
-		return e, ok
-	}).Maybe()
-	b.EXPECT().All().RunAndReturn(func() []prepsvc.SpellbookEntry {
-		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"], book["wall_of_ice"], book["cloudkill"], book["enlarge"], book["slow"], book["mirror_image"]}
+	// The spellbook is the character's own: it is read for character 1, the
+	// one every test prepares for.
+	b.EXPECT().All(mock.Anything, int64(1)).RunAndReturn(func(context.Context, int64) ([]prepsvc.SpellbookEntry, error) {
+		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"], book["wall_of_ice"], book["cloudkill"], book["enlarge"], book["slow"], book["mirror_image"], book["magic_missile"], book["identify"]}, nil
 	}).Maybe()
 
 	limits := mocks.NewMockLimits(t)
@@ -90,11 +88,11 @@ func TestNew_NilDeps(t *testing.T) {
 
 func TestInfo(t *testing.T) {
 	f := newFixture(t)
-	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 3}, {3, 3}, {4, 3}, {5, 2}}, info.Limits)
-	require.Len(t, info.Spellbook, 9)
+	require.Len(t, info.Spellbook, 11)
 	assert.Equal(t, prepsvc.CastInputs{}, info.Spellbook[0].Cast, "alarm asks nothing")
 }
 
@@ -104,7 +102,7 @@ func TestInfo(t *testing.T) {
 // (Wall of Ice's ice plane: none).
 func TestInfo_ServesTheModes(t *testing.T) {
 	f := newFixture(t)
-	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	wall := info.Spellbook[4]
@@ -125,7 +123,7 @@ func TestInfo_ServesTheModes(t *testing.T) {
 // none for a spell without one.
 func TestInfo_ServesTheExposure(t *testing.T) {
 	f := newFixture(t)
-	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	cloud := info.Spellbook[5]
@@ -142,7 +140,7 @@ func TestInfo_ServesTheExposure(t *testing.T) {
 // spell effects data, never from the spell's id.
 func TestInfo_CastInputsFromTheCatalog(t *testing.T) {
 	f := newFixture(t)
-	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, prepsvc.CastInputs{ConsumeItemType: "gem", AttackRoll: true}, info.Spellbook[2].Cast)
@@ -155,7 +153,7 @@ func TestInfo_CastInputsFromTheCatalog(t *testing.T) {
 // Image) and a spell that adds no buff (Fireball, Alarm) offer none.
 func TestInfo_ServesTheTargetChoice(t *testing.T) {
 	f := newFixture(t)
-	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	byID := map[string]*spelleffectsvc.TargetChoice{}
@@ -174,7 +172,7 @@ func TestInfo_ServesTheTargetChoice(t *testing.T) {
 // that rolls no damage.
 func TestInfo_DamageAtTheCharacterLevel(t *testing.T) {
 	f := newFixture(t)
-	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Nil(t, info.Spellbook[0].Damage, "alarm rolls no damage")
@@ -190,7 +188,7 @@ func TestInfo_DamageAtTheCharacterLevel(t *testing.T) {
 // consumes nothing lists none, whatever the inventory holds.
 func TestInfo_ServesTheItemsTheSpellCanSpend(t *testing.T) {
 	f := newFixture(t)
-	f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{
 		{ID: "ruby", Name: localized.Of("Ruby"), Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2},
 		{ID: "opal", Name: localized.Of("Opal"), Type: "Gem", Behaviour: itemsvc.BehaviourCharges, Count: 1},
 		{ID: "spent", Name: localized.Of("Spent"), Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 0},
@@ -209,7 +207,7 @@ func TestInfo_ServesTheItemsTheSpellCanSpend(t *testing.T) {
 
 func TestInfo_ItemsListFailure(t *testing.T) {
 	f := newFixture(t)
-	f.items.EXPECT().List(mock.Anything).Return(nil, errors.New("boom"))
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, errors.New("boom"))
 	_, err := f.svc.Info(context.Background(), 1)
 	require.Error(t, err)
 }

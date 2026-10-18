@@ -25,8 +25,8 @@ func (f *fixture) withForm(stored *combatsvc.AttackForm, weapons []combatsvc.Wea
 	} else {
 		f.forms.EXPECT().Get(mock.Anything, charID).Return(*stored, true, nil).Once()
 	}
-	f.weapons.EXPECT().List(mock.Anything).Return(weapons, nil)
-	f.items.EXPECT().List(mock.Anything).Return(items, nil).Maybe()
+	f.weapons.EXPECT().List(mock.Anything, charID).Return(weapons, nil)
+	f.items.EXPECT().List(mock.Anything, charID).Return(items, nil).Maybe()
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil).Maybe()
 }

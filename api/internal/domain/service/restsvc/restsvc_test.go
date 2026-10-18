@@ -64,8 +64,8 @@ func TestLongRest_ResetsBothInOneLoggedTransaction(t *testing.T) {
 	after := []spellsvc.SpellSlot{{Level: 1, SpellID: "sleep"}, {Level: 3, SpellID: "haste"}}
 	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(before, nil)
 	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(after, nil)
-	f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 0}, {ID: "arrows", Count: 9}}, nil)
-	f.items.EXPECT().ResetDaily(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 1}, {ID: "arrows", Count: 9}}, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 0}, {ID: "arrows", Count: 9}}, nil)
+	f.items.EXPECT().ResetDaily(mock.Anything, int64(1)).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 1}, {ID: "arrows", Count: 9}}, nil)
 
 	got, err := f.svc.LongRest(context.Background(), 1)
 	require.NoError(t, err)
@@ -86,10 +86,10 @@ func TestLongRest_ResetsBothInOneLoggedTransaction(t *testing.T) {
 func TestLongRest_ItemFailureFailsTheRest(t *testing.T) {
 	f := newFixture(t)
 	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(nil, nil)
-	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(nil, nil)
 	boom := errors.New("boom")
-	f.items.EXPECT().ResetDaily(mock.Anything).Return(nil, boom)
+	f.items.EXPECT().ResetDaily(mock.Anything, int64(1)).Return(nil, boom)
 
 	_, err := f.svc.LongRest(context.Background(), 1)
 	require.ErrorIs(t, err, boom)
@@ -99,7 +99,7 @@ func TestLongRest_ItemFailureFailsTheRest(t *testing.T) {
 func TestLongRest_SlotFailureSkipsItems(t *testing.T) {
 	f := newFixture(t)
 	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(nil, nil)
-	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	boom := errors.New("boom")
 	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(nil, boom)
 

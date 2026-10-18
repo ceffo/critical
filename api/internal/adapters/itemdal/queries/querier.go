@@ -9,14 +9,16 @@ import (
 )
 
 type Querier interface {
-	DecrementItem(ctx context.Context, id string) (Item, error)
-	DeleteItem(ctx context.Context, id string) (int64, error)
-	GetItem(ctx context.Context, id string) (Item, error)
+	DecrementItem(ctx context.Context, arg DecrementItemParams) (Item, error)
+	DeleteItem(ctx context.Context, arg DeleteItemParams) (int64, error)
+	GetItem(ctx context.Context, arg GetItemParams) (Item, error)
 	IncrementItem(ctx context.Context, arg IncrementItemParams) (Item, error)
 	InsertItem(ctx context.Context, arg InsertItemParams) error
-	ItemNames(ctx context.Context) ([]LocalizedText, error)
-	ListItems(ctx context.Context) ([]Item, error)
-	ResetDailyItems(ctx context.Context) error
+	ItemNames(ctx context.Context, characterID int64) ([]LocalizedText, error)
+	// Every query is one character's: items belong to a character (character_id). The selected
+	// columns are the whole row, so sqlc maps them to the Item model.
+	ListItems(ctx context.Context, characterID int64) ([]Item, error)
+	ResetDailyItems(ctx context.Context, characterID int64) error
 	SetItemCount(ctx context.Context, arg SetItemCountParams) (int64, error)
 	UpdateItem(ctx context.Context, arg UpdateItemParams) (int64, error)
 }

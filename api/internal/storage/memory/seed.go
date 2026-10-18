@@ -19,39 +19,54 @@ import (
 // Seed loads the seed files of seedsDir (seedfile, checked by the same rules
 // as the database's seed) into the store, in one transaction. The store
 // starts empty, so this is the database seed's first run: the character (a
-// missing character file is ignored), the weapons and items (a missing file
-// is an error: the catalog would be empty) and the skills.
-func (s *Store) Seed(ctx context.Context, seedsDir string) error {
+// missing character file is ignored), then its starting set, as the seed
+// character's: the weapons and items (a missing file is an error: its sheet
+// would be empty), the skills and the spellbook (spellbook: the spellbook
+// seed's catalogue keys in order, checked against the catalogue by the
+// caller). Without a character file nothing owns the starting set, so it is
+// not loaded.
+func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string) error {
 	return s.InTx(ctx, func(context.Context) error {
 		t := s.t
-		if err := t.seedCharacter(seedfile.Path(seedsDir, seedfile.CharacterFile)); err != nil {
+		owner, ok, err := t.seedCharacter(seedfile.Path(seedsDir, seedfile.CharacterFile))
+		if err != nil {
 			return fmt.Errorf("seed character: %w", err)
 		}
-		if err := t.seedWeapons(seedfile.Path(seedsDir, seedfile.WeaponsFile)); err != nil {
+		if !ok {
+			return nil
+		}
+		if err := t.seedWeapons(owner, seedfile.Path(seedsDir, seedfile.WeaponsFile)); err != nil {
 			return fmt.Errorf("seed weapons: %w", err)
 		}
-		if err := t.seedItems(seedfile.Path(seedsDir, seedfile.ItemsFile)); err != nil {
+		if err := t.seedItems(owner, seedfile.Path(seedsDir, seedfile.ItemsFile)); err != nil {
 			return fmt.Errorf("seed items: %w", err)
 		}
-		if err := t.seedSkills(seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
+		if err := t.seedSkills(owner, seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
 			return fmt.Errorf("seed skills: %w", err)
+		}
+		if len(t.spellbooks[owner]) == 0 { // once, while it has none (as the database's seed)
+			t.spellbooks[owner] = append([]string{}, spellbook...)
 		}
 		return nil
 	})
 }
 
-func (t *tables) seedCharacter(path string) error {
+// seedCharacter inserts the character of the character file into the empty
+// store and returns its id; ok is false without a character file, or when
+// the store already holds characters (seeded already: the starting set is
+// applied once).
+func (t *tables) seedCharacter(path string) (id int64, ok bool, err error) {
 	if len(t.characters) > 0 {
-		return nil
+		return 0, false, nil
 	}
 	c, ok, err := seedfile.ReadCharacter(path)
 	if err != nil || !ok {
-		return err
+		return 0, false, err
 	}
 	// The slots are read as the spell slot adapter reads its stored list.
 	encoded, err := c.SlotsJSON()
 	if err != nil {
-		return err
+		return 0, false, err
 	}
 	var raw []struct {
 		Level             int    `json:"level"`
@@ -61,7 +76,7 @@ func (t *tables) seedCharacter(path string) error {
 		Extra             bool   `json:"extra"`
 	}
 	if err := json.Unmarshal([]byte(encoded), &raw); err != nil {
-		return fmt.Errorf("parse slots: %w", err)
+		return 0, false, fmt.Errorf("parse slots: %w", err)
 	}
 	slots := make([]spellsvc.SpellSlot, len(raw))
 	for i, r := range raw {
@@ -69,7 +84,7 @@ func (t *tables) seedCharacter(path string) error {
 			Level: r.Level, SpellID: r.PreparedSpellID, PreparedSpellName: r.PreparedSpellName, Used: r.Used, Extra: r.Extra,
 		}
 	}
-	id := nextID(&t.characterSeq)
+	id = nextID(&t.characterSeq)
 	t.characters[id] = charactersvc.Character{
 		ID: id, Name: c.Name, Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, Thac0Base: c.Thac0Base, Level: c.Level, XPTotal: c.XPTotal,
@@ -80,16 +95,16 @@ func (t *tables) seedCharacter(path string) error {
 	t.slots[id] = slots
 	t.buffs[id] = []buffsvc.BuffEffect{}
 	t.rounds[id] = roundState{}
-	return nil
+	return id, true, nil
 }
 
-func (t *tables) seedWeapons(path string) error {
+func (t *tables) seedWeapons(owner int64, path string) error {
 	weapons, err := seedfile.ReadWeapons(path)
 	if err != nil {
 		return err
 	}
 	for i, w := range weapons {
-		t.weapons[w.ID] = storedWeapon{row: nextID(&t.rowSeq), Weapon: weaponsvc.Weapon{
+		t.weapons[owned{owner, w.ID}] = storedWeapon{row: nextID(&t.rowSeq), Weapon: weaponsvc.Weapon{
 			ID: w.ID, Position: i, Name: stored(w.Name.Trimmed()), DamageSM: w.DamageSM, DamageL: w.DamageL,
 			MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: w.Kind, TwoHanded: w.TwoHanded,
 			AmmoKind: w.AmmoKind,
@@ -98,13 +113,13 @@ func (t *tables) seedWeapons(path string) error {
 	return nil
 }
 
-func (t *tables) seedItems(path string) error {
+func (t *tables) seedItems(owner int64, path string) error {
 	items, err := seedfile.ReadItems(path)
 	if err != nil {
 		return err
 	}
 	for i, it := range items {
-		t.items[it.ID] = storedItem{row: nextID(&t.rowSeq), powers: it.PowersJSON, Item: itemsvc.Item{
+		t.items[owned{owner, it.ID}] = storedItem{row: nextID(&t.rowSeq), powers: it.PowersJSON, Item: itemsvc.Item{
 			ID: it.ID, Position: i, Name: stored(it.Name.Trimmed()), Type: it.Type,
 			Behaviour: itemsvc.Behaviour(it.Behaviour), MagicBonus: it.MagicBonus, AmmoKind: it.AmmoKind,
 			Count: it.Count, MaxCount: it.Max(), EffectDice: it.EffectDice, EffectSave: it.EffectSave,
@@ -114,19 +129,20 @@ func (t *tables) seedItems(path string) error {
 	return nil
 }
 
-func (t *tables) seedSkills(path string) error {
+func (t *tables) seedSkills(owner int64, path string) error {
 	seed, err := seedfile.ReadSkills(path)
 	if err != nil {
 		return err
 	}
-	t.proficiencies = make([]skillsvc.ProficiencyDef, len(seed.Proficiencies))
+	profs := make([]skillsvc.ProficiencyDef, len(seed.Proficiencies))
 	for i, p := range seed.Proficiencies {
-		t.proficiencies[i] = skillsvc.ProficiencyDef{ID: p.ID, Ability: skillsvc.Ability(p.Ability), Modifier: p.Modifier}
+		profs[i] = skillsvc.ProficiencyDef{ID: p.ID, Ability: skillsvc.Ability(p.Ability), Modifier: p.Modifier}
 	}
-	t.bardSkills = make([]skillsvc.BardSkillDef, len(seed.BardSkills))
+	skills := make([]skillsvc.BardSkillDef, len(seed.BardSkills))
 	for i, b := range seed.BardSkills {
-		t.bardSkills[i] = skillsvc.BardSkillDef{ID: b.ID, Percent: b.Percent}
+		skills[i] = skillsvc.BardSkillDef{ID: b.ID, Percent: b.Percent}
 	}
+	t.proficiencies[owner], t.bardSkills[owner] = profs, skills
 	return nil
 }
 

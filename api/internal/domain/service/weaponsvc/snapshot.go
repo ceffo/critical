@@ -78,10 +78,11 @@ func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.
 }
 
 // Restorers writes a weapons snapshot back (registered for the
-// StateKeyWeapons family). It runs inside the void's transaction.
+// StateKeyWeapons family). It runs inside the void's transaction and
+// writes the entry's character's weapon.
 func (s *service) Restorers() map[string]actionlog.Restorer {
 	return map[string]actionlog.Restorer{
-		StateKeyWeapons: restoreFunc(func(ctx context.Context, _ int64, state json.RawMessage) error {
+		StateKeyWeapons: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
 			var c snapWeapon
 			if err := json.Unmarshal(state, &c); err != nil {
 				return fmt.Errorf("decode weapons snapshot: %w", err)
@@ -91,15 +92,15 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 			}
 			var err error
 			if c.Absent {
-				err = s.dal.Delete(ctx, c.ID)
+				err = s.dal.Delete(ctx, characterID, c.ID)
 			} else {
 				var w Weapon
-				if w, err = s.restored(ctx, c); err != nil {
+				if w, err = s.restored(ctx, characterID, c); err != nil {
 					return err
 				}
-				err = s.dal.Update(ctx, w)
+				err = s.dal.Update(ctx, characterID, w)
 				if errors.Is(err, ErrWeaponNotFound) {
-					err = s.dal.Insert(ctx, w)
+					err = s.dal.Insert(ctx, characterID, w)
 				}
 			}
 			if err != nil {
@@ -113,12 +114,12 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 // restored is the weapon a snapshot writes back. A snapshot taken before
 // names were localized (a plain string) replaces the fallback body only and
 // keeps the other languages the weapon has now (ADR 0023 step 11).
-func (s *service) restored(ctx context.Context, c snapWeapon) (Weapon, error) {
+func (s *service) restored(ctx context.Context, characterID int64, c snapWeapon) (Weapon, error) {
 	w := c.weapon()
 	if !c.Name.Plain {
 		return w, nil
 	}
-	cur, err := s.dal.Get(ctx, c.ID)
+	cur, err := s.dal.Get(ctx, characterID, c.ID)
 	switch {
 	case errors.Is(err, ErrWeaponNotFound):
 		return w, nil

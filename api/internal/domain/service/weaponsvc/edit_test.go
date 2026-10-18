@@ -83,12 +83,12 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := weaponsvc.New(dal, f.Deps)
-	dal.EXPECT().List(mock.Anything).Return([]weaponsvc.Weapon{{ID: "long_bow", Position: 5}, {ID: "x", Position: 3}}, nil)
+	dal.EXPECT().List(mock.Anything, int64(1)).Return([]weaponsvc.Weapon{{ID: "long_bow", Position: 5}, {ID: "x", Position: 3}}, nil)
 	want := weaponsvc.Weapon{
 		ID: "long_bow_2", Position: 6, Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
 		Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
 	}
-	dal.EXPECT().Insert(mock.Anything, want).Return(nil).Once()
+	dal.EXPECT().Insert(mock.Anything, int64(1), want).Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(5), nil)
 
@@ -113,10 +113,10 @@ func TestUpdate_ChangesFieldsAndLogsBeforeAfter(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := weaponsvc.New(dal, f.Deps)
-	dal.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastard, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "bastard_sword").Return(bastard, nil)
 	after := bastard
 	after.MagicToHit, after.MagicDamage = 3, 3
-	dal.EXPECT().Update(mock.Anything, after).Return(nil).Once()
+	dal.EXPECT().Update(mock.Anything, int64(1), after).Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(8), nil)
 
@@ -137,17 +137,17 @@ func TestUpdate_KindAndAmmo(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := weaponsvc.New(dal, f.Deps)
-	dal.EXPECT().Get(mock.Anything, "bow").Return(bow, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "bow").Return(bow, nil)
 	melee := bow
 	melee.Kind, melee.AmmoKind = "melee", ""
-	dal.EXPECT().Update(mock.Anything, melee).Return(nil).Once()
+	dal.EXPECT().Update(mock.Anything, int64(1), melee).Return(nil).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
 	_, err := svc.Update(context.Background(), 1, "bow", weaponsvc.WeaponPatch{Kind: ptr("melee")})
 	require.NoError(t, err)
 
 	dal2 := mocks.NewMockDAL(t)
 	svc2, _ := weaponsvc.New(dal2, deps(t).Deps)
-	dal2.EXPECT().Get(mock.Anything, "bow").Return(bow, nil)
+	dal2.EXPECT().Get(mock.Anything, int64(1), "bow").Return(bow, nil)
 	_, err = svc2.Update(context.Background(), 1, "bow", weaponsvc.WeaponPatch{Kind: ptr("melee"), AmmoKind: ptr("arrow")})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
@@ -167,7 +167,7 @@ func TestUpdate_RejectsBadValuesAndNoOps(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			dal := mocks.NewMockDAL(t) // no Update
 			svc, _ := weaponsvc.New(dal, deps(t).Deps)
-			dal.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastard, nil)
+			dal.EXPECT().Get(mock.Anything, int64(1), "bastard_sword").Return(bastard, nil)
 			_, err := svc.Update(context.Background(), 1, "bastard_sword", c.patch)
 			require.ErrorIs(t, err, domain.ErrInvalidInput)
 			var fe *domain.FieldError
@@ -182,7 +182,7 @@ func TestUpdate_RejectsBadValuesAndNoOps(t *testing.T) {
 func TestUpdateAndDelete_UnknownWeapon(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := weaponsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().Get(mock.Anything, "x").Return(weaponsvc.Weapon{}, weaponsvc.ErrWeaponNotFound)
+	dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(weaponsvc.Weapon{}, weaponsvc.ErrWeaponNotFound)
 	_, err := svc.Update(context.Background(), 1, "x", weaponsvc.WeaponPatch{Name: localized.Text{"en": "y"}})
 	assert.ErrorIs(t, err, weaponsvc.ErrWeaponNotFound)
 	_, err = svc.Delete(context.Background(), 1, "x")
@@ -193,8 +193,8 @@ func TestDelete_RemovesAndLogsWholeWeapon(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := weaponsvc.New(dal, f.Deps)
-	dal.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastard, nil)
-	dal.EXPECT().Delete(mock.Anything, "bastard_sword").Return(nil).Once()
+	dal.EXPECT().Get(mock.Anything, int64(1), "bastard_sword").Return(bastard, nil)
+	dal.EXPECT().Delete(mock.Anything, int64(1), "bastard_sword").Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(2), nil)
 
@@ -216,20 +216,20 @@ func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 	}
 	t.Run("create", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Delete(mock.Anything, "new").Return(nil).Once()
+		dal.EXPECT().Delete(mock.Anything, int64(1), "new").Return(nil).Once()
 		require.NoError(t, restore(dal, json.RawMessage(`{"id":"new","absent":true}`)))
 	})
 	before := json.RawMessage(`{"id":"bastard_sword","position":0,"name":{"en":"Bastard Sword +2"},"damageSm":"2d4","damageL":"2d8",
 		"magicToHit":2,"magicDamage":2,"kind":"melee","twoHanded":true,"ammoKind":""}`)
 	t.Run("edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Update(mock.Anything, bastard).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), bastard).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
 	})
 	t.Run("delete", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Update(mock.Anything, bastard).Return(weaponsvc.ErrWeaponNotFound).Once()
-		dal.EXPECT().Insert(mock.Anything, bastard).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), bastard).Return(weaponsvc.ErrWeaponNotFound).Once()
+		dal.EXPECT().Insert(mock.Anything, int64(1), bastard).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
 	})
 	t.Run("garbage", func(t *testing.T) {

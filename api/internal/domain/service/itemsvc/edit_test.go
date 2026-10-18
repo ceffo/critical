@@ -73,14 +73,14 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().List(mock.Anything).Return([]itemsvc.Item{
+	dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{
 		{ID: "arrows_3", Position: 4}, {ID: "arrows_3_2", Position: 7},
 	}, nil)
 	want := itemsvc.Item{
 		ID: "arrows_3_3", Position: 8, Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock,
 		MagicBonus: 3, AmmoKind: "arrow", Count: 6, MaxCount: 6,
 	}
-	dal.EXPECT().Insert(mock.Anything, want).Return(nil).Once()
+	dal.EXPECT().Insert(mock.Anything, int64(1), want).Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(5), nil)
 
@@ -114,10 +114,10 @@ func TestUpdate_ChangesOneFieldAndLogsBeforeAfter(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(wand4, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil)
 	after := wand4
 	after.Count = 3
-	dal.EXPECT().Update(mock.Anything, after).Return(nil).Once()
+	dal.EXPECT().Update(mock.Anything, int64(1), after).Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(8), nil)
 
@@ -141,11 +141,11 @@ func TestUpdate_StockToDailyKeepsCountAndTakesDailyNumber(t *testing.T) {
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(9), nil)
-	dal.EXPECT().Get(mock.Anything, "fire_flask").Return(flask, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "fire_flask").Return(flask, nil)
 	after := flask
 	after.Behaviour = itemsvc.BehaviourDaily
 	after.MaxCount = 5
-	dal.EXPECT().Update(mock.Anything, after).Return(nil).Once()
+	dal.EXPECT().Update(mock.Anything, int64(1), after).Return(nil).Once()
 
 	res, err := svc.Update(context.Background(), 1, "fire_flask", itemsvc.ItemPatch{Behaviour: ptr(itemsvc.BehaviourDaily), MaxCount: ptr(5)})
 	require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestUpdate_RejectsBadValuesAndNoOps(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			dal := mocks.NewMockDAL(t) // no Update
 			svc, _ := itemsvc.New(dal, deps(t).Deps)
-			dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(wand4, nil)
+			dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil)
 			_, err := svc.Update(context.Background(), 1, "wand_lightning", c.patch)
 			require.ErrorIs(t, err, domain.ErrInvalidInput)
 			var fe *domain.FieldError
@@ -185,7 +185,7 @@ func TestUpdate_RejectsBadValuesAndNoOps(t *testing.T) {
 func TestUpdate_UnknownItem(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().Get(mock.Anything, "x").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound)
+	dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound)
 	_, err := svc.Update(context.Background(), 1, "x", itemsvc.ItemPatch{Count: ptr(1)})
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
@@ -194,8 +194,8 @@ func TestDelete_RemovesAndLogsWholeItem(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(wand4, nil)
-	dal.EXPECT().Delete(mock.Anything, "wand_lightning").Return(nil).Once()
+	dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil)
+	dal.EXPECT().Delete(mock.Anything, int64(1), "wand_lightning").Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(2), nil)
 
@@ -218,22 +218,22 @@ func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 	}
 	t.Run("create", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Delete(mock.Anything, "new").Return(nil).Once()
+		dal.EXPECT().Delete(mock.Anything, int64(1), "new").Return(nil).Once()
 		require.NoError(t, restore(dal, json.RawMessage(`[{"id":"new","count":0,"removed":true,"absent":true}]`)))
 	})
 	before := json.RawMessage(`[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Wand of lightning","type":"wand",
 		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}]`)
 	t.Run("edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(wand4, nil).Once()
-		dal.EXPECT().Update(mock.Anything, wand4).Return(nil).Once()
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), wand4).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
 	})
 	t.Run("delete", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
-		dal.EXPECT().Update(mock.Anything, wand4).Return(itemsvc.ErrItemNotFound).Once()
-		dal.EXPECT().Insert(mock.Anything, wand4).Return(nil).Once()
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), wand4).Return(itemsvc.ErrItemNotFound).Once()
+		dal.EXPECT().Insert(mock.Anything, int64(1), wand4).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
 	})
 }
@@ -243,7 +243,7 @@ func TestUseItem_DiceWithModifier(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Decrement(mock.Anything, "x").Return(itemsvc.Item{ID: "x", Name: localized.Of("X"), Behaviour: itemsvc.BehaviourStock, Count: 1, EffectDice: "1d8+2"}, nil)
+	dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Name: localized.Of("X"), Behaviour: itemsvc.BehaviourStock, Count: 1, EffectDice: "1d8+2"}, nil)
 	f.dice.EXPECT().RollDie(8).Return(5).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
 	res, err := svc.UseItem(context.Background(), 1, "x")

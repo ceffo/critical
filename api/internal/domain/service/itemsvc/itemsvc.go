@@ -19,13 +19,14 @@ import (
 // SVC is the driver port.
 type SVC interface {
 	domain.Service
-	List(ctx context.Context) ([]Item, error)
+	// List is the character's items in sheet order.
+	List(ctx context.Context, characterID int64) ([]Item, error)
 	// Use spends one count of the item atomically and returns the updated
 	// item; a charges item spent to 0 is removed (Item.Removed). It must run
 	// in the caller's transaction (the attack that fires an arrow) and the
 	// caller logs UseSnapshot of the result. ErrItemNotFound for an unknown
 	// id, ErrItemEmpty at 0.
-	Use(ctx context.Context, itemID string) (Item, error)
+	Use(ctx context.Context, characterID int64, itemID string) (Item, error)
 	// UseItem spends one count of any item (Use), rolls its effect dice (if
 	// any) through the dice port and records the use in the action log with
 	// the item's snapshot, all in one transaction.
@@ -34,9 +35,9 @@ type SVC interface {
 	// item's snapshot, in one transaction. ErrNotRestockable for a charges or
 	// daily item, ErrInvalidInput for n out of range.
 	Restock(ctx context.Context, characterID int64, itemID string, n int) (*RestockResult, error)
-	// ResetDaily refills every daily item to its max (long rest) and
-	// returns the full item list.
-	ResetDaily(ctx context.Context) ([]Item, error)
+	// ResetDaily refills every daily item of the character to its max (long
+	// rest) and returns the character's full item list.
+	ResetDaily(ctx context.Context, characterID int64) ([]Item, error)
 	// Create adds an item (loot, a purchase) and logs it with the item's
 	// snapshot, in one transaction. A *domain.FieldError for invalid input.
 	Create(ctx context.Context, characterID int64, in ItemInput) (*ChangeResult, error)
@@ -49,7 +50,7 @@ type SVC interface {
 
 	// ItemPowers is every carried item's powers, whatever its count (ADR
 	// 0016 steps 9 and 11): buffsvc's Items port.
-	ItemPowers(ctx context.Context) ([]buffsvc.ItemPower, error)
+	ItemPowers(ctx context.Context, characterID int64) ([]buffsvc.ItemPower, error)
 
 	// Restorers maps the items state key to the Restorer that writes the
 	// counts of a "before" snapshot back when an action-log entry is voided.
@@ -57,28 +58,31 @@ type SVC interface {
 	Restorers() map[string]actionlog.Restorer
 }
 
-// DAL is the driven port. Decrement and Increment must be single atomic
-// statements; Decrement never takes the count below 0. Every method joins
-// the transaction carried by ctx.
+// DAL is the driven port. Items belong to a character: every method reads
+// or writes the items of characterID only, and an item id is looked up among
+// that character's (another character's item of the same id is unknown).
+// Decrement and Increment must be single atomic statements; Decrement never
+// takes the count below 0. Every method joins the transaction carried by ctx.
 type DAL interface {
-	List(ctx context.Context) ([]Item, error)
+	List(ctx context.Context, characterID int64) ([]Item, error)
 	// Get returns one item, or ErrItemNotFound.
-	Get(ctx context.Context, itemID string) (Item, error)
+	Get(ctx context.Context, characterID int64, itemID string) (Item, error)
 	// Update overwrites every field of an existing item (position
 	// included); ErrItemNotFound for an unknown id.
-	Update(ctx context.Context, item Item) error
+	Update(ctx context.Context, characterID int64, item Item) error
 	// Decrement returns the updated item, ErrItemNotFound or ErrItemEmpty.
-	Decrement(ctx context.Context, itemID string) (Item, error)
+	Decrement(ctx context.Context, characterID int64, itemID string) (Item, error)
 	// Increment adds n and returns the updated item, or ErrItemNotFound.
-	Increment(ctx context.Context, itemID string, n int) (Item, error)
-	// ResetDaily refills every daily item to its max count.
-	ResetDaily(ctx context.Context) error
+	Increment(ctx context.Context, characterID int64, itemID string, n int) (Item, error)
+	// ResetDaily refills every daily item of the character to its max count.
+	ResetDaily(ctx context.Context, characterID int64) error
 	// SetCount writes a count back; ErrItemNotFound for an unknown id.
-	SetCount(ctx context.Context, itemID string, count int) error
+	SetCount(ctx context.Context, characterID int64, itemID string, count int) error
 	// Delete removes an item; ErrItemNotFound for an unknown id.
-	Delete(ctx context.Context, itemID string) error
-	// Insert writes a whole item back (restoring a removed one).
-	Insert(ctx context.Context, item Item) error
+	Delete(ctx context.Context, characterID int64, itemID string) error
+	// Insert writes a whole item for the character (a new one, or a
+	// removed one restored).
+	Insert(ctx context.Context, characterID int64, item Item) error
 }
 
 // Dice is the dice adapter port.
@@ -125,15 +129,17 @@ func DefaultConfig() *Config { return &Config{} }
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
 
-func (s *service) List(ctx context.Context) ([]Item, error) { return s.dal.List(ctx) }
+func (s *service) List(ctx context.Context, characterID int64) ([]Item, error) {
+	return s.dal.List(ctx, characterID)
+}
 
-func (s *service) Use(ctx context.Context, itemID string) (Item, error) {
-	item, err := s.dal.Decrement(ctx, itemID)
+func (s *service) Use(ctx context.Context, characterID int64, itemID string) (Item, error) {
+	item, err := s.dal.Decrement(ctx, characterID, itemID)
 	if err != nil {
 		return Item{}, err
 	}
 	if item.Removed() {
-		if err := s.dal.Delete(ctx, item.ID); err != nil {
+		if err := s.dal.Delete(ctx, characterID, item.ID); err != nil {
 			return Item{}, fmt.Errorf("remove spent item %s: %w", item.ID, err)
 		}
 	}
@@ -142,9 +148,9 @@ func (s *service) Use(ctx context.Context, itemID string) (Item, error) {
 
 // ResetDaily refills the daily items only: stock and charges items are never
 // refilled by a rest.
-func (s *service) ResetDaily(ctx context.Context) ([]Item, error) {
-	if err := s.dal.ResetDaily(ctx); err != nil {
+func (s *service) ResetDaily(ctx context.Context, characterID int64) ([]Item, error) {
+	if err := s.dal.ResetDaily(ctx, characterID); err != nil {
 		return nil, fmt.Errorf("reset daily items: %w", err)
 	}
-	return s.dal.List(ctx)
+	return s.dal.List(ctx, characterID)
 }

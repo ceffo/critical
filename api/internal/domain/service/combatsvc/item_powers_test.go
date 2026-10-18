@@ -37,7 +37,7 @@ func withRealBuffs(t *testing.T, buffs []buffsvc.BuffEffect, powers []buffsvc.It
 	dal := buffmocks.NewMockDAL(t)
 	dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(buffs, nil)
 	items := buffmocks.NewMockItems(t)
-	items.EXPECT().ItemPowers(mock.Anything).Return(powers, nil)
+	items.EXPECT().ItemPowers(mock.Anything, charID).Return(powers, nil)
 	real, err := buffsvc.New(dal, noTx{}, buffmocks.NewMockLog(t), buffmocks.NewMockCharacters(t), buffmocks.NewMockDice(t), items)
 	require.NoError(t, err)
 
@@ -90,12 +90,12 @@ func TestItemPowers_Step12_HammerOnMeleeOnly(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := withRealBuffs(t, []buffsvc.BuffEffect{strengthTo18}, []buffsvc.ItemPower{gemHammer})
-			f.weapons.EXPECT().Get(mock.Anything, tt.weapon.ID).Return(tt.weapon, nil)
+			f.weapons.EXPECT().Get(mock.Anything, charID, tt.weapon.ID).Return(tt.weapon, nil)
 			f.withChar(bard())
 			if tt.ammo != "" {
 				left := arrows
 				left.Count--
-				f.items.EXPECT().Use(mock.Anything, tt.ammo).Return(left, nil).Once()
+				f.items.EXPECT().Use(mock.Anything, charID, tt.ammo).Return(left, nil).Once()
 			}
 			f.dice.EXPECT().RollD20().Return(tt.d20).Once()
 			f.d100s(t, 90, noCritMult)
@@ -141,8 +141,8 @@ func TestItemPowers_Step12_PreviewFollowsTheWeaponInHand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := withRealBuffs(t, []buffsvc.BuffEffect{strengthTo18}, []buffsvc.ItemPower{gemHammer})
 			f.forms.EXPECT().Get(mock.Anything, charID).Return(tt.form, true, nil).Once()
-			f.weapons.EXPECT().List(mock.Anything).Return([]combatsvc.Weapon{longsword, shortbow}, nil)
-			f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{arrows}, nil).Maybe()
+			f.weapons.EXPECT().List(mock.Anything, charID).Return([]combatsvc.Weapon{longsword, shortbow}, nil)
+			f.items.EXPECT().List(mock.Anything, charID).Return([]itemsvc.Item{arrows}, nil).Maybe()
 			f.withChar(bard())
 
 			v, err := f.svc.GetAttackForm(context.Background(), charID)
@@ -161,7 +161,7 @@ func TestItemPowers_Step12_PreviewFollowsTheWeaponInHand(t *testing.T) {
 func TestItemPowers_Step14_BreakdownCarriesTheItemID(t *testing.T) {
 	bless := buffsvc.BuffEffect{ID: "b", Name: "Bless", Effects: buffsvc.BuffEffects{ToHit: intPtr(1)}}
 	f := withRealBuffs(t, []buffsvc.BuffEffect{strengthTo18, bless}, []buffsvc.ItemPower{gemHammer})
-	f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
+	f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 	f.withChar(bard())
 	f.dice.EXPECT().RollD20().Return(14).Once()
 	f.d100s(t, 95, noCritMult)

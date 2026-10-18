@@ -22,9 +22,9 @@ func (_m *MockItems) EXPECT() *MockItems_Expecter {
 	return &MockItems_Expecter{mock: &_m.Mock}
 }
 
-// List provides a mock function with given fields: ctx
-func (_m *MockItems) List(ctx context.Context) ([]itemsvc.Item, error) {
-	ret := _m.Called(ctx)
+// List provides a mock function with given fields: ctx, characterID
+func (_m *MockItems) List(ctx context.Context, characterID int64) ([]itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -32,19 +32,19 @@ func (_m *MockItems) List(ctx context.Context) ([]itemsvc.Item, error) {
 
 	var r0 []itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]itemsvc.Item, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]itemsvc.Item, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []itemsvc.Item); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []itemsvc.Item); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]itemsvc.Item)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -59,13 +59,14 @@ type MockItems_List_Call struct {
 
 // List is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockItems_Expecter) List(ctx interface{}) *MockItems_List_Call {
-	return &MockItems_List_Call{Call: _e.mock.On("List", ctx)}
+//   - characterID int64
+func (_e *MockItems_Expecter) List(ctx interface{}, characterID interface{}) *MockItems_List_Call {
+	return &MockItems_List_Call{Call: _e.mock.On("List", ctx, characterID)}
 }
 
-func (_c *MockItems_List_Call) Run(run func(ctx context.Context)) *MockItems_List_Call {
+func (_c *MockItems_List_Call) Run(run func(ctx context.Context, characterID int64)) *MockItems_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -75,14 +76,14 @@ func (_c *MockItems_List_Call) Return(_a0 []itemsvc.Item, _a1 error) *MockItems_
 	return _c
 }
 
-func (_c *MockItems_List_Call) RunAndReturn(run func(context.Context) ([]itemsvc.Item, error)) *MockItems_List_Call {
+func (_c *MockItems_List_Call) RunAndReturn(run func(context.Context, int64) ([]itemsvc.Item, error)) *MockItems_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// ResetDaily provides a mock function with given fields: ctx
-func (_m *MockItems) ResetDaily(ctx context.Context) ([]itemsvc.Item, error) {
-	ret := _m.Called(ctx)
+// ResetDaily provides a mock function with given fields: ctx, characterID
+func (_m *MockItems) ResetDaily(ctx context.Context, characterID int64) ([]itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResetDaily")
@@ -90,19 +91,19 @@ func (_m *MockItems) ResetDaily(ctx context.Context) ([]itemsvc.Item, error) {
 
 	var r0 []itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]itemsvc.Item, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]itemsvc.Item, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []itemsvc.Item); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []itemsvc.Item); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]itemsvc.Item)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -117,13 +118,14 @@ type MockItems_ResetDaily_Call struct {
 
 // ResetDaily is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockItems_Expecter) ResetDaily(ctx interface{}) *MockItems_ResetDaily_Call {
-	return &MockItems_ResetDaily_Call{Call: _e.mock.On("ResetDaily", ctx)}
+//   - characterID int64
+func (_e *MockItems_Expecter) ResetDaily(ctx interface{}, characterID interface{}) *MockItems_ResetDaily_Call {
+	return &MockItems_ResetDaily_Call{Call: _e.mock.On("ResetDaily", ctx, characterID)}
 }
 
-func (_c *MockItems_ResetDaily_Call) Run(run func(ctx context.Context)) *MockItems_ResetDaily_Call {
+func (_c *MockItems_ResetDaily_Call) Run(run func(ctx context.Context, characterID int64)) *MockItems_ResetDaily_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -133,7 +135,7 @@ func (_c *MockItems_ResetDaily_Call) Return(_a0 []itemsvc.Item, _a1 error) *Mock
 	return _c
 }
 
-func (_c *MockItems_ResetDaily_Call) RunAndReturn(run func(context.Context) ([]itemsvc.Item, error)) *MockItems_ResetDaily_Call {
+func (_c *MockItems_ResetDaily_Call) RunAndReturn(run func(context.Context, int64) ([]itemsvc.Item, error)) *MockItems_ResetDaily_Call {
 	_c.Call.Return(run)
 	return _c
 }

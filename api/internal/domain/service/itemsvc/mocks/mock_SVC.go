@@ -238,9 +238,9 @@ func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *Mo
 	return _c
 }
 
-// ItemPowers provides a mock function with given fields: ctx
-func (_m *MockSVC) ItemPowers(ctx context.Context) ([]buffsvc.ItemPower, error) {
-	ret := _m.Called(ctx)
+// ItemPowers provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) ItemPowers(ctx context.Context, characterID int64) ([]buffsvc.ItemPower, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ItemPowers")
@@ -248,19 +248,19 @@ func (_m *MockSVC) ItemPowers(ctx context.Context) ([]buffsvc.ItemPower, error) 
 
 	var r0 []buffsvc.ItemPower
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]buffsvc.ItemPower, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.ItemPower, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []buffsvc.ItemPower); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.ItemPower); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]buffsvc.ItemPower)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -275,13 +275,14 @@ type MockSVC_ItemPowers_Call struct {
 
 // ItemPowers is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockSVC_Expecter) ItemPowers(ctx interface{}) *MockSVC_ItemPowers_Call {
-	return &MockSVC_ItemPowers_Call{Call: _e.mock.On("ItemPowers", ctx)}
+//   - characterID int64
+func (_e *MockSVC_Expecter) ItemPowers(ctx interface{}, characterID interface{}) *MockSVC_ItemPowers_Call {
+	return &MockSVC_ItemPowers_Call{Call: _e.mock.On("ItemPowers", ctx, characterID)}
 }
 
-func (_c *MockSVC_ItemPowers_Call) Run(run func(ctx context.Context)) *MockSVC_ItemPowers_Call {
+func (_c *MockSVC_ItemPowers_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_ItemPowers_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -291,14 +292,14 @@ func (_c *MockSVC_ItemPowers_Call) Return(_a0 []buffsvc.ItemPower, _a1 error) *M
 	return _c
 }
 
-func (_c *MockSVC_ItemPowers_Call) RunAndReturn(run func(context.Context) ([]buffsvc.ItemPower, error)) *MockSVC_ItemPowers_Call {
+func (_c *MockSVC_ItemPowers_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.ItemPower, error)) *MockSVC_ItemPowers_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// List provides a mock function with given fields: ctx
-func (_m *MockSVC) List(ctx context.Context) ([]itemsvc.Item, error) {
-	ret := _m.Called(ctx)
+// List provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) List(ctx context.Context, characterID int64) ([]itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -306,19 +307,19 @@ func (_m *MockSVC) List(ctx context.Context) ([]itemsvc.Item, error) {
 
 	var r0 []itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]itemsvc.Item, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]itemsvc.Item, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []itemsvc.Item); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []itemsvc.Item); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]itemsvc.Item)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -333,13 +334,14 @@ type MockSVC_List_Call struct {
 
 // List is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockSVC_Expecter) List(ctx interface{}) *MockSVC_List_Call {
-	return &MockSVC_List_Call{Call: _e.mock.On("List", ctx)}
+//   - characterID int64
+func (_e *MockSVC_Expecter) List(ctx interface{}, characterID interface{}) *MockSVC_List_Call {
+	return &MockSVC_List_Call{Call: _e.mock.On("List", ctx, characterID)}
 }
 
-func (_c *MockSVC_List_Call) Run(run func(ctx context.Context)) *MockSVC_List_Call {
+func (_c *MockSVC_List_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -349,14 +351,14 @@ func (_c *MockSVC_List_Call) Return(_a0 []itemsvc.Item, _a1 error) *MockSVC_List
 	return _c
 }
 
-func (_c *MockSVC_List_Call) RunAndReturn(run func(context.Context) ([]itemsvc.Item, error)) *MockSVC_List_Call {
+func (_c *MockSVC_List_Call) RunAndReturn(run func(context.Context, int64) ([]itemsvc.Item, error)) *MockSVC_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// ResetDaily provides a mock function with given fields: ctx
-func (_m *MockSVC) ResetDaily(ctx context.Context) ([]itemsvc.Item, error) {
-	ret := _m.Called(ctx)
+// ResetDaily provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) ResetDaily(ctx context.Context, characterID int64) ([]itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResetDaily")
@@ -364,19 +366,19 @@ func (_m *MockSVC) ResetDaily(ctx context.Context) ([]itemsvc.Item, error) {
 
 	var r0 []itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]itemsvc.Item, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]itemsvc.Item, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []itemsvc.Item); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []itemsvc.Item); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]itemsvc.Item)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -391,13 +393,14 @@ type MockSVC_ResetDaily_Call struct {
 
 // ResetDaily is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockSVC_Expecter) ResetDaily(ctx interface{}) *MockSVC_ResetDaily_Call {
-	return &MockSVC_ResetDaily_Call{Call: _e.mock.On("ResetDaily", ctx)}
+//   - characterID int64
+func (_e *MockSVC_Expecter) ResetDaily(ctx interface{}, characterID interface{}) *MockSVC_ResetDaily_Call {
+	return &MockSVC_ResetDaily_Call{Call: _e.mock.On("ResetDaily", ctx, characterID)}
 }
 
-func (_c *MockSVC_ResetDaily_Call) Run(run func(ctx context.Context)) *MockSVC_ResetDaily_Call {
+func (_c *MockSVC_ResetDaily_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_ResetDaily_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -407,7 +410,7 @@ func (_c *MockSVC_ResetDaily_Call) Return(_a0 []itemsvc.Item, _a1 error) *MockSV
 	return _c
 }
 
-func (_c *MockSVC_ResetDaily_Call) RunAndReturn(run func(context.Context) ([]itemsvc.Item, error)) *MockSVC_ResetDaily_Call {
+func (_c *MockSVC_ResetDaily_Call) RunAndReturn(run func(context.Context, int64) ([]itemsvc.Item, error)) *MockSVC_ResetDaily_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -581,9 +584,9 @@ func (_c *MockSVC_Update_Call) RunAndReturn(run func(context.Context, int64, str
 	return _c
 }
 
-// Use provides a mock function with given fields: ctx, itemID
-func (_m *MockSVC) Use(ctx context.Context, itemID string) (itemsvc.Item, error) {
-	ret := _m.Called(ctx, itemID)
+// Use provides a mock function with given fields: ctx, characterID, itemID
+func (_m *MockSVC) Use(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID, itemID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Use")
@@ -591,17 +594,17 @@ func (_m *MockSVC) Use(ctx context.Context, itemID string) (itemsvc.Item, error)
 
 	var r0 itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (itemsvc.Item, error)); ok {
-		return rf(ctx, itemID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (itemsvc.Item, error)); ok {
+		return rf(ctx, characterID, itemID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) itemsvc.Item); ok {
-		r0 = rf(ctx, itemID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) itemsvc.Item); ok {
+		r0 = rf(ctx, characterID, itemID)
 	} else {
 		r0 = ret.Get(0).(itemsvc.Item)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, itemID)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, itemID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -616,14 +619,15 @@ type MockSVC_Use_Call struct {
 
 // Use is a helper method to define mock.On call
 //   - ctx context.Context
+//   - characterID int64
 //   - itemID string
-func (_e *MockSVC_Expecter) Use(ctx interface{}, itemID interface{}) *MockSVC_Use_Call {
-	return &MockSVC_Use_Call{Call: _e.mock.On("Use", ctx, itemID)}
+func (_e *MockSVC_Expecter) Use(ctx interface{}, characterID interface{}, itemID interface{}) *MockSVC_Use_Call {
+	return &MockSVC_Use_Call{Call: _e.mock.On("Use", ctx, characterID, itemID)}
 }
 
-func (_c *MockSVC_Use_Call) Run(run func(ctx context.Context, itemID string)) *MockSVC_Use_Call {
+func (_c *MockSVC_Use_Call) Run(run func(ctx context.Context, characterID int64, itemID string)) *MockSVC_Use_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
 	})
 	return _c
 }
@@ -633,7 +637,7 @@ func (_c *MockSVC_Use_Call) Return(_a0 itemsvc.Item, _a1 error) *MockSVC_Use_Cal
 	return _c
 }
 
-func (_c *MockSVC_Use_Call) RunAndReturn(run func(context.Context, string) (itemsvc.Item, error)) *MockSVC_Use_Call {
+func (_c *MockSVC_Use_Call) RunAndReturn(run func(context.Context, int64, string) (itemsvc.Item, error)) *MockSVC_Use_Call {
 	_c.Call.Return(run)
 	return _c
 }

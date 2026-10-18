@@ -11,13 +11,21 @@ import (
 
 type Querier interface {
 	ActiveBuffLists(ctx context.Context) ([]ActiveBuffListsRow, error)
+	AdoptBardSkills(ctx context.Context, characterID int64) error
+	AdoptItems(ctx context.Context, characterID int64) error
+	AdoptProficiencies(ctx context.Context, characterID int64) error
+	AdoptWeapons(ctx context.Context, characterID int64) error
 	AllTexts(ctx context.Context) ([]LocalizedText, error)
 	CatalogueVersion(ctx context.Context) (CatalogueVersionRow, error)
 	CountCharacters(ctx context.Context) (int64, error)
-	CountItems(ctx context.Context) (int64, error)
+	CountItems(ctx context.Context, characterID int64) (int64, error)
 	CountKeyedSpells(ctx context.Context) (int64, error)
-	CountSkills(ctx context.Context) (int64, error)
-	CountWeapons(ctx context.Context) (int64, error)
+	CountSkills(ctx context.Context, characterID int64) (int64, error)
+	CountSpellbookEntries(ctx context.Context, characterID int64) (int64, error)
+	// Rows from before each character owned its equipment, or written by the release before during a
+	// rolling deploy, have no owner: the seed gives them to the seed character.
+	CountUnowned(ctx context.Context) (int64, error)
+	CountWeapons(ctx context.Context, characterID int64) (int64, error)
 	DeleteSpell(ctx context.Context, key sql.NullString) error
 	DeleteText(ctx context.Context, textID int64) error
 	DeleteTextLanguage(ctx context.Context, arg DeleteTextLanguageParams) error
@@ -26,15 +34,19 @@ type Querier interface {
 	InsertItem(ctx context.Context, arg InsertItemParams) error
 	InsertRoundState(ctx context.Context, characterID int64) error
 	InsertSpellSlots(ctx context.Context, arg InsertSpellSlotsParams) error
+	InsertSpellbookEntry(ctx context.Context, arg InsertSpellbookEntryParams) error
 	InsertText(ctx context.Context, arg InsertTextParams) error
 	InsertWeapon(ctx context.Context, arg InsertWeaponParams) error
-	ItemNameKey(ctx context.Context, id string) (int64, error)
+	ItemNameKey(ctx context.Context, arg ItemNameKeyParams) (int64, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
 	// rollback releases it. One fixed key for the whole database.
 	LockWriters(ctx context.Context) error
 	NextTextKey(ctx context.Context) (int64, error)
 	RecordCatalogueVersion(ctx context.Context, arg RecordCatalogueVersionParams) error
 	RecordSeedOffer(ctx context.Context, arg RecordSeedOfferParams) error
+	// The character the seed files belong to: the one named in character.json (the lowest id when
+	// two share the name).
+	SeedCharacterID(ctx context.Context, name string) (int64, error)
 	SeedOffers(ctx context.Context, arg SeedOffersParams) ([]string, error)
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error
@@ -45,12 +57,13 @@ type Querier interface {
 	SpellSlotLists(ctx context.Context) ([]SpellSlotListsRow, error)
 	SpellStatTexts(ctx context.Context, lang string) ([]SpellStatTextsRow, error)
 	SpellTextKeys(ctx context.Context) ([]SpellTextKeysRow, error)
+	SpellbookRefs(ctx context.Context) ([]SpellbookRefsRow, error)
 	TextLanguages(ctx context.Context, textID int64) ([]TextLanguagesRow, error)
 	UpsertBardSkill(ctx context.Context, arg UpsertBardSkillParams) error
 	UpsertProficiency(ctx context.Context, arg UpsertProficiencyParams) error
 	UpsertSpell(ctx context.Context, arg UpsertSpellParams) error
 	UpsertText(ctx context.Context, arg UpsertTextParams) error
-	WeaponNameKey(ctx context.Context, id string) (int64, error)
+	WeaponNameKey(ctx context.Context, arg WeaponNameKeyParams) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -106,7 +106,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput)
 	}
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		all, err := s.dal.List(ctx)
+		all, err := s.dal.List(ctx, characterID)
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput)
 			w.ID = base + "_" + strconv.Itoa(n)
 		}
 		w.Position = pos
-		if err := s.dal.Insert(ctx, w); err != nil {
+		if err := s.dal.Insert(ctx, characterID, w); err != nil {
 			return err
 		}
 		logID, err := s.logChange(ctx, characterID, actionlog.KindWeaponAdd, record(w, nil), nil, &w)
@@ -145,7 +145,7 @@ func (s *service) Update(ctx context.Context, characterID int64, id string, p We
 	}
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		old, err := s.dal.Get(ctx, id)
+		old, err := s.dal.Get(ctx, characterID, id)
 		if err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ func (s *service) Update(ctx context.Context, characterID int64, id string, p We
 		if len(changes) == 0 {
 			return fmt.Errorf("%w: nothing changed", domain.ErrInvalidInput)
 		}
-		if err := s.dal.Update(ctx, w); err != nil {
+		if err := s.dal.Update(ctx, characterID, w); err != nil {
 			return err
 		}
 		logID, err := s.logChange(ctx, characterID, actionlog.KindWeaponEdit, record(w, changes), &old, &w)
@@ -206,11 +206,11 @@ func (s *service) Update(ctx context.Context, characterID int64, id string, p We
 func (s *service) Delete(ctx context.Context, characterID int64, id string) (*ChangeResult, error) {
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		old, err := s.dal.Get(ctx, id)
+		old, err := s.dal.Get(ctx, characterID, id)
 		if err != nil {
 			return err
 		}
-		if err := s.dal.Delete(ctx, id); err != nil {
+		if err := s.dal.Delete(ctx, characterID, id); err != nil {
 			return err
 		}
 		logID, err := s.logChange(ctx, characterID, actionlog.KindWeaponRemove, record(old, nil), &old, nil)

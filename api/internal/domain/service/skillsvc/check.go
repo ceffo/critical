@@ -206,7 +206,7 @@ func (s *service) check(ctx context.Context, characterID int64, id string, adj A
 
 // find is the unrolled check of skill id: its kind, die and target.
 func (s *service) find(ctx context.Context, characterID int64, id string) (checkRecord, error) {
-	profs, err := s.dal.ListProficiencies(ctx)
+	profs, err := s.dal.ListProficiencies(ctx, characterID)
 	if err != nil {
 		return checkRecord{}, fmt.Errorf("list proficiencies: %w", err)
 	}
@@ -227,7 +227,7 @@ func (s *service) find(ctx context.Context, characterID int64, id string) (check
 			Ability: p.Ability, AbilityScore: score, Modifier: p.Modifier,
 		}, nil
 	}
-	skills, err := s.dal.ListBardSkills(ctx)
+	skills, err := s.dal.ListBardSkills(ctx, characterID)
 	if err != nil {
 		return checkRecord{}, fmt.Errorf("list bard skills: %w", err)
 	}
@@ -245,11 +245,11 @@ func (s *service) find(ctx context.Context, characterID int64, id string) (check
 func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) {
 	var out *Skills
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		profs, err := s.dal.ListProficiencies(ctx)
+		profs, err := s.dal.ListProficiencies(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("list proficiencies: %w", err)
 		}
-		skills, err := s.dal.ListBardSkills(ctx)
+		skills, err := s.dal.ListBardSkills(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("list bard skills: %w", err)
 		}

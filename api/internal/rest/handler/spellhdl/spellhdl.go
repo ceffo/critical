@@ -32,7 +32,7 @@ type CharacterIDFunc func(r *http.Request) int64
 type spellSvc interface {
 	GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
-	Search(ctx context.Context, f spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error)
+	Search(ctx context.Context, characterID int64, f spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error)
 	Get(ctx context.Context, id string) (spellsvc.Spell, error)
 	Names(ctx context.Context) ([]spellsvc.SpellName, error)
 	Levels(ctx context.Context) ([]int, error)
@@ -145,7 +145,7 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 		if err != nil {
 			return err
 		}
-		page, err := svc.Search(r.Context(), f, pr)
+		page, err := svc.Search(r.Context(), charID(r), f, pr)
 		if err != nil {
 			return err
 		}

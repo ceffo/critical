@@ -22,9 +22,9 @@ func (_m *MockDAL) EXPECT() *MockDAL_Expecter {
 	return &MockDAL_Expecter{mock: &_m.Mock}
 }
 
-// Decrement provides a mock function with given fields: ctx, itemID
-func (_m *MockDAL) Decrement(ctx context.Context, itemID string) (itemsvc.Item, error) {
-	ret := _m.Called(ctx, itemID)
+// Decrement provides a mock function with given fields: ctx, characterID, itemID
+func (_m *MockDAL) Decrement(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID, itemID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Decrement")
@@ -32,17 +32,17 @@ func (_m *MockDAL) Decrement(ctx context.Context, itemID string) (itemsvc.Item, 
 
 	var r0 itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (itemsvc.Item, error)); ok {
-		return rf(ctx, itemID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (itemsvc.Item, error)); ok {
+		return rf(ctx, characterID, itemID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) itemsvc.Item); ok {
-		r0 = rf(ctx, itemID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) itemsvc.Item); ok {
+		r0 = rf(ctx, characterID, itemID)
 	} else {
 		r0 = ret.Get(0).(itemsvc.Item)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, itemID)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, itemID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -57,14 +57,15 @@ type MockDAL_Decrement_Call struct {
 
 // Decrement is a helper method to define mock.On call
 //   - ctx context.Context
+//   - characterID int64
 //   - itemID string
-func (_e *MockDAL_Expecter) Decrement(ctx interface{}, itemID interface{}) *MockDAL_Decrement_Call {
-	return &MockDAL_Decrement_Call{Call: _e.mock.On("Decrement", ctx, itemID)}
+func (_e *MockDAL_Expecter) Decrement(ctx interface{}, characterID interface{}, itemID interface{}) *MockDAL_Decrement_Call {
+	return &MockDAL_Decrement_Call{Call: _e.mock.On("Decrement", ctx, characterID, itemID)}
 }
 
-func (_c *MockDAL_Decrement_Call) Run(run func(ctx context.Context, itemID string)) *MockDAL_Decrement_Call {
+func (_c *MockDAL_Decrement_Call) Run(run func(ctx context.Context, characterID int64, itemID string)) *MockDAL_Decrement_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
 	})
 	return _c
 }
@@ -74,22 +75,22 @@ func (_c *MockDAL_Decrement_Call) Return(_a0 itemsvc.Item, _a1 error) *MockDAL_D
 	return _c
 }
 
-func (_c *MockDAL_Decrement_Call) RunAndReturn(run func(context.Context, string) (itemsvc.Item, error)) *MockDAL_Decrement_Call {
+func (_c *MockDAL_Decrement_Call) RunAndReturn(run func(context.Context, int64, string) (itemsvc.Item, error)) *MockDAL_Decrement_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Delete provides a mock function with given fields: ctx, itemID
-func (_m *MockDAL) Delete(ctx context.Context, itemID string) error {
-	ret := _m.Called(ctx, itemID)
+// Delete provides a mock function with given fields: ctx, characterID, itemID
+func (_m *MockDAL) Delete(ctx context.Context, characterID int64, itemID string) error {
+	ret := _m.Called(ctx, characterID, itemID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = rf(ctx, itemID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) error); ok {
+		r0 = rf(ctx, characterID, itemID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -104,14 +105,15 @@ type MockDAL_Delete_Call struct {
 
 // Delete is a helper method to define mock.On call
 //   - ctx context.Context
+//   - characterID int64
 //   - itemID string
-func (_e *MockDAL_Expecter) Delete(ctx interface{}, itemID interface{}) *MockDAL_Delete_Call {
-	return &MockDAL_Delete_Call{Call: _e.mock.On("Delete", ctx, itemID)}
+func (_e *MockDAL_Expecter) Delete(ctx interface{}, characterID interface{}, itemID interface{}) *MockDAL_Delete_Call {
+	return &MockDAL_Delete_Call{Call: _e.mock.On("Delete", ctx, characterID, itemID)}
 }
 
-func (_c *MockDAL_Delete_Call) Run(run func(ctx context.Context, itemID string)) *MockDAL_Delete_Call {
+func (_c *MockDAL_Delete_Call) Run(run func(ctx context.Context, characterID int64, itemID string)) *MockDAL_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
 	})
 	return _c
 }
@@ -121,14 +123,14 @@ func (_c *MockDAL_Delete_Call) Return(_a0 error) *MockDAL_Delete_Call {
 	return _c
 }
 
-func (_c *MockDAL_Delete_Call) RunAndReturn(run func(context.Context, string) error) *MockDAL_Delete_Call {
+func (_c *MockDAL_Delete_Call) RunAndReturn(run func(context.Context, int64, string) error) *MockDAL_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Get provides a mock function with given fields: ctx, itemID
-func (_m *MockDAL) Get(ctx context.Context, itemID string) (itemsvc.Item, error) {
-	ret := _m.Called(ctx, itemID)
+// Get provides a mock function with given fields: ctx, characterID, itemID
+func (_m *MockDAL) Get(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID, itemID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
@@ -136,17 +138,17 @@ func (_m *MockDAL) Get(ctx context.Context, itemID string) (itemsvc.Item, error)
 
 	var r0 itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (itemsvc.Item, error)); ok {
-		return rf(ctx, itemID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (itemsvc.Item, error)); ok {
+		return rf(ctx, characterID, itemID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) itemsvc.Item); ok {
-		r0 = rf(ctx, itemID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) itemsvc.Item); ok {
+		r0 = rf(ctx, characterID, itemID)
 	} else {
 		r0 = ret.Get(0).(itemsvc.Item)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, itemID)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, itemID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -161,14 +163,15 @@ type MockDAL_Get_Call struct {
 
 // Get is a helper method to define mock.On call
 //   - ctx context.Context
+//   - characterID int64
 //   - itemID string
-func (_e *MockDAL_Expecter) Get(ctx interface{}, itemID interface{}) *MockDAL_Get_Call {
-	return &MockDAL_Get_Call{Call: _e.mock.On("Get", ctx, itemID)}
+func (_e *MockDAL_Expecter) Get(ctx interface{}, characterID interface{}, itemID interface{}) *MockDAL_Get_Call {
+	return &MockDAL_Get_Call{Call: _e.mock.On("Get", ctx, characterID, itemID)}
 }
 
-func (_c *MockDAL_Get_Call) Run(run func(ctx context.Context, itemID string)) *MockDAL_Get_Call {
+func (_c *MockDAL_Get_Call) Run(run func(ctx context.Context, characterID int64, itemID string)) *MockDAL_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
 	})
 	return _c
 }
@@ -178,14 +181,14 @@ func (_c *MockDAL_Get_Call) Return(_a0 itemsvc.Item, _a1 error) *MockDAL_Get_Cal
 	return _c
 }
 
-func (_c *MockDAL_Get_Call) RunAndReturn(run func(context.Context, string) (itemsvc.Item, error)) *MockDAL_Get_Call {
+func (_c *MockDAL_Get_Call) RunAndReturn(run func(context.Context, int64, string) (itemsvc.Item, error)) *MockDAL_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Increment provides a mock function with given fields: ctx, itemID, n
-func (_m *MockDAL) Increment(ctx context.Context, itemID string, n int) (itemsvc.Item, error) {
-	ret := _m.Called(ctx, itemID, n)
+// Increment provides a mock function with given fields: ctx, characterID, itemID, n
+func (_m *MockDAL) Increment(ctx context.Context, characterID int64, itemID string, n int) (itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID, itemID, n)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Increment")
@@ -193,17 +196,17 @@ func (_m *MockDAL) Increment(ctx context.Context, itemID string, n int) (itemsvc
 
 	var r0 itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, int) (itemsvc.Item, error)); ok {
-		return rf(ctx, itemID, n)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) (itemsvc.Item, error)); ok {
+		return rf(ctx, characterID, itemID, n)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, int) itemsvc.Item); ok {
-		r0 = rf(ctx, itemID, n)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) itemsvc.Item); ok {
+		r0 = rf(ctx, characterID, itemID, n)
 	} else {
 		r0 = ret.Get(0).(itemsvc.Item)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
-		r1 = rf(ctx, itemID, n)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, int) error); ok {
+		r1 = rf(ctx, characterID, itemID, n)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -218,15 +221,16 @@ type MockDAL_Increment_Call struct {
 
 // Increment is a helper method to define mock.On call
 //   - ctx context.Context
+//   - characterID int64
 //   - itemID string
 //   - n int
-func (_e *MockDAL_Expecter) Increment(ctx interface{}, itemID interface{}, n interface{}) *MockDAL_Increment_Call {
-	return &MockDAL_Increment_Call{Call: _e.mock.On("Increment", ctx, itemID, n)}
+func (_e *MockDAL_Expecter) Increment(ctx interface{}, characterID interface{}, itemID interface{}, n interface{}) *MockDAL_Increment_Call {
+	return &MockDAL_Increment_Call{Call: _e.mock.On("Increment", ctx, characterID, itemID, n)}
 }
 
-func (_c *MockDAL_Increment_Call) Run(run func(ctx context.Context, itemID string, n int)) *MockDAL_Increment_Call {
+func (_c *MockDAL_Increment_Call) Run(run func(ctx context.Context, characterID int64, itemID string, n int)) *MockDAL_Increment_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(int))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(int))
 	})
 	return _c
 }
@@ -236,22 +240,22 @@ func (_c *MockDAL_Increment_Call) Return(_a0 itemsvc.Item, _a1 error) *MockDAL_I
 	return _c
 }
 
-func (_c *MockDAL_Increment_Call) RunAndReturn(run func(context.Context, string, int) (itemsvc.Item, error)) *MockDAL_Increment_Call {
+func (_c *MockDAL_Increment_Call) RunAndReturn(run func(context.Context, int64, string, int) (itemsvc.Item, error)) *MockDAL_Increment_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Insert provides a mock function with given fields: ctx, item
-func (_m *MockDAL) Insert(ctx context.Context, item itemsvc.Item) error {
-	ret := _m.Called(ctx, item)
+// Insert provides a mock function with given fields: ctx, characterID, item
+func (_m *MockDAL) Insert(ctx context.Context, characterID int64, item itemsvc.Item) error {
+	ret := _m.Called(ctx, characterID, item)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Insert")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, itemsvc.Item) error); ok {
-		r0 = rf(ctx, item)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, itemsvc.Item) error); ok {
+		r0 = rf(ctx, characterID, item)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -266,14 +270,15 @@ type MockDAL_Insert_Call struct {
 
 // Insert is a helper method to define mock.On call
 //   - ctx context.Context
+//   - characterID int64
 //   - item itemsvc.Item
-func (_e *MockDAL_Expecter) Insert(ctx interface{}, item interface{}) *MockDAL_Insert_Call {
-	return &MockDAL_Insert_Call{Call: _e.mock.On("Insert", ctx, item)}
+func (_e *MockDAL_Expecter) Insert(ctx interface{}, characterID interface{}, item interface{}) *MockDAL_Insert_Call {
+	return &MockDAL_Insert_Call{Call: _e.mock.On("Insert", ctx, characterID, item)}
 }
 
-func (_c *MockDAL_Insert_Call) Run(run func(ctx context.Context, item itemsvc.Item)) *MockDAL_Insert_Call {
+func (_c *MockDAL_Insert_Call) Run(run func(ctx context.Context, characterID int64, item itemsvc.Item)) *MockDAL_Insert_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(itemsvc.Item))
+		run(args[0].(context.Context), args[1].(int64), args[2].(itemsvc.Item))
 	})
 	return _c
 }
@@ -283,14 +288,14 @@ func (_c *MockDAL_Insert_Call) Return(_a0 error) *MockDAL_Insert_Call {
 	return _c
 }
 
-func (_c *MockDAL_Insert_Call) RunAndReturn(run func(context.Context, itemsvc.Item) error) *MockDAL_Insert_Call {
+func (_c *MockDAL_Insert_Call) RunAndReturn(run func(context.Context, int64, itemsvc.Item) error) *MockDAL_Insert_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// List provides a mock function with given fields: ctx
-func (_m *MockDAL) List(ctx context.Context) ([]itemsvc.Item, error) {
-	ret := _m.Called(ctx)
+// List provides a mock function with given fields: ctx, characterID
+func (_m *MockDAL) List(ctx context.Context, characterID int64) ([]itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -298,19 +303,19 @@ func (_m *MockDAL) List(ctx context.Context) ([]itemsvc.Item, error) {
 
 	var r0 []itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]itemsvc.Item, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]itemsvc.Item, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []itemsvc.Item); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []itemsvc.Item); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]itemsvc.Item)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -325,13 +330,14 @@ type MockDAL_List_Call struct {
 
 // List is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockDAL_Expecter) List(ctx interface{}) *MockDAL_List_Call {
-	return &MockDAL_List_Call{Call: _e.mock.On("List", ctx)}
+//   - characterID int64
+func (_e *MockDAL_Expecter) List(ctx interface{}, characterID interface{}) *MockDAL_List_Call {
+	return &MockDAL_List_Call{Call: _e.mock.On("List", ctx, characterID)}
 }
 
-func (_c *MockDAL_List_Call) Run(run func(ctx context.Context)) *MockDAL_List_Call {
+func (_c *MockDAL_List_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -341,22 +347,22 @@ func (_c *MockDAL_List_Call) Return(_a0 []itemsvc.Item, _a1 error) *MockDAL_List
 	return _c
 }
 
-func (_c *MockDAL_List_Call) RunAndReturn(run func(context.Context) ([]itemsvc.Item, error)) *MockDAL_List_Call {
+func (_c *MockDAL_List_Call) RunAndReturn(run func(context.Context, int64) ([]itemsvc.Item, error)) *MockDAL_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// ResetDaily provides a mock function with given fields: ctx
-func (_m *MockDAL) ResetDaily(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// ResetDaily provides a mock function with given fields: ctx, characterID
+func (_m *MockDAL) ResetDaily(ctx context.Context, characterID int64) error {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResetDaily")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -371,13 +377,14 @@ type MockDAL_ResetDaily_Call struct {
 
 // ResetDaily is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockDAL_Expecter) ResetDaily(ctx interface{}) *MockDAL_ResetDaily_Call {
-	return &MockDAL_ResetDaily_Call{Call: _e.mock.On("ResetDaily", ctx)}
+//   - characterID int64
+func (_e *MockDAL_Expecter) ResetDaily(ctx interface{}, characterID interface{}) *MockDAL_ResetDaily_Call {
+	return &MockDAL_ResetDaily_Call{Call: _e.mock.On("ResetDaily", ctx, characterID)}
 }
 
-func (_c *MockDAL_ResetDaily_Call) Run(run func(ctx context.Context)) *MockDAL_ResetDaily_Call {
+func (_c *MockDAL_ResetDaily_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_ResetDaily_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -387,22 +394,22 @@ func (_c *MockDAL_ResetDaily_Call) Return(_a0 error) *MockDAL_ResetDaily_Call {
 	return _c
 }
 
-func (_c *MockDAL_ResetDaily_Call) RunAndReturn(run func(context.Context) error) *MockDAL_ResetDaily_Call {
+func (_c *MockDAL_ResetDaily_Call) RunAndReturn(run func(context.Context, int64) error) *MockDAL_ResetDaily_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// SetCount provides a mock function with given fields: ctx, itemID, count
-func (_m *MockDAL) SetCount(ctx context.Context, itemID string, count int) error {
-	ret := _m.Called(ctx, itemID, count)
+// SetCount provides a mock function with given fields: ctx, characterID, itemID, count
+func (_m *MockDAL) SetCount(ctx context.Context, characterID int64, itemID string, count int) error {
+	ret := _m.Called(ctx, characterID, itemID, count)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetCount")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, int) error); ok {
-		r0 = rf(ctx, itemID, count)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) error); ok {
+		r0 = rf(ctx, characterID, itemID, count)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -417,15 +424,16 @@ type MockDAL_SetCount_Call struct {
 
 // SetCount is a helper method to define mock.On call
 //   - ctx context.Context
+//   - characterID int64
 //   - itemID string
 //   - count int
-func (_e *MockDAL_Expecter) SetCount(ctx interface{}, itemID interface{}, count interface{}) *MockDAL_SetCount_Call {
-	return &MockDAL_SetCount_Call{Call: _e.mock.On("SetCount", ctx, itemID, count)}
+func (_e *MockDAL_Expecter) SetCount(ctx interface{}, characterID interface{}, itemID interface{}, count interface{}) *MockDAL_SetCount_Call {
+	return &MockDAL_SetCount_Call{Call: _e.mock.On("SetCount", ctx, characterID, itemID, count)}
 }
 
-func (_c *MockDAL_SetCount_Call) Run(run func(ctx context.Context, itemID string, count int)) *MockDAL_SetCount_Call {
+func (_c *MockDAL_SetCount_Call) Run(run func(ctx context.Context, characterID int64, itemID string, count int)) *MockDAL_SetCount_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(int))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(int))
 	})
 	return _c
 }
@@ -435,22 +443,22 @@ func (_c *MockDAL_SetCount_Call) Return(_a0 error) *MockDAL_SetCount_Call {
 	return _c
 }
 
-func (_c *MockDAL_SetCount_Call) RunAndReturn(run func(context.Context, string, int) error) *MockDAL_SetCount_Call {
+func (_c *MockDAL_SetCount_Call) RunAndReturn(run func(context.Context, int64, string, int) error) *MockDAL_SetCount_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Update provides a mock function with given fields: ctx, item
-func (_m *MockDAL) Update(ctx context.Context, item itemsvc.Item) error {
-	ret := _m.Called(ctx, item)
+// Update provides a mock function with given fields: ctx, characterID, item
+func (_m *MockDAL) Update(ctx context.Context, characterID int64, item itemsvc.Item) error {
+	ret := _m.Called(ctx, characterID, item)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, itemsvc.Item) error); ok {
-		r0 = rf(ctx, item)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, itemsvc.Item) error); ok {
+		r0 = rf(ctx, characterID, item)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -465,14 +473,15 @@ type MockDAL_Update_Call struct {
 
 // Update is a helper method to define mock.On call
 //   - ctx context.Context
+//   - characterID int64
 //   - item itemsvc.Item
-func (_e *MockDAL_Expecter) Update(ctx interface{}, item interface{}) *MockDAL_Update_Call {
-	return &MockDAL_Update_Call{Call: _e.mock.On("Update", ctx, item)}
+func (_e *MockDAL_Expecter) Update(ctx interface{}, characterID interface{}, item interface{}) *MockDAL_Update_Call {
+	return &MockDAL_Update_Call{Call: _e.mock.On("Update", ctx, characterID, item)}
 }
 
-func (_c *MockDAL_Update_Call) Run(run func(ctx context.Context, item itemsvc.Item)) *MockDAL_Update_Call {
+func (_c *MockDAL_Update_Call) Run(run func(ctx context.Context, characterID int64, item itemsvc.Item)) *MockDAL_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(itemsvc.Item))
+		run(args[0].(context.Context), args[1].(int64), args[2].(itemsvc.Item))
 	})
 	return _c
 }
@@ -482,7 +491,7 @@ func (_c *MockDAL_Update_Call) Return(_a0 error) *MockDAL_Update_Call {
 	return _c
 }
 
-func (_c *MockDAL_Update_Call) RunAndReturn(run func(context.Context, itemsvc.Item) error) *MockDAL_Update_Call {
+func (_c *MockDAL_Update_Call) RunAndReturn(run func(context.Context, int64, itemsvc.Item) error) *MockDAL_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

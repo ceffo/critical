@@ -43,7 +43,7 @@ func (s *service) Restock(ctx context.Context, characterID int64, itemID string,
 	}
 	var res *RestockResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		item, err := s.dal.Increment(ctx, itemID, n)
+		item, err := s.dal.Increment(ctx, characterID, itemID, n)
 		if err != nil {
 			return err
 		}

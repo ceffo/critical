@@ -54,7 +54,7 @@ func TestUnknownAC_Step1_AttackWithoutAC(t *testing.T) {
 func TestUnknownAC_Step1_ResultNotSettled(t *testing.T) {
 	for _, ac := range []*int{nil, new(0)} {
 		f := newFixture(t)
-		f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil).Once()
+		f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil).Once()
 		f.withChar(bard())
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
 		f.dice.EXPECT().RollD20().Return(15).Once()
@@ -244,7 +244,7 @@ func TestUnknownAC_Step6_SameDiceAsKnownAC(t *testing.T) {
 				Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
 			})
 			require.NoError(t, err)
-			f.weapons.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastardSword, nil).Once()
+			f.weapons.EXPECT().Get(mock.Anything, charID, "bastard_sword").Return(bastardSword, nil).Once()
 			f.withChar(bard())
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
 			f.records()

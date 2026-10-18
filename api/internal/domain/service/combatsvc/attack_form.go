@@ -123,7 +123,7 @@ func (s *service) UpdateAttackForm(ctx context.Context, characterID int64, p Att
 		if err != nil {
 			return err
 		}
-		weapons, err := s.weapons.List(ctx)
+		weapons, err := s.weapons.List(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("list weapons: %w", err)
 		}
@@ -143,7 +143,7 @@ func (s *service) UpdateAttackForm(ctx context.Context, characterID int64, p Att
 		if p.AmmoItemID != nil {
 			id := strings.TrimSpace(*p.AmmoItemID)
 			if id != "" {
-				if err := s.checkAmmo(ctx, held, id); err != nil {
+				if err := s.checkAmmo(ctx, characterID, held, id); err != nil {
 					return err
 				}
 			}
@@ -186,8 +186,8 @@ func (s *service) UpdateAttackForm(ctx context.Context, characterID int64, p Att
 }
 
 // checkAmmo refuses an ammunition the weapon in hand cannot fire.
-func (s *service) checkAmmo(ctx context.Context, weapon *Weapon, itemID string) error {
-	items, err := s.items.List(ctx)
+func (s *service) checkAmmo(ctx context.Context, characterID int64, weapon *Weapon, itemID string) error {
+	items, err := s.items.List(ctx, characterID)
 	if err != nil {
 		return fmt.Errorf("list items: %w", err)
 	}
@@ -225,7 +225,7 @@ func (s *service) storedForm(ctx context.Context, characterID int64) (AttackForm
 //     left is offered (AmmoFromDefault). A weapon without ammunition shows
 //     none, the stored choice is kept for when a bow is back in hand.
 func (s *service) formView(ctx context.Context, characterID int64, form AttackForm) (*AttackFormView, error) {
-	weapons, err := s.weapons.List(ctx)
+	weapons, err := s.weapons.List(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("list weapons: %w", err)
 	}
@@ -243,7 +243,7 @@ func (s *service) formView(ctx context.Context, characterID int64, form AttackFo
 	var ammo *itemsvc.Item
 	view.Form.AmmoItemID = ""
 	if held.FiresAmmo() {
-		items, err := s.items.List(ctx)
+		items, err := s.items.List(ctx, characterID)
 		if err != nil {
 			return nil, fmt.Errorf("list items: %w", err)
 		}

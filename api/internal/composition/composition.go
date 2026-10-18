@@ -109,8 +109,8 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	return bs, nil
 }
 
-// Build runs the startup steps (migrate, seed, validate the catalogue and the
-// seeds, import the catalogue), then builds the adapters that need no storage
+// Build runs the startup steps (migrate, validate the catalogue and the
+// seeds, seed, import the catalogue), then builds the adapters that need no storage
 // and the services over st. On an error it closes st. It touches storage only
 // through the ports of st, so tests drive it with mocks.
 func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error) {
@@ -119,11 +119,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
-	if err := db.Seed(ctx, cfg.SeedsDir); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("seed: %w", err)
-	}
-
 	characterDAL, hpDAL, logDAL, buffDAL, spellDAL := st.Character, st.HP, st.Log, st.Buff, st.Spell
 	var dice Dice = diceadpt.New()
 	if cfg.Dice != nil {
@@ -159,12 +154,19 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
-	spellbook, err := spellbookadpt.New(cfg.SeedsDir, cat)
+	// The spellbook seed is checked against the catalogue before the seed
+	// writes it into the seed character's spellbook: only catalogue spells
+	// are stored.
+	spellbookSeed, err := spellbookadpt.ReadSeed(cfg.SeedsDir, cat)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	if err := db.ImportCatalogue(ctx, cat, seedSpellRefs(spellbook, effects)); err != nil {
+	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("seed: %w", err)
+	}
+	if err := db.ImportCatalogue(ctx, cat, seedSpellRefs(spellbookSeed, effects)); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -174,6 +176,9 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, fmt.Errorf("resolve character: %w", err)
 	}
+
+	// Each character's spellbook, named from the catalogue.
+	spellbook := spellbookadpt.New(st.Spellbook, cat)
 
 	charSvc, err := charactersvc.New(characterDAL)
 	if err != nil {
@@ -358,10 +363,10 @@ func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.
 
 // seedSpellRefs are the spell ids the seeds refer to: a catalogue import may
 // not remove any of them (ADR 0021 step 5.4.3).
-func seedSpellRefs(book *spellbookadpt.Book, effects *spelleffectsadpt.Catalog) []catalogue.Ref {
+func seedSpellRefs(spellbook []string, effects *spelleffectsadpt.Catalog) []catalogue.Ref {
 	var refs []catalogue.Ref
-	for _, e := range book.All() {
-		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spellbook seed"})
+	for _, id := range spellbook {
+		refs = append(refs, catalogue.Ref{ID: id, Where: "spellbook seed"})
 	}
 	for _, e := range effects.All() {
 		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spell effects seed"})

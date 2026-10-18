@@ -4,6 +4,10 @@
 
 package queries
 
+import (
+	"database/sql"
+)
+
 type LocalizedText struct {
 	TextID int64
 	Lang   string
@@ -21,4 +25,5 @@ type Weapon struct {
 	Kind        string
 	TwoHanded   int64
 	AmmoKind    string
+	CharacterID sql.NullInt64
 }

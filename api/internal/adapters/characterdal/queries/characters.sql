@@ -14,6 +14,10 @@ FROM characters WHERE id = $1;
 UPDATE characters SET realized_level = sqlc.arg(realized_level), hp_max = sqlc.arg(hp_max)
 WHERE id = sqlc.arg(id);
 
+-- A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
+-- name: SetSkillPoints :execrows
+UPDATE characters SET skill_points = sqlc.arg(skill_points) WHERE id = sqlc.arg(id);
+
 -- name: GetCharacterDetails :one
 SELECT race, alignment, age, sex, height, weight, hair, eyes, languages
 FROM characters WHERE id = $1;

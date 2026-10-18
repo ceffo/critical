@@ -186,9 +186,26 @@ func validSkills(n NewCharacter) (map[string]int, error) {
 	case !slices.Contains(ruletablesvc.ThiefArmors, n.SkillArmor):
 		return nil, &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
 	}
+	return ValidSkillPoints(n.Class, n.SkillPoints)
+}
+
+// ValidSkillPoints is ADR 0030 step 17's entry check on a thief's points,
+// at creation and when the player spends them later: each skill of
+// ThiefSkills from 0 to MaxSkillPoints. The budget is no refusal, only the
+// derived warning (step 17 as built). The points come back without the
+// zeros, nil for none. A class without thieving skills enters none: any
+// point is refused with field skillPoints; another refusal names the field
+// skillPoints.<skill>.
+func ValidSkillPoints(class string, points map[string]int) (map[string]int, error) {
+	if !ruletablesvc.HasThiefSkills(class) {
+		if len(points) > 0 {
+			return nil, &domain.FieldError{Field: "skillPoints", Message: CodeNotAllowed}
+		}
+		return nil, nil
+	}
 	var out map[string]int
-	for _, skill := range slices.Sorted(maps.Keys(n.SkillPoints)) {
-		pts := n.SkillPoints[skill]
+	for _, skill := range slices.Sorted(maps.Keys(points)) {
+		pts := points[skill]
 		switch {
 		case !slices.Contains(ruletablesvc.ThiefSkills, skill):
 			return nil, &domain.FieldError{Field: "skillPoints." + skill, Message: CodeUnknown}

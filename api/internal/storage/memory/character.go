@@ -66,6 +66,20 @@ func (c Characters) SetRealizedLevel(ctx context.Context, id int64, realizedLeve
 	})
 }
 
+// SetSkillPoints implements skillsvc.Points (ADR 0030 step 17), or returns
+// domain.ErrCharacterNotFound. It stores a copy of points.
+func (c Characters) SetSkillPoints(ctx context.Context, id int64, points map[string]int) error {
+	return c.s.write(ctx, func(t *tables) error {
+		ch, ok := t.characters[id]
+		if !ok {
+			return domain.ErrCharacterNotFound
+		}
+		ch.SkillPoints = maps.Clone(points)
+		t.characters[id] = ch
+		return nil
+	})
+}
+
 // CharactersOf implements charactersvc.Owners.
 func (c Characters) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charactersvc.Summary, error) {
 	out := []charactersvc.Summary{}

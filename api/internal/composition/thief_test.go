@@ -12,8 +12,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -97,4 +99,60 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 	require.Len(t, entries, 3)
 	assert.Equal(t, actionlog.KindAttack, entries[0].Kind)
 	assert.Equal(t, actionlog.KindSkillCheck, entries[2].Kind, "after it the dagger's weapon_add")
+}
+
+// ADR 0030 step 17 after creation, through the real services: the thief of
+// the test above reaches 2nd level (1,250 XP, Table 25) and its level-up is
+// rolled, so PHB p.39's budget grows by 30 points, 15 at most in one skill.
+// The player spends them, 15 in Open Locks and 15 in Pick Pockets: Open
+// Locks rises from 55 to 70 with no budget warning, the spend is one
+// skill_points entry, and undoing it gives the points back.
+func TestThief_Step17_SpendPointsAfterALevelUpAndUndo(t *testing.T) {
+	ctx := context.Background()
+	cfg := fixtureConfig()
+	cfg.Dice = &attackDice{t: t, dies: []int{4}, calls: map[string]int{}}
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Name: "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		SkillArmor: "none", SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
+	})
+	require.NoError(t, err)
+	openLocks := func() int {
+		t.Helper()
+		skills, err := bs.Skills.List(ctx, id)
+		require.NoError(t, err)
+		require.Equal(t, "open_locks", skills.ThiefSkills[1].Skill)
+		return skills.ThiefSkills[1].Percent
+	}
+	assert.Equal(t, 55, openLocks())
+
+	_, err = bs.XP.Add(ctx, id, xpsvc.EntryInput{Base: 1_250, Reason: "the vault"})
+	require.NoError(t, err)
+	_, err = bs.LevelUp.Roll(ctx, id, levelupsvc.RollInput{Level: 2})
+	require.NoError(t, err)
+	spend := map[string]int{"open_locks": 45, "pick_pockets": 45}
+	got, err := bs.Skills.SetPoints(ctx, id, spend)
+	require.NoError(t, err)
+	assert.Equal(t, spend, got)
+	assert.Equal(t, 70, openLocks())
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 2, c.Derived.RealizedLevel)
+	assert.Empty(t, c.Derived.SkillBudget, "90 points, 45 in each: the budget at 2nd")
+
+	top, ok, err := bs.Log.TopID(ctx, id)
+	require.NoError(t, err)
+	require.True(t, ok)
+	e, err := bs.Log.Undo(ctx, id, top)
+	require.NoError(t, err)
+	assert.Equal(t, actionlog.KindSkillPoints, e.Kind)
+	assert.Equal(t, 55, openLocks(), "the undo gives the points back")
+	c, err = bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int{"open_locks": 30, "pick_pockets": 30}, c.SkillPoints)
+	assert.Equal(t, 2, c.Derived.RealizedLevel, "the level-up stays")
 }

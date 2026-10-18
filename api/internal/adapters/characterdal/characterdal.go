@@ -86,6 +86,24 @@ func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpM
 	return nil
 }
 
+// SetSkillPoints implements skillsvc.Points: a thief's points per skill,
+// nil for none (ADR 0030 step 17). domain.ErrCharacterNotFound when the row
+// is missing.
+func (d *DAL) SetSkillPoints(ctx context.Context, id int64, points map[string]int) error {
+	raw, err := encodeSkillPoints(points)
+	if err != nil {
+		return err
+	}
+	n, err := d.q.SetSkillPoints(ctx, queries.SetSkillPointsParams{SkillPoints: raw, ID: id})
+	if err != nil {
+		return fmt.Errorf("set skill points: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
+}
+
 // CharactersOf implements charactersvc.Owners.
 func (d *DAL) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charactersvc.Summary, error) {
 	rows, err := d.q.CharactersOf(ctx, uuid.NullUUID{UUID: owner, Valid: true})

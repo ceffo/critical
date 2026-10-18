@@ -33,6 +33,7 @@ type fixture struct {
 	abils   *mocks.MockAbilities
 	dice    *mocks.MockDice
 	log     *mocks.MockLog
+	points  *mocks.MockPoints
 	tx      *countingTx
 	entries []actionlog.NewEntry
 }
@@ -54,9 +55,9 @@ func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
 		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
-		log: mocks.NewMockLog(t), tx: &countingTx{},
+		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	f.dal.EXPECT().ListProficiencies(mock.Anything, charID).Return(catalog, nil).Maybe()

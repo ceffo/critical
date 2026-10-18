@@ -213,6 +213,12 @@ const KindLevelUp Kind = "level_up"
 // is never adjusted after the fact.
 const KindSpellLearn Kind = "spell_learn"
 
+// KindSkillPoints is a thief spending skill points on the sheet (skillsvc,
+// ADR 0030 step 17): the points per skill before and after. Its
+// "skill_points" snapshot carries the points, so popping it gives them back.
+// Not one of RollKinds: nothing is rolled.
+const KindSkillPoints Kind = "skill_points"
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.

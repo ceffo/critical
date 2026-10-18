@@ -145,3 +145,29 @@ func TestGetAttackForm_Step19_BackstabPreview(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0030 step 19 (PHB p.40): a thief backstabs with a melee weapon only.
+// With darts the backstab is refused before any die (the dice mock fails a
+// roll), and the attack form previews none.
+func TestBackstab_Step19_MeleeWeaponOnly(t *testing.T) {
+	f := newFixture(t)
+	f.weapons.EXPECT().Get(mock.Anything, charID, "darts").Return(darts, nil)
+	f.withChar(thief())
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, mock.Anything, mock.Anything).Return(str16Mods, nil).Maybe()
+	_, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "darts", TargetAC: intPtr(5), Backstab: true})
+	require.ErrorIs(t, err, domain.ErrInvalidInput)
+
+	g := newFixture(t)
+	g.forms.EXPECT().Get(mock.Anything, charID).Return(combatsvc.AttackForm{}, false, nil).Once()
+	g.weapons.EXPECT().List(mock.Anything, charID).Return([]combatsvc.Weapon{darts}, nil)
+	g.items.EXPECT().List(mock.Anything, charID).Return([]itemsvc.Item{}, nil).Maybe()
+	g.withChar(thief())
+	g.buffs.EXPECT().Aggregate(mock.Anything, charID, mock.Anything, mock.Anything).Return(str16Mods, nil)
+	v, err := g.svc.GetAttackForm(context.Background(), charID)
+	require.NoError(t, err)
+	assert.Nil(t, v.Preview.Backstab)
+
+	assert.True(t, combatsvc.BackstabAllowed(thief(), dagger1))
+	assert.False(t, combatsvc.BackstabAllowed(thief(), darts))
+	assert.False(t, combatsvc.BackstabAllowed(bard(), dagger1))
+}

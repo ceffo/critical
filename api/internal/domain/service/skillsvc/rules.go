@@ -41,6 +41,14 @@ const (
 	MaxAdjustmentReasonLen   = 80
 )
 
+// MinThiefSkillPercent is the least percentage a thieving skill is used at
+// (ADR 0030 step 17, PHB p.39): under it the player must spend points first.
+const MinThiefSkillPercent = 1
+
+// CodeSkillUnusable is the FieldError code of a roll of a thieving skill
+// under MinThiefSkillPercent. The web owns the wording.
+const CodeSkillUnusable = "skill_unusable"
+
 // percentKind reports a check on a d100 against a percentage: a bard skill
 // (ADR 0014 step 3) or a thieving skill (ADR 0030 step 17).
 func percentKind(k Kind) bool { return k == KindBardSkill || k == KindThiefSkill }

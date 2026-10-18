@@ -398,6 +398,24 @@ func (q *Queries) SetRealizedLevel(ctx context.Context, arg SetRealizedLevelPara
 	return result.RowsAffected()
 }
 
+const setSkillPoints = `-- name: SetSkillPoints :execrows
+UPDATE characters SET skill_points = $1 WHERE id = $2
+`
+
+type SetSkillPointsParams struct {
+	SkillPoints string
+	ID          int64
+}
+
+// A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
+func (q *Queries) SetSkillPoints(ctx context.Context, arg SetSkillPointsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setSkillPoints, arg.SkillPoints, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const updateCharacterDetails = `-- name: UpdateCharacterDetails :execrows
 UPDATE characters
 SET race = $1, alignment = $2, age = $3, sex = $4, height = $5, weight = $6, hair = $7, eyes = $8, languages = $9

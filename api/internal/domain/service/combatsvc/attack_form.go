@@ -306,8 +306,8 @@ func (s *service) formView(ctx context.Context, characterID int64, form AttackFo
 // preview computes the effective THAC0 of the current choices with the
 // same steps as an attack (ADR 0002 step 12): nothing is rolled or spent.
 // A weapon that allows the point-blank option (ADR 0030 step 12) also gets
-// the preview with it, in PointBlank; a character with the backstab (step
-// 19) the preview with it, in Backstab.
+// the preview with it, in PointBlank; a character with the backstab and a
+// melee weapon (step 19, BackstabAllowed) the preview with it, in Backstab.
 func (s *service) preview(ctx context.Context, char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, form AttackForm) (*AttackPreview, error) {
 	mods, err := s.buffs.Aggregate(ctx, char.ID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponKind(weapon.Kind))
 	if err != nil {
@@ -322,7 +322,7 @@ func (s *service) preview(ctx context.Context, char *charactersvc.Character, wea
 			return nil, err
 		}
 	}
-	if char.Derived.Backstab > 0 {
+	if BackstabAllowed(char, weapon) {
 		if p.Backstab, err = s.previewWith(char, weapon, ammo, mods, form, attackOptions{backstab: true}); err != nil {
 			return nil, err
 		}

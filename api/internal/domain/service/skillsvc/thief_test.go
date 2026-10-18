@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -22,9 +23,9 @@ func thiefFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
 		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
-		log: mocks.NewMockLog(t), tx: &countingTx{},
+		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	f.dal.EXPECT().ListProficiencies(mock.Anything, charID).Return(nil, nil).Maybe()
@@ -99,4 +100,25 @@ func TestThiefSkill_ListedWithTheirTermsAndLastCheck(t *testing.T) {
 	f = thiefFixture(t)
 	_, err = f.svc.Roll(context.Background(), charID, "read_languages", skillsvc.Adjustment{})
 	require.Error(t, err, "a skill the character lacks; the dice mock fails on any roll")
+}
+
+// ADR 0030 step 17 (PHB p.39): a thieving skill at 0% is refused before
+// the die (the dice mock fails a roll), even with a DM bonus, until points
+// raise it to 1% at least.
+func TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie(t *testing.T) {
+	f := &fixture{
+		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
+		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
+	}
+	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Tx: f.tx})
+	require.NoError(t, err)
+	f.dal.EXPECT().ListProficiencies(mock.Anything, charID).Return(nil, nil)
+	f.dal.EXPECT().ListBardSkills(mock.Anything, charID).Return(nil, nil)
+	thief := &charactersvc.Character{ID: charID, Class: "thief"}
+	thief.Derived.ThiefSkills = []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 60, Race: -15, Armor: -50, Percent: 0}}
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(thief, nil)
+	_, err = svc.Roll(context.Background(), charID, "climb_walls", skillsvc.Adjustment{Value: 30, Reason: "rope"})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, skillsvc.CodeSkillUnusable, fe.Message)
 }

@@ -180,6 +180,17 @@ flowchart TD
   Under the themes, the account (ADR 0029: account actions live in the cog menu): the logged-in email
   (`stores/session.ts`, from start-up's `GET /api/auth/me`) and "Log out" (the full "Log out of
   <email>" in its tooltip and `aria-label`), which posts `POST /api/auth/logout` and shows the login page.
+  Above the account, the Character group ([ADR 0029](adr/0029-users-login-and-access.md) step 7.2,
+  amendment "creating, switching and retiring characters as built"): Switch, Create and Retire, each
+  opening its `ui/dialog` (`components/characters/CharacterDialogs.tsx`) outside the popover, which
+  closes: the user's characters with Play (`PUT /api/characters/current`), the new character form
+  (`CharacterForm.tsx`: class and race from `GET /api/characters/options`, name, the six abilities, max
+  HP, starting XP; the server derives the rest) and the confirmed Retire (`PATCH /api/characters/{id}`).
+  Each change loads the page again on `/`.
+- Creation page (`components/characters/CreateCharacterPage.tsx`): `startFor` shows it to a user whose
+  `currentCharacterId` is null (a new player, or their current one retired), on every path but `/admin`.
+  The brand, the user's other characters to play when they have some, the form in a `stage-card`, and
+  the language switch and Log out (the cog menu is the dashboard's).
 - Theme (ADR 0020, amended by ADR 0026: the contrast ladder, the raised stage and four themes,
   Arcane, Deep, Parchment and Plain, with a dark and a light theme per device): `lib/theme.ts`
   `THEMES` holds one hand-tuned role table per theme and mode (Deep is dark only, Parchment light
@@ -616,6 +627,9 @@ outside `ui/`).
   `details.errors.<code>`, falling back to the code. Free-text values (race, languages...) are shown as
   entered, except a language whose name has a `details.language.<key>` entry (key: lower case, no accents or
   spaces), which is shown translated; the class key is read-only and translated by `details.classes.<key>`.
+  The new character form does the same with `characters.errors.<code>` (`empty`, `too_long`,
+  `out_of_range`, `not_creatable`, `unknown`, `race_not_allowed`), with the field's range from the
+  options; a typed value that is no whole number is refused in the form (parsing, `lib/wholeNumber.ts`).
 
 ## Testing
 

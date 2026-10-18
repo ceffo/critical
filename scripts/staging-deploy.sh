@@ -47,7 +47,7 @@ rollback_hint() {
 }
 trap rollback_hint EXIT
 
-"$fly" deploy -c "$config" -a "$app" --image "$image" --no-public-ips --yes
+"$fly" deploy -c "$config" -a "$app" --image "$image" --no-public-ips --ha=false --yes
 FLY="$fly" "$smoke" "$app" "$sha" ${version:+"$version"}
 # After: the release now running must hold the gate too.
 FLY="$fly" "$here/fly-access-check.sh" "$app"

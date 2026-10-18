@@ -412,6 +412,10 @@ Through the `.flycast` address, fly's proxy starts a stopped machine and balance
 answers on the service ports (80, and 443 with TLS), not on 8080. `$fly proxy <free port>:8080 -a <app>` without
 the address goes straight to one running machine's port 8080 and starts nothing. A request can be pinned to one
 machine with the header `fly-force-instance-id: <machine id>` (what `just fly-smoke` does for each machine).
+Port 80 answers `301` to https (`force_https`), so `just fly-smoke` and `fly-persistence-check.sh` proxy to port 443
+and call the app by its public name, `curl --resolve <app>.fly.dev:<port>:127.0.0.1 https://<app>.fly.dev:<port>/…`:
+a valid certificate (no `-k`), and it works before the app has a public address (the first deploy is private) as
+well as after. `fly-open.sh` (port 80) now only serves a cluster (`--db`); a public app is opened at its fly.dev URL.
 
 ## Going public (ADR 0024 step 8, ADR 0029)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Smoke-checks a deployed private fly app (ADR 0024 steps 3.3 and 10.5): opens `fly proxy` to the
+# Smoke-checks a deployed fly app, private or public (ADR 0024 steps 3.3 and 10.5): opens `fly proxy` to the
 # app's Flycast address (fly's proxy starts a stopped machine), then, on every machine of the app
 # (each request pinned with fly's `fly-force-instance-id` header), checks that /api/health answers
 # 200 with status ok and the expected commit, that /api/character answers with a read through the
@@ -31,12 +31,13 @@ fly="${FLY:-$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)}"
 port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
 body="$(mktemp)"
 log="$(mktemp)"
-"$fly" proxy "$port:80" "$app.flycast" -a "$app" -q >"$log" 2>&1 &
+"$fly" proxy "$port:443" "$app.flycast" -a "$app" -q >"$log" 2>&1 &
 proxy=$!
 trap 'kill "$proxy" 2>/dev/null || true; rm -f "$body" "$log"' EXIT
 fail() { echo "fly-smoke: FAIL ($app): $*" >&2; exit 1; }
 
-base="http://127.0.0.1:$port"
+base="https://$app.fly.dev:$port"
+res=(--resolve "$app.fly.dev:$port:127.0.0.1") # the public name, valid cert, through the private tunnel
 machines="$("$fly" machine list -a "$app" --json | jq -r '.[].id')"
 [ -n "$machines" ] || fail "no machine"
 
@@ -45,7 +46,7 @@ machines="$("$fly" machine list -a "$app" --json | jq -r '.[].id')"
 get() {
     local m="$1" path="$2"
     shift 2
-    curl -sS -m 70 -o "$body" -w '%{http_code}' -H "fly-force-instance-id: $m" "$@" "$base$path" 2>/dev/null || true
+    curl -sS "${res[@]}" -m 70 -o "$body" -w '%{http_code}' -H "fly-force-instance-id: $m" "$@" "$base$path" 2>/dev/null || true
 }
 
 for m in $machines; do
@@ -53,7 +54,7 @@ for m in $machines; do
     if [ "$m" = "$(echo "$machines" | head -n1)" ]; then
         # The pin must be honoured, or "every machine serves" proves nothing: wait until the app
         # answers at all, then a machine id that does not exist must not get a 200.
-        while [ $((SECONDS - start)) -lt 90 ] && [ "$(curl -sS -m 70 -o /dev/null -w '%{http_code}' "$base/api/health" 2>/dev/null || true)" != 200 ]; do sleep 1; done
+        while [ $((SECONDS - start)) -lt 90 ] && [ "$(curl -sS "${res[@]}" -m 70 -o /dev/null -w '%{http_code}' "$base/api/health" 2>/dev/null || true)" != 200 ]; do sleep 1; done
         [ "$(get 0000000000dead /api/health)" != 200 ] || fail "fly-force-instance-id is ignored: cannot pin a machine"
     fi
     code=000
@@ -71,7 +72,7 @@ for m in $machines; do
     echo "fly-smoke: machine $m /api/health 200 $(cat "$body") after $((SECONDS - start)) s"
 
     start=$SECONDS
-    suffix="$(curl -sS -m 70 -o /dev/null -D - -H "fly-force-instance-id: $m" "$base/api/auth/google/start" 2>/dev/null |
+    suffix="$(curl -sS "${res[@]}" -m 70 -o /dev/null -D - -H "fly-force-instance-id: $m" "$base/api/auth/google/start" 2>/dev/null |
         tr -d '\r' | sed -n 's/^[Ss]et-[Cc]ookie: critical_login\(_[^=]*\)=.*/\1/p' | head -n1 || true)"
     code="$(get "$m" /api/character -H "Cookie: critical_session$suffix=fly-smoke")"
     case "$code" in

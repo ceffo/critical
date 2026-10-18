@@ -18,16 +18,17 @@ fly="${FLY:-$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)}"
 port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
 body="$(mktemp)"
 log="$(mktemp)"
-"$fly" proxy "$port:80" "$app.flycast" -a "$app" -q >"$log" 2>&1 &
+"$fly" proxy "$port:443" "$app.flycast" -a "$app" -q >"$log" 2>&1 &
 proxy=$!
 trap 'kill "$proxy" 2>/dev/null || true; rm -f "$body" "$log"' EXIT
 fail() { echo "fly-persistence-check: FAIL ($app): $*" >&2; exit 1; }
-base="http://127.0.0.1:$port"
+base="https://$app.fly.dev:$port"
+res=(--resolve "$app.fly.dev:$port:127.0.0.1") # the public name, valid cert, through the private tunnel
 
 code=000
 for _ in $(seq 1 90); do
     kill -0 "$proxy" 2>/dev/null || { cat "$log" >&2; fail "fly proxy exited"; }
-    code="$(curl -sS -m 70 -o /dev/null -w '%{http_code}' "$base/api/health" 2>/dev/null || true)"
+    code="$(curl -sS "${res[@]}" -m 70 -o /dev/null -w '%{http_code}' "$base/api/health" 2>/dev/null || true)"
     [ "$code" = 200 ] && break
     sleep 1
 done
@@ -35,7 +36,7 @@ done
 
 case "$mode" in
 mark)
-    code="$(curl -sS -m 70 -o "$body" -w '%{http_code}' -H 'Content-Type: application/json' \
+    code="$(curl -sS "${res[@]}" -m 70 -o "$body" -w '%{http_code}' -H 'Content-Type: application/json' \
         -d '{"formula":"1d20"}' "$base/api/roll/dice")"
     [ "$code" = 200 ] || fail "POST /api/roll/dice: HTTP $code"
     id="$(jq -r '.logEntryId' "$body")"
@@ -48,7 +49,7 @@ check)
     # default 500) returns the newest entries. Entry <id> is gone only if that list reaches back past
     # it (an older id, or fewer entries than asked); otherwise too many entries came after it to tell.
     limit=500
-    code="$(curl -sS -m 70 -o "$body" -w '%{http_code}' "$base/api/log?limit=$limit")"
+    code="$(curl -sS "${res[@]}" -m 70 -o "$body" -w '%{http_code}' "$base/api/log?limit=$limit")"
     [ "$code" = 200 ] || fail "GET /api/log: HTTP $code"
     if ! jq -e --argjson id "$id" 'any(.entries[]; .id == $id)' "$body" >/dev/null; then
         jq -e --argjson id "$id" --argjson limit "$limit" '(.entries | length) < $limit or any(.entries[]; .id < $id)' "$body" >/dev/null \

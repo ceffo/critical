@@ -2,10 +2,9 @@ import { describe, expect, it } from "vitest";
 import { languageKey, toBody, toDraft } from "./characterDetails";
 
 const details = {
-  race: "Elf",
-  alignment: "",
+  alignment: "neutral_good",
   age: 112,
-  sex: "",
+  sex: "male",
   height: "",
   weight: "",
   hair: "",
@@ -19,6 +18,11 @@ describe("character details draft", () => {
       ageInvalid: false,
       body: details,
     });
+  });
+  it("leaves out an alignment or sex not picked yet", () => {
+    const { body } = toBody({ ...toDraft(details), alignment: "", sex: "" });
+    expect(body).not.toHaveProperty("alignment");
+    expect(body).not.toHaveProperty("sex");
   });
   it("an empty age clears it and no languages is an empty list", () => {
     const { body } = toBody({ ...toDraft(details), age: " ", languages: "  " });

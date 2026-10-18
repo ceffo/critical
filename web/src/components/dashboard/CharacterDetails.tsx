@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,9 +15,10 @@ import {
   toDraft,
   type Draft,
 } from "@/lib/characterDetails";
+import { fetchCreationOptions } from "@/api/characters";
 import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
-import type { Character } from "@/types/character";
+import type { Character, CreationOptions } from "@/types/character";
 
 /**
  * The character's name, opening a popover with the details: class and level read-only, the rest
@@ -103,6 +104,15 @@ function DetailsView({
   );
   const classKey = `details.classes.${c.class}`;
   const text = (v: string) => (v === "" ? none : v);
+  // ADR 0032 step 8.2: a required value the character lacks is asked for, not shown as "not set".
+  const toPick = (
+    <span className="text-danger" data-testid="details-missing">
+      {t("details.missing")}
+    </span>
+  );
+  const alignmentWarning = c.warnings.some(
+    (w) => w.code === "alignment_not_allowed" && w.field === "alignment",
+  );
   return (
     <>
       <dl className="flex flex-col gap-2">
@@ -113,15 +123,32 @@ function DetailsView({
         <Row label={t("details.raceCode")}>
           {c.raceCode === "" ? none : t(`details.races.${c.raceCode}`)}
         </Row>
-        {TEXT_FIELDS.slice(0, 2).map((f) => (
-          <Row key={f} label={t(`details.fields.${f}`)}>
-            {text(c[f])}
-          </Row>
-        ))}
+        <Row label={t("details.fields.alignment")}>
+          {c.alignment === "" ? (
+            toPick
+          ) : (
+            <>
+              {t(`details.alignments.${c.alignment}`)}
+              {alignmentWarning && (
+                <span
+                  className="block text-label text-muted-foreground"
+                  data-testid="details-alignment-warning"
+                >
+                  {t("details.warnings.alignment_not_allowed", {
+                    className: i18n.exists(classKey) ? t(classKey) : c.class,
+                  })}
+                </span>
+              )}
+            </>
+          )}
+        </Row>
         <Row label={t("details.fields.age")}>
           {c.age === null ? none : c.age}
         </Row>
-        {TEXT_FIELDS.slice(2).map((f) => (
+        <Row label={t("details.fields.sex")}>
+          {c.sex === "" ? toPick : t(`details.sexes.${c.sex}`)}
+        </Row>
+        {TEXT_FIELDS.map((f) => (
           <Row key={f} label={t(`details.fields.${f}`)}>
             {text(c[f])}
           </Row>
@@ -153,6 +180,22 @@ function DetailsForm({
     null,
   );
   const [busy, setBusy] = useState(false);
+  // The lists the picks are made from come from the server (ADR 0032 conventions): the class's
+  // admitted alignments and the sexes.
+  const [options, setOptions] = useState<CreationOptions | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetchCreationOptions().then(
+      (o) => live && setOptions(o),
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+  const alignments =
+    options?.classes.find((c) => c.class === character.class)?.alignments ?? [];
+  const sexes = options?.sexes ?? [];
   const set = (k: keyof Draft) => (v: string) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
@@ -174,11 +217,54 @@ function DetailsForm({
 
   const message = (field: string) => {
     if (error?.field !== field) return null;
-    const key = `details.errors.${error.code}`;
+    const fieldKey = `details.errors.${field}.${error.code}`;
+    const key = i18n.exists(fieldKey)
+      ? fieldKey
+      : `details.errors.${error.code}`;
     return (
       <span role="alert" className="text-label text-danger">
-        {i18n.exists(key) ? t(key) : error.code}
+        {i18n.exists(key)
+          ? t(key, {
+              className: i18n.exists(`details.classes.${character.class}`)
+                ? t(`details.classes.${character.class}`)
+                : character.class,
+            })
+          : error.code}
       </span>
+    );
+  };
+  // A pick among the server's codes: an empty value is the "pick" prompt, kept while the draft
+  // holds nothing (a character that lacks it); the stored value stays offered whatever the list.
+  const pick = (field: "alignment" | "sex", codes: string[]) => {
+    const offered = codes.includes(draft[field])
+      ? codes
+      : draft[field] === ""
+        ? codes
+        : [draft[field], ...codes];
+    return (
+      <div key={field} className="flex min-w-0 flex-col gap-1 text-body">
+        <label
+          htmlFor={`details-${field}`}
+          className="text-label text-muted-foreground"
+        >
+          {t(`details.fields.${field}`)}
+        </label>
+        <select
+          id={`details-${field}`}
+          className={fieldClass}
+          value={draft[field]}
+          aria-invalid={error?.field === field}
+          onChange={(e) => set(field)(e.target.value)}
+        >
+          {draft[field] === "" && <option value="">{t("details.pick")}</option>}
+          {offered.map((code) => (
+            <option key={code} value={code}>
+              {t(`details.${field === "sex" ? "sexes" : "alignments"}.${code}`)}
+            </option>
+          ))}
+        </select>
+        {message(field)}
+      </div>
     );
   };
   const input = (
@@ -210,10 +296,9 @@ function DetailsForm({
   return (
     <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-        {input("race")}
-        {input("alignment")}
+        {pick("alignment", alignments)}
         {input("age", { inputMode: "numeric" })}
-        {input("sex")}
+        {pick("sex", sexes)}
         {input("height")}
         {input("weight")}
         {input("hair")}

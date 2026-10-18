@@ -1,20 +1,11 @@
 import type { CharacterDetails } from "@/types/character";
 
-/** The text fields, in display order. */
-export const TEXT_FIELDS = [
-  "race",
-  "alignment",
-  "sex",
-  "height",
-  "weight",
-  "hair",
-  "eyes",
-] as const;
+/** The free-text fields, in display order (alignment and sex are codes picked from the server's lists). */
+export const TEXT_FIELDS = ["height", "weight", "hair", "eyes"] as const;
 export type TextField = (typeof TEXT_FIELDS)[number];
 
 /** The form's state: everything as the text typed in the inputs. */
 export interface Draft {
-  race: string;
   alignment: string;
   age: string;
   sex: string;
@@ -39,7 +30,7 @@ export function toDraft(d: CharacterDetails): Draft {
  * Every limit is the server's.
  */
 export function toBody(draft: Draft): {
-  body: CharacterDetails;
+  body: Partial<CharacterDetails>;
   ageInvalid: boolean;
 } {
   const age = draft.age.trim();
@@ -51,9 +42,10 @@ export function toBody(draft: Draft): {
   return {
     ageInvalid,
     body: {
-      race: draft.race,
-      alignment: draft.alignment,
-      sex: draft.sex,
+      // A character that lacks its alignment or sex may still edit the rest: an unpicked value is
+      // left out, not sent empty (the server refuses an empty one).
+      ...(draft.alignment === "" ? {} : { alignment: draft.alignment }),
+      ...(draft.sex === "" ? {} : { sex: draft.sex }),
       height: draft.height,
       weight: draft.weight,
       hair: draft.hair,

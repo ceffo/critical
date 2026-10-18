@@ -30,10 +30,7 @@ type Field =
 
 /** The details the form takes, in the card's order (the card's edit checks them the same way). */
 const DETAIL_FIELDS: (keyof Draft)[] = [
-  "race",
-  "alignment",
   "age",
-  "sex",
   "height",
   "weight",
   "hair",
@@ -41,7 +38,6 @@ const DETAIL_FIELDS: (keyof Draft)[] = [
 ];
 
 const NO_DETAILS: Draft = {
-  race: "",
   alignment: "",
   age: "",
   sex: "",
@@ -118,6 +114,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
 
   const classOption = options?.classes.find((c) => c.class === cls);
   const races = classOption?.races ?? [];
+  const alignments = classOption?.alignments ?? [];
   const skills = classOption?.skills ?? [];
   const armors = classOption?.skillArmors ?? [];
   const offersExceptional =
@@ -134,9 +131,14 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
 
   const wording = (e: FieldError): string => {
     if (e.field.startsWith("details.")) {
-      return t(`details.errors.${e.code}`, {
-        defaultValue: e.message ?? e.code,
-      });
+      const detail = e.field.slice("details.".length);
+      return t(
+        [`details.errors.${detail}.${e.code}`, `details.errors.${e.code}`],
+        {
+          className: t(`details.classes.${cls}`, { defaultValue: cls }),
+          defaultValue: e.message ?? e.code,
+        },
+      );
     }
     const r =
       e.field === "name"
@@ -285,13 +287,12 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
           htmlFor={`new-character-${field}`}
           className={cn(labelClass, "break-words")}
         >
-          {t(f === "race" ? "characters.raceDetail" : `details.fields.${f}`)}
+          {t(`details.fields.${f}`)}
         </label>
         <input
           {...fieldProps(field)}
           autoComplete="off"
           inputMode={f === "age" ? "numeric" : undefined}
-          title={f === "race" ? t("characters.raceDetailHint") : undefined}
           value={details[f]}
           onChange={(e) => {
             setDetails((d) => ({ ...d, [f]: e.target.value }));
@@ -301,6 +302,38 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
         {hint && (
           <span className="text-label text-muted-foreground">{hint}</span>
         )}
+        {errorFor(field)}
+      </div>
+    );
+  };
+
+  // ADR 0032 steps 2 and 3: alignment and sex are required codes, picked from the server's lists
+  // (the class's admitted alignments, the sexes).
+  const pick = (f: "alignment" | "sex", codes: string[]) => {
+    const field: Field = `details.${f}`;
+    return (
+      <div key={f} className="flex min-w-0 flex-col gap-1">
+        <label
+          htmlFor={`new-character-${field}`}
+          className={cn(labelClass, "break-words")}
+        >
+          {t(`details.fields.${f}`)}
+        </label>
+        <select
+          {...fieldProps(field)}
+          value={details[f]}
+          onChange={(e) => {
+            setDetails((d) => ({ ...d, [f]: e.target.value }));
+            setError(null);
+          }}
+        >
+          <option value="">{t("details.pick")}</option>
+          {codes.map((code) => (
+            <option key={code} value={code}>
+              {t(`details.${f === "sex" ? "sexes" : "alignments"}.${code}`)}
+            </option>
+          ))}
+        </select>
         {errorFor(field)}
       </div>
     );
@@ -354,6 +387,12 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
               const allowed =
                 options.classes.find((c) => c.class === next)?.races ?? [];
               if (!allowed.includes(race)) setRace(allowed[0] ?? "");
+              // The class limits the alignment (ADR 0032 step 2): a pick it no longer admits is cleared.
+              const admitted =
+                options.classes.find((c) => c.class === next)?.alignments ?? [];
+              setDetails((d) =>
+                admitted.includes(d.alignment) ? d : { ...d, alignment: "" },
+              );
               setError(null);
             }}
           >
@@ -519,6 +558,8 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
           {t("characters.detailsLead")}
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {pick("alignment", alignments)}
+          {pick("sex", options?.sexes ?? [])}
           {DETAIL_FIELDS.map((f) => detail(f))}
         </div>
         {detail("languages", t("details.languagesHint"))}

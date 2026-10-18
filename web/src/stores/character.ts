@@ -59,10 +59,9 @@ export const useCharacterStore = create<CharacterStore>((set) => ({
   },
   saveDetails: async (body) => {
     try {
-      const details = await patchCharacterDetails(body);
-      set((s) => ({
-        character: s.character ? { ...s.character, ...details } : s.character,
-      }));
+      await patchCharacterDetails(body);
+      // The sheet is read again: the missing fields and the warnings are the server's to say.
+      set({ character: await fetchCharacter() });
       return null;
     } catch (e) {
       if (e instanceof ApiError && e.field) return e;

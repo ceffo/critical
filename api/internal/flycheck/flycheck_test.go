@@ -76,13 +76,18 @@ func dockerfileEnv(t *testing.T) map[string]string {
 
 var files = map[string]string{"fly.staging.toml": "staging", "fly.prod.toml": "prod"}
 
+// apps are the fly app names (ADR 0024 step 8.5); the databases keep the
+// environment's name (critical_staging, critical_prod).
+var apps = map[string]string{"staging": "critical-hit-staging", "prod": "critical-hit"}
+
 func TestFly_Step2_RequiredKeysAndImageLayout(t *testing.T) {
 	image := dockerfileEnv(t)
 	require.NotEmpty(t, image)
 	for file, env := range files {
 		t.Run(file, func(t *testing.T) {
 			c := load(t, file)
-			assert.Equal(t, "critical-"+env, c.App)
+			assert.Equal(t, apps[env], c.App)
+			assert.True(t, c.HTTPService.ForceHTTPS, "a public app serves HTTPS only")
 			assert.Equal(t, "yyz", c.PrimaryRegion)
 			assert.Empty(t, c.Build, "the image is passed by the workflow (--image), never named here")
 			assert.Equal(t, image, c.Env, "[env] must equal the image's ENV (Dockerfile)")

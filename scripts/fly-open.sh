@@ -7,8 +7,8 @@
 #   scripts/fly-open.sh <app> [local port]          # the app: prints the URL to open in the browser
 #   scripts/fly-open.sh --db <cluster> [local port] # a cluster: prints the psql connection string
 #
-# No port: an app whose login redirects to a fixed localhost port (CRITICAL_PUBLIC_URL, set with the Google
-# secrets, docs/deploy.md "Google login") gets that port, any other target a free one. A given port that is already taken is refused. The proxy goes to the
+# No port: a free one. A given port that is already taken is refused. (The apps are public since the login
+# went live, docs/deploy.md; this is for reaching an app behind its public ingress, or a cluster.) The proxy goes to the
 # `.flycast` address (fly starts a stopped machine, balances between machines; the app answers on its
 # service port 80, the cluster on 5432), binds 127.0.0.1 only, and runs until Ctrl-C. For an app it
 # first waits (up to 90 s, a cold machine or database) until /api/health answers 200 and prints the
@@ -22,17 +22,7 @@ target="${1:?$usage}"
 port="${2:-}"
 fly="${FLY:-$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)}"
 
-# The localhost port each private app's login redirects back to. Goes away when the apps get public URLs.
-login_port() {
-    case "$1" in
-        critical-staging) echo 8091 ;;
-        critical-prod) echo 8092 ;;
-    esac
-}
-
 taken() { [ -n "$(ss -H -ltn "sport = :$1")" ]; }
-[ -z "$port" ] && [ "$kind" = app ] && port="$(login_port "$target")"
-if [ "${FLY_OPEN_PORT_ONLY:-}" = default ]; then echo "$port"; exit 0; fi # for the test: the default, even if taken
 if [ -z "$port" ]; then
     port="$(python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
 elif taken "$port"; then

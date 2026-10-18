@@ -246,6 +246,11 @@ flowchart LR
       gate: the **gate check** replaces the no-public-IP check, a request without a session to the
       catalogue and to a data route must answer 401 and only the public paths of ADR 0029 step 6.1 may
       answer 200; any other answer fails the deploy. The check reaches the app as in step 10.5.
+      _Built 2026-10-18 (see "Amendment (going public, 2026-10-18)")._ The release **reports** the gate:
+      `/api/health` carries `"login":"google"` when the Google login is configured (`"dev"` is the local dev
+      login, which a hosted app refuses to start with). A public IP is allowed only on an app whose gate check
+      passes (`scripts/gate-check.sh` on the public URL), for staging and production alike, before and after
+      the deploy; there is no bypass and the `PUBLIC_ACCESS_OPTION` variable is gone.
    4. Options considered, (c) chosen: (a) shared-secret HTTP basic auth, (b) stay private behind
       WireGuard / Tailscale, **(c) real login** (ADR 0029). (a) and (b) are not built.
    5. App names: `critical-hit` (production) and `critical-hit-staging` (user, 2026-10-17:
@@ -623,3 +628,32 @@ authorization"_. The design is [ADR 0029](0029-users-login-and-access.md).
 - **App names**: `critical-hit` and `critical-hit-staging`, replacing `critical-prod` and
   `critical-staging`.
 - **Step 10**: the Google OAuth client secret is a per-app fly secret like the database URL.
+
+## Amendment (going public, 2026-10-18)
+
+The first public deploy, on `critical-hit` and `critical-hit-staging` (free: a shared IPv4 and an IPv6, no
+custom domain). Step 8.3 as built:
+
+- **The gate reports itself.** `/api/health` gains `"login"`: `"google"` when the three OAuth settings are set,
+  `"dev"` for the local dev login. A hosted server cannot run with `"dev"` (ADR 0029 step 8.2), so on fly the
+  field is the proof that the release was started with the Google login, and a release from before this field
+  reads as not gated.
+- **One access check for both environments** (`scripts/fly-access-check.sh`): no public address needs the
+  private Flycast address (`fly-private-check.sh`); a public address needs the **gate check** on
+  `https://<app>.fly.dev` (`scripts/gate-check.sh`: health reports `google`; the dev login route is absent and
+  not offered; `/api/character`, `/api/characters`, `/api/spells/names` and `/api/spells/filters` answer 401;
+  a POST to `/api/characters` is refused; a browser on `/` or a page is redirected to `/login`; `/login` is the
+  login page). Staging's deploy runs it before and after the deploy, production's promotion too. Staging's
+  `PUBLIC_ACCESS_OPTION` bypass (step 8.3, 2026-10-16) and the unused step 8.4 option variable are removed: the
+  login is the access control.
+- **The static bundle stays public** (ADR 0029 amendment): the check does not ask for a 401 on `/assets/*`,
+  which the login page needs; it asks that no page but `/login` carries the app and that no `/api` data route
+  answers a visitor.
+- **Names.** The apps are `critical-hit` and `critical-hit-staging`; the databases and their users keep the
+  environment's name (`critical_prod`, `critical_staging`), so the move keeps the data: each new app's
+  `CRITICAL_DSN` is the old app's, copied inside fly (`scripts/fly-app-create.sh`). The old private apps are
+  retired after the new ones pass.
+- **Per-app login secrets** (`CRITICAL_GOOGLE_CLIENT_ID`, `_SECRET`, `CRITICAL_PUBLIC_URL`) are set by
+  `scripts/fly-google-secrets.sh`; one Google OAuth client per environment, with its `fly.dev` redirect URI.
+- **The tunnel is no longer a login path.** `just fly-open` takes a free port; the fixed login ports 8091 and
+  8092 of the private era are gone.

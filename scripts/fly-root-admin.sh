@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sets the root admin (ADR 0029 step 5.1) of a deployed app, in one command:
 #
-#   scripts/fly-root-admin.sh <app> <email>     # e.g. critical-staging you@gmail.com
+#   scripts/fly-root-admin.sh <app> <email>     # e.g. critical-hit-staging you@gmail.com
 #
 # Runs the image's /app/critical-rootadmin inside the app's own machine through `fly ssh console`, so it
 # uses the machine's CRITICAL_DSN secret: the DSN never reaches this machine. If no machine of the app is

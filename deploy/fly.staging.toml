@@ -1,7 +1,7 @@
 # Staging app (ADR 0024 steps 2, 3, 5, 8). Used as `fly deploy -c deploy/fly.staging.toml --image <ref>`:
-# the image is never named here, the release workflow passes it. No public IP is allocated (step 8.2):
-# the first deploy uses --no-public-ips. Runbook: docs/deploy.md. Checked by `just check-fly`.
-app = "critical-staging"
+# the image is never named here, the release workflow passes it. Public IPs come only once the login gate is live (step 8.2):
+# the first deploy uses --no-public-ips, `just fly-go-public` allocates them. Runbook: docs/deploy.md. Checked by `just check-fly`.
+app = "critical-hit-staging"
 primary_region = "yyz"
 
 # Same values as the image's ENV (Dockerfile), `just check-fly` fails when they differ. No CRITICAL_DSN:
@@ -20,6 +20,7 @@ primary_region = "yyz"
 
 [http_service]
   internal_port = 8080
+  force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 0

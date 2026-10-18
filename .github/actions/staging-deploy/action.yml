@@ -20,10 +20,6 @@ inputs:
   fly-api-token:
     description: The staging environment's FLY_API_TOKEN
     required: true
-  public-access-option:
-    description: The PUBLIC_ACCESS_OPTION variable (empty while the apps stay private)
-    required: false
-    default: ""
   github-token:
     description: Token that records the deployment (deployments write)
     required: true
@@ -62,13 +58,12 @@ runs:
     - name: Set up flyctl
       uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
 
-    # The no-public-IP check, the deploy and the smoke check through fly proxy (the app is private).
+    # The access check (no public IP, or the login gate live), the deploy and the smoke check through fly proxy.
     - name: Deploy and smoke-check
       id: deploy
       shell: bash
       env:
         FLY_API_TOKEN: ${{ inputs.fly-api-token }}
-        PUBLIC_ACCESS_OPTION: ${{ inputs.public-access-option }}
         SHA: ${{ inputs.sha }}
         VERSION: ${{ inputs.version }}
         STAGING_CONFIG: ${{ github.workspace }}/image-src/deploy/fly.staging.toml

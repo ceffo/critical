@@ -96,13 +96,13 @@ func TestConfigValidate_Step8_3_InMemoryStorageOnlyOutsideFlyAndTheImage(t *test
 		{"database by default", base, true},
 		{"memory for e2e", with(func(c *Config) { c.Storage = StorageMemory }), true},
 		{"memory on fly", with(func(c *Config) {
-			c.Storage, c.FlyApp, c.Env = StorageMemory, "critical-prod", ""
+			c.Storage, c.FlyApp, c.Env = StorageMemory, "critical-hit", ""
 			c.GoogleClientID, c.GoogleClientSecret, c.PublicURL = "id", "secret", "https://critical-hit.fly.dev"
 		}), false},
 		{"memory in the production image", with(func(c *Config) { c.Storage, c.WebDir = StorageMemory, "/app/web" }), false},
 		{"unknown storage", with(func(c *Config) { c.Storage = "sqlite" }), false},
 		{"database on fly", with(func(c *Config) {
-			c.FlyApp, c.WebDir, c.Env = "critical-prod", "/app/web", ""
+			c.FlyApp, c.WebDir, c.Env = "critical-hit", "/app/web", ""
 			c.GoogleClientID, c.GoogleClientSecret, c.PublicURL = "id", "secret", "https://critical-hit.fly.dev"
 		}), true},
 	}
@@ -124,7 +124,7 @@ func TestLoadConfig_InMemoryStorage(t *testing.T) {
 	if err != nil || cfg.Storage != StorageMemory {
 		t.Fatalf("got %+v, %v", cfg, err)
 	}
-	t.Setenv("FLY_APP_NAME", "critical-staging")
+	t.Setenv("FLY_APP_NAME", "critical-hit-staging")
 	if _, err := loadConfig(); err == nil {
 		t.Fatal("CRITICAL_STORAGE=memory on a fly machine must be refused")
 	}
@@ -233,5 +233,21 @@ func TestLoadConfig_Step8_2_DevLoginNeedsCriticalEnvDev(t *testing.T) {
 	t.Setenv("CRITICAL_ENV", EnvDev)
 	if _, err := loadConfig(); err != nil {
 		t.Fatalf("CRITICAL_ENV=dev must start in dev login mode: %v", err)
+	}
+}
+
+// ADR 0024 step 8.3: the login mode /api/health reports is the Google login
+// only when all three settings are set; a hosted app never has the dev login.
+func TestConfigAuth_Step8_3_HealthLoginMode(t *testing.T) {
+	dev := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c", Env: EnvDev}
+	a, err := dev.auth()
+	if err != nil || a.login() != "dev" {
+		t.Fatalf("dev: %q, %v", a.login(), err)
+	}
+	g := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c", FlyApp: "critical-hit",
+		GoogleClientID: "id", GoogleClientSecret: "secret", PublicURL: "https://critical-hit.fly.dev"}
+	a, err = g.auth()
+	if err != nil || a.login() != "google" {
+		t.Fatalf("google: %q, %v", a.login(), err)
 	}
 }

@@ -65,13 +65,19 @@ case "\$1 \${2:-}" in
     *) exit 1 ;;
 esac
 STUB
+cat > "$stubs/gate" <<STUB
+#!/bin/sh
+echo "gate \$*" >> "$calls"
+[ ! -f "$tmp/gate-fails" ]
+STUB
+chmod +x "$stubs/gate"
 echo '[]' > "$fx/empty"
 cat > "$stubs/docker" <<STUB
 #!/bin/sh
 echo "docker \$*" >> "$calls"
 case "\$*" in
     "buildx imagetools create"*) [ ! -f "$tmp/copy-fails" ] ;;
-    *critical-prod@*) [ ! -f "$tmp/copy-missing" ] ;;
+    *critical-hit@*) [ ! -f "$tmp/copy-missing" ] ;;
     *) [ ! -f "$tmp/image-missing" ] ;;
 esac
 STUB
@@ -81,7 +87,7 @@ echo "fly \$*" >> "$calls"
 case "\$1 \$2" in
     "ips list") cat "$tmp/ips" ;;
     "machine list") [ ! -f "$tmp/machines-fail" ] || exit 1; cat "$tmp/machines" ;;
-    "releases --image") echo "v3 complete registry.fly.io/critical-staging@previous" ;;
+    "releases --image") echo "v3 complete registry.fly.io/critical-hit-staging@previous" ;;
     "console -a")
         point="\$(echo "\$*" | sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p')"
         if [ -f "$tmp/console-out" ]; then sed "s/@POINT@/\$point/" "$tmp/console-out"; exit 0; fi
@@ -131,7 +137,7 @@ cd "$tmp/repo"
 git config user.email t@example.com
 git config user.name test
 mkdir -p scripts deploy
-cp "$root"/scripts/{release-guards,promote,restore-point,fly-private-check}.sh scripts/
+cp "$root"/scripts/{release-guards,promote,restore-point,fly-private-check,fly-access-check}.sh scripts/
 cp "$root"/deploy/fly.{staging,prod}.toml deploy/
 mkdir -p api/internal/storage/postgres/migrations
 touch api/internal/storage/postgres/migrations/{001_baseline,002_more}.sql
@@ -184,10 +190,10 @@ put "$(deployments "$main_sha")" "[{\"id\":12,\"created_at\":\"2026-10-17T03:00:
 
 # --- guard: the image ---
 : > "$calls"
-"$guards" image "registry.fly.io/critical-staging@$newer" >/dev/null 2>&1 || fail "an image in the registry is refused"
-grep -qx "docker manifest inspect registry.fly.io/critical-staging@$newer" "$calls" || fail "image: wrong docker call: $(cat "$calls")"
+"$guards" image "registry.fly.io/critical-hit-staging@$newer" >/dev/null 2>&1 || fail "an image in the registry is refused"
+grep -qx "docker manifest inspect registry.fly.io/critical-hit-staging@$newer" "$calls" || fail "image: wrong docker call: $(cat "$calls")"
 touch "$tmp/image-missing"
-"$guards" image "registry.fly.io/critical-staging@$newer" >/dev/null 2>&1 && fail "a missing image is accepted"
+"$guards" image "registry.fly.io/critical-hit-staging@$newer" >/dev/null 2>&1 && fail "a missing image is accepted"
 rm -f "$tmp/image-missing"
 
 # --- guard: all ---
@@ -308,31 +314,31 @@ machines="[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\",\"tag\":\"$main_s
 reset() {
     echo "$private" > "$tmp/ips"; echo "$machines" > "$tmp/machines"; rm -rf "$tmp/points" "$tmp/console-out"
     rm -f "$tmp/smoke-fails" "$tmp/release-exists" "$tmp/machines-fail" "$tmp/image-missing" "$tmp/copy-fails" "$tmp/copy-missing" \
-        "$tmp/console-damage" "$tmp/console-cut"
+        "$tmp/console-damage" "$tmp/console-cut" "$tmp/gate-fails"
 }
 # promote [phase] <tag>: promote.sh with the passphrase and $tmp/points, RESTORE_POINT_KEPT unset by default.
 promote() {
     : > "$calls"; status=0
-    out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" RESTORE_POINT_PASSPHRASE="${PASS-$passphrase}" RESTORE_POINT_DIR="$tmp/points" \
+    out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GATE_CHECK="$stubs/gate" RESTORE_POINT_PASSPHRASE="${PASS-$passphrase}" RESTORE_POINT_DIR="$tmp/points" \
         "$tmp/repo/scripts/promote.sh" "$@" 2>&1)" || status=$?
 }
 b64line="$(base64 "$tmp/point.tar" | sed -n 2p)" # a line of the dump's block: never in the log
 line() { grep -n "$1" "$calls" | head -n1 | cut -d: -f1; }
-staged="registry.fly.io/critical-staging@$newer"
-image="registry.fly.io/critical-prod@$newer"
+staged="registry.fly.io/critical-hit-staging@$newer"
+image="registry.fly.io/critical-hit@$newer"
 
 reset; promote v1.2.3
 [ "$status" = 0 ] || fail "promote: exit $status: $out"
 point="$(sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p' "$calls" | head -n1)"
 [[ "$point" =~ ^critical_prod_pre_v1_2_3_[0-9]{14}$ ]] || fail "promote: restore point name '$point'"
-grep -qx "docker buildx imagetools create --prefer-index=false --progress none -t registry.fly.io/critical-prod:$main_sha $staged" "$calls" \
+grep -qx "docker buildx imagetools create --prefer-index=false --progress none -t registry.fly.io/critical-hit:$main_sha $staged" "$calls" \
     || fail "promote: wrong copy call: $(grep buildx "$calls")"
 grep -qx "docker manifest inspect $image" "$calls" || fail "promote: the copy's digest is not checked"
-grep -qx "fly console -a critical-prod --image $image --region yyz --vm-size shared-cpu-1x --vm-memory 512 --file-local /tmp/restore-point.sh=$tmp/repo/scripts/restore-point.sh -C sh /tmp/restore-point.sh $point 001_baseline.sql 002_more.sql" "$calls" \
+grep -qx "fly console -a critical-hit --image $image --region yyz --vm-size shared-cpu-1x --vm-memory 512 --file-local /tmp/restore-point.sh=$tmp/repo/scripts/restore-point.sh -C sh /tmp/restore-point.sh $point 001_baseline.sql 002_more.sql" "$calls" \
     || fail "promote: wrong console call: $(grep console "$calls")"
-grep -qx "fly deploy -c $tmp/repo/deploy/fly.prod.toml -a critical-prod --image $image --no-public-ips --yes" "$calls" \
+grep -qx "fly deploy -c $tmp/repo/deploy/fly.prod.toml -a critical-hit --image $image --no-public-ips --yes" "$calls" \
     || fail "promote: wrong deploy call: $(grep deploy "$calls")"
-grep -qx "smoke critical-prod $main_sha" "$calls" || fail "promote: smoke not called with the app and the tag's commit"
+grep -qx "smoke critical-hit $main_sha" "$calls" || fail "promote: smoke not called with the app and the tag's commit"
 grep -q "^gh release create v1.2.3 --verify-tag --title v1.2.3 --generate-notes --notes .*$newer.*$point\`, kept on the machine that ran the promotion, $tmp/points/$point.tar.gpg" "$calls" \
     || fail "promote: no GitHub Release with the digest, the restore point and where it is kept: $(grep release "$calls")"
 [ -s "$tmp/points/$point.tar.gpg" ] || fail "promote: the restore point is not kept in RESTORE_POINT_DIR: $(ls "$tmp/points" 2>&1)"
@@ -344,7 +350,7 @@ cmp -s "$tmp/points/$point.tar.gpg" "$tmp/point.tar" && fail "promote: the resto
 [[ "$out" != *"$b64line"* ]] || fail "promote: the dump's block reached the log"
 [[ "$out" == *"restore-point: dumping critical_prod"* && "$out" == *"Connecting to fdaa::2"* && "$out" == *"restore-point: OK $point"* ]] \
     || fail "promote: the console machine's own lines are not printed: $out"
-[[ "$out" == *"promote: production (critical-prod) runs 1.2.3 (commit $main_sha, $newer); promoting v1.2.3"* ]] \
+[[ "$out" == *"promote: production (critical-hit) runs 1.2.3 (commit $main_sha, $newer); promoting v1.2.3"* ]] \
     || fail "promote: what production runs is not printed: $out"
 [ "$(line '^fly machine list')" -lt "$(line '^fly ips')" ] || fail "promote: production's current version is not printed before the promotion starts"
 reset; echo "[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\",\"tag\":\"$main_sha\"}}]" > "$tmp/machines"; promote v1.2.3
@@ -404,11 +410,16 @@ reset; touch "$tmp/copy-missing"; promote v1.2.3
 [ "$status" != 0 ] && [[ "$out" == *"is not $newer"* ]] || fail "promote: a copy under another digest is not refused: $out"
 grep -qE '^fly (console|deploy)' "$calls" && fail "promote: a copy under another digest still took a restore point or deployed"
 
-reset; echo "$public" > "$tmp/ips"; promote v1.2.3
-[ "$status" != 0 ] || fail "promote: a public IP is promoted"
-grep -qE '^(fly (console|deploy)|docker buildx)' "$calls" && fail "promote: a public IP still copied, took a restore point or deployed"
+reset; echo "$public" > "$tmp/ips"; touch "$tmp/gate-fails"; promote v1.2.3
+[ "$status" != 0 ] || fail "promote: a public IP without the login gate is promoted"
+grep -qE '^(fly (console|deploy)|docker buildx)' "$calls" && fail "promote: a public IP without the gate still copied, took a restore point or deployed"
+grep -qx "gate https://critical-hit.fly.dev" "$calls" || fail "promote: the gate check was not run against the public URL: $(cat "$calls")"
 PUBLIC_ACCESS_OPTION=basic-auth promote v1.2.3
-[ "$status" != 0 ] || fail "promote: PUBLIC_ACCESS_OPTION bypassed the mandatory no-public-IP check"
+[ "$status" != 0 ] || fail "promote: PUBLIC_ACCESS_OPTION bypassed the mandatory access check"
+# With the gate live a public app is promoted, and the gate is checked again once the release runs.
+rm -f "$tmp/gate-fails"; promote v1.2.3
+[ "$status" = 0 ] || fail "promote: a public app with the gate live is refused: $out"
+[ "$(grep -c '^gate ' "$calls")" = 2 ] || fail "promote: the gate check did not run before and after the deploy: $(cat "$calls")"
 
 reset; printf 'restore-point: FAIL: pg_dump of critical_prod failed\n' > "$tmp/console-out"; promote v1.2.3
 [ "$status" != 0 ] && [[ "$out" == *"no restore point"* && "$out" == *"pg_dump of critical_prod failed"* ]] \
@@ -446,9 +457,9 @@ RESTORE_POINT_KEPT="artifact 7" promote deploy v1.2.4
 [ "$status" != 0 ] && [[ "$out" == *"taken for another tag"* ]] && ! grep -q '^fly deploy' "$calls" \
     || fail "promote deploy of another tag than prepare's: $out"
 RESTORE_POINT_KEPT="encrypted, artifact 7 of https://run" promote deploy v1.2.3
-[ "$status" = 0 ] && grep -qx "fly deploy -c $tmp/repo/deploy/fly.prod.toml -a critical-prod --image $image --no-public-ips --yes" "$calls" \
+[ "$status" = 0 ] && grep -qx "fly deploy -c $tmp/repo/deploy/fly.prod.toml -a critical-hit --image $image --no-public-ips --yes" "$calls" \
     && grep -q "^gh release create v1.2.3 .*$point\`, encrypted, artifact 7 of https://run" "$calls" \
-    && ! grep -qE '^(fly (ips|console)|docker)' "$calls" \
+    && ! grep -qE '^(fly console|docker)' "$calls" && [ "$(line '^fly deploy')" -lt "$(line '^fly ips')" ] \
     || fail "promote deploy after prepare: exit $status, $out; $(cat "$calls")"
 rm -rf "$tmp/points"; RESTORE_POINT_KEPT="artifact 7" promote deploy v1.2.3
 [ "$status" != 0 ] && [[ "$out" == *"no restore point recorded"* ]] && ! grep -q '^fly deploy' "$calls" || fail "promote deploy without prepare: $out"
@@ -456,7 +467,7 @@ reset; status=0; out="$(FLY="$stubs/fly" RESTORE_POINT_PASSPHRASE=x "$tmp/repo/s
 [ "$status" != 0 ] && [[ "$out" == *"RESTORE_POINT_DIR is not set"* ]] || fail "promote prepare without RESTORE_POINT_DIR: $out"
 
 reset; touch "$tmp/smoke-fails"; promote v1.2.3
-[ "$status" != 0 ] && [[ "$out" == *"registry.fly.io/critical-staging@previous"* ]] || fail "promote: a failed smoke check: exit $status, no releases listed: $out"
+[ "$status" != 0 ] && [[ "$out" == *"registry.fly.io/critical-hit-staging@previous"* ]] || fail "promote: a failed smoke check: exit $status, no releases listed: $out"
 grep -q '^gh release create' "$calls" && fail "promote: released after a failed smoke check"
 
 reset; echo "[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\"}},{\"id\":\"m2\",\"image_ref\":{\"digest\":\"$digest\"}}]" > "$tmp/machines"

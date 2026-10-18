@@ -17,8 +17,8 @@
 #      runs now (its machines' image: version label, commit tag and digest; read-only); with
 #      PROMOTE_NEWEST=true (the workflow, no version asked) a tag older than the highest version production
 #      runs, or production unreadable, is refused here;
-#   2. the production app has no public IP (scripts/fly-private-check.sh). Mandatory: there is no bypass
-#      until a public-access option with access control exists (ADR 0024 step 8);
+#   2. the production app has no public IP, or the login gate is live (scripts/fly-access-check.sh,
+#      scripts/gate-check.sh). Mandatory: there is no bypass (ADR 0024 step 8.3);
 #   3. the copy of that image, by digest, into the production app's repository,
 #      registry.fly.io/<prod app>:<sha> (`docker buildx imagetools create --prefer-index=false`: the same
 #      manifest, so the same digest; nothing is rebuilt), then registry.fly.io/<prod app>@<digest> must
@@ -62,7 +62,7 @@ fail() { echo "promote: FAIL: $*" >&2; exit 1; }
 app="$(sed -n 's/^app = "\(.*\)"$/\1/p' "$config")"
 staging_app="$(sed -n 's/^app = "\(.*\)"$/\1/p' "$root/deploy/fly.staging.toml")"
 [ -n "$app" ] && [ -n "$staging_app" ] || fail "no app in $config or deploy/fly.staging.toml"
-db="critical_${app#critical-}" # the database of the app (scripts/fly-db-provision.sh)
+db="critical_prod" # the database keeps the environment name; the app was renamed (ADR 0024 step 8.5, scripts/fly-db-provision.sh)
 points="${RESTORE_POINT_DIR:-}"
 if [ -z "$points" ]; then
     [ "$phase" = all ] || fail "RESTORE_POINT_DIR is not set: where the restore point is written and read"
@@ -112,7 +112,7 @@ if [ "${PROMOTE_NEWEST:-false}" = true ]; then
     fi
 fi
 
-FLY="$fly" "$here/fly-private-check.sh" "$app"
+FLY="$fly" "$here/fly-access-check.sh" "$app"
 
 echo "promote: copying it to registry.fly.io/$app:$sha (same digest, no rebuild)"
 docker buildx imagetools create --prefer-index=false --progress none -t "registry.fly.io/$app:$sha" "$staged" \
@@ -199,6 +199,7 @@ trap 'rollback_hint; cleanup_work' EXIT
 
 "$fly" deploy -c "$config" -a "$app" --image "$image" --no-public-ips --yes
 FLY="$fly" "$smoke" "$app" "$sha"
+FLY="$fly" "$here/fly-access-check.sh" "$app" # the release now running must hold the gate too
 running="$("$fly" machine list -a "$app" --json | jq -r '[.[].image_ref.digest // empty] | unique | .[]')"
 [ "$running" = "$digest" ] || fail "the machines of $app run '$running', not $digest"
 echo "promote: $app runs $tag ($sha, $digest)"

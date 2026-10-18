@@ -3,8 +3,8 @@
 # steps 3.2, 3.3, 8.3 and 10.4):
 #   - staging-deploy.sh, with fly and the smoke check stubbed: a public IP fails before any deploy; a
 #     private app is deployed from registry.fly.io/<app>:<sha> and the smoke check gets app and sha; a
-#     failed smoke check fails the run and prints the releases; a configured public-access option skips
-#     the IP check only; machines on different digests fail; the digest is written to $GITHUB_OUTPUT.
+#     failed smoke check fails the run and prints the releases; a public IP deploys only while the login gate check
+#     passes (before and after, no bypass); machines on different digests fail; the digest is written to $GITHUB_OUTPUT.
 #   - record-deployment.sh, with gh stubbed: one deployment (task deploy-staging, ref the sha, digest in
 #     the payload) and one status; a success without a digest, a short sha and an unknown state call nothing.
 #   - with a version: the image registry.fly.io/<app>:v<version> is deployed and the smoke check gets the
@@ -37,7 +37,7 @@ echo "fly \$*" >> "$calls"
 case "\$1 \$2" in
     "ips list") cat "$tmp/ips" ;;
     "machine list") cat "$tmp/machines" ;;
-    "releases --image") echo "v7 complete registry.fly.io/critical-staging:previous" ;;
+    "releases --image") echo "v7 complete registry.fly.io/critical-hit-staging:previous" ;;
 esac
 STUB
 cat > "$stubs/smoke" <<STUB
@@ -45,7 +45,12 @@ cat > "$stubs/smoke" <<STUB
 echo "smoke \$*" >> "$calls"
 [ ! -f "$tmp/smoke-fails" ]
 STUB
-chmod +x "$stubs/fly" "$stubs/smoke"
+cat > "$stubs/gate" <<STUB
+#!/bin/sh
+echo "gate \$*" >> "$calls"
+[ ! -f "$tmp/gate-fails" ]
+STUB
+chmod +x "$stubs/fly" "$stubs/smoke" "$stubs/gate"
 
 private='[{"Type":"private_v6","Address":"fdaa::1","Region":"global"}]'
 public='[{"Type":"v4","Address":"1.2.3.4","Region":"global"},{"Type":"private_v6","Address":"fdaa::1","Region":"global"}]'
@@ -56,16 +61,17 @@ split="[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$digest\"}},{\"id\":\"m2\",\"
 run_deploy() {
     : > "$calls"; : > "$tmp/gh_out"
     status=0
-    out="$(env "$@" FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GITHUB_OUTPUT="$tmp/gh_out" \
+    out="$(env "$@" FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GATE_CHECK="$stubs/gate" GITHUB_OUTPUT="$tmp/gh_out" \
         "$root/scripts/staging-deploy.sh" "$sha" 2>&1)" || status=$?
     gh_out="$(cat "$tmp/gh_out")"
 }
 
-# --- a public IP fails before anything is deployed ---
-echo "$public" > "$tmp/ips"; echo "$one" > "$tmp/machines"; rm -f "$tmp/smoke-fails"
+# --- a public IP with no live login gate fails before anything is deployed (step 8.3, no bypass) ---
+echo "$public" > "$tmp/ips"; echo "$one" > "$tmp/machines"; rm -f "$tmp/smoke-fails"; touch "$tmp/gate-fails"
 run_deploy A=1
-[ "$status" != 0 ] || fail "a public IP did not fail the run"
-grep -q '^fly deploy' "$calls" && fail "deployed an app that has a public IP"
+[ "$status" != 0 ] || fail "a public IP without the gate did not fail the run"
+grep -q '^fly deploy' "$calls" && fail "deployed an app that has a public IP and no gate"
+grep -qx "gate https://critical-hit-staging.fly.dev" "$calls" || fail "the gate check was not run against the public URL: $(cat "$calls")"
 grep -q '^smoke' "$calls" && fail "smoke-checked an app that has a public IP"
 [[ "$out" != *"FAILED. Releases"* ]] || fail "a refused deploy printed a rollback hint"
 
@@ -73,9 +79,9 @@ grep -q '^smoke' "$calls" && fail "smoke-checked an app that has a public IP"
 echo "$private" > "$tmp/ips"
 run_deploy A=1
 [ "$status" = 0 ] || fail "private app: exit $status: $out"
-grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-staging --image registry.fly.io/critical-staging:$sha --yes" "$calls" \
+grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-hit-staging --image registry.fly.io/critical-hit-staging:$sha --yes" "$calls" \
     || fail "private app: wrong deploy call: $(cat "$calls")"
-grep -qx "smoke critical-staging $sha" "$calls" || fail "private app: smoke check not called with app and sha"
+grep -qx "smoke critical-hit-staging $sha" "$calls" || fail "private app: smoke check not called with app and sha"
 [ "$gh_out" = "digest=$digest" ] || fail "private app: output is '$gh_out'"
 ips_line="$(grep -n '^fly ips' "$calls" | head -n1 | cut -d: -f1)"
 deploy_line="$(grep -n '^fly deploy' "$calls" | head -n1 | cut -d: -f1)"
@@ -84,15 +90,15 @@ deploy_line="$(grep -n '^fly deploy' "$calls" | head -n1 | cut -d: -f1)"
 # --- with a version: the version's image, and the smoke check wants that version ---
 run_version() {
     : > "$calls"; : > "$tmp/gh_out"; status=0
-    out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GITHUB_OUTPUT="$tmp/gh_out" "$root/scripts/staging-deploy.sh" "$sha" "$@" 2>&1)" || status=$?
+    out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GATE_CHECK="$stubs/gate" GITHUB_OUTPUT="$tmp/gh_out" "$root/scripts/staging-deploy.sh" "$sha" "$@" 2>&1)" || status=$?
 }
 run_version 1.4.0
 [ "$status" = 0 ] || fail "version: exit $status: $out"
-grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-staging --image registry.fly.io/critical-staging:v1.4.0 --yes" "$calls" \
+grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-hit-staging --image registry.fly.io/critical-hit-staging:v1.4.0 --yes" "$calls" \
     || fail "version: not the version's image: $(cat "$calls")"
-grep -qx "smoke critical-staging $sha 1.4.0" "$calls" || fail "version: smoke check not called with the version"
+grep -qx "smoke critical-hit-staging $sha 1.4.0" "$calls" || fail "version: smoke check not called with the version"
 run_version ""
-grep -qx "smoke critical-staging $sha" "$calls" && grep -q "critical-staging:$sha --yes" "$calls" || fail "empty version: not the sha's image: $(cat "$calls")"
+grep -qx "smoke critical-hit-staging $sha" "$calls" && grep -q "critical-hit-staging:$sha --yes" "$calls" || fail "empty version: not the sha's image: $(cat "$calls")"
 for v in v1.4.0 1.4 'x'; do
     run_version "$v"
     [ "$status" != 0 ] && [ ! -s "$calls" ] || fail "version '$v': accepted, or called fly"
@@ -102,17 +108,21 @@ done
 touch "$tmp/smoke-fails"
 run_deploy A=1
 [ "$status" != 0 ] || fail "failed smoke check: exit 0"
-[[ "$out" == *"v7 complete registry.fly.io/critical-staging:previous"* ]] || fail "failed smoke check: no previous release printed: $out"
+[[ "$out" == *"v7 complete registry.fly.io/critical-hit-staging:previous"* ]] || fail "failed smoke check: no previous release printed: $out"
 [ -z "$gh_out" ] || fail "failed smoke check: wrote a digest: '$gh_out'"
 rm -f "$tmp/smoke-fails"
 
-# --- a configured public-access option skips the IP check, not the deploy and the smoke check ---
-echo "$public" > "$tmp/ips"
+# --- a public IP with the gate live deploys; the gate is checked before and after, a PUBLIC_ACCESS_OPTION bypasses nothing ---
+echo "$public" > "$tmp/ips"; rm -f "$tmp/gate-fails"
 run_deploy PUBLIC_ACCESS_OPTION=basic-auth
-[ "$status" = 0 ] || fail "access option: exit $status: $out"
-grep -q '^fly ips' "$calls" && fail "access option: still listed the IPs"
-grep -q '^fly deploy' "$calls" || fail "access option: no deploy"
-grep -q '^smoke' "$calls" || fail "access option: no smoke check"
+[ "$status" = 0 ] || fail "public app with the gate: exit $status: $out"
+[ "$(grep -c '^gate ' "$calls")" = 2 ] || fail "public app: the gate check did not run before and after the deploy: $(cat "$calls")"
+grep -q '^fly deploy' "$calls" || fail "public app: no deploy"
+grep -q '^smoke' "$calls" || fail "public app: no smoke check"
+# The release now running loses the gate: the deploy is reported failed.
+touch "$tmp/gate-fails"; run_deploy A=1
+[ "$status" != 0 ] || fail "public app: exit 0 with the gate failing"
+rm -f "$tmp/gate-fails"
 echo "$private" > "$tmp/ips"
 
 # --- machines on two digests are not one release ---

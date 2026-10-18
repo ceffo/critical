@@ -24,8 +24,7 @@ fail() { echo "restore-point-fetch: FAIL: $*" >&2; exit 1; }
 want="${1:?$usage}"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(dirname "$here")"
-app="$(sed -n 's/^app = "\(.*\)"$/\1/p' "${PROD_CONFIG:-$root/deploy/fly.prod.toml}")"
-db="critical_${app#critical-}"
+db="critical_prod" # the database keeps the environment name; the app was renamed (ADR 0024 step 8.5)
 
 if [[ "$want" =~ ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
     prefix="${db}_pre_v${BASH_REMATCH[1]}_${BASH_REMATCH[2]}_${BASH_REMATCH[3]}_"

@@ -155,7 +155,6 @@ jobs:
           sha: ${{ steps.version.outputs.sha }}
           version: ${{ steps.version.outputs.version }}
           fly-api-token: ${{ secrets.FLY_API_TOKEN }}
-          public-access-option: ${{ vars.PUBLIC_ACCESS_OPTION }}
           github-token: ${{ github.token }}
 
       # Only after a passed staging deploy (a failed one stops the job above): the version becomes a tag.

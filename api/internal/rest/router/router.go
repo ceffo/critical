@@ -52,6 +52,11 @@ type Options struct {
 	// Version is the release version (X.Y.Z) baked into the image, reported
 	// by /api/health (ADR 0024 step 1.4); empty is reported as "unknown".
 	Version string
+	// Login is what /api/health reports as the login the server runs:
+	// "google" (the Google login, ADR 0029 step 8) or "dev" (the dev login of
+	// local runs). The deploy checks allow a public IP only on "google"
+	// (ADR 0024 step 8.3). Empty is reported as "unknown".
+	Login string
 	// Host is the application's own host, from its public URL (the CSRF
 	// check of ADR 0029 step 4.5); empty accepts the request's Host.
 	Host string
@@ -110,6 +115,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	r.Get("/api/health", func(w http.ResponseWriter, req *http.Request) {
 		render.OK(req.Context(), w, map[string]string{
 			"status": "ok", "commit": orUnknown(opts.Commit), "version": orUnknown(opts.Version),
+			"login": orUnknown(opts.Login),
 		})
 	})
 	r.NotFound(notFound(opts.Web))

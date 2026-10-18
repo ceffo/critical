@@ -276,7 +276,8 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
       success: true,
       effect: "turn",
       affected: [3, 4],
-      count: 7,
+      destroyed: 0,
+      turned: 7,
     }),
     value: "12",
     en: "Turning Ghoul · turned",
@@ -323,6 +324,34 @@ describe("shortResult", () => {
       }
     });
   }
+
+  // ADR 0030 step 16.4: D* destroys the 2d6 (the row value) and turns the 2d4 (in the verdict).
+  it("words a D* turn with both counts, en and fr", async () => {
+    const e = entry("turn_undead", {
+      undead: "skeleton",
+      clericLevel: 8,
+      outcome: "destroy_more",
+      success: true,
+      effect: "destroy",
+      affected: [2, 3],
+      more: [1, 2],
+      destroyed: 5,
+      turned: 3,
+    });
+    const want = {
+      en: "Turning Skeleton · destroyed, 3 turned",
+      fr: "Renvoi Squelette · détruits, 3 repoussés",
+    };
+    for (const lng of ["en", "fr"] as const) {
+      const t = await makeT(lng);
+      const r = shortResult(e, t, (_id, name) => name ?? "", {
+        ...recordedNames,
+        item: (_id: string | undefined, name: string) => name,
+      });
+      expect(r.value?.text).toBe("5");
+      expect(`${r.what} · ${r.verdict?.text}`).toBe(want[lng]);
+    }
+  });
 
   it("colours the verdict: hit green, miss red, crit highlight; unsettled has none", async () => {
     const t = await makeT("en");

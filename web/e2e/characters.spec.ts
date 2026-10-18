@@ -303,4 +303,32 @@ test("create a cleric, prepare and cast a spell, turn undead", async ({
     "Renvoi des morts-vivants (Squelette)",
   );
   await snap(page, "cleric-turn-fr");
+
+  // ADR 0030 step 16.4 on the card: a D* turn (a fixed response, a 1st-level cleric has none)
+  // destroys the 2d6 and turns the 2d4, two counts with their dice.
+  await page.route("**/api/character/turn-undead", (route) =>
+    route.fulfill({
+      json: {
+        entryId: 999_999,
+        undead: "skeleton",
+        hdMin: 1,
+        hdMax: 1,
+        clericLevel: 8,
+        outcome: "destroy_more",
+        success: true,
+        effect: "destroy",
+        affected: [2, 3],
+        more: [1, 2],
+        destroyed: 5,
+        turned: 3,
+      },
+    }),
+  );
+  await turning.getByRole("button", { name: "Repousser : Squelette" }).click();
+  await expect(card.getByTestId("turn-destroyed")).toHaveText(
+    "Détruits : 5 (2 + 3)",
+  );
+  await expect(card.getByTestId("turn-turned")).toHaveText(
+    "Repoussés : 3 (1 + 2)",
+  );
 });

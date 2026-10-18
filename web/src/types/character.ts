@@ -121,11 +121,13 @@ export interface TurnResult {
   d20?: number;
   success: boolean;
   effect?: "turn" | "destroy";
-  /** The 2d6 undead affected, then the 2d4 more of a D* cell. */
+  /** The 2d6 undead affected (turned, or destroyed for D and D*), then the 2d4 more of a D* cell
+   * (turned). */
   affected?: number[];
   more?: number[];
-  /** How many undead are turned or destroyed, worked out by the server. */
-  count: number;
+  /** How many undead are destroyed and turned, worked out by the server (D*: both). */
+  destroyed: number;
+  turned: number;
 }
 
 /** ADR 0030 step 20.1: the class's and PHB Table 4's highest spell level, Table 4's chance to

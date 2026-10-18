@@ -59,8 +59,16 @@ var Undead = []string{
 	"mummy", "spectre", "vampire", "ghost", "lich", "special",
 }
 
+// The Table 61 cells that need no die: T, D, D* and a dash.
+const (
+	TurningTurn        = "turn"
+	TurningDestroy     = "destroy"
+	TurningDestroyMore = "destroy_more"
+	TurningCannot      = "cannot"
+)
+
 // TurningOutcomes are the Table 61 cells that need no die.
-var TurningOutcomes = []string{"turn", "destroy", "destroy_more", "cannot"}
+var TurningOutcomes = []string{TurningTurn, TurningDestroy, TurningDestroyMore, TurningCannot}
 
 // ExperienceRow is the XP that reaches Level, per class (PHB Tables 14, 20,
 // 23 and 25).

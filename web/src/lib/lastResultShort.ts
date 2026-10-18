@@ -39,8 +39,9 @@ function verdict(
   t: TFunction,
   key: string,
   tone: ShortVerdict["tone"],
+  values?: Record<string, number>,
 ): ShortVerdict {
-  return { text: t(`lastShort.verdict.${key}`), tone };
+  return { text: t(`lastShort.verdict.${key}`, values), tone };
 }
 
 /** Every log kind has a short wording; the kinds without a roll are worded by their kind label. */
@@ -136,8 +137,13 @@ export function shortResult(
         ? verdict(t, "failure", "fail")
         : verdict(
             t,
-            turn.effect === "destroy" ? "destroyed" : "turned",
+            turn.destroyed > 0 && turn.turned > 0
+              ? "destroyedTurned"
+              : turn.destroyed > 0
+                ? "destroyed"
+                : "turned",
             "pass",
+            { turned: turn.turned },
           ),
     };
   if (e.kind === "hp_change")

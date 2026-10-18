@@ -512,7 +512,7 @@ export function rowValue(e: LogEntry): RowValue | null {
   if (turn)
     return turn.d20 !== undefined
       ? { text: String(turn.d20), tone: turn.success ? "pass" : "fail" }
-      : { text: String(turn.count), tone: "ink" };
+      : { text: String(turn.destroyed || turn.turned), tone: "ink" };
   const cast = castPayload(e);
   // ADR 0030 step 14: a failed spell's d100 is the whole result.
   if (cast?.failure?.failed)

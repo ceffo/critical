@@ -1188,9 +1188,8 @@
       "turned": "Turned",
       "destroyed": "Destroyed",
       "failed": "Failed",
-      "affectedDice": "2d6: {{dice}}",
-      "moreDice": "2d4 more: {{dice}}",
-      "count": "Undead affected: {{count}}"
+      "destroyedCount": "Destroyed: {{count}} ({{dice}})",
+      "turnedCount": "Turned: {{count}} ({{dice}})"
     }
   },
   "log": {
@@ -1389,6 +1388,7 @@
       "text": "Turning undead ({{undead}}): {{result}}, {{roll}}",
       "turned": "{{count}} turned",
       "destroyed": "{{count}} destroyed",
+      "destroyedTurned": "{{destroyed}} destroyed, {{turned}} turned",
       "failed": "failed",
       "roll": "d20 {{d20}} vs {{target}}",
       "noRoll": "no roll"
@@ -1718,6 +1718,7 @@
       "failure": "failed",
       "turned": "turned",
       "destroyed": "destroyed",
+      "destroyedTurned": "destroyed, {{turned}} turned",
       "spellFailed": "spell failed"
     },
     "turn": "Turning {{undead}}"
@@ -1838,7 +1839,7 @@
     "outcome": {
       "turn": "Turned (T)",
       "destroy": "Destroyed (D)",
-      "destroy_more": "Destroyed, 2d4 more (D*)",
+      "destroy_more": "Destroyed, more turned (D*)",
       "cannot": "Cannot turn"
     },
     "undead": {

@@ -1402,8 +1402,8 @@ describe("spell learn entries", () => {
   });
 });
 
-// ADR 0030 step 16: a turn_undead entry is structured (the type, the cell, the dice, the count the
-// server worked out); the journal words it, French first.
+// ADR 0030 step 16: a turn_undead entry is structured (the type, the cell, the dice, the destroyed and
+// turned counts the server worked out); the journal words it, French first.
 describe("turn undead entries", () => {
   const turn = (over: object) =>
     entry("turn_undead", {
@@ -1414,7 +1414,8 @@ describe("turn undead entries", () => {
       success: true,
       effect: "turn",
       affected: [3, 4],
-      count: 7,
+      destroyed: 0,
+      turned: 7,
       ...over,
     });
 
@@ -1426,7 +1427,7 @@ describe("turn undead entries", () => {
     );
     expect(
       entryText(
-        turn({ d20: 4, success: false, effect: undefined, count: 0 }),
+        turn({ d20: 4, success: false, effect: undefined, turned: 0 }),
         fr,
       ),
     ).toBe("Renvoi des morts-vivants (Goule) : échec, d20 4 contre 10");
@@ -1439,11 +1440,25 @@ describe("turn undead entries", () => {
           outcome: "destroy_more",
           effect: "destroy",
           more: [1, 2],
-          count: 10,
+          destroyed: 7,
+          turned: 3,
         }),
         en,
       ),
-    ).toBe("Turning undead (Skeleton): 10 destroyed, no roll");
+    ).toBe("Turning undead (Skeleton): 7 destroyed, 3 turned, no roll");
+    expect(
+      entryText(
+        turn({
+          target: undefined,
+          d20: undefined,
+          outcome: "destroy",
+          effect: "destroy",
+          destroyed: 7,
+          turned: 0,
+        }),
+        fr,
+      ),
+    ).toBe("Renvoi des morts-vivants (Goule) : 7 détruits, sans jet");
   });
 });
 

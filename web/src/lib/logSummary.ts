@@ -523,11 +523,16 @@ function turnText(e: LogEntry, t: TFunction): string | null {
   const p = turnPayload(e);
   if (!p) return null;
   const undead = undeadName(t, p.undead);
-  const result = p.success
-    ? t(p.effect === "destroy" ? "log.turn.destroyed" : "log.turn.turned", {
-        count: p.count,
-      })
-    : t("log.turn.failed");
+  const result = !p.success
+    ? t("log.turn.failed")
+    : p.destroyed > 0 && p.turned > 0
+      ? t("log.turn.destroyedTurned", {
+          destroyed: p.destroyed,
+          turned: p.turned,
+        })
+      : p.destroyed > 0
+        ? t("log.turn.destroyed", { count: p.destroyed })
+        : t("log.turn.turned", { count: p.turned });
   const roll =
     p.d20 !== undefined && p.target !== undefined
       ? t("log.turn.roll", { d20: p.d20, target: p.target })

@@ -249,20 +249,23 @@ function TurnResultView({ turn: r }: { turn: TurnResult }) {
           </span>
         </ResultLine>
       )}
-      {r.success && (
-        <p className="text-body font-semibold" data-testid="turn-count">
-          {t("result.turn.count", { count: r.count })}
+      {r.destroyed > 0 && (
+        <p className="text-body font-semibold" data-testid="turn-destroyed">
+          {t("result.turn.destroyedCount", {
+            count: r.destroyed,
+            dice: (r.affected ?? []).join(" + "),
+          })}
         </p>
       )}
-      {r.affected && r.affected.length > 0 && (
-        <p className="text-body text-muted-foreground" data-testid="turn-dice">
-          {t("result.turn.affectedDice", { dice: r.affected.join(" + ") })}
-          {r.more && r.more.length > 0 && (
-            <>
-              {" · "}
-              {t("result.turn.moreDice", { dice: r.more.join(" + ") })}
-            </>
-          )}
+      {r.turned > 0 && (
+        <p className="text-body font-semibold" data-testid="turn-turned">
+          {t("result.turn.turnedCount", {
+            count: r.turned,
+            dice: (r.effect === "destroy"
+              ? (r.more ?? [])
+              : (r.affected ?? [])
+            ).join(" + "),
+          })}
         </p>
       )}
     </div>

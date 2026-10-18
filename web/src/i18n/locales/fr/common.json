@@ -1188,9 +1188,8 @@
       "turned": "Repoussés",
       "destroyed": "Détruits",
       "failed": "Échec",
-      "affectedDice": "2d6 : {{dice}}",
-      "moreDice": "2d4 de plus : {{dice}}",
-      "count": "Morts-vivants affectés : {{count}}"
+      "destroyedCount": "Détruits : {{count}} ({{dice}})",
+      "turnedCount": "Repoussés : {{count}} ({{dice}})"
     }
   },
   "log": {
@@ -1389,6 +1388,7 @@
       "text": "Renvoi des morts-vivants ({{undead}}) : {{result}}, {{roll}}",
       "turned": "{{count}} repoussés",
       "destroyed": "{{count}} détruits",
+      "destroyedTurned": "{{destroyed}} détruits, {{turned}} repoussés",
       "failed": "échec",
       "roll": "d20 {{d20}} contre {{target}}",
       "noRoll": "sans jet"
@@ -1718,6 +1718,7 @@
       "failure": "échec",
       "turned": "repoussés",
       "destroyed": "détruits",
+      "destroyedTurned": "détruits, {{turned}} repoussés",
       "spellFailed": "sort raté"
     },
     "turn": "Renvoi {{undead}}"
@@ -1838,7 +1839,7 @@
     "outcome": {
       "turn": "Repoussés (R)",
       "destroy": "Détruits (D)",
-      "destroy_more": "Détruits, 2d4 de plus (D*)",
+      "destroy_more": "Détruits, d'autres repoussés (D*)",
       "cannot": "Impossible"
     },
     "undead": {

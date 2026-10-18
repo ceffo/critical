@@ -410,10 +410,11 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     the cell for the cleric's level (columns 1 to 9, 10-11, 12-13, 14 and up):
     1. A number: one d20 through the dice port; success at or above the number.
     2. `T`: turned with no d20. `D`: destroyed with no d20. `D*`: destroyed, and 2d4 more of the
-       type are affected.
+       type are turned (the table's footnote).
     3. `—`: the cleric cannot turn that type; refused (400) before any die.
-    4. On a success (or `T`, `D`) 2d6 undead are affected (plus the 2d4 of `D*`), rolled on the
-       server; the lowest Hit Dice go first (PHB chapter 9), which the DM applies.
+    4. On a success (or `T`, `D`, `D*`) 2d6 undead are affected, turned or destroyed as the cell
+       says; `D*` destroys those 2d6 and turns 2d4 more. The dice are rolled on the server; the
+       lowest Hit Dice go first (PHB chapter 9), which the DM applies.
     5. One logged roll entry (a roll kind of `actionlog.RollKinds`) with the type, the cell, the
        dice and the result; it changes no state. Once per encounter is not enforced.
     _(As built, steps 13 to 16)_ The derived character carries the slots (step 13), the failure
@@ -430,7 +431,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     nothing. Step 16 is `POST /api/character/turn-undead` `{undead}` (a Table 61 row code); the
     breakdown and the `turn_undead` entry carry the type, the level, the cell (`target` or
     `outcome`), the d20, `success`, `effect` (turn or destroy), the 2d6 `affected`, D*'s 2d4
-    `more` and `count` (how many undead, their sum, so the web adds no rule dice). The web's Turning
+    `more`, and `destroyed` and `turned` (how many undead each, worked out by the server so the web
+    adds no rule dice; a D* turn has both: the 2d6 destroyed, the 2d4 turned). The web's Turning
     tab lists `derived.turning` as served (a dash is not offered); the result card, the journal and
     the header word the entry, and a cast's `failure` d100. Refusals: `cannot_turn_undead` (a dash), `class_cannot_turn`, an unknown type (400).
     Tests: `TestPriestSpellsPerDay_Step13_WisdomBonusSpells`, `TestSpellFailureFor_Step14_LowWisdom`,

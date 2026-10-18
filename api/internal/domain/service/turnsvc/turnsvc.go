@@ -27,8 +27,8 @@ const (
 	EffectDestroy = "destroy"
 )
 
-// The dice of step 16: the d20 against a number, 2d6 undead affected, 2d4
-// more for D*.
+// The dice of step 16: the d20 against a number, 2d6 undead affected, and
+// for D* 2d4 more that are turned (the PHB Table 61 footnote).
 const (
 	turnDie     = 20
 	affectedDie = 6
@@ -83,12 +83,13 @@ type Result struct {
 	Success bool
 	// Effect is EffectTurn or EffectDestroy on a success, empty otherwise.
 	Effect string
-	// Affected are the 2d6 undead affected on a success (nil otherwise);
-	// More the 2d4 more of a D* cell (nil otherwise).
+	// Affected are the 2d6 undead affected on a success (nil otherwise):
+	// turned for a number or T, destroyed for D and D*. More are the 2d4
+	// more of a D* cell, turned (nil otherwise).
 	Affected, More []int
-	// Count is how many undead are turned or destroyed: the 2d6 plus the
-	// 2d4 of a D* cell (0 on a failure).
-	Count int
+	// Destroyed and Turned are how many undead the turn destroys and turns:
+	// a D* cell destroys the 2d6 and turns the 2d4 (0 on a failure).
+	Destroyed, Turned int
 }
 
 type service struct{ Deps }
@@ -107,7 +108,8 @@ func (s *service) Close(_ context.Context) error  { return nil }
 // Turn is ADR 0030 step 16: the class must turn undead and the type be a
 // Table 61 row (refused, 400, before any die); a dash is refused before any
 // die (16.3). A number rolls one d20, a success at or above it (16.1); T, D
-// and D* need none (16.2). A success rolls 2d6 affected, D* 2d4 more (16.4).
+// and D* need none (16.2). A success rolls 2d6 affected, turned or
+// destroyed; D* destroys the 2d6 and turns 2d4 more (16.4).
 // One turn_undead roll entry, no snapshot (16.5).
 func (s *service) Turn(ctx context.Context, characterID int64, undead string) (*Result, error) {
 	c, err := s.Characters.GetCharacter(ctx, characterID)
@@ -127,7 +129,7 @@ func (s *service) Turn(ctx context.Context, characterID int64, undead string) (*
 	if row == nil {
 		return nil, fmt.Errorf("%w: unknown undead type %q", domain.ErrInvalidInput, undead)
 	}
-	if row.Cell.Outcome == "cannot" {
+	if row.Cell.Outcome == ruletablesvc.TurningCannot {
 		return nil, fmt.Errorf("%w: %s at level %d", ruletablesvc.ErrCannotTurn, undead, c.Derived.RealizedLevel)
 	}
 	res := &Result{
@@ -140,20 +142,24 @@ func (s *service) Turn(ctx context.Context, characterID int64, undead string) (*
 		if res.Success {
 			res.Effect = EffectTurn
 		}
-	case "turn":
+	case ruletablesvc.TurningTurn:
 		res.Success, res.Effect = true, EffectTurn
-	case "destroy", "destroy_more":
+	case ruletablesvc.TurningDestroy, ruletablesvc.TurningDestroyMore:
 		res.Success, res.Effect = true, EffectDestroy
 	default:
 		return nil, fmt.Errorf("turning undead: unknown cell outcome %q", row.Cell.Outcome)
 	}
 	if res.Success {
 		res.Affected = []int{s.Dice.RollDie(affectedDie), s.Dice.RollDie(affectedDie)}
-		if row.Cell.Outcome == "destroy_more" {
-			res.More = []int{s.Dice.RollDie(moreDie), s.Dice.RollDie(moreDie)}
+		affected := res.Affected[0] + res.Affected[1]
+		if res.Effect == EffectDestroy {
+			res.Destroyed = affected
+		} else {
+			res.Turned = affected
 		}
-		for _, v := range append(append([]int{}, res.Affected...), res.More...) {
-			res.Count += v
+		if row.Cell.Outcome == ruletablesvc.TurningDestroyMore {
+			res.More = []int{s.Dice.RollDie(moreDie), s.Dice.RollDie(moreDie)}
+			res.Turned = res.More[0] + res.More[1]
 		}
 	}
 	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
@@ -187,12 +193,14 @@ type record struct {
 	Effect      string `json:"effect,omitempty"`
 	Affected    []int  `json:"affected,omitempty"`
 	More        []int  `json:"more,omitempty"`
-	Count       int    `json:"count"`
+	Destroyed   int    `json:"destroyed"`
+	Turned      int    `json:"turned"`
 }
 
 func recordOf(r *Result) record {
 	return record{
 		Undead: r.Undead, ClericLevel: r.ClericLevel, Target: r.Cell.Roll, Outcome: r.Cell.Outcome,
-		D20: r.D20, Success: r.Success, Effect: r.Effect, Affected: r.Affected, More: r.More, Count: r.Count,
+		D20: r.D20, Success: r.Success, Effect: r.Effect, Affected: r.Affected, More: r.More,
+		Destroyed: r.Destroyed, Turned: r.Turned,
 	}
 }

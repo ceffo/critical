@@ -397,6 +397,55 @@ For a device that must reach the app without `fly proxy`, join the org's WireGua
 custom domain come only once the user picks a public-access option (ADR 0024 step 8.4); this runbook
 gets those steps then.
 
+## Login on the hosted apps (ADR 0029)
+
+The server refuses to start on fly.io without the Google login's settings (ADR 0029 step 8.2): a
+machine with `FLY_APP_NAME` set and no OAuth settings exits before it listens, so a hosted app never
+has the dev login. **Set these secrets on each app before the first deploy of a release that carries
+the login** (a staging deploy without them fails its start and its smoke, and nothing reaches
+production):
+
+| Secret | Value |
+|---|---|
+| `CRITICAL_GOOGLE_CLIENT_ID` | the OAuth client id (Google Cloud console, "Credentials", an OAuth client of type "Web application") |
+| `CRITICAL_GOOGLE_CLIENT_SECRET` | its secret |
+| `CRITICAL_PUBLIC_URL` | the address users open, `https://<host>` (no path): the redirect is `<public URL>/api/auth/google/callback`, the CSRF check compares every mutation's `Origin` with its host, and `https` makes the cookies `Secure` |
+
+All three or none (a partial setting is a start-up error everywhere). In the Google console add
+`<public URL>/api/auth/google/callback` to the client's "Authorised redirect URIs". **(user)**:
+
+```bash
+$fly secrets set -a critical-<env> CRITICAL_GOOGLE_CLIENT_ID=<id> CRITICAL_PUBLIC_URL=<url>
+$fly secrets set -a critical-<env> CRITICAL_GOOGLE_CLIENT_SECRET=-   # reads the value from stdin; never on the command line
+```
+
+While an app is private (no public IP, "Reaching a private app"), its public URL is the local end of
+the proxy: `CRITICAL_PUBLIC_URL=http://localhost:<port>`, the redirect URI
+`http://localhost:<port>/api/auth/google/callback` in the console (Google accepts `http://localhost`
+for testing), and `just fly-open critical-<env> <port>` with that fixed port, then open
+`http://localhost:<port>` (not `127.0.0.1`: the host must match). Until the login page exists, open
+`http://localhost:<port>/api/auth/google/start` to log in; the callback brings the browser back to the app.
+
+**Root admin.** Only invited emails and the root admin can log in, and invites come with the admin
+section. Set the root admin once per database with the script (ADR 0029 step 5.1), through the
+database proxy ("Reaching a database"), after the release with the login has started once (its
+migration creates the tables):
+
+```bash
+just fly-db-proxy tournesol-db                     # prints the local port; leave it running
+CRITICAL_DSN='postgres://critical_<env>:<password>@localhost:<port>/critical_<env>?sslmode=disable' just root-admin <your Google email>
+```
+
+It creates the user as an admin with no Google account; your first Google login with that email binds
+it. A rerun with the same email changes nothing. With another email it refuses once the root has logged
+in; before that (a typo, a lost account) the old row loses the flag and is disabled, never deleted. A
+root whose Google account is lost after binding needs a database fix by the operator.
+
+**Smoke.** `just fly-smoke` has no session: on a release with the gate it checks that `/api/character`
+answers 401 `unauthenticated` to an unknown session cookie (the session lookup is its database read)
+and that `/` redirects a browser to `/login`, which serves the app. A release from before the gate (a
+rollback) answers 200 instead, which it accepts.
+
 ## How a release flows
 
 ADR 0024 steps 3 and 4, driven by GitHub Actions (the PR title, a conventional-commit line, becomes the commit on `main` and drives the version):

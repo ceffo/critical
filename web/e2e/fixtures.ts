@@ -41,7 +41,7 @@ async function waitForApi(url: string, proc: ChildProcess, log: () => string) {
       );
     }
     try {
-      const res = await fetch(`${url}/api/character`);
+      const res = await fetch(`${url}/api/health`);
       if (res.ok) return;
     } catch {
       // not listening yet
@@ -56,7 +56,51 @@ export interface Stack {
   webUrl: string;
   /** Base URL of this stack's own Go API. */
   apiUrl: string;
+  /** The session cookie's value: the stack's dev login (ADR 0029 step 8.1). */
+  session: string;
 }
+
+/** The API's session cookie (ADR 0029 step 4.2). */
+const sessionCookie = "critical_session";
+
+/** Logs into the API through its dev login (no OAuth settings: the root admin) and returns the session token. */
+async function devLogin(apiUrl: string): Promise<string> {
+  const res = await fetch(`${apiUrl}/api/auth/dev`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!res.ok) throw new Error(`dev login: ${res.status} ${await res.text()}`);
+  for (const c of res.headers.getSetCookie()) {
+    const [pair] = c.split(";");
+    const [name, value] = pair.split("=");
+    if (name === sessionCookie && value) return value;
+  }
+  throw new Error("dev login: no session cookie");
+}
+
+const nodeFetch = globalThis.fetch;
+let signedIn: { apiUrl: string; session: string } | null = null;
+
+/**
+ * Every request a spec sends to its stack's API from Node carries the stack's session, as the browser's do:
+ * a worker runs one test at a time, and the stack fixture sets and clears `signedIn`.
+ */
+globalThis.fetch = (input, init) => {
+  const url =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.href
+        : input.url;
+  if (!signedIn || !url.startsWith(`${signedIn.apiUrl}/`))
+    return nodeFetch(input, init);
+  const headers = new Headers(
+    init?.headers ?? (input instanceof Request ? input.headers : undefined),
+  );
+  headers.set("Cookie", `${sessionCookie}=${signedIn.session}`);
+  return nodeFetch(input, { ...init, headers });
+};
 
 /**
  * Copy the fixture seeds into dir with fields of character.json replaced, for tests that need a specific
@@ -137,7 +181,9 @@ async function startWebServer(): Promise<{
           port: apiTarget.port,
           method: req.method,
           path: req.url,
-          headers: { ...req.headers, host: apiTarget.host },
+          // The browser's Host is kept, as the production server sees it: the API's CSRF check
+          // compares it with the Origin of every mutation (ADR 0029 step 4.5).
+          headers: req.headers,
         },
         (r) => {
           res.writeHead(r.statusCode ?? 502, r.headers);
@@ -230,9 +276,12 @@ export const test = base.extend<
 
     try {
       await waitForApi(apiUrl, api, () => output);
+      const session = await devLogin(apiUrl);
+      signedIn = { apiUrl, session };
       webServer.setApi(apiUrl);
-      await provide({ webUrl: webServer.url, apiUrl });
+      await provide({ webUrl: webServer.url, apiUrl, session });
     } finally {
+      signedIn = null;
       api.kill("SIGTERM");
       await rm(tmp, { recursive: true, force: true });
     }
@@ -240,6 +289,22 @@ export const test = base.extend<
 
   // Open the dashboard of this test's stack.
   baseURL: async ({ stack }, provide) => provide(stack.webUrl),
+
+  // The browser starts logged in (the harness's dev login): the session cookie is host-only, so it
+  // also reaches the API on its own port.
+  context: async ({ context, stack }, provide) => {
+    await context.addCookies([
+      {
+        name: sessionCookie,
+        value: stack.session,
+        domain: new URL(stack.webUrl).hostname,
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+    await provide(context);
+  },
 });
 
 export { expect };

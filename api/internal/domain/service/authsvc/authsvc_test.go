@@ -525,3 +525,29 @@ func TestTokens_RandomAndStoredHashed(t *testing.T) {
 	assert.NotEqual(t, a, authsvc.SessionID(a))
 	assert.Len(t, authsvc.SessionID(a), 64)
 }
+
+// Step 5.2: naming the DevEmail user while another user is the root logs it
+// in as it is (here disabled: refused); only a database with no root makes
+// DevEmail the root.
+func TestDevLogin_NamedDevEmailIsNotMadeRoot(t *testing.T) {
+	e := newEnv(t, false)
+	u := authsvc.User{ID: otherID, Email: authsvc.DevEmail, Role: authsvc.RoleAdmin, Disabled: true}
+	e.dal.EXPECT().UserByEmail(mock.Anything, authsvc.DevEmail).Return(&u, nil).Once()
+	_, err := e.svc.DevLogin(context.Background(), authsvc.DevEmail)
+	require.ErrorIs(t, err, authsvc.ErrUserDisabled)
+}
+
+// Step 8.1: on a database with no root, an existing DevEmail user (a root
+// moved away and back) becomes the root again.
+func TestDevLogin_ExistingDevEmailBecomesRootWhenThereIsNone(t *testing.T) {
+	e := newEnv(t, false)
+	e.dal.EXPECT().RootUser(mock.Anything).Return(nil, notFound()).Once()
+	u := authsvc.User{ID: otherID, Email: authsvc.DevEmail, Role: authsvc.RolePlayer, Disabled: true}
+	e.dal.EXPECT().UserByEmail(mock.Anything, authsvc.DevEmail).Return(&u, nil).Once()
+	e.dal.EXPECT().UpdateUser(mock.Anything, authsvc.User{
+		ID: otherID, Email: authsvc.DevEmail, Role: authsvc.RoleAdmin, Root: true, LastLogin: ptr(now),
+	}).Return(nil).Once()
+	e.expectSession(otherID, "tok-1")
+	_, err := e.svc.DevLogin(context.Background(), "")
+	require.NoError(t, err)
+}

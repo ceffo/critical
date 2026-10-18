@@ -57,9 +57,14 @@ for _ in $(seq 1 120); do
     sleep 0.5
 done
 
-# get <path>: prints "<status> <content-type>" and leaves the body in $body_file.
+# get <path> [curl args]: prints "<status> <content-type>" and leaves the body in $body_file.
 body_file="$(mktemp)"
-get() { curl -sS -o "$body_file" -w '%{http_code} %{content_type}' "$base$1"; }
+# Extra arguments go to curl (headers).
+get() {
+    local path="$1"
+    shift
+    curl -sS -o "$body_file" -w '%{http_code} %{content_type}' "$@" "$base$path"
+}
 
 out="$(get /api/health)"
 [ "${out%% *}" = 200 ] || fail "/api/health: $out"
@@ -67,13 +72,36 @@ grep -q "\"commit\":\"$commit\"" "$body_file" || fail "/api/health does not repo
 grep -q "\"version\":\"$version\"" "$body_file" || fail "/api/health does not report version $version: $(cat "$body_file")"
 grep -q '"status":"ok"' "$body_file" || fail "/api/health status: $(cat "$body_file")"
 
+# The login gate (ADR 0029 step 6): without a session a page goes to the login page, which is served,
+# and a data route, the catalogue and an asset of the bundle answer 401. The image runs without OAuth
+# settings and outside fly, so it is in dev login mode (step 8.1).
 for path in / /spells/deep/link; do
+    out="$(get "$path" -H "Accept: text/html")"
+    [ "${out%% *}" = 302 ] || fail "$path without a session: $out (want a redirect to /login)"
+done
+out="$(get /login -H "Accept: text/html")"
+[ "${out%% *}" = 200 ] || fail "/login: $out"
+grep -q '<div id="root">' "$body_file" || fail "/login is not index.html"
+asset="$(docker exec "$name" sh -c 'ls /app/web/assets | grep "\.js$" | head -n1')"
+for path in /api/character /api/spells/names "/assets/$asset"; do
     out="$(get "$path")"
+    [ "${out%% *}" = 401 ] || fail "$path without a session: $out"
+done
+
+out="$(curl -sS -o "$body_file" -D - -X POST -H 'Content-Type: application/json' -d '{}' "$base/api/auth/dev")"
+session="$(sed -n 's/^[Ss]et-[Cc]ookie: critical_session=\([^;]*\).*/\1/p' <<<"$out" | head -n1)"
+[ -n "$session" ] || fail "dev login: no session cookie: $out"
+cookie="critical_session=$session"
+
+for path in / /spells/deep/link; do
+    out="$(get "$path" -H "Cookie: $cookie")"
     [ "${out%% *}" = 200 ] || fail "$path: $out"
     grep -q '<div id="root">' "$body_file" || fail "$path is not index.html"
 done
+out="$(get /api/character -H "Cookie: $cookie")"
+[ "${out%% *}" = 200 ] || fail "/api/character with a session: $out"
 
-out="$(get /api/nope)"
+out="$(get /api/nope -H "Cookie: $cookie")"
 [ "$out" = "404 application/json" ] || fail "/api/nope: $out"
 grep -q '"code":"not_found"' "$body_file" || fail "/api/nope body: $(cat "$body_file")"
 

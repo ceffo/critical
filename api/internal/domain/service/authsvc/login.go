@@ -144,6 +144,7 @@ func (s *service) DevLogin(ctx context.Context, email string) (*NewSession, erro
 // unknown), or with no email the root admin (DevEmail made root when there is
 // none).
 func (s *service) devUser(ctx context.Context, email string) (*User, bool, error) {
+	makeRoot := false
 	if email == "" {
 		root, err := s.dal.RootUser(ctx)
 		if err == nil {
@@ -152,19 +153,19 @@ func (s *service) devUser(ctx context.Context, email string) (*User, bool, error
 		if !errors.Is(err, domain.ErrNotFound) {
 			return nil, false, err
 		}
-		email = DevEmail
+		email, makeRoot = DevEmail, true
 	}
 	u, err := s.dal.UserByEmail(ctx, email)
 	switch {
 	case err == nil:
-		if email == DevEmail && !u.Root {
+		if makeRoot {
 			u.Root, u.Role, u.Disabled = true, RoleAdmin, false
 		}
 		return u, false, nil
 	case !errors.Is(err, domain.ErrNotFound):
 		return nil, false, err
 	}
-	u = &User{ID: s.newID(), Email: email, Role: RoleAdmin, Root: email == DevEmail, CreatedAt: s.now()}
+	u = &User{ID: s.newID(), Email: email, Role: RoleAdmin, Root: makeRoot, CreatedAt: s.now()}
 	return u, true, nil
 }
 

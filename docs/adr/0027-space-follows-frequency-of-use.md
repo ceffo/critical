@@ -148,6 +148,10 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       expands the list; a name longer than the column's cap (`clamp(14rem, 22vw, 26rem)`, a
       player's very long custom name) wraps, never cut. The 5 turn columns share all the width
       the timeline gets (step 4.6).
+      **Out of combat (round 0) the round-number row and the current-round highlight go** (*amended
+      2026-10-17, user: "When we're out of combat, we should not see the rounds", bars, no
+      numbers*); the row itself stays, empty, so the "Effets" label cell and the effect rows keep
+      their place, and the bars, pills, charges and item powers draw as in combat.
    4. **Effect rows show their edit and remove buttons on hover and keyboard focus** only (step 1.4),
       not at rest. Add stays visible in the "Effets" label cell.
    5. **The last result is one line**, larger than today (its value in `text-key`, the words in

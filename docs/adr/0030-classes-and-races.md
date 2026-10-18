@@ -133,6 +133,12 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    `out_of_range`, `not_creatable`, `unknown`, `race_not_allowed`), worded by the web.
    Tests: `TestCreate_RefusesInvalidInputWithFieldErrors`, `TestCreate_AcceptsTheBounds` (charactersvc),
    `TestCreate_RefusedInputStoresNothing` (composition).
+   _(Amended 2026-10-18 by [ADR 0032](0032-character-identity-and-creation-rolls.md))_ A created
+   character also enters its alignment (required, class limits refused), sex (required), languages
+   (catalogue only, the native one automatic) and height, weight and age; the free-text race of the
+   details is dropped (the rules race is the only race); and rolling is offered for the scores, the max HP
+   and the identity numbers (typing stays possible). Step 7.5's "Level 1 hit points are entered, never
+   rolled here" no longer holds for a created character: ADR 0032 step 7 rolls them.
 2. **Class groups.** Fighter is a warrior, mage a wizard, cleric a priest, thief and bard rogues.
    The group picks the THAC0 row (step 5), the saving throw rows (step 6), the hit dice (step 7) and
    the Constitution hit point bonus (warriors get the higher one, step 7).

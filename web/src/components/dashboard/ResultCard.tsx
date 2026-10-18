@@ -213,7 +213,7 @@ function CardBody({
  * cell's outcome when no die is rolled), the verdict and the dice of how many, all as the server
  * recorded them.
  */
-function TurnResultView({ turn: r }: { turn: TurnResult }) {
+export function TurnResultView({ turn: r }: { turn: TurnResult }) {
   const { t } = useTranslation();
   const verdictText = r.success
     ? t(r.effect === "destroy" ? "result.turn.destroyed" : "result.turn.turned")

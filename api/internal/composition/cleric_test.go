@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -109,4 +110,46 @@ func TestCleric_Steps13_15_AThirdLevelClericOfWisdom15(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, res.Failure, "Wisdom 15: no die")
 	assert.Empty(t, dice.calls)
+}
+
+// ADR 0030 step 14 with the log: undoing a failed cast gives the slot back
+// and voids the entry; the next cast rolls a fresh d100.
+func TestCleric_Step14_UndoAFailedCast(t *testing.T) {
+	ctx := context.Background()
+	dice := &queuedDice{t: t, values: []int{5, 90}, calls: map[int]int{}}
+	cfg := fixtureConfig()
+	cfg.Dice = dice
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Name: "Ansel", Class: "cleric", Race: "human", Str: 12, Dex: 10, Con: 13, Int: 10, Wis: 9, Cha: 11, HPMax: 7,
+	})
+	require.NoError(t, err)
+	_, err = bs.Prep.Prepare(ctx, id, []string{"bless"})
+	require.NoError(t, err)
+
+	failed, err := bs.Cast.Cast(ctx, id, 0, castsvc.CastRequest{})
+	require.NoError(t, err)
+	require.NotNil(t, failed.Failure)
+	assert.True(t, failed.Failure.Failed, "d100 5 at or under 20")
+	_, err = bs.Cast.Cast(ctx, id, 0, castsvc.CastRequest{})
+	require.ErrorIs(t, err, spellsvc.ErrSlotAlreadyUsed, "the failed spell spent its slot")
+
+	_, err = bs.Log.Undo(ctx, id, failed.EntryID)
+	require.NoError(t, err)
+	entries, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	for _, e := range entries {
+		if e.ID == failed.EntryID {
+			assert.True(t, e.Voided(), "the failed cast is undone")
+		}
+	}
+
+	again, err := bs.Cast.Cast(ctx, id, 0, castsvc.CastRequest{})
+	require.NoError(t, err, "the slot is unspent again")
+	assert.Equal(t, &castsvc.SpellFailure{Roll: 90, Chance: 20}, again.Failure, "a fresh d100")
+	assert.Equal(t, 2, dice.calls[100])
 }

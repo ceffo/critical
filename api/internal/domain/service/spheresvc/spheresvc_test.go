@@ -2,6 +2,7 @@ package spheresvc_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,6 +33,7 @@ func priest(id string, level int, spheres ...string) catalogue.Spell {
 
 var cat = catalogue.Catalogue{Spells: []catalogue.Spell{
 	priest("flame_strike", 5, "combat"),
+	priest("blade_barrier", 6, "combat"),
 	priest("bless", 1, "all"),
 	priest("chant", 2, "combat"),
 	priest("produce_flame", 2, "elemental_fire"),
@@ -100,4 +102,26 @@ func TestSpheres_RefusesAnUnknownSphereCode(t *testing.T) {
 	typo := access(t, ruletablesvc.SphereAccessRow{Class: "cleric", Sphere: "combatt", Access: ruletablesvc.AccessMajor})
 	_, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{}, Access: typo, Catalogue: cat})
 	require.ErrorContains(t, err, `"combatt" is on no spell`)
+}
+
+// ADR 0030 steps 13 and 15: at level 11 Wisdom 17 opens a 6th-level slot
+// (PHB Table 5), so 6th-level spells are offered; Wisdom 16 has none, so
+// none are (the slots as ruletablesvc.PriestSpellsPerDay gives them).
+func TestSpheres_Step15_SixthLevelNeedsWisdom17(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name  string
+		slots map[int]int
+		want  bool
+	}{
+		{"Wisdom 16", map[int]int{1: 7, 2: 6, 3: 4, 4: 3, 5: 2}, false},
+		{"Wisdom 17", map[int]int{1: 7, 2: 6, 3: 5, 4: 3, 5: 2, 6: 1}, true},
+	} {
+		c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{RealizedLevel: 11, SpellSlots: tc.slots}}
+		s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Access: cleric(t), Catalogue: cat})
+		require.NoError(t, err)
+		all, err := s.All(ctx, 1)
+		require.NoError(t, err)
+		assert.Equal(t, tc.want, slices.Contains(ids(all), "blade_barrier"), tc.name)
+	}
 }

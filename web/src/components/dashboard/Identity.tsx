@@ -177,7 +177,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
  * each one with the sheet's figure and the computed one, which the app uses. Rare (a data or rules
  * error), so it shows only when there is one; the server sends codes and numbers, worded here.
  */
-function SheetDifferences({
+export function SheetDifferences({
   differences,
 }: {
   differences: Character["derived"]["sheetDifferences"];

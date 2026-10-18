@@ -63,6 +63,10 @@ type Querier interface {
 	SpellTextKeys(ctx context.Context) ([]SpellTextKeysRow, error)
 	SpellbookRefs(ctx context.Context) ([]SpellbookRefsRow, error)
 	TextLanguages(ctx context.Context, textID int64) ([]TextLanguagesRow, error)
+	// The weapons stored before migration 005 have no type: the data step run just after it gives the
+	// seeded ones theirs, never replacing a type already set (typeSeedWeapons). Delete it with its step
+	// once every environment is past 005 (ADR 0025 step 2.1.1).
+	TypeWeaponIfUntyped(ctx context.Context, arg TypeWeaponIfUntypedParams) error
 	UpsertBardSkill(ctx context.Context, arg UpsertBardSkillParams) error
 	UpsertProficiency(ctx context.Context, arg UpsertProficiencyParams) error
 	UpsertSpell(ctx context.Context, arg UpsertSpellParams) error

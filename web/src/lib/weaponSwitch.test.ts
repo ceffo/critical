@@ -12,6 +12,7 @@ const weapon = (id: string): Weapon => ({
   kind: "melee",
   two_handed: false,
   ammo_kind: "",
+  weapon_type: "long_sword",
 });
 const WEAPONS = ["sword", "bow", "dagger", "mace"].map(weapon);
 const ids = (ws: Weapon[]) => ws.map((w) => w.id);

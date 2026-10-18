@@ -403,9 +403,9 @@ func (q *Queries) InsertText(ctx context.Context, arg InsertTextParams) error {
 
 const insertWeapon = `-- name: InsertWeapon :exec
 INSERT INTO weapons (character_id, id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind,
-                     two_handed, ammo_kind)
+                     two_handed, ammo_kind, weapon_type)
 VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8,
-        $9, $10, $11)
+        $9, $10, $11, $12)
 `
 
 type InsertWeaponParams struct {
@@ -420,6 +420,7 @@ type InsertWeaponParams struct {
 	Kind        string
 	TwoHanded   int64
 	AmmoKind    string
+	WeaponType  string
 }
 
 func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) error {
@@ -435,6 +436,7 @@ func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) erro
 		arg.Kind,
 		arg.TwoHanded,
 		arg.AmmoKind,
+		arg.WeaponType,
 	)
 	return err
 }
@@ -925,6 +927,23 @@ func (q *Queries) TextLanguages(ctx context.Context, textID int64) ([]TextLangua
 		return nil, err
 	}
 	return items, nil
+}
+
+const typeWeaponIfUntyped = `-- name: TypeWeaponIfUntyped :exec
+UPDATE weapons SET weapon_type = $1 WHERE id = $2 AND weapon_type = ''
+`
+
+type TypeWeaponIfUntypedParams struct {
+	WeaponType string
+	ID         string
+}
+
+// The weapons stored before migration 005 have no type: the data step run just after it gives the
+// seeded ones theirs, never replacing a type already set (typeSeedWeapons). Delete it with its step
+// once every environment is past 005 (ADR 0025 step 2.1.1).
+func (q *Queries) TypeWeaponIfUntyped(ctx context.Context, arg TypeWeaponIfUntypedParams) error {
+	_, err := q.db.ExecContext(ctx, typeWeaponIfUntyped, arg.WeaponType, arg.ID)
+	return err
 }
 
 const upsertBardSkill = `-- name: UpsertBardSkill :exec

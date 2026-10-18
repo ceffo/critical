@@ -45,7 +45,7 @@ var bastard = weaponsvc.Weapon{
 // Every bad field is rejected with a *domain.FieldError naming the wire
 // field, before anything is stored or logged.
 func TestCreate_ValidationNamesTheField(t *testing.T) {
-	good := weaponsvc.WeaponInput{Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", Kind: "missile", AmmoKind: "arrow"}
+	good := weaponsvc.WeaponInput{Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", Kind: "missile", AmmoKind: "arrow", Type: "long_bow"}
 	cases := map[string]struct {
 		mut   func(*weaponsvc.WeaponInput)
 		field string
@@ -60,6 +60,7 @@ func TestCreate_ValidationNamesTheField(t *testing.T) {
 		"to-hit too high":  {func(i *weaponsvc.WeaponInput) { i.MagicToHit = 11 }, "magic_to_hit"},
 		"damage too low":   {func(i *weaponsvc.WeaponInput) { i.MagicDamage = -11 }, "magic_damage"},
 		"unknown kind":     {func(i *weaponsvc.WeaponInput) { i.Kind = "x" }, "kind"},
+		"unknown type":     {func(i *weaponsvc.WeaponInput) { i.Type = "Long Bow" }, "weapon_type"},
 		"melee fires ammo": {func(i *weaponsvc.WeaponInput) { i.Kind = "melee" }, "ammo_kind"},
 	}
 	for name, c := range cases {
@@ -86,14 +87,14 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	dal.EXPECT().List(mock.Anything, int64(1)).Return([]weaponsvc.Weapon{{ID: "long_bow", Position: 5}, {ID: "x", Position: 3}}, nil)
 	want := weaponsvc.Weapon{
 		ID: "long_bow_2", Position: 6, Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
-		Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+		Kind: "missile", TwoHanded: true, AmmoKind: "arrow", Type: "short_bow",
 	}
 	dal.EXPECT().Insert(mock.Anything, int64(1), want).Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(5), nil)
 
 	res, err := svc.Create(context.Background(), 1, weaponsvc.WeaponInput{
-		Name: localized.Of(" Long Bow "), DamageSM: "1D8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: " Arrow ",
+		Name: localized.Of(" Long Bow "), DamageSM: "1D8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: " Arrow ", Type: " short_bow ",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, &weaponsvc.ChangeResult{Weapon: want, LogEntryID: 5}, res)
@@ -101,10 +102,12 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	assert.False(t, actionlog.IsRoll(got.Kind), "a pop-only entry that is not a roll card")
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "weapons:long_bow_2", got.Snapshots[0].Key)
-	assert.JSONEq(t, `{"id":"long_bow_2","absent":true,"position":0,"name":null,"damageSm":"","damageL":"","magicToHit":0,"magicDamage":0,"kind":"","twoHanded":false,"ammoKind":""}`,
+	assert.JSONEq(t, `{"id":"long_bow_2","absent":true,"position":0,"name":null,"damageSm":"","damageL":"","magicToHit":0,"magicDamage":0,"kind":"","twoHanded":false,"ammoKind":"","weaponType":""}`,
 		string(got.Snapshots[0].Before))
 	assert.Contains(t, string(got.Snapshots[0].After), `"name":{"en":"Long Bow"}`)
 	assert.Contains(t, string(got.Payload), `"ammo_kind":"arrow"`)
+	assert.Contains(t, string(got.Payload), `"weapon_type":"short_bow"`)
+	assert.Contains(t, string(got.Snapshots[0].After), `"weaponType":"short_bow"`)
 }
 
 // Bastard Sword +2 -> +3 to hit and damage: one weapon_edit entry with both

@@ -107,7 +107,7 @@ func (t *tables) seedWeapons(owner int64, path string) error {
 		t.weapons[owned{owner, w.ID}] = storedWeapon{row: nextID(&t.rowSeq), Weapon: weaponsvc.Weapon{
 			ID: w.ID, Position: i, Name: stored(w.Name.Trimmed()), DamageSM: w.DamageSM, DamageL: w.DamageL,
 			MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: w.Kind, TwoHanded: w.TwoHanded,
-			AmmoKind: w.AmmoKind,
+			AmmoKind: w.AmmoKind, Type: w.WeaponType,
 		}}
 	}
 	return nil

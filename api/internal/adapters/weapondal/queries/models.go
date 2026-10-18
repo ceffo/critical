@@ -22,4 +22,5 @@ type Weapon struct {
 	TwoHanded   int64
 	AmmoKind    string
 	CharacterID int64
+	WeaponType  string
 }

@@ -42,6 +42,7 @@ type WeaponDTO struct {
 	Kind        string         `json:"kind"`
 	TwoHanded   bool           `json:"two_handed"`
 	AmmoKind    string         `json:"ammo_kind"`
+	WeaponType  string         `json:"weapon_type"`
 }
 
 // ChangeDTO is the wire shape of POST/PATCH/DELETE /api/weapons: the weapon
@@ -63,6 +64,7 @@ type WeaponBody struct {
 	Kind        *string        `json:"kind"`
 	TwoHanded   *bool          `json:"two_handed"`
 	AmmoKind    *string        `json:"ammo_kind"`
+	WeaponType  *string        `json:"weapon_type"`
 }
 
 func decodeBody(r *http.Request) (WeaponBody, error) {
@@ -81,6 +83,7 @@ func change(w http.ResponseWriter, r *http.Request, res *weaponsvc.ChangeResult)
 		Weapon: WeaponDTO{
 			ID: x.ID, Name: x.Name, DamageSM: x.DamageSM, DamageL: x.DamageL, MagicToHit: x.MagicToHit,
 			MagicDamage: x.MagicDamage, Kind: x.Kind, TwoHanded: x.TwoHanded, AmmoKind: x.AmmoKind,
+			WeaponType: x.Type,
 		},
 		LogEntryID: res.LogEntryID,
 	})
@@ -104,7 +107,7 @@ func Create(charID CharacterIDFunc, svc weaponsvc.SVC) render.HandlerFunc {
 		res, err := svc.Create(r.Context(), charID(r), weaponsvc.WeaponInput{
 			Name: b.Name, DamageSM: deref(b.DamageSM), DamageL: deref(b.DamageL),
 			MagicToHit: deref(b.MagicToHit), MagicDamage: deref(b.MagicDamage), Kind: deref(b.Kind),
-			TwoHanded: deref(b.TwoHanded), AmmoKind: deref(b.AmmoKind),
+			TwoHanded: deref(b.TwoHanded), AmmoKind: deref(b.AmmoKind), Type: deref(b.WeaponType),
 		})
 		if err != nil {
 			return err
@@ -123,7 +126,7 @@ func Update(charID CharacterIDFunc, svc weaponsvc.SVC) render.HandlerFunc {
 		}
 		res, err := svc.Update(r.Context(), charID(r), chi.URLParam(r, "id"), weaponsvc.WeaponPatch{
 			Name: b.Name, DamageSM: b.DamageSM, DamageL: b.DamageL, MagicToHit: b.MagicToHit,
-			MagicDamage: b.MagicDamage, Kind: b.Kind, TwoHanded: b.TwoHanded, AmmoKind: b.AmmoKind,
+			MagicDamage: b.MagicDamage, Kind: b.Kind, TwoHanded: b.TwoHanded, AmmoKind: b.AmmoKind, Type: b.WeaponType,
 		})
 		if err != nil {
 			return err

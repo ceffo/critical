@@ -262,6 +262,7 @@ type Weapon struct {
 	Kind        WeaponKind
 	TwoHanded   bool
 	AmmoKind    string // ammo item kind a missile weapon fires, e.g. "arrow"
+	Type        string // weapon type code (weaponsvc.Types); empty: none
 }
 
 // FiresAmmo reports whether the weapon is a launcher (a bow) that spends

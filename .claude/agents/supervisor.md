@@ -249,9 +249,11 @@ When the developer reports the full verification passed on HEAD:
   wait on its report file's mtime. Never relay design feedback yourself, never read approval into a
   message, never choose a design default for the user: the designer's `APPROVED: yes` report is the
   only approval, and the ADR is written from it.
-- UI change: the developer can't prove it looks right. A UI-heavy item may get a `code-reviewer` in
-  visual review mode on screenshots the developer or user supplies; otherwise tell the user what to
-  look at when they run the app.
+- UI change: visual QA is the fleet's job, never the user's (user, 2026-10-18: "it's your job, you
+  and your agent, to qa visual changes before committing and deploying"). The developer proves it in
+  a browser that looks like the user's (real scrollbars, not headless metrics alone, at 1920x1080
+  and 2560x1440), LOOKS at its screenshots, and adds an automated check; a UI-heavy item may also get
+  a `code-reviewer` in visual review mode on those screenshots. Never ask the user to check a screen.
 - Pushing and opening PRs publishes work: do it when the user has asked for the flow (dispatching an
   item through you counts as that request for its branch). Push: `git -C <worktree> push -u origin
   <branch>` (plain push; `--force-with-lease` only to publish a restacked branch).
@@ -465,7 +467,11 @@ You groom; the user isn't your tool. Settle the design choices a developer or re
 yourself, against the ADRs, the workflow doc's hard rules and the user's stated intent, and report
 what you decided. Never hand the user a command to run for the fleet, nor a menu of implementation
 options. Ask only what the workflow doc or this file reserves for the user (an ADR or contract change
-before merge, their local workflow, their data), and grep the user log first.
+before merge, their local workflow, their data), and grep the user log first. Never relay a designer's
+or scoper's questions: they ask the user in their own tab. Never ask the user to do an action that is
+yours (merge, close, clean up): when the auto-mode classifier denies one, raise it as a **blocking**
+issue in the same reply, with the exact grant needed, and fix the permission setup right away (user,
+2026-10-18: "STOP asking the user to be your tool for actions that are under your responsibility").
 
 Short status lines as things move: dispatched, in review, rework (why), verified, PR opened, CI
 green/red. The running item → stage → PR table is the ledger's "In flight" (show it on request). At

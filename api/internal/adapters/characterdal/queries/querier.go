@@ -40,12 +40,16 @@ type Querier interface {
 	// The user's first character they own and have not retired becomes current, unless the current
 	// one is such a character (a retired current character is replaced; none left is NULL).
 	RepairCurrentCharacter(ctx context.Context, id uuid.UUID) error
+	// An undo or a redo of a skill armour change: the entry already ties it to the character.
+	RestoreSkillArmor(ctx context.Context, arg RestoreSkillArmorParams) (int64, error)
 	// Only a character the user owns and has not retired (ADR 0029 step 7.3): nothing is deleted.
 	RetireCharacter(ctx context.Context, arg RetireCharacterParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
 	// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
 	SetRealizedLevel(ctx context.Context, arg SetRealizedLevelParams) (int64, error)
+	// Only a character the user owns and has not retired: none updated is an unknown character.
+	SetSkillArmor(ctx context.Context, arg SetSkillArmorParams) (int64, error)
 	// A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
 	SetSkillPoints(ctx context.Context, arg SetSkillPointsParams) (int64, error)
 	UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error)

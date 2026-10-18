@@ -4,6 +4,7 @@ import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
 import { Button } from "@/components/ui/button";
+import { ThiefArmorPicker } from "./ThiefArmorPicker";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
 import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/lib/logSummary";
@@ -152,6 +153,7 @@ export function SkillsTab() {
               ))}
             </ul>
           )}
+          <ThiefArmorPicker />
           {editingPoints ? (
             <ThiefPointsEditor
               skills={skills.thiefSkills}

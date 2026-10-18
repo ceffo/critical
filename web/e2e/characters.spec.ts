@@ -253,6 +253,35 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
   await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("55 %");
   await expect(page.getByTestId("skill-budget")).toHaveCount(0);
 
+  // The armour changes in play (step 1): elven chain takes 5 off Open Locks (Table 29), and the
+  // choice survives a reload.
+  // A refused request leaves the select enabled and the armour as it was.
+  await page.route("**/api/characters/*", (route) =>
+    route.request().method() === "PATCH"
+      ? route.fulfill({ status: 500, body: "boom" })
+      : route.continue(),
+  );
+  await page
+    .getByTestId("thief-armor")
+    .selectOption({ label: "Cotte de mailles elfique" });
+  await expect(page.getByTestId("thief-armor")).toBeEnabled();
+  await expect(page.getByTestId("thief-armor")).toHaveValue("none");
+  await page.unroute("**/api/characters/*");
+  await page
+    .getByTestId("thief-armor")
+    .selectOption({ label: "Cotte de mailles elfique" });
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
+  await expect(
+    page
+      .getByText("Armure des talents : Aucune → Cotte de mailles elfique")
+      .first(),
+  ).toBeVisible();
+  await snap(page, "thief-armor-changed-fr");
+  await page.reload();
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  await expect(page.getByTestId("thief-armor")).toHaveValue("elven_chain");
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
+
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Inventory");
   await page.getByRole("button", { name: "Add weapon" }).click();

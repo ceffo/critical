@@ -53,6 +53,7 @@ export const KIND_ICONS: Record<LogKind, Icon> = {
   spell_learn: BookOpen,
   turn_undead: Skull,
   skill_points: ListNumbers,
+  skill_armor: ListNumbers,
   spell_prep: BookOpen,
   long_rest: Moon,
   save: Shield,

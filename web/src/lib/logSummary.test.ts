@@ -1307,6 +1307,20 @@ describe("entryText for skill checks", () => {
     );
   });
 
+  it("words a thief's skill armour change (ADR 0030 step 1): before and after (en, fr)", async () => {
+    const en = await makeT("en");
+    const fr = await makeT("fr");
+    const e = entry(
+      "skill_armor",
+      { before: "none", after: "elven_chain" },
+      "",
+    );
+    expect(entryText(e, en)).toBe("Skill armour: None → Elven chain");
+    expect(entryText(e, fr)).toBe(
+      "Armure des talents : Aucune → Cotte de mailles elfique",
+    );
+  });
+
   it("words an adjusted check: adjusted target, original target, adjustment and reason (en, fr)", async () => {
     const en = await makeT("en");
     const fr = await makeT("fr");

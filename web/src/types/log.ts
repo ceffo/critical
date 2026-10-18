@@ -30,6 +30,7 @@ export type LogKind =
   | "turn_undead"
   /** A thief's skill points spent on the sheet (ADR 0030 step 17); popping it gives them back. */
   | "skill_points"
+  | "skill_armor"
   | "spell_prep"
   | "long_rest"
   | "save"

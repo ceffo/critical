@@ -79,6 +79,15 @@ INSERT INTO round_state (character_id, round_number) VALUES ($1, 0);
 UPDATE characters SET name = sqlc.arg(name)
 WHERE id = sqlc.arg(id) AND owner_user_id = sqlc.arg(owner_user_id) AND NOT retired;
 
+-- name: SetSkillArmor :execrows
+-- Only a character the user owns and has not retired: none updated is an unknown character.
+UPDATE characters SET skill_armor = sqlc.arg(skill_armor)
+WHERE id = sqlc.arg(id) AND owner_user_id = sqlc.arg(owner_user_id) AND NOT retired;
+
+-- name: RestoreSkillArmor :execrows
+-- An undo or a redo of a skill armour change: the entry already ties it to the character.
+UPDATE characters SET skill_armor = sqlc.arg(skill_armor) WHERE id = sqlc.arg(id);
+
 -- name: RetireCharacter :execrows
 -- Only a character the user owns and has not retired (ADR 0029 step 7.3): nothing is deleted.
 UPDATE characters SET retired = TRUE

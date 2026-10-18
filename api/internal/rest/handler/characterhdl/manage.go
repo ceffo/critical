@@ -198,12 +198,14 @@ func Create(svc creator) render.HandlerFunc {
 	}
 }
 
-// ChangeBody is the body of PATCH /api/characters/{id}: a new name, or
-// retired true (ADR 0029 step 7.3; a retired character never comes back
-// here).
+// ChangeBody is the body of PATCH /api/characters/{id}: a new name, a
+// thief's new skill armour (ADR 0030 step 1, logged and undoable), or retired
+// true (ADR 0029 step 7.3; a retired character never comes back here).
 type ChangeBody struct {
 	Name    *string `json:"name"`
 	Retired *bool   `json:"retired"`
+	// SkillArmor is a thief's new skill armour (ADR 0030 step 1).
+	SkillArmor *string `json:"skillArmor"`
 }
 
 // Change is PATCH /api/characters/{id}: renames or retires one of the user's
@@ -227,12 +229,12 @@ func Change(svc changer) render.HandlerFunc {
 			return render.BadRequestError("invalid JSON body")
 		}
 		switch {
-		case b.Name == nil && b.Retired == nil:
-			return render.BadRequestError("name or retired is required")
+		case b.Name == nil && b.Retired == nil && b.SkillArmor == nil:
+			return render.BadRequestError("name, retired or skillArmor is required")
 		case b.Retired != nil && !*b.Retired:
 			return render.BadRequestError("a character is only ever retired")
 		}
-		current, err := svc.Change(r.Context(), u.ID, id, charactersvc.Change{Name: b.Name, Retired: b.Retired})
+		current, err := svc.Change(r.Context(), u.ID, id, charactersvc.Change{Name: b.Name, Retired: b.Retired, SkillArmor: b.SkillArmor})
 		if err != nil {
 			return err
 		}

@@ -64,6 +64,9 @@ func TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage(t *testing.T) {
 			h.Spellbook.EXPECT().RemoveEntry(mock.Anything, characterID, "light").Return(nil).Once()
 			h.Spellbook.EXPECT().SetLearnFailure(mock.Anything, characterID, "light", 4).Return(nil).Once()
 		}},
+		{"a thief's skill armour", "skill_armor", `{"armor":"none"}`, func(h *harness) {
+			h.Character.EXPECT().RestoreSkillArmor(mock.Anything, characterID, "none").Return(nil).Once()
+		}},
 		{"an XP entry added by hand (family xp)", "xp:12", `{"id":12,"absent":true}`, func(h *harness) {
 			h.XP.EXPECT().Delete(mock.Anything, characterID, int64(12)).Return(nil).Once()
 		}},

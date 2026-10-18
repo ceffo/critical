@@ -295,6 +295,54 @@ func (_c *MockOwners_RepairCurrentCharacter_Call) RunAndReturn(run func(context.
 	return _c
 }
 
+// RestoreSkillArmor provides a mock function with given fields: ctx, id, armor
+func (_m *MockOwners) RestoreSkillArmor(ctx context.Context, id int64, armor string) error {
+	ret := _m.Called(ctx, id, armor)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RestoreSkillArmor")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) error); ok {
+		r0 = rf(ctx, id, armor)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockOwners_RestoreSkillArmor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RestoreSkillArmor'
+type MockOwners_RestoreSkillArmor_Call struct {
+	*mock.Call
+}
+
+// RestoreSkillArmor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - armor string
+func (_e *MockOwners_Expecter) RestoreSkillArmor(ctx interface{}, id interface{}, armor interface{}) *MockOwners_RestoreSkillArmor_Call {
+	return &MockOwners_RestoreSkillArmor_Call{Call: _e.mock.On("RestoreSkillArmor", ctx, id, armor)}
+}
+
+func (_c *MockOwners_RestoreSkillArmor_Call) Run(run func(ctx context.Context, id int64, armor string)) *MockOwners_RestoreSkillArmor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockOwners_RestoreSkillArmor_Call) Return(_a0 error) *MockOwners_RestoreSkillArmor_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockOwners_RestoreSkillArmor_Call) RunAndReturn(run func(context.Context, int64, string) error) *MockOwners_RestoreSkillArmor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RetireCharacter provides a mock function with given fields: ctx, owner, id
 func (_m *MockOwners) RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
 	ret := _m.Called(ctx, owner, id)
@@ -387,6 +435,55 @@ func (_c *MockOwners_SetCurrentCharacter_Call) Return(_a0 error) *MockOwners_Set
 }
 
 func (_c *MockOwners_SetCurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64) error) *MockOwners_SetCurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetSkillArmor provides a mock function with given fields: ctx, owner, id, armor
+func (_m *MockOwners) SetSkillArmor(ctx context.Context, owner uuid.UUID, id int64, armor string) error {
+	ret := _m.Called(ctx, owner, id, armor)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetSkillArmor")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, string) error); ok {
+		r0 = rf(ctx, owner, id, armor)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockOwners_SetSkillArmor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetSkillArmor'
+type MockOwners_SetSkillArmor_Call struct {
+	*mock.Call
+}
+
+// SetSkillArmor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - id int64
+//   - armor string
+func (_e *MockOwners_Expecter) SetSkillArmor(ctx interface{}, owner interface{}, id interface{}, armor interface{}) *MockOwners_SetSkillArmor_Call {
+	return &MockOwners_SetSkillArmor_Call{Call: _e.mock.On("SetSkillArmor", ctx, owner, id, armor)}
+}
+
+func (_c *MockOwners_SetSkillArmor_Call) Run(run func(ctx context.Context, owner uuid.UUID, id int64, armor string)) *MockOwners_SetSkillArmor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int64), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *MockOwners_SetSkillArmor_Call) Return(_a0 error) *MockOwners_SetSkillArmor_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockOwners_SetSkillArmor_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64, string) error) *MockOwners_SetSkillArmor_Call {
 	_c.Call.Return(run)
 	return _c
 }

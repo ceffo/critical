@@ -2568,6 +2568,13 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(skills, `thieving skills, fr, ${where}`);
+    // The armour select (its longest choice) and its label sit uncut in the block.
+    const picker = page.getByTestId("thief-armor-picker");
+    await expectNoClippedText(picker, `thief armour picker, fr, ${where}`);
+    const select = page.getByTestId("thief-armor");
+    expect(
+      await select.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
     await snap(page, `thief-skills-fr-${where}`);
   }
 

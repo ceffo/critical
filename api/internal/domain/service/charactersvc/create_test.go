@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
@@ -290,6 +291,67 @@ func TestChange_Rename(t *testing.T) {
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, "name", fe.Field)
+}
+
+// ADR 0030 step 1 after creation: a thief's skill armour is set to one of
+// Table 29's armours and logged as one skill_armor entry whose snapshot holds
+// the armour before and after, which the restorer writes back on undo and redo.
+func TestChange_ASkillArmourIsSetAndLoggedOnAThief(t *testing.T) {
+	e := newEnv(t)
+	e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{Class: "thief", SkillArmor: "none"}, nil).Twice()
+	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "elven_chain").Return(nil).Once()
+	e.owners.EXPECT().CurrentCharacter(mock.Anything, ownerID).Return(3, nil).Twice()
+
+	current, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr("elven_chain")})
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), current)
+	require.Len(t, e.log.entries, 1)
+	got := e.log.entries[0]
+	assert.Equal(t, actionlog.KindSkillArmor, got.Kind)
+	assert.Equal(t, int64(5), got.CharacterID)
+	assert.JSONEq(t, `{"before":"none","after":"elven_chain"}`, string(got.Payload))
+	require.Len(t, got.Snapshots, 1)
+	assert.Equal(t, "skill_armor", got.Snapshots[0].Key)
+	assert.JSONEq(t, `{"armor":"none"}`, string(got.Snapshots[0].Before))
+	assert.JSONEq(t, `{"armor":"elven_chain"}`, string(got.Snapshots[0].After))
+
+	// The same armour as stored records nothing.
+	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "none").Return(nil).Once()
+	e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{Class: "thief", SkillArmor: "none"}, nil).Twice()
+	_, err = e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr("none")})
+	require.NoError(t, err)
+	assert.Len(t, e.log.entries, 1)
+}
+
+// Undo writes the snapshot's armour back through the owner-less writer.
+func TestRestorers_TheSkillArmourSnapshotIsWrittenBack(t *testing.T) {
+	e := newEnv(t)
+	e.owners.EXPECT().RestoreSkillArmor(mock.Anything, int64(5), "none").Return(nil).Once()
+	r := e.svc.Restorers()[charactersvc.ArmorStateKey]
+	require.NotNil(t, r)
+	require.NoError(t, r.Restore(context.Background(), 5, []byte(`{"armor":"none"}`)))
+}
+
+// An armour that is empty or none of Table 29's is refused before anything
+// runs; a class without thieving skills has no armour to change (the write
+// and its entry are rolled back with the refusal; nothing is recorded).
+func TestChange_ASkillArmourIsRefusedWhenInvalid(t *testing.T) {
+	e := newEnv(t)
+	for armor, code := range map[string]string{"": "empty", "plate": "unknown"} {
+		_, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr(armor)})
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, "skillArmor", fe.Field)
+		assert.Equal(t, code, fe.Message)
+	}
+
+	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "leather").Return(nil).Once()
+	e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{Class: "bard"}, nil).Twice()
+	_, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr("leather")})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "not_allowed", fe.Message)
+	assert.Empty(t, e.log.entries)
 }
 
 // Another user's character, a retired one and an unknown id are not found

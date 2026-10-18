@@ -337,6 +337,24 @@ func (q *Queries) RepairCurrentCharacter(ctx context.Context, id uuid.UUID) erro
 	return err
 }
 
+const restoreSkillArmor = `-- name: RestoreSkillArmor :execrows
+UPDATE characters SET skill_armor = $1 WHERE id = $2
+`
+
+type RestoreSkillArmorParams struct {
+	SkillArmor string
+	ID         int64
+}
+
+// An undo or a redo of a skill armour change: the entry already ties it to the character.
+func (q *Queries) RestoreSkillArmor(ctx context.Context, arg RestoreSkillArmorParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, restoreSkillArmor, arg.SkillArmor, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const retireCharacter = `-- name: RetireCharacter :execrows
 UPDATE characters SET retired = TRUE
 WHERE id = $1 AND owner_user_id = $2 AND NOT retired
@@ -392,6 +410,26 @@ type SetRealizedLevelParams struct {
 // A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
 func (q *Queries) SetRealizedLevel(ctx context.Context, arg SetRealizedLevelParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setRealizedLevel, arg.RealizedLevel, arg.HpMax, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setSkillArmor = `-- name: SetSkillArmor :execrows
+UPDATE characters SET skill_armor = $1
+WHERE id = $2 AND owner_user_id = $3 AND NOT retired
+`
+
+type SetSkillArmorParams struct {
+	SkillArmor  string
+	ID          int64
+	OwnerUserID uuid.NullUUID
+}
+
+// Only a character the user owns and has not retired: none updated is an unknown character.
+func (q *Queries) SetSkillArmor(ctx context.Context, arg SetSkillArmorParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setSkillArmor, arg.SkillArmor, arg.ID, arg.OwnerUserID)
 	if err != nil {
 		return 0, err
 	}

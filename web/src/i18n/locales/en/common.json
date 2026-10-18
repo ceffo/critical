@@ -1239,7 +1239,8 @@
       "level_up": "Level",
       "spell_learn": "Learn",
       "turn_undead": "Turning",
-      "skill_points": "Skills"
+      "skill_points": "Skills",
+      "skill_armor": "Armour"
     },
     "status": {
       "active": "Active",
@@ -1401,6 +1402,9 @@
     "skillPoints": {
       "text": "Skill points: {{changes}}",
       "change": "{{name}} {{from}} → {{to}}"
+    },
+    "skillArmor": {
+      "text": "Skill armour: {{from}} → {{to}}"
     }
   },
   "critTable": {
@@ -1632,6 +1636,7 @@
     },
     "spendPoints": "Spend",
     "spendPointsHint": "Spend thieving skill points",
+    "armorHint": "Change the armour worn for the thieving skills",
     "pointsTitle": "Thieving skill points",
     "pointsLead": "The total points in each skill. The budget at your level is a warning, not a limit.",
     "pointsLabel": "Points in {{name}}",

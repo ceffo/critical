@@ -536,6 +536,19 @@ function skillPointsText(e: LogEntry, t: TFunction): string | null {
   return t("log.skillPoints.text", { changes });
 }
 
+/** "Skill armour: None → Elven chain" (charactersvc, ADR 0030 step 1): the armour before and after. */
+function skillArmorText(e: LogEntry, t: TFunction): string | null {
+  if (e.kind !== "skill_armor") return null;
+  const p = e.payload as { before?: string; after?: string } | null;
+  if (!p || typeof p.after !== "string") return null;
+  const name = (a: string) =>
+    t(`characters.armors.${a || "leather"}`, { defaultValue: a });
+  return t("log.skillArmor.text", {
+    from: name(p.before ?? ""),
+    to: name(p.after),
+  });
+}
+
 /** The payload of a turn_undead entry (turnsvc record, ADR 0030 step 16), or null. */
 export function turnPayload(e: LogEntry): TurnResult | null {
   if (e.kind !== "turn_undead") return null;
@@ -903,6 +916,8 @@ export function entryText(
   if (turn) return turn;
   const points = skillPointsText(e, t);
   if (points) return points;
+  const armor = skillArmorText(e, t);
+  if (armor) return armor;
   const hp = hpChangeText(e, t);
   if (hp) return hp;
   const p = buffPayload(e);

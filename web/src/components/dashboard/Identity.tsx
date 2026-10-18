@@ -16,7 +16,7 @@ const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
 
 /**
- * Who: name with the level right-aligned on the same line (a button opening the Expérience workspace, underlined with the server's
+ * Who: the name, the class under it (muted), the level right-aligned on the name's line (a button opening the Expérience workspace, underlined with the server's
  * progress to the next level, ADR 0015), then the abilities in one row of seven cells and THAC0 last.
  * Each ability tile rolls its check on the server (ADR 0028): the result card shows it.
  * STR is the server's effective value; changed by an effect, it shows only that value, in the
@@ -40,9 +40,18 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
           "flex min-w-0 items-baseline justify-between gap-2 py-2",
         )}
       >
-        <h1 className="min-w-0 flex-1">
-          <CharacterDetails character={character} />
-        </h1>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <h1 className="min-w-0">
+            <CharacterDetails character={character} />
+          </h1>
+          {character && (
+            <p className="text-body text-muted-foreground" data-testid="class">
+              {i18n.exists(`details.classes.${character.class}`)
+                ? t(`details.classes.${character.class}`)
+                : character.class}
+            </p>
+          )}
+        </div>
         {character && (
           <button
             type="button"

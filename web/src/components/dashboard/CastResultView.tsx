@@ -389,12 +389,6 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         </div>
       )}
 
-      {r.note && (
-        <div>
-          <div className={labelClass}>{t("result.cast.note")}</div>
-          <p className="text-body">{r.note}</p>
-        </div>
-      )}
       {description && (
         <details className="group rounded-lg border px-3 py-2">
           <summary className={cn(labelClass, "cursor-pointer select-none")}>

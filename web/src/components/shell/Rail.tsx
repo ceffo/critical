@@ -13,8 +13,8 @@ import { ACTIVITIES, type Activity } from "@/lib/activities";
 const ICONS: Record<Activity, ComponentType<IconProps>> = {
   act: HandFist,
   spells: BookOpenText,
-  xp: TrendUp,
   inventory: Backpack,
+  xp: TrendUp,
 };
 
 /**

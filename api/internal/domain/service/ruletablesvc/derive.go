@@ -155,3 +155,37 @@ func (t *Tables) WizardSpellsPerDay(level int) (map[int]int, error) {
 	}
 	return out, nil
 }
+
+// HitDiceFor is the hit dice row of group (ADR 0030 step 7): the die, the
+// name level (the last level that rolls it) and the fixed gain per level
+// after it (PHB Tables 14, 20, 23 and 25, Hit Dice column, with chapter 3's
+// hit points paragraphs).
+func (t *Tables) HitDiceFor(group string) (HitDiceRow, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return HitDiceRow{}, err
+	}
+	for _, r := range c.HitDice {
+		if r.Group == group {
+			return r, nil
+		}
+	}
+	return HitDiceRow{}, fmt.Errorf("hit dice: unknown class group %q", group)
+}
+
+// ConstitutionFor is PHB Table 3's row of a Constitution score (ADR 0030 step
+// 7): the hit point adjustment per die (HPWarrior for warriors) and the value
+// a low die counts as (0: none). The table covers 1 to MaxScore; a score
+// outside it is an error.
+func (t *Tables) ConstitutionFor(con int) (ConstitutionRow, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return ConstitutionRow{}, err
+	}
+	for _, r := range c.Constitution {
+		if con >= r.ConMin && con <= r.ConMax {
+			return r, nil
+		}
+	}
+	return ConstitutionRow{}, fmt.Errorf("constitution: score %d outside the table", con)
+}

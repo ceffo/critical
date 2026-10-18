@@ -52,7 +52,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 		ID: row.ID, Name: row.Name,
 		Str: int(row.Str), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
-		HPMax: int(row.HpMax), XPTotal: int(row.XpTotal),
+		HPMax: int(row.HpMax), HPLevel: int(row.HpLevel), XPTotal: int(row.XpTotal),
 		Class: row.Class, Race: row.RaceCode,
 		// The figures the imported sheet stated (ADR 0030 step 24).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
@@ -64,6 +64,22 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 			Height: row.Height, Weight: row.Weight, Hair: row.Hair, Eyes: row.Eyes, Languages: langs,
 		},
 	}, nil
+}
+
+// SetHitPoints implements levelupsvc.DAL: the max HP and the level it is set
+// for (ADR 0030 step 7.3). domain.ErrCharacterNotFound when the row is
+// missing.
+func (d *DAL) SetHitPoints(ctx context.Context, id int64, hpMax, hpLevel int) error {
+	n, err := d.q.SetHitPoints(ctx, queries.SetHitPointsParams{
+		HpMax: int64(hpMax), HpLevel: sql.NullInt64{Int64: int64(hpLevel), Valid: true}, ID: id,
+	})
+	if err != nil {
+		return fmt.Errorf("set hit points: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
 }
 
 // CharactersOf implements charactersvc.Owners.
@@ -113,6 +129,7 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		SavePetriPoly: int64(c.Sheet.Saves.PetriPoly), SaveBreath: int64(c.Sheet.Saves.Breath),
 		SaveSpell: int64(c.Sheet.Saves.Spell), Class: c.Class, RaceCode: c.Race,
 		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+		HpLevel:     sql.NullInt64{Int64: int64(c.HPLevel), Valid: true},
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create character: %w", err)

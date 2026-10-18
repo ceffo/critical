@@ -193,6 +193,13 @@ const (
 	KindXPRemove Kind = "xp_remove"
 )
 
+// KindLevelUp is a level-up roll (levelupsvc, ADR 0030 step 7.3): the level
+// reached, the hit die and its value, the Constitution adjustment and the
+// gain. Its "hit_points" snapshot carries the max HP and the level it is set
+// for, so popping it makes the level-up pending again. Not one of RollKinds:
+// it is never adjusted after the fact.
+const KindLevelUp Kind = "level_up"
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.

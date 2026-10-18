@@ -61,13 +61,13 @@ const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-    class, race_code, owner_user_id
+    class, race_code, owner_user_id, hp_level
 ) VALUES (
     $1, $2, $3, $4, $5, $6,
     $7, $8, $9, $10, $11,
     $12, $13, $14,
     $15, $16, $17, $18,
-    $19
+    $19, $20
 ) RETURNING id
 `
 
@@ -91,11 +91,13 @@ type CreateCharacterParams struct {
 	Class            string
 	RaceCode         string
 	OwnerUserID      uuid.NullUUID
+	HpLevel          sql.NullInt64
 }
 
 // A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
 // sheet's level, THAC0 and saves the values the rules derive at its starting XP (ADR 0030 step
-// 24: a created character states no sheet, so it shows no difference). Its details start empty.
+// 24: a created character states no sheet, so it shows no difference), and its max HP set for that
+// level (step 7.5). Its details start empty.
 func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, createCharacter,
 		arg.Name,
@@ -117,6 +119,7 @@ func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams
 		arg.Class,
 		arg.RaceCode,
 		arg.OwnerUserID,
+		arg.HpLevel,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -161,7 +164,8 @@ func (q *Queries) CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, er
 const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-       class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages
+       class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages,
+       COALESCE(hp_level, level)::BIGINT AS hp_level
 FROM characters WHERE id = $1
 `
 
@@ -194,10 +198,12 @@ type GetCharacterRow struct {
 	Hair             string
 	Eyes             string
 	Languages        string
+	HpLevel          int64
 }
 
 // level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
 // step 24): compared with the derived values, never read as inputs.
+// hp_level is the level the max HP was last set for (ADR 0030 step 7); NULL is the sheet's level.
 func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error) {
 	row := q.db.QueryRowContext(ctx, getCharacter, id)
 	var i GetCharacterRow
@@ -230,6 +236,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.Hair,
 		&i.Eyes,
 		&i.Languages,
+		&i.HpLevel,
 	)
 	return i, err
 }
@@ -352,6 +359,26 @@ type SetCurrentCharacterParams struct {
 // Only a character the user owns and has not retired: none updated is an unknown character.
 func (q *Queries) SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setCurrentCharacter, arg.CharacterID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setHitPoints = `-- name: SetHitPoints :execrows
+UPDATE characters SET hp_max = $1, hp_level = $2
+WHERE id = $3
+`
+
+type SetHitPointsParams struct {
+	HpMax   int64
+	HpLevel sql.NullInt64
+	ID      int64
+}
+
+// A level-up roll and its undo (ADR 0030 step 7.3): the max HP and the level it is set for.
+func (q *Queries) SetHitPoints(ctx context.Context, arg SetHitPointsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setHitPoints, arg.HpMax, arg.HpLevel, arg.ID)
 	if err != nil {
 		return 0, err
 	}

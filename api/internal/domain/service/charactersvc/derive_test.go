@@ -14,10 +14,10 @@ import (
 
 // kelsen is the seed's half-elf bard as the reader returns it: the entered
 // values and the figures his sheet states (level 15, THAC0 13, saves
-// 10/8/9/13/9 at 1,293,418 XP).
+// 10/8/9/13/9 at 1,293,418 XP), his max HP set for level 15.
 func kelsen() *charactersvc.Character {
 	return &charactersvc.Character{
-		ID: 3, Name: "Kelsen", Str: 12, Dex: 17, Con: 16, Int: 14, Wis: 8, Cha: 16, HPMax: 85,
+		ID: 3, Name: "Kelsen", Str: 12, Dex: 17, Con: 16, Int: 14, Wis: 8, Cha: 16, HPMax: 85, HPLevel: 15,
 		XPTotal: 1_293_418, Class: "bard", Race: "half_elf",
 		Sheet: charactersvc.Sheet{Level: 15, THAC0: 13, Saves: kelsenSaves},
 	}
@@ -48,8 +48,13 @@ func kelsenDerived() charactersvc.Derived {
 	return charactersvc.Derived{
 		XPTotal: 1_293_418, Level: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
 		SpellSlots: level15Slots, SheetDifferences: []charactersvc.SheetDifference{},
+		LevelUp: charactersvc.LevelUp{HPLevel: 15, Pending: []charactersvc.PendingLevel{}},
 	}
 }
+
+// rogueHitDice is the rogues' row of the hit dice (PHB Table 25, Hit Dice
+// column): d6 through level 10, +2 a level after.
+var rogueHitDice = ruletablesvc.HitDiceRow{Group: "rogue", Die: 6, NameLevel: 10, GainAfter: 2}
 
 // Kelsen's sheet matches the rules: every derived value is the sheet's and
 // there is no difference to warn about (ADR 0030 Consequences).
@@ -76,6 +81,7 @@ func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 		r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 		r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 		r.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
+		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
 
 		got, err := charactersvc.Derive(kelsen(), 26_582, r)
 		require.NoError(t, err)
@@ -86,7 +92,7 @@ func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 	})
 	t.Run("no next level at 20", func(t *testing.T) {
 		c := kelsen()
-		c.XPTotal, c.Sheet = 3_000_000, charactersvc.Sheet{Level: 20, THAC0: 11, Saves: kelsenSaves}
+		c.XPTotal, c.HPLevel, c.Sheet = 3_000_000, 20, charactersvc.Sheet{Level: 20, THAC0: 11, Saves: kelsenSaves}
 		r := mocks.NewMockRules(t)
 		r.EXPECT().LevelFor("bard", 3_000_000).Return(20, nil).Once()
 		r.EXPECT().THAC0For("rogue", 20).Return(11, nil).Once()
@@ -106,7 +112,7 @@ func TestDerive_Step2_TheClassGroupPicksTheRows(t *testing.T) {
 	for class, group := range map[string]string{"bard": "rogue", "thief": "rogue", "fighter": "warrior"} {
 		t.Run(class, func(t *testing.T) {
 			c := kelsen()
-			c.Class, c.XPTotal, c.Sheet = class, 0, charactersvc.Sheet{Level: 1, THAC0: 20}
+			c.Class, c.XPTotal, c.HPLevel, c.Sheet = class, 0, 1, charactersvc.Sheet{Level: 1, THAC0: 20}
 			r := mocks.NewMockRules(t)
 			r.EXPECT().LevelFor(class, 0).Return(1, nil).Once()
 			r.EXPECT().XPThreshold(class, 2).Return(1_250, nil).Once()
@@ -282,11 +288,83 @@ func TestDerive_Step24_SheetDifferences(t *testing.T) {
 		r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 		r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 		r.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
+		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
 		got, err := charactersvc.Derive(kelsen(), 300_000, r)
 		require.NoError(t, err)
 		assert.Equal(t, 17, got.Level)
 		assert.Empty(t, got.SheetDifferences)
 	})
+}
+
+// ADR 0030 step 7: a level-up is pending for each level above the one the
+// max HP was last set for, up to the level of step 3, lowest first: the
+// group's hit die up to its name level (step 7.1), the fixed gain above it
+// (step 7.2).
+func TestDerive_Step7_PendingLevelUps(t *testing.T) {
+	// A bard set for level 9 whose XP gives 12: d6 for 10 (the rogues' name
+	// level), +2 for 11 and 12.
+	t.Run("hit die through the name level, fixed gain after", func(t *testing.T) {
+		c := kelsen()
+		c.HPLevel, c.XPTotal, c.Sheet = 9, 500_000, charactersvc.Sheet{Level: 9, THAC0: 16, Saves: kelsenSaves}
+		r := mocks.NewMockRules(t)
+		r.EXPECT().LevelFor("bard", 500_000+250_000).Return(12, nil).Once()
+		r.EXPECT().XPThreshold("bard", 13).Return(880_000, nil).Once()
+		r.EXPECT().THAC0For("rogue", 12).Return(15, nil).Once()
+		r.EXPECT().SavesFor("rogue", 12).Return(rogue13to16, nil).Once()
+		r.EXPECT().BardSpellsPerDay(12).Return(map[int]int{1: 3}, nil).Once()
+		r.EXPECT().LevelFor("bard", 500_000).Return(9, nil).Once()
+		r.EXPECT().THAC0For("rogue", 9).Return(16, nil).Once()
+		r.EXPECT().SavesFor("rogue", 9).Return(rogue13to16, nil).Once()
+		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
+		got, err := charactersvc.Derive(c, 250_000, r)
+		require.NoError(t, err)
+		assert.Equal(t, charactersvc.LevelUp{HPLevel: 9, Pending: []charactersvc.PendingLevel{
+			{Level: 10, Die: 6}, {Level: 11, FixedGain: 2}, {Level: 12, FixedGain: 2},
+		}}, got.LevelUp)
+	})
+	t.Run("the warriors' row for a fighter", func(t *testing.T) {
+		c := kelsen()
+		c.Class, c.HPLevel, c.XPTotal, c.Sheet = "fighter", 1, 2_000, charactersvc.Sheet{Level: 2, THAC0: 19}
+		r := mocks.NewMockRules(t)
+		r.EXPECT().LevelFor("fighter", 2_000).Return(2, nil).Once()
+		r.EXPECT().XPThreshold("fighter", 3).Return(4_000, nil).Once()
+		r.EXPECT().THAC0For("warrior", 2).Return(19, nil).Once()
+		r.EXPECT().SavesFor("warrior", 2).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
+		r.EXPECT().HitDiceFor("warrior").Return(ruletablesvc.HitDiceRow{Group: "warrior", Die: 10, NameLevel: 9, GainAfter: 3}, nil).Once()
+		got, err := charactersvc.Derive(c, 0, r)
+		require.NoError(t, err)
+		assert.Equal(t, []charactersvc.PendingLevel{{Level: 2, Die: 10}}, got.LevelUp.Pending)
+	})
+	t.Run("none at the max HP's level, and no lookup", func(t *testing.T) {
+		r := mocks.NewMockRules(t)
+		expectKelsenRules(r, 1_293_418, 15)
+		got, err := charactersvc.Derive(kelsen(), 0, r)
+		require.NoError(t, err)
+		assert.Equal(t, charactersvc.LevelUp{HPLevel: 15, Pending: []charactersvc.PendingLevel{}}, got.LevelUp)
+	})
+	t.Run("no level set for the max HP is the derived level (step 7.5)", func(t *testing.T) {
+		c := kelsen()
+		c.HPLevel = 0
+		r := mocks.NewMockRules(t)
+		expectKelsenRules(r, 1_293_418, 15)
+		got, err := charactersvc.Derive(c, 0, r)
+		require.NoError(t, err)
+		assert.Equal(t, charactersvc.LevelUp{HPLevel: 15, Pending: []charactersvc.PendingLevel{}}, got.LevelUp)
+	})
+}
+
+// ADR 0030 step 7.4: an XP correction that brings the level under the max
+// HP's removes nothing: no level is pending and the block flags it, with
+// both levels, for the card's warning.
+func TestDerive_Step7_4_ALevelUnderTheMaxHPsIsFlagged(t *testing.T) {
+	c := kelsen()
+	c.HPLevel = 16
+	r := mocks.NewMockRules(t)
+	expectKelsenRules(r, 1_293_418, 15)
+	got, err := charactersvc.Derive(c, 0, r)
+	require.NoError(t, err)
+	assert.Equal(t, charactersvc.LevelUp{HPLevel: 16, Pending: []charactersvc.PendingLevel{}, HPAboveLevel: true}, got.LevelUp)
+	assert.Equal(t, 15, got.Level)
 }
 
 // A table error stops the derivation, naming the lookup.

@@ -214,6 +214,35 @@ type DerivedDTO struct {
 	RaceSaveBonus    SavesDTO             `json:"raceSaveBonus"`
 	SpellSlots       []SlotCountDTO       `json:"spellSlots"`
 	SheetDifferences []SheetDifferenceDTO `json:"sheetDifferences"`
+	LevelUp          LevelUpDTO           `json:"levelUp"`
+}
+
+// PendingLevelDTO is one level whose hit points are owed (ADR 0030 step 7):
+// `die` the hit die's sides to roll up to the name level (0 above it),
+// `fixedGain` the gain above it (0 up to it).
+type PendingLevelDTO struct {
+	Level     int `json:"level"`
+	Die       int `json:"die"`
+	FixedGain int `json:"fixedGain"`
+}
+
+// LevelUpDTO is ADR 0030 step 7: `hpLevel` the level the max HP was last set
+// for, `pending` the levels to roll, lowest first (the prompt, one per
+// level), `hpAboveLevel` an XP correction brought the level under `hpLevel`
+// (step 7.4, the card warns).
+type LevelUpDTO struct {
+	HPLevel      int               `json:"hpLevel"`
+	Pending      []PendingLevelDTO `json:"pending"`
+	HPAboveLevel bool              `json:"hpAboveLevel"`
+}
+
+// PendingDTO maps the pending levels, never null.
+func PendingDTO(p []charactersvc.PendingLevel) []PendingLevelDTO {
+	out := make([]PendingLevelDTO, 0, len(p))
+	for _, l := range p {
+		out = append(out, PendingLevelDTO{Level: l.Level, Die: l.Die, FixedGain: l.FixedGain})
+	}
+	return out
 }
 
 func savesDTO(s charactersvc.Saves) SavesDTO {
@@ -225,6 +254,9 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		XPTotal: d.XPTotal, Level: d.Level, NextLevelXP: d.NextLevelXP, THAC0: d.THAC0,
 		Saves: savesDTO(d.Saves), RaceSaveBonus: savesDTO(d.RaceSaveBonus),
 		SpellSlots: []SlotCountDTO{}, SheetDifferences: []SheetDifferenceDTO{},
+		LevelUp: LevelUpDTO{
+			HPLevel: d.LevelUp.HPLevel, Pending: PendingDTO(d.LevelUp.Pending), HPAboveLevel: d.LevelUp.HPAboveLevel,
+		},
 	}
 	for _, level := range slices.Sorted(maps.Keys(d.SpellSlots)) {
 		if n := d.SpellSlots[level]; n > 0 {

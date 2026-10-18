@@ -16,6 +16,10 @@ type Character struct {
 	Wis   int
 	Cha   int
 	HPMax int
+	// HPLevel is the level HPMax was last set for (ADR 0030 step 7): the
+	// level the entered max HP is for (step 7.5), one more after each
+	// level-up roll.
+	HPLevel int
 	// XPTotal is the starting XP, the sheet's (ADR 0015 step 1); the XP total
 	// adds the ledger's entries to it (Derived.XPTotal).
 	XPTotal int
@@ -79,6 +83,31 @@ type Derived struct {
 	// SheetDifferences are step 24: each value the imported sheet states
 	// differently from the rules; the derived value is the one used.
 	SheetDifferences []SheetDifference
+	// LevelUp is step 7: the hit points the level owes.
+	LevelUp LevelUp
+}
+
+// PendingLevel is one level whose hit points are owed (ADR 0030 step 7): up
+// to the group's name level a hit die to roll (Die, FixedGain 0, step 7.1),
+// above it a fixed gain (FixedGain, Die 0, step 7.2).
+type PendingLevel struct {
+	Level     int
+	Die       int
+	FixedGain int
+}
+
+// LevelUp is ADR 0030 step 7 on a character: the level its max HP was last
+// set for against the level its XP gives.
+type LevelUp struct {
+	// HPLevel is the level the max HP was last set for.
+	HPLevel int
+	// Pending are the levels whose hit points are still to roll, lowest
+	// first: HPLevel+1 to Level, one prompt each. Empty when none.
+	Pending []PendingLevel
+	// HPAboveLevel is step 7.4: an XP correction brought the level under
+	// HPLevel. Nothing is removed; the card warns until the roll is undone
+	// or the XP comes back.
+	HPAboveLevel bool
 }
 
 // SheetValue names a value of the sheet comparison (ADR 0030 step 24).

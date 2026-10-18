@@ -19,6 +19,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -149,6 +150,7 @@ var mappings = []mapping{
 	{target: charactersvc.ErrCharacterChanged, status: http.StatusConflict, code: "character_changed"},
 	{target: buffsvc.ErrNoInitiative, status: http.StatusConflict, code: "no_initiative"},
 	{target: buffsvc.ErrInitiativeNotOnTop, status: http.StatusConflict, code: "initiative_not_on_top"},
+	{target: levelupsvc.ErrNotPending, status: http.StatusConflict, code: "level_up_not_pending"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},
 	{target: spelleffectsvc.ErrUnknownMode, status: http.StatusBadRequest, code: "unknown_spell_mode"},
 	{target: spelleffectsvc.ErrNoExposure, status: http.StatusBadRequest, code: "no_exposure"},

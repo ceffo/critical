@@ -34,6 +34,8 @@ import (
 	hpmocks "github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
+	levelupmocks "github.com/ceffo/critical/api/internal/domain/service/levelupsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	restmocks "github.com/ceffo/critical/api/internal/domain/service/restsvc/mocks"
 	skillmocks "github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
@@ -79,6 +81,7 @@ type mocksSet struct {
 	details *detailsmocks.MockSVC
 	skills  *skillmocks.MockSVC
 	dice    *dicemocks.MockSVC
+	levelUp *levelupmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -110,10 +113,11 @@ func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handl
 		details: detailsmocks.NewMockSVC(t),
 		skills:  skillmocks.NewMockSVC(t),
 		dice:    dicemocks.NewMockSVC(t),
+		levelUp: levelupmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		Character: m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
-		XP: m.xp, Details: m.details, Skills: m.skills, Dice: m.dice, Auth: a,
+		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, Auth: a,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs, opts), m
@@ -175,6 +179,9 @@ var endpoints = []endpoint{
 	}},
 	{"GET xp/preview", "GET", "/api/xp/preview?base=10&bonus=true", "", func(m *mocksSet, err error) {
 		m.xp.On("Preview", anyArgs(2)...).Return(xpsvc.Amount{}, err)
+	}},
+	{"POST character/levelup/roll", "POST", "/api/character/levelup/roll", `{"level":16}`, func(m *mocksSet, err error) {
+		m.levelUp.On("Roll", anyArgs(3)...).Return(nil, err)
 	}},
 	{"POST xp", "POST", "/api/xp", `{"base":10}`, func(m *mocksSet, err error) {
 		m.xp.On("Add", anyArgs(3)...).Return(nil, err)
@@ -378,6 +385,8 @@ func TestSpecialSentinels(t *testing.T) {
 		{"attack AC not an attack", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7 is save, not attack", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is save, not attack"}`},
 		{"reroll without initiative", "POST log/undo", fmt.Errorf("%w: %w", domain.ErrConflict, buffsvc.ErrNoInitiative), 409, `{"code":"no_initiative","error":"conflict: no initiative to reroll"}`},
 		{"reroll not on top", "POST round/initiative/reroll", fmt.Errorf("%w: %w: the initiative is #4, the newest entry #5", domain.ErrConflict, buffsvc.ErrInitiativeNotOnTop), 409, `{"code":"initiative_not_on_top","error":"conflict: the initiative is no longer the newest action: the initiative is #4, the newest entry #5"}`},
+		// ADR 0030 step 7: a roll for a level that is not the lowest pending one.
+		{"level-up not pending", "POST character/levelup/roll", levelupsvc.ErrNotPending, 409, `{"code":"level_up_not_pending","error":"level-up not pending: conflict"}`},
 		{"too many favourites", "POST log/undo", fmt.Errorf("%w: %w (at most 50)", domain.ErrConflict, dicesvc.ErrTooManyFavourites), 409, `{"code":"too_many_favourites","error":"conflict: too many favourites (at most 50)"}`},
 		{"wrapped twice", "POST spells/{id}/cast", fmt.Errorf("ctx: %w", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed)), 409, `{"code":"slot_already_used","error":"ctx: slot already used: 2"}`},
 	}

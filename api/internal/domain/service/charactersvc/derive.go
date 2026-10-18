@@ -25,6 +25,9 @@ type Rules interface {
 	BardSpellsPerDay(level int) (map[int]int, error)
 	// WizardSpellsPerDay is PHB Table 21 by spell level (step 8).
 	WizardSpellsPerDay(level int) (map[int]int, error)
+	// HitDiceFor is the group's hit die, name level and fixed gain after it
+	// (step 7).
+	HitDiceFor(group string) (ruletablesvc.HitDiceRow, error)
 	// RaceAllows is DMG Table 7: false for a race the class does not admit
 	// (step 21, checked when a character is created).
 	RaceAllows(race, class string) (bool, error)
@@ -38,7 +41,7 @@ type Rules interface {
 var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 
 // Derive computes the derived block of c (ADR 0030 steps 3 to 8, 22.1 and
-// 24) from its class, race, Constitution and XP total: the starting XP
+// 24, and the pending level-ups of step 7) from its class, race, Constitution and XP total: the starting XP
 // (c.XPTotal) plus ledgerXP, what the XP ledger's entries add (ADR 0015 step
 // 1). Nothing derived is read from c.Sheet but the comparison of step 24.
 func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
@@ -71,7 +74,45 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 		}
 	}
 	d.SheetDifferences = sheetDifferences(c.Sheet, atImport)
+	if d.LevelUp, err = levelUp(c, d.Level, rules); err != nil {
+		return Derived{}, err
+	}
 	return d, nil
+}
+
+// levelUp is step 7: a level-up is pending for each level above the one the
+// max HP was last set for, up to the level of step 3, rolled lowest first;
+// each is the group's hit die up to its name level (step 7.1), the fixed
+// gain above it (step 7.2). A level under the max HP's (an XP correction,
+// step 7.4) removes nothing: it is flagged.
+func levelUp(c *Character, level int, rules Rules) (LevelUp, error) {
+	// Step 7.5: no level set for the max HP (a character being created) is
+	// the level of step 3, the one the entered max HP is for.
+	hpLevel := c.HPLevel
+	if hpLevel == 0 {
+		hpLevel = level
+	}
+	l := LevelUp{HPLevel: hpLevel, Pending: []PendingLevel{}, HPAboveLevel: hpLevel > level}
+	if hpLevel >= level {
+		return l, nil
+	}
+	group, err := ruletablesvc.ClassGroup(c.Class)
+	if err != nil {
+		return LevelUp{}, fmt.Errorf("derive level-up: %w", err)
+	}
+	hd, err := rules.HitDiceFor(group)
+	if err != nil {
+		return LevelUp{}, fmt.Errorf("derive %s level-up: %w", c.Class, err)
+	}
+	// Step 7.5: level 1's hit points are entered, never rolled.
+	for n := max(hpLevel+1, 2); n <= level; n++ {
+		if n <= hd.NameLevel {
+			l.Pending = append(l.Pending, PendingLevel{Level: n, Die: hd.Die})
+		} else {
+			l.Pending = append(l.Pending, PendingLevel{Level: n, FixedGain: hd.GainAfter})
+		}
+	}
+	return l, nil
 }
 
 // core are the values steps 3, 5 and 6 derive from the class and the XP.

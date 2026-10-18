@@ -47,6 +47,7 @@ func TestDerived_AnXPAwardCrossingALevelChangesEverythingAtOnce(t *testing.T) {
 		XPTotal: 1_293_418, Level: 15, NextLevelXP: &next, THAC0: 13,
 		Saves:      charactersvc.Saves{ParaPoison: 10, RodStaffWand: 8, PetriPoly: 9, Breath: 13, Spell: 9},
 		SpellSlots: map[int]int{1: 3, 2: 3, 3: 3, 4: 3, 5: 2}, SheetDifferences: []charactersvc.SheetDifference{},
+		LevelUp: charactersvc.LevelUp{HPLevel: 15, Pending: []charactersvc.PendingLevel{}},
 	}
 	limits15 := []prepsvc.LevelLimit{{Level: 1, Max: 3}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 3}, {Level: 5, Max: 2}}
 	d, ledgerLevel, limits := derivedOf(t, bs, id)
@@ -62,6 +63,9 @@ func TestDerived_AnXPAwardCrossingALevelChangesEverythingAtOnce(t *testing.T) {
 		XPTotal: 1_540_000, Level: 17, NextLevelXP: &next17, THAC0: 12,
 		Saves:      charactersvc.Saves{ParaPoison: 9, RodStaffWand: 6, PetriPoly: 8, Breath: 12, Spell: 7},
 		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1}, SheetDifferences: []charactersvc.SheetDifference{},
+		// The hit points wait for the rolls (ADR 0030 step 7): above the
+		// rogues' name level, +2 each.
+		LevelUp: charactersvc.LevelUp{HPLevel: 15, Pending: []charactersvc.PendingLevel{{Level: 16, FixedGain: 2}, {Level: 17, FixedGain: 2}}},
 	}, d)
 	assert.Equal(t, 17, ledgerLevel)
 	assert.Equal(t, []prepsvc.LevelLimit{

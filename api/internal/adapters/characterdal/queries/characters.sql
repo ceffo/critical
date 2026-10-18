@@ -1,10 +1,17 @@
 -- level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
 -- step 24): compared with the derived values, never read as inputs.
+-- hp_level is the level the max HP was last set for (ADR 0030 step 7); NULL is the sheet's level.
 -- name: GetCharacter :one
 SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-       class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages
+       class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages,
+       COALESCE(hp_level, level)::BIGINT AS hp_level
 FROM characters WHERE id = $1;
+
+-- A level-up roll and its undo (ADR 0030 step 7.3): the max HP and the level it is set for.
+-- name: SetHitPoints :execrows
+UPDATE characters SET hp_max = sqlc.arg(hp_max), hp_level = sqlc.arg(hp_level)
+WHERE id = sqlc.arg(id);
 
 -- name: GetCharacterDetails :one
 SELECT race, alignment, age, sex, height, weight, hair, eyes, languages
@@ -36,18 +43,19 @@ WHERE users.id = sqlc.arg(user_id) AND EXISTS (
 
 -- A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
 -- sheet's level, THAC0 and saves the values the rules derive at its starting XP (ADR 0030 step
--- 24: a created character states no sheet, so it shows no difference). Its details start empty.
+-- 24: a created character states no sheet, so it shows no difference), and its max HP set for that
+-- level (step 7.5). Its details start empty.
 -- name: CreateCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-    class, race_code, owner_user_id
+    class, race_code, owner_user_id, hp_level
 ) VALUES (
     sqlc.arg(name), sqlc.arg(str), sqlc.arg(dex), sqlc.arg(con), sqlc.arg(int), sqlc.arg(wis),
     sqlc.arg(cha), sqlc.arg(hp_max), sqlc.arg(thac0_base), sqlc.arg(level), sqlc.arg(xp_total),
     sqlc.arg(save_para_poison), sqlc.arg(save_rod_staff_wand), sqlc.arg(save_petri_poly),
     sqlc.arg(save_breath), sqlc.arg(save_spell), sqlc.arg(class), sqlc.arg(race_code),
-    sqlc.arg(owner_user_id)
+    sqlc.arg(owner_user_id), sqlc.arg(hp_level)
 ) RETURNING id;
 
 -- A new character's state rows: no spell prepared, no buff, round 0 (the seed character's

@@ -135,7 +135,8 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 
 // Create validates n, derives its level, THAC0 and saves at the starting XP
 // and stores them as the sheet's figures (ADR 0030 step 24: a character
-// created in the app states no sheet, so it shows no difference), then makes
+// created in the app states no sheet, so it shows no difference), with its
+// max HP set for that level (step 7.5: no level-up is pending), then makes
 // it current, in one transaction and outside the action log (creating a
 // character is no move of the game and is not undone). This server forgets
 // the owner's sessions once it committed (ADR 0029 step 4.7).
@@ -149,6 +150,8 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 		return 0, fmt.Errorf("new character: %w", err)
 	}
 	c.Sheet = Sheet{Level: d.Level, THAC0: d.THAC0, Saves: d.Saves}
+	// Step 7.5: the max HP entered is the max HP at that level.
+	c.HPLevel = d.Level
 	var id int64
 	if err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error

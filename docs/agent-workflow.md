@@ -258,6 +258,7 @@ contract or domain struct.
 ## CI and PRs
 
 CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date), plus `dev-smoke` and `image`.
+**Main runs:** a push to `main` runs CI, and Release follows. A Dependabot PR merged by auto-merge starts no push run (GitHub: events caused by `GITHUB_TOKEN` start no workflow), so `dependabot-auto-merge.yml` waits for the merge and runs `gh workflow run ci.yml --ref main`; that dispatched run has no base commit, so `changes` runs every slow job.
 **Slow-job skip:** a first job, `changes` (`scripts/ci-skip-slow.sh`, tested by
 `scripts/test-ci-skip-slow.sh` in `just validate`), skips `e2e`, `dev-smoke` and `image` when every
 changed file is documentation (`*.md`, `docs/**`, the `.beads/**` archive; on a PR against its base, on a push

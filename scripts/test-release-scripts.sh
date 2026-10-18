@@ -85,7 +85,7 @@ check(on["workflow_run"] == {"workflows": ["CI"], "types": ["completed"], "branc
 check(list(on["workflow_dispatch"]["inputs"]) == ["version"] and on["workflow_dispatch"]["inputs"]["version"]["required"] is False,
       "the manual run's only input is an optional version")
 cond = job["if"]
-for part in ("github.event.workflow_run.conclusion == 'success'", "github.event.workflow_run.event == 'push'",
+for part in ("github.event.workflow_run.conclusion == 'success'", "contains(fromJSON('[\"push\",\"workflow_dispatch\"]'), github.event.workflow_run.event)",
              "github.event.workflow_run.head_branch == 'main'", "head_repository.full_name == github.repository",
              "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'"):
     check(part in cond, f"job condition lacks {part}")

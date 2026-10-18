@@ -6,6 +6,9 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
+  # Also how main gets its run after a merge GitHub made with a workflow's GITHUB_TOKEN (the Dependabot
+  # auto-merge): such a merge starts no push run. Release follows a dispatched run on main like a push one.
+  workflow_dispatch:
 
 permissions:
   contents: read

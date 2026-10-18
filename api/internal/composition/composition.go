@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/googleadpt"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
+	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -179,6 +180,14 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 
+	// The spell catalogue is served from memory, read once after the import
+	// (spelldal.Catalogue): page loads read none of it from the database.
+	catalogue, err := spelldal.LoadCatalogue(ctx, spellDAL)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
 	charID, err := characterDAL.FirstID(ctx)
 	if err != nil {
 		_ = db.Close()
@@ -230,7 +239,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
-	spellSvc, err := spellsvc.New(spellDAL, spellDAL, spellbook)
+	spellSvc, err := spellsvc.New(spellDAL, catalogue, spellbook)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -259,7 +268,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	castSvc, err := castsvc.New(castsvc.Deps{
-		Slots: spellDAL, Effects: effects, Texts: spellDAL, Buffs: buffSvc, Items: itemSvc, Attacks: combatSvc,
+		Slots: spellDAL, Effects: effects, Texts: catalogue, Buffs: buffSvc, Items: itemSvc, Attacks: combatSvc,
 		Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
 	})
 	if err != nil {

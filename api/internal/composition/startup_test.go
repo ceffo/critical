@@ -19,10 +19,11 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
-// The steps run in the order migrate, seed, import the catalogue, find the
-// character; the import is told the fixture's catalogue and every spell the
+// The steps run in the order migrate, seed, import the catalogue, read the
+// spell catalogue once, find the character; the import is told the fixture's catalogue and every spell the
 // seeds refer to, so it cannot remove one (ADR 0021 step 5.4.3). Closing the
 // services closes the store once.
 func TestBuild_StartupStepsRunInOrder(t *testing.T) {
@@ -43,6 +44,8 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 			cat, refs = c, r
 			return nil
 		}).Once()
+	search := h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once()
+	h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once().NotBefore(search)
 	h.Character.EXPECT().FirstID(mock.Anything).Return(characterID, nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once()
 
@@ -89,8 +92,16 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once()
+			h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once()
 			h.Character.EXPECT().FirstID(mock.Anything).Return(int64(0), boom).Once()
 		}, "resolve character: boom"},
+		{"spell catalogue read", func(h *harness) {
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, boom).Once()
+		}, "load the spell catalogue: boom"},
 		{"catalogue import", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
@@ -383,4 +394,33 @@ func TestBuild_ASpellbookSeedTheCatalogueRefusesIsRefusedBeforeTheSeed(t *testin
 	cfg.SeedsDir = seeds
 	_, err = h.build(t, cfg)
 	require.ErrorContains(t, err, `"magic_rocket" is not a Wizard spell of the catalogue`)
+}
+
+// The spell catalogue is read from the store once, at startup: the lookup,
+// its filters and the names are served from memory afterwards, however many
+// requests ask (the mock refuses a second Search or Details).
+func TestBuild_SpellCatalogueReadOnceAtStartup(t *testing.T) {
+	h := newHarness(t)
+	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds).Return(nil).Once()
+	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	fire := spellsvc.Spell{ID: "fireball", Class: "Wizard", Level: 3}
+	h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return([]spellsvc.Spell{fire}, nil).Once()
+	h.Spell.EXPECT().Details(mock.Anything, []string{"fireball"}).Return([]spellsvc.Spell{fire}, nil).Once()
+	h.Character.EXPECT().FirstID(mock.Anything).Return(characterID, nil).Once()
+
+	bs, err := h.build(t, fixtureConfig())
+	require.NoError(t, err)
+	ctx := context.Background()
+	for range 3 {
+		page, err := bs.Spells.Search(ctx, characterID, spellsvc.Filter{Class: "wizard"}, spellsvc.PageRequest{})
+		require.NoError(t, err)
+		assert.Equal(t, 1, page.Total)
+		names, err := bs.Spells.Names(ctx)
+		require.NoError(t, err)
+		assert.Len(t, names, 1)
+		got, err := bs.Spells.Get(ctx, "fireball")
+		require.NoError(t, err)
+		assert.Equal(t, fire, got)
+	}
 }

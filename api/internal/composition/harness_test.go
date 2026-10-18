@@ -19,6 +19,7 @@ import (
 	hpmocks "github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 	skillmocks "github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	weaponmocks "github.com/ceffo/critical/api/internal/domain/service/weaponsvc/mocks"
 	xpmocks "github.com/ceffo/critical/api/internal/domain/service/xpsvc/mocks"
 )
@@ -92,6 +93,8 @@ func (h *harness) expectStartup(seedsDir string) {
 	migrate := h.Store.EXPECT().Migrate(mock.Anything, seedsDir).Return(nil).Once()
 	seed := h.Store.EXPECT().Seed(mock.Anything, seedsDir, mock.Anything).Return(nil).Once().NotBefore(migrate)
 	imp := h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once().NotBefore(seed)
+	search := h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once().NotBefore(imp)
+	h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once().NotBefore(search)
 	h.Character.EXPECT().FirstID(mock.Anything).Return(characterID, nil).Once().NotBefore(imp)
 }
 

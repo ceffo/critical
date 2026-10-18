@@ -41,9 +41,10 @@ Answers in the scoper session, the same day:
 
 Two facts of the code shape the design. Storage is PostgreSQL with one writer lock
 ([ADR 0025](0025-postgresql-storage.md) step 4), and every mutation is a transaction on the action log
-([ADR 0018](0018-transactions-and-undo.md)). Today the router hands one fixed character id to every
-handler; making that id come from the logged-in user is the work of the characters-per-user item, not
-of this ADR.
+([ADR 0018](0018-transactions-and-undo.md)). When this ADR was written the router handed one fixed
+character id to every handler; making that id come from the logged-in user is the work of the
+characters-per-user item, not of this ADR (built: amendment 2026-10-18, "how a request finds its
+character").
 
 ```mermaid
 erDiagram
@@ -272,6 +273,46 @@ step 4.4): a page goes to `/login?error=session_expired`, and `GET /api/auth/me`
 code `session_expired` (an `unauthenticated` refusal; the data routes keep `unauthenticated`).
 `GET /api/auth/options` (public, under `/api/auth`) tells the login page which login the server offers:
 `{"google": bool, "devLogin": bool}` (step 8).
+
+## Amendment 2026-10-18: how a request finds its character
+
+Step 7 as built (the characters-per-user item; the user approves ADR changes at merge):
+
+1. **Schema** (migration `006_character_owners.sql`, additive): `characters.owner_user_id` (nullable: a
+   fresh database seeds its character before any user exists, and a character without an owner is
+   nobody's), `characters.retired` (default false) and `users.current_character_id` (nullable). The
+   release before keeps running on it during the rolling deploy.
+2. **Existing characters** (step 5.3): the characters without an owner go to the root admin, and the
+   first of them becomes the root admin's current character when they have none. It happens at every
+   start once a root admin exists, and in the transaction of `just root-admin` and of the dev login
+   that makes or finds the root admin. No migration holds the data; nothing else changes. On local,
+   staging and production Kelsen is therefore the root admin's and current for them after the
+   upgrade, with no one-off step. Tests: `authsvc` `TestAdoptUnownedCharacters_Step5_3_GivesThemToTheRootAdmin`,
+   `TestAdoptUnownedCharacters_Step5_3_NoRootAdminChangesNothing`, `TestSetRootAdmin_CreatesTheRoot`.
+3. **One resolver.** The current character is read with the user, through the ownership (a character the
+   user does not own, or retired, is no current character), so it comes with the session the gate
+   already reads and remembers (step 4.7): resolving it costs no query of its own. One router
+   middleware (`mw.CurrentCharacter`) hands it to every per-character route; there is no start-up
+   character and no fixed id. A user with none is refused with **404 `no_character`**, which the web
+   turns into "create your first character". The reference reads no character owns (the spell
+   filters and names, the house crit table, the XP preview) and the user's characters are outside it.
+   Tests: `router` `TestCurrentCharacter_Step7_2_EveryCharacterRouteNeedsOne` (walks every route),
+   `TestCurrentCharacter_Step7_1_EachUserActsOnTheirOwn`; `composition`
+   `TestOwners_Step7_1_EachUserPlaysOnlyTheirCurrentCharacter`.
+4. **Endpoints.** `GET /api/characters` is the user's own characters, not retired, in creation order,
+   with the current one's id: `{"characters": [{"id", "name", "class", "level"}], "currentId": n | null}`.
+   `PUT /api/characters/current {"id": n}` makes one of them current and answers the same shape;
+   another user's character, a retired one and an unknown id are all **404 `character_not_found`**
+   (step 7.1), written by one guarded update (no check-then-write) outside the action log (choosing a
+   character is no game move and is not undone). `GET /api/auth/me` carries `currentCharacterId`.
+   Tests: `TestOwners_Step7_1_AnotherUsersCharacterIsNotFound`, `TestCharacters_SetCurrent`,
+   `TestCharacters_ListIsTheUsersOwn`.
+5. **Switching and the session cache.** The server that switches a user's character forgets the user's
+   remembered sessions once it committed, so their next request plays the new one. On the other
+   production server the switch takes effect **within 10 seconds** (step 4.7's window): a request there
+   in that window still acts on the previous character, which is the same user's. Accepted, as for a
+   role change: switching is rare and both characters are the user's own. Test:
+   `TestAuthenticate_Step7_2_ACurrentCharacterChangeForgetsAtOnce`.
 
 ## Amendment to ADR 0024
 

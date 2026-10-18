@@ -1544,7 +1544,7 @@
     },
     "errors": {
       "too_long": "Too long.",
-      "out_of_range": "Enter a whole age between 0 and 10,000.",
+      "out_of_range": "Enter a whole age between 1 and 10,000.",
       "too_many": "Too many languages.",
       "empty": "A language is blank.",
       "duplicate": "A language is listed twice."

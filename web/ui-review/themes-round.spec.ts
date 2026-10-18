@@ -33,8 +33,8 @@ test("new themes: each candidate in each of its modes, in French, at both viewpo
 
   for (const { id, mode } of CANDIDATE_MODES) {
     // The app's Arcane in that mode sets the mode; the candidate's variables replace Arcane's.
-    await chooseTheme(page, mode, fr("settings.themes.arcane"));
     await chooseSetting(page, fr(`settings.mode.${mode}`));
+    await chooseTheme(page, fr("settings.themes.arcane"));
     await focus(page, fr, "act");
     await page.getByRole("tab", { name: fr("actions.tabs.weapons") }).click();
     await page.evaluate(

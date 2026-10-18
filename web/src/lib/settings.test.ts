@@ -227,8 +227,15 @@ describe("settings", () => {
 
 describe("the theme list follows the appearance (ADR 0026 step 4.6)", () => {
   it("lists only the themes with a dark mode in dark, a light mode in light", () => {
-    expect(themesFor(false)).toEqual(["arcane", "deep", "plain"]);
-    expect(themesFor(true)).toEqual(["arcane", "parchment", "plain"]);
+    expect(themesFor(false)).toEqual([
+      "arcane",
+      "deep",
+      "plain",
+      "forest",
+      "ember",
+      "amber",
+    ]);
+    expect(themesFor(true)).toEqual(["arcane", "parchment", "plain", "forest"]);
   });
 
   it("system lists the list of the OS's current mode", () => {

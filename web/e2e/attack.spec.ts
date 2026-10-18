@@ -664,23 +664,25 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({
 });
 
 // docs/adr/0012 step 5: the GM gives the AC after the roll; at AC 10 the stored dice make a crit.
-// A THAC0 of -100 keeps critsFromAc (effective THAC0 − d20 + crit-check d100) at most about -3, so
-// every roll crits AC 10 whatever the dice.
-test.describe("with a THAC0 low enough that AC 10 always crits", () => {
-  test.use({ character: { thac0_base: -100 } });
-
+// The THAC0 is derived (ADR 0030 step 5), so roll until the dice crit AC 10: critsFromAc (effective
+// THAC0 − d20 + crit-check d100) at most 10, about 1 roll in 10.
+test.describe("an attack whose dice crit AC 10", () => {
   test("an attack against an unknown AC becomes a crit when the GM gives the AC", async ({
     page,
   }) => {
     await openAttack(page);
     const form = attackForm(page);
     await chooseWeapon(page, "Long Sword +2");
-    const rolled = page.waitForResponse((res) =>
-      res.url().endsWith("/api/roll/attack"),
-    );
-    await form.getByRole("button", { name: "Attack", exact: true }).click();
-    const r = (await (await rolled).json()) as { critsFromAc: number };
-    expect(r.critsFromAc).toBeLessThanOrEqual(10);
+    let critsFromAc = Infinity;
+    for (let i = 0; i < 100 && critsFromAc > 10; i++) {
+      const rolled = page.waitForResponse((res) =>
+        res.url().endsWith("/api/roll/attack"),
+      );
+      await form.getByRole("button", { name: "Attack", exact: true }).click();
+      critsFromAc = ((await (await rolled).json()) as { critsFromAc: number })
+        .critsFromAc;
+    }
+    expect(critsFromAc, "no roll in 100 crits AC 10").toBeLessThanOrEqual(10);
 
     const card = resultCard(page);
     await expect(card.getByTestId("verdict")).toHaveText("?");

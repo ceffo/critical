@@ -34,11 +34,24 @@ func fixtureRuleTables(t *testing.T) []byte {
 	return a.RuleTables
 }
 
-// phb parses the fixture's rule tables, as the composition root does for the
-// artifact's.
+// fixtureEquipment is the fixture's top-level equipment object (format 7).
+func fixtureEquipment(t *testing.T) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(fixture) //nolint:gosec // test path
+	require.NoError(t, err)
+	var a struct {
+		Equipment json.RawMessage `json:"equipment"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &a))
+	require.NotEmpty(t, a.Equipment)
+	return a.Equipment
+}
+
+// phb parses the fixture's rule tables and equipment, as the composition root
+// does for the artifact's.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	return must.Do(ruletablesadpt.Parse(catalogue.FormatSpheres, fixtureRuleTables(t)))
+	return must.Do(ruletablesadpt.ParseWithEquipment(catalogue.FormatEquipment, fixtureRuleTables(t), fixtureEquipment(t)))
 }
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
@@ -193,11 +206,11 @@ func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Contains(t, string(good), tt.from)
-			_, err := ruletablesadpt.Parse(catalogue.FormatSpheres, []byte(strings.Replace(string(good), tt.from, tt.to, 1)))
+			_, err := ruletablesadpt.ParseWithEquipment(catalogue.FormatEquipment, []byte(strings.Replace(string(good), tt.from, tt.to, 1)), fixtureEquipment(t))
 			require.ErrorContains(t, err, tt.table)
 		})
 	}
-	_, err := ruletablesadpt.Parse(catalogue.FormatSpheres, good)
+	_, err := ruletablesadpt.ParseWithEquipment(catalogue.FormatEquipment, good, fixtureEquipment(t))
 	require.NoError(t, err)
 }
 
@@ -207,13 +220,20 @@ func classTablesOf(t *testing.T, format int, mutate func(map[string]any)) (*rule
 	t.Helper()
 	var doc map[string]any
 	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &doc))
+	var equipment []byte
 	if format < catalogue.FormatSpheres {
 		delete(doc, sphereAccess)
+	}
+	if format < catalogue.FormatEquipment {
+		delete(doc, "weapon_vs_armor")
+		delete(doc, "initiative_item")
+	} else {
+		equipment = fixtureEquipment(t)
 	}
 	mutate(doc)
 	raw, err := json.Marshal(doc)
 	require.NoError(t, err)
-	return ruletablesadpt.Parse(format, raw)
+	return ruletablesadpt.ParseWithEquipment(format, raw, equipment)
 }
 
 func classRows(d map[string]any, table string) []any { return d[table].([]any) }
@@ -298,7 +318,7 @@ func TestParse_Step10_4_Format3HasNoClassTables(t *testing.T) {
 	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &doc))
 	var classKeys []string
 	for k := range doc {
-		if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits && k != sphereAccess {
+		if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits && k != sphereAccess && k != "weapon_vs_armor" && k != "initiative_item" {
 			classKeys = append(classKeys, k)
 		}
 	}
@@ -394,7 +414,7 @@ func TestParse_Step11_3_RejectsMissingOrBrokenLevelLimits(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := classTablesOf(t, catalogue.FormatSpheres, tc.mutate)
+			_, err := classTablesOf(t, catalogue.FormatEquipment, tc.mutate)
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
@@ -414,7 +434,7 @@ func TestParse_Step11_4_Format4HasNoLevelLimits(t *testing.T) {
 	require.ErrorContains(t, err, "format 4 carries no race_level_limits table")
 	_, err = classTablesOf(t, catalogue.FormatRuleTables, func(d map[string]any) {
 		for k := range d {
-			if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits && k != sphereAccess {
+			if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits && k != sphereAccess && k != "weapon_vs_armor" && k != "initiative_item" {
 				delete(d, k)
 			}
 		}

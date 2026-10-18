@@ -1,7 +1,7 @@
 // Package catalogueadpt reads the spell catalogue artifact (ADR 0021) from
 // the file at CRITICAL_CATALOGUE and validates it (steps 5.1 and 5.2): the
 // file must exist, carry a format this API knows (3, step 9.1, 4, step 10,
-// 5, step 11, or 6, step 12; format 1 is retired, step 9.6.3), match the committed JSON
+// 5, step 11, 6, step 12, or 7, step 13; format 1 is retired, step 9.6.3), match the committed JSON
 // Schema and hold no duplicate id. It maps the spells to catalogue.Catalogue
 // and hands the artifact's rule tables (the PHB rule tables, from format 4
 // the class and race tables, from format 5 the racial level limits, in format 6 the sphere access) on as the
@@ -65,9 +65,12 @@ func compiled() (*jsonschema.Schema, error) {
 // Artifact is one parsed artifact: its spells and its rule_tables object as
 // written (shape checked by the schema, step 9.2). The caller parses the
 // tables with ruletablesadpt.Parse, which applies the rules of step 9.3.
+// Equipment is a format-7 artifact's top-level equipment object as written
+// (ADR 0021 step 13), nil before format 7; ruletablesadpt reads it too.
 type Artifact struct {
 	Catalogue  catalogue.Catalogue
 	RuleTables json.RawMessage
+	Equipment  json.RawMessage
 }
 
 // Load reads and validates the artifact at path and returns its spells.
@@ -118,6 +121,8 @@ type artifactDTO struct {
 	Spells  []spellDTO `json:"spells"`
 	// RuleTables (step 9.2) has the keys and rows ruletablesadpt.Parse reads.
 	RuleTables json.RawMessage `json:"rule_tables"`
+	// Equipment (format 7, step 13) has the keys and rows ruletablesadpt reads.
+	Equipment json.RawMessage `json:"equipment"`
 }
 
 // Parse validates artifact bytes and returns the spells (see ParseArtifact).
@@ -184,7 +189,7 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 	if len(dups) > 0 {
 		return Artifact{}, fmt.Errorf("duplicate spell ids: %s", strings.Join(first(dups), ", "))
 	}
-	return Artifact{Catalogue: out, RuleTables: a.RuleTables}, nil
+	return Artifact{Catalogue: out, RuleTables: a.RuleTables, Equipment: a.Equipment}, nil
 }
 
 // knownFormat reports whether the raw format value is one this API reads,

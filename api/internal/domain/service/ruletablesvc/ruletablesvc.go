@@ -82,6 +82,12 @@ type Tables struct {
 	// spheres is the classes' sphere access of a format-6 catalogue (ADR
 	// 0021 step 12); nil before format 6.
 	spheres *SphereAccess
+	// equipment, weaponVsArmor and initiativeItems are the equipment data and
+	// its two tables of a format-7 catalogue (ADR 0021 step 13); nil before
+	// format 7.
+	equipment       *Equipment
+	weaponVsArmor   *WeaponVsArmor
+	initiativeItems *InitiativeItems
 }
 
 var _ Lookup = (*Tables)(nil)

@@ -28,9 +28,10 @@ func TestLoad_Fixture(t *testing.T) {
 	a, err := LoadArtifact(fixture)
 	require.NoError(t, err)
 	c := a.Catalogue
-	assert.Equal(t, catalogue.FormatSpheres, c.Format)
+	assert.Equal(t, catalogue.FormatEquipment, c.Format)
 	assert.Equal(t, "1970-01-01", c.Version)
 	assert.NotEmpty(t, a.RuleTables, "the fixture carries the rule tables")
+	assert.NotEmpty(t, a.Equipment, "the fixture carries the equipment")
 	mm, ok := c.ByID()["magic_missile"]
 	require.True(t, ok)
 	assert.Equal(t, localized.Text{"en": "Magic Missile", "fr": "Projectile magique"}, mm.Name)
@@ -85,9 +86,24 @@ const levelLimits = "race_level_limits"
 // spell's sphere codes (ADR 0021 step 12).
 const sphereAccess = "sphere_access"
 
-// asFormat5 turns the format-6 fixture into a format-5 artifact: the same
+// equipmentTables are the keys format 7 adds to rule_tables, beside the
+// top-level equipment object (ADR 0021 step 13).
+var equipmentTables = []string{"weapon_vs_armor", "initiative_item"}
+
+// asFormat6 turns the format-7 fixture into a format-6 artifact: the same
+// spells and tables, without the equipment and its two rule tables.
+func asFormat6(d map[string]any) {
+	d["format"] = 6
+	delete(d, "equipment")
+	for _, k := range equipmentTables {
+		delete(d["rule_tables"].(map[string]any), k)
+	}
+}
+
+// asFormat5 turns the format-7 fixture into a format-5 artifact: the same
 // spells without their sphere codes, the tables without the sphere access.
 func asFormat5(d map[string]any) {
+	asFormat6(d)
 	d["format"] = 5
 	delete(d["rule_tables"].(map[string]any), sphereAccess)
 	for _, s := range spells(d) {
@@ -95,7 +111,7 @@ func asFormat5(d map[string]any) {
 	}
 }
 
-// asFormat4 turns the format-6 fixture into a format-4 artifact: the same
+// asFormat4 turns the format-7 fixture into a format-4 artifact: the same
 // spells, PHB rule tables and class and race tables, without the racial
 // level limits.
 func asFormat4(d map[string]any) {
@@ -104,7 +120,7 @@ func asFormat4(d map[string]any) {
 	delete(d["rule_tables"].(map[string]any), levelLimits)
 }
 
-// asFormat3 turns the format-6 fixture into a format-3 artifact: the same
+// asFormat3 turns the format-7 fixture into a format-3 artifact: the same
 // spells and the four PHB rule tables of step 9.
 func asFormat3(d map[string]any) {
 	asFormat4(d)
@@ -122,7 +138,7 @@ func TestParse_Step2_Refusals(t *testing.T) {
 		mutate func(map[string]any)
 		want   []string
 	}{
-		{"unknown format names it", func(d map[string]any) { d["format"] = 7 }, []string{"unknown format 7", "formats 3, 4, 5 and 6", "just catalogue"}},
+		{"unknown format names it", func(d map[string]any) { d["format"] = 8 }, []string{"unknown format 8", "formats 3, 4, 5, 6 and 7", "just catalogue"}},
 		{"missing format", func(d map[string]any) { delete(d, "format") }, []string{"unknown format none"}},
 		{"schema violation lists the offence", func(d map[string]any) {
 			spells(d)[0].(map[string]any)["level"] = 12
@@ -199,7 +215,7 @@ func TestParse_Step9_6_3_RefusesTheRetiredFormat1(t *testing.T) {
 			delete(d, "rule_tables")
 		}))
 		require.ErrorContains(t, err, fmt.Sprintf(
-			"unknown format %d: this API reads formats 3, 4, 5 and 6; run `just catalogue` to fetch a current artifact", format))
+			"unknown format %d: this API reads formats 3, 4, 5, 6 and 7; run `just catalogue` to fetch a current artifact", format))
 	}
 }
 
@@ -295,8 +311,9 @@ func keys(m map[string]json.RawMessage) []string {
 // ADR 0021 step 12.1: format 6 hands on the format-5 tables and the sphere
 // access as written, and every priest spell's sphere codes.
 func TestParse_Step12_1_ReadsFormat6(t *testing.T) {
-	six, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	six, err := ParseArtifact(artifact(t, asFormat6))
 	require.NoError(t, err)
+	assert.Nil(t, six.Equipment, "a format-6 artifact has no equipment")
 	assert.Equal(t, catalogue.FormatSpheres, six.Catalogue.Format)
 	var tables map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(six.RuleTables, &tables))
@@ -333,14 +350,95 @@ func TestParse_Step12_2_SpheresBelongToFormat6(t *testing.T) {
 			priest(d)["spheres"] = []any{"all"}
 		}, []string{"format 5 schema", "spheres"}},
 		{"format 6 missing the sphere access", func(d map[string]any) {
+			asFormat6(d)
 			delete(d["rule_tables"].(map[string]any), sphereAccess)
 		}, []string{"format 6 schema", "sphere_access"}},
 		{"format 6 with a priest spell without codes", func(d map[string]any) {
+			asFormat6(d)
 			delete(priest(d), "spheres")
 		}, []string{"format 6 schema", "spheres"}},
 		{"format 6 with a sphere name in a language", func(d map[string]any) {
+			asFormat6(d)
 			priest(d)["spheres"] = []any{"Tout"}
 		}, []string{"format 6 schema", "spheres/0"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse(artifact(t, tc.mutate))
+			require.Error(t, err)
+			for _, w := range tc.want {
+				assert.Contains(t, err.Error(), w)
+			}
+		})
+	}
+}
+
+// ADR 0021 step 13.1: format 7 hands on the format-6 tables with Tables 52
+// and 56, and the equipment object, as written (ruletablesadpt parses them).
+func TestParse_Step13_1_ReadsFormat7(t *testing.T) {
+	seven, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	require.NoError(t, err)
+	assert.Equal(t, catalogue.FormatEquipment, seven.Catalogue.Format)
+	var tables map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(seven.RuleTables, &tables))
+	assert.ElementsMatch(t,
+		append(append([]string{"strength", "dexterity", "bard_spells", "bard_experience"}, classTables...),
+			append([]string{levelLimits, sphereAccess}, equipmentTables...)...),
+		keys(tables))
+	var equipment map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(seven.Equipment, &equipment))
+	assert.ElementsMatch(t, []string{"weapons", "ammunition", "armour", "shields"}, keys(equipment))
+}
+
+// ADR 0021 step 13.2: the equipment and its two tables belong to format 7
+// only, and format 7 requires all three; a row has the codes and shapes of
+// ADR 0033 steps 21 and 25.
+func TestParse_Step13_2_EquipmentBelongsToFormat7(t *testing.T) {
+	row := func(d map[string]any, list string, i int) map[string]any {
+		return d["equipment"].(map[string]any)[list].([]any)[i].(map[string]any)
+	}
+	tables := func(d map[string]any) map[string]any { return d["rule_tables"].(map[string]any) }
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   []string
+	}{
+		{"format 6 with the equipment", func(d map[string]any) {
+			equipment := d["equipment"]
+			asFormat6(d)
+			d["equipment"] = equipment
+		}, []string{"format 6 schema", "/equipment"}},
+		{"format 6 with Table 52", func(d map[string]any) {
+			table := tables(d)["weapon_vs_armor"]
+			asFormat6(d)
+			tables(d)["weapon_vs_armor"] = table
+		}, []string{"format 6 schema", "/rule_tables/weapon_vs_armor"}},
+		{"format 7 without the equipment", func(d map[string]any) { delete(d, "equipment") }, []string{"format 7 schema", "equipment"}},
+		{"format 7 without Table 52", func(d map[string]any) { delete(tables(d), "weapon_vs_armor") }, []string{"format 7 schema", "weapon_vs_armor"}},
+		{"format 7 without Table 56", func(d map[string]any) { delete(tables(d), "initiative_item") }, []string{"format 7 schema", "initiative_item"}},
+		{"a code in capitals", func(d map[string]any) { row(d, "weapons", 0)["code"] = "BattleAxe" }, []string{"format 7 schema", "code"}},
+		{"a name without English", func(d map[string]any) { row(d, "weapons", 0)["name"] = map[string]any{"fr": "Hache"} }, []string{"format 7 schema", "en"}},
+		{"a weapon type outside the list", func(d map[string]any) { row(d, "weapons", 0)["weapon_type"] = "axe" }, []string{"format 7 schema", "weapon_type"}},
+		{"three damage types", func(d map[string]any) { row(d, "weapons", 0)["damage_types"] = []any{"b", "p", "s"} }, []string{"format 7 schema", "damage_types"}},
+		{"a speed above 20", func(d map[string]any) { row(d, "weapons", 0)["speed"] = 21 }, []string{"format 7 schema", "speed"}},
+		{"damage in words", func(d map[string]any) { row(d, "weapons", 0)["damage_sm"] = "one d8" }, []string{"format 7 schema", "damage_sm"}},
+		{"damage S-M without damage L", func(d map[string]any) { delete(row(d, "weapons", 0), "damage_l") }, []string{"format 7 schema", "damage_l"}},
+		{"a launcher with damage", func(d map[string]any) {
+			row(d, "weapons", 2)["damage_sm"], row(d, "weapons", 2)["damage_l"] = "1d6", "1d6"
+		}, []string{"format 7 schema", "damage_sm"}},
+		{"an unknown ammunition kind", func(d map[string]any) { row(d, "ammunition", 0)["ammo_kind"] = "bolt" }, []string{"format 7 schema", "ammo_kind"}},
+		{"ammunition without a damage type", func(d map[string]any) { row(d, "ammunition", 0)["damage_types"] = []any{} }, []string{"format 7 schema", "damage_types"}},
+		{"a base AC above 10", func(d map[string]any) { row(d, "armour", 0)["base_ac"] = 11 }, []string{"format 7 schema", "base_ac"}},
+		{"an unknown Table 29 column", func(d map[string]any) { row(d, "armour", 0)["skill_column"] = "plate" }, []string{"format 7 schema", "skill_column"}},
+		{"an unknown Table 52 row", func(d map[string]any) { row(d, "armour", 0)["armor_row"] = "bronze_plate" }, []string{"format 7 schema", "armor_row"}},
+		{"a shield bonus above 5", func(d map[string]any) { row(d, "shields", 0)["ac_melee"] = 6 }, []string{"format 7 schema", "ac_melee"}},
+		{"a field the format lacks", func(d map[string]any) { row(d, "armour", 0)["weight"] = 35 }, []string{"format 7 schema", "weight"}},
+		{"Table 52 with ten rows", func(d map[string]any) {
+			tables(d)["weapon_vs_armor"] = tables(d)["weapon_vs_armor"].([]any)[1:]
+		}, []string{"format 7 schema", "weapon_vs_armor"}},
+		{"Table 56 with a modifier above 20", func(d map[string]any) {
+			tables(d)["initiative_item"].([]any)[0].(map[string]any)["modifier"] = 21
+		}, []string{"format 7 schema", "modifier"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

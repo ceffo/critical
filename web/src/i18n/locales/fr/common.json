@@ -1771,7 +1771,7 @@
       "not_creatable": "Cette classe ne peut pas encore être créée.",
       "unknown": "Choisissez une des six races.",
       "race_not_allowed": "Cette race ne peut pas être {{className}}.",
-      "not_allowed": "Pas de Force exceptionnelle pour ce personnage : seulement un combattant à 18 de Force, hors halfelin."
+      "not_allowed": "Pas de Force exceptionnelle pour ce personnage : seulement un combattant à 18 de Force, sauf un petite-gens."
     }
   }
 }

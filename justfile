@@ -410,6 +410,13 @@ sync-main:
     rm -f "$before"
     git log --oneline -1
 
+# The new-themes round (docs/design/new-themes/): the candidates painted over the app, then the
+# app's theme rules (theme.test.ts) run over them; the tests pinning today's theme list fail by design.
+ui-themes: build-api
+    cd web && node e2e/check-browser.mjs
+    cd web && npx playwright test -c playwright.ui-review.config.ts themes-round.spec.ts
+    cd web && npx vitest run -c ui-review/vitest.candidates.ts || true
+
 # Brand placement design round (docs/design/brand-placement/): the decided header drawn in each
 # placement over the real app (French, the Arcane theme), on the e2e stack with the seeded table of
 # web/ui-review/paint.ts. Fails on cut text, a page scroll, a header over 120 px or a hidden wordmark.

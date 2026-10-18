@@ -1370,3 +1370,29 @@ describe("hp_change entries without a source", () => {
     expect(entryText(hp(-5, "orc axe"), await makeT("en"))).toBe("orc axe");
   });
 });
+
+// ADR 0030 step 20.2: a spell_learn entry is structured (the spell, the d100, the chance, learned
+// or not, the realized level); the journal words it, French first (the test namer falls back to
+// the id).
+describe("spell learn entries", () => {
+  const roll = (over: object) =>
+    entry("spell_learn", {
+      spellId: "sleep",
+      spellLevel: 1,
+      roll: 37,
+      chance: 65,
+      learned: true,
+      characterLevel: 3,
+      ...over,
+    });
+
+  it("words a success and a failure with the level to try again at", async () => {
+    const fr = await makeT("fr");
+    const en = await makeT("en");
+    expect(entryText(roll({}), fr)).toBe("Appris : sleep (d100 37 ≤ 65 %)");
+    expect(entryText(roll({ roll: 72, learned: false }), fr)).toBe(
+      "Échec : sleep (d100 72 > 65 %), à retenter au niveau 4",
+    );
+    expect(entryText(roll({}), en)).toBe("Learned: sleep (d100 37 ≤ 65%)");
+  });
+});

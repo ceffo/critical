@@ -982,7 +982,14 @@
     "rollDice": "Lancer",
     "addEffectLabel": "Ajouter {{name}} comme effet au niveau {{level}}",
     "exposure": "Exposition",
-    "exposureMode": "Exposition ({{mode}})"
+    "exposureMode": "Exposition ({{mode}})",
+    "learn": {
+      "button": "Apprendre",
+      "title": "Apprendre ce sort : jet de d100 sous {{chance}} % (Intelligence)",
+      "known": "Dans le grimoire",
+      "learned": "Appris : d100 {{roll}} ≤ {{chance}} %",
+      "failed": "Échec : d100 {{roll}} > {{chance}} %, à retenter au niveau {{level}}"
+    }
   },
   "result": {
     "empty": "Lancez une attaque, une sauvegarde ou un sort : le détail complet s'affiche ici.",
@@ -1211,7 +1218,8 @@
       "xp_add": "XP",
       "xp_edit": "XP",
       "xp_remove": "XP",
-      "level_up": "Niveau"
+      "level_up": "Niveau",
+      "spell_learn": "Apprentissage"
     },
     "status": {
       "active": "Actif",
@@ -1354,6 +1362,10 @@
       "dieRaised": "d{{die}} {{rolled}} (compté {{counted}})",
       "con": ", CON {{adjustment}}",
       "manual": ", dé saisi"
+    },
+    "learn": {
+      "learned": "Appris : {{spell}} (d100 {{roll}} ≤ {{chance}} %)",
+      "failed": "Échec : {{spell}} (d100 {{roll}} > {{chance}} %), à retenter au niveau {{level}}"
     }
   },
   "critTable": {
@@ -1484,7 +1496,8 @@
     "languagesHint": "Séparez les langues par des virgules",
     "classes": {
       "bard": "Barde",
-      "fighter": "Guerrier"
+      "fighter": "Guerrier",
+      "mage": "Magicien"
     },
     "language": {
       "elfique": "Elfique",
@@ -1651,7 +1664,14 @@
     "already_invited": "Cette adresse e-mail a déjà une invitation en attente.",
     "invite_not_found": "Cette invitation n'est plus en attente.",
     "user_not_found": "Cet utilisateur n'existe pas.",
-    "level_up_not_pending": "Ce niveau n'est plus à lancer : la fiche se met à jour."
+    "level_up_not_pending": "Ce niveau n'est plus à lancer : la fiche se met à jour.",
+    "no_spellbook": "Cette classe n'a pas de grimoire.",
+    "not_a_wizard_spell": "Seul un sort de magicien s'inscrit au grimoire.",
+    "already_in_spellbook": "Ce sort est déjà dans le grimoire.",
+    "spell_level_above_intelligence": "Niveau de sort trop élevé pour l'Intelligence du personnage.",
+    "spell_level_above_class": "Niveau de sort au-delà de ce que la classe peut apprendre.",
+    "spellbook_level_full": "Le grimoire contient déjà le maximum de sorts de ce niveau pour cette Intelligence.",
+    "spell_learn_failed_at_level": "Sort raté à ce niveau : à retenter au niveau suivant."
   },
   "lastShort": {
     "attack": "Attaque",

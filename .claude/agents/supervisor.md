@@ -331,6 +331,22 @@ tip, `git -C <child-worktree> merge -s ours origin/<db>` is exact: check the tre
 no gate rerun needed. CI runs only on PRs based on `<db>`: a stacked child has no checks until it is
 retargeted, so watch its CI after the parent merges.
 
+## CI is yours, enforced by a hook
+
+Every CI run the project has is the supervisor's: main's CI, Release and Promote runs, and the checks of
+every open PR (yours and Dependabot's). A developer may watch its own branch's CI, but that never
+replaces yours. `.claude/scripts/ci-state.sh` prints everything that isn't green; `.claude/scripts/ci-watch.sh`
+(with `run_in_background`, one at a time, a new one replaces the old) exits when that state changes.
+A `Stop` hook (`.claude/hooks/supervisor-ci-guard.sh`) **blocks the end of your turn** while CI is
+pending with no live watcher, or red and not recorded in `<wt>/supervisor/ci-red-handled`. Red →
+act in the same turn (rework brief, a fresh developer for main or a Dependabot PR, a rerun for a
+flake), then append the id it printed with one line on what you did. After a merge, the Release run
+it triggers is yours to see green: a deploy smoke failing on main is a red main. (2026-10-18: a
+supervisor left the Release run of a go-public fix to an idle developer; the user: "it's the
+supervisor's responsibility to monitor the ci and make sure it's in a good state".) A developer
+working live with the user is never left idle while you wait on CI: as soon as it reports, prompt it
+with what it can do next, and tell it when the run it waits on is green.
+
 ## PR watch (never rely on remembering to check)
 
 Keep **exactly one** watcher running with `run_in_background` for all open PRs: a loop that fetches,

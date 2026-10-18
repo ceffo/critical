@@ -163,17 +163,17 @@ func (_c *MockStore_InTx_Call) RunAndReturn(run func(context.Context, func(conte
 	return _c
 }
 
-// Migrate provides a mock function with given fields: ctx
-func (_m *MockStore) Migrate(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// Migrate provides a mock function with given fields: ctx, seedsDir
+func (_m *MockStore) Migrate(ctx context.Context, seedsDir string) error {
+	ret := _m.Called(ctx, seedsDir)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Migrate")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, seedsDir)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -188,13 +188,14 @@ type MockStore_Migrate_Call struct {
 
 // Migrate is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockStore_Expecter) Migrate(ctx interface{}) *MockStore_Migrate_Call {
-	return &MockStore_Migrate_Call{Call: _e.mock.On("Migrate", ctx)}
+//   - seedsDir string
+func (_e *MockStore_Expecter) Migrate(ctx interface{}, seedsDir interface{}) *MockStore_Migrate_Call {
+	return &MockStore_Migrate_Call{Call: _e.mock.On("Migrate", ctx, seedsDir)}
 }
 
-func (_c *MockStore_Migrate_Call) Run(run func(ctx context.Context)) *MockStore_Migrate_Call {
+func (_c *MockStore_Migrate_Call) Run(run func(ctx context.Context, seedsDir string)) *MockStore_Migrate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(string))
 	})
 	return _c
 }
@@ -204,7 +205,7 @@ func (_c *MockStore_Migrate_Call) Return(_a0 error) *MockStore_Migrate_Call {
 	return _c
 }
 
-func (_c *MockStore_Migrate_Call) RunAndReturn(run func(context.Context) error) *MockStore_Migrate_Call {
+func (_c *MockStore_Migrate_Call) RunAndReturn(run func(context.Context, string) error) *MockStore_Migrate_Call {
 	_c.Call.Return(run)
 	return _c
 }

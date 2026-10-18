@@ -20,9 +20,9 @@ import (
 // (once it has some, only the names of weapons and items are reconciled, reconcileName), its
 // skills reconciled by id, its spellbook (spellbook: the spellbook seed's catalogue keys, in
 // order, checked against the catalogue by the caller before anything is written) only while it
-// has none. A character created later starts with nothing. Rows without an owner (stored before
-// each character owned its equipment, or written by the release before during a rolling deploy)
-// are given to the seed character first. A missing character file is ignored. A missing weapons,
+// has none. A character created later starts with nothing. Every row has an owner by then: the
+// migration run gave the rows without one to the seed character (ownRows). A missing character
+// file is ignored. A missing weapons,
 // items or skills file while the seed character has none is an error: its sheet would be empty.
 // Spells are not seeds: they come from the catalogue artifact (ImportCatalogue).
 func (d *DB) Seed(ctx context.Context, seedsDir string, spellbook []string) error {
@@ -38,9 +38,6 @@ func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir st
 		}
 		owner, ok, err := seedOwner(ctx, q, characterPath)
 		if err != nil || !ok {
-			return err
-		}
-		if err := adoptUnowned(ctx, q, owner); err != nil {
 			return err
 		}
 		if err := seedWeapons(ctx, q, owner, seedfile.Path(seedsDir, seedfile.WeaponsFile)); err != nil {
@@ -61,36 +58,43 @@ func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir st
 
 // seedOwner is the seed character: the character named in character.json (the lowest id of
 // that name). ok is false when there is none (no character file, or no character of its name);
-// the equipment seeds are then not applied, and rows without an owner are an error, since
-// nothing would own them.
+// the equipment seeds are then not applied.
 func seedOwner(ctx context.Context, q storeq.Querier, characterPath string) (int64, bool, error) {
 	c, found, err := seedfile.ReadCharacter(characterPath)
-	if err != nil {
+	if err != nil || !found {
 		return 0, false, err
 	}
-	if found {
-		id, err := q.SeedCharacterID(ctx, c.Name)
-		if err == nil {
-			return id, true, nil
-		}
-		if !errors.Is(err, sql.ErrNoRows) {
-			return 0, false, fmt.Errorf("find seed character: %w", err)
-		}
+	id, err := q.SeedCharacterID(ctx, c.Name)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, false, nil
 	}
-	unowned, err := q.CountUnowned(ctx)
 	if err != nil {
-		return 0, false, fmt.Errorf("count unowned rows: %w", err)
+		return 0, false, fmt.Errorf("find seed character: %w", err)
 	}
-	if unowned > 0 {
-		return 0, false, fmt.Errorf("%d weapons, items or skills have no owner and no character is named as in %s: "+
-			"they would belong to no one", unowned, characterPath)
-	}
-	return 0, false, nil
+	return id, true, nil
 }
 
-// adoptUnowned gives every weapon, item, proficiency and bard skill without an owner to the seed
-// character.
-func adoptUnowned(ctx context.Context, q storeq.Querier, owner int64) error {
+// ownRows gives every weapon, item, proficiency and bard skill without an owner to the seed
+// character, with every count, position and field as it was: the data step before
+// ownerKeysMigration makes the owner required. Rows without an owner and no seed character (the
+// name in character.json changed) are an error rather than belong to no one: the migration run
+// rolls back and the server does not start.
+func ownRows(ctx context.Context, q storeq.Querier, characterPath string) error {
+	owner, ok, err := seedOwner(ctx, q, characterPath)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		unowned, err := q.CountUnowned(ctx)
+		if err != nil {
+			return fmt.Errorf("count unowned rows: %w", err)
+		}
+		if unowned > 0 {
+			return fmt.Errorf("%d weapons, items or skills have no owner and no character is named as in %s: "+
+				"they would belong to no one", unowned, characterPath)
+		}
+		return nil
+	}
 	for _, adopt := range []struct {
 		table string
 		run   func(context.Context, int64) error

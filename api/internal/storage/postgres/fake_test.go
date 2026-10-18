@@ -16,9 +16,10 @@ import (
 // test opens a database). It keeps the tables the seeds and the catalogue import read and
 // write, enforces what the schema would refuse (a duplicate key, a row whose character does not
 // exist, an empty text body, the CHECKs of weapons and items) and runs InTx all or nothing.
-// Weapons, items, proficiencies and bard skills are keyed by id, as their primary keys still are
-// (migration 002); their CharacterID 0 is a NULL owner (a row from before owners, or written by
-// the release before during a rolling deploy). The seed and import tests drive the
+// Weapons, items, proficiencies and bard skills are keyed by (character, id), rowKey, as their
+// primary keys are (migration 004): two characters may hold the same id. Their CharacterID 0 is a
+// NULL owner, which only the database before migration 004 holds (ownRows' tests: a row from
+// before owners, or written by a release without them). The seed and import tests drive the
 // real code over it and read its tables, so they assert what is stored, not which SQL ran.
 type fakeStore struct {
 	t tables
@@ -31,8 +32,9 @@ type tables struct {
 	Slots      map[int64]string
 	Buffs      map[int64]string
 	Rounds     map[int64]bool
-	Weapons    map[string]storeq.InsertWeaponParams
-	Items      map[string]storeq.InsertItemParams
+	// Weapons, Items, Profs and Bard are by rowKey.
+	Weapons map[string]storeq.InsertWeaponParams
+	Items   map[string]storeq.InsertItemParams
 	// Offers are seeded_name_languages rows, "kind|id|lang".
 	Offers map[string]bool
 	Profs  map[string]storeq.UpsertProficiencyParams
@@ -205,19 +207,29 @@ func (f *fakeStore) AdoptBardSkills(_ context.Context, characterID int64) error 
 	return adopt(f, f.t.Bard, characterID, func(b *storeq.UpsertBardSkillParams) *int64 { return &b.CharacterID })
 }
 
-// adopt gives every row of table without an owner to characterID (the foreign key holds).
+// adopt gives every row of table without an owner to characterID (the foreign key holds), under
+// its new key; the unique (character_id, id) index of migration 002 refuses a row the character
+// already holds.
 func adopt[R any](f *fakeStore, table map[string]R, characterID int64, owner func(*R) *int64) error {
 	if err := f.hasCharacter(characterID); err != nil {
 		return err
 	}
-	for id, r := range table {
+	for key, r := range table {
 		if o := owner(&r); *o == 0 {
+			id := key[len(rowKey(0, "")):]
+			if _, taken := table[rowKey(characterID, id)]; taken {
+				return fmt.Errorf("duplicate key (%d, %q)", characterID, id)
+			}
 			*o = characterID
-			table[id] = r
+			delete(table, key)
+			table[rowKey(characterID, id)] = r
 		}
 	}
 	return nil
 }
+
+// rowKey is the primary key of a weapon, item, proficiency or bard skill: (character_id, id).
+func rowKey(characterID int64, id string) string { return fmt.Sprintf("%d|%s", characterID, id) }
 
 func (f *fakeStore) InsertSpellSlots(_ context.Context, arg storeq.InsertSpellSlotsParams) error {
 	if err := f.hasCharacter(arg.CharacterID); err != nil {
@@ -273,10 +285,11 @@ func (f *fakeStore) InsertWeapon(_ context.Context, arg storeq.InsertWeaponParam
 	if err := f.hasCharacter(arg.CharacterID); err != nil {
 		return err
 	}
-	if _, ok := f.t.Weapons[arg.ID]; ok {
-		return fmt.Errorf("duplicate key weapons %q", arg.ID)
+	key := rowKey(arg.CharacterID, arg.ID)
+	if _, ok := f.t.Weapons[key]; ok {
+		return fmt.Errorf("duplicate key weapons %s", key)
 	}
-	f.t.Weapons[arg.ID] = arg
+	f.t.Weapons[key] = arg
 	return nil
 }
 
@@ -287,24 +300,25 @@ func (f *fakeStore) InsertItem(_ context.Context, arg storeq.InsertItemParams) e
 	if err := f.hasCharacter(arg.CharacterID); err != nil {
 		return err
 	}
-	if _, ok := f.t.Items[arg.ID]; ok {
-		return fmt.Errorf("duplicate key items %q", arg.ID)
+	key := rowKey(arg.CharacterID, arg.ID)
+	if _, ok := f.t.Items[key]; ok {
+		return fmt.Errorf("duplicate key items %s", key)
 	}
-	f.t.Items[arg.ID] = arg
+	f.t.Items[key] = arg
 	return nil
 }
 
 func (f *fakeStore) WeaponNameKey(_ context.Context, arg storeq.WeaponNameKeyParams) (int64, error) {
-	w, ok := f.t.Weapons[arg.ID]
-	if !ok || w.CharacterID != arg.CharacterID {
+	w, ok := f.t.Weapons[rowKey(arg.CharacterID, arg.ID)]
+	if !ok {
 		return 0, sql.ErrNoRows
 	}
 	return w.Name, nil
 }
 
 func (f *fakeStore) ItemNameKey(_ context.Context, arg storeq.ItemNameKeyParams) (int64, error) {
-	it, ok := f.t.Items[arg.ID]
-	if !ok || it.CharacterID != arg.CharacterID {
+	it, ok := f.t.Items[rowKey(arg.CharacterID, arg.ID)]
+	if !ok {
 		return 0, sql.ErrNoRows
 	}
 	return it.Name, nil
@@ -327,16 +341,13 @@ func (f *fakeStore) RecordSeedOffer(_ context.Context, arg storeq.RecordSeedOffe
 	return nil
 }
 
-// The skill upserts conflict on (character_id, id); the primary key on id alone still refuses
-// another character's row of the same id.
+// The skill upserts conflict on (character_id, id), the primary key: another character's row of
+// the same id is another row.
 func (f *fakeStore) UpsertProficiency(_ context.Context, arg storeq.UpsertProficiencyParams) error {
 	if err := f.hasCharacter(arg.CharacterID); err != nil {
 		return err
 	}
-	if cur, ok := f.t.Profs[arg.ID]; ok && cur.CharacterID != arg.CharacterID {
-		return fmt.Errorf("duplicate key proficiencies %q", arg.ID)
-	}
-	f.t.Profs[arg.ID] = arg
+	f.t.Profs[rowKey(arg.CharacterID, arg.ID)] = arg
 	return nil
 }
 
@@ -344,16 +355,11 @@ func (f *fakeStore) UpsertBardSkill(_ context.Context, arg storeq.UpsertBardSkil
 	if err := f.hasCharacter(arg.CharacterID); err != nil {
 		return err
 	}
-	if cur, ok := f.t.Bard[arg.ID]; ok && cur.CharacterID != arg.CharacterID {
-		return fmt.Errorf("duplicate key bard_skills %q", arg.ID)
-	}
-	f.t.Bard[arg.ID] = arg
+	f.t.Bard[rowKey(arg.CharacterID, arg.ID)] = arg
 	return nil
 }
 
-func spellbookKey(characterID int64, spellKey string) string {
-	return fmt.Sprintf("%d|%s", characterID, spellKey)
-}
+func spellbookKey(characterID int64, spellKey string) string { return rowKey(characterID, spellKey) }
 
 func (f *fakeStore) CountSpellbookEntries(_ context.Context, characterID int64) (int64, error) {
 	return count(f.t.Spellbook, func(e storeq.InsertSpellbookEntryParams) bool { return e.CharacterID == characterID }), nil

@@ -37,7 +37,7 @@ func seeded(t *testing.T) (*memory.Store, int64) {
 	t.Helper()
 	ctx := context.Background()
 	s := memory.New()
-	require.NoError(t, s.Migrate(ctx))
+	require.NoError(t, s.Migrate(ctx, ""))
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	book, err := spellbookadpt.ReadSeed(seedsDir, artifact.Catalogue)

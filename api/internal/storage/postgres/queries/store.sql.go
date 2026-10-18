@@ -186,8 +186,9 @@ SELECT ((SELECT COUNT(*) FROM weapons WHERE character_id IS NULL)
       + (SELECT COUNT(*) FROM bard_skills WHERE character_id IS NULL))::bigint AS count
 `
 
-// Rows from before each character owned its equipment, or written by the release before during a
-// rolling deploy, have no owner: the seed gives them to the seed character.
+// Rows from before each character owned its equipment (migration 002), or written by a release
+// without it during a rolling deploy, have no owner: the migration run gives them to the seed
+// character just before migration 004 makes the owner required (ownRows). Afterwards none exist.
 func (q *Queries) CountUnowned(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countUnowned)
 	var count int64

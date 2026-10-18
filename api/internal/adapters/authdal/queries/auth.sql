@@ -73,3 +73,28 @@ UPDATE characters SET owner_user_id = sqlc.arg(to_user) WHERE owner_user_id = sq
 
 -- name: ClearCurrentCharacter :exec
 UPDATE users SET current_character_id = NULL WHERE id = $1;
+
+-- The admin section (ADR 0029 step 1.3): every user, the names of their characters (not the sheets),
+-- and the pending invites.
+
+-- name: ListUsers :many
+SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users
+ORDER BY created_at, id;
+
+-- name: OwnedCharacterNames :many
+-- The names of every owned character not retired, by owner, in creation order.
+SELECT owner_user_id, name FROM characters
+WHERE owner_user_id IS NOT NULL AND NOT retired
+ORDER BY id;
+
+-- name: ListPendingInvites :many
+SELECT id, email, invited_by, created_at FROM invites
+WHERE cancelled IS NULL AND accepted_by IS NULL
+ORDER BY created_at, id;
+
+-- name: InsertInvite :exec
+INSERT INTO invites (id, email, invited_by, created_at) VALUES ($1, $2, $3, $4);
+
+-- name: CancelInvite :execrows
+-- Only a pending invite is cancelled (step 2.3): a used or cancelled one stays as it is.
+UPDATE invites SET cancelled = $2 WHERE id = $1 AND cancelled IS NULL AND accepted_by IS NULL;

@@ -53,8 +53,8 @@ func as(h http.Handler, token, method, path, body string) *httptest.ResponseReco
 }
 
 // The routes a user without a current character still reaches: the login's,
-// the health check, the reference data no character owns (step 7.5) and the
-// user's characters.
+// the health check, the reference data no character owns (step 7.5), the
+// user's characters and the admin section (adminPrefix).
 var characterFree = map[string]bool{
 	"GET /api/health": true, "GET /api/spells/filters": true, "GET /api/spells/names": true,
 	"GET /api/crit-table": true, "PUT /api/crit-table": true, "GET /api/xp/preview": true,
@@ -75,7 +75,8 @@ func TestCurrentCharacter_Step7_2_EveryCharacterRouteNeedsOne(t *testing.T) {
 	guarded := 0
 	require.NoError(t, chi.Walk(routes, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
 		key := method + " " + route
-		if !strings.HasPrefix(route, "/api/") || strings.HasPrefix(route, "/api/auth/") || characterFree[key] {
+		if !strings.HasPrefix(route, "/api/") || strings.HasPrefix(route, "/api/auth/") ||
+			strings.HasPrefix(route, adminPrefix) || characterFree[key] {
 			return nil
 		}
 		guarded++

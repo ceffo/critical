@@ -33,7 +33,13 @@ export function loginUrl(code?: string): string {
 
 /** What the app shows at start-up. */
 export type Start =
-  { show: "login"; error: string | null } | { show: "app" } | { go: string };
+  | { show: "login"; error: string | null }
+  | { show: "app" }
+  | { show: "admin" }
+  | { go: string };
+
+/** The admin section's page (ADR 0029 step 1.3). */
+export const ADMIN_PATH = "/admin";
 
 /** True for the login page's path. */
 export function isLoginPath(path: string): boolean {
@@ -43,8 +49,8 @@ export function isLoginPath(path: string): boolean {
 /**
  * What to show for a path and the session (ADR 0029 step 6): the login page only without a session
  * (a logged-in user who opens it goes to the app), the app only with one (without, the login page,
- * saying the session ended when it did). With no answer from the API the app or the page loads and
- * shows the failure.
+ * saying the session ended when it did), and the admin section only to an admin. With no answer from
+ * the API the app or the page loads and shows the failure.
  */
 export function startFor(
   path: string,
@@ -61,5 +67,11 @@ export function startFor(
     return { show: "login", error };
   }
   if (session.kind === "out") return { go: loginUrl(session.code) };
+  if (path === ADMIN_PATH) {
+    // The admin section is an admin's; a player who opens it goes to the app (the API refuses them anyway).
+    if (session.kind === "in" && session.me.role !== "admin")
+      return { go: "/" };
+    return { show: "admin" };
+  }
   return { show: "app" };
 }

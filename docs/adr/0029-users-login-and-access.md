@@ -340,6 +340,36 @@ Step 7 as built (the characters-per-user item; the user approves ADR changes at 
    `TestFreshCurrentCharacter_Step7_2_ReadsTheDatabaseAndForgetsAStaleSession`,
    `TestAuthenticate_Step7_2_ACurrentCharacterChangeForgetsAtOnce`; web `http.test.ts`.
 
+## Amendment 2026-10-18: the admin section as built
+
+Steps 1.3, 2 and 5.2 as built (the admin section item; the user approves ADR changes at merge):
+
+1. **One guard.** Every `/api/admin/*` route, and `PUT /api/crit-table` (the house crit table is one
+   rule set shared by every user, so only an admin changes it; reading it stays open to every
+   session), is mounted behind one router middleware, `mw.AdminOnly`: a player gets **403
+   `admin_only`** before any service runs. Tests: `router` `TestAdmin_Step1_3_APlayerIsRefusedEveryAdminRoute`
+   (walks every admin route), `TestCritTable_APlayerReadsButCannotSave`.
+2. **Endpoints.** `GET /api/admin/users`, `PATCH /api/admin/users/{id} {disabled?, role?}`,
+   `GET /api/admin/invites` (the pending invites: the item named the other three; listing them is what
+   the screen needs), `POST /api/admin/invites {email}`, `DELETE /api/admin/invites/{id}` (sets
+   `cancelled`, step 2.3). Refusals: `email_has_user` and `already_invited` (409, step 2.1),
+   `invite_not_found`, `user_not_found` (404), `root_admin_protected` (409, step 5.2), and an address
+   that is not a bare email is a field error on `email`. Tests: `authsvc`
+   `TestCreateInvite_Step2_1_ExistingUserOrDuplicateRefused`, `TestCancelInvite_Step2_3`,
+   `TestChangeUser_Step5_2_TheRootAdminIsProtected`; `composition` `TestAdmin_Step2_InviteListCancel`.
+3. **A change is one transaction.** A `PATCH` that disables and demotes checks both before writing
+   anything, and disabling deletes the user's sessions in that transaction (step 4.4). The server that
+   made the change forgets the user's remembered sessions once it committed, so on that server the
+   user is logged out (or loses the admin routes) at once; on the other production server within
+   `SessionCacheTTL` (step 4.7's accepted window, unchanged). Tests: `authsvc`
+   `TestChangeUser_Step4_4_DisablingDeletesTheSessionsInTheSameTransaction`,
+   `TestChangeUser_Step4_7_DisablingLogsTheUserOutAtOnce`; `composition`
+   `TestAdmin_Step4_4_DisablingLogsTheUserOut`.
+4. **The admin's view** is each user's email, role, root flag, status, last login and the names of
+   their characters not retired, never a sheet (step 1.3). The web shows it at `/admin`, a page of the
+   one bundle reached from the cog menu's Admin link, shown to admins only; a player opening `/admin`
+   goes to the app.
+
 ## Amendment to ADR 0024
 
 Applied to [ADR 0024](0024-deployment.md) by this PR; the user chose option (c) in the 2026-10-17

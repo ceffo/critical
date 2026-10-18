@@ -123,6 +123,54 @@ func (_c *MockDAL_AdoptUnownedCharacters_Call) RunAndReturn(run func(context.Con
 	return _c
 }
 
+// CancelInvite provides a mock function with given fields: ctx, id, at
+func (_m *MockDAL) CancelInvite(ctx context.Context, id uuid.UUID, at time.Time) error {
+	ret := _m.Called(ctx, id, at)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CancelInvite")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, time.Time) error); ok {
+		r0 = rf(ctx, id, at)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_CancelInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CancelInvite'
+type MockDAL_CancelInvite_Call struct {
+	*mock.Call
+}
+
+// CancelInvite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+//   - at time.Time
+func (_e *MockDAL_Expecter) CancelInvite(ctx interface{}, id interface{}, at interface{}) *MockDAL_CancelInvite_Call {
+	return &MockDAL_CancelInvite_Call{Call: _e.mock.On("CancelInvite", ctx, id, at)}
+}
+
+func (_c *MockDAL_CancelInvite_Call) Run(run func(ctx context.Context, id uuid.UUID, at time.Time)) *MockDAL_CancelInvite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(time.Time))
+	})
+	return _c
+}
+
+func (_c *MockDAL_CancelInvite_Call) Return(_a0 error) *MockDAL_CancelInvite_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_CancelInvite_Call) RunAndReturn(run func(context.Context, uuid.UUID, time.Time) error) *MockDAL_CancelInvite_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteSession provides a mock function with given fields: ctx, id
 func (_m *MockDAL) DeleteSession(ctx context.Context, id string) error {
 	ret := _m.Called(ctx, id)
@@ -266,6 +314,53 @@ func (_c *MockDAL_ExtendSession_Call) RunAndReturn(run func(context.Context, str
 	return _c
 }
 
+// InsertInvite provides a mock function with given fields: ctx, inv
+func (_m *MockDAL) InsertInvite(ctx context.Context, inv authsvc.Invite) error {
+	ret := _m.Called(ctx, inv)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertInvite")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, authsvc.Invite) error); ok {
+		r0 = rf(ctx, inv)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_InsertInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertInvite'
+type MockDAL_InsertInvite_Call struct {
+	*mock.Call
+}
+
+// InsertInvite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - inv authsvc.Invite
+func (_e *MockDAL_Expecter) InsertInvite(ctx interface{}, inv interface{}) *MockDAL_InsertInvite_Call {
+	return &MockDAL_InsertInvite_Call{Call: _e.mock.On("InsertInvite", ctx, inv)}
+}
+
+func (_c *MockDAL_InsertInvite_Call) Run(run func(ctx context.Context, inv authsvc.Invite)) *MockDAL_InsertInvite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(authsvc.Invite))
+	})
+	return _c
+}
+
+func (_c *MockDAL_InsertInvite_Call) Return(_a0 error) *MockDAL_InsertInvite_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_InsertInvite_Call) RunAndReturn(run func(context.Context, authsvc.Invite) error) *MockDAL_InsertInvite_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InsertSession provides a mock function with given fields: ctx, s
 func (_m *MockDAL) InsertSession(ctx context.Context, s authsvc.Session) error {
 	ret := _m.Called(ctx, s)
@@ -356,6 +451,122 @@ func (_c *MockDAL_InsertUser_Call) Return(_a0 error) *MockDAL_InsertUser_Call {
 }
 
 func (_c *MockDAL_InsertUser_Call) RunAndReturn(run func(context.Context, authsvc.User) error) *MockDAL_InsertUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListPendingInvites provides a mock function with given fields: ctx
+func (_m *MockDAL) ListPendingInvites(ctx context.Context) ([]authsvc.Invite, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPendingInvites")
+	}
+
+	var r0 []authsvc.Invite
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]authsvc.Invite, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []authsvc.Invite); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]authsvc.Invite)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDAL_ListPendingInvites_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPendingInvites'
+type MockDAL_ListPendingInvites_Call struct {
+	*mock.Call
+}
+
+// ListPendingInvites is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockDAL_Expecter) ListPendingInvites(ctx interface{}) *MockDAL_ListPendingInvites_Call {
+	return &MockDAL_ListPendingInvites_Call{Call: _e.mock.On("ListPendingInvites", ctx)}
+}
+
+func (_c *MockDAL_ListPendingInvites_Call) Run(run func(ctx context.Context)) *MockDAL_ListPendingInvites_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockDAL_ListPendingInvites_Call) Return(_a0 []authsvc.Invite, _a1 error) *MockDAL_ListPendingInvites_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDAL_ListPendingInvites_Call) RunAndReturn(run func(context.Context) ([]authsvc.Invite, error)) *MockDAL_ListPendingInvites_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListUsers provides a mock function with given fields: ctx
+func (_m *MockDAL) ListUsers(ctx context.Context) ([]authsvc.UserSummary, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUsers")
+	}
+
+	var r0 []authsvc.UserSummary
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]authsvc.UserSummary, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []authsvc.UserSummary); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]authsvc.UserSummary)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDAL_ListUsers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUsers'
+type MockDAL_ListUsers_Call struct {
+	*mock.Call
+}
+
+// ListUsers is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockDAL_Expecter) ListUsers(ctx interface{}) *MockDAL_ListUsers_Call {
+	return &MockDAL_ListUsers_Call{Call: _e.mock.On("ListUsers", ctx)}
+}
+
+func (_c *MockDAL_ListUsers_Call) Run(run func(ctx context.Context)) *MockDAL_ListUsers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockDAL_ListUsers_Call) Return(_a0 []authsvc.UserSummary, _a1 error) *MockDAL_ListUsers_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDAL_ListUsers_Call) RunAndReturn(run func(context.Context) ([]authsvc.UserSummary, error)) *MockDAL_ListUsers_Call {
 	_c.Call.Return(run)
 	return _c
 }

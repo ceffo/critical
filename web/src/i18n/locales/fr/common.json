@@ -1557,7 +1557,12 @@
     "user_disabled": "Ce compte est désactivé. Adressez-vous à un administrateur.",
     "root_admin_protected": "L'administrateur principal ne peut être ni désactivé ni rétrogradé.",
     "root_admin_taken": "Un autre utilisateur est déjà l'administrateur principal.",
-    "database_unavailable": "La base de données ne répond pas. Réessayez dans un instant."
+    "database_unavailable": "La base de données ne répond pas. Réessayez dans un instant.",
+    "admin_only": "Seul un administrateur peut faire cela.",
+    "email_has_user": "Cette adresse e-mail a déjà un compte.",
+    "already_invited": "Cette adresse e-mail a déjà une invitation en attente.",
+    "invite_not_found": "Cette invitation n'est plus en attente.",
+    "user_not_found": "Cet utilisateur n'existe pas."
   },
   "lastShort": {
     "attack": "Attaque",
@@ -1578,5 +1583,59 @@
   "database": {
     "unavailable": "La base de données ne répond pas. Nouvel essai…",
     "uncertainWrite": "Votre dernière action n'a peut-être pas été enregistrée. Les actions reprennent une fois la fiche rechargée : vérifiez le journal avant de réessayer."
+  },
+  "admin": {
+    "open": "Administration",
+    "openHint": "Ouvrir l'administration : utilisateurs et invitations",
+    "title": "Administration",
+    "back": "Retour",
+    "backHint": "Retour à la fiche du personnage",
+    "invites": "Invitations",
+    "invitesLead": "Une adresse invitée peut se connecter avec Google. Aucun e-mail n'est envoyé : prévenez la personne et donnez-lui le lien de l'application.",
+    "email": "Adresse e-mail",
+    "emailPlaceholder": "nom@exemple.fr",
+    "emailInvalid": "Saisissez une adresse e-mail.",
+    "invite": "Inviter",
+    "inviteHint": "Inviter {{email}}",
+    "inviteHintEmpty": "Inviter cette adresse e-mail",
+    "copy": "Copier",
+    "copyHint": "Copier le lien de l'application ({{url}}) pour l'envoyer",
+    "copied": "Lien copié",
+    "copyFailed": "Le lien n'a pas pu être copié : {{url}}",
+    "pending": "Invitations en attente",
+    "noPending": "Aucune invitation en attente.",
+    "invitedBy": "Invité par {{email}} le {{date}}",
+    "invitedOn": "Invité le {{date}}",
+    "cancel": "Annuler",
+    "cancelHint": "Annuler l'invitation de {{email}}",
+    "users": "Utilisateurs",
+    "col": {
+      "email": "E-mail",
+      "role": "Rôle",
+      "lastLogin": "Dernière connexion",
+      "characters": "Personnages",
+      "status": "État",
+      "actions": "Actions"
+    },
+    "role": {
+      "admin": "Administrateur",
+      "player": "Joueur"
+    },
+    "root": "Administrateur principal",
+    "rootHint": "L'administrateur principal ne peut être ni désactivé ni rétrogradé.",
+    "you": "vous",
+    "never": "Jamais",
+    "noCharacters": "Aucun",
+    "active": "Actif",
+    "disabled": "Désactivé",
+    "promote": "Promouvoir",
+    "promoteHint": "Faire de {{email}} un administrateur",
+    "demote": "Rétrograder",
+    "demoteHint": "Refaire de {{email}} un joueur",
+    "disable": "Désactiver",
+    "disableHint": "Désactiver {{email}} : déconnecté aussitôt, ne peut plus se connecter",
+    "enable": "Réactiver",
+    "enableHint": "Réactiver {{email}}",
+    "loadFailed": "L'administration n'a pas pu être chargée : {{message}}"
   }
 }

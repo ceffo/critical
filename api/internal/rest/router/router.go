@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/actionloghdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/adminhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/authhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/buffhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/casthdl"
@@ -120,6 +121,16 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	xphdl.RegisterSharedRoutes(r, bs.XP)
 	// The user's characters: a session, no current character needed.
 	characterhdl.RegisterUserRoutes(r, bs.Character)
+
+	// The admin section (ADR 0029 step 1.3) and the shared rule set only an
+	// admin edits: mw.AdminOnly refuses a player every route mounted here.
+	r.Group(func(r chi.Router) {
+		r.Use(mw.AdminOnly)
+		if bs.Auth != nil {
+			adminhdl.RegisterRoutes(r, bs.Auth)
+		}
+		combathdl.RegisterAdminRoutes(r, bs.Combat)
+	})
 
 	// Every other route acts on the current character of the request's user
 	// (ADR 0029 step 7): mw.CurrentCharacter is the one resolver, a route

@@ -337,3 +337,23 @@ func CharacterID(r *http.Request) int64 {
 	id, _ := r.Context().Value(characterKey{}).(int64)
 	return id
 }
+
+// AdminOnly guards the admin routes (ADR 0029 step 1.3): a request whose user
+// is not an admin is refused with authsvc.ErrAdminOnly (403) before any
+// service runs. The router mounts every admin route behind it, never a
+// per-handler check.
+func AdminOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		p := PrincipalFrom(ctx)
+		if p == nil {
+			render.Error(ctx, w, authsvc.ErrUnauthenticated)
+			return
+		}
+		if p.User.Role != authsvc.RoleAdmin {
+			render.Error(ctx, w, authsvc.ErrAdminOnly)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}

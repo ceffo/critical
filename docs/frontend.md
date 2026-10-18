@@ -143,6 +143,15 @@ flowchart TD
   dice, shows before the time on hover, on keyboard focus in the row and on the selected row (step
   5.3). The row shown in the card is highlighted. Attack damage dice
   show as "1d8 → 6": the attack payload has no per-die values.
+- Admin section (`components/admin/AdminPage.tsx`, [ADR 0029](adr/0029-users-login-and-access.md) step
+  1.3, amendment "the admin section as built"): `/admin`, a page of its own (`startFor` shows it to an
+  admin; a player goes to `/`), reached from the cog menu's Admin link (admins only). A header card
+  (title, Back), then on the ground two `zone-card`s: Invites (the email form, checked by the browser
+  as an email before Invite is enabled; Copy puts the app's address on the clipboard, no email is sent;
+  the pending invites with who sent them and Cancel) and Users (a table: email, role and the root tag,
+  last login, the characters' names, status, and per row Promote/Demote and Disable/Enable; none on
+  the root admin's row). The page is capped at 120rem wide. The crit table editor (Weapons tab) shows to
+  admins only: the API refuses a player's save.
 - Login page (`components/login/LoginPage.tsx`, [ADR 0029](adr/0029-users-login-and-access.md) steps 3, 6
   and 8), the one page shown without a session. `main.tsx` reads `GET /api/auth/me` before the first
   render and `lib/session.ts` `startFor` decides: `/login` shows the page (a logged-in user goes to `/`),

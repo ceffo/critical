@@ -136,6 +136,11 @@ var mappings = []mapping{
 	{target: authsvc.ErrUserDisabled, status: http.StatusForbidden, code: "user_disabled"},
 	{target: authsvc.ErrRootProtected, status: http.StatusConflict, code: "root_admin_protected"},
 	{target: authsvc.ErrRootTaken, status: http.StatusConflict, code: "root_admin_taken"},
+	{target: authsvc.ErrAdminOnly, status: http.StatusForbidden, code: "admin_only"},
+	{target: authsvc.ErrEmailHasUser, status: http.StatusConflict, code: "email_has_user"},
+	{target: authsvc.ErrAlreadyInvited, status: http.StatusConflict, code: "already_invited"},
+	{target: authsvc.ErrInviteNotFound, status: http.StatusNotFound, code: "invite_not_found"},
+	{target: authsvc.ErrUserNotFound, status: http.StatusNotFound, code: "user_not_found"},
 	// A user with no current character (ADR 0029 step 7.2): the web offers
 	// to create the first one.
 	{target: charactersvc.ErrNoCurrentCharacter, status: http.StatusNotFound, code: "no_character"},

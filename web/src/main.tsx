@@ -5,6 +5,7 @@ import "./i18n";
 import { startSettings } from "./stores/settings";
 import App from "./App.tsx";
 import { readSession } from "./api/auth";
+import { AdminPage } from "./components/admin/AdminPage";
 import { LoginPage } from "./components/login/LoginPage";
 import { startFor } from "./lib/session";
 import { useSessionStore } from "./stores/session";
@@ -30,5 +31,5 @@ void readSession().then((session) => {
     return;
   }
   if (session.kind === "in") useSessionStore.getState().setMe(session.me);
-  render(<App />);
+  render(start.show === "admin" ? <AdminPage /> : <App />);
 });

@@ -68,7 +68,7 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	assert.NotEmpty(t, artifact.Catalogue.Spells)
-	_, err = ruletablesadpt.ParseWithEquipment(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment)
+	_, err = ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment)
 	require.NoError(t, err, "the artifact's rule tables")
 
 	effects, err := spelleffectsadpt.New(seedsDir)
@@ -95,9 +95,9 @@ func TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables(t *testin
 	require.NoError(t, err)
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.ParseWithEquipment(real.Catalogue.Format, real.RuleTables, real.Equipment)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.ParseWithEquipment(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
 	require.NoError(t, err)
 	// Compared by lookup, not row by row: the builder may group equal rows
 	// differently (one row per book line) for the same numbers.
@@ -146,9 +146,9 @@ func TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables(t *
 	}
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.ParseWithEquipment(real.Catalogue.Format, real.RuleTables, real.Equipment)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.ParseWithEquipment(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
 	require.NoError(t, err)
 	rc, ok := fromReal.Classes()
 	require.True(t, ok)
@@ -169,9 +169,9 @@ func TestRealCatalogue_Step11_5_TheFixtureCarriesTheRealArtifactsLevelLimits(t *
 	}
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.ParseWithEquipment(real.Catalogue.Format, real.RuleTables, real.Equipment)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.ParseWithEquipment(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
 	require.NoError(t, err)
 	rl, ok := fromReal.LevelLimits()
 	require.True(t, ok)
@@ -200,9 +200,9 @@ func TestRealCatalogue_Step13_5_TheFixtureCarriesTheRealArtifactsEquipment(t *te
 	}
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.ParseWithEquipment(real.Catalogue.Format, real.RuleTables, real.Equipment)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.ParseWithEquipment(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
 	require.NoError(t, err)
 	re, ok := fromReal.Equipment()
 	require.True(t, ok)

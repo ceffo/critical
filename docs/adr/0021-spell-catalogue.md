@@ -537,7 +537,9 @@ is only ever appended to by play.
          -10 to 10), `skill_column` (`none` `leather` `padded_studded` `elven_chain` `metal` `none_allowed`:
          ADR 0033 step 5; `metal` is every armour a bard may wear that a thief may not) and `armor_row`
          (Table 52's eleven rows).
-       - `shields`: `kind` (`buckler` `small` `medium` `body`), `ac_melee`, `ac_missile` (0 to 5).
+       - `shields`: `kind` (`buckler` `small` `medium` `body`), `ac_melee`, `ac_missile` (0 to 5). The book gives a missile figure only for the body shield (1 melee,
+         2 missile); the builder reads every other shield as improving the AC by 1 against both melee and
+         missiles. The buckler's single parry per round and the facing limits are not modelled.
     2. **`rule_tables.weapon_vs_armor`**: PHB Table 52, exactly one row `{armor_row, s, p, b}` per armour row.
        **`rule_tables.initiative_item`**: PHB Table 56's magic item rows `{kind[, modifier]}`, one per magic kind
        (`potion scroll ring rod staff wand misc`); the scroll's row has no `modifier` (the spell's casting

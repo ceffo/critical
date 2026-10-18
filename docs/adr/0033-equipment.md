@@ -337,7 +337,8 @@ name or comment); this ADR names none yet.
     where the model needs it; a weapon with no damage type (mancatcher, whip, scourge) has an empty
     `damage_types`. Readings the books leave open, fixed in the builder: elven chain mail is AC 5 with
     Table 52's `chain` row (worn as chain mail, DMG); bronze plate mail has no Table 52 row and reads as
-    `plate`; hide counts as `leather` for Table 52 and as `metal` for Table 29 (a bard may wear it up to
+    `plate`, an approximation (at AC 4 with the plate row's +3 against slashing it is better against
+    slashing than field plate, AC 2); hide counts as `leather` for Table 52 and as `metal` for Table 29 (a bard may wear it up to
     chain mail, a thief may not); padded armour is the `padded_studded` column and the `leather` row; the
     scroll's `initiative_item` row has no modifier. The French names come from the *Manuel des Joueurs*
     where its OCR reads cleanly; a name with no French falls back to English.

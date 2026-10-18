@@ -51,7 +51,7 @@ func fixtureEquipment(t *testing.T) []byte {
 // does for the artifact's.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	return must.Do(ruletablesadpt.ParseWithEquipment(catalogue.FormatEquipment, fixtureRuleTables(t), fixtureEquipment(t)))
+	return must.Do(ruletablesadpt.Parse(catalogue.FormatEquipment, fixtureRuleTables(t), fixtureEquipment(t)))
 }
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
@@ -206,11 +206,11 @@ func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Contains(t, string(good), tt.from)
-			_, err := ruletablesadpt.ParseWithEquipment(catalogue.FormatEquipment, []byte(strings.Replace(string(good), tt.from, tt.to, 1)), fixtureEquipment(t))
+			_, err := ruletablesadpt.Parse(catalogue.FormatEquipment, []byte(strings.Replace(string(good), tt.from, tt.to, 1)), fixtureEquipment(t))
 			require.ErrorContains(t, err, tt.table)
 		})
 	}
-	_, err := ruletablesadpt.ParseWithEquipment(catalogue.FormatEquipment, good, fixtureEquipment(t))
+	_, err := ruletablesadpt.Parse(catalogue.FormatEquipment, good, fixtureEquipment(t))
 	require.NoError(t, err)
 }
 
@@ -233,7 +233,7 @@ func classTablesOf(t *testing.T, format int, mutate func(map[string]any)) (*rule
 	mutate(doc)
 	raw, err := json.Marshal(doc)
 	require.NoError(t, err)
-	return ruletablesadpt.ParseWithEquipment(format, raw, equipment)
+	return ruletablesadpt.Parse(format, raw, equipment)
 }
 
 func classRows(d map[string]any, table string) []any { return d[table].([]any) }

@@ -473,7 +473,7 @@ func registerRestorers(log actionlogsvc.SVC, restorers map[string]actionlog.Rest
 // database recorded (step 9.5).
 // The seeds hold no rule tables (step 9.6.3).
 func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.Tables, error) {
-	t, err := ruletablesadpt.ParseWithEquipment(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment)
+	t, err := ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment)
 	if err != nil {
 		return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
 	}

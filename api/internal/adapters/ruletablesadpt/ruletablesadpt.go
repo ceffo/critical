@@ -79,16 +79,10 @@ type bardDTO struct {
 // validated Tables. A violation names the table. Format 4 carries every
 // class and race table (a missing one is named) but the racial level limits,
 // format 5 those too, format 6 also the sphere access; format 3 carries none.
-// A format-7 artifact also carries the equipment: use ParseWithEquipment.
-func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
-	return ParseWithEquipment(format, raw, nil)
-}
-
-// ParseWithEquipment is Parse for an artifact that may carry the top-level
-// equipment object (format 7, ADR 0021 step 13): equipment is that object as
-// written, nil when absent. Format 7 needs it and the two tables Table 52 and
-// Table 56; formats 3 to 6 carry none of them.
-func ParseWithEquipment(format int, raw, equipment []byte) (*ruletablesvc.Tables, error) {
+// equipment is the artifact's top-level equipment object as written, nil when
+// absent (format 7, ADR 0021 step 13): format 7 needs it and the two tables
+// Table 52 and Table 56; formats 3 to 6 carry none of them.
+func Parse(format int, raw, equipment []byte) (*ruletablesvc.Tables, error) {
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()

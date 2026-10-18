@@ -18,8 +18,7 @@
     "title": "Réglages",
     "language": "Langue",
     "appearance": "Apparence",
-    "darkTheme": "Sombre",
-    "lightTheme": "Clair",
+    "theme": "Thème",
     "mode": {
       "dark": "Sombre",
       "light": "Clair",

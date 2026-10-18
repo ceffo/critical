@@ -254,8 +254,8 @@ test("brand placement: each placement in French, Arcane dark at both viewports, 
 
   for (const run of RUNS) {
     // The app's own Arcane theme (ADR 0026); the raised stage's band tone is in header.css.
-    await chooseTheme(page, run.mode, fr("settings.themes.arcane"));
     await chooseSetting(page, fr(`settings.mode.${run.mode}`));
+    await chooseTheme(page, fr("settings.themes.arcane"));
     await focus(page, fr, "act");
     await page.getByRole("tab", { name: fr("actions.tabs.weapons") }).click();
     await annotate(page);

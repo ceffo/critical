@@ -745,11 +745,25 @@ test("settings: language, appearance and both themes apply live and persist acro
   await openDashboard(page);
   expect(await isDark(page)).toBe(false); // System by default, the OS is light
 
-  await chooseTheme(page, "light", "Parchment");
+  await chooseTheme(page, "Parchment");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
+  // The list follows the appearance: light themes in Light, dark themes in Dark.
+  let popover = await openSettings(page);
+  const list = popover.getByTestId("settings-theme");
+  await expect(list).toHaveAttribute("data-mode", "light");
+  await expect(list.getByRole("radio")).toHaveText([
+    /Arcane/,
+    /Parchment/,
+    /Plain/,
+  ]);
+  await page.keyboard.press("Escape");
   await chooseSetting(page, "Dark");
   expect(await isDark(page)).toBe(true);
-  await chooseTheme(page, "dark", "Deep");
+  await openSettings(page);
+  await expect(list).toHaveAttribute("data-mode", "dark");
+  await expect(list.getByRole("radio")).toHaveText([/Arcane/, /Deep/, /Plain/]);
+  await page.keyboard.press("Escape");
+  await chooseTheme(page, "Deep");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
   await chooseLanguage(page, "fr");
   await expect(
@@ -769,18 +783,17 @@ test("settings: language, appearance and both themes apply live and persist acro
     page.getByRole("button", { name: "Tour suivant" }),
   ).toBeVisible();
   expect(await rootVar(page, "--tint")).toMatch(DEEP);
-  const popover = await openSettings(page);
+  popover = await openSettings(page);
   for (const name of ["Français", "Sombre"])
     await expect(
       popover.getByRole("radio", { name, exact: true }),
     ).toHaveAttribute("aria-checked", "true");
-  for (const [group, name] of [
-    ["settings-dark-theme", "Abysses"],
-    ["settings-light-theme", "Parchemin"],
-  ])
-    await expect(
-      popover.getByTestId(group).getByRole("radio", { name, exact: true }),
-    ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    popover.getByTestId("settings-theme").getByRole("radio", {
+      name: "Abysses",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-checked", "true");
   await expectNoClippedText(popover, "settings popover, fr");
   await expectWholeWords(popover, "settings popover, fr");
   await snap(page, "settings-popover-fr");
@@ -791,6 +804,26 @@ test("settings: language, appearance and both themes apply live and persist acro
   await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
   await page.emulateMedia({ colorScheme: "dark" });
   await expect.poll(() => isDark(page)).toBe(true);
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
+
+  // Dark -> Light -> Dark: each appearance keeps its own pick, and the list switches with it.
+  await popover.getByRole("radio", { name: "Clair", exact: true }).click();
+  await expect(popover.getByTestId("settings-theme")).toHaveAttribute(
+    "data-mode",
+    "light",
+  );
+  await expect(
+    popover
+      .getByTestId("settings-theme")
+      .getByRole("radio", { name: "Parchemin", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
+  await popover.getByRole("radio", { name: "Sombre", exact: true }).click();
+  await expect(
+    popover
+      .getByTestId("settings-theme")
+      .getByRole("radio", { name: "Abysses", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
 });
 
@@ -867,7 +900,7 @@ test("theme: the main screens in dark and light, every theme in each of its mode
   ] as const) {
     await chooseSetting(page, mode);
     for (const name of themes) {
-      await chooseTheme(page, which, name);
+      await chooseTheme(page, name);
       await page.waitForTimeout(150); // let colour transitions settle
       await expectNoClippedText(page.locator("body"), `${which} ${name}, fr`);
       // Parchment's own touches (ADR 0026 step 7): Cinzel section labels, a gilt latest outline;

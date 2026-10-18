@@ -18,8 +18,7 @@
     "title": "Settings",
     "language": "Language",
     "appearance": "Appearance",
-    "darkTheme": "Dark",
-    "lightTheme": "Light",
+    "theme": "Theme",
     "mode": {
       "dark": "Dark",
       "light": "Light",

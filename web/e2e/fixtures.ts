@@ -131,7 +131,28 @@ async function seedsWith(
   return out;
 }
 
-/** The fixture catalogue with extra spells (artifact format, each with its id) appended. */
+/**
+ * Format 6 (ADR 0021 step 12) gives every priest spell its sphere codes: an extra priest spell
+ * without them gets them from its raw sphere text ("Elemental (Fire)" → elemental_fire).
+ */
+function withSphereCodes(spell: unknown): unknown {
+  const s = spell as { class?: string; sphere?: string; spheres?: string[] };
+  if (s.class !== "Priest" || s.spheres) return spell;
+  const codes = (s.sphere ?? "All")
+    .split(/[,/]/)
+    .map((p) =>
+      p
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z]+/g, "_")
+        .replace(/^_|_$/g, ""),
+    )
+    .filter((c) => c !== "");
+  return { ...s, spheres: [...new Set(codes.length ? codes : ["all"])] };
+}
+
+/** The fixture catalogue with extra spells (artifact format, each with its id) appended; an extra
+ * spell replaces the fixture's spell of the same id. */
 async function catalogueWith(
   dir: string,
   extraSpells: unknown[],
@@ -140,10 +161,17 @@ async function catalogueWith(
   const doc = JSON.parse(await readFile(catalogueFile, "utf8")) as {
     spells: unknown[];
   };
+  const extraIds = new Set(extraSpells.map((s) => (s as { id: string }).id));
   const out = path.join(dir, "catalogue.json");
   await writeFile(
     out,
-    JSON.stringify({ ...doc, spells: [...doc.spells, ...extraSpells] }),
+    JSON.stringify({
+      ...doc,
+      spells: [
+        ...doc.spells.filter((s) => !extraIds.has((s as { id: string }).id)),
+        ...extraSpells.map(withSphereCodes),
+      ],
+    }),
   );
   return out;
 }

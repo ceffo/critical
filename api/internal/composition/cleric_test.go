@@ -80,7 +80,7 @@ func TestCleric_Steps13to16_PrepareCastAndTurn(t *testing.T) {
 // ADR 0030 steps 13 and 15.2: a 3rd-level cleric (3,000 XP, PHB Table 23) of
 // Wisdom 15 has two 1st and one 2nd on top of Table 24's two 1st and one 2nd,
 // rolls no failure die, and prepares 2nd-level spells too: Produce Flame
-// (Elemental Fire, minor, 2nd) is open, Produce Fire (Elemental Fire, 4th)
+// (Elemental Fire, minor, 2nd) is open, Flame Walk (Elemental Fire, 4th)
 // is not, nor Flame Strike (5th, no slot).
 func TestCleric_Steps13_15_AThirdLevelClericOfWisdom15(t *testing.T) {
 	ctx := context.Background()
@@ -102,7 +102,7 @@ func TestCleric_Steps13_15_AThirdLevelClericOfWisdom15(t *testing.T) {
 	got := spellbookOf(t, bs, id)
 	assert.Contains(t, got, "produce_flame")
 	assert.Contains(t, got, "chant")
-	assert.NotContains(t, got, "produce_fire")
+	assert.NotContains(t, got, "flame_walk")
 	assert.NotContains(t, got, "flame_strike")
 	_, err = bs.Prep.Prepare(ctx, id, []string{"bless"})
 	require.NoError(t, err)

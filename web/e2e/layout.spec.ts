@@ -1976,3 +1976,112 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
     }
   }
 });
+
+// The character dialogs of the cog menu and the page of a user with no character (ADR 0029 step
+// 7.2), French first: the creation form, the switch list (a long name) and the creation page are
+// never cut, fr and en, 1280x800 and 2560x1440.
+test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const call = (method: string, url: string, body: unknown) =>
+    page.evaluate(
+      async ([m, u, b]) => {
+        const r = await fetch(u as string, {
+          method: m as string,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(b),
+        });
+        return {
+          ok: r.ok,
+          body: (await r.json()) as { characters: { id: number }[] },
+        };
+      },
+      [method, url, body] as const,
+    );
+  const created = await call("POST", "/api/characters", {
+    name: "Aldéric de la Tour-d'Auvergne-Lesparre",
+    class: "bard",
+    raceCode: "half_elf",
+    str: 10,
+    dex: 15,
+    con: 12,
+    int: 14,
+    wis: 9,
+    cha: 16,
+    hpMax: 6,
+    xp: 0,
+  });
+  expect(created.ok).toBe(true);
+  await page.reload();
+  const dialog = page.getByTestId("character-dialog");
+
+  for (const lang of ["fr", "en"] as const) {
+    if (lang === "en") await chooseLanguage(page, "en");
+    const [switchHint, newHint] =
+      lang === "fr"
+        ? [/^Changer de personnage/, "Créer un nouveau personnage"]
+        : [/^Switch character/, "Create a new character"];
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      let settings = await openSettings(page);
+      await expectNoClippedText(
+        settings.getByTestId("settings-character"),
+        `cog menu characters, ${where}`,
+      );
+      await settings.getByRole("button", { name: newHint }).click();
+      await expect(dialog.getByTestId("character-form")).toBeVisible();
+      await expectNoClippedText(dialog, `new character form, ${where}`);
+      await expectWholeWords(dialog, `new character form, ${where}`);
+      await snap(page, `character-form-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+
+      settings = await openSettings(page);
+      await settings.getByRole("button", { name: switchHint }).click();
+      await expect(
+        dialog.getByTestId("character-list").getByRole("listitem"),
+      ).toHaveCount(2);
+      await expectNoClippedText(dialog, `switch list, ${where}`);
+      await snap(page, `character-switch-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+    }
+  }
+
+  // Both characters retired: the creation page, the first one's lead (no character left).
+  const list = await call("GET", "/api/characters", undefined);
+  for (const c of list.body.characters)
+    expect(
+      (await call("PATCH", `/api/characters/${c.id}`, { retired: true })).ok,
+    ).toBe(true);
+  for (const lang of ["fr", "en"] as const) {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    const card = page.getByTestId("create-card");
+    await expect(card.getByTestId("character-form")).toBeVisible();
+    if (lang === "fr")
+      await page.getByRole("radio", { name: "Français", exact: true }).click();
+    else
+      await page.getByRole("radio", { name: "English", exact: true }).click();
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(
+        page.locator("body"),
+        `creation page, ${where}`,
+      );
+      await snap(page, `create-page-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+});

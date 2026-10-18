@@ -1,0 +1,323 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
+import { UserPlus } from "@phosphor-icons/react";
+import { createCharacter, fetchCreationOptions } from "@/api/characters";
+import { ApiError } from "@/api/http";
+import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
+import { Button } from "@/components/ui/button";
+import { parseWhole } from "@/lib/wholeNumber";
+import { cn } from "@/lib/utils";
+import {
+  ABILITIES,
+  type CreationOptions,
+  type NewCharacter,
+  type ValueRange,
+} from "@/types/character";
+
+type NumberField = (typeof ABILITIES)[number] | "hpMax" | "xp";
+type Field = NumberField | "name" | "class" | "raceCode";
+
+/** The server's field names for the form's: the race is `race` in its errors. */
+const ERROR_FIELD: Record<string, Field> = { race: "raceCode" };
+
+interface FieldError {
+  field: Field;
+  code: string;
+  /** The server's message, shown when the web has no wording for the code. */
+  message?: string;
+}
+
+/**
+ * The new character form (ADR 0029 step 7.2, ADR 0030 step 1): the class (the ones the server can
+ * create), the race (the ones the class admits, DMG Table 7), the name, the six ability scores as
+ * on the sheet, the max HP and the starting XP. Level, THAC0 and saves are never entered: the server
+ * derives them. It starts with no equipment. The server checks every value and refuses with the
+ * field; the form words its code. On success the page reloads on the new character, now current.
+ */
+export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
+  const { t } = useTranslation();
+  const [options, setOptions] = useState<CreationOptions | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [cls, setCls] = useState("");
+  const [race, setRace] = useState("");
+  const [numbers, setNumbers] = useState<Record<NumberField, string>>({
+    str: "",
+    dex: "",
+    con: "",
+    int: "",
+    wis: "",
+    cha: "",
+    hpMax: "",
+    xp: "0",
+  });
+  const [error, setError] = useState<FieldError | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    fetchCreationOptions().then(
+      (o) => {
+        if (!live) return;
+        setOptions(o);
+        const first = o.classes[0];
+        if (first) {
+          setCls(first.class);
+          setRace(first.races[0] ?? "");
+        }
+      },
+      (e: unknown) => live && setLoadError(String((e as Error).message ?? e)),
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const races = options?.classes.find((c) => c.class === cls)?.races ?? [];
+  const rangeOf = (f: NumberField): ValueRange | undefined =>
+    options
+      ? f === "hpMax"
+        ? options.hpMax
+        : f === "xp"
+          ? options.xp
+          : options.ability
+      : undefined;
+
+  const wording = (e: FieldError): string => {
+    const r =
+      e.field === "name"
+        ? { max: options?.maxNameLength }
+        : e.field in numbers
+          ? rangeOf(e.field as NumberField)
+          : undefined;
+    const key = `characters.errors.${e.code}`;
+    const className = t(`details.classes.${cls}`, { defaultValue: cls });
+    return t(key, {
+      ...r,
+      className,
+      defaultValue: e.message ?? e.code,
+    });
+  };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const body: NewCharacter = {
+      name,
+      class: cls,
+      raceCode: race,
+      str: null,
+      dex: null,
+      con: null,
+      int: null,
+      wis: null,
+      cha: null,
+      hpMax: null,
+      xp: null,
+    };
+    for (const f of Object.keys(numbers) as NumberField[]) {
+      const v = parseWhole(numbers[f]);
+      if (Number.isNaN(v)) {
+        setError({ field: f, code: "out_of_range" });
+        return;
+      }
+      body[f] = v;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await createCharacter(body);
+      globalThis.location.assign("/");
+    } catch (err) {
+      setBusy(false);
+      if (err instanceof ApiError && err.field) {
+        setError({
+          field: ERROR_FIELD[err.field] ?? (err.field as Field),
+          code: err.message,
+          message: err.message,
+        });
+      } else {
+        setError({
+          field: "name",
+          code: "",
+          message: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  };
+
+  const errorFor = (f: Field) =>
+    error?.field === f ? (
+      <p
+        id={`new-character-${f}-error`}
+        role="alert"
+        className="text-label text-destructive"
+        data-testid="field-error"
+      >
+        {wording(error)}
+      </p>
+    ) : null;
+
+  const fieldProps = (f: Field) => ({
+    id: `new-character-${f}`,
+    "aria-invalid": error?.field === f ? true : undefined,
+    "aria-describedby":
+      error?.field === f ? `new-character-${f}-error` : undefined,
+    className: cn(fieldClass, error?.field === f && "border-destructive"),
+  });
+
+  const number = (f: NumberField, label: string, hint?: string) => {
+    const r = rangeOf(f);
+    return (
+      <div className="flex min-w-0 flex-col gap-1">
+        <label htmlFor={`new-character-${f}`} className={labelClass}>
+          {label}
+        </label>
+        <input
+          {...fieldProps(f)}
+          inputMode="numeric"
+          title={
+            hint ??
+            (r ? t("characters.range", { min: r.min, max: r.max }) : undefined)
+          }
+          value={numbers[f]}
+          onChange={(e) => {
+            setNumbers((n) => ({ ...n, [f]: e.target.value }));
+            setError(null);
+          }}
+        />
+        {errorFor(f)}
+      </div>
+    );
+  };
+
+  if (loadError)
+    return (
+      <p role="alert" className="text-body text-danger">
+        {loadError}
+      </p>
+    );
+  if (!options)
+    return <p className="text-body text-muted-foreground">{t("loading")}</p>;
+
+  return (
+    <form
+      noValidate
+      onSubmit={(e) => void submit(e)}
+      className="flex flex-col gap-4"
+      aria-label={t("characters.formTitle")}
+      data-testid="character-form"
+    >
+      <div className="flex min-w-0 flex-col gap-1">
+        <label htmlFor="new-character-name" className={labelClass}>
+          {t("characters.name")}
+        </label>
+        <input
+          {...fieldProps("name")}
+          autoComplete="off"
+          maxLength={options.maxNameLength * 2}
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setError(null);
+          }}
+        />
+        {errorFor("name")}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <label htmlFor="new-character-class" className={labelClass}>
+            {t("details.class")}
+          </label>
+          <select
+            {...fieldProps("class")}
+            value={cls}
+            onChange={(e) => {
+              const next = e.target.value;
+              setCls(next);
+              const allowed =
+                options.classes.find((c) => c.class === next)?.races ?? [];
+              if (!allowed.includes(race)) setRace(allowed[0] ?? "");
+              setError(null);
+            }}
+          >
+            {options.classes.map((c) => (
+              <option key={c.class} value={c.class}>
+                {t(`details.classes.${c.class}`, { defaultValue: c.class })}
+              </option>
+            ))}
+          </select>
+          {errorFor("class")}
+        </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <label htmlFor="new-character-raceCode" className={labelClass}>
+            {t("characters.race")}
+          </label>
+          <select
+            {...fieldProps("raceCode")}
+            value={race}
+            onChange={(e) => {
+              setRace(e.target.value);
+              setError(null);
+            }}
+          >
+            {races.map((r) => (
+              <option key={r} value={r}>
+                {t(`details.races.${r}`)}
+              </option>
+            ))}
+          </select>
+          {errorFor("raceCode")}
+        </div>
+      </div>
+
+      <fieldset className="flex min-w-0 flex-col gap-2">
+        <legend className={cn(labelClass, "mb-1")}>
+          {t("characters.abilities")}
+        </legend>
+        <p className="text-label text-muted-foreground">
+          {t("characters.abilitiesLead")}
+        </p>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {ABILITIES.map((a) =>
+            number(
+              a,
+              t(`attr.${a}`),
+              t("characters.abilityHint", {
+                name: t(`abilityCheck.names.${a}`),
+                min: options.ability.min,
+                max: options.ability.max,
+              }),
+            ),
+          )}
+        </div>
+      </fieldset>
+
+      <div className="grid grid-cols-2 gap-3">
+        {number("hpMax", t("characters.hpMax"))}
+        {number("xp", t("characters.xp"))}
+      </div>
+      <p className="text-label text-muted-foreground">
+        {t("characters.derivedLead")}
+      </p>
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {onCancel && (
+          <Button type="button" variant="quiet" onClick={onCancel}>
+            {t("characters.cancel")}
+          </Button>
+        )}
+        <Button
+          type="submit"
+          variant="main"
+          disabled={busy}
+          aria-label={t("characters.createHint")}
+          title={t("characters.createHint")}
+        >
+          <UserPlus aria-hidden />
+          {t("characters.create")}
+        </Button>
+      </div>
+    </form>
+  );
+}

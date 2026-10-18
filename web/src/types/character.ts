@@ -84,3 +84,52 @@ export type CharacterDetails = Pick<
   | "eyes"
   | "languages"
 >;
+
+// Mirrors api/internal/rest/handler/characterhdl (SummaryDTO, CharactersDTO, OptionsDTO, CreateBody).
+
+/** A character in its owner's list (ADR 0029 step 7.2). */
+export interface CharacterSummary {
+  id: number;
+  name: string;
+  /** The class code, worded by `details.classes.<code>`. */
+  class: string;
+  /** The level the rules derive (ADR 0030 step 3). */
+  level: number;
+}
+
+/** The user's characters, not retired, in creation order, and the current one (null: none). */
+export interface CharacterList {
+  characters: CharacterSummary[];
+  currentId: number | null;
+}
+
+/** An inclusive range the server checks. */
+export interface ValueRange {
+  min: number;
+  max: number;
+}
+
+/** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
+export interface CreationOptions {
+  classes: { class: string; races: string[] }[];
+  ability: ValueRange;
+  hpMax: ValueRange;
+  xp: ValueRange;
+  maxNameLength: number;
+}
+
+/** The six ability codes, in the sheet's order. */
+export const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
+export type AbilityCode = (typeof ABILITIES)[number];
+
+/**
+ * A new character (`POST /api/characters`): only what is entered (ADR 0030 step 1), never a level
+ * or a THAC0. A number left blank is null, which the server refuses with its field.
+ */
+export type NewCharacter = {
+  name: string;
+  class: string;
+  raceCode: string;
+  hpMax: number | null;
+  xp: number | null;
+} & Record<AbilityCode, number | null>;

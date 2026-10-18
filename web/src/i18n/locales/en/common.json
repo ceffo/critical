@@ -1530,7 +1530,8 @@
     "not_invited": "This Google account is not invited. Ask an admin for an invite.",
     "user_disabled": "This account is disabled. Ask an admin.",
     "root_admin_protected": "The root administrator cannot be disabled or demoted.",
-    "root_admin_taken": "Another user is already the root administrator."
+    "root_admin_taken": "Another user is already the root administrator.",
+    "database_unavailable": "The database is not answering. Try again in a moment."
   },
   "lastShort": {
     "attack": "Attack",
@@ -1547,5 +1548,9 @@
       "success": "success",
       "failure": "failed"
     }
+  },
+  "database": {
+    "unavailable": "The database is not answering. Retrying…",
+    "uncertainWrite": "Your last action may not have been saved. Actions resume once the sheet is reloaded: check the journal before trying again."
   }
 }

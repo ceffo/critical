@@ -1530,7 +1530,8 @@
     "not_invited": "Ce compte Google n'est pas invité. Demandez une invitation à un administrateur.",
     "user_disabled": "Ce compte est désactivé. Adressez-vous à un administrateur.",
     "root_admin_protected": "L'administrateur principal ne peut être ni désactivé ni rétrogradé.",
-    "root_admin_taken": "Un autre utilisateur est déjà l'administrateur principal."
+    "root_admin_taken": "Un autre utilisateur est déjà l'administrateur principal.",
+    "database_unavailable": "La base de données ne répond pas. Réessayez dans un instant."
   },
   "lastShort": {
     "attack": "Attaque",
@@ -1547,5 +1548,9 @@
       "success": "réussi",
       "failure": "échec"
     }
+  },
+  "database": {
+    "unavailable": "La base de données ne répond pas. Nouvel essai…",
+    "uncertainWrite": "Votre dernière action n'a peut-être pas été enregistrée. Les actions reprennent une fois la fiche rechargée : vérifiez le journal avant de réessayer."
   }
 }

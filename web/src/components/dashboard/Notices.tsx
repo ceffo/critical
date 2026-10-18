@@ -4,12 +4,23 @@ import { X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { buffName, useSpellName } from "@/i18n/spellName";
 import { useTableStore } from "@/stores/table";
+import { useDatabaseStore } from "@/stores/database";
+import { isUnavailableMessage } from "@/api/http";
 
 /** Server errors (verbatim, role=alert) and round notices (role=status), bottom-left. */
 export function Notices() {
   const { t } = useTranslation();
   const spellName = useSpellName();
-  const { error, notice, clearError, clearNotice } = useTableStore();
+  const {
+    error: tableError,
+    notice,
+    clearError,
+    clearNotice,
+  } = useTableStore();
+  // An unavailable database has its own banner (DatabaseBanner): its error is not repeated here.
+  const dbUnavailable = useDatabaseStore((s) => s.unavailable);
+  const error =
+    dbUnavailable && isUnavailableMessage(tableError) ? null : tableError;
 
   useEffect(() => {
     if (!notice) return;

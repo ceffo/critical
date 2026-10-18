@@ -4,6 +4,7 @@
 #     run that CI's success on main's head must trigger;
 #   - every open PR (ours and Dependabot's): its checks.
 # Prints one line per item that is not green: "PENDING <what>" or "RED <what> <url>".
+# A cancelled run counts as superseded (concurrency cancels a run when a newer push arrives).
 # Exit 0: all green. 10: something pending, nothing red. 20: something red.
 # A red item listed (its run id or "pr<n>@<sha7>") in supervisor/ci-red-handled is reported as
 # "HANDLED ..." and doesn't count: append it there once you've acted on it (rework brief, rerun).
@@ -26,10 +27,10 @@ for wf in CI Release Promote; do
   [ -n "$r" ] || continue
   id=$(jq -r .databaseId <<<"$r"); st=$(jq -r .status <<<"$r"); c=$(jq -r .conclusion <<<"$r"); url=$(jq -r .url <<<"$r")
   if [ "$st" != completed ]; then flag PENDING "$id" "main $wf run $id ($st)"
-  elif [ "$c" != success ] && [ "$c" != skipped ] && [ "$c" != neutral ]; then flag RED "$id" "main $wf run $id ($c) $url"; fi
+  elif [ "$c" != success ] && [ "$c" != skipped ] && [ "$c" != neutral ] && [ "$c" != cancelled ]; then flag RED "$id" "main $wf run $id ($c) $url"; fi
 done
 # CI green on main's head but its Release run not started yet (workflow_run gap).
-ci_head=$(jq -r --arg s "$head_sha" '[.[]|select(.workflowName=="CI" and .headSha==$s and .event=="push")][0].conclusion // empty' <<<"$runs")
+ci_head=$(jq -r --arg s "$head_sha" '[.[]|select(.workflowName=="CI" and .headSha==$s and (.event=="push" or .event=="workflow_dispatch"))][0].conclusion // empty' <<<"$runs")
 rel_head=$(jq -r --arg s "$head_sha" '[.[]|select(.workflowName=="Release" and .headSha==$s)]|length' <<<"$runs")
 [ "$ci_head" = success ] && [ "$rel_head" = 0 ] && flag PENDING "release-$head_sha" "main Release for ${head_sha:0:7} not started yet"
 [ -z "$ci_head" ] && [ -n "$head_sha" ] && ! jq -e --arg s "$head_sha" 'any(.[];.workflowName=="CI" and .headSha==$s)' <<<"$runs" >/dev/null \
@@ -41,7 +42,7 @@ while IFS= read -r p; do
   [ -n "$p" ] || continue
   n=$(jq -r .number <<<"$p"); sha=$(jq -r '.headRefOid[0:7]' <<<"$p")
   np=$(jq '[.statusCheckRollup[]|select((.status // "COMPLETED")!="COMPLETED")]|length' <<<"$p")
-  bad=$(jq -r '[.statusCheckRollup[]|select((.status // "COMPLETED")=="COMPLETED")|select(((.conclusion // .state)|IN("SUCCESS","SKIPPED","NEUTRAL"))|not)|.name // .context]|join(",")' <<<"$p")
+  bad=$(jq -r '[.statusCheckRollup[]|select((.status // "COMPLETED")=="COMPLETED")|select(((.conclusion // .state)|IN("SUCCESS","SKIPPED","NEUTRAL","CANCELLED"))|not)|.name // .context]|join(",")' <<<"$p")
   [ -n "$bad" ] && flag RED "pr$n@$sha" "PR #$n @$sha failing: $bad"
   [ "$np" -gt 0 ] && [ -z "$bad" ] && flag PENDING "pr$n" "PR #$n @$sha: $np check(s) running"
 done < <(jq -c '.[]' <<<"$prs")

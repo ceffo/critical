@@ -6,6 +6,8 @@ critical-qki.8, critical-qki.20, critical-qki.29 and critical-qki.33, until then
 2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers); step 19 (add a
 spell as an effect from the lookup) added 2026-10-16. Steps 7 to 10 amended for warriors by [ADR 0030](0030-classes-and-races.md) (18/xx), on its implementation.
 
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 11 (an `ac` effect is a change of the AC number, negative betters it; new effect kinds `base_ac` and `initiative`, ADR 0033 step 11) and step 18 (a second condition, `without_magic_armour`, ADR 0033 step 12)._
+
 ## Context
 
 A buff is an active effect on the character: a spell received or cast (Strength, Stoneskin, Mirror

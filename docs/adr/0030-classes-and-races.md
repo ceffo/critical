@@ -16,6 +16,8 @@ to 10 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR
 steps 2 and 3, [ADR 0014](0014-skill-checks.md) step 3 and [ADR 0015](0015-experience.md) steps 2
 and 3, each from its implementation.
 
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 1 and steps 17 and 18 (the skill armour is the worn body armour; the entered field and its drop-down are removed, ADR 0033 step 14), step 23 (the weapon type also comes from the catalogue row, ADR 0033 steps 3 and 21) and the Consequences (class armour and weapon limits warned, never enforced, ADR 0033 step 20)._
+
 ## Context
 
 Until now the app manages one level 15 half-elf Bard and stores what the sheet says: level, THAC0
@@ -137,6 +139,12 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    `out_of_range`, `not_creatable`, `unknown`, `race_not_allowed`), worded by the web.
    Tests: `TestCreate_RefusesInvalidInputWithFieldErrors`, `TestCreate_AcceptsTheBounds` (charactersvc),
    `TestCreate_RefusedInputStoresNothing` (composition).
+   _(Amended 2026-10-18 by [ADR 0032](0032-character-identity-and-creation-rolls.md))_ A created
+   character also enters its alignment (required, class limits refused), sex (required), languages
+   (catalogue only, the native one automatic) and height, weight and age; the free-text race of the
+   details is dropped (the rules race is the only race); and rolling is offered for the scores, the max HP
+   and the identity numbers (typing stays possible). Step 7.5's "Level 1 hit points are entered, never
+   rolled here" no longer holds for a created character: ADR 0032 step 7 rolls them.
 2. **Class groups.** Fighter is a warrior, mage a wizard, cleric a priest, thief and bard rogues.
    The group picks the THAC0 row (step 5), the saving throw rows (step 6), the hit dice (step 7) and
    the Constitution hit point bonus (warriors get the higher one, step 7).

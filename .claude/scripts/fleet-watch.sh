@@ -19,7 +19,7 @@ old=$(cat "$pidf" 2>/dev/null) && [ -n "$old" ] && [ "$old" != $$ ] && kill "$ol
 echo $$ > "$pidf"
 trap '[ "$(cat "$pidf" 2>/dev/null)" = $$ ] && rm -f "$pidf"' EXIT
 declare -A seen state
-snap() { herdr agent list 2>/dev/null | jq -r '.result.agents[]|select(.name|startswith("sup-")|not)|"\(.name) \(.agent_status) \(.state_change_seq)"'; }
+snap() { herdr agent list 2>/dev/null | jq -r '.result.agents[]|select((.name // "sup-")|startswith("sup-")|not)|"\(.name) \(.agent_status) \(.state_change_seq)"'; }
 while read -r n s q; do [ -n "$n" ] && { seen[$n]=$q; state[$n]=$s; }; done < <(snap)
 fresh_report() { # the agent's report newer than the supervisor's last prompt marker for its item
   local item=${1#*-}; item=${item^^}; local f

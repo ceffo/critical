@@ -12,6 +12,8 @@ critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
 PostgreSQL now.
 
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: a step 13 (format 7: equipment reference data, `equipment` and two rule tables, ADR 0033 steps 21 to 23)._
+
 ## Context
 
 User, 2026-10-15: _"at some point we'll have to stop with the seeds. we need a more thoughtful way of

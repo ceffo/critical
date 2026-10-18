@@ -22,6 +22,8 @@ export type LogKind =
   | "xp_add"
   | "xp_edit"
   | "xp_remove"
+  /** A level-up roll (ADR 0030 step 7.3); popping it gives the max HP back, the level pending again. */
+  | "level_up"
   | "spell_prep"
   | "long_rest"
   | "save"

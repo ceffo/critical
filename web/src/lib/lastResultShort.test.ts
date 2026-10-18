@@ -236,6 +236,23 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
   xp_add: { e: entry("xp_add", null), value: null, en: "XP", fr: "XP" },
   xp_edit: { e: entry("xp_edit", null), value: null, en: "XP", fr: "XP" },
   xp_remove: { e: entry("xp_remove", null), value: null, en: "XP", fr: "XP" },
+  level_up: {
+    e: entry("level_up", {
+      level: 16,
+      hitDie: 0,
+      rolled: null,
+      counted: null,
+      conAdjustment: 0,
+      gain: 2,
+      fixed: true,
+      manual: false,
+      hpMaxBefore: 85,
+      hpMaxAfter: 87,
+    }),
+    value: "+2",
+    en: "Level",
+    fr: "Niveau",
+  },
   spell_prep: {
     e: entry("spell_prep", null),
     value: null,

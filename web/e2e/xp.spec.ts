@@ -1,5 +1,10 @@
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, openWorkspace } from "./helpers";
+import {
+  chooseLanguage,
+  logEntry,
+  openDashboard,
+  openWorkspace,
+} from "./helpers";
 import type { Page } from "@playwright/test";
 
 /** The XP total shown in the progress card, as a number (en formatting: "1,293,418"). */
@@ -93,4 +98,68 @@ test("experience: add with the bonus, edit, delete, then undo each", async ({
   ])
     await expect(logEntry(page, text)).toHaveAttribute("data-status", "voided");
   await snap(page, "experience-journal");
+});
+
+/** The max HP as shown in the Moi column ("current / max"). */
+async function maxHp(page: Page): Promise<number> {
+  const text = (await page.getByTestId("hp-value").textContent()) ?? "";
+  const m = /\/\s*(\d+)/.exec(text);
+  if (!m) throw new Error(`unexpected HP text: ${JSON.stringify(text)}`);
+  return Number(m[1]);
+}
+
+// ADR 0030 step 7, in French (ADR 0027 step 2). What only a browser proves: an XP add that crosses
+// a level makes the character card prompt for the hit points without a reload (the refresh wiring),
+// the prompt's button raises the max HP the HP panel shows and leaves, the journal words the entry,
+// and the journal's Undo brings the prompt back. The rules (the die, Constitution, the fixed gain,
+// two levels at once, the stale level) are Go tests (levelupsvc, charactersvc, composition); the
+// prompt's wording is a unit test (LevelUpPrompt.test).
+test("level up: an XP add crossing a level prompts, the prompt adds the hit points, Undo brings it back", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const moi = page.getByRole("complementary", { name: "Personnage" });
+  await expect(page.getByTestId("level-up")).toHaveCount(0);
+  const before = await maxHp(page);
+
+  // 1,293,418 + 30,000 XP (no bonus) reaches Table 25's level 16 (1,320,000).
+  await moi.getByRole("button", { name: /^Niveau 15$/ }).click();
+  const add = page.getByRole("region", { name: "Ajouter des XP" });
+  await add.getByRole("checkbox").uncheck();
+  await add.getByLabel("Montant").fill("30000");
+  await add.getByLabel("Motif").fill("Le dragon");
+  await add.getByLabel("Motif").press("Enter");
+
+  // Level 16 is above the bard's name level (10): a fixed +2, no die (step 7.2).
+  const prompt = page.getByTestId("level-up");
+  await expect(prompt).toBeVisible();
+  await expect(prompt.getByTestId("level-up-title")).toHaveText(
+    "Niveau 16 atteint",
+  );
+  await expect(prompt).toContainText(
+    "Au-delà du niveau de nom : +2 PV max, sans dé",
+  );
+  await snap(page, "level-up-prompt-fr");
+
+  await prompt
+    .getByRole("button", { name: "Ajouter +2 PV max pour le niveau 16" })
+    .click();
+  await expect(prompt).toHaveCount(0);
+  await expect.poll(() => maxHp(page)).toBe(before + 2);
+  await page
+    .getByRole("navigation", { name: "Activités" })
+    .getByRole("button", { name: "Agir", exact: true })
+    .click();
+  const entry = logEntry(
+    page,
+    `Niveau 16 : PV max +2, gain fixe (${before} → ${before + 2})`,
+  );
+  await expect(entry).toBeVisible();
+
+  // The journal's Undo pops the roll: the max HP and the prompt are back.
+  await page.getByTestId("undo").click();
+  await expect(entry).toHaveAttribute("data-status", "voided");
+  await expect(page.getByTestId("level-up")).toBeVisible();
+  await expect.poll(() => maxHp(page)).toBe(before);
 });

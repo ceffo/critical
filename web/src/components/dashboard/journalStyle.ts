@@ -1,6 +1,7 @@
 // How the journal marks an entry: its kind's icon and the tone of its value. Shared by the journal
 // and its collapsed bar.
 import {
+  ArrowFatLinesUp,
   Barbell,
   BookOpen,
   Clock,
@@ -46,6 +47,7 @@ export const KIND_ICONS: Record<LogKind, Icon> = {
   xp_add: TrendUp,
   xp_edit: TrendUp,
   xp_remove: TrendUp,
+  level_up: ArrowFatLinesUp,
   spell_prep: BookOpen,
   long_rest: Moon,
   save: Shield,

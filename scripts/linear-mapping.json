@@ -1,0 +1,32 @@
+{
+  "_comment": "The one place the beads -> Linear mapping is written. Read by scripts/linear-configure.sh (the workspace shape) and by the import and the agents' scripts; described in docs/linear.md. Change it here only.",
+  "team": "CRI",
+  "project": "critical",
+  "priority": {
+    "P0": {"name": "Urgent", "linear": 1},
+    "P1": {"name": "High", "linear": 2},
+    "P2": {"name": "Medium", "linear": 3},
+    "P3": {"name": "Low", "linear": 4},
+    "P4": {"name": "None", "linear": 0}
+  },
+  "status": {
+    "open": {"state": "Todo"},
+    "in_progress": {"state": "In Progress"},
+    "deferred": {"state": "Backlog", "label": "deferred"},
+    "pr_open": {"state": "In Review"},
+    "closed": {"state": "Done"}
+  },
+  "type": {
+    "task": null,
+    "bug": "Bug",
+    "feature": "Feature",
+    "chore": "chore",
+    "docs": "docs",
+    "question": "question",
+    "epic": "epic"
+  },
+  "labels": [
+    "epic", "needs-info", "risky", "deferred", "chore", "docs", "question",
+    "mvp-saturday", "backend", "frontend", "infra", "data-prep", "tooling"
+  ]
+}

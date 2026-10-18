@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -56,6 +57,12 @@ type Options struct {
 	CookieApp string
 }
 
+// RequestDeadline bounds every request: a slow or unavailable database answers
+// a click with an error within a few seconds instead of holding it (the
+// connection gate of storage/postgres waits no longer than this either). A
+// request on a database that answers takes a small fraction of it.
+const RequestDeadline = 8 * time.Second
+
 // unknown is what /api/health reports for a build identity that was not set.
 const unknown = "unknown"
 
@@ -74,6 +81,8 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	r := chi.NewRouter()
 	r.Use(mw.Logger(log))
 	r.Use(mw.Recoverer)
+	// Before the gate, which reads the session from the database.
+	r.Use(mw.Deadline(RequestDeadline))
 	// The one access check (ADR 0029 step 6.2): every route below, and the
 	// web app outside /api, needs a session unless mw.Public lists it.
 	var auth mw.Authenticator

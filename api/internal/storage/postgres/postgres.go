@@ -5,6 +5,7 @@
 package postgres
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"database/sql/driver"
@@ -13,6 +14,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/lib/pq" // PostgreSQL driver
@@ -50,19 +52,39 @@ type DB struct {
 
 // Open connects to the PostgreSQL database at dsn (CRITICAL_DSN, a PostgreSQL connection
 // string or URL) and checks the connection. Every new connection of the pool, this first one
-// included, waits up to connectWait for a database that is still starting; ending ctx (the server's
-// SIGINT/SIGTERM) stops the first one's wait at once. It runs no migration and writes nothing: those
-// are the startup steps the composition root drives.
+// included, goes through the gate: it waits up to connectWait for a database that is still
+// starting, never beyond the caller's context (the server's SIGINT/SIGTERM at boot, a request's
+// deadline afterwards). It runs no migration and writes nothing: those are the startup steps the
+// composition root drives.
 func Open(ctx context.Context, dsn string) (*DB, error) {
-	connector, err := pq.NewConnector(dsn)
+	cfg, err := connectConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open postgres: %w", err)
 	}
-	pool, err := openPool(ctx, waitingConnector{Connector: connector, wait: connectWait, retryEvery: connectRetryEvery})
+	connector, err := pq.NewConnectorConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("open postgres: %w", err)
+	}
+	pool, err := openPool(ctx, newGate(connector, connectWait, connectRetryEvery, attemptTimeout))
 	if err != nil {
 		return nil, err
 	}
 	return newDB(pool), nil
+}
+
+// connectConfig is the driver configuration of dsn. Without a connect timeout lib/pq bounds only
+// the TCP dial by the context: a database that accepts the connection but never answers the
+// handshake (a node starved of memory) would hold the attempt forever. So one attempt gets
+// attemptTimeout, unless the DSN sets its own connect_timeout.
+func connectConfig(dsn string) (pq.Config, error) {
+	cfg, err := pq.NewConfig(dsn)
+	if err != nil {
+		return pq.Config{}, err
+	}
+	if cfg.ConnectTimeout == 0 {
+		cfg.ConnectTimeout = attemptTimeout
+	}
+	return cfg, nil
 }
 
 // openPool opens the pool over connector and checks its first connection under ctx.
@@ -75,61 +97,176 @@ func openPool(ctx context.Context, connector driver.Connector) (*sql.DB, error) 
 	return pool, nil
 }
 
-// connectWait is how long a new connection waits for the database to accept it, retrying every
-// connectRetryEvery. The fly cluster stops when idle (ADR 0024 step 2) and the first connection to
-// its Flycast address starts it: until PostgreSQL is up, connections are closed (EOF), refused or
-// answered "the database system is starting up" (what is retried: retryable). A server booting meanwhile waits instead of exiting (its
-// HTTP listener, and so its health check, comes up once the database answers; fly keeps waiting for
-// the check during a deploy), and the first request after the cluster's idle stop waits a few
-// seconds instead of failing.
+// connectWait is how long a new connection waits for the database to accept it; the gate tries
+// again every connectRetryEvery. The fly cluster stops when idle (ADR 0024 step 2) and the first
+// connection to its Flycast address starts it: until PostgreSQL is up, connections are closed
+// (EOF), refused or answered "the database system is starting up" (what is retried: retryable). A
+// server booting meanwhile waits instead of exiting (its HTTP listener, and so its health check,
+// comes up once the database answers; fly keeps waiting for the check during a deploy). A request
+// waits at most until its own deadline (middleware.Deadline), far shorter.
+//
+// attemptTimeout bounds one connection attempt, the handshake included (lib/pq's
+// connect_timeout, unless the DSN sets one).
 const (
 	connectWait       = 60 * time.Second
 	connectRetryEvery = time.Second
+	attemptTimeout    = 5 * time.Second
 )
 
-// waitingConnector is a driver.Connector whose Connect waits for a starting database
-// (waitForDatabase), for at most wait and never beyond the caller's context.
-type waitingConnector struct {
-	driver.Connector
-	wait, retryEvery time.Duration
+// ErrUnavailable is what a new connection fails with when the database did not answer within the
+// caller's wait: it is stopped, starting, or too starved to accept connections.
+var ErrUnavailable = errors.New("database unavailable")
+
+// gate is the pool's driver.Connector. While the database answers, each new connection is one
+// attempt of the inner connector. Once an attempt fails as a stopped or starting database fails
+// (retryable), the gate is down: one probe alone retries every retryEvery until the database
+// answers, and every connection asked for meanwhile waits for that, for at most wait and never
+// beyond its caller's context, without dialling. A burst of requests during an outage then puts
+// one connection attempt per second on the database instead of one per request, and no request
+// waits longer than its own deadline.
+type gate struct {
+	inner                     driver.Connector
+	wait, retryEvery, attempt time.Duration
+
+	mu sync.Mutex
+	// down is open while the database is down and closed when it answers again; nil while up.
+	down chan struct{}
+	// lastErr is the last failed attempt's error while down.
+	lastErr error
+	// closed ends the probe when the pool closes.
+	closed    chan struct{}
+	closeOnce sync.Once
 }
 
-func (c waitingConnector) Connect(ctx context.Context) (driver.Conn, error) {
-	ctx, cancel := context.WithTimeout(ctx, c.wait)
+var _ driver.Connector = (*gate)(nil)
+
+func newGate(inner driver.Connector, wait, retryEvery, attempt time.Duration) *gate {
+	return &gate{inner: inner, wait: wait, retryEvery: retryEvery, attempt: attempt, closed: make(chan struct{})}
+}
+
+// Driver is the inner connector's driver.
+func (g *gate) Driver() driver.Driver { return g.inner.Driver() }
+
+// Close stops the probe; sql.DB.Close calls it.
+func (g *gate) Close() error {
+	g.closeOnce.Do(func() { close(g.closed) })
+	return nil
+}
+
+// Connect returns a new connection: at once while the database answers, after waiting for the
+// probe while it does not. It fails with ErrUnavailable when its wait or its caller's context ends
+// first, and with the attempt's own error when waiting cannot help (a wrong password, a DSN that
+// cannot work: retryable).
+func (g *gate) Connect(ctx context.Context) (driver.Conn, error) {
+	ctx, cancel := context.WithTimeout(ctx, g.wait)
 	defer cancel()
-	var conn driver.Conn
-	err := waitForDatabase(ctx, func(ctx context.Context) error {
-		var err error
-		conn, err = c.Connector.Connect(ctx)
-		return err
-	}, c.retryEvery)
-	if err != nil {
-		return nil, err
+	for {
+		if down, last := g.state(); down != nil {
+			select {
+			case <-down:
+			case <-ctx.Done():
+				return nil, fmt.Errorf("%w: %w", ErrUnavailable, cmp.Or(last, ctx.Err()))
+			}
+		}
+		conn, err := g.try(ctx)
+		switch {
+		case err == nil:
+			return conn, nil
+		case ctx.Err() != nil:
+			return nil, fmt.Errorf("%w: %w", ErrUnavailable, err)
+		case !retryable(err):
+			return nil, err
+		}
+		g.markDown(err)
 	}
-	return conn, nil
 }
 
-// waitForDatabase calls connect until it succeeds, retrying every retryEvery while the error is
-// one a stopped or starting database gives (retryable). Any other error is returned at once, since
-// waiting cannot fix it. When ctx ends first, it returns the last error.
-func waitForDatabase(ctx context.Context, connect func(context.Context) error, retryEvery time.Duration) error {
-	for attempt := 1; ; attempt++ {
-		err := connect(ctx)
-		if err == nil {
-			return nil
+// try is one attempt of the inner connector, given up when ctx ends even if the driver does not
+// watch it; a connection that arrives after that is closed.
+func (g *gate) try(ctx context.Context) (driver.Conn, error) {
+	type result struct {
+		conn driver.Conn
+		err  error
+	}
+	done := make(chan result, 1)
+	go func() {
+		conn, err := g.inner.Connect(ctx)
+		done <- result{conn, err}
+	}()
+	// A failed attempt's connection is never used, not even closed: lib/pq returns a nil *conn
+	// with its error, a non-nil driver.Conn whose Close panics.
+	select {
+	case r := <-done:
+		if r.err != nil {
+			return nil, r.err
 		}
-		if !retryable(err) {
-			return err
-		}
-		if ctx.Err() != nil {
-			return fmt.Errorf("gave up after %d attempts: %w", attempt, err)
-		}
-		slog.Warn("postgres: database not accepting connections yet, retrying", "attempt", attempt, "error", err)
+		return r.conn, nil
+	case <-ctx.Done():
+		go func() {
+			if r := <-done; r.err == nil {
+				_ = r.conn.Close()
+			}
+		}()
+		return nil, ctx.Err()
+	}
+}
+
+func (g *gate) state() (chan struct{}, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.down, g.lastErr
+}
+
+// markDown records a failed attempt and, when the gate was up, puts it down and starts the probe.
+func (g *gate) markDown(err error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.lastErr = err
+	if g.down != nil {
+		return
+	}
+	g.down = make(chan struct{})
+	slog.Warn("postgres: database not accepting connections, waiting for it", "error", err)
+	go g.probe()
+}
+
+// markUp puts the gate up and releases every connection waiting.
+func (g *gate) markUp() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.down != nil {
+		close(g.down)
+		g.down, g.lastErr = nil, nil
+	}
+}
+
+// probe retries every retryEvery, each attempt bounded by g.attempt, until the database answers or
+// fails with an error waiting cannot fix (the waiting connections then try themselves and get it),
+// or the pool closes. Its connection is closed at once: it only proves the database answers.
+func (g *gate) probe() {
+	for n := 1; ; n++ {
 		select {
-		case <-ctx.Done():
-			return fmt.Errorf("gave up after %d attempts: %w", attempt, err)
-		case <-time.After(retryEvery):
+		case <-g.closed:
+			return
+		case <-time.After(g.retryEvery):
 		}
+		ctx, cancel := context.WithTimeout(context.Background(), g.attempt)
+		conn, err := g.try(ctx)
+		cancel()
+		switch {
+		case err == nil:
+			_ = conn.Close()
+			slog.Info("postgres: database answers again", "attempts", n)
+			g.markUp()
+			return
+		case !retryable(err) && !errors.Is(err, context.DeadlineExceeded):
+			g.markUp()
+			return
+		}
+		slog.Warn("postgres: database not accepting connections yet, retrying", "attempt", n, "error", err)
+		g.mu.Lock()
+		g.lastErr = err
+		g.mu.Unlock()
 	}
 }
 

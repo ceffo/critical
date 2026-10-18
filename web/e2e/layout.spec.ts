@@ -244,6 +244,8 @@ async function expectHeaderLayout(page: Page, where: string) {
     `turn label over its number, ${where}`,
   ).toBeLessThanOrEqual(turn.y + 1);
   const next = await box(page.getByRole("button", { name: "Tour suivant" }));
+  // Next turn is an `lg` primary action, 32 px (ADR 0017 step 5, ADR 0027 step 1.2).
+  expect(Math.round(next.height), `Tour suivant height, ${where}`).toBe(32);
   const init = page.getByTestId("initiative-value");
   expect(
     (await box(init)).y,
@@ -1727,6 +1729,24 @@ test("spells tab: Cast buttons and full-height preparation columns, French, 1280
     });
     await expect(form.getByTestId("grimoire-level-1")).toBeVisible();
     await expectNoClippedText(actions, `preparation, ${size}`);
+    // The grimoire search's placeholder fits its field (the audit does not see placeholders).
+    const search = form.getByRole("textbox", {
+      name: "Chercher dans le grimoire",
+    });
+    const fit = await search.evaluate((el) => {
+      const input = el as HTMLInputElement;
+      const s = getComputedStyle(input);
+      const ctx = document.createElement("canvas").getContext("2d")!;
+      ctx.font = `${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
+      const room =
+        input.clientWidth -
+        parseFloat(s.paddingLeft) -
+        parseFloat(s.paddingRight);
+      return { text: ctx.measureText(input.placeholder).width, room };
+    });
+    expect(fit.text, `search placeholder fits, ${size}`).toBeLessThanOrEqual(
+      fit.room,
+    );
     await snap(page, `fr-preparation-${size}`);
     // Both columns end at the panel's content bottom (its 14 px padding), nothing scrolls but them.
     const inner = (await panel.boundingBox())!;

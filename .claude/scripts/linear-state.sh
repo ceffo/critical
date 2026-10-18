@@ -4,9 +4,9 @@
 # or state, or any Linear error.
 #
 # The supervisor's tracker transitions (the GitHub integration closes the issue on merge, nobody closes by hand):
-#   PR opened            linear-state.sh CRI-12 "In Review" "PR https://github.com/…/pull/9"   (ship.sh does it)
-#   PR closed unmerged   linear-state.sh CRI-12 Todo "PR #9 closed unmerged"
-#   work claimed         linear-state.sh CRI-12 "In Progress"
+#   PR opened            linear-state.sh TST-12 "In Review" "PR https://github.com/…/pull/9"   (ship.sh does it)
+#   PR closed unmerged   linear-state.sh TST-12 Todo "PR #9 closed unmerged"
+#   work claimed         linear-state.sh TST-12 "In Progress"
 set -euo pipefail
 
 [ $# -ge 2 ] || { echo "usage: linear-state.sh <CRI-n> <State name> [comment]" >&2; exit 2; }

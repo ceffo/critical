@@ -26,12 +26,12 @@ class H(BaseHTTPRequestHandler):
         open(log, "a").write(json.dumps(body) + "\n")
         q, v = body["query"], body["variables"]
         if "issue(id" in q:
-            if v["id"] == "CRI-404":
+            if v["id"] == "TST-404":
                 out = {"data": {"issue": None}}
             else:
                 out = {"data": {"issue": {"id": "uuid-" + v["id"], "identifier": v["id"], "team": {"states": {"nodes": STATES}}}}}
         elif "issueUpdate" in q:
-            out = {"data": {"issueUpdate": {"success": v["id"] != "uuid-CRI-500"}}}
+            out = {"data": {"issueUpdate": {"success": v["id"] != "uuid-TST-500"}}}
         elif "commentCreate" in q:
             out = {"data": {"commentCreate": {"success": True}}}
         else:
@@ -51,14 +51,14 @@ reqs() { wc -l <"$tmp/requests" 2>/dev/null || echo 0; }
 sent_states() { jq -r 'select(.query|test("issueUpdate")) | .variables.s' "$tmp/requests" | paste -sd' '; }
 
 # --- linear-state.sh
-out="$("$S/linear-state.sh" CRI-12 "In Review" "PR https://x/pull/9")" || fail "linear-state failed"
-[ "$out" = "CRI-12 -> In Review" ] || fail "linear-state output: $out"
+out="$("$S/linear-state.sh" TST-12 "In Review" "PR https://x/pull/9")" || fail "linear-state failed"
+[ "$out" = "TST-12 -> In Review" ] || fail "linear-state output: $out"
 [ "$(sent_states)" = "s-rev" ] || fail "state not In Review: $(sent_states)"
-jq -e 'select(.query|test("commentCreate")) | select(.variables.b=="PR https://x/pull/9" and .variables.id=="uuid-CRI-12")' "$tmp/requests" >/dev/null || fail "comment not sent"
-"$S/linear-state.sh" CRI-404 Todo 2>"$tmp/err" && fail "unknown issue accepted"; grep -q 'no such issue' "$tmp/err" || fail "unknown issue message"
-"$S/linear-state.sh" CRI-12 Nope 2>"$tmp/err" && fail "unknown state accepted"; grep -q 'no state' "$tmp/err" || fail "unknown state message"
+jq -e 'select(.query|test("commentCreate")) | select(.variables.b=="PR https://x/pull/9" and .variables.id=="uuid-TST-12")' "$tmp/requests" >/dev/null || fail "comment not sent"
+"$S/linear-state.sh" TST-404 Todo 2>"$tmp/err" && fail "unknown issue accepted"; grep -q 'no such issue' "$tmp/err" || fail "unknown issue message"
+"$S/linear-state.sh" TST-12 Nope 2>"$tmp/err" && fail "unknown state accepted"; grep -q 'no state' "$tmp/err" || fail "unknown state message"
 : > "$tmp/requests"
-"$S/linear-state.sh" CRI-12 Todo "PR #9 closed unmerged" >/dev/null || fail "back to Todo failed"
+"$S/linear-state.sh" TST-12 Todo "PR #9 closed unmerged" >/dev/null || fail "back to Todo failed"
 [ "$(sent_states)" = "s-todo" ] || fail "unmerged path did not send Todo"
 
 # --- ship.sh with a real local remote and a stub gh
@@ -81,16 +81,16 @@ export GH_LOG="$tmp/gh.log" PATH="$tmp/bin:$PATH" CRITICAL_MAIN="$tmp/main" SHIP
 git -C "$tmp/main" init -q -b main; git -C "$tmp/main" remote add origin "$tmp/remote.git"
 echo body > "$tmp/body"
 : > "$tmp/requests"
-out="$("$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body" CRI-1 CRI-2 2>"$tmp/err")" || fail "ship failed: $(cat "$tmp/err")"
+out="$("$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body" TST-1 TST-2 2>"$tmp/err")" || fail "ship failed: $(cat "$tmp/err")"
 [ "$out" = "PR 77 MERGEABLE" ] || fail "ship output: $out"
 [ "$(sent_states)" = "s-rev s-rev" ] || fail "ship states: $(sent_states)"
 [ "$(jq -r 'select(.query|test("commentCreate")) | .variables.b' "$tmp/requests" | sort -u)" = "PR https://github.com/o/r/pull/77" ] || fail "PR link comment"
 grep -q 'Done\|s-done' "$tmp/requests" && fail "ship closed an issue"
 git -C "$tmp/remote.git" rev-parse -q --verify refs/heads/feat >/dev/null || fail "branch not pushed"
 : > "$tmp/requests"
-out="$("$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body" CRI-404 CRI-3 2>"$tmp/err")" && fail "ship with a bad issue exited 0"
+out="$("$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body" TST-404 TST-3 2>"$tmp/err")" && fail "ship with a bad issue exited 0"
 [ "$out" = "PR 77 MERGEABLE" ] || fail "PR line missing after a Linear failure: $out"
-grep -q 'CRI-404 not moved' "$tmp/err" || fail "bad issue not reported"
+grep -q 'TST-404 not moved' "$tmp/err" || fail "bad issue not reported"
 [ "$(sent_states)" = "s-rev" ] || fail "the good issue was skipped after the bad one"
 
 # --- land.sh: merges, no Linear call

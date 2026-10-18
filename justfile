@@ -39,10 +39,11 @@ check-no-sqlite:
     fi
     echo "--- No SQLite in the server ---"
 
-# scripts/linear.sh (Linear GraphQL helper), scripts/linear-setup.sh and the supervisor's Linear scripts (.claude/scripts) against a local stub server; no real Linear call.
+# scripts/linear.sh (Linear GraphQL helper), scripts/linear-setup.sh, scripts/linear-configure.sh and the supervisor's Linear scripts (.claude/scripts) against a local stub server; no real Linear call.
 check-linear:
     scripts/test-linear.sh
     scripts/test-ship-linear.sh
+    scripts/test-linear-configure.sh
 
 # scripts/linear-ready.sh and the Linear mode of pending-questions.sh against a local stub server; no real Linear call.
 check-linear-queue:
@@ -465,3 +466,9 @@ ui-brand: build-api
 # Set up the Linear API key and the GitHub integration
 linear-setup:
     scripts/linear-setup.sh
+
+# Shapes the Linear workspace (project in team CRI, process labels) from scripts/linear-mapping.json; idempotent.
+# `just linear-configure --dry-run` prints what it would change without writing.
+# Configure Linear for the project
+linear-configure *args:
+    scripts/linear-configure.sh {{args}}

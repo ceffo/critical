@@ -61,3 +61,22 @@ describe("request errors", () => {
     expect((err as ApiError).message).toBe("server words");
   });
 });
+
+describe("an ended session", () => {
+  it("shows the login page saying the session ended on a 401", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { assign });
+    respond(401, { code: "unauthenticated", error: "authentication required" });
+    const err = await request("/api/character").catch((e: unknown) => e);
+    expect((err as ApiError).status).toBe(401);
+    expect(assign).toHaveBeenCalledWith("/login?error=session_expired");
+  });
+
+  it("stays on the page for other errors", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { assign });
+    respond(409, { code: "no_initiative", error: "x" });
+    await request("/api/x").catch(() => undefined);
+    expect(assign).not.toHaveBeenCalled();
+  });
+});

@@ -32,6 +32,27 @@
       "forest": "Forest",
       "ember": "Ember",
       "amber": "Amber"
+    },
+    "account": "Account",
+    "logout": "Log out",
+    "logoutHint": "Log out of {{email}}",
+    "logoutHintNoEmail": "Log out of this account"
+  },
+  "login": {
+    "title": "Log in",
+    "lead": "Log in to play your characters.",
+    "action": "Log in",
+    "googleHint": "Log in with Google",
+    "devHint": "Log in as the root admin without Google (local development only)",
+    "inviteOnly": "Only invited Google accounts can log in. Ask an admin for an invite.",
+    "error": {
+      "not_invited": "This Google account is not invited. Ask an admin for an invite, then log in again.",
+      "user_disabled": "This account is disabled. Ask an admin to enable it again.",
+      "session_expired": "Your session has ended. Log in again.",
+      "email_unverified": "Your Google account's email address is not verified. Verify it with Google, then log in again.",
+      "login_state_mismatch": "The login took too long or was started in another tab. Try again.",
+      "login_failed": "Google login did not complete. Try again.",
+      "unknown": "The login did not complete. Try again."
     }
   },
   "shell": {
@@ -1522,6 +1543,7 @@
     "no_exposure": "That spell deals no exposure damage.",
     "spell_not_an_effect": "That spell adds no effect to track.",
     "spell_not_found": "That spell is not in the catalogue.",
+    "session_expired": "Your session has ended. Log in again.",
     "unauthenticated": "You are not logged in, or your session has ended. Log in again.",
     "cross_origin": "This request came from another site and was refused.",
     "login_state_mismatch": "The login took too long or was started elsewhere. Try again.",

@@ -1820,3 +1820,32 @@ test("spells tab: Cast buttons and full-height preparation columns, French, 1280
     await actions.getByRole("button", { name: "Annuler" }).click();
   }
 });
+
+// The login page (ADR 0022 step 1, ADR 0027 step 2): with both login buttons and the longest
+// refusal message, no text is cut in French and English at every layout viewport; screenshots in
+// French. The e2e API has no OAuth settings, so its login options are answered here with both.
+test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", async ({
+  page,
+  context,
+}) => {
+  await context.clearCookies();
+  await page.route("**/api/auth/options", (r) =>
+    r.fulfill({ json: { google: true, devLogin: true } }),
+  );
+  await page.goto("/login?error=email_unverified");
+  const card = page.getByTestId("login-card");
+  for (const lang of ["fr", "en"] as const) {
+    await page
+      .getByRole("radio", { name: lang === "fr" ? "Français" : "English" })
+      .click();
+    await expect(card.getByTestId("login-error")).toBeVisible();
+    await expect(card.getByRole("link")).toBeVisible();
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(card, `login page ${lang} ${vp.width}`);
+      await expectWholeWords(card, `login page ${lang} ${vp.width}`);
+      if (lang === "fr" && (vp.width === 1440 || vp.width === 1707))
+        await snap(page, `login-fr-${vp.width}x${vp.height}`);
+    }
+  }
+});

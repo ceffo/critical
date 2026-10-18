@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
@@ -177,9 +178,10 @@ type CharacterDTO struct {
 	XPTotal        int    `json:"xpTotal"`
 	Class          string `json:"class"`
 	RaceCode       string `json:"raceCode"`
-	// SkillArmor is the armour a thief wears for its skills (ADR 0030 step
-	// 1), "" for a class without thieving skills; its points are in
-	// derived.thiefSkills.
+	// SkillArmor is the armour a thief or a bard wears for its skills (ADR
+	// 0030 step 1), "" for a class without skill points or none entered
+	// (read as leather); its points are in derived.thiefSkills or
+	// derived.bardSkills.
 	SkillArmor string     `json:"skillArmor"`
 	Derived    DerivedDTO `json:"derived"`
 	detailshdl.DetailsDTO
@@ -239,15 +241,32 @@ type DerivedDTO struct {
 	// ThiefSkills is ADR 0030 step 17: each thieving skill with its terms
 	// and percentage; null for a class without them.
 	ThiefSkills []ThiefSkillDTO `json:"thiefSkills"`
-	// SkillBudget is step 17's warnings on the entered points, never null.
+	// BardSkills is ADR 0030 step 18: each bard skill with its terms and
+	// percentage; null for a class without them.
+	BardSkills []ThiefSkillDTO `json:"bardSkills"`
+	// SkillBudget is step 17's or 18's warnings on the entered points,
+	// never null.
 	SkillBudget []BudgetWarningDTO `json:"skillBudget"`
 	// Backstab is ADR 0030 step 19: PHB Table 30's damage multiplier at the
 	// realized level, 0 for a class without the backstab option.
 	Backstab int `json:"backstab"`
 }
 
-// ThiefSkillDTO is one thieving skill (ADR 0030 step 17): percent = base +
-// points + race + dexterity + armor, capped at 95 and floored at 0.
+// skillDTOs maps a class's skills; nil stays nil (no such skills).
+func skillDTOs(skills []ruletablesvc.SkillPercent) []ThiefSkillDTO {
+	if skills == nil {
+		return nil
+	}
+	out := make([]ThiefSkillDTO, len(skills))
+	for i, s := range skills {
+		out[i] = ThiefSkillDTO(s)
+	}
+	return out
+}
+
+// ThiefSkillDTO is one thieving skill (ADR 0030 step 17) or bard skill (step
+// 18): percent = base + points + race + dexterity + armor, capped at 95 and
+// floored at 0.
 type ThiefSkillDTO struct {
 	Skill     string `json:"skill"`
 	Base      int    `json:"base"`
@@ -334,12 +353,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
 		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab,
 	}
-	if d.ThiefSkills != nil {
-		out.ThiefSkills = make([]ThiefSkillDTO, len(d.ThiefSkills))
-		for i, s := range d.ThiefSkills {
-			out.ThiefSkills[i] = ThiefSkillDTO(s)
-		}
-	}
+	out.ThiefSkills, out.BardSkills = skillDTOs(d.ThiefSkills), skillDTOs(d.BardSkills)
 	for _, w := range d.SkillBudget {
 		out.SkillBudget = append(out.SkillBudget, BudgetWarningDTO(w))
 	}

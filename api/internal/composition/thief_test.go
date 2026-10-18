@@ -322,21 +322,21 @@ func TestThief_Step1_ChangeTheSkillArmourAfterCreation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "elven_chain", c.SkillArmor, "another user changes nothing")
 
-	bard, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Lyra", Class: "bard", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 13, Wis: 11, Cha: 17, HPMax: 4,
+	fighter, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Name: "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
 	})
 	require.NoError(t, err)
-	_, err = bs.Character.Change(ctx, s.User.ID, bard, charactersvc.Change{SkillArmor: new("leather")})
+	_, err = bs.Character.Change(ctx, s.User.ID, fighter, charactersvc.Change{SkillArmor: new("leather")})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, "skillArmor", fe.Field)
-	b, err := bs.Character.GetCharacter(ctx, bard)
+	b, err := bs.Character.GetCharacter(ctx, fighter)
 	require.NoError(t, err)
 	assert.Empty(t, b.SkillArmor, "the refused write is rolled back")
 }
 
 // A change of several fields is one transaction: a rename that comes with a
-// skill armour a bard cannot have changes neither; a thief's armour and
+// skill armour a fighter cannot have changes neither; a thief's armour and
 // retirement both apply; a retired or another user's character is not found
 // and nothing is written.
 func TestThief_Step1_ArmourChangeIsAtomicWithRenameAndRetire(t *testing.T) {
@@ -347,8 +347,8 @@ func TestThief_Step1_ArmourChangeIsAtomicWithRenameAndRetire(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	owner := s.User.ID
-	bard, err := bs.Character.Create(ctx, owner, charactersvc.NewCharacter{
-		Name: "Lyra", Class: "bard", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 13, Wis: 11, Cha: 17, HPMax: 4,
+	fighter, err := bs.Character.Create(ctx, owner, charactersvc.NewCharacter{
+		Name: "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
 	})
 	require.NoError(t, err)
 	thief, err := bs.Character.Create(ctx, owner, charactersvc.NewCharacter{
@@ -357,11 +357,11 @@ func TestThief_Step1_ArmourChangeIsAtomicWithRenameAndRetire(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = bs.Character.Change(ctx, owner, bard, charactersvc.Change{Name: new("Renamed"), SkillArmor: new("leather")})
+	_, err = bs.Character.Change(ctx, owner, fighter, charactersvc.Change{Name: new("Renamed"), SkillArmor: new("leather")})
 	require.Error(t, err)
-	b, err := bs.Character.GetCharacter(ctx, bard)
+	b, err := bs.Character.GetCharacter(ctx, fighter)
 	require.NoError(t, err)
-	assert.Equal(t, "Lyra", b.Name, "the rename is rolled back with the refused armour")
+	assert.Equal(t, "Bram", b.Name, "the rename is rolled back with the refused armour")
 
 	_, err = bs.Character.Change(ctx, owner, thief, charactersvc.Change{SkillArmor: new("elven_chain"), Retired: new(true)})
 	require.NoError(t, err)

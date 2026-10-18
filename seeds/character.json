@@ -17,5 +17,6 @@
   "save_breath": 13,
   "save_spell": 9,
   "languages": ["Elfique", "Commun", "Orque", "Nain"],
+  "skill_points": { "climb_walls": 35, "detect_noise": 70, "pick_pockets": 25, "read_languages": 70 },
   "slots": []
 }

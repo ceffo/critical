@@ -16,7 +16,7 @@ import (
 )
 
 const newBard = `{"name":"Lyra","class":"bard","raceCode":"half_elf",` +
-	`"str":10,"dex":15,"con":12,"int":14,"wis":9,"cha":16,"hpMax":6,"xp":2500}`
+	`"str":10,"dex":15,"con":12,"int":14,"wis":9,"cha":16,"hpMax":6,"xp":2500,"skillArmor":"leather"}`
 
 type createdSheet struct {
 	ID       int64  `json:"id"`
@@ -167,7 +167,7 @@ func TestCreate_SwitchAndRetire(t *testing.T) {
 	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", newBard, &list))
 	first := *list.CurrentID
 	second := `{"name":"Mira","class":"bard","raceCode":"human",` +
-		`"str":9,"dex":16,"con":10,"int":13,"wis":11,"cha":17,"hpMax":4,"xp":0}`
+		`"str":9,"dex":16,"con":10,"int":13,"wis":11,"cha":17,"hpMax":4,"xp":0,"skillArmor":"none"}`
 	require.Equal(t, http.StatusCreated, tb.showing(bob, first, "POST", "/api/characters", second, &list))
 	require.Len(t, list.Characters, 2)
 	mira := *list.CurrentID
@@ -235,7 +235,8 @@ func TestCreate_Options(t *testing.T) {
 		"hide_in_shadows", "detect_noise", "climb_walls", "read_languages",
 	}, got.Classes[4].Skills, "PHB Table 26")
 	assert.Equal(t, []string{"none", "leather", "padded_studded_leather", "elven_chain"}, got.Classes[4].SkillArmors)
-	assert.Empty(t, got.Classes[0].Skills, "a bard enters no thieving skill")
+	assert.Equal(t, []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"}, got.Classes[0].Skills, "PHB Table 33")
+	assert.Equal(t, []string{"none", "leather", "padded_studded_leather", "elven_chain", "metal"}, got.Classes[0].SkillArmors)
 	assert.Equal(t, struct{ Min, Max int }{1, 100}, got.StrExceptional)
 	assert.Equal(t, 3, got.Ability.Min)
 	assert.Equal(t, 19, got.Ability.Max)

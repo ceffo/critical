@@ -110,8 +110,9 @@ func checkRange(k Kind, value int) error {
 }
 
 // Roll rolls one check of skill id: a proficiency is one d20 against the
-// ability score plus the modifier (ADR 0014 steps 1 and 2), a bard skill one
-// d100 against its percentage (step 3), the target moved by the pre-roll
+// ability score plus the modifier (ADR 0014 steps 1 and 2), a bard or a
+// thieving skill one d100 against its derived percentage (step 3, ADR 0030
+// steps 17 and 18), the target moved by the pre-roll
 // adjustment (step 5). The check is a skill_check entry with no snapshots,
 // recorded in the same transaction (step 4). An unknown id or an invalid
 // adjustment is refused before anything is rolled.
@@ -198,7 +199,7 @@ func (s *service) check(ctx context.Context, characterID int64, id string, adj A
 	}
 	// ADR 0030 step 17 (PHB p.39): a thieving skill under 1% cannot be used
 	// until points raise it, whatever the DM's adjustment.
-	if rec.Kind == KindThiefSkill && rec.Target < MinThiefSkillPercent {
+	if !SkillUsable(rec.Kind, rec.Target) {
 		return checkRecord{}, &domain.FieldError{Field: "id", Message: CodeSkillUnusable}
 	}
 	rec.Roll = s.dice.RollDie(rec.Die)
@@ -232,20 +233,17 @@ func (s *service) find(ctx context.Context, characterID int64, id string) (check
 			Ability: p.Ability, AbilityScore: score, Modifier: p.Modifier,
 		}, nil
 	}
-	skills, err := s.dal.ListBardSkills(ctx, characterID)
-	if err != nil {
-		return checkRecord{}, fmt.Errorf("list bard skills: %w", err)
-	}
-	for _, b := range skills {
-		if b.ID == id {
-			return checkRecord{ID: b.ID, Kind: KindBardSkill, Die: BardSkillDie, Target: b.Percent}, nil
-		}
-	}
-	// ADR 0030 step 17: a thieving skill's target is the percentage the
-	// character service derives (its terms are on the character).
+	// ADR 0030 steps 17 and 18 (ADR 0014 step 3 as amended): a thieving or
+	// a bard skill's target is the percentage the character service derives
+	// (its terms are on the character).
 	char, err := s.chars.GetCharacter(ctx, characterID)
 	if err != nil {
 		return checkRecord{}, fmt.Errorf("get character: %w", err)
+	}
+	for _, b := range char.Derived.BardSkills {
+		if b.Skill == id {
+			return checkRecord{ID: b.Skill, Kind: KindBardSkill, Die: BardSkillDie, Target: b.Percent}, nil
+		}
 	}
 	for _, t := range char.Derived.ThiefSkills {
 		if t.Skill == id {
@@ -265,10 +263,6 @@ func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) 
 		if err != nil {
 			return fmt.Errorf("list proficiencies: %w", err)
 		}
-		skills, err := s.dal.ListBardSkills(ctx, characterID)
-		if err != nil {
-			return fmt.Errorf("list bard skills: %w", err)
-		}
 		char, err := s.chars.GetCharacter(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
@@ -278,7 +272,7 @@ func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) 
 			return err
 		}
 		out = &Skills{
-			Proficiencies: make([]Proficiency, 0, len(profs)), BardSkills: make([]BardSkill, 0, len(skills)),
+			Proficiencies: make([]Proficiency, 0, len(profs)), BardSkills: make([]BardSkill, 0, len(char.Derived.BardSkills)),
 			ThiefSkills: make([]ThiefSkill, 0, len(char.Derived.ThiefSkills)),
 		}
 		for _, t := range char.Derived.ThiefSkills {
@@ -294,8 +288,8 @@ func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) 
 				Target: ProficiencyTarget(score, p.Modifier), Last: last[p.ID],
 			})
 		}
-		for _, b := range skills {
-			out.BardSkills = append(out.BardSkills, BardSkill{ID: b.ID, Percent: b.Percent, Last: last[b.ID]})
+		for _, b := range char.Derived.BardSkills {
+			out.BardSkills = append(out.BardSkills, BardSkill{SkillPercent: b, Last: last[b.Skill]})
 		}
 		return nil
 	})

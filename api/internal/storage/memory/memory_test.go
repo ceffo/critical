@@ -564,7 +564,6 @@ func TestStore_EachCharacterOwnsItsRows(t *testing.T) {
 		func() (int, error) { l, err := s.WeaponEditor().List(ctx, other); return len(l), err },
 		func() (int, error) { l, err := s.Weapons().List(ctx, other); return len(l), err },
 		func() (int, error) { l, err := s.Skills().ListProficiencies(ctx, other); return len(l), err },
-		func() (int, error) { l, err := s.Skills().ListBardSkills(ctx, other); return len(l), err },
 		func() (int, error) { l, err := s.Spellbooks().Keys(ctx, other); return len(l), err },
 	} {
 		n, err := empty()

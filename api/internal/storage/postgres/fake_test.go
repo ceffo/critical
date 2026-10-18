@@ -31,10 +31,12 @@ type tables struct {
 	Characters []int64
 	Names      map[int64]string
 	// Races are characters.race_code ('' none, the column's default).
-	Races  map[int64]string
-	Slots  map[int64]string
-	Buffs  map[int64]string
-	Rounds map[int64]bool
+	Races map[int64]string
+	// SkillPoints are characters.skill_points ('{}' none, the column's default).
+	SkillPoints map[int64]string
+	Slots       map[int64]string
+	Buffs       map[int64]string
+	Rounds      map[int64]bool
 	// Weapons, Items, Profs and Bard are by rowKey.
 	Weapons map[string]storeq.InsertWeaponParams
 	Items   map[string]storeq.InsertItemParams
@@ -90,7 +92,7 @@ func newFakeStore() *fakeStore {
 		Weapons: map[string]storeq.InsertWeaponParams{}, Items: map[string]storeq.InsertItemParams{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
-		Names: map[int64]string{}, Races: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Races: map[int64]string{}, SkillPoints: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -161,7 +163,15 @@ func (f *fakeStore) InsertCharacter(_ context.Context, arg storeq.InsertCharacte
 	f.t.Characters = append(f.t.Characters, id)
 	f.t.Names[id] = arg.Name
 	f.t.Races[id] = arg.RaceCode
+	f.t.SkillPoints[id] = arg.SkillPoints
 	return id, nil
+}
+
+func (f *fakeStore) SetSkillPointsIfUnset(_ context.Context, arg storeq.SetSkillPointsIfUnsetParams) error {
+	if slices.Contains(f.t.Characters, arg.ID) && f.t.SkillPoints[arg.ID] == "{}" {
+		f.t.SkillPoints[arg.ID] = arg.SkillPoints
+	}
+	return nil
 }
 
 func (f *fakeStore) SetRaceIfUnset(_ context.Context, arg storeq.SetRaceIfUnsetParams) error {

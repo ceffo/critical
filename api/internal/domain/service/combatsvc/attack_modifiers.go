@@ -7,6 +7,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // attackMods are the to-hit modifiers of an attack (ADR 0002 steps 4 to 9)
@@ -31,6 +32,23 @@ func (a attackMods) toHit() int {
 	return sum
 }
 
+// strDetail is the Strength modifier's detail: the score in effect, an
+// 18/xx in the PHB's language-neutral notation (ADR 0030 step 9: 18/05,
+// 18/00 for 100).
+func strDetail(mods buffsvc.BuffModifiers) string {
+	detail := strconv.Itoa(mods.EffectiveStr)
+	switch exc := mods.EffectiveStrExceptional; {
+	case exc <= 0:
+		return detail
+	case exc >= ruletablesvc.ExceptionalMax:
+		return detail + "/00"
+	case exc < 10:
+		return detail + "/0" + strconv.Itoa(exc)
+	default:
+		return detail + "/" + strconv.Itoa(exc)
+	}
+}
+
 // attackModifiers lists the to-hit modifiers in the order of ADR 0002 steps
 // 4 to 9 (Strength, Dexterity, weapon or buff "+N", ammunition, buffs,
 // situational). A nil or zero situational adds nothing.
@@ -43,12 +61,11 @@ func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, a
 	// always for melee and hurled weapons; for bows only with a strength
 	// bow, which the Bard's are not.
 	if !weapon.FiresAmmo() {
-		str := mods.EffectiveStr
-		hit, dmg, err := s.rules.StrengthMods(str, 0)
+		hit, dmg, err := s.rules.StrengthMods(mods.EffectiveStr, mods.EffectiveStrExceptional)
 		if err != nil {
 			return attackMods{}, fmt.Errorf("strength table: %w", err)
 		}
-		detail := strconv.Itoa(str)
+		detail := strDetail(mods)
 		add(Modifier{Kind: ModStrength, Detail: detail, Value: hit})
 		out.strDmg = dmg
 		out.strTerms = append(out.strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Detail: detail, Value: float64(dmg)})

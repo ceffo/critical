@@ -1,6 +1,11 @@
 package buffsvc
 
-import "time"
+import (
+	"time"
+
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+)
 
 // State keys under which buffsvc snapshots its state in the action log. Each
 // has a Restorer (see Restorers) that the composition root registers.
@@ -178,6 +183,32 @@ type SavedBuff struct {
 type Strength struct {
 	Base      int
 	Effective int
+	// BaseExceptional and EffectiveExceptional are their 18/xx percentiles
+	// (ADR 0030 steps 9 and 10; 0: none).
+	BaseExceptional      int
+	EffectiveExceptional int
+}
+
+// StrScore is a Strength score and its exceptional percentile (ADR 0030
+// step 9: 1 to 100 at 18 only, 100 = 18/00; 0: none).
+type StrScore struct {
+	Score, Exceptional int
+}
+
+// BaseStrength is the sheet's Strength the effects start from, and whether
+// the warrior's scale above 18 applies (ADR 0030 step 10).
+type BaseStrength struct {
+	StrScore
+	Warrior bool
+}
+
+// BaseStrengthOf is c's sheet Strength (ADR 0030 steps 9 and 10).
+func BaseStrengthOf(c *charactersvc.Character) BaseStrength {
+	group, err := ruletablesvc.ClassGroup(c.Class)
+	return BaseStrength{
+		StrScore: StrScore{Score: c.Str, Exceptional: c.StrExceptional},
+		Warrior:  err == nil && ruletablesvc.HasExceptionalStrength(group),
+	}
 }
 
 // AbilityScore is the sheet's score in one ability and the score in effect
@@ -225,6 +256,9 @@ type BuffModifiers struct {
 	WeaponBuffItemID string
 	// EffectiveStr is the STR score the gating used (base plus STR buffs).
 	EffectiveStr int
+	// EffectiveStrExceptional is its exceptional percentile (ADR 0030 step
+	// 10; 0: none), read with EffectiveStr for PHB Table 1.
+	EffectiveStrExceptional int
 
 	SpellsBuffFrom  []Factor
 	MultipliersFrom []Factor

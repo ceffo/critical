@@ -65,7 +65,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 
 		rec := saveRecord{Category: string(category), Target: target, Modifiers: []modifierRecord{}}
 		rec.D20Roll = s.dice.RollD20()
-		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponNone)
+		mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponNone)
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
 		}

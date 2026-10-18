@@ -300,9 +300,13 @@ func PreviewPassTime(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 }
 
 // StrengthDTO is GET /api/stats/str.
+// baseExceptional and effectiveExceptional are their 18/xx percentiles
+// (ADR 0030 steps 9 and 10; 0: none, 100: 18/00).
 type StrengthDTO struct {
-	Base      int `json:"base"`
-	Effective int `json:"effective"`
+	Base                 int `json:"base"`
+	Effective            int `json:"effective"`
+	BaseExceptional      int `json:"baseExceptional"`
+	EffectiveExceptional int `json:"effectiveExceptional"`
 }
 
 // GetEffectiveStr returns the sheet STR and the STR with buffs.
@@ -312,7 +316,10 @@ func GetEffectiveStr(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, StrengthDTO{Base: s.Base, Effective: s.Effective})
+		render.OK(r.Context(), w, StrengthDTO{
+			Base: s.Base, Effective: s.Effective,
+			BaseExceptional: s.BaseExceptional, EffectiveExceptional: s.EffectiveExceptional,
+		})
 		return nil
 	}
 }

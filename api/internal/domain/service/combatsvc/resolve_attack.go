@@ -50,7 +50,7 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
 		}
-		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponKind(weapon.Kind))
+		mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponKind(weapon.Kind))
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
 		}

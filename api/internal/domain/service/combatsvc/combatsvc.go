@@ -62,7 +62,7 @@ type Characters interface {
 // returns the totals of the buffs and the item powers that are on, with the
 // effective STR.
 type Buffs interface {
-	Aggregate(ctx context.Context, characterID int64, str int, kind buffsvc.WeaponKind) (buffsvc.BuffModifiers, error)
+	Aggregate(ctx context.Context, characterID int64, str buffsvc.BaseStrength, kind buffsvc.WeaponKind) (buffsvc.BuffModifiers, error)
 }
 
 // Dice is the dice adapter port.

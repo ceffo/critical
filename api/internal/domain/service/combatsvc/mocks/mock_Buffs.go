@@ -24,7 +24,7 @@ func (_m *MockBuffs) EXPECT() *MockBuffs_Expecter {
 }
 
 // Aggregate provides a mock function with given fields: ctx, characterID, str, kind
-func (_m *MockBuffs) Aggregate(ctx context.Context, characterID int64, str int, kind buffsvc.WeaponKind) (buffsvc.BuffModifiers, error) {
+func (_m *MockBuffs) Aggregate(ctx context.Context, characterID int64, str buffsvc.BaseStrength, kind buffsvc.WeaponKind) (buffsvc.BuffModifiers, error) {
 	ret := _m.Called(ctx, characterID, str, kind)
 
 	if len(ret) == 0 {
@@ -33,16 +33,16 @@ func (_m *MockBuffs) Aggregate(ctx context.Context, characterID int64, str int, 
 
 	var r0 buffsvc.BuffModifiers
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int, buffsvc.WeaponKind) (buffsvc.BuffModifiers, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64, buffsvc.BaseStrength, buffsvc.WeaponKind) (buffsvc.BuffModifiers, error)); ok {
 		return rf(ctx, characterID, str, kind)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int, buffsvc.WeaponKind) buffsvc.BuffModifiers); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64, buffsvc.BaseStrength, buffsvc.WeaponKind) buffsvc.BuffModifiers); ok {
 		r0 = rf(ctx, characterID, str, kind)
 	} else {
 		r0 = ret.Get(0).(buffsvc.BuffModifiers)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, int, buffsvc.WeaponKind) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int64, buffsvc.BaseStrength, buffsvc.WeaponKind) error); ok {
 		r1 = rf(ctx, characterID, str, kind)
 	} else {
 		r1 = ret.Error(1)
@@ -59,15 +59,15 @@ type MockBuffs_Aggregate_Call struct {
 // Aggregate is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
-//   - str int
+//   - str buffsvc.BaseStrength
 //   - kind buffsvc.WeaponKind
 func (_e *MockBuffs_Expecter) Aggregate(ctx interface{}, characterID interface{}, str interface{}, kind interface{}) *MockBuffs_Aggregate_Call {
 	return &MockBuffs_Aggregate_Call{Call: _e.mock.On("Aggregate", ctx, characterID, str, kind)}
 }
 
-func (_c *MockBuffs_Aggregate_Call) Run(run func(ctx context.Context, characterID int64, str int, kind buffsvc.WeaponKind)) *MockBuffs_Aggregate_Call {
+func (_c *MockBuffs_Aggregate_Call) Run(run func(ctx context.Context, characterID int64, str buffsvc.BaseStrength, kind buffsvc.WeaponKind)) *MockBuffs_Aggregate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(int), args[3].(buffsvc.WeaponKind))
+		run(args[0].(context.Context), args[1].(int64), args[2].(buffsvc.BaseStrength), args[3].(buffsvc.WeaponKind))
 	})
 	return _c
 }
@@ -77,7 +77,7 @@ func (_c *MockBuffs_Aggregate_Call) Return(_a0 buffsvc.BuffModifiers, _a1 error)
 	return _c
 }
 
-func (_c *MockBuffs_Aggregate_Call) RunAndReturn(run func(context.Context, int64, int, buffsvc.WeaponKind) (buffsvc.BuffModifiers, error)) *MockBuffs_Aggregate_Call {
+func (_c *MockBuffs_Aggregate_Call) RunAndReturn(run func(context.Context, int64, buffsvc.BaseStrength, buffsvc.WeaponKind) (buffsvc.BuffModifiers, error)) *MockBuffs_Aggregate_Call {
 	_c.Call.Return(run)
 	return _c
 }

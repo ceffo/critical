@@ -172,7 +172,7 @@ func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 			}
 			f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 			f.withChar(bard())
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil)
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil)
 			f.dice.EXPECT().RollD20().Return(20)
 			f.d100s(t, 99, tt.d100) // check 99: 20 - 99 still reaches the -89 needed vs AC 100
 			f.dice.EXPECT().RollDie(8).Return(5)
@@ -239,7 +239,7 @@ func TestResolveAttack_DecimalCritMultiplier(t *testing.T) {
 			}
 			f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 			f.withChar(bard())
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil)
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil)
 			f.dice.EXPECT().RollD20().Return(20)
 			f.d100s(t, 30, noCritMult)
 			f.dice.EXPECT().RollDie(8).Return(5)
@@ -266,7 +266,7 @@ func TestResolveAttack_DecimalFloorsAfterBonusDamage(t *testing.T) {
 	mods.DamageFrom = []buffsvc.Contribution{{Buff: "Bless", Value: 3}}
 	f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 	f.withChar(bard())
-	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil)
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil)
 	f.dice.EXPECT().RollD20().Return(20)
 	f.d100s(t, 30, noCritMult)
 	f.dice.EXPECT().RollDie(8).Return(5)
@@ -283,7 +283,7 @@ func TestResolveAttack_NoCritIgnoresTable(t *testing.T) {
 	f.critRows = rows([3]int{1, 100, 9})
 	f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 	f.withChar(bard())
-	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil)
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil)
 	f.dice.EXPECT().RollD20().Return(15)
 	f.d100s(t, 10, noCritMult) // 15 - 10 = 5 < 6 needed
 	f.dice.EXPECT().RollDie(8).Return(5)
@@ -315,7 +315,7 @@ func TestResolveAttack_DecimalFloatNoiseKeepsThePoint(t *testing.T) {
 			big.MagicDamage = tt.magic
 			f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(big, nil)
 			f.withChar(bard())
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil)
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil)
 			f.dice.EXPECT().RollD20().Return(20)
 			f.d100s(t, 30, noCritMult)
 			f.dice.EXPECT().RollDie(8).Return(5)
@@ -338,7 +338,7 @@ func TestResolveAttack_DecimalCritWithNegativeBonusClampsToZero(t *testing.T) {
 	mods.DamageFrom = []buffsvc.Contribution{{Buff: "Curse", Value: -20}}
 	f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 	f.withChar(bard())
-	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil)
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil)
 	f.dice.EXPECT().RollD20().Return(20)
 	f.d100s(t, 30, noCritMult)
 	f.dice.EXPECT().RollDie(8).Return(5)

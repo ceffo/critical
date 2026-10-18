@@ -285,7 +285,7 @@ func (s *service) preview(ctx context.Context, characterID int64, weapon Weapon,
 	if err != nil {
 		return nil, fmt.Errorf("get character: %w", err)
 	}
-	mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponKind(weapon.Kind))
+	mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponKind(weapon.Kind))
 	if err != nil {
 		return nil, fmt.Errorf("aggregate buffs: %w", err)
 	}

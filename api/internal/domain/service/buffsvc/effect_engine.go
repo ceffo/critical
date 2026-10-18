@@ -6,6 +6,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // maxAbility is the highest ability score a buff may name (AD&D 2.5 tops
@@ -57,6 +58,50 @@ func effectiveStr(buffs []BuffEffect, base int) int {
 	return max(base, min(base+sum, strengthCap))
 }
 
+// exceptionalPerPoint is the percentile a point of Strength bonus adds to a
+// warrior's 18 (ADR 0030 step 10.1: 10% a point).
+const exceptionalPerPoint = 10
+
+// effectiveStrength is the Strength in effect with its exceptional
+// percentile (ADR 0030 step 10, on top of ADR 0004 steps 7 to 9). The score
+// is effectiveStr's for every class: a warrior's spells stop at 18 too, and
+// gates (step 10.4) read an 18/xx as 18. Only the percentile differs:
+//
+//  1. A warrior's Strength bonuses past 18 add 10 percentile points a
+//     point, capped at 18/00 (17 with +3: 18/20; 18/50 with +4: 18/90).
+//  2. Improved Strength counts an 18/xx as 18: at 19 and more there is no
+//     percentile.
+//  3. Nothing lowers the sheet's Strength: at a plain 18 the sheet's
+//     percentile stays.
+//
+// Every other class keeps its sheet percentile (none).
+func effectiveStrength(buffs []BuffEffect, base BaseStrength) StrScore {
+	score := effectiveStr(buffs, base.Score)
+	out := StrScore{Score: score}
+	if score != strengthCap {
+		return out
+	}
+	baseExc := 0
+	if base.Score == strengthCap {
+		baseExc = base.Exceptional
+	}
+	out.Exceptional = baseExc
+	if !base.Warrior || improvedActive(buffs) || base.Score > strengthCap {
+		return out
+	}
+	sum := 0
+	for _, b := range buffs {
+		if isStrengthBonus(b.Effects) {
+			sum += *b.Effects.StrBonus
+		}
+	}
+	past := sum - (strengthCap - base.Score)
+	if past > 0 {
+		out.Exceptional = min(baseExc+exceptionalPerPoint*past, ruletablesvc.ExceptionalMax)
+	}
+	return out
+}
+
 // effectiveScore is the score in ability a with buffs, from the sheet's
 // base. Strength is the only ability a buff raises today (ADR 0004 steps 7
 // to 9); every other ability's score in effect is the sheet's (ADR 0028
@@ -87,9 +132,10 @@ func improvedActive(buffs []BuffEffect) bool {
 // (MinStr) aren't met are skipped, so are powers whose trigger isn't (ADR
 // 0016 step 10). Buffs fold first, in list order, then the powers in item
 // and power order (step 11), so a weapon +N tie goes to the buff.
-func aggregate(buffs []BuffEffect, powers []ItemPower, baseStr int, kind WeaponKind) BuffModifiers {
-	str := effectiveStr(buffs, baseStr)
-	mods := BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: str}
+func aggregate(buffs []BuffEffect, powers []ItemPower, base BaseStrength, kind WeaponKind) BuffModifiers {
+	strength := effectiveStrength(buffs, base)
+	str := strength.Score
+	mods := BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: str, EffectiveStrExceptional: strength.Exceptional}
 	for _, b := range buffs {
 		if !meetsRequirements(b.Effects, str) {
 			continue

@@ -256,11 +256,14 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		ID: 3, Name: "Kelsen", Class: "bard", Race: "dwarf", XPTotal: 1_293_418,
 		Sheet: charactersvc.Sheet{Level: 15, THAC0: 14},
 		Derived: charactersvc.Derived{
-			XPTotal: 1_300_000, Level: 15, NextLevelXP: &next, THAC0: 13,
+			XPTotal: 1_300_000, TargetLevel: 11, RealizedLevel: 9, NextLevelXP: &next, THAC0: 13,
 			Saves:            charactersvc.Saves{ParaPoison: 10, RodStaffWand: 8, PetriPoly: 9, Breath: 13, Spell: 9},
 			RaceSaveBonus:    charactersvc.Saves{RodStaffWand: 4, Spell: 4},
 			SpellSlots:       map[int]int{5: 2, 1: 3},
 			SheetDifferences: []charactersvc.SheetDifference{{Value: charactersvc.SheetTHAC0, Sheet: 14, Computed: 13}},
+			LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
+				{Level: 10, Die: 6}, {Level: 11, FixedGain: 2},
+			}},
 		},
 		Details: charactersvc.Details{Race: "Nain des collines", Languages: []string{}},
 	}, nil).Once()
@@ -277,10 +280,13 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 	derived, err := json.Marshal(body["derived"])
 	require.NoError(t, err)
 	assert.JSONEq(t, `{
-		"xpTotal": 1300000, "level": 15, "nextLevelXp": 1320000, "thac0": 13,
+		"xpTotal": 1300000, "targetLevel": 11, "realizedLevel": 9, "nextLevelXp": 1320000, "thac0": 13,
 		"saves": {"paraPoison": 10, "rodStaffWand": 8, "petriPoly": 9, "breath": 13, "spell": 9},
 		"raceSaveBonus": {"paraPoison": 0, "rodStaffWand": 4, "petriPoly": 0, "breath": 0, "spell": 4},
 		"spellSlots": [{"level": 1, "count": 3}, {"level": 5, "count": 2}],
-		"sheetDifferences": [{"value": "thac0", "sheet": 14, "computed": 13}]
+		"sheetDifferences": [{"value": "thac0", "sheet": 14, "computed": 13}],
+		"levelUp": {"realizedAboveTarget": false, "pending": [
+			{"level": 10, "die": 6, "fixedGain": 0}, {"level": 11, "die": 0, "fixedGain": 2}
+		]}
 	}`, string(derived))
 }

@@ -32,7 +32,7 @@ const charID = int64(1)
 func bard() *charactersvc.Character {
 	return &charactersvc.Character{
 		ID: charID, Str: 12, Dex: 17, Class: "bard", Race: "half_elf",
-		Derived: charactersvc.Derived{Level: 15, THAC0: 13, Saves: charactersvc.Saves{
+		Derived: charactersvc.Derived{RealizedLevel: 15, THAC0: 13, Saves: charactersvc.Saves{
 			ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14,
 		}},
 	}

@@ -46,6 +46,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
@@ -71,11 +72,12 @@ type Store interface {
 }
 
 // CharacterStore is the character adapter: the sheet reads, who owns and
-// plays which character, and the details edit.
+// plays which character, the details edit and the level-up's hit points.
 type CharacterStore interface {
 	charactersvc.Reader
 	charactersvc.Owners
 	detailssvc.DAL
+	levelupsvc.DAL
 }
 
 // BuffStore is the buff adapter plus the round read the action log stamps

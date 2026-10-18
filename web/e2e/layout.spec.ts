@@ -2085,3 +2085,65 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
     }
   }
 });
+
+// ADR 0030 step 7 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the level-up prompt on
+// the character card, at its widest (a hit die to roll, a second level owed, the manual entry
+// open), is never cut from 1280 to 2560, and each button says one word (ADR 0027 step 3).
+test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    page.evaluate(
+      async ([m, u, b]) =>
+        (
+          await fetch(u as string, {
+            method: m as string,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(b),
+          })
+        ).ok,
+      [method, url, body] as const,
+    );
+  // A level 1 bard (made current), then 2,500 XP: levels 2 and 3 owe a d6 each (Table 25).
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Aldéric de la Tour-d'Auvergne-Lesparre",
+      class: "bard",
+      raceCode: "half_elf",
+      str: 10,
+      dex: 15,
+      con: 12,
+      int: 14,
+      wis: 9,
+      cha: 16,
+      hpMax: 6,
+      xp: 0,
+    }),
+  ).toBe(true);
+  expect(await call("POST", "/api/xp", { base: 2500, bonus: false })).toBe(
+    true,
+  );
+  await page.reload();
+  await chooseLanguage(page, "fr");
+  const prompt = page.getByTestId("level-up");
+  await expect(prompt.getByTestId("level-up-title")).toHaveText(
+    "Niveau 2 atteint",
+  );
+  await expect(prompt.getByTestId("level-up-more")).toBeVisible();
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    const where = `fr, ${vp.width}x${vp.height}`;
+    await expectNoClippedText(prompt, `level-up prompt, ${where}`);
+    await expectWholeWords(prompt, `level-up prompt, ${where}`);
+    await prompt
+      .getByRole("button", { name: "Saisir le dé lancé à la table" })
+      .click();
+    await expect(prompt.getByTestId("level-up-die")).toBeVisible();
+    await expectNoClippedText(prompt, `level-up manual entry, ${where}`);
+    await expectWholeWords(prompt, `level-up manual entry, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `level-up-fr-${vp.width}x${vp.height}`);
+    await prompt.getByRole("button", { name: "Fermer", exact: true }).click();
+  }
+});

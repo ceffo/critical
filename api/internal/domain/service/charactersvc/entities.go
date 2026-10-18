@@ -16,6 +16,12 @@ type Character struct {
 	Wis   int
 	Cha   int
 	HPMax int
+	// RealizedLevel is the level the character has taken (ADR 0030 step 7):
+	// its benefits (max HP, THAC0, saves, slots) are this level's. It starts
+	// at the level the entered max HP is for (step 7.5: an imported sheet's
+	// level, a created character's starting level) and only the level-up
+	// step moves it, one level per roll. 0 is none yet (being created).
+	RealizedLevel int
 	// XPTotal is the starting XP, the sheet's (ADR 0015 step 1); the XP total
 	// adds the ledger's entries to it (Derived.XPTotal).
 	XPTotal int
@@ -62,23 +68,52 @@ type Sheet struct {
 type Derived struct {
 	// XPTotal is the starting XP plus every ledger entry (ADR 0015 step 1).
 	XPTotal int
-	// Level is ADR 0030 step 3: the class's experience table at XPTotal.
-	Level int
-	// NextLevelXP is the XP that reaches Level + 1; nil at the last level.
+	// TargetLevel is ADR 0030 step 3: the class's experience table at
+	// XPTotal. Never stored; it drives the pending level-ups (step 7) and the
+	// XP progress, no benefit.
+	TargetLevel int
+	// RealizedLevel is the stored level the benefits follow (step 7):
+	// THAC0, saves and slots below are this level's.
+	RealizedLevel int
+	// NextLevelXP is the XP that reaches TargetLevel + 1; nil at the last
+	// level.
 	NextLevelXP *int
-	// THAC0 is step 5 (PHB Table 53).
+	// THAC0 is step 5 (PHB Table 53) at the realized level.
 	THAC0 int
-	// Saves are the targets of step 6 (PHB Table 60).
+	// Saves are the targets of step 6 (PHB Table 60) at the realized level.
 	Saves Saves
 	// RaceSaveBonus is step 22.1: the race's bonus per category, a named
 	// modifier on the roll (0: none), never a change of the target.
 	RaceSaveBonus Saves
-	// SpellSlots is step 8: the slots per day by spell level, levels with no
-	// slot absent.
+	// SpellSlots is step 8 at the realized level: the slots per day by
+	// spell level, levels with no slot absent.
 	SpellSlots map[int]int
 	// SheetDifferences are step 24: each value the imported sheet states
 	// differently from the rules; the derived value is the one used.
 	SheetDifferences []SheetDifference
+	// LevelUp is step 7: the levels the target is above the realized one.
+	LevelUp LevelUp
+}
+
+// PendingLevel is one level whose hit points are owed (ADR 0030 step 7): up
+// to the group's name level a hit die to roll (Die, FixedGain 0, step 7.1),
+// above it a fixed gain (FixedGain, Die 0, step 7.2).
+type PendingLevel struct {
+	Level     int
+	Die       int
+	FixedGain int
+}
+
+// LevelUp is ADR 0030 step 7 on a character: its realized level against
+// the target level its XP gives.
+type LevelUp struct {
+	// Pending are the levels still to take, lowest first: RealizedLevel+1
+	// to TargetLevel, one prompt each. Empty when none.
+	Pending []PendingLevel
+	// RealizedAboveTarget is step 7.4: an XP correction brought the target
+	// under the realized level. Nothing is removed; the card warns until the
+	// roll is undone or the XP comes back.
+	RealizedAboveTarget bool
 }
 
 // SheetValue names a value of the sheet comparison (ADR 0030 step 24).

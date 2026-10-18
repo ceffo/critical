@@ -18,7 +18,8 @@ import (
 
 // Characters is the character port: the sheet reads (charactersvc.Reader),
 // who owns and plays which character (charactersvc.Owners), the details edit
-// (detailssvc.DAL) and the maximum HP (hpsvc.DAL).
+// (detailssvc.DAL), the maximum HP (hpsvc.DAL) and the realized level
+// (levelupsvc.DAL).
 type Characters struct{ s *Store }
 
 var (
@@ -40,10 +41,29 @@ func (c Characters) GetCharacter(ctx context.Context, id int64) (*charactersvc.C
 			return domain.ErrCharacterNotFound
 		}
 		ch = clone(ch)
+		// No realized level is the sheet's level, as the database's
+		// realized_level NULL (ADR 0030 step 7.5).
+		if ch.RealizedLevel == 0 {
+			ch.RealizedLevel = ch.Sheet.Level
+		}
 		out = &ch
 		return nil
 	})
 	return out, err
+}
+
+// SetRealizedLevel implements levelupsvc.DAL (ADR 0030 step 7.3), or
+// returns domain.ErrCharacterNotFound.
+func (c Characters) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpMax int) error {
+	return c.s.write(ctx, func(t *tables) error {
+		ch, ok := t.characters[id]
+		if !ok {
+			return domain.ErrCharacterNotFound
+		}
+		ch.RealizedLevel, ch.HPMax = realizedLevel, hpMax
+		t.characters[id] = ch
+		return nil
+	})
 }
 
 // CharactersOf implements charactersvc.Owners.

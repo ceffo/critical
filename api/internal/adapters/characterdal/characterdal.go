@@ -52,7 +52,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 		ID: row.ID, Name: row.Name,
 		Str: int(row.Str), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
-		HPMax: int(row.HpMax), XPTotal: int(row.XpTotal),
+		HPMax: int(row.HpMax), RealizedLevel: int(row.RealizedLevel), XPTotal: int(row.XpTotal),
 		Class: row.Class, Race: row.RaceCode,
 		// The figures the imported sheet stated (ADR 0030 step 24).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
@@ -64,6 +64,22 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 			Height: row.Height, Weight: row.Weight, Hair: row.Hair, Eyes: row.Eyes, Languages: langs,
 		},
 	}, nil
+}
+
+// SetRealizedLevel implements levelupsvc.DAL: the realized level and the
+// max HP that goes with it (ADR 0030 step 7.3). domain.ErrCharacterNotFound
+// when the row is missing.
+func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpMax int) error {
+	n, err := d.q.SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
+		RealizedLevel: sql.NullInt64{Int64: int64(realizedLevel), Valid: true}, HpMax: int64(hpMax), ID: id,
+	})
+	if err != nil {
+		return fmt.Errorf("set realized level: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
 }
 
 // CharactersOf implements charactersvc.Owners.
@@ -112,7 +128,8 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		SaveParaPoison: int64(c.Sheet.Saves.ParaPoison), SaveRodStaffWand: int64(c.Sheet.Saves.RodStaffWand),
 		SavePetriPoly: int64(c.Sheet.Saves.PetriPoly), SaveBreath: int64(c.Sheet.Saves.Breath),
 		SaveSpell: int64(c.Sheet.Saves.Spell), Class: c.Class, RaceCode: c.Race,
-		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+		OwnerUserID:   uuid.NullUUID{UUID: owner, Valid: true},
+		RealizedLevel: sql.NullInt64{Int64: int64(c.RealizedLevel), Valid: true},
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create character: %w", err)

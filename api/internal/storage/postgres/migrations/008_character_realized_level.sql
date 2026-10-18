@@ -1,0 +1,11 @@
+-- The level a character has realized (ADR 0030 step 7): the level its benefits (max HP, THAC0,
+-- saves, spell slots) follow. The target level, the one its XP gives, is never stored; while it
+-- is above the realized level a level-up is pending and the player takes it, one level per roll,
+-- which raises hp_max by the gain and realized_level by 1 in one action-log transaction whose
+-- snapshot the undo writes back.
+--
+-- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): a nullable column the release before this one
+-- never reads. Schema only (step 2.1), no data step: NULL is "not levelled up in the app yet",
+-- read as the character's stored sheet `level` (step 7.5: an imported character starts at its
+-- sheet's level). The sheet `level` itself stays the imported figure step 24 compares.
+ALTER TABLE characters ADD COLUMN realized_level BIGINT;

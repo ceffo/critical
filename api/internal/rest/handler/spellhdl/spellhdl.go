@@ -341,7 +341,8 @@ func casterLevel(r *http.Request, charID CharacterIDFunc, chars characterGetter)
 	if err != nil || c == nil {
 		return 0, nil //nolint:nilerr // deliberate fallback, see above
 	}
-	return c.Derived.Level, nil
+	// The caster level is the realized level (ADR 0030 step 7).
+	return c.Derived.RealizedLevel, nil
 }
 
 // SpellSlotDTO matches the previous wire shape.

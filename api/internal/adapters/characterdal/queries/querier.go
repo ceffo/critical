@@ -16,7 +16,8 @@ type Querier interface {
 	CreateActiveBuffs(ctx context.Context, characterID int64) error
 	// A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
 	// sheet's level, THAC0 and saves the values the rules derive at its starting XP (ADR 0030 step
-	// 24: a created character states no sheet, so it shows no difference). Its details start empty.
+	// 24: a created character states no sheet, so it shows no difference), realized at that level with
+	// its max HP for it (step 7.5). Its details start empty.
 	CreateCharacter(ctx context.Context, arg CreateCharacterParams) (int64, error)
 	CreateRoundState(ctx context.Context, characterID int64) error
 	// A new character's state rows: no spell prepared, no buff, round 0 (the seed character's
@@ -27,6 +28,8 @@ type Querier interface {
 	CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, error)
 	// level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
 	// step 24): compared with the derived values, never read as inputs.
+	// realized_level is the level the character has taken (ADR 0030 step 7); NULL is the sheet's level
+	// (step 7.5), which stays the imported figure step 24 compares.
 	GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error)
 	GetCharacterDetails(ctx context.Context, id int64) (GetCharacterDetailsRow, error)
 	// Serialises the writes that move a user's current character (switch, create, retire): the
@@ -41,6 +44,8 @@ type Querier interface {
 	RetireCharacter(ctx context.Context, arg RetireCharacterParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
+	// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
+	SetRealizedLevel(ctx context.Context, arg SetRealizedLevelParams) (int64, error)
 	UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error)
 }
 

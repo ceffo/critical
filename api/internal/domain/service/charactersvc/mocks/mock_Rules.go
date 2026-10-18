@@ -134,6 +134,62 @@ func (_c *MockRules_ConSaveBonusFor_Call) RunAndReturn(run func(int) (int, error
 	return _c
 }
 
+// HitDiceFor provides a mock function with given fields: group
+func (_m *MockRules) HitDiceFor(group string) (ruletablesvc.HitDiceRow, error) {
+	ret := _m.Called(group)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HitDiceFor")
+	}
+
+	var r0 ruletablesvc.HitDiceRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (ruletablesvc.HitDiceRow, error)); ok {
+		return rf(group)
+	}
+	if rf, ok := ret.Get(0).(func(string) ruletablesvc.HitDiceRow); ok {
+		r0 = rf(group)
+	} else {
+		r0 = ret.Get(0).(ruletablesvc.HitDiceRow)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(group)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_HitDiceFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HitDiceFor'
+type MockRules_HitDiceFor_Call struct {
+	*mock.Call
+}
+
+// HitDiceFor is a helper method to define mock.On call
+//   - group string
+func (_e *MockRules_Expecter) HitDiceFor(group interface{}) *MockRules_HitDiceFor_Call {
+	return &MockRules_HitDiceFor_Call{Call: _e.mock.On("HitDiceFor", group)}
+}
+
+func (_c *MockRules_HitDiceFor_Call) Run(run func(group string)) *MockRules_HitDiceFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockRules_HitDiceFor_Call) Return(_a0 ruletablesvc.HitDiceRow, _a1 error) *MockRules_HitDiceFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_HitDiceFor_Call) RunAndReturn(run func(string) (ruletablesvc.HitDiceRow, error)) *MockRules_HitDiceFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LevelFor provides a mock function with given fields: class, xp
 func (_m *MockRules) LevelFor(class string, xp int) (int, error) {
 	ret := _m.Called(class, xp)

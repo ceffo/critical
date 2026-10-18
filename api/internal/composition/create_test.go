@@ -24,7 +24,8 @@ type createdSheet struct {
 	RaceCode string `json:"raceCode"`
 	HPMax    int    `json:"hpMax"`
 	Derived  struct {
-		Level            int   `json:"level"`
+		TargetLevel      int   `json:"targetLevel"`
+		RealizedLevel    int   `json:"realizedLevel"`
 		THAC0            int   `json:"thac0"`
 		SheetDifferences []any `json:"sheetDifferences"`
 	} `json:"derived"`
@@ -54,7 +55,8 @@ func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 	assert.Equal(t, "bard", got.Class)
 	assert.Equal(t, "half_elf", got.RaceCode)
 	assert.Equal(t, 6, got.HPMax)
-	assert.Equal(t, 3, got.Derived.Level, "PHB Table 25: 2,500 XP is level 3")
+	assert.Equal(t, 3, got.Derived.TargetLevel, "PHB Table 25: 2,500 XP is level 3")
+	assert.Equal(t, 3, got.Derived.RealizedLevel, "created realized at its starting level (ADR 0030 step 7.5)")
 	assert.Equal(t, 19, got.Derived.THAC0, "PHB Table 53: a level 3 rogue")
 	assert.Empty(t, got.Derived.SheetDifferences, "a created character states no sheet")
 

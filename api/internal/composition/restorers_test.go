@@ -49,6 +49,9 @@ func TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage(t *testing.T) {
 		{"a weapon added by hand (family weapons), the entry's character's", "weapons:dagger2", `{"id":"dagger2","absent":true}`, func(h *harness) {
 			h.WeaponEditor.EXPECT().Delete(mock.Anything, characterID, "dagger2").Return(nil).Once()
 		}},
+		{"a level-up roll's realized level", "realized_level", `{"realizedLevel":15,"hpMax":85}`, func(h *harness) {
+			h.Character.EXPECT().SetRealizedLevel(mock.Anything, characterID, 15, 85).Return(nil).Once()
+		}},
 		{"an XP entry added by hand (family xp)", "xp:12", `{"id":12,"absent":true}`, func(h *harness) {
 			h.XP.EXPECT().Delete(mock.Anything, characterID, int64(12)).Return(nil).Once()
 		}},

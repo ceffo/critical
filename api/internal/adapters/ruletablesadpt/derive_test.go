@@ -171,6 +171,42 @@ func TestWizardSpellsPerDay_Step8_Table21(t *testing.T) {
 	require.Error(t, err)
 }
 
+// ADR 0030 step 7.1 and 7.2: each group's hit die, name level and fixed gain
+// after it (PHB Tables 14 p.26, 20 p.30, 23 p.33 and 25 p.38, Hit Dice
+// column, with chapter 3's hit points paragraphs).
+func TestHitDiceFor_Step7_TheGroupsDieNameLevelAndFixedGain(t *testing.T) {
+	tbl := phb(t)
+	for group, want := range map[string]ruletablesvc.HitDiceRow{
+		"warrior": {Group: "warrior", Die: 10, NameLevel: 9, GainAfter: 3},
+		"priest":  {Group: "priest", Die: 8, NameLevel: 9, GainAfter: 2},
+		"rogue":   {Group: "rogue", Die: 6, NameLevel: 10, GainAfter: 2},
+		"wizard":  {Group: "wizard", Die: 4, NameLevel: 10, GainAfter: 1},
+	} {
+		got, err := tbl.HitDiceFor(group)
+		require.NoError(t, err)
+		assert.Equal(t, want, got, group)
+	}
+	_, err := tbl.HitDiceFor("psionicist")
+	require.Error(t, err)
+}
+
+// ADR 0030 step 7.1: PHB Table 3 (p.14), the hit point adjustment (the
+// warriors' bracketed value) and the value a low die counts as from 20 up.
+func TestConstitutionFor_Step7_1_Table3(t *testing.T) {
+	tbl := phb(t)
+	type row struct{ hp, warrior, lowDieMin int }
+	for con, want := range map[int]row{
+		3: {-2, -2, 0}, 6: {-1, -1, 0}, 7: {0, 0, 0}, 14: {0, 0, 0}, 15: {1, 1, 0}, 16: {2, 2, 0},
+		17: {2, 3, 0}, 18: {2, 4, 0}, 19: {2, 5, 0}, 20: {2, 5, 2}, 21: {2, 6, 3}, 23: {2, 6, 4}, 25: {2, 7, 4},
+	} {
+		got, err := tbl.ConstitutionFor(con)
+		require.NoError(t, err)
+		assert.Equal(t, want, row{got.HP, got.HPWarrior, got.LowDieMin}, "Constitution %d", con)
+	}
+	_, err := tbl.ConstitutionFor(26)
+	require.Error(t, err)
+}
+
 // A format-3 artifact has no class tables: every lookup says so (the server
 // refuses to start on one).
 func TestDerivedLookups_Format3HasNoClassTables(t *testing.T) {
@@ -193,5 +229,9 @@ func TestDerivedLookups_Format3HasNoClassTables(t *testing.T) {
 	_, err = three.XPThreshold("bard", 1)
 	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
 	_, err = three.WizardSpellsPerDay(1)
+	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
+	_, err = three.HitDiceFor("rogue")
+	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
+	_, err = three.ConstitutionFor(16)
 	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
 }

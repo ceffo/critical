@@ -28,7 +28,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 
 	q.EXPECT().GetCharacter(ctx, int64(3)).Return(queries.GetCharacterRow{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
-		HpMax: 42, Thac0Base: 16, Level: 5, XpTotal: 1200,
+		HpMax: 42, RealizedLevel: 6, Thac0Base: 16, Level: 5, XpTotal: 1200,
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
 		Class: "bard", RaceCode: "half_elf", Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M",
 		Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
@@ -37,7 +37,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, &charactersvc.Character{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
-		HPMax: 42, XPTotal: 1200, Class: "bard", Race: "half_elf",
+		HPMax: 42, RealizedLevel: 6, XPTotal: 1200, Class: "bard", Race: "half_elf",
 		// The stored level, THAC0 and saves are the sheet's figures (ADR 0030 step 24), never inputs.
 		Sheet: charactersvc.Sheet{Level: 5, THAC0: 16, Saves: charactersvc.Saves{
 			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
@@ -184,14 +184,14 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 		Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HpMax: 6, XpTotal: 2500,
 		Thac0Base: 19, Level: 3, SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12,
 		SaveBreath: 16, SaveSpell: 15, Class: "bard", RaceCode: "half_elf",
-		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true}, RealizedLevel: sql.NullInt64{Int64: 3, Valid: true},
 	}).Return(int64(7), nil).Once().NotBefore(lock)
 	slots := q.EXPECT().CreateSpellSlots(ctx, int64(7)).Return(nil).Once().NotBefore(row)
 	buffs := q.EXPECT().CreateActiveBuffs(ctx, int64(7)).Return(nil).Once().NotBefore(slots)
 	q.EXPECT().CreateRoundState(ctx, int64(7)).Return(nil).Once().NotBefore(buffs)
 
 	id, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
-		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, XPTotal: 2500,
+		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 3, XPTotal: 2500,
 		Class: "bard", Race: "half_elf",
 		Sheet: charactersvc.Sheet{Level: 3, THAC0: 19, Saves: charactersvc.Saves{
 			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
@@ -199,6 +199,23 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, int64(7), id)
+}
+
+// ADR 0030 step 7.3: a level-up roll (and its undo) writes the max HP and
+// the level it is set for; no row is ErrCharacterNotFound.
+func TestSetRealizedLevel_WritesTheLevelAndItsMaxHP(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	dal := characterdal.New(q)
+	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
+		HpMax: 91, RealizedLevel: sql.NullInt64{Int64: 16, Valid: true}, ID: 3,
+	}).Return(1, nil).Once()
+	require.NoError(t, dal.SetRealizedLevel(ctx, 3, 16, 91))
+
+	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
+		HpMax: 1, RealizedLevel: sql.NullInt64{Int64: 2, Valid: true}, ID: 9,
+	}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.SetRealizedLevel(ctx, 9, 2, 1), domain.ErrCharacterNotFound)
 }
 
 // A rename or a retirement that matches no row (another user's character, a

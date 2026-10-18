@@ -11,6 +11,7 @@ import { useRollStore } from "@/stores/roll";
 import { useXpStore } from "@/stores/xp";
 import type { Character } from "@/types/character";
 import { CharacterDetails } from "./CharacterDetails";
+import { LevelUpPrompt } from "./LevelUpPrompt";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
@@ -23,7 +24,8 @@ const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
  * success colour, and the sheet value is in a tooltip on hover and keyboard focus, never under it
  * (ADR 0027 step 5.4: a click on a stat is kept for the ability check). The level and THAC0 are the
  * server's, derived from class and XP (ADR 0030 steps 3 and 5); a difference with the imported
- * sheet is listed under the abilities (step 24).
+ * sheet is listed under the abilities (step 24). A level whose hit points are owed shows its prompt
+ * there too (step 7, LevelUpPrompt).
  */
 export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   const { t, i18n } = useTranslation();
@@ -32,6 +34,8 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   const strength = useBuffsStore((s) => s.strength);
   const strBuffed = strength !== null && strength.effective !== strength.base;
   const rollAbility = useRollStore((s) => s.rollAbility);
+  const rollLevelUp = useCharacterStore((s) => s.rollLevelUp);
+  const levelUpBusy = useCharacterStore((s) => s.levelUpBusy);
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
@@ -68,7 +72,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             }
             className="relative shrink-0 pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            {t("app.levelValue", { level: character.derived.level })}
+            {t("app.levelValue", { level: character.derived.realizedLevel })}
             {xp && (
               <span
                 aria-hidden
@@ -164,6 +168,15 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             </span>
           </div>
         </div>
+      )}
+      {character && (
+        <LevelUpPrompt
+          levelUp={character.derived.levelUp}
+          realizedLevel={character.derived.realizedLevel}
+          targetLevel={character.derived.targetLevel}
+          busy={levelUpBusy}
+          onRoll={rollLevelUp}
+        />
       )}
       {character && character.derived.sheetDifferences.length > 0 && (
         <SheetDifferences differences={character.derived.sheetDifferences} />

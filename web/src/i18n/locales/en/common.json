@@ -21,6 +21,28 @@
         "save_breath": "Save vs Breath",
         "save_spell": "Save vs Spells"
       }
+    },
+    "levelUp": {
+      "title": "Level {{level}} reached",
+      "rollHint": "Hit die d{{die}}, plus the CON adjustment",
+      "roll": "Roll",
+      "rollTitle": "Roll the hit die of level {{level}} (d{{die}})",
+      "fixedHint": "Past the name level: +{{gain}} max HP, no die",
+      "apply": "Add",
+      "applyTitle": "Add +{{gain}} max HP for level {{level}}",
+      "enter": "Enter",
+      "enterTitle": "Enter the die rolled at the table",
+      "dieLabel": "Die rolled at the table, 1 to {{die}}",
+      "confirm": "Confirm",
+      "cancel": "Close",
+      "more_one": "+{{count}} more level to roll next",
+      "more_other": "+{{count}} more levels to roll next",
+      "realizedAbove": "Level {{realized}} taken, XP gives level {{target}}",
+      "realizedAboveHint": "Undo the roll or correct the XP.",
+      "dieErrors": {
+        "out_of_range": "Enter a die from 1 to {{die}}.",
+        "fixed_gain": "This level has a fixed gain, no die."
+      }
     }
   },
   "language": {
@@ -1180,7 +1202,8 @@
       "exposure": "Exposure",
       "xp_add": "XP",
       "xp_edit": "XP",
-      "xp_remove": "XP"
+      "xp_remove": "XP",
+      "level_up": "Level"
     },
     "status": {
       "active": "Active",
@@ -1315,6 +1338,14 @@
       "removed": "XP removed: {{reason}} ({{total, number}} XP)",
       "edited": "XP edited: {{reason}}, {{from, number}} → {{to, number}} XP",
       "editedSame": "XP edited: {{reason}} ({{total, number}} XP)"
+    },
+    "levelUp": {
+      "rolled": "Level {{level}}: {{die}}{{con}}, max HP +{{gain}} ({{from}} → {{to}}){{manual}}",
+      "fixed": "Level {{level}}: max HP +{{gain}}, fixed gain ({{from}} → {{to}})",
+      "die": "d{{die}} {{rolled}}",
+      "dieRaised": "d{{die}} {{rolled}} (counts as {{counted}})",
+      "con": ", CON {{adjustment}}",
+      "manual": ", die entered"
     }
   },
   "critTable": {
@@ -1586,7 +1617,8 @@
     "email_has_user": "This email address already has an account.",
     "already_invited": "This email address already has a pending invite.",
     "invite_not_found": "This invite is no longer pending.",
-    "user_not_found": "This user does not exist."
+    "user_not_found": "This user does not exist.",
+    "level_up_not_pending": "That level is no longer to roll: the sheet refreshes."
   },
   "lastShort": {
     "attack": "Attack",

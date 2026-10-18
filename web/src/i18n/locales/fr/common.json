@@ -21,6 +21,28 @@
         "save_breath": "JS Souffle",
         "save_spell": "JS Sorts"
       }
+    },
+    "levelUp": {
+      "title": "Niveau {{level}} atteint",
+      "rollHint": "Dé de vie d{{die}}, plus l'ajustement de CON",
+      "roll": "Lancer",
+      "rollTitle": "Lancer le dé de vie du niveau {{level}} (d{{die}})",
+      "fixedHint": "Au-delà du niveau de nom : +{{gain}} PV max, sans dé",
+      "apply": "Ajouter",
+      "applyTitle": "Ajouter +{{gain}} PV max pour le niveau {{level}}",
+      "enter": "Saisir",
+      "enterTitle": "Saisir le dé lancé à la table",
+      "dieLabel": "Dé lancé à la table, de 1 à {{die}}",
+      "confirm": "Valider",
+      "cancel": "Fermer",
+      "more_one": "+{{count}} autre niveau à lancer ensuite",
+      "more_other": "+{{count}} autres niveaux à lancer ensuite",
+      "realizedAbove": "Niveau {{realized}} acquis, l'XP donne le niveau {{target}}",
+      "realizedAboveHint": "Annulez le jet ou corrigez l'XP.",
+      "dieErrors": {
+        "out_of_range": "Saisissez un dé de 1 à {{die}}.",
+        "fixed_gain": "Ce niveau a un gain fixe, sans dé."
+      }
     }
   },
   "language": {
@@ -1180,7 +1202,8 @@
       "exposure": "Exposition",
       "xp_add": "XP",
       "xp_edit": "XP",
-      "xp_remove": "XP"
+      "xp_remove": "XP",
+      "level_up": "Niveau"
     },
     "status": {
       "active": "Actif",
@@ -1315,6 +1338,14 @@
       "removed": "XP retirés : {{reason}} ({{total, number}} XP)",
       "edited": "XP modifiés : {{reason}}, {{from, number}} → {{to, number}} XP",
       "editedSame": "XP modifiés : {{reason}} ({{total, number}} XP)"
+    },
+    "levelUp": {
+      "rolled": "Niveau {{level}} : {{die}}{{con}}, PV max +{{gain}} ({{from}} → {{to}}){{manual}}",
+      "fixed": "Niveau {{level}} : PV max +{{gain}}, gain fixe ({{from}} → {{to}})",
+      "die": "d{{die}} {{rolled}}",
+      "dieRaised": "d{{die}} {{rolled}} (compté {{counted}})",
+      "con": ", CON {{adjustment}}",
+      "manual": ", dé saisi"
     }
   },
   "critTable": {
@@ -1586,7 +1617,8 @@
     "email_has_user": "Cette adresse e-mail a déjà un compte.",
     "already_invited": "Cette adresse e-mail a déjà une invitation en attente.",
     "invite_not_found": "Cette invitation n'est plus en attente.",
-    "user_not_found": "Cet utilisateur n'existe pas."
+    "user_not_found": "Cet utilisateur n'existe pas.",
+    "level_up_not_pending": "Ce niveau n'est plus à lancer : la fiche se met à jour."
   },
   "lastShort": {
     "attack": "Attaque",

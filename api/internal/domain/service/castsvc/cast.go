@@ -75,7 +75,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
-			casterLevel: c.Derived.Level, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
+			casterLevel: c.Derived.RealizedLevel, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -152,7 +152,7 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 	if err != nil {
 		return CastResult{}, fmt.Errorf("get character: %w", err)
 	}
-	if err := checkCasterLevel(c.Derived.Level); err != nil {
+	if err := checkCasterLevel(c.Derived.RealizedLevel); err != nil {
 		return CastResult{}, err
 	}
 	mode, err := s.modeFor(id, "")
@@ -164,7 +164,7 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: c.Derived.Level, source: SourceEffect, mode: mode,
+			spellID: id, casterLevel: c.Derived.RealizedLevel, source: SourceEffect, mode: mode,
 		})
 		if err != nil {
 			return err

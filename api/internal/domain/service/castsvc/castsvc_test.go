@@ -103,7 +103,7 @@ func newFixtureWith(t *testing.T, effects spelleffectsvc.Catalog, dice ...int) *
 		tx:      &fakeTx{},
 	}
 	chars := mocks.NewMockCharacters(t)
-	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: 12, Derived: charactersvc.Derived{Level: bardLevel}}, nil).Maybe()
+	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel}}, nil).Maybe()
 	log := mocks.NewMockLog(t)
 	log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(
 		func(_ context.Context, e actionlog.NewEntry) (int64, error) {
@@ -549,7 +549,7 @@ func TestCast_BuffErrorAborts(t *testing.T) {
 	buffs := mocks.NewMockBuffs(t)
 	buffs.EXPECT().Add(mock.Anything, charID, mock.Anything).Return(buffsvc.BuffEffect{}, actionlog.Snapshot{}, boom)
 	chars := mocks.NewMockCharacters(t)
-	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{Derived: charactersvc.Derived{Level: bardLevel}}, nil)
+	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{Derived: charactersvc.Derived{RealizedLevel: bardLevel}}, nil)
 	svc, err := castsvc.New(castsvc.Deps{
 		Slots: f.slots, Effects: catalog(t), Texts: f.texts, Buffs: buffs, Items: f.items, Attacks: f.attacks,
 		Characters: chars, Dice: f.dice, Log: mocks.NewMockLog(t), Tx: f.tx,

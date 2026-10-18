@@ -202,18 +202,49 @@ type SheetDifferenceDTO struct {
 }
 
 // DerivedDTO is the values the rules derive (ADR 0030 steps 3 to 8, 22.1 and
-// 24). `xpTotal` is the starting XP plus the ledger, `nextLevelXp` null at the
-// last level, `raceSaveBonus` the race's bonus per category (0: none), the
+// 24). `xpTotal` is the starting XP plus the ledger, `targetLevel` the level
+// it gives (step 3, never stored), `realizedLevel` the level taken (step 7),
+// which THAC0, saves and slots follow, `nextLevelXp` (the target's next
+// level) null at the last level, `raceSaveBonus` the race's bonus per category (0: none), the
 // slots by ascending spell level (levels without a slot left out).
 type DerivedDTO struct {
 	XPTotal          int                  `json:"xpTotal"`
-	Level            int                  `json:"level"`
+	TargetLevel      int                  `json:"targetLevel"`
+	RealizedLevel    int                  `json:"realizedLevel"`
 	NextLevelXP      *int                 `json:"nextLevelXp"`
 	THAC0            int                  `json:"thac0"`
 	Saves            SavesDTO             `json:"saves"`
 	RaceSaveBonus    SavesDTO             `json:"raceSaveBonus"`
 	SpellSlots       []SlotCountDTO       `json:"spellSlots"`
 	SheetDifferences []SheetDifferenceDTO `json:"sheetDifferences"`
+	LevelUp          LevelUpDTO           `json:"levelUp"`
+}
+
+// PendingLevelDTO is one level whose hit points are owed (ADR 0030 step 7):
+// `die` the hit die's sides to roll up to the name level (0 above it),
+// `fixedGain` the gain above it (0 up to it).
+type PendingLevelDTO struct {
+	Level     int `json:"level"`
+	Die       int `json:"die"`
+	FixedGain int `json:"fixedGain"`
+}
+
+// LevelUpDTO is ADR 0030 step 7: `pending` the levels from the realized one
+// to the target, lowest first (the prompt, one per level),
+// `realizedAboveTarget` an XP correction brought the target under the
+// realized level (step 7.4, the card warns).
+type LevelUpDTO struct {
+	Pending             []PendingLevelDTO `json:"pending"`
+	RealizedAboveTarget bool              `json:"realizedAboveTarget"`
+}
+
+// PendingDTO maps the pending levels, never null.
+func PendingDTO(p []charactersvc.PendingLevel) []PendingLevelDTO {
+	out := make([]PendingLevelDTO, 0, len(p))
+	for _, l := range p {
+		out = append(out, PendingLevelDTO{Level: l.Level, Die: l.Die, FixedGain: l.FixedGain})
+	}
+	return out
 }
 
 func savesDTO(s charactersvc.Saves) SavesDTO {
@@ -222,9 +253,12 @@ func savesDTO(s charactersvc.Saves) SavesDTO {
 
 func derivedDTO(d charactersvc.Derived) DerivedDTO {
 	out := DerivedDTO{
-		XPTotal: d.XPTotal, Level: d.Level, NextLevelXP: d.NextLevelXP, THAC0: d.THAC0,
+		XPTotal: d.XPTotal, TargetLevel: d.TargetLevel, RealizedLevel: d.RealizedLevel, NextLevelXP: d.NextLevelXP, THAC0: d.THAC0,
 		Saves: savesDTO(d.Saves), RaceSaveBonus: savesDTO(d.RaceSaveBonus),
 		SpellSlots: []SlotCountDTO{}, SheetDifferences: []SheetDifferenceDTO{},
+		LevelUp: LevelUpDTO{
+			Pending: PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
+		},
 	}
 	for _, level := range slices.Sorted(maps.Keys(d.SpellSlots)) {
 		if n := d.SpellSlots[level]; n > 0 {

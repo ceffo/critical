@@ -47,14 +47,15 @@ func expectLevel1Bard(e *env) {
 // as the sheet's figures the values the rules derive at its starting XP (ADR
 // 0030 step 24: it states no sheet, so it shows no difference); it becomes
 // the owner's current character in the same transaction, and the owner's
-// remembered sessions are forgotten (ADR 0029 step 4.7).
+// remembered sessions are forgotten (ADR 0029 step 4.7). Its max HP is set
+// for that level (ADR 0030 step 7.5: no level-up pending).
 func TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent(t *testing.T) {
 	e := newEnv(t)
 	e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
 	expectLevel1Bard(e)
 	want := charactersvc.Character{
 		Name: "Lyra", Class: "bard", Race: "half_elf",
-		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, XPTotal: 0,
+		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 1, XPTotal: 0,
 		Sheet:   charactersvc.Sheet{Level: 1, THAC0: 20, Saves: rogue1to4Saves},
 		Details: charactersvc.Details{Languages: []string{}},
 	}

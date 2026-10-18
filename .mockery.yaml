@@ -54,6 +54,17 @@ packages:
       outpkg: "mocks"
     interfaces:
       Catalog:
+  github.com/ceffo/critical/api/internal/domain/service/levelupsvc:
+    config:
+      dir: "internal/domain/service/levelupsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Characters:
+      Rules:
+      Dice:
+      Log:
   github.com/ceffo/critical/api/internal/domain/service/charactersvc:
     config:
       dir: "internal/domain/service/charactersvc/mocks"

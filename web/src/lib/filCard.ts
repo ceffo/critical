@@ -22,6 +22,7 @@ import {
   exposurePayload,
   type ExposureLogPayload,
   itemPayload,
+  levelUpPayload,
   savePayload,
   skillCheckPayload,
   skillName,
@@ -494,6 +495,8 @@ export function rowValue(e: LogEntry): RowValue | null {
     const amount = e.status === "voided" ? e.hpDelta : e.effectiveHpDelta;
     return { text: formatSigned(amount), tone: "damage" };
   }
+  const levelUp = levelUpPayload(e);
+  if (levelUp) return { text: formatSigned(levelUp.gain), tone: "heal" };
   const cast = castPayload(e);
   if (cast?.damage) return { text: String(cast.damage.total), tone: "ink" };
   if (cast?.attack)

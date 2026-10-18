@@ -1,5 +1,9 @@
-import type { Character, CharacterDetails } from "@/types/character";
-import { patch, request } from "./http";
+import type {
+  Character,
+  CharacterDetails,
+  LevelUpResult,
+} from "@/types/character";
+import { patch, post, request } from "./http";
 
 export function fetchCharacter(): Promise<Character> {
   return request<Character>("/api/character");
@@ -10,4 +14,18 @@ export function patchCharacterDetails(
   body: Partial<CharacterDetails>,
 ): Promise<CharacterDetails> {
   return patch<CharacterDetails>("/api/character/details", body);
+}
+
+/**
+ * Roll the hit points of `level`, the lowest pending one (ADR 0030 step 7), on the server; `die` is
+ * the manual entry, the die rolled at the table.
+ */
+export function rollLevelUp(
+  level: number,
+  die?: number,
+): Promise<LevelUpResult> {
+  return post<LevelUpResult>(
+    "/api/character/levelup/roll",
+    die === undefined ? { level } : { level, die },
+  );
 }

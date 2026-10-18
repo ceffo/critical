@@ -4,6 +4,7 @@ import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
+import type { LevelUpRecord } from "@/types/character";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { buffName, englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { checkAdjustedTarget } from "./skillAdjust";
@@ -470,6 +471,42 @@ function xpChangeText(e: LogEntry, t: TFunction): string | null {
   return t("log.xp.edited", { from: was.total, to: now.total, reason });
 }
 
+/** The payload of a level_up entry (levelupsvc record, ADR 0030 step 7.3), or null. */
+export function levelUpPayload(e: LogEntry): LevelUpRecord | null {
+  if (e.kind !== "level_up") return null;
+  const p = e.payload as Partial<LevelUpRecord> | null;
+  return p && typeof p.gain === "number" && typeof p.level === "number"
+    ? (p as LevelUpRecord)
+    : null;
+}
+
+/** A level-up roll: the die (and the value it counts as from Constitution 20), the Constitution
+ * adjustment and the gain the server computed, or the fixed gain above the name level. */
+function levelUpText(e: LogEntry, t: TFunction): string | null {
+  const p = levelUpPayload(e);
+  if (!p) return null;
+  const hp = {
+    level: p.level,
+    gain: p.gain,
+    from: p.hpMaxBefore,
+    to: p.hpMaxAfter,
+  };
+  if (p.fixed || p.rolled === null) return t("log.levelUp.fixed", hp);
+  const die =
+    p.counted !== null && p.counted !== p.rolled
+      ? t("log.levelUp.dieRaised", {
+          die: p.hitDie,
+          rolled: p.rolled,
+          counted: p.counted,
+        })
+      : t("log.levelUp.die", { die: p.hitDie, rolled: p.rolled });
+  const con = p.conAdjustment
+    ? t("log.levelUp.con", { adjustment: formatSigned(p.conAdjustment) })
+    : "";
+  const manual = p.manual ? t("log.levelUp.manual") : "";
+  return t("log.levelUp.rolled", { ...hp, die, con, manual });
+}
+
 function attackText(
   p: RollResult,
   t: TFunction,
@@ -755,6 +792,8 @@ export function entryText(
   if (weaponChange) return weaponChange;
   const xpChange = xpChangeText(e, t);
   if (xpChange) return xpChange;
+  const levelUp = levelUpText(e, t);
+  if (levelUp) return levelUp;
   const hp = hpChangeText(e, t);
   if (hp) return hp;
   const p = buffPayload(e);

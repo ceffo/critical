@@ -1635,9 +1635,9 @@
       "skill_points_per_skill": "{{name}} : {{points}} points, {{limit}} au plus à ce niveau"
     },
     "spendPoints": "Dépenser",
-    "spendPointsHint": "Dépenser des points de talent de voleur",
-    "armorHint": "Changer l’armure portée pour les talents de voleur",
-    "pointsTitle": "Points des talents de voleur",
+    "spendPointsHint": "Dépenser des points de talent",
+    "armorHint": "Changer l’armure portée pour les talents",
+    "pointsTitle": "Points de talent",
     "pointsLead": "Le total des points de chaque talent. Le budget de votre niveau est un avertissement, pas une limite.",
     "pointsLabel": "Points en {{name}}",
     "savePoints": "Enregistrer",
@@ -1870,14 +1870,15 @@
       "race_not_allowed": "Cette race ne peut pas être {{className}}.",
       "not_allowed": "Pas de Force exceptionnelle pour ce personnage : seulement un combattant à 18 de Force, sauf un petite-gens."
     },
-    "skillPoints": "Talents de voleur",
+    "skillPoints": "Points de talent",
     "skillPointsLead": "Les points dépensés dans chaque talent ; le serveur ajoute la base, la race, la Dextérité et l’armure.",
     "skillArmor": "Armure portée",
     "armors": {
       "none": "Aucune",
       "leather": "Cuir",
       "padded_studded_leather": "Matelassée ou cuir clouté",
-      "elven_chain": "Cotte de mailles elfique"
+      "elven_chain": "Cotte de mailles elfique",
+      "metal": "Métal, jusqu’à la maille"
     }
   },
   "turning": {

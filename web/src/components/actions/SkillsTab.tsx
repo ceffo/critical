@@ -19,8 +19,9 @@ const HEADINGS: Record<SkillKind, string> = {
 
 /**
  * Skills tab of the Act panel (ADR 0014; layout ADR 0027 step 12): the non-weapon proficiencies
- * (d20 at or under the target) and the bard or thief skills (d100 at or under the percentage; a
- * thief's computed by the server, ADR 0030 step 17, with a budget warning), side by side
+ * (d20 at or under the target) and the bard or thief skills (d100 at or under the percentage,
+ * computed by the server from the entered points, ADR 0030 steps 17 and 18, with a budget warning,
+ * the armour worn and the "Spend" editor), side by side
  * when the panel holds two 16rem columns, stacked otherwise. Each row is one button that rolls the
  * check on the server; a proficiency shows its ability with the modifier as a pill, a bard skill its
  * percentage. The target, the verdict and the DM's adjustment are on the result card, after the
@@ -40,6 +41,11 @@ export function SkillsTab() {
   }, [fetchSkills, logEntries]);
 
   if (!skills) return null;
+  // A thief's or a bard's skills, derived from its points (ADR 0030 steps 17 and 18).
+  const classKind: SkillKind =
+    skills.thiefSkills.length > 0 ? "thiefSkill" : "bardSkill";
+  const classSkills =
+    classKind === "thiefSkill" ? skills.thiefSkills : skills.bardSkills;
   const rows = (
     kind: SkillKind,
     list: { id: string; value: ReactNode; unusable?: boolean }[],
@@ -99,26 +105,16 @@ export function SkillsTab() {
           ),
         })),
       )}
-      {(skills.bardSkills.length > 0 || skills.thiefSkills.length === 0) &&
-        rows(
-          "bardSkill",
-          skills.bardSkills.map((b) => ({
-            id: b.id,
-            value: (
-              <span className="text-right font-semibold whitespace-nowrap tabular-nums">
-                {t("skills.percent", { value: b.percent })}
-              </span>
-            ),
-          })),
-        )}
-      {skills.thiefSkills.length > 0 && (
+      {classSkills.length === 0 && rows("bardSkill", [])}
+      {classSkills.length > 0 && (
         <div className="flex min-w-0 flex-col gap-2">
           {rows(
-            "thiefSkill",
-            // ADR 0030 step 17: the server's percentage; its terms in the tooltip.
-            skills.thiefSkills.map((s) => ({
+            classKind,
+            // ADR 0030 steps 17 and 18: the server's percentage; its terms in the tooltip. A
+            // thieving skill under 1% waits for points (PHB p.39).
+            classSkills.map((s) => ({
               id: s.id,
-              unusable: s.percent < 1,
+              unusable: classKind === "thiefSkill" && s.percent < 1,
               value: (
                 <span
                   className="text-right font-semibold whitespace-nowrap tabular-nums"
@@ -130,7 +126,7 @@ export function SkillsTab() {
                     armor: formatSigned(s.armor),
                     max: s.maxPercent,
                   })}
-                  data-testid={`thief-percent-${s.id}`}
+                  data-testid={`${classKind === "thiefSkill" ? "thief" : "bard"}-percent-${s.id}`}
                 >
                   {t("skills.percent", { value: s.percent })}
                 </span>
@@ -156,7 +152,7 @@ export function SkillsTab() {
           <ThiefArmorPicker />
           {editingPoints ? (
             <ThiefPointsEditor
-              skills={skills.thiefSkills}
+              skills={classSkills}
               onDone={() => setEditingPoints(false)}
             />
           ) : (

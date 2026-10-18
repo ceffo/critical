@@ -29,15 +29,9 @@ export interface Proficiency {
   last: LastCheck | null;
 }
 
-export interface BardSkill {
-  id: string;
-  percent: number;
-  last: LastCheck | null;
-}
-
-/** A thieving skill (ADR 0030 step 17): percent = base + points + race + dexterity + armor,
- * capped at 95 and floored at 0, computed by the server. */
-export interface ThiefSkill {
+/** A thieving skill (ADR 0030 step 17) or a bard skill (step 18): percent = base + points + race +
+ * dexterity + armor, capped at 95 and floored at 0, computed by the server. */
+export interface RogueSkill {
   id: string;
   base: number;
   points: number;
@@ -45,11 +39,14 @@ export interface ThiefSkill {
   dexterity: number;
   armor: number;
   percent: number;
-  /** The cap on the percentage, and the most points one skill takes (ADR 0030 step 17). */
+  /** The cap on the percentage, and the most points one skill takes (ADR 0030 steps 17, 18). */
   maxPercent: number;
   maxPoints: number;
   last: LastCheck | null;
 }
+
+export type ThiefSkill = RogueSkill;
+export type BardSkill = RogueSkill;
 
 export interface Skills {
   proficiencies: Proficiency[];

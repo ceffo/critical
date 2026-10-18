@@ -8,7 +8,8 @@ Rod/Staff/Wand and Spells saves, step 24 for the level, THAC0 and saves, and the
 (each with its "Tests:" line); step 7 (realized and target levels, the level-up roll) implemented
 2026-10-18 as rewritten by the
 user's ruling that day; steps 9 to 12 (the fighter) implemented 2026-10-18, each with its "Tests:"
-line and as-built note; the rest is not
+line and as-built note; step 18 (the bard's skills, its budget accepted by the user in triage)
+implemented 2026-10-18 with its "Tests:" line; the rest is not
 implemented. Amends [ADR 0002](0002-attack-resolution.md) step 2, [ADR 0004](0004-buffs.md) steps 7
 to 10 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR
 0008](0008-spell-slots-and-long-rest.md)
@@ -113,7 +114,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    to chain mail" (chain, ring, scale, hide, brigandine: the bard may wear any armour up to and
    including chain mail, PHB chapter 3, Bard). Table 29 has columns only for the first four; the
    metal one uses the elven chain column plus the bard's extra -5% (Table 29's note), a ruling,
-   not book text, step 18)_.
+   not book text, step 18)_. _(As built for the bard, 2026-10-18: the code `metal`, stored in
+   `characters.skill_armor` (migration 012 widens its CHECK) and refused for a thief (`unknown`);
+   a bard's points share `characters.skill_points` with the thief's.)_
    _(As built)_ The race is a code in `characters.race_code` (`''` when none is set: no racial
    adjustment applies); the free-text race of the character's details stays as the player wrote it.
    The seed names Kelsen's (`half_elf`), given to him by the migration's data step. The derived values
@@ -128,7 +131,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    starting XP (0 to 100,000,000). Only the classes whose entries and rules are built may be created:
    the **bard** for now (`charactersvc.CreatableClasses`; the fighter and the **mage** since,
    a created mage's spellbook starting empty and filling by step 20); each class item adds its own with its entries
-   (a fighter's exceptional strength, a thief's skill points). The **thief** is creatable since steps 17 and 19 (its skill points and armour, step 17). The **cleric** is creatable since steps 13
+   (a fighter's exceptional strength, a thief's skill points). The **thief** is creatable since steps 17 and 19 (its skill points and armour, step 17); the
+   **bard** enters its skill points and armour since step 18 (the armour required as the thief's). The **cleric** is creatable since steps 13
    to 16 (it enters nothing more). A refusal names the field and a code (`empty`, `too_long`,
    `out_of_range`, `not_creatable`, `unknown`, `race_not_allowed`), worded by the web.
    Tests: `TestCreate_RefusesInvalidInputWithFieldErrors`, `TestCreate_AcceptsTheBounds` (charactersvc),
@@ -484,9 +488,33 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 18. **Bard skills.** The four bard skills (Climb Walls, Detect Noise, Pick Pockets, Read
     Languages) are: base (PHB Table 33) + the entered points + race (Table 27) + Dexterity (Table
     28: Pick Pockets only) + armour (Table 29; metal armour up to chain mail is the elven chain column plus the extra -5%
-    of the table's note, step 1), capped at 95% and floored at 0. _(proposed: budget warning as step 17, 20 points at level 1 and 15 a level
-    after; the PHB gives the bard no per-skill limit, so none is checked.)_ The computed percentage replaces the sheet's in [ADR 0014](0014-skill-checks.md) step
-    3. The other bard abilities stay as they are.
+    of the table's note, step 1), capped at 95% and floored at 0. The budget is a warning as step
+    17's, 20 points at level 1 and 15 a level after (PHB p.42; accepted by the user in triage,
+    2026-10-18); the PHB gives the bard no per-skill limit, so none is checked. The computed
+    percentage replaces the sheet's in [ADR 0014](0014-skill-checks.md) step 3. The other bard
+    abilities stay as they are.
+    _(As built, 2026-10-18)_ Step 17's machinery serves the bard, generalised by class rather than
+    duplicated: the same entries (`characters.skill_points` and `skill_armor`; the bard's armours
+    are the thief's four and `metal`), the same checks at creation and after it
+    (`charactersvc.ValidSkillPoints` on the class's skills, `ruletablesvc.SkillsOf` and
+    `SkillArmorsOf`; refusals `empty`, `unknown`, `out_of_range`, `not_allowed`), the same spend
+    (`PUT /api/skills/points`, a `skill_points` entry undone by its snapshot) and the same armour
+    change (a `skill_armor` entry). The outputs stay per class: the derived block's `bardSkills`
+    beside `thiefSkills` (`ruletablesvc.BardSkills` on `rogueSkills`, the shared sum), the budget
+    in `skillBudget` (`ruletablesvc.BardSkillPointBudget`, code `skill_points_total` only), and the
+    check kind `bardSkill` (ADR 0014 step 3, kept so the logged checks still read). A bard skill at
+    0% is rolled as before (the PHB's 1% minimum is the thief's, PHB p.39). No armour stored (the
+    imported bard) reads as leather. The `bard_skills` rows are no longer read: they stay as the
+    imported sheet's figures (step 24).
+    Tests: `TestBardSkills_Step18_Base`, `TestBardSkills_Step18_Points`,
+    `TestBardSkills_Step18_Race`, `TestBardSkills_Step18_DexterityOnPickPocketsOnly`,
+    `TestBardSkills_Step18_Armour` (metal included), `TestBardSkills_Step18_CapAndFloor`,
+    `TestBardSkillPointBudget_Step18` (ruletablesadpt), `TestDerive_Step18_TheBardsSkillsAndBudget`,
+    `TestCreate_Step18_BardSkillPointsAndArmour`, `TestChange_ABardsSkillArmourIsSetAndLogged`
+    (charactersvc), `TestBardSkill_Step18_D100AtOrUnderTheDerivedPercent`,
+    `TestBardSkill_Step18_ListedWithTheirTermsAndLastCheck`, `TestSetPoints_Step18_ABardSpendsItsPoints`
+    (skillsvc), `TestBard_Step18_CreateRollSpendAndUndo`,
+    `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
 19. **Backstab.** A thief's attack has a backstab option (not a bard's): +4 to hit (a named
     modifier), and the weapon's damage dice multiplied by PHB Table 30 for the level (×2 at 1-4, ×3
     at 5-8, ×4 at 9-12, ×5 from 13) as a `DiceMultiplier` factor of
@@ -634,10 +662,20 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     the computed values at import. Every difference is a warning naming the value, the sheet's
     figure and the computed one (structured: a code and the
     two numbers), kept and shown to the player; the computed value is used. The
-    sheet's figures are not stored as inputs. _(proposed: Kelsen's bard skill points are derived
-    once at import as the sheet's percentage minus the computed base, race, Dexterity and armour
-    terms, so his skills come out as on the sheet.)_
-    _(As built, level, THAC0 and saves; the skills come with step 18)_ The figures the sheet stated
+    sheet's figures are not stored as inputs. Kelsen's bard skill points are derived once as the
+    sheet's percentage minus the computed base, race, Dexterity and armour terms, so his skills come
+    out as on the sheet (the user's ruling in triage, 2026-10-18).
+    _(As built for the skills, 2026-10-18)_ The derived points are the seed's (`skill_points` in
+    `seeds/character.json`: 35 / 70 / 25 / 70, within the bard's budget at level 15), stored with a
+    new seed character and given to the one already stored by migration 012's data step
+    (`pointSeedCharacter`, only while he has none). The seed check proves them: on the fixture's
+    tables and the real artifact, each derived percentage equals the sheet's in `seeds/skills.json`
+    and each point is that percentage minus the computed terms. The sheet's skill figures are not
+    compared on read (no `sheetDifferences` entry for them).
+    Tests: `TestKelsen_TheSheetMatchesTheDerivedValues` (seedcheck),
+    `TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration` (storage/postgres),
+    `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
+    _(As built, level, THAC0 and saves; the skills with step 18, above)_ The figures the sheet stated
     at import are the character's stored `level`, `thac0_base` and `save_*` columns, never read as
     inputs; each read of the character compares them with the values the rules give at the sheet's
     own XP (the starting XP, without the ledger), which is the comparison at import: XP awarded

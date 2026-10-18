@@ -504,6 +504,38 @@ function learnText(
     : t("log.learn.failed", { ...vars, level: p.retryLevel });
 }
 
+/** The payload of a skill_points entry (skillsvc, ADR 0030 step 17): the points per skill before
+ * and after, or null. */
+export function skillPointsPayload(
+  e: LogEntry,
+): { before: Record<string, number>; after: Record<string, number> } | null {
+  if (e.kind !== "skill_points") return null;
+  const p = e.payload as {
+    before?: Record<string, number>;
+    after?: Record<string, number>;
+  } | null;
+  return p && p.before && p.after ? { before: p.before, after: p.after } : null;
+}
+
+/** "Skill points: Open Locks 30 → 45, Pick Pockets 0 → 15": each skill whose points changed. */
+function skillPointsText(e: LogEntry, t: TFunction): string | null {
+  const p = skillPointsPayload(e);
+  if (!p) return null;
+  const skills = [
+    ...new Set([...Object.keys(p.before), ...Object.keys(p.after)]),
+  ].filter((k) => (p.before[k] ?? 0) !== (p.after[k] ?? 0));
+  const changes = skills
+    .map((k) =>
+      t("log.skillPoints.change", {
+        name: skillName(t, k),
+        from: p.before[k] ?? 0,
+        to: p.after[k] ?? 0,
+      }),
+    )
+    .join(", ");
+  return t("log.skillPoints.text", { changes });
+}
+
 /** The payload of a turn_undead entry (turnsvc record, ADR 0030 step 16), or null. */
 export function turnPayload(e: LogEntry): TurnResult | null {
   if (e.kind !== "turn_undead") return null;
@@ -869,6 +901,8 @@ export function entryText(
   if (learn) return learn;
   const turn = turnText(e, t);
   if (turn) return turn;
+  const points = skillPointsText(e, t);
+  if (points) return points;
   const hp = hpChangeText(e, t);
   if (hp) return hp;
   const p = buffPayload(e);

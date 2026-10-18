@@ -45,6 +45,9 @@ export interface ThiefSkill {
   dexterity: number;
   armor: number;
   percent: number;
+  /** The cap on the percentage, and the most points one skill takes (ADR 0030 step 17). */
+  maxPercent: number;
+  maxPoints: number;
   last: LastCheck | null;
 }
 

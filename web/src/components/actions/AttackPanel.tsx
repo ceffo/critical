@@ -143,7 +143,15 @@ export function AttackPanel() {
               {view.preview?.backstab && (
                 <label
                   className="flex w-fit items-center gap-2 text-body"
-                  title={t("attack.backstabHint", { n: backstabMultiplier })}
+                  title={t("attack.backstabHint", {
+                    n: backstabMultiplier,
+                    // The +4 is the server's: the backstab modifier of its preview.
+                    toHit: formatSigned(
+                      view.preview.backstab.modifiers.find(
+                        (m) => m.kind === "backstab",
+                      )?.value ?? 0,
+                    ),
+                  })}
                 >
                   <input
                     type="checkbox"

@@ -1282,6 +1282,29 @@ describe("entryText for skill checks", () => {
     expect(entryText(entry("skill_check", thief, ""), fr)).toBe(
       "Crochetage : d100 40 contre 55, réussi",
     );
+    const en = await makeT("en");
+    expect(entryText(entry("skill_check", thief, ""), en)).toMatch(
+      /^Open Locks: d100 40 vs 55/,
+    );
+  });
+
+  it("words a thief's skill points spent (ADR 0030 step 17): each changed skill (en, fr)", async () => {
+    const en = await makeT("en");
+    const fr = await makeT("fr");
+    const e = entry(
+      "skill_points",
+      {
+        before: { open_locks: 30, pick_pockets: 30 },
+        after: { open_locks: 45, pick_pockets: 30, climb_walls: 15 },
+      },
+      "",
+    );
+    expect(entryText(e, en)).toBe(
+      "Skill points: Open Locks 30 → 45, Climb walls 0 → 15",
+    );
+    expect(entryText(e, fr)).toBe(
+      "Points de talent : Crochetage 30 → 45, Escalade 0 → 15",
+    );
   });
 
   it("words an adjusted check: adjusted target, original target, adjustment and reason (en, fr)", async () => {

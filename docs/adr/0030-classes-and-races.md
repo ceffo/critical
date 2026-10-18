@@ -464,10 +464,23 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     totals the realized level allows (60 + 30 a level after the 1st in all, 30 + 15 a level after
     the 1st in one skill): `derived.skillBudget`, codes `skill_points_total` and
     `skill_points_per_skill`, shown under the skills, never a refusal.
+    The player spends points **after creation** too (the triage ruling: "the player spends
+    them"): `PUT /api/skills/points` sets each skill's total, checked as at creation
+    (`charactersvc.ValidSkillPoints`), the budget at the realized level still only a warning. It is
+    a `skill_points` entry of the action log with a `skill_points` snapshot (the points before and
+    after), so it is undone and redone like any move; the same points as stored log nothing. The
+    web edits it from the Skills tab ("Spend points"). Storing totals loses no budget rule (the
+    per-skill and total caps at a level are exactly the conditions under which totals split into
+    legal per-level allotments), only which level each point came from. A skill under 1% (the
+    floor 0) is shown but refused before the die (`skill_unusable`): PHB p.39 says the player must
+    first spend points to raise it to 1% at least.
     Tests: `TestThiefSkills_Step17_TheTermsOfEachSkill`, `TestThiefSkills_Step17_CapFloorAndArmour`,
     `TestSkillPointBudget_Step17` (ruletablesadpt), `TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab`,
     `TestCreate_Step17_ThiefSkillPointsAndArmour` (charactersvc), `TestThiefSkill_Step17_D100AtOrUnderTheDerivedPercent`
-    (skillsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition).
+    (skillsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition); after creation
+    `TestSetPoints_Step17_WritesAndLogsTheSpend`, `TestSetPoints_Step17_RefusalsAndNoChange`,
+    `TestSetPoints_Step17_RestorerWritesThePointsBack`, `TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie`
+    (skillsvc), `TestThief_Step17_SpendPointsAfterALevelUpAndUndo` (composition).
 18. **Bard skills.** The four bard skills (Climb Walls, Detect Noise, Pick Pockets, Read
     Languages) are: base (PHB Table 33) + the entered points + race (Table 27) + Dexterity (Table
     28: Pick Pockets only) + armour (Table 29; metal armour up to chain mail is the elven chain column plus the extra -5%
@@ -482,13 +495,16 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     [ADR 0012](0012-attack-against-unknown-ac.md)); first-attack-only and the conditions of
     surprise are the player's call. Read scrolls (level 10) and followers come later.
     _(As built, 2026-10-18)_ The attack request's `backstab` option, refused before any die for a
-    class without it (`derived.backstab` 0). The +4 is the modifier kind `backstab`; Table 30 at the
+    class without it (`derived.backstab` 0) and for a weapon that is not a melee one
+    (`combatsvc.BackstabAllowed`, as point-blank checks its weapon; no backstab preview then). PHB
+    p.40 has the thief strike a blow from behind at a target area he must be able to reach (on a
+    giant, from a ledge), which a missile does not do. The +4 is the modifier kind `backstab`; Table 30 at the
     realized level is a `dice_multiplier` damage term of kind `backstab`, multiplied into the dice
     multiplier with any buff's. The attack form previews it; the web clears the option once an
     attack is rolled with it (the player checks it again for another).
     Tests: `TestBackstabFor_Step19_Table30` (ruletablesadpt), `TestResolveAttack_Step19_Backstab`,
-    `TestResolveAttack_Step19_BackstabRefusedBeforeAnyDie`, `TestGetAttackForm_Step19_BackstabPreview`
-    (combatsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition).
+    `TestResolveAttack_Step19_BackstabRefusedBeforeAnyDie`, `TestGetAttackForm_Step19_BackstabPreview`,
+    `TestBackstab_Step19_MeleeWeaponOnly` (combatsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition).
 
 ### Spellbook
 

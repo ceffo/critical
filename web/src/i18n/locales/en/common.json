@@ -348,7 +348,7 @@
       "thac0": "THAC0"
     },
     "backstab": "Backstab ×{{n}}",
-    "backstabHint": "Backstab: +4 to hit, the weapon’s damage dice ×{{n}}"
+    "backstabHint": "Backstab: {{toHit}} to hit, the weapon’s damage dice ×{{n}}"
   },
   "saves": {
     "title": "Saving Throws",
@@ -1164,6 +1164,7 @@
     "skill": {
       "proficiency": "Proficiency · d{{die}} under {{stat}}",
       "bardSkill": "Bard skill · d{{die}} under {{percent}}%",
+      "thiefSkill": "Thief skill · d{{die}} under {{percent}}%",
       "success": "Success",
       "failure": "Failure",
       "die": "d{{die}}",
@@ -1237,7 +1238,8 @@
       "xp_remove": "XP",
       "level_up": "Level",
       "spell_learn": "Learn",
-      "turn_undead": "Turning"
+      "turn_undead": "Turning",
+      "skill_points": "Skills"
     },
     "status": {
       "active": "Active",
@@ -1395,6 +1397,10 @@
       "failed": "failed",
       "roll": "d20 {{d20}} vs {{target}}",
       "noRoll": "no roll"
+    },
+    "skillPoints": {
+      "text": "Skill points: {{changes}}",
+      "change": "{{name}} {{from}} → {{to}}"
     }
   },
   "critTable": {
@@ -1619,11 +1625,20 @@
       "hide_in_shadows": "Hide in Shadows"
     },
     "thiefSkills": "Thief skills",
-    "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dexterity {{dexterity}}, armour {{armor}} (95% at most)",
+    "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dexterity {{dexterity}}, armour {{armor}} ({{max}}% at most)",
     "budget": {
       "skill_points_total": "Skill points: {{points}} in all, at most {{limit}} at this level",
       "skill_points_per_skill": "{{name}}: {{points}} points, at most {{limit}} at this level"
-    }
+    },
+    "spendPoints": "Spend points",
+    "pointsTitle": "Thieving skill points",
+    "pointsLead": "The total points in each skill. The budget at your level is a warning, not a limit.",
+    "pointsLabel": "Points in {{name}}",
+    "savePoints": "Save",
+    "cancelPoints": "Cancel",
+    "pointsOutOfRange": "Enter a whole number from {{min}} to {{max}}.",
+    "pointsRefused": "These points were refused.",
+    "unusable": "{{name}}: spend points to raise it before you can use it"
   },
   "dice": {
     "title": "Dice",

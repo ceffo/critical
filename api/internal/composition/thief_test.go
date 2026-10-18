@@ -8,11 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
@@ -155,4 +157,99 @@ func TestThief_Step17_SpendPointsAfterALevelUpAndUndo(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, map[string]int{"open_locks": 30, "pick_pockets": 30}, c.SkillPoints)
 	assert.Equal(t, 2, c.Derived.RealizedLevel, "the level-up stays")
+}
+
+// ADR 0030 step 17 on the PHB tables of the fixture, through the real
+// services: a halfling thief of Dexterity 18 in no armour with 30 points in
+// Open Locks and Pick Pockets has Pick Pockets 15 + 30 + 5 + 10 + 5 = 65 and
+// Open Locks 10 + 30 + 5 + 15 = 60, within the 1st-level budget; a 1st-level
+// thief with 40 and 30 is created with both warnings. A roll the DM adjusts
+// after it changes target and verdict; Read Languages at 0% is refused
+// before the die.
+func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
+	ctx := context.Background()
+	dice := &attackDice{t: t, d100s: []int{58}, calls: map[string]int{}}
+	cfg := fixtureConfig()
+	cfg.Dice = dice
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	thief := func(points map[string]int) int64 {
+		t.Helper()
+		id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+			Name: "Vex", Class: "thief", Race: "halfling", Str: 12, Dex: 18, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+			SkillArmor: "none", SkillPoints: points,
+		})
+		require.NoError(t, err)
+		return id
+	}
+
+	id := thief(map[string]int{"open_locks": 30, "pick_pockets": 30})
+	skills, err := bs.Skills.List(ctx, id)
+	require.NoError(t, err)
+	percents := map[string]int{}
+	for _, sk := range skills.ThiefSkills {
+		percents[sk.Skill] = sk.Percent
+	}
+	assert.Equal(t, map[string]int{
+		"pick_pockets": 65, "open_locks": 60, "find_remove_traps": 15, "move_silently": 40,
+		"hide_in_shadows": 35, "detect_noise": 20, "climb_walls": 55, "read_languages": 0,
+	}, percents)
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Empty(t, c.Derived.SkillBudget)
+
+	check, err := bs.Skills.Roll(ctx, id, "open_locks", skillsvc.Adjustment{})
+	require.NoError(t, err)
+	assert.True(t, check.Success, "58 at or under 60")
+	adjusted, err := bs.Skills.Adjust(ctx, id, check.LogEntryID, skillsvc.Adjustment{Value: -10, Reason: "rusty"})
+	require.NoError(t, err)
+	assert.Equal(t, 50, adjusted.AdjustedTarget)
+	assert.False(t, adjusted.Success, "58 over 60 - 10")
+	_, err = bs.Skills.Roll(ctx, id, "read_languages", skillsvc.Adjustment{Value: 50})
+	require.ErrorIs(t, err, domain.ErrInvalidInput)
+	assert.Equal(t, 1, dice.calls["d100"], "no die for a skill at 0%")
+
+	over := thief(map[string]int{"open_locks": 40, "pick_pockets": 30})
+	c, err = bs.Character.GetCharacter(ctx, over)
+	require.NoError(t, err)
+	assert.Equal(t, []ruletablesvc.BudgetWarning{
+		{Code: ruletablesvc.BudgetTotal, Points: 70, Limit: 60},
+		{Code: ruletablesvc.BudgetPerSkill, Skill: "open_locks", Points: 40, Limit: 30},
+	}, c.Derived.SkillBudget)
+}
+
+// ADR 0030 step 19 with ADR 0012 step 5: a backstab rolled at an unknown AC
+// keeps Table 30's multiplier when the DM gives the AC afterwards: the d4's
+// 3 x 2 + 1 (Strength 16) = 7.
+func TestThief_Step19_BackstabAtAnUnknownACKeepsItsMultiplier(t *testing.T) {
+	ctx := context.Background()
+	dice := &attackDice{t: t, d20s: []int{14}, d100s: []int{95, 77}, dies: []int{3}, calls: map[string]int{}}
+	cfg := fixtureConfig()
+	cfg.Dice = dice
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Name: "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		SkillArmor: "none",
+	})
+	require.NoError(t, err)
+	_, err = bs.Weapons.Create(ctx, id, weaponsvc.WeaponInput{
+		Name: localized.Of("Dagger"), DamageSM: "1d4", DamageL: "1d3", Kind: "melee", Type: "dagger",
+	})
+	require.NoError(t, err)
+	res, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{
+		WeaponID: "dagger", TargetSize: combatsvc.SizeSmallMedium, Backstab: true,
+	})
+	require.NoError(t, err)
+	got, err := bs.Combat.AdjustAttackAC(ctx, id, res.LogEntryID, 5)
+	require.NoError(t, err)
+	assert.True(t, got.Hit, "14 against THAC0 16 at AC 5")
+	assert.Equal(t, 7, got.TotalDamage)
+	assert.Equal(t, 1, dice.calls["die"], "no die rolled again")
 }

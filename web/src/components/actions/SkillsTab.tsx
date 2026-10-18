@@ -1,8 +1,10 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
+import { Button } from "@/components/ui/button";
+import { ThiefPointsEditor } from "./ThiefPointsEditor";
 import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/lib/logSummary";
 import { formatSigned } from "@/lib/format";
@@ -30,13 +32,17 @@ export function SkillsTab() {
   const { rollSkill, rolling } = useRollStore();
   const logEntries = useLogStore((s) => s.entries);
   const budget = useCharacterStore((s) => s.character?.derived.skillBudget);
+  const [editingPoints, setEditingPoints] = useState(false);
   // A check, an undo or an effect (any new log state) can change the abilities in effect.
   useEffect(() => {
     void fetchSkills();
   }, [fetchSkills, logEntries]);
 
   if (!skills) return null;
-  const rows = (kind: SkillKind, list: { id: string; value: ReactNode }[]) => {
+  const rows = (
+    kind: SkillKind,
+    list: { id: string; value: ReactNode; unusable?: boolean }[],
+  ) => {
     const label = t(HEADINGS[kind]);
     const id = `skills-${kind}`;
     return (
@@ -45,17 +51,21 @@ export function SkillsTab() {
           {label}
         </h3>
         <ul aria-label={label} className="flex flex-col gap-1">
-          {list.map(({ id: skill, value }) => {
+          {list.map(({ id: skill, value, unusable }) => {
             const name = skillName(t, skill);
+            // ADR 0030 step 17 (PHB p.39): a thieving skill under 1% waits for points.
+            const label = unusable
+              ? t("skills.unusable", { name })
+              : t("skills.rollLabel", { name });
             return (
               <li key={skill}>
                 {/* The shared clickable row (the saves' rows): a raised stripe, hover and focus. */}
                 <button
                   type="button"
                   className="grid min-h-7 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-raised px-2.5 py-0.5 text-left text-body transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted"
-                  disabled={rolling}
-                  aria-label={t("skills.rollLabel", { name })}
-                  title={t("skills.rollLabel", { name })}
+                  disabled={rolling || unusable}
+                  aria-label={label}
+                  title={label}
                   data-testid={`skill-${skill}`}
                   onClick={() => void rollSkill(skill)}
                 >
@@ -107,6 +117,7 @@ export function SkillsTab() {
             // ADR 0030 step 17: the server's percentage; its terms in the tooltip.
             skills.thiefSkills.map((s) => ({
               id: s.id,
+              unusable: s.percent < 1,
               value: (
                 <span
                   className="text-right font-semibold whitespace-nowrap tabular-nums"
@@ -116,6 +127,7 @@ export function SkillsTab() {
                     race: formatSigned(s.race),
                     dexterity: formatSigned(s.dexterity),
                     armor: formatSigned(s.armor),
+                    max: s.maxPercent,
                   })}
                   data-testid={`thief-percent-${s.id}`}
                 >
@@ -139,6 +151,22 @@ export function SkillsTab() {
                 </li>
               ))}
             </ul>
+          )}
+          {editingPoints ? (
+            <ThiefPointsEditor
+              skills={skills.thiefSkills}
+              onDone={() => setEditingPoints(false)}
+            />
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              className="mx-2.5 w-fit"
+              onClick={() => setEditingPoints(true)}
+              data-testid="thief-points-edit"
+            >
+              {t("skills.spendPoints")}
+            </Button>
           )}
         </div>
       )}

@@ -7,6 +7,7 @@ import {
   openSettings,
   openWeapons,
   openWorkspace,
+  undoEntry,
 } from "./helpers";
 
 // Creating and switching characters from the cog menu (ADR 0029 step 7.2), the one flow only a
@@ -207,6 +208,19 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
   await expect(
     page.getByTestId("skill-result").getByTestId("skill-vs"),
   ).toHaveText(/^\d+ contre 55\u00a0%$/);
+
+  // The player spends points after creation (step 17): the server's percentage rises, the budget
+  // warns (75 of 60 at 1st) without refusing, and the journal's Undo gives the points back.
+  await page.getByTestId("thief-points-edit").click();
+  await page.getByTestId("thief-points-open_locks").fill("45");
+  await snap(page, "thief-points-editor-fr");
+  await page.getByTestId("thief-points-save").click();
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("70 %");
+  await expect(page.getByTestId("skill-budget")).toBeVisible();
+  await expect(page.getByTestId("thief-points-editor")).toHaveCount(0);
+  await undoEntry(page, "Points de talent : Crochetage 30 → 45");
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("55 %");
+  await expect(page.getByTestId("skill-budget")).toHaveCount(0);
 
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Inventory");

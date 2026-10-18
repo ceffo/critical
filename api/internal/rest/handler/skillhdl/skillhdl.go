@@ -18,6 +18,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
@@ -97,16 +99,19 @@ type BardSkillDTO struct {
 
 // ThiefSkillDTO is one thieving skill (ADR 0030 step 17): id the skill
 // code, percent = base + points + race + dexterity + armor, capped at 95 and
-// floored at 0; last is null before the first check.
+// floored at 0; last is null before the first check. maxPercent is that
+// cap and maxPoints the most points one skill takes (the editor's range).
 type ThiefSkillDTO struct {
-	ID        string   `json:"id"`
-	Base      int      `json:"base"`
-	Points    int      `json:"points"`
-	Race      int      `json:"race"`
-	Dexterity int      `json:"dexterity"`
-	Armor     int      `json:"armor"`
-	Percent   int      `json:"percent"`
-	Last      *LastDTO `json:"last"`
+	ID         string   `json:"id"`
+	Base       int      `json:"base"`
+	Points     int      `json:"points"`
+	Race       int      `json:"race"`
+	Dexterity  int      `json:"dexterity"`
+	Armor      int      `json:"armor"`
+	Percent    int      `json:"percent"`
+	MaxPercent int      `json:"maxPercent"`
+	MaxPoints  int      `json:"maxPoints"`
+	Last       *LastDTO `json:"last"`
 }
 
 // SkillsDTO is the GET /api/skills answer.
@@ -158,7 +163,8 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 	for _, t := range s.ThiefSkills {
 		out.ThiefSkills = append(out.ThiefSkills, ThiefSkillDTO{
 			ID: t.Skill, Base: t.Base, Points: t.Points, Race: t.Race, Dexterity: t.Dexterity, Armor: t.Armor,
-			Percent: t.Percent, Last: lastDTO(t.Last),
+			Percent: t.Percent, MaxPercent: ruletablesvc.MaxSkillPercent, MaxPoints: charactersvc.MaxSkillPoints,
+			Last: lastDTO(t.Last),
 		})
 	}
 	for _, p := range s.Proficiencies {

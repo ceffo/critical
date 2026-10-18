@@ -1559,7 +1559,12 @@ function SkillResult({
                 c.modifier ?? 0,
               ),
             })
-          : t("result.skill.bardSkill", { die: c.die, percent: c.target })
+          : t(
+              c.kind === "thiefSkill"
+                ? "result.skill.thiefSkill"
+                : "result.skill.bardSkill",
+              { die: c.die, percent: c.target },
+            )
       }
       adjust={
         interactive &&

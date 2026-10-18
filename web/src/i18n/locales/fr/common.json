@@ -348,7 +348,7 @@
       "thac0": "TAC0"
     },
     "backstab": "Dans le dos ×{{n}}",
-    "backstabHint": "Attaque dans le dos : +4 au toucher, dés de dégâts de l’arme ×{{n}}"
+    "backstabHint": "Attaque dans le dos : {{toHit}} au toucher, dés de dégâts de l’arme ×{{n}}"
   },
   "saves": {
     "title": "Jets de sauvegarde",
@@ -1164,6 +1164,7 @@
     "skill": {
       "proficiency": "Compétence · d{{die}} sous {{stat}}",
       "bardSkill": "Talent de barde · d{{die}} sous {{percent}} %",
+      "thiefSkill": "Talent de voleur · d{{die}} sous {{percent}} %",
       "success": "Réussi",
       "failure": "Échec",
       "die": "d{{die}}",
@@ -1237,7 +1238,8 @@
       "xp_remove": "XP",
       "level_up": "Niveau",
       "spell_learn": "Apprentissage",
-      "turn_undead": "Renvoi"
+      "turn_undead": "Renvoi",
+      "skill_points": "Talents"
     },
     "status": {
       "active": "Actif",
@@ -1395,6 +1397,10 @@
       "failed": "échec",
       "roll": "d20 {{d20}} contre {{target}}",
       "noRoll": "sans jet"
+    },
+    "skillPoints": {
+      "text": "Points de talent : {{changes}}",
+      "change": "{{name}} {{from}} → {{to}}"
     }
   },
   "critTable": {
@@ -1619,11 +1625,20 @@
       "hide_in_shadows": "Se cacher dans l’ombre"
     },
     "thiefSkills": "Talents de voleur",
-    "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dextérité {{dexterity}}, armure {{armor}} (95 % au plus)",
+    "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dextérité {{dexterity}}, armure {{armor}} ({{max}} % au plus)",
     "budget": {
       "skill_points_total": "Points de talent : {{points}} au total, {{limit}} au plus à ce niveau",
       "skill_points_per_skill": "{{name}} : {{points}} points, {{limit}} au plus à ce niveau"
-    }
+    },
+    "spendPoints": "Dépenser des points",
+    "pointsTitle": "Points des talents de voleur",
+    "pointsLead": "Le total des points de chaque talent. Le budget de votre niveau est un avertissement, pas une limite.",
+    "pointsLabel": "Points en {{name}}",
+    "savePoints": "Enregistrer",
+    "cancelPoints": "Annuler",
+    "pointsOutOfRange": "Entrez un nombre entier de {{min}} à {{max}}.",
+    "pointsRefused": "Ces points ont été refusés.",
+    "unusable": "{{name}} : dépensez des points pour l’augmenter avant de pouvoir l’utiliser"
   },
   "dice": {
     "title": "Dés",

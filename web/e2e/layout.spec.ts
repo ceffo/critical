@@ -1127,8 +1127,9 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     }
     await rail.nth(0).click();
     await expectNoClippedText(stage, `act, ${where}`);
-    if (SHOTS.has(`${vp.width}x${vp.height}`)) {
-      // ADR 0027 step 7.2: AC, Inconnue and the two tags on one line.
+    {
+      await snap(page, `target-bar-fr-${vp.width}x${vp.height}`);
+      // ADR 0027 steps 1.5 and 7.2: AC, Inconnue, the size chips and the toggle on one line; the tag may wrap.
       const bar = page.getByRole("group", { name: "Cible" });
       const middle = async (l: Locator) => {
         const b = (await l.boundingBox())!;
@@ -1137,13 +1138,14 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       const ac = await middle(bar.getByLabel("CA de la cible"));
       for (const el of [
         bar.getByRole("button", { name: "Inconnue" }),
-        ...(await bar.getByTestId("modifier-tag").all()),
+        bar.getByRole("radiogroup", { name: "Taille de la cible" }),
+        bar.getByRole("button", { name: "Modificateur situationnel" }),
       ])
         expect(
           Math.abs((await middle(el)) - ac),
           `target bar on one line, ${where}`,
         ).toBeLessThanOrEqual(2);
-      await expect(bar.getByTestId("modifier-tag")).toHaveCount(2);
+      await expect(bar.getByTestId("modifier-tag")).toHaveCount(1);
     }
     if (vp.width === 1440) {
       // ADR 0027 step 6: the now band is as tall as the Weapons tab, which does not scroll, and the

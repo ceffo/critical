@@ -14,19 +14,14 @@ import { useBuffsStore } from "@/stores/buffs";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
+import { SizeChips } from "@/components/actions/SizeChips";
 import { CritTableEditor } from "@/components/actions/CritTableEditor";
 import { formatSigned } from "@/lib/format";
 import { UNKNOWN_AC_STEP_BASE } from "@/lib/attackAdjust";
 import { setModifiers, weaponSwitch } from "@/lib/weaponSwitch";
 import { cn } from "@/lib/utils";
-import type {
-  AmmoChoice,
-  AttackFormView,
-  TargetSize,
-  Weapon,
-} from "@/types/combat";
+import type { AmmoChoice, AttackFormView, Weapon } from "@/types/combat";
 
-const SIZES: TargetSize[] = ["sm", "l"];
 /** Same bound as the server's (combatsvc MaxTargetAC / MaxSituational); the server checks it. */
 const BOUND = 20;
 /** From this count down, an ammunition chip turns amber. */
@@ -211,7 +206,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
       aria-label={t("attack.target")}
       className="flex flex-col gap-2 rounded-lg bg-raised px-3 py-1.5"
     >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="section-label">{t("attack.target")}</span>
         <div className="flex items-center gap-1">
           <Stepper
@@ -238,72 +233,48 @@ function TargetBar({ view }: { view: AttackFormView }) {
             </Button>
           )}
         </div>
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
-          {set.large && (
-            <span
-              className="chip px-2 py-0.5 text-body whitespace-nowrap"
-              data-testid="modifier-tag"
-            >
-              {t("attack.tags.large")}
-            </span>
-          )}
-          {set.situational && (
-            <span
-              className="chip px-2 py-0.5 text-body whitespace-nowrap"
-              title={set.situational.label.trim() || undefined}
-              data-testid="modifier-tag"
-            >
-              {t("attack.tags.situational", {
-                value: formatSigned(set.situational.value),
-              })}
-            </span>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-expanded={open}
-            aria-controls={modifiersId}
-            aria-label={t("attack.modifiers")}
-            title={t("attack.modifiers")}
-            onClick={() => setOpen(!open)}
+        <SizeChips
+          value={targetSize}
+          label={t("attack.targetSize")}
+          names={{ sm: t("attack.sizes.sm"), l: t("attack.sizes.l") }}
+          shorts={{
+            sm: t("attack.sizesShort.sm"),
+            l: t("attack.sizesShort.l"),
+          }}
+          onChange={(size) => void update({ targetSize: size })}
+        />
+        {/* The toggle stays on the line; the tag of a set situational modifier follows it and
+            wraps to a second row when the panel is too narrow. */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="ml-auto"
+          aria-expanded={open}
+          aria-controls={modifiersId}
+          aria-label={t("attack.modifiers")}
+          title={t("attack.modifiers")}
+          onClick={() => setOpen(!open)}
+        >
+          <SlidersHorizontal />
+        </Button>
+        {set.situational && (
+          <span
+            className="chip px-2 py-0.5 text-body whitespace-nowrap"
+            title={set.situational.label.trim() || undefined}
+            data-testid="modifier-tag"
           >
-            <SlidersHorizontal />
-          </Button>
-        </div>
+            {t("attack.tags.situational", {
+              value: formatSigned(set.situational.value),
+            })}
+          </span>
+        )}
       </div>
       {open && (
         <div
           id={modifiersId}
           className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-1"
         >
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="text-body text-muted-foreground">
-              {t("attack.sizeShort")}
-            </span>
-            <div
-              role="radiogroup"
-              aria-label={t("attack.targetSize")}
-              className="flex rounded-lg bg-surface p-0.5"
-            >
-              {SIZES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  role="radio"
-                  aria-checked={targetSize === s}
-                  aria-label={t(`attack.sizes.${s}`)}
-                  className={cn(
-                    "h-6 rounded-md px-3 text-body whitespace-nowrap text-muted-foreground",
-                    targetSize === s && "chip-chosen",
-                  )}
-                  onClick={() => void update({ targetSize: s })}
-                >
-                  {t(`attack.sizesShort.${s}`)}
-                </button>
-              ))}
-            </div>
-          </div>
           <Stepper
             label={t("attack.situational")}
             lower={t("attack.lowerSituational")}

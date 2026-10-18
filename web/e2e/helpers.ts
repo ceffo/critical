@@ -270,10 +270,10 @@ export async function chooseWeapon(page: Page, name: string) {
   await expect(held).toHaveText(name);
 }
 
-/** Show the target bar's size and situational controls (ADR 0027 step 7.2) unless shown. */
+/** Show the target bar's situational controls (ADR 0027 step 7.2) unless shown. */
 export async function openTargetModifiers(page: Page) {
   const toggle = attackForm(page).getByRole("button", {
-    name: "Size and situational modifier",
+    name: "Situational modifier",
   });
   if ((await toggle.getAttribute("aria-expanded")) !== "true")
     await toggle.click();

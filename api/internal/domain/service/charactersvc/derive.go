@@ -102,6 +102,7 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 	if d.LevelUp, err = levelUp(c, realized, target, rules); err != nil {
 		return Derived{}, err
 	}
+	d.Specializes = ruletablesvc.Specializes(c.Class)
 	return d, nil
 }
 

@@ -287,6 +287,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"sheetDifferences": [{"value": "thac0", "sheet": 14, "computed": 13}],
 		"levelUp": {"realizedAboveTarget": false, "pending": [
 			{"level": 10, "die": 6, "fixedGain": 0}, {"level": 11, "die": 0, "fixedGain": 2}
-		]}
+		]},
+		"specializes": false
 	}`, string(derived))
 }

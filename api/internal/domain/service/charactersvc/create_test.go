@@ -3,6 +3,7 @@ package charactersvc_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -96,7 +97,6 @@ func TestCreate_RefusesInvalidInputWithFieldErrors(t *testing.T) {
 		{"empty name", func(n *charactersvc.NewCharacter) { n.Name = "   " }, nil, "name", "empty"},
 		{"long name", func(n *charactersvc.NewCharacter) { n.Name = strings.Repeat("é", 41) }, nil, "name", "too_long"},
 		{"cleric", func(n *charactersvc.NewCharacter) { n.Class = "cleric" }, nil, "class", "not_creatable"},
-		{"fighter", func(n *charactersvc.NewCharacter) { n.Class = "fighter" }, nil, "class", "not_creatable"},
 		{"unknown class", func(n *charactersvc.NewCharacter) { n.Class = "paladin" }, nil, "class", "not_creatable"},
 		{"no race", func(n *charactersvc.NewCharacter) { n.Race = "" }, nil, "race", "empty"},
 		{"unknown race", func(n *charactersvc.NewCharacter) { n.Race = "orc" }, nil, "race", "unknown"},
@@ -146,6 +146,60 @@ func TestCreate_AcceptsTheBounds(t *testing.T) {
 
 func ptr[T any](v T) *T { return &v }
 
+// ADR 0030 step 9: a fighter with Strength 18 enters an exceptional strength
+// of 1 to 100 or none; it is refused for any other class, any other
+// Strength and a halfling, and stored as entered.
+func TestCreate_Step9_ExceptionalStrength(t *testing.T) {
+	fighter := func(race string, str, exc int) charactersvc.NewCharacter {
+		return charactersvc.NewCharacter{
+			Name: "Brom", Class: "fighter", Race: race,
+			Str: str, StrExceptional: exc, Dex: 12, Con: 15, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+		}
+	}
+	bard := lyra()
+	bard.Str, bard.StrExceptional = 18, 50
+	for _, tt := range []struct {
+		name string
+		n    charactersvc.NewCharacter
+		code string
+	}{
+		{"above 18/00", fighter("human", 18, 101), "out_of_range"},
+		{"negative", fighter("human", 18, -1), "out_of_range"},
+		{"strength 17", fighter("human", 17, 50), "not_allowed"},
+		{"strength 19", fighter("human", 19, 50), "not_allowed"},
+		{"a halfling fighter", fighter("halfling", 18, 50), "not_allowed"},
+		{"a bard", bard, "not_allowed"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newEnv(t)
+			e.rules.EXPECT().RaceAllows(tt.n.Race, tt.n.Class).Return(true, nil).Once()
+			_, err := e.svc.Create(context.Background(), ownerID, tt.n)
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, "strExceptional", fe.Field)
+			assert.Equal(t, tt.code, fe.Message)
+			assert.Zero(t, e.tx.n, "nothing written")
+		})
+	}
+	for _, exc := range []int{0, 1, 100} {
+		t.Run(fmt.Sprintf("stored %d", exc), func(t *testing.T) {
+			e := newEnv(t)
+			e.rules.EXPECT().RaceAllows("human", "fighter").Return(true, nil).Once()
+			e.rules.EXPECT().LevelFor("fighter", 0).Return(1, nil).Once()
+			e.rules.EXPECT().XPThreshold("fighter", 2).Return(2_000, nil).Once()
+			e.rules.EXPECT().THAC0For("warrior", 1).Return(20, nil).Once()
+			e.rules.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{Group: "warrior"}, nil).Once()
+			e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
+				return c.Class == "fighter" && c.Str == 18 && c.StrExceptional == exc
+			})).Return(5, nil).Once()
+			e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(5)).Return(nil).Once()
+			e.sessions.EXPECT().ForgetUser(ownerID).Once()
+			_, err := e.svc.Create(context.Background(), ownerID, fighter("human", 18, exc))
+			require.NoError(t, err)
+		})
+	}
+}
+
 // Retiring a character retires it, then repairs the owner's current
 // character (the first one left when it was the current one), in one
 // transaction, and answers the current character after it.
@@ -193,11 +247,16 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	e := newEnv(t)
 	for _, race := range charactersvc.Races {
 		e.rules.EXPECT().RaceAllows(race, "bard").Return(race == "human" || race == "half_elf", nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "fighter").Return(race != "elf", nil).Once()
 	}
 	got, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, charactersvc.CreationOptions{
-		Classes:    []charactersvc.ClassOption{{Class: "bard", Races: []string{"human", "half_elf"}}},
-		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP, MaxNameLen: 40,
+		Classes: []charactersvc.ClassOption{
+			{Class: "bard", Races: []string{"human", "half_elf"}},
+			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrength: true},
+		},
+		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
+		MinStrExceptional: 1, MaxStrExceptional: 100, MaxNameLen: 40,
 	}, got)
 }

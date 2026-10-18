@@ -10,14 +10,15 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // CreatableClasses are the classes a new character may have (ADR 0030 step
-// 1): the bard's rules are built. Each class item adds its class here with
-// its own entries (a fighter's exceptional strength, a thief's skill points);
-// a cleric waits for its bonus spells (step 13), without which its spell
-// slots cannot be derived.
-var CreatableClasses = []string{"bard"}
+// 1): the bard's and the fighter's rules are built (the fighter enters an
+// exceptional strength, step 9). Each class item adds its class here with
+// its own entries (a thief's skill points); a cleric waits for its bonus
+// spells (step 13), without which its spell slots cannot be derived.
+var CreatableClasses = []string{"bard", "fighter"}
 
 // The ranges a new character's entered values must fall in.
 const (
@@ -35,6 +36,10 @@ const (
 	// highest is more than any class's level 20 threshold).
 	MinStartingXP = 0
 	MaxStartingXP = 100_000_000
+	// MinStrExceptional and MaxStrExceptional bound an exceptional strength
+	// (ADR 0030 step 9): 18/01 to 18/00, entered as 1 to 100.
+	MinStrExceptional = 1
+	MaxStrExceptional = 100
 )
 
 // Error codes carried by the creation's FieldError messages. The web owns
@@ -49,6 +54,10 @@ const (
 	CodeUnknown = "unknown"
 	// CodeRaceNotAllowed is a race the class does not admit (DMG Table 7).
 	CodeRaceNotAllowed = "race_not_allowed"
+	// CodeNotAllowed is an exceptional strength for a character that has
+	// none (ADR 0030 step 9: not a warrior, a Strength other than 18, or a
+	// halfling).
+	CodeNotAllowed = "not_allowed"
 )
 
 // NewCharacter are the values entered for a new character (ADR 0030 step 1):
@@ -58,8 +67,10 @@ type NewCharacter struct {
 	Class                        string
 	Race                         string
 	Str, Dex, Con, Int, Wis, Cha int
-	HPMax                        int
-	XP                           int
+	// StrExceptional is a fighter's 18/xx percentile (step 9), 0 for none.
+	StrExceptional int
+	HPMax          int
+	XP             int
 }
 
 // Change is a rename (Name) or a retirement (Retired true) of a character;
@@ -120,6 +131,9 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 			return Character{}, &domain.FieldError{Field: a.field, Message: CodeOutOfRange}
 		}
 	}
+	if err := validExceptional(n); err != nil {
+		return Character{}, err
+	}
 	if n.HPMax < MinHPMax || n.HPMax > MaxHPMax {
 		return Character{}, &domain.FieldError{Field: "hpMax", Message: CodeOutOfRange}
 	}
@@ -128,9 +142,23 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 	}
 	return Character{
 		Name: name, Class: n.Class, Race: n.Race,
-		Str: n.Str, Dex: n.Dex, Con: n.Con, Int: n.Int, Wis: n.Wis, Cha: n.Cha,
+		Str: n.Str, StrExceptional: n.StrExceptional, Dex: n.Dex, Con: n.Con, Int: n.Int, Wis: n.Wis, Cha: n.Cha,
 		HPMax: n.HPMax, XPTotal: n.XP, Details: Details{Languages: []string{}},
 	}, nil
+}
+
+// validExceptional is ADR 0030 step 9: an exceptional strength is optional,
+// 1 to 100, and only a warrior's with Strength 18 who is not a halfling.
+func validExceptional(n NewCharacter) error {
+	switch {
+	case n.StrExceptional == 0:
+		return nil
+	case n.StrExceptional < MinStrExceptional || n.StrExceptional > MaxStrExceptional:
+		return &domain.FieldError{Field: "strExceptional", Message: CodeOutOfRange}
+	case !ruletablesvc.ExceptionalStrengthAllowed(n.Class, n.Race, n.Str):
+		return &domain.FieldError{Field: "strExceptional", Message: CodeNotAllowed}
+	}
+	return nil
 }
 
 // Create validates n, derives its level, THAC0 and saves at the starting XP
@@ -212,6 +240,9 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 type ClassOption struct {
 	Class string
 	Races []string
+	// ExceptionalStrength is whether the class enters an 18/xx at Strength
+	// 18 (ADR 0030 step 9).
+	ExceptionalStrength bool
 }
 
 // CreationOptions are what the creation form offers: the creatable classes
@@ -222,6 +253,8 @@ type CreationOptions struct {
 	MinAbility, MaxAbility int
 	MinHPMax, MaxHPMax     int
 	MinXP, MaxXP           int
+	MinStrExceptional      int
+	MaxStrExceptional      int
 	MaxNameLen             int
 }
 
@@ -230,10 +263,15 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 	out := CreationOptions{
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
+		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
 		MaxNameLen: MaxNameLen, Classes: make([]ClassOption, 0, len(CreatableClasses)),
 	}
 	for _, class := range CreatableClasses {
-		opt := ClassOption{Class: class, Races: []string{}}
+		group, err := ruletablesvc.ClassGroup(class)
+		if err != nil {
+			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
+		}
+		opt := ClassOption{Class: class, Races: []string{}, ExceptionalStrength: ruletablesvc.HasExceptionalStrength(group)}
 		for _, race := range Races {
 			ok, err := s.rules.RaceAllows(race, class)
 			if err != nil {

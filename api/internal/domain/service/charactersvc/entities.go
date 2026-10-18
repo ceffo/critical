@@ -7,15 +7,18 @@ package charactersvc
 // service fills Derived (steps 3 to 8): level, THAC0, saves and slots are never
 // entered.
 type Character struct {
-	ID    int64
-	Name  string
-	Str   int
-	Dex   int
-	Con   int
-	Int   int
-	Wis   int
-	Cha   int
-	HPMax int
+	ID   int64
+	Name string
+	Str  int
+	// StrExceptional is a fighter's exceptional strength (ADR 0030 step 9):
+	// the percentile of an 18/xx, 1 to 100 (100 = 18/00); 0 is none.
+	StrExceptional int
+	Dex            int
+	Con            int
+	Int            int
+	Wis            int
+	Cha            int
+	HPMax          int
 	// RealizedLevel is the level the character has taken (ADR 0030 step 7):
 	// its benefits (max HP, THAC0, saves, slots) are this level's. It starts
 	// at the level the entered max HP is for (step 7.5: an imported sheet's
@@ -93,6 +96,9 @@ type Derived struct {
 	SheetDifferences []SheetDifference
 	// LevelUp is step 7: the levels the target is above the realized one.
 	LevelUp LevelUp
+	// Specializes is step 12: the class may specialize in a weapon (the
+	// weapon editor offers the flag).
+	Specializes bool
 }
 
 // PendingLevel is one level whose hit points are owed (ADR 0030 step 7): up

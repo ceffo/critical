@@ -32,6 +32,9 @@ type optionsReader interface {
 type ClassOptionDTO struct {
 	Class string   `json:"class"`
 	Races []string `json:"races"`
+	// ExceptionalStrength is whether the class enters an 18/xx at Strength
+	// 18 (ADR 0030 step 9).
+	ExceptionalStrength bool `json:"exceptionalStrength"`
 }
 
 // RangeDTO is the inclusive range an entered number must fall in.
@@ -43,11 +46,14 @@ type RangeDTO struct {
 // OptionsDTO is GET /api/characters/options: what the creation form offers
 // and the ranges the server checks.
 type OptionsDTO struct {
-	Classes    []ClassOptionDTO `json:"classes"`
-	Ability    RangeDTO         `json:"ability"`
-	HPMax      RangeDTO         `json:"hpMax"`
-	XP         RangeDTO         `json:"xp"`
-	MaxNameLen int              `json:"maxNameLength"`
+	Classes []ClassOptionDTO `json:"classes"`
+	Ability RangeDTO         `json:"ability"`
+	HPMax   RangeDTO         `json:"hpMax"`
+	XP      RangeDTO         `json:"xp"`
+	// StrExceptional is the range of an exceptional strength (1 = 18/01,
+	// 100 = 18/00).
+	StrExceptional RangeDTO `json:"strExceptional"`
+	MaxNameLen     int      `json:"maxNameLength"`
 }
 
 // Options is GET /api/characters/options.
@@ -58,14 +64,15 @@ func Options(svc optionsReader) render.HandlerFunc {
 			return err
 		}
 		out := OptionsDTO{
-			Classes:    make([]ClassOptionDTO, 0, len(o.Classes)),
-			Ability:    RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
-			HPMax:      RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
-			XP:         RangeDTO{Min: o.MinXP, Max: o.MaxXP},
-			MaxNameLen: o.MaxNameLen,
+			Classes:        make([]ClassOptionDTO, 0, len(o.Classes)),
+			Ability:        RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
+			HPMax:          RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
+			XP:             RangeDTO{Min: o.MinXP, Max: o.MaxXP},
+			StrExceptional: RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
+			MaxNameLen:     o.MaxNameLen,
 		}
 		for _, c := range o.Classes {
-			out.Classes = append(out.Classes, ClassOptionDTO{Class: c.Class, Races: c.Races})
+			out.Classes = append(out.Classes, ClassOptionDTO{Class: c.Class, Races: c.Races, ExceptionalStrength: c.ExceptionalStrength})
 		}
 		render.OK(r.Context(), w, out)
 		return nil
@@ -79,13 +86,16 @@ type CreateBody struct {
 	Class string `json:"class"`
 	Race  string `json:"raceCode"`
 	Str   *int   `json:"str"`
-	Dex   *int   `json:"dex"`
-	Con   *int   `json:"con"`
-	Int   *int   `json:"int"`
-	Wis   *int   `json:"wis"`
-	Cha   *int   `json:"cha"`
-	HPMax *int   `json:"hpMax"`
-	XP    *int   `json:"xp"`
+	// StrExceptional is a fighter's 18/xx percentile (ADR 0030 step 9);
+	// absent or 0 for none.
+	StrExceptional int  `json:"strExceptional"`
+	Dex            *int `json:"dex"`
+	Con            *int `json:"con"`
+	Int            *int `json:"int"`
+	Wis            *int `json:"wis"`
+	Cha            *int `json:"cha"`
+	HPMax          *int `json:"hpMax"`
+	XP             *int `json:"xp"`
 }
 
 // required is the field's value, or the field error of a missing one.
@@ -97,7 +107,7 @@ func required(field string, v *int) (int, error) {
 }
 
 func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
-	n := charactersvc.NewCharacter{Name: b.Name, Class: b.Class, Race: b.Race}
+	n := charactersvc.NewCharacter{Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional}
 	for _, f := range []struct {
 		field string
 		dst   *int

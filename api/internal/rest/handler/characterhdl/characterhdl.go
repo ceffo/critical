@@ -162,19 +162,22 @@ func GetCharacter(charID CharacterIDFunc, svc characterGetter) render.HandlerFun
 // derived block (ADR 0030 steps 3 to 8). `race` is the free-text detail the
 // player edits, `raceCode` the PHB race the rules read ("" for none).
 type CharacterDTO struct {
-	ID       int64      `json:"id"`
-	Name     string     `json:"name"`
-	Str      int        `json:"str"`
-	Dex      int        `json:"dex"`
-	Con      int        `json:"con"`
-	Int      int        `json:"int"`
-	Wis      int        `json:"wis"`
-	Cha      int        `json:"cha"`
-	HPMax    int        `json:"hpMax"`
-	XPTotal  int        `json:"xpTotal"`
-	Class    string     `json:"class"`
-	RaceCode string     `json:"raceCode"`
-	Derived  DerivedDTO `json:"derived"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Str  int    `json:"str"`
+	// StrExceptional is a fighter's 18/xx percentile (ADR 0030 step 9), 0
+	// for none.
+	StrExceptional int        `json:"strExceptional"`
+	Dex            int        `json:"dex"`
+	Con            int        `json:"con"`
+	Int            int        `json:"int"`
+	Wis            int        `json:"wis"`
+	Cha            int        `json:"cha"`
+	HPMax          int        `json:"hpMax"`
+	XPTotal        int        `json:"xpTotal"`
+	Class          string     `json:"class"`
+	RaceCode       string     `json:"raceCode"`
+	Derived        DerivedDTO `json:"derived"`
 	detailshdl.DetailsDTO
 }
 
@@ -218,6 +221,8 @@ type DerivedDTO struct {
 	SpellSlots       []SlotCountDTO       `json:"spellSlots"`
 	SheetDifferences []SheetDifferenceDTO `json:"sheetDifferences"`
 	LevelUp          LevelUpDTO           `json:"levelUp"`
+	// Specializes is ADR 0030 step 12: the class may specialize in a weapon.
+	Specializes bool `json:"specializes"`
 }
 
 // PendingLevelDTO is one level whose hit points are owed (ADR 0030 step 7):
@@ -259,6 +264,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		LevelUp: LevelUpDTO{
 			Pending: PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
 		},
+		Specializes: d.Specializes,
 	}
 	for _, level := range slices.Sorted(maps.Keys(d.SpellSlots)) {
 		if n := d.SpellSlots[level]; n > 0 {
@@ -277,7 +283,7 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 	}
 	return CharacterDTO{
 		ID: c.ID, Name: c.Name,
-		Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
+		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race,
 		Derived: derivedDTO(c.Derived), DetailsDTO: detailshdl.ToDTO(c.Details),
 	}

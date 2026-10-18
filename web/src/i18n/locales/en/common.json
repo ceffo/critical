@@ -52,6 +52,8 @@
       "email_unverified": "Your Google account's email address is not verified. Verify it with Google, then log in again.",
       "login_state_mismatch": "The login took too long or was started in another tab. Try again.",
       "login_failed": "Google login did not complete. Try again.",
+      "login_timeout": "The login took too long to complete. Try again in a moment.",
+      "database_unavailable": "The database is not answering, so the login could not complete. Try again in a moment.",
       "unknown": "The login did not complete. Try again."
     }
   },

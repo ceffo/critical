@@ -52,6 +52,8 @@
       "email_unverified": "L'adresse de votre compte Google n'est pas vérifiée. Faites vérifier cette adresse chez Google, puis réessayez.",
       "login_state_mismatch": "La connexion a pris trop de temps ou a été lancée dans un autre onglet. Réessayez.",
       "login_failed": "La connexion Google n'a pas abouti. Réessayez.",
+      "login_timeout": "La connexion a mis trop de temps à aboutir. Réessayez dans un instant.",
+      "database_unavailable": "La base de données ne répond pas : la connexion n'a pas pu aboutir. Réessayez dans un instant.",
       "unknown": "La connexion n'a pas abouti. Réessayez."
     }
   },

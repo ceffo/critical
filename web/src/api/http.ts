@@ -71,8 +71,9 @@ export function isUnavailableMessage(message: string | null | undefined) {
 /** How long a read waits before it asks again while the database is unavailable. */
 export const RETRY_MS = 3000;
 
-/** How many times a read asks before it gives up and throws (about a minute). */
-export const MAX_READ_ATTEMPTS = 20;
+/** How long a read goes on asking before it gives up and throws: no new attempt starts after it,
+ * so a read ends within this plus one request deadline (8 s), about a minute. */
+export const MAX_READ_MS = 60_000;
 
 /** What the probe reads while the database is unavailable: a small read that needs it. */
 const PROBE_URL = "/api/character";
@@ -90,11 +91,15 @@ function unavailableError(): ApiError {
 
 let reload: (() => Promise<unknown>) | null = null;
 let recovering = false;
+/** Whether a request failed while the reload ran: the reload is then not trusted. */
+let recoveryFailed = false;
 let probing = false;
 
 /**
  * Registers what reloads the whole sheet from the database: after a write whose outcome is
- * unknown, it runs once the database answers again, before writes are allowed again.
+ * unknown, it runs once the database answers again, before writes are allowed again. Writes are
+ * allowed only when it resolves and no request failed while it ran: the stores catch their own
+ * errors, so a reload that resolves may still have shown nothing new.
  */
 export function setReload(fn: (() => Promise<unknown>) | null) {
   reload = fn;
@@ -119,8 +124,12 @@ async function markAnswered() {
     return;
   }
   recovering = true;
+  recoveryFailed = false;
   try {
     await reload();
+    // A read of the reload failed: the journal may not show the uncertain write yet, so writes
+    // stay refused and the probe tries again (fails closed).
+    if (recoveryFailed) return;
     useDatabaseStore.setState({ unavailable: false, uncertainWrite: false });
   } catch {
     // Still unavailable: the probe goes on.
@@ -155,7 +164,7 @@ const isRead = (init?: RequestInit) =>
  * fetch + JSON decode; throws ApiError with the localized or server message on a non-2xx status.
  *
  * While the database is unavailable (`database_unavailable`, ADR 0025 step 10.4) a read asks again
- * every RETRY_MS, up to MAX_READ_ATTEMPTS, so the panels wait instead of failing. A write is never
+ * every RETRY_MS, for MAX_READ_MS, so the panels wait instead of failing. A write is never
  * sent again by itself: it fails, and so does every write until the database answers (and, after a
  * write whose outcome is unknown, until the sheet is reloaded), so a second click cannot record the
  * same action twice.
@@ -165,11 +174,21 @@ const isRead = (init?: RequestInit) =>
  * out) navigate on their own, so their 401 only throws.
  */
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  try {
+    return await send<T>(url, init);
+  } catch (e) {
+    if (recovering) recoveryFailed = true;
+    throw e;
+  }
+}
+
+async function send<T>(url: string, init?: RequestInit): Promise<T> {
   const read = isRead(init);
+  const started = Date.now();
   if (!read && useDatabaseStore.getState().unavailable) {
     throw unavailableError();
   }
-  for (let attempt = 1; ; attempt++) {
+  for (;;) {
     const res = await fetch(url, init);
     if (res.ok) {
       void markAnswered();
@@ -184,7 +203,7 @@ export async function request<T>(url: string, init?: RequestInit): Promise<T> {
       throw err;
     }
     markUnavailable(!read);
-    if (!read || attempt >= MAX_READ_ATTEMPTS) throw err;
+    if (!read || Date.now() - started + RETRY_MS > MAX_READ_MS) throw err;
     await sleep(RETRY_MS);
   }
 }

@@ -8,6 +8,8 @@ export const LOGIN_ERRORS = [
   "email_unverified",
   "login_state_mismatch",
   "login_failed",
+  "login_timeout",
+  "database_unavailable",
 ] as const;
 
 export type LoginError = (typeof LOGIN_ERRORS)[number];

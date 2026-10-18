@@ -1,11 +1,5 @@
-import { test, expect, snap } from "./fixtures";
-import {
-  chooseLanguage,
-  currentHp,
-  logEntry,
-  openDashboard,
-  recordHp,
-} from "./helpers";
+import { test, expect } from "./fixtures";
+import { currentHp, logEntry, openDashboard, recordHp } from "./helpers";
 
 const unavailable = {
   status: 503,
@@ -18,7 +12,8 @@ const unavailable = {
 
 // ADR 0025 step 10.4, the one flow only a browser proves: the banner over the real sheet, a
 // second click refused without reaching the server, and the sheet reloaded before writes resume.
-// The retry and refusal rules themselves are unit-tested (src/api/http.unavailable.test.ts).
+// The retry and refusal rules themselves are unit-tested (src/api/http.unavailable.test.ts); the
+// banner's no-cut audit and screenshots, fr and en, are in layout.spec.
 test("an unavailable database shows the banner, refuses writes, then reloads the sheet", async ({
   page,
 }) => {
@@ -44,11 +39,6 @@ test("an unavailable database shows the banner, refuses writes, then reloads the
   // A second click while the banner shows never reaches the server.
   await recordHp(page, "damage", 4, "e2e lost blow");
   expect(writes).toHaveLength(1);
-
-  await chooseLanguage(page, "fr");
-  await expect(banner).toContainText("La base de données ne répond pas");
-  await snap(page, "database-unavailable");
-  await chooseLanguage(page, "en");
 
   // The database answers again: the sheet is reloaded, the banner goes, writes resume.
   await page.unroute("**/api/character");

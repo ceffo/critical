@@ -3,7 +3,7 @@ import i18n from "@/i18n";
 import { useDatabaseStore } from "@/stores/database";
 import {
   ApiError,
-  MAX_READ_ATTEMPTS,
+  MAX_READ_MS,
   RETRY_MS,
   UNAVAILABLE,
   post,
@@ -46,7 +46,8 @@ afterEach(async () => {
   serve({}, () => ok());
   setReload(null);
   useDatabaseStore.setState({ unavailable: false, uncertainWrite: false });
-  await vi.advanceTimersByTimeAsync(RETRY_MS * 2);
+  // Long enough for a probe still waiting on a slow answer (one request deadline) to end too.
+  await vi.advanceTimersByTimeAsync(RETRY_MS * 2 + 8000);
   vi.useRealTimers();
   vi.unstubAllGlobals();
   await i18n.changeLanguage("en");
@@ -67,11 +68,11 @@ describe("database unavailable (ADR 0025 step 10.4)", () => {
     expect(state().unavailable).toBe(false);
   });
 
-  it("gives a read up after MAX_READ_ATTEMPTS, with the localized message", async () => {
+  it("gives a read up after MAX_READ_MS, with the localized message", async () => {
     await i18n.changeLanguage("fr");
     serve({});
     const got = request("/api/hp").catch((e: unknown) => e);
-    await vi.advanceTimersByTimeAsync(RETRY_MS * MAX_READ_ATTEMPTS);
+    await vi.advanceTimersByTimeAsync(MAX_READ_MS);
     const err = (await got) as ApiError;
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(503);
@@ -131,5 +132,56 @@ describe("database unavailable (ADR 0025 step 10.4)", () => {
     await vi.advanceTimersByTimeAsync(RETRY_MS);
     expect(reloads).toBe(2);
     expect(state().unavailable).toBe(false);
+  });
+
+  it("gives a read up after about a minute even when each attempt takes the whole request deadline", async () => {
+    let reads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url === "/api/hp") reads++;
+        return new Promise<Response>((r) =>
+          setTimeout(() => r(unavailable()), 8000),
+        );
+      }),
+    );
+    let settled = false;
+    const got = request("/api/hp")
+      .catch((e: unknown) => e)
+      .finally(() => (settled = true));
+    await vi.advanceTimersByTimeAsync(MAX_READ_MS + 8000);
+    expect(settled).toBe(true);
+    expect(((await got) as ApiError).code).toBe(UNAVAILABLE);
+    expect(reads).toBeLessThan(MAX_READ_MS / (8000 + RETRY_MS) + 2);
+  });
+
+  it("keeps writes refused when a read of the reload fails, though the reload resolves", async () => {
+    serve({});
+    let reloads = 0;
+    // Like the stores' loaders: each catches its own error and resolves.
+    setReload(() => {
+      reloads++;
+      return request("/api/log").catch(() => undefined);
+    });
+    await post("/api/xp", {}).catch(() => undefined);
+
+    // The database answers again, but the journal's read fails for good (a 500).
+    serve({ "/api/log": [() => new Response("boom", { status: 500 })] }, () =>
+      ok(),
+    );
+    await vi.advanceTimersByTimeAsync(RETRY_MS);
+    expect(reloads).toBe(1);
+    expect(state()).toMatchObject({ unavailable: true, uncertainWrite: true });
+    const refused = await post("/api/xp", {}).catch((e: unknown) => e);
+    expect((refused as ApiError).code).toBe(UNAVAILABLE);
+
+    // Once the journal reads again, the next probe's reload succeeds and writes are allowed.
+    serve({}, () => ok());
+    await vi.advanceTimersByTimeAsync(RETRY_MS);
+    expect(reloads).toBe(2);
+    expect(state()).toMatchObject({
+      unavailable: false,
+      uncertainWrite: false,
+    });
   });
 });

@@ -268,7 +268,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	logSvc.RegisterRestorer(prepsvc.StateKey, prepSvc)
-	weaponSvc, err := weaponsvc.New(weaponEditor, weaponsvc.Deps{Log: logSvc, Tx: tx})
+	weaponSvc, err := weaponsvc.New(weaponEditor, weaponsvc.Deps{Log: logSvc, Tx: tx, Chars: charSvc})
 	if err != nil {
 		_ = db.Close()
 		return nil, err

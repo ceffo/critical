@@ -422,6 +422,8 @@ export interface CastAttack {
     detail?: string;
     itemId?: string;
     value: number;
+    /** As on Modifier (combat.ts). */
+    strExceptional?: number;
   }[];
   effectiveThac0: number;
   targetAc: number;

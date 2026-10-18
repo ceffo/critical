@@ -39,7 +39,7 @@ func (r storedWeapon) combat() combatsvc.Weapon {
 	return combatsvc.Weapon{
 		ID: w.ID, Name: w.Name, BaseDamage: w.DamageSM, DamageLarge: w.DamageL,
 		MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: combatsvc.WeaponKind(w.Kind),
-		TwoHanded: w.TwoHanded, AmmoKind: w.AmmoKind, Type: w.Type,
+		TwoHanded: w.TwoHanded, AmmoKind: w.AmmoKind, Type: w.Type, Specialized: w.Specialized,
 	}
 }
 

@@ -13,7 +13,9 @@ export type ModifierKind =
   | "buff"
   | "situational"
   | "race"
-  | "crit";
+  | "crit"
+  | "specialization"
+  | "point_blank";
 
 export interface Modifier {
   kind: ModifierKind;
@@ -25,6 +27,8 @@ export interface Modifier {
   /** Set on an item power's contribution: the UI names it from the item (ADR 0016 step 14). */
   itemId?: string;
   value: number;
+  /** A Strength modifier's 18/xx percentile (1 to 100, ADR 0030 step 9); the UI writes "18/50". */
+  strExceptional?: number;
 }
 
 /** Place of a contribution in ((dice × spells) + weapon) × multiplier + strength + bonus. */
@@ -39,6 +43,8 @@ export interface DamageTerm {
   /** As on Modifier. */
   itemId?: string;
   value: number;
+  /** As on Modifier. */
+  strExceptional?: number;
 }
 
 export interface AmmoUse {
@@ -144,6 +150,8 @@ export interface AttackRequest {
   target_ac?: number;
   target_size: TargetSize;
   situational?: { value: number; label: string };
+  /** A specialized launcher's point-blank option (ADR 0030 step 12); refused for another weapon. */
+  point_blank?: boolean;
 }
 
 /** The attack form's last choices, kept on the server (combathdl AttackFormDTO). */
@@ -178,8 +186,18 @@ export interface AttackPreview {
   toHit: number;
   /** The d20 that hits the target AC; null while the AC is unknown. */
   rollNeeded: number | null;
-  /** Flat damage terms: weapon or buff "+N", ammunition, Strength, buff damage. */
+  /** Flat damage terms: weapon or buff "+N", ammunition, Strength, specialization, buff damage. */
   damageBonus: number;
+  /** The same preview with the point-blank option (ADR 0030 step 12); absent when not offered. */
+  pointBlank?: AttackPreview;
+}
+
+/** The weapon in hand's attacks per round (ADR 0030 step 11): `attacks` every `rounds` rounds. */
+export interface AttackRate {
+  attacks: number;
+  rounds: number;
+  /** The attacks in the current round (3/2: 1 in odd rounds, 2 in even ones). */
+  thisRound: number;
 }
 
 /** GET / PATCH /api/attack/form (combathdl AttackFormViewDTO). */
@@ -190,6 +208,8 @@ export interface AttackFormView {
   ammoChoices: AmmoChoice[];
   /** Null when there is no weapon at all. */
   preview: AttackPreview | null;
+  /** Absent when the weapon shows no rate (no type, or not a warrior). */
+  attackRate?: AttackRate;
   /** The highest AC the rules allow: the target AC stepper stops there (docs/adr/0012 step 7). */
   maxRealAc: number;
 }
@@ -238,6 +258,8 @@ export interface Weapon {
   /** Ammo item kind the weapon fires ("arrow"); empty for melee and hurled weapons. */
   ammo_kind: string;
   weapon_type: WeaponType;
+  /** The fighter's weapon specialization (ADR 0030 step 12). */
+  specialized: boolean;
 }
 
 /** Saving throw categories accepted by POST /api/roll/save. */
@@ -276,6 +298,8 @@ export interface WeaponBody {
   two_handed?: boolean;
   ammo_kind?: string;
   weapon_type?: WeaponType;
+  /** Refused (field `specialized`, code `not_allowed`) for a class that does not specialize. */
+  specialized?: boolean;
 }
 
 /** POST/PATCH/DELETE /api/weapons (weaponhdl ChangeDTO): the weapon as it is now (as it was, for a delete). */

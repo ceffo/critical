@@ -32,12 +32,11 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 	if err != nil {
 		return nil, fmt.Errorf("get character: %w", err)
 	}
-	mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponNone)
+	mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponNone)
 	if err != nil {
 		return nil, fmt.Errorf("aggregate buffs: %w", err)
 	}
-	str := mods.EffectiveStr
-	strHit, _, err := s.rules.StrengthMods(str, 0)
+	strHit, _, err := s.rules.StrengthMods(mods.EffectiveStr, mods.EffectiveStrExceptional)
 	if err != nil {
 		return nil, fmt.Errorf("strength table: %w", err)
 	}
@@ -51,7 +50,7 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 		res.Modifiers = append(res.Modifiers, m)
 		sum += m.Value
 	}
-	add(Modifier{Kind: ModStrength, Detail: strconv.Itoa(str), Value: strHit})
+	add(Modifier{Kind: ModStrength, Detail: strconv.Itoa(mods.EffectiveStr), StrExceptional: mods.EffectiveStrExceptional, Value: strHit})
 	add(Modifier{Kind: ModDexterity, Detail: strconv.Itoa(char.Dex), Value: dexMissile})
 	for _, c := range mods.ToHitFrom {
 		add(Modifier{Kind: ModBuff, Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})

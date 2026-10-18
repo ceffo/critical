@@ -23,4 +23,5 @@ type Weapon struct {
 	AmmoKind    string
 	CharacterID int64
 	WeaponType  string
+	Specialized int64
 }

@@ -50,7 +50,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 	}
 	return &charactersvc.Character{
 		ID: row.ID, Name: row.Name,
-		Str: int(row.Str), Dex: int(row.Dex), Con: int(row.Con),
+		Str: int(row.Str), StrExceptional: int(row.StrExceptional), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
 		HPMax: int(row.HpMax), RealizedLevel: int(row.RealizedLevel), XPTotal: int(row.XpTotal),
 		Class: row.Class, Race: row.RaceCode,
@@ -122,7 +122,7 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		return 0, err
 	}
 	id, err := d.q.CreateCharacter(ctx, queries.CreateCharacterParams{
-		Name: c.Name, Str: int64(c.Str), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
+		Name: c.Name, Str: int64(c.Str), StrExceptional: int64(c.StrExceptional), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
 		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), XpTotal: int64(c.XPTotal),
 		Thac0Base: int64(c.Sheet.THAC0), Level: int64(c.Sheet.Level),
 		SaveParaPoison: int64(c.Sheet.Saves.ParaPoison), SaveRodStaffWand: int64(c.Sheet.Saves.RodStaffWand),

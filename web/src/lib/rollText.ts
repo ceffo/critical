@@ -3,6 +3,7 @@
 import type { TFunction } from "i18next";
 import type { RollResult } from "@/types/combat";
 import type { UseResult } from "@/types/items";
+import { formatStrength } from "./format";
 import { namedDetail, type ItemNamer } from "./itemPowers";
 
 /** A multiplier inside a formula, with at least one decimal: 2.0, 1.5, 1.25 (1,5 in French). */
@@ -56,7 +57,13 @@ export function itemRollText(r: UseResult): string {
  */
 export function modLabel(
   t: TFunction,
-  m: { kind: string; detail?: string; itemId?: string; value: number },
+  m: {
+    kind: string;
+    detail?: string;
+    itemId?: string;
+    value: number;
+    strExceptional?: number;
+  },
   roll?: { critPlaceholder?: boolean; critFrom?: number; critTo?: number },
   itemName?: ItemNamer,
 ): string {
@@ -71,6 +78,11 @@ export function modLabel(
   if (m.kind === "race")
     return t("result.mods.race", {
       race: t(`details.races.${m.detail ?? ""}`, { defaultValue: m.detail }),
+    });
+  // An 18/xx Strength (ADR 0030 step 9): the score and its percentile.
+  if (m.kind === "strength" && m.strExceptional)
+    return t("result.mods.strength", {
+      detail: formatStrength(Number(m.detail), m.strExceptional),
     });
   return t(`result.mods.${m.kind}`, {
     detail: namedDetail(m, itemName) ?? "",

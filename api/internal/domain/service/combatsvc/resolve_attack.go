@@ -50,7 +50,7 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
 		}
-		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponKind(weapon.Kind))
+		mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponKind(weapon.Kind))
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
 		}
@@ -148,7 +148,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	if ammo != nil {
 		res.Ammo = &AmmoUse{ItemID: ammo.ID, Name: ammo.Name.Any(), Magic: ammo.MagicBonus, Remaining: ammo.Count}
 	}
-	am, err := s.attackModifiers(char, weapon, ammo, mods, req.Situational)
+	am, err := s.attackModifiers(char, weapon, ammo, mods, req.Situational, req.PointBlank)
 	if err != nil {
 		return nil, err
 	}

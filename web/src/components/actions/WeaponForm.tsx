@@ -11,7 +11,12 @@ import {
   type WeaponField,
 } from "@/lib/weaponForm";
 import type { ApiError } from "@/api/http";
-import type { Weapon, WeaponBody } from "@/types/combat";
+import {
+  WEAPON_TYPES,
+  type Weapon,
+  type WeaponBody,
+  type WeaponType,
+} from "@/types/combat";
 
 interface Props {
   /** Starting values. */
@@ -20,6 +25,8 @@ interface Props {
   editing?: Weapon;
   /** Ammo kinds offered as suggestions. */
   ammoKinds: string[];
+  /** The character's class specializes (ADR 0030 step 12): the form offers the flag. */
+  specializes?: boolean;
   busy: boolean;
   /** Save a body; resolves the server's rejection, or null when saved. */
   onSave: (body: WeaponBody) => Promise<ApiError | null>;
@@ -34,6 +41,7 @@ export function WeaponForm({
   initial,
   editing,
   ammoKinds,
+  specializes = false,
   busy,
   onSave,
   onCancel,
@@ -70,7 +78,13 @@ export function WeaponForm({
       return;
     }
     const rejected = await onSave(toSend);
-    if (rejected?.field) setErrors({ [rejected.field]: rejected.message });
+    // The server's message, or the wording of its code (ADR 0023: not_allowed).
+    if (rejected?.field)
+      setErrors({
+        [rejected.field]: t(`weapons.form.errors.${rejected.message}`, {
+          defaultValue: rejected.message,
+        }),
+      });
   }
 
   const field = (
@@ -174,6 +188,22 @@ export function WeaponForm({
             <option value="missile">{t("weapons.kind.missile")}</option>
           </select>
         ))}
+        {field("weapon_type", t("weapons.form.weaponType"), (props) => (
+          <select
+            {...props}
+            className={fieldClass}
+            title={t("weapons.form.weaponTypeHint")}
+            value={draft.weapon_type}
+            onChange={(e) => set("weapon_type", e.target.value as WeaponType)}
+          >
+            <option value="">{t("weapons.types.none")}</option>
+            {WEAPON_TYPES.map((wt) => (
+              <option key={wt} value={wt}>
+                {t(`weapons.types.${wt}`)}
+              </option>
+            ))}
+          </select>
+        ))}
         {field("two_handed", t("weapons.form.twoHanded"), (props) => (
           <input
             {...props}
@@ -183,6 +213,17 @@ export function WeaponForm({
             onChange={(e) => set("two_handed", e.target.checked)}
           />
         ))}
+        {(specializes || initial.specialized) &&
+          field("specialized", t("weapons.form.specialized"), (props) => (
+            <input
+              {...props}
+              type="checkbox"
+              className="size-5"
+              title={t("weapons.form.specializedHint")}
+              checked={draft.specialized}
+              onChange={(e) => set("specialized", e.target.checked)}
+            />
+          ))}
         {draft.kind === "missile" &&
           field(
             "ammo_kind",

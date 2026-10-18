@@ -39,7 +39,7 @@ func rollAttack(t *testing.T, f *fixture, a rolledAttack) *actionlog.Entry {
 	t.Helper()
 	f.weapons.EXPECT().Get(mock.Anything, charID, a.req.WeaponID).Return(a.weapon, nil).Once()
 	f.withChar(bard())
-	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(a.mods, nil).Once()
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(a.mods, nil).Once()
 	if a.ammo != nil {
 		f.items.EXPECT().Use(mock.Anything, charID, a.req.AmmoItemID).Return(*a.ammo, nil).Once()
 	}

@@ -312,6 +312,12 @@
       "missile": "Tir"
     },
     "twoHanded": "à deux mains",
+    "specialized": "spécialisée",
+    "rate": "{{attacks}}/{{rounds}} att.",
+    "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} ce round",
+    "rateHint": "Attaques par round : {{attacks}} tous les {{rounds}} rounds ; ce round : {{count}}",
+    "pointBlank": "Bout portant",
+    "pointBlankHint": "Cible à bout portant : +2 au toucher pour un spécialiste de l’arc ou de l’arbalète",
     "sizesShort": {
       "sm": "P / M",
       "l": "G"
@@ -1018,7 +1024,9 @@
       "situationalUnnamed": "Situationnel",
       "critRange": "Coup critique ({{from}}–{{to}})",
       "critPlaceholder": "Coup critique (provisoire)",
-      "race": "{{race}} (race)"
+      "race": "{{race}} (race)",
+      "specialization": "Spécialisation",
+      "point_blank": "Bout portant"
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",
@@ -1369,6 +1377,23 @@
     "none": "Aucune arme.",
     "detail": "{{sm}} · G {{l}}",
     "twoHanded": "à deux mains",
+    "types": {
+      "none": "Aucun",
+      "long_bow": "Arc long",
+      "short_bow": "Arc court",
+      "light_crossbow": "Arbalète légère",
+      "heavy_crossbow": "Arbalète lourde",
+      "hand_crossbow": "Arbalète de poing",
+      "dagger": "Dague",
+      "dart": "Fléchette",
+      "sling": "Fronde",
+      "short_sword": "Épée courte",
+      "long_sword": "Épée longue",
+      "other_melee": "Autre arme de mêlée",
+      "other_thrown": "Autre arme de jet",
+      "other_missile": "Autre arme de tir"
+    },
+    "specialized": "spécialisée",
     "kind": {
       "melee": "Mêlée",
       "missile": "Tir"
@@ -1387,7 +1412,14 @@
       "kind": "Type",
       "twoHanded": "À deux mains",
       "ammoKind": "Type de munition",
-      "ammoNone": "aucune (lancée)"
+      "ammoNone": "aucune (lancée)",
+      "weaponType": "Catégorie",
+      "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par round)",
+      "specialized": "Spécialisée",
+      "specializedHint": "Spécialisation du guerrier : +1 au toucher et +2 aux dégâts en mêlée ou lancée ; une arme de tir gagne +2 au toucher à bout portant",
+      "errors": {
+        "not_allowed": "Seul un guerrier peut se spécialiser dans une arme."
+      }
     },
     "columns": {
       "name": "Nom",
@@ -1451,7 +1483,8 @@
     },
     "languagesHint": "Séparez les langues par des virgules",
     "classes": {
-      "bard": "Barde"
+      "bard": "Barde",
+      "fighter": "Guerrier"
     },
     "language": {
       "elfique": "Elfique",
@@ -1723,6 +1756,8 @@
     "abilities": "Caractéristiques",
     "abilitiesLead": "Les valeurs de la fiche, ajustements raciaux compris.",
     "abilityHint": "{{name}} : de {{min}} à {{max}}",
+    "strExceptional": "Force exceptionnelle (18/xx)",
+    "strExceptionalHint": "Le pourcentage d'une Force 18 de guerrier, de {{min}} à {{max}} (100 = 18/00) ; vide : aucun",
     "range": "De {{min}} à {{max}}",
     "hpMax": "PV max",
     "xp": "XP de départ",
@@ -1735,7 +1770,8 @@
       "out_of_range": "Saisissez un nombre entier de {{min}} à {{max}}.",
       "not_creatable": "Cette classe ne peut pas encore être créée.",
       "unknown": "Choisissez une des six races.",
-      "race_not_allowed": "Cette race ne peut pas être {{className}}."
+      "race_not_allowed": "Cette race ne peut pas être {{className}}.",
+      "not_allowed": "Pas de Force exceptionnelle pour ce personnage : seulement un combattant à 18 de Force, sauf un petite-gens."
     }
   }
 }

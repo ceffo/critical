@@ -74,7 +74,7 @@ type SVC interface {
 	// gating and power triggers, and the result carries the effective STR
 	// used. kind is the weapon kind of the roll it serves (WeaponNone for a
 	// save or a spell's to-hit, ADR 0004 step 18).
-	Aggregate(ctx context.Context, characterID int64, str int, kind WeaponKind) (BuffModifiers, error)
+	Aggregate(ctx context.Context, characterID int64, str BaseStrength, kind WeaponKind) (BuffModifiers, error)
 	// GetEffectiveStr is the character's base STR and its STR with buffs.
 	GetEffectiveStr(ctx context.Context, characterID int64) (Strength, error)
 	// GetAbilityScore is the sheet's score in ability a and the score in

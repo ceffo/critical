@@ -83,12 +83,16 @@ export interface Derived {
   spellSlots: { level: number; count: number }[];
   sheetDifferences: SheetDifference[];
   levelUp: LevelUp;
+  /** Step 12: the class may specialize in a weapon (the weapon editor offers the flag). */
+  specializes: boolean;
 }
 
 export interface Character {
   id: number;
   name: string;
   str: number;
+  /** A warrior's exceptional strength at 18 (ADR 0030 step 9): 1 to 100 (100 = 18/00), 0 none. */
+  strExceptional: number;
   dex: number;
   con: number;
   int: number;
@@ -156,8 +160,18 @@ export interface ValueRange {
 
 /** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 export interface CreationOptions {
-  classes: { class: string; races: string[] }[];
+  /**
+   * `exceptionalStrengthRaces`: the races that enter an 18/xx at Strength 18 with the class (ADR
+   * 0030 step 9; a halfling fighter does not).
+   */
+  classes: {
+    class: string;
+    races: string[];
+    exceptionalStrengthRaces: string[];
+  }[];
   ability: ValueRange;
+  /** The 18/xx percentile's range (1 = 18/01, 100 = 18/00). */
+  strExceptional: ValueRange;
   hpMax: ValueRange;
   xp: ValueRange;
   maxNameLength: number;
@@ -177,4 +191,6 @@ export type NewCharacter = {
   raceCode: string;
   hpMax: number | null;
   xp: number | null;
+  /** The 18/xx percentile (ADR 0030 step 9), 0 for none. */
+  strExceptional: number;
 } & Record<AbilityCode, number | null>;

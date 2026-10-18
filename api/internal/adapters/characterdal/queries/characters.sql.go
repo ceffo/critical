@@ -59,21 +59,22 @@ func (q *Queries) CreateActiveBuffs(ctx context.Context, characterID int64) erro
 
 const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO characters (
-    name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
+    name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
     class, race_code, owner_user_id, realized_level
 ) VALUES (
-    $1, $2, $3, $4, $5, $6,
-    $7, $8, $9, $10, $11,
-    $12, $13, $14,
-    $15, $16, $17, $18,
-    $19, $20
+    $1, $2, $3, $4, $5, $6, $7,
+    $8, $9, $10, $11, $12,
+    $13, $14, $15,
+    $16, $17, $18, $19,
+    $20, $21
 ) RETURNING id
 `
 
 type CreateCharacterParams struct {
 	Name             string
 	Str              int64
+	StrExceptional   int64
 	Dex              int64
 	Con              int64
 	Int              int64
@@ -102,6 +103,7 @@ func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams
 	row := q.db.QueryRowContext(ctx, createCharacter,
 		arg.Name,
 		arg.Str,
+		arg.StrExceptional,
 		arg.Dex,
 		arg.Con,
 		arg.Int,
@@ -162,7 +164,7 @@ func (q *Queries) CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, er
 }
 
 const getCharacter = `-- name: GetCharacter :one
-SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
+SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages,
        COALESCE(realized_level, level)::BIGINT AS realized_level
@@ -173,6 +175,7 @@ type GetCharacterRow struct {
 	ID               int64
 	Name             string
 	Str              int64
+	StrExceptional   int64
 	Dex              int64
 	Con              int64
 	Int              int64
@@ -212,6 +215,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.ID,
 		&i.Name,
 		&i.Str,
+		&i.StrExceptional,
 		&i.Dex,
 		&i.Con,
 		&i.Int,

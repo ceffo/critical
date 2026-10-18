@@ -26,7 +26,7 @@ func aggregateWith(t *testing.T, buffs []buffsvc.BuffEffect, powers []buffsvc.It
 	f := newFixture(t)
 	f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(buffs, nil).Once()
 	f.powers(powers...)
-	got, err := f.svc.Aggregate(context.Background(), charID, base, kind)
+	got, err := f.svc.Aggregate(context.Background(), charID, sheetStr(base), kind)
 	require.NoError(t, err)
 	return got
 }
@@ -227,4 +227,9 @@ func TestBuffs_Step18_RejectsAnUnknownWeaponKind(t *testing.T) {
 	for _, ok := range []buffsvc.WeaponKind{buffsvc.WeaponMelee, buffsvc.WeaponMissile, buffsvc.WeaponNone} {
 		require.NoError(t, buffsvc.ValidateEffects(buffsvc.BuffEffects{WeaponKind: ok}), ok)
 	}
+}
+
+// sheetStr is a non-warrior's sheet Strength as Aggregate receives it.
+func sheetStr(score int) buffsvc.BaseStrength {
+	return buffsvc.BaseStrength{StrScore: buffsvc.StrScore{Score: score}}
 }

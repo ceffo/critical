@@ -4,6 +4,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { formatStrength } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
@@ -32,7 +33,18 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   const xp = useXpStore((s) => s.ledger);
   const character = useCharacterStore((s) => s.character);
   const strength = useBuffsStore((s) => s.strength);
-  const strBuffed = strength !== null && strength.effective !== strength.base;
+  const strBuffed =
+    strength !== null &&
+    (strength.effective !== strength.base ||
+      strength.effectiveExceptional !== strength.baseExceptional);
+  // The score in effect and the sheet's, an 18/xx as 18/50 (ADR 0030 step 9).
+  const strText = strength && {
+    effective: formatStrength(
+      strength.effective,
+      strength.effectiveExceptional,
+    ),
+    base: formatStrength(strength.base, strength.baseExceptional),
+  };
   const rollAbility = useRollStore((s) => s.rollAbility);
   const rollLevelUp = useCharacterStore((s) => s.rollLevelUp);
   const levelUpBusy = useCharacterStore((s) => s.levelUpBusy);
@@ -91,13 +103,19 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
       {character && (
         <div
           role="group"
-          className="grid grid-cols-[repeat(6,minmax(0,1fr))_minmax(0,1.35fr)] gap-1"
+          className={cn(
+            "grid gap-1",
+            // An 18/xx Strength takes a wider first tile (ADR 0030 step 9), never a cut one.
+            strength && strength.effectiveExceptional > 0
+              ? "grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(0,1fr))_minmax(0,1.35fr)]"
+              : "grid-cols-[repeat(6,minmax(0,1fr))_minmax(0,1.35fr)]",
+          )}
           aria-label={t("app.abilities")}
         >
           {ABILITIES.map((k) => {
             const isStr = k === "str" && strength !== null;
             const buffed = isStr && strBuffed;
-            const score = isStr ? strength.effective : character[k];
+            const score = isStr && strText ? strText.effective : character[k];
             const cell = (
               <>
                 <span className="text-label text-muted-foreground">
@@ -110,7 +128,17 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                   )}
                 >
                   {isStr ? (
-                    <span data-testid="str-value">{strength.effective}</span>
+                    <span data-testid="str-value">
+                      {/* An 18/xx: the percentile smaller, so the tile fits it (ADR 0030 step 9). */}
+                      {strength.effective}
+                      {strength.effectiveExceptional > 0 && (
+                        <span className="text-label">
+                          {strText?.effective.slice(
+                            String(strength.effective).length,
+                          )}
+                        </span>
+                      )}
+                    </span>
                   ) : (
                     character[k]
                   )}
@@ -154,7 +182,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                   {cell}
                 </TooltipTrigger>
                 <TooltipContent>
-                  {t("app.strTitle", { ...strength })}
+                  {t("app.strTitle", { ...strText })}
                 </TooltipContent>
               </Tooltip>
             );

@@ -18,6 +18,12 @@ interface AttackStore {
    * (weapon, ammunition, preview) replaces the view once no newer change is on its way.
    */
   update: (patch: AttackFormPatch) => Promise<void>;
+  /**
+   * The point-blank option of a specialized launcher (ADR 0030 step 12): per attack, never saved;
+   * it applies only while the preview offers it.
+   */
+  pointBlank: boolean;
+  setPointBlank: (on: boolean) => void;
   /** Roll an attack with the saved choices. Resolves true when it was rolled. */
   attack: () => Promise<boolean>;
 }
@@ -52,6 +58,8 @@ export const useAttackStore = create<AttackStore>((set, get) => {
 
   return {
     view: null,
+    pointBlank: false,
+    setPointBlank: (on) => set({ pointBlank: on }),
     load: () => send(fetchAttackForm),
     update: (patch) => {
       const view = get().view;
@@ -90,6 +98,7 @@ export const useAttackStore = create<AttackStore>((set, get) => {
       if (form.targetAc !== null) req.target_ac = form.targetAc;
       if (form.ammoItemId) req.ammo_item_id = form.ammoItemId;
       if (form.situational.value !== 0) req.situational = form.situational;
+      if (get().pointBlank && view.preview.pointBlank) req.point_blank = true;
       const ok = await useRollStore.getState().rollAttack(req);
       await get().load();
       return ok;

@@ -698,7 +698,7 @@ func TestStrength_Step10_PowerGemFrom18Up(t *testing.T) {
 			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tt.buffs, nil).Once()
 			f.powers()
 
-			got, err := f.svc.Aggregate(context.Background(), charID, tt.base, buffsvc.WeaponNone)
+			got, err := f.svc.Aggregate(context.Background(), charID, sheetStr(tt.base), buffsvc.WeaponNone)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
@@ -828,7 +828,7 @@ func TestAggregate(t *testing.T) {
 			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tt.buffs, nil)
 			f.powers()
 
-			got, err := f.svc.Aggregate(context.Background(), charID, tt.str, buffsvc.WeaponNone)
+			got, err := f.svc.Aggregate(context.Background(), charID, sheetStr(tt.str), buffsvc.WeaponNone)
 			require.NoError(t, err)
 			assert.InDelta(t, tt.want.SpellsBuff, got.SpellsBuff, 1e-9)
 			assert.InDelta(t, tt.want.Multipliers, got.Multipliers, 1e-9)
@@ -857,7 +857,7 @@ func TestAggregate_DALError(t *testing.T) {
 	boom := errors.New("boom")
 	f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(nil, boom)
 
-	_, err := f.svc.Aggregate(context.Background(), charID, 10, buffsvc.WeaponNone)
+	_, err := f.svc.Aggregate(context.Background(), charID, sheetStr(10), buffsvc.WeaponNone)
 	assert.ErrorIs(t, err, boom)
 }
 

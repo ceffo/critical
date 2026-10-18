@@ -3,12 +3,15 @@ package combatsvc
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // AttackForm is the attack form's last choices for one character, kept on
@@ -72,8 +75,17 @@ type AttackPreview struct {
 	// AC is unknown.
 	RollNeeded *int
 	// DamageBonus is the sum of the flat damage terms: weapon or buff "+N",
-	// magic ammunition, Strength and buff damage (ADR 0003).
+	// magic ammunition, Strength, specialization and buff damage (ADR 0003).
 	DamageBonus int
+	// PointBlank is the same preview with the point-blank option (ADR 0030
+	// step 12); nil when the weapon does not allow it.
+	PointBlank *AttackPreview
+}
+
+// AttackRateView is the held weapon's attacks per round (ADR 0030 step 11):
+// Attacks every Rounds rounds, ThisRound in the current round (step 11.4).
+type AttackRateView struct {
+	Attacks, Rounds, ThisRound int
 }
 
 // AttackFormView is the form as the panel shows it: the stored choices with
@@ -91,6 +103,9 @@ type AttackFormView struct {
 	AmmoChoices []AmmoChoice
 	// Preview is nil when there is no weapon at all.
 	Preview *AttackPreview
+	// AttackRate is nil when there is no weapon or it shows no rate (ADR
+	// 0030 step 11.3, and every class but the warriors).
+	AttackRate *AttackRateView
 }
 
 // GetAttackForm returns the character's attack form with its preview.
@@ -270,28 +285,46 @@ func (s *service) formView(ctx context.Context, characterID int64, form AttackFo
 		}
 	}
 
-	preview, err := s.preview(ctx, characterID, *held, ammo, view.Form)
+	char, err := s.chars.GetCharacter(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("get character: %w", err)
+	}
+	preview, err := s.preview(ctx, char, *held, ammo, view.Form)
 	if err != nil {
 		return nil, err
 	}
 	view.Preview = preview
+	if view.AttackRate, err = s.attackRate(ctx, char, *held); err != nil {
+		return nil, err
+	}
 	return view, nil
 }
 
 // preview computes the effective THAC0 of the current choices with the
 // same steps as an attack (ADR 0002 step 12): nothing is rolled or spent.
-func (s *service) preview(ctx context.Context, characterID int64, weapon Weapon, ammo *itemsvc.Item, form AttackForm) (*AttackPreview, error) {
-	char, err := s.chars.GetCharacter(ctx, characterID)
-	if err != nil {
-		return nil, fmt.Errorf("get character: %w", err)
-	}
-	mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponKind(weapon.Kind))
+// A weapon that allows the point-blank option (ADR 0030 step 12) also gets
+// the preview with it, in PointBlank.
+func (s *service) preview(ctx context.Context, char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, form AttackForm) (*AttackPreview, error) {
+	mods, err := s.buffs.Aggregate(ctx, char.ID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponKind(weapon.Kind))
 	if err != nil {
 		return nil, fmt.Errorf("aggregate buffs: %w", err)
 	}
+	p, err := s.previewWith(char, weapon, ammo, mods, form, false)
+	if err != nil {
+		return nil, err
+	}
+	if weapon.PointBlankAllowed() {
+		if p.PointBlank, err = s.previewWith(char, weapon, ammo, mods, form, true); err != nil {
+			return nil, err
+		}
+	}
+	return p, nil
+}
+
+func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, form AttackForm, pointBlank bool) (*AttackPreview, error) {
 	// Trimmed like ResolveAttack does, so the preview lists the same modifier.
 	sit := Situational{Value: form.Situational.Value, Label: strings.TrimSpace(form.Situational.Label)}
-	am, err := s.attackModifiers(char, weapon, ammo, mods, &sit)
+	am, err := s.attackModifiers(char, weapon, ammo, mods, &sit, pointBlank)
 	if err != nil {
 		return nil, err
 	}
@@ -309,6 +342,32 @@ func (s *service) preview(ctx context.Context, characterID int64, weapon Weapon,
 		p.RollNeeded = &needed
 	}
 	return p, nil
+}
+
+// attackRate is ADR 0030 step 11 for the held weapon at the character's
+// realized level (step 7), with this round's count (step 11.4) from the
+// round of ADR 0005; nil when the weapon shows no rate. The rate is
+// display-only: a class or level the tables cannot read is logged and shows
+// no rate rather than failing the form.
+func (s *service) attackRate(ctx context.Context, char *charactersvc.Character, weapon Weapon) (*AttackRateView, error) {
+	group, err := ruletablesvc.ClassGroup(char.Class)
+	if err != nil {
+		slog.WarnContext(ctx, "attack rate: no class group", "character", char.ID, "class", char.Class, "err", err)
+		return nil, nil
+	}
+	rate, ok, err := s.rules.AttackRateFor(group, char.Derived.RealizedLevel, string(weapon.Kind), weapon.Type, weapon.Specialized)
+	if err != nil {
+		slog.WarnContext(ctx, "attack rate: rule tables", "character", char.ID, "level", char.Derived.RealizedLevel, "weapon", weapon.ID, "err", err)
+		return nil, nil
+	}
+	if !ok {
+		return nil, nil
+	}
+	round, err := s.buffs.GetRound(ctx, char.ID)
+	if err != nil {
+		return nil, fmt.Errorf("get round: %w", err)
+	}
+	return &AttackRateView{Attacks: rate.Attacks, Rounds: rate.Rounds, ThisRound: rate.InRound(round)}, nil
 }
 
 // resolveWeapon is the weapon with id, else the first of the list; ok is

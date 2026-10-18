@@ -21,7 +21,12 @@ import { formatSigned } from "@/lib/format";
 import { UNKNOWN_AC_STEP_BASE } from "@/lib/attackAdjust";
 import { setModifiers, weaponSwitch } from "@/lib/weaponSwitch";
 import { cn } from "@/lib/utils";
-import type { AmmoChoice, AttackFormView, Weapon } from "@/types/combat";
+import type {
+  AmmoChoice,
+  AttackFormView,
+  AttackPreview,
+  Weapon,
+} from "@/types/combat";
 
 /** Same bound as the server's (combatsvc MaxTargetAC / MaxSituational); the server checks it. */
 const BOUND = 20;
@@ -37,7 +42,8 @@ const LOW_AMMO = 3;
  */
 export function AttackPanel() {
   const { t, i18n } = useTranslation();
-  const { view, load, update, attack } = useAttackStore();
+  const { view, load, update, attack, pointBlank, setPointBlank } =
+    useAttackStore();
   const rolling = useRollStore((s) => s.rolling);
   const isAdmin = useSessionStore((s) => s.me?.role === "admin");
   const weapons = useItemsStore((s) => s.weapons);
@@ -56,7 +62,12 @@ export function AttackPanel() {
       <p className="text-body text-muted-foreground">{t("attack.loading")}</p>
     );
   }
-  const { form, preview } = view;
+  const { form } = view;
+  // ADR 0030 step 12: with the point-blank option on, the server's point-blank preview is shown.
+  const preview =
+    pointBlank && view.preview?.pointBlank
+      ? view.preview.pointBlank
+      : view.preview;
   const weapon = weapons.find((w) => w.id === form.weaponId);
   const needsAmmo = Boolean(weapon?.ammo_kind);
   const ammo = view.ammoChoices.find((a) => a.itemId === form.ammoItemId);
@@ -97,7 +108,24 @@ export function AttackPanel() {
               <h3 className="text-key break-words" data-testid="weapon-in-hand">
                 {localized(i18n.language, weapon.name)}
               </h3>
-              {preview && <StatsLine weapon={weapon} view={view} />}
+              {preview && (
+                <StatsLine weapon={weapon} view={view} preview={preview} />
+              )}
+              {view.preview?.pointBlank && (
+                <label
+                  className="flex w-fit items-center gap-2 text-body"
+                  title={t("attack.pointBlankHint")}
+                >
+                  <input
+                    type="checkbox"
+                    className="size-4"
+                    checked={pointBlank}
+                    onChange={(e) => setPointBlank(e.target.checked)}
+                    data-testid="point-blank"
+                  />
+                  {t("attack.pointBlank")}
+                </label>
+              )}
             </div>
             <Button
               type="submit"
@@ -413,15 +441,25 @@ function Stepper({
  * The weapon's numbers on one line of text (ADR 0022 step 2.5), from the server's preview (ADR 0002
  * step 12): "Melee · 1d8 S/M · 1d12 L · +2 / +2 to hit / dmg · THAC0 11", the size not in use dimmed.
  */
-function StatsLine({ weapon, view }: { weapon: Weapon; view: AttackFormView }) {
+function StatsLine({
+  weapon,
+  view,
+  preview,
+}: {
+  weapon: Weapon;
+  view: AttackFormView;
+  preview: AttackPreview;
+}) {
   const { t } = useTranslation();
-  const preview = view.preview;
-  if (!preview) return null;
+  const rate = view.attackRate;
   const size = view.form.targetSize;
   // Each segment stays on one line; the line breaks between segments when the row is narrow.
   const segments: ReactNode[] = [
     t(`attack.kinds.${weapon.kind}`),
     weapon.two_handed && t("attack.twoHanded"),
+    weapon.specialized && (
+      <span data-testid="tile-specialized">{t("attack.specialized")}</span>
+    ),
     <span className={cn(size !== "sm" && "opacity-60")}>
       <Value testId="tile-damage-sm">{weapon.damage_sm}</Value>{" "}
       {t("attack.line.sm")}
@@ -442,6 +480,18 @@ function StatsLine({ weapon, view }: { weapon: Weapon; view: AttackFormView }) {
       {t("attack.line.thac0")}{" "}
       <Value testId="tile-thac0">{preview.effectiveThac0}</Value>
     </>,
+    // ADR 0030 step 11: the rate, in the PHB's notation, and this round's count for a half rate.
+    rate && (
+      <span
+        data-testid="tile-rate"
+        title={t("attack.rateHint", { ...rate, count: rate.thisRound })}
+      >
+        {t(rate.rounds > 1 ? "attack.rateRound" : "attack.rate", {
+          ...rate,
+          count: rate.thisRound,
+        })}
+      </span>
+    ),
   ].filter(Boolean);
   return (
     <p className="text-body text-muted-foreground" data-testid="weapon-stats">

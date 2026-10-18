@@ -100,6 +100,9 @@ export interface SavedBuff {
 export interface Strength {
   base: number;
   effective: number;
+  /** A warrior's 18/xx percentiles (ADR 0030 steps 9 and 10), 0 for none. */
+  baseExceptional: number;
+  effectiveExceptional: number;
 }
 
 /**

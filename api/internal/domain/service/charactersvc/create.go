@@ -3,6 +3,7 @@ package charactersvc
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -17,10 +18,10 @@ import (
 // 1): the bard's and the fighter's rules are built (the fighter enters an
 // exceptional strength, step 9), the mage's too (its spellbook starts empty
 // and fills by learning, step 20). Each class item adds its class here with
-// its own entries (a thief's skill points). The cleric enters nothing more:
-// its slots, spell failure and turning follow its Wisdom and level (steps 13
-// to 16).
-var CreatableClasses = []string{"bard", "fighter", "mage", "cleric"}
+// its own entries. The cleric enters nothing more: its slots, spell failure
+// and turning follow its Wisdom and level (steps 13 to 16). The thief enters
+// its skill points and the armour it wears for its skills (steps 1 and 17).
+var CreatableClasses = []string{"bard", "fighter", "mage", "cleric", "thief"}
 
 // The ranges a new character's entered values must fall in.
 const (
@@ -42,6 +43,10 @@ const (
 	// (ADR 0030 step 9): 18/01 to 18/00, entered as 1 to 100.
 	MinStrExceptional = 1
 	MaxStrExceptional = 100
+	// MaxSkillPoints bounds a thief's points in one skill (ADR 0030 step 17):
+	// more could never count, a skill being capped at 95%. The budget of
+	// PHB p.39 is a warning (Derived.SkillBudget), not a bound.
+	MaxSkillPoints = ruletablesvc.MaxSkillPercent
 )
 
 // Error codes carried by the creation's FieldError messages. The web owns
@@ -58,7 +63,8 @@ const (
 	CodeRaceNotAllowed = "race_not_allowed"
 	// CodeNotAllowed is an exceptional strength for a character that has
 	// none (ADR 0030 step 9: not a warrior, a Strength other than 18, or a
-	// halfling).
+	// halfling), or skill points or a skill armour for a class without
+	// thieving skills (step 17).
 	CodeNotAllowed = "not_allowed"
 )
 
@@ -73,6 +79,11 @@ type NewCharacter struct {
 	StrExceptional int
 	HPMax          int
 	XP             int
+	// SkillPoints and SkillArmor are a thief's (steps 1 and 17): the points
+	// by skill code (0 to MaxSkillPoints each, absent is 0) and one of
+	// ruletablesvc.ThiefArmors. Empty for the other classes.
+	SkillPoints map[string]int
+	SkillArmor  string
 }
 
 // Change is a rename (Name) or a retirement (Retired true) of a character;
@@ -136,6 +147,10 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 	if err := validExceptional(n); err != nil {
 		return Character{}, err
 	}
+	points, err := validSkills(n)
+	if err != nil {
+		return Character{}, err
+	}
 	if n.HPMax < MinHPMax || n.HPMax > MaxHPMax {
 		return Character{}, &domain.FieldError{Field: "hpMax", Message: CodeOutOfRange}
 	}
@@ -146,7 +161,48 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 		Name: name, Class: n.Class, Race: n.Race,
 		Str: n.Str, StrExceptional: n.StrExceptional, Dex: n.Dex, Con: n.Con, Int: n.Int, Wis: n.Wis, Cha: n.Cha,
 		HPMax: n.HPMax, XPTotal: n.XP, Details: Details{Languages: []string{}},
+		SkillPoints: points, SkillArmor: n.SkillArmor,
 	}, nil
+}
+
+// validSkills is ADR 0030 steps 1 and 17: a thief enters its armour (one of
+// ThiefArmors) and its points, each a skill of ThiefSkills from 0 to
+// MaxSkillPoints; any other class enters neither. The points come back
+// without the zeros, nil for none. A refusal names the field (skillArmor,
+// or skillPoints.<skill>).
+func validSkills(n NewCharacter) (map[string]int, error) {
+	if !ruletablesvc.HasThiefSkills(n.Class) {
+		switch {
+		case n.SkillArmor != "":
+			return nil, &domain.FieldError{Field: "skillArmor", Message: CodeNotAllowed}
+		case len(n.SkillPoints) > 0:
+			return nil, &domain.FieldError{Field: "skillPoints", Message: CodeNotAllowed}
+		}
+		return nil, nil
+	}
+	switch {
+	case n.SkillArmor == "":
+		return nil, &domain.FieldError{Field: "skillArmor", Message: CodeEmpty}
+	case !slices.Contains(ruletablesvc.ThiefArmors, n.SkillArmor):
+		return nil, &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
+	}
+	var out map[string]int
+	for _, skill := range slices.Sorted(maps.Keys(n.SkillPoints)) {
+		pts := n.SkillPoints[skill]
+		switch {
+		case !slices.Contains(ruletablesvc.ThiefSkills, skill):
+			return nil, &domain.FieldError{Field: "skillPoints." + skill, Message: CodeUnknown}
+		case pts < 0 || pts > MaxSkillPoints:
+			return nil, &domain.FieldError{Field: "skillPoints." + skill, Message: CodeOutOfRange}
+		case pts == 0:
+			continue
+		}
+		if out == nil {
+			out = map[string]int{}
+		}
+		out[skill] = pts
+	}
+	return out, nil
 }
 
 // validExceptional is ADR 0030 step 9: an exceptional strength is optional,
@@ -245,6 +301,11 @@ type ClassOption struct {
 	// ExceptionalStrengthRaces are the races of Races that enter an 18/xx
 	// at Strength 18 with the class (ADR 0030 step 9), empty for none.
 	ExceptionalStrengthRaces []string
+	// Skills are the skills the class enters points in (step 17, in
+	// ruletablesvc.ThiefSkills order) and SkillArmors the armours it picks
+	// for them; both empty for a class without thieving skills.
+	Skills      []string
+	SkillArmors []string
 }
 
 // CreationOptions are what the creation form offers: the creatable classes
@@ -257,6 +318,7 @@ type CreationOptions struct {
 	MinXP, MaxXP           int
 	MinStrExceptional      int
 	MaxStrExceptional      int
+	MaxSkillPoints         int
 	MaxNameLen             int
 }
 
@@ -266,13 +328,17 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
-		MaxNameLen: MaxNameLen, Classes: make([]ClassOption, 0, len(CreatableClasses)),
+		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Classes: make([]ClassOption, 0, len(CreatableClasses)),
 	}
 	for _, class := range CreatableClasses {
 		if _, err := ruletablesvc.ClassGroup(class); err != nil {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
-		opt := ClassOption{Class: class, Races: []string{}, ExceptionalStrengthRaces: []string{}}
+		opt := ClassOption{Class: class, Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}}
+		if ruletablesvc.HasThiefSkills(class) {
+			opt.Skills = slices.Clone(ruletablesvc.ThiefSkills)
+			opt.SkillArmors = slices.Clone(ruletablesvc.ThiefArmors)
+		}
 		for _, race := range Races {
 			ok, err := s.rules.RaceAllows(race, class)
 			if err != nil {

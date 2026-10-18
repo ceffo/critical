@@ -35,6 +35,13 @@ type Character struct {
 	Class string
 	// Race is the race code (one of Races), "" when none is set.
 	Race string
+	// SkillPoints are a thief's entered skill points (ADR 0030 step 1), by
+	// skill code (ruletablesvc.ThiefSkills); nil or absent skills have 0.
+	SkillPoints map[string]int
+	// SkillArmor is the armour a thief wears for its skills (step 1, one of
+	// ruletablesvc.ThiefArmors), "" for a character without thieving
+	// skills.
+	SkillArmor string
 
 	// Sheet is what the character sheet stated when the character was
 	// imported; never an input (ADR 0030 step 24).
@@ -111,6 +118,15 @@ type Derived struct {
 	// Turning is step 16: PHB Table 61 at the realized level, the book's
 	// rows in order; nil for a class that does not turn undead.
 	Turning []ruletablesvc.TurningTarget
+	// ThiefSkills is step 17: each thieving skill with its terms and
+	// percentage; nil for a class without them.
+	ThiefSkills []ruletablesvc.SkillPercent
+	// SkillBudget is step 17's warnings: the entered points against PHB
+	// p.39's budget at the realized level; empty when none.
+	SkillBudget []ruletablesvc.BudgetWarning
+	// Backstab is step 19: PHB Table 30's damage multiplier at the realized
+	// level; 0 for a class without the backstab option.
+	Backstab int
 }
 
 // SpellbookRules are ADR 0030 step 20.1 on a character: what it may write

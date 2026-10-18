@@ -1,6 +1,9 @@
 package skillsvc
 
-import "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+import (
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+)
 
 // Ability is the key of an ability score on the sheet.
 type Ability = charactersvc.Ability
@@ -15,19 +18,23 @@ const (
 	AbilityCha = charactersvc.AbilityCha
 )
 
-// Kind tells a proficiency check from a bard skill check.
+// Kind tells a proficiency check from a bard or thief skill check.
 type Kind string
 
 // Check kinds.
 const (
 	KindProficiency Kind = "proficiency"
 	KindBardSkill   Kind = "bardSkill"
+	// KindThiefSkill is a thieving skill (ADR 0030 step 17): a d100 at or
+	// under the derived percentage, as a bard skill (ADR 0014 step 3).
+	KindThiefSkill Kind = "thiefSkill"
 )
 
 // Dice of each kind (ADR 0014 steps 1 and 3).
 const (
 	ProficiencyDie = 20
 	BardSkillDie   = 100
+	ThiefSkillDie  = 100
 )
 
 // ProficiencyDef is a stored non-weapon proficiency: the ability it is
@@ -74,10 +81,18 @@ type BardSkill struct {
 	Last    *LastCheck
 }
 
+// ThiefSkill is a thieving skill (ADR 0030 step 17): its percentage, derived
+// by the character service with its terms, and the last check rolled for it.
+type ThiefSkill struct {
+	ruletablesvc.SkillPercent
+	Last *LastCheck
+}
+
 // Skills is the whole Compétences tab.
 type Skills struct {
 	Proficiencies []Proficiency
 	BardSkills    []BardSkill
+	ThiefSkills   []ThiefSkill
 }
 
 // Adjustment is the DM's adjustment of one check (ADR 0014 steps 5 to 7):

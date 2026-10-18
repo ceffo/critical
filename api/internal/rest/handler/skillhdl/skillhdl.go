@@ -91,10 +91,25 @@ type BardSkillDTO struct {
 	Last    *LastDTO `json:"last"`
 }
 
+// ThiefSkillDTO is one thieving skill (ADR 0030 step 17): id the skill
+// code, percent = base + points + race + dexterity + armor, capped at 95 and
+// floored at 0; last is null before the first check.
+type ThiefSkillDTO struct {
+	ID        string   `json:"id"`
+	Base      int      `json:"base"`
+	Points    int      `json:"points"`
+	Race      int      `json:"race"`
+	Dexterity int      `json:"dexterity"`
+	Armor     int      `json:"armor"`
+	Percent   int      `json:"percent"`
+	Last      *LastDTO `json:"last"`
+}
+
 // SkillsDTO is the GET /api/skills answer.
 type SkillsDTO struct {
 	Proficiencies []ProficiencyDTO `json:"proficiencies"`
 	BardSkills    []BardSkillDTO   `json:"bardSkills"`
+	ThiefSkills   []ThiefSkillDTO  `json:"thiefSkills"`
 }
 
 // CheckDTO is one check: target is unadjusted, adjustedTarget = target +
@@ -134,6 +149,13 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 	out := SkillsDTO{
 		Proficiencies: make([]ProficiencyDTO, 0, len(s.Proficiencies)),
 		BardSkills:    make([]BardSkillDTO, 0, len(s.BardSkills)),
+		ThiefSkills:   make([]ThiefSkillDTO, 0, len(s.ThiefSkills)),
+	}
+	for _, t := range s.ThiefSkills {
+		out.ThiefSkills = append(out.ThiefSkills, ThiefSkillDTO{
+			ID: t.Skill, Base: t.Base, Points: t.Points, Race: t.Race, Dexterity: t.Dexterity, Armor: t.Armor,
+			Percent: t.Percent, Last: lastDTO(t.Last),
+		})
 	}
 	for _, p := range s.Proficiencies {
 		out.Proficiencies = append(out.Proficiencies, ProficiencyDTO{

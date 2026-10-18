@@ -129,6 +129,10 @@ func TestDerive_Step2_TheClassGroupPicksTheRows(t *testing.T) {
 			if class == "bard" {
 				r.EXPECT().BardSpellsPerDay(1).Return(map[int]int{}, nil).Once()
 			}
+			if class == "thief" {
+				r.EXPECT().ThiefSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Once()
+				r.EXPECT().BackstabFor(1).Return(2, nil).Once()
+			}
 			_, err := charactersvc.Derive(c, 0, r)
 			require.NoError(t, err)
 		})
@@ -191,6 +195,10 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 			r.EXPECT().XPThreshold(class, 15).Return(1_500_000, nil).Once()
 			r.EXPECT().THAC0For(ruleGroup(t, class), 14).Return(7, nil).Once()
 			r.EXPECT().SavesFor(ruleGroup(t, class), 14).Return(rogue13to16, nil).Once()
+			if class == "thief" {
+				r.EXPECT().ThiefSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Once()
+				r.EXPECT().BackstabFor(14).Return(5, nil).Once()
+			}
 			got, err := charactersvc.Derive(c, 0, r)
 			require.NoError(t, err)
 			assert.Empty(t, got.SpellSlots)
@@ -488,4 +496,51 @@ func TestDerive_Step20_1_SpellbookRules(t *testing.T) {
 			assert.Equal(t, tc.want, got.Spellbook)
 		})
 	}
+}
+
+// ADR 0030 steps 17 and 19: a thief's skills are Tables 26 to 29 on the
+// sheet's Dexterity, its race, its entered points and armour (none stored is
+// leather); the budget and the backstab multiplier follow the realized level,
+// never the XP's target level (step 7). Other classes ask for neither.
+func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
+	skills := []ruletablesvc.SkillPercent{{Skill: "open_locks", Base: 10, Points: 70, Percent: 80}}
+	for _, tc := range []struct{ name, stored, asked string }{
+		{"the entered armour", "none", "none"},
+		{"no armour stored is leather", "", ruletablesvc.ArmorLeather},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := kelsen()
+			c.Class, c.Race, c.Dex, c.XPTotal, c.RealizedLevel = "thief", "elf", 17, 0, 1
+			c.SkillPoints, c.SkillArmor = map[string]int{"open_locks": 70}, tc.stored
+			c.Sheet = charactersvc.Sheet{}
+			r := newRules(t)
+			// 40,000 XP is level 8 in Table 25: two levels pending; the
+			// realized level 1 gives the backstab and the budget.
+			r.EXPECT().LevelFor("thief", 40_000).Return(8, nil).Once()
+			r.EXPECT().LevelFor("thief", 0).Return(1, nil).Once()
+			r.EXPECT().XPThreshold("thief", 9).Return(70_000, nil).Once()
+			r.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
+			r.EXPECT().SavesFor("rogue", mock.Anything).Return(ruletablesvc.SavingThrowRow{}, nil)
+			r.EXPECT().THAC0For("rogue", mock.Anything).Return(20, nil).Maybe()
+			r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
+			r.EXPECT().ThiefSkills("elf", 17, tc.asked, map[string]int{"open_locks": 70}).Return(skills, nil).Once()
+			r.EXPECT().BackstabFor(1).Return(2, nil).Once()
+			got, err := charactersvc.Derive(c, 40_000, r)
+			require.NoError(t, err)
+			assert.Equal(t, skills, got.ThiefSkills)
+			assert.Equal(t, 2, got.Backstab)
+			assert.Equal(t, []ruletablesvc.BudgetWarning{
+				{Code: ruletablesvc.BudgetTotal, Points: 70, Limit: 60},
+				{Code: ruletablesvc.BudgetPerSkill, Skill: "open_locks", Points: 70, Limit: 30},
+			}, got.SkillBudget, "the budget of level 1, not of level 8")
+		})
+	}
+	t.Run("a bard has neither", func(t *testing.T) {
+		r := newRules(t)
+		expectKelsenRules(r, 1_293_418, 15)
+		got, err := charactersvc.Derive(kelsen(), 0, r)
+		require.NoError(t, err)
+		assert.Nil(t, got.ThiefSkills)
+		assert.Zero(t, got.Backstab)
+	})
 }

@@ -255,5 +255,6 @@ func TestList_TargetsAndLastCheckPerSkill(t *testing.T) {
 			{ID: "climb_walls", Percent: 85, Last: &skillsvc.LastCheck{EntryID: 30, Roll: 12, Target: 85, AdjustedTarget: 85, Success: true}},
 			{ID: "pick_pockets", Percent: 50},
 		},
+		ThiefSkills: []skillsvc.ThiefSkill{},
 	}, got)
 }

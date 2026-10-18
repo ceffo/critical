@@ -80,6 +80,9 @@ type AttackPreview struct {
 	// PointBlank is the same preview with the point-blank option (ADR 0030
 	// step 12); nil when the weapon does not allow it.
 	PointBlank *AttackPreview
+	// Backstab is the same preview with the backstab option (ADR 0030 step
+	// 19); nil for a class without it.
+	Backstab *AttackPreview
 }
 
 // AttackRateView is the held weapon's attacks per round (ADR 0030 step 11):
@@ -303,28 +306,34 @@ func (s *service) formView(ctx context.Context, characterID int64, form AttackFo
 // preview computes the effective THAC0 of the current choices with the
 // same steps as an attack (ADR 0002 step 12): nothing is rolled or spent.
 // A weapon that allows the point-blank option (ADR 0030 step 12) also gets
-// the preview with it, in PointBlank.
+// the preview with it, in PointBlank; a character with the backstab (step
+// 19) the preview with it, in Backstab.
 func (s *service) preview(ctx context.Context, char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, form AttackForm) (*AttackPreview, error) {
 	mods, err := s.buffs.Aggregate(ctx, char.ID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponKind(weapon.Kind))
 	if err != nil {
 		return nil, fmt.Errorf("aggregate buffs: %w", err)
 	}
-	p, err := s.previewWith(char, weapon, ammo, mods, form, false)
+	p, err := s.previewWith(char, weapon, ammo, mods, form, attackOptions{})
 	if err != nil {
 		return nil, err
 	}
 	if weapon.PointBlankAllowed() {
-		if p.PointBlank, err = s.previewWith(char, weapon, ammo, mods, form, true); err != nil {
+		if p.PointBlank, err = s.previewWith(char, weapon, ammo, mods, form, attackOptions{pointBlank: true}); err != nil {
+			return nil, err
+		}
+	}
+	if char.Derived.Backstab > 0 {
+		if p.Backstab, err = s.previewWith(char, weapon, ammo, mods, form, attackOptions{backstab: true}); err != nil {
 			return nil, err
 		}
 	}
 	return p, nil
 }
 
-func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, form AttackForm, pointBlank bool) (*AttackPreview, error) {
+func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, form AttackForm, opt attackOptions) (*AttackPreview, error) {
 	// Trimmed like ResolveAttack does, so the preview lists the same modifier.
 	sit := Situational{Value: form.Situational.Value, Label: strings.TrimSpace(form.Situational.Label)}
-	am, err := s.attackModifiers(char, weapon, ammo, mods, &sit, pointBlank)
+	am, err := s.attackModifiers(char, weapon, ammo, mods, &sit, opt)
 	if err != nil {
 		return nil, err
 	}

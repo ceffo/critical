@@ -236,6 +236,17 @@ func (s *service) find(ctx context.Context, characterID int64, id string) (check
 			return checkRecord{ID: b.ID, Kind: KindBardSkill, Die: BardSkillDie, Target: b.Percent}, nil
 		}
 	}
+	// ADR 0030 step 17: a thieving skill's target is the percentage the
+	// character service derives (its terms are on the character).
+	char, err := s.chars.GetCharacter(ctx, characterID)
+	if err != nil {
+		return checkRecord{}, fmt.Errorf("get character: %w", err)
+	}
+	for _, t := range char.Derived.ThiefSkills {
+		if t.Skill == id {
+			return checkRecord{ID: t.Skill, Kind: KindThiefSkill, Die: ThiefSkillDie, Target: t.Percent}, nil
+		}
+	}
 	return checkRecord{}, fmt.Errorf("%w: unknown skill %q", domain.ErrNotFound, id)
 }
 
@@ -261,7 +272,13 @@ func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) 
 		if err != nil {
 			return err
 		}
-		out = &Skills{Proficiencies: make([]Proficiency, 0, len(profs)), BardSkills: make([]BardSkill, 0, len(skills))}
+		out = &Skills{
+			Proficiencies: make([]Proficiency, 0, len(profs)), BardSkills: make([]BardSkill, 0, len(skills)),
+			ThiefSkills: make([]ThiefSkill, 0, len(char.Derived.ThiefSkills)),
+		}
+		for _, t := range char.Derived.ThiefSkills {
+			out.ThiefSkills = append(out.ThiefSkills, ThiefSkill{SkillPercent: t, Last: last[t.Skill]})
+		}
 		for _, p := range profs {
 			score, err := abilityScore(char, p.Ability)
 			if err != nil {

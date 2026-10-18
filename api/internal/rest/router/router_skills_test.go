@@ -29,7 +29,8 @@ func TestSkills_ListWireShape(t *testing.T) {
 	assert.JSONEq(t, `{
 		"proficiencies":[{"id":"musical_instrument","ability":"dex","abilityScore":17,"modifier":-1,"target":16,
 			"last":{"entryId":7,"roll":18,"target":16,"adjustment":3,"adjustmentReason":"rope","adjustedTarget":19,"success":true}}],
-		"bardSkills":[{"id":"climb_walls","percent":85,"last":null}]}`, rec.Body.String())
+		"bardSkills":[{"id":"climb_walls","percent":85,"last":null}],
+		"thiefSkills":[]}`, rec.Body.String())
 }
 
 func TestSkills_RollWireShape(t *testing.T) {

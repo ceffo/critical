@@ -32,6 +32,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
 		Class: "bard", RaceCode: "half_elf", Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M",
 		Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
+		SkillPoints: `{}`,
 	}, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 3)
 	require.NoError(t, err)
@@ -185,6 +186,7 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 		Thac0Base: 19, Level: 3, SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12,
 		SaveBreath: 16, SaveSpell: 15, Class: "bard", RaceCode: "half_elf",
 		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true}, RealizedLevel: sql.NullInt64{Int64: 3, Valid: true},
+		SkillPoints: `{}`,
 	}).Return(int64(7), nil).Once().NotBefore(lock)
 	slots := q.EXPECT().CreateSpellSlots(ctx, int64(7)).Return(nil).Once().NotBefore(row)
 	buffs := q.EXPECT().CreateActiveBuffs(ctx, int64(7)).Return(nil).Once().NotBefore(slots)
@@ -266,4 +268,34 @@ func TestLockUser_UnknownUserIsNotAnError(t *testing.T) {
 
 	q.EXPECT().LockUser(ctx, owner).Return(uuid.Nil, assert.AnError).Once()
 	require.ErrorIs(t, dal.RetireCharacter(ctx, owner, 1), assert.AnError)
+}
+
+// A thief's skill points (ADR 0030 step 1) are stored as a JSON object by
+// skill code and read back as the same map; its armour as entered.
+func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	owner := uuid.MustParse("0b6a8c7e-5f1d-4a59-9a3e-3c2d1e0f4a11")
+	q.EXPECT().LockUser(ctx, owner).Return(owner, nil).Once()
+	q.EXPECT().CreateCharacter(ctx, queries.CreateCharacterParams{
+		Name: "Vex", Class: "thief", RaceCode: "halfling", OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+		RealizedLevel: sql.NullInt64{Int64: 1, Valid: true},
+		SkillPoints:   `{"open_locks":20,"pick_pockets":15}`, SkillArmor: "none",
+	}).Return(int64(8), nil).Once()
+	q.EXPECT().CreateSpellSlots(ctx, int64(8)).Return(nil).Once()
+	q.EXPECT().CreateActiveBuffs(ctx, int64(8)).Return(nil).Once()
+	q.EXPECT().CreateRoundState(ctx, int64(8)).Return(nil).Once()
+	points := map[string]int{"pick_pockets": 15, "open_locks": 20}
+	_, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
+		Name: "Vex", Class: "thief", Race: "halfling", RealizedLevel: 1, SkillPoints: points, SkillArmor: "none",
+	})
+	require.NoError(t, err)
+
+	q.EXPECT().GetCharacter(ctx, int64(8)).Return(queries.GetCharacterRow{
+		ID: 8, Class: "thief", Languages: `[]`, SkillPoints: `{"open_locks":20,"pick_pockets":15}`, SkillArmor: "none",
+	}, nil).Once()
+	got, err := characterdal.New(q).GetCharacter(ctx, 8)
+	require.NoError(t, err)
+	assert.Equal(t, points, got.SkillPoints)
+	assert.Equal(t, "none", got.SkillArmor)
 }

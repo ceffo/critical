@@ -61,13 +61,13 @@ const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO characters (
     name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-    class, race_code, owner_user_id, realized_level
+    class, race_code, owner_user_id, realized_level, skill_points, skill_armor
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12,
     $13, $14, $15,
     $16, $17, $18, $19,
-    $20, $21
+    $20, $21, $22, $23
 ) RETURNING id
 `
 
@@ -93,6 +93,8 @@ type CreateCharacterParams struct {
 	RaceCode         string
 	OwnerUserID      uuid.NullUUID
 	RealizedLevel    sql.NullInt64
+	SkillPoints      string
+	SkillArmor       string
 }
 
 // A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
@@ -122,6 +124,8 @@ func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams
 		arg.RaceCode,
 		arg.OwnerUserID,
 		arg.RealizedLevel,
+		arg.SkillPoints,
+		arg.SkillArmor,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -167,7 +171,7 @@ const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_points, skill_armor
 FROM characters WHERE id = $1
 `
 
@@ -202,6 +206,8 @@ type GetCharacterRow struct {
 	Eyes             string
 	Languages        string
 	RealizedLevel    int64
+	SkillPoints      string
+	SkillArmor       string
 }
 
 // level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
@@ -242,6 +248,8 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.Eyes,
 		&i.Languages,
 		&i.RealizedLevel,
+		&i.SkillPoints,
+		&i.SkillArmor,
 	)
 	return i, err
 }

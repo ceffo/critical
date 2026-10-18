@@ -1189,8 +1189,9 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     }
     await rail.nth(0).click();
     await expectNoClippedText(stage, `act, ${where}`);
-    if (SHOTS.has(`${vp.width}x${vp.height}`)) {
-      // ADR 0027 step 7.2: AC, Inconnue and the two tags on one line.
+    {
+      await snap(page, `target-bar-fr-${vp.width}x${vp.height}`);
+      // ADR 0027 steps 1.5 and 7.2: AC, Inconnue, the size chips and the toggle on one line; the tag may wrap.
       const bar = page.getByRole("group", { name: "Cible" });
       const middle = async (l: Locator) => {
         const b = (await l.boundingBox())!;
@@ -1199,13 +1200,14 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       const ac = await middle(bar.getByLabel("CA de la cible"));
       for (const el of [
         bar.getByRole("button", { name: "Inconnue" }),
-        ...(await bar.getByTestId("modifier-tag").all()),
+        bar.getByRole("radiogroup", { name: "Taille de la cible" }),
+        bar.getByRole("button", { name: "Modificateur situationnel" }),
       ])
         expect(
           Math.abs((await middle(el)) - ac),
           `target bar on one line, ${where}`,
         ).toBeLessThanOrEqual(2);
-      await expect(bar.getByTestId("modifier-tag")).toHaveCount(2);
+      await expect(bar.getByTestId("modifier-tag")).toHaveCount(1);
     }
     if (vp.width === 1440) {
       // ADR 0027 step 6: the now band is as tall as the Weapons tab, which does not scroll, and the
@@ -1646,5 +1648,59 @@ test("attack card: verdict beside the result, tiles and the open AC correction u
       if (SHOTS.has(`${vp.width}x${vp.height}`))
         await snap(page, `attack-card-${lang}-${vp.width}x${vp.height}`);
     }
+  }
+});
+
+// ADR 0026 step 6.7: every in-card group heading (the spell list's and the preparation's levels,
+// the skills' groups, the inventory's column heads, the character card's groups) is the one shared
+// heading band, in French, in a dark and a light theme. Only a browser paints the tones, so the
+// screenshots (and the no-cut audit on them) are the check.
+test("group headings: one shared band, French, dark and light", async ({
+  page,
+  stack,
+}) => {
+  test.setTimeout(60_000);
+  const put = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spells: PREPARED }),
+  });
+  expect(put.ok).toBe(true);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const rail = page.getByRole("navigation", { name: "Activités" });
+  const actions = page.getByRole("region", { name: "Actions" });
+  for (const [mode, which, theme] of [
+    ["Sombre", "dark", "Arcane"],
+    ["Clair", "light", "Parchemin"],
+  ] as const) {
+    await chooseSetting(page, mode);
+    await chooseTheme(page, which, theme);
+    await page.waitForTimeout(150); // let colour transitions settle
+    const tag = `${which}-${theme.toLowerCase()}`;
+    await rail.getByRole("button", { name: "Agir", exact: true }).click();
+    await actions.getByRole("tab", { name: "Sorts" }).click();
+    await expect(actions.getByRole("tabpanel")).toContainText("Niveau 1");
+    // Each level's head is the shared band, not the card's tone.
+    await expect(
+      actions.locator(".group-heading", { hasText: "Niveau 1" }).first(),
+    ).toBeVisible();
+    await expectNoClippedText(actions, `spell levels, ${tag}`);
+    await snap(page, `fr-${tag}-spells`);
+    await actions.getByRole("button", { name: "Préparer les sorts" }).click();
+    const form = actions.getByRole("form", {
+      name: "Préparer les sorts du jour",
+    });
+    await expect(form.getByTestId("grimoire-level-1")).toBeVisible();
+    await expectNoClippedText(actions, `preparation, ${tag}`);
+    await snap(page, `fr-${tag}-preparation`);
+    await actions.getByRole("button", { name: "Annuler" }).click();
+    await actions.getByRole("tab", { name: "Compétences" }).click();
+    await expect(actions.locator(".group-heading").first()).toBeVisible();
+    await expectNoClippedText(actions, `skills, ${tag}`);
+    await snap(page, `fr-${tag}-skills`);
+    await rail.getByRole("button", { name: "Inventaire", exact: true }).click();
+    await expectNoClippedText(page.locator("main"), `inventory, ${tag}`);
+    await snap(page, `fr-${tag}-inventory`);
   }
 });

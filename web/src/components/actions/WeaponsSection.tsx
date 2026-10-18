@@ -76,7 +76,7 @@ export function WeaponsSection() {
           <div
             className={cn(
               WEAPON_ROW,
-              "px-2 pb-1 text-label text-muted-foreground",
+              "group-heading mb-0.5 px-2 text-label font-medium",
             )}
             aria-hidden
           >

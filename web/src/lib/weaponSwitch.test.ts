@@ -51,17 +51,16 @@ describe("weaponSwitch", () => {
 
 describe("setModifiers", () => {
   it("is empty at the defaults", () => {
-    expect(
-      setModifiers({ targetSize: "sm", situational: { value: 0, label: "x" } }),
-    ).toEqual({ large: false, situational: null });
+    expect(setModifiers({ situational: { value: 0, label: "x" } })).toEqual({
+      situational: null,
+    });
   });
 
-  it("names a large target and a situational modifier other than 0", () => {
+  it("names a situational modifier other than 0", () => {
     expect(
       setModifiers({
-        targetSize: "l",
         situational: { value: -2, label: "cover" },
       }),
-    ).toEqual({ large: true, situational: { value: -2, label: "cover" } });
+    ).toEqual({ situational: { value: -2, label: "cover" } });
   });
 });

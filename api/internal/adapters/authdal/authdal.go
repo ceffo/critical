@@ -198,3 +198,18 @@ func (d *DAL) AdoptUnownedCharacters(ctx context.Context, userID uuid.UUID) erro
 	}
 	return nil
 }
+
+// MoveCharacters implements authsvc.DAL: every character of from becomes
+// to's, and from keeps no current character.
+func (d *DAL) MoveCharacters(ctx context.Context, from, to uuid.UUID) error {
+	if err := d.q.MoveCharacters(ctx, queries.MoveCharactersParams{
+		FromUser: uuid.NullUUID{UUID: from, Valid: true},
+		ToUser:   uuid.NullUUID{UUID: to, Valid: true},
+	}); err != nil {
+		return fmt.Errorf("move characters: %w", err)
+	}
+	if err := d.q.ClearCurrentCharacter(ctx, from); err != nil {
+		return fmt.Errorf("clear current character: %w", err)
+	}
+	return nil
+}

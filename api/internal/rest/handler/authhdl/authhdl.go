@@ -35,6 +35,7 @@ type Service interface {
 	FinishLogin(ctx context.Context, in authsvc.FinishLogin) (*authsvc.NewSession, error)
 	DevLogin(ctx context.Context, email string) (*authsvc.NewSession, error)
 	Logout(ctx context.Context, token string) error
+	FreshCurrentCharacter(ctx context.Context, p *authsvc.Principal) (int64, error)
 }
 
 // LoginCookie is the base name of the cookie holding a started Google
@@ -91,7 +92,7 @@ func RegisterRoutes(r Router, svc Service, opts Options) {
 	r.Get(StartPath, render.Handle(Start(svc, opts)))
 	r.Get(CallbackPath, Callback(svc, opts))
 	r.Post("/api/auth/logout", render.Handle(Logout(svc, opts)))
-	r.Get("/api/auth/me", render.Handle(Me()))
+	r.Get("/api/auth/me", render.Handle(Me(svc)))
 	r.Get("/api/auth/options", render.Handle(LoginOptions(svc)))
 	if svc.DevLoginEnabled() {
 		r.Post("/api/auth/dev", render.Handle(Dev(svc, opts)))
@@ -184,7 +185,7 @@ func Logout(svc Service, opts Options) render.HandlerFunc {
 // web decides to show the login page, ADR 0029 step 4.6): session_expired
 // when the request carried a session the server no longer knows, so the
 // login page says it has ended, unauthenticated without one.
-func Me() render.HandlerFunc {
+func Me(svc Service) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		p := mw.PrincipalFrom(r.Context())
 		if p == nil && mw.StaleSession(r.Context()) {
@@ -193,7 +194,17 @@ func Me() render.HandlerFunc {
 		if p == nil {
 			return authsvc.ErrUnauthenticated
 		}
-		render.OK(r.Context(), w, meDTO(p.User))
+		// The web names the character it shows after this answer (ADR 0029
+		// step 7.2), once per page load: the database's current character,
+		// not the one this server may remember from before a switch made on
+		// the other server.
+		u := p.User
+		current, err := svc.FreshCurrentCharacter(r.Context(), p)
+		if err != nil {
+			return err
+		}
+		u.CurrentCharacterID = current
+		render.OK(r.Context(), w, meDTO(u))
 		return nil
 	}
 }

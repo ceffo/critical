@@ -58,7 +58,18 @@ DELETE FROM sessions WHERE user_id = $1;
 UPDATE characters SET owner_user_id = $1 WHERE owner_user_id IS NULL;
 
 -- name: SetFirstCurrentCharacter :exec
--- The user's first character they own and have not retired becomes current, unless one is set.
+-- The user's first character they own and have not retired becomes current, unless the current one
+-- is such a character: a NULL current, a retired one and another user's are all repaired.
 UPDATE users SET current_character_id = (
     SELECT min(c.id) FROM characters c WHERE c.owner_user_id = users.id AND NOT c.retired
-) WHERE users.id = $1 AND users.current_character_id IS NULL;
+) WHERE users.id = $1 AND NOT EXISTS (
+    SELECT 1 FROM characters c
+    WHERE c.id = users.current_character_id AND c.owner_user_id = users.id AND NOT c.retired
+);
+
+-- name: MoveCharacters :exec
+-- Every character of one user becomes another's (a root admin that never logged in moves).
+UPDATE characters SET owner_user_id = sqlc.arg(to_user) WHERE owner_user_id = sqlc.arg(from_user);
+
+-- name: ClearCurrentCharacter :exec
+UPDATE users SET current_character_id = NULL WHERE id = $1;

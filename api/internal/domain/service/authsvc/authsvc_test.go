@@ -461,6 +461,8 @@ func TestSetRootAdmin_RefusesToMoveABoundRoot(t *testing.T) {
 
 // Step 5.1: a root that never logged in moves to the new email (an existing
 // user is promoted); the old row loses the flag and is disabled, never deleted.
+// Step 5.3: the characters it was given (Kelsen, after a typo) move with the
+// flag, before the new root's current character is set, in one transaction.
 func TestSetRootAdmin_MovesAnUnboundRoot(t *testing.T) {
 	e := newEnv(t, true)
 	old := authsvc.User{ID: otherID, Email: "typo@example.com", Role: authsvc.RoleAdmin, Root: true}
@@ -473,11 +475,31 @@ func TestSetRootAdmin_MovesAnUnboundRoot(t *testing.T) {
 	promoted := *player
 	promoted.Role, promoted.Root = authsvc.RoleAdmin, true
 	update := e.dal.EXPECT().UpdateUser(mock.Anything, promoted).Return(nil).Once().NotBefore(first)
-	e.expectAdopt(player.ID, promoted, update)
+	move := e.dal.EXPECT().MoveCharacters(mock.Anything, otherID, player.ID).Return(nil).Once().NotBefore(update)
+	playing := promoted
+	playing.CurrentCharacterID = 1
+	e.expectAdopt(player.ID, playing, move)
 
 	got, err := e.svc.SetRootAdmin(context.Background(), "ann@example.com")
 	require.NoError(t, err)
-	assert.Equal(t, promoted, *got)
+	assert.Equal(t, playing, *got, "the new root plays the moved character")
+	assert.Equal(t, 1, e.tx.n, "one transaction")
+}
+
+// Step 5.3: a failed move leaves the transaction body: the old root keeps
+// its characters and the flag (the transaction rolls back).
+func TestSetRootAdmin_MoveFailureAborts(t *testing.T) {
+	e := newEnv(t, true)
+	old := authsvc.User{ID: otherID, Email: "typo@example.com", Role: authsvc.RoleAdmin, Root: true}
+	e.dal.EXPECT().RootUser(mock.Anything).Return(&old, nil).Once()
+	e.dal.EXPECT().UpdateUser(mock.Anything, mock.Anything).Return(nil).Twice()
+	e.dal.EXPECT().DeleteUserSessions(mock.Anything, otherID).Return(nil).Once()
+	u := *player
+	e.dal.EXPECT().UserByEmail(mock.Anything, "ann@example.com").Return(&u, nil).Once()
+	e.dal.EXPECT().MoveCharacters(mock.Anything, otherID, player.ID).Return(assert.AnError).Once()
+
+	_, err := e.svc.SetRootAdmin(context.Background(), "ann@example.com")
+	require.ErrorIs(t, err, assert.AnError)
 }
 
 // Step 8.1: the dev login with no email logs in as the root admin.

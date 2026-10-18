@@ -68,6 +68,8 @@ func (s *service) SetRootAdmin(ctx context.Context, email string) (*User, error)
 	defer s.sessions.forgetAll()
 	var out *User
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		// moved is the root that never logged in, when it loses the flag.
+		var moved *User
 		root, err := s.dal.RootUser(ctx)
 		switch {
 		case err == nil && root.Email == email:
@@ -85,6 +87,7 @@ func (s *service) SetRootAdmin(ctx context.Context, email string) (*User, error)
 			if err := s.dal.DeleteUserSessions(ctx, root.ID); err != nil {
 				return err
 			}
+			moved = root
 		case !errors.Is(err, domain.ErrNotFound):
 			return err
 		}
@@ -100,6 +103,14 @@ func (s *service) SetRootAdmin(ctx context.Context, email string) (*User, error)
 		default:
 			u = &User{ID: s.newID(), Email: email, Role: RoleAdmin, Root: true, CreatedAt: s.now()}
 			if err := s.dal.InsertUser(ctx, *u); err != nil {
+				return err
+			}
+		}
+		// The moved root's characters (adopted when it was made) go with the flag: a root
+		// set with a typo, then with the right email, leaves the new root
+		// playing them, not the disabled one.
+		if moved != nil {
+			if err := s.dal.MoveCharacters(ctx, moved.ID, u.ID); err != nil {
 				return err
 			}
 		}
@@ -143,4 +154,21 @@ func (s *service) adoptAsRoot(ctx context.Context, u *User) (*User, error) {
 		return nil, err
 	}
 	return s.dal.UserByID(ctx, u.ID)
+}
+
+// FreshCurrentCharacter implements SVC (ADR 0029 step 7.2). It reads the user
+// only: the web calls it when the character it shows is not the one this
+// server remembers (a switch made on the other server), not on every request.
+func (s *service) FreshCurrentCharacter(ctx context.Context, p *Principal) (int64, error) {
+	u, err := s.dal.UserByID(ctx, p.User.ID)
+	if errors.Is(err, domain.ErrNotFound) {
+		return 0, ErrUnauthenticated
+	}
+	if err != nil {
+		return 0, err
+	}
+	if u.CurrentCharacterID != p.User.CurrentCharacterID {
+		s.sessions.forgetUser(u.ID)
+	}
+	return u.CurrentCharacterID, nil
 }

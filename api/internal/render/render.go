@@ -139,6 +139,9 @@ var mappings = []mapping{
 	// A user with no current character (ADR 0029 step 7.2): the web offers
 	// to create the first one.
 	{target: charactersvc.ErrNoCurrentCharacter, status: http.StatusNotFound, code: "no_character"},
+	// A request for a character that is not the current one any more: the
+	// web reloads (step 7.2).
+	{target: charactersvc.ErrCharacterChanged, status: http.StatusConflict, code: "character_changed"},
 	{target: buffsvc.ErrNoInitiative, status: http.StatusConflict, code: "no_initiative"},
 	{target: buffsvc.ErrInitiativeNotOnTop, status: http.StatusConflict, code: "initiative_not_on_top"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},

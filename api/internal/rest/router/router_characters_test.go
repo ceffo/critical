@@ -4,11 +4,14 @@ package router_test
 // character, resolved once by the router (mw.CurrentCharacter).
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -21,6 +24,7 @@ import (
 	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
+	"github.com/ceffo/critical/api/internal/rest/router"
 )
 
 var (
@@ -148,5 +152,90 @@ func TestCharacters_SetCurrent(t *testing.T) {
 	for _, body := range []string{`{}`, `{"id":"5"}`, `{"id":5,"x":1}`, `nope`} {
 		rec = as(h, "ann", "PUT", "/api/characters/current", body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, body)
+	}
+}
+
+// shown sends a request with the session token from a page that shows the
+// character id (mw.CharacterHeader).
+func shown(h http.Handler, token, id, method, path, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req.AddCookie(&http.Cookie{Name: mw.SessionCookie, Value: token})
+	req.Header.Set(mw.CharacterHeader, id)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+// Step 7.2: a request names the character its page shows and acts on that
+// one or on none. The remembered one costs no query; another is checked
+// against the database (only then), and still another is refused with
+// character_changed before any service runs (the strict mocks expect no call).
+func TestCurrentCharacter_Step7_2_TheShownCharacterOrNone(t *testing.T) {
+	ann := authsvc.User{ID: annID, Email: "ann@example.com", Role: authsvc.RolePlayer, CurrentCharacterID: 3}
+	a := usersAuth(t, map[string]authsvc.User{"ann": ann})
+	h, m := newRouterWith(t, a)
+
+	m.hp.EXPECT().AppendEvent(mock.Anything, int64(3), -1, "a").Return(nil, nil).Once()
+	assert.Equal(t, http.StatusOK, shown(h, "ann", "3", "POST", "/api/hp/event", `{"delta":-1,"source":"a"}`).Code)
+
+	// Switched to 5 on the other server: this one remembers 3.
+	a.EXPECT().FreshCurrentCharacter(mock.Anything, mock.Anything).Return(5, nil).Once()
+	m.hp.EXPECT().AppendEvent(mock.Anything, int64(5), -2, "b").Return(nil, nil).Once()
+	assert.Equal(t, http.StatusOK, shown(h, "ann", "5", "POST", "/api/hp/event", `{"delta":-2,"source":"b"}`).Code)
+
+	// The page shows 7, the database says 5: nothing runs.
+	a.EXPECT().FreshCurrentCharacter(mock.Anything, mock.Anything).Return(5, nil).Once()
+	rec := shown(h, "ann", "7", "POST", "/api/hp/event", `{"delta":-3,"source":"c"}`)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	assert.JSONEq(t, `{"error":"current character changed: conflict","code":"character_changed"}`, rec.Body.String())
+
+	// The database unavailable while checking: 503, not 404 or 409.
+	a.EXPECT().FreshCurrentCharacter(mock.Anything, mock.Anything).Return(0, fmt.Errorf("user: %w", domain.ErrUnavailable)).Once()
+	rec = shown(h, "ann", "7", "GET", "/api/hp", "")
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"database_unavailable"`)
+
+	for _, bad := range []string{"x", "0", "-1", "3.0"} {
+		assert.Equal(t, http.StatusBadRequest, shown(h, "ann", bad, "GET", "/api/hp", "").Code, bad)
+	}
+}
+
+// ADR 0025 step 10 for the user's characters: a database too slow for the
+// request deadline, or unavailable, answers 503 database_unavailable on the
+// list and on the switch, never a 404 or a 500.
+func TestCharacters_SlowDatabaseIsUnavailable(t *testing.T) {
+	h, m := newRouterOpts(t, usersAuth(t, map[string]authsvc.User{
+		"ann": {ID: annID, Email: "ann@example.com", Role: authsvc.RolePlayer, CurrentCharacterID: 3},
+	}), router.Options{RequestDeadline: 30 * time.Millisecond})
+	release := make(chan struct{})
+	defer close(release)
+	m.char.EXPECT().List(mock.Anything, annID).RunAndReturn(func(context.Context, uuid.UUID) ([]charactersvc.Summary, error) {
+		<-release // a driver call that does not watch the context
+		return nil, nil
+	}).Once()
+	m.char.EXPECT().SetCurrent(mock.Anything, annID, int64(5)).RunAndReturn(func(ctx context.Context, _ uuid.UUID, _ int64) error {
+		<-ctx.Done() // a driver call that gives up at the deadline
+		return ctx.Err()
+	}).Once()
+	for _, rec := range []*httptest.ResponseRecorder{
+		as(h, "ann", "GET", "/api/characters", ""),
+		as(h, "ann", "PUT", "/api/characters/current", `{"id":5}`),
+	} {
+		assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+		assert.Contains(t, rec.Body.String(), `"code":"database_unavailable"`)
+	}
+
+	h, m = newRouterWith(t, usersAuth(t, map[string]authsvc.User{
+		"ann": {ID: annID, Email: "ann@example.com", Role: authsvc.RolePlayer, CurrentCharacterID: 3},
+	}))
+	gone := fmt.Errorf("characters of: %w", domain.ErrUnavailable)
+	m.char.EXPECT().List(mock.Anything, annID).Return(nil, gone).Once()
+	m.char.EXPECT().SetCurrent(mock.Anything, annID, int64(5)).Return(gone).Once()
+	for _, rec := range []*httptest.ResponseRecorder{
+		as(h, "ann", "GET", "/api/characters", ""),
+		as(h, "ann", "PUT", "/api/characters/current", `{"id":5}`),
+	} {
+		assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+		assert.Contains(t, rec.Body.String(), `"code":"database_unavailable"`)
 	}
 }

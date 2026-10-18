@@ -240,9 +240,25 @@ func (p Auth) AdoptUnownedCharacters(ctx context.Context, userID uuid.UUID) erro
 				first = id
 			}
 		}
-		if _, set := t.current[userID]; !set && first != 0 {
+		if t.currentOf(userID) == 0 && first != 0 {
 			t.current[userID] = first
 		}
+		return nil
+	})
+}
+
+// MoveCharacters implements authsvc.DAL.
+func (p Auth) MoveCharacters(ctx context.Context, from, to uuid.UUID) error {
+	return p.s.write(ctx, func(t *tables) error {
+		if _, ok := t.users[to]; !ok {
+			return fmt.Errorf("%w: characters of unknown user %s", errConstraint, to)
+		}
+		for id, owner := range t.owners {
+			if owner == from {
+				t.owners[id] = to
+			}
+		}
+		delete(t.current, from)
 		return nil
 	})
 }

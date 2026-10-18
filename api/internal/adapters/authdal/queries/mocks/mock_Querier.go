@@ -130,6 +130,53 @@ func (_c *MockQuerier_AdoptUnownedCharacters_Call) RunAndReturn(run func(context
 	return _c
 }
 
+// ClearCurrentCharacter provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) ClearCurrentCharacter(ctx context.Context, id uuid.UUID) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClearCurrentCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_ClearCurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClearCurrentCharacter'
+type MockQuerier_ClearCurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// ClearCurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockQuerier_Expecter) ClearCurrentCharacter(ctx interface{}, id interface{}) *MockQuerier_ClearCurrentCharacter_Call {
+	return &MockQuerier_ClearCurrentCharacter_Call{Call: _e.mock.On("ClearCurrentCharacter", ctx, id)}
+}
+
+func (_c *MockQuerier_ClearCurrentCharacter_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockQuerier_ClearCurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_ClearCurrentCharacter_Call) Return(_a0 error) *MockQuerier_ClearCurrentCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_ClearCurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockQuerier_ClearCurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteSession provides a mock function with given fields: ctx, id
 func (_m *MockQuerier) DeleteSession(ctx context.Context, id string) error {
 	ret := _m.Called(ctx, id)
@@ -361,6 +408,53 @@ func (_c *MockQuerier_InsertUser_Call) Return(_a0 error) *MockQuerier_InsertUser
 }
 
 func (_c *MockQuerier_InsertUser_Call) RunAndReturn(run func(context.Context, queries.InsertUserParams) error) *MockQuerier_InsertUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MoveCharacters provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) MoveCharacters(ctx context.Context, arg queries.MoveCharactersParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MoveCharacters")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.MoveCharactersParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_MoveCharacters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MoveCharacters'
+type MockQuerier_MoveCharacters_Call struct {
+	*mock.Call
+}
+
+// MoveCharacters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.MoveCharactersParams
+func (_e *MockQuerier_Expecter) MoveCharacters(ctx interface{}, arg interface{}) *MockQuerier_MoveCharacters_Call {
+	return &MockQuerier_MoveCharacters_Call{Call: _e.mock.On("MoveCharacters", ctx, arg)}
+}
+
+func (_c *MockQuerier_MoveCharacters_Call) Run(run func(ctx context.Context, arg queries.MoveCharactersParams)) *MockQuerier_MoveCharacters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.MoveCharactersParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_MoveCharacters_Call) Return(_a0 error) *MockQuerier_MoveCharacters_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_MoveCharacters_Call) RunAndReturn(run func(context.Context, queries.MoveCharactersParams) error) *MockQuerier_MoveCharacters_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -40,6 +40,15 @@ func (q *Queries) AdoptUnownedCharacters(ctx context.Context, ownerUserID uuid.N
 	return err
 }
 
+const clearCurrentCharacter = `-- name: ClearCurrentCharacter :exec
+UPDATE users SET current_character_id = NULL WHERE id = $1
+`
+
+func (q *Queries) ClearCurrentCharacter(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, clearCurrentCharacter, id)
+	return err
+}
+
 const deleteSession = `-- name: DeleteSession :exec
 DELETE FROM sessions WHERE id = $1
 `
@@ -126,6 +135,21 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
 	return err
 }
 
+const moveCharacters = `-- name: MoveCharacters :exec
+UPDATE characters SET owner_user_id = $1 WHERE owner_user_id = $2
+`
+
+type MoveCharactersParams struct {
+	ToUser   uuid.NullUUID
+	FromUser uuid.NullUUID
+}
+
+// Every character of one user becomes another's (a root admin that never logged in moves).
+func (q *Queries) MoveCharacters(ctx context.Context, arg MoveCharactersParams) error {
+	_, err := q.db.ExecContext(ctx, moveCharacters, arg.ToUser, arg.FromUser)
+	return err
+}
+
 const pendingInvite = `-- name: PendingInvite :one
 SELECT id, email, invited_by, created_at FROM invites
 WHERE email = $1 AND cancelled IS NULL AND accepted_by IS NULL
@@ -206,10 +230,14 @@ func (q *Queries) SessionByID(ctx context.Context, id string) (Session, error) {
 const setFirstCurrentCharacter = `-- name: SetFirstCurrentCharacter :exec
 UPDATE users SET current_character_id = (
     SELECT min(c.id) FROM characters c WHERE c.owner_user_id = users.id AND NOT c.retired
-) WHERE users.id = $1 AND users.current_character_id IS NULL
+) WHERE users.id = $1 AND NOT EXISTS (
+    SELECT 1 FROM characters c
+    WHERE c.id = users.current_character_id AND c.owner_user_id = users.id AND NOT c.retired
+)
 `
 
-// The user's first character they own and have not retired becomes current, unless one is set.
+// The user's first character they own and have not retired becomes current, unless the current one
+// is such a character: a NULL current, a retired one and another user's are all repaired.
 func (q *Queries) SetFirstCurrentCharacter(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, setFirstCurrentCharacter, id)
 	return err

@@ -18,6 +18,12 @@ import (
 // their first one. Its stable code tells the web to offer that.
 var ErrNoCurrentCharacter = fmt.Errorf("no current character: %w", domain.ErrNotFound)
 
+// ErrCharacterChanged is a request for a character that is not the user's
+// current one any more (ADR 0029 step 7.2): the user switched elsewhere (the
+// other server, another tab). Nothing was read or written; the web reloads to
+// show the current character.
+var ErrCharacterChanged = fmt.Errorf("current character changed: %w", domain.ErrConflict)
+
 // SVC is the driver port.
 type SVC interface {
 	domain.Service

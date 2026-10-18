@@ -89,6 +89,12 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 // newRouterWith is newRouter over the auth service a.
 func newRouterWith(t *testing.T, a authsvc.SVC) (http.Handler, *mocksSet) {
 	t.Helper()
+	return newRouterOpts(t, a, router.Options{Commit: "abc123"})
+}
+
+// newRouterOpts is newRouterWith with the router's options.
+func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handler, *mocksSet) {
+	t.Helper()
 	m := &mocksSet{
 		char:    charmocks.NewMockSVC(t),
 		hp:      hpmocks.NewMockSVC(t),
@@ -110,7 +116,7 @@ func newRouterWith(t *testing.T, a authsvc.SVC) (http.Handler, *mocksSet) {
 		XP: m.xp, Details: m.details, Skills: m.skills, Dice: m.dice, Auth: a,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return router.New(log, bs, router.Options{Commit: "abc123"}), m
+	return router.New(log, bs, opts), m
 }
 
 func anyArgs(n int) []any {

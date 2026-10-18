@@ -35,9 +35,19 @@ type table struct {
 // JSON answer into out (nil: ignored); it returns the status.
 func (tb table) call(token, method, path, body string, out any) int {
 	tb.t.Helper()
+	return tb.showing(token, 0, method, path, body, out)
+}
+
+// showing is call from a web page that shows the character shown (0: a
+// client that names none, mw.CharacterHeader).
+func (tb table) showing(token string, shown int64, method, path, body string, out any) int {
+	tb.t.Helper()
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	if token != "" {
 		req.AddCookie(&http.Cookie{Name: mw.SessionCookie, Value: token})
+	}
+	if shown != 0 {
+		req.Header.Set(mw.CharacterHeader, itoa(shown))
 	}
 	rec := httptest.NewRecorder()
 	tb.h.ServeHTTP(rec, req)
@@ -97,13 +107,21 @@ type listView struct {
 
 func newTable(t *testing.T) (table, *memory.Store) {
 	t.Helper()
-	ctx := context.Background()
 	m := memory.New()
+	tb, _ := serverOn(t, m)
+	return tb, m
+}
+
+// serverOn starts one server over m (production runs two over one
+// database): its own services, so its own session cache.
+func serverOn(t *testing.T, m *memory.Store) (table, *composition.BackingServices) {
+	t.Helper()
+	ctx := context.Background()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(m), fixtureConfig())
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return table{t: t, h: router.New(log, bs, router.Options{})}, m
+	return table{t: t, h: router.New(log, bs, router.Options{})}, bs
 }
 
 // Step 7.1: Ann (the root admin, who got the seeded character) and Bob (a new
@@ -208,6 +226,16 @@ func TestOwners_Step7_1_AnotherUsersCharacterIsNotFound(t *testing.T) {
 	require.Len(t, bobList.Characters, 1, "the retired one is not listed")
 	assert.Equal(t, bram, bobList.Characters[0].ID)
 	assert.Equal(t, http.StatusNotFound, tb.call(bob, "PUT", "/api/characters/current", `{"id":`+itoa(old)+`}`, nil))
+
+	// With a current character, each refusal leaves it as it was.
+	require.Equal(t, http.StatusOK, tb.call(bob, "PUT", "/api/characters/current", `{"id":`+itoa(bram)+`}`, nil))
+	for _, id := range []int64{kelsen, old, 999} {
+		assert.Equal(t, http.StatusNotFound, tb.call(bob, "PUT", "/api/characters/current", `{"id":`+itoa(id)+`}`, &refused), id)
+		assert.Equal(t, "character_not_found", refused["code"], id)
+		var sheet sheetView
+		require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/character", "", &sheet))
+		assert.Equal(t, "Bram", sheet.Name, "still Bob's current character")
+	}
 
 	// Ann's list and current character are untouched.
 	require.Equal(t, http.StatusOK, tb.call(ann, "GET", "/api/characters", "", &annList))

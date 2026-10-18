@@ -95,8 +95,9 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	// The one access check (ADR 0029 step 6.2): every route below, and the
 	// web app outside /api, needs a session unless mw.Public lists it.
 	var auth mw.Authenticator
+	var fresh mw.FreshCharacters
 	if bs.Auth != nil {
-		auth = bs.Auth
+		auth, fresh = bs.Auth, bs.Auth
 	}
 	r.Use(mw.Gate(auth, mw.GateConfig{
 		Host: opts.Host, Secure: opts.SecureCookies, Cookie: mw.SessionCookieName(opts.CookieApp),
@@ -124,7 +125,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	// (ADR 0029 step 7): mw.CurrentCharacter is the one resolver, a route
 	// mounted here gets it.
 	r.Group(func(r chi.Router) {
-		r.Use(mw.CurrentCharacter)
+		r.Use(mw.CurrentCharacter(fresh))
 		charID := mw.CharacterID
 
 		characterhdl.RegisterRoutes(r, charID, bs.Character)

@@ -372,6 +372,63 @@ func (_c *MockSVC_ForgetUser_Call) RunAndReturn(run func(uuid.UUID)) *MockSVC_Fo
 	return _c
 }
 
+// FreshCurrentCharacter provides a mock function with given fields: ctx, p
+func (_m *MockSVC) FreshCurrentCharacter(ctx context.Context, p *authsvc.Principal) (int64, error) {
+	ret := _m.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FreshCurrentCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *authsvc.Principal) (int64, error)); ok {
+		return rf(ctx, p)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *authsvc.Principal) int64); ok {
+		r0 = rf(ctx, p)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *authsvc.Principal) error); ok {
+		r1 = rf(ctx, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_FreshCurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FreshCurrentCharacter'
+type MockSVC_FreshCurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// FreshCurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p *authsvc.Principal
+func (_e *MockSVC_Expecter) FreshCurrentCharacter(ctx interface{}, p interface{}) *MockSVC_FreshCurrentCharacter_Call {
+	return &MockSVC_FreshCurrentCharacter_Call{Call: _e.mock.On("FreshCurrentCharacter", ctx, p)}
+}
+
+func (_c *MockSVC_FreshCurrentCharacter_Call) Run(run func(ctx context.Context, p *authsvc.Principal)) *MockSVC_FreshCurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*authsvc.Principal))
+	})
+	return _c
+}
+
+func (_c *MockSVC_FreshCurrentCharacter_Call) Return(_a0 int64, _a1 error) *MockSVC_FreshCurrentCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_FreshCurrentCharacter_Call) RunAndReturn(run func(context.Context, *authsvc.Principal) (int64, error)) *MockSVC_FreshCurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Health provides a mock function with given fields: ctx
 func (_m *MockSVC) Health(ctx context.Context) error {
 	ret := _m.Called(ctx)

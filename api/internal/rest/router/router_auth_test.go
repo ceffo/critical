@@ -258,6 +258,7 @@ func TestGate_Step4_3_ExtendedSessionRefreshesTheCookie(t *testing.T) {
 	a.EXPECT().Authenticate(mock.Anything, "tok").Return(&authsvc.Principal{
 		User: authsvc.User{Email: "ann@example.com", Role: authsvc.RolePlayer}, Expires: expires, Extended: true,
 	}, nil).Once()
+	a.EXPECT().FreshCurrentCharacter(mock.Anything, mock.Anything).Return(0, nil).Once()
 	h := authRouter(t, a, router.Options{})
 	req := httptest.NewRequest("GET", "/api/auth/me", nil)
 	req.AddCookie(&http.Cookie{Name: mw.SessionCookie, Value: "tok"})
@@ -425,6 +426,7 @@ func TestSessionCookie_NamedPerApp(t *testing.T) {
 		User: authsvc.User{Email: "ann@example.com", Role: authsvc.RolePlayer},
 	}, nil).Once()
 	a.EXPECT().DevLogin(mock.Anything, "").Return(&authsvc.NewSession{Token: "new", Expires: time.Now().Add(time.Hour)}, nil).Once()
+	a.EXPECT().FreshCurrentCharacter(mock.Anything, mock.Anything).Return(0, nil).Once()
 	a.EXPECT().StartLogin(mock.Anything).Return(&authsvc.LoginStart{URL: "https://accounts.example/auth", State: "st", Verifier: "ver"}, nil).Once()
 	h := authRouter(t, a, router.Options{CookieApp: "localhost:8091"})
 

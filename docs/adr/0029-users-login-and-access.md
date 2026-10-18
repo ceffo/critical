@@ -287,8 +287,14 @@ Step 7 as built (the characters-per-user item; the user approves ADR changes at 
    start once a root admin exists, and in the transaction of `just root-admin` and of the dev login
    that makes or finds the root admin. No migration holds the data; nothing else changes. On local,
    staging and production Kelsen is therefore the root admin's and current for them after the
-   upgrade, with no one-off step. Tests: `authsvc` `TestAdoptUnownedCharacters_Step5_3_GivesThemToTheRootAdmin`,
-   `TestAdoptUnownedCharacters_Step5_3_NoRootAdminChangesNothing`, `TestSetRootAdmin_CreatesTheRoot`.
+   upgrade, with no one-off step. When `just root-admin` moves a root admin that never logged in (a typo,
+   step 5.1), that root's characters go to the new root in the same transaction, and the old row keeps no
+   current character: Kelsen follows the flag, it does not stay with the disabled row. The same pass
+   repairs the root admin's current character when it is none, retired or not theirs (their first
+   character not retired). Tests: `authsvc` `TestAdoptUnownedCharacters_Step5_3_GivesThemToTheRootAdmin`,
+   `TestAdoptUnownedCharacters_Step5_3_NoRootAdminChangesNothing`, `TestSetRootAdmin_CreatesTheRoot`,
+   `TestSetRootAdmin_MovesAnUnboundRoot`; `composition` `TestSwitch_Step5_3_ATypoRootHandsItsCharactersOver`,
+   `TestSwitch_Step5_3_StartsAreIdempotent`.
 3. **One resolver.** The current character is read with the user, through the ownership (a character the
    user does not own, or retired, is no current character), so it comes with the session the gate
    already reads and remembers (step 4.7): resolving it costs no query of its own. One router
@@ -307,12 +313,32 @@ Step 7 as built (the characters-per-user item; the user approves ADR changes at 
    character is no game move and is not undone). `GET /api/auth/me` carries `currentCharacterId`.
    Tests: `TestOwners_Step7_1_AnotherUsersCharacterIsNotFound`, `TestCharacters_SetCurrent`,
    `TestCharacters_ListIsTheUsersOwn`.
-5. **Switching and the session cache.** The server that switches a user's character forgets the user's
-   remembered sessions once it committed, so their next request plays the new one. On the other
-   production server the switch takes effect **within 10 seconds** (step 4.7's window): a request there
-   in that window still acts on the previous character, which is the same user's. Accepted, as for a
-   role change: switching is rare and both characters are the user's own. Test:
-   `TestAuthenticate_Step7_2_ACurrentCharacterChangeForgetsAtOnce`.
+5. **Switching, and the character on screen.** The server that switches a user's character forgets the
+   user's remembered sessions once it committed, so their next request there plays the new one. The other
+   production server may remember the previous one for up to 10 seconds (step 4.7's window), so the
+   current character alone could send a write to another character than the one on screen. Rule: **no
+   request reads or writes another character than the one the page shows.** The web names it in the
+   header `X-Character-Id` on every request (the session's `currentCharacterId`), and the resolver acts on
+   that character or on none:
+   - the remembered current character: it acts, with no query (the common case);
+   - another one: it reads the user's current character from the database (one query, only then; the
+     server then forgets the stale session). If that is the named one it acts, else it refuses with
+     **409 `character_changed`** before any service runs. The web then reloads the page;
+   - a value that is no positive id: 400 `invalid_input`. A request without the header (an API client
+     with no page) acts on the remembered current character.
+
+   `GET /api/auth/me`, which the page reads once at load, carries the current character read from the
+   database, not the remembered one, so a page loaded right after a switch names the new character. A
+   database too slow for that read answers 503 `database_unavailable`, like any other request.
+6. **A current character retired or lost.** A current character the user no longer owns or has retired
+   reads as none: every per-character route answers `no_character`, while `GET /api/characters` lists
+   their other characters with `currentId: null`, and `PUT /api/characters/current` makes one current
+   (the switch UI offers it). The root admin's is repaired at the next start (item 2). The item that
+   retires characters picks the user's next current character in its own transaction. Tests: `composition`
+   `TestSwitch_Step7_2_AWriteOnTheOtherServerLandsOnTheShownCharacter`, `TestSwitch_Step7_2_ARetiredCurrentCharacter`;
+   `router` `TestCurrentCharacter_Step7_2_TheShownCharacterOrNone`; `authsvc`
+   `TestFreshCurrentCharacter_Step7_2_ReadsTheDatabaseAndForgetsAStaleSession`,
+   `TestAuthenticate_Step7_2_ACurrentCharacterChangeForgetsAtOnce`; web `http.test.ts`.
 
 ## Amendment to ADR 0024
 

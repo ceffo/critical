@@ -20,6 +20,9 @@ newest version that passed staging or the one asked, and only a repository admin
 2026-10-17)"): `just major` makes the next staging release the next major version (step 3).
 Amended again 2026-10-17 (see "Amendment (one tag ruleset, 2026-10-17)"): GitHub refuses the Actions-app
 bypass on a personal repository, so only the `release tags` ruleset (step 10.2) remains.
+Amended again 2026-10-18 (see "Amendment (real login, 2026-10-18)"): step 8 chooses option (c), the login
+of [ADR 0029](0029-users-login-and-access.md); public IPs are allowed once the gate is live, the
+no-public-IP check becomes a gate check, and the apps are named `critical-hit` and `critical-hit-staging`.
 
 ## Context
 
@@ -218,22 +221,27 @@ flowchart LR
       does not export the layer that holds the catalogue to a build cache that other workflows can
       read.
 
-8. **Access control: private by default.**
+8. **Access control: real login.** _Amended 2026-10-18 ([ADR 0029](0029-users-login-and-access.md)); was:
+   private by default, with the options below awaiting the user._
    1. **Hard rule** (user, 2026-10-16): nothing reachable from the public internet serves the
-      catalogue or the app without access control.
-   2. **Default, reversible** (proposed, awaiting the user): both apps have **no public IP**. The first
-      deploy uses `--no-public-ips` and allocates a private Flycast IPv6 only. Operators reach an app
-      with `fly proxy` or fly WireGuard.
-   3. Every deploy job (staging and production) checks the app's IPs before deploying and fails if
-      the app has a public IP while no public-access option is configured. _Amended 2026-10-16 (user):
-      for production the check is mandatory, with no bypass, until a public-access option with access
-      control is built; only staging's honours the `PUBLIC_ACCESS_OPTION` variable._
-   4. Options for public access, the choice awaiting the user:
-      - **(a) Shared-secret HTTP basic auth** in the Go server, then public IPs. Recommended for use at
-        the table from any phone.
-      - **(b) Stay private**: players' devices join through WireGuard or Tailscale. Recommended if only
-        the user's own devices need the app.
-      - **(c) Real login**, which belongs to the multi-user storage design.
+      catalogue or the app without access control. Since 2026-10-17 (user: _"no content visible without
+      authentication and authorization"_) the access control is option (c), the Google login with
+      invites and server-side sessions of ADR 0029; only the login page, `/api/auth/*` and `/api/health`
+      are public.
+   2. Until the release being deployed carries the gate (ADR 0029 steps 3, 4 and 6), both apps stay
+      **private**: no public IP, the first deploy uses `--no-public-ips` and allocates a private Flycast
+      IPv6 only, and operators reach an app with `fly proxy` or fly WireGuard. **Once the gate is live**
+      the apps may have **public IPs** and a public hostname.
+   3. Every deploy job (staging and production) runs a check before and after deploying. While the
+      release has no gate: it fails if the app has a public IP (_amended 2026-10-16 (user): for
+      production with no bypass; only staging's honours the `PUBLIC_ACCESS_OPTION` variable_). With the
+      gate: the **gate check** replaces the no-public-IP check, a request without a session to the
+      catalogue and to a data route must answer 401 and only the public paths of ADR 0029 step 6.1 may
+      answer 200; any other answer fails the deploy. The check reaches the app as in step 10.5.
+   4. Options considered, (c) chosen: (a) shared-secret HTTP basic auth, (b) stay private behind
+      WireGuard / Tailscale, **(c) real login** (ADR 0029). (a) and (b) are not built.
+   5. App names: `critical-hit` (production) and `critical-hit-staging` (user, 2026-10-17:
+      _"critical-hit and critical-hit-staging then"_; `critical.fly.dev` belongs to another account).
 
 9. **Backups.** _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: daily
    snapshots of both app volumes (proposed retention 30 days production, 7 days staging), the
@@ -297,11 +305,11 @@ part of this ADR to accepted. Answered rows keep their original default and say 
 
 | Question | Default | Options |
 |---|---|---|
-| Access for a public URL (step 8) | private, no public IP | (a) basic auth + public IPs, (b) stay private, devices join WireGuard / Tailscale, (c) real login |
+| Access for a public URL (step 8) | private, no public IP | (a) basic auth + public IPs, (b) stay private, devices join WireGuard / Tailscale, (c) real login. **Answered 2026-10-17 (user): (c)**, recorded 2026-10-18 with [ADR 0029](0029-users-login-and-access.md); public IPs once the gate is live |
 | PostgreSQL and the second production machine (step 5) | SQLite, one machine per environment | **Answered 2026-10-16: PostgreSQL first**, no deploy until then; two production machines from the first deploy ([ADR 0025](0025-postgresql-storage.md)) |
 | Production data | fresh database | **Answered 2026-10-16: fresh database** (_amended 2026-10-16; was: seeded once with the user's data, the local `.dev/critical.db` copied into `critical_prod` by the copy tool_): production's first boot seeds it from `seeds/` and the catalogue, like staging; the user re-enters the few character-sheet edits made in the app. See "Amendment (production starts from the seeds, 2026-10-16)" |
 | Production approval | none: running the promotion is the act (_amended 2026-10-17; was: pushing the tag is the act_) | a required reviewer on the `production` environment. **Answered 2026-10-17 (proposed with the promotion on demand): none**, the promotion checks that the actor is a repository admin (option (a)) |
-| Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the shared cluster `tournesol-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
+| Names, region, size | `critical-staging` / `critical-prod` (**answered 2026-10-17: `critical-hit-staging` / `critical-hit`**), region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the shared cluster `tournesol-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
 | Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | **Answered 2026-10-16 ("1a"): a copy database on the same cluster** (a restore point, newest 3 kept), not a dump file; see "Amendment (restore point: a copy database, 2026-10-16)" |
 | Snapshot retention of the cluster volume (step 9.1) | 30 days | **Answered 2026-10-16: 30 days** (the default) |
 | A migration during a rolling production deploy (step 5.2) | a release's migrations are additive, so the previous release keeps working on the new schema while its machines are replaced | **Answered 2026-10-16: additive migrations** (the default); the `immediate` strategy is not used |
@@ -559,3 +567,18 @@ creation rule.
   exist. Were the repository moved to an organization, they could come back.
 - **Tests**: `scripts/test-major.sh` (the dry-run is `release tags` alone; a run with `gh` stubbed deletes the
   two obsolete rulesets by name, replaces `release tags` and writes nothing else).
+
+## Amendment (real login, 2026-10-18)
+
+Access control for a public URL was open (step 8). User, 2026-10-17: players log in with SSO, are invited
+first, an admin section manages users and invites, and _"no content visible without authentication and
+authorization"_. The design is [ADR 0029](0029-users-login-and-access.md).
+
+- **Step 8**: option (c), real login, is chosen. Public IPs are allowed once the login gate is live in the
+  deployed release; until then the apps stay private.
+- **Step 8.3**: the no-public-IP check is replaced, for a release with the gate, by a gate check (401
+  without a session on the catalogue and on a data route, 200 only on the public paths). Production's
+  no-bypass rule of the 2026-10-16 amendment holds for the old check until the gate is live.
+- **App names**: `critical-hit` and `critical-hit-staging`, replacing `critical-prod` and
+  `critical-staging`.
+- **Step 10**: the Google OAuth client secret is a per-app fly secret like the database URL.

@@ -2,9 +2,9 @@
 
 ## What This Project Is
 
-Critical is a personal AD&D 2.5 character sheet engine for a single Bard character. It automates mechanical computation (attack resolution, damage calculation, buff expiry, spell slot tracking) and presents a persistent dashboard. The player sends intent; the app returns fully-explained results.
+Critical is a hosted AD&D 2.5 character sheet engine for a gaming group. Invited players log in with Google and each keeps several characters of five classes (bard, fighter, mage, cleric, thief). It automates mechanical computation (attack resolution, damage calculation, buff expiry, spell slot tracking) and presents a persistent dashboard. The player sends intent; the app returns fully-explained results.
 
-**This is a personal tool, not a product.** No authentication, no multi-tenancy, no SaaS concerns.
+**It is a multi-user game tool for one table, not a SaaS product.** Access is by invitation only, and nothing but the login page is visible without a session ([ADR 0029](adr/0029-users-login-and-access.md)). A character has one owner and only the owner sees it. The class rules arrive with the classes ADR; the Bard is the first class implemented. A DM role and a shared table are a later epic.
 
 ## Monorepo Layout
 
@@ -39,7 +39,11 @@ critical/
 
 ## Key Domain Vocabulary
 
-- **Bard**: the single character this app manages in Phase 1
+- **Bard**: the first class implemented; the others (fighter, mage, cleric, thief) follow
+- **User**: a person who can log in, identified by their Google account; has a role (`admin` or `player`) and owns many characters ([ADR 0029](adr/0029-users-login-and-access.md))
+- **Admin**: a user who manages users and invites in the admin section; sees users and their characters' names, never the sheets
+- **Root admin**: the one admin who cannot be disabled, demoted or removed through the app; set in the database by a local script
+- **Invite**: an email an admin authorises to log in through Google; no email is sent
 - **HP Ledger**: the append-only action log of damage and healing; current HP is derived from it ([ADR 0007](adr/0007-hp-ledger.md))
 - **Buff**: an active effect with a charge count, a duration in rounds, both or neither; every buff change is in the action log ([ADR 0004](adr/0004-buffs.md))
 - **Round Counter**: manually advanced by the player; Next Round, End combat and passing time are in [ADR 0005](adr/0005-rounds-and-time.md)
@@ -80,9 +84,10 @@ dashboard v3 redesign `critical-kiv`; items labelled `mvp-saturday` are the must
 12. XP ledger: total, progress to the next level and the ledger (no level-up)
 
 **After Saturday (not to be built now):** Gaia fire/lightning protections, mobile and other device
-layouts (below 1024 CSS px), level-up mechanics, multiple characters.
+layouts (below 1024 CSS px), level-up mechanics (the multi-user model, with several characters per user and five classes, is now scoped: ADR 0029).
 
 **Hosting and deployment** (`critical-8g1`) is no longer deferred (user, 2026-10-16): fly.io, staging
-from main and production from version tags, designed in [ADR 0024](adr/0024-deployment.md).
+from main and production from version tags, designed in [ADR 0024](adr/0024-deployment.md). The apps
+go public behind the Google login (`critical-hit`, `critical-hit-staging`) once ADR 0029's gate is live.
 
 Do not implement anything from the "after" list even if it seems related.

@@ -1,8 +1,7 @@
 # ADR 0032: Character identity and creation rolls
 
 **Status**: accepted 2026-10-18 (decisions from the user's triage of the onboarding epic, the same
-day; the six defaults proposed in the first round were accepted by the supervisor; the one part still marked _(proposed)_ (bare height and weight units in step 8) awaits the user's OK in
-review). Not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
+day; the details this ADR added beyond the triage were accepted by the supervisor in review). Not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
 step 7.5 on level 1 hit points) and [ADR 0029](0029-users-login-and-access.md) steps 7.2 and 7.3
 (character actions leave the cog menu; creation is a full-screen route).
 
@@ -203,8 +202,8 @@ flowchart LR
       "H"; languages: each item of a list (separated by commas, semicolons, "and" and
       "et") that names a catalogue language in either language, so Kelsen's French words become
       codes; height, weight and age: a number, with or without a recognised unit (cm, m, feet-inches,
-      kg, lb, years / ans; a bare height under 3 reads as metres, a bare weight as kilograms
-      _(proposed)_), stored metric;
+      kg, lb, years / ans; a bare height under 3 reads as metres and otherwise as centimetres, a bare
+      weight as kilograms), stored metric;
    2. **an unmapped value is cleared**, each language item on its own (the recognised ones stay),
       and the character card shows each required field left empty (alignment, sex) as **missing** and
       asks the player to pick; the rest of the card works meanwhile and nothing is blocked by it.

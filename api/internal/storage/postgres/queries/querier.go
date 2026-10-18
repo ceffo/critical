@@ -34,6 +34,8 @@ type Querier interface {
 	DeleteText(ctx context.Context, textID int64) error
 	DeleteTextLanguage(ctx context.Context, arg DeleteTextLanguageParams) error
 	InsertActiveBuffs(ctx context.Context, characterID int64) error
+	// The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
+	// compared with the derived values, never read as inputs.
 	InsertCharacter(ctx context.Context, arg InsertCharacterParams) (int64, error)
 	InsertItem(ctx context.Context, arg InsertItemParams) error
 	InsertRoundState(ctx context.Context, characterID int64) error
@@ -52,6 +54,9 @@ type Querier interface {
 	// two share the name).
 	SeedCharacterID(ctx context.Context, name string) (int64, error)
 	SeedOffers(ctx context.Context, arg SeedOffersParams) ([]string, error)
+	// The race of a character stored before races had codes (migration 007): only while it has none,
+	// so a rerun changes nothing and a race set since is kept.
+	SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error
 	SnapshotsOf(ctx context.Context, stateKey string) ([]SnapshotsOfRow, error)

@@ -49,7 +49,7 @@ func newFixture(t *testing.T) fixture {
 
 func (f fixture) sheet(dex, cha, level, xp int) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
-		Return(&charactersvc.Character{ID: 1, Dex: dex, Cha: cha, Level: level, XPTotal: xp}, nil)
+		Return(&charactersvc.Character{ID: 1, Dex: dex, Cha: cha, XPTotal: xp, Derived: charactersvc.Derived{Level: level}}, nil)
 }
 
 // recorded captures the one action-log entry a write records.
@@ -263,4 +263,14 @@ func TestPreview_IsStep1AndValidatesTheBase(t *testing.T) {
 	assert.Equal(t, xpsvc.Amount{Base: 1205, BonusAmount: 121, Total: 1326}, got)
 	_, err = f.svc.Preview(0, true)
 	require.ErrorIs(t, err, domain.ErrInvalidInput)
+}
+
+// Totals is what the entries add to the starting XP (ADR 0015 step 1), each
+// with its bonus: what the character's level is derived from (ADR 0030 step 3).
+func TestTotals_EntriesTotal(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{{Base: 1000, Bonus: true}, {Base: 25}}, nil).Once()
+	got, err := xpsvc.Totals{DAL: dal}.EntriesTotal(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, 1100+25, got)
 }

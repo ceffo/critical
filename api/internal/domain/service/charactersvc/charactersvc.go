@@ -1,6 +1,8 @@
-// Package charactersvc owns read access to character core attributes (stats,
-// HP max, THAC0, saving throws), and which characters a user owns and plays
-// (ADR 0029 step 7). The sheets are written via seeding in the storage layer.
+// Package charactersvc owns read access to a character: the entered values
+// (abilities, HP max, class, race, starting XP) and the values the rules
+// derive from them (level, THAC0, saving throws, spell slots; ADR 0030 steps 3
+// to 8), and which characters a user owns and plays (ADR 0029 step 7). The
+// sheets are written via seeding in the storage layer.
 package charactersvc
 
 import (
@@ -44,6 +46,12 @@ type Reader interface {
 	GetCharacter(ctx context.Context, id int64) (*Character, error)
 }
 
+// XPLedger is what the XP ledger's entries add to the starting XP (ADR 0015
+// step 1); xpsvc.Totals implements it over the ledger's DAL.
+type XPLedger interface {
+	EntriesTotal(ctx context.Context, characterID int64) (int, error)
+}
+
 // Owners is the driven port over who owns and plays which character.
 type Owners interface {
 	// CharactersOf is the owner's characters they have not retired, by id.
@@ -64,6 +72,8 @@ type Sessions interface {
 // Deps are the service's collaborators.
 type Deps struct {
 	Reader   Reader
+	XP       XPLedger
+	Rules    Rules
 	Owners   Owners
 	Tx       domain.TxRunner
 	Sessions Sessions
@@ -71,6 +81,8 @@ type Deps struct {
 
 type service struct {
 	reader   Reader
+	xp       XPLedger
+	rules    Rules
 	owners   Owners
 	tx       domain.TxRunner
 	sessions Sessions
@@ -78,22 +90,50 @@ type service struct {
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Reader == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil {
+	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil {
 		return nil, errors.New("charactersvc: nil dependency")
 	}
-	return &service{reader: d.Reader, owners: d.Owners, tx: d.Tx, sessions: d.Sessions}, nil
+	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions}, nil
 }
 
 // NewWithConfig is here for symmetry with the other services. There is no
 // configurable surface today.
 func NewWithConfig(_ *Config, d Deps) (SVC, error) { return New(d) }
 
+// GetCharacter reads the character and derives its level, THAC0, saves and
+// slots from its class, race, abilities and XP total (ADR 0030 steps 3 to 8):
+// every reader of a character (attacks, saves, preparation, casting, the XP
+// ledger) gets the derived values, so an XP award that crosses a threshold
+// changes them all at once.
 func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error) {
-	return s.reader.GetCharacter(ctx, id)
+	c, err := s.reader.GetCharacter(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	ledger, err := s.xp.EntriesTotal(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("character %d XP: %w", id, err)
+	}
+	if c.Derived, err = Derive(c, ledger, s.rules); err != nil {
+		return nil, fmt.Errorf("character %d: %w", id, err)
+	}
+	return c, nil
 }
 
+// List names each character with its derived level (ADR 0030 step 3).
 func (s *service) List(ctx context.Context, owner uuid.UUID) ([]Summary, error) {
-	return s.owners.CharactersOf(ctx, owner)
+	list, err := s.owners.CharactersOf(ctx, owner)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		c, err := s.GetCharacter(ctx, list[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		list[i].Level = c.Derived.Level
+	}
+	return list, nil
 }
 
 // SetCurrent writes under the writer lock like every mutation (ADR 0025 step

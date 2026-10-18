@@ -6,12 +6,19 @@ SELECT pg_advisory_xact_lock(7240531);
 -- name: CountCharacters :one
 SELECT COUNT(*) FROM characters;
 
+-- The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
+-- compared with the derived values, never read as inputs.
 -- name: InsertCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
-    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 RETURNING id;
+
+-- The race of a character stored before races had codes (migration 007): only while it has none,
+-- so a rerun changes nothing and a race set since is kept.
+-- name: SetRaceIfUnset :exec
+UPDATE characters SET race_code = sqlc.arg(race_code) WHERE id = sqlc.arg(id) AND race_code = '';
 
 -- name: InsertSpellSlots :exec
 INSERT INTO spell_slots (character_id, slots) VALUES ($1, $2);

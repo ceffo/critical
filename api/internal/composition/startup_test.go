@@ -22,6 +22,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
@@ -169,7 +170,7 @@ func setLevel16XP(tables map[string]any, xp int) {
 }
 
 // nextThreshold starts the root on the artifact at cfg.Catalogue and reads the
-// XP ledger of a level-15 Bard with no XP entry.
+// XP ledger of a Bard at 1,293,418 XP (level 15) with no XP entry.
 func nextThreshold(t *testing.T, cfg composition.Config) int {
 	t.Helper()
 	ctx := context.Background()
@@ -177,9 +178,10 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 	h.expectStartup(cfg.SeedsDir)
 	h.Store.EXPECT().Close().Return(nil).Once()
 	h.Character.EXPECT().GetCharacter(mock.Anything, characterID).Return(&charactersvc.Character{
-		ID: characterID, Level: 15, Dex: 10, Cha: 10,
+		ID: characterID, Class: "bard", XPTotal: 1_293_418, Dex: 10, Cha: 10,
 	}, nil).Once()
-	h.XP.EXPECT().List(mock.Anything, characterID).Return(nil, nil).Once()
+	// Read twice: by the character's derivation (ADR 0030 step 3), then by the ledger.
+	h.XP.EXPECT().List(mock.Anything, characterID).Return(nil, nil).Twice()
 
 	bs, err := h.build(t, cfg)
 	require.NoError(t, err)
@@ -330,7 +332,10 @@ func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
 		})
 	}
 
-	t.Run("format 3 still starts", func(t *testing.T) {
+	// Every character's level, THAC0 and saves are derived from the class
+	// tables (ADR 0030 steps 3 to 6): a format-3 artifact, which has none,
+	// refuses the start, naming `just catalogue`.
+	t.Run("format 3 is refused", func(t *testing.T) {
 		artifact := writeArtifact(t, func(d map[string]any) {
 			d["format"] = 3
 			for k := range tables(d) {
@@ -339,7 +344,10 @@ func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
 				}
 			}
 		})
-		assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact}))
+		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+		require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
+		require.ErrorContains(t, err, "just catalogue")
+		require.ErrorContains(t, err, "spell catalogue "+artifact)
 	})
 }
 

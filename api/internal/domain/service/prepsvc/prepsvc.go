@@ -98,12 +98,9 @@ type Spellbook interface {
 	All(ctx context.Context, characterID int64) ([]SpellbookEntry, error)
 }
 
-// Limits is the PHB bard table port (ruletablesvc.Lookup satisfies it).
-type Limits interface {
-	BardSpellsPerDay(level int) (map[int]int, error)
-}
-
-// Characters supplies the character level (charactersvc.SVC satisfies it).
+// Characters supplies the character's level and spell slot limits, both
+// derived by the rules (ADR 0030 steps 3 and 8; charactersvc.SVC satisfies
+// it).
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
@@ -129,7 +126,6 @@ type Deps struct {
 	Slots      Slots
 	Spellbook  Spellbook
 	Effects    spelleffectsvc.Catalog
-	Limits     Limits
 	Items      Items
 	Characters Characters
 	Log        Log
@@ -140,7 +136,7 @@ type service struct{ Deps }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Slots == nil || d.Spellbook == nil || d.Effects == nil || d.Limits == nil || d.Items == nil || d.Characters == nil || d.Log == nil || d.Tx == nil {
+	if d.Slots == nil || d.Spellbook == nil || d.Effects == nil || d.Items == nil || d.Characters == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("prepsvc: nil dependency")
 	}
 	return &service{d}, nil
@@ -154,17 +150,14 @@ func (s *service) limits(ctx context.Context, characterID int64) (map[int]int, e
 	return limits, err
 }
 
-// levelLimits returns the character's level and its preparation limits.
+// levelLimits returns the character's level and its preparation limits, the
+// slots per day of its level (ADR 0008 step 2 as amended by ADR 0030 step 8).
 func (s *service) levelLimits(ctx context.Context, characterID int64) (int, map[int]int, error) {
 	c, err := s.Characters.GetCharacter(ctx, characterID)
 	if err != nil {
 		return 0, nil, fmt.Errorf("get character: %w", err)
 	}
-	limits, err := s.Limits.BardSpellsPerDay(c.Level)
-	if err != nil {
-		return 0, nil, fmt.Errorf("spells per day: %w", err)
-	}
-	return c.Level, limits, nil
+	return c.Derived.Level, c.Derived.SpellSlots, nil
 }
 
 func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {

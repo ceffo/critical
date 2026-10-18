@@ -145,7 +145,7 @@ func TestOwners_Step7_1_EachUserPlaysOnlyTheirCurrentCharacter(t *testing.T) {
 	assert.Nil(t, none.CurrentID)
 
 	bram, err := m.AddCharacterOf(ctx, bobID, charactersvc.Character{
-		Name: "Bram", Class: "fighter", Level: 3, Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 30, Thac0Base: 18,
+		Name: "Bram", Class: "fighter", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 30,
 	})
 	require.NoError(t, err)
 	var list listView
@@ -216,9 +216,9 @@ func TestOwners_Step7_1_AnotherUsersCharacterIsNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, tb.call(bob, "GET", "/api/character", "", &refused))
 	assert.Equal(t, "no_character", refused["code"], "nothing changed")
 
-	bram, err := m.AddCharacterOf(ctx, bobID, charactersvc.Character{Name: "Bram", Class: "fighter", Level: 3, HPMax: 30})
+	bram, err := m.AddCharacterOf(ctx, bobID, charactersvc.Character{Name: "Bram", Class: "fighter", HPMax: 30})
 	require.NoError(t, err)
-	old, err := m.AddCharacterOf(ctx, bobID, charactersvc.Character{Name: "Old", Class: "thief", Level: 1, HPMax: 6})
+	old, err := m.AddCharacterOf(ctx, bobID, charactersvc.Character{Name: "Old", Class: "thief", HPMax: 6})
 	require.NoError(t, err)
 	require.NoError(t, m.RetireCharacter(ctx, old))
 	var bobList listView

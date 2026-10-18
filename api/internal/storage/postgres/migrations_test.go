@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
+	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
 // dataStatement matches a data statement's keyword; lineComment is a "--" comment to the end of
@@ -198,6 +199,7 @@ func TestMigrationDataSteps_NameEmbeddedMigrations(t *testing.T) {
 	before, after := migrationDataSteps(repoSeeds())
 	require.Contains(t, before, ownerKeysMigration)
 	require.Contains(t, after, weaponTypeMigration)
+	require.Contains(t, after, raceMigration)
 	for _, steps := range []map[string]dataStep{before, after} {
 		for name := range steps {
 			assert.True(t, names[name], "data step for %s, which is not embedded", name)
@@ -279,4 +281,46 @@ func TestMigrate_SeededWeaponsAreTypedAfterTheWeaponTypeMigration(t *testing.T) 
 	steps, afterSteps := migrationDataSteps(repoSeeds())
 	require.NoError(t, runMigrations(context.Background(), f, embedded, steps, afterSteps))
 	assert.Equal(t, "", typeOf(other, "longsword"), "an applied migration runs no step")
+}
+
+// Existing data (ADR 0030 step 1, a race from the six PHB races): the seed character stored before
+// races had codes gets the race its seed names right after migration 007; another character, a
+// race already set and the free-text race of the details are left as they are; a rerun (the
+// migration applied) runs no step.
+func TestMigrate_TheSeedCharacterGetsItsRaceAfterTheRaceMigration(t *testing.T) {
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	store := newFakeStore()
+	require.NoError(t, seedOn(store, repoSeeds()))
+	kelsen := store.t.Characters[0]
+	other := int64(99)
+	store.t.Characters = append(store.t.Characters, other)
+	store.t.Races[kelsen], store.t.Races[other] = "", "" // as the column's default left them
+	var recorded []string
+	for _, m := range embedded {
+		if m.name != raceMigration {
+			recorded = append(recorded, m.name)
+		}
+	}
+	run := func(recorded []string) {
+		f := &fakeMigrations{recorded: recorded, store: store}
+		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
+			before, after := migrationDataSteps(repoSeeds())
+			return runMigrations(ctx, f, embedded, before, after)
+		}))
+	}
+
+	run(recorded)
+	assert.Equal(t, "half_elf", store.t.Races[kelsen], "the seed's race")
+	assert.Equal(t, "", store.t.Races[other], "another character is not the seed's")
+
+	// A race set since is kept, by a rerun of the step and by an applied migration.
+	store.t.Races[kelsen] = "elf"
+	require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
+		return raceSeedCharacter(ctx, store, seedfile.Path(repoSeeds(), seedfile.CharacterFile))
+	}))
+	assert.Equal(t, "elf", store.t.Races[kelsen])
+	store.t.Races[kelsen] = ""
+	run(append(recorded, raceMigration))
+	assert.Equal(t, "", store.t.Races[kelsen], "an applied migration runs no step")
 }

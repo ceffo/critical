@@ -204,8 +204,12 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 
 	// Choosing the current character is no game move: it runs on the store's
 	// transactions, outside the action log.
+	// The character's level, THAC0, saves and slots are derived from its
+	// class, race and XP total (ADR 0030 steps 3 to 8): the class tables and
+	// what the XP ledger's entries add.
 	charSvc, err := charactersvc.New(charactersvc.Deps{
-		Reader: characterDAL, Owners: characterDAL, Tx: db, Sessions: authSvc,
+		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
+		Owners: characterDAL, Tx: db, Sessions: authSvc,
 	})
 	if err != nil {
 		_ = db.Close()
@@ -254,7 +258,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	prepSvc, err := prepsvc.New(prepsvc.Deps{
-		Slots: spellDAL, Spellbook: spellbook, Effects: effects, Limits: ruleTables, Items: itemSvc,
+		Slots: spellDAL, Spellbook: spellbook, Effects: effects, Items: itemSvc,
 		Characters: charSvc, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
@@ -406,7 +410,8 @@ func registerRestorers(log actionlogsvc.SVC, restorers map[string]actionlog.Rest
 }
 
 // loadRuleTables parses the PHB rule tables the artifact carries (ADR 0021
-// step 9.4), and a format-4 artifact's class and race tables (step 10), with
+// step 9.4), and a format-4 artifact's class and race tables (step 10, which
+// the server needs: a format-3 artifact refuses the start), with
 // the table rules of steps 9.3 and 10.3 (a missing or broken table refuses
 // the start, naming it), at every start, whatever catalogue version the
 // database recorded (step 9.5).
@@ -415,6 +420,11 @@ func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.
 	t, err := ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables)
 	if err != nil {
 		return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
+	}
+	// Every character's level, THAC0 and saves come from the class tables
+	// (ADR 0030 steps 3 to 6): an artifact without them cannot serve one.
+	if _, ok := t.Classes(); !ok {
+		return nil, fmt.Errorf("spell catalogue %s: %w", cfg.Catalogue, ruletablesvc.ErrNoClassTables)
 	}
 	return t, nil
 }

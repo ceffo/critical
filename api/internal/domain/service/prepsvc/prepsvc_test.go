@@ -67,14 +67,13 @@ func newFixture(t *testing.T) *fixture {
 		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"], book["wall_of_ice"], book["cloudkill"], book["enlarge"], book["slow"], book["mirror_image"], book["magic_missile"], book["identify"]}, nil
 	}).Maybe()
 
-	limits := mocks.NewMockLimits(t)
-	limits.EXPECT().BardSpellsPerDay(15).Return(bardTable, nil).Maybe()
-
+	// The limits are the character's derived slots (ADR 0030 step 8).
 	chars := mocks.NewMockCharacters(t)
-	chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{Level: 15}, nil).Maybe()
+	chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
+		Return(&charactersvc.Character{Derived: charactersvc.Derived{Level: 15, SpellSlots: bardTable}}, nil).Maybe()
 
 	svc, err := prepsvc.New(prepsvc.Deps{
-		Slots: f.slots, Spellbook: b, Effects: catalog(t), Limits: limits, Items: f.items, Characters: chars, Log: f.log, Tx: f.tx,
+		Slots: f.slots, Spellbook: b, Effects: catalog(t), Items: f.items, Characters: chars, Log: f.log, Tx: f.tx,
 	})
 	require.NoError(t, err)
 	f.svc = svc

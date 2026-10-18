@@ -72,7 +72,7 @@ func twoCharacters(t *testing.T) (bs *composition.BackingServices, seeded, other
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	other, err = m.AddCharacter(ctx, charactersvc.Character{
-		Name: "Other", Class: "bard", Level: 1, Str: 10, Dex: 10, Con: 10, Int: 10, Wis: 10, Cha: 10, HPMax: 6, Thac0Base: 20,
+		Name: "Other", Class: "bard", Str: 10, Dex: 10, Con: 10, Int: 10, Wis: 10, Cha: 10, HPMax: 6,
 	})
 	require.NoError(t, err)
 	return bs, rootCharacter(t, bs), other

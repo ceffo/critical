@@ -11,8 +11,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
@@ -33,9 +35,13 @@ func Path(seedsDir, file string) string {
 	return filepath.Join(filepath.Clean(seedsDir), file)
 }
 
-// Character is seeds/character.json.
+// Character is seeds/character.json. Level, Thac0Base and the saves are the
+// figures the campaign sheet states, kept to compare with the derived values
+// (ADR 0030 step 24), never read as inputs. Race is a race code
+// (charactersvc.Races), "" for none.
 type Character struct {
 	Name             string   `json:"name"`
+	Race             string   `json:"race"`
 	Str              int      `json:"str"`
 	Dex              int      `json:"dex"`
 	Con              int      `json:"con"`
@@ -64,6 +70,9 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 	}
 	if err := json.Unmarshal(data, &c); err != nil {
 		return Character{}, false, fmt.Errorf("parse character.json: %w", err)
+	}
+	if c.Race != "" && !slices.Contains(charactersvc.Races, c.Race) {
+		return Character{}, false, fmt.Errorf("character.json: race %q is not one of %v", c.Race, charactersvc.Races)
 	}
 	return c, c.Name != "", nil
 }

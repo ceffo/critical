@@ -296,9 +296,9 @@ func (s *service) preview(ctx context.Context, characterID int64, weapon Weapon,
 		return nil, err
 	}
 	toHit := am.toHit()
-	eff := char.Thac0Base - toHit
+	eff := char.Derived.THAC0 - toHit
 	p := &AttackPreview{
-		BaseThac0:      char.Thac0Base,
+		BaseThac0:      char.Derived.THAC0,
 		Modifiers:      am.modifiers,
 		EffectiveThac0: eff,
 		ToHit:          toHit,

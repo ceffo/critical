@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
 // Adjustment limits: an adjustment is a ruling learnt after the roll (+4 vs
@@ -33,8 +34,19 @@ type SaveAdjustment struct {
 // them.
 var saveCategories = []SaveCategory{SaveParaPoison, SaveRodStaffWand, SavePetriPoly, SaveBreath, SaveSpell}
 
+// savesByCategory keys the five numbers of s by save category.
+func savesByCategory(s charactersvc.Saves) map[SaveCategory]int {
+	return map[SaveCategory]int{
+		SaveParaPoison:   s.ParaPoison,
+		SaveRodStaffWand: s.RodStaffWand,
+		SavePetriPoly:    s.PetriPoly,
+		SaveBreath:       s.Breath,
+		SaveSpell:        s.Spell,
+	}
+}
+
 // ResolveSavingThrow rolls a D20 against the character's per-category target,
-// applying buff SaveBonus modifiers, and records the save in the action log
+// applying the race's bonus and buff SaveBonus modifiers, and records the save in the action log
 // (kind save, no snapshots: it changes no state). A natural 1 or 20 is plain
 // arithmetic.
 func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory) (*RollResult, error) {
@@ -47,19 +59,20 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
 		}
-		target := map[SaveCategory]int{
-			SaveParaPoison:   char.SaveParaPoison,
-			SaveRodStaffWand: char.SaveRodStaffWand,
-			SavePetriPoly:    char.SavePetriPoly,
-			SaveBreath:       char.SaveBreath,
-			SaveSpell:        char.SaveSpell,
-		}[category]
+		// The target is the derived one (ADR 0030 step 6, amending ADR 0006
+		// step 1): PHB Table 60 for the class group and level.
+		target := savesByCategory(char.Derived.Saves)[category]
 
 		rec := saveRecord{Category: string(category), Target: target, Modifiers: []modifierRecord{}}
 		rec.D20Roll = s.dice.RollD20()
 		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponNone)
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
+		}
+		// The race's bonus (ADR 0030 step 22.1) is one named modifier on the
+		// roll, like a buff's: it moves the roll, never the target.
+		if b := savesByCategory(char.Derived.RaceSaveBonus)[category]; b != 0 {
+			rec.Modifiers = append(rec.Modifiers, modifierRecord{Kind: string(ModRace), Detail: char.Race, Value: b})
 		}
 		// One modifier per buff, named like attack buff modifiers (Detail =
 		// buff name), so the card labels each one.
@@ -138,9 +151,10 @@ func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, ad
 type saveRecord struct {
 	Category string `json:"category"`
 	D20Roll  int    `json:"d20Roll"`
-	// Modifiers are the ones applied when rolling (buffs), not the adjustment.
+	// Modifiers are the ones applied when rolling (the race's bonus, buffs),
+	// not the adjustment.
 	Modifiers []modifierRecord `json:"modifiers"`
-	// Target is the category's target on the sheet, never adjusted.
+	// Target is the category's derived target (ADR 0030 step 6), never adjusted.
 	Target int `json:"target"`
 	// RolledPassed is the verdict as rolled, before any adjustment.
 	RolledPassed bool `json:"rolledPassed"`

@@ -15,6 +15,7 @@ const (
 	ModAmmoMagic   ModifierKind = "ammo_magic"   // the arrow's +N, Detail = ammo name, ItemID = the ammo item
 	ModBuff        ModifierKind = "buff"         // a buff's or item power's to-hit/damage/save bonus, Detail = buff (or item) name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
+	ModRace        ModifierKind = "race"         // the race's save bonus (ADR 0030 step 22.1), Detail = the race code
 	ModCrit        ModifierKind = "crit"         // house crit multiplier; the range is the roll's CritFrom..CritTo
 )
 

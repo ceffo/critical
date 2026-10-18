@@ -55,7 +55,7 @@ func (c Characters) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charac
 				continue
 			}
 			ch := t.characters[id]
-			out = append(out, charactersvc.Summary{ID: id, Name: ch.Name, Class: ch.Class, Level: ch.Level})
+			out = append(out, charactersvc.Summary{ID: id, Name: ch.Name, Class: ch.Class})
 		}
 		return nil
 	})

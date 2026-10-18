@@ -1,0 +1,11 @@
+-- A character's race: the language-neutral code of one of the six PHB races (ADR 0030 steps 1 and
+-- 21: human, dwarf, elf, gnome, half_elf, halfling), which the rules read (the race's save bonus,
+-- step 22.1). '' is a character whose race is not set: no racial adjustment applies. The free-text
+-- `race` the player edits in the details stays as it is, so nothing entered is lost.
+--
+-- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): a defaulted column the release before this one
+-- never reads. Schema only (step 2.1): the characters already stored get the race their seed names
+-- (the seed character, Kelsen) from a data step run just after this file (raceSeedCharacter). The
+-- list of codes is charactersvc.Races, which the seed's reader checks; there is no CHECK, so the
+-- list lives in one place.
+ALTER TABLE characters ADD COLUMN race_code TEXT NOT NULL DEFAULT '';

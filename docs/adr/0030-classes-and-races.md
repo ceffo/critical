@@ -2,8 +2,10 @@
 
 **Status**: accepted 2026-10-17 (triage, user; the four questions answered "yes to all" by the
 user on 2026-10-17, so each stated default is decided). Steps or parts marked _(proposed)_ are
-details this ADR adds beyond the triage and the answers; they await the user's OK in review. Not
-implemented. Amends [ADR 0002](0002-attack-resolution.md) step 2, [ADR 0004](0004-buffs.md) steps 7
+details this ADR adds beyond the triage and the answers; they await the user's OK in review.
+Implemented 2026-10-18: steps 2, 3, 5 and 6, step 8 for the bard and the mage, step 22.1 for the
+Rod/Staff/Wand and Spells saves, step 24 for the level, THAC0 and saves, and the race code of step 1
+(each with its "Tests:" line); the rest is not implemented. Amends [ADR 0002](0002-attack-resolution.md) step 2, [ADR 0004](0004-buffs.md) steps 7
 to 10 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR 0008](0008-spell-slots-and-long-rest.md)
 steps 2 and 3, [ADR 0014](0014-skill-checks.md) step 3 and [ADR 0015](0015-experience.md) steps 2
 and 3, each from its implementation.
@@ -107,12 +109,22 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    including chain mail, PHB chapter 3, Bard). Table 29 has columns only for the first four; the
    metal one uses the elven chain column plus the bard's extra -5% (Table 29's note), a ruling,
    not book text, step 18)_.
+   _(As built)_ The race is a code in `characters.race_code` (`''` when none is set: no racial
+   adjustment applies); the free-text race of the character's details stays as the player wrote it.
+   The seed names Kelsen's (`half_elf`), given to him by the migration's data step. The derived values
+   are computed on every read of the character (`charactersvc.GetCharacter`), so every reader (attack,
+   save, preparation, casting, the XP ledger, the character list) gets them.
+   Tests: `TestRead_Refusals` ("character race not a PHB race code", seedfile),
+   `TestMigrate_TheSeedCharacterGetsItsRaceAfterTheRaceMigration`, `TestSeed_TheCharacterAndItsStateRows`
+   (storage/postgres).
 2. **Class groups.** Fighter is a warrior, mage a wizard, cleric a priest, thief and bard rogues.
    The group picks the THAC0 row (step 5), the saving throw rows (step 6), the hit dice (step 7) and
    the Constitution hit point bonus (warriors get the higher one, step 7).
 
 ### Level and experience
 
+   Tests: `TestClassGroup_Step2` (ruletablesadpt), `TestDerive_Step2_TheClassGroupPicksTheRows`
+   (charactersvc).
 3. **Level from XP.** The level is the highest level `L` from 1 to 20 whose threshold `T(L)` in the
    class's experience table is at or under the XP total ([ADR 0015](0015-experience.md) step 1):
    fighter PHB Table 14 (Fighter column), mage Table 20, cleric Table 23 (Cleric column), thief and
@@ -120,6 +132,11 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    feeds ADR 0015 step 3's progress (`L` is no longer the sheet's) and every step below. Reaching a
    threshold raises the level at once; the new hit points wait for the roll (step 7). The race's
    level limit is shown, not enforced (step 21). Amends ADR 0015 step 3 ("no level-up").
+   Tests: `TestLevelFor_Step3_HighestThresholdAtOrUnderTheXP`, `TestXPThreshold_ByClass`
+   (ruletablesadpt, against the PHB pages), `TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal`,
+   `TestList_IsTheOwnersCharactersAtTheirDerivedLevel` (charactersvc),
+   `TestDerived_AnXPAwardCrossingALevelChangesEverythingAtOnce` (composition: an award crossing a
+   threshold changes the level, THAC0, saves and slots at once; its undo brings them back).
 4. **XP bonus by prime requisites.** A character earns the 10% bonus of [ADR 0015](0015-experience.md)
    step 1 when every prime requisite of the class is 16 or more (PHB chapter 3, each class's
    description): fighter Strength (18/xx counts as 18), mage Intelligence, cleric Wisdom, thief
@@ -130,12 +147,17 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    every 3 (Table 54; DMG Tables 37 and 38 are the same). It replaces the sheet's `thac0_base` as
    "the character's THAC0" of [ADR 0002](0002-attack-resolution.md) step 2; every to-hit modifier
    there is unchanged.
+   Tests: `TestTHAC0For_Step5_Table53` (ruletablesadpt), `TestDerive_Step5_THAC0FromTable53`
+   (charactersvc); the attack reads it (`TestResolveAttack`, combatsvc, on the derived THAC0).
 6. **Saving throws.** The target of each of the five categories of [ADR 0006](0006-saving-throws.md)
    step 1 is the PHB Table 60 (DMG Table 46) row for the class group and level: priests 1-3, 4-6,
    …; rogues 1-4, 5-8, …; warriors 1-2, 3-4, …; wizards 1-5, 6-10, … (the warriors' level 0 row is
    unused: a character starts at level 1). The race's bonus (step 22) is one named modifier on the
    roll, like a buff's `save_bonus` (ADR 0006 step 1): it moves the roll, never the target. Amends
    ADR 0006 step 1 ("the target of the category on the character sheet").
+
+   Tests: `TestSavesFor_Step6_Table60` (ruletablesadpt), `TestDerive_Step6_SavesFromTable60`
+   (charactersvc), `TestResolveSavingThrow` (combatsvc, on the derived targets).
 
 ### Hit points
 
@@ -174,6 +196,12 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    Wisdom bonus spells (step 13). Fighters and thieves have none and are refused a preparation.
    Amends ADR 0008 step 2 (it named the Bard's table only). A mage prepares from his spellbook as
    the Bard does (ADR 0008 step 3); a cleric from the spheres (step 15).
+
+   _(As built)_ The cleric's slots (Table 24 and step 13) come with the cleric: until then a
+   cleric's character read is an error ("not implemented yet"), never an empty list.
+   Tests: `TestWizardSpellsPerDay_Step8_Table21`, `TestBardSpellsPerDay` (ruletablesadpt),
+   `TestDerive_Step8_SpellSlotsByClass` (charactersvc), `TestInfo` (prepsvc: the limits are the
+   derived slots).
 
 ### Fighter
 
@@ -310,6 +338,11 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        saves against Rod/Staff/Wand and Spells. Dwarves and halflings add it against poison too:
        _(proposed: the Paralyze/Poison save request takes a "poison" flag, and the bonus applies
        only with it, since the category also covers paralysis and death magic.)_
+       _(As built)_ The bonus is the derived block's `raceSaveBonus` (per category) and, on the
+       roll, a modifier of kind `race` whose detail is the race code; the poison flag waits for the
+       user's OK (until then dwarves and halflings get no bonus against poison).
+       Tests: `TestConSaveBonusFor_Step22_1_Table9` (ruletablesadpt), `TestDerive_Step22_1_RaceSaveBonus`
+       (charactersvc), `TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier` (combatsvc).
     2. Thief and bard skills: step 17 and 18's Table 27.
     3. _(proposed)_ Elves +1 to hit with bows (not crossbows) and short and long swords; halflings
        +1 to hit with thrown weapons and slings (PHB chapter 2), named modifiers read from the
@@ -362,6 +395,18 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     sheet's figures are not stored as inputs. _(proposed: Kelsen's bard skill points are derived
     once at import as the sheet's percentage minus the computed base, race, Dexterity and armour
     terms, so his skills come out as on the sheet.)_
+    _(As built, level, THAC0 and saves; the skills come with step 18)_ The figures the sheet stated
+    at import are the character's stored `level`, `thac0_base` and `save_*` columns, never read as
+    inputs; each read of the character compares them with the values the rules give at the sheet's
+    own XP (the starting XP, without the ledger), which is the comparison at import: XP awarded
+    since raises the level without making the sheet "wrong". The differences are the derived
+    block's `sheetDifferences` (`value` code, `sheet`, `computed`); the character card lists them.
+    A character created in the app states no sheet: its creation (a later item) stores the
+    computed figures, or the columns go with their contract step. Kelsen's seed against the books'
+    tables and the real artifact: no difference.
+    Tests: `TestDerive_Step24_SheetDifferences`, `TestDerive_KelsenMatchesHisSheet` (charactersvc),
+    `TestKelsen_TheSheetMatchesTheDerivedValues` (seedcheck: seeds/character.json on the fixture's
+    tables and, when present, the real artifact), `TestCharacter_ServesTheDerivedBlock` (router).
 
 ## Consequences
 

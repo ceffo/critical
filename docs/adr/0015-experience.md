@@ -1,7 +1,7 @@
 # ADR 0015: Experience
 
 **Status**: accepted, 2026-10-15 (critical-kiv.13). Step 4 amended by
-[ADR 0018](0018-transactions-and-undo.md) step 7, 2026-10-15. Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (bonus by class, level from XP), on its implementation.
+[ADR 0018](0018-transactions-and-undo.md) step 7, 2026-10-15. Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (bonus by class, level from XP), on its implementation; step 3 implemented 2026-10-18 (`L` is the level ADR 0030 step 3 derives from the total, so it never exceeds 20 and reaching a threshold raises it), step 2 not yet (still the bard's rule).
 
 ## Context
 

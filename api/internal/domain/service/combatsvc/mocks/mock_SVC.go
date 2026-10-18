@@ -412,9 +412,9 @@ func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *Mo
 	return _c
 }
 
-// ListWeapons provides a mock function with given fields: ctx
-func (_m *MockSVC) ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error) {
-	ret := _m.Called(ctx)
+// ListWeapons provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) ListWeapons(ctx context.Context, characterID int64) ([]combatsvc.Weapon, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListWeapons")
@@ -422,19 +422,19 @@ func (_m *MockSVC) ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error) 
 
 	var r0 []combatsvc.Weapon
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]combatsvc.Weapon, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]combatsvc.Weapon, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []combatsvc.Weapon); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []combatsvc.Weapon); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]combatsvc.Weapon)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -449,13 +449,14 @@ type MockSVC_ListWeapons_Call struct {
 
 // ListWeapons is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockSVC_Expecter) ListWeapons(ctx interface{}) *MockSVC_ListWeapons_Call {
-	return &MockSVC_ListWeapons_Call{Call: _e.mock.On("ListWeapons", ctx)}
+//   - characterID int64
+func (_e *MockSVC_Expecter) ListWeapons(ctx interface{}, characterID interface{}) *MockSVC_ListWeapons_Call {
+	return &MockSVC_ListWeapons_Call{Call: _e.mock.On("ListWeapons", ctx, characterID)}
 }
 
-func (_c *MockSVC_ListWeapons_Call) Run(run func(ctx context.Context)) *MockSVC_ListWeapons_Call {
+func (_c *MockSVC_ListWeapons_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_ListWeapons_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -465,7 +466,7 @@ func (_c *MockSVC_ListWeapons_Call) Return(_a0 []combatsvc.Weapon, _a1 error) *M
 	return _c
 }
 
-func (_c *MockSVC_ListWeapons_Call) RunAndReturn(run func(context.Context) ([]combatsvc.Weapon, error)) *MockSVC_ListWeapons_Call {
+func (_c *MockSVC_ListWeapons_Call) RunAndReturn(run func(context.Context, int64) ([]combatsvc.Weapon, error)) *MockSVC_ListWeapons_Call {
 	_c.Call.Return(run)
 	return _c
 }

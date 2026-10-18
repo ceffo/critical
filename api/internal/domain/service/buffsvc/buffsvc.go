@@ -130,7 +130,7 @@ type Dice interface {
 // Items supplies the carried items' powers (itemsvc), whatever their count
 // (ADR 0016 steps 9 and 11). Wired in the composition root.
 type Items interface {
-	ItemPowers(ctx context.Context) ([]ItemPower, error)
+	ItemPowers(ctx context.Context, characterID int64) ([]ItemPower, error)
 }
 
 // Characters supplies the base STR from the sheet (charactersvc).

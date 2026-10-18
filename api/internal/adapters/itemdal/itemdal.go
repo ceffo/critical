@@ -15,6 +15,7 @@ import (
 )
 
 // DAL is the implementation of itemsvc.DAL over the sqlc-generated queries.
+// Every query is the given character's (items.character_id).
 // An item's name is a key into localized_texts (ADR 0023 step 9), written
 // with the item through texts.
 type DAL struct {
@@ -44,13 +45,13 @@ func toItem(r queries.Item, name localized.Text) (itemsvc.Item, error) {
 	}, nil
 }
 
-// List returns every item in sheet order.
-func (d *DAL) List(ctx context.Context) ([]itemsvc.Item, error) {
-	rows, err := d.q.ListItems(ctx)
+// List returns the character's items in sheet order.
+func (d *DAL) List(ctx context.Context, characterID int64) ([]itemsvc.Item, error) {
+	rows, err := d.q.ListItems(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("list items: %w", err)
 	}
-	texts, err := d.q.ItemNames(ctx)
+	texts, err := d.q.ItemNames(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("list item names: %w", err)
 	}
@@ -76,15 +77,15 @@ func (d *DAL) List(ctx context.Context) ([]itemsvc.Item, error) {
 // concurrent uses of the last charge cannot both succeed and the count never
 // goes below 0. When no row was updated, a follow-up read tells an unknown id
 // from an empty item.
-func (d *DAL) Decrement(ctx context.Context, itemID string) (itemsvc.Item, error) {
-	r, err := d.q.DecrementItem(ctx, itemID)
+func (d *DAL) Decrement(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error) {
+	r, err := d.q.DecrementItem(ctx, queries.DecrementItemParams{CharacterID: characterID, ID: itemID})
 	if err == nil {
 		return d.named(ctx, r)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return itemsvc.Item{}, fmt.Errorf("decrement item %s: %w", itemID, err)
 	}
-	_, err = d.q.GetItem(ctx, itemID)
+	_, err = d.q.GetItem(ctx, queries.GetItemParams{CharacterID: characterID, ID: itemID})
 	if errors.Is(err, sql.ErrNoRows) {
 		return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 	}
@@ -96,8 +97,8 @@ func (d *DAL) Decrement(ctx context.Context, itemID string) (itemsvc.Item, error
 
 // Increment adds n with a single UPDATE and returns the updated item;
 // ErrItemNotFound when the id is unknown.
-func (d *DAL) Increment(ctx context.Context, itemID string, n int) (itemsvc.Item, error) {
-	r, err := d.q.IncrementItem(ctx, queries.IncrementItemParams{N: int64(n), ID: itemID})
+func (d *DAL) Increment(ctx context.Context, characterID int64, itemID string, n int) (itemsvc.Item, error) {
+	r, err := d.q.IncrementItem(ctx, queries.IncrementItemParams{N: int64(n), CharacterID: characterID, ID: itemID})
 	if errors.Is(err, sql.ErrNoRows) {
 		return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 	}
@@ -116,9 +117,9 @@ func (d *DAL) named(ctx context.Context, r queries.Item) (itemsvc.Item, error) {
 	return toItem(r, name)
 }
 
-// ResetDaily refills every daily item to its max count.
-func (d *DAL) ResetDaily(ctx context.Context) error {
-	if err := d.q.ResetDailyItems(ctx); err != nil {
+// ResetDaily refills every daily item of the character to its max count.
+func (d *DAL) ResetDaily(ctx context.Context, characterID int64) error {
+	if err := d.q.ResetDailyItems(ctx, characterID); err != nil {
 		return fmt.Errorf("reset daily items: %w", err)
 	}
 	return nil
@@ -126,8 +127,8 @@ func (d *DAL) ResetDaily(ctx context.Context) error {
 
 // Delete removes an item (a charges item spent to 0) and its name's rows.
 // ErrItemNotFound when the id is unknown.
-func (d *DAL) Delete(ctx context.Context, itemID string) error {
-	key, err := d.q.DeleteItem(ctx, itemID)
+func (d *DAL) Delete(ctx context.Context, characterID int64, itemID string) error {
+	key, err := d.q.DeleteItem(ctx, queries.DeleteItemParams{CharacterID: characterID, ID: itemID})
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 	}
@@ -139,7 +140,7 @@ func (d *DAL) Delete(ctx context.Context, itemID string) error {
 
 // Insert writes a whole item (a void restoring a removed item), powers
 // included, its name under a new key.
-func (d *DAL) Insert(ctx context.Context, it itemsvc.Item) error {
+func (d *DAL) Insert(ctx context.Context, characterID int64, it itemsvc.Item) error {
 	powers, err := itemsvc.EncodePowers(it.Powers)
 	if err != nil {
 		return err
@@ -149,7 +150,7 @@ func (d *DAL) Insert(ctx context.Context, it itemsvc.Item) error {
 		return fmt.Errorf("insert item %s: %w", it.ID, err)
 	}
 	err = d.q.InsertItem(ctx, queries.InsertItemParams{
-		ID: it.ID, Position: int64(it.Position), Name: key, Type: it.Type,
+		CharacterID: characterID, ID: it.ID, Position: int64(it.Position), Name: key, Type: it.Type,
 		Behaviour: string(it.Behaviour), MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind,
 		Count: int64(it.Count), MaxCount: int64(it.MaxCount),
 		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes, Powers: powers,
@@ -162,8 +163,8 @@ func (d *DAL) Insert(ctx context.Context, it itemsvc.Item) error {
 
 // SetCount writes an item's count back (an action-log void restoring a
 // snapshot). ErrItemNotFound when the id is unknown.
-func (d *DAL) SetCount(ctx context.Context, itemID string, count int) error {
-	n, err := d.q.SetItemCount(ctx, queries.SetItemCountParams{Count: int64(count), ID: itemID})
+func (d *DAL) SetCount(ctx context.Context, characterID int64, itemID string, count int) error {
+	n, err := d.q.SetItemCount(ctx, queries.SetItemCountParams{Count: int64(count), CharacterID: characterID, ID: itemID})
 	if err != nil {
 		return fmt.Errorf("set item %s count: %w", itemID, err)
 	}
@@ -174,8 +175,8 @@ func (d *DAL) SetCount(ctx context.Context, itemID string, count int) error {
 }
 
 // Get returns one item; ErrItemNotFound when the id is unknown.
-func (d *DAL) Get(ctx context.Context, itemID string) (itemsvc.Item, error) {
-	r, err := d.q.GetItem(ctx, itemID)
+func (d *DAL) Get(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error) {
+	r, err := d.q.GetItem(ctx, queries.GetItemParams{CharacterID: characterID, ID: itemID})
 	if errors.Is(err, sql.ErrNoRows) {
 		return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 	}
@@ -187,7 +188,7 @@ func (d *DAL) Get(ctx context.Context, itemID string) (itemsvc.Item, error) {
 
 // Update overwrites every field of an existing item, powers included, and
 // its name's rows (the key stays). ErrItemNotFound when the id is unknown.
-func (d *DAL) Update(ctx context.Context, it itemsvc.Item) error {
+func (d *DAL) Update(ctx context.Context, characterID int64, it itemsvc.Item) error {
 	powers, err := itemsvc.EncodePowers(it.Powers)
 	if err != nil {
 		return err
@@ -196,7 +197,7 @@ func (d *DAL) Update(ctx context.Context, it itemsvc.Item) error {
 		Position: int64(it.Position), Type: it.Type, Behaviour: string(it.Behaviour),
 		MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind, Count: int64(it.Count),
 		MaxCount: int64(it.MaxCount), EffectDice: it.EffectDice, EffectSave: it.EffectSave,
-		Notes: it.Notes, Powers: powers, ID: it.ID,
+		Notes: it.Notes, Powers: powers, CharacterID: characterID, ID: it.ID,
 	})
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, it.ID)

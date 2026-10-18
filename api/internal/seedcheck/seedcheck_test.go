@@ -73,9 +73,9 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	effects, err := spelleffectsadpt.New(seedsDir)
 	require.NoError(t, err)
 	require.NoError(t, effects.CheckAgainst(cat), "every spell effect is a catalogue spell")
-	book, err := spellbookadpt.New(seedsDir, cat)
+	book, err := spellbookadpt.ReadSeed(seedsDir, cat)
 	require.NoError(t, err)
-	assert.NotEmpty(t, book.All())
+	assert.NotEmpty(t, book)
 
 	for _, name := range []string{"character.json", "weapons.json", "items.json", "skills.json"} {
 		var doc json.RawMessage
@@ -181,13 +181,13 @@ func TestRealCatalogue_AnUnknownSpellEffectIDIsRefused(t *testing.T) {
 }
 
 func TestRepoSeeds_SpellbookSpellsResolve(t *testing.T) {
-	book, err := spellbookadpt.New(seedsDir, realCatalogue(t))
+	book, err := spellbookadpt.ReadSeed(seedsDir, realCatalogue(t))
 	require.NoError(t, err, "spellbook ids/levels match the catalog")
 	effects, err := spelleffectsadpt.New(seedsDir)
 	require.NoError(t, err)
-	for _, e := range book.All() {
-		_, ok := effects.Get(e.ID)
-		assert.True(t, ok, "spellbook spell %s has no effect entry", e.ID)
+	for _, id := range book {
+		_, ok := effects.Get(id)
+		assert.True(t, ok, "spellbook spell %s has no effect entry", id)
 	}
 }
 

@@ -92,10 +92,10 @@ type SVC interface {
 	Prepare(ctx context.Context, characterID int64, spellIDs []string) ([]spellsvc.SpellSlot, error)
 }
 
-// Spellbook is the read port over the spells the Bard knows.
+// Spellbook is the read port over the spells a character knows, each in
+// its own spellbook, in the order of the sheet.
 type Spellbook interface {
-	All() []SpellbookEntry
-	Get(id string) (SpellbookEntry, bool)
+	All(ctx context.Context, characterID int64) ([]SpellbookEntry, error)
 }
 
 // Limits is the PHB bard table port (ruletablesvc.Lookup satisfies it).
@@ -110,7 +110,7 @@ type Characters interface {
 
 // Items is the inventory (itemsvc.SVC satisfies it).
 type Items interface {
-	List(ctx context.Context) ([]itemsvc.Item, error)
+	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
 }
 
 // Slots is the spell slot store (spellsvc's DAL satisfies it).
@@ -172,8 +172,12 @@ func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
 	if err != nil {
 		return Info{}, err
 	}
-	out := Info{Spellbook: append([]SpellbookEntry(nil), s.Spellbook.All()...)}
-	inventory, err := s.Items.List(ctx)
+	book, err := s.Spellbook.All(ctx, characterID)
+	if err != nil {
+		return Info{}, fmt.Errorf("read spellbook: %w", err)
+	}
+	out := Info{Spellbook: append([]SpellbookEntry(nil), book...)}
+	inventory, err := s.Items.List(ctx, characterID)
 	if err != nil {
 		return Info{}, fmt.Errorf("list items: %w", err)
 	}
@@ -231,10 +235,18 @@ func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []str
 	if err != nil {
 		return nil, err
 	}
+	book, err := s.Spellbook.All(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("read spellbook: %w", err)
+	}
+	known := make(map[string]SpellbookEntry, len(book))
+	for _, e := range book {
+		known[e.ID] = e
+	}
 	picked := make([]SpellbookEntry, 0, len(spellIDs))
 	perLevel := map[int]int{}
 	for _, id := range spellIDs {
-		e, ok := s.Spellbook.Get(id)
+		e, ok := known[id]
 		if !ok {
 			return nil, fmt.Errorf("%w: %q", ErrNotInSpellbook, id)
 		}

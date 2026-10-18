@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
+	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 )
 
 func fixtureCatalogue(t *testing.T) catalogue.Catalogue {
@@ -403,6 +404,7 @@ func TestImportCatalogue_Step4_3_DeletesAnUnreferencedRemovedSpell(t *testing.T)
 // plantState writes game state referring to spells in every place step 5.4.3 scans.
 func (f *fakeStore) plantState() {
 	f.t.Characters = append(f.t.Characters, 1)
+	f.t.Spellbook[spellbookKey(1, "burning_hands")] = storeq.UpsertSpellbookEntryParams{CharacterID: 1, SpellKey: "burning_hands"}
 	f.t.Slots[1] = `[{"level":1,"prepared_spell_id":"sleep","prepared_spell_name":"Sleep","used":false},{"level":1,"prepared_spell_name":"","used":false}]`
 	f.t.Buffs[1] = `[{"id":"a","name":"Stoneskin","spell_id":"stoneskin"},{"id":"b","name":"Gem"}]`
 	f.t.Log = []logRow{
@@ -439,6 +441,7 @@ func TestStateSpellRefs_ScansEveryPlace(t *testing.T) {
 		got[r.ID] = r.Where
 	}
 	assert.Equal(t, map[string]string{
+		"burning_hands": "spellbook of character 1",
 		"sleep":         "spell_slots of character 1",
 		"identify":      "action_snapshots 1",
 		"light":         "action_snapshots 1",
@@ -476,7 +479,7 @@ func TestImportCatalogue_Step4_3_RefusesRemovingReferencedSpells(t *testing.T) {
 	f.plantState()
 	before := copyTables(f.t)
 
-	removed := []string{"strength", "sleep", "identify", "light", "magic_missile", "cloudkill", "armor", "enlarge"}
+	removed := []string{"strength", "burning_hands", "sleep", "identify", "light", "magic_missile", "cloudkill", "armor", "enlarge"}
 	next := withVersion(cat, "1970-01-02", func(in []catalogue.Spell) []catalogue.Spell {
 		for _, id := range removed {
 			in = without(id)(in)
@@ -489,7 +492,8 @@ func TestImportCatalogue_Step4_3_RefusesRemovingReferencedSpells(t *testing.T) {
 	err := importOn(f, next, seeds)
 	require.Error(t, err)
 	for _, want := range []string{
-		"strength (spellbook seed, spell effects seed)", "sleep (spell_slots of character 1)",
+		"strength (spellbook seed, spell effects seed)", "burning_hands (spellbook of character 1)",
+		"sleep (spell_slots of character 1)",
 		"identify (action_snapshots 1)", "light (action_snapshots 1)", "magic_missile (action_log 1)",
 		"cloudkill (action_log 2)", "armor (action_log 3)", "enlarge (action_corrections 1)",
 	} {

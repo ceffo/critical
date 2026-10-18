@@ -54,13 +54,14 @@ func TestPostgresStorage_EveryAdapterRunsOnTheCallersTransaction(t *testing.T) {
 		"Log":          func() { _, _ = s.Log.HPTotal(ctx, 1) },
 		"Buff":         func() { _, _ = s.Buff.GetActiveBuffs(ctx, 1) },
 		"Spell":        func() { _, _ = s.Spell.GetSlots(ctx, 1) },
-		"Weapons":      func() { _, _ = s.Weapons.List(ctx) },
-		"WeaponEditor": func() { _, _ = s.WeaponEditor.List(ctx) },
+		"Weapons":      func() { _, _ = s.Weapons.List(ctx, 1) },
+		"WeaponEditor": func() { _, _ = s.WeaponEditor.List(ctx, 1) },
 		"Crit":         func() { _, _ = s.Crit.List(ctx) },
-		"Items":        func() { _, _ = s.Items.List(ctx) },
+		"Items":        func() { _, _ = s.Items.List(ctx, 1) },
 		"Forms":        func() { _, _, _ = s.Forms.Get(ctx, 1) },
 		"XP":           func() { _, _ = s.XP.List(ctx, 1) },
-		"Skill":        func() { _, _ = s.Skill.ListProficiencies(ctx) },
+		"Skill":        func() { _, _ = s.Skill.ListProficiencies(ctx, 1) },
+		"Spellbook":    func() { _, _ = s.Spellbook.Keys(ctx, 1) },
 		"Dice":         func() { _, _ = s.Dice.List(ctx, 1) },
 	}
 

@@ -166,6 +166,7 @@ packages:
       CharacterStore:
       BuffStore:
       SpellStore:
+      SpellbookStore:
   github.com/ceffo/critical/api/internal/adapters/critdal/queries:
     config:
       dir: "internal/adapters/critdal/queries/mocks"
@@ -187,6 +188,12 @@ packages:
   github.com/ceffo/critical/api/internal/adapters/skilldal/queries:
     config:
       dir: "internal/adapters/skilldal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:
+  github.com/ceffo/critical/api/internal/adapters/spellbookdal/queries:
+    config:
+      dir: "internal/adapters/spellbookdal/queries/mocks"
       outpkg: "mocks"
     interfaces:
       Querier:

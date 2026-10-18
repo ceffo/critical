@@ -92,8 +92,10 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
 
 ## Consequences
 
-- The catalog is data: `seeds/skills.json` is reconciled at every start with the
-  `proficiencies` (id, ability key, modifier) and `bard_skills` (id, percentage) tables by id: a
+- The catalog is data: `seeds/skills.json` is reconciled at every start with the seed character's
+  rows of the `proficiencies` (id, ability key, modifier) and `bard_skills` (id, percentage) tables
+  by id (_amended 2026-10-18: each character owns its skills, `docs/backend.md` "Per-character
+  data"; another character's are its own and the seed never touches them_): a
   new id is added, an existing one takes the seed's values and order, a row the seed no longer
   lists is kept. Ids are stable keys the UI names in en and fr. A new proficiency or a raised
   percentage is a seed change, never code. Editing them in the app is not covered.

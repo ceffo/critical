@@ -12,10 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
+	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
@@ -36,9 +38,11 @@ func seeded(t *testing.T) (*memory.Store, int64) {
 	ctx := context.Background()
 	s := memory.New()
 	require.NoError(t, s.Migrate(ctx))
-	require.NoError(t, s.Seed(ctx, seedsDir))
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
+	book, err := spellbookadpt.ReadSeed(seedsDir, artifact.Catalogue)
+	require.NoError(t, err)
+	require.NoError(t, s.Seed(ctx, seedsDir, book))
 	require.NoError(t, s.ImportCatalogue(ctx, artifact.Catalogue, nil))
 	id, err := s.Characters().FirstID(ctx)
 	require.NoError(t, err)
@@ -75,9 +79,9 @@ func read(t *testing.T, s *memory.Store, characterID int64) state {
 	require.NoError(t, err)
 	st.Slots, err = s.Spells().GetSlots(ctx, characterID)
 	require.NoError(t, err)
-	st.Items, err = s.Items().List(ctx)
+	st.Items, err = s.Items().List(ctx, characterID)
 	require.NoError(t, err)
-	st.Weapons, err = s.WeaponEditor().List(ctx)
+	st.Weapons, err = s.WeaponEditor().List(ctx, characterID)
 	require.NoError(t, err)
 	st.XP, err = s.XP().List(ctx, characterID)
 	require.NoError(t, err)
@@ -96,9 +100,9 @@ func writeEverything(t *testing.T, ctx context.Context, s *memory.Store, charact
 	require.NoError(t, s.Buffs().SaveActiveBuffs(ctx, characterID, []buffsvc.BuffEffect{{ID: "b", Name: "Haste"}}))
 	require.NoError(t, s.Buffs().SaveRoundNumber(ctx, characterID, 7))
 	require.NoError(t, s.Spells().SaveSlots(ctx, characterID, []spellsvc.SpellSlot{{Level: 1, Used: true}}))
-	_, err = s.Items().Decrement(ctx, "arrows_plus1")
+	_, err = s.Items().Decrement(ctx, characterID, "arrows_plus1")
 	require.NoError(t, err)
-	require.NoError(t, s.WeaponEditor().Delete(ctx, "longsword"))
+	require.NoError(t, s.WeaponEditor().Delete(ctx, characterID, "longsword"))
 	_, err = s.XP().Insert(ctx, characterID, xpsvc.Entry{Date: "2026-01-01", Reason: "orc", Base: 10})
 	require.NoError(t, err)
 	_, err = s.Dice().Insert(ctx, characterID, "1d6")
@@ -165,12 +169,12 @@ func TestStore_Step8_2_NestedTransactionJoinsTheOuter(t *testing.T) {
 // A write outside a transaction is a transaction of its own: a refused
 // write (an empty item) changes nothing.
 func TestStore_Step8_2_WriteOutsideATransactionIsAtomic(t *testing.T) {
-	s, _ := seeded(t)
+	s, id := seeded(t)
 	ctx := context.Background()
-	require.NoError(t, s.Items().SetCount(ctx, "arrows_plus1", 0))
-	_, err := s.Items().Decrement(ctx, "arrows_plus1")
+	require.NoError(t, s.Items().SetCount(ctx, id, "arrows_plus1", 0))
+	_, err := s.Items().Decrement(ctx, id, "arrows_plus1")
 	require.ErrorIs(t, err, itemsvc.ErrItemEmpty)
-	it, err := s.Items().Get(ctx, "arrows_plus1")
+	it, err := s.Items().Get(ctx, id, "arrows_plus1")
 	require.NoError(t, err)
 	assert.Zero(t, it.Count, "the count never goes below 0")
 }
@@ -469,18 +473,18 @@ func TestStore_Step8_1_SeededLikeTheDatabase(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 85, maxHP)
 
-	weapons, err := s.Weapons().List(ctx)
+	weapons, err := s.Weapons().List(ctx, id)
 	require.NoError(t, err)
 	assert.NotEmpty(t, weapons)
 	for i, w := range weapons {
 		assert.NotEmpty(t, w.Name, "weapon %d has its name", i)
 	}
-	items, err := s.Items().List(ctx)
+	items, err := s.Items().List(ctx, id)
 	require.NoError(t, err)
 	for i, it := range items {
 		assert.Equal(t, i, it.Position, "items keep the seed's order")
 	}
-	profs, err := s.Skills().ListProficiencies(ctx)
+	profs, err := s.Skills().ListProficiencies(ctx, id)
 	require.NoError(t, err)
 	assert.NotEmpty(t, profs)
 
@@ -513,12 +517,12 @@ func TestStore_Step8_1_SeededLikeTheDatabase(t *testing.T) {
 func TestStore_Step8_2_KeysRefusedLikeTheDatabase(t *testing.T) {
 	s, id := seeded(t)
 	ctx := context.Background()
-	w, err := s.WeaponEditor().Get(ctx, "longsword")
+	w, err := s.WeaponEditor().Get(ctx, id, "longsword")
 	require.NoError(t, err)
-	require.Error(t, s.WeaponEditor().Insert(ctx, w))
-	it, err := s.Items().Get(ctx, "arrows_plus1")
+	require.Error(t, s.WeaponEditor().Insert(ctx, id, w))
+	it, err := s.Items().Get(ctx, id, "arrows_plus1")
 	require.NoError(t, err)
-	require.Error(t, s.Items().Insert(ctx, it))
+	require.Error(t, s.Items().Insert(ctx, id, it))
 
 	require.NoError(t, s.XP().Reinsert(ctx, id, xpsvc.Entry{ID: 40, Date: "2026-01-01", Base: 5}))
 	require.Error(t, s.XP().Reinsert(ctx, id, xpsvc.Entry{ID: 40}))
@@ -526,4 +530,53 @@ func TestStore_Step8_2_KeysRefusedLikeTheDatabase(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(41), next)
 	require.ErrorIs(t, s.XP().Delete(ctx, id+1, 40), xpsvc.ErrEntryNotFound)
+}
+
+// Weapons, items, skills and spellbooks belong to a character: the seed gives
+// the starting set to the seed character only, a character added later owns
+// nothing, and the same id names a different row for each character.
+func TestStore_EachCharacterOwnsItsRows(t *testing.T) {
+	s, kelsen := seeded(t)
+	ctx := context.Background()
+	other, err := s.AddCharacter(ctx, charactersvc.Character{Name: "Other", Class: "bard"})
+	require.NoError(t, err)
+	require.NotEqual(t, kelsen, other)
+
+	book, err := s.Spellbooks().Keys(ctx, kelsen)
+	require.NoError(t, err)
+	assert.NotEmpty(t, book, "the seed character gets the spellbook seed")
+	for _, empty := range []func() (int, error){
+		func() (int, error) { l, err := s.Items().List(ctx, other); return len(l), err },
+		func() (int, error) { l, err := s.WeaponEditor().List(ctx, other); return len(l), err },
+		func() (int, error) { l, err := s.Weapons().List(ctx, other); return len(l), err },
+		func() (int, error) { l, err := s.Skills().ListProficiencies(ctx, other); return len(l), err },
+		func() (int, error) { l, err := s.Skills().ListBardSkills(ctx, other); return len(l), err },
+		func() (int, error) { l, err := s.Spellbooks().Keys(ctx, other); return len(l), err },
+	} {
+		n, err := empty()
+		require.NoError(t, err)
+		assert.Zero(t, n, "a character added later starts with nothing")
+	}
+
+	arrows, err := s.Items().Get(ctx, kelsen, "arrows_plus1")
+	require.NoError(t, err)
+	_, err = s.Items().Get(ctx, other, "arrows_plus1")
+	require.ErrorIs(t, err, itemsvc.ErrItemNotFound, "another character's item is unknown")
+	arrows.Count = 1
+	require.NoError(t, s.Items().Insert(ctx, other, arrows), "the same id for another character")
+	_, err = s.Items().Decrement(ctx, other, "arrows_plus1")
+	require.NoError(t, err)
+	mine, err := s.Items().Get(ctx, kelsen, "arrows_plus1")
+	require.NoError(t, err)
+	theirs, err := s.Items().Get(ctx, other, "arrows_plus1")
+	require.NoError(t, err)
+	assert.Zero(t, theirs.Count)
+	assert.NotZero(t, mine.Count, "spending the other's arrow leaves the seed character's")
+
+	sword, err := s.WeaponEditor().Get(ctx, kelsen, "longsword")
+	require.NoError(t, err)
+	require.NoError(t, s.WeaponEditor().Insert(ctx, other, sword))
+	require.NoError(t, s.WeaponEditor().Delete(ctx, other, "longsword"))
+	_, err = s.Weapons().Get(ctx, kelsen, "longsword")
+	require.NoError(t, err, "deleting the other's sword leaves the seed character's")
 }

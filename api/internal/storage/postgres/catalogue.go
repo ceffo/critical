@@ -417,8 +417,8 @@ func retypeStats(ctx context.Context, tx domain.TxRunner, q storeq.Querier) erro
 // spellRefKinds are the action-log kinds whose payload may hold a spell id.
 var spellRefKinds = []string{"cast", "exposure", "spell_prep", "buff_change", "round_advance", "time_passed"}
 
-// StateSpellRefs returns every spell id game state holds (ADR 0021 step 5.4.3): the prepared
-// spells of spell_slots, the spell_id of the active buffs (ADR 0004 step 17), the slot and buff
+// StateSpellRefs returns every spell id game state holds (ADR 0021 step 5.4.3): the spellbook
+// entries of every character, the prepared spells of spell_slots, the spell_id of the active buffs (ADR 0004 step 17), the slot and buff
 // lists in the before/after state of action_snapshots (undo and redo restore them), the spellId
 // of cast, exposure and buff entries in action_log and of the payloads of their corrections,
 // expiredSpellIds of round_advance and time_passed entries, and spells[].id of spell_prep
@@ -435,6 +435,14 @@ func StateSpellRefs(ctx context.Context, q storeq.Querier) ([]catalogue.Ref, err
 	type slot struct {
 		PreparedSpellID string `json:"prepared_spell_id"`
 	}
+	book, err := q.SpellbookRefs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("scan references: %w", err)
+	}
+	for _, r := range book {
+		add(r.SpellKey, fmt.Sprintf("spellbook of character %d", r.CharacterID))
+	}
+
 	slotLists, err := q.SpellSlotLists(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("scan references: %w", err)

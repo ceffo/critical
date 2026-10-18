@@ -269,11 +269,11 @@ func TestResolveAttack(t *testing.T) {
 	for _, tt := range attackCases {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.weapons.EXPECT().Get(mock.Anything, tt.req.WeaponID).Return(tt.weapon, nil)
+			f.weapons.EXPECT().Get(mock.Anything, charID, tt.req.WeaponID).Return(tt.weapon, nil)
 			f.withChar(bard())
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(tt.mods, nil)
 			if tt.ammo != nil {
-				f.items.EXPECT().Use(mock.Anything, tt.req.AmmoItemID).Return(*tt.ammo, nil).Once()
+				f.items.EXPECT().Use(mock.Anything, charID, tt.req.AmmoItemID).Return(*tt.ammo, nil).Once()
 			}
 			f.dice.EXPECT().RollD20().Return(tt.d20).Once()
 			f.d100s(t, tt.d100, noCritMult)
@@ -331,7 +331,7 @@ func TestResolveAttack(t *testing.T) {
 // Every contribution to the damage formula is listed, in formula order.
 func TestResolveAttack_DamageTermsListEveryModifier(t *testing.T) {
 	f := newFixture(t)
-	f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
+	f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(buffsvc.BuffModifiers{
 		SpellsBuff: 1.5, Multipliers: 2, EffectiveStr: 18, Damage: 1,
@@ -413,7 +413,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 			dal := buffmocks.NewMockDAL(t)
 			dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{strength(tt.bonus), gem}, nil)
 			noPowers := buffmocks.NewMockItems(t)
-			noPowers.EXPECT().ItemPowers(mock.Anything).Return(nil, nil)
+			noPowers.EXPECT().ItemPowers(mock.Anything, charID).Return(nil, nil)
 			realBuffs, err := buffsvc.New(dal, noTx{}, buffmocks.NewMockLog(t), buffmocks.NewMockCharacters(t), buffmocks.NewMockDice(t), noPowers)
 			require.NoError(t, err)
 
@@ -423,7 +423,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 				Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
 			})
 			require.NoError(t, err)
-			f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
+			f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 			f.withChar(bard())
 			f.dice.EXPECT().RollD20().Return(10)
 			f.d100s(t, tt.d100, noCritMult)
@@ -460,7 +460,7 @@ func TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff(t *testing.T) {
 		MagicToHit: 3, MagicDamage: 3, Kind: combatsvc.WeaponMelee,
 	}
 	f := newFixture(t)
-	f.weapons.EXPECT().Get(mock.Anything, "dagger3").Return(dagger, nil)
+	f.weapons.EXPECT().Get(mock.Anything, charID, "dagger3").Return(dagger, nil)
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(buffsvc.BuffModifiers{
 		SpellsBuff: 1, Multipliers: 1, EffectiveStr: 12, WeaponBuff: 2, WeaponBuffFrom: "Magic Weapon",
@@ -495,12 +495,12 @@ func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {
 		Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
 	}
 	f := newFixture(t)
-	f.weapons.EXPECT().Get(mock.Anything, "plainbow").Return(bow, nil)
+	f.weapons.EXPECT().Get(mock.Anything, charID, "plainbow").Return(bow, nil)
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(buffsvc.BuffModifiers{
 		SpellsBuff: 1, Multipliers: 1, EffectiveStr: 18, WeaponBuff: 5, WeaponBuffFrom: "Magic Weapon",
 	}, nil)
-	f.items.EXPECT().Use(mock.Anything, "arrows_plus3").Return(arrows3Left1, nil).Once()
+	f.items.EXPECT().Use(mock.Anything, charID, "arrows_plus3").Return(arrows3Left1, nil).Once()
 	f.dice.EXPECT().RollD20().Return(9).Once()
 	f.d100s(t, 33, noCritMult)
 	f.dice.EXPECT().RollDie(6).Return(4).Once()
@@ -527,10 +527,10 @@ func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {
 // result and an items snapshot in the same transaction.
 func TestResolveAttack_RecordsAttackWithAmmoSnapshot(t *testing.T) {
 	f := newFixture(t)
-	f.weapons.EXPECT().Get(mock.Anything, "shortbow").Return(shortbow, nil)
+	f.weapons.EXPECT().Get(mock.Anything, charID, "shortbow").Return(shortbow, nil)
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil)
-	f.items.EXPECT().Use(mock.Anything, "arrows_plus3").Return(arrows3Left1, nil).Once()
+	f.items.EXPECT().Use(mock.Anything, charID, "arrows_plus3").Return(arrows3Left1, nil).Once()
 	f.dice.EXPECT().RollD20().Return(4)
 	f.d100s(t, 50, noCritMult)
 	f.dice.EXPECT().RollDie(6).Return(4)
@@ -566,7 +566,7 @@ func TestResolveAttack_RecordsAttackWithAmmoSnapshot(t *testing.T) {
 
 func TestResolveAttack_MeleeIsLoggedWithoutSnapshot(t *testing.T) {
 	f := newFixture(t)
-	f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
+	f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil)
 	f.dice.EXPECT().RollD20().Return(3)
@@ -593,7 +593,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 
 	t.Run("unknown weapon", func(t *testing.T) {
 		f := newFixture(t)
-		f.weapons.EXPECT().Get(mock.Anything, "nope").Return(combatsvc.Weapon{}, combatsvc.ErrWeaponNotFound)
+		f.weapons.EXPECT().Get(mock.Anything, charID, "nope").Return(combatsvc.Weapon{}, combatsvc.ErrWeaponNotFound)
 		res, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "nope"})
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, combatsvc.ErrWeaponNotFound)
@@ -601,7 +601,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 
 	t.Run("character lookup error keeps the sentinel", func(t *testing.T) {
 		f := newFixture(t)
-		f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
+		f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(nil, domain.ErrCharacterNotFound)
 		_, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword"})
 		assert.ErrorIs(t, err, domain.ErrCharacterNotFound)
@@ -609,7 +609,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 
 	t.Run("aggregate error", func(t *testing.T) {
 		f := newFixture(t)
-		f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
+		f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 		f.withChar(bard())
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(buffsvc.BuffModifiers{}, boom)
 		_, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword"})
@@ -643,7 +643,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		// Nothing is rolled or recorded; the transaction rolls the Use back.
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.weapons.EXPECT().Get(mock.Anything, tt.weapon.ID).Return(tt.weapon, nil)
+			f.weapons.EXPECT().Get(mock.Anything, charID, tt.weapon.ID).Return(tt.weapon, nil)
 			f.withChar(bard())
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil)
 			if tt.use != nil || tt.useErr != nil {
@@ -651,7 +651,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 				if tt.use != nil {
 					item = *tt.use
 				}
-				f.items.EXPECT().Use(mock.Anything, tt.ammoID).Return(item, tt.useErr)
+				f.items.EXPECT().Use(mock.Anything, charID, tt.ammoID).Return(item, tt.useErr)
 			}
 			_, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: tt.weapon.ID, AmmoItemID: tt.ammoID})
 			assert.ErrorIs(t, err, tt.wantErr)
@@ -660,7 +660,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 
 	t.Run("record error fails the attack", func(t *testing.T) {
 		f := newFixture(t)
-		f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
+		f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
 		f.withChar(bard())
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil)
 		f.dice.EXPECT().RollD20().Return(3)
@@ -676,7 +676,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		f := newFixture(t)
 		bad := longsword
 		bad.BaseDamage = "d8"
-		f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(bad, nil)
+		f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(bad, nil)
 		f.withChar(bard())
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil)
 		f.dice.EXPECT().RollD20().Return(20)
@@ -688,8 +688,8 @@ func TestResolveAttack_Rejections(t *testing.T) {
 
 func TestListWeapons(t *testing.T) {
 	f := newFixture(t)
-	f.weapons.EXPECT().List(mock.Anything).Return([]combatsvc.Weapon{longsword}, nil)
-	got, err := f.svc.ListWeapons(context.Background())
+	f.weapons.EXPECT().List(mock.Anything, charID).Return([]combatsvc.Weapon{longsword}, nil)
+	got, err := f.svc.ListWeapons(context.Background(), charID)
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.Weapon{longsword}, got)
 }

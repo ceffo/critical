@@ -59,10 +59,10 @@ func TestUpdate_Step11_NameEditKeepsTheOtherLanguages(t *testing.T) {
 			if tt.from != nil {
 				before.Name = tt.from
 			}
-			dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(before, nil)
+			dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(before, nil)
 			after := before
 			after.Name = tt.want
-			dal.EXPECT().Update(mock.Anything, after).Return(nil).Once()
+			dal.EXPECT().Update(mock.Anything, int64(1), after).Return(nil).Once()
 			var got actionlog.NewEntry
 			f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(3), nil)
 
@@ -82,7 +82,7 @@ func TestUpdate_Step11_NameEditKeepsTheOtherLanguages(t *testing.T) {
 	t.Run("no language left", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t) // no Update
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
-		dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(wandBoth, nil)
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wandBoth, nil)
 		_, err := svc.Update(context.Background(), 1, "wand_lightning", itemsvc.ItemPatch{Name: localized.Text{"en": "", "fr": " "}})
 		var fe *domain.FieldError
 		require.True(t, errors.As(err, &fe), "got %v", err)
@@ -96,8 +96,8 @@ func TestCreate_Step11_NameInThePlayersLanguage(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().List(mock.Anything).Return(nil, nil)
-	dal.EXPECT().Insert(mock.Anything, mock.MatchedBy(func(it itemsvc.Item) bool {
+	dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+	dal.EXPECT().Insert(mock.Anything, int64(1), mock.MatchedBy(func(it itemsvc.Item) bool {
 		return it.ID == "corde" && it.Name.Equal(localized.Text{"fr": "Corde"})
 	})).Return(nil).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
@@ -118,26 +118,26 @@ func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) 
 	const tail = `"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}]`
 	t.Run("plain string", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(wandBoth, nil).Once()
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wandBoth, nil).Once()
 		want := wandBoth
 		want.Name = localized.Text{"en": "Old wand", "fr": "Baguette de foudre"}
-		dal.EXPECT().Update(mock.Anything, want).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
 		require.NoError(t, restore(dal, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Old wand",`+tail))
 	})
 	t.Run("language map", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t) // no Get: the snapshot is the whole truth
 		want := wandBoth
 		want.Name = localized.Text{"en": "Old wand"}
-		dal.EXPECT().Update(mock.Anything, want).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
 		require.NoError(t, restore(dal, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":{"en":"Old wand"},`+tail))
 	})
 	t.Run("plain string, item gone", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
 		want := wand4
 		want.Name = localized.Text{"en": "Old wand"}
-		dal.EXPECT().Update(mock.Anything, want).Return(itemsvc.ErrItemNotFound).Once()
-		dal.EXPECT().Insert(mock.Anything, want).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(itemsvc.ErrItemNotFound).Once()
+		dal.EXPECT().Insert(mock.Anything, int64(1), want).Return(nil).Once()
 		require.NoError(t, restore(dal, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Old wand",`+tail))
 	})
 }

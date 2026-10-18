@@ -40,8 +40,8 @@ type Spells interface {
 
 // Items is the narrow port to the item service.
 type Items interface {
-	List(ctx context.Context) ([]itemsvc.Item, error)
-	ResetDaily(ctx context.Context) ([]itemsvc.Item, error)
+	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
+	ResetDaily(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
 }
 
 // Log records the rest (actionlogsvc).
@@ -82,7 +82,7 @@ func (s *service) LongRest(ctx context.Context, characterID int64) (Result, erro
 		if err != nil {
 			return fmt.Errorf("get slots: %w", err)
 		}
-		itemsBefore, err := s.items.List(ctx)
+		itemsBefore, err := s.items.List(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("list items: %w", err)
 		}
@@ -90,7 +90,7 @@ func (s *service) LongRest(ctx context.Context, characterID int64) (Result, erro
 		if err != nil {
 			return fmt.Errorf("reset slots: %w", err)
 		}
-		items, err := s.items.ResetDaily(ctx)
+		items, err := s.items.ResetDaily(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("reset items: %w", err)
 		}

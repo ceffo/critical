@@ -43,11 +43,11 @@ func TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage(t *testing.T) {
 				return len(s) == 1 && s[0].SpellID == "alarm"
 			})).Return(nil).Once()
 		}},
-		{"an item's count (family items)", "items:wand_lightning", `[{"id":"wand_lightning","count":4}]`, func(h *harness) {
-			h.Items.EXPECT().SetCount(mock.Anything, "wand_lightning", 4).Return(nil).Once()
+		{"an item's count (family items), the entry's character's", "items:wand_lightning", `[{"id":"wand_lightning","count":4}]`, func(h *harness) {
+			h.Items.EXPECT().SetCount(mock.Anything, characterID, "wand_lightning", 4).Return(nil).Once()
 		}},
-		{"a weapon added by hand (family weapons)", "weapons:dagger2", `{"id":"dagger2","absent":true}`, func(h *harness) {
-			h.WeaponEditor.EXPECT().Delete(mock.Anything, "dagger2").Return(nil).Once()
+		{"a weapon added by hand (family weapons), the entry's character's", "weapons:dagger2", `{"id":"dagger2","absent":true}`, func(h *harness) {
+			h.WeaponEditor.EXPECT().Delete(mock.Anything, characterID, "dagger2").Return(nil).Once()
 		}},
 		{"an XP entry added by hand (family xp)", "xp:12", `{"id":12,"absent":true}`, func(h *harness) {
 			h.XP.EXPECT().Delete(mock.Anything, characterID, int64(12)).Return(nil).Once()

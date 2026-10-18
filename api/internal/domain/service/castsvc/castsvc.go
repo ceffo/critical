@@ -78,8 +78,8 @@ type Buffs interface {
 // Items is the inventory (itemsvc): a spell that consumes an item lists the
 // items and spends one. Use joins the caller's transaction.
 type Items interface {
-	List(ctx context.Context) ([]itemsvc.Item, error)
-	Use(ctx context.Context, itemID string) (itemsvc.Item, error)
+	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
+	Use(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error)
 }
 
 // Attacks rolls the to-hit of a thrown spell (combatsvc).

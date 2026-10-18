@@ -218,7 +218,7 @@ var endpoints = []endpoint{
 		m.spell.On("GetSlots", anyArgs(2)...).Return(nil, err)
 	}},
 	{"GET spells", "GET", "/api/spells?q=a", "", func(m *mocksSet, err error) {
-		m.spell.On("Search", anyArgs(3)...).Return(spellsvc.Page{}, err)
+		m.spell.On("Search", anyArgs(4)...).Return(spellsvc.Page{}, err)
 	}},
 	{"GET spells/{id}", "GET", "/api/spells/fireball", "", func(m *mocksSet, err error) {
 		m.spell.On("Get", anyArgs(2)...).Return(spellsvc.Spell{}, err)
@@ -242,10 +242,10 @@ var endpoints = []endpoint{
 		m.rest.On("LongRest", anyArgs(2)...).Return(restsvc.Result{}, err)
 	}},
 	{"GET weapons", "GET", "/api/weapons", "", func(m *mocksSet, err error) {
-		m.cmb.On("ListWeapons", anyArgs(1)...).Return(nil, err)
+		m.cmb.On("ListWeapons", anyArgs(2)...).Return(nil, err)
 	}},
 	{"GET items", "GET", "/api/items", "", func(m *mocksSet, err error) {
-		m.items.On("List", anyArgs(1)...).Return(nil, err)
+		m.items.On("List", anyArgs(2)...).Return(nil, err)
 	}},
 	{"POST roll/attack", "POST", "/api/roll/attack", `{"weapon_id":"w","target_ac":3}`, func(m *mocksSet, err error) {
 		m.cmb.On("ResolveAttack", anyArgs(4)...).Return(nil, err)

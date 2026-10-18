@@ -40,19 +40,12 @@ func ids(t *testing.T, f spellsvc.Filter, book []string, spells []spellsvc.Spell
 	dal := mocks.NewMockDAL(t)
 	reader := mocks.NewMockReader(t)
 	b := mocks.NewMockSpellbook(t)
-	b.EXPECT().Contains(mock.Anything).RunAndReturn(func(id string) bool {
-		for _, k := range book {
-			if k == id {
-				return true
-			}
-		}
-		return false
-	}).Maybe()
+	b.EXPECT().SpellKeys(mock.Anything, int64(1)).Return(book, nil).Maybe()
 	svc, err := spellsvc.New(dal, reader, b)
 	require.NoError(t, err)
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
 	expectDetails(reader, spells)
-	got, err := svc.Search(context.Background(), f, spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize})
+	got, err := svc.Search(context.Background(), 1, f, spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize})
 	require.NoError(t, err)
 	out := []string{}
 	for _, s := range got.Items {

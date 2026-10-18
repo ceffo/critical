@@ -25,6 +25,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
+// owner is the character every call is made for: each query carries it (items belong to a
+// character).
+const owner = int64(4)
+
 func mocked(t *testing.T) (*itemdal.DAL, *mocks.MockQuerier, *textmocks.MockQuerier) {
 	t.Helper()
 	q, tq := mocks.NewMockQuerier(t), textmocks.NewMockQuerier(t)
@@ -59,18 +63,18 @@ func TestList_MapsBehavioursFieldsAndNames(t *testing.T) {
 	dal, q, _ := mocked(t)
 	p, raw := powers(t)
 
-	q.EXPECT().ListItems(ctx).Return([]queries.Item{
+	q.EXPECT().ListItems(ctx, owner).Return([]queries.Item{
 		{ID: "arrows_plus1", Position: 0, Name: 10, Type: "arrow", Behaviour: "stock", MagicBonus: 1, AmmoKind: "arrow", Count: 18, MaxCount: 18},
 		{ID: "power_gem_dispel", Position: 1, Name: 11, Type: "gem", Behaviour: "daily", Count: 1, MaxCount: 1, Powers: raw},
 		wandRow,
 	}, nil).Once()
-	q.EXPECT().ItemNames(ctx).Return([]queries.LocalizedText{
+	q.EXPECT().ItemNames(ctx, owner).Return([]queries.LocalizedText{
 		{TextID: 13, Lang: "en", Body: "Wand"},
 		{TextID: 10, Lang: "en", Body: "Arrows +1"},
 		{TextID: 10, Lang: "fr", Body: "Flèches +1"},
 		{TextID: 11, Lang: "en", Body: "Power Gem"},
 	}, nil).Once()
-	got, err := dal.List(ctx)
+	got, err := dal.List(ctx, owner)
 	require.NoError(t, err)
 	assert.Equal(t, []itemsvc.Item{
 		{
@@ -91,9 +95,9 @@ func TestList_UndecodablePowersAreAnError(t *testing.T) {
 	ctx := context.Background()
 	dal, q, _ := mocked(t)
 
-	q.EXPECT().ListItems(ctx).Return([]queries.Item{{ID: "gem", Powers: `[{"oops":1}]`}}, nil).Once()
-	q.EXPECT().ItemNames(ctx).Return([]queries.LocalizedText{}, nil).Once()
-	_, err := dal.List(ctx)
+	q.EXPECT().ListItems(ctx, owner).Return([]queries.Item{{ID: "gem", Powers: `[{"oops":1}]`}}, nil).Once()
+	q.EXPECT().ItemNames(ctx, owner).Return([]queries.LocalizedText{}, nil).Once()
+	_, err := dal.List(ctx, owner)
 	require.Error(t, err)
 }
 
@@ -105,26 +109,26 @@ func TestDecrement_UpdatedItemElseEmptyOrNotFound(t *testing.T) {
 
 	spent := wandRow
 	spent.Count = 3
-	q.EXPECT().DecrementItem(ctx, "wand_lightning").Return(spent, nil).Once()
+	q.EXPECT().DecrementItem(ctx, queries.DecrementItemParams{CharacterID: owner, ID: "wand_lightning"}).Return(spent, nil).Once()
 	tq.EXPECT().GetText(ctx, int64(13)).Return(wandName(), nil).Once()
-	got, err := dal.Decrement(ctx, "wand_lightning")
+	got, err := dal.Decrement(ctx, owner, "wand_lightning")
 	require.NoError(t, err)
 	want := wandItem
 	want.Count = 3
 	assert.Equal(t, want, got)
 
 	mock.InOrder(
-		q.EXPECT().DecrementItem(ctx, "wand_lightning").Return(queries.Item{}, sql.ErrNoRows).Once(),
-		q.EXPECT().GetItem(ctx, "wand_lightning").Return(wandRow, nil).Once(),
+		q.EXPECT().DecrementItem(ctx, queries.DecrementItemParams{CharacterID: owner, ID: "wand_lightning"}).Return(queries.Item{}, sql.ErrNoRows).Once(),
+		q.EXPECT().GetItem(ctx, queries.GetItemParams{CharacterID: owner, ID: "wand_lightning"}).Return(wandRow, nil).Once(),
 	)
-	_, err = dal.Decrement(ctx, "wand_lightning")
+	_, err = dal.Decrement(ctx, owner, "wand_lightning")
 	require.ErrorIs(t, err, itemsvc.ErrItemEmpty)
 
 	mock.InOrder(
-		q.EXPECT().DecrementItem(ctx, "nope").Return(queries.Item{}, sql.ErrNoRows).Once(),
-		q.EXPECT().GetItem(ctx, "nope").Return(queries.Item{}, sql.ErrNoRows).Once(),
+		q.EXPECT().DecrementItem(ctx, queries.DecrementItemParams{CharacterID: owner, ID: "nope"}).Return(queries.Item{}, sql.ErrNoRows).Once(),
+		q.EXPECT().GetItem(ctx, queries.GetItemParams{CharacterID: owner, ID: "nope"}).Return(queries.Item{}, sql.ErrNoRows).Once(),
 	)
-	_, err = dal.Decrement(ctx, "nope")
+	_, err = dal.Decrement(ctx, owner, "nope")
 	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
@@ -132,14 +136,14 @@ func TestIncrement_AddsNAndReturnsTheUpdatedItem(t *testing.T) {
 	ctx := context.Background()
 	dal, q, tq := mocked(t)
 
-	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 3, ID: "wand_lightning"}).Return(wandRow, nil).Once()
+	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 3, CharacterID: owner, ID: "wand_lightning"}).Return(wandRow, nil).Once()
 	tq.EXPECT().GetText(ctx, int64(13)).Return(wandName(), nil).Once()
-	got, err := dal.Increment(ctx, "wand_lightning", 3)
+	got, err := dal.Increment(ctx, owner, "wand_lightning", 3)
 	require.NoError(t, err)
 	assert.Equal(t, wandItem, got)
 
-	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 1, ID: "nope"}).Return(queries.Item{}, sql.ErrNoRows).Once()
-	_, err = dal.Increment(ctx, "nope", 1)
+	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 1, CharacterID: owner, ID: "nope"}).Return(queries.Item{}, sql.ErrNoRows).Once()
+	_, err = dal.Increment(ctx, owner, "nope", 1)
 	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
@@ -147,8 +151,8 @@ func TestResetDaily_RunsTheDailyRefill(t *testing.T) {
 	ctx := context.Background()
 	dal, q, _ := mocked(t)
 
-	q.EXPECT().ResetDailyItems(ctx).Return(nil).Once()
-	require.NoError(t, dal.ResetDaily(ctx))
+	q.EXPECT().ResetDailyItems(ctx, owner).Return(nil).Once()
+	require.NoError(t, dal.ResetDaily(ctx, owner))
 }
 
 // SetCount writes the count given; no row updated is ErrItemNotFound.
@@ -156,24 +160,24 @@ func TestSetCount_WritesTheCountElseNotFound(t *testing.T) {
 	ctx := context.Background()
 	dal, q, _ := mocked(t)
 
-	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 3, ID: "arrows"}).Return(1, nil).Once()
-	require.NoError(t, dal.SetCount(ctx, "arrows", 3))
-	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 1, ID: "nope"}).Return(0, nil).Once()
-	require.ErrorIs(t, dal.SetCount(ctx, "nope", 1), itemsvc.ErrItemNotFound)
+	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 3, CharacterID: owner, ID: "arrows"}).Return(1, nil).Once()
+	require.NoError(t, dal.SetCount(ctx, owner, "arrows", 3))
+	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 1, CharacterID: owner, ID: "nope"}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.SetCount(ctx, owner, "nope", 1), itemsvc.ErrItemNotFound)
 }
 
 func TestGet_MapsTheRowAndItsNameElseNotFound(t *testing.T) {
 	ctx := context.Background()
 	dal, q, tq := mocked(t)
 
-	q.EXPECT().GetItem(ctx, "wand_lightning").Return(wandRow, nil).Once()
+	q.EXPECT().GetItem(ctx, queries.GetItemParams{CharacterID: owner, ID: "wand_lightning"}).Return(wandRow, nil).Once()
 	tq.EXPECT().GetText(ctx, int64(13)).Return(wandName(), nil).Once()
-	got, err := dal.Get(ctx, "wand_lightning")
+	got, err := dal.Get(ctx, owner, "wand_lightning")
 	require.NoError(t, err)
 	assert.Equal(t, wandItem, got)
 
-	q.EXPECT().GetItem(ctx, "nope").Return(queries.Item{}, sql.ErrNoRows).Once()
-	_, err = dal.Get(ctx, "nope")
+	q.EXPECT().GetItem(ctx, queries.GetItemParams{CharacterID: owner, ID: "nope"}).Return(queries.Item{}, sql.ErrNoRows).Once()
+	_, err = dal.Get(ctx, owner, "nope")
 	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
@@ -195,35 +199,35 @@ func TestName_Step9_WrittenAsLocalizedTextRows(t *testing.T) {
 	mock.InOrder(
 		q.EXPECT().UpdateItem(ctx, queries.UpdateItemParams{
 			Position: 9, Type: "staff", Behaviour: "daily", MagicBonus: 1, AmmoKind: "bolt", Count: 2, MaxCount: 3,
-			EffectDice: "1d4+1", EffectSave: "spell", Notes: "hum", Powers: raw, ID: "w",
+			EffectDice: "1d4+1", EffectSave: "spell", Notes: "hum", Powers: raw, CharacterID: owner, ID: "w",
 		}).Return(100, nil).Once(),
 		tq.EXPECT().DeleteText(ctx, int64(100)).Return(nil).Once(),
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 100, Lang: "de", Body: "Stab"}).Return(nil).Once(),
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 100, Lang: "fr", Body: "Baguette"}).Return(nil).Once(),
 	)
-	require.NoError(t, dal.Update(ctx, it))
+	require.NoError(t, dal.Update(ctx, owner, it))
 
 	it.ID, it.Name = "x", localized.Text{"en": "Rope"}
 	mock.InOrder(
 		tq.EXPECT().NextTextKey(ctx).Return(101, nil).Once(),
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 101, Lang: "en", Body: "Rope"}).Return(nil).Once(),
 		q.EXPECT().InsertItem(ctx, queries.InsertItemParams{
-			ID: "x", Position: 9, Name: 101, Type: "staff", Behaviour: "daily", MagicBonus: 1, AmmoKind: "bolt",
+			CharacterID: owner, ID: "x", Position: 9, Name: 101, Type: "staff", Behaviour: "daily", MagicBonus: 1, AmmoKind: "bolt",
 			Count: 2, MaxCount: 3, EffectDice: "1d4+1", EffectSave: "spell", Notes: "hum", Powers: raw,
 		}).Return(nil).Once(),
 	)
-	require.NoError(t, dal.Insert(ctx, it))
+	require.NoError(t, dal.Insert(ctx, owner, it))
 
 	mock.InOrder(
-		q.EXPECT().DeleteItem(ctx, "w").Return(100, nil).Once(),
+		q.EXPECT().DeleteItem(ctx, queries.DeleteItemParams{CharacterID: owner, ID: "w"}).Return(100, nil).Once(),
 		tq.EXPECT().DeleteText(ctx, int64(100)).Return(nil).Once(),
 	)
-	require.NoError(t, dal.Delete(ctx, "w"))
+	require.NoError(t, dal.Delete(ctx, owner, "w"))
 
-	q.EXPECT().DeleteItem(ctx, "w").Return(0, sql.ErrNoRows).Once()
-	require.ErrorIs(t, dal.Delete(ctx, "w"), itemsvc.ErrItemNotFound)
+	q.EXPECT().DeleteItem(ctx, queries.DeleteItemParams{CharacterID: owner, ID: "w"}).Return(0, sql.ErrNoRows).Once()
+	require.ErrorIs(t, dal.Delete(ctx, owner, "w"), itemsvc.ErrItemNotFound)
 	q.EXPECT().UpdateItem(ctx, mock.Anything).Return(0, sql.ErrNoRows).Once()
-	require.ErrorIs(t, dal.Update(ctx, it), itemsvc.ErrItemNotFound)
+	require.ErrorIs(t, dal.Update(ctx, owner, it), itemsvc.ErrItemNotFound)
 }
 
 // Storage errors are returned, never taken for not found or empty, and stop
@@ -233,37 +237,37 @@ func TestStorageErrors_AreReturnedAndStopTheWrite(t *testing.T) {
 	ctx := context.Background()
 	dal, q, tq := mocked(t)
 
-	q.EXPECT().ListItems(ctx).Return(nil, assert.AnError).Once()
-	_, err := dal.List(ctx)
+	q.EXPECT().ListItems(ctx, owner).Return(nil, assert.AnError).Once()
+	_, err := dal.List(ctx, owner)
 	require.ErrorIs(t, err, assert.AnError)
 
-	q.EXPECT().DecrementItem(ctx, "w").Return(queries.Item{}, assert.AnError).Once()
-	_, err = dal.Decrement(ctx, "w")
-	require.ErrorIs(t, err, assert.AnError)
-	assert.NotErrorIs(t, err, itemsvc.ErrItemEmpty)
-
-	q.EXPECT().DecrementItem(ctx, "v").Return(queries.Item{}, sql.ErrNoRows).Once()
-	q.EXPECT().GetItem(ctx, "v").Return(queries.Item{}, assert.AnError).Once()
-	_, err = dal.Decrement(ctx, "v")
+	q.EXPECT().DecrementItem(ctx, queries.DecrementItemParams{CharacterID: owner, ID: "w"}).Return(queries.Item{}, assert.AnError).Once()
+	_, err = dal.Decrement(ctx, owner, "w")
 	require.ErrorIs(t, err, assert.AnError)
 	assert.NotErrorIs(t, err, itemsvc.ErrItemEmpty)
 
-	q.EXPECT().GetItem(ctx, "w").Return(wandRow, nil).Once()
+	q.EXPECT().DecrementItem(ctx, queries.DecrementItemParams{CharacterID: owner, ID: "v"}).Return(queries.Item{}, sql.ErrNoRows).Once()
+	q.EXPECT().GetItem(ctx, queries.GetItemParams{CharacterID: owner, ID: "v"}).Return(queries.Item{}, assert.AnError).Once()
+	_, err = dal.Decrement(ctx, owner, "v")
+	require.ErrorIs(t, err, assert.AnError)
+	assert.NotErrorIs(t, err, itemsvc.ErrItemEmpty)
+
+	q.EXPECT().GetItem(ctx, queries.GetItemParams{CharacterID: owner, ID: "w"}).Return(wandRow, nil).Once()
 	tq.EXPECT().GetText(ctx, int64(13)).Return(nil, assert.AnError).Once()
-	_, err = dal.Get(ctx, "w")
+	_, err = dal.Get(ctx, owner, "w")
 	require.ErrorIs(t, err, assert.AnError)
 
 	tq.EXPECT().NextTextKey(ctx).Return(0, assert.AnError).Once()
-	require.ErrorIs(t, dal.Insert(ctx, wandItem), assert.AnError)
+	require.ErrorIs(t, dal.Insert(ctx, owner, wandItem), assert.AnError)
 
 	q.EXPECT().UpdateItem(ctx, mock.Anything).Return(0, assert.AnError).Once()
-	err = dal.Update(ctx, wandItem)
+	err = dal.Update(ctx, owner, wandItem)
 	require.ErrorIs(t, err, assert.AnError)
 	assert.NotErrorIs(t, err, itemsvc.ErrItemNotFound)
 
-	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 1, ID: "w"}).Return(0, assert.AnError).Once()
-	require.ErrorIs(t, dal.SetCount(ctx, "w", 1), assert.AnError)
+	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 1, CharacterID: owner, ID: "w"}).Return(0, assert.AnError).Once()
+	require.ErrorIs(t, dal.SetCount(ctx, owner, "w", 1), assert.AnError)
 
-	q.EXPECT().ResetDailyItems(ctx).Return(assert.AnError).Once()
-	require.ErrorIs(t, dal.ResetDaily(ctx), assert.AnError)
+	q.EXPECT().ResetDailyItems(ctx, owner).Return(assert.AnError).Once()
+	require.ErrorIs(t, dal.ResetDaily(ctx, owner), assert.AnError)
 }

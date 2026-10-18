@@ -16,7 +16,7 @@ type Filter struct {
 	Query string
 	// Class is "Wizard" or "Priest" (any case); empty means both.
 	Class string
-	// Mine keeps only the spells of the Bard's spellbook (set with Class
+	// Mine keeps only the spells of the character's spellbook (set with Class
 	// "wizard": the spellbook holds Wizard spells).
 	Mine bool
 	// Levels lists the spell levels to keep; empty means any.

@@ -70,10 +70,15 @@ id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, ste
 -- the total is characters.xp_total plus every entry (base + 10% when bonus)
 id, character_id, entry_date TEXT, session TEXT, reason TEXT, base INTEGER, bonus INTEGER (0/1)
 
--- proficiencies, bard_skills: the skill catalog (ADR 0014), reconciled by id with seeds/skills.json
--- at startup; a check is an action_log entry (skill_check), nothing is stored here
-id TEXT, position, ability TEXT ('str'..'cha'), modifier INTEGER
-id TEXT, position, percent INTEGER (0-100)
+-- proficiencies, bard_skills: each character's skill catalog (ADR 0014); the seed character's is
+-- reconciled by id with seeds/skills.json at startup; a check is an action_log entry (skill_check),
+-- nothing is stored here
+id TEXT, character_id, position, ability TEXT ('str'..'cha'), modifier INTEGER
+id TEXT, character_id, position, percent INTEGER (0-100)
+
+-- weapons, items: each character's (character_id; "Per-character data" below)
+-- spellbook_entries: the spells each character knows, by catalogue key, in sheet order
+character_id, spell_key TEXT, position
 
 -- dice_favourites: the composer's saved formulas, per character, in normal form (unique per character)
 id, character_id, formula TEXT
@@ -373,17 +378,44 @@ type RollResult struct {
 
 ## Seed Loader Pattern
 
-The seed files are read and checked by `api/internal/storage/seedfile`, shared by every storage engine
-(the database and the in-memory storage). At startup, for each seed file (character, weapons, items:
-only into an empty table; skills: reconciled by id):
-```go
-// Check if table is empty, if so load from seeds/
-var count int
-db.QueryRow("SELECT COUNT(*) FROM weapons").Scan(&count)
-if count == 0 {
-    loadSeedsFromFile("seeds/weapons.json", db)
-}
-```
+The seed files are read and checked by `api/internal/storage/seedfile` (the spellbook by
+`spellbookadpt.ReadSeed`), shared by every storage engine (the database and the in-memory storage).
+At startup, in one transaction (`Seed`): `character.json` only into an empty `characters` table;
+the other files are the starting set of the **seed character** ("Per-character data" below):
+weapons and items only while that character has none (then only their names are reconciled, ADR
+0023 step 10), skills reconciled by id, the spellbook reconciled by key.
+
+## Per-character data
+
+Weapons, items (counts, charges), nonweapon proficiencies, bard skills and the spellbook belong to a
+character (`character_id`; `spellbook_entries` for the spellbook). Spell texts, the PHB tables and
+the item and weapon rules stay shared. Every DAL method of these ports takes the character id and
+reads or writes only that character's rows; an id is looked up among that character's (another
+character's row of the same id is unknown: not found).
+
+- **Seed character**: the character `character.json` names (the lowest id of that name). The seed
+  files are its starting set; a character created later starts with nothing. The spellbook seed is
+  reconciled like the skills (a key it lacks is added, a key it has takes the seed's position, an
+  entry the seed no longer lists is kept), so adding a learned spell to `seeds/spellbook.json` still
+  reaches the seed character on the next start.
+- **Rows without an owner** (stored before migration 002, or written by the release before during a
+  rolling deploy) are given to the seed character at every start, before the seeds are applied:
+  existing data keeps every count, position and field, with nothing to run by hand. Rows without an
+  owner and no seed character (the name in `character.json` changed) refuse the start, rather than
+  belong to no one.
+- **Catalogue check at write time**: the spellbook seed is checked against the catalogue (a Wizard
+  spell, its English name and level, each once) before the seed writes anything, so `Build` loads
+  the catalogue artifact and checks the seeds before it seeds. Reading a spellbook names each entry
+  from the catalogue (`spellbookadpt.Book`); the catalogue import keeps every spell a spellbook
+  holds (`StateSpellRefs`, ADR 0021 step 5.4.3).
+- **Undo**: snapshot keys stay `items:<id>` and `weapons:<id>`; a restorer writes the row of the
+  popped entry's character (the `characterID` every `Restorer` receives).
+- **Expand now, contract later** (the migrations are additive across a rolling deploy, ADR 0024 step
+  5.2): migration 002 adds `character_id` nullable, with a unique index on `(character_id, id)`,
+  and keeps the single-column primary keys the release before still upserts on. Until a later
+  migration makes `character_id NOT NULL` and the primary keys `(character_id, id)` (once no release
+  without the column runs), an item, weapon or skill id is unique across characters in the
+  database; the in-memory store already keys them per character.
 
 ## Spell catalogue
 
@@ -404,8 +436,8 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   table) and the PHB's real rule-table numbers (ADR 0021 step 9.7). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
   own database `critical_fixture`, when `.catalogue/catalogue.json` is absent (the campaign seeds refer to
   spells only the real artifact holds). The database `critical` is only ever opened with the real catalogue.
-- **Seed checks**: the spellbook and every `spell_effects.json` id are checked against the catalogue at
-  startup; an id it does not hold refuses the start.
+- **Seed checks**: the spellbook seed and every `spell_effects.json` id are checked against the catalogue at
+  startup, before the seed writes; an id it does not hold refuses the start.
 - **Import** (`catalogueadpt` reads and validates against the embedded copy of
   `schemas/catalogue.schema.json`, kept identical by a test; `postgres.ImportCatalogue` imports): same
   version as recorded in `catalogue_meta` → only the typed `stats` of rows whose stored English stat texts

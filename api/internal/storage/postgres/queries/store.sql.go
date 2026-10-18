@@ -44,6 +44,42 @@ func (q *Queries) ActiveBuffLists(ctx context.Context) ([]ActiveBuffListsRow, er
 	return items, nil
 }
 
+const adoptBardSkills = `-- name: AdoptBardSkills :exec
+UPDATE bard_skills SET character_id = $1::bigint WHERE character_id IS NULL
+`
+
+func (q *Queries) AdoptBardSkills(ctx context.Context, characterID int64) error {
+	_, err := q.db.ExecContext(ctx, adoptBardSkills, characterID)
+	return err
+}
+
+const adoptItems = `-- name: AdoptItems :exec
+UPDATE items SET character_id = $1::bigint WHERE character_id IS NULL
+`
+
+func (q *Queries) AdoptItems(ctx context.Context, characterID int64) error {
+	_, err := q.db.ExecContext(ctx, adoptItems, characterID)
+	return err
+}
+
+const adoptProficiencies = `-- name: AdoptProficiencies :exec
+UPDATE proficiencies SET character_id = $1::bigint WHERE character_id IS NULL
+`
+
+func (q *Queries) AdoptProficiencies(ctx context.Context, characterID int64) error {
+	_, err := q.db.ExecContext(ctx, adoptProficiencies, characterID)
+	return err
+}
+
+const adoptWeapons = `-- name: AdoptWeapons :exec
+UPDATE weapons SET character_id = $1::bigint WHERE character_id IS NULL
+`
+
+func (q *Queries) AdoptWeapons(ctx context.Context, characterID int64) error {
+	_, err := q.db.ExecContext(ctx, adoptWeapons, characterID)
+	return err
+}
+
 const allTexts = `-- name: AllTexts :many
 SELECT text_id, lang, body FROM localized_texts
 `
@@ -99,11 +135,11 @@ func (q *Queries) CountCharacters(ctx context.Context) (int64, error) {
 }
 
 const countItems = `-- name: CountItems :one
-SELECT COUNT(*) FROM items
+SELECT COUNT(*) FROM items WHERE character_id = $1::bigint
 `
 
-func (q *Queries) CountItems(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countItems)
+func (q *Queries) CountItems(ctx context.Context, characterID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countItems, characterID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -121,22 +157,39 @@ func (q *Queries) CountKeyedSpells(ctx context.Context) (int64, error) {
 }
 
 const countSkills = `-- name: CountSkills :one
-SELECT ((SELECT COUNT(*) FROM proficiencies) + (SELECT COUNT(*) FROM bard_skills))::bigint AS count
+SELECT ((SELECT COUNT(*) FROM proficiencies p WHERE p.character_id = $1::bigint)
+      + (SELECT COUNT(*) FROM bard_skills b WHERE b.character_id = $1::bigint))::bigint AS count
 `
 
-func (q *Queries) CountSkills(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countSkills)
+func (q *Queries) CountSkills(ctx context.Context, characterID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countSkills, characterID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUnowned = `-- name: CountUnowned :one
+SELECT ((SELECT COUNT(*) FROM weapons WHERE character_id IS NULL)
+      + (SELECT COUNT(*) FROM items WHERE character_id IS NULL)
+      + (SELECT COUNT(*) FROM proficiencies WHERE character_id IS NULL)
+      + (SELECT COUNT(*) FROM bard_skills WHERE character_id IS NULL))::bigint AS count
+`
+
+// Rows from before each character owned its equipment, or written by the release before during a
+// rolling deploy, have no owner: the seed gives them to the seed character.
+func (q *Queries) CountUnowned(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUnowned)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const countWeapons = `-- name: CountWeapons :one
-SELECT COUNT(*) FROM weapons
+SELECT COUNT(*) FROM weapons WHERE character_id = $1::bigint
 `
 
-func (q *Queries) CountWeapons(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countWeapons)
+func (q *Queries) CountWeapons(ctx context.Context, characterID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countWeapons, characterID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -237,29 +290,32 @@ func (q *Queries) InsertCharacter(ctx context.Context, arg InsertCharacterParams
 }
 
 const insertItem = `-- name: InsertItem :exec
-INSERT INTO items (id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice,
-                   effect_save, notes, powers)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,
+                   effect_dice, effect_save, notes, powers)
+VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8, $9,
+        $10, $11, $12, $13, $14)
 `
 
 type InsertItemParams struct {
-	ID         string
-	Position   int64
-	Name       int64
-	Type       string
-	Behaviour  string
-	MagicBonus int64
-	AmmoKind   string
-	Count      int64
-	MaxCount   int64
-	EffectDice string
-	EffectSave string
-	Notes      string
-	Powers     string
+	CharacterID int64
+	ID          string
+	Position    int64
+	Name        int64
+	Type        string
+	Behaviour   string
+	MagicBonus  int64
+	AmmoKind    string
+	Count       int64
+	MaxCount    int64
+	EffectDice  string
+	EffectSave  string
+	Notes       string
+	Powers      string
 }
 
 func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
 	_, err := q.db.ExecContext(ctx, insertItem,
+		arg.CharacterID,
 		arg.ID,
 		arg.Position,
 		arg.Name,
@@ -316,11 +372,14 @@ func (q *Queries) InsertText(ctx context.Context, arg InsertTextParams) error {
 }
 
 const insertWeapon = `-- name: InsertWeapon :exec
-INSERT INTO weapons (id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO weapons (character_id, id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind,
+                     two_handed, ammo_kind)
+VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8,
+        $9, $10, $11)
 `
 
 type InsertWeaponParams struct {
+	CharacterID int64
 	ID          string
 	Position    int64
 	Name        int64
@@ -335,6 +394,7 @@ type InsertWeaponParams struct {
 
 func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) error {
 	_, err := q.db.ExecContext(ctx, insertWeapon,
+		arg.CharacterID,
 		arg.ID,
 		arg.Position,
 		arg.Name,
@@ -350,11 +410,16 @@ func (q *Queries) InsertWeapon(ctx context.Context, arg InsertWeaponParams) erro
 }
 
 const itemNameKey = `-- name: ItemNameKey :one
-SELECT name FROM items WHERE id = $1
+SELECT name FROM items WHERE character_id = $1::bigint AND id = $2
 `
 
-func (q *Queries) ItemNameKey(ctx context.Context, id string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, itemNameKey, id)
+type ItemNameKeyParams struct {
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) ItemNameKey(ctx context.Context, arg ItemNameKeyParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, itemNameKey, arg.CharacterID, arg.ID)
 	var name int64
 	err := row.Scan(&name)
 	return name, err
@@ -410,6 +475,19 @@ type RecordSeedOfferParams struct {
 func (q *Queries) RecordSeedOffer(ctx context.Context, arg RecordSeedOfferParams) error {
 	_, err := q.db.ExecContext(ctx, recordSeedOffer, arg.Kind, arg.ID, arg.Lang)
 	return err
+}
+
+const seedCharacterID = `-- name: SeedCharacterID :one
+SELECT id FROM characters WHERE name = $1 ORDER BY id LIMIT 1
+`
+
+// The character the seed files belong to: the one named in character.json (the lowest id when
+// two share the name).
+func (q *Queries) SeedCharacterID(ctx context.Context, name string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, seedCharacterID, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const seedOffers = `-- name: SeedOffers :many
@@ -755,6 +833,38 @@ func (q *Queries) SpellTextKeys(ctx context.Context) ([]SpellTextKeysRow, error)
 	return items, nil
 }
 
+const spellbookRefs = `-- name: SpellbookRefs :many
+SELECT character_id, spell_key FROM spellbook_entries ORDER BY character_id, position, spell_key
+`
+
+type SpellbookRefsRow struct {
+	CharacterID int64
+	SpellKey    string
+}
+
+func (q *Queries) SpellbookRefs(ctx context.Context) ([]SpellbookRefsRow, error) {
+	rows, err := q.db.QueryContext(ctx, spellbookRefs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SpellbookRefsRow{}
+	for rows.Next() {
+		var i SpellbookRefsRow
+		if err := rows.Scan(&i.CharacterID, &i.SpellKey); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const textLanguages = `-- name: TextLanguages :many
 SELECT lang, body FROM localized_texts WHERE text_id = $1
 `
@@ -788,35 +898,45 @@ func (q *Queries) TextLanguages(ctx context.Context, textID int64) ([]TextLangua
 }
 
 const upsertBardSkill = `-- name: UpsertBardSkill :exec
-INSERT INTO bard_skills (id, position, percent) VALUES ($1, $2, $3)
-ON CONFLICT (id) DO UPDATE SET position = excluded.position, percent = excluded.percent
+INSERT INTO bard_skills (character_id, id, position, percent) VALUES ($1::bigint, $2, $3, $4)
+ON CONFLICT (character_id, id) DO UPDATE SET position = excluded.position, percent = excluded.percent
 `
 
 type UpsertBardSkillParams struct {
-	ID       string
-	Position int64
-	Percent  int64
+	CharacterID int64
+	ID          string
+	Position    int64
+	Percent     int64
 }
 
 func (q *Queries) UpsertBardSkill(ctx context.Context, arg UpsertBardSkillParams) error {
-	_, err := q.db.ExecContext(ctx, upsertBardSkill, arg.ID, arg.Position, arg.Percent)
+	_, err := q.db.ExecContext(ctx, upsertBardSkill,
+		arg.CharacterID,
+		arg.ID,
+		arg.Position,
+		arg.Percent,
+	)
 	return err
 }
 
 const upsertProficiency = `-- name: UpsertProficiency :exec
-INSERT INTO proficiencies (id, position, ability, modifier) VALUES ($1, $2, $3, $4)
-ON CONFLICT (id) DO UPDATE SET position = excluded.position, ability = excluded.ability, modifier = excluded.modifier
+INSERT INTO proficiencies (character_id, id, position, ability, modifier)
+VALUES ($1::bigint, $2, $3, $4, $5)
+ON CONFLICT (character_id, id) DO UPDATE SET position = excluded.position, ability = excluded.ability,
+                                             modifier = excluded.modifier
 `
 
 type UpsertProficiencyParams struct {
-	ID       string
-	Position int64
-	Ability  string
-	Modifier int64
+	CharacterID int64
+	ID          string
+	Position    int64
+	Ability     string
+	Modifier    int64
 }
 
 func (q *Queries) UpsertProficiency(ctx context.Context, arg UpsertProficiencyParams) error {
 	_, err := q.db.ExecContext(ctx, upsertProficiency,
+		arg.CharacterID,
 		arg.ID,
 		arg.Position,
 		arg.Ability,
@@ -876,6 +996,22 @@ func (q *Queries) UpsertSpell(ctx context.Context, arg UpsertSpellParams) error 
 	return err
 }
 
+const upsertSpellbookEntry = `-- name: UpsertSpellbookEntry :exec
+INSERT INTO spellbook_entries (character_id, spell_key, position) VALUES ($1, $2, $3)
+ON CONFLICT (character_id, spell_key) DO UPDATE SET position = excluded.position
+`
+
+type UpsertSpellbookEntryParams struct {
+	CharacterID int64
+	SpellKey    string
+	Position    int64
+}
+
+func (q *Queries) UpsertSpellbookEntry(ctx context.Context, arg UpsertSpellbookEntryParams) error {
+	_, err := q.db.ExecContext(ctx, upsertSpellbookEntry, arg.CharacterID, arg.SpellKey, arg.Position)
+	return err
+}
+
 const upsertText = `-- name: UpsertText :exec
 INSERT INTO localized_texts (text_id, lang, body) VALUES ($1, $2, $3)
 ON CONFLICT (text_id, lang) DO UPDATE SET body = excluded.body
@@ -893,11 +1029,16 @@ func (q *Queries) UpsertText(ctx context.Context, arg UpsertTextParams) error {
 }
 
 const weaponNameKey = `-- name: WeaponNameKey :one
-SELECT name FROM weapons WHERE id = $1
+SELECT name FROM weapons WHERE character_id = $1::bigint AND id = $2
 `
 
-func (q *Queries) WeaponNameKey(ctx context.Context, id string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, weaponNameKey, id)
+type WeaponNameKeyParams struct {
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) WeaponNameKey(ctx context.Context, arg WeaponNameKeyParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, weaponNameKey, arg.CharacterID, arg.ID)
 	var name int64
 	err := row.Scan(&name)
 	return name, err

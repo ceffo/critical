@@ -209,17 +209,17 @@ func (_c *MockStore_Migrate_Call) RunAndReturn(run func(context.Context) error) 
 	return _c
 }
 
-// Seed provides a mock function with given fields: ctx, seedsDir
-func (_m *MockStore) Seed(ctx context.Context, seedsDir string) error {
-	ret := _m.Called(ctx, seedsDir)
+// Seed provides a mock function with given fields: ctx, seedsDir, spellbook
+func (_m *MockStore) Seed(ctx context.Context, seedsDir string, spellbook []string) error {
+	ret := _m.Called(ctx, seedsDir, spellbook)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Seed")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = rf(ctx, seedsDir)
+	if rf, ok := ret.Get(0).(func(context.Context, string, []string) error); ok {
+		r0 = rf(ctx, seedsDir, spellbook)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -235,13 +235,14 @@ type MockStore_Seed_Call struct {
 // Seed is a helper method to define mock.On call
 //   - ctx context.Context
 //   - seedsDir string
-func (_e *MockStore_Expecter) Seed(ctx interface{}, seedsDir interface{}) *MockStore_Seed_Call {
-	return &MockStore_Seed_Call{Call: _e.mock.On("Seed", ctx, seedsDir)}
+//   - spellbook []string
+func (_e *MockStore_Expecter) Seed(ctx interface{}, seedsDir interface{}, spellbook interface{}) *MockStore_Seed_Call {
+	return &MockStore_Seed_Call{Call: _e.mock.On("Seed", ctx, seedsDir, spellbook)}
 }
 
-func (_c *MockStore_Seed_Call) Run(run func(ctx context.Context, seedsDir string)) *MockStore_Seed_Call {
+func (_c *MockStore_Seed_Call) Run(run func(ctx context.Context, seedsDir string, spellbook []string)) *MockStore_Seed_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].([]string))
 	})
 	return _c
 }
@@ -251,7 +252,7 @@ func (_c *MockStore_Seed_Call) Return(_a0 error) *MockStore_Seed_Call {
 	return _c
 }
 
-func (_c *MockStore_Seed_Call) RunAndReturn(run func(context.Context, string) error) *MockStore_Seed_Call {
+func (_c *MockStore_Seed_Call) RunAndReturn(run func(context.Context, string, []string) error) *MockStore_Seed_Call {
 	_c.Call.Return(run)
 	return _c
 }

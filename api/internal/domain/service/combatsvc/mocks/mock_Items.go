@@ -22,9 +22,9 @@ func (_m *MockItems) EXPECT() *MockItems_Expecter {
 	return &MockItems_Expecter{mock: &_m.Mock}
 }
 
-// List provides a mock function with given fields: ctx
-func (_m *MockItems) List(ctx context.Context) ([]itemsvc.Item, error) {
-	ret := _m.Called(ctx)
+// List provides a mock function with given fields: ctx, characterID
+func (_m *MockItems) List(ctx context.Context, characterID int64) ([]itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for List")
@@ -32,19 +32,19 @@ func (_m *MockItems) List(ctx context.Context) ([]itemsvc.Item, error) {
 
 	var r0 []itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]itemsvc.Item, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]itemsvc.Item, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []itemsvc.Item); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []itemsvc.Item); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]itemsvc.Item)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -59,13 +59,14 @@ type MockItems_List_Call struct {
 
 // List is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockItems_Expecter) List(ctx interface{}) *MockItems_List_Call {
-	return &MockItems_List_Call{Call: _e.mock.On("List", ctx)}
+//   - characterID int64
+func (_e *MockItems_Expecter) List(ctx interface{}, characterID interface{}) *MockItems_List_Call {
+	return &MockItems_List_Call{Call: _e.mock.On("List", ctx, characterID)}
 }
 
-func (_c *MockItems_List_Call) Run(run func(ctx context.Context)) *MockItems_List_Call {
+func (_c *MockItems_List_Call) Run(run func(ctx context.Context, characterID int64)) *MockItems_List_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -75,14 +76,14 @@ func (_c *MockItems_List_Call) Return(_a0 []itemsvc.Item, _a1 error) *MockItems_
 	return _c
 }
 
-func (_c *MockItems_List_Call) RunAndReturn(run func(context.Context) ([]itemsvc.Item, error)) *MockItems_List_Call {
+func (_c *MockItems_List_Call) RunAndReturn(run func(context.Context, int64) ([]itemsvc.Item, error)) *MockItems_List_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Use provides a mock function with given fields: ctx, itemID
-func (_m *MockItems) Use(ctx context.Context, itemID string) (itemsvc.Item, error) {
-	ret := _m.Called(ctx, itemID)
+// Use provides a mock function with given fields: ctx, characterID, itemID
+func (_m *MockItems) Use(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error) {
+	ret := _m.Called(ctx, characterID, itemID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Use")
@@ -90,17 +91,17 @@ func (_m *MockItems) Use(ctx context.Context, itemID string) (itemsvc.Item, erro
 
 	var r0 itemsvc.Item
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (itemsvc.Item, error)); ok {
-		return rf(ctx, itemID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (itemsvc.Item, error)); ok {
+		return rf(ctx, characterID, itemID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) itemsvc.Item); ok {
-		r0 = rf(ctx, itemID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) itemsvc.Item); ok {
+		r0 = rf(ctx, characterID, itemID)
 	} else {
 		r0 = ret.Get(0).(itemsvc.Item)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, itemID)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, itemID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -115,14 +116,15 @@ type MockItems_Use_Call struct {
 
 // Use is a helper method to define mock.On call
 //   - ctx context.Context
+//   - characterID int64
 //   - itemID string
-func (_e *MockItems_Expecter) Use(ctx interface{}, itemID interface{}) *MockItems_Use_Call {
-	return &MockItems_Use_Call{Call: _e.mock.On("Use", ctx, itemID)}
+func (_e *MockItems_Expecter) Use(ctx interface{}, characterID interface{}, itemID interface{}) *MockItems_Use_Call {
+	return &MockItems_Use_Call{Call: _e.mock.On("Use", ctx, characterID, itemID)}
 }
 
-func (_c *MockItems_Use_Call) Run(run func(ctx context.Context, itemID string)) *MockItems_Use_Call {
+func (_c *MockItems_Use_Call) Run(run func(ctx context.Context, characterID int64, itemID string)) *MockItems_Use_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
 	})
 	return _c
 }
@@ -132,7 +134,7 @@ func (_c *MockItems_Use_Call) Return(_a0 itemsvc.Item, _a1 error) *MockItems_Use
 	return _c
 }
 
-func (_c *MockItems_Use_Call) RunAndReturn(run func(context.Context, string) (itemsvc.Item, error)) *MockItems_Use_Call {
+func (_c *MockItems_Use_Call) RunAndReturn(run func(context.Context, int64, string) (itemsvc.Item, error)) *MockItems_Use_Call {
 	_c.Call.Return(run)
 	return _c
 }

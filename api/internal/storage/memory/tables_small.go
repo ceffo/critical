@@ -169,7 +169,7 @@ func (p XP) Delete(ctx context.Context, characterID, entryID int64) error {
 	})
 }
 
-// Skills is the skill catalogue (skillsvc.DAL).
+// Skills is each character's skill catalogue (skillsvc.DAL).
 type Skills struct{ s *Store }
 
 var _ skillsvc.DAL = Skills{}
@@ -177,21 +177,21 @@ var _ skillsvc.DAL = Skills{}
 // Skills returns the skill port.
 func (s *Store) Skills() Skills { return Skills{s} }
 
-// ListProficiencies returns the proficiencies in sheet order.
-func (p Skills) ListProficiencies(ctx context.Context) ([]skillsvc.ProficiencyDef, error) {
+// ListProficiencies returns the character's proficiencies in sheet order.
+func (p Skills) ListProficiencies(ctx context.Context, characterID int64) ([]skillsvc.ProficiencyDef, error) {
 	out := []skillsvc.ProficiencyDef{}
 	err := p.s.read(ctx, func(t *tables) error {
-		out = append(out, t.proficiencies...)
+		out = append(out, t.proficiencies[characterID]...)
 		return nil
 	})
 	return out, err
 }
 
-// ListBardSkills returns the bard skills in sheet order.
-func (p Skills) ListBardSkills(ctx context.Context) ([]skillsvc.BardSkillDef, error) {
+// ListBardSkills returns the character's bard skills in sheet order.
+func (p Skills) ListBardSkills(ctx context.Context, characterID int64) ([]skillsvc.BardSkillDef, error) {
 	out := []skillsvc.BardSkillDef{}
 	err := p.s.read(ctx, func(t *tables) error {
-		out = append(out, t.bardSkills...)
+		out = append(out, t.bardSkills[characterID]...)
 		return nil
 	})
 	return out, err
@@ -274,4 +274,22 @@ func (p Dice) SetPosition(ctx context.Context, characterID, id, position int64) 
 		return nil
 	})
 	return found, err
+}
+
+// Spellbooks is each character's spellbook (the store spellbookadpt's Book
+// reads; the composition root wires it).
+type Spellbooks struct{ s *Store }
+
+// Spellbooks returns the spellbook port.
+func (s *Store) Spellbooks() Spellbooks { return Spellbooks{s} }
+
+// Keys returns the catalogue keys of the character's spellbook in sheet
+// order.
+func (p Spellbooks) Keys(ctx context.Context, characterID int64) ([]string, error) {
+	out := []string{}
+	err := p.s.read(ctx, func(t *tables) error {
+		out = append(out, t.spellbooks[characterID]...)
+		return nil
+	})
+	return out, err
 }

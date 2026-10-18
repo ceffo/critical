@@ -147,8 +147,8 @@ func DecodePowers(raw string) ([]Power, error) {
 // power order, whatever the item's count (ADR 0016 step 9: the Power Gem's
 // powers work at 0 dispels left). It is buffsvc's Items port; whether a
 // power is on is buffsvc's to decide (step 10).
-func (s *service) ItemPowers(ctx context.Context) ([]buffsvc.ItemPower, error) {
-	items, err := s.dal.List(ctx)
+func (s *service) ItemPowers(ctx context.Context, characterID int64) ([]buffsvc.ItemPower, error) {
+	items, err := s.dal.List(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("list items: %w", err)
 	}

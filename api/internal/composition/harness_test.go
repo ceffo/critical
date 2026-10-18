@@ -48,6 +48,7 @@ type harness struct {
 	Forms        *combatmocks.MockFormStore
 	XP           *xpmocks.MockDAL
 	Skill        *skillmocks.MockDAL
+	Spellbook    *compmocks.MockSpellbookStore
 	Dice         *dicemocks.MockDAL
 }
 
@@ -67,12 +68,13 @@ func newHarness(t *testing.T) *harness {
 		Forms:        combatmocks.NewMockFormStore(t),
 		XP:           xpmocks.NewMockDAL(t),
 		Skill:        skillmocks.NewMockDAL(t),
+		Spellbook:    compmocks.NewMockSpellbookStore(t),
 		Dice:         dicemocks.NewMockDAL(t),
 	}
 	h.Storage = composition.Storage{
 		Store: h.Store, Character: h.Character, HP: h.HP, Log: h.Log, Buff: h.Buff, Spell: h.Spell,
 		Weapons: h.Weapons, WeaponEditor: h.WeaponEditor, Crit: h.Crit, Items: h.Items, Forms: h.Forms,
-		XP: h.XP, Skill: h.Skill, Dice: h.Dice,
+		XP: h.XP, Skill: h.Skill, Spellbook: h.Spellbook, Dice: h.Dice,
 	}
 	// Every service runs its transactions through the store: the body runs
 	// once, in the caller's context.
@@ -85,7 +87,7 @@ func newHarness(t *testing.T) *harness {
 // order, and the lookup of the single character.
 func (h *harness) expectStartup(seedsDir string) {
 	migrate := h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
-	seed := h.Store.EXPECT().Seed(mock.Anything, seedsDir).Return(nil).Once().NotBefore(migrate)
+	seed := h.Store.EXPECT().Seed(mock.Anything, seedsDir, mock.Anything).Return(nil).Once().NotBefore(migrate)
 	imp := h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once().NotBefore(seed)
 	h.Character.EXPECT().FirstID(mock.Anything).Return(characterID, nil).Once().NotBefore(imp)
 }

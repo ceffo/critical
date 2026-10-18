@@ -17,7 +17,7 @@ import (
 )
 
 // DAL is the implementation of combatsvc.Weapons over the sqlc-generated
-// queries. A weapon's name is a key into localized_texts (ADR 0023 step 9),
+// queries, each the given character's (weapons.character_id). A weapon's name is a key into localized_texts (ADR 0023 step 9),
 // read through texts.
 type DAL struct {
 	q     queries.Querier
@@ -31,9 +31,9 @@ var _ combatsvc.Weapons = (*DAL)(nil)
 // transaction (ADR 0025 step 5.2).
 func New(q queries.Querier, texts textdal.Store) *DAL { return &DAL{q: q, texts: texts} }
 
-// names reads the name of every weapon, by key.
-func names(ctx context.Context, q queries.Querier) (map[int64]localized.Text, error) {
-	rows, err := q.WeaponNames(ctx)
+// names reads the name of every weapon of the character, by key.
+func names(ctx context.Context, q queries.Querier, characterID int64) (map[int64]localized.Text, error) {
+	rows, err := q.WeaponNames(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("list weapon names: %w", err)
 	}
@@ -59,8 +59,8 @@ func toWeapon(r queries.Weapon, name localized.Text) combatsvc.Weapon {
 
 // get reads one weapon row and its name; notFound is the error wrapped when
 // the id is unknown.
-func get(ctx context.Context, q queries.Querier, texts textdal.Store, id string, notFound error) (queries.Weapon, localized.Text, error) {
-	r, err := q.GetWeapon(ctx, id)
+func get(ctx context.Context, q queries.Querier, texts textdal.Store, characterID int64, id string, notFound error) (queries.Weapon, localized.Text, error) {
+	r, err := q.GetWeapon(ctx, queries.GetWeaponParams{CharacterID: characterID, ID: id})
 	if errors.Is(err, sql.ErrNoRows) {
 		return queries.Weapon{}, nil, fmt.Errorf("%w: %s", notFound, id)
 	}
@@ -74,13 +74,14 @@ func get(ctx context.Context, q queries.Querier, texts textdal.Store, id string,
 	return r, name, nil
 }
 
-// list reads every weapon row in sheet order and the names by key.
-func list(ctx context.Context, q queries.Querier) ([]queries.Weapon, map[int64]localized.Text, error) {
-	rows, err := q.ListWeapons(ctx)
+// list reads every weapon row of the character in sheet order and the names
+// by key.
+func list(ctx context.Context, q queries.Querier, characterID int64) ([]queries.Weapon, map[int64]localized.Text, error) {
+	rows, err := q.ListWeapons(ctx, characterID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list weapons: %w", err)
 	}
-	byKey, err := names(ctx, q)
+	byKey, err := names(ctx, q, characterID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -88,17 +89,17 @@ func list(ctx context.Context, q queries.Querier) ([]queries.Weapon, map[int64]l
 }
 
 // Get returns the weapon or an error wrapping combatsvc.ErrWeaponNotFound.
-func (d *DAL) Get(ctx context.Context, id string) (combatsvc.Weapon, error) {
-	r, name, err := get(ctx, d.q, d.texts, id, combatsvc.ErrWeaponNotFound)
+func (d *DAL) Get(ctx context.Context, characterID int64, id string) (combatsvc.Weapon, error) {
+	r, name, err := get(ctx, d.q, d.texts, characterID, id, combatsvc.ErrWeaponNotFound)
 	if err != nil {
 		return combatsvc.Weapon{}, err
 	}
 	return toWeapon(r, name), nil
 }
 
-// List returns every weapon in sheet order.
-func (d *DAL) List(ctx context.Context) ([]combatsvc.Weapon, error) {
-	rows, byKey, err := list(ctx, d.q)
+// List returns the character's weapons in sheet order.
+func (d *DAL) List(ctx context.Context, characterID int64) ([]combatsvc.Weapon, error) {
+	rows, byKey, err := list(ctx, d.q, characterID)
 	if err != nil {
 		return nil, err
 	}
@@ -140,9 +141,9 @@ func b2i(b bool) int64 {
 	return 0
 }
 
-// List returns every weapon in sheet order.
-func (e *Editor) List(ctx context.Context) ([]weaponsvc.Weapon, error) {
-	rows, byKey, err := list(ctx, e.q)
+// List returns the character's weapons in sheet order.
+func (e *Editor) List(ctx context.Context, characterID int64) ([]weaponsvc.Weapon, error) {
+	rows, byKey, err := list(ctx, e.q, characterID)
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +155,8 @@ func (e *Editor) List(ctx context.Context) ([]weaponsvc.Weapon, error) {
 }
 
 // Get returns one weapon or an error wrapping weaponsvc.ErrWeaponNotFound.
-func (e *Editor) Get(ctx context.Context, id string) (weaponsvc.Weapon, error) {
-	r, name, err := get(ctx, e.q, e.texts, id, weaponsvc.ErrWeaponNotFound)
+func (e *Editor) Get(ctx context.Context, characterID int64, id string) (weaponsvc.Weapon, error) {
+	r, name, err := get(ctx, e.q, e.texts, characterID, id, weaponsvc.ErrWeaponNotFound)
 	if err != nil {
 		return weaponsvc.Weapon{}, err
 	}
@@ -164,13 +165,13 @@ func (e *Editor) Get(ctx context.Context, id string) (weaponsvc.Weapon, error) {
 
 // Insert writes a whole weapon (a new one, or a void restoring a removed
 // one), its name under a new key.
-func (e *Editor) Insert(ctx context.Context, w weaponsvc.Weapon) error {
+func (e *Editor) Insert(ctx context.Context, characterID int64, w weaponsvc.Weapon) error {
 	key, err := e.texts.Add(ctx, w.Name)
 	if err != nil {
 		return fmt.Errorf("insert weapon %s: %w", w.ID, err)
 	}
 	err = e.q.InsertWeapon(ctx, queries.InsertWeaponParams{
-		ID: w.ID, Position: int64(w.Position), Name: key, DamageSm: w.DamageSM, DamageL: w.DamageL,
+		CharacterID: characterID, ID: w.ID, Position: int64(w.Position), Name: key, DamageSm: w.DamageSM, DamageL: w.DamageL,
 		MagicToHit: int64(w.MagicToHit), MagicDamage: int64(w.MagicDamage), Kind: w.Kind,
 		TwoHanded: b2i(w.TwoHanded), AmmoKind: w.AmmoKind,
 	})
@@ -182,11 +183,11 @@ func (e *Editor) Insert(ctx context.Context, w weaponsvc.Weapon) error {
 
 // Update overwrites every field of an existing weapon and its name's rows
 // (the key stays).
-func (e *Editor) Update(ctx context.Context, w weaponsvc.Weapon) error {
+func (e *Editor) Update(ctx context.Context, characterID int64, w weaponsvc.Weapon) error {
 	key, err := e.q.UpdateWeapon(ctx, queries.UpdateWeaponParams{
 		Position: int64(w.Position), DamageSm: w.DamageSM, DamageL: w.DamageL,
 		MagicToHit: int64(w.MagicToHit), MagicDamage: int64(w.MagicDamage), Kind: w.Kind,
-		TwoHanded: b2i(w.TwoHanded), AmmoKind: w.AmmoKind, ID: w.ID,
+		TwoHanded: b2i(w.TwoHanded), AmmoKind: w.AmmoKind, CharacterID: characterID, ID: w.ID,
 	})
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("%w: %s", weaponsvc.ErrWeaponNotFound, w.ID)
@@ -199,8 +200,8 @@ func (e *Editor) Update(ctx context.Context, w weaponsvc.Weapon) error {
 
 // Delete removes a weapon and its name's rows; ErrWeaponNotFound when the id
 // is unknown.
-func (e *Editor) Delete(ctx context.Context, id string) error {
-	key, err := e.q.DeleteWeapon(ctx, id)
+func (e *Editor) Delete(ctx context.Context, characterID int64, id string) error {
+	key, err := e.q.DeleteWeapon(ctx, queries.DeleteWeaponParams{CharacterID: characterID, ID: id})
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("%w: %s", weaponsvc.ErrWeaponNotFound, id)
 	}

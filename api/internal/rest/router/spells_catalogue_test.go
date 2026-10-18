@@ -30,7 +30,7 @@ func TestSpells_TextsAreLanguageMaps(t *testing.T) {
 		Description: localized.Of("Fixture text for Armor"),
 	}
 	h, m := newRouter(t)
-	m.spell.EXPECT().Search(mock.Anything, spellsvc.Filter{Query: "armor"}, spellsvc.PageRequest{Page: 1, PageSize: spellsvc.DefaultPageSize}).
+	m.spell.EXPECT().Search(mock.Anything, int64(1), spellsvc.Filter{Query: "armor"}, spellsvc.PageRequest{Page: 1, PageSize: spellsvc.DefaultPageSize}).
 		Return(spellsvc.Page{Items: []spellsvc.Spell{missile, armor}, Total: 2, Page: 1, PageSize: spellsvc.DefaultPageSize}, nil)
 	m.char.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(nil, nil)
 	m.cast.EXPECT().AddsEffect(mock.Anything, mock.Anything).Return(false)

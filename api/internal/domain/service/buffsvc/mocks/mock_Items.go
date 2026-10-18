@@ -23,9 +23,9 @@ func (_m *MockItems) EXPECT() *MockItems_Expecter {
 	return &MockItems_Expecter{mock: &_m.Mock}
 }
 
-// ItemPowers provides a mock function with given fields: ctx
-func (_m *MockItems) ItemPowers(ctx context.Context) ([]buffsvc.ItemPower, error) {
-	ret := _m.Called(ctx)
+// ItemPowers provides a mock function with given fields: ctx, characterID
+func (_m *MockItems) ItemPowers(ctx context.Context, characterID int64) ([]buffsvc.ItemPower, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ItemPowers")
@@ -33,19 +33,19 @@ func (_m *MockItems) ItemPowers(ctx context.Context) ([]buffsvc.ItemPower, error
 
 	var r0 []buffsvc.ItemPower
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]buffsvc.ItemPower, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.ItemPower, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []buffsvc.ItemPower); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.ItemPower); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]buffsvc.ItemPower)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -60,13 +60,14 @@ type MockItems_ItemPowers_Call struct {
 
 // ItemPowers is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockItems_Expecter) ItemPowers(ctx interface{}) *MockItems_ItemPowers_Call {
-	return &MockItems_ItemPowers_Call{Call: _e.mock.On("ItemPowers", ctx)}
+//   - characterID int64
+func (_e *MockItems_Expecter) ItemPowers(ctx interface{}, characterID interface{}) *MockItems_ItemPowers_Call {
+	return &MockItems_ItemPowers_Call{Call: _e.mock.On("ItemPowers", ctx, characterID)}
 }
 
-func (_c *MockItems_ItemPowers_Call) Run(run func(ctx context.Context)) *MockItems_ItemPowers_Call {
+func (_c *MockItems_ItemPowers_Call) Run(run func(ctx context.Context, characterID int64)) *MockItems_ItemPowers_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -76,7 +77,7 @@ func (_c *MockItems_ItemPowers_Call) Return(_a0 []buffsvc.ItemPower, _a1 error) 
 	return _c
 }
 
-func (_c *MockItems_ItemPowers_Call) RunAndReturn(run func(context.Context) ([]buffsvc.ItemPower, error)) *MockItems_ItemPowers_Call {
+func (_c *MockItems_ItemPowers_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.ItemPower, error)) *MockItems_ItemPowers_Call {
 	_c.Call.Return(run)
 	return _c
 }

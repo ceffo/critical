@@ -28,7 +28,12 @@ import (
 func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 	h := newHarness(t)
 	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
-	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds).Return(nil).Once()
+	var book []string
+	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).
+		RunAndReturn(func(_ context.Context, _ string, b []string) error {
+			book = b
+			return nil
+		}).Once()
 	var cat catalogue.Catalogue
 	var refs []catalogue.Ref
 	h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).
@@ -43,6 +48,7 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, characterID, bs.CharacterID)
 	assert.NotEmpty(t, cat.Spells)
+	assert.Contains(t, book, "alarm", "the seed gets the spellbook seed, checked against the catalogue")
 	assert.Contains(t, refs, catalogue.Ref{ID: "alarm", Where: "spellbook seed"})
 	assert.Contains(t, refs, catalogue.Ref{ID: "alarm", Where: "spell effects seed"})
 	assert.Nil(t, bs.DB, "a root built over mocks holds no SQLite handle")
@@ -75,17 +81,17 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 		}, "migrate: boom"},
 		{"seed", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
-			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds).Return(boom).Once()
+			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(boom).Once()
 		}, "seed: boom"},
 		{"no character", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
-			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds).Return(nil).Once()
+			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Character.EXPECT().FirstID(mock.Anything).Return(int64(0), boom).Once()
 		}, "resolve character: boom"},
 		{"catalogue import", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
-			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds).Return(nil).Once()
+			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "boom"},
 	}
@@ -101,7 +107,7 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 }
 
 // A spell effect whose id the catalogue does not hold refuses the start,
-// naming every such id, before anything is imported.
+// naming every such id, before anything is seeded or imported.
 func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 	seeds := t.TempDir()
 	require.NoError(t, os.CopyFS(seeds, os.DirFS(fixtureSeeds)))
@@ -120,8 +126,7 @@ func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 
 	h := newHarness(t)
 	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
-	h.Store.EXPECT().Seed(mock.Anything, seeds).Return(nil).Once()
-	h.Store.EXPECT().Close().Return(nil).Once() // no ImportCatalogue expectation: a call fails the test
+	h.Store.EXPECT().Close().Return(nil).Once() // no Seed or ImportCatalogue expectation: a call fails the test
 
 	_, err = h.build(t, composition.Config{SeedsDir: seeds, Catalogue: fixtureCatalogue})
 	require.Error(t, err)
@@ -168,12 +173,11 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 }
 
 // refusedStart builds the root on cfg, which must refuse the start with the
-// store closed and nothing imported.
+// store closed and nothing seeded or imported.
 func refusedStart(t *testing.T, cfg composition.Config) error {
 	t.Helper()
 	h := newHarness(t)
 	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
-	h.Store.EXPECT().Seed(mock.Anything, cfg.SeedsDir).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once()
 	_, err := h.build(t, cfg)
 	require.Error(t, err)
@@ -266,4 +270,28 @@ func TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable(t *testing
 			require.ErrorContains(t, err, "spell catalogue "+artifact)
 		})
 	}
+}
+
+// The spellbook seed is checked against the catalogue before anything is
+// written: a spell the catalogue does not hold refuses the start with the seed
+// not run, so no character ever stores it.
+func TestBuild_ASpellbookSeedTheCatalogueRefusesIsRefusedBeforeTheSeed(t *testing.T) {
+	seeds := t.TempDir()
+	entries, err := os.ReadDir(fixtureSeeds)
+	require.NoError(t, err)
+	for _, e := range entries {
+		data, err := os.ReadFile(filepath.Join(fixtureSeeds, e.Name()))
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(seeds, e.Name()), data, 0o600)) //nolint:gosec // test temp dir, fixture file names
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(seeds, "spellbook.json"),
+		[]byte(`[{"id":"magic_rocket","name":"Magic Rocket","level":1}]`), 0o600))
+
+	h := newHarness(t)
+	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Close().Return(nil).Once()
+	cfg := fixtureConfig()
+	cfg.SeedsDir = seeds
+	_, err = h.build(t, cfg)
+	require.ErrorContains(t, err, `"magic_rocket" is not a Wizard spell of the catalogue`)
 }

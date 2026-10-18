@@ -26,7 +26,7 @@ type Router interface {
 type CharacterIDFunc func(r *http.Request) int64
 
 type itemSvc interface {
-	List(ctx context.Context) ([]itemsvc.Item, error)
+	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
 	UseItem(ctx context.Context, characterID int64, itemID string) (*itemsvc.UseResult, error)
 	Restock(ctx context.Context, characterID int64, itemID string, n int) (*itemsvc.RestockResult, error)
 	Create(ctx context.Context, characterID int64, in itemsvc.ItemInput) (*itemsvc.ChangeResult, error)
@@ -36,7 +36,7 @@ type itemSvc interface {
 
 // RegisterRoutes wires item endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc itemsvc.SVC) {
-	r.Get("/api/items", render.Handle(List(svc)))
+	r.Get("/api/items", render.Handle(List(charID, svc)))
 	r.Post("/api/items", render.Handle(Create(charID, svc)))
 	r.Patch("/api/items/{id}", render.Handle(Update(charID, svc)))
 	r.Delete("/api/items/{id}", render.Handle(Delete(charID, svc)))
@@ -123,9 +123,9 @@ func Restock(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 var _ Router = (*chi.Mux)(nil)
 
 // List returns every item with its current count.
-func List(svc itemSvc) render.HandlerFunc {
+func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		items, err := svc.List(r.Context())
+		items, err := svc.List(r.Context(), charID(r))
 		if err != nil {
 			return err
 		}

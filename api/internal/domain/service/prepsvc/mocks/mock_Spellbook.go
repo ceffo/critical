@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	context "context"
+
 	prepsvc "github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -20,24 +22,34 @@ func (_m *MockSpellbook) EXPECT() *MockSpellbook_Expecter {
 	return &MockSpellbook_Expecter{mock: &_m.Mock}
 }
 
-// All provides a mock function with no fields
-func (_m *MockSpellbook) All() []prepsvc.SpellbookEntry {
-	ret := _m.Called()
+// All provides a mock function with given fields: ctx, characterID
+func (_m *MockSpellbook) All(ctx context.Context, characterID int64) ([]prepsvc.SpellbookEntry, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for All")
 	}
 
 	var r0 []prepsvc.SpellbookEntry
-	if rf, ok := ret.Get(0).(func() []prepsvc.SpellbookEntry); ok {
-		r0 = rf()
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]prepsvc.SpellbookEntry, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []prepsvc.SpellbookEntry); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]prepsvc.SpellbookEntry)
 		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // MockSpellbook_All_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'All'
@@ -46,79 +58,25 @@ type MockSpellbook_All_Call struct {
 }
 
 // All is a helper method to define mock.On call
-func (_e *MockSpellbook_Expecter) All() *MockSpellbook_All_Call {
-	return &MockSpellbook_All_Call{Call: _e.mock.On("All")}
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSpellbook_Expecter) All(ctx interface{}, characterID interface{}) *MockSpellbook_All_Call {
+	return &MockSpellbook_All_Call{Call: _e.mock.On("All", ctx, characterID)}
 }
 
-func (_c *MockSpellbook_All_Call) Run(run func()) *MockSpellbook_All_Call {
+func (_c *MockSpellbook_All_Call) Run(run func(ctx context.Context, characterID int64)) *MockSpellbook_All_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run()
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
 
-func (_c *MockSpellbook_All_Call) Return(_a0 []prepsvc.SpellbookEntry) *MockSpellbook_All_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockSpellbook_All_Call) RunAndReturn(run func() []prepsvc.SpellbookEntry) *MockSpellbook_All_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Get provides a mock function with given fields: id
-func (_m *MockSpellbook) Get(id string) (prepsvc.SpellbookEntry, bool) {
-	ret := _m.Called(id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Get")
-	}
-
-	var r0 prepsvc.SpellbookEntry
-	var r1 bool
-	if rf, ok := ret.Get(0).(func(string) (prepsvc.SpellbookEntry, bool)); ok {
-		return rf(id)
-	}
-	if rf, ok := ret.Get(0).(func(string) prepsvc.SpellbookEntry); ok {
-		r0 = rf(id)
-	} else {
-		r0 = ret.Get(0).(prepsvc.SpellbookEntry)
-	}
-
-	if rf, ok := ret.Get(1).(func(string) bool); ok {
-		r1 = rf(id)
-	} else {
-		r1 = ret.Get(1).(bool)
-	}
-
-	return r0, r1
-}
-
-// MockSpellbook_Get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Get'
-type MockSpellbook_Get_Call struct {
-	*mock.Call
-}
-
-// Get is a helper method to define mock.On call
-//   - id string
-func (_e *MockSpellbook_Expecter) Get(id interface{}) *MockSpellbook_Get_Call {
-	return &MockSpellbook_Get_Call{Call: _e.mock.On("Get", id)}
-}
-
-func (_c *MockSpellbook_Get_Call) Run(run func(id string)) *MockSpellbook_Get_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
-	})
-	return _c
-}
-
-func (_c *MockSpellbook_Get_Call) Return(_a0 prepsvc.SpellbookEntry, _a1 bool) *MockSpellbook_Get_Call {
+func (_c *MockSpellbook_All_Call) Return(_a0 []prepsvc.SpellbookEntry, _a1 error) *MockSpellbook_All_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSpellbook_Get_Call) RunAndReturn(run func(string) (prepsvc.SpellbookEntry, bool)) *MockSpellbook_Get_Call {
+func (_c *MockSpellbook_All_Call) RunAndReturn(run func(context.Context, int64) ([]prepsvc.SpellbookEntry, error)) *MockSpellbook_All_Call {
 	_c.Call.Return(run)
 	return _c
 }

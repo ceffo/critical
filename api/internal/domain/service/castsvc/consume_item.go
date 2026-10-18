@@ -22,7 +22,7 @@ func (s *service) castMechanics(ctx context.Context, characterID int64, entry sp
 	}
 	var snaps []actionlog.Snapshot
 	if entry.ConsumeItem != nil {
-		used, snap, err := s.consume(ctx, entry, req.ItemID)
+		used, snap, err := s.consume(ctx, characterID, entry, req.ItemID)
 		if err != nil {
 			return nil, err
 		}
@@ -40,9 +40,9 @@ func (s *service) castMechanics(ctx context.Context, characterID int64, entry sp
 
 // consume spends one unit of the chosen item of the entry's type. Refuses with
 // a clear message when none is left, or when several are and none was chosen.
-func (s *service) consume(ctx context.Context, entry spelleffectsvc.Entry, itemID string) (*ConsumedItem, actionlog.Snapshot, error) {
+func (s *service) consume(ctx context.Context, characterID int64, entry spelleffectsvc.Entry, itemID string) (*ConsumedItem, actionlog.Snapshot, error) {
 	itemType := entry.ConsumeItem.Type
-	items, err := s.Items.List(ctx)
+	items, err := s.Items.List(ctx, characterID)
 	if err != nil {
 		return nil, actionlog.Snapshot{}, fmt.Errorf("list items: %w", err)
 	}
@@ -72,7 +72,7 @@ func (s *service) consume(ctx context.Context, entry spelleffectsvc.Entry, itemI
 		return nil, actionlog.Snapshot{}, fmt.Errorf("%w: choose the %s %s spends", domain.ErrInvalidInput, itemType, entry.Name)
 	}
 
-	used, err := s.Items.Use(ctx, item.ID)
+	used, err := s.Items.Use(ctx, characterID, item.ID)
 	if err != nil {
 		return nil, actionlog.Snapshot{}, fmt.Errorf("spend %s: %w", item.ID, err)
 	}

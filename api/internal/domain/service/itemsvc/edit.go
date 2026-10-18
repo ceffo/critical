@@ -144,7 +144,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 	}
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		all, err := s.dal.List(ctx)
+		all, err := s.dal.List(ctx, characterID)
 		if err != nil {
 			return err
 		}
@@ -161,7 +161,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 			item.ID = base + "_" + strconv.Itoa(n)
 		}
 		item.Position = pos
-		if err := s.dal.Insert(ctx, item); err != nil {
+		if err := s.dal.Insert(ctx, characterID, item); err != nil {
 			return err
 		}
 		logID, err := s.logChange(ctx, characterID, actionlog.KindItemAdd, record(item, nil), nil, &item)
@@ -183,7 +183,7 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 	}
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		old, err := s.dal.Get(ctx, itemID)
+		old, err := s.dal.Get(ctx, characterID, itemID)
 		if err != nil {
 			return err
 		}
@@ -231,7 +231,7 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		if len(changes) == 0 {
 			return fmt.Errorf("%w: nothing changed", domain.ErrInvalidInput)
 		}
-		if err := s.dal.Update(ctx, item); err != nil {
+		if err := s.dal.Update(ctx, characterID, item); err != nil {
 			return err
 		}
 		logID, err := s.logChange(ctx, characterID, actionlog.KindItemEdit, record(item, changes), &old, &item)
@@ -250,11 +250,11 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 func (s *service) Delete(ctx context.Context, characterID int64, itemID string) (*ChangeResult, error) {
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		old, err := s.dal.Get(ctx, itemID)
+		old, err := s.dal.Get(ctx, characterID, itemID)
 		if err != nil {
 			return err
 		}
-		if err := s.dal.Delete(ctx, itemID); err != nil {
+		if err := s.dal.Delete(ctx, characterID, itemID); err != nil {
 			return err
 		}
 		logID, err := s.logChange(ctx, characterID, actionlog.KindItemRemove, record(old, nil), &old, nil)

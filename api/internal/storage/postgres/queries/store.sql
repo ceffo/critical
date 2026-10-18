@@ -22,29 +22,58 @@ INSERT INTO active_buffs (character_id, buffs) VALUES ($1, '[]');
 -- name: InsertRoundState :exec
 INSERT INTO round_state (character_id, round_number) VALUES ($1, 0);
 
+-- The character the seed files belong to: the one named in character.json (the lowest id when
+-- two share the name).
+-- name: SeedCharacterID :one
+SELECT id FROM characters WHERE name = $1 ORDER BY id LIMIT 1;
+
+-- Rows from before each character owned its equipment, or written by the release before during a
+-- rolling deploy, have no owner: the seed gives them to the seed character.
+-- name: CountUnowned :one
+SELECT ((SELECT COUNT(*) FROM weapons WHERE character_id IS NULL)
+      + (SELECT COUNT(*) FROM items WHERE character_id IS NULL)
+      + (SELECT COUNT(*) FROM proficiencies WHERE character_id IS NULL)
+      + (SELECT COUNT(*) FROM bard_skills WHERE character_id IS NULL))::bigint AS count;
+
+-- name: AdoptWeapons :exec
+UPDATE weapons SET character_id = sqlc.arg(character_id)::bigint WHERE character_id IS NULL;
+
+-- name: AdoptItems :exec
+UPDATE items SET character_id = sqlc.arg(character_id)::bigint WHERE character_id IS NULL;
+
+-- name: AdoptProficiencies :exec
+UPDATE proficiencies SET character_id = sqlc.arg(character_id)::bigint WHERE character_id IS NULL;
+
+-- name: AdoptBardSkills :exec
+UPDATE bard_skills SET character_id = sqlc.arg(character_id)::bigint WHERE character_id IS NULL;
+
 -- name: CountWeapons :one
-SELECT COUNT(*) FROM weapons;
+SELECT COUNT(*) FROM weapons WHERE character_id = sqlc.arg(character_id)::bigint;
 
 -- name: CountItems :one
-SELECT COUNT(*) FROM items;
+SELECT COUNT(*) FROM items WHERE character_id = sqlc.arg(character_id)::bigint;
 
 -- name: CountSkills :one
-SELECT ((SELECT COUNT(*) FROM proficiencies) + (SELECT COUNT(*) FROM bard_skills))::bigint AS count;
+SELECT ((SELECT COUNT(*) FROM proficiencies p WHERE p.character_id = sqlc.arg(character_id)::bigint)
+      + (SELECT COUNT(*) FROM bard_skills b WHERE b.character_id = sqlc.arg(character_id)::bigint))::bigint AS count;
 
 -- name: InsertWeapon :exec
-INSERT INTO weapons (id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+INSERT INTO weapons (character_id, id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind,
+                     two_handed, ammo_kind)
+VALUES (sqlc.arg(character_id)::bigint, @id, @position, @name, @damage_sm, @damage_l, @magic_to_hit, @magic_damage,
+        @kind, @two_handed, @ammo_kind);
 
 -- name: InsertItem :exec
-INSERT INTO items (id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice,
-                   effect_save, notes, powers)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
+INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,
+                   effect_dice, effect_save, notes, powers)
+VALUES (sqlc.arg(character_id)::bigint, @id, @position, @name, @type, @behaviour, @magic_bonus, @ammo_kind, @count,
+        @max_count, @effect_dice, @effect_save, @notes, @powers);
 
 -- name: WeaponNameKey :one
-SELECT name FROM weapons WHERE id = $1;
+SELECT name FROM weapons WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;
 
 -- name: ItemNameKey :one
-SELECT name FROM items WHERE id = $1;
+SELECT name FROM items WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;
 
 -- name: SeedOffers :many
 SELECT lang FROM seeded_name_languages WHERE kind = $1 AND id = $2;
@@ -53,12 +82,18 @@ SELECT lang FROM seeded_name_languages WHERE kind = $1 AND id = $2;
 INSERT INTO seeded_name_languages (kind, id, lang) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;
 
 -- name: UpsertProficiency :exec
-INSERT INTO proficiencies (id, position, ability, modifier) VALUES ($1, $2, $3, $4)
-ON CONFLICT (id) DO UPDATE SET position = excluded.position, ability = excluded.ability, modifier = excluded.modifier;
+INSERT INTO proficiencies (character_id, id, position, ability, modifier)
+VALUES (sqlc.arg(character_id)::bigint, @id, @position, @ability, @modifier)
+ON CONFLICT (character_id, id) DO UPDATE SET position = excluded.position, ability = excluded.ability,
+                                             modifier = excluded.modifier;
 
 -- name: UpsertBardSkill :exec
-INSERT INTO bard_skills (id, position, percent) VALUES ($1, $2, $3)
-ON CONFLICT (id) DO UPDATE SET position = excluded.position, percent = excluded.percent;
+INSERT INTO bard_skills (character_id, id, position, percent) VALUES (sqlc.arg(character_id)::bigint, @id, @position, @percent)
+ON CONFLICT (character_id, id) DO UPDATE SET position = excluded.position, percent = excluded.percent;
+
+-- name: UpsertSpellbookEntry :exec
+INSERT INTO spellbook_entries (character_id, spell_key, position) VALUES ($1, $2, $3)
+ON CONFLICT (character_id, spell_key) DO UPDATE SET position = excluded.position;
 
 -- name: NextTextKey :one
 SELECT (COALESCE(MAX(text_id), 0) + 1)::bigint AS next_key FROM localized_texts;
@@ -137,6 +172,9 @@ SELECT character_id, slots FROM spell_slots ORDER BY character_id;
 
 -- name: ActiveBuffLists :many
 SELECT character_id, buffs FROM active_buffs ORDER BY character_id;
+
+-- name: SpellbookRefs :many
+SELECT character_id, spell_key FROM spellbook_entries ORDER BY character_id, position, spell_key;
 
 -- name: SnapshotsOf :many
 SELECT id, before_state, after_state FROM action_snapshots WHERE state_key = $1 ORDER BY id;

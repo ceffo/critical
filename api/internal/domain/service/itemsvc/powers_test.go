@@ -73,9 +73,9 @@ func TestItemPowers_Step9_CountDoesNotGateThePowers(t *testing.T) {
 	arrows := itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), Behaviour: itemsvc.BehaviourStock, Count: 0}
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().List(mock.Anything).Return([]itemsvc.Item{arrows, ring, spent}, nil)
+	dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{arrows, ring, spent}, nil)
 
-	got, err := svc.ItemPowers(context.Background())
+	got, err := svc.ItemPowers(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, []buffsvc.ItemPower{
 		{ItemID: "ring", ItemName: "Ring", PowerID: "luck", Effects: buffsvc.BuffEffects{ToHit: ptr(1)}},
@@ -90,8 +90,8 @@ func TestItemPowers_Step15_SnapshotCarriesThePowers(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Get(mock.Anything, "power_gem_dispel").Return(gem, nil).Once()
-	dal.EXPECT().Delete(mock.Anything, "power_gem_dispel").Return(nil).Once()
+	dal.EXPECT().Get(mock.Anything, int64(1), "power_gem_dispel").Return(gem, nil).Once()
+	dal.EXPECT().Delete(mock.Anything, int64(1), "power_gem_dispel").Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(3), nil)
 
@@ -106,8 +106,8 @@ func TestItemPowers_Step15_SnapshotCarriesThePowers(t *testing.T) {
 	// Popping the remove inserts the gem back whole, hammer included.
 	restore := mocks.NewMockDAL(t)
 	rsvc, _ := itemsvc.New(restore, deps(t).Deps)
-	restore.EXPECT().Update(mock.Anything, gem).Return(itemsvc.ErrItemNotFound).Once()
-	restore.EXPECT().Insert(mock.Anything, gem).Return(nil).Once()
+	restore.EXPECT().Update(mock.Anything, int64(1), gem).Return(itemsvc.ErrItemNotFound).Once()
+	restore.EXPECT().Insert(mock.Anything, int64(1), gem).Return(nil).Once()
 	require.NoError(t, rsvc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, got.Snapshots[0].Before))
 }
 
@@ -118,18 +118,18 @@ func TestItemPowers_Step15_EditBodyCannotSetPowers(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Get(mock.Anything, "power_gem_dispel").Return(gem, nil).Once()
+	dal.EXPECT().Get(mock.Anything, int64(1), "power_gem_dispel").Return(gem, nil).Once()
 	renamed := gem
 	renamed.Name = localized.Text{"en": gem.Name["en"], "fr": "Gemme de puissance"}
-	dal.EXPECT().Update(mock.Anything, renamed).Return(nil).Once()
+	dal.EXPECT().Update(mock.Anything, int64(1), renamed).Return(nil).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(4), nil).Once()
 
 	res, err := svc.Update(context.Background(), 1, "power_gem_dispel", itemsvc.ItemPatch{Name: localized.Text{"fr": "Gemme de puissance"}})
 	require.NoError(t, err)
 	assert.Equal(t, []itemsvc.Power{hammer}, res.Item.Powers)
 
-	dal.EXPECT().List(mock.Anything).Return(nil, nil).Once()
-	dal.EXPECT().Insert(mock.Anything, mock.MatchedBy(func(it itemsvc.Item) bool { return it.Powers == nil })).Return(nil).Once()
+	dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil).Once()
+	dal.EXPECT().Insert(mock.Anything, int64(1), mock.MatchedBy(func(it itemsvc.Item) bool { return it.Powers == nil })).Return(nil).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(5), nil).Once()
 	created, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1})
 	require.NoError(t, err)
@@ -143,10 +143,10 @@ func TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers(t *testing.T) {
 		"type":"gem","behaviour":"daily","magicalBonus":0,"ammoKind":"","maxCount":1,"effectDice":"","effectSave":"","notes":"old"}}]`)
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().Get(mock.Anything, "power_gem_dispel").Return(gem, nil).Once()
+	dal.EXPECT().Get(mock.Anything, int64(1), "power_gem_dispel").Return(gem, nil).Once()
 	want := gem
 	want.Name, want.Notes = localized.Of("Power Gem: Dispel Magic"), "old"
-	dal.EXPECT().Update(mock.Anything, want).Return(nil).Once()
+	dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
 	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, old))
 }
 

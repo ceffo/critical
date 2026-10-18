@@ -21,8 +21,17 @@ func repoSeeds() string { return filepath.Join("..", "..", "..", "testdata", "se
 // campaignSeeds is the campaign's seeds/ (the real Power Gem), not the test fixture.
 func campaignSeeds() string { return filepath.Join("..", "..", "..", "..", "seeds") }
 
-// seedOn runs Seed's logic on the fake, which runs the transaction and the queries.
-func seedOn(f *fakeStore, dir string) error { return seed(context.Background(), f, f, dir) }
+// seedOn runs Seed's logic on the fake, which runs the transaction and the queries, with
+// seedBook as the spellbook seed.
+func seedOn(f *fakeStore, dir string) error { return seedBookOn(f, dir, seedBook) }
+
+// seedBookOn is seedOn with the spellbook seed book (catalogue keys, in order).
+func seedBookOn(f *fakeStore, dir string, book []string) error {
+	return seed(context.Background(), f, f, dir, book)
+}
+
+// seedBook is a spellbook seed: the seed writes the keys the caller checked, in order.
+var seedBook = []string{"sleep", "alarm"}
 
 // copySeeds copies the fixture seeds to a temp dir and replaces the named files.
 func copySeeds(t *testing.T, replace map[string]string) string {
@@ -58,16 +67,16 @@ func (f *fakeStore) weaponNames() map[string]localized.Text {
 	return out
 }
 
-// sheet is every field of the items and weapons but the name, by id: what the seed reconcile
-// must keep.
+// sheet is every field of the items and weapons but the name and the owner, by id: what the
+// seed reconcile must keep (the owner a row without one gets is the ownership tests' subject).
 func (f *fakeStore) sheet() map[string]any {
 	out := map[string]any{}
 	for id, it := range f.t.Items {
-		it.Name = 0
+		it.Name, it.CharacterID = 0, 0
 		out["item:"+id] = it
 	}
 	for id, w := range f.t.Weapons {
-		w.Name = 0
+		w.Name, w.CharacterID = 0, 0
 		out["weapon:"+id] = w
 	}
 	return out

@@ -114,7 +114,7 @@ func (f *fixture) rollsInitiative(d10 int) {
 
 // powers answers the items port's reads with the carried items' powers.
 func (f *fixture) powers(ps ...buffsvc.ItemPower) {
-	f.items.EXPECT().ItemPowers(mock.Anything).Return(ps, nil)
+	f.items.EXPECT().ItemPowers(mock.Anything, charID).Return(ps, nil)
 }
 
 func (f *fixture) base(str int) {

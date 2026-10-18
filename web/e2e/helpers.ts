@@ -187,17 +187,14 @@ export async function chooseSetting(page: Page, option: string) {
 }
 
 /**
- * Pick the dark or the light theme in the settings popover (by its visible name, in either
- * language), then close it. The two choices share names (Arcane, Plain), hence the group.
+ * Pick a theme in the settings popover (by its visible name, in either language), then close it.
+ * The list shows the themes of the appearance in effect (ADR 0026 step 4.6), so pick the
+ * appearance first.
  */
-export async function chooseTheme(
-  page: Page,
-  which: "dark" | "light",
-  name: string,
-) {
+export async function chooseTheme(page: Page, name: string) {
   const popover = await openSettings(page);
   const radio = popover
-    .getByTestId(`settings-${which}-theme`)
+    .getByTestId("settings-theme")
     .getByRole("radio", { name, exact: true });
   await radio.click();
   await expect(radio).toHaveAttribute("aria-checked", "true");
@@ -270,10 +267,10 @@ export async function chooseWeapon(page: Page, name: string) {
   await expect(held).toHaveText(name);
 }
 
-/** Show the target bar's size and situational controls (ADR 0027 step 7.2) unless shown. */
+/** Show the target bar's situational controls (ADR 0027 step 7.2) unless shown. */
 export async function openTargetModifiers(page: Page) {
   const toggle = attackForm(page).getByRole("button", {
-    name: "Size and situational modifier",
+    name: "Situational modifier",
   });
   if ((await toggle.getAttribute("aria-expanded")) !== "true")
     await toggle.click();

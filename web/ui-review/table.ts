@@ -175,6 +175,6 @@ export async function pickTheme(
   theme: string,
 ) {
   await chooseSetting(page, mode);
-  await chooseTheme(page, mode === "Dark" ? "dark" : "light", theme);
+  await chooseTheme(page, theme);
   await page.waitForTimeout(150);
 }

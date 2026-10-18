@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Desktop, GearSix, Moon, Sun } from "@phosphor-icons/react";
 import {
@@ -7,12 +7,14 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { LANGUAGES } from "@/lib/settings";
+import { LANGUAGES, themePatch } from "@/lib/settings";
 import {
-  DARK_THEMES,
-  LIGHT_THEMES,
   MODES,
+  isLight,
+  systemPrefersDark,
   themeVars,
+  themesFor,
+  watchSystemScheme,
   type Mode,
 } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -28,14 +30,16 @@ const MODE_ICONS: Record<Mode, ReactNode> = {
 function Choice({
   label,
   testId,
+  mode,
   children,
 }: {
   label: string;
   testId?: string;
+  mode?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2" data-testid={testId}>
+    <div className="flex flex-col gap-2" data-testid={testId} data-mode={mode}>
       <span className="text-label text-muted-foreground">{label}</span>
       <div
         role="radiogroup"
@@ -49,7 +53,7 @@ function Choice({
 }
 
 const segment =
-  "flex min-h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-2 py-1 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4";
+  "flex min-h-7 flex-auto items-center justify-center gap-1 rounded-md px-2 py-1 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4";
 
 /** A theme's swatch in its own colours for that mode: its tint on its card, ringed by its page. */
 function Swatch({ id, light }: { id: string; light: boolean }) {
@@ -74,6 +78,11 @@ function Swatch({ id, light }: { id: string; light: boolean }) {
 export function SettingsPopover() {
   const { t } = useTranslation();
   const { lang, mode, darkTheme, lightTheme, update } = useSettingsStore();
+  // The list follows the appearance in effect; "system" follows the OS live (ADR 0026 step 4.6).
+  const [osDark, setOsDark] = useState(systemPrefersDark);
+  useEffect(() => watchSystemScheme(() => setOsDark(systemPrefersDark())), []);
+  const light = isLight(mode, osDark);
+  const shown = light ? lightTheme : darkTheme;
   // The chosen option is the selected tone with a tint outline (ADR 0026 step 5.3).
   const chosen = (on: boolean) =>
     on ? "chip-chosen" : "chip hover:bg-raised-hover";
@@ -130,33 +139,21 @@ export function SettingsPopover() {
           ))}
         </Choice>
 
-        <Choice label={t("settings.darkTheme")} testId="settings-dark-theme">
-          {DARK_THEMES.map((id) => (
+        <Choice
+          label={t("settings.theme")}
+          testId="settings-theme"
+          mode={light ? "light" : "dark"}
+        >
+          {themesFor(light).map((id) => (
             <button
               key={id}
               type="button"
               role="radio"
-              aria-checked={darkTheme === id}
-              className={cn(segment, chosen(darkTheme === id))}
-              onClick={() => update({ darkTheme: id })}
+              aria-checked={shown === id}
+              className={cn(segment, chosen(shown === id))}
+              onClick={() => update(themePatch(light, id))}
             >
-              <Swatch id={id} light={false} />
-              <span className="break-words">{t(`settings.themes.${id}`)}</span>
-            </button>
-          ))}
-        </Choice>
-
-        <Choice label={t("settings.lightTheme")} testId="settings-light-theme">
-          {LIGHT_THEMES.map((id) => (
-            <button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={lightTheme === id}
-              className={cn(segment, chosen(lightTheme === id))}
-              onClick={() => update({ lightTheme: id })}
-            >
-              <Swatch id={id} light />
+              <Swatch id={id} light={light} />
               <span className="break-words">{t(`settings.themes.${id}`)}</span>
             </button>
           ))}

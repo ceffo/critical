@@ -90,10 +90,10 @@ describe("powerRows", () => {
 describe("powerEffectsText", () => {
   it("words the hammer in each language", async () => {
     expect(powerEffectsText(await makeT("en"), hammerEffects)).toBe(
-      "weapon +5 · dice ×2 · melee only",
+      "weapon +5 · dice ×2",
     );
     expect(powerEffectsText(await makeT("fr"), hammerEffects)).toBe(
-      "arme +5 · dés ×2 · corps à corps seulement",
+      "arme +5 · dés ×2",
     );
   });
 
@@ -104,7 +104,7 @@ describe("powerEffectsText", () => {
         ac: -2,
         weapon_kind: "missile",
       }),
-    ).toBe("To hit +1 · AC −2 · missile only");
+    ).toBe("To hit +1 · AC −2");
   });
 });
 

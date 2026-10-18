@@ -64,8 +64,8 @@ export function powerRows(
 }
 
 /**
- * A power's effects in words: "weapon +5 · dice ×2 · melee only". The weapon +N and the dice
- * factor first (the Power Gem's), then the other effects, then the weapon-kind condition.
+ * A power's effects in words: "weapon +5 · dice ×2". The weapon +N and the dice
+ * factor first (the Power Gem's), then the other effects.
  */
 export function powerEffectsText(t: TFunction, e: BuffEffects): string {
   const parts: string[] = [];
@@ -80,7 +80,5 @@ export function powerEffectsText(t: TFunction, e: BuffEffects): string {
     if (v !== undefined)
       parts.push(t(`result.cast.fx.${key}`, { value: formatSigned(v) }));
   }
-  if (e.weapon_kind === "melee") parts.push(t("buffs.effMelee"));
-  if (e.weapon_kind === "missile") parts.push(t("buffs.effMissile"));
   return parts.join(" · ");
 }

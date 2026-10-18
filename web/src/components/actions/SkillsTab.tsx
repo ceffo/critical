@@ -34,7 +34,7 @@ export function SkillsTab() {
     const id = `skills-${kind}`;
     return (
       <section aria-labelledby={id} className="flex min-w-0 flex-col gap-2">
-        <h3 id={id} className="section-label">
+        <h3 id={id} className="group-heading section-label px-2.5">
           {label}
         </h3>
         <ul aria-label={label} className="flex flex-col gap-1">

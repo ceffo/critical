@@ -57,9 +57,9 @@ flowchart TD
   end
   subgraph B["Below the header: character card clamp(280px, 21vw, 384px) | rail 68 px | stage 1fr"]
     subgraph C["Character card (aside 'Character'), scrolls on its own"]
-      ID["Identity, abilities, THAC0"]
+      ID["Identity: name (text-key) with the class under it, level right-aligned on the name line; abilities, THAC0"]
       HP["HpBar: HIT POINTS"]
-      QH["QuickHp: HP CHANGE, labelled amount, Damage / Healing on one line"]
+      QH["QuickHp: HP CHANGE, amount (aria-label only), Damage / Healing on one line"]
       CC["ChargeCards"]
       SV["Saves: SAVING THROWS, click to roll"]
     end

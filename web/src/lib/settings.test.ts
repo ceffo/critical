@@ -9,8 +9,9 @@ import {
   loadSettings,
   savePaint,
   saveSettings,
+  themePatch,
 } from "./settings";
-import { themeVars } from "./theme";
+import { isLight, themeVars, themesFor } from "./theme";
 
 function memory(init: Record<string, string> = {}) {
   const data = new Map(Object.entries(init));
@@ -221,5 +222,31 @@ describe("settings", () => {
       dark: themeVars("deep", false),
       light: themeVars("parchment", true),
     });
+  });
+});
+
+describe("the theme list follows the appearance (ADR 0026 step 4.6)", () => {
+  it("lists only the themes with a dark mode in dark, a light mode in light", () => {
+    expect(themesFor(false)).toEqual([
+      "arcane",
+      "deep",
+      "plain",
+      "forest",
+      "ember",
+      "amber",
+    ]);
+    expect(themesFor(true)).toEqual(["arcane", "parchment", "plain", "forest"]);
+  });
+
+  it("system lists the list of the OS's current mode", () => {
+    expect(themesFor(isLight("system", true))).toEqual(themesFor(false));
+    expect(themesFor(isLight("system", false))).toEqual(themesFor(true));
+  });
+
+  it("a pick saves for the shown mode only", () => {
+    expect(themePatch(false, "deep")).toEqual({ darkTheme: "deep" });
+    expect(themePatch(true, "parchment")).toEqual({ lightTheme: "parchment" });
+    expect(themePatch(false, "parchment")).toEqual({});
+    expect(themePatch(true, "deep")).toEqual({});
   });
 });

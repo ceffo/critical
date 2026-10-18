@@ -76,6 +76,9 @@ export function EffectsTimeline() {
   const shown = expanded ? rows : rows.slice(0, REST_ROWS);
   const start = windowStart(turn);
   const current = turn - start;
+  // Out of combat (round 0) no round is counted: the numbers row and the current-round highlight go,
+  // the row itself stays so the effect rows do not move (ADR 0027 step 4.3).
+  const inCombat = turn > 0;
   const columns = Array.from({ length: size }, (_, i) => start + i);
   const grid: CSSProperties = {
     gridTemplateColumns: `${NAME_COLUMN} repeat(${size}, minmax(3rem, 1fr))`,
@@ -96,12 +99,15 @@ export function EffectsTimeline() {
           data-testid="effects-track"
           data-columns={size}
         >
-          {/* The current turn, highlighted across every row. */}
-          <div
-            aria-hidden
-            className="pointer-events-none self-stretch rounded-md bg-tint/10 ring-1 ring-tint/30 ring-inset"
-            style={{ gridColumn: current + 2, gridRow: "1 / -1" }}
-          />
+          {/* The current turn, highlighted across every row (in combat only). */}
+          {inCombat && (
+            <div
+              aria-hidden
+              data-testid="effects-current-column"
+              className="pointer-events-none self-stretch rounded-md bg-tint/10 ring-1 ring-tint/30 ring-inset"
+              style={{ gridColumn: current + 2, gridRow: "1 / -1" }}
+            />
+          )}
           <div
             className="sticky top-0 z-10 flex h-full items-center gap-2 bg-card"
             style={{ gridColumn: 1, gridRow: 1 }}
@@ -138,18 +144,19 @@ export function EffectsTimeline() {
                 "sticky top-0 z-10 flex h-full items-center justify-center text-label tabular-nums",
                 // Opaque, so effect rows scrolled under the sticky turn row stay hidden; the current
                 // column keeps its highlight tint.
-                i === current
+                inCombat && i === current
                   ? "bg-[color-mix(in_oklab,var(--tint)_10%,var(--card))]"
                   : "bg-card",
-                i === current
+                inCombat && i === current
                   ? "font-semibold text-tint"
                   : "text-muted-foreground",
                 i < current && "text-muted-foreground/40",
               )}
               style={{ gridColumn: i + 2, gridRow: 1 }}
-              aria-current={i === current ? "step" : undefined}
+              aria-current={inCombat && i === current ? "step" : undefined}
+              data-testid="effects-round-number"
             >
-              {t("effects.column", { n })}
+              {inCombat ? t("effects.column", { n }) : null}
             </span>
           ))}
           {shown.map((r, row) =>

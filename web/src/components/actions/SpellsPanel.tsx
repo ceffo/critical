@@ -283,7 +283,7 @@ export function SpellsPanel() {
                 className="mb-3 min-w-0 break-inside-avoid"
                 aria-label={t("spellSlots.level", { level })}
               >
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 pb-1">
+                <div className="group-heading mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 px-2">
                   <h3 className="section-label">
                     {t("spellSlots.level", { level })}
                   </h3>

@@ -21,17 +21,14 @@ export function weaponSwitch(
 }
 
 /**
- * The target modifiers that are set (ADR 0027 step 1.5): a large target or a situational modifier
- * other than 0. Each shows as a tag on the target bar while it is set.
+ * The target modifier that is set behind the toggle (ADR 0027 step 1.5): a situational modifier
+ * other than 0. It shows as a tag on the target bar while it is set. The size is not one: its chips
+ * are always on the line.
  */
-export function setModifiers(
-  form: Pick<AttackForm, "targetSize" | "situational">,
-): {
-  large: boolean;
+export function setModifiers(form: Pick<AttackForm, "situational">): {
   situational: { value: number; label: string } | null;
 } {
   return {
-    large: form.targetSize === "l",
     situational: form.situational.value !== 0 ? form.situational : null,
   };
 }

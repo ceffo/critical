@@ -180,7 +180,24 @@ async function expectCharacterCardLines(page: Page, where: string) {
       (await row.boundingBox())!.height,
       `${await row.getAttribute("data-save")} on one line, ${where}`,
     ).toBeLessThanOrEqual(29);
+  // The identity: the class under the name, the level right-aligned on the name's line.
+  const name = (await character.getByTestId("details-trigger").boundingBox())!;
+  const klass = (await character.getByTestId("class").boundingBox())!;
+  const level = (await character
+    .getByRole("button", { name: /^Niveau/ })
+    .boundingBox())!;
+  expect(klass.y, `class under the name, ${where}`).toBeGreaterThanOrEqual(
+    name.y + name.height - 1,
+  );
+  expect(
+    Math.abs(level.y + level.height / 2 - (name.y + 14)),
+    `level on the name's line, ${where}`,
+  ).toBeLessThanOrEqual(14);
   const hp = character.getByRole("group", { name: "Modifier les PV" });
+  await expect(
+    hp.getByText("Montant"),
+    `no visible amount label, ${where}`,
+  ).toHaveCount(0);
   const amount = (await hp.getByLabel("Montant").boundingBox())!;
   for (const name of ["Dégâts", "Soins"]) {
     const b = (await hp.getByRole("button", { name }).boundingBox())!;
@@ -301,7 +318,7 @@ const VIEWPORTS = [
   { width: 1920, height: 1080 },
   { width: 2560, height: 1440 },
 ];
-const ACTIVITIES = ["Act", "Spells", "Experience", "Inventory"] as const;
+const ACTIVITIES = ["Act", "Spells", "Inventory", "Experience"] as const;
 /** Activities whose screenshots are kept, at the two viewports of the design (ADR 0022). */
 const SHOTS = new Set(["1440x900", "1707x1300"]);
 /** A long effect name: it wraps in the expanded header, never cut. */
@@ -743,11 +760,33 @@ test("settings: language, appearance and both themes apply live and persist acro
   await openDashboard(page);
   expect(await isDark(page)).toBe(false); // System by default, the OS is light
 
-  await chooseTheme(page, "light", "Parchment");
+  await chooseTheme(page, "Parchment");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
+  // The list follows the appearance: light themes in Light, dark themes in Dark.
+  let popover = await openSettings(page);
+  const list = popover.getByTestId("settings-theme");
+  await expect(list).toHaveAttribute("data-mode", "light");
+  await expect(list.getByRole("radio")).toHaveText([
+    /Arcane/,
+    /Parchment/,
+    /Plain/,
+    /Forest/,
+  ]);
+  await page.keyboard.press("Escape");
   await chooseSetting(page, "Dark");
   expect(await isDark(page)).toBe(true);
-  await chooseTheme(page, "dark", "Deep");
+  await openSettings(page);
+  await expect(list).toHaveAttribute("data-mode", "dark");
+  await expect(list.getByRole("radio")).toHaveText([
+    /Arcane/,
+    /Deep/,
+    /Plain/,
+    /Forest/,
+    /Ember/,
+    /Amber/,
+  ]);
+  await page.keyboard.press("Escape");
+  await chooseTheme(page, "Deep");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
   await chooseLanguage(page, "fr");
   await expect(
@@ -767,18 +806,17 @@ test("settings: language, appearance and both themes apply live and persist acro
     page.getByRole("button", { name: "Tour suivant" }),
   ).toBeVisible();
   expect(await rootVar(page, "--tint")).toMatch(DEEP);
-  const popover = await openSettings(page);
+  popover = await openSettings(page);
   for (const name of ["Français", "Sombre"])
     await expect(
       popover.getByRole("radio", { name, exact: true }),
     ).toHaveAttribute("aria-checked", "true");
-  for (const [group, name] of [
-    ["settings-dark-theme", "Abysses"],
-    ["settings-light-theme", "Parchemin"],
-  ])
-    await expect(
-      popover.getByTestId(group).getByRole("radio", { name, exact: true }),
-    ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    popover.getByTestId("settings-theme").getByRole("radio", {
+      name: "Abysses",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-checked", "true");
   await expectNoClippedText(popover, "settings popover, fr");
   await expectWholeWords(popover, "settings popover, fr");
   await snap(page, "settings-popover-fr");
@@ -789,6 +827,26 @@ test("settings: language, appearance and both themes apply live and persist acro
   await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
   await page.emulateMedia({ colorScheme: "dark" });
   await expect.poll(() => isDark(page)).toBe(true);
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
+
+  // Dark -> Light -> Dark: each appearance keeps its own pick, and the list switches with it.
+  await popover.getByRole("radio", { name: "Clair", exact: true }).click();
+  await expect(popover.getByTestId("settings-theme")).toHaveAttribute(
+    "data-mode",
+    "light",
+  );
+  await expect(
+    popover
+      .getByTestId("settings-theme")
+      .getByRole("radio", { name: "Parchemin", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
+  await popover.getByRole("radio", { name: "Sombre", exact: true }).click();
+  await expect(
+    popover
+      .getByTestId("settings-theme")
+      .getByRole("radio", { name: "Abysses", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
 });
 
@@ -860,12 +918,16 @@ test("theme: the main screens in dark and light, every theme in each of its mode
   await openWorkspace(page, "Act");
   await chooseLanguage(page, "fr");
   for (const [mode, which, themes] of [
-    ["Sombre", "dark", ["Arcane", "Abysses", "Sobre"]],
-    ["Clair", "light", ["Arcane", "Parchemin", "Sobre"]],
+    [
+      "Sombre",
+      "dark",
+      ["Arcane", "Abysses", "Sobre", "Forêt", "Braise", "Ambre"],
+    ],
+    ["Clair", "light", ["Arcane", "Parchemin", "Sobre", "Forêt"]],
   ] as const) {
     await chooseSetting(page, mode);
     for (const name of themes) {
-      await chooseTheme(page, which, name);
+      await chooseTheme(page, name);
       await page.waitForTimeout(150); // let colour transitions settle
       await expectNoClippedText(page.locator("body"), `${which} ${name}, fr`);
       // Parchment's own touches (ADR 0026 step 7): Cinzel section labels, a gilt latest outline;
@@ -1125,8 +1187,9 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     }
     await rail.nth(0).click();
     await expectNoClippedText(stage, `act, ${where}`);
-    if (SHOTS.has(`${vp.width}x${vp.height}`)) {
-      // ADR 0027 step 7.2: AC, Inconnue and the two tags on one line.
+    {
+      await snap(page, `target-bar-fr-${vp.width}x${vp.height}`);
+      // ADR 0027 steps 1.5 and 7.2: AC, Inconnue, the size chips and the toggle on one line; the tag may wrap.
       const bar = page.getByRole("group", { name: "Cible" });
       const middle = async (l: Locator) => {
         const b = (await l.boundingBox())!;
@@ -1135,13 +1198,14 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       const ac = await middle(bar.getByLabel("CA de la cible"));
       for (const el of [
         bar.getByRole("button", { name: "Inconnue" }),
-        ...(await bar.getByTestId("modifier-tag").all()),
+        bar.getByRole("radiogroup", { name: "Taille de la cible" }),
+        bar.getByRole("button", { name: "Modificateur situationnel" }),
       ])
         expect(
           Math.abs((await middle(el)) - ac),
           `target bar on one line, ${where}`,
         ).toBeLessThanOrEqual(2);
-      await expect(bar.getByTestId("modifier-tag")).toHaveCount(2);
+      await expect(bar.getByTestId("modifier-tag")).toHaveCount(1);
     }
     if (vp.width === 1440) {
       // ADR 0027 step 6: the now band is as tall as the Weapons tab, which does not scroll, and the
@@ -1291,7 +1355,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     }
     // ADR 0027 step 14.4: the ledger card is as tall as its rows (two entries and the opening row),
     // not the rest of the stage.
-    await rail.nth(2).click();
+    await rail.nth(3).click();
     const ledger = stage.getByTestId("xp-ledger");
     await expect(ledger.getByTestId("xp-row")).toHaveCount(2);
     await expectNoClippedText(stage, `experience, ${where}`);
@@ -1304,7 +1368,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     ).toBeLessThanOrEqual(24);
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `experience-fr-${vp.width}x${vp.height}`);
-    await rail.nth(3).click();
+    await rail.nth(2).click();
     await expectNoClippedText(stage, `inventory, ${where}`);
     await expectWholeWords(stage, `inventory, ${where}`);
     if (vp.width === 1707) {
@@ -1628,5 +1692,59 @@ test("the last result is one short line, at most a sixth of the viewport, the fu
     // The full wording (journal text, round and time) is the tooltip.
     await expect(last.locator("p")).toHaveAttribute("title", /Rary/);
     await snap(page, `last-result-long-spell-fr-${vp.width}x${vp.height}`);
+  }
+});
+
+// ADR 0026 step 6.7: every in-card group heading (the spell list's and the preparation's levels,
+// the skills' groups, the inventory's column heads, the character card's groups) is the one shared
+// heading band, in French, in a dark and a light theme. Only a browser paints the tones, so the
+// screenshots (and the no-cut audit on them) are the check.
+test("group headings: one shared band, French, dark and light", async ({
+  page,
+  stack,
+}) => {
+  test.setTimeout(60_000);
+  const put = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spells: PREPARED }),
+  });
+  expect(put.ok).toBe(true);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const rail = page.getByRole("navigation", { name: "Activités" });
+  const actions = page.getByRole("region", { name: "Actions" });
+  for (const [mode, which, theme] of [
+    ["Sombre", "dark", "Arcane"],
+    ["Clair", "light", "Parchemin"],
+  ] as const) {
+    await chooseSetting(page, mode);
+    await chooseTheme(page, theme);
+    await page.waitForTimeout(150); // let colour transitions settle
+    const tag = `${which}-${theme.toLowerCase()}`;
+    await rail.getByRole("button", { name: "Agir", exact: true }).click();
+    await actions.getByRole("tab", { name: "Sorts" }).click();
+    await expect(actions.getByRole("tabpanel")).toContainText("Niveau 1");
+    // Each level's head is the shared band, not the card's tone.
+    await expect(
+      actions.locator(".group-heading", { hasText: "Niveau 1" }).first(),
+    ).toBeVisible();
+    await expectNoClippedText(actions, `spell levels, ${tag}`);
+    await snap(page, `fr-${tag}-spells`);
+    await actions.getByRole("button", { name: "Préparer les sorts" }).click();
+    const form = actions.getByRole("form", {
+      name: "Préparer les sorts du jour",
+    });
+    await expect(form.getByTestId("grimoire-level-1")).toBeVisible();
+    await expectNoClippedText(actions, `preparation, ${tag}`);
+    await snap(page, `fr-${tag}-preparation`);
+    await actions.getByRole("button", { name: "Annuler" }).click();
+    await actions.getByRole("tab", { name: "Compétences" }).click();
+    await expect(actions.locator(".group-heading").first()).toBeVisible();
+    await expectNoClippedText(actions, `skills, ${tag}`);
+    await snap(page, `fr-${tag}-skills`);
+    await rail.getByRole("button", { name: "Inventaire", exact: true }).click();
+    await expectNoClippedText(page.locator("main"), `inventory, ${tag}`);
+    await snap(page, `fr-${tag}-inventory`);
   }
 });

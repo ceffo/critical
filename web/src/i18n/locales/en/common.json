@@ -18,8 +18,7 @@
     "title": "Settings",
     "language": "Language",
     "appearance": "Appearance",
-    "darkTheme": "Dark",
-    "lightTheme": "Light",
+    "theme": "Theme",
     "mode": {
       "dark": "Dark",
       "light": "Light",
@@ -29,7 +28,10 @@
       "arcane": "Arcane",
       "deep": "Deep",
       "parchment": "Parchment",
-      "plain": "Plain"
+      "plain": "Plain",
+      "forest": "Forest",
+      "ember": "Ember",
+      "amber": "Amber"
     }
   },
   "shell": {
@@ -160,8 +162,6 @@
     "inactive": "needs STR {{min}}",
     "effWeapon": "weapon +{{n}}",
     "effDice": "dice ×{{n}}",
-    "effMelee": "melee only",
-    "effMissile": "missile only",
     "inactiveHint": "No effect until STR reaches {{min}}",
     "replaced": "replaced by Improved Strength",
     "replacedHint": "Improved Strength replaces the other Strength bonuses while it lasts",
@@ -268,13 +268,11 @@
     "needs": "needs {{n}} vs AC {{ac}}",
     "needsUnknown": "AC unknown",
     "acShort": "AC",
-    "sizeShort": "Size",
     "otherWeapons": "Other weapons",
     "otherWeapon": "Other weapon",
     "otherWeaponPlaceholder": "Other weapon…",
-    "modifiers": "Size and situational modifier",
+    "modifiers": "Situational modifier",
     "tags": {
-      "large": "Size L",
       "situational": "Situational {{value}}"
     },
     "line": {
@@ -1009,7 +1007,6 @@
       },
       "byHand": "Apply by hand",
       "tracked": "Tracked effects",
-      "note": "Note",
       "text": "Spell text",
       "fx": {
         "to_hit": "To hit {{value}}",

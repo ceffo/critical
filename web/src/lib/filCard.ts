@@ -520,16 +520,6 @@ export function lastResultEntry(entries: readonly LogEntry[]): LogEntry | null {
 }
 
 /**
- * The chip of the header's last result: an attack's d20 (its wording already carries the verdict
- * and the damage), else the journal row's value.
- */
-export function lastResultChip(e: LogEntry): RowValue | null {
-  const attack = attackPayload(e);
-  if (attack) return { text: String(attack.d20Roll), tone: "muted" };
-  return rowValue(e);
-}
-
-/**
  * The faces of a single dice group ("6d6", "1d8+2" → 6, 8), to mark a die at its maximum or at 1;
  * null for anything else ("2d6+1d4").
  */

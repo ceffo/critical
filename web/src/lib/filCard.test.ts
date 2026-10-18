@@ -15,7 +15,6 @@ import {
   dieTone,
   filterEntries,
   isRollEntry,
-  lastResultChip,
   lastResultEntry,
   latestResult,
   liveKind,
@@ -1030,12 +1029,6 @@ describe("header: last result", () => {
     expect(
       lastResultEntry([{ ...check, status: "voided" }, skill, save])?.id,
     ).toBe(6);
-  });
-
-  it("an attack shows its d20 in the chip, any other result its row value", () => {
-    expect(lastResultChip(attack)).toEqual({ text: "14", tone: "muted" });
-    expect(lastResultChip(save)).toEqual({ text: "12", tone: "pass" });
-    expect(lastResultChip(dice)).toEqual({ text: "7", tone: "ink" });
   });
 });
 

@@ -54,6 +54,7 @@ export function TurnBlock() {
       <div className="flex flex-col items-start gap-1">
         <div className="flex gap-1">
           <Button
+            size="lg"
             variant="main"
             disabled={busy}
             onClick={() => void nextRound()}

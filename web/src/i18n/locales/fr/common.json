@@ -265,13 +265,11 @@
     "needs": "{{n}} contre CA {{ac}}",
     "needsUnknown": "CA inconnue",
     "acShort": "CA",
-    "sizeShort": "Taille",
     "otherWeapons": "Autres armes",
     "otherWeapon": "Autre arme",
     "otherWeaponPlaceholder": "Autre arme…",
-    "modifiers": "Taille et modificateur situationnel",
+    "modifiers": "Modificateur situationnel",
     "tags": {
-      "large": "Taille G",
       "situational": "Situationnel {{value}}"
     },
     "line": {

@@ -216,8 +216,13 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       listing every other weapon, names in full in the UI language. The chips of step 2.5 (one per
       other weapon) go. A bow's ammunition choice stays in the row.
    2. **Target bar on one line**: AC stepper and "Inconnue" (every turn); **Size and Situational
-      behind a small toggle** (rare). When set (size L, situational ≠ 0) they show as **tags** on the
-      line (step 1.5). The choices still persist on the server across reload.
+      behind a small toggle** (rare). *Amended (2026-10-17, user: "The selection for the size of the
+      creature should not be hidden behind a menu. It should be on the same line. This is like the
+      most important setting."):* the **target size is not behind the toggle**: the S/M · L chips sit
+      on the target line beside the AC stepper, always visible, one click to change; the "large" tag
+      goes (the chips show it). **Only the situational modifier** stays behind the toggle, and shows
+      as a **tag** on the line when ≠ 0 (step 1.5). The line fits on one line from 1280 px wide
+      (French). The choices still persist on the server across reload.
    3. The weapon in hand and its "needs N vs AC" line follow ADR 0026 step 5.9 and step 5.3's
       full-ink rule; Attack stays the one tall control (ADR 0022 step 3.3).
 

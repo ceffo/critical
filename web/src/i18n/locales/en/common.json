@@ -265,13 +265,11 @@
     "needs": "needs {{n}} vs AC {{ac}}",
     "needsUnknown": "AC unknown",
     "acShort": "AC",
-    "sizeShort": "Size",
     "otherWeapons": "Other weapons",
     "otherWeapon": "Other weapon",
     "otherWeaponPlaceholder": "Other weapon…",
-    "modifiers": "Size and situational modifier",
+    "modifiers": "Situational modifier",
     "tags": {
-      "large": "Size L",
       "situational": "Situational {{value}}"
     },
     "line": {

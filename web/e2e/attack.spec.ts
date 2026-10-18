@@ -37,8 +37,9 @@ test("a melee attack lists every modifier in the result card and the log", async
   await chooseWeapon(page, "Long Sword +2");
   await expect(ammoChips(page)).toHaveCount(0);
   await form.getByLabel("Target AC").fill("5");
-  await openTargetModifiers(page);
+  // The size chips are on the target line; only the situational modifier is behind the toggle.
   await form.getByRole("radio", { name: "Large" }).click();
+  await openTargetModifiers(page);
   await form.getByLabel("Situational", { exact: true }).fill("2");
   // Typed key by key: every keystroke is saved on the server, spaces included.
   await form.getByLabel("Reason").pressSequentially("Rear attack");
@@ -517,8 +518,8 @@ test("the attack form is kept on the server across a reload; switching weapons n
   ).toBeVisible();
   await chooseAmmo(page, "Arrows +2");
   await form.getByLabel("Target AC").fill("-3");
-  await openTargetModifiers(page);
   await form.getByRole("radio", { name: "Large" }).click();
+  await openTargetModifiers(page);
   await form.getByRole("button", { name: "Raise the modifier" }).click();
   await form.getByRole("button", { name: "Raise the modifier" }).click();
   await form.getByLabel("Reason").fill("cover");
@@ -547,27 +548,28 @@ test("the attack form is kept on the server across a reload; switching weapons n
     ammoChips(page).locator('[aria-checked="true"]'),
   ).toHaveAttribute("data-item", "arrows_plus2");
   await expect(form.getByLabel("Target AC")).toHaveValue("-3");
-  // ADR 0027 step 7.2: the set modifiers show as tags on the target bar, the toggle closed.
+  // ADR 0027 steps 1.5 and 7.2: the size chips are on the target line (Large chosen), the
+  // situational modifier shows as a tag, the toggle closed.
+  await expect(form.getByRole("radio", { name: "Large" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
   const tags = form.getByTestId("modifier-tag");
-  await expect(tags).toHaveText(["Size L", "Situational +2"]);
+  await expect(tags).toHaveText(["Situational +2"]);
   await expect(tags.last()).toHaveAttribute("title", "cover");
-  // One line: the tags sit beside the AC (same vertical centre).
+  // One line: the size chips and the toggle sit beside the AC (same vertical centre).
   const middle = async (l: Locator) => {
     const b = (await l.boundingBox())!;
     return b.y + b.height / 2;
   };
   expect(
     Math.abs(
-      (await middle(tags.first())) -
+      (await middle(form.getByRole("radiogroup", { name: "Target size" }))) -
         (await middle(form.getByLabel("Target AC"))),
     ),
   ).toBeLessThanOrEqual(2);
   await snap(page, "target-tags");
   await openTargetModifiers(page);
-  await expect(form.getByRole("radio", { name: "Large" })).toHaveAttribute(
-    "aria-checked",
-    "true",
-  );
   await expect(form.getByLabel("Situational", { exact: true })).toHaveValue(
     "+2",
   );

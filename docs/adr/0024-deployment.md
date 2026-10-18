@@ -20,6 +20,9 @@ newest version that passed staging or the one asked, and only a repository admin
 2026-10-17)"): `just major` makes the next staging release the next major version (step 3).
 Amended again 2026-10-17 (see "Amendment (one tag ruleset, 2026-10-17)"): GitHub refuses the Actions-app
 bypass on a personal repository, so only the `release tags` ruleset (step 10.2) remains.
+Amended again 2026-10-17, **accepted, user decision 2026-10-17** (see "Amendment (restore point: a backup
+file, 2026-10-17)"): the restore point is a `pg_dump` kept encrypted as an artifact of the Promote run, no
+longer a copy database on the cluster (steps 4.2, 7, 9.2 and 9.3).
 Amended again 2026-10-18 (see "Amendment (real login, 2026-10-18)"): step 8 chooses option (c), the login
 of [ADR 0029](0029-users-login-and-access.md); public IPs are allowed once the gate is live, the
 no-public-IP check becomes a gate check, and the apps are named `critical-hit` and `critical-hit-staging`.
@@ -164,10 +167,12 @@ flowchart LR
       it says which version it promotes, its commit and digest, and what production runs. With no version,
       a failed read stops it (never a fallback to an older version), and a newest version older than
       production's is refused (a rollback names its version);
-   2. it takes the restore point of step 9.2, a verified copy of `critical_prod`, and waits for it
-      to complete; no restore point, no deploy. _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md));
-      was: an on-demand snapshot of the production volume. Amended again 2026-10-16 (restore point); was:
-      a `pg_dump` kept where step 9.2 would say._ It is private data (step 7);
+   2. it takes the restore point of step 9.2, a `pg_dump` of `critical_prod` kept encrypted as an artifact
+      of its run, and waits for it to be kept; no restore point kept, no deploy. _Amended 2026-10-16
+      ([ADR 0025](0025-postgresql-storage.md)); was: an on-demand snapshot of the production volume. Amended
+      again 2026-10-16 (restore point); was: a `pg_dump` kept where step 9.2 would say. Amended again
+      2026-10-17 (restore point: a backup file); was: a verified copy database of `critical_prod`._ It is
+      private data (step 7);
    3. it deploys **the same image** (same digest as staging, no rebuild) to production;
    4. it runs the smoke check of step 3.3 against production;
    5. it creates a GitHub Release for the tag.
@@ -215,7 +220,10 @@ flowchart LR
    rows), never enters the public repo, a PR build, a workflow artifact, a shared build cache or a
    log. It lives only in the private fly registry image and in the fly PostgreSQL cluster with its
    volume snapshots (and on the operator's machine for a downloaded dump, step 9.4). _Amended
-   2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: on the fly volumes._
+   2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: on the fly volumes._ One exception, _amended
+   2026-10-17 (restore point: a backup file)_: the promotion's restore point (step 9.2) is a workflow
+   artifact, **encrypted only** (the repository is public, and so are its artifacts); the clear dump never
+   leaves the runner and never reaches the log.
    1. PR builds and the CI image check use the fixture catalogue `api/testdata/catalogue.json`.
    2. The release build never echoes the catalogue, the deploy key or a token (no shell tracing), and
       does not export the layer that holds the catalogue to a build cache that other workflows can
@@ -250,27 +258,28 @@ flowchart LR
    1. The cluster's volume has fly's daily snapshots, with a set retention (30 days, answered
       2026-10-16; the runbook records the value set).
       A snapshot holds both databases.
-   2. _Answered 2026-10-16 (user, "1a"); was: open, where a pre-promotion `pg_dump` is kept._ Every
-      promotion first takes a **restore point**: a copy database of `critical_prod` on the same cluster,
-      named after the release being promoted and the time, `critical_prod_pre_<tag>_<UTC time>` (e.g.
-      `critical_prod_pre_v1_2_3_20261017153000`), made by `pg_dump` and `pg_restore` and verified (the
-      same tables and recorded migrations as `critical_prod`, rows in it). It never leaves fly: not a
-      GitHub artifact, a cache or a bucket (step 7). fly's daily snapshots of step 9.1 cover the loss of
-      the cluster machine.
-      1. The newest **3** restore points are kept; older ones are dropped by the promotion that adds one.
-      2. The promotion refuses to take one when `critical_prod`, the copies it keeps and the new one
-         would use more than 300 MB (the 1 GB volume is shared with the other app). The budget counts
-         critical's databases only: `critical_prod` cannot size the other app's databases nor see the
-         volume's free space, so the operator watches the volume's use (the runbook's "Promotion").
-      3. A copy is locked like every database of the cluster: owned by `critical_prod`, CONNECT revoked
-         from PUBLIC. `critical_prod` has the `CREATEDB` attribute for this, and only this (it creates,
-         owns and drops its copies); `critical_staging` has not.
-      4. It is made in an ephemeral `fly console` machine of the production app, started from the release
-         image (which ships the PostgreSQL client of the cluster's major version) without starting the
-         server, so the app's own secret is the only credential used and the running app is untouched.
-   3. Restore: `critical_prod` is restored from a restore point (or a `pg_dump` taken by step 9.4)
-      without touching `critical_staging`: the current database is set aside and the restore point is
-      copied into its place, with no server running on it meanwhile (the runbook's "Rollback").
+   2. _Answered 2026-10-17 (user: "yes, go with the backup file"); was: a copy database of `critical_prod`
+      on the same cluster (answered 2026-10-16, "1a"), and before that open._ Every promotion first takes a
+      **restore point**: a `pg_dump` of `critical_prod` (custom format, `--no-owner --no-acl`) with the row
+      count of every table, named after the release being promoted and the time,
+      `critical_prod_pre_<tag>_<UTC time>` (e.g. `critical_prod_pre_v1_2_3_20261017153000`), kept as an
+      artifact of that Promote run. Nothing is written on the cluster.
+      1. The dump is taken in an ephemeral `fly console` machine of the production app, started from the
+         release image (which ships the PostgreSQL client of the cluster's major version) without starting
+         the server, so the app's own secret is the only database credential used and the running app is
+         untouched. It comes back to the runner on the console's output, checked (size, SHA-256), and
+         never into the log.
+      2. It is encrypted on the runner with gpg (AES-256) under the passphrase `RESTORE_POINT_PASSPHRASE`, a
+         secret of the `production` environment that only the restore point step reads; the operator keeps a
+         copy (GitHub never shows a secret back). Only the encrypted file is uploaded (step 7).
+      3. The artifact is kept **90 days**, the longest GitHub allows; the operator's dumps (step 9.4) and the
+         snapshots (step 9.1) cover what is older.
+      4. A failed dump, a damaged or cut transfer, a failed encryption or a failed upload stops the
+         promotion before the deploy.
+   3. Restore: `critical_prod` is restored from a restore point (fetched and decrypted by `just
+      restore-point-fetch`, _amended 2026-10-17; was: a copy database copied into place_) or a `pg_dump`
+      taken by step 9.4, without touching `critical_staging`: the current database is set aside and the dump
+      is restored into a new empty one, with no server running on it meanwhile (the runbook's "Rollback").
       Restoring a cluster volume snapshot rolls back every database of the cluster; it is the fallback
       when no usable restore point exists.
    4. `just db-backup <env>` downloads a `pg_dump` of that environment's database into a gitignored
@@ -310,7 +319,7 @@ part of this ADR to accepted. Answered rows keep their original default and say 
 | Production data | fresh database | **Answered 2026-10-16: fresh database** (_amended 2026-10-16; was: seeded once with the user's data, the local `.dev/critical.db` copied into `critical_prod` by the copy tool_): production's first boot seeds it from `seeds/` and the catalogue, like staging; the user re-enters the few character-sheet edits made in the app. See "Amendment (production starts from the seeds, 2026-10-16)" |
 | Production approval | none: running the promotion is the act (_amended 2026-10-17; was: pushing the tag is the act_) | a required reviewer on the `production` environment. **Answered 2026-10-17 (proposed with the promotion on demand): none**, the promotion checks that the actor is a repository admin (option (a)) |
 | Names, region, size | `critical-staging` / `critical-prod` (**answered 2026-10-17: `critical-hit-staging` / `critical-hit`**), region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the shared cluster `tournesol-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
-| Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | **Answered 2026-10-16 ("1a"): a copy database on the same cluster** (a restore point, newest 3 kept), not a dump file; see "Amendment (restore point: a copy database, 2026-10-16)" |
+| Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | **Answered 2026-10-17: a backup file**, the `pg_dump` encrypted as an artifact of the Promote run, kept 90 days; see "Amendment (restore point: a backup file, 2026-10-17)". _Was: answered 2026-10-16 ("1a"), a copy database on the same cluster_ |
 | Snapshot retention of the cluster volume (step 9.1) | 30 days | **Answered 2026-10-16: 30 days** (the default) |
 | A migration during a rolling production deploy (step 5.2) | a release's migrations are additive, so the previous release keeps working on the new schema while its machines are replaced | **Answered 2026-10-16: additive migrations** (the default); the `immediate` strategy is not used |
 | Custom domain | none | a domain, only once public access is chosen |
@@ -433,6 +442,9 @@ _"we go with A"_.
   (step 9.5).
 
 ## Amendment (restore point: a copy database, 2026-10-16)
+
+_Superseded 2026-10-17 for the restore point by "Amendment (restore point: a backup file, 2026-10-17)": no
+copy database, no `CREATEDB`. Its step 8.3 part (no bypass for production) stands._
 
 The promotion needed a place for its pre-promotion `pg_dump` (step 9.2, open). Offered: the cluster's own
 volume, a private store, or a dump taken by the operator before tagging. User, 2026-10-16: _"1a"_, a copy
@@ -567,6 +579,33 @@ creation rule.
   exist. Were the repository moved to an organization, they could come back.
 - **Tests**: `scripts/test-major.sh` (the dry-run is `release tags` alone; a run with `gh` stubbed deletes the
   two obsolete rulesets by name, replaces `release tags` and writes nothing else).
+
+## Amendment (restore point: a backup file, 2026-10-17)
+
+**Accepted, user decision 2026-10-17**: _"yes, go with the backup file"_. Three promotions failed at the copy
+database of the 2026-10-16 amendment (the last, run 39090345876): restoring `critical_prod` into a copy on
+`tournesol-db` (shared with the other app, `shared-cpu-1x`, 256 MB) ran the VM out of memory, and the cluster
+dropped connections mid-restore. fly's own `flypgadmin` sessions also held leftover copies, so
+`critical_prod` could not drop them. Scaling the cluster costs and it is shared; a `pg_dump` alone is light.
+
+- **Step 4.2**: the restore point is the dump of step 9.2, kept before the deploy: no restore point kept, no
+  deploy.
+- **Step 7**: one exception, the restore point as an encrypted workflow artifact. The user's words were
+  "kept privately"; the repository is public and GitHub lets anyone signed in download a public repository's
+  artifacts, so the file is gpg-encrypted on the runner (AES-256, the `production` secret
+  `RESTORE_POINT_PASSPHRASE`, made by `just restore-point-key`) and only the ciphertext is uploaded.
+- **Step 9.2**: a `pg_dump` and its table counts, made in the console machine as before, sent back on its
+  output, checked, encrypted, uploaded with the run, kept 90 days (GitHub's longest). No copy database, no
+  retention or size budget on the cluster.
+- **Step 9.3**: `just restore-point-fetch <version>` downloads, decrypts and unpacks it like a `just
+  db-backup` folder; the drill and the runbook's restore from a dump take it from there.
+- **Privilege**: `critical_prod` no longer needs `CREATEDB`; the provisioning removes it on its next run.
+- **Leftovers**: the copy databases `critical_prod_pre_*` already on the cluster are dropped by hand by the
+  cluster's superuser, never by the pipeline (the runbook's "Promotion").
+- **Tests**: `scripts/test-promotion.sh` (the block kept out of the log, a cut or damaged one refused,
+  the file decrypting with the passphrase only, the two halves around the upload, the fetch and the key
+  scripts, the workflow parsed) and `scripts/image-smoke.sh` (the dump from the real image restores with its
+  counts, no database created, a lost connection retried).
 
 ## Amendment (real login, 2026-10-18)
 

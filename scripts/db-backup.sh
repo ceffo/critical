@@ -9,7 +9,7 @@
 #   scripts/db-backup.sh <staging|prod>
 #
 # A dump holds the catalogue (book text): it stays on this machine, mode 700/600, and is never committed,
-# attached to a workflow or printed. The database user is critical_<env> and its password comes from the
+# attached to a workflow or printed (only the promotion's restore point is, encrypted: scripts/promote.sh). The database user is critical_<env> and its password comes from the
 # operator's environment: PGPASSWORD, else the file $CRITICAL_PASSWORD_DIR/critical_<env>.password (default
 # ~/.config/critical, where `just fly-db-provision --password-dir` writes it). It reaches pg_dump through the
 # environment only: never an argument, never printed. pg_dump must be at least the server's version (17).

@@ -7,8 +7,10 @@
 # The image holds no database (ADR 0025 step 1) and refuses the in-memory storage (step 8.3), so the
 # smoke starts its own empty PostgreSQL next to it, on a private network: the boot migrates, seeds and
 # imports the fixture catalogue into it. Then it takes restore points of that database with the image's
-# own PostgreSQL client (scripts/restore-point.sh, as the promotion does in a `fly console` machine of the
-# release image, ADR 0024 step 4.2): copies made and verified, the retention, and the refusals. The containers and the network get unique names and are
+# own PostgreSQL client and shell (scripts/restore-point.sh, as the promotion does in a `fly console` machine
+# of the release image, ADR 0024 steps 4.2 and 9.2): the dump comes back whole (checksum, size, the dump and
+# its counts), restores into a scratch database with the same row counts, no database is created by it, a
+# lost connection is retried, and the refusals. The containers and the network get unique names and are
 # removed on exit (the database has no volume); nothing else is touched.
 set -euo pipefail
 
@@ -122,84 +124,83 @@ docker inspect -f '{{json .Config.Healthcheck.Test}}' "$name" | grep -q '/api/he
     fail "the image HEALTHCHECK does not call /api/health"
 
 # restore_point <container> <name> [env...]: runs scripts/restore-point.sh in the container, as the
-# promotion runs it in its console machine; output in $rp_out.
+# promotion runs it in its console machine; stdout in $rp_out, stderr in $rp_err.
 dsn="postgres://critical:critical@$db:5432/critical?sslmode=disable"
 # The migrations the image embeds, as scripts/promote.sh lists them (RP_MIGRATIONS overrides them).
 migrations="$(cd "$root/api/internal/storage/postgres/migrations" && ls -- *.sql | tr '\n' ' ')"
+rp_dir="$(mktemp -d)"
 restore_point() {
     local c="$1" n="$2"
     shift 2
     rp_status=0
     # shellcheck disable=SC2086 # one argument per migration
     rp_out="$(docker exec -i -e CRITICAL_DSN="$dsn" "$@" "$c" sh -s "$n" ${RP_MIGRATIONS:-$migrations} \
-        <"$root/scripts/restore-point.sh" 2>&1)" || rp_status=$?
+        <"$root/scripts/restore-point.sh" 2>"$rp_dir/err")" || rp_status=$?
+    rp_err="$(cat "$rp_dir/err")"
+}
+# unpack <name>: the block of $rp_out decoded into $rp_dir/<name>.tar, checked against the OK line, unpacked.
+unpack() {
+    local ok sum bytes
+    ok="$(grep -E "^restore-point: OK $1 [0-9a-f]{64} [0-9]+\$" <<<"$rp_out")" || fail "no OK line for $1: $rp_out $rp_err"
+    read -r _ _ _ sum bytes <<<"$ok"
+    awk -v b="restore-point: BEGIN $1" -v e="restore-point: END $1" '$0 == e { exit } f { print } $0 == b { f = 1 }' <<<"$rp_out" \
+        | base64 -d >"$rp_dir/$1.tar" || fail "the block of $1 does not decode"
+    [ "$(wc -c <"$rp_dir/$1.tar" | tr -d ' ')" = "$bytes" ] && [ "$(sha256sum "$rp_dir/$1.tar" | cut -d' ' -f1)" = "$sum" ] ||
+        fail "$1 came back damaged (size or checksum)"
+    [ "$(tar -tf "$rp_dir/$1.tar" | LC_ALL=C sort | tr '\n' ' ')" = "counts.txt critical.dump " ] || fail "$1 does not hold the dump and its counts"
+    mkdir -p "$rp_dir/$1"
+    tar -C "$rp_dir/$1" -xf "$rp_dir/$1.tar"
 }
 sql() { docker exec "$db" psql -X -q -A -t -U critical -d critical -c "$1"; }
+databases() { sql "SELECT string_agg(datname, ' ' ORDER BY datname) FROM pg_database"; }
+before="$(databases)"
 # A machine started from the image without its entrypoint, like the console machine.
 docker run -d --name "$name-console" --network "$name" --entrypoint sleep "$image" infinity >/dev/null
-trap 'cleanup; docker rm -f "$name-console" >/dev/null 2>&1 || true' EXIT
-for n in 1 2 3; do
-    restore_point "$name-console" "critical_pre_v0_0_${n}_2026010100000$n" -e RESTORE_POINT_KEEP=2
-    [ "$rp_status" = 0 ] && [[ "$rp_out" == *"restore-point: OK critical_pre_v0_0_${n}_2026010100000$n"* ]] ||
-        fail "restore point $n: exit $rp_status: $rp_out"
-done
-echo "$rp_out"
-copies="$(sql "SELECT string_agg(datname, ' ' ORDER BY datname) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")"
-[ "$copies" = "critical_pre_v0_0_2_20260101000002 critical_pre_v0_0_3_20260101000003" ] ||
-    fail "restore points kept: '$copies', want the newest two"
-[ "$(sql "SELECT has_database_privilege('public', 'critical_pre_v0_0_3_20260101000003', 'CONNECT')")" = f ] ||
-    fail "PUBLIC may connect to a restore point"
-[ "$(docker exec "$db" psql -X -q -A -t -U critical -d critical_pre_v0_0_3_20260101000003 -c 'SELECT count(*) FROM schema_migrations')" = \
-  "$(sql 'SELECT count(*) FROM schema_migrations')" ] || fail "the restore point does not hold the migrations"
-restore_point "$name-console" critical_pre_v0_0_3_20260101000003
-[ "$rp_status" != 0 ] && [[ "$rp_out" == *"exists already"* ]] || fail "an existing restore point was not refused: $rp_out"
-restore_point "$name" critical_pre_v0_0_4_20260101000004
-[ "$rp_status" != 0 ] && [[ "$rp_out" == *"the server runs in this machine"* ]] || fail "a copy beside the running server was not refused: $rp_out"
-restore_point "$name-console" critical_pre_v0_0_5_20260101000005 -e RESTORE_POINT_BUDGET_MB=1
-[ "$rp_status" != 0 ] && [[ "$rp_out" == *"over the 1 MB budget"* ]] || fail "the size budget was not enforced: $rp_out"
+trap 'cleanup; docker rm -f "$name-console" >/dev/null 2>&1 || true; rm -rf "$rp_dir"' EXIT
+point=critical_pre_v0_0_1_20260101000001
+restore_point "$name-console" "$point"
+[ "$rp_status" = 0 ] && [ "$(tail -n1 <<<"$rp_out" | cut -d' ' -f1-3)" = "restore-point: OK $point" ] ||
+    fail "restore point: exit $rp_status: $rp_out $rp_err"
+grep -v '^[A-Za-z0-9+/=]*$' <<<"$rp_out" | grep -v "^restore-point: " && fail "restore point: a line outside the block that is not the script's"
+unpack "$point"
+grep -E '^restore-point: ' <<<"$rp_out"
+[ "$(databases)" = "$before" ] || fail "the restore point created or dropped a database: '$(databases)', was '$before'"
+[ "$(wc -l <"$rp_dir/$point/counts.txt")" = "$(sql "SELECT count(*) FROM pg_tables WHERE schemaname = 'public'")" ] &&
+    grep -qx "schema_migrations $(sql 'SELECT count(*) FROM schema_migrations')" "$rp_dir/$point/counts.txt" ||
+    fail "counts.txt does not count every table: $(cat "$rp_dir/$point/counts.txt")"
+# It restores (as the runbook's restore does: --no-owner --no-acl) with the counts it recorded.
+sql "CREATE DATABASE smoke_restored TEMPLATE template0" >/dev/null
+docker cp "$rp_dir/$point/critical.dump" "$db:/tmp/critical.dump"
+docker exec "$db" pg_restore -U critical --no-owner --no-acl --exit-on-error --single-transaction -d smoke_restored /tmp/critical.dump ||
+    fail "the restore point does not restore"
+restored="$(docker exec -i "$db" psql -X -q -A -t -F ' ' -v ON_ERROR_STOP=1 -U critical -d smoke_restored <<'SQL' | LC_ALL=C sort
+SELECT format('SELECT %L, count(*) FROM %I.%I', tablename, schemaname, tablename)
+FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename \gexec
+SQL
+)"
+[ "$restored" = "$(cat "$rp_dir/$point/counts.txt")" ] || fail "the restored counts differ from counts.txt: $restored"
+sql "DROP DATABASE smoke_restored" >/dev/null
+# Refusals, before any dump.
+restore_point "$name" critical_pre_v0_0_2_20260101000002
+[ "$rp_status" != 0 ] && [[ "$rp_err" == *"the server runs in this machine"* ]] || fail "a dump beside the running server was not refused: $rp_err"
 # An older release (a rollback across a migration): the database records a migration it does not embed.
-RP_MIGRATIONS=000_older.sql restore_point "$name-console" critical_pre_v0_0_6_20260101000006
-[ "$rp_status" != 0 ] && [[ "$rp_out" == *"records migrations this release does not embed (001_baseline.sql"* ]] &&
-    [[ "$rp_out" == *"Across a migration"* ]] || fail "a release older than the schema was not refused: $rp_out"
-[ "$(sql "SELECT count(*) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")" = 2 ] || fail "a refused restore point left a database"
-[[ "$rp_out" != *critical:critical* ]] || fail "restore-point printed the DSN"
-# Incomplete copies left by failed runs (empty databases, one newer than every valid copy, one with a session
-# still open on it) are dropped, do not count toward the retention, and never push a valid copy out.
-sql "CREATE DATABASE critical_pre_v0_0_9_20260101000009 TEMPLATE template0" >/dev/null
-sql "CREATE DATABASE critical_pre_v0_0_1_20260101000001 TEMPLATE template0" >/dev/null
-docker exec -d "$db" psql -X -q -U critical -d critical_pre_v0_0_1_20260101000001 -c 'SELECT pg_sleep(120)'
-sleep 1
-restore_point "$name-console" critical_pre_v0_0_7_20260101000007 -e RESTORE_POINT_KEEP=2
-[ "$rp_status" = 0 ] && [[ "$rp_out" == *"restore-point: OK critical_pre_v0_0_7_20260101000007"* ]] ||
-    fail "restore point 7 beside incomplete copies: exit $rp_status: $rp_out"
-copies="$(sql "SELECT string_agg(datname, ' ' ORDER BY datname) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")"
-[ "$copies" = "critical_pre_v0_0_3_20260101000003 critical_pre_v0_0_7_20260101000007" ] ||
-    fail "after incomplete copies: '$copies', want the valid 3 and the new 7 only"
-# An incomplete copy held by another role's session (in production, a superuser's: the script's user cannot
-# end it) is skipped at once, warned about once, kept, and the promotion goes on.
-sql "CREATE ROLE smoke_holder LOGIN" >/dev/null
-sql "CREATE DATABASE critical_pre_v0_0_9_20260101000010 TEMPLATE template0" >/dev/null
-docker exec -d "$db" psql -X -q -U smoke_holder -d critical_pre_v0_0_9_20260101000010 -c 'SELECT pg_sleep(120)'
-sleep 1
-restore_point "$name-console" critical_pre_v0_0_8_20260101000008 -e RESTORE_POINT_KEEP=2
-[ "$rp_status" = 0 ] && [[ "$rp_out" == *"restore-point: OK critical_pre_v0_0_8_20260101000008"* ]] ||
-    fail "restore point 8 beside a held incomplete copy: exit $rp_status: $rp_out"
-[ "$(grep -c 'critical_pre_v0_0_9_20260101000010 is held by a session this user cannot end: .* of smoke_holder' <<<"$rp_out")" = 1 ] ||
-    fail "the held copy was not reported once, with its holder: $rp_out"
-copies="$(sql "SELECT string_agg(datname, ' ' ORDER BY datname) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")"
-[ "$copies" = "critical_pre_v0_0_7_20260101000007 critical_pre_v0_0_8_20260101000008 critical_pre_v0_0_9_20260101000010" ] ||
-    fail "after a held incomplete copy: '$copies', want the valid 7 and 8 and the held copy"
-sql "DROP DATABASE critical_pre_v0_0_9_20260101000010 WITH (FORCE)" >/dev/null
+RP_MIGRATIONS=000_older.sql restore_point "$name-console" critical_pre_v0_0_3_20260101000003
+[ "$rp_status" != 0 ] && [[ "$rp_err" == *"records migrations this release does not embed (001_baseline.sql"* ]] &&
+    [[ "$rp_err" == *"Across a migration"* ]] && [[ "$rp_out" != *BEGIN* ]] || fail "a release older than the schema was not refused: $rp_err"
+restore_point "$name-console" critical_staging_pre_v0_0_4_20260101000004
+[ "$rp_status" != 0 ] && [[ "$rp_err" == *"is not a restore point of the database 'critical'"* ]] || fail "a name of another database was not refused: $rp_err"
+[[ "$rp_out$rp_err" != *critical:critical* ]] || fail "restore-point printed the DSN"
 # The cluster unreachable for a few seconds (its proxy marks it down when the VM is short of memory): the
 # connection is tried again and the restore point is taken.
 docker network disconnect "$name" "$db"
 (sleep 3 && docker network connect "$name" "$db") &
 reconnect=$!
-restore_point "$name-console" critical_pre_v0_0_10_20260101000011 -e RESTORE_POINT_KEEP=2
+point=critical_pre_v0_0_5_20260101000005
+restore_point "$name-console" "$point"
 wait "$reconnect"
-[ "$rp_status" = 0 ] && [[ "$rp_out" == *"restore-point: OK critical_pre_v0_0_10_20260101000011"* ]] &&
-    [[ "$rp_out" == *"the connection to the database failed (try 1 of 5)"* ]] ||
-    fail "restore point 10 across a lost connection: exit $rp_status: $rp_out"
-echo "image-smoke: restore points OK (copies, retention, refusals, a release older than the schema, a held copy, a lost connection)"
+[ "$rp_status" = 0 ] && [[ "$rp_err" == *"the connection to the database failed (try 1 of 5)"* ]] ||
+    fail "restore point across a lost connection: exit $rp_status: $rp_out $rp_err"
+unpack "$point"
+echo "image-smoke: restore points OK (the dump back whole, restored with its counts, no database created, refusals, a release older than the schema, a lost connection)"
 
 echo "image-smoke: OK ($image, commit $commit, uid $uid, port $port)"

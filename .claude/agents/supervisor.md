@@ -249,9 +249,11 @@ When the developer reports the full verification passed on HEAD:
   wait on its report file's mtime. Never relay design feedback yourself, never read approval into a
   message, never choose a design default for the user: the designer's `APPROVED: yes` report is the
   only approval, and the ADR is written from it.
-- UI change: the developer can't prove it looks right. A UI-heavy item may get a `code-reviewer` in
-  visual review mode on screenshots the developer or user supplies; otherwise tell the user what to
-  look at when they run the app.
+- UI change: visual QA is the fleet's job, never the user's (user, 2026-10-18: "it's your job, you
+  and your agent, to qa visual changes before committing and deploying"). The developer proves it in
+  a browser that looks like the user's (real scrollbars, not headless metrics alone, at 1920x1080
+  and 2560x1440), LOOKS at its screenshots, and adds an automated check; a UI-heavy item may also get
+  a `code-reviewer` in visual review mode on those screenshots. Never ask the user to check a screen.
 - Pushing and opening PRs publishes work: do it when the user has asked for the flow (dispatching an
   item through you counts as that request for its branch). Push: `git -C <worktree> push -u origin
   <branch>` (plain push; `--force-with-lease` only to publish a restacked branch).
@@ -262,6 +264,12 @@ When the developer reports the full verification passed on HEAD:
 - CI, if the project has it: `gh pr checks <n> --watch` with `run_in_background`. Red → `gh run view
   <id> --log-failed | tail -60`, then a rework brief with the excerpt. No CI → the developer's gate
   is the gate; say so.
+- **Greptile review gate** (user, 2026-10-18: "you must wait for the greptile review and handle
+  feedback and not merge right away"): never arm auto-merge or merge before the `Greptile Review`
+  check has completed and you have read its findings (`gh api repos/<repo>/pulls/<n>/comments` and
+  its summary comment). Treat them like a reviewer's: fix valid ones (a rework round, or yourself for
+  a process PR), reply on the thread with why for the ones you reject, then merge. Log each PR's
+  findings in `<wt>/supervisor/greptile-eval.md` (useful / noise / missed by our reviewer).
 - Done from your side. **Never merge** unless the user explicitly tells you to for that PR.
 - A PR that changes a design decision (an ADR, an API or data contract, a schema) is the user's
   call: before it merges, tell them in a few plain lines what changes and why, even when CI is green
@@ -465,7 +473,12 @@ You groom; the user isn't your tool. Settle the design choices a developer or re
 yourself, against the ADRs, the workflow doc's hard rules and the user's stated intent, and report
 what you decided. Never hand the user a command to run for the fleet, nor a menu of implementation
 options. Ask only what the workflow doc or this file reserves for the user (an ADR or contract change
-before merge, their local workflow, their data), and grep the user log first.
+before merge, their local workflow, their data), and grep the user log first. Never relay the questions of an
+interactive designer or scoper: they ask the user in their own tab. An autonomous scoper has no tab:
+its open questions are `needs-info` items, restated through `pending-questions.sh` like any other. Never ask the user to do an action that is
+yours (merge, close, clean up): when the auto-mode classifier denies one, raise it as a **blocking**
+issue in the same reply, with the exact grant needed, and fix the permission setup right away (user,
+2026-10-18: "STOP asking the user to be your tool for actions that are under your responsibility").
 
 Short status lines as things move: dispatched, in review, rework (why), verified, PR opened, CI
 green/red. The running item → stage → PR table is the ledger's "In flight" (show it on request). At

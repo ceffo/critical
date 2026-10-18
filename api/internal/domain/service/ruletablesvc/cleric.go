@@ -3,6 +3,7 @@ package ruletablesvc
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 )
 
@@ -185,6 +186,23 @@ func NewSphereAccess(rows []SphereAccessRow) (*SphereAccess, error) {
 		m[r.Sphere] = r.Access
 	}
 	return out, nil
+}
+
+// CheckSpheres refuses a sphere access row whose sphere code is on no spell
+// of known (the catalogue's spells' sphere codes): a typo would silently
+// close the sphere.
+func (a *SphereAccess) CheckSpheres(known []string) error {
+	if a == nil {
+		return nil
+	}
+	for _, class := range slices.Sorted(maps.Keys(a.byClass)) {
+		for _, sphere := range slices.Sorted(maps.Keys(a.byClass[class])) {
+			if !slices.Contains(known, sphere) {
+				return fmt.Errorf("sphere_access: %s sphere %q is on no spell of the catalogue", class, sphere)
+			}
+		}
+	}
+	return nil
 }
 
 // HasSpheres reports whether class prepares from spheres (it has a sphere

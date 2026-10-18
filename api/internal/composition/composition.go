@@ -35,6 +35,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spheresvc"
 	"github.com/ceffo/critical/api/internal/domain/service/turnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
@@ -230,7 +231,11 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
-	prepSource := spellbookadpt.NewSpheres(spellbook, charSvc, sphereAccess, cat)
+	prepSource, err := spheresvc.New(spheresvc.Deps{Book: spellbook, Characters: charSvc, Access: sphereAccess, Catalogue: cat})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	// The action log stamps entries with the round read straight from
 	// buffdal (buffsvc itself records into the log, so it cannot be the
 	// log's dependency). Services that record snapshots register their

@@ -426,7 +426,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     failed cast spends the slot and records only the slot snapshot, the spell and `failure` (d100,
     chance, failed); a cast above the chance carries the roll too. Step 15 reads the sphere access and
     each priest spell's sphere codes of catalogue format 6 ([ADR 0021](0021-spell-catalogue.md) step
-    12, decided as built): `spellbookadpt.Spheres` serves a class with a sphere access the open priest spells
+    12, decided as built; an access row whose sphere code is on no spell is refused at start-up): the domain's `spheresvc.Spheres` serves a class with a sphere access the open priest spells
     **at the spell levels it has slots of** (a ruling, accepted by the user: a level without a slot offers
     nothing to prepare), level then id order; on a format-5 catalogue there is no access and a cleric prepares
     nothing. Step 16 is `POST /api/character/turn-undead` `{undead}` (a Table 61 row code); the

@@ -1,5 +1,7 @@
 # Onboarding design round: intro, full-screen creation, roster, cog menu (2026-10-18)
 
+**Approved by the user, 2026-10-18** ("approved"), after three rounds.
+
 The screens of the onboarding epic, for the UI items that build them (the creation route, the
 identity step and review, the roster and cog menu clean-up). The rules behind every screen are
 [ADR 0032](../../adr/0032-character-identity-and-creation-rolls.md) and

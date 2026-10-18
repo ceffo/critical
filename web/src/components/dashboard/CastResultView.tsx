@@ -7,6 +7,7 @@ import type {
   DamagePartSave,
   DiceRoll,
   ExposureResult,
+  SpellFailure,
 } from "@/types/spells";
 import { spellTexts, useSpellName } from "@/i18n/spellName";
 import { SpellDescription } from "./SpellDescription";
@@ -118,6 +119,36 @@ function fxLabel(t: TFunction, key: string, value: number): string {
 }
 
 /** What a cast or a received spell did: buff with its rolls, damage rolls, or the text only. */
+/** A cast's spell failure d100 (ADR 0030 step 14): failed (the slot spent, nothing applied) or not. */
+export function SpellFailureLine({ failure: f }: { failure: SpellFailure }) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="flex flex-col gap-1 rounded-lg bg-raised p-3"
+      data-testid="cast-failure"
+      data-failed={f.failed}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span
+          className={cn("text-key", f.failed ? "text-danger" : "text-success")}
+        >
+          {f.failed
+            ? t("lastShort.verdict.spellFailed")
+            : t("result.cast.spellHeld")}
+        </span>
+        <span className="inline-flex items-center gap-2 text-body">
+          <span className={labelClass}>d100</span>
+          <Die sides={100} value={f.d100} />
+        </span>
+      </div>
+      <p className="text-body text-muted-foreground">
+        {t("result.cast.failureRoll", { roll: f.d100, chance: f.chance })}
+      </p>
+      {f.failed && <p className="text-body">{t("result.cast.spellFailed")}</p>}
+    </div>
+  );
+}
+
 export function CastResultView({ result: r }: { result: CastResult }) {
   const { t, i18n } = useTranslation();
   const names = useInventoryName();
@@ -141,6 +172,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
   return (
     <div className="flex flex-col gap-3" data-testid="cast-result">
       <div className="text-body text-muted-foreground">{heading}</div>
+      {r.failure && <SpellFailureLine failure={r.failure} />}
       {r.mode && (
         <p className="text-body" data-testid="cast-mode">
           {t("result.cast.mode", { mode: modeName(t, r.spellId, r.mode) })}

@@ -21,8 +21,14 @@ const FormatClassTables = 4
 // the published artifact and the dev checkouts are format 5 (step 11.4).
 const FormatLevelLimits = 5
 
+// FormatSpheres is format 6 (ADR 0021 step 12): format 5 plus each priest
+// spell's sphere codes and the classes' sphere access (ADR 0030 steps 15 and
+// 23). The API reads it beside format 5 until the published artifact and the
+// dev checkouts are format 6 (step 12.4).
+const FormatSpheres = 6
+
 // Formats lists the formats this API reads, in order.
-var Formats = []int{FormatRuleTables, FormatClassTables, FormatLevelLimits}
+var Formats = []int{FormatRuleTables, FormatClassTables, FormatLevelLimits, FormatSpheres}
 
 // Catalogue is one artifact's spells: a version compared for equality only,
 // and the spells. A format-3 artifact's PHB rule tables are not part of it:
@@ -41,11 +47,15 @@ type Catalogue struct {
 // import from the fallback-language stat texts. An absent language has no
 // entry; an absent text (a spell without a sphere) is empty.
 type Spell struct {
-	ID           string
-	Class        string
-	Level        int
-	School       localized.Text
-	Sphere       localized.Text
+	ID     string
+	Class  string
+	Level  int
+	School localized.Text
+	Sphere localized.Text
+	// Spheres are the sphere codes of a priest spell (format 6, ADR 0030
+	// step 23): what the rules read, never Sphere. Empty before format 6
+	// and for wizard spells.
+	Spheres      []string
 	CastingTime  localized.Text
 	Range        localized.Text
 	Duration     localized.Text

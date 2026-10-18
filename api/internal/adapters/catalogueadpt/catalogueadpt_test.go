@@ -28,7 +28,7 @@ func TestLoad_Fixture(t *testing.T) {
 	a, err := LoadArtifact(fixture)
 	require.NoError(t, err)
 	c := a.Catalogue
-	assert.Equal(t, catalogue.FormatLevelLimits, c.Format)
+	assert.Equal(t, catalogue.FormatSpheres, c.Format)
 	assert.Equal(t, "1970-01-01", c.Version)
 	assert.NotEmpty(t, a.RuleTables, "the fixture carries the rule tables")
 	mm, ok := c.ByID()["magic_missile"]
@@ -42,6 +42,8 @@ func TestLoad_Fixture(t *testing.T) {
 	assert.NotContains(t, armor.Description, "fr")
 	assert.Equal(t, localized.Text{"en": "Divination"}, c.ByID()["detect_magic_priest"].Sphere)
 	assert.Empty(t, armor.Sphere, "no sphere: an empty text")
+	assert.Equal(t, []string{"divination"}, c.ByID()["detect_magic_priest"].Spheres, "format 6: the sphere codes")
+	assert.Empty(t, armor.Spheres, "a wizard spell has no sphere code")
 }
 
 // Step 5.1: no file -> an error naming the path and `just catalogue`.
@@ -79,15 +81,30 @@ var classTables = []string{
 // levelLimits is the key format 5 adds to rule_tables (ADR 0021 step 11).
 const levelLimits = "race_level_limits"
 
-// asFormat4 turns the format-5 fixture into a format-4 artifact: the same
+// sphereAccess is the key format 6 adds to rule_tables, beside each priest
+// spell's sphere codes (ADR 0021 step 12).
+const sphereAccess = "sphere_access"
+
+// asFormat5 turns the format-6 fixture into a format-5 artifact: the same
+// spells without their sphere codes, the tables without the sphere access.
+func asFormat5(d map[string]any) {
+	d["format"] = 5
+	delete(d["rule_tables"].(map[string]any), sphereAccess)
+	for _, s := range spells(d) {
+		delete(s.(map[string]any), "spheres")
+	}
+}
+
+// asFormat4 turns the format-6 fixture into a format-4 artifact: the same
 // spells, PHB rule tables and class and race tables, without the racial
 // level limits.
 func asFormat4(d map[string]any) {
+	asFormat5(d)
 	d["format"] = 4
 	delete(d["rule_tables"].(map[string]any), levelLimits)
 }
 
-// asFormat3 turns the format-5 fixture into a format-3 artifact: the same
+// asFormat3 turns the format-6 fixture into a format-3 artifact: the same
 // spells and the four PHB rule tables of step 9.
 func asFormat3(d map[string]any) {
 	asFormat4(d)
@@ -105,7 +122,7 @@ func TestParse_Step2_Refusals(t *testing.T) {
 		mutate func(map[string]any)
 		want   []string
 	}{
-		{"unknown format names it", func(d map[string]any) { d["format"] = 6 }, []string{"unknown format 6", "formats 3, 4 and 5", "just catalogue"}},
+		{"unknown format names it", func(d map[string]any) { d["format"] = 7 }, []string{"unknown format 7", "formats 3, 4, 5 and 6", "just catalogue"}},
 		{"missing format", func(d map[string]any) { delete(d, "format") }, []string{"unknown format none"}},
 		{"schema violation lists the offence", func(d map[string]any) {
 			spells(d)[0].(map[string]any)["level"] = 12
@@ -161,7 +178,7 @@ func TestParse_Step10_1_ReadsFormat4(t *testing.T) {
 // ADR 0021 step 11.1: format 5 hands on the format-4 tables and the racial
 // level limits as written (ruletablesadpt parses them).
 func TestParse_Step11_1_ReadsFormat5(t *testing.T) {
-	five, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	five, err := ParseArtifact(artifact(t, asFormat5))
 	require.NoError(t, err)
 	assert.Equal(t, catalogue.FormatLevelLimits, five.Catalogue.Format)
 	var tables map[string]json.RawMessage
@@ -182,7 +199,7 @@ func TestParse_Step9_6_3_RefusesTheRetiredFormat1(t *testing.T) {
 			delete(d, "rule_tables")
 		}))
 		require.ErrorContains(t, err, fmt.Sprintf(
-			"unknown format %d: this API reads formats 3, 4 and 5; run `just catalogue` to fetch a current artifact", format))
+			"unknown format %d: this API reads formats 3, 4, 5 and 6; run `just catalogue` to fetch a current artifact", format))
 	}
 }
 
@@ -227,25 +244,31 @@ func TestParse_Step9_2_TablesBelongToFormat3Only(t *testing.T) {
 		// ADR 0021 step 11.2: the level limits belong to format 5 only, and
 		// format 5 requires them and every format-4 table.
 		{
-			"format 4 with the level limits", func(d map[string]any) { d["format"] = 4 },
+			"format 4 with the level limits", func(d map[string]any) { asFormat5(d); d["format"] = 4 },
 			[]string{"format 4 schema", "/rule_tables/race_level_limits"},
 		},
 		{"format 5 missing the level limits", func(d map[string]any) {
+			asFormat5(d)
 			delete(d["rule_tables"].(map[string]any), levelLimits)
 		}, []string{"format 5 schema", "race_level_limits"}},
 		{"format 5 missing a class table", func(d map[string]any) {
+			asFormat5(d)
 			delete(d["rule_tables"].(map[string]any), "thac0")
 		}, []string{"format 5 schema", "thac0"}},
 		{"format 5 with a human row", func(d map[string]any) {
+			asFormat5(d)
 			d["rule_tables"].(map[string]any)[levelLimits].([]any)[0].(map[string]any)["race"] = "human"
 		}, []string{"format 5 schema", "race_level_limits/0/race"}},
 		{"format 5 with a level above 20", func(d map[string]any) {
+			asFormat5(d)
 			d["rule_tables"].(map[string]any)[levelLimits].([]any)[0].(map[string]any)["max_level"] = 21
 		}, []string{"format 5 schema", "race_level_limits/0/max_level"}},
 		{"format 5 with a class name in a language", func(d map[string]any) {
+			asFormat5(d)
 			d["rule_tables"].(map[string]any)[levelLimits].([]any)[0].(map[string]any)["class"] = "guerrier"
 		}, []string{"format 5 schema", "race_level_limits/0/class"}},
 		{"format 5 with 24 level limits", func(d map[string]any) {
+			asFormat5(d)
 			rt := d["rule_tables"].(map[string]any)
 			rt[levelLimits] = rt[levelLimits].([]any)[1:]
 		}, []string{"format 5 schema", "race_level_limits"}},
@@ -267,4 +290,65 @@ func keys(m map[string]json.RawMessage) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// ADR 0021 step 12.1: format 6 hands on the format-5 tables and the sphere
+// access as written, and every priest spell's sphere codes.
+func TestParse_Step12_1_ReadsFormat6(t *testing.T) {
+	six, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	require.NoError(t, err)
+	assert.Equal(t, catalogue.FormatSpheres, six.Catalogue.Format)
+	var tables map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(six.RuleTables, &tables))
+	assert.ElementsMatch(t,
+		append(append([]string{"strength", "dexterity", "bard_spells", "bard_experience"}, classTables...), levelLimits, sphereAccess),
+		keys(tables))
+	assert.Equal(t, []string{"elemental_fire"}, six.Catalogue.ByID()["produce_flame"].Spheres)
+}
+
+// ADR 0021 step 12.2: the sphere codes and access belong to format 6 only,
+// and format 6 requires both.
+func TestParse_Step12_2_SpheresBelongToFormat6(t *testing.T) {
+	priest := func(d map[string]any) map[string]any {
+		for _, s := range spells(d) {
+			if m := s.(map[string]any); m["id"] == "bless" {
+				return m
+			}
+		}
+		t.Fatal("the fixture holds bless")
+		return nil
+	}
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   []string
+	}{
+		{"format 5 with the sphere access", func(d map[string]any) {
+			access := d["rule_tables"].(map[string]any)[sphereAccess]
+			asFormat5(d)
+			d["rule_tables"].(map[string]any)[sphereAccess] = access
+		}, []string{"format 5 schema", "/rule_tables/sphere_access"}},
+		{"format 5 with sphere codes", func(d map[string]any) {
+			asFormat5(d)
+			priest(d)["spheres"] = []any{"all"}
+		}, []string{"format 5 schema", "spheres"}},
+		{"format 6 missing the sphere access", func(d map[string]any) {
+			delete(d["rule_tables"].(map[string]any), sphereAccess)
+		}, []string{"format 6 schema", "sphere_access"}},
+		{"format 6 with a priest spell without codes", func(d map[string]any) {
+			delete(priest(d), "spheres")
+		}, []string{"format 6 schema", "spheres"}},
+		{"format 6 with a sphere name in a language", func(d map[string]any) {
+			priest(d)["spheres"] = []any{"Tout"}
+		}, []string{"format 6 schema", "spheres/0"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse(artifact(t, tc.mutate))
+			require.Error(t, err)
+			for _, w := range tc.want {
+				assert.Contains(t, err.Error(), w)
+			}
+		})
+	}
 }

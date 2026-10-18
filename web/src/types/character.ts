@@ -87,6 +87,47 @@ export interface Derived {
   specializes: boolean;
   /** Step 20.1: what a mage or a bard may write in the spellbook; null for the other classes. */
   spellbook: SpellbookRules | null;
+  /** Step 14: the percent chance a cast fails (low Wisdom); 0: no die. */
+  spellFailure: number;
+  /** Step 16: PHB Table 61 at the realized level, in the book's order; null for a class that does
+   * not turn undead. */
+  turning: TurningTarget[] | null;
+}
+
+/** ADR 0030 step 16: one undead type and its Table 61 cell at the cleric's level. `hdMin` 0: by
+ * type only; `hdMax` 0: "and more". `roll` is the d20 target, or `outcome` when no die is rolled. */
+export interface TurningTarget {
+  undead: string;
+  hdMin: number;
+  hdMax: number;
+  roll?: number;
+  outcome?: TurningOutcome;
+}
+
+export type TurningOutcome = "turn" | "destroy" | "destroy_more" | "cannot";
+
+/** The breakdown of a turning roll (`POST /api/character/turn-undead`, ADR 0030 step 16), also
+ * (without `entryId` and the Hit Dice) the payload of a turn_undead journal entry. */
+export interface TurnResult {
+  entryId?: number;
+  undead: string;
+  hdMin?: number;
+  hdMax?: number;
+  clericLevel: number;
+  /** The d20 target; absent when the cell needs no die. */
+  target?: number;
+  outcome?: TurningOutcome;
+  /** The turning d20; absent when the cell needs no die. */
+  d20?: number;
+  success: boolean;
+  effect?: "turn" | "destroy";
+  /** The 2d6 undead affected (turned, or destroyed for D and D*), then the 2d4 more of a D* cell
+   * (turned). */
+  affected?: number[];
+  more?: number[];
+  /** How many undead are destroyed and turned, worked out by the server (D*: both). */
+  destroyed: number;
+  turned: number;
 }
 
 /** ADR 0030 step 20.1: the class's and PHB Table 4's highest spell level, Table 4's chance to

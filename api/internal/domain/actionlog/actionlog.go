@@ -51,13 +51,17 @@ const (
 	// is the one exposed, its HP delta takes the damage off his HP, so
 	// popping it gives the HP back.
 	KindExposure Kind = "exposure"
+	// KindTurnUndead is a cleric's turning undead roll (turnsvc, ADR 0030
+	// step 16). It changes no state and has no snapshots: popping it only
+	// removes it. It is never adjusted.
+	KindTurnUndead Kind = "turn_undead"
 )
 
 // RollKinds are the entries whose result replaces the dashboard's result
 // card (attack, save, cast or received spell, item use, skill check, ability
-// check, spell exposure). Only
+// check, spell exposure, turning undead). Only
 // the newest of them, the one on the card, can be adjusted after the fact.
-var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck, KindAbilityCheck, KindExposure}
+var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck, KindAbilityCheck, KindExposure, KindTurnUndead}
 
 // IsRoll reports whether k is one of RollKinds.
 func IsRoll(k Kind) bool {

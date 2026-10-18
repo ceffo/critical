@@ -55,6 +55,33 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		if err != nil {
 			return err
 		}
+		// ADR 0030 step 14: a caster with a chance of spell failure rolls one
+		// d100, after every refusal of the request (above, and checkCast for
+		// the effect's); at or under it the spell fails: the slot is spent and
+		// nothing else happens.
+		var failure *SpellFailure
+		if chance := c.Derived.SpellFailure; chance > 0 {
+			if err := s.checkCast(ctx, characterID, id, req, c.Derived.RealizedLevel); err != nil {
+				return err
+			}
+			roll := s.Dice.RollDie(100)
+			failure = &SpellFailure{Roll: roll, Chance: chance, Failed: roll <= chance}
+		}
+		if failure != nil && failure.Failed {
+			if err := s.Slots.SaveSlots(ctx, characterID, after); err != nil {
+				return fmt.Errorf("save slots: %w", err)
+			}
+			slotSnap, err := prepsvc.SlotsSnapshot(before, after)
+			if err != nil {
+				return err
+			}
+			res = CastResult{
+				Source: SourceCast, SpellID: id, Name: name, Level: slot.Level, CasterLevel: c.Derived.RealizedLevel,
+				SlotIndex: &slotIndex, Slots: after, Failure: failure,
+			}
+			res.EntryID, err = s.record(ctx, characterID, res, []actionlog.Snapshot{slotSnap})
+			return err
+		}
 		var extra []int
 		// ADR 0008 step 9: a spell that grants slots adds them, blank.
 		if entry, ok := s.Effects.Get(id); ok && entry.GrantSlots != nil {
@@ -81,6 +108,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 			return err
 		}
 		res.SlotIndex = &slotIndex
+		res.Failure = failure
 		res.ExtraSlots = extra
 		res.Slots = after
 		res.EntryID, err = s.record(ctx, characterID, res, append([]actionlog.Snapshot{slotSnap}, snaps...))

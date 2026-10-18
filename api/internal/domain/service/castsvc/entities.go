@@ -198,6 +198,17 @@ type CastResult struct {
 	// player to roll each round of exposure from (nil: none; ADR 0008 step
 	// 16).
 	Exposure *spelleffectsvc.ExposureAt
+	// Failure is the cast's spell failure roll (nil: no die, ADR 0030 step
+	// 14). A failed spell spends its slot and applies nothing: the result
+	// then carries only the spell, the slot and the roll.
+	Failure *SpellFailure
+}
+
+// SpellFailure is one d100 against the caster's chance of spell failure
+// (ADR 0030 step 14): Failed when Roll is at or under Chance.
+type SpellFailure struct {
+	Roll, Chance int
+	Failed       bool
 }
 
 // ExposureRequest is one round of exposure to a spell's area (ADR 0008

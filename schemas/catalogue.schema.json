@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, formats 3, 4 and 5",
-  "description": "Shape of the catalogue artifact (ADR 0021): format 3 holds the spells and the PHB rule tables (step 9); format 4 adds the class and race tables (step 10, ADR 0030 step 23); format 5 adds the racial level limits (step 11, DMG Table 7). Shape only: the schema carries no book text. Format 1 (spells only) is retired and format 2 named a retracted shape: neither is valid.",
+  "title": "Critical! catalogue, formats 3, 4, 5 and 6",
+  "description": "Shape of the catalogue artifact (ADR 0021): format 3 holds the spells and the PHB rule tables (step 9); format 4 adds the class and race tables (step 10, ADR 0030 step 23); format 5 adds the racial level limits (step 11, DMG Table 7); format 6 adds each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23). Shape only: the schema carries no book text. Format 1 (spells only) is retired and format 2 named a retracted shape: neither is valid.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,11 +13,12 @@
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 3 (spells and rule_tables, ADR 0021 step 9), 4 (format 3 plus the class and race tables, step 10) or 5 (format 4 plus the racial level limits, step 11). An importer accepts exactly the formats it knows and refuses the rest.",
+      "description": "Artifact format: 3 (spells and rule_tables, ADR 0021 step 9), 4 (format 3 plus the class and race tables, step 10) 5 (format 4 plus the racial level limits, step 11) or 6 (format 5 plus the sphere codes and access, step 12). An importer accepts exactly the formats it knows and refuses the rest.",
       "enum": [
         3,
         4,
-        5
+        5,
+        6
       ]
     },
     "version": {
@@ -43,7 +44,8 @@
           "format": {
             "enum": [
               4,
-              5
+              5,
+              6
             ]
           }
         }
@@ -85,7 +87,10 @@
       "if": {
         "properties": {
           "format": {
-            "const": 5
+            "enum": [
+              5,
+              6
+            ]
           }
         }
       },
@@ -111,7 +116,8 @@
         "properties": {
           "rule_tables": {
             "properties": {
-              "race_level_limits": false
+              "race_level_limits": false,
+              "sphere_access": false
             }
           }
         }
@@ -153,7 +159,89 @@
               "bard_skill_base": false,
               "backstab": false,
               "turning_undead": false,
-              "race_level_limits": false
+              "race_level_limits": false,
+              "sphere_access": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "const": 5
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rule_tables": {
+            "properties": {
+              "sphere_access": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "enum": [
+              3,
+              4,
+              5
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "spells": {
+            "items": {
+              "properties": {
+                "spheres": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "const": 6
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rule_tables": {
+            "required": [
+              "sphere_access"
+            ]
+          },
+          "spells": {
+            "items": {
+              "if": {
+                "properties": {
+                  "class": {
+                    "const": "Priest"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "spheres"
+                ]
+              },
+              "else": {
+                "properties": {
+                  "spheres": false
+                }
+              }
             }
           }
         }
@@ -245,6 +333,15 @@
           "description": "Priest spells only (raw text, may hold several spheres). Omitted for Wizard spells.",
           "$ref": "#/$defs/text"
         },
+        "spheres": {
+          "description": "Format 6, priest spells only: the spell's spheres as language-neutral codes (e.g. all, combat, elemental_fire, thought), one per sphere of the raw sphere text, Elemental as its subsphere codes (ADR 0030 step 23). The engine reads these, never the raw text.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/sphere_code"
+          }
+        },
         "casting_time": {
           "$ref": "#/$defs/text"
         },
@@ -277,7 +374,7 @@
       }
     },
     "rule_tables": {
-      "description": "The rule tables the engine looks values up in (ADR 0021 steps 9 and 10): numbers and language-neutral codes only, the columns the engine reads, rows in ascending order. Format 3 carries the first four tables only, format 4 every table but race_level_limits, format 5 every table. Contiguity, overlap, level order, increasing XP and completeness of the code combinations cannot be expressed here: the builder and the importer check them.",
+      "description": "The rule tables the engine looks values up in (ADR 0021 steps 9 and 10): numbers and language-neutral codes only, the columns the engine reads, rows in ascending order. Format 3 carries the first four tables only, format 4 every table but race_level_limits, format 5 every table but sphere_access, format 6 every table. Contiguity, overlap, level order, increasing XP and completeness of the code combinations cannot be expressed here: the builder and the importer check them.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -503,6 +600,14 @@
           "maxItems": 13,
           "items": {
             "$ref": "#/$defs/turning_row"
+          }
+        },
+        "sphere_access": {
+          "description": "Format 6: the spheres each class has access to (ADR 0030 step 15.1), one row per class and sphere; a sphere a class has no row for is closed to it. Minor access opens spell levels 1 to 3 only (an engine rule).",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sphere_access_row"
           }
         }
       }
@@ -1481,6 +1586,39 @@
       "then": {
         "properties": {
           "outcome": false
+        }
+      }
+    },
+    "sphere_code": {
+      "type": "string",
+      "pattern": "^[a-z]+(_[a-z]+)*$"
+    },
+    "sphere_access_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class",
+        "sphere",
+        "access"
+      ],
+      "properties": {
+        "class": {
+          "enum": [
+            "fighter",
+            "mage",
+            "cleric",
+            "thief",
+            "bard"
+          ]
+        },
+        "sphere": {
+          "$ref": "#/$defs/sphere_code"
+        },
+        "access": {
+          "enum": [
+            "major",
+            "minor"
+          ]
         }
       }
     }

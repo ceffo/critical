@@ -1401,3 +1401,85 @@ describe("spell learn entries", () => {
     );
   });
 });
+
+// ADR 0030 step 16: a turn_undead entry is structured (the type, the cell, the dice, the destroyed and
+// turned counts the server worked out); the journal words it, French first.
+describe("turn undead entries", () => {
+  const turn = (over: object) =>
+    entry("turn_undead", {
+      undead: "ghoul",
+      clericLevel: 3,
+      target: 10,
+      d20: 12,
+      success: true,
+      effect: "turn",
+      affected: [3, 4],
+      destroyed: 0,
+      turned: 7,
+      ...over,
+    });
+
+  it("words a rolled turn, a failure and a destroy without a roll", async () => {
+    const fr = await makeT("fr");
+    const en = await makeT("en");
+    expect(entryText(turn({}), fr)).toBe(
+      "Renvoi des morts-vivants (Goule) : 7 repoussés, d20 12 contre 10",
+    );
+    expect(
+      entryText(
+        turn({ d20: 4, success: false, effect: undefined, turned: 0 }),
+        fr,
+      ),
+    ).toBe("Renvoi des morts-vivants (Goule) : échec, d20 4 contre 10");
+    expect(
+      entryText(
+        turn({
+          undead: "skeleton",
+          target: undefined,
+          d20: undefined,
+          outcome: "destroy_more",
+          effect: "destroy",
+          more: [1, 2],
+          destroyed: 7,
+          turned: 3,
+        }),
+        en,
+      ),
+    ).toBe("Turning undead (Skeleton): 7 destroyed, 3 turned, no roll");
+    expect(
+      entryText(
+        turn({
+          target: undefined,
+          d20: undefined,
+          outcome: "destroy",
+          effect: "destroy",
+          destroyed: 7,
+          turned: 0,
+        }),
+        fr,
+      ),
+    ).toBe("Renvoi des morts-vivants (Goule) : 7 détruits, sans jet");
+  });
+});
+
+// ADR 0030 step 14: a cast with a spell failure d100 says it, failed or not.
+describe("spell failure on a cast", () => {
+  const cast = (failed: boolean) =>
+    entry("cast", {
+      action: "cast",
+      spellId: "bless",
+      spell: "Bless",
+      casterLevel: 3,
+      failure: { d100: failed ? 12 : 55, chance: 30, failed },
+    });
+
+  it("words a failed spell and a spell that held", async () => {
+    const fr = await makeT("fr");
+    expect(entryText(cast(true), fr)).toBe(
+      "Lancé : Bless: échec du sort (d100 12 ≤ 30 %)",
+    );
+    expect(entryText(cast(false), fr)).toBe(
+      "Lancé : Bless: pas d'échec du sort (d100 55 > 30 %)",
+    );
+  });
+});

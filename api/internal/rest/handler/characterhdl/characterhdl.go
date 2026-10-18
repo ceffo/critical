@@ -226,6 +226,24 @@ type DerivedDTO struct {
 	// Spellbook is ADR 0030 step 20.1: the learning rules of a class with a
 	// spellbook (mage, bard); null for the others.
 	Spellbook *SpellbookRulesDTO `json:"spellbook"`
+	// SpellFailure is ADR 0030 step 14: the percent chance a cast fails (0:
+	// no die).
+	SpellFailure int `json:"spellFailure"`
+	// Turning is ADR 0030 step 16: PHB Table 61 at the realized level, the
+	// book's rows in order; null for a class that does not turn undead.
+	Turning []TurningTargetDTO `json:"turning"`
+}
+
+// TurningTargetDTO is one undead type a cleric may try to turn (ADR 0030
+// step 16): its code, its Hit Dice (`hdMin` 0: by type only, `hdMax` 0: and
+// more) and the cell at the cleric's level, `roll` the d20 target or
+// `outcome` (turn, destroy, destroy_more, cannot) when no die is rolled.
+type TurningTargetDTO struct {
+	Undead  string `json:"undead"`
+	HDMin   int    `json:"hdMin"`
+	HDMax   int    `json:"hdMax"`
+	Roll    int    `json:"roll,omitempty"`
+	Outcome string `json:"outcome,omitempty"`
 }
 
 // SpellbookRulesDTO is what a character may write in its spellbook (ADR 0030
@@ -279,7 +297,13 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		LevelUp: LevelUpDTO{
 			Pending: PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
 		},
-		Specializes: d.Specializes,
+		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
+	}
+	if d.Turning != nil {
+		out.Turning = make([]TurningTargetDTO, len(d.Turning))
+		for i, r := range d.Turning {
+			out.Turning[i] = TurningTargetDTO{Undead: r.Undead, HDMin: r.HDMin, HDMax: r.HDMax, Roll: r.Cell.Roll, Outcome: r.Cell.Outcome}
+		}
 	}
 	if b := d.Spellbook; b != nil {
 		out.Spellbook = &SpellbookRulesDTO{

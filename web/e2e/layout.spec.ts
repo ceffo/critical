@@ -2362,3 +2362,108 @@ test("mage: the lookup's Learn button and its answer uncut in French, 1280 to 25
     await snap(page, `mage-learn-fr-${where}`);
   }
 });
+
+// The cleric's screens (ADR 0030 steps 14 and 16) uncut in French at 1280x800 and 2560x1440: the
+// Turning tab (Table 61 at the realized level, the longest outcome labels), the turning result card
+// and its journal row, and a cast's spell failure on the result card. Wisdom 9 gives a spell
+// failure chance; the failed cast is a fixed response (the dice are real; the failure itself is a
+// Go test, castsvc).
+test("cleric: turning panel, turning result and spell failure uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  const created = await page.evaluate(async () => {
+    const r = await fetch("/api/characters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Frère Anselme de la Haute-Marche",
+        class: "cleric",
+        raceCode: "human",
+        str: 12,
+        dex: 10,
+        con: 13,
+        int: 10,
+        wis: 9,
+        cha: 11,
+        hpMax: 8,
+        xp: 0,
+      }),
+    });
+    if (!r.ok) return `${r.status} ${await r.text()}`;
+    const p = await fetch("/api/spells/prepared", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spells: ["bless"] }),
+    });
+    return p.ok || `${p.status} ${await p.text()}`;
+  });
+  expect(created).toBe(true);
+  await page.reload();
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Renvoi" }).click();
+  const turning = page.getByTestId("turn-undead");
+  await expect(turning.getByTestId("turn-cell-skeleton")).toBeVisible();
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expectNoClippedText(
+      turning,
+      `turning panel, fr, ${vp.width}x${vp.height}`,
+    );
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await turning.getByRole("button", { name: "Repousser : Squelette" }).click();
+  const turned = page.getByTestId("turn-result");
+  await expect(turned).toContainText("Clerc de niveau 1");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(turned, `turning result, fr, ${where}`);
+    await expectNoClippedText(
+      page.getByTestId("card-header"),
+      `turning card header, fr, ${where}`,
+    );
+    await expectNoClippedText(combatLog(page), `turning journal, fr, ${where}`);
+    await snap(page, `cleric-turn-fr-${where}`);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.route("**/api/spells/*/cast", (route) =>
+    route.fulfill({
+      json: {
+        entryId: 999_999,
+        source: "cast",
+        spellId: "bless",
+        name: "Bless",
+        level: 1,
+        casterLevel: 1,
+        slotIndex: 0,
+        untracked: [],
+        failure: { d100: 12, chance: 20, failed: true },
+      },
+    }),
+  );
+  await page.getByRole("tab", { name: "Sorts" }).click();
+  await page.getByRole("button", { name: "Lancer Bless" }).click();
+  const failure = page.getByTestId("cast-failure");
+  await expect(failure).toHaveAttribute("data-failed", "true");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(failure, `spell failure, fr, ${where}`);
+    await snap(page, `cleric-spell-failure-fr-${where}`);
+  }
+  await page.unroute("**/api/spells/*/cast");
+});

@@ -290,6 +290,8 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 			{"level": 10, "die": 6, "fixedGain": 0}, {"level": 11, "die": 0, "fixedGain": 2}
 		]},
 		"specializes": false,
+		"spellFailure": 0,
+		"turning": null,
 		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false}
 	}`, string(derived))
 }

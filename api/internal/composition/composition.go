@@ -5,6 +5,7 @@ package composition
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
@@ -34,6 +35,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spheresvc"
+	"github.com/ceffo/critical/api/internal/domain/service/turnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
@@ -62,6 +65,7 @@ type BackingServices struct {
 	XP        xpsvc.SVC
 	LevelUp   levelupsvc.SVC
 	Learn     learnsvc.SVC
+	Turn      turnsvc.SVC
 	Details   detailssvc.SVC
 	Skills    skillsvc.SVC
 	Dice      dicesvc.SVC
@@ -219,6 +223,19 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
+	// What a character prepares from: a cleric's sphere-open priest spells
+	// (ADR 0030 step 15; no sphere access before catalogue format 6), every
+	// other class's spellbook.
+	sphereAccess, err := ruleTables.SphereAccess()
+	if err != nil && !errors.Is(err, ruletablesvc.ErrNoSphereAccess) {
+		_ = db.Close()
+		return nil, err
+	}
+	prepSource, err := spheresvc.New(spheresvc.Deps{Book: spellbook, Characters: charSvc, Access: sphereAccess, Catalogue: cat})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	// The action log stamps entries with the round read straight from
 	// buffdal (buffsvc itself records into the log, so it cannot be the
 	// log's dependency). Services that record snapshots register their
@@ -256,13 +273,13 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
-	spellSvc, err := spellsvc.New(spellDAL, catalogue, spellbook)
+	spellSvc, err := spellsvc.New(spellDAL, catalogue, prepSource)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	prepSvc, err := prepsvc.New(prepsvc.Deps{
-		Slots: spellDAL, Spellbook: spellbook, Effects: effects, Items: itemSvc,
+		Slots: spellDAL, Spellbook: prepSource, Effects: effects, Items: itemSvc,
 		Characters: charSvc, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
@@ -332,6 +349,13 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	registerRestorers(logSvc, learnSvc.Restorers())
+	// Turning undead reads the cleric's Table 61 row (ADR 0030 step 16) and
+	// rolls; it changes no state, so it registers no restorer.
+	turnSvc, err := turnsvc.New(turnsvc.Deps{Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	// Skill and ability checks change no state: their entries carry no
 	// snapshot, so there is no restorer to register. The ability check's
 	// score in effect comes from buffSvc (ADR 0028 step 2).
@@ -364,6 +388,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		XP:        xpSvc,
 		LevelUp:   levelUpSvc,
 		Learn:     learnSvc,
+		Turn:      turnSvc,
 		Details:   detailsSvc,
 		Skills:    skillSvc,
 		Dice:      diceSvc,

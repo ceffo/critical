@@ -5,6 +5,8 @@ private `critical-rulebooks` repo and the API importer). Amended by [ADR 0023](0
 no per-language column or field; the `name_fr` / `description_fr` wording below is superseded.
 Step 10 (the class and race tables, format 4) is _proposed_ (critical-reul.9).
 Step 11 (the racial level limits of DMG Table 7, format 5) is _proposed_ (critical-reul.20).
+Step 12 (the spheres, format 6) is **decided as built**, 2026-10-18 (critical-reul.15, accepted by the
+user; the API reads formats 5 and 6, the builder publishing format 6 is a separate item).
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -491,7 +493,25 @@ is only ever appended to by play.
        chapter 2 prose as the source of "the classes each race allows" (step 10.6) is that item's decision; they
        agree for the five classes.
 
-
+12. **The spheres, format 6** (**decided as built** 2026-10-18, critical-reul.15; ADR 0030 steps 15 and 23). Format 6 is format 5
+    plus two things, both numbers-and-codes only (no book text):
+    1. **Each priest spell's `spheres`**: the codes of its spheres (`^[a-z]+(_[a-z]+)*$`, at least one, each
+       once), one per sphere of the raw `sphere` text (which stays, localized, never parsed): `all`,
+       `astral`, `charm`, `combat`, … , Elemental as its subsphere codes (`elemental_fire`; a spell printed
+       "Elemental" alone carries the four), the *Tome of Magic*'s as theirs (`thought`, `numbers`, …).
+       Required on every Priest spell, absent on Wizard spells.
+    2. **`rule_tables.sphere_access`**: rows `{class, sphere, access}` (`access` `major` or `minor`), one per
+       class and sphere; a sphere a class has no row for is closed to it. The cleric's are ADR 0030 step
+       15.1's twelve major spheres and the four Elemental subspheres minor. Minor opens levels 1 to 3 (an
+       engine rule, `ruletablesvc.MinorSphereMaxLevel`, not data).
+    3. Formats 3 to 5 may carry neither (schema); the importer refuses a class code it does not know, an
+       unknown access and a class and sphere twice (`ruletablesvc.NewSphereAccess`).
+    4. **Rollout, as step 11.4**: the API reads formats 5 and 6; a format-5 catalogue starts, its clerics
+       prepare nothing. The fixture is format 6 (ten invented-text priest spells with their codes and the
+       cleric's access). The builder (`critical-rulebooks`) publishing format 6 is its own item.
+    Tests: `TestSchema_Step12_Format6Spheres` (cataloguecheck), `TestParse_Step12_1_ReadsFormat6`,
+    `TestParse_Step12_2_SpheresBelongToFormat6` (catalogueadpt),
+    `TestStartup_Step12_RefusesABrokenSphereAccessAndStillReadsFormat5` (composition).
 ## Consequences
 
 - The builder item and the importer item can proceed in parallel against this ADR and the schema:

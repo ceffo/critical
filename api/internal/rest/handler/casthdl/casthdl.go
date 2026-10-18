@@ -219,6 +219,17 @@ type CastResultDTO struct {
 	// Exposure: the spell's exposure damage at the caster level, to roll
 	// each round of exposure from (absent: none; ADR 0008 step 16).
 	Exposure *spellhdl.SpellExposureDTO `json:"exposure,omitempty"`
+	// Failure: the low-Wisdom spell failure d100 (ADR 0030 step 14; absent:
+	// no die). `failed`: the spell failed (d100 at or under `chance`), its
+	// slot spent and nothing applied.
+	Failure *SpellFailureDTO `json:"failure,omitempty"`
+}
+
+// SpellFailureDTO is a cast's spell failure roll (ADR 0030 step 14).
+type SpellFailureDTO struct {
+	D100   int  `json:"d100"`
+	Chance int  `json:"chance"`
+	Failed bool `json:"failed"`
 }
 
 // ConsumedItemDTO is the item a cast spent and how many are left.
@@ -354,6 +365,9 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 	out.ExtraSlots = res.ExtraSlots
 	if c := res.Consumed; c != nil {
 		out.ConsumedItem = &ConsumedItemDTO{ItemID: c.ItemID, Name: c.Name, Remaining: c.Remaining}
+	}
+	if f := res.Failure; f != nil {
+		out.Failure = &SpellFailureDTO{D100: f.Roll, Chance: f.Chance, Failed: f.Failed}
 	}
 	if a := res.Attack; a != nil {
 		out.Attack = &SpellAttackDTO{

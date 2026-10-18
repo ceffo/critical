@@ -8,6 +8,7 @@ import type { UseResult } from "@/types/items";
 import type { CastResult, ExposureResult } from "@/types/spells";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
+import type { TurnResult } from "@/types/character";
 import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { formatSigned, formatTime } from "./format";
@@ -26,6 +27,8 @@ import {
   savePayload,
   skillCheckPayload,
   skillName,
+  turnPayload,
+  undeadName,
   type CastLogPayload,
 } from "./logSummary";
 
@@ -56,6 +59,7 @@ export const RESULT_KINDS: readonly LogKind[] = [
   "skill_check",
   "ability_check",
   "exposure",
+  "turn_undead",
 ];
 
 /** The newest entry of RESULT_KINDS, voided ones included (the server's "latest roll"). */
@@ -77,6 +81,7 @@ export function isRollEntry(e: LogEntry): boolean {
     case "item_use":
     case "initiative":
     case "exposure":
+    case "turn_undead":
       return true;
     case "cast": {
       const p = castPayload(e);
@@ -209,6 +214,7 @@ export type CardModel =
   | { layout: "skill"; check: SkillCheck }
   | { layout: "ability"; check: AbilityCheck }
   | { layout: "dice"; roll: DiceRoll }
+  | { layout: "turn"; turn: TurnResult }
   | { layout: "info"; info: InfoView };
 
 /** HP change value as the journal and the card show it: a voided change keeps its original delta. */
@@ -280,6 +286,8 @@ export function cardModel(
     return { layout: "ability", check: { ...ability, logEntryId: e.id } };
   const dice = dicePayload(e);
   if (dice) return { layout: "dice", roll: { ...dice, logEntryId: e.id } };
+  const turn = turnPayload(e);
+  if (turn) return { layout: "turn", turn };
   return {
     layout: "info",
     info: {
@@ -434,6 +442,9 @@ export function cardHeader(
     case "dice":
       subtitle = model.roll.formula;
       break;
+    case "turn":
+      subtitle = undeadName(t, model.turn.undead);
+      break;
     case "info":
       break;
   }
@@ -497,7 +508,15 @@ export function rowValue(e: LogEntry): RowValue | null {
   }
   const levelUp = levelUpPayload(e);
   if (levelUp) return { text: formatSigned(levelUp.gain), tone: "heal" };
+  const turn = turnPayload(e);
+  if (turn)
+    return turn.d20 !== undefined
+      ? { text: String(turn.d20), tone: turn.success ? "pass" : "fail" }
+      : { text: String(turn.destroyed || turn.turned), tone: "ink" };
   const cast = castPayload(e);
+  // ADR 0030 step 14: a failed spell's d100 is the whole result.
+  if (cast?.failure?.failed)
+    return { text: String(cast.failure.d100), tone: "fail" };
   if (cast?.damage) return { text: String(cast.damage.total), tone: "ink" };
   if (cast?.attack)
     return {

@@ -1,5 +1,7 @@
 package charactersvc
 
+import "github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+
 // Character is the pure domain representation of a character row. No transport
 // tags — handlers map to a DTO before serializing.
 //
@@ -102,6 +104,13 @@ type Derived struct {
 	// Spellbook is step 20: the learning rules of a class with a spellbook
 	// (mage, bard); nil for the others.
 	Spellbook *SpellbookRules
+	// SpellFailure is step 14: the percent chance a cast fails (one d100 at
+	// each cast, at or under it); 0 for no die (Wisdom 13 and up, a class
+	// without it).
+	SpellFailure int
+	// Turning is step 16: PHB Table 61 at the realized level, the book's
+	// rows in order; nil for a class that does not turn undead.
+	Turning []ruletablesvc.TurningTarget
 }
 
 // SpellbookRules are ADR 0030 step 20.1 on a character: what it may write

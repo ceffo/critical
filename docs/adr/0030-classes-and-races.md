@@ -128,8 +128,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    starting XP (0 to 100,000,000). Only the classes whose entries and rules are built may be created:
    the **bard** for now (`charactersvc.CreatableClasses`; the fighter and the **mage** since,
    a created mage's spellbook starting empty and filling by step 20); each class item adds its own with its entries
-   (a fighter's exceptional strength, a thief's skill points). A **cleric is refused** until step 13: its
-   slots need the Wisdom bonus spells. A refusal names the field and a code (`empty`, `too_long`,
+   (a fighter's exceptional strength, a thief's skill points). The **cleric** is creatable since steps 13
+   to 16 (it enters nothing more). A refusal names the field and a code (`empty`, `too_long`,
    `out_of_range`, `not_creatable`, `unknown`, `race_not_allowed`), worded by the web.
    Tests: `TestCreate_RefusesInvalidInputWithFieldErrors`, `TestCreate_AcceptsTheBounds` (charactersvc),
    `TestCreate_RefusedInputStoresNothing` (composition).
@@ -282,8 +282,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    Amends ADR 0008 step 2 (it named the Bard's table only). A mage prepares from his spellbook as
    the Bard does (ADR 0008 step 3); a cleric from the spheres (step 15).
 
-   _(As built)_ The cleric's slots (Table 24 and step 13) come with the cleric: until then a
-   cleric's character read is an error ("not implemented yet"), never an empty list.
+   _(As built)_ The cleric's slots are Table 24 with the Wisdom bonus spells of step 13 at the realized
+   level (`ruletablesvc.PriestSpellsPerDay`).
    Tests: `TestWizardSpellsPerDay_Step8_Table21`, `TestBardSpellsPerDay` (ruletablesadpt),
    `TestDerive_Step8_SpellSlotsByClass` (charactersvc), `TestInfo` (prepsvc: the limits are the
    derived slots).
@@ -410,12 +410,38 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     the cell for the cleric's level (columns 1 to 9, 10-11, 12-13, 14 and up):
     1. A number: one d20 through the dice port; success at or above the number.
     2. `T`: turned with no d20. `D`: destroyed with no d20. `D*`: destroyed, and 2d4 more of the
-       type are affected.
+       type are turned (the table's footnote).
     3. `—`: the cleric cannot turn that type; refused (400) before any die.
-    4. On a success (or `T`, `D`) 2d6 undead are affected (plus the 2d4 of `D*`), rolled on the
-       server; the lowest Hit Dice go first (PHB chapter 9), which the DM applies.
+    4. On a success (or `T`, `D`, `D*`) 2d6 undead are affected, turned or destroyed as the cell
+       says; `D*` destroys those 2d6 and turns 2d4 more. The dice are rolled on the server; the
+       lowest Hit Dice go first (PHB chapter 9), which the DM applies.
     5. One logged roll entry (a roll kind of `actionlog.RollKinds`) with the type, the cell, the
        dice and the result; it changes no state. Once per encounter is not enforced.
+    _(As built, steps 13 to 16)_ The derived character carries the slots (step 13), the failure
+    chance (`Derived.SpellFailure`, step 14) and Table 61 at the realized level (`Derived.Turning`,
+    served on the character as `turning`, step 16), so the web offers the types and shows each target
+    without computing it. Which class reads what is class data in `ruletablesvc` (`UsesWisdomSpells`,
+    `TurnsUndead`), never a handler branch. Step 14's d100 is rolled after every refusal of the request, its effect's included (a target AC, a
+    material item left or chosen, a granted-slots split), so an invalid request is a 400 whatever the die; a
+    failed cast spends the slot and records only the slot snapshot, the spell and `failure` (d100,
+    chance, failed); a cast above the chance carries the roll too. Step 15 reads the sphere access and
+    each priest spell's sphere codes of catalogue format 6 ([ADR 0021](0021-spell-catalogue.md) step
+    12, decided as built; an access row whose sphere code is on no spell is refused at start-up): the domain's `spheresvc.Spheres` serves a class with a sphere access the open priest spells
+    **at the spell levels it has slots of** (a ruling, accepted by the user: a level without a slot offers
+    nothing to prepare), level then id order; on a format-5 catalogue there is no access and a cleric prepares
+    nothing. Step 16 is `POST /api/character/turn-undead` `{undead}` (a Table 61 row code); the
+    breakdown and the `turn_undead` entry carry the type, the level, the cell (`target` or
+    `outcome`), the d20, `success`, `effect` (turn or destroy), the 2d6 `affected`, D*'s 2d4
+    `more`, and `destroyed` and `turned` (how many undead each, worked out by the server so the web
+    adds no rule dice; a D* turn has both: the 2d6 destroyed, the 2d4 turned). The web's Turning
+    tab lists `derived.turning` as served (a dash is not offered); the result card, the journal and
+    the header word the entry, and a cast's `failure` d100. Refusals: `cannot_turn_undead` (a dash), `class_cannot_turn`, an unknown type (400).
+    Tests: `TestPriestSpellsPerDay_Step13_WisdomBonusSpells`, `TestSpellFailureFor_Step14_LowWisdom`,
+    `TestTurningAt_Step16_Table61`, `TestSphereAccess_Step15_TheClericsSpheres` (ruletablesadpt),
+    `TestDerive_Steps13to16_TheClericsWisdomAndTurning` (charactersvc), `TestCast_Step14_SpellFailure`
+    (castsvc), `TestTurn_Step16_TheCellDecidesTheDice`, `TestTurn_Step16_3_RefusalsRollNothing`
+    (turnsvc), `TestCleric_Steps13to16_PrepareCastAndTurn`,
+    `TestCleric_Steps13_15_AThirdLevelClericOfWisdom15` (composition).
 
 ### Thief and bard skills
 

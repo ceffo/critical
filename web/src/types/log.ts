@@ -26,6 +26,8 @@ export type LogKind =
   | "level_up"
   /** A chance-to-learn roll (ADR 0030 step 20.2); popping it takes the spell out or lifts the block. */
   | "spell_learn"
+  /** A cleric's turning undead roll (ADR 0030 step 16); it changes no state. */
+  | "turn_undead"
   | "spell_prep"
   | "long_rest"
   | "save"

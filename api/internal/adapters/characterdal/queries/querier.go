@@ -46,6 +46,8 @@ type Querier interface {
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
 	// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
 	SetRealizedLevel(ctx context.Context, arg SetRealizedLevelParams) (int64, error)
+	// Only a character the user owns and has not retired: none updated is an unknown character.
+	SetSkillArmor(ctx context.Context, arg SetSkillArmorParams) (int64, error)
 	// A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
 	SetSkillPoints(ctx context.Context, arg SetSkillPointsParams) (int64, error)
 	UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error)

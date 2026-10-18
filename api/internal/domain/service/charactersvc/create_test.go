@@ -292,6 +292,40 @@ func TestChange_Rename(t *testing.T) {
 	assert.Equal(t, "name", fe.Field)
 }
 
+// ADR 0030 step 1 after creation: a thief's skill armour is set to one of
+// Table 29's armours; the thief skills are derived on read, so they follow.
+func TestChange_ASkillArmourIsSetOnAThief(t *testing.T) {
+	e := newEnv(t)
+	set := e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "elven_chain").Return(nil).Once()
+	e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{Class: "thief"}, nil).Once().NotBefore(set)
+	e.owners.EXPECT().CurrentCharacter(mock.Anything, ownerID).Return(3, nil).Once()
+
+	current, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr("elven_chain")})
+	require.NoError(t, err)
+	assert.Equal(t, int64(3), current)
+}
+
+// An armour that is empty or none of Table 29's is refused before anything
+// runs; a class without thieving skills has no armour to change (the write
+// is rolled back with the refusal).
+func TestChange_ASkillArmourIsRefusedWhenInvalid(t *testing.T) {
+	e := newEnv(t)
+	for armor, code := range map[string]string{"": "empty", "plate": "unknown"} {
+		_, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr(armor)})
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, "skillArmor", fe.Field)
+		assert.Equal(t, code, fe.Message)
+	}
+
+	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "leather").Return(nil).Once()
+	e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{Class: "bard"}, nil).Once()
+	_, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr("leather")})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "not_allowed", fe.Message)
+}
+
 // Another user's character, a retired one and an unknown id are not found
 // (ADR 0029 step 7.1): nothing else runs.
 func TestChange_AnotherUsersCharacterIsNotFound(t *testing.T) {

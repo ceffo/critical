@@ -89,12 +89,16 @@ type NewCharacter struct {
 	Details DetailsPatch
 }
 
-// Change is a rename (Name) or a retirement (Retired true) of a character;
-// nil leaves a field as it is, and Retired false retires nothing (a retired
+// Change is a rename (Name), a retirement (Retired true) or a new skill
+// armour (SkillArmor, a thief's only) of a character; nil leaves a field as it is, and Retired false retires nothing (a retired
 // character is not found, so none is brought back).
 type Change struct {
 	Name    *string
 	Retired *bool
+	// SkillArmor is ADR 0030 step 1's armour, changed after creation: one of
+	// ruletablesvc.ThiefArmors, and only a thief has one. The thief skills
+	// are derived on read, so they follow it.
+	SkillArmor *string
 }
 
 // cleanName is the trimmed name, or the field error naming what is wrong.
@@ -289,12 +293,34 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 			return 0, err
 		}
 	}
+	if c.SkillArmor != nil {
+		switch armor := *c.SkillArmor; {
+		case armor == "":
+			return 0, &domain.FieldError{Field: "skillArmor", Message: CodeEmpty}
+		case !slices.Contains(ruletablesvc.ThiefArmors, armor):
+			return 0, &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
+		}
+	}
 	retire := c.Retired != nil && *c.Retired
 	var current int64
 	if err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		if c.Name != nil {
 			if err := s.owners.RenameCharacter(ctx, owner, id, name); err != nil {
 				return err
+			}
+		}
+		if c.SkillArmor != nil {
+			// The write checks the ownership first, so another user's
+			// character is not found rather than told its class.
+			if err := s.owners.SetSkillArmor(ctx, owner, id, *c.SkillArmor); err != nil {
+				return err
+			}
+			ch, err := s.reader.GetCharacter(ctx, id)
+			if err != nil {
+				return err
+			}
+			if !ruletablesvc.HasThiefSkills(ch.Class) {
+				return &domain.FieldError{Field: "skillArmor", Message: CodeNotAllowed}
 			}
 		}
 		if retire {

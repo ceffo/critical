@@ -398,6 +398,26 @@ func (q *Queries) SetRealizedLevel(ctx context.Context, arg SetRealizedLevelPara
 	return result.RowsAffected()
 }
 
+const setSkillArmor = `-- name: SetSkillArmor :execrows
+UPDATE characters SET skill_armor = $1
+WHERE id = $2 AND owner_user_id = $3 AND NOT retired
+`
+
+type SetSkillArmorParams struct {
+	SkillArmor  string
+	ID          int64
+	OwnerUserID uuid.NullUUID
+}
+
+// Only a character the user owns and has not retired: none updated is an unknown character.
+func (q *Queries) SetSkillArmor(ctx context.Context, arg SetSkillArmorParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setSkillArmor, arg.SkillArmor, arg.ID, arg.OwnerUserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const setSkillPoints = `-- name: SetSkillPoints :execrows
 UPDATE characters SET skill_points = $1 WHERE id = $2
 `

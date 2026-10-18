@@ -192,6 +192,20 @@ func (d *DAL) RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, na
 	return nil
 }
 
+// SetSkillArmor implements charactersvc.Owners.
+func (d *DAL) SetSkillArmor(ctx context.Context, owner uuid.UUID, id int64, armor string) error {
+	n, err := d.q.SetSkillArmor(ctx, queries.SetSkillArmorParams{
+		SkillArmor: armor, ID: id, OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("set skill armor: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
+}
+
 // RetireCharacter implements charactersvc.Owners.
 func (d *DAL) RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
 	if err := d.lockUser(ctx, owner); err != nil {

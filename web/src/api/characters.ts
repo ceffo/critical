@@ -41,3 +41,11 @@ export function renameCharacter(
 ): Promise<CharacterList> {
   return patch<CharacterList>(`/api/characters/${id}`, { name });
 }
+
+/** Changes the armour a thief wears for its skills (ADR 0030 step 1); the server derives the skills from it. */
+export function changeSkillArmor(
+  id: number,
+  skillArmor: string,
+): Promise<CharacterList> {
+  return patch<CharacterList>(`/api/characters/${id}`, { skillArmor });
+}

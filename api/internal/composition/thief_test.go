@@ -253,3 +253,66 @@ func TestThief_Step19_BackstabAtAnUnknownACKeepsItsMultiplier(t *testing.T) {
 	assert.Equal(t, 7, got.TotalDamage)
 	assert.Equal(t, 1, dice.calls["die"], "no die rolled again")
 }
+
+// ADR 0030 steps 1 and 17 after creation, through the real services: the
+// halfling thief of Dexterity 17 with 30 points in Open Locks and Pick
+// Pockets puts on elven chain. PHB Table 29 takes 5 off Open Locks (55 to
+// 50) and 20 off Pick Pockets (the armour term goes from +5 to -20); a bard
+// has no skill armour to change, and another user's thief is not found.
+func TestThief_Step1_ChangeTheSkillArmourAfterCreation(t *testing.T) {
+	ctx := context.Background()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Name: "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		SkillArmor: "none", SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
+	})
+	require.NoError(t, err)
+	armor := func(skill string) (percent, term int) {
+		t.Helper()
+		skills, err := bs.Skills.List(ctx, id)
+		require.NoError(t, err)
+		for _, k := range skills.ThiefSkills {
+			if k.Skill == skill {
+				return k.Percent, k.Armor
+			}
+		}
+		require.Failf(t, "no such skill", skill)
+		return 0, 0
+	}
+	percent, _ := armor("open_locks")
+	require.Equal(t, 55, percent)
+
+	_, err = bs.Character.Change(ctx, s.User.ID, id, charactersvc.Change{SkillArmor: new("elven_chain")})
+	require.NoError(t, err)
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, "elven_chain", c.SkillArmor)
+	percent, _ = armor("open_locks")
+	assert.Equal(t, 50, percent, "Table 29: elven chain -5 on Open Locks")
+	_, term := armor("pick_pockets")
+	assert.Equal(t, -20, term, "Table 29: elven chain -20 on Pick Pockets")
+
+	other, err := bs.Auth.DevLogin(ctx, "bob@example.com")
+	require.NoError(t, err)
+	_, err = bs.Character.Change(ctx, other.User.ID, id, charactersvc.Change{SkillArmor: new("none")})
+	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
+	c, err = bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, "elven_chain", c.SkillArmor, "another user changes nothing")
+
+	bard, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Name: "Lyra", Class: "bard", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 13, Wis: 11, Cha: 17, HPMax: 4,
+	})
+	require.NoError(t, err)
+	_, err = bs.Character.Change(ctx, s.User.ID, bard, charactersvc.Change{SkillArmor: new("leather")})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "skillArmor", fe.Field)
+	b, err := bs.Character.GetCharacter(ctx, bard)
+	require.NoError(t, err)
+	assert.Empty(t, b.SkillArmor, "the refused write is rolled back")
+}

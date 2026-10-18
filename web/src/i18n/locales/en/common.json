@@ -1632,6 +1632,7 @@
     },
     "spendPoints": "Spend",
     "spendPointsHint": "Spend thieving skill points",
+    "armorHint": "Change the armour worn for the thieving skills",
     "pointsTitle": "Thieving skill points",
     "pointsLead": "The total points in each skill. The budget at your level is a warning, not a limit.",
     "pointsLabel": "Points in {{name}}",

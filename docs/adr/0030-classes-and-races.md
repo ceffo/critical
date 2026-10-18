@@ -506,6 +506,13 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestResolveAttack_Step19_BackstabRefusedBeforeAnyDie`, `TestGetAttackForm_Step19_BackstabPreview`,
     `TestBackstab_Step19_MeleeWeaponOnly` (combatsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition).
 
+    _(Armour changed after creation, 2026-10-18)_ The armour is edited later with
+    `PATCH /api/characters/{id}` `{"skillArmor": …}` (the rename's path, outside the action log: the
+    inventory does not track worn armour, so it is a field, not a move; no Undo). The same
+    checks as at creation apply (`empty`, `unknown`; `not_allowed` for a class without thieving
+    skills); the skills are derived on read, so they follow. The Skills tab's thief block holds the
+    selector.
+
 ### Spellbook
 
 20. **Learning a spell (mage, bard).** Adding a wizard spell to a mage's or bard's spellbook:

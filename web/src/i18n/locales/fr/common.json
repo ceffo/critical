@@ -1632,6 +1632,7 @@
     },
     "spendPoints": "Dépenser",
     "spendPointsHint": "Dépenser des points de talent de voleur",
+    "armorHint": "Changer l’armure portée pour les talents de voleur",
     "pointsTitle": "Points des talents de voleur",
     "pointsLead": "Le total des points de chaque talent. Le budget de votre niveau est un avertissement, pas une limite.",
     "pointsLabel": "Points en {{name}}",

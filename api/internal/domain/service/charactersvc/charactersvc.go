@@ -44,7 +44,8 @@ type SVC interface {
 	// weapon, item, proficiency, skill or spellbook). A *domain.FieldError
 	// for invalid input (see NewCharacter).
 	Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (int64, error)
-	// Change renames or retires the owner's character id (step 7.3).
+	// Change renames, retires or re-arms (a thief's skill armour) the
+	// owner's character id (step 7.3).
 	// Another user's character, a retired one and an unknown id are all
 	// domain.ErrCharacterNotFound; retiring the current character makes the
 	// owner's first one left current (none: no current character).
@@ -84,6 +85,9 @@ type Owners interface {
 	// domain.ErrCharacterNotFound and change nothing (one statement each).
 	RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, name string) error
 	RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error
+	// SetSkillArmor sets the armour a thief wears for its skills, with the
+	// same ownership rule as RenameCharacter.
+	SetSkillArmor(ctx context.Context, owner uuid.UUID, id int64, armor string) error
 	// RepairCurrentCharacter makes the owner's first character not retired
 	// current unless their current one is such a character (none left: no
 	// current character).

@@ -253,6 +253,18 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
   await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("55 %");
   await expect(page.getByTestId("skill-budget")).toHaveCount(0);
 
+  // The armour changes in play (step 1): elven chain takes 5 off Open Locks (Table 29), and the
+  // choice survives a reload.
+  await page
+    .getByTestId("thief-armor")
+    .selectOption({ label: "Cotte de mailles elfique" });
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
+  await snap(page, "thief-armor-changed-fr");
+  await page.reload();
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  await expect(page.getByTestId("thief-armor")).toHaveValue("elven_chain");
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
+
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Inventory");
   await page.getByRole("button", { name: "Add weapon" }).click();

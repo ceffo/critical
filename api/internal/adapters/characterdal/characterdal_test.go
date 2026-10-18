@@ -240,6 +240,11 @@ func TestRenameRetire_NoRowIsNotFound(t *testing.T) {
 	q.EXPECT().RenameCharacter(ctx, queries.RenameCharacterParams{Name: "B", ID: 5, OwnerUserID: nullOwner}).Return(1, nil).Once()
 	require.NoError(t, dal.RenameCharacter(ctx, owner, 5, "B"))
 
+	q.EXPECT().SetSkillArmor(ctx, queries.SetSkillArmorParams{SkillArmor: "elven_chain", ID: 4, OwnerUserID: nullOwner}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.SetSkillArmor(ctx, owner, 4, "elven_chain"), domain.ErrCharacterNotFound)
+	q.EXPECT().SetSkillArmor(ctx, queries.SetSkillArmorParams{SkillArmor: "elven_chain", ID: 5, OwnerUserID: nullOwner}).Return(1, nil).Once()
+	require.NoError(t, dal.SetSkillArmor(ctx, owner, 5, "elven_chain"))
+
 	q.EXPECT().LockUser(ctx, owner).Return(owner, nil).Twice()
 	q.EXPECT().RetireCharacter(ctx, queries.RetireCharacterParams{ID: 4, OwnerUserID: nullOwner}).Return(0, nil).Once()
 	require.ErrorIs(t, dal.RetireCharacter(ctx, owner, 4), domain.ErrCharacterNotFound)

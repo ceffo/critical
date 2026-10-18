@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
@@ -125,4 +126,15 @@ func ParseSeed(book []byte, cat catalogue.Catalogue) ([]string, error) {
 		keys = append(keys, e.ID)
 	}
 	return keys, nil
+}
+
+// Spell is the catalogue spell id as learnsvc reads it (ADR 0030 step 20):
+// its level and whether it is a wizard spell; ok is false for an id the
+// catalogue does not hold.
+func (b *Book) Spell(id string) (learnsvc.Spell, bool) {
+	s, ok := b.spells[id]
+	if !ok {
+		return learnsvc.Spell{}, false
+	}
+	return learnsvc.Spell{Level: s.Level, Wizard: s.Class == "Wizard"}, true
 }

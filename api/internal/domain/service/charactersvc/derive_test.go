@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -48,8 +49,14 @@ func kelsenDerived() charactersvc.Derived {
 	return charactersvc.Derived{
 		XPTotal: 1_293_418, TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
 		SpellSlots: level15Slots, SheetDifferences: []charactersvc.SheetDifference{},
-		LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		LevelUp:   charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		Spellbook: &kelsenSpellbook,
 	}
+}
+
+// kelsenSpellbook is a bard's spellbook rules at Intelligence 14 (step 20.1).
+var kelsenSpellbook = charactersvc.SpellbookRules{
+	ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9,
 }
 
 // rogueHitDice is the rogues' row of the hit dice (PHB Table 25, Hit Dice
@@ -59,7 +66,7 @@ var rogueHitDice = ruletablesvc.HitDiceRow{Group: "rogue", Die: 6, NameLevel: 10
 // Kelsen's sheet matches the rules: every derived value is the sheet's and
 // there is no difference to warn about (ADR 0030 Consequences).
 func TestDerive_KelsenMatchesHisSheet(t *testing.T) {
-	r := mocks.NewMockRules(t)
+	r := newRules(t)
 	expectKelsenRules(r, 1_293_418, 15)
 	got, err := charactersvc.Derive(kelsen(), 0, r)
 	require.NoError(t, err)
@@ -71,7 +78,7 @@ func TestDerive_KelsenMatchesHisSheet(t *testing.T) {
 // next level's threshold comes from the same table, none at level 20.
 func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 	t.Run("starting XP plus the ledger", func(t *testing.T) {
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		r.EXPECT().LevelFor("bard", 1_293_418+26_582).Return(16, nil).Once()
 		r.EXPECT().XPThreshold("bard", 17).Return(1_540_000, nil).Once()
 		// The benefits are the realized level's (15), not the target's.
@@ -94,7 +101,7 @@ func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 	t.Run("no next level at 20", func(t *testing.T) {
 		c := kelsen()
 		c.XPTotal, c.RealizedLevel, c.Sheet = 3_000_000, 20, charactersvc.Sheet{Level: 20, THAC0: 11, Saves: kelsenSaves}
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		r.EXPECT().LevelFor("bard", 3_000_000).Return(20, nil).Once()
 		r.EXPECT().THAC0For("rogue", 20).Return(11, nil).Once()
 		r.EXPECT().SavesFor("rogue", 20).Return(rogue13to16, nil).Once()
@@ -114,7 +121,7 @@ func TestDerive_Step2_TheClassGroupPicksTheRows(t *testing.T) {
 		t.Run(class, func(t *testing.T) {
 			c := kelsen()
 			c.Class, c.XPTotal, c.RealizedLevel, c.Sheet = class, 0, 1, charactersvc.Sheet{Level: 1, THAC0: 20}
-			r := mocks.NewMockRules(t)
+			r := newRules(t)
 			r.EXPECT().LevelFor(class, 0).Return(1, nil).Once()
 			r.EXPECT().XPThreshold(class, 2).Return(1_250, nil).Once()
 			r.EXPECT().THAC0For(group, 1).Return(20, nil).Once()
@@ -129,7 +136,7 @@ func TestDerive_Step2_TheClassGroupPicksTheRows(t *testing.T) {
 	t.Run("an unknown class is an error", func(t *testing.T) {
 		c := kelsen()
 		c.Class = "paladin"
-		_, err := charactersvc.Derive(c, 0, mocks.NewMockRules(t))
+		_, err := charactersvc.Derive(c, 0, newRules(t))
 		require.ErrorContains(t, err, "paladin")
 	})
 }
@@ -137,7 +144,7 @@ func TestDerive_Step2_TheClassGroupPicksTheRows(t *testing.T) {
 // ADR 0030 step 5: the THAC0 is PHB Table 53's for the group at the derived
 // level (Table 53 answers 12 here, not the sheet's 13: the derived one wins).
 func TestDerive_Step5_THAC0FromTable53(t *testing.T) {
-	r := mocks.NewMockRules(t)
+	r := newRules(t)
 	r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 	r.EXPECT().XPThreshold("bard", 16).Return(1_320_000, nil).Once()
 	r.EXPECT().THAC0For("rogue", 15).Return(12, nil).Once()
@@ -153,7 +160,7 @@ func TestDerive_Step5_THAC0FromTable53(t *testing.T) {
 // fails).
 func TestDerive_Step6_SavesFromTable60(t *testing.T) {
 	row := ruletablesvc.SavingThrowRow{Group: "rogue", LevelMin: 13, LevelMax: 16, ParaPoison: 1, RodStaffWand: 2, PetriPoly: 3, Breath: 4, Spell: 5}
-	r := mocks.NewMockRules(t)
+	r := newRules(t)
 	r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 	r.EXPECT().XPThreshold("bard", 16).Return(1_320_000, nil).Once()
 	r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
@@ -169,7 +176,7 @@ func TestDerive_Step6_SavesFromTable60(t *testing.T) {
 // implemented yet (an error, not an empty list).
 func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 	t.Run("bard: Table 32", func(t *testing.T) {
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		expectKelsenRules(r, 1_293_418, 15)
 		got, err := charactersvc.Derive(kelsen(), 0, r)
 		require.NoError(t, err)
@@ -179,7 +186,7 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 		t.Run(class+": none", func(t *testing.T) {
 			c := kelsen()
 			c.Class, c.RealizedLevel = class, 14
-			r := mocks.NewMockRules(t)
+			r := newRules(t)
 			r.EXPECT().LevelFor(class, 1_293_418).Return(14, nil).Once()
 			r.EXPECT().XPThreshold(class, 15).Return(1_500_000, nil).Once()
 			r.EXPECT().THAC0For(ruleGroup(t, class), 14).Return(7, nil).Once()
@@ -192,7 +199,7 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 	t.Run("mage: Table 21", func(t *testing.T) {
 		c := kelsen()
 		c.Class, c.RealizedLevel = "mage", 13
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		r.EXPECT().LevelFor("mage", 1_293_418).Return(13, nil).Once()
 		r.EXPECT().XPThreshold("mage", 14).Return(1_500_000, nil).Once()
 		r.EXPECT().THAC0For("wizard", 13).Return(16, nil).Once()
@@ -205,7 +212,7 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 	t.Run("cleric: not implemented yet", func(t *testing.T) {
 		c := kelsen()
 		c.Class, c.RealizedLevel = "cleric", 13
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		r.EXPECT().LevelFor("cleric", 1_293_418).Return(13, nil).Once()
 		r.EXPECT().XPThreshold("cleric", 14).Return(1_350_000, nil).Once()
 		r.EXPECT().THAC0For("priest", 13).Return(12, nil).Once()
@@ -242,7 +249,7 @@ func TestDerive_Step22_1_RaceSaveBonus(t *testing.T) {
 		t.Run("race "+tc.race, func(t *testing.T) {
 			c := kelsen()
 			c.Race = tc.race
-			r := mocks.NewMockRules(t)
+			r := newRules(t)
 			expectKelsenRules(r, 1_293_418, 15)
 			if tc.want != (charactersvc.Saves{}) {
 				r.EXPECT().ConSaveBonusFor(16).Return(4, nil).Once()
@@ -264,7 +271,7 @@ func TestDerive_Step24_SheetDifferences(t *testing.T) {
 	t.Run("every differing figure", func(t *testing.T) {
 		c := kelsen()
 		c.Sheet = charactersvc.Sheet{Level: 14, THAC0: 14, Saves: charactersvc.Saves{ParaPoison: 11, RodStaffWand: 8, PetriPoly: 10, Breath: 14, Spell: 10}}
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		expectKelsenRules(r, 1_293_418, 15)
 		got, err := charactersvc.Derive(c, 0, r)
 		require.NoError(t, err)
@@ -280,7 +287,7 @@ func TestDerive_Step24_SheetDifferences(t *testing.T) {
 		assert.Equal(t, 13, got.THAC0, "the computed THAC0 is used")
 	})
 	t.Run("XP awarded since the import is no difference", func(t *testing.T) {
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		r.EXPECT().LevelFor("bard", 1_293_418+300_000).Return(17, nil).Once()
 		r.EXPECT().XPThreshold("bard", 18).Return(1_760_000, nil).Once()
 		r.EXPECT().THAC0For("rogue", 17).Return(12, nil).Once()
@@ -309,7 +316,7 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 	t.Run("hit die through the name level, fixed gain after", func(t *testing.T) {
 		c := kelsen()
 		c.RealizedLevel, c.XPTotal, c.Sheet = 9, 500_000, charactersvc.Sheet{Level: 9, THAC0: 16, Saves: kelsenSaves}
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		r.EXPECT().LevelFor("bard", 500_000+250_000).Return(12, nil).Once()
 		r.EXPECT().XPThreshold("bard", 13).Return(880_000, nil).Once()
 		r.EXPECT().THAC0For("rogue", 9).Return(16, nil).Once()
@@ -326,7 +333,7 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 	t.Run("the warriors' row for a fighter", func(t *testing.T) {
 		c := kelsen()
 		c.Class, c.RealizedLevel, c.XPTotal, c.Sheet = "fighter", 1, 2_000, charactersvc.Sheet{Level: 2, THAC0: 19}
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		r.EXPECT().LevelFor("fighter", 2_000).Return(2, nil).Once()
 		r.EXPECT().XPThreshold("fighter", 3).Return(4_000, nil).Once()
 		// The benefits are level 1's; the sheet comparison reads level 2.
@@ -340,7 +347,7 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 		assert.Equal(t, []charactersvc.PendingLevel{{Level: 2, Die: 10}}, got.LevelUp.Pending)
 	})
 	t.Run("none at the target level, and no lookup", func(t *testing.T) {
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		expectKelsenRules(r, 1_293_418, 15)
 		got, err := charactersvc.Derive(kelsen(), 0, r)
 		require.NoError(t, err)
@@ -353,7 +360,7 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 	t.Run("no realized level while creating is the target level (step 7.5)", func(t *testing.T) {
 		c := kelsen()
 		c.RealizedLevel = 0
-		r := mocks.NewMockRules(t)
+		r := newRules(t)
 		expectKelsenRules(r, 1_293_418, 15)
 		got, err := charactersvc.Derive(c, 0, r)
 		require.NoError(t, err)
@@ -368,7 +375,7 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 func TestDerive_Step7_4_ATargetUnderTheRealizedLevelIsFlagged(t *testing.T) {
 	c := kelsen()
 	c.RealizedLevel = 16
-	r := mocks.NewMockRules(t)
+	r := newRules(t)
 	r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 	r.EXPECT().XPThreshold("bard", 16).Return(1_320_000, nil).Once()
 	r.EXPECT().THAC0For("rogue", 16).Return(12, nil).Once()
@@ -387,9 +394,57 @@ func TestDerive_Step7_4_ATargetUnderTheRealizedLevelIsFlagged(t *testing.T) {
 
 // A table error stops the derivation, naming the lookup.
 func TestDerive_ATableErrorIsAnError(t *testing.T) {
-	r := mocks.NewMockRules(t)
+	r := newRules(t)
 	boom := errors.New("boom")
 	r.EXPECT().LevelFor("bard", 1_293_418).Return(0, boom).Once()
 	_, err := charactersvc.Derive(kelsen(), 0, r)
 	require.ErrorIs(t, err, boom)
+}
+
+// int14 is PHB Table 4 at Intelligence 14 (ADR 0030 step 20).
+var int14 = ruletablesvc.IntelligenceRow{IntMin: 14, IntMax: 14, MaxSpellLevel: 7, LearnChance: 60, MaxSpells: 9}
+
+// newRules is the rules mock; a class with a spellbook reads Table 4 (step
+// 20), which the tests that are not about it leave at Intelligence 14.
+func newRules(t *testing.T) *mocks.MockRules {
+	r := mocks.NewMockRules(t)
+	r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
+	return r
+}
+
+// Step 20.1: a class with a spellbook (mage, bard) derives the class's
+// highest spell level and PHB Table 4 at the sheet's Intelligence; a fighter
+// has none.
+func TestDerive_Step20_1_SpellbookRules(t *testing.T) {
+	int18 := ruletablesvc.IntelligenceRow{IntMin: 18, IntMax: 18, MaxSpellLevel: 9, LearnChance: 85, MaxSpells: 18}
+	int19 := ruletablesvc.IntelligenceRow{IntMin: 19, IntMax: 19, MaxSpellLevel: 9, LearnChance: 95, NoMaximum: true}
+	for _, tc := range []struct {
+		class string
+		score int
+		row   ruletablesvc.IntelligenceRow
+		want  *charactersvc.SpellbookRules
+	}{
+		{"mage", 18, int18, &charactersvc.SpellbookRules{ClassMaxSpellLevel: 9, IntMaxSpellLevel: 9, LearnChance: 85, MaxSpellsPerLevel: 18}},
+		{"mage", 19, int19, &charactersvc.SpellbookRules{ClassMaxSpellLevel: 9, IntMaxSpellLevel: 9, LearnChance: 95, NoMaximum: true}},
+		{"bard", 14, int14, &kelsenSpellbook},
+		{"fighter", 18, int18, nil},
+	} {
+		t.Run(tc.class, func(t *testing.T) {
+			c := kelsen()
+			c.Class, c.Int, c.RealizedLevel = tc.class, tc.score, 13
+			r := mocks.NewMockRules(t)
+			r.EXPECT().LevelFor(tc.class, mock.Anything).Return(13, nil).Once()
+			r.EXPECT().XPThreshold(tc.class, 14).Return(1_500_000, nil).Once()
+			r.EXPECT().THAC0For(mock.Anything, 13).Return(16, nil).Once()
+			r.EXPECT().SavesFor(mock.Anything, 13).Return(rogue13to16, nil).Once()
+			r.EXPECT().WizardSpellsPerDay(13).Return(map[int]int{1: 5}, nil).Maybe()
+			r.EXPECT().BardSpellsPerDay(13).Return(map[int]int{1: 3}, nil).Maybe()
+			if tc.want != nil {
+				r.EXPECT().IntelligenceFor(tc.score).Return(tc.row, nil).Once()
+			}
+			got, err := charactersvc.Derive(c, 0, r)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got.Spellbook)
+		})
+	}
 }

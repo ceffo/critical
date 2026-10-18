@@ -99,6 +99,25 @@ type Derived struct {
 	// Specializes is step 12: the class may specialize in a weapon (the
 	// weapon editor offers the flag).
 	Specializes bool
+	// Spellbook is step 20: the learning rules of a class with a spellbook
+	// (mage, bard); nil for the others.
+	Spellbook *SpellbookRules
+}
+
+// SpellbookRules are ADR 0030 step 20.1 on a character: what it may write
+// in its spellbook. The sheet's Intelligence picks the PHB Table 4 row.
+type SpellbookRules struct {
+	// ClassMaxSpellLevel is the class's highest spell level (bard 6th, mage
+	// 9th).
+	ClassMaxSpellLevel int
+	// IntMaxSpellLevel is Table 4's highest spell level (0: none).
+	IntMaxSpellLevel int
+	// LearnChance is Table 4's chance to learn a spell, in percent.
+	LearnChance int
+	// MaxSpellsPerLevel is Table 4's maximum number of spells of one level;
+	// it means nothing when NoMaximum (the book's "All").
+	MaxSpellsPerLevel int
+	NoMaximum         bool
 }
 
 // PendingLevel is one level whose hit points are owed (ADR 0030 step 7): up

@@ -36,7 +36,7 @@ type env struct {
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
-		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: mocks.NewMockRules(t),
+		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: newRules(t),
 		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{},
 	}
 	svc, err := charactersvc.NewWithConfig(charactersvc.DefaultConfig(), charactersvc.Deps{
@@ -49,7 +49,7 @@ func newEnv(t *testing.T) *env {
 
 func TestNew_NilDependency(t *testing.T) {
 	full := charactersvc.Deps{
-		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: mocks.NewMockRules(t),
+		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: newRules(t),
 		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t),
 	}
 	without := map[string]func(d *charactersvc.Deps){

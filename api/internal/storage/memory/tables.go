@@ -69,6 +69,9 @@ type tables struct {
 	proficiencies map[int64][]skillsvc.ProficiencyDef
 	bardSkills    map[int64][]skillsvc.BardSkillDef
 	spellbooks    map[int64][]string
+	// learnFailures are the spells each character failed to learn, by
+	// catalogue key, at the realized level of the failure (ADR 0030 step 20.2).
+	learnFailures map[int64]map[string]int
 
 	dice    map[int64]diceFavourite
 	diceSeq int64
@@ -96,6 +99,7 @@ func newTables() *tables {
 		proficiencies: map[int64][]skillsvc.ProficiencyDef{},
 		bardSkills:    map[int64][]skillsvc.BardSkillDef{},
 		spellbooks:    map[int64][]string{},
+		learnFailures: map[int64]map[string]int{},
 		forms:         map[int64]combatsvc.AttackForm{},
 		xp:            map[int64]xpEntry{},
 		dice:          map[int64]diceFavourite{},

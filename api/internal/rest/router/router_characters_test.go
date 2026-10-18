@@ -243,8 +243,8 @@ func TestCharacters_SlowDatabaseIsUnavailable(t *testing.T) {
 	}
 }
 
-// GET /api/character carries the derived block (ADR 0030 steps 3 to 8, 22.1
-// and 24) as structured data: numbers and codes, the slots by ascending spell
+// GET /api/character carries the derived block (ADR 0030 steps 3 to 8, 20.1,
+// 22.1 and 24) as structured data: numbers and codes, the slots by ascending spell
 // level, null at the last level; the race code apart from the free-text race.
 // The stored sheet figures are not served.
 func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
@@ -264,6 +264,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 			LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
 				{Level: 10, Die: 6}, {Level: 11, FixedGain: 2},
 			}},
+			Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 		},
 		Details: charactersvc.Details{Race: "Nain des collines", Languages: []string{}},
 	}, nil).Once()
@@ -288,6 +289,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"levelUp": {"realizedAboveTarget": false, "pending": [
 			{"level": 10, "die": 6, "fixedGain": 0}, {"level": 11, "die": 0, "fixedGain": 2}
 		]},
-		"specializes": false
+		"specializes": false,
+		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false}
 	}`, string(derived))
 }

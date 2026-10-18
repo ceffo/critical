@@ -29,3 +29,52 @@ func (d *DAL) Keys(ctx context.Context, characterID int64) ([]string, error) {
 	}
 	return keys, nil
 }
+
+// AddEntry writes the spell at the end of the character's spellbook (a
+// spell already there stays where it is).
+func (d *DAL) AddEntry(ctx context.Context, characterID int64, spellKey string) error {
+	if err := d.q.AddSpellbookEntry(ctx, queries.AddSpellbookEntryParams{CharacterID: characterID, SpellKey: spellKey}); err != nil {
+		return fmt.Errorf("add %q to the spellbook of character %d: %w", spellKey, characterID, err)
+	}
+	return nil
+}
+
+// RemoveEntry takes the spell out of the character's spellbook (none: no
+// change).
+func (d *DAL) RemoveEntry(ctx context.Context, characterID int64, spellKey string) error {
+	if err := d.q.RemoveSpellbookEntry(ctx, queries.RemoveSpellbookEntryParams{CharacterID: characterID, SpellKey: spellKey}); err != nil {
+		return fmt.Errorf("remove %q from the spellbook of character %d: %w", spellKey, characterID, err)
+	}
+	return nil
+}
+
+// LearnFailure returns the realized level the character failed to learn the
+// spell at (ADR 0030 step 20.2); ok is false when there is no failure.
+func (d *DAL) LearnFailure(ctx context.Context, characterID int64, spellKey string) (int, bool, error) {
+	levels, err := d.q.GetLearnFailure(ctx, queries.GetLearnFailureParams{CharacterID: characterID, SpellKey: spellKey})
+	if err != nil {
+		return 0, false, fmt.Errorf("read learn failure of %q for character %d: %w", spellKey, characterID, err)
+	}
+	if len(levels) == 0 {
+		return 0, false, nil
+	}
+	return int(levels[0]), true, nil
+}
+
+// SetLearnFailure records (or replaces) the character's failure to learn the
+// spell at level.
+func (d *DAL) SetLearnFailure(ctx context.Context, characterID int64, spellKey string, level int) error {
+	if err := d.q.SetLearnFailure(ctx, queries.SetLearnFailureParams{CharacterID: characterID, SpellKey: spellKey, Level: int64(level)}); err != nil {
+		return fmt.Errorf("set learn failure of %q for character %d: %w", spellKey, characterID, err)
+	}
+	return nil
+}
+
+// DeleteLearnFailure lifts the character's failure to learn the spell (none:
+// no change).
+func (d *DAL) DeleteLearnFailure(ctx context.Context, characterID int64, spellKey string) error {
+	if err := d.q.DeleteLearnFailure(ctx, queries.DeleteLearnFailureParams{CharacterID: characterID, SpellKey: spellKey}); err != nil {
+		return fmt.Errorf("delete learn failure of %q for character %d: %w", spellKey, characterID, err)
+	}
+	return nil
+}

@@ -9,8 +9,14 @@ import (
 )
 
 type Querier interface {
+	AddSpellbookEntry(ctx context.Context, arg AddSpellbookEntryParams) error
+	DeleteLearnFailure(ctx context.Context, arg DeleteLearnFailureParams) error
+	// The spells a character failed to learn (ADR 0030 step 20.2), at the realized level of the failure.
+	GetLearnFailure(ctx context.Context, arg GetLearnFailureParams) ([]int64, error)
 	// The spells a character knows, by catalogue key, in the sheet's order.
 	ListSpellbook(ctx context.Context, characterID int64) ([]string, error)
+	RemoveSpellbookEntry(ctx context.Context, arg RemoveSpellbookEntryParams) error
+	SetLearnFailure(ctx context.Context, arg SetLearnFailureParams) error
 }
 
 var _ Querier = (*Queries)(nil)

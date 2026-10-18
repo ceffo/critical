@@ -15,10 +15,11 @@ import (
 
 // CreatableClasses are the classes a new character may have (ADR 0030 step
 // 1): the bard's and the fighter's rules are built (the fighter enters an
-// exceptional strength, step 9). Each class item adds its class here with
+// exceptional strength, step 9), the mage's too (its spellbook starts empty
+// and fills by learning, step 20). Each class item adds its class here with
 // its own entries (a thief's skill points); a cleric waits for its bonus
 // spells (step 13), without which its spell slots cannot be derived.
-var CreatableClasses = []string{"bard", "fighter"}
+var CreatableClasses = []string{"bard", "fighter", "mage"}
 
 // The ranges a new character's entered values must fall in.
 const (

@@ -9,6 +9,71 @@ import (
 	"context"
 )
 
+const addSpellbookEntry = `-- name: AddSpellbookEntry :exec
+INSERT INTO spellbook_entries (character_id, spell_key, position)
+SELECT $1, $2,
+       COALESCE(MAX(position), -1) + 1 FROM spellbook_entries WHERE character_id = $1
+ON CONFLICT (character_id, spell_key) DO NOTHING
+`
+
+type AddSpellbookEntryParams struct {
+	CharacterID int64
+	SpellKey    string
+}
+
+func (q *Queries) AddSpellbookEntry(ctx context.Context, arg AddSpellbookEntryParams) error {
+	_, err := q.db.ExecContext(ctx, addSpellbookEntry, arg.CharacterID, arg.SpellKey)
+	return err
+}
+
+const deleteLearnFailure = `-- name: DeleteLearnFailure :exec
+DELETE FROM spellbook_learn_failures WHERE character_id = $1 AND spell_key = $2
+`
+
+type DeleteLearnFailureParams struct {
+	CharacterID int64
+	SpellKey    string
+}
+
+func (q *Queries) DeleteLearnFailure(ctx context.Context, arg DeleteLearnFailureParams) error {
+	_, err := q.db.ExecContext(ctx, deleteLearnFailure, arg.CharacterID, arg.SpellKey)
+	return err
+}
+
+const getLearnFailure = `-- name: GetLearnFailure :many
+
+SELECT level FROM spellbook_learn_failures WHERE character_id = $1 AND spell_key = $2
+`
+
+type GetLearnFailureParams struct {
+	CharacterID int64
+	SpellKey    string
+}
+
+// The spells a character failed to learn (ADR 0030 step 20.2), at the realized level of the failure.
+func (q *Queries) GetLearnFailure(ctx context.Context, arg GetLearnFailureParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, getLearnFailure, arg.CharacterID, arg.SpellKey)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var level int64
+		if err := rows.Scan(&level); err != nil {
+			return nil, err
+		}
+		items = append(items, level)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSpellbook = `-- name: ListSpellbook :many
 
 SELECT spell_key FROM spellbook_entries WHERE character_id = $1 ORDER BY position, spell_key
@@ -36,4 +101,34 @@ func (q *Queries) ListSpellbook(ctx context.Context, characterID int64) ([]strin
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeSpellbookEntry = `-- name: RemoveSpellbookEntry :exec
+DELETE FROM spellbook_entries WHERE character_id = $1 AND spell_key = $2
+`
+
+type RemoveSpellbookEntryParams struct {
+	CharacterID int64
+	SpellKey    string
+}
+
+func (q *Queries) RemoveSpellbookEntry(ctx context.Context, arg RemoveSpellbookEntryParams) error {
+	_, err := q.db.ExecContext(ctx, removeSpellbookEntry, arg.CharacterID, arg.SpellKey)
+	return err
+}
+
+const setLearnFailure = `-- name: SetLearnFailure :exec
+INSERT INTO spellbook_learn_failures (character_id, spell_key, level) VALUES ($1, $2, $3)
+ON CONFLICT (character_id, spell_key) DO UPDATE SET level = EXCLUDED.level
+`
+
+type SetLearnFailureParams struct {
+	CharacterID int64
+	SpellKey    string
+	Level       int64
+}
+
+func (q *Queries) SetLearnFailure(ctx context.Context, arg SetLearnFailureParams) error {
+	_, err := q.db.ExecContext(ctx, setLearnFailure, arg.CharacterID, arg.SpellKey, arg.Level)
+	return err
 }

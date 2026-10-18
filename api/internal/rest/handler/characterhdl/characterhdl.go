@@ -223,6 +223,21 @@ type DerivedDTO struct {
 	LevelUp          LevelUpDTO           `json:"levelUp"`
 	// Specializes is ADR 0030 step 12: the class may specialize in a weapon.
 	Specializes bool `json:"specializes"`
+	// Spellbook is ADR 0030 step 20.1: the learning rules of a class with a
+	// spellbook (mage, bard); null for the others.
+	Spellbook *SpellbookRulesDTO `json:"spellbook"`
+}
+
+// SpellbookRulesDTO is what a character may write in its spellbook (ADR 0030
+// step 20.1): the class's and PHB Table 4's highest spell level, Table 4's
+// chance to learn (percent) and its maximum spells per level
+// (`noMaximum`: the book's "All", `maxSpellsPerLevel` then 0).
+type SpellbookRulesDTO struct {
+	ClassMaxSpellLevel int  `json:"classMaxSpellLevel"`
+	IntMaxSpellLevel   int  `json:"intMaxSpellLevel"`
+	LearnChance        int  `json:"learnChance"`
+	MaxSpellsPerLevel  int  `json:"maxSpellsPerLevel"`
+	NoMaximum          bool `json:"noMaximum"`
 }
 
 // PendingLevelDTO is one level whose hit points are owed (ADR 0030 step 7):
@@ -265,6 +280,12 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 			Pending: PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
 		},
 		Specializes: d.Specializes,
+	}
+	if b := d.Spellbook; b != nil {
+		out.Spellbook = &SpellbookRulesDTO{
+			ClassMaxSpellLevel: b.ClassMaxSpellLevel, IntMaxSpellLevel: b.IntMaxSpellLevel, LearnChance: b.LearnChance,
+			MaxSpellsPerLevel: b.MaxSpellsPerLevel, NoMaximum: b.NoMaximum,
+		}
 	}
 	for _, level := range slices.Sorted(maps.Keys(d.SpellSlots)) {
 		if n := d.SpellSlots[level]; n > 0 {

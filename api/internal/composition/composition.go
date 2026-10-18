@@ -27,6 +27,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
@@ -60,6 +61,7 @@ type BackingServices struct {
 	Rest      restsvc.SVC
 	XP        xpsvc.SVC
 	LevelUp   levelupsvc.SVC
+	Learn     learnsvc.SVC
 	Details   detailssvc.SVC
 	Skills    skillsvc.SVC
 	Dice      dicesvc.SVC
@@ -319,6 +321,17 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	registerRestorers(logSvc, levelUpSvc.Restorers())
+	// Learning a spell (ADR 0030 step 20) reads the character's derived
+	// spellbook rules and the catalogue, rolls the chance to learn and writes
+	// the spellbook; its undo writes the spell's place back.
+	learnSvc, err := learnsvc.New(learnsvc.Deps{
+		DAL: st.Spellbook, Book: st.Spellbook, Spells: spellbook, Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
+	})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	registerRestorers(logSvc, learnSvc.Restorers())
 	// Skill and ability checks change no state: their entries carry no
 	// snapshot, so there is no restorer to register. The ability check's
 	// score in effect comes from buffSvc (ADR 0028 step 2).
@@ -350,13 +363,14 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		Rest:      restSvc,
 		XP:        xpSvc,
 		LevelUp:   levelUpSvc,
+		Learn:     learnSvc,
 		Details:   detailsSvc,
 		Skills:    skillSvc,
 		Dice:      diceSvc,
 		Auth:      authSvc,
 		store:     db,
 		services: []domain.Service{
-			authSvc, charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, levelUpSvc, skillSvc, detailsSvc, diceSvc,
+			authSvc, charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, levelUpSvc, learnSvc, skillSvc, detailsSvc, diceSvc,
 		},
 	}, nil
 }

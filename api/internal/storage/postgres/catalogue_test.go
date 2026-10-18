@@ -417,6 +417,7 @@ func (f *fakeStore) plantState() {
 		{7, "round_advance", `{"action":"next_round","expired":["Wall of Ice","Gem"],"expiredSpellIds":["wall_of_ice",""]}`},
 		{8, "time_passed", `{"action":"pass_time","expired":["Chromatic Orb"],"expiredSpellIds":["chromatic_orb"]}`},
 		{9, "hp_change", `{"spellId":"not_a_spell_entry"}`},
+		{10, "spell_learn", `{"spellId":"lightning_bolt","spellLevel":3,"roll":90,"chance":65,"learned":false,"characterLevel":5,"retryLevel":6}`},
 	}
 	f.t.Snapshots = []snapshotRow{
 		{
@@ -425,7 +426,14 @@ func (f *fakeStore) plantState() {
 		},
 		{2, 4, "buffs", `[{"SpellID":"not_a_slot","spell_id":"improved_strength"}]`, `[{"spell_id":"mirror_image"}]`},
 		{3, 5, "round", `[{"spell_id":"not_a_buff_list"}]`, `[]`},
+		// A spellbook snapshot (ADR 0030 step 20.3); "spellbook" alone is not one.
+		{
+			4, 10, "spellbook:melfs_acid_arrow", `{"spellId":"melfs_acid_arrow","known":false,"failedAtLevel":0}`,
+			`{"spellId":"melfs_acid_arrow","known":true,"failedAtLevel":0}`,
+		},
+		{5, 10, "spellbook", `{"spellId":"not_a_spellbook_snapshot"}`, `{}`},
 	}
+	f.t.LearnFailures = []storeq.LearnFailureRefsRow{{CharacterID: 1, SpellKey: "alarm"}}
 	f.t.Corrections = []correctionRow{{1, 5, `{"spellId":"enlarge","casterLevel":5}`}}
 }
 
@@ -457,6 +465,10 @@ func TestStateSpellRefs_ScansEveryPlace(t *testing.T) {
 		"detect_magic":      "action_log 6",
 		"wall_of_ice":       "action_log 7",
 		"chromatic_orb":     "action_log 8",
+		// Spell learning (ADR 0030 step 20).
+		"alarm":            "spellbook_learn_failures of character 1",
+		"melfs_acid_arrow": "action_snapshots 4",
+		"lightning_bolt":   "action_log 10",
 	}, got)
 }
 
@@ -479,7 +491,10 @@ func TestImportCatalogue_Step4_3_RefusesRemovingReferencedSpells(t *testing.T) {
 	f.plantState()
 	before := copyTables(f.t)
 
-	removed := []string{"strength", "burning_hands", "sleep", "identify", "light", "magic_missile", "cloudkill", "armor", "enlarge"}
+	removed := []string{
+		"strength", "burning_hands", "sleep", "identify", "light", "magic_missile", "cloudkill", "armor", "enlarge",
+		"alarm", "melfs_acid_arrow", "lightning_bolt",
+	}
 	next := withVersion(cat, "1970-01-02", func(in []catalogue.Spell) []catalogue.Spell {
 		for _, id := range removed {
 			in = without(id)(in)
@@ -496,6 +511,8 @@ func TestImportCatalogue_Step4_3_RefusesRemovingReferencedSpells(t *testing.T) {
 		"sleep (spell_slots of character 1)",
 		"identify (action_snapshots 1)", "light (action_snapshots 1)", "magic_missile (action_log 1)",
 		"cloudkill (action_log 2)", "armor (action_log 3)", "enlarge (action_corrections 1)",
+		"alarm (spellbook_learn_failures of character 1)", "melfs_acid_arrow (action_snapshots 4)",
+		"lightning_bolt (action_log 10)",
 	} {
 		assert.Contains(t, err.Error(), want)
 	}
@@ -579,7 +596,7 @@ func TestImportCatalogue_UpgradesADatabaseSeededBeforeTheCatalogue(t *testing.T)
 	sort.Strings(unresolved)
 	assert.Empty(t, unresolved, "every reference resolves")
 	assert.Len(t, f.t.Slots, 1, "game state untouched")
-	assert.Len(t, f.t.Log, 9)
+	assert.Len(t, f.t.Log, 10)
 
 	before := catalogueRows(f)
 	require.NoError(t, importOn(f, cat, seeds))

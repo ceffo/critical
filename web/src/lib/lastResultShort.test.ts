@@ -253,6 +253,20 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Level",
     fr: "Niveau",
   },
+  spell_learn: {
+    e: entry("spell_learn", {
+      spellId: "sleep",
+      spellLevel: 1,
+      roll: 37,
+      chance: 65,
+      learned: true,
+      characterLevel: 1,
+      retryLevel: 0,
+    }),
+    value: null,
+    en: "Learn",
+    fr: "Apprentissage",
+  },
   spell_prep: {
     e: entry("spell_prep", null),
     value: null,

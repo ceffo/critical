@@ -48,6 +48,7 @@ export const KIND_ICONS: Record<LogKind, Icon> = {
   xp_edit: TrendUp,
   xp_remove: TrendUp,
   level_up: ArrowFatLinesUp,
+  spell_learn: BookOpen,
   spell_prep: BookOpen,
   long_rest: Moon,
   save: Shield,

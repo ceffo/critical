@@ -235,3 +235,34 @@ func TestDerivedLookups_Format3HasNoClassTables(t *testing.T) {
 	_, err = three.ConstitutionFor(16)
 	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
 }
+
+// PHB Table 4 (ADR 0030 step 20): the highest spell level, the chance to
+// learn and the maximum spells per level ("All" from 19), against the book.
+func TestIntelligenceFor_Step20_Table4(t *testing.T) {
+	tbl := phb(t)
+	type row struct {
+		level, chance, max int
+		all                bool
+	}
+	for score, want := range map[int]row{
+		8: {0, 0, 0, false}, 9: {4, 35, 6, false}, 10: {5, 40, 7, false}, 13: {6, 55, 9, false},
+		14: {7, 60, 9, false}, 17: {8, 75, 14, false}, 18: {9, 85, 18, false}, 19: {9, 95, 0, true},
+		24: {9, 100, 0, true}, 25: {9, 100, 0, true},
+	} {
+		got, err := tbl.IntelligenceFor(score)
+		require.NoError(t, err)
+		assert.Equal(t, want, row{got.MaxSpellLevel, got.LearnChance, got.MaxSpells, got.NoMaximum}, "Intelligence %d", score)
+	}
+	_, err := tbl.IntelligenceFor(26)
+	require.Error(t, err)
+}
+
+// Only mages and bards keep a spellbook, up to their highest spell level
+// (ADR 0030 step 20.1).
+func TestSpellbookMaxLevel_Step20_1(t *testing.T) {
+	for class, want := range map[string]int{"mage": 9, "bard": 6, "fighter": 0, "cleric": 0, "thief": 0} {
+		got, ok := ruletablesvc.SpellbookMaxLevel(class)
+		assert.Equal(t, want, got, class)
+		assert.Equal(t, want > 0, ok, class)
+	}
+}

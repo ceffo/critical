@@ -190,6 +190,62 @@ func (_c *MockRules_HitDiceFor_Call) RunAndReturn(run func(string) (ruletablesvc
 	return _c
 }
 
+// IntelligenceFor provides a mock function with given fields: score
+func (_m *MockRules) IntelligenceFor(score int) (ruletablesvc.IntelligenceRow, error) {
+	ret := _m.Called(score)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IntelligenceFor")
+	}
+
+	var r0 ruletablesvc.IntelligenceRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) (ruletablesvc.IntelligenceRow, error)); ok {
+		return rf(score)
+	}
+	if rf, ok := ret.Get(0).(func(int) ruletablesvc.IntelligenceRow); ok {
+		r0 = rf(score)
+	} else {
+		r0 = ret.Get(0).(ruletablesvc.IntelligenceRow)
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(score)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_IntelligenceFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IntelligenceFor'
+type MockRules_IntelligenceFor_Call struct {
+	*mock.Call
+}
+
+// IntelligenceFor is a helper method to define mock.On call
+//   - score int
+func (_e *MockRules_Expecter) IntelligenceFor(score interface{}) *MockRules_IntelligenceFor_Call {
+	return &MockRules_IntelligenceFor_Call{Call: _e.mock.On("IntelligenceFor", score)}
+}
+
+func (_c *MockRules_IntelligenceFor_Call) Run(run func(score int)) *MockRules_IntelligenceFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockRules_IntelligenceFor_Call) Return(_a0 ruletablesvc.IntelligenceRow, _a1 error) *MockRules_IntelligenceFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_IntelligenceFor_Call) RunAndReturn(run func(int) (ruletablesvc.IntelligenceRow, error)) *MockRules_IntelligenceFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LevelFor provides a mock function with given fields: class, xp
 func (_m *MockRules) LevelFor(class string, xp int) (int, error) {
 	ret := _m.Called(class, xp)

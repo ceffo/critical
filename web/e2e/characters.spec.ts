@@ -1,6 +1,7 @@
 import { test, expect, snap } from "./fixtures";
 import {
   attackForm,
+  combatLog,
   chooseLanguage,
   openDashboard,
   openSettings,
@@ -157,4 +158,77 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   await chooseLanguage(page, "fr");
   await expect(page.getByTestId("tile-rate")).toContainText("ce round");
   await snap(page, "fighter-attack-fr");
+});
+
+// The mage (ADR 0030 steps 8 and 20), what only a browser proves: the class in the creation form,
+// the lookup's Learn button reaching the server's roll and its answer on screen, the learned spell
+// in the preparation editor, then its Cast button. The rules (Table 4's refusals and chance, the
+// failure's block, the undo, Table 21) are Go tests (learnsvc, charactersvc, composition
+// learn_test.go). The dice are real here: Intelligence 19 learns at 95%, and a failed spell is
+// simply followed by the next one.
+test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
+  test.setTimeout(60_000);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const settings = await openSettings(page);
+  await settings
+    .getByRole("button", { name: "Créer un nouveau personnage" })
+    .click();
+  const form = page
+    .getByTestId("character-dialog")
+    .getByTestId("character-form");
+  await form.getByLabel("Nom").fill("Elminster");
+  await form.getByLabel("Classe").selectOption({ label: "Magicien" });
+  await form.getByLabel("Race").selectOption({ label: "Humain" });
+  for (const [ability, score] of [
+    ["FOR", "9"],
+    ["DEX", "12"],
+    ["CON", "11"],
+    ["INT", "19"],
+    ["SAG", "12"],
+    ["CHA", "10"],
+  ])
+    await form.getByLabel(ability, { exact: true }).fill(score);
+  await form.getByLabel("PV max").fill("4");
+  await form
+    .getByRole("button", { name: "Créer ce personnage et le jouer" })
+    .click();
+  await expect(page.getByTestId("character")).toContainText("Elminster");
+
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Spells");
+  const searchBox = page.getByRole("combobox", { name: "Search spells..." });
+  const detail = page.getByTestId("spell-detail");
+  let learned = "";
+  for (const name of ["Sleep", "Magic Missile", "Burning Hands"]) {
+    await searchBox.fill(name);
+    await expect(detail.getByRole("heading")).toHaveText(name);
+    await detail.getByRole("button", { name: /^Learn this spell/ }).click();
+    const result = detail.getByTestId("learn-result");
+    await expect(result).toBeVisible();
+    if ((await result.textContent())?.startsWith("Learned")) {
+      learned = name;
+      break;
+    }
+  }
+  expect(learned, "one of three spells learned at 95%").not.toBe("");
+  await expect(detail.getByTestId("learn-spell")).toContainText(
+    "In the spellbook",
+  );
+  await chooseLanguage(page, "fr");
+  await snap(page, "mage-learned-fr");
+
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Act");
+  await page.getByRole("tab", { name: "Spells" }).click();
+  await page.getByRole("button", { name: "Prepare spells" }).click();
+  const editor = page.getByRole("form", { name: "Prepare today's spells" });
+  await editor
+    .getByRole("button", { name: `Add ${learned}`, exact: true })
+    .click();
+  await editor.getByRole("button", { name: "Save preparation" }).click();
+  await expect(editor).toHaveCount(0);
+  await page.getByRole("button", { name: `Cast ${learned}` }).click();
+  await expect(combatLog(page)).toContainText(`Cast ${learned}`);
+  await snap(page, "mage-cast");
 });

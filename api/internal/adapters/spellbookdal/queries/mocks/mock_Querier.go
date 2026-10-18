@@ -5,6 +5,7 @@ package mocks
 import (
 	context "context"
 
+	queries "github.com/ceffo/critical/api/internal/adapters/spellbookdal/queries"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -19,6 +20,159 @@ type MockQuerier_Expecter struct {
 
 func (_m *MockQuerier) EXPECT() *MockQuerier_Expecter {
 	return &MockQuerier_Expecter{mock: &_m.Mock}
+}
+
+// AddSpellbookEntry provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) AddSpellbookEntry(ctx context.Context, arg queries.AddSpellbookEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddSpellbookEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AddSpellbookEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_AddSpellbookEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddSpellbookEntry'
+type MockQuerier_AddSpellbookEntry_Call struct {
+	*mock.Call
+}
+
+// AddSpellbookEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.AddSpellbookEntryParams
+func (_e *MockQuerier_Expecter) AddSpellbookEntry(ctx interface{}, arg interface{}) *MockQuerier_AddSpellbookEntry_Call {
+	return &MockQuerier_AddSpellbookEntry_Call{Call: _e.mock.On("AddSpellbookEntry", ctx, arg)}
+}
+
+func (_c *MockQuerier_AddSpellbookEntry_Call) Run(run func(ctx context.Context, arg queries.AddSpellbookEntryParams)) *MockQuerier_AddSpellbookEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.AddSpellbookEntryParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_AddSpellbookEntry_Call) Return(_a0 error) *MockQuerier_AddSpellbookEntry_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_AddSpellbookEntry_Call) RunAndReturn(run func(context.Context, queries.AddSpellbookEntryParams) error) *MockQuerier_AddSpellbookEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteLearnFailure provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) DeleteLearnFailure(ctx context.Context, arg queries.DeleteLearnFailureParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteLearnFailure")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeleteLearnFailureParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_DeleteLearnFailure_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteLearnFailure'
+type MockQuerier_DeleteLearnFailure_Call struct {
+	*mock.Call
+}
+
+// DeleteLearnFailure is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.DeleteLearnFailureParams
+func (_e *MockQuerier_Expecter) DeleteLearnFailure(ctx interface{}, arg interface{}) *MockQuerier_DeleteLearnFailure_Call {
+	return &MockQuerier_DeleteLearnFailure_Call{Call: _e.mock.On("DeleteLearnFailure", ctx, arg)}
+}
+
+func (_c *MockQuerier_DeleteLearnFailure_Call) Run(run func(ctx context.Context, arg queries.DeleteLearnFailureParams)) *MockQuerier_DeleteLearnFailure_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.DeleteLearnFailureParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_DeleteLearnFailure_Call) Return(_a0 error) *MockQuerier_DeleteLearnFailure_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_DeleteLearnFailure_Call) RunAndReturn(run func(context.Context, queries.DeleteLearnFailureParams) error) *MockQuerier_DeleteLearnFailure_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetLearnFailure provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) GetLearnFailure(ctx context.Context, arg queries.GetLearnFailureParams) ([]int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetLearnFailure")
+	}
+
+	var r0 []int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetLearnFailureParams) ([]int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetLearnFailureParams) []int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int64)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetLearnFailureParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_GetLearnFailure_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetLearnFailure'
+type MockQuerier_GetLearnFailure_Call struct {
+	*mock.Call
+}
+
+// GetLearnFailure is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.GetLearnFailureParams
+func (_e *MockQuerier_Expecter) GetLearnFailure(ctx interface{}, arg interface{}) *MockQuerier_GetLearnFailure_Call {
+	return &MockQuerier_GetLearnFailure_Call{Call: _e.mock.On("GetLearnFailure", ctx, arg)}
+}
+
+func (_c *MockQuerier_GetLearnFailure_Call) Run(run func(ctx context.Context, arg queries.GetLearnFailureParams)) *MockQuerier_GetLearnFailure_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.GetLearnFailureParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_GetLearnFailure_Call) Return(_a0 []int64, _a1 error) *MockQuerier_GetLearnFailure_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_GetLearnFailure_Call) RunAndReturn(run func(context.Context, queries.GetLearnFailureParams) ([]int64, error)) *MockQuerier_GetLearnFailure_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // ListSpellbook provides a mock function with given fields: ctx, characterID
@@ -76,6 +230,100 @@ func (_c *MockQuerier_ListSpellbook_Call) Return(_a0 []string, _a1 error) *MockQ
 }
 
 func (_c *MockQuerier_ListSpellbook_Call) RunAndReturn(run func(context.Context, int64) ([]string, error)) *MockQuerier_ListSpellbook_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RemoveSpellbookEntry provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) RemoveSpellbookEntry(ctx context.Context, arg queries.RemoveSpellbookEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveSpellbookEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RemoveSpellbookEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_RemoveSpellbookEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveSpellbookEntry'
+type MockQuerier_RemoveSpellbookEntry_Call struct {
+	*mock.Call
+}
+
+// RemoveSpellbookEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.RemoveSpellbookEntryParams
+func (_e *MockQuerier_Expecter) RemoveSpellbookEntry(ctx interface{}, arg interface{}) *MockQuerier_RemoveSpellbookEntry_Call {
+	return &MockQuerier_RemoveSpellbookEntry_Call{Call: _e.mock.On("RemoveSpellbookEntry", ctx, arg)}
+}
+
+func (_c *MockQuerier_RemoveSpellbookEntry_Call) Run(run func(ctx context.Context, arg queries.RemoveSpellbookEntryParams)) *MockQuerier_RemoveSpellbookEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.RemoveSpellbookEntryParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_RemoveSpellbookEntry_Call) Return(_a0 error) *MockQuerier_RemoveSpellbookEntry_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_RemoveSpellbookEntry_Call) RunAndReturn(run func(context.Context, queries.RemoveSpellbookEntryParams) error) *MockQuerier_RemoveSpellbookEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetLearnFailure provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) SetLearnFailure(ctx context.Context, arg queries.SetLearnFailureParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetLearnFailure")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetLearnFailureParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_SetLearnFailure_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetLearnFailure'
+type MockQuerier_SetLearnFailure_Call struct {
+	*mock.Call
+}
+
+// SetLearnFailure is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.SetLearnFailureParams
+func (_e *MockQuerier_Expecter) SetLearnFailure(ctx interface{}, arg interface{}) *MockQuerier_SetLearnFailure_Call {
+	return &MockQuerier_SetLearnFailure_Call{Call: _e.mock.On("SetLearnFailure", ctx, arg)}
+}
+
+func (_c *MockQuerier_SetLearnFailure_Call) Run(run func(ctx context.Context, arg queries.SetLearnFailureParams)) *MockQuerier_SetLearnFailure_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.SetLearnFailureParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_SetLearnFailure_Call) Return(_a0 error) *MockQuerier_SetLearnFailure_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_SetLearnFailure_Call) RunAndReturn(run func(context.Context, queries.SetLearnFailureParams) error) *MockQuerier_SetLearnFailure_Call {
 	_c.Call.Return(run)
 	return _c
 }

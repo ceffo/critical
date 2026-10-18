@@ -982,7 +982,14 @@
     "rollDice": "Roll",
     "addEffectLabel": "Add {{name}} as an effect at level {{level}}",
     "exposure": "Exposure",
-    "exposureMode": "Exposure ({{mode}})"
+    "exposureMode": "Exposure ({{mode}})",
+    "learn": {
+      "button": "Learn",
+      "title": "Learn this spell: d100 under {{chance}}% (Intelligence)",
+      "known": "In the spellbook",
+      "learned": "Learned: d100 {{roll}} ≤ {{chance}}%",
+      "failed": "Failed: d100 {{roll}} > {{chance}}%, try again at level {{level}}"
+    }
   },
   "result": {
     "empty": "Roll an attack or a save, or cast a spell: the full breakdown shows here.",
@@ -1211,7 +1218,8 @@
       "xp_add": "XP",
       "xp_edit": "XP",
       "xp_remove": "XP",
-      "level_up": "Level"
+      "level_up": "Level",
+      "spell_learn": "Learn"
     },
     "status": {
       "active": "Active",
@@ -1354,6 +1362,10 @@
       "dieRaised": "d{{die}} {{rolled}} (counts as {{counted}})",
       "con": ", CON {{adjustment}}",
       "manual": ", die entered"
+    },
+    "learn": {
+      "learned": "Learned: {{spell}} (d100 {{roll}} ≤ {{chance}}%)",
+      "failed": "Failed: {{spell}} (d100 {{roll}} > {{chance}}%), try again at level {{level}}"
     }
   },
   "critTable": {
@@ -1484,7 +1496,8 @@
     "languagesHint": "Separate languages with commas",
     "classes": {
       "bard": "Bard",
-      "fighter": "Fighter"
+      "fighter": "Fighter",
+      "mage": "Mage"
     },
     "language": {
       "elfique": "Elvish",
@@ -1651,7 +1664,14 @@
     "already_invited": "This email address already has a pending invite.",
     "invite_not_found": "This invite is no longer pending.",
     "user_not_found": "This user does not exist.",
-    "level_up_not_pending": "That level is no longer to roll: the sheet refreshes."
+    "level_up_not_pending": "That level is no longer to roll: the sheet refreshes.",
+    "no_spellbook": "This class has no spellbook.",
+    "not_a_wizard_spell": "Only a wizard spell goes in the spellbook.",
+    "already_in_spellbook": "That spell is already in the spellbook.",
+    "spell_level_above_intelligence": "Spell level too high for the character's Intelligence.",
+    "spell_level_above_class": "Spell level beyond what the class can learn.",
+    "spellbook_level_full": "The spellbook already holds the most spells of that level this Intelligence allows.",
+    "spell_learn_failed_at_level": "Failed at this level: try again at the next level."
   },
   "lastShort": {
     "attack": "Attack",

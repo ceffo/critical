@@ -24,6 +24,8 @@ export type LogKind =
   | "xp_remove"
   /** A level-up roll (ADR 0030 step 7.3); popping it gives the max HP back, the level pending again. */
   | "level_up"
+  /** A chance-to-learn roll (ADR 0030 step 20.2); popping it takes the spell out or lifts the block. */
+  | "spell_learn"
   | "spell_prep"
   | "long_rest"
   | "save"

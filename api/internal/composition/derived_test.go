@@ -51,6 +51,8 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		Saves:      charactersvc.Saves{ParaPoison: 10, RodStaffWand: 8, PetriPoly: 9, Breath: 13, Spell: 9},
 		SpellSlots: map[int]int{1: 3, 2: 3, 3: 3, 4: 3, 5: 2}, SheetDifferences: []charactersvc.SheetDifference{},
 		LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		// Kelsen's Intelligence 14 (PHB Table 4, ADR 0030 step 20.1).
+		Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 	}
 	limits15 := []prepsvc.LevelLimit{{Level: 1, Max: 3}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 3}, {Level: 5, Max: 2}}
 	d, ledgerLevel, limits := derivedOf(t, bs, id)
@@ -79,7 +81,8 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		XPTotal: 1_540_000, TargetLevel: 17, RealizedLevel: 17, NextLevelXP: &next17, THAC0: 12,
 		Saves:      charactersvc.Saves{ParaPoison: 9, RodStaffWand: 6, PetriPoly: 8, Breath: 12, Spell: 7},
 		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1}, SheetDifferences: []charactersvc.SheetDifference{},
-		LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		LevelUp:   charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		Spellbook: at15.Spellbook,
 	}, d)
 	assert.Equal(t, 17, ledgerLevel)
 	assert.Equal(t, []prepsvc.LevelLimit{

@@ -31,6 +31,8 @@ type Rules interface {
 	// RaceAllows is DMG Table 7: false for a race the class does not admit
 	// (step 21, checked when a character is created).
 	RaceAllows(race, class string) (bool, error)
+	// IntelligenceFor is PHB Table 4 (step 20).
+	IntelligenceFor(score int) (ruletablesvc.IntelligenceRow, error)
 }
 
 // conSaveRaces are the races that add their PHB Table 9 bonus to the saves
@@ -103,7 +105,28 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 		return Derived{}, err
 	}
 	d.Specializes = ruletablesvc.Specializes(c.Class)
+	if d.Spellbook, err = spellbookRules(c, rules); err != nil {
+		return Derived{}, err
+	}
 	return d, nil
+}
+
+// spellbookRules is step 20.1 for a class with a spellbook (nil for the
+// others): the class's highest spell level and PHB Table 4 at the sheet's
+// Intelligence.
+func spellbookRules(c *Character, rules Rules) (*SpellbookRules, error) {
+	classMax, ok := ruletablesvc.SpellbookMaxLevel(c.Class)
+	if !ok {
+		return nil, nil
+	}
+	row, err := rules.IntelligenceFor(c.Int)
+	if err != nil {
+		return nil, fmt.Errorf("derive %s spellbook: %w", c.Class, err)
+	}
+	return &SpellbookRules{
+		ClassMaxSpellLevel: classMax, IntMaxSpellLevel: row.MaxSpellLevel, LearnChance: row.LearnChance,
+		MaxSpellsPerLevel: row.MaxSpells, NoMaximum: row.NoMaximum,
+	}, nil
 }
 
 // levelUp is step 7: a level-up is pending for each level above the

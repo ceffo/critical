@@ -179,7 +179,7 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 	h.expectStartup(cfg.SeedsDir)
 	h.Store.EXPECT().Close().Return(nil).Once()
 	h.Character.EXPECT().GetCharacter(mock.Anything, characterID).Return(&charactersvc.Character{
-		ID: characterID, Class: "bard", XPTotal: 1_293_418, Dex: 10, Cha: 10,
+		ID: characterID, Class: "bard", XPTotal: 1_293_418, Dex: 10, Int: 14, Cha: 10,
 	}, nil).Once()
 	// Read twice: by the character's derivation (ADR 0030 step 3), then by the ledger.
 	h.XP.EXPECT().List(mock.Anything, characterID).Return(nil, nil).Twice()

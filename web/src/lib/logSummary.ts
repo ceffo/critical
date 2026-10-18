@@ -4,7 +4,7 @@ import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
-import type { LevelUpRecord } from "@/types/character";
+import type { LearnResult, LevelUpRecord } from "@/types/character";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { buffName, englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { checkAdjustedTarget } from "./skillAdjust";
@@ -471,6 +471,29 @@ function xpChangeText(e: LogEntry, t: TFunction): string | null {
   return t("log.xp.edited", { from: was.total, to: now.total, reason });
 }
 
+/** The payload of a spell_learn entry (learnsvc record, ADR 0030 step 20.2), or null. */
+export function learnPayload(e: LogEntry): LearnResult | null {
+  if (e.kind !== "spell_learn") return null;
+  const p = e.payload as Partial<LearnResult> | null;
+  return p && typeof p.spellId === "string" && typeof p.roll === "number"
+    ? (p as LearnResult)
+    : null;
+}
+
+/** A chance-to-learn roll: the spell, the d100 against the chance, learned or failed. */
+function learnText(
+  e: LogEntry,
+  t: TFunction,
+  spellName: SpellNamer,
+): string | null {
+  const p = learnPayload(e);
+  if (!p) return null;
+  const vars = { spell: spellName(p.spellId), roll: p.roll, chance: p.chance };
+  return p.learned
+    ? t("log.learn.learned", vars)
+    : t("log.learn.failed", { ...vars, level: p.retryLevel });
+}
+
 /** The payload of a level_up entry (levelupsvc record, ADR 0030 step 7.3), or null. */
 export function levelUpPayload(e: LogEntry): LevelUpRecord | null {
   if (e.kind !== "level_up") return null;
@@ -794,6 +817,8 @@ export function entryText(
   if (xpChange) return xpChange;
   const levelUp = levelUpText(e, t);
   if (levelUp) return levelUp;
+  const learn = learnText(e, t, spellName);
+  if (learn) return learn;
   const hp = hpChangeText(e, t);
   if (hp) return hp;
   const p = buffPayload(e);

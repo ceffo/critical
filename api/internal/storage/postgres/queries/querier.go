@@ -44,6 +44,7 @@ type Querier interface {
 	InsertText(ctx context.Context, arg InsertTextParams) error
 	InsertWeapon(ctx context.Context, arg InsertWeaponParams) error
 	ItemNameKey(ctx context.Context, arg ItemNameKeyParams) (int64, error)
+	LearnFailureRefs(ctx context.Context) ([]LearnFailureRefsRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
 	// rollback releases it. One fixed key for the whole database.
 	LockWriters(ctx context.Context) error
@@ -60,6 +61,7 @@ type Querier interface {
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error
 	SnapshotsOf(ctx context.Context, stateKey string) ([]SnapshotsOfRow, error)
+	SnapshotsWithPrefix(ctx context.Context, prefix string) ([]SnapshotsWithPrefixRow, error)
 	SpellCorrectionPayloads(ctx context.Context, kinds []string) ([]SpellCorrectionPayloadsRow, error)
 	SpellEntryPayloads(ctx context.Context, kinds []string) ([]SpellEntryPayloadsRow, error)
 	SpellIdentities(ctx context.Context, lang string) ([]SpellIdentitiesRow, error)

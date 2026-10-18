@@ -85,6 +85,33 @@ export interface Derived {
   levelUp: LevelUp;
   /** Step 12: the class may specialize in a weapon (the weapon editor offers the flag). */
   specializes: boolean;
+  /** Step 20.1: what a mage or a bard may write in the spellbook; null for the other classes. */
+  spellbook: SpellbookRules | null;
+}
+
+/** ADR 0030 step 20.1: the class's and PHB Table 4's highest spell level, Table 4's chance to
+ * learn (percent) and its maximum spells per level (`noMaximum`: the book's "All"). */
+export interface SpellbookRules {
+  classMaxSpellLevel: number;
+  intMaxSpellLevel: number;
+  learnChance: number;
+  maxSpellsPerLevel: number;
+  noMaximum: boolean;
+}
+
+/** The breakdown of a chance-to-learn roll (`POST /api/character/spellbook/learn`, ADR 0030 step
+ * 20.2), also the payload of a spell_learn journal entry. */
+export interface LearnResult {
+  spellId: string;
+  spellLevel: number;
+  roll: number;
+  chance: number;
+  learned: boolean;
+  /** The realized level the roll was made at: a failure is refused until a higher one. */
+  characterLevel: number;
+  /** The realized level from which a failed spell may be tried again, given by the server
+   * (the next one, ADR 0030 step 20.3); 0 when learned. */
+  retryLevel: number;
 }
 
 export interface Character {

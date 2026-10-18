@@ -201,6 +201,14 @@ const (
 // it is never adjusted after the fact.
 const KindLevelUp Kind = "level_up"
 
+// KindSpellLearn is a chance-to-learn roll (learnsvc, ADR 0030 step 20.2):
+// the spell, the d100, Table 4's chance and whether it was learned. Its
+// "spellbook:<spell key>" snapshot carries the spell's place in the
+// spellbook (known, or blocked by a failure at a level), so popping it takes
+// a learned spell out or lifts a failure's block. Not one of RollKinds: it
+// is never adjusted after the fact.
+const KindSpellLearn Kind = "spell_learn"
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.

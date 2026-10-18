@@ -198,6 +198,13 @@ SELECT character_id, spell_key FROM spellbook_entries ORDER BY character_id, pos
 -- name: SnapshotsOf :many
 SELECT id, before_state, after_state FROM action_snapshots WHERE state_key = $1 ORDER BY id;
 
+-- name: SnapshotsWithPrefix :many
+SELECT id, before_state, after_state FROM action_snapshots
+WHERE state_key LIKE sqlc.arg('prefix')::text || '%' ORDER BY id;
+
+-- name: LearnFailureRefs :many
+SELECT character_id, spell_key FROM spellbook_learn_failures ORDER BY character_id, spell_key;
+
 -- name: SpellEntryPayloads :many
 SELECT id, payload FROM action_log WHERE kind = ANY(sqlc.arg('kinds')::text[]) ORDER BY id;
 

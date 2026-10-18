@@ -248,6 +248,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	for _, race := range charactersvc.Races {
 		e.rules.EXPECT().RaceAllows(race, "bard").Return(race == "human" || race == "half_elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "fighter").Return(race != "elf", nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "mage").Return(race == "human" || race == "elf" || race == "half_elf", nil).Once()
 	}
 	got, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
@@ -255,6 +256,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		Classes: []charactersvc.ClassOption{
 			{Class: "bard", Races: []string{"human", "half_elf"}, ExceptionalStrengthRaces: []string{}},
 			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}},
+			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
 		MinStrExceptional: 1, MaxStrExceptional: 100, MaxNameLen: 40,

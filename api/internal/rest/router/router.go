@@ -28,6 +28,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/dicehdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/hphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/itemhdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/learnhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/leveluphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/resthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/skillhdl"
@@ -153,6 +154,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		resthdl.RegisterRoutes(r, charID, bs.Rest)
 		xphdl.RegisterRoutes(r, charID, bs.XP)
 		leveluphdl.RegisterRoutes(r, charID, bs.LevelUp)
+		learnhdl.RegisterRoutes(r, charID, bs.Learn)
 		detailshdl.RegisterRoutes(r, charID, bs.Details)
 		skillhdl.RegisterRoutes(r, charID, bs.Skills)
 		dicehdl.RegisterRoutes(r, charID, bs.Dice)

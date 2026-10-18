@@ -7,6 +7,7 @@ Step 10 (the class and race tables, format 4) is _proposed_ (critical-reul.9).
 Step 11 (the racial level limits of DMG Table 7, format 5) is _proposed_ (critical-reul.20).
 Step 12 (the spheres, format 6) is **decided as built**, 2026-10-18 (critical-reul.15, accepted by the
 user; the API reads formats 5 and 6, the builder publishing format 6 is a separate item).
+Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; the API reads formats 6 and 7).
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -514,6 +515,54 @@ is only ever appended to by play.
     Tests: `TestSchema_Step12_Format6Spheres` (cataloguecheck), `TestParse_Step12_1_ReadsFormat6`,
     `TestParse_Step12_2_SpheresBelongToFormat6` (catalogueadpt),
     `TestStartup_Step12_RefusesABrokenSphereAccessAndStillReadsFormat5` (composition).
+
+13. **The equipment, format 7** (**decided as built** 2026-10-18; [ADR 0033](0033-equipment.md) steps 21 to 23).
+    Format 7 is format 6 plus a top-level `equipment` object and two `rule_tables` keys, numbers and codes
+    only, names as language maps (English required, French optional, step 1, ADR 0023). Formats 3 to 6 may
+    carry none of the three (schema).
+    1. **`equipment`**, required in format 7, four non-empty lists, each row with a `code`
+       (`^[a-z0-9]+(_[a-z0-9]+)*$`, unique across the four lists) and a `name`:
+       - `weapons`: PHB Table 44's weapon rows (polearms and lances included, the arquebus and the helmets
+         left out): `weapon_type` (ADR 0030 step 23's thirteen codes), `kind` (`melee` or `missile`; a
+         hurled weapon is `missile`), `size` (`s` `m` `l`), `damage_types` (zero to two of `b` `p` `s`: the
+         mancatcher, whip and scourge have none), `speed` (0 to 20), `damage_sm` and `damage_l` (as
+         printed, `1d6`, `1d4+1`, `1d3-1`, `1`; both or neither), `two_handed` (for a medium character,
+         PHB p.73) and, for a launcher, `fires`: its ammunition kinds. A launcher has no damage of its
+         own; its ammunition rows carry the dice. **`fires` is a list, not the single kind of ADR 0033 step
+         21**: the blowgun fires two kinds (the barbed dart and the needle), and every other launcher one.
+         The list is non-empty and each kind is carried by some ammunition row (importer).
+       - `ammunition`: `ammo_kind` (`arrow` `quarrel` `bullet` `needle` `blowgun_dart`), `damage_types`
+         (one or two), `damage_sm`, `damage_l`.
+       - `armour`: PHB Table 44's armours and elven chain mail: `base_ac` (Table 46 without a shield,
+         -10 to 10), `skill_column` (`none` `leather` `padded_studded` `elven_chain` `metal` `none_allowed`:
+         ADR 0033 step 5; `metal` is every armour a bard may wear that a thief may not) and `armor_row`
+         (Table 52's eleven rows).
+       - `shields`: `kind` (`buckler` `small` `medium` `body`), `ac_melee`, `ac_missile` (0 to 5). The book gives a missile figure only for the body shield (1 melee,
+         2 missile); the builder reads every other shield as improving the AC by 1 against both melee and
+         missiles. The buckler's single parry per round and the facing limits are not modelled.
+    2. **`rule_tables.weapon_vs_armor`**: PHB Table 52, exactly one row `{armor_row, s, p, b}` per armour row.
+       **`rule_tables.initiative_item`**: PHB Table 56's magic item rows `{kind[, modifier]}`, one per magic kind
+       (`potion scroll ring rod staff wand misc`); the scroll's row has no `modifier` (the spell's casting
+       time counts), every other kind's has one. Both required in format 7.
+    3. **Validation.** The schema checks the shapes, the codes and the bounds. The builder and the importer
+       (at start, `ruletablesvc.NewEquipment`, `NewWeaponVsArmor`, `NewInitiativeItems`, a refusal naming the
+       row or table like step 9.3) check what it cannot: a code names one row across the four lists; a
+       launcher is a missile weapon with no damage of its own and fires kinds some ammunition row carries; a
+       weapon with a damage type has damage or fires; Table 52 and Table 56 have each of their rows once.
+       A format-7 artifact missing the equipment or one of the tables is a startup error.
+    4. **Rollout, as step 12.4**: the API reads formats 6 and 7; a format-6 catalogue starts and offers no
+       equipment. The builder (`critical-rulebooks`) publishing format 7 is a separate change in that repo.
+    5. **The fixture is format 7**: the equipment's real rows and numbers with invented names (every
+       row `Fixture <code>`), Tables 52 and 56 real
+       (`TestRealCatalogue_Step13_5_TheFixtureCarriesTheRealArtifactsEquipment`, skipped without a
+       format-7 `.catalogue/catalogue.json`).
+    6. **Nothing is imported into the database** (no migration): like the rule tables, the equipment is read
+       from the artifact at every start (ADR 0033 step 23: a piece copies a row and keeps its code, so no
+       row is ever referenced by game state). The catalogue import of spells (step 5) is unchanged.
+    Tests: `TestSchema_Step13_Format7Equipment` (cataloguecheck), `TestParse_Step13_1_ReadsFormat7`,
+    `TestParse_Step13_2_EquipmentBelongsToFormat7` (catalogueadpt), `TestParse_Step13_1_ReadsFormat7Equipment`,
+    `TestParse_Step13_2_EquipmentBelongsToFormat7`, `TestParse_Step13_3_RefusesBrokenEquipment`
+    (ruletablesadpt), `TestStartup_Step13_RefusesBrokenEquipmentAndStillReadsFormat6` (composition).
 ## Consequences
 
 - The builder item and the importer item can proceed in parallel against this ADR and the schema:

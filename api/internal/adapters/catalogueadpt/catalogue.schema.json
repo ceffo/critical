@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, formats 3, 4, 5 and 6",
-  "description": "Shape of the catalogue artifact (ADR 0021): format 3 holds the spells and the PHB rule tables (step 9); format 4 adds the class and race tables (step 10, ADR 0030 step 23); format 5 adds the racial level limits (step 11, DMG Table 7); format 6 adds each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23). Shape only: the schema carries no book text. Format 1 (spells only) is retired and format 2 named a retracted shape: neither is valid.",
+  "title": "Critical! catalogue, formats 3, 4, 5, 6 and 7",
+  "description": "Shape of the catalogue artifact (ADR 0021): format 3 holds the spells and the PHB rule tables (step 9); format 4 adds the class and race tables (step 10, ADR 0030 step 23); format 5 adds the racial level limits (step 11, DMG Table 7); format 6 adds each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23); format 7 adds the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23). Shape only: the schema carries no book text. Format 1 (spells only) is retired and format 2 named a retracted shape: neither is valid.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,12 +13,13 @@
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 3 (spells and rule_tables, ADR 0021 step 9), 4 (format 3 plus the class and race tables, step 10) 5 (format 4 plus the racial level limits, step 11) or 6 (format 5 plus the sphere codes and access, step 12). An importer accepts exactly the formats it knows and refuses the rest.",
+      "description": "Artifact format: 3 (spells and rule_tables, ADR 0021 step 9), 4 (format 3 plus the class and race tables, step 10) 5 (format 4 plus the racial level limits, step 11) 6 (format 5 plus the sphere codes and access, step 12) or 7 (format 6 plus the equipment and its two rule tables, step 13). An importer accepts exactly the formats it knows and refuses the rest.",
       "enum": [
         3,
         4,
         5,
-        6
+        6,
+        7
       ]
     },
     "version": {
@@ -35,6 +36,9 @@
     },
     "rule_tables": {
       "$ref": "#/$defs/rule_tables"
+    },
+    "equipment": {
+      "$ref": "#/$defs/equipment"
     }
   },
   "allOf": [
@@ -45,7 +49,8 @@
             "enum": [
               4,
               5,
-              6
+              6,
+              7
             ]
           }
         }
@@ -89,7 +94,8 @@
           "format": {
             "enum": [
               5,
-              6
+              6,
+              7
             ]
           }
         }
@@ -212,7 +218,10 @@
       "if": {
         "properties": {
           "format": {
-            "const": 6
+            "enum": [
+              6,
+              7
+            ]
           }
         }
       },
@@ -243,6 +252,53 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "enum": [
+              3,
+              4,
+              5,
+              6
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "equipment": false,
+          "rule_tables": {
+            "properties": {
+              "weapon_vs_armor": false,
+              "initiative_item": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "const": 7
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "equipment"
+        ],
+        "properties": {
+          "rule_tables": {
+            "required": [
+              "weapon_vs_armor",
+              "initiative_item"
+            ]
           }
         }
       }
@@ -374,7 +430,7 @@
       }
     },
     "rule_tables": {
-      "description": "The rule tables the engine looks values up in (ADR 0021 steps 9 and 10): numbers and language-neutral codes only, the columns the engine reads, rows in ascending order. Format 3 carries the first four tables only, format 4 every table but race_level_limits, format 5 every table but sphere_access, format 6 every table. Contiguity, overlap, level order, increasing XP and completeness of the code combinations cannot be expressed here: the builder and the importer check them.",
+      "description": "The rule tables the engine looks values up in (ADR 0021 steps 9 and 10): numbers and language-neutral codes only, the columns the engine reads, rows in ascending order. Format 3 carries the first four tables only, format 4 every table but race_level_limits, format 5 every table but sphere_access, format 6 every table but weapon_vs_armor and initiative_item, format 7 every table. Contiguity, overlap, level order, increasing XP and completeness of the code combinations cannot be expressed here: the builder and the importer check them.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -608,6 +664,24 @@
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/sphere_access_row"
+          }
+        },
+        "weapon_vs_armor": {
+          "description": "Format 7: PHB Table 52 (optional rule), the modifier of each armour type (a row code of the equipment) against each damage type (s slashing, p piercing, b bludgeoning); exactly one row per armour row (ADR 0033 steps 19 and 21). The engine reads the damage type of the attack against the target's armour row.",
+          "type": "array",
+          "minItems": 11,
+          "maxItems": 11,
+          "items": {
+            "$ref": "#/$defs/weapon_vs_armor_row"
+          }
+        },
+        "initiative_item": {
+          "description": "Format 7: PHB Table 56 (optional rule), the initiative modifier of a magic item by its magic kind (ADR 0033 steps 15 and 21); one row per kind. A scroll has no modifier: the spell's casting time counts, so its row carries none.",
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "$ref": "#/$defs/initiative_item_row"
           }
         }
       }
@@ -1619,6 +1693,387 @@
             "major",
             "minor"
           ]
+        }
+      }
+    },
+    "equipment_code": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$"
+    },
+    "damage_type": {
+      "enum": [
+        "b",
+        "p",
+        "s"
+      ]
+    },
+    "damage_types": {
+      "type": "array",
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/damage_type"
+      }
+    },
+    "damage_expr": {
+      "description": "A damage as printed: dice NdM, a flat number, with an optional flat bonus (1d6+1, 1d3-1, 1).",
+      "type": "string",
+      "pattern": "^[0-9]+(d[0-9]+)?([+-][0-9]+)?$"
+    },
+    "ammo_kind": {
+      "enum": [
+        "arrow",
+        "quarrel",
+        "bullet",
+        "needle",
+        "blowgun_dart"
+      ]
+    },
+    "armor_row_code": {
+      "enum": [
+        "banded",
+        "brigandine",
+        "chain",
+        "field_plate",
+        "full_plate",
+        "leather",
+        "plate",
+        "ring",
+        "scale",
+        "splint",
+        "studded_leather"
+      ]
+    },
+    "magic_kind": {
+      "enum": [
+        "potion",
+        "scroll",
+        "ring",
+        "rod",
+        "staff",
+        "wand",
+        "misc"
+      ]
+    },
+    "equipment": {
+      "description": "Format 7: the equipment reference data (ADR 0033 steps 21 to 23, ADR 0021 step 13): the weapons, ammunition, body armour and shields a player picks from. Numbers and codes only, names as language maps; no book text. A character's piece copies a row and keeps its code, so the importer never keeps a row for a character.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "weapons",
+        "ammunition",
+        "armour",
+        "shields"
+      ],
+      "properties": {
+        "weapons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/weapon_row"
+          }
+        },
+        "ammunition": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ammunition_row"
+          }
+        },
+        "armour": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/armour_row"
+          }
+        },
+        "shields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/shield_row"
+          }
+        }
+      }
+    },
+    "weapon_row": {
+      "description": "PHB Table 44 weapon row. A launcher (fires) has a speed but no damage: its ammunition's rows carry the dice. damage_sm / damage_l go together.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "name",
+        "weapon_type",
+        "kind",
+        "size",
+        "damage_types",
+        "speed",
+        "two_handed"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/equipment_code"
+        },
+        "name": {
+          "$ref": "#/$defs/localized"
+        },
+        "weapon_type": {
+          "enum": [
+            "long_bow",
+            "short_bow",
+            "light_crossbow",
+            "heavy_crossbow",
+            "hand_crossbow",
+            "dagger",
+            "dart",
+            "sling",
+            "short_sword",
+            "long_sword",
+            "other_melee",
+            "other_thrown",
+            "other_missile"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "melee",
+            "missile"
+          ]
+        },
+        "size": {
+          "enum": [
+            "s",
+            "m",
+            "l"
+          ]
+        },
+        "damage_types": {
+          "$ref": "#/$defs/damage_types"
+        },
+        "speed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "damage_sm": {
+          "$ref": "#/$defs/damage_expr"
+        },
+        "damage_l": {
+          "$ref": "#/$defs/damage_expr"
+        },
+        "two_handed": {
+          "type": "boolean"
+        },
+        "fires": {
+          "description": "A launcher's ammunition kinds (a blowgun fires two).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/ammo_kind"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "damage_sm"
+            ]
+          },
+          "then": {
+            "required": [
+              "damage_l"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "damage_l"
+            ]
+          },
+          "then": {
+            "required": [
+              "damage_sm"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "fires"
+            ]
+          },
+          "then": {
+            "properties": {
+              "damage_sm": false,
+              "damage_l": false
+            }
+          }
+        }
+      ]
+    },
+    "ammunition_row": {
+      "description": "An ammunition row of PHB Table 44 (arrow, quarrel, bullet, stone, needle, dart).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "name",
+        "ammo_kind",
+        "damage_types",
+        "damage_sm",
+        "damage_l"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/equipment_code"
+        },
+        "name": {
+          "$ref": "#/$defs/localized"
+        },
+        "ammo_kind": {
+          "$ref": "#/$defs/ammo_kind"
+        },
+        "damage_types": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/damage_types"
+            },
+            {
+              "minItems": 1
+            }
+          ]
+        },
+        "damage_sm": {
+          "$ref": "#/$defs/damage_expr"
+        },
+        "damage_l": {
+          "$ref": "#/$defs/damage_expr"
+        }
+      }
+    },
+    "armour_row": {
+      "description": "A body armour (PHB Table 44, Table 46, with elven chain mail, DMG): base_ac is Table 46 without a shield; skill_column the Table 29 column (none_allowed: an armour a thief or bard may not wear); armor_row the Table 52 row.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "name",
+        "base_ac",
+        "skill_column",
+        "armor_row"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/equipment_code"
+        },
+        "name": {
+          "$ref": "#/$defs/localized"
+        },
+        "base_ac": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10
+        },
+        "skill_column": {
+          "enum": [
+            "none",
+            "leather",
+            "padded_studded",
+            "elven_chain",
+            "metal",
+            "none_allowed"
+          ]
+        },
+        "armor_row": {
+          "$ref": "#/$defs/armor_row_code"
+        }
+      }
+    },
+    "shield_row": {
+      "description": "A shield (PHB p.75-76): its AC bonus against melee and against missiles.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "name",
+        "kind",
+        "ac_melee",
+        "ac_missile"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/equipment_code"
+        },
+        "name": {
+          "$ref": "#/$defs/localized"
+        },
+        "kind": {
+          "enum": [
+            "buckler",
+            "small",
+            "medium",
+            "body"
+          ]
+        },
+        "ac_melee": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "ac_missile": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        }
+      }
+    },
+    "weapon_vs_armor_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "armor_row",
+        "s",
+        "p",
+        "b"
+      ],
+      "properties": {
+        "armor_row": {
+          "$ref": "#/$defs/armor_row_code"
+        },
+        "s": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10
+        },
+        "p": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10
+        },
+        "b": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10
+        }
+      }
+    },
+    "initiative_item_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/magic_kind"
+        },
+        "modifier": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
         }
       }
     }

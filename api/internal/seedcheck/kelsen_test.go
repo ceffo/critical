@@ -80,7 +80,7 @@ func parseTables(t *testing.T, path string) *ruletablesvc.Tables {
 	t.Helper()
 	artifact, err := catalogueadpt.LoadArtifact(path)
 	require.NoError(t, err)
-	tables, err := ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables)
+	tables, err := ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment)
 	require.NoError(t, err)
 	_, ok := tables.Classes()
 	require.True(t, ok, "%s carries no class tables: run `just catalogue`", path)

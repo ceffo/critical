@@ -184,14 +184,24 @@ func format4Tables(t *testing.T) map[string]any {
 // format-5 shape (ADR 0021 step 11).
 func format5Tables(t *testing.T) map[string]any {
 	t.Helper()
-	tables := allTables(t)
+	tables := format6Tables(t)
 	delete(tables, "sphere_access")
 	return tables
 }
 
-// allTables reads the fixture's rule_tables (format 6: the four PHB rule
-// tables, the class and race tables, the racial level limits and the sphere
-// access, ADR 0021 steps 10 to 12).
+// format6Tables is the fixture's rule_tables without Tables 52 and 56, the
+// format-6 shape (ADR 0021 step 12).
+func format6Tables(t *testing.T) map[string]any {
+	t.Helper()
+	tables := allTables(t)
+	delete(tables, "weapon_vs_armor")
+	delete(tables, "initiative_item")
+	return tables
+}
+
+// allTables reads the fixture's rule_tables (format 7: the four PHB rule
+// tables, the class and race tables, the racial level limits, the sphere
+// access and Tables 52 and 56, ADR 0021 steps 10 to 13).
 func allTables(t *testing.T) map[string]any {
 	t.Helper()
 	f, err := os.Open("../../testdata/catalogue.json")
@@ -411,13 +421,13 @@ func TestSchema_Step12_Format6Spheres(t *testing.T) {
 		a["spells"] = spells
 		return a
 	}
-	assert.NoError(t, sch.Validate(doc(6, allTables(t), priest("combat"), spell("a", map[string]any{"en": "x"}))), "format 6 with every table")
+	assert.NoError(t, sch.Validate(doc(6, format6Tables(t), priest("combat"), spell("a", map[string]any{"en": "x"}))), "format 6 with every table")
 	assert.Error(t, sch.Validate(doc(6, format5Tables(t), priest("combat"))), "format 6 without the sphere access")
-	assert.Error(t, sch.Validate(doc(6, allTables(t), priest())), "format 6 with a priest spell without codes")
+	assert.Error(t, sch.Validate(doc(6, format6Tables(t), priest())), "format 6 with a priest spell without codes")
 	wizard := spell("a", map[string]any{"en": "x"})
 	wizard["spheres"] = []any{"combat"}
-	assert.Error(t, sch.Validate(doc(6, allTables(t), wizard)), "format 6 with a wizard spell with codes")
-	assert.Error(t, sch.Validate(doc(5, allTables(t), priest())), "format 5 with the sphere access")
+	assert.Error(t, sch.Validate(doc(6, format6Tables(t), wizard)), "format 6 with a wizard spell with codes")
+	assert.Error(t, sch.Validate(doc(5, format6Tables(t), priest())), "format 5 with the sphere access")
 	assert.Error(t, sch.Validate(doc(5, format5Tables(t), priest("combat"))), "format 5 with sphere codes")
 	assert.NoError(t, sch.Validate(doc(5, format5Tables(t), priest())), "format 5 as before")
 
@@ -428,10 +438,10 @@ func TestSchema_Step12_Format6Spheres(t *testing.T) {
 		"a sphere twice":            priest("combat", "combat"),
 		"no sphere":                 empty,
 	} {
-		assert.Error(t, sch.Validate(doc(6, allTables(t), p)), name)
+		assert.Error(t, sch.Validate(doc(6, format6Tables(t), p)), name)
 	}
 	editAccess := func(change func(map[string]any)) map[string]any {
-		tables := allTables(t)
+		tables := format6Tables(t)
 		change(row(tables, "sphere_access", 0))
 		return tables
 	}
@@ -442,5 +452,81 @@ func TestSchema_Step12_Format6Spheres(t *testing.T) {
 		"an unknown row field":  func(r map[string]any) { r["level"] = 3 },
 	} {
 		assert.Error(t, sch.Validate(doc(6, editAccess(change), priest("combat"))), name)
+	}
+}
+
+// TestSchema_Step13_Format7Equipment (ADR 0021 steps 13.1 and 13.2, ADR 0033
+// steps 21 to 23): format 7 is format 6 plus the equipment object and Tables 52
+// and 56; formats before 7 may carry none of them; codes and numbers only.
+func TestSchema_Step13_Format7Equipment(t *testing.T) {
+	sch := compile(t)
+	raw, err := os.ReadFile("../../testdata/catalogue.json")
+	require.NoError(t, err)
+	fixtureEquipment := func() map[string]any {
+		doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(raw)))
+		require.NoError(t, err)
+		return doc.(map[string]any)["equipment"].(map[string]any)
+	}
+	doc := func(format int, tables, equipment any) map[string]any {
+		a := format3(t, tables)
+		a["format"] = format
+		if equipment != nil {
+			a["equipment"] = equipment
+		}
+		return a
+	}
+	assert.NoError(t, sch.Validate(doc(7, allTables(t), fixtureEquipment())), "format 7 with every table and the equipment")
+	assert.Error(t, sch.Validate(doc(7, allTables(t), nil)), "format 7 without the equipment")
+	assert.Error(t, sch.Validate(doc(7, format6Tables(t), fixtureEquipment())), "format 7 without Tables 52 and 56")
+	assert.Error(t, sch.Validate(doc(6, format6Tables(t), fixtureEquipment())), "format 6 with the equipment")
+	assert.Error(t, sch.Validate(doc(6, allTables(t), nil)), "format 6 with Tables 52 and 56")
+	assert.NoError(t, sch.Validate(doc(6, format6Tables(t), nil)), "format 6 as before")
+
+	edit := func(change func(map[string]any)) map[string]any {
+		e := fixtureEquipment()
+		change(e)
+		return e
+	}
+	item := func(e map[string]any, list string, i int) map[string]any { return row(e, list, i) }
+	refusedEquipment := map[string]func(map[string]any){
+		"a missing list":          func(e map[string]any) { delete(e, "shields") },
+		"an unknown list":         func(e map[string]any) { e["helmets"] = []any{} },
+		"an empty list":           func(e map[string]any) { e["ammunition"] = []any{} },
+		"a code with a space":     func(e map[string]any) { item(e, "weapons", 0)["code"] = "battle axe" },
+		"a weapon without a name": func(e map[string]any) { delete(item(e, "weapons", 0), "name") },
+		"a name text, not a map":  func(e map[string]any) { item(e, "weapons", 0)["name"] = "Battle axe" },
+		"a cost":                  func(e map[string]any) { item(e, "weapons", 0)["cost"] = "5 gp" },
+		"a size in capitals":      func(e map[string]any) { item(e, "weapons", 0)["size"] = "M" },
+		"a kind of 'thrown'":      func(e map[string]any) { item(e, "weapons", 0)["kind"] = "thrown" },
+		"a negative speed":        func(e map[string]any) { item(e, "weapons", 0)["speed"] = -1 },
+		"two-handed as text":      func(e map[string]any) { item(e, "weapons", 0)["two_handed"] = "yes" },
+		"a launcher firing nothing": func(e map[string]any) {
+			item(e, "weapons", 2)["fires"] = []any{}
+		},
+		"a launcher firing a thing twice": func(e map[string]any) {
+			item(e, "weapons", 2)["fires"] = []any{"arrow", "arrow"}
+		},
+		"a damage with a letter":  func(e map[string]any) { item(e, "weapons", 0)["damage_l"] = "d8" },
+		"an armour without a row": func(e map[string]any) { delete(item(e, "armour", 0), "armor_row") },
+		"a shield kind in French": func(e map[string]any) { item(e, "shields", 0)["kind"] = "bouclier" },
+	}
+	for name, change := range refusedEquipment {
+		assert.Error(t, sch.Validate(doc(7, allTables(t), edit(change))), name)
+	}
+	editTables := func(change func(map[string]any)) map[string]any {
+		tables := allTables(t)
+		change(tables)
+		return tables
+	}
+	refusedTables := map[string]func(map[string]any){
+		"a Table 52 row in French":   func(m map[string]any) { row(m, "weapon_vs_armor", 0)["armor_row"] = "bandes" },
+		"a Table 52 cell as text":    func(m map[string]any) { row(m, "weapon_vs_armor", 0)["s"] = "+2" },
+		"a Table 52 row missing 'b'": func(m map[string]any) { delete(row(m, "weapon_vs_armor", 0), "b") },
+		"a Table 56 kind outside":    func(m map[string]any) { row(m, "initiative_item", 0)["kind"] = "stave" },
+		"a Table 56 kind missing":    func(m map[string]any) { delete(row(m, "initiative_item", 0), "kind") },
+		"a Table 56 text modifier":   func(m map[string]any) { row(m, "initiative_item", 0)["modifier"] = "+4" },
+	}
+	for name, change := range refusedTables {
+		assert.Error(t, sch.Validate(doc(7, editTables(change), fixtureEquipment())), name)
 	}
 }

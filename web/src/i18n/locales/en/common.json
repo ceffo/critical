@@ -1377,6 +1377,22 @@
     "none": "No weapons.",
     "detail": "{{sm}} · L {{l}}",
     "twoHanded": "two-handed",
+    "types": {
+      "none": "None",
+      "long_bow": "Long bow",
+      "short_bow": "Short bow",
+      "light_crossbow": "Light crossbow",
+      "heavy_crossbow": "Heavy crossbow",
+      "hand_crossbow": "Hand crossbow",
+      "dagger": "Dagger",
+      "dart": "Dart",
+      "sling": "Sling",
+      "short_sword": "Short sword",
+      "long_sword": "Long sword",
+      "other_melee": "Other melee weapon",
+      "other_thrown": "Other thrown weapon",
+      "other_missile": "Other missile weapon"
+    },
     "specialized": "specialized",
     "kind": {
       "melee": "Melee",
@@ -1397,6 +1413,8 @@
       "twoHanded": "Two-handed",
       "ammoKind": "Ammo kind",
       "ammoNone": "none (hurled)",
+      "weaponType": "Weapon type",
+      "weaponTypeHint": "The weapon type the class rules read (attacks per round)",
       "specialized": "Specialized",
       "specializedHint": "Fighter specialization: +1 to hit and +2 damage in melee or thrown; a launcher gains +2 to hit at point-blank range",
       "errors": {

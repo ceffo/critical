@@ -1377,6 +1377,22 @@
     "none": "Aucune arme.",
     "detail": "{{sm}} · G {{l}}",
     "twoHanded": "à deux mains",
+    "types": {
+      "none": "Aucun",
+      "long_bow": "Arc long",
+      "short_bow": "Arc court",
+      "light_crossbow": "Arbalète légère",
+      "heavy_crossbow": "Arbalète lourde",
+      "hand_crossbow": "Arbalète de poing",
+      "dagger": "Dague",
+      "dart": "Fléchette",
+      "sling": "Fronde",
+      "short_sword": "Épée courte",
+      "long_sword": "Épée longue",
+      "other_melee": "Autre arme de mêlée",
+      "other_thrown": "Autre arme de jet",
+      "other_missile": "Autre arme de tir"
+    },
     "specialized": "spécialisée",
     "kind": {
       "melee": "Mêlée",
@@ -1397,6 +1413,8 @@
       "twoHanded": "À deux mains",
       "ammoKind": "Type de munition",
       "ammoNone": "aucune (lancée)",
+      "weaponType": "Catégorie",
+      "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par round)",
       "specialized": "Spécialisée",
       "specializedHint": "Spécialisation du guerrier : +1 au toucher et +2 aux dégâts en mêlée ou lancée ; une arme de tir gagne +2 au toucher à bout portant",
       "errors": {

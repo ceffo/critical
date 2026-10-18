@@ -122,7 +122,17 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                   )}
                 >
                   {isStr ? (
-                    <span data-testid="str-value">{strText?.effective}</span>
+                    <span data-testid="str-value">
+                      {/* An 18/xx: the percentile smaller, so the tile fits it (ADR 0030 step 9). */}
+                      {strength.effective}
+                      {strength.effectiveExceptional > 0 && (
+                        <span className="text-label">
+                          {strText?.effective.slice(
+                            String(strength.effective).length,
+                          )}
+                        </span>
+                      )}
+                    </span>
                   ) : (
                     character[k]
                   )}

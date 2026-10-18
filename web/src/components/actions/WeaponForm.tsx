@@ -11,7 +11,12 @@ import {
   type WeaponField,
 } from "@/lib/weaponForm";
 import type { ApiError } from "@/api/http";
-import type { Weapon, WeaponBody } from "@/types/combat";
+import {
+  WEAPON_TYPES,
+  type Weapon,
+  type WeaponBody,
+  type WeaponType,
+} from "@/types/combat";
 
 interface Props {
   /** Starting values. */
@@ -181,6 +186,22 @@ export function WeaponForm({
           >
             <option value="melee">{t("weapons.kind.melee")}</option>
             <option value="missile">{t("weapons.kind.missile")}</option>
+          </select>
+        ))}
+        {field("weapon_type", t("weapons.form.weaponType"), (props) => (
+          <select
+            {...props}
+            className={fieldClass}
+            title={t("weapons.form.weaponTypeHint")}
+            value={draft.weapon_type}
+            onChange={(e) => set("weapon_type", e.target.value as WeaponType)}
+          >
+            <option value="">{t("weapons.types.none")}</option>
+            {WEAPON_TYPES.map((wt) => (
+              <option key={wt} value={wt}>
+                {t(`weapons.types.${wt}`)}
+              </option>
+            ))}
           </select>
         ))}
         {field("two_handed", t("weapons.form.twoHanded"), (props) => (

@@ -5,6 +5,7 @@ package router_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -239,4 +240,46 @@ func TestCharacters_SlowDatabaseIsUnavailable(t *testing.T) {
 		assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
 		assert.Contains(t, rec.Body.String(), `"code":"database_unavailable"`)
 	}
+}
+
+// GET /api/character carries the derived block (ADR 0030 steps 3 to 8, 22.1
+// and 24) as structured data: numbers and codes, the slots by ascending spell
+// level, null at the last level; the race code apart from the free-text race.
+// The stored sheet figures are not served.
+func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
+	h, m := newRouterWith(t, usersAuth(t, map[string]authsvc.User{
+		"ann": {ID: annID, Email: "ann@example.com", Role: authsvc.RolePlayer, CurrentCharacterID: 3},
+	}))
+	next := 1_320_000
+	m.char.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(&charactersvc.Character{
+		ID: 3, Name: "Kelsen", Class: "bard", Race: "dwarf", XPTotal: 1_293_418,
+		Sheet: charactersvc.Sheet{Level: 15, THAC0: 14},
+		Derived: charactersvc.Derived{
+			XPTotal: 1_300_000, Level: 15, NextLevelXP: &next, THAC0: 13,
+			Saves:            charactersvc.Saves{ParaPoison: 10, RodStaffWand: 8, PetriPoly: 9, Breath: 13, Spell: 9},
+			RaceSaveBonus:    charactersvc.Saves{RodStaffWand: 4, Spell: 4},
+			SpellSlots:       map[int]int{5: 2, 1: 3},
+			SheetDifferences: []charactersvc.SheetDifference{{Value: charactersvc.SheetTHAC0, Sheet: 14, Computed: 13}},
+		},
+		Details: charactersvc.Details{Race: "Nain des collines", Languages: []string{}},
+	}, nil).Once()
+
+	rec := as(h, "ann", "GET", "/api/character", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.Equal(t, "dwarf", body["raceCode"])
+	assert.Equal(t, "Nain des collines", body["race"])
+	for _, gone := range []string{"level", "thac0Base", "saveParaPoison", "saveSpell"} {
+		assert.NotContains(t, body, gone)
+	}
+	derived, err := json.Marshal(body["derived"])
+	require.NoError(t, err)
+	assert.JSONEq(t, `{
+		"xpTotal": 1300000, "level": 15, "nextLevelXp": 1320000, "thac0": 13,
+		"saves": {"paraPoison": 10, "rodStaffWand": 8, "petriPoly": 9, "breath": 13, "spell": 9},
+		"raceSaveBonus": {"paraPoison": 0, "rodStaffWand": 4, "petriPoly": 0, "breath": 0, "spell": 4},
+		"spellSlots": [{"level": 1, "count": 3}, {"level": 5, "count": 2}],
+		"sheetDifferences": [{"value": "thac0", "sheet": 14, "computed": 13}]
+	}`, string(derived))
 }

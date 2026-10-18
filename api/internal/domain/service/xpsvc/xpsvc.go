@@ -69,10 +69,11 @@ type Log interface {
 	actionlog.Recorder
 }
 
-// Thresholds is PHB Table 25 (Thief/Bard column): the XP that reaches a
-// level, an error outside the table.
+// Thresholds is the class's experience table (PHB Tables 14, 20, 23 and
+// 25): the XP that reaches a level, an error outside the table or for an
+// unknown class.
 type Thresholds interface {
-	BardXPThreshold(level int) (int, error)
+	XPThreshold(class string, level int) (int, error)
 }
 
 // Deps are the service's collaborators. Now is optional (time.Now).
@@ -108,3 +109,17 @@ func New(d Deps) (SVC, error) {
 
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
+
+// Totals is what a character's ledger entries add to the starting XP (ADR
+// 0015 step 1), read through the ledger's DAL: the character service derives
+// the level from it (ADR 0030 step 3) without depending on this service.
+type Totals struct{ DAL DAL }
+
+// EntriesTotal is the sum of the character's entries, each with its bonus.
+func (t Totals) EntriesTotal(ctx context.Context, characterID int64) (int, error) {
+	entries, err := t.DAL.List(ctx, characterID)
+	if err != nil {
+		return 0, err
+	}
+	return LedgerTotal(0, entries), nil
+}

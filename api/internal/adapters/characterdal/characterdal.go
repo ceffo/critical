@@ -52,14 +52,13 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 		ID: row.ID, Name: row.Name,
 		Str: int(row.Str), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
-		HPMax: int(row.HpMax), Thac0Base: int(row.Thac0Base),
-		Level: int(row.Level), XPTotal: int(row.XpTotal),
-		SaveParaPoison:   int(row.SaveParaPoison),
-		SaveRodStaffWand: int(row.SaveRodStaffWand),
-		SavePetriPoly:    int(row.SavePetriPoly),
-		SaveBreath:       int(row.SaveBreath),
-		SaveSpell:        int(row.SaveSpell),
-		Class:            row.Class,
+		HPMax: int(row.HpMax), XPTotal: int(row.XpTotal),
+		Class: row.Class, Race: row.RaceCode,
+		// The figures the imported sheet stated (ADR 0030 step 24).
+		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
+			ParaPoison: int(row.SaveParaPoison), RodStaffWand: int(row.SaveRodStaffWand),
+			PetriPoly: int(row.SavePetriPoly), Breath: int(row.SaveBreath), Spell: int(row.SaveSpell),
+		}},
 		Details: charactersvc.Details{
 			Race: row.Race, Alignment: row.Alignment, Age: int(row.Age), Sex: row.Sex,
 			Height: row.Height, Weight: row.Weight, Hair: row.Hair, Eyes: row.Eyes, Languages: langs,
@@ -75,7 +74,7 @@ func (d *DAL) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charactersvc
 	}
 	out := make([]charactersvc.Summary, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, charactersvc.Summary{ID: r.ID, Name: r.Name, Class: r.Class, Level: int(r.Level)})
+		out = append(out, charactersvc.Summary{ID: r.ID, Name: r.Name, Class: r.Class})
 	}
 	return out, nil
 }

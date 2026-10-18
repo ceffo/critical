@@ -11,8 +11,10 @@ import (
 )
 
 type Querier interface {
-	// The owner's characters they have not retired, in creation order.
+	// The owner's characters they have not retired, in creation order (the service derives each level).
 	CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) ([]CharactersOfRow, error)
+	// level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
+	// step 24): compared with the derived values, never read as inputs.
 	GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error)
 	GetCharacterDetails(ctx context.Context, id int64) (GetCharacterDetailsRow, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.

@@ -94,6 +94,7 @@ func TestSeed_TheCharacterAndItsStateRows(t *testing.T) {
 	assert.Contains(t, f.t.Slots, id)
 	assert.Equal(t, "[]", f.t.Buffs[id])
 	assert.True(t, f.t.Rounds[id])
+	assert.Equal(t, "half_elf", f.t.Races[id], "the seed's race code (ADR 0030 step 1)")
 
 	require.NoError(t, seedOn(f, repoSeeds()))
 	assert.Len(t, f.t.Characters, 1, "a restart adds no character")

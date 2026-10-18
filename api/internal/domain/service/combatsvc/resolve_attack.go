@@ -130,7 +130,7 @@ func (s *service) spendAmmo(ctx context.Context, characterID int64, weapon Weapo
 // range holding the multiplier d100.
 func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, crit CritTable, req AttackRequest) (*RollResult, error) {
 	res := &RollResult{
-		BaseThac0:      char.Thac0Base,
+		BaseThac0:      char.Derived.THAC0,
 		Modifiers:      []Modifier{},
 		DamageTerms:    []DamageTerm{},
 		CritMultiplier: 1,

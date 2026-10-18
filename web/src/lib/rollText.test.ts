@@ -142,6 +142,12 @@ describe("modLabel", () => {
     ).toBe("Coup critique (provisoire)");
   });
 
+  it("names the race of a race save bonus from its code (ADR 0030 step 22.1)", async () => {
+    const race = { kind: "race", detail: "halfling", value: 4 };
+    expect(modLabel(await makeT("en"), race)).toBe("Halfling (race)");
+    expect(modLabel(await makeT("fr"), race)).toBe("Petite-gens (race)");
+  });
+
   it("labels the other kinds from their detail; an unnamed situational one by its kind", async () => {
     const en = await makeT("en");
     expect(modLabel(en, { kind: "strength", detail: "18", value: 1 })).toBe(

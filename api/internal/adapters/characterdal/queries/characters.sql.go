@@ -13,7 +13,7 @@ import (
 )
 
 const charactersOf = `-- name: CharactersOf :many
-SELECT id, name, class, level FROM characters
+SELECT id, name, class FROM characters
 WHERE owner_user_id = $1 AND NOT retired
 ORDER BY id
 `
@@ -22,10 +22,9 @@ type CharactersOfRow struct {
 	ID    int64
 	Name  string
 	Class string
-	Level int64
 }
 
-// The owner's characters they have not retired, in creation order.
+// The owner's characters they have not retired, in creation order (the service derives each level).
 func (q *Queries) CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) ([]CharactersOfRow, error) {
 	rows, err := q.db.QueryContext(ctx, charactersOf, ownerUserID)
 	if err != nil {
@@ -35,12 +34,7 @@ func (q *Queries) CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) (
 	items := []CharactersOfRow{}
 	for rows.Next() {
 		var i CharactersOfRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Class,
-			&i.Level,
-		); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.Class); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -57,7 +51,7 @@ func (q *Queries) CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) (
 const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-       class, race, alignment, age, sex, height, weight, hair, eyes, languages
+       class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages
 FROM characters WHERE id = $1
 `
 
@@ -80,6 +74,7 @@ type GetCharacterRow struct {
 	SaveBreath       int64
 	SaveSpell        int64
 	Class            string
+	RaceCode         string
 	Race             string
 	Alignment        string
 	Age              int64
@@ -91,6 +86,8 @@ type GetCharacterRow struct {
 	Languages        string
 }
 
+// level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
+// step 24): compared with the derived values, never read as inputs.
 func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error) {
 	row := q.db.QueryRowContext(ctx, getCharacter, id)
 	var i GetCharacterRow
@@ -113,6 +110,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.SaveBreath,
 		&i.SaveSpell,
 		&i.Class,
+		&i.RaceCode,
 		&i.Race,
 		&i.Alignment,
 		&i.Age,

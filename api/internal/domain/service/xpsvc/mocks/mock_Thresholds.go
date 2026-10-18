@@ -17,27 +17,27 @@ func (_m *MockThresholds) EXPECT() *MockThresholds_Expecter {
 	return &MockThresholds_Expecter{mock: &_m.Mock}
 }
 
-// BardXPThreshold provides a mock function with given fields: level
-func (_m *MockThresholds) BardXPThreshold(level int) (int, error) {
-	ret := _m.Called(level)
+// XPThreshold provides a mock function with given fields: class, level
+func (_m *MockThresholds) XPThreshold(class string, level int) (int, error) {
+	ret := _m.Called(class, level)
 
 	if len(ret) == 0 {
-		panic("no return value specified for BardXPThreshold")
+		panic("no return value specified for XPThreshold")
 	}
 
 	var r0 int
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int) (int, error)); ok {
-		return rf(level)
+	if rf, ok := ret.Get(0).(func(string, int) (int, error)); ok {
+		return rf(class, level)
 	}
-	if rf, ok := ret.Get(0).(func(int) int); ok {
-		r0 = rf(level)
+	if rf, ok := ret.Get(0).(func(string, int) int); ok {
+		r0 = rf(class, level)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
 
-	if rf, ok := ret.Get(1).(func(int) error); ok {
-		r1 = rf(level)
+	if rf, ok := ret.Get(1).(func(string, int) error); ok {
+		r1 = rf(class, level)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -45,30 +45,31 @@ func (_m *MockThresholds) BardXPThreshold(level int) (int, error) {
 	return r0, r1
 }
 
-// MockThresholds_BardXPThreshold_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BardXPThreshold'
-type MockThresholds_BardXPThreshold_Call struct {
+// MockThresholds_XPThreshold_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'XPThreshold'
+type MockThresholds_XPThreshold_Call struct {
 	*mock.Call
 }
 
-// BardXPThreshold is a helper method to define mock.On call
+// XPThreshold is a helper method to define mock.On call
+//   - class string
 //   - level int
-func (_e *MockThresholds_Expecter) BardXPThreshold(level interface{}) *MockThresholds_BardXPThreshold_Call {
-	return &MockThresholds_BardXPThreshold_Call{Call: _e.mock.On("BardXPThreshold", level)}
+func (_e *MockThresholds_Expecter) XPThreshold(class interface{}, level interface{}) *MockThresholds_XPThreshold_Call {
+	return &MockThresholds_XPThreshold_Call{Call: _e.mock.On("XPThreshold", class, level)}
 }
 
-func (_c *MockThresholds_BardXPThreshold_Call) Run(run func(level int)) *MockThresholds_BardXPThreshold_Call {
+func (_c *MockThresholds_XPThreshold_Call) Run(run func(class string, level int)) *MockThresholds_XPThreshold_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
+		run(args[0].(string), args[1].(int))
 	})
 	return _c
 }
 
-func (_c *MockThresholds_BardXPThreshold_Call) Return(_a0 int, _a1 error) *MockThresholds_BardXPThreshold_Call {
+func (_c *MockThresholds_XPThreshold_Call) Return(_a0 int, _a1 error) *MockThresholds_XPThreshold_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockThresholds_BardXPThreshold_Call) RunAndReturn(run func(int) (int, error)) *MockThresholds_BardXPThreshold_Call {
+func (_c *MockThresholds_XPThreshold_Call) RunAndReturn(run func(string, int) (int, error)) *MockThresholds_XPThreshold_Call {
 	_c.Call.Return(run)
 	return _c
 }

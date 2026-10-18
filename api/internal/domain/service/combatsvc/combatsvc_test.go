@@ -26,12 +26,15 @@ func floatPtr(v float64) *float64 { return &v }
 
 const charID = int64(1)
 
-// bard is the campaign Bard: THAC0 13, sheet STR 12, DEX 17. Combat reads the
+// bard is the campaign Bard: derived THAC0 13 (ADR 0030 step 5), sheet STR
+// 12, DEX 17, and distinct derived save targets (step 6). Combat reads the
 // effective STR from the buffs port, never from the sheet.
 func bard() *charactersvc.Character {
 	return &charactersvc.Character{
-		ID: charID, Str: 12, Dex: 17, Thac0Base: 13,
-		SaveParaPoison: 11, SaveRodStaffWand: 13, SavePetriPoly: 12, SaveBreath: 15, SaveSpell: 14,
+		ID: charID, Str: 12, Dex: 17, Class: "bard", Race: "half_elf",
+		Derived: charactersvc.Derived{Level: 15, THAC0: 13, Saves: charactersvc.Saves{
+			ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14,
+		}},
 	}
 }
 
@@ -182,6 +185,61 @@ func TestResolveSavingThrow(t *testing.T) {
 
 // The d20 is plain arithmetic: a natural 1 passes when the bonuses carry it to
 // the target and a natural 20 fails when they pull it below.
+// ADR 0030 step 22.1 (amending ADR 0006 step 1): the race's save bonus is
+// one named modifier on the roll, before the buffs' (kind race, the race code
+// as detail): it moves the roll, never the target. A category the race gets
+// no bonus in has no race modifier.
+func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
+	dwarf := func() *charactersvc.Character {
+		c := bard()
+		c.Race = "dwarf"
+		c.Derived.RaceSaveBonus = charactersvc.Saves{RodStaffWand: 4, Spell: 5}
+		return c
+	}
+	t.Run("rod/staff/wand", func(t *testing.T) {
+		f := newFixture(t)
+		f.withChar(dwarf())
+		f.dice.EXPECT().RollD20().Return(9).Once()
+		mods := strMods(12)
+		mods.SaveBonus = 1
+		mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Prayer", Value: 1}}
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil).Once()
+		f.records()
+
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveRodStaffWand)
+		require.NoError(t, err)
+		assert.Equal(t, []combatsvc.Modifier{
+			{Kind: combatsvc.ModRace, Detail: "dwarf", Value: 4},
+			{Kind: combatsvc.ModBuff, Detail: "Prayer", Value: 1},
+		}, res.Modifiers)
+		assert.Equal(t, 13, res.BaseThac0, "the target is the derived one, unmoved")
+		assert.Equal(t, 14, res.SaveRollTotal, "9 + 4 + 1")
+		assert.True(t, res.Hit)
+	})
+	t.Run("spell: the category's own bonus", func(t *testing.T) {
+		f := newFixture(t)
+		f.withChar(dwarf())
+		f.dice.EXPECT().RollD20().Return(9).Once()
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
+		f.records()
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+		require.NoError(t, err)
+		assert.Equal(t, []combatsvc.Modifier{{Kind: combatsvc.ModRace, Detail: "dwarf", Value: 5}}, res.Modifiers)
+		assert.Equal(t, 14, res.SaveRollTotal)
+	})
+	t.Run("para/poison: none", func(t *testing.T) {
+		f := newFixture(t)
+		f.withChar(dwarf())
+		f.dice.EXPECT().RollD20().Return(9).Once()
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
+		f.records()
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveParaPoison)
+		require.NoError(t, err)
+		assert.Empty(t, res.Modifiers)
+		assert.Equal(t, 11, res.BaseThac0)
+	})
+}
+
 func TestResolveSavingThrow_NaturalOneAndTwentyArePlain(t *testing.T) {
 	tests := []struct {
 		name      string

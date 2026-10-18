@@ -445,7 +445,12 @@ is only ever appended to by play.
        `Tables.Classes()` is false); it lands on `main` before the builder publishes format 4 on the
        rulebooks default branch, so a dev checkout's format-3 `.catalogue/catalogue.json` and the release
        build keep starting. Format 3 is retired by a later item once the published artifact and the dev
-       checkouts are format 4, before any consumer of the class tables relies on them.
+       checkouts are format 4, before any consumer of the class tables relies on them. _(Amended
+       2026-10-18, ADR 0030's level, THAC0 and saves.)_ Format 3 is retired: the published artifact is
+       format 5 and every character's level, THAC0 and saves read the class tables, so a format-3
+       artifact refuses the start (`ruletablesvc.ErrNoClassTables`, naming `just catalogue`); a dev
+       checkout fetches the current artifact with `just catalogue`. Test:
+       `TestStartup_Step10_3_RefusesAMissingOrGappedClassTable` ("format 3 is refused").
     5. **The fixture carries the real numbers** (as step 9.7): `api/testdata/catalogue.json` is format 4,
        its class tables the real artifact's row for row (`TestRealCatalogue_Step10_5_…`, skipped without a
        format-4 `.catalogue/catalogue.json`).

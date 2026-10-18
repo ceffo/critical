@@ -341,7 +341,7 @@ func casterLevel(r *http.Request, charID CharacterIDFunc, chars characterGetter)
 	if err != nil || c == nil {
 		return 0, nil //nolint:nilerr // deliberate fallback, see above
 	}
-	return c.Level, nil
+	return c.Derived.Level, nil
 }
 
 // SpellSlotDTO matches the previous wire shape.

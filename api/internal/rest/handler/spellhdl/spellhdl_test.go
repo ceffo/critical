@@ -80,7 +80,7 @@ func (f fakeChars) GetCharacter(context.Context, int64) (*charactersvc.Character
 	if f.err != nil {
 		return nil, f.err
 	}
-	return &charactersvc.Character{Level: f.level}, nil
+	return &charactersvc.Character{Derived: charactersvc.Derived{Level: f.level}}, nil
 }
 
 // fakeDamage serves 10d6+2 fire, once per round, at any level for

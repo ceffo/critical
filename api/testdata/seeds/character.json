@@ -1,5 +1,6 @@
 {
  "name": "Test Bard",
+ "race": "half_elf",
  "str": 12,
  "dex": 17,
  "con": 16,

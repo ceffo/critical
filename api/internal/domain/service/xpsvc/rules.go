@@ -45,24 +45,31 @@ func BonusEligible(dex, cha int) bool {
 	return dex >= BonusMinScore && cha >= BonusMinScore
 }
 
-// ComputeProgress is ADR 0015 step 3: the floor is the Table 25 threshold
-// of the sheet's level, the ceiling the next level's. ToNext is what is
+// ComputeProgress is ADR 0015 step 3, read in class's experience table
+// (ADR 0030 step 3: PHB Tables 14, 20, 23 and 25): the floor is the
+// threshold of the level, the ceiling the next level's. ToNext is what is
 // left to the ceiling (0 once reached), Progress the share of the way from
 // floor to ceiling clamped to 0..1. At the last level there is no ceiling
-// and the progress is full; a sheet level above the table (an override) is
-// treated as the last level, keeping its own Level. The cells are LevelCells consecutive levels
-// starting two below the sheet's, kept inside the table.
-func ComputeProgress(level, total int, table Thresholds) (Progress, error) {
-	tableLevel := min(level, ruletablesvc.MaxBardLevel)
-	floor, err := table.BardXPThreshold(tableLevel)
+// and the progress is full; a level above the table is treated as the last
+// level, keeping its own Level. The cells are LevelCells consecutive levels
+// starting two below the level, kept inside the table.
+func ComputeProgress(class string, level, total int, table Thresholds) (Progress, error) {
+	threshold := func(l int) (int, error) {
+		th, err := table.XPThreshold(class, l)
+		if err != nil {
+			return 0, fmt.Errorf("xp progress: %w", err)
+		}
+		return th, nil
+	}
+	floor, err := threshold(min(level, ruletablesvc.MaxLevel))
 	if err != nil {
-		return Progress{}, fmt.Errorf("xp progress: %w", err)
+		return Progress{}, err
 	}
 	p := Progress{Level: level, CurrentFloor: floor, Progress: 1, ProgressPercent: 100}
-	if level < ruletablesvc.MaxBardLevel {
-		ceiling, err := table.BardXPThreshold(level + 1)
+	if level < ruletablesvc.MaxLevel {
+		ceiling, err := threshold(level + 1)
 		if err != nil {
-			return Progress{}, fmt.Errorf("xp progress: %w", err)
+			return Progress{}, err
 		}
 		p.NextLevel = level + 1
 		p.NextThreshold = &ceiling
@@ -70,11 +77,11 @@ func ComputeProgress(level, total int, table Thresholds) (Progress, error) {
 		p.Progress = min(1, max(0, float64(total-floor)/float64(ceiling-floor)))
 		p.ProgressPercent = min(100, max(0, (total-floor)*100/(ceiling-floor)))
 	}
-	start := min(max(1, level-2), ruletablesvc.MaxBardLevel-LevelCells+1)
+	start := min(max(1, level-2), ruletablesvc.MaxLevel-LevelCells+1)
 	for l := start; l < start+LevelCells; l++ {
-		th, err := table.BardXPThreshold(l)
+		th, err := threshold(l)
 		if err != nil {
-			return Progress{}, fmt.Errorf("xp progress: %w", err)
+			return Progress{}, err
 		}
 		p.Levels = append(p.Levels, LevelCell{Level: l, Threshold: th, Status: cellStatus(l, level)})
 	}

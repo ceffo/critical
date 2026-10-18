@@ -45,7 +45,7 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 	if err != nil {
 		return nil, fmt.Errorf("dexterity table: %w", err)
 	}
-	res := &ToHitRoll{BaseThac0: char.Thac0Base, TargetAC: targetAC, Modifiers: []Modifier{}}
+	res := &ToHitRoll{BaseThac0: char.Derived.THAC0, TargetAC: targetAC, Modifiers: []Modifier{}}
 	sum := 0
 	add := func(m Modifier) {
 		res.Modifiers = append(res.Modifiers, m)

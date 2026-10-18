@@ -21,7 +21,7 @@ import (
 )
 
 // Every column of the row lands in its field, the languages decoded from
-// their JSON list.
+// their JSON list, the race code apart from the free-text race.
 func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
@@ -30,16 +30,18 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
 		HpMax: 42, Thac0Base: 16, Level: 5, XpTotal: 1200,
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
-		Class: "bard", Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M",
+		Class: "bard", RaceCode: "half_elf", Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M",
 		Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
 	}, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 3)
 	require.NoError(t, err)
 	assert.Equal(t, &charactersvc.Character{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
-		HPMax: 42, Thac0Base: 16, Level: 5, XPTotal: 1200,
-		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
-		Class: "bard",
+		HPMax: 42, XPTotal: 1200, Class: "bard", Race: "half_elf",
+		// The stored level, THAC0 and saves are the sheet's figures (ADR 0030 step 24), never inputs.
+		Sheet: charactersvc.Sheet{Level: 5, THAC0: 16, Saves: charactersvc.Saves{
+			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
+		}},
 		Details: charactersvc.Details{
 			Race: "half-elf", Alignment: "CG", Age: 31, Sex: "M",
 			Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: []string{"Common", "Elvish"},
@@ -148,12 +150,12 @@ func TestOwners_ListAndSetCurrent(t *testing.T) {
 	owner := uuid.MustParse("11111111-1111-1111-1111-111111111111")
 
 	q.EXPECT().CharactersOf(ctx, uuid.NullUUID{UUID: owner, Valid: true}).Return([]queries.CharactersOfRow{
-		{ID: 1, Name: "Kelsen", Class: "bard", Level: 15}, {ID: 4, Name: "Other", Class: "fighter", Level: 2},
+		{ID: 1, Name: "Kelsen", Class: "bard"}, {ID: 4, Name: "Other", Class: "fighter"},
 	}, nil).Once()
 	list, err := dal.CharactersOf(ctx, owner)
 	require.NoError(t, err)
 	assert.Equal(t, []charactersvc.Summary{
-		{ID: 1, Name: "Kelsen", Class: "bard", Level: 15}, {ID: 4, Name: "Other", Class: "fighter", Level: 2},
+		{ID: 1, Name: "Kelsen", Class: "bard"}, {ID: 4, Name: "Other", Class: "fighter"},
 	}, list)
 
 	q.EXPECT().SetCurrentCharacter(ctx, queries.SetCurrentCharacterParams{

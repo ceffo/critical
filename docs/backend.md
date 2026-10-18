@@ -44,9 +44,13 @@ api/
 
 ### Normalized tables (core scalars)
 ```sql
--- characters: one row for the Bard
+-- characters: one row per character (ADR 0029 step 7)
 id, name, str, dex, con, int, wis, cha,
-hp_max, thac0_base, level, xp_total
+hp_max, thac0_base, level, xp_total, class, race_code
+-- (class and race_code are codes, '' race: none set; level, THAC0, saves and slots are derived
+--  from them and the XP total on every read, ADR 0030 steps 3 to 8 (charactersvc.Derive): the stored
+--  level, thac0_base and save_* columns are the figures the imported sheet stated, only compared
+--  with the derived ones (step 24, the response's derived.sheetDifferences), never inputs)
 
 -- action_log: THE append-only log of table actions (HP ledger + combat log)
 id, character_id, round, kind TEXT, summary TEXT, hp_delta INTEGER, payload JSON, created_at,
@@ -145,7 +149,8 @@ one statement list (no parameters), so it may hold several statements; DDL is tr
 `TestMigrations_Step2_1_SchemaOnly`) and new files only: never rename, edit or delete an applied one.
 Data a schema change needs first (rows a `NOT NULL` would refuse) is a **data step**: Go code the run
 executes on its transaction just before that migration, only when the migration is pending
-(`migrationDataSteps`; today the owners before migration 004, "Per-character data"). Its rules,
+(`migrationDataSteps`; today the owners before migration 004, "Per-character data"; after a migration,
+the seeded weapons' types after 005 and the seed character's race code after 007). Its rules,
 including when a step and its queries may be deleted, are [ADR 0025](adr/0025-postgresql-storage.md)
 step 2.1.1.
 
@@ -503,11 +508,12 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   the repo root (the nearest directory above the working directory with a `.git` entry; outside a checkout,
   against the working directory). A missing file stops the API with a message naming the path and
   `just catalogue`.
-- **Formats**: the API reads formats 3 (spells and the PHB rule tables, ADR 0021 step 9), 4 (format 3
-  plus the class and race tables, step 10) and 5 (format 4 plus the racial level limits of DMG Table 7,
-  step 11); any other, the retired format 1 included, is refused, naming it and `just catalogue`. Formats 3
-  and 4 are read until the published artifact and the dev checkouts are format 5 (steps 10.4 and 11.4). See
-  "Rule tables" below.
+- **Formats**: the API starts on formats 4 (the spells, the PHB rule tables and the class and race tables,
+  ADR 0021 steps 9 and 10) and 5 (format 4 plus the racial level limits of DMG Table 7, step 11); any other
+  is refused, naming it and `just catalogue`. Format 3 (no class tables) is retired since the characters'
+  level, THAC0 and saves are derived from the class tables (step 10.4 as amended, ADR 0030): a dev
+  checkout with an older `.catalogue/catalogue.json` runs `just catalogue`. Format 4 is read until the dev
+  checkouts are format 5 (step 11.4). See "Rule tables" below.
 - **Without access**: `api/testdata/catalogue.json` is a small fixture, format 5, with invented text
   (every spell the `api/testdata/seeds` spellbook and spell effects use, some with French, one list, one
   table) and the books' real rule-table, class-table and level-limit numbers (ADR 0021 steps 9.7, 10.5 and
@@ -641,8 +647,13 @@ throws, warrior and specialist attacks, rates of fire, wizard and priest spells 
 needs for 6th and 7th level), the thieving and bard skill tables, backstab and turning undead. The same
 parser reads them at every start into `ruletablesvc.ClassTables` (`Tables.Classes()`; false for a format-3
 artifact), validated by `ruletablesvc.NewClassTables`: a missing table, a gap in a level band or in the
-scores, XP not increasing or a code twice is a startup error naming the table. The derivations that use
-them (level, THAC0, saves, slots, skills) are ADR 0030's items.
+scores, XP not increasing or a code twice is a startup error naming the table; an artifact without them
+(format 3) refuses the start (`ErrNoClassTables`). `Tables` looks them up for the derived values
+(`derive.go`): `LevelFor(class, xp)`, `XPThreshold(class, level)`, `THAC0For(group, level)`,
+`SavesFor(group, level)`, `ConSaveBonusFor(con)` and `WizardSpellsPerDay(level)`, plus `ClassGroup(class)`.
+`charactersvc.Derive` combines them into the character's derived block (ADR 0030 steps 2 to 8, 22.1 and
+24), from the XP total that `xpsvc.Totals` reads from the ledger; the skills (steps 17 and 18) are a later
+item.
 
 A format-5 artifact adds the **racial level limits** of DMG Table 7 (ADR 0021 step 11, `race_level_limits`):
 one row per race and class, read into `ruletablesvc.LevelLimits` (`Tables.LevelLimits()`; false for a format-3

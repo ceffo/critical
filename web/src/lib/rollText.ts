@@ -67,6 +67,11 @@ export function modLabel(
   }
   if (m.kind === "situational" && !m.detail)
     return t("result.mods.situationalUnnamed");
+  // The race's save bonus (ADR 0030 step 22.1): the detail is the race code.
+  if (m.kind === "race")
+    return t("result.mods.race", {
+      race: t(`details.races.${m.detail ?? ""}`, { defaultValue: m.detail }),
+    });
   return t(`result.mods.${m.kind}`, {
     detail: namedDetail(m, itemName) ?? "",
     value: m.value,

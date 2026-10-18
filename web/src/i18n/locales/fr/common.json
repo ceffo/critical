@@ -7,7 +7,21 @@
     "abilities": "Caractéristiques",
     "error": "Erreur",
     "dismiss": "Fermer",
-    "strTitle": "FOR {{effective}} (fiche {{base}})"
+    "strTitle": "FOR {{effective}} (fiche {{base}})",
+    "sheetDiff": {
+      "title": "La feuille diffère des règles",
+      "hint": "L'appli utilise la valeur des règles.",
+      "item": "{{value}} : feuille {{sheet}}, règles {{computed}}",
+      "values": {
+        "level": "Niveau",
+        "thac0": "TAC0",
+        "save_para_poison": "JS Paralysie/Poison",
+        "save_rod_staff_wand": "JS Bâton/Sceptre/Baguette",
+        "save_petri_poly": "JS Pétrification/Métamorphose",
+        "save_breath": "JS Souffle",
+        "save_spell": "JS Sorts"
+      }
+    }
   },
   "language": {
     "en": "English",
@@ -981,7 +995,8 @@
       "situational": "{{detail}}",
       "situationalUnnamed": "Situationnel",
       "critRange": "Coup critique ({{from}}–{{to}})",
-      "critPlaceholder": "Coup critique (provisoire)"
+      "critPlaceholder": "Coup critique (provisoire)",
+      "race": "{{race}} (race)"
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",
@@ -1391,6 +1406,7 @@
     "none": "Non renseigné",
     "class": "Classe",
     "level": "Niveau",
+    "raceCode": "Race (règles)",
     "fields": {
       "race": "Race",
       "alignment": "Alignement",
@@ -1418,6 +1434,14 @@
       "too_many": "Trop de langues.",
       "empty": "Une langue est vide.",
       "duplicate": "Une langue est en double."
+    },
+    "races": {
+      "human": "Humain",
+      "dwarf": "Nain",
+      "elf": "Elfe",
+      "gnome": "Gnome",
+      "half_elf": "Demi-elfe",
+      "halfling": "Petite-gens"
     }
   },
   "xp": {

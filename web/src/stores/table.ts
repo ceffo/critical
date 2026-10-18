@@ -5,6 +5,7 @@ import { redoLogEntry, undoLogEntry } from "@/api/log";
 import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
+import { useCharacterStore } from "./character";
 import { useItemsStore } from "./items";
 import { useRollStore } from "./roll";
 import { useXpStore } from "./xp";
@@ -16,6 +17,16 @@ export type Notice = {
   buffs: { name: string; spellId?: string }[];
 };
 
+interface RefreshOptions {
+  /** The caller just set the XP ledger from a write's answer: not read again. */
+  skipXp?: boolean;
+  /** The action can have changed the XP total (an XP write, an undo or a redo): the character is
+   * read again, since its level, THAC0, saves and slots follow it (ADR 0030 step 3). Not on every
+   * action: GET /api/character is also the database probe, and a read retries while the
+   * database is unavailable, so the refresh (and the busy controls) would wait on it. */
+  character?: boolean;
+}
+
 interface TableStore {
   /** Last server (or network) error message; shown verbatim, never translated. */
   error: string | null;
@@ -25,13 +36,16 @@ interface TableStore {
   clearNotice: () => void;
   /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item
    * counts, weapons, the XP ledger once loaded (`skipXp`: the caller just set it from a write's
-   * answer). */
-  refresh: (opts?: { skipXp?: boolean }) => Promise<void>;
+   * answer), and the character when the action can have changed its XP (`character`). */
+  refresh: (opts?: RefreshOptions) => Promise<void>;
   /**
    * Run a mutation, then refresh the table state. Errors are caught into `error`.
    * Resolves true on success.
    */
-  run: (action: () => Promise<unknown>) => Promise<boolean>;
+  run: (
+    action: () => Promise<unknown>,
+    opts?: RefreshOptions,
+  ) => Promise<boolean>;
   /**
    * Like `run` for a form: resolves null on success, or the ApiError when the server rejected a
    * field (shown by the form under that field, not in the global error). Other failures go to `error`.
@@ -91,6 +105,9 @@ export const useTableStore = create<TableStore>((set, get) => ({
           useBuffsStore.getState().fetchStrength(),
           useItemsStore.getState().fetchItems(),
           useItemsStore.getState().fetchWeapons(),
+          // The level, THAC0, saves and slots follow the XP (ADR 0030 step 3): an award or the
+          // undo of one changes them, so the character is re-read with the rest.
+          opts?.character ? useCharacterStore.getState().loadCharacter() : null,
           // An undo can pop an XP award (ADR 0015 step 4): re-read the ledger once it is shown.
           useXpStore.getState().ledger && !opts?.skipXp
             ? useXpStore.getState().fetchXp()
@@ -104,7 +121,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
     return next;
   },
 
-  run: async (action) => {
+  run: async (action, opts) => {
     set({ busy: true, error: null });
     let ok = true;
     try {
@@ -113,7 +130,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
       ok = false;
       set({ error: message(e) });
     }
-    await get().refresh();
+    await get().refresh(opts);
     set({ busy: false });
     return ok;
   },
@@ -144,11 +161,14 @@ export const useTableStore = create<TableStore>((set, get) => ({
   undo: () => {
     const expected = useLogStore.getState().topId;
     if (expected === null) return Promise.resolve(false);
-    return get().run(async () => {
-      await undoLogEntry(expected);
-      set({ notice: null });
-      useRollStore.setState({ last: null });
-    });
+    return get().run(
+      async () => {
+        await undoLogEntry(expected);
+        set({ notice: null });
+        useRollStore.setState({ last: null });
+      },
+      { character: true },
+    );
   },
   // Redo (ADR 0019 step 3), the journal's Redo button and Ctrl+Shift+Z: replays the transaction
   // this client last read as the redo target, so a stale one is refused and nothing changes. Like
@@ -156,11 +176,14 @@ export const useTableStore = create<TableStore>((set, get) => ({
   redo: () => {
     const expected = useLogStore.getState().redo?.id ?? null;
     if (expected === null) return Promise.resolve(false);
-    return get().run(async () => {
-      await redoLogEntry(expected);
-      set({ notice: null });
-      useRollStore.setState({ last: null });
-    });
+    return get().run(
+      async () => {
+        await redoLogEntry(expected);
+        set({ notice: null });
+        useRollStore.setState({ last: null });
+      },
+      { character: true },
+    );
   },
   // A round change leaves buffs alone, but an "expired" notice is stale after either.
   endCombat: () =>

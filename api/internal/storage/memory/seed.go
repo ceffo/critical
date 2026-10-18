@@ -87,9 +87,11 @@ func (t *tables) seedCharacter(path string) (id int64, ok bool, err error) {
 	id = nextID(&t.characterSeq)
 	t.characters[id] = charactersvc.Character{
 		ID: id, Name: c.Name, Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
-		HPMax: c.HPMax, Thac0Base: c.Thac0Base, Level: c.Level, XPTotal: c.XPTotal,
-		SaveParaPoison: c.SaveParaPoison, SaveRodStaffWand: c.SaveRodStaffWand, SavePetriPoly: c.SavePetriPoly,
-		SaveBreath: c.SaveBreath, SaveSpell: c.SaveSpell, Class: seedfile.DefaultClass,
+		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: seedfile.DefaultClass, Race: c.Race,
+		Sheet: charactersvc.Sheet{Level: c.Level, THAC0: c.Thac0Base, Saves: charactersvc.Saves{
+			ParaPoison: c.SaveParaPoison, RodStaffWand: c.SaveRodStaffWand, PetriPoly: c.SavePetriPoly,
+			Breath: c.SaveBreath, Spell: c.SaveSpell,
+		}},
 		Details: charactersvc.Details{Languages: append([]string{}, c.Languages...)},
 	}
 	t.slots[id] = slots

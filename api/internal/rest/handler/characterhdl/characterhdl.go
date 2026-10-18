@@ -6,7 +6,9 @@ package characterhdl
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -147,27 +149,83 @@ func GetCharacter(charID CharacterIDFunc, svc characterGetter) render.HandlerFun
 	}
 }
 
-// CharacterDTO preserves the API contract previously emitted by domain.Character.
+// CharacterDTO is the current character's sheet: the entered values and the
+// derived block (ADR 0030 steps 3 to 8). `race` is the free-text detail the
+// player edits, `raceCode` the PHB race the rules read ("" for none).
 type CharacterDTO struct {
-	ID               int64  `json:"id"`
-	Name             string `json:"name"`
-	Str              int    `json:"str"`
-	Dex              int    `json:"dex"`
-	Con              int    `json:"con"`
-	Int              int    `json:"int"`
-	Wis              int    `json:"wis"`
-	Cha              int    `json:"cha"`
-	HPMax            int    `json:"hpMax"`
-	Thac0Base        int    `json:"thac0Base"`
-	Level            int    `json:"level"`
-	XPTotal          int    `json:"xpTotal"`
-	SaveParaPoison   int    `json:"saveParaPoison"`
-	SaveRodStaffWand int    `json:"saveRodStaffWand"`
-	SavePetriPoly    int    `json:"savePetriPoly"`
-	SaveBreath       int    `json:"saveBreath"`
-	SaveSpell        int    `json:"saveSpell"`
-	Class            string `json:"class"`
+	ID       int64      `json:"id"`
+	Name     string     `json:"name"`
+	Str      int        `json:"str"`
+	Dex      int        `json:"dex"`
+	Con      int        `json:"con"`
+	Int      int        `json:"int"`
+	Wis      int        `json:"wis"`
+	Cha      int        `json:"cha"`
+	HPMax    int        `json:"hpMax"`
+	XPTotal  int        `json:"xpTotal"`
+	Class    string     `json:"class"`
+	RaceCode string     `json:"raceCode"`
+	Derived  DerivedDTO `json:"derived"`
 	detailshdl.DetailsDTO
+}
+
+// SavesDTO are five numbers, one per save category.
+type SavesDTO struct {
+	ParaPoison   int `json:"paraPoison"`
+	RodStaffWand int `json:"rodStaffWand"`
+	PetriPoly    int `json:"petriPoly"`
+	Breath       int `json:"breath"`
+	Spell        int `json:"spell"`
+}
+
+// SlotCountDTO is the slots per day of one spell level.
+type SlotCountDTO struct {
+	Level int `json:"level"`
+	Count int `json:"count"`
+}
+
+// SheetDifferenceDTO is a value the imported sheet states differently from
+// the rules (ADR 0030 step 24): `value` is a code the web words.
+type SheetDifferenceDTO struct {
+	Value    string `json:"value"`
+	Sheet    int    `json:"sheet"`
+	Computed int    `json:"computed"`
+}
+
+// DerivedDTO is the values the rules derive (ADR 0030 steps 3 to 8, 22.1 and
+// 24). `xpTotal` is the starting XP plus the ledger, `nextLevelXp` null at the
+// last level, `raceSaveBonus` the race's bonus per category (0: none), the
+// slots by ascending spell level (levels without a slot left out).
+type DerivedDTO struct {
+	XPTotal          int                  `json:"xpTotal"`
+	Level            int                  `json:"level"`
+	NextLevelXP      *int                 `json:"nextLevelXp"`
+	THAC0            int                  `json:"thac0"`
+	Saves            SavesDTO             `json:"saves"`
+	RaceSaveBonus    SavesDTO             `json:"raceSaveBonus"`
+	SpellSlots       []SlotCountDTO       `json:"spellSlots"`
+	SheetDifferences []SheetDifferenceDTO `json:"sheetDifferences"`
+}
+
+func savesDTO(s charactersvc.Saves) SavesDTO {
+	return SavesDTO{ParaPoison: s.ParaPoison, RodStaffWand: s.RodStaffWand, PetriPoly: s.PetriPoly, Breath: s.Breath, Spell: s.Spell}
+}
+
+func derivedDTO(d charactersvc.Derived) DerivedDTO {
+	out := DerivedDTO{
+		XPTotal: d.XPTotal, Level: d.Level, NextLevelXP: d.NextLevelXP, THAC0: d.THAC0,
+		Saves: savesDTO(d.Saves), RaceSaveBonus: savesDTO(d.RaceSaveBonus),
+		SpellSlots: []SlotCountDTO{}, SheetDifferences: []SheetDifferenceDTO{},
+	}
+	for _, level := range slices.Sorted(maps.Keys(d.SpellSlots)) {
+		if n := d.SpellSlots[level]; n > 0 {
+			out.SpellSlots = append(out.SpellSlots, SlotCountDTO{Level: level, Count: n})
+		}
+	}
+	for _, diff := range d.SheetDifferences {
+		out.SheetDifferences = append(out.SheetDifferences, SheetDifferenceDTO{Value: string(diff.Value), Sheet: diff.Sheet, Computed: diff.Computed})
+	}
+	return out
 }
 
 func toDTO(c *charactersvc.Character) CharacterDTO {
@@ -177,9 +235,7 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 	return CharacterDTO{
 		ID: c.ID, Name: c.Name,
 		Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
-		HPMax: c.HPMax, Thac0Base: c.Thac0Base, Level: c.Level, XPTotal: c.XPTotal,
-		SaveParaPoison: c.SaveParaPoison, SaveRodStaffWand: c.SaveRodStaffWand,
-		SavePetriPoly: c.SavePetriPoly, SaveBreath: c.SaveBreath, SaveSpell: c.SaveSpell,
-		Class: c.Class, DetailsDTO: detailshdl.ToDTO(c.Details),
+		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race,
+		Derived: derivedDTO(c.Derived), DetailsDTO: detailshdl.ToDTO(c.Details),
 	}
 }

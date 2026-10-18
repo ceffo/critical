@@ -12,6 +12,7 @@ export type ModifierKind =
   | "ammo_magic"
   | "buff"
   | "situational"
+  | "race"
   | "crit";
 
 export interface Modifier {

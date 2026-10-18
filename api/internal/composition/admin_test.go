@@ -80,7 +80,7 @@ func TestAdmin_Step4_4_DisablingLogsTheUserOut(t *testing.T) {
 	root, rootID := tb.login("")
 	bob, bobID := tb.login("bob@example.com")
 	_, err := m.AddCharacterOf(context.Background(), bobID, charactersvc.Character{
-		Name: "Bram", Class: "fighter", Level: 3, Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 30, Thac0Base: 18,
+		Name: "Bram", Class: "fighter", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 30,
 	})
 	require.NoError(t, err)
 

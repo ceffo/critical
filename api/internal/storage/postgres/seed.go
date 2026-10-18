@@ -133,6 +133,25 @@ func typeSeedWeapons(ctx context.Context, q storeq.Querier, weaponsPath string) 
 	return nil
 }
 
+// raceSeedCharacter gives the seed character stored before races had codes the race its seed
+// names: the data step after raceMigration. A character that already has a race keeps it, so a
+// rerun changes nothing and no race set since is lost; no seed character, or a seed without a
+// race, changes nothing.
+func raceSeedCharacter(ctx context.Context, q storeq.Querier, characterPath string) error {
+	c, found, err := seedfile.ReadCharacter(characterPath)
+	if err != nil || !found || c.Race == "" {
+		return err
+	}
+	owner, ok, err := seedOwner(ctx, q, characterPath)
+	if err != nil || !ok {
+		return err
+	}
+	if err := q.SetRaceIfUnset(ctx, storeq.SetRaceIfUnsetParams{ID: owner, RaceCode: c.Race}); err != nil {
+		return fmt.Errorf("set the race of character %d: %w", owner, err)
+	}
+	return nil
+}
+
 // seedCharacter inserts the character, then the rows that refer to it (its spell slots, buffs
 // and round state): the foreign keys need the character first.
 func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error {
@@ -157,6 +176,7 @@ func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error
 		Level: int64(c.Level), XpTotal: int64(c.XPTotal), SaveParaPoison: int64(c.SaveParaPoison),
 		SaveRodStaffWand: int64(c.SaveRodStaffWand), SavePetriPoly: int64(c.SavePetriPoly),
 		SaveBreath: int64(c.SaveBreath), SaveSpell: int64(c.SaveSpell), Languages: string(languages),
+		RaceCode: c.Race,
 	})
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)

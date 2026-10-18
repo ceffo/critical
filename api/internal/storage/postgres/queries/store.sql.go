@@ -254,8 +254,8 @@ func (q *Queries) InsertActiveBuffs(ctx context.Context, characterID int64) erro
 const insertCharacter = `-- name: InsertCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
-    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 RETURNING id
 `
 
@@ -277,8 +277,11 @@ type InsertCharacterParams struct {
 	SaveBreath       int64
 	SaveSpell        int64
 	Languages        string
+	RaceCode         string
 }
 
+// The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
+// compared with the derived values, never read as inputs.
 func (q *Queries) InsertCharacter(ctx context.Context, arg InsertCharacterParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, insertCharacter,
 		arg.Name,
@@ -298,6 +301,7 @@ func (q *Queries) InsertCharacter(ctx context.Context, arg InsertCharacterParams
 		arg.SaveBreath,
 		arg.SaveSpell,
 		arg.Languages,
+		arg.RaceCode,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -552,6 +556,22 @@ func (q *Queries) SeedOffers(ctx context.Context, arg SeedOffersParams) ([]strin
 		return nil, err
 	}
 	return items, nil
+}
+
+const setRaceIfUnset = `-- name: SetRaceIfUnset :exec
+UPDATE characters SET race_code = $1 WHERE id = $2 AND race_code = ''
+`
+
+type SetRaceIfUnsetParams struct {
+	RaceCode string
+	ID       int64
+}
+
+// The race of a character stored before races had codes (migration 007): only while it has none,
+// so a rerun changes nothing and a race set since is kept.
+func (q *Queries) SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error {
+	_, err := q.db.ExecContext(ctx, setRaceIfUnset, arg.RaceCode, arg.ID)
+	return err
 }
 
 const setSpellKey = `-- name: SetSpellKey :exec

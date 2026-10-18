@@ -61,6 +61,8 @@ packages:
     interfaces:
       SVC:
       Reader:
+      XPLedger:
+      Rules:
       Owners:
       Sessions:
   github.com/ceffo/critical/api/internal/domain/service/combatsvc:
@@ -103,7 +105,6 @@ packages:
     interfaces:
       SVC:
       Spellbook:
-      Limits:
       Characters:
       Items:
       Slots:

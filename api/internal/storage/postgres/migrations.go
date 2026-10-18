@@ -69,6 +69,10 @@ func (d *DB) Migrate(ctx context.Context, seedsDir string) error {
 // already stored (typeSeedWeapons), which hold ” (the column's default).
 const weaponTypeMigration = "005_weapon_type.sql"
 
+// raceMigration adds characters.race_code. Right after it the run gives the seed character
+// already stored the race its seed names (raceSeedCharacter).
+const raceMigration = "007_character_race.sql"
+
 // migrationDataSteps are the data steps run just before the named migrations, then those run just
 // after the named migrations.
 func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
@@ -79,6 +83,7 @@ func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
 	}
 	after = map[string]dataStep{
 		weaponTypeMigration: func(ctx context.Context, q storeq.Querier) error { return typeSeedWeapons(ctx, q, weaponsPath) },
+		raceMigration:       func(ctx context.Context, q storeq.Querier) error { return raceSeedCharacter(ctx, q, characterPath) },
 	}
 	return before, after
 }

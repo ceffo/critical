@@ -20,6 +20,8 @@ test("character details: view, edit with a field error, save, reload", async ({
   const pop = page.getByTestId("details-popover");
   await expect(pop).toBeVisible();
   await expect(pop.getByText("Bard", { exact: true })).toBeVisible();
+  // The PHB race the rules read (ADR 0030 step 1), apart from the free-text race.
+  await expect(pop.getByText("Half-elf", { exact: true })).toBeVisible();
   await expect(pop.getByText("Not set").first()).toBeVisible();
 
   for (const vp of VIEWPORTS) {
@@ -30,13 +32,15 @@ test("character details: view, edit with a field error, save, reload", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await pop.getByRole("button", { name: "Edit" }).click();
-  await pop.getByLabel("Race", { exact: true }).fill("Half-elf");
+  await pop.getByLabel("Race", { exact: true }).fill("Sylvan half-elf");
   await pop.getByLabel("Age", { exact: true }).fill("10001");
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("alert")).toHaveText(
     "Enter a whole age between 0 and 10,000.",
   );
-  await expect(pop.getByLabel("Race", { exact: true })).toHaveValue("Half-elf");
+  await expect(pop.getByLabel("Race", { exact: true })).toHaveValue(
+    "Sylvan half-elf",
+  );
   await snap(page, "details-error-1440x900");
 
   await pop.getByLabel("Age", { exact: true }).fill("112");
@@ -46,7 +50,7 @@ test("character details: view, edit with a field error, save, reload", async ({
     .fill("Commun, Nain, Sylvain");
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
-  await expect(pop.getByText("Half-elf")).toBeVisible();
+  await expect(pop.getByText("Sylvan half-elf")).toBeVisible();
   await expect(pop.getByText("112")).toBeVisible();
   await expect(pop.getByText("Common, Dwarvish, Sylvain")).toBeVisible();
 
@@ -55,7 +59,9 @@ test("character details: view, edit with a field error, save, reload", async ({
   await pop.getByLabel("Race", { exact: true }).fill("Dwarf");
   await pop.getByRole("button", { name: "Cancel" }).click();
   await pop.getByRole("button", { name: "Edit" }).click();
-  await expect(pop.getByLabel("Race", { exact: true })).toHaveValue("Half-elf");
+  await expect(pop.getByLabel("Race", { exact: true })).toHaveValue(
+    "Sylvan half-elf",
+  );
   await pop.getByLabel("Age", { exact: true }).fill("0");
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("alert")).toBeVisible();

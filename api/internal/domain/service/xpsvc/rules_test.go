@@ -10,19 +10,30 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
-// table25 is the Thief/Bard column of PHB Table 25 (p.38), as printed.
-type table25 struct{}
+// xpTables is the experience tables by class, as printed: the Thief/Bard
+// column of PHB Table 25 (p.38) and Table 20 (p.30) for the mage.
+type xpTables struct{}
 
-var phbTable25 = []int{
-	0, 1250, 2500, 5000, 10000, 20000, 40000, 70000, 110000, 160000,
-	220000, 440000, 660000, 880000, 1100000, 1320000, 1540000, 1760000, 1980000, 2200000,
+var phbXP = map[string][]int{
+	"bard": {
+		0, 1250, 2500, 5000, 10000, 20000, 40000, 70000, 110000, 160000,
+		220000, 440000, 660000, 880000, 1100000, 1320000, 1540000, 1760000, 1980000, 2200000,
+	},
+	"mage": {
+		0, 2500, 5000, 10000, 20000, 40000, 60000, 90000, 135000, 250000,
+		375000, 750000, 1125000, 1500000, 1875000, 2250000, 2625000, 3000000, 3375000, 3750000,
+	},
 }
 
-func (table25) BardXPThreshold(level int) (int, error) {
-	if level < 1 || level > len(phbTable25) {
+func (xpTables) XPThreshold(class string, level int) (int, error) {
+	col, ok := phbXP[class]
+	if !ok {
+		return 0, fmt.Errorf("unknown class %q", class)
+	}
+	if level < 1 || level > len(col) {
 		return 0, fmt.Errorf("level %d out of range", level)
 	}
-	return phbTable25[level-1], nil
+	return col[level-1], nil
 }
 
 // ADR 0015 step 1: an entry adds its base, plus 10% of it rounded to the
@@ -84,19 +95,28 @@ func TestBonusEligible_DexAndChaBothAtLeast16(t *testing.T) {
 }
 
 func cells(from int, statuses ...xpsvc.CellStatus) []xpsvc.LevelCell {
+	return classCells("bard", from, statuses...)
+}
+
+func mageCells(from int, statuses ...xpsvc.CellStatus) []xpsvc.LevelCell {
+	return classCells("mage", from, statuses...)
+}
+
+func classCells(class string, from int, statuses ...xpsvc.CellStatus) []xpsvc.LevelCell {
 	out := make([]xpsvc.LevelCell, 0, len(statuses))
 	for i, s := range statuses {
-		out = append(out, xpsvc.LevelCell{Level: from + i, Threshold: phbTable25[from+i-1], Status: s})
+		out = append(out, xpsvc.LevelCell{Level: from + i, Threshold: phbXP[class][from+i-1], Status: s})
 	}
 	return out
 }
 
 func ptr(n int) *int { return &n }
 
-// ADR 0015 step 3: the floor is the Table 25 threshold of the sheet's level,
-// the ceiling the next level's; what is left and the share of the way come
-// from them, the cells are 8 levels from two below the sheet's.
-func TestComputeProgress_FromTable25(t *testing.T) {
+// ADR 0015 step 3, in the class's table (ADR 0030 step 3): the floor is the
+// threshold of the level, the ceiling the next level's; what is left and the
+// share of the way come from them, the cells are 8 levels from two below the
+// level.
+func TestComputeProgress_FromTheClassTable(t *testing.T) {
 	const (
 		past    = xpsvc.CellPast
 		current = xpsvc.CellCurrent
@@ -105,6 +125,7 @@ func TestComputeProgress_FromTable25(t *testing.T) {
 	)
 	tests := []struct {
 		name         string
+		class        string
 		level, total int
 		want         xpsvc.Progress
 	}{
@@ -154,15 +175,36 @@ func TestComputeProgress_FromTable25(t *testing.T) {
 				Levels: cells(1, current, next, ahead, ahead, ahead, ahead, ahead, ahead),
 			},
 		},
+		{
+			name: "mage: Table 20, not the bard's", class: "mage", level: 2, total: 2_600,
+			want: xpsvc.Progress{
+				Level: 2, CurrentFloor: 2_500, NextLevel: 3, NextThreshold: ptr(5_000),
+				ToNext: 2_400, Progress: 100.0 / 2_500.0, ProgressPercent: 4,
+				Levels: mageCells(1, past, current, next, ahead, ahead, ahead, ahead, ahead),
+			},
+		},
+		{
+			name: "mage: last level", class: "mage", level: 20, total: 3_800_000,
+			want: xpsvc.Progress{
+				Level: 20, CurrentFloor: 3_750_000, Progress: 1, ProgressPercent: 100,
+				Levels: mageCells(13, past, past, past, past, past, past, past, current),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := xpsvc.ComputeProgress(tt.level, tt.total, table25{})
+			class := tt.class
+			if class == "" {
+				class = "bard"
+			}
+			got, err := xpsvc.ComputeProgress(class, tt.level, tt.total, xpTables{})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 
-	_, err := xpsvc.ComputeProgress(0, 0, table25{})
+	_, err := xpsvc.ComputeProgress("bard", 0, 0, xpTables{})
 	require.Error(t, err, "a level below the table")
+	_, err = xpsvc.ComputeProgress("cleric", 1, 0, xpTables{})
+	require.Error(t, err, "a class without a table")
 }

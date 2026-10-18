@@ -292,19 +292,21 @@ func NewClassTables(c ClassTables) (*ClassTables, error) {
 	return &c, nil
 }
 
+// experienceColumns reads a class's column of the experience table.
+var experienceColumns = map[string]func(ExperienceRow) int{
+	"fighter": func(r ExperienceRow) int { return r.Fighter },
+	"mage":    func(r ExperienceRow) int { return r.Mage },
+	"cleric":  func(r ExperienceRow) int { return r.Cleric },
+	"thief":   func(r ExperienceRow) int { return r.Thief },
+	"bard":    func(r ExperienceRow) int { return r.Bard },
+}
+
 func checkExperience(rows []ExperienceRow) error {
 	if err := levelsInOrder(rows, func(r ExperienceRow) int { return r.Level }); err != nil {
 		return err
 	}
-	cols := map[string]func(ExperienceRow) int{
-		"fighter": func(r ExperienceRow) int { return r.Fighter },
-		"mage":    func(r ExperienceRow) int { return r.Mage },
-		"cleric":  func(r ExperienceRow) int { return r.Cleric },
-		"thief":   func(r ExperienceRow) int { return r.Thief },
-		"bard":    func(r ExperienceRow) int { return r.Bard },
-	}
 	for _, class := range Classes {
-		xp := cols[class]
+		xp := experienceColumns[class]
 		if xp(rows[0]) != 0 {
 			return fmt.Errorf("%s: level 1 must start at 0 XP", class)
 		}

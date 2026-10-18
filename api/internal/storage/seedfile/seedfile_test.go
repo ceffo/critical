@@ -25,6 +25,7 @@ func TestRead_FixtureSeeds(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, ok)
 	assert.Equal(t, "Test Bard", c.Name)
+	assert.Equal(t, "half_elf", c.Race)
 	_, err = seedfile.ReadWeapons(seedfile.Path(dir, seedfile.WeaponsFile))
 	require.NoError(t, err)
 	items, err := seedfile.ReadItems(seedfile.Path(dir, seedfile.ItemsFile))
@@ -62,6 +63,7 @@ func TestRead_Refusals(t *testing.T) {
 		{"skill unknown ability", `{"proficiencies":[{"id":"a","ability":"luck"}]}`, "unknown ability", readSkills},
 		{"skill duplicate across lists", `{"proficiencies":[{"id":"a","ability":"str"}],"bard_skills":[{"id":"a","percent":5}]}`, "duplicate id", readSkills},
 		{"bard skill above 100", `{"bard_skills":[{"id":"a","percent":101}]}`, "outside 0-100", readSkills},
+		{"character race not a PHB race code", `{"name":"A","race":"Half-Elf"}`, `race "Half-Elf" is not one of`, readCharacter},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -70,9 +72,10 @@ func TestRead_Refusals(t *testing.T) {
 	}
 }
 
-func readWeapons(p string) error { _, err := seedfile.ReadWeapons(p); return err }
-func readItems(p string) error   { _, err := seedfile.ReadItems(p); return err }
-func readSkills(p string) error  { _, err := seedfile.ReadSkills(p); return err }
+func readWeapons(p string) error   { _, err := seedfile.ReadWeapons(p); return err }
+func readCharacter(p string) error { _, _, err := seedfile.ReadCharacter(p); return err }
+func readItems(p string) error     { _, err := seedfile.ReadItems(p); return err }
+func readSkills(p string) error    { _, err := seedfile.ReadSkills(p); return err }
 
 // max_count defaults to the count; powers come back in their stored
 // encoding, "[]" for none.

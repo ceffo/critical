@@ -26,6 +26,8 @@ func (t *tx) InTx(ctx context.Context, fn func(context.Context) error) error {
 type env struct {
 	svc      charactersvc.SVC
 	reader   *mocks.MockReader
+	xp       *mocks.MockXPLedger
+	rules    *mocks.MockRules
 	owners   *mocks.MockOwners
 	sessions *mocks.MockSessions
 	tx       *tx
@@ -34,10 +36,11 @@ type env struct {
 func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
-		reader: mocks.NewMockReader(t), owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{},
+		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: mocks.NewMockRules(t),
+		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{},
 	}
 	svc, err := charactersvc.NewWithConfig(charactersvc.DefaultConfig(), charactersvc.Deps{
-		Reader: e.reader, Owners: e.owners, Tx: e.tx, Sessions: e.sessions,
+		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions,
 	})
 	require.NoError(t, err)
 	e.svc = svc
@@ -46,14 +49,20 @@ func newEnv(t *testing.T) *env {
 
 func TestNew_NilDependency(t *testing.T) {
 	full := charactersvc.Deps{
-		Reader: mocks.NewMockReader(t), Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t),
+		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: mocks.NewMockRules(t),
+		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t),
 	}
-	for name, d := range map[string]charactersvc.Deps{
-		"reader":   {Owners: full.Owners, Tx: full.Tx, Sessions: full.Sessions},
-		"owners":   {Reader: full.Reader, Tx: full.Tx, Sessions: full.Sessions},
-		"tx":       {Reader: full.Reader, Owners: full.Owners, Sessions: full.Sessions},
-		"sessions": {Reader: full.Reader, Owners: full.Owners, Tx: full.Tx},
-	} {
+	without := map[string]func(d *charactersvc.Deps){
+		"reader":   func(d *charactersvc.Deps) { d.Reader = nil },
+		"xp":       func(d *charactersvc.Deps) { d.XP = nil },
+		"rules":    func(d *charactersvc.Deps) { d.Rules = nil },
+		"owners":   func(d *charactersvc.Deps) { d.Owners = nil },
+		"tx":       func(d *charactersvc.Deps) { d.Tx = nil },
+		"sessions": func(d *charactersvc.Deps) { d.Sessions = nil },
+	}
+	for name, drop := range without {
+		d := full
+		drop(&d)
 		_, err := charactersvc.New(d)
 		require.Error(t, err, name)
 	}
@@ -61,14 +70,18 @@ func TestNew_NilDependency(t *testing.T) {
 
 var owner = uuid.MustParse("11111111-1111-1111-1111-111111111111")
 
-// ADR 0029 steps 7.1 and 7.3: the list is the owner's port answer, as it is.
-func TestList_IsTheOwnersCharacters(t *testing.T) {
+// ADR 0029 steps 7.1 and 7.3: the list is the owner's port answer, each
+// character with its derived level (ADR 0030 step 3).
+func TestList_IsTheOwnersCharactersAtTheirDerivedLevel(t *testing.T) {
 	e := newEnv(t)
-	want := []charactersvc.Summary{{ID: 1, Name: "Kelsen", Class: "bard", Level: 15}}
-	e.owners.EXPECT().CharactersOf(mock.Anything, owner).Return(want, nil).Once()
+	e.owners.EXPECT().CharactersOf(mock.Anything, owner).
+		Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen", Class: "bard"}}, nil).Once()
+	e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(kelsen(), nil).Once()
+	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(1)).Return(0, nil).Once()
+	expectKelsenRules(e.rules, 1_293_418, 15)
 	got, err := e.svc.List(context.Background(), owner)
 	require.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, []charactersvc.Summary{{ID: 1, Name: "Kelsen", Class: "bard", Level: 15}}, got)
 }
 
 // ADR 0029 step 7.2: setting the current character writes it in one
@@ -91,33 +104,37 @@ func TestSetCurrent_Step7_1_AForeignCharacterIsNotFound(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
 }
 
+// GetCharacter derives the character's block from what the reader returns
+// and what the XP ledger's entries add (ADR 0030 steps 3 to 8), and passes a
+// reader's error through.
 func TestGetCharacter(t *testing.T) {
-	want := &charactersvc.Character{ID: 3, Name: "Bard", Str: 18, Thac0Base: 16}
+	t.Run("derived from the reader's character and the ledger", func(t *testing.T) {
+		e := newEnv(t)
+		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(kelsen(), nil).Once()
+		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+		expectKelsenRules(e.rules, 1_293_418, 15)
 
-	tests := []struct {
-		name    string
-		ret     *charactersvc.Character
-		retErr  error
-		wantErr error
-	}{
-		{name: "found", ret: want},
-		{name: "not found passes sentinel through", retErr: domain.ErrCharacterNotFound, wantErr: domain.ErrCharacterNotFound},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			e := newEnv(t)
-			e.reader.EXPECT().GetCharacter(context.Background(), int64(3)).Return(tt.ret, tt.retErr)
-
-			got, err := e.svc.GetCharacter(context.Background(), 3)
-			if tt.wantErr != nil {
-				assert.True(t, errors.Is(err, tt.wantErr))
-				assert.Nil(t, got)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, want, got)
-		})
-	}
+		got, err := e.svc.GetCharacter(context.Background(), 3)
+		require.NoError(t, err)
+		want := kelsen()
+		want.Derived = kelsenDerived()
+		assert.Equal(t, want, got)
+	})
+	t.Run("not found passes sentinel through", func(t *testing.T) {
+		e := newEnv(t)
+		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(nil, domain.ErrCharacterNotFound).Once()
+		got, err := e.svc.GetCharacter(context.Background(), 3)
+		assert.True(t, errors.Is(err, domain.ErrCharacterNotFound))
+		assert.Nil(t, got)
+	})
+	t.Run("a ledger error is the read's", func(t *testing.T) {
+		e := newEnv(t)
+		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(kelsen(), nil).Once()
+		boom := errors.New("boom")
+		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, boom).Once()
+		_, err := e.svc.GetCharacter(context.Background(), 3)
+		require.ErrorIs(t, err, boom)
+	})
 }
 
 // Score reads each ability's own field of the sheet (distinct values, so a

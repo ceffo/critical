@@ -167,7 +167,7 @@ func (s *Store) AddCharacterOf(ctx context.Context, owner uuid.UUID, c character
 
 // CreateCharacter implements charactersvc.Owners.
 func (c Characters) CreateCharacter(ctx context.Context, owner uuid.UUID, ch charactersvc.Character) (int64, error) {
-	ch.Details.Languages = []string{}
+	ch.Details.Languages = append([]string{}, ch.Details.Languages...)
 	return c.s.AddCharacterOf(ctx, owner, ch)
 }
 

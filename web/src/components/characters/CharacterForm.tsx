@@ -6,6 +6,7 @@ import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { parseWhole } from "@/lib/wholeNumber";
+import { toBody, type Draft } from "@/lib/characterDetails";
 import { skillName } from "@/lib/logSummary";
 import { cn } from "@/lib/utils";
 import {
@@ -24,7 +25,32 @@ type Field =
   | "strExceptional"
   | "skillArmor"
   | "skillPoints"
-  | `skillPoints.${string}`;
+  | `skillPoints.${string}`
+  | `details.${keyof Draft}`;
+
+/** The details the form takes, in the card's order (the card's edit checks them the same way). */
+const DETAIL_FIELDS: (keyof Draft)[] = [
+  "race",
+  "alignment",
+  "age",
+  "sex",
+  "height",
+  "weight",
+  "hair",
+  "eyes",
+];
+
+const NO_DETAILS: Draft = {
+  race: "",
+  alignment: "",
+  age: "",
+  sex: "",
+  height: "",
+  weight: "",
+  hair: "",
+  eyes: "",
+  languages: "",
+};
 
 /** The server's field names for the form's: the race is `race` in its errors. */
 const ERROR_FIELD: Record<string, Field> = { race: "raceCode" };
@@ -40,7 +66,8 @@ interface FieldError {
  * The new character form (ADR 0029 step 7.2, ADR 0030 step 1): the class (the ones the server can
  * create), the race (the ones the class admits, DMG Table 7), the name, the six ability scores as
  * on the sheet, the max HP and the starting XP; a thief its skill points and the armour worn for its
- * skills (ADR 0030 step 17: the percentages are the server's). Level, THAC0 and saves are never entered: the server
+ * skills (ADR 0030 step 17: the percentages are the server's); and, optional, the details the
+ * character card shows (alignment, age, languages...), which the server checks as the card's edit. Level, THAC0 and saves are never entered: the server
  * derives them. It starts with no equipment. The server checks every value and refuses with the
  * field; the form words its code. On success the page reloads on the new character, now current.
  */
@@ -66,6 +93,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
   // ADR 0030 steps 1 and 17: a thief's points by skill and the armour worn for its skills.
   const [skillPoints, setSkillPoints] = useState<Record<string, string>>({});
   const [skillArmor, setSkillArmor] = useState("leather");
+  const [details, setDetails] = useState<Draft>(NO_DETAILS);
   const [error, setError] = useState<FieldError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -105,6 +133,11 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
       : undefined;
 
   const wording = (e: FieldError): string => {
+    if (e.field.startsWith("details.")) {
+      return t(`details.errors.${e.code}`, {
+        defaultValue: e.message ?? e.code,
+      });
+    }
     const r =
       e.field === "name"
         ? { max: options?.maxNameLength }
@@ -170,6 +203,12 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
         body.skillPoints[skill] = v;
       }
     }
+    const { body: detailsBody, ageInvalid } = toBody(details);
+    if (ageInvalid) {
+      setError({ field: "details.age", code: "out_of_range" });
+      return;
+    }
+    body.details = detailsBody;
     setBusy(true);
     setError(null);
     try {
@@ -234,6 +273,35 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
           }}
         />
         {errorFor(f)}
+      </div>
+    );
+  };
+
+  const detail = (f: keyof Draft, hint?: string) => {
+    const field: Field = `details.${f}`;
+    return (
+      <div key={f} className="flex min-w-0 flex-col gap-1">
+        <label
+          htmlFor={`new-character-${field}`}
+          className={cn(labelClass, "break-words")}
+        >
+          {t(f === "race" ? "characters.raceDetail" : `details.fields.${f}`)}
+        </label>
+        <input
+          {...fieldProps(field)}
+          autoComplete="off"
+          inputMode={f === "age" ? "numeric" : undefined}
+          title={f === "race" ? t("characters.raceDetailHint") : undefined}
+          value={details[f]}
+          onChange={(e) => {
+            setDetails((d) => ({ ...d, [f]: e.target.value }));
+            setError(null);
+          }}
+        />
+        {hint && (
+          <span className="text-label text-muted-foreground">{hint}</span>
+        )}
+        {errorFor(field)}
       </div>
     );
   };
@@ -439,6 +507,22 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
       <p className="text-label text-muted-foreground">
         {t("characters.derivedLead")}
       </p>
+
+      <fieldset
+        className="flex min-w-0 flex-col gap-2"
+        data-testid="new-character-details"
+      >
+        <legend className={cn(labelClass, "mb-1")}>
+          {t("characters.details")}
+        </legend>
+        <p className="text-label text-muted-foreground">
+          {t("characters.detailsLead")}
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {DETAIL_FIELDS.map((f) => detail(f))}
+        </div>
+        {detail("languages", t("details.languagesHint"))}
+      </fieldset>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         {onCancel && (

@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
 )
 
 type creator interface {
@@ -112,6 +113,26 @@ type CreateBody struct {
 	// other classes.
 	SkillPoints map[string]int `json:"skillPoints"`
 	SkillArmor  string         `json:"skillArmor"`
+	// Details are the free-text details, in the shape GET /api/character
+	// shows them (age null for none); absent for none. A refusal names its
+	// field under "details." (details.age).
+	Details *detailshdl.DetailsDTO `json:"details"`
+}
+
+// detailsPatch is the details as the patch a new character applies: every text
+// field set (empty is none), the age and the languages when given.
+func detailsPatch(d *detailshdl.DetailsDTO) charactersvc.DetailsPatch {
+	if d == nil {
+		return charactersvc.DetailsPatch{}
+	}
+	p := charactersvc.DetailsPatch{
+		Race: &d.Race, Alignment: &d.Alignment, Age: d.Age, Sex: &d.Sex, Height: &d.Height,
+		Weight: &d.Weight, Hair: &d.Hair, Eyes: &d.Eyes,
+	}
+	if d.Languages != nil {
+		p.Languages = &d.Languages
+	}
+	return p
 }
 
 // required is the field's value, or the field error of a missing one.
@@ -125,7 +146,7 @@ func required(field string, v *int) (int, error) {
 func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
 	n := charactersvc.NewCharacter{
 		Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional,
-		SkillPoints: b.SkillPoints, SkillArmor: b.SkillArmor,
+		SkillPoints: b.SkillPoints, SkillArmor: b.SkillArmor, Details: detailsPatch(b.Details),
 	}
 	for _, f := range []struct {
 		field string

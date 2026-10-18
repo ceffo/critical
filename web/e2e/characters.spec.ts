@@ -10,12 +10,12 @@ import {
   undoEntry,
 } from "./helpers";
 
-// Creating and switching characters from the cog menu (ADR 0029 step 7.2), the one flow only a
-// browser proves: the menu's dialogs, the form's selects, and the page loading again on the
-// character the server made current, its sheet on screen. French first (ADR 0027 step 2). The
+// Creating, switching and renaming characters from the cog menu (ADR 0029 step 7.2), the one flow
+// only a browser proves: the menu's dialogs, the form's selects and details, and the page loading
+// again on the character the server made current, its sheet and details on screen. French first (ADR 0027 step 2). The
 // validation (abilities, race and class, a cleric, an entered level), the empty start, ownership
 // and retiring are Go tests (composition create_test.go); the no-cut audit is in layout.spec.ts.
-test("create a second bard, switch to the first and back, retire it", async ({
+test("create a second bard with details, switch to the first and back, rename and retire it", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -31,7 +31,9 @@ test("create a second bard, switch to the first and back, retire it", async ({
   const form = dialog.getByTestId("character-form");
   await form.getByLabel("Nom").fill("Lyra");
   await expect(form.getByLabel("Classe")).toHaveValue("bard");
-  await form.getByLabel("Race").selectOption({ label: "Demi-elfe" });
+  await form
+    .getByLabel("Race", { exact: true })
+    .selectOption({ label: "Demi-elfe" });
   for (const [ability, score] of [
     ["FOR", "10"],
     ["DEX", "15"],
@@ -43,6 +45,10 @@ test("create a second bard, switch to the first and back, retire it", async ({
     await form.getByLabel(ability, { exact: true }).fill(score);
   await form.getByLabel("PV max").fill("6");
   await form.getByLabel("XP de départ").fill("2500");
+  // The details go with it: the card shows them after the reload.
+  const details = form.getByTestId("new-character-details");
+  await details.getByLabel("Alignement").fill("Neutre bon");
+  await details.getByLabel("Langues").fill("Commun, Elfique");
   await snap(page, "new-character-form-fr");
   await form
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
@@ -51,6 +57,11 @@ test("create a second bard, switch to the first and back, retire it", async ({
   // The page loads again on the new character: its level is the rules' at 2,500 XP.
   await expect(character).toContainText("Lyra");
   await expect(page.getByTestId("hp-value")).toHaveText("6 / 6");
+  await page.getByTestId("details-trigger").click();
+  const pop = page.getByTestId("details-popover");
+  await expect(pop).toContainText("Neutre bon");
+  await expect(pop).toContainText("Commun, Elfique");
+  await page.keyboard.press("Escape");
 
   settings = await openSettings(page);
   await settings
@@ -72,6 +83,22 @@ test("create a second bard, switch to the first and back, retire it", async ({
     .click();
   await list.getByRole("button", { name: "Jouer Lyra" }).click();
   await expect(character).toContainText("Lyra");
+
+  // Rename from the cog menu: the page loads again with the new name.
+  settings = await openSettings(page);
+  await settings
+    .getByRole("button", { name: "Renommer le personnage joué" })
+    .click();
+  const rename = dialog.getByTestId("rename-form");
+  await expect(rename.getByRole("textbox", { name: "Nom" })).toHaveValue(
+    "Lyra",
+  );
+  await rename.getByRole("textbox", { name: "Nom" }).fill("Lyra la Brave");
+  await snap(page, "rename-character-fr");
+  await rename
+    .getByRole("button", { name: "Enregistrer le nouveau nom de Lyra" })
+    .click();
+  await expect(character).toContainText("Lyra la Brave");
 
   settings = await openSettings(page);
   await settings
@@ -106,7 +133,9 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
     .getByTestId("character-form");
   await form.getByLabel("Nom").fill("Borin");
   await form.getByLabel("Classe").selectOption({ label: "Guerrier" });
-  await form.getByLabel("Race").selectOption({ label: "Humain" });
+  await form
+    .getByLabel("Race", { exact: true })
+    .selectOption({ label: "Humain" });
   for (const [ability, score] of [
     ["FOR", "18"],
     ["DEX", "14"],
@@ -178,7 +207,9 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
     .getByTestId("character-form");
   await form.getByLabel("Nom").fill("Vex");
   await form.getByLabel("Classe").selectOption({ label: "Voleur" });
-  await form.getByLabel("Race").selectOption({ label: "Petite-gens" });
+  await form
+    .getByLabel("Race", { exact: true })
+    .selectOption({ label: "Petite-gens" });
   for (const [ability, score] of [
     ["FOR", "16"],
     ["DEX", "17"],
@@ -264,7 +295,9 @@ test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
     .getByTestId("character-form");
   await form.getByLabel("Nom").fill("Elminster");
   await form.getByLabel("Classe").selectOption({ label: "Magicien" });
-  await form.getByLabel("Race").selectOption({ label: "Humain" });
+  await form
+    .getByLabel("Race", { exact: true })
+    .selectOption({ label: "Humain" });
   for (const [ability, score] of [
     ["FOR", "9"],
     ["DEX", "12"],
@@ -339,7 +372,9 @@ test("create a cleric, prepare and cast a spell, turn undead", async ({
     .getByTestId("character-form");
   await form.getByLabel("Nom").fill("Frère Anselme");
   await form.getByLabel("Classe").selectOption({ label: "Clerc" });
-  await form.getByLabel("Race").selectOption({ label: "Humain" });
+  await form
+    .getByLabel("Race", { exact: true })
+    .selectOption({ label: "Humain" });
   for (const [ability, score] of [
     ["FOR", "12"],
     ["DEX", "10"],

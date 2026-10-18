@@ -6,6 +6,7 @@ package composition_test
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -76,6 +77,34 @@ func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, tb.call(ann, "PATCH", "/api/characters/"+itoa(lyra), `{"retired":true}`, nil))
 }
 
+// The details entered with a new character are stored trimmed, as the
+// card's edit stores them, and GET /api/character shows them; the ones left
+// out are none.
+func TestCreate_TheDetailsEnteredAreStored(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	body := newBard[:len(newBard)-1] +
+		`,"details":{"alignment":" Neutre bon ","age":23,"eyes":"verts","languages":["Commun"," Elfique "]}}`
+	var list listView
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, &list))
+	var got struct {
+		Race      string   `json:"race"`
+		Alignment string   `json:"alignment"`
+		Age       *int     `json:"age"`
+		Eyes      string   `json:"eyes"`
+		Hair      string   `json:"hair"`
+		Languages []string `json:"languages"`
+	}
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.Equal(t, "Neutre bon", got.Alignment)
+	require.NotNil(t, got.Age)
+	assert.Equal(t, 23, *got.Age)
+	assert.Equal(t, "verts", got.Eyes)
+	assert.Empty(t, got.Hair)
+	assert.Empty(t, got.Race)
+	assert.Equal(t, []string{"Commun", "Elfique"}, got.Languages)
+}
+
 // emptied maps the nil lists of an empty sheet to their zero value.
 func emptied(s sheet) sheet {
 	if len(s.Items) == 0 {
@@ -92,7 +121,7 @@ func emptied(s sheet) sheet {
 
 // Invalid input is 400 with the field, and nothing is stored: a race the
 // class does not admit (a dwarf bard, DMG Table 7), an ability outside 3 to
-// 19, a class the app does not have, and an
+// 19, a class the app does not have, details the card would refuse, and an
 // entered level or THAC0 (never entered, step 1).
 func TestCreate_RefusedInputStoresNothing(t *testing.T) {
 	tb, _ := newTable(t)
@@ -105,6 +134,17 @@ func TestCreate_RefusedInputStoresNothing(t *testing.T) {
 		var refused map[string]string
 		require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused), body)
 		assert.Equal(t, "invalid_input", refused["code"])
+		assert.Equal(t, field, refused["field"], body)
+	}
+	// The details are checked as the card's edit checks them, their field
+	// named under "details." (the race code is "race").
+	for body, field := range map[string]string{
+		newBard[:len(newBard)-1] + `,"details":{"age":0}}`:                                  "details.age",
+		newBard[:len(newBard)-1] + `,"details":{"languages":["Commun","commun"]}}`:          "details.languages",
+		newBard[:len(newBard)-1] + `,"details":{"race":"` + strings.Repeat("e", 41) + `"}}`: "details.race",
+	} {
+		var refused map[string]string
+		require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused), body)
 		assert.Equal(t, field, refused["field"], body)
 	}
 	for _, extra := range []string{`"level":3`, `"thac0":19`} {

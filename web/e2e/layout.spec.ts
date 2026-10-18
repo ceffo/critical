@@ -1978,8 +1978,8 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
 });
 
 // The character dialogs of the cog menu and the page of a user with no character (ADR 0029 step
-// 7.2), French first: the creation form, the switch list (a long name) and the creation page are
-// never cut, fr and en, 1280x800 and 2560x1440.
+// 7.2), French first: the creation form with its details, the rename dialog and the switch list (a
+// long name) and the creation page are never cut, fr and en, 1280x800 and 2560x1440.
 test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", async ({
   page,
 }) => {
@@ -2021,10 +2021,18 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
 
   for (const lang of ["fr", "en"] as const) {
     if (lang === "en") await chooseLanguage(page, "en");
-    const [switchHint, newHint] =
+    const [switchHint, newHint, renameHint] =
       lang === "fr"
-        ? [/^Changer de personnage/, "Créer un nouveau personnage"]
-        : [/^Switch character/, "Create a new character"];
+        ? [
+            /^Changer de personnage/,
+            "Créer un nouveau personnage",
+            "Renommer le personnage joué",
+          ]
+        : [
+            /^Switch character/,
+            "Create a new character",
+            "Rename the character you play",
+          ];
     for (const vp of [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
@@ -2041,6 +2049,14 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
       await expectNoClippedText(dialog, `new character form, ${where}`);
       await expectWholeWords(dialog, `new character form, ${where}`);
       await snap(page, `character-form-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+
+      settings = await openSettings(page);
+      await settings.getByRole("button", { name: renameHint }).click();
+      await expect(dialog.getByTestId("rename-form")).toBeVisible();
+      await expectNoClippedText(dialog, `rename dialog, ${where}`);
+      await snap(page, `character-rename-${lang}-${vp.width}x${vp.height}`);
       await page.keyboard.press("Escape");
       await expect(dialog).toBeHidden();
 

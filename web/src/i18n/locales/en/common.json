@@ -160,8 +160,6 @@
     "inactive": "needs STR {{min}}",
     "effWeapon": "weapon +{{n}}",
     "effDice": "dice ×{{n}}",
-    "effMelee": "melee only",
-    "effMissile": "missile only",
     "inactiveHint": "No effect until STR reaches {{min}}",
     "replaced": "replaced by Improved Strength",
     "replacedHint": "Improved Strength replaces the other Strength bonuses while it lasts",
@@ -1009,7 +1007,6 @@
       },
       "byHand": "Apply by hand",
       "tracked": "Tracked effects",
-      "note": "Note",
       "text": "Spell text",
       "fx": {
         "to_hit": "To hit {{value}}",

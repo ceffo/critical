@@ -301,7 +301,7 @@ const VIEWPORTS = [
   { width: 1920, height: 1080 },
   { width: 2560, height: 1440 },
 ];
-const ACTIVITIES = ["Act", "Spells", "Experience", "Inventory"] as const;
+const ACTIVITIES = ["Act", "Spells", "Inventory", "Experience"] as const;
 /** Activities whose screenshots are kept, at the two viewports of the design (ADR 0022). */
 const SHOTS = new Set(["1440x900", "1707x1300"]);
 /** A long effect name: it wraps in the expanded header, never cut. */
@@ -1293,7 +1293,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     }
     // ADR 0027 step 14.4: the ledger card is as tall as its rows (two entries and the opening row),
     // not the rest of the stage.
-    await rail.nth(2).click();
+    await rail.nth(3).click();
     const ledger = stage.getByTestId("xp-ledger");
     await expect(ledger.getByTestId("xp-row")).toHaveCount(2);
     await expectNoClippedText(stage, `experience, ${where}`);
@@ -1306,7 +1306,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     ).toBeLessThanOrEqual(24);
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `experience-fr-${vp.width}x${vp.height}`);
-    await rail.nth(3).click();
+    await rail.nth(2).click();
     await expectNoClippedText(stage, `inventory, ${where}`);
     await expectWholeWords(stage, `inventory, ${where}`);
     if (vp.width === 1707) {

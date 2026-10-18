@@ -183,7 +183,7 @@ test.describe("with the sheet's STR 12", () => {
     // On by itself, under the item's name, with nothing to edit or dismiss.
     await expect(hammer).toContainText("Power Gem");
     await expect(hammer.getByTestId("power-effects")).toHaveText(
-      "weapon +5 · dice ×2 · melee only",
+      "weapon +5 · dice ×2",
     );
     await expect(hammer.getByTestId("effect-bar")).toHaveText("while STR ≥ 18");
     await expect(hammer.getByRole("button")).toHaveCount(0);

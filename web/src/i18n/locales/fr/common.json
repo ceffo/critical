@@ -160,8 +160,6 @@
     "inactive": "FOR {{min}} requise",
     "effWeapon": "arme +{{n}}",
     "effDice": "dés ×{{n}}",
-    "effMelee": "corps à corps seulement",
-    "effMissile": "à distance seulement",
     "inactiveHint": "Sans effet tant que la FOR n'atteint pas {{min}}",
     "replaced": "remplacée par Improved Strength",
     "replacedHint": "Improved Strength remplace les autres bonus de Force tant qu'elle dure",
@@ -1009,7 +1007,6 @@
       },
       "byHand": "À appliquer à la main",
       "tracked": "Effets suivis",
-      "note": "Note",
       "text": "Texte du sort",
       "fx": {
         "to_hit": "Toucher {{value}}",

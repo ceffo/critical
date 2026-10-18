@@ -143,6 +143,11 @@ one statement list (no parameters), so it may hold several statements; DDL is tr
 `BIGINT` integers, `TIMESTAMPTZ` timestamps; 0/1 flags and JSON stay checked `BIGINT` and `TEXT`
 (the file says why). Migrations are schema only (no `INSERT`, `UPDATE` or `DELETE`,
 `TestMigrations_Step2_1_SchemaOnly`) and new files only: never rename, edit or delete an applied one.
+Data a schema change needs first (rows a `NOT NULL` would refuse) is a **data step**: Go code the run
+executes on its transaction just before that migration, only when the migration is pending
+(`migrationDataSteps`; today the owners before migration 004, "Per-character data"). Its rules,
+including when a step and its queries may be deleted, are [ADR 0025](adr/0025-postgresql-storage.md)
+step 2.1.1.
 
 Before applying anything it refuses a database that records a migration the binary does not embed
 ([ADR 0024](adr/0024-deployment.md) step 6.2): the server exits with
@@ -446,11 +451,15 @@ character's row of the same id is unknown: not found).
   (decided 2026-10-18 in review: spells are learned and removed in the app, [ADR 0030](adr/0030-classes-and-races.md)
   step 20, so a start must never re-add a removed spell or reset the order). Editing
   `seeds/spellbook.json` afterwards changes nothing for an existing character.
-- **Rows without an owner** (stored before migration 002, or written by the release before during a
-  rolling deploy) are given to the seed character at every start, before the seeds are applied:
-  existing data keeps every count, position and field, with nothing to run by hand. Rows without an
-  owner and no seed character (the name in `character.json` changed) refuse the start, rather than
-  belong to no one.
+- **Every row has an owner** (migration 004): `character_id` is `NOT NULL` and the primary keys are
+  `(character_id, id)`, so two characters may hold the same weapon, item or skill id. Rows without an
+  owner (stored before migration 002, or written by a release without it during a rolling deploy)
+  are given to the seed character by the migration run itself, just before migration 004, in the
+  same transaction (`ownRows`, a data step of `Migrate`, ADR 0025 step 2.1.1): existing data keeps
+  every count, position and field, with nothing to run by hand, and a
+  database that gets 002 and 004 in one run (one upgraded from a release before 002) starts.
+  Rows without an owner and no seed character (the name in `character.json` changed) refuse the
+  start, rather than belong to no one; nothing is migrated.
 - **Catalogue check at write time**: the spellbook seed is checked against the catalogue (a Wizard
   spell, its English name and level, each once) before the seed writes anything, so `Build` loads
   the catalogue artifact and checks the seeds before it seeds. Reading a spellbook names each entry
@@ -458,12 +467,13 @@ character's row of the same id is unknown: not found).
   holds (`StateSpellRefs`, ADR 0021 step 5.4.3).
 - **Undo**: snapshot keys stay `items:<id>` and `weapons:<id>`; a restorer writes the row of the
   popped entry's character (the `characterID` every `Restorer` receives).
-- **Expand now, contract later** (the migrations are additive across a rolling deploy, ADR 0024 step
-  5.2): migration 002 adds `character_id` nullable, with a unique index on `(character_id, id)`,
-  and keeps the single-column primary keys the release before still upserts on. Until a later
-  migration makes `character_id NOT NULL` and the primary keys `(character_id, id)` (once no release
-  without the column runs), an item, weapon or skill id is unique across characters in the
-  database; the in-memory store already keys them per character.
+- **Expand, then contract** (the migrations are additive across a rolling deploy, ADR 0024 step
+  5.2): migration 002 added `character_id` nullable, with a unique index on `(character_id, id)`,
+  and kept the single-column primary keys the release before still upserted on. Migration 004 is
+  the contract step: `NOT NULL`, and the 002 indexes become the primary keys. During its rolling
+  deploy a release with 002 keeps working (it always writes the owner and upserts on
+  `(character_id, id)`); a release from before 002 fails only its inserts of weapons and items (no
+  owner) for the minutes both run. The in-memory store keys these rows per character too.
 
 ## Spell catalogue
 

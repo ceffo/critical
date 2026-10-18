@@ -60,7 +60,9 @@ import (
 // catalogue import. Close releases it.
 type Store interface {
 	domain.TxRunner
-	Migrate(ctx context.Context) error
+	// Migrate applies the pending migrations; seedsDir's character.json names
+	// the seed character, the owner of rows a migration finds without one.
+	Migrate(ctx context.Context, seedsDir string) error
 	// Seed loads the seed files of seedsDir; spellbook is the spellbook
 	// seed's catalogue keys, checked against the catalogue.
 	Seed(ctx context.Context, seedsDir string, spellbook []string) error

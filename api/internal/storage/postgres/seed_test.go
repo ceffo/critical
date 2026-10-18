@@ -53,16 +53,16 @@ func copySeeds(t *testing.T, replace map[string]string) string {
 // names are the names of the items or weapons by id, read through their keys.
 func (f *fakeStore) itemNames() map[string]localized.Text {
 	out := map[string]localized.Text{}
-	for id, it := range f.t.Items {
-		out[id] = f.t.Texts[it.Name]
+	for _, it := range f.t.Items {
+		out[it.ID] = f.t.Texts[it.Name]
 	}
 	return out
 }
 
 func (f *fakeStore) weaponNames() map[string]localized.Text {
 	out := map[string]localized.Text{}
-	for id, w := range f.t.Weapons {
-		out[id] = f.t.Texts[w.Name]
+	for _, w := range f.t.Weapons {
+		out[w.ID] = f.t.Texts[w.Name]
 	}
 	return out
 }
@@ -71,11 +71,13 @@ func (f *fakeStore) weaponNames() map[string]localized.Text {
 // seed reconcile must keep (the owner a row without one gets is the ownership tests' subject).
 func (f *fakeStore) sheet() map[string]any {
 	out := map[string]any{}
-	for id, it := range f.t.Items {
+	for _, it := range f.t.Items {
+		id := it.ID
 		it.Name, it.CharacterID = 0, 0
 		out["item:"+id] = it
 	}
-	for id, w := range f.t.Weapons {
+	for _, w := range f.t.Weapons {
+		id := w.ID
 		w.Name, w.CharacterID = 0, 0
 		out["weapon:"+id] = w
 	}
@@ -103,12 +105,12 @@ func TestSeed_WeaponsAndItemsMatchSheetAndAreIdempotent(t *testing.T) {
 
 	assert.Len(t, f.t.Weapons, 6)
 	assert.Len(t, f.t.Items, 6)
-	assert.Equal(t, int64(18), f.t.Items["arrows_plus1"].Count)
-	assert.Equal(t, int64(16), f.t.Items["arrows_plus2"].Count)
-	assert.Equal(t, int64(2), f.t.Items["arrows_plus3"].Count)
-	assert.Equal(t, int64(5), f.t.Items["fire_flask"].Count)
-	assert.Equal(t, int64(4), f.t.Items["wand_lightning"].MaxCount, "max_count defaults to count")
-	gem, wand := f.t.Items["power_gem_dispel"], f.t.Items["wand_lightning"]
+	assert.Equal(t, int64(18), f.item("arrows_plus1").Count)
+	assert.Equal(t, int64(16), f.item("arrows_plus2").Count)
+	assert.Equal(t, int64(2), f.item("arrows_plus3").Count)
+	assert.Equal(t, int64(5), f.item("fire_flask").Count)
+	assert.Equal(t, int64(4), f.item("wand_lightning").MaxCount, "max_count defaults to count")
+	gem, wand := f.item("power_gem_dispel"), f.item("wand_lightning")
 	assert.Equal(t, []string{"daily", "gem"}, []string{gem.Behaviour, gem.Type})
 	assert.Equal(t, []string{"charges", "wand"}, []string{wand.Behaviour, wand.Type})
 	stock := 0
@@ -120,12 +122,12 @@ func TestSeed_WeaponsAndItemsMatchSheetAndAreIdempotent(t *testing.T) {
 	assert.Equal(t, 4, stock, "arrows and flasks")
 
 	// A table change must survive a re-seed (a restart).
-	arrows := f.t.Items["arrows_plus1"]
+	arrows := f.item("arrows_plus1")
 	arrows.Count = 3
-	f.t.Items["arrows_plus1"] = arrows
+	f.t.Items[rowKey(arrows.CharacterID, arrows.ID)] = arrows
 	require.NoError(t, seedOn(f, repoSeeds()))
 	assert.Len(t, f.t.Items, 6)
-	assert.Equal(t, int64(3), f.t.Items["arrows_plus1"].Count)
+	assert.Equal(t, int64(3), f.item("arrows_plus1").Count)
 	assert.Len(t, f.t.Weapons, 6)
 }
 
@@ -187,19 +189,19 @@ func TestSeed_SkillsMatchSheetAndAreIdempotent(t *testing.T) {
 		"riding_land": {"wis", 3}, "appraising": {"int", 0}, "singing": {"cha", 0},
 		"reading_writing": {"int", 1}, "local_history": {"cha", 0},
 	} {
-		assert.Equal(t, want.ability, f.t.Profs[id].Ability, id)
-		assert.Equal(t, want.modifier, f.t.Profs[id].Modifier, id)
+		assert.Equal(t, want.ability, f.prof(id).Ability, id)
+		assert.Equal(t, want.modifier, f.prof(id).Modifier, id)
 	}
 	for id, want := range map[string]int64{"climb_walls": 85, "detect_noise": 90, "pick_pockets": 50, "read_languages": 75} {
-		assert.Equal(t, want, f.t.Bard[id].Percent, id)
+		assert.Equal(t, want, f.bardSkill(id).Percent, id)
 	}
-	assert.Zero(t, f.t.Profs["musical_instrument"].Position, "seed order kept")
+	assert.Zero(t, f.prof("musical_instrument").Position, "seed order kept")
 
 	require.NoError(t, seedOn(f, repoSeeds()))
 	assert.Len(t, f.t.Profs, 8)
 	assert.Len(t, f.t.Bard, 4)
-	assert.Equal(t, int64(50), f.t.Bard["pick_pockets"].Percent)
-	assert.Equal(t, int64(7), f.t.Profs["local_history"].Position, "order kept")
+	assert.Equal(t, int64(50), f.bardSkill("pick_pockets").Percent)
+	assert.Equal(t, int64(7), f.prof("local_history").Position, "order kept")
 	require.NoError(t, seedOn(f, t.TempDir()), "a missing file is fine once the tables are filled")
 }
 
@@ -218,11 +220,11 @@ func TestSeed_SkillsReconcileByID(t *testing.T) {
 	for range 2 {
 		require.NoError(t, seedOn(f, edited))
 		assert.Len(t, f.t.Profs, 3, "new row added once")
-		assert.Equal(t, int64(1), f.t.Profs["singing"].Modifier, "corrected modifier")
-		assert.Zero(t, f.t.Profs["singing"].Position, "new order")
-		assert.Equal(t, int64(2), f.t.Profs["ventriloquism"].Position)
-		assert.Equal(t, int64(-2), f.t.Profs["ventriloquism"].Modifier)
-		assert.Equal(t, int64(90), f.t.Bard["climb_walls"].Percent, "raised percentage")
+		assert.Equal(t, int64(1), f.prof("singing").Modifier, "corrected modifier")
+		assert.Zero(t, f.prof("singing").Position, "new order")
+		assert.Equal(t, int64(2), f.prof("ventriloquism").Position)
+		assert.Equal(t, int64(-2), f.prof("ventriloquism").Modifier)
+		assert.Equal(t, int64(90), f.bardSkill("climb_walls").Percent, "raised percentage")
 		assert.Len(t, f.t.Bard, 2, "a row the seed dropped is kept")
 	}
 }
@@ -274,15 +276,15 @@ func TestSeed_Step16_PowerGemHasTheHammer(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			f := newFakeStore()
 			require.NoError(t, seedOn(f, dir))
-			gem := f.t.Items["power_gem_dispel"]
+			gem := f.item("power_gem_dispel")
 			assert.Equal(t, "Power Gem", f.t.Texts[gem.Name]["en"])
 			assert.Equal(t, int64(1), gem.Count)
 			assert.Equal(t, int64(1), gem.MaxCount)
 			assert.Equal(t, "daily", gem.Behaviour)
 			assert.Equal(t, thunderHammer, decodedPowers(t, gem.Powers))
-			for id, it := range f.t.Items {
-				if id != "power_gem_dispel" {
-					assert.Equal(t, "[]", it.Powers, "only the gem has powers: %s", id)
+			for _, it := range f.t.Items {
+				if it.ID != "power_gem_dispel" {
+					assert.Equal(t, "[]", it.Powers, "only the gem has powers: %s", it.ID)
 				}
 			}
 		})
@@ -330,17 +332,25 @@ func TestSeed_Step10_FreshDatabaseGetsEveryLanguage(t *testing.T) {
 	}
 }
 
+// firstCharacter is the id the fake gives the first character it stores: on a fresh fake, the
+// seed character's.
+const firstCharacter = 1
+
 // plantItem and plantWeapon store a played row whose name is an English text under a new key,
-// with no seed offer recorded: a database the seed has not reconciled yet.
+// with no seed offer recorded, owned by the seed character unless the row names another: a
+// database the seed has not reconciled yet.
 func (f *fakeStore) plantItem(t *testing.T, it storeq.InsertItemParams, name localized.Text) {
 	t.Helper()
 	key, err := addSeedText(context.Background(), f, name)
 	require.NoError(t, err)
 	it.Name = key
+	if it.CharacterID == 0 {
+		it.CharacterID = firstCharacter
+	}
 	if it.Powers == "" {
 		it.Powers = "[]"
 	}
-	f.t.Items[it.ID] = it
+	f.t.Items[rowKey(it.CharacterID, it.ID)] = it
 }
 
 func (f *fakeStore) plantWeapon(t *testing.T, w storeq.InsertWeaponParams, name localized.Text) {
@@ -348,7 +358,10 @@ func (f *fakeStore) plantWeapon(t *testing.T, w storeq.InsertWeaponParams, name 
 	key, err := addSeedText(context.Background(), f, name)
 	require.NoError(t, err)
 	w.Name = key
-	f.t.Weapons[w.ID] = w
+	if w.CharacterID == 0 {
+		w.CharacterID = firstCharacter
+	}
+	f.t.Weapons[rowKey(w.CharacterID, w.ID)] = w
 }
 
 // ADR 0023 step 10: on a played database, the seed gives a name it still holds unchanged the
@@ -417,7 +430,7 @@ func TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved(t *testing.T) {
 	}
 	f := newFakeStore()
 	require.NoError(t, seedOn(f, seeds(`{"en":"Gem"}`, `{"en":"Axe"}`)))
-	axe := func() int64 { return f.t.Weapons["axe"].Name }
+	axe := func() int64 { return f.weapon("axe").Name }
 
 	// The player renamed the axe: the French seed name is not given...
 	f.t.Texts[axe()]["en"] = "Big axe"
@@ -432,20 +445,20 @@ func TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved(t *testing.T) {
 	require.Equal(t, map[string]localized.Text{"axe": {"en": "Axe", "fr": "Hache"}}, f.weaponNames())
 
 	// The player blanks the French names (the DAL deletes the language's row).
-	delete(f.t.Texts[f.t.Items["gem"].Name], "fr")
+	delete(f.t.Texts[f.item("gem").Name], "fr")
 	delete(f.t.Texts[axe()], "fr")
 	require.NoError(t, seedOn(f, both))
 	assert.Equal(t, map[string]localized.Text{"gem": {"en": "Gem"}}, f.itemNames(), "a removed language stays removed")
 	assert.Equal(t, map[string]localized.Text{"axe": {"en": "Axe"}}, f.weaponNames())
 
 	// The gem is removed, then put back under a new key (an undo).
-	gem := f.t.Items["gem"]
+	gem := f.item("gem")
 	delete(f.t.Texts, gem.Name)
 	key, err := f.NextTextKey(context.Background())
 	require.NoError(t, err)
 	f.t.Texts[key] = localized.Text{"en": "Gem"}
 	gem.Name = key
-	f.t.Items["gem"] = gem
+	f.t.Items[rowKey(gem.CharacterID, gem.ID)] = gem
 	texts := copyTables(f.t).Texts
 	require.NoError(t, seedOn(f, both))
 	assert.Equal(t, texts, f.t.Texts, "the record follows the id, not the key")

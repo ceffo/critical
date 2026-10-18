@@ -89,7 +89,7 @@ func newHarness(t *testing.T) *harness {
 // expectStartup expects the steps a successful start takes on the store, in
 // order, and the lookup of the single character.
 func (h *harness) expectStartup(seedsDir string) {
-	migrate := h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	migrate := h.Store.EXPECT().Migrate(mock.Anything, seedsDir).Return(nil).Once()
 	seed := h.Store.EXPECT().Seed(mock.Anything, seedsDir, mock.Anything).Return(nil).Once().NotBefore(migrate)
 	imp := h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once().NotBefore(seed)
 	h.Character.EXPECT().FirstID(mock.Anything).Return(characterID, nil).Once().NotBefore(imp)

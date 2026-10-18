@@ -27,7 +27,9 @@ import (
 // services closes the store once.
 func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	// The seeds' character.json names the owner of rows a migration finds
+	// without one.
+	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds).Return(nil).Once()
 	var book []string
 	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).
 		RunAndReturn(func(_ context.Context, _ string, b []string) error {
@@ -77,20 +79,20 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 		want    string
 	}{
 		{"migrate (the unknown-migration guard's refusal travels this way)", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything).Return(boom).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(boom).Once()
 		}, "migrate: boom"},
 		{"seed", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(boom).Once()
 		}, "seed: boom"},
 		{"no character", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Character.EXPECT().FirstID(mock.Anything).Return(int64(0), boom).Once()
 		}, "resolve character: boom"},
 		{"catalogue import", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "boom"},
@@ -125,7 +127,7 @@ func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, raw, 0o600))
 
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once() // no Seed or ImportCatalogue expectation: a call fails the test
 
 	_, err = h.build(t, composition.Config{SeedsDir: seeds, Catalogue: fixtureCatalogue})
@@ -177,7 +179,7 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 func refusedStart(t *testing.T, cfg composition.Config) error {
 	t.Helper()
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once()
 	_, err := h.build(t, cfg)
 	require.Error(t, err)
@@ -341,7 +343,7 @@ func TestBuild_ASpellbookSeedTheCatalogueRefusesIsRefusedBeforeTheSeed(t *testin
 		[]byte(`[{"id":"magic_rocket","name":"Magic Rocket","level":1}]`), 0o600))
 
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once()
 	cfg := fixtureConfig()
 	cfg.SeedsDir = seeds

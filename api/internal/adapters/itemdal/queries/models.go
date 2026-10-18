@@ -4,10 +4,6 @@
 
 package queries
 
-import (
-	"database/sql"
-)
-
 type Item struct {
 	ID          string
 	Position    int64
@@ -22,7 +18,7 @@ type Item struct {
 	EffectSave  string
 	Notes       string
 	Powers      string
-	CharacterID sql.NullInt64
+	CharacterID int64
 }
 
 type LocalizedText struct {

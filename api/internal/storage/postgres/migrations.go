@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
+	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
 // migrationFiles are the schema migrations, applied in lexical order. Schema only: no migration
@@ -33,16 +36,40 @@ type migrationTx interface {
 	Applied(ctx context.Context) ([]string, error)
 	// Apply runs a migration's statements and records it as applied.
 	Apply(ctx context.Context, m migration) error
+	// Store runs the storage's sqlc queries on the run's transaction (the data steps).
+	Store() storeq.Querier
 }
 
+// dataStep is data a migration needs before its schema change, written in Go on the run's
+// transaction: migration files hold no data (ADR 0025 step 2.1.1).
+type dataStep func(ctx context.Context, q storeq.Querier) error
+
+// ownerKeysMigration makes character_id required on weapons, items, proficiencies and bard
+// skills. Before it the run gives every row without an owner to the seed character (ownRows):
+// rows stored before migration 002, or written by a release without it during a rolling deploy,
+// including on a database that gets 002 and this one in the same run.
+const ownerKeysMigration = "004_per_character_keys.sql"
+
 // Migrate applies every embedded migration the database does not record yet, in lexical order,
-// and records each one in schema_migrations (ADR 0025 step 3).
-func (d *DB) Migrate(ctx context.Context) error {
+// and records each one in schema_migrations (ADR 0025 step 3). seedsDir is the seeds' directory:
+// its character.json names the seed character, the owner of rows without one before
+// ownerKeysMigration.
+func (d *DB) Migrate(ctx context.Context, seedsDir string) error {
 	embedded, err := embeddedMigrations()
 	if err != nil {
 		return err
 	}
-	return d.migrations(ctx, func(tx migrationTx) error { return runMigrations(ctx, tx, embedded) })
+	return d.migrations(ctx, func(tx migrationTx) error {
+		return runMigrations(ctx, tx, embedded, migrationDataSteps(seedsDir))
+	})
+}
+
+// migrationDataSteps are the data steps run just before the named migrations.
+func migrationDataSteps(seedsDir string) map[string]dataStep {
+	characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
+	return map[string]dataStep{
+		ownerKeysMigration: func(ctx context.Context, q storeq.Querier) error { return ownRows(ctx, q, characterPath) },
+	}
 }
 
 func embeddedMigrations() ([]migration, error) {
@@ -67,8 +94,9 @@ func embeddedMigrations() ([]migration, error) {
 //
 // Before applying anything it refuses a database that records a migration the binary does not
 // embed (ADR 0024 step 6.2): an older binary does not undo a newer schema, so it must not run on
-// one.
-func runMigrations(ctx context.Context, tx migrationTx, embedded []migration) error {
+// one. A pending migration with a data step in steps gets it run just before it, in the same
+// transaction.
+func runMigrations(ctx context.Context, tx migrationTx, embedded []migration, steps map[string]dataStep) error {
 	if err := tx.Lock(ctx); err != nil {
 		return fmt.Errorf("take the writer lock: %w", err)
 	}
@@ -105,6 +133,11 @@ func runMigrations(ctx context.Context, tx migrationTx, embedded []migration) er
 	}
 	sort.Slice(pending, func(i, j int) bool { return pending[i].name < pending[j].name })
 	for _, m := range pending {
+		if step, ok := steps[m.name]; ok {
+			if err := step(ctx, tx.Store()); err != nil {
+				return fmt.Errorf("before %s: %w", m.name, err)
+			}
+		}
 		if err := tx.Apply(ctx, m); err != nil {
 			return fmt.Errorf("apply %s: %w", m.name, err)
 		}
@@ -137,6 +170,8 @@ type pgMigrationTx struct {
 }
 
 func (m pgMigrationTx) Lock(ctx context.Context) error { return m.lock(ctx, m.tx) }
+
+func (m pgMigrationTx) Store() storeq.Querier { return storeq.New(m.tx) }
 
 func (m pgMigrationTx) EnsureTable(ctx context.Context) error {
 	_, err := m.tx.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (

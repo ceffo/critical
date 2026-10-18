@@ -1,26 +1,31 @@
 package postgres
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
+	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
 // owners is the owner of every weapon, item, proficiency and bard skill, by table and id.
 func (f *fakeStore) owners() map[string]int64 {
 	out := map[string]int64{}
-	for id, w := range f.t.Weapons {
-		out["weapon:"+id] = w.CharacterID
+	for _, w := range f.t.Weapons {
+		out["weapon:"+w.ID] = w.CharacterID
 	}
-	for id, it := range f.t.Items {
-		out["item:"+id] = it.CharacterID
+	for _, it := range f.t.Items {
+		out["item:"+it.ID] = it.CharacterID
 	}
-	for id, p := range f.t.Profs {
-		out["proficiency:"+id] = p.CharacterID
+	for _, p := range f.t.Profs {
+		out["proficiency:"+p.ID] = p.CharacterID
 	}
-	for id, b := range f.t.Bard {
-		out["bard_skill:"+id] = b.CharacterID
+	for _, b := range f.t.Bard {
+		out["bard_skill:"+b.ID] = b.CharacterID
 	}
 	return out
 }
@@ -35,25 +40,67 @@ func (f *fakeStore) everyRowOwnedBy(id int64) map[string]int64 {
 }
 
 // disown makes every row ownerless and empties the spellbooks: the database as it was before
-// each character owned its equipment.
+// each character owned its equipment (before migration 004 the owner may be NULL).
 func (f *fakeStore) disown() {
-	for id, w := range f.t.Weapons {
-		w.CharacterID = 0
-		f.t.Weapons[id] = w
-	}
-	for id, it := range f.t.Items {
-		it.CharacterID = 0
-		f.t.Items[id] = it
-	}
-	for id, p := range f.t.Profs {
-		p.CharacterID = 0
-		f.t.Profs[id] = p
-	}
-	for id, b := range f.t.Bard {
-		b.CharacterID = 0
-		f.t.Bard[id] = b
-	}
+	f.t.Weapons = rekey(f.t.Weapons, func(w *storeq.InsertWeaponParams) (*int64, string) { return &w.CharacterID, w.ID })
+	f.t.Items = rekey(f.t.Items, func(it *storeq.InsertItemParams) (*int64, string) { return &it.CharacterID, it.ID })
+	f.t.Profs = rekey(f.t.Profs, func(p *storeq.UpsertProficiencyParams) (*int64, string) { return &p.CharacterID, p.ID })
+	f.t.Bard = rekey(f.t.Bard, func(b *storeq.UpsertBardSkillParams) (*int64, string) { return &b.CharacterID, b.ID })
 	clear(f.t.Spellbook)
+}
+
+// rekey is table with every row's owner NULL (0), under its new key.
+func rekey[R any](table map[string]R, owner func(*R) (*int64, string)) map[string]R {
+	out := make(map[string]R, len(table))
+	for _, r := range table {
+		o, id := owner(&r)
+		*o = 0
+		out[rowKey(0, id)] = r
+	}
+	return out
+}
+
+// only is the one row of table whose id is id (the zero row when there is none); a second row
+// of that id fails: the caller expected one character's rows.
+func only[R any](table map[string]R, id string, rowID func(R) string) R {
+	var found []R
+	for _, r := range table {
+		if rowID(r) == id {
+			found = append(found, r)
+		}
+	}
+	var zero R
+	switch len(found) {
+	case 0:
+		return zero
+	case 1:
+		return found[0]
+	}
+	panic(fmt.Sprintf("%d rows of id %q", len(found), id))
+}
+
+func (f *fakeStore) item(id string) storeq.InsertItemParams {
+	return only(f.t.Items, id, func(r storeq.InsertItemParams) string { return r.ID })
+}
+
+func (f *fakeStore) weapon(id string) storeq.InsertWeaponParams {
+	return only(f.t.Weapons, id, func(r storeq.InsertWeaponParams) string { return r.ID })
+}
+
+func (f *fakeStore) prof(id string) storeq.UpsertProficiencyParams {
+	return only(f.t.Profs, id, func(r storeq.UpsertProficiencyParams) string { return r.ID })
+}
+
+func (f *fakeStore) bardSkill(id string) storeq.UpsertBardSkillParams {
+	return only(f.t.Bard, id, func(r storeq.UpsertBardSkillParams) string { return r.ID })
+}
+
+// ownOn runs ownRows as the migration run does: in its one transaction, with the seed character
+// named by dir's character.json.
+func ownOn(f *fakeStore, dir string) error {
+	return f.InTx(context.Background(), func(ctx context.Context) error {
+		return ownRows(ctx, f, seedfile.Path(dir, seedfile.CharacterFile))
+	})
 }
 
 // A fresh database: the starting set (weapons, items, skills, spellbook in the seed's order)
@@ -73,43 +120,48 @@ func TestSeed_TheStartingSetIsTheSeedCharacters(t *testing.T) {
 }
 
 // The user's existing data: rows stored before each character owned its equipment (no owner)
-// all go to the character the seeds name, with every count, position and field as it was, no
-// row added or removed, and the spellbook seed becomes its spellbook. Nothing to run by hand.
-func TestSeed_ExistingRowsGoToTheSeedCharacterUnchanged(t *testing.T) {
+// all go to the character the seeds name before the owner becomes required, with every count,
+// position and field as it was, no row added or removed; then the spellbook seed becomes its
+// spellbook. Nothing to run by hand.
+func TestOwnRows_ExistingRowsGoToTheSeedCharacterUnchanged(t *testing.T) {
 	f := newFakeStore()
 	require.NoError(t, seedOn(f, repoSeeds()))
 	id := f.t.Characters[0]
-	arrows := f.t.Items["arrows_plus1"]
+	arrows := f.item("arrows_plus1")
 	arrows.Count = 3 // played: a count the seed does not hold
-	f.t.Items["arrows_plus1"] = arrows
+	f.t.Items[rowKey(arrows.CharacterID, arrows.ID)] = arrows
 	f.disown()
 	sheet, profs, bard := f.sheet(), len(f.t.Profs), len(f.t.Bard)
 
-	require.NoError(t, seedOn(f, repoSeeds()))
+	require.NoError(t, ownOn(f, repoSeeds()))
 	assert.Equal(t, f.everyRowOwnedBy(id), f.owners(), "every row is the seed character's")
 	assert.Equal(t, sheet, f.sheet(), "no count, position or other field moves, no row added")
-	assert.Equal(t, int64(3), f.t.Items["arrows_plus1"].Count)
+	assert.Equal(t, int64(3), f.item("arrows_plus1").Count)
 	assert.Len(t, f.t.Profs, profs)
 	assert.Len(t, f.t.Bard, bard)
+
+	require.NoError(t, seedOn(f, repoSeeds()))
+	assert.Equal(t, sheet, f.sheet(), "the seed adds nothing to the owned rows")
 	assert.Equal(t, seedBook, f.spellbookOf(id))
 
 	again := copyTables(f.t)
+	require.NoError(t, ownOn(f, repoSeeds()))
 	require.NoError(t, seedOn(f, repoSeeds()))
 	assert.Equal(t, again, f.t, "a second start writes nothing")
 }
 
-// Rows the release before wrote during a rolling deploy (no owner) go to the seed character on
-// the next start, beside its own.
-func TestSeed_RowsWithoutOwnerWrittenLaterGoToTheSeedCharacter(t *testing.T) {
+// Rows a release without owners wrote during a rolling deploy (no owner) go to the seed
+// character, beside its own.
+func TestOwnRows_RowsWithoutOwnerWrittenLaterGoToTheSeedCharacter(t *testing.T) {
 	f := newFakeStore()
 	require.NoError(t, seedOn(f, repoSeeds()))
 	id := f.t.Characters[0]
-	rope := f.t.Items["arrows_plus1"]
+	rope := f.item("arrows_plus1")
 	rope.ID, rope.CharacterID = "rope", 0
-	f.t.Items["rope"] = rope
+	f.t.Items[rowKey(0, "rope")] = rope
 
-	require.NoError(t, seedOn(f, repoSeeds()))
-	assert.Equal(t, id, f.t.Items["rope"].CharacterID)
+	require.NoError(t, ownOn(f, repoSeeds()))
+	assert.Equal(t, id, f.item("rope").CharacterID)
 	assert.Equal(t, f.everyRowOwnedBy(id), f.owners())
 }
 
@@ -131,26 +183,67 @@ func TestSeed_AnotherCharacterGetsNothing(t *testing.T) {
 }
 
 // Without the character the seeds name, the starting set has no owner: it is not applied, and
-// rows without an owner refuse the start (they would belong to no one) and change nothing.
-func TestSeed_NoSeedCharacter(t *testing.T) {
+// rows without an owner refuse the migration run (they would belong to no one) and change nothing.
+func TestOwnRows_NoSeedCharacter(t *testing.T) {
 	t.Run("nothing unowned: nothing is seeded", func(t *testing.T) {
 		f := newFakeStore()
 		require.NoError(t, seedOn(f, repoSeeds()))
 		f.t.Names[f.t.Characters[0]] = "Renamed"
 		before := copyTables(f.t)
+		require.NoError(t, ownOn(f, repoSeeds()))
 		require.NoError(t, seedOn(f, repoSeeds()))
 		assert.Equal(t, before, f.t)
 	})
-	t.Run("unowned rows refuse the start", func(t *testing.T) {
+	t.Run("unowned rows refuse the run", func(t *testing.T) {
 		f := newFakeStore()
 		require.NoError(t, seedOn(f, repoSeeds()))
 		f.t.Names[f.t.Characters[0]] = "Renamed"
 		f.disown()
 		before := copyTables(f.t)
-		err := seedOn(f, repoSeeds())
+		err := ownOn(f, repoSeeds())
 		require.ErrorContains(t, err, "have no owner")
-		assert.Equal(t, before, f.t, "the seed is one transaction: nothing changes")
+		assert.Equal(t, before, f.t, "the run is one transaction: nothing changes")
 	})
+	t.Run("a fresh database: nothing to own", func(t *testing.T) {
+		f := newFakeStore()
+		require.NoError(t, ownOn(f, repoSeeds()))
+		assert.Equal(t, newFakeStore().t, f.t)
+	})
+}
+
+// Rows are keyed by (character, id): another character may hold the seed character's weapon,
+// item and skill ids, and a later start leaves both characters' rows as they are.
+func TestSeed_AnotherCharacterMayHoldTheSameIDs(t *testing.T) {
+	f := newFakeStore()
+	require.NoError(t, seedOn(f, repoSeeds()))
+	seedChar := f.t.Characters[0]
+	other := seedChar + 1
+	f.t.Characters = append(f.t.Characters, other)
+	f.t.Names[other] = "Someone else"
+	ctx := t.Context()
+	for _, w := range copyTables(f.t).Weapons {
+		w.CharacterID = other
+		require.NoError(t, f.InsertWeapon(ctx, w))
+	}
+	for _, it := range copyTables(f.t).Items {
+		it.CharacterID, it.Count = other, 0
+		require.NoError(t, f.InsertItem(ctx, it))
+	}
+	for _, p := range copyTables(f.t).Profs {
+		p.CharacterID = other
+		require.NoError(t, f.UpsertProficiency(ctx, p))
+	}
+	for _, b := range copyTables(f.t).Bard {
+		b.CharacterID, b.Percent = other, 5
+		require.NoError(t, f.UpsertBardSkill(ctx, b))
+	}
+	before := copyTables(f.t)
+
+	require.NoError(t, seedOn(f, repoSeeds()))
+	assert.Equal(t, before, f.t, "each character keeps its own rows")
+	n, err := f.CountItems(ctx, other)
+	require.NoError(t, err)
+	assert.Equal(t, int64(6), n)
 }
 
 // The spellbook seed is applied once, while the seed character has no spellbook, as its weapons

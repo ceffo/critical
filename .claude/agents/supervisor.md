@@ -74,12 +74,15 @@ handoff note and died with no handoff). Never type into an agent's tab other tha
 If `~/.claude/state/rate-limits.json` exists (`{at, rate_limits:{five_hour:{used_percentage,resets_at},
 seven_day:{…}}}`), read it with `jq -c .` (older than ~10 minutes is stale: treat the numbers as a
 floor). No file → skip this section.
-- **Below 75%**: dispatch as usual.
-- **75% or more**: finish what is in flight, but send **no new brief and no rework round** (a cut
-  between a commit and a push leaves a half state). Tell the user once ("paused at N%, resets at
-  HH:MM, held: <list>"), keep watching CI and reading reports, and dispatch the held work after
-  `resets_at` (epoch seconds) or when the user says to go on.
-- **90% or more**: also tell the user which agents are mid-run.
+- **Judge by velocity, not a fixed threshold** (user, 2026-10-18: "you have to look at velocity of
+  quota filling vs time left to reset"). Keep the previous reading in the ledger (time, percent).
+  Velocity = points gained per hour since then; projected = used + velocity × hours to `resets_at`.
+  - **Projected under 100%**: dispatch as usual, whatever the current percent.
+  - **Projected over 100%**: keep going, but cheaper: Sonnet wherever "Model selection" allows, one
+    developer at a time, no optional rounds. Tell the user once (current %, velocity, reset time).
+  - **95% or more used**: send no new brief and no rework round (a cut between a commit and a push
+    leaves a half state); finish what is in flight, tell the user which agents are mid-run, and
+    resume after `resets_at` or when the user says to go on.
 - If an agent hit the limit anyway, don't re-prompt blindly: wait for the reset, then prompt it to
   continue from its last committed state.
 

@@ -363,7 +363,7 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   ).toContainText("Specialization");
 
   await chooseLanguage(page, "fr");
-  await expect(page.getByTestId("tile-rate")).toContainText("ce round");
+  await expect(page.getByTestId("tile-rate")).toContainText("ce tour");
   await snap(page, "fighter-attack-fr");
 });
 

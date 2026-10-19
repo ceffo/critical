@@ -133,7 +133,7 @@ describe("exposure dice text", () => {
   it("is worded in French", async () => {
     const t = await makeT("fr");
     expect(exposureText(t, "cloudkill", cloud)).toBe(
-      "1d10 poison par round d'exposition",
+      "1d10 poison par tour d'exposition",
     );
     expect(exposureText(t, "wall_of_fire", wall)).toBe(
       "À 10 pi ou moins : 2d4 feu · En la traversant : 2d6+15 feu",
@@ -311,7 +311,7 @@ describe("exposure entries", () => {
       },
     });
     expect(entryText(wall, await makeT("fr"), frNames)).toBe(
-      "Mur de feu, exposition au round 1 : 19 dégâts (feu) · En la traversant",
+      "Mur de feu, exposition au tour 1 : 19 dégâts (feu) · En la traversant",
     );
   });
 

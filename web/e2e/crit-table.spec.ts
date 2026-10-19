@@ -175,14 +175,14 @@ test("French shows the decimal multiplier with a comma on the card and in the lo
     .getByRole("region", { name: "Détail", exact: true })
     .getByTestId("attack-result");
   await expect(card.getByTestId("crit-badge")).toHaveText(
-    /^Test critique \d+ · multiplicateur \d+ → ×1,5 \(1–100\)$/,
+    /^Jet critique \d+ · multiplicateur \d+ → ×1,5 \(1–100\)$/,
   );
   await expect(card.getByTestId("damage-terms")).toContainText("×1,5");
   await expect(
     page
       .getByRole("region", { name: "Journal", exact: true })
       .getByRole("listitem")
-      .filter({ hasText: /critique \(test \d+ · multiplicateur \d+ → ×1,5\)/ })
+      .filter({ hasText: /critique \(jet \d+ · multiplicateur \d+ → ×1,5\)/ })
       .first(),
   ).toBeVisible();
   await snap(page, "decimal-crit-fr");

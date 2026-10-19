@@ -244,7 +244,7 @@ test("lookup in French: a French name finds the spell, its French text shows wit
   await searchFrench.fill("armor");
   await expect(detail(page).getByRole("heading")).toHaveText("Armor");
   await expect(text).toContainText("Fixture text for Armor");
-  await expect(stat("castingTime")).toContainText("1 round");
+  await expect(stat("castingTime")).toContainText("1 tour");
   await expect(stat("range")).toContainText("Contact");
   await snap(page, "french-english-fallback");
 });
@@ -482,7 +482,7 @@ test("lookup: the Receive picker finds spells by French and English names with t
 
   await openWorkspace(page, "Act");
   const picker = await receivePicker(page);
-  const box = picker.getByLabel("Search for a spell cast on me");
+  const box = picker.getByLabel("Search for a received spell");
   await box.fill("fire");
   await expect(picker.getByRole("listitem")).toHaveCount(5);
   await expect(picker.getByRole("listitem").first()).toContainText("Fireball");

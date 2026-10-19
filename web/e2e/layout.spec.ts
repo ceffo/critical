@@ -1588,10 +1588,10 @@ test("ability check card: adjusted with a long reason, uncut, fr and en, 1280 to
   await page.setViewportSize({ width: 1280, height: 800 });
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  await page.getByRole("button", { name: "Test de Dextérité (17)" }).click();
+  await page.getByRole("button", { name: "Jet de Dextérité (17)" }).click();
   const card = page.getByTestId("ability-result");
   await expect(card).toBeVisible();
-  const form = await openFold(card, "Ajuster après le jet", "Ajuster ce test");
+  const form = await openFold(card, "Ajuster après le jet", "Ajuster ce jet");
   const harder = form.getByRole("button", { name: "Diminuer l'ajustement" });
   await harder.click();
   await harder.click();

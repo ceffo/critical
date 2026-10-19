@@ -501,7 +501,7 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
     .getByRole("region", { name: "Détail", exact: true })
     .getByTestId("attack-result");
   await expect(frCard.getByTestId("crit-badge")).toHaveText(
-    `Test critique ${check} · multiplicateur ${mult} → ×2 (provisoire)`,
+    `Jet critique ${check} · multiplicateur ${mult} → ×2 (provisoire)`,
   );
   await expect(
     frCard.locator("dt", { hasText: "d100 multiplicateur" }),
@@ -636,8 +636,8 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({
   await expect(card.getByTestId("tell-gm")).toHaveText(
     // The crit part is dropped when no real AC can crit (critPossible=false, random with the dice).
     r.critPossible === false
-      ? `Tell the GM: “hits AC ${r.hitsAc}”.`
-      : `Tell the GM: “hits AC ${r.hitsAc}”. A crit from AC ${r.critsFromAc}.`,
+      ? `Tell the DM: “hits AC ${r.hitsAc}”.`
+      : `Tell the DM: “hits AC ${r.hitsAc}”. A crit from AC ${r.critsFromAc}.`,
   );
   await expect(card.getByTestId("verdict")).toHaveText("?");
   await expect(card.getByText("Damage if it hits")).toBeVisible();
@@ -657,7 +657,7 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await card
-    .getByRole("group", { name: "The GM’s hit or miss" })
+    .getByRole("group", { name: "The DM’s hit or miss" })
     .getByRole("button", { name: "Hit" })
     .click();
   await expect(card.getByTestId("verdict")).toHaveText("Hit");
@@ -669,7 +669,7 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({
   await expect(
     logEntry(
       page,
-      `Long Sword +2 vs unknown AC: hit (GM), ${r.totalDamage} damage`,
+      `Long Sword +2 vs unknown AC: hit (DM), ${r.totalDamage} damage`,
     ),
   ).toBeVisible();
   await snap(page, "unknown-ac-gm-hit");
@@ -705,7 +705,7 @@ test.describe("an attack whose dice crit AC 10", () => {
     await expect(card.getByTestId("ac-given")).toBeVisible();
     await expect(card.getByTestId("tell-gm")).toHaveCount(0);
     await expect(
-      card.getByRole("group", { name: "The GM’s hit or miss" }),
+      card.getByRole("group", { name: "The DM’s hit or miss" }),
     ).toHaveCount(0);
     await expect(card.getByTestId("verdict")).toHaveText("Hit");
     await expect(card.getByTestId("crit-badge")).toBeVisible();

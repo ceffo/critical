@@ -50,16 +50,17 @@ domain, it was just for ingestion, to kickstart the whole thing".
    round in the web are legacy (and the `hp_events` table was, until it was dropped); nothing new
    uses them, and renaming them is an ordinary refactor item, not a rule change.
 
-Checks: the wording items that implement steps 3 and 4 add a locale test refusing the avoided
-words (`GM`, `MD`, `fiche`, `bonus` for a buff, `round` in French, `test de`); until it exists,
-the review checklist's wording pass reads the glossary.
+Checks: `web/src/i18n/avoidedWords.test.ts` reads the values of both locale files and refuses the
+avoided words (fr: `MD`, `fiche`, `round`, `test de`, `buff` and a `bonus` that means a buff, `livre
+de sorts`, `sort lancé sur moi`, `jet de protection`; en: `GM`, `buff`, `spell cast on me`); keys
+and magic bonuses (`bonus au toucher`) are not words of the text. A new avoided word is a line in
+that test.
 
 ## Consequences
 
-- The locale files do not match steps 3 and 4 yet: the alignment is a work item (fr: 23 "round"
-  strings, 15 "bonus", 13 "buff", 10 "MJ"-vs-"MD" and 2 "feuille" already right, 20 "fiche", 4
-  "test"; en: 10 "GM", 2 "Buff" strings). Until it ships, the UI and the glossary disagree on
-  those strings, and nothing else.
+- The locale files follow steps 3 and 4; `avoidedWords.test.ts` keeps them there. The
+  weapon form's kind field (melee or missile) reads "Mêlée ou tir" / "Melee or missile", so that
+  "Type" stays free for ADR 0033's category and the weapon type field.
 - ADR 0004's buff, ADR 0005's round, ADR 0006's saving throw and ADR 0016's item keep their
   names; each carries a one-line pointer to this ADR for its UI word.
 - The "sheet differences" of ADR 0030 step 24 compare the figures imported from the Google

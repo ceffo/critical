@@ -154,7 +154,7 @@ describe("undoButtonState", () => {
     );
     expect(
       await label("en", { field: "verdict", from: "hit", to: "miss" }),
-    ).toBe("Undo: Correction GM verdict Hit → Miss (Ctrl+Z / ⌘Z)");
+    ).toBe("Undo: Correction DM verdict Hit → Miss (Ctrl+Z / ⌘Z)");
   });
 });
 

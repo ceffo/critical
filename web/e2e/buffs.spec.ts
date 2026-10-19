@@ -29,7 +29,7 @@ test("Next round then void restores the round, the durations and the expired buf
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(r0 + 1);
   await expect(page.getByRole("status")).toContainText(
-    "Expired buffs: e2e Haste",
+    "Expired effects: e2e Haste",
   );
   await expect(buffBadge(page, "e2e Haste")).toHaveCount(0);
   await expect(
@@ -247,7 +247,7 @@ test("a saved buff is added from the Saved effect tab, deleting it leaves active
     save: true,
   });
   await expect(
-    logEntry(page, "Saved buff e2e Hammer form (10 rd)"),
+    logEntry(page, "Saved effect e2e Hammer form (10 rd)"),
   ).toBeVisible();
 
   // Add it again from the Saved effect tab, as it was saved.
@@ -266,16 +266,16 @@ test("a saved buff is added from the Saved effect tab, deleting it leaves active
   // Delete the template: the active buffs stay.
   const again = await openAddEffect(page, "Saved effect");
   await again
-    .getByRole("button", { name: "Delete saved buff e2e Hammer form" })
+    .getByRole("button", { name: "Delete saved effect e2e Hammer form" })
     .click();
   await expect(again.getByTestId("saved-buff")).toHaveCount(0);
   await expect(buffBadge(page, "e2e Hammer form")).toHaveCount(2);
   await expect(
-    logEntry(page, "Deleted saved buff e2e Hammer form"),
+    logEntry(page, "Deleted saved effect e2e Hammer form"),
   ).toBeVisible();
   await snap(page, "saved-deleted");
 
-  await undoEntry(page, "Deleted saved buff e2e Hammer form");
+  await undoEntry(page, "Deleted saved effect e2e Hammer form");
   await openAddEffect(page, "Saved effect");
   await expect(again.getByTestId("saved-buff")).toHaveCount(1);
 

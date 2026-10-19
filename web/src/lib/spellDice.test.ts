@@ -63,7 +63,7 @@ describe("damageText", () => {
     [
       damage(dice(0, [2, 4]), "acid", n(1), n(6)),
       "2d4 acid per round, 6 rounds",
-      "2d4 acide par round, 6 rounds",
+      "2d4 acide par tour, 6 tours",
     ],
     [damage(dice(15, [15, 4])), "15d4+15", "15d4+15"],
     [damage(dice(0, [1, 6]), "radiant"), "1d6 radiant", "1d6 radiant"],
@@ -135,7 +135,7 @@ describe("dice steps", () => {
         dice(0, [12, 2]),
       ),
       "by round: —, —, 12d2, 12d4, 12d2 fire",
-      "par round : —, —, 12d2, 12d4, 12d2 feu",
+      "par tour : —, —, 12d2, 12d4, 12d2 feu",
     ],
     [
       stepped(
@@ -151,7 +151,7 @@ describe("dice steps", () => {
     [
       stepped("round", undefined, dice(1, [2, 4]), n(3)),
       "by round: 2d4+1, 3",
-      "par round : 2d4+1, 3",
+      "par tour : 2d4+1, 3",
     ],
   ])("%j", async (d, en, fr) => {
     expect(damageText(await makeT("en"), d)).toBe(en);

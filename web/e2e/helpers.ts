@@ -92,7 +92,7 @@ export interface NewBuff {
 /** Open the timeline's Add popover (closed beforehand) on one of its tabs; returns the popover. */
 export async function openAddEffect(
   page: Page,
-  tab: "Spell cast on me" | "Saved effect" | "New effect",
+  tab: "Received spell" | "Saved effect" | "New effect",
 ): Promise<Locator> {
   const popover = page.getByTestId("add-effect-popover");
   // A popover still animating out of an earlier step must be gone before it is reopened.
@@ -105,17 +105,17 @@ export async function openAddEffect(
   return popover;
 }
 
-/** The spell search of the Add popover's "Spell cast on me" tab. */
+/** The spell search of the Add popover's "Received spell" tab. */
 export async function receivePicker(page: Page): Promise<Locator> {
-  const popover = await openAddEffect(page, "Spell cast on me");
-  return popover.getByRole("region", { name: "Spell cast on me" });
+  const popover = await openAddEffect(page, "Received spell");
+  return popover.getByRole("region", { name: "Received spell" });
 }
 
 /** Add a buff through the Add popover's New effect tab and wait for its row. */
 export async function addBuff(page: Page, buff: NewBuff) {
   const popover = await openAddEffect(page, "New effect");
   const form = popover.getByRole("form", { name: "Add effect" });
-  await form.getByLabel("Buff name").fill(buff.name);
+  await form.getByLabel("Effect name").fill(buff.name);
   await form.getByLabel("Rounds").fill(String(buff.rounds ?? 0));
   await form.getByLabel("Charges").fill(String(buff.charges ?? 0));
   for (const [i, [key, value]] of (buff.effects ?? []).entries()) {

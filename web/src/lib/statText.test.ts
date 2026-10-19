@@ -103,8 +103,8 @@ describe("unitText", () => {
   });
 
   it("agrees in number in French, keeps the short labels in English", () => {
-    expect(unitText(fr, "round", 1)).toBe("round");
-    expect(unitText(fr, "round", 3)).toBe("rounds");
+    expect(unitText(fr, "round", 1)).toBe("tour");
+    expect(unitText(fr, "round", 3)).toBe("tours");
     expect(unitText(fr, "turn", 2)).toBe("tours");
     expect(unitText(fr, "hour", 1)).toBe("heure");
     expect(unitText(fr, "sq m", 4)).toBe("m²");
@@ -232,15 +232,15 @@ describe("formatValue (the value at the caster level)", () => {
   });
 
   it("keeps times, words their units in French, and leaves dice alone", () => {
-    expect(formatValue(fr, { amount: 15, unit: "round" })).toBe("15 rounds");
+    expect(formatValue(fr, { amount: 15, unit: "round" })).toBe("15 tours");
     expect(formatValue(fr, { amount: 1, unit: "turn" })).toBe("1 tour");
     expect(formatValue(fr, { amount: 8, dice: "1d8", unit: "round" })).toBe(
-      "8 + 1d8 rounds",
+      "8 + 1d8 tours",
     );
     expect(formatValue(fr, { amount: 0, dice: "1d4", unit: "hour" })).toBe(
       "1d4 heures",
     );
-    expect(formatValue(fr, { amount: 1.5, unit: "round" })).toBe("1,5 round");
+    expect(formatValue(fr, { amount: 1.5, unit: "round" })).toBe("1,5 tour");
     expect(formatValue(fr, { amount: 3, upper: 4, unit: "turn" })).toBe(
       "3-4 tours",
     );
@@ -278,10 +278,10 @@ describe("quantityText (the book's formula)", () => {
     expect(quantityText(en, mm)).toBe("60 yd + 10 yd/level");
     expect(
       quantityText(fr, qty(1, "round", { per_level: true, step: 2 })),
-    ).toBe("1 round/2 niveaux");
+    ).toBe("1 tour/2 niveaux");
     expect(
       quantityText(fr, qty(2, "round", { per_level: true, step: 1 })),
-    ).toBe("2 rounds/niveau");
+    ).toBe("2 tours/niveau");
   });
 
   it("words dice, ranges, 'up to' and a cap", () => {
@@ -338,7 +338,7 @@ describe("castingTimeText", () => {
         kind: "timed",
         time: qty(1, "round"),
       }),
-    ).toBe("1 round");
+    ).toBe("1 tour");
     expect(
       castingTimeText(fr, { raw: "Special", kind: "special", time: none }),
     ).toBe("Spécial");
@@ -401,7 +401,7 @@ describe("durationText", () => {
           },
         }),
       ),
-    ).toBe("1 tour + 1 round/niveau");
+    ).toBe("1 tour + 1 tour/niveau");
     expect(durationText(fr, d("instantaneous", "Instantaneous"))).toBe(
       "Instantanée",
     );
@@ -431,7 +431,7 @@ describe("durationText", () => {
           time: { ...qty(3, "round"), up_to: true },
         }),
       ),
-    ).toBe("Spéciale (jusqu'à 3 rounds)");
+    ).toBe("Spéciale (jusqu'à 3 tours)");
   });
 
   it("has words for every condition it lists, in both languages; null for another", () => {
@@ -936,7 +936,7 @@ describe("areaText", () => {
           noun: "creature",
         }),
       ),
-    ).toBe("1 créature/round");
+    ).toBe("1 créature/tour");
   });
 
   it("words dice and a cap in an extent", () => {

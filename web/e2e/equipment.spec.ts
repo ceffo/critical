@@ -96,7 +96,9 @@ test("a new bow is carried: the attack's drop-down lists it under Not equipped, 
   const f = form(page);
   await f.getByLabel("Name").fill("Long Bow");
   await f.getByLabel("Category").selectOption("weapon");
-  await f.getByLabel("Kind", { exact: true }).selectOption("missile");
+  await f
+    .getByLabel("Melee or missile", { exact: true })
+    .selectOption("missile");
   await f.getByLabel("Damage S-M").fill("1d8");
   await f.getByLabel("Damage Large").fill("1d8");
   await f.getByLabel("Two-handed").check();
@@ -302,7 +304,7 @@ test("AC: follows the Armor spell and an Equip with no entry of its own; the ove
   await expect(value).toHaveText("7"); // 10, Dexterity 17 -3
 
   const picker = await receivePicker(page);
-  await picker.getByLabel("Search for a spell cast on me").fill("Armor");
+  await picker.getByLabel("Search for a received spell").fill("Armor");
   await picker.getByLabel("Caster level").fill("1");
   await picker.getByRole("button", { name: "Apply Armor" }).click();
   await expect(value).toHaveText("3"); // Armor's base 6, Dexterity -3

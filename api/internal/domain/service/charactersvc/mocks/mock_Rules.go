@@ -479,6 +479,64 @@ func (_c *MockRules_PriestSpellsPerDay_Call) RunAndReturn(run func(int, int) (ma
 	return _c
 }
 
+// RaceAdjustmentsFor provides a mock function with given fields: race
+func (_m *MockRules) RaceAdjustmentsFor(race string) (map[string]int, error) {
+	ret := _m.Called(race)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RaceAdjustmentsFor")
+	}
+
+	var r0 map[string]int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (map[string]int, error)); ok {
+		return rf(race)
+	}
+	if rf, ok := ret.Get(0).(func(string) map[string]int); ok {
+		r0 = rf(race)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]int)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(race)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_RaceAdjustmentsFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RaceAdjustmentsFor'
+type MockRules_RaceAdjustmentsFor_Call struct {
+	*mock.Call
+}
+
+// RaceAdjustmentsFor is a helper method to define mock.On call
+//   - race string
+func (_e *MockRules_Expecter) RaceAdjustmentsFor(race interface{}) *MockRules_RaceAdjustmentsFor_Call {
+	return &MockRules_RaceAdjustmentsFor_Call{Call: _e.mock.On("RaceAdjustmentsFor", race)}
+}
+
+func (_c *MockRules_RaceAdjustmentsFor_Call) Run(run func(race string)) *MockRules_RaceAdjustmentsFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockRules_RaceAdjustmentsFor_Call) Return(_a0 map[string]int, _a1 error) *MockRules_RaceAdjustmentsFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_RaceAdjustmentsFor_Call) RunAndReturn(run func(string) (map[string]int, error)) *MockRules_RaceAdjustmentsFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RaceAllows provides a mock function with given fields: race, class
 func (_m *MockRules) RaceAllows(race string, class string) (bool, error) {
 	ret := _m.Called(race, class)

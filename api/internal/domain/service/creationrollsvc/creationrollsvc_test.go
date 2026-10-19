@@ -348,3 +348,135 @@ func TestHP_Step7_RefusesAnUnknownClassAndOutOfRangeInputs(t *testing.T) {
 		assert.True(t, errors.Is(err, domain.ErrInvalidInput))
 	}
 }
+
+// The PHB Table 8 rows of the arrangement tests.
+var (
+	dwarfAdj = map[string]int{"str": 0, "dex": 0, "con": 1, "int": 0, "wis": 0, "cha": -1}
+	elfAdj   = map[string]int{"str": 0, "dex": 1, "con": -1, "int": 0, "wis": 0, "cha": 0}
+)
+
+func (f fixture) arrange(t *testing.T, in creationrollsvc.ArrangeInput) *creationrollsvc.ArrangeResult {
+	t.Helper()
+	res, err := f.svc.Arrange(context.Background(), in)
+	require.NoError(t, err)
+	return res
+}
+
+// Step 6, arrangement of an arranged method (III): an ability's score is the
+// total placed plus the race's Table 8 adjustment; an ability with nothing
+// placed has no score. No die is drawn (the dice mock expects none).
+func TestArrange_Step6_ArrangedTotalPlusTheRacesAdjustment(t *testing.T) {
+	f := newFixture(t)
+	f.rules.EXPECT().RaceAdjustmentsFor("dwarf").Return(dwarfAdj, nil).Once()
+	res := f.arrange(t, creationrollsvc.ArrangeInput{
+		Method: "III", Race: "dwarf",
+		Placed: map[string][]int{"str": {17}, "con": {12}, "cha": {9}},
+	})
+	assert.Equal(t, map[string]int{"str": 17, "con": 12, "cha": 9}, res.Rolled)
+	assert.Equal(t, map[string]int{"str": 17, "con": 13, "cha": 8}, res.Scores)
+	assert.Equal(t, dwarfAdj, res.Adjustments)
+	assert.Equal(t, "III", res.Method.Code)
+}
+
+// Step 6, method VI: every ability starts at the base 8, the dice placed on
+// it are added whole, then Table 8; with no race the score is the roll.
+func TestArrange_Step6_MethodVIBase8PlusTheDicePlaced(t *testing.T) {
+	f := newFixture(t)
+	res := f.arrange(t, creationrollsvc.ArrangeInput{
+		Method: "VI",
+		Placed: map[string][]int{"str": {6, 4}, "dex": {1}, "int": {3, 2, 5}},
+	})
+	want := map[string]int{"str": 18, "dex": 9, "con": 8, "int": 18, "wis": 8, "cha": 8}
+	assert.Equal(t, want, res.Rolled)
+	assert.Equal(t, want, res.Scores)
+	assert.Nil(t, res.Adjustments)
+}
+
+// Step 6, method VI's max: the dice may raise an ability to 18 and no
+// further; the race's adjustment comes after the max (an elf's 18 Dexterity
+// is 19), and a placement above 18 is refused on that ability.
+func TestArrange_Step6_MethodVINoAbilityAbove18BeforeTheRace(t *testing.T) {
+	f := newFixture(t)
+	f.rules.EXPECT().RaceAdjustmentsFor("elf").Return(elfAdj, nil).Times(2)
+	res := f.arrange(t, creationrollsvc.ArrangeInput{
+		Method: "VI", Race: "elf",
+		Placed: map[string][]int{"dex": {6, 4}},
+	})
+	assert.Equal(t, 18, res.Rolled["dex"])
+	assert.Equal(t, 19, res.Scores["dex"])
+	assert.Equal(t, 7, res.Scores["con"], "the base 8, less the elf's 1")
+
+	_, err := f.svc.Arrange(context.Background(), creationrollsvc.ArrangeInput{
+		Method: "VI", Race: "elf",
+		Placed: map[string][]int{"dex": {6, 4, 1}},
+	})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "placed.dex", fe.Field)
+	assert.Equal(t, creationrollsvc.CodeAboveMax, fe.Message)
+}
+
+// Step 6 with ADR 0030 step 1: the same placement for another race gives
+// that race's scores (the stored score is the adjusted one), so a race
+// changed after the roll changes the scores and the adjustments shown.
+func TestArrange_Step6_AnotherRaceAdjustsTheSamePlacement(t *testing.T) {
+	f := newFixture(t)
+	f.rules.EXPECT().RaceAdjustmentsFor("dwarf").Return(dwarfAdj, nil).Once()
+	f.rules.EXPECT().RaceAdjustmentsFor("elf").Return(elfAdj, nil).Once()
+	placed := map[string][]int{"str": {10}, "dex": {11}, "con": {12}, "int": {13}, "wis": {14}, "cha": {15}}
+	dwarf := f.arrange(t, creationrollsvc.ArrangeInput{Method: "V", Race: "dwarf", Placed: placed})
+	elf := f.arrange(t, creationrollsvc.ArrangeInput{Method: "V", Race: "elf", Placed: placed})
+	assert.Equal(t, map[string]int{"str": 10, "dex": 11, "con": 13, "int": 13, "wis": 14, "cha": 14}, dwarf.Scores)
+	assert.Equal(t, map[string]int{"str": 10, "dex": 12, "con": 11, "int": 13, "wis": 14, "cha": 15}, elf.Scores)
+	assert.Equal(t, elfAdj, elf.Adjustments)
+}
+
+// Step 6: Table 8 may take a 3 to 2 (or an 18 to 19); the arrangement gives
+// the adjusted score as it is, and the creation's range check refuses a 2
+// (ADR 0030 step 1), not the arrangement.
+func TestArrange_Step6_TheAdjustedScoreIsNotClamped(t *testing.T) {
+	f := newFixture(t)
+	f.rules.EXPECT().RaceAdjustmentsFor("dwarf").Return(dwarfAdj, nil).Once()
+	res := f.arrange(t, creationrollsvc.ArrangeInput{
+		Method: "IV", Race: "dwarf",
+		Placed: map[string][]int{"con": {18}, "cha": {3}},
+	})
+	assert.Equal(t, map[string]int{"con": 19, "cha": 2}, res.Scores)
+}
+
+// Step 6: a placement the method cannot make is refused, on the ability or
+// on "placed": two totals on one ability (II to V), a value one total cannot
+// be (3d6: 3 to 18; method V keeps three dice; method VI's die: 1 to 6), more
+// totals than the method keeps, an unknown ability; and an unknown method or
+// race as for the roll.
+func TestArrange_Step6_RefusesWhatTheMethodCannotMake(t *testing.T) {
+	f := newFixture(t)
+	vi := func(n int) []int {
+		out := make([]int, n)
+		for i := range out {
+			out[i] = 1
+		}
+		return out
+	}
+	for _, c := range []struct {
+		in          creationrollsvc.ArrangeInput
+		field, code string
+	}{
+		{creationrollsvc.ArrangeInput{Method: "III", Placed: map[string][]int{"str": {10, 11}}}, "placed.str", "too_many"},
+		{creationrollsvc.ArrangeInput{Method: "II", Placed: map[string][]int{"wis": {2}}}, "placed.wis", "out_of_range"},
+		{creationrollsvc.ArrangeInput{Method: "IV", Placed: map[string][]int{"dex": {19}}}, "placed.dex", "out_of_range"},
+		{creationrollsvc.ArrangeInput{Method: "V", Placed: map[string][]int{"int": {19}}}, "placed.int", "out_of_range"},
+		{creationrollsvc.ArrangeInput{Method: "VI", Placed: map[string][]int{"cha": {7}}}, "placed.cha", "out_of_range"},
+		{creationrollsvc.ArrangeInput{Method: "VI", Placed: map[string][]int{"cha": {0}}}, "placed.cha", "out_of_range"},
+		{creationrollsvc.ArrangeInput{Method: "VI", Placed: map[string][]int{"str": vi(4), "dex": vi(4)}}, "placed", "too_many"},
+		{creationrollsvc.ArrangeInput{Method: "III", Placed: map[string][]int{"luck": {10}}}, "placed", "unknown"},
+		{creationrollsvc.ArrangeInput{Method: "VII"}, "method", "unknown"},
+		{creationrollsvc.ArrangeInput{Method: "III", Race: "orc"}, "race", "unknown"},
+	} {
+		_, err := f.svc.Arrange(context.Background(), c.in)
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe, "%+v", c.in)
+		assert.Equal(t, c.field, fe.Field, "%+v", c.in)
+		assert.Equal(t, c.code, fe.Message, "%+v", c.in)
+	}
+}

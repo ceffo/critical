@@ -36,6 +36,8 @@ import {
   type Mode,
 } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { navigate } from "@/lib/navigation";
+import { CREATE_PATH } from "@/lib/session";
 import { useSessionStore } from "@/stores/session";
 import { useSettingsStore } from "@/stores/settings";
 
@@ -118,7 +120,7 @@ export function SettingsPopover() {
     on ? "chip-chosen" : "chip hover:bg-raised-hover";
 
   const characterActions: {
-    id: CharacterDialog;
+    id: CharacterDialog | "new";
     hint: string;
     icon: ReactNode;
   }[] = [
@@ -230,7 +232,11 @@ export function SettingsPopover() {
                   variant="quiet"
                   aria-label={a.hint}
                   title={a.hint}
-                  onClick={() => openDialog(a.id)}
+                  onClick={() =>
+                    // Creation is a full-screen route (ADR 0034 step 2), no dialog any more; client
+                    // navigation, so nothing reloads.
+                    a.id === "new" ? navigate(CREATE_PATH) : openDialog(a.id)
+                  }
                 >
                   {a.icon}
                   {t(`characters.${a.id}`)}

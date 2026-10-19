@@ -18,7 +18,6 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CharacterForm } from "./CharacterForm";
 import type { CharacterList, CharacterSummary } from "@/types/character";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -317,7 +316,7 @@ function RenameForm({ onCancel }: { onCancel: () => void }) {
 }
 
 /** Which character dialog the cog menu opened. */
-export type CharacterDialog = "switch" | "new" | "rename" | "retire";
+export type CharacterDialog = "switch" | "rename" | "retire";
 
 /** One of the cog menu's character dialogs (ADR 0029 step 7.2: rare actions, in the cog menu). */
 export function CharacterDialogs({
@@ -330,13 +329,11 @@ export function CharacterDialogs({
   const { t } = useTranslation();
   const titles: Record<CharacterDialog, string> = {
     switch: t("characters.switchTitle"),
-    new: t("characters.newTitle"),
     rename: t("characters.renameTitle"),
     retire: t("characters.retireTitle"),
   };
   const bodies: Record<CharacterDialog, ReactNode> = {
     switch: <CharacterList />,
-    new: <CharacterForm onCancel={onClose} />,
     rename: <RenameForm onCancel={onClose} />,
     retire: <RetireConfirm onCancel={onClose} />,
   };

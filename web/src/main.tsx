@@ -3,11 +3,11 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./i18n";
 import { startSettings } from "./stores/settings";
-import App from "./App.tsx";
 import { readSession } from "./api/auth";
 import { AdminPage } from "./components/admin/AdminPage";
-import { CreateCharacterPage } from "./components/characters/CreateCharacterPage";
+import { CreationRoute } from "./components/creation/CreationRoute";
 import { LoginPage } from "./components/login/LoginPage";
+import { Playing } from "./components/shell/Playing";
 import { startFor } from "./lib/session";
 import { useSessionStore } from "./stores/session";
 
@@ -35,10 +35,10 @@ void readSession().then((session) => {
   render(
     start.show === "admin" ? (
       <AdminPage />
-    ) : start.show === "create" ? (
-      <CreateCharacterPage />
+    ) : start.show === "create" && !start.hasCurrent ? (
+      <CreationRoute hasCurrent={false} />
     ) : (
-      <App />
+      <Playing />
     ),
   );
 });

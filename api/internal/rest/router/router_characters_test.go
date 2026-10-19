@@ -62,6 +62,7 @@ var characterFree = map[string]bool{
 	"GET /api/characters": true, "PUT /api/characters/current": true,
 	"GET /api/characters/options": true, "POST /api/characters": true, "PATCH /api/characters/{id}": true,
 	"POST /api/characters/rolls/scores": true, "POST /api/characters/rolls/hp": true,
+	"POST /api/characters/rolls/scores/arrangement": true,
 }
 
 var urlParam = regexp.MustCompile(`\{[^}]+\}`)

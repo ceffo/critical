@@ -290,7 +290,17 @@ export interface CreationOptions {
     skillArmors: string[];
     /** The alignment codes the class admits (ADR 0032 step 2). */
     alignments: string[];
+    /**
+     * The sides of the class's hit die and, for levels 1 to 20, the lowest XP of each level (ADR
+     * 0034 step 4.1): a level picked is sent as that XP. Absent from a release that predates them.
+     */
+    hitDie?: number;
+    levelXp?: LevelXp[];
   }[];
+  /** ADR 0032 step 6's score methods, in the book's order; absent from an older release. */
+  scoreMethods?: ScoreMethod[];
+  /** PHB Table 8 by race (each ability's adjustment); absent from an older release. */
+  raceAdjustments?: { race: string; adjustments: Record<string, number> }[];
   /** The sex codes (ADR 0032 step 3). */
   sexes: string[];
   /**
@@ -309,6 +319,78 @@ export interface CreationOptions {
   hpMax: ValueRange;
   xp: ValueRange;
   maxNameLength: number;
+}
+
+/** A level and the lowest XP that reaches it, for one class. */
+export interface LevelXp {
+  level: number;
+  xp: number;
+}
+
+/**
+ * A score method (ADR 0032 step 6): how many totals of how many d6, the lowest die dropped, and how
+ * the totals become scores (`assign`); method VI's `base` and `max` (0 for the others).
+ */
+export interface ScoreMethod {
+  code: string;
+  rolls: number;
+  dice: number;
+  dropLowest: boolean;
+  assign: "in_order" | "keep_per_ability" | "arrange" | "add_to_base";
+  keep: number;
+  base: number;
+  max: number;
+}
+
+/** One total of a score roll: its dice in the order drawn, the dropped die's index, the ability (I and II). */
+export interface ScoreRoll {
+  dice: number[];
+  dropped: number | null;
+  total: number;
+  ability: string;
+}
+
+/**
+ * `POST /api/characters/rolls/scores`: the method, the totals, PHB Table 8's adjustments for the
+ * race given (null without one) and, for method I alone, the finished scores (adjusted).
+ */
+export interface ScoresRoll {
+  method: ScoreMethod;
+  rolls: ScoreRoll[];
+  adjustments: Record<string, number> | null;
+  scores: Record<string, number> | null;
+}
+
+/**
+ * `POST /api/characters/rolls/scores/arrangement`: the scores a placement of a roll's totals gives
+ * (ADR 0032 step 6), by ability code. `rolled` is the method's base plus the totals placed, `scores`
+ * that plus the race's Table 8 adjustment (the score stored); an ability with nothing placed and no
+ * base is absent from both. `adjustments` is null without a race.
+ */
+export interface ScoresArrangement {
+  method: string;
+  adjustments: Record<string, number> | null;
+  rolled: Record<string, number>;
+  scores: Record<string, number>;
+}
+
+/** One level of a max HP roll (ADR 0032 step 7): a rolled die, or a fixed gain above the name level. */
+export interface HpRollLevel {
+  level: number;
+  hitDie: number;
+  rolled: number | null;
+  counted: number | null;
+  conAdjustment: number;
+  gain: number;
+  fixed: boolean;
+}
+
+/** `POST /api/characters/rolls/hp`: the class, the starting level, one row per level and the total. */
+export interface HpRoll {
+  class: string;
+  level: number;
+  levels: HpRollLevel[];
+  total: number;
 }
 
 /** The six ability codes, in the sheet's order. */

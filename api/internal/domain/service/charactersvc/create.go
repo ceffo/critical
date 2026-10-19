@@ -452,6 +452,25 @@ type ClassOption struct {
 	// Alignments are the alignments the class admits (ADR 0032 step 2), in
 	// ruletablesvc.Alignments order.
 	Alignments []string
+	// HitDie is the class group's hit die (ADR 0030 step 7), the sides of
+	// the die the creation's class card shows.
+	HitDie int
+	// LevelXP is ADR 0034 step 4.1: for levels 1 to MaxLevel, the lowest XP
+	// of the level in the class's table (ADR 0030 step 3). A level the
+	// player picks is sent as that XP; the web computes no threshold.
+	LevelXP []LevelXP
+}
+
+// LevelXP is a level and the XP that reaches it.
+type LevelXP struct {
+	Level, XP int
+}
+
+// RaceAdjustmentOption is a race and PHB Table 8's adjustment of each
+// ability (0 for none), which the creation's race cards show.
+type RaceAdjustmentOption struct {
+	Race        string
+	Adjustments map[string]int
 }
 
 // CreationOptions are what the creation form offers: the creatable classes
@@ -468,6 +487,12 @@ type CreationOptions struct {
 	// warns (step 4.2), the form computes nothing.
 	Languages     []ruletablesvc.Language
 	RaceLanguages []RaceLanguageOption
+	// ScoreMethods are ADR 0032 step 6's methods, in the book's order: the
+	// creation's score step offers them and rolls one through the roll
+	// endpoint.
+	ScoreMethods []ruletablesvc.ScoreMethod
+	// RaceAdjustments are PHB Table 8 for every race, in Races order.
+	RaceAdjustments []RaceAdjustmentOption
 
 	MinAbility, MaxAbility int
 	MinHPMax, MaxHPMax     int
@@ -492,12 +517,35 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
 		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Sexes: slices.Clone(Sexes), Classes: make([]ClassOption, 0, len(CreatableClasses)),
+		ScoreMethods: slices.Clone(ruletablesvc.ScoreMethods), RaceAdjustments: make([]RaceAdjustmentOption, 0, len(Races)),
 	}
-	for _, class := range CreatableClasses {
-		if _, err := ruletablesvc.ClassGroup(class); err != nil {
+	for _, race := range Races {
+		adj, err := s.rules.RaceAdjustmentsFor(race)
+		if err != nil {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
-		opt := ClassOption{Class: class, Alignments: ruletablesvc.AlignmentsOf(class), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}}
+		out.RaceAdjustments = append(out.RaceAdjustments, RaceAdjustmentOption{Race: race, Adjustments: adj})
+	}
+	for _, class := range CreatableClasses {
+		group, err := ruletablesvc.ClassGroup(class)
+		if err != nil {
+			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
+		}
+		hd, err := s.rules.HitDiceFor(group)
+		if err != nil {
+			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
+		}
+		opt := ClassOption{
+			Class: class, Alignments: ruletablesvc.AlignmentsOf(class), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{},
+			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, ruletablesvc.MaxLevel),
+		}
+		for level := 1; level <= ruletablesvc.MaxLevel; level++ {
+			xp, err := s.rules.XPThreshold(class, level)
+			if err != nil {
+				return CreationOptions{}, fmt.Errorf("creation options: %w", err)
+			}
+			opt.LevelXP = append(opt.LevelXP, LevelXP{Level: level, XP: xp})
+		}
 		if ruletablesvc.HasSkillPoints(class) {
 			opt.Skills = slices.Clone(ruletablesvc.SkillsOf(class))
 			opt.SkillArmors = slices.Clone(ruletablesvc.SkillArmorsOf(class))

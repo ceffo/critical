@@ -462,8 +462,14 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		e.rules.EXPECT().RaceAllows(race, "cleric").Return(race != "elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "thief").Return(true, nil).Once()
 	}
+	expectOptionTables(e)
 	got, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
+	// The tables' figures are checked by the tests below; this one checks the classes and ranges.
+	for i := range got.Classes {
+		got.Classes[i].HitDie, got.Classes[i].LevelXP = 0, nil
+	}
+	got.ScoreMethods, got.RaceAdjustments = nil, nil
 	assert.Equal(t, charactersvc.CreationOptions{
 		Classes: []charactersvc.ClassOption{
 			{
@@ -485,6 +491,61 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
 		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40, Sexes: []string{"male", "female"},
 	}, got)
+}
+
+// expectOptionTables answers the tables the creation options read beyond DMG Table 7: each race's
+// Table 8 adjustments, each group's hit die and each class's XP table, every value distinct.
+func expectOptionTables(e *env) {
+	e.rules.EXPECT().RaceAdjustmentsFor(mock.Anything).RunAndReturn(func(race string) (map[string]int, error) {
+		return map[string]int{"str": len(race)}, nil
+	}).Maybe()
+	dice := map[string]int{"rogue": 6, "warrior": 10, "wizard": 4, "priest": 8}
+	e.rules.EXPECT().HitDiceFor(mock.Anything).RunAndReturn(func(group string) (ruletablesvc.HitDiceRow, error) {
+		return ruletablesvc.HitDiceRow{Group: group, Die: dice[group]}, nil
+	}).Maybe()
+	e.rules.EXPECT().XPThreshold(mock.Anything, mock.Anything).RunAndReturn(func(class string, level int) (int, error) {
+		return level*1000 + len(class), nil
+	}).Maybe()
+}
+
+// ADR 0034 step 4.1: each class carries its XP table read at levels 1 to 20, so a picked level
+// is sent as the lowest XP of that level; and its hit die (step 3.1's class card).
+func TestCreationOptions_Step4_1_EachClassCarriesItsLevelToXPTableAndHitDie(t *testing.T) {
+	e := newEnv(t)
+	e.rules.EXPECT().RaceAllows(mock.Anything, mock.Anything).Return(true, nil).Maybe()
+	expectOptionTables(e)
+	got, err := e.svc.CreationOptions(context.Background())
+	require.NoError(t, err)
+	byClass := map[string]charactersvc.ClassOption{}
+	for _, c := range got.Classes {
+		byClass[c.Class] = c
+	}
+	bard := byClass["bard"]
+	require.Len(t, bard.LevelXP, 20)
+	assert.Equal(t, charactersvc.LevelXP{Level: 1, XP: 1004}, bard.LevelXP[0])
+	assert.Equal(t, charactersvc.LevelXP{Level: 5, XP: 5004}, bard.LevelXP[4])
+	assert.Equal(t, charactersvc.LevelXP{Level: 20, XP: 20004}, bard.LevelXP[19])
+	assert.Equal(t, charactersvc.LevelXP{Level: 5, XP: 5007}, byClass["fighter"].LevelXP[4], "each class its own table")
+	assert.Equal(t, 6, bard.HitDie)
+	assert.Equal(t, 10, byClass["fighter"].HitDie)
+	assert.Equal(t, 4, byClass["mage"].HitDie)
+	assert.Equal(t, 8, byClass["cleric"].HitDie)
+}
+
+// ADR 0034 steps 3.2 and 3.3: the options carry the six score methods in the book's order and
+// PHB Table 8 for every race, in the races' order.
+func TestCreationOptions_CarryTheScoreMethodsAndTheRaceAdjustments(t *testing.T) {
+	e := newEnv(t)
+	e.rules.EXPECT().RaceAllows(mock.Anything, mock.Anything).Return(true, nil).Maybe()
+	expectOptionTables(e)
+	got, err := e.svc.CreationOptions(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, ruletablesvc.ScoreMethods, got.ScoreMethods)
+	require.Len(t, got.RaceAdjustments, len(charactersvc.Races))
+	for i, r := range got.RaceAdjustments {
+		assert.Equal(t, charactersvc.Races[i], r.Race)
+		assert.Equal(t, map[string]int{"str": len(r.Race)}, r.Adjustments)
+	}
 }
 
 // identity is the alignment and sex every test character enters (both required, ADR 0032 steps 2

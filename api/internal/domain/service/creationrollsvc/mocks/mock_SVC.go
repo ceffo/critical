@@ -22,6 +22,65 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
+// Arrange provides a mock function with given fields: ctx, in
+func (_m *MockSVC) Arrange(ctx context.Context, in creationrollsvc.ArrangeInput) (*creationrollsvc.ArrangeResult, error) {
+	ret := _m.Called(ctx, in)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Arrange")
+	}
+
+	var r0 *creationrollsvc.ArrangeResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, creationrollsvc.ArrangeInput) (*creationrollsvc.ArrangeResult, error)); ok {
+		return rf(ctx, in)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, creationrollsvc.ArrangeInput) *creationrollsvc.ArrangeResult); ok {
+		r0 = rf(ctx, in)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*creationrollsvc.ArrangeResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, creationrollsvc.ArrangeInput) error); ok {
+		r1 = rf(ctx, in)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Arrange_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Arrange'
+type MockSVC_Arrange_Call struct {
+	*mock.Call
+}
+
+// Arrange is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in creationrollsvc.ArrangeInput
+func (_e *MockSVC_Expecter) Arrange(ctx interface{}, in interface{}) *MockSVC_Arrange_Call {
+	return &MockSVC_Arrange_Call{Call: _e.mock.On("Arrange", ctx, in)}
+}
+
+func (_c *MockSVC_Arrange_Call) Run(run func(ctx context.Context, in creationrollsvc.ArrangeInput)) *MockSVC_Arrange_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(creationrollsvc.ArrangeInput))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Arrange_Call) Return(_a0 *creationrollsvc.ArrangeResult, _a1 error) *MockSVC_Arrange_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Arrange_Call) RunAndReturn(run func(context.Context, creationrollsvc.ArrangeInput) (*creationrollsvc.ArrangeResult, error)) *MockSVC_Arrange_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)

@@ -1938,5 +1938,152 @@
       "special": "Spécial"
     },
     "turnLabel": "Repousser : {{undead}}"
+  },
+  "intro": {
+    "title": "Bienvenue à la table",
+    "what": "Critical! tient la fiche de votre personnage AD&D 2e pendant la partie : points de vie, sorts, effets en cours et jets de dés, chaque résultat avec son calcul.",
+    "steps_one": "Commencez par créer votre personnage, en une étape :",
+    "steps_other": "Commencez par créer votre personnage, en {{count}} étapes :",
+    "dm": "À chaque valeur, tirez les dés ici ou recopiez votre fiche papier. Tout reste modifiable ensuite, et le MD a toujours le dernier mot.",
+    "start": "Commencer",
+    "startHint": "Commencer la création de votre personnage",
+    "others": "Jouez un de vos personnages, ou créez-en un nouveau."
+  },
+  "creation": {
+    "stepOf": "Étape {{n}} sur {{of}}",
+    "steps": "Étapes",
+    "yourCharacter": "Votre personnage",
+    "noName": "Sans nom",
+    "leave": "Quitter",
+    "leaveHint": "Quitter la création",
+    "leaveTitle": "Abandonner ce personnage ?",
+    "leaveLead": "Les valeurs saisies seront perdues.",
+    "stay": "Rester",
+    "stayHint": "Rester et continuer la création",
+    "discard": "Abandonner",
+    "discardHint": "Abandonner ce personnage et quitter la création",
+    "back": "Retour",
+    "backHint": "Revenir à l'étape précédente, les valeurs restent",
+    "next": "Suivant",
+    "nextHint": "Passer à l'étape suivante",
+    "reroll": "Relancer",
+    "blocked": {
+      "class": "Choisissez une classe.",
+      "xp": "Saisissez les XP de départ.",
+      "race": "Choisissez une race.",
+      "scores": "Saisissez les six caractéristiques.",
+      "hpMax": "Saisissez les PV max."
+    },
+    "class": {
+      "name": "Classe",
+      "title": "Choisissez une classe",
+      "lead": "La classe fixe le dé de vie, les talents et les alignements permis.",
+      "hitDie": "Dé de vie",
+      "alignment": "Alignement",
+      "allAlignments": "Tous",
+      "allBut": "Tous sauf {{list}}",
+      "races": "Races",
+      "allRaces": "Toutes"
+    },
+    "level": {
+      "title": "Niveau de départ",
+      "level": "Niveau",
+      "xp": "XP",
+      "lead": "Choisissez un niveau : il vaut le minimum d'XP de ce niveau pour la classe. Ou saisissez les XP exacts de votre fiche.",
+      "pick": "Niveau {{level}}",
+      "levelN": "Niveau {{level}}",
+      "xpOfLevel": " · {{xp}} XP, le minimum du niveau {{level}} pour un {{className}}. Le TAC0, les jets de protection et les points de vie en découlent.",
+      "xpOfLevelNoClass": " · choisissez d'abord une classe : ses XP en découlent.",
+      "levelLower": "niveau {{level}}",
+      "xpN": "{{xp}} XP"
+    },
+    "race": {
+      "name": "Race",
+      "title": "Choisissez une race",
+      "lead": "Seules les races permises au {{className}} sont proposées ; les autres restent visibles.",
+      "refused": "Pas {{className}}",
+      "refusedHint": "{{name}} : pas permis au {{className}}",
+      "adjustments": "Ajustements",
+      "noAdjustment": "Aucun",
+      "native": "Langue maternelle"
+    },
+    "scores": {
+      "name": "Caractéristiques",
+      "title": "Caractéristiques",
+      "lead": "Tirez-les selon une méthode du Guide du maître, ou saisissez celles de votre fiche.",
+      "mode": "Tirer ou saisir",
+      "roll": "Tirer",
+      "type": "Saisir",
+      "method": "Méthode",
+      "rollOf": "Tirage · méthode {{method}}",
+      "rollTitle": "Tirage",
+      "rollHint": "Tirer les dés de la méthode choisie",
+      "rollLead": "Tirez les dés : le serveur les lance, vous répartissez ensuite.",
+      "pickMethod": "Choisissez d'abord une méthode.",
+      "totalHint": "Total {{n}} : {{total}}",
+      "how": {
+        "in_order": "Les totaux vont aux caractéristiques dans l'ordre, ajustements de race compris.",
+        "keep_per_ability": "Deux totaux par caractéristique : cliquez celui à garder, puis sa caractéristique.",
+        "arrange": "Cliquez un total puis une caractéristique pour l'y placer. Un dé barré est écarté.",
+        "add_to_base": "Chaque caractéristique part de {{base}} : cliquez un dé puis une caractéristique pour l'y ajouter, sans dépasser {{max}}. Recliquez pour le retirer."
+      },
+      "arrangement": "Répartition",
+      "ability": "Caractéristique",
+      "rolled": "Tirage",
+      "race": "Race",
+      "score": "Score",
+      "placeHint": "Placer le total choisi en {{ability}}",
+      "editable": "Les scores restent modifiables. Le serveur vérifie les minimums du {{className}} à la création.",
+      "methodN": "Méthode {{method}}",
+      "typed": "Saisies"
+    },
+    "methods": {
+      "I": "3d6, dans l'ordre",
+      "II": "3d6 deux fois, garder le meilleur",
+      "III": "3d6 six fois, répartir",
+      "IV": "3d6 douze fois, garder six",
+      "V": "4d6 sans le plus bas, répartir",
+      "VI": "8 partout + 7d6 à répartir"
+    },
+    "placeErrors": {
+      "above_max": "{{ability}} dépasserait {{max}} : placez ce dé ailleurs.",
+      "too_many": "Trop de valeurs placées pour cette méthode.",
+      "out_of_range": "Cette valeur ne vient pas de ce tirage : tirez à nouveau.",
+      "unknown": "Choix inconnu du serveur : rechargez la page."
+    },
+    "rollErrors": {
+      "unknown": "Choix inconnu du serveur : rechargez la page.",
+      "out_of_range": "La Constitution ou les XP sont hors limites : corrigez-les à leur étape.",
+      "not_creatable": "Cette classe ne peut pas encore être créée."
+    },
+    "extras": {
+      "name": "Points de vie et talents",
+      "title": "Points de vie et talents",
+      "lead": "Ce que la classe demande en plus : les PV de chaque niveau jusqu'au niveau de départ, et les choix du {{className}}.",
+      "hp": "Points de vie",
+      "rollHint": "Tirer les dés de vie, du niveau 1 au niveau de départ",
+      "level": "Niveau",
+      "die": "Dé",
+      "gain": "Gain",
+      "fixed": "fixe",
+      "counted": "compte {{n}}",
+      "total": "Total",
+      "hpLead": "Un dé de vie par niveau, du niveau 1 au niveau {{level}} de départ ; au-delà du niveau nominal, un gain fixe.",
+      "hpRollLead": "Tirez les dés de vie, ou saisissez les PV max de votre fiche.",
+      "hpNeedsCon": "Saisissez la Constitution et les XP pour tirer, ou saisissez les PV max.",
+      "hpEditable": "Le tirage remplit la case ; vous pouvez la changer.",
+      "hpOutdated": "La classe, le niveau ou la Constitution ont changé depuis le tirage : tirez à nouveau les points de vie.",
+      "skills": "Talents de {{className}}",
+      "skill": "Talent",
+      "points": "Points",
+      "percentile": "Pourcentage (18/xx)",
+      "nothingElse": "Rien d'autre à choisir pour un {{className}} : seulement ses points de vie.",
+      "hpN": "PV {{hp}}"
+    },
+    "identity": {
+      "name": "Identité",
+      "title": "Identité",
+      "lead": "Le nom et les détails du personnage, puis Créer."
+    }
   }
 }

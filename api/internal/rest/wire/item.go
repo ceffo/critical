@@ -2,6 +2,7 @@ package wire
 
 import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
@@ -32,8 +33,9 @@ type ItemDTO struct {
 	EffectDice   string `json:"effectDice"`
 	EffectSave   string `json:"effectSave"`
 	Notes        string `json:"notes"`
-	// Powers are the item's own powers (ADR 0016 steps 9 to 16), read only:
-	// whether one is on is served with the effects list (GET /api/buffs).
+	// Powers are the item's own powers (ADR 0016 steps 9 to 16), set by the
+	// editor (ADR 0033 step 17): whether one is on is served with the effects
+	// list (GET /api/buffs).
 	Powers []PowerDTO `json:"powers"`
 	// Weapon and ammunition.
 	DamageTypes []string `json:"damageTypes"`
@@ -68,6 +70,19 @@ type PowerDTO struct {
 	ID      string         `json:"id"`
 	MinStr  *int           `json:"minStr,omitempty"`
 	Effects BuffEffectsDTO `json:"effects"`
+}
+
+// PowersFromDTO is the domain list of powers sent by the editor (ADR 0033
+// step 17), in the order sent; none is nil.
+func PowersFromDTO(dtos []PowerDTO) []itemsvc.Power {
+	if len(dtos) == 0 {
+		return nil
+	}
+	out := make([]itemsvc.Power, 0, len(dtos))
+	for _, d := range dtos {
+		out = append(out, itemsvc.Power{ID: d.ID, MinStr: d.MinStr, Effects: buffsvc.BuffEffects(d.Effects)})
+	}
+	return out
 }
 
 // ItemsToDTO maps items to their wire shape.

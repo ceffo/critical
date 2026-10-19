@@ -2890,6 +2890,72 @@ test("the piece editor's spell component uncut in French, 1280 to 2560", async (
   }
 });
 
+// ADR 0033 step 17, ADR 0035 item 11 and ADR 0022 step 1: the editor's powers. A ring with the ring
+// of protection template and a power with every control set (trigger, weapon kind, without magic
+// armour, two effects), then the worn armour's "+N" and its other powers: no cut text and no page
+// scroll in French (ADR 0027 step 2) and English, 1280 to 2560. Screens at 1920x1080 and 2560x1440.
+test("the piece editor's powers and +N uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await openWorkspace(page, "Inventory");
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await openTypedAdd(page, lang);
+    const wf = page.getByTestId("item-form");
+    await wf
+      .getByLabel(lang === "fr" ? "Catégorie" : "Category")
+      .selectOption("magic");
+    await wf.getByTestId("power-templates").click();
+    await page.getByTestId("power-template-ring_of_protection").click();
+    await wf.getByTestId("power-add").click();
+    const second = wf.getByTestId("power-row").nth(1);
+    await second.getByTestId("power-min-str").fill("18");
+    await second.getByRole("combobox").last().selectOption("melee");
+    await second.getByTestId("power-without-magic-armour").check();
+    await second
+      .getByRole("button", {
+        name: lang === "fr" ? "Effet" : "Effect",
+        exact: true,
+      })
+      .click();
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoPageScroll(page);
+      await expectNoClippedText(wf, `powers editor, ${where}`);
+      if (lang === "fr" && vp.width >= 1920)
+        await snap(page, `powers-editor-fr-${vp.width}x${vp.height}`);
+    }
+    await wf
+      .getByRole("button", { name: lang === "fr" ? "Annuler" : "Cancel" })
+      .click();
+    await page
+      .getByTestId("item-leather")
+      .getByRole("button", { name: lang === "fr" ? /^Modifier / : /^Edit / })
+      .click();
+    const af = page.getByTestId("item-form");
+    await af
+      .getByRole("button", {
+        name: lang === "fr" ? "Plus de magie" : "More magic",
+      })
+      .click();
+    await af.getByTestId("power-add").click();
+    for (const vp of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoPageScroll(page);
+      await expectNoClippedText(af, `armour editor +N, ${where}`);
+      await af.getByTestId("item-powers").scrollIntoViewIfNeeded();
+      if (lang === "fr" && vp.width >= 1920)
+        await snap(page, `armour-plus-editor-fr-${vp.width}x${vp.height}`);
+    }
+    await af
+      .getByRole("button", { name: lang === "fr" ? "Annuler" : "Cancel" })
+      .click();
+  }
+});
+
 // ADR 0035 item 10 and ADR 0022 step 1: Ajouter in the stage, French first (ADR 0027 step 2), then
 // English. Each catalogue category with its first row chosen (the copy panel filled): no cut text
 // and no page scroll from 1280 to 2560 (the rows scroll inside the card); the Saisir tab too.

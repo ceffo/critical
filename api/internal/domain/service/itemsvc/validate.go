@@ -116,6 +116,9 @@ func (i Item) Validate() error {
 	if i.EffectSave != "" && !slices.Contains(SaveCategories, i.EffectSave) {
 		return fieldErr("effectSave", "Unknown save category")
 	}
+	if err := i.validPiecePowers(); err != nil {
+		return err
+	}
 	switch i.Category {
 	case CategoryWeapon:
 		return i.validateWeapon()

@@ -165,11 +165,12 @@ func AddEffect(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
 // and stats, absent when not in the catalogue) and the slots after a cast.
 //
 // entryId, source, name and consumedItem are logEntryId, action, spell and
-// item under the names the previous release's web reads from this answer
-// (the attack's d20Roll likewise, see castsvc.CastAttack). They are kept for
-// one release so that a page of that release still shows the cast against
-// this server during the rolling deploy (ADR 0024 step 5.2); they are never
-// logged. Drop them in the next release.
+// item under the names the previous release's web reads from this answer.
+// They are kept for one release so that a page of that release still shows
+// the cast against this server during the rolling deploy (ADR 0024 step
+// 5.2); they are never logged. The attack's d20Roll is the one compat key
+// that is also logged (it lives inside the shared payload type). Drop them
+// all in the next release.
 type castAnswer struct {
 	castsvc.CastBreakdown
 	CatalogueSpell *wire.SpellDTO      `json:"catalogueSpell,omitempty"`

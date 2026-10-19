@@ -119,7 +119,9 @@ type CastAttack struct {
 	// D20Roll is D20 under the name the previous release's web reads from
 	// the answer, kept for one release so a page of that release still shows
 	// the die against this server during the rolling deploy (ADR 0024 step
-	// 5.2). Drop it in the next release.
+	// 5.2). Unlike the other compat keys it is part of the shared payload, so
+	// it is logged too (a harmless duplicate of d20). Drop it in the next
+	// release.
 	D20Roll int `json:"d20Roll,omitempty"`
 }
 

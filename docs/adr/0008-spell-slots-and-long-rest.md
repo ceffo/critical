@@ -121,7 +121,7 @@ named otherwise.
     `TestParse_DamagePartsRefused` (adapters/spelleffectsadpt), `TestDamageAt_ForceMissilesParts`
     (levels 7, 15 and 25), `TestCast_DamageParts_RollsEachPartOnce`,
     `TestReceive_DamageParts_AtTheCastersLevel`, `TestDamageAt_IsWhatACastRolls`,
-    `TestDamageToDTO_Parts` (rest/handler/spellhdl), `TestToDTO_DamageParts` (rest/handler/casthdl).
+    `TestDamageAtWire_Parts` (domain/service/spelleffectsvc).
 14. **Cast-time modes.** A spell whose damage depends on an option the caster picks when casting
     (Wall of Ice: an ice plane, a hemisphere or a falling ice sheet; Meteor Swarm: four large
     spheres or eight small ones; Ice Storm: hail or sleet) lists `modes` in its data instead of a
@@ -178,8 +178,8 @@ named otherwise.
     (spelleffectsvc), `TestParse_DamageSteps`, `TestParse_DamageStepsRefused`
     (adapters/spelleffectsadpt), `TestDamageAt_StepsMatchThePHB` (levels 12, 15 and 20),
     `TestCast_DamageSteps_RollsEachStepOnce`, `TestReceive_DamageSteps_AtTheCastersLevel`,
-    `TestDamageAt_IsWhatACastRolls`, `TestDamageToDTO_Steps` (rest/handler/spellhdl),
-    `TestToDTO_DamageSteps` (rest/handler/casthdl).
+    `TestDamageAt_IsWhatACastRolls`, `TestDamageAtWire_Steps` (domain/service/spelleffectsvc)
+    (served by lookup, spellbook, cast and exposure alike).
 
 16. **Exposure damage.** A spell whose damage is taken each round by whoever is in the area it
     leaves, or passes through it (Cloudkill: 1d10 poison per round above 6 Hit Dice; Wall of Fire:

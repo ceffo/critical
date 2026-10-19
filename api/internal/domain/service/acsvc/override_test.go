@@ -172,7 +172,7 @@ func TestAC_Step13_OverrideValidation(t *testing.T) {
 func TestAC_Step13_RestorerWritesTheSnapshotBack(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
-	r := f.svc.Restorers()[acsvc.StateKey]
+	r := f.svc.Module().Restorer(acsvc.StateKey)
 	require.NotNil(t, r)
 	f.overrides.EXPECT().SetACOverride(mock.Anything, charID, &acsvc.Override{Value: 4, Label: "Shield"}).Return(nil).Once()
 	require.NoError(t, r.Restore(ctx, charID, snaptest.Env(`{"override":{"value":4,"label":"Shield"}}`)))

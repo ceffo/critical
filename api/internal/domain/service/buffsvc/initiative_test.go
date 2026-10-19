@@ -241,7 +241,7 @@ func TestInitiative_Step5_NoneOutOfCombat(t *testing.T) {
 	t.Run("voiding the move writes the initiative back", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveInitiative(mock.Anything, charID, current).Return(nil).Once()
-		err := f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, snaptest.Env(`{"d10":4,"entryId":12}`))
+		err := f.svc.Module().Restorer(buffsvc.StateKeyInitiative).Restore(ctx, charID, snaptest.Env(`{"d10":4,"entryId":12}`))
 		require.NoError(t, err)
 	})
 }
@@ -251,12 +251,12 @@ func TestInitiativeRestorer(t *testing.T) {
 	t.Run("null clears it", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveInitiative(mock.Anything, charID, (*buffsvc.Initiative)(nil)).Return(nil).Once()
-		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, snaptest.Absent("")))
+		require.NoError(t, f.svc.Module().Restorer(buffsvc.StateKeyInitiative).Restore(ctx, charID, snaptest.Absent("")))
 	})
 	for _, bad := range []string{`{"d10":0}`, `{"d10":11}`, `"seven"`} {
 		t.Run("rejects "+bad, func(t *testing.T) {
 			f := newFixture(t) // nothing is written
-			assert.Error(t, f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, snaptest.Env(bad)))
+			assert.Error(t, f.svc.Module().Restorer(buffsvc.StateKeyInitiative).Restore(ctx, charID, snaptest.Env(bad)))
 		})
 	}
 	// ADR 0019 step 1: the "after" of the entry that rolled the initiative
@@ -264,7 +264,7 @@ func TestInitiativeRestorer(t *testing.T) {
 	// replayed entry's id, which the reroll guard reads (ADR 0018 step 5).
 	t.Run("replay names the replayed entry", func(t *testing.T) {
 		f := newFixture(t)
-		replayer, ok := f.svc.Restorers()[buffsvc.StateKeyInitiative].(actionlog.Replayer)
+		replayer, ok := f.svc.Module().Restorer(buffsvc.StateKeyInitiative).(actionlog.Replayer)
 		require.True(t, ok, "the initiative restorer replays with the entry id")
 		f.dal.EXPECT().SaveInitiative(mock.Anything, charID, &buffsvc.Initiative{D10: 8, LogEntryID: 21}).Return(nil).Once()
 		require.NoError(t, replayer.Replay(ctx, charID, 21, snaptest.Env(`{"d10":8}`)))

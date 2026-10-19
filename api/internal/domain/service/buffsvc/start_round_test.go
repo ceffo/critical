@@ -100,13 +100,13 @@ func TestBuffs_Step15_StartRound(t *testing.T) {
 		require.NoError(t, err)
 
 		f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, before).Return(nil).Once()
-		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyBuffs].Restore(ctx, charID, f.entries[0].Snapshots[0].Before))
+		require.NoError(t, f.svc.Module().Restorer(buffsvc.StateKeyBuffs).Restore(ctx, charID, f.entries[0].Snapshots[0].Before))
 	})
 
 	t.Run("an entry recorded before the field restores round 0", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, []buffsvc.BuffEffect{{ID: "o", Name: "Old", Duration: 3}}).Return(nil).Once()
 		old := snaptest.Env(`[{"id":"o","name":"Old","charges":0,"duration":3,"effects":{}}]`)
-		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyBuffs].Restore(ctx, charID, old))
+		require.NoError(t, f.svc.Module().Restorer(buffsvc.StateKeyBuffs).Restore(ctx, charID, old))
 	})
 }

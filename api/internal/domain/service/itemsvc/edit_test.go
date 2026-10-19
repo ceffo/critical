@@ -170,7 +170,7 @@ func TestUpdate_Step1_1_SetsTheComponent(t *testing.T) {
 	pop := mocks.NewMockDAL(t)
 	popSvc, _ := itemsvc.New(pop, deps(t).Deps)
 	pop.EXPECT().Update(mock.Anything, int64(1), wand4).Return(nil).Once()
-	require.NoError(t, popSvc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, got.Snapshots[0].Before))
+	require.NoError(t, popSvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
 }
 
 // A stock item turned daily keeps its count and takes the daily number sent with the change.
@@ -261,7 +261,7 @@ func TestDelete_RemovesAndLogsWholeItem(t *testing.T) {
 func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 	restore := func(dal *mocks.MockDAL, before json.RawMessage) error {
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
-		return svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, before)
+		return svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, before)
 	}
 	t.Run("create", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)

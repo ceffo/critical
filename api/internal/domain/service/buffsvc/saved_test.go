@@ -84,8 +84,8 @@ func TestSavedRestorer_WritesTheSnapshotBack(t *testing.T) {
 	f := newFixture(t)
 	want := []buffsvc.SavedBuff{{ID: 7, Name: "Form", Duration: 2, Note: "n", Effects: buffsvc.BuffEffects{WeaponBuff: intPtr(5)}}}
 	f.dal.EXPECT().ReplaceSavedBuffs(mock.Anything, charID, want).Return(nil).Once()
-	r, ok := f.svc.Restorers()[buffsvc.StateKeySavedBuffs]
-	require.True(t, ok)
+	r := f.svc.Module().Restorer(buffsvc.StateKeySavedBuffs)
+	require.NotNil(t, r)
 	require.NoError(t, r.Restore(context.Background(), charID,
 		snaptest.Env(`[{"id":7,"name":"Form","duration":2,"charges":0,"effects":{"weapon_buff":5},"note":"n"}]`)))
 }
@@ -105,7 +105,7 @@ func TestSavedRestorer_KeepsCreatedAtAndReadsOldSnapshots(t *testing.T) {
 			f := newFixture(t)
 			want := []buffsvc.SavedBuff{{ID: 7, Name: "Form", Duration: 2, CreatedAt: tt.want}}
 			f.dal.EXPECT().ReplaceSavedBuffs(mock.Anything, charID, want).Return(nil).Once()
-			require.NoError(t, f.svc.Restorers()[buffsvc.StateKeySavedBuffs].Restore(context.Background(), charID, snaptest.Env(tt.raw)))
+			require.NoError(t, f.svc.Module().Restorer(buffsvc.StateKeySavedBuffs).Restore(context.Background(), charID, snaptest.Env(tt.raw)))
 		})
 	}
 }

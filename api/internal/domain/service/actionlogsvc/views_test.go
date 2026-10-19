@@ -8,20 +8,22 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
 )
 
-// The service hands out entries through the payload views it was built with,
-// on every list-style read, so a caller cannot forget them.
+// The service hands out entries through the payload views the registered
+// modules declare, on every list-style read, so a caller cannot forget them.
 func TestListReads_ServeEntriesThroughThePayloadViews(t *testing.T) {
 	views := actionlog.PayloadViews{actionlog.KindSave: func(p json.RawMessage) (json.RawMessage, error) {
 		return json.RawMessage(`{"viewed":` + string(p) + `}`), nil
 	}}
 	dal := mocks.NewMockDAL(t)
-	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, &passTx{}, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t), views)
+	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, &passTx{}, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t))
 	require.NoError(t, err)
+	require.NoError(t, svc.Register(domain.Module{Name: "saves", Views: views}))
 	stored := []actionlog.Entry{
 		{ID: 2, Kind: actionlog.KindSave, Payload: json.RawMessage(`1`)},
 		{ID: 1, Kind: actionlog.KindDice, Payload: json.RawMessage(`1`)},

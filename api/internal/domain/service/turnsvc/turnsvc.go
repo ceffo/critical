@@ -105,6 +105,9 @@ func New(d Deps) (SVC, error) {
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
 
+// Module declares no codec: turning undead changes no state.
+func (s *service) Module() domain.Module { return domain.Module{Name: "turnsvc"} }
+
 // Turn is ADR 0030 step 16: the class must turn undead and the type be a
 // Table 61 row (refused, 400, before any die); a dash is refused before any
 // die (16.3). A number rolls one d20, a success at or above it (16.1); T, D

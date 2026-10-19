@@ -51,7 +51,7 @@ var matchable = []string{
 //
 //  1. every item and weapon keeps its id, its fields and its name; the
 //     items keep their positions and the weapons follow them, in their order;
-//  2. (the snapshots are the restorers', see Restorers);
+//  2. (the snapshots are the codecs', see Module);
 //  3. an item whose id a weapon has takes the next free suffix, recorded in
 //     Renames;
 //  4. a weapon is matched to the catalogue row of its type, else to the one

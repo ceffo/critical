@@ -252,7 +252,7 @@ func TestStore_Step8_2_WritersSerialised(t *testing.T) {
 // root wires it.
 func logService(t *testing.T, s *memory.Store) actionlogsvc.SVC {
 	t.Helper()
-	svc, err := actionlogsvc.New(s.ActionLog(), actionlogsvc.Transactions(s), rounds{s}, s.Characters(), nil)
+	svc, err := actionlogsvc.New(s.ActionLog(), actionlogsvc.Transactions(s), rounds{s}, s.Characters())
 	require.NoError(t, err)
 	return svc
 }
@@ -395,7 +395,7 @@ func TestStore_Step8_2_FailedUndoLeavesNothing(t *testing.T) {
 	s, id := seeded(t)
 	ctx := context.Background()
 	svc := logService(t, s)
-	svc.RegisterRestorer("buffs", failingRestorer{s})
+	require.NoError(t, svc.Register(domain.Module{Name: "buffs", Codecs: []actionlog.Codec{failingRestorer{s}}}))
 	e := entry(id, actionlog.KindBuffChange)
 	e.Snapshots = []actionlog.Snapshot{{Key: "buffs", Before: json.RawMessage(`[]`), After: json.RawMessage(`[]`)}}
 	top := record(t, s, svc, e)
@@ -409,8 +409,11 @@ func TestStore_Step8_2_FailedUndoLeavesNothing(t *testing.T) {
 	assert.Empty(t, got.Corrections, "no void is left by the failed undo")
 }
 
-// failingRestorer writes, then fails.
+// failingRestorer is the codec of the buffs family that writes, then fails.
 type failingRestorer struct{ s *memory.Store }
+
+func (failingRestorer) Family() string    { return "buffs" }
+func (failingRestorer) CanRestore() error { return nil }
 
 func (f failingRestorer) Restore(ctx context.Context, characterID int64, _ json.RawMessage) error {
 	if err := f.s.Buffs().SaveActiveBuffs(ctx, characterID, []buffsvc.BuffEffect{{ID: "x"}}); err != nil {

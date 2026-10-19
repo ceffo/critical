@@ -33,9 +33,6 @@ type SVC interface {
 	Update(ctx context.Context, characterID, entryID int64, p EntryPatch) (*Ledger, error)
 	// Delete removes an entry. ErrEntryNotFound.
 	Delete(ctx context.Context, characterID, entryID int64) (*Ledger, error)
-	// Restorers writes an entry's "before" back when its log entry is
-	// popped, keyed by state-key family. Registered by the composition root.
-	Restorers() map[string]actionlog.Restorer
 }
 
 // DAL is the driven port over the stored entries. Entries come back with

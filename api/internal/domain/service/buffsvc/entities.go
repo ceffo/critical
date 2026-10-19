@@ -8,7 +8,7 @@ import (
 )
 
 // State keys under which buffsvc snapshots its state in the action log. Each
-// has a Restorer (see Restorers) that the composition root registers.
+// has a codec in buffsvc's module (Module), which the composition root registers.
 const (
 	StateKeyBuffs = "buffs"
 	StateKeyRound = "round"

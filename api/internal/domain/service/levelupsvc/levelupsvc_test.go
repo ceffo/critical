@@ -342,7 +342,7 @@ func TestRoll_TheManualEntryTakesTheDieRolledAtTheTable(t *testing.T) {
 // HP, so a popped roll's level is pending again. A broken snapshot is an error.
 func TestRestorer_WritesTheRealizedLevelBack(t *testing.T) {
 	f := newFixture(t)
-	r := f.svc.Restorers()[levelupsvc.StateKey]
+	r := f.svc.Module().Restorer(levelupsvc.StateKey)
 	require.NotNil(t, r)
 	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 8, 40).Return(nil).Once()
 	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"realizedLevel":8,"hpMax":40}`)))

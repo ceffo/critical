@@ -54,9 +54,6 @@ type SVC interface {
 	// points refused (or any point of a class without skill points);
 	// nothing is logged then.
 	SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error)
-	// Restorers are the state keys SetPoints snapshots, with the writers
-	// that restore them.
-	Restorers() map[string]actionlog.Restorer
 }
 
 // DAL is the driven port over the skill catalog: the character's own

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
@@ -100,18 +101,18 @@ func roundSnapshot(before, after int) (actionlog.Snapshot, error) {
 	return roundSnaps.Snapshot("", &before, &after)
 }
 
-// Restorers writes the buff list, the saved templates, the round number or
-// the initiative back from a snapshot.
-// They run inside the void's transaction (ctx carries it).
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		StateKeyBuffs: buffsSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, buffs []snapBuff) error {
+// Module declares the codecs that write the buff list, the saved templates,
+// the round number or the initiative back from a snapshot. They run inside the
+// void's transaction (ctx carries it).
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "buffsvc", Codecs: []actionlog.Codec{
+		buffsSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, buffs []snapBuff) error {
 			return s.dal.SaveActiveBuffs(ctx, characterID, fromSnapBuffs(buffs))
 		}, nil),
-		StateKeySavedBuffs: savedSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, saved []snapSaved) error {
+		savedSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, saved []snapSaved) error {
 			return s.dal.ReplaceSavedBuffs(ctx, characterID, fromSnapSaved(saved))
 		}, nil),
-		StateKeyInitiative: initiativeSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st snapInitiative) error {
+		initiativeSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st snapInitiative) error {
 			if st.D10 < 1 || st.D10 > InitiativeDie {
 				return fmt.Errorf("decode initiative snapshot: d10 %d out of range", st.D10)
 			}
@@ -119,11 +120,11 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 		}, func(ctx context.Context, characterID int64, _ string) error {
 			return s.dal.SaveInitiative(ctx, characterID, nil)
 		}),
-		StateKeyRound: roundSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, round int) error {
+		roundSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, round int) error {
 			if round < 0 {
 				return fmt.Errorf("decode round snapshot: negative round %d", round)
 			}
 			return s.dal.SaveRoundNumber(ctx, characterID, round)
 		}, nil),
-	}
+	}}
 }

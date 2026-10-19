@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
@@ -96,13 +97,14 @@ func (s *service) record(ctx context.Context, characterID int64, r Result, befor
 	return nil
 }
 
-// Restorers writes a spell's spellbook state back: undoing a success takes
-// the spell out of the spellbook, undoing a failure lifts its block (step
-// 20.3); a redo writes the roll's "after" (ADR 0019). The action log hands
-// the state, which names the spell; it runs inside the undo's transaction.
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		StateFamily: spellbookSnaps.Restorer(func(ctx context.Context, characterID int64, spellID string, st spellState) error {
+// Module declares the codec that writes a spell's spellbook state back:
+// undoing a success takes the spell out of the spellbook, undoing a failure
+// lifts its block (step 20.3); a redo writes the roll's "after" (ADR 0019).
+// The action log hands the state, which names the spell; it runs inside the
+// undo's transaction.
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "learnsvc", Codecs: []actionlog.Codec{
+		spellbookSnaps.Restorer(func(ctx context.Context, characterID int64, spellID string, st spellState) error {
 			if spellID == "" || st.FailedAtLevel < 0 {
 				return fmt.Errorf("decode spellbook snapshot: spell %q failed at level %d", spellID, st.FailedAtLevel)
 			}
@@ -112,5 +114,5 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 			}
 			return nil
 		}, nil),
-	}
+	}}
 }

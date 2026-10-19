@@ -225,6 +225,9 @@ func New(d Deps) (SVC, error) {
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
 
+// Module declares no codec: the creation's rolls write nothing.
+func (s *service) Module() domain.Module { return domain.Module{Name: "creationrollsvc"} }
+
 // Scores is ADR 0032 step 6: the method's totals, each its dice drawn in
 // order, method V's lowest die dropped; methods I and II give each total its
 // ability in order (II two per ability, together).

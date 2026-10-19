@@ -216,6 +216,9 @@ func New(d Deps) (SVC, error) {
 func (s *service) Health(context.Context) error { return nil }
 func (s *service) Close(context.Context) error  { return nil }
 
+// Module declares no codec: the login is no game move.
+func (s *service) Module() domain.Module { return domain.Module{Name: "authsvc"} }
+
 func (s *service) DevLoginEnabled() bool { return s.idp == nil }
 
 // RandomToken is 256 bits from the system's secure generator, base64url

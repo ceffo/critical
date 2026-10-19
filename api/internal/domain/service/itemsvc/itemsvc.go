@@ -67,11 +67,6 @@ type SVC interface {
 	// ItemPowers is every worn or wielded piece's powers, whatever its count
 	// (ADR 0016 steps 9 and 11, ADR 0033 step 9): buffsvc's Items port.
 	ItemPowers(ctx context.Context, characterID int64) ([]buffsvc.ItemPower, error)
-
-	// Restorers maps the items state key to the Restorer that writes the
-	// counts of a "before" snapshot back when an action-log entry is voided.
-	// The composition root registers it on the action log.
-	Restorers() map[string]actionlog.Restorer
 }
 
 // DAL is the driven port. Items belong to a character: every method reads

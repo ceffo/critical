@@ -254,7 +254,7 @@ func TestRestorer_WritesTheSnapshotBack(t *testing.T) {
 	ctx := context.Background()
 	entry := xpsvc.Entry{ID: 3, Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1000, Bonus: true}
 	present := snaptest.EnvID("3", `{"date":"2026-10-10","session":"S41","reason":"ogre","base":1000,"bonus":true}`)
-	restorer := func(f fixture) actionlog.Restorer { return f.svc.Restorers()[xpsvc.StateKeyXP] }
+	restorer := func(f fixture) actionlog.Restorer { return f.svc.Module().Restorer(xpsvc.StateKeyXP) }
 
 	t.Run("absent deletes", func(t *testing.T) {
 		f := newFixture(t)

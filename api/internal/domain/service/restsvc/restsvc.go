@@ -67,6 +67,10 @@ func New(spells Spells, items Items, log Log, tx domain.TxRunner) (SVC, error) {
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
 
+// Module declares no codec: the slots and the items a rest refills are
+// encoded by prepsvc's and itemsvc's helpers and restored by their codecs.
+func (s *service) Module() domain.Module { return domain.Module{Name: "restsvc"} }
+
 // restRecord is the long rest's log payload. Add fields, never rename.
 type restRecord struct {
 	SlotsReset    int      `json:"slotsReset"`

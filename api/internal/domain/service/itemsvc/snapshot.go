@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 )
@@ -227,23 +228,23 @@ func wholeItem(i *Item) *itemState {
 	return &itemState{Count: i.Count, Item: toSnapItem(*i), Replace: true}
 }
 
-// Restorers writes an item or a weapon of before the model back (registered
-// for the StateKeyItems and StateKeyWeapons families, so they serve every
-// "items:<id>" and "weapons:<id>" key). An absent state deletes the thing.
-// An item that is gone (a charges item its use removed) is inserted back
-// whole when the state carries it. It runs inside the void's transaction (ctx
-// carries it). The restored item is the entry's character's.
-func (s *service) Restorers() map[string]actionlog.Restorer {
+// Module declares the codecs that write an item or a weapon of before the
+// model back (the StateKeyItems and StateKeyWeapons families, so they serve
+// every "items:<id>" and "weapons:<id>" key). An absent state deletes the
+// thing. An item that is gone (a charges item its use removed) is inserted
+// back whole when the state carries it. They run inside the void's
+// transaction (ctx carries it). The restored item is the entry's character's.
+func (s *service) Module() domain.Module {
 	remove := func(ctx context.Context, characterID int64, id string) error {
 		if id == "" {
 			return errors.New("decode items snapshot: missing id")
 		}
 		return s.dal.Delete(ctx, characterID, id)
 	}
-	return map[string]actionlog.Restorer{
-		StateKeyWeapons: weaponSnaps.Restorer(s.restoreLegacyWeapon, remove),
-		StateKeyItems:   itemSnaps.Restorer(s.restoreItem, remove),
-	}
+	return domain.Module{Name: "itemsvc", Codecs: []actionlog.Codec{
+		weaponSnaps.Restorer(s.restoreLegacyWeapon, remove),
+		itemSnaps.Restorer(s.restoreItem, remove),
+	}}
 }
 
 func (s *service) restoreItem(ctx context.Context, characterID int64, id string, c itemState) error {
@@ -302,7 +303,7 @@ type weaponState struct {
 // restoreLegacyWeapon writes a "weapons:<id>" snapshot back: the piece of
 // that id takes the weapon's stats and keeps its place, category fields and
 // state, or, when it is gone, the weapon comes back converted (ADR 0033 step
-// 26.4), last in the list. An absent weapon deletes the piece (Restorers).
+// 26.4), last in the list. An absent weapon deletes the piece (Module).
 func (s *service) restoreLegacyWeapon(ctx context.Context, characterID int64, id string, c weaponState) error {
 	if id == "" {
 		return errors.New("decode weapons snapshot: missing id")

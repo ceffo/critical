@@ -9,7 +9,7 @@
 // Each cast or receive is one action-log entry with before/after snapshots of
 // the slot list (prepsvc.StateKey) and the buff list (buffsvc.StateKeyBuffs),
 // written in one transaction; voiding it gives the slot back and removes the
-// buff through the Restorers prepsvc and buffsvc register.
+// buff through the codecs of prepsvc's and buffsvc's modules.
 package castsvc
 
 import (
@@ -132,3 +132,8 @@ func New(d Deps) (SVC, error) {
 
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
+
+// Module declares no codec: the slots, buffs and items a cast changes are
+// encoded by prepsvc's, buffsvc's and itemsvc's helpers and restored by
+// their codecs.
+func (s *service) Module() domain.Module { return domain.Module{Name: "castsvc"} }

@@ -149,6 +149,14 @@ W4 and W7); not implemented. Each point is built by the item named and gets its 
    each service's restorer tests, on the envelope; `composition`
    `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (unchanged cases and expectations,
    its stored states written as envelopes).
+   _As built (CRI-63)_: each service declares its codecs in a `Module()` (part of `domain.Service`);
+   the root keeps one list of its services, registers every module on the log at the end of `Build`
+   and closes them in reverse. There is no package-level registry. A state-key family or a kind two
+   modules claim refuses the start, naming both. Tests: `domain/service/actionlogsvc`
+   `TestRegister_RefusesWhatTwoModulesClaim`, `TestRegister_RefusesACodecThatCannotRestore`,
+   `TestRegister_RefusesAKeyThatIsNotAFamily`, `TestRegister_ARefusedModuleBindsNothing`;
+   `composition` `TestBuild_TwoModulesClaimingOneFamilyRefuseTheStart`,
+   `TestModules_EveryDeclaredFamilyHasAnUndoCase`, `TestBuild_EveryServiceIsOnTheModuleList`.
 9. **Re-encoding is not editing.** A migration-time data step ([ADR 0025](0025-postgresql-storage.md)
    step 2.1.1) may rewrite stored snapshots into the codec's envelope (user, 2026-10-19: "Data step
    rewrites old snapshots"). It changes an encoding, never a before, an after, a delta, a payload or a

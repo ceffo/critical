@@ -2045,6 +2045,12 @@
       "V": "4d6 drop the lowest, arrange",
       "VI": "8 each + 7d6 to share"
     },
+    "placeErrors": {
+      "above_max": "{{ability}} would go above {{max}}: place this die elsewhere.",
+      "too_many": "Too many values placed for this method.",
+      "out_of_range": "This value is not from this roll: roll again.",
+      "unknown": "Unknown choice for the server: reload the page."
+    },
     "rollErrors": {
       "unknown": "The server does not know this choice: reload the page.",
       "out_of_range": "Constitution or XP out of range: fix them on their step.",

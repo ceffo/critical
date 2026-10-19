@@ -190,13 +190,15 @@ flowchart TD
   the intro (`CreationRoute.tsx`) to a user whose `currentCharacterId` is null (a new player, or their
   current one retired, who also finds their other characters there), on every path but `/admin`;
   Commencer opens the flow and Quitter comes back. `/create` opens the flow straight away for a player
-  with a character; Quitter returns to `/`. The flow (`CreationFlow.tsx`) is the header band, the step
+  with a character; the cog menu's Create and Quitter move between `/create` and `/` without a reload
+  (`lib/navigation.ts` `navigate`, `components/shell/Playing.tsx`). The flow (`CreationFlow.tsx`) is the header band, the step
   list, the step card (scrolls inside; Retour / Suivant with the blocking reason) and "Votre personnage",
   capped at 1680 px. Steps (`steps.tsx`, order in `lib/creationFlow.ts` `STEPS`): class (cards with the
   options' `hitDie`, alignments and races; the level chips read the options' `levelXp`, a picked level is
   sent as its XP), race (all six, the refused ones dimmed; Table 8 from `raceAdjustments`), scores (Tirer
-  with a method from `scoreMethods` and `POST /api/characters/rolls/scores`, the player's arrangement in
-  `lib/creationFlow.ts` `place`; or Saisir), HP and talents (`POST /api/characters/rolls/hp`, the class
+  with a method from `scoreMethods` and `POST /api/characters/rolls/scores`; the player's choice of which total goes where
+  in `lib/creationFlow.ts` `place`, its scores from `POST /api/characters/rolls/scores/arrangement`
+  (`components/creation/arrange.ts`, again when the race changes after the roll); or Saisir), HP and talents (`POST /api/characters/rolls/hp`, the class
   extras), and, until the identity screen, the name and details with Créer. The values live in the flow,
   so back and forth keep them; Quitter with values entered asks first (and `beforeunload`). Suivant is
   blocked only by a missing or unreadable value; ranges and rules are the server's refusals, which open

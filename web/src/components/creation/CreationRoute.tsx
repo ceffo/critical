@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/brand";
 import { STEPS } from "@/lib/creationFlow";
 import { LANGUAGES } from "@/lib/settings";
+import { navigate } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/stores/session";
 import { useSettingsStore } from "@/stores/settings";
@@ -26,9 +27,7 @@ export function CreationRoute({ hasCurrent }: { hasCurrent: boolean }) {
   if (!started) return <Intro onStart={() => setStarted(true)} />;
   return (
     <CreationFlow
-      onLeave={() =>
-        hasCurrent ? globalThis.location.assign("/") : setStarted(false)
-      }
+      onLeave={() => (hasCurrent ? navigate("/") : setStarted(false))}
     />
   );
 }

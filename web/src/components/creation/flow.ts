@@ -5,6 +5,7 @@ import type {
   AbilityCode,
   CreationOptions,
   HpRoll,
+  ScoresArrangement,
   ScoresRoll,
 } from "@/types/character";
 
@@ -25,6 +26,8 @@ export interface FlowDraft {
   placement: Placement;
   /** The total picked in the roll, waiting for an ability to be placed on. */
   picked: number | null;
+  /** The server's scores for the placement (ADR 0032 step 6), null before any or on an older server. */
+  arranged: ScoresArrangement | null;
   scores: Record<AbilityCode, string>;
   hpRoll: HpRoll | null;
   hpMax: string;
@@ -46,6 +49,7 @@ export const EMPTY_DRAFT: FlowDraft = {
   roll: null,
   placement: emptyPlacement(),
   picked: null,
+  arranged: null,
   scores: { str: "", dex: "", con: "", int: "", wis: "", cha: "" },
   hpRoll: null,
   hpMax: "",

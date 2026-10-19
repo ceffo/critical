@@ -2045,6 +2045,12 @@
       "V": "4d6 sans le plus bas, répartir",
       "VI": "8 partout + 7d6 à répartir"
     },
+    "placeErrors": {
+      "above_max": "{{ability}} dépasserait {{max}} : placez ce dé ailleurs.",
+      "too_many": "Trop de valeurs placées pour cette méthode.",
+      "out_of_range": "Cette valeur ne vient pas de ce tirage : tirez à nouveau.",
+      "unknown": "Choix inconnu du serveur : rechargez la page."
+    },
     "rollErrors": {
       "unknown": "Choix inconnu du serveur : rechargez la page.",
       "out_of_range": "La Constitution ou les XP sont hors limites : corrigez-les à leur étape.",

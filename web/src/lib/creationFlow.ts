@@ -21,7 +21,12 @@ export type StepId = (typeof STEPS)[number];
 export function stepOfField(field: string): StepId {
   if (field === "class" || field === "xp") return "class";
   if (field === "raceCode" || field === "race") return "race";
-  if ((ABILITIES as readonly string[]).includes(field)) return "scores";
+  if (
+    (ABILITIES as readonly string[]).includes(field) ||
+    field === "placed" ||
+    field.startsWith("placed.")
+  )
+    return "scores";
   if (
     field === "hpMax" ||
     field === "strExceptional" ||
@@ -76,12 +81,13 @@ export function emptyPlacement(): Placement {
 
 /**
  * Places total `index` of the roll on `ability` (ADR 0032 step 6: the arrangement is the player's
- * choice, made in the web), by the method's `assign` mode; null when the method does not allow it:
+ * choice, made in the web; the scores it gives are the server's, `arrangeScores`), by the method's
+ * `assign` mode; null when the method does not allow it:
  * - `keep_per_ability` (II): a total goes only to its own ability and replaces the one kept there;
  * - `arrange` (III to V): one total per ability, each total used once (moved if already placed);
- * - `add_to_base` (VI): each die is added whole to one ability (moved if already placed), never
- *   above the method's `max`; the same die again takes it back off.
- * Method I places nothing: its scores are the server's.
+ * - `add_to_base` (VI): each die is added whole to one ability (moved if already placed); the same
+ *   die again takes it back off. The server refuses a sum above the method's max.
+ * Method I places nothing: its totals are on their abilities (`inOrderPlacement`).
  */
 export function place(
   roll: ScoresRoll,
@@ -105,11 +111,6 @@ export function place(
     case "add_to_base": {
       if (placement[ability].includes(index)) return without(placement);
       const next = without(placement);
-      const sum =
-        roll.method.base +
-        next[ability].reduce((s, i) => s + (roll.rolls[i]?.total ?? 0), 0) +
-        total.total;
-      if (roll.method.max > 0 && sum > roll.method.max) return null;
       return { ...next, [ability]: [...next[ability], index] };
     }
     default:
@@ -117,42 +118,34 @@ export function place(
   }
 }
 
+/** A fresh roll's placement: method I's totals on the abilities the server gave them, else none. */
+export function initialPlacement(roll: ScoresRoll): Placement {
+  const out = emptyPlacement();
+  if (roll.method.assign !== "in_order") return out;
+  roll.rolls.forEach((r, i) => {
+    if ((ABILITIES as readonly string[]).includes(r.ability))
+      out[r.ability as AbilityCode].push(i);
+  });
+  return out;
+}
+
 /** True when total `index` already sits on an ability. */
 export function isPlaced(placement: Placement, index: number): boolean {
   return ABILITIES.some((a) => placement[a].includes(index));
 }
 
-/**
- * The roll column of the arrangement table for an ability: the method's base plus the totals placed
- * there (ADR 0032 step 6 gives both); null when nothing is placed and the method has no base.
- */
-export function rolledFor(
+/** What the arrangement request carries: by ability, the rolled values placed there (no sum). */
+export function placedValues(
   roll: ScoresRoll,
   placement: Placement,
-  ability: AbilityCode,
-): number | null {
-  const placed = placement[ability];
-  if (placed.length === 0 && roll.method.base === 0) return null;
-  return (
-    roll.method.base +
-    placed.reduce((s, i) => s + (roll.rolls[i]?.total ?? 0), 0)
-  );
-}
-
-/**
- * The score an arrangement gives an ability: the roll column plus the race's Table 8 adjustment as
- * the server sent it (ADR 0032 step 6: the stored score is the adjusted one); null with nothing
- * placed. Method I's scores are the server's (`roll.scores`).
- */
-export function scoreFor(
-  roll: ScoresRoll,
-  placement: Placement,
-  ability: AbilityCode,
-): number | null {
-  if (roll.scores) return roll.scores[ability] ?? null;
-  const rolled = rolledFor(roll, placement, ability);
-  if (rolled === null) return null;
-  return rolled + (roll.adjustments?.[ability] ?? 0);
+): Record<AbilityCode, number[]> {
+  const out = emptyPlacement();
+  for (const a of ABILITIES)
+    out[a] = placement[a].flatMap((i) => {
+      const r = roll.rolls[i];
+      return r ? [r.total] : [];
+    });
+  return out;
 }
 
 /** The entered values a step needs before Suivant; the server checks the ranges and the rules. */

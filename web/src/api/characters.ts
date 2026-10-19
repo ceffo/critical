@@ -3,6 +3,7 @@ import type {
   CreationOptions,
   HpRoll,
   NewCharacter,
+  ScoresArrangement,
   ScoresRoll,
 } from "@/types/character";
 import { patch, post, request } from "./http";
@@ -72,6 +73,23 @@ export function rollScores(
   raceCode: string,
 ): Promise<ScoresRoll> {
   return post<ScoresRoll>("/api/characters/rolls/scores", { method, raceCode });
+}
+
+/**
+ * The scores a placement gives (ADR 0032 step 6): the server adds the method's base, the totals placed
+ * on each ability and the race's Table 8 adjustment, and refuses what the method cannot make (method
+ * VI above its max). Writes nothing.
+ */
+export function arrangeScores(
+  method: string,
+  raceCode: string,
+  placed: Record<string, number[]>,
+): Promise<ScoresArrangement> {
+  return post<ScoresArrangement>("/api/characters/rolls/scores/arrangement", {
+    method,
+    raceCode,
+    placed,
+  });
 }
 
 /** Rolls the max HP of a new character (ADR 0032 step 7); writes nothing. */

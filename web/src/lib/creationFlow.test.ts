@@ -7,8 +7,8 @@ import {
   emptyPlacement,
   isPlaced,
   place,
-  rolledFor,
-  scoreFor,
+  placedValues,
+  initialPlacement,
   stepOfField,
   xpOfLevel,
   type StepInputs,
@@ -128,39 +128,41 @@ describe("place (the player's arrangement, ADR 0032 step 6)", () => {
     expect(isPlaced(p, 2)).toBe(false);
   });
 
-  it("method VI adds dice to the base 8, never above the max, and takes one back", () => {
+  it("method VI adds dice to an ability and takes one back (no sum: the server's)", () => {
     const r = roll(method("VI", "add_to_base", 8, 18), [6, 4, 5, 1, 2, 3, 6]);
     let p = place(r, emptyPlacement(), 0, "str")!;
     p = place(r, p, 1, "str")!;
-    expect(p.str).toEqual([0, 1]);
-    expect(rolledFor(r, p, "str")).toBe(18);
-    expect(place(r, p, 3, "str")).toBeNull();
+    p = place(r, p, 3, "str")!;
+    expect(p.str).toEqual([0, 1, 3]);
+    expect(placedValues(r, p).str).toEqual([6, 4, 1]);
     p = place(r, p, 1, "str")!;
-    expect(p.str).toEqual([0]);
-    expect(rolledFor(r, p, "dex")).toBe(8);
+    expect(p.str).toEqual([0, 3]);
+    p = place(r, p, 3, "dex")!;
+    expect(placedValues(r, p)).toEqual({
+      str: [6],
+      dex: [1],
+      con: [],
+      int: [],
+      wis: [],
+      cha: [],
+    });
   });
 
-  it("method I places nothing", () => {
-    const r = roll(method("I", "in_order"), [10, 11, 12, 13, 14, 15]);
+  it("method I places nothing; its totals start on their abilities", () => {
+    const r = roll(
+      method("I", "in_order"),
+      [10, 11, 12, 13, 14, 15],
+      ["str", "dex", "con", "int", "wis", "cha"],
+    );
     expect(place(r, emptyPlacement(), 0, "str")).toBeNull();
+    const p = initialPlacement(r);
+    expect(p.wis).toEqual([4]);
+    expect(placedValues(r, p).cha).toEqual([15]);
   });
-});
 
-describe("scoreFor", () => {
-  it("adds the server's Table 8 adjustment to the placed total", () => {
-    const r = roll(method("III", "arrange"), [15, 9], [], { dex: 1, con: -1 });
-    let p = place(r, emptyPlacement(), 0, "dex")!;
-    p = place(r, p, 1, "con")!;
-    expect(scoreFor(r, p, "dex")).toBe(16);
-    expect(scoreFor(r, p, "con")).toBe(8);
-    expect(scoreFor(r, p, "str")).toBeNull();
-  });
-  it("takes method I's finished scores from the server", () => {
-    const r: ScoresRoll = {
-      ...roll(method("I", "in_order"), [10]),
-      scores: { str: 11, dex: 12, con: 13, int: 14, wis: 15, cha: 16 },
-    };
-    expect(scoreFor(r, emptyPlacement(), "wis")).toBe(15);
+  it("the other methods start with nothing placed", () => {
+    const r = roll(method("III", "arrange"), [15, 9]);
+    expect(initialPlacement(r)).toEqual(emptyPlacement());
   });
 });
 

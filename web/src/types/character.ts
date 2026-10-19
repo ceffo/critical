@@ -361,6 +361,19 @@ export interface ScoresRoll {
   scores: Record<string, number> | null;
 }
 
+/**
+ * `POST /api/characters/rolls/scores/arrangement`: the scores a placement of a roll's totals gives
+ * (ADR 0032 step 6), by ability code. `rolled` is the method's base plus the totals placed, `scores`
+ * that plus the race's Table 8 adjustment (the score stored); an ability with nothing placed and no
+ * base is absent from both. `adjustments` is null without a race.
+ */
+export interface ScoresArrangement {
+  method: string;
+  adjustments: Record<string, number> | null;
+  rolled: Record<string, number>;
+  scores: Record<string, number>;
+}
+
 /** One level of a max HP roll (ADR 0032 step 7): a rolled die, or a fixed gain above the name level. */
 export interface HpRollLevel {
   level: number;

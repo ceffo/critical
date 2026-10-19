@@ -36,6 +36,7 @@ import {
   type Mode,
 } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { navigate } from "@/lib/navigation";
 import { CREATE_PATH } from "@/lib/session";
 import { useSessionStore } from "@/stores/session";
 import { useSettingsStore } from "@/stores/settings";
@@ -232,10 +233,9 @@ export function SettingsPopover() {
                   aria-label={a.hint}
                   title={a.hint}
                   onClick={() =>
-                    // Creation is a full-screen route (ADR 0034 step 2), no dialog any more.
-                    a.id === "new"
-                      ? globalThis.location.assign(CREATE_PATH)
-                      : openDialog(a.id)
+                    // Creation is a full-screen route (ADR 0034 step 2), no dialog any more; client
+                    // navigation, so nothing reloads.
+                    a.id === "new" ? navigate(CREATE_PATH) : openDialog(a.id)
                   }
                 >
                   {a.icon}

@@ -15,9 +15,10 @@ import {
 // from the cog menu (ADR 0029 step 7.2): the one flow only a browser proves. The cog menu's Create
 // opens the route; the steps keep their values back and forth, Quitter asks first, the server's rolls
 // fill the scores and the HP and stay editable, and the page loads again on the character the server
-// made current. French first (ADR 0027 step 2). The arrangement and the step rules are unit tests
-// (lib/creationFlow.test.ts); the validation, the rolls and the options are Go tests (composition
-// create_test.go, creationrolls_test.go); the no-cut audit is in layout.spec.ts.
+// made current. French first (ADR 0027 step 2). The placement choice, the step rules and a race
+// changed after the roll are unit tests (lib/creationFlow.test.ts, components/creation/arrange.test.ts);
+// the validation, the rolls, the arrangement's scores and the options are Go tests (composition
+// create_test.go, creationrolls_test.go, creationrollsvc); the no-cut audit is in layout.spec.ts.
 test("create a bard through the creation route, switch to the first and back, rename and retire it", async ({
   page,
 }) => {
@@ -26,12 +27,29 @@ test("create a bard through the creation route, switch to the first and back, re
   const character = page.getByTestId("character");
   await expect(character).toContainText("Test Bard");
 
+  // ADR 0034 step 2: creation is a full-screen route, opened and left without a page load (a marker
+  // set on the window survives); Quitter with nothing entered goes straight back to the character.
+  await page.evaluate(() => {
+    (window as unknown as { stayed: boolean }).stayed = true;
+  });
   let settings = await openSettings(page);
   await settings
     .getByRole("button", { name: "Créer un nouveau personnage" })
     .click();
-  // ADR 0034 step 2: creation is a full-screen route.
   await expect(page).toHaveURL(/\/create$/);
+  await page.getByRole("button", { name: "Quitter la création" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(character).toContainText("Test Bard");
+  settings = await openSettings(page);
+  await settings
+    .getByRole("button", { name: "Créer un nouveau personnage" })
+    .click();
+  await expect(page).toHaveURL(/\/create$/);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { stayed?: boolean }).stayed,
+    ),
+  ).toBe(true);
   const step = page.getByTestId("creation-step");
   const next = step.getByRole("button", { name: "Passer à l'étape suivante" });
   const back = step.getByRole("button", {
@@ -54,6 +72,18 @@ test("create a bard through the creation route, switch to the first and back, re
     .getByRole("button", { name: "Rester et continuer la création" })
     .click();
   await expect(confirm).toBeHidden();
+  // A reload with values entered asks the browser's question; staying keeps them.
+  const asked = new Promise<string>((resolve) =>
+    page.once("dialog", (d) => {
+      resolve(d.type());
+      void d.dismiss();
+    }),
+  );
+  await page.evaluate(() => location.reload());
+  expect(await asked).toBe("beforeunload");
+  await expect(
+    step.getByRole("radio", { name: "Barde", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
   await next.click();
 
   // Step 2: the races the bard refuses are shown, marked, not pickable.

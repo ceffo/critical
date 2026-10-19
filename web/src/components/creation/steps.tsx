@@ -22,13 +22,11 @@ import {
   alignmentLimit,
   allRaces,
   classOf,
+  initialPlacement,
   isPlaced,
   place,
-  rolledFor,
-  scoreFor,
   signed,
   emptyPlacement,
-  type Placement,
 } from "@/lib/creationFlow";
 import { raceLanguages } from "@/lib/languages";
 import { formatNumber } from "@/lib/format";
@@ -36,11 +34,8 @@ import { skillName } from "@/lib/logSummary";
 import { useLanguageNames } from "@/lib/useLanguageNames";
 import { parseWhole } from "@/lib/wholeNumber";
 import { cn } from "@/lib/utils";
-import {
-  ABILITIES,
-  type AbilityCode,
-  type ScoresRoll,
-} from "@/types/character";
+import { ABILITIES, type AbilityCode } from "@/types/character";
+import { arrangeFor } from "./arrange";
 import { Choice, Die, Group, Note, Row, Seg } from "./kit";
 import type { FlowDraft, StepProps } from "./flow";
 
@@ -250,6 +245,22 @@ export function RaceStep({ options, draft, update, errorFor }: StepProps) {
   const className = t(`details.classes.${draft.cls}`, {
     defaultValue: draft.cls,
   }).toLocaleLowerCase();
+  // The roll stays; the server adjusts its placement for the new race (PHB Table 8), so the scores
+  // and the Race column follow. If it cannot, the roll is dropped rather than left on the old race.
+  const pickRace = async (r: string) => {
+    update({ race: r });
+    if (draft.race === r || !draft.roll) return;
+    try {
+      update(await arrangeFor(draft.roll, draft.placement, r, draft.scores));
+    } catch {
+      update({
+        roll: null,
+        placement: emptyPlacement(),
+        picked: null,
+        arranged: null,
+      });
+    }
+  };
   return (
     <>
       <div
@@ -270,15 +281,7 @@ export function RaceStep({ options, draft, update, errorFor }: StepProps) {
               key={r}
               on={draft.race === r}
               off={!ok}
-              onPick={() =>
-                update({
-                  race: r,
-                  // The roll's adjustments are the race's (PHB Table 8): another race rolls again.
-                  ...(draft.race !== r && draft.roll
-                    ? { roll: null, placement: emptyPlacement(), picked: null }
-                    : {}),
-                })
-              }
+              onPick={() => void pickRace(r)}
               label={
                 ok ? name : t("creation.race.refusedHint", { name, className })
               }
@@ -319,25 +322,12 @@ export function RaceStep({ options, draft, update, errorFor }: StepProps) {
 
 // --- Step 3: ability scores ---------------------------------------------------------------
 
-/** The scores an arrangement gives, written into the typed scores (they stay editable). */
-function scoresOf(
-  roll: ScoresRoll,
-  placement: Placement,
-  current: FlowDraft["scores"],
-): FlowDraft["scores"] {
-  const out = { ...current };
-  for (const a of ABILITIES) {
-    const s = scoreFor(roll, placement, a);
-    if (s !== null) out[a] = String(s);
-  }
-  return out;
-}
-
 export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
   const { t } = useTranslation();
   const methods = options.scoreMethods ?? [];
   const [busy, setBusy] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
+  const [placeError, setPlaceError] = useState<string | null>(null);
   const mode = methods.length > 0 ? draft.scoreMode : "type";
   const roll = draft.roll;
   // Inside a sentence: "pour un barde", "Pas barde".
@@ -349,14 +339,13 @@ export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
     if (!draft.method) return;
     setBusy(true);
     setRollError(null);
+    setPlaceError(null);
     try {
       const r = await rollScores(draft.method, draft.race);
-      const placement = emptyPlacement();
       update({
         roll: r,
-        placement,
         picked: null,
-        scores: scoresOf(r, placement, draft.scores),
+        ...(await arrangeFor(r, initialPlacement(r), draft.race, draft.scores)),
       });
     } catch (e) {
       setRollError(
@@ -373,15 +362,34 @@ export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
     }
   };
 
-  const placeOn = (ability: AbilityCode) => {
+  // The placement is the player's choice; its scores, and a refusal (method VI above its max), are
+  // the server's.
+  const placeOn = async (ability: AbilityCode) => {
     if (!roll || draft.picked === null) return;
     const next = place(roll, draft.placement, draft.picked, ability);
     if (!next) return;
-    update({
-      placement: next,
-      picked: null,
-      scores: scoresOf(roll, next, draft.scores),
-    });
+    setBusy(true);
+    setPlaceError(null);
+    try {
+      update({
+        picked: null,
+        ...(await arrangeFor(roll, next, draft.race, draft.scores)),
+      });
+    } catch (e) {
+      setPlaceError(
+        e instanceof ApiError && e.field
+          ? t(`creation.placeErrors.${e.message}`, {
+              ability: t(`abilityCheck.names.${ability}`),
+              max: roll.method.max,
+              defaultValue: e.message,
+            })
+          : e instanceof Error
+            ? e.message
+            : String(e),
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const scoreInput = (a: AbilityCode, compact?: boolean) => {
@@ -476,6 +484,7 @@ export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
                             roll: null,
                             placement: emptyPlacement(),
                             picked: null,
+                            arranged: null,
                           }
                         : {}),
                     })
@@ -629,15 +638,10 @@ export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
                 </thead>
                 <tbody>
                   {ABILITIES.map((a) => {
-                    const rolled = roll
-                      ? rolledFor(roll, draft.placement, a)
-                      : null;
-                    const fromServer =
-                      roll?.method.assign === "in_order"
-                        ? roll.rolls.find((r) => r.ability === a)?.total
-                        : undefined;
-                    const shown = fromServer ?? rolled;
-                    const adj = roll?.adjustments?.[a];
+                    const shown = roll ? draft.arranged?.rolled[a] : undefined;
+                    const adj = draft.arranged
+                      ? draft.arranged.adjustments?.[a]
+                      : roll?.adjustments?.[a];
                     return (
                       <tr key={a} className="border-t border-border">
                         <td className="py-1.5 pr-2">
@@ -646,8 +650,8 @@ export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
                         <td className="pr-2">
                           <button
                             type="button"
-                            disabled={!roll || draft.picked === null}
-                            onClick={() => placeOn(a)}
+                            disabled={!roll || draft.picked === null || busy}
+                            onClick={() => void placeOn(a)}
                             aria-label={t("creation.scores.placeHint", {
                               ability: t(`abilityCheck.names.${a}`),
                             })}
@@ -673,6 +677,7 @@ export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
                   })}
                 </tbody>
               </table>
+              {placeError && <Note kind="refusal">{placeError}</Note>}
               <p className="text-label text-ink-muted">
                 {t("creation.scores.editable", { className })}
               </p>

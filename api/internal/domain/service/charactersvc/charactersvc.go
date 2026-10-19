@@ -206,7 +206,7 @@ func (s *service) readWarnings(c *Character) {
 	}
 }
 
-// List names each character with its derived level (ADR 0030 step 3), its
+// List names each character with its realized level (ADR 0030 step 3), its
 // race, alignment and sex, the fields still to choose (ADR 0032 step 8.2) and
 // its HP: the max HP and the current HP, derived from the ledger as the HP
 // panel derives it (ADR 0007 step 6).

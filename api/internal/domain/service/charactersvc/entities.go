@@ -177,7 +177,8 @@ type Summary struct {
 	ID    int64
 	Name  string
 	Class string
-	// Level is the derived level (ADR 0030 step 3), set by the service.
+	// Level is the realized level (ADR 0030 step 3): stored, advanced only by the
+	// manual level-up step, not the target level derived from XP. Set by the service.
 	Level int
 	// Race is the race code, "" when none is set.
 	Race string

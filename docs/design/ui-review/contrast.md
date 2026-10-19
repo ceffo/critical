@@ -10,7 +10,7 @@ Semi-transparent tokens are composited over their backdrop in gamma sRGB.
 
 ## Dark mode
 
-| Pair | min | Arcane | Deep (Abysses) | Plain (Sobre) |  |  |  |
+| Pair | min | Arcane | Deep (Abysses) | Plain (Sobre) | Forest (Forêt) | Ember (Braise) | Amber (Ambre) |
 |---|---|---|---|---|---|---|---|
 | ink on ground | 4.5 | 17.83 | 17.82 | 17.80 | 17.84 | 17.77 | 17.80 |
 | ink on surface | 4.5 | 13.93 | 13.81 | 13.83 | 13.69 | 14.02 | 13.90 |
@@ -45,7 +45,7 @@ Semi-transparent tokens are composited over their backdrop in gamma sRGB.
 
 ### dark role values
 
-| Token | Arcane | Deep (Abysses) | Plain (Sobre) |  |  |  |
+| Token | Arcane | Deep (Abysses) | Plain (Sobre) | Forest (Forêt) | Ember (Braise) | Amber (Ambre) |
 |---|---|---|---|---|---|---|
 | ground | `oklch(0.1 0.048 285)` | `oklch(0.1 0.028 250)` | `oklch(0.1 0.021 265)` | `oklch(0.1 0.021 165)` | `oklch(0.1 0.035 15)` | `oklch(0.1 0.02 60)` |
 | surface | `oklch(0.25 0.046 285)` | `oklch(0.25 0.04 245)` | `oklch(0.25 0.019 265)` | `oklch(0.25 0.04 160)` | `oklch(0.25 0.05 12)` | `oklch(0.25 0.035 65)` |
@@ -65,7 +65,7 @@ Semi-transparent tokens are composited over their backdrop in gamma sRGB.
 
 ## Light mode
 
-| Pair | min | Arcane | Parchment (Parchemin) | Plain (Sobre) |  |
+| Pair | min | Arcane | Parchment (Parchemin) | Plain (Sobre) | Forest (Forêt) |
 |---|---|---|---|---|---|
 | ink on ground | 4.5 | 13.49 | 10.98 | 13.52 | 12.49 |
 | ink on surface | 4.5 | 18.61 | 15.19 | 18.54 | 17.49 |
@@ -100,7 +100,7 @@ Semi-transparent tokens are composited over their backdrop in gamma sRGB.
 
 ### light role values
 
-| Token | Arcane | Parchment (Parchemin) | Plain (Sobre) |  |
+| Token | Arcane | Parchment (Parchemin) | Plain (Sobre) | Forest (Forêt) |
 |---|---|---|---|---|
 | ground | `oklch(0.89 0.044 285)` | `oklch(0.865 0.034 80)` | `oklch(0.89 0.017 265)` | `oklch(0.875 0.04 155)` |
 | surface | `oklch(0.995 0.002 285)` | `oklch(0.97 0.02 88)` | `oklch(0.995 0.002 265)` | `oklch(0.99 0.01 140)` |

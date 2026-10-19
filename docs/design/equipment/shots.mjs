@@ -1,6 +1,6 @@
 // Screenshots of the equipment design round (docs/design/equipment/README.md): every mock-up
-// screen of web/design/equipment/ in French and English at the two layout viewports the item asks
-// (1280x800 and 2560x1440, ADR 0022 step 1), dark Arcane, into shots/<screen>--<lang>-<WxH>.png.
+// screen of web/design/equipment/ in French and English at the three layout viewports
+// (1280x800, 1920x1080 and 2560x1440, ADR 0022 step 1), dark Arcane, into shots/<screen>--<lang>-<WxH>.png.
 // Fails when any element cuts its text (wider or taller than the box that hides it) or the page
 // scrolls: the no-cut rule, checked rather than eyeballed. `--self-test` proves the audit catches
 // both. Run `just equipment-shots` (needs web/node_modules and Playwright's Chromium).
@@ -37,6 +37,7 @@ const LANGS = process.argv.includes("--fr") ? ["fr"] : ["fr", "en"];
 const only = process.argv.find((a) => a.startsWith("--only="))?.slice(7).split(",");
 const VIEWPORTS = [
   { width: 1280, height: 800 },
+  { width: 1920, height: 1080 },
   { width: 2560, height: 1440 },
 ];
 
@@ -58,7 +59,7 @@ const audit = () => {
   return { clipped, pageScroll: over(document.documentElement) || over(document.body) };
 };
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ ignoreDefaultArgs: ["--hide-scrollbars"] });
 
 if (process.argv.includes("--self-test")) {
   const page = await browser.newPage({ viewport: { width: 800, height: 400 } });

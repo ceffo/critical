@@ -1226,7 +1226,7 @@ function ItemResult({ r }: { r: UseResult }) {
 }
 
 /** A cast from its journal payload: who cast it, the buff, the to-hit roll, the damage, the item. */
-function CastEntry({
+export function CastEntry({
   cast: c,
   interactive,
 }: {

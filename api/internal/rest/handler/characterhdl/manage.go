@@ -27,6 +27,10 @@ type changer interface {
 	Change(ctx context.Context, owner uuid.UUID, id int64, c charactersvc.Change) (int64, error)
 }
 
+type previewer interface {
+	Preview(ctx context.Context, n charactersvc.NewCharacter) (*charactersvc.Character, error)
+}
+
 type optionsReader interface {
 	CreationOptions(ctx context.Context) (charactersvc.CreationOptions, error)
 }
@@ -85,6 +89,48 @@ type OptionsDTO struct {
 	// cards). Additions of ADR 0034: a previous web ignores them.
 	ScoreMethods    []ScoreMethodDTO     `json:"scoreMethods"`
 	RaceAdjustments []RaceAdjustmentsDTO `json:"raceAdjustments"`
+	// RaceIdentity is ADR 0032 step 5's dice and ranges by race: the
+	// identity step's roll buttons and the race cards show them. Additive.
+	RaceIdentity []RaceIdentityDTO `json:"raceIdentity"`
+}
+
+// FigureDTO is one identity figure: `count` dice of `sides` rolled, and the
+// range (`min`, `max`, stored units: cm, kg or years) outside which a value
+// warns. `sex` names a height or weight row.
+type FigureDTO struct {
+	Sex   string  `json:"sex,omitempty"`
+	Count int     `json:"count"`
+	Sides int     `json:"sides"`
+	Min   float64 `json:"min"`
+	Max   float64 `json:"max"`
+}
+
+// RaceIdentityDTO is a race's height and weight per sex, its age, and the
+// range of starting ages a roll gives (`startAge`, inside `age`).
+type RaceIdentityDTO struct {
+	Race     string      `json:"race"`
+	Height   []FigureDTO `json:"height"`
+	Weight   []FigureDTO `json:"weight"`
+	Age      FigureDTO   `json:"age"`
+	StartAge RangeFDTO   `json:"startAge"`
+}
+
+// RangeFDTO is an inclusive range of decimal numbers.
+type RangeFDTO struct {
+	Min float64 `json:"min"`
+	Max float64 `json:"max"`
+}
+
+func figureDTOs(fs []charactersvc.FigureOption) []FigureDTO {
+	out := make([]FigureDTO, 0, len(fs))
+	for _, f := range fs {
+		out = append(out, figureDTO(f))
+	}
+	return out
+}
+
+func figureDTO(f charactersvc.FigureOption) FigureDTO {
+	return FigureDTO{Sex: f.Sex, Count: f.Count, Sides: f.Sides, Min: f.Range.Min, Max: f.Range.Max}
 }
 
 // LevelXPDTO is a level and the XP that reaches it.
@@ -145,6 +191,13 @@ func Options(svc optionsReader) render.HandlerFunc {
 			RaceLanguages:   make([]RaceLanguagesDTO, 0, len(o.RaceLanguages)),
 			ScoreMethods:    make([]ScoreMethodDTO, 0, len(o.ScoreMethods)),
 			RaceAdjustments: make([]RaceAdjustmentsDTO, 0, len(o.RaceAdjustments)),
+			RaceIdentity:    make([]RaceIdentityDTO, 0, len(o.RaceIdentity)),
+		}
+		for _, ri := range o.RaceIdentity {
+			out.RaceIdentity = append(out.RaceIdentity, RaceIdentityDTO{
+				Race: ri.Race, Height: figureDTOs(ri.Height), Weight: figureDTOs(ri.Weight), Age: figureDTO(ri.Age),
+				StartAge: RangeFDTO{Min: ri.StartAge.Min, Max: ri.StartAge.Max},
+			})
 		}
 		for _, m := range o.ScoreMethods {
 			out.ScoreMethods = append(out.ScoreMethods, ScoreMethodDTO{
@@ -275,6 +328,66 @@ func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
 	return n, nil
 }
 
+// decodeCreate reads a POST /api/characters body (the creation's and the
+// preview's).
+func decodeCreate(r *http.Request) (charactersvc.NewCharacter, error) {
+	var b CreateBody
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&b); err != nil {
+		// A height or weight that is no number names its field under details.
+		if fe, ok := errors.AsType[*domain.FieldError](err); ok {
+			return charactersvc.NewCharacter{}, &domain.FieldError{Field: charactersvc.DetailsField + fe.Field, Message: fe.Message}
+		}
+		return charactersvc.NewCharacter{}, render.BadRequestError("invalid JSON body")
+	}
+	return b.toNew()
+}
+
+// PreviewDTO is POST /api/characters/preview: the derived block and the
+// warnings the character would be read with once created (as GET
+// /api/character), its languages (the native one added), and `missing`, the
+// fields still blank that the creation requires (`name`, `alignment`, `sex`).
+type PreviewDTO struct {
+	Derived   DerivedDTO   `json:"derived"`
+	Warnings  []WarningDTO `json:"warnings"`
+	Languages []string     `json:"languages"`
+	Missing   []string     `json:"missing"`
+}
+
+// Preview is POST /api/characters/preview: the creation's body, checked and
+// derived as POST /api/characters would, storing nothing (ADR 0034, the
+// identity step and the review). A blank name, alignment or sex is listed in
+// `missing`; any other invalid input is the creation's 400, field for field.
+func Preview(svc previewer) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		if _, err := user(r); err != nil {
+			return err
+		}
+		n, err := decodeCreate(r)
+		if err != nil {
+			return err
+		}
+		c, err := svc.Preview(r.Context(), n)
+		if err != nil {
+			return err
+		}
+		missing := []string{}
+		if c.Name == "" {
+			missing = append(missing, "name")
+		}
+		missing = append(missing, c.Details.Missing()...)
+		langs := c.Details.Languages
+		if langs == nil {
+			langs = []string{}
+		}
+		render.OK(r.Context(), w, PreviewDTO{
+			Derived: derivedDTO(c.Derived), Warnings: warningsDTO(c.Warnings), Languages: langs, Missing: missing,
+		})
+		return nil
+	}
+}
+
 // Create is POST /api/characters: a new character of the user's, which
 // becomes their current one (ADR 0029 step 7.2). It answers 201 with the
 // list, as GET /api/characters. Invalid input is 400 with the field.
@@ -284,17 +397,7 @@ func Create(svc creator) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		var b CreateBody
-		dec := json.NewDecoder(r.Body)
-		dec.DisallowUnknownFields()
-		if err := dec.Decode(&b); err != nil {
-			// A height or weight that is no number names its field under details.
-			if fe, ok := errors.AsType[*domain.FieldError](err); ok {
-				return &domain.FieldError{Field: charactersvc.DetailsField + fe.Field, Message: fe.Message}
-			}
-			return render.BadRequestError("invalid JSON body")
-		}
-		n, err := b.toNew()
+		n, err := decodeCreate(r)
 		if err != nil {
 			return err
 		}

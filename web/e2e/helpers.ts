@@ -399,8 +399,18 @@ export async function createInFlow(page: Page, c: FlowCharacter) {
   if (c.extras) await c.extras(step);
   await next();
   await step.getByLabel("Nom", { exact: true }).fill(c.name);
-  await step.getByLabel("Alignement").selectOption({ index: 1 });
-  await step.getByLabel("Sexe").selectOption({ index: 1 });
+  // The first alignment the class admits (a refused one is labelled "… : interdit au …").
+  await step
+    .getByTestId("alignment-grid")
+    .getByRole("radio", { name: /^[^:]+$/ })
+    .first()
+    .click();
+  await step
+    .getByRole("radiogroup", { name: "Sexe" })
+    .getByRole("radio")
+    .first()
+    .click();
+  await next();
   await step
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
     .click();

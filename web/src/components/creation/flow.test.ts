@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { HpRoll } from "@/types/character";
-import { EMPTY_DRAFT, mergeDraft, settle, type FlowDraft } from "./flow";
+import type { CreationOptions, HpRoll } from "@/types/character";
+import {
+  EMPTY_DRAFT,
+  buildBody,
+  mergeDraft,
+  settle,
+  type FlowDraft,
+} from "./flow";
 
 // A level 1 fighter with CON 15 rolled 9 hit points.
 const roll: HpRoll = {
@@ -74,5 +80,77 @@ describe("mergeDraft (a late reply never rebuilds the details from an older copy
       hair: "red",
       weight: "75",
     });
+  });
+});
+
+describe("buildBody", () => {
+  const options = {
+    classes: [
+      {
+        class: "bard",
+        races: ["half_elf"],
+        exceptionalStrengthRaces: [],
+        skills: ["climb_walls"],
+        skillArmors: ["leather"],
+        alignments: ["neutral_good"],
+      },
+    ],
+  } as unknown as CreationOptions;
+  const draft: FlowDraft = {
+    ...EMPTY_DRAFT,
+    cls: "bard",
+    race: "half_elf",
+    scores: { str: "10", dex: "15", con: "12", int: "14", wis: "9", cha: "16" },
+    hpMax: "6",
+    name: "Lyra",
+    skillPoints: { climb_walls: "15" },
+    details: {
+      ...EMPTY_DRAFT.details,
+      sex: "female",
+      // A rolled 176.5 cm shows as 5'9" in English; 5'9" read back is 175.3 cm.
+      height: `5'9"`,
+      rolledHeight: 176.5,
+      weight: "70,5",
+    },
+  };
+  it("sends a rolled height as rolled, not as its rounded display", () => {
+    const out = buildBody(options, draft, "2500", "en");
+    expect("body" in out && out.body.details?.height_cm).toBe(176.5);
+  });
+  it("reads the figures in the language's units", () => {
+    const fr = {
+      ...draft,
+      details: { ...draft.details, height: "176,5" },
+    };
+    const out = buildBody(options, fr, "2500", "fr");
+    expect("body" in out && out.body.details?.height_cm).toBe(176.5);
+    expect("body" in out && out.body.details?.weight_kg).toBe(70.5);
+  });
+  it("leaves a blank alignment out and carries the entered values", () => {
+    const out = buildBody(options, draft, "2500", "en");
+    if (!("body" in out)) throw new Error("no body");
+    expect(out.body.details).not.toHaveProperty("alignment");
+    expect(out.body).toMatchObject({
+      name: "Lyra",
+      class: "bard",
+      raceCode: "half_elf",
+      xp: 2500,
+      hpMax: 6,
+      skillPoints: { climb_walls: 15 },
+      skillArmor: "leather",
+    });
+  });
+  it("names the field of an unreadable value", () => {
+    expect(
+      buildBody(options, { ...draft, hpMax: "six" }, "2500", "fr"),
+    ).toEqual({ error: { field: "hpMax", code: "out_of_range" } });
+    expect(
+      buildBody(
+        options,
+        { ...draft, details: { ...draft.details, weight: "lourd" } },
+        "2500",
+        "en",
+      ),
+    ).toEqual({ error: { field: "details.weight", code: "not_a_number" } });
   });
 });

@@ -1,5 +1,6 @@
 import type {
   CharacterList,
+  CharacterPreview,
   CreationOptions,
   HpRoll,
   IdentityFigure,
@@ -46,6 +47,17 @@ export async function fetchCreationChoices(): Promise<CreationOptions> {
 /** Creates a character, which becomes current. */
 export function createCharacter(body: NewCharacter): Promise<CharacterList> {
   return post<CharacterList>("/api/characters", body);
+}
+
+/**
+ * What a creation body would be once created (ADR 0034: the identity step and the review show the
+ * server's figures and warnings); a blank name, alignment or sex is listed as missing, any other
+ * invalid value is the creation's refusal. Writes nothing.
+ */
+export function previewCharacter(
+  body: NewCharacter,
+): Promise<CharacterPreview> {
+  return post<CharacterPreview>("/api/characters/preview", body);
 }
 
 /** Retires a character (ADR 0029 step 7.3: hidden, never deleted); the server picks the next current one. */

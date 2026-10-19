@@ -6,17 +6,21 @@ import {
   type ScoresRoll,
 } from "@/types/character";
 
-/**
- * The creation route's steps (ADR 0034 step 3), in order. The identity step stands for today's name
- * and details inputs until its own screen lands; the review comes with it.
- */
-export const STEPS = ["class", "race", "scores", "extras", "identity"] as const;
+/** The creation route's steps (ADR 0034 step 3), in order; Créer is on the review. */
+export const STEPS = [
+  "class",
+  "race",
+  "scores",
+  "extras",
+  "identity",
+  "review",
+] as const;
 export type StepId = (typeof STEPS)[number];
 
 /**
  * The step a server refusal's field belongs to (the form's field names: `raceCode`, `skillPoints.x`,
- * `details.x`), so the flow opens that step and shows the refusal there. An unknown field goes to the
- * last step, where Create is.
+ * `details.x`), so the flow opens that step and shows the refusal there. An unknown field stays on
+ * the review, where Créer is.
  */
 export function stepOfField(field: string): StepId {
   if (field === "class" || field === "xp") return "class";
@@ -35,7 +39,8 @@ export function stepOfField(field: string): StepId {
     field.startsWith("skillPoints.")
   )
     return "extras";
-  return "identity";
+  if (field === "name" || field.startsWith("details.")) return "identity";
+  return "review";
 }
 
 /** The class's options entry, or undefined. */
@@ -155,6 +160,11 @@ export interface StepInputs {
   xp: string;
   scores: Record<AbilityCode, string>;
   hpMax: string;
+  name: string;
+  alignment: string;
+  sex: string;
+  /** The alignments the class admits, from the server's options. */
+  alignments: string[];
 }
 
 /** A number typed in a field: a whole number, not blank. */
@@ -179,6 +189,12 @@ export function blockedReason(step: StepId, d: StepInputs): string | null {
       return ABILITIES.every((a) => filled(d.scores[a])) ? null : "scores";
     case "extras":
       return filled(d.hpMax) ? null : "hpMax";
+    case "identity":
+      if (d.name.trim() === "") return "name";
+      if (d.alignment === "") return "alignment";
+      // The class's limit is a refusal (ADR 0034 step 6): the server's list, not a rule of the web.
+      if (!d.alignments.includes(d.alignment)) return "alignmentAllowed";
+      return d.sex === "" ? "sex" : null;
     default:
       return null;
   }

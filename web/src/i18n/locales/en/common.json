@@ -1934,7 +1934,6 @@
     "renameHint": "Save the new name of {{name}}",
     "renameTitle": "Rename the character",
     "details": "Details",
-    "detailsLead": "Alignment and sex are required, the rest is optional; you can change them later on the card, by clicking the name.",
     "newTitle": "New character",
     "retireTitle": "Retire the character",
     "retireLead": "Retire {{name}}? It disappears from your lists, but nothing is deleted. You then play your first character left.",
@@ -2196,7 +2195,12 @@
       "xp": "Type the starting XP.",
       "race": "Choose a race.",
       "scores": "Type the six ability scores.",
-      "hpMax": "Type the max HP."
+      "hpMax": "Type the max HP.",
+      "name": "Enter a name.",
+      "alignment": "Pick an alignment.",
+      "alignmentAllowed": "Pick an allowed alignment to go on.",
+      "sex": "Pick a sex.",
+      "unreadable": "Fix the unreadable value to continue."
     },
     "class": {
       "name": "Class",
@@ -2307,7 +2311,43 @@
     "identity": {
       "name": "Identity",
       "title": "Identity",
-      "lead": "The character's name and details, then Create."
-    }
+      "lead": "Who your character is.",
+      "alignmentRefusedHint": "{{name}}: not allowed for a {{className}}",
+      "alignmentRefused_one": "A {{className}} cannot be {{alignment}}. Pick the allowed alignment.",
+      "alignmentRefused_other": "A {{className}} cannot be {{alignment}}. Pick one of the {{count}} allowed alignments.",
+      "sexLead": "Sets the height and weight ranges.",
+      "languagesCount_one": "{{count}} extra · {{limit}} allowed",
+      "languagesCount_other": "{{count}} extra · {{limit}} allowed",
+      "languagesOver_one": "{{count}} language besides the native one; Intelligence {{int}} allows {{limit}}.",
+      "languagesOver_other": "{{count}} languages besides the native one; Intelligence {{int}} allows {{limit}}.",
+      "onlyWarning": "Only a warning: you can still create.",
+      "build": "Build",
+      "native": "native",
+      "languagesLead": "Bright: the race's languages ({{race}}); dimmed: the others, if the DM allows them.",
+      "raceSex": "{{race}}, {{sex}}",
+      "range": "{{who}}: {{min}} – {{max}} · {{count}}d{{sides}}"
+    },
+    "review": {
+      "name": "Review",
+      "title": "Review",
+      "lead": "Check, then create: the character becomes the one you play.",
+      "classRace": "Class and race",
+      "editHint": "Edit: {{step}}",
+      "classLevel": "{{className}} · level {{level}} ({{xp}} XP)",
+      "rolledMethod": "Rolled · method {{method}}",
+      "hpMax": "Max HP",
+      "hpRolled": "{{hp}} (rolled: {{gains}})",
+      "skillWithPoints_one": "{{percent}} % ({{count}} point)",
+      "skillWithPoints_other": "{{percent}} % ({{count}} points)",
+      "warningOf": "{{field}}: {{text}}",
+      "skillsField": "skills",
+      "refusedFoot": "The server refuses a value: fix it on its step.",
+      "warningsFoot_one": "{{count}} warning, nothing blocking.",
+      "warningsFoot_other": "{{count}} warnings, nothing blocking.",
+      "noWarning": "No warning."
+    },
+    "heightWeight": "Height, weight",
+    "warningsOn_one": "{{count}} warning: {{fields}}",
+    "warningsOn_other": "{{count}} warnings: {{fields}}"
   }
 }

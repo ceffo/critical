@@ -46,6 +46,10 @@ type SVC interface {
 	// weapon, item, proficiency, skill or spellbook). A *domain.FieldError
 	// for invalid input (see NewCharacter).
 	Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (int64, error)
+	// Preview is the character Create would store from n, derived and
+	// warned as a read of it, storing nothing; a blank name, alignment or
+	// sex is no refusal (ADR 0034, the creation's identity step and review).
+	Preview(ctx context.Context, n NewCharacter) (*Character, error)
 	// Change renames, retires or re-arms (a thief's or a bard's skill armour) the
 	// owner's character id (step 7.3).
 	// Another user's character, a retired one and an unknown id are all
@@ -171,9 +175,15 @@ func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error
 	if c.Derived, err = Derive(c, ledger, s.rules); err != nil {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
-	// The native language is always among the languages (ADR 0032 step 4.1),
-	// a character stored before it was added included; the warnings follow
-	// what is read (steps 4.2 and 8.4).
+	s.readWarnings(c)
+	return c, nil
+}
+
+// readWarnings sets c's languages and warnings as a read shows them. The
+// native language is always among the languages (ADR 0032 step 4.1), a
+// character stored before it was added included; the warnings follow what is
+// read (steps 4.2, 5.2 and 8.4).
+func (s *service) readWarnings(c *Character) {
 	native := s.languages.Native(c.Race)
 	c.Details = c.Details.Known(s.languages).WithNative(native)
 	c.Warnings = c.Details.Warnings(c.Class)
@@ -185,7 +195,6 @@ func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error
 			c.Warnings = append(c.Warnings, w)
 		}
 	}
-	return c, nil
 }
 
 // List names each character with its derived level (ADR 0030 step 3).

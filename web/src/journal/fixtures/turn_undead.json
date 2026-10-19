@@ -1,0 +1,42 @@
+{
+  "turned": {
+    "roll": true,
+    "payload": {
+      "undead": "ghoul",
+      "hdMin": 2,
+      "hdMax": 2,
+      "clericLevel": 3,
+      "target": 10,
+      "outcome": "roll",
+      "d20": 12,
+      "success": true,
+      "effect": "turn",
+      "affected": [
+        3,
+        4
+      ],
+      "destroyed": 0,
+      "turned": 7
+    }
+  },
+  "destroyMore": {
+    "roll": true,
+    "payload": {
+      "undead": "skeleton",
+      "clericLevel": 8,
+      "outcome": "destroy_more",
+      "success": true,
+      "effect": "destroy",
+      "affected": [
+        2,
+        3
+      ],
+      "more": [
+        1,
+        2
+      ],
+      "destroyed": 5,
+      "turned": 3
+    }
+  }
+}

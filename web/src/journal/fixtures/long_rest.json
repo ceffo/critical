@@ -1,0 +1,10 @@
+{
+  "rested": {
+    "payload": {
+      "slotsReset": 9,
+      "itemsRefilled": [
+        "holy_water"
+      ]
+    }
+  }
+}

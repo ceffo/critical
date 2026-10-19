@@ -1,0 +1,21 @@
+{
+  "edited": {
+    "payload": {
+      "weapon_id": "dagger",
+      "name": "Dagger +1",
+      "damage_sm": "1d4",
+      "damage_l": "1d3",
+      "magic_to_hit": 1,
+      "magic_damage": 1,
+      "kind": "melee",
+      "two_handed": false,
+      "changes": [
+        {
+          "field": "magic_to_hit",
+          "before": "0",
+          "after": "1"
+        }
+      ]
+    }
+  }
+}

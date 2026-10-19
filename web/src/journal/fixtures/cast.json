@@ -1,0 +1,98 @@
+{
+  "damage": {
+    "roll": true,
+    "payload": {
+      "action": "cast",
+      "spellId": "fireball",
+      "spell": "Fireball",
+      "casterLevel": 5,
+      "level": 3,
+      "damage": {
+        "dice": "5d6",
+        "type": "fire",
+        "instances": 1,
+        "rounds": 1,
+        "total": 17,
+        "rolls": [
+          {
+            "formula": "5d6",
+            "dice": [
+              {
+                "sides": 6,
+                "value": 6
+              },
+              {
+                "sides": 6,
+                "value": 1
+              },
+              {
+                "sides": 6,
+                "value": 3
+              },
+              {
+                "sides": 6,
+                "value": 4
+              },
+              {
+                "sides": 6,
+                "value": 3
+              }
+            ],
+            "total": 17
+          }
+        ]
+      },
+      "save": {
+        "type": "spell",
+        "effect": "half"
+      }
+    }
+  },
+  "received": {
+    "roll": true,
+    "payload": {
+      "action": "received",
+      "spellId": "haste",
+      "spell": "Haste",
+      "casterLevel": 9,
+      "buff": {
+        "name": "Haste",
+        "applied": true,
+        "rounds": 12,
+        "charges": 0
+      }
+    }
+  },
+  "failed": {
+    "roll": true,
+    "payload": {
+      "action": "cast",
+      "spellId": "sleep",
+      "spell": "Sleep",
+      "casterLevel": 5,
+      "failure": {
+        "d100": 3,
+        "chance": 10,
+        "failed": true
+      }
+    }
+  },
+  "toHit": {
+    "roll": true,
+    "payload": {
+      "action": "cast",
+      "spellId": "shocking_grasp",
+      "spell": "Shocking Grasp",
+      "casterLevel": 5,
+      "attack": {
+        "d20": 15,
+        "targetAc": 4,
+        "hit": true,
+        "baseThac0": 19,
+        "modifiers": [],
+        "effectiveThac0": 19,
+        "targetACNeeded": 4
+      }
+    }
+  }
+}

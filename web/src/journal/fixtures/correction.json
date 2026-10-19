@@ -1,0 +1,29 @@
+{
+  "targetAc": {
+    "payload": {
+      "entryId": 2,
+      "entryKind": "attack",
+      "field": "targetAc",
+      "from": 5,
+      "to": 7
+    }
+  },
+  "verdict": {
+    "payload": {
+      "entryId": 2,
+      "entryKind": "attack",
+      "field": "verdict",
+      "from": null,
+      "to": "hit"
+    }
+  },
+  "saveAdjustment": {
+    "payload": {
+      "entryId": 3,
+      "entryKind": "save",
+      "field": "saveAdjustment",
+      "from": null,
+      "to": 2
+    }
+  }
+}

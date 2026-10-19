@@ -1,0 +1,28 @@
+{
+  "free": {
+    "payload": {
+      "formula": "2d6-d4+3",
+      "groups": [
+        {
+          "sides": 6,
+          "rolls": [
+            2,
+            5
+          ],
+          "negative": false,
+          "subtotal": 7
+        },
+        {
+          "sides": 4,
+          "rolls": [
+            3
+          ],
+          "negative": true,
+          "subtotal": -3
+        }
+      ],
+      "modifier": 3,
+      "total": 7
+    }
+  }
+}

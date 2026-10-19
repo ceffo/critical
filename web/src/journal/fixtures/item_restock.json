@@ -1,0 +1,11 @@
+{
+  "restocked": {
+    "payload": {
+      "itemId": "arrows",
+      "name": "Arrows",
+      "type": "arrow",
+      "added": 2,
+      "count": 12
+    }
+  }
+}

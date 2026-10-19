@@ -1,0 +1,221 @@
+{
+  "hit": {
+    "roll": true,
+    "payload": {
+      "d20Roll": 14,
+      "d100CritRoll": 80,
+      "isCrit": false,
+      "critMultiplier": 1,
+      "critPlaceholder": false,
+      "baseThac0": 13,
+      "modifiers": [
+        {
+          "kind": "strength",
+          "detail": "12",
+          "value": 0
+        }
+      ],
+      "effectiveThac0": 11,
+      "targetACNeeded": -3,
+      "hitsAc": -3,
+      "acKnown": true,
+      "hit": true,
+      "hitMargin": 8,
+      "baseDamage": 6,
+      "damageDice": "1d8",
+      "damageRolls": [
+        {
+          "sides": 8,
+          "value": 6
+        }
+      ],
+      "spellsBuff": 1,
+      "weaponBuff": 2,
+      "multipliers": 1,
+      "strengthBonus": 0,
+      "bonusDamage": 0,
+      "damageTerms": [],
+      "totalDamage": 8,
+      "weaponId": "long_sword",
+      "weaponName": "Long Sword +2",
+      "targetAc": 5,
+      "targetSize": "sm"
+    }
+  },
+  "crit": {
+    "roll": true,
+    "payload": {
+      "d20Roll": 14,
+      "d100CritRoll": 7,
+      "isCrit": true,
+      "critMultiplier": 2,
+      "critPlaceholder": false,
+      "baseThac0": 13,
+      "modifiers": [
+        {
+          "kind": "strength",
+          "detail": "12",
+          "value": 0
+        }
+      ],
+      "effectiveThac0": 11,
+      "targetACNeeded": -3,
+      "hitsAc": -3,
+      "acKnown": true,
+      "hit": true,
+      "hitMargin": 8,
+      "baseDamage": 6,
+      "damageDice": "1d8",
+      "damageRolls": [
+        {
+          "sides": 8,
+          "value": 6
+        }
+      ],
+      "spellsBuff": 1,
+      "weaponBuff": 2,
+      "multipliers": 1,
+      "strengthBonus": 0,
+      "bonusDamage": 0,
+      "damageTerms": [],
+      "totalDamage": 16,
+      "weaponId": "long_sword",
+      "weaponName": "Long Sword +2",
+      "targetAc": 5,
+      "targetSize": "sm",
+      "d100MultiplierRoll": 63,
+      "critFrom": 51,
+      "critTo": 90
+    }
+  },
+  "unknownAc": {
+    "roll": true,
+    "payload": {
+      "d20Roll": 14,
+      "d100CritRoll": 80,
+      "isCrit": false,
+      "critMultiplier": 1,
+      "critPlaceholder": false,
+      "baseThac0": 13,
+      "modifiers": [
+        {
+          "kind": "strength",
+          "detail": "12",
+          "value": 0
+        }
+      ],
+      "effectiveThac0": 11,
+      "targetACNeeded": -3,
+      "hitsAc": 3,
+      "acKnown": false,
+      "hit": false,
+      "hitMargin": 0,
+      "baseDamage": 6,
+      "damageDice": "1d8",
+      "damageRolls": [
+        {
+          "sides": 8,
+          "value": 6
+        }
+      ],
+      "spellsBuff": 1,
+      "weaponBuff": 2,
+      "multipliers": 1,
+      "strengthBonus": 0,
+      "bonusDamage": 0,
+      "damageTerms": [],
+      "totalDamage": 8,
+      "weaponId": "long_sword",
+      "weaponName": "Long Sword +2",
+      "targetAc": null,
+      "targetSize": "sm",
+      "critsFromAc": -2
+    }
+  },
+  "corrected": {
+    "roll": true,
+    "status": "amended",
+    "payload": {
+      "d20Roll": 14,
+      "d100CritRoll": 80,
+      "isCrit": false,
+      "critMultiplier": 1,
+      "critPlaceholder": false,
+      "baseThac0": 13,
+      "modifiers": [
+        {
+          "kind": "strength",
+          "detail": "12",
+          "value": 0
+        }
+      ],
+      "effectiveThac0": 11,
+      "targetACNeeded": -3,
+      "hitsAc": -3,
+      "acKnown": true,
+      "hit": true,
+      "hitMargin": 8,
+      "baseDamage": 6,
+      "damageDice": "1d8",
+      "damageRolls": [
+        {
+          "sides": 8,
+          "value": 6
+        }
+      ],
+      "spellsBuff": 1,
+      "weaponBuff": 2,
+      "multipliers": 1,
+      "strengthBonus": 0,
+      "bonusDamage": 0,
+      "damageTerms": [],
+      "totalDamage": 8,
+      "weaponId": "long_sword",
+      "weaponName": "Long Sword +2",
+      "targetAc": 5,
+      "targetSize": "sm"
+    },
+    "effectivePayload": {
+      "d20Roll": 14,
+      "d100CritRoll": 80,
+      "isCrit": false,
+      "critMultiplier": 1,
+      "critPlaceholder": false,
+      "baseThac0": 13,
+      "modifiers": [
+        {
+          "kind": "strength",
+          "detail": "12",
+          "value": 0
+        }
+      ],
+      "effectiveThac0": 11,
+      "targetACNeeded": -3,
+      "hitsAc": -3,
+      "acKnown": true,
+      "hit": false,
+      "hitMargin": 8,
+      "baseDamage": 6,
+      "damageDice": "1d8",
+      "damageRolls": [
+        {
+          "sides": 8,
+          "value": 6
+        }
+      ],
+      "spellsBuff": 1,
+      "weaponBuff": 2,
+      "multipliers": 1,
+      "strengthBonus": 0,
+      "bonusDamage": 0,
+      "damageTerms": [],
+      "totalDamage": 8,
+      "weaponId": "long_sword",
+      "weaponName": "Long Sword +2",
+      "targetAc": 7,
+      "targetSize": "sm",
+      "rolledTargetAc": 5,
+      "rolledHit": true
+    }
+  }
+}

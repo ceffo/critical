@@ -1,0 +1,31 @@
+{
+  "activate": {
+    "payload": {
+      "action": "activate",
+      "buff": "Haste",
+      "spellId": "haste",
+      "rounds": 5,
+      "charges": 0
+    }
+  },
+  "absorb": {
+    "payload": {
+      "action": "absorb",
+      "buff": "Stoneskin",
+      "spellId": "stoneskin",
+      "charges": 3,
+      "fromCharges": 4
+    }
+  },
+  "noteEdited": {
+    "payload": {
+      "action": "edit",
+      "buff": "Bless",
+      "rounds": 4,
+      "fromRounds": 4,
+      "note": "+1 morale",
+      "fromNote": "",
+      "noteChanged": true
+    }
+  }
+}

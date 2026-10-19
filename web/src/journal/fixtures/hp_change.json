@@ -1,0 +1,24 @@
+{
+  "damage": {
+    "summary": "orc axe",
+    "effectiveSummary": "orc axe",
+    "hpDelta": -6,
+    "effectiveHpDelta": -6,
+    "payload": {}
+  },
+  "cappedHeal": {
+    "summary": "potion",
+    "effectiveSummary": "potion",
+    "hpDelta": 5,
+    "effectiveHpDelta": 5,
+    "payload": {
+      "hpRequested": 12,
+      "hpApplied": 5
+    }
+  },
+  "noSource": {
+    "hpDelta": -4,
+    "effectiveHpDelta": -4,
+    "payload": {}
+  }
+}

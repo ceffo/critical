@@ -39,7 +39,7 @@ func (s *service) GetHPState(ctx context.Context, characterID int64) (*actionlog
 	// (actionlog.CapHeal); this guards rows logged before. ADR 0011 step 1
 	// guards the other end the same way: writes stop at the floor
 	// (actionlog.FloorDamage), rows logged before it never show below it.
-	current := max(actionlog.HPFloor, min(maxHP, maxHP+sum))
+	current := actionlog.CurrentHP(maxHP, sum)
 	return &actionlog.HPState{
 		CurrentHp: current,
 		MaxHp:     maxHP,

@@ -10,6 +10,15 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
+// ADR 0007 step 6 and ADR 0011 step 1: current HP is max plus the ledger
+// total, never above max nor below the floor.
+func TestCurrentHP(t *testing.T) {
+	assert.Equal(t, 55, actionlog.CurrentHP(85, -30))
+	assert.Equal(t, 85, actionlog.CurrentHP(85, 0))
+	assert.Equal(t, 85, actionlog.CurrentHP(85, 9), "legacy rows above max")
+	assert.Equal(t, actionlog.HPFloor, actionlog.CurrentHP(85, -400), "legacy rows below the floor")
+}
+
 // HP-1/HP-2: total is SUM(effective hp_delta); HP is at max
 // when it is 0.
 func TestCapHeal(t *testing.T) {

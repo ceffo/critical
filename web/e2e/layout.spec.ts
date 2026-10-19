@@ -2008,171 +2008,193 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
 // no character action (step 8) are never cut, fr and en, 1280x800, 1920x1080 and 2560x1440, and the
 // page never scrolls. The current character retired elsewhere (another tab) leaves a usable screen:
 // back in the game the page loads on the next one.
-test("roster, character card and intro uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await openDashboard(page);
-  await chooseLanguage(page, "fr");
-  const call = (method: string, url: string, body: unknown) =>
-    page.evaluate(
-      async ([m, u, b]) => {
-        const r = await fetch(u as string, {
-          method: m as string,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(b),
-        });
-        return {
-          ok: r.ok,
-          body: (await r.json()) as {
-            characters: { id: number }[];
-            currentId: number | null;
-          },
-        };
-      },
-      [method, url, body] as const,
-    );
-  const created = await call("POST", "/api/characters", {
-    name: "Aldéric de la Tour-d'Auvergne-Lesparre",
-    class: "bard",
-    raceCode: "half_elf",
-    details: { alignment: "neutral_good", sex: "male" },
-    str: 10,
-    dex: 15,
-    con: 12,
-    int: 14,
-    wis: 9,
-    cha: 16,
-    hpMax: 6,
-    xp: 0,
-    skillArmor: "leather",
-  });
-  expect(created.ok).toBe(true);
-  await page.reload();
-  const sizes = [
-    { width: 1280, height: 800 },
-    { width: 1920, height: 1080 },
-    { width: 2560, height: 1440 },
-  ];
-  const dialog = page.getByTestId("character-dialog");
-  const roster = page.getByTestId("roster");
-  const character = page.getByTestId("character");
+// The imported character lacks its alignment and sex (the tag), the created one has them.
+test.describe("roster cards", () => {
+  test.use({ character: { alignment: "", sex: "" } });
 
-  for (const lang of ["fr", "en"] as const) {
-    await page.setViewportSize(sizes[0]!);
-    if (lang === "en") await chooseLanguage(page, "en");
-    const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
-    for (const vp of sizes) {
-      await page.setViewportSize(vp);
-      const where = `${lang}, ${vp.width}x${vp.height}`;
-      // The cog menu: settings and account, no character action.
-      const settings = await openSettings(page);
-      await expect(
-        settings.getByRole("button", {
-          name: tr("Créer un nouveau personnage", "Create a new character"),
-        }),
-      ).toHaveCount(0);
-      await expectNoClippedText(settings, `cog menu, ${where}`);
-      await snap(page, `cog-menu-${lang}-${vp.width}x${vp.height}`);
-      await page.keyboard.press("Escape");
-      // The card's header: the long name wraps beside the level and the roster's button.
-      await expectNoClippedText(
-        character.locator(".group-band"),
-        `character card header, ${where}`,
+  test("roster, character card and intro uncut, fr and en, 1280 to 2560", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openDashboard(page);
+    await chooseLanguage(page, "fr");
+    const call = (method: string, url: string, body: unknown) =>
+      page.evaluate(
+        async ([m, u, b]) => {
+          const r = await fetch(u as string, {
+            method: m as string,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(b),
+          });
+          return {
+            ok: r.ok,
+            body: (await r.json()) as {
+              characters: { id: number }[];
+              currentId: number | null;
+            },
+          };
+        },
+        [method, url, body] as const,
       );
-      await page.getByTestId("details-trigger").click();
-      const pop = page.getByTestId("details-popover");
-      await pop.getByRole("button", { name: tr("Modifier", "Edit") }).click();
-      await expect(
-        pop.getByLabel(tr("Nom", "Name"), { exact: true }),
-      ).toHaveValue("Aldéric de la Tour-d'Auvergne-Lesparre");
-      await expectNoClippedText(pop, `details with Nom, ${where}`);
-      await snap(page, `character-card-${lang}-${vp.width}x${vp.height}`);
-      await page.keyboard.press("Escape");
-      await expect(pop).toBeHidden();
+    const created = await call("POST", "/api/characters", {
+      name: "Aldéric de la Tour-d'Auvergne-Lesparre",
+      class: "bard",
+      raceCode: "half_elf",
+      details: { alignment: "neutral_good", sex: "male" },
+      str: 10,
+      dex: 15,
+      con: 12,
+      int: 14,
+      wis: 9,
+      cha: 16,
+      hpMax: 6,
+      xp: 0,
+      skillArmor: "leather",
+    });
+    expect(created.ok).toBe(true);
+    await page.reload();
+    const sizes = [
+      { width: 1280, height: 800 },
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ];
+    const dialog = page.getByTestId("character-dialog");
+    const roster = page.getByTestId("roster");
+    const character = page.getByTestId("character");
 
-      await page.getByTestId("roster-open").click();
-      await expect(roster.getByTestId("roster-card")).toHaveCount(2);
-      await expectNoClippedText(page.locator("body"), `roster, ${where}`);
-      await expectNoPageScroll(page);
-      await snap(page, `roster-${lang}-${vp.width}x${vp.height}`);
+    for (const lang of ["fr", "en"] as const) {
+      await page.setViewportSize(sizes[0]!);
+      if (lang === "en") await chooseLanguage(page, "en");
+      const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
+      for (const vp of sizes) {
+        await page.setViewportSize(vp);
+        const where = `${lang}, ${vp.width}x${vp.height}`;
+        // The cog menu: settings and account, no character action.
+        const settings = await openSettings(page);
+        await expect(
+          settings.getByRole("button", {
+            name: tr("Créer un nouveau personnage", "Create a new character"),
+          }),
+        ).toHaveCount(0);
+        await expectNoClippedText(settings, `cog menu, ${where}`);
+        await snap(page, `cog-menu-${lang}-${vp.width}x${vp.height}`);
+        await page.keyboard.press("Escape");
+        // The card's header: the long name wraps beside the level and the roster's button.
+        await expectNoClippedText(
+          character.locator(".group-band"),
+          `character card header, ${where}`,
+        );
+        await page.getByTestId("details-trigger").click();
+        const pop = page.getByTestId("details-popover");
+        await pop.getByRole("button", { name: tr("Modifier", "Edit") }).click();
+        await expect(
+          pop.getByLabel(tr("Nom", "Name"), { exact: true }),
+        ).toHaveValue("Aldéric de la Tour-d'Auvergne-Lesparre");
+        await expectNoClippedText(pop, `details with Nom, ${where}`);
+        await snap(page, `character-card-${lang}-${vp.width}x${vp.height}`);
+        await page.keyboard.press("Escape");
+        await expect(pop).toBeHidden();
 
-      await roster
-        .getByRole("button", { name: /^(Renommer|Rename) Aldéric/ })
-        .click();
-      await expect(dialog.getByTestId("rename-form")).toBeVisible();
-      await expectNoClippedText(dialog, `rename dialog, ${where}`);
-      await snap(page, `roster-rename-${lang}-${vp.width}x${vp.height}`);
-      await page.keyboard.press("Escape");
-      await expect(dialog).toBeHidden();
-      await roster
-        .getByRole("button", { name: /^(Retirer|Retire) Aldéric/ })
-        .click();
-      await expect(dialog.getByTestId("retire-confirm")).toBeVisible();
-      await expectNoClippedText(dialog, `retire dialog, ${where}`);
-      await snap(page, `roster-retire-${lang}-${vp.width}x${vp.height}`);
-      await page.keyboard.press("Escape");
-      await expect(dialog).toBeHidden();
+        await page.getByTestId("roster-open").click();
+        await expect(roster.getByTestId("roster-card")).toHaveCount(2);
+        // Each card shows its HP; race · alignment and no tag on the one with a complete identity,
+        // the tag on the one still to choose (the imported sheet).
+        await expect(roster.getByTestId("roster-hp")).toHaveCount(2);
+        const complete = roster
+          .getByTestId("roster-card")
+          .filter({ hasText: "Aldéric" });
+        await expect(complete.getByTestId("roster-identity")).toHaveText(
+          tr("Demi-elfe · Neutre bon", "Half-elf · Neutral good"),
+        );
+        await expect(complete.getByTestId("roster-missing")).toHaveCount(0);
+        await expect(complete.getByTestId("roster-hp")).toHaveText(
+          tr("PV 6/6", "HP 6/6"),
+        );
+        await expect(roster.getByTestId("roster-missing")).toHaveCount(1);
+        await expect(roster.getByTestId("roster-missing")).toHaveText(
+          tr("Alignement et sexe à choisir", "Alignment and sex to pick"),
+        );
+        await expectNoClippedText(page.locator("body"), `roster, ${where}`);
+        await expectNoPageScroll(page);
+        await snap(page, `roster-${lang}-${vp.width}x${vp.height}`);
+
+        await roster
+          .getByRole("button", { name: /^(Renommer|Rename) Aldéric/ })
+          .click();
+        await expect(dialog.getByTestId("rename-form")).toBeVisible();
+        await expectNoClippedText(dialog, `rename dialog, ${where}`);
+        await snap(page, `roster-rename-${lang}-${vp.width}x${vp.height}`);
+        await page.keyboard.press("Escape");
+        await expect(dialog).toBeHidden();
+        await roster
+          .getByRole("button", { name: /^(Retirer|Retire) Aldéric/ })
+          .click();
+        await expect(dialog.getByTestId("retire-confirm")).toBeVisible();
+        await expectNoClippedText(dialog, `retire dialog, ${where}`);
+        await snap(page, `roster-retire-${lang}-${vp.width}x${vp.height}`);
+        await page.keyboard.press("Escape");
+        await expect(dialog).toBeHidden();
+        await page
+          .getByRole("button", {
+            name: tr("Revenir à la partie", "Back to the game"),
+          })
+          .click();
+        await expect(character).toBeVisible();
+      }
+    }
+
+    // The current character retired elsewhere while the roster shows: back in the game, the server
+    // says the character changed and the page loads on the one it made current.
+    await page.setViewportSize(sizes[0]!);
+    await page.getByTestId("roster-open").click();
+    await expect(roster.getByTestId("roster-card")).toHaveCount(2);
+    const retired = await call(
+      "PATCH",
+      `/api/characters/${created.body.currentId}`,
+      { retired: true },
+    );
+    expect(retired.ok).toBe(true);
+    await page.getByRole("button", { name: "Back to the game" }).click();
+    await expect(character).toContainText("Test Bard");
+
+    // The last character retired: the intro (no character left), then Commencer opens the flow.
+    const list = await call("GET", "/api/characters", undefined);
+    for (const c of list.body.characters)
+      expect(
+        (await call("PATCH", `/api/characters/${c.id}`, { retired: true })).ok,
+      ).toBe(true);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/");
+    const intro = page.getByTestId("intro");
+    await expect(intro).toBeVisible();
+    for (const lang of ["fr", "en"] as const) {
       await page
-        .getByRole("button", {
-          name: tr("Revenir à la partie", "Back to the game"),
+        .getByRole("radio", {
+          name: lang === "fr" ? "Français" : "English",
+          exact: true,
         })
         .click();
-      await expect(character).toBeVisible();
+      for (const vp of [
+        { width: 1280, height: 800 },
+        { width: 2560, height: 1440 },
+      ]) {
+        await page.setViewportSize(vp);
+        const where = `${lang}, ${vp.width}x${vp.height}`;
+        await expectNoClippedText(page.locator("body"), `intro, ${where}`);
+        await expectWholeWords(intro, `intro, ${where}`);
+        await expectNoPageScroll(page);
+        await snap(page, `intro-${lang}-${vp.width}x${vp.height}`);
+      }
     }
-  }
-
-  // The current character retired elsewhere while the roster shows: back in the game, the server
-  // says the character changed and the page loads on the one it made current.
-  await page.setViewportSize(sizes[0]!);
-  await page.getByTestId("roster-open").click();
-  await expect(roster.getByTestId("roster-card")).toHaveCount(2);
-  const retired = await call(
-    "PATCH",
-    `/api/characters/${created.body.currentId}`,
-    { retired: true },
-  );
-  expect(retired.ok).toBe(true);
-  await page.getByRole("button", { name: "Back to the game" }).click();
-  await expect(character).toContainText("Test Bard");
-
-  // The last character retired: the intro (no character left), then Commencer opens the flow.
-  const list = await call("GET", "/api/characters", undefined);
-  for (const c of list.body.characters)
-    expect(
-      (await call("PATCH", `/api/characters/${c.id}`, { retired: true })).ok,
-    ).toBe(true);
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto("/");
-  const intro = page.getByTestId("intro");
-  await expect(intro).toBeVisible();
-  for (const lang of ["fr", "en"] as const) {
     await page
-      .getByRole("radio", {
-        name: lang === "fr" ? "Français" : "English",
-        exact: true,
-      })
+      .getByRole("button", { name: "Start creating your character" })
       .click();
-    for (const vp of [
-      { width: 1280, height: 800 },
-      { width: 2560, height: 1440 },
-    ]) {
-      await page.setViewportSize(vp);
-      const where = `${lang}, ${vp.width}x${vp.height}`;
-      await expectNoClippedText(page.locator("body"), `intro, ${where}`);
-      await expectWholeWords(intro, `intro, ${where}`);
-      await expectNoPageScroll(page);
-      await snap(page, `intro-${lang}-${vp.width}x${vp.height}`);
-    }
-  }
-  await page
-    .getByRole("button", { name: "Start creating your character" })
-    .click();
-  await expect(page.getByTestId("creation-step")).toBeVisible();
-  // Quitter with nothing entered goes straight back to the intro.
-  await page.getByRole("button", { name: "Leave the creation" }).click();
-  await expect(intro).toBeVisible();
+    await expect(page.getByTestId("creation-step")).toBeVisible();
+    // Quitter with nothing entered goes straight back to the intro.
+    await page.getByRole("button", { name: "Leave the creation" }).click();
+    await expect(intro).toBeVisible();
+  });
 });
 
 // The creation route (ADR 0034 steps 2 to 4), judged in French first (ADR 0027 step 2) and audited

@@ -179,6 +179,17 @@ type Summary struct {
 	Class string
 	// Level is the derived level (ADR 0030 step 3), set by the service.
 	Level int
+	// Race is the race code, "" when none is set.
+	Race string
+	// Alignment and Sex are codes; "" when still to choose (a value that is no
+	// code reads as such, ADR 0032 step 8.2). Missing lists those fields.
+	Alignment string
+	Sex       string
+	Missing   []string
+	// MaxHP and CurrentHP are the max HP and the ledger's current HP (ADR 0007
+	// step 6, ADR 0011 step 1), set by the service.
+	MaxHP     int
+	CurrentHP int
 }
 
 // Details are the facts about the character that the player edits. Alignment

@@ -253,6 +253,16 @@ export interface CharacterSummary {
   class: string;
   /** The level the rules derive (ADR 0030 step 3). */
   level: number;
+  /** The race code, worded by `details.races.<code>`; "" when none. */
+  race: string;
+  /** The alignment and sex codes (`details.alignments.*`, `details.sexes.*`); "" while still to choose. */
+  alignment: string;
+  sex: string;
+  /** The identity fields still to choose, in the card's order (`alignment`, `sex`). */
+  missing: ("alignment" | "sex")[];
+  /** The HP the ledger gives and the max HP. */
+  currentHp: number;
+  maxHp: number;
 }
 
 /** The user's characters, not retired, in creation order, and the current one (null: none). */

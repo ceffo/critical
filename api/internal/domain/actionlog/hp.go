@@ -43,6 +43,13 @@ func CapHeal(total, delta int) int {
 	return min(delta, max(0, -total))
 }
 
+// CurrentHP is a character's current HP: max HP plus the ledger total, never
+// shown above max (ADR 0007 step 6) nor below HPFloor (ADR 0011 step 1), which
+// guards rows logged before the writes kept to those bounds.
+func CurrentHP(maxHP, total int) int {
+	return max(HPFloor, min(maxHP, maxHP+total))
+}
+
 // HPFloor is the lowest current HP a character can have (ADR 0011 step 1):
 // at -10 the character is dead, and damage beyond it is not recorded.
 const HPFloor = -10

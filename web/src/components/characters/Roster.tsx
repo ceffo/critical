@@ -218,7 +218,7 @@ export function Roster({ onBack }: { onBack?: () => void }) {
   );
 }
 
-/** One character's card: name, class and level, "En jeu" on the current one, its three actions. */
+/** One character's card: name, class and level, race · alignment, HP, the tag of what is still to choose, "En jeu" on the current one, its three actions. */
 function RosterCard({
   character: c,
   current,
@@ -235,6 +235,13 @@ function RosterCard({
   onRetire: () => void;
 }) {
   const { t } = useTranslation();
+  // Race · alignment: what is still to choose is the tag's, not a blank here.
+  const identity = [
+    c.race && t(`details.races.${c.race}`, { defaultValue: c.race }),
+    c.alignment && t(`details.alignments.${c.alignment}`),
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <li
       className={cn("zone-card flex flex-col", current && "latest")}
@@ -260,6 +267,27 @@ function RosterCard({
             level: c.level,
           })}
         </span>
+        {identity && (
+          <span
+            className="text-body text-ink-muted"
+            data-testid="roster-identity"
+          >
+            {identity}
+          </span>
+        )}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-body font-semibold" data-testid="roster-hp">
+            {t("roster.hp", { current: c.currentHp, max: c.maxHp })}
+          </span>
+          {c.missing.length > 0 && (
+            <span
+              className="rounded-md bg-tint px-1.5 py-0.5 text-label font-semibold text-on-accent"
+              data-testid="roster-missing"
+            >
+              {t(`roster.toPick.${c.missing.join("_")}`)}
+            </span>
+          )}
+        </div>
       </div>
       <div className="mt-auto flex flex-wrap items-center gap-2 px-4 pt-3 pb-3">
         {!current && (

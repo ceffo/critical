@@ -120,14 +120,20 @@ func TestCharacters_ListIsTheUsersOwn(t *testing.T) {
 		"new": {ID: bobID, Email: "new@example.com", Role: authsvc.RolePlayer},
 	}))
 	m.char.EXPECT().List(mock.Anything, annID).Return([]charactersvc.Summary{
-		{ID: 3, Name: "Kelsen", Class: "bard", Level: 15}, {ID: 5, Name: "Vex", Class: "thief", Level: 2},
+		{
+			ID: 3, Name: "Kelsen", Class: "bard", Level: 15, Race: "half_elf", Alignment: "chaotic_good", Sex: "male",
+			Missing: []string{}, CurrentHP: 55, MaxHP: 85,
+		},
+		{ID: 5, Name: "Vex", Class: "thief", Level: 2, Race: "elf", Missing: []string{"alignment", "sex"}, CurrentHP: 9, MaxHP: 9},
 	}, nil).Once()
 	m.char.EXPECT().List(mock.Anything, bobID).Return([]charactersvc.Summary{}, nil).Once()
 
 	rec := as(h, "ann", "GET", "/api/characters", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"characters":[{"id":3,"name":"Kelsen","class":"bard","level":15},`+
-		`{"id":5,"name":"Vex","class":"thief","level":2}],"currentId":3}`, rec.Body.String())
+	assert.JSONEq(t, `{"characters":[{"id":3,"name":"Kelsen","class":"bard","level":15,"race":"half_elf",`+
+		`"alignment":"chaotic_good","sex":"male","missing":[],"currentHp":55,"maxHp":85},`+
+		`{"id":5,"name":"Vex","class":"thief","level":2,"race":"elf","alignment":"","sex":"",`+
+		`"missing":["alignment","sex"],"currentHp":9,"maxHp":9}],"currentId":3}`, rec.Body.String())
 
 	rec = as(h, "new", "GET", "/api/characters", "")
 	require.Equal(t, http.StatusOK, rec.Code)

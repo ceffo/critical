@@ -248,7 +248,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 	languages, _ := ruleTables.Languages()
 	charSvc, err := charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
-		Owners: characterDAL, Tx: tx, Sessions: authSvc, Log: logSvc, Languages: languages,
+		Owners: characterDAL, Tx: tx, Sessions: authSvc, Log: logSvc, Languages: languages, HP: logSvc,
 	})
 	if err != nil {
 		_ = db.Close()

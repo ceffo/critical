@@ -1980,7 +1980,13 @@
     "back": "Back",
     "backHint": "Back to the game",
     "renameHint": "Rename {{name}}",
-    "createLead": "Opens the full-screen creation."
+    "createLead": "Opens the full-screen creation.",
+    "hp": "HP {{current}}/{{max}}",
+    "toPick": {
+      "alignment": "Alignment to pick",
+      "sex": "Sex to pick",
+      "alignment_sex": "Alignment and sex to pick"
+    }
   },
   "turning": {
     "title": "Turn undead",

@@ -12,7 +12,7 @@
 # Skip when:
 #   - the PR carries the label ci-skip (a pull_request event only: the push to main that merges it runs
 #     everything, unless the path rule applies); or
-#   - every changed file is documentation: *.md anywhere, docs/**, .beads/**.
+#   - every changed file is documentation: *.md anywhere, docs/**.
 # The decision defaults to running everything: no changed file found, an unreadable range (a new branch's
 # zero BASE, a force-pushed-away commit) or a changed file that is not documentation.
 set -euo pipefail
@@ -50,7 +50,7 @@ fi
 
 while IFS= read -r f; do
     case "$f" in
-        *.md | docs/* | .beads/*) ;;
+        *.md | docs/*) ;;
         *) decide false "$f is not documentation" ;;
     esac
 done <<< "$files"

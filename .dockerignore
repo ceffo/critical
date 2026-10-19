@@ -7,7 +7,6 @@
 **/catalogue.json
 
 .git/
-.beads/
 .bv/
 .claude/
 .agents/

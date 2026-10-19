@@ -10,7 +10,7 @@ pattern='(_(fr|en)|[a-z](FR|Fr|EN|En))\b'
 # Not scanned: this script and its test (they spell the patterns), docs (ADRs narrate the old names),
 # and the tracker.
 excludes=(
-    ':!.beads' ':!docs'
+    ':!docs'
     ':!scripts/check-no-language-fields.sh' ':!scripts/test-check-no-language-fields.sh'
 )
 

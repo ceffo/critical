@@ -81,7 +81,7 @@ func TestAdjustSave_Recompute(t *testing.T) {
 		steps      []combatsvc.SaveAdjustment
 		wantPassed bool
 		wantMargin int
-		wantMods   []combatsvc.Modifier
+		wantMods   []combatsvc.BreakdownModifier
 		wantBonus  int
 		wantTotal  int
 		// wantTarget is the adjusted target: 14 - the adjustment in effect.
@@ -93,7 +93,7 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			name: "fail to pass", d20: 12,
 			steps:      []combatsvc.SaveAdjustment{{Value: 4, Reason: " Gaia fire "}},
 			wantPassed: true, wantMargin: 2,
-			wantMods:  []combatsvc.Modifier{},
+			wantMods:  []combatsvc.BreakdownModifier{},
 			wantBonus: 0, wantTotal: 16, wantTarget: 10,
 			wantPrevPassed: false,
 		},
@@ -101,7 +101,7 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			name: "pass to fail, buff kept", d20: 13, bonus: 1,
 			steps:      []combatsvc.SaveAdjustment{{Value: -2}},
 			wantPassed: false, wantMargin: -2,
-			wantMods:  []combatsvc.Modifier{{Kind: combatsvc.ModBuff, Detail: "Luck", Value: 1}},
+			wantMods:  []combatsvc.BreakdownModifier{{Kind: string(combatsvc.ModBuff), Detail: "Luck", Value: 1}},
 			wantBonus: 1, wantTotal: 12, wantTarget: 16,
 			wantPrevPassed: true,
 		},
@@ -109,7 +109,7 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			name: "back to 0 restores the rolled verdict, reason dropped", d20: 12,
 			steps:      []combatsvc.SaveAdjustment{{Value: 4, Reason: "Gaia fire"}, {Value: 0, Reason: "oops"}},
 			wantPassed: false, wantMargin: -2,
-			wantMods:  []combatsvc.Modifier{},
+			wantMods:  []combatsvc.BreakdownModifier{},
 			wantBonus: 0, wantTotal: 12, wantTarget: 14,
 			wantPrevPassed: true,
 		},
@@ -117,7 +117,7 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			name: "a new adjustment replaces the previous one", d20: 12,
 			steps:      []combatsvc.SaveAdjustment{{Value: 4, Reason: "Gaia fire"}, {Value: 1, Reason: "luck"}},
 			wantPassed: false, wantMargin: -1,
-			wantMods:  []combatsvc.Modifier{},
+			wantMods:  []combatsvc.BreakdownModifier{},
 			wantBonus: 0, wantTotal: 13, wantTarget: 13,
 			wantPrevPassed: true,
 		},
@@ -125,7 +125,7 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			name: "natural 1 is plain arithmetic", d20: 1,
 			steps:      []combatsvc.SaveAdjustment{{Value: 13}},
 			wantPassed: true, wantMargin: 0,
-			wantMods:  []combatsvc.Modifier{},
+			wantMods:  []combatsvc.BreakdownModifier{},
 			wantBonus: 0, wantTotal: 14, wantTarget: 1,
 			wantPrevPassed: false,
 		},
@@ -135,7 +135,7 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			f := newFixture(t)
 			e := rollSave(t, f, c.d20, c.bonus)
 			amends(f, e)
-			var res *combatsvc.RollResult
+			var res *combatsvc.SaveBreakdown
 			for _, step := range c.steps {
 				var err error
 				res, err = f.svc.AdjustSave(context.Background(), charID, 42, step)
@@ -143,18 +143,18 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			}
 			last := c.steps[len(c.steps)-1]
 			assert.Equal(t, c.d20, res.D20Roll, "the d20 never changes")
-			assert.Equal(t, 14, res.BaseThac0, "the sheet's target")
-			assert.Equal(t, c.wantTarget, res.EffectiveThac0)
-			assert.Equal(t, c.wantTarget, res.SaveAdjustedTarget)
-			assert.Equal(t, c.d20+c.wantBonus, res.SaveRollTotal, "the roll never includes the adjustment")
-			assert.Equal(t, c.wantPassed, res.Hit)
-			assert.Equal(t, c.wantMargin, res.HitMargin)
+			assert.Equal(t, 14, res.Target, "the sheet's target")
+			assert.Equal(t, c.wantTarget, res.AdjustedTarget)
+			assert.Equal(t, c.wantTarget, res.AdjustedTarget)
+			assert.Equal(t, c.d20+c.wantBonus, res.RollTotal, "the roll never includes the adjustment")
+			assert.Equal(t, c.wantPassed, res.Passed)
+			assert.Equal(t, c.wantMargin, res.Margin)
 			assert.Equal(t, last.Value, res.Adjustment)
 			assert.Equal(t, c.wantMods, res.Modifiers)
-			assert.Equal(t, c.wantBonus, res.SaveBonus)
-			assert.Equal(t, c.wantTotal, res.SaveTotal)
+			assert.Equal(t, c.wantBonus, res.RollTotal-res.D20Roll)
+			assert.Equal(t, c.wantTotal, res.Total)
 			assert.Equal(t, int64(42), res.LogEntryID)
-			assert.Equal(t, combatsvc.SaveSpell, res.SaveCategory)
+			assert.Equal(t, string(combatsvc.SaveSpell), res.Category)
 
 			require.Len(t, e.Corrections, len(c.steps), "one audited amend per adjustment")
 			p := payloadOf(t, e.EffectivePayload())
@@ -222,11 +222,11 @@ func TestResolveSavingThrow_OneModifierPerBuff(t *testing.T) {
 	f.records()
 	res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 	require.NoError(t, err)
-	assert.Equal(t, []combatsvc.Modifier{
-		{Kind: combatsvc.ModBuff, Detail: "Gaia", Value: 4},
-		{Kind: combatsvc.ModBuff, Detail: "Curse", Value: -1},
+	assert.Equal(t, []combatsvc.BreakdownModifier{
+		{Kind: string(combatsvc.ModBuff), Detail: "Gaia", Value: 4},
+		{Kind: string(combatsvc.ModBuff), Detail: "Curse", Value: -1},
 	}, res.Modifiers)
-	assert.Equal(t, 13, res.HitMargin+14)
+	assert.Equal(t, 13, res.Margin+14)
 }
 
 // ADR 0006 step 5: the adjustment moves the target, + easier, - harder. The
@@ -264,15 +264,15 @@ func TestAdjustSave_Step5_MovesTheTarget(t *testing.T) {
 			assert.Equal(t, oldTotal >= 14, c.wantPassed, "verdict unchanged for the same numbers")
 			assert.Equal(t, oldTotal-14, c.wantMargin, "margin unchanged for the same numbers")
 
-			assert.Equal(t, c.wantRollTotal, res.SaveRollTotal)
-			assert.Equal(t, c.wantTarget, res.SaveAdjustedTarget)
-			assert.Equal(t, c.wantTarget, res.EffectiveThac0)
-			assert.Equal(t, 14, res.BaseThac0)
-			assert.Equal(t, c.wantPassed, res.Hit)
-			assert.Equal(t, c.wantMargin, res.HitMargin)
-			assert.Equal(t, oldTotal, res.SaveTotal, "saveTotal keeps its meaning")
+			assert.Equal(t, c.wantRollTotal, res.RollTotal)
+			assert.Equal(t, c.wantTarget, res.AdjustedTarget)
+			assert.Equal(t, c.wantTarget, res.AdjustedTarget)
+			assert.Equal(t, 14, res.Target)
+			assert.Equal(t, c.wantPassed, res.Passed)
+			assert.Equal(t, c.wantMargin, res.Margin)
+			assert.Equal(t, oldTotal, res.Total, "total keeps its meaning")
 			for _, m := range res.Modifiers {
-				assert.Equal(t, combatsvc.ModBuff, m.Kind, "the adjustment is not a roll modifier")
+				assert.Equal(t, string(combatsvc.ModBuff), m.Kind, "the adjustment is not a roll modifier")
 			}
 
 			p := payloadOf(t, e.EffectivePayload())
@@ -358,10 +358,10 @@ func TestAdjustSave_Step8_SaveLoggedBeforeTheTargetMovedStoresBothFieldsInTheAme
 
 	res, err := f.svc.AdjustSave(context.Background(), charID, 42, combatsvc.SaveAdjustment{Value: -2})
 	require.NoError(t, err)
-	assert.Equal(t, 14, res.SaveRollTotal)
-	assert.Equal(t, 16, res.SaveAdjustedTarget)
-	assert.False(t, res.Hit)
-	assert.Equal(t, -2, res.HitMargin)
+	assert.Equal(t, 14, res.RollTotal)
+	assert.Equal(t, 16, res.AdjustedTarget)
+	assert.False(t, res.Passed)
+	assert.Equal(t, -2, res.Margin)
 
 	require.Len(t, e.Corrections, 1)
 	p := payloadOf(t, e.EffectivePayload())

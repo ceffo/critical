@@ -31,8 +31,8 @@ type CharacterIDFunc func(r *http.Request) int64
 
 type combatSvc interface {
 	ResolveAttack(ctx context.Context, characterID int64, req combatsvc.AttackRequest) (*combatsvc.RollResult, error)
-	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.RollResult, error)
-	AdjustSave(ctx context.Context, characterID, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.RollResult, error)
+	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.SaveBreakdown, error)
+	AdjustSave(ctx context.Context, characterID, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.SaveBreakdown, error)
 	AdjustAttackAC(ctx context.Context, characterID, entryID int64, targetAC int) (*combatsvc.RollResult, error)
 	SetAttackVerdict(ctx context.Context, characterID, entryID int64, hit bool) (*combatsvc.RollResult, error)
 	ClearAttackAC(ctx context.Context, characterID, entryID int64) (*combatsvc.RollResult, error)
@@ -167,7 +167,8 @@ func ResolveAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	}
 }
 
-// RollSave runs a saving throw and returns the RollResult JSON.
+// RollSave runs a saving throw and returns its breakdown, the payload of its
+// log entry plus the entry id (combatsvc.SaveBreakdown, see saveAnswer).
 func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		var req SaveRequestDTO
@@ -178,7 +179,7 @@ func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(res))
+		render.OK(r.Context(), w, newSaveAnswer(res))
 		return nil
 	}
 }
@@ -277,7 +278,7 @@ type SaveAdjustmentDTO struct {
 
 // AdjustSave sets the adjustment of the latest save (log entry {id}); the
 // server recomputes the verdict and margin with the same d20 and returns the
-// updated RollResult. 409 when the entry is voided or not the latest save,
+// updated breakdown. 409 when the entry is voided or not the latest save,
 // 400 when it is not a save, 404 when it does not exist.
 func AdjustSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
@@ -296,171 +297,27 @@ func AdjustSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(res))
+		render.OK(r.Context(), w, newSaveAnswer(res))
 		return nil
 	}
 }
 
-// RollResultDTO is the full breakdown of a saving throw (camelCase JSON), in
-// the shape the attack had before it answered with combatsvc.AttackBreakdown;
-// its attack fields are zero on a save.
-type RollResultDTO struct {
-	D20Roll      int `json:"d20Roll"`
-	D100CritRoll int `json:"d100CritRoll"`
-	// D100MultiplierRoll is the second d100 whose crit-table row gives the
-	// multiplier (docs/adr/0001-critical-hits.md); absent on saves.
-	D100MultiplierRoll int           `json:"d100MultiplierRoll,omitempty"`
-	IsCrit             bool          `json:"isCrit"`
-	CritMultiplier     float64       `json:"critMultiplier"`
-	CritPlaceholder    bool          `json:"critPlaceholder"`
-	CritFrom           int           `json:"critFrom"`
-	CritTo             int           `json:"critTo"`
-	BaseThac0          int           `json:"baseThac0"`
-	Modifiers          []ModifierDTO `json:"modifiers"`
-	EffectiveThac0     int           `json:"effectiveThac0"`
-	TargetACNeeded     int           `json:"targetACNeeded"`
-	// HitsAC is the lowest target AC the attack hits, CritsFromAC the
-	// lowest it crits (docs/adr/0012 steps 2 and 3); sent on attacks.
-	HitsAC      *int `json:"hitsAc,omitempty"`
-	CritsFromAC *int `json:"critsFromAc,omitempty"`
-	// CritPossible: some real AC (at most 10) is crit, i.e. critsFromAc is
-	// not beyond every AC (ADR 0012 step 7). Attacks only.
-	CritPossible *bool `json:"critPossible,omitempty"`
-	// Hit, hitMargin, isCrit and the damage are final only when acKnown or
-	// verdict is set; until then hit is false and the damage is the one of
-	// a hit at x1.
+// saveAnswer is the answer of the save endpoints: the save's breakdown
+// (combatsvc.SaveBreakdown, the logged payload plus logEntryId) followed by
+// hit, hitMargin and baseThac0, the passed, margin and target under the
+// names the previous release's web reads from this answer. They are kept for
+// one release so that a page of that release still shows the right verdict
+// against this server during the rolling deploy (ADR 0024 step 5.2, as ADR
+// 0032 step 8 did); they are never logged. Drop them in the next release.
+type saveAnswer struct {
+	combatsvc.SaveBreakdown
 	Hit       bool `json:"hit"`
 	HitMargin int  `json:"hitMargin"`
-
-	BaseDamage     int             `json:"baseDamage"`
-	DamageDice     string          `json:"damageDice"`
-	SpellsBuff     float64         `json:"spellsBuff"`
-	WeaponBuff     int             `json:"weaponBuff"`
-	Multipliers    float64         `json:"multipliers"`
-	DiceMultiplier float64         `json:"diceMultiplier"`
-	StrengthBonus  int             `json:"strengthBonus"`
-	BonusDamage    int             `json:"bonusDamage"`
-	DamageTerms    []DamageTermDTO `json:"damageTerms"`
-	// DamageRolls are the damage dice as thrown (absent when there is no damage).
-	DamageRolls []DieDTO `json:"damageRolls,omitempty"`
-	TotalDamage int      `json:"totalDamage"`
-	// UnroundedDamage is the damage formula's result before the final
-	// floor (ADR 0003 step 9); the UI shows the formula from these fields.
-	UnroundedDamage float64 `json:"unroundedDamage"`
-
-	// Attack context; empty on saving throws.
-	WeaponID   string `json:"weaponId,omitempty"`
-	WeaponName string `json:"weaponName,omitempty"`
-	// TargetAC is null on an attack whose AC is unknown (0 on saves).
-	TargetAC   *int     `json:"targetAc"`
-	TargetSize string   `json:"targetSize,omitempty"`
-	Ammo       *AmmoDTO `json:"ammo,omitempty"`
-	// ACKnown is sent on attacks; RolledACUnknown: rolled without the AC
-	// (still set once the GM gave it); Verdict: the GM's "hit" or "miss"
-	// while the AC is unknown.
-	ACKnown         *bool  `json:"acKnown,omitempty"`
-	RolledACUnknown bool   `json:"rolledAcUnknown,omitempty"`
-	Verdict         string `json:"verdict,omitempty"`
-	// Target AC and outcome as rolled; present while a correction differs
-	// from the rolled target AC.
-	RolledTargetAC *int  `json:"rolledTargetAc,omitempty"`
-	RolledHit      *bool `json:"rolledHit,omitempty"`
-	RolledCrit     *bool `json:"rolledCrit,omitempty"`
-
-	// Saving-throw context; empty on attacks. adjustment is always sent on
-	// saves (0: none).
-	SaveCategory     string `json:"saveCategory,omitempty"`
-	Adjustment       *int   `json:"adjustment,omitempty"`
-	AdjustmentReason string `json:"adjustmentReason,omitempty"`
-	// Sent on saves only. The adjustment moves the target (ADR 0006 step 5):
-	// rollTotal (d20 + saveBonus, the buffs) is compared with adjustedTarget
-	// (target - adjustment; baseThac0 is the target, effectiveThac0 the
-	// adjusted one). saveTotal is rollTotal + adjustment, kept for the
-	// clients that read it.
-	SaveBonus      *int `json:"saveBonus,omitempty"`
-	SaveTotal      *int `json:"saveTotal,omitempty"`
-	RollTotal      *int `json:"rollTotal,omitempty"`
-	AdjustedTarget *int `json:"adjustedTarget,omitempty"`
-
-	LogEntryID int64 `json:"logEntryId,omitempty"`
+	BaseThac0 int  `json:"baseThac0"`
 }
 
-// ModifierDTO is one to-hit (or save) modifier. The UI labels it in the
-// player's language from Kind and Detail; an item power's carries its item's
-// id (ADR 0016 step 14), which the UI names it from (Detail, the stored
-// name, is the fallback).
-type ModifierDTO struct {
-	Kind           string `json:"kind"`
-	Detail         string `json:"detail,omitempty"`
-	ItemID         string `json:"itemId,omitempty"`
-	Value          int    `json:"value"`
-	StrExceptional int    `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
-}
-
-// DamageTermDTO is one contribution to the damage formula (ItemID as on
-// ModifierDTO).
-type DamageTermDTO struct {
-	Term           string  `json:"term"`
-	Kind           string  `json:"kind"`
-	Detail         string  `json:"detail,omitempty"`
-	ItemID         string  `json:"itemId,omitempty"`
-	Value          float64 `json:"value"`
-	StrExceptional int     `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
-}
-
-// AmmoDTO is the ammunition an attack spent and what is left.
-type AmmoDTO struct {
-	ItemID    string `json:"itemId"`
-	Name      string `json:"name"`
-	Magic     int    `json:"magic"`
-	Remaining int    `json:"remaining"`
-}
-
-func toDTO(r *combatsvc.RollResult) RollResultDTO {
-	if r == nil {
-		return RollResultDTO{Modifiers: []ModifierDTO{}, DamageTerms: []DamageTermDTO{}}
-	}
-	mods := make([]ModifierDTO, 0, len(r.Modifiers))
-	for _, m := range r.Modifiers {
-		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional})
-	}
-	terms := make([]DamageTermDTO, 0, len(r.DamageTerms))
-	for _, t := range r.DamageTerms {
-		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional})
-	}
-	out := RollResultDTO{
-		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
-		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo,
-		BaseThac0: r.BaseThac0, Modifiers: mods, EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded,
-		Hit: r.Hit, HitMargin: r.HitMargin,
-		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
-		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
-		DamageRolls: dieDTOs(r.DamageRolls),
-		TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
-		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize),
-		RolledACUnknown: r.RolledACUnknown, Verdict: string(r.Verdict),
-		RolledTargetAC: r.RolledTargetAC, RolledHit: r.RolledHit, RolledCrit: r.RolledCrit,
-		SaveCategory: string(r.SaveCategory), AdjustmentReason: r.AdjustmentReason,
-		LogEntryID: r.LogEntryID,
-	}
-	if r.SaveCategory == "" {
-		known, hits, crits := r.ACKnown, r.HitsAC, r.CritsFromAC
-		out.ACKnown, out.HitsAC, out.CritsFromAC = &known, &hits, &crits
-		possible := r.CritPossible()
-		out.CritPossible = &possible
-	}
-	if r.SaveCategory != "" || r.ACKnown {
-		ac := r.TargetAC
-		out.TargetAC = &ac
-	}
-	if r.SaveCategory != "" {
-		adj, bonus, total, roll, target := r.Adjustment, r.SaveBonus, r.SaveTotal, r.SaveRollTotal, r.SaveAdjustedTarget
-		out.Adjustment, out.SaveBonus, out.SaveTotal, out.RollTotal, out.AdjustedTarget = &adj, &bonus, &total, &roll, &target
-	}
-	if a := r.Ammo; a != nil {
-		out.Ammo = &AmmoDTO{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Remaining: a.Remaining}
-	}
-	return out
+func newSaveAnswer(b *combatsvc.SaveBreakdown) saveAnswer {
+	return saveAnswer{SaveBreakdown: *b, Hit: b.Passed, HitMargin: b.Margin, BaseThac0: b.Target}
 }
 
 // CritRowDTO is one inclusive D100 range of the crit table.
@@ -537,19 +394,4 @@ func PutCritTable(svc combatSvc) render.HandlerFunc {
 		render.OK(r.Context(), w, toCritTableDTO(t))
 		return nil
 	}
-}
-
-// DieDTO is one die thrown.
-type DieDTO struct {
-	Sides int `json:"sides"`
-	Value int `json:"value"`
-}
-
-// dieDTOs maps thrown dice to their wire shape.
-func dieDTOs(in []combatsvc.DieRoll) []DieDTO {
-	var out []DieDTO
-	for _, d := range in {
-		out = append(out, DieDTO{Sides: d.Sides, Value: d.Value})
-	}
-	return out
 }

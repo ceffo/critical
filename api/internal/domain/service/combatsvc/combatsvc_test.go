@@ -164,21 +164,21 @@ func TestResolveSavingThrow(t *testing.T) {
 			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, tt.category)
 			require.NoError(t, err)
 			assert.Equal(t, int64(42), res.LogEntryID)
-			assert.Equal(t, tt.category, res.SaveCategory)
+			assert.Equal(t, string(tt.category), res.Category)
 			assert.Zero(t, res.Adjustment)
 			require.Len(t, f.entries, 1)
 			assert.Equal(t, actionlog.KindSave, f.entries[0].Kind)
 			assert.Empty(t, f.entries[0].Snapshots, "a save changes no state")
 			assert.Equal(t, tt.d20, res.D20Roll)
-			assert.Equal(t, tt.wantTarget, res.BaseThac0)
-			assert.Equal(t, tt.wantTarget, res.EffectiveThac0)
-			assert.Equal(t, tt.wantHit, res.Hit)
-			assert.Equal(t, tt.wantMargin, res.HitMargin)
+			assert.Equal(t, tt.wantTarget, res.Target)
+			assert.Equal(t, tt.wantTarget, res.AdjustedTarget)
+			assert.Equal(t, tt.wantHit, res.Passed)
+			assert.Equal(t, tt.wantMargin, res.Margin)
 			// ADR 0006 step 2: d20 + modifiers, compared with the target.
-			assert.Equal(t, tt.saveBonus, res.SaveBonus)
-			assert.Equal(t, tt.d20+tt.saveBonus, res.SaveTotal)
+			assert.Equal(t, tt.saveBonus, res.RollTotal-res.D20Roll)
+			assert.Equal(t, tt.d20+tt.saveBonus, res.Total)
 			if tt.saveBonus != 0 {
-				assert.Equal(t, []combatsvc.Modifier{{Kind: combatsvc.ModBuff, Detail: "Prayer", Value: tt.saveBonus}}, res.Modifiers)
+				assert.Equal(t, []combatsvc.BreakdownModifier{{Kind: string(combatsvc.ModBuff), Detail: "Prayer", Value: tt.saveBonus}}, res.Modifiers)
 			} else {
 				assert.Empty(t, res.Modifiers)
 			}
@@ -211,13 +211,13 @@ func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
 
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveRodStaffWand)
 		require.NoError(t, err)
-		assert.Equal(t, []combatsvc.Modifier{
-			{Kind: combatsvc.ModRace, Detail: "dwarf", Value: 4},
-			{Kind: combatsvc.ModBuff, Detail: "Prayer", Value: 1},
+		assert.Equal(t, []combatsvc.BreakdownModifier{
+			{Kind: string(combatsvc.ModRace), Detail: "dwarf", Value: 4},
+			{Kind: string(combatsvc.ModBuff), Detail: "Prayer", Value: 1},
 		}, res.Modifiers)
-		assert.Equal(t, 13, res.BaseThac0, "the target is the derived one, unmoved")
-		assert.Equal(t, 14, res.SaveRollTotal, "9 + 4 + 1")
-		assert.True(t, res.Hit)
+		assert.Equal(t, 13, res.Target, "the target is the derived one, unmoved")
+		assert.Equal(t, 14, res.RollTotal, "9 + 4 + 1")
+		assert.True(t, res.Passed)
 	})
 	t.Run("spell: the category's own bonus", func(t *testing.T) {
 		f := newFixture(t)
@@ -227,8 +227,8 @@ func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
 		f.records()
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 		require.NoError(t, err)
-		assert.Equal(t, []combatsvc.Modifier{{Kind: combatsvc.ModRace, Detail: "dwarf", Value: 5}}, res.Modifiers)
-		assert.Equal(t, 14, res.SaveRollTotal)
+		assert.Equal(t, []combatsvc.BreakdownModifier{{Kind: string(combatsvc.ModRace), Detail: "dwarf", Value: 5}}, res.Modifiers)
+		assert.Equal(t, 14, res.RollTotal)
 	})
 	t.Run("para/poison: none", func(t *testing.T) {
 		f := newFixture(t)
@@ -239,7 +239,7 @@ func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveParaPoison)
 		require.NoError(t, err)
 		assert.Empty(t, res.Modifiers)
-		assert.Equal(t, 11, res.BaseThac0)
+		assert.Equal(t, 11, res.Target)
 	})
 }
 
@@ -269,8 +269,8 @@ func TestResolveSavingThrow_NaturalOneAndTwentyArePlain(t *testing.T) {
 
 			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantHit, res.Hit)
-			assert.Equal(t, tt.wantTotal, res.SaveTotal, "against target 14")
+			assert.Equal(t, tt.wantHit, res.Passed)
+			assert.Equal(t, tt.wantTotal, res.Total, "against target 14")
 		})
 	}
 }

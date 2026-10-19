@@ -1,6 +1,10 @@
 import type { TFunction } from "i18next";
 import type { LogEntry, LogKind } from "@/types/log";
-import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
+import type {
+  RollResult,
+  SaveBreakdown,
+  WeaponChangeRecord,
+} from "@/types/combat";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
@@ -288,7 +292,7 @@ export function counters(t: TFunction, rounds = 0, charges = 0): string {
 }
 
 /**
- * Payload of attack entries: the roll breakdown (combatsvc attackRecord, same shape as RollResult); a
+ * Payload of attack entries: the roll breakdown (combatsvc.AttackBreakdown, the attack endpoints' answer too); a
  * corrected attack's is the latest amend's.
  */
 export function attackPayload(e: LogEntry): RollResult | null {
@@ -299,31 +303,10 @@ export function attackPayload(e: LogEntry): RollResult | null {
     : null;
 }
 
-/** Payload of save entries (combatsvc saveRecord); an adjusted save's is the latest amend's. */
-export interface SaveLogPayload {
-  category: string;
-  d20Roll: number;
-  target: number;
-  passed: boolean;
-  adjustment: number;
-  adjustmentReason?: string;
-  /** Verdict before the latest adjustment; set once the save was adjusted. */
-  previousPassed?: boolean;
-  /** The modifiers applied when rolling (buffs), not the adjustment. */
-  modifiers?: Modifier[];
-  /** rollTotal + adjustment (kept by the server; not displayed). */
-  total?: number;
-  /** d20 + modifiers, the adjustment left out (ADR 0006 step 5). */
-  rollTotal: number;
-  /** target − adjustment: the adjustment moves the target, + easier, − harder. */
-  adjustedTarget: number;
-  /** rollTotal − adjustedTarget, as computed by the server. */
-  margin: number;
-}
-
-export function savePayload(e: LogEntry): SaveLogPayload | null {
+/** Payload of save entries (combatsvc.SaveBreakdown); an adjusted save's is the latest amend's. */
+export function savePayload(e: LogEntry): SaveBreakdown | null {
   if (e.kind !== "save") return null;
-  const p = (e.effectivePayload ?? e.payload) as Partial<SaveLogPayload> | null;
+  const p = (e.effectivePayload ?? e.payload) as Partial<SaveBreakdown> | null;
   return p &&
     typeof p.passed === "boolean" &&
     typeof p.d20Roll === "number" &&
@@ -331,18 +314,18 @@ export function savePayload(e: LogEntry): SaveLogPayload | null {
     typeof p.adjustedTarget === "number" &&
     typeof p.margin === "number" &&
     typeof p.category === "string"
-    ? (p as SaveLogPayload)
+    ? (p as SaveBreakdown)
     : null;
 }
 
 /** The roll side of a save as the journal words it: "d20 12", or "d20 12 +2 = 14" with buffs. */
-function saveRollText(p: SaveLogPayload): string {
+function saveRollText(p: SaveBreakdown): string {
   return p.rollTotal === p.d20Roll
     ? `d20 ${p.d20Roll}`
     : `d20 ${p.d20Roll} ${formatSigned(p.rollTotal - p.d20Roll)} = ${p.rollTotal}`;
 }
 
-function saveText(p: SaveLogPayload, t: TFunction): string {
+function saveText(p: SaveBreakdown, t: TFunction): string {
   const verdict = (passed: boolean) =>
     t(passed ? "result.passed" : "result.failed").toUpperCase();
   const args = {

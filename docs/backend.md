@@ -67,6 +67,9 @@ id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, ste
 --  amend now sets only note, post-roll adjustments set the payload)
 -- summary holds only text the player typed (an HP change's source); every other entry is a
 -- structured payload the UI words in the player's language (older rows keep an English summary)
+-- an attack's and a save's payload is also their endpoints' answer: one Go struct
+-- (combatsvc.AttackBreakdown, combatsvc.SaveBreakdown), the answer adding only logEntryId as its
+-- last key (and, for one release, the save's previous names hit, hitMargin and baseThac0)
 
 -- hp_events: legacy HP ledger, carried into action_log by migration 007; no longer written
 

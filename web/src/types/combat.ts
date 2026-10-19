@@ -1,6 +1,6 @@
-// Mirrors api/internal/rest/handler/combathdl (RollResultDTO for saves, AttackRequestDTO, WeaponDTO)
-// and combatsvc.AttackBreakdown, which is both the attack endpoints' answer and the attack entries'
-// log payload.
+// Mirrors combatsvc.AttackBreakdown (RollResult) and combatsvc.SaveBreakdown, each both the roll
+// endpoints' answer and their entries' log payload, and api/internal/rest/handler/combathdl
+// (AttackRequestDTO, WeaponDTO, the attack form).
 
 import type { LocalizedText } from "./localized";
 
@@ -67,7 +67,7 @@ export interface RollResult {
   d100CritRoll: number;
   /**
    * The second d100, whose crit-table row gives the multiplier of a crit (docs/adr/0001). Absent on
-   * saves and on attacks logged before it existed.
+   * attacks logged before it existed.
    */
   d100MultiplierRoll?: number;
   isCrit: boolean;
@@ -82,9 +82,9 @@ export interface RollResult {
   effectiveThac0: number;
   /** The lowest AC the d20 hits (effective THAC0 − d20), same as hitsAc; kept for older entries. */
   targetACNeeded: number;
-  /** The lowest target AC the attack hits (docs/adr/0012 step 2); absent on saves and older entries. */
+  /** The lowest target AC the attack hits (docs/adr/0012 step 2); absent on older entries. */
   hitsAc?: number;
-  /** The lowest target AC the attack crits (docs/adr/0012 step 3); absent on saves and older entries. */
+  /** The lowest target AC the attack crits (docs/adr/0012 step 3); absent on older entries. */
   critsFromAc?: number;
   /** Some real AC can crit (critsFromAc within the highest AC the rules allow, docs/adr/0012 step 7). */
   critPossible?: boolean;
@@ -109,12 +109,12 @@ export interface RollResult {
   totalDamage: number;
   /** The damage formula's result before the final floor; absent on attacks logged before it was recorded. */
   unroundedDamage?: number;
-  // Attack context (absent on saving throws).
+  // Attack context.
   weaponId?: string;
   weaponName?: string;
-  /** Null on an attack whose target AC is unknown (docs/adr/0012); 0 on saves. */
+  /** Null on an attack whose target AC is unknown (docs/adr/0012). */
   targetAc: number | null;
-  /** False while the target AC is unknown; absent on saves and on attacks logged before it existed (known). */
+  /** False while the target AC is unknown; absent on attacks logged before it existed (known). */
   acKnown?: boolean;
   /** The attack was rolled without the AC (still true once the GM gave it). */
   rolledAcUnknown?: boolean;
@@ -126,20 +126,39 @@ export interface RollResult {
   rolledTargetAc?: number;
   rolledHit?: boolean;
   rolledCrit?: boolean;
-  // Saving-throw context (absent on attacks).
-  saveCategory?: SaveCategory;
-  /** Adjustment set after the roll (0: none); always present on saves. It moves the target (+ easier, − harder). */
-  adjustment?: number;
+  /** The action-log entry recording the attack. */
+  logEntryId?: number;
+}
+
+/**
+ * A saving throw: the payload of its save entry (an adjusted save's is the latest amend's) and the
+ * answer of POST /api/roll/save and its adjust route (combatsvc.SaveBreakdown, one struct).
+ */
+export interface SaveBreakdown {
+  category: string;
+  d20Roll: number;
+  /** The modifiers applied when rolling (race, buffs), not the adjustment. */
+  modifiers?: Modifier[];
+  /** The sheet's target, never adjusted. */
+  target: number;
+  /** The verdict as rolled, before any adjustment. */
+  rolledPassed?: boolean;
+  /** Moves the target, + easier, − harder (ADR 0006 step 5); 0: none. */
+  adjustment: number;
   adjustmentReason?: string;
-  /** A save's modifiers summed (the buffs, not the adjustment). */
-  saveBonus?: number;
-  /** rollTotal + adjustment, kept for older clients; the card reads rollTotal and adjustedTarget. */
-  saveTotal?: number;
-  /** A save's d20 + saveBonus, the adjustment left out (ADR 0006 step 5). */
-  rollTotal?: number;
-  /** A save's target moved by the adjustment: target − adjustment (baseThac0 is the sheet's target). */
-  adjustedTarget?: number;
-  /** The action-log entry recording the attack or save. */
+  /** d20 + modifiers, the adjustment left out (ADR 0006 step 5). */
+  rollTotal: number;
+  /** target − adjustment: the target the save was judged against. */
+  adjustedTarget: number;
+  /** rollTotal + adjustment (kept by the server; not displayed). */
+  total?: number;
+  passed: boolean;
+  /** rollTotal − adjustedTarget, as computed by the server. */
+  margin: number;
+  /** Verdict and adjustment before the latest adjustment; set once the save was adjusted. */
+  previousPassed?: boolean;
+  previousAdjustment?: number;
+  /** The entry recording the save: on the endpoints' answer only (a journal entry has its own id). */
   logEntryId?: number;
 }
 

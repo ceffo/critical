@@ -15,33 +15,31 @@ import (
 )
 
 // POST /api/roll/save/{id}/adjust passes the entry id, adjustment and reason
-// to the service and returns the recomputed save with its log entry id.
+// to the service and returns the recomputed save (combatsvc.SaveBreakdown)
+// with its log entry id, then hit, hitMargin and baseThac0 for the previous
+// release's web.
 func TestAdjustSave_WireShape(t *testing.T) {
 	h, m := newRouter(t)
+	prevPassed, prevAdj := false, 0
 	m.cmb.EXPECT().AdjustSave(mock.Anything, int64(1), int64(7), combatsvc.SaveAdjustment{Value: 4, Reason: "Gaia fire"}).
-		Return(&combatsvc.RollResult{
-			D20Roll: 12, BaseThac0: 14, EffectiveThac0: 10, Hit: true, HitMargin: 2,
-			Modifiers:    []combatsvc.Modifier{},
-			SaveCategory: combatsvc.SaveSpell, Adjustment: 4, AdjustmentReason: "Gaia fire", SaveBonus: 0, SaveTotal: 16,
-			SaveRollTotal: 12, SaveAdjustedTarget: 10, LogEntryID: 7,
+		Return(&combatsvc.SaveBreakdown{
+			Category: "spell", D20Roll: 12, Modifiers: []combatsvc.BreakdownModifier{}, Target: 14, RolledPassed: false,
+			Adjustment: 4, AdjustmentReason: "Gaia fire", RollTotal: 12, AdjustedTarget: 10, Total: 16, Passed: true, Margin: 2,
+			PreviousPassed: &prevPassed, PreviousAdjustment: &prevAdj, LogEntryID: 7,
 		}, nil)
 	rec := do(h, "POST", "/api/roll/save/7/adjust", `{"adjustment":4,"reason":"Gaia fire"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{
-		"d20Roll":12,"d100CritRoll":0,"isCrit":false,"critMultiplier":0,"critPlaceholder":false,"critFrom":0,"critTo":0,
-		"baseThac0":14,"modifiers":[],
-		"effectiveThac0":10,"targetACNeeded":0,"hit":true,"hitMargin":2,
-		"baseDamage":0,"damageDice":"","spellsBuff":0,"weaponBuff":0,"multipliers":0,"diceMultiplier":0,"strengthBonus":0,"bonusDamage":0,
-		"damageTerms":[],"totalDamage":0,"unroundedDamage":0,
-		"targetAc":0,"saveCategory":"spell","adjustment":4,"adjustmentReason":"Gaia fire","saveBonus":0,"saveTotal":16,
-		"rollTotal":12,"adjustedTarget":10,"logEntryId":7}`, rec.Body.String())
+	assert.Equal(t, `{"category":"spell","d20Roll":12,"modifiers":[],"target":14,"rolledPassed":false,`+
+		`"adjustment":4,"adjustmentReason":"Gaia fire","rollTotal":12,"adjustedTarget":10,"total":16,"passed":true,"margin":2,`+
+		`"previousPassed":false,"previousAdjustment":0,"logEntryId":7,`+
+		`"hit":true,"hitMargin":2,"baseThac0":14}`+"\n", rec.Body.String())
 }
 
 // A save always carries its adjustment, 0 included, so the card can show it.
 func TestRollSave_SendsZeroAdjustment(t *testing.T) {
 	h, m := newRouter(t)
 	m.cmb.EXPECT().ResolveSavingThrow(mock.Anything, int64(1), combatsvc.SaveSpell).
-		Return(&combatsvc.RollResult{D20Roll: 12, SaveCategory: combatsvc.SaveSpell, LogEntryID: 7}, nil)
+		Return(&combatsvc.SaveBreakdown{Category: "spell", D20Roll: 12, Modifiers: []combatsvc.BreakdownModifier{}, LogEntryID: 7}, nil)
 	rec := do(h, "POST", "/api/roll/save", `{"category":"spell"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Body.String(), `"adjustment":0`)

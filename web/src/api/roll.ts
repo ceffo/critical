@@ -1,4 +1,4 @@
-import type { RollResult, SaveCategory } from "@/types/combat";
+import type { RollResult, SaveBreakdown, SaveCategory } from "@/types/combat";
 import { post } from "./http";
 
 /** Sets the adjustment of the latest save (log entry id); the server recomputes the verdict. */
@@ -6,8 +6,8 @@ export function adjustSave(
   entryId: number,
   adjustment: number,
   reason: string,
-): Promise<RollResult> {
-  return post<RollResult>(`/api/roll/save/${entryId}/adjust`, {
+): Promise<SaveBreakdown> {
+  return post<SaveBreakdown>(`/api/roll/save/${entryId}/adjust`, {
     adjustment,
     reason,
   });
@@ -34,6 +34,8 @@ export function attackVerdict(
   return post<RollResult>(`/api/roll/attack/${entryId}/verdict`, { hit });
 }
 
-export function rollSavingThrow(category: SaveCategory): Promise<RollResult> {
-  return post<RollResult>("/api/roll/save", { category });
+export function rollSavingThrow(
+  category: SaveCategory,
+): Promise<SaveBreakdown> {
+  return post<SaveBreakdown>("/api/roll/save", { category });
 }

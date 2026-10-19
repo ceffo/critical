@@ -49,11 +49,11 @@ func savesByCategory(s charactersvc.Saves) map[SaveCategory]int {
 // applying the race's bonus and buff SaveBonus modifiers, and records the save in the action log
 // (kind save, no snapshots: it changes no state). A natural 1 or 20 is plain
 // arithmetic.
-func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory) (*RollResult, error) {
+func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory) (*SaveBreakdown, error) {
 	if !slices.Contains(saveCategories, category) {
 		return nil, fmt.Errorf("%w: unknown save category %q", domain.ErrInvalidInput, category)
 	}
-	var res *RollResult
+	var res *SaveBreakdown
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		char, err := s.chars.GetCharacter(ctx, characterID)
 		if err != nil {
@@ -63,7 +63,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		// step 1): PHB Table 60 for the class group and level.
 		target := savesByCategory(char.Derived.Saves)[category]
 
-		rec := saveRecord{Category: string(category), Target: target, Modifiers: []BreakdownModifier{}}
+		rec := SaveBreakdown{Category: string(category), Target: target, Modifiers: []BreakdownModifier{}}
 		rec.D20Roll = s.dice.RollD20()
 		mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponNone)
 		if err != nil {
@@ -94,7 +94,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		if err != nil {
 			return fmt.Errorf("record save: %w", err)
 		}
-		res = rec.result(id)
+		res = rec.answer(id)
 		return nil
 	})
 	if err != nil {
@@ -108,7 +108,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 // margin from the stored d20, modifiers and target (ADR 0006 step 5). The change is an audited amend on the
 // entry. Refused for an entry that is not a save, is voided or is not the
 // newest save.
-func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, adj SaveAdjustment) (*RollResult, error) {
+func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, adj SaveAdjustment) (*SaveBreakdown, error) {
 	adj.Reason = strings.TrimSpace(adj.Reason)
 	switch {
 	case adj.Value < -MaxSaveAdjustment || adj.Value > MaxSaveAdjustment:
@@ -119,7 +119,7 @@ func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, ad
 	if adj.Value == 0 {
 		adj.Reason = "" // no adjustment, nothing to explain
 	}
-	var rec saveRecord
+	var rec SaveBreakdown
 	e, err := s.log.AmendLatest(ctx, characterID, entryID, actionlog.KindSave, func(e actionlog.Entry) (actionlog.PayloadAmendment, error) {
 		if err := json.Unmarshal(e.EffectivePayload(), &rec); err != nil {
 			return actionlog.PayloadAmendment{}, fmt.Errorf("decode save #%d: %w", e.ID, err)
@@ -139,16 +139,17 @@ func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, ad
 	if err != nil {
 		return nil, err
 	}
-	return rec.result(e.ID), nil
+	return rec.answer(e.ID), nil
 }
 
-// saveRecord is combatsvc's JSON encoding of a saving throw inside its
-// action-log entry (payload); an adjustment amend carries the recomputed
-// record. Entries already in the log must stay decodable: add fields, never
-// rename them.
+// SaveBreakdown is the one wire shape of a saving throw: the payload of its
+// action-log entry (an adjustment amend carries the recomputed one) and the
+// answer of /api/roll/save and its adjust route are this struct. Entries
+// already in the log must stay decodable: add fields, never rename them (ADR
+// 0010, ADR 0018).
 // Saves logged before the UI named the category also carry an English
 // "label", no longer read.
-type saveRecord struct {
+type SaveBreakdown struct {
 	Category string `json:"category"`
 	D20Roll  int    `json:"d20Roll"`
 	// Modifiers are the ones applied when rolling (the race's bonus, buffs),
@@ -176,13 +177,17 @@ type saveRecord struct {
 	// before the latest adjustment; set on adjustment amends only.
 	PreviousPassed     *bool `json:"previousPassed,omitempty"`
 	PreviousAdjustment *int  `json:"previousAdjustment,omitempty"`
+	// LogEntryID is the entry recording the save: set on the endpoints'
+	// answer, never in the payload (the entry carries its own id). Last, so
+	// an answer is its entry's payload plus this one key.
+	LogEntryID int64 `json:"logEntryId,omitempty"`
 }
 
 // settle computes the roll total, the adjusted target, the verdict and the
 // margin: the adjustment moves the target (ADR 0006 step 5), and the save
 // passes when d20 + modifiers >= target - adjustment, a natural 1 or 20
 // included (steps 2 and 3).
-func (r *saveRecord) settle() {
+func (r *SaveBreakdown) settle() {
 	r.RollTotal = r.D20Roll + r.modTotal()
 	r.AdjustedTarget = r.Target - r.Adjustment
 	r.Passed = r.RollTotal >= r.AdjustedTarget
@@ -190,7 +195,7 @@ func (r *saveRecord) settle() {
 	r.Total = r.RollTotal + r.Adjustment
 }
 
-func (r *saveRecord) modTotal() int {
+func (r *SaveBreakdown) modTotal() int {
 	sum := 0
 	for _, m := range r.Modifiers {
 		sum += m.Value
@@ -198,22 +203,12 @@ func (r *saveRecord) modTotal() int {
 	return sum
 }
 
-// result is the RollResult of the save: the sheet's target is BaseThac0,
-// the adjusted target EffectiveThac0 and SaveAdjustedTarget, the verdict Hit,
-// the margin HitMargin. The modifiers are the roll's (buffs): the adjustment
-// moves the target, so it is not one of them.
-func (r *saveRecord) result(entryID int64) *RollResult {
-	mods := make([]Modifier, 0, len(r.Modifiers))
-	for _, m := range r.Modifiers {
-		mods = append(mods, Modifier{Kind: ModifierKind(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
-	}
-	return &RollResult{
-		D20Roll: r.D20Roll, BaseThac0: r.Target, EffectiveThac0: r.AdjustedTarget, Modifiers: mods,
-		Hit: r.Passed, HitMargin: r.Margin, SaveBonus: r.modTotal(), SaveTotal: r.Total,
-		SaveRollTotal: r.RollTotal, SaveAdjustedTarget: r.AdjustedTarget,
-		SaveCategory: SaveCategory(r.Category), Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason,
-		LogEntryID: entryID,
-	}
+// answer is the save as its endpoints return it: the payload plus the id of
+// its entry. Every field is settled (an old entry's roll total and adjusted
+// target included, see SavePayloadView), so the answer needs no view.
+func (r SaveBreakdown) answer(entryID int64) *SaveBreakdown {
+	r.LogEntryID = entryID
+	return &r
 }
 
 // SavePayloadView is the actionlog.PayloadView of save entries (ADR 0006
@@ -231,7 +226,7 @@ func SavePayloadView(payload json.RawMessage) (json.RawMessage, error) {
 	if hasRoll && hasTarget {
 		return payload, nil
 	}
-	var rec saveRecord
+	var rec SaveBreakdown
 	if err := json.Unmarshal(payload, &rec); err != nil {
 		return nil, fmt.Errorf("decode save payload: %w", err)
 	}

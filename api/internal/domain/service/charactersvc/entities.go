@@ -45,7 +45,8 @@ type Character struct {
 	SkillArmor string
 
 	// Sheet is what the character sheet stated when the character was
-	// imported; never an input (ADR 0030 step 24).
+	// imported; never an input. Only its level is read: the realized level of
+	// a character with none stored (ADR 0030 step 7.5).
 	Sheet Sheet
 	// Derived are the values the rules derive from class, race, abilities and
 	// XP; set by the service, zero as the reader returns it.
@@ -71,8 +72,8 @@ type Saves struct {
 }
 
 // Sheet are the figures an imported character's sheet stated (Kelsen's seed):
-// kept to compare them with the derived values (ADR 0030 step 24), never read
-// as inputs.
+// kept as imported, never read as inputs (ADR 0030 step 24, retired); the level
+// stands in for a missing realized level (step 7.5).
 type Sheet struct {
 	Level int
 	THAC0 int
@@ -80,7 +81,7 @@ type Sheet struct {
 }
 
 // Derived are a character's values derived by the rules (ADR 0030 steps 3 to
-// 8, 22.1 and 24).
+// 8 and 22.1).
 type Derived struct {
 	// XPTotal is the starting XP plus every ledger entry (ADR 0015 step 1).
 	XPTotal int
@@ -104,9 +105,6 @@ type Derived struct {
 	// SpellSlots is step 8 at the realized level: the slots per day by
 	// spell level, levels with no slot absent.
 	SpellSlots map[int]int
-	// SheetDifferences are step 24: each value the imported sheet states
-	// differently from the rules; the derived value is the one used.
-	SheetDifferences []SheetDifference
 	// LevelUp is step 7: the levels the target is above the realized one.
 	LevelUp LevelUp
 	// Specializes is step 12: the class may specialize in a weapon (the
@@ -172,28 +170,6 @@ type LevelUp struct {
 	// under the realized level. Nothing is removed; the card warns until the
 	// roll is undone or the XP comes back.
 	RealizedAboveTarget bool
-}
-
-// SheetValue names a value of the sheet comparison (ADR 0030 step 24).
-type SheetValue string
-
-// The values the sheet comparison names.
-const (
-	SheetLevel            SheetValue = "level"
-	SheetTHAC0            SheetValue = "thac0"
-	SheetSaveParaPoison   SheetValue = "save_para_poison"
-	SheetSaveRodStaffWand SheetValue = "save_rod_staff_wand"
-	SheetSavePetriPoly    SheetValue = "save_petri_poly"
-	SheetSaveBreath       SheetValue = "save_breath"
-	SheetSaveSpell        SheetValue = "save_spell"
-)
-
-// SheetDifference is a value the sheet states differently from the rules:
-// the sheet's figure and the computed one (structured: the web words it).
-type SheetDifference struct {
-	Value    SheetValue
-	Sheet    int
-	Computed int
 }
 
 // Summary is a character in its owner's list (ADR 0029 step 7.2).

@@ -63,7 +63,7 @@ the review checklist's wording pass reads the glossary.
 - ADR 0004's buff, ADR 0005's round, ADR 0006's saving throw and ADR 0016's item keep their
   names; each carries a one-line pointer to this ADR for its UI word.
 - The "sheet differences" of ADR 0030 step 24 compare the figures imported from the Google
-  sheet; the user does not count that sheet as domain. The feature stays until an item retires
-  it; the glossary does not name it as a term.
+  sheet; the user does not count that sheet as domain. The feature was retired on 2026-10-19
+  (ADR 0030 step 24); the glossary does not name it as a term.
 - The glossary is not a spec: implementation details, endpoints and table names stay in
   `docs/backend.md` and the ADRs.

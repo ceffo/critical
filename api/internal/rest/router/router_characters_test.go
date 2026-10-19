@@ -260,10 +260,9 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		Sheet: charactersvc.Sheet{Level: 15, THAC0: 14},
 		Derived: charactersvc.Derived{
 			XPTotal: 1_300_000, TargetLevel: 11, RealizedLevel: 9, NextLevelXP: &next, THAC0: 13,
-			Saves:            charactersvc.Saves{ParaPoison: 10, RodStaffWand: 8, PetriPoly: 9, Breath: 13, Spell: 9},
-			RaceSaveBonus:    charactersvc.Saves{RodStaffWand: 4, Spell: 4},
-			SpellSlots:       map[int]int{5: 2, 1: 3},
-			SheetDifferences: []charactersvc.SheetDifference{{Value: charactersvc.SheetTHAC0, Sheet: 14, Computed: 13}},
+			Saves:         charactersvc.Saves{ParaPoison: 10, RodStaffWand: 8, PetriPoly: 9, Breath: 13, Spell: 9},
+			RaceSaveBonus: charactersvc.Saves{RodStaffWand: 4, Spell: 4},
+			SpellSlots:    map[int]int{5: 2, 1: 3},
 			LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
 				{Level: 10, Die: 6}, {Level: 11, FixedGain: 2},
 			}},
@@ -298,7 +297,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"saves": {"paraPoison": 10, "rodStaffWand": 8, "petriPoly": 9, "breath": 13, "spell": 9},
 		"raceSaveBonus": {"paraPoison": 0, "rodStaffWand": 4, "petriPoly": 0, "breath": 0, "spell": 4},
 		"spellSlots": [{"level": 1, "count": 3}, {"level": 5, "count": 2}],
-		"sheetDifferences": [{"value": "thac0", "sheet": 14, "computed": 13}],
+		"sheetDifferences": [],
 		"levelUp": {"realizedAboveTarget": false, "pending": [
 			{"level": 10, "die": 6, "fixedGain": 0}, {"level": 11, "die": 0, "fixedGain": 2}
 		]},

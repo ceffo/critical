@@ -19,8 +19,8 @@ saves, slots, skill percentages) are derived from class, race, abilities and XP,
 **Character sheet** (fr: feuille de personnage):
 The character's record the app keeps and shows during play: its figures, state and history.
 The Google sheet the first character was imported from is not part of the domain (it was
-ingestion); the imported figures survive only as the "sheet differences" of
-[ADR 0030](docs/adr/0030-classes-and-races.md) step 24.
+ingestion); its figures are kept as imported and compared with nothing
+([ADR 0030](docs/adr/0030-classes-and-races.md) step 24, retired).
 _Avoid_: fiche, "the sheet" for the Google import.
 
 **Player** (fr: joueur):

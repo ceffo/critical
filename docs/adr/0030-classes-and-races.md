@@ -244,8 +244,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    _(As built, 2026-10-18)_ `characters.realized_level` is a nullable column (migration 008,
    additive, no data step): NULL is the stored sheet `level`, read with
    `COALESCE(realized_level, level)`, so nothing is copied. The sheet `level` is not itself the
-   realized level because step 24 compares it, as imported, with the rules at the import XP; a
-   level-up must not turn into a sheet difference. A created character stores `realized_level` with
+   realized level: it stays the level as imported (step 24 compared it, until it was retired on
+   2026-10-19; the column is not reworked). A created character stores `realized_level` with
    its sheet figures. In Go the derived block carries `TargetLevel` and `RealizedLevel`
    (`charactersvc.Derived`; no bare level where both meet); the API's `derived` carries
    `targetLevel` and `realizedLevel`, and `levelUp` carries the `pending` levels (each with the
@@ -665,14 +665,14 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
       from a fixed list, at least long bow, short bow (composite ones included), light crossbow,
       heavy crossbow, hand crossbow, dagger, dart, sling, short sword, long sword, other melee,
       other thrown, other missile. Steps 11, 12 and 22.3 read it; no rule matches a weapon name.
-24. **The sheet comparison.** For a character imported from a sheet that states them (Kelsen's
-    seed), the sheet's level, THAC0, five save targets and bard skill percentages are compared with
-    the computed values at import. Every difference is a warning naming the value, the sheet's
-    figure and the computed one (structured: a code and the
-    two numbers), kept and shown to the player; the computed value is used. The
-    sheet's figures are not stored as inputs. Kelsen's bard skill points are derived once as the
-    sheet's percentage minus the computed base, race, Dexterity and armour terms, so his skills come
-    out as on the sheet (the user's ruling in triage, 2026-10-18).
+24. **The sheet comparison (retired).** _Retired by the user's ruling, 2026-10-19: "retire"
+    (Kelsen's import is reconciled; the comparison was a one-off)._ It compared the figures of a
+    character imported from a sheet (Kelsen's seed: level, THAC0, five save targets, bard skill
+    percentages) with the computed values and showed one warning per difference. Nothing is
+    compared, computed, sent or shown any more; the computed value is the only one. The sheet's
+    figures stay stored as imported (the `level`, `thac0_base` and `save_*` columns), never read as
+    inputs, and the `level` stays what stands in for a missing `realized_level` (step 7.5). Kelsen's
+    bard skill points are unchanged (below).
     _(As built for the skills, 2026-10-18)_ The derived points are the seed's (`skill_points` in
     `seeds/character.json`: 35 / 70 / 25 / 70, within the bard's budget at level 15), stored with a
     new seed character and given to the one already stored by migration 012's data step
@@ -683,20 +683,14 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     Tests: `TestKelsen_TheSheetMatchesTheDerivedValues` (seedcheck),
     `TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration` (storage/postgres),
     `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
-    _(As built, level, THAC0 and saves; the skills with step 18, above)_ The figures the sheet stated
-    at import are the character's stored `level`, `thac0_base` and `save_*` columns, never read as
-    inputs; each read of the character compares them with the values the rules give at the sheet's
-    own XP (the starting XP, without the ledger), which is the comparison at import: XP awarded
-    since raises the level without making the sheet "wrong". The differences are the derived
-    block's `sheetDifferences` (`value` code, `sheet`, `computed`); the character card lists them.
-    A character created in the app states no sheet: its creation stores the figures the rules derive
-    at its starting XP in those columns (_as built 2026-10-18_), so it shows no difference.
-    Tests: `TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent` (charactersvc),
-    `TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing` (composition). Kelsen's seed against the books'
-    tables and the real artifact: no difference.
-    Tests: `TestDerive_Step24_SheetDifferences`, `TestDerive_KelsenMatchesHisSheet` (charactersvc),
-    `TestKelsen_TheSheetMatchesTheDerivedValues` (seedcheck: seeds/character.json on the fixture's
-    tables and, when present, the real artifact), `TestCharacter_ServesTheDerivedBlock` (router).
+    _(Retirement as built, 2026-10-19)_ The derived block no longer lists differences. The API keeps
+    `sheetDifferences` as an always empty array for one release only, because the previous
+    release's web reads its `.length`; the web of this release neither types nor reads it. Drop the
+    field in the release after.
+    Tests: `TestDerive_Step24_SheetIsNotCompared` (charactersvc: a disagreeing sheet changes
+    nothing and the rules are read once), `TestDerive_KelsenMatchesHisSheet` (charactersvc),
+    `TestKelsen_TheSheetMatchesTheDerivedValues` (seedcheck: the derived slots and skills against the
+    seed), `TestCharacter_ServesTheDerivedBlock` (router: `sheetDifferences` is `[]`).
 
 ## Consequences
 

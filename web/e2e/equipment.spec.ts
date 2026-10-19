@@ -237,3 +237,44 @@ test("a weapon removed behind the Attack panel's back: the attack says so and th
   expect(await otherWeapons(page)).not.toContain("Darts");
   await snap(page, "attack-weapon-gone");
 });
+
+test("a weapon with a daily behaviour counts in the list: its row has the use button, a plain weapon has none", async ({
+  page,
+}) => {
+  await openInventory(page);
+  await expect(
+    row(page, "bastard_sword").getByTestId("item-count"),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Add item" }).click();
+  const f = form(page);
+  await f.getByLabel("Name").fill("Flame Tongue");
+  await f.getByLabel("Category").selectOption("weapon");
+  await f.getByLabel("Damage S-M").fill("1d8");
+  await f.getByLabel("Damage Large").fill("1d8");
+  await f.getByLabel("Behaviour").selectOption("daily");
+  await f.getByLabel("Daily number").fill("2");
+  await f.getByLabel("Count").fill("2");
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  const tongue = row(page, "flame_tongue");
+  await expect(tongue.getByTestId("item-count")).toHaveText("2 / 2");
+  await tongue.getByRole("button", { name: "Use one Flame Tongue" }).click();
+  await expect(tongue.getByTestId("item-count")).toHaveText("1 / 2");
+});
+
+test("the review section is bounded and its list scrolls, so the rows below stay reachable", async ({
+  page,
+}) => {
+  await openInventory(page);
+  await page
+    .getByTestId("review-band")
+    .getByRole("button", { name: /Check the possessions/ })
+    .click();
+  const section = page.getByTestId("inventory-review");
+  await expect(section).toBeVisible();
+  const style = await section.evaluate((el) => getComputedStyle(el).maxHeight);
+  expect(style).not.toBe("none");
+  const overflow = await page
+    .getByTestId("inventory-review-list")
+    .evaluate((el) => getComputedStyle(el).overflowY);
+  expect(overflow).toBe("auto");
+});

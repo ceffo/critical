@@ -572,6 +572,38 @@ func (q *Queries) LearnFailureRefs(ctx context.Context) ([]LearnFailureRefsRow, 
 	return items, nil
 }
 
+const legacySnapshotKeys = `-- name: LegacySnapshotKeys :many
+SELECT DISTINCT s.state_key::text AS state_key
+FROM action_snapshots s JOIN action_log a ON a.id = s.action_id
+WHERE a.character_id = $1::bigint
+  AND (s.state_key LIKE 'items:%' OR s.state_key LIKE 'weapons:%')
+`
+
+// The ids the action log still holds item and weapon snapshots of (the conversion of migration 016
+// keeps an item and a weapon of one id apart even when one of them is only in the log).
+func (q *Queries) LegacySnapshotKeys(ctx context.Context, characterID int64) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, legacySnapshotKeys, characterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var state_key string
+		if err := rows.Scan(&state_key); err != nil {
+			return nil, err
+		}
+		items = append(items, state_key)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCharacterIdentity = `-- name: ListCharacterIdentity :many
 SELECT id, alignment, sex FROM characters ORDER BY id
 `
@@ -839,6 +871,23 @@ type RecordSeedOfferParams struct {
 
 func (q *Queries) RecordSeedOffer(ctx context.Context, arg RecordSeedOfferParams) error {
 	_, err := q.db.ExecContext(ctx, recordSeedOffer, arg.Kind, arg.ID, arg.Lang)
+	return err
+}
+
+const renameAttackFormAmmo = `-- name: RenameAttackFormAmmo :exec
+UPDATE attack_forms SET ammo_item_id = $1
+WHERE character_id = $2::bigint AND ammo_item_id = $3
+`
+
+type RenameAttackFormAmmoParams struct {
+	NewID       string
+	CharacterID int64
+	OldID       string
+}
+
+// The chosen ammunition follows an item the conversion gave a new id.
+func (q *Queries) RenameAttackFormAmmo(ctx context.Context, arg RenameAttackFormAmmoParams) error {
+	_, err := q.db.ExecContext(ctx, renameAttackFormAmmo, arg.NewID, arg.CharacterID, arg.OldID)
 	return err
 }
 

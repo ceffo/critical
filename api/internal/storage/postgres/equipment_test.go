@@ -184,3 +184,42 @@ func TestConvertEquipment_Step26_4_RefusesACatalogueWithoutEquipment(t *testing.
 		return after[equipmentMigration](ctx, empty)
 	}), "nothing to convert, nothing refused")
 }
+
+// ADR 0033 step 26.3: the attack form's chosen ammunition is an item id, so it follows the item
+// the conversion renamed; left alone the form would offer the first matching ammunition and the
+// next attack would save and spend that one.
+func TestConvertEquipment_Step26_3_TheChosenAmmunitionFollowsTheRename(t *testing.T) {
+	f, owner := legacyCharacter(t)
+	f.t.AttackAmmo[owner] = "dagger" // the item that shares its id with the weapon
+	_, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
+	require.NoError(t, f.InTx(context.Background(), func(ctx context.Context) error {
+		return after[equipmentMigration](ctx, f)
+	}))
+	assert.Equal(t, "dagger_2", f.t.AttackAmmo[owner])
+}
+
+// ADR 0033 step 26.3: an item and a weapon of one id that clash only through the action log (one of
+// them removed, its removal still undoable) are kept apart too: the log's ids are read from its
+// snapshot keys. Here the item is stored and the weapon only in the log, and the reverse.
+func TestConvertEquipment_Step26_3_IdsOnlyInTheLogAreKeptApart(t *testing.T) {
+	f, owner := legacyCharacter(t)
+	ctx := context.Background()
+	for _, it := range []storeq.InsertItemParams{
+		{ID: "torch", Position: 9, Name: 1, Behaviour: "stock", Count: 1, MaxCount: 1, Powers: "[]", DamageTypes: []string{}},
+	} {
+		it.CharacterID = owner
+		require.NoError(t, f.InsertItem(ctx, it))
+	}
+	// The weapon "torch" was removed (its snapshot is in the log) while the item "torch" is stored; the
+	// item "mace" was removed while the weapon "mace" is stored.
+	f.t.SnapshotKeys[owner] = []string{"weapons:torch", "items:mace", "items:never_clashes"}
+	_, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
+	require.NoError(t, f.InTx(ctx, func(ctx context.Context) error { return after[equipmentMigration](ctx, f) }))
+
+	assert.Equal(t, "torch_2", f.t.Renames[rowKey(owner, "torch")], "the stored item steps aside for the removed weapon")
+	assert.Contains(t, f.t.Items, rowKey(owner, "torch_2"))
+	assert.NotContains(t, f.t.Items, rowKey(owner, "torch"))
+	assert.Equal(t, "mace_2", f.t.Renames[rowKey(owner, "mace")], "the removed item's id is mapped for its undo")
+	assert.NotContains(t, f.t.Items, rowKey(owner, "mace_2"), "no piece is made for it")
+	assert.NotContains(t, f.t.Renames, rowKey(owner, "never_clashes"))
+}

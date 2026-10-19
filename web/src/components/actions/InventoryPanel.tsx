@@ -63,8 +63,22 @@ function CategoryIcon({ item }: { item: Item }) {
   return <Icon aria-hidden className={cls} />;
 }
 
-/** The categories whose pieces count at the table (stock, charges, daily): not one-off weapons and armour. */
+/** The categories whose pieces always count at the table (stock, charges, daily). */
 const COUNTED: readonly Category[] = ["ammunition", "magic", "gear"];
+
+/**
+ * Whether the row shows its count and use controls: always for a counted category; for a weapon,
+ * armour or shield only when the piece counts (a charges or daily behaviour, more than one, or
+ * effect dice), so a plain one-off weapon stays free of them.
+ */
+function isCounted(i: Item): boolean {
+  return (
+    COUNTED.includes(i.category) ||
+    i.behaviour !== "stock" ||
+    i.count > 1 ||
+    i.effectDice !== ""
+  );
+}
 
 /**
  * Inventaire workspace (ADR 0033 step 1, ADR 0035 items 2, 3 and 7): one flat possessions list in
@@ -124,7 +138,7 @@ export function InventoryPanel() {
       {reviewOpen && toReview.length > 0 && (
         <section
           aria-labelledby="inventory-review-title"
-          className="zone-card flex min-h-0 shrink-0 flex-col pb-3"
+          className="zone-card flex max-h-[45%] min-h-0 shrink-0 flex-col pb-3"
           data-testid="inventory-review"
         >
           <div className="card-band mb-1.5 flex min-h-10 flex-wrap items-center justify-between gap-x-3 px-3 py-1">
@@ -140,7 +154,10 @@ export function InventoryPanel() {
               {t("equipment.review.intro")}
             </span>
           </div>
-          <ul className="flex flex-col gap-1 px-3">
+          <ul
+            className="flex min-h-0 flex-col gap-1 overflow-y-auto px-3"
+            data-testid="inventory-review-list"
+          >
             {toReview.map((i) => (
               <li
                 key={i.id}
@@ -336,7 +353,7 @@ function ItemRow({
 }) {
   const { t, i18n } = useTranslation();
   const name = localized(i18n.language, i.name);
-  const counted = COUNTED.includes(i.category);
+  const counted = isCounted(i);
   return (
     <li
       className={cn(

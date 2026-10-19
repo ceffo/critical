@@ -149,6 +149,19 @@ FROM weapons WHERE character_id = sqlc.arg(character_id)::bigint ORDER BY positi
 -- name: DeleteCharacterItems :exec
 DELETE FROM items WHERE character_id = sqlc.arg(character_id)::bigint;
 
+-- The ids the action log still holds item and weapon snapshots of (the conversion of migration 016
+-- keeps an item and a weapon of one id apart even when one of them is only in the log).
+-- name: LegacySnapshotKeys :many
+SELECT DISTINCT s.state_key::text AS state_key
+FROM action_snapshots s JOIN action_log a ON a.id = s.action_id
+WHERE a.character_id = sqlc.arg(character_id)::bigint
+  AND (s.state_key LIKE 'items:%' OR s.state_key LIKE 'weapons:%');
+
+-- The chosen ammunition follows an item the conversion gave a new id.
+-- name: RenameAttackFormAmmo :exec
+UPDATE attack_forms SET ammo_item_id = @new_id
+WHERE character_id = sqlc.arg(character_id)::bigint AND ammo_item_id = @old_id;
+
 -- name: InsertItemRename :exec
 INSERT INTO item_id_renames (character_id, old_id, new_id) VALUES (sqlc.arg(character_id)::bigint, @old_id, @new_id);
 

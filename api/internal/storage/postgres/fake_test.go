@@ -55,6 +55,10 @@ type tables struct {
 	// of the old id.
 	Reviews map[string]bool
 	Renames map[string]string
+	// SnapshotKeys are the state keys of the action log's snapshots, by character; AttackAmmo the
+	// attack form's chosen ammunition item id, by character.
+	SnapshotKeys map[int64][]string
+	AttackAmmo   map[int64]string
 	// Offers are seeded_name_languages rows, "kind|id|lang".
 	Offers map[string]bool
 	Profs  map[string]storeq.UpsertProficiencyParams
@@ -122,7 +126,7 @@ func newFakeStore() *fakeStore {
 	return &fakeStore{t: tables{
 		Slots: map[int64]string{}, Buffs: map[int64]string{}, Rounds: map[int64]bool{},
 		Weapons: map[string]weaponRow{}, Items: map[string]storeq.InsertItemParams{},
-		Reviews: map[string]bool{}, Renames: map[string]string{},
+		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
 		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, Heights: map[int64]string{}, Weights: map[int64]string{}, HeightsCm: map[int64]float64{}, WeightsKg: map[int64]float64{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
@@ -848,4 +852,15 @@ func (f *fakeStore) SpellCorrectionPayloads(_ context.Context, kinds []string) (
 		}
 	}
 	return out, nil
+}
+
+func (f *fakeStore) LegacySnapshotKeys(_ context.Context, characterID int64) ([]string, error) {
+	return slices.Clone(f.t.SnapshotKeys[characterID]), nil
+}
+
+func (f *fakeStore) RenameAttackFormAmmo(_ context.Context, arg storeq.RenameAttackFormAmmoParams) error {
+	if f.t.AttackAmmo[arg.CharacterID] == arg.OldID {
+		f.t.AttackAmmo[arg.CharacterID] = arg.NewID
+	}
+	return nil
 }

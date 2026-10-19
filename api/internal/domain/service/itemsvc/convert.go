@@ -66,33 +66,68 @@ var matchable = []string{
 //  6. every weapon is wielded, every piece with powers worn (one that cannot
 //     be worn stays carried, on the review list), the rest carried.
 func Convert(items []Item, weapons []LegacyWeapon, catalogue []ruletablesvc.Weapon) Conversion {
+	return ConvertWithHistory(items, weapons, catalogue, History{})
+}
+
+// History is the ids the action log still holds snapshots of, for items and
+// weapons that are no longer stored: undoing their removal (or redoing their
+// add) brings them back, so their identities count as taken (ADR 0033 step
+// 26.3).
+type History struct {
+	ItemIDs   []string // ids of "items:<id>" snapshots
+	WeaponIDs []string // ids of "weapons:<id>" snapshots
+}
+
+// ConvertWithHistory is Convert that also keeps apart an item and a weapon
+// that share an id only through the log: an item (stored or only in the log)
+// whose id a weapon (stored or only in the log) has takes the next free
+// suffix, recorded in Renames, so that restoring either never overwrites the
+// other. A renamed id with no stored item is recorded only: the restorer of an
+// old items snapshot reads it.
+func ConvertWithHistory(items []Item, weapons []LegacyWeapon, catalogue []ruletablesvc.Weapon, h History) Conversion {
 	out := Conversion{Renames: map[string]string{}}
 	taken := map[string]bool{}
+	weaponIDs := map[string]bool{}
+	storedItems := map[string]bool{}
 	end := 0
 	for _, w := range weapons {
-		taken[w.ID] = true
+		taken[w.ID], weaponIDs[w.ID] = true, true
+	}
+	for _, id := range h.WeaponIDs {
+		taken[id], weaponIDs[id] = true, true
 	}
 	for _, it := range items {
-		taken[it.ID] = true
+		taken[it.ID], storedItems[it.ID] = true, true
 		if it.Position >= end {
 			end = it.Position + 1
 		}
 	}
+	for _, id := range h.ItemIDs {
+		taken[id] = true
+	}
+	nextFree := func(base string) string {
+		for n := 2; ; n++ {
+			id := base + "_" + strconv.Itoa(n)
+			if !taken[id] {
+				taken[id] = true
+				return id
+			}
+		}
+	}
 	for _, it := range items {
 		piece, reasons := ConvertItem(it)
-		if weaponHas(weapons, it.ID) {
-			for n := 2; ; n++ {
-				id := it.ID + "_" + strconv.Itoa(n)
-				if !taken[id] {
-					taken[id] = true
-					out.Renames[it.ID] = id
-					piece.ID = id
-					break
-				}
-			}
+		if weaponIDs[it.ID] {
+			id := nextFree(it.ID)
+			out.Renames[it.ID] = id
+			piece.ID = id
 		}
 		out.Pieces = append(out.Pieces, piece)
 		out.Reviews = append(out.Reviews, reviews(piece.ID, reasons)...)
+	}
+	for _, id := range slices.Sorted(slices.Values(h.ItemIDs)) {
+		if _, done := out.Renames[id]; !storedItems[id] && weaponIDs[id] && !done {
+			out.Renames[id] = nextFree(id)
+		}
 	}
 	ordered := slices.Clone(weapons)
 	slices.SortStableFunc(ordered, func(a, b LegacyWeapon) int { return a.Position - b.Position })

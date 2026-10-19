@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -91,7 +92,20 @@ func convertCharacter(ctx context.Context, q storeq.Querier, owner int64, catalo
 			AmmoKind: r.AmmoKind, Type: r.WeaponType, Specialized: r.Specialized == 1,
 		})
 	}
-	conv := itemsvc.Convert(items, weapons, catalogue)
+	keys, err := q.LegacySnapshotKeys(ctx, owner)
+	if err != nil {
+		return fmt.Errorf("list snapshots: %w", err)
+	}
+	var history itemsvc.History
+	for _, k := range keys {
+		switch {
+		case strings.HasPrefix(k, itemsvc.StateKeyItems+":"):
+			history.ItemIDs = append(history.ItemIDs, strings.TrimPrefix(k, itemsvc.StateKeyItems+":"))
+		case strings.HasPrefix(k, itemsvc.StateKeyWeapons+":"):
+			history.WeaponIDs = append(history.WeaponIDs, strings.TrimPrefix(k, itemsvc.StateKeyWeapons+":"))
+		}
+	}
+	conv := itemsvc.ConvertWithHistory(items, weapons, catalogue, history)
 	renamedFrom := map[string]string{}
 	for old, id := range conv.Renames {
 		renamedFrom[id] = old
@@ -117,6 +131,11 @@ func convertCharacter(ctx context.Context, q storeq.Querier, owner int64, catalo
 	for old, id := range conv.Renames {
 		if err := q.InsertItemRename(ctx, storeq.InsertItemRenameParams{CharacterID: owner, OldID: old, NewID: id}); err != nil {
 			return fmt.Errorf("record rename %s: %w", old, err)
+		}
+		// The attack form's chosen ammunition is an item id: it follows the rename, or the form would
+		// offer the first matching ammunition and the next attack would save that one instead.
+		if err := q.RenameAttackFormAmmo(ctx, storeq.RenameAttackFormAmmoParams{CharacterID: owner, OldID: old, NewID: id}); err != nil {
+			return fmt.Errorf("rename the chosen ammunition %s: %w", old, err)
 		}
 	}
 	return insertReviews(ctx, q, owner, conv.Reviews)

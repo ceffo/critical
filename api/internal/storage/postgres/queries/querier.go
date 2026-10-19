@@ -51,6 +51,9 @@ type Querier interface {
 	InsertText(ctx context.Context, arg InsertTextParams) error
 	ItemNameKey(ctx context.Context, arg ItemNameKeyParams) (int64, error)
 	LearnFailureRefs(ctx context.Context) ([]LearnFailureRefsRow, error)
+	// The ids the action log still holds item and weapon snapshots of (the conversion of migration 016
+	// keeps an item and a weapon of one id apart even when one of them is only in the log).
+	LegacySnapshotKeys(ctx context.Context, characterID int64) ([]string, error)
 	// The identity migration (013): every character's stored alignment and sex, to map to codes.
 	ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error)
 	// The languages migration (014): every character's stored language list, to map to codes.
@@ -66,6 +69,8 @@ type Querier interface {
 	NextTextKey(ctx context.Context) (int64, error)
 	RecordCatalogueVersion(ctx context.Context, arg RecordCatalogueVersionParams) error
 	RecordSeedOffer(ctx context.Context, arg RecordSeedOfferParams) error
+	// The chosen ammunition follows an item the conversion gave a new id.
+	RenameAttackFormAmmo(ctx context.Context, arg RenameAttackFormAmmoParams) error
 	// The character the seed files belong to: the one named in character.json (the lowest id when
 	// two share the name).
 	SeedCharacterID(ctx context.Context, name string) (int64, error)

@@ -324,3 +324,24 @@ func TestConvert_Step26_4_WeaponMatchedByName(t *testing.T) {
 		assert.Empty(t, piece.CatalogueCode, name)
 	}
 }
+
+// ADR 0033 step 26.3: ids that the action log still holds count as taken: a stored item steps aside
+// for a weapon only in the log, a removed item whose id a weapon has is recorded without a piece, and
+// the suffix is free of every id in play.
+func TestConvertWithHistory_Step26_3_LogOnlyIdentities(t *testing.T) {
+	stored := itemsvc.Item{ID: "dagger", Name: localized.Of("Spare"), Type: "sack", Behaviour: itemsvc.BehaviourStock, Count: 1, MaxCount: 1}
+	conv := itemsvc.ConvertWithHistory([]itemsvc.Item{stored}, nil, catalogueWeapons,
+		itemsvc.History{WeaponIDs: []string{"dagger"}, ItemIDs: []string{"dagger_2"}})
+	assert.Equal(t, map[string]string{"dagger": "dagger_3"}, conv.Renames, "dagger_2 is an item of the log: taken")
+	require.Len(t, conv.Pieces, 1)
+	assert.Equal(t, "dagger_3", conv.Pieces[0].ID)
+
+	conv = itemsvc.ConvertWithHistory(nil, []itemsvc.LegacyWeapon{legacySword}, catalogueWeapons,
+		itemsvc.History{ItemIDs: []string{"longsword", "other"}})
+	assert.Equal(t, map[string]string{"longsword": "longsword_2"}, conv.Renames)
+	require.Len(t, conv.Pieces, 1, "only the weapon is a piece")
+	assert.Equal(t, "longsword", conv.Pieces[0].ID)
+
+	plain := itemsvc.Convert([]itemsvc.Item{stored}, nil, catalogueWeapons)
+	assert.Empty(t, plain.Renames, "no log, no weapon: nothing renamed")
+}

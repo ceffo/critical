@@ -151,13 +151,16 @@ budget").
    scoper filed without the user. The scoper's issues are already in Linear: nothing to commit.
 The quota gate applies (a scoper is Opus).
 
-## Capacity: one item at a time
+## Capacity: one lane per independent item
 
-- **Default: one developer working at a time.** Start the next item when the current one's PR is open
-  and CI is green (or it's parked waiting on the user).
-- **A second developer in parallel only when the two items are truly independent**, per the
-  workflow doc's "Parallelism" rules. If you can't establish that cheaply, run them in sequence. Say
-  in the plan why two run in parallel.
+- **Run every Todo item that is independent of what is in flight, each in its own lane** (user,
+  2026-10-16: "don't hesitate to have more parallel dev"; 2026-10-19: "you should have multiple
+  lanes if work can be done in paralell. are you checking linear?"). Independent = the workflow
+  doc's "Parallelism" rules (compare the in-flight branch's `git diff --name-only` with the files
+  the item names).
+- **At every transition** (report read, PR shipped, merge), list Linear's Todo items and fill every
+  free lane before ending the turn. One lane busy and eligible disjoint items waiting is idling.
+- The quota gate caps the lane count (projected over 100%: fewer lanes, Sonnet where allowed).
 - At most one `code-reviewer` per branch.
 
 Agents run in the background and you're notified when they finish. Don't poll, don't guess at an

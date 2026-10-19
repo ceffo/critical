@@ -214,8 +214,10 @@ export interface Character {
   alignment: string;
   age: number | null;
   sex: string;
-  height: string;
-  weight: string;
+  /** Centimetres, null when not set (ADR 0032 step 5); shown per language by `lib/measures`. */
+  height: number | null;
+  /** Kilograms, null when not set. */
+  weight: number | null;
   hair: string;
   eyes: string;
   /** The language catalogue codes the character knows, its race's native language included (ADR
@@ -228,7 +230,17 @@ export interface Character {
   /** Rules the stored character breaks without being refused (steps 4.2 and 8.4), worded by the
    * web; `languages_over_limit` also carries how many additional languages it knows (`count`, the
    * native one not counted) and its Intelligence allows (`limit`). */
-  warnings: { code: string; field: string; count?: number; limit?: number }[];
+  warnings: {
+    code: string;
+    field: string;
+    count?: number;
+    limit?: number;
+    /** `height_outside_range`, `weight_outside_range` and `age_outside_range` (step 5.2): the
+     * stored value and the race's range, in centimetres, kilograms or years. */
+    value?: number;
+    min?: number;
+    max?: number;
+  }[];
 }
 
 /** The editable details, as the server stores them. */
@@ -391,6 +403,28 @@ export interface HpRoll {
   level: number;
   levels: HpRollLevel[];
   total: number;
+}
+
+/** One figure of an identity roll (ADR 0032 step 5.3): `sides`-sided dice in the order drawn, the
+ * table's `base` (inches, pounds or years in `unit`), their `total`, and the `value` to store
+ * (centimetres, kilograms or years). */
+export interface IdentityRollFigure {
+  figure: IdentityFigure;
+  dice: number[];
+  sides: number;
+  base: number;
+  total: number;
+  unit: "in" | "lb" | "year";
+  value: number;
+}
+
+export type IdentityFigure = "height" | "weight" | "age";
+
+/** `POST /api/characters/rolls/identity`. */
+export interface IdentityRoll {
+  raceCode: string;
+  sex: string;
+  rolls: IdentityRollFigure[];
 }
 
 /** The six ability codes, in the sheet's order. */

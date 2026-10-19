@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  rangeWarnings,
   ALIGNMENT_CODES,
   codeOrEmpty,
   hasAlignmentWarning,
@@ -12,8 +13,8 @@ const details = {
   alignment: "neutral_good",
   age: 112,
   sex: "male",
-  height: "",
-  weight: "",
+  height: 177.8,
+  weight: 72.6,
   hair: "",
   eyes: "",
   languages: ["common", "elvish"],
@@ -23,8 +24,37 @@ describe("character details draft", () => {
   it("round-trips the details", () => {
     expect(toBody(toDraft(details))).toEqual({
       ageInvalid: false,
+      invalid: [],
       body: details,
     });
+  });
+  it("shows the same height and weight per language and sends the same numbers", () => {
+    expect(toDraft(details, "fr")).toMatchObject({
+      height: "177,8",
+      weight: "72,6",
+    });
+    expect(toDraft(details, "en")).toMatchObject({
+      height: `5'10"`,
+      weight: "160",
+    });
+    expect(toBody(toDraft(details, "en"), "en").body).toMatchObject({
+      height: 177.8,
+      weight: 72.6,
+    });
+    expect(toBody(toDraft(details, "fr"), "fr").body).toMatchObject({
+      height: 177.8,
+      weight: 72.6,
+    });
+  });
+  it("sends null for an empty height or weight and flags text that is no figure", () => {
+    const d = { ...toDraft(details), height: " ", weight: "heavy" };
+    const { body, invalid } = toBody(d);
+    expect(body.height).toBeNull();
+    expect(invalid).toEqual(["weight"]);
+    expect(toBody({ ...d, height: "tall" }).invalid).toEqual([
+      "height",
+      "weight",
+    ]);
   });
   it("leaves out an alignment or sex not picked yet", () => {
     const { body } = toBody({ ...toDraft(details), alignment: "", sex: "" });
@@ -94,5 +124,36 @@ describe("an old release's free text", () => {
     expect(body).not.toHaveProperty("alignment");
     expect(body).not.toHaveProperty("sex");
     expect(codeOrEmpty("lawful_good", ALIGNMENT_CODES)).toBe("lawful_good");
+  });
+});
+
+describe("rangeWarnings", () => {
+  it("reads each outside-range warning with its value and range, and none without warnings", () => {
+    expect(
+      rangeWarnings({
+        warnings: [
+          { code: "alignment_not_allowed", field: "alignment" },
+          {
+            code: "height_outside_range",
+            field: "height",
+            value: 210,
+            min: 152.4,
+            max: 177.8,
+          },
+          {
+            code: "age_outside_range",
+            field: "age",
+            value: 400,
+            min: 16,
+            max: 185,
+          },
+          { code: "weight_outside_range", field: "weight" },
+        ],
+      }),
+    ).toEqual({
+      height: { field: "height", value: 210, min: 152.4, max: 177.8 },
+      age: { field: "age", value: 400, min: 16, max: 185 },
+    });
+    expect(rangeWarnings({})).toEqual({});
   });
 });

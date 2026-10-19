@@ -1,10 +1,19 @@
-import type { CharacterDetails } from "@/types/character";
+import type { Character, CharacterDetails } from "@/types/character";
+import {
+  heightField,
+  parseHeight,
+  parseWeight,
+  unitsFor,
+  weightField,
+} from "./measures";
 
-/** The free-text fields, in display order (alignment and sex are codes picked from the server's lists). */
-export const TEXT_FIELDS = ["height", "weight", "hair", "eyes"] as const;
+/** The free-text fields, in display order (alignment and sex are codes picked from the server's lists;
+ * height and weight are numbers shown per language, see `lib/measures`). */
+export const TEXT_FIELDS = ["hair", "eyes"] as const;
 export type TextField = (typeof TEXT_FIELDS)[number];
 
-/** The form's state: everything as the text typed in the inputs. */
+/** The form's state: everything as the text typed in the inputs; height and weight are typed in the
+ * units of the language (`lib/measures`). */
 export interface Draft {
   alignment: string;
   age: string;
@@ -36,9 +45,12 @@ export function codeOrEmpty(v: string | undefined, codes: string[]): string {
   return v !== undefined && codes.includes(v) ? v : "";
 }
 
-export function toDraft(d: CharacterDetails): Draft {
+export function toDraft(d: CharacterDetails, language = "fr"): Draft {
+  const units = unitsFor(language);
   return {
     ...d,
+    height: heightField(d.height, units, language),
+    weight: weightField(d.weight, units, language),
     alignment: codeOrEmpty(d.alignment, ALIGNMENT_CODES),
     sex: codeOrEmpty(d.sex, SEX_CODES),
     age: d.age === null ? "" : String(d.age),
@@ -48,24 +60,37 @@ export function toDraft(d: CharacterDetails): Draft {
 
 /**
  * The PATCH body for a draft. Only the shape is checked here: an age that is not a whole number
- * from 1 up is flagged for the caller to report, and an empty age is sent as null, which clears it.
- * Every limit is the server's.
+ * from 1 up, or a height or weight that is no figure in the units of the language, is flagged for
+ * the caller to report; an empty age, height or weight is sent as null, which clears it. Every
+ * limit is the server's.
  */
-export function toBody(draft: Draft): {
+export function toBody(
+  draft: Draft,
+  language = "fr",
+): {
   body: Partial<CharacterDetails>;
   ageInvalid: boolean;
+  /** The measures typed that are no figure. */
+  invalid: ("height" | "weight")[];
 } {
   const age = draft.age.trim();
   const ageInvalid = age !== "" && !/^0*[1-9]\d*$/.test(age);
+  const units = unitsFor(language);
+  const height = parseHeight(draft.height, units);
+  const weight = parseWeight(draft.weight, units);
   return {
     ageInvalid,
+    invalid: [
+      ...(height.invalid ? (["height"] as const) : []),
+      ...(weight.invalid ? (["weight"] as const) : []),
+    ],
     body: {
       // A character that lacks its alignment or sex may still edit the rest: an unpicked value is
       // left out, not sent empty (the server refuses an empty one).
       ...(draft.alignment === "" ? {} : { alignment: draft.alignment }),
       ...(draft.sex === "" ? {} : { sex: draft.sex }),
-      height: draft.height,
-      weight: draft.weight,
+      height: height.value,
+      weight: weight.value,
       hair: draft.hair,
       eyes: draft.eyes,
       age: age === "" || ageInvalid ? null : Number(age),
@@ -94,4 +119,40 @@ export function languageWarning(c: {
   return w && w.count !== undefined && w.limit !== undefined
     ? { count: w.count, limit: w.limit }
     : undefined;
+}
+
+/** A number outside its table range (ADR 0032 step 5.2): the server's verdict, stored units. */
+export interface RangeWarning {
+  field: "height" | "weight" | "age";
+  value: number;
+  min: number;
+  max: number;
+}
+
+const RANGE_CODES: Record<string, RangeWarning["field"]> = {
+  height_outside_range: "height",
+  weight_outside_range: "weight",
+  age_outside_range: "age",
+};
+
+/**
+ * The range warnings of a character, by field: `height_outside_range`, `weight_outside_range` and
+ * `age_outside_range` with the value and the range. An answer without `warnings` (a previous
+ * release) reads as none.
+ */
+export function rangeWarnings(
+  c: Pick<Character, "warnings"> | { warnings?: undefined },
+): Partial<Record<RangeWarning["field"], RangeWarning>> {
+  const out: Partial<Record<RangeWarning["field"], RangeWarning>> = {};
+  for (const w of c.warnings ?? []) {
+    const field = RANGE_CODES[w.code];
+    if (
+      field !== undefined &&
+      w.value !== undefined &&
+      w.min !== undefined &&
+      w.max !== undefined
+    )
+      out[field] = { field, value: w.value, min: w.min, max: w.max };
+  }
+  return out;
 }

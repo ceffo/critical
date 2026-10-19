@@ -95,8 +95,11 @@ func TestUpdate_Validation(t *testing.T) {
 		field string
 		code  string
 	}{
-		{"height too long", detailssvc.Patch{Height: ptr(long(21))}, "height", detailssvc.CodeTooLong},
-		{"weight too long", detailssvc.Patch{Weight: ptr(long(21))}, "weight", detailssvc.CodeTooLong},
+		{"zero height", detailssvc.Patch{Height: ptr(0.0)}, "height", detailssvc.CodeOutOfRange},
+		{"negative height", detailssvc.Patch{Height: ptr(-170.0)}, "height", detailssvc.CodeOutOfRange},
+		{"huge height", detailssvc.Patch{Height: ptr(300.1)}, "height", detailssvc.CodeOutOfRange},
+		{"zero weight", detailssvc.Patch{Weight: ptr(0.0)}, "weight", detailssvc.CodeOutOfRange},
+		{"huge weight", detailssvc.Patch{Weight: ptr(500.1)}, "weight", detailssvc.CodeOutOfRange},
 		{"hair too long", detailssvc.Patch{Hair: ptr(long(41))}, "hair", detailssvc.CodeTooLong},
 		{"eyes too long", detailssvc.Patch{Eyes: ptr(long(41))}, "eyes", detailssvc.CodeTooLong},
 		{"zero age is not a clear", detailssvc.Patch{Age: ptr(0)}, "age", detailssvc.CodeOutOfRange},
@@ -125,7 +128,7 @@ func TestUpdate_AcceptsTheBounds(t *testing.T) {
 	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, bard, nil)
 	dal.EXPECT().UpdateDetails(mockAny, int64(1), mockAnyDetails).Return(nil)
 	_, err := svc.Update(context.Background(), 1, detailssvc.Patch{
-		Hair: ptr(strings.Repeat("é", 40)), Height: ptr(strings.Repeat("é", 20)), Age: ptr(10_000),
+		Hair: ptr(strings.Repeat("é", 40)), Height: ptr(300.0), Weight: ptr(500.0), Age: ptr(10_000),
 	})
 	require.NoError(t, err)
 }

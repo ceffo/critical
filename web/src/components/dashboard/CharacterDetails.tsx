@@ -15,13 +15,22 @@ import {
   codeOrEmpty,
   hasAlignmentWarning,
   languageWarning,
+  rangeWarnings,
   toBody,
   toDraft,
   type Draft,
 } from "@/lib/characterDetails";
 import { fetchCreationChoices, fetchCreationOptions } from "@/api/characters";
 import { LanguagePicker } from "@/components/characters/LanguagePicker";
+import { IdentityRoll } from "@/components/dashboard/IdentityRoll";
 import { useLanguageNames } from "@/lib/useLanguageNames";
+import {
+  formatHeight,
+  formatWeight,
+  heightField,
+  unitsFor,
+  weightField,
+} from "@/lib/measures";
 import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
 import type { Character, CreationOptions } from "@/types/character";
@@ -138,6 +147,31 @@ function DetailsView({
   const alignment = codeOrEmpty(c.alignment, ALIGNMENT_CODES);
   const sex = codeOrEmpty(c.sex, SEX_CODES);
   const alignmentWarning = hasAlignmentWarning(c);
+  const units = unitsFor(i18n.language);
+  const outside = rangeWarnings(c);
+  // ADR 0032 step 5.2: a number outside the race's table range is noted, never refused; the
+  // range is the server's, converted for display here.
+  const rangeNote = (field: "height" | "weight" | "age") => {
+    const w = outside[field];
+    if (!w) return null;
+    const show = (v: number) =>
+      field === "height"
+        ? formatHeight(v, units, i18n.language)
+        : field === "weight"
+          ? formatWeight(v, units, i18n.language)
+          : String(v);
+    return (
+      <span
+        className="block text-label text-muted-foreground"
+        data-testid={`details-${field}-warning`}
+      >
+        {t(`details.warnings.${field}_outside_range`, {
+          min: show(w.min),
+          max: show(w.max),
+        })}
+      </span>
+    );
+  };
   return (
     <>
       <dl className="flex flex-col gap-2">
@@ -169,9 +203,22 @@ function DetailsView({
         </Row>
         <Row label={t("details.fields.age")}>
           {c.age === null ? none : c.age}
+          {rangeNote("age")}
         </Row>
         <Row label={t("details.fields.sex")}>
           {sex === "" ? toPick : t(`details.sexes.${sex}`)}
+        </Row>
+        <Row label={t("details.fields.height")}>
+          {c.height === null
+            ? none
+            : formatHeight(c.height, units, i18n.language)}
+          {rangeNote("height")}
+        </Row>
+        <Row label={t("details.fields.weight")}>
+          {c.weight === null
+            ? none
+            : formatWeight(c.weight, units, i18n.language)}
+          {rangeNote("weight")}
         </Row>
         {TEXT_FIELDS.map((f) => (
           <Row key={f} label={t(`details.fields.${f}`)}>
@@ -213,7 +260,9 @@ function DetailsForm({
 }) {
   const { t, i18n } = useTranslation();
   const save = useCharacterStore((s) => s.saveDetails);
-  const [draft, setDraft] = useState<Draft>(() => toDraft(character));
+  const [draft, setDraft] = useState<Draft>(() =>
+    toDraft(character, i18n.language),
+  );
   const [error, setError] = useState<{ field: string; code: string } | null>(
     null,
   );
@@ -246,9 +295,13 @@ function DetailsForm({
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    const { body, ageInvalid } = toBody(draft);
+    const { body, ageInvalid, invalid } = toBody(draft, i18n.language);
     if (ageInvalid) {
       setError({ field: "age", code: "out_of_range" });
+      return;
+    }
+    if (invalid.length > 0) {
+      setError({ field: invalid[0], code: "not_a_number" });
       return;
     }
     setBusy(true);
@@ -311,9 +364,28 @@ function DetailsForm({
       </div>
     );
   };
+  const units = unitsFor(i18n.language);
+  // A rolled figure fills its field, in the units the player types in.
+  const filled = {
+    age: (v: number) => setDraft((d) => ({ ...d, age: String(v) })),
+    height: (v: number) =>
+      setDraft((d) => ({
+        ...d,
+        height: heightField(v, units, i18n.language),
+      })),
+    weight: (v: number) =>
+      setDraft((d) => ({
+        ...d,
+        weight: weightField(v, units, i18n.language),
+      })),
+  };
   const input = (
     field: Exclude<keyof Draft, "languages">,
-    props: { inputMode?: "numeric"; hint?: string } = {},
+    props: {
+      inputMode?: "numeric";
+      hint?: string;
+      roll?: "age" | "height" | "weight";
+    } = {},
   ) => (
     <div key={field} className="flex min-w-0 flex-col gap-1 text-body">
       <label
@@ -334,6 +406,14 @@ function DetailsForm({
         <span className="text-label text-muted-foreground">{props.hint}</span>
       )}
       {message(field)}
+      {props.roll && (
+        <IdentityRoll
+          figure={props.roll}
+          raceCode={character.raceCode}
+          sex={draft.sex}
+          onRolled={filled[props.roll]}
+        />
+      )}
     </div>
   );
 
@@ -360,10 +440,16 @@ function DetailsForm({
       )}
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         {pick("alignment", alignments)}
-        {input("age", { inputMode: "numeric" })}
+        {input("age", { inputMode: "numeric", roll: "age" })}
         {pick("sex", sexes)}
-        {input("height")}
-        {input("weight")}
+        {input("height", {
+          hint: t(`details.unitHint.height.${units}`),
+          roll: "height",
+        })}
+        {input("weight", {
+          hint: t(`details.unitHint.weight.${units}`),
+          roll: "weight",
+        })}
         {input("hair")}
         {input("eyes")}
       </div>

@@ -177,6 +177,7 @@ func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error
 	native := s.languages.Native(c.Race)
 	c.Details = c.Details.Known(s.languages).WithNative(native)
 	c.Warnings = c.Details.Warnings(c.Class)
+	c.Warnings = append(c.Warnings, c.Details.RangeWarnings(c.Race)...)
 	// Without a catalogue (before format 8) the native language is unknown and
 	// would be counted as an additional one: no verdict is possible.
 	if native != "" {

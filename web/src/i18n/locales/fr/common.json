@@ -1557,6 +1557,18 @@
       "sex": {
         "empty": "Choisissez un sexe.",
         "unknown": "Choisissez l’un des sexes proposés."
+      },
+      "height": {
+        "out_of_range": "Saisissez une taille plausible.",
+        "not_a_number": "Saisissez la taille en nombre."
+      },
+      "weight": {
+        "out_of_range": "Saisissez un poids plausible.",
+        "not_a_number": "Saisissez le poids en nombre."
+      },
+      "age": {
+        "out_of_range": "Saisissez un âge entier entre 1 et 10 000.",
+        "not_a_number": "Saisissez l’âge en nombre."
       }
     },
     "races": {
@@ -1588,7 +1600,42 @@
     },
     "warnings": {
       "alignment_not_allowed": "Cet alignement n’est pas permis à un personnage de classe {{className}} ; conservé tel qu’enregistré.",
-      "languages_over_limit": "{{n}} langues au-delà de la langue natale, {{limit}} pour cette Intelligence : le MD décide."
+      "languages_over_limit": "{{n}} langues au-delà de la langue natale, {{limit}} pour cette Intelligence : le MD décide.",
+      "height_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MD décide.",
+      "weight_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MD décide.",
+      "age_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}} ans) : le MD décide."
+    },
+    "unitHint": {
+      "height": {
+        "metric": "En centimètres, par ex. 178.",
+        "imperial": "En pieds et pouces, par ex. 5'10\"."
+      },
+      "weight": {
+        "metric": "En kilogrammes.",
+        "imperial": "En livres."
+      }
+    },
+    "roll": {
+      "hint": {
+        "height": "Tirer la taille selon la race et le sexe",
+        "weight": "Tirer le poids selon la race et le sexe",
+        "age": "Tirer l’âge de départ selon la race"
+      },
+      "need": {
+        "race": "Choisissez d’abord une race",
+        "sex": "Choisissez d’abord un sexe"
+      },
+      "errors": {
+        "race_required": "Choisissez d’abord une race.",
+        "sex_required": "Choisissez d’abord un sexe.",
+        "unknown": "Le serveur ne connaît pas ce choix : rechargez la page."
+      },
+      "breakdown": "{{count}}d{{sides}} ({{dice}}) + {{base}} {{unit}} = {{total}} {{unit}}",
+      "units": {
+        "in": "po",
+        "lb": "lb",
+        "year": "ans"
+      }
     }
   },
   "xp": {

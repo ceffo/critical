@@ -13,6 +13,8 @@ import {
   UserCircle,
 } from "@phosphor-icons/react";
 import { rollHp, rollScores } from "@/api/characters";
+import { IdentityRoll } from "@/components/dashboard/IdentityRoll";
+import { heightField, unitsFor, weightField } from "@/lib/measures";
 import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { LanguagePicker } from "@/components/characters/LanguagePicker";
@@ -975,11 +977,22 @@ export function ExtrasStep({
 const DETAIL_FIELDS = ["age", "height", "weight", "hair", "eyes"] as const;
 
 export function IdentityStep({ options, draft, update, errorFor }: StepProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const cls = classOf(options, draft.cls);
   const nameError = errorFor("name");
   const setDetail = (f: keyof FlowDraft["details"], v: string) =>
     update({ details: { ...draft.details, [f]: v } });
+  const units = unitsFor(i18n.language);
+  // A rolled figure fills its field, in the units the player types in (ADR 0032 step 5.3).
+  const filled = (f: "age" | "height" | "weight", v: number) =>
+    setDetail(
+      f,
+      f === "height"
+        ? heightField(v, units, i18n.language)
+        : f === "weight"
+          ? weightField(v, units, i18n.language)
+          : String(v),
+    );
 
   const pick = (f: "alignment" | "sex", codes: string[]) => {
     const field = `details.${f}`;
@@ -1046,7 +1059,20 @@ export function IdentityStep({ options, draft, update, errorFor }: StepProps) {
                 value={draft.details[f]}
                 onChange={(e) => setDetail(f, e.target.value)}
               />
+              {(f === "height" || f === "weight") && (
+                <span className="text-label text-muted-foreground">
+                  {t(`details.unitHint.${f}.${units}`)}
+                </span>
+              )}
               <FieldError id={`new-character-${field}`} text={text} />
+              {(f === "age" || f === "height" || f === "weight") && (
+                <IdentityRoll
+                  figure={f}
+                  raceCode={draft.race}
+                  sex={draft.details.sex}
+                  onRolled={(v) => filled(f, v)}
+                />
+              )}
             </div>
           );
         })}

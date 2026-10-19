@@ -1,7 +1,7 @@
 # ADR 0032: Character identity and creation rolls
 
 **Status**: accepted 2026-10-18 (decisions from the user's triage of the onboarding epic, the same
-day; the details this ADR added beyond the triage were accepted by the supervisor in review). Steps 1, 2, 3 and 8 (for alignment, sex and the race detail) implemented 2026-10-18, see "As built"; steps 6 and 7 (the score and max HP rolls) implemented 2026-10-18, see "As built (steps 6 and 7)"; the rest is not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
+day; the details this ADR added beyond the triage were accepted by the supervisor in review). Steps 1, 2, 3 and 8 (for alignment, sex and the race detail) implemented 2026-10-18, see "As built"; step 5 (height, weight and age) and its part of step 8 implemented 2026-10-19, see "As built (step 5)"; steps 6 and 7 (the score and max HP rolls) implemented 2026-10-18, see "As built (steps 6 and 7)"; the rest is not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
 step 7.5 on level 1 hit points) and [ADR 0029](0029-users-login-and-access.md) steps 7.2 and 7.3
 (character actions leave the cog menu; creation is a full-screen route).
 
@@ -330,6 +330,30 @@ items'). Package `creationrollsvc`, handler `creationrollhdl`.
   server on every placement and on a race changed after the roll, so the scores and the Race column follow
   the race. Additive: a previous web never calls it; this web against a previous server (404) keeps the
   placement and leaves the scores to be typed.
+
+## As built (step 5, height, weight and age)
+
+2026-10-19, the item that made the identity numbers.
+
+- **Reference data.** PHB Tables 10 and 11 are committed Go data, `ruletablesvc.IdentityRows` (like Table 4 and the
+  alignment limits), converted once with the step's factors; `identity_test.go` writes every figure out again from the
+  rulebook files. They could move to the catalogue as a `race_identity` table (race, base heights and weights by sex,
+  the five dice, the age bases); that needs the catalogue repo and a format bump, and nothing here depends on it.
+- **Storage.** Migration 015 adds `characters.height_cm` and `characters.weight_kg` (`DOUBLE PRECISION NOT NULL DEFAULT 0`,
+  0 = not set, kept to a tenth); the free-text `height` and `weight` stay, unread, for the release before (a later migration
+  drops them). Its data step (`mapMeasures`, `storage/postgres/measures.go`) parses the recognisable texts (cm, m, `1m80`,
+  feet-inches in several spellings, kg, lb; bare height under 3 = metres, else cm; bare weight = kg) and leaves the rest unset.
+  `age` is the existing integer.
+- **Wire.** `height` (cm) and `weight` (kg) are JSON numbers or null in the details (PATCH, create, read); a non-number is 400
+  `not_a_number` on the field (`details.height` at creation), a value of 0 or less or above 300 cm / 500 kg `out_of_range`.
+  The sanity bounds are the item's proposal (step 5.2). `GET /api/character` `warnings` gains `height_outside_range`,
+  `weight_outside_range`, `age_outside_range` with `value`, `min`, `max` (stored units), read again at every read.
+- **Roll.** `POST /api/characters/rolls/identity`, `{"raceCode", "sex", "figures": ["height","weight","age"]}`; the answer is
+  `{"raceCode","sex","rolls":[{"figure","dice","sides","base","total","unit","value"}]}`, drawn in the order height, weight, age
+  whatever the order asked. Refusals 400 `invalid_input`: `race_required` / `sex_required` on the figure that needs it, `race` /
+  `sex` `unknown`, `figures` `empty` / `unknown` / `duplicate`. Needs a session, no current character; writes nothing.
+- **Web.** `lib/measures.ts` shows and parses the numbers per language (en feet-inches and pounds, others metric); the card
+  words the range warnings; the creation step and the card's edit form have a roll button per figure.
 
 ## Consequences
 

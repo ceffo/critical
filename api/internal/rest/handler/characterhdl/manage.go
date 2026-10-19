@@ -3,6 +3,7 @@ package characterhdl
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -206,8 +207,15 @@ func detailsPatch(d *detailshdl.DetailsDTO) charactersvc.DetailsPatch {
 		return charactersvc.DetailsPatch{}
 	}
 	p := charactersvc.DetailsPatch{
-		Alignment: &d.Alignment, Age: d.Age, Sex: &d.Sex, Height: &d.Height,
-		Weight: &d.Weight, Hair: &d.Hair, Eyes: &d.Eyes,
+		Alignment: &d.Alignment, Age: d.Age, Sex: &d.Sex, Hair: &d.Hair, Eyes: &d.Eyes,
+	}
+	if d.Height != nil {
+		h := float64(*d.Height)
+		p.Height = &h
+	}
+	if d.Weight != nil {
+		w := float64(*d.Weight)
+		p.Weight = &w
 	}
 	if d.Languages != nil {
 		p.Languages = &d.Languages
@@ -264,6 +272,10 @@ func Create(svc creator) render.HandlerFunc {
 		dec := json.NewDecoder(r.Body)
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&b); err != nil {
+			// A height or weight that is no number names its field under details.
+			if fe, ok := errors.AsType[*domain.FieldError](err); ok {
+				return &domain.FieldError{Field: charactersvc.DetailsField + fe.Field, Message: fe.Message}
+			}
 			return render.BadRequestError("invalid JSON body")
 		}
 		n, err := b.toNew()

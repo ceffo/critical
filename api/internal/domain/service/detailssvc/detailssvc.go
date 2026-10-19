@@ -17,9 +17,8 @@ import (
 // Input bounds: the details' own, kept by charactersvc so that the creation
 // form checks the details the same way (one validation, Details.Apply).
 const (
-	MaxShortLen   = charactersvc.MaxDetailShortLen
-	MaxMeasureLen = charactersvc.MaxDetailMeasureLen
-	MaxAge        = charactersvc.MaxAge
+	MaxShortLen = charactersvc.MaxDetailShortLen
+	MaxAge      = charactersvc.MaxAge
 )
 
 // Error codes carried by the FieldError messages. The web owns the wording.

@@ -480,3 +480,103 @@ func TestArrange_Step6_RefusesWhatTheMethodCannotMake(t *testing.T) {
 		assert.Equal(t, c.code, fe.Message, "%+v", c.in)
 	}
 }
+
+// Step 5.3, for each of the six races and both sexes: height, weight and age
+// are rolled with that row's dice, in that order, every die given its own
+// value and the exact number of dice asserted; each total is the row's base
+// (for the sex) plus its dice, and the stored value the conversion of it.
+func TestIdentity_Step5_3_EachRowRollsItsOwnBaseAndDice(t *testing.T) {
+	for _, row := range ruletablesvc.IdentityRows() {
+		for _, sex := range []string{"male", "female"} {
+			t.Run(row.Race+" "+sex, func(t *testing.T) {
+				f := newFixture(t)
+				next := 0
+				expect := func(d ruletablesvc.Dice) []int {
+					out := make([]int, d.Count)
+					for i := range out {
+						next++
+						out[i] = next
+						f.dice.EXPECT().RollDie(d.Sides).Return(next).Once()
+					}
+					return out
+				}
+				hDice, wDice, aDice := expect(row.HeightDice), expect(row.WeightDice), expect(row.StartAgeDice)
+
+				// Asked in a different order: drawn height, weight, age all the same.
+				res, err := f.svc.Identity(context.Background(), creationrollsvc.IdentityInput{
+					Race: row.Race, Sex: sex, Figures: []string{"age", "weight", "height"},
+				})
+				require.NoError(t, err)
+				require.Len(t, res.Rolls, 3)
+				sum := func(v []int) (s int) {
+					for _, x := range v {
+						s += x
+					}
+					return s
+				}
+				baseH, _ := row.BaseHeight(sex)
+				baseW, _ := row.BaseWeight(sex)
+				assert.Equal(t, creationrollsvc.IdentityRoll{
+					Figure: "height", Dice: hDice, Sides: row.HeightDice.Sides, Base: baseH, Total: baseH + sum(hDice),
+					Unit: "in", Value: ruletablesvc.InchesToCm(float64(baseH + sum(hDice))),
+				}, res.Rolls[0])
+				assert.Equal(t, creationrollsvc.IdentityRoll{
+					Figure: "weight", Dice: wDice, Sides: row.WeightDice.Sides, Base: baseW, Total: baseW + sum(wDice),
+					Unit: "lb", Value: ruletablesvc.PoundsToKg(float64(baseW + sum(wDice))),
+				}, res.Rolls[1])
+				assert.Equal(t, creationrollsvc.IdentityRoll{
+					Figure: "age", Dice: aDice, Sides: row.StartAgeDice.Sides, Base: row.StartAge,
+					Total: row.StartAge + sum(aDice), Unit: "year", Value: float64(row.StartAge + sum(aDice)),
+				}, res.Rolls[2])
+			})
+		}
+	}
+}
+
+// Step 5.3, an exact conversion: a half-elf female rolling 2d6 = 3 and 4 is
+// 58 + 7 = 65 in = 165.1 cm; one roll per figure asked, so asking the age
+// alone draws only the age dice and needs no sex.
+func TestIdentity_Step5_3_OneRollPerFigureAsked(t *testing.T) {
+	f := newFixture(t)
+	f.dice.EXPECT().RollDie(6).Return(3).Once()
+	f.dice.EXPECT().RollDie(6).Return(4).Once()
+	res, err := f.svc.Identity(context.Background(), creationrollsvc.IdentityInput{Race: "half_elf", Sex: "female", Figures: []string{"height"}})
+	require.NoError(t, err)
+	require.Len(t, res.Rolls, 1)
+	assert.Equal(t, 65, res.Rolls[0].Total)
+	assert.InDelta(t, 165.1, res.Rolls[0].Value, 1e-9)
+
+	f.dice.EXPECT().RollDie(6).Return(5).Once() // half-elf's age: 1d6
+	res, err = f.svc.Identity(context.Background(), creationrollsvc.IdentityInput{Race: "half_elf", Figures: []string{"age"}})
+	require.NoError(t, err)
+	assert.Equal(t, []int{5}, res.Rolls[0].Dice)
+	assert.Equal(t, 20.0, res.Rolls[0].Value)
+}
+
+// Step 5.3, the refusals draw no die: the race and, for a height or a weight,
+// the sex are needed, named on the figure rolled; an unknown value and a bad
+// list of figures are refused.
+func TestIdentity_Step5_3_RefusalsRollNothing(t *testing.T) {
+	for name, tc := range map[string]struct {
+		in          creationrollsvc.IdentityInput
+		field, code string
+	}{
+		"no race":           {creationrollsvc.IdentityInput{Sex: "male", Figures: []string{"weight", "age"}}, "weight", "race_required"},
+		"no sex for height": {creationrollsvc.IdentityInput{Race: "elf", Figures: []string{"age", "height"}}, "height", "sex_required"},
+		"no sex for weight": {creationrollsvc.IdentityInput{Race: "elf", Figures: []string{"weight"}}, "weight", "sex_required"},
+		"unknown race":      {creationrollsvc.IdentityInput{Race: "orc", Sex: "male", Figures: []string{"age"}}, "race", "unknown"},
+		"unknown sex":       {creationrollsvc.IdentityInput{Race: "elf", Sex: "other", Figures: []string{"age"}}, "sex", "unknown"},
+		"no figure":         {creationrollsvc.IdentityInput{Race: "elf", Sex: "male"}, "figures", "empty"},
+		"unknown figure":    {creationrollsvc.IdentityInput{Race: "elf", Sex: "male", Figures: []string{"hair"}}, "figures", "unknown"},
+		"a figure twice":    {creationrollsvc.IdentityInput{Race: "elf", Sex: "male", Figures: []string{"age", "age"}}, "figures", "duplicate"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newFixture(t) // a mock with no expectation fails on any die drawn
+			_, err := f.svc.Identity(context.Background(), tc.in)
+			fe, ok := errors.AsType[*domain.FieldError](err)
+			require.True(t, ok, "%v", err)
+			assert.Equal(t, tc.field, fe.Field)
+			assert.Equal(t, tc.code, fe.Message)
+		})
+	}
+}

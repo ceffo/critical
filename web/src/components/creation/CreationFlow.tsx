@@ -55,7 +55,7 @@ function isDirty(d: FlowDraft): boolean {
  * computes no score, HP, level or verdict.
  */
 export function CreationFlow({ onLeave }: { onLeave: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [options, setOptions] = useState<CreationOptions | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -203,8 +203,14 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
         body.skillPoints[skill] = v;
       }
     }
-    const { body: details, ageInvalid } = toBody(draft.details);
+    const {
+      body: details,
+      ageInvalid,
+      invalid,
+    } = toBody(draft.details, i18n.language);
     if (ageInvalid) return fail("details.age", "out_of_range");
+    if (invalid.length > 0)
+      return fail(`details.${invalid[0]}`, "not_a_number");
     body.details = details;
     setBusy(true);
     setError(null);

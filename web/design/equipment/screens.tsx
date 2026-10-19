@@ -5,8 +5,6 @@ import {
   ArrowsLeftRight,
   CaretDown,
   Check,
-  Lightning,
-  MagicWand,
   MagnifyingGlass,
   Plus,
   Minus,
@@ -33,7 +31,6 @@ import {
   AC_ROWS,
   CATALOGUE_ARMOUR,
   POSSESSIONS,
-  TARGET_ARMOUR,
   l,
   type Piece,
 } from "./data";
@@ -307,7 +304,7 @@ function AddCatalogue() {
               <span className="flex size-4 items-center justify-center rounded-sm bg-tint text-on-accent">
                 <Check weight="bold" className="size-3" aria-hidden />
               </span>
-              {tr("Porter tout de suite", "Wear it now")}
+              {tr("Équiper tout de suite", "Equip it now")}
             </label>
             <Button variant="main" size="lg">
               <Plus aria-hidden />
@@ -323,7 +320,7 @@ function AddCatalogue() {
 function PowersBlock({ templates }: { templates?: boolean }) {
   return (
     <div className="flex flex-col gap-2">
-      <GroupHead title={tr("Pouvoirs", "Powers")} note={tr("actifs quand l'objet est porté ou en main", "on while worn or wielded")} />
+      <GroupHead title={tr("Pouvoirs", "Powers")} note={tr("actifs quand l'objet est équipé", "on while equipped")} />
       <ul className="flex flex-col gap-1">
         {[
           [tr("CA −2", "AC −2"), tr("sans armure magique", "without magic armour")],
@@ -490,7 +487,7 @@ function AddHomebrew() {
             <span className="flex size-4 items-center justify-center rounded-sm bg-tint text-on-accent">
               <Check weight="bold" className="size-3" aria-hidden />
             </span>
-            {tr("Porter tout de suite", "Wear it now")}
+            {tr("Équiper tout de suite", "Equip it now")}
           </label>
           <Button variant="main" size="lg">
             <Plus aria-hidden />
@@ -504,12 +501,18 @@ function AddHomebrew() {
 
 /* ---------- Act: weapons, AC breakdown, initiative ---------- */
 
-function Journal() {
+function Journal({ cast }: { cast?: boolean }) {
   const rows = [
-    ["6", tr("Épée longue +2 contre CA 5 (plates) : attaque réussie, 6 dégâts", "Long sword +2 vs AC 5 (plate): hit, 6 damage")],
+    ...(cast
+      ? [
+          ["4", tr("Initiative du tour 2 corrigée : 6 → 4 (Projectile magique +1)", "Turn 2 initiative corrected: 6 → 4 (Magic missile +1)")],
+          ["", tr("Lancé : Projectile magique", "Cast: Magic missile")],
+        ]
+      : []),
+    ["6", tr("Épée longue +2 contre CA 5 : attaque réussie, 6 dégâts", "Long sword +2 vs AC 5: hit, 6 damage")],
     ["6", tr("Initiative 6 pour le tour 2 : d10 5, Épée longue +2 +3, Hâte −2", "Initiative 6 for turn 2: d10 5, Long sword +2 +3, Haste −2")],
-    ["", tr("Porté : Anneau de protection +2", "Worn: Ring of protection +2")],
-    ["", tr("Pris en main : Épée longue +2", "Taken: Long sword +2")],
+    ["", tr("Équipé : Anneau de protection +2", "Equipped: Ring of protection +2")],
+    ["", tr("Équipé : Épée longue +2", "Equipped: Long sword +2")],
   ];
   return (
     <section className="zone-card flex min-h-0 flex-1 flex-col">
@@ -521,7 +524,7 @@ function Journal() {
           <li key={i} className="grid grid-cols-[3rem_1fr_auto] gap-3 rounded-md px-2 py-0.5 text-body">
             <span className="text-right font-semibold text-highlight tabular-nums">{n}</span>
             <span>{t}</span>
-            <span className="text-ink-muted tabular-nums">20:3{i}</span>
+            <span className="text-ink-muted tabular-nums">20:{39 - i}</span>
           </li>
         ))}
       </ul>
@@ -559,11 +562,11 @@ function ResultCard() {
           <span className="flex size-11 items-center justify-center rounded-lg bg-tint text-key font-bold text-on-accent">15</span>
           <span className="flex flex-col">
             <span className="text-key">{tr("Touché", "Hit")}</span>
-            <span className="text-label text-ink-muted">{tr("contre CA 5 · plates · P/M", "vs AC 5 · plate · S/M")}</span>
+            <span className="text-label text-ink-muted">{tr("contre CA 5 · P/M", "vs AC 5 · S/M")}</span>
           </span>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          {[["d20", "15"], [tr("Armure", "Armour"), "−3"], [tr("Marge", "Margin"), "+6"]].map(([k, v]) => (
+          {[["d20", "15"], [tr("CA cible", "Target AC"), "5"], [tr("Marge", "Margin"), "+9"]].map(([k, v]) => (
             <span key={k} className="flex flex-col rounded-md bg-raised px-3 py-1.5">
               <span className="text-label text-ink-muted">{k}</span>
               <span className="text-body font-semibold tabular-nums">{v}</span>
@@ -575,7 +578,7 @@ function ResultCard() {
   );
 }
 
-function WeaponsTab({ menu, armourOpen }: { menu?: boolean; armourOpen?: boolean }) {
+function WeaponsTab({ menu }: { menu?: boolean }) {
   return (
     <div className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-raised px-3 py-1.5">
@@ -584,19 +587,6 @@ function WeaponsTab({ menu, armourOpen }: { menu?: boolean; armourOpen?: boolean
         <Stepper value="5" />
         <span className="text-body">{tr("Inconnue", "Unknown")}</span>
         <Seg options={[tr("P/M", "S/M"), "G"]} chosen={0} />
-        <span className="relative flex items-center gap-2">
-          <span className="text-body text-ink-muted">{tr("Armure", "Armour")}</span>
-          <Select value={tr("Plates", "Plate")} className={cn("w-32", armourOpen && "border-tint")} />
-          {armourOpen && (
-            <span className="absolute top-8 right-0 z-10 flex w-44 flex-col rounded-lg border border-border bg-popover p-1 shadow-2xl">
-              {TARGET_ARMOUR.map((a, i) => (
-                <span key={a.en} className={cn("rounded-md px-2 py-0.5 text-body", i === 10 && "selected")}>
-                  {lt(a)}
-                </span>
-              ))}
-            </span>
-          )}
-        </span>
         <span className="flex-1" />
         <SlidersHorizontal className="size-4 text-ink-muted" aria-hidden />
       </div>
@@ -605,11 +595,8 @@ function WeaponsTab({ menu, armourOpen }: { menu?: boolean; armourOpen?: boolean
           <span className="section-label">{tr("Arme en main", "Weapon in hand")}</span>
           <span className="text-title">{tr("Épée longue +2", "Long sword +2")}</span>
           <span className="text-body text-ink-muted">
-            {tr("Mêlée · tranchant · vitesse 3 · ", "Melee · slashing · speed 3 · ")}
+            {tr("Mêlée · vitesse 3 · ", "Melee · speed 3 · ")}
             <b className="text-ink">1d8</b> {tr("P/M", "S/M")} · 1d12 G · <b className="text-ink">+2 / +2</b>
-          </span>
-          <span className="mt-1 flex flex-wrap gap-1">
-            <Tag tone="muted">{tr("Plates : −3 au toucher (tranchant)", "Plate: −3 to hit (slashing)")}</Tag>
           </span>
         </div>
         <Button variant="main" className="h-auto flex-col items-start gap-0 px-4 py-1.5">
@@ -617,7 +604,7 @@ function WeaponsTab({ menu, armourOpen }: { menu?: boolean; armourOpen?: boolean
             <Sword aria-hidden />
             {tr("Attaquer", "Attack")}
           </span>
-          <span className="text-label">{tr("9 contre CA 5", "needs 9 vs AC 5")}</span>
+          <span className="text-label">{tr("6 contre CA 5", "needs 6 vs AC 5")}</span>
         </Button>
       </div>
       <div className="relative flex flex-wrap items-center gap-2">
@@ -631,14 +618,14 @@ function WeaponsTab({ menu, armourOpen }: { menu?: boolean; armourOpen?: boolean
         </Button>
         {menu && (
           <div className="absolute top-9 left-28 z-10 flex w-[21rem] flex-col gap-0.5 rounded-lg border border-border bg-popover p-1 shadow-2xl">
-            <span className="px-2 pt-1 section-label">{tr("Prêtes", "Ready")}</span>
+            <span className="px-2 pt-1 section-label">{tr("Équipées", "Equipped")}</span>
             {[[tr("Dague +3", "Dagger +3"), "1d4 · " + tr("vitesse 0", "speed 0")]].map(([n, s]) => (
               <span key={n} className="flex justify-between gap-3 rounded-md px-2 py-1 text-body hover:bg-raised-hover">
                 {n}
                 <span className="text-ink-muted">{s}</span>
               </span>
             ))}
-            <span className="px-2 pt-2 section-label">{tr("Dans le sac", "In the pack")}</span>
+            <span className="px-2 pt-2 section-label">{tr("Non équipées", "Not equipped")}</span>
             {[
               [tr("Épée bâtarde +2", "Bastard sword +2"), "2d4 · " + tr("vitesse 6", "speed 6")],
               [tr("Masse d'armes +1", "Mace +1"), "1d6"],
@@ -649,7 +636,7 @@ function WeaponsTab({ menu, armourOpen }: { menu?: boolean; armourOpen?: boolean
               </span>
             ))}
             <span className="px-2 pt-1 pb-1 text-label text-ink-muted">
-              {tr("Choisir une arme du sac la prend en main.", "Picking a weapon from the pack takes it in hand.")}
+              {tr("En choisir une l'équipe.", "Picking one equips it.")}
             </span>
           </div>
         )}
@@ -658,7 +645,7 @@ function WeaponsTab({ menu, armourOpen }: { menu?: boolean; armourOpen?: boolean
   );
 }
 
-function ActStage({ children, tab = 0 }: { children: ReactNode; tab?: number }) {
+function ActStage({ children, tab = 0, cast }: { children: ReactNode; tab?: number; cast?: boolean }) {
   return (
     <>
       <div className="grid min-h-0 shrink-0 grid-cols-[minmax(28rem,1.35fr)_minmax(18rem,1fr)] gap-3">
@@ -668,7 +655,7 @@ function ActStage({ children, tab = 0 }: { children: ReactNode; tab?: number }) 
         </section>
         <ResultCard />
       </div>
-      <Journal />
+      <Journal cast={cast} />
     </>
   );
 }
@@ -688,16 +675,6 @@ function ActWeaponsMenu() {
     <Dashboard activity="act">
       <ActStage>
         <WeaponsTab menu />
-      </ActStage>
-    </Dashboard>
-  );
-}
-
-function ActArmour() {
-  return (
-    <Dashboard activity="act">
-      <ActStage>
-        <WeaponsTab armourOpen />
       </ActStage>
     </Dashboard>
   );
@@ -732,56 +709,30 @@ function AcPopover() {
 }
 
 function Initiative() {
-  const opts: [ReactNode, string, string, string, boolean][] = [
-    [<Sword key="s" aria-hidden />, tr("Arme en main", "Weapon in hand"), tr("Épée longue +2 · vitesse 3", "Long sword +2 · speed 3"), "+3", true],
-    [<Sparkle key="p" aria-hidden />, tr("Sort", "Spell"), tr("Boule de feu · 3 segments", "Fireball · 3 segments"), "+3", false],
-    [<MagicWand key="w" aria-hidden />, tr("Objet", "Item"), tr("Baguette de foudre", "Wand of lightning"), "+3", false],
-    [<Lightning key="o" aria-hidden />, tr("Autre", "Other"), tr("bouger, parler…", "move, talk…"), "+0", false],
-  ];
   return (
-    <Dashboard
-      activity="act"
-      declOpen
-      overlay={
-        <Popover
-          title={tr("Action du tour 3", "Action for turn 3")}
-          style={{ left: 150, top: 104 }}
-          className="w-[25rem]"
-        >
-          <div className="flex flex-col gap-1 p-2">
-            {opts.map(([icon, k, what, mod, on]) => (
-              <span
-                key={k}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-1.5 [&_svg]:size-4",
-                  on ? "selected" : "hover:bg-raised-hover",
-                )}
-              >
-                {icon}
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-body font-medium">{k}</span>
-                  <span className="flex items-center gap-1 text-label text-ink-muted">
-                    {what}
-                    {!on && k !== tr("Autre", "Other") && <CaretDown className="size-3" aria-hidden />}
-                  </span>
-                </span>
-                <span className="text-body font-semibold tabular-nums">{mod}</span>
-              </span>
-            ))}
-          </div>
-          <div className="flex items-center gap-3 border-t border-border px-4 py-2.5">
-            <span className="text-body text-ink-muted">{tr("Situationnel", "Situational")}</span>
-            <Stepper value="0" />
-          </div>
-          <p className="border-t border-border px-4 py-2.5 text-body text-ink-muted">
-            {tr("Tour 2 : d10 5 · Épée longue +2 +3 · Hâte −2 = ", "Turn 2: d10 5 · Long sword +2 +3 · Haste −2 = ")}
-            <b className="text-ink">6</b>
-          </p>
-        </Popover>
-      }
-    >
+    <Dashboard activity="act" initTip="weapon">
       <ActStage>
         <WeaponsTab />
+      </ActStage>
+    </Dashboard>
+  );
+}
+
+function InitiativeCast() {
+  return (
+    <Dashboard activity="act" initTip="cast">
+      <ActStage tab={1} cast>
+        <div className="flex flex-col gap-2 p-4">
+          <GroupHead title={tr("Niveau 1", "Level 1")} />
+          {[tr("Projectile magique", "Magic missile"), tr("Mains brûlantes", "Burning hands")].map((n, i) => (
+            <div key={n} className="flex items-center justify-between rounded-md bg-raised px-3 py-1.5 text-body">
+              {n}
+              <Button variant={i === 0 ? "main" : "quiet"} size="sm">
+                {tr("Lancer", "Cast")}
+              </Button>
+            </div>
+          ))}
+        </div>
       </ActStage>
     </Dashboard>
   );
@@ -801,7 +752,7 @@ function Skills() {
           <GroupHead title={tr("Talents de barde", "Bard skills")} />
           <p className="flex flex-wrap items-center gap-2 px-3 text-body">
             <span className="text-ink-muted">{tr("Armure :", "Armour:")}</span>
-            <span className="font-medium">{tr("Cotte de mailles (portée)", "Chain mail (worn)")}</span>
+            <span className="font-medium">{tr("Cotte de mailles (équipée)", "Chain mail (equipped)")}</span>
             <Tag tone="muted">{tr("métal : −5 % à chaque talent", "metal: −5% to every skill")}</Tag>
           </p>
           <ul className="grid grid-cols-2 gap-1">
@@ -830,8 +781,8 @@ export const SCREENS: Record<string, () => ReactNode> = {
   "ac-override": AcOverride,
   "act-weapons": ActWeapons,
   "act-weapons-menu": ActWeaponsMenu,
-  "act-target-armour": ActArmour,
   initiative: Initiative,
+  "initiative-cast": InitiativeCast,
   skills: Skills,
 };
 

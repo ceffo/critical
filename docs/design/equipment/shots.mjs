@@ -27,8 +27,8 @@ const SCREENS = [
   "ac-override",
   "act-weapons",
   "act-weapons-menu",
-  "act-target-armour",
   "initiative",
+  "initiative-cast",
   "skills",
 ];
 // `--fr` shoots French only (the quick loop while iterating); the default shoots both.

@@ -1,6 +1,12 @@
 # Equipment design round: possessions, worn and wielded, the AC, pick list, review list (CRI-32)
 
-**Round 1, 2026-10-18: proposals, awaiting the user's verdict.**
+**Round 2, 2026-10-18: round 1's feedback applied, awaiting the user's verdict.**
+
+Round 1 feedback (user): the target's armour type is dropped from the attack ("the dm gives (or
+not) the final AC"); no groups by state ("adds nothing but confusion"); one domain term,
+Équiper / Retirer, state Équipé; the AC beside the HP as a number inside a filled shield, no
+label; no initiative declaration ("this app should make things easier, not harder"): Next turn
+adds the weapon in hand's speed, a spell or item used that round corrects it, logged.
 
 The screens of the equipment epic, for the UI items that build them (CRI-34 to CRI-41). The rules
 behind every screen are [ADR 0033](../../adr/0033-equipment.md); this folder decides only where
@@ -20,17 +26,17 @@ things sit, under [ADR 0022](../../adr/0022-activity-focus-layout.md),
 
 | Screen | What it shows |
 |---|---|
-| `inventory` | Inventaire: one possessions card, "Sur vous" (worn and ready) and "Dans le sac" (carried), category chips, Ajouter; the AC card on the right; the review band. |
+| `inventory` | Inventaire: one flat possessions list, "Équipé" tags, Équiper / Retirer, category chips, Ajouter; the AC card on the right; the review band. |
 | `review` | The review list opened above the possessions. |
 | `add-catalogue` | Ajouter > Catalogue: category, search, the PHB rows with class warnings, "Votre exemplaire" (name, magic), "Porter tout de suite". |
 | `add-homebrew` | Ajouter > Saisir: a typed magic item. |
 | `edit-armour` | The editor of an armour: base AC, skills column, armour type, "+N". |
 | `edit-magic` | The editor of a ring: powers and the templates menu. |
 | `warnings` | Class warnings (shield on a bard, two-handed with a shield) on the rows, the AC card and the character card. |
-| `ac-popover` | The AC on the character card and its breakdown popover. |
+| `ac-popover` | The AC (a number in a shield) on the character card and its breakdown popover. |
 | `ac-override` | The AC overridden (Shield spell), the derived AC beside it. |
-| `act-weapons` | Act > Armes: the target's armour on the target bar, its modifier as a tag. |
-| `act-weapons-menu` | The weapon drop-down: ready weapons, then the pack's. |
-| `act-target-armour` | The target armour drop-down open. |
-| `initiative` | The declared action by the initiative, its menu and breakdown. |
+| `act-weapons` | Act > Armes: unchanged target bar (no armour type). |
+| `act-weapons-menu` | The weapon drop-down: equipped weapons, then the others (picking one equips it). |
+| `initiative` | The initiative's tooltip: d10, the weapon in hand's speed, effects. |
+| `initiative-cast` | After a spell cast: the round's initiative corrected, the journal row. |
 | `skills` | Act > Compétences: the skill armour read from the worn armour. |

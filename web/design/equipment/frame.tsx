@@ -7,13 +7,11 @@ import {
   ArrowsClockwise,
   Backpack,
   BookOpenText,
-  CaretDown,
   DotsThree,
   Drop,
   Gear,
   HandFist,
   Heart,
-  Sword,
   TrendUp,
   Warning,
 } from "@phosphor-icons/react";
@@ -26,7 +24,7 @@ import { CHAR, SAVES } from "./data";
 export type Activity = "act" | "spells" | "inventory" | "xp";
 
 /** The header: the turn block (with the initiative's declaration), the effects, the brand and last result. */
-export function Header({ declOpen }: { declOpen?: boolean }) {
+export function Header({ initTip }: { initTip?: "weapon" | "cast" }) {
   return (
     <header className="zone-card flex shrink-0 items-stretch gap-4 px-4 py-3">
       <div className="group-band flex items-center gap-4 rounded-lg px-3 py-2">
@@ -46,9 +44,13 @@ export function Header({ declOpen }: { declOpen?: boolean }) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-body text-ink-muted">Initiative</span>
-            <span className="text-hero leading-none tabular-nums">6</span>
+            <span className="relative">
+              <span className="text-hero leading-none tabular-nums">
+                {initTip === "cast" ? "4" : "6"}
+              </span>
+              {initTip && <InitiativeTip kind={initTip} />}
+            </span>
             <ArrowsClockwise className="size-4 text-ink-muted" aria-hidden />
-            <Declaration open={declOpen} />
           </div>
         </div>
       </div>
@@ -96,21 +98,40 @@ export function Header({ declOpen }: { declOpen?: boolean }) {
 }
 
 /**
- * The declared action for the next round (ADR 0033 step 15): a small drop-down chip by the
- * initiative, the action's icon and modifier; its name in the tooltip and the menu.
+ * The initiative's tooltip (hover and focus): the d10 and every modifier. No declaration (user,
+ * round 1): Next turn adds the weapon in hand's speed; a spell cast or an item used in the round
+ * corrects that round's initiative by itself, logged.
  */
-function Declaration({ open }: { open?: boolean }) {
+function InitiativeTip({ kind }: { kind: "weapon" | "cast" }) {
   return (
     <span
-      className={cn(
-        "relative ml-1 flex h-7 items-center gap-1 rounded-md px-2 text-body",
-        open ? "chip-chosen" : "chip",
-      )}
-      title={tr("Action déclarée : Épée longue +2, +3", "Declared: Long sword +2, +3")}
+      // Fixed under its number (measured once): a tooltip floats above the layout, so it never
+      // widens the header's boxes (which the no-cut audit would read as cut text).
+      ref={(el) => {
+        const anchor = el?.parentElement?.getBoundingClientRect();
+        if (el && anchor) {
+          el.style.left = `${anchor.left}px`;
+          el.style.top = `${anchor.bottom + 8}px`;
+        }
+      }}
+      className="fixed z-20 flex w-max flex-col gap-0.5 rounded-md border border-border bg-popover px-3 py-2 text-body shadow-2xl"
     >
-      <Sword aria-hidden className="size-4" />
-      <span className="tabular-nums">+3</span>
-      <CaretDown aria-hidden className="size-3.5 text-ink-muted" />
+      <span>
+        d10 <b>5</b> ·{" "}
+        {kind === "cast"
+          ? tr("Projectile magique", "Magic missile")
+          : tr("Épée longue +2", "Long sword +2")}{" "}
+        <b>{kind === "cast" ? "+1" : "+3"}</b> · {tr("Hâte", "Haste")} <b>−2</b> ={" "}
+        <b>{kind === "cast" ? "4" : "6"}</b>
+      </span>
+      {kind === "cast" && (
+        <span className="text-label text-ink-muted">
+          {tr(
+            "Corrigée par le sort lancé ce tour (était 6, Épée longue +2)",
+            "Corrected by the spell cast this turn (was 6, Long sword +2)",
+          )}
+        </span>
+      )}
     </span>
   );
 }
@@ -202,9 +223,10 @@ export function CharacterCard({
 }
 
 /**
- * The character's AC (ADR 0033 step 10): every-turn information (ADR 0027 step 1.1), so on the
- * card at the hit points' size; a button that opens its breakdown. An override shows as the
- * number with an "override" tag; a class warning as an amber mark.
+ * The character's AC (ADR 0033 step 10), every-turn information beside the hit points (user,
+ * round 1): no label, the number inside a filled shield so it stands out, smaller than the HP.
+ * A button opening the breakdown (its tooltip and aria-label say "Classe d'armure"). An override
+ * draws the shield in the warning hue; a class warning adds a small badge.
  */
 function AcTile({
   override,
@@ -215,23 +237,31 @@ function AcTile({
   warning?: boolean;
   open?: boolean;
 }) {
+  const value = override ? "4" : warning ? "−3" : "−2";
   return (
     <span
       className={cn(
-        "flex w-[5.5rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5",
-        open ? "chip-chosen" : "bg-raised",
+        "relative flex size-16 shrink-0 items-center justify-center self-center rounded-lg",
+        open && "bg-raised-hover",
       )}
-      title={tr("Détail de la CA", "AC breakdown")}
+      title={tr("Classe d'armure", "Armour class")}
+      aria-label={`${tr("Classe d'armure", "Armour class")} ${value}`}
     >
-      <span className="flex items-center gap-1 section-label">
-        {tr("CA", "AC")}
-        {warning && <Warning weight="fill" className="size-3.5 text-warning" />}
-      </span>
-      <span className="text-hero leading-none tabular-nums">
-        {override ? "4" : warning ? "−3" : "−2"}
-      </span>
-      {override && (
-        <span className="text-label text-warning">{tr("forcée", "override")}</span>
+      <svg viewBox="0 0 48 56" className="absolute inset-1 size-14" aria-hidden>
+        <path
+          d="M24 2 L44 9 V27 C44 40 35 49 24 54 C13 49 4 40 4 27 V9 Z"
+          fill="var(--amb-800)"
+          stroke={override ? "var(--warning)" : "var(--tint)"}
+          strokeWidth="2"
+        />
+      </svg>
+      <span className="relative -mt-1 text-key font-bold tabular-nums">{value}</span>
+      {warning && (
+        <Warning
+          weight="fill"
+          className="absolute top-0 right-0 size-4 text-warning"
+          aria-label={tr("Avertissement de classe", "Class warning")}
+        />
       )}
     </span>
   );
@@ -283,19 +313,19 @@ export function Footer() {
 export function Dashboard({
   activity,
   children,
-  declOpen,
+  initTip,
   card,
   overlay,
 }: {
   activity: Activity;
   children: ReactNode;
-  declOpen?: boolean;
+  initTip?: "weapon" | "cast";
   card?: { acOverride?: boolean; acWarning?: boolean; acOpen?: boolean };
   overlay?: ReactNode;
 }) {
   return (
     <div className="relative flex h-full flex-col gap-3 overflow-hidden p-3">
-      <Header declOpen={declOpen} />
+      <Header initTip={initTip} />
       <div className="flex min-h-0 flex-1 gap-3">
         <CharacterCard {...card} />
         <Rail active={activity} />

@@ -26,8 +26,6 @@ export interface Piece {
   count?: { value: number; max?: number; behaviour: "stock" | "charges" | "daily" };
   dice?: string;
   review?: boolean;
-  /** The weapon the attack form holds (ADR 0033 step 8). */
-  inHand?: boolean;
   warning?: L;
 }
 
@@ -110,7 +108,6 @@ export const POSSESSIONS: Piece[] = [
     kind: l("Mêlée", "Melee"),
     stats: l("1d8 · G 1d12 · +2/+2 · vitesse 3", "1d8 · L 1d12 · +2/+2 · speed 3"),
     state: "wielded",
-    inHand: true,
   },
   {
     id: "shortbow",
@@ -262,19 +259,3 @@ export const CATALOGUE_ARMOUR: { name: L; ac: number; skill: L; row: L; warn?: b
   { name: l("Armure de plates complète", "Full plate"), ac: 1, skill: l("Interdite", "Not allowed"), row: l("Plates complètes", "Full plate"), warn: true },
 ];
 
-/** Table 52 rows offered as the target's armour (ADR 0033 step 18). */
-export const TARGET_ARMOUR: L[] = [
-  l("Inconnue", "Unknown"),
-  l("Naturelle", "Natural"),
-  l("Cuir", "Leather"),
-  l("Cuir clouté", "Studded leather"),
-  l("Anneaux", "Ring"),
-  l("Écailles", "Scale"),
-  l("Brigandine", "Brigandine"),
-  l("Mailles", "Chain"),
-  l("Bandes", "Banded"),
-  l("Lamelles", "Splint"),
-  l("Plates", "Plate"),
-  l("Harnois", "Field plate"),
-  l("Plates complètes", "Full plate"),
-];

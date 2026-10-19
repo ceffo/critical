@@ -53,13 +53,15 @@ export function CategoryIcon({ p, className }: { p: Piece; className?: string })
   return map[p.category];
 }
 
-/** The one-word state move of a row (ADR 0027 step 3): wear / take off, take / put away. */
+/** Worn and wielded are one concept on screen (user, round 1): Équipé / Equipped. */
+export const equipped = (p: Piece) => p.state !== "carried";
+
+/** The one-word move of a row: Équiper / Retirer, for the categories that can be equipped. */
 function stateMove(p: Piece): string | null {
-  const wearable = p.category === "armour" || p.category === "shield" || (p.category === "magic" && p.id !== "wand");
-  if (p.category === "weapon")
-    return p.state === "wielded" ? tr("Ranger", "Put away") : tr("Prendre", "Take");
-  if (wearable) return p.state === "worn" ? tr("Retirer", "Take off") : tr("Porter", "Wear");
-  return null;
+  const equippable =
+    p.category === "weapon" || p.category === "armour" || p.category === "shield" || (p.category === "magic" && p.id !== "wand");
+  if (!equippable) return null;
+  return equipped(p) ? tr("Retirer", "Unequip") : tr("Équiper", "Equip");
 }
 
 export function Tag({
@@ -98,7 +100,7 @@ export function PieceRow({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-1.5",
+        "flex shrink-0 items-center gap-3 rounded-md px-3 py-1.5",
         hover ? "bg-raised-hover" : "bg-raised",
       )}
     >
@@ -106,7 +108,7 @@ export function PieceRow({
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-body font-medium">{lt(p.name)}</span>
-          {p.inHand && <Tag tone="tint">{tr("En main", "In hand")}</Tag>}
+          {equipped(p) && <Tag tone="tint">{tr("Équipé", "Equipped")}</Tag>}
           {p.review && <Tag tone="warning">{tr("À vérifier", "To check")}</Tag>}
         </span>
         <span className="text-label text-ink-muted">
@@ -191,8 +193,8 @@ export function CategoryChips({ chosen = "all" }: { chosen?: string }) {
 const byId = (id: string) => POSSESSIONS.find((p) => p.id === id)!;
 
 /**
- * The possessions card (ADR 0033 step 1): one list, two groups by state: on you (worn and wielded)
- * and in the pack (carried). Side by side on a wide stage, stacked below that.
+ * The possessions card (ADR 0033 step 1): one flat list in the player's order, the category chips
+ * as its only filter; an equipped piece is tagged "Équipé" (user, round 1: no groups by state).
  */
 export function PossessionsCard({
   pieces = POSSESSIONS,
@@ -205,8 +207,6 @@ export function PossessionsCard({
   warnings?: Record<string, string>;
   hoverId?: string;
 }) {
-  const on = pieces.filter((p) => p.state !== "carried");
-  const pack = pieces.filter((p) => p.state === "carried");
   return (
     <section className="stage-card flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="card-band flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2">
@@ -232,27 +232,11 @@ export function PossessionsCard({
           </Button>
         </div>
       )}
-      <div className="grid min-h-0 flex-1 auto-rows-min gap-4 overflow-y-auto p-4 min-[1800px]:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <GroupHead
-            title={tr("Sur vous", "On you")}
-            note={tr("portées et prêtes", "worn and ready")}
-          />
-          <ul className="flex flex-col gap-1">
-            {on.map((p) => (
-              <PieceRow key={p.id} p={p} hover={p.id === hoverId} warning={warnings[p.id]} />
-            ))}
-          </ul>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <GroupHead title={tr("Dans le sac", "In the pack")} />
-          <ul className="flex flex-col gap-1">
-            {pack.map((p) => (
-              <PieceRow key={p.id} p={p} hover={p.id === hoverId} warning={warnings[p.id]} />
-            ))}
-          </ul>
-        </div>
-      </div>
+      <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4">
+        {pieces.map((p) => (
+          <PieceRow key={p.id} p={p} hover={p.id === hoverId} warning={warnings[p.id]} />
+        ))}
+      </ul>
     </section>
   );
 }

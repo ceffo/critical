@@ -152,6 +152,14 @@ func (s *service) UpdateAttackForm(ctx context.Context, characterID int64, p Att
 			if !ok {
 				return domain.FieldErrorf("weaponId", "unknown weapon %q", *p.WeaponID)
 			}
+			// Picking a weapon that is not wielded wields it first: one
+			// equipment_state entry (ADR 0033 step 8).
+			if !next.Wielded {
+				if _, err := s.items.Wield(ctx, characterID, next.ID); err != nil {
+					return fmt.Errorf("wield %s: %w", next.ID, err)
+				}
+				next.Wielded = true
+			}
 			if held != nil && held.ID != next.ID {
 				form.PreviousWeaponID = held.ID
 			}
@@ -215,7 +223,7 @@ func (s *service) checkAmmo(ctx context.Context, characterID int64, weapon *Weap
 		return domain.FieldErrorf("ammoItemId", "unknown item %q", itemID)
 	case weapon == nil || !weapon.FiresAmmo():
 		return domain.FieldErrorf("ammoItemId", "the weapon in hand fires no ammunition")
-	case item.AmmoKind != weapon.AmmoKind:
+	case !isAmmo(item, *weapon):
 		return domain.FieldErrorf("ammoItemId", "%s cannot fire %s", weapon.Name.Any(), item.Name.Any())
 	}
 	return nil
@@ -232,11 +240,12 @@ func (s *service) storedForm(ctx context.Context, characterID int64) (AttackForm
 	return form, nil
 }
 
-// formView resolves the stored form against the catalog and computes the
+// formView resolves the stored form against the equipment and computes the
 // preview:
-//   - the weapon is the stored one, or the first of the list when it is
-//     unset or gone;
-//   - the previous weapon is dropped when gone or the same as the held one;
+//   - the weapon is the stored one while it is wielded; none when it was put
+//     away (ADR 0033 step 8); the first wielded one when it is unset or gone;
+//   - the previous weapon is dropped when gone, not wielded or the same as
+//     the held one;
 //   - for a weapon that fires ammunition, the chosen item stays chosen while
 //     it exists and is of the weapon's kind, even spent (never switched
 //     behind the player's back); otherwise the first of the kind with some
@@ -254,7 +263,7 @@ func (s *service) formView(ctx context.Context, characterID int64, form AttackFo
 		return view, nil
 	}
 	view.Form.WeaponID = held.ID
-	if prev, found := findWeapon(weapons, form.PreviousWeaponID); !found || prev.ID == held.ID {
+	if prev, found := findWeapon(weapons, form.PreviousWeaponID); !found || !prev.Wielded || prev.ID == held.ID {
 		view.Form.PreviousWeaponID = ""
 	}
 
@@ -268,7 +277,7 @@ func (s *service) formView(ctx context.Context, characterID int64, form AttackFo
 		var firstLeft *itemsvc.Item
 		for i := range items {
 			it := &items[i]
-			if it.AmmoKind != held.AmmoKind || (it.Count == 0 && it.ID != form.AmmoItemID) {
+			if !isAmmo(*it, *held) || (it.Count == 0 && it.ID != form.AmmoItemID) {
 				continue
 			}
 			view.AmmoChoices = append(view.AmmoChoices, AmmoChoice{ItemID: it.ID, Name: it.Name, Magic: it.MagicBonus, Count: it.Count})
@@ -379,17 +388,22 @@ func (s *service) attackRate(ctx context.Context, char *charactersvc.Character, 
 	return &AttackRateView{Attacks: rate.Attacks, Rounds: rate.Rounds, ThisRound: rate.InRound(round)}, nil
 }
 
-// resolveWeapon is the weapon with id, else the first of the list; ok is
-// false for an empty list.
+// resolveWeapon is the weapon in hand (ADR 0033 step 8): the weapon with id
+// while it is wielded; none when that weapon was put away; else (no id, or a
+// weapon gone) the first wielded one. ok is false when no weapon is in hand.
 func resolveWeapon(weapons []Weapon, id string) (*Weapon, bool) {
 	if w, ok := findWeapon(weapons, id); ok {
+		if !w.Wielded {
+			return nil, false
+		}
 		return &w, true
 	}
-	if len(weapons) == 0 {
-		return nil, false
+	for _, w := range weapons {
+		if w.Wielded {
+			return &w, true
+		}
 	}
-	w := weapons[0]
-	return &w, true
+	return nil, false
 }
 
 func findWeapon(weapons []Weapon, id string) (Weapon, bool) {

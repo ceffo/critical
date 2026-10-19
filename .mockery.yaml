@@ -129,6 +129,7 @@ packages:
       DAL:
       Dice:
       Log:
+      Characters:
   github.com/ceffo/critical/api/internal/domain/service/restsvc:
     config:
       dir: "internal/domain/service/restsvc/mocks"
@@ -163,15 +164,6 @@ packages:
       Characters:
       Dice:
       Log:
-  github.com/ceffo/critical/api/internal/domain/service/weaponsvc:
-    config:
-      dir: "internal/domain/service/weaponsvc/mocks"
-      outpkg: "mocks"
-    interfaces:
-      SVC:
-      DAL:
-      Log:
-      Characters:
   github.com/ceffo/critical/api/internal/domain/service/xpsvc:
     config:
       dir: "internal/domain/service/xpsvc/mocks"
@@ -283,12 +275,6 @@ packages:
   github.com/ceffo/critical/api/internal/adapters/textdal/queries:
     config:
       dir: "internal/adapters/textdal/queries/mocks"
-      outpkg: "mocks"
-    interfaces:
-      Querier:
-  github.com/ceffo/critical/api/internal/adapters/weapondal/queries:
-    config:
-      dir: "internal/adapters/weapondal/queries/mocks"
       outpkg: "mocks"
     interfaces:
       Querier:

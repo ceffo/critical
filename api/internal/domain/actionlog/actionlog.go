@@ -179,9 +179,17 @@ const (
 	KindItemRemove Kind = "item_remove"
 )
 
-// Weapon editor entries (weaponsvc Create, Update, Delete): a
-// weapon added, edited or removed by hand. Not rolls. Each carries the
-// weapon's "weapons:<id>" snapshot, so popping it undoes the change.
+// KindEquipmentState is a piece worn, taken off, wielded or put away (ADR
+// 0033 step 7): one entry per move (a swap is one entry with both pieces),
+// each piece's "items:<id>" snapshot, so popping it puts the pieces back.
+// Not a roll.
+const KindEquipmentState Kind = "equipment_state"
+
+// Weapon editor entries, written before the one equipment model (ADR 0033
+// step 1): a weapon added, edited or removed by hand. No longer written (a
+// weapon is a piece, logged as item_*); the entries in the log still pop,
+// their "weapons:<id>" snapshot restored into the piece of that id (step
+// 26.2).
 const (
 	KindWeaponAdd    Kind = "weapon_add"
 	KindWeaponEdit   Kind = "weapon_edit"

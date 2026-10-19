@@ -8,10 +8,9 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
@@ -20,12 +19,12 @@ import (
 // as the database's seed) into the store, in one transaction. The store
 // starts empty, so this is the database seed's first run: the character (a
 // missing character file is ignored), then its starting set, as the seed
-// character's: the weapons and items (a missing file is an error: its sheet
+// character's: the equipment (a missing file is an error: its sheet
 // would be empty), the skills and the spellbook (spellbook: the spellbook
 // seed's catalogue keys in order, checked against the catalogue by the
 // caller). Without a character file nothing owns the starting set, so it is
 // not loaded.
-func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string) error {
+func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string, catalogue []ruletablesvc.Weapon) error {
 	return s.InTx(ctx, func(context.Context) error {
 		t := s.t
 		owner, ok, err := t.seedCharacter(seedfile.Path(seedsDir, seedfile.CharacterFile))
@@ -35,11 +34,9 @@ func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string) e
 		if !ok {
 			return nil
 		}
-		if err := t.seedWeapons(owner, seedfile.Path(seedsDir, seedfile.WeaponsFile)); err != nil {
-			return fmt.Errorf("seed weapons: %w", err)
-		}
-		if err := t.seedItems(owner, seedfile.Path(seedsDir, seedfile.ItemsFile)); err != nil {
-			return fmt.Errorf("seed items: %w", err)
+		if err := t.seedEquipment(owner, seedfile.Path(seedsDir, seedfile.ItemsFile),
+			seedfile.Path(seedsDir, seedfile.WeaponsFile), catalogue); err != nil {
+			return fmt.Errorf("seed equipment: %w", err)
 		}
 		if err := t.seedSkills(owner, seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
 			return fmt.Errorf("seed skills: %w", err)
@@ -100,33 +97,30 @@ func (t *tables) seedCharacter(path string) (id int64, ok bool, err error) {
 	return id, true, nil
 }
 
-func (t *tables) seedWeapons(owner int64, path string) error {
-	weapons, err := seedfile.ReadWeapons(path)
+// seedEquipment stores the items and weapons seeds as the database's seed
+// does: converted into pieces (seedfile.Equipment), with their review rows.
+func (t *tables) seedEquipment(owner int64, itemsPath, weaponsPath string, catalogue []ruletablesvc.Weapon) error {
+	items, err := seedfile.ReadItems(itemsPath)
 	if err != nil {
 		return err
 	}
-	for i, w := range weapons {
-		t.weapons[owned{owner, w.ID}] = storedWeapon{row: nextID(&t.rowSeq), Weapon: weaponsvc.Weapon{
-			ID: w.ID, Position: i, Name: stored(w.Name.Trimmed()), DamageSM: w.DamageSM, DamageL: w.DamageL,
-			MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: w.Kind, TwoHanded: w.TwoHanded,
-			AmmoKind: w.AmmoKind, Type: w.WeaponType,
-		}}
-	}
-	return nil
-}
-
-func (t *tables) seedItems(owner int64, path string) error {
-	items, err := seedfile.ReadItems(path)
+	weapons, err := seedfile.ReadWeapons(weaponsPath)
 	if err != nil {
 		return err
 	}
-	for i, it := range items {
-		t.items[owned{owner, it.ID}] = storedItem{row: nextID(&t.rowSeq), powers: it.PowersJSON, Item: itemsvc.Item{
-			ID: it.ID, Position: i, Name: stored(it.Name.Trimmed()), Type: it.Type,
-			Behaviour: itemsvc.Behaviour(it.Behaviour), MagicBonus: it.MagicBonus, AmmoKind: it.AmmoKind,
-			Count: it.Count, MaxCount: it.Max(), EffectDice: it.EffectDice, EffectSave: it.EffectSave,
-			Notes: it.Notes,
-		}}
+	conv, err := seedfile.Equipment(items, weapons, catalogue)
+	if err != nil {
+		return err
+	}
+	for _, p := range conv.Pieces {
+		st, err := toStored(p, nextID(&t.rowSeq))
+		if err != nil {
+			return err
+		}
+		t.items[owned{owner, p.ID}] = st
+	}
+	for _, r := range conv.Reviews {
+		t.reviews[review{owner, r.ItemID, r.Reason}] = true
 	}
 	return nil
 }

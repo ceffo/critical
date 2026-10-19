@@ -23,23 +23,27 @@ import (
 // Weapons built by hand for these tests (independent of seeds/weapons.json).
 var (
 	longsword = combatsvc.Weapon{
-		ID: "longsword", Name: localized.Of("Long Sword +2"), BaseDamage: "1d8", DamageLarge: "1d12",
+		Wielded: true,
+		ID:      "longsword", Name: localized.Of("Long Sword +2"), BaseDamage: "1d8", DamageLarge: "1d12",
 		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMelee,
 	}
 	bastardSword = combatsvc.Weapon{
-		ID: "bastard_sword", Name: localized.Of("Bastard Sword +2"), BaseDamage: "2d4", DamageLarge: "2d8",
+		Wielded: true,
+		ID:      "bastard_sword", Name: localized.Of("Bastard Sword +2"), BaseDamage: "2d4", DamageLarge: "2d8",
 		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMelee, TwoHanded: true,
 	}
 	shortbow = combatsvc.Weapon{
-		ID: "shortbow", Name: localized.Of("Short Bow +2"), BaseDamage: "1d6", DamageLarge: "1d6",
+		Wielded: true,
+		ID:      "shortbow", Name: localized.Of("Short Bow +2"), BaseDamage: "1d6", DamageLarge: "1d6",
 		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
 	}
 	darts = combatsvc.Weapon{
-		ID: "darts", Name: localized.Of("Darts"), BaseDamage: "1d3", DamageLarge: "1d2", Kind: combatsvc.WeaponMissile,
+		Wielded: true,
+		ID:      "darts", Name: localized.Of("Darts"), BaseDamage: "1d3", DamageLarge: "1d2", Kind: combatsvc.WeaponMissile,
 	}
 	// arrows3Left1 is what itemsvc.Use returns after firing one of two +3 arrows.
 	arrows3Left1 = itemsvc.Item{
-		ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, MagicBonus: 3, AmmoKind: "arrow", Count: 1,
+		ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, MagicBonus: 3, Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", Count: 1,
 	}
 )
 
@@ -456,7 +460,8 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 // if the buff always replaced the weapon (it would show +2 from the buff).
 func TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff(t *testing.T) {
 	dagger := combatsvc.Weapon{
-		ID: "dagger3", Name: localized.Of("Dagger +3"), BaseDamage: "1d4", DamageLarge: "1d3",
+		Wielded: true,
+		ID:      "dagger3", Name: localized.Of("Dagger +3"), BaseDamage: "1d4", DamageLarge: "1d3",
 		MagicToHit: 3, MagicDamage: 3, Kind: combatsvc.WeaponMelee,
 	}
 	f := newFixture(t)
@@ -491,7 +496,8 @@ func TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff(t *testing.T) {
 // separate entries. Fails if the buff replaced the ammo bonus (+5 only).
 func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {
 	bow := combatsvc.Weapon{
-		ID: "plainbow", Name: localized.Of("Short Bow"), BaseDamage: "1d6", DamageLarge: "1d6",
+		Wielded: true,
+		ID:      "plainbow", Name: localized.Of("Short Bow"), BaseDamage: "1d6", DamageLarge: "1d6",
 		Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
 	}
 	f := newFixture(t)
@@ -550,8 +556,8 @@ func TestResolveAttack_RecordsAttackWithAmmoSnapshot(t *testing.T) {
 	assert.Empty(t, e.Summary, "the UI words the attack from its payload")
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, "items:arrows_plus3", e.Snapshots[0].Key)
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":2}]`, string(e.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(e.Snapshots[0].After))
+	assert.JSONEq(t, `[{"id":"arrows_plus3","count":2,"model":2}]`, string(e.Snapshots[0].Before))
+	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1,"model":2}]`, string(e.Snapshots[0].After))
 
 	var payload map[string]any
 	require.NoError(t, json.Unmarshal(e.Payload, &payload))
@@ -636,7 +642,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		},
 		{
 			name: "ammunition of another kind", weapon: shortbow, ammoID: "bolts",
-			use: &itemsvc.Item{ID: "bolts", Name: localized.Of("Bolts"), Behaviour: itemsvc.BehaviourStock, AmmoKind: "bolt"}, wantErr: domain.ErrInvalidInput,
+			use: &itemsvc.Item{ID: "bolts", Name: localized.Of("Bolts"), Behaviour: itemsvc.BehaviourStock, Category: itemsvc.CategoryAmmunition, AmmoKind: "bolt"}, wantErr: domain.ErrInvalidInput,
 		},
 	}
 	for _, tt := range ammoCases {

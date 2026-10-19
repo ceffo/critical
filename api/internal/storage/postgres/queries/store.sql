@@ -86,9 +86,6 @@ UPDATE bard_skills SET character_id = sqlc.arg(character_id)::bigint WHERE chara
 -- name: TypeWeaponIfUntyped :exec
 UPDATE weapons SET weapon_type = @weapon_type WHERE id = @id AND weapon_type = '';
 
--- name: CountWeapons :one
-SELECT COUNT(*) FROM weapons WHERE character_id = sqlc.arg(character_id)::bigint;
-
 -- name: CountItems :one
 SELECT COUNT(*) FROM items WHERE character_id = sqlc.arg(character_id)::bigint;
 
@@ -96,23 +93,47 @@ SELECT COUNT(*) FROM items WHERE character_id = sqlc.arg(character_id)::bigint;
 SELECT ((SELECT COUNT(*) FROM proficiencies p WHERE p.character_id = sqlc.arg(character_id)::bigint)
       + (SELECT COUNT(*) FROM bard_skills b WHERE b.character_id = sqlc.arg(character_id)::bigint))::bigint AS count;
 
--- name: InsertWeapon :exec
-INSERT INTO weapons (character_id, id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind,
-                     two_handed, ammo_kind, weapon_type)
-VALUES (sqlc.arg(character_id)::bigint, @id, @position, @name, @damage_sm, @damage_l, @magic_to_hit, @magic_damage,
-        @kind, @two_handed, @ammo_kind, @weapon_type);
-
+-- A piece of equipment (ADR 0033 step 1), every column: the seed and the conversion write it.
 -- name: InsertItem :exec
 INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,
-                   effect_dice, effect_save, notes, powers)
+                   effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, state,
+                   weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit,
+                   magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind,
+                   ac_melee, ac_missile)
 VALUES (sqlc.arg(character_id)::bigint, @id, @position, @name, @type, @behaviour, @magic_bonus, @ammo_kind, @count,
-        @max_count, @effect_dice, @effect_save, @notes, @powers);
-
--- name: WeaponNameKey :one
-SELECT name FROM weapons WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;
+        @max_count, @effect_dice, @effect_save, @notes, @powers, @category, @magic_kind, @catalogue_code, @state,
+        @weapon_type, @weapon_kind, @size, @damage_types, @speed, @damage_sm, @damage_l, @magic_to_hit,
+        @magic_damage, @two_handed, @fires, @specialized, @base_ac, @skill_column, @armor_row, @shield_kind,
+        @ac_melee, @ac_missile);
 
 -- name: ItemNameKey :one
 SELECT name FROM items WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;
+
+-- name: InsertReview :exec
+INSERT INTO equipment_review (character_id, item_id, reason) VALUES (sqlc.arg(character_id)::bigint, @item_id, @reason)
+ON CONFLICT DO NOTHING;
+
+-- The conversion of migration 014 (ADR 0033 step 26, convertEquipment): every character that holds
+-- items or weapons, their rows as stored before it, and the item rows rewritten as pieces. Delete
+-- them with their step once every environment is past 014 (ADR 0025 step 2.1.1).
+-- name: EquipmentOwners :many
+SELECT character_id FROM items UNION SELECT character_id FROM weapons ORDER BY character_id;
+
+-- name: ListLegacyItems :many
+SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save,
+       notes, powers
+FROM items WHERE character_id = sqlc.arg(character_id)::bigint ORDER BY position, id;
+
+-- name: ListLegacyWeapons :many
+SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind,
+       weapon_type, specialized
+FROM weapons WHERE character_id = sqlc.arg(character_id)::bigint ORDER BY position, id;
+
+-- name: DeleteCharacterItems :exec
+DELETE FROM items WHERE character_id = sqlc.arg(character_id)::bigint;
+
+-- name: InsertItemRename :exec
+INSERT INTO item_id_renames (character_id, old_id, new_id) VALUES (sqlc.arg(character_id)::bigint, @old_id, @new_id);
 
 -- name: SeedOffers :many
 SELECT lang FROM seeded_name_languages WHERE kind = $1 AND id = $2;

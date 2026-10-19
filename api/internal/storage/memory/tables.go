@@ -13,7 +13,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
@@ -49,12 +48,13 @@ type tables struct {
 	spells    map[string]spellsvc.Spell
 	catalogue *catalogueVersion
 
-	// weapons and items belong to a character: keyed by the character
-	// and the id, so two characters may hold the same id.
-	weapons map[owned]storedWeapon
+	// items (every piece of equipment, ADR 0033) belong to a character:
+	// keyed by the character and the id, so two characters may hold the same
+	// id. reviews is the review list (step 27), one key per row.
 	items   map[owned]storedItem
-	// rowSeq orders items and weapons inserted at the same position as the
-	// database's rowid does.
+	reviews map[review]bool
+	// rowSeq orders items inserted at the same position as the database's
+	// rowid does.
 	rowSeq int64
 
 	// crit holds the house crit table by ascending range start.
@@ -93,8 +93,8 @@ func newTables() *tables {
 		rounds:        map[int64]roundState{},
 		savedBuffs:    map[int64]savedBuff{},
 		spells:        map[string]spellsvc.Spell{},
-		weapons:       map[owned]storedWeapon{},
 		items:         map[owned]storedItem{},
+		reviews:       map[review]bool{},
 		proficiencies: map[int64][]skillsvc.ProficiencyDef{},
 		spellbooks:    map[int64][]string{},
 		learnFailures: map[int64]map[string]int{},
@@ -129,11 +129,10 @@ type catalogueVersion struct {
 	version string
 }
 
-// storedWeapon is a weapon with the insertion order that breaks a position
-// tie.
-type storedWeapon struct {
-	weaponsvc.Weapon
-	row int64
+// review is one review row: the character, the piece and the reason.
+type review struct {
+	characterID    int64
+	itemID, reason string
 }
 
 // storedItem is an item with its powers in itemsvc's stored encoding (read

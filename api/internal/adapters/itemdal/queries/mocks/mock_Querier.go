@@ -136,6 +136,53 @@ func (_c *MockQuerier_DeleteItem_Call) RunAndReturn(run func(context.Context, qu
 	return _c
 }
 
+// DeleteReviews provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) DeleteReviews(ctx context.Context, arg queries.DeleteReviewsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteReviews")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.DeleteReviewsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_DeleteReviews_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteReviews'
+type MockQuerier_DeleteReviews_Call struct {
+	*mock.Call
+}
+
+// DeleteReviews is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.DeleteReviewsParams
+func (_e *MockQuerier_Expecter) DeleteReviews(ctx interface{}, arg interface{}) *MockQuerier_DeleteReviews_Call {
+	return &MockQuerier_DeleteReviews_Call{Call: _e.mock.On("DeleteReviews", ctx, arg)}
+}
+
+func (_c *MockQuerier_DeleteReviews_Call) Run(run func(ctx context.Context, arg queries.DeleteReviewsParams)) *MockQuerier_DeleteReviews_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.DeleteReviewsParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_DeleteReviews_Call) Return(_a0 error) *MockQuerier_DeleteReviews_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_DeleteReviews_Call) RunAndReturn(run func(context.Context, queries.DeleteReviewsParams) error) *MockQuerier_DeleteReviews_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetItem provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) GetItem(ctx context.Context, arg queries.GetItemParams) (queries.Item, error) {
 	ret := _m.Called(ctx, arg)
@@ -411,6 +458,122 @@ func (_c *MockQuerier_ListItems_Call) Return(_a0 []queries.Item, _a1 error) *Moc
 }
 
 func (_c *MockQuerier_ListItems_Call) RunAndReturn(run func(context.Context, int64) ([]queries.Item, error)) *MockQuerier_ListItems_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListReviews provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ListReviews(ctx context.Context, characterID int64) ([]queries.ListReviewsRow, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListReviews")
+	}
+
+	var r0 []queries.ListReviewsRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListReviewsRow, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListReviewsRow); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.ListReviewsRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_ListReviews_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListReviews'
+type MockQuerier_ListReviews_Call struct {
+	*mock.Call
+}
+
+// ListReviews is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ListReviews(ctx interface{}, characterID interface{}) *MockQuerier_ListReviews_Call {
+	return &MockQuerier_ListReviews_Call{Call: _e.mock.On("ListReviews", ctx, characterID)}
+}
+
+func (_c *MockQuerier_ListReviews_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ListReviews_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_ListReviews_Call) Return(_a0 []queries.ListReviewsRow, _a1 error) *MockQuerier_ListReviews_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_ListReviews_Call) RunAndReturn(run func(context.Context, int64) ([]queries.ListReviewsRow, error)) *MockQuerier_ListReviews_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RenamedItemID provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) RenamedItemID(ctx context.Context, arg queries.RenamedItemIDParams) (string, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenamedItemID")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RenamedItemIDParams) (string, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RenamedItemIDParams) string); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.RenamedItemIDParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_RenamedItemID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenamedItemID'
+type MockQuerier_RenamedItemID_Call struct {
+	*mock.Call
+}
+
+// RenamedItemID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.RenamedItemIDParams
+func (_e *MockQuerier_Expecter) RenamedItemID(ctx interface{}, arg interface{}) *MockQuerier_RenamedItemID_Call {
+	return &MockQuerier_RenamedItemID_Call{Call: _e.mock.On("RenamedItemID", ctx, arg)}
+}
+
+func (_c *MockQuerier_RenamedItemID_Call) Run(run func(ctx context.Context, arg queries.RenamedItemIDParams)) *MockQuerier_RenamedItemID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.RenamedItemIDParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_RenamedItemID_Call) Return(_a0 string, _a1 error) *MockQuerier_RenamedItemID_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_RenamedItemID_Call) RunAndReturn(run func(context.Context, queries.RenamedItemIDParams) (string, error)) *MockQuerier_RenamedItemID_Call {
 	_c.Call.Return(run)
 	return _c
 }

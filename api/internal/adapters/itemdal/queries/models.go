@@ -5,20 +5,43 @@
 package queries
 
 type Item struct {
-	ID          string
-	Position    int64
-	Name        int64
-	Type        string
-	Behaviour   string
-	MagicBonus  int64
-	AmmoKind    string
-	Count       int64
-	MaxCount    int64
-	EffectDice  string
-	EffectSave  string
-	Notes       string
-	Powers      string
-	CharacterID int64
+	ID       string
+	Position int64
+	Name     int64
+	// the free-text label of before the equipment model, kept as stored, no longer edited
+	Type          string
+	Behaviour     string
+	MagicBonus    int64
+	AmmoKind      string
+	Count         int64
+	MaxCount      int64
+	EffectDice    string
+	EffectSave    string
+	Notes         string
+	Powers        string
+	CharacterID   int64
+	Category      string
+	MagicKind     string
+	CatalogueCode string
+	State         string
+	WeaponType    string
+	WeaponKind    string
+	Size          string
+	DamageTypes   []string
+	Speed         int64
+	DamageSm      string
+	DamageL       string
+	MagicToHit    int64
+	MagicDamage   int64
+	TwoHanded     int64
+	Fires         string
+	Specialized   int64
+	BaseAc        int64
+	SkillColumn   string
+	ArmorRow      string
+	ShieldKind    string
+	AcMelee       int64
+	AcMissile     int64
 }
 
 type LocalizedText struct {

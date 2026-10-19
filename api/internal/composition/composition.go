@@ -38,7 +38,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spheresvc"
 	"github.com/ceffo/critical/api/internal/domain/service/turnsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 	"github.com/ceffo/critical/api/internal/storage/postgres"
@@ -61,7 +60,6 @@ type BackingServices struct {
 	Cast      castsvc.SVC
 	Combat    combatsvc.SVC
 	Items     itemsvc.SVC
-	Weapons   weaponsvc.SVC
 	Rest      restsvc.SVC
 	XP        xpsvc.SVC
 	LevelUp   levelupsvc.SVC
@@ -133,27 +131,10 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 // through the ports of st, so tests drive it with mocks.
 func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error) {
 	db := st.Store
-	if err := db.Migrate(ctx, cfg.SeedsDir); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("migrate: %w", err)
-	}
-	characterDAL, hpDAL, logDAL, buffDAL, spellDAL := st.Character, st.HP, st.Log, st.Buff, st.Spell
-	var dice Dice = diceadpt.New()
-	if cfg.Dice != nil {
-		dice = cfg.Dice
-	}
-	weaponDAL, weaponEditor, critDAL, itemDAL := st.Weapons, st.WeaponEditor, st.Crit, st.Items
-
-	// The spell effects casting applies; a malformed formula is a startup
-	// error.
-	effects, err := spelleffectsadpt.New(cfg.SeedsDir)
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-
 	// The spell catalogue (ADR 0021 step 5): a missing or invalid artifact,
-	// or one that removes a spell still referenced, is a startup error.
+	// or one that removes a spell still referenced, is a startup error. It is
+	// read first: the migration's equipment conversion and the seed match
+	// weapons to its rows (ADR 0033 step 26.4).
 	artifact, err := catalogueadpt.LoadArtifact(cfg.Catalogue)
 	if err != nil {
 		_ = db.Close()
@@ -168,6 +149,30 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
+	// The catalogue's weapons (format 7), none before.
+	var catalogueWeapons []ruletablesvc.Weapon
+	if eq, ok := ruleTables.Equipment(); ok {
+		catalogueWeapons = eq.Weapons
+	}
+	if err := db.Migrate(ctx, cfg.SeedsDir, catalogueWeapons); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("migrate: %w", err)
+	}
+	characterDAL, hpDAL, logDAL, buffDAL, spellDAL := st.Character, st.HP, st.Log, st.Buff, st.Spell
+	var dice Dice = diceadpt.New()
+	if cfg.Dice != nil {
+		dice = cfg.Dice
+	}
+	critDAL, itemDAL := st.Crit, st.Items
+
+	// The spell effects casting applies; a malformed formula is a startup
+	// error.
+	effects, err := spelleffectsadpt.New(cfg.SeedsDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
 	if err := effects.CheckAgainst(cat); err != nil {
 		_ = db.Close()
 		return nil, err
@@ -180,7 +185,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
-	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed); err != nil {
+	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueWeapons); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("seed: %w", err)
 	}
@@ -257,13 +262,16 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
-	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{Dice: dice, Log: logSvc, Tx: tx})
+	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{
+		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Catalogue: catalogueWeapons,
+	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	registerRestorers(logSvc, itemSvc.Restorers())
-	// The carried items' powers join the buffs' aggregate (ADR 0016 step 11).
+	// The worn and wielded pieces' powers join the buffs' aggregate (ADR 0016
+	// step 11, ADR 0033 step 9).
 	buffSvc, err := buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, itemSvc)
 	if err != nil {
 		_ = db.Close()
@@ -289,14 +297,8 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	logSvc.RegisterRestorer(prepsvc.StateKey, prepSvc)
-	weaponSvc, err := weaponsvc.New(weaponEditor, weaponsvc.Deps{Log: logSvc, Tx: tx, Chars: charSvc})
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-	registerRestorers(logSvc, weaponSvc.Restorers())
 	combatSvc, err := combatsvc.New(combatsvc.Deps{
-		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL, Crit: critDAL,
+		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: combatsvc.ItemWeapons(itemSvc), Crit: critDAL,
 		Items: itemSvc, Forms: st.Forms, Rules: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
@@ -395,7 +397,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		Cast:      castSvc,
 		Combat:    combatSvc,
 		Items:     itemSvc,
-		Weapons:   weaponSvc,
 		Rest:      restSvc,
 		XP:        xpSvc,
 		LevelUp:   levelUpSvc,
@@ -408,7 +409,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		Auth:      authSvc,
 		store:     db,
 		services: []domain.Service{
-			authSvc, charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, levelUpSvc, creationRollSvc, learnSvc, skillSvc, detailsSvc, diceSvc,
+			authSvc, charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, restSvc, xpSvc, levelUpSvc, creationRollSvc, learnSvc, skillSvc, detailsSvc, diceSvc,
 		},
 	}, nil
 }

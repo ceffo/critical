@@ -1,5 +1,6 @@
-// Package itemsvc owns the counted items (and adding,
-// editing and removing them by hand). One model: an
+// Package itemsvc owns a character's equipment, the one possessions list of
+// ADR 0033: weapons, ammunition, armour, shields, magic items and gear are
+// one model (Item), each piece carried, worn or wielded (SetState). An
 // item's Behaviour says how its count moves. Use spends one of any item (a
 // charges item is removed at 0), Restock adds to a stock item, ResetDaily
 // refills the daily items on a long rest. Every change at the table is one
@@ -14,6 +15,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // SVC is the driver port.
@@ -47,9 +50,22 @@ type SVC interface {
 	// Delete removes an item (sold, broken) and logs it; popping the entry
 	// brings it back with its id, place and count. ErrItemNotFound.
 	Delete(ctx context.Context, characterID int64, itemID string) (*ChangeResult, error)
+	// SetState wears, takes off, wields or puts away a piece (ADR 0033 steps
+	// 6 and 7): one equipment_state entry, nothing for the same state again.
+	// swap takes off the body armour or shield worn in the way. A
+	// *domain.FieldError on "state" (CodeNotAllowed, CodeSlotTaken).
+	SetState(ctx context.Context, characterID int64, itemID string, state State, swap bool) (*StateResult, error)
+	// Wield is SetState(wielded) inside the caller's transaction: the attack
+	// form wields the weapon picked (ADR 0033 step 8).
+	Wield(ctx context.Context, characterID int64, itemID string) (*StateResult, error)
+	// Reviews is the review list (ADR 0033 step 27), in list order.
+	Reviews(ctx context.Context, characterID int64) ([]Review, error)
+	// DismissReview takes a piece off the review list, not logged.
+	// ErrItemNotFound.
+	DismissReview(ctx context.Context, characterID int64, itemID string) error
 
-	// ItemPowers is every carried item's powers, whatever its count (ADR
-	// 0016 steps 9 and 11): buffsvc's Items port.
+	// ItemPowers is every worn or wielded piece's powers, whatever its count
+	// (ADR 0016 steps 9 and 11, ADR 0033 step 9): buffsvc's Items port.
 	ItemPowers(ctx context.Context, characterID int64) ([]buffsvc.ItemPower, error)
 
 	// Restorers maps the items state key to the Restorer that writes the
@@ -83,6 +99,19 @@ type DAL interface {
 	// Insert writes a whole item for the character (a new one, or a
 	// removed one restored).
 	Insert(ctx context.Context, characterID int64, item Item) error
+	// Reviews is the character's review rows (ADR 0033 step 27), any order.
+	Reviews(ctx context.Context, characterID int64) ([]Review, error)
+	// DeleteReviews removes every review row of a piece (none: no error).
+	DeleteReviews(ctx context.Context, characterID int64, itemID string) error
+	// RenamedID is the id the conversion gave an item whose id a weapon had
+	// (ADR 0033 step 26.3), or itemID itself when it was not renamed.
+	RenamedID(ctx context.Context, characterID int64, itemID string) (string, error)
+}
+
+// Characters reads the character whose pieces change: a specialized weapon
+// needs a class that specializes (ADR 0030 step 12, Derived.Specializes).
+type Characters interface {
+	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
 
 // Dice is the dice adapter port.
@@ -95,26 +124,32 @@ type Log interface {
 	actionlog.Recorder
 }
 
-// Deps are the collaborators UseItem needs besides the DAL.
+// Deps are the service's collaborators besides the DAL. Catalogue is the
+// catalogue's weapons (ADR 0033 step 21), which an old weapon entry popped
+// back is matched to (step 26.4); none before catalogue format 7.
 type Deps struct {
-	Dice Dice
-	Log  Log
-	Tx   domain.TxRunner
+	Dice      Dice
+	Log       Log
+	Tx        domain.TxRunner
+	Chars     Characters
+	Catalogue []ruletablesvc.Weapon
 }
 
 type service struct {
-	dal  DAL
-	dice Dice
-	log  Log
-	tx   domain.TxRunner
+	dal       DAL
+	dice      Dice
+	log       Log
+	tx        domain.TxRunner
+	chars     Characters
+	catalogue []ruletablesvc.Weapon
 }
 
 // New constructs the service.
 func New(dal DAL, d Deps) (SVC, error) {
-	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil {
+	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil || d.Chars == nil {
 		return nil, fmt.Errorf("itemsvc: nil dependency")
 	}
-	return &service{dal: dal, dice: d.Dice, log: d.Log, tx: d.Tx}, nil
+	return &service{dal: dal, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, catalogue: d.Catalogue}, nil
 }
 
 // NewWithConfig is here for shape consistency.

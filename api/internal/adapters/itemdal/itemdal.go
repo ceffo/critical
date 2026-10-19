@@ -37,12 +37,35 @@ func toItem(r queries.Item, name localized.Text) (itemsvc.Item, error) {
 	}
 	return itemsvc.Item{
 		ID: r.ID, Position: int(r.Position), Name: name, Type: r.Type,
+		Category: itemsvc.Category(r.Category), MagicKind: r.MagicKind, CatalogueCode: r.CatalogueCode,
+		State:      itemsvc.State(r.State),
 		Behaviour:  itemsvc.Behaviour(r.Behaviour),
 		MagicBonus: int(r.MagicBonus), AmmoKind: r.AmmoKind,
 		Count: int(r.Count), MaxCount: int(r.MaxCount),
 		EffectDice: r.EffectDice, EffectSave: r.EffectSave, Notes: r.Notes,
-		Powers: powers,
+		Powers:      powers,
+		DamageTypes: r.DamageTypes, DamageSM: r.DamageSm, DamageL: r.DamageL,
+		WeaponType: r.WeaponType, WeaponKind: r.WeaponKind, Size: r.Size, Speed: int(r.Speed),
+		MagicToHit: int(r.MagicToHit), MagicDamage: int(r.MagicDamage), TwoHanded: r.TwoHanded == 1,
+		Fires: r.Fires, Specialized: r.Specialized == 1,
+		BaseAC: int(r.BaseAc), SkillColumn: r.SkillColumn, ArmorRow: r.ArmorRow,
+		ShieldKind: r.ShieldKind, ACMelee: int(r.AcMelee), ACMissile: int(r.AcMissile),
 	}, nil
+}
+
+func flag(b bool) int64 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// types is never nil: the column is NOT NULL.
+func types(t []string) []string {
+	if t == nil {
+		return []string{}
+	}
+	return t
 }
 
 // List returns the character's items in sheet order.
@@ -154,6 +177,13 @@ func (d *DAL) Insert(ctx context.Context, characterID int64, it itemsvc.Item) er
 		Behaviour: string(it.Behaviour), MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind,
 		Count: int64(it.Count), MaxCount: int64(it.MaxCount),
 		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes, Powers: powers,
+		Category: string(it.Category), MagicKind: it.MagicKind, CatalogueCode: it.CatalogueCode,
+		State: string(it.State), WeaponType: it.WeaponType, WeaponKind: it.WeaponKind, Size: it.Size,
+		DamageTypes: types(it.DamageTypes), Speed: int64(it.Speed), DamageSm: it.DamageSM, DamageL: it.DamageL,
+		MagicToHit: int64(it.MagicToHit), MagicDamage: int64(it.MagicDamage), TwoHanded: flag(it.TwoHanded),
+		Fires: it.Fires, Specialized: flag(it.Specialized), BaseAc: int64(it.BaseAC),
+		SkillColumn: it.SkillColumn, ArmorRow: it.ArmorRow, ShieldKind: it.ShieldKind,
+		AcMelee: int64(it.ACMelee), AcMissile: int64(it.ACMissile),
 	})
 	if err != nil {
 		return fmt.Errorf("insert item %s: %w", it.ID, err)
@@ -198,6 +228,13 @@ func (d *DAL) Update(ctx context.Context, characterID int64, it itemsvc.Item) er
 		MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind, Count: int64(it.Count),
 		MaxCount: int64(it.MaxCount), EffectDice: it.EffectDice, EffectSave: it.EffectSave,
 		Notes: it.Notes, Powers: powers, CharacterID: characterID, ID: it.ID,
+		Category: string(it.Category), MagicKind: it.MagicKind, CatalogueCode: it.CatalogueCode,
+		State: string(it.State), WeaponType: it.WeaponType, WeaponKind: it.WeaponKind, Size: it.Size,
+		DamageTypes: types(it.DamageTypes), Speed: int64(it.Speed), DamageSm: it.DamageSM, DamageL: it.DamageL,
+		MagicToHit: int64(it.MagicToHit), MagicDamage: int64(it.MagicDamage), TwoHanded: flag(it.TwoHanded),
+		Fires: it.Fires, Specialized: flag(it.Specialized), BaseAc: int64(it.BaseAC),
+		SkillColumn: it.SkillColumn, ArmorRow: it.ArmorRow, ShieldKind: it.ShieldKind,
+		AcMelee: int64(it.ACMelee), AcMissile: int64(it.ACMissile),
 	})
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, it.ID)
@@ -206,4 +243,38 @@ func (d *DAL) Update(ctx context.Context, characterID int64, it itemsvc.Item) er
 		return fmt.Errorf("update item %s: %w", it.ID, err)
 	}
 	return d.texts.Put(ctx, key, it.Name)
+}
+
+// Reviews returns the character's review rows (ADR 0033 step 27).
+func (d *DAL) Reviews(ctx context.Context, characterID int64) ([]itemsvc.Review, error) {
+	rows, err := d.q.ListReviews(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("list reviews: %w", err)
+	}
+	out := make([]itemsvc.Review, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, itemsvc.Review{ItemID: r.ItemID, Reason: r.Reason})
+	}
+	return out, nil
+}
+
+// DeleteReviews removes every review row of a piece.
+func (d *DAL) DeleteReviews(ctx context.Context, characterID int64, itemID string) error {
+	if err := d.q.DeleteReviews(ctx, queries.DeleteReviewsParams{CharacterID: characterID, ItemID: itemID}); err != nil {
+		return fmt.Errorf("delete reviews of %s: %w", itemID, err)
+	}
+	return nil
+}
+
+// RenamedID is the id the conversion gave itemID (ADR 0033 step 26.3), or
+// itemID when it was not renamed.
+func (d *DAL) RenamedID(ctx context.Context, characterID int64, itemID string) (string, error) {
+	id, err := d.q.RenamedItemID(ctx, queries.RenamedItemIDParams{CharacterID: characterID, OldID: itemID})
+	if errors.Is(err, sql.ErrNoRows) {
+		return itemID, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("renamed id of %s: %w", itemID, err)
+	}
+	return id, nil
 }

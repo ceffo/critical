@@ -139,6 +139,66 @@ func (_c *MockItems_Use_Call) RunAndReturn(run func(context.Context, int64, stri
 	return _c
 }
 
+// Wield provides a mock function with given fields: ctx, characterID, itemID
+func (_m *MockItems) Wield(ctx context.Context, characterID int64, itemID string) (*itemsvc.StateResult, error) {
+	ret := _m.Called(ctx, characterID, itemID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Wield")
+	}
+
+	var r0 *itemsvc.StateResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (*itemsvc.StateResult, error)); ok {
+		return rf(ctx, characterID, itemID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) *itemsvc.StateResult); ok {
+		r0 = rf(ctx, characterID, itemID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*itemsvc.StateResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, itemID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockItems_Wield_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Wield'
+type MockItems_Wield_Call struct {
+	*mock.Call
+}
+
+// Wield is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - itemID string
+func (_e *MockItems_Expecter) Wield(ctx interface{}, characterID interface{}, itemID interface{}) *MockItems_Wield_Call {
+	return &MockItems_Wield_Call{Call: _e.mock.On("Wield", ctx, characterID, itemID)}
+}
+
+func (_c *MockItems_Wield_Call) Run(run func(ctx context.Context, characterID int64, itemID string)) *MockItems_Wield_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockItems_Wield_Call) Return(_a0 *itemsvc.StateResult, _a1 error) *MockItems_Wield_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockItems_Wield_Call) RunAndReturn(run func(context.Context, int64, string) (*itemsvc.StateResult, error)) *MockItems_Wield_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockItems creates a new instance of MockItems. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockItems(t interface {

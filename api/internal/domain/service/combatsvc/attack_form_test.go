@@ -83,7 +83,7 @@ func TestPreviewAttack_Step12_DamageBonus(t *testing.T) {
 		// Bow +2 and arrow +3; a bow gets no Strength.
 		{
 			"bow: weapon + arrow, no strength", shortbow,
-			[]itemsvc.Item{{ID: "a3", Name: localized.Of("Arrows +3"), AmmoKind: "arrow", MagicBonus: 3, Count: 4}},
+			[]itemsvc.Item{{ID: "a3", Name: localized.Of("Arrows +3"), Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", MagicBonus: 3, Count: 4}},
 			strMods(18), 5,
 		},
 	}
@@ -122,10 +122,10 @@ func TestGetAttackForm_NoWeaponNoPreview(t *testing.T) {
 }
 
 func TestGetAttackForm_Ammunition(t *testing.T) {
-	plain := itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), AmmoKind: "arrow", Count: 0}
-	plus1 := itemsvc.Item{ID: "arrows_plus1", Name: localized.Of("Arrows +1"), AmmoKind: "arrow", MagicBonus: 1, Count: 3}
-	plus3 := itemsvc.Item{ID: "arrows_plus3", Name: localized.Of("Arrows +3"), AmmoKind: "arrow", MagicBonus: 3, Count: 2}
-	bolts := itemsvc.Item{ID: "bolts", Name: localized.Of("Bolts"), AmmoKind: "bolt", Count: 9}
+	plain := itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", Count: 0}
+	plus1 := itemsvc.Item{ID: "arrows_plus1", Name: localized.Of("Arrows +1"), Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", MagicBonus: 1, Count: 3}
+	plus3 := itemsvc.Item{ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", MagicBonus: 3, Count: 2}
+	bolts := itemsvc.Item{ID: "bolts", Name: localized.Of("Bolts"), Category: itemsvc.CategoryAmmunition, AmmoKind: "bolt", Count: 9}
 	flask := itemsvc.Item{ID: "flask", Name: localized.Of("Flask"), Count: 2}
 	all := []itemsvc.Item{plain, plus1, plus3, bolts, flask}
 	choice := func(i itemsvc.Item) combatsvc.AmmoChoice {
@@ -273,7 +273,7 @@ func TestUpdateAttackForm_UnknownTargetAC(t *testing.T) {
 
 func TestUpdateAttackForm_ChoosesAmmunition(t *testing.T) {
 	f := newFixture(t)
-	arrows := itemsvc.Item{ID: "a3", Name: localized.Of("Arrows +3"), AmmoKind: "arrow", MagicBonus: 3, Count: 2}
+	arrows := itemsvc.Item{ID: "a3", Name: localized.Of("Arrows +3"), Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", MagicBonus: 3, Count: 2}
 	f.withForm(&combatsvc.AttackForm{WeaponID: "shortbow", TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium},
 		[]combatsvc.Weapon{shortbow}, []itemsvc.Item{arrows}, strMods(12))
 	f.forms.EXPECT().Put(mock.Anything, charID, combatsvc.AttackForm{
@@ -286,8 +286,8 @@ func TestUpdateAttackForm_ChoosesAmmunition(t *testing.T) {
 }
 
 func TestUpdateAttackForm_Rejections(t *testing.T) {
-	arrows := itemsvc.Item{ID: "a3", Name: localized.Of("Arrows +3"), AmmoKind: "arrow", Count: 2}
-	bolts := itemsvc.Item{ID: "bolts", Name: localized.Of("Bolts"), AmmoKind: "bolt", Count: 2}
+	arrows := itemsvc.Item{ID: "a3", Name: localized.Of("Arrows +3"), Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", Count: 2}
+	bolts := itemsvc.Item{ID: "bolts", Name: localized.Of("Bolts"), Category: itemsvc.CategoryAmmunition, AmmoKind: "bolt", Count: 2}
 	bad := combatsvc.TargetSize("huge")
 	cases := []struct {
 		name      string

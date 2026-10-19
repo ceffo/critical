@@ -30,24 +30,28 @@ var (
 	str1850Mods = buffsvc.BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: 18, EffectiveStrExceptional: 50}
 
 	specSword = combatsvc.Weapon{
-		ID: "long_sword", Name: localized.Of("Long Sword"), BaseDamage: "1d8", DamageLarge: "1d12",
+		Wielded: true,
+		ID:      "long_sword", Name: localized.Of("Long Sword"), BaseDamage: "1d8", DamageLarge: "1d12",
 		Kind: combatsvc.WeaponMelee, Type: "long_sword", Specialized: true,
 	}
 	specCrossbow = combatsvc.Weapon{
-		ID: "heavy_crossbow", Name: localized.Of("Heavy Crossbow"), BaseDamage: "1d4", DamageLarge: "1d6",
+		Wielded: true,
+		ID:      "heavy_crossbow", Name: localized.Of("Heavy Crossbow"), BaseDamage: "1d4", DamageLarge: "1d6",
 		Kind: combatsvc.WeaponMissile, AmmoKind: "bolt", Type: "heavy_crossbow", Specialized: true,
 	}
 	specDarts = combatsvc.Weapon{
-		ID: "darts", Name: localized.Of("Darts"), BaseDamage: "1d3", DamageLarge: "1d2",
+		Wielded: true,
+		ID:      "darts", Name: localized.Of("Darts"), BaseDamage: "1d3", DamageLarge: "1d2",
 		Kind: combatsvc.WeaponMissile, Type: "dart", Specialized: true,
 	}
-	bolts = itemsvc.Item{ID: "bolts", Name: localized.Of("Bolts"), AmmoKind: "bolt", Count: 9}
+	bolts = itemsvc.Item{ID: "bolts", Name: localized.Of("Bolts"), Category: itemsvc.CategoryAmmunition, AmmoKind: "bolt", Count: 9}
 )
 
 // specSling is a specialized sling with ammoKind (empty: none filled in).
 func specSling(ammoKind string) combatsvc.Weapon {
 	return combatsvc.Weapon{
-		ID: "sling", Name: localized.Of("Sling"), BaseDamage: "1d4", DamageLarge: "1d4",
+		Wielded: true,
+		ID:      "sling", Name: localized.Of("Sling"), BaseDamage: "1d4", DamageLarge: "1d4",
 		Kind: combatsvc.WeaponMissile, AmmoKind: ammoKind, Type: "sling", Specialized: true,
 	}
 }
@@ -197,7 +201,7 @@ func TestGetAttackForm_Step11_AttackRateAndPointBlank(t *testing.T) {
 		{"specialized long sword", fighter(), specSword, 3, &combatsvc.AttackRateView{Attacks: 5, Rounds: 2, ThisRound: 2}, false},
 		{"specialized heavy crossbow", fighter(), specCrossbow, 4, &combatsvc.AttackRateView{Attacks: 3, Rounds: 2, ThisRound: 2}, true},
 		{"a level outside the tables logs and shows no rate", func() *charactersvc.Character { c := fighter(); c.Derived.RealizedLevel = 0; return c }(), specSword, 0, nil, false},
-		{"bard", bard(), combatsvc.Weapon{ID: "long_sword", Name: localized.Of("Long Sword"), BaseDamage: "1d8", DamageLarge: "1d12", Kind: combatsvc.WeaponMelee, Type: "long_sword"}, 0, nil, false},
+		{"bard", bard(), combatsvc.Weapon{Wielded: true, ID: "long_sword", Name: localized.Of("Long Sword"), BaseDamage: "1d8", DamageLarge: "1d12", Kind: combatsvc.WeaponMelee, Type: "long_sword"}, 0, nil, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

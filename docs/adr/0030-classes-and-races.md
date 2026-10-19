@@ -386,7 +386,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `not_allowed`, for a class whose `derived.specializes` is false, on every save that has it
     set.
     Tests: `TestSpecializes_Step12_FightersOnly` (ruletablesadpt), `TestCreate_Step12_SpecializedFightersOnly`,
-    `TestUpdate_Step12_SpecializedFlag` (weaponsvc), `TestResolveAttack_Step12_SpecializedMeleeAnd18_50`,
+    `TestUpdate_Step12_SpecializedFlag` (itemsvc since ADR 0033), `TestResolveAttack_Step12_SpecializedMeleeAnd18_50`,
     `TestResolveAttack_Step12_LauncherPointBlank`, `TestResolveAttack_Step12_PointBlankRefused`
     (sling with and without an ammo kind, darts, long sword),
     `TestResolveAttack_Step12_SpecializedThrownGetsNoBonus` (combatsvc).

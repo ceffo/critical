@@ -7,11 +7,13 @@ package queries
 
 import (
 	"context"
+
+	"github.com/lib/pq"
 )
 
 const decrementItem = `-- name: DecrementItem :one
 UPDATE items SET count = count - 1 WHERE character_id = $1::bigint AND id = $2 AND count > 0
-RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id
+RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile
 `
 
 type DecrementItemParams struct {
@@ -37,6 +39,28 @@ func (q *Queries) DecrementItem(ctx context.Context, arg DecrementItemParams) (I
 		&i.Notes,
 		&i.Powers,
 		&i.CharacterID,
+		&i.Category,
+		&i.MagicKind,
+		&i.CatalogueCode,
+		&i.State,
+		&i.WeaponType,
+		&i.WeaponKind,
+		&i.Size,
+		pq.Array(&i.DamageTypes),
+		&i.Speed,
+		&i.DamageSm,
+		&i.DamageL,
+		&i.MagicToHit,
+		&i.MagicDamage,
+		&i.TwoHanded,
+		&i.Fires,
+		&i.Specialized,
+		&i.BaseAc,
+		&i.SkillColumn,
+		&i.ArmorRow,
+		&i.ShieldKind,
+		&i.AcMelee,
+		&i.AcMissile,
 	)
 	return i, err
 }
@@ -58,8 +82,22 @@ func (q *Queries) DeleteItem(ctx context.Context, arg DeleteItemParams) (int64, 
 	return name, err
 }
 
+const deleteReviews = `-- name: DeleteReviews :exec
+DELETE FROM equipment_review WHERE character_id = $1::bigint AND item_id = $2
+`
+
+type DeleteReviewsParams struct {
+	CharacterID int64
+	ItemID      string
+}
+
+func (q *Queries) DeleteReviews(ctx context.Context, arg DeleteReviewsParams) error {
+	_, err := q.db.ExecContext(ctx, deleteReviews, arg.CharacterID, arg.ItemID)
+	return err
+}
+
 const getItem = `-- name: GetItem :one
-SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id
+SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile
 FROM items WHERE character_id = $1::bigint AND id = $2
 `
 
@@ -86,13 +124,35 @@ func (q *Queries) GetItem(ctx context.Context, arg GetItemParams) (Item, error) 
 		&i.Notes,
 		&i.Powers,
 		&i.CharacterID,
+		&i.Category,
+		&i.MagicKind,
+		&i.CatalogueCode,
+		&i.State,
+		&i.WeaponType,
+		&i.WeaponKind,
+		&i.Size,
+		pq.Array(&i.DamageTypes),
+		&i.Speed,
+		&i.DamageSm,
+		&i.DamageL,
+		&i.MagicToHit,
+		&i.MagicDamage,
+		&i.TwoHanded,
+		&i.Fires,
+		&i.Specialized,
+		&i.BaseAc,
+		&i.SkillColumn,
+		&i.ArmorRow,
+		&i.ShieldKind,
+		&i.AcMelee,
+		&i.AcMissile,
 	)
 	return i, err
 }
 
 const incrementItem = `-- name: IncrementItem :one
 UPDATE items SET count = count + $1 WHERE character_id = $2::bigint AND id = $3
-RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id
+RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile
 `
 
 type IncrementItemParams struct {
@@ -119,32 +179,82 @@ func (q *Queries) IncrementItem(ctx context.Context, arg IncrementItemParams) (I
 		&i.Notes,
 		&i.Powers,
 		&i.CharacterID,
+		&i.Category,
+		&i.MagicKind,
+		&i.CatalogueCode,
+		&i.State,
+		&i.WeaponType,
+		&i.WeaponKind,
+		&i.Size,
+		pq.Array(&i.DamageTypes),
+		&i.Speed,
+		&i.DamageSm,
+		&i.DamageL,
+		&i.MagicToHit,
+		&i.MagicDamage,
+		&i.TwoHanded,
+		&i.Fires,
+		&i.Specialized,
+		&i.BaseAc,
+		&i.SkillColumn,
+		&i.ArmorRow,
+		&i.ShieldKind,
+		&i.AcMelee,
+		&i.AcMissile,
 	)
 	return i, err
 }
 
 const insertItem = `-- name: InsertItem :exec
 INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,
-                   effect_dice, effect_save, notes, powers)
+                   effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, state,
+                   weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit,
+                   magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind,
+                   ac_melee, ac_missile)
 VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8, $9,
-        $10, $11, $12, $13, $14)
+        $10, $11, $12, $13, $14, $15, $16, $17, $18,
+        $19, $20, $21, $22, $23, $24, $25, $26,
+        $27, $28, $29, $30, $31, $32, $33, $34,
+        $35, $36)
 `
 
 type InsertItemParams struct {
-	CharacterID int64
-	ID          string
-	Position    int64
-	Name        int64
-	Type        string
-	Behaviour   string
-	MagicBonus  int64
-	AmmoKind    string
-	Count       int64
-	MaxCount    int64
-	EffectDice  string
-	EffectSave  string
-	Notes       string
-	Powers      string
+	CharacterID   int64
+	ID            string
+	Position      int64
+	Name          int64
+	Type          string
+	Behaviour     string
+	MagicBonus    int64
+	AmmoKind      string
+	Count         int64
+	MaxCount      int64
+	EffectDice    string
+	EffectSave    string
+	Notes         string
+	Powers        string
+	Category      string
+	MagicKind     string
+	CatalogueCode string
+	State         string
+	WeaponType    string
+	WeaponKind    string
+	Size          string
+	DamageTypes   []string
+	Speed         int64
+	DamageSm      string
+	DamageL       string
+	MagicToHit    int64
+	MagicDamage   int64
+	TwoHanded     int64
+	Fires         string
+	Specialized   int64
+	BaseAc        int64
+	SkillColumn   string
+	ArmorRow      string
+	ShieldKind    string
+	AcMelee       int64
+	AcMissile     int64
 }
 
 func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
@@ -163,6 +273,28 @@ func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
 		arg.EffectSave,
 		arg.Notes,
 		arg.Powers,
+		arg.Category,
+		arg.MagicKind,
+		arg.CatalogueCode,
+		arg.State,
+		arg.WeaponType,
+		arg.WeaponKind,
+		arg.Size,
+		pq.Array(arg.DamageTypes),
+		arg.Speed,
+		arg.DamageSm,
+		arg.DamageL,
+		arg.MagicToHit,
+		arg.MagicDamage,
+		arg.TwoHanded,
+		arg.Fires,
+		arg.Specialized,
+		arg.BaseAc,
+		arg.SkillColumn,
+		arg.ArmorRow,
+		arg.ShieldKind,
+		arg.AcMelee,
+		arg.AcMissile,
 	)
 	return err
 }
@@ -197,12 +329,13 @@ func (q *Queries) ItemNames(ctx context.Context, characterID int64) ([]Localized
 
 const listItems = `-- name: ListItems :many
 
-SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id
+SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile
 FROM items WHERE character_id = $1::bigint ORDER BY position
 `
 
 // Every query is one character's: items belong to a character (character_id). The selected
-// columns are the whole row, so sqlc maps them to the Item model.
+// columns are the whole row, so sqlc maps them to the Item model. An item is any piece of
+// equipment (ADR 0033 step 1), weapons included.
 func (q *Queries) ListItems(ctx context.Context, characterID int64) ([]Item, error) {
 	rows, err := q.db.QueryContext(ctx, listItems, characterID)
 	if err != nil {
@@ -227,6 +360,28 @@ func (q *Queries) ListItems(ctx context.Context, characterID int64) ([]Item, err
 			&i.Notes,
 			&i.Powers,
 			&i.CharacterID,
+			&i.Category,
+			&i.MagicKind,
+			&i.CatalogueCode,
+			&i.State,
+			&i.WeaponType,
+			&i.WeaponKind,
+			&i.Size,
+			pq.Array(&i.DamageTypes),
+			&i.Speed,
+			&i.DamageSm,
+			&i.DamageL,
+			&i.MagicToHit,
+			&i.MagicDamage,
+			&i.TwoHanded,
+			&i.Fires,
+			&i.Specialized,
+			&i.BaseAc,
+			&i.SkillColumn,
+			&i.ArmorRow,
+			&i.ShieldKind,
+			&i.AcMelee,
+			&i.AcMissile,
 		); err != nil {
 			return nil, err
 		}
@@ -239,6 +394,57 @@ func (q *Queries) ListItems(ctx context.Context, characterID int64) ([]Item, err
 		return nil, err
 	}
 	return items, nil
+}
+
+const listReviews = `-- name: ListReviews :many
+SELECT item_id, reason FROM equipment_review WHERE character_id = $1::bigint
+ORDER BY item_id, reason
+`
+
+type ListReviewsRow struct {
+	ItemID string
+	Reason string
+}
+
+// The review list (ADR 0033 step 27).
+func (q *Queries) ListReviews(ctx context.Context, characterID int64) ([]ListReviewsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listReviews, characterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListReviewsRow{}
+	for rows.Next() {
+		var i ListReviewsRow
+		if err := rows.Scan(&i.ItemID, &i.Reason); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const renamedItemID = `-- name: RenamedItemID :one
+SELECT new_id FROM item_id_renames WHERE character_id = $1::bigint AND old_id = $2
+`
+
+type RenamedItemIDParams struct {
+	CharacterID int64
+	OldID       string
+}
+
+// The id the conversion gave an item whose id a weapon had (ADR 0033 step 26.3).
+func (q *Queries) RenamedItemID(ctx context.Context, arg RenamedItemIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, renamedItemID, arg.CharacterID, arg.OldID)
+	var new_id string
+	err := row.Scan(&new_id)
+	return new_id, err
 }
 
 const resetDailyItems = `-- name: ResetDailyItems :exec
@@ -271,25 +477,53 @@ func (q *Queries) SetItemCount(ctx context.Context, arg SetItemCountParams) (int
 const updateItem = `-- name: UpdateItem :one
 UPDATE items SET position = $1, type = $2, behaviour = $3, magic_bonus = $4,
                  ammo_kind = $5, count = $6, max_count = $7, effect_dice = $8,
-                 effect_save = $9, notes = $10, powers = $11
-WHERE character_id = $12::bigint AND id = $13
+                 effect_save = $9, notes = $10, powers = $11, category = $12,
+                 magic_kind = $13, catalogue_code = $14, state = $15,
+                 weapon_type = $16, weapon_kind = $17, size = $18,
+                 damage_types = $19, speed = $20, damage_sm = $21, damage_l = $22,
+                 magic_to_hit = $23, magic_damage = $24, two_handed = $25,
+                 fires = $26, specialized = $27, base_ac = $28, skill_column = $29,
+                 armor_row = $30, shield_kind = $31, ac_melee = $32, ac_missile = $33
+WHERE character_id = $34::bigint AND id = $35
 RETURNING name
 `
 
 type UpdateItemParams struct {
-	Position    int64
-	Type        string
-	Behaviour   string
-	MagicBonus  int64
-	AmmoKind    string
-	Count       int64
-	MaxCount    int64
-	EffectDice  string
-	EffectSave  string
-	Notes       string
-	Powers      string
-	CharacterID int64
-	ID          string
+	Position      int64
+	Type          string
+	Behaviour     string
+	MagicBonus    int64
+	AmmoKind      string
+	Count         int64
+	MaxCount      int64
+	EffectDice    string
+	EffectSave    string
+	Notes         string
+	Powers        string
+	Category      string
+	MagicKind     string
+	CatalogueCode string
+	State         string
+	WeaponType    string
+	WeaponKind    string
+	Size          string
+	DamageTypes   []string
+	Speed         int64
+	DamageSm      string
+	DamageL       string
+	MagicToHit    int64
+	MagicDamage   int64
+	TwoHanded     int64
+	Fires         string
+	Specialized   int64
+	BaseAc        int64
+	SkillColumn   string
+	ArmorRow      string
+	ShieldKind    string
+	AcMelee       int64
+	AcMissile     int64
+	CharacterID   int64
+	ID            string
 }
 
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (int64, error) {
@@ -305,6 +539,28 @@ func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (int64, 
 		arg.EffectSave,
 		arg.Notes,
 		arg.Powers,
+		arg.Category,
+		arg.MagicKind,
+		arg.CatalogueCode,
+		arg.State,
+		arg.WeaponType,
+		arg.WeaponKind,
+		arg.Size,
+		pq.Array(arg.DamageTypes),
+		arg.Speed,
+		arg.DamageSm,
+		arg.DamageL,
+		arg.MagicToHit,
+		arg.MagicDamage,
+		arg.TwoHanded,
+		arg.Fires,
+		arg.Specialized,
+		arg.BaseAc,
+		arg.SkillColumn,
+		arg.ArmorRow,
+		arg.ShieldKind,
+		arg.AcMelee,
+		arg.AcMissile,
 		arg.CharacterID,
 		arg.ID,
 	)

@@ -121,19 +121,21 @@ func TestUse_RemoveErrorFails(t *testing.T) {
 
 var wand = itemsvc.Item{
 	ID: "wand_lightning", Position: 4, Name: localized.Of("Wand of lightning"), Type: "wand", Behaviour: itemsvc.BehaviourCharges,
+	Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicWand, State: itemsvc.StateCarried,
 	Count: 0, MaxCount: 4, EffectDice: "6d6", EffectSave: "rod_staff_wand",
 }
 
-const wandBefore = `[{"id":"wand_lightning","count":1,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
-	"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}]`
+const wandBefore = `[{"id":"wand_lightning","count":1,"model":2,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
+	"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[],
+	"piece":{"category":"magic","magicKind":"wand","state":"carried"}}}]`
 
 func TestUseSnapshot_BeforeIsOneMore(t *testing.T) {
 	for _, b := range []itemsvc.Behaviour{itemsvc.BehaviourStock, itemsvc.BehaviourDaily} {
 		snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Behaviour: b, Count: 0})
 		require.NoError(t, err)
 		assert.Equal(t, "items:arrows_plus3", snap.Key)
-		assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(snap.Before), "kept at 0: no item data")
-		assert.JSONEq(t, `[{"id":"arrows_plus3","count":0}]`, string(snap.After))
+		assert.JSONEq(t, `[{"id":"arrows_plus3","count":1,"model":2}]`, string(snap.Before), "kept at 0: no item data")
+		assert.JSONEq(t, `[{"id":"arrows_plus3","count":0,"model":2}]`, string(snap.After))
 	}
 }
 
@@ -141,7 +143,7 @@ func TestUseSnapshot_MarksARemovedItem(t *testing.T) {
 	snap, err := itemsvc.UseSnapshot(wand)
 	require.NoError(t, err)
 	assert.JSONEq(t, wandBefore, string(snap.Before))
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true}]`, string(snap.After))
+	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true,"model":2}]`, string(snap.After))
 }
 
 func TestRestorers_WriteTheBeforeCountsBack(t *testing.T) {
@@ -174,6 +176,7 @@ func TestRestorers_PutBackARemovedItem(t *testing.T) {
 func TestRestorers_MissingItemWithoutDataFails(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
+	dal.EXPECT().RenamedID(mock.Anything, int64(1), "x").Return("x", nil)
 	dal.EXPECT().SetCount(mock.Anything, int64(1), "x", 2).Return(fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
 	err := svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, json.RawMessage(`[{"id":"x","count":2}]`))
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
@@ -191,8 +194,9 @@ func TestRestorers_RejectBadSnapshots(t *testing.T) {
 // fixture holds the collaborators UseItem needs besides the DAL.
 type fixture struct {
 	itemsvc.Deps
-	dice *mocks.MockDice
-	log  *mocks.MockLog
+	dice  *mocks.MockDice
+	log   *mocks.MockLog
+	chars *mocks.MockCharacters
 }
 
 // noTx runs the unit of work directly.
@@ -201,8 +205,8 @@ type noTx struct{}
 func (noTx) InTx(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
 
 func deps(t *testing.T) fixture {
-	dice, log := mocks.NewMockDice(t), mocks.NewMockLog(t)
-	return fixture{Deps: itemsvc.Deps{Dice: dice, Log: log, Tx: noTx{}}, dice: dice, log: log}
+	dice, log, chars := mocks.NewMockDice(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t)
+	return fixture{Deps: itemsvc.Deps{Dice: dice, Log: log, Tx: noTx{}, Chars: chars}, dice: dice, log: log, chars: chars}
 }
 
 func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
@@ -232,8 +236,8 @@ func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	assert.Equal(t, actionlog.KindItemUse, got.Kind)
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "items:wand_lightning", got.Snapshots[0].Key)
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":4}]`, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":3}]`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, `[{"id":"wand_lightning","count":4,"model":2}]`, string(got.Snapshots[0].Before))
+	assert.JSONEq(t, `[{"id":"wand_lightning","count":3,"model":2}]`, string(got.Snapshots[0].After))
 	assert.JSONEq(t, `{"itemId":"wand_lightning","name":"Wand of lightning","type":"wand","behaviour":"charges","removed":false,"remaining":3,"maxCount":4,
 		"dice":"6d6","rolls":[1,2,3,4,5,6],"total":21,"save":"rod_staff_wand"}`, string(got.Payload))
 }
@@ -296,7 +300,7 @@ func TestUseItem_LastChargeRemovesTheItem(t *testing.T) {
 	assert.Empty(t, got.Summary, "the UI words the use from its payload")
 	require.Len(t, got.Snapshots, 1)
 	assert.JSONEq(t, wandBefore, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true}]`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true,"model":2}]`, string(got.Snapshots[0].After))
 	assert.Contains(t, string(got.Payload), `"removed":true`)
 }
 
@@ -318,8 +322,8 @@ func TestRestock_AddsToStockAndLogs(t *testing.T) {
 	assert.JSONEq(t, `{"itemId":"arrows_plus3","name":"Arrows +3","type":"arrow","added":1,"count":1}`, string(got.Payload))
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "items:arrows_plus3", got.Snapshots[0].Key)
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":0}]`, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, `[{"id":"arrows_plus3","count":0,"model":2}]`, string(got.Snapshots[0].Before))
+	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1,"model":2}]`, string(got.Snapshots[0].After))
 	assert.JSONEq(t, `{"itemId":"arrows_plus3","name":"Arrows +3","type":"arrow","added":1,"count":1}`, string(got.Payload))
 }
 

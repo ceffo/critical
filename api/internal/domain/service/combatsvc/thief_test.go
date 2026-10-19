@@ -28,7 +28,8 @@ func thief() *charactersvc.Character {
 var (
 	str16Mods = buffsvc.BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: 16}
 	dagger1   = combatsvc.Weapon{
-		ID: "dagger", Name: localized.Of("Dagger +1"), BaseDamage: "1d4", DamageLarge: "1d3",
+		Wielded: true,
+		ID:      "dagger", Name: localized.Of("Dagger +1"), BaseDamage: "1d4", DamageLarge: "1d3",
 		Kind: combatsvc.WeaponMelee, Type: "dagger", MagicToHit: 1, MagicDamage: 1,
 	}
 )

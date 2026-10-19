@@ -9,7 +9,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 )
 
 // attackMods are the to-hit modifiers of an attack (ADR 0002 steps 4 to 9)
@@ -53,8 +52,8 @@ type attackOptions struct {
 // bowAndCrossbowTypes are the weapon types (ADR 0030 step 23) whose
 // specialist gains the point-blank range category (PHB p.53).
 var bowAndCrossbowTypes = []string{
-	weaponsvc.TypeLongBow, weaponsvc.TypeShortBow,
-	weaponsvc.TypeLightCrossbow, weaponsvc.TypeHeavyCrossbow, weaponsvc.TypeHandCrossbow,
+	itemsvc.TypeLongBow, itemsvc.TypeShortBow,
+	itemsvc.TypeLightCrossbow, itemsvc.TypeHeavyCrossbow, itemsvc.TypeHandCrossbow,
 }
 
 // PointBlankAllowed reports whether an attack with weapon may take the

@@ -28,8 +28,8 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
@@ -322,11 +322,11 @@ func TestRepoSeeds_EveryWeaponIsTyped(t *testing.T) {
 	require.NotEmpty(t, weapons)
 	for _, w := range weapons {
 		assert.NotEmpty(t, w.Type, "weapon %s has no weapon_type", w.ID)
-		assert.True(t, weaponsvc.ValidType(w.Type), "weapon %s: unknown weapon_type %q", w.ID, w.Type)
+		assert.True(t, itemsvc.ValidWeaponType(w.Type), "weapon %s: unknown weapon_type %q", w.ID, w.Type)
 	}
 }
 
-// The web's WEAPON_TYPES is the same list as weaponsvc.Types, in the same order: the code list has
+// The web's WEAPON_TYPES is the same list as itemsvc.WeaponTypes, in the same order: the code list has
 // one owner (Go) and this copy cannot drift.
 func TestWebWeaponTypes_MatchTheServicesList(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "src", "types", "combat.ts"))
@@ -337,7 +337,7 @@ func TestWebWeaponTypes_MatchTheServicesList(t *testing.T) {
 	for _, q := range regexp.MustCompile(`"([a-z_]+)"`).FindAllSubmatch(m[1], -1) {
 		codes = append(codes, string(q[1]))
 	}
-	assert.Equal(t, weaponsvc.Types, codes)
+	assert.Equal(t, itemsvc.WeaponTypes, codes)
 }
 
 func TestRepoSeeds_ItemsReferenceRealWeapons(t *testing.T) {

@@ -42,7 +42,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	spellmocks "github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
-	weaponmocks "github.com/ceffo/critical/api/internal/domain/service/weaponsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	xpmocks "github.com/ceffo/critical/api/internal/domain/service/xpsvc/mocks"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
@@ -75,7 +74,6 @@ type mocksSet struct {
 	cmb     *combatmocks.MockSVC
 	log     *logmocks.MockSVC
 	items   *itemmocks.MockSVC
-	weapons *weaponmocks.MockSVC
 	rest    *restmocks.MockSVC
 	xp      *xpmocks.MockSVC
 	details *detailsmocks.MockSVC
@@ -107,7 +105,6 @@ func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handl
 		cmb:     combatmocks.NewMockSVC(t),
 		log:     logmocks.NewMockSVC(t),
 		items:   itemmocks.NewMockSVC(t),
-		weapons: weaponmocks.NewMockSVC(t),
 		rest:    restmocks.NewMockSVC(t),
 		xp:      xpmocks.NewMockSVC(t),
 		details: detailsmocks.NewMockSVC(t),
@@ -116,7 +113,7 @@ func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handl
 		levelUp: levelupmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
-		Character: m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
+		Character: m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Rest: m.rest,
 		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, Auth: a,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))

@@ -29,24 +29,32 @@ type Querier interface {
 	// that changes the columns they touch deletes them with ownRows instead, once every environment is
 	// past 004 (ADR 0025 step 2.1.1).
 	CountUnowned(ctx context.Context) (int64, error)
-	CountWeapons(ctx context.Context, characterID int64) (int64, error)
+	DeleteCharacterItems(ctx context.Context, characterID int64) error
 	DeleteSpell(ctx context.Context, key sql.NullString) error
 	DeleteText(ctx context.Context, textID int64) error
 	DeleteTextLanguage(ctx context.Context, arg DeleteTextLanguageParams) error
+	// The conversion of migration 014 (ADR 0033 step 26, convertEquipment): every character that holds
+	// items or weapons, their rows as stored before it, and the item rows rewritten as pieces. Delete
+	// them with their step once every environment is past 014 (ADR 0025 step 2.1.1).
+	EquipmentOwners(ctx context.Context) ([]int64, error)
 	InsertActiveBuffs(ctx context.Context, characterID int64) error
 	// The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
 	// compared with the derived values, never read as inputs.
 	InsertCharacter(ctx context.Context, arg InsertCharacterParams) (int64, error)
+	// A piece of equipment (ADR 0033 step 1), every column: the seed and the conversion write it.
 	InsertItem(ctx context.Context, arg InsertItemParams) error
+	InsertItemRename(ctx context.Context, arg InsertItemRenameParams) error
+	InsertReview(ctx context.Context, arg InsertReviewParams) error
 	InsertRoundState(ctx context.Context, characterID int64) error
 	InsertSpellSlots(ctx context.Context, arg InsertSpellSlotsParams) error
 	InsertSpellbookEntry(ctx context.Context, arg InsertSpellbookEntryParams) error
 	InsertText(ctx context.Context, arg InsertTextParams) error
-	InsertWeapon(ctx context.Context, arg InsertWeaponParams) error
 	ItemNameKey(ctx context.Context, arg ItemNameKeyParams) (int64, error)
 	LearnFailureRefs(ctx context.Context) ([]LearnFailureRefsRow, error)
 	// The identity migration (013): every character's stored alignment and sex, to map to codes.
 	ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error)
+	ListLegacyItems(ctx context.Context, characterID int64) ([]ListLegacyItemsRow, error)
+	ListLegacyWeapons(ctx context.Context, characterID int64) ([]ListLegacyWeaponsRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
 	// rollback releases it. One fixed key for the whole database.
 	LockWriters(ctx context.Context) error
@@ -88,7 +96,6 @@ type Querier interface {
 	UpsertProficiency(ctx context.Context, arg UpsertProficiencyParams) error
 	UpsertSpell(ctx context.Context, arg UpsertSpellParams) error
 	UpsertText(ctx context.Context, arg UpsertTextParams) error
-	WeaponNameKey(ctx context.Context, arg WeaponNameKeyParams) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

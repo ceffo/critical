@@ -79,7 +79,7 @@ unless named otherwise.
    re-inserts the same id, position and fields. The next attack reads the table, so an edit applies
    at once.
    Tests: `TestCreate_InsertsLogsAndSnapshots`, `TestDelete_RemovesAndLogsWholeWeapon`,
-   `TestRestorers_UndoCreateEditDelete` (weaponsvc), `TestResolveAttack` (`combatsvc`: the weapon is read
+   `TestRestorers_UndoCreateEditDelete` (itemsvc since ADR 0033), `TestResolveAttack` (`combatsvc`: the weapon is read
    from the table at each attack).
 8. **Weapon validation.** Damage dice are `NdM` only (the attack rolls NdM; the weapon's magic is
    its own field), for the small/medium and the large column alike; to-hit and damage magic are

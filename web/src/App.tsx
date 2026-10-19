@@ -110,12 +110,9 @@ function App() {
           <Identity onOpenXp={() => focus("xp")} />
           <div className="flex flex-col gap-3">
             {/* The AC beside the HP (ADR 0035 item 4): smaller, no label, opening its breakdown. */}
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <HpBar />
-              </div>
-              <AcShield onOpenInventory={() => focus("inventory")} />
-            </div>
+            <HpBar
+              aside={<AcShield onOpenInventory={() => focus("inventory")} />}
+            />
             <QuickHp />
             <ChargeCards />
           </div>

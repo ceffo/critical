@@ -374,7 +374,7 @@ test("Next round rolls the initiative; one Undo pops a round with its initiative
   const prepared = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ spells: ["stoneskin"] }),
+    body: JSON.stringify({ spells: ["stoneskin", "rarys_mnemonic_enhancer"] }),
   });
   expect(prepared.ok).toBe(true);
   await openDashboard(page);
@@ -455,6 +455,19 @@ test("Next round rolls the initiative; one Undo pops a round with its initiative
   await undoEntry(page, "Cast Stoneskin");
   await expect(value).toHaveText(before ?? "");
   await expect(value).toHaveAttribute("data-entry-id", rolledId ?? "");
+
+  // A spell of a round or more (Rary's: 1 turn) adds nothing and tags the number "end of round";
+  // the tag goes with the round at Next Round.
+  const endOfRound = page.getByTestId("initiative-end-of-round");
+  await expect(endOfRound).toBeHidden();
+  await page
+    .getByRole("button", { name: "Cast Rary's Mnemonic Enhancer" })
+    .click();
+  await expect(endOfRound).toHaveText("end of round");
+  await expect(value).toHaveText(String(d10));
+  await nextRound(page);
+  await expect.poll(() => currentRound(page)).toBe(2);
+  await expect(endOfRound).toBeHidden();
 
   for (const vp of HEADER_VIEWPORTS) {
     await page.setViewportSize(vp);

@@ -51,12 +51,9 @@ export function LearnSpell({
 
   const learn = async () => {
     const got: { res: LearnResult | null } = { res: null };
+    // The spellbook is read again by the key the answer names (a refusal reads everything).
     await run(async () => {
-      try {
-        got.res = await learnSpell(spellId);
-      } finally {
-        await fetchInfo();
-      }
+      got.res = await learnSpell(spellId);
     });
     // run has re-read the log: its top is this roll's entry.
     setResult(

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useLogStore } from "@/stores/log";
+import { useTableStore } from "@/stores/table";
 import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
 import { Button } from "@/components/ui/button";
@@ -30,15 +30,15 @@ const HEADINGS: Record<SkillKind, string> = {
 export function SkillsTab() {
   const { t } = useTranslation();
   const skills = useSkillsStore((s) => s.skills);
-  const fetchSkills = useSkillsStore((s) => s.fetchSkills);
+  const refresh = useTableStore((s) => s.refresh);
   const { rollSkill, rolling } = useRollStore();
-  const logEntries = useLogStore((s) => s.entries);
   const budget = useCharacterStore((s) => s.character?.derived.skillBudget);
   const [editingPoints, setEditingPoints] = useState(false);
-  // A check, an undo or an effect (any new log state) can change the abilities in effect.
+  // Read once shown; then the action module reads them again when a write names what they follow
+  // (an effect, an item, the points, the level).
   useEffect(() => {
-    void fetchSkills();
-  }, [fetchSkills, logEntries]);
+    void refresh(["skills"]);
+  }, [refresh]);
 
   if (!skills) return null;
   // A thief's or a bard's skills, derived from its points (ADR 0030 steps 17 and 18).

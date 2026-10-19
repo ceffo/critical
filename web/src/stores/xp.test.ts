@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { XpLedger } from "@/types/xp";
 
-// Counts the XP and log reads: an XP write answers with the ledger and refreshes the journal
-// (its entry is the new top, ADR 0015 step 4) without reading the ledger again; an undo re-reads
-// it, since the pop may have been an XP award. Both re-read the character (its level follows the
-// XP, ADR 0030 step 3); another action does not (GET /api/character is the database probe).
+// Counts the XP and log reads: an XP write answers with the ledger and names "xp:<id>" and the log
+// (its entry is the new top, ADR 0015 step 4): the journal is read again, the ledger is not; an
+// undo of the award names the same keys and re-reads the ledger. Both re-read the character (its
+// level follows the XP, ADR 0030 step 3); another action does not (GET /api/character is the
+// database probe). The keys are the ones the server's answer carries (ADR 0018 step 11).
 const calls = vi.hoisted(() => ({
   fetchXp: 0,
   fetchLog: 0,
@@ -13,15 +14,20 @@ const calls = vi.hoisted(() => ({
 }));
 const ledger = (total: number) =>
   ({ total, entries: [] }) as unknown as XpLedger;
+/** value, from a write whose answer named header in X-State-Keys. */
+async function named<T>(header: string, value: T): Promise<T> {
+  noteWrite(header);
+  return value;
+}
 
 vi.mock("@/api/xp", () => ({
   fetchXp: async () => {
     calls.fetchXp++;
     return ledger(100);
   },
-  postXpEntry: async () => ledger(200),
-  patchXpEntry: async () => ledger(200),
-  deleteXpEntry: async () => ledger(200),
+  postXpEntry: async () => named("log,xp:1", ledger(200)),
+  patchXpEntry: async () => named("log,xp:1", ledger(200)),
+  deleteXpEntry: async () => named("log,xp:1", ledger(200)),
 }));
 vi.mock("@/api/log", () => ({
   fetchLog: async () => {
@@ -30,6 +36,7 @@ vi.mock("@/api/log", () => ({
   },
   undoLogEntry: async () => {
     calls.undo++;
+    return named("log,xp:1", undefined);
   },
 }));
 vi.mock("@/api/character", () => ({
@@ -45,12 +52,14 @@ vi.mock("@/api/hp", () => ({
 vi.mock("@/api/items", () => ({ fetchItems: async () => [] }));
 vi.mock("@/api/combat", () => ({ fetchWeapons: async () => [] }));
 vi.mock("@/api/ac", () => ({ fetchAc: async () => null }));
+vi.mock("../api/spells", () => ({ fetchSpellSlots: async () => [] }));
 vi.mock("../api/buffs", () => ({
   fetchActiveBuffs: async () => [],
   fetchSavedBuffs: async () => [],
   fetchStrength: async () => null,
 }));
 
+import { noteWrite } from "@/lib/stateKeys";
 import { useXpStore } from "./xp";
 import { useTableStore } from "./table";
 
@@ -81,9 +90,9 @@ describe("XP writes and the journal", () => {
   });
 
   it("another action does not re-read the character", async () => {
-    expect(await useTableStore.getState().run(async () => undefined)).toBe(
-      true,
-    );
+    expect(
+      await useTableStore.getState().run(async () => named("log", undefined)),
+    ).toBe(true);
     expect(calls.fetchLog).toBe(1);
     expect(calls.character).toBe(0);
   });

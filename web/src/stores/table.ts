@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { appendHpEvent } from "@/api/hp";
 import { ApiError } from "@/api/http";
 import { redoLogEntry, undoLogEntry } from "@/api/log";
+import { SLICES, slicesFor, takeChanges, type Slice } from "@/lib/stateKeys";
 import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
@@ -9,6 +10,8 @@ import { useCharacterStore } from "./character";
 import { useItemsStore } from "./items";
 import { useAcStore } from "./ac";
 import { useRollStore } from "./roll";
+import { useSkillsStore } from "./skills";
+import { useSpellStore } from "./spells";
 import { useXpStore } from "./xp";
 
 /** Something to tell the player after an action (rendered with i18n by the Notices component). */
@@ -18,16 +21,20 @@ export type Notice = {
   buffs: { name: string; spellId?: string }[];
 };
 
-interface RefreshOptions {
-  /** The caller just set the XP ledger from a write's answer: not read again. */
-  skipXp?: boolean;
-  /** The action can have changed the XP total (an XP write, an undo or a redo): the character is
-   * read again, since its level, THAC0, saves and slots follow it (ADR 0030 step 3). Not on every
-   * action: GET /api/character is also the database probe, and a read retries while the
-   * database is unavailable, so the refresh (and the busy controls) would wait on it. */
-  character?: boolean;
+interface ActionOptions {
+  /** Slices the action already set from its answer: not read again. */
+  fresh?: readonly Slice[];
+  /** A background action (the attack form's saves and reads): the busy flag is left alone and a
+   * shown error is not cleared. */
+  quiet?: boolean;
 }
 
+/**
+ * The action module (ADR 0018 step 11): the one place that runs a write, owns the error, the notice
+ * and the busy flag, and reads again what the write changed. The data stores hold the data and their
+ * fetches only: none reads another store again or sets another store's error. What a write changed
+ * is what the server named in its answer (lib/stateKeys); an unknown change reads every slice again.
+ */
 interface TableStore {
   /** Last server (or network) error message; shown verbatim, never translated. */
   error: string | null;
@@ -35,23 +42,27 @@ interface TableStore {
   busy: boolean;
   clearError: () => void;
   clearNotice: () => void;
-  /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item
-   * counts, weapons, the AC, the XP ledger once loaded (`skipXp`: the caller just set it from a write's
-   * answer), and the character when the action can have changed its XP (`character`). */
-  refresh: (opts?: RefreshOptions) => Promise<void>;
+  /** Shows a failure in the error notice. */
+  fail: (e: unknown) => void;
+  /** Read `slices` again, or, without them, every slice as it is loaded (a slice no panel has
+   * loaded yet stays unread). Errors go to `error`. */
+  refresh: (slices?: readonly Slice[]) => Promise<void>;
   /**
-   * Run a mutation, then refresh the table state. Errors are caught into `error`.
-   * Resolves true on success.
+   * Run a mutation, then read again what the server said it changed. Errors are caught into
+   * `error`. Resolves true on success.
    */
   run: (
     action: () => Promise<unknown>,
-    opts?: RefreshOptions,
+    opts?: ActionOptions,
   ) => Promise<boolean>;
   /**
    * Like `run` for a form: resolves null on success, or the ApiError when the server rejected a
    * field (shown by the form under that field, not in the global error). Other failures go to `error`.
    */
-  submit: (action: () => Promise<unknown>) => Promise<ApiError | null>;
+  submit: (
+    action: () => Promise<unknown>,
+    opts?: ActionOptions,
+  ) => Promise<ApiError | null>;
   recordHp: (delta: number, source: string) => Promise<boolean>;
   /** Pop the top of the action stack, any kind, as last read (ADR 0010). False when the server
    * refused (another action landed first) or there was nothing to pop. */
@@ -67,6 +78,41 @@ interface TableStore {
   /** Fast-forward hours of game time (timed buffs count down, round to 0). */
   passTime: (hours: number) => Promise<boolean>;
 }
+
+/**
+ * The fetch of each slice, exhaustive by type. `loaded` says whether a panel has read the slice
+ * yet: a refresh of every slice skips the ones no panel shows.
+ */
+const fetchers: Record<
+  Slice,
+  { fetch: () => Promise<void>; loaded?: () => boolean }
+> = {
+  log: { fetch: () => useLogStore.getState().fetchLog() },
+  hp: { fetch: () => useHpStore.getState().fetchHp() },
+  buffs: { fetch: () => useBuffsStore.getState().fetchBuffs() },
+  savedBuffs: { fetch: () => useBuffsStore.getState().fetchSaved() },
+  round: { fetch: () => useBuffsStore.getState().fetchRound() },
+  strength: { fetch: () => useBuffsStore.getState().fetchStrength() },
+  items: { fetch: () => useItemsStore.getState().fetchItems() },
+  weapons: { fetch: () => useItemsStore.getState().fetchWeapons() },
+  ac: { fetch: () => useAcStore.getState().fetchAc() },
+  slots: { fetch: () => useSpellStore.getState().fetchSlots() },
+  spellInfo: {
+    fetch: () => useSpellStore.getState().fetchInfo(),
+    loaded: () => useSpellStore.getState().infoLoaded,
+  },
+  skills: {
+    fetch: () => useSkillsStore.getState().fetchSkills(),
+    loaded: () => useSkillsStore.getState().skills !== null,
+  },
+  // GET /api/character is also the database probe, and a read retries while the database is
+  // unavailable: it is read only when a change can have moved it (the level, the budget).
+  character: { fetch: () => useCharacterStore.getState().loadCharacter() },
+  xp: {
+    fetch: () => useXpStore.getState().fetchXp(),
+    loaded: () => useXpStore.getState().ledger !== null,
+  },
+};
 
 function expiredNotice(
   expired: { name: string; spellId?: string }[] | undefined,
@@ -85,130 +131,134 @@ function message(e: unknown): string {
 
 let refreshQueue: Promise<void> = Promise.resolve();
 
-export const useTableStore = create<TableStore>((set, get) => ({
-  error: null,
-  notice: null,
-  busy: false,
-  clearError: () => set({ error: null }),
-  clearNotice: () => set({ notice: null }),
-
+export const useTableStore = create<TableStore>((set, get) => {
   // Refreshes run one after the other: when two actions overlap, an older refresh response
   // can no longer land after (and overwrite) the newer one.
-  refresh: (opts) => {
+  const read = (slices: Iterable<Slice>): Promise<void> => {
+    const list = [...slices];
     const next = refreshQueue.then(async () => {
+      if (list.length === 0) return;
       try {
-        await Promise.all([
-          useHpStore.getState().fetchHp(),
-          useLogStore.getState().fetchLog(),
-          useBuffsStore.getState().fetchBuffs(),
-          useBuffsStore.getState().fetchSaved(),
-          useBuffsStore.getState().fetchRound(),
-          useBuffsStore.getState().fetchStrength(),
-          useItemsStore.getState().fetchItems(),
-          useItemsStore.getState().fetchWeapons(),
-          // Derived from the pieces, the buffs and the sheet (ADR 0033 step 10): any action can move it.
-          useAcStore.getState().fetchAc(),
-          // The level, THAC0, saves and slots follow the XP (ADR 0030 step 3): an award or the
-          // undo of one changes them, so the character is re-read with the rest.
-          opts?.character ? useCharacterStore.getState().loadCharacter() : null,
-          // An undo can pop an XP award (ADR 0015 step 4): re-read the ledger once it is shown.
-          useXpStore.getState().ledger && !opts?.skipXp
-            ? useXpStore.getState().fetchXp()
-            : null,
-        ]);
+        await Promise.all(list.map((s) => fetchers[s].fetch()));
       } catch (e) {
         set({ error: message(e) });
       }
     });
     refreshQueue = next;
     return next;
-  },
+  };
+  const shown = (s: Slice) => fetchers[s].loaded?.() ?? true;
+  // What the writes answered since the last action changed, but what the action set from its
+  // answer and the slices no panel has loaded. A failed action reads everything again: a refusal
+  // names nothing, and the player must see the state that refused it (a stale undo's new top).
+  const changed = (failed: boolean, opts?: ActionOptions) => {
+    const answered = takeChanges();
+    const slices = slicesFor(failed ? { known: false } : answered);
+    if (!failed) for (const s of opts?.fresh ?? []) slices.delete(s);
+    return [...slices].filter(shown);
+  };
+  const start = (opts?: ActionOptions) => {
+    if (!opts?.quiet) set({ busy: true, error: null });
+  };
+  const end = (opts?: ActionOptions) => {
+    if (!opts?.quiet) set({ busy: false });
+  };
 
-  run: async (action, opts) => {
-    set({ busy: true, error: null });
-    let ok = true;
-    try {
-      await action();
-    } catch (e) {
-      ok = false;
-      set({ error: message(e) });
-    }
-    await get().refresh(opts);
-    set({ busy: false });
-    return ok;
-  },
+  return {
+    error: null,
+    notice: null,
+    busy: false,
+    clearError: () => set({ error: null }),
+    clearNotice: () => set({ notice: null }),
+    fail: (e) => set({ error: message(e) }),
 
-  submit: async (action) => {
-    set({ busy: true, error: null });
-    let rejected: ApiError | null = null;
-    try {
-      await action();
-    } catch (e) {
-      if (e instanceof ApiError && e.field) rejected = e;
-      else set({ error: message(e) });
-    }
-    await get().refresh();
-    set({ busy: false });
-    return rejected;
-  },
+    refresh: (slices) => read(slices ?? SLICES.filter(shown)),
 
-  recordHp: (delta, source) =>
-    get().run(async () =>
-      useHpStore.getState().setHp(await appendHpEvent(delta, source)),
-    ),
-  // One undo system (ADR 0018 step 3), the journal's Undo button and Ctrl+Z: the global undo
-  // with the top this client last read, so a stale top (another client acted since) is refused
-  // and nothing changes. A pop can bring expired buffs back (an "expired" notice would now be
-  // stale) and can take back a correction (ADR 0010 step 6): the card then shows the latest roll
-  // from the refreshed log, not this session's (corrected) roll response.
-  undo: () => {
-    const expected = useLogStore.getState().topId;
-    if (expected === null) return Promise.resolve(false);
-    return get().run(
-      async () => {
+    run: async (action, opts) => {
+      start(opts);
+      let ok = true;
+      try {
+        await action();
+      } catch (e) {
+        ok = false;
+        set({ error: message(e) });
+      }
+      await read(changed(!ok, opts));
+      end(opts);
+      return ok;
+    },
+
+    submit: async (action, opts) => {
+      start(opts);
+      let rejected: ApiError | null = null;
+      let failed = false;
+      try {
+        await action();
+      } catch (e) {
+        failed = true;
+        if (e instanceof ApiError && e.field) rejected = e;
+        else set({ error: message(e) });
+      }
+      await read(changed(failed, opts));
+      end(opts);
+      return rejected;
+    },
+
+    recordHp: (delta, source) =>
+      get().run(
+        async () =>
+          useHpStore.getState().setHp(await appendHpEvent(delta, source)),
+        { fresh: ["hp"] },
+      ),
+    // One undo system (ADR 0018 step 3), the journal's Undo button and Ctrl+Z: the global undo
+    // with the top this client last read, so a stale top (another client acted since) is refused
+    // and nothing changes. A pop can bring expired buffs back (an "expired" notice would now be
+    // stale) and can take back a correction (ADR 0010 step 6): the card then shows the latest roll
+    // from the refreshed log, not this session's (corrected) roll response. What the pop restored
+    // is read again by the keys it names, like any action (ADR 0019: undo and redo are two more).
+    undo: () => {
+      const expected = useLogStore.getState().topId;
+      if (expected === null) return Promise.resolve(false);
+      return get().run(async () => {
         await undoLogEntry(expected);
         set({ notice: null });
         useRollStore.setState({ last: null });
-      },
-      { character: true },
-    );
-  },
-  // Redo (ADR 0019 step 3), the journal's Redo button and Ctrl+Shift+Z: replays the transaction
-  // this client last read as the redo target, so a stale one is refused and nothing changes. Like
-  // an undo, it can change anything the card or a notice shows: both are re-read from the log.
-  redo: () => {
-    const expected = useLogStore.getState().redo?.id ?? null;
-    if (expected === null) return Promise.resolve(false);
-    return get().run(
-      async () => {
+      });
+    },
+    // Redo (ADR 0019 step 3), the journal's Redo button and Ctrl+Shift+Z: replays the transaction
+    // this client last read as the redo target, so a stale one is refused and nothing changes. Like
+    // an undo, it can change anything the card or a notice shows: both are re-read from the log.
+    redo: () => {
+      const expected = useLogStore.getState().redo?.id ?? null;
+      if (expected === null) return Promise.resolve(false);
+      return get().run(async () => {
         await redoLogEntry(expected);
         set({ notice: null });
         useRollStore.setState({ last: null });
-      },
-      { character: true },
-    );
-  },
-  // A round change leaves buffs alone, but an "expired" notice is stale after either.
-  endCombat: () =>
-    get().run(async () => {
-      await useBuffsStore.getState().resetRound();
-      set({ notice: null });
-    }),
-  setRound: (round) =>
-    get().run(async () => {
-      await useBuffsStore.getState().setRound(round);
-      set({ notice: null });
-    }),
-  nextRound: () =>
-    get().run(async () => {
-      const res = await useBuffsStore.getState().advanceRound();
-      set({ notice: expiredNotice(res.expiredBuffs) });
-    }),
-  rerollInitiative: () =>
-    get().run(() => useBuffsStore.getState().rerollInitiative()),
-  passTime: (hours) =>
-    get().run(async () => {
-      const res = await useBuffsStore.getState().passTime(hours);
-      set({ notice: expiredNotice(res.expiredBuffs) });
-    }),
-}));
+      });
+    },
+    // A round change leaves buffs alone, but an "expired" notice is stale after either.
+    endCombat: () =>
+      get().run(async () => {
+        await useBuffsStore.getState().resetRound();
+        set({ notice: null });
+      }),
+    setRound: (round) =>
+      get().run(async () => {
+        await useBuffsStore.getState().setRound(round);
+        set({ notice: null });
+      }),
+    nextRound: () =>
+      get().run(async () => {
+        const res = await useBuffsStore.getState().advanceRound();
+        set({ notice: expiredNotice(res.expiredBuffs) });
+      }),
+    rerollInitiative: () =>
+      get().run(() => useBuffsStore.getState().rerollInitiative()),
+    passTime: (hours) =>
+      get().run(async () => {
+        const res = await useBuffsStore.getState().passTime(hours);
+        set({ notice: expiredNotice(res.expiredBuffs) });
+      }),
+  };
+});

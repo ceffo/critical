@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { changeSkillArmor, fetchCreationOptions } from "@/api/characters";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { useCharacterStore } from "@/stores/character";
-import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
 
 /**
@@ -18,7 +17,6 @@ export function ThiefArmorPicker() {
   const id = useCharacterStore((s) => s.character?.id);
   const stored = useCharacterStore((s) => s.character?.skillArmor);
   const cls = useCharacterStore((s) => s.character?.class);
-  const fetchSkills = useSkillsStore((s) => s.fetchSkills);
   const run = useTableStore((s) => s.run);
   const [armors, setArmors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -40,8 +38,8 @@ export function ThiefArmorPicker() {
   const pick = async (next: string) => {
     setSaving(true);
     try {
-      await run(() => changeSkillArmor(id, next), { character: true });
-      await fetchSkills();
+      // The skills and the sheet follow the armour: read again by the keys the answer names.
+      await run(() => changeSkillArmor(id, next));
     } finally {
       setSaving(false);
     }

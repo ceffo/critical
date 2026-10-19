@@ -6,53 +6,29 @@ import { useTableStore } from "./table";
 
 interface XpStore {
   ledger: XpLedger | null;
-  busy: boolean;
   /** Entries added in this session, tinted in the ledger. */
   freshIds: ReadonlySet<number>;
+  /** Throws on failure: read it through the action module's refresh. */
   fetchXp: () => Promise<void>;
   /** Each write resolves null on success, or the ApiError naming the rejected field (shown under
-   * it). Other failures go to the table's error notice. */
+   * it). Other failures go to the action module's error notice. */
   add: (body: XpEntryBody) => Promise<ApiError | null>;
   update: (id: number, body: XpEntryBody) => Promise<ApiError | null>;
   remove: (id: number) => Promise<ApiError | null>;
 }
 
-/** The XP ledger (ADR 0015). Each write is a transaction on the action stack (step 4), so it
- * refreshes the table state: the journal shows the entry and its Undo targets it. */
+/** The XP ledger (ADR 0015). Each write is a transaction on the action stack (step 4), run by the
+ * action module: the journal shows the entry, its Undo targets it, and the sheet follows the XP. */
 export const useXpStore = create<XpStore>((set, get) => {
-  const write = async (
-    action: () => Promise<XpLedger>,
-  ): Promise<ApiError | null> => {
-    set({ busy: true });
-    try {
-      set({ ledger: await action() });
-      // The answer is the ledger: refresh the rest of the table (the journal and the character,
-      // whose level follows the XP), not the ledger.
-      await useTableStore.getState().refresh({ skipXp: true, character: true });
-      return null;
-    } catch (e) {
-      if (e instanceof ApiError && e.field) return e;
-      useTableStore.setState({
-        error: e instanceof Error ? e.message : String(e),
-      });
-      return null;
-    } finally {
-      set({ busy: false });
-    }
-  };
+  // The answer is the ledger: it is not read again.
+  const write = (action: () => Promise<XpLedger>) =>
+    useTableStore
+      .getState()
+      .submit(async () => set({ ledger: await action() }), { fresh: ["xp"] });
   return {
     ledger: null,
-    busy: false,
     freshIds: new Set(),
-    fetchXp: async () => {
-      try {
-        set({ ledger: await fetchXp() });
-      } catch (e) {
-        useTableStore.setState({
-          error: e instanceof Error ? e.message : String(e),
-        });
-      }
-    },
+    fetchXp: async () => set({ ledger: await fetchXp() }),
     add: async (body) => {
       const before = new Set(get().ledger?.entries.map((e) => e.id));
       const rejected = await write(() => postXpEntry(body));

@@ -10,9 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSpellStore } from "@/stores/spells";
-import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
-import { useItemsStore } from "@/stores/items";
 import { spellId, useSpellName } from "@/i18n/spellName";
 import type { CastTarget, SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
@@ -193,7 +191,6 @@ export function SpellsPanel() {
   const [modePicks, setModePicks] = useState<Record<number, string>>({});
   // Blank extra slots: the spell picked per slot index.
   const [picks, setPicks] = useState<Record<number, string>>({});
-  const logEntries = useLogStore((s) => s.entries);
   const { run, busy } = useTableStore();
 
   useEffect(() => {
@@ -202,17 +199,8 @@ export function SpellsPanel() {
     });
   }, [run, fetchSlots, fetchInfo]);
 
-  // A void from the combat log can change the preparation behind this panel.
-  useEffect(() => {
-    void fetchSlots().catch(() => undefined);
-  }, [logEntries, fetchSlots]);
-
-  // The items a spell can spend are served with the spellbook: ask again when the inventory
-  // changes (an item edited or restocked, a cast or a void in the log).
-  const items = useItemsStore((s) => s.items);
-  useEffect(() => {
-    void fetchInfo().catch(() => undefined);
-  }, [items, logEntries, fetchInfo]);
+  // The action module reads the slots and the spellbook (with the items a spell can spend) again
+  // when a write names them: a cast, a preparation, an item, an undo.
 
   // Group by level for display, keeping each slot's index (the cast endpoint's id). Only the levels
   // with a slot show (ADR 0027 step 10.5).

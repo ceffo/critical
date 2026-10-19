@@ -3,7 +3,8 @@ import type { LogEntry, LogKind } from "@/types/log";
 
 // A fake server action stack: what GET /api/log, POST /api/log/undo, POST /api/log/redo and
 // the initiative reroll do to it (the rules themselves are Go tests). It lets the store be driven
-// through its real refresh path, as two clients would see the server.
+// through its real refresh path, as two clients would see the server: each write names the state
+// keys its answer would carry (X-State-Keys, ADR 0018 step 11), a refused one none.
 const server = vi.hoisted(() => {
   type Row = { id: number; kind: string; voided: boolean };
   const s = {
@@ -66,10 +67,12 @@ vi.mock("@/api/log", () => ({
   undoLogEntry: async (expected: number) => {
     server.calls.push(`undo ${expected}`);
     server.pop(expected);
+    (await import("@/lib/stateKeys")).noteWrite("log");
   },
   redoLogEntry: async (expected: number) => {
     server.calls.push(`redo ${expected}`);
     server.redo(expected);
+    (await import("@/lib/stateKeys")).noteWrite("log");
   },
 }));
 vi.mock("../api/round", () => ({
@@ -81,6 +84,7 @@ vi.mock("../api/round", () => ({
     if (top?.kind !== "initiative") throw new Error("not the latest entry");
     top.voided = true;
     server.push("initiative");
+    (await import("@/lib/stateKeys")).noteWrite("initiative,log");
     return { round: 1, d10: 5 };
   },
 }));
@@ -90,6 +94,8 @@ vi.mock("@/api/hp", () => ({
 vi.mock("@/api/items", () => ({ fetchItems: async () => [] }));
 vi.mock("@/api/combat", () => ({ fetchWeapons: async () => [] }));
 vi.mock("@/api/ac", () => ({ fetchAc: async () => null }));
+vi.mock("../api/spells", () => ({ fetchSpellSlots: async () => [] }));
+vi.mock("@/api/character", () => ({ fetchCharacter: async () => ({}) }));
 vi.mock("../api/buffs", () => ({
   fetchActiveBuffs: async () => [],
   fetchSavedBuffs: async () => [],

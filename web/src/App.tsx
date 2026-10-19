@@ -19,10 +19,9 @@ import { SettingsPopover } from "@/components/shell/SettingsPopover";
 import { XpPanel } from "@/components/xp/XpPanel";
 import type { Activity } from "@/lib/activities";
 import { cn } from "@/lib/utils";
-import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
 import { useSpellNamesStore } from "@/stores/spellNames";
-import { useXpStore } from "@/stores/xp";
+import type { Slice } from "@/lib/stateKeys";
 
 /**
  * One activity's stage. It mounts on its first visit and then stays mounted while hidden, so its
@@ -69,11 +68,25 @@ function Pane({
  * footer are always visible: together they show the last result, HP and the turn with its effects
  * in every activity. Each zone scrolls on its own.
  */
+/** What the page reads on start, and again once the database answers after an uncertain write. */
+const SHEET: readonly Slice[] = [
+  "character",
+  "log",
+  "hp",
+  "buffs",
+  "savedBuffs",
+  "round",
+  "strength",
+  "items",
+  "weapons",
+  "ac",
+  "slots",
+  "xp",
+];
+
 function App() {
   const { t } = useTranslation();
-  const loadCharacter = useCharacterStore((s) => s.loadCharacter);
   const refresh = useTableStore((s) => s.refresh);
-  const fetchXp = useXpStore((s) => s.fetchXp);
   const loadSpellNames = useSpellNamesStore((s) => s.load);
   const [activity, setActivity] = useState<Activity>("act");
   const [visited, setVisited] = useState<ReadonlySet<Activity>>(
@@ -85,17 +98,14 @@ function App() {
   };
 
   useEffect(() => {
-    void loadCharacter();
-    void refresh();
-    void fetchXp();
-    void loadSpellNames();
+    // The sheet; the skills and the spellbook are read by their panels once shown.
+    const load = () => Promise.all([refresh(SHEET), loadSpellNames()]);
+    void load();
     // After a write the database may or may not have saved, the whole sheet is read again before
     // writes are allowed (ADR 0025 step 10.4).
-    setReload(() =>
-      Promise.all([loadCharacter(), refresh(), fetchXp(), loadSpellNames()]),
-    );
+    setReload(load);
     return () => setReload(null);
-  }, [loadCharacter, refresh, fetchXp, loadSpellNames]);
+  }, [refresh, loadSpellNames]);
 
   return (
     <div className="flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">

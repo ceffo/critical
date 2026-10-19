@@ -6,6 +6,7 @@ import { skillName } from "@/lib/logSummary";
 import { parseWhole } from "@/lib/wholeNumber";
 import { cn } from "@/lib/utils";
 import { useSkillsStore } from "@/stores/skills";
+import { useTableStore } from "@/stores/table";
 import type { RogueSkill } from "@/types/skills";
 
 /**
@@ -23,7 +24,7 @@ export function ThiefPointsEditor({
 }) {
   const { t } = useTranslation();
   const savePoints = useSkillsStore((s) => s.savePoints);
-  const saving = useSkillsStore((s) => s.savingPoints);
+  const saving = useTableStore((s) => s.busy);
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(skills.map((s) => [s.id, String(s.points)])),
   );

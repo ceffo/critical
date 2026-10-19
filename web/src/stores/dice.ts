@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { ApiError } from "@/api/http";
 import {
   addFavourite,
   deleteFavourite,
@@ -37,13 +36,25 @@ interface DiceStore {
 /** The dice composer (free rolls and favourites), all rolled and stored by the server. */
 export const useDiceStore = create<DiceStore>((set, get) => {
   const edit = (formula: string) => set({ formula, error: null });
-  const fail = (e: unknown) => {
-    if (e instanceof ApiError && e.field === "formula")
-      set({ error: e.message });
-    else
-      useTableStore.setState({
-        error: e instanceof Error ? e.message : String(e),
-      });
+  // Run by the action module: a refused formula is this store's own error, shown by the composer;
+  // any other failure goes to the action module's error notice. The favourites are kept in the
+  // background (quiet: no busy controls). Resolves true on success.
+  const write = async (action: () => Promise<unknown>, quiet = true) => {
+    let failed = false;
+    const rejected = await useTableStore.getState().submit(
+      async () => {
+        try {
+          await action();
+        } catch (e) {
+          failed = true;
+          throw e;
+        }
+      },
+      { quiet },
+    );
+    if (rejected?.field === "formula") set({ error: rejected.message });
+    else if (rejected) useTableStore.getState().fail(rejected);
+    return !failed;
   };
   return {
     formula: "",
@@ -59,33 +70,30 @@ export const useDiceStore = create<DiceStore>((set, get) => {
       const text = formula ?? get().formula;
       if (get().rolling || text.trim() === "") return false;
       set({ rolling: true, error: null });
-      useTableStore.getState().clearError();
+      let entry: number | undefined;
       try {
-        const res = await rollDice(text);
-        // The composer shows the server's normal form, ready to roll again.
-        set({ formula: res.formula });
-        await useTableStore.getState().refresh();
-        if (res.logEntryId !== undefined)
-          useFilStore.getState().select(res.logEntryId);
-        return true;
-      } catch (e) {
-        fail(e);
-        return false;
+        const ok = await write(async () => {
+          const res = await rollDice(text);
+          // The composer shows the server's normal form, ready to roll again.
+          set({ formula: res.formula });
+          entry = res.logEntryId;
+        }, false);
+        // The action module has read the journal again: the roll's entry is in it.
+        if (ok && entry !== undefined) useFilStore.getState().select(entry);
+        return ok;
       } finally {
         set({ rolling: false });
       }
     },
     fetchFavourites: async () => {
-      try {
-        set({ favourites: (await fetchFavourites()).favourites });
-      } catch (e) {
-        fail(e);
-      }
+      await write(async () =>
+        set({ favourites: (await fetchFavourites()).favourites }),
+      );
     },
     saveFavourite: async () => {
       const text = get().formula;
       if (text.trim() === "") return false;
-      try {
+      return write(async () => {
         const fav = await addFavourite(text);
         set((s) => ({
           error: null,
@@ -93,18 +101,12 @@ export const useDiceStore = create<DiceStore>((set, get) => {
             ? s.favourites
             : [...s.favourites, fav],
         }));
-        return true;
-      } catch (e) {
-        fail(e);
-        return false;
-      }
+      });
     },
     removeFavourite: async (id) => {
-      try {
-        set({ favourites: (await deleteFavourite(id)).favourites });
-      } catch (e) {
-        fail(e);
-      }
+      await write(async () =>
+        set({ favourites: (await deleteFavourite(id)).favourites }),
+      );
     },
     moveFavourite: async (id, delta) => {
       const ids = get().favourites.map((f) => f.id);
@@ -112,11 +114,9 @@ export const useDiceStore = create<DiceStore>((set, get) => {
       const to = from + delta;
       if (from < 0 || to < 0 || to >= ids.length) return;
       [ids[from], ids[to]] = [ids[to], ids[from]];
-      try {
-        set({ favourites: (await reorderFavourites(ids)).favourites });
-      } catch (e) {
-        fail(e);
-      }
+      await write(async () =>
+        set({ favourites: (await reorderFavourites(ids)).favourites }),
+      );
     },
   };
 });

@@ -45,9 +45,9 @@ func carryCharacter(ctx context.Context, q storeq.Querier, owner int64, armours 
 // inserts the new piece under a new name key (its name in every language of the catalogue row)
 // with its review row. Nothing is logged: the carry-over is no move of the game.
 func carryOver(ctx context.Context, q storeq.Querier, owner int64, class, skillArmor string, armours []ruletablesvc.Armour) error {
-	rows, err := q.ListArmourPieces(ctx, owner)
+	rows, err := q.CarryOverItems(ctx, owner)
 	if err != nil {
-		return fmt.Errorf("list pieces: %w", err)
+		return fmt.Errorf("list items: %w", err)
 	}
 	pieces := make([]itemsvc.Item, 0, len(rows))
 	for _, r := range rows {

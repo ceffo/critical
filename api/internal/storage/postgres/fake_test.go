@@ -930,16 +930,16 @@ func (f *fakeStore) class(id int64) string {
 	return "bard"
 }
 
-func (f *fakeStore) ListArmourPieces(_ context.Context, characterID int64) ([]storeq.ListArmourPiecesRow, error) {
-	rows := []storeq.ListArmourPiecesRow{}
+func (f *fakeStore) CarryOverItems(_ context.Context, characterID int64) ([]storeq.CarryOverItemsRow, error) {
+	rows := []storeq.CarryOverItemsRow{}
 	for _, it := range f.t.Items {
 		if it.CharacterID == characterID {
-			rows = append(rows, storeq.ListArmourPiecesRow{
+			rows = append(rows, storeq.CarryOverItemsRow{
 				ID: it.ID, Position: it.Position, Category: it.Category, State: it.State, SkillColumn: it.SkillColumn,
 			})
 		}
 	}
-	slices.SortFunc(rows, func(a, b storeq.ListArmourPiecesRow) int {
+	slices.SortFunc(rows, func(a, b storeq.CarryOverItemsRow) int {
 		return cmp.Or(cmp.Compare(a.Position, b.Position), cmp.Compare(a.ID, b.ID))
 	})
 	return rows, nil

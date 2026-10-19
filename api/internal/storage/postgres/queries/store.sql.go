@@ -107,6 +107,48 @@ func (q *Queries) AllTexts(ctx context.Context) ([]LocalizedText, error) {
 	return items, nil
 }
 
+const carryOverItems = `-- name: CarryOverItems :many
+SELECT id, position, category, state, skill_column
+FROM items WHERE character_id = $1::bigint ORDER BY position, id
+`
+
+type CarryOverItemsRow struct {
+	ID          string
+	Position    int64
+	Category    string
+	State       string
+	SkillColumn string
+}
+
+func (q *Queries) CarryOverItems(ctx context.Context, characterID int64) ([]CarryOverItemsRow, error) {
+	rows, err := q.db.QueryContext(ctx, carryOverItems, characterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CarryOverItemsRow{}
+	for rows.Next() {
+		var i CarryOverItemsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Position,
+			&i.Category,
+			&i.State,
+			&i.SkillColumn,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const catalogueVersion = `-- name: CatalogueVersion :one
 SELECT format, version FROM catalogue_meta WHERE id = 1
 `
@@ -610,48 +652,6 @@ func (q *Queries) LegacySnapshotKeys(ctx context.Context, characterID int64) ([]
 			return nil, err
 		}
 		items = append(items, state_key)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listArmourPieces = `-- name: ListArmourPieces :many
-SELECT id, position, category, state, skill_column
-FROM items WHERE character_id = $1::bigint ORDER BY position, id
-`
-
-type ListArmourPiecesRow struct {
-	ID          string
-	Position    int64
-	Category    string
-	State       string
-	SkillColumn string
-}
-
-func (q *Queries) ListArmourPieces(ctx context.Context, characterID int64) ([]ListArmourPiecesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listArmourPieces, characterID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListArmourPiecesRow{}
-	for rows.Next() {
-		var i ListArmourPiecesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Position,
-			&i.Category,
-			&i.State,
-			&i.SkillColumn,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -1166,9 +1166,9 @@ type SkillArmourCharactersRow struct {
 }
 
 // The skill armour carry-over of migration 020 (ADR 0033 step 14, carrySkillArmour): each
-// character's class and entered skill armour, its pieces as the carry-over reads them, and a
-// carried piece put on. Delete them with their step once every environment is past 020 (ADR 0025
-// step 2.1.1); the seed keeps CharacterSkillArmour, ListArmourPieces and WearItem.
+// character's class and entered skill armour, all its items as the carry-over reads them (every
+// item, armour or not: an added piece goes after the last position), and a carried piece put on. Delete them with their step once every environment is past 020 (ADR 0025
+// step 2.1.1); the seed keeps CharacterSkillArmour, CarryOverItems and WearItem.
 func (q *Queries) SkillArmourCharacters(ctx context.Context) ([]SkillArmourCharactersRow, error) {
 	rows, err := q.db.QueryContext(ctx, skillArmourCharacters)
 	if err != nil {

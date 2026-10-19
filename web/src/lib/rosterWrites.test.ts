@@ -8,8 +8,16 @@ import {
   type RosterState,
 } from "./rosterWrites";
 
-const lyra = { id: 1, name: "Lyra", class: "bard", level: 3 };
-const borin = { id: 2, name: "Borin", class: "fighter", level: 1 };
+const identity = {
+  race: "human",
+  alignment: "true_neutral",
+  sex: "female",
+  missing: [] as [],
+  currentHp: 8,
+  maxHp: 12,
+};
+const lyra = { id: 1, name: "Lyra", class: "bard", level: 3, ...identity };
+const borin = { id: 2, name: "Borin", class: "fighter", level: 1, ...identity };
 const list = (
   names: [string, string],
   currentId: number | null = 1,

@@ -32,7 +32,13 @@ func (r *recorder) Record(_ context.Context, e actionlog.NewEntry) (int64, error
 	return int64(len(r.entries)), nil
 }
 
+// hpLedger answers the HP ledger's total of each character.
+type hpLedger map[int64]int
+
+func (h hpLedger) HPTotal(_ context.Context, id int64) (int, error) { return h[id], nil }
+
 type env struct {
+	hp       hpLedger
 	log      *recorder
 	svc      charactersvc.SVC
 	reader   *mocks.MockReader
@@ -47,10 +53,10 @@ func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
 		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: newRules(t),
-		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{}, log: &recorder{},
+		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{}, log: &recorder{}, hp: hpLedger{},
 	}
 	svc, err := charactersvc.NewWithConfig(charactersvc.DefaultConfig(), charactersvc.Deps{
-		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Log: e.log,
+		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Log: e.log, HP: e.hp,
 	})
 	require.NoError(t, err)
 	e.svc = svc
@@ -60,7 +66,7 @@ func newEnv(t *testing.T) *env {
 func TestNew_NilDependency(t *testing.T) {
 	full := charactersvc.Deps{
 		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: newRules(t),
-		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t), Log: &recorder{},
+		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t), Log: &recorder{}, HP: hpLedger{},
 	}
 	without := map[string]func(d *charactersvc.Deps){
 		"reader":   func(d *charactersvc.Deps) { d.Reader = nil },
@@ -70,6 +76,7 @@ func TestNew_NilDependency(t *testing.T) {
 		"tx":       func(d *charactersvc.Deps) { d.Tx = nil },
 		"sessions": func(d *charactersvc.Deps) { d.Sessions = nil },
 		"log":      func(d *charactersvc.Deps) { d.Log = nil },
+		"hp":       func(d *charactersvc.Deps) { d.HP = nil },
 	}
 	for name, drop := range without {
 		d := full
@@ -98,7 +105,58 @@ func TestList_IsTheOwnersCharactersAtTheirRealizedLevel(t *testing.T) {
 	e.rules.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
 	got, err := e.svc.List(context.Background(), owner)
 	require.NoError(t, err)
-	assert.Equal(t, []charactersvc.Summary{{ID: 1, Name: "Kelsen", Class: "bard", Level: 15}}, got)
+	assert.Equal(t, []charactersvc.Summary{{
+		ID: 1, Name: "Kelsen", Class: "bard", Level: 15, Race: "half_elf",
+		Missing: []string{"alignment", "sex"}, MaxHP: 85, CurrentHP: 85,
+	}}, got)
+}
+
+// The roster card's identity and HP: the race, the alignment and sex codes
+// (one that is no code reads as still to choose, ADR 0032 step 8.2), the fields
+// to choose, and the current HP derived from the ledger (ADR 0007 step 6, ADR
+// 0011 step 1), never above max nor below the floor.
+func TestList_CarriesTheIdentityAndTheHP(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		alignment   string
+		sex         string
+		total       int
+		wantMissing []string
+		wantAlign   string
+		wantSex     string
+		wantCurrent int
+	}{
+		{"complete, hurt", "chaotic_good", "male", -30, []string{}, "chaotic_good", "male", 55},
+		{"free text alignment reads as missing", "bon et sage", "female", 0, []string{"alignment"}, "", "female", 85},
+		{"above max shows max", "chaotic_good", "male", 12, []string{}, "chaotic_good", "male", 85},
+		{"below the floor shows the floor", "chaotic_good", "", -400, []string{"sex"}, "chaotic_good", "", -10},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEnv(t)
+			k := kelsen()
+			k.Details.Alignment, k.Details.Sex = tc.alignment, tc.sex
+			e.hp[1] = tc.total
+			e.owners.EXPECT().CharactersOf(mock.Anything, owner).
+				Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen", Class: "bard"}}, nil).Once()
+			e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(k, nil).Once()
+			e.xp.EXPECT().EntriesTotal(mock.Anything, int64(1)).Return(26_582, nil).Once()
+			e.rules.EXPECT().LevelFor("bard", 1_320_000).Return(16, nil).Once()
+			e.rules.EXPECT().XPThreshold("bard", 17).Return(1_540_000, nil).Once()
+			e.rules.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
+			e.rules.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
+			e.rules.EXPECT().BardSpellsPerDay(15).Return(level15Slots, nil).Once()
+			e.rules.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
+			got, err := e.svc.List(context.Background(), owner)
+			require.NoError(t, err)
+			require.Len(t, got, 1)
+			assert.Equal(t, "half_elf", got[0].Race)
+			assert.Equal(t, tc.wantAlign, got[0].Alignment)
+			assert.Equal(t, tc.wantSex, got[0].Sex)
+			assert.Equal(t, tc.wantMissing, got[0].Missing)
+			assert.Equal(t, 85, got[0].MaxHP)
+			assert.Equal(t, tc.wantCurrent, got[0].CurrentHP)
+		})
+	}
 }
 
 // ADR 0029 step 7.2: setting the current character writes it in one

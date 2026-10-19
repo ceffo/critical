@@ -77,6 +77,12 @@ type XPLedger interface {
 	EntriesTotal(ctx context.Context, characterID int64) (int, error)
 }
 
+// HPLedger is the HP ledger's total, the sum of the effective HP deltas of a
+// character's entries (actionlogsvc.SVC implements it).
+type HPLedger interface {
+	HPTotal(ctx context.Context, characterID int64) (int, error)
+}
+
 // Owners is the driven port over who owns and plays which character.
 type Owners interface {
 	// CharactersOf is the owner's characters they have not retired, by id.
@@ -129,6 +135,8 @@ type Deps struct {
 	// Languages is the language catalogue (ADR 0032 step 4); nil is the empty
 	// one of a catalogue before format 8, which knows no language.
 	Languages LanguageBook
+	// HP is the HP ledger, for the current HP of the list (ADR 0007 step 6).
+	HP HPLedger
 }
 
 type service struct {
@@ -141,17 +149,18 @@ type service struct {
 	log      actionlog.Recorder
 	// languages is never nil: the empty catalogue when Deps holds none.
 	languages LanguageBook
+	hp        HPLedger
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil || d.Log == nil {
+	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil || d.Log == nil || d.HP == nil {
 		return nil, errors.New("charactersvc: nil dependency")
 	}
 	if d.Languages == nil {
 		d.Languages = (*ruletablesvc.Languages)(nil)
 	}
-	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, log: d.Log, languages: d.Languages}, nil
+	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, log: d.Log, languages: d.Languages, hp: d.HP}, nil
 }
 
 // NewWithConfig is here for symmetry with the other services. There is no
@@ -197,7 +206,10 @@ func (s *service) readWarnings(c *Character) {
 	}
 }
 
-// List names each character with its derived level (ADR 0030 step 3).
+// List names each character with its realized level (ADR 0030 step 3), its
+// race, alignment and sex, the fields still to choose (ADR 0032 step 8.2) and
+// its HP: the max HP and the current HP, derived from the ledger as the HP
+// panel derives it (ADR 0007 step 6).
 func (s *service) List(ctx context.Context, owner uuid.UUID) ([]Summary, error) {
 	list, err := s.owners.CharactersOf(ctx, owner)
 	if err != nil {
@@ -208,7 +220,17 @@ func (s *service) List(ctx context.Context, owner uuid.UUID) ([]Summary, error) 
 		if err != nil {
 			return nil, err
 		}
+		total, err := s.hp.HPTotal(ctx, list[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("character %d HP: %w", list[i].ID, err)
+		}
+		d := c.Details.Coded()
 		list[i].Level = c.Derived.RealizedLevel
+		list[i].Race = c.Race
+		list[i].Alignment, list[i].Sex = d.Alignment, d.Sex
+		list[i].Missing = c.Details.Missing()
+		list[i].MaxHP = c.HPMax
+		list[i].CurrentHP = actionlog.CurrentHP(c.HPMax, total)
 	}
 	return list, nil
 }

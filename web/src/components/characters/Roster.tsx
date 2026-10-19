@@ -42,6 +42,7 @@ import {
   type RosterDialog as Opened,
   type RosterState,
 } from "@/lib/rosterWrites";
+import { identityLine, toPickKey } from "@/lib/rosterCard";
 import { CREATE_PATH } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import type { CharacterList, CharacterSummary } from "@/types/character";
@@ -218,7 +219,7 @@ export function Roster({ onBack }: { onBack?: () => void }) {
   );
 }
 
-/** One character's card: name, class and level, "En jeu" on the current one, its three actions. */
+/** One character's card: name, class and level, race · alignment, HP, the tag of what is still to choose, "En jeu" on the current one, its three actions. */
 function RosterCard({
   character: c,
   current,
@@ -235,6 +236,11 @@ function RosterCard({
   onRetire: () => void;
 }) {
   const { t } = useTranslation();
+  // Race · alignment: what is still to choose is the tag's, not a blank here.
+  const identity = identityLine(c, (key, code) =>
+    t(`${key}.${code}`, { defaultValue: code }),
+  );
+  const toPick = toPickKey(c.missing);
   return (
     <li
       className={cn("zone-card flex flex-col", current && "latest")}
@@ -260,6 +266,29 @@ function RosterCard({
             level: c.level,
           })}
         </span>
+        {identity && (
+          <span
+            className="text-body text-ink-muted [overflow-wrap:anywhere]"
+            data-testid="roster-identity"
+          >
+            {identity}
+          </span>
+        )}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {c.currentHp !== undefined && c.maxHp !== undefined && (
+            <span className="text-body font-semibold" data-testid="roster-hp">
+              {t("roster.hp", { current: c.currentHp, max: c.maxHp })}
+            </span>
+          )}
+          {toPick && (
+            <span
+              className="rounded-md bg-tint px-1.5 py-0.5 text-label font-semibold text-on-accent"
+              data-testid="roster-missing"
+            >
+              {t(toPick)}
+            </span>
+          )}
+        </div>
       </div>
       <div className="mt-auto flex flex-wrap items-center gap-2 px-4 pt-3 pb-3">
         {!current && (

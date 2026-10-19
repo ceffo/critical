@@ -66,6 +66,15 @@ type SummaryDTO struct {
 	Name  string `json:"name"`
 	Class string `json:"class"`
 	Level int    `json:"level"`
+	// Race is the race code ("" when none); Alignment and Sex are codes, ""
+	// while still to choose, and Missing names those fields (the card's tag).
+	Race      string   `json:"race"`
+	Alignment string   `json:"alignment"`
+	Sex       string   `json:"sex"`
+	Missing   []string `json:"missing"`
+	// CurrentHP and MaxHP come from the HP ledger and the sheet's max HP.
+	CurrentHP int `json:"currentHp"`
+	MaxHP     int `json:"maxHp"`
 }
 
 // CharactersDTO is the user's characters, not retired, in creation order, and
@@ -96,7 +105,10 @@ func renderCharactersStatus(w http.ResponseWriter, r *http.Request, svc ownedLis
 	}
 	out := CharactersDTO{Characters: make([]SummaryDTO, 0, len(list))}
 	for _, c := range list {
-		out.Characters = append(out.Characters, SummaryDTO{ID: c.ID, Name: c.Name, Class: c.Class, Level: c.Level})
+		out.Characters = append(out.Characters, SummaryDTO{
+			ID: c.ID, Name: c.Name, Class: c.Class, Level: c.Level, Race: c.Race, Alignment: c.Alignment,
+			Sex: c.Sex, Missing: c.Missing, CurrentHP: c.CurrentHP, MaxHP: c.MaxHP,
+		})
 		if c.ID == current {
 			id := c.ID
 			out.CurrentID = &id

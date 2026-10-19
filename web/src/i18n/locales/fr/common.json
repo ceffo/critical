@@ -1980,7 +1980,13 @@
     "back": "Retour",
     "backHint": "Revenir à la partie",
     "renameHint": "Renommer {{name}}",
-    "createLead": "Ouvre la création en plein écran."
+    "createLead": "Ouvre la création en plein écran.",
+    "hp": "PV {{current}}/{{max}}",
+    "toPick": {
+      "alignment": "Alignement à choisir",
+      "sex": "Sexe à choisir",
+      "alignment_sex": "Alignement et sexe à choisir"
+    }
   },
   "turning": {
     "title": "Repousser les morts-vivants",

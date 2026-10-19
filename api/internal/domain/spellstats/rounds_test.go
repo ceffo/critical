@@ -44,6 +44,18 @@ func TestBuffs_Step20_DurationInRounds(t *testing.T) {
 		{"1-4 rounds", "1d4", 4},
 		{"3-4 rounds", "(2+1d2)", 4},
 		{"up to 8 hrs.", "480", 480},
+		// A cap caps the total, in the unit of the cap (20.1): below it the
+		// total stands, above it the cap does, and the cap follows the
+		// segment round-up base.
+		{"1 turn/level, max. 10 turns", "min(10*level,100)", 100},
+		{"1 hr./level, max. 12 hrs.", "min(60*level,720)", 720},
+		{"1 rd./level, max. 2 turns", "min(level,20)", 15},
+		// A dice term with a flat count and a step, and a range per level:
+		// everything in the term scales with the levels (20.1).
+		{"1d4+2 rds./2 levels", "((1*(level/2))d4+2*(level/2))", 7*4 + 14},
+		{"1d4+1 rds./level", "((1*level)d4+level)", 15*4 + 15},
+		{"1-4 rds./level", "1d4*level", 4 * 15},
+		{"1-4 rds./2 levels", "1d4*(level/2)", 4 * 7},
 	}
 	for _, tt := range tests {
 		t.Run(tt.raw, func(t *testing.T) {
@@ -55,6 +67,33 @@ func TestBuffs_Step20_DurationInRounds(t *testing.T) {
 			v, err := f.Eval(15, top)
 			require.NoError(t, err)
 			assert.Equal(t, tt.at15, v)
+		})
+	}
+}
+
+// The cap binds on level: 1 turn/level, max. 10 turns is 40 rounds at level 4
+// and 100 at level 15 (ADR 0004 step 20.1).
+func TestBuffs_Step20_CapByLevel(t *testing.T) {
+	tests := []struct {
+		raw   string
+		level int
+		want  int
+	}{
+		{"1 turn/level, max. 10 turns", 4, 40},
+		{"1 turn/level, max. 10 turns", 10, 100},
+		{"1 turn/level, max. 10 turns", 15, 100},
+		{"1 hr./level, max. 12 hrs.", 4, 240},
+		{"1 hr./level, max. 12 hrs.", 15, 720},
+	}
+	for _, tt := range tests {
+		t.Run(tt.raw, func(t *testing.T) {
+			got, ok := spellstats.ParseDuration(tt.raw).RoundsFormula()
+			require.True(t, ok)
+			f, err := formula.Parse(got)
+			require.NoError(t, err)
+			v, err := f.Eval(tt.level, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, v)
 		})
 	}
 }

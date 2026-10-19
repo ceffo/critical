@@ -229,8 +229,9 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
          (`spellstats.Duration.RoundsFormula`): 1 turn = 10 rounds, 1 hour = 60, 1 day = 1,440,
          1 week = 10,080; a term per N levels counts once every N levels; dice are rolled in their
          own unit, then converted; a range ("1-4 days") is rolled evenly between its ends; "up to"
-         takes the top; a cap ("max. 10 turns") caps the total; a part of a round rounds up to a
-         whole round. A duration the parser left special, that names no time unit, or that is
+         takes the top; a cap ("max. 10 turns") caps the total; a term per N levels scales everything in it
+         (dice count, flat count), except a range, which rolls once and is multiplied ("1-4 rds./level"
+         is 1d4 × level); a part of a round rounds up to a whole round. A duration the parser left special, that names no time unit, or that is
          divided by something other than the level ("per recipient") gets no row.
     20.2 **No row.** A duration that is instantaneous, permanent, concentration, special or "until
          …" puts no row; an "until discharged" spell keeps its charge behaviour (step 3). A

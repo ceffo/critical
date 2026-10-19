@@ -8,6 +8,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
 // ADR 0004 step 20 through the real services and storage: a utility spell
@@ -75,4 +76,79 @@ func TestBuffs_Step20_RowCountsDownAndUndoRemovesIt(t *testing.T) {
 	require.Len(t, rows, 1, "undoing the cast removes its row only")
 	assert.Equal(t, "polymorph_self", rows[0].SpellID)
 	assert.Equal(t, 1, dice.calls["die"], "the round's d10 only")
+}
+
+// ADR 0004 step 20.5 through the real services and storage: the mage casts
+// Haste on someone else, which changes none of his numbers, then on himself:
+// the row on him applies, and the row on the other stays where it was (it is
+// not renewed by, nor does it replace, his own).
+func TestBuffs_Step20_HasteOnAnotherThenOnTheBard(t *testing.T) {
+	dice := &attackDice{t: t, dies: []int{1, 1, 1, 1}, calls: map[string]int{}}
+	dice.d100s = []int{1}
+	tb := newInitiativeTable(t, dice, charactersvc.NewCharacter{
+		Name: "Elminster", Class: "mage", Race: "human", Str: 9, Dex: 12, Con: 11, Int: 17, Wis: 12, Cha: 10, HPMax: 20, XP: 40000,
+	})
+	got, err := tb.bs.Learn.Learn(tb.ctx, tb.id, "haste")
+	require.NoError(t, err)
+	require.True(t, got.Learned)
+	_, err = tb.bs.Prep.Prepare(tb.ctx, tb.id, []string{"haste", "haste"})
+	require.NoError(t, err)
+	aggregate := func() buffsvc.BuffModifiers {
+		got, err := tb.bs.Buffs.Aggregate(tb.ctx, tb.id, buffsvc.BaseStrength{StrScore: buffsvc.StrScore{Score: 9}}, buffsvc.WeaponMelee)
+		require.NoError(t, err)
+		return got
+	}
+	neutral := aggregate()
+	neutralInit := tb.initiative(t)
+
+	other, onSelf := false, true
+	res, err := tb.bs.Cast.Cast(tb.ctx, tb.id, 0, castsvc.CastRequest{OnSelf: &other})
+	require.NoError(t, err)
+	require.NotNil(t, res.Buff)
+	assert.True(t, res.Buff.OnOther)
+	assert.Equal(t, neutral, aggregate(), "a cast on someone else changes no aggregate")
+	assert.Equal(t, neutralInit, tb.initiative(t), "nor his initiative")
+
+	_, err = tb.bs.Cast.Cast(tb.ctx, tb.id, 1, castsvc.CastRequest{OnSelf: &onSelf})
+	require.NoError(t, err)
+	rows, err := tb.bs.Buffs.ListStatus(tb.ctx, tb.id)
+	require.NoError(t, err)
+	require.Len(t, rows, 2, "the row on him does not replace the row on the other")
+	assert.True(t, rows[0].OnOther)
+	assert.False(t, rows[0].Applies)
+	assert.False(t, rows[1].OnOther)
+	assert.True(t, rows[1].Applies)
+	assert.Equal(t, "haste", rows[0].SpellID)
+	assert.Equal(t, "haste", rows[1].SpellID)
+}
+
+// ADR 0004 step 20.3 and ADR 0018: receiving Polymorph Self while it already
+// runs on the Bard renews the row; voiding that receive brings the previous
+// row back with the rounds it had left.
+func TestBuffs_Step20_VoidingARenewalRestoresTheOldRounds(t *testing.T) {
+	dice := &attackDice{t: t, dies: []int{6, 6, 6, 6}, calls: map[string]int{}}
+	tb := mageWith(t, dice)
+	list := func() []buffsvc.BuffStatus {
+		got, err := tb.bs.Buffs.ListStatus(tb.ctx, tb.id)
+		require.NoError(t, err)
+		return got
+	}
+	_, err := tb.bs.Cast.Receive(tb.ctx, tb.id, castsvc.ReceiveRequest{SpellID: "polymorph_self", CasterLevel: 15})
+	require.NoError(t, err)
+	for range 3 {
+		_, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+		require.NoError(t, err)
+	}
+	require.Equal(t, 297, list()[0].Duration)
+
+	_, err = tb.bs.Cast.Receive(tb.ctx, tb.id, castsvc.ReceiveRequest{SpellID: "polymorph_self", CasterLevel: 15})
+	require.NoError(t, err)
+	require.Len(t, list(), 1, "renewed, not duplicated")
+	require.Equal(t, 300, list()[0].Duration)
+
+	_, err = tb.bs.Log.Undo(tb.ctx, tb.id, tb.top(t).ID)
+	require.NoError(t, err)
+	rows := list()
+	require.Len(t, rows, 1)
+	assert.Equal(t, 297, rows[0].Duration, "the previous row, with its old remaining rounds")
 }

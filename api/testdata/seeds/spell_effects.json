@@ -224,7 +224,7 @@
   "kind": "utility",
   "confidence": "low",
   "note": "Victim loses 2 Strength (or -2 to attack and damage) after the first round of laughter. Not modelled.",
-  "target": "none",
+  "target": "other",
   "duration": {
    "kind": "rounds",
    "rounds": "level"

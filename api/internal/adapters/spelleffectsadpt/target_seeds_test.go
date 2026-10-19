@@ -105,5 +105,5 @@ func TestRepoSeeds_EveryRowOnlySpellTargetChoice(t *testing.T) {
 		}
 	}
 	onAlly := &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnOther, Alternate: spelleffectsvc.CastOnSelf}
-	assert.Equal(t, map[string]*spelleffectsvc.TargetChoice{"sleep": onAlly}, got)
+	assert.Equal(t, map[string]*spelleffectsvc.TargetChoice{"sleep": onAlly, "tashas_uncontrollable_hideous_laughter": onAlly}, got)
 }

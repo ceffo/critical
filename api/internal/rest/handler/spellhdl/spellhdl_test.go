@@ -89,9 +89,10 @@ func (f fakeChars) GetCharacter(context.Context, int64) (*charactersvc.Character
 // modes are ice_storm's: hail (3d10 cold) and sleet (no damage).
 type fakeDamage struct{ levels *[]int }
 
-// AddsEffect: only "strength" adds a buff.
-func (f fakeDamage) AddsEffect(_ context.Context, id string) bool {
-	return id == "strength"
+// AddsEffect: "strength" gets a row, and so does a spell whose catalogue
+// duration is timed (the handler passes the spell's own).
+func (f fakeDamage) AddsEffect(id string, d spellstats.Duration) bool {
+	return id == "strength" || d.Kind == spellstats.KindTimed
 }
 
 func (f fakeDamage) ModesAt(_ context.Context, id string, level int) ([]spelleffectsvc.ModeAt, error) {
@@ -454,6 +455,8 @@ func TestSearch_EffectFlag(t *testing.T) {
 	svc := fakeSvc{spells: []spellsvc.Spell{
 		{ID: "strength", Name: localized.Of("Strength")},
 		{ID: "fireball", Name: localized.Of("Fireball")},
+		// ADR 0004 step 20: the rule reads the spell's catalogue duration.
+		{ID: "bless", Name: localized.Of("Bless"), Stats: spellstats.Parse(spellstats.Raw{Duration: "6 rds."})},
 	}}
 	for _, url := range []string{"/api/spells", "/api/spells?caster_level=3"} {
 		h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, svc, fakeChars{err: errors.New("no character")}, fakeDamage{}))
@@ -464,9 +467,10 @@ func TestSearch_EffectFlag(t *testing.T) {
 			Items []map[string]any `json:"items"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
-		require.Len(t, page.Items, 2)
+		require.Len(t, page.Items, 3)
 		assert.Equal(t, true, page.Items[0]["effect"], url)
 		assert.NotContains(t, page.Items[1], "effect", url)
+		assert.Equal(t, true, page.Items[2]["effect"], url)
 	}
 }
 

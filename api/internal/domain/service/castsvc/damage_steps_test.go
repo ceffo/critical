@@ -154,12 +154,15 @@ func TestReceive_DamageSteps_AtTheCastersLevel(t *testing.T) {
 		string(payloadField(t, f.entries[0].Payload, "damage")))
 
 	// Incendiary Cloud from a level 2 caster: two rounds of smoke (no die),
-	// then 2d2, 2d4 and 2d2.
-	f = newFixture(t, 2, 1, 3, 4, 1, 2)
+	// then 2d2, 2d4 and 2d2; then its row's 4 + 1d6 rounds (ADR 0004 step
+	// 20).
+	f = newFixture(t, 2, 1, 3, 4, 1, 2, 5)
 	res, err := f.svc.Receive(context.Background(), charID, castsvc.ReceiveRequest{SpellID: incendiaryCloud.SpellID, CasterLevel: 2})
 	require.NoError(t, err)
 	assert.Empty(t, f.dice.vals)
-	assert.Equal(t, []int{2, 2, 4, 4, 2, 2}, f.dice.sides)
+	assert.Equal(t, []int{2, 2, 4, 4, 2, 2, 6}, f.dice.sides)
+	require.Len(t, f.added, 1)
+	assert.Equal(t, 9, f.added[0].Duration)
 	d := res.Damage
 	assert.Equal(t, spelleffectsvc.StepPerRound, d.StepsPer)
 	assert.Equal(t, 5, d.Rounds)

@@ -3,6 +3,8 @@ package castsvc_test
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
 // ADR 0004 step 19: a spell that adds a buff is added as an effect from the
@@ -111,30 +114,33 @@ func TestBuffs_Step19_AddAsEffectLogPayload(t *testing.T) {
 	}, p)
 }
 
-// lowConfidenceBuff is a test-only buff entry the extraction does not trust.
-func lowConfidenceBuff(t *testing.T) spelleffectsvc.Catalog {
+// lowConfidenceInstant is a test-only buff entry the extraction does not
+// trust and that does not last a number of rounds.
+func lowConfidenceInstant(t *testing.T) spelleffectsvc.Catalog {
 	t.Helper()
 	c, err := spelleffectsadpt.Parse([]byte(`[{"id":"shaky_ward","name":"Shaky Ward","level":2,
-	  "kind":"buff","confidence":"low","note":"Test only.","target":"self","duration":{"kind":"rounds","rounds":"level"},
+	  "kind":"buff","confidence":"low","note":"Test only.","target":"self","duration":{"kind":"special"},
 	  "modifiers":{"ac":-2}}]`))
 	require.NoError(t, err)
 	return c
 }
 
-// ADR 0004 step 19: a spell that adds no buff is refused before anything is
-// rolled, written or logged; an unknown one is not found.
+// ADR 0004 steps 19 and 20: a spell that gets no row is refused before
+// anything is rolled, written or logged; an unknown one is not found.
 func TestBuffs_Step19_AddAsEffectRefusals(t *testing.T) {
 	tests := []struct {
 		name    string
 		effects spelleffectsvc.Catalog
 		spellID string
+		stats   spellstats.Duration
 		wantErr error
 	}{
-		{name: "a damage spell rolls nothing", spellID: "fireball", wantErr: spelleffectsvc.ErrNotAnEffect},
-		{name: "a utility spell", spellID: "identify", wantErr: spelleffectsvc.ErrNotAnEffect},
-		{name: "an ability set applied by hand", spellID: "fist_of_stone", wantErr: spelleffectsvc.ErrNotAnEffect},
-		{name: "a low-confidence buff", effects: lowConfidenceBuff(t), spellID: "shaky_ward", wantErr: spelleffectsvc.ErrNotAnEffect},
-		{name: "a spell outside the effects seed (priest)", spellID: "bless", wantErr: spelleffectsvc.ErrNotAnEffect},
+		{name: "a damage spell with no duration rolls nothing", spellID: "fireball", wantErr: spelleffectsvc.ErrNotAnEffect},
+		{name: "an instantaneous utility spell", spellID: "dispel_magic", wantErr: spelleffectsvc.ErrNotAnEffect},
+		{name: "a utility spell with a special duration", spellID: "alarm", wantErr: spelleffectsvc.ErrNotAnEffect},
+		{name: "a low-confidence buff with no rounds", effects: lowConfidenceInstant(t), spellID: "shaky_ward", wantErr: spelleffectsvc.ErrNotAnEffect},
+		{name: "a permanent priest spell", spellID: "cure_light_wounds", stats: spellstats.ParseDuration("Permanent"), wantErr: spelleffectsvc.ErrNotAnEffect},
+		{name: "a priest spell lasting the time of chanting", spellID: "chant", stats: spellstats.ParseDuration("Time of chanting"), wantErr: spelleffectsvc.ErrNotAnEffect},
 		{name: "an unknown spell", spellID: "no_such_spell", wantErr: domain.ErrNotFound},
 		{name: "no spell id", spellID: " ", wantErr: domain.ErrInvalidInput},
 	}
@@ -145,37 +151,78 @@ func TestBuffs_Step19_AddAsEffectRefusals(t *testing.T) {
 				effects = catalog(t)
 			}
 			f := newFixtureWith(t, effects)
+			f.stats = map[string]spellstats.Stats{tt.spellID: {Duration: tt.stats}}
 			_, err := f.svc.AddEffect(context.Background(), charID, castsvc.AddEffectRequest{SpellID: tt.spellID})
 			require.ErrorIs(t, err, tt.wantErr)
 			assert.Empty(t, f.dice.sides, "nothing rolled")
-			assert.Empty(t, f.added, "no buff")
+			assert.Empty(t, f.added, "no row")
 			assert.Empty(t, f.entries, "nothing logged")
 			assert.Zero(t, f.tx.calls, "refused before the transaction")
-			assert.False(t, f.svc.AddsEffect(context.Background(), tt.spellID), "not offered")
+			assert.False(t, f.svc.AddsEffect(tt.spellID, tt.stats), "not offered")
 		})
 	}
 }
 
-// ADR 0004 step 19: the flag the lookup offers the action from and the
-// action agree for every seed entry: AddsEffect is true exactly when
-// AddEffect puts a buff on the Bard.
-func TestBuffs_Step19_FlagMatchesTheAction(t *testing.T) {
-	offered := 0
+// fixtureDurations are the catalogue durations of the test catalogue, by
+// spell id, parsed as the importer parses them.
+func fixtureDurations(t *testing.T) map[string]spellstats.Duration {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "testdata", "catalogue.json"))
+	require.NoError(t, err)
+	var c struct {
+		Spells []struct {
+			ID       string `json:"id"`
+			Duration string `json:"duration"`
+		} `json:"spells"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &c))
+	out := map[string]spellstats.Duration{}
+	for _, s := range c.Spells {
+		out[s.ID] = spellstats.ParseDuration(s.Duration)
+	}
+	return out
+}
+
+// ADR 0004 step 20: the flag the lookup offers the action from and the
+// action agree for every seed entry and every spell of the catalogue (the
+// Priest spells, with no entry, by their catalogue duration): AddsEffect is
+// true exactly when AddEffect puts a row on the Bard. Replaces step 19's
+// check, whose rule was the buffs only.
+func TestBuffs_Step20_OfferMatchesTheAction(t *testing.T) {
+	durations := fixtureDurations(t)
+	ids := map[string]bool{}
 	for _, e := range catalog(t).All() {
+		ids[e.ID] = true
+	}
+	for id := range durations {
+		ids[id] = true
+	}
+	offered, priest := 0, 0
+	for id := range ids {
 		f := newFixture(t, ones(20)...)
-		ok := f.svc.AddsEffect(context.Background(), e.ID)
-		res, err := f.svc.AddEffect(context.Background(), charID, castsvc.AddEffectRequest{SpellID: e.ID})
+		f.stats = map[string]spellstats.Stats{id: {Duration: durations[id]}}
+		ok := f.svc.AddsEffect(id, durations[id])
+		res, err := f.svc.AddEffect(context.Background(), charID, castsvc.AddEffectRequest{SpellID: id})
 		if !ok {
-			require.ErrorIs(t, err, spelleffectsvc.ErrNotAnEffect, e.ID)
-			assert.Empty(t, f.added, e.ID)
+			require.ErrorIs(t, err, spelleffectsvc.ErrNotAnEffect, id)
+			assert.Empty(t, f.added, id)
 			continue
 		}
 		offered++
-		require.NoError(t, err, e.ID)
-		require.NotNil(t, res.Buff, e.ID)
-		assert.True(t, res.Buff.Applied, e.ID)
-		assert.Len(t, f.added, 1, e.ID)
-		assert.Nil(t, res.Damage, e.ID)
+		if _, has := catalog(t).Get(id); !has {
+			priest++
+		}
+		require.NoError(t, err, id)
+		require.NotNil(t, res.Buff, id)
+		assert.True(t, res.Buff.Applied, id)
+		require.Len(t, f.added, 1, id)
+		assert.False(t, f.added[0].OnOther, "an added effect is on the Bard: "+id)
+		assert.Nil(t, res.Damage, id)
 	}
-	assert.Equal(t, 8, offered, "the fixture's nine buff entries but Fist of Stone")
+	// Every fixture entry that lasts rounds or adds a buff (all but the
+	// instant, special and until-discharged non-buffs), plus the Priest
+	// spells that last rounds (detect magic, bless, command, produce flame,
+	// flame walk).
+	assert.Equal(t, 26, offered)
+	assert.Equal(t, 5, priest)
 }

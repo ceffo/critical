@@ -24,6 +24,19 @@ const maxAbility = 25
 // (PHB Strength: it "cannot confer a Strength of 19 or more").
 const strengthCap = 18
 
+// onTheBearer is the buffs on the character: a row marked as on someone else
+// or on an area only counts down (ADR 0004 step 20.5), so every aggregate
+// below reads the list through this filter, whatever such a row holds.
+func onTheBearer(buffs []BuffEffect) []BuffEffect {
+	out := make([]BuffEffect, 0, len(buffs))
+	for _, b := range buffs {
+		if !b.OnOther {
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
 // isImproved reports whether e is an Improved Strength bonus: a StrBonus
 // whose StrMax is above 18 (the seed caps it at 23 for a bard, 25 for a
 // warrior). It is the only Strength magic that goes past 18.
@@ -47,6 +60,7 @@ func isStrengthBonus(e BuffEffects) bool {
 //  2. Improved Strength active: it REPLACES every other Strength bonus; the
 //     best single Improved wins, base + bonus capped at its StrMax (23).
 func effectiveStr(buffs []BuffEffect, base int) int {
+	buffs = onTheBearer(buffs)
 	improved, hasImproved := base, false
 	sum := 0
 	for _, b := range buffs {
@@ -83,6 +97,7 @@ const exceptionalPerPoint = 10
 //
 // Every other class keeps its sheet percentile (none).
 func effectiveStrength(buffs []BuffEffect, base BaseStrength) StrScore {
+	buffs = onTheBearer(buffs)
 	score := effectiveStr(buffs, base.Score)
 	out := StrScore{Score: score}
 	if score != strengthCap {
@@ -123,7 +138,7 @@ func effectiveScore(buffs []BuffEffect, a charactersvc.Ability, base int) int {
 
 // improvedActive reports whether an Improved Strength is among buffs.
 func improvedActive(buffs []BuffEffect) bool {
-	for _, b := range buffs {
+	for _, b := range onTheBearer(buffs) {
 		if isImproved(b.Effects) {
 			return true
 		}
@@ -143,7 +158,7 @@ func aggregate(buffs []BuffEffect, powers []ItemPower, base BaseStrength, kind W
 	strength := effectiveStrength(buffs, base)
 	str := strength.Score
 	mods := BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: str, EffectiveStrExceptional: strength.Exceptional}
-	for _, b := range buffs {
+	for _, b := range onTheBearer(buffs) {
 		if !meetsRequirements(b.Effects, str) {
 			continue
 		}
@@ -180,13 +195,13 @@ type source struct {
 
 // statuses marks each buff with whether its effects apply at baseStr. A
 // Strength bonus does not apply while an Improved Strength replaces it
-// (ADR 0004 step 8).
+// (ADR 0004 step 8); a row on someone else never does (step 20.5).
 func statuses(buffs []BuffEffect, baseStr int) []BuffStatus {
 	str := effectiveStr(buffs, baseStr)
 	replaced := improvedActive(buffs)
 	out := make([]BuffStatus, len(buffs))
 	for i, b := range buffs {
-		applies := meetsRequirements(b.Effects, str) && (!replaced || !isStrengthBonus(b.Effects))
+		applies := !b.OnOther && meetsRequirements(b.Effects, str) && (!replaced || !isStrengthBonus(b.Effects))
 		out[i] = BuffStatus{BuffEffect: b, Applies: applies}
 	}
 	return out

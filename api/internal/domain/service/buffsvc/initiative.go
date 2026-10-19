@@ -189,7 +189,7 @@ func initiativeEffects(buffs []BuffEffect, powers []ItemPower, base BaseStrength
 	counts := func(e BuffEffects) bool {
 		return e.Initiative != nil && *e.Initiative != 0 && e.WeaponKind == WeaponNone
 	}
-	for _, b := range buffs {
+	for _, b := range onTheBearer(buffs) {
 		if meetsRequirements(b.Effects, str) && counts(b.Effects) {
 			out = append(out, InitiativeModifier{Source: InitiativeEffect, Value: *b.Effects.Initiative, Name: b.Name, SpellID: b.SpellID})
 		}

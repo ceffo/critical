@@ -4,6 +4,7 @@
 import type { TFunction } from "i18next";
 import type { Category, Item } from "@/types/items";
 import { formatSigned } from "@/lib/format";
+import type { SpellNamer } from "@/i18n/spellName";
 
 /** Equipped is the one state word the player sees, for worn and wielded alike (ADR 0035 item 3). */
 export function equipped(i: Pick<Item, "state">): boolean {
@@ -24,9 +25,14 @@ export interface StatPart {
 /**
  * The stats line of a piece's row, by category (ADR 0033 steps 3 to 5): a weapon's kind, damage,
  * magic and speed; ammunition's kind, damage and magic; an armour's base AC, skills column and
- * type; a shield's kind and bonus; a magic piece's kind; and the count behaviour of what is counted.
+ * type; a shield's kind and bonus; a magic piece's kind, then the spell a scroll holds (ADR 0033
+ * step 2) named in the player's language by `spellName`; and the count behaviour of what is counted.
  */
-export function pieceStats(i: Item, t: TFunction): StatPart[] {
+export function pieceStats(
+  i: Item,
+  t: TFunction,
+  spellName: SpellNamer,
+): StatPart[] {
   const parts: StatPart[] = [];
   const add = (text: string | false | undefined | null) => {
     if (text) parts.push({ text });
@@ -100,6 +106,7 @@ export function pieceStats(i: Item, t: TFunction): StatPart[] {
       break;
     case "magic":
       if (i.magicKind) add(t(`equipment.magicKinds.${i.magicKind}`));
+      if (i.magicKind === "scroll" && i.spellId) add(spellName(i.spellId));
       behaviour();
       break;
     case "gear":

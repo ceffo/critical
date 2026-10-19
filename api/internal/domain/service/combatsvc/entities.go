@@ -26,7 +26,7 @@ const (
 	// ModPointBlank is a specialized launcher's +2 to hit at point-blank range (ADR 0030 step 12),
 	// an option of the attack request; Detail is empty.
 	ModPointBlank ModifierKind = "point_blank"
-	// ModBackstab is a thief's backstab (ADR 0030 step 19): +4 to hit and, as a dice_multiplier
+	// ModBackstab is a thief's backstab (ADR 0030 step 19): +4 to hit and, as a standard_multiplier
 	// damage term, PHB Table 30's multiplier at the realized level. An option of the attack
 	// request; Detail is empty.
 	ModBackstab ModifierKind = "backstab"
@@ -50,18 +50,21 @@ type Modifier struct {
 }
 
 // DamageTermKind is the place of a contribution in the damage formula
-// ((Base × Spells × DiceMultiplier) + DiceModifier + Weapon) × Crit +
-// Strength + Bonus (ADR 0003 step 2).
+// ((Base × DiceMultiplier + DiceModifier) × Spells × Backstab + Weapon) ×
+// Crit + Strength + Bonus (ADR 0003 step 2).
 type DamageTermKind string
 
 // Damage formula terms.
 const (
-	TermSpells     DamageTermKind = "spells"          // × on the dice
-	TermDiceMult   DamageTermKind = "dice_multiplier" // × on the raw dice only (Power Gem ×2, backstab)
-	TermWeapon     DamageTermKind = "weapon"          // + before the crit multiplier (the damage's flat part, then magic)
-	TermMultiplier DamageTermKind = "multiplier"      // crit × on dice and weapon
-	TermStrength   DamageTermKind = "strength"        // + after the multipliers
-	TermBonus      DamageTermKind = "bonus"           // + after the multipliers (buff damage)
+	TermSpells   DamageTermKind = "spells"          // × on the dice
+	TermDiceMult DamageTermKind = "dice_multiplier" // × on the raw dice only (Power Gem ×2; backstab on attacks logged before standard_multiplier)
+	// TermStandardMult multiplies the weapon's standard damage, its dice and
+	// flat part, not its magic (backstab, PHB p.40).
+	TermStandardMult DamageTermKind = "standard_multiplier"
+	TermWeapon       DamageTermKind = "weapon"     // + : the damage's flat part (before Spells), the weapon's magic (before the crit)
+	TermMultiplier   DamageTermKind = "multiplier" // crit × on dice and weapon
+	TermStrength     DamageTermKind = "strength"   // + after the multipliers
+	TermBonus        DamageTermKind = "bonus"      // + after the multipliers (buff damage)
 )
 
 // DamageTerm is one contribution to the damage formula; ItemID as on
@@ -182,7 +185,8 @@ type RollResult struct {
 	BaseDamage int
 	DamageDice string
 	// DiceModifier is the flat part K of the damage as printed (1d4+1:
-	// 1), added after the raw-dice factors, before the crit (ADR 0003
+	// 1), part of the standard damage: added after the Power Gem's raw-dice
+	// factor, multiplied by SpellsBuff, the backstab and the crit (ADR 0003
 	// step 2).
 	DiceModifier int
 	SpellsBuff   float64
@@ -190,8 +194,11 @@ type RollResult struct {
 	Multipliers  float64 // crit multiplier (1 without a crit)
 	// DiceMultiplier is the buffs' multiplier on the raw dice only.
 	DiceMultiplier float64
-	StrengthBonus  int
-	BonusDamage    int
+	// BackstabMultiplier multiplies the standard damage, dice and
+	// DiceModifier (ADR 0030 step 19); 0 without a backstab.
+	BackstabMultiplier float64
+	StrengthBonus      int
+	BonusDamage        int
 	// DamageTerms lists every contribution to the damage formula.
 	DamageTerms []DamageTerm
 	// DamageRolls are the damage dice as thrown (empty when the attack
@@ -243,8 +250,8 @@ type DieRoll struct {
 
 // RolledDamage is the damage side of an attack as rolled, before the crit:
 // the weapon dice and every buff, weapon and strength term. The damage of a
-// hit is ((Dice × SpellsBuff × BuffMultipliers) + DiceModifier +
-// WeaponBuff) × crit + StrengthBonus + BonusDamage.
+// hit is ((Dice × BuffMultipliers + DiceModifier) × SpellsBuff ×
+// BackstabMultiplier + WeaponBuff) × crit + StrengthBonus + BonusDamage.
 type RolledDamage struct {
 	Dice  string
 	Total int // the dice total
@@ -255,8 +262,11 @@ type RolledDamage struct {
 	SpellsBuff      float64
 	WeaponBuff      int
 	BuffMultipliers float64
-	StrengthBonus   int
-	BonusDamage     int
+	// BackstabMultiplier is the backstab's PHB Table 30 factor, 0 without
+	// a backstab (ADR 0030 step 19).
+	BackstabMultiplier float64
+	StrengthBonus      int
+	BonusDamage        int
 	// Terms are the damage terms in formula order, without the crit term.
 	Terms []DamageTerm
 }

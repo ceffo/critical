@@ -119,22 +119,21 @@ function attackText(
 
 /**
  * The damage formula of a hit with its numbers (docs/adr/0003 step 2):
- * ((dice × spells [× dice multiplier]) [± the damage's flat part] + weapon) × crit + strength
- * [± bonus] = total. A result the
- * server floored (or clamped at 0) shows its unrounded value first: "= 10.5 → 10".
+ * ((standard × spells [× backstab]) + weapon) × crit + strength [± bonus] = total, where the
+ * standard damage is the dice [× dice multiplier], in parentheses with the damage's flat part
+ * when it has one. A result the server floored (or clamped at 0) shows its unrounded value
+ * first: "= 10.5 → 10".
  */
 export function damageFormula(r: RollResult, lang?: string): string {
   const m = (n: number) => formatMultiplier(n, lang);
-  let dice = `${r.baseDamage} × ${m(r.spellsBuff)}`;
-  if (
-    r.diceMultiplier !== undefined &&
-    r.diceMultiplier > 0 &&
-    r.diceMultiplier !== 1
-  ) {
-    dice += ` × ${m(r.diceMultiplier)}`;
-  }
-  const flat = r.diceModifier ? plusTerm(r.diceModifier) : "";
-  let s = `((${dice})${flat} + ${r.weaponBuff}) × ${m(r.multipliers)} + ${r.strengthBonus}`;
+  const shown = (f: number | undefined): f is number =>
+    f !== undefined && f > 0 && f !== 1;
+  let standard = `${r.baseDamage}`;
+  if (shown(r.diceMultiplier)) standard += ` × ${m(r.diceMultiplier)}`;
+  if (r.diceModifier) standard = `(${standard}${plusTerm(r.diceModifier)})`;
+  let dice = `${standard} × ${m(r.spellsBuff)}`;
+  if (shown(r.backstabMultiplier)) dice += ` × ${m(r.backstabMultiplier)}`;
+  let s = `((${dice}) + ${r.weaponBuff}) × ${m(r.multipliers)} + ${r.strengthBonus}`;
   if (r.bonusDamage !== 0) s += plusTerm(r.bonusDamage);
   const unrounded = r.unroundedDamage;
   if (unrounded !== undefined && Math.abs(unrounded - r.totalDamage) > 1e-9) {
@@ -504,6 +503,7 @@ function AttackCard({
                     <span className="tabular-nums">
                       {d.term === "spells" ||
                       d.term === "dice_multiplier" ||
+                      d.term === "standard_multiplier" ||
                       d.term === "multiplier"
                         ? formatFactor(d.value, i18n.language)
                         : formatSigned(d.value)}

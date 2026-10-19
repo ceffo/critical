@@ -35,9 +35,19 @@ export interface Modifier {
   strExceptional?: number;
 }
 
-/** Place of a contribution in ((dice × spells) + weapon) × multiplier + strength + bonus. */
+/**
+ * Place of a contribution in (((dice × dice_multiplier + flat part) × spells × standard_multiplier)
+ * + weapon) × multiplier + strength + bonus (docs/adr/0003 step 2). standard_multiplier is the
+ * backstab; attacks logged before it list the backstab as a dice_multiplier.
+ */
 export type DamageTermKind =
-  "spells" | "dice_multiplier" | "weapon" | "multiplier" | "strength" | "bonus";
+  | "spells"
+  | "dice_multiplier"
+  | "standard_multiplier"
+  | "weapon"
+  | "multiplier"
+  | "strength"
+  | "bonus";
 
 export interface DamageTerm {
   term: DamageTermKind;
@@ -105,6 +115,8 @@ export interface RollResult {
   multipliers: number;
   /** Buff multiplier on the raw dice only (Power Gem ×2); absent on old log entries. */
   diceMultiplier?: number;
+  /** The backstab's factor on the standard damage, dice and flat part (docs/adr/0030 step 19); absent without one. */
+  backstabMultiplier?: number;
   strengthBonus: number;
   bonusDamage: number;
   damageTerms: DamageTerm[];

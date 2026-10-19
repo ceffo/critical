@@ -4,7 +4,7 @@
 critical-qki.12 and critical-qki.39, until then in `docs/backend.md` "Damage Formula"); steps 4, 5
 and 11 amended 2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers)
 
-_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 1 (a launcher's attack rolls its ammunition's dice; the launcher's own dice when the ammunition has none, ADR 0033 step 4). Steps 1 and 2 amended 2026-10-19 (the supervisor's ruling, picking from the catalogue): the damage as printed, its flat part K in the formula._
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 1 (a launcher's attack rolls its ammunition's dice; the launcher's own dice when the ammunition has none, ADR 0033 step 4). Steps 1 and 2 amended 2026-10-19 (the supervisor's ruling, picking from the catalogue, following the PHB): the damage as printed, its flat part K part of the weapon's standard damage; steps 3, 6 and 11 and [ADR 0030](0030-classes-and-races.md) step 19 follow (the backstab is its own factor)._
 
 ## Context
 
@@ -39,26 +39,35 @@ return a distinct value for each call and expect an exact number of calls.
 2. **Formula.**
 
    ```
-   Damage = floor(((BaseDamage × SpellsBuff × DiceMultiplier) + DiceModifier + WeaponBuff) × Crit
-                  + StrengthBonus + BuffDamage)
+   Standard = BaseDamage × DiceMultiplier + DiceModifier
+   Damage   = floor((Standard × SpellsBuff × Backstab + WeaponBuff) × Crit
+                    + StrengthBonus + BuffDamage)
    ```
 
    with the terms of steps 3 to 8, computed at full precision and floored **once**, on the whole
    (step 9), never below 0 (step 10).
-   **DiceModifier** (2026-10-19, the supervisor's ruling) is the flat part of the damage as printed
-   (step 1.1): part of the weapon's base damage, added **after** the raw-dice factors (SpellsBuff,
-   DiceMultiplier: the Power Gem's "raw dice x2" is the dice only, K is not doubled) and **before**
-   the crit, which multiplies it. The backstab ([ADR 0030](0030-classes-and-races.md) step 19) is a
-   factor of DiceMultiplier in the code (it multiplies the weapon's dice), so it does not multiply K
-   either. In the breakdown (step 11) K is a `weapon` term of kind `dice_modifier` whose detail is
-   the damage as printed, first of the weapon terms.
+   **DiceModifier** (2026-10-19, the supervisor's ruling, following the book) is the flat part K
+   of the damage as printed (step 1.1). It is part of the weapon's **standard damage** (the footman's
+   mace's is 1d6+1), so whatever multiplies the standard damage multiplies it with the dice:
+   SpellsBuff (Enlarge, PHB p.134: "damage rolls increase proportionately"; only Strength, class
+   and magic bonuses are left as they are), the **Backstab** (PHB p.40: the weapon's standard damage
+   is multiplied by Table 30, then Strength and magic are added; [ADR 0030](0030-classes-and-races.md)
+   step 19) and the crit. Only the Power Gem's DiceMultiplier stays on the raw dice (step 4, user
+   ruling "raw dice x2"): K is added after it. Strength, the weapon's magic and buff damage stay
+   outside SpellsBuff and the backstab, as before. Backstab is 1 without a backstab; an attack
+   logged before it had its own factor (`backstabMultiplier` absent, the backstab inside
+   `diceMultiplier`, no K) recomputes as it was rolled. In the breakdown (step 11) K is a `weapon`
+   term of kind `dice_modifier` whose detail is the damage as printed, listed after the dice
+   multipliers; the backstab is a `standard_multiplier` term of kind `backstab`.
+   A L5 thief (×3) hitting with a 1d6+1 mace on a 3 deals `(3 + 1) × 3 + Str`, not `3 × 3 + 1 + Str`.
    Tests: `TestResolveAttack_DamageTermsListEveryModifier` (every term at once:
-   `((5 × 1.5 × 2) + 2) × 2 + 2 + 1 = 37`), `TestCrit_Step5_MultipliersStackFlooredOnce`; K's place,
-   one test per multiplier: `TestDamage_Step2_FlatPartAfterSpellsBuff`,
-   `TestDamage_Step2_FlatPartAfterDiceMultiplier`, `TestDamage_Step2_FlatPartAfterBackstab`,
-   `TestDamage_Step2_FlatPartMultipliedByCrit`.
+   `((5 × 2 × 1.5) + 2) × 2 + 2 + 1 = 37`), `TestCrit_Step5_MultipliersStackFlooredOnce`; K's place,
+   one test per multiplier: `TestDamage_Step2_FlatPartMultipliedBySpellsBuff`,
+   `TestDamage_Step2_FlatPartAfterDiceMultiplier`, `TestDamage_Step2_FlatPartMultipliedByBackstab`,
+   `TestDamage_Step2_FlatPartMultipliedByCrit`; `TestAdjustAttackAC_Step2_BackstabFactorIsLogged`
+   (a correction recomputes the logged factor; an entry logged before keeps its total).
 3. **SpellsBuff.** The product of the buffs' `spells_buff` factors (Enlarge), 1 without any. It
-   multiplies the dice. Tests: `buffsvc` `TestAggregate` ("multipliers stack multiplicatively…"),
+   multiplies the standard damage: the dice (after the DiceMultiplier) and K. Tests: `buffsvc` `TestAggregate` ("multipliers stack multiplicatively…"),
    `TestResolveAttack_DamageTermsListEveryModifier`.
 4. **DiceMultiplier.** The product of the `multiplier` effects of the buffs that apply and of the
    item powers that are on (the Power Gem's thunder hammer ×2, melee only:
@@ -76,8 +85,8 @@ return a distinct value for each call and expect an exact number of calls.
    (ADR 0002 step 7). Added after the dice factors, before the crit.
    Tests: `TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff`,
    `TestResolveAttack_WeaponBuffPlusMagicAmmo`.
-6. **Crit.** The crit multiplier of ADR 0001 step 4 (1 without a crit). It multiplies the dice
-   part and the WeaponBuff together, after the DiceMultiplier: a crit with the gem is
+6. **Crit.** The crit multiplier of ADR 0001 step 4 (1 without a crit). It multiplies the standard
+   damage and the WeaponBuff together, after the DiceMultiplier, SpellsBuff and the backstab: a crit with the gem is
    `((dice × 2) + 5) × crit`. Strength and buff damage are not multiplied.
    Tests: `TestResolveAttack_PowerGem` ("crit with the gem: gem on the dice, crit on dice and
    weapon"), `TestResolveAttack_DamageTermsListEveryModifier`.
@@ -98,8 +107,9 @@ return a distinct value for each call and expect an exact number of calls.
 10. **Never below 0.** A negative result (negative buff damage) is 0.
     Tests: `TestResolveAttack_DecimalCritWithNegativeBonusClampsToZero`,
     `TestCrit_Step5_MultipliersStackFlooredOnce` ("never below 0").
-11. **Breakdown.** Every contribution is listed in `DamageTerms`, in formula order: spells, dice
-    multipliers, weapon and ammunition, crit, Strength, buff damage. The breakdown shows the
+11. **Breakdown.** Every contribution is listed in `DamageTerms`, in formula order: dice
+    multipliers, the flat part K, spells, the backstab, weapon and ammunition magic, crit,
+    Strength, buff damage. The breakdown shows the
     unrounded value and the floor (`… = 10.5 → 10`) when they differ. A term from an item power
     carries the item's id next to its stored name, and the client names it from the item
     (ADR 0016 step 14); an item power that is off lists no term.

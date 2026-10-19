@@ -1,9 +1,9 @@
 package combatsvc_test
 
 // ADR 0003 steps 1 and 2 (amended): a damage as printed (1d4+1, 1d3-1, a
-// flat 1). Its flat part K is the weapon's base damage: added after the
-// raw-dice factors (Enlarge, the Power Gem's ×2, the backstab), before the
-// crit, which multiplies it. Each multiplier has its own test, with numbers
+// flat 1). Its flat part K is part of the weapon's standard damage: Enlarge
+// (PHB p.134), the backstab (PHB p.40) and the crit multiply it with the
+// dice; only the Power Gem's ×2 stays on the raw dice (user ruling). Each multiplier has its own test, with numbers
 // where the other order gives another total.
 
 import (
@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -90,16 +91,17 @@ func TestDamage_Step1_DamageAsPrinted(t *testing.T) {
 	}
 }
 
-// ADR 0003 steps 2 and 3: Enlarge (×1.5) multiplies the dice, not K.
-// 1d6 = 5: 5 × 1.5 + 1 = 8.5 → 8, not (5 + 1) × 1.5 = 9.
-func TestDamage_Step2_FlatPartAfterSpellsBuff(t *testing.T) {
+// ADR 0003 steps 2 and 3: Enlarge (×1.5) multiplies the standard damage,
+// dice and K (PHB p.134 "damage rolls increase proportionately").
+// 1d6 = 5: (5 + 1) × 1.5 = 9, not 5 × 1.5 + 1 = 8.5 → 8.
+func TestDamage_Step2_FlatPartMultipliedBySpellsBuff(t *testing.T) {
 	mods := strMods(12)
 	mods.SpellsBuff, mods.SpellsBuffFrom = 1.5, []buffsvc.Factor{{Buff: "Enlarge", Value: 1.5}}
 	res, _ := flatAttack(t, bard(), mace, mods, nil, 17, 92, 6, 5, combatsvc.AttackRequest{})
-	assert.Equal(t, 8, res.TotalDamage)
+	assert.Equal(t, 9, res.TotalDamage)
 	assert.Equal(t, []combatsvc.DamageTerm{
-		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Detail: "Enlarge", Value: 1.5},
 		flatTerm("1d6+1", 1),
+		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Detail: "Enlarge", Value: 1.5},
 		str12Term,
 	}, res.DamageTerms)
 }
@@ -118,15 +120,17 @@ func TestDamage_Step2_FlatPartAfterDiceMultiplier(t *testing.T) {
 	}, res.DamageTerms)
 }
 
-// ADR 0003 step 2 and ADR 0030 step 19: the backstab is a raw-dice factor
-// (the code's order: one more DiceMultiplier), so it does not multiply K.
-// Thief STR 16 (+1 damage), 1d6 = 3: 3 × 3 + 1 + 1 = 11, not (3 + 1) × 3 + 1 = 13.
-func TestDamage_Step2_FlatPartAfterBackstab(t *testing.T) {
+// ADR 0003 step 2 and ADR 0030 step 19: the backstab multiplies the
+// weapon's standard damage, dice and K (PHB p.40), not Strength. L5 thief
+// STR 16 (+1 damage), 1d6 = 3: (3 + 1) × 3 + 1 = 13, not 3 × 3 + 1 + 1 = 11.
+func TestDamage_Step2_FlatPartMultipliedByBackstab(t *testing.T) {
 	res, _ := flatAttack(t, thief(), mace, str16Mods, nil, 20, 90, 6, 3, combatsvc.AttackRequest{Backstab: true})
-	assert.Equal(t, 11, res.TotalDamage)
+	assert.Equal(t, 13, res.TotalDamage)
+	assert.Equal(t, 3.0, res.BackstabMultiplier)
+	assert.Equal(t, 1.0, res.DiceMultiplier, "the backstab is not a raw-dice factor")
 	assert.Equal(t, []combatsvc.DamageTerm{
-		{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBackstab, Value: 3},
 		flatTerm("1d6+1", 1),
+		{Term: combatsvc.TermStandardMult, Kind: combatsvc.ModBackstab, Value: 3},
 		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Detail: "16", Value: 1},
 	}, res.DamageTerms)
 }
@@ -142,4 +146,42 @@ func TestDamage_Step2_FlatPartMultipliedByCrit(t *testing.T) {
 		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Value: 2},
 		str12Term,
 	}, res.DamageTerms)
+}
+
+// ADR 0003 step 2 and ADR 0030 step 19: a corrected target AC recomputes a
+// backstab from the logged factor, K inside it: (3 + 1) × 3 + 1 = 13 again.
+// An attack logged before the backstab had its own factor (inside
+// buffMultipliers, no backstabMultiplier, no K) keeps its old total.
+func TestAdjustAttackAC_Step2_BackstabFactorIsLogged(t *testing.T) {
+	t.Run("logged apart", func(t *testing.T) {
+		_, f := flatAttack(t, thief(), mace, str16Mods, nil, 20, 90, 6, 3, combatsvc.AttackRequest{Backstab: true})
+		n := f.entries[0]
+		e := &actionlog.Entry{ID: 42, CharacterID: charID, Kind: n.Kind, Summary: n.Summary, Payload: n.Payload}
+		amends(f, e)
+		res, err := f.svc.AdjustAttackAC(context.Background(), charID, 42, 7)
+		require.NoError(t, err)
+		assert.Equal(t, 3.0, res.BackstabMultiplier)
+		assert.Equal(t, 13, res.TotalDamage)
+	})
+	t.Run("logged inside the dice multiplier", func(t *testing.T) {
+		_, f := flatAttack(t, thief(), dagger1, str16Mods, nil, 20, 90, 4, 3, combatsvc.AttackRequest{Backstab: true})
+		n := f.entries[0]
+		var p map[string]any
+		require.NoError(t, json.Unmarshal(n.Payload, &p))
+		delete(p, "backstabMultiplier")
+		p["diceMultiplier"] = 3.0
+		rolled := p["rolled"].(map[string]any)
+		delete(rolled, "backstabMultiplier")
+		rolled["buffMultipliers"] = 3.0
+		payload, err := json.Marshal(p)
+		require.NoError(t, err)
+		e := &actionlog.Entry{ID: 42, CharacterID: charID, Kind: n.Kind, Summary: n.Summary, Payload: payload}
+		amends(f, e)
+		res, err := f.svc.AdjustAttackAC(context.Background(), charID, 42, 7)
+		require.NoError(t, err)
+		assert.Equal(t, 0.0, res.BackstabMultiplier)
+		assert.Equal(t, 3.0, res.DiceMultiplier)
+		// 3 × 3 + 1 (dagger +1) + 1 (STR 16) = 11.
+		assert.Equal(t, 11, res.TotalDamage)
+	})
 }

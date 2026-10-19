@@ -517,8 +517,8 @@ shield in the way taken off (swap); a piece that cannot be equipped is refused o
 Readings left open, fixed here: a launcher of several ammo kinds (the blowgun) gets the first, changed
 by an edit (a piece fires one kind, step 3); the damage strings stay as printed and the attack adds
 their flat part (ADR 0003 steps 1.1 and 2, ADR 0016 step 8, the supervisor's ruling of 2026-10-19);
-a weapon with no damage type and no dice (the mancatcher) is valid and its attack is refused (no
-dice). The armour and shield "+N" (step 17) and the class warnings (step 20) are not part of the
+a catalogue weapon with no damage type and no dice (the mancatcher) is valid and its attack is refused (no
+dice); a typed homebrew weapon with neither is refused on `damageSm` (ADR 0016 step 8). The armour and shield "+N" (step 17) and the class warnings (step 20) are not part of the
 pick. Step 4: `TestDamage_ADR0033Step4_LauncherRollsAmmunitionDice`; the attack form's preview
 serves the dice pair the attack rolls (`damageSm`, `damageL`: a launcher's from its ammunition), which
 the weapon-in-hand line shows (`TestGetAttackForm_ADR0033Step4_PreviewShowsTheDiceRolled`). The web

@@ -221,6 +221,10 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 		{"melee without dice", withWeapon(func(i *itemsvc.Item) { i.DamageSM, i.DamageL = "", "" }), "damageSm"},
 		{"hurled without dice", withWeapon(func(i *itemsvc.Item) { i.WeaponKind, i.DamageSM, i.DamageL = "missile", "", "" }), "damageSm"},
 		{"launcher with one dice", withLauncher(func(i *itemsvc.Item) { i.DamageSM = "1d6" }), "damageL"},
+		// ADR 0016 step 8: only a catalogue piece with no damage type (the mancatcher) may have no
+		// dice; a homebrew one is refused.
+		{"homebrew without damage type nor dice", withWeapon(func(i *itemsvc.Item) { i.DamageTypes, i.DamageSM, i.DamageL = nil, "", "" }), "damageSm"},
+		{"catalogue piece with a damage type and no dice", withWeapon(func(i *itemsvc.Item) { i.CatalogueCode, i.DamageSM, i.DamageL = "mancatcher", "", "" }), "damageSm"},
 		{"ammo kind", itemsvc.Item{Category: itemsvc.CategoryAmmunition, AmmoKind: "stone"}, "ammoKind"},
 		{"ammo one dice", itemsvc.Item{Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", DamageSM: "1d6"}, "damageL"},
 		{"base AC", withArmour(func(i *itemsvc.Item) { i.BaseAC = 11 }), "baseAc"},
@@ -247,8 +251,10 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 			// ADR 0016 step 8 (amended): the damage as printed, NdM±K or a flat K.
 			withWeapon(func(i *itemsvc.Item) { i.DamageSM, i.DamageL = "1d4+1", "1" }),
 			withWeapon(func(i *itemsvc.Item) { i.DamageSM, i.DamageL = "1d3-1", "1d2-1" }),
-			// The mancatcher: no damage type, no dice.
-			withWeapon(func(i *itemsvc.Item) { i.DamageTypes, i.DamageSM, i.DamageL = nil, "", "" }),
+			// The catalogue's mancatcher: no damage type, no dice.
+			withWeapon(func(i *itemsvc.Item) {
+				i.CatalogueCode, i.DamageTypes, i.DamageSM, i.DamageL = "mancatcher", nil, "", ""
+			}),
 		} {
 			assert.NoError(t, it.Validate(), it.ID)
 		}

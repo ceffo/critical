@@ -132,10 +132,12 @@ func (i Item) Validate() error {
 // validateWeapon is ADR 0016 step 8 and ADR 0033 step 3: NdM damage, magic
 // within ±MaxBonus, a kind, a launcher is a missile weapon, known codes, a
 // speed factor of 0 to 20. A launcher may have no dice of its own (step 4:
-// its ammunition's are rolled), and so may a weapon with no damage type (the
-// catalogue's mancatcher, ADR 0021 step 13): both or none.
+// its ammunition's are rolled), and so may a catalogue piece with no damage
+// type (the mancatcher, ADR 0021 step 13): both or none. A homebrew weapon
+// (no catalogue code) with no damage type still needs its dice.
 func (i Item) validateWeapon() error {
-	if (i.Fires != "" || len(i.DamageTypes) == 0) && i.DamageSM == "" && i.DamageL == "" {
+	diceless := i.Fires != "" || (i.CatalogueCode != "" && len(i.DamageTypes) == 0)
+	if diceless && i.DamageSM == "" && i.DamageL == "" {
 		return i.validateWeaponRest()
 	}
 	if !validWeaponDice(i.DamageSM) {

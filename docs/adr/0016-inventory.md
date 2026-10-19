@@ -92,8 +92,10 @@ unless named otherwise.
    catalogue)_: the damage is stored **as printed**: `NdM`, `NdM+K`, `NdM-K` (1 to 100 dice of 2 to
    1000 sides, `|K|` at most 20) or a flat `K` (1 to 20), as the PHB prints the footman's mace
    (`1d6+1`), the jousting lance (`1d3-1`) or the needle (`1`); the attack rolls the dice and adds K
-   at its place in the formula ([ADR 0003](0003-damage.md) step 2). A launcher, and a weapon with no
-   damage type (the mancatcher), may have no damage, both columns or neither. Field names are the
+   at its place in the formula ([ADR 0003](0003-damage.md) step 2). A launcher, and a catalogue piece
+   with no damage type (the mancatcher, picked with its catalogue code), may have no damage, both
+   columns or neither; a homebrew weapon (no catalogue code) needs its dice even with no damage type,
+   so a typed weapon cannot be saved into one its attack refuses. Field names are the
    wire's camelCase (`damageSm`). Tests: `itemsvc` `TestValidate_Steps2To5_CategoryFields`.
 
 ### An item's own powers (steps 9 to 16)

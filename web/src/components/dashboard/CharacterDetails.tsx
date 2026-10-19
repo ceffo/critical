@@ -10,13 +10,16 @@ import {
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import {
   TEXT_FIELDS,
+  ALIGNMENT_CODES,
+  SEX_CODES,
+  codeOrEmpty,
   hasAlignmentWarning,
   languageKey,
   toBody,
   toDraft,
   type Draft,
 } from "@/lib/characterDetails";
-import { fetchCreationOptions } from "@/api/characters";
+import { fetchCreationChoices } from "@/api/characters";
 import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
 import type { Character, CreationOptions } from "@/types/character";
@@ -112,8 +115,8 @@ function DetailsView({
     </span>
   );
   // A value that is not a code (an old release's free text) reads as missing, never as a raw key.
-  const alignmentKnown = i18n.exists(`details.alignments.${c.alignment}`);
-  const sexKnown = i18n.exists(`details.sexes.${c.sex}`);
+  const alignment = codeOrEmpty(c.alignment, ALIGNMENT_CODES);
+  const sex = codeOrEmpty(c.sex, SEX_CODES);
   const alignmentWarning = hasAlignmentWarning(c);
   return (
     <>
@@ -126,11 +129,11 @@ function DetailsView({
           {c.raceCode === "" ? none : t(`details.races.${c.raceCode}`)}
         </Row>
         <Row label={t("details.fields.alignment")}>
-          {c.alignment === "" || !alignmentKnown ? (
+          {alignment === "" ? (
             toPick
           ) : (
             <>
-              {t(`details.alignments.${c.alignment}`)}
+              {t(`details.alignments.${alignment}`)}
               {alignmentWarning && (
                 <span
                   className="block text-label text-muted-foreground"
@@ -148,7 +151,7 @@ function DetailsView({
           {c.age === null ? none : c.age}
         </Row>
         <Row label={t("details.fields.sex")}>
-          {c.sex === "" || !sexKnown ? toPick : t(`details.sexes.${c.sex}`)}
+          {sex === "" ? toPick : t(`details.sexes.${sex}`)}
         </Row>
         {TEXT_FIELDS.map((f) => (
           <Row key={f} label={t(`details.fields.${f}`)}>
@@ -189,7 +192,7 @@ function DetailsForm({
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
-    fetchCreationOptions().then(
+    fetchCreationChoices().then(
       (o) => {
         if (!live) return;
         setOptions(o);

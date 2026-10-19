@@ -16,9 +16,30 @@ export interface Draft {
   languages: string;
 }
 
+/** The alignment and sex codes (ADR 0032): a stored value that is none (an old release's free text) is missing. */
+export const ALIGNMENT_CODES = [
+  "lawful_good",
+  "neutral_good",
+  "chaotic_good",
+  "lawful_neutral",
+  "true_neutral",
+  "chaotic_neutral",
+  "lawful_evil",
+  "neutral_evil",
+  "chaotic_evil",
+];
+export const SEX_CODES = ["male", "female"];
+
+/** The code `v` is, "" when it is none. */
+export function codeOrEmpty(v: string | undefined, codes: string[]): string {
+  return v !== undefined && codes.includes(v) ? v : "";
+}
+
 export function toDraft(d: CharacterDetails): Draft {
   return {
     ...d,
+    alignment: codeOrEmpty(d.alignment, ALIGNMENT_CODES),
+    sex: codeOrEmpty(d.sex, SEX_CODES),
     age: d.age === null ? "" : String(d.age),
     languages: d.languages.join(", "),
   };

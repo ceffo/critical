@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard } from "./helpers";
+import { chooseLanguage, openDashboard, openSettings } from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
 const VIEWPORTS = [
@@ -143,5 +143,35 @@ test("details card: an answer without warnings opens, failed choices show an err
   await expect(pop.getByTestId("details-options-error")).toHaveCount(0);
   await expect(
     pop.getByLabel("Alignment").getByRole("option", { name: "Neutral good" }),
+  ).toHaveCount(1);
+});
+
+// A rolling deploy (ADR 0024): an old server's options carry no alignment or sex lists. The
+// creation form says the choices did not load, never shows empty pickers, and Retry loads them.
+test("new character form: options without the identity lists show an error, retry loads them", async ({
+  page,
+}) => {
+  let old = true;
+  await page.route("**/api/characters/options", async (route) => {
+    if (!old) return route.fallback();
+    const res = await route.fetch();
+    const body = await res.json();
+    delete body.sexes;
+    for (const c of body.classes) delete c.alignments;
+    await route.fulfill({ response: res, json: body });
+  });
+  await openDashboard(page);
+  const settings = await openSettings(page);
+  await settings.getByRole("button", { name: "New character" }).click();
+  const dialog = page.getByTestId("character-dialog");
+  await expect(dialog.getByRole("alert")).toContainText(
+    "The choices could not be loaded.",
+  );
+  old = false;
+  await dialog.getByRole("button", { name: "Retry" }).click();
+  await expect(
+    dialog
+      .getByLabel("Alignment")
+      .getByRole("option", { name: "Neutral good" }),
   ).toHaveCount(1);
 });

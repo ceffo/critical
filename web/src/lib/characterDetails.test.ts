@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  ALIGNMENT_CODES,
+  codeOrEmpty,
   hasAlignmentWarning,
   languageKey,
   toBody,
@@ -63,5 +65,21 @@ describe("hasAlignmentWarning", () => {
     ).toBe(true);
     expect(hasAlignmentWarning({ warnings: [] })).toBe(false);
     expect(hasAlignmentWarning({})).toBe(false);
+  });
+});
+
+describe("an old release's free text", () => {
+  it("is not kept in the draft, so an unrelated save never sends it", () => {
+    const draft = toDraft({
+      ...details,
+      alignment: "Chaotic Good",
+      sex: "Homme",
+    });
+    expect(draft.alignment).toBe("");
+    expect(draft.sex).toBe("");
+    const { body } = toBody(draft);
+    expect(body).not.toHaveProperty("alignment");
+    expect(body).not.toHaveProperty("sex");
+    expect(codeOrEmpty("lawful_good", ALIGNMENT_CODES)).toBe("lawful_good");
   });
 });

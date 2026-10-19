@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { UserPlus } from "@phosphor-icons/react";
-import { createCharacter, fetchCreationOptions } from "@/api/characters";
+import { createCharacter, fetchCreationChoices } from "@/api/characters";
 import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
   const { t } = useTranslation();
   const [options, setOptions] = useState<CreationOptions | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [name, setName] = useState("");
   const [cls, setCls] = useState("");
   const [race, setRace] = useState("");
@@ -95,7 +96,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
 
   useEffect(() => {
     let live = true;
-    fetchCreationOptions().then(
+    fetchCreationChoices().then(
       (o) => {
         if (!live) return;
         setOptions(o);
@@ -110,7 +111,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   const classOption = options?.classes.find((c) => c.class === cls);
   const races = classOption?.races ?? [];
@@ -341,9 +342,19 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
 
   if (loadError)
     return (
-      <p role="alert" className="text-body text-danger">
-        {loadError}
-      </p>
+      <div role="alert" className="flex flex-col items-start gap-2">
+        <p className="text-body text-danger">{t("details.optionsError")}</p>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setLoadError(null);
+            setAttempt((n) => n + 1);
+          }}
+        >
+          {t("details.optionsRetry")}
+        </Button>
+      </div>
     );
   if (!options)
     return <p className="text-body text-muted-foreground">{t("loading")}</p>;

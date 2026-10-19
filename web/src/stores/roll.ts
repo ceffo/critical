@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import type { AttackRequest, RollResult, SaveCategory } from "@/types/combat";
+import type {
+  AttackRequest,
+  RollResult,
+  SaveBreakdown,
+  SaveCategory,
+} from "@/types/combat";
 import type {
   CastResult,
   ExposureRequest,
@@ -28,7 +33,7 @@ import { useTableStore } from "./table";
 /** The last roll and what was asked for, so the result card can show its context. */
 export type LastRoll =
   | { kind: "attack"; result: RollResult }
-  | { kind: "save"; category: SaveCategory; result: RollResult }
+  | { kind: "save"; result: SaveBreakdown }
   | { kind: "cast"; result: CastResult }
   | { kind: "item"; result: UseResult }
   | { kind: "skill"; result: SkillCheck }
@@ -47,7 +52,6 @@ interface RollStore {
    */
   adjustLastSave: (
     entryId: number,
-    category: SaveCategory,
     adjustment: number,
     reason: string,
   ) => Promise<boolean>;
@@ -151,7 +155,6 @@ export const useRollStore = create<RollStore>((set) => {
       await roll(
         async () => ({
           kind: "save",
-          category,
           result: await rollSavingThrow(category),
         }),
         true,
@@ -175,11 +178,10 @@ export const useRollStore = create<RollStore>((set) => {
         async () => ({ kind: "attack", result: await attackVerdict(id, hit) }),
         true,
       ),
-    adjustLastSave: (id, category, adjustment, reason) =>
+    adjustLastSave: (id, adjustment, reason) =>
       roll(
         async () => ({
           kind: "save",
-          category,
           result: await adjustSave(id, adjustment, reason),
         }),
         true,

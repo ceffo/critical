@@ -23,10 +23,10 @@ type SVC interface {
 	// transaction.
 	ResolveAttack(ctx context.Context, characterID int64, req AttackRequest) (*RollResult, error)
 	// ResolveSavingThrow rolls a save and records it in the action log.
-	ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory) (*RollResult, error)
+	ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory) (*SaveBreakdown, error)
 	// AdjustSave sets the adjustment of the latest save entry and returns
 	// the recomputed save (same d20); recorded as an audited amend.
-	AdjustSave(ctx context.Context, characterID, entryID int64, adj SaveAdjustment) (*RollResult, error)
+	AdjustSave(ctx context.Context, characterID, entryID int64, adj SaveAdjustment) (*SaveBreakdown, error)
 	// AdjustAttackAC corrects the target AC of the latest attack entry and
 	// returns the recomputed attack (same d20, d100 and damage dice, no ammo
 	// spent); recorded as an audited amend.

@@ -1,16 +1,38 @@
-import type { RollResult, SaveCategory } from "@/types/combat";
+import type { RollResult, SaveBreakdown, SaveCategory } from "@/types/combat";
 import { post } from "./http";
+
+/**
+ * TRANSITION ONLY (rolling deploy): a still-old machine answers a save with the previous
+ * release's names, saveCategory/baseThac0/hit/hitMargin, where this release reads
+ * category/target/passed/margin. Accept both here, at the boundary, so the rest of the web sees one
+ * shape. Remove with the server's compat keys (saveAnswer in combathdl) in the follow-up release.
+ */
+export function normalizeSaveAnswer(raw: SaveBreakdown): SaveBreakdown {
+  const old = raw as Partial<SaveBreakdown> & {
+    saveCategory?: string;
+    baseThac0?: number;
+    hit?: boolean;
+    hitMargin?: number;
+  };
+  return {
+    ...raw,
+    category: old.category ?? old.saveCategory ?? "",
+    target: old.target ?? old.baseThac0 ?? 0,
+    passed: old.passed ?? old.hit ?? false,
+    margin: old.margin ?? old.hitMargin ?? 0,
+  };
+}
 
 /** Sets the adjustment of the latest save (log entry id); the server recomputes the verdict. */
 export function adjustSave(
   entryId: number,
   adjustment: number,
   reason: string,
-): Promise<RollResult> {
-  return post<RollResult>(`/api/roll/save/${entryId}/adjust`, {
+): Promise<SaveBreakdown> {
+  return post<SaveBreakdown>(`/api/roll/save/${entryId}/adjust`, {
     adjustment,
     reason,
-  });
+  }).then(normalizeSaveAnswer);
 }
 
 /** Corrects the target AC of the latest attack (log entry id); the server recomputes the attack. */
@@ -34,6 +56,10 @@ export function attackVerdict(
   return post<RollResult>(`/api/roll/attack/${entryId}/verdict`, { hit });
 }
 
-export function rollSavingThrow(category: SaveCategory): Promise<RollResult> {
-  return post<RollResult>("/api/roll/save", { category });
+export function rollSavingThrow(
+  category: SaveCategory,
+): Promise<SaveBreakdown> {
+  return post<SaveBreakdown>("/api/roll/save", { category }).then(
+    normalizeSaveAnswer,
+  );
 }

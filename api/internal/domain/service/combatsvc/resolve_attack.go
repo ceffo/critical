@@ -80,7 +80,7 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 			}
 			snaps = append(snaps, snap)
 		}
-		payload, err := json.Marshal(toRecord(r))
+		payload, err := json.Marshal(toBreakdown(r))
 		if err != nil {
 			return fmt.Errorf("encode attack payload: %w", err)
 		}

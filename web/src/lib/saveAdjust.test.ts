@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RollResult } from "@/types/combat";
+import type { SaveBreakdown } from "@/types/combat";
 import {
   adjustmentChanged,
   adjustmentInEffect,
@@ -21,7 +21,7 @@ describe("stepAdjustment", () => {
 
 describe("adjustmentChanged", () => {
   const save = (adjustment: number, adjustmentReason?: string) =>
-    ({ adjustment, adjustmentReason }) as RollResult;
+    ({ adjustment, adjustmentReason }) as SaveBreakdown;
 
   it.each([
     ["untouched card", save(0), 0, "", false],

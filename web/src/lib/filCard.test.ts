@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { LogEntry, LogKind } from "@/types/log";
-import type { RollResult } from "@/types/combat";
+import type { RollResult, SaveBreakdown } from "@/types/combat";
 import type { CastResult } from "@/types/spells";
 import {
   attackDiceChips,
@@ -20,7 +20,6 @@ import {
   liveKind,
   liveModel,
   rowValue,
-  saveFromRoll,
   turnMarker,
   type CardModel,
   type LiveResult,
@@ -534,8 +533,7 @@ describe("cardSource: latest result by default, a selected entry read-only", () 
   const entries = [hp, save, attack]; // newest first
   const liveSave: LiveResult = {
     kind: "save",
-    category: "spell",
-    result: { ...attackPayload, logEntryId: 3 },
+    result: { ...savePayload, logEntryId: 3 } as SaveBreakdown,
   };
 
   it("the latest result is the newest attack, save, cast or item use, voided included", () => {
@@ -615,29 +613,13 @@ describe("cardSource: latest result by default, a selected entry read-only", () 
 });
 
 describe("liveModel", () => {
-  it("a save response reads like its log entry: the sheet's target, the roll total and the adjusted target", () => {
-    const r = {
-      ...attackPayload,
-      d20Roll: 12,
-      baseThac0: 14,
-      effectiveThac0: 12,
-      modifiers: [{ kind: "buff", detail: "Prayer", value: 1 }],
-      hit: true,
-      hitMargin: 1,
-      adjustment: 2,
-      adjustmentReason: "Gaia",
-      saveTotal: 15,
-      rollTotal: 13,
-      adjustedTarget: 12,
-      logEntryId: 9,
-    } as RollResult;
-    expect(saveFromRoll("spell", r)).toEqual(
-      (
-        cardModel(
-          entry("save", savePayload, { id: 9 }),
-          ((k: string) => k) as never,
-        ) as { save: unknown }
-      ).save,
+  it("a save response is its log entry's payload: the live card reads it like the journal's", () => {
+    const r = { ...savePayload, logEntryId: 9 } as SaveBreakdown;
+    expect(liveModel({ kind: "save", result: r })).toEqual(
+      cardModel(
+        entry("save", savePayload, { id: 9 }),
+        ((k: string) => k) as never,
+      ),
     );
   });
 

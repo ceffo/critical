@@ -3,7 +3,7 @@
 // from the payloads as recorded (docs/all.md, "Core Architectural Rule").
 import type { TFunction } from "i18next";
 import type { HpBreakdown, LogEntry, LogKind } from "@/types/log";
-import type { Modifier, RollResult } from "@/types/combat";
+import type { Modifier, RollResult, SaveBreakdown } from "@/types/combat";
 import type { UseResult } from "@/types/items";
 import type { CastResult, ExposureResult } from "@/types/spells";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
@@ -35,7 +35,7 @@ import {
 /** The last roll of this session as the roll endpoints returned it (stores/roll.ts LastRoll). */
 export type LiveResult =
   | { kind: "attack"; result: RollResult }
-  | { kind: "save"; category: string; result: RollResult }
+  | { kind: "save"; result: SaveBreakdown }
   | { kind: "cast"; result: CastResult }
   | { kind: "item"; result: UseResult }
   | { kind: "skill"; result: SkillCheck }
@@ -176,21 +176,20 @@ export interface SaveView {
   logEntryId?: number;
 }
 
-/** A save as the save endpoint returns it (baseThac0 is the sheet's target). */
-export function saveFromRoll(category: string, r: RollResult): SaveView {
+/** The card's view of a save, from a save entry's payload or the save endpoints' answer (one shape). */
+export function saveView(p: SaveBreakdown, logEntryId?: number): SaveView {
   return {
-    category,
-    d20: r.d20Roll,
-    target: r.baseThac0,
-    modifiers: r.modifiers,
-    adjustment: r.adjustment ?? 0,
-    adjustmentReason: r.adjustmentReason,
-    // Always sent on saves (ADR 0006 step 5).
-    rollTotal: r.rollTotal ?? r.d20Roll,
-    adjustedTarget: r.adjustedTarget ?? r.effectiveThac0,
-    passed: r.hit,
-    margin: r.hitMargin,
-    logEntryId: r.logEntryId,
+    category: p.category,
+    d20: p.d20Roll,
+    target: p.target,
+    modifiers: p.modifiers ?? [],
+    adjustment: p.adjustment ?? 0,
+    adjustmentReason: p.adjustmentReason,
+    rollTotal: p.rollTotal,
+    adjustedTarget: p.adjustedTarget,
+    passed: p.passed,
+    margin: p.margin,
+    logEntryId,
   };
 }
 
@@ -252,24 +251,7 @@ export function cardModel(
   if (attack)
     return { layout: "attack", roll: { ...attack, logEntryId: e.id } };
   const save = savePayload(e);
-  if (save) {
-    return {
-      layout: "save",
-      save: {
-        category: save.category,
-        d20: save.d20Roll,
-        target: save.target,
-        modifiers: save.modifiers ?? [],
-        adjustment: save.adjustment ?? 0,
-        adjustmentReason: save.adjustmentReason,
-        rollTotal: save.rollTotal,
-        adjustedTarget: save.adjustedTarget,
-        passed: save.passed,
-        margin: save.margin,
-        logEntryId: e.id,
-      },
-    };
-  }
+  if (save) return { layout: "save", save: saveView(save, e.id) };
   const cast = castPayload(e);
   if (cast) return { layout: "cast", cast };
   const exposure = exposurePayload(e);
@@ -338,7 +320,10 @@ export function liveModel(last: LiveResult): CardModel {
     case "attack":
       return { layout: "attack", roll: last.result };
     case "save":
-      return { layout: "save", save: saveFromRoll(last.category, last.result) };
+      return {
+        layout: "save",
+        save: saveView(last.result, last.result.logEntryId),
+      };
     case "cast":
       return { layout: "castLive", result: last.result };
     case "item":

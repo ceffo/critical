@@ -60,6 +60,36 @@ async function adjust(page: Page, steps: number, reason?: string) {
 
 const verdict = (margin: number) => (margin >= 0 ? "PASSED" : "FAILED");
 
+// The live card reads the save endpoint's answer, the reloaded one the entry's payload: one shape
+// (the answer is the payload plus its entry id), so a natural 1 or 20 reads the same in both.
+test("a natural 1 or 20 save reads the same live and after a reload", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const card = saveCard(page);
+  let live = { d20: 0, target: 0, margin: 0 };
+  for (let i = 0; i < 100 && live.d20 !== 1 && live.d20 !== 20; i++) {
+    await rollSpellSave(page);
+    await expect
+      .poll(async () => await logEntry(page, "Save vs Spells").count())
+      .toBe(Math.min(i + 1, 50)); // the page reads the journal's newest 50 (the default page)
+    live = await facts(card);
+  }
+  expect([1, 20], "no natural 1 or 20 in 100 saves").toContain(live.d20);
+  const vs = await card.getByTestId("save-vs").textContent();
+  const outcome = live.margin >= 0 ? "Passed" : "Failed";
+  await expect(card).toContainText(outcome);
+
+  await page.reload();
+  await expect(card).toBeVisible();
+  expect(await facts(card)).toEqual(live);
+  await expect(card.getByTestId("save-vs")).toHaveText(vs ?? "");
+  await expect(card).toContainText(outcome);
+  await expect(logEntry(page, "Save vs Spells").first()).toContainText(
+    `Save vs Spells: d20 ${live.d20} vs ${live.target}, ${verdict(live.margin)}`,
+  );
+});
+
 test("a save is logged and its adjustment moves the target, never the roll", async ({
   page,
 }) => {

@@ -55,7 +55,7 @@ import { type InventoryNamer, useInventoryName } from "@/i18n/inventoryName";
 import { modeName } from "@/lib/spellMode";
 import { rollLabel } from "@/lib/spellDice";
 import { abilityText, counters, type CastLogPayload } from "@/lib/logSummary";
-import type { RollResult, SaveCategory } from "@/types/combat";
+import type { RollResult } from "@/types/combat";
 import type { UseResult } from "@/types/items";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
@@ -991,9 +991,7 @@ function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
       entryId={entryId}
       valueTestId="save-adjustment"
       step={stepAdjustment}
-      onApply={(value, reason) =>
-        adjustLastSave(entryId, s.category as SaveCategory, value, reason)
-      }
+      onApply={(value, reason) => adjustLastSave(entryId, value, reason)}
     />
   );
 }

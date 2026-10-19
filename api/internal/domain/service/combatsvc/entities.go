@@ -140,7 +140,7 @@ type AmmoUse struct {
 	Remaining int
 }
 
-// RollResult is the full outcome of a combat roll.
+// RollResult is the full outcome of an attack.
 type RollResult struct {
 	D20Roll int
 	// D100CritRoll is the crit-check d100 (ADR 0001 step 1): crit when
@@ -148,7 +148,7 @@ type RollResult struct {
 	D100CritRoll int
 	// D100MultiplierRoll is the second, independent d100 (step 3) whose
 	// crit-table row gives the multiplier of a crit. Rolled on every attack;
-	// 0 on saves and on attacks logged before it existed.
+	// 0 on attacks logged before it existed.
 	D100MultiplierRoll int
 	IsCrit             bool
 	CritMultiplier     float64
@@ -210,7 +210,7 @@ type RollResult struct {
 	Verdict Verdict
 	// Rolled is what the damage is computed from, rolled with every attack
 	// (even a miss) so a target AC correction never rolls again. Nil on
-	// saves and on attacks logged before corrections existed.
+	// attacks logged before corrections existed.
 	Rolled *RolledDamage
 	// RollCritRow is the crit-table row the multiplier d100 falls in,
 	// looked up when rolling whatever the outcome (nil like Rolled), so a
@@ -223,21 +223,7 @@ type RollResult struct {
 	RolledTargetAC *int
 	RolledHit      *bool
 	RolledCrit     *bool
-	// Saving-throw context (empty for attacks): the category and the
-	// adjustment set after the roll (0: none), with its optional reason.
-	SaveCategory     SaveCategory
-	Adjustment       int
-	AdjustmentReason string
-	// SaveBonus is the sum of a save's modifiers (buffs). The adjustment
-	// moves the target (ADR 0006 step 5): SaveRollTotal (d20 + SaveBonus) is
-	// compared with SaveAdjustedTarget (target - Adjustment). SaveTotal is
-	// SaveRollTotal + Adjustment, kept for the clients that read it.
-	SaveBonus          int
-	SaveTotal          int
-	SaveRollTotal      int
-	SaveAdjustedTarget int
-
-	// LogEntryID is the action-log entry recording the attack or save.
+	// LogEntryID is the action-log entry recording the attack.
 	LogEntryID int64
 }
 

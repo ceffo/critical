@@ -76,6 +76,15 @@ func TestRegister_RefusesAKeyThatIsNotAFamily(t *testing.T) {
 	}
 }
 
+// The families the log names itself in a request's changes (ADR 0018 step
+// 11) are no module's.
+func TestRegister_RefusesTheLogsOwnFamilies(t *testing.T) {
+	for _, family := range []string{actionlog.FamilyLog, actionlog.FamilyHP} {
+		svc, _, _, _ := newSvc(t)
+		assert.ErrorIs(t, svc.Register(module("itemsvc", family)), actionlogsvc.ErrClaimed, "family %q", family)
+	}
+}
+
 // A refused module binds nothing: its other families stay free for the
 // module that owns them.
 func TestRegister_ARefusedModuleBindsNothing(t *testing.T) {

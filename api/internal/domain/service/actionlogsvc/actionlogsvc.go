@@ -171,6 +171,8 @@ func (s *service) Register(m domain.Module) error {
 		switch {
 		case family == "" || actionlog.Family(family) != family:
 			return fmt.Errorf("module %s: state-key family %q is not a family", m.Name, family)
+		case actionlog.IsLogFamily(family):
+			return fmt.Errorf("state-key family %q: %w (the log and %s)", family, ErrClaimed, m.Name)
 		case families[family]:
 			return fmt.Errorf("state-key family %q: %w (%s twice)", family, ErrClaimed, m.Name)
 		}

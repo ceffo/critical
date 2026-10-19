@@ -213,6 +213,22 @@ W4 and W7); not implemented. Each point is built by the item named and gets its 
     answers with the state keys of the transaction it wrote; the web refetches by key family and
     nothing else. Moves outside the log ([ADR 0029](0029-users-login-and-access.md) amendment "creating,
     switching and retiring", step 4) keep an explicit refetch (W7).
+    _As built (CRI-66)_: the keys travel in the `X-State-Keys` answer header (sorted, comma-separated,
+    empty when nothing was logged; never on an error answer), so every body keeps its shape and a
+    client of the release before reads every answer as before. They are the snapshots' keys plus two
+    the log names itself, `log` (the journal changed) and `hp` (an entry moved current HP), which no
+    module may claim. The log's transaction scope notes them and hands them to the request
+    (`actionlog.Changes`) only once the outermost transaction commits. The web maps each family to
+    the slices it reads again (`web/src/lib/stateKeys.ts`, exhaustive by type); no header, an
+    unknown family or a failed action reads every slice again (the rolling deploy's fallback). The
+    action module (`stores/table.ts`) owns the one error, notice and busy flag; the data stores
+    expose their data and fetches only. Details: `docs/backend.md`, "State keys on write answers".
+    Tests: `domain/service/actionlogsvc` `TestChanges_ARecordedTransactionNamesItsKeys`,
+    `TestChanges_UndoAndRedoNameTheKeysOfTheirTransaction`, `TestChanges_AnAmendNamesTheLog`,
+    `TestRegister_RefusesTheLogsOwnFamilies`; `rest/router` `TestStateKeys_TheAnswerNamesWhatTheWriteChanged`;
+    `composition` `TestStateKeys_EachWriteNamesWhatItChanged`, `TestStateKeys_TheWebMapsEveryFamily`;
+    web `stores/table.test.ts` (one case per family: exactly the mapped slices; the fallbacks; the
+    refresh queue's ordering).
 
 ## Consequences
 

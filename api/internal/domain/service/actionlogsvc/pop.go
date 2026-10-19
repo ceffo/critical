@@ -71,5 +71,6 @@ func (s *service) pop(ctx context.Context, characterID int64, e *actionlog.Entry
 	if err := s.dal.InsertCorrection(ctx, actionlog.Correction{ActionID: e.ID, Kind: actionlog.CorrectionVoid}); err != nil {
 		return fmt.Errorf("insert void: %w", err)
 	}
+	touch(ctx, actionlog.TouchedKeys(*e)...)
 	return nil
 }

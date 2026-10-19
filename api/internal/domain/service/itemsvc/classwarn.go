@@ -59,8 +59,11 @@ var classRules = map[string]classRule{
 		armourColumns: []string{"none", "leather", "padded_studded", "elven_chain"},
 		weaponTypes:   []string{"dagger", "dart", "hand_crossbow", "short_bow", "sling", "short_sword", "long_sword"},
 		weapons: []weaponRef{
-			{"club", "other_melee"}, {"knife", "other_melee"}, {"lasso", "other_thrown"},
-			{"broad_sword", "other_melee"}, {"quarterstaff", "other_melee"},
+			{"club", "other_melee"},
+			{"knife", "other_melee"},
+			{"lasso", "other_thrown"},
+			{"broad_sword", "other_melee"},
+			{"quarterstaff", "other_melee"},
 		},
 	},
 	"bard": {

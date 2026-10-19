@@ -201,18 +201,12 @@ func (s *service) gain(c *charactersvc.Character, p charactersvc.PendingLevel, e
 	if err != nil {
 		return nil, fmt.Errorf("level-up: %w", err)
 	}
-	// Table 3's footnotes from Constitution 20: a low die counts as the
-	// floor; the die shown is the one rolled.
-	counted := max(rolled, row.LowDieMin)
-	// Warriors take the bracketed adjustment, every other class the plain
-	// one (at most +2).
-	res.ConAdjustment = row.HP
-	if group, _ := ruletablesvc.ClassGroup(c.Class); group == "warrior" {
-		res.ConAdjustment = row.HPWarrior
-	}
+	// Table 3's footnotes from Constitution 20 raise a low die (the die
+	// shown is the one rolled), warriors take the bracketed adjustment, and
+	// the gain is at least 1: the arithmetic the creation's roll shares.
+	group, _ := ruletablesvc.ClassGroup(c.Class)
+	counted, conAdj, gain := ruletablesvc.HitDieGain(group, rolled, row)
 	res.Rolled, res.Counted = &rolled, &counted
-	// The gain is at least 1 (a low die with a negative adjustment never
-	// lowers or keeps the max HP).
-	res.Gain = max(1, counted+res.ConAdjustment)
+	res.ConAdjustment, res.Gain = conAdj, gain
 	return res, nil
 }

@@ -1,7 +1,7 @@
 # ADR 0032: Character identity and creation rolls
 
 **Status**: accepted 2026-10-18 (decisions from the user's triage of the onboarding epic, the same
-day; the details this ADR added beyond the triage were accepted by the supervisor in review). Steps 1, 2, 3 and 8 (for alignment, sex and the race detail) implemented 2026-10-18, see "As built"; the rest is not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
+day; the details this ADR added beyond the triage were accepted by the supervisor in review). Steps 1, 2, 3 and 8 (for alignment, sex and the race detail) implemented 2026-10-18, see "As built"; steps 6 and 7 (the score and max HP rolls) implemented 2026-10-18, see "As built (steps 6 and 7)"; the rest is not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
 step 7.5 on level 1 hit points) and [ADR 0029](0029-users-login-and-access.md) steps 7.2 and 7.3
 (character actions leave the cog menu; creation is a full-screen route).
 
@@ -286,6 +286,33 @@ roster and creation items land.
 - **Refusals**, `languages` (`details.languages` at creation): `empty`, `unknown`, `duplicate`; no `too_many`/`too_long` any more.
 - **Options.** `GET /api/characters/options` gains `languages` (`{code, name}`) and `raceLanguages` (`{race, native, languages}`).
   The form and the card offer the whole catalogue, the race's list first. A previous release's options lack these: no picker.
+
+## As built (steps 6 and 7, the score and max HP rolls)
+
+2026-10-18, the item that made the creation's rolls (backend only; the screens are the creation-flow
+items'). Package `creationrollsvc`, handler `creationrollhdl`.
+
+- **Endpoints.** `POST /api/characters/rolls/scores` (`{"method", "raceCode"}`, the race optional)
+  and `POST /api/characters/rolls/hp` (`{"class", "con", "xp"}`, all three required). They need a
+  session but no current character (a new player has none), roll through the dice port, write
+  nothing and log nothing.
+- **Methods** are the codes `I` to `VI`, the table `ruletablesvc.ScoreMethods` (rolls, dice per roll,
+  the dropped lowest die, `assign`: `in_order` for I, `keep_per_ability` for II, `arrange` for III to
+  V, `add_to_base` for VI; how many totals are kept; VI's `base` 8 and `max` 18). The answer carries
+  the method, the rolls in the order drawn (each its dice, the index of the dropped die or null, the
+  total, and the ability for I and II), PHB Table 8's `adjustments` by ability for the race given
+  (null without one), and for method I alone the finished `scores`, adjustments included (the stored
+  score is the adjusted one).
+- **Max HP.** The starting level is ADR 0030 step 3's level at the XP; the answer is the class, that
+  level, one row per level (`hitDie`, `rolled`, `counted`, `conAdjustment`, `gain`, `fixed`) and the
+  `total`. One hit die's arithmetic (raised low die, the warriors' bracketed adjustment, the gain of
+  at least 1) is `ruletablesvc.HitDieGain`, which the level-up roll of ADR 0030 step 7.1 uses too.
+- **Refusals** are 400 `invalid_input` field errors: `method` `unknown`, `race` `unknown` (the
+  `raceCode` field), `class` `unknown` / `not_creatable`, `con` and `xp` `out_of_range` (3 to 19 and
+  0 to 100,000,000, step 1 of ADR 0030). A Constitution of 20 or more is thereby refused by the roll,
+  as by the creation; Table 3's raised dice are tested on `HitDieGain` (Constitution 21).
+- **Not here:** the method list and ADR 0034 item 4.1's level to XP table in the form's options, and
+  the web types: the creation-flow item adds them with the screens.
 
 ## Consequences
 

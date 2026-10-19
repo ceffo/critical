@@ -24,6 +24,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/casthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/characterhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/combathdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/creationrollhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/dicehdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/hphdl"
@@ -130,6 +131,8 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	xphdl.RegisterSharedRoutes(r, bs.XP)
 	// The user's characters: a session, no current character needed.
 	characterhdl.RegisterUserRoutes(r, bs.Character)
+	// The creation's rolls (ADR 0032 steps 6 and 7) write nothing.
+	creationrollhdl.RegisterRoutes(r, bs.Rolls)
 
 	// The admin section (ADR 0029 step 1.3) and the shared rule set only an
 	// admin edits: mw.AdminOnly refuses a player every route mounted here.

@@ -24,6 +24,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/creationrollsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
@@ -64,6 +65,7 @@ type BackingServices struct {
 	Rest      restsvc.SVC
 	XP        xpsvc.SVC
 	LevelUp   levelupsvc.SVC
+	Rolls     creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
 	Learn     learnsvc.SVC
 	Turn      turnsvc.SVC
 	Details   detailssvc.SVC
@@ -341,6 +343,13 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	registerRestorers(logSvc, levelUpSvc.Restorers())
+	// The creation's rolls (ADR 0032 steps 6 and 7) read the rule tables and
+	// the dice, and write nothing.
+	creationRollSvc, err := creationrollsvc.New(creationrollsvc.Deps{Rules: ruleTables, Dice: dice})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	// Learning a spell (ADR 0030 step 20) reads the character's derived
 	// spellbook rules and the catalogue, rolls the chance to learn and writes
 	// the spellbook; its undo writes the spell's place back.
@@ -393,6 +402,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		Rest:      restSvc,
 		XP:        xpSvc,
 		LevelUp:   levelUpSvc,
+		Rolls:     creationRollSvc,
 		Learn:     learnSvc,
 		Turn:      turnSvc,
 		Details:   detailsSvc,
@@ -401,7 +411,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		Auth:      authSvc,
 		store:     db,
 		services: []domain.Service{
-			authSvc, charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, levelUpSvc, learnSvc, skillSvc, detailsSvc, diceSvc,
+			authSvc, charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, levelUpSvc, creationRollSvc, learnSvc, skillSvc, detailsSvc, diceSvc,
 		},
 	}, nil
 }

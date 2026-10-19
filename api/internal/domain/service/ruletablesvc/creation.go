@@ -1,0 +1,100 @@
+package ruletablesvc
+
+import (
+	"fmt"
+	"slices"
+)
+
+// The rule data of the creation rolls (ADR 0032 steps 6 and 7): the six
+// ability score methods of DMG chapter 1, PHB Table 8 read by race, and the
+// hit point arithmetic of one hit die (ADR 0030 step 7.1) that the level-up
+// roll and the creation's max HP roll share.
+
+// How a method's totals become scores (ADR 0032 step 6, "The player" column).
+const (
+	// AssignInOrder: the totals are the scores, in ability order (method I).
+	AssignInOrder = "in_order"
+	// AssignKeepPerAbility: each ability gets its own totals, in ability
+	// order, and the player keeps one of them (method II).
+	AssignKeepPerAbility = "keep_per_ability"
+	// AssignArrange: the player picks Keep of the totals and assigns them to
+	// the abilities (methods III, IV and V).
+	AssignArrange = "arrange"
+	// AssignAddToBase: every ability starts at Base and the player adds each
+	// total (one die), whole, to one ability, none above Max (method VI).
+	AssignAddToBase = "add_to_base"
+)
+
+// ScoreMethod is one of DMG chapter 1's ability score methods: Rolls totals
+// of Dice d6 each, the lowest die of each dropped when DropLowest, assigned
+// as Assign says.
+type ScoreMethod struct {
+	Code string
+	// Rolls is the number of totals; Dice the d6 each total adds.
+	Rolls, Dice int
+	// DropLowest drops the lowest die of each total (one of them on a tie).
+	DropLowest bool
+	Assign     string
+	// Keep is how many totals the player keeps (6 for every method but VI,
+	// whose dice all go to the abilities).
+	Keep int
+	// Base and Max are method VI's: the score every ability starts at and
+	// the highest one the dice may raise it to. 0 for the other methods.
+	Base, Max int
+}
+
+// ScoreMethods are ADR 0032 step 6's table, in the book's order.
+var ScoreMethods = []ScoreMethod{
+	{Code: "I", Rolls: 6, Dice: 3, Assign: AssignInOrder, Keep: 6},
+	{Code: "II", Rolls: 12, Dice: 3, Assign: AssignKeepPerAbility, Keep: 6},
+	{Code: "III", Rolls: 6, Dice: 3, Assign: AssignArrange, Keep: 6},
+	{Code: "IV", Rolls: 12, Dice: 3, Assign: AssignArrange, Keep: 6},
+	{Code: "V", Rolls: 6, Dice: 4, DropLowest: true, Assign: AssignArrange, Keep: 6},
+	{Code: "VI", Rolls: 7, Dice: 1, Assign: AssignAddToBase, Keep: 7, Base: 8, Max: 18},
+}
+
+// ScoreMethodFor is the method of code; false for none.
+func ScoreMethodFor(code string) (ScoreMethod, bool) {
+	i := slices.IndexFunc(ScoreMethods, func(m ScoreMethod) bool { return m.Code == code })
+	if i < 0 {
+		return ScoreMethod{}, false
+	}
+	return ScoreMethods[i], true
+}
+
+// RaceAdjustmentsFor is PHB Table 8 for race: the adjustment of each of the
+// six abilities, 0 where the table has none (every ability of a human). An
+// error for a race that is neither human nor one of Races.
+func (t *Tables) RaceAdjustmentsFor(race string) (map[string]int, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return nil, err
+	}
+	if race != "human" && !slices.Contains(Races, race) {
+		return nil, fmt.Errorf("race adjustments: unknown race %q", race)
+	}
+	out := make(map[string]int, len(Abilities))
+	for _, a := range Abilities {
+		out[a] = 0
+	}
+	for _, r := range c.RaceAdjustments {
+		if r.Race == race {
+			out[r.Ability] = r.Adjustment
+		}
+	}
+	return out, nil
+}
+
+// HitDieGain is ADR 0030 step 7.1's arithmetic for one hit die rolled by a
+// character of group with the Constitution row con: the die counted (Table
+// 3's footnotes from Constitution 20 raise a low die to con.LowDieMin), the
+// Constitution adjustment (warriors take the bracketed value, every other
+// group the plain one) and the gain, at least 1.
+func HitDieGain(group string, rolled int, con ConstitutionRow) (counted, conAdjustment, gain int) {
+	counted = max(rolled, con.LowDieMin)
+	conAdjustment = con.HP
+	if group == "warrior" {
+		conAdjustment = con.HPWarrior
+	}
+	return counted, conAdjustment, max(1, counted+conAdjustment)
+}

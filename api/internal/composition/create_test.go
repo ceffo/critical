@@ -5,6 +5,7 @@ package composition_test
 // router, the real services and the fixture's rule tables.
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -283,6 +284,66 @@ func TestCreate_Options(t *testing.T) {
 	assert.Equal(t, struct{ Min, Max int }{1, 100}, got.StrExceptional)
 	assert.Equal(t, 3, got.Ability.Min)
 	assert.Equal(t, 19, got.Ability.Max)
+}
+
+// ADR 0034 step 4.1 over the fixture's tables: each class's level to XP table is ADR 0030 step 3's
+// XP table read at each level's lower bound (PHB Tables 14, 20, 23 and 25), so a level picked in the
+// form and sent as that XP derives that very level; the hit die, the score methods and Table 8 ride
+// along for the class, score and race steps.
+func TestCreate_Options_LevelXPTableHitDiceMethodsAndRaceAdjustments(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var got struct {
+		Classes []struct {
+			Class   string `json:"class"`
+			HitDie  int    `json:"hitDie"`
+			LevelXP []struct {
+				Level int `json:"level"`
+				XP    int `json:"xp"`
+			} `json:"levelXp"`
+		} `json:"classes"`
+		ScoreMethods []struct {
+			Code   string `json:"code"`
+			Assign string `json:"assign"`
+		} `json:"scoreMethods"`
+		RaceAdjustments []struct {
+			Race        string         `json:"race"`
+			Adjustments map[string]int `json:"adjustments"`
+		} `json:"raceAdjustments"`
+	}
+	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &got))
+	want := map[string]struct{ die, xp5 int }{
+		"bard": {6, 10_000}, "fighter": {10, 16_000}, "mage": {4, 20_000}, "cleric": {8, 13_000}, "thief": {6, 10_000},
+	}
+	require.Len(t, got.Classes, 5)
+	for _, c := range got.Classes {
+		require.Len(t, c.LevelXP, 20, c.Class)
+		assert.Equal(t, 1, c.LevelXP[0].Level, c.Class)
+		assert.Equal(t, 0, c.LevelXP[0].XP, c.Class)
+		assert.Equal(t, 5, c.LevelXP[4].Level, c.Class)
+		assert.Equal(t, want[c.Class].xp5, c.LevelXP[4].XP, c.Class)
+		assert.Equal(t, want[c.Class].die, c.HitDie, c.Class)
+	}
+	codes := make([]string, 0, len(got.ScoreMethods))
+	for _, m := range got.ScoreMethods {
+		codes = append(codes, m.Code)
+	}
+	assert.Equal(t, []string{"I", "II", "III", "IV", "V", "VI"}, codes)
+	assert.Equal(t, "add_to_base", got.ScoreMethods[5].Assign)
+	require.Len(t, got.RaceAdjustments, 6)
+	assert.Equal(t, "human", got.RaceAdjustments[0].Race)
+	for _, r := range got.RaceAdjustments {
+		if r.Race == "elf" {
+			assert.Equal(t, 1, r.Adjustments["dex"], "PHB Table 8")
+			assert.Equal(t, -1, r.Adjustments["con"], "PHB Table 8")
+		}
+	}
+
+	// A picked level sent as its XP derives that level (ADR 0030 step 3).
+	var hp hpRollView
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/rolls/hp",
+		fmt.Sprintf(`{"class":"bard","con":12,"xp":%d}`, got.Classes[0].LevelXP[4].XP), &hp))
+	assert.Equal(t, 5, hp.Level)
 }
 
 // identity is the alignment and sex every test character enters (both required, ADR 0032 steps 2

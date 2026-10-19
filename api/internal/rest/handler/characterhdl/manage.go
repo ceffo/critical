@@ -45,6 +45,11 @@ type ClassOptionDTO struct {
 	// Alignments are the alignment codes the class admits (ADR 0032 step 2),
 	// so the form offers only those.
 	Alignments []string `json:"alignments"`
+	// HitDie is the sides of the class's hit die (ADR 0030 step 7).
+	HitDie int `json:"hitDie"`
+	// LevelXP is ADR 0034 step 4.1: levels 1 to 20, each with the lowest
+	// XP of that level for the class; a picked level is sent as its XP.
+	LevelXP []LevelXPDTO `json:"levelXp"`
 }
 
 // RangeDTO is the inclusive range an entered number must fall in.
@@ -74,6 +79,36 @@ type OptionsDTO struct {
 	// empty before catalogue format 8.
 	Languages     []LanguageDTO      `json:"languages"`
 	RaceLanguages []RaceLanguagesDTO `json:"raceLanguages"`
+	// ScoreMethods are ADR 0032 step 6's methods in the book's order (the
+	// score step's chips); RaceAdjustments PHB Table 8 by race (the race
+	// cards). Additions of ADR 0034: a previous web ignores them.
+	ScoreMethods    []ScoreMethodDTO     `json:"scoreMethods"`
+	RaceAdjustments []RaceAdjustmentsDTO `json:"raceAdjustments"`
+}
+
+// LevelXPDTO is a level and the XP that reaches it.
+type LevelXPDTO struct {
+	Level int `json:"level"`
+	XP    int `json:"xp"`
+}
+
+// ScoreMethodDTO is one of ADR 0032 step 6's methods, as the roll answers
+// it (creationrollhdl.MethodDTO): `assign` is how the totals become scores.
+type ScoreMethodDTO struct {
+	Code       string `json:"code"`
+	Rolls      int    `json:"rolls"`
+	Dice       int    `json:"dice"`
+	DropLowest bool   `json:"dropLowest"`
+	Assign     string `json:"assign"`
+	Keep       int    `json:"keep"`
+	Base       int    `json:"base"`
+	Max        int    `json:"max"`
+}
+
+// RaceAdjustmentsDTO is PHB Table 8 for a race: each ability's adjustment.
+type RaceAdjustmentsDTO struct {
+	Race        string         `json:"race"`
+	Adjustments map[string]int `json:"adjustments"`
 }
 
 // LanguageDTO is a catalogue language: its code and its name by language.
@@ -97,16 +132,26 @@ func Options(svc optionsReader) render.HandlerFunc {
 			return err
 		}
 		out := OptionsDTO{
-			Classes:        make([]ClassOptionDTO, 0, len(o.Classes)),
-			Ability:        RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
-			HPMax:          RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
-			XP:             RangeDTO{Min: o.MinXP, Max: o.MaxXP},
-			StrExceptional: RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
-			SkillPoints:    RangeDTO{Min: 0, Max: o.MaxSkillPoints},
-			MaxNameLen:     o.MaxNameLen,
-			Sexes:          o.Sexes,
-			Languages:      make([]LanguageDTO, 0, len(o.Languages)),
-			RaceLanguages:  make([]RaceLanguagesDTO, 0, len(o.RaceLanguages)),
+			Classes:         make([]ClassOptionDTO, 0, len(o.Classes)),
+			Ability:         RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
+			HPMax:           RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
+			XP:              RangeDTO{Min: o.MinXP, Max: o.MaxXP},
+			StrExceptional:  RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
+			SkillPoints:     RangeDTO{Min: 0, Max: o.MaxSkillPoints},
+			MaxNameLen:      o.MaxNameLen,
+			Sexes:           o.Sexes,
+			Languages:       make([]LanguageDTO, 0, len(o.Languages)),
+			RaceLanguages:   make([]RaceLanguagesDTO, 0, len(o.RaceLanguages)),
+			ScoreMethods:    make([]ScoreMethodDTO, 0, len(o.ScoreMethods)),
+			RaceAdjustments: make([]RaceAdjustmentsDTO, 0, len(o.RaceAdjustments)),
+		}
+		for _, m := range o.ScoreMethods {
+			out.ScoreMethods = append(out.ScoreMethods, ScoreMethodDTO{
+				Code: m.Code, Rolls: m.Rolls, Dice: m.Dice, DropLowest: m.DropLowest, Assign: m.Assign, Keep: m.Keep, Base: m.Base, Max: m.Max,
+			})
+		}
+		for _, ra := range o.RaceAdjustments {
+			out.RaceAdjustments = append(out.RaceAdjustments, RaceAdjustmentsDTO{Race: ra.Race, Adjustments: ra.Adjustments})
 		}
 		for _, l := range o.Languages {
 			out.Languages = append(out.Languages, LanguageDTO{Code: l.Code, Name: l.Name})
@@ -118,6 +163,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 			out.Classes = append(out.Classes, ClassOptionDTO{
 				Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces,
 				Skills: c.Skills, SkillArmors: c.SkillArmors, Alignments: c.Alignments,
+				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP),
 			})
 		}
 		render.OK(r.Context(), w, out)
@@ -274,4 +320,12 @@ func Change(svc changer) render.HandlerFunc {
 		}
 		return renderCharacters(w, r, svc, u.ID, current)
 	}
+}
+
+func levelXPDTO(rows []charactersvc.LevelXP) []LevelXPDTO {
+	out := make([]LevelXPDTO, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, LevelXPDTO{Level: r.Level, XP: r.XP})
+	}
+	return out
 }

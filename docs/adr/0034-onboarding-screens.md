@@ -77,6 +77,20 @@ content. This ADR records the decisions; the README and the shots are the pictur
 8. **Cog menu** (_proposed_). Language, appearance, theme, account (email, Log out) and admin. No
    character action.
 
+## As built (the creation route: intro, class, race, scores, HP and talents)
+
+2026-10-18, the item that built the route and its first four steps.
+
+- **Options** (`GET /api/characters/options`, additive: a previous web ignores them). Each class gains
+  `hitDie` (the sides of its group's die, ADR 0030 step 7) and `levelXp`, `[{level, xp}]` for levels 1
+  to 20, read from ADR 0030 step 3's table at each level's lower bound (item 4.1). The answer gains
+  `scoreMethods` (ADR 0032 step 6's table, the roll endpoint's `method` shape: `code`, `rolls`, `dice`,
+  `dropLowest`, `assign`, `keep`, `base`, `max`) and `raceAdjustments` (`[{race, adjustments}]`, PHB
+  Table 8 for the six races). Tested on the fixture's tables, level 5 of every class.
+- **Not shown yet**, for want of server data: the class cards' ability minimums and the arrangement
+  table's minimum check, the race cards' height and starting age (the identity step's dice), and the
+  skill budget and percentages on step 4 (the server warns at creation). The web computes none of them.
+
 ## Consequences
 
 - The form's options gain the per-class level to XP table (item 4.1); the implementing item

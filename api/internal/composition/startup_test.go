@@ -134,6 +134,18 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 	}
 }
 
+// A service constructor late in Build failing (the last one, over a nil port)
+// closes the store exactly once, however many services were built before it.
+func TestBuild_ALateConstructorFailingClosesTheStoreOnce(t *testing.T) {
+	h := newHarness(t)
+	h.expectStartup(fixtureSeeds)
+	h.Store.EXPECT().Close().Return(nil).Once()
+	h.Storage.Dice = nil
+
+	_, err := h.build(t, fixtureConfig())
+	require.ErrorContains(t, err, "dicesvc: nil dependency")
+}
+
 // A spell effect whose id the catalogue does not hold refuses the start,
 // naming every such id, before anything is seeded or imported.
 func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {

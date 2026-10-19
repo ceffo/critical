@@ -155,6 +155,7 @@ func TestBuild_EveryServiceIsOnTheModuleList(t *testing.T) {
 
 	listed := map[domain.Service]bool{}
 	for _, svc := range composition.Services(bs) {
+		require.True(t, reflect.ValueOf(svc).Comparable(), "%s is not comparable", svc.Module().Name)
 		assert.False(t, listed[svc], "%s listed twice", svc.Module().Name)
 		listed[svc] = true
 	}

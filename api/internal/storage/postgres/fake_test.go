@@ -103,11 +103,16 @@ type spellRow struct {
 	Keys   [10]sql.NullInt64
 }
 
+// snapshotRow is an action_snapshots row: Before and After are the columns written before the
+// codec's envelopes (migration 019), BeforeEnv and AfterEnv the envelopes ("": NULL, not
+// re-encoded yet); CharacterID is its entry's character (action_log.character_id).
 type snapshotRow struct {
-	ID            int64
-	ActionID      int64
-	Key           string
-	Before, After string
+	ID                  int64
+	ActionID            int64
+	Key                 string
+	Before, After       string
+	BeforeEnv, AfterEnv string
+	CharacterID         int64
 }
 
 type logRow struct {
@@ -820,7 +825,7 @@ func (f *fakeStore) SnapshotsOf(_ context.Context, stateKey string) ([]storeq.Sn
 	out := []storeq.SnapshotsOfRow{}
 	for _, s := range f.t.Snapshots {
 		if s.Key == stateKey {
-			out = append(out, storeq.SnapshotsOfRow{ID: s.ID, BeforeState: s.Before, AfterState: s.After})
+			out = append(out, storeq.SnapshotsOfRow{ID: s.ID, BeforeEnvelope: s.BeforeEnv, AfterEnvelope: s.AfterEnv})
 		}
 	}
 	return out, nil
@@ -830,10 +835,31 @@ func (f *fakeStore) SnapshotsWithPrefix(_ context.Context, prefix string) ([]sto
 	out := []storeq.SnapshotsWithPrefixRow{}
 	for _, s := range f.t.Snapshots {
 		if strings.HasPrefix(s.Key, prefix) {
-			out = append(out, storeq.SnapshotsWithPrefixRow{ID: s.ID, BeforeState: s.Before, AfterState: s.After})
+			out = append(out, storeq.SnapshotsWithPrefixRow{ID: s.ID, BeforeEnvelope: s.BeforeEnv, AfterEnvelope: s.AfterEnv})
 		}
 	}
 	return out, nil
+}
+
+func (f *fakeStore) SnapshotsToReencode(context.Context) ([]storeq.SnapshotsToReencodeRow, error) {
+	out := []storeq.SnapshotsToReencodeRow{}
+	for _, s := range f.t.Snapshots {
+		if s.BeforeEnv == "" || s.AfterEnv == "" {
+			out = append(out, storeq.SnapshotsToReencodeRow{
+				ID: s.ID, CharacterID: s.CharacterID, StateKey: s.Key, BeforeState: s.Before, AfterState: s.After,
+			})
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeStore) SetSnapshotEnvelopes(_ context.Context, arg storeq.SetSnapshotEnvelopesParams) error {
+	for i := range f.t.Snapshots {
+		if f.t.Snapshots[i].ID == arg.ID {
+			f.t.Snapshots[i].BeforeEnv, f.t.Snapshots[i].AfterEnv = arg.BeforeEnvelope, arg.AfterEnvelope
+		}
+	}
+	return nil
 }
 
 func (f *fakeStore) LearnFailureRefs(context.Context) ([]storeq.LearnFailureRefsRow, error) {

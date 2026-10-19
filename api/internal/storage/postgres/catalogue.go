@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -423,7 +424,7 @@ const spellbookSnapshotPrefix = "spellbook:"
 
 // StateSpellRefs returns every spell id game state holds (ADR 0021 step 5.4.3): the spellbook
 // entries and the failed learns (spellbook_learn_failures) of every character, the spellId of the
-// "spellbook:<key>" snapshots and of spell_learn entries (ADR 0030 step 20), the prepared spells of spell_slots, the spell_id of the active buffs (ADR 0004 step 17), the slot and buff
+// "spellbook:<key>" snapshots (their envelope's id) and of spell_learn entries (ADR 0030 step 20), the prepared spells of spell_slots, the spell_id of the active buffs (ADR 0004 step 17), the slot and buff
 // lists in the before/after state of action_snapshots (undo and redo restore them), the spellId
 // of cast, exposure and buff entries in action_log and of the payloads of their corrections,
 // expiredSpellIds of round_advance and time_passed entries, and spells[].id of spell_prep
@@ -456,23 +457,21 @@ func StateSpellRefs(ctx context.Context, q storeq.Querier) ([]catalogue.Ref, err
 		add(r.SpellKey, fmt.Sprintf("spellbook_learn_failures of character %d", r.CharacterID))
 	}
 
-	// A spellbook snapshot names its spell in the state (learnsvc spellState) and in its key.
-	type bookState struct {
-		SpellID string `json:"spellId"`
-	}
+	// A spellbook snapshot names its spell in its envelope's id (learnsvc, the action log codec)
+	// and in its key.
 	bookSnaps, err := q.SnapshotsWithPrefix(ctx, spellbookSnapshotPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("scan references: %w", err)
 	}
 	for _, r := range bookSnaps {
 		where := fmt.Sprintf("action_snapshots %d", r.ID)
-		for _, c := range [][2]string{{"before_state", r.BeforeState}, {"after_state", r.AfterState}} {
+		for _, c := range [][2]string{{"before_envelope", r.BeforeEnvelope}, {"after_envelope", r.AfterEnvelope}} {
 			col, blob := c[0], c[1]
-			var st bookState
-			if err := decode(blob, &st); err != nil {
+			id, _, err := actionlog.DecodeEnvelope(json.RawMessage(blob))
+			if err != nil {
 				return nil, fmt.Errorf("action_snapshots %d %s: %w", r.ID, col, err)
 			}
-			add(st.SpellID, where)
+			add(id, where)
 		}
 	}
 
@@ -517,12 +516,20 @@ func StateSpellRefs(ctx context.Context, q storeq.Querier) ([]catalogue.Ref, err
 		if err != nil {
 			return nil, fmt.Errorf("scan references: %w", err)
 		}
-		for _, col := range []string{"before_state", "after_state"} {
+		for _, col := range []string{"before_envelope", "after_envelope"} {
 			for _, r := range snaps {
-				blob := r.BeforeState
-				if col == "after_state" {
-					blob = r.AfterState
+				envelope := r.BeforeEnvelope
+				if col == "after_envelope" {
+					envelope = r.AfterEnvelope
 				}
+				_, state, err := actionlog.DecodeEnvelope(json.RawMessage(envelope))
+				if err != nil {
+					return nil, fmt.Errorf("action_snapshots %d %s: %w", r.ID, col, err)
+				}
+				if state == nil {
+					continue
+				}
+				blob := string(state)
 				where := fmt.Sprintf("action_snapshots %d", r.ID)
 				if kind == "spell_slots" {
 					var slots []snapSlot

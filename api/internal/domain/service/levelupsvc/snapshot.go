@@ -8,13 +8,16 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
-// realized is the JSON encoding of the StateKey snapshot: the realized
-// level and the max HP that goes with it. Entries already in the log must
+// realized is the state of the StateKey snapshot (realizedSnaps): the
+// realized level and the max HP that goes with it. Entries already in the log must
 // stay decodable: add fields, never rename.
 type realized struct {
 	RealizedLevel int `json:"realizedLevel"`
 	HPMax         int `json:"hpMax"`
 }
+
+// realizedSnaps is the snapshotter of the realized level (ADR 0018 step 8).
+var realizedSnaps = actionlog.NewSnapshotter[realized](StateKey)
 
 // record is the payload of a level_up entry, the roll's breakdown in the
 // /api/character/levelup/roll wire names. The UI words it. Add fields, never
@@ -45,27 +48,17 @@ func (s *service) record(ctx context.Context, characterID int64, r Result, befor
 	if err != nil {
 		return fmt.Errorf("encode level_up payload: %w", err)
 	}
-	b, err := json.Marshal(before)
+	snap, err := realizedSnaps.Snapshot("", &before, &after)
 	if err != nil {
-		return fmt.Errorf("encode realized level snapshot: %w", err)
-	}
-	a, err := json.Marshal(after)
-	if err != nil {
-		return fmt.Errorf("encode realized level snapshot: %w", err)
+		return err
 	}
 	if _, err := s.log.Record(ctx, actionlog.NewEntry{
 		CharacterID: characterID, Kind: actionlog.KindLevelUp, Payload: payload,
-		Snapshots: []actionlog.Snapshot{{Key: StateKey, Before: b, After: a}},
+		Snapshots: []actionlog.Snapshot{snap},
 	}); err != nil {
 		return fmt.Errorf("record level_up: %w", err)
 	}
 	return nil
-}
-
-type restoreFunc func(ctx context.Context, characterID int64, state json.RawMessage) error
-
-func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
-	return f(ctx, characterID, state)
 }
 
 // Restorers writes a realized level snapshot back: the undo of a roll gives
@@ -74,11 +67,7 @@ func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.
 // 0019). It runs inside the undo's transaction.
 func (s *service) Restorers() map[string]actionlog.Restorer {
 	return map[string]actionlog.Restorer{
-		StateKey: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
-			var r realized
-			if err := json.Unmarshal(state, &r); err != nil {
-				return fmt.Errorf("decode realized level snapshot: %w", err)
-			}
+		StateKey: realizedSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, r realized) error {
 			if r.HPMax < 1 || r.RealizedLevel < 1 {
 				return fmt.Errorf("decode realized level snapshot: level %d with max HP %d", r.RealizedLevel, r.HPMax)
 			}
@@ -86,6 +75,6 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 				return fmt.Errorf("restore realized level: %w", err)
 			}
 			return nil
-		}),
+		}, nil),
 	}
 }

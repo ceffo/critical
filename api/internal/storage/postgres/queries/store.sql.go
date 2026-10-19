@@ -1052,6 +1052,22 @@ func (q *Queries) SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsI
 	return err
 }
 
+const setSnapshotEnvelopes = `-- name: SetSnapshotEnvelopes :exec
+UPDATE action_snapshots SET before_envelope = $1, after_envelope = $2
+WHERE id = $3
+`
+
+type SetSnapshotEnvelopesParams struct {
+	BeforeEnvelope string
+	AfterEnvelope  string
+	ID             int64
+}
+
+func (q *Queries) SetSnapshotEnvelopes(ctx context.Context, arg SetSnapshotEnvelopesParams) error {
+	_, err := q.db.ExecContext(ctx, setSnapshotEnvelopes, arg.BeforeEnvelope, arg.AfterEnvelope, arg.ID)
+	return err
+}
+
 const setSpellKey = `-- name: SetSpellKey :exec
 UPDATE spells SET key = $1 WHERE id = $2
 `
@@ -1081,13 +1097,13 @@ func (q *Queries) SetSpellStats(ctx context.Context, arg SetSpellStatsParams) er
 }
 
 const snapshotsOf = `-- name: SnapshotsOf :many
-SELECT id, before_state, after_state FROM action_snapshots WHERE state_key = $1 ORDER BY id
+SELECT id, before_envelope, after_envelope FROM action_snapshots WHERE state_key = $1 ORDER BY id
 `
 
 type SnapshotsOfRow struct {
-	ID          int64
-	BeforeState string
-	AfterState  string
+	ID             int64
+	BeforeEnvelope string
+	AfterEnvelope  string
 }
 
 func (q *Queries) SnapshotsOf(ctx context.Context, stateKey string) ([]SnapshotsOfRow, error) {
@@ -1099,7 +1115,53 @@ func (q *Queries) SnapshotsOf(ctx context.Context, stateKey string) ([]Snapshots
 	items := []SnapshotsOfRow{}
 	for rows.Next() {
 		var i SnapshotsOfRow
-		if err := rows.Scan(&i.ID, &i.BeforeState, &i.AfterState); err != nil {
+		if err := rows.Scan(&i.ID, &i.BeforeEnvelope, &i.AfterEnvelope); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const snapshotsToReencode = `-- name: SnapshotsToReencode :many
+SELECT s.id, a.character_id, s.state_key, s.before_state, s.after_state
+FROM action_snapshots s JOIN action_log a ON a.id = s.action_id
+WHERE s.before_envelope IS NULL OR s.after_envelope IS NULL
+ORDER BY s.id
+`
+
+type SnapshotsToReencodeRow struct {
+	ID          int64
+	CharacterID int64
+	StateKey    string
+	BeforeState string
+	AfterState  string
+}
+
+// The snapshots stored before the codec's envelopes (migration 019), with their character, for the
+// re-encoding (reencodeSnapshots, ADR 0018 step 9).
+func (q *Queries) SnapshotsToReencode(ctx context.Context) ([]SnapshotsToReencodeRow, error) {
+	rows, err := q.db.QueryContext(ctx, snapshotsToReencode)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SnapshotsToReencodeRow{}
+	for rows.Next() {
+		var i SnapshotsToReencodeRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CharacterID,
+			&i.StateKey,
+			&i.BeforeState,
+			&i.AfterState,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1114,14 +1176,14 @@ func (q *Queries) SnapshotsOf(ctx context.Context, stateKey string) ([]Snapshots
 }
 
 const snapshotsWithPrefix = `-- name: SnapshotsWithPrefix :many
-SELECT id, before_state, after_state FROM action_snapshots
+SELECT id, before_envelope, after_envelope FROM action_snapshots
 WHERE state_key LIKE $1::text || '%' ORDER BY id
 `
 
 type SnapshotsWithPrefixRow struct {
-	ID          int64
-	BeforeState string
-	AfterState  string
+	ID             int64
+	BeforeEnvelope string
+	AfterEnvelope  string
 }
 
 func (q *Queries) SnapshotsWithPrefix(ctx context.Context, prefix string) ([]SnapshotsWithPrefixRow, error) {
@@ -1133,7 +1195,7 @@ func (q *Queries) SnapshotsWithPrefix(ctx context.Context, prefix string) ([]Sna
 	items := []SnapshotsWithPrefixRow{}
 	for rows.Next() {
 		var i SnapshotsWithPrefixRow
-		if err := rows.Scan(&i.ID, &i.BeforeState, &i.AfterState); err != nil {
+		if err := rows.Scan(&i.ID, &i.BeforeEnvelope, &i.AfterEnvelope); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

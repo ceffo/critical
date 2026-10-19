@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	buffmocks "github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
@@ -556,8 +557,8 @@ func TestResolveAttack_RecordsAttackWithAmmoSnapshot(t *testing.T) {
 	assert.Empty(t, e.Summary, "the UI words the attack from its payload")
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, "items:arrows_plus3", e.Snapshots[0].Key)
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":2,"model":2}]`, string(e.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1,"model":2}]`, string(e.Snapshots[0].After))
+	assert.JSONEq(t, `{"count":2}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"count":1}`, snaptest.State(t, e.Snapshots[0].After))
 
 	var payload map[string]any
 	require.NoError(t, json.Unmarshal(e.Payload, &payload))

@@ -14,7 +14,7 @@ const (
 	StateKeyRound = "round"
 	// StateKeySavedBuffs is the whole saved-buff template list.
 	StateKeySavedBuffs = "saved_buffs"
-	// StateKeyInitiative is the round's initiative (ADR 0013), JSON null when
+	// StateKeyInitiative is the round's initiative (ADR 0013), absent when
 	// there is none.
 	StateKeyInitiative = "initiative"
 )

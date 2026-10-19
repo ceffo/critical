@@ -2,13 +2,13 @@ package buffsvc_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
@@ -169,7 +169,7 @@ func TestBuffs_Step17_SpellID(t *testing.T) {
 	t.Run("an entry recorded before the field restores no spell id", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, []buffsvc.BuffEffect{{ID: "o", Name: "Haste", Duration: 3}}).Return(nil).Once()
-		raw := json.RawMessage(`[{"id":"o","name":"Haste","charges":0,"duration":3,"effects":{}}]`)
+		raw := snaptest.Env(`[{"id":"o","name":"Haste","charges":0,"duration":3,"effects":{}}]`)
 		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyBuffs].Restore(ctx, charID, raw))
 	})
 }

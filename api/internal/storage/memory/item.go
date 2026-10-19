@@ -214,9 +214,3 @@ func (p Items) DeleteReviews(ctx context.Context, characterID int64, itemID stri
 		return nil
 	})
 }
-
-// RenamedID is itemID: the store starts empty, so no conversion renamed any
-// item (ADR 0033 step 26.3).
-func (p Items) RenamedID(_ context.Context, _ int64, itemID string) (string, error) {
-	return itemID, nil
-}

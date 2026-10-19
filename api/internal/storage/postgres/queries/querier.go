@@ -92,9 +92,13 @@ type Querier interface {
 	// The skill points of a character stored before bards entered them (migration 012): only while it
 	// has none, so a rerun changes nothing and points spent since are kept.
 	SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsIfUnsetParams) error
+	SetSnapshotEnvelopes(ctx context.Context, arg SetSnapshotEnvelopesParams) error
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error
 	SnapshotsOf(ctx context.Context, stateKey string) ([]SnapshotsOfRow, error)
+	// The snapshots stored before the codec's envelopes (migration 019), with their character, for the
+	// re-encoding (reencodeSnapshots, ADR 0018 step 9).
+	SnapshotsToReencode(ctx context.Context) ([]SnapshotsToReencodeRow, error)
 	SnapshotsWithPrefix(ctx context.Context, prefix string) ([]SnapshotsWithPrefixRow, error)
 	SpellCorrectionPayloads(ctx context.Context, kinds []string) ([]SpellCorrectionPayloadsRow, error)
 	SpellEntryPayloads(ctx context.Context, kinds []string) ([]SpellEntryPayloadsRow, error)

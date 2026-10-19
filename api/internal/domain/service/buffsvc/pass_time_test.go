@@ -12,6 +12,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
@@ -138,8 +139,8 @@ func TestPassTime(t *testing.T) {
 			assert.JSONEq(t, tt.wantPayload, string(e.Payload))
 			assert.Equal(t, []string{buffsvc.StateKeyBuffs, buffsvc.StateKeyRound}, snapKeys(e),
 				"void restores both the buffs and the round")
-			assert.JSONEq(t, jsonInt(tt.round), string(e.Snapshots[1].Before))
-			assert.JSONEq(t, `0`, string(e.Snapshots[1].After))
+			assert.JSONEq(t, jsonInt(tt.round), snaptest.State(t, e.Snapshots[1].Before))
+			assert.JSONEq(t, `0`, snaptest.State(t, e.Snapshots[1].After))
 			assert.Len(t, decodeSnap(t, e.Snapshots[0].Before), len(tt.start))
 
 			var p map[string]any

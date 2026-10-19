@@ -162,6 +162,18 @@ WHERE a.character_id = sqlc.arg(character_id)::bigint
 UPDATE attack_forms SET ammo_item_id = @new_id
 WHERE character_id = sqlc.arg(character_id)::bigint AND ammo_item_id = @old_id;
 
+-- The snapshots stored before the codec's envelopes (migration 019), with their character, for the
+-- re-encoding (reencodeSnapshots, ADR 0018 step 9).
+-- name: SnapshotsToReencode :many
+SELECT s.id, a.character_id, s.state_key, s.before_state, s.after_state
+FROM action_snapshots s JOIN action_log a ON a.id = s.action_id
+WHERE s.before_envelope IS NULL OR s.after_envelope IS NULL
+ORDER BY s.id;
+
+-- name: SetSnapshotEnvelopes :exec
+UPDATE action_snapshots SET before_envelope = @before_envelope, after_envelope = @after_envelope
+WHERE id = @id;
+
 -- name: InsertItemRename :exec
 INSERT INTO item_id_renames (character_id, old_id, new_id) VALUES (sqlc.arg(character_id)::bigint, @old_id, @new_id);
 
@@ -273,10 +285,10 @@ SELECT character_id, buffs FROM active_buffs ORDER BY character_id;
 SELECT character_id, spell_key FROM spellbook_entries ORDER BY character_id, position, spell_key;
 
 -- name: SnapshotsOf :many
-SELECT id, before_state, after_state FROM action_snapshots WHERE state_key = $1 ORDER BY id;
+SELECT id, before_envelope, after_envelope FROM action_snapshots WHERE state_key = $1 ORDER BY id;
 
 -- name: SnapshotsWithPrefix :many
-SELECT id, before_state, after_state FROM action_snapshots
+SELECT id, before_envelope, after_envelope FROM action_snapshots
 WHERE state_key LIKE sqlc.arg('prefix')::text || '%' ORDER BY id;
 
 -- name: LearnFailureRefs :many

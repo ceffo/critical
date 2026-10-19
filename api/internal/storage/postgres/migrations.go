@@ -98,7 +98,8 @@ func migrationDataSteps(seedsDir string, catalogue []ruletablesvc.Weapon) (befor
 	characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
 	weaponsPath := seedfile.Path(seedsDir, seedfile.WeaponsFile)
 	before = map[string]dataStep{
-		ownerKeysMigration: func(ctx context.Context, q storeq.Querier) error { return ownRows(ctx, q, characterPath) },
+		ownerKeysMigration:         func(ctx context.Context, q storeq.Querier) error { return ownRows(ctx, q, characterPath) },
+		snapshotEnvelopesMigration: reencodeSnapshots,
 	}
 	after = map[string]dataStep{
 		weaponTypeMigration: func(ctx context.Context, q storeq.Querier) error { return typeSeedWeapons(ctx, q, weaponsPath) },

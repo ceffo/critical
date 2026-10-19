@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
@@ -54,8 +55,8 @@ func TestAdd(t *testing.T) {
 			}
 			assert.Equal(t, tt.want, ids)
 			assert.Equal(t, buffsvc.StateKeyBuffs, snap.Key)
-			assert.Contains(t, string(snap.Before), `"id":"h1"`)
-			assert.Contains(t, string(snap.After), `"id":"`+tt.add.ID+`"`)
+			assert.Contains(t, snaptest.State(t, snap.Before), `"id":"h1"`)
+			assert.Contains(t, snaptest.State(t, snap.After), `"id":"`+tt.add.ID+`"`)
 			assert.Equal(t, 0, f.tx.calls, "runs in the caller's transaction")
 			f.log.AssertNotCalled(t, "Record", mock.Anything, mock.Anything)
 		})

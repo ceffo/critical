@@ -2,7 +2,6 @@ package buffsvc_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
@@ -68,15 +68,15 @@ func TestInitiative_Step2_OwnEntryAfterTheAdvance(t *testing.T) {
 	advance, initiative := f.entries[0], f.entries[1]
 	assert.Equal(t, actionlog.KindRoundAdvance, advance.Kind)
 	assert.Equal(t, []string{buffsvc.StateKeyBuffs, buffsvc.StateKeyRound, buffsvc.StateKeyInitiative}, snapKeys(advance))
-	assert.JSONEq(t, `{"d10":3,"entryId":40}`, string(advance.Snapshots[2].Before))
-	assert.JSONEq(t, `null`, string(advance.Snapshots[2].After))
+	assert.JSONEq(t, `{"d10":3,"entryId":40}`, snaptest.State(t, advance.Snapshots[2].Before))
+	assert.True(t, snaptest.IsAbsent(t, advance.Snapshots[2].After))
 
 	assert.Equal(t, actionlog.KindInitiative, initiative.Kind)
 	assert.Equal(t, 6, initiative.Round, "stamped with the round it is rolled for")
 	assert.Empty(t, initiative.Summary, "no display text: the UI words the payload")
 	assert.Equal(t, []string{buffsvc.StateKeyInitiative}, snapKeys(initiative))
-	assert.JSONEq(t, `null`, string(initiative.Snapshots[0].Before), "voiding it leaves the new round without one")
-	assert.JSONEq(t, `{"d10":8}`, string(initiative.Snapshots[0].After))
+	assert.True(t, snaptest.IsAbsent(t, initiative.Snapshots[0].Before), "voiding it leaves the new round without one")
+	assert.JSONEq(t, `{"d10":8}`, snaptest.State(t, initiative.Snapshots[0].After))
 
 	assert.Equal(t, []string{"record", "save buffs", "save round", "save initiative", "record", "save initiative"}, f.calls)
 	assert.Equal(t, []*buffsvc.Initiative{nil, {D10: 8, LogEntryID: 2}}, f.initiatives)
@@ -133,8 +133,8 @@ func TestInitiative_Step4_RerollReplacesTheNewestInitiative(t *testing.T) {
 		require.Len(t, f.entries[0].Snapshots, 1)
 		snap := f.entries[0].Snapshots[0]
 		assert.Equal(t, buffsvc.StateKeyInitiative, snap.Key)
-		assert.JSONEq(t, `{"d10":4,"entryId":12}`, string(snap.Before), "undo gives the replaced roll back")
-		assert.JSONEq(t, `{"d10":9}`, string(snap.After))
+		assert.JSONEq(t, `{"d10":4,"entryId":12}`, snaptest.State(t, snap.Before), "undo gives the replaced roll back")
+		assert.JSONEq(t, `{"d10":9}`, snaptest.State(t, snap.After))
 		assert.Equal(t, 1, f.tx.calls)
 	})
 
@@ -212,8 +212,8 @@ func TestInitiative_Step5_NoneOutOfCombat(t *testing.T) {
 			snaps := f.entries[0].Snapshots
 			last := snaps[len(snaps)-1]
 			assert.Equal(t, buffsvc.StateKeyInitiative, last.Key)
-			assert.JSONEq(t, `{"d10":4,"entryId":12}`, string(last.Before))
-			assert.JSONEq(t, `null`, string(last.After))
+			assert.JSONEq(t, `{"d10":4,"entryId":12}`, snaptest.State(t, last.Before))
+			assert.True(t, snaptest.IsAbsent(t, last.After))
 		})
 	}
 
@@ -241,7 +241,7 @@ func TestInitiative_Step5_NoneOutOfCombat(t *testing.T) {
 	t.Run("voiding the move writes the initiative back", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveInitiative(mock.Anything, charID, current).Return(nil).Once()
-		err := f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, json.RawMessage(`{"d10":4,"entryId":12}`))
+		err := f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, snaptest.Env(`{"d10":4,"entryId":12}`))
 		require.NoError(t, err)
 	})
 }
@@ -251,12 +251,12 @@ func TestInitiativeRestorer(t *testing.T) {
 	t.Run("null clears it", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveInitiative(mock.Anything, charID, (*buffsvc.Initiative)(nil)).Return(nil).Once()
-		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, json.RawMessage(`null`)))
+		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, snaptest.Absent("")))
 	})
 	for _, bad := range []string{`{"d10":0}`, `{"d10":11}`, `"seven"`} {
 		t.Run("rejects "+bad, func(t *testing.T) {
 			f := newFixture(t) // nothing is written
-			assert.Error(t, f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, json.RawMessage(bad)))
+			assert.Error(t, f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, snaptest.Env(bad)))
 		})
 	}
 	// ADR 0019 step 1: the "after" of the entry that rolled the initiative
@@ -267,10 +267,10 @@ func TestInitiativeRestorer(t *testing.T) {
 		replayer, ok := f.svc.Restorers()[buffsvc.StateKeyInitiative].(actionlog.Replayer)
 		require.True(t, ok, "the initiative restorer replays with the entry id")
 		f.dal.EXPECT().SaveInitiative(mock.Anything, charID, &buffsvc.Initiative{D10: 8, LogEntryID: 21}).Return(nil).Once()
-		require.NoError(t, replayer.Replay(ctx, charID, 21, json.RawMessage(`{"d10":8}`)))
+		require.NoError(t, replayer.Replay(ctx, charID, 21, snaptest.Env(`{"d10":8}`)))
 		f.dal.EXPECT().SaveInitiative(mock.Anything, charID, (*buffsvc.Initiative)(nil)).Return(nil).Once()
-		require.NoError(t, replayer.Replay(ctx, charID, 21, json.RawMessage(`null`)), "an after with no initiative clears it")
-		assert.Error(t, replayer.Replay(ctx, charID, 21, json.RawMessage(`{"d10":11}`)))
+		require.NoError(t, replayer.Replay(ctx, charID, 21, snaptest.Absent("")), "an after with no initiative clears it")
+		assert.Error(t, replayer.Replay(ctx, charID, 21, snaptest.Env(`{"d10":11}`)))
 	})
 }
 

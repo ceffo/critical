@@ -62,7 +62,7 @@ func (d *DAL) InsertEntry(ctx context.Context, e actionlog.NewEntry, transaction
 	}
 	for _, s := range e.Snapshots {
 		err := d.q.InsertSnapshot(ctx, queries.InsertSnapshotParams{
-			ActionID: id, StateKey: s.Key, BeforeState: string(s.Before), AfterState: string(s.After),
+			ActionID: id, StateKey: s.Key, BeforeEnvelope: string(s.Before), AfterEnvelope: string(s.After),
 		})
 		if err != nil {
 			return 0, fmt.Errorf("insert action_snapshots %s: %w", s.Key, err)
@@ -280,7 +280,7 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 	for _, s := range snaps {
 		if e, ok := byID[s.ActionID]; ok {
 			e.Snapshots = append(e.Snapshots, actionlog.Snapshot{
-				Key: s.StateKey, Before: json.RawMessage(s.BeforeState), After: json.RawMessage(s.AfterState),
+				Key: s.StateKey, Before: json.RawMessage(s.BeforeEnvelope), After: json.RawMessage(s.AfterEnvelope),
 			})
 		}
 	}

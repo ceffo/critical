@@ -3,11 +3,3 @@
 //   sqlc v1.31.1
 
 package queries
-
-type ActionSnapshot struct {
-	ID          int64
-	ActionID    int64
-	StateKey    string
-	BeforeState string
-	AfterState  string
-}

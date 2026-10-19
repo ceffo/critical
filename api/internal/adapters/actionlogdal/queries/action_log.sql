@@ -12,7 +12,7 @@ UPDATE action_log SET transaction_id = id
 WHERE id = $1;
 
 -- name: InsertSnapshot :exec
-INSERT INTO action_snapshots (action_id, state_key, before_state, after_state)
+INSERT INTO action_snapshots (action_id, state_key, before_envelope, after_envelope)
 VALUES ($1, $2, $3, $4);
 
 -- name: InsertCorrection :exec
@@ -67,7 +67,7 @@ ORDER BY action_corrections.id;
 
 -- name: ListSnapshotsFrom :many
 SELECT action_snapshots.id, action_snapshots.action_id, action_snapshots.state_key,
-       action_snapshots.before_state, action_snapshots.after_state
+       action_snapshots.before_envelope, action_snapshots.after_envelope
 FROM action_snapshots
 JOIN action_log ON action_log.id = action_snapshots.action_id
 WHERE action_log.character_id = $1 AND action_snapshots.action_id >= $2

@@ -198,6 +198,7 @@ func TestMigrationDataSteps_NameEmbeddedMigrations(t *testing.T) {
 	}
 	before, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
 	require.Contains(t, before, ownerKeysMigration)
+	require.Contains(t, before, snapshotEnvelopesMigration)
 	require.Contains(t, after, weaponTypeMigration)
 	require.Contains(t, after, raceMigration)
 	for _, steps := range []map[string]dataStep{before, after} {

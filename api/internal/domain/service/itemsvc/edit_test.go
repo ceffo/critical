@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
@@ -101,10 +102,11 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	assert.False(t, actionlog.IsRoll(got.Kind))
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "items:arrows_3_3", got.Snapshots[0].Key)
-	assert.JSONEq(t, `[{"id":"arrows_3_3","count":0,"removed":true,"absent":true,"model":2}]`, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"arrows_3_3","count":6,"replace":true,"model":2,"item":{"position":8,"name":{"en":"Arrows +3"},"type":"",
+	assert.Equal(t, snaptest.Absent("arrows_3_3"), got.Snapshots[0].Before)
+	assert.Equal(t, "arrows_3_3", snaptest.ID(t, got.Snapshots[0].After))
+	assert.JSONEq(t, `{"count":6,"replace":true,"item":{"position":8,"name":{"en":"Arrows +3"},"type":"",
 		"behaviour":"stock","magicalBonus":3,"ammoKind":"arrow","maxCount":6,"effectDice":"","effectSave":"","notes":"","powers":[],
-		"piece":{"category":"ammunition","state":"carried"}}}]`, string(got.Snapshots[0].After))
+		"piece":{"category":"ammunition","state":"carried"}}}`, snaptest.State(t, got.Snapshots[0].After))
 	var p map[string]any
 	require.NoError(t, json.Unmarshal(got.Payload, &p))
 	assert.Equal(t, "Arrows +3", p["name"])
@@ -136,10 +138,10 @@ func TestUpdate_ChangesOneFieldAndLogsBeforeAfter(t *testing.T) {
 	assert.Equal(t, actionlog.KindItemEdit, got.Kind)
 	assert.Empty(t, got.Summary, "the UI words the change from its payload")
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":4,"replace":true,"model":2,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
+	assert.JSONEq(t, `{"count":4,"replace":true,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
 		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[],
-		"piece":{"category":"magic","magicKind":"wand","state":"carried"}}}]`,
-		string(got.Snapshots[0].Before))
+		"piece":{"category":"magic","magicKind":"wand","state":"carried"}}}`,
+		snaptest.State(t, got.Snapshots[0].Before))
 	assert.Contains(t, string(got.Snapshots[0].After), `"count":3`)
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
 }
@@ -245,7 +247,7 @@ func TestDelete_RemovesAndLogsWholeItem(t *testing.T) {
 	assert.Equal(t, actionlog.KindItemRemove, got.Kind)
 	assert.Contains(t, string(got.Snapshots[0].Before), `"replace":true`)
 	assert.Contains(t, string(got.Snapshots[0].Before), `"count":4`)
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true,"absent":true,"model":2}]`, string(got.Snapshots[0].After))
+	assert.Equal(t, snaptest.Absent("wand_lightning"), got.Snapshots[0].After)
 }
 
 // Restoring: an item added by hand is deleted, an edited one overwritten
@@ -253,49 +255,39 @@ func TestDelete_RemovesAndLogsWholeItem(t *testing.T) {
 // (no "powers" key): the item keeps the powers it has now. They predate the
 // equipment model too (ADR 0033 step 26.2): the piece keeps its category and
 // state, and one that is gone comes back converted (a wand is a magic wand,
-// carried). Their id is read through the conversion's renames (step 26.3).
+// carried). Their name predates localized names (namePartial). The envelope's
+// id names the item, which the re-encoding read through the conversion's
+// renames (step 26.3).
 func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 	restore := func(dal *mocks.MockDAL, before json.RawMessage) error {
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
 		return svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, before)
 	}
-	renamed := func(dal *mocks.MockDAL, id string) {
-		dal.EXPECT().RenamedID(mock.Anything, int64(1), id).Return(id, nil).Once()
-	}
 	t.Run("create", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		renamed(dal, "new")
 		dal.EXPECT().Delete(mock.Anything, int64(1), "new").Return(nil).Once()
-		require.NoError(t, restore(dal, json.RawMessage(`[{"id":"new","count":0,"removed":true,"absent":true}]`)))
+		require.NoError(t, restore(dal, snaptest.Absent("new")))
 	})
-	before := json.RawMessage(`[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Wand of lightning","type":"wand",
-		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}]`)
+	before := snaptest.EnvID("wand_lightning", `{"count":4,"replace":true,"item":{"position":4,"name":{"en":"Wand of lightning"},"namePartial":true,"type":"wand",
+		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}`)
 	t.Run("edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		renamed(dal, "wand_lightning")
 		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil).Once()
 		dal.EXPECT().Update(mock.Anything, int64(1), wand4).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
 	})
 	t.Run("delete", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		renamed(dal, "wand_lightning")
 		back := wand4
 		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
 		dal.EXPECT().Update(mock.Anything, int64(1), back).Return(itemsvc.ErrItemNotFound).Once()
 		dal.EXPECT().Insert(mock.Anything, int64(1), back).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
 	})
-	t.Run("renamed by the conversion", func(t *testing.T) {
+	t.Run("renamed by the conversion: the envelope's id", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().RenamedID(mock.Anything, int64(1), "dagger").Return("dagger_2", nil).Once()
 		dal.EXPECT().SetCount(mock.Anything, int64(1), "dagger_2", 3).Return(nil).Once()
-		require.NoError(t, restore(dal, json.RawMessage(`[{"id":"dagger","count":3}]`)))
-	})
-	t.Run("a snapshot of the model is not renamed", func(t *testing.T) {
-		dal := mocks.NewMockDAL(t) // no RenamedID
-		dal.EXPECT().SetCount(mock.Anything, int64(1), "dagger", 3).Return(nil).Once()
-		require.NoError(t, restore(dal, json.RawMessage(`[{"id":"dagger","count":3,"model":2}]`)))
+		require.NoError(t, restore(dal, snaptest.EnvID("dagger_2", `{"count":3}`)))
 	})
 }
 

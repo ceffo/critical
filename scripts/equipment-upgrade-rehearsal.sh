@@ -114,13 +114,24 @@ redo_kind() { call GET /api/log | jq -r '.redo.kind // empty'; }
 undo() { call POST /api/log/undo "{\"expectedTopId\":$(call GET /api/log | jq .topId)}" | jq -r .kind; }
 redo() { call POST /api/log/redo "{\"expectedRedoId\":$(call GET /api/log | jq .redo.id)}" | jq -r .kind; }
 
+# hit_attack: a bow attack that hit. A miss rolls no damage (damageDice and damageTerms come back empty), so
+# a single d20 would make the old/new comparison of the dice fail one run in ten; roll again until one hits.
+hit_attack() {
+    local out
+    for _ in $(seq 1 30); do
+        out="$(call POST /api/roll/attack '{"weapon_id":"shortbow","ammo_item_id":"arrows_plus1","target_ac":5}')"
+        [ "$(jq -r .hit <<<"$out")" = true ] && { printf '%s' "$out"; return; }
+    done
+    fail "thirty bow attacks in a row missed AC 5"
+}
+
 # --- 1. the old release writes a player's data ---
 start "$work/old-srv" "$work/old/api/testdata"
 call POST /api/items '{"name":{"en":"Dagger"},"type":"knife","behaviour":"stock","count":2}' >/dev/null
 call POST /api/items '{"name":{"en":"Arrows"},"type":"arrows","behaviour":"stock","count":12,"ammoKind":"arrows"}' >/dev/null
 call POST /api/items '{"name":{"en":"Ruby"},"type":"gem","behaviour":"stock","count":2}' >/dev/null
 call PATCH /api/attack/form '{"weaponId":"shortbow","ammoItemId":"arrows_plus1","targetAc":5}' >/dev/null
-old_attack="$(call POST /api/roll/attack '{"weapon_id":"shortbow","ammo_item_id":"arrows_plus1","target_ac":5}')"
+old_attack="$(hit_attack)"
 call PATCH /api/weapons/longsword '{"magic_to_hit":3}' >/dev/null
 call POST /api/items/dagger/use '' >/dev/null
 call DELETE /api/items/fire_flask '' >/dev/null
@@ -187,7 +198,7 @@ done
 # --- 5. the converted bow and arrows attack as before; the stored form keeps the bow ---
 expect "the stored form still holds the bow" shortbow "$(call GET /api/attack/form | jq -r .form.weaponId)"
 expect "the bow is wielded" wielded "$(piece shortbow .state)"
-new_attack="$(call POST /api/roll/attack '{"weapon_id":"shortbow","ammo_item_id":"arrows_plus1","target_ac":5}')"
+new_attack="$(hit_attack)"
 # targetACNeeded and the rolls follow the d20: the comparison is of what the rules derive.
 same='{baseThac0, effectiveThac0, damageDice, modifiers: [.modifiers[] | {kind, value}],
        damageTerms: [.damageTerms[] | {kind, value}], weaponId, ammo: .ammo.itemId}'

@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -128,4 +130,38 @@ func TestSeed_Step26_SeedsTheConvertedEquipment(t *testing.T) {
 		rowKey(owner, "bastard_sword") + "|weapon_unmatched": true,
 		rowKey(owner, "mace") + "|weapon_unmatched":          true,
 	}, f.t.Reviews)
+}
+
+// ADR 0033 step 26.4 (amended): a weapon no type matches is matched by its stored
+// name, read from its text key: "Bastard Sword +2" finds "Bastard sword, two-handed" by the flag,
+// while "Mace +1" has no one row and stays on the review list. The weapon keeps its own name.
+func TestConvertEquipment_Step26_4_MatchedByTheStoredName(t *testing.T) {
+	f, owner := legacyCharacter(t)
+	ctx := context.Background()
+	key, err := addSeedText(ctx, f, localized.Text{"en": "Bastard Sword +2", "fr": "Épée bâtarde +2"})
+	require.NoError(t, err)
+	require.NoError(t, f.addWeapon(weaponRow{
+		CharacterID: owner, ID: "bastard_sword", Position: 3, Name: key, DamageSm: "2d4", DamageL: "2d8",
+		MagicToHit: 2, MagicDamage: 2, Kind: "melee", TwoHanded: 1, WeaponType: "other_melee",
+	}))
+	rows := append(slices.Clone(catalogueWeapons),
+		ruletablesvc.Weapon{
+			Code: "bastard_sword_one_handed", WeaponType: "other_melee", Kind: "melee", Size: "m", Types: []string{"s"}, Speed: 6,
+			Name: localized.Text{"en": "Bastard sword, one-handed"},
+		},
+		ruletablesvc.Weapon{
+			Code: "bastard_sword_two_handed", WeaponType: "other_melee", Kind: "melee", Size: "m", Types: []string{"s"}, Speed: 8,
+			TwoHanded: true, Name: localized.Text{"en": "Bastard sword, two-handed"},
+		},
+		ruletablesvc.Weapon{Code: "footmans_mace", WeaponType: "other_melee", Kind: "melee", Speed: 7, Name: localized.Text{"en": "Footman's mace"}})
+	_, after := migrationDataSteps(repoSeeds(), rows)
+	require.NoError(t, f.InTx(ctx, func(ctx context.Context) error { return after[equipmentMigration](ctx, f) }))
+
+	sword := f.t.Items[rowKey(owner, "bastard_sword")]
+	assert.Equal(t, []any{"bastard_sword_two_handed", int64(8), "m"}, []any{sword.CatalogueCode, sword.Speed, sword.Size})
+	assert.Equal(t, "Bastard Sword +2", f.t.Texts[sword.Name]["en"], "its own name stays")
+	assert.Equal(t, int64(2), sword.MagicToHit, "its own bonus stays")
+	assert.Empty(t, f.t.Items[rowKey(owner, "mace")].CatalogueCode, "the mace is no row's name")
+	assert.True(t, f.t.Reviews[fmt.Sprintf("%d|mace|weapon_unmatched", owner)], "the mace stays on the review list")
+	assert.False(t, f.t.Reviews[fmt.Sprintf("%d|bastard_sword|weapon_unmatched", owner)], "the sword is matched")
 }

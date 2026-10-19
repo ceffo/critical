@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
@@ -61,8 +62,16 @@ func convertCharacter(ctx context.Context, q storeq.Querier, owner int64, catalo
 	weapons := make([]itemsvc.LegacyWeapon, 0, len(weaponRows))
 	for _, r := range weaponRows {
 		weaponKeys[r.ID] = r.Name
+		texts, err := q.TextLanguages(ctx, r.Name)
+		if err != nil {
+			return fmt.Errorf("weapon %s: name: %w", r.ID, err)
+		}
+		name := localized.Text{}
+		for _, t := range texts {
+			name[t.Lang] = t.Body
+		}
 		weapons = append(weapons, itemsvc.LegacyWeapon{
-			ID: r.ID, Position: int(r.Position), DamageSM: r.DamageSm, DamageL: r.DamageL,
+			ID: r.ID, Position: int(r.Position), Name: name, DamageSM: r.DamageSm, DamageL: r.DamageL,
 			MagicToHit: int(r.MagicToHit), MagicDamage: int(r.MagicDamage), Kind: r.Kind, TwoHanded: r.TwoHanded == 1,
 			AmmoKind: r.AmmoKind, Type: r.WeaponType, Specialized: r.Specialized == 1,
 		})

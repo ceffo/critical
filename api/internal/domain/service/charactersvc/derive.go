@@ -195,8 +195,8 @@ func levelUp(c *Character, realized, target int, rules Rules) (LevelUp, error) {
 
 // core are the values steps 5 and 6 derive from the class at a level.
 type core struct {
-	level, thac0 int
-	saves        Saves
+	thac0 int
+	saves Saves
 }
 
 // levelAt is step 3: the class's experience table at xp.
@@ -223,7 +223,7 @@ func coreAt(c *Character, level int, rules Rules) (core, error) {
 	if err != nil {
 		return core{}, fmt.Errorf("derive %s saves: %w", c.Class, err)
 	}
-	return core{level: level, thac0: thac0, saves: Saves{
+	return core{thac0: thac0, saves: Saves{
 		ParaPoison: row.ParaPoison, RodStaffWand: row.RodStaffWand, PetriPoly: row.PetriPoly,
 		Breath: row.Breath, Spell: row.Spell,
 	}}, nil

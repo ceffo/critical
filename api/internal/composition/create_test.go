@@ -1,7 +1,7 @@
 package composition_test
 
 // Creating, switching and retiring characters end to end over the in-memory
-// storage (ADR 0029 steps 7.2 and 7.3, ADR 0030 steps 1, 21 and 24): the
+// storage (ADR 0029 steps 7.2 and 7.3, ADR 0030 steps 1 and 21): the
 // router, the real services and the fixture's rule tables.
 
 import (

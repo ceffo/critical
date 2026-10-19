@@ -257,8 +257,8 @@ func validExceptional(n NewCharacter) error {
 }
 
 // Create validates n, derives its level, THAC0 and saves at the starting XP
-// and stores them as the sheet's figures (ADR 0030 step 24: a character
-// created in the app states no sheet, so it shows no difference), with its
+// and stores them as the sheet's figures (a character created in the
+// app states the rules' own figures), with its
 // realized level and max HP at that level (step 7.5: no level-up is pending), then makes
 // it current, in one transaction and outside the action log (creating a
 // character is no move of the game and is not undone). This server forgets
@@ -286,8 +286,7 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 }
 
 // started gives a new character the sheet and the realized level it is
-// stored with: its sheet states the rules' own figures (so it shows no
-// difference, ADR 0030 step 24) and, step 7.5, the max HP entered is the max
+// stored with: its sheet states the rules' own figures and, step 7.5, the max HP entered is the max
 // HP at the target level, the level the character starts realized at.
 func started(c *Character, rules Rules) error {
 	d, err := Derive(c, 0, rules)

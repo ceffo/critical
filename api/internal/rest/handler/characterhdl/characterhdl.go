@@ -226,8 +226,8 @@ type SlotCountDTO struct {
 	Count int `json:"count"`
 }
 
-// DerivedDTO is the values the rules derive (ADR 0030 steps 3 to 8, 22.1 and
-// 24). `xpTotal` is the starting XP plus the ledger, `targetLevel` the level
+// DerivedDTO is the values the rules derive (ADR 0030 steps 3 to 8, and 22.1).
+// `xpTotal` is the starting XP plus the ledger, `targetLevel` the level
 // it gives (step 3, never stored), `realizedLevel` the level taken (step 7),
 // which THAC0, saves and slots follow, `nextLevelXp` (the target's next
 // level) null at the last level, `raceSaveBonus` the race's bonus per category (0: none), the

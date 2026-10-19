@@ -37,8 +37,7 @@ func derivedOf(t *testing.T, bs *composition.BackingServices, id int64) (charact
 // (the XP ledger's level, the pending level-ups): the THAC0, saves and slots
 // stay level 15's until the level-up step takes 16 and 17, then they are
 // level 17's (Table 53: 12; Table 60, rogues 17-20; Table 32) for every
-// reader. Undoing the two rolls and the award brings them all back. The sheet
-// comparison (step 24) stays empty: it reads the sheet's own XP.
+// reader. Undoing the two rolls and the award brings them all back.
 func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())

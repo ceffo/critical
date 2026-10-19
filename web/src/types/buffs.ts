@@ -14,6 +14,7 @@ export const BUFF_EFFECT_KEYS = [
   "base_ac",
   "to_hit",
   "damage",
+  "initiative",
 ] as const;
 
 export type BuffEffectKey = (typeof BUFF_EFFECT_KEYS)[number];
@@ -112,8 +113,36 @@ export interface Strength {
  * The round's initiative (ADR 0013): the plain d10, lowest acts first, and the log entry that
  * rolled it. Null out of combat.
  */
+/** What an initiative modifier comes from (ADR 0035 item 6). */
+export type InitiativeSource = "weapon" | "effect" | "spell" | "item";
+
+/** How a spell's casting time counted: absent, its segments; a round or more; special (adds 0). */
+export type CastTiming = "end_of_round" | "special";
+
+/**
+ * One term of the initiative, named by its source: the weapon in hand's speed, an initiative effect
+ * (a buff, `spellId` its spell, or an item power, `itemId` its piece), or the spell cast or item
+ * used that corrected the round. `name` is the name recorded with it (the fallback label).
+ */
+export interface InitiativeModifier {
+  source: InitiativeSource;
+  value: number;
+  itemId?: string;
+  name?: string;
+  spellId?: string;
+  magicKind?: string;
+  timing?: CastTiming;
+}
+
+/**
+ * The round's initiative (ADR 0035 item 6): `value` the total, the lowest acts first; the d10 and
+ * the modifiers are its breakdown; `endOfRound` when a spell cast that round takes a round or more.
+ */
 export interface Initiative {
   value: number;
+  d10: number;
+  modifiers: InitiativeModifier[];
+  endOfRound: boolean;
   logEntryId: number;
 }
 

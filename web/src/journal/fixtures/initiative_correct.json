@@ -1,0 +1,78 @@
+{
+  "spell": {
+    "payload": {
+      "round": 2,
+      "d10": 3,
+      "before": 8,
+      "after": 4,
+      "modifiers": [
+        {
+          "source": "spell",
+          "value": 1,
+          "name": "Magic Missile",
+          "spellId": "magic_missile"
+        }
+      ],
+      "cause": {
+        "source": "spell",
+        "value": 1,
+        "name": "Magic Missile",
+        "spellId": "magic_missile"
+      }
+    }
+  },
+  "endOfRound": {
+    "payload": {
+      "round": 2,
+      "d10": 3,
+      "before": 8,
+      "after": 1,
+      "modifiers": [
+        {
+          "source": "spell",
+          "value": 0,
+          "name": "Fly",
+          "spellId": "fly",
+          "timing": "end_of_round"
+        },
+        {
+          "source": "effect",
+          "value": -2,
+          "name": "Haste",
+          "spellId": "haste"
+        }
+      ],
+      "cause": {
+        "source": "spell",
+        "value": 0,
+        "name": "Fly",
+        "spellId": "fly",
+        "timing": "end_of_round"
+      }
+    }
+  },
+  "item": {
+    "payload": {
+      "round": 4,
+      "d10": 6,
+      "before": 6,
+      "after": 9,
+      "modifiers": [
+        {
+          "source": "item",
+          "value": 3,
+          "itemId": "wand_lightning",
+          "name": "Wand of lightning",
+          "magicKind": "wand"
+        }
+      ],
+      "cause": {
+        "source": "item",
+        "value": 3,
+        "itemId": "wand_lightning",
+        "name": "Wand of lightning",
+        "magicKind": "wand"
+      }
+    }
+  }
+}

@@ -161,6 +161,19 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Initiative",
     fr: "Initiative",
   },
+  initiative_correct: {
+    e: entry("initiative_correct", {
+      round: 2,
+      d10: 3,
+      before: 8,
+      after: 4,
+      modifiers: [{ source: "spell", value: 1, spellId: "magic_missile" }],
+      cause: { source: "spell", value: 1, spellId: "magic_missile" },
+    }),
+    value: "4",
+    en: "Initiative",
+    fr: "Initiative",
+  },
   buff_change: {
     e: entry("buff_change", null),
     value: null,

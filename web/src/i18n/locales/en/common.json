@@ -157,7 +157,7 @@
     "initiative": "Initiative",
     "initiativeNone": "Not rolled",
     "outOfCombatInitiative": "Out of combat · initiative will be rolled",
-    "initiativeHint": "1d10, the lowest acts first",
+    "initiativeHint": "1d10 plus its modifiers, the lowest acts first",
     "initiativeReroll": "Reroll initiative",
     "passTime": "Time passes…",
     "setRound": "Set round number…",
@@ -176,6 +176,15 @@
     "passTimePlaceholder": "1.5",
     "passTimeEnding": "Ends: {{names}}",
     "passTimeNothingEnds": "No effect ends"
+  },
+  "initiative": {
+    "die": "d10 {{value}}",
+    "term": "{{name}} {{value}}",
+    "endOfRoundTerm": "{{name}}: end of round",
+    "specialTerm": "{{name}}: special casting time",
+    "total": "= {{value}}, the lowest acts first",
+    "endOfRound": "end of round",
+    "breakdown": "Initiative breakdown"
   },
   "effects": {
     "title": "Effects",
@@ -231,7 +240,8 @@
       "ac": "AC ±N",
       "to_hit": "To hit +N",
       "damage": "Damage +N",
-      "base_ac": "Base AC N"
+      "base_ac": "Base AC N",
+      "initiative": "Initiative ±N"
     },
     "activate": "Activate",
     "save": "Save",
@@ -1218,6 +1228,7 @@
       "weapon_edit": "Weapon",
       "weapon_remove": "Weapon",
       "initiative": "Initiative",
+      "initiative_correct": "Initiative",
       "item_add": "Item",
       "item_edit": "Item",
       "item_remove": "Item",
@@ -1339,6 +1350,8 @@
       }
     },
     "initiative": "Initiative {{value}} (d10) for round {{round}}",
+    "initiativeWith": "Initiative {{value}} for round {{round}} ({{breakdown}})",
+    "initiativeCorrect": "Round {{round}} initiative corrected: {{before}} → {{after}} ({{cause}})",
     "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled",
     "prep": "Prepared: {{spells}}",
     "prepNone": "Prepared no spells",

@@ -141,10 +141,6 @@ func ConvertWithHistory(items []Item, weapons []LegacyWeapon, catalogue []ruleta
 	return out
 }
 
-func weaponHas(weapons []LegacyWeapon, id string) bool {
-	return slices.ContainsFunc(weapons, func(w LegacyWeapon) bool { return w.ID == id })
-}
-
 func reviews(id string, reasons []string) []Review {
 	out := make([]Review, 0, len(reasons))
 	for _, r := range reasons {

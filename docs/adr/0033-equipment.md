@@ -511,7 +511,18 @@ worn). The class warning of a thief in armour it may not wear is step 20's (CRI-
 `TestSeed_Step14_TheSeedBardWearsTheArmourItEntered` (storage/memory),
 `TestThief_Step14_TheSkillsFollowTheWornArmour`, `TestBard_Step14_MetalArmourReadsTheBardsColumn`,
 `TestCharacters_Step14_SkillArmourIsNoEntry`, `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages`
-(composition).
+(composition). Upgrade rehearsal: `just skill-armour-rehearsal` (`scripts/skill-armour-rehearsal.sh`:
+a database written by the release before, every entered value and the bard's `metal`, a piece already
+worn, a carried piece, every skill percentage compared, restarts, the old entries popped).
+
+_Step 14 carry-over, accepted upgrade gap._ The carry-over changes the pieces without logging (it is
+no move of the game), and an old `equipment_state` entry restores a piece without checking its slot.
+So a take-off logged before 020 and undone after it can leave two worn body armours: a thief entered
+`elven_chain` and took off its worn leather (the take-off still on the stack); 020 adds a worn Elven
+chain mail; undoing the take-off puts the leather back on next to it. The AC and the skills then
+read the first worn armour in the list (the rehearsal: the leather, so the sheet reads what the
+player had put back on) and the player takes the other off. Accepted, not fixed: it needs a
+take-off entry from before the upgrade still on the stack, and taking one piece off ends it.
 
 _Steps 10 to 13 (as built, CRI-35)_: `acsvc` derives the AC on every read (`acsvc.Derive`, tests
 `TestAC_Step10_*`, `TestAC_Step11_*`, `TestAC_Step12_*`) from the worn armour and shield

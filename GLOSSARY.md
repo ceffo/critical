@@ -58,11 +58,11 @@ on the action stack. [ADR 0015](docs/adr/0015-experience.md).
 
 **Hit points** (fr: points de vie):
 **Max HP**, **current HP** and the **condition** (ok, badly wounded, unconscious, dead) derived
-from them; HP never goes below the **floor** of -10. [ADR 0007](docs/adr/0007-hp-ledger.md),
+from them, and the HP **floor**. [ADR 0007](docs/adr/0007-hp-ledger.md),
 [ADR 0011](docs/adr/0011-hp-below-zero.md).
 
 **HP ledger**:
-The rule, not a table: current HP is max HP plus the sum of the action log's effective deltas.
+How current HP is derived from the action log, not a table.
 [ADR 0007](docs/adr/0007-hp-ledger.md) step 2. _Avoid_: hp_events (a dead legacy table).
 
 **THAC0** (fr: TAC0), **AC** (fr: CA):
@@ -78,9 +78,8 @@ _Avoid_: jet de protection.
 ### Rounds and time
 
 **Round** (fr: tour):
-The combat clock's unit, counted by hand: **Next round** (fr: Tour suivant) moves it,
-**End combat** (fr: Fin du combat) sets it to 0, **Set round** sets it. Round 0 is out of
-combat. [ADR 0005](docs/adr/0005-rounds-and-time.md).
+The combat clock's unit, counted by hand: **Next round** (fr: Tour suivant),
+**End combat** (fr: Fin du combat) and **Set round** move it. [ADR 0005](docs/adr/0005-rounds-and-time.md).
 _Avoid_: turn (in English a turn is ten rounds, and "turn" means turning undead in this
 project; the web's `turn` identifiers are legacy).
 
@@ -89,7 +88,7 @@ The round's d10 rolled on Next round, lowest first; display only. [ADR 0013](doc
 to gain the weapon's speed by [ADR 0035](docs/adr/0035-equipment-screens.md) item 6.
 
 **Pass time** (fr: heures écoulées):
-Jumping ahead by hours outside combat: timed buffs lose the rounds, the counter goes to 0.
+Jumping ahead by hours outside combat.
 [ADR 0005](docs/adr/0005-rounds-and-time.md) steps 5 to 8.
 
 **Long rest** (fr: repos long):

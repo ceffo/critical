@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -76,6 +77,38 @@ func (c Characters) SetSkillPoints(ctx context.Context, id int64, points map[str
 		}
 		ch.SkillPoints = maps.Clone(points)
 		t.characters[id] = ch
+		return nil
+	})
+}
+
+// GetACOverride implements acsvc.Overrides: nil for none, or
+// domain.ErrCharacterNotFound.
+func (c Characters) GetACOverride(ctx context.Context, id int64) (*acsvc.Override, error) {
+	var out *acsvc.Override
+	err := c.s.read(ctx, func(t *tables) error {
+		if _, ok := t.characters[id]; !ok {
+			return domain.ErrCharacterNotFound
+		}
+		if o, ok := t.acOverrides[id]; ok {
+			out = &o
+		}
+		return nil
+	})
+	return out, err
+}
+
+// SetACOverride implements acsvc.Overrides: nil clears it, or
+// domain.ErrCharacterNotFound.
+func (c Characters) SetACOverride(ctx context.Context, id int64, o *acsvc.Override) error {
+	return c.s.write(ctx, func(t *tables) error {
+		if _, ok := t.characters[id]; !ok {
+			return domain.ErrCharacterNotFound
+		}
+		if o == nil {
+			delete(t.acOverrides, id)
+		} else {
+			t.acOverrides[id] = *o
+		}
 		return nil
 	})
 }

@@ -53,13 +53,18 @@ type BuffEffects struct {
 	// effectiveStr).
 	StrBonus *int
 	StrMax   *int
-	// AC is added to armour class (descending AC: negative is better).
+	// AC is a change of the armour class number (descending AC: -2 betters
+	// it by 2; ADR 0033 step 11).
 	AC *int
 	// ToHit is added to attack rolls (Bless +1, Prayer +1, Chant +1).
 	ToHit *int
 	// Damage is added to damage rolls after the multipliers, like the
 	// Strength bonus.
 	Damage *int
+	// BaseAC is "an AC of N as if armoured" (ADR 0033 step 11: the Armor
+	// spell, bracers of defense): it replaces the base 10 only while no body
+	// armour is worn, and the best (lowest) one counts.
+	BaseAC *int
 
 	// WeaponKind is a condition on the effects above, not an effect (ADR
 	// 0004 step 18): with one (melee or missile) they count only for an
@@ -68,6 +73,11 @@ type BuffEffects struct {
 	// (StrBonus, StrMax) and MinStr are not conditioned by it: they make the
 	// one effective STR of the character.
 	WeaponKind WeaponKind
+	// WithoutMagicArmour is a condition on the AC effects (AC, BaseAC), not
+	// an effect (ADR 0033 step 12): they count only while the worn body
+	// armour has no ac power (a ring of protection). It conditions nothing
+	// else (the ring's save bonus always counts).
+	WithoutMagicArmour bool
 }
 
 // WeaponKind is the kind of weapon a roll is made with (ADR 0016 step 8),

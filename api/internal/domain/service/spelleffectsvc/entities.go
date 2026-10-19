@@ -2,6 +2,7 @@ package spelleffectsvc
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/ceffo/critical/api/pkg/formula"
 )
@@ -169,12 +170,24 @@ type AbilityGain struct {
 }
 
 // Buff is the modifier payload of a buff or debuff. Sign conventions are in
-// seeds/spell_effects.schema.json.
+// seeds/spell_effects.schema.json. Condition is when the modifiers apply, if
+// not always; ConditionKeys, when set, are the only modifiers it limits (the
+// others apply always), else it limits them all.
 type Buff struct {
-	Modifiers   map[string]*formula.Formula
-	AbilityGain map[string]AbilityGain
-	AbilitySet  map[string]string
-	Condition   string
+	Modifiers     map[string]*formula.Formula
+	AbilityGain   map[string]AbilityGain
+	AbilitySet    map[string]string
+	Condition     string
+	ConditionKeys []string
+}
+
+// Conditional reports whether the modifier key applies only under the
+// buff's Condition.
+func (b *Buff) Conditional(key string) bool {
+	if b == nil || b.Condition == "" {
+		return false
+	}
+	return len(b.ConditionKeys) == 0 || slices.Contains(b.ConditionKeys, key)
 }
 
 // GrantSlots is a cast mechanic: casting the spell adds blank extra spell

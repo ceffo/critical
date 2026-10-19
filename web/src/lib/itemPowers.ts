@@ -5,7 +5,7 @@ import type { TFunction } from "i18next";
 import type { BuffEffects, ItemPower } from "@/types/buffs";
 import type { Item } from "@/types/items";
 import { localized } from "@/i18n/localized";
-import { formatSigned } from "./format";
+import { formatAc, formatSigned } from "./format";
 
 /** The current name of the item with an id, undefined when no item has it (removed since). */
 export type ItemNamer = (itemId: string) => string | undefined;
@@ -80,5 +80,7 @@ export function powerEffectsText(t: TFunction, e: BuffEffects): string {
     if (v !== undefined)
       parts.push(t(`result.cast.fx.${key}`, { value: formatSigned(v) }));
   }
+  if (e.base_ac !== undefined)
+    parts.push(t("result.cast.fx.base_ac", { value: formatAc(e.base_ac) }));
   return parts.join(" · ");
 }

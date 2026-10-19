@@ -167,6 +167,23 @@ func (q *Queries) CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, er
 	return id_2, err
 }
 
+const getACOverride = `-- name: GetACOverride :one
+SELECT ac_override, ac_override_label FROM characters WHERE id = $1
+`
+
+type GetACOverrideRow struct {
+	AcOverride      sql.NullInt32
+	AcOverrideLabel string
+}
+
+// The AC override (ADR 0033 step 13), NULL for none.
+func (q *Queries) GetACOverride(ctx context.Context, id int64) (GetACOverrideRow, error) {
+	row := q.db.QueryRowContext(ctx, getACOverride, id)
+	var i GetACOverrideRow
+	err := row.Scan(&i.AcOverride, &i.AcOverrideLabel)
+	return i, err
+}
+
 const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
@@ -368,6 +385,26 @@ type RetireCharacterParams struct {
 // Only a character the user owns and has not retired (ADR 0029 step 7.3): nothing is deleted.
 func (q *Queries) RetireCharacter(ctx context.Context, arg RetireCharacterParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, retireCharacter, arg.ID, arg.OwnerUserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setACOverride = `-- name: SetACOverride :execrows
+UPDATE characters SET ac_override = $1, ac_override_label = $2
+WHERE id = $3
+`
+
+type SetACOverrideParams struct {
+	AcOverride      sql.NullInt32
+	AcOverrideLabel string
+	ID              int64
+}
+
+// Setting, clearing (NULL and an empty label) and the undo of either.
+func (q *Queries) SetACOverride(ctx context.Context, arg SetACOverrideParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setACOverride, arg.AcOverride, arg.AcOverrideLabel, arg.ID)
 	if err != nil {
 		return 0, err
 	}

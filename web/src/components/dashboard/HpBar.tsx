@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useHpStore } from "@/stores/hp";
 import { useLogStore } from "@/stores/log";
@@ -22,9 +23,10 @@ const CONDITION: Record<Exclude<HpCondition, "ok">, string> = {
  * (`lib/hpBar.ts`): a hatched dying zone from the server's floor (-10) to 0, filled from 0 down to
  * current HP below 0, with "0" at its boundary; the fill from 0 coloured by threshold; the last
  * damage taken as a faint ghost after the fill. The condition (ADR 0011) is the server's; it is only
- * labelled here. Every number is the server's; the bar only draws them.
+ * labelled here. Every number is the server's; the bar only draws them. `aside` sits beside the
+ * value and the bar (the AC shield).
  */
-export function HpBar() {
+export function HpBar({ aside }: { aside?: ReactNode } = {}) {
   const { t } = useTranslation();
   const spellName = useSpellName();
   const { currentHp, maxHp, floor, condition, loaded } = useHpStore();
@@ -76,95 +78,102 @@ export function HpBar() {
           </span>
         )}
       </div>
-      <div className="flex min-w-0 items-baseline justify-between gap-2">
-        <div
-          className="flex items-baseline gap-1 tabular-nums"
-          data-testid="hp-value"
-        >
-          {loaded ? (
-            <>
-              <span className="text-headline">{currentHp}</span>
-              <span className="text-body text-muted-foreground">
-                {" "}
-                / {maxHp}
-              </span>
-            </>
-          ) : (
-            "–"
-          )}
-        </div>
-        {loaded && condition !== "ok" && (
-          <span
-            className={cn(
-              "min-w-0 text-right text-body break-words",
-              CONDITION[condition],
-            )}
-            data-testid="hp-condition"
-            data-condition={condition}
-          >
-            {t(`hp.condition.${condition}`)}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-col gap-1">
-        <div
-          className="flex h-3 w-full overflow-hidden rounded bg-raised"
-          role="meter"
-          aria-label={t("hp.title")}
-          aria-valuemin={floor}
-          aria-valuemax={maxHp}
-          aria-valuenow={currentHp}
-        >
-          {bar.dyingPct > 0 && (
+      {/* The value and the bar, with `aside` (the AC shield, ADR 0035 item 4) beside them; the
+          label row above keeps the card's whole width for a long last change. */}
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 items-baseline justify-between gap-2">
             <div
-              className="relative h-full shrink-0 hatch-danger"
-              style={{ width: `${bar.dyingPct}%` }}
-              title={t("hp.dyingZone", { floor })}
-              data-testid="hp-dying-zone"
+              className="flex items-baseline gap-1 tabular-nums"
+              data-testid="hp-value"
             >
-              {bar.deepPct > 0 && (
-                <div
-                  className="absolute inset-y-0 right-0 bg-danger transition-all duration-300"
-                  style={{ width: `${bar.deepPct}%` }}
-                  data-testid="hp-dying-fill"
-                />
+              {loaded ? (
+                <>
+                  <span className="text-headline">{currentHp}</span>
+                  <span className="text-body text-muted-foreground">
+                    {" "}
+                    / {maxHp}
+                  </span>
+                </>
+              ) : (
+                "–"
               )}
             </div>
-          )}
-          <div className="flex h-full min-w-0 flex-1">
+            {loaded && condition !== "ok" && (
+              <span
+                className={cn(
+                  "min-w-0 text-right text-body break-words",
+                  CONDITION[condition],
+                )}
+                data-testid="hp-condition"
+                data-condition={condition}
+              >
+                {t(`hp.condition.${condition}`)}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
             <div
-              className={cn(
-                "h-full transition-all duration-300",
-                TONE[bar.tone],
+              className="flex h-3 w-full overflow-hidden rounded bg-raised"
+              role="meter"
+              aria-label={t("hp.title")}
+              aria-valuemin={floor}
+              aria-valuemax={maxHp}
+              aria-valuenow={currentHp}
+            >
+              {bar.dyingPct > 0 && (
+                <div
+                  className="relative h-full shrink-0 hatch-danger"
+                  style={{ width: `${bar.dyingPct}%` }}
+                  title={t("hp.dyingZone", { floor })}
+                  data-testid="hp-dying-zone"
+                >
+                  {bar.deepPct > 0 && (
+                    <div
+                      className="absolute inset-y-0 right-0 bg-danger transition-all duration-300"
+                      style={{ width: `${bar.deepPct}%` }}
+                      data-testid="hp-dying-fill"
+                    />
+                  )}
+                </div>
               )}
-              style={{ width: `${bar.fillPct}%` }}
-              data-testid="hp-fill"
-            />
-            {bar.ghostPct > 0 && (
+              <div className="flex h-full min-w-0 flex-1">
+                <div
+                  className={cn(
+                    "h-full transition-all duration-300",
+                    TONE[bar.tone],
+                  )}
+                  style={{ width: `${bar.fillPct}%` }}
+                  data-testid="hp-fill"
+                />
+                {bar.ghostPct > 0 && (
+                  <div
+                    className="h-full bg-danger/35 transition-all duration-300"
+                    style={{ width: `${bar.ghostPct}%` }}
+                    title={t("hp.lastDamage", { amount: damage })}
+                    data-testid="hp-ghost"
+                  />
+                )}
+              </div>
+            </div>
+            {bar.dyingPct > 0 && (
               <div
-                className="h-full bg-danger/35 transition-all duration-300"
-                style={{ width: `${bar.ghostPct}%` }}
-                title={t("hp.lastDamage", { amount: damage })}
-                data-testid="hp-ghost"
-              />
+                className="relative h-4 text-label text-muted-foreground tabular-nums"
+                aria-hidden
+                data-testid="hp-scale"
+              >
+                <span
+                  className="absolute -translate-x-1/2"
+                  style={{ left: `${bar.dyingPct}%` }}
+                >
+                  0
+                </span>
+                <span className="absolute right-0">{maxHp}</span>
+              </div>
             )}
           </div>
         </div>
-        {bar.dyingPct > 0 && (
-          <div
-            className="relative h-4 text-label text-muted-foreground tabular-nums"
-            aria-hidden
-            data-testid="hp-scale"
-          >
-            <span
-              className="absolute -translate-x-1/2"
-              style={{ left: `${bar.dyingPct}%` }}
-            >
-              0
-            </span>
-            <span className="absolute right-0">{maxHp}</span>
-          </div>
-        )}
+        {aside}
       </div>
     </div>
   );

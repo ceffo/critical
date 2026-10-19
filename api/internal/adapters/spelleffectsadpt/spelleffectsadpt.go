@@ -153,6 +153,7 @@ type entryDTO struct {
 	AbilityGain map[string]abilityGainDTO `json:"ability_gain"`
 	AbilitySet  map[string]flexString     `json:"ability_set"`
 	Condition   string                    `json:"condition"`
+	CondKeys    []string                  `json:"condition_keys"`
 	GrantSlots  *grantSlotsDTO            `json:"grant_slots"`
 	ConsumeItem *consumeItemDTO           `json:"consume_item"`
 	AttackRoll  bool                      `json:"attack_roll"`
@@ -336,7 +337,7 @@ func (d entryDTO) buffToDomain() (*spelleffectsvc.Buff, error) {
 	if len(d.Modifiers) == 0 && len(d.AbilityGain) == 0 && len(d.AbilitySet) == 0 && d.Condition == "" {
 		return nil, nil
 	}
-	b := &spelleffectsvc.Buff{Condition: d.Condition}
+	b := &spelleffectsvc.Buff{Condition: d.Condition, ConditionKeys: d.CondKeys}
 	if len(d.Modifiers) > 0 {
 		b.Modifiers = make(map[string]*formula.Formula, len(d.Modifiers))
 	}

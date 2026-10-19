@@ -48,6 +48,14 @@ func TestBuffs_Step19_AddAsEffect(t *testing.T) {
 			want: buffsvc.BuffEffect{ID: buffsAdded, Name: "Stoneskin", SpellID: "stoneskin", Charges: 10},
 		},
 		{
+			// ADR 0033 step 11: the seed's ac_set is the base_ac effect.
+			name: "armor: AC 6 as if armoured, until discharged", spellID: "armor",
+			want: buffsvc.BuffEffect{
+				ID: buffsAdded, Name: "Armor", SpellID: "armor",
+				Effects: buffsvc.BuffEffects{BaseAC: intPtr(6)},
+			},
+		},
+		{
 			name: "slow (hostile area) lands on the Bard: 3 + 15 rounds", spellID: "slow",
 			want: buffsvc.BuffEffect{
 				ID: buffsAdded, Name: "Slow", SpellID: "slow", Duration: 18,

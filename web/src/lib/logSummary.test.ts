@@ -1360,6 +1360,31 @@ describe("entryText for skill checks", () => {
     );
   });
 
+  it("words the AC override set and cleared (ADR 0033 step 13) (en, fr)", async () => {
+    const en = await makeT("en");
+    const fr = await makeT("fr");
+    const set = entry(
+      "ac_override",
+      { before: null, after: { value: -1, label: "Shield spell" } },
+      "",
+    );
+    expect(entryText(set, en)).toBe("AC overridden: −1 (Shield spell)");
+    expect(entryText(set, fr)).toBe("CA forcée : −1 (Shield spell)");
+    const bare = entry(
+      "ac_override",
+      { before: null, after: { value: 4 } },
+      "",
+    );
+    expect(entryText(bare, fr)).toBe("CA forcée : 4");
+    const cleared = entry(
+      "ac_override",
+      { before: { value: 4 }, after: null },
+      "",
+    );
+    expect(entryText(cleared, en)).toBe("AC override cleared");
+    expect(entryText(cleared, fr)).toBe("CA forcée effacée");
+  });
+
   it("words an adjusted check: adjusted target, original target, adjustment and reason (en, fr)", async () => {
     const en = await makeT("en");
     const fr = await makeT("fr");

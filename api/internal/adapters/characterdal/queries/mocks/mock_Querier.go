@@ -338,6 +338,63 @@ func (_c *MockQuerier_CurrentCharacter_Call) RunAndReturn(run func(context.Conte
 	return _c
 }
 
+// GetACOverride provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) GetACOverride(ctx context.Context, id int64) (queries.GetACOverrideRow, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetACOverride")
+	}
+
+	var r0 queries.GetACOverrideRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.GetACOverrideRow, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.GetACOverrideRow); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(queries.GetACOverrideRow)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_GetACOverride_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetACOverride'
+type MockQuerier_GetACOverride_Call struct {
+	*mock.Call
+}
+
+// GetACOverride is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockQuerier_Expecter) GetACOverride(ctx interface{}, id interface{}) *MockQuerier_GetACOverride_Call {
+	return &MockQuerier_GetACOverride_Call{Call: _e.mock.On("GetACOverride", ctx, id)}
+}
+
+func (_c *MockQuerier_GetACOverride_Call) Run(run func(ctx context.Context, id int64)) *MockQuerier_GetACOverride_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_GetACOverride_Call) Return(_a0 queries.GetACOverrideRow, _a1 error) *MockQuerier_GetACOverride_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_GetACOverride_Call) RunAndReturn(run func(context.Context, int64) (queries.GetACOverrideRow, error)) *MockQuerier_GetACOverride_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCharacter provides a mock function with given fields: ctx, id
 func (_m *MockQuerier) GetCharacter(ctx context.Context, id int64) (queries.GetCharacterRow, error) {
 	ret := _m.Called(ctx, id)
@@ -725,6 +782,63 @@ func (_c *MockQuerier_RetireCharacter_Call) Return(_a0 int64, _a1 error) *MockQu
 }
 
 func (_c *MockQuerier_RetireCharacter_Call) RunAndReturn(run func(context.Context, queries.RetireCharacterParams) (int64, error)) *MockQuerier_RetireCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetACOverride provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) SetACOverride(ctx context.Context, arg queries.SetACOverrideParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetACOverride")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetACOverrideParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetACOverrideParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.SetACOverrideParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_SetACOverride_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetACOverride'
+type MockQuerier_SetACOverride_Call struct {
+	*mock.Call
+}
+
+// SetACOverride is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.SetACOverrideParams
+func (_e *MockQuerier_Expecter) SetACOverride(ctx interface{}, arg interface{}) *MockQuerier_SetACOverride_Call {
+	return &MockQuerier_SetACOverride_Call{Call: _e.mock.On("SetACOverride", ctx, arg)}
+}
+
+func (_c *MockQuerier_SetACOverride_Call) Run(run func(ctx context.Context, arg queries.SetACOverrideParams)) *MockQuerier_SetACOverride_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.SetACOverrideParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_SetACOverride_Call) Return(_a0 int64, _a1 error) *MockQuerier_SetACOverride_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_SetACOverride_Call) RunAndReturn(run func(context.Context, queries.SetACOverrideParams) (int64, error)) *MockQuerier_SetACOverride_Call {
 	_c.Call.Return(run)
 	return _c
 }

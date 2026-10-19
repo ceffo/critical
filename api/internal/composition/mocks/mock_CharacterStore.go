@@ -3,6 +3,7 @@
 package mocks
 
 import (
+	acsvc "github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	charactersvc "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 
 	context "context"
@@ -195,6 +196,65 @@ func (_c *MockCharacterStore_CurrentCharacter_Call) Return(_a0 int64, _a1 error)
 }
 
 func (_c *MockCharacterStore_CurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) (int64, error)) *MockCharacterStore_CurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetACOverride provides a mock function with given fields: ctx, characterID
+func (_m *MockCharacterStore) GetACOverride(ctx context.Context, characterID int64) (*acsvc.Override, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetACOverride")
+	}
+
+	var r0 *acsvc.Override
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (*acsvc.Override, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) *acsvc.Override); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*acsvc.Override)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCharacterStore_GetACOverride_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetACOverride'
+type MockCharacterStore_GetACOverride_Call struct {
+	*mock.Call
+}
+
+// GetACOverride is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockCharacterStore_Expecter) GetACOverride(ctx interface{}, characterID interface{}) *MockCharacterStore_GetACOverride_Call {
+	return &MockCharacterStore_GetACOverride_Call{Call: _e.mock.On("GetACOverride", ctx, characterID)}
+}
+
+func (_c *MockCharacterStore_GetACOverride_Call) Run(run func(ctx context.Context, characterID int64)) *MockCharacterStore_GetACOverride_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_GetACOverride_Call) Return(_a0 *acsvc.Override, _a1 error) *MockCharacterStore_GetACOverride_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCharacterStore_GetACOverride_Call) RunAndReturn(run func(context.Context, int64) (*acsvc.Override, error)) *MockCharacterStore_GetACOverride_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -510,6 +570,54 @@ func (_c *MockCharacterStore_RetireCharacter_Call) Return(_a0 error) *MockCharac
 }
 
 func (_c *MockCharacterStore_RetireCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64) error) *MockCharacterStore_RetireCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetACOverride provides a mock function with given fields: ctx, characterID, o
+func (_m *MockCharacterStore) SetACOverride(ctx context.Context, characterID int64, o *acsvc.Override) error {
+	ret := _m.Called(ctx, characterID, o)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetACOverride")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, *acsvc.Override) error); ok {
+		r0 = rf(ctx, characterID, o)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_SetACOverride_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetACOverride'
+type MockCharacterStore_SetACOverride_Call struct {
+	*mock.Call
+}
+
+// SetACOverride is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - o *acsvc.Override
+func (_e *MockCharacterStore_Expecter) SetACOverride(ctx interface{}, characterID interface{}, o interface{}) *MockCharacterStore_SetACOverride_Call {
+	return &MockCharacterStore_SetACOverride_Call{Call: _e.mock.On("SetACOverride", ctx, characterID, o)}
+}
+
+func (_c *MockCharacterStore_SetACOverride_Call) Run(run func(ctx context.Context, characterID int64, o *acsvc.Override)) *MockCharacterStore_SetACOverride_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(*acsvc.Override))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_SetACOverride_Call) Return(_a0 error) *MockCharacterStore_SetACOverride_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_SetACOverride_Call) RunAndReturn(run func(context.Context, int64, *acsvc.Override) error) *MockCharacterStore_SetACOverride_Call {
 	_c.Call.Return(run)
 	return _c
 }

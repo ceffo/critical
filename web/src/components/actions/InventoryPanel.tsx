@@ -34,6 +34,7 @@ import {
 import { draftFromItem, emptyDraft } from "@/lib/itemForm";
 import { cn } from "@/lib/utils";
 import { ItemForm } from "./ItemForm";
+import { AcCard } from "@/components/ac/AcCard";
 import { formatSigned } from "@/lib/format";
 import { CATEGORIES, type Category, type Item } from "@/types/items";
 import { pieceStats, piecesIn, equipped } from "@/lib/equipment";
@@ -133,201 +134,207 @@ export function InventoryPanel() {
     />
   );
 
+  // The possessions, and the AC card on the right (ADR 0035 item 7).
   return (
-    <div className="@container flex min-h-0 flex-1 flex-col gap-3">
-      {reviewOpen && toReview.length > 0 && (
-        <section
-          aria-labelledby="inventory-review-title"
-          className="zone-card flex max-h-[45%] min-h-0 shrink-0 flex-col pb-3"
-          data-testid="inventory-review"
-        >
-          <div className="card-band mb-1.5 flex min-h-10 flex-wrap items-center justify-between gap-x-3 px-3 py-1">
-            <h2
-              id="inventory-review-title"
-              className="section-label flex items-center gap-2 text-warning"
-            >
-              <Warning aria-hidden className="size-4" />
-              {t("equipment.review.title")}
-              <span className="tabular-nums">· {toReview.length}</span>
-            </h2>
-            <span className="text-label text-muted-foreground">
-              {t("equipment.review.intro")}
-            </span>
-          </div>
-          <ul
-            className="flex min-h-0 flex-col gap-1 overflow-y-auto px-3"
-            data-testid="inventory-review-list"
+    <div className="flex min-h-0 flex-1 gap-3">
+      <div className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+        {reviewOpen && toReview.length > 0 && (
+          <section
+            aria-labelledby="inventory-review-title"
+            className="zone-card flex max-h-[45%] min-h-0 shrink-0 flex-col pb-3"
+            data-testid="inventory-review"
           >
-            {toReview.map((i) => (
-              <li
-                key={i.id}
-                className="flex items-start gap-3 rounded-lg bg-raised px-2 py-1.5 text-body"
-                data-testid={`review-${i.id}`}
+            <div className="card-band mb-1.5 flex min-h-10 flex-wrap items-center justify-between gap-x-3 px-3 py-1">
+              <h2
+                id="inventory-review-title"
+                className="section-label flex items-center gap-2 text-warning"
               >
-                <CategoryIcon item={i} />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="break-words font-medium">{nameOf(i)}</span>
-                  {i.review.map((r) => (
-                    <span
-                      key={r}
-                      className="break-words text-label text-muted-foreground"
-                    >
-                      {t(`equipment.review.reasons.${r}`, { type: i.type })}
-                    </span>
-                  ))}
-                </div>
-                <Button
-                  size="sm"
-                  disabled={busy}
-                  title={t("equipment.review.editHint", { name: nameOf(i) })}
-                  aria-label={t("equipment.review.editHint", {
-                    name: nameOf(i),
-                  })}
-                  onClick={() => {
-                    setFilter("all");
-                    setForm(i.id);
-                  }}
-                >
-                  <PencilSimple /> {t("equipment.review.edit")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={busy}
-                  title={t("equipment.review.dismissHint", { name: nameOf(i) })}
-                  aria-label={t("equipment.review.dismissHint", {
-                    name: nameOf(i),
-                  })}
-                  onClick={() => void run(() => dismissReview(i.id))}
-                >
-                  {t("equipment.review.dismiss")}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      <InventoryCard
-        titleId="inventory-items-title"
-        title={t("equipment.title")}
-        addLabel={t("items.form.openAdd")}
-        showAdd={form !== "add"}
-        busy={busy}
-        onAdd={() => setForm("add")}
-        focused
-        toolbar={
-          <div
-            role="group"
-            aria-label={t("equipment.filter")}
-            className="flex flex-wrap gap-1"
-            data-testid="category-chips"
-          >
-            {(["all", ...CATEGORIES] as const).map((c) => (
-              <button
-                key={c}
-                type="button"
-                className={cn(
-                  "h-7 px-2 text-body font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
-                  filter === c
-                    ? "chip-chosen"
-                    : "chip text-muted-foreground hover:text-foreground",
-                )}
-                aria-pressed={filter === c}
-                onClick={() => setFilter(c)}
-              >
-                {c === "all"
-                  ? t("equipment.all")
-                  : t(`equipment.categories.${c}`)}
-              </button>
-            ))}
-          </div>
-        }
-      >
-        {toReview.length > 0 && (
-          <div
-            className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-1.5 text-body text-warning"
-            data-testid="review-band"
-          >
-            <span className="flex min-w-0 items-center gap-2 break-words">
-              <Warning aria-hidden className="size-4 shrink-0" />
-              {t("equipment.review.band", { count: toReview.length })}
-            </span>
-            <Button
-              size="sm"
-              title={t("equipment.review.openHint")}
-              aria-label={t("equipment.review.openHint")}
-              aria-expanded={reviewOpen}
-              onClick={() => setReviewOpen((o) => !o)}
+                <Warning aria-hidden className="size-4" />
+                {t("equipment.review.title")}
+                <span className="tabular-nums">· {toReview.length}</span>
+              </h2>
+              <span className="text-label text-muted-foreground">
+                {t("equipment.review.intro")}
+              </span>
+            </div>
+            <ul
+              className="flex min-h-0 flex-col gap-1 overflow-y-auto px-3"
+              data-testid="inventory-review-list"
             >
-              {reviewOpen
-                ? t("equipment.review.close")
-                : t("equipment.review.open")}
-            </Button>
-          </div>
-        )}
-        {form === "add" && (
-          <div className="mb-2" data-testid="inventory-form">
-            <ItemForm
-              initial={emptyDraft(filter === "all" ? "gear" : filter)}
-              specializes={specializes}
-              busy={busy}
-              onCancel={close}
-              onSave={async (body) => {
-                const rejected = await submit(() => postCreateItem(body));
-                if (!rejected) close();
-                return rejected;
-              }}
-            />
-          </div>
-        )}
-        {items.length === 0 ? (
-          <p className="text-body text-muted-foreground">
-            {t("equipment.none")}
-          </p>
-        ) : shown.length === 0 ? (
-          <p className="text-body text-muted-foreground">
-            {t("equipment.noneInCategory")}
-          </p>
-        ) : (
-          <ul
-            className={cn(ITEM_COLS, "gap-y-1")}
-            aria-label={t("items.title")}
-          >
-            {shown.map((i) =>
-              form === i.id ? (
+              {toReview.map((i) => (
                 <li
                   key={i.id}
-                  className="col-span-full"
-                  data-testid="inventory-form"
+                  className="flex items-start gap-3 rounded-lg bg-raised px-2 py-1.5 text-body"
+                  data-testid={`review-${i.id}`}
                 >
-                  {editor(i)}
+                  <CategoryIcon item={i} />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="break-words font-medium">{nameOf(i)}</span>
+                    {i.review.map((r) => (
+                      <span
+                        key={r}
+                        className="break-words text-label text-muted-foreground"
+                      >
+                        {t(`equipment.review.reasons.${r}`, { type: i.type })}
+                      </span>
+                    ))}
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={busy}
+                    title={t("equipment.review.editHint", { name: nameOf(i) })}
+                    aria-label={t("equipment.review.editHint", {
+                      name: nameOf(i),
+                    })}
+                    onClick={() => {
+                      setFilter("all");
+                      setForm(i.id);
+                    }}
+                  >
+                    <PencilSimple /> {t("equipment.review.edit")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    title={t("equipment.review.dismissHint", {
+                      name: nameOf(i),
+                    })}
+                    aria-label={t("equipment.review.dismissHint", {
+                      name: nameOf(i),
+                    })}
+                    onClick={() => void run(() => dismissReview(i.id))}
+                  >
+                    {t("equipment.review.dismiss")}
+                  </Button>
                 </li>
-              ) : (
-                <ItemRow
-                  key={i.id}
-                  item={i}
-                  busy={busy}
-                  onDice={() => i.effectDice && toComposer(i.effectDice)}
-                  onUse={() => void spendItem(i.id)}
-                  onRestock={() => void run(() => postRestockItem(i.id, 1))}
-                  onEquip={() =>
-                    void run(() =>
-                      postItemState(
-                        i.id,
-                        equipped(i)
-                          ? { state: "carried" }
-                          : { state: i.equipState || "carried", swap: true },
-                      ),
-                    )
-                  }
-                  onEdit={() => setForm(i.id)}
-                  onRemove={() => void run(() => deleteItem(i.id))}
-                />
-              ),
-            )}
-          </ul>
+              ))}
+            </ul>
+          </section>
         )}
-      </InventoryCard>
+        <InventoryCard
+          titleId="inventory-items-title"
+          title={t("equipment.title")}
+          addLabel={t("items.form.openAdd")}
+          showAdd={form !== "add"}
+          busy={busy}
+          onAdd={() => setForm("add")}
+          focused
+          toolbar={
+            <div
+              role="group"
+              aria-label={t("equipment.filter")}
+              className="flex flex-wrap gap-1"
+              data-testid="category-chips"
+            >
+              {(["all", ...CATEGORIES] as const).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={cn(
+                    "h-7 px-2 text-body font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                    filter === c
+                      ? "chip-chosen"
+                      : "chip text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-pressed={filter === c}
+                  onClick={() => setFilter(c)}
+                >
+                  {c === "all"
+                    ? t("equipment.all")
+                    : t(`equipment.categories.${c}`)}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {toReview.length > 0 && (
+            <div
+              className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-1.5 text-body text-warning"
+              data-testid="review-band"
+            >
+              <span className="flex min-w-0 items-center gap-2 break-words">
+                <Warning aria-hidden className="size-4 shrink-0" />
+                {t("equipment.review.band", { count: toReview.length })}
+              </span>
+              <Button
+                size="sm"
+                title={t("equipment.review.openHint")}
+                aria-label={t("equipment.review.openHint")}
+                aria-expanded={reviewOpen}
+                onClick={() => setReviewOpen((o) => !o)}
+              >
+                {reviewOpen
+                  ? t("equipment.review.close")
+                  : t("equipment.review.open")}
+              </Button>
+            </div>
+          )}
+          {form === "add" && (
+            <div className="mb-2" data-testid="inventory-form">
+              <ItemForm
+                initial={emptyDraft(filter === "all" ? "gear" : filter)}
+                specializes={specializes}
+                busy={busy}
+                onCancel={close}
+                onSave={async (body) => {
+                  const rejected = await submit(() => postCreateItem(body));
+                  if (!rejected) close();
+                  return rejected;
+                }}
+              />
+            </div>
+          )}
+          {items.length === 0 ? (
+            <p className="text-body text-muted-foreground">
+              {t("equipment.none")}
+            </p>
+          ) : shown.length === 0 ? (
+            <p className="text-body text-muted-foreground">
+              {t("equipment.noneInCategory")}
+            </p>
+          ) : (
+            <ul
+              className={cn(ITEM_COLS, "gap-y-1")}
+              aria-label={t("items.title")}
+            >
+              {shown.map((i) =>
+                form === i.id ? (
+                  <li
+                    key={i.id}
+                    className="col-span-full"
+                    data-testid="inventory-form"
+                  >
+                    {editor(i)}
+                  </li>
+                ) : (
+                  <ItemRow
+                    key={i.id}
+                    item={i}
+                    busy={busy}
+                    onDice={() => i.effectDice && toComposer(i.effectDice)}
+                    onUse={() => void spendItem(i.id)}
+                    onRestock={() => void run(() => postRestockItem(i.id, 1))}
+                    onEquip={() =>
+                      void run(() =>
+                        postItemState(
+                          i.id,
+                          equipped(i)
+                            ? { state: "carried" }
+                            : { state: i.equipState || "carried", swap: true },
+                        ),
+                      )
+                    }
+                    onEdit={() => setForm(i.id)}
+                    onRemove={() => void run(() => deleteItem(i.id))}
+                  />
+                ),
+              )}
+            </ul>
+          )}
+        </InventoryCard>
+      </div>
+      <AcCard />
     </div>
   );
 }

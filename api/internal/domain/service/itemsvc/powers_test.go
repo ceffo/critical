@@ -185,3 +185,17 @@ func mustJSON(t *testing.T, v any) string {
 	require.NoError(t, err)
 	return string(b)
 }
+
+// ADR 0033 steps 11 and 12: a power stores base_ac and the
+// without_magic_armour condition (the ring of protection, bracers of
+// defense), and reads them back.
+func TestPowers_ADR0033Steps11_12_BaseACAndWithoutMagicArmourRoundTrip(t *testing.T) {
+	ring := itemsvc.Power{ID: "magic", Effects: buffsvc.BuffEffects{AC: new(-2), BaseAC: new(4), WithoutMagicArmour: true}}
+	raw, err := itemsvc.EncodePowers([]itemsvc.Power{ring})
+	require.NoError(t, err)
+	assert.JSONEq(t, `[{"id":"magic","effects":{"ac":-2,"base_ac":4,"without_magic_armour":true}}]`, raw)
+	back, err := itemsvc.DecodePowers(raw)
+	require.NoError(t, err)
+	assert.Equal(t, []itemsvc.Power{ring}, back)
+	require.NoError(t, itemsvc.ValidatePowers(back))
+}

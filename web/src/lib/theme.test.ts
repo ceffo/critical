@@ -289,6 +289,18 @@ describe("contrast (ADR 0026 step 2, ADR 0020 step 4)", () => {
       ).toBeGreaterThanOrEqual(AA_TEXT);
     });
 
+    it(`${name}: the AC shield's number reads on its fill, its outline stands off it (ADR 0035 item 4)`, () => {
+      expect(
+        ratio(T(v, "--ink"), T(v, "--amb-800")),
+        `ink on amb-800: ${v["--ink"]} on ${v["--amb-800"]}`,
+      ).toBeGreaterThanOrEqual(AA_TEXT);
+      for (const edge of ["--tint", "--warning"])
+        expect(
+          ratio(T(v, edge), T(v, "--amb-800")),
+          `${edge} edge on amb-800`,
+        ).toBeGreaterThanOrEqual(UI);
+    });
+
     it(`${name}: the accent fills stand 3:1 off the card`, () => {
       for (const role of ACCENTS)
         expect(

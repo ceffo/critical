@@ -109,3 +109,12 @@ UPDATE users SET current_character_id = (
 SELECT c.id FROM users u
 JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
 WHERE u.id = $1;
+
+-- The AC override (ADR 0033 step 13), NULL for none.
+-- name: GetACOverride :one
+SELECT ac_override, ac_override_label FROM characters WHERE id = $1;
+
+-- Setting, clearing (NULL and an empty label) and the undo of either.
+-- name: SetACOverride :execrows
+UPDATE characters SET ac_override = sqlc.narg(ac_override), ac_override_label = sqlc.arg(ac_override_label)
+WHERE id = sqlc.arg(id);

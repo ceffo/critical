@@ -983,7 +983,8 @@
       "attackers_to_hit_first": -4,
       "save": 1
     },
-    "condition": "save bonus applies to direct magical attacks only"
+    "condition": "save bonus applies to direct magical attacks only",
+    "condition_keys": ["save"]
   },
   {
     "id": "cats_grace",
@@ -2535,7 +2536,8 @@
       "ac_set": 4,
       "save": 3
     },
-    "condition": "save bonus applies to magical attacks only"
+    "condition": "save bonus applies to magical attacks only",
+    "condition_keys": ["save"]
   },
   {
     "id": "squaring_the_circle",

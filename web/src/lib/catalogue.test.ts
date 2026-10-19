@@ -131,9 +131,7 @@ describe("pickBody", () => {
       ),
     ).toEqual({ catalogueCode: "sheaf_arrow", magicalBonus: 1, count: 12 });
     for (const count of ["x", "", "0", "-2", "1.5"])
-      expect(
-        pickBody(arrows, "ammunition", copy({ count }), "en"),
-      ).toBeNull();
+      expect(pickBody(arrows, "ammunition", copy({ count }), "en")).toBeNull();
   });
   it("gives armour no magic (its +N is a power)", () => {
     const mail = {

@@ -7,6 +7,7 @@ import { LookupPanel } from "@/components/actions/LookupPanel";
 import { QuickHp } from "@/components/dashboard/QuickHp";
 import { ChargeCards } from "@/components/dashboard/ChargeCards";
 import { Saves } from "@/components/dashboard/Saves";
+import { AcShield } from "@/components/ac/AcShield";
 import { HpBar } from "@/components/dashboard/HpBar";
 import { Identity } from "@/components/dashboard/Identity";
 import { Notices } from "@/components/dashboard/Notices";
@@ -108,7 +109,13 @@ function App() {
         >
           <Identity onOpenXp={() => focus("xp")} />
           <div className="flex flex-col gap-3">
-            <HpBar />
+            {/* The AC beside the HP (ADR 0035 item 4): smaller, no label, opening its breakdown. */}
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <HpBar />
+              </div>
+              <AcShield onOpenInventory={() => focus("inventory")} />
+            </div>
             <QuickHp />
             <ChargeCards />
           </div>

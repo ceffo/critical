@@ -34,6 +34,8 @@ export type LogKind =
   /** A thief's skill points spent on the sheet (ADR 0030 step 17); popping it gives them back. */
   | "skill_points"
   | "skill_armor"
+  /** The AC override set or cleared (ADR 0033 step 13); popping it gives the previous one back. */
+  | "ac_override"
   | "spell_prep"
   | "long_rest"
   | "save"

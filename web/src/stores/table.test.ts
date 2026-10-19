@@ -22,6 +22,7 @@ vi.mock("@/api/log", () => ({
 }));
 vi.mock("@/api/items", () => ({ fetchItems: async () => [] }));
 vi.mock("@/api/combat", () => ({ fetchWeapons: async () => [] }));
+vi.mock("@/api/ac", () => ({ fetchAc: async () => null }));
 vi.mock("../api/buffs", () => ({
   fetchActiveBuffs: async () => [],
   fetchSavedBuffs: async () => [],

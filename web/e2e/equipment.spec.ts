@@ -278,3 +278,49 @@ test("the review section is bounded and its list scrolls, so the rows below stay
     .evaluate((el) => getComputedStyle(el).overflowY);
   expect(overflow).toBe("auto");
 });
+
+// The character's AC (ADR 0033 steps 10 and 13, ADR 0035 items 4, 7 and 8), what only a browser
+// proves: the shield beside the HP and the Inventaire's AC card follow an Equip with no action of
+// their own, the popover's breakdown names the piece, and the override set from it is a journal line
+// the undo pops. The derivation itself is the Go tests' (acsvc).
+test("AC: equipping an armour moves the shield beside the HP; the override is a journal line the undo pops", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const shield = page.getByTestId("ac-shield");
+  await expect(shield.getByTestId("ac-value")).toHaveText("7");
+
+  await openWorkspace(page, "Inventory");
+  await page.getByRole("button", { name: "Add item" }).click();
+  const f = form(page);
+  await f.getByLabel("Name").fill("Chain mail");
+  await f.getByLabel("Category").selectOption("armour");
+  await f.getByLabel("Base AC").fill("5");
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(form(page)).toHaveCount(0);
+  await expect(page.getByTestId("ac-card-value")).toHaveText("7");
+  await row(page, "chain_mail")
+    .getByRole("button", { name: "Equip Chain mail" })
+    .click();
+  await expect(page.getByTestId("ac-card-value")).toHaveText("2");
+  await expect(shield.getByTestId("ac-value")).toHaveText("2");
+
+  await shield.click();
+  const pop = page.getByTestId("ac-popover");
+  await expect(
+    pop.locator('[data-testid="ac-row"][data-term="base"]'),
+  ).toContainText("Chain mail");
+  await pop.getByTestId("ac-override-open").click();
+  await pop.getByTestId("ac-override-value").fill("4");
+  await pop.getByTestId("ac-override-label").fill("Shield spell");
+  await pop.getByTestId("ac-override-save").click();
+  await expect(shield.getByTestId("ac-value")).toHaveText("4");
+  await expect(shield).toHaveAttribute("data-overridden", "true");
+  await expect(pop.getByTestId("ac-derived")).toHaveText("2");
+  await page.keyboard.press("Escape");
+
+  await openWorkspace(page, "Act");
+  await undoEntry(page, "AC overridden: 4 (Shield spell)");
+  await expect(shield.getByTestId("ac-value")).toHaveText("2");
+  await expect(shield).not.toHaveAttribute("data-overridden");
+});

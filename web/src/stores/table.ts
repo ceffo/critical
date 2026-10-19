@@ -7,6 +7,7 @@ import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
 import { useCharacterStore } from "./character";
 import { useItemsStore } from "./items";
+import { useAcStore } from "./ac";
 import { useRollStore } from "./roll";
 import { useXpStore } from "./xp";
 
@@ -35,7 +36,7 @@ interface TableStore {
   clearError: () => void;
   clearNotice: () => void;
   /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item
-   * counts, weapons, the XP ledger once loaded (`skipXp`: the caller just set it from a write's
+   * counts, weapons, the AC, the XP ledger once loaded (`skipXp`: the caller just set it from a write's
    * answer), and the character when the action can have changed its XP (`character`). */
   refresh: (opts?: RefreshOptions) => Promise<void>;
   /**
@@ -105,6 +106,8 @@ export const useTableStore = create<TableStore>((set, get) => ({
           useBuffsStore.getState().fetchStrength(),
           useItemsStore.getState().fetchItems(),
           useItemsStore.getState().fetchWeapons(),
+          // Derived from the pieces, the buffs and the sheet (ADR 0033 step 10): any action can move it.
+          useAcStore.getState().fetchAc(),
           // The level, THAC0, saves and slots follow the XP (ADR 0030 step 3): an award or the
           // undo of one changes them, so the character is re-read with the rest.
           opts?.character ? useCharacterStore.getState().loadCharacter() : null,

@@ -8,7 +8,7 @@ import type { LearnResult, LevelUpRecord, TurnResult } from "@/types/character";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { buffName, englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { checkAdjustedTarget } from "./skillAdjust";
-import { formatSigned } from "@/lib/format";
+import { formatAc, formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
 import type { SpellExposure, SpellFailure } from "@/types/spells";
@@ -574,6 +574,22 @@ function skillArmorText(e: LogEntry, t: TFunction): string | null {
   });
 }
 
+/** "AC overridden: 4 (Shield spell)" / "AC override cleared" (acsvc, ADR 0033 step 13). */
+function acOverrideText(e: LogEntry, t: TFunction): string | null {
+  if (e.kind !== "ac_override") return null;
+  const p = e.payload as {
+    after?: { value: number; label?: string } | null;
+  } | null;
+  if (!p) return null;
+  if (!p.after) return t("log.acOverride.cleared");
+  return p.after.label
+    ? t("log.acOverride.setWith", {
+        value: formatAc(p.after.value),
+        label: p.after.label,
+      })
+    : t("log.acOverride.set", { value: formatAc(p.after.value) });
+}
+
 /** The payload of a turn_undead entry (turnsvc record, ADR 0030 step 16), or null. */
 export function turnPayload(e: LogEntry): TurnResult | null {
   if (e.kind !== "turn_undead") return null;
@@ -945,6 +961,8 @@ export function entryText(
   if (points) return points;
   const armor = skillArmorText(e, t);
   if (armor) return armor;
+  const acOverride = acOverrideText(e, t);
+  if (acOverride) return acOverride;
   const hp = hpChangeText(e, t);
   if (hp) return hp;
   const p = buffPayload(e);

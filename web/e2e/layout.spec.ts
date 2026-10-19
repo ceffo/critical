@@ -2868,3 +2868,72 @@ test("the piece editor's spell component uncut in French, 1280 to 2560", async (
       await snap(page, `component-editor-fr-${vp.width}x${vp.height}`);
   }
 });
+
+// The character's AC (ADR 0035 items 4, 7 and 8): the number in a filled shield beside the HP,
+// inside the character card and smaller than the HP; its breakdown popover on screen; the
+// Inventaire's AC card beside the possessions; the override with its derived AC. No cut text and no
+// page scroll in French and English, 1280 to 2560.
+test("AC: the shield beside the HP, its breakdown popover and the Inventaire's AC card uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await addBuff(page, {
+    name: "Protection from Evil",
+    effects: [["ac", -2]],
+  });
+  await openWorkspace(page, "Inventory");
+  await page.getByRole("button", { name: "Add item" }).click();
+  const f = page.getByTestId("item-form");
+  await f.getByLabel("Name").fill("Chain mail of the long winter watch");
+  await f.getByLabel("Category").selectOption("armour");
+  await f.getByLabel("Base AC").fill("5");
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Equip Chain mail of the long winter watch" })
+    .click();
+  const card = page.getByTestId("ac-card");
+  await expect(card.getByTestId("ac-card-value")).toHaveText("0");
+
+  const character = page.getByTestId("character");
+  const shield = page.getByTestId("ac-shield");
+  const pop = page.getByTestId("ac-popover");
+  const check = async (state: string) => {
+    for (const lang of ["fr", "en"] as const) {
+      await chooseLanguage(page, lang);
+      for (const vp of VIEWPORTS) {
+        const where = `${state}, ${lang}, ${vp.width}x${vp.height}`;
+        await page.setViewportSize(vp);
+        await expectNoPageScroll(page);
+        await expectInside(shield, character, `AC shield, ${where}`);
+        const size = async (l: Locator) =>
+          l.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+        expect(
+          await size(shield.getByTestId("ac-value")),
+          `the AC is smaller than the HP, ${where}`,
+        ).toBeLessThan(
+          await size(page.getByTestId("hp-value").locator("span").first()),
+        );
+        await expectNoClippedText(card, `AC card, ${where}`);
+        await shield.click();
+        await expect(pop).toBeVisible();
+        await expectOnScreen(page, pop, `AC popover, ${where}`);
+        await expectNoClippedText(pop, `AC popover, ${where}`);
+        if (vp.width >= 1920)
+          await snap(page, `ac-${state}-${lang}-${vp.width}x${vp.height}`);
+        await page.keyboard.press("Escape");
+        await expect(pop).toHaveCount(0);
+      }
+    }
+  };
+  await check("derived");
+
+  await card.getByTestId("ac-card-override").click();
+  await card.getByTestId("ac-override-value").fill("4");
+  await card
+    .getByTestId("ac-override-label")
+    .fill("Shield spell against hurled missiles");
+  await card.getByTestId("ac-override-save").click();
+  await expect(card.getByTestId("ac-override")).toBeVisible();
+  await expect(shield).toHaveAttribute("data-overridden", "true");
+  await check("override");
+});

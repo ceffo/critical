@@ -244,7 +244,8 @@
       "min_str": "Needs STR",
       "ac": "AC ±N",
       "to_hit": "To hit +N",
-      "damage": "Damage +N"
+      "damage": "Damage +N",
+      "base_ac": "Base AC N"
     },
     "activate": "Activate",
     "save": "Save",
@@ -1117,7 +1118,8 @@
         "min_str": "Needs STR {{value}}",
         "dex_gain": "DEX +{{value}}",
         "cha_gain": "CHA +{{value}}",
-        "charges_hp_damage_taken": "Absorbs {{value}} HP of damage"
+        "charges_hp_damage_taken": "Absorbs {{value}} HP of damage",
+        "base_ac": "AC {{value}} as if armoured"
       },
       "totalOnSave": "On a save: {{total}}",
       "partSave": {
@@ -1245,7 +1247,8 @@
       "turn_undead": "Turning",
       "skill_points": "Skills",
       "skill_armor": "Armour",
-      "equipment_state": "Equipment"
+      "equipment_state": "Equipment",
+      "ac_override": "AC"
     },
     "status": {
       "active": "Active",
@@ -1438,6 +1441,11 @@
       "equipped": "Equipped: {{name}}",
       "unequipped": "Unequipped: {{name}}",
       "swapped": "Equipped: {{name}} (in place of {{off}})"
+    },
+    "acOverride": {
+      "set": "AC overridden: {{value}}",
+      "setWith": "AC overridden: {{value}} ({{label}})",
+      "cleared": "AC override cleared"
     }
   },
   "critTable": {
@@ -2308,6 +2316,58 @@
       "name": "Identity",
       "title": "Identity",
       "lead": "The character's name and details, then Create."
+    }
+  },
+  "ac": {
+    "title": "Armour class",
+    "titleWith": "Armour class {{value}}",
+    "open": "Armour class {{value}}: show the breakdown",
+    "openOverridden": "Armour class {{value}} (overridden, derived {{derived}}): show the breakdown",
+    "terms": {
+      "base": "Base",
+      "armour_magic": "Armour magic",
+      "shield": "Shield",
+      "shield_magic": "Shield magic",
+      "dexterity": "Dexterity",
+      "protection": "Protection",
+      "buffs": "Effects"
+    },
+    "none": {
+      "base": "no armour",
+      "armour_magic": "none",
+      "shield": "none"
+    },
+    "missileValue": "{{value}} vs missiles",
+    "off": {
+      "magic_armour": "not with magic armour",
+      "duplicate": "does not stack",
+      "armour_worn": "armour worn",
+      "not_best": "a better one counts"
+    },
+    "total": "AC",
+    "floor": "never better than −10",
+    "floored": "floored at −10",
+    "missile": "vs missiles {{value}}",
+    "inventory": "Inventory",
+    "inventoryHint": "Open the inventory: the pieces worn",
+    "override": {
+      "open": "Override",
+      "openHint": "Override the AC: for what the breakdown cannot hold (Shield spell…)",
+      "value": "AC",
+      "label": "Why",
+      "labelPlaceholder": "Shield spell",
+      "save": "Override",
+      "saveHint": "Override the AC with this value",
+      "cancel": "Cancel",
+      "clear": "Clear",
+      "clearHint": "Clear the override: the derived AC applies again",
+      "shown": "Overridden",
+      "shownWith": "Overridden: {{label}}",
+      "derived": "Derived",
+      "errors": {
+        "value": "Between −10 and 10",
+        "label": "60 characters at most"
+      }
     }
   }
 }

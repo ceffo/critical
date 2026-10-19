@@ -50,9 +50,11 @@ fresh_report() { # the agent's report newer than the supervisor's last prompt fo
   # brief (written just before each prompt), so a forgotten marker never hides a report.
   local item=${1#*-}; item=${item^^}; item=$(sed -E 's/([0-9]+)[A-Z]+$/\1/' <<<"$item"); local f p
   # The newest of all markers is the last prompt: a report must be newer than it.
-  p=$(ls -td "$W"/.prompt-"$item"* "$B"/*"$item"-[0-9]*.md "$B"/*"$item".md 2>/dev/null | head -1)
+  # Exact item only (a "-" or the end after it), so item 3 never matches item 34's files.
+  p=$(ls -td "$W"/.prompt-"$item" "$W"/.prompt-"$item"-* "$W"/.prompt-*-"$item" \
+    "$B"/*"$item"-[0-9]*.md "$B"/*"$item".md 2>/dev/null | head -1)
   [ -n "$p" ] || return 1
-  for f in "$R"/*"$item"*-dev.md "$R"/*"${item}"*.md; do
+  for f in "$R"/"$item"-*.md "$R"/*-"$item".md "$R"/"$item".md; do
     [ -f "$f" ] && [ "$f" -nt "$p" ] && return 0
   done; return 1
 }

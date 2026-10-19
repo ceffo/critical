@@ -64,6 +64,11 @@ export interface BuffEffect {
    */
   onOther?: boolean;
   /**
+   * The row's spell has end effects (ADR 0004 step 21): stopping it asks how it ended (`EndCause`).
+   * Absent otherwise. Set by the server; never sent.
+   */
+  asksEndCause?: boolean;
+  /**
    * On list responses: false while min_str is not met by the effective STR, or (a Strength bonus)
    * while an Improved Strength replaces it.
    */
@@ -85,6 +90,31 @@ export interface ItemPower {
 export interface BuffList {
   buffs: BuffEffect[];
   powers: ItemPower[];
+  /** DELETE /api/buffs/{id} only: what the stopped row's end effects did (absent: none applied). */
+  ended?: Ended;
+}
+
+/** How the player says a row with end effects ended (ADR 0004 step 21); running out is the server's. */
+export type EndCause = "voluntary" | "dispelled";
+
+/** One end effect applied (ADR 0004 step 21): the dice, every die, the total. */
+export interface EndEffectRoll {
+  spellId: string;
+  /** The row's stored name; the UI names it from spellId. */
+  buff: string;
+  cause: EndCause | "expired";
+  kind: "heal";
+  dice: string;
+  rolls: { sides: number; value: number }[];
+  constant: number;
+  total: number;
+}
+
+/** What the end of one or more rows did: the effects, and current HP before and after. */
+export interface Ended {
+  effects: EndEffectRoll[];
+  hpBefore: number;
+  hpAfter: number;
 }
 
 /** PATCH /api/buffs/{id}: omitted fields are unchanged; 0 on a counter the buff uses ends it. */
@@ -179,4 +209,6 @@ export interface RoundAdvanceResponse {
   roundsPassed?: number;
   /** advance only: the new round's initiative. */
   initiative?: Initiative;
+  /** advance and pass-time: what the expired rows' end effects did (absent: none applied). */
+  ended?: Ended;
 }

@@ -6,6 +6,7 @@ import { buffName, useSpellName } from "@/i18n/spellName";
 import { useTableStore } from "@/stores/table";
 import { useDatabaseStore } from "@/stores/database";
 import { isUnavailableMessage } from "@/api/http";
+import { endEffectsText } from "@/journal/kinds/buff";
 
 /** Server errors (verbatim, role=alert) and round notices (role=status), bottom-left. */
 export function Notices() {
@@ -57,9 +58,28 @@ export function Notices() {
           className="pointer-events-auto flex items-start gap-2 rounded-lg border bg-card p-3 text-body shadow-lg"
         >
           <div className="min-w-0 flex-1">
-            {t("buffs.expired", {
-              names: notice.buffs.map((b) => buffName(spellName, b)).join(", "),
-            })}
+            {notice.buffs.length > 0 && (
+              <div>
+                {t("buffs.expired", {
+                  names: notice.buffs
+                    .map((b) => buffName(spellName, b))
+                    .join(", "),
+                })}
+              </div>
+            )}
+            {/* ADR 0004 step 21: what the end effects of the rows that ended did. */}
+            {notice.ended && (
+              <div data-testid="notice-ended">
+                {endEffectsText(
+                  t,
+                  spellName,
+                  notice.ended.effects,
+                  notice.ended.hpBefore,
+                  notice.ended.hpAfter,
+                  true,
+                )}
+              </div>
+            )}
           </div>
           <Button
             size="icon-xs"

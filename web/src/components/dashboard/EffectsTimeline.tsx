@@ -10,6 +10,12 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { buffName, useSpellName } from "@/i18n/spellName";
 import { powerEffectsText, powerRows, type PowerRow } from "@/lib/itemPowers";
 import { formatRoundsLeft } from "@/lib/passTime";
@@ -241,8 +247,8 @@ function EffectRow({
 }) {
   const { t } = useTranslation();
   const name = buffName(useSpellName(), b);
-  const { triggerBuff, dismissBuff } = useBuffsStore();
-  const { run, busy } = useTableStore();
+  const { triggerBuff } = useBuffsStore();
+  const { run, busy, dismissBuff } = useTableStore();
   const inactive = b.applies === false;
   const lastRound = b.duration === 1;
   const span = effectSpan({
@@ -305,16 +311,50 @@ function EffectRow({
           >
             <PencilSimple />
           </Button>
-          <Button
-            size="icon-xs"
-            variant="ghost"
-            disabled={busy}
-            aria-label={t("buffs.dismiss", { name })}
-            title={t("buffs.dismiss", { name })}
-            onClick={() => void run(() => dismissBuff(b.id))}
-          >
-            <X />
-          </Button>
+          {/* ADR 0004 step 21: a row whose spell has end effects asks how it ended. */}
+          {b.asksEndCause ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    disabled={busy}
+                    aria-label={t("buffs.dismiss", { name })}
+                    title={t("buffs.endHint", { name })}
+                    data-testid="buff-stop"
+                  />
+                }
+              >
+                <X />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem
+                  data-testid="buff-end-voluntary"
+                  onClick={() => void dismissBuff(b.id, "voluntary")}
+                >
+                  {t("buffs.endBy")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  data-testid="buff-end-dispelled"
+                  onClick={() => void dismissBuff(b.id, "dispelled")}
+                >
+                  {t("buffs.endDispelled")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              disabled={busy}
+              aria-label={t("buffs.dismiss", { name })}
+              title={t("buffs.dismiss", { name })}
+              onClick={() => void dismissBuff(b.id)}
+            >
+              <X />
+            </Button>
+          )}
         </div>
       </div>
       {span.past && (

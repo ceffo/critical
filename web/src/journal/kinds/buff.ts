@@ -3,6 +3,7 @@
 import type { TFunction } from "i18next";
 import { Clock, Hourglass, Sparkle, type Icon } from "@phosphor-icons/react";
 import { buffName, type SpellNamer } from "@/i18n/spellName";
+import type { EndCause, EndEffectRoll } from "@/types/buffs";
 import type { LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
 import { counters } from "../words";
@@ -38,6 +39,49 @@ export interface BuffLogPayload {
   note?: string;
   fromNote?: string;
   noteChanged?: boolean;
+  /** dismiss: how the player said the row ended, when its spell has end effects (ADR 0004 step 21). */
+  cause?: EndCause;
+  /** The end effects the action applied, and current HP around them (ADR 0004 step 21). */
+  endEffects?: EndEffectRoll[];
+  hpBefore?: number;
+  hpAfter?: number;
+}
+
+/** The dice of one end effect as rolled: "4", "4 + 2", "7 + 1" (a constant last). */
+function rolledText(e: EndEffectRoll): string {
+  const parts = e.rolls.map((r) => String(r.value));
+  if (e.constant) parts.push(String(e.constant));
+  return parts.join(" + ");
+}
+
+/**
+ * What the end effects of the rows that ended did (ADR 0004 step 21): each effect's heal with its
+ * dice, then the HP change. `named` puts the row's name before each effect (several rows may have
+ * ended: Next Round, passing time, the notice); a dismiss names its one row already. Shared by the
+ * journal and the notice after the action. "" when no effect applied.
+ */
+export function endEffectsText(
+  t: TFunction,
+  spellName: SpellNamer,
+  effects: readonly EndEffectRoll[] | undefined,
+  hpBefore: number | undefined,
+  hpAfter: number | undefined,
+  named: boolean,
+): string {
+  if (!effects || effects.length === 0) return "";
+  const heals = effects
+    .map((e) =>
+      t(named ? "log.buff.endHealNamed" : "log.buff.endHeal", {
+        buff: buffName(spellName, { name: e.buff, spellId: e.spellId }),
+        total: e.total,
+        dice: e.dice,
+        rolls: rolledText(e),
+      }),
+    )
+    .join("; ");
+  return hpBefore !== undefined && hpAfter !== undefined
+    ? t("log.buff.endHp", { heals, before: hpBefore, after: hpAfter })
+    : heals;
 }
 
 function decodeBuff(e: LogEntry): BuffLogPayload | null {
@@ -55,10 +99,34 @@ function buffText(
   const expired = (p.expired ?? []).map((name, i) =>
     buffName(spellName, { name, spellId: p.expiredSpellIds?.[i] }),
   );
-  const withExpired = (text: string) =>
-    expired.length > 0
-      ? `${text} ${t("log.buff.expired", { names: expired.join(", ") })}`
-      : text;
+  // ADR 0004 step 21: a dismiss names its one row; the rows that run out are named by effect.
+  const endOfOne = endEffectsText(
+    t,
+    spellName,
+    p.endEffects,
+    p.hpBefore,
+    p.hpAfter,
+    false,
+  );
+  const endOfMany = endEffectsText(
+    t,
+    spellName,
+    p.endEffects,
+    p.hpBefore,
+    p.hpAfter,
+    true,
+  );
+  const withEnded = (text: string) =>
+    endOfOne ? t("log.buff.withEnd", { text, end: endOfOne }) : text;
+  const withExpired = (text: string) => {
+    const out =
+      expired.length > 0
+        ? `${text} ${t("log.buff.expired", { names: expired.join(", ") })}`
+        : text;
+    return endOfMany
+      ? t("log.buff.withEndAfter", { text: out, end: endOfMany })
+      : out;
+  };
   switch (p.action) {
     case "activate":
       return t("log.buff.activate", {
@@ -95,7 +163,13 @@ function buffText(
     case "delete_template":
       return t("log.buff.deleteTemplate", { buff });
     case "dismiss":
-      return t("log.buff.dismiss", { buff });
+      return withEnded(
+        p.cause === "voluntary"
+          ? t("log.buff.dismissVoluntary", { buff })
+          : p.cause === "dispelled"
+            ? t("log.buff.dismissDispelled", { buff })
+            : t("log.buff.dismiss", { buff }),
+      );
     case "next_round":
       return withExpired(
         t("log.buff.nextRound", {

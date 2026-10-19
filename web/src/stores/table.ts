@@ -13,12 +13,15 @@ import { useRollStore } from "./roll";
 import { useSkillsStore } from "./skills";
 import { useSpellStore } from "./spells";
 import { useXpStore } from "./xp";
+import type { EndCause, Ended } from "@/types/buffs";
 
 /** Something to tell the player after an action, rendered with i18n by the Notices component: the
- * buffs that just expired, named at render time in the player's language (buffName). */
+ * buffs that just expired, named at render time in the player's language (buffName), and what the
+ * end effects of the rows that ended did (ADR 0004 step 21). */
 export type Notice = {
   kind: "expired";
   buffs: { name: string; spellId?: string }[];
+  ended?: Ended;
 };
 
 interface ActionOptions {
@@ -71,6 +74,9 @@ interface TableStore {
    * (another action landed or another client redid first) or there was nothing to redo. */
   redo: () => Promise<boolean>;
   nextRound: () => Promise<boolean>;
+  /** Stops a row; `cause` is how it ended when its spell has end effects (ADR 0004 step 21). What
+   * they did becomes the notice. */
+  dismissBuff: (id: string, cause?: EndCause) => Promise<boolean>;
   /** Pop the round's initiative entry and roll a new one (refused when another entry is newer). */
   rerollInitiative: () => Promise<boolean>;
   endCombat: () => Promise<boolean>;
@@ -116,11 +122,16 @@ const fetchers: Record<
 
 function expiredNotice(
   expired: { name: string; spellId?: string }[] | undefined,
+  ended?: Ended,
 ): Notice | null {
-  return expired && expired.length > 0
+  return (expired && expired.length > 0) || ended
     ? {
         kind: "expired",
-        buffs: expired.map((b) => ({ name: b.name, spellId: b.spellId })),
+        buffs: (expired ?? []).map((b) => ({
+          name: b.name,
+          spellId: b.spellId,
+        })),
+        ended,
       }
     : null;
 }
@@ -256,14 +267,19 @@ export const useTableStore = create<TableStore>((set, get) => {
     nextRound: () =>
       get().run(async () => {
         const res = await useBuffsStore.getState().advanceRound();
-        set({ notice: expiredNotice(res.expiredBuffs) });
+        set({ notice: expiredNotice(res.expiredBuffs, res.ended) });
+      }),
+    dismissBuff: (id, cause) =>
+      get().run(async () => {
+        const ended = await useBuffsStore.getState().dismissBuff(id, cause);
+        set({ notice: expiredNotice([], ended) });
       }),
     rerollInitiative: () =>
       get().run(() => useBuffsStore.getState().rerollInitiative()),
     passTime: (hours) =>
       get().run(async () => {
         const res = await useBuffsStore.getState().passTime(hours);
-        set({ notice: expiredNotice(res.expiredBuffs) });
+        set({ notice: expiredNotice(res.expiredBuffs, res.ended) });
       }),
   };
 });

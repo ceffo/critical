@@ -2,6 +2,7 @@ import type {
   BuffEdit,
   BuffEffect,
   BuffList,
+  EndCause,
   SavedBuff,
   Strength,
 } from "../types/buffs";
@@ -26,8 +27,10 @@ export function editBuff(id: string, edit: BuffEdit): Promise<BuffList> {
   });
 }
 
-export function dismissBuff(id: string): Promise<BuffList> {
-  return request<BuffList>(`/api/buffs/${encodeURIComponent(id)}`, {
+/** Stops a row; `cause` says how it ended when its spell has end effects (ADR 0004 step 21). */
+export function dismissBuff(id: string, cause?: EndCause): Promise<BuffList> {
+  const query = cause ? `?cause=${cause}` : "";
+  return request<BuffList>(`/api/buffs/${encodeURIComponent(id)}${query}`, {
     method: "DELETE",
   });
 }

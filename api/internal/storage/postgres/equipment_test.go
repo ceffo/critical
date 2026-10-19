@@ -165,3 +165,22 @@ func TestConvertEquipment_Step26_4_MatchedByTheStoredName(t *testing.T) {
 	assert.True(t, f.t.Reviews[fmt.Sprintf("%d|mace|weapon_unmatched", owner)], "the mace stays on the review list")
 	assert.False(t, f.t.Reviews[fmt.Sprintf("%d|bastard_sword|weapon_unmatched", owner)], "the sword is matched")
 }
+
+// ADR 0033 step 26.4: the conversion runs once, so a catalogue without the equipment section (format
+// 6 and before) refuses it when there is something to convert, naming `just catalogue`; the
+// run rolls back, so the database is as it was and the next start retries. A database with nothing
+// to convert does not need the equipment.
+func TestConvertEquipment_Step26_4_RefusesACatalogueWithoutEquipment(t *testing.T) {
+	f, owner := legacyCharacter(t)
+	_, after := migrationDataSteps(repoSeeds(), nil)
+	err := f.InTx(context.Background(), func(ctx context.Context) error { return after[equipmentMigration](ctx, f) })
+	require.ErrorIs(t, err, ErrCatalogueWithoutEquipment)
+	assert.Contains(t, err.Error(), "just catalogue")
+	assert.Empty(t, f.t.Reviews, "nothing was written")
+	assert.NotContains(t, f.t.Items, rowKey(owner, "dagger_2"))
+
+	empty := newFakeStore()
+	require.NoError(t, empty.InTx(context.Background(), func(ctx context.Context) error {
+		return after[equipmentMigration](ctx, empty)
+	}), "nothing to convert, nothing refused")
+}

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/localized"
@@ -14,6 +15,13 @@ import (
 // converts every character's items and weapons (convertEquipment).
 const equipmentMigration = "016_equipment.sql"
 
+// ErrCatalogueWithoutEquipment is the refusal to convert the equipment against a catalogue that
+// carries none (ADR 0033 step 26.4).
+var ErrCatalogueWithoutEquipment = errors.New(
+	"the loaded catalogue has no equipment section (format 7 or later), so the weapons cannot be matched and the " +
+		"one-time equipment conversion (migration 016) is not applied: run `just catalogue` to fetch a current " +
+		"artifact, then start again (nothing was changed)")
+
 // convertEquipment is the conversion of ADR 0033 step 26, a data step run just after
 // equipmentMigration (migrations hold no data, ADR 0025 step 2.1.1): for every character that
 // holds items or weapons, the rows as stored before it are converted by itemsvc.Convert (the one
@@ -21,10 +29,17 @@ const equipmentMigration = "016_equipment.sql"
 // under its id and name key, with the review rows (step 27) and the renamed item ids (step 26.3).
 // The weapons rows stay, unread, until a later migration drops the table. catalogue is the
 // catalogue's weapons the conversion matches (none before format 7).
+//
+// The conversion runs once, so it refuses a catalogue without the equipment section (format 6 and
+// before: no weapon could match, every one would stay on the review list for good) when there is
+// something to convert: the run fails, rolls back, and the next start retries it.
 func convertEquipment(ctx context.Context, q storeq.Querier, catalogue []ruletablesvc.Weapon) error {
 	owners, err := q.EquipmentOwners(ctx)
 	if err != nil {
 		return fmt.Errorf("list equipment owners: %w", err)
+	}
+	if len(owners) > 0 && len(catalogue) == 0 {
+		return ErrCatalogueWithoutEquipment
 	}
 	for _, owner := range owners {
 		if err := convertCharacter(ctx, q, owner, catalogue); err != nil {

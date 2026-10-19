@@ -403,6 +403,9 @@ name or comment); this ADR names none yet.
        its name followed by a qualifier (`Bastard sword, two-handed`) and whose two-handed flag is the
        weapon's. Exactly one row matches or none: an ambiguous or missing name stays unmatched and goes
        on the review list (nothing is guessed). The weapon keeps its own name and bonus.
+       The conversion runs once, so the server **refuses** it when the loaded catalogue has no equipment
+       section (format 6 and before) and a character holds items or weapons: the start fails with an
+       error naming `just catalogue`, the run rolls back and the next start retries it.
     5. **Items** are categorised from their type label when it is obvious: `arrow`, `quarrel`,
        `bolt`, `bullet` → ammunition (its ammo kind); `potion`, `scroll`, `ring`, `rod`, `staff`,
        `wand` → magic of that kind; `gem` → magic `misc` (and the component `gem`, step 1.1); `flask` →

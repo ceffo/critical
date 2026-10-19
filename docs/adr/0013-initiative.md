@@ -2,7 +2,7 @@
 
 **Status**: accepted, 2026-10-15 (critical-kiv.4); steps 2 and 4 amended by [ADR 0018](0018-transactions-and-undo.md)
 
-_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 3 and Consequences (the initiative adds the declared action's weapon speed, casting time or item modifier, initiative effects and a situational modifier; the declaration is logged, ADR 0033 steps 15 and 16)._
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 3 and Consequences (the initiative adds the declared action's weapon speed, casting time or item modifier, initiative effects and a situational modifier; the declaration is logged, ADR 0033 steps 15 and 16); then amended by [ADR 0035](0035-equipment-screens.md) item 6 (no declaration: d10, the weapon in hand's speed and effects; a spell cast or an item used corrects that round's initiative, logged)._
 
 ## Context
 

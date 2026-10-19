@@ -200,6 +200,9 @@ const NAMES: Record<string, string> = {
   deep: "Deep (Abysses)",
   parchment: "Parchment (Parchemin)",
   plain: "Plain (Sobre)",
+  forest: "Forest (Forêt)",
+  ember: "Ember (Braise)",
+  amber: "Amber (Ambre)",
 };
 
 base("contrast report: every theme token pair, both modes", async () => {

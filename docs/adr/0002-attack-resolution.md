@@ -5,7 +5,7 @@ critical-qki.13, critical-qki.28, critical-qki.33 and critical-qki.34, until the
 `docs/backend.md` "Attack Modifiers"); step 6 and the Consequences amended 2026-10-16 by
 [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers). Step 2 amended by [ADR 0030](0030-classes-and-races.md) step 5 (THAC0 derived), implemented 2026-10-18.
 
-_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: steps 2 and 12 (a new to-hit modifier `armor_type`, weapon type against the target's armour type, ADR 0033 step 19) and step 11 (the target's armour corrected after the roll like its AC, ADR 0033 step 18)._
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: steps 2 and 12 (a new to-hit modifier `armor_type`, weapon type against the target's armour type, ADR 0033 step 19) and step 11 (the target's armour corrected after the roll like its AC, ADR 0033 step 18); then removed by [ADR 0035](0035-equipment-screens.md) item 1 (no target armour, no `armor_type` modifier)._
 
 ## Context
 

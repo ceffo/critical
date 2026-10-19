@@ -124,3 +124,42 @@ func TestClassWarnings_Step20_HandsEveryone(t *testing.T) {
 	carriedShield.State = itemsvc.StateCarried
 	assert.Empty(t, warned("fighter", two, carriedShield), "a shield not worn")
 }
+
+func launcher(id, code, weaponType, fires string) itemsvc.Item {
+	it := weapon(id, code, weaponType)
+	it.WeaponKind, it.Fires = "missile", fires
+	return it
+}
+
+// ADR 0033 step 20, cleric and a launcher: PHB p.33 (only blunt, bludgeoning weapons) and step 4
+// (a launcher deals its ammunition's damage type) make a sling, whose bullets are b, allowed and a
+// bow, whose arrows pierce, not; an ammunition piece's own types win over the kind's.
+func TestClassWarnings_Step20_ClericLauncherJudgedByItsAmmunition(t *testing.T) {
+	assert.Empty(t, warned("cleric", launcher("s", "sling", "sling", "bullet")), "bullets are b")
+	assert.Equal(t, []itemsvc.Warning{w("b", "weapon_not_allowed")},
+		warned("cleric", launcher("b", "short_bow", "short_bow", "arrow")), "arrows pierce")
+	arrows := itemsvc.Item{ID: "ar", Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", DamageTypes: []string{"p", "b"}}
+	assert.Empty(t, warned("cleric", launcher("b", "short_bow", "short_bow", "arrow"), arrows), "the ammunition piece says b")
+	assert.Empty(t, warned("cleric", weapon("ms", "morning_star", "other_melee", "p", "b")))
+	assert.Empty(t, warned("cleric", weapon("h", "", "")), "homebrew with no damage type and no code is not settled")
+	assert.Equal(t, []itemsvc.Warning{w("d", "weapon_not_allowed")}, warned("cleric", weapon("d", "dagger", "dagger", "p")))
+}
+
+// ADR 0033 step 20, thief with a shield and a quarterstaff (two-handed): armour_not_allowed on the
+// shield and hands on both pieces, the staff itself being on the list.
+func TestClassWarnings_Step20_ThiefShieldAndQuarterstaff(t *testing.T) {
+	staff := weapon("q", "quarterstaff", "other_melee", "b")
+	staff.TwoHanded = true
+	got := warned("thief", shield("s"), staff)
+	assert.ElementsMatch(t, []itemsvc.Warning{w("s", "armour_not_allowed"), w("s", "hands"), w("q", "hands")}, got)
+}
+
+// ADR 0033 step 20, bard and thief armour by Table 29 column: plate mail (none_allowed) warns a
+// bard, chain mail (metal) does not; elven chain mail does not warn a thief, chain mail does.
+func TestClassWarnings_Step20_ArmourByColumn(t *testing.T) {
+	assert.Equal(t, []itemsvc.Warning{w("plate_mail", "armour_not_allowed")}, warned("bard", armour("plate_mail", "none_allowed")))
+	assert.Empty(t, warned("bard", armour("chain_mail", "metal")))
+	assert.Empty(t, warned("thief", armour("elven_chain_mail", "elven_chain")))
+	assert.Equal(t, []itemsvc.Warning{w("chain_mail", "armour_not_allowed")}, warned("thief", armour("chain_mail", "metal")))
+	assert.Empty(t, warned("fighter", armour("plate_mail", "none_allowed"), shield("s"), weapon("a", "battle_axe", "other_melee", "s")))
+}

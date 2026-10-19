@@ -22,6 +22,8 @@ import (
 type Result struct {
 	Slots []spellsvc.SpellSlot
 	Items []itemsvc.Item
+	// Warnings are the class warnings of Items (ADR 0033 step 20).
+	Warnings []itemsvc.Warning
 	// EntryID is the long rest's action-log entry.
 	EntryID int64
 }
@@ -42,6 +44,7 @@ type Spells interface {
 type Items interface {
 	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
 	ResetDaily(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
+	Warnings(ctx context.Context, characterID int64, items []itemsvc.Item) ([]itemsvc.Warning, error)
 }
 
 // Log records the rest (actionlogsvc).
@@ -115,7 +118,11 @@ func (s *service) LongRest(ctx context.Context, characterID int64) (Result, erro
 		if err != nil {
 			return fmt.Errorf("record long rest: %w", err)
 		}
-		res = Result{Slots: slots, Items: items, EntryID: id}
+		warnings, err := s.items.Warnings(ctx, characterID, items)
+		if err != nil {
+			return fmt.Errorf("class warnings: %w", err)
+		}
+		res = Result{Slots: slots, Items: items, Warnings: warnings, EntryID: id}
 		return nil
 	})
 	if err != nil {

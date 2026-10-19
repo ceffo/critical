@@ -129,7 +129,7 @@ func TestClassWarnings_Step20_ServedOnReadNeverRefused(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	got, err := bs.Items.Warnings(ctx, id)
+	got, err := bs.Items.Warnings(ctx, id, nil)
 	require.NoError(t, err)
 	assert.Equal(t, []itemsvc.Warning{{ItemID: "chain_mail", Code: "armour_not_allowed"}, {ItemID: "sword", Code: "weapon_not_allowed"}}, got)
 	a, err := bs.AC.Get(ctx, id)
@@ -142,4 +142,42 @@ func TestClassWarnings_Step20_ServedOnReadNeverRefused(t *testing.T) {
 	a, err = bs.AC.Get(ctx, id)
 	require.NoError(t, err)
 	assert.Empty(t, a.Warnings)
+}
+
+// ADR 0033 step 20: the AC's warnings are the worn armour's and shield's only, never a weapon's: a
+// thief with a shield and a two-handed quarterstaff has armour_not_allowed and hands on the shield
+// in the AC, while the quarterstaff's own hands warning is on the pieces list only.
+func TestClassWarnings_Step20_ACCarriesOnlyArmourAndShield(t *testing.T) {
+	ctx := context.Background()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Vex", Class: "thief", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 12, Wis: 10, Cha: 8, HPMax: 4,
+	})
+	require.NoError(t, err)
+	_, err = bs.Items.Create(ctx, id, itemsvc.ItemInput{
+		Name: localized.Of("Small shield"), Category: itemsvc.CategoryShield, Behaviour: itemsvc.BehaviourStock, Count: 1,
+		ShieldKind: "small", ACMelee: 1, ACMissile: 1, Equip: true,
+	})
+	require.NoError(t, err)
+	_, err = bs.Items.Create(ctx, id, itemsvc.ItemInput{
+		Name: localized.Of("Staff"), Category: itemsvc.CategoryWeapon, Behaviour: itemsvc.BehaviourStock, Count: 1,
+		WeaponKind: "melee", WeaponType: "other_melee", TwoHanded: true, DamageTypes: []string{"b"}, DamageSM: "1d6", DamageL: "1d6",
+		CatalogueCode: "quarterstaff", Equip: true,
+	})
+	require.NoError(t, err)
+	all, err := bs.Items.Warnings(ctx, id, nil)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []itemsvc.Warning{
+		{ItemID: "small_shield", Code: "armour_not_allowed"}, {ItemID: "small_shield", Code: "hands"}, {ItemID: "staff", Code: "hands"},
+	}, all)
+	a, err := bs.AC.Get(ctx, id)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []itemsvc.Warning{
+		{ItemID: "small_shield", Code: "armour_not_allowed"}, {ItemID: "small_shield", Code: "hands"},
+	}, a.Warnings)
 }

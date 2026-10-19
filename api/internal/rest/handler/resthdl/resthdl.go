@@ -39,7 +39,7 @@ func LongRest(charID CharacterIDFunc, svc restsvc.SVC) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, LongRestDTO{Slots: wire.SlotsToDTO(res.Slots), Items: wire.ItemsToDTO(res.Items), EntryID: res.EntryID})
+		render.OK(r.Context(), w, LongRestDTO{Slots: wire.SlotsToDTO(res.Slots), Items: wire.ItemsToDTO(res.Items, res.Warnings), EntryID: res.EntryID})
 		return nil
 	}
 }

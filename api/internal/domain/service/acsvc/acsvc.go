@@ -137,12 +137,14 @@ func (s *service) Get(ctx context.Context, characterID int64) (*AC, error) {
 // armourWarnings are the class warnings (ADR 0033 step 20) of the worn body
 // armour and shield: what the AC card shows beside the breakdown.
 func armourWarnings(class string, items []itemsvc.Item) []itemsvc.Warning {
+	worn := make(map[string]bool, len(items))
+	for _, it := range items {
+		worn[it.ID] = it.Category == itemsvc.CategoryArmour || it.Category == itemsvc.CategoryShield
+	}
 	var out []itemsvc.Warning
 	for _, w := range itemsvc.ClassWarnings(class, items) {
-		for _, it := range items {
-			if it.ID == w.ItemID && (it.Category == itemsvc.CategoryArmour || it.Category == itemsvc.CategoryShield) {
-				out = append(out, w)
-			}
+		if worn[w.ItemID] {
+			out = append(out, w)
 		}
 	}
 	return out

@@ -76,7 +76,7 @@ export function AcShield({ onOpenInventory }: { onOpenInventory: () => void }) {
           <Warning
             weight="fill"
             aria-hidden
-            className="absolute -right-0.5 -top-0.5 size-5 text-warning"
+            className="absolute right-0 top-0 size-5 text-warning"
             data-testid="ac-shield-warning"
           />
         )}

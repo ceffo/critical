@@ -1428,7 +1428,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     }
     // ADR 0027 step 14.4: the ledger card is as tall as its rows (two entries and the opening row),
     // not the rest of the stage.
-    await rail.nth(2).click();
+    await rail.nth(3).click();
     const ledger = stage.getByTestId("xp-ledger");
     await expect(ledger.getByTestId("xp-row")).toHaveCount(2);
     await expectNoClippedText(stage, `experience, ${where}`);
@@ -3287,6 +3287,8 @@ test("class warnings: rows, AC card, shield and attack card uncut, en and fr, 12
     const card = page.getByTestId("ac-card");
     await expect(card.getByTestId("ac-warnings")).toBeVisible();
     await expect(card.getByTestId("class-warning")).toHaveCount(3);
+    // The shield's two warnings sit under its name, shown once.
+    await expect(card.getByTestId("ac-warning-piece")).toHaveCount(2);
     await expect(card.getByTestId("ac-warnings")).toContainText(
       lang === "fr" ? "Pas pour un magicien" : "Not for a mage",
     );

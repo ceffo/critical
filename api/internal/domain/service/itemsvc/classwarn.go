@@ -93,7 +93,7 @@ func ClassWarnings(class string, pieces []Item) []Warning {
 				out = append(out, Warning{p.ID, WarnArmourNotAllowed})
 			}
 		case p.Category == CategoryWeapon && p.State == StateWielded:
-			if ruled && !weaponAllowed(rule, p) {
+			if ruled && !weaponAllowed(rule, p, pieces) {
 				out = append(out, Warning{p.ID, WarnWeaponNotAllowed})
 			}
 			if p.TwoHanded {
@@ -118,10 +118,38 @@ func armourAllowed(r classRule, p Item) bool {
 	return len(r.armourColumns) == 0 || slices.Contains(r.armourColumns, p.SkillColumn)
 }
 
-func weaponAllowed(r classRule, p Item) bool {
+// ammoDamageTypes are the damage types of an ammunition kind when no piece of that kind says
+// (ADR 0033 step 4): bullets are bludgeoning, every other kind pierces.
+var ammoDamageTypes = map[string][]string{"bullet": {"b"}}
+
+// launcherDamageTypes are the damage types a launcher deals: its ammunition's (ADR 0033 step 4),
+// from the pieces of the kind it fires, else the kind's own.
+func launcherDamageTypes(p Item, pieces []Item) []string {
+	var types []string
+	for _, a := range pieces {
+		if a.Category == CategoryAmmunition && a.AmmoKind == p.Fires {
+			types = append(types, a.DamageTypes...)
+		}
+	}
+	if len(types) > 0 {
+		return types
+	}
+	if t, ok := ammoDamageTypes[p.Fires]; ok {
+		return t
+	}
+	return []string{"p"}
+}
+
+func weaponAllowed(r classRule, p Item, pieces []Item) bool {
 	if r.bluntOnly {
-		if len(p.DamageTypes) > 0 {
-			return slices.Contains(p.DamageTypes, "b")
+		types := p.DamageTypes
+		if p.FiresAmmo() {
+			// PHB p.33 (only blunt, bludgeoning weapons): a launcher is judged by the
+			// ammunition it fires, so a sling is allowed and a bow is not.
+			types = launcherDamageTypes(p, pieces)
+		}
+		if len(types) > 0 {
+			return slices.Contains(types, "b")
 		}
 		// No damage type: a catalogue row or a specific type (a bow) says
 		// it does no bludgeoning; a bare homebrew weapon is not settled.
@@ -142,15 +170,17 @@ func weaponAllowed(r classRule, p Item) bool {
 }
 
 // Warnings is the character's class warnings (ADR 0033 step 20), read from
-// its class and its pieces.
-func (s *service) Warnings(ctx context.Context, characterID int64) ([]Warning, error) {
+// its class and its pieces: the list the caller already holds, or, with none,
+// the character's pieces as stored.
+func (s *service) Warnings(ctx context.Context, characterID int64, items []Item) ([]Warning, error) {
 	c, err := s.chars.GetCharacter(ctx, characterID)
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.dal.List(ctx, characterID)
-	if err != nil {
-		return nil, err
+	if items == nil {
+		if items, err = s.dal.List(ctx, characterID); err != nil {
+			return nil, err
+		}
 	}
 	return ClassWarnings(c.Class, items), nil
 }

@@ -453,7 +453,20 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
   await page.getByRole("tab", { name: "Compétences" }).click();
   await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
 
+  // In English, taking it off in the inventory gives the skills back without a reload.
   await chooseLanguage(page, "en");
+  await expect(page.getByTestId("skill-armor")).toHaveText(
+    "Skill armour: Elven chain",
+  );
+  await openWorkspace(page, "Inventory");
+  await page.getByRole("button", { name: "Unequip Elven chain mail" }).click();
+  await openWorkspace(page, "Act");
+  await page.getByRole("tab", { name: "Skills" }).click();
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("55%");
+  await expect(page.getByTestId("skill-armor")).toHaveText(
+    "Skill armour: None",
+  );
+
   await openWorkspace(page, "Inventory");
   await page.getByRole("button", { name: "Add item" }).click();
   const wf = page.getByTestId("item-form");

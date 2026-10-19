@@ -8,13 +8,13 @@ import (
 )
 
 // State keys under which buffsvc snapshots its state in the action log. Each
-// has a Restorer (see Restorers) that the composition root registers.
+// has a codec in buffsvc's module (Module), which the composition root registers.
 const (
 	StateKeyBuffs = "buffs"
 	StateKeyRound = "round"
 	// StateKeySavedBuffs is the whole saved-buff template list.
 	StateKeySavedBuffs = "saved_buffs"
-	// StateKeyInitiative is the round's initiative (ADR 0013), JSON null when
+	// StateKeyInitiative is the round's initiative (ADR 0013), absent when
 	// there is none.
 	StateKeyInitiative = "initiative"
 )

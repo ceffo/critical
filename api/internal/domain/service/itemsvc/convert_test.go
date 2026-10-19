@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -224,7 +225,7 @@ func TestConvert_Step26_6_PowersStayOnOrAreReviewed(t *testing.T) {
 // weapon comes back converted (matched, wielded), last in the list; an add
 // popped deletes the piece.
 func TestRestorers_Step26_2_OldWeaponEntriesPopIntoThePiece(t *testing.T) {
-	snap := json.RawMessage(`{"id":"longsword","position":1,"name":{"en":"Long Sword +1"},"damageSm":"1d8","damageL":"1d12",
+	snap := snaptest.EnvID("longsword", `{"position":1,"name":{"en":"Long Sword +1"},"damageSm":"1d8","damageL":"1d12",
 		"magicToHit":1,"magicDamage":1,"kind":"melee","twoHanded":false,"ammoKind":"","weaponType":"long_sword"}`)
 	piece, _ := itemsvc.ConvertWeapon(legacySword, catalogueWeapons)
 	piece.Position = 7
@@ -232,7 +233,7 @@ func TestRestorers_Step26_2_OldWeaponEntriesPopIntoThePiece(t *testing.T) {
 		f := deps(t)
 		f.Catalogue = catalogueWeapons
 		svc, _ := itemsvc.New(dal, f.Deps)
-		return svc.Restorers()[itemsvc.StateKeyWeapons].Restore(context.Background(), 1, state)
+		return svc.Module().Restorer(itemsvc.StateKeyWeapons).Restore(context.Background(), 1, state)
 	}
 	t.Run("edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
@@ -255,7 +256,7 @@ func TestRestorers_Step26_2_OldWeaponEntriesPopIntoThePiece(t *testing.T) {
 	t.Run("added", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		dal.EXPECT().Delete(mock.Anything, int64(1), "longsword").Return(nil).Once()
-		require.NoError(t, restore(dal, json.RawMessage(`{"id":"longsword","absent":true}`)))
+		require.NoError(t, restore(dal, snaptest.Absent("longsword")))
 	})
 }
 

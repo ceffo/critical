@@ -5,8 +5,6 @@
 package localized
 
 import (
-	"encoding/json"
-	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -116,44 +114,4 @@ func (t Text) With(patch Text) Text {
 // Equal reports whether both texts have the same body in every language.
 func (t Text) Equal(o Text) bool {
 	return maps.Equal(t.Clean(), o.Clean())
-}
-
-// Snap is a text inside a stored snapshot (an action-log state): the
-// language map, or the plain string of a snapshot written before the text
-// was localized (Plain), read as its fallback-language body. Restoring a
-// Plain one replaces that body only (ADR 0023 step 11).
-type Snap struct {
-	Text  Text
-	Plain bool
-}
-
-// MarshalJSON writes the language map.
-func (n Snap) MarshalJSON() ([]byte, error) { return json.Marshal(n.Text) }
-
-// UnmarshalJSON reads a language map or a plain string.
-func (n *Snap) UnmarshalJSON(b []byte) error {
-	if string(b) == "null" {
-		*n = Snap{}
-		return nil
-	}
-	var s string
-	if err := json.Unmarshal(b, &s); err == nil {
-		*n = Snap{Text: Of(s), Plain: true}
-		return nil
-	}
-	var t Text
-	if err := json.Unmarshal(b, &t); err != nil {
-		return fmt.Errorf("decode localized text: %w", err)
-	}
-	*n = Snap{Text: t}
-	return nil
-}
-
-// Restored is the text a snapshot puts back over cur: the whole snapshot
-// text, or for a Plain one cur with its fallback body replaced.
-func (n Snap) Restored(cur Text) Text {
-	if n.Plain {
-		return cur.With(n.Text)
-	}
-	return n.Text
 }

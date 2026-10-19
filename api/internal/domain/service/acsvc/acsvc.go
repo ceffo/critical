@@ -28,9 +28,6 @@ type SVC interface {
 	SetOverride(ctx context.Context, characterID int64, o Override) (*AC, error)
 	// ClearOverride clears it, one ac_override entry; none set logs nothing.
 	ClearOverride(ctx context.Context, characterID int64) (*AC, error)
-	// Restorers are the state keys the override's entries snapshot, with
-	// the writers that restore them.
-	Restorers() map[string]actionlog.Restorer
 }
 
 // Items reads the character's pieces (itemsvc).

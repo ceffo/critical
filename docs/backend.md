@@ -58,7 +58,12 @@ transaction_id
 -- (transaction_id: the id of the first entry of the request that recorded it, ADR 0018 step 1;
 --  undo pops a transaction whole. Rows older than the column are each their own transaction)
 -- action_snapshots: before/after state an entry changed, one row per state key
-id, action_id, state_key, before_state JSON, after_state JSON
+id, action_id, state_key, before_envelope JSON, after_envelope JSON, before_state, after_state
+-- (before_envelope / after_envelope: the action log codec's envelope, {"id","state"} or
+--  {"id","absent":true}, ADR 0018 steps 8 and 9; NULL on a row the release before the codec
+--  recorded during a rolling deploy, until the data step re-encodes it: that entry cannot be undone
+--  or redone meanwhile. before_state / after_state hold the encoding of before the codec, no longer
+--  read, kept for the release before it; a later release makes the envelopes NOT NULL and drops them)
 -- action_corrections: audited amend/void events pointing at an entry (never edit an entry)
 id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, step_id, created_at
 -- (step_id: the 'correction' entry a post-roll correction belongs to, ADR 0010 step 6; popping
@@ -134,13 +139,24 @@ situational_value, situational_label
 action log's `Record` inside the same `domain.TxRunner.InTx` as its state write (the runner is
 `actionlogsvc.Transactions(db)`, built once in the composition root: every entry recorded in one
 outermost `InTx` is one transaction, popped by one undo, ADR 0018), with
-`Snapshots` of the state it changed (a `before` and an `after` JSON per state key). It registers an
-`actionlog.Restorer` for its state key on the action log in the composition root, so voiding
-(popping) the entry restores the "before" state; a service exposes its restorers (for example
-`buffSvc.Restorers()`) for the composition root to register. A state key `family:id` (for example
-`items:arrows_plus3`) is restored by the Restorer of its family. A snapshot of state that other
-services also write (the slot list, the buffs) is produced by one helper of the owning service
-(`prepsvc.SlotsSnapshot`, `buffsvc.Add`) so every writer encodes it the same way.
+`Snapshots` of the state it changed (a `before` and an `after` JSON per state key), encoded by the
+`actionlog.Snapshotter` of the key's family. A snapshot of state that other services also write
+(the slot list, the buffs) is produced by one helper of the owning service (`prepsvc.SlotsSnapshot`,
+`buffsvc.Add`) so every writer encodes it the same way.
+
+**Modules.** Every service exposes one module value, `Module() domain.Module` (part of
+`domain.Service`, so a service cannot leave it out): its name, the codecs (`actionlog.Codec`, a
+family's `Snapshotter` with its `Restorer(write, remove)`) that write its families back on undo and
+redo, and the payload views of its entry kinds. The composition root builds each service once,
+straight into its `BackingServices` field, and adds it to its one list of services (`add`); at the end
+of `Build` it loops over that list and registers every module on the action log
+(`actionlogsvc.Register`), and `Close` walks the same list in reverse. Registration refuses a family
+or an entry kind two modules claim (`actionlogsvc.ErrClaimed`) and a codec that cannot restore
+(`actionlog.ErrNoRestorer`): the start fails, not the player's undo. A state key `family:id` (for
+example `items:arrows_plus3`) is restored by the codec of its family. The composition tests derive
+their coverage from the list: every declared family has an undo case
+(`TestModules_EveryDeclaredFamilyHasAnUndoCase`) and every service field is on the list
+(`TestBuild_EveryServiceIsOnTheModuleList`).
 
 What each service records, and the rules it follows, are in the ADRs ([index](adr/README.md)).
 
@@ -160,7 +176,8 @@ one statement list (no parameters), so it may hold several statements; DDL is tr
 Data a schema change needs first (rows a `NOT NULL` would refuse) is a **data step**: Go code the run
 executes on its transaction just before that migration, only when the migration is pending
 (`migrationDataSteps`; today the owners before migration 004, "Per-character data"; after a migration,
-the seeded weapons' types after 005 and the seed character's race code after 007). Its rules,
+the seeded weapons' types after 005, the seed character's race code after 007 and the action log
+snapshots re-encoded into the codec's envelopes after 019, ADR 0018 step 9). Its rules,
 including when a step and its queries may be deleted, are [ADR 0025](adr/0025-postgresql-storage.md)
 step 2.1.1.
 

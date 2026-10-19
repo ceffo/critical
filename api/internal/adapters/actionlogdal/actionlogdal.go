@@ -62,7 +62,7 @@ func (d *DAL) InsertEntry(ctx context.Context, e actionlog.NewEntry, transaction
 	}
 	for _, s := range e.Snapshots {
 		err := d.q.InsertSnapshot(ctx, queries.InsertSnapshotParams{
-			ActionID: id, StateKey: s.Key, BeforeState: string(s.Before), AfterState: string(s.After),
+			ActionID: id, StateKey: s.Key, BeforeEnvelope: string(s.Before), AfterEnvelope: string(s.After),
 		})
 		if err != nil {
 			return 0, fmt.Errorf("insert action_snapshots %s: %w", s.Key, err)
@@ -280,12 +280,21 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 	for _, s := range snaps {
 		if e, ok := byID[s.ActionID]; ok {
 			e.Snapshots = append(e.Snapshots, actionlog.Snapshot{
-				Key: s.StateKey, Before: json.RawMessage(s.BeforeState), After: json.RawMessage(s.AfterState),
+				Key: s.StateKey, Before: envelope(s.BeforeEnvelope), After: envelope(s.AfterEnvelope),
 			})
 		}
 	}
 
 	return d.attachCorrections(ctx, characterID, entries, minID)
+}
+
+// envelope is a stored envelope column, nil when the row has none: a snapshot the release before
+// the codec recorded during a rolling deploy, not re-encoded yet (ADR 0018 step 9).
+func envelope(col sql.NullString) json.RawMessage {
+	if !col.Valid {
+		return nil
+	}
+	return json.RawMessage(col.String)
 }
 
 // attachCorrections loads the corrections of entries from minID, the

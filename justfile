@@ -363,6 +363,13 @@ equipment-rehearsal ref="":
 ac-rehearsal container="critical-postgres-1" database="critical":
     scripts/ac-override-rehearsal.sh {{container}} {{database}}
 
+# The snapshot codec upgrade (019) on copies of a real database (default: the main checkout's dev
+# database, only read by pg_dump) in a throwaway compose PostgreSQL: the rolling deploy beside the
+# release before (old ref, default the merge base with origin/main), a data step failure, and every
+# character's stack popped and replayed against that release. Removes the compose project.
+snapshot-rehearsal container="critical-postgres-1" database="critical" ref="":
+    scripts/snapshot-codec-rehearsal.sh {{container}} {{database}} {{ref}}
+
 # ADR 0024 step 9.2, docs/deploy.md "Promotion". Admin, once: a random passphrase in
 # ~/.config/critical/restore-point.passphrase (never overwritten), set as the production secret
 # RESTORE_POINT_PASSPHRASE. Keep a copy in a password manager: GitHub never shows a secret back.

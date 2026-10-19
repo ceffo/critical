@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -100,17 +101,17 @@ func TestItemPowers_Step15_SnapshotCarriesThePowers(t *testing.T) {
 	_, err := svc.Delete(context.Background(), 1, "power_gem_dispel")
 	require.NoError(t, err)
 	require.Len(t, got.Snapshots, 1)
-	var before []map[string]any
-	require.NoError(t, json.Unmarshal(got.Snapshots[0].Before, &before))
+	var before map[string]any
+	require.NoError(t, json.Unmarshal([]byte(snaptest.State(t, got.Snapshots[0].Before)), &before))
 	assert.JSONEq(t, `[{"id":"thunder_hammer","trigger":{"min_str":18},"effects":{"weapon_buff":5,"multiplier":2,"weapon_kind":"melee"}}]`,
-		mustJSON(t, before[0]["item"].(map[string]any)["powers"]))
+		mustJSON(t, before["item"].(map[string]any)["powers"]))
 
 	// Popping the remove inserts the gem back whole, hammer included.
 	restore := mocks.NewMockDAL(t)
 	rsvc, _ := itemsvc.New(restore, deps(t).Deps)
 	restore.EXPECT().Update(mock.Anything, int64(1), gem).Return(itemsvc.ErrItemNotFound).Once()
 	restore.EXPECT().Insert(mock.Anything, int64(1), gem).Return(nil).Once()
-	require.NoError(t, rsvc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, got.Snapshots[0].Before))
+	require.NoError(t, rsvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
 }
 
 // ADR 0016 step 15: an edit never sets powers (the patch has no field for
@@ -145,16 +146,15 @@ func TestItemPowers_Step15_EditBodyCannotSetPowers(t *testing.T) {
 // ADR 0016 step 15, an entry recorded before powers existed: its snapshot
 // has no "powers" key, and popping it leaves the powers the item has now.
 func TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers(t *testing.T) {
-	old := json.RawMessage(`[{"id":"power_gem_dispel","count":1,"replace":true,"item":{"position":5,"name":"Power Gem: Dispel Magic",
-		"type":"gem","behaviour":"daily","magicalBonus":0,"ammoKind":"","maxCount":1,"effectDice":"","effectSave":"","notes":"old"}}]`)
+	old := snaptest.EnvID("power_gem_dispel", `{"count":1,"replace":true,"item":{"position":5,"name":{"en":"Power Gem: Dispel Magic"},"namePartial":true,
+		"type":"gem","behaviour":"daily","magicalBonus":0,"ammoKind":"","maxCount":1,"effectDice":"","effectSave":"","notes":"old"}}`)
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().RenamedID(mock.Anything, int64(1), "power_gem_dispel").Return("power_gem_dispel", nil).Once()
 	dal.EXPECT().Get(mock.Anything, int64(1), "power_gem_dispel").Return(gem, nil).Once()
 	want := gem
 	want.Name, want.Notes = localized.Of("Power Gem: Dispel Magic"), "old"
 	dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
-	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, old))
+	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, old))
 }
 
 // The stored encoding round-trips and refuses an unknown key (a typo in the

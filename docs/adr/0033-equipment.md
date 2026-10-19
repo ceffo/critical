@@ -391,7 +391,9 @@ name or comment); this ADR names none yet.
        keep their weapon and ammunition ids and names (ADR 0016 steps 7 and 14).
     3. An item and a weapon of the same character with the same id: the weapon keeps it, the item
        gets the next free suffix, and its old snapshots are mapped to the new id by a conversion
-       table the restorer reads (the developer checks the live data: none is expected).
+       table the restorer reads (the developer checks the live data: none is expected). _Since the
+       action log codec ([ADR 0018](0018-transactions-and-undo.md) step 9)_: the table is read once,
+       by the data step that re-encodes the snapshots, which writes the new id into their envelope.
     4. **Weapons** are matched to a catalogue row by their **weapon type** (ADR 0030 step 23):
        `long_sword` → long sword, `short_bow` → short bow, `dagger`, `dart`, `sling`, `short_sword`,
        `long_bow`, the three crossbows. The match adds the code, the size, the damage types and the
@@ -446,7 +448,8 @@ to, so the web never re-derives step 6). `GET /api/weapons` stays as the attack'
 pieces (with `wielded` and `speed`); `/api/weapons`' editor routes are gone. New pieces log
 `item_add` / `item_edit` / `item_remove` (payload with `category`); old `weapon_*` entries pop into the
 piece (step 26.2), old `items:<id>` snapshots are told from new ones by a `model` marker and read
-through `item_id_renames` (step 26.3). Readings the ADR leaves open, fixed here: the review reasons are
+through `item_id_renames` (step 26.3; since the action log codec, the re-encoding reads them, ADR
+0018 step 9). Readings the ADR leaves open, fixed here: the review reasons are
 `weapon_unmatched`, `uncategorised`, `ammo_kind_unknown` (an ammo kind none of step 4's codes,
 kept as typed) and `powers_off`; an item with powers and an unknown label becomes `magic` `misc`, worn,
 on the review list (so its powers stay on, step 9), one whose category cannot be worn stays carried

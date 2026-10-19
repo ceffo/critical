@@ -399,9 +399,14 @@ reads `seeds/spell_effects.json` into private DTOs and returns
 
 `internal/domain/` contains things shared by *every* service:
 
-- A generic `Service` interface (`Health`, `Close`) embedded by every service's
-  driver port. The composition root iterates a `[]domain.Service` to shut
-  everything down.
+- A generic `Service` interface (`Health`, `Close`, `Module`) embedded by every
+  service's driver port. The composition root iterates a `[]domain.Service` to
+  shut everything down and to register each service's `Module()` (its
+  action-log codecs and payload views) on the log.
+- `internal/domain/actionlog` holds the action log's vocabulary (`Module`, the
+  snapshot codec). It stays a leaf: it never imports `domain`, because `domain`
+  imports it (`Service.Module` returns its `Module`). The compiler enforces this
+  (an import would be a cycle), so no lint rule is needed.
 - Sentinel errors used across the system. `errors.Is(err, domain.ErrXxx)` works
   at any layer because the DAL, the service, and the handler all agree on the
   same value.

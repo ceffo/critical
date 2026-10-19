@@ -312,10 +312,9 @@ func TestPiece_EveryColumnMapped(t *testing.T) {
 	require.NoError(t, dal.Update(ctx, owner, piece))
 }
 
-// ADR 0033 steps 26.3 and 27: the review rows map to reviews; a piece's
-// rows are deleted by its id; a renamed item's new id is read, an item not
-// renamed keeps its id.
-func TestReviewsAndRenames(t *testing.T) {
+// ADR 0033 step 27: the review rows map to reviews; a piece's rows are
+// deleted by its id.
+func TestReviews(t *testing.T) {
 	ctx := context.Background()
 	dal, q, _ := mocked(t)
 	q.EXPECT().ListReviews(ctx, owner).Return([]queries.ListReviewsRow{{ItemID: "mace", Reason: "weapon_unmatched"}}, nil).Once()
@@ -325,13 +324,4 @@ func TestReviewsAndRenames(t *testing.T) {
 
 	q.EXPECT().DeleteReviews(ctx, queries.DeleteReviewsParams{CharacterID: owner, ItemID: "mace"}).Return(nil).Once()
 	require.NoError(t, dal.DeleteReviews(ctx, owner, "mace"))
-
-	q.EXPECT().RenamedItemID(ctx, queries.RenamedItemIDParams{CharacterID: owner, OldID: "dagger"}).Return("dagger_2", nil).Once()
-	id, err := dal.RenamedID(ctx, owner, "dagger")
-	require.NoError(t, err)
-	assert.Equal(t, "dagger_2", id)
-	q.EXPECT().RenamedItemID(ctx, queries.RenamedItemIDParams{CharacterID: owner, OldID: "rope"}).Return("", sql.ErrNoRows).Once()
-	id, err = dal.RenamedID(ctx, owner, "rope")
-	require.NoError(t, err)
-	assert.Equal(t, "rope", id)
 }

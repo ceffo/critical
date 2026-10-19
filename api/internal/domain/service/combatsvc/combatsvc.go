@@ -174,3 +174,10 @@ func NewWithConfig(cfg *Config, d Deps) (SVC, error) {
 
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
+
+// Module declares the save entries' payload view (SavePayloadView) and no
+// codec: the ammunition an attack spends is encoded by itemsvc's helper and
+// restored by its codec.
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "combatsvc", Views: actionlog.PayloadViews{actionlog.KindSave: SavePayloadView}}
+}

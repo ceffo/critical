@@ -6,7 +6,7 @@
 // Every change (activate, edit, absorb, dismiss, Next Round) is recorded in
 // the action log with before/after snapshots of the buff list (and the round
 // for Next Round) in the same transaction as the state write, so voiding the
-// entry restores the state through Restorers.
+// entry restores the state through the codecs of its module (Module).
 package buffsvc
 
 import (
@@ -90,11 +90,6 @@ type SVC interface {
 	// 5). Refused (a conflict) when there is no initiative or a newer
 	// transaction is on the log.
 	RerollInitiative(ctx context.Context, characterID int64) (Initiative, error)
-
-	// Restorers maps each state key buffsvc snapshots to the Restorer that
-	// writes a "before" state back on void. The composition root registers
-	// every one on the action log.
-	Restorers() map[string]actionlog.Restorer
 }
 
 // DAL is the storage-driven port. Every method must use the transaction

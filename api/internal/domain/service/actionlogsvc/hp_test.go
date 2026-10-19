@@ -174,7 +174,7 @@ func historyLimitSeen(t *testing.T) int {
 	var got int
 	dal.EXPECT().ListActiveEntries(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Run(func(_ context.Context, _ int64, _ actionlog.Kind, limit int) { got = limit }).Return(nil, nil)
-	svc, err := actionlogsvc.New(dal, &passTx{}, mocks.NewMockRounds(t), maxHP, nil)
+	svc, err := actionlogsvc.New(dal, &passTx{}, mocks.NewMockRounds(t), maxHP)
 	require.NoError(t, err)
 	_, err = svc.GetHPState(context.Background(), 1)
 	require.NoError(t, err)
@@ -193,7 +193,7 @@ func TestNew_HistoryLimitEnv(t *testing.T) {
 	})
 	t.Run("zero rejected", func(t *testing.T) {
 		t.Setenv("HP_HISTORY_LIMIT", "0")
-		_, err := actionlogsvc.New(mocks.NewMockDAL(t), &passTx{}, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t), nil)
+		_, err := actionlogsvc.New(mocks.NewMockDAL(t), &passTx{}, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t))
 		require.ErrorContains(t, err, "HistoryLimit")
 	})
 }

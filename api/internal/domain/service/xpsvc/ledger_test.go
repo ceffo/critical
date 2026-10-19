@@ -12,6 +12,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc/mocks"
@@ -138,8 +139,9 @@ func TestAdd_RecordsOneTransactionWithTheAwardsSnapshot(t *testing.T) {
 	assert.JSONEq(t, `{"entry":{"id":7,"date":"2026-10-17","session":"S42","reason":"troll","base":1200,"bonus":true,"bonusAmount":120,"total":1320}}`, string(rec.Payload))
 	require.Len(t, rec.Snapshots, 1)
 	assert.Equal(t, "xp:7", rec.Snapshots[0].Key)
-	assert.JSONEq(t, `{"id":7,"absent":true,"date":"","session":"","reason":"","base":0,"bonus":false}`, string(rec.Snapshots[0].Before))
-	assert.JSONEq(t, `{"id":7,"date":"2026-10-17","session":"S42","reason":"troll","base":1200,"bonus":true}`, string(rec.Snapshots[0].After))
+	assert.Equal(t, snaptest.Absent("7"), rec.Snapshots[0].Before)
+	assert.Equal(t, "7", snaptest.ID(t, rec.Snapshots[0].After))
+	assert.JSONEq(t, `{"date":"2026-10-17","session":"S42","reason":"troll","base":1200,"bonus":true}`, snaptest.State(t, rec.Snapshots[0].After))
 }
 
 func TestAdd_RejectsInvalidInput(t *testing.T) {
@@ -189,8 +191,8 @@ func TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction(t *testing.T) {
 	}`, string(rec.Payload))
 	require.Len(t, rec.Snapshots, 1)
 	assert.Equal(t, "xp:3", rec.Snapshots[0].Key)
-	assert.JSONEq(t, `{"id":3,"date":"2026-10-10","session":"S41","reason":"ogre","base":1000,"bonus":true}`, string(rec.Snapshots[0].Before))
-	assert.JSONEq(t, `{"id":3,"date":"2026-10-10","session":"S41","reason":"ogre chief","base":1100,"bonus":false}`, string(rec.Snapshots[0].After))
+	assert.JSONEq(t, `{"date":"2026-10-10","session":"S41","reason":"ogre","base":1000,"bonus":true}`, snaptest.State(t, rec.Snapshots[0].Before))
+	assert.JSONEq(t, `{"date":"2026-10-10","session":"S41","reason":"ogre chief","base":1100,"bonus":false}`, snaptest.State(t, rec.Snapshots[0].After))
 }
 
 // ADR 0018 step 1: an edit that changes nothing writes nothing and records
@@ -237,8 +239,9 @@ func TestDelete_RecordsTheRemovedAwardOrReportsNotFound(t *testing.T) {
 	assert.Equal(t, actionlog.KindXPRemove, rec.Kind)
 	assert.JSONEq(t, `{"entry":{"id":3,"date":"2026-10-10","session":"","reason":"ogre","base":15,"bonus":true,"bonusAmount":2,"total":17}}`, string(rec.Payload))
 	require.Len(t, rec.Snapshots, 1)
-	assert.JSONEq(t, `{"id":3,"date":"2026-10-10","session":"","reason":"ogre","base":15,"bonus":true}`, string(rec.Snapshots[0].Before))
-	assert.JSONEq(t, `{"id":3,"absent":true,"date":"","session":"","reason":"","base":0,"bonus":false}`, string(rec.Snapshots[0].After))
+	assert.Equal(t, "3", snaptest.ID(t, rec.Snapshots[0].Before))
+	assert.JSONEq(t, `{"date":"2026-10-10","session":"","reason":"ogre","base":15,"bonus":true}`, snaptest.State(t, rec.Snapshots[0].Before))
+	assert.Equal(t, snaptest.Absent("3"), rec.Snapshots[0].After)
 
 	f.dal.EXPECT().Get(mock.Anything, int64(1), int64(4)).Return(xpsvc.Entry{}, xpsvc.ErrEntryNotFound).Once()
 	_, err = f.svc.Delete(context.Background(), 1, 4)
@@ -250,28 +253,28 @@ func TestDelete_RecordsTheRemovedAwardOrReportsNotFound(t *testing.T) {
 func TestRestorer_WritesTheSnapshotBack(t *testing.T) {
 	ctx := context.Background()
 	entry := xpsvc.Entry{ID: 3, Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1000, Bonus: true}
-	present := `{"id":3,"date":"2026-10-10","session":"S41","reason":"ogre","base":1000,"bonus":true}`
-	restorer := func(f fixture) actionlog.Restorer { return f.svc.Restorers()[xpsvc.StateKeyXP] }
+	present := snaptest.EnvID("3", `{"date":"2026-10-10","session":"S41","reason":"ogre","base":1000,"bonus":true}`)
+	restorer := func(f fixture) actionlog.Restorer { return f.svc.Module().Restorer(xpsvc.StateKeyXP) }
 
 	t.Run("absent deletes", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().Delete(mock.Anything, int64(1), int64(3)).Return(nil).Once()
-		require.NoError(t, restorer(f).Restore(ctx, 1, []byte(`{"id":3,"absent":true}`)))
+		require.NoError(t, restorer(f).Restore(ctx, 1, snaptest.Absent("3")))
 	})
 	t.Run("present overwrites", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().Update(mock.Anything, int64(1), entry).Return(nil).Once()
-		require.NoError(t, restorer(f).Restore(ctx, 1, []byte(present)))
+		require.NoError(t, restorer(f).Restore(ctx, 1, present))
 	})
 	t.Run("gone is written back under its id", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().Update(mock.Anything, int64(1), entry).Return(xpsvc.ErrEntryNotFound).Once()
 		f.dal.EXPECT().Reinsert(mock.Anything, int64(1), entry).Return(nil).Once()
-		require.NoError(t, restorer(f).Restore(ctx, 1, []byte(present)))
+		require.NoError(t, restorer(f).Restore(ctx, 1, present))
 	})
 	t.Run("no id is refused", func(t *testing.T) {
 		f := newFixture(t)
-		require.Error(t, restorer(f).Restore(ctx, 1, []byte(`{"absent":true}`)))
+		require.Error(t, restorer(f).Restore(ctx, 1, snaptest.Absent("")))
 	})
 }
 

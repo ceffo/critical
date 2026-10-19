@@ -59,7 +59,7 @@ func row(id int64, kind actionlog.Kind, delta int64, payload string) queries.Get
 
 // expectAttach expects the snapshots and corrections of the entries from
 // minID on.
-func expectAttach(q *mocks.MockQuerier, minID int64, snaps []queries.ActionSnapshot, corrs []queries.ListCorrectionsFromRow) {
+func expectAttach(q *mocks.MockQuerier, minID int64, snaps []queries.ListSnapshotsFromRow, corrs []queries.ListCorrectionsFromRow) {
 	q.EXPECT().ListSnapshotsFrom(mock.Anything, queries.ListSnapshotsFromParams{CharacterID: charID, ActionID: minID}).Return(snaps, nil).Once()
 	q.EXPECT().ListCorrectionsFrom(mock.Anything, queries.ListCorrectionsFromParams{CharacterID: charID, ActionID: minID}).Return(corrs, nil).Once()
 }
@@ -83,8 +83,8 @@ func TestInsertEntry_NewTransactionStartsUnderTheEntrysID(t *testing.T) {
 			CharacterID: charID, Round: 4, Kind: "round_advance", Summary: "next round", HpDelta: -2, Payload: "{}",
 		}).Return(int64(10), nil).Once(),
 		q.EXPECT().StartActionTransaction(ctx, int64(10)).Return(nil).Once(),
-		q.EXPECT().InsertSnapshot(ctx, queries.InsertSnapshotParams{ActionID: 10, StateKey: "buffs", BeforeState: `["haste"]`, AfterState: `[]`}).Return(nil).Once(),
-		q.EXPECT().InsertSnapshot(ctx, queries.InsertSnapshotParams{ActionID: 10, StateKey: "round", BeforeState: `1`, AfterState: `2`}).Return(nil).Once(),
+		q.EXPECT().InsertSnapshot(ctx, queries.InsertSnapshotParams{ActionID: 10, StateKey: "buffs", BeforeEnvelope: `["haste"]`, AfterEnvelope: `[]`}).Return(nil).Once(),
+		q.EXPECT().InsertSnapshot(ctx, queries.InsertSnapshotParams{ActionID: 10, StateKey: "round", BeforeEnvelope: `1`, AfterEnvelope: `2`}).Return(nil).Once(),
 	)
 	id, err := dal.InsertEntry(ctx, actionlog.NewEntry{
 		CharacterID: charID, Round: 4, Kind: actionlog.KindRoundAdvance, Summary: "next round", HPDelta: -2,
@@ -217,7 +217,7 @@ func TestPop_KeepsEntriesAndSnapshots(t *testing.T) {
 
 	q.EXPECT().GetAction(ctx, queries.GetActionParams{CharacterID: charID, ID: 10}).
 		Return(row(10, actionlog.KindRoundAdvance, 0, `{"from":0,"to":1}`), nil).Once()
-	expectAttach(q, 10, []queries.ActionSnapshot{{ID: 1, ActionID: 10, StateKey: "round", BeforeState: `0`, AfterState: `1`}},
+	expectAttach(q, 10, []queries.ListSnapshotsFromRow{{ID: 1, ActionID: 10, StateKey: "round", BeforeEnvelope: text(`0`), AfterEnvelope: text(`1`)}},
 		[]queries.ListCorrectionsFromRow{void(5, 10)})
 	e, err := dal.GetEntry(ctx, charID, 10)
 	require.NoError(t, err)
@@ -226,6 +226,23 @@ func TestPop_KeepsEntriesAndSnapshots(t *testing.T) {
 	assert.JSONEq(t, `{"from":0,"to":1}`, string(e.Payload))
 	assert.JSONEq(t, `{"from":0,"to":1}`, string(e.EffectivePayload()), "the void rewrites no payload")
 	assert.Equal(t, []actionlog.Snapshot{{Key: "round", Before: json.RawMessage(`0`), After: json.RawMessage(`1`)}}, e.Snapshots)
+}
+
+// ADR 0018 step 9, rolling deploy: a snapshot the release before the codec recorded has no
+// envelopes until the data step re-encodes it. It reads back with a nil before and after (null on
+// the wire) instead of failing the read, so GET /api/log and the undo of other entries keep working.
+func TestGetEntry_ASnapshotWithoutEnvelopesReadsAsNil(t *testing.T) {
+	ctx := context.Background()
+	dal, q := mocked(t)
+	q.EXPECT().GetAction(ctx, queries.GetActionParams{CharacterID: charID, ID: 10}).
+		Return(row(10, actionlog.KindRoundAdvance, 0, `{"from":0,"to":1}`), nil).Once()
+	expectAttach(q, 10, []queries.ListSnapshotsFromRow{{ID: 1, ActionID: 10, StateKey: "round"}}, nil)
+	e, err := dal.GetEntry(ctx, charID, 10)
+	require.NoError(t, err)
+	require.Len(t, e.Snapshots, 1)
+	assert.Equal(t, "round", e.Snapshots[0].Key)
+	assert.Nil(t, e.Snapshots[0].Before)
+	assert.Nil(t, e.Snapshots[0].After)
 }
 
 // GetEntry maps the row, its snapshots and corrections (read from the
@@ -238,10 +255,10 @@ func TestGetEntry_WithSnapshotsAndCorrections(t *testing.T) {
 			ID: 4, CharacterID: charID, Round: 3, Kind: "buff_change", Summary: "bless",
 			Payload: `{"buff":"bless"}`, TransactionID: some(2), CreatedAt: at,
 		}, nil).Once()
-	expectAttach(q, 4, []queries.ActionSnapshot{
-		{ID: 1, ActionID: 4, StateKey: "buffs", BeforeState: `[]`, AfterState: `[{"id":"b"}]`},
-		{ID: 2, ActionID: 4, StateKey: "round", BeforeState: `2`, AfterState: `3`},
-		{ID: 3, ActionID: 6, StateKey: "round", BeforeState: `3`, AfterState: `4`},
+	expectAttach(q, 4, []queries.ListSnapshotsFromRow{
+		{ID: 1, ActionID: 4, StateKey: "buffs", BeforeEnvelope: text(`[]`), AfterEnvelope: text(`[{"id":"b"}]`)},
+		{ID: 2, ActionID: 4, StateKey: "round", BeforeEnvelope: text(`2`), AfterEnvelope: text(`3`)},
+		{ID: 3, ActionID: 6, StateKey: "round", BeforeEnvelope: text(`3`), AfterEnvelope: text(`4`)},
 	}, []queries.ListCorrectionsFromRow{
 		{ID: 8, ActionID: 4, Kind: "amend", HpDelta: some(-6), Summary: text("bless (fixed)"), Note: text("n"), CreatedAt: at},
 		void(9, 6),

@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
@@ -125,25 +126,26 @@ var wand = itemsvc.Item{
 	Count: 0, MaxCount: 4, EffectDice: "6d6", EffectSave: "rod_staff_wand",
 }
 
-const wandBefore = `[{"id":"wand_lightning","count":1,"model":2,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
+const wandBefore = `{"count":1,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
 	"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[],
-	"piece":{"category":"magic","magicKind":"wand","state":"carried"}}}]`
+	"piece":{"category":"magic","magicKind":"wand","state":"carried"}}}`
 
 func TestUseSnapshot_BeforeIsOneMore(t *testing.T) {
 	for _, b := range []itemsvc.Behaviour{itemsvc.BehaviourStock, itemsvc.BehaviourDaily} {
 		snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Behaviour: b, Count: 0})
 		require.NoError(t, err)
 		assert.Equal(t, "items:arrows_plus3", snap.Key)
-		assert.JSONEq(t, `[{"id":"arrows_plus3","count":1,"model":2}]`, string(snap.Before), "kept at 0: no item data")
-		assert.JSONEq(t, `[{"id":"arrows_plus3","count":0,"model":2}]`, string(snap.After))
+		assert.Equal(t, "arrows_plus3", snaptest.ID(t, snap.Before))
+		assert.JSONEq(t, `{"count":1}`, snaptest.State(t, snap.Before), "kept at 0: no item data")
+		assert.JSONEq(t, `{"count":0}`, snaptest.State(t, snap.After))
 	}
 }
 
 func TestUseSnapshot_MarksARemovedItem(t *testing.T) {
 	snap, err := itemsvc.UseSnapshot(wand)
 	require.NoError(t, err)
-	assert.JSONEq(t, wandBefore, string(snap.Before))
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true,"model":2}]`, string(snap.After))
+	assert.JSONEq(t, wandBefore, snaptest.State(t, snap.Before))
+	assert.Equal(t, snaptest.Absent("wand_lightning"), snap.After, "the use removed it")
 }
 
 func TestRestorers_WriteTheBeforeCountsBack(t *testing.T) {
@@ -153,7 +155,7 @@ func TestRestorers_WriteTheBeforeCountsBack(t *testing.T) {
 	require.NoError(t, err)
 
 	dal.EXPECT().SetCount(mock.Anything, int64(1), "arrows_plus3", 1).Return(nil).Once()
-	r := svc.Restorers()[itemsvc.StateKeyItems]
+	r := svc.Module().Restorer(itemsvc.StateKeyItems)
 	require.NotNil(t, r)
 	require.NoError(t, r.Restore(context.Background(), 1, snap.Before))
 }
@@ -169,25 +171,26 @@ func TestRestorers_PutBackARemovedItem(t *testing.T) {
 	back := wand
 	back.Count = 1
 	dal.EXPECT().Insert(mock.Anything, int64(1), back).Return(nil).Once()
-	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, snap.Before))
+	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snap.Before))
 }
 
-// A snapshot written before the one item model (count only) cannot recreate a missing item.
+// A count-only state (a use that kept the item) cannot recreate a missing item.
 func TestRestorers_MissingItemWithoutDataFails(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().RenamedID(mock.Anything, int64(1), "x").Return("x", nil)
 	dal.EXPECT().SetCount(mock.Anything, int64(1), "x", 2).Return(fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
-	err := svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, json.RawMessage(`[{"id":"x","count":2}]`))
+	err := svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snaptest.EnvID("x", `{"count":2}`))
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
 func TestRestorers_RejectBadSnapshots(t *testing.T) {
-	for _, state := range []string{`{"id":"x"}`, `[{"id":"","count":1}]`, `[{"id":"x","count":-1}]`} {
+	for _, state := range []json.RawMessage{
+		snaptest.EnvID("x", `[{"count":1}]`), snaptest.Env(`{"count":1}`), snaptest.EnvID("x", `{"count":-1}`), snaptest.Absent(""),
+	} {
 		dal := mocks.NewMockDAL(t) // nothing is written
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
-		err := svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, json.RawMessage(state))
-		assert.Error(t, err, state)
+		err := svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, state)
+		assert.Error(t, err, string(state))
 	}
 }
 
@@ -236,8 +239,8 @@ func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	assert.Equal(t, actionlog.KindItemUse, got.Kind)
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "items:wand_lightning", got.Snapshots[0].Key)
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":4,"model":2}]`, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":3,"model":2}]`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, `{"count":4}`, snaptest.State(t, got.Snapshots[0].Before))
+	assert.JSONEq(t, `{"count":3}`, snaptest.State(t, got.Snapshots[0].After))
 	assert.JSONEq(t, `{"itemId":"wand_lightning","name":"Wand of lightning","type":"wand","behaviour":"charges","removed":false,"remaining":3,"maxCount":4,
 		"dice":"6d6","rolls":[1,2,3,4,5,6],"total":21,"save":"rod_staff_wand"}`, string(got.Payload))
 }
@@ -299,8 +302,8 @@ func TestUseItem_LastChargeRemovesTheItem(t *testing.T) {
 	assert.Equal(t, 0, res.Remaining)
 	assert.Empty(t, got.Summary, "the UI words the use from its payload")
 	require.Len(t, got.Snapshots, 1)
-	assert.JSONEq(t, wandBefore, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true,"model":2}]`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, wandBefore, snaptest.State(t, got.Snapshots[0].Before))
+	assert.True(t, snaptest.IsAbsent(t, got.Snapshots[0].After))
 	assert.Contains(t, string(got.Payload), `"removed":true`)
 }
 
@@ -322,8 +325,8 @@ func TestRestock_AddsToStockAndLogs(t *testing.T) {
 	assert.JSONEq(t, `{"itemId":"arrows_plus3","name":"Arrows +3","type":"arrow","added":1,"count":1}`, string(got.Payload))
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "items:arrows_plus3", got.Snapshots[0].Key)
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":0,"model":2}]`, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1,"model":2}]`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, `{"count":0}`, snaptest.State(t, got.Snapshots[0].Before))
+	assert.JSONEq(t, `{"count":1}`, snaptest.State(t, got.Snapshots[0].After))
 	assert.JSONEq(t, `{"itemId":"arrows_plus3","name":"Arrows +3","type":"arrow","added":1,"count":1}`, string(got.Payload))
 }
 

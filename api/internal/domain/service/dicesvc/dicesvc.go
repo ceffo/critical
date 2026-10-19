@@ -94,6 +94,9 @@ func New(d Deps) (SVC, error) {
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
 
+// Module declares no codec: free rolls change no state.
+func (s *service) Module() domain.Module { return domain.Module{Name: "dicesvc"} }
+
 // Favourite is a saved formula, in normal form.
 type Favourite struct {
 	ID      int64

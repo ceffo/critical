@@ -29,7 +29,7 @@ func TestUndo(t *testing.T) {
 	t.Run("matching expected top pops it and restores its snapshots", func(t *testing.T) {
 		svc, dal, _, tx := newSvc(t)
 		var restored []string
-		svc.RegisterRestorer("items", restorerFunc(func(_ context.Context, charID int64, state json.RawMessage) error {
+		registerCodec(t, svc, "items", restorerFunc(func(_ context.Context, charID int64, state json.RawMessage) error {
 			assert.Equal(t, int64(1), charID)
 			restored = append(restored, string(state))
 			return nil
@@ -53,7 +53,7 @@ func TestUndo(t *testing.T) {
 	// restored and no void is written (the mock DAL fails on InsertCorrection).
 	t.Run("stale expected top is refused and nothing changes", func(t *testing.T) {
 		svc, dal, _, tx := newSvc(t)
-		svc.RegisterRestorer("items", restorerFunc(func(context.Context, int64, json.RawMessage) error {
+		registerCodec(t, svc, "items", restorerFunc(func(context.Context, int64, json.RawMessage) error {
 			t.Fatal("nothing may be restored on a stale undo")
 			return nil
 		}))
@@ -87,13 +87,33 @@ func TestUndo(t *testing.T) {
 
 	t.Run("restorer fails: no void written", func(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
-		svc.RegisterRestorer("items", restorerFunc(func(context.Context, int64, json.RawMessage) error { return errBoom }))
+		registerCodec(t, svc, "items", restorerFunc(func(context.Context, int64, json.RawMessage) error { return errBoom }))
 		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(9, true, nil).Once()
 		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(9)).Return(attack(), nil).Once()
 		dal.EXPECT().ListTransaction(mock.Anything, int64(1), int64(9)).Return([]actionlog.Entry{*attack()}, nil).Once()
 
 		_, err := svc.Undo(context.Background(), 1, 9)
 		require.ErrorIs(t, err, errBoom)
+	})
+
+	// ADR 0018 step 9, rolling deploy: an entry the release before the codec
+	// recorded has no "before" envelope until the data step re-encodes it. Its
+	// undo is refused: nothing is restored and no void is written.
+	t.Run("a snapshot not re-encoded yet is refused", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		registerCodec(t, svc, "items", restorerFunc(func(context.Context, int64, json.RawMessage) error {
+			t.Fatal("nothing may be restored")
+			return nil
+		}))
+		old := attack()
+		old.Snapshots = []actionlog.Snapshot{{Key: "items:arrows_plus3"}}
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(9, true, nil).Once()
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(9)).Return(old, nil).Once()
+		dal.EXPECT().ListTransaction(mock.Anything, int64(1), int64(9)).Return([]actionlog.Entry{*old}, nil).Once()
+
+		_, err := svc.Undo(context.Background(), 1, 9)
+		require.ErrorIs(t, err, actionlogsvc.ErrSnapshotNotReencoded)
+		assert.Contains(t, err.Error(), `entry #9, state "items:arrows_plus3"`)
 	})
 
 	t.Run("latest lookup fails", func(t *testing.T) {
@@ -144,7 +164,7 @@ func TestUndo_PopsTheWholeTransaction(t *testing.T) {
 	// register records "restore <key> <before>" and "void #id" in order.
 	register := func(svc actionlogsvc.SVC, dal *mocks.MockDAL, calls *[]string, failKey string) {
 		for _, key := range []string{"buffs", "round", "initiative"} {
-			svc.RegisterRestorer(key, restorerFunc(func(_ context.Context, _ int64, state json.RawMessage) error {
+			registerCodec(t, svc, key, restorerFunc(func(_ context.Context, _ int64, state json.RawMessage) error {
 				if key == failKey {
 					return errBoom
 				}
@@ -184,7 +204,7 @@ func TestUndo_PopsTheWholeTransaction(t *testing.T) {
 	t.Run("restorer fails mid-transaction: no void, no partial state", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		tx := &errTx{}
-		svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t), nil)
+		svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t))
 		require.NoError(t, err)
 		var calls []string
 		register(svc, dal, &calls, "round")

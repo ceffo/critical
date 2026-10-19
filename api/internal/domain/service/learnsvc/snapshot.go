@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
-// spellState is the JSON encoding of a "spellbook:<spell key>" snapshot: the
-// spell (the restorer gets no key, so the state names it) is in the
+// spellState is the state of a "spellbook:<spell key>" snapshot (the
+// envelope's id names the spell, SpellID is not encoded): the spell is in the
 // spellbook, or blocked by a failure at a realized level (0: none). Entries
 // already in the log must stay decodable: add fields, never rename.
 type spellState struct {
-	SpellID       string `json:"spellId"`
+	SpellID       string `json:"-"`
 	Known         bool   `json:"known"`
 	FailedAtLevel int    `json:"failedAtLevel"`
 }
@@ -31,7 +32,9 @@ type record struct {
 	RetryLevel     int    `json:"retryLevel"`
 }
 
-func stateKey(spellID string) string { return StateFamily + ":" + spellID }
+// spellbookSnaps is the snapshotter of a spell's place in the spellbook (ADR
+// 0018 step 8); the key's id is the spell.
+var spellbookSnaps = actionlog.NewSnapshotter[spellState](StateFamily)
 
 // state reads the spell's place in the character's spellbook.
 func (s *service) state(ctx context.Context, characterID int64, spellID string) (spellState, error) {
@@ -81,47 +84,35 @@ func (s *service) record(ctx context.Context, characterID int64, r Result, befor
 	if err != nil {
 		return fmt.Errorf("encode spell_learn payload: %w", err)
 	}
-	b, err := json.Marshal(before)
+	snap, err := spellbookSnaps.Snapshot(r.SpellID, &before, &after)
 	if err != nil {
-		return fmt.Errorf("encode spellbook snapshot: %w", err)
-	}
-	a, err := json.Marshal(after)
-	if err != nil {
-		return fmt.Errorf("encode spellbook snapshot: %w", err)
+		return err
 	}
 	if _, err := s.d.Log.Record(ctx, actionlog.NewEntry{
 		CharacterID: characterID, Kind: actionlog.KindSpellLearn, Payload: payload,
-		Snapshots: []actionlog.Snapshot{{Key: stateKey(r.SpellID), Before: b, After: a}},
+		Snapshots: []actionlog.Snapshot{snap},
 	}); err != nil {
 		return fmt.Errorf("record spell_learn: %w", err)
 	}
 	return nil
 }
 
-type restoreFunc func(ctx context.Context, characterID int64, state json.RawMessage) error
-
-func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
-	return f(ctx, characterID, state)
-}
-
-// Restorers writes a spell's spellbook state back: undoing a success takes
-// the spell out of the spellbook, undoing a failure lifts its block (step
-// 20.3); a redo writes the roll's "after" (ADR 0019). The action log hands
-// the state, which names the spell; it runs inside the undo's transaction.
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		StateFamily: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
-			var st spellState
-			if err := json.Unmarshal(state, &st); err != nil {
-				return fmt.Errorf("decode spellbook snapshot: %w", err)
+// Module declares the codec that writes a spell's spellbook state back:
+// undoing a success takes the spell out of the spellbook, undoing a failure
+// lifts its block (step 20.3); a redo writes the roll's "after" (ADR 0019).
+// The action log hands the state, which names the spell; it runs inside the
+// undo's transaction.
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "learnsvc", Codecs: []actionlog.Codec{
+		spellbookSnaps.Restorer(func(ctx context.Context, characterID int64, spellID string, st spellState) error {
+			if spellID == "" || st.FailedAtLevel < 0 {
+				return fmt.Errorf("decode spellbook snapshot: spell %q failed at level %d", spellID, st.FailedAtLevel)
 			}
-			if st.SpellID == "" || st.FailedAtLevel < 0 {
-				return fmt.Errorf("decode spellbook snapshot: spell %q failed at level %d", st.SpellID, st.FailedAtLevel)
-			}
-			if err := s.write(ctx, characterID, st.SpellID, st); err != nil {
+			st.SpellID = spellID
+			if err := s.write(ctx, characterID, spellID, st); err != nil {
 				return fmt.Errorf("restore spellbook: %w", err)
 			}
 			return nil
-		}),
-	}
+		}, nil),
+	}}
 }

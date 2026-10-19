@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
@@ -378,8 +379,8 @@ func TestChange_ASkillArmourIsSetAndLoggedOnAThief(t *testing.T) {
 	assert.JSONEq(t, `{"before":"none","after":"elven_chain"}`, string(got.Payload))
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "skill_armor", got.Snapshots[0].Key)
-	assert.JSONEq(t, `{"armor":"none"}`, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `{"armor":"elven_chain"}`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, `{"armor":"none"}`, snaptest.State(t, got.Snapshots[0].Before))
+	assert.JSONEq(t, `{"armor":"elven_chain"}`, snaptest.State(t, got.Snapshots[0].After))
 
 	// The same armour as stored records nothing.
 	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "none").Return(nil).Once()
@@ -406,9 +407,9 @@ func TestChange_ABardsSkillArmourIsSetAndLogged(t *testing.T) {
 func TestRestorers_TheSkillArmourSnapshotIsWrittenBack(t *testing.T) {
 	e := newEnv(t)
 	e.owners.EXPECT().RestoreSkillArmor(mock.Anything, int64(5), "none").Return(nil).Once()
-	r := e.svc.Restorers()[charactersvc.ArmorStateKey]
+	r := e.svc.Module().Restorer(charactersvc.ArmorStateKey)
 	require.NotNil(t, r)
-	require.NoError(t, r.Restore(context.Background(), 5, []byte(`{"armor":"none"}`)))
+	require.NoError(t, r.Restore(context.Background(), 5, snaptest.Env(`{"armor":"none"}`)))
 }
 
 // An armour that is empty or none of Table 29's is refused before anything

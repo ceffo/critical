@@ -2,10 +2,10 @@ package itemsvc
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 )
@@ -17,47 +17,48 @@ import (
 // registered for the family writes the "before" counts back on void.
 const StateKeyItems = "items"
 
+// The snapshotters of itemsvc's state keys (ADR 0018 step 8): an item, and a
+// weapon of before the one equipment model (no longer written). Either may be
+// absent: not created yet, or gone.
+var (
+	itemSnaps   = actionlog.NewSnapshotter[itemState](StateKeyItems).MayBeAbsent()
+	weaponSnaps = actionlog.NewSnapshotter[weaponState](StateKeyWeapons).MayBeAbsent()
+)
+
 // StateKey is the action-log state key of one item's count.
 func StateKey(itemID string) string { return StateKeyItems + actionlog.KeySeparator + itemID }
 
-// snapCount is itemsvc's JSON encoding of one item count inside a snapshot.
-// Entries already in the log must stay decodable: add fields, never rename.
-// Item is the whole item as it was (a use's "before"), so a pop can put back
-// an item the use removed. Removed marks an "after" in which the item is gone.
-type snapCount struct {
-	ID      string    `json:"id"`
+// itemState is the state of an "items:<id>" snapshot (itemSnaps), the
+// envelope's id naming the item. Entries already in the log must stay
+// decodable: add fields, never rename. Count is the item's count; Item is
+// the whole item as it was (a use's "before" when the use removed it, so a
+// pop can put it back; every state of an edit or a remove). Replace marks a
+// state whose Item is the whole truth (edit, remove): restoring overwrites
+// every field, or inserts the item when it is gone; otherwise only the count
+// is written back, and the item is inserted whole only when it is gone.
+type itemState struct {
 	Count   int       `json:"count"`
 	Item    *snapItem `json:"item,omitempty"`
-	Removed bool      `json:"removed,omitempty"`
-	// Absent marks a "before" in which the item did not exist yet (an item
-	// added by hand): restoring it deletes the item.
-	Absent bool `json:"absent,omitempty"`
-	// Replace marks a snapshot whose Item is the whole truth (edit, remove):
-	// restoring overwrites every field, or inserts the item when it is gone.
-	Replace bool `json:"replace,omitempty"`
-	// Model is snapshotModel on every snapshot written by the one equipment
-	// model; 0 on one written before, whose id may have been renamed by the
-	// conversion (ADR 0033 step 26.3).
-	Model int `json:"model,omitempty"`
+	Replace bool      `json:"replace,omitempty"`
 }
-
-// snapshotModel marks the snapshots of the one equipment model.
-const snapshotModel = 2
 
 // snapItem is the whole item inside a snapshot (add fields, never rename).
 type snapItem struct {
 	Position int `json:"position"`
-	// Name is the item's name by language (ADR 0023 step 11); a snapshot
-	// taken before names were localized holds a plain string.
-	Name       localized.Snap `json:"name"`
-	Type       string         `json:"type"`
-	Behaviour  string         `json:"behaviour"`
-	MagicBonus int            `json:"magicalBonus"`
-	AmmoKind   string         `json:"ammoKind"`
-	MaxCount   int            `json:"maxCount"`
-	EffectDice string         `json:"effectDice"`
-	EffectSave string         `json:"effectSave"`
-	Notes      string         `json:"notes"`
+	// Name is the item's name by language (ADR 0023 step 11). NamePartial
+	// marks a snapshot taken before names were localized: it knew only the
+	// fallback body, so restoring it replaces that body and keeps the item's
+	// other languages.
+	Name        localized.Text `json:"name"`
+	NamePartial bool           `json:"namePartial,omitempty"`
+	Type        string         `json:"type"`
+	Behaviour   string         `json:"behaviour"`
+	MagicBonus  int            `json:"magicalBonus"`
+	AmmoKind    string         `json:"ammoKind"`
+	MaxCount    int            `json:"maxCount"`
+	EffectDice  string         `json:"effectDice"`
+	EffectSave  string         `json:"effectSave"`
+	Notes       string         `json:"notes"`
 	// Powers are the item's own powers (ADR 0016 step 15), always written
 	// ([] for none); nil in a snapshot taken before they existed, which then
 	// leaves the stored powers as they are (see keepCurrent).
@@ -99,7 +100,7 @@ type snapPiece struct {
 func toSnapItem(i Item) *snapItem {
 	powers := toJSONPowers(i.Powers)
 	return &snapItem{
-		Position: i.Position, Name: localized.Snap{Text: i.Name}, Type: i.Type, Behaviour: string(i.Behaviour),
+		Position: i.Position, Name: i.Name, Type: i.Type, Behaviour: string(i.Behaviour),
 		MagicBonus: i.MagicBonus, AmmoKind: i.AmmoKind, MaxCount: i.MaxCount,
 		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: &powers,
 		Piece: &snapPiece{
@@ -113,10 +114,10 @@ func toSnapItem(i Item) *snapItem {
 	}
 }
 
-func (c snapCount) item() Item {
+func (c itemState) item(id string) Item {
 	it := c.Item
 	out := Item{
-		ID: c.ID, Position: it.Position, Name: it.Name.Text, Type: it.Type, Behaviour: Behaviour(it.Behaviour),
+		ID: id, Position: it.Position, Name: it.Name, Type: it.Type, Behaviour: Behaviour(it.Behaviour),
 		MagicBonus: it.MagicBonus, AmmoKind: it.AmmoKind, Count: c.Count, MaxCount: it.MaxCount,
 		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes,
 	}
@@ -159,18 +160,18 @@ func withPiece(item Item, cur *Item) Item {
 // keepCurrent is the item a Replace snapshot writes back: when the snapshot
 // predates powers (no "powers" key), the item keeps the powers it has now,
 // so popping an old edit never strips the ones a migration gave it; when it
-// predates localized names (a plain string), that string is the fallback
-// body and the other languages the item has now are kept (ADR 0023 step
+// predates localized names (NamePartial), its fallback body is restored and
+// the other languages the item has now are kept (ADR 0023 step
 // 11); when it predates the equipment model, the piece keeps its category,
 // state and the fields of its category, or is converted when it is gone (ADR
 // 0033 step 26.2). An item that is gone has nothing else to keep (ADR 0016
 // Consequences).
-func (s *service) keepCurrent(ctx context.Context, characterID int64, c snapCount) (Item, error) {
-	item := c.item()
-	if c.Item.Powers != nil && !c.Item.Name.Plain && c.Item.Piece != nil {
+func (s *service) keepCurrent(ctx context.Context, characterID int64, id string, c itemState) (Item, error) {
+	item := c.item(id)
+	if c.Item.Powers != nil && !c.Item.NamePartial && c.Item.Piece != nil {
 		return item, nil
 	}
-	cur, err := s.dal.Get(ctx, characterID, c.ID)
+	cur, err := s.dal.Get(ctx, characterID, id)
 	switch {
 	case errors.Is(err, ErrItemNotFound):
 		if c.Item.Piece == nil {
@@ -183,8 +184,8 @@ func (s *service) keepCurrent(ctx context.Context, characterID int64, c snapCoun
 	if c.Item.Powers == nil {
 		item.Powers = cur.Powers
 	}
-	if c.Item.Name.Plain {
-		item.Name = c.Item.Name.Restored(cur.Name)
+	if c.Item.NamePartial {
+		item.Name = cur.Name.With(c.Item.Name)
 	}
 	if c.Item.Piece == nil {
 		item = withPiece(item, &cur)
@@ -195,20 +196,21 @@ func (s *service) keepCurrent(ctx context.Context, characterID int64, c snapCoun
 // UseSnapshot is the snapshot of one Use: after is the item Use returned,
 // the "before" count is one more (Use always spends exactly one). When the
 // use removed the item (a charges item spent to 0), "before" carries the
-// whole item, so popping the use brings it back with 1 charge.
+// whole item, so popping the use brings it back with 1 charge, and "after"
+// is absent.
 func UseSnapshot(after Item) (actionlog.Snapshot, error) {
-	before := snapCount{ID: after.ID, Count: after.Count + 1, Model: snapshotModel}
+	before := itemState{Count: after.Count + 1}
 	if after.Removed() {
 		before.Item = toSnapItem(after)
+		return itemSnaps.Snapshot(after.ID, &before, nil)
 	}
-	return encodeSnapshot(after.ID, before, snapCount{ID: after.ID, Count: after.Count, Removed: after.Removed(), Model: snapshotModel})
+	return itemSnaps.Snapshot(after.ID, &before, &itemState{Count: after.Count})
 }
 
 // CountSnapshot is the snapshot of one item's count going from before to
 // after (a long rest refilling a daily item, a restock).
 func CountSnapshot(itemID string, before, after int) (actionlog.Snapshot, error) {
-	return encodeSnapshot(itemID, snapCount{ID: itemID, Count: before, Model: snapshotModel},
-		snapCount{ID: itemID, Count: after, Model: snapshotModel})
+	return itemSnaps.Snapshot(itemID, &itemState{Count: before}, &itemState{Count: after})
 }
 
 // itemSnapshot is the snapshot of an item going from before to after by hand
@@ -216,101 +218,62 @@ func CountSnapshot(itemID string, before, after int) (actionlog.Snapshot, error)
 // a nil before deletes the item, any other before overwrites it or puts it
 // back.
 func itemSnapshot(itemID string, before, after *Item) (actionlog.Snapshot, error) {
-	return encodeSnapshot(itemID, wholeItem(itemID, before), wholeItem(itemID, after))
+	return itemSnaps.Snapshot(itemID, wholeItem(before), wholeItem(after))
 }
 
-func wholeItem(id string, i *Item) snapCount {
+func wholeItem(i *Item) *itemState {
 	if i == nil {
-		return snapCount{ID: id, Absent: true, Removed: true, Model: snapshotModel}
+		return nil
 	}
-	return snapCount{ID: id, Count: i.Count, Item: toSnapItem(*i), Replace: true, Model: snapshotModel}
+	return &itemState{Count: i.Count, Item: toSnapItem(*i), Replace: true}
 }
 
-func encodeSnapshot(itemID string, before, after snapCount) (actionlog.Snapshot, error) {
-	b, err := json.Marshal([]snapCount{before})
-	if err != nil {
-		return actionlog.Snapshot{}, fmt.Errorf("encode items snapshot: %w", err)
+// Module declares the codecs that write an item or a weapon of before the
+// model back (the StateKeyItems and StateKeyWeapons families, so they serve
+// every "items:<id>" and "weapons:<id>" key). An absent state deletes the
+// thing. An item that is gone (a charges item its use removed) is inserted
+// back whole when the state carries it. They run inside the void's
+// transaction (ctx carries it). The restored item is the entry's character's.
+func (s *service) Module() domain.Module {
+	remove := func(ctx context.Context, characterID int64, id string) error {
+		if id == "" {
+			return errors.New("decode items snapshot: missing id")
+		}
+		return s.dal.Delete(ctx, characterID, id)
 	}
-	a, err := json.Marshal([]snapCount{after})
-	if err != nil {
-		return actionlog.Snapshot{}, fmt.Errorf("encode items snapshot: %w", err)
-	}
-	return actionlog.Snapshot{Key: StateKey(itemID), Before: b, After: a}, nil
+	return domain.Module{Name: "itemsvc", Codecs: []actionlog.Codec{
+		weaponSnaps.Restorer(s.restoreLegacyWeapon, remove),
+		itemSnaps.Restorer(s.restoreItem, remove),
+	}}
 }
 
-// restoreFunc adapts a function to actionlog.Restorer.
-type restoreFunc func(ctx context.Context, characterID int64, state json.RawMessage) error
-
-func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
-	return f(ctx, characterID, state)
-}
-
-// Restorers writes the counts of an items snapshot back (registered for the
-// StateKeyItems family, so it serves every "items:<id>" key). An item that is
-// gone (a charges item its use removed) is inserted back whole when the
-// snapshot carries it; a state in which the item is gone (Absent or Removed)
-// deletes it. It runs inside the void's transaction (ctx carries
-// it). The restored item is the entry's character's.
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		StateKeyWeapons: restoreFunc(s.restoreLegacyWeapon),
-		StateKeyItems: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
-			var counts []snapCount
-			if err := json.Unmarshal(state, &counts); err != nil {
-				return fmt.Errorf("decode items snapshot: %w", err)
-			}
-			for _, c := range counts {
-				if c.ID == "" || c.Count < 0 {
-					return fmt.Errorf("decode items snapshot: invalid count %+v", c)
-				}
-			}
-			for _, c := range counts {
-				if c.Model == 0 {
-					// An items snapshot of before the model: its item may
-					// have been renamed by the conversion (step 26.3).
-					id, err := s.dal.RenamedID(ctx, characterID, c.ID)
-					if err != nil {
-						return fmt.Errorf("restore item %s: %w", c.ID, err)
-					}
-					c.ID = id
-				}
-				var err error
-				switch {
-				case c.Absent, c.Removed:
-					// Gone in this state: an add's "before", a remove's
-					// "after", the "after" of a use that spent the last
-					// charge (written back by a redo, ADR 0019 step 1).
-					err = s.dal.Delete(ctx, characterID, c.ID)
-				case c.Replace && c.Item != nil:
-					var item Item
-					if item, err = s.keepCurrent(ctx, characterID, c); err != nil {
-						break
-					}
-					err = s.dal.Update(ctx, characterID, item)
-					if errors.Is(err, ErrItemNotFound) {
-						err = s.dal.Insert(ctx, characterID, item)
-					}
-				default:
-					// The item is inserted only when it is gone, so there
-					// are no stored powers to keep: a snapshot from before
-					// powers brings it back without them (ADR 0016
-					// Consequences).
-					err = s.dal.SetCount(ctx, characterID, c.ID, c.Count)
-					if errors.Is(err, ErrItemNotFound) && c.Item != nil {
-						item := c.item()
-						if c.Item.Piece == nil {
-							item = withPiece(item, nil)
-						}
-						err = s.dal.Insert(ctx, characterID, item)
-					}
-				}
-				if err != nil {
-					return fmt.Errorf("restore item %s: %w", c.ID, err)
-				}
-			}
-			return nil
-		}),
+func (s *service) restoreItem(ctx context.Context, characterID int64, id string, c itemState) error {
+	if id == "" || c.Count < 0 {
+		return fmt.Errorf("decode items snapshot: invalid item %q count %d", id, c.Count)
 	}
+	if c.Replace && c.Item != nil {
+		item, err := s.keepCurrent(ctx, characterID, id, c)
+		if err != nil {
+			return err
+		}
+		err = s.dal.Update(ctx, characterID, item)
+		if errors.Is(err, ErrItemNotFound) {
+			err = s.dal.Insert(ctx, characterID, item)
+		}
+		return err
+	}
+	// The item is inserted only when it is gone, so there are no stored
+	// powers to keep: a snapshot from before powers brings it back without
+	// them (ADR 0016 Consequences).
+	err := s.dal.SetCount(ctx, characterID, id, c.Count)
+	if errors.Is(err, ErrItemNotFound) && c.Item != nil {
+		item := c.item(id)
+		if c.Item.Piece == nil {
+			item = withPiece(item, nil)
+		}
+		err = s.dal.Insert(ctx, characterID, item)
+	}
+	return err
 }
 
 // StateKeyWeapons is the state-key family of the weapons of before the one
@@ -319,12 +282,13 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 // 26.2).
 const StateKeyWeapons = "weapons"
 
-// snapWeapon is a "weapons:<id>" snapshot as written before the model.
-type snapWeapon struct {
-	ID          string         `json:"id"`
-	Absent      bool           `json:"absent,omitempty"`
+// weaponState is the state of a "weapons:<id>" snapshot as written before
+// the model (the envelope's id naming the weapon). NamePartial marks one
+// taken before names were localized (see snapItem).
+type weaponState struct {
 	Position    int            `json:"position"`
-	Name        localized.Snap `json:"name"`
+	Name        localized.Text `json:"name"`
+	NamePartial bool           `json:"namePartial,omitempty"`
 	DamageSM    string         `json:"damageSm"`
 	DamageL     string         `json:"damageL"`
 	MagicToHit  int            `json:"magicToHit"`
@@ -336,57 +300,44 @@ type snapWeapon struct {
 	Specialized bool           `json:"specialized,omitempty"`
 }
 
-// restoreLegacyWeapon writes a "weapons:<id>" snapshot back: an absent weapon
-// deletes the piece; otherwise the piece of that id takes the weapon's stats
-// and keeps its place, category fields and state, or, when it is gone, the
-// weapon comes back converted (ADR 0033 step 26.4), last in the list.
-func (s *service) restoreLegacyWeapon(ctx context.Context, characterID int64, state json.RawMessage) error {
-	var c snapWeapon
-	if err := json.Unmarshal(state, &c); err != nil {
-		return fmt.Errorf("decode weapons snapshot: %w", err)
-	}
-	if c.ID == "" {
-		return fmt.Errorf("decode weapons snapshot: missing id")
-	}
-	if c.Absent {
-		if err := s.dal.Delete(ctx, characterID, c.ID); err != nil {
-			return fmt.Errorf("restore weapon %s: %w", c.ID, err)
-		}
-		return nil
+// restoreLegacyWeapon writes a "weapons:<id>" snapshot back: the piece of
+// that id takes the weapon's stats and keeps its place, category fields and
+// state, or, when it is gone, the weapon comes back converted (ADR 0033 step
+// 26.4), last in the list. An absent weapon deletes the piece (Module).
+func (s *service) restoreLegacyWeapon(ctx context.Context, characterID int64, id string, c weaponState) error {
+	if id == "" {
+		return errors.New("decode weapons snapshot: missing id")
 	}
 	w := LegacyWeapon{
-		ID: c.ID, Name: c.Name.Text, DamageSM: c.DamageSM, DamageL: c.DamageL, MagicToHit: c.MagicToHit,
+		ID: id, Name: c.Name, DamageSM: c.DamageSM, DamageL: c.DamageL, MagicToHit: c.MagicToHit,
 		MagicDamage: c.MagicDamage, Kind: c.Kind, TwoHanded: c.TwoHanded, AmmoKind: c.AmmoKind, Type: c.Type,
 		Specialized: c.Specialized,
 	}
-	cur, err := s.dal.Get(ctx, characterID, c.ID)
+	cur, err := s.dal.Get(ctx, characterID, id)
 	switch {
 	case errors.Is(err, ErrItemNotFound):
 		piece, _ := ConvertWeapon(w, s.catalogue)
 		all, err := s.dal.List(ctx, characterID)
 		if err != nil {
-			return fmt.Errorf("restore weapon %s: %w", c.ID, err)
+			return err
 		}
 		for _, o := range all {
 			if o.Position >= piece.Position {
 				piece.Position = o.Position + 1
 			}
 		}
-		if err := s.dal.Insert(ctx, characterID, piece); err != nil {
-			return fmt.Errorf("restore weapon %s: %w", c.ID, err)
-		}
-		return nil
+		return s.dal.Insert(ctx, characterID, piece)
 	case err != nil:
-		return fmt.Errorf("restore weapon %s: %w", c.ID, err)
+		return err
 	}
 	piece := cur
-	piece.Name = c.Name.Restored(cur.Name)
+	piece.Name = c.Name
+	if c.NamePartial {
+		piece.Name = cur.Name.With(c.Name)
+	}
 	fires, _ := ammoKind(w.AmmoKind)
 	piece.DamageSM, piece.DamageL, piece.MagicToHit, piece.MagicDamage = w.DamageSM, w.DamageL, w.MagicToHit, w.MagicDamage
 	piece.WeaponKind, piece.TwoHanded, piece.Fires, piece.WeaponType = w.Kind, w.TwoHanded, fires, w.Type
 	piece.Specialized = w.Specialized
-	if err := s.dal.Update(ctx, characterID, piece); err != nil {
-		return fmt.Errorf("restore weapon %s: %w", c.ID, err)
-	}
-	return nil
+	return s.dal.Update(ctx, characterID, piece)
 }

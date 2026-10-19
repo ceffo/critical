@@ -16,7 +16,6 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
@@ -129,17 +128,23 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 
 // Build runs the startup steps (migrate, validate the catalogue and the
 // seeds, seed, import the catalogue), then builds the adapters that need no storage
-// and the services over st. On an error it closes st. It touches storage only
-// through the ports of st, so tests drive it with mocks.
-func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error) {
+// and the services over st, and registers every service's module on the
+// action log. On an error it closes the services built so far and st. It
+// touches storage only through the ports of st, so tests drive it with mocks.
+func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err error) {
 	db := st.Store
+	bs := &BackingServices{store: db}
+	defer func() {
+		if err != nil {
+			_ = bs.Close(ctx)
+		}
+	}()
 	// The spell catalogue (ADR 0021 step 5): a missing or invalid artifact,
 	// or one that removes a spell still referenced, is a startup error. It is
 	// read first: the migration's equipment conversion and the seed match
 	// weapons to its rows (ADR 0033 step 26.4).
 	artifact, err := catalogueadpt.LoadArtifact(cfg.Catalogue)
 	if err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 	cat := artifact.Catalogue
@@ -148,7 +153,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 	// error.
 	ruleTables, err := loadRuleTables(artifact, cfg)
 	if err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 	// The catalogue's weapons (format 7), none before.
@@ -157,7 +161,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		catalogueWeapons = eq.Weapons
 	}
 	if err := db.Migrate(ctx, cfg.SeedsDir, catalogueWeapons); err != nil {
-		_ = db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 	characterDAL, hpDAL, logDAL, buffDAL, spellDAL := st.Character, st.HP, st.Log, st.Buff, st.Spell
@@ -171,12 +174,10 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 	// error.
 	effects, err := spelleffectsadpt.New(cfg.SeedsDir)
 	if err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 
 	if err := effects.CheckAgainst(cat); err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 	// The spellbook seed is checked against the catalogue before the seed
@@ -184,15 +185,12 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 	// are stored.
 	spellbookSeed, err := spellbookadpt.ReadSeed(cfg.SeedsDir, cat)
 	if err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueWeapons); err != nil {
-		_ = db.Close()
 		return nil, fmt.Errorf("seed: %w", err)
 	}
 	if err := db.ImportCatalogue(ctx, cat, seedSpellRefs(spellbookSeed, effects)); err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 
@@ -200,19 +198,19 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 	// (spelldal.Catalogue): page loads read none of it from the database.
 	catalogue, err := spelldal.LoadCatalogue(ctx, spellDAL)
 	if err != nil {
-		_ = db.Close()
 		return nil, err
 	}
 
-	authSvc, err := newAuth(st, cfg)
-	if err != nil {
-		_ = db.Close()
+	// Every service below joins bs.services (add) in the order it is built:
+	// the one list of the services, whose modules are registered on the log
+	// at the end and which Close walks in reverse.
+	bs.Auth, err = newAuth(st, cfg)
+	if err := bs.add(bs.Auth, err); err != nil {
 		return nil, err
 	}
 	// The characters stored before characters had owners (the seed
 	// character) are the root admin's once there is one (ADR 0029 step 5.3).
-	if err := authSvc.AdoptUnownedCharacters(ctx); err != nil {
-		_ = db.Close()
+	if err := bs.Auth.AdoptUnownedCharacters(ctx); err != nil {
 		return nil, fmt.Errorf("give the characters without an owner to the root admin: %w", err)
 	}
 
@@ -221,23 +219,17 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 
 	// The action log stamps entries with the round read straight from
 	// buffdal (buffsvc itself records into the log, so it cannot be the
-	// log's dependency). Services that record snapshots register their
-	// Restorers on logSvc here.
+	// log's dependency).
 	//
 	// tx is the one TxRunner every service gets: each outermost InTx is one
 	// action-log transaction, so whatever a request records is popped by one
 	// undo (ADR 0018 steps 1 and 2).
 	tx := actionlogsvc.Transactions(db)
-	// The log serves every entry through these views (payload fields a kind
-	// gained after the entry was logged).
-	logPayloadViews := actionlog.PayloadViews{
-		actionlog.KindSave: combatsvc.SavePayloadView,
-	}
-	logSvc, err := actionlogsvc.New(logDAL, tx, roundReader{buffDAL}, hpDAL, logPayloadViews)
-	if err != nil {
-		_ = db.Close()
+	bs.Log, err = actionlogsvc.New(logDAL, tx, roundReader{buffDAL}, hpDAL)
+	if err := bs.add(bs.Log, err); err != nil {
 		return nil, err
 	}
+	logSvc := bs.Log
 	// Choosing the current character is no game move: it runs on the store's
 	// transactions, outside the action log.
 	// The character's level, THAC0, saves and slots are derived from its
@@ -246,184 +238,158 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 	// The language catalogue (ADR 0032 step 4) is the artifact's: nil before
 	// format 8, which knows no language.
 	languages, _ := ruleTables.Languages()
-	charSvc, err := charactersvc.New(charactersvc.Deps{
+	bs.Character, err = charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
-		Owners: characterDAL, Tx: tx, Sessions: authSvc, Log: logSvc, Languages: languages, HP: logSvc,
+		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Log: logSvc, Languages: languages, HP: logSvc,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.Character, err); err != nil {
 		return nil, err
 	}
+	charSvc := bs.Character
 	// What a character prepares from: a cleric's sphere-open priest spells
 	// (ADR 0030 step 15; no sphere access before catalogue format 6), every
 	// other class's spellbook.
 	sphereAccess, err := ruleTables.SphereAccess()
 	if err != nil && !errors.Is(err, ruletablesvc.ErrNoSphereAccess) {
-		_ = db.Close()
 		return nil, err
 	}
 	prepSource, err := spheresvc.New(spheresvc.Deps{Book: spellbook, Characters: charSvc, Access: sphereAccess, Catalogue: cat})
 	if err != nil {
-		_ = db.Close()
 		return nil, err
 	}
-	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{
+	bs.Items, err = itemsvc.New(itemDAL, itemsvc.Deps{
 		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Catalogue: catalogueWeapons,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.Items, err); err != nil {
 		return nil, err
 	}
-	registerRestorers(logSvc, itemSvc.Restorers())
 	// The worn and wielded pieces' powers join the buffs' aggregate (ADR 0016
 	// step 11, ADR 0033 step 9).
-	buffSvc, err := buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, itemSvc)
-	if err != nil {
-		_ = db.Close()
+	bs.Buffs, err = buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, bs.Items)
+	if err := bs.add(bs.Buffs, err); err != nil {
 		return nil, err
 	}
-	registerRestorers(logSvc, buffSvc.Restorers())
-	spellSvc, err := spellsvc.New(spellDAL, catalogue, prepSource)
-	if err != nil {
-		_ = db.Close()
+	bs.Spells, err = spellsvc.New(spellDAL, catalogue, prepSource)
+	if err := bs.add(bs.Spells, err); err != nil {
 		return nil, err
 	}
-	prepSvc, err := prepsvc.New(prepsvc.Deps{
-		Slots: spellDAL, Spellbook: prepSource, Effects: effects, Items: itemSvc,
+	bs.Prep, err = prepsvc.New(prepsvc.Deps{
+		Slots: spellDAL, Spellbook: prepSource, Effects: effects, Items: bs.Items,
 		Characters: charSvc, Log: logSvc, Tx: tx,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.Prep, err); err != nil {
 		return nil, err
 	}
-	logSvc.RegisterRestorer(prepsvc.StateKey, prepSvc)
-	combatSvc, err := combatsvc.New(combatsvc.Deps{
-		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: combatsvc.ItemWeapons(itemSvc), Crit: critDAL,
-		Items: itemSvc, Forms: st.Forms, Rules: ruleTables, Log: logSvc, Tx: tx,
+	bs.Combat, err = combatsvc.New(combatsvc.Deps{
+		Chars: charSvc, Buffs: bs.Buffs, Dice: dice, Weapons: combatsvc.ItemWeapons(bs.Items), Crit: critDAL,
+		Items: bs.Items, Forms: st.Forms, Rules: ruleTables, Log: logSvc, Tx: tx,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.Combat, err); err != nil {
 		return nil, err
 	}
-	castSvc, err := castsvc.New(castsvc.Deps{
-		Slots: spellDAL, Effects: effects, Texts: catalogue, Buffs: buffSvc, Items: itemSvc, Attacks: combatSvc,
+	bs.Cast, err = castsvc.New(castsvc.Deps{
+		Slots: spellDAL, Effects: effects, Texts: catalogue, Buffs: bs.Buffs, Items: bs.Items, Attacks: bs.Combat,
 		Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.Cast, err); err != nil {
 		return nil, err
 	}
-	restSvc, err := restsvc.New(spellSvc, itemSvc, logSvc, tx)
-	if err != nil {
-		_ = db.Close()
+	bs.Rest, err = restsvc.New(bs.Spells, bs.Items, logSvc, tx)
+	if err := bs.add(bs.Rest, err); err != nil {
 		return nil, err
 	}
-	detailsSvc, err := detailssvc.New(characterDAL, tx, languages)
-	if err != nil {
-		_ = db.Close()
+	bs.Details, err = detailssvc.New(characterDAL, tx, languages)
+	if err := bs.add(bs.Details, err); err != nil {
 		return nil, err
 	}
-	xpSvc, err := xpsvc.New(xpsvc.Deps{
+	bs.XP, err = xpsvc.New(xpsvc.Deps{
 		DAL: st.XP, Characters: charSvc, Thresholds: ruleTables, Log: logSvc, Tx: tx,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.XP, err); err != nil {
 		return nil, err
 	}
-	registerRestorers(logSvc, xpSvc.Restorers())
 	// The level-up roll (ADR 0030 step 7) reads the pending levels from the
 	// character's derived block and writes its hit points; its undo writes
 	// them back.
-	levelUpSvc, err := levelupsvc.New(levelupsvc.Deps{
+	bs.LevelUp, err = levelupsvc.New(levelupsvc.Deps{
 		DAL: characterDAL, Characters: charSvc, Rules: ruleTables, Dice: dice, Log: logSvc, Tx: tx,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.LevelUp, err); err != nil {
 		return nil, err
 	}
-	registerRestorers(logSvc, levelUpSvc.Restorers())
 	// The creation's rolls (ADR 0032 steps 6 and 7) read the rule tables and
 	// the dice, and write nothing.
-	creationRollSvc, err := creationrollsvc.New(creationrollsvc.Deps{Rules: ruleTables, Dice: dice})
-	if err != nil {
-		_ = db.Close()
+	bs.Rolls, err = creationrollsvc.New(creationrollsvc.Deps{Rules: ruleTables, Dice: dice})
+	if err := bs.add(bs.Rolls, err); err != nil {
 		return nil, err
 	}
 	// Learning a spell (ADR 0030 step 20) reads the character's derived
 	// spellbook rules and the catalogue, rolls the chance to learn and writes
 	// the spellbook; its undo writes the spell's place back.
-	learnSvc, err := learnsvc.New(learnsvc.Deps{
+	bs.Learn, err = learnsvc.New(learnsvc.Deps{
 		DAL: st.Spellbook, Book: st.Spellbook, Spells: spellbook, Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.Learn, err); err != nil {
 		return nil, err
 	}
-	registerRestorers(logSvc, learnSvc.Restorers())
 	// Turning undead reads the cleric's Table 61 row (ADR 0030 step 16) and
-	// rolls; it changes no state, so it registers no restorer.
-	turnSvc, err := turnsvc.New(turnsvc.Deps{Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx})
-	if err != nil {
-		_ = db.Close()
+	// rolls.
+	bs.Turn, err = turnsvc.New(turnsvc.Deps{Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx})
+	if err := bs.add(bs.Turn, err); err != nil {
 		return nil, err
 	}
-	// Skill and ability checks change no state: their entries carry no
-	// snapshot. A thief's skill points spent on the sheet do: their undo
-	// writes the points back. The ability check's score in effect comes from
-	// buffSvc (ADR 0028 step 2).
-	skillSvc, err := skillsvc.New(skillsvc.Deps{
-		DAL: st.Skill, Characters: charSvc, Abilities: buffSvc, Dice: dice, Log: logSvc, Points: characterDAL, Tx: tx,
+	// A thief's skill points spent on the sheet are undone by their
+	// snapshot. The ability check's score in effect comes from buffsvc (ADR
+	// 0028 step 2).
+	bs.Skills, err = skillsvc.New(skillsvc.Deps{
+		DAL: st.Skill, Characters: charSvc, Abilities: bs.Buffs, Dice: dice, Log: logSvc, Points: characterDAL, Tx: tx,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.Skills, err); err != nil {
 		return nil, err
 	}
-	registerRestorers(logSvc, skillSvc.Restorers())
-	registerRestorers(logSvc, charSvc.Restorers())
 	// The character's AC is derived on read from the pieces, the buffs and
 	// powers that apply and the sheet's Dexterity (ADR 0033 step 10); its
 	// override is a logged move undone by its snapshot (step 13).
-	acSvc, err := acsvc.New(acsvc.Deps{
-		Items: itemSvc, Effects: buffSvc, Characters: charSvc, Tables: ruleTables,
+	bs.AC, err = acsvc.New(acsvc.Deps{
+		Items: bs.Items, Effects: bs.Buffs, Characters: charSvc, Tables: ruleTables,
 		Overrides: characterDAL, Log: logSvc, Tx: tx,
 	})
-	if err != nil {
-		_ = db.Close()
+	if err := bs.add(bs.AC, err); err != nil {
 		return nil, err
 	}
-	registerRestorers(logSvc, acSvc.Restorers())
-	// Free dice rolls change no state: no snapshot, no restorer.
-	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: st.Dice, Dice: dice, Log: logSvc, Tx: tx})
-	if err != nil {
-		_ = db.Close()
+	bs.Dice, err = dicesvc.New(dicesvc.Deps{DAL: st.Dice, Dice: dice, Log: logSvc, Tx: tx})
+	if err := bs.add(bs.Dice, err); err != nil {
 		return nil, err
 	}
 
-	return &BackingServices{
-		Character: charSvc,
-		Log:       logSvc,
-		Buffs:     buffSvc,
-		Spells:    spellSvc,
-		Prep:      prepSvc,
-		Cast:      castSvc,
-		Combat:    combatSvc,
-		Items:     itemSvc,
-		Rest:      restSvc,
-		XP:        xpSvc,
-		LevelUp:   levelUpSvc,
-		Rolls:     creationRollSvc,
-		Learn:     learnSvc,
-		Turn:      turnSvc,
-		Details:   detailsSvc,
-		Skills:    skillSvc,
-		AC:        acSvc,
-		Dice:      diceSvc,
-		Auth:      authSvc,
-		store:     db,
-		services: []domain.Service{
-			authSvc, charSvc, buffSvc, logSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, restSvc, xpSvc, levelUpSvc, creationRollSvc, learnSvc, skillSvc, acSvc, detailsSvc, diceSvc,
-		},
-	}, nil
+	// Every service's module on the log: the codecs that restore its
+	// state-key families on undo and redo (ADR 0018 steps 2 and 8, ADR 0019
+	// step 1) and its payload views. A family or a kind two modules claim
+	// refuses the start.
+	if err := registerModules(logSvc, bs.services); err != nil {
+		return nil, err
+	}
+	return bs, nil
+}
+
+// add appends svc, just built (unless err), to the root's services.
+func (b *BackingServices) add(svc domain.Service, err error) error {
+	if err != nil {
+		return err
+	}
+	b.services = append(b.services, svc)
+	return nil
+}
+
+// registerModules registers the module of every service on the log, in
+// order; the first refusal is the build's error.
+func registerModules(log actionlogsvc.SVC, services []domain.Service) error {
+	for _, svc := range services {
+		if err := log.Register(svc.Module()); err != nil {
+			return fmt.Errorf("register the modules: %w", err)
+		}
+	}
+	return nil
 }
 
 // newAuth builds the login service over st: with Google when cfg.Google is
@@ -478,14 +444,6 @@ type roundReader struct{ dal BuffStore }
 
 func (r roundReader) GetRound(ctx context.Context, characterID int64) (int, error) {
 	return r.dal.GetRoundNumber(ctx, characterID)
-}
-
-// registerRestorers binds every state key a service snapshots to its
-// Restorer, so voiding one of its entries can write the "before" state back.
-func registerRestorers(log actionlogsvc.SVC, restorers map[string]actionlog.Restorer) {
-	for key, r := range restorers {
-		log.RegisterRestorer(key, r)
-	}
 }
 
 // loadRuleTables parses the PHB rule tables the artifact carries (ADR 0021

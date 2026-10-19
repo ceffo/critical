@@ -133,10 +133,10 @@ func TestSetState_Step7_LoggedMoveWithSnapshot(t *testing.T) {
 	restore := mocks.NewMockDAL(t)
 	rsvc, _ := itemsvc.New(restore, deps(t).Deps)
 	restore.EXPECT().Update(mock.Anything, int64(1), sword).Return(nil).Once()
-	require.NoError(t, rsvc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, got.Snapshots[0].Before))
+	require.NoError(t, rsvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
 	// Redoing it writes the "after": wielded again.
 	restore.EXPECT().Update(mock.Anything, int64(1), wielded).Return(nil).Once()
-	require.NoError(t, rsvc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, got.Snapshots[0].After))
+	require.NoError(t, rsvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].After))
 
 	t.Run("same state again", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t) // no Update, no Record

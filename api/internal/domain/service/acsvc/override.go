@@ -22,6 +22,9 @@ type jsonOverride struct {
 	Label string `json:"label,omitempty"`
 }
 
+// overrideSnaps is the snapshotter of the AC override (ADR 0018 step 8).
+var overrideSnaps = actionlog.NewSnapshotter[overrideState](StateKey)
+
 // overrideState is the "ac_override" snapshot: the override, null for none.
 type overrideState struct {
 	Override *jsonOverride `json:"override"`
@@ -115,42 +118,30 @@ func (s *service) record(ctx context.Context, characterID int64, before, after *
 	if err != nil {
 		return fmt.Errorf("encode ac_override payload: %w", err)
 	}
-	b, err := json.Marshal(overrideState{Override: toJSON(before)})
+	b, a := overrideState{Override: toJSON(before)}, overrideState{Override: toJSON(after)}
+	snap, err := overrideSnaps.Snapshot("", &b, &a)
 	if err != nil {
-		return fmt.Errorf("encode ac_override snapshot: %w", err)
-	}
-	a, err := json.Marshal(overrideState{Override: toJSON(after)})
-	if err != nil {
-		return fmt.Errorf("encode ac_override snapshot: %w", err)
+		return err
 	}
 	if _, err := s.log.Record(ctx, actionlog.NewEntry{
 		CharacterID: characterID, Kind: actionlog.KindACOverride, Payload: payload,
-		Snapshots: []actionlog.Snapshot{{Key: StateKey, Before: b, After: a}},
+		Snapshots: []actionlog.Snapshot{snap},
 	}); err != nil {
 		return fmt.Errorf("record ac_override: %w", err)
 	}
 	return nil
 }
 
-type restoreFunc func(ctx context.Context, characterID int64, state json.RawMessage) error
-
-func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
-	return f(ctx, characterID, state)
-}
-
-// Restorers writes the override back: undo writes the entry's "before",
-// redo its "after" (ADR 0019). It runs inside the undo's transaction.
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		StateKey: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
-			var st overrideState
-			if err := json.Unmarshal(state, &st); err != nil {
-				return fmt.Errorf("decode ac_override snapshot: %w", err)
-			}
+// Module declares the codec that writes the override back: undo writes the
+// entry's "before", redo its "after" (ADR 0019). It runs inside the undo's
+// transaction.
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "acsvc", Codecs: []actionlog.Codec{
+		overrideSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st overrideState) error {
 			if err := s.overrides.SetACOverride(ctx, characterID, fromJSON(st.Override)); err != nil {
 				return fmt.Errorf("restore ac override: %w", err)
 			}
 			return nil
-		}),
-	}
+		}, nil),
+	}}
 }

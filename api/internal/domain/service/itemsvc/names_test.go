@@ -12,6 +12,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
@@ -110,24 +111,23 @@ func TestCreate_Step11_NameInThePlayersLanguage(t *testing.T) {
 }
 
 // ADR 0023 step 11: popping restores the whole name of a snapshot; a
-// snapshot written before names were localized holds a plain string, which
-// restores the English body only and keeps the other languages the item has
-// now (an item that is gone comes back with that one).
+// snapshot written before names were localized held a plain string, re-encoded
+// as its English body marked namePartial, which restores the English body only
+// and keeps the other languages the item has now (an item that is gone comes
+// back with that one).
 func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) {
 	restore := func(dal *mocks.MockDAL, state string) error {
-		// These snapshots predate the equipment model: read through the renames.
-		dal.EXPECT().RenamedID(mock.Anything, int64(1), "wand_lightning").Return("wand_lightning", nil).Once()
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
-		return svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, json.RawMessage(state))
+		return svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snaptest.EnvID("wand_lightning", state))
 	}
-	const tail = `"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}]`
-	t.Run("plain string", func(t *testing.T) {
+	const tail = `"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}`
+	t.Run("partial name", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wandBoth, nil).Once()
 		want := wandBoth
 		want.Name = localized.Text{"en": "Old wand", "fr": "Baguette de foudre"}
 		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
-		require.NoError(t, restore(dal, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Old wand",`+tail))
+		require.NoError(t, restore(dal, `{"count":4,"replace":true,"item":{"position":4,"name":{"en":"Old wand"},"namePartial":true,`+tail))
 	})
 	t.Run("language map", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
@@ -137,16 +137,16 @@ func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) 
 		want := wandBoth
 		want.Name = localized.Text{"en": "Old wand"}
 		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
-		require.NoError(t, restore(dal, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":{"en":"Old wand"},`+tail))
+		require.NoError(t, restore(dal, `{"count":4,"replace":true,"item":{"position":4,"name":{"en":"Old wand"},`+tail))
 	})
-	t.Run("plain string, item gone", func(t *testing.T) {
+	t.Run("partial name, item gone", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
 		want := wand4
 		want.Name = localized.Text{"en": "Old wand"}
 		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(itemsvc.ErrItemNotFound).Once()
 		dal.EXPECT().Insert(mock.Anything, int64(1), want).Return(nil).Once()
-		require.NoError(t, restore(dal, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Old wand",`+tail))
+		require.NoError(t, restore(dal, `{"count":4,"replace":true,"item":{"position":4,"name":{"en":"Old wand"},"namePartial":true,`+tail))
 	})
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc/mocks"
@@ -239,8 +240,8 @@ func TestRoll_Step7_3_OneTransactionWithTheRealizedLevelSnapshot(t *testing.T) {
 		"fixed":false,"manual":false,"hpMaxBefore":40,"hpMaxAfter":45}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, levelupsvc.StateKey, e.Snapshots[0].Key)
-	assert.JSONEq(t, `{"realizedLevel":8,"hpMax":40}`, string(e.Snapshots[0].Before))
-	assert.JSONEq(t, `{"realizedLevel":9,"hpMax":45}`, string(e.Snapshots[0].After))
+	assert.JSONEq(t, `{"realizedLevel":8,"hpMax":40}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"realizedLevel":9,"hpMax":45}`, snaptest.State(t, e.Snapshots[0].After))
 }
 
 // Step 7.3: two levels gained at once are two rolls, one per request, lowest
@@ -341,10 +342,10 @@ func TestRoll_TheManualEntryTakesTheDieRolledAtTheTable(t *testing.T) {
 // HP, so a popped roll's level is pending again. A broken snapshot is an error.
 func TestRestorer_WritesTheRealizedLevelBack(t *testing.T) {
 	f := newFixture(t)
-	r := f.svc.Restorers()[levelupsvc.StateKey]
+	r := f.svc.Module().Restorer(levelupsvc.StateKey)
 	require.NotNil(t, r)
 	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 8, 40).Return(nil).Once()
-	require.NoError(t, r.Restore(context.Background(), charID, json.RawMessage(`{"realizedLevel":8,"hpMax":40}`)))
-	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`{"realizedLevel":8,"hpMax":0}`)))
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"realizedLevel":8,"hpMax":40}`)))
+	require.Error(t, r.Restore(context.Background(), charID, snaptest.Env(`{"realizedLevel":8,"hpMax":0}`)))
 	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`nope`)))
 }

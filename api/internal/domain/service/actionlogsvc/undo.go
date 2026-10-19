@@ -35,7 +35,7 @@ func (s *service) Undo(ctx context.Context, characterID, expectedTopID int64) (*
 	if err != nil {
 		return nil, err
 	}
-	return s.views.EntryPtr(out), nil
+	return s.payloadViews().EntryPtr(out), nil
 }
 
 // TopID is the id of the newest non-voided entry, the one Undo pops (ADR 0010

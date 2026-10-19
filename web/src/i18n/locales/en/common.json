@@ -1807,6 +1807,7 @@
     "nothing_to_undo": "There is nothing to undo.",
     "log_redo_changed": "What can be redone changed in the meantime. Check the journal and try again.",
     "nothing_to_redo": "There is nothing to redo.",
+    "snapshot_not_reencoded": "This entry was recorded during an update and cannot be undone or redone yet.",
     "no_initiative": "There is no initiative to reroll: start a combat first.",
     "initiative_not_on_top": "The initiative is no longer the newest action: undo what came after it, or roll again at the next round.",
     "too_many_favourites": "Too many favourite rolls: remove one first.",

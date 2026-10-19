@@ -521,63 +521,6 @@ func (_c *MockQuerier_ListReviews_Call) RunAndReturn(run func(context.Context, i
 	return _c
 }
 
-// RenamedItemID provides a mock function with given fields: ctx, arg
-func (_m *MockQuerier) RenamedItemID(ctx context.Context, arg queries.RenamedItemIDParams) (string, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for RenamedItemID")
-	}
-
-	var r0 string
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.RenamedItemIDParams) (string, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.RenamedItemIDParams) string); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Get(0).(string)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.RenamedItemIDParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockQuerier_RenamedItemID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenamedItemID'
-type MockQuerier_RenamedItemID_Call struct {
-	*mock.Call
-}
-
-// RenamedItemID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - arg queries.RenamedItemIDParams
-func (_e *MockQuerier_Expecter) RenamedItemID(ctx interface{}, arg interface{}) *MockQuerier_RenamedItemID_Call {
-	return &MockQuerier_RenamedItemID_Call{Call: _e.mock.On("RenamedItemID", ctx, arg)}
-}
-
-func (_c *MockQuerier_RenamedItemID_Call) Run(run func(ctx context.Context, arg queries.RenamedItemIDParams)) *MockQuerier_RenamedItemID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(queries.RenamedItemIDParams))
-	})
-	return _c
-}
-
-func (_c *MockQuerier_RenamedItemID_Call) Return(_a0 string, _a1 error) *MockQuerier_RenamedItemID_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockQuerier_RenamedItemID_Call) RunAndReturn(run func(context.Context, queries.RenamedItemIDParams) (string, error)) *MockQuerier_RenamedItemID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // ResetDailyItems provides a mock function with given fields: ctx, characterID
 func (_m *MockQuerier) ResetDailyItems(ctx context.Context, characterID int64) error {
 	ret := _m.Called(ctx, characterID)

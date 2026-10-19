@@ -20,4 +20,9 @@ var (
 	ErrRedoChanged = errors.New("the transaction to redo changed")
 	// ErrNothingToRedo: a redo with no popped transaction above the live top.
 	ErrNothingToRedo = errors.New("nothing to redo")
+	// ErrSnapshotNotReencoded: an undo or redo of an entry whose snapshot has
+	// no envelope (ADR 0018 step 9): the release before the codec recorded it
+	// during a rolling deploy and the data step has not re-encoded it yet.
+	// Nothing is written.
+	ErrSnapshotNotReencoded = errors.New("snapshot recorded by the previous release, not re-encoded yet")
 )

@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -274,9 +275,9 @@ func TestPrepare_AcceptsTheLimit_KeepsOrderAndDuplicates(t *testing.T) {
 		string(rec.Payload))
 	require.Len(t, rec.Snapshots, 1)
 	assert.Equal(t, prepsvc.StateKey, rec.Snapshots[0].Key)
-	assert.JSONEq(t, `[]`, string(rec.Snapshots[0].Before))
+	assert.JSONEq(t, `[]`, snaptest.State(t, rec.Snapshots[0].Before))
 	var after []spellsvc.SpellSlot
-	require.NoError(t, json.Unmarshal(rec.Snapshots[0].After, &after))
+	require.NoError(t, json.Unmarshal([]byte(snaptest.State(t, rec.Snapshots[0].After)), &after))
 	assert.Equal(t, want, after)
 }
 
@@ -327,9 +328,9 @@ func TestRestore_WritesTheSnapshotBack(t *testing.T) {
 	}).Return(nil)
 	raw, err := json.Marshal([]spellsvc.SpellSlot{{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true}})
 	require.NoError(t, err)
-	require.NoError(t, f.svc.Restore(context.Background(), 1, raw))
+	require.NoError(t, f.svc.Module().Restorer(prepsvc.StateKey).Restore(context.Background(), 1, snaptest.Env(string(raw))))
 
-	require.Error(t, f.svc.Restore(context.Background(), 1, json.RawMessage(`{`)))
+	require.Error(t, f.svc.Module().Restorer(prepsvc.StateKey).Restore(context.Background(), 1, json.RawMessage(`{`)))
 }
 
 // ADR 0008 step 9: extra slots are not part of the preparation, so

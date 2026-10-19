@@ -73,6 +73,9 @@ func New(dal DAL, tx domain.TxRunner, languages charactersvc.LanguageBook) (SVC,
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
 
+// Module declares no codec: the details' edits are not on the action log.
+func (s *service) Module() domain.Module { return domain.Module{Name: "detailssvc"} }
+
 func (s *service) Update(ctx context.Context, id int64, p Patch) (charactersvc.Details, error) {
 	var out charactersvc.Details
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {

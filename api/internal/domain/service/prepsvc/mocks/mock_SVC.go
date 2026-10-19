@@ -4,8 +4,8 @@ package mocks
 
 import (
 	context "context"
-	json "encoding/json"
 
+	domain "github.com/ceffo/critical/api/internal/domain"
 	mock "github.com/stretchr/testify/mock"
 
 	prepsvc "github.com/ceffo/critical/api/internal/domain/service/prepsvc"
@@ -175,6 +175,51 @@ func (_c *MockSVC_Info_Call) RunAndReturn(run func(context.Context, int64) (prep
 	return _c
 }
 
+// Module provides a mock function with no fields
+func (_m *MockSVC) Module() domain.Module {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Module")
+	}
+
+	var r0 domain.Module
+	if rf, ok := ret.Get(0).(func() domain.Module); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(domain.Module)
+	}
+
+	return r0
+}
+
+// MockSVC_Module_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Module'
+type MockSVC_Module_Call struct {
+	*mock.Call
+}
+
+// Module is a helper method to define mock.On call
+func (_e *MockSVC_Expecter) Module() *MockSVC_Module_Call {
+	return &MockSVC_Module_Call{Call: _e.mock.On("Module")}
+}
+
+func (_c *MockSVC_Module_Call) Run(run func()) *MockSVC_Module_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockSVC_Module_Call) Return(_a0 domain.Module) *MockSVC_Module_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_Module_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Prepare provides a mock function with given fields: ctx, characterID, spellIDs
 func (_m *MockSVC) Prepare(ctx context.Context, characterID int64, spellIDs []string) ([]spellsvc.SpellSlot, error) {
 	ret := _m.Called(ctx, characterID, spellIDs)
@@ -231,54 +276,6 @@ func (_c *MockSVC_Prepare_Call) Return(_a0 []spellsvc.SpellSlot, _a1 error) *Moc
 }
 
 func (_c *MockSVC_Prepare_Call) RunAndReturn(run func(context.Context, int64, []string) ([]spellsvc.SpellSlot, error)) *MockSVC_Prepare_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Restore provides a mock function with given fields: ctx, characterID, state
-func (_m *MockSVC) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
-	ret := _m.Called(ctx, characterID, state)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Restore")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, json.RawMessage) error); ok {
-		r0 = rf(ctx, characterID, state)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockSVC_Restore_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Restore'
-type MockSVC_Restore_Call struct {
-	*mock.Call
-}
-
-// Restore is a helper method to define mock.On call
-//   - ctx context.Context
-//   - characterID int64
-//   - state json.RawMessage
-func (_e *MockSVC_Expecter) Restore(ctx interface{}, characterID interface{}, state interface{}) *MockSVC_Restore_Call {
-	return &MockSVC_Restore_Call{Call: _e.mock.On("Restore", ctx, characterID, state)}
-}
-
-func (_c *MockSVC_Restore_Call) Run(run func(ctx context.Context, characterID int64, state json.RawMessage)) *MockSVC_Restore_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(json.RawMessage))
-	})
-	return _c
-}
-
-func (_c *MockSVC_Restore_Call) Return(_a0 error) *MockSVC_Restore_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockSVC_Restore_Call) RunAndReturn(run func(context.Context, int64, json.RawMessage) error) *MockSVC_Restore_Call {
 	_c.Call.Return(run)
 	return _c
 }

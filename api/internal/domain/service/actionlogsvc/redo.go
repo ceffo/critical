@@ -54,7 +54,7 @@ func (s *service) RedoTarget(ctx context.Context, characterID int64) (*actionlog
 	if err != nil {
 		return nil, err
 	}
-	return s.views.EntryPtr(out), nil
+	return s.payloadViews().EntryPtr(out), nil
 }
 
 // Redo replays the redo target when its first entry's id is expectedRedoID
@@ -82,7 +82,7 @@ func (s *service) Redo(ctx context.Context, characterID, expectedRedoID int64) (
 	if err != nil {
 		return nil, err
 	}
-	return s.views.EntryPtr(out), nil
+	return s.payloadViews().EntryPtr(out), nil
 }
 
 // replayTransaction un-pops every popped entry of transaction transactionID,
@@ -117,6 +117,9 @@ func (s *service) replay(ctx context.Context, characterID int64, e *actionlog.En
 		r := s.restorer(snap.Key)
 		if r == nil {
 			return fmt.Errorf("no restorer registered for state %q", snap.Key)
+		}
+		if snap.After == nil {
+			return fmt.Errorf("%w: entry #%d, state %q", ErrSnapshotNotReencoded, e.ID, snap.Key)
 		}
 		var err error
 		if rp, ok := r.(actionlog.Replayer); ok {

@@ -51,9 +51,6 @@ type SVC interface {
 	// returns the roll's breakdown (Learned false: the failure is recorded).
 	// domain.ErrNotFound (wrapped) for a spell the catalogue does not hold.
 	Learn(ctx context.Context, characterID int64, spellID string) (*Result, error)
-	// Restorers writes a spell's spellbook state back when a learn entry is
-	// popped or redone, keyed by StateFamily.
-	Restorers() map[string]actionlog.Restorer
 }
 
 // Result is the full breakdown of a learn roll (step 20.2).

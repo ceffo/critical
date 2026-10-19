@@ -8,6 +8,8 @@ import (
 
 	context "context"
 
+	domain "github.com/ceffo/critical/api/internal/domain"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -537,6 +539,51 @@ func (_c *MockSVC_List_Call) RunAndReturn(run func(context.Context, int64, int) 
 	return _c
 }
 
+// Module provides a mock function with no fields
+func (_m *MockSVC) Module() domain.Module {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Module")
+	}
+
+	var r0 domain.Module
+	if rf, ok := ret.Get(0).(func() domain.Module); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(domain.Module)
+	}
+
+	return r0
+}
+
+// MockSVC_Module_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Module'
+type MockSVC_Module_Call struct {
+	*mock.Call
+}
+
+// Module is a helper method to define mock.On call
+func (_e *MockSVC_Expecter) Module() *MockSVC_Module_Call {
+	return &MockSVC_Module_Call{Call: _e.mock.On("Module")}
+}
+
+func (_c *MockSVC_Module_Call) Run(run func()) *MockSVC_Module_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockSVC_Module_Call) Return(_a0 domain.Module) *MockSVC_Module_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_Module_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Record provides a mock function with given fields: ctx, e
 func (_m *MockSVC) Record(ctx context.Context, e actionlog.NewEntry) (int64, error) {
 	ret := _m.Called(ctx, e)
@@ -713,37 +760,49 @@ func (_c *MockSVC_RedoTarget_Call) RunAndReturn(run func(context.Context, int64)
 	return _c
 }
 
-// RegisterRestorer provides a mock function with given fields: stateKey, r
-func (_m *MockSVC) RegisterRestorer(stateKey string, r actionlog.Restorer) {
-	_m.Called(stateKey, r)
+// Register provides a mock function with given fields: m
+func (_m *MockSVC) Register(m domain.Module) error {
+	ret := _m.Called(m)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Register")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(domain.Module) error); ok {
+		r0 = rf(m)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
-// MockSVC_RegisterRestorer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RegisterRestorer'
-type MockSVC_RegisterRestorer_Call struct {
+// MockSVC_Register_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Register'
+type MockSVC_Register_Call struct {
 	*mock.Call
 }
 
-// RegisterRestorer is a helper method to define mock.On call
-//   - stateKey string
-//   - r actionlog.Restorer
-func (_e *MockSVC_Expecter) RegisterRestorer(stateKey interface{}, r interface{}) *MockSVC_RegisterRestorer_Call {
-	return &MockSVC_RegisterRestorer_Call{Call: _e.mock.On("RegisterRestorer", stateKey, r)}
+// Register is a helper method to define mock.On call
+//   - m domain.Module
+func (_e *MockSVC_Expecter) Register(m interface{}) *MockSVC_Register_Call {
+	return &MockSVC_Register_Call{Call: _e.mock.On("Register", m)}
 }
 
-func (_c *MockSVC_RegisterRestorer_Call) Run(run func(stateKey string, r actionlog.Restorer)) *MockSVC_RegisterRestorer_Call {
+func (_c *MockSVC_Register_Call) Run(run func(m domain.Module)) *MockSVC_Register_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(actionlog.Restorer))
+		run(args[0].(domain.Module))
 	})
 	return _c
 }
 
-func (_c *MockSVC_RegisterRestorer_Call) Return() *MockSVC_RegisterRestorer_Call {
-	_c.Call.Return()
+func (_c *MockSVC_Register_Call) Return(_a0 error) *MockSVC_Register_Call {
+	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockSVC_RegisterRestorer_Call) RunAndReturn(run func(string, actionlog.Restorer)) *MockSVC_RegisterRestorer_Call {
-	_c.Run(run)
+func (_c *MockSVC_Register_Call) RunAndReturn(run func(domain.Module) error) *MockSVC_Register_Call {
+	_c.Call.Return(run)
 	return _c
 }
 

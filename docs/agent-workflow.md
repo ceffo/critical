@@ -97,7 +97,7 @@ merge instead of hand-merging.
 
 ## Tracker
 
-Linear: team `CRI`, project "critical-app". The workspace shape (priorities, states, labels) is written once
+Linear: team `CRI`, project "critical-hit". The workspace shape (priorities, states, labels) is written once
 in [`scripts/linear-mapping.json`](../scripts/linear-mapping.json) and described in [linear.md](linear.md);
 this file links it, never copies it. The decision is [ADR 0031](adr/0031-linear-tracker.md).
 

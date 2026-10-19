@@ -1,4 +1,11 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   Archive,
@@ -27,6 +34,14 @@ import {
 } from "@/components/ui/dialog";
 import { APP_NAME } from "@/lib/brand";
 import { navigate } from "@/lib/navigation";
+import {
+  initialRoster,
+  rosterReducer,
+  startedWrite,
+  type RosterAction,
+  type RosterDialog as Opened,
+  type RosterState,
+} from "@/lib/rosterWrites";
 import { CREATE_PATH } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import type { CharacterList, CharacterSummary } from "@/types/character";
@@ -36,12 +51,28 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 /** The page shows the user's current character: after a switch it loads again on it. */
 const reloadOnCurrent = () => globalThis.location.assign("/");
 
-/** A dialog the roster opened, on one character. */
-type Opened = {
-  kind: "rename" | "retire";
-  character: CharacterSummary;
-  current: boolean;
-};
+/** Sends one write through the roster: throws its failure, for the form to show. */
+type Send = (call: () => Promise<CharacterList>) => Promise<void>;
+
+/**
+ * The roster's state (`lib/rosterWrites.ts`), applied at once so a write knows its id before its
+ * answer comes back.
+ */
+function useRosterState(): [
+  RosterState,
+  (a: RosterAction) => RosterState,
+  () => RosterState,
+] {
+  const ref = useRef(initialRoster);
+  const [state, setState] = useState(initialRoster);
+  const apply = useCallback((a: RosterAction) => {
+    ref.current = rosterReducer(ref.current, a);
+    setState(ref.current);
+    return ref.current;
+  }, []);
+  const get = useCallback(() => ref.current, []);
+  return [state, apply, get];
+}
 
 /**
  * "Vos personnages" (ADR 0034 step 7, amending ADR 0029 steps 7.2 and 7.3): a full screen with a card
@@ -53,11 +84,10 @@ type Opened = {
  */
 export function Roster({ onBack }: { onBack?: () => void }) {
   const { t } = useTranslation();
-  const [list, setList] = useState<CharacterList | null>(null);
+  const [state, apply, current] = useRosterState();
+  const { list, opened, pending } = state;
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [opened, setOpened] = useState<Opened | null>(null);
 
   useEffect(() => {
     document.title = `${t("roster.title")} · ${APP_NAME}`;
@@ -65,29 +95,45 @@ export function Roster({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     let live = true;
     fetchCharacters().then(
-      (l) => live && setList(l),
+      (l) => live && apply({ type: "loaded", list: l }),
       (e: unknown) => live && setLoadError(message(e)),
     );
     return () => {
       live = false;
     };
-  }, []);
+  }, [apply]);
 
-  const play = async (c: CharacterSummary) => {
-    setBusy(true);
-    setError(null);
+  /**
+   * One write at a time (`lib/rosterWrites.ts`): its answer replaces the list and closes the dialog it
+   * came from, never one opened since. Retiring the last character loads the page again (the intro).
+   */
+  const write = async (
+    fromDialog: boolean,
+    call: () => Promise<CharacterList>,
+  ): Promise<CharacterList | null> => {
+    const before = current();
+    const id = startedWrite(before, apply({ type: "start", fromDialog }));
+    if (id === null) return null;
     try {
-      await switchCharacter(c.id);
-      reloadOnCurrent();
+      const l = await call();
+      apply({ type: "done", id, list: l });
+      if (l.characters.length === 0) reloadOnCurrent();
+      return l;
     } catch (e) {
-      setError(message(e));
-      setBusy(false);
+      apply({ type: "failed", id });
+      throw e;
     }
   };
-  const changed = (l: CharacterList) => {
-    setOpened(null);
-    if (l.characters.length === 0) reloadOnCurrent();
-    else setList(l);
+  const send: Send = async (call) => {
+    await write(true, call);
+  };
+  const play = async (c: CharacterSummary) => {
+    setError(null);
+    try {
+      if (await write(false, () => switchCharacter(c.id))) reloadOnCurrent();
+    } catch (e) {
+      setError(message(e));
+    }
   };
 
   return (
@@ -134,21 +180,13 @@ export function Roster({ onBack }: { onBack?: () => void }) {
                   key={c.id}
                   character={c}
                   current={c.id === list.currentId}
-                  busy={busy}
+                  busy={pending !== null}
                   onPlay={() => void play(c)}
                   onRename={() =>
-                    setOpened({
-                      kind: "rename",
-                      character: c,
-                      current: c.id === list.currentId,
-                    })
+                    apply({ type: "open", kind: "rename", character: c })
                   }
                   onRetire={() =>
-                    setOpened({
-                      kind: "retire",
-                      character: c,
-                      current: c.id === list.currentId,
-                    })
+                    apply({ type: "open", kind: "retire", character: c })
                   }
                 />
               ))}
@@ -173,8 +211,8 @@ export function Roster({ onBack }: { onBack?: () => void }) {
       </main>
       <RosterDialog
         opened={opened}
-        onClose={() => setOpened(null)}
-        onChanged={changed}
+        onClose={() => apply({ type: "close" })}
+        send={send}
       />
     </div>
   );
@@ -266,29 +304,31 @@ function RosterCard({
 function RosterDialog({
   opened,
   onClose,
-  onChanged,
+  send,
 }: {
   opened: Opened | null;
   onClose: () => void;
-  onChanged: (l: CharacterList) => void;
+  send: Send;
 }) {
   const { t } = useTranslation();
   let body: ReactNode = null;
   if (opened?.kind === "rename")
     body = (
       <RenameForm
+        key={opened.token}
         character={opened.character}
         onCancel={onClose}
-        onDone={onChanged}
+        send={send}
       />
     );
   if (opened?.kind === "retire")
     body = (
       <RetireConfirm
+        key={opened.token}
         character={opened.character}
         current={opened.current}
         onCancel={onClose}
-        onDone={onChanged}
+        send={send}
       />
     );
   return (
@@ -328,13 +368,13 @@ function RetireConfirm({
   character,
   current,
   onCancel,
-  onDone,
+  send,
 }: {
   character: CharacterSummary;
   /** The one in play: the server then makes the first one left current, which the lead says. */
   current: boolean;
   onCancel: () => void;
-  onDone: (l: CharacterList) => void;
+  send: Send;
 }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -344,7 +384,7 @@ function RetireConfirm({
     setBusy(true);
     setError(null);
     try {
-      onDone(await retireCharacter(character.id));
+      await send(() => retireCharacter(character.id));
     } catch (e) {
       setError(message(e));
       setBusy(false);
@@ -389,11 +429,11 @@ function RetireConfirm({
 function RenameForm({
   character,
   onCancel,
-  onDone,
+  send,
 }: {
   character: CharacterSummary;
   onCancel: () => void;
-  onDone: (l: CharacterList) => void;
+  send: Send;
 }) {
   const { t } = useTranslation();
   const [maxName, setMaxName] = useState<number | null>(null);
@@ -418,7 +458,7 @@ function RenameForm({
     setBusy(true);
     setError(null);
     try {
-      onDone(await renameCharacter(character.id, name));
+      await send(() => renameCharacter(character.id, name));
     } catch (err) {
       setBusy(false);
       setError(

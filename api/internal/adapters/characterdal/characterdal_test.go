@@ -31,7 +31,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		HpMax: 42, RealizedLevel: 6, Thac0Base: 16, Level: 5, XpTotal: 1200,
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
 		Class: "bard", RaceCode: "half_elf", Alignment: "chaotic_good", Age: 31, Sex: "male",
-		Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
+		HeightCm: 177.8, WeightKg: 72.6, Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
 		SkillPoints: `{}`,
 	}, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 3)
@@ -45,7 +45,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		}},
 		Details: charactersvc.Details{
 			Alignment: "chaotic_good", Age: 31, Sex: "male",
-			Height: "5'10", Weight: "160 lb", Hair: "black", Eyes: "green", Languages: []string{"Common", "Elvish"},
+			Height: 177.8, Weight: 72.6, Hair: "black", Eyes: "green", Languages: []string{"Common", "Elvish"},
 		},
 	}, got)
 }
@@ -81,7 +81,7 @@ func TestDetails_UpdateStoresWhatGetMapsBack(t *testing.T) {
 	}{
 		"languages": {
 			details: charactersvc.Details{
-				Alignment: "chaotic_good", Age: 31, Sex: "male", Height: "5'10", Weight: "160 lb",
+				Alignment: "chaotic_good", Age: 31, Sex: "male", Height: 177.8, Weight: 72.6,
 				Hair: "black", Eyes: "green", Languages: []string{"Elvish", "Common"},
 			},
 			stored: `["Elvish","Common"]`, back: []string{"Elvish", "Common"},
@@ -93,14 +93,14 @@ func TestDetails_UpdateStoresWhatGetMapsBack(t *testing.T) {
 			dal := characterdal.New(q)
 			d := tc.details
 			q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
-				Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, Height: d.Height,
-				Weight: d.Weight, Hair: d.Hair, Eyes: d.Eyes, Languages: tc.stored, ID: 1,
+				Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, HeightCm: d.Height,
+				WeightKg: d.Weight, Hair: d.Hair, Eyes: d.Eyes, Languages: tc.stored, ID: 1,
 			}).Return(1, nil).Once()
 			require.NoError(t, dal.UpdateDetails(ctx, 1, d))
 
 			q.EXPECT().GetCharacterDetails(ctx, int64(1)).Return(queries.GetCharacterDetailsRow{
-				Class: "bard", RaceCode: "elf", Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, Height: d.Height,
-				Weight: d.Weight, Hair: d.Hair, Eyes: d.Eyes, Languages: tc.stored,
+				Class: "bard", RaceCode: "elf", Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, HeightCm: d.Height,
+				WeightKg: d.Weight, Hair: d.Hair, Eyes: d.Eyes, Languages: tc.stored,
 			}, nil).Once()
 			got, kind, err := dal.GetDetails(ctx, 1)
 			require.NoError(t, err)

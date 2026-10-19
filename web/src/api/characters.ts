@@ -2,6 +2,8 @@ import type {
   CharacterList,
   CreationOptions,
   HpRoll,
+  IdentityFigure,
+  IdentityRoll,
   NewCharacter,
   ScoresArrangement,
   ScoresRoll,
@@ -89,6 +91,22 @@ export function arrangeScores(
     method,
     raceCode,
     placed,
+  });
+}
+
+/**
+ * Rolls a figure of the identity (ADR 0032 step 5.3): the table's dice for the race, and for a height
+ * or a weight the sex. Writes nothing; the player may change the value.
+ */
+export function rollIdentity(
+  raceCode: string,
+  sex: string,
+  figures: IdentityFigure[],
+): Promise<IdentityRoll> {
+  return post<IdentityRoll>("/api/characters/rolls/identity", {
+    raceCode,
+    sex,
+    figures,
   });
 }
 

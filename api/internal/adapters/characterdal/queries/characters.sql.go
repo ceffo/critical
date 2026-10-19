@@ -170,7 +170,7 @@ func (q *Queries) CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, er
 const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-       class, race_code, alignment, age, sex, height, weight, hair, eyes, languages,
+       class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
        COALESCE(realized_level, level)::BIGINT AS realized_level, skill_points, skill_armor
 FROM characters WHERE id = $1
 `
@@ -199,8 +199,8 @@ type GetCharacterRow struct {
 	Alignment        string
 	Age              int64
 	Sex              string
-	Height           string
-	Weight           string
+	HeightCm         float64
+	WeightKg         float64
 	Hair             string
 	Eyes             string
 	Languages        string
@@ -240,8 +240,8 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.Alignment,
 		&i.Age,
 		&i.Sex,
-		&i.Height,
-		&i.Weight,
+		&i.HeightCm,
+		&i.WeightKg,
 		&i.Hair,
 		&i.Eyes,
 		&i.Languages,
@@ -253,7 +253,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 }
 
 const getCharacterDetails = `-- name: GetCharacterDetails :one
-SELECT class, race_code, alignment, age, sex, height, weight, hair, eyes, languages
+SELECT class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages
 FROM characters WHERE id = $1
 `
 
@@ -263,8 +263,8 @@ type GetCharacterDetailsRow struct {
 	Alignment string
 	Age       int64
 	Sex       string
-	Height    string
-	Weight    string
+	HeightCm  float64
+	WeightKg  float64
 	Hair      string
 	Eyes      string
 	Languages string
@@ -279,8 +279,8 @@ func (q *Queries) GetCharacterDetails(ctx context.Context, id int64) (GetCharact
 		&i.Alignment,
 		&i.Age,
 		&i.Sex,
-		&i.Height,
-		&i.Weight,
+		&i.HeightCm,
+		&i.WeightKg,
 		&i.Hair,
 		&i.Eyes,
 		&i.Languages,
@@ -456,7 +456,7 @@ func (q *Queries) SetSkillPoints(ctx context.Context, arg SetSkillPointsParams) 
 
 const updateCharacterDetails = `-- name: UpdateCharacterDetails :execrows
 UPDATE characters
-SET alignment = $1, age = $2, sex = $3, height = $4, weight = $5, hair = $6, eyes = $7, languages = $8
+SET alignment = $1, age = $2, sex = $3, height_cm = $4, weight_kg = $5, hair = $6, eyes = $7, languages = $8
 WHERE id = $9
 `
 
@@ -464,8 +464,8 @@ type UpdateCharacterDetailsParams struct {
 	Alignment string
 	Age       int64
 	Sex       string
-	Height    string
-	Weight    string
+	HeightCm  float64
+	WeightKg  float64
 	Hair      string
 	Eyes      string
 	Languages string
@@ -477,8 +477,8 @@ func (q *Queries) UpdateCharacterDetails(ctx context.Context, arg UpdateCharacte
 		arg.Alignment,
 		arg.Age,
 		arg.Sex,
-		arg.Height,
-		arg.Weight,
+		arg.HeightCm,
+		arg.WeightKg,
 		arg.Hair,
 		arg.Eyes,
 		arg.Languages,

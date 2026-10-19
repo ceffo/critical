@@ -567,6 +567,41 @@ func (q *Queries) ListCharacterLanguages(ctx context.Context) ([]ListCharacterLa
 	return items, nil
 }
 
+const listCharacterMeasures = `-- name: ListCharacterMeasures :many
+SELECT id, height, weight FROM characters ORDER BY id
+`
+
+type ListCharacterMeasuresRow struct {
+	ID     int64
+	Height string
+	Weight string
+}
+
+// The identity numbers migration (015): every character's stored free-text height and weight,
+// to parse into centimetres and kilograms.
+func (q *Queries) ListCharacterMeasures(ctx context.Context) ([]ListCharacterMeasuresRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCharacterMeasures)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCharacterMeasuresRow{}
+	for rows.Next() {
+		var i ListCharacterMeasuresRow
+		if err := rows.Scan(&i.ID, &i.Height, &i.Weight); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockWriters = `-- name: LockWriters :exec
 SELECT pg_advisory_xact_lock(7240531)
 `
@@ -692,6 +727,22 @@ type SetCharacterLanguagesParams struct {
 // The mapped language list of a character (a JSON list of codes).
 func (q *Queries) SetCharacterLanguages(ctx context.Context, arg SetCharacterLanguagesParams) error {
 	_, err := q.db.ExecContext(ctx, setCharacterLanguages, arg.Languages, arg.ID)
+	return err
+}
+
+const setCharacterMeasures = `-- name: SetCharacterMeasures :exec
+UPDATE characters SET height_cm = $1, weight_kg = $2 WHERE id = $3
+`
+
+type SetCharacterMeasuresParams struct {
+	HeightCm float64
+	WeightKg float64
+	ID       int64
+}
+
+// The parsed height and weight of a character (0: none, the text was not recognised).
+func (q *Queries) SetCharacterMeasures(ctx context.Context, arg SetCharacterMeasuresParams) error {
+	_, err := q.db.ExecContext(ctx, setCharacterMeasures, arg.HeightCm, arg.WeightKg, arg.ID)
 	return err
 }
 

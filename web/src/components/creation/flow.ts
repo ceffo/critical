@@ -14,6 +14,17 @@ import type {
  * Everything the player entered in the creation route, kept across the steps (back and forward keep
  * the values). Numbers stay as typed; the server checks them all at Créer.
  */
+/** A change to the draft: `details` names only the fields that change. */
+export type DraftPatch = Partial<Omit<FlowDraft, "details">> & {
+  details?: Partial<FlowDraft["details"]>;
+};
+
+/** The draft with the patch applied; `details` is merged field by field, so a reply carrying one
+ * detail (a rolled height) keeps what was typed since the request left. */
+export function mergeDraft(d: FlowDraft, patch: DraftPatch): FlowDraft {
+  return { ...d, ...patch, details: { ...d.details, ...patch.details } };
+}
+
 export interface FlowDraft {
   cls: string;
   race: string;
@@ -129,7 +140,9 @@ export interface FieldError {
 export interface StepProps {
   options: CreationOptions;
   draft: FlowDraft;
-  update: (patch: Partial<FlowDraft>) => void;
+  /** Applies a change to the latest draft; `details` is merged field by field, so a late reply
+   * (a rolled figure) never rebuilds the details from an older copy. */
+  update: (patch: DraftPatch) => void;
   error: FieldError | null;
   /** The worded refusal for a field, or null when the error is another field's. */
   errorFor: (field: string) => string | null;

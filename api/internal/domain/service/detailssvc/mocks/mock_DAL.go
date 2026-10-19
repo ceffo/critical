@@ -24,7 +24,7 @@ func (_m *MockDAL) EXPECT() *MockDAL_Expecter {
 }
 
 // GetDetails provides a mock function with given fields: ctx, id
-func (_m *MockDAL) GetDetails(ctx context.Context, id int64) (charactersvc.Details, string, error) {
+func (_m *MockDAL) GetDetails(ctx context.Context, id int64) (charactersvc.Details, charactersvc.Kind, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
@@ -32,9 +32,9 @@ func (_m *MockDAL) GetDetails(ctx context.Context, id int64) (charactersvc.Detai
 	}
 
 	var r0 charactersvc.Details
-	var r1 string
+	var r1 charactersvc.Kind
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (charactersvc.Details, string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (charactersvc.Details, charactersvc.Kind, error)); ok {
 		return rf(ctx, id)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, int64) charactersvc.Details); ok {
@@ -43,10 +43,10 @@ func (_m *MockDAL) GetDetails(ctx context.Context, id int64) (charactersvc.Detai
 		r0 = ret.Get(0).(charactersvc.Details)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64) string); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int64) charactersvc.Kind); ok {
 		r1 = rf(ctx, id)
 	} else {
-		r1 = ret.Get(1).(string)
+		r1 = ret.Get(1).(charactersvc.Kind)
 	}
 
 	if rf, ok := ret.Get(2).(func(context.Context, int64) error); ok {
@@ -77,12 +77,12 @@ func (_c *MockDAL_GetDetails_Call) Run(run func(ctx context.Context, id int64)) 
 	return _c
 }
 
-func (_c *MockDAL_GetDetails_Call) Return(_a0 charactersvc.Details, _a1 string, _a2 error) *MockDAL_GetDetails_Call {
+func (_c *MockDAL_GetDetails_Call) Return(_a0 charactersvc.Details, _a1 charactersvc.Kind, _a2 error) *MockDAL_GetDetails_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockDAL_GetDetails_Call) RunAndReturn(run func(context.Context, int64) (charactersvc.Details, string, error)) *MockDAL_GetDetails_Call {
+func (_c *MockDAL_GetDetails_Call) RunAndReturn(run func(context.Context, int64) (charactersvc.Details, charactersvc.Kind, error)) *MockDAL_GetDetails_Call {
 	_c.Call.Return(run)
 	return _c
 }

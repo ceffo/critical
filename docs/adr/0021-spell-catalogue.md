@@ -8,6 +8,7 @@ Step 11 (the racial level limits of DMG Table 7, format 5) is _proposed_ (critic
 Step 12 (the spheres, format 6) is **decided as built**, 2026-10-18 (critical-reul.15, accepted by the
 user; the API reads formats 5 and 6, the builder publishing format 6 is a separate item).
 Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; the API reads formats 6 and 7).
+Step 14 (the languages, format 8) is **decided as built**, 2026-10-18 (the API reads formats 7 and 8).
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -563,6 +564,25 @@ is only ever appended to by play.
     `TestParse_Step13_2_EquipmentBelongsToFormat7` (catalogueadpt), `TestParse_Step13_1_ReadsFormat7Equipment`,
     `TestParse_Step13_2_EquipmentBelongsToFormat7`, `TestParse_Step13_3_RefusesBrokenEquipment`
     (ruletablesadpt), `TestStartup_Step13_RefusesBrokenEquipmentAndStillReadsFormat6` (composition).
+14. **The languages, format 8** (**decided as built** 2026-10-18; [ADR 0032](0032-character-identity-and-creation-rolls.md) step 4).
+    Format 8 is format 7 plus a top-level `languages` list and one `rule_tables` key; formats 3 to 7 carry neither (schema).
+    1. **`languages`**, required, non-empty: rows `{code, name}`, `code` as `^[a-z0-9]+(_[a-z0-9]+)*$` (unique), `name` a language map
+       (English required, ADR 0023). The PHB racial lists plus Common give eleven: `common dwarvish elvish gnomish halfling goblin
+       hobgoblin kobold orcish gnoll burrowers`; a campaign language is one more row, no code change.
+    2. **`rule_tables.race_languages`**, required: rows `{race, language[, native: true]}`, one per race and language of its PHB list
+       (chapter 2); `native` marks the race's own language (Common for human and half-elf).
+    3. **Validation** (`ruletablesvc.NewLanguages`, a refusal naming the race or language): a code once, with an English name; a racial list
+       naming an unknown language or listing one twice is refused; every one of the six races has exactly one native language.
+       A format-8 artifact missing either part is a startup error.
+    4. **Rollout, as step 13.4**: the API reads 7 and 8; a format-7 catalogue starts and offers no language (creation options carry none,
+       any language code is `unknown`). Publishing format 8 is a change in `critical-rulebooks`. Merge order: this change first; until the
+       published artifact is format 8, a deployed app has no language catalogue and shows the stored codes as they are.
+    5. **Nothing is imported into the database**; the data migration of stored free text uses committed spellings whose codes a test holds
+       equal to the fixture's (`TestLanguageSpellings_Step8_1_AreCatalogueCodes`).
+    Tests: `TestSchema_Step14_Format8Languages` (cataloguecheck), `TestParse_Step14_1_ReadsFormat8`, `TestParse_Step14_2_LanguagesBelongToFormat8`
+    (catalogueadpt), `TestParse_Step14_1_ReadsFormat8Languages`, `TestParse_Step14_2_LanguagesBelongToFormat8`,
+    `TestParse_Step14_3_RefusesABrokenLanguageCatalogue` (ruletablesadpt), `TestStartup_Step14_RefusesAnUnknownLanguageAndStillReadsFormat7` (composition).
+
 ## Consequences
 
 - The builder item and the importer item can proceed in parallel against this ADR and the schema:

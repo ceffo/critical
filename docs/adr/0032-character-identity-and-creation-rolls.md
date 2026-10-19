@@ -268,6 +268,25 @@ roster and creation items land.
 - **Options.** `GET /api/characters/options` gains `alignments` per class (the codes it admits, in the
   PHB order) and `sexes`; the creation form and the card's edit offer only those.
 
+## As built (steps 4 and 8, languages)
+
+2026-10-18, the item that made languages catalogue codes ([ADR 0021](0021-spell-catalogue.md) step 14 holds the artifact shape).
+
+- **Storage.** `characters.languages` stays the JSON list; it holds codes. Migration 014 changes no column; its data step
+  (`mapLanguages`, spellings in `storage/postgres/languages.go`) splits each stored item at commas, semicolons, "and" and "et", maps
+  en and fr names ignoring case and accents, keeps each code once, **drops an unrecognised item and logs it** (character and word).
+  Idempotent. The seed character's seed names codes.
+- **Native language** is added by the server on creation and on every languages edit, and on every read (a character stored without it
+  reads with it). A word that is no catalogue code (written by the release before, during a rolling deploy) is not read.
+  Before a format-8 artifact is published the book is empty and nothing is hidden; an edit then accepts the codes the character already
+  holds (the card sends them back with every save) and refuses any other as `unknown`, so the empty catalogue never locks an edit.
+- **Count.** PHB Table 4 is committed Go data (`ruletablesvc.LanguageLimit`), applied only by the server: the form computes and shows no
+  verdict; the card shows the server's warning. `GET /api/character` `warnings` gains
+  `{code: "languages_over_limit", field: "languages", count, limit}`, read again at every read, so an edited Intelligence warns.
+- **Refusals**, `languages` (`details.languages` at creation): `empty`, `unknown`, `duplicate`; no `too_many`/`too_long` any more.
+- **Options.** `GET /api/characters/options` gains `languages` (`{code, name}`) and `raceLanguages` (`{race, native, languages}`).
+  The form and the card offer the whole catalogue, the race's list first. A previous release's options lack these: no picker.
+
 ## As built (steps 6 and 7, the score and max HP rolls)
 
 2026-10-18, the item that made the creation's rolls (backend only; the screens are the creation-flow

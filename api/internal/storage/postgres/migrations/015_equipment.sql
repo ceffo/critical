@@ -46,7 +46,7 @@ ALTER TABLE items ADD COLUMN ac_melee       BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE items ADD COLUMN ac_missile     BIGINT NOT NULL DEFAULT 0;
 
 COMMENT ON COLUMN items.type IS 'the free-text label of before the equipment model, kept as stored, no longer edited';
-COMMENT ON TABLE weapons IS 'unused since migration 014: its rows were converted into items';
+COMMENT ON TABLE weapons IS 'unused since migration 015: its rows were converted into items';
 
 CREATE TABLE equipment_review (
     character_id BIGINT NOT NULL REFERENCES characters(id),

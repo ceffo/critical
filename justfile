@@ -398,7 +398,7 @@ design-shots *args:
     node docs/design/ui-directions/shots.mjs {{args}}
 
 # Onboarding design round (docs/design/onboarding/): the mock-ups of web/design/onboarding/ served on
-# the app's Vite and screenshotted in French and English at 1280x800 and 2560x1440 into
+# the app's Vite and screenshotted in French and English at 1280x800, 1920x1080 and 2560x1440 into
 # docs/design/onboarding/shots/; fails on cut text or a page scroll (`--self-test` checks the audit).
 # Not part of `just validate` nor `just e2e`. Needs web/node_modules and `just e2e-install` once.
 onboarding-shots *args:
@@ -406,7 +406,7 @@ onboarding-shots *args:
     node docs/design/onboarding/shots.mjs {{args}}
 
 # Equipment design round (docs/design/equipment/): the mock-ups of web/design/equipment/ served on the
-# app's Vite and screenshotted in French and English at 1280x800 and 2560x1440 into
+# app's Vite and screenshotted in French and English at 1280x800, 1920x1080 and 2560x1440 into
 # docs/design/equipment/shots/; fails on cut text or a page scroll (`--self-test` checks the audit,
 # `--fr` shoots French only, `--only=a,b` some screens). Not part of `just validate` nor `just e2e`.
 equipment-shots *args:

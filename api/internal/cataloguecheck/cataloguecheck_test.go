@@ -199,10 +199,20 @@ func format6Tables(t *testing.T) map[string]any {
 	return tables
 }
 
-// allTables reads the fixture's rule_tables (format 7: the four PHB rule
-// tables, the class and race tables, the racial level limits, the sphere
-// access and Tables 52 and 56, ADR 0021 steps 10 to 13).
+// allTables reads the fixture's rule_tables as format 7 has them (the four
+// PHB rule tables, the class and race tables, the racial level limits, the
+// sphere access and Tables 52 and 56, ADR 0021 steps 10 to 13): without the
+// race_languages table of format 8.
 func allTables(t *testing.T) map[string]any {
+	t.Helper()
+	tables := format8Tables(t)
+	delete(tables, "race_languages")
+	return tables
+}
+
+// format8Tables reads the fixture's rule_tables whole (format 8, ADR 0021
+// step 14).
+func format8Tables(t *testing.T) map[string]any {
 	t.Helper()
 	f, err := os.Open("../../testdata/catalogue.json")
 	require.NoError(t, err)
@@ -528,5 +538,59 @@ func TestSchema_Step13_Format7Equipment(t *testing.T) {
 	}
 	for name, change := range refusedTables {
 		assert.Error(t, sch.Validate(doc(7, editTables(change), fixtureEquipment())), name)
+	}
+}
+
+// TestSchema_Step14_Format8Languages (ADR 0021 steps 14.1 and 14.2, ADR 0032
+// step 4): format 8 is format 7 plus the languages list and the
+// race_languages table; formats before 8 may carry neither; codes, names as
+// language maps, the six races only.
+func TestSchema_Step14_Format8Languages(t *testing.T) {
+	sch := compile(t)
+	raw, err := os.ReadFile("../../testdata/catalogue.json")
+	require.NoError(t, err)
+	fixture := func() map[string]any {
+		doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(raw)))
+		require.NoError(t, err)
+		return doc.(map[string]any)
+	}
+	languages := func() any { return fixture()["languages"] }
+	equipment := func() any { return fixture()["equipment"] }
+	doc := func(format int, tables, langs any) map[string]any {
+		a := format3(t, tables)
+		a["format"] = format
+		a["equipment"] = equipment()
+		if langs != nil {
+			a["languages"] = langs
+		}
+		return a
+	}
+	assert.NoError(t, sch.Validate(doc(8, format8Tables(t), languages())), "format 8 with the languages and the table")
+	assert.Error(t, sch.Validate(doc(8, format8Tables(t), nil)), "format 8 without the languages")
+	assert.Error(t, sch.Validate(doc(8, allTables(t), languages())), "format 8 without race_languages")
+	assert.Error(t, sch.Validate(doc(7, format8Tables(t), nil)), "format 7 with race_languages")
+	assert.Error(t, sch.Validate(doc(7, allTables(t), languages())), "format 7 with the languages")
+	assert.NoError(t, sch.Validate(doc(7, allTables(t), nil)), "format 7 as before")
+
+	refused := map[string]func(map[string]any){
+		"a missing list":     func(a map[string]any) { a["languages"] = []any{} },
+		"a code in capitals": func(a map[string]any) { a["languages"].([]any)[0].(map[string]any)["code"] = "Common" },
+		"a name text, not a map": func(a map[string]any) {
+			a["languages"].([]any)[0].(map[string]any)["name"] = "Common"
+		},
+		"a name without English": func(a map[string]any) {
+			a["languages"].([]any)[0].(map[string]any)["name"] = map[string]any{"fr": "Commun"}
+		},
+		"a family":           func(a map[string]any) { a["languages"].([]any)[0].(map[string]any)["family"] = "x" },
+		"a race of the book": func(a map[string]any) { row(a["rule_tables"].(map[string]any), "race_languages", 0)["race"] = "orc" },
+		"native as a word":   func(a map[string]any) { row(a["rule_tables"].(map[string]any), "race_languages", 0)["native"] = "yes" },
+		"a row without a language": func(a map[string]any) {
+			delete(row(a["rule_tables"].(map[string]any), "race_languages", 0), "language")
+		},
+	}
+	for name, change := range refused {
+		a := doc(8, format8Tables(t), languages())
+		change(a)
+		assert.Error(t, sch.Validate(a), name)
 	}
 }

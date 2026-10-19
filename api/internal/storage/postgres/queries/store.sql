@@ -29,6 +29,14 @@ SELECT id, alignment, sex FROM characters ORDER BY id;
 -- name: SetCharacterIdentity :exec
 UPDATE characters SET alignment = sqlc.arg(alignment), sex = sqlc.arg(sex), race = '' WHERE id = sqlc.arg(id);
 
+-- The languages migration (014): every character's stored language list, to map to codes.
+-- name: ListCharacterLanguages :many
+SELECT id, languages FROM characters ORDER BY id;
+
+-- The mapped language list of a character (a JSON list of codes).
+-- name: SetCharacterLanguages :exec
+UPDATE characters SET languages = sqlc.arg(languages) WHERE id = sqlc.arg(id);
+
 -- The seed character's alignment and sex when it lacks them (migration 013): a value set since is
 -- kept, so a rerun changes nothing.
 -- name: SetIdentityIfUnset :exec
@@ -113,9 +121,9 @@ SELECT name FROM items WHERE character_id = sqlc.arg(character_id)::bigint AND i
 INSERT INTO equipment_review (character_id, item_id, reason) VALUES (sqlc.arg(character_id)::bigint, @item_id, @reason)
 ON CONFLICT DO NOTHING;
 
--- The conversion of migration 014 (ADR 0033 step 26, convertEquipment): every character that holds
+-- The conversion of migration 015 (ADR 0033 step 26, convertEquipment): every character that holds
 -- items or weapons, their rows as stored before it, and the item rows rewritten as pieces. Delete
--- them with their step once every environment is past 014 (ADR 0025 step 2.1.1).
+-- them with their step once every environment is past 015 (ADR 0025 step 2.1.1).
 -- name: EquipmentOwners :many
 SELECT character_id FROM items UNION SELECT character_id FROM weapons ORDER BY character_id;
 

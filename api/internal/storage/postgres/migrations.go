@@ -84,6 +84,10 @@ const bardSkillsMigration = "012_bard_skills.sql"
 // (identitySeedCharacter).
 const identityMigration = "013_identity_codes.sql"
 
+// languagesMigration makes the languages codes of the language catalogue. Right after it the run maps
+// the stored words (mapLanguages).
+const languagesMigration = "014_language_codes.sql"
+
 // migrationDataSteps are the data steps run just before the named migrations, then those run just
 // after the named migrations.
 func migrationDataSteps(seedsDir string, catalogue []ruletablesvc.Weapon) (before, after map[string]dataStep) {
@@ -102,6 +106,7 @@ func migrationDataSteps(seedsDir string, catalogue []ruletablesvc.Weapon) (befor
 			}
 			return identitySeedCharacter(ctx, q, characterPath)
 		},
+		languagesMigration: mapLanguages,
 		equipmentMigration: func(ctx context.Context, q storeq.Querier) error { return convertEquipment(ctx, q, catalogue) },
 	}
 	return before, after

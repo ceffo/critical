@@ -18,7 +18,7 @@ things sit, under [ADR 0022](../../adr/0022-activity-focus-layout.md),
   Phosphor icons; data in `data.ts`: Kelsen, a level 15 bard, after the conversion of ADR 0033 step
   26; PHB values). `?screen=<id>&lang=fr|en&theme=<id>&light=1`.
 - **Shots**: `just equipment-shots` serves them on the app's Vite and writes
-  `shots/<screen>--<fr|en>-<WxH>.png` at 1280x800 and 2560x1440, plus `-full.png` when a card
+  `shots/<screen>--<fr|en>-<WxH>.png` at 1280x800, 1920x1080 and 2560x1440, plus `-full.png` when a card
   scrolls at that size. It fails on cut text or a page scroll; `--self-test` checks the audit,
   `--fr` shoots French only, `--only=a,b` some screens.
 

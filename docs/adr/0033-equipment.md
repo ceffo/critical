@@ -417,7 +417,7 @@ The slices that follow this ADR, in order; each amends the ADRs it touches, as b
 8. **CRI-40**: weapon type against armour type (steps 18, 19).
 9. **CRI-41**: class warnings (step 20).
 
-_As built (CRI-34, slice 2)_: the one model is the `items` table (migration 014, additive: the
+_As built (CRI-34, slice 2)_: the one model is the `items` table (migration 015, additive: the
 category, magic kind, catalogue code, state and every category's columns; `weapons` is no longer read
 and is dropped later), served and edited at `/api/items` (`POST /api/items/{id}/state {state, swap}`
 for step 7, which answers the pieces changed; `DELETE /api/items/{id}/review` dismisses, step 27;

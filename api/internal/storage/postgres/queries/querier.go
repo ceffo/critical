@@ -33,9 +33,9 @@ type Querier interface {
 	DeleteSpell(ctx context.Context, key sql.NullString) error
 	DeleteText(ctx context.Context, textID int64) error
 	DeleteTextLanguage(ctx context.Context, arg DeleteTextLanguageParams) error
-	// The conversion of migration 014 (ADR 0033 step 26, convertEquipment): every character that holds
+	// The conversion of migration 015 (ADR 0033 step 26, convertEquipment): every character that holds
 	// items or weapons, their rows as stored before it, and the item rows rewritten as pieces. Delete
-	// them with their step once every environment is past 014 (ADR 0025 step 2.1.1).
+	// them with their step once every environment is past 015 (ADR 0025 step 2.1.1).
 	EquipmentOwners(ctx context.Context) ([]int64, error)
 	InsertActiveBuffs(ctx context.Context, characterID int64) error
 	// The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
@@ -53,6 +53,8 @@ type Querier interface {
 	LearnFailureRefs(ctx context.Context) ([]LearnFailureRefsRow, error)
 	// The identity migration (013): every character's stored alignment and sex, to map to codes.
 	ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error)
+	// The languages migration (014): every character's stored language list, to map to codes.
+	ListCharacterLanguages(ctx context.Context) ([]ListCharacterLanguagesRow, error)
 	ListLegacyItems(ctx context.Context, characterID int64) ([]ListLegacyItemsRow, error)
 	ListLegacyWeapons(ctx context.Context, characterID int64) ([]ListLegacyWeaponsRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
@@ -67,6 +69,8 @@ type Querier interface {
 	SeedOffers(ctx context.Context, arg SeedOffersParams) ([]string, error)
 	// The mapped (or cleared) alignment and sex of a character, and its race detail discarded.
 	SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error
+	// The mapped language list of a character (a JSON list of codes).
+	SetCharacterLanguages(ctx context.Context, arg SetCharacterLanguagesParams) error
 	// The seed character's alignment and sex when it lacks them (migration 013): a value set since is
 	// kept, so a rerun changes nothing.
 	SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error

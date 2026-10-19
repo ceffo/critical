@@ -14,12 +14,14 @@ import {
   SEX_CODES,
   codeOrEmpty,
   hasAlignmentWarning,
-  languageKey,
+  languageWarning,
   toBody,
   toDraft,
   type Draft,
 } from "@/lib/characterDetails";
-import { fetchCreationChoices } from "@/api/characters";
+import { fetchCreationChoices, fetchCreationOptions } from "@/api/characters";
+import { LanguagePicker } from "@/components/characters/LanguagePicker";
+import { useLanguageNames } from "@/lib/useLanguageNames";
 import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
 import type { Character, CreationOptions } from "@/types/character";
@@ -85,13 +87,29 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** A language as entered, or its translation when the catalogue has one. */
-function useLanguageName() {
-  const { t, i18n } = useTranslation();
-  return (name: string) => {
-    const key = `details.language.${languageKey(name)}`;
-    return i18n.exists(key) ? t(key) : name;
-  };
+/**
+ * The language catalogue, for the names (ADR 0032 step 4): loaded once the card opens, tolerant of
+ * a release that predates it (its codes then show as they are). `loading` until it answers.
+ */
+function useLanguageCatalogue(): {
+  options: CreationOptions | null;
+  loading: boolean;
+} {
+  const [state, setState] = useState<{
+    options: CreationOptions | null;
+    loading: boolean;
+  }>({ options: null, loading: true });
+  useEffect(() => {
+    let live = true;
+    fetchCreationOptions().then(
+      (options) => live && setState({ options, loading: false }),
+      () => live && setState({ options: null, loading: false }),
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+  return state;
 }
 
 function DetailsView({
@@ -102,7 +120,9 @@ function DetailsView({
   onEdit: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const languageName = useLanguageName();
+  const catalogue = useLanguageCatalogue();
+  const languageName = useLanguageNames(catalogue.options);
+  const languagesOver = languageWarning(c);
   const none = (
     <span className="text-muted-foreground">{t("details.none")}</span>
   );
@@ -161,7 +181,20 @@ function DetailsView({
         <Row label={t("details.fields.languages")}>
           {c.languages.length === 0
             ? none
-            : c.languages.map(languageName).join(", ")}
+            : catalogue.loading
+              ? "…"
+              : c.languages.map(languageName).join(", ")}
+          {languagesOver && (
+            <span
+              className="block text-label text-muted-foreground"
+              data-testid="details-languages-warning"
+            >
+              {t("details.warnings.languages_over_limit", {
+                n: languagesOver.count,
+                limit: languagesOver.limit,
+              })}
+            </span>
+          )}
         </Row>
       </dl>
       <Button type="button" className="self-end" onClick={onEdit}>
@@ -207,7 +240,7 @@ function DetailsForm({
   const alignments =
     options?.classes.find((c) => c.class === character.class)?.alignments ?? [];
   const sexes = options?.sexes ?? [];
-  const set = (k: keyof Draft) => (v: string) =>
+  const set = (k: Exclude<keyof Draft, "languages">) => (v: string) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
   const submit = async (e: FormEvent) => {
@@ -279,7 +312,7 @@ function DetailsForm({
     );
   };
   const input = (
-    field: keyof Draft,
+    field: Exclude<keyof Draft, "languages">,
     props: { inputMode?: "numeric"; hint?: string } = {},
   ) => (
     <div key={field} className="flex min-w-0 flex-col gap-1 text-body">
@@ -334,7 +367,21 @@ function DetailsForm({
         {input("hair")}
         {input("eyes")}
       </div>
-      {input("languages", { hint: t("details.languagesHint") })}
+      {options && (options.languages ?? []).length > 0 && (
+        <div className="flex min-w-0 flex-col gap-1 text-body">
+          <span className="text-label text-muted-foreground">
+            {t("details.fields.languages")}
+          </span>
+          <LanguagePicker
+            idPrefix="details-languages"
+            options={options}
+            race={character.raceCode}
+            picked={draft.languages}
+            onChange={(languages) => setDraft((d) => ({ ...d, languages }))}
+          />
+          {message("languages")}
+        </div>
+      )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onDone}>
           {t("details.cancel")}

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
@@ -67,6 +68,25 @@ type OptionsDTO struct {
 	MaxNameLen  int      `json:"maxNameLength"`
 	// Sexes are the sex codes (ADR 0032 step 3).
 	Sexes []string `json:"sexes"`
+	// Languages is the language catalogue with its names by language (ADR
+	// 0032 step 4.3: the form offers all of it), RaceLanguages each race's
+	// own language and PHB list, which the form marks. Never null; both are
+	// empty before catalogue format 8.
+	Languages     []LanguageDTO      `json:"languages"`
+	RaceLanguages []RaceLanguagesDTO `json:"raceLanguages"`
+}
+
+// LanguageDTO is a catalogue language: its code and its name by language.
+type LanguageDTO struct {
+	Code string         `json:"code"`
+	Name localized.Text `json:"name"`
+}
+
+// RaceLanguagesDTO is a race's own language and the languages of its PHB list.
+type RaceLanguagesDTO struct {
+	Race      string   `json:"race"`
+	Native    string   `json:"native"`
+	Languages []string `json:"languages"`
 }
 
 // Options is GET /api/characters/options.
@@ -85,6 +105,14 @@ func Options(svc optionsReader) render.HandlerFunc {
 			SkillPoints:    RangeDTO{Min: 0, Max: o.MaxSkillPoints},
 			MaxNameLen:     o.MaxNameLen,
 			Sexes:          o.Sexes,
+			Languages:      make([]LanguageDTO, 0, len(o.Languages)),
+			RaceLanguages:  make([]RaceLanguagesDTO, 0, len(o.RaceLanguages)),
+		}
+		for _, l := range o.Languages {
+			out.Languages = append(out.Languages, LanguageDTO{Code: l.Code, Name: l.Name})
+		}
+		for _, rl := range o.RaceLanguages {
+			out.RaceLanguages = append(out.RaceLanguages, RaceLanguagesDTO{Race: rl.Race, Native: rl.Native, Languages: rl.List})
 		}
 		for _, c := range o.Classes {
 			out.Classes = append(out.Classes, ClassOptionDTO{

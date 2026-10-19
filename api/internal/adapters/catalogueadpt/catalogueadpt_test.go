@@ -28,10 +28,11 @@ func TestLoad_Fixture(t *testing.T) {
 	a, err := LoadArtifact(fixture)
 	require.NoError(t, err)
 	c := a.Catalogue
-	assert.Equal(t, catalogue.FormatEquipment, c.Format)
+	assert.Equal(t, catalogue.FormatLanguages, c.Format)
 	assert.Equal(t, "1970-01-01", c.Version)
 	assert.NotEmpty(t, a.RuleTables, "the fixture carries the rule tables")
 	assert.NotEmpty(t, a.Equipment, "the fixture carries the equipment")
+	assert.NotEmpty(t, a.Languages, "the fixture carries the languages")
 	mm, ok := c.ByID()["magic_missile"]
 	require.True(t, ok)
 	assert.Equal(t, localized.Text{"en": "Magic Missile", "fr": "Projectile magique"}, mm.Name)
@@ -90,9 +91,18 @@ const sphereAccess = "sphere_access"
 // top-level equipment object (ADR 0021 step 13).
 var equipmentTables = []string{"weapon_vs_armor", "initiative_item"}
 
-// asFormat6 turns the format-7 fixture into a format-6 artifact: the same
+// asFormat7 turns the format-8 fixture into a format-7 artifact: the same
+// spells and tables, without the languages and the race_languages table.
+func asFormat7(d map[string]any) {
+	d["format"] = 7
+	delete(d, "languages")
+	delete(d["rule_tables"].(map[string]any), "race_languages")
+}
+
+// asFormat6 turns the format-8 fixture into a format-6 artifact: the same
 // spells and tables, without the equipment and its two rule tables.
 func asFormat6(d map[string]any) {
+	asFormat7(d)
 	d["format"] = 6
 	delete(d, "equipment")
 	for _, k := range equipmentTables {
@@ -138,7 +148,7 @@ func TestParse_Step2_Refusals(t *testing.T) {
 		mutate func(map[string]any)
 		want   []string
 	}{
-		{"unknown format names it", func(d map[string]any) { d["format"] = 8 }, []string{"unknown format 8", "formats 3, 4, 5, 6 and 7", "just catalogue"}},
+		{"unknown format names it", func(d map[string]any) { d["format"] = 9 }, []string{"unknown format 9", "formats 3, 4, 5, 6, 7 and 8", "just catalogue"}},
 		{"missing format", func(d map[string]any) { delete(d, "format") }, []string{"unknown format none"}},
 		{"schema violation lists the offence", func(d map[string]any) {
 			spells(d)[0].(map[string]any)["level"] = 12
@@ -215,7 +225,7 @@ func TestParse_Step9_6_3_RefusesTheRetiredFormat1(t *testing.T) {
 			delete(d, "rule_tables")
 		}))
 		require.ErrorContains(t, err, fmt.Sprintf(
-			"unknown format %d: this API reads formats 3, 4, 5, 6 and 7; run `just catalogue` to fetch a current artifact", format))
+			"unknown format %d: this API reads formats 3, 4, 5, 6, 7 and 8; run `just catalogue` to fetch a current artifact", format))
 	}
 }
 
@@ -376,9 +386,10 @@ func TestParse_Step12_2_SpheresBelongToFormat6(t *testing.T) {
 // ADR 0021 step 13.1: format 7 hands on the format-6 tables with Tables 52
 // and 56, and the equipment object, as written (ruletablesadpt parses them).
 func TestParse_Step13_1_ReadsFormat7(t *testing.T) {
-	seven, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	seven, err := ParseArtifact(artifact(t, asFormat7))
 	require.NoError(t, err)
 	assert.Equal(t, catalogue.FormatEquipment, seven.Catalogue.Format)
+	assert.Nil(t, seven.Languages, "a format-7 artifact has no languages")
 	var tables map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(seven.RuleTables, &tables))
 	assert.ElementsMatch(t,
@@ -439,6 +450,63 @@ func TestParse_Step13_2_EquipmentBelongsToFormat7(t *testing.T) {
 		{"Table 56 with a modifier above 20", func(d map[string]any) {
 			tables(d)["initiative_item"].([]any)[0].(map[string]any)["modifier"] = 21
 		}, []string{"format 7 schema", "modifier"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse(artifact(t, func(d map[string]any) { asFormat7(d); tc.mutate(d) }))
+			require.Error(t, err)
+			for _, w := range tc.want {
+				assert.Contains(t, err.Error(), w)
+			}
+		})
+	}
+}
+
+// ADR 0021 step 14.1: format 8 hands on the format-7 tables, the equipment and
+// the language catalogue with each race's list as written (ruletablesadpt
+// parses them).
+func TestParse_Step14_1_ReadsFormat8(t *testing.T) {
+	eight, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	require.NoError(t, err)
+	assert.Equal(t, catalogue.FormatLanguages, eight.Catalogue.Format)
+	var tables map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(eight.RuleTables, &tables))
+	assert.Contains(t, keys(tables), "race_languages")
+	var languages []map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(eight.Languages, &languages))
+	assert.NotEmpty(t, languages)
+	assert.ElementsMatch(t, []string{"code", "name"}, keys(languages[0]))
+}
+
+// ADR 0021 step 14.2: the languages and the race_languages table belong to
+// format 8 only, and format 8 requires both; a row has the codes and shapes of
+// ADR 0032 step 4.
+func TestParse_Step14_2_LanguagesBelongToFormat8(t *testing.T) {
+	tables := func(d map[string]any) map[string]any { return d["rule_tables"].(map[string]any) }
+	language := func(d map[string]any, i int) map[string]any { return d["languages"].([]any)[i].(map[string]any) }
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   []string
+	}{
+		{"format 7 with the languages", func(d map[string]any) {
+			languages := d["languages"]
+			asFormat7(d)
+			d["languages"] = languages
+		}, []string{"format 7 schema", "/languages"}},
+		{"format 7 with race_languages", func(d map[string]any) {
+			rows := tables(d)["race_languages"]
+			asFormat7(d)
+			tables(d)["race_languages"] = rows
+		}, []string{"format 7 schema", "/rule_tables/race_languages"}},
+		{"format 8 without the languages", func(d map[string]any) { delete(d, "languages") }, []string{"format 8 schema", "languages"}},
+		{"format 8 without race_languages", func(d map[string]any) { delete(tables(d), "race_languages") }, []string{"format 8 schema", "race_languages"}},
+		{"a code in capitals", func(d map[string]any) { language(d, 0)["code"] = "Common" }, []string{"format 8 schema", "code"}},
+		{"a name without English", func(d map[string]any) { language(d, 0)["name"] = map[string]any{"fr": "Commun"} }, []string{"format 8 schema", "en"}},
+		{"a field the format lacks", func(d map[string]any) { language(d, 0)["family"] = "x" }, []string{"format 8 schema", "family"}},
+		{"a race outside the six", func(d map[string]any) {
+			tables(d)["race_languages"].([]any)[0].(map[string]any)["race"] = "orc"
+		}, []string{"format 8 schema", "race"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

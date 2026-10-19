@@ -91,7 +91,9 @@ export function CombatLog() {
           <RedoButton />
         </span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
+      {/* The scroller is its rows' containing block (relative): an absolute box inside, such as a
+          turn marker's sr-only label, then scrolls and clips with it instead of stretching the page. */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
         {groups.map((g, i) => {
           const marker = turnMarker(t, g.round, g.current);
           return (

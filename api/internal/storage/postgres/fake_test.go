@@ -38,11 +38,13 @@ type tables struct {
 	// Alignments and Sexes are characters.alignment and characters.sex ('' missing), RaceDetails
 	// the free-text characters.race ('' none).
 	Alignments, Sexes, RaceDetails map[int64]string
-	Slots                          map[int64]string
-	Buffs                          map[int64]string
-	Rounds                         map[int64]bool
+	// Languages are characters.languages, a JSON list.
+	Languages map[int64]string
+	Slots     map[int64]string
+	Buffs     map[int64]string
+	Rounds    map[int64]bool
 	// Weapons, Items, Profs and Bard are by rowKey. Weapons is the weapons table as stored before
-	// the equipment model (migration 014), which only the migration run reads.
+	// the equipment model (migration 015), which only the migration run reads.
 	Weapons map[string]weaponRow
 	Items   map[string]storeq.InsertItemParams
 	// Reviews are equipment_review rows, "character|item|reason"; Renames item_id_renames, by rowKey
@@ -66,7 +68,7 @@ type tables struct {
 	Corrections []correctionRow
 }
 
-// weaponRow is a weapons row (the table no query writes since migration 014).
+// weaponRow is a weapons row (the table no query writes since migration 015).
 type weaponRow struct {
 	CharacterID int64
 	ID          string
@@ -119,7 +121,7 @@ func newFakeStore() *fakeStore {
 		Reviews: map[string]bool{}, Renames: map[string]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
-		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -192,7 +194,24 @@ func (f *fakeStore) InsertCharacter(_ context.Context, arg storeq.InsertCharacte
 	f.t.Races[id] = arg.RaceCode
 	f.t.SkillPoints[id] = arg.SkillPoints
 	f.t.Alignments[id], f.t.Sexes[id] = arg.Alignment, arg.Sex
+	f.t.Languages[id] = arg.Languages
 	return id, nil
+}
+
+func (f *fakeStore) ListCharacterLanguages(context.Context) ([]storeq.ListCharacterLanguagesRow, error) {
+	rows := []storeq.ListCharacterLanguagesRow{}
+	for _, id := range f.t.Characters {
+		rows = append(rows, storeq.ListCharacterLanguagesRow{ID: id, Languages: f.t.Languages[id]})
+	}
+	return rows, nil
+}
+
+func (f *fakeStore) SetCharacterLanguages(_ context.Context, arg storeq.SetCharacterLanguagesParams) error {
+	if err := f.hasCharacter(arg.ID); err != nil {
+		return err
+	}
+	f.t.Languages[arg.ID] = arg.Languages
+	return nil
 }
 
 func (f *fakeStore) ListCharacterIdentity(context.Context) ([]storeq.ListCharacterIdentityRow, error) {
@@ -364,7 +383,7 @@ func (f *fakeStore) TypeWeaponIfUntyped(_ context.Context, arg storeq.TypeWeapon
 	return nil
 }
 
-// addWeapon puts a weapons row as a release before migration 014 wrote it, refusing what the
+// addWeapon puts a weapons row as a release before migration 015 wrote it, refusing what the
 // table's CHECKs and keys refuse.
 func (f *fakeStore) addWeapon(arg weaponRow) error {
 	if !slices.Contains([]string{"melee", "missile"}, arg.Kind) || (arg.TwoHanded != 0 && arg.TwoHanded != 1) {

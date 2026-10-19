@@ -1563,7 +1563,9 @@
       "eyes": "Eyes",
       "languages": "Languages"
     },
-    "languagesHint": "Separate languages with commas",
+    "languagesRaceList": "From the race's list",
+    "languagesOthers": "Others, if the DM allows",
+    "languageNative": "The race's own language, always known",
     "classes": {
       "bard": "Bard",
       "cleric": "Cleric",
@@ -1571,18 +1573,14 @@
       "mage": "Mage",
       "thief": "Thief"
     },
-    "language": {
-      "elfique": "Elvish",
-      "commun": "Common",
-      "orque": "Orc",
-      "nain": "Dwarvish"
-    },
     "errors": {
       "too_long": "Too long.",
       "out_of_range": "Enter a whole age between 1 and 10,000.",
-      "too_many": "Too many languages.",
-      "empty": "A language is blank.",
-      "duplicate": "A language is listed twice.",
+      "languages": {
+        "empty": "A language is blank.",
+        "unknown": "Pick languages from the list.",
+        "duplicate": "A language is listed twice."
+      },
       "alignment": {
         "empty": "Pick an alignment.",
         "unknown": "Pick one of the listed alignments.",
@@ -1621,7 +1619,8 @@
       "female": "Female"
     },
     "warnings": {
-      "alignment_not_allowed": "This alignment is not allowed for a {{className}}; kept as recorded."
+      "alignment_not_allowed": "This alignment is not allowed for a {{className}}; kept as recorded.",
+      "languages_over_limit": "{{n}} languages beyond the native one, {{limit}} for this Intelligence: the DM decides."
     }
   },
   "xp": {

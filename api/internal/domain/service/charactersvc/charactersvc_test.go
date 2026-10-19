@@ -136,6 +136,7 @@ func TestGetCharacter(t *testing.T) {
 		require.NoError(t, err)
 		want := kelsen()
 		want.Derived = kelsenDerived()
+		want.Details.Languages, want.Warnings = []string{}, []charactersvc.Warning{}
 		assert.Equal(t, want, got)
 	})
 	t.Run("not found passes sentinel through", func(t *testing.T) {

@@ -244,9 +244,9 @@ const equipmentOwners = `-- name: EquipmentOwners :many
 SELECT character_id FROM items UNION SELECT character_id FROM weapons ORDER BY character_id
 `
 
-// The conversion of migration 014 (ADR 0033 step 26, convertEquipment): every character that holds
+// The conversion of migration 015 (ADR 0033 step 26, convertEquipment): every character that holds
 // items or weapons, their rows as stored before it, and the item rows rewritten as pieces. Delete
-// them with their step once every environment is past 014 (ADR 0025 step 2.1.1).
+// them with their step once every environment is past 015 (ADR 0025 step 2.1.1).
 func (q *Queries) EquipmentOwners(ctx context.Context) ([]int64, error) {
 	rows, err := q.db.QueryContext(ctx, equipmentOwners)
 	if err != nil {
@@ -604,6 +604,39 @@ func (q *Queries) ListCharacterIdentity(ctx context.Context) ([]ListCharacterIde
 	return items, nil
 }
 
+const listCharacterLanguages = `-- name: ListCharacterLanguages :many
+SELECT id, languages FROM characters ORDER BY id
+`
+
+type ListCharacterLanguagesRow struct {
+	ID        int64
+	Languages string
+}
+
+// The languages migration (014): every character's stored language list, to map to codes.
+func (q *Queries) ListCharacterLanguages(ctx context.Context) ([]ListCharacterLanguagesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCharacterLanguages)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCharacterLanguagesRow{}
+	for rows.Next() {
+		var i ListCharacterLanguagesRow
+		if err := rows.Scan(&i.ID, &i.Languages); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLegacyItems = `-- name: ListLegacyItems :many
 SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save,
        notes, powers
@@ -830,6 +863,21 @@ type SetCharacterIdentityParams struct {
 // The mapped (or cleared) alignment and sex of a character, and its race detail discarded.
 func (q *Queries) SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error {
 	_, err := q.db.ExecContext(ctx, setCharacterIdentity, arg.Alignment, arg.Sex, arg.ID)
+	return err
+}
+
+const setCharacterLanguages = `-- name: SetCharacterLanguages :exec
+UPDATE characters SET languages = $1 WHERE id = $2
+`
+
+type SetCharacterLanguagesParams struct {
+	Languages string
+	ID        int64
+}
+
+// The mapped language list of a character (a JSON list of codes).
+func (q *Queries) SetCharacterLanguages(ctx context.Context, arg SetCharacterLanguagesParams) error {
+	_, err := q.db.ExecContext(ctx, setCharacterLanguages, arg.Languages, arg.ID)
 	return err
 }
 

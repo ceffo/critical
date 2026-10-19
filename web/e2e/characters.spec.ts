@@ -36,7 +36,7 @@ test("create a second bard with details, switch to the first and back, rename an
     .click();
   const dialog = page.getByTestId("character-dialog");
   const form = dialog.getByTestId("character-form");
-  await form.getByLabel("Nom").fill("Lyra");
+  await form.getByLabel("Nom", { exact: true }).fill("Lyra");
   await expect(form.getByLabel("Classe")).toHaveValue("bard");
   await form
     .getByLabel("Race", { exact: true })
@@ -66,7 +66,12 @@ test("create a second bard with details, switch to the first and back, rename an
   ).toHaveCount(0);
   await details.getByLabel("Alignement").selectOption({ label: "Neutre bon" });
   await details.getByLabel("Sexe").selectOption({ label: "Femme" });
-  await details.getByLabel("Langues").fill("Commun, Elfique");
+  // ADR 0032 step 4: the half-elf's own language (Commun) is known without picking it and cannot
+  // be unticked; Elfe is picked from the race's list.
+  const commun = details.getByRole("checkbox", { name: "Commun", exact: true });
+  await expect(commun).toBeChecked();
+  await expect(commun).toBeDisabled();
+  await details.getByRole("checkbox", { name: "Elfe", exact: true }).check();
   await snap(page, "new-character-form-fr");
   await form
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
@@ -80,7 +85,7 @@ test("create a second bard with details, switch to the first and back, rename an
   await expect(pop).toContainText("Neutre bon");
   await expect(pop).toContainText("Femme");
   await expect(pop.getByTestId("details-missing")).toHaveCount(0);
-  await expect(pop).toContainText("Commun, Elfique");
+  await expect(pop).toContainText("Commun, Elfe");
   await page.keyboard.press("Escape");
 
   // 50 + 15 + 0 (half-elf) - 20 (elven chain column) - 5 (metal armour) = 40, the server's.
@@ -160,7 +165,7 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   const form = page
     .getByTestId("character-dialog")
     .getByTestId("character-form");
-  await form.getByLabel("Nom").fill("Borin");
+  await form.getByLabel("Nom", { exact: true }).fill("Borin");
   await form.getByLabel("Classe").selectOption({ label: "Guerrier" });
   await form
     .getByLabel("Race", { exact: true })
@@ -238,7 +243,7 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
   const form = page
     .getByTestId("character-dialog")
     .getByTestId("character-form");
-  await form.getByLabel("Nom").fill("Vex");
+  await form.getByLabel("Nom", { exact: true }).fill("Vex");
   await form.getByLabel("Classe").selectOption({ label: "Voleur" });
   await form
     .getByLabel("Race", { exact: true })
@@ -364,7 +369,7 @@ test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
   const form = page
     .getByTestId("character-dialog")
     .getByTestId("character-form");
-  await form.getByLabel("Nom").fill("Elminster");
+  await form.getByLabel("Nom", { exact: true }).fill("Elminster");
   await form.getByLabel("Classe").selectOption({ label: "Magicien" });
   await form
     .getByLabel("Race", { exact: true })
@@ -442,7 +447,7 @@ test("create a cleric, prepare and cast a spell, turn undead", async ({
   const form = page
     .getByTestId("character-dialog")
     .getByTestId("character-form");
-  await form.getByLabel("Nom").fill("Frère Anselme");
+  await form.getByLabel("Nom", { exact: true }).fill("Frère Anselme");
   await form.getByLabel("Classe").selectOption({ label: "Clerc" });
   await form
     .getByLabel("Race", { exact: true })

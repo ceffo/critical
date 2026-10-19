@@ -109,13 +109,13 @@ func (c Characters) SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id
 	})
 }
 
-// GetDetails returns the editable details, or domain.ErrCharacterNotFound.
-func (c Characters) GetDetails(ctx context.Context, id int64) (charactersvc.Details, string, error) {
+// GetDetails returns the editable details with the class and race codes, or domain.ErrCharacterNotFound.
+func (c Characters) GetDetails(ctx context.Context, id int64) (charactersvc.Details, charactersvc.Kind, error) {
 	ch, err := c.GetCharacter(ctx, id)
 	if err != nil {
-		return charactersvc.Details{}, "", err
+		return charactersvc.Details{}, charactersvc.Kind{}, err
 	}
-	return ch.Details, ch.Class, nil
+	return ch.Details, charactersvc.Kind{Class: ch.Class, Race: ch.Race}, nil
 }
 
 // UpdateDetails overwrites every editable detail of the character, or

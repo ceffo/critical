@@ -1285,6 +1285,8 @@
       "endHeal": "regains {{total}} HP ({{dice}}: {{rolls}})",
       "endHp": "{{heals}}, HP {{before}} → {{after}}",
       "endHealNamed": "{{buff}} regains {{total}} HP ({{dice}}: {{rolls}})",
+      "endCapped": "rolls {{dice}}: {{rolls}}, no HP regained",
+      "endCappedNamed": "{{buff}} rolls {{dice}}: {{rolls}}, no HP regained",
       "withEnd": "{{text}}: {{end}}",
       "withEndAfter": "{{text}}. {{end}}"
     },

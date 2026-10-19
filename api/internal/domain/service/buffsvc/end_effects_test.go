@@ -75,6 +75,16 @@ func TestBuffs_Step21_Dismiss(t *testing.T) {
 			}}},
 		},
 		{
+			name: "at full HP the entry is still written with the roll and no HP gained", row: shape, cause: spelleffectsvc.EndVoluntary, d12: 5, total: 0, max: 40,
+			wantDelta: 6, // the ledger caps it to 0 when it records
+			wantPayload: `{"action":"dismiss","buff":"Shape","spellId":"shape","cause":"voluntary","hpBefore":40,"hpAfter":40,
+				"endEffects":[{"spellId":"shape","buff":"Shape","cause":"voluntary","kind":"heal","dice":"1d12+1","rolls":[{"sides":12,"value":5}],"constant":1,"total":6}]}`,
+			wantEnd: buffsvc.EndResult{HPBefore: 40, HPAfter: 40, Effects: []buffsvc.EndEffectRoll{{
+				SpellID: "shape", Buff: "Shape", Cause: spelleffectsvc.EndVoluntary, Kind: spelleffectsvc.EndHeal,
+				Dice: "1d12+1", Rolls: []buffsvc.DieRoll{{Sides: 12, Value: 5}}, Constant: 1, Total: 6,
+			}}},
+		},
+		{
 			name: "dispelled or slain heals nothing", row: shape, cause: spelleffectsvc.EndDispelled,
 			wantPayload: `{"action":"dismiss","buff":"Shape","spellId":"shape","cause":"dispelled"}`,
 		},

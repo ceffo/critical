@@ -1285,6 +1285,8 @@
       "endHeal": "regagne {{total}} PV ({{dice}} : {{rolls}})",
       "endHp": "{{heals}}, PV {{before}} → {{after}}",
       "endHealNamed": "{{buff}} regagne {{total}} PV ({{dice}} : {{rolls}})",
+      "endCapped": "jette {{dice}} : {{rolls}}, aucun PV regagné",
+      "endCappedNamed": "{{buff}} jette {{dice}} : {{rolls}}, aucun PV regagné",
       "withEnd": "{{text}}, {{end}}",
       "withEndAfter": "{{text}}. {{end}}"
     },

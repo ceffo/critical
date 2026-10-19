@@ -69,9 +69,18 @@ export function endEffectsText(
   named: boolean,
 ): string {
   if (!effects || effects.length === 0) return "";
+  // The cap at max HP gave nothing: the roll shows, not a gain that did not happen.
+  const capped = hpBefore !== undefined && hpBefore === hpAfter;
+  const key = capped
+    ? named
+      ? "log.buff.endCappedNamed"
+      : "log.buff.endCapped"
+    : named
+      ? "log.buff.endHealNamed"
+      : "log.buff.endHeal";
   const heals = effects
     .map((e) =>
-      t(named ? "log.buff.endHealNamed" : "log.buff.endHeal", {
+      t(key, {
         buff: buffName(spellName, { name: e.buff, spellId: e.spellId }),
         total: e.total,
         dice: e.dice,

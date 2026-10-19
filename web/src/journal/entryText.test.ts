@@ -1672,4 +1672,22 @@ describe("end effects", () => {
       "Round 3 → 4 — expired: Polymorph Self. Polymorph Self regains 10 HP (1d12+1: 9 + 1), HP 20 → 30",
     );
   });
+
+  it("at full HP the cap gave nothing: the roll shows, not a gain", async () => {
+    const full = entry("buff_change", {
+      action: "dismiss",
+      buff: "Polymorph Self",
+      spellId: "polymorph_self",
+      cause: "voluntary",
+      endEffects: [heal("voluntary", 9)],
+      hpBefore: 40,
+      hpAfter: 40,
+    });
+    expect(entryText(full, await makeT("en"))).toBe(
+      "Ended Polymorph Self: rolls 1d12: 9, no HP regained, HP 40 → 40",
+    );
+    expect(entryText(full, await makeT("fr"))).toContain(
+      "jette 1d12 : 9, aucun PV regagné, PV 40 → 40",
+    );
+  });
 });

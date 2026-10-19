@@ -429,6 +429,13 @@ onboarding is the same route. The creation's `details` object loses `race` and g
 of that ADR. Item 5 above ("The web") is superseded when the roster and creation items land; the
 endpoints and the other items are unchanged.
 
+**As built 2026-10-19** (the roster item, [ADR 0034](0034-onboarding-screens.md) "As built (the roster and
+the cog menu)"): item 5 is superseded. Switch, Create, Rename and Retire are on the roster at `/characters`,
+reached from the character card's header; Rename and Retire act on any of the user's characters; Rename is
+also the details' Nom field; the cog menu has no character action. A user with no current character sees
+the intro when they have no character, the roster otherwise. No endpoint changed. Tests: e2e
+`characters.spec.ts`, `character-details.spec.ts`, `layout.spec.ts` ("roster, character card and intro uncut").
+
 ## Amendment to ADR 0024
 
 Applied to [ADR 0024](0024-deployment.md) by this PR; the user chose option (c) in the 2026-10-17

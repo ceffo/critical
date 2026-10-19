@@ -46,7 +46,7 @@ mark() { # mark <tab> <prefix|""> : set or clear the tab's waiting prefix
 notify() { herdr notification show "$1" --body "$2" --sound request >/dev/null 2>&1 || true; }
 user_facing() { [[ "$1" == scoper-* || "$1" == designer-* ]]; }
 fresh_report() { # the agent's report newer than the supervisor's last prompt for its item
-  # (dev-cri-34c -> CRI-34). The marker is a .prompt-<item> file or, without one, the item's newest
+  # (an agent suffix is dropped: dev-x-12b -> X-12). The marker is a .prompt-<item> file or, without one, the item's newest
   # brief (written just before each prompt), so a forgotten marker never hides a report.
   local item=${1#*-}; item=${item^^}; item=$(sed -E 's/([0-9]+)[A-Z]+$/\1/' <<<"$item"); local f p
   local brief; brief=$(ls -t "$B"/*"$item"-[0-9]*.md "$B"/*"$item".md 2>/dev/null | head -1)

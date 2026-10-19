@@ -4,6 +4,8 @@
 critical-qki.14, until then in `docs/backend.md`); amended 2026-10-16 (the adjustment moves the
 target: steps 2, 4 and 5, step 8 added); step 6 amended by 0028 (ability checks are a roll kind). Step 1 amended by [ADR 0030](0030-classes-and-races.md) steps 6 and 22.1 (targets derived, racial bonus), implemented 2026-10-18.
 
+_UI word: the French UI says jet de sauvegarde ([ADR 0036](0036-vocabulary.md) step 3)._
+
 ## Context
 
 A saving throw is a d20 against a target from the character sheet, and the DM often rules it easier

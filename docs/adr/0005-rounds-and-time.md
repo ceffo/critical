@@ -3,6 +3,8 @@
 **Status**: accepted, 2026-10-15 (critical-qki.36; collects the rules shipped in critical-qki.8,
 critical-qki.29 and critical-qki.30, until then in `docs/backend.md`)
 
+_UI word: the French UI says tour for a round ([ADR 0036](0036-vocabulary.md) step 3)._
+
 ## Context
 
 The round counter is the combat clock: the player advances it by hand and it counts the timed

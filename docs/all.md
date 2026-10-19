@@ -39,17 +39,12 @@ critical/
 
 ## Key Domain Vocabulary
 
-- **Bard**: the first class implemented; the others (fighter, mage, cleric, thief) follow
-- **User**: a person who can log in, identified by their Google account; has a role (`admin` or `player`) and owns many characters ([ADR 0029](adr/0029-users-login-and-access.md))
-- **Admin**: a user who manages users and invites in the admin section; sees users and their characters' names, never the sheets
-- **Root admin**: the one admin who cannot be disabled, demoted or removed through the app; set in the database by a local script
-- **Invite**: an email an admin authorises to log in through Google; no email is sent
-- **HP Ledger**: the append-only action log of damage and healing; current HP is derived from it ([ADR 0007](adr/0007-hp-ledger.md))
-- **Buff**: an active effect with a charge count, a duration in rounds, both or neither; every buff change is in the action log ([ADR 0004](adr/0004-buffs.md))
-- **Round Counter**: manually advanced by the player; Next Round, End combat and passing time are in [ADR 0005](adr/0005-rounds-and-time.md)
-- **THAC0**: "To Hit Armor Class 0"; lower is better. The attack math is in [ADR 0002](adr/0002-attack-resolution.md)
-- **Spell Slot**: a prepared spell instance, cast once per day; reset on long rest ([ADR 0008](adr/0008-spell-slots-and-long-rest.md))
+The vocabulary lives in [`GLOSSARY.md`](../GLOSSARY.md) (English term, French UI word, the ADR
+that holds the rules; [ADR 0036](adr/0036-vocabulary.md)). Read it before naming anything. Two
+process words that are not domain:
+
 - **Vertical Slice**: one Linear issue covers schema + Go engine + REST endpoint + React panel for one feature
+- **Kelsen**: the seed character (the table's bard), see the glossary
 
 ## Phase 1 Scope (MVP for the 2026-10-17 game)
 

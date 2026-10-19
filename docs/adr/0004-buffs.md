@@ -8,6 +8,8 @@ spell as an effect from the lookup) added 2026-10-16. Steps 7 to 10 amended for 
 
 _Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 11 (an `ac` effect is a change of the AC number, negative betters it; new effect kinds `base_ac` and `initiative`, ADR 0033 step 11) and step 18 (a second condition, `without_magic_armour`, ADR 0033 step 12)._
 
+_UI word: a buff is shown as Effect / Effet ([ADR 0036](0036-vocabulary.md) step 2)._
+
 ## Context
 
 A buff is an active effect on the character: a spell received or cast (Strength, Stoneskin, Mirror

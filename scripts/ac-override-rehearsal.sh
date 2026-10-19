@@ -7,6 +7,8 @@
 #   scripts/ac-override-rehearsal.sh [source container] [source database]
 #       default: critical-postgres-1 critical (the main checkout's `just dev` database)
 #
+# 0. Refused before the server starts when the source already records 017 (or has its columns): the
+#    rehearsal is of the upgrade, so the source must predate it.
 # 1. The copy keeps its characters (same ids) and every one reads no override (NULL, empty label).
 # 2. 017 is recorded once; a restart applies nothing again.
 # 3. The dev login's current character: GET /api/ac answers a derived AC; PUT /api/ac/override
@@ -76,6 +78,12 @@ sql() { psql "$db" -X -q -t -A -c "$1"; }
 chars_before="$(sql "SELECT string_agg(id::text, ',' ORDER BY id) FROM characters")"
 [ -n "$chars_before" ] || fail "the copy holds no character"
 ok "copy restored: characters $chars_before, last migration $(sql 'SELECT max(name) FROM schema_migrations' 2>/dev/null || echo '?')"
+# A source already past 017 would make the rehearsal check an upgrade that never ran: refuse it.
+[ "$(sql "SELECT count(*) FROM schema_migrations WHERE name = '017_ac_override.sql'")" = 0 ] ||
+    fail "the source already records 017_ac_override.sql: nothing to rehearse (use a database from before it)"
+[ "$(sql "SELECT count(*) FROM information_schema.columns WHERE table_name = 'characters' AND column_name IN ('ac_override', 'ac_override_label')")" = 0 ] ||
+    fail "the source already has the override columns: nothing to rehearse"
+ok "the source predates 017"
 
 start() {
     CRITICAL_DSN="postgres://critical:critical@127.0.0.1:$pg_port/rehearsal?sslmode=disable" \

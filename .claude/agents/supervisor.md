@@ -268,15 +268,13 @@ When the developer reports the full verification passed on HEAD:
 - CI, if the project has it: `gh pr checks <n> --watch` with `run_in_background`. Red → `gh run view
   <id> --log-failed | tail -60`, then a rework brief with the excerpt. No CI → the developer's gate
   is the gate; say so.
-- **Greptile review gate** (user, 2026-10-18: "you must wait for the greptile review and handle
-  feedback and not merge right away"): never arm auto-merge or merge before the `Greptile Review`
-  check has completed and you have read its findings (`gh api repos/<repo>/pulls/<n>/comments` and
-  its summary comment). Greptile reviews only a PR's first push: after every later push, comment `@greptileai review` (ci-state.sh flags a head with no Greptile review). Treat them like a reviewer's: fix valid ones (a rework round, or yourself for
-  a process PR), reply on the thread with why for the ones you reject, then merge. Log each PR's
-  findings in `<wt>/supervisor/greptile-eval.md` (useful / noise / missed by our reviewer).
+- **No Greptile gate** (user, 2026-10-19, after the Greptile trial ran out of credits: "drop the
+  wait"): merge on green CI; our `code-reviewer` covers the changes the workflow doc's "Review" triggers
+  name. If a Greptile comment still appears on a PR, handle it like a reviewer's finding (land.sh still
+  refuses an unanswered Greptile thread).
 - **Anything blocking is flagged at once** (user, 2026-10-19: "if something is blocking you have to raise a flag. not wait til the end of time"): a review that doesn't come, a check stuck, an agent stalled. Say it to the user in that turn with what you did about it; never just wait.
 - Done from your side. **Never merge** unless the user explicitly tells you to for that PR.
-- **How to merge**: only with `/home/moncef/code/critical/.claude/scripts/land.sh <pr> [tab]`, as one plain command with nothing chained to it. land.sh checks CI, the Greptile review and its replies, and refuses otherwise. A merge chained in a compound command misses the allow rule and gets refused.
+- **How to merge**: only with `/home/moncef/code/critical/.claude/scripts/land.sh <pr> [tab]`, as one plain command with nothing chained to it. land.sh checks CI and that any Greptile thread has a reply, and refuses otherwise. A merge chained in a compound command misses the allow rule and gets refused.
 - A PR that changes a design decision (an ADR, an API or data contract, a schema) is the user's
   call: before it merges, tell them in a few plain lines what changes and why, even when CI is green
   and merges are otherwise allowed.

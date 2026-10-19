@@ -3,7 +3,7 @@
 # server and stub gh: nothing here calls Linear or GitHub. Checks: ship moves each issue to In Review and comments
 # the PR link and never closes (no Done/Canceled state sent); the unmerged path puts an issue back to Todo; an
 # unknown issue or state fails; a Linear failure leaves the PR open and exits 1; land.sh merges without a tracker
-# call only when CI is green, the PR is CLEAN, Greptile has reviewed the head and every Greptile thread has a reply.
+# call only when CI is green, the PR is CLEAN, and every Greptile thread (if any) has a reply.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 S="$root/.claude/scripts"
@@ -70,7 +70,7 @@ mkdir -p "$tmp/bin" "$tmp/main"
 cat > "$tmp/bin/gh" <<'GH'
 #!/usr/bin/env bash
 echo "gh $*" >> "$GH_LOG"
-# land.sh's gate reads: pr view --json (PR state and checks), the Greptile check run, the review comments.
+# land.sh's gate reads: pr view --json (PR state and checks), the review comments.
 case "$*" in
   *statusCheckRollup*) printf '{"state":"OPEN","mergeable":"MERGEABLE","mergeStateStatus":"%s","headRefOid":"abc1234","statusCheckRollup":[{"name":"validate","status":"COMPLETED","conclusion":"%s"}]}\n' \
     "${STUB_MERGE_STATE:-CLEAN}" "${STUB_CHECK:-SUCCESS}"; exit 0 ;;
@@ -117,7 +117,8 @@ refused() { # $1 = case name, env set by the caller; land must exit 2, print REF
 set +e
 STUB_CHECK=FAILURE refused "red check"
 STUB_MERGE_STATE=BLOCKED refused "not clean"
-STUB_GREPTILE=in_progress refused "greptile pending"
+# No Greptile wait (user, 2026-10-19): a head with no Greptile review merges on green.
+: > "$GH_LOG"; STUB_GREPTILE=missing "$S/land.sh" 77 >/dev/null 2>&1 || fail "land refused a head with no Greptile review"
 STUB_COMMENTS='[{"id":1,"in_reply_to_id":null,"user":{"login":"greptile-apps[bot]"}}]' refused "unanswered greptile thread"
 : > "$GH_LOG"; STUB_MERGE_FAIL=1 "$S/land.sh" 77 >/dev/null 2>&1; [ $? = 1 ] || fail "land: a refused merge did not exit 1"
 ! grep -q "stack merge" "$GH_LOG" || fail "land fell back to an unchecked stack merge"

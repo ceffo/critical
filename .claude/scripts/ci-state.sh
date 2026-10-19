@@ -46,12 +46,6 @@ while IFS= read -r p; do
   bad=$(jq -r '[.statusCheckRollup[]|select((.status // "COMPLETED")=="COMPLETED")|select(((.conclusion // .state)|IN("SUCCESS","SKIPPED","NEUTRAL","CANCELLED"))|not)|.name // .context]|join(",")' <<<"$p")
   [ -n "$bad" ] && flag RED "pr$n@$sha" "PR #$n$who @$sha failing: $bad"
   [ "$np" -gt 0 ] && [ -z "$bad" ] && flag PENDING "pr$n" "PR #$n$who @$sha: $np check(s) running"
-  # Greptile reviews a PR's first push only: every later push needs an "@greptileai review" comment,
-  # and land.sh refuses a head without a completed Greptile Review. A missing one is a blocker, flagged
-  # every time instead of waited on.
-  if [ -z "$who" ] && ! jq -e 'any(.statusCheckRollup[]; (.name // .context)=="Greptile Review")' <<<"$p" >/dev/null; then
-    flag PENDING "pr$n-greptile" "PR #$n @$sha: NO Greptile review on this push (comment @greptileai review; still none after ~15 min -> tell the user)"
-  fi
 done < <(jq -c '.[]' <<<"$prs")
 
 [ "$red" = 1 ] && exit 20

@@ -3,8 +3,8 @@
 # It enforces the review gate itself and refuses (exit 2, prints why) unless ALL hold on the PR's head:
 #   - every check has completed and is SUCCESS / SKIPPED / NEUTRAL, at least one check exists;
 #   - GitHub says MERGEABLE and CLEAN (required checks reported, not behind or blocked);
-#   - the "Greptile Review" check has completed on the head sha;
-#   - every Greptile inline comment thread has a reply (handled: fixed, or answered why not).
+#   - every Greptile inline comment thread, if any, has a reply (handled: fixed, or answered why not).
+# No wait for a Greptile review (user, 2026-10-19: the trial ran out; "drop the wait").
 # Then: squash-merge (pinned to the checked head sha), close the dev tab if given, prune worktrees,
 # fast-forward the main checkout. Call it as ONE plain command (absolute path, nothing chained) so the
 # permission allow rule matches. No tracker step: Linear's GitHub integration closes the issue on merge.
@@ -24,8 +24,6 @@ bad=$(jq -r '[.statusCheckRollup[]|select(((.conclusion // .state)|IN("SUCCESS",
 [ -z "$bad" ] || refuse "checks not green: $bad"
 [ "$(jq -r .mergeable <<<"$j")" = MERGEABLE ] || refuse "mergeable=$(jq -r .mergeable <<<"$j")"
 [ "$(jq -r .mergeStateStatus <<<"$j")" = CLEAN ] || refuse "mergeStateStatus=$(jq -r .mergeStateStatus <<<"$j")"
-g=$(gh api "repos/$repo/commits/$sha/check-runs" --jq '[.check_runs[]|select(.name=="Greptile Review")|.status]|first // "missing"')
-[ "$g" = completed ] || refuse "Greptile Review on ${sha:0:7}: $g"
 unanswered=$(gh api --paginate "repos/$repo/pulls/$pr/comments" | jq -s 'add // [] | . as $c
   | [$c[]|select(.in_reply_to_id==null and (.user.login|test("greptile")))|.id as $r
      |select([$c[]|select(.in_reply_to_id==$r)]|length==0)]|length')

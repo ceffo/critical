@@ -113,6 +113,10 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		Host: opts.Host, Secure: opts.SecureCookies, Cookie: mw.SessionCookieName(opts.CookieApp),
 	}))
 
+	// Every state-changing answer names the state keys it changed (ADR 0018
+	// step 11).
+	r.Use(mw.StateKeys)
+
 	r.Get("/api/health", func(w http.ResponseWriter, req *http.Request) {
 		render.OK(req.Context(), w, map[string]string{
 			"status": "ok", "commit": orUnknown(opts.Commit), "version": orUnknown(opts.Version),

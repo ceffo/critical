@@ -17,41 +17,24 @@ interface CharacterStore {
   /** Saves the details, and the name first when `name` differs from the character's (Rename lives in
    * the details too, ADR 0034 step 7.2; the name is renamed on its own endpoint, ADR 0029 step 7.3):
    * null on success, or the ApiError naming the rejected field (shown under it; a refused name stops
-   * before the details). Other failures go to the table's error notice. */
+   * before the details). Other failures go to the action module's error notice. Both are outside
+   * the action log (ADR 0029 amendment step 4): the sheet is read again here, by hand. */
   saveDetails: (
     body: Partial<CharacterDetails>,
     name?: string,
   ) => Promise<ApiError | null>;
-  /** A level-up roll in flight. */
-  levelUpBusy: boolean;
   /** Roll the hit points of `level`, the lowest pending one (ADR 0030 step 7), on the server, or
-   * send `die`, the die rolled at the table. A transaction on the action stack: the table is
-   * refreshed with the character (its max HP and pending levels). Null on success, or the ApiError
-   * naming the rejected field; other failures go to the table's error notice. */
+   * send `die`, the die rolled at the table. A transaction on the action stack, run by the action
+   * module (refused or not, what it names is read again: a stale level shows the pending levels as
+   * they are). Null on success, or the ApiError naming the rejected field; other failures go to the
+   * action module's error notice. */
   rollLevelUp: (level: number, die?: number) => Promise<ApiError | null>;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
   character: null,
-  levelUpBusy: false,
-  rollLevelUp: async (level, die) => {
-    set({ levelUpBusy: true });
-    let rejected: ApiError | null = null;
-    try {
-      await rollLevelUp(level, die);
-    } catch (e) {
-      if (e instanceof ApiError && e.field) rejected = e;
-      else
-        useTableStore.setState({
-          error: e instanceof Error ? e.message : String(e),
-        });
-    }
-    // Refused or not, the sheet is read again: a stale level (another tab rolled it) shows the
-    // pending levels as they are.
-    await useTableStore.getState().refresh({ character: true });
-    set({ levelUpBusy: false });
-    return rejected;
-  },
+  rollLevelUp: (level, die) =>
+    useTableStore.getState().submit(() => rollLevelUp(level, die)),
   loading: false,
   error: null,
   loadCharacter: async () => {
@@ -63,30 +46,26 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       set({ error: (e as Error).message, loading: false });
     }
   },
-  saveDetails: async (body, name) => {
-    let renamed = false;
-    try {
-      const c = get().character;
-      if (c && name !== undefined && name !== c.name) {
-        await renameCharacter(c.id, name);
-        renamed = true;
+  saveDetails: (body, name) =>
+    useTableStore.getState().submit(async () => {
+      let renamed = false;
+      try {
+        const c = get().character;
+        if (c && name !== undefined && name !== c.name) {
+          await renameCharacter(c.id, name);
+          renamed = true;
+        }
+        await patchCharacterDetails(body);
+        // The sheet is read again: the missing fields and the warnings are the server's to say.
+        set({ character: await fetchCharacter() });
+      } catch (e) {
+        // A name saved before the details were refused shows at once.
+        if (renamed)
+          await fetchCharacter().then(
+            (character) => set({ character }),
+            () => undefined,
+          );
+        throw e;
       }
-      await patchCharacterDetails(body);
-      // The sheet is read again: the missing fields and the warnings are the server's to say.
-      set({ character: await fetchCharacter() });
-      return null;
-    } catch (e) {
-      // A name saved before the details were refused shows at once.
-      if (renamed)
-        await fetchCharacter().then(
-          (character) => set({ character }),
-          () => undefined,
-        );
-      if (e instanceof ApiError && e.field) return e;
-      useTableStore.setState({
-        error: e instanceof Error ? e.message : String(e),
-      });
-      return null;
-    }
-  },
+    }),
 }));

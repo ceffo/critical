@@ -134,5 +134,6 @@ func (s *service) replay(ctx context.Context, characterID int64, e *actionlog.En
 	if err := s.dal.InsertCorrection(ctx, actionlog.Correction{ActionID: e.ID, Kind: actionlog.CorrectionRedo}); err != nil {
 		return fmt.Errorf("insert redo: %w", err)
 	}
+	touch(ctx, actionlog.TouchedKeys(*e)...)
 	return nil
 }

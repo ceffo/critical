@@ -307,8 +307,8 @@ flowchart TD
   reloaded when buffs, effective STR, items or weapons change. An attack sends the saved choices
   (an offered first arrow becomes the choice first, so it stays chosen once spent); the result
   card labels each modifier and damage term by its `kind` (`result.mods.*`); attack log entries
-  are rendered from their payload (the kind's view, `journal/kinds/`). An attack refreshes the table state (log,
-  item counts), so voiding it shows the arrow back.
+  are rendered from their payload (the kind's view, `journal/kinds/`). An attack's answer names the
+  log and the arrow's `items:` key, read again (log, item counts), so voiding it shows the arrow back.
 - Items tab (`ItemsTab.tsx`): every item but ammunition (`lib/combatItems.ts`) on a grid row: the
   name (wrapping, never cut), behaviour and count, dice, Roll (it has dice) or Use, through
   `stores/roll.ts` `spendItem`; "Manage" (tooltip "Manage the inventory") focuses the Inventory activity.
@@ -337,7 +337,7 @@ flowchart TD
 - The Armes card (`WeaponsSection.tsx`) is the same grid: name with "melee / missile · two-handed ·
   ammo" | damage "1d8 · L 1d12" | to-hit / damage bonus | spare width | ✎ / 🗑 on hover and focus,
   and an "Add" form (`WeaponForm.tsx`, `lib/weaponForm.ts`), built like the item form (server
-  validation under the field). A change refreshes the weapons store, so the Weapons tab follows.
+  validation under the field). A change names its `items:` key, which reads the weapons again, so the Weapons tab follows.
 - Spells tab (`SpellsPanel.tsx`, ADR 0027 step 10): Prepare and Long rest (crescent-moon icon) on
   top, right; one group per level that has a slot (no group for an empty level), the LEVEL N
   section label and the level's slot dots (`lib/slotDots.ts`, from the server's slots and limits:
@@ -434,9 +434,9 @@ flowchart TD
   under it in full. The ledger (section-label head and column headers): reason wrapping between
   words with date · session under it, base, bonus, total; in-row edit, Enter saves, Escape cancels;
   delete; entries added this session tinted; the sheet's starting XP as the last, read-only row. Each write is a transaction on the action
-  stack (ADR 0015 step 4): it answers with the whole ledger, then refreshes the table state so the
-  journal shows the entry; the table refresh re-reads the ledger, so the journal's Undo shows the
-  total back. The character card's level line opens
+  stack (ADR 0015 step 4): it answers with the whole ledger (not read again) and names `xp:<id>`, so
+  the journal and the character are read again; the Undo of it names the same key and re-reads the
+  ledger, so the journal's Undo shows the total back. The character card's level line opens
   it and is underlined with the server's `progress`.
 - Character card (`Identity`, `HpBar`, `QuickHp`, `ChargeCards`, `Saves` in `components/dashboard/`,
   ADR 0022 step 2.3, ADR 0027 step 5), `clamp(280px, 21vw, 384px)` wide, beside every activity, in this order, grouped by spacing and section labels
@@ -445,8 +445,8 @@ flowchart TD
   empty, the level-up prompt `LevelUpPrompt` (ADR 0030 step 7): "Level N reached", the hit die or
   the fixed gain, how many more levels follow, and one-word buttons: Roll (the server rolls the
   die) and Enter (the die rolled at the table, an inline number field), or Add for a fixed gain;
-  `POST /api/character/levelup/roll` with the level shown, then the table refresh re-reads the
-  character; a target level under the realized one (`realizedAboveTarget`) is a warning instead;
+  `POST /api/character/levelup/roll` with the level shown, then the action module reads again what its
+  `realized_level` key names (the character, HP, the slots); a target level under the realized one (`realizedAboveTarget`) is a warning instead;
   the card's level is `derived.realizedLevel`, the level taken, whose THAC0, saves and slots
   apply; the XP card shows the target level the XP gives); "HIT POINTS"
   with the newest HP change still in force on the right (a long one drops under the label and
@@ -479,8 +479,18 @@ flowchart TD
   `hitsAc` and `critsFromAc`, a "?" verdict, the damage dimmed "if it hits", the GM's Hit / Miss
   (`POST /api/roll/attack/{logEntryId}/verdict`, `verdictLastAttack`) and a "Real AC" form (the
   adjust endpoint) that replaces any verdict.
-- Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `undo`,
-  `nextRound`; the journal's Undo button and Ctrl+Z are the one global undo, ADR 0018 step 3): call the API, then refresh HP, log, buffs and round. Server errors
+- Every mutation goes through the action module, `stores/table.ts` (`run`, `submit`, `recordHp`,
+  `undo`, `nextRound`; the journal's Undo button and Ctrl+Z are the one global undo, ADR 0018 step 3):
+  call the API, then read again what the answer's `X-State-Keys` names, by the one map from key
+  family to slice (`lib/stateKeys.ts` `INVALIDATES`, ADR 0018 step 11; a refused input (400) reads nothing;
+  an answer without keys, a stale refusal (404, 409), a server error or a lost answer reads every
+  slice again).
+  A write outside `run` (the dice favourites, the attack form, log out) adds its keys to the same
+  `pending` list, and the next action takes them: a superset, never a stale panel. The action module owns the one error, notice and busy
+  flag; the data stores hold their data and fetches only: none calls `refresh` or sets the action
+  module's state (an eslint rule on `src/stores`). A store's write runs through `run` / `submit`
+  (`fresh`: the slices it set from its answer, `quiet`: a background write such as the attack form).
+  A slice no panel has loaded (the XP ledger, the skills, the spellbook) is read only once shown. Server errors
   (`{"error": …, "code": …}`, parsed by `api/http.ts`) are shown in `Notices` (`role="alert"`): a known code in the
   player's language (`apiError.*`), else the server text verbatim.
 - An unavailable database (`database_unavailable`, 503; [ADR 0025](adr/0025-postgresql-storage.md) step

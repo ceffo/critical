@@ -38,6 +38,7 @@ func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment)
 		}); err != nil {
 			return fmt.Errorf("insert amend: %w", err)
 		}
+		touch(ctx, actionlog.FamilyLog)
 		out, err = s.dal.GetEntry(ctx, characterID, id)
 		return err
 	})
@@ -95,6 +96,7 @@ func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind a
 		}); err != nil {
 			return fmt.Errorf("insert amend: %w", err)
 		}
+		touch(ctx, actionlog.FamilyLog)
 		out, err = s.dal.GetEntry(ctx, characterID, id)
 		return err
 	})

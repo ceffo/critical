@@ -429,6 +429,45 @@ Auto-merge: `.github/workflows/dependabot-auto-merge.yml` enables GitHub auto-me
 | `api/internal/adapters/*/queries/{db,models,querier}.go`, `*.sql.go` | sqlc output of an adapter |
 | `api/internal/adapters/*/queries/mocks/` | mockery mock of an adapter's `Querier` |
 
+## State keys on write answers
+
+Every state-changing request (any method but `GET`, `HEAD`, `OPTIONS`) answers, on a success, with
+the header `X-State-Keys`: the state keys of the action-log transactions it committed, sorted, each
+once, comma-separated (`buffs,hp,items:arrows,log`), empty when it wrote nothing to the log
+([ADR 0018](adr/0018-transactions-and-undo.md) step 11). The body is the endpoint's own, unchanged;
+an error answer (the `render` contract) carries no header.
+
+- **The keys.** `log` when an entry was recorded, popped, replayed or amended (the journal
+  changed); `hp` when one of them moves current HP (an HP delta, or an amend's); and the key of every
+  snapshot the entries carry (`round`, `buffs`, `items:arrows`, `xp:12`…, the families the modules
+  declare). An undo or a redo names the keys of the entries it pops or replays (ADR 0019: two more
+  actions). `log` and `hp` are the log's own (`actionlog.FamilyLog`, `FamilyHP`): no module may claim
+  them.
+- **How.** `middleware.StateKeys` (mounted for every route) puts an `actionlog.Changes` in the
+  request's context and sets the header when the status is written. The action log's transaction
+  scope (`actionlogsvc.Transactions`) notes the keys of every write it makes, and hands them to the
+  request's `Changes` only once the outermost transaction commits: a rollback names nothing. A write
+  outside the log (rename, retire, switch, the details, the saved attack form, the dice favourites,
+  the settings) names nothing: the web reads what it changed by hand
+  ([ADR 0029](adr/0029-users-login-and-access.md) amendment "creating, switching and retiring",
+  step 4).
+- **The web.** `web/src/lib/stateKeys.ts` maps each family to the slices it reads again
+  (`INVALIDATES`, exhaustive by type over `STATE_FAMILIES`); `composition`
+  `TestStateKeys_TheWebMapsEveryFamily` keeps that list equal to the server's. An error answer carries
+  no header: a refused input (400, 422) rolled back and reads nothing; a stale refusal (409: a
+  stale undo or redo top, a level-up no longer pending; 404: an entity removed elsewhere) or a server
+  error reads every slice again, so the player sees the state that refused the write. A success without the header (a server of the release before)
+  or naming a family the web does not know reads every slice again.
+- **Rolling deploy** ([ADR 0024](adr/0024-deployment.md) step 5.2): a client of the release before
+  ignores the header; this client reads everything again when a server of the release before sends
+  none.
+
+Tests: `actionlogsvc` `TestChanges_ARecordedTransactionNamesItsKeys`,
+`TestChanges_UndoAndRedoNameTheKeysOfTheirTransaction`, `TestChanges_AnAmendNamesTheLog`,
+`TestRegister_RefusesTheLogsOwnFamilies`; `router` `TestStateKeys_TheAnswerNamesWhatTheWriteChanged`;
+`composition` `TestStateKeys_EachWriteNamesWhatItChanged` (real services: an HP change, an item use,
+its undo and redo, Next Round, a refused undo).
+
 ## Key Go Structs
 
 ```go

@@ -17,8 +17,13 @@ import (
 type scopeKey struct{}
 
 // scope is the action-log transaction of one outermost InTx: 0 until its
-// first entry is recorded, then that entry's id.
-type scope struct{ transactionID int64 }
+// first entry is recorded, then that entry's id. keys are the state keys its
+// writes change (ADR 0018 step 11), handed to the request's
+// actionlog.Changes once the DB transaction commits.
+type scope struct {
+	transactionID int64
+	keys          []string
+}
 
 // Transactions wraps runner so that each outermost InTx is one action-log
 // transaction: the entries recorded inside it (through Record, by any
@@ -38,9 +43,22 @@ func (t transactions) InTx(ctx context.Context, fn func(ctx context.Context) err
 	if _, ok := ctx.Value(scopeKey{}).(*scope); ok {
 		return t.inner.InTx(ctx, fn)
 	}
-	return t.inner.InTx(ctx, func(ctx context.Context) error {
-		return fn(context.WithValue(ctx, scopeKey{}, &scope{}))
+	sc := &scope{}
+	err := t.inner.InTx(ctx, func(ctx context.Context) error {
+		return fn(context.WithValue(ctx, scopeKey{}, sc))
 	})
+	if err == nil {
+		actionlog.ChangesFrom(ctx).Add(sc.keys...)
+	}
+	return err
+}
+
+// touch notes keys as changed by the transaction of the scope ctx carries;
+// they reach the request's changes only if it commits.
+func touch(ctx context.Context, keys ...string) {
+	if sc, ok := ctx.Value(scopeKey{}).(*scope); ok {
+		sc.keys = append(sc.keys, keys...)
+	}
 }
 
 // insert stores e in the transaction of the scope ctx carries, starting it
@@ -58,5 +76,6 @@ func (s *service) insert(ctx context.Context, e actionlog.NewEntry) (int64, erro
 	if sc.transactionID == 0 {
 		sc.transactionID = id
 	}
+	sc.keys = append(sc.keys, actionlog.NewEntryKeys(e)...)
 	return id, nil
 }

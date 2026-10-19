@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { combatLog, openDashboard } from "./helpers";
+import { combatLog, openDashboard, readsAfter } from "./helpers";
 
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -73,9 +73,13 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
   await expect(rows).toHaveCount(3);
 
   // A formula the server refuses turns the field red; editing clears it.
+  // The refusal changed nothing: the page reads nothing again (ADR 0018 step 11).
   await formula.fill("2d6*3");
-  await composer.getByRole("button", { name: "Roll", exact: true }).click();
-  await expect(composer.getByTestId("dice-error")).toBeVisible();
+  const reads = await readsAfter(page, async () => {
+    await composer.getByRole("button", { name: "Roll", exact: true }).click();
+    await expect(composer.getByTestId("dice-error")).toBeVisible();
+  });
+  expect(reads).toEqual([]);
   await expect(formula).toHaveAttribute("aria-invalid", "true");
   await formula.fill("d%+d4");
   await expect(composer.getByTestId("dice-error")).toHaveCount(0);

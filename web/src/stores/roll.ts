@@ -69,113 +69,69 @@ interface RollStore {
 }
 
 export const useRollStore = create<RollStore>((set) => {
-  async function roll(
-    fn: () => Promise<LastRoll>,
-    refresh: boolean,
-  ): Promise<boolean> {
+  // Every roll is logged (and an attack may spend ammo, a use a charge): the action module runs
+  // it and reads again what the server says it changed.
+  async function roll(fn: () => Promise<LastRoll>): Promise<boolean> {
     set({ rolling: true });
-    const table = useTableStore.getState();
-    table.clearError();
-    let ok = true;
     try {
-      set({ last: await fn() });
-    } catch (e) {
-      ok = false;
-      useTableStore.setState({
-        error: e instanceof Error ? e.message : String(e),
-      });
+      return await useTableStore
+        .getState()
+        .run(async () => set({ last: await fn() }));
     } finally {
       set({ rolling: false });
     }
-    // An attack is logged and may spend ammo: show the new log entry and counts.
-    if (refresh) await table.refresh();
-    return ok;
   }
   return {
     last: null,
     rolling: false,
     rollAttack: (req) =>
-      roll(
-        async () => ({ kind: "attack", result: await resolveAttack(req) }),
-        true,
-      ),
+      roll(async () => ({ kind: "attack", result: await resolveAttack(req) })),
     spendItem: (id) =>
-      roll(
-        async () => ({ kind: "item_use", result: await postUseItem(id) }),
-        true,
-      ),
+      roll(async () => ({ kind: "item_use", result: await postUseItem(id) })),
     rollSkill: (id, adjustment) =>
-      roll(
-        async () => ({
-          kind: "skill_check",
-          result: await rollSkill(id, adjustment ? { adjustment } : undefined),
-        }),
-        true,
-      ),
+      roll(async () => ({
+        kind: "skill_check",
+        result: await rollSkill(id, adjustment ? { adjustment } : undefined),
+      })),
     adjustLastSkill: (id, adjustment, reason) =>
-      roll(
-        async () => ({
-          kind: "skill_check",
-          result: await adjustSkill(id, adjustment, reason),
-        }),
-        true,
-      ),
+      roll(async () => ({
+        kind: "skill_check",
+        result: await adjustSkill(id, adjustment, reason),
+      })),
     rollAbility: (ability) =>
-      roll(
-        async () => ({
-          kind: "ability_check",
-          result: await rollAbility(ability),
-        }),
-        true,
-      ),
+      roll(async () => ({
+        kind: "ability_check",
+        result: await rollAbility(ability),
+      })),
     adjustLastAbility: (id, adjustment, reason) =>
-      roll(
-        async () => ({
-          kind: "ability_check",
-          result: await adjustAbility(id, adjustment, reason),
-        }),
-        true,
-      ),
+      roll(async () => ({
+        kind: "ability_check",
+        result: await adjustAbility(id, adjustment, reason),
+      })),
     rollExposure: (req) =>
-      roll(
-        async () => ({ kind: "exposure", result: await postExposure(req) }),
-        true,
-      ),
-    // A save is logged: refresh to show its entry.
+      roll(async () => ({ kind: "exposure", result: await postExposure(req) })),
     rollSave: async (category) => {
-      await roll(
-        async () => ({
-          kind: "save",
-          result: await rollSavingThrow(category),
-        }),
-        true,
-      );
+      await roll(async () => ({
+        kind: "save",
+        result: await rollSavingThrow(category),
+      }));
     },
     adjustLastAttack: (id, targetAc) =>
-      roll(
-        async () => ({
-          kind: "attack",
-          result: await adjustAttack(id, targetAc),
-        }),
-        true,
-      ),
+      roll(async () => ({
+        kind: "attack",
+        result: await adjustAttack(id, targetAc),
+      })),
     clearLastAttackAc: (id) =>
-      roll(
-        async () => ({ kind: "attack", result: await clearAttackAc(id) }),
-        true,
-      ),
+      roll(async () => ({ kind: "attack", result: await clearAttackAc(id) })),
     verdictLastAttack: (id, hit) =>
-      roll(
-        async () => ({ kind: "attack", result: await attackVerdict(id, hit) }),
-        true,
-      ),
+      roll(async () => ({
+        kind: "attack",
+        result: await attackVerdict(id, hit),
+      })),
     adjustLastSave: (id, adjustment, reason) =>
-      roll(
-        async () => ({
-          kind: "save",
-          result: await adjustSave(id, adjustment, reason),
-        }),
-        true,
-      ),
+      roll(async () => ({
+        kind: "save",
+        result: await adjustSave(id, adjustment, reason),
+      })),
   };
 });

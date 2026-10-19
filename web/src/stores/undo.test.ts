@@ -3,7 +3,9 @@ import type { LogEntry, LogKind } from "@/types/log";
 
 // A fake server action stack: what GET /api/log, POST /api/log/undo, POST /api/log/redo and
 // the initiative reroll do to it (the rules themselves are Go tests). It lets the store be driven
-// through its real refresh path, as two clients would see the server.
+// through its real refresh path, as two clients would see the server: each write names the state
+// keys its answer would carry (X-State-Keys, ADR 0018 step 11); a refusal is a conflict (409), noted
+// as api/http.ts notes it: the change is unknown.
 const server = vi.hoisted(() => {
   type Row = { id: number; kind: string; voided: boolean };
   const s = {
@@ -43,6 +45,16 @@ const server = vi.hoisted(() => {
   return s;
 });
 
+/** Runs a fake server step; its refusal is answered 409, as the real server answers a stale top. */
+const refusedAsConflict = vi.hoisted(() => async (step: () => void) => {
+  try {
+    step();
+  } catch (e) {
+    (await import("@/lib/stateKeys")).noteAnswer(409, null);
+    throw e;
+  }
+});
+
 vi.mock("@/api/log", () => ({
   fetchLog: async () => ({
     entries: [...server.rows].reverse().map(
@@ -65,11 +77,13 @@ vi.mock("@/api/log", () => ({
   }),
   undoLogEntry: async (expected: number) => {
     server.calls.push(`undo ${expected}`);
-    server.pop(expected);
+    await refusedAsConflict(() => server.pop(expected));
+    (await import("@/lib/stateKeys")).noteWrite("log");
   },
   redoLogEntry: async (expected: number) => {
     server.calls.push(`redo ${expected}`);
-    server.redo(expected);
+    await refusedAsConflict(() => server.redo(expected));
+    (await import("@/lib/stateKeys")).noteWrite("log");
   },
 }));
 vi.mock("../api/round", () => ({
@@ -77,10 +91,13 @@ vi.mock("../api/round", () => ({
   // The reroll pops the newest initiative and records a new one (ADR 0013 step 4).
   rerollInitiative: async () => {
     server.calls.push("reroll");
-    const top = server.top();
-    if (top?.kind !== "initiative") throw new Error("not the latest entry");
-    top.voided = true;
+    await refusedAsConflict(() => {
+      if (server.top()?.kind !== "initiative")
+        throw new Error("not the latest entry");
+    });
+    server.top()!.voided = true;
     server.push("initiative");
+    (await import("@/lib/stateKeys")).noteWrite("initiative,log");
     return { round: 1, d10: 5 };
   },
 }));
@@ -90,6 +107,8 @@ vi.mock("@/api/hp", () => ({
 vi.mock("@/api/items", () => ({ fetchItems: async () => [] }));
 vi.mock("@/api/combat", () => ({ fetchWeapons: async () => [] }));
 vi.mock("@/api/ac", () => ({ fetchAc: async () => null }));
+vi.mock("../api/spells", () => ({ fetchSpellSlots: async () => [] }));
+vi.mock("@/api/character", () => ({ fetchCharacter: async () => ({}) }));
 vi.mock("../api/buffs", () => ({
   fetchActiveBuffs: async () => [],
   fetchSavedBuffs: async () => [],

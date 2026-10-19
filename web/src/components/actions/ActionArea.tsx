@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Backpack,
@@ -11,7 +11,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useItemsStore } from "@/stores/items";
 import { useSpellStore } from "@/stores/spells";
-import { useLogStore } from "@/stores/log";
 import { AttackPanel } from "./AttackPanel";
 import { SpellsPanel } from "./SpellsPanel";
 import { ItemsTab } from "./ItemsTab";
@@ -51,13 +50,8 @@ export function ActionArea({
     (s) => s.slots.filter((slot) => !slot.used).length,
   );
   const itemCount = useItemsStore((s) => combatItems(s.items).length);
-  const fetchSlots = useSpellStore((s) => s.fetchSlots);
-  const logEntries = useLogStore((s) => s.entries);
-  // The Spells tab shows the spells left before it is opened; a cast, a long rest or a void
-  // (any new log state) can change them.
-  useEffect(() => {
-    void fetchSlots().catch(() => undefined);
-  }, [fetchSlots, logEntries]);
+  // The Spells tab shows the spells left before it is opened: the slots are read with the sheet,
+  // and again by the action module when a write names them.
   const counts: Partial<Record<TabId, number>> = {
     spells: spellsLeft,
     items: itemCount,

@@ -6,6 +6,7 @@ import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
 import { parseXpAmount } from "@/lib/xpForm";
 import { useXpStore } from "@/stores/xp";
+import { useTableStore } from "@/stores/table";
 import type { XpEntry, XpLedger, XpLevel } from "@/types/xp";
 import type { ApiError } from "@/api/http";
 import { useXpPreview } from "./useXpPreview";
@@ -54,10 +55,10 @@ const XP_COLS = "grid grid-cols-[minmax(0,1fr)_24rem] gap-x-6";
 export function XpPanel() {
   const { t } = useTranslation();
   const ledger = useXpStore((s) => s.ledger);
-  const fetchXp = useXpStore((s) => s.fetchXp);
+  const refresh = useTableStore((s) => s.refresh);
   useEffect(() => {
-    void fetchXp();
-  }, [fetchXp]);
+    void refresh(["xp"]);
+  }, [refresh]);
 
   if (!ledger)
     return (
@@ -208,7 +209,7 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
   const { t } = useTranslation();
   const f = useFormats();
   const add = useXpStore((s) => s.add);
-  const busy = useXpStore((s) => s.busy);
+  const busy = useTableStore((s) => s.busy);
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [session, setSession] = useState("");
@@ -377,7 +378,7 @@ function Row({
   const { t } = useTranslation();
   const f = useFormats();
   const remove = useXpStore((s) => s.remove);
-  const busy = useXpStore((s) => s.busy);
+  const busy = useTableStore((s) => s.busy);
   const fresh = useXpStore((s) => s.freshIds.has(e.id));
   // Delete asks, Confirm deletes (the journal's Undo brings the entry back, ADR 0015 step 4).
   const [confirming, setConfirming] = useState(false);
@@ -481,7 +482,7 @@ function EditRow({
   const { t } = useTranslation();
   const f = useFormats();
   const update = useXpStore((s) => s.update);
-  const busy = useXpStore((s) => s.busy);
+  const busy = useTableStore((s) => s.busy);
   const [reason, setReason] = useState(e.reason);
   const [amount, setAmount] = useState(String(e.base));
   const [bonus, setBonus] = useState(e.bonus);

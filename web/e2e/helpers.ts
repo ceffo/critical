@@ -1,4 +1,9 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import {
+  expect,
+  type Locator,
+  type Page,
+  type Request,
+} from "@playwright/test";
 
 /** Current HP as shown on the character card ("current / max"). */
 export async function currentHp(page: Page): Promise<number> {
@@ -13,6 +18,49 @@ export async function currentRound(page: Page): Promise<number> {
   const text = (await page.getByTestId("round-value").textContent()) ?? "";
   if (!/^\d+$/.test(text.trim())) throw new Error(`unexpected round: ${text}`);
   return Number(text);
+}
+
+/**
+ * The API reads (GET paths, sorted) the page makes while `act` runs and until no request has been in
+ * flight for `quietMs`. A write's answer names the state keys it changed and the page reads those
+ * again, nothing else (ADR 0018 step 11), so an action's reads are a short, known list.
+ */
+export async function readsAfter(
+  page: Page,
+  act: () => Promise<void>,
+  quietMs = 600,
+): Promise<string[]> {
+  const reads: string[] = [];
+  let inFlight = 0;
+  let last = Date.now();
+  const started = (r: Request) => {
+    const url = new URL(r.url());
+    if (!url.pathname.startsWith("/api/")) return;
+    inFlight++;
+    last = Date.now();
+    if (r.method() === "GET") reads.push(url.pathname);
+  };
+  const ended = (r: Request) => {
+    if (!new URL(r.url()).pathname.startsWith("/api/")) return;
+    inFlight--;
+    last = Date.now();
+  };
+  page.on("request", started);
+  page.on("requestfinished", ended);
+  page.on("requestfailed", ended);
+  try {
+    await act();
+    await expect
+      .poll(() => inFlight === 0 && Date.now() - last >= quietMs, {
+        intervals: [100],
+      })
+      .toBe(true);
+  } finally {
+    page.off("request", started);
+    page.off("requestfinished", ended);
+    page.off("requestfailed", ended);
+  }
+  return reads.sort();
 }
 
 /** Open the dashboard and wait until server state is loaded. */

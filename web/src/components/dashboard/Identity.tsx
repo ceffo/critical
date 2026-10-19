@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
 import { useRollStore } from "@/stores/roll";
+import { useTableStore } from "@/stores/table";
 import { useXpStore } from "@/stores/xp";
 import { CharacterDetails } from "./CharacterDetails";
 import { LevelUpPrompt } from "./LevelUpPrompt";
@@ -51,7 +52,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   };
   const rollAbility = useRollStore((s) => s.rollAbility);
   const rollLevelUp = useCharacterStore((s) => s.rollLevelUp);
-  const levelUpBusy = useCharacterStore((s) => s.levelUpBusy);
+  const levelUpBusy = useTableStore((s) => s.busy);
 
   return (
     <div className="flex min-w-0 flex-col gap-2">

@@ -6,6 +6,8 @@ import { useRollStore } from "./roll";
 interface SpellStore {
   slots: SpellSlot[];
   info: PreparationInfo;
+  /** Whether a panel has read the spellbook (the action module reads it again only then). */
+  infoLoaded: boolean;
   loading: boolean;
   fetchSlots: () => Promise<void>;
   fetchInfo: () => Promise<void>;
@@ -27,6 +29,7 @@ interface SpellStore {
 export const useSpellStore = create<SpellStore>((set) => ({
   slots: [],
   info: { spellbook: [], limits: [] },
+  infoLoaded: false,
   loading: false,
   fetchSlots: async () => {
     set({ loading: true });
@@ -37,7 +40,7 @@ export const useSpellStore = create<SpellStore>((set) => ({
     }
   },
   fetchInfo: async () => {
-    set({ info: await api.fetchPreparationInfo() });
+    set({ info: await api.fetchPreparationInfo(), infoLoaded: true });
   },
   castSpell: async (index, opts) => {
     const result = await api.castSpell(index, opts);

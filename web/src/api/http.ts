@@ -1,5 +1,6 @@
 import i18n from "@/i18n";
 import { loginUrl } from "@/lib/session";
+import { noteAnswer, noteWrite, STATE_KEYS_HEADER } from "@/lib/stateKeys";
 import { useDatabaseStore } from "@/stores/database";
 import { useSessionStore } from "@/stores/session";
 
@@ -209,7 +210,16 @@ async function send<T>(url: string, init?: RequestInit): Promise<T> {
     throw unavailableError();
   }
   for (;;) {
-    const res = await fetch(url, withCharacter(init));
+    let res: Response;
+    try {
+      res = await fetch(url, withCharacter(init));
+    } catch (e) {
+      // The write may or may not have landed: what it changed is unknown.
+      if (!read) noteWrite(null);
+      throw e;
+    }
+    // What a write changed, for the action module's refetch (ADR 0018 step 11).
+    if (!read) noteAnswer(res.status, res.headers.get(STATE_KEYS_HEADER));
     if (res.ok) {
       void markAnswered();
       return res.json() as Promise<T>;

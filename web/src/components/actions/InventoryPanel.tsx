@@ -95,6 +95,7 @@ function isCounted(i: Item): boolean {
 export function InventoryPanel() {
   const { t, i18n } = useTranslation();
   const items = useItemsStore((s) => s.items);
+  const setItems = useItemsStore((s) => s.setItems);
   const { spendItem, rolling } = useRollStore();
   const run = useTableStore((s) => s.run);
   const submit = useTableStore((s) => s.submit);
@@ -203,7 +204,10 @@ export function InventoryPanel() {
                     aria-label={t("equipment.review.dismissHint", {
                       name: nameOf(i),
                     })}
-                    onClick={() => void run(() => dismissReview(i.id))}
+                    onClick={() =>
+                      // Outside the action log (no key named): the answer is the items.
+                      void run(async () => setItems(await dismissReview(i.id)))
+                    }
                   >
                     {t("equipment.review.dismiss")}
                   </Button>

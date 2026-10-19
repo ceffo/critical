@@ -7,7 +7,6 @@ import type {
 } from "@/types/combat";
 import { useRollStore } from "./roll";
 import { useTableStore } from "./table";
-import { useItemsStore } from "./items";
 
 interface AttackStore {
   /** The server's attack form with its preview; null until loaded. */
@@ -35,10 +34,6 @@ interface AttackStore {
   attack: () => Promise<boolean>;
 }
 
-function message(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
 // Requests to the form run one after the other, in the order they were made; only the newest
 // one's answer is shown, so an older answer never overwrites a newer change.
 let queue: Promise<unknown> = Promise.resolve();
@@ -53,15 +48,23 @@ export const useAttackStore = create<AttackStore>((set, get) => {
         const view = await call();
         if (seq === issued) set({ view });
       } catch (e) {
-        useTableStore.setState({ error: message(e) });
         // Show what the server kept.
         if (seq === issued)
           set({ view: await fetchAttackForm().catch(() => get().view) });
+        throw e;
       }
     });
-    queue = next;
+    queue = next.catch(() => undefined);
     return next;
   }
+  // The form's reads and saves run in the background of the action module: its error notice shows
+  // a failure, and what a save changed (ADR 0033 step 8: picking a weapon that is not equipped
+  // equips it, a logged move) is read again by the keys the server names.
+  const background = (call: () => Promise<AttackFormView>) =>
+    useTableStore
+      .getState()
+      .run(() => send(call), { quiet: true })
+      .then(() => undefined);
 
   return {
     view: null,
@@ -69,7 +72,7 @@ export const useAttackStore = create<AttackStore>((set, get) => {
     setPointBlank: (on) => set({ pointBlank: on }),
     backstab: false,
     setBackstab: (on) => set({ backstab: on }),
-    load: () => send(fetchAttackForm),
+    load: () => background(fetchAttackForm),
     update: (patch) => {
       const view = get().view;
       if (view) {
@@ -86,17 +89,7 @@ export const useAttackStore = create<AttackStore>((set, get) => {
           },
         });
       }
-      // ADR 0033 step 8: picking a weapon that is not equipped equips it on the server, a logged
-      // move: the journal and the inventory are read again once the form is saved.
-      const equips =
-        patch.weaponId !== undefined &&
-        useItemsStore
-          .getState()
-          .weapons.some((w) => w.id === patch.weaponId && !w.wielded);
-      const saved = send(() => patchAttackForm(patch));
-      return equips
-        ? saved.then(() => useTableStore.getState().refresh())
-        : saved;
+      return background(() => patchAttackForm(patch));
     },
     attack: async () => {
       await queue;

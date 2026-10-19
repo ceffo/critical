@@ -18,8 +18,15 @@ func mapMeasures(ctx context.Context, q storeq.Querier) error {
 		return fmt.Errorf("list character measures: %w", err)
 	}
 	for _, r := range rows {
-		h, _ := charactersvc.ParseHeight(r.Height)
-		w, _ := charactersvc.ParseWeight(r.Weight)
+		// A text beyond the sanity bound (999 cm) is no figure: the parsers' flag, not the value, decides.
+		h, ok := charactersvc.ParseHeight(r.Height)
+		if !ok {
+			h = 0
+		}
+		w, ok := charactersvc.ParseWeight(r.Weight)
+		if !ok {
+			w = 0
+		}
 		if h == 0 && w == 0 {
 			continue
 		}

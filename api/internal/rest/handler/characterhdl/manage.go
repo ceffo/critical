@@ -219,10 +219,10 @@ func detailsPatch(d *detailshdl.DetailsDTO) (charactersvc.DetailsPatch, error) {
 		kg = &v
 	}
 	var err error
-	if p.Height, p.ClearHeight, err = detailshdl.ResolveMeasure(charactersvc.FieldHeight, cm, false, &d.Height, charactersvc.ParseHeight); err != nil {
+	if p.Height, p.ClearHeight, err = detailshdl.ResolveMeasure(charactersvc.FieldHeight, cm, d.HeightNull, &d.Height, charactersvc.ParseHeight); err != nil {
 		return p, err
 	}
-	if p.Weight, p.ClearWeight, err = detailshdl.ResolveMeasure(charactersvc.FieldWeight, kg, false, &d.Weight, charactersvc.ParseWeight); err != nil {
+	if p.Weight, p.ClearWeight, err = detailshdl.ResolveMeasure(charactersvc.FieldWeight, kg, d.WeightNull, &d.Weight, charactersvc.ParseWeight); err != nil {
 		return p, err
 	}
 	if d.Languages != nil {

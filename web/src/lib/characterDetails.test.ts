@@ -20,6 +20,28 @@ const details = {
   languages: ["common", "elvish"],
 };
 
+describe("an unrelated edit does not drift the measures", () => {
+  it("keeps the stored numbers of fields left as toDraft showed them, in en", () => {
+    const d = { ...details, height_cm: 180, weight_kg: 75 };
+    const draft = { ...toDraft(d, "en"), hair: "red" };
+    expect(toBody(draft, "en", d).body).toMatchObject({
+      height_cm: 180,
+      weight_kg: 75,
+    });
+    // Without the original the whole-inch field would be sent back: 180.3 and 74.8.
+    expect(toBody(draft, "en").body).toMatchObject({
+      height_cm: 180.3,
+      weight_kg: 74.8,
+    });
+    // A field the player did change is parsed.
+    const typed = { ...draft, weight: "160" };
+    expect(toBody(typed, "en", d).body).toMatchObject({
+      height_cm: 180,
+      weight_kg: 72.6,
+    });
+  });
+});
+
 describe("character details draft", () => {
   it("round-trips the details", () => {
     expect(toBody(toDraft(details))).toEqual({

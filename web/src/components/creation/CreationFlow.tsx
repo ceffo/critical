@@ -29,6 +29,8 @@ import {
   draftXp,
   settle,
   type FieldError,
+  type DraftPatch,
+  mergeDraft,
   type FlowDraft,
   type StepProps,
 } from "./flow";
@@ -110,10 +112,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     const at = revision.current;
     return () => revision.current === at;
   };
-  const update = (patch: Partial<FlowDraft>) => {
+  const update = (patch: DraftPatch) => {
     revision.current += 1;
     setDraft((d) => {
-      const next = { ...d, ...patch };
+      const next = mergeDraft(d, patch);
       return settle(next, draftXp(options, next));
     });
     setError(null);

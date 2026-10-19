@@ -22,6 +22,7 @@ func TestMigrate_Step8_HeightsAndWeightsFreeTextBecomeNumbers(t *testing.T) {
 		{"Words", "grand", "costaud"},
 		{"Half", "6 ft", "lourd"},
 		{"Empty", "", ""},
+		{"Beyond the bound", "999 cm", "600 kg"},
 	}
 	for _, c := range chars {
 		id, err := store.InsertCharacter(context.Background(), insertParams(c.name, "human"))
@@ -45,7 +46,7 @@ func TestMigrate_Step8_HeightsAndWeightsFreeTextBecomeNumbers(t *testing.T) {
 
 	ids := store.t.Characters
 	for i, want := range []struct{ h, w float64 }{
-		{180, 75}, {180.3, 74.8}, {172, 68}, {0, 0}, {182.9, 0}, {0, 0},
+		{180, 75}, {180.3, 74.8}, {172, 68}, {0, 0}, {182.9, 0}, {0, 0}, {0, 0},
 	} {
 		assert.InDelta(t, want.h, store.t.HeightsCm[ids[i]], 1e-9, "%s height", chars[i].name)
 		assert.InDelta(t, want.w, store.t.WeightsKg[ids[i]], 1e-9, "%s weight", chars[i].name)

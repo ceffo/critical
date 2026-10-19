@@ -1,5 +1,5 @@
 import { DiceFive } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { rollIdentity } from "@/api/characters";
 import { ApiError } from "@/api/http";
@@ -27,6 +27,12 @@ export function IdentityRoll({
   const [roll, setRoll] = useState<IdentityRollFigure | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The race and sex the figure is rolled for: a reply for others (changed while it was pending)
+  // is dropped. Anything else typed meanwhile stays: the callback merges into the latest details.
+  const latest = useRef({ raceCode, sex });
+  useEffect(() => {
+    latest.current = { raceCode, sex };
+  }, [raceCode, sex]);
   const needsSex = figure !== "age";
   const missing =
     raceCode === "" ? "race" : needsSex && sex === "" ? "sex" : null;
@@ -37,6 +43,8 @@ export function IdentityRoll({
     setError(null);
     try {
       const r = await rollIdentity(raceCode, sex, [figure]);
+      const now = latest.current;
+      if (now.raceCode !== raceCode || (needsSex && now.sex !== sex)) return;
       const rolled = r.rolls[0];
       setRoll(rolled);
       onRolled(rolled.value);

@@ -61,12 +61,13 @@ export function toDraft(d: CharacterDetails, language = "fr"): Draft {
 /**
  * The PATCH body for a draft. Only the shape is checked here: an age that is not a whole number
  * from 1 up, or a height or weight that is no figure in the units of the language, is flagged for
- * the caller to report; an empty age, height or weight is sent as null, which clears it. Every
+ * the caller to report; a height or weight left as `toDraft` showed it keeps the `original` number; an empty age, height or weight is sent as null, which clears it. Every
  * limit is the server's.
  */
 export function toBody(
   draft: Draft,
   language = "fr",
+  original?: Pick<CharacterDetails, "height_cm" | "weight_kg">,
 ): {
   body: Partial<CharacterDetails>;
   ageInvalid: boolean;
@@ -76,8 +77,18 @@ export function toBody(
   const age = draft.age.trim();
   const ageInvalid = age !== "" && !/^0*[1-9]\d*$/.test(age);
   const units = unitsFor(language);
-  const height = parseHeight(draft.height, units);
-  const weight = parseWeight(draft.weight, units);
+  // A field left as `toDraft` showed it keeps the stored number: the imperial field is rounded to
+  // whole inches and pounds, and sending that back would drift the figure on an unrelated edit.
+  const height =
+    original &&
+    draft.height === heightField(original.height_cm, units, language)
+      ? { value: original.height_cm, invalid: false }
+      : parseHeight(draft.height, units);
+  const weight =
+    original &&
+    draft.weight === weightField(original.weight_kg, units, language)
+      ? { value: original.weight_kg, invalid: false }
+      : parseWeight(draft.weight, units);
   return {
     ageInvalid,
     invalid: [

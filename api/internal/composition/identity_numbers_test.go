@@ -9,6 +9,7 @@ package composition_test
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -186,4 +187,23 @@ func TestIdentityNumbers_Step5_2_TheEdgeIsCheckedAfterTheRoundingToATenth(t *tes
 		assert.InDelta(t, c.stored, *got.Height, 1e-9, c.sent)
 		assert.Len(t, got.Warnings, c.warnings, c.sent)
 	}
+}
+
+// A creation that names height_cm as null clears it, as a PATCH does: the number key wins over the
+// text key whether it is a number or a null.
+func TestIdentityNumbers_CreateNullNumberKeyBeatsTheTextKey(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var list listView
+	body := `{"name":"Null","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
+		`"hpMax":10,"xp":2500,"skillArmor":"leather","details":{"alignment":"neutral_good","sex":"female",` +
+		`"height_cm":null,"height":"180 cm","weight":"60 kg"}}`
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, &list))
+	var got numbersView
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.Nil(t, got.Height, "height_cm null wins over the text")
+	require.NotNil(t, got.Weight)
+	assert.Equal(t, 60.0, *got.Weight, "an omitted weight_kg leaves the text")
+	// An unknown key under details is still refused.
+	assert.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", strings.Replace(body, `"height_cm":null,`, `"bogus":1,`, 1), nil))
 }

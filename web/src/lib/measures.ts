@@ -90,7 +90,8 @@ const FEET_INCHES = new RegExp(
 );
 const INCHES = new RegExp(String.raw`^${NUM}\s*(?:"|″|''|in)?$`, "i");
 const FEET_SPACE_INCHES = new RegExp(String.raw`^(\d+)\s+${NUM}$`);
-const PLAIN = new RegExp(String.raw`^${NUM}\s*(?:cm|kg|lbs?)?$`, "i");
+const PLAIN = new RegExp(String.raw`^${NUM}\s*(cm)?$`, "i");
+const PLAIN_WEIGHT = new RegExp(String.raw`^${NUM}\s*(kgs?|lbs?)?$`, "i");
 
 /**
  * A height typed in the units: centimetres, or feet and inches (`5'10"`, `5 10`, `5'`; a lone
@@ -104,6 +105,9 @@ export function parseHeight(text: string, units: Units): Parsed {
     const m = PLAIN.exec(s);
     if (!m) return INVALID;
     cm = num(m[1]);
+  } else if (PLAIN.exec(s)?.[2]) {
+    // An explicit "180 cm" is read as written in any language.
+    cm = num(PLAIN.exec(s)![1]);
   } else {
     const fi = FEET_INCHES.exec(s) ?? FEET_SPACE_INCHES.exec(s);
     if (fi) {
@@ -123,11 +127,10 @@ export function parseHeight(text: string, units: Units): Parsed {
 export function parseWeight(text: string, units: Units): Parsed {
   const s = text.trim();
   if (s === "") return EMPTY;
-  const m = PLAIN.exec(s);
+  const m = PLAIN_WEIGHT.exec(s);
   if (!m) return INVALID;
   const v = num(m[1]);
-  return {
-    value: tenth(units === "metric" ? v : v * KG_PER_POUND),
-    invalid: false,
-  };
+  // An explicit unit is read as written, whatever the language; a bare number is in the language's.
+  const pounds = m[2] ? /^lb/i.test(m[2]) : units === "imperial";
+  return { value: tenth(pounds ? v * KG_PER_POUND : v), invalid: false };
 }

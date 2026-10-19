@@ -295,7 +295,11 @@ function DetailsForm({
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    const { body, ageInvalid, invalid } = toBody(draft, i18n.language);
+    const { body, ageInvalid, invalid } = toBody(
+      draft,
+      i18n.language,
+      character,
+    );
     if (ageInvalid) {
       setError({ field: "age", code: "out_of_range" });
       return;

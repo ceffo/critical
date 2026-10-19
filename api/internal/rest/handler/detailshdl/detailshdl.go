@@ -3,6 +3,7 @@
 package detailshdl
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -41,16 +42,38 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc detailssvc.SVC) {
 // migration's parser reads (an empty one clears). height_cm and weight_kg
 // win when both are sent.
 type DetailsDTO struct {
-	Alignment string   `json:"alignment"`
-	Age       *int     `json:"age"`
-	Sex       string   `json:"sex"`
-	Height    string   `json:"height"`
-	Weight    string   `json:"weight"`
-	HeightCm  *Height  `json:"height_cm"`
-	WeightKg  *Weight  `json:"weight_kg"`
-	Hair      string   `json:"hair"`
-	Eyes      string   `json:"eyes"`
-	Languages []string `json:"languages"`
+	Alignment string  `json:"alignment"`
+	Age       *int    `json:"age"`
+	Sex       string  `json:"sex"`
+	Height    string  `json:"height"`
+	Weight    string  `json:"weight"`
+	HeightCm  *Height `json:"height_cm"`
+	WeightKg  *Weight `json:"weight_kg"`
+	// HeightNull and WeightNull are set when the body names height_cm / weight_kg as JSON null (a
+	// clear), which pointers alone cannot tell from an omitted key. Read by the creation only.
+	HeightNull bool     `json:"-"`
+	WeightNull bool     `json:"-"`
+	Hair       string   `json:"hair"`
+	Eyes       string   `json:"eyes"`
+	Languages  []string `json:"languages"`
+}
+
+// UnmarshalJSON reads the details strictly (unknown keys refused, as the bodies are) and notes a
+// height_cm or weight_kg sent as null.
+func (d *DetailsDTO) UnmarshalJSON(b []byte) error {
+	type plain DetailsDTO
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode((*plain)(d)); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	d.HeightNull = string(raw["height_cm"]) == "null"
+	d.WeightNull = string(raw["weight_kg"]) == "null"
+	return nil
 }
 
 // ToDTO maps the domain details to their wire shape.

@@ -110,3 +110,19 @@ describe("typing a weight", () => {
     }
   });
 });
+
+describe("an explicit unit is read as written", () => {
+  it("reads kg and lb in either language", () => {
+    expect(parseWeight("75 kg", "imperial").value).toBe(75);
+    expect(parseWeight("150 lb", "metric").value).toBe(68);
+    expect(parseWeight("150 lbs", "imperial").value).toBe(68);
+    expect(parseWeight("75", "imperial").value).toBe(34);
+    expect(parseWeight("75", "metric").value).toBe(75);
+  });
+  it("reads cm in either language and refuses a weight unit on a height", () => {
+    expect(parseHeight("180 cm", "imperial").value).toBe(180);
+    expect(parseHeight("180 cm", "metric").value).toBe(180);
+    expect(parseHeight("180 kg", "metric").invalid).toBe(true);
+    expect(parseHeight("75 lb", "imperial").invalid).toBe(true);
+  });
+});

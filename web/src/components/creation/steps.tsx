@@ -998,7 +998,7 @@ export function IdentityStep({ options, draft, update, errorFor }: StepProps) {
   const cls = classOf(options, draft.cls);
   const nameError = errorFor("name");
   const setDetail = (f: keyof FlowDraft["details"], v: string) =>
-    update({ details: { ...draft.details, [f]: v } });
+    update({ details: { [f]: v } });
   const units = unitsFor(i18n.language);
   // A rolled figure fills its field, in the units the player types in (ADR 0032 step 5.3).
   const filled = (f: "age" | "height" | "weight", v: number) =>

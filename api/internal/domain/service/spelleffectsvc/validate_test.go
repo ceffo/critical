@@ -56,6 +56,18 @@ func TestValidate(t *testing.T) {
 			e.Kind = spelleffectsvc.KindBuff
 			e.Buff = &spelleffectsvc.Buff{Modifiers: map[string]*formula.Formula{"luck": f}}
 		}, "modifiers key"},
+		"condition_keys without condition": {func(e *spelleffectsvc.Entry) {
+			e.Kind = spelleffectsvc.KindBuff
+			e.Buff = &spelleffectsvc.Buff{Modifiers: map[string]*formula.Formula{"save": f}, ConditionKeys: []string{"save"}}
+		}, "needs a condition"},
+		"condition_keys not a modifier": {func(e *spelleffectsvc.Entry) {
+			e.Kind = spelleffectsvc.KindBuff
+			e.Buff = &spelleffectsvc.Buff{Modifiers: map[string]*formula.Formula{"save": f}, Condition: "vs magic", ConditionKeys: []string{"ac"}}
+		}, "not one of the modifiers"},
+		"condition_keys on one modifier": {func(e *spelleffectsvc.Entry) {
+			e.Kind = spelleffectsvc.KindBuff
+			e.Buff = &spelleffectsvc.Buff{Modifiers: map[string]*formula.Formula{"save": f, "ac_set": f}, Condition: "vs magic", ConditionKeys: []string{"save"}}
+		}, ""},
 		"grant_slots zero":     {func(e *spelleffectsvc.Entry) { e.GrantSlots = &spelleffectsvc.GrantSlots{} }, "grant_slots.levels"},
 		"consume_item no type": {func(e *spelleffectsvc.Entry) { e.ConsumeItem = &spelleffectsvc.ConsumeItem{Type: " "} }, "consume_item.type"},
 		"cast mechanics on a utility": {func(e *spelleffectsvc.Entry) {

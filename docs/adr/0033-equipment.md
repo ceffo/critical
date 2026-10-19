@@ -489,7 +489,9 @@ and the sheet's Dexterity; served at `GET /api/ac` as rows of codes (`term`: `ba
 that does not add). Readings the ADR leaves open, fixed here: an effect with a `weapon_kind`
 condition never moves the AC (it conditions the character's own attack); a `base_ac` that does not
 count is shown as not adding; the shield's own `ac` powers are their own term, `shield_magic`; the
-spell seed's `ac_set` (the Armor spell, Spirit Armor) casts as `base_ac`. The override (step 13) is
+spell seed's `ac_set` (the Armor spell, Spirit Armor) casts as `base_ac`; a seed's `condition` limits only the
+modifiers its `condition_keys` names, all of them without it (Spirit Armor's and Blur's limit their
+save bonus, so Spirit Armor's `ac_set` applies). The override (step 13) is
 `characters.ac_override` and `ac_override_label` (migration 017), set by `PUT /api/ac/override
 {value, label}` and cleared by `DELETE`, one `ac_override` entry (`{before, after}`, snapshot
 `ac_override`) each, nothing logged for the same value again (`TestAC_Step13_*`). The `initiative`

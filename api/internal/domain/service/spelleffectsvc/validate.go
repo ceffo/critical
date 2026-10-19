@@ -189,6 +189,14 @@ func (b *Buff) validate() error {
 			return fmt.Errorf("ability_set.%s is empty", ab)
 		}
 	}
+	if len(b.ConditionKeys) > 0 && b.Condition == "" {
+		return fmt.Errorf("condition_keys needs a condition")
+	}
+	for _, k := range b.ConditionKeys {
+		if _, ok := b.Modifiers[k]; !ok {
+			return fmt.Errorf("condition_keys %q is not one of the modifiers", k)
+		}
+	}
 	return nil
 }
 

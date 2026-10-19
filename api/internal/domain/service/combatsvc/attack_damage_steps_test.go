@@ -334,4 +334,20 @@ func TestDamage_ADR0033Step4_LauncherRollsAmmunitionDice(t *testing.T) {
 		require.ErrorAs(t, err, &fe)
 		assert.Equal(t, "ammoItemId", fe.Field)
 	})
+	// ADR 0033 step 4: a launcher with no ammunition chosen is refused on
+	// the ammunition field, before any die is rolled or piece spent.
+	t.Run("step 4: launcher with no ammunition chosen: refused on the ammunition field", func(t *testing.T) {
+		f := newFixture(t)
+		f.weapons.EXPECT().Get(mock.Anything, charID, catalogueBow.ID).Return(catalogueBow, nil).Once()
+		f.withChar(bard())
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil).Once()
+
+		_, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{
+			WeaponID: catalogueBow.ID, TargetAC: new(5),
+		})
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, "ammoItemId", fe.Field)
+		assert.ErrorIs(t, err, domain.ErrInvalidInput)
+	})
 }

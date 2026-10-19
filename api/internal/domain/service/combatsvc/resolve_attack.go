@@ -113,7 +113,7 @@ func (s *service) spendAmmo(ctx context.Context, characterID int64, weapon Weapo
 		return nil, nil
 	}
 	if ammoID == "" {
-		return nil, fmt.Errorf("%w: %s needs ammunition (%s)", domain.ErrInvalidInput, weapon.Name.Any(), weapon.AmmoKind)
+		return nil, domain.FieldErrorf("ammoItemId", "%s needs ammunition (%s)", weapon.Name.Any(), weapon.AmmoKind)
 	}
 	item, err := s.items.Use(ctx, characterID, ammoID)
 	if err != nil {

@@ -397,6 +397,14 @@ design-shots *args:
     cd web && node e2e/check-browser.mjs
     node docs/design/ui-directions/shots.mjs {{args}}
 
+# Onboarding design round (docs/design/onboarding/): the mock-ups of web/design/onboarding/ served on
+# the app's Vite and screenshotted in French and English at 1280x800 and 2560x1440 into
+# docs/design/onboarding/shots/; fails on cut text or a page scroll (`--self-test` checks the audit).
+# Not part of `just validate` nor `just e2e`. Needs web/node_modules and `just e2e-install` once.
+onboarding-shots *args:
+    cd web && node e2e/check-browser.mjs
+    node docs/design/onboarding/shots.mjs {{args}}
+
 # Clone (or fast-forward) the private rulebooks repo used as a rules reference. Not part of validate/dev.
 # Override the target dir with RULEBOOKS_DIR and the remote with RULEBOOKS_REMOTE.
 rulebooks:

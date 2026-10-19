@@ -43,7 +43,7 @@ export function ChargeCards() {
               </span>
               <span
                 className="min-w-0 text-label break-words text-muted-foreground tabular-nums"
-                title={t("moi.chargesHint")}
+                title={t("chargeCards.chargesHint")}
                 data-testid="charge-count"
               >
                 {b.chargesTotal >= b.charges
@@ -51,16 +51,16 @@ export function ChargeCards() {
                       count: b.charges,
                       total: b.chargesTotal,
                     })
-                  : t("moi.chargesLeft", { count: b.charges })}
+                  : t("chargeCards.chargesLeft", { count: b.charges })}
               </span>
             </div>
             <Button
               size="sm"
               disabled={busy}
-              aria-label={t("moi.absorbLabel", { name })}
+              aria-label={t("chargeCards.absorbLabel", { name })}
               onClick={() => void run(() => triggerBuff(b.id))}
             >
-              {t("moi.absorb")}
+              {t("chargeCards.absorb")}
             </Button>
           </div>
         );

@@ -1,0 +1,14 @@
+{
+  "removed": {
+    "payload": {
+      "weapon_id": "dagger",
+      "name": "Dagger",
+      "damage_sm": "1d4",
+      "damage_l": "1d3",
+      "magic_to_hit": 0,
+      "magic_damage": 0,
+      "kind": "melee",
+      "two_handed": false
+    }
+  }
+}

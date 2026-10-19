@@ -177,7 +177,7 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     `TestActiveBuffs_SpellIDRoundTripsAndOldRowsReadEmpty` (`buffdal`);
     `TestBuffs_SpellIDOnTheWire` (`router`); SQLite migration 028 backfilled the spell ids of
     existing buffs (a past migration; the per-migration test was deleted with the squash into the PostgreSQL baseline, [ADR 0025](0025-postgresql-storage.md) step 2.3); the client's
-    `buffName` and log tests (`web/src/i18n/spellName.test.ts`, `web/src/lib/logSummary.test.ts`).
+    `buffName` and log tests (`web/src/i18n/spellName.test.ts`, `web/src/journal/entryText.test.ts`).
 18. **Weapon-kind condition.** A buff's effects, or an item power's (ADR 0016 step 12), may carry
     a `weapon_kind` condition, `melee` or `missile` (the weapon kinds of ADR 0016 step 8). With one,
     the effects count only for an attack, or its preview, made with a weapon of that kind; a hurled

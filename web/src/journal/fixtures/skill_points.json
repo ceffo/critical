@@ -1,0 +1,14 @@
+{
+  "spent": {
+    "payload": {
+      "before": {
+        "open_locks": 30,
+        "climb_walls": 60
+      },
+      "after": {
+        "open_locks": 45,
+        "climb_walls": 60
+      }
+    }
+  }
+}

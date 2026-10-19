@@ -82,7 +82,7 @@ The combat clock's unit, counted by hand: **Next round** (fr: Tour suivant),
 **End combat** (fr: Fin du combat) and **Set round** move it. [ADR 0005](docs/adr/0005-rounds-and-time.md).
 A duration the book gives in turns (10 rounds) is shown in rounds, in both languages.
 _Avoid_: turn (in English a turn is ten rounds, and "turn" means turning undead in this
-project; the web's `turn` identifiers are legacy).
+project).
 
 **Initiative** (fr: initiative):
 The round's d10 rolled on Next round, lowest first; display only. [ADR 0013](docs/adr/0013-initiative.md),
@@ -336,7 +336,7 @@ The first screen of a user without a character and the full-screen, stepped crea
 **Theme** (fr: thème):
 One of the four colour themes, a dark and a light one per device. [ADR 0026](docs/adr/0026-contrast-ladder-raised-stage-four-themes.md).
 
-**Fil**, **Moi** (legacy):
+**Fil**, **Moi** (retired):
 The two columns of the dashboard v3 of [ADR 0009](docs/adr/0009-dashboard-layout-and-theme-system.md),
-replaced by [ADR 0022](docs/adr/0022-activity-focus-layout.md). They survive only as code and i18n
-namespace names (`fil`, `moi`). _Avoid_ in anything new.
+replaced by [ADR 0022](docs/adr/0022-activity-focus-layout.md): the journal with its result card,
+and the character card. No code or i18n name uses them any more. _Avoid_ in anything new.

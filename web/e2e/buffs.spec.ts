@@ -7,12 +7,12 @@ import {
   expectNoReload,
   logEntry,
   markNoReload,
-  nextTurn,
+  nextRound,
   openAddEffect,
   openDashboard,
   undoEntry,
-  undoNextTurn,
-  turnGroup,
+  undoNextRound,
+  roundGroup,
 } from "./helpers";
 
 test("Next round then void restores the round, the durations and the expired buff", async ({
@@ -26,7 +26,7 @@ test("Next round then void restores the round, the durations and the expired buf
   await addBuff(page, { name: "e2e Bless", rounds: 3 });
   await expect(logEntry(page, "Activated e2e Haste (1 rd)")).toBeVisible();
 
-  await nextTurn(page);
+  await nextRound(page);
   await expect.poll(() => currentRound(page)).toBe(r0 + 1);
   await expect(page.getByRole("status")).toContainText(
     "Expired effects: e2e Haste",
@@ -38,13 +38,13 @@ test("Next round then void restores the round, the durations and the expired buf
   const advance = `Round ${r0} → ${r0 + 1} — expired: e2e Haste`;
   // Logged with its initiative as one transaction, in the round it opens.
   await expect(
-    turnGroup(page, r0 + 1)
+    roundGroup(page, r0 + 1)
       .getByRole("listitem")
       .filter({ hasText: advance }),
   ).toBeVisible();
   await snap(page, "next-round-expired");
 
-  await undoNextTurn(page, logEntry(page, advance));
+  await undoNextRound(page, logEntry(page, advance));
   await expect.poll(() => currentRound(page)).toBe(r0);
   await expect(page.getByRole("status")).toHaveCount(0);
   await expect(
@@ -88,7 +88,7 @@ test("editing a buff's remaining rounds is logged and voidable", async ({
   await snap(page, "edit-rounds-voided");
 });
 
-test("Stoneskin layers absorb hits from the Moi card, the buff ends at 0, and the absorb is voidable", async ({
+test("Stoneskin layers absorb hits from the character card, the buff ends at 0, and the absorb is voidable", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -99,7 +99,7 @@ test("Stoneskin layers absorb hits from the Moi card, the buff ends at 0, and th
   await expect(badge.getByTestId("buff-charges")).toHaveText(
     "2 / 2 charges · until spent",
   );
-  // The Moi column shows a card for it, above the damage entry.
+  // The character card shows a card for it, above the damage entry.
   const card = page
     .getByRole("complementary", { name: "Character" })
     .getByRole("group", { name: "e2e Stoneskin" });
@@ -189,7 +189,7 @@ test.describe("with the sheet's STR 12", () => {
     await expect(hammer.getByRole("button")).toHaveCount(0);
     await snap(page, "strength-18-gem-on");
 
-    await nextTurn(page);
+    await nextRound(page);
     await expect(buffBadge(page, "e2e Strength")).toHaveCount(0);
     await expect.poll(() => effectiveStr(page)).toBe(12);
     await expect(hammer).toHaveCount(0);

@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { useSpellName } from "@/i18n/spellName";
 import { useInventoryName } from "@/i18n/inventoryName";
-import { lastResultEntry, type RowValue } from "@/lib/filCard";
-import { shortResult, type ShortVerdict } from "@/lib/lastResultShort";
-import { formatTime } from "@/lib/format";
-import { entryText } from "@/lib/logSummary";
+import { lastResultEntry } from "@/journal/card";
+import { entryText, shortResult } from "@/journal/entry";
+import type { RowValue, ShortVerdict } from "@/journal/kindView";
+import { entryWhen } from "@/journal/rounds";
 import { cn } from "@/lib/utils";
 import { useLogStore } from "@/stores/log";
 
@@ -39,12 +39,7 @@ export function LastResult() {
   const entries = useLogStore((s) => s.entries);
   const entry = lastResultEntry(entries);
   const short = entry ? shortResult(entry, t, spellName, names) : null;
-  const when = entry
-    ? t(entry.round > 0 ? "fil.when" : "fil.whenOutOfCombat", {
-        round: entry.round,
-        time: formatTime(entry.createdAt, i18n.language),
-      })
-    : null;
+  const when = entry ? entryWhen(t, entry, i18n.language) : null;
   const full = entry
     ? `${entryText(entry, t, spellName, names)} (${when})`
     : undefined;
@@ -53,7 +48,7 @@ export function LastResult() {
     <div
       role="group"
       aria-label={t("shell.lastResult")}
-      // A banded cell of the header card (ADR 0026 step 6.3), like the turn block.
+      // A banded cell of the header card (ADR 0026 step 6.3), like the round block.
       className="group-band flex max-w-[16.67vw] min-w-0 flex-col items-end gap-0.5 rounded-lg px-3 py-1"
       data-testid="last-result"
     >

@@ -592,8 +592,8 @@ test("create a cleric, prepare and cast a spell, turn undead", async ({
 
   // A level-up moves the panel to the next Table 61 column without a reload: 1,500 XP reach the
   // cleric's level 2 (Table 23), the hit die is rolled, and skeletons need 7 instead of 10.
-  const moi = page.getByRole("complementary", { name: "Personnage" });
-  await moi.getByRole("button", { name: /^Niveau 1$/ }).click();
+  const character = page.getByRole("complementary", { name: "Personnage" });
+  await character.getByRole("button", { name: /^Niveau 1$/ }).click();
   const add = page.getByRole("region", { name: "Ajouter des XP" });
   await add.getByLabel("Montant").fill("1500");
   await add.getByLabel("Motif").fill("La crypte");

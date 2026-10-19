@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
-import { entryText } from "@/lib/logSummary";
+import { entryText } from "@/journal/entry";
 import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 

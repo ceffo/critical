@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
-import { skillName } from "@/lib/logSummary";
+import { skillName } from "@/journal/words";
 import { parseWhole } from "@/lib/wholeNumber";
 import { cn } from "@/lib/utils";
 import { useSkillsStore } from "@/stores/skills";

@@ -1,0 +1,23 @@
+{
+  "prepared": {
+    "payload": {
+      "spells": [
+        {
+          "id": "sleep",
+          "name": "Sleep",
+          "count": 2
+        },
+        {
+          "id": "charm_person",
+          "name": "Charm Person",
+          "count": 1
+        }
+      ]
+    }
+  },
+  "none": {
+    "payload": {
+      "spells": []
+    }
+  }
+}

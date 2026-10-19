@@ -69,7 +69,7 @@ async function readHeader(page: Page): Promise<HeaderData> {
     page.evaluate(() =>
       (
         document.querySelector(
-          "[data-screen=turn-header]:not(.bp-header) [data-testid=effects-expander]",
+          "[data-screen=round-header]:not(.bp-header) [data-testid=effects-expander]",
         ) as HTMLElement
       ).click(),
     );
@@ -77,7 +77,7 @@ async function readHeader(page: Page): Promise<HeaderData> {
     () =>
       document
         .querySelector(
-          "[data-screen=turn-header]:not(.bp-header) [data-testid=effects-expander]",
+          "[data-screen=round-header]:not(.bp-header) [data-testid=effects-expander]",
         )
         ?.textContent?.trim() ?? "",
   );
@@ -92,7 +92,7 @@ async function readHeader(page: Page): Promise<HeaderData> {
 async function read(page: Page): Promise<HeaderData> {
   return page.evaluate(() => {
     const h = document.querySelector(
-      "[data-screen=turn-header]:not(.bp-header)",
+      "[data-screen=round-header]:not(.bp-header)",
     )!;
     const q = (s: string) => h.querySelector(s);
     const txt = (s: string) => q(s)?.textContent?.trim() ?? "";
@@ -147,10 +147,10 @@ function headerHtml(
   expanded = false,
 ): string {
   const brand = `<div class="bp-brand" data-testid="bp-brand">${MARK}<span class="bp-wordmark" data-testid="bp-wordmark">Critical<b>!</b></span></div>`;
-  const turn = `<div class="bp-turn"><span class="bp-label">${t("turn.title")}</span><span class="num">${d.turn}</span></div>`;
+  const turn = `<div class="bp-turn"><span class="bp-label">${t("round.title")}</span><span class="num">${d.turn}</span></div>`;
   const next = `<div class="bp-next">
-    <div class="row"><span class="bp-btn">${t("turn.next")}${d.icons.next}</span><span class="bp-icon-btn">${d.icons.menu}</span></div>
-    <div class="bp-init" title="${t("turn.initiativeHint")}">${t("turn.initiative")} <span class="num">${d.initiative}</span><span class="bp-icon-btn quiet">${d.icons.reroll}</span></div>
+    <div class="row"><span class="bp-btn">${t("round.next")}${d.icons.next}</span><span class="bp-icon-btn">${d.icons.menu}</span></div>
+    <div class="bp-init" title="${t("round.initiativeHint")}">${t("round.initiative")} <span class="num">${d.initiative}</span><span class="bp-icon-btn quiet">${d.icons.reroll}</span></div>
   </div>`;
   const turnNo = Number(d.turn);
   const cols = Array.from({ length: COLUMNS }, (_, i) => {
@@ -193,7 +193,7 @@ function headerHtml(
       : p.id === "e-dock"
         ? `${turn}${next}${effects}<div class="bp-dockcol">${brand}${last}</div>`
         : `${turn}${next}${effects}${last}${brand}`; // c-right, c-right-top, d-wide
-  return `<header class="bp-header ${p.cls}" data-screen="turn-header">${inner}</header>`;
+  return `<header class="bp-header ${p.cls}" data-screen="round-header">${inner}</header>`;
 }
 
 /** Put the drawn header in front of the real one (which the stylesheet hides). */
@@ -209,7 +209,7 @@ async function draw(page: Page, css: string, html: string) {
       style.textContent = css;
       document.querySelector(".bp-header")?.remove();
       const real = document.querySelector(
-        "[data-screen=turn-header]:not(.bp-header)",
+        "[data-screen=round-header]:not(.bp-header)",
       )!;
       real.insertAdjacentHTML("beforebegin", html);
     },

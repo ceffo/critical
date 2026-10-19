@@ -3,9 +3,9 @@ import type { TFunction } from "i18next";
 import { Skull } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { turnUndead } from "@/api/character";
-import { undeadName } from "@/lib/logSummary";
+import { undeadName } from "@/journal/words";
 import { useCharacterStore } from "@/stores/character";
-import { useFilStore } from "@/stores/fil";
+import { useJournalStore } from "@/stores/journal";
 import { useTableStore } from "@/stores/table";
 import type { TurningTarget } from "@/types/character";
 
@@ -33,7 +33,7 @@ export function TurnUndeadPanel() {
   const rows = useCharacterStore((s) => s.character?.derived.turning ?? null);
   const run = useTableStore((s) => s.run);
   const busy = useTableStore((s) => s.busy);
-  const showLatest = useFilStore((s) => s.showLatest);
+  const showLatest = useJournalStore((s) => s.showLatest);
   if (!rows) return null;
 
   const turn = async (undead: string) => {

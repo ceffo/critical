@@ -83,6 +83,9 @@ export interface LogEntry {
   characterId: number;
   round: number;
   kind: LogKind;
+  /** One of the roll kinds (actionlog.RollKinds, ADR 0018 step 10): its result takes the result
+   * card, and only the newest of them takes a correction. Absent from an API older than the mark. */
+  roll?: boolean;
   summary: string;
   /** Original HP delta as recorded. */
   hpDelta: number;

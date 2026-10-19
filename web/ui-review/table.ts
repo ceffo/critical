@@ -10,7 +10,7 @@ import {
   chooseTheme,
   chooseWeapon,
   logEntry,
-  nextTurn,
+  nextRound,
   openDashboard,
   openWeapons,
   recordHp,
@@ -104,7 +104,7 @@ export async function seedTable(page: Page, apiUrl: string) {
   if ((await expander.getAttribute("aria-expanded")) === "true")
     await expander.click();
   await expect(page.getByTestId("buff")).toHaveCount(3);
-  await nextTurn(page);
+  await nextRound(page);
   // The amount field is cleared when a change lands: wait for each entry before the next.
   await recordHp(page, "damage", 12, "Orc axe");
   await expect(logEntry(page, "Orc axe")).toBeVisible();

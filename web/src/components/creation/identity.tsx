@@ -17,7 +17,7 @@ import { classOf, type StepId } from "@/lib/creationFlow";
 import { raceLanguages } from "@/lib/languages";
 import { heightField, unitsFor, weightField } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
-import { skillName } from "@/lib/logSummary";
+import { skillName } from "@/journal/words";
 import { useLanguageNames } from "@/lib/useLanguageNames";
 import { cn } from "@/lib/utils";
 import {

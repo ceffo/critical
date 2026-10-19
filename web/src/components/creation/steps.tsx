@@ -29,7 +29,7 @@ import {
 } from "@/lib/creationFlow";
 import { raceLanguages } from "@/lib/languages";
 import { formatNumber } from "@/lib/format";
-import { skillName } from "@/lib/logSummary";
+import { skillName } from "@/journal/words";
 import { useLanguageNames } from "@/lib/useLanguageNames";
 import { parseWhole } from "@/lib/wholeNumber";
 import { cn } from "@/lib/utils";

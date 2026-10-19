@@ -1,0 +1,69 @@
+{
+  "failed": {
+    "roll": true,
+    "payload": {
+      "category": "spell",
+      "d20Roll": 12,
+      "modifiers": [
+        {
+          "kind": "buff",
+          "detail": "Prayer",
+          "value": 1
+        }
+      ],
+      "target": 14,
+      "rolledPassed": false,
+      "adjustment": 0,
+      "rollTotal": 13,
+      "adjustedTarget": 14,
+      "total": 13,
+      "passed": false,
+      "margin": -1
+    }
+  },
+  "adjusted": {
+    "roll": true,
+    "status": "amended",
+    "payload": {
+      "category": "spell",
+      "d20Roll": 12,
+      "modifiers": [
+        {
+          "kind": "buff",
+          "detail": "Prayer",
+          "value": 1
+        }
+      ],
+      "target": 14,
+      "rolledPassed": false,
+      "adjustment": 0,
+      "rollTotal": 13,
+      "adjustedTarget": 14,
+      "total": 13,
+      "passed": false,
+      "margin": -1
+    },
+    "effectivePayload": {
+      "category": "spell",
+      "d20Roll": 12,
+      "modifiers": [
+        {
+          "kind": "buff",
+          "detail": "Prayer",
+          "value": 1
+        }
+      ],
+      "target": 14,
+      "rolledPassed": false,
+      "adjustment": 2,
+      "rollTotal": 13,
+      "adjustedTarget": 12,
+      "total": 15,
+      "passed": true,
+      "margin": 1,
+      "adjustmentReason": "Gaia",
+      "previousPassed": false,
+      "previousAdjustment": 0
+    }
+  }
+}

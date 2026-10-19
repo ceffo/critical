@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { buffName, useSpellName } from "@/i18n/spellName";
 import { powerEffectsText, powerRows, type PowerRow } from "@/lib/itemPowers";
-import { formatTurnsLeft } from "@/lib/passTime";
+import { formatRoundsLeft } from "@/lib/passTime";
 import {
   TRACK_COLUMNS,
   effectSpan,
@@ -28,9 +28,9 @@ import { AddEffect } from "./AddEffect";
 import { EditBuffForm } from "./BuffForms";
 
 /**
- * The name column, then one column per turn of the window (ADR 0027 step 4.6): the name column is as
+ * The name column, then one column per round of the window (ADR 0027 step 4.6): the name column is as
  * wide as the longest effect name, the hidden ones included, so it does not jump when the expander
- * opens; past the cap (a player's very long custom name) the name wraps, never cut. The turn columns
+ * opens; past the cap (a player's very long custom name) the name wraps, never cut. The round columns
  * share the rest of the width.
  */
 const NAME_COLUMN = "fit-content(clamp(14rem, 22vw, 26rem))";
@@ -44,13 +44,13 @@ type TrackRow =
   | { kind: "power"; key: string; power: PowerRow };
 
 /**
- * The effects track: one row per active buff over a window of turns that follows the current one,
+ * The effects track: one row per active buff over a window of rounds that follows the current one,
  * then one per item power that is on (named by its item, nothing to edit or dismiss).
- * A timed buff is a thin line for the turns it has run and a pill for what is left (from the
- * server's `duration`), in the warning colour on its last turn; a charge buff shows its charges as
+ * A timed buff is a thin line for the rounds it has run and a pill for what is left (from the
+ * server's `duration`), in the warning colour on its last round; a charge buff shows its charges as
  * pips; a buff that does not apply is dashed with a lock and the reason. Absorb, edit and remove
  * show on the row's hover and keyboard focus (ADR 0027 step 4.4); Add stays next to the label. Five
- * turn columns at every width (step 4.3), sharing the width the header leaves. At rest the track shows its turn row and up to 3 effect rows, no scrollbar; with more effects an
+ * round columns at every width (step 4.3), sharing the width the header leaves. At rest the track shows its round row and up to 3 effect rows, no scrollbar; with more effects an
  * expander (aria-expanded) grows the track in place to show them all, capped at 40% of the viewport
  * height where it scrolls (ADR 0017 step 6).
  */
@@ -59,7 +59,7 @@ export function EffectsTimeline() {
   const buffs = useBuffsStore((s) => s.buffs);
   const powers = useBuffsStore((s) => s.powers);
   const items = useItemsStore((s) => s.items);
-  const turn = useBuffsStore((s) => s.round);
+  const round = useBuffsStore((s) => s.round);
   const [editing, setEditing] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const edited = buffs.find((b) => b.id === editing);
@@ -74,11 +74,11 @@ export function EffectsTimeline() {
   ];
   const hidden = Math.max(rows.length - REST_ROWS, 0);
   const shown = expanded ? rows : rows.slice(0, REST_ROWS);
-  const start = windowStart(turn);
-  const current = turn - start;
+  const start = windowStart(round);
+  const current = round - start;
   // Out of combat (round 0) no round is counted: the numbers row and the current-round highlight go,
   // the row itself stays so the effect rows do not move (ADR 0027 step 4.3).
-  const inCombat = turn > 0;
+  const inCombat = round > 0;
   const columns = Array.from({ length: size }, (_, i) => start + i);
   const grid: CSSProperties = {
     gridTemplateColumns: `${NAME_COLUMN} repeat(${size}, minmax(3rem, 1fr))`,
@@ -99,7 +99,7 @@ export function EffectsTimeline() {
           data-testid="effects-track"
           data-columns={size}
         >
-          {/* The current turn, highlighted across every row (in combat only). */}
+          {/* The current round, highlighted across every row (in combat only). */}
           {inCombat && (
             <div
               aria-hidden
@@ -142,7 +142,7 @@ export function EffectsTimeline() {
               key={n}
               className={cn(
                 "sticky top-0 z-10 flex h-full items-center justify-center text-label tabular-nums",
-                // Opaque, so effect rows scrolled under the sticky turn row stay hidden; the current
+                // Opaque, so effect rows scrolled under the sticky round row stay hidden; the current
                 // column keeps its highlight tint.
                 inCombat && i === current
                   ? "bg-[color-mix(in_oklab,var(--tint)_10%,var(--card))]"
@@ -165,7 +165,7 @@ export function EffectsTimeline() {
                 key={r.key}
                 buff={r.buff}
                 row={row + 2}
-                turn={turn}
+                round={round}
                 start={start}
                 size={size}
                 onEdit={() => {
@@ -177,7 +177,7 @@ export function EffectsTimeline() {
                 key={r.key}
                 power={r.power}
                 row={row + 2}
-                turn={turn}
+                round={round}
                 start={start}
                 size={size}
               />
@@ -227,14 +227,14 @@ function place(run: ColumnRun, row: number): CSSProperties {
 function EffectRow({
   buff: b,
   row,
-  turn,
+  round,
   start,
   size,
   onEdit,
 }: {
   buff: BuffEffect;
   row: number;
-  turn: number;
+  round: number;
   start: number;
   size: number;
   onEdit: () => void;
@@ -244,9 +244,9 @@ function EffectRow({
   const { triggerBuff, dismissBuff } = useBuffsStore();
   const { run, busy } = useTableStore();
   const inactive = b.applies === false;
-  const lastTurn = b.duration === 1;
+  const lastRound = b.duration === 1;
   const span = effectSpan({
-    turn,
+    round,
     start,
     size,
     duration: b.duration,
@@ -268,7 +268,7 @@ function EffectRow({
       data-testid="buff"
       data-buff={b.name}
       data-applies={String(!inactive)}
-      data-last-turn={String(lastTurn)}
+      data-last-round={String(lastRound)}
     >
       <div
         className="relative flex min-w-0 items-center pr-2"
@@ -327,7 +327,7 @@ function EffectRow({
             "flex h-5 min-w-0 items-center gap-1 overflow-hidden rounded-full px-2 text-label whitespace-nowrap tabular-nums",
             inactive
               ? "border border-dashed border-neu-500 text-muted-foreground"
-              : lastTurn
+              : lastRound
                 ? "bg-warning/20 text-warning ring-1 ring-warning ring-inset"
                 : b.duration > 0
                   ? "bg-selected text-amb-200 ring-1 ring-tint/70 ring-inset"
@@ -337,14 +337,18 @@ function EffectRow({
           )}
           style={place(span.remaining, row)}
           title={
-            inactive ? reasonHint : lastTurn ? t("effects.lastTurn") : undefined
+            inactive
+              ? reasonHint
+              : lastRound
+                ? t("effects.lastRound")
+                : undefined
           }
           data-testid="effect-bar"
         >
           {inactive && <LockSimple aria-hidden className="shrink-0" />}
           {b.duration > 0 && (
             <span data-testid="buff-rounds">
-              {formatTurnsLeft(t, b.duration)}
+              {formatRoundsLeft(t, b.duration)}
             </span>
           )}
           {b.duration === 0 && b.charges > 0 && (
@@ -384,7 +388,7 @@ function buffEffectsText(t: TFunction, b: BuffEffect): string | null {
 }
 
 /**
- * A buff's name cell text: the name (warning on its last turn, muted when it does not apply), then
+ * A buff's name cell text: the name (warning on its last round, muted when it does not apply), then
  * what it changes and the player's note. Also drawn, hidden, to size the name column.
  */
 function BuffLabel({ buff: b, ghost }: { buff: BuffEffect; ghost?: boolean }) {
@@ -463,24 +467,30 @@ function PowerLabel({ power: p, ghost }: { power: PowerRow; ghost?: boolean }) {
 }
 
 /**
- * An item power that is on: the item's name and the power's effects, a bar from the current turn to
+ * An item power that is on: the item's name and the power's effects, a bar from the current round to
  * the edge, filled like a buff's pill and fading out (it lasts while its trigger holds). No counters, no edit or dismiss (ADR 0016 step 13).
  */
 function ItemPowerRow({
   power: p,
   row,
-  turn,
+  round,
   start,
   size,
 }: {
   power: PowerRow;
   row: number;
-  turn: number;
+  round: number;
   start: number;
   size: number;
 }) {
   const { t } = useTranslation();
-  const span = effectSpan({ turn, start, size, duration: 0, startRound: turn });
+  const span = effectSpan({
+    round,
+    start,
+    size,
+    duration: 0,
+    startRound: round,
+  });
   const lasts =
     p.minStr !== undefined
       ? t("effects.powerOnFrom", { min: p.minStr })

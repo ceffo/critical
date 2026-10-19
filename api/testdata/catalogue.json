@@ -1458,14 +1458,14 @@
   "languages": [
     {"code": "common", "name": {"en": "Common", "fr": "Commun"}},
     {"code": "dwarvish", "name": {"en": "Dwarvish", "fr": "Nain"}},
-    {"code": "elvish", "name": {"en": "Elvish", "fr": "Elfique"}},
+    {"code": "elvish", "name": {"en": "Elvish", "fr": "Elfe"}},
     {"code": "gnomish", "name": {"en": "Gnomish", "fr": "Gnome"}},
-    {"code": "halfling", "name": {"en": "Halfling", "fr": "Halfelin"}},
+    {"code": "halfling", "name": {"en": "Halfling", "fr": "Petites-gens"}},
     {"code": "goblin", "name": {"en": "Goblin", "fr": "Gobelin"}},
     {"code": "hobgoblin", "name": {"en": "Hobgoblin", "fr": "Hobgobelin"}},
     {"code": "kobold", "name": {"en": "Kobold", "fr": "Kobold"}},
     {"code": "orcish", "name": {"en": "Orcish", "fr": "Orque"}},
     {"code": "gnoll", "name": {"en": "Gnoll", "fr": "Gnoll"}},
-    {"code": "burrowers", "name": {"en": "Burrowers' speech", "fr": "Parler des fouisseurs"}}
+    {"code": "burrowers", "name": {"en": "Burrowers' speech", "fr": "Langue des fouisseurs"}}
   ]
 }

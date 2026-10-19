@@ -42,7 +42,7 @@ func TestParse_Step14_1_ReadsFormat8Languages(t *testing.T) {
 	require.True(t, ok)
 	assert.True(t, l.Has("elvish"))
 	assert.False(t, l.Has("klingon"))
-	assert.Equal(t, localizedName("Elvish", "Elfique"), l.All()[2].Name)
+	assert.Equal(t, localizedName("Elvish", "Elfe"), l.All()[2].Name)
 	for race, want := range map[string]string{
 		"human": "common", "dwarf": "dwarvish", "elf": "elvish", "gnome": "gnomish",
 		"half_elf": "common", "halfling": "halfling",

@@ -152,11 +152,11 @@ test("create a bard through the creation route, switch to the first and back, re
   await details.getByLabel("Alignement").selectOption({ label: "Neutre bon" });
   await details.getByLabel("Sexe").selectOption({ label: "Femme" });
   // ADR 0032 step 4: the half-elf's own language (Commun) is known without picking it and cannot
-  // be unticked; Elfique is picked from the race's list.
+  // be unticked; Elfe is picked from the race's list.
   const commun = details.getByRole("checkbox", { name: "Commun", exact: true });
   await expect(commun).toBeChecked();
   await expect(commun).toBeDisabled();
-  await details.getByRole("checkbox", { name: "Elfique", exact: true }).check();
+  await details.getByRole("checkbox", { name: "Elfe", exact: true }).check();
   await snap(page, "creation-identity-fr");
   await step
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
@@ -170,7 +170,7 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(pop).toContainText("Neutre bon");
   await expect(pop).toContainText("Femme");
   await expect(pop.getByTestId("details-missing")).toHaveCount(0);
-  await expect(pop).toContainText("Commun, Elfique");
+  await expect(pop).toContainText("Commun, Elfe");
   await page.keyboard.press("Escape");
 
   // 50 + 15 + 0 (half-elf) - 20 (elven chain column) - 5 (metal armour) = 40, the server's.

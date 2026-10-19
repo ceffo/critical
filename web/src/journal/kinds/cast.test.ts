@@ -41,6 +41,23 @@ describeKind("cast", fixtures, {
     value: null,
     rolled: false,
   },
+  // ADR 0004 step 20.5: a spell cast on an area, its row on the timeline marked as not on him.
+  onOther: {
+    en: {
+      text: "Cast Sleep: 75 rd, not on you",
+      short: "Sleep",
+      subtitle: "Sleep",
+      card: ['data-testid="cast-entry-buff"'],
+    },
+    fr: {
+      text: "Lancé : Sleep: 75 tr., pas sur vous",
+      short: "Sleep",
+      subtitle: "Sleep",
+      card: ['data-testid="cast-entry-buff"'],
+    },
+    value: null,
+    rolled: false,
+  },
   failed: {
     en: {
       text: "Cast Sleep: spell failed (d100 3 ≤ 10%)",

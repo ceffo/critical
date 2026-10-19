@@ -221,6 +221,8 @@
     "inactiveHint": "No effect until STR reaches {{min}}",
     "replaced": "replaced by Improved Strength",
     "replacedHint": "Improved Strength replaces the other Strength effects while it lasts",
+    "onOther": "not on you",
+    "onOtherHint": "Cast on someone else or on an area: it only counts down, nothing applies to you",
     "add": "Add effect",
     "name": "Effect name",
     "roundsLeft": "Rounds",
@@ -1303,7 +1305,8 @@
       "attackHit": "hit (d20 {{d20}} vs AC {{ac}})",
       "attackMiss": "missed (d20 {{d20}} vs AC {{ac}})",
       "spellFailed": "spell failed (d100 {{roll}} ≤ {{chance}}%)",
-      "spellHeld": "no spell failure (d100 {{roll}} > {{chance}}%)"
+      "spellHeld": "no spell failure (d100 {{roll}} > {{chance}}%)",
+      "onOther": "{{counters}}, not on you"
     },
     "item": {
       "rolled": "Used {{name}}: {{dice}} = {{total}} ({{left}} left)",
@@ -1546,6 +1549,7 @@
     "saveVs": "{{total}} vs {{target}}+",
     "castVsAc": "To-hit roll against AC {{ac}}",
     "castBuff": "{{buff}}: {{counters}}",
+    "castBuffOther": "{{buff}}: {{counters}}, not on you",
     "noRollsThisRound": "No rolls this round.",
     "filter": {
       "label": "Journal filter",

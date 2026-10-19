@@ -45,7 +45,7 @@ type characterGetter interface {
 // damageReader serves the damage a cast rolls at a caster level and whether
 // a spell can be added as an effect (castsvc satisfies it).
 type damageReader interface {
-	AddsEffect(ctx context.Context, spellID string) bool
+	AddsEffect(spellID string, duration spellstats.Duration) bool
 	DamageAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error)
 	ModesAt(ctx context.Context, spellID string, casterLevel int) ([]spelleffectsvc.ModeAt, error)
 	ExposureAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.ExposureAt, error)
@@ -144,7 +144,7 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 			return err
 		}
 		items := spellsToDTO(page.Items, level)
-		if err := enrich(r.Context(), items, level, damage); err != nil {
+		if err := enrich(r.Context(), items, page.Items, level, damage); err != nil {
 			return err
 		}
 		render.OK(r.Context(), w, SpellPageDTO{
@@ -154,14 +154,16 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 	}
 }
 
-// enrich adds what the catalogue rows do not carry to items: whether a cast
-// adds an effect, and, at a caster level the formulas are checked at, the
+// enrich adds what the catalogue rows do not carry to items (spells' DTOs,
+// in the same order): whether the spell can be added as an effect (ADR 0004
+// step 20: the action's own rule, read with the spell's catalogue
+// duration), and, at a caster level the formulas are checked at, the
 // damage, modes and exposure at that level. An explicit caster_level is
 // bounded above; the character's level is not, and a level the formulas are
 // not checked at gets no damage rather than failing the request.
-func enrich(ctx context.Context, items []wire.SpellDTO, level int, damage damageReader) error {
+func enrich(ctx context.Context, items []wire.SpellDTO, spells []spellsvc.Spell, level int, damage damageReader) error {
 	for i := range items {
-		items[i].Effect = damage.AddsEffect(ctx, items[i].ID)
+		items[i].Effect = damage.AddsEffect(items[i].ID, spells[i].Stats.Duration)
 	}
 	if level < 1 || level > spelleffectsvc.MaxCasterLevel {
 		return nil
@@ -200,7 +202,7 @@ func Get(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage dam
 			return err
 		}
 		items := []wire.SpellDTO{wire.SpellToDTO(sp, level)}
-		if err := enrich(r.Context(), items, level, damage); err != nil {
+		if err := enrich(r.Context(), items, []spellsvc.Spell{sp}, level, damage); err != nil {
 			return err
 		}
 		render.OK(r.Context(), w, items[0])

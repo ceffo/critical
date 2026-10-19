@@ -373,7 +373,11 @@ type BuffEffectDTO struct {
 	// name otherwise). Response only, like startRound: a request's value is
 	// ignored, only a spell cast stamps it.
 	SpellID string `json:"spellId,omitempty"`
-	Applies *bool  `json:"applies,omitempty"`
+	// OnOther marks a row for a spell cast on someone else or on an area
+	// (ADR 0004 step 20.5): it only counts down and never applies. Omitted
+	// for a buff on the character. Response only, like spellId.
+	OnOther bool  `json:"onOther,omitempty"`
+	Applies *bool `json:"applies,omitempty"`
 }
 
 // BuffListDTO is the effects list of GET /api/buffs, also answered by every
@@ -424,7 +428,7 @@ func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 	return BuffEffectDTO{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 		Effects: wire.BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
-		SpellID: b.SpellID,
+		SpellID: b.SpellID, OnOther: b.OnOther,
 	}
 }
 

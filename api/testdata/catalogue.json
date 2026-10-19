@@ -360,6 +360,24 @@
       "source": "PHB"
     },
     {
+      "id": "polymorph_self",
+      "class": "Wizard",
+      "level": 4,
+      "school": "Alteration",
+      "casting_time": "4",
+      "range": "0",
+      "duration": "2 turns/level",
+      "area_of_effect": "The caster",
+      "components": "V",
+      "saving_throw": "None",
+      "name": { "en": "Polymorph Self", "fr": "Métamorphose" },
+      "description": {
+        "en": "Fixture text for Polymorph Self: the caster takes another shape.",
+        "fr": "Texte de test pour Métamorphose : le lanceur change de forme."
+      },
+      "source": "PHB"
+    },
+    {
       "id": "wall_of_ice",
       "class": "Wizard",
       "level": 4,

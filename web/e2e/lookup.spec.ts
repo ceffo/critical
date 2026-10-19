@@ -164,9 +164,10 @@ test("lookup: typing 'project im' selects Project Image with no click and shows 
   ).toHaveText("15 rd");
   await snap(page, "search-selected");
 
-  // Add as effect (ADR 0004 step 19): offered only for a spell that adds a buff; Mirror Image
-  // goes on the Bard at his level and shows in the header's effects timeline.
-  await expect(detail(page).getByTestId("spell-add-effect")).toHaveCount(0);
+  // Add as effect (ADR 0004 steps 19 and 20): offered for a spell that gets a row, as Project
+  // Image does (it lasts rounds); Mirror Image goes on the Bard at his level and shows in the
+  // header's effects timeline.
+  await expect(detail(page).getByTestId("spell-add-effect")).toHaveCount(1);
   await search(page).fill("mirror image");
   await expect(selected(page)).toHaveAttribute("data-id", "mirror_image");
   await detail(page)

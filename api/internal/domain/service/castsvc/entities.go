@@ -116,6 +116,9 @@ type AppliedBuff struct {
 	// Applied is false when the buff went on somebody else (the rolls are
 	// still shown, e.g. Stoneskin layers to tell the ally).
 	Applied bool
+	// OnOther: a row marked as on someone else or on an area went on the
+	// list for it (ADR 0004 step 20.5); Buff.ID is the row's.
+	OnOther bool
 	// Duration is the rounds roll (nil: not timed).
 	Duration *Roll
 	// Charges is the charges roll (nil: no charges) and ChargeUnit what one

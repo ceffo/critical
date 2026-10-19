@@ -24,6 +24,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
 // SVC is the driver port.
@@ -35,13 +36,13 @@ type SVC interface {
 	// Receive applies a spell someone else cast on the character, at their
 	// caster level. No slot is used.
 	Receive(ctx context.Context, characterID int64, req ReceiveRequest) (CastResult, error)
-	// AddEffect puts a spell that adds a buff on the character as an
-	// effect, at the character's level, with no slot spent and no damage
-	// rolled (ADR 0004 step 19). A spell that adds no buff is refused.
+	// AddEffect puts a spell that gets a row on the character as an effect,
+	// at the character's level, with no slot spent and no damage rolled (ADR
+	// 0004 steps 19 and 20). A spell that gets no row is refused.
 	AddEffect(ctx context.Context, characterID int64, req AddEffectRequest) (CastResult, error)
-	// AddsEffect reports whether AddEffect takes spellID (false for a spell
-	// the effects catalogue does not know).
-	AddsEffect(ctx context.Context, spellID string) bool
+	// AddsEffect reports whether AddEffect takes spellID, whose catalogue
+	// duration is duration (ADR 0004 step 20: the one rule, RowOf).
+	AddsEffect(spellID string, duration spellstats.Duration) bool
 	// DamageAt is the damage a cast of spellID rolls at casterLevel (1 to
 	// MaxCasterLevel), evaluated down to the dice left to roll; nil when a
 	// cast rolls none (no effect entry, not a damage spell, low confidence).

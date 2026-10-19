@@ -183,27 +183,26 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 }
 
 // AddEffect puts a spell on the character as an effect from the spell
-// lookup, at the character's level (ADR 0004 step 19): the buff a cast would
-// put on him, rolled the same way, with no slot spent, no cast mechanics and
-// no damage. A spell that adds no buff is refused before anything is rolled
-// or written. It is one cast entry (action "effect") with the buff list's
-// snapshots, so voiding it removes the buff.
+// lookup, at the character's level (ADR 0004 step 19): the row a cast would
+// put on him (step 20), rolled the same way, with no slot spent, no cast
+// mechanics and no damage. A spell that gets no row is refused before
+// anything is rolled or written. It is one cast entry (action "effect") with
+// the buff list's snapshots, so voiding it removes the row.
 func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffectRequest) (CastResult, error) {
 	id := strings.TrimSpace(req.SpellID)
 	if id == "" {
 		return CastResult{}, fmt.Errorf("%w: spell id is required", domain.ErrInvalidInput)
 	}
-	entry, ok := s.Effects.Get(id)
-	if !ok {
-		_, found, err := s.Texts.Describe(ctx, id)
-		if err != nil {
-			return CastResult{}, fmt.Errorf("describe %s: %w", id, err)
-		}
-		if !found {
-			return CastResult{}, fmt.Errorf("%w: spell %q", domain.ErrNotFound, id)
-		}
+	spell, found, err := s.Texts.Describe(ctx, id)
+	if err != nil {
+		return CastResult{}, fmt.Errorf("describe %s: %w", id, err)
 	}
-	if !entry.AddsBuff() {
+	entry, ok := s.Effects.Get(id)
+	if !ok && !found {
+		return CastResult{}, fmt.Errorf("%w: spell %q", domain.ErrNotFound, id)
+	}
+	// ADR 0004 step 20: the one rule the lookup's offer reads too.
+	if !spelleffectsvc.RowOf(entryRef(entry, ok), spell.Stats.Duration).Any() {
 		return CastResult{}, fmt.Errorf("%w: %s", spelleffectsvc.ErrNotAnEffect, id)
 	}
 	c, err := s.Characters.GetCharacter(ctx, characterID)
@@ -236,11 +235,20 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 	return res, nil
 }
 
-// AddsEffect reports whether AddEffect takes spellID: its effect entry adds
-// a buff (ADR 0004 step 19).
-func (s *service) AddsEffect(_ context.Context, spellID string) bool {
+// AddsEffect reports whether AddEffect takes spellID: the spell gets a row
+// (ADR 0004 step 20, RowOf), from its effect entry or, without one, its
+// catalogue duration.
+func (s *service) AddsEffect(spellID string, duration spellstats.Duration) bool {
 	e, ok := s.Effects.Get(spellID)
-	return ok && e.AddsBuff()
+	return spelleffectsvc.RowOf(entryRef(e, ok), duration).Any()
+}
+
+// entryRef is e when the effects catalogue has it, nil otherwise.
+func entryRef(e spelleffectsvc.Entry, ok bool) *spelleffectsvc.Entry {
+	if !ok {
+		return nil
+	}
+	return &e
 }
 
 type effectReq struct {
@@ -268,7 +276,7 @@ func (s *service) modeFor(id, key string) (*spelleffectsvc.Mode, error) {
 }
 
 // resolve looks the spell up and applies its effect; it returns the buffs
-// snapshot when a buff went on the character.
+// snapshot when a row went on the buff list (ADR 0004 steps 19 and 20).
 func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (CastResult, []actionlog.Snapshot, error) {
 	spell, found, err := s.Texts.Describe(ctx, r.spellID)
 	if err != nil {
@@ -278,6 +286,78 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 	if !found && !hasEffect && r.source == SourceReceived {
 		return CastResult{}, nil, fmt.Errorf("%w: spell %q", domain.ErrNotFound, r.spellID)
 	}
+	res, snaps, err := s.applyEffect(ctx, characterID, r, spell, entry, hasEffect)
+	if err != nil {
+		return CastResult{}, nil, err
+	}
+	snap, err := s.trackRow(ctx, characterID, r, entryRef(entry, hasEffect), &res)
+	if err != nil {
+		return CastResult{}, nil, err
+	}
+	if snap != nil {
+		snaps = append(snaps, *snap)
+	}
+	return res, snaps, nil
+}
+
+// trackRow is ADR 0004 step 20: a spell that lasts a number of rounds and
+// put no buff on the character gets a row with no effects, whether or not
+// the engine models what it does. Its rounds are the ones the buff rolled
+// when there is one (a buff cast on someone else), else rolled now at the
+// caster level. A row the character casts on someone else or on an area is
+// marked OnOther (step 20.5); a spell received or added as an effect is on
+// him. The row goes on in the caller's transaction and its snapshot joins
+// the cast's entry, so voiding the cast removes it.
+func (s *service) trackRow(ctx context.Context, characterID int64, r effectReq, entry *spelleffectsvc.Entry, res *CastResult) (*actionlog.Snapshot, error) {
+	if res.Buff != nil && res.Buff.Applied {
+		return nil, nil
+	}
+	row := spelleffectsvc.RowOf(entry, res.Spell.Stats.Duration)
+	if row.Rounds == nil {
+		return nil, nil
+	}
+	var roll Roll
+	if res.Buff != nil && res.Buff.Duration != nil {
+		roll = *res.Buff.Duration
+	} else {
+		var err error
+		if roll, err = s.roll(row.Rounds, r.casterLevel); err != nil {
+			return nil, fmt.Errorf("%s: %w", r.spellID, err)
+		}
+	}
+	if roll.Total <= 0 { // step 20.2
+		return nil, nil
+	}
+	onSelf := true
+	if r.source == SourceCast {
+		// A buff that was not applied was cast on someone else.
+		castOnOther := res.Buff != nil && row.Effects
+		onSelf = !castOnOther && spelleffectsvc.RowOnSelf(entry, r.onSelf)
+	}
+	added, snap, err := s.Buffs.Add(ctx, characterID, buffsvc.BuffEffect{
+		Name: res.Name, SpellID: r.spellID, Duration: roll.Total, OnOther: !onSelf,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("add row: %w", err)
+	}
+	switch {
+	case res.Buff == nil:
+		res.Buff = &AppliedBuff{Buff: added, Duration: &roll}
+	case onSelf:
+		// An ability set applied by hand: the row carries none of it.
+		res.Buff.Buff = added
+	default:
+		// The rolls stay to tell the one it landed on; the row is his.
+		res.Buff.Buff.ID = added.ID
+	}
+	res.Buff.Applied, res.Buff.OnOther = onSelf, !onSelf
+	return &snap, nil
+}
+
+// applyEffect applies the spell's effect entry: its buff, damage and cast
+// mechanics. The row of a spell that only lasts is trackRow's.
+func (s *service) applyEffect(ctx context.Context, characterID int64, r effectReq, spell spellsvc.Spell, entry spelleffectsvc.Entry, hasEffect bool) (CastResult, []actionlog.Snapshot, error) {
+	var err error
 	res := CastResult{
 		Source: r.source, SpellID: r.spellID, CasterLevel: r.casterLevel,
 		Name: firstNonEmpty(entry.Name, spell.Name.Default(), r.name), Level: r.level, Spell: spell,
@@ -319,6 +399,11 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 		}
 	}
 	mechanics := len(r.extraSlots) > 0 || res.Consumed != nil || res.Attack != nil
+	// ADR 0004 step 19: an added effect rolls nothing but its row.
+	if r.source == SourceEffect && entry.Kind != spelleffectsvc.KindBuff {
+		res.TextOnly = TextOnlyUtility
+		return res, snaps, nil
+	}
 	switch entry.Kind {
 	case spelleffectsvc.KindDamage:
 		damage := entry.CastDamage(r.mode)

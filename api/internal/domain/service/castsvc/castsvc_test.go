@@ -196,6 +196,9 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		onSelf   *bool
 		dice     []int
 		wantBuff *buffsvc.BuffEffect // nil: no buff on the Bard
+		// wantRow is the row with no effects a spell that lasts rounds puts
+		// on the list (ADR 0004 step 20; nil: none).
+		wantRow  *buffsvc.BuffEffect
 		wantDmg  *castsvc.DamageResult
 		textOnly castsvc.TextOnly
 		check    func(t *testing.T, r castsvc.CastResult)
@@ -232,8 +235,13 @@ func TestCast_PerSeedEntry(t *testing.T) {
 			},
 		},
 		{
+			// ADR 0004 step 20.5: its row is marked as not on him, no effects.
 			name: "slow (hostile area spell) does not land on the Bard by default",
 			slot: slot("slow", "Slow", 3), textOnly: castsvc.TextOnlyNotOnSelf,
+			wantRow: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Slow", SpellID: "slow", Duration: 18, OnOther: true},
+			check: func(t *testing.T, r castsvc.CastResult) {
+				assert.Equal(t, buffsvc.BuffEffects{ToHit: intPtr(-4), AC: intPtr(4)}, r.Buff.Buff.Effects, "the rolls stay shown for the ones it hit")
+			},
 		},
 		{
 			name: "slow cast on the Bard (its alternate target) lands on him",
@@ -290,10 +298,14 @@ func TestCast_PerSeedEntry(t *testing.T) {
 			name: "melf's acid arrow: 2d4 repeated 1 + level/3 rounds",
 			slot: slot("melfs_acid_arrow", "Melf's Acid Arrow", 2), dice: []int{1, 1, 2, 2, 3, 3, 4, 4, 1, 2, 1, 1},
 			wantDmg: &castsvc.DamageResult{Dice: "2d4", Type: "acid", Instances: 1, Rounds: 6, Total: 2 + 4 + 6 + 8 + 3 + 2},
+			// ADR 0004 step 20: on someone else, it lasts 1 + 15/3 rounds.
+			wantRow: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Melf's Acid Arrow", SpellID: "melfs_acid_arrow", Duration: 6, OnOther: true},
 		},
 		{
 			name: "fist of stone: STR 18/00 for the fist only, shown not applied",
 			slot: slot("fist_of_stone", "Fist of Stone", 1), textOnly: castsvc.TextOnlyByHand,
+			// ADR 0004 step 20.4: a row with no effects counts its rounds down.
+			wantRow: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Fist of Stone", SpellID: "fist_of_stone", Duration: 15},
 			check: func(t *testing.T, r castsvc.CastResult) {
 				assert.Equal(t, []castsvc.Untracked{{Key: "str_set", Value: 18}}, r.Untracked)
 				assert.Nil(t, r.Buff.Buff.Effects.StrBonus, "never raises STR for every attack")
@@ -302,10 +314,12 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		{
 			name: "utility spell shows its text only",
 			slot: slot("identify", "Identify", 1), textOnly: castsvc.TextOnlyUtility,
+			wantRow: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Identify", SpellID: "identify", Duration: 15},
 		},
 		{
 			name: "low-confidence spell shows its text only",
 			slot: slot("tashas_uncontrollable_hideous_laughter", "Tasha's Uncontrollable Hideous Laughter", 2), textOnly: castsvc.TextOnlyLowConfidence,
+			wantRow: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Tasha's Uncontrollable Hideous Laughter", SpellID: "tashas_uncontrollable_hideous_laughter", Duration: 15},
 		},
 		{
 			name: "slot saved before preparation: id from the name",
@@ -345,6 +359,14 @@ func TestCast_PerSeedEntry(t *testing.T) {
 				assert.Equal(t, *tt.wantBuff, f.added[0])
 				assert.Equal(t, *tt.wantBuff, r.Buff.Buff)
 				assert.True(t, r.Buff.Applied)
+				assert.Equal(t, []string{prepsvc.StateKey, buffsvc.StateKeyBuffs}, keys(e.Snapshots))
+			} else if tt.wantRow != nil {
+				require.Len(t, f.added, 1)
+				assert.Equal(t, *tt.wantRow, f.added[0])
+				require.NotNil(t, r.Buff)
+				assert.Equal(t, buffsAdded, r.Buff.Buff.ID)
+				assert.Equal(t, !tt.wantRow.OnOther, r.Buff.Applied)
+				assert.Equal(t, tt.wantRow.OnOther, r.Buff.OnOther)
 				assert.Equal(t, []string{prepsvc.StateKey, buffsvc.StateKeyBuffs}, keys(e.Snapshots))
 			} else {
 				assert.Empty(t, f.added)
@@ -691,6 +713,12 @@ func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 			n := 0
 			for _, s := range served {
 				n += count(s)
+			}
+			// ADR 0004 step 20: a spell that lasts rounds also rolls its row's.
+			if e, ok := catalog(t).Get(tt.slot.SpellID); ok && e.Duration.Rounds != nil {
+				rounds, err := e.Duration.Rounds.Expand(bardLevel)
+				require.NoError(t, err)
+				n += count(rounds)
 			}
 			f.dice.vals = make([]int, n)
 			for i := range f.dice.vals {

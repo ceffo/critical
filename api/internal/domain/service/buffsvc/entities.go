@@ -230,6 +230,12 @@ type BuffEffect struct {
 	// the catalogue's name in the player's language, Name otherwise. No rules
 	// meaning.
 	SpellID string
+	// OnOther marks a row for a spell the character cast on someone else or
+	// on an area (ADR 0004 step 20.5): it only counts down. No aggregate
+	// counts it, whatever it holds, the list shows it as not applying, and
+	// it never renews nor is renewed by another buff. Stamped by the spell
+	// cast only; false for everything else.
+	OnOther bool
 }
 
 // Timed reports whether Next Round counts this buff down.

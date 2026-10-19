@@ -20,6 +20,7 @@ func (s *service) Activate(ctx context.Context, characterID int64, buff BuffEffe
 	// Step 17: only a spell cast stamps the spell id; a buff entered by hand
 	// is not from a spell.
 	buff.SpellID = ""
+	buff.OnOther = false // step 20.5: only a spell cast marks a row
 	if buff.ID == "" {
 		buff.ID = uuid.New().String()
 	}

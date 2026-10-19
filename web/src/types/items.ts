@@ -88,6 +88,10 @@ export const DAMAGE_TYPES = ["b", "p", "s"] as const;
  */
 export type ItemState = "carried" | "worn" | "wielded";
 
+/** A class warning (ADR 0033 step 20, itemsvc.Warn*): the code the web words; nothing is refused. */
+export type ClassWarningCode =
+  "armour_not_allowed" | "weapon_not_allowed" | "hands";
+
 /** Why a piece is on the review list (ADR 0033 step 27, itemsvc.Reason*). */
 export type ReviewReason =
   "weapon_unmatched" | "uncategorised" | "ammo_kind_unknown" | "powers_off";
@@ -151,6 +155,8 @@ export interface Item {
   acMissile: number;
   /** The review reasons (ADR 0033 step 27); empty when the piece is settled. */
   review: ReviewReason[];
+  /** The class warnings of the piece (ADR 0033 step 20); empty for none. Served by the list. */
+  warnings: ClassWarningCode[];
 }
 
 /** One of an item's powers: its trigger (minStr; absent: always on) and its effects. */

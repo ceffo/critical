@@ -35,6 +35,7 @@ type itemSvc interface {
 	Delete(ctx context.Context, characterID int64, itemID string) (*itemsvc.ChangeResult, error)
 	SetState(ctx context.Context, characterID int64, itemID string, state itemsvc.State, swap bool) (*itemsvc.StateResult, error)
 	Reviews(ctx context.Context, characterID int64) ([]itemsvc.Review, error)
+	Warnings(ctx context.Context, characterID int64, items []itemsvc.Item) ([]itemsvc.Warning, error)
 	DismissReview(ctx context.Context, characterID int64, itemID string) error
 	Catalogue() ruletablesvc.Equipment
 }
@@ -139,8 +140,8 @@ func Restock(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 // Compile-time check that *chi.Mux satisfies our small Router interface.
 var _ Router = (*chi.Mux)(nil)
 
-// List returns every piece with its current count and its review reasons
-// (ADR 0033 step 27).
+// List returns every piece with its current count, its review reasons
+// (ADR 0033 step 27) and its class warnings (step 20).
 func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		items, err := svc.List(r.Context(), charID(r))
@@ -151,7 +152,11 @@ func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		out := wire.ItemsToDTO(items)
+		warnings, err := svc.Warnings(r.Context(), charID(r), items)
+		if err != nil {
+			return err
+		}
+		out := wire.ItemsToDTO(items, warnings)
 		for i := range out {
 			for _, rv := range reviews {
 				if rv.ItemID == out[i].ID {
@@ -224,6 +229,8 @@ type ItemBody struct {
 	State      json.RawMessage `json:"state"`
 	EquipState json.RawMessage `json:"equipState"`
 	Review     json.RawMessage `json:"review"`
+	// Warnings are accepted and ignored like the review: a piece served back as is still decodes.
+	Warnings json.RawMessage `json:"warnings"`
 }
 
 func decodeBody(r *http.Request) (ItemBody, error) {
@@ -236,8 +243,16 @@ func decodeBody(r *http.Request) (ItemBody, error) {
 	return b, nil
 }
 
-func change(ctx context.Context, w http.ResponseWriter, res *itemsvc.ChangeResult) {
-	render.OK(ctx, w, ChangeDTO{Item: wire.ItemsToDTO([]itemsvc.Item{res.Item})[0], LogEntryID: res.LogEntryID})
+// change answers a create, edit or delete with the piece and its class warnings (step 20), which
+// depend on the other pieces too (a shield and a two-handed weapon), so the character's pieces are
+// read once for them.
+func change(r *http.Request, w http.ResponseWriter, svc itemSvc, charID int64, res *itemsvc.ChangeResult) error {
+	warnings, err := svc.Warnings(r.Context(), charID, nil)
+	if err != nil {
+		return err
+	}
+	render.OK(r.Context(), w, ChangeDTO{Item: wire.ItemsToDTO([]itemsvc.Item{res.Item}, warnings)[0], LogEntryID: res.LogEntryID})
+	return nil
 }
 
 func deref[T any](p *T) T {
@@ -280,8 +295,7 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		change(r.Context(), w, res)
-		return nil
+		return change(r, w, svc, charID(r), res)
 	}
 }
 
@@ -317,8 +331,7 @@ func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		change(r.Context(), w, res)
-		return nil
+		return change(r, w, svc, charID(r), res)
 	}
 }
 
@@ -329,8 +342,7 @@ func Delete(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		change(r.Context(), w, res)
-		return nil
+		return change(r, w, svc, charID(r), res)
 	}
 }
 
@@ -364,7 +376,11 @@ func SetState(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, StateDTO{Items: wire.ItemsToDTO(res.Items), LogEntryID: res.LogEntryID})
+		warnings, err := svc.Warnings(r.Context(), charID(r), nil)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, StateDTO{Items: wire.ItemsToDTO(res.Items, warnings), LogEntryID: res.LogEntryID})
 		return nil
 	}
 }

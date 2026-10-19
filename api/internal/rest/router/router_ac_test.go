@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
 // ADR 0033 steps 10 and 13 on the wire: the derived AC, its rows as codes
@@ -26,6 +27,7 @@ func TestAC_GetWireShape(t *testing.T) {
 			{Term: acsvc.TermShield, ItemID: "body_shield", Value: -1, MissileValue: &missile},
 			{Term: acsvc.TermDexterity, Value: 0, Dexterity: 12},
 		},
+		Warnings: []itemsvc.Warning{{ItemID: "chain_mail", Code: itemsvc.WarnArmourNotAllowed}},
 	}, nil).Once()
 	rec := do(h, "GET", "/api/ac", "")
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -34,7 +36,8 @@ func TestAC_GetWireShape(t *testing.T) {
 		{"term":"base","buff":"Armor","spellId":"armor","value":6,"off":"armour_worn"},
 		{"term":"armour_magic","value":0},
 		{"term":"shield","itemId":"body_shield","value":-1,"missileValue":-2},
-		{"term":"dexterity","value":0,"dexterity":12}]}`, rec.Body.String())
+		{"term":"dexterity","value":0,"dexterity":12}],
+		"warnings":[{"itemId":"chain_mail","code":"armour_not_allowed"}]}`, rec.Body.String())
 }
 
 // ADR 0033 step 13: PUT sets the override and DELETE clears it, each
@@ -47,12 +50,12 @@ func TestAC_OverrideRoutes(t *testing.T) {
 	}, nil).Once()
 	rec := do(h, "PUT", "/api/ac/override", `{"value":4,"label":"Shield spell"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"ac":2,"floored":false,"rows":[],"override":{"value":4,"label":"Shield spell"}}`, rec.Body.String())
+	assert.JSONEq(t, `{"ac":2,"floored":false,"rows":[],"warnings":[],"override":{"value":4,"label":"Shield spell"}}`, rec.Body.String())
 
 	m.ac.EXPECT().ClearOverride(mock.Anything, int64(1)).Return(&acsvc.AC{Value: 2, Rows: []acsvc.Row{}}, nil).Once()
 	rec = do(h, "DELETE", "/api/ac/override", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"ac":2,"floored":false,"rows":[],"override":null}`, rec.Body.String())
+	assert.JSONEq(t, `{"ac":2,"floored":false,"rows":[],"warnings":[],"override":null}`, rec.Body.String())
 
 	for _, body := range []string{`{}`, `{"label":"x"}`, `{"value":4,"extra":1}`} {
 		rec = do(h, "PUT", "/api/ac/override", body)

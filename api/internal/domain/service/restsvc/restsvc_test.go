@@ -66,9 +66,12 @@ func TestLongRest_ResetsBothInOneLoggedTransaction(t *testing.T) {
 	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(after, nil)
 	f.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 0}, {ID: "arrows", Count: 9}}, nil)
 	f.items.EXPECT().ResetDaily(mock.Anything, int64(1)).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 1}, {ID: "arrows", Count: 9}}, nil)
+	warn := []itemsvc.Warning{{ItemID: "gem", Code: itemsvc.WarnHands}}
+	f.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(warn, nil)
 
 	got, err := f.svc.LongRest(context.Background(), 1)
 	require.NoError(t, err)
+	assert.Equal(t, warn, got.Warnings, "the items answer carries their class warnings (ADR 0033 step 20)")
 	assert.Equal(t, 1, f.tx.calls)
 	assert.Equal(t, after, got.Slots)
 	assert.Equal(t, int64(7), got.EntryID)

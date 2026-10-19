@@ -3168,3 +3168,171 @@ test("AC: the shield beside the HP, its breakdown popover and the Inventaire's A
     await expect(card.getByTestId("ac-override")).toHaveCount(0);
   }
 });
+
+// ADR 0033 step 20, ADR 0035 item 9: a mage in plate, with a shield and a two-handed sword, is
+// warned on the rows, the AC card, the shield (badge and popover) and the attack card; nothing is
+// refused. In French and English at every layout viewport (1920x1080 and 2560x1440 included, real
+// scrollbars): no warning, piece name or sentence is cut. Screenshots at 1920x1080 and 2560x1440.
+test("class warnings: rows, AC card, shield and attack card uncut, en and fr, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    apiCall(page, method, url, body);
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Ilyana Mainfroide d'Ombrebrume",
+      class: "mage",
+      raceCode: "human",
+      details: { alignment: "neutral_good", sex: "female" },
+      str: 9,
+      dex: 14,
+      con: 10,
+      int: 17,
+      wis: 10,
+      cha: 12,
+      hpMax: 4,
+      xp: 0,
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  const pieces = [
+    {
+      id: "full_plate_armour_of_the_northern_wardens",
+      state: "worn",
+      body: {
+        name: {
+          en: "Full plate armour of the northern wardens",
+          fr: "Armure de plates complète des gardiens du nord",
+        },
+        category: "armour",
+        baseAc: 1,
+        skillColumn: "none_allowed",
+        armorRow: "full_plate",
+      },
+    },
+    {
+      id: "tower_shield",
+      state: "worn",
+      body: {
+        name: { en: "Tower shield", fr: "Bouclier-tour" },
+        category: "shield",
+        shieldKind: "body",
+        acMelee: 1,
+        acMissile: 2,
+      },
+    },
+    {
+      id: "great_claymore",
+      state: "wielded",
+      body: {
+        name: { en: "Great claymore", fr: "Grande claymore à deux mains" },
+        category: "weapon",
+        damageSm: "1d10",
+        damageL: "3d6",
+        damageTypes: ["s"],
+        weaponKind: "melee",
+        weaponType: "long_sword",
+        twoHanded: true,
+      },
+    },
+  ];
+  for (const p of pieces) {
+    expect(
+      await call("POST", "/api/items", {
+        ...p.body,
+        behaviour: "stock",
+        count: 1,
+      }),
+      `create ${p.id}`,
+    ).toBe(true);
+    // Warned, never refused: wearing and wielding succeed.
+    expect(
+      await call("POST", `/api/items/${p.id}/state`, { state: p.state }),
+      `equip ${p.id}`,
+    ).toBe(true);
+  }
+  await reloadSettled(page);
+
+  const codes = async (id: string) =>
+    page
+      .getByTestId(`item-${id}`)
+      .getByTestId("class-warning")
+      .evaluateAll((els) => els.map((e) => e.getAttribute("data-code")));
+  const check = async (
+    lang: "en" | "fr",
+    vp: { width: number; height: number },
+  ) => {
+    await page.setViewportSize(vp);
+    const where = `${lang}, ${vp.width}x${vp.height}`;
+    const shot = vp.width === 1920 || vp.width === 2560;
+    // The Inventaire: the warnings on the rows and on the AC card.
+    await rail.nth(2).click();
+    await expect(
+      page.getByTestId("item-full_plate_armour_of_the_northern_wardens"),
+    ).toBeVisible();
+    expect(await codes("full_plate_armour_of_the_northern_wardens")).toEqual([
+      "armour_not_allowed",
+    ]);
+    expect(await codes("tower_shield")).toEqual([
+      "armour_not_allowed",
+      "hands",
+    ]);
+    expect(await codes("great_claymore")).toEqual([
+      "weapon_not_allowed",
+      "hands",
+    ]);
+    const card = page.getByTestId("ac-card");
+    await expect(card.getByTestId("ac-warnings")).toBeVisible();
+    await expect(card.getByTestId("class-warning")).toHaveCount(3);
+    // The shield's two warnings sit under its name, shown once.
+    await expect(card.getByTestId("ac-warning-piece")).toHaveCount(2);
+    await expect(card.getByTestId("ac-warnings")).toContainText(
+      lang === "fr" ? "Pas pour un magicien" : "Not for a mage",
+    );
+    await expectNoClippedText(page.getByTestId("stage"), `inventory, ${where}`);
+    if (shot)
+      await snap(
+        page,
+        `class-warnings-inventory-${lang}-${vp.width}x${vp.height}`,
+      );
+    // The shield beside the HP: a badge, and the popover lists the warnings.
+    const shield = page.getByTestId("ac-shield");
+    await expect(shield.getByTestId("ac-shield-warning")).toBeVisible();
+    await shield.click();
+    const popover = page.getByTestId("ac-popover");
+    await expect(popover.getByTestId("class-warning")).toHaveCount(3);
+    await expectNoClippedText(popover, `AC popover, ${where}`);
+    if (shot)
+      await snap(
+        page,
+        `class-warnings-shield-${lang}-${vp.width}x${vp.height}`,
+      );
+    await page.keyboard.press("Escape");
+    await expect(popover).toHaveCount(0);
+    // The attack card: the weapon in hand carries its warnings.
+    // The Weapons tab stays open between visits (its name is English-only in the helper).
+    await rail.nth(0).click();
+    const attack = page.getByRole("form", {
+      name: lang === "fr" ? "Attaque" : "Attack",
+    });
+    await expect(attack.getByTestId("class-warning")).toHaveCount(2);
+    await expectNoClippedText(attack, `attack card, ${where}`);
+    if (shot)
+      await snap(
+        page,
+        `class-warnings-attack-${lang}-${vp.width}x${vp.height}`,
+      );
+  };
+  // The weapon in hand is picked once (in English); the choice is kept on the server.
+  await openWorkspace(page, "Act");
+  await openWeapons(page);
+  await chooseWeapon(page, "Great claymore");
+  const rail = page.getByTestId("rail").getByRole("button");
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of VIEWPORTS) await check(lang, vp);
+  }
+});

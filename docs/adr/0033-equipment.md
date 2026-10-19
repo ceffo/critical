@@ -323,6 +323,17 @@ name or comment); this ADR names none yet.
     those do not settle it (`other_melee` for a thief), no warning. Amends ADR 0030's Consequences
     ("class armour limits (not enforced)", "the cleric's blunt-weapon restriction"): still not
     enforced, now warned.
+    As built: a launcher is judged by the ammunition it fires (PHB p.33's "only blunt, bludgeoning
+    weapons", with step 4: a launcher deals its ammunition's damage type): the cleric's sling (bullets
+    are `b`) is not warned, its bow (arrows pierce) is. Every answer that serves pieces carries
+    their warnings, computed once per request from the full list (`hands` needs the other pieces).
+    Wire: `GET /api/items`, the item create, edit and state answers and the long rest's items serve
+    `warnings` (codes) on each piece, `GET /api/ac` serves `warnings`
+    (`{itemId, code}`) for the worn armour and shield; the web words them ("Pas pour un barde").
+    `hands` is on both the weapon and the shield. The lists are the table in `itemsvc/classwarn.go`.
+    Tests: `TestClassWarnings_Step20_Wizard`, `_Cleric`, `_ClericLauncherJudgedByItsAmmunition`, `_ThiefShieldAndQuarterstaff`, `_ArmourByColumn`, `_Thief`, `_Bard`, `_FighterNone`, `_HandsEveryone`
+    (itemsvc), `TestClassWarnings_Step20_ServedOnReadNeverRefused` (composition), `TestAC_GetWireShape`
+    and `TestItems_ListWireShape` (router), e2e `layout.spec` ("class warnings").
 
 ### Catalogue content
 

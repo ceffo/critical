@@ -49,6 +49,7 @@ function piece(p: Partial<Item>): Item {
     acMelee: 0,
     acMissile: 0,
     review: [],
+    warnings: [],
     ...p,
   };
 }

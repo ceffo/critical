@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAttackStore } from "@/stores/attack";
 import { useCharacterStore } from "@/stores/character";
+import { ClassWarningTag } from "@/components/ClassWarning";
 import { useBuffsStore } from "@/stores/buffs";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
@@ -122,6 +123,11 @@ export function AttackPanel() {
               <h3 className="text-key break-words" data-testid="weapon-in-hand">
                 {localized(i18n.language, weapon.name)}
               </h3>
+              {items
+                .find((i) => i.id === weapon.id)
+                ?.warnings.map((code) => (
+                  <ClassWarningTag key={code} code={code} />
+                ))}
               {preview && (
                 <StatsLine weapon={weapon} view={view} preview={preview} />
               )}

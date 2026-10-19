@@ -2265,6 +2265,19 @@
       },
       "withConditions": "{{effects}} ({{conditions}})",
       "plusText": "magic {{value}}"
+    },
+    "warnings": {
+      "armour_not_allowed": "Not for {{who}}",
+      "weapon_not_allowed": "Not for {{who}}",
+      "hands": "Two-handed weapon with a shield",
+      "title": "Class warnings",
+      "who": {
+        "bard": "a bard",
+        "cleric": "a cleric",
+        "fighter": "a fighter",
+        "mage": "a mage",
+        "thief": "a thief"
+      }
     }
   },
   "intro": {
@@ -2504,6 +2517,7 @@
         "value": "Between −10 and 10",
         "label": "60 characters at most"
       }
-    }
+    },
+    "warned": "Class warning"
   }
 }

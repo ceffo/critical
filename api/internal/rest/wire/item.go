@@ -62,6 +62,9 @@ type ItemDTO struct {
 	// Review is the piece's review reasons (ADR 0033 step 27), empty when it
 	// is not on the review list. Served by the list only.
 	Review []string `json:"review"`
+	// Warnings are the piece's class warnings (ADR 0033 step 20): codes the
+	// web words, empty for none. Served with every piece.
+	Warnings []string `json:"warnings"`
 }
 
 // PowerDTO is one of an item's powers: its id, its trigger (minStr, omitted:
@@ -85,8 +88,9 @@ func PowersFromDTO(dtos []PowerDTO) []itemsvc.Power {
 	return out
 }
 
-// ItemsToDTO maps items to their wire shape.
-func ItemsToDTO(items []itemsvc.Item) []ItemDTO {
+// ItemsToDTO maps items to their wire shape, each with its class warnings
+// (ADR 0033 step 20) from warnings, the character's, computed once.
+func ItemsToDTO(items []itemsvc.Item, warnings []itemsvc.Warning) []ItemDTO {
 	out := make([]ItemDTO, 0, len(items))
 	for _, i := range items {
 		powers := make([]PowerDTO, 0, len(i.Powers))
@@ -96,6 +100,12 @@ func ItemsToDTO(items []itemsvc.Item) []ItemDTO {
 		damageTypes := i.DamageTypes
 		if damageTypes == nil {
 			damageTypes = []string{}
+		}
+		codes := []string{}
+		for _, w := range warnings {
+			if w.ItemID == i.ID {
+				codes = append(codes, w.Code)
+			}
 		}
 		out = append(out, ItemDTO{
 			ID: i.ID, Name: i.Name, Category: string(i.Category), MagicKind: i.MagicKind,
@@ -107,7 +117,7 @@ func ItemsToDTO(items []itemsvc.Item) []ItemDTO {
 			WeaponType: i.WeaponType, WeaponKind: i.WeaponKind, Size: i.Size, Speed: i.Speed,
 			MagicToHit: i.MagicToHit, MagicDamage: i.MagicDamage, TwoHanded: i.TwoHanded, Fires: i.Fires,
 			Specialized: i.Specialized, BaseAC: i.BaseAC, SkillColumn: i.SkillColumn, ArmorRow: i.ArmorRow,
-			ShieldKind: i.ShieldKind, ACMelee: i.ACMelee, ACMissile: i.ACMissile, Review: []string{},
+			ShieldKind: i.ShieldKind, ACMelee: i.ACMelee, ACMissile: i.ACMissile, Review: []string{}, Warnings: codes,
 		})
 	}
 	return out

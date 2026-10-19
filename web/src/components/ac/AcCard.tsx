@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAcStore } from "@/stores/ac";
 import { formatAc } from "@/lib/format";
 import { AcBreakdown } from "./AcBreakdown";
+import { AcWarnings } from "./AcWarnings";
 import { AcOverrideForm } from "./AcOverrideForm";
 import { AcOverrideLine } from "./AcOverrideLine";
 
@@ -57,6 +58,7 @@ export function AcCard() {
               onDone={() => setOverriding(false)}
             />
           )}
+          <AcWarnings ac={ac} />
           <AcBreakdown ac={ac} />
         </div>
       )}

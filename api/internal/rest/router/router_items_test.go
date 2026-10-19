@@ -36,17 +36,18 @@ func TestItems_ListWireShape(t *testing.T) {
 		WeaponKind: "melee", WeaponType: "other_melee", MagicToHit: 1, MagicDamage: 1,
 	}}, nil)
 	m.items.EXPECT().Reviews(mock.Anything, int64(1)).Return([]itemsvc.Review{{ItemID: "mace", Reason: itemsvc.ReasonWeaponUnmatched}}, nil)
+	m.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return([]itemsvc.Warning{{ItemID: "mace", Code: itemsvc.WarnWeaponNotAllowed}}, nil)
 	rec := do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"arrows_plus1","name":{"en":"Arrows +1"},"category":"ammunition","magicKind":"","catalogueCode":"","component":"",
 		"state":"carried","equipState":"","type":"arrow","behaviour":"stock","magicalBonus":1,
 		"ammoKind":"arrow","count":18,"maxCount":18,"effectDice":"","effectSave":"","notes":"","powers":[],
-		"damageSm":"1d6","damageL":"1d6",`+noWeapon+`,"review":[]},
+		"damageSm":"1d6","damageL":"1d6",`+noWeapon+`,"review":[],"warnings":[]},
 		{"id":"mace","name":{"en":"Mace +1"},"category":"weapon","magicKind":"","catalogueCode":"","component":"","state":"wielded","equipState":"wielded","type":"",
 		"behaviour":"stock","magicalBonus":0,"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[],"damageTypes":[],"damageSm":"1d6","damageL":"1d6","weaponType":"other_melee","weaponKind":"melee","size":"",
 		"speed":0,"magicToHit":1,"magicDamage":1,"twoHanded":false,"fires":"","specialized":false,"baseAc":0,"skillColumn":"",
-		"armorRow":"","shieldKind":"","acMelee":0,"acMissile":0,"review":["weapon_unmatched"]}]`, rec.Body.String())
+		"armorRow":"","shieldKind":"","acMelee":0,"acMissile":0,"review":["weapon_unmatched"],"warnings":["weapon_not_allowed"]}]`, rec.Body.String())
 }
 
 // ADR 0033 steps 6 and 7: POST /api/items/{id}/state moves a piece and
@@ -54,6 +55,7 @@ func TestItems_ListWireShape(t *testing.T) {
 // its code.
 func TestItems_SetState(t *testing.T) {
 	h, m := newRouter(t)
+	noWarnings(m)
 	worn := wandItem
 	worn.ID, worn.Category, worn.MagicKind, worn.State = "ring", itemsvc.CategoryMagic, itemsvc.MagicRing, itemsvc.StateWorn
 	m.items.EXPECT().SetState(mock.Anything, int64(1), "ring", itemsvc.StateWorn, true).
@@ -78,6 +80,7 @@ func TestItems_DismissReview(t *testing.T) {
 	m.items.EXPECT().DismissReview(mock.Anything, int64(1), "mace").Return(nil).Once()
 	m.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{}, nil)
 	m.items.EXPECT().Reviews(mock.Anything, int64(1)).Return([]itemsvc.Review{}, nil)
+	m.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(nil, nil)
 	rec := do(h, "DELETE", "/api/items/mace/review", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[]`, rec.Body.String())
@@ -138,7 +141,7 @@ func TestItems_Restock(t *testing.T) {
 
 const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","component":"","state":"carried","equipState":"",
 	"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
-	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[],"damageSm":"","damageL":"",` + noWeapon + `,"review":[]}`
+	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[],"damageSm":"","damageL":"",` + noWeapon + `,"review":[],"warnings":[]}`
 
 var wandItem = itemsvc.Item{
 	ID: "w", Name: localized.Of("Wand"), Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4,
@@ -147,6 +150,7 @@ var wandItem = itemsvc.Item{
 
 func TestItems_Create(t *testing.T) {
 	h, m := newRouter(t)
+	noWarnings(m)
 	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{
 		Name: localized.Of("Arrows +3"), Category: itemsvc.CategoryAmmunition, Behaviour: itemsvc.BehaviourStock, Count: 6,
 		MagicBonus: 3, AmmoKind: "arrow", DamageSM: "1d6", DamageL: "1d6",
@@ -169,6 +173,7 @@ func TestItems_CreateInvalidNamesTheField(t *testing.T) {
 
 func TestItems_UpdatePatchesOnlyTheFieldsSent(t *testing.T) {
 	h, m := newRouter(t)
+	noWarnings(m)
 	three := 3
 	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Count: &three}).
 		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 13}, nil)
@@ -187,6 +192,7 @@ func TestItems_UpdatePatchesOnlyTheFieldsSent(t *testing.T) {
 // them; an unknown key in a power is refused. The list is served back.
 func TestItems_ADR0033Step17_PowersInTheBody(t *testing.T) {
 	h, m := newRouter(t)
+	noWarnings(m)
 	three := 3
 	ring := []itemsvc.Power{{ID: "protection", Effects: buffsvc.BuffEffects{AC: new(-1), SaveBonus: new(1), WithoutMagicArmour: true}}}
 	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Count: &three, Powers: &ring}).
@@ -223,18 +229,20 @@ func TestItems_ADR0033Step17_PowersInTheBody(t *testing.T) {
 		}}},
 	}}, nil)
 	m.items.EXPECT().Reviews(mock.Anything, int64(1)).Return(nil, nil)
+	m.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(nil, nil)
 	rec = do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":{"en":"Power Gem"},"category":"magic","magicKind":"misc","catalogueCode":"","component":"",
 		"state":"worn","equipState":"worn","type":"gem","behaviour":"daily","magicalBonus":0,
 		"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[{"id":"thunder_hammer","minStr":18,"effects":{"weapon_buff":5,"multiplier":2,"weapon_kind":"melee"}}],
-		"damageSm":"","damageL":"",`+noWeapon+`,"review":[]}]`,
+		"damageSm":"","damageL":"",`+noWeapon+`,"review":[],"warnings":[]}]`,
 		rec.Body.String())
 }
 
 func TestItems_Delete(t *testing.T) {
 	h, m := newRouter(t)
+	noWarnings(m)
 	m.items.EXPECT().Delete(mock.Anything, int64(1), "w").Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 14}, nil)
 	rec := do(h, "DELETE", "/api/items/w", "")
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -259,6 +267,7 @@ func TestItems_EditErrors(t *testing.T) {
 // the languages it does not hold); a plain string is refused.
 func TestItems_Step9_NameIsALanguageMap(t *testing.T) {
 	h, m := newRouter(t)
+	noWarnings(m)
 	both := wandItem
 	both.Name = localized.Text{"en": "Wand", "fr": "Baguette"}
 	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Name: localized.Text{"fr": "Baguette"}}).
@@ -275,6 +284,7 @@ func TestItems_Step9_NameIsALanguageMap(t *testing.T) {
 // body and served; a patch without it leaves it as it is (nil).
 func TestItems_Step1_1_ComponentOnTheWire(t *testing.T) {
 	h, m := newRouter(t)
+	noWarnings(m)
 	gem := wandItem
 	gem.Component = itemsvc.ComponentGem
 	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{
@@ -295,6 +305,7 @@ func TestItems_Step1_1_ComponentOnTheWire(t *testing.T) {
 // player's fields and equip on; the service copies the row.
 func TestItems_Step24_CreatePickedFromTheCatalogue(t *testing.T) {
 	h, m := newRouter(t)
+	noWarnings(m)
 	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{
 		CatalogueCode: "long_sword", Equip: true, Name: localized.Text{"fr": "Épée de Kelsen"}, Count: 1, MagicToHit: 1, MagicDamage: 1,
 	}).Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 12}, nil)
@@ -339,4 +350,39 @@ func TestItems_Step21_CatalogueWireShape(t *testing.T) {
 		"ammunition":[{"code":"sheaf_arrow","name":{"en":"Sheaf arrow"},"ammoKind":"arrow","damageTypes":["p"],"damageSm":"1d8","damageL":"1d8"}],
 		"armour":[{"code":"chain_mail","name":{"en":"Chain mail"},"baseAc":5,"skillColumn":"metal","armorRow":"chain"}],
 		"shields":[{"code":"buckler","name":{"en":"Buckler"},"shieldKind":"buckler","acMelee":1,"acMissile":1}]}`, rec.Body.String())
+}
+
+// noWarnings answers every class warnings read with none, for the tests of something else.
+func noWarnings(m *mocksSet) {
+	m.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(nil, nil).Maybe()
+}
+
+// ADR 0033 step 20: every answer that serves a piece carries its true warnings: a mage that wears
+// plate gets the warning on the state answer, on the create and edit answers, and on the list.
+func TestItems_Step20_EveryAnswerCarriesItsWarnings(t *testing.T) {
+	h, m := newRouter(t)
+	plate := itemsvc.Item{
+		ID: "plate", Name: localized.Of("Plate"), Category: itemsvc.CategoryArmour, State: itemsvc.StateWorn,
+		Behaviour: itemsvc.BehaviourStock, Count: 1, SkillColumn: "none_allowed",
+	}
+	warn := []itemsvc.Warning{{ItemID: "plate", Code: itemsvc.WarnArmourNotAllowed}}
+	m.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(warn, nil)
+	m.items.EXPECT().SetState(mock.Anything, int64(1), "plate", itemsvc.StateWorn, false).
+		Return(&itemsvc.StateResult{Items: []itemsvc.Item{plate}, LogEntryID: 3}, nil)
+	m.items.EXPECT().Update(mock.Anything, int64(1), "plate", mock.Anything).
+		Return(&itemsvc.ChangeResult{Item: plate, LogEntryID: 4}, nil)
+	m.items.EXPECT().Create(mock.Anything, int64(1), mock.Anything).
+		Return(&itemsvc.ChangeResult{Item: plate, LogEntryID: 5}, nil)
+	m.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{plate}, nil)
+	m.items.EXPECT().Reviews(mock.Anything, int64(1)).Return(nil, nil)
+	for _, c := range [][3]string{
+		{"POST", "/api/items/plate/state", `{"state":"worn"}`},
+		{"PATCH", "/api/items/plate", `{"count":1}`},
+		{"POST", "/api/items", `{"name":{"en":"Plate"},"category":"armour"}`},
+		{"GET", "/api/items", ""},
+	} {
+		rec := do(h, c[0], c[1], c[2])
+		require.Equal(t, http.StatusOK, rec.Code, c[1]+rec.Body.String())
+		assert.Contains(t, rec.Body.String(), `"warnings":["armour_not_allowed"]`, c[0]+" "+c[1])
+	}
 }

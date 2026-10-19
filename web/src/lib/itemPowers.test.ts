@@ -56,6 +56,7 @@ const gem: Item = {
   acMelee: 0,
   acMissile: 0,
   review: [],
+  warnings: [],
   type: "gem",
   behaviour: "daily",
   magicalBonus: 0,

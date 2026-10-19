@@ -101,7 +101,7 @@ describe("acRowView (ADR 0033 step 10, ADR 0035 item 8)", () => {
   });
 
   it("shows the override while one is set (ADR 0033 step 13)", () => {
-    const base = { ac: -2, floored: false, rows: [] };
+    const base = { ac: -2, floored: false, rows: [], warnings: [] };
     expect(shownAc({ ...base, override: null })).toBe(-2);
     expect(shownAc({ ...base, override: { value: 4, label: "" } })).toBe(4);
   });

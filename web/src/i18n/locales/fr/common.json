@@ -2265,6 +2265,19 @@
       },
       "withConditions": "{{effects}} ({{conditions}})",
       "plusText": "magie {{value}}"
+    },
+    "warnings": {
+      "armour_not_allowed": "Pas pour {{who}}",
+      "weapon_not_allowed": "Pas pour {{who}}",
+      "hands": "Arme à deux mains avec un bouclier",
+      "title": "Avertissements de classe",
+      "who": {
+        "bard": "un barde",
+        "cleric": "un clerc",
+        "fighter": "un guerrier",
+        "mage": "un magicien",
+        "thief": "un voleur"
+      }
     }
   },
   "intro": {
@@ -2504,6 +2517,7 @@
         "value": "Entre −10 et 10",
         "label": "60 caractères au plus"
       }
-    }
+    },
+    "warned": "Avertissement de classe"
   }
 }

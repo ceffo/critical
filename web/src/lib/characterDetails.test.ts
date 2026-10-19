@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { languageKey, toBody, toDraft } from "./characterDetails";
+import {
+  ALIGNMENT_CODES,
+  codeOrEmpty,
+  hasAlignmentWarning,
+  languageKey,
+  toBody,
+  toDraft,
+} from "./characterDetails";
 
 const details = {
-  race: "Elf",
-  alignment: "",
+  alignment: "neutral_good",
   age: 112,
-  sex: "",
+  sex: "male",
   height: "",
   weight: "",
   hair: "",
@@ -19,6 +25,11 @@ describe("character details draft", () => {
       ageInvalid: false,
       body: details,
     });
+  });
+  it("leaves out an alignment or sex not picked yet", () => {
+    const { body } = toBody({ ...toDraft(details), alignment: "", sex: "" });
+    expect(body).not.toHaveProperty("alignment");
+    expect(body).not.toHaveProperty("sex");
   });
   it("an empty age clears it and no languages is an empty list", () => {
     const { body } = toBody({ ...toDraft(details), age: " ", languages: "  " });
@@ -42,5 +53,33 @@ describe("languageKey", () => {
   it("drops case and accents", () => {
     expect(languageKey("Élfique")).toBe("elfique");
     expect(languageKey("Haut Elfique")).toBe("hautelfique");
+  });
+});
+
+describe("hasAlignmentWarning", () => {
+  it("reads the warning, and an answer without `warnings` (the previous release) as none", () => {
+    expect(
+      hasAlignmentWarning({
+        warnings: [{ code: "alignment_not_allowed", field: "alignment" }],
+      }),
+    ).toBe(true);
+    expect(hasAlignmentWarning({ warnings: [] })).toBe(false);
+    expect(hasAlignmentWarning({})).toBe(false);
+  });
+});
+
+describe("an old release's free text", () => {
+  it("is not kept in the draft, so an unrelated save never sends it", () => {
+    const draft = toDraft({
+      ...details,
+      alignment: "Chaotic Good",
+      sex: "Homme",
+    });
+    expect(draft.alignment).toBe("");
+    expect(draft.sex).toBe("");
+    const { body } = toBody(draft);
+    expect(body).not.toHaveProperty("alignment");
+    expect(body).not.toHaveProperty("sex");
+    expect(codeOrEmpty("lawful_good", ALIGNMENT_CODES)).toBe("lawful_good");
   });
 });

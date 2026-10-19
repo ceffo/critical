@@ -1,6 +1,8 @@
 {
   "name": "Kelsen Balstriel",
   "race": "half_elf",
+  "alignment": "neutral_good",
+  "sex": "male",
   "str": 12,
   "dex": 17,
   "con": 16,

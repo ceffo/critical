@@ -1,7 +1,7 @@
 # ADR 0032: Character identity and creation rolls
 
 **Status**: accepted 2026-10-18 (decisions from the user's triage of the onboarding epic, the same
-day; the details this ADR added beyond the triage were accepted by the supervisor in review). Not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
+day; the details this ADR added beyond the triage were accepted by the supervisor in review). Steps 1, 2, 3 and 8 (for alignment, sex and the race detail) implemented 2026-10-18, see "As built"; the rest is not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
 step 7.5 on level 1 hit points) and [ADR 0029](0029-users-login-and-access.md) steps 7.2 and 7.3
 (character actions leave the cog menu; creation is a full-screen route).
 
@@ -244,6 +244,29 @@ endpoints, the creation making the character current, retire repairing the curre
 `race` (step 1 above) and gains the fields of this ADR. Item 5 of the as-built amendment ("The web",
 the cog menu's Character group and the creation dialog) is superseded by this paragraph when the
 roster and creation items land.
+
+## As built (steps 1, 2, 3 and 8, alignment and sex)
+
+2026-10-18, the item that made alignment and sex codes. The rest of the ADR is not built.
+
+- **Storage.** `characters.alignment` and `characters.sex` stay TEXT columns and hold the codes, `''`
+  for missing. Migration 013 changes no column ([ADR 0024](0024-deployment.md) step 5.2: the release
+  before keeps working on the schema while the new one deploys); its data step maps the stored free
+  text (`mapIdentity`, the spellings in `storage/postgres/identity.go`), clears the unmapped values,
+  empties `characters.race` and gives the seed character the alignment and sex of `seeds/character.json`
+  when he lacks them. The new code no longer reads or writes `characters.race`: **a later migration
+  drops it**, in the release after this one is deployed everywhere (until then the release before may
+  still write free text into it, which nobody reads).
+- **Refusals** are field errors `details.alignment` / `details.sex` at creation (the `details.` prefix of
+  that route) and `alignment` / `sex` on `PATCH /api/character/details`, codes `empty`, `unknown`,
+  `alignment_not_allowed` (the web knows the class, so the response does not name it). The class
+  limits are the table in `ruletablesvc/alignment.go`. A request still carrying `race` is a 400
+  `bad_request` (unknown field).
+- **Reads.** `GET /api/character` carries `missing` (field codes the character lacks: `alignment`,
+  `sex`) and `warnings` (`{code, field}`: `alignment_not_allowed` for a kept alignment its class
+  refuses, step 8.4); `race` is gone from it and from the details.
+- **Options.** `GET /api/characters/options` gains `alignments` per class (the codes it admits, in the
+  PHB order) and `sexes`; the creation form and the card's edit offer only those.
 
 ## Consequences
 

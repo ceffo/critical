@@ -64,7 +64,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 			PetriPoly: int(row.SavePetriPoly), Breath: int(row.SaveBreath), Spell: int(row.SaveSpell),
 		}},
 		Details: charactersvc.Details{
-			Race: row.Race, Alignment: row.Alignment, Age: int(row.Age), Sex: row.Sex,
+			Alignment: row.Alignment, Age: int(row.Age), Sex: row.Sex,
 			Height: row.Height, Weight: row.Weight, Hair: row.Hair, Eyes: row.Eyes, Languages: langs,
 		},
 	}, nil
@@ -299,22 +299,22 @@ func decodeLanguages(raw string) ([]string, error) {
 }
 
 // GetDetails reads the editable details. Returns domain.ErrCharacterNotFound when the row is missing.
-func (d *DAL) GetDetails(ctx context.Context, id int64) (charactersvc.Details, error) {
+func (d *DAL) GetDetails(ctx context.Context, id int64) (charactersvc.Details, string, error) {
 	r, err := d.q.GetCharacterDetails(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return charactersvc.Details{}, domain.ErrCharacterNotFound
+		return charactersvc.Details{}, "", domain.ErrCharacterNotFound
 	}
 	if err != nil {
-		return charactersvc.Details{}, fmt.Errorf("get character details: %w", err)
+		return charactersvc.Details{}, "", fmt.Errorf("get character details: %w", err)
 	}
 	langs, err := decodeLanguages(r.Languages)
 	if err != nil {
-		return charactersvc.Details{}, err
+		return charactersvc.Details{}, "", err
 	}
 	return charactersvc.Details{
-		Race: r.Race, Alignment: r.Alignment, Age: int(r.Age), Sex: r.Sex,
+		Alignment: r.Alignment, Age: int(r.Age), Sex: r.Sex,
 		Height: r.Height, Weight: r.Weight, Hair: r.Hair, Eyes: r.Eyes, Languages: langs,
-	}, nil
+	}, r.Class, nil
 }
 
 // UpdateDetails overwrites every editable detail of the character.
@@ -324,7 +324,7 @@ func (d *DAL) UpdateDetails(ctx context.Context, id int64, v charactersvc.Detail
 		return fmt.Errorf("encode languages: %w", err)
 	}
 	n, err := d.q.UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
-		Race: v.Race, Alignment: v.Alignment, Age: int64(v.Age), Sex: v.Sex, Height: v.Height,
+		Alignment: v.Alignment, Age: int64(v.Age), Sex: v.Sex, Height: v.Height,
 		Weight: v.Weight, Hair: v.Hair, Eyes: v.Eyes, Languages: string(langs), ID: id,
 	})
 	if err != nil {

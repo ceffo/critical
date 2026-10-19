@@ -88,8 +88,9 @@ type NewCharacter struct {
 	// classes.
 	SkillPoints map[string]int
 	SkillArmor  string
-	// Details are the free-text details entered with the character, checked
-	// as the card's edit checks them (Details.Apply); nil fields stay unset.
+	// Details are the details entered with the character, checked as the
+	// card's edit checks them (Details.Apply); the alignment and the sex are
+	// required, the other nil fields stay unset.
 	Details DetailsPatch
 }
 
@@ -169,7 +170,7 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 	if n.XP < MinStartingXP || n.XP > MaxStartingXP {
 		return Character{}, &domain.FieldError{Field: "xp", Message: CodeOutOfRange}
 	}
-	details, err := newDetails(n.Details)
+	details, err := newDetails(n.Class, n.Details)
 	if err != nil {
 		return Character{}, err
 	}
@@ -448,13 +449,18 @@ type ClassOption struct {
 	// for them; both empty for a class without skill points.
 	Skills      []string
 	SkillArmors []string
+	// Alignments are the alignments the class admits (ADR 0032 step 2), in
+	// ruletablesvc.Alignments order.
+	Alignments []string
 }
 
 // CreationOptions are what the creation form offers: the creatable classes
 // with their races, and the ranges the entered values must fall in (the
 // same ones Create checks).
 type CreationOptions struct {
-	Classes                []ClassOption
+	Classes []ClassOption
+	// Sexes are the sex codes (ADR 0032 step 3).
+	Sexes                  []string
 	MinAbility, MaxAbility int
 	MinHPMax, MaxHPMax     int
 	MinXP, MaxXP           int
@@ -470,13 +476,13 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
-		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Classes: make([]ClassOption, 0, len(CreatableClasses)),
+		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Sexes: slices.Clone(Sexes), Classes: make([]ClassOption, 0, len(CreatableClasses)),
 	}
 	for _, class := range CreatableClasses {
 		if _, err := ruletablesvc.ClassGroup(class); err != nil {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
-		opt := ClassOption{Class: class, Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}}
+		opt := ClassOption{Class: class, Alignments: ruletablesvc.AlignmentsOf(class), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}}
 		if ruletablesvc.HasSkillPoints(class) {
 			opt.Skills = slices.Clone(ruletablesvc.SkillsOf(class))
 			opt.SkillArmors = slices.Clone(ruletablesvc.SkillArmorsOf(class))

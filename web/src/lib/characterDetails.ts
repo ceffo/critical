@@ -1,20 +1,11 @@
 import type { CharacterDetails } from "@/types/character";
 
-/** The text fields, in display order. */
-export const TEXT_FIELDS = [
-  "race",
-  "alignment",
-  "sex",
-  "height",
-  "weight",
-  "hair",
-  "eyes",
-] as const;
+/** The free-text fields, in display order (alignment and sex are codes picked from the server's lists). */
+export const TEXT_FIELDS = ["height", "weight", "hair", "eyes"] as const;
 export type TextField = (typeof TEXT_FIELDS)[number];
 
 /** The form's state: everything as the text typed in the inputs. */
 export interface Draft {
-  race: string;
   alignment: string;
   age: string;
   sex: string;
@@ -25,9 +16,30 @@ export interface Draft {
   languages: string;
 }
 
+/** The alignment and sex codes (ADR 0032): a stored value that is none (an old release's free text) is missing. */
+export const ALIGNMENT_CODES = [
+  "lawful_good",
+  "neutral_good",
+  "chaotic_good",
+  "lawful_neutral",
+  "true_neutral",
+  "chaotic_neutral",
+  "lawful_evil",
+  "neutral_evil",
+  "chaotic_evil",
+];
+export const SEX_CODES = ["male", "female"];
+
+/** The code `v` is, "" when it is none. */
+export function codeOrEmpty(v: string | undefined, codes: string[]): string {
+  return v !== undefined && codes.includes(v) ? v : "";
+}
+
 export function toDraft(d: CharacterDetails): Draft {
   return {
     ...d,
+    alignment: codeOrEmpty(d.alignment, ALIGNMENT_CODES),
+    sex: codeOrEmpty(d.sex, SEX_CODES),
     age: d.age === null ? "" : String(d.age),
     languages: d.languages.join(", "),
   };
@@ -39,7 +51,7 @@ export function toDraft(d: CharacterDetails): Draft {
  * Every limit is the server's.
  */
 export function toBody(draft: Draft): {
-  body: CharacterDetails;
+  body: Partial<CharacterDetails>;
   ageInvalid: boolean;
 } {
   const age = draft.age.trim();
@@ -51,9 +63,10 @@ export function toBody(draft: Draft): {
   return {
     ageInvalid,
     body: {
-      race: draft.race,
-      alignment: draft.alignment,
-      sex: draft.sex,
+      // A character that lacks its alignment or sex may still edit the rest: an unpicked value is
+      // left out, not sent empty (the server refuses an empty one).
+      ...(draft.alignment === "" ? {} : { alignment: draft.alignment }),
+      ...(draft.sex === "" ? {} : { sex: draft.sex }),
       height: draft.height,
       weight: draft.weight,
       hair: draft.hair,
@@ -71,4 +84,16 @@ export function languageKey(name: string): string {
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Whether the class no longer admits the character's alignment. `warnings` is absent from the
+ * answer of a release that predates it (a rolling deploy, ADR 0024): absent reads as none.
+ */
+export function hasAlignmentWarning(c: {
+  warnings?: { code: string; field: string }[];
+}): boolean {
+  return (c.warnings ?? []).some(
+    (w) => w.code === "alignment_not_allowed" && w.field === "alignment",
+  );
 }

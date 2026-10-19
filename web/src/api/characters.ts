@@ -24,6 +24,20 @@ export function fetchCreationOptions(): Promise<CreationOptions> {
   return request<CreationOptions>("/api/characters/options");
 }
 
+/**
+ * The options with the alignment and sex lists (ADR 0032). A release that predates them answers
+ * without (a rolling deploy, ADR 0024): that is rejected as not loaded, never read as "no choice".
+ */
+export async function fetchCreationChoices(): Promise<CreationOptions> {
+  const o = await fetchCreationOptions();
+  if (
+    !Array.isArray(o.sexes) ||
+    o.classes.some((c) => !Array.isArray(c.alignments))
+  )
+    throw new Error("incomplete creation options");
+  return o;
+}
+
 /** Creates a character, which becomes current. */
 export function createCharacter(body: NewCharacter): Promise<CharacterList> {
   return post<CharacterList>("/api/characters", body);

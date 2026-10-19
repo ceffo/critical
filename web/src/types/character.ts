@@ -208,8 +208,8 @@ export interface Character {
   skillArmor: string;
   derived: Derived;
 
-  // Details the player edits; age is null when not set. `race` is free text.
-  race: string;
+  // Details the player edits; age is null when not set. `alignment` and `sex` are codes (ADR 0032
+  // steps 2 and 3), "" when the character lacks them (see `missing`).
   alignment: string;
   age: number | null;
   sex: string;
@@ -218,12 +218,17 @@ export interface Character {
   hair: string;
   eyes: string;
   languages: string[];
+
+  /** The required details the character lacks ("alignment", "sex"): the card asks to pick them
+   * (ADR 0032 step 8.2). */
+  missing: ("alignment" | "sex")[];
+  /** Rules the stored character breaks without being refused (step 8.4), worded by the web. */
+  warnings: { code: string; field: string }[];
 }
 
 /** The editable details, as the server stores them. */
 export type CharacterDetails = Pick<
   Character,
-  | "race"
   | "alignment"
   | "age"
   | "sex"
@@ -272,7 +277,11 @@ export interface CreationOptions {
     skills: string[];
     /** The armours it picks for its skills (step 1); empty for none. */
     skillArmors: string[];
+    /** The alignment codes the class admits (ADR 0032 step 2). */
+    alignments: string[];
   }[];
+  /** The sex codes (ADR 0032 step 3). */
+  sexes: string[];
   ability: ValueRange;
   /** The 18/xx percentile's range (1 = 18/01, 100 = 18/00). */
   strExceptional: ValueRange;
@@ -305,5 +314,5 @@ export type NewCharacter = {
   skillPoints?: Record<string, number>;
   skillArmor?: string;
   /** The details, as the card shows them (age null for none); a refusal's field is `details.<field>`. */
-  details?: CharacterDetails;
+  details?: Partial<CharacterDetails>;
 } & Record<AbilityCode, number | null>;

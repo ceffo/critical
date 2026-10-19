@@ -63,7 +63,8 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		Details: identity(),
+		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 		SkillArmor: "none", SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
 	})
 	require.NoError(t, err)
@@ -119,7 +120,8 @@ func TestThief_Step17_SpendPointsAfterALevelUpAndUndo(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		Details: identity(),
+		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 		SkillArmor: "none", SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
 	})
 	require.NoError(t, err)
@@ -179,7 +181,8 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 	thief := func(points map[string]int) int64 {
 		t.Helper()
 		id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-			Name: "Vex", Class: "thief", Race: "halfling", Str: 12, Dex: 18, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+			Details: identity(),
+			Name:    "Vex", Class: "thief", Race: "halfling", Str: 12, Dex: 18, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 			SkillArmor: "none", SkillPoints: points,
 		})
 		require.NoError(t, err)
@@ -235,7 +238,8 @@ func TestThief_Step19_BackstabAtAnUnknownACKeepsItsMultiplier(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		Details: identity(),
+		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 		SkillArmor: "none",
 	})
 	require.NoError(t, err)
@@ -267,7 +271,8 @@ func TestThief_Step1_ChangeTheSkillArmourAfterCreation(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		Details: identity(),
+		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 		SkillArmor: "none", SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
 	})
 	require.NoError(t, err)
@@ -323,7 +328,8 @@ func TestThief_Step1_ChangeTheSkillArmourAfterCreation(t *testing.T) {
 	assert.Equal(t, "elven_chain", c.SkillArmor, "another user changes nothing")
 
 	fighter, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+		Details: identity(),
+		Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
 	})
 	require.NoError(t, err)
 	_, err = bs.Character.Change(ctx, s.User.ID, fighter, charactersvc.Change{SkillArmor: new("leather")})
@@ -348,11 +354,13 @@ func TestThief_Step1_ArmourChangeIsAtomicWithRenameAndRetire(t *testing.T) {
 	require.NoError(t, err)
 	owner := s.User.ID
 	fighter, err := bs.Character.Create(ctx, owner, charactersvc.NewCharacter{
-		Name: "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+		Details: identity(),
+		Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
 	})
 	require.NoError(t, err)
 	thief, err := bs.Character.Create(ctx, owner, charactersvc.NewCharacter{
-		Name: "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		Details: identity(),
+		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 		SkillArmor: "none",
 	})
 	require.NoError(t, err)

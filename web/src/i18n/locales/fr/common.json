@@ -1522,7 +1522,6 @@
     "level": "Niveau",
     "raceCode": "Race (règles)",
     "fields": {
-      "race": "Race",
       "alignment": "Alignement",
       "age": "Âge",
       "sex": "Sexe",
@@ -1551,7 +1550,16 @@
       "out_of_range": "Saisissez un âge entier entre 1 et 10 000.",
       "too_many": "Trop de langues.",
       "empty": "Une langue est vide.",
-      "duplicate": "Une langue est en double."
+      "duplicate": "Une langue est en double.",
+      "alignment": {
+        "empty": "Choisissez un alignement.",
+        "unknown": "Choisissez l’un des alignements proposés.",
+        "alignment_not_allowed": "Cet alignement est interdit à la classe {{className}}."
+      },
+      "sex": {
+        "empty": "Choisissez un sexe.",
+        "unknown": "Choisissez l’un des sexes proposés."
+      }
     },
     "races": {
       "human": "Humain",
@@ -1560,6 +1568,28 @@
       "gnome": "Gnome",
       "half_elf": "Demi-elfe",
       "halfling": "Petite-gens"
+    },
+    "missing": "À choisir",
+    "pick": "Choisir…",
+    "optionsError": "Les choix n'ont pas pu être chargés.",
+    "optionsRetry": "Réessayer",
+    "alignments": {
+      "lawful_good": "Loyal bon",
+      "neutral_good": "Neutre bon",
+      "chaotic_good": "Chaotique bon",
+      "lawful_neutral": "Loyal neutre",
+      "true_neutral": "Neutre strict",
+      "chaotic_neutral": "Chaotique neutre",
+      "lawful_evil": "Loyal mauvais",
+      "neutral_evil": "Neutre mauvais",
+      "chaotic_evil": "Chaotique mauvais"
+    },
+    "sexes": {
+      "male": "Homme",
+      "female": "Femme"
+    },
+    "warnings": {
+      "alignment_not_allowed": "Cet alignement n’est pas permis à un personnage de classe {{className}} ; conservé tel qu’enregistré."
     }
   },
   "xp": {
@@ -1830,9 +1860,7 @@
     "renameHint": "Enregistrer le nouveau nom de {{name}}",
     "renameTitle": "Renommer le personnage",
     "details": "Détails",
-    "detailsLead": "Facultatif ; modifiables ensuite sur la fiche, en cliquant sur le nom.",
-    "raceDetail": "Précision de race",
-    "raceDetailHint": "Texte libre, par exemple « elfe sylvain » ; la race des règles est choisie plus haut",
+    "detailsLead": "L’alignement et le sexe sont obligatoires, le reste est facultatif ; modifiables ensuite sur la fiche, en cliquant sur le nom.",
     "switchTitle": "Vos personnages",
     "newTitle": "Nouveau personnage",
     "retireTitle": "Retirer le personnage",

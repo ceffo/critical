@@ -160,8 +160,8 @@ func GetCharacter(charID CharacterIDFunc, svc characterGetter) render.HandlerFun
 }
 
 // CharacterDTO is the current character's sheet: the entered values and the
-// derived block (ADR 0030 steps 3 to 8). `race` is the free-text detail the
-// player edits, `raceCode` the PHB race the rules read ("" for none).
+// derived block (ADR 0030 steps 3 to 8). `raceCode` is the PHB race the rules
+// read ("" for none).
 type CharacterDTO struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
@@ -184,7 +184,19 @@ type CharacterDTO struct {
 	// derived.bardSkills.
 	SkillArmor string     `json:"skillArmor"`
 	Derived    DerivedDTO `json:"derived"`
+	// Missing lists the required fields the character lacks (ADR 0032 step
+	// 8.2: "alignment", "sex"); the card asks the player to pick them.
+	Missing []string `json:"missing"`
+	// Warnings are the rules the stored character breaks without being
+	// refused (step 8.4: an alignment its class does not admit).
+	Warnings []WarningDTO `json:"warnings"`
 	detailshdl.DetailsDTO
+}
+
+// WarningDTO is a code and the field it is about; the web words it.
+type WarningDTO struct {
+	Code  string `json:"code"`
+	Field string `json:"field"`
 }
 
 // SavesDTO are five numbers, one per save category.
@@ -389,5 +401,14 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race, SkillArmor: c.SkillArmor,
 		Derived: derivedDTO(c.Derived), DetailsDTO: detailshdl.ToDTO(c.Details),
+		Missing: c.Details.Missing(), Warnings: warningsDTO(c.Details.Warnings(c.Class)),
 	}
+}
+
+func warningsDTO(ws []charactersvc.Warning) []WarningDTO {
+	out := make([]WarningDTO, 0, len(ws))
+	for _, w := range ws {
+		out = append(out, WarningDTO(w))
+	}
+	return out
 }

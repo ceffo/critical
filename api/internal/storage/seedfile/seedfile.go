@@ -38,10 +38,13 @@ func Path(seedsDir, file string) string {
 // Character is seeds/character.json. Level, Thac0Base and the saves are the
 // figures the campaign sheet states, kept to compare with the derived values
 // (ADR 0030 step 24), never read as inputs. Race is a race code
-// (charactersvc.Races), "" for none.
+// (charactersvc.Races), "" for none; Alignment and Sex are codes
+// (ruletablesvc.Alignments, charactersvc.Sexes).
 type Character struct {
 	Name             string   `json:"name"`
 	Race             string   `json:"race"`
+	Alignment        string   `json:"alignment"`
+	Sex              string   `json:"sex"`
 	Str              int      `json:"str"`
 	Dex              int      `json:"dex"`
 	Con              int      `json:"con"`

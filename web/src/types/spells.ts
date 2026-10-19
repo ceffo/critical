@@ -1,5 +1,6 @@
 import type { LocalizedText } from "@/types/localized";
 import type { Modifier } from "@/types/combat";
+import type { MarkedTexts } from "@/lib/valueMarks";
 
 export interface SpellSlot {
   level: number;
@@ -217,6 +218,11 @@ export interface Spell {
   components: LocalizedText;
   saving_throw: LocalizedText;
   description: LocalizedText;
+  /**
+   * The gameplay values of the description and the six stat texts, by field then language, as
+   * spans that concatenate to the text (ADR 0021 step 15). Only a text with a value is listed.
+   */
+  marked?: MarkedTexts;
   /** Book code of the English text (PHB, TOM, ...; WEB when no book was matched). */
   source: string;
   /** The six stat fields above, typed. Raw text stays in the text fields. */

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
+import { markedField } from "@/lib/valueMarks";
 import { useSpellNamesStore } from "@/stores/spellNames";
 import type { Spell, SpellNames } from "@/types/spells";
 
@@ -41,14 +42,22 @@ export function useSpellName(): SpellNamer {
   return spellNamer(i18n.language, names);
 }
 
-/** A spell's name and description in `lang`, each falling back to English on its own. */
+/**
+ * A spell's name and description in `lang`, each falling back to English on its own. The
+ * description carries the API's value marks (lib/valueMarks); `plainText` drops them.
+ */
 export function spellTexts(
   lang: string,
-  spell: Pick<Spell, "name" | "description">,
+  spell: Pick<Spell, "name" | "description" | "marked">,
 ): { name: string; description: string } {
   return {
     name: localized(lang, spell.name),
-    description: localized(lang, spell.description),
+    description: markedField(
+      lang,
+      spell.description,
+      spell.marked,
+      "description",
+    ),
   };
 }
 

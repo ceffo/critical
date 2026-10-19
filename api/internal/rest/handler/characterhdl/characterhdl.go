@@ -248,11 +248,7 @@ type DerivedDTO struct {
 	Saves         SavesDTO       `json:"saves"`
 	RaceSaveBonus SavesDTO       `json:"raceSaveBonus"`
 	SpellSlots    []SlotCountDTO `json:"spellSlots"`
-	// SheetDifferences is retired (ADR 0030 step 24) and always empty. The
-	// previous release's web reads `.length` on it, so the field stays one
-	// release for the rolling deploy; drop it after.
-	SheetDifferences []struct{} `json:"sheetDifferences"`
-	LevelUp          LevelUpDTO `json:"levelUp"`
+	LevelUp       LevelUpDTO     `json:"levelUp"`
 	// Specializes is ADR 0030 step 12: the class may specialize in a weapon.
 	Specializes bool `json:"specializes"`
 	// Spellbook is ADR 0030 step 20.1: the learning rules of a class with a
@@ -359,7 +355,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 	out := DerivedDTO{
 		XPTotal: d.XPTotal, TargetLevel: d.TargetLevel, RealizedLevel: d.RealizedLevel, NextLevelXP: d.NextLevelXP, THAC0: d.THAC0,
 		Saves: savesDTO(d.Saves), RaceSaveBonus: savesDTO(d.RaceSaveBonus),
-		SpellSlots: []SlotCountDTO{}, SheetDifferences: []struct{}{},
+		SpellSlots: []SlotCountDTO{},
 		LevelUp: LevelUpDTO{
 			Pending: wire.PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
 		},

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LogEntry, LogKind, LogStatus } from "@/types/log";
-import { lastDamage, lastHpChange, lastSaves } from "./moiLog";
+import { lastDamage, lastHpChange, lastSaves } from "./hpAndSaves";
 
 let nextId = 100;
 function entry(kind: LogKind, over: Partial<LogEntry> = {}): LogEntry {

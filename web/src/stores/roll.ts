@@ -1,15 +1,6 @@
 import { create } from "zustand";
-import type {
-  AttackRequest,
-  RollResult,
-  SaveBreakdown,
-  SaveCategory,
-} from "@/types/combat";
-import type {
-  CastResult,
-  ExposureRequest,
-  ExposureResult,
-} from "@/types/spells";
+import type { AttackRequest, SaveCategory } from "@/types/combat";
+import type { ExposureRequest } from "@/types/spells";
 import { rollExposure as postExposure } from "@/api/spells";
 import { resolveAttack } from "@/api/combat";
 import {
@@ -20,25 +11,19 @@ import {
   rollSavingThrow,
 } from "@/api/roll";
 import { postUseItem } from "@/api/items";
-import type { UseResult } from "@/types/items";
-import type { Ability, AbilityCheck, SkillCheck } from "@/types/skills";
+import type { Ability } from "@/types/skills";
 import {
   adjustAbility,
   adjustSkill,
   rollAbility,
   rollSkill,
 } from "@/api/skills";
+import type { LiveResult } from "@/journal/card";
 import { useTableStore } from "./table";
 
-/** The last roll and what was asked for, so the result card can show its context. */
-export type LastRoll =
-  | { kind: "attack"; result: RollResult }
-  | { kind: "save"; result: SaveBreakdown }
-  | { kind: "cast"; result: CastResult }
-  | { kind: "item"; result: UseResult }
-  | { kind: "skill"; result: SkillCheck }
-  | { kind: "ability"; result: AbilityCheck }
-  | { kind: "exposure"; result: ExposureResult };
+/** The last roll and what was asked for, so the result card can show its context; its kind is the
+ * log kind the roll is recorded as. */
+export type LastRoll = LiveResult;
 
 interface RollStore {
   last: LastRoll | null;
@@ -115,11 +100,14 @@ export const useRollStore = create<RollStore>((set) => {
         true,
       ),
     spendItem: (id) =>
-      roll(async () => ({ kind: "item", result: await postUseItem(id) }), true),
+      roll(
+        async () => ({ kind: "item_use", result: await postUseItem(id) }),
+        true,
+      ),
     rollSkill: (id, adjustment) =>
       roll(
         async () => ({
-          kind: "skill",
+          kind: "skill_check",
           result: await rollSkill(id, adjustment ? { adjustment } : undefined),
         }),
         true,
@@ -127,20 +115,23 @@ export const useRollStore = create<RollStore>((set) => {
     adjustLastSkill: (id, adjustment, reason) =>
       roll(
         async () => ({
-          kind: "skill",
+          kind: "skill_check",
           result: await adjustSkill(id, adjustment, reason),
         }),
         true,
       ),
     rollAbility: (ability) =>
       roll(
-        async () => ({ kind: "ability", result: await rollAbility(ability) }),
+        async () => ({
+          kind: "ability_check",
+          result: await rollAbility(ability),
+        }),
         true,
       ),
     adjustLastAbility: (id, adjustment, reason) =>
       roll(
         async () => ({
-          kind: "ability",
+          kind: "ability_check",
           result: await adjustAbility(id, adjustment, reason),
         }),
         true,

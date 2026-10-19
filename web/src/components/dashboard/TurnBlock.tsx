@@ -40,10 +40,10 @@ export function TurnBlock() {
     <div
       className="group-band flex shrink-0 items-center gap-6 rounded-lg px-3 py-1"
       role="group"
-      aria-label={t("turn.title")}
+      aria-label={t("round.title")}
     >
       <div className="flex flex-col items-center" data-testid="turn">
-        <span className="section-label">{t("turn.title")}</span>
+        <span className="section-label">{t("round.title")}</span>
         <span
           className="min-w-[2ch] text-center text-headline tabular-nums"
           data-testid="round-value"
@@ -59,7 +59,7 @@ export function TurnBlock() {
             disabled={busy}
             onClick={() => void nextRound()}
           >
-            {t("turn.next")}
+            {t("round.next")}
             <ArrowRight />
           </Button>
           <Popover
@@ -70,8 +70,8 @@ export function TurnBlock() {
             }}
           >
             <PopoverTrigger
-              aria-label={t("turn.menu")}
-              title={t("turn.menu")}
+              aria-label={t("round.menu")}
+              title={t("round.menu")}
               className="flex size-7 items-center justify-center rounded-lg border border-input text-foreground transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4"
             >
               <DotsThree weight="bold" />
@@ -95,13 +95,13 @@ export function TurnBlock() {
           data-testid="initiative-row"
         >
           {turn === 0 ? (
-            t("turn.outOfCombatInitiative")
+            t("round.outOfCombatInitiative")
           ) : (
             <span
               className="flex items-center gap-2"
-              title={t("turn.initiativeHint")}
+              title={t("round.initiativeHint")}
             >
-              {t("turn.initiative")}
+              {t("round.initiative")}
               {initiative ? (
                 <>
                   <span
@@ -113,8 +113,8 @@ export function TurnBlock() {
                   </span>
                   <button
                     type="button"
-                    aria-label={t("turn.initiativeReroll")}
-                    title={t("turn.initiativeReroll")}
+                    aria-label={t("round.initiativeReroll")}
+                    title={t("round.initiativeReroll")}
                     disabled={busy}
                     onClick={() => void rerollInitiative()}
                     className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted [&_svg]:size-4"
@@ -123,7 +123,7 @@ export function TurnBlock() {
                   </button>
                 </>
               ) : (
-                <span className="chip px-2">{t("turn.initiativeNone")}</span>
+                <span className="chip px-2">{t("round.initiativeNone")}</span>
               )}
             </span>
           )}
@@ -139,14 +139,14 @@ const menuItem =
 function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
   const { t } = useTranslation();
   return (
-    <div role="menu" aria-label={t("turn.menu")} className="flex flex-col">
+    <div role="menu" aria-label={t("round.menu")} className="flex flex-col">
       <button
         type="button"
         role="menuitem"
         className={menuItem}
         onClick={() => onPick("passing")}
       >
-        {t("turn.passTime")}
+        {t("round.passTime")}
       </button>
       <button
         type="button"
@@ -154,7 +154,7 @@ function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
         className={menuItem}
         onClick={() => onPick("setting")}
       >
-        {t("turn.setTurn")}
+        {t("round.setRound")}
       </button>
       <button
         type="button"
@@ -162,7 +162,7 @@ function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
         className={menuItem}
         onClick={() => onPick("confirmEnd")}
       >
-        {t("turn.endCombat")}
+        {t("round.endCombat")}
       </button>
     </div>
   );
@@ -208,35 +208,35 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
   return (
     <form
       className="flex flex-col gap-2 p-1"
-      aria-label={t("turn.passTime")}
+      aria-label={t("round.passTime")}
       onSubmit={async (ev) => {
         ev.preventDefault();
         if (preview.kind !== "ok" || value === null) return;
         if (await passTime(value)) onDone();
       }}
     >
-      <span className="section-label">{t("turn.passTime")}</span>
+      <span className="section-label">{t("round.passTime")}</span>
       <div className="flex items-center gap-2 text-body">
         <input
           className={`${fieldClass} !w-20 tabular-nums`}
           type="text"
           inputMode="decimal"
-          placeholder={t("turn.passTimePlaceholder")}
-          aria-label={t("turn.passTimeLabel")}
-          title={t("turn.passTimeHint")}
+          placeholder={t("round.passTimePlaceholder")}
+          aria-label={t("round.passTimeLabel")}
+          title={t("round.passTimeHint")}
           value={hours}
           onChange={(ev) => setHours(ev.target.value)}
           autoFocus
         />
-        <span>{t("turn.passTimeHours")}</span>
+        <span>{t("round.passTimeHours")}</span>
         <span
           className="tabular-nums text-muted-foreground"
           data-testid="pass-time-preview"
         >
           {preview.kind === "ok"
-            ? t("turn.passTimePreview", { count: preview.rounds })
+            ? t("round.passTimePreview", { count: preview.rounds })
             : preview.kind === "invalid"
-              ? t("turn.passTimeInvalid")
+              ? t("round.passTimeInvalid")
               : preview.kind === "error"
                 ? preview.message
                 : ""}
@@ -245,27 +245,27 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
       {preview.kind === "ok" && (
         <p className="text-body" data-testid="pass-time-ending">
           {preview.expiring.length > 0
-            ? t("turn.passTimeEnding", {
+            ? t("round.passTimeEnding", {
                 names: preview.expiring
                   .map((b) => buffName(spellName, b))
                   .join(", "),
               })
-            : t("turn.passTimeNothingEnds")}
+            : t("round.passTimeNothingEnds")}
         </p>
       )}
       <p className="text-label text-muted-foreground">
-        {t("turn.passTimeHint")}
+        {t("round.passTimeHint")}
       </p>
       <div className="flex justify-end gap-1">
         <Button size="sm" variant="ghost" type="button" onClick={onDone}>
-          {t("turn.cancel")}
+          {t("round.cancel")}
         </Button>
         <Button
           size="sm"
           type="submit"
           disabled={busy || preview.kind !== "ok"}
         >
-          {t("turn.confirm")}
+          {t("round.confirm")}
         </Button>
       </div>
     </form>
@@ -281,7 +281,7 @@ function SetTurnForm({ onDone }: { onDone: () => void }) {
   return (
     <form
       className="flex flex-col gap-2 p-1"
-      aria-label={t("turn.setTurn")}
+      aria-label={t("round.setRound")}
       onSubmit={async (ev) => {
         ev.preventDefault();
         if (!valid) return;
@@ -289,7 +289,7 @@ function SetTurnForm({ onDone }: { onDone: () => void }) {
       }}
     >
       <label className="flex items-center justify-between gap-2 text-body">
-        {t("turn.setLabel")}
+        {t("round.setLabel")}
         <input
           className={`${fieldClass} !w-20 tabular-nums`}
           type="number"
@@ -302,10 +302,10 @@ function SetTurnForm({ onDone }: { onDone: () => void }) {
       </label>
       <div className="flex justify-end gap-1">
         <Button size="sm" variant="ghost" type="button" onClick={onDone}>
-          {t("turn.cancel")}
+          {t("round.cancel")}
         </Button>
         <Button size="sm" type="submit" disabled={busy || !valid}>
-          {t("turn.apply")}
+          {t("round.apply")}
         </Button>
       </div>
     </form>
@@ -319,12 +319,12 @@ function EndCombatConfirm({ onDone }: { onDone: () => void }) {
     <div
       className="flex flex-col gap-2 p-1"
       role="alertdialog"
-      aria-label={t("turn.endCombat")}
+      aria-label={t("round.endCombat")}
     >
-      <p className="text-body">{t("turn.endCombatConfirm")}</p>
+      <p className="text-body">{t("round.endCombatConfirm")}</p>
       <div className="flex justify-end gap-1">
         <Button size="sm" variant="ghost" onClick={onDone}>
-          {t("turn.cancel")}
+          {t("round.cancel")}
         </Button>
         <Button
           size="sm"
@@ -334,7 +334,7 @@ function EndCombatConfirm({ onDone }: { onDone: () => void }) {
             if (await endCombat()) onDone();
           }}
         >
-          {t("turn.confirm")}
+          {t("round.confirm")}
         </Button>
       </div>
     </div>

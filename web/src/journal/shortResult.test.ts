@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { LogEntry, LogKind } from "@/types/log";
-import { shortResult } from "./lastResultShort";
+import { shortResult } from "./entry";
 import { recordedNames } from "@/i18n/inventoryName";
 
 async function makeT(lng: string) {

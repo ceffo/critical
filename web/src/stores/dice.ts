@@ -9,7 +9,7 @@ import {
 } from "@/api/dice";
 import { addDie, removeDie, stepConstant } from "@/lib/diceFormula";
 import type { DiceFavourite } from "@/types/dice";
-import { useFilStore } from "./fil";
+import { useJournalStore } from "./journal";
 import { useTableStore } from "./table";
 
 interface DiceStore {
@@ -66,7 +66,7 @@ export const useDiceStore = create<DiceStore>((set, get) => {
         set({ formula: res.formula });
         await useTableStore.getState().refresh();
         if (res.logEntryId !== undefined)
-          useFilStore.getState().select(res.logEntryId);
+          useJournalStore.getState().select(res.logEntryId);
         return true;
       } catch (e) {
         fail(e);

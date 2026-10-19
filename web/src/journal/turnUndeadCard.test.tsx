@@ -4,7 +4,7 @@ import { I18nextProvider } from "react-i18next";
 import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { TurnResult } from "@/types/character";
-import { TurnResultView } from "./ResultCard";
+import { turnUndeadKind } from "./kinds/turnUndead";
 
 async function render(turn: TurnResult) {
   const inst = i18next.createInstance();
@@ -17,14 +17,19 @@ async function render(turn: TurnResult) {
   });
   return renderToStaticMarkup(
     <I18nextProvider i18n={inst}>
-      <TurnResultView turn={turn} />
+      {turnUndeadKind.card?.({
+        payload: turn,
+        entry: null,
+        text: "",
+        interactive: true,
+      })}
     </I18nextProvider>,
   );
 }
 
 // ADR 0030 step 16.4: a D* turn destroys the 2d6 and turns the 2d4, two counts the server works out,
 // each with its dice; a T turn has the turned count only.
-describe("TurnResultView", () => {
+describe("turning undead card", () => {
   it("shows a D* turn's destroyed and turned counts apart", async () => {
     const html = await render({
       undead: "skeleton",

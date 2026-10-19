@@ -150,7 +150,7 @@
     "dyingZone": "Agonie, jusqu’à {{floor}}",
     "lastExposure": "{{delta}} {{spell}}"
   },
-  "turn": {
+  "round": {
     "title": "Tour",
     "next": "Tour suivant",
     "menu": "Autres actions du tour",
@@ -160,7 +160,7 @@
     "initiativeHint": "1d10, le plus bas agit en premier",
     "initiativeReroll": "Relancer l’initiative",
     "passTime": "Le temps passe…",
-    "setTurn": "Régler le numéro de tour…",
+    "setRound": "Régler le numéro de tour…",
     "endCombat": "Fin du combat",
     "endCombatConfirm": "Terminer le combat ? Le tour repasse à 0 ; les effets gardent leurs tours.",
     "setLabel": "Numéro du tour",
@@ -1505,18 +1505,18 @@
       "bonus": "Tou. / dég."
     }
   },
-  "moi": {
+  "chargeCards": {
     "chargesLeft_one": "{{count}} charge restante",
     "chargesLeft_other": "{{count}} charges restantes",
     "absorb": "Absorber",
     "absorbLabel": "Absorber un coup avec {{name}}",
     "chargesHint": "Un coup reçu en consomme une"
   },
-  "fil": {
+  "journal": {
     "card": "Détail",
     "latest": "Dernier",
-    "turn": "Tour {{round}}",
-    "turnShort": "T{{round}}",
+    "round": "Tour {{round}}",
+    "roundShort": "T{{round}}",
     "outOfCombat": "Hors combat",
     "when": "T{{round}} · {{time}}",
     "whenOutOfCombat": "Hors combat · {{time}}",
@@ -1527,7 +1527,7 @@
     "saveVs": "{{total}} contre {{target}}+",
     "castVsAc": "Jet pour toucher contre CA {{ac}}",
     "castBuff": "{{buff}} : {{counters}}",
-    "noRollsThisTurn": "Aucun jet ce tour-ci.",
+    "noRollsThisRound": "Aucun jet ce tour-ci.",
     "filter": {
       "label": "Filtre du journal",
       "all": "Tout",

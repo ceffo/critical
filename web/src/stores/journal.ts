@@ -1,12 +1,13 @@
 import { create } from "zustand";
-import type { LogFilter } from "@/lib/filCard";
+import type { LogFilter } from "@/journal/entry";
 import { useRollStore } from "./roll";
 
 /**
- * UI state of the result panel and journal (no game state): the journal entry shown in the detail card (null:
- * the latest result), the journal filter and whether the attack's calculation details are open.
+ * UI state of the result card and the journal (no game state): the journal entry shown in the
+ * card (null: the latest result), the journal filter and whether the attack's calculation details
+ * are open.
  */
-interface FilStore {
+interface JournalStore {
   selectedId: number | null;
   filter: LogFilter;
   detailOpen: boolean;
@@ -17,7 +18,7 @@ interface FilStore {
   setDetailOpen: (open: boolean) => void;
 }
 
-export const useFilStore = create<FilStore>((set) => ({
+export const useJournalStore = create<JournalStore>((set) => ({
   selectedId: null,
   filter: "all",
   detailOpen: false,
@@ -29,5 +30,5 @@ export const useFilStore = create<FilStore>((set) => ({
 
 // A new result (a roll, a cast, a correction) brings the card back to the latest result.
 useRollStore.subscribe((s, prev) => {
-  if (s.last !== prev.last) useFilStore.getState().showLatest();
+  if (s.last !== prev.last) useJournalStore.getState().showLatest();
 });

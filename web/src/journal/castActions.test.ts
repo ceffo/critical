@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { LogEntry } from "@/types/log";
-import { entryText } from "./logSummary";
+import { entryText } from "./entry";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();

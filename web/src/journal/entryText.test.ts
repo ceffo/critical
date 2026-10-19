@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { LogEntry } from "@/types/log";
-import { abilityText, entryText } from "./logSummary";
+import { entryText } from "./entry";
+import { abilityText } from "./words";
 import { spellNamer } from "@/i18n/spellName";
 import { inventoryNamer } from "@/i18n/inventoryName";
 

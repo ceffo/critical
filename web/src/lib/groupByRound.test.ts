@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LogEntry } from "@/types/log";
-import { groupByRound, isUndone, opensTurn } from "./groupByRound";
+import { groupByRound, isUndone, opensRound } from "./groupByRound";
 
 const entry = (id: number, round: number): LogEntry => ({
   id,
@@ -93,11 +93,11 @@ describe("groupByRound", () => {
       transactionId: 10,
       kind: "round_advance" as const,
     };
-    expect(opensTurn([init, advance])).toBe(true);
+    expect(opensRound([init, advance])).toBe(true);
     // A reroll of the initiative alone, or any other multi-entry transaction, does not.
-    expect(opensTurn([init])).toBe(false);
+    expect(opensRound([init])).toBe(false);
     expect(
-      opensTurn([entry(13, 3), { ...entry(12, 3), transactionId: 13 }]),
+      opensRound([entry(13, 3), { ...entry(12, 3), transactionId: 13 }]),
     ).toBe(false);
   });
 

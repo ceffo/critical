@@ -3,7 +3,9 @@ import type { DamageTerm, RollResult } from "@/types/combat";
 import type { UseResult } from "@/types/items";
 import i18next from "i18next";
 import { resources } from "@/i18n";
-import { damageFormula, itemRollText, modLabel } from "./rollText";
+import { damageFormula } from "./kinds/attack";
+import { itemRollText } from "./kinds/itemUse";
+import { modLabel } from "./words";
 
 const hit = (over: Partial<RollResult>): RollResult =>
   ({

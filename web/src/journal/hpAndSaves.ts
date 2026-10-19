@@ -1,8 +1,9 @@
-// Display helpers for the character card: what the log already says, picked out for a glance. No game
-// rules here (docs/all.md, "Core Architectural Rule"): HP and save verdicts come from the server.
+// What the journal says for the character card, picked out for a glance: the last HP change and the
+// last save per category. No game rules here (docs/all.md, "Core Architectural Rule"): HP and save
+// verdicts come from the server.
 import type { LogEntry } from "@/types/log";
 import type { SaveCategory } from "@/types/combat";
-import { exposurePayload } from "./logSummary";
+import { decodeExposure } from "./kinds/exposure";
 
 /**
  * The newest HP change still in force: the delta the server applied and the player's source, or
@@ -29,7 +30,7 @@ export function lastHpChange(
       x.effectiveHpDelta !== 0,
   );
   if (!e) return null;
-  const p = exposurePayload(e);
+  const p = e.kind === "exposure" ? decodeExposure(e) : null;
   return p
     ? {
         delta: e.effectiveHpDelta,
@@ -58,6 +59,7 @@ export function lastSaves(
   const out: Partial<Record<SaveCategory, LastSave>> = {};
   for (const e of entries) {
     if (e.kind !== "save" || e.status === "voided") continue;
+    // The verdict and the d20 are enough here: a save logged before the full breakdown counts too.
     const p = (e.effectivePayload ?? e.payload) as {
       category?: unknown;
       d20Roll?: unknown;

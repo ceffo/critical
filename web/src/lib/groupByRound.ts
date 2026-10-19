@@ -22,7 +22,7 @@ export function isUndone(tx: LogEntry[]): boolean {
  * not framed as a multi-entry transaction: the turn block and its marker already say what they are
  * (ADR 0027 step 9.6).
  */
-export function opensTurn(tx: LogEntry[]): boolean {
+export function opensRound(tx: LogEntry[]): boolean {
   return tx.some((e) => e.kind === "round_advance");
 }
 

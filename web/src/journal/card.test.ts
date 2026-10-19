@@ -5,26 +5,24 @@ import type { LogEntry, LogKind } from "@/types/log";
 import type { RollResult, SaveBreakdown } from "@/types/combat";
 import type { CastResult } from "@/types/spells";
 import {
-  attackDiceChips,
-  castInstances,
+  cardContent,
   cardEntryId,
-  cardHeader,
-  cardModel,
   cardSource,
-  dieFaces,
-  dieTone,
-  filterEntries,
-  isRollEntry,
   lastResultEntry,
   latestResult,
-  liveKind,
-  liveModel,
-  rowValue,
-  turnMarker,
-  type CardModel,
   type LiveResult,
-} from "./filCard";
-import { undoButtonState } from "./undoButton";
+} from "./card";
+import { dieFaces, dieTone } from "./dice";
+import { entryCapped, filterEntries, isRolledEntry, rowValue } from "./entry";
+import { attackDiceChips } from "./kinds/attack";
+import { castInstances, type CastPayload } from "./kinds/cast";
+import { saveView } from "./kinds/save";
+import { KIND_VIEWS } from "./registry";
+import { roundMarker } from "./rounds";
+import { cardOf } from "./testing";
+import { englishSpellName } from "@/i18n/spellName";
+import { recordedNames } from "@/i18n/inventoryName";
+import { undoButtonState } from "@/lib/undoButton";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();
@@ -168,7 +166,7 @@ const diceRoll = {
   total: 7,
 };
 
-const KINDS: [LogKind, unknown, CardModel["layout"], Partial<LogEntry>?][] = [
+const KINDS: [LogKind, unknown, string, Partial<LogEntry>?][] = [
   ["attack", attackPayload, "attack"],
   ["skill_check", profCheck, "skill"],
   ["ability_check", strCheck, "ability"],
@@ -236,70 +234,60 @@ const KINDS: [LogKind, unknown, CardModel["layout"], Partial<LogEntry>?][] = [
   ],
 ];
 
-describe("cardModel: every log kind renders from its payload", () => {
+describe("cardContent: every log kind renders from its payload", () => {
   it("covers every kind", () => {
     const kinds = new Set(KINDS.map(([k]) => k));
     expect(kinds.size).toBe(KINDS.length);
-    // LogKind has 23 members (types/log.ts); a new kind must be added here.
     expect(kinds.size).toBe(24);
   });
 
   it.each(KINDS)("%s → %s", async (kind, payload, layout, over) => {
     const t = await makeT("en");
-    const m = cardModel(entry(kind, payload, over), t);
-    expect(m.layout).toBe(layout);
-    if (m.layout === "info") {
-      // Worded from the payload, never an empty line.
-      expect(m.info.text).not.toBe("");
-    }
+    const c = cardOf(entry(kind, payload, over), t);
+    expect(c.view).toBe(KIND_VIEWS[kind]);
+    expect(c.payload).not.toBeNull();
+    // A kind with a layout has its card body; the others show the journal's text.
+    expect(c.view?.card !== undefined).toBe(
+      layout !== "info" || kind === "hp_change",
+    );
+    // Worded from the payload, never an empty line.
+    expect(c.text).not.toBe("");
   });
 
   it("skill check: the payload as recorded, header names the skill (en, fr)", async () => {
     const e = entry("skill_check", profCheck, { id: 9 });
-    const m = cardModel(e, await makeT("en"));
-    expect(m).toEqual({
-      layout: "skill",
-      check: { ...profCheck, logEntryId: 9 },
-    });
-    expect(
-      cardHeader("skill_check", m, e, await makeT("en"), "en").subtitle,
-    ).toBe("Musical instrument");
-    const fr = cardHeader("skill_check", m, e, await makeT("fr"), "fr");
+    const en = cardOf(e, await makeT("en"));
+    expect(en.payload).toEqual({ ...profCheck, logEntryId: 9 });
+    expect(en.subtitle).toBe("Musical instrument");
+    const fr = cardOf(e, await makeT("fr"), "fr");
     expect(fr.tag).toBe("Compétence");
     expect(fr.subtitle).toBe("Instrument de musique");
     expect(
-      cardModel(entry("skill_check", { id: "x" }), await makeT("en")).layout,
-    ).toBe("info");
+      cardOf(entry("skill_check", { id: "x" }), await makeT("en")).payload,
+    ).toBeNull();
   });
 
   it("ability check: the payload as recorded, header names the ability (en, fr)", async () => {
     const e = entry("ability_check", strCheck, { id: 9 });
-    const m = cardModel(e, await makeT("en"));
-    expect(m).toEqual({
-      layout: "ability",
-      check: { ...strCheck, logEntryId: 9 },
-    });
-    const en = cardHeader("ability_check", m, e, await makeT("en"), "en");
+    const en = cardOf(e, await makeT("en"));
+    expect(en.payload).toEqual({ ...strCheck, logEntryId: 9 });
     expect(en.tag).toBe("Ability");
     expect(en.subtitle).toBe("Strength");
-    const fr = cardHeader("ability_check", m, e, await makeT("fr"), "fr");
+    const fr = cardOf(e, await makeT("fr"), "fr");
     expect(fr.tag).toBe("Caractéristique");
     expect(fr.subtitle).toBe("Force");
     expect(
-      cardModel(entry("ability_check", { ability: "str" }), await makeT("en"))
-        .layout,
-    ).toBe("info");
+      cardOf(entry("ability_check", { ability: "str" }), await makeT("en"))
+        .payload,
+    ).toBeNull();
   });
 
   it("attack: the payload as recorded, with its entry id for the correction", async () => {
-    const m = cardModel(
+    const c = cardOf(
       entry("attack", attackPayload, { id: 42 }),
       await makeT("en"),
     );
-    expect(m).toEqual({
-      layout: "attack",
-      roll: { ...attackPayload, logEntryId: 42 },
-    });
+    expect(c.payload).toEqual({ ...attackPayload, logEntryId: 42 });
   });
 
   it("attack: a corrected attack shows the latest amend's payload", async () => {
@@ -310,42 +298,36 @@ describe("cardModel: every log kind renders from its payload", () => {
       rolledTargetAc: 5,
       rolledHit: true,
     };
-    const m = cardModel(
+    const c = cardOf(
       entry("attack", attackPayload, {
         effectivePayload: corrected,
         status: "amended",
       }),
       await makeT("en"),
     );
-    expect(m.layout === "attack" && m.roll.targetAc).toBe(7);
-    expect(m.layout === "attack" && m.roll.hit).toBe(false);
+    expect((c.payload as RollResult).targetAc).toBe(7);
+    expect((c.payload as RollResult).hit).toBe(false);
   });
 
   it("save: d20, target, modifiers, adjustment and the server's roll total, adjusted target and verdict", async () => {
-    const m = cardModel(
-      entry("save", savePayload, { id: 9 }),
-      await makeT("en"),
-    );
-    expect(m).toEqual({
-      layout: "save",
-      save: {
-        category: "spell",
-        d20: 12,
-        target: 14,
-        modifiers: [{ kind: "buff", detail: "Prayer", value: 1 }],
-        adjustment: 2,
-        adjustmentReason: "Gaia",
-        rollTotal: 13,
-        adjustedTarget: 12,
-        passed: true,
-        margin: 1,
-        logEntryId: 9,
-      },
+    const c = cardOf(entry("save", savePayload, { id: 9 }), await makeT("en"));
+    expect(saveView(c.payload as SaveBreakdown)).toEqual({
+      category: "spell",
+      d20: 12,
+      target: 14,
+      modifiers: [{ kind: "buff", detail: "Prayer", value: 1 }],
+      adjustment: 2,
+      adjustmentReason: "Gaia",
+      rollTotal: 13,
+      adjustedTarget: 12,
+      passed: true,
+      margin: 1,
+      logEntryId: 9,
     });
   });
 
   it("save: a payload without modifiers still renders", async () => {
-    const m = cardModel(
+    const c = cardOf(
       entry("save", {
         category: "breath",
         d20Roll: 4,
@@ -358,11 +340,11 @@ describe("cardModel: every log kind renders from its payload", () => {
       }),
       await makeT("en"),
     );
-    expect(m.layout === "save" && m.save.modifiers).toEqual([]);
+    expect(saveView(c.payload as SaveBreakdown).modifiers).toEqual([]);
   });
 
   it("save: without the roll total and adjusted target the server fills (ADR 0006 step 8), it is not read as a save", async () => {
-    const m = cardModel(
+    const c = cardOf(
       entry("save", {
         category: "breath",
         d20Roll: 4,
@@ -372,97 +354,69 @@ describe("cardModel: every log kind renders from its payload", () => {
       }),
       await makeT("en"),
     );
-    expect(m.layout).toBe("info");
+    expect(c.payload).toBeNull();
   });
 
   it("cast and item: the payloads as recorded", async () => {
     const t = await makeT("en");
-    expect(cardModel(entry("cast", castPayload), t)).toEqual({
-      layout: "cast",
-      cast: castPayload,
+    expect(cardOf(entry("cast", castPayload), t).payload).toEqual({
+      breakdown: castPayload,
+      answer: null,
     });
-    expect(cardModel(entry("item_use", usePayload, { id: 5 }), t)).toEqual({
-      layout: "item",
-      item: { ...usePayload, logEntryId: 5 },
-    });
+    expect(cardOf(entry("item_use", usePayload, { id: 5 }), t).payload).toEqual(
+      { ...usePayload, logEntryId: 5 },
+    );
   });
 
-  it("initiative: the turn and its d10", async () => {
+  it("initiative: the round and its d10", async () => {
     expect(
-      cardModel(entry("initiative", { round: 3, d10: 7 }), await makeT("en")),
-    ).toEqual({
-      layout: "initiative",
-      round: 3,
-      d10: 7,
-    });
+      cardOf(entry("initiative", { round: 3, d10: 7 }), await makeT("en"))
+        .payload,
+    ).toEqual({ round: 3, d10: 7 });
   });
 
-  it("info: an HP change carries its value (damage red, heal green) and the cap", async () => {
+  it("an HP change carries its value (damage red, heal green) and the cap", async () => {
     const t = await makeT("en");
-    const damage = cardModel(
-      entry("hp_change", null, {
-        hpDelta: -6,
-        effectiveHpDelta: -6,
-        effectiveSummary: "orc axe",
-      }),
-      t,
+    const damage = entry("hp_change", null, {
+      hpDelta: -6,
+      effectiveHpDelta: -6,
+      effectiveSummary: "orc axe",
+    });
+    expect(cardOf(damage, t).text).toBe("orc axe");
+    expect(rowValue(damage)).toEqual({ text: "−6", tone: "damage" });
+    expect(entryCapped(damage)).toBeNull();
+    const heal = entry(
+      "hp_change",
+      { hpRequested: 12, hpApplied: 5 },
+      { hpDelta: 5, effectiveHpDelta: 5, effectiveSummary: "potion" },
     );
-    expect(damage).toEqual({
-      layout: "info",
-      info: {
-        text: "orc axe",
-        value: { amount: -6, tone: "damage" },
-        capped: null,
-      },
-    });
-    const heal = cardModel(
-      entry(
-        "hp_change",
-        { hpRequested: 12, hpApplied: 5 },
-        { hpDelta: 5, effectiveHpDelta: 5, effectiveSummary: "potion" },
-      ),
-      t,
-    );
-    expect(heal.layout === "info" && heal.info.value).toEqual({
-      amount: 5,
-      tone: "heal",
-    });
-    expect(heal.layout === "info" && heal.info.capped).toEqual({
-      hpRequested: 12,
-      hpApplied: 5,
-    });
+    expect(rowValue(heal)).toEqual({ text: "+5", tone: "heal" });
+    expect(entryCapped(heal)).toEqual({ hpRequested: 12, hpApplied: 5 });
     // A voided change keeps its original delta (struck through) and no cap note.
-    const voided = cardModel(
-      entry(
-        "hp_change",
-        { hpRequested: 12, hpApplied: 5 },
-        { hpDelta: 5, effectiveHpDelta: 0, status: "voided" },
-      ),
-      t,
+    const voided = entry(
+      "hp_change",
+      { hpRequested: 12, hpApplied: 5 },
+      { hpDelta: 5, effectiveHpDelta: 0, status: "voided" },
     );
-    expect(voided.layout === "info" && voided.info.value).toEqual({
-      amount: 5,
-      tone: "heal",
-    });
-    expect(voided.layout === "info" && voided.info.capped).toBeNull();
+    expect(rowValue(voided)).toEqual({ text: "+5", tone: "heal" });
+    expect(entryCapped(voided)).toBeNull();
   });
 
-  it("info: non-HP entries are worded in the player's language with no value", async () => {
+  it("non-HP entries without a layout are worded in the player's language with no value", async () => {
     const fr = await makeT("fr");
-    const m = cardModel(
-      entry("round_advance", {
-        action: "next_round",
-        fromRound: 2,
-        toRound: 3,
-      }),
-      fr,
-    );
-    expect(m.layout === "info" && m.info.value).toBeNull();
-    expect(m.layout === "info" && m.info.text).toMatch(/2 → 3/);
+    const e = entry("round_advance", {
+      action: "next_round",
+      fromRound: 2,
+      toRound: 3,
+    });
+    const c = cardOf(e, fr, "fr");
+    expect(c.view?.card).toBeUndefined();
+    expect(rowValue(e)).toBeNull();
+    expect(c.text).toMatch(/2 → 3/);
   });
 
-  it("an unreadable roll payload falls back to info with the server's text", async () => {
-    const m = cardModel(
+  it("an unreadable roll payload falls back to the server's text", async () => {
+    const c = cardOf(
       entry(
         "attack",
         { legacy: true },
@@ -470,14 +424,12 @@ describe("cardModel: every log kind renders from its payload", () => {
       ),
       await makeT("en"),
     );
-    expect(m).toEqual({
-      layout: "info",
-      info: { text: "Old attack line", value: null, capped: null },
-    });
+    expect(c.payload).toBeNull();
+    expect(c.text).toBe("Old attack line");
   });
 });
 
-describe("cardHeader", () => {
+describe("card header", () => {
   it.each([
     ["attack", attackPayload, "Attack", "Long Sword +2"],
     ["save", savePayload, "Save", "Spells"],
@@ -489,15 +441,14 @@ describe("cardHeader", () => {
     "%s: tag %s, subtitle %s",
     async (kind, payload, tag, subtitle) => {
       const t = await makeT("en");
-      const e = entry(kind, payload);
-      const h = cardHeader(kind, cardModel(e, t), e, t, "en");
+      const h = cardOf(entry(kind, payload), t);
       expect(h.tag).toBe(tag);
       expect(h.subtitle).toBe(subtitle);
       expect(h.when).toMatch(/^R3 · \d\d:\d\d/);
     },
   );
 
-  it("an attack with ammunition names both; turn 0 reads out of combat (fr)", async () => {
+  it("an attack with ammunition names both; round 0 reads out of combat (fr)", async () => {
     const fr = await makeT("fr");
     const e = entry(
       "attack",
@@ -508,28 +459,33 @@ describe("cardHeader", () => {
       },
       { round: 0 },
     );
-    const h = cardHeader("attack", cardModel(e, fr), e, fr, "fr");
+    const h = cardOf(e, fr, "fr");
     expect(h.subtitle).toBe("Short Bow +2 (Arrows +3)");
     expect(h.when).toMatch(/^Hors combat · /);
   });
 
   it("a live result whose entry the log has not loaded yet has no time", async () => {
     const t = await makeT("en");
-    const h = cardHeader(
-      "attack",
-      { layout: "attack", roll: attackPayload },
-      null,
+    const h = cardContent(
+      {
+        kind: "live",
+        last: { kind: "attack", result: attackPayload },
+        entry: null,
+      },
       t,
       "en",
+      englishSpellName,
+      recordedNames,
     );
     expect(h.when).toBe("");
+    expect(h.tag).toBe("Attack");
   });
 });
 
 describe("cardSource: latest result by default, a selected entry read-only", () => {
   const hp = entry("hp_change", null, { id: 4 });
-  const save = entry("save", savePayload, { id: 3 });
-  const attack = entry("attack", attackPayload, { id: 2 });
+  const save = entry("save", savePayload, { id: 3, roll: true });
+  const attack = entry("attack", attackPayload, { id: 2, roll: true });
   const entries = [hp, save, attack]; // newest first
   const liveSave: LiveResult = {
     kind: "save",
@@ -541,7 +497,7 @@ describe("cardSource: latest result by default, a selected entry read-only", () 
     expect(latestResult([{ ...save, status: "voided" }, attack])?.id).toBe(3);
     expect(latestResult([hp])).toBeNull();
     // An ability check is a roll kind (ADR 0028 step 5): it takes the card.
-    const check = entry("ability_check", strCheck, { id: 5 });
+    const check = entry("ability_check", strCheck, { id: 5, roll: true });
     expect(latestResult([hp, check, save])?.id).toBe(5);
   });
 
@@ -612,59 +568,64 @@ describe("cardSource: latest result by default, a selected entry read-only", () 
   });
 });
 
-describe("liveModel", () => {
-  it("a save response is its log entry's payload: the live card reads it like the journal's", () => {
+describe("live results", () => {
+  const live = async (last: LiveResult) =>
+    cardContent(
+      { kind: "live", last, entry: null },
+      await makeT("en"),
+      "en",
+      englishSpellName,
+      recordedNames,
+    );
+
+  it("a save response is its log entry's payload: the live card reads it like the journal's", async () => {
     const r = { ...savePayload, logEntryId: 9 } as SaveBreakdown;
-    expect(liveModel({ kind: "save", result: r })).toEqual(
-      cardModel(
-        entry("save", savePayload, { id: 9 }),
-        ((k: string) => k) as never,
-      ),
+    expect((await live({ kind: "save", result: r })).payload).toEqual(
+      cardOf(entry("save", savePayload, { id: 9 }), await makeT("en")).payload,
     );
   });
 
-  it("each live kind maps to its layout; a cast keeps the full response", () => {
+  it("each live kind is its log kind's view; a cast keeps the full response", async () => {
     const cast = {
       logEntryId: 3,
       spellId: "sleep",
       spell: "Sleep",
     } as CastResult;
-    expect(liveModel({ kind: "cast", result: cast })).toEqual({
-      layout: "castLive",
-      result: cast,
+    expect((await live({ kind: "cast", result: cast })).payload).toEqual({
+      breakdown: cast,
+      answer: cast,
     });
-    expect(liveModel({ kind: "attack", result: attackPayload }).layout).toBe(
-      "attack",
+    expect((await live({ kind: "attack", result: attackPayload })).view).toBe(
+      KIND_VIEWS.attack,
     );
     expect(
-      liveModel({ kind: "item", result: { ...usePayload } as never }).layout,
-    ).toBe("item");
-    expect(liveModel({ kind: "skill", result: bardCheck as never })).toEqual({
-      layout: "skill",
-      check: bardCheck,
+      (await live({ kind: "item_use", result: { ...usePayload } as never }))
+        .view,
+    ).toBe(KIND_VIEWS.item_use);
+    expect(
+      (await live({ kind: "skill_check", result: bardCheck as never })).payload,
+    ).toEqual(bardCheck);
+    const ability = await live({
+      kind: "ability_check",
+      result: strCheck as never,
     });
-    expect(liveModel({ kind: "ability", result: strCheck as never })).toEqual({
-      layout: "ability",
-      check: strCheck,
-    });
-    expect(liveKind({ kind: "ability", result: strCheck as never })).toBe(
-      "ability_check",
-    );
+    expect(ability.payload).toEqual(strCheck);
+    expect(ability.tag).toBe("Ability");
   });
 });
 
 describe("journal: rolls filter and row values", () => {
   it("rolls are attacks, saves, item uses, initiative and casts that rolled", () => {
-    expect(isRollEntry(entry("attack", attackPayload))).toBe(true);
-    expect(isRollEntry(entry("save", savePayload))).toBe(true);
-    expect(isRollEntry(entry("item_use", usePayload))).toBe(true);
-    expect(isRollEntry(entry("initiative", { round: 1, d10: 3 }))).toBe(true);
-    expect(isRollEntry(entry("skill_check", bardCheck))).toBe(true);
-    expect(isRollEntry(entry("ability_check", strCheck))).toBe(true);
-    expect(isRollEntry(entry("dice", diceRoll))).toBe(true);
-    expect(isRollEntry(entry("cast", castPayload))).toBe(true);
+    expect(isRolledEntry(entry("attack", attackPayload))).toBe(true);
+    expect(isRolledEntry(entry("save", savePayload))).toBe(true);
+    expect(isRolledEntry(entry("item_use", usePayload))).toBe(true);
+    expect(isRolledEntry(entry("initiative", { round: 1, d10: 3 }))).toBe(true);
+    expect(isRolledEntry(entry("skill_check", bardCheck))).toBe(true);
+    expect(isRolledEntry(entry("ability_check", strCheck))).toBe(true);
+    expect(isRolledEntry(entry("dice", diceRoll))).toBe(true);
+    expect(isRolledEntry(entry("cast", castPayload))).toBe(true);
     expect(
-      isRollEntry(
+      isRolledEntry(
         entry("cast", {
           ...castPayload,
           damage: undefined,
@@ -673,7 +634,7 @@ describe("journal: rolls filter and row values", () => {
       ),
     ).toBe(true);
     expect(
-      isRollEntry(
+      isRolledEntry(
         entry("cast", {
           action: "cast",
           spellId: "haste",
@@ -682,9 +643,9 @@ describe("journal: rolls filter and row values", () => {
         }),
       ),
     ).toBe(false);
-    expect(isRollEntry(entry("hp_change", null))).toBe(false);
+    expect(isRolledEntry(entry("hp_change", null))).toBe(false);
     expect(
-      isRollEntry(entry("buff_change", { action: "dismiss", buff: "Haste" })),
+      isRolledEntry(entry("buff_change", { action: "dismiss", buff: "Haste" })),
     ).toBe(false);
   });
 
@@ -801,6 +762,7 @@ describe("a popped correction under the Rolls filter", () => {
       step(3, "active"),
       entry("attack", rolled, {
         id: 2,
+        roll: true,
         effectivePayload: corrected,
         status: "amended",
       }),
@@ -810,12 +772,15 @@ describe("a popped correction under the Rolls filter", () => {
       "Annuler : Correction CA 5 → 7 (Ctrl+Z / ⌘Z)",
     );
 
-    const after = [step(3, "voided"), entry("attack", rolled, { id: 2 })];
+    const after = [
+      step(3, "voided"),
+      entry("attack", rolled, { id: 2, roll: true }),
+    ];
     const source = cardSource(null, after, null);
     expect(source).toEqual({ kind: "entry", entry: after[1], latest: true });
-    const m = cardModel(after[1], fr);
-    expect(m.layout === "attack" && m.roll.targetAc).toBe(5);
-    expect(m.layout === "attack" && m.roll.rolledTargetAc).toBeUndefined();
+    const m = cardOf(after[1], fr, "fr").payload as RollResult;
+    expect(m.targetAc).toBe(5);
+    expect(m.rolledTargetAc).toBeUndefined();
     expect(undoButtonState(2, after, false, fr).label).toMatch(
       /^Annuler : .*CA 5/,
     );
@@ -832,7 +797,7 @@ describe("die chips from the payload", () => {
 
   it("attack, new entry: one chip per recorded die, max and 1 marked", async () => {
     const t = await makeT("en");
-    const m = cardModel(
+    const m = cardOf(
       entry("attack", {
         ...attackPayload,
         damageDice: "2d6",
@@ -843,8 +808,7 @@ describe("die chips from the payload", () => {
       }),
       t,
     );
-    if (m.layout !== "attack") throw new Error("not an attack card");
-    expect(attackDiceChips(m.roll)).toEqual([
+    expect(attackDiceChips(m.payload as RollResult)).toEqual([
       { value: 6, tone: "max" },
       { value: 1, tone: "min" },
     ]);
@@ -852,14 +816,13 @@ describe("die chips from the payload", () => {
 
   it("attack, old entry without the dice: no chips, the card falls back to the total", async () => {
     const t = await makeT("en");
-    const m = cardModel(entry("attack", attackPayload), t);
-    if (m.layout !== "attack") throw new Error("not an attack card");
-    expect(attackDiceChips(m.roll)).toBeNull();
+    const m = cardOf(entry("attack", attackPayload), t);
+    expect(attackDiceChips(m.payload as RollResult)).toBeNull();
   });
 
   it("cast, new entry: the instances with their dice, plus the save", async () => {
     const t = await makeT("en");
-    const m = cardModel(
+    const m = cardOf(
       entry("cast", {
         ...castBase,
         damage: {
@@ -877,14 +840,14 @@ describe("die chips from the payload", () => {
       }),
       t,
     );
-    if (m.layout !== "cast") throw new Error("not a cast card");
-    expect(castInstances(m.cast)).toEqual([
+    const cast = (m.payload as CastPayload).breakdown;
+    expect(castInstances(cast)).toEqual([
       { dice: [{ value: 6, tone: "max" }], total: 7 },
       { dice: [{ value: 3, tone: "plain" }], total: 4 },
     ]);
-    const sum = castInstances(m.cast)?.reduce((n, i) => n + i.total, 0);
-    expect(sum).toBe(m.cast.damage?.total);
-    expect(m.cast.save).toEqual({ type: "spell", effect: "half" });
+    const sum = castInstances(cast)?.reduce((n, i) => n + i.total, 0);
+    expect(sum).toBe(cast.damage?.total);
+    expect(cast.save).toEqual({ type: "spell", effect: "half" });
   });
 
   it("cast with damage parts: each instance lists its parts and their save", async () => {
@@ -894,7 +857,7 @@ describe("die chips from the payload", () => {
       { sides: 4, value: b },
     ];
     const burst = { formula: "level", dice: [], total: 10 };
-    const m = cardModel(
+    const m = cardOf(
       entry("cast", {
         ...castBase,
         damage: {
@@ -926,10 +889,10 @@ describe("die chips from the payload", () => {
       }),
       t,
     );
-    if (m.layout !== "cast") throw new Error("not a cast card");
+    const cast = (m.payload as CastPayload).breakdown;
     const max = { value: 4, tone: "max" };
     const min = { value: 1, tone: "min" };
-    expect(castInstances(m.cast)?.[1]).toEqual({
+    expect(castInstances(cast)?.[1]).toEqual({
       dice: [max, min],
       total: 15,
       parts: [
@@ -937,12 +900,12 @@ describe("die chips from the payload", () => {
         { dice: [], total: 10, save: "negates" },
       ],
     });
-    expect(m.cast.damage?.totalOnSave).toBe(11);
+    expect(cast.damage?.totalOnSave).toBe(11);
   });
 
   it("cast with dice steps: each roll keeps its step, a step without damage has no dice", async () => {
     const t = await makeT("en");
-    const m = cardModel(
+    const m = cardOf(
       entry("cast", {
         ...castBase,
         damage: {
@@ -977,30 +940,30 @@ describe("die chips from the payload", () => {
       }),
       t,
     );
-    if (m.layout !== "cast") throw new Error("not a cast card");
-    const got = castInstances(m.cast);
+    const cast = (m.payload as CastPayload).breakdown;
+    const got = castInstances(cast);
     expect(got?.map((i) => i.step)).toEqual([1, 2, 3]);
     expect(got?.[0]).toEqual({ dice: [], total: 0, step: 1 });
-    expect(m.cast.damage?.stepsPer).toBe("round");
+    expect(cast.damage?.stepsPer).toBe("round");
   });
 
   it("cast, old entry without the dice: no instances, still a cast card", async () => {
     const t = await makeT("en");
-    const m = cardModel(
+    const m = cardOf(
       entry("cast", { ...castBase, damage: { total: 24, type: "fire" } }),
       t,
     );
-    if (m.layout !== "cast") throw new Error("not a cast card");
-    expect(castInstances(m.cast)).toBeNull();
-    expect(m.cast.damage?.total).toBe(24);
+    const cast = (m.payload as CastPayload).breakdown;
+    expect(castInstances(cast)).toBeNull();
+    expect(cast.damage?.total).toBe(24);
   });
 });
 
 describe("header: last result", () => {
   const hp = entry("hp_change", null, { id: 5 });
   const dice = entry("dice", diceRoll, { id: 4 });
-  const save = entry("save", savePayload, { id: 3 });
-  const attack = entry("attack", attackPayload, { id: 2 });
+  const save = entry("save", savePayload, { id: 3, roll: true });
+  const attack = entry("attack", attackPayload, { id: 2, roll: true });
 
   it("is the newest result or free dice roll still in force", () => {
     expect(lastResultEntry([hp, dice, save, attack])?.id).toBe(4);
@@ -1009,8 +972,8 @@ describe("header: last result", () => {
     ).toBe(3);
     expect(lastResultEntry([hp])).toBeNull();
     // ADR 0028 step 5: an ability check takes it; once popped, the roll before it is back.
-    const check = entry("ability_check", strCheck, { id: 7 });
-    const skill = entry("skill_check", profCheck, { id: 6 });
+    const check = entry("ability_check", strCheck, { id: 7, roll: true });
+    const skill = entry("skill_check", profCheck, { id: 6, roll: true });
     expect(lastResultEntry([check, skill, save])?.id).toBe(7);
     expect(
       lastResultEntry([{ ...check, status: "voided" }, skill, save])?.id,
@@ -1018,20 +981,20 @@ describe("header: last result", () => {
   });
 });
 
-describe("turnMarker (ADR 0027 step 9.3)", () => {
-  it("is T3 in a turn, an icon out of combat, the full label in the tooltip", async () => {
+describe("roundMarker (ADR 0027 step 9.3)", () => {
+  it("is T3 in a round, an icon out of combat, the full label in the tooltip", async () => {
     const fr = await makeT("fr");
-    expect(turnMarker(fr, 3, true)).toEqual({
+    expect(roundMarker(fr, 3, true)).toEqual({
       short: "T3",
       full: "Tour 3 · en cours",
     });
-    expect(turnMarker(fr, 2, false)).toEqual({ short: "T2", full: "Tour 2" });
-    expect(turnMarker(fr, 0, true)).toEqual({
+    expect(roundMarker(fr, 2, false)).toEqual({ short: "T2", full: "Tour 2" });
+    expect(roundMarker(fr, 0, true)).toEqual({
       short: null,
       full: "Hors combat · en cours",
     });
     const en = await makeT("en");
-    expect(turnMarker(en, 0, false)).toEqual({
+    expect(roundMarker(en, 0, false)).toEqual({
       short: null,
       full: "Out of combat",
     });

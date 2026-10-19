@@ -1,4 +1,13 @@
 {
+  "saveAdjustment": {
+    "payload": {
+      "entryId": 3,
+      "entryKind": "save",
+      "field": "saveAdjustment",
+      "from": null,
+      "to": 2
+    }
+  },
   "targetAc": {
     "payload": {
       "entryId": 2,
@@ -15,15 +24,6 @@
       "field": "verdict",
       "from": null,
       "to": "hit"
-    }
-  },
-  "saveAdjustment": {
-    "payload": {
-      "entryId": 3,
-      "entryKind": "save",
-      "field": "saveAdjustment",
-      "from": null,
-      "to": 2
     }
   }
 }

@@ -209,6 +209,11 @@ fmt-api:
 test-api:
     cd api && go test -v ./...
 
+# Rewrite the web journal fixtures (web/src/journal/fixtures) to what the services log; review the diff
+journal-fixtures:
+    cd api && UPDATE_JOURNAL_FIXTURES=1 go test -count=1 ./internal/domain/... -run TestJournalFixtures
+    cd web && npx prettier --write src/journal/fixtures && npx vitest run src/journal
+
 # Fast vet (compile + static analysis) on the backend
 vet-api:
     cd api && go vet ./...

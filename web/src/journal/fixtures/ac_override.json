@@ -1,4 +1,12 @@
 {
+  "cleared": {
+    "payload": {
+      "before": {
+        "value": 4
+      },
+      "after": null
+    }
+  },
   "set": {
     "payload": {
       "before": null,
@@ -6,14 +14,6 @@
         "value": 4,
         "label": "Shield spell"
       }
-    }
-  },
-  "cleared": {
-    "payload": {
-      "before": {
-        "value": 4
-      },
-      "after": null
     }
   }
 }

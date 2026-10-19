@@ -1,18 +1,16 @@
 {
   "damage": {
-    "roll": true,
     "payload": {
       "action": "cast",
       "spellId": "fireball",
       "spell": "Fireball",
       "casterLevel": 5,
-      "level": 3,
       "damage": {
-        "dice": "5d6",
+        "total": 17,
         "type": "fire",
+        "dice": "5d6",
         "instances": 1,
         "rounds": 1,
-        "total": 17,
         "rolls": [
           {
             "formula": "5d6",
@@ -45,26 +43,13 @@
       "save": {
         "type": "spell",
         "effect": "half"
-      }
-    }
-  },
-  "received": {
-    "roll": true,
-    "payload": {
-      "action": "received",
-      "spellId": "haste",
-      "spell": "Haste",
-      "casterLevel": 9,
-      "buff": {
-        "name": "Haste",
-        "applied": true,
-        "rounds": 12,
-        "charges": 0
-      }
-    }
+      },
+      "level": 3,
+      "untracked": null
+    },
+    "roll": true
   },
   "failed": {
-    "roll": true,
     "payload": {
       "action": "cast",
       "spellId": "sleep",
@@ -74,11 +59,30 @@
         "d100": 3,
         "chance": 10,
         "failed": true
-      }
-    }
+      },
+      "level": 0,
+      "untracked": null
+    },
+    "roll": true
+  },
+  "received": {
+    "payload": {
+      "action": "received",
+      "spellId": "haste",
+      "spell": "Haste",
+      "casterLevel": 9,
+      "buff": {
+        "name": "Haste",
+        "rounds": 12,
+        "applied": true,
+        "effects": null
+      },
+      "level": 0,
+      "untracked": null
+    },
+    "roll": true
   },
   "toHit": {
-    "roll": true,
     "payload": {
       "action": "cast",
       "spellId": "shocking_grasp",
@@ -91,8 +95,12 @@
         "baseThac0": 19,
         "modifiers": [],
         "effectiveThac0": 19,
-        "targetACNeeded": 4
-      }
-    }
+        "targetACNeeded": 4,
+        "hitMargin": 0
+      },
+      "level": 0,
+      "untracked": null
+    },
+    "roll": true
   }
 }

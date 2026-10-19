@@ -1,15 +1,4 @@
 {
-  "learned": {
-    "payload": {
-      "spellId": "sleep",
-      "spellLevel": 1,
-      "roll": 37,
-      "chance": 65,
-      "learned": true,
-      "characterLevel": 1,
-      "retryLevel": 0
-    }
-  },
   "failed": {
     "payload": {
       "spellId": "sleep",
@@ -19,6 +8,17 @@
       "learned": false,
       "characterLevel": 1,
       "retryLevel": 2
+    }
+  },
+  "learned": {
+    "payload": {
+      "spellId": "sleep",
+      "spellLevel": 1,
+      "roll": 37,
+      "chance": 65,
+      "learned": true,
+      "characterLevel": 1,
+      "retryLevel": 0
     }
   }
 }

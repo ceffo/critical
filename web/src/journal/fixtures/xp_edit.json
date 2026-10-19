@@ -3,15 +3,23 @@
     "payload": {
       "entry": {
         "id": 4,
-        "total": 1800,
+        "date": "",
+        "session": "",
         "reason": "Goblin cave",
-        "createdAt": "2026-10-15T21:31:00Z"
+        "base": 0,
+        "bonus": false,
+        "bonusAmount": 0,
+        "total": 1800
       },
       "before": {
         "id": 4,
-        "total": 1500,
+        "date": "",
+        "session": "",
         "reason": "Goblin cave",
-        "createdAt": "2026-10-15T21:31:00Z"
+        "base": 0,
+        "bonus": false,
+        "bonusAmount": 0,
+        "total": 1500
       }
     }
   }

@@ -1,18 +1,4 @@
 {
-  "rolled": {
-    "payload": {
-      "level": 6,
-      "hitDie": 6,
-      "rolled": 4,
-      "counted": 4,
-      "conAdjustment": 1,
-      "gain": 5,
-      "fixed": false,
-      "manual": false,
-      "hpMaxBefore": 30,
-      "hpMaxAfter": 35
-    }
-  },
   "fixed": {
     "payload": {
       "level": 16,
@@ -25,6 +11,20 @@
       "manual": false,
       "hpMaxBefore": 85,
       "hpMaxAfter": 87
+    }
+  },
+  "rolled": {
+    "payload": {
+      "level": 6,
+      "hitDie": 6,
+      "rolled": 4,
+      "counted": 4,
+      "conAdjustment": 1,
+      "gain": 5,
+      "fixed": false,
+      "manual": false,
+      "hpMaxBefore": 30,
+      "hpMaxAfter": 35
     }
   }
 }

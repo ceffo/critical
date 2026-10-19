@@ -2,10 +2,10 @@
   "passTime": {
     "payload": {
       "action": "pass_time",
-      "hours": 1,
       "rounds": 60,
       "fromRound": 3,
-      "toRound": 0
+      "toRound": 0,
+      "hours": 1
     }
   }
 }

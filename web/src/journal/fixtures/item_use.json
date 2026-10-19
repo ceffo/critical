@@ -1,23 +1,5 @@
 {
-  "rolled": {
-    "roll": true,
-    "payload": {
-      "itemId": "wand_lightning",
-      "name": "Wand of lightning",
-      "type": "wand",
-      "behaviour": "charges",
-      "remaining": 3,
-      "maxCount": 0,
-      "dice": "6d6",
-      "rolls": [6, 1, 3, 4, 2, 5],
-      "modifier": 0,
-      "total": 21,
-      "save": "rod_staff_wand",
-      "notes": ""
-    }
-  },
   "lastCharge": {
-    "roll": true,
     "payload": {
       "itemId": "potion_healing",
       "name": "Potion of healing",
@@ -26,11 +8,25 @@
       "removed": true,
       "remaining": 0,
       "maxCount": 0,
-      "dice": "",
       "rolls": [],
-      "total": 0,
-      "save": "",
-      "notes": ""
-    }
+      "total": 0
+    },
+    "roll": true
+  },
+  "rolled": {
+    "payload": {
+      "itemId": "wand_lightning",
+      "name": "Wand of lightning",
+      "type": "wand",
+      "behaviour": "charges",
+      "removed": false,
+      "remaining": 3,
+      "maxCount": 0,
+      "dice": "6d6",
+      "rolls": [6, 1, 3, 4, 2, 5],
+      "total": 21,
+      "save": "rod_staff_wand"
+    },
+    "roll": true
   }
 }

@@ -28,7 +28,7 @@ things sit, under [ADR 0022](../../adr/0022-activity-focus-layout.md),
 |---|---|
 | `inventory` | Inventaire: one flat possessions list, "Équipé" tags, Équiper / Retirer, category chips, Ajouter; the AC card on the right; the review band. |
 | `review` | The review list opened above the possessions. |
-| `add-catalogue` | Ajouter > Catalogue: category, search, the PHB rows with class warnings, "Votre exemplaire" (name, magic), "Porter tout de suite". |
+| `add-catalogue` | Ajouter > Catalogue: category, search, the PHB rows with class warnings, "Votre exemplaire" (name, magic), "Équiper tout de suite". |
 | `add-homebrew` | Ajouter > Saisir: a typed magic item. |
 | `edit-armour` | The editor of an armour: base AC, skills column, armour type, "+N". |
 | `edit-magic` | The editor of a ring: powers and the templates menu. |

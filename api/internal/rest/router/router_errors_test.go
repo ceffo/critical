@@ -31,7 +31,6 @@ import (
 	detailsmocks "github.com/ceffo/critical/api/internal/domain/service/detailssvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	dicemocks "github.com/ceffo/critical/api/internal/domain/service/dicesvc/mocks"
-	hpmocks "github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
@@ -67,7 +66,6 @@ func signedIn(t *testing.T) *authmocks.MockSVC {
 
 type mocksSet struct {
 	char    *charmocks.MockSVC
-	hp      *hpmocks.MockSVC
 	buffs   *buffmocks.MockSVC
 	spell   *spellmocks.MockSVC
 	cast    *castmocks.MockSVC
@@ -98,7 +96,6 @@ func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handl
 	t.Helper()
 	m := &mocksSet{
 		char:    charmocks.NewMockSVC(t),
-		hp:      hpmocks.NewMockSVC(t),
 		buffs:   buffmocks.NewMockSVC(t),
 		spell:   spellmocks.NewMockSVC(t),
 		cast:    castmocks.NewMockSVC(t),
@@ -113,7 +110,7 @@ func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handl
 		levelUp: levelupmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
-		Character: m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Rest: m.rest,
+		Character: m.char, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Rest: m.rest,
 		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, Auth: a,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -193,10 +190,10 @@ var endpoints = []endpoint{
 		m.char.On("GetCharacter", anyArgs(2)...).Return(nil, err)
 	}},
 	{"GET hp", "GET", "/api/hp", "", func(m *mocksSet, err error) {
-		m.hp.On("GetState", anyArgs(2)...).Return(nil, err)
+		m.log.On("GetHPState", anyArgs(2)...).Return(nil, err)
 	}},
 	{"POST hp/event", "POST", "/api/hp/event", `{"delta":-1,"source":"x"}`, func(m *mocksSet, err error) {
-		m.hp.On("AppendEvent", anyArgs(4)...).Return(nil, err)
+		m.log.On("AppendHPEvent", anyArgs(4)...).Return(nil, err)
 	}},
 	{"GET log", "GET", "/api/log?limit=10", "", func(m *mocksSet, err error) {
 		m.log.On("List", anyArgs(3)...).Return(nil, err)

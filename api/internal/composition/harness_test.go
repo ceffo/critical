@@ -17,7 +17,6 @@ import (
 	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	combatmocks "github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
 	dicemocks "github.com/ceffo/critical/api/internal/domain/service/dicesvc/mocks"
-	hpmocks "github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 	skillmocks "github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -39,7 +38,7 @@ type harness struct {
 
 	Store     *compmocks.MockStore
 	Character *compmocks.MockCharacterStore
-	HP        *hpmocks.MockDAL
+	HP        *actionlogmocks.MockMaxHP
 	Log       *actionlogmocks.MockDAL
 	Buff      *compmocks.MockBuffStore
 	Spell     *compmocks.MockSpellStore
@@ -58,7 +57,7 @@ func newHarness(t *testing.T) *harness {
 	h := &harness{
 		Store:     compmocks.NewMockStore(t),
 		Character: compmocks.NewMockCharacterStore(t),
-		HP:        hpmocks.NewMockDAL(t),
+		HP:        actionlogmocks.NewMockMaxHP(t),
 		Log:       actionlogmocks.NewMockDAL(t),
 		Buff:      compmocks.NewMockBuffStore(t),
 		Spell:     compmocks.NewMockSpellStore(t),

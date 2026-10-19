@@ -46,7 +46,8 @@ func TestCast_RepoSeedConditionLimitsItsModifiers(t *testing.T) {
 			name: "blur: the attackers' penalties shown without the condition, the save bonus with it", slot: "blur", level: 2,
 			wantDuration: 18,
 			wantUntracked: []castsvc.Untracked{
-				{Key: "attackers_to_hit", Value: -2}, {Key: "attackers_to_hit_first", Value: -4},
+				{Key: "attackers_to_hit", Value: -2},
+				{Key: "attackers_to_hit_first", Value: -4},
 				{Key: "save", Value: 1, Condition: "save bonus applies to direct magical attacks only"},
 			},
 		},

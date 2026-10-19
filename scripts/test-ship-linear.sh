@@ -3,7 +3,8 @@
 # server and stub gh: nothing here calls Linear or GitHub. Checks: ship moves each issue to In Review and comments
 # the PR link and never closes (no Done/Canceled state sent); the unmerged path puts an issue back to Todo; an
 # unknown issue or state fails; a Linear failure leaves the PR open and exits 1; land.sh merges without a tracker
-# call; the cutover swaps the wrappers and removes the beads tooling.
+# call only when CI is green, the PR is CLEAN, Greptile has reviewed the head and every Greptile thread has a reply;
+# the cutover swaps the wrappers and removes the beads tooling.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 S="$root/.claude/scripts"
@@ -70,10 +71,17 @@ mkdir -p "$tmp/bin" "$tmp/main"
 cat > "$tmp/bin/gh" <<'GH'
 #!/usr/bin/env bash
 echo "gh $*" >> "$GH_LOG"
+# land.sh's gate reads: pr view --json (PR state and checks), the Greptile check run, the review comments.
+case "$*" in
+  *statusCheckRollup*) printf '{"state":"OPEN","mergeable":"MERGEABLE","mergeStateStatus":"%s","headRefOid":"abc1234","statusCheckRollup":[{"name":"validate","status":"COMPLETED","conclusion":"%s"}]}\n' \
+    "${STUB_MERGE_STATE:-CLEAN}" "${STUB_CHECK:-SUCCESS}"; exit 0 ;;
+  *check-runs*) echo "${STUB_GREPTILE:-completed}"; exit 0 ;;
+  *pulls/77/comments*) echo "${STUB_COMMENTS:-[]}"; exit 0 ;;
+esac
 case "$1 $2" in
   "pr create") echo "https://github.com/o/r/pull/77" ;;
   "pr view") echo MERGEABLE ;;
-  "pr merge") ;;
+  "pr merge") [ -z "${STUB_MERGE_FAIL:-}" ] || exit 1 ;;
 esac
 GH
 chmod +x "$tmp/bin/gh"
@@ -93,13 +101,30 @@ out="$("$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body" TST-404 TST-3 2>"$tmp/err")"
 grep -q 'TST-404 not moved' "$tmp/err" || fail "bad issue not reported"
 [ "$(sent_states)" = "s-rev" ] || fail "the good issue was skipped after the bad one"
 
-# --- land.sh: merges, no Linear call
+# --- land.sh: merges only through its gate, no Linear call
 : > "$tmp/requests"; : > "$GH_LOG"
 git -C "$tmp/main" fetch -q origin; git -C "$tmp/main" checkout -q -B main origin/feat
 git -C "$tmp/main" push -q origin main
 "$S/land.sh" 77 >/dev/null 2>&1 || fail "land failed"
-grep -q 'pr merge 77 --squash --delete-branch' "$GH_LOG" || fail "land did not merge"
+grep -q 'pr merge 77 .*--squash --delete-branch --match-head-commit abc1234' "$GH_LOG" || fail "land did not merge"
 [ ! -s "$tmp/requests" ] || fail "land called Linear"
+refused() { # $1 = case name, env set by the caller; land must exit 2, print REFUSED and not merge
+  : > "$GH_LOG"
+  out="$("$S/land.sh" 77 2>&1)"; rc=$?
+  [ "$rc" = 2 ] || fail "land $1: exit $rc, want 2"
+  case "$out" in REFUSED*) ;; *) fail "land $1: no REFUSED line: $out" ;; esac
+  ! grep -q 'pr merge' "$GH_LOG" || fail "land $1: merged anyway"
+}
+set +e
+STUB_CHECK=FAILURE refused "red check"
+STUB_MERGE_STATE=BLOCKED refused "not clean"
+STUB_GREPTILE=in_progress refused "greptile pending"
+STUB_COMMENTS='[{"id":1,"in_reply_to_id":null,"user":{"login":"greptile-apps[bot]"}}]' refused "unanswered greptile thread"
+: > "$GH_LOG"; STUB_MERGE_FAIL=1 "$S/land.sh" 77 >/dev/null 2>&1; [ $? = 1 ] || fail "land: a refused merge did not exit 1"
+! grep -q "stack merge" "$GH_LOG" || fail "land fell back to an unchecked stack merge"
+set -e
+STUB_COMMENTS='[{"id":1,"in_reply_to_id":null,"user":{"login":"greptile-apps[bot]"}},{"id":2,"in_reply_to_id":1,"user":{"login":"ceffo"}}]' \
+  "$S/land.sh" 77 >/dev/null 2>&1 || fail "land refused an answered greptile thread"
 
 # --- cutover
 sup="$tmp/sup"; mkdir -p "$sup"

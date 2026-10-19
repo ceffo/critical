@@ -271,6 +271,7 @@ When the developer reports the full verification passed on HEAD:
   a process PR), reply on the thread with why for the ones you reject, then merge. Log each PR's
   findings in `<wt>/supervisor/greptile-eval.md` (useful / noise / missed by our reviewer).
 - Done from your side. **Never merge** unless the user explicitly tells you to for that PR.
+- **How to merge**: only with `/home/moncef/code/critical/.claude/scripts/land.sh <pr> [tab]`, as one plain command with nothing chained to it. land.sh checks CI, the Greptile review and its replies, and refuses otherwise. A merge chained in a compound command misses the allow rule and gets refused.
 - A PR that changes a design decision (an ADR, an API or data contract, a schema) is the user's
   call: before it merges, tell them in a few plain lines what changes and why, even when CI is green
   and merges are otherwise allowed.

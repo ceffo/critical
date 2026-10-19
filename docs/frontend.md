@@ -402,8 +402,8 @@ flowchart TD
   "Duration 1d8+8", the served dice then the served flat amount), each with "To the dice" (fills the
   composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`), and "Add" for a spell
   that adds an effect; no cast box when the spell has neither); then the description, which takes the rest of the height, scrolls inside its own box
-  and flows in two text columns (24 px apart) once the card is wide enough for two of 16rem
-  (`SpellDescription` `columns`; a table spans both). Inside the cards grouping is by spacing,
+  in one column capped at 75 characters, as in the cast result
+  (`SpellDescription`; blocks 16 px apart, table cells 12 x 8 px, ADR 0022 step 3.5). Inside the cards grouping is by spacing,
   section labels and the raised tone, never a rule (step 4.1). `layout.spec` runs
   `expectNoClippedText` on the list and the detail at every layout viewport with a long spell name
   and long stat text selected.

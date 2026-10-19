@@ -6,27 +6,23 @@ import { parseSpellText } from "@/lib/spellMarkdown";
  * tables, rendered as React text only (no HTML). Table cells wrap; a table still too wide for the
  * block (many columns) scrolls sideways inside its own box.
  *
- * `columns`: the text flows in two columns when the block is wide enough for two of at least
- * 16rem, 24 px apart (the lookup's description, ADR 0022 steps 2.5 and 3.2); a block never
- * splits across them and a table spans both, so it keeps the whole width.
+ * One column wherever it is shown (the lookup and the cast result), its measure capped at 75
+ * characters (ADR 0022 steps 2.5 and 3.5). Blocks are 16 px apart, clearly more than the lines of a
+ * paragraph; a table's cells have room (12 x 8 px) and its header is a raised band.
  */
 export function SpellDescription({
   text,
   className,
   testId,
-  columns = false,
 }: {
   text: string;
   className?: string;
   testId?: string;
-  columns?: boolean;
 }) {
   return (
     <div
       className={cn(
-        columns
-          ? "gap-x-6 [columns:2_16rem] *:mb-2 *:break-inside-avoid"
-          : "flex flex-col gap-2",
+        "flex max-w-[75ch] flex-col gap-4 leading-relaxed",
         className,
       )}
       data-testid={testId}
@@ -41,7 +37,7 @@ export function SpellDescription({
             );
           case "list":
             return (
-              <ul key={i} className="flex list-disc flex-col gap-1 pl-5">
+              <ul key={i} className="flex list-disc flex-col gap-2 pl-5">
                 {b.items.map((item, j) => (
                   <li key={j}>{item}</li>
                 ))}
@@ -51,10 +47,7 @@ export function SpellDescription({
             return (
               <div
                 key={i}
-                className={cn(
-                  "max-w-full overflow-x-auto rounded-md border border-border",
-                  columns && "[column-span:all]",
-                )}
+                className="max-w-full overflow-x-auto rounded-md border border-border"
                 data-testid="spell-table"
               >
                 <table className="w-full border-collapse text-left">
@@ -64,7 +57,7 @@ export function SpellDescription({
                         <th
                           key={j}
                           scope="col"
-                          className="min-w-20 border-b border-border px-2 py-1 align-bottom font-semibold"
+                          className="min-w-20 border-b border-border px-3 py-2 align-bottom font-semibold"
                         >
                           {h}
                         </th>
@@ -78,7 +71,7 @@ export function SpellDescription({
                         className="border-b border-border last:border-b-0"
                       >
                         {row.map((c, k) => (
-                          <td key={k} className="min-w-20 px-2 py-1 align-top">
+                          <td key={k} className="min-w-20 px-3 py-2 align-top">
                             {c}
                           </td>
                         ))}

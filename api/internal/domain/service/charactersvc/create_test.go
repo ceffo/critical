@@ -449,7 +449,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	require.NoError(t, err)
 	// The tables' figures are checked by the tests below; this one checks the classes and ranges.
 	for i := range got.Classes {
-		got.Classes[i].HitDie, got.Classes[i].LevelXP = 0, nil
+		got.Classes[i].HitDie, got.Classes[i].LevelXP, got.Classes[i].Minimums = 0, nil, nil
 	}
 	got.ScoreMethods, got.RaceAdjustments, got.RaceIdentity = nil, nil, nil
 	assert.Equal(t, charactersvc.CreationOptions{
@@ -534,4 +534,108 @@ func TestCreationOptions_CarryTheScoreMethodsAndTheRaceAdjustments(t *testing.T)
 func identity() charactersvc.DetailsPatch {
 	alignment, sex := "neutral_good", "male"
 	return charactersvc.DetailsPatch{Alignment: &alignment, Sex: &sex}
+}
+
+func minimum(ability string, min int) ruletablesvc.AbilityMinimum {
+	return ruletablesvc.AbilityMinimum{Ability: ability, Min: min}
+}
+
+// PHB Table 13: each creatable class's card carries its ability minimums, in ability order.
+func TestCreationOptions_Table13_EachClassCarriesItsAbilityMinimums(t *testing.T) {
+	e := newEnv(t)
+	e.rules.EXPECT().RaceAllows(mock.Anything, mock.Anything).Return(true, nil).Maybe()
+	expectOptionTables(e)
+	got, err := e.svc.CreationOptions(context.Background())
+	require.NoError(t, err)
+	byClass := map[string][]ruletablesvc.AbilityMinimum{}
+	for _, c := range got.Classes {
+		byClass[c.Class] = c.Minimums
+	}
+	assert.Equal(t, map[string][]ruletablesvc.AbilityMinimum{
+		"fighter": {minimum("str", 9)},
+		"mage":    {minimum("int", 9)},
+		"cleric":  {minimum("wis", 9)},
+		"thief":   {minimum("dex", 9)},
+		"bard":    {minimum("dex", 12), minimum("int", 13), minimum("cha", 15)},
+	}, byClass)
+}
+
+func unmetOf(c charactersvc.DraftChecks) map[string][]string {
+	out := map[string][]string{}
+	for _, u := range c.UnmetMinimums {
+		out[u.Class] = u.Abilities
+	}
+	return out
+}
+
+// PHB Table 13: a score under a class's minimum is unmet; at the minimum it is met; an ability
+// with no score yet is not unmet.
+func TestCreationChecks_Table13_ScoresUnderAClassMinimumAreUnmet(t *testing.T) {
+	e := newEnv(t)
+	got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{
+		Class:  "fighter",
+		Scores: map[string]int{"str": 8, "dex": 11, "int": 13, "cha": 14, "wis": 9},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, map[string][]string{
+		"fighter": {"str"},        // 8 < 9
+		"mage":    {},             // int 13 >= 9
+		"cleric":  {},             // wis 9 is the minimum itself
+		"thief":   {},             // dex 11 >= 9
+		"bard":    {"dex", "cha"}, // dex 11 < 12, int 13 ok, cha 14 < 15
+	}, unmetOf(got))
+	assert.Nil(t, got.SkillBudget, "a fighter has no skill points")
+
+	none, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: "bard"})
+	require.NoError(t, err)
+	assert.Equal(t, map[string][]string{"fighter": {}, "mage": {}, "cleric": {}, "thief": {}, "bard": {}}, unmetOf(none))
+}
+
+// ADR 0030 steps 17 and 18: the thief's budget is 60 points at level 1 and 30 more a level, 30
+// in one skill and 15 more a level; the bard's is 20 and 15 a level, with no limit on one skill.
+// The level is the one the starting XP gives; left is the total minus the points entered.
+func TestCreationChecks_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
+	cases := []struct {
+		name   string
+		class  string
+		level  int
+		points map[string]int
+		want   charactersvc.SkillBudget
+	}{
+		{"thief level 1", "thief", 1, map[string]int{"pick_pockets": 20, "open_locks": 15}, charactersvc.SkillBudget{Level: 1, Total: 60, Spent: 35, Left: 25, PerSkill: 30}},
+		{"thief level 3 over budget", "thief", 3, map[string]int{"pick_pockets": 90, "open_locks": 40}, charactersvc.SkillBudget{Level: 3, Total: 120, Spent: 130, Left: -10, PerSkill: 60}},
+		{"bard level 1", "bard", 1, map[string]int{"climb_walls": 5}, charactersvc.SkillBudget{Level: 1, Total: 20, Spent: 5, Left: 15}},
+		{"bard level 4", "bard", 4, nil, charactersvc.SkillBudget{Level: 4, Total: 65, Left: 65}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEnv(t)
+			xp := 777
+			e.rules.EXPECT().LevelFor(tc.class, xp).Return(tc.level, nil).Once()
+			got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: tc.class, XP: &xp, SkillPoints: tc.points})
+			require.NoError(t, err)
+			require.NotNil(t, got.SkillBudget)
+			assert.Equal(t, tc.want, *got.SkillBudget)
+		})
+	}
+}
+
+// An XP the class table gives no level for has no budget, and no refusal (Create refuses it).
+func TestCreationChecks_AnXPWithNoLevelHasNoBudget(t *testing.T) {
+	e := newEnv(t)
+	xp := 5
+	e.rules.EXPECT().LevelFor("thief", xp).Return(0, errors.New("outside the table")).Once()
+	got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: "thief", XP: &xp})
+	require.NoError(t, err)
+	assert.Nil(t, got.SkillBudget)
+}
+
+// An XP outside the creation's range is never looked up: no budget, no error.
+func TestCreationChecks_AnXPOutsideTheRangeHasNoBudget(t *testing.T) {
+	e := newEnv(t)
+	for _, xp := range []int{-5, charactersvc.MaxStartingXP + 1} {
+		got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: "thief", XP: &xp})
+		require.NoError(t, err)
+		assert.Nil(t, got.SkillBudget)
+	}
 }

@@ -3,6 +3,7 @@ import type { CreationOptions, HpRoll } from "@/types/character";
 import {
   EMPTY_DRAFT,
   buildBody,
+  checksRequest,
   mergeDraft,
   settle,
   type FlowDraft,
@@ -152,5 +153,30 @@ describe("buildBody", () => {
         "en",
       ),
     ).toEqual({ error: { field: "details.weight", code: "not_a_number" } });
+  });
+});
+
+describe("checksRequest (what the class and skills steps ask the server)", () => {
+  const options = {
+    classes: [{ class: "thief", skills: ["open_locks", "pick_pockets"] }],
+  } as unknown as CreationOptions;
+
+  it("sends only the scores and points that read as whole numbers, and the XP", () => {
+    const draft: FlowDraft = {
+      ...EMPTY_DRAFT,
+      cls: "thief",
+      scores: { ...EMPTY_DRAFT.scores, dex: "8", str: "x", con: "" },
+      skillPoints: { open_locks: "25", pick_pockets: "" },
+    };
+    expect(checksRequest(options, draft, "1250")).toEqual({
+      class: "thief",
+      scores: { dex: 8 },
+      xp: 1250,
+      skillPoints: { open_locks: 25 },
+    });
+  });
+
+  it("sends no XP while it does not read", () => {
+    expect(checksRequest(options, EMPTY_DRAFT, "").xp).toBeNull();
   });
 });

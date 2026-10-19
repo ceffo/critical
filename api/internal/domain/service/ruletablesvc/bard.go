@@ -95,5 +95,6 @@ func (t *Tables) BardSkills(race string, dex int, armor string, points map[strin
 // BardSkillPointsPerLevel a level after the first in all (code BudgetTotal);
 // no per-skill check. A warning, never a refusal.
 func BardSkillPointBudget(level int, points map[string]int) []BudgetWarning {
-	return budget(level, points, BardSkills, BardSkillPointsFirstLevel, BardSkillPointsPerLevel, 0, 0)
+	total, perSkill, _ := SkillBudgetLimits("bard", level)
+	return budget(level, points, BardSkills, total, perSkill)
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/wire"
 )
@@ -35,6 +36,18 @@ type optionsReader interface {
 	CreationOptions(ctx context.Context) (charactersvc.CreationOptions, error)
 }
 
+type draftChecker interface {
+	CreationChecks(ctx context.Context, in charactersvc.DraftInput) (charactersvc.DraftChecks, error)
+}
+
+func minimumDTOs(ms []ruletablesvc.AbilityMinimum) []AbilityMinimumDTO {
+	out := make([]AbilityMinimumDTO, 0, len(ms))
+	for _, m := range ms {
+		out = append(out, AbilityMinimumDTO{Ability: m.Ability, Min: m.Min})
+	}
+	return out
+}
+
 // ClassOptionDTO is a creatable class and the race codes it admits.
 type ClassOptionDTO struct {
 	Class string   `json:"class"`
@@ -53,6 +66,15 @@ type ClassOptionDTO struct {
 	// LevelXP is ADR 0034 step 4.1: levels 1 to 20, each with the lowest
 	// XP of that level for the class; a picked level is sent as its XP.
 	LevelXP []LevelXPDTO `json:"levelXp"`
+	// Minimums are the class's ability minimums (PHB Table 13), shown on
+	// its card and not enforced; empty for none. Additive.
+	Minimums []AbilityMinimumDTO `json:"minimums"`
+}
+
+// AbilityMinimumDTO is the lowest score a class asks in one ability.
+type AbilityMinimumDTO struct {
+	Ability string `json:"ability"`
+	Min     int    `json:"min"`
 }
 
 // RangeDTO is the inclusive range an entered number must fall in.
@@ -215,7 +237,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 			out.Classes = append(out.Classes, ClassOptionDTO{
 				Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces,
 				Skills: c.Skills, Alignments: c.Alignments,
-				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP),
+				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
 			})
 		}
 		render.OK(r.Context(), w, out)
@@ -455,4 +477,70 @@ func levelXPDTO(rows []charactersvc.LevelXP) []LevelXPDTO {
 		out = append(out, LevelXPDTO{Level: r.Level, XP: r.XP})
 	}
 	return out
+}
+
+// ChecksBody is the body of POST /api/characters/checks: a draft as far as
+// it is entered. `scores` holds the abilities entered so far (by code),
+// `xp` the starting XP when it reads, `skillPoints` the points by skill.
+type ChecksBody struct {
+	Class       string         `json:"class"`
+	Scores      map[string]int `json:"scores"`
+	XP          *int           `json:"xp"`
+	SkillPoints map[string]int `json:"skillPoints"`
+}
+
+// ClassUnmetDTO is a class and the abilities whose entered score is under its
+// minimum.
+type ClassUnmetDTO struct {
+	Class     string   `json:"class"`
+	Abilities []string `json:"abilities"`
+}
+
+// SkillBudgetFigureDTO is a thief's or a bard's skill point budget at the
+// starting level: `total` the level allows, `spent` entered, `left` (negative
+// when over), `perSkill` the most one skill holds (0: no such limit).
+type SkillBudgetFigureDTO struct {
+	Level    int `json:"level"`
+	Total    int `json:"total"`
+	Spent    int `json:"spent"`
+	Left     int `json:"left"`
+	PerSkill int `json:"perSkill"`
+}
+
+// ChecksDTO is POST /api/characters/checks: `unmetMinimums` for every
+// creatable class, and `skillBudget` for the draft's class (null for a class
+// without skill points or an XP that gives no level).
+type ChecksDTO struct {
+	UnmetMinimums []ClassUnmetDTO       `json:"unmetMinimums"`
+	SkillBudget   *SkillBudgetFigureDTO `json:"skillBudget"`
+}
+
+// Checks is POST /api/characters/checks: the verdicts the class and skills
+// steps show on a draft too raw to preview (ADR 0034). It refuses no value
+// and stores nothing.
+func Checks(svc draftChecker) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var b ChecksBody
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&b); err != nil {
+			return render.BadRequestError("invalid JSON body")
+		}
+		c, err := svc.CreationChecks(r.Context(), charactersvc.DraftInput{
+			Class: b.Class, Scores: b.Scores, XP: b.XP, SkillPoints: b.SkillPoints,
+		})
+		if err != nil {
+			return err
+		}
+		out := ChecksDTO{UnmetMinimums: make([]ClassUnmetDTO, 0, len(c.UnmetMinimums))}
+		for _, u := range c.UnmetMinimums {
+			out.UnmetMinimums = append(out.UnmetMinimums, ClassUnmetDTO(u))
+		}
+		if c.SkillBudget != nil {
+			f := SkillBudgetFigureDTO(*c.SkillBudget)
+			out.SkillBudget = &f
+		}
+		render.OK(r.Context(), w, out)
+		return nil
+	}
 }

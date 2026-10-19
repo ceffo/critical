@@ -2798,11 +2798,75 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await next.click();
   await step.getByRole("radio", { name: "Saisir" }).click();
   for (const a of ["FOR", "DEX", "CON", "INT", "SAG", "CHA"])
-    await step.getByLabel(a, { exact: true }).fill("12");
+    await step.getByLabel(a, { exact: true }).fill(a === "DEX" ? "8" : "12");
+  // The class cards show each class's ability minimums, the server flags the ones the scores miss
+  // (the thief asks for Dexterity 9) and the flag follows a corrected score.
+  const back = step.getByRole("button", {
+    name: /^Revenir à l'étape précédente/,
+  });
+  await back.click();
+  await back.click();
+  const thiefMinimums = step.getByTestId("minimums-thief");
+  await expect(thiefMinimums).toContainText("DEX 9");
+  await expect(thiefMinimums.locator("[data-unmet]")).toHaveCount(1);
+  await expect(
+    step.getByTestId("minimums-bard").locator("[data-unmet]"),
+  ).toHaveCount(3); // Dex 8, Int 12 and Cha 12 against 12, 13 and 15
+  for (const vp of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(step, `thief class minimums, fr, ${where}`);
+    await snap(page, `thief-class-minimums-fr-${where}`);
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
   await next.click();
+  await next.click();
+  await step.getByLabel("DEX", { exact: true }).fill("12");
+  await back.click();
+  await back.click();
+  await expect(thiefMinimums.locator("[data-unmet]")).toHaveCount(0);
+  await next.click();
+  await next.click();
+  await next.click();
+  // 1st level: 60 points in all, 30 in one skill; the budget shows what is left as points are entered.
   const entry = step.getByTestId("thief-skills-entry");
+  const budget = entry.getByTestId("skill-budget");
+  await expect(budget).toContainText("Budget du niveau 1 : 60 points");
+  await expect(budget).toContainText("Restants : 60");
+  await entry.getByLabel("Crochetage").fill("25");
+  await expect(budget).toContainText("Restants : 35");
+  await entry.getByLabel("Crochetage").fill("");
+  await expect(budget).toContainText("Restants : 60");
+  // Over budget: 90 points in a 60-point level shows a negative balance in red.
+  for (const skill of ["Crochetage", "Escalade", "Vol à la tire"])
+    await entry.getByLabel(skill).fill("30");
+  await expect(budget).toContainText("Restants : -30");
+  await expect(budget.locator("[data-over]")).toHaveCount(1);
+  await snap(page, "thief-form-over-budget-fr");
+  for (const skill of ["Crochetage", "Escalade", "Vol à la tire"])
+    await entry.getByLabel(skill).fill("");
+  await expect(budget).toContainText("Restants : 60");
+  // The figures follow the draft's class: a fighter has no budget, back to the thief it is again 60.
+  const goBack = async () => {
+    for (let i = 0; i < 3; i++) await back.click();
+  };
+  const goOn = async () => {
+    for (let i = 0; i < 3; i++) await next.click();
+  };
+  await goBack();
+  await step.getByRole("radio", { name: "Guerrier", exact: true }).click();
+  await goOn();
+  await expect(step.getByTestId("skill-budget")).toHaveCount(0);
+  await goBack();
+  await step.getByRole("radio", { name: "Voleur", exact: true }).click();
+  await goOn();
+  await expect(step.getByTestId("skill-budget")).toContainText("Restants : 60");
   for (const vp of [
     { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
   ]) {
     await page.setViewportSize(vp);

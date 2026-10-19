@@ -304,6 +304,8 @@ export interface CreationOptions {
      */
     hitDie?: number;
     levelXp?: LevelXp[];
+    /** The class's ability minimums (PHB Table 13), shown on its card and not enforced; absent from an older release. */
+    minimums?: { ability: string; min: number }[];
   }[];
   /** ADR 0032 step 6's score methods, in the book's order; absent from an older release. */
   scoreMethods?: ScoreMethod[];
@@ -482,3 +484,30 @@ export type NewCharacter = {
   /** The details, as the card shows them (age null for none); a refusal's field is `details.<field>`. */
   details?: Partial<CharacterDetails>;
 } & Record<AbilityCode, number | null>;
+
+/** The draft as far as it is entered, asked at `POST /api/characters/checks`. */
+export interface DraftChecksRequest {
+  class: string;
+  /** The abilities entered so far, by code. */
+  scores: Record<string, number>;
+  xp: number | null;
+  skillPoints: Record<string, number>;
+}
+
+/**
+ * The server's verdicts on a raw draft (`POST /api/characters/checks`): for every creatable class the
+ * abilities whose entered score is under its minimum, and the draft class's skill point budget at the
+ * level its XP gives (null for a class without skill points).
+ */
+export interface DraftChecks {
+  unmetMinimums: { class: string; abilities: string[] }[];
+  skillBudget: {
+    level: number;
+    /** The points the level allows in all, those entered, and what is left (negative when over). */
+    total: number;
+    spent: number;
+    left: number;
+    /** The most one skill holds at the level; 0 for no such limit. */
+    perSkill: number;
+  } | null;
+}

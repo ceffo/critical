@@ -28,8 +28,15 @@ unanswered=$(gh api --paginate "repos/$repo/pulls/$pr/comments" | jq -s 'add // 
   | [$c[]|select(.in_reply_to_id==null and (.user.login|test("greptile")))|.id as $r
      |select([$c[]|select(.in_reply_to_id==$r)]|length==0)]|length')
 [ "$unanswered" = 0 ] || refuse "$unanswered Greptile comment thread(s) without a reply"
-# No fallback (no gh stack merge): if the head moved after the checks, the merge fails and nothing is merged.
-gh pr merge "$pr" -R "$repo" --squash --delete-branch --match-head-commit "$sha" >/dev/null 2>&1 || { echo "MERGE FAILED #$pr (head moved from ${sha:0:7}, or GitHub refused)"; exit 1; }
+# Pinned to the checked head: if the head moved after the checks, the merge fails and nothing is merged.
+if ! err=$(gh pr merge "$pr" -R "$repo" --squash --delete-branch --match-head-commit "$sha" 2>&1 >/dev/null); then
+  # A PR in a GitHub stack can only merge through the stack merge. Only the stack's bottom PR (based on
+  # main), and only if its head is still the checked sha: a higher PR would merge unchecked parents.
+  grep -q "part of a stack" <<<"$err" || { echo "MERGE FAILED #$pr (head moved from ${sha:0:7}, or GitHub refused)"; exit 1; }
+  h=$(gh pr view "$pr" -R "$repo" --json headRefOid,baseRefName --jq '.headRefOid+" "+.baseRefName')
+  [ "$h" = "$sha main" ] || { echo "MERGE FAILED #$pr (stacked: head/base now $h; only the bottom PR at ${sha:0:7} lands)"; exit 1; }
+  gh stack merge "$pr" --yes --squash >/dev/null 2>&1 || { echo "MERGE FAILED #$pr (stack merge refused)"; exit 1; }
+fi
 git worktree prune
 [ -z "${2:-}" ] || herdr tab close "$2" >/dev/null 2>&1 || true
 if [ "$(git branch --show-current)" = main ]; then git fetch -q origin && git merge -q --ff-only origin/main; fi

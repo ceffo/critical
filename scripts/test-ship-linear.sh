@@ -76,11 +76,13 @@ case "$*" in
     "${STUB_MERGE_STATE:-CLEAN}" "${STUB_CHECK:-SUCCESS}"; exit 0 ;;
   *check-runs*) echo "${STUB_GREPTILE:-completed}"; exit 0 ;;
   *pulls/77/comments*) echo "${STUB_COMMENTS:-[]}"; exit 0 ;;
+  *headRefOid,baseRefName*) echo "abc1234 ${STUB_BASE:-main}"; exit 0 ;;
 esac
 case "$1 $2" in
   "pr create") echo "https://github.com/o/r/pull/77" ;;
   "pr view") echo MERGEABLE ;;
-  "pr merge") [ -z "${STUB_MERGE_FAIL:-}" ] || exit 1 ;;
+  "pr merge") [ "${STUB_MERGE_FAIL:-}" != stack ] || { echo "GraphQL: This pull request is part of a stack and must be merged using the asynchronous merge REST API." >&2; exit 1; }
+    [ -z "${STUB_MERGE_FAIL:-}" ] || exit 1 ;;
 esac
 GH
 chmod +x "$tmp/bin/gh"
@@ -122,6 +124,10 @@ STUB_MERGE_STATE=BLOCKED refused "not clean"
 STUB_COMMENTS='[{"id":1,"in_reply_to_id":null,"user":{"login":"greptile-apps[bot]"}}]' refused "unanswered greptile thread"
 : > "$GH_LOG"; STUB_MERGE_FAIL=1 "$S/land.sh" 77 >/dev/null 2>&1; [ $? = 1 ] || fail "land: a refused merge did not exit 1"
 ! grep -q "stack merge" "$GH_LOG" || fail "land fell back to an unchecked stack merge"
+: > "$GH_LOG"; STUB_MERGE_FAIL=stack "$S/land.sh" 77 >/dev/null 2>&1 || fail "land: a stacked bottom PR did not land"
+grep -q "stack merge 77 --yes --squash" "$GH_LOG" || fail "land: stacked bottom PR not merged through gh stack merge"
+: > "$GH_LOG"; STUB_MERGE_FAIL=stack STUB_BASE=feat/parent "$S/land.sh" 77 >/dev/null 2>&1; [ $? = 1 ] || fail "land: a stacked child PR did not fail"
+! grep -q "stack merge" "$GH_LOG" || fail "land merged a stacked child (its parents unchecked)"
 set -e
 STUB_COMMENTS='[{"id":1,"in_reply_to_id":null,"user":{"login":"greptile-apps[bot]"}},{"id":2,"in_reply_to_id":1,"user":{"login":"ceffo"}}]' \
   "$S/land.sh" 77 >/dev/null 2>&1 || fail "land refused an answered greptile thread"

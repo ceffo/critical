@@ -37,6 +37,7 @@ func TestBuffs_Step21_ValidateEndEffects(t *testing.T) {
 		}}, "dice is required"},
 		"dice use the level":   {[]spelleffectsvc.EndEffect{heal("leveld4", v)}, "may not use level"},
 		"dice not a sum":       {[]spelleffectsvc.EndEffect{heal("2*1d6", v)}, "not a sum of dice"},
+		"dice below 0":         {[]spelleffectsvc.EndEffect{heal("1d4-2", v)}, "may go below 0"},
 		"second effect is bad": {[]spelleffectsvc.EndEffect{heal("1d12", v), heal("1d4", "nope")}, "end_effects[1].on"},
 	}
 	for name, tt := range tests {

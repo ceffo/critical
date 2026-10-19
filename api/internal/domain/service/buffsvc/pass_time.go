@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 // MaxPassHours caps one fast-forward (30 days): a typo like 8000 instead of
@@ -40,10 +41,10 @@ func RoundsForHours(hours float64) (int, error) {
 // untimed buffs are untouched; the round counter goes to 0 (out of combat).
 // One time_passed entry snapshots the buffs and the round, so voiding it
 // restores both.
-func (s *service) PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []BuffEffect, rounds, round int, err error) {
+func (s *service) PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []BuffEffect, rounds, round int, end EndResult, err error) {
 	rounds, err = RoundsForHours(hours)
 	if err != nil {
-		return nil, nil, 0, 0, err
+		return nil, nil, 0, 0, EndResult{}, err
 	}
 	ch, err := s.apply(ctx, characterID, func(buffs []BuffEffect, from int) (change, error) {
 		to := 0
@@ -56,12 +57,16 @@ func (s *service) PassTime(ctx context.Context, characterID int64, hours float64
 			round:   &to,
 			// Out of combat: no initiative (ADR 0013 step 5).
 			clearInitiative: true,
+			// ADR 0004 step 21: the rows that run out apply their
+			// "expired" end effects in this entry.
+			ended:    expired,
+			endCause: spelleffectsvc.EndExpired,
 		}, nil
 	})
 	if err != nil {
-		return nil, nil, 0, 0, err
+		return nil, nil, 0, 0, EndResult{}, err
 	}
-	return active, expired, rounds, *ch.round, nil
+	return active, expired, rounds, *ch.round, ch.end, nil
 }
 
 // PreviewPassTime runs the PassTime rules on the current buffs and returns

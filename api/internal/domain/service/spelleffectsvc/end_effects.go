@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/ceffo/critical/api/pkg/formula"
 )
@@ -84,7 +85,7 @@ func (e Entry) validateEndEffects() error {
 		return fmt.Errorf("end_effects: empty list")
 	}
 	for i, x := range e.EndEffects {
-		field := fmt.Sprintf("end_effects[%d]", i)
+		field := "end_effects[" + strconv.Itoa(i) + "]"
 		if err := oneOf(x.Kind, validEndKinds, field+".kind"); err != nil {
 			return err
 		}
@@ -107,6 +108,9 @@ func (e Entry) validateEndEffects() error {
 		}
 		if _, err := x.Dice.Expand(0); err != nil {
 			return fmt.Errorf("%s.dice: %w", field, err)
+		}
+		if lo, err := x.Dice.Min(0); err != nil || lo < 0 {
+			return fmt.Errorf("%s.dice %s: may go below 0", field, x.Dice)
 		}
 	}
 	return nil

@@ -70,13 +70,13 @@ func TestBuffs_Step15_StartRound(t *testing.T) {
 			f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 6).Return(nil).Once()
 			f.initiativeIs(nil)
 			f.rollsInitiative(2)
-			_, _, _, _, err := f.svc.AdvanceRound(ctx, charID)
+			_, _, _, _, _, err := f.svc.AdvanceRound(ctx, charID)
 			return err
 		}, []buffsvc.BuffEffect{{ID: "h", Name: "Haste", Duration: 4, StartRound: 2}, {ID: "m", Name: "Mirror Image", Duration: 8, Charges: 3, StartRound: 1}}},
 		{"passing time keeps it", func(f *fixture) error {
 			f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 0).Return(nil).Once()
 			f.initiativeIs(nil)
-			_, _, _, _, err := f.svc.PassTime(ctx, charID, 0.05)
+			_, _, _, _, _, err := f.svc.PassTime(ctx, charID, 0.05)
 			return err
 		}, []buffsvc.BuffEffect{{ID: "h", Name: "Haste", Duration: 2, StartRound: 2}, {ID: "m", Name: "Mirror Image", Duration: 6, Charges: 3, StartRound: 1}}},
 	}
@@ -96,7 +96,7 @@ func TestBuffs_Step15_StartRound(t *testing.T) {
 		f.state(before, 5)
 		f.records()
 		f.saves([]buffsvc.BuffEffect{mirror})
-		_, err := f.svc.Dismiss(ctx, charID, "h")
+		_, _, err := f.svc.Dismiss(ctx, charID, "h", "")
 		require.NoError(t, err)
 
 		f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, before).Return(nil).Once()

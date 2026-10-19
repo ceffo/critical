@@ -102,7 +102,7 @@ func TestRoundPassTime(t *testing.T) {
 		m.buffs.EXPECT().PassTime(mock.Anything, int64(1), 1.5).Return(
 			[]buffsvc.BuffEffect{{ID: "a", Name: "Long", Duration: 10, StartRound: 3}},
 			[]buffsvc.BuffEffect{{ID: "b", Name: "Short"}},
-			90, 0, nil)
+			90, 0, buffsvc.EndResult{}, nil)
 		rec := do(h, "POST", "/api/round/pass-time", `{"hours":1.5}`)
 		require.Equal(t, http.StatusOK, rec.Code)
 		assert.JSONEq(t, `{"roundNumber":0,"roundsPassed":90,
@@ -127,7 +127,7 @@ func TestRoundPassTime(t *testing.T) {
 	t.Run("400 with the service's message when hours give no round", func(t *testing.T) {
 		h, m := newRouter(t)
 		m.buffs.EXPECT().PassTime(mock.Anything, int64(1), 0.01).
-			Return(nil, nil, 0, 0, fmt.Errorf("%w: 0.01 hours is less than one round (1 minute)", domain.ErrInvalidInput))
+			Return(nil, nil, 0, 0, buffsvc.EndResult{}, fmt.Errorf("%w: 0.01 hours is less than one round (1 minute)", domain.ErrInvalidInput))
 		rec := do(h, "POST", "/api/round/pass-time", `{"hours":0.01}`)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Contains(t, rec.Body.String(), "less than one round")
@@ -211,7 +211,7 @@ func TestRoundInitiative_WireShape(t *testing.T) {
 	t.Run("Next Round returns the new round's initiative", func(t *testing.T) {
 		h, m := newRouter(t)
 		m.buffs.EXPECT().AdvanceRound(mock.Anything, int64(1)).
-			Return([]buffsvc.BuffEffect{}, []buffsvc.BuffEffect{}, 1, buffsvc.Initiative{D10: 9, LogEntryID: 2}, nil)
+			Return([]buffsvc.BuffEffect{}, []buffsvc.BuffEffect{}, 1, buffsvc.Initiative{D10: 9, LogEntryID: 2}, buffsvc.EndResult{}, nil)
 		// No GetInitiative: the advance returns the roll it made.
 		rec := do(h, "POST", "/api/round/advance", "")
 		require.Equal(t, http.StatusOK, rec.Code)

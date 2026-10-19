@@ -24,7 +24,11 @@ func (s *service) ListStatus(ctx context.Context, characterID int64) ([]BuffStat
 	if err != nil {
 		return nil, fmt.Errorf("get active buffs: %w", err)
 	}
-	return statuses(buffs, base), nil
+	out := statuses(buffs, base)
+	for i := range out {
+		out[i].AsksEndCause = s.asksEndCause(out[i].BuffEffect)
+	}
+	return out, nil
 }
 
 // GetRound returns the persisted round number.

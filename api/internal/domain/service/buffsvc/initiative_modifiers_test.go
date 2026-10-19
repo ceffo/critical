@@ -122,7 +122,7 @@ func TestInitiative_ADR0035Item6_NextRoundAddsTheWeaponSpeedAndEffects(t *testin
 		f := newFixture(t)
 		advanceWith(f, []buffsvc.BuffEffect{haste, meleeOnly, strong, weaponPlus}, []buffsvc.ItemPower{boots}, &sword, 6)
 
-		_, _, _, got, err := f.svc.AdvanceRound(context.Background(), charID)
+		_, _, _, got, _, err := f.svc.AdvanceRound(context.Background(), charID)
 		require.NoError(t, err)
 		want := []buffsvc.InitiativeModifier{
 			// Speed 5 lowered by the melee "weapon becomes +2" (its condition
@@ -154,7 +154,7 @@ func TestInitiative_ADR0035Item6_NextRoundAddsTheWeaponSpeedAndEffects(t *testin
 		f := newFixture(t)
 		advanceWith(f, nil, nil, nil, 4)
 
-		_, _, _, got, err := f.svc.AdvanceRound(context.Background(), charID)
+		_, _, _, got, _, err := f.svc.AdvanceRound(context.Background(), charID)
 		require.NoError(t, err)
 		assert.Nil(t, got.Modifiers)
 		assert.Equal(t, 4, got.Total())
@@ -165,7 +165,7 @@ func TestInitiative_ADR0035Item6_NextRoundAddsTheWeaponSpeedAndEffects(t *testin
 		ending := buffsvc.BuffEffect{ID: "e", Name: "Ending", Duration: 1, Effects: buffsvc.BuffEffects{Initiative: intPtr(-2)}}
 		advanceWith(f, []buffsvc.BuffEffect{ending}, nil, nil, 4)
 
-		_, _, _, got, err := f.svc.AdvanceRound(context.Background(), charID)
+		_, _, _, got, _, err := f.svc.AdvanceRound(context.Background(), charID)
 		require.NoError(t, err)
 		assert.Equal(t, 4, got.Total())
 	})

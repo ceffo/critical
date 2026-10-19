@@ -37,6 +37,45 @@ async function expectNoPageScroll(page: Page) {
   });
   expect(m.sw, "horizontal page scroll").toBeLessThanOrEqual(m.cw);
   expect(m.sh, "vertical page scroll").toBeLessThanOrEqual(m.ch);
+  expect(
+    await escapedAbsolutes(page),
+    "absolute boxes past their scroller",
+  ).toEqual([]);
+}
+
+/**
+ * Absolutely positioned boxes that a scroller or clipping box around them can't hold: their
+ * containing block (nearest positioned or transformed ancestor) lies outside that box, so they
+ * are neither clipped nor scrolled by it and they stretch the document. A `sr-only` label in a
+ * journal turn below the fold did that: with enough turns the whole page got a scrollbar. The
+ * rule holds whatever the content, so a short fixture journal still proves it.
+ */
+async function escapedAbsolutes(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const createsBlock = (cs: CSSStyleDeclaration) =>
+      cs.position !== "static" ||
+      cs.transform !== "none" ||
+      cs.filter !== "none" ||
+      cs.perspective !== "none" ||
+      /paint|layout|strict|content/.test(cs.contain);
+    const out: string[] = [];
+    for (const el of document.querySelectorAll("body *")) {
+      if (getComputedStyle(el).position !== "absolute") continue;
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        const cs = getComputedStyle(p);
+        if (createsBlock(cs)) break;
+        if (cs.overflowX !== "visible" || cs.overflowY !== "visible") {
+          const what = (e: Element) =>
+            `${e.tagName.toLowerCase()}.${(e.getAttribute("class") ?? "").split(" ").slice(0, 4).join(".")}`;
+          out.push(
+            `${what(el)} "${el.textContent?.slice(0, 30)}" escapes ${what(p)}`,
+          );
+          break;
+        }
+      }
+    }
+    return [...new Set(out)];
+  });
 }
 
 /** The always-visible zones (ADR 0022 step 2.1) and the focused activity's stage. */
@@ -1845,6 +1884,7 @@ test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", a
       await page.setViewportSize(vp);
       await expectNoClippedText(card, `login page ${lang} ${vp.width}`);
       await expectWholeWords(card, `login page ${lang} ${vp.width}`);
+      await expectNoPageScroll(page);
       if (lang === "fr" && (vp.width === 1440 || vp.width === 1707))
         await snap(page, `login-fr-${vp.width}x${vp.height}`);
     }
@@ -1973,6 +2013,8 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
       const where = `${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(invites, `admin invites, ${where}`);
       await expectNoClippedText(users, `admin users, ${where}`);
+      // The admin page may scroll as a page (a long user list), but nothing escapes its scrollers.
+      expect(await escapedAbsolutes(page), `admin, ${where}`).toEqual([]);
       await snap(page, `admin-${lang}-${vp.width}x${vp.height}`);
     }
   }

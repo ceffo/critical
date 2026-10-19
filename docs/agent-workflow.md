@@ -102,8 +102,8 @@ in [`scripts/linear-mapping.json`](../scripts/linear-mapping.json) and described
 this file links it, never copies it. The decision is [ADR 0031](adr/0031-linear-tracker.md).
 
 - Work item = Linear issue; id `CRI-<n>` (e.g. `CRI-42`). Old bead ids (`critical-518.3`) are looked up in
-  `docs/beads-id-map.json` (`{"critical-x":"CRI-n"}`); the old text is in the read-only archive
-  `.beads/issues.jsonl` (kept for one release, then deleted and kept as a git tag).
+  `docs/beads-id-map.json` (`{"critical-x":"CRI-n"}`); the old text is in the annotated git tag
+  `beads-archive` (`git show beads-archive:.beads/issues.jsonl`).
 - Tools. Agents use the Linear MCP tools listed in their `tools:` (`mcp__linear-server__…`): read
   (`get_issue`, `list_issues` with `query` for search, `list_comments`) for developer, code-reviewer and
   tester; read plus write (`save_issue`, `save_comment`, `list_issue_labels`, `list_issue_statuses`) for the
@@ -177,9 +177,8 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   names, strings, config or seeds. Code says what it does and why; the link to the work item lives in
   the commit message and the PR only. (User rule, 2026-10-14.) Enforced by `just check-no-tracker-ids`
   (part of `just validate`; `scripts/test-check-no-tracker-ids.sh` plants ids in throwaway trees). Linear
-  ids are matched by pattern; old bead ids are read from `.beads/issues.jsonl` while the archive exists
-  and from `docs/beads-id-map.json` (the cutover's id map) after it. It scans everything but `.beads/`,
-  `docs/` and lock files.
+  ids are matched by pattern; old bead ids are read from `docs/beads-id-map.json` (the cutover's id map).
+  It scans everything but `docs/` and lock files.
 - **No throwaway code.** Data processing and verification are done by committed, deterministic, rerunnable
   scripts or tests; never by throwaway code whose result we rely on. (User rule, 2026-10-15.)
 - **No special case per spell, item or buff.** Model the mechanic generically and drive it from the
@@ -272,7 +271,7 @@ CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays t
 **Main runs:** a push to `main` runs CI, and Release follows. A Dependabot PR merged by auto-merge starts no push run (GitHub: events caused by `GITHUB_TOKEN` start no workflow), so `dependabot-auto-merge.yml` waits for the merge and runs `gh workflow run ci.yml --ref main`; that dispatched run has no base commit, so `changes` runs every slow job.
 **Slow-job skip:** a first job, `changes` (`scripts/ci-skip-slow.sh`, tested by
 `scripts/test-ci-skip-slow.sh` in `just validate`), skips `e2e`, `dev-smoke` and `image` when every
-changed file is documentation (`*.md`, `docs/**`, the `.beads/**` archive; on a PR against its base, on a push
+changed file is documentation (`*.md`, `docs/**`; on a PR against its base, on a push
 against the previous head), or when the PR carries the label `ci-skip` (PR runs only: the push that
 merges it runs everything). `validate` and `generated` always run (required checks). A skipped job
 counts as a success, so the CI run is green and the Release workflow still starts and decides by its

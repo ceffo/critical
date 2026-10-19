@@ -47,7 +47,7 @@ change readme README.md
 check "README only" true pull_request "" "$base"
 check "README only, on a push" true push "" "$base"
 
-change docs-all docs/adr/0001-x.md web/README.md .beads/issues.jsonl api/NOTES.md
+change docs-all docs/adr/0001-x.md web/README.md api/NOTES.md
 check "docs, nested markdown and tracker only" true pull_request "bug,other" "$base"
 
 change code api/main.go

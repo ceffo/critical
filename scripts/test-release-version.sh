@@ -53,7 +53,7 @@ c 'Feat: capitalised' | bump_case "type case" v1.4.2 true 1.5.0 minor
 for t in 'fix: a bug' 'refactor(dal): x' 'perf: faster' 'ci: a job' 'build: deps' 'style: fmt' 'revert: feat: x'; do
     c "$t" | bump_case "'$t'" v1.4.2 true 1.4.3 patch
 done
-for t in 'chore/sync-beads (#227)' 'Add a thing' 'feat:no space' 'feat : spaced' 'feat(: open' 'Merge pull request #3 from a/b' ''; do
+for t in 'chore/sync-tracker (#227)' 'Add a thing' 'feat:no space' 'feat : spaced' 'feat(: open' 'Merge pull request #3 from a/b' ''; do
     c "$t" | bump_case "unparseable '$t'" v1.4.2 true 1.4.3 patch
 done
 for t in 'docs: a page' 'test: more' 'chore: tracker export' 'chore(deps): bump x' 'docs(adr): y'; do

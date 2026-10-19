@@ -18,9 +18,6 @@ web/dist/
 # OS
 .DS_Store
 
-# beads_rust runtime sidecars (the tracked state is .beads/issues.jsonl)
-.beads/beads.db*
-
 # ralph-tui local run state (logs, reports, session)
 .ralph-tui/
 

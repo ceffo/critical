@@ -39,12 +39,11 @@ check-no-sqlite:
     fi
     echo "--- No SQLite in the server ---"
 
-# scripts/linear.sh (Linear GraphQL helper), scripts/linear-setup.sh, scripts/linear-configure.sh, scripts/linear-import.sh and the supervisor's Linear scripts (.claude/scripts) against a local stub server; no real Linear call.
+# scripts/linear.sh (Linear GraphQL helper), scripts/linear-setup.sh, scripts/linear-configure.sh and the supervisor's Linear scripts (.claude/scripts) against a local stub server; no real Linear call.
 check-linear:
     scripts/test-linear.sh
     scripts/test-ship-linear.sh
     scripts/test-linear-configure.sh
-    scripts/test-linear-import.sh
 
 # scripts/linear-ready.sh and the Linear mode of pending-questions.sh against a local stub server; no real Linear call.
 check-linear-queue:
@@ -496,8 +495,3 @@ linear-setup:
 linear-configure *args:
     scripts/linear-configure.sh {{args}}
 
-# Imports the live beads and all epics into Linear (scripts/linear-import.sh): a dry run by default, which prints
-# everything it would create and writes nothing; `just linear-import --apply` writes and updates docs/beads-id-map.json.
-# Idempotent: a rerun fills in what is missing. The live run is the cutover's.
-linear-import *args:
-    scripts/linear-import.sh {{args}}

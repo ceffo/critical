@@ -1,4 +1,4 @@
-# ADR 0031: Linear is the work-item tracker; beads is a read-only archive
+# ADR 0031: Linear is the work-item tracker; beads is archived as a git tag
 
 **Status**: accepted, 2026-10-18 (user, triage: "agree with all", after the investigation of beads against
 Linear). Takes effect at the cutover, when this change merges.
@@ -30,8 +30,9 @@ PRs, `just sync-main`); the user wants issues in a tool with a UI, relations, an
    relation; `needs-info` and `risky` stay labels, and the "## Questions" section stays in the issue
    description. The commit and PR suffix is `(CRI-n)`, and the PR body carries `Closes CRI-n`.
 5. **Import and archive.** Live items and all epics were imported; `docs/beads-id-map.json` maps each old id
-   to its `CRI-n`. `.beads/issues.jsonl` stays as a read-only archive for one release, then is deleted and
-   kept as a git tag. Old ids, in code or anywhere else, are looked up in the map and the archive;
+   to its `CRI-n`. `.beads/issues.jsonl` stayed as a read-only archive for one release, then was deleted and
+   kept as the annotated git tag `beads-archive` (with the one-shot import and cutover scripts). Old ids, in
+   code or anywhere else, are looked up in the map and the tag;
    `check-no-tracker-ids` refuses both kinds of id in code.
 6. **One switch.** The agent definitions and the workflow docs change in a single PR, merged at the
    cutover, so that main never has half the agents on beads and half on Linear.

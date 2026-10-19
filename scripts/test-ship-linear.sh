@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Tests .claude/scripts/{linear-state,ship,land,linear-cutover}.sh (part of `just validate`) against a stub Linear
+# Tests .claude/scripts/{linear-state,ship,land}.sh (part of `just validate`) against a stub Linear
 # server and stub gh: nothing here calls Linear or GitHub. Checks: ship moves each issue to In Review and comments
 # the PR link and never closes (no Done/Canceled state sent); the unmerged path puts an issue back to Todo; an
 # unknown issue or state fails; a Linear failure leaves the PR open and exits 1; land.sh merges without a tracker
-# call only when CI is green, the PR is CLEAN, Greptile has reviewed the head and every Greptile thread has a reply;
-# the cutover swaps the wrappers and removes the beads tooling.
+# call only when CI is green, the PR is CLEAN, Greptile has reviewed the head and every Greptile thread has a reply.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 S="$root/.claude/scripts"
@@ -125,16 +124,6 @@ STUB_COMMENTS='[{"id":1,"in_reply_to_id":null,"user":{"login":"greptile-apps[bot
 set -e
 STUB_COMMENTS='[{"id":1,"in_reply_to_id":null,"user":{"login":"greptile-apps[bot]"}},{"id":2,"in_reply_to_id":1,"user":{"login":"ceffo"}}]' \
   "$S/land.sh" 77 >/dev/null 2>&1 || fail "land refused an answered greptile thread"
-
-# --- cutover
-sup="$tmp/sup"; mkdir -p "$sup"
-touch "$sup/merge.sh" "$sup/sync-branch.sh" "$sup/beads-line.py"
-mkdir -p "$tmp/main/.claude"; cp -r "$S" "$tmp/main/.claude/"
-SUPERVISOR_DIR=$sup "$S/linear-cutover.sh" >/dev/null || fail "cutover failed"
-SUPERVISOR_DIR=$sup "$S/linear-cutover.sh" >/dev/null || fail "cutover not idempotent"
-for f in merge.sh sync-branch.sh beads-line.py; do [ ! -e "$sup/$f" ] || fail "$f still there"; done
-grep -q "$tmp/main/.claude/scripts/ship.sh" "$sup/ship.sh" || fail "ship wrapper"
-[ -x "$sup/pr-merge-watch.sh" ] || fail "watch wrapper"
 
 [ "$fails" = 0 ] || { echo "test-ship-linear: $fails failure(s)" >&2; exit 1; }
 echo "test-ship-linear: ok"

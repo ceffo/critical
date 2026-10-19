@@ -13,10 +13,11 @@ export default defineConfig({
   // Every test gets its own API + Vite stack on free ports (see e2e/fixtures.ts),
   // so tests are independent and can run in parallel.
   fullyParallel: true,
-  // CI: one retry for infra flakes; 2 workers to match the 2-4 vCPU runner (each worker serves the built
-  // bundle once, each test boots only its own API). Locally: no retries, default workers.
+  // CI: one retry for infra flakes; 4 workers, one per vCPU of the free runner for public repositories
+  // (ubuntu-latest: 4 vCPU, 16 GB; each worker serves the built bundle once, each test boots only its own
+  // API). Locally: no retries, default workers.
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 4 : undefined,
   use: {
     ...devices["Desktop Chrome"],
     viewport: { width: 1440, height: 900 },

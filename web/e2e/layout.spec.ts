@@ -1414,7 +1414,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     // ADR 0027 step 14.3 and ADR 0035 item 2: one possessions card, inside the stage (the page never
     // scrolls; a long list scrolls inside the card).
     await expectInside(
-      stage.getByRole("region", { name: "Possessions" }),
+      stage.getByRole("region", { name: "Objets" }),
       stage,
       `possessions card, ${where}`,
     );

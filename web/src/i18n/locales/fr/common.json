@@ -2020,7 +2020,7 @@
     "turnLabel": "Repousser : {{undead}}"
   },
   "equipment": {
-    "title": "Possessions",
+    "title": "Objets",
     "all": "Tout",
     "filter": "Afficher une catégorie",
     "categories": {
@@ -2105,7 +2105,7 @@
     "equipped": "Équipé",
     "equipHint": "Équiper {{name}}",
     "unequipHint": "Retirer {{name}}",
-    "none": "Aucune possession.",
+    "none": "Aucun objet.",
     "noneInCategory": "Rien dans cette catégorie.",
     "stats": {
       "speed": "vitesse {{speed}}",
@@ -2120,10 +2120,10 @@
       "large": "G {{dice}}"
     },
     "review": {
-      "band_one": "{{count}} possession à vérifier après le passage au nouvel inventaire",
-      "band_other": "{{count}} possessions à vérifier après le passage au nouvel inventaire",
+      "band_one": "{{count}} objet à vérifier après le passage au nouvel inventaire",
+      "band_other": "{{count}} objets à vérifier après le passage au nouvel inventaire",
       "open": "Vérifier",
-      "openHint": "Vérifier les possessions que le passage n’a pas pu classer",
+      "openHint": "Vérifier les objets que le passage n’a pas pu classer",
       "close": "Fermer",
       "title": "À vérifier",
       "intro": "Le passage au nouvel inventaire n’a pas pu tout classer.",
@@ -2156,9 +2156,9 @@
       "acMissile": "Bonus de CA (projectiles)",
       "component": "Composante de sort",
       "noComponent": "Aucune",
-      "componentHint": "Un sort qui dépense cette composante peut dépenser cette possession",
+      "componentHint": "Un sort qui dépense cette composante peut dépenser cet objet",
       "errors": {
-        "not_allowed": "Pas permis pour cette possession.",
+        "not_allowed": "Pas permis pour cet objet.",
         "slot_taken": "Une autre est déjà équipée."
       }
     }
@@ -2381,7 +2381,7 @@
     "floored": "limitée à −10",
     "missile": "contre les projectiles {{value}}",
     "inventory": "Inventaire",
-    "inventoryHint": "Ouvrir l'inventaire : les pièces portées",
+    "inventoryHint": "Ouvrir l'inventaire : les objets portés",
     "override": {
       "open": "Forcer",
       "openHint": "Forcer la CA : pour ce que le détail ne couvre pas (sort Bouclier…)",

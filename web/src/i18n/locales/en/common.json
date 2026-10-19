@@ -2020,7 +2020,7 @@
     "turnLabel": "Turn: {{undead}}"
   },
   "equipment": {
-    "title": "Possessions",
+    "title": "Items",
     "all": "All",
     "filter": "Show a category",
     "categories": {
@@ -2105,7 +2105,7 @@
     "equipped": "Equipped",
     "equipHint": "Equip {{name}}",
     "unequipHint": "Unequip {{name}}",
-    "none": "No possessions.",
+    "none": "No items.",
     "noneInCategory": "None in this category.",
     "stats": {
       "speed": "speed {{speed}}",
@@ -2120,10 +2120,10 @@
       "large": "L {{dice}}"
     },
     "review": {
-      "band_one": "{{count}} possession to check after the move to the new inventory",
-      "band_other": "{{count}} possessions to check after the move to the new inventory",
+      "band_one": "{{count}} item to check after the move to the new inventory",
+      "band_other": "{{count}} items to check after the move to the new inventory",
       "open": "Check",
-      "openHint": "Check the possessions the move could not sort",
+      "openHint": "Check the items the move could not sort",
       "close": "Close",
       "title": "To check",
       "intro": "The move to the new inventory could not sort everything.",
@@ -2156,9 +2156,9 @@
       "acMissile": "AC bonus (missiles)",
       "component": "Spell component",
       "noComponent": "None",
-      "componentHint": "A spell that spends this component can spend this piece",
+      "componentHint": "A spell that spends this component can spend this item",
       "errors": {
-        "not_allowed": "Not allowed for this piece.",
+        "not_allowed": "Not allowed for this item.",
         "slot_taken": "Another one is already equipped."
       }
     }
@@ -2381,7 +2381,7 @@
     "floored": "floored at −10",
     "missile": "vs missiles {{value}}",
     "inventory": "Inventory",
-    "inventoryHint": "Open the inventory: the pieces worn",
+    "inventoryHint": "Open the inventory: the items worn",
     "override": {
       "open": "Override",
       "openHint": "Override the AC: for what the breakdown cannot hold (Shield spell…)",

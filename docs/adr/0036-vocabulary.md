@@ -52,7 +52,7 @@ domain, it was just for ingestion, to kickstart the whole thing".
 
 Checks: `web/src/i18n/avoidedWords.test.ts` reads the values of both locale files and refuses the
 avoided words (fr: `MD`, `fiche`, `round`, `test de`, `buff` and a `bonus` that means a buff, `livre
-de sorts`, `sort lancé sur moi`, `jet de protection`; en: `GM`, `buff`, `spell cast on me`); keys
+de sorts`, `possession`, `sort lancé sur moi`, `jet de protection`; en: `GM`, `buff`, `spell cast on me`, `possession`, `piece`); keys
 and magic bonuses (`bonus au toucher`) are not words of the text. A new avoided word is a line in
 that test.
 
@@ -60,7 +60,9 @@ that test.
 
 - The locale files follow steps 3 and 4; `avoidedWords.test.ts` keeps them there. The
   weapon form's kind field (melee or missile) reads "Mêlée ou tir" / "Melee or missile", so that
-  "Type" stays free for ADR 0033's category and the weapon type field.
+  "Type" stays free for ADR 0033's category and the weapon type field. A duration the
+  book gives in turns is shown in rounds (ten per turn), in both languages, so "tour" means one
+  thing in French.
 - ADR 0004's buff, ADR 0005's round, ADR 0006's saving throw and ADR 0016's item keep their
   names; each carries a one-line pointer to this ADR for its UI word.
 - The "sheet differences" of ADR 0030 step 24 compare the figures imported from the Google

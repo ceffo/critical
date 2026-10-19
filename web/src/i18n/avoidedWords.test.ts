@@ -58,6 +58,12 @@ const french: Avoided[] = [
     word: "jet de protection (say jet de sauvegarde)",
     pattern: /jets? de protection/i,
   },
+  { word: "possession (say objet)", pattern: /\bpossessions?\b/i },
+  // "pièce" is also a room of a building (the spell area word), so only the possession sense.
+  {
+    word: "pièce for an item (say objet)",
+    pattern: /\bpièces? (portée|équipée|à vérifier)|les pièces portées/i,
+  },
 ];
 
 const english: Avoided[] = [
@@ -67,6 +73,8 @@ const english: Avoided[] = [
     word: "spell cast on me (say received spell)",
     pattern: /spells? cast on me|cast on me/i,
   },
+  { word: "possession (say item)", pattern: /\bpossessions?\b/i },
+  { word: "piece (say item)", pattern: /\bpieces?\b/i },
 ];
 
 describe.each([

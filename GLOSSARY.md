@@ -80,6 +80,7 @@ _Avoid_: jet de protection.
 **Round** (fr: tour):
 The combat clock's unit, counted by hand: **Next round** (fr: Tour suivant),
 **End combat** (fr: Fin du combat) and **Set round** move it. [ADR 0005](docs/adr/0005-rounds-and-time.md).
+A duration the book gives in turns (10 rounds) is shown in rounds, in both languages.
 _Avoid_: turn (in English a turn is ten rounds, and "turn" means turning undead in this
 project; the web's `turn` identifiers are legacy).
 

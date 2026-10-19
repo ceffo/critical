@@ -233,7 +233,8 @@ describe("formatValue (the value at the caster level)", () => {
 
   it("keeps times, words their units in French, and leaves dice alone", () => {
     expect(formatValue(fr, { amount: 15, unit: "round" })).toBe("15 tours");
-    expect(formatValue(fr, { amount: 1, unit: "turn" })).toBe("1 tour");
+    expect(formatValue(fr, { amount: 1, unit: "turn" })).toBe("10 tours");
+    expect(formatValue(en, { amount: 1, unit: "turn" })).toBe("10 rd");
     expect(formatValue(fr, { amount: 8, dice: "1d8", unit: "round" })).toBe(
       "8 + 1d8 tours",
     );
@@ -242,7 +243,7 @@ describe("formatValue (the value at the caster level)", () => {
     );
     expect(formatValue(fr, { amount: 1.5, unit: "round" })).toBe("1,5 tour");
     expect(formatValue(fr, { amount: 3, upper: 4, unit: "turn" })).toBe(
-      "3-4 tours",
+      "30-40 tours",
     );
   });
 
@@ -285,9 +286,7 @@ describe("quantityText (the book's formula)", () => {
   });
 
   it("words dice, ranges, 'up to' and a cap", () => {
-    expect(quantityText(fr, qty(1, "turn", { dice: "1d4" }))).toBe(
-      "1d4+1 tours",
-    );
+    expect(quantityText(fr, qty(1, "turn", { dice: "1d4" }))).toBeNull();
     expect(quantityText(fr, qty(0, "hour", { dice: "2d12" }))).toBe(
       "2d12 heures",
     );
@@ -348,7 +347,7 @@ describe("castingTimeText", () => {
         kind: "special",
         time: qty(8, "turn"),
       }),
-    ).toBe("Spécial (8 tours)");
+    ).toBe("Spécial (80 tours)");
   });
 
   it("is null for an untyped text", () => {
@@ -401,7 +400,17 @@ describe("durationText", () => {
           },
         }),
       ),
-    ).toBe("1 tour + 1 tour/niveau");
+    ).toBe("10 tours + 1 tour/niveau");
+    const turns = d("timed", "1 turn + 1 turn/level", {
+      time: {
+        terms: [
+          { count: 1, unit: "turn" },
+          { count: 1, unit: "turn", per_level: true, step: 1 },
+        ],
+      },
+    });
+    expect(durationText(fr, turns)).toBe("10 tours + 10 tours/niveau");
+    expect(durationText(en, turns)).toBe("10 rd + 10 rd/level");
     expect(durationText(fr, d("instantaneous", "Instantaneous"))).toBe(
       "Instantanée",
     );

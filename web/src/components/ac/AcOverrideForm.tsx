@@ -27,6 +27,7 @@ export function AcOverrideForm({
   return (
     <form
       className="flex flex-col gap-2"
+      noValidate
       data-testid="ac-override-form"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -47,8 +48,6 @@ export function AcOverrideForm({
           <Input
             type="number"
             inputMode="numeric"
-            min={-10}
-            max={10}
             value={value}
             autoFocus
             aria-invalid={error === "value"}
@@ -63,7 +62,6 @@ export function AcOverrideForm({
           {t("ac.override.label")}
           <Input
             value={label}
-            maxLength={60}
             placeholder={t("ac.override.labelPlaceholder")}
             aria-invalid={error === "label"}
             data-testid="ac-override-label"

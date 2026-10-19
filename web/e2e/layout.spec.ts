@@ -2920,14 +2920,33 @@ test("AC: the shield beside the HP, its breakdown popover and the Inventaire's A
   await page
     .getByRole("button", { name: "Equip Chain mail of the long winter watch" })
     .click();
+  // A body shield: +1 against melee, +2 against missiles (ADR 0033 step 10.3).
+  await page.getByRole("button", { name: "Add item" }).click();
+  await f.getByLabel("Name").fill("Body shield");
+  await f.getByLabel("Category").selectOption("shield");
+  await f.getByLabel("Shield kind").selectOption("body");
+  await f.getByLabel("AC bonus (melee)").fill("1");
+  await f.getByLabel("AC bonus (missiles)").fill("2");
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Equip Body shield" }).click();
   const card = page.getByTestId("ac-card");
-  await expect(card.getByTestId("ac-card-value")).toHaveText("0");
+  // 5, shield -1, Dexterity -3, Protection from Evil -2; against missiles -2.
+  await expect(card.getByTestId("ac-card-value")).toHaveText("−1");
+  await expect(
+    page.getByTestId("ac-shield").getByTestId("ac-value"),
+  ).toHaveText("−1");
+  await expect(card.getByTestId("ac-breakdown")).toContainText(
+    "−2 vs missiles",
+  );
 
   const character = page.getByTestId("character");
   const shield = page.getByTestId("ac-shield");
   const pop = page.getByTestId("ac-popover");
-  const check = async (state: string) => {
-    for (const lang of ["fr", "en"] as const) {
+  const check = async (
+    state: string,
+    langs: readonly ("fr" | "en")[] = ["fr", "en"],
+  ) => {
+    for (const lang of langs) {
       await chooseLanguage(page, lang);
       for (const vp of VIEWPORTS) {
         const where = `${state}, ${lang}, ${vp.width}x${vp.height}`;
@@ -2965,4 +2984,37 @@ test("AC: the shield beside the HP, its breakdown popover and the Inventaire's A
   await expect(card.getByTestId("ac-override")).toBeVisible();
   await expect(shield).toHaveAttribute("data-overridden", "true");
   await check("override");
+
+  // The dark theme, French first.
+  await chooseSetting(page, "Dark");
+  await check("override-dark", ["fr"]);
+  await card.getByTestId("ac-override-clear").click();
+  await expect(card.getByTestId("ac-override")).toHaveCount(0);
+  await check("derived-dark", ["fr"]);
+
+  // The widest numbers the shield holds: -10 and 10.
+  for (const value of ["-10", "10"]) {
+    await card.getByTestId("ac-card-override").click();
+    await card.getByTestId("ac-override-value").fill(value);
+    await card.getByTestId("ac-override-save").click();
+    await expect(shield.getByTestId("ac-value")).toHaveText(
+      value.replace("-", "−"),
+    );
+    for (const vp of [VIEWPORTS[0], VIEWPORTS[VIEWPORTS.length - 1]]) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(
+        shield,
+        `AC shield ${value}, ${vp.width}x${vp.height}`,
+      );
+      const box = (await shield.getByTestId("ac-value").boundingBox())!;
+      const outer = (await shield.boundingBox())!;
+      expect(box.width, `the number fits the shield, ${value}`).toBeLessThan(
+        outer.width - 16,
+      );
+      if (value === "-10")
+        await snap(page, `ac-minus10-fr-dark-${vp.width}x${vp.height}`);
+    }
+    await card.getByTestId("ac-override-clear").click();
+    await expect(card.getByTestId("ac-override")).toHaveCount(0);
+  }
 });

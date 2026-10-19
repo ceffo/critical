@@ -358,6 +358,12 @@ db-restore-drill dump="":
 equipment-rehearsal ref="":
     scripts/equipment-upgrade-rehearsal.sh {{ref}}
 
+# The AC override migration (017) on a copy of a real database: a read-only pg_dump of the source
+# (default: the main checkout's dev database) restored into a throwaway compose PostgreSQL, upgraded
+# by this checkout's server and checked through SQL and the API.
+ac-rehearsal container="critical-postgres-1" database="critical":
+    scripts/ac-override-rehearsal.sh {{container}} {{database}}
+
 # ADR 0024 step 9.2, docs/deploy.md "Promotion". Admin, once: a random passphrase in
 # ~/.config/critical/restore-point.passphrase (never overwritten), set as the production secret
 # RESTORE_POINT_PASSPHRASE. Keep a copy in a password manager: GitHub never shows a secret back.

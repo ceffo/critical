@@ -2,6 +2,8 @@ import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
   attackForm,
+  chooseLanguage,
+  receivePicker,
   chooseWeapon,
   logEntry,
   openDashboard,
@@ -279,16 +281,31 @@ test("the review section is bounded and its list scrolls, so the rows below stay
   expect(overflow).toBe("auto");
 });
 
-// The character's AC (ADR 0033 steps 10 and 13, ADR 0035 items 4, 7 and 8), what only a browser
-// proves: the shield beside the HP and the Inventaire's AC card follow an Equip with no action of
-// their own, the popover's breakdown names the piece, and the override set from it is a journal line
-// the undo pops. The derivation itself is the Go tests' (acsvc).
-test("AC: equipping an armour moves the shield beside the HP; the override is a journal line the undo pops", async ({
+// The character's AC (ADR 0033 steps 10, 11 and 13, ADR 0035 items 4, 7 and 8), what only a
+// browser proves: the shield beside the HP and the Inventaire's AC card follow a spell received and
+// an Equip with no entry of their own; the breakdown mutes the Armor spell once armour is worn; the
+// override set from the popover is refused with a worded error, then set, shown in amber with the
+// derived AC beside it, worded in the journal (en, fr), undone, redone and cleared as one entry
+// each. The derivation itself is the Go tests' (acsvc).
+test("AC: follows the Armor spell and an Equip with no entry of its own; the override is refused, set, popped, redone and cleared", async ({
   page,
 }) => {
+  const entries = async () =>
+    (
+      (await (await page.request.get("/api/log")).json()) as {
+        entries: unknown[];
+      }
+    ).entries.length;
   await openDashboard(page);
   const shield = page.getByTestId("ac-shield");
-  await expect(shield.getByTestId("ac-value")).toHaveText("7");
+  const value = shield.getByTestId("ac-value");
+  await expect(value).toHaveText("7"); // 10, Dexterity 17 -3
+
+  const picker = await receivePicker(page);
+  await picker.getByLabel("Search for a spell cast on me").fill("Armor");
+  await picker.getByLabel("Caster level").fill("1");
+  await picker.getByRole("button", { name: "Apply Armor" }).click();
+  await expect(value).toHaveText("3"); // Armor's base 6, Dexterity -3
 
   await openWorkspace(page, "Inventory");
   await page.getByRole("button", { name: "Add item" }).click();
@@ -298,29 +315,63 @@ test("AC: equipping an armour moves the shield beside the HP; the override is a 
   await f.getByLabel("Base AC").fill("5");
   await f.getByRole("button", { name: "Add", exact: true }).click();
   await expect(form(page)).toHaveCount(0);
-  await expect(page.getByTestId("ac-card-value")).toHaveText("7");
+  const before = await entries();
   await row(page, "chain_mail")
     .getByRole("button", { name: "Equip Chain mail" })
     .click();
   await expect(page.getByTestId("ac-card-value")).toHaveText("2");
-  await expect(shield.getByTestId("ac-value")).toHaveText("2");
+  await expect(value).toHaveText("2");
+  expect(await entries(), "the Equip is the only entry").toBe(before + 1);
 
   await shield.click();
   const pop = page.getByTestId("ac-popover");
-  await expect(
-    pop.locator('[data-testid="ac-row"][data-term="base"]'),
-  ).toContainText("Chain mail");
+  const base = pop.locator('[data-testid="ac-row"][data-term="base"]');
+  await expect(base.first()).toContainText("Chain mail");
+  await expect(base.nth(1)).toHaveAttribute("data-off", "armour_worn");
+  await expect(base.nth(1)).toContainText("armour worn");
+
+  // Refused: 11 is out of range, a 61-character label too long; worded, nothing logged.
+  const logged = await entries();
   await pop.getByTestId("ac-override-open").click();
-  await pop.getByTestId("ac-override-value").fill("4");
-  await pop.getByTestId("ac-override-label").fill("Shield spell");
+  await pop.getByTestId("ac-override-value").fill("11");
   await pop.getByTestId("ac-override-save").click();
-  await expect(shield.getByTestId("ac-value")).toHaveText("4");
+  await expect(pop.getByTestId("ac-override-error")).toHaveText(
+    "Between −10 and 10",
+  );
+  await pop.getByTestId("ac-override-value").fill("4");
+  await pop.getByTestId("ac-override-label").fill("x".repeat(61));
+  await pop.getByTestId("ac-override-save").click();
+  await expect(pop.getByTestId("ac-override-error")).toHaveText(
+    "60 characters at most",
+  );
+  expect(await entries(), "a refused override logs nothing").toBe(logged);
+
+  await pop.getByTestId("ac-override-label").fill("Sort Bouclier");
+  await pop.getByTestId("ac-override-save").click();
+  await expect(value).toHaveText("4");
   await expect(shield).toHaveAttribute("data-overridden", "true");
+  await expect(pop.getByTestId("ac-override")).toContainText("Derived");
   await expect(pop.getByTestId("ac-derived")).toHaveText("2");
   await page.keyboard.press("Escape");
 
   await openWorkspace(page, "Act");
-  await undoEntry(page, "AC overridden: 4 (Shield spell)");
-  await expect(shield.getByTestId("ac-value")).toHaveText("2");
+  await expect(
+    logEntry(page, "AC overridden: 4 (Sort Bouclier)"),
+  ).toBeVisible();
+  await chooseLanguage(page, "fr");
+  await expect(logEntry(page, "CA forcée : 4 (Sort Bouclier)")).toBeVisible();
+  await chooseLanguage(page, "en");
+  await undoEntry(page, "AC overridden: 4 (Sort Bouclier)");
+  await expect(value).toHaveText("2");
   await expect(shield).not.toHaveAttribute("data-overridden");
+  await page.getByTestId("redo").click();
+  await expect(value).toHaveText("4");
+
+  const set = await entries();
+  await openWorkspace(page, "Inventory");
+  await page.getByTestId("ac-card").getByTestId("ac-override-clear").click();
+  await expect(value).toHaveText("2");
+  expect(await entries(), "Clear is one entry").toBe(set + 1);
+  await openWorkspace(page, "Act");
+  await expect(logEntry(page, "AC override cleared")).toBeVisible();
 });

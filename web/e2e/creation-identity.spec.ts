@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
-import { openDashboard, chooseLanguage, openSettings } from "./helpers";
+import { openDashboard, chooseLanguage } from "./helpers";
 
 // The identity step and the review of the creation route (ADR 0034 steps 3.5 and 3.6): what only a
 // browser proves is the timing and the navigation around the server's replies (a late roll, a stale
@@ -21,15 +21,7 @@ const scores = [
 async function toIdentity(page: Page, lang: "fr" | "en" = "fr") {
   await openDashboard(page);
   await chooseLanguage(page, lang);
-  const settings = await openSettings(page);
-  await settings
-    .getByRole("button", {
-      name:
-        lang === "fr"
-          ? "Créer un nouveau personnage"
-          : "Create a new character",
-    })
-    .click();
+  await page.goto("/create");
   const step = page.getByTestId("creation-step");
   const next = step.getByRole("button", {
     name: lang === "fr" ? "Passer à l'étape suivante" : "Go to the next step",

@@ -1028,7 +1028,8 @@
       "race": "{{race}} (race)",
       "specialization": "Specialization",
       "point_blank": "Point blank",
-      "backstab": "Backstab"
+      "backstab": "Backstab",
+      "dice_modifier": "{{detail}}: fixed part"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -2160,8 +2161,53 @@
       "componentHint": "A spell that spends this component can spend this item",
       "errors": {
         "not_allowed": "Not allowed for this item.",
-        "slot_taken": "Another one is already equipped."
+        "slot_taken": "Another one is already equipped.",
+        "unknown": "Not in the catalogue."
       }
+    },
+    "add": {
+      "title": "Add",
+      "tab": {
+        "catalogue": "Catalogue",
+        "typed": "Type in"
+      },
+      "tabHint": {
+        "catalogue": "Pick a weapon, ammunition, armour or shield from the Player's Handbook list",
+        "typed": "Type every field: a magic item, gear or a homebrew item"
+      },
+      "close": "Close",
+      "closeHint": "Close without adding",
+      "category": "Catalogue category",
+      "search": "Search",
+      "searchLabel": "Search the catalogue by name",
+      "columns": {
+        "name": "Name",
+        "damage": "Damage",
+        "speed": "Speed",
+        "kind": "Kind",
+        "ammoKind": "Ammunition",
+        "ac": "AC",
+        "skills": "Skills",
+        "armorRow": "Armour type",
+        "shieldKind": "Shield",
+        "melee": "Melee",
+        "missile": "Missiles"
+      },
+      "cell": "{{label}}: {{value}}",
+      "yourCopy": "Your copy",
+      "countInvalid": "The count must be a whole number, at least 1",
+      "name": "Name",
+      "magic": "Magic",
+      "magicLess": "One less magic",
+      "magicMore": "One more magic",
+      "count": "Count",
+      "pickFirst": "Pick a row in the list.",
+      "editLater": "Everything can be changed later in the editor.",
+      "equipNow": "Equip it now",
+      "add": "Add",
+      "addHint": "Add {{name}} to the inventory",
+      "noMatch": "Nothing matches “{{query}}”.",
+      "noCatalogue": "The catalogue has no equipment: type the item in."
     }
   },
   "intro": {

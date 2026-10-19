@@ -12,6 +12,7 @@ import {
   openWorkspace,
   reloadSettled,
   undoEntry,
+  openTypedAdd,
 } from "./helpers";
 
 // The one possessions list (ADR 0033 steps 1 to 8 and 27, ADR 0035 items 2, 3, 7 and 12): weapons
@@ -94,7 +95,7 @@ test("a new bow is carried: the attack's drop-down lists it under Not equipped, 
   page,
 }) => {
   await openInventory(page);
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const f = form(page);
   await f.getByLabel("Name").fill("Long Bow");
   await f.getByLabel("Category").selectOption("weapon");
@@ -137,13 +138,101 @@ test("a new bow is carried: the attack's drop-down lists it under Not equipped, 
   await expect(bow.getByTestId("item-equipped")).toHaveCount(0);
 });
 
+// ADR 0033 step 24, ADR 0035 item 10: Ajouter > Catalogue in French, searched by the French name,
+// renamed, made +1 and equipped at once; one undo takes it away; picked again it survives a reload.
+// What only a browser proves: the tabs, the search, the copy panel and the wiring of one add with
+// its equip (what the server copies, and the one undo, are the Go tests').
+test("pick a long sword from the catalogue in French: renamed, +1, equipped at once; one undo takes it away", async ({
+  page,
+}) => {
+  await openInventory(page);
+  await chooseLanguage(page, "fr");
+  await page.getByRole("button", { name: "Ajouter un objet" }).click();
+  const add = page.getByTestId("add-piece");
+  await expect(add.getByRole("tab", { name: "Catalogue" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(
+    add.getByRole("button", { name: "Armes", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await add.getByTestId("add-search").fill("essai long SWORD");
+  await expect(add.getByTestId("add-rows").getByRole("button")).toHaveCount(1);
+  await add.getByTestId("add-row-long_sword").click();
+  const copy = add.getByTestId("add-copy");
+  await expect(copy.getByTestId("add-name")).toHaveValue(
+    "Banc d'essai long sword",
+  );
+  await copy.getByTestId("add-name").fill("Lame de Kelsen");
+  await copy.getByRole("button", { name: "Un de magie en plus" }).click();
+  await expect(copy.getByTestId("add-magic")).toHaveText("+1");
+  await expect(copy.getByTestId("add-equip")).toBeChecked();
+  await snap(page, "add-catalogue-fr");
+  await copy.getByTestId("add-submit").click();
+
+  await expect(add).toHaveCount(0);
+  // The id is made from the name the piece has (the row's English one stays beside the French).
+  const sword = row(page, "fixture_long_sword");
+  await expect(sword).toContainText("Lame de Kelsen");
+  await expect(sword.getByTestId("item-equipped")).toHaveText("Équipé");
+  await expect(sword.getByTestId("item-stats")).toContainText("+1/+1");
+
+  // One undo takes the add and its equip away together (one transaction).
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Act");
+  // In English the copy keeps the row's English name (only French was renamed).
+  await undoEntry(page, "Equipped: Fixture long sword");
+  await expect(logEntry(page, "Added Fixture long sword")).toHaveAttribute(
+    "data-status",
+    "voided",
+  );
+  await openWorkspace(page, "Inventory");
+  await expect(row(page, "fixture_long_sword")).toHaveCount(0);
+
+  // Picked again (English name, kept carried): it survives a reload.
+  await page.getByRole("button", { name: "Add item" }).click();
+  await page.getByTestId("add-row-long_sword").click();
+  await page.getByTestId("add-equip").uncheck();
+  await page.getByTestId("add-submit").click();
+  await page.reload();
+  await openInventory(page);
+  const again = row(page, "fixture_long_sword");
+  await expect(again).toContainText("Fixture long sword");
+  await expect(again.getByTestId("item-equipped")).toHaveCount(0);
+
+  // A catalogue launcher has no dice of its own (ADR 0033 step 4): its row shows none, and in hand
+  // the attack offers its arrows.
+  await page.getByRole("button", { name: "Add item" }).click();
+  await page.getByTestId("add-search").fill("long bow");
+  await page.getByTestId("add-row-long_bow").click();
+  await page.getByTestId("add-submit").click();
+  const bow = row(page, "fixture_long_bow");
+  await expect(bow.getByTestId("item-stats")).toHaveText(
+    "Missile · speed 8 · two-handed · ammo: Arrow",
+  );
+  await snap(page, "picked-launcher-row");
+  await openWorkspace(page, "Act");
+  await openWeapons(page);
+  await chooseWeapon(page, "Fixture long bow");
+  await expect(
+    attackForm(page)
+      .getByRole("radiogroup", { name: "Ammunition" })
+      .getByRole("radio", { name: /^Arrows \+1,/ }),
+  ).toHaveCount(1);
+  // The dice shown are the arrow's, the ones the attack rolls.
+  await expect(attackForm(page).getByTestId("tile-damage-sm")).toHaveText(
+    "1d6",
+  );
+  await snap(page, "picked-launcher-attack");
+});
+
 test("a new gem marked as a spell component in the editor keeps it after a reload", async ({
   page,
 }) => {
   // ADR 0033 step 1.1: the component select is wired to the API and persisted (which piece a spell
   // spends is the Go tests'). What only a browser proves: the select, its labels and the reload.
   await openInventory(page);
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const f = form(page);
   await f.getByLabel("Name").fill("Ruby");
   await expect(f.getByLabel("Spell component")).toHaveValue("");
@@ -251,7 +340,7 @@ test("a weapon with a daily behaviour counts in the list: its row has the use bu
   await expect(
     row(page, "bastard_sword").getByTestId("item-count"),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const f = form(page);
   await f.getByLabel("Name").fill("Flame Tongue");
   await f.getByLabel("Category").selectOption("weapon");
@@ -319,7 +408,7 @@ test("AC: follows the Armor spell and an Equip with no entry of its own; the ove
   await expect(value).toHaveText("3"); // Armor's base 6, Dexterity -3
 
   await openWorkspace(page, "Inventory");
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const f = form(page);
   await f.getByLabel("Name").fill("Chain mail");
   await f.getByLabel("Category").selectOption("armour");

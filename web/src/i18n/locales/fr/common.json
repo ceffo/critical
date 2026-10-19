@@ -1028,7 +1028,8 @@
       "race": "{{race}} (race)",
       "specialization": "Spécialisation",
       "point_blank": "Bout portant",
-      "backstab": "Attaque dans le dos"
+      "backstab": "Attaque dans le dos",
+      "dice_modifier": "{{detail}} : partie fixe"
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",
@@ -2160,8 +2161,53 @@
       "componentHint": "Un sort qui dépense cette composante peut dépenser cet objet",
       "errors": {
         "not_allowed": "Pas permis pour cet objet.",
-        "slot_taken": "Une autre est déjà équipée."
+        "slot_taken": "Une autre est déjà équipée.",
+        "unknown": "Absent du catalogue."
       }
+    },
+    "add": {
+      "title": "Ajouter",
+      "tab": {
+        "catalogue": "Catalogue",
+        "typed": "Saisir"
+      },
+      "tabHint": {
+        "catalogue": "Choisir une arme, une munition, une armure ou un bouclier dans la liste du Manuel des Joueurs",
+        "typed": "Saisir chaque champ : un objet magique, de l’équipement ou une pièce maison"
+      },
+      "close": "Fermer",
+      "closeHint": "Fermer sans rien ajouter",
+      "category": "Catégorie du catalogue",
+      "search": "Chercher",
+      "searchLabel": "Chercher dans le catalogue par nom",
+      "columns": {
+        "name": "Nom",
+        "damage": "Dégâts",
+        "speed": "Vitesse",
+        "kind": "Type",
+        "ammoKind": "Munition",
+        "ac": "CA",
+        "skills": "Talents",
+        "armorRow": "Type d’armure",
+        "shieldKind": "Bouclier",
+        "melee": "Mêlée",
+        "missile": "Projectiles"
+      },
+      "cell": "{{label}} : {{value}}",
+      "yourCopy": "Votre exemplaire",
+      "countInvalid": "Le nombre doit être un entier, au moins 1",
+      "name": "Nom",
+      "magic": "Magie",
+      "magicLess": "Un de magie en moins",
+      "magicMore": "Un de magie en plus",
+      "count": "Nombre",
+      "pickFirst": "Choisissez une ligne dans la liste.",
+      "editLater": "Tout se corrige ensuite dans l’éditeur.",
+      "equipNow": "Équiper tout de suite",
+      "add": "Ajouter",
+      "addHint": "Ajouter {{name}} aux objets",
+      "noMatch": "Rien ne correspond à « {{query}} ».",
+      "noCatalogue": "Le catalogue n’a pas d’équipement : saisissez l’objet."
     }
   },
   "intro": {

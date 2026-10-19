@@ -543,6 +543,31 @@ effect of step 11 is left to CRI-39. The step 12 duplicate rule reads the pieces
 catalogue row is a magic item today (step 22), so it applies once the editor's templates (CRI-38)
 give one.
 
+_Steps 4, 24 and 25 (as built, CRI-37)_: the catalogue rows are served at `GET
+/api/equipment/catalogue` (`{weapons, ammunition, armour, shields}`, codes and numbers, names as
+language maps, damage as printed; empty lists before format 7); the web filters them by the name in
+the player's language. `POST /api/items` with a `catalogueCode` picks: the service copies the row
+(`itemsvc` `picked`) and reads only the name (a typed name replaces the languages it holds, the row's
+others stay), the count (at least 1; 1 when not given, a negative one refused on field `count`, `TestCreate_Step24_PickedCountAtLeastOne`), the note and the magic of a weapon (`magicToHit`,
+`magicDamage`) or ammunition (`magicalBonus`); one `item_add` entry whose payload carries
+`catalogueCode`. An unknown code is refused on field `catalogueCode` with the code `unknown`
+(`TestCreate_Step25_UnknownCatalogueCode`). `equip: true` equips the new piece in the same
+transaction, one undo for the `item_add` and the `equipment_state` entry, a worn body armour or
+shield in the way taken off (swap); a piece that cannot be equipped is refused on field `equip`
+(`TestCreate_Step24_EquipNowIsOneTransaction`, `TestPick_Steps4_24_PickedBowShootsTheArrowsDiceAndEquipNowUndoesAsOne`).
+Readings left open, fixed here: a launcher of several ammo kinds (the blowgun) gets the first, changed
+by an edit (a piece fires one kind, step 3); the damage strings stay as printed and the attack adds
+their flat part (ADR 0003 steps 1.1 and 2, ADR 0016 step 8, the supervisor's ruling of 2026-10-19);
+a catalogue weapon with no damage type and no dice (the mancatcher) is valid and its attack is refused (no
+dice); a typed homebrew weapon with neither is refused on `damageSm` (ADR 0016 step 8). The armour and shield "+N" (step 17) and the class warnings (step 20) are not part of the
+pick. Step 4: `TestDamage_ADR0033Step4_LauncherRollsAmmunitionDice`; the attack form's preview
+serves the dice pair the attack rolls (`damageSm`, `damageL`: a launcher's from its ammunition), which
+the weapon-in-hand line shows (`TestGetAttackForm_ADR0033Step4_PreviewShowsTheDiceRolled`). The web
+(ADR 0035 item 10): Ajouter replaces the possessions card in the stage, tabs Catalogue (first) and
+Saisir; the catalogue is read once (`GET /api/equipment/catalogue`, reference data, no state key);
+"Votre exemplaire" has the name, the "+N" (weapon and ammunition only), the count (ammunition) and
+"Équiper tout de suite" (checked; not for ammunition).
+
 CRI-32 (the design round) comes before the UI of slices 2 to 9. Slices 3 to 9 need slice 2; slices
 5, 7 and 8 need slice 1's data.
 

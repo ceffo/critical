@@ -207,7 +207,9 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 		{"magic without kind", itemsvc.Item{Category: itemsvc.CategoryMagic}, "magicKind"},
 		{"kind on gear", itemsvc.Item{Category: itemsvc.CategoryGear, MagicKind: itemsvc.MagicRing}, "magicKind"},
 		{"worn gear", itemsvc.Item{Category: itemsvc.CategoryGear, State: itemsvc.StateWorn}, "state"},
-		{"weapon dice +K", withWeapon(func(i *itemsvc.Item) { i.DamageSM = "1d8+1" }), "damageSm"},
+		{"weapon dice malformed", withWeapon(func(i *itemsvc.Item) { i.DamageSM = "1d8+" }), "damageSm"},
+		{"weapon flat part out of range", withWeapon(func(i *itemsvc.Item) { i.DamageL = "1d8+21" }), "damageL"},
+		{"weapon flat damage 0", withWeapon(func(i *itemsvc.Item) { i.DamageL = "0" }), "damageL"},
 		{"weapon kind", withWeapon(func(i *itemsvc.Item) { i.WeaponKind = "thrown" }), "weaponKind"},
 		{"melee fires", withWeapon(func(i *itemsvc.Item) { i.Fires = "arrow" }), "fires"},
 		{"unknown weapon type", withWeapon(func(i *itemsvc.Item) { i.WeaponType = "katana" }), "weaponType"},
@@ -215,6 +217,14 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 		{"speed", withWeapon(func(i *itemsvc.Item) { i.Speed = 21 }), "speed"},
 		{"three damage types", withWeapon(func(i *itemsvc.Item) { i.DamageTypes = []string{"b", "p", "s"} }), "damageTypes"},
 		{"damage type twice", withWeapon(func(i *itemsvc.Item) { i.DamageTypes = []string{"p", "p"} }), "damageTypes"},
+		// ADR 0033 step 4: only a launcher may have no dice of its own, and then both or none.
+		{"melee without dice", withWeapon(func(i *itemsvc.Item) { i.DamageSM, i.DamageL = "", "" }), "damageSm"},
+		{"hurled without dice", withWeapon(func(i *itemsvc.Item) { i.WeaponKind, i.DamageSM, i.DamageL = "missile", "", "" }), "damageSm"},
+		{"launcher with one dice", withLauncher(func(i *itemsvc.Item) { i.DamageSM = "1d6" }), "damageL"},
+		// ADR 0016 step 8: only a catalogue piece with no damage type (the mancatcher) may have no
+		// dice; a homebrew one is refused.
+		{"homebrew without damage type nor dice", withWeapon(func(i *itemsvc.Item) { i.DamageTypes, i.DamageSM, i.DamageL = nil, "", "" }), "damageSm"},
+		{"catalogue piece with a damage type and no dice", withWeapon(func(i *itemsvc.Item) { i.CatalogueCode, i.DamageSM, i.DamageL = "mancatcher", "", "" }), "damageSm"},
 		{"ammo kind", itemsvc.Item{Category: itemsvc.CategoryAmmunition, AmmoKind: "stone"}, "ammoKind"},
 		{"ammo one dice", itemsvc.Item{Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", DamageSM: "1d6"}, "damageL"},
 		{"base AC", withArmour(func(i *itemsvc.Item) { i.BaseAC = 11 }), "baseAc"},
@@ -236,7 +246,16 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 		})
 	}
 	t.Run("valid pieces", func(t *testing.T) {
-		for _, it := range []itemsvc.Item{withWeapon(nil), withArmour(nil), chain, sword} {
+		for _, it := range []itemsvc.Item{
+			withWeapon(nil), withLauncher(nil), withArmour(nil), chain, sword,
+			// ADR 0016 step 8 (amended): the damage as printed, NdM±K or a flat K.
+			withWeapon(func(i *itemsvc.Item) { i.DamageSM, i.DamageL = "1d4+1", "1" }),
+			withWeapon(func(i *itemsvc.Item) { i.DamageSM, i.DamageL = "1d3-1", "1d2-1" }),
+			// The catalogue's mancatcher: no damage type, no dice.
+			withWeapon(func(i *itemsvc.Item) {
+				i.CatalogueCode, i.DamageTypes, i.DamageSM, i.DamageL = "mancatcher", nil, "", ""
+			}),
+		} {
 			assert.NoError(t, it.Validate(), it.ID)
 		}
 	})
@@ -245,6 +264,17 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 func withWeapon(mut func(*itemsvc.Item)) itemsvc.Item {
 	it := sword
 	it.DamageTypes = []string{"s"}
+	if mut != nil {
+		mut(&it)
+	}
+	return it
+}
+
+// withLauncher is a catalogue long bow: no dice of its own (ADR 0033 step 4).
+func withLauncher(mut func(*itemsvc.Item)) itemsvc.Item {
+	it := withWeapon(func(i *itemsvc.Item) {
+		i.ID, i.WeaponKind, i.Fires, i.DamageSM, i.DamageL, i.TwoHanded = "long_bow", "missile", "arrow", "", "", true
+	})
 	if mut != nil {
 		mut(&it)
 	}

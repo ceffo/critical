@@ -40,6 +40,10 @@ type AttackPreviewDTO struct {
 	// RollNeeded is null while the target AC is unknown.
 	RollNeeded  *int `json:"rollNeeded"`
 	DamageBonus int  `json:"damageBonus"`
+	// DamageSm and DamageL are the dice the attack rolls (ADR 0033 step 4:
+	// a launcher's from its ammunition), as printed; empty when none.
+	DamageSM string `json:"damageSm"`
+	DamageL  string `json:"damageL"`
 	// PointBlank is the same preview with the point-blank option (ADR 0030
 	// step 12); absent when the weapon does not allow it.
 	PointBlank *AttackPreviewDTO `json:"pointBlank,omitempty"`
@@ -156,7 +160,7 @@ func toPreviewDTO(p *combatsvc.AttackPreview) *AttackPreviewDTO {
 	}
 	return &AttackPreviewDTO{
 		BaseThac0: p.BaseThac0, Modifiers: combatsvc.BreakdownModifiers(p.Modifiers), EffectiveThac0: p.EffectiveThac0,
-		ToHit: p.ToHit, RollNeeded: p.RollNeeded, DamageBonus: p.DamageBonus,
+		ToHit: p.ToHit, RollNeeded: p.RollNeeded, DamageBonus: p.DamageBonus, DamageSM: p.DamageSM, DamageL: p.DamageL,
 		PointBlank: toPreviewDTO(p.PointBlank),
 		Backstab:   toPreviewDTO(p.Backstab),
 	}

@@ -26,18 +26,25 @@ type AttackBreakdown struct {
 	// CritPossible: some real AC (at most 10) is crit, i.e. critsFromAc is
 	// not beyond every AC (ADR 0012 step 7). Absent on attacks logged before
 	// it was recorded; the UI reads absent as possible.
-	CritPossible   *bool           `json:"critPossible,omitempty"`
-	Hit            bool            `json:"hit"`
-	HitMargin      int             `json:"hitMargin"`
-	BaseDamage     int             `json:"baseDamage"`
-	DamageDice     string          `json:"damageDice"`
-	SpellsBuff     float64         `json:"spellsBuff"`
-	WeaponBuff     int             `json:"weaponBuff"`
-	Multipliers    float64         `json:"multipliers"`
-	DiceMultiplier float64         `json:"diceMultiplier"`
-	StrengthBonus  int             `json:"strengthBonus"`
-	BonusDamage    int             `json:"bonusDamage"`
-	DamageTerms    []BreakdownTerm `json:"damageTerms"`
+	CritPossible *bool  `json:"critPossible,omitempty"`
+	Hit          bool   `json:"hit"`
+	HitMargin    int    `json:"hitMargin"`
+	BaseDamage   int    `json:"baseDamage"`
+	DamageDice   string `json:"damageDice"`
+	// DiceModifier is the flat part of damageDice (ADR 0003 step 2),
+	// absent when none.
+	DiceModifier   int     `json:"diceModifier,omitempty"`
+	SpellsBuff     float64 `json:"spellsBuff"`
+	WeaponBuff     int     `json:"weaponBuff"`
+	Multipliers    float64 `json:"multipliers"`
+	DiceMultiplier float64 `json:"diceMultiplier"`
+	// BackstabMultiplier multiplies the standard damage (ADR 0030 step 19),
+	// absent without a backstab and on attacks logged before it was apart
+	// (their backstab is inside diceMultiplier).
+	BackstabMultiplier float64         `json:"backstabMultiplier,omitempty"`
+	StrengthBonus      int             `json:"strengthBonus"`
+	BonusDamage        int             `json:"bonusDamage"`
+	DamageTerms        []BreakdownTerm `json:"damageTerms"`
 	// DamageRolls are the damage dice as thrown (absent on attacks logged
 	// before they were recorded, and when the attack deals no damage).
 	DamageRolls []BreakdownDie `json:"damageRolls,omitempty"`
@@ -75,14 +82,17 @@ type AttackBreakdown struct {
 // BreakdownRolled is RolledDamage: the damage as rolled, which a target AC
 // correction recomputes the outcome from.
 type BreakdownRolled struct {
-	Dice            string          `json:"dice"`
-	Total           int             `json:"total"`
-	SpellsBuff      float64         `json:"spellsBuff"`
-	WeaponBuff      int             `json:"weaponBuff"`
-	BuffMultipliers float64         `json:"buffMultipliers"`
-	StrengthBonus   int             `json:"strengthBonus"`
-	BonusDamage     int             `json:"bonusDamage"`
-	Terms           []BreakdownTerm `json:"terms"`
+	Dice            string  `json:"dice"`
+	Total           int     `json:"total"`
+	DiceModifier    int     `json:"diceModifier,omitempty"`
+	SpellsBuff      float64 `json:"spellsBuff"`
+	WeaponBuff      int     `json:"weaponBuff"`
+	BuffMultipliers float64 `json:"buffMultipliers"`
+	// BackstabMultiplier as on AttackBreakdown.
+	BackstabMultiplier float64         `json:"backstabMultiplier,omitempty"`
+	StrengthBonus      int             `json:"strengthBonus"`
+	BonusDamage        int             `json:"bonusDamage"`
+	Terms              []BreakdownTerm `json:"terms"`
 	// Rolls are the dice thrown for Total, in order.
 	Rolls []BreakdownDie `json:"rolls,omitempty"`
 }
@@ -196,8 +206,8 @@ func toBreakdown(r *RollResult) AttackBreakdown {
 		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo, BaseThac0: r.BaseThac0, Modifiers: mods,
 		EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded, HitsAC: r.HitsAC, CritsFromAC: r.CritsFromAC,
 		Hit: r.Hit, HitMargin: r.HitMargin,
-		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
-		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,
+		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, DiceModifier: r.DiceModifier, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
+		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, BackstabMultiplier: r.BackstabMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,
 		DamageTerms: terms, DamageRolls: toBreakdownDice(r.DamageRolls), TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize),
 		ACKnown: &r.ACKnown, RolledACUnknown: r.RolledACUnknown, Verdict: string(r.Verdict),
@@ -213,8 +223,8 @@ func toBreakdown(r *RollResult) AttackBreakdown {
 	}
 	if d := r.Rolled; d != nil {
 		out.Rolled = &BreakdownRolled{
-			Dice: d.Dice, Total: d.Total, SpellsBuff: d.SpellsBuff, WeaponBuff: d.WeaponBuff,
-			BuffMultipliers: d.BuffMultipliers, StrengthBonus: d.StrengthBonus, BonusDamage: d.BonusDamage,
+			Dice: d.Dice, Total: d.Total, DiceModifier: d.DiceModifier, SpellsBuff: d.SpellsBuff, WeaponBuff: d.WeaponBuff,
+			BuffMultipliers: d.BuffMultipliers, BackstabMultiplier: d.BackstabMultiplier, StrengthBonus: d.StrengthBonus, BonusDamage: d.BonusDamage,
 			Terms: toBreakdownTerms(d.Terms), Rolls: toBreakdownDice(d.Rolls),
 		}
 	}
@@ -238,8 +248,8 @@ func (a AttackBreakdown) result(entryID int64) *RollResult {
 		CritPlaceholder: a.CritPlaceholder, CritFrom: a.CritFrom, CritTo: a.CritTo, BaseThac0: a.BaseThac0, Modifiers: mods,
 		EffectiveThac0: a.EffectiveThac0, TargetACNeeded: a.TargetACNeeded, HitsAC: a.HitsAC, CritsFromAC: a.CritsFromAC,
 		Hit: a.Hit, HitMargin: a.HitMargin,
-		BaseDamage: a.BaseDamage, DamageDice: a.DamageDice, SpellsBuff: a.SpellsBuff, WeaponBuff: a.WeaponBuff,
-		Multipliers: a.Multipliers, DiceMultiplier: a.DiceMultiplier, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
+		BaseDamage: a.BaseDamage, DamageDice: a.DamageDice, DiceModifier: a.DiceModifier, SpellsBuff: a.SpellsBuff, WeaponBuff: a.WeaponBuff,
+		Multipliers: a.Multipliers, DiceMultiplier: a.DiceMultiplier, BackstabMultiplier: a.BackstabMultiplier, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
 		DamageTerms: fromBreakdownTerms(a.DamageTerms), DamageRolls: fromBreakdownDice(a.DamageRolls), TotalDamage: a.TotalDamage, UnroundedDamage: a.UnroundedDamage,
 		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetSize: TargetSize(a.TargetSize),
 		ACKnown: a.ACKnown == nil || *a.ACKnown, RolledACUnknown: a.RolledACUnknown, Verdict: Verdict(a.Verdict),
@@ -254,8 +264,8 @@ func (a AttackBreakdown) result(entryID int64) *RollResult {
 	}
 	if d := a.Rolled; d != nil {
 		r.Rolled = &RolledDamage{
-			Dice: d.Dice, Total: d.Total, SpellsBuff: d.SpellsBuff, WeaponBuff: d.WeaponBuff,
-			BuffMultipliers: d.BuffMultipliers, StrengthBonus: d.StrengthBonus, BonusDamage: d.BonusDamage,
+			Dice: d.Dice, Total: d.Total, DiceModifier: d.DiceModifier, SpellsBuff: d.SpellsBuff, WeaponBuff: d.WeaponBuff,
+			BuffMultipliers: d.BuffMultipliers, BackstabMultiplier: d.BackstabMultiplier, StrengthBonus: d.StrengthBonus, BonusDamage: d.BonusDamage,
 			Terms: fromBreakdownTerms(d.Terms), Rolls: fromBreakdownDice(d.Rolls),
 		}
 	}

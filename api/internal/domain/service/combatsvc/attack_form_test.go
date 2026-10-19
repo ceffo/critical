@@ -339,3 +339,31 @@ func TestUpdateAttackForm_KeepsTheReasonAsTyped(t *testing.T) {
 	}
 	assert.Equal(t, "Rear attack", label)
 }
+
+// ADR 0033 step 4 in the preview: the dice shown are the ones the attack
+// rolls, the chosen arrow's for a catalogue bow with none of its own, the
+// sword's own for a melee weapon.
+func TestGetAttackForm_ADR0033Step4_PreviewShowsTheDiceRolled(t *testing.T) {
+	bow := combatsvc.Weapon{
+		Wielded: true, ID: "long_bow", Name: localized.Of("Long Bow"),
+		Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
+	}
+	sheaf := itemsvc.Item{
+		ID: "sheaf", Name: localized.Of("Sheaf"), Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow",
+		DamageSM: "1d8", DamageL: "1d10", Count: 4,
+	}
+	f := newFixture(t)
+	f.withForm(&combatsvc.AttackForm{WeaponID: "long_bow", AmmoItemID: "sheaf", TargetAC: new(5)},
+		[]combatsvc.Weapon{bow}, []itemsvc.Item{sheaf}, strMods(12))
+	v, err := f.svc.GetAttackForm(t.Context(), charID)
+	require.NoError(t, err)
+	assert.Equal(t, "1d8", v.Preview.DamageSM)
+	assert.Equal(t, "1d10", v.Preview.DamageL)
+
+	g := newFixture(t)
+	g.withForm(&combatsvc.AttackForm{WeaponID: "longsword", TargetAC: new(5)}, []combatsvc.Weapon{longsword}, nil, strMods(12))
+	w, err := g.svc.GetAttackForm(t.Context(), charID)
+	require.NoError(t, err)
+	assert.Equal(t, "1d8", w.Preview.DamageSM)
+	assert.Equal(t, "1d12", w.Preview.DamageL)
+}

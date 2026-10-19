@@ -46,22 +46,24 @@ func TestResolveAttack_Step19_Backstab(t *testing.T) {
 		d20, critCheck        int
 		critRows              []combatsvc.CritRow
 		wantThac0, wantDamage int
-		wantMultiplier        float64
+		wantDiceMult          float64
+		wantBackstab          float64
 	}{
 		// (3) + 1 + 1 = 5.
-		{"without", false, str16Mods, 12, 90, nil, 17, 5, 1},
+		{"without", false, str16Mods, 12, 90, nil, 17, 5, 1, 0},
 		// (3 x 3) + 1 + 1 = 11.
-		{"with", true, str16Mods, 12, 90, nil, 13, 11, 3},
-		// A buff's x2 on the dice multiplies with it: (3 x 2 x 3) + 1 + 1 = 20.
+		{"with", true, str16Mods, 12, 90, nil, 13, 11, 1, 3},
+		// A buff's x2 on the dice multiplies with it, each its own factor:
+		// (3 x 2 x 3) + 1 + 1 = 20.
 		{"with a buff's dice multiplier", true, func() buffsvc.BuffModifiers {
 			m := str16Mods
 			m.Multipliers = 2
 			m.MultipliersFrom = []buffsvc.Factor{{Buff: "gem", Value: 2}}
 			return m
-		}(), 12, 90, nil, 13, 20, 6},
+		}(), 12, 90, nil, 13, 20, 2, 3},
 		// The crit multiplies the backstabbed dice and the magic, not
 		// Strength: ((3 x 3) + 1) x 2 + 1 = 21.
-		{"with a crit", true, str16Mods, 20, 1, []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 2}}, 13, 21, 3},
+		{"with a crit", true, str16Mods, 20, 1, []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 2}}, 13, 21, 1, 3},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -92,9 +94,10 @@ func TestResolveAttack_Step19_Backstab(t *testing.T) {
 			assert.Equal(t, want, res.Modifiers)
 			assert.Equal(t, c.wantThac0, res.EffectiveThac0)
 			assert.True(t, res.Hit)
-			assert.Equal(t, c.wantMultiplier, res.DiceMultiplier)
+			assert.Equal(t, c.wantDiceMult, res.DiceMultiplier)
+			assert.Equal(t, c.wantBackstab, res.BackstabMultiplier)
 			assert.Equal(t, c.wantDamage, res.TotalDamage)
-			term := combatsvc.DamageTerm{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBackstab, Value: 3}
+			term := combatsvc.DamageTerm{Term: combatsvc.TermStandardMult, Kind: combatsvc.ModBackstab, Value: 3}
 			if c.backstab {
 				assert.Contains(t, res.DamageTerms, term, "the multiplier is in the breakdown")
 				assert.Contains(t, string(f.entries[0].Payload), `"kind":"backstab"`)

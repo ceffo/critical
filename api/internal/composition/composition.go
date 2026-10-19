@@ -155,12 +155,13 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err != nil {
 		return nil, err
 	}
-	// The catalogue's equipment (format 7), none before.
+	// The catalogue's equipment (format 7), none before; equipment is nil
+	// then (itemsvc picks from it).
 	var catalogueEquipment ruletablesvc.Equipment
-	if eq, ok := ruleTables.Equipment(); ok {
-		catalogueEquipment = *eq
+	equipment, hasEquipment := ruleTables.Equipment()
+	if hasEquipment {
+		catalogueEquipment = *equipment
 	}
-	catalogueWeapons := catalogueEquipment.Weapons
 	if err := db.Migrate(ctx, cfg.SeedsDir, catalogueEquipment); err != nil {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
@@ -259,7 +260,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		return nil, err
 	}
 	bs.Items, err = itemsvc.New(itemDAL, itemsvc.Deps{
-		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Catalogue: catalogueWeapons,
+		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Equipment: equipment,
 	})
 	if err := bs.add(bs.Items, err); err != nil {
 		return nil, err

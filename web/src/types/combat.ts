@@ -17,7 +17,9 @@ export type ModifierKind =
   | "crit"
   | "specialization"
   | "point_blank"
-  | "backstab";
+  | "backstab"
+  /** The flat part of the damage as printed (1d4+1), a weapon damage term; detail is the damage (ADR 0003 step 2). */
+  | "dice_modifier";
 
 export interface Modifier {
   kind: ModifierKind;
@@ -33,9 +35,19 @@ export interface Modifier {
   strExceptional?: number;
 }
 
-/** Place of a contribution in ((dice × spells) + weapon) × multiplier + strength + bonus. */
+/**
+ * Place of a contribution in (((dice × dice_multiplier + flat part) × spells × standard_multiplier)
+ * + weapon) × multiplier + strength + bonus (docs/adr/0003 step 2). standard_multiplier is the
+ * backstab; attacks logged before it list the backstab as a dice_multiplier.
+ */
 export type DamageTermKind =
-  "spells" | "dice_multiplier" | "weapon" | "multiplier" | "strength" | "bonus";
+  | "spells"
+  | "dice_multiplier"
+  | "standard_multiplier"
+  | "weapon"
+  | "multiplier"
+  | "strength"
+  | "bonus";
 
 export interface DamageTerm {
   term: DamageTermKind;
@@ -96,11 +108,15 @@ export interface RollResult {
   hitMargin: number;
   baseDamage: number;
   damageDice: string;
+  /** The flat part of damageDice ("1d4+1": 1), absent when none (ADR 0003 step 2). */
+  diceModifier?: number;
   spellsBuff: number;
   weaponBuff: number;
   multipliers: number;
   /** Buff multiplier on the raw dice only (Power Gem ×2); absent on old log entries. */
   diceMultiplier?: number;
+  /** The backstab's factor on the standard damage, dice and flat part (docs/adr/0030 step 19); absent without one. */
+  backstabMultiplier?: number;
   strengthBonus: number;
   bonusDamage: number;
   damageTerms: DamageTerm[];
@@ -211,6 +227,12 @@ export interface AttackPreview {
   rollNeeded: number | null;
   /** Flat damage terms: weapon or buff "+N", ammunition, Strength, specialization, buff damage. */
   damageBonus: number;
+  /**
+   * The dice the attack rolls against each size, as printed (ADR 0033 step 4: a launcher's come from
+   * its ammunition); both empty when there are none.
+   */
+  damageSm: string;
+  damageL: string;
   /** The same preview with the point-blank option (ADR 0030 step 12); absent when not offered. */
   pointBlank?: AttackPreview;
   /** The same preview with the backstab option (ADR 0030 step 19); absent for another class. */

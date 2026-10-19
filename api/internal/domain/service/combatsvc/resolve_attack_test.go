@@ -352,8 +352,8 @@ func TestResolveAttack_DamageTermsListEveryModifier(t *testing.T) {
 	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.DamageTerm{
-		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Detail: "Enlarge", Value: 1.5},
 		{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Detail: "Haste blade", Value: 2},
+		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Detail: "Enlarge", Value: 1.5},
 		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Detail: "Long Sword +2", Value: 2},
 		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Value: 2},
 		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Detail: "18", Value: 2},

@@ -38,7 +38,7 @@ describe("damageFormula", () => {
         totalDamage: 37,
         unroundedDamage: 37,
       },
-      "((5 × 1.5 × 2.0) + 2) × 2.0 + 2 + 1 = 37",
+      "((5 × 2.0 × 1.5) + 2) × 2.0 + 2 + 1 = 37",
     ],
     [
       {
@@ -50,6 +50,35 @@ describe("damageFormula", () => {
       "((5 × 1.0) + 2) × 1.5 + 0 − 20 = -9.5 → 0",
     ],
     [{ unroundedDamage: undefined }, "((5 × 1.0) + 2) × 1.0 + 0 = 7"],
+    // ADR 0003 step 2: the flat part of a 1d6+1 after the Power Gem's raw-dice factor, inside
+    // Enlarge, the backstab and the crit.
+    [
+      {
+        diceModifier: 1,
+        diceMultiplier: 2,
+        multipliers: 2,
+        totalDamage: 26,
+        unroundedDamage: 26,
+      },
+      "(((5 × 2.0 + 1) × 1.0) + 2) × 2.0 + 0 = 26",
+    ],
+    [
+      { diceModifier: -1, weaponBuff: 0, totalDamage: 4, unroundedDamage: 4 },
+      "(((5 − 1) × 1.0) + 0) × 1.0 + 0 = 4",
+    ],
+    // L5 thief, 1d6+1 footman's mace, die 3, STR 16: (3 + 1) × 3 + 1 = 13.
+    [
+      {
+        baseDamage: 3,
+        diceModifier: 1,
+        backstabMultiplier: 3,
+        weaponBuff: 0,
+        strengthBonus: 1,
+        totalDamage: 13,
+        unroundedDamage: 13,
+      },
+      "(((3 + 1) × 1.0 × 3.0) + 0) × 1.0 + 1 = 13",
+    ],
   ])("%o", (over, want) => expect(damageFormula(hit(over), "en")).toBe(want));
 
   it("uses the language's decimal separator", () => {
@@ -92,7 +121,7 @@ describe("damage formula in French, clamped and floored", () => {
         totalDamage: 25,
         unroundedDamage: 25.5,
       },
-      "((5 × 1,0 × 3,0) + 2) × 1,5 + 0 = 25,5 → 25",
+      "((5 × 3,0 × 1,0) + 2) × 1,5 + 0 = 25,5 → 25",
     ],
     [
       {

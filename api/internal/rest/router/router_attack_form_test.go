@@ -23,7 +23,7 @@ var bowForm = &combatsvc.AttackFormView{
 	AmmoChoices:     []combatsvc.AmmoChoice{{ItemID: "a3", Name: localized.Of("Arrows +3"), Magic: 3, Count: 2}},
 	Preview: &combatsvc.AttackPreview{
 		BaseThac0: 13, Modifiers: []combatsvc.Modifier{{Kind: combatsvc.ModDexterity, Detail: "17", Value: 2}},
-		EffectiveThac0: 11, ToHit: 2, RollNeeded: new(7), DamageBonus: 5,
+		EffectiveThac0: 11, ToHit: 2, RollNeeded: new(7), DamageBonus: 5, DamageSM: "1d8", DamageL: "1d8",
 	},
 }
 
@@ -31,7 +31,7 @@ const bowFormJSON = `{"form":{"weaponId":"shortbow","previousWeaponId":"longswor
 	"targetSize":"l","situational":{"value":2,"label":"rear"}},"ammoFromDefault":true,
 	"ammoChoices":[{"itemId":"a3","name":{"en":"Arrows +3"},"magic":3,"count":2}],
 	"preview":{"baseThac0":13,"modifiers":[{"kind":"dexterity","detail":"17","value":2}],"effectiveThac0":11,
-	"toHit":2,"rollNeeded":7,"damageBonus":5},"maxRealAc":10}`
+	"toHit":2,"rollNeeded":7,"damageBonus":5,"damageSm":"1d8","damageL":"1d8"},"maxRealAc":10}`
 
 func TestAttackForm_Get(t *testing.T) {
 	h, m := newRouter(t)
@@ -77,7 +77,7 @@ func TestAttackForm_PatchUnknownTargetAC(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"form":{"weaponId":"shortbow","previousWeaponId":"","ammoItemId":"","targetAc":null,"targetSize":"sm",
 		"situational":{"value":0,"label":""}},"ammoFromDefault":false,"ammoChoices":[],
-		"preview":{"baseThac0":13,"modifiers":[],"effectiveThac0":13,"toHit":0,"rollNeeded":null,"damageBonus":0},"maxRealAc":10}`, rec.Body.String())
+		"preview":{"baseThac0":13,"modifiers":[],"effectiveThac0":13,"toHit":0,"rollNeeded":null,"damageBonus":0,"damageSm":"","damageL":""},"maxRealAc":10}`, rec.Body.String())
 
 	h, _ = newRouter(t)
 	rec = do(h, "PATCH", "/api/attack/form", `{"targetAc":"five"}`)

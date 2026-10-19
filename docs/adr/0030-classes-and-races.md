@@ -532,8 +532,11 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
 19. **Backstab.** A thief's attack has a backstab option (not a bard's): +4 to hit (a named
     modifier), and the weapon's damage dice multiplied by PHB Table 30 for the level (×2 at 1-4, ×3
-    at 5-8, ×4 at 9-12, ×5 from 13) as a `DiceMultiplier` factor of
-    [ADR 0003](0003-damage.md) step 4: the dice before Strength and magic, as the book says. The
+    at 5-8, ×4 at 9-12, ×5 from 13): the weapon's standard damage, before Strength and magic, as
+    the book says (PHB p.40). _(Amended 2026-10-19)_ It is the Backstab factor of
+    [ADR 0003](0003-damage.md) step 2, apart from the Power Gem's raw-dice DiceMultiplier: it
+    multiplies the dice and the flat part K of a damage as printed (a 1d6+1 mace on a 3 at level 5:
+    `(3 + 1) × 3`, then Strength). The
     target's shield and Dexterity bonuses are not modelled (the AC is the one the player enters,
     [ADR 0012](0012-attack-against-unknown-ac.md)); first-attack-only and the conditions of
     surprise are the player's call. Read scrolls (level 10) and followers come later.
@@ -542,12 +545,12 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     (`combatsvc.BackstabAllowed`, as point-blank checks its weapon; no backstab preview then). PHB
     p.40 has the thief strike a blow from behind at a target area he must be able to reach (on a
     giant, from a ledge), which a missile does not do. The +4 is the modifier kind `backstab`; Table 30 at the
-    realized level is a `dice_multiplier` damage term of kind `backstab`, multiplied into the dice
-    multiplier with any buff's. The attack form previews it; the web clears the option once an
+    realized level is a damage term of kind `backstab`, `standard_multiplier` (2026-10-19; a
+    `dice_multiplier` multiplied into the buffs' before), logged as `backstabMultiplier`. The attack form previews it; the web clears the option once an
     attack is rolled with it (the player checks it again for another).
     Tests: `TestBackstabFor_Step19_Table30` (ruletablesadpt), `TestResolveAttack_Step19_Backstab`,
     `TestResolveAttack_Step19_BackstabRefusedBeforeAnyDie`, `TestGetAttackForm_Step19_BackstabPreview`,
-    `TestBackstab_Step19_MeleeWeaponOnly` (combatsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition).
+    `TestBackstab_Step19_MeleeWeaponOnly`, `TestDamage_Step2_FlatPartMultipliedByBackstab` (combatsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition).
 
     _(Armour changed after creation, 2026-10-18; superseded by [ADR 0033](0033-equipment.md) step 14:
     the armour is the one worn, changed by wearing or taking off a piece, one `equipment_state`

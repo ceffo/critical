@@ -6,7 +6,7 @@ powers) added 2026-10-16 (critical-qki.45), amending [ADR 0002](0002-attack-reso
 [ADR 0003](0003-damage.md) steps 4, 5 and 11 and [ADR 0004](0004-buffs.md) steps 10 and 11 and its
 Consequences
 
-_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: steps 1 and 4 (one possessions list with categories instead of the type label), steps 7 and 8 (weapons are pieces of the same list and editor), step 9 (powers on only while the piece is worn or wielded) and step 15 (the editor writes powers), ADR 0033 steps 1 to 9, 17 and 24 to 27._
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: steps 1 and 4 (one possessions list with categories instead of the type label), steps 7 and 8 (weapons are pieces of the same list and editor), step 9 (powers on only while the piece is worn or wielded) and step 15 (the editor writes powers), ADR 0033 steps 1 to 9, 17 and 24 to 27; step 8 (damage as printed, 2026-10-19)._
 
 _Vocabulary: one possession of any category is an item, the list is the inventory ([ADR 0036](0036-vocabulary.md) step 5)._
 
@@ -88,6 +88,15 @@ unless named otherwise.
    separate, each -10 to 10; the kind is melee or missile and a melee weapon has no ammo kind. Field
    names in the error are snake_case (`damage_sm`, `magic_to_hit`...).
    Tests: `TestCreate_ValidationNamesTheField` (weaponsvc), `TestUpdate_RejectsBadValuesAndNoOps`.
+   _Amended 2026-10-19 (ADR 0033 steps 4 and 24, the supervisor's ruling on picking from the
+   catalogue)_: the damage is stored **as printed**: `NdM`, `NdM+K`, `NdM-K` (1 to 100 dice of 2 to
+   1000 sides, `|K|` at most 20) or a flat `K` (1 to 20), as the PHB prints the footman's mace
+   (`1d6+1`), the jousting lance (`1d3-1`) or the needle (`1`); the attack rolls the dice and adds K
+   at its place in the formula ([ADR 0003](0003-damage.md) step 2). A launcher, and a catalogue piece
+   with no damage type (the mancatcher, picked with its catalogue code), may have no damage, both
+   columns or neither; a homebrew weapon (no catalogue code) needs its dice even with no damage type,
+   so a typed weapon cannot be saved into one its attack refuses. Field names are the
+   wire's camelCase (`damageSm`). Tests: `itemsvc` `TestValidate_Steps2To5_CategoryFields`.
 
 ### An item's own powers (steps 9 to 16)
 

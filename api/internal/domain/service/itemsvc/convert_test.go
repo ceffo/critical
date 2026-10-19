@@ -231,7 +231,7 @@ func TestRestorers_Step26_2_OldWeaponEntriesPopIntoThePiece(t *testing.T) {
 	piece.Position = 7
 	restore := func(dal *mocks.MockDAL, state json.RawMessage) error {
 		f := deps(t)
-		f.Catalogue = catalogueWeapons
+		f.Equipment = &ruletablesvc.Equipment{Weapons: catalogueWeapons}
 		svc, _ := itemsvc.New(dal, f.Deps)
 		return svc.Module().Restorer(itemsvc.StateKeyWeapons).Restore(context.Background(), 1, state)
 	}

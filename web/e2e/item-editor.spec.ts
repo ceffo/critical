@@ -9,6 +9,7 @@ import {
   openWorkspace,
   readsAfter,
   undoEntry,
+  openTypedAdd,
 } from "./helpers";
 
 // Inventory editor (one editor for every piece, ADR 0033 step 1): add, edit and remove possessions;
@@ -39,7 +40,7 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   page,
 }) => {
   await openInventory(page);
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const f = form(page);
   await f.getByLabel("Name").fill("Arrows +3 (blessed)");
   await f.getByLabel("Category").selectOption("ammunition");
@@ -133,7 +134,7 @@ test("an empty name and invalid dice are rejected with a message under the field
   page,
 }) => {
   await openInventory(page);
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const f = form(page);
   const save = f.getByRole("button", { name: "Add", exact: true });
 
@@ -161,7 +162,7 @@ test("a daily item and an effect with a modifier: add, use rolls the modifier in
   page,
 }) => {
   await openInventory(page);
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const f = form(page);
   await f.getByLabel("Name").fill("Holy water");
   await f.getByLabel("Category").selectOption("magic");

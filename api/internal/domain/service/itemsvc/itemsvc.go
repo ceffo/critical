@@ -42,8 +42,13 @@ type SVC interface {
 	// rest) and returns the character's full item list.
 	ResetDaily(ctx context.Context, characterID int64) ([]Item, error)
 	// Create adds an item (loot, a purchase) and logs it with the item's
-	// snapshot, in one transaction. A *domain.FieldError for invalid input.
+	// snapshot, in one transaction: typed, or picked from the catalogue
+	// (ItemInput.CatalogueCode, ADR 0033 step 24); Equip equips it in the
+	// same transaction (one undo). A *domain.FieldError for invalid input.
 	Create(ctx context.Context, characterID int64, in ItemInput) (*ChangeResult, error)
+	// Catalogue is the equipment reference data pieces are picked from
+	// (ADR 0033 step 21), empty before catalogue format 7.
+	Catalogue() ruletablesvc.Equipment
 	// Update edits any field of an item (only the set fields of the patch)
 	// and logs the before/after fields. ErrItemNotFound, *domain.FieldError.
 	Update(ctx context.Context, characterID int64, itemID string, p ItemPatch) (*ChangeResult, error)
@@ -116,15 +121,16 @@ type Log interface {
 	actionlog.Recorder
 }
 
-// Deps are the service's collaborators besides the DAL. Catalogue is the
-// catalogue's weapons (ADR 0033 step 21), which an old weapon entry popped
-// back is matched to (step 26.4); none before catalogue format 7.
+// Deps are the service's collaborators besides the DAL. Equipment is the
+// catalogue's equipment reference data (ADR 0033 step 21): a piece is picked
+// from it (step 24) and an old weapon entry popped back is matched to its
+// weapons (step 26.4); nil before catalogue format 7.
 type Deps struct {
 	Dice      Dice
 	Log       Log
 	Tx        domain.TxRunner
 	Chars     Characters
-	Catalogue []ruletablesvc.Weapon
+	Equipment *ruletablesvc.Equipment
 }
 
 type service struct {
@@ -134,6 +140,7 @@ type service struct {
 	tx        domain.TxRunner
 	chars     Characters
 	catalogue []ruletablesvc.Weapon
+	equipment *ruletablesvc.Equipment
 }
 
 // New constructs the service.
@@ -141,7 +148,11 @@ func New(dal DAL, d Deps) (SVC, error) {
 	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil || d.Chars == nil {
 		return nil, fmt.Errorf("itemsvc: nil dependency")
 	}
-	return &service{dal: dal, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, catalogue: d.Catalogue}, nil
+	s := &service{dal: dal, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment}
+	if d.Equipment != nil {
+		s.catalogue = d.Equipment.Weapons
+	}
+	return s, nil
 }
 
 // NewWithConfig is here for shape consistency.

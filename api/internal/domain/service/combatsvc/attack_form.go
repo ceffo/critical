@@ -77,6 +77,10 @@ type AttackPreview struct {
 	// DamageBonus is the sum of the flat damage terms: weapon or buff "+N",
 	// magic ammunition, Strength, specialization and buff damage (ADR 0003).
 	DamageBonus int
+	// DamageSM and DamageL are the dice the attack rolls against each size
+	// (ADR 0033 step 4: a launcher's from its ammunition), as printed; both
+	// empty when there are none.
+	DamageSM, DamageL string
 	// PointBlank is the same preview with the point-blank option (ADR 0030
 	// step 12); nil when the weapon does not allow it.
 	PointBlank *AttackPreview
@@ -355,6 +359,7 @@ func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo 
 		ToHit:          toHit,
 		DamageBonus:    am.weaponDmg + am.ammoDmg + am.strDmg + mods.Damage,
 	}
+	p.DamageSM, p.DamageL = damagePair(weapon, ammo)
 	if form.TargetAC != nil {
 		needed := eff - *form.TargetAC
 		p.RollNeeded = &needed

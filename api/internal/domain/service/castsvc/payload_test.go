@@ -60,13 +60,13 @@ func TestCastBreakdown_DamageSteps(t *testing.T) {
 	assert.NotContains(t, damageJSON(t, &castsvc.DamageResult{Rolls: []castsvc.Roll{{Formula: "1d4"}}}), "step")
 }
 
-// The previous release's web reads the spell attack's d20 as d20Roll: the
-// breakdown carries both names for one release.
-func TestCastBreakdown_AttackCarriesThePreviousD20Name(t *testing.T) {
+// The spell attack's die is d20 and only d20: the previous release's d20Roll
+// alias is gone.
+func TestCastBreakdown_AttackHasNoD20RollAlias(t *testing.T) {
 	raw, err := json.Marshal(castsvc.NewCastBreakdown(castsvc.CastResult{Attack: toHit()}).Attack)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"d20":17,"targetAc":5,"hit":true,"baseThac0":13,"modifiers":[{"kind":"dexterity","detail":"17","value":2}],
-		"effectiveThac0":11,"targetACNeeded":-6,"hitMargin":11,"d20Roll":17}`, string(raw))
+		"effectiveThac0":11,"targetACNeeded":-6,"hitMargin":11}`, string(raw))
 }
 
 func toHit() *combatsvc.ToHitRoll {

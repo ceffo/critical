@@ -163,30 +163,16 @@ func AddEffect(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
 // (castsvc.CastBreakdown, the logged payload plus logEntryId), then what is
 // not part of the cast and so never logged: the catalogue spell (its texts
 // and stats, absent when not in the catalogue) and the slots after a cast.
-//
-// entryId, source, name and consumedItem are logEntryId, action, spell and
-// item under the names the previous release's web reads from this answer.
-// They are kept for one release so that a page of that release still shows
-// the cast against this server during the rolling deploy (ADR 0024 step
-// 5.2); they are never logged. The attack's d20Roll is the one compat key
-// that is also logged (it lives inside the shared payload type). Drop them
-// all in the next release.
 type castAnswer struct {
 	castsvc.CastBreakdown
 	CatalogueSpell *wire.SpellDTO      `json:"catalogueSpell,omitempty"`
 	Slots          []wire.SpellSlotDTO `json:"slots,omitempty"`
-
-	EntryID      int64             `json:"entryId"`
-	Source       string            `json:"source"`
-	Name         string            `json:"name"`
-	ConsumedItem *castsvc.CastItem `json:"consumedItem,omitempty"`
 }
 
 func newCastAnswer(res castsvc.CastResult) castAnswer {
 	b := castsvc.NewCastBreakdown(res)
 	out := castAnswer{
 		CastBreakdown: b,
-		EntryID:       b.LogEntryID, Source: b.Action, Name: b.Spell, ConsumedItem: b.Item,
 	}
 	if len(res.Spell.Name) > 0 {
 		s := wire.SpellToDTO(res.Spell, res.CasterLevel)
@@ -203,19 +189,12 @@ func newCastAnswer(res castsvc.CastResult) castAnswer {
 // then hpDelta, the HP change the ledger applied when the Bard was exposed
 // (the floor may make it smaller than the damage; 0 otherwise), which the
 // entry carries as its own delta, not in its payload.
-//
-// entryId and name are logEntryId and spell under the previous release's
-// names, kept for one release like castAnswer's. Drop them in the next
-// release.
 type exposureAnswer struct {
 	castsvc.ExposureBreakdown
 	HPDelta int `json:"hpDelta"`
-
-	EntryID int64  `json:"entryId"`
-	Name    string `json:"name"`
 }
 
 func newExposureAnswer(res castsvc.ExposureResult) exposureAnswer {
 	b := castsvc.NewExposureBreakdown(res)
-	return exposureAnswer{ExposureBreakdown: b, HPDelta: res.HPDelta, EntryID: b.LogEntryID, Name: b.Spell}
+	return exposureAnswer{ExposureBreakdown: b, HPDelta: res.HPDelta}
 }

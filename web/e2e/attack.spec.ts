@@ -448,13 +448,22 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
         .locator("xpath=following-sibling::dd")
         .textContent(),
     );
+  const lastEntryId = () =>
+    page.evaluate(
+      () =>
+        document
+          .querySelector('[data-testid="last-result"] [data-entry-id]')
+          ?.getAttribute("data-entry-id") ?? null,
+    );
+  let previous = await lastEntryId();
   let d20 = 0;
   let check = 100;
   for (let i = 0; i < 100 && d20 - check < 1; i++) {
     await form.getByRole("button", { name: "Attack", exact: true }).click();
-    await expect
-      .poll(async () => await logEntry(page, "Long Sword +2 vs AC -20").count())
-      .toBe(i + 1);
+    // The new roll is the one the last-result line names: the journal lists only its 50 latest
+    // entries, so a count would stop growing on a long streak of misses.
+    await expect.poll(lastEntryId).not.toBe(previous);
+    previous = await lastEntryId();
     d20 = await fact("d20");
     check = await fact("Crit check d100");
   }

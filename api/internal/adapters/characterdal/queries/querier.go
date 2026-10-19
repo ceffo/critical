@@ -46,7 +46,7 @@ type Querier interface {
 	RestoreSkillArmor(ctx context.Context, arg RestoreSkillArmorParams) (int64, error)
 	// Only a character the user owns and has not retired (ADR 0029 step 7.3): nothing is deleted.
 	RetireCharacter(ctx context.Context, arg RetireCharacterParams) (int64, error)
-	// Setting, clearing (NULL and '') and the undo of either.
+	// Setting, clearing (NULL and an empty label) and the undo of either.
 	SetACOverride(ctx context.Context, arg SetACOverrideParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)

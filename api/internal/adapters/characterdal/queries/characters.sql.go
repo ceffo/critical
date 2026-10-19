@@ -402,7 +402,7 @@ type SetACOverrideParams struct {
 	ID              int64
 }
 
-// Setting, clearing (NULL and ”) and the undo of either.
+// Setting, clearing (NULL and an empty label) and the undo of either.
 func (q *Queries) SetACOverride(ctx context.Context, arg SetACOverrideParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setACOverride, arg.AcOverride, arg.AcOverrideLabel, arg.ID)
 	if err != nil {

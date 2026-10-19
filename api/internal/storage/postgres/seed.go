@@ -26,14 +26,16 @@ import (
 // migration run gave the rows without one to the seed character (ownRows). A missing character
 // file is ignored. A missing weapons,
 // items or skills file while the seed character has none is an error: its sheet would be empty.
-// catalogue is the catalogue's weapons the seeded weapons are matched to (ADR 0033 step 26.4).
+// equipment is the catalogue's: its weapons, which the seeded weapons are matched to (ADR 0033 step
+// 26.4), and its body armours, from which a seed character with skill points gets the armour it
+// entered, worn, when its equipment is seeded (step 14's carry-over, as an upgraded database has).
 // Spells are not seeds: they come from the catalogue artifact (ImportCatalogue).
-func (d *DB) Seed(ctx context.Context, seedsDir string, spellbook []string, catalogue []ruletablesvc.Weapon) error {
-	return seed(ctx, d, d.q, seedsDir, spellbook, catalogue)
+func (d *DB) Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error {
+	return seed(ctx, d, d.q, seedsDir, spellbook, equipment)
 }
 
 // seed is Seed over its ports: tx runs the transaction, q runs on the transaction tx carries.
-func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir string, spellbook []string, catalogue []ruletablesvc.Weapon) error {
+func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error {
 	return tx.InTx(ctx, func(ctx context.Context) error {
 		characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
 		if err := seedCharacter(ctx, q, characterPath); err != nil {
@@ -44,7 +46,7 @@ func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir st
 			return err
 		}
 		if err := seedEquipment(ctx, q, owner, seedfile.Path(seedsDir, seedfile.ItemsFile),
-			seedfile.Path(seedsDir, seedfile.WeaponsFile), catalogue); err != nil {
+			seedfile.Path(seedsDir, seedfile.WeaponsFile), equipment); err != nil {
 			return fmt.Errorf("seed equipment: %w", err)
 		}
 		if err := seedSkills(ctx, q, owner, seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
@@ -261,7 +263,7 @@ func boolInt(b bool) int64 {
 // the items and weapons seeds converted as an upgraded database's are (seedfile.Equipment), with
 // their review rows; once it holds some, only the names of the seeded pieces are reconciled
 // (reconcileName). A seed file that is unreadable is an error only while the character holds none.
-func seedEquipment(ctx context.Context, q storeq.Querier, owner int64, itemsPath, weaponsPath string, catalogue []ruletablesvc.Weapon) error {
+func seedEquipment(ctx context.Context, q storeq.Querier, owner int64, itemsPath, weaponsPath string, equipment ruletablesvc.Equipment) error {
 	count, err := q.CountItems(ctx, owner)
 	if err != nil {
 		return fmt.Errorf("count items: %w", err)
@@ -293,7 +295,7 @@ func seedEquipment(ctx context.Context, q storeq.Querier, owner int64, itemsPath
 		}
 		return nil
 	}
-	conv, err := seedfile.Equipment(items, weapons, catalogue)
+	conv, err := seedfile.Equipment(items, weapons, equipment.Weapons)
 	if err != nil {
 		return err
 	}
@@ -314,7 +316,16 @@ func seedEquipment(ctx context.Context, q storeq.Querier, owner int64, itemsPath
 			return err
 		}
 	}
-	return insertReviews(ctx, q, owner, conv.Reviews)
+	if err := insertReviews(ctx, q, owner, conv.Reviews); err != nil {
+		return err
+	}
+	// ADR 0033 step 14: the seed character with skill points wears the armour it entered, as the
+	// carry-over gives an upgraded database's. Without the catalogue's armours (before format 7)
+	// it wears none, as its weapons stay unmatched.
+	if len(equipment.Armour) == 0 {
+		return nil
+	}
+	return carryCharacter(ctx, q, owner, equipment.Armour)
 }
 
 // seededName is the kind a seeded piece's offers are recorded under (seeded_name_languages): the

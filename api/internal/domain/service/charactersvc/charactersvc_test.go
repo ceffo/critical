@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 )
@@ -24,12 +23,16 @@ func (t *tx) InTx(ctx context.Context, fn func(context.Context) error) error {
 	return fn(ctx)
 }
 
-// recorder keeps the entries recorded in the action log.
-type recorder struct{ entries []actionlog.NewEntry }
+// wornArmour answers the Table 29 column of the body armour each character
+// wears (ADR 0033 step 14), none when absent, and counts the reads.
+type wornArmour struct {
+	columns map[int64]string
+	reads   int
+}
 
-func (r *recorder) Record(_ context.Context, e actionlog.NewEntry) (int64, error) {
-	r.entries = append(r.entries, e)
-	return int64(len(r.entries)), nil
+func (w *wornArmour) WornSkillColumn(_ context.Context, id int64) (string, error) {
+	w.reads++
+	return w.columns[id], nil
 }
 
 // hpLedger answers the HP ledger's total of each character.
@@ -39,7 +42,7 @@ func (h hpLedger) HPTotal(_ context.Context, id int64) (int, error) { return h[i
 
 type env struct {
 	hp       hpLedger
-	log      *recorder
+	armour   *wornArmour
 	svc      charactersvc.SVC
 	reader   *mocks.MockReader
 	xp       *mocks.MockXPLedger
@@ -53,10 +56,10 @@ func newEnv(t *testing.T) *env {
 	t.Helper()
 	e := &env{
 		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: newRules(t),
-		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{}, log: &recorder{}, hp: hpLedger{},
+		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{}, armour: &wornArmour{columns: map[int64]string{}}, hp: hpLedger{},
 	}
 	svc, err := charactersvc.NewWithConfig(charactersvc.DefaultConfig(), charactersvc.Deps{
-		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Log: e.log, HP: e.hp,
+		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Armour: e.armour, HP: e.hp,
 	})
 	require.NoError(t, err)
 	e.svc = svc
@@ -66,7 +69,7 @@ func newEnv(t *testing.T) *env {
 func TestNew_NilDependency(t *testing.T) {
 	full := charactersvc.Deps{
 		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: newRules(t),
-		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t), Log: &recorder{}, HP: hpLedger{},
+		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t), Armour: &wornArmour{}, HP: hpLedger{},
 	}
 	without := map[string]func(d *charactersvc.Deps){
 		"reader":   func(d *charactersvc.Deps) { d.Reader = nil },
@@ -75,7 +78,7 @@ func TestNew_NilDependency(t *testing.T) {
 		"owners":   func(d *charactersvc.Deps) { d.Owners = nil },
 		"tx":       func(d *charactersvc.Deps) { d.Tx = nil },
 		"sessions": func(d *charactersvc.Deps) { d.Sessions = nil },
-		"log":      func(d *charactersvc.Deps) { d.Log = nil },
+		"armour":   func(d *charactersvc.Deps) { d.Armour = nil },
 		"hp":       func(d *charactersvc.Deps) { d.HP = nil },
 	}
 	for name, drop := range without {

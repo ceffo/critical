@@ -706,7 +706,6 @@ export function ExtrasStep({
   const [rollError, setRollError] = useState<string | null>(null);
   const cls = classOf(options, draft.cls);
   const skills = cls?.skills ?? [];
-  const armors = cls?.skillArmors ?? [];
   const offersExceptional =
     !!cls?.exceptionalStrengthRaces.includes(draft.race) &&
     parseWhole(draft.scores.str) === 18;
@@ -755,7 +754,6 @@ export function ExtrasStep({
 
   const hpError = errorFor("hpMax");
   const strError = errorFor("strExceptional");
-  const armorError = errorFor("skillArmor");
 
   return (
     <>
@@ -928,26 +926,6 @@ export function ExtrasStep({
                   id="new-character-skillPoints"
                   text={errorFor("skillPoints")}
                 />
-                <div className="flex w-56 min-w-0 flex-col gap-1">
-                  <label
-                    htmlFor="new-character-skillArmor"
-                    className={labelClass}
-                  >
-                    {t("characters.skillArmor")}
-                  </label>
-                  <select
-                    {...fieldProps("skillArmor", armorError)}
-                    value={draft.skillArmor}
-                    onChange={(e) => update({ skillArmor: e.target.value })}
-                  >
-                    {armors.map((a) => (
-                      <option key={a} value={a}>
-                        {t(`characters.armors.${a}`, { defaultValue: a })}
-                      </option>
-                    ))}
-                  </select>
-                  <FieldError id="new-character-skillArmor" text={armorError} />
-                </div>
               </Group>
             )}
             {offersExceptional && (

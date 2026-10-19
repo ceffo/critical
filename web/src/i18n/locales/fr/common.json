@@ -1740,7 +1740,8 @@
     },
     "spendPoints": "Dépenser",
     "spendPointsHint": "Dépenser des points de talent",
-    "armorHint": "Changer l’armure portée pour les talents",
+    "armor": "Armure des talents : {{armor}}",
+    "armorHint": "Lue sur l’armure portée : porter ou ôter une armure dans l’inventaire la change",
     "pointsTitle": "Points de talent",
     "pointsLead": "Le total des points de chaque talent. Le budget de votre niveau est un avertissement, pas une limite.",
     "pointsLabel": "Points en {{name}}",
@@ -1967,7 +1968,6 @@
     },
     "skillPoints": "Points de talent",
     "skillPointsLead": "Les points dépensés dans chaque talent ; le serveur ajoute la base, la race, la Dextérité et l’armure.",
-    "skillArmor": "Armure portée",
     "armors": {
       "none": "Aucune",
       "leather": "Cuir",

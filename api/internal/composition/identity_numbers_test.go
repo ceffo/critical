@@ -45,7 +45,7 @@ type numbersView struct {
 
 func numbersBody(height, weight, age string) string {
 	return `{"name":"Numbers","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
-		`"hpMax":10,"xp":2500,"skillArmor":"leather","details":{"alignment":"neutral_good","sex":"female",` +
+		`"hpMax":10,"xp":2500,"details":{"alignment":"neutral_good","sex":"female",` +
 		`"height_cm":` + height + `,"weight_kg":` + weight + `,"age":` + age + `}}`
 }
 
@@ -147,7 +147,7 @@ func TestIdentityNumbers_Step8_5_PreviousReleaseClientStillWorks(t *testing.T) {
 	bob, _ := tb.login("bob@example.com")
 	var list listView
 	old := `{"name":"Old","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
-		`"hpMax":10,"xp":2500,"skillArmor":"leather","details":{"alignment":"neutral_good","sex":"female",` +
+		`"hpMax":10,"xp":2500,"details":{"alignment":"neutral_good","sex":"female",` +
 		`"height":"1m80","weight":"150 lb","hair":"red","eyes":"","age":30}}`
 	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", old, &list))
 	var got struct {
@@ -196,7 +196,7 @@ func TestIdentityNumbers_CreateNullNumberKeyBeatsTheTextKey(t *testing.T) {
 	bob, _ := tb.login("bob@example.com")
 	var list listView
 	body := `{"name":"Null","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
-		`"hpMax":10,"xp":2500,"skillArmor":"leather","details":{"alignment":"neutral_good","sex":"female",` +
+		`"hpMax":10,"xp":2500,"details":{"alignment":"neutral_good","sex":"female",` +
 		`"height_cm":null,"height":"180 cm","weight":"60 kg"}}`
 	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, &list))
 	var got numbersView

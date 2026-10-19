@@ -115,6 +115,10 @@ type SkillsDTO struct {
 	Proficiencies []ProficiencyDTO `json:"proficiencies"`
 	BardSkills    []RogueSkillDTO  `json:"bardSkills"`
 	ThiefSkills   []RogueSkillDTO  `json:"thiefSkills"`
+	// SkillArmor is the skill armour the bard or thief skills read (ADR
+	// 0033 step 14, from the worn body armour: none, leather,
+	// padded_studded_leather, elven_chain or metal), "" for another class.
+	SkillArmor string `json:"skillArmor"`
 }
 
 // CheckDTO is one check: target is unadjusted, adjustedTarget = target +
@@ -155,6 +159,7 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 		Proficiencies: make([]ProficiencyDTO, 0, len(s.Proficiencies)),
 		BardSkills:    make([]RogueSkillDTO, 0, len(s.BardSkills)),
 		ThiefSkills:   make([]RogueSkillDTO, 0, len(s.ThiefSkills)),
+		SkillArmor:    s.SkillArmor,
 	}
 	for _, t := range s.ThiefSkills {
 		out.ThiefSkills = append(out.ThiefSkills, rogueSkillDTO(skillsvc.KindThiefSkill, t.SkillPercent, t.Last))

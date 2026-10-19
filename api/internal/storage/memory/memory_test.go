@@ -22,6 +22,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
@@ -39,12 +40,12 @@ func seeded(t *testing.T) (*memory.Store, int64) {
 	t.Helper()
 	ctx := context.Background()
 	s := memory.New()
-	require.NoError(t, s.Migrate(ctx, "", nil))
+	require.NoError(t, s.Migrate(ctx, "", ruletablesvc.Equipment{}))
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	book, err := spellbookadpt.ReadSeed(seedsDir, artifact.Catalogue)
 	require.NoError(t, err)
-	require.NoError(t, s.Seed(ctx, seedsDir, book, nil))
+	require.NoError(t, s.Seed(ctx, seedsDir, book, ruletablesvc.Equipment{}))
 	require.NoError(t, s.ImportCatalogue(ctx, artifact.Catalogue, nil))
 	return s, seedCharacter(t, s)
 }
@@ -601,4 +602,43 @@ func TestStore_EachCharacterOwnsItsRows(t *testing.T) {
 	require.NoError(t, s.Items().Delete(ctx, other, "longsword"))
 	_, err = s.Items().Get(ctx, kelsen, "longsword")
 	require.NoError(t, err, "deleting the other's sword leaves the seed character's")
+}
+
+// ADR 0033 step 14: the seed character, a bard with no skill armour entered
+// (read as leather), is seeded wearing the catalogue's Leather armour, as the
+// carry-over gives an upgraded database's, so its skills read the same
+// column as before. Without the catalogue's armours it wears none.
+func TestSeed_Step14_TheSeedBardWearsTheArmourItEntered(t *testing.T) {
+	ctx := context.Background()
+	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	book, err := spellbookadpt.ReadSeed(seedsDir, artifact.Catalogue)
+	require.NoError(t, err)
+	leather := ruletablesvc.Armour{
+		Code: "leather", Name: map[string]string{"en": "Leather armor", "fr": "Armure de cuir"},
+		BaseAC: 8, SkillColumn: "leather", ArmorRow: "leather",
+	}
+	s := memory.New()
+	require.NoError(t, s.Seed(ctx, seedsDir, book, ruletablesvc.Equipment{Armour: []ruletablesvc.Armour{leather}}))
+	id := seedCharacter(t, s)
+	items, err := s.Items().List(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, ruletablesvc.ColumnLeather, itemsvc.WornSkillColumn(items))
+	last := items[len(items)-1]
+	assert.Equal(t, "leather", last.ID)
+	assert.Equal(t, itemsvc.CategoryArmour, last.Category)
+	assert.Equal(t, itemsvc.StateWorn, last.State)
+	assert.Equal(t, "leather", last.CatalogueCode)
+	assert.Equal(t, 8, last.BaseAC)
+	assert.Equal(t, "Armure de cuir", last.Name["fr"])
+	reviews, err := s.Items().Reviews(ctx, id)
+	require.NoError(t, err)
+	for _, r := range reviews {
+		assert.NotEqual(t, "leather", r.ItemID, "leather is no guess")
+	}
+
+	bare, bareID := seeded(t)
+	items, err = bare.Items().List(ctx, bareID)
+	require.NoError(t, err)
+	assert.Empty(t, itemsvc.WornSkillColumn(items), "no catalogue armour: none worn")
 }

@@ -64,7 +64,7 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillArmor: "none", SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
+		SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
 	})
 	require.NoError(t, err)
 
@@ -125,7 +125,7 @@ func TestThief_Step17_SpendPointsAfterALevelUpAndUndo(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillArmor: "none", SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
+		SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
 	})
 	require.NoError(t, err)
 	openLocks := func() int {
@@ -186,7 +186,7 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 		id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 			Details: identity(),
 			Name:    "Vex", Class: "thief", Race: "halfling", Str: 12, Dex: 18, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-			SkillArmor: "none", SkillPoints: points,
+			SkillPoints: points,
 		})
 		require.NoError(t, err)
 		return id
@@ -243,7 +243,6 @@ func TestThief_Step19_BackstabAtAnUnknownACKeepsItsMultiplier(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillArmor: "none",
 	})
 	require.NoError(t, err)
 	dagger := newWeapon("Dagger", "1d4", "1d3")
@@ -264,12 +263,18 @@ func TestThief_Step19_BackstabAtAnUnknownACKeepsItsMultiplier(t *testing.T) {
 	assert.Equal(t, 1, dice.calls["die"], "no die rolled again")
 }
 
-// ADR 0030 steps 1 and 17 after creation, through the real services: the
-// halfling thief of Dexterity 17 with 30 points in Open Locks and Pick
-// Pockets puts on elven chain. PHB Table 29 takes 5 off Open Locks (55 to
-// 50) and 20 off Pick Pockets (the armour term goes from +5 to -20); a bard
-// has no skill armour to change, and another user's thief is not found.
-func TestThief_Step1_ChangeTheSkillArmourAfterCreation(t *testing.T) {
+// ADR 0033 step 14 (amending ADR 0030 steps 1 and 17), through the real
+// services: the skills read the body armour the thief wears. The halfling
+// thief of Dexterity 17 with 30 points in Open Locks and Pick Pockets wears
+// nothing at creation (the none column: Open Locks 55, Pick Pockets' armour
+// term +5). An elven chain mail carried changes nothing; wearing it (one
+// equipment_state entry) takes PHB Table 29's 5 off Open Locks (50) and puts
+// Pick Pockets' term at -20; Undo gives the skills back and Redo applies them
+// again. Swapping it for a studded leather reads the padded or studded column
+// (45, -30), wearing an armour a thief may not wear (plate) the same worst
+// column, and taking the armour off the none column again. A shield changes
+// no skill.
+func TestThief_Step14_TheSkillsFollowTheWornArmour(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
 	require.NoError(t, err)
@@ -279,10 +284,10 @@ func TestThief_Step1_ChangeTheSkillArmourAfterCreation(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillArmor: "none", SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
+		SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
 	})
 	require.NoError(t, err)
-	armor := func(skill string) (percent, term int) {
+	skill := func(skill string) (percent, term int) {
 		t.Helper()
 		skills, err := bs.Skills.List(ctx, id)
 		require.NoError(t, err)
@@ -294,108 +299,98 @@ func TestThief_Step1_ChangeTheSkillArmourAfterCreation(t *testing.T) {
 		require.Failf(t, "no such skill", skill)
 		return 0, 0
 	}
-	percent, _ := armor("open_locks")
-	require.Equal(t, 55, percent)
+	expect := func(openLocks, pickPocketsTerm int, armour, msg string) {
+		t.Helper()
+		percent, _ := skill("open_locks")
+		assert.Equal(t, openLocks, percent, msg)
+		_, term := skill("pick_pockets")
+		assert.Equal(t, pickPocketsTerm, term, msg)
+		c, err := bs.Character.GetCharacter(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, armour, c.Derived.SkillArmor, msg)
+		skills, err := bs.Skills.List(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, armour, skills.SkillArmor, "the Skills tab names it: "+msg)
+	}
+	add := func(name, column, row string) string {
+		t.Helper()
+		res, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
+			Name: map[string]string{"en": name}, Category: itemsvc.CategoryArmour, Behaviour: itemsvc.BehaviourStock,
+			Count: 1, BaseAC: 5, SkillColumn: column, ArmorRow: row,
+		})
+		require.NoError(t, err)
+		return res.Item.ID
+	}
+	wear := func(itemID string, state itemsvc.State, swap bool) {
+		t.Helper()
+		_, err := bs.Items.SetState(ctx, id, itemID, state, swap)
+		require.NoError(t, err)
+	}
+	expect(55, 5, "none", "nothing worn at creation: the none column")
 
-	_, err = bs.Character.Change(ctx, s.User.ID, id, charactersvc.Change{SkillArmor: new("elven_chain")})
-	require.NoError(t, err)
-	c, err := bs.Character.GetCharacter(ctx, id)
-	require.NoError(t, err)
-	assert.Equal(t, "elven_chain", c.SkillArmor)
-	percent, _ = armor("open_locks")
-	assert.Equal(t, 50, percent, "Table 29: elven chain -5 on Open Locks")
-	_, term := armor("pick_pockets")
-	assert.Equal(t, -20, term, "Table 29: elven chain -20 on Pick Pockets")
+	chain := add("Elven chain mail", "elven_chain", "chain")
+	expect(55, 5, "none", "a carried armour changes no skill")
+	wear(chain, itemsvc.StateWorn, false)
+	expect(50, -20, "elven_chain", "Table 29: elven chain")
 
-	// The change is one skill_armor entry (a move of the game): Undo gives the
-	// armour and the skills back, Redo applies it again.
 	top, ok, err := bs.Log.TopID(ctx, id)
 	require.NoError(t, err)
 	require.True(t, ok)
 	e, err := bs.Log.Undo(ctx, id, top)
 	require.NoError(t, err)
-	assert.Equal(t, actionlog.KindSkillArmor, e.Kind)
-	c, err = bs.Character.GetCharacter(ctx, id)
-	require.NoError(t, err)
-	assert.Equal(t, "none", c.SkillArmor, "the undo gives the armour back")
-	percent, _ = armor("open_locks")
-	assert.Equal(t, 55, percent)
+	assert.Equal(t, actionlog.KindEquipmentState, e.Kind, "the wear change is the logged move")
+	expect(55, 5, "none", "the undo gives the skills back")
 	_, err = bs.Log.Redo(ctx, id, top)
 	require.NoError(t, err)
-	percent, _ = armor("open_locks")
-	assert.Equal(t, 50, percent, "the redo puts it on again")
+	expect(50, -20, "elven_chain", "the redo puts the armour on again")
 
-	other, err := bs.Auth.DevLogin(ctx, "bob@example.com")
-	require.NoError(t, err)
-	_, err = bs.Character.Change(ctx, other.User.ID, id, charactersvc.Change{SkillArmor: new("none")})
-	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
-	c, err = bs.Character.GetCharacter(ctx, id)
-	require.NoError(t, err)
-	assert.Equal(t, "elven_chain", c.SkillArmor, "another user changes nothing")
+	studded := add("Studded leather", "padded_studded", "studded_leather")
+	wear(studded, itemsvc.StateWorn, true)
+	expect(45, -30, "padded_studded_leather", "the swap: Table 29's padded or studded column")
+	plate := add("Plate mail", "none_allowed", "plate")
+	wear(plate, itemsvc.StateWorn, true)
+	expect(45, -30, "padded_studded_leather", "an armour a thief may not wear reads the worst column")
+	wear(plate, itemsvc.StateCarried, false)
+	expect(55, 5, "none", "taken off: the none column")
 
-	fighter, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Details: identity(),
-		Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+	res, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
+		Name: map[string]string{"en": "Buckler"}, Category: itemsvc.CategoryShield, Behaviour: itemsvc.BehaviourStock,
+		Count: 1, ShieldKind: "buckler", ACMelee: 1, ACMissile: 1,
 	})
 	require.NoError(t, err)
-	_, err = bs.Character.Change(ctx, s.User.ID, fighter, charactersvc.Change{SkillArmor: new("leather")})
-	var fe *domain.FieldError
-	require.ErrorAs(t, err, &fe)
-	assert.Equal(t, "skillArmor", fe.Field)
-	b, err := bs.Character.GetCharacter(ctx, fighter)
-	require.NoError(t, err)
-	assert.Empty(t, b.SkillArmor, "the refused write is rolled back")
+	wear(res.Item.ID, itemsvc.StateWorn, false)
+	expect(55, 5, "none", "a shield changes no skill")
 }
 
-// A change of several fields is one transaction: a rename that comes with a
-// skill armour a fighter cannot have changes neither; a thief's armour and
-// retirement both apply; a retired or another user's character is not found
-// and nothing is written.
-func TestThief_Step1_ArmourChangeIsAtomicWithRenameAndRetire(t *testing.T) {
+// ADR 0033 step 14 for the bard (amending ADR 0030 step 18): a bard in a
+// metal armour up to chain mail reads its own metal column, Table 29's elven
+// chain column with the bard's extra -5%.
+func TestBard_Step14_MetalArmourReadsTheBardsColumn(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
-	owner := s.User.ID
-	fighter, err := bs.Character.Create(ctx, owner, charactersvc.NewCharacter{
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
-		Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+		Name:    "Lyra", Class: "bard", Race: "human", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6,
+		SkillPoints: map[string]int{"climb_walls": 15},
 	})
 	require.NoError(t, err)
-	thief, err := bs.Character.Create(ctx, owner, charactersvc.NewCharacter{
-		Details: identity(),
-		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillArmor: "none",
+	res, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
+		Name: map[string]string{"en": "Chain mail"}, Category: itemsvc.CategoryArmour, Behaviour: itemsvc.BehaviourStock,
+		Count: 1, BaseAC: 5, SkillColumn: "metal", ArmorRow: "chain",
 	})
 	require.NoError(t, err)
-
-	_, err = bs.Character.Change(ctx, owner, fighter, charactersvc.Change{Name: new("Renamed"), SkillArmor: new("leather")})
-	require.Error(t, err)
-	b, err := bs.Character.GetCharacter(ctx, fighter)
+	_, err = bs.Items.SetState(ctx, id, res.Item.ID, itemsvc.StateWorn, false)
 	require.NoError(t, err)
-	assert.Equal(t, "Bram", b.Name, "the rename is rolled back with the refused armour")
-
-	_, err = bs.Character.Change(ctx, owner, thief, charactersvc.Change{SkillArmor: new("elven_chain"), Retired: new(true)})
+	c, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
-	c, err := bs.Character.GetCharacter(ctx, thief)
-	require.NoError(t, err)
-	assert.Equal(t, "elven_chain", c.SkillArmor)
-	list, err := bs.Character.List(ctx, owner)
-	require.NoError(t, err)
-	for _, l := range list {
-		assert.NotEqual(t, thief, l.ID, "the thief is retired")
+	assert.Equal(t, ruletablesvc.ArmorMetal, c.Derived.SkillArmor)
+	for _, b := range c.Derived.BardSkills {
+		if b.Skill == "climb_walls" {
+			assert.Equal(t, -25, b.Armor, "elven chain -20 and the bard's -5")
+		}
 	}
-
-	_, err = bs.Character.Change(ctx, owner, thief, charactersvc.Change{SkillArmor: new("none")})
-	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
-	c, err = bs.Character.GetCharacter(ctx, thief)
-	require.NoError(t, err)
-	assert.Equal(t, "elven_chain", c.SkillArmor, "a retired character is not written")
-	top, _, err := bs.Log.TopID(ctx, thief)
-	require.NoError(t, err)
-	e, err := bs.Log.Undo(ctx, thief, top)
-	require.NoError(t, err)
-	assert.Equal(t, actionlog.KindSkillArmor, e.Kind, "the refused change recorded nothing beyond the first entry")
 }

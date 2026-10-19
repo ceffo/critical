@@ -57,7 +57,9 @@ func TestKelsen_TheSheetMatchesTheDerivedValues(t *testing.T) {
 	for name, path := range catalogues {
 		t.Run(name, func(t *testing.T) {
 			tables := parseTables(t, path)
-			d, err := charactersvc.Derive(c, 0, tables)
+			// The seed and the carry-over make him wear Leather armour (ADR 0033 step
+			// 14), the armour none entered read as.
+			d, err := charactersvc.Derive(c, 0, ruletablesvc.ColumnLeather, tables)
 			require.NoError(t, err)
 			sheetSlots, err := tables.BardSpellsPerDay(seed.Level)
 			require.NoError(t, err)

@@ -54,6 +54,9 @@ export interface Skills {
   proficiencies: Proficiency[];
   bardSkills: BardSkill[];
   thiefSkills: ThiefSkill[];
+  /** ADR 0033 step 14: the skill armour the bard or thief skills read, from the body armour worn
+   * (none, leather, padded_studded_leather, elven_chain, metal); "" for another class. */
+  skillArmor: string;
 }
 
 /** One check as POST /api/roll/skill/{id} and POST /api/roll/skill/{id}/adjust return it, and the

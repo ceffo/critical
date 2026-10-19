@@ -719,55 +719,6 @@ func (_c *MockCharacterStore_SetRealizedLevel_Call) RunAndReturn(run func(contex
 	return _c
 }
 
-// SetSkillArmor provides a mock function with given fields: ctx, owner, id, armor
-func (_m *MockCharacterStore) SetSkillArmor(ctx context.Context, owner uuid.UUID, id int64, armor string) error {
-	ret := _m.Called(ctx, owner, id, armor)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SetSkillArmor")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, string) error); ok {
-		r0 = rf(ctx, owner, id, armor)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockCharacterStore_SetSkillArmor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetSkillArmor'
-type MockCharacterStore_SetSkillArmor_Call struct {
-	*mock.Call
-}
-
-// SetSkillArmor is a helper method to define mock.On call
-//   - ctx context.Context
-//   - owner uuid.UUID
-//   - id int64
-//   - armor string
-func (_e *MockCharacterStore_Expecter) SetSkillArmor(ctx interface{}, owner interface{}, id interface{}, armor interface{}) *MockCharacterStore_SetSkillArmor_Call {
-	return &MockCharacterStore_SetSkillArmor_Call{Call: _e.mock.On("SetSkillArmor", ctx, owner, id, armor)}
-}
-
-func (_c *MockCharacterStore_SetSkillArmor_Call) Run(run func(ctx context.Context, owner uuid.UUID, id int64, armor string)) *MockCharacterStore_SetSkillArmor_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int64), args[3].(string))
-	})
-	return _c
-}
-
-func (_c *MockCharacterStore_SetSkillArmor_Call) Return(_a0 error) *MockCharacterStore_SetSkillArmor_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockCharacterStore_SetSkillArmor_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64, string) error) *MockCharacterStore_SetSkillArmor_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // SetSkillPoints provides a mock function with given fields: ctx, characterID, points
 func (_m *MockCharacterStore) SetSkillPoints(ctx context.Context, characterID int64, points map[string]int) error {
 	ret := _m.Called(ctx, characterID, points)

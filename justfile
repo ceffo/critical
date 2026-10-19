@@ -362,6 +362,14 @@ db-restore-drill dump="":
 equipment-rehearsal ref="":
     scripts/equipment-upgrade-rehearsal.sh {{ref}}
 
+# Local only: the skill armour carry-over (020, ADR 0033 step 14) on a database written by the release before
+# (old ref, default the merge base with origin/main), in a throwaway compose PostgreSQL (own project and port,
+# never `just dev`'s): every thief's and bard's skill percentages compared, restarts, the old entries popped.
+# Removes the compose project. Needs docker, psql, jq, go.
+# Rehearse the skill armour upgrade
+skill-armour-rehearsal ref="":
+    scripts/skill-armour-rehearsal.sh {{ref}}
+
 # The AC override migration (017) on a copy of a real database: a read-only pg_dump of the source
 # (default: the main checkout's dev database) restored into a throwaway compose PostgreSQL, upgraded
 # by this checkout's server and checked through SQL and the API.

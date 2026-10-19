@@ -258,9 +258,6 @@ test("identity and review: arrows choose, an unreadable weight blocks at its fie
 }) => {
   page.on("dialog", (d) => void d.accept());
   const { step, next } = await toIdentity(page, "fr", async (extras) => {
-    await extras
-      .getByLabel("Armure portée")
-      .selectOption({ label: "Métal, jusqu’à la maille" });
     await extras.getByLabel("Escalade").fill("15");
   });
   const details = step.getByTestId("new-character-details");
@@ -296,11 +293,10 @@ test("identity and review: arrows choose, an unreadable weight blocks at its fie
   await expect(next).toBeEnabled();
   await next.click();
 
-  // The review shows the armour worn and the points beside the final percentage.
+  // The review shows the points beside the final percentage; no armour is entered (the skills
+  // read the one worn, ADR 0033 step 14).
   const review = step.getByTestId("review");
-  await expect(review.getByTestId("review-skill-armor")).toHaveText(
-    "Métal, jusqu’à la maille",
-  );
+  await expect(review.getByTestId("review-skill-armor")).toHaveCount(0);
   await expect(review.getByTestId("review-skill-climb_walls")).toHaveText(
     /\d+ % \(15 points\)/,
   );

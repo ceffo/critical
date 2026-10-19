@@ -202,7 +202,6 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
       cha: 16,
       hpMax: 6,
       xp: 0,
-      skillArmor: "leather",
     }),
   ).toBe(true);
   expect(

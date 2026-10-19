@@ -1740,7 +1740,8 @@
     },
     "spendPoints": "Spend",
     "spendPointsHint": "Spend skill points",
-    "armorHint": "Change the armour worn for the skills",
+    "armor": "Skill armour: {{armor}}",
+    "armorHint": "Read from the body armour worn: wear or take off armour in the inventory to change it",
     "pointsTitle": "Skill points",
     "pointsLead": "The total points in each skill. The budget at your level is a warning, not a limit.",
     "pointsLabel": "Points in {{name}}",
@@ -1967,7 +1968,6 @@
     },
     "skillPoints": "Skill points",
     "skillPointsLead": "The points spent in each skill; the server adds the base, race, Dexterity and armour.",
-    "skillArmor": "Armour worn",
     "armors": {
       "none": "None",
       "leather": "Leather",

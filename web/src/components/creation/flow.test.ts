@@ -91,7 +91,6 @@ describe("buildBody", () => {
         races: ["half_elf"],
         exceptionalStrengthRaces: [],
         skills: ["climb_walls"],
-        skillArmors: ["leather"],
         alignments: ["neutral_good"],
       },
     ],
@@ -137,8 +136,9 @@ describe("buildBody", () => {
       xp: 2500,
       hpMax: 6,
       skillPoints: { climb_walls: 15 },
-      skillArmor: "leather",
     });
+    // ADR 0033 step 14: the skills read the worn armour; the body enters none.
+    expect(out.body).not.toHaveProperty("skillArmor");
   });
   it("names the field of an unreadable value", () => {
     expect(

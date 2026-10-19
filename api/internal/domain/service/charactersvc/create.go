@@ -2,7 +2,6 @@ package charactersvc
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -82,29 +81,24 @@ type NewCharacter struct {
 	StrExceptional int
 	HPMax          int
 	XP             int
-	// SkillPoints and SkillArmor are a thief's or a bard's (steps 1, 17 and
-	// 18): the points by skill code (0 to MaxSkillPoints each, absent is 0)
-	// and one of ruletablesvc.SkillArmorsOf the class. Empty for the other
-	// classes.
+	// SkillPoints are a thief's or a bard's (steps 1, 17 and 18): the points
+	// by skill code (0 to MaxSkillPoints each, absent is 0). Empty for the
+	// other classes. The armour the skills read is the worn one (ADR 0033
+	// step 14): nothing is worn at creation.
 	SkillPoints map[string]int
-	SkillArmor  string
 	// Details are the details entered with the character, checked as the
 	// card's edit checks them (Details.Apply); the alignment and the sex are
 	// required, the other nil fields stay unset.
 	Details DetailsPatch
 }
 
-// Change is a rename (Name), a retirement (Retired true) or a new skill
-// armour (SkillArmor, a thief's or a bard's only) of a character; nil leaves a field as
-// it is, and Retired false retires nothing (a retired character is not found,
-// so none is brought back).
+// Change is a rename (Name) or a retirement (Retired true) of a character;
+// nil leaves a field as it is, and Retired false retires nothing (a retired
+// character is not found, so none is brought back). The skill armour is no
+// entry any more: it is the worn body armour (ADR 0033 step 14).
 type Change struct {
 	Name    *string
 	Retired *bool
-	// SkillArmor is ADR 0030 step 1's armour, changed after creation: one of
-	// ruletablesvc.SkillArmorsOf the class, and only a thief or a bard has
-	// one. The skills are derived on read, so they follow it.
-	SkillArmor *string
 }
 
 // cleanName is the trimmed name, or the field error naming what is wrong.
@@ -179,31 +173,21 @@ func (s *service) validate(n NewCharacter, draft bool) (Character, error) {
 		Name: name, Class: n.Class, Race: n.Race,
 		Str: n.Str, StrExceptional: n.StrExceptional, Dex: n.Dex, Con: n.Con, Int: n.Int, Wis: n.Wis, Cha: n.Cha,
 		HPMax: n.HPMax, XPTotal: n.XP, Details: details,
-		SkillPoints: points, SkillArmor: n.SkillArmor,
+		SkillPoints: points,
 	}, nil
 }
 
 // validSkills is ADR 0030 steps 1, 17 and 18: a thief or a bard enters its
-// armour (one of SkillArmorsOf its class) and its points, each a skill of
-// SkillsOf its class from 0 to MaxSkillPoints; any other class enters
-// neither. The points come back
-// without the zeros, nil for none. A refusal names the field (skillArmor,
-// or skillPoints.<skill>).
+// points, each a skill of SkillsOf its class from 0 to MaxSkillPoints; any
+// other class enters none. The points come back without the zeros, nil for
+// none. A refusal names the field (skillPoints or skillPoints.<skill>). The
+// armour is no entry (ADR 0033 step 14).
 func validSkills(n NewCharacter) (map[string]int, error) {
 	if !ruletablesvc.HasSkillPoints(n.Class) {
-		switch {
-		case n.SkillArmor != "":
-			return nil, &domain.FieldError{Field: "skillArmor", Message: CodeNotAllowed}
-		case len(n.SkillPoints) > 0:
+		if len(n.SkillPoints) > 0 {
 			return nil, &domain.FieldError{Field: "skillPoints", Message: CodeNotAllowed}
 		}
 		return nil, nil
-	}
-	switch {
-	case n.SkillArmor == "":
-		return nil, &domain.FieldError{Field: "skillArmor", Message: CodeEmpty}
-	case !slices.Contains(ruletablesvc.SkillArmorsOf(n.Class), n.SkillArmor):
-		return nil, &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
 	}
 	return ValidSkillPoints(n.Class, n.SkillPoints)
 }
@@ -289,7 +273,7 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 // stored with: its sheet states the rules' own figures and, step 7.5, the max HP entered is the max
 // HP at the target level, the level the character starts realized at.
 func started(c *Character, rules Rules) error {
-	d, err := Derive(c, 0, rules)
+	d, err := Derive(c, 0, "", rules)
 	if err != nil {
 		return fmt.Errorf("new character: %w", err)
 	}
@@ -312,20 +296,18 @@ func (s *service) Preview(_ context.Context, n NewCharacter) (*Character, error)
 	if err := started(&c, s.rules); err != nil {
 		return nil, err
 	}
-	if c.Derived, err = Derive(&c, 0, s.rules); err != nil {
+	// Nothing is worn before the character exists (ADR 0033 step 14).
+	if c.Derived, err = Derive(&c, 0, "", s.rules); err != nil {
 		return nil, fmt.Errorf("preview: %w", err)
 	}
 	s.readWarnings(&c)
 	return &c, nil
 }
 
-// Change renames, re-arms and retires in one transaction. A rename and a
-// retirement are outside the action log (managing one's characters is no move
-// of the game); a new skill armour is a move (it changes the thief's or
-// the bard's percentages, ADR 0030 step 1) and is one skill_armor entry with a snapshot,
-// so Undo gives the armour back; the same armour records nothing. Retiring
-// picks the owner's next current character in the same transaction (ADR 0029
-// step 7.2, item 6 of its 2026-10-18 amendment).
+// Change renames and retires in one transaction, outside the action log
+// (managing one's characters is no move of the game). Retiring picks the
+// owner's next current character in the same transaction (ADR 0029 step 7.2,
+// item 6 of its 2026-10-18 amendment).
 func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Change) (int64, error) {
 	var name string
 	if c.Name != nil {
@@ -334,49 +316,11 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 			return 0, err
 		}
 	}
-	if c.SkillArmor != nil {
-		switch armor := *c.SkillArmor; {
-		case armor == "":
-			return 0, &domain.FieldError{Field: "skillArmor", Message: CodeEmpty}
-		// The class's own armours are checked once the character is read.
-		case !ruletablesvc.IsSkillArmor(armor):
-			return 0, &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
-		}
-	}
 	retire := c.Retired != nil && *c.Retired
 	var current int64
 	if err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		var before string
-		if c.SkillArmor != nil {
-			// Read before the write; a refusal below tells nothing of it.
-			ch, err := s.reader.GetCharacter(ctx, id)
-			if err != nil {
-				return err
-			}
-			before = ch.SkillArmor
-		}
 		if c.Name != nil {
 			if err := s.owners.RenameCharacter(ctx, owner, id, name); err != nil {
-				return err
-			}
-		}
-		if c.SkillArmor != nil {
-			// The write checks the ownership first, so another user's
-			// character is not found rather than told its class.
-			if err := s.owners.SetSkillArmor(ctx, owner, id, *c.SkillArmor); err != nil {
-				return err
-			}
-			ch, err := s.reader.GetCharacter(ctx, id)
-			if err != nil {
-				return err
-			}
-			if !ruletablesvc.HasSkillPoints(ch.Class) {
-				return &domain.FieldError{Field: "skillArmor", Message: CodeNotAllowed}
-			}
-			if !slices.Contains(ruletablesvc.SkillArmorsOf(ch.Class), *c.SkillArmor) {
-				return &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
-			}
-			if err := s.recordArmor(ctx, id, before, *c.SkillArmor); err != nil {
 				return err
 			}
 		}
@@ -400,47 +344,20 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 	return current, nil
 }
 
-// recordArmor logs a change of skill armour from before to after with the
-// snapshot its restorer writes back; no change records nothing.
-func (s *service) recordArmor(ctx context.Context, id int64, before, after string) error {
-	if before == after {
-		return nil
-	}
-	payload, err := json.Marshal(armorRecord{Before: before, After: after})
-	if err != nil {
-		return fmt.Errorf("encode skill_armor payload: %w", err)
-	}
-	b, a := armorState{Armor: before}, armorState{Armor: after}
-	snap, err := armorSnaps.Snapshot("", &b, &a)
-	if err != nil {
-		return err
-	}
-	if _, err := s.log.Record(ctx, actionlog.NewEntry{
-		CharacterID: id, Kind: actionlog.KindSkillArmor, Payload: payload,
-		Snapshots: []actionlog.Snapshot{snap},
-	}); err != nil {
-		return fmt.Errorf("record skill_armor: %w", err)
-	}
-	return nil
-}
-
 // ArmorStateKey is the action-log state key of a thief's or a bard's skill
-// armour.
+// armour as it was entered before ADR 0033 step 14: no move records it any
+// more, but the entries already logged still pop and redo (they write the
+// stored column back, which nothing reads).
 const ArmorStateKey = "skill_armor"
 
 // armorSnaps is the snapshotter of the skill armour (ADR 0018 step 8).
 var armorSnaps = actionlog.NewSnapshotter[armorState](ArmorStateKey)
 
-// armorState is the JSON encoding of a "skill_armor" snapshot, armorRecord
-// the payload of a skill_armor entry (the UI words it). Entries already in
-// the log must stay decodable: add fields, never rename.
+// armorState is the JSON encoding of a "skill_armor" snapshot (the entries'
+// payload, {before, after}, is the web's to word). Entries already in the log
+// must stay decodable: add fields, never rename.
 type armorState struct {
 	Armor string `json:"armor"`
-}
-
-type armorRecord struct {
-	Before string `json:"before"`
-	After  string `json:"after"`
 }
 
 // Module declares the codec that writes a thief's or a bard's skill armour
@@ -466,10 +383,9 @@ type ClassOption struct {
 	// at Strength 18 with the class (ADR 0030 step 9), empty for none.
 	ExceptionalStrengthRaces []string
 	// Skills are the skills the class enters points in (steps 17 and 18, in
-	// ruletablesvc.SkillsOf order) and SkillArmors the armours it picks
-	// for them; both empty for a class without skill points.
-	Skills      []string
-	SkillArmors []string
+	// ruletablesvc.SkillsOf order); empty for a class without skill
+	// points.
+	Skills []string
 	// Alignments are the alignments the class admits (ADR 0032 step 2), in
 	// ruletablesvc.Alignments order.
 	Alignments []string
@@ -602,7 +518,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
 		opt := ClassOption{
-			Class: class, Alignments: ruletablesvc.AlignmentsOf(class), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{},
+			Class: class, Alignments: ruletablesvc.AlignmentsOf(class), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, ruletablesvc.MaxLevel),
 		}
 		for level := 1; level <= ruletablesvc.MaxLevel; level++ {
@@ -614,7 +530,6 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		}
 		if ruletablesvc.HasSkillPoints(class) {
 			opt.Skills = slices.Clone(ruletablesvc.SkillsOf(class))
-			opt.SkillArmors = slices.Clone(ruletablesvc.SkillArmorsOf(class))
 		}
 		for _, race := range Races {
 			ok, err := s.rules.RaceAllows(race, class)

@@ -241,7 +241,7 @@ func TestSeed_AnotherCharacterMayHoldTheSameIDs(t *testing.T) {
 	assert.Equal(t, before, f.t, "each character keeps its own rows")
 	n, err := f.CountItems(ctx, other)
 	require.NoError(t, err)
-	assert.Equal(t, int64(12), n)
+	assert.Equal(t, int64(13), n, "the twelve seeded pieces and the worn armour (ADR 0033 step 14)")
 }
 
 // The spellbook seed is applied once, while the seed character has no spellbook, as its weapons

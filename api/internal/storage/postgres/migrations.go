@@ -54,15 +54,16 @@ const ownerKeysMigration = "004_per_character_keys.sql"
 // Migrate applies every embedded migration the database does not record yet, in lexical order,
 // and records each one in schema_migrations (ADR 0025 step 3). seedsDir is the seeds' directory:
 // its character.json names the seed character, the owner of rows without one before
-// ownerKeysMigration. catalogue is the catalogue's weapons, which the equipment conversion
-// matches (ADR 0033 step 26.4; none before catalogue format 7).
-func (d *DB) Migrate(ctx context.Context, seedsDir string, catalogue []ruletablesvc.Weapon) error {
+// ownerKeysMigration. equipment is the catalogue's equipment: its weapons, which the equipment
+// conversion matches (ADR 0033 step 26.4), and its body armours, which the skill armour carry-over
+// gives (step 14); none before catalogue format 7.
+func (d *DB) Migrate(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment) error {
 	embedded, err := embeddedMigrations()
 	if err != nil {
 		return err
 	}
 	return d.migrations(ctx, func(tx migrationTx) error {
-		before, after := migrationDataSteps(seedsDir, catalogue)
+		before, after := migrationDataSteps(seedsDir, equipment)
 		return runMigrations(ctx, tx, embedded, before, after)
 	})
 }
@@ -94,7 +95,7 @@ const measuresMigration = "015_identity_numbers.sql"
 
 // migrationDataSteps are the data steps run just before the named migrations, then those run just
 // after the named migrations.
-func migrationDataSteps(seedsDir string, catalogue []ruletablesvc.Weapon) (before, after map[string]dataStep) {
+func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment) (before, after map[string]dataStep) {
 	characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
 	weaponsPath := seedfile.Path(seedsDir, seedfile.WeaponsFile)
 	before = map[string]dataStep{
@@ -112,8 +113,9 @@ func migrationDataSteps(seedsDir string, catalogue []ruletablesvc.Weapon) (befor
 		},
 		languagesMigration:         mapLanguages,
 		measuresMigration:          mapMeasures,
-		equipmentMigration:         func(ctx context.Context, q storeq.Querier) error { return convertEquipment(ctx, q, catalogue) },
+		equipmentMigration:         func(ctx context.Context, q storeq.Querier) error { return convertEquipment(ctx, q, equipment.Weapons) },
 		snapshotEnvelopesMigration: reencodeSnapshots,
+		skillArmourMigration:       func(ctx context.Context, q storeq.Querier) error { return carrySkillArmour(ctx, q, equipment.Armour) },
 	}
 	return before, after
 }

@@ -73,14 +73,6 @@ export function renameCharacter(
   return patch<CharacterList>(`/api/characters/${id}`, { name });
 }
 
-/** Changes the armour a thief wears for its skills (ADR 0030 step 1); the server derives the skills from it. */
-export function changeSkillArmor(
-  id: number,
-  skillArmor: string,
-): Promise<CharacterList> {
-  return patch<CharacterList>(`/api/characters/${id}`, { skillArmor });
-}
-
 /** Rolls the six scores by a method (ADR 0032 step 6); writes nothing. The race adds Table 8's adjustments. */
 export function rollScores(
   method: string,

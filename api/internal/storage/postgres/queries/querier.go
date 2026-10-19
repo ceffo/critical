@@ -16,7 +16,9 @@ type Querier interface {
 	AdoptProficiencies(ctx context.Context, characterID int64) error
 	AdoptWeapons(ctx context.Context, characterID int64) error
 	AllTexts(ctx context.Context) ([]LocalizedText, error)
+	CarryOverItems(ctx context.Context, characterID int64) ([]CarryOverItemsRow, error)
 	CatalogueVersion(ctx context.Context) (CatalogueVersionRow, error)
+	CharacterSkillArmour(ctx context.Context, id int64) (CharacterSkillArmourRow, error)
 	CountCharacters(ctx context.Context) (int64, error)
 	CountItems(ctx context.Context, characterID int64) (int64, error)
 	CountKeyedSpells(ctx context.Context) (int64, error)
@@ -95,6 +97,11 @@ type Querier interface {
 	SetSnapshotEnvelopes(ctx context.Context, arg SetSnapshotEnvelopesParams) error
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error
+	// The skill armour carry-over of migration 020 (ADR 0033 step 14, carrySkillArmour): each
+	// character's class and entered skill armour, all its items as the carry-over reads them (every
+	// item, armour or not: an added piece goes after the last position), and a carried piece put on. Delete them with their step once every environment is past 020 (ADR 0025
+	// step 2.1.1); the seed keeps CharacterSkillArmour, CarryOverItems and WearItem.
+	SkillArmourCharacters(ctx context.Context) ([]SkillArmourCharactersRow, error)
 	SnapshotsOf(ctx context.Context, stateKey string) ([]SnapshotsOfRow, error)
 	// The snapshots stored before the codec's envelopes (migration 019), with their character, for the
 	// re-encoding (reencodeSnapshots, ADR 0018 step 9).
@@ -116,6 +123,7 @@ type Querier interface {
 	UpsertProficiency(ctx context.Context, arg UpsertProficiencyParams) error
 	UpsertSpell(ctx context.Context, arg UpsertSpellParams) error
 	UpsertText(ctx context.Context, arg UpsertTextParams) error
+	WearItem(ctx context.Context, arg WearItemParams) error
 }
 
 var _ Querier = (*Queries)(nil)

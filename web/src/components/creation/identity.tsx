@@ -770,17 +770,6 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
                   : (body?.hpMax ?? dash),
                 "review-hp",
               ],
-              ...(body?.skillArmor
-                ? [
-                    [
-                      t("characters.skillArmor"),
-                      t(`characters.armors.${body.skillArmor}`, {
-                        defaultValue: body.skillArmor,
-                      }),
-                      "review-skill-armor",
-                    ] as [string, ReactNode, string],
-                  ]
-                : []),
               ...skills.map(
                 (s) =>
                   [

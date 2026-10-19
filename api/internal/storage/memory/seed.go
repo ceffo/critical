@@ -1,13 +1,16 @@
 package memory
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -24,7 +27,7 @@ import (
 // seed's catalogue keys in order, checked against the catalogue by the
 // caller). Without a character file nothing owns the starting set, so it is
 // not loaded.
-func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string, catalogue []ruletablesvc.Weapon) error {
+func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error {
 	return s.InTx(ctx, func(context.Context) error {
 		t := s.t
 		owner, ok, err := t.seedCharacter(seedfile.Path(seedsDir, seedfile.CharacterFile))
@@ -35,8 +38,11 @@ func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string, c
 			return nil
 		}
 		if err := t.seedEquipment(owner, seedfile.Path(seedsDir, seedfile.ItemsFile),
-			seedfile.Path(seedsDir, seedfile.WeaponsFile), catalogue); err != nil {
+			seedfile.Path(seedsDir, seedfile.WeaponsFile), equipment.Weapons); err != nil {
 			return fmt.Errorf("seed equipment: %w", err)
+		}
+		if err := t.carrySkillArmour(owner, equipment.Armour); err != nil {
+			return fmt.Errorf("seed skill armour: %w", err)
 		}
 		if err := t.seedSkills(owner, seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
 			return fmt.Errorf("seed skills: %w", err)
@@ -182,4 +188,41 @@ func (s *Store) ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, _ 
 		t.catalogue = &catalogueVersion{format: cat.Format, version: cat.Version}
 		return nil
 	})
+}
+
+// carrySkillArmour gives the seed character the armour it entered for its
+// skills (none: leather), worn, as the database's seed does (ADR 0033 step
+// 14, itemsvc.CarrySkillArmour). Without the catalogue's armours (before
+// format 7) it wears none.
+func (t *tables) carrySkillArmour(owner int64, armours []ruletablesvc.Armour) error {
+	if len(armours) == 0 {
+		return nil
+	}
+	var pieces []itemsvc.Item
+	for k, st := range t.items {
+		if k.characterID == owner {
+			pieces = append(pieces, st.Item)
+		}
+	}
+	slices.SortFunc(pieces, func(a, b itemsvc.Item) int { return cmp.Compare(a.Position, b.Position) })
+	co, err := itemsvc.CarrySkillArmour(t.characters[owner].Class, t.skillArmors[owner], pieces, armours)
+	if err != nil {
+		return err
+	}
+	switch {
+	case co.Wear != "":
+		st := t.items[owned{owner, co.Wear}]
+		st.State = itemsvc.StateWorn
+		t.items[owned{owner, co.Wear}] = st
+	case co.Add != nil:
+		st, err := toStored(*co.Add, nextID(&t.rowSeq))
+		if err != nil {
+			return err
+		}
+		t.items[owned{owner, co.Add.ID}] = st
+		if co.Review != nil {
+			t.reviews[review{owner, co.Review.ItemID, co.Review.Reason}] = true
+		}
+	}
+	return nil
 }

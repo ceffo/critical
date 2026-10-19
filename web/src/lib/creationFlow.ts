@@ -34,7 +34,6 @@ export function stepOfField(field: string): StepId {
   if (
     field === "hpMax" ||
     field === "strExceptional" ||
-    field === "skillArmor" ||
     field === "skillPoints" ||
     field.startsWith("skillPoints.")
   )

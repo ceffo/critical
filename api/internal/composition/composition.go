@@ -155,13 +155,14 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err != nil {
 		return nil, err
 	}
-	// The catalogue's weapons (format 7), none before.
-	var catalogueWeapons []ruletablesvc.Weapon
+	// The catalogue's equipment (format 7), none before; equipment is nil
+	// then (itemsvc picks from it).
+	var catalogueEquipment ruletablesvc.Equipment
 	equipment, hasEquipment := ruleTables.Equipment()
 	if hasEquipment {
-		catalogueWeapons = equipment.Weapons
+		catalogueEquipment = *equipment
 	}
-	if err := db.Migrate(ctx, cfg.SeedsDir, catalogueWeapons); err != nil {
+	if err := db.Migrate(ctx, cfg.SeedsDir, catalogueEquipment); err != nil {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 	characterDAL, hpDAL, logDAL, buffDAL, spellDAL := st.Character, st.HP, st.Log, st.Buff, st.Spell
@@ -188,7 +189,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err != nil {
 		return nil, err
 	}
-	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueWeapons); err != nil {
+	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueEquipment); err != nil {
 		return nil, fmt.Errorf("seed: %w", err)
 	}
 	if err := db.ImportCatalogue(ctx, cat, seedSpellRefs(spellbookSeed, effects)); err != nil {
@@ -241,7 +242,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	languages, _ := ruleTables.Languages()
 	bs.Character, err = charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
-		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Log: logSvc, Languages: languages, HP: logSvc,
+		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Armour: wornArmour{itemDAL}, Languages: languages, HP: logSvc,
 	})
 	if err := bs.add(bs.Character, err); err != nil {
 		return nil, err
@@ -445,6 +446,20 @@ type roundReader struct{ dal BuffStore }
 
 func (r roundReader) GetRound(ctx context.Context, characterID int64) (int, error) {
 	return r.dal.GetRoundNumber(ctx, characterID)
+}
+
+// wornArmour satisfies charactersvc.Armour from the equipment's store (the
+// item service reads the characters, so the character service reads the
+// pieces through their DAL): the worn body armour's Table 29 column (ADR 0033
+// step 14). It follows the ctx transaction.
+type wornArmour struct{ dal itemsvc.DAL }
+
+func (a wornArmour) WornSkillColumn(ctx context.Context, characterID int64) (string, error) {
+	pieces, err := a.dal.List(ctx, characterID)
+	if err != nil {
+		return "", err
+	}
+	return itemsvc.WornSkillColumn(pieces), nil
 }
 
 // loadRuleTables parses the PHB rule tables the artifact carries (ADR 0021

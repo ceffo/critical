@@ -2053,7 +2053,6 @@ test.describe("roster cards", () => {
       cha: 16,
       hpMax: 6,
       xp: 0,
-      skillArmor: "leather",
     });
     expect(created.ok).toBe(true);
     await reloadSettled(page);
@@ -2395,7 +2394,6 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
       cha: 16,
       hpMax: 6,
       xp: 0,
-      skillArmor: "leather",
     }),
   ).toBe(true);
   expect(await call("POST", "/api/xp", { base: 2500, bonus: false })).toBe(
@@ -2801,9 +2799,23 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
       cha: 10,
       hpMax: 5,
       xp: 0,
-      skillArmor: "padded_studded_leather",
       skillPoints: { find_remove_traps: 40, hide_in_shadows: 30 },
     }),
+  ).toBe(true);
+  // The skills read the armour worn (ADR 0033 step 14): a studded leather, the longest column name.
+  expect(
+    await call("POST", "/api/items", {
+      name: { en: "Studded leather", fr: "Cuir clouté" },
+      category: "armour",
+      behaviour: "stock",
+      count: 1,
+      baseAc: 7,
+      skillColumn: "padded_studded",
+      armorRow: "studded_leather",
+    }),
+  ).toBe(true);
+  expect(
+    await call("POST", "/api/items/studded_leather/state", { state: "worn" }),
   ).toBe(true);
   expect(
     await call("POST", "/api/items", {
@@ -2834,13 +2846,12 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(skills, `thieving skills, fr, ${where}`);
-    // The armour select (its longest choice) and its label sit uncut in the block.
-    const picker = page.getByTestId("thief-armor-picker");
-    await expectNoClippedText(picker, `thief armour picker, fr, ${where}`);
-    const select = page.getByTestId("thief-armor");
-    expect(
-      await select.evaluate((el) => el.scrollWidth <= el.clientWidth),
-    ).toBe(true);
+    // The skill armour line (its longest column name) sits uncut in the block.
+    const armour = page.getByTestId("skill-armor");
+    await expect(armour).toHaveText(
+      "Armure des talents : Matelassée ou cuir clouté",
+    );
+    await expectNoClippedText(armour, `thief skill armour, fr, ${where}`);
     await snap(page, `thief-skills-fr-${where}`);
   }
 

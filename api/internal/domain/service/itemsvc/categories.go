@@ -150,7 +150,7 @@ var Sizes = []string{"s", "m", "l"}
 var DamageTypes = []string{"b", "p", "s"}
 
 // SkillColumns are the PHB Table 29 columns an armour reads (step 5).
-var SkillColumns = []string{"none", "leather", "padded_studded", "elven_chain", "metal", "none_allowed"}
+var SkillColumns = ruletablesvc.SkillColumns
 
 // ArmorRows are the PHB Table 52 rows (step 5), the catalogue's list.
 var ArmorRows = ruletablesvc.ArmorRows

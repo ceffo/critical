@@ -39,10 +39,6 @@ type Character struct {
 	// steps 1, 17 and 18), by skill code (ruletablesvc.SkillsOf the class);
 	// nil or absent skills have 0.
 	SkillPoints map[string]int
-	// SkillArmor is the armour a thief or a bard wears for its skills (step
-	// 1, one of ruletablesvc.SkillArmorsOf the class), "" for a character
-	// without skill points or none entered (read as leather).
-	SkillArmor string
 
 	// Sheet is what the character sheet stated when the character was
 	// imported; never an input. Only its level is read: the realized level of
@@ -126,6 +122,10 @@ type Derived struct {
 	// BardSkills is step 18: each bard skill with its terms and
 	// percentage; nil for a class without them.
 	BardSkills []ruletablesvc.SkillPercent
+	// SkillArmor is the skill armour the thief's or the bard's skills read
+	// (ADR 0033 step 14: ruletablesvc.SkillArmorFor the worn body armour's
+	// Table 29 column; "none" when it wears none), "" for another class.
+	SkillArmor string
 	// SkillBudget is step 17's (a thief's) or step 18's (a bard's)
 	// warnings: the entered points against the class's budget at the
 	// realized level; empty when none.

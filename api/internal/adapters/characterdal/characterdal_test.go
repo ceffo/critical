@@ -242,11 +242,6 @@ func TestRenameRetire_NoRowIsNotFound(t *testing.T) {
 	q.EXPECT().RenameCharacter(ctx, queries.RenameCharacterParams{Name: "B", ID: 5, OwnerUserID: nullOwner}).Return(1, nil).Once()
 	require.NoError(t, dal.RenameCharacter(ctx, owner, 5, "B"))
 
-	q.EXPECT().SetSkillArmor(ctx, queries.SetSkillArmorParams{SkillArmor: "elven_chain", ID: 4, OwnerUserID: nullOwner}).Return(0, nil).Once()
-	require.ErrorIs(t, dal.SetSkillArmor(ctx, owner, 4, "elven_chain"), domain.ErrCharacterNotFound)
-	q.EXPECT().SetSkillArmor(ctx, queries.SetSkillArmorParams{SkillArmor: "elven_chain", ID: 5, OwnerUserID: nullOwner}).Return(1, nil).Once()
-	require.NoError(t, dal.SetSkillArmor(ctx, owner, 5, "elven_chain"))
-
 	q.EXPECT().LockUser(ctx, owner).Return(owner, nil).Twice()
 	q.EXPECT().RetireCharacter(ctx, queries.RetireCharacterParams{ID: 4, OwnerUserID: nullOwner}).Return(0, nil).Once()
 	require.ErrorIs(t, dal.RetireCharacter(ctx, owner, 4), domain.ErrCharacterNotFound)
@@ -283,7 +278,8 @@ func TestLockUser_UnknownUserIsNotAnError(t *testing.T) {
 }
 
 // A thief's skill points (ADR 0030 step 1) are stored as a JSON object by
-// skill code and read back as the same map; its armour as entered.
+// skill code and read back as the same map. No armour is entered or read: the
+// skills read the worn one (ADR 0033 step 14).
 func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
@@ -292,7 +288,7 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	q.EXPECT().CreateCharacter(ctx, queries.CreateCharacterParams{
 		Name: "Vex", Class: "thief", RaceCode: "halfling", OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
 		RealizedLevel: sql.NullInt64{Int64: 1, Valid: true},
-		SkillPoints:   `{"open_locks":20,"pick_pockets":15}`, SkillArmor: "none",
+		SkillPoints:   `{"open_locks":20,"pick_pockets":15}`,
 	}).Return(int64(8), nil).Once()
 	q.EXPECT().CreateSpellSlots(ctx, int64(8)).Return(nil).Once()
 	q.EXPECT().CreateActiveBuffs(ctx, int64(8)).Return(nil).Once()
@@ -300,17 +296,16 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{Languages: `[]`, ID: 8}).Return(1, nil).Once()
 	points := map[string]int{"pick_pockets": 15, "open_locks": 20}
 	_, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
-		Name: "Vex", Class: "thief", Race: "halfling", RealizedLevel: 1, SkillPoints: points, SkillArmor: "none",
+		Name: "Vex", Class: "thief", Race: "halfling", RealizedLevel: 1, SkillPoints: points,
 	})
 	require.NoError(t, err)
 
 	q.EXPECT().GetCharacter(ctx, int64(8)).Return(queries.GetCharacterRow{
-		ID: 8, Class: "thief", Languages: `[]`, SkillPoints: `{"open_locks":20,"pick_pockets":15}`, SkillArmor: "none",
+		ID: 8, Class: "thief", Languages: `[]`, SkillPoints: `{"open_locks":20,"pick_pockets":15}`,
 	}, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 8)
 	require.NoError(t, err)
 	assert.Equal(t, points, got.SkillPoints)
-	assert.Equal(t, "none", got.SkillArmor)
 }
 
 // ADR 0033 step 13: the AC override is read as nil when the column is NULL,

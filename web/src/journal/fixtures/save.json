@@ -1,7 +1,6 @@
 {
-  "failed": {
-    "roll": true,
-    "payload": {
+  "adjusted": {
+    "effectivePayload": {
       "category": "spell",
       "d20Roll": 12,
       "modifiers": [
@@ -13,17 +12,16 @@
       ],
       "target": 14,
       "rolledPassed": false,
-      "adjustment": 0,
+      "adjustment": 2,
+      "adjustmentReason": "Gaia",
       "rollTotal": 13,
-      "adjustedTarget": 14,
-      "total": 13,
-      "passed": false,
-      "margin": -1
-    }
-  },
-  "adjusted": {
-    "roll": true,
-    "status": "amended",
+      "adjustedTarget": 12,
+      "total": 15,
+      "passed": true,
+      "margin": 1,
+      "previousPassed": false,
+      "previousAdjustment": 0
+    },
     "payload": {
       "category": "spell",
       "d20Roll": 12,
@@ -43,7 +41,11 @@
       "passed": false,
       "margin": -1
     },
-    "effectivePayload": {
+    "roll": true,
+    "status": "amended"
+  },
+  "failed": {
+    "payload": {
       "category": "spell",
       "d20Roll": 12,
       "modifiers": [
@@ -55,15 +57,13 @@
       ],
       "target": 14,
       "rolledPassed": false,
-      "adjustment": 2,
+      "adjustment": 0,
       "rollTotal": 13,
-      "adjustedTarget": 12,
-      "total": 15,
-      "passed": true,
-      "margin": 1,
-      "adjustmentReason": "Gaia",
-      "previousPassed": false,
-      "previousAdjustment": 0
-    }
+      "adjustedTarget": 14,
+      "total": 13,
+      "passed": false,
+      "margin": -1
+    },
+    "roll": true
   }
 }

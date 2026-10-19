@@ -155,7 +155,12 @@ flowchart TD
   `LogKind` member. `parts.tsx` holds the card's shared pieces (hexagon die, tiles, verdict pill,
   correction fold, check layout). Each kind has `kinds/<kind>.test.ts` over
   `fixtures/<kind>.json` (entries as `GET /api/log` serves them), in English and French
-  (`kindCase.tsx`). The fast-refresh lint rule is off for `journal/kinds/*.tsx` only: a kind's file
+  (`kindCase.tsx`). The fixtures are checked against the server: each owning service's
+  `journalfixtures_test.go` fails when its fixtures differ from what it logs (`just journal-fixtures`
+  rewrites them from the records; review the diff), `actionlog` fails on a fixture whose `roll` flag
+  differs from `IsRoll`, or on a kind without a fixture (or the reverse), and `journal/fixtures.test.ts`
+  on a fixture without a view or kind test. A legacy kind no service writes any more (`weapon_*`) is
+  only checked for the roll flag and presence. The fast-refresh lint rule is off for `journal/kinds/*.tsx` only: a kind's file
   exports its record beside its card.
 - Admin section (`components/admin/AdminPage.tsx`, [ADR 0029](adr/0029-users-login-and-access.md) step
   1.3, amendment "the admin section as built"): `/admin`, a page of its own (`startFor` shows it to an

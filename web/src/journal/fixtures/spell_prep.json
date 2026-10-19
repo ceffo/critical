@@ -1,4 +1,9 @@
 {
+  "none": {
+    "payload": {
+      "spells": []
+    }
+  },
   "prepared": {
     "payload": {
       "spells": [
@@ -13,11 +18,6 @@
           "count": 1
         }
       ]
-    }
-  },
-  "none": {
-    "payload": {
-      "spells": []
     }
   }
 }

@@ -1,37 +1,27 @@
 {
-  "onMe": {
-    "roll": true,
-    "hpDelta": -7,
-    "effectiveHpDelta": -7,
+  "floored": {
+    "effectiveHpDelta": -2,
+    "hpDelta": -2,
     "payload": {
       "spellId": "cloudkill",
       "spell": "Cloudkill",
       "casterLevel": 15,
-      "round": 2,
+      "round": 3,
       "onSelf": true,
       "damage": {
-        "dice": "1d10",
+        "total": 10,
         "type": "poison",
+        "dice": "1d10",
         "instances": 1,
         "rounds": 1,
-        "total": 7,
-        "rolls": [
-          {
-            "formula": "1d10",
-            "dice": [
-              {
-                "sides": 10,
-                "value": 7
-              }
-            ],
-            "total": 7
-          }
-        ]
-      }
-    }
+        "rolls": []
+      },
+      "hpRequested": -10,
+      "hpApplied": -2
+    },
+    "roll": true
   },
   "forDm": {
-    "roll": true,
     "payload": {
       "spellId": "wall_of_fire",
       "spell": "Wall of Fire",
@@ -40,11 +30,11 @@
       "round": 1,
       "onSelf": false,
       "damage": {
-        "dice": "2d6+level",
+        "total": 19,
         "type": "fire",
+        "dice": "2d6+level",
         "instances": 1,
         "rounds": 1,
-        "total": 19,
         "rolls": [
           {
             "formula": "2d6+level",
@@ -62,28 +52,38 @@
           }
         ]
       }
-    }
+    },
+    "roll": true
   },
-  "floored": {
-    "roll": true,
-    "hpDelta": -2,
-    "effectiveHpDelta": -2,
+  "onMe": {
+    "effectiveHpDelta": -7,
+    "hpDelta": -7,
     "payload": {
       "spellId": "cloudkill",
       "spell": "Cloudkill",
       "casterLevel": 15,
-      "round": 3,
+      "round": 2,
       "onSelf": true,
       "damage": {
-        "dice": "1d10",
+        "total": 7,
         "type": "poison",
+        "dice": "1d10",
         "instances": 1,
         "rounds": 1,
-        "total": 10,
-        "rolls": []
-      },
-      "hpRequested": -10,
-      "hpApplied": -2
-    }
+        "rolls": [
+          {
+            "formula": "1d10",
+            "dice": [
+              {
+                "sides": 10,
+                "value": 7
+              }
+            ],
+            "total": 7
+          }
+        ]
+      }
+    },
+    "roll": true
   }
 }

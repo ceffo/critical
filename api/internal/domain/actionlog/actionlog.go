@@ -233,6 +233,12 @@ const KindSkillPoints Kind = "skill_points"
 // the skills with it. Not one of RollKinds: nothing is rolled.
 const KindSkillArmor Kind = "skill_armor"
 
+// KindACOverride is the player setting or clearing the character's AC
+// override (acsvc, ADR 0033 step 13): the override before and after (null:
+// none). Its "ac_override" snapshot carries the override, so popping it
+// gives the previous one back. Not one of RollKinds: nothing is rolled.
+const KindACOverride Kind = "ac_override"
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.

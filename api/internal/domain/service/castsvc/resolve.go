@@ -255,6 +255,10 @@ func applyModifier(fx *buffsvc.BuffEffects, key string, v int) bool {
 		fx.Damage = ptr(v)
 	case "ac":
 		fx.AC = ptr(v)
+	case "ac_set":
+		// "AC becomes N as if armoured" (the Armor spell, Spirit Armor): the
+		// base_ac effect of ADR 0033 step 11.
+		fx.BaseAC = ptr(v)
 	case "save":
 		fx.SaveBonus = ptr(v)
 	case "weapon_buff":

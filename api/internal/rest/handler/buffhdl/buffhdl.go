@@ -362,9 +362,12 @@ type BuffEffectsDTO struct {
 	AC         *int     `json:"ac,omitempty"`
 	ToHit      *int     `json:"to_hit,omitempty"`
 	Damage     *int     `json:"damage,omitempty"`
+	BaseAC     *int     `json:"base_ac,omitempty"`
 	// WeaponKind is the weapon-kind condition of the other effects, melee or
 	// missile (ADR 0004 step 18); omitted: every roll.
 	WeaponKind buffsvc.WeaponKind `json:"weapon_kind,omitempty"`
+	// WithoutMagicArmour is the AC effects' condition (ADR 0033 step 12).
+	WithoutMagicArmour bool `json:"without_magic_armour,omitempty"`
 }
 
 // BuffListDTO is the effects list of GET /api/buffs, also answered by every

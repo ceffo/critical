@@ -9,6 +9,13 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
+// MinAC and MaxAC bound an armour class number (DMG p.181: never better
+// than -10; 10 is the unarmoured base).
+const (
+	MinAC = -10
+	MaxAC = 10
+)
+
 // maxAbility is the highest ability score a buff may name (AD&D 2.5 tops
 // out at 25).
 const maxAbility = 25
@@ -244,8 +251,8 @@ func validateBuff(b BuffEffect) error {
 
 // ValidateEffects checks an effect set, a buff's or an item power's (ADR
 // 0016 step 9): STR effects name a score in 1..25 and a bonus is positive, a
-// weapon +N is positive, a weapon-kind condition is melee or missile (ADR
-// 0004 step 18). ErrInvalidInput names the bad key.
+// weapon +N is positive, a base AC is -10 to 10 (ADR 0033 step 11), a
+// weapon-kind condition is melee or missile (ADR 0004 step 18). ErrInvalidInput names the bad key.
 func ValidateEffects(e BuffEffects) error {
 	for _, s := range []struct {
 		name string
@@ -260,6 +267,9 @@ func ValidateEffects(e BuffEffects) error {
 	}
 	if e.WeaponBuff != nil && *e.WeaponBuff < 1 {
 		return fmt.Errorf("%w: weapon_buff must be positive (the weapon becomes +N)", domain.ErrInvalidInput)
+	}
+	if e.BaseAC != nil && (*e.BaseAC < MinAC || *e.BaseAC > MaxAC) {
+		return fmt.Errorf("%w: base_ac must be between %d and %d", domain.ErrInvalidInput, MinAC, MaxAC)
 	}
 	if !e.WeaponKind.Valid() {
 		return fmt.Errorf("%w: weapon_kind must be %q or %q", domain.ErrInvalidInput, WeaponMelee, WeaponMissile)

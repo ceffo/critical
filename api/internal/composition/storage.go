@@ -34,6 +34,7 @@ import (
 	xpq "github.com/ceffo/critical/api/internal/adapters/xpdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -81,6 +82,7 @@ type CharacterStore interface {
 	detailssvc.DAL
 	levelupsvc.DAL
 	skillsvc.Points
+	acsvc.Overrides
 }
 
 // BuffStore is the buff adapter plus the round read the action log stamps

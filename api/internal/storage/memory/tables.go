@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -72,6 +73,10 @@ type tables struct {
 	// catalogue key, at the realized level of the failure (ADR 0030 step 20.2).
 	learnFailures map[int64]map[string]int
 
+	// acOverrides are the characters' AC overrides (ADR 0033 step 13); no
+	// entry: none.
+	acOverrides map[int64]acsvc.Override
+
 	dice    map[int64]diceFavourite
 	diceSeq int64
 
@@ -100,6 +105,7 @@ func newTables() *tables {
 		learnFailures: map[int64]map[string]int{},
 		forms:         map[int64]combatsvc.AttackForm{},
 		xp:            map[int64]xpEntry{},
+		acOverrides:   map[int64]acsvc.Override{},
 		dice:          map[int64]diceFavourite{},
 		users:         map[uuid.UUID]authsvc.User{},
 		invites:       map[uuid.UUID]storedInvite{},

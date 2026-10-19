@@ -75,6 +75,13 @@ type Buffs interface {
 	Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
 }
 
+// Initiative corrects the round's initiative by the spell cast (ADR 0035
+// item 6.2), inside the cast's transaction, as its last entry (buffsvc). It
+// does nothing out of combat.
+type Initiative interface {
+	CorrectInitiative(ctx context.Context, characterID int64, cause buffsvc.InitiativeModifier) (*buffsvc.Initiative, error)
+}
+
 // Items is the inventory (itemsvc): a spell that consumes an item lists the
 // items and spends one. Use joins the caller's transaction.
 type Items interface {
@@ -111,6 +118,7 @@ type Deps struct {
 	Effects    spelleffectsvc.Catalog
 	Texts      Texts
 	Buffs      Buffs
+	Initiative Initiative
 	Items      Items
 	Attacks    Attacks
 	Characters Characters
@@ -123,7 +131,7 @@ type service struct{ Deps }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Slots == nil || d.Effects == nil || d.Texts == nil || d.Buffs == nil || d.Items == nil || d.Attacks == nil ||
+	if d.Slots == nil || d.Effects == nil || d.Texts == nil || d.Buffs == nil || d.Initiative == nil || d.Items == nil || d.Attacks == nil ||
 		d.Characters == nil || d.Dice == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("castsvc: nil dependency")
 	}

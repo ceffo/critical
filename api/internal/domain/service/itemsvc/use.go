@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
 // UseResult is what one use of an item produced: the dice rolled (none for an
@@ -107,12 +108,32 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 		}
 		r.LogEntryID = id
 		res = r
-		return nil
+		return s.correctInitiative(ctx, characterID, item)
 	})
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
+}
+
+// correctInitiative is ADR 0035 item 6.2 for an item used: a magic piece
+// makes the round's initiative the same d10 plus its magic kind's PHB Table
+// 56 modifier (a scroll's row has none: 0). It is the use transaction's last
+// entry. Any other piece (ammunition, gear) corrects nothing, nor does a use
+// before catalogue format 7 (no Table 56).
+func (s *service) correctInitiative(ctx context.Context, characterID int64, item Item) error {
+	if item.Category != CategoryMagic || s.initiativeItems == nil {
+		return nil
+	}
+	row, ok := s.initiativeItems.Row(item.MagicKind)
+	if !ok {
+		return nil
+	}
+	cause := buffsvc.ItemInitiative(item.ID, item.Name.Any(), item.MagicKind, row.Modifier)
+	if _, err := s.initiative.CorrectInitiative(ctx, characterID, cause); err != nil {
+		return fmt.Errorf("correct initiative: %w", err)
+	}
+	return nil
 }
 
 // rollDice rolls "NdM" or "NdM+K" through the dice port: the dice in order

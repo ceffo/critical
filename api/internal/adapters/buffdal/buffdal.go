@@ -62,6 +62,8 @@ type jsonEffects struct {
 	ToHit      *int     `json:"to_hit,omitempty"`
 	Damage     *int     `json:"damage,omitempty"`
 	BaseAC     *int     `json:"base_ac,omitempty"`
+	// Initiative is the initiative effect (ADR 0033 step 11).
+	Initiative *int `json:"initiative,omitempty"`
 	// WeaponKind is the weapon-kind condition (ADR 0004 step 18), absent
 	// from buffs stored before it existed and from buffs without one.
 	WeaponKind buffsvc.WeaponKind `json:"weapon_kind,omitempty"`
@@ -157,7 +159,30 @@ func (d *DAL) GetInitiative(ctx context.Context, characterID int64) (*buffsvc.In
 	if !row.InitiativeD10.Valid {
 		return nil, nil
 	}
-	return &buffsvc.Initiative{D10: int(row.InitiativeD10.Int64), LogEntryID: row.InitiativeEntryID.Int64}, nil
+	out := &buffsvc.Initiative{D10: int(row.InitiativeD10.Int64), LogEntryID: row.InitiativeEntryID.Int64}
+	// NULL: a plain d10 (every initiative stored before the modifiers).
+	if row.InitiativeModifiers.Valid && row.InitiativeModifiers.String != "" {
+		var terms []jsonInitiativeTerm
+		if err := json.Unmarshal([]byte(row.InitiativeModifiers.String), &terms); err != nil {
+			return nil, fmt.Errorf("decode initiative modifiers: %w", err)
+		}
+		for _, t := range terms {
+			out.Modifiers = append(out.Modifiers, buffsvc.InitiativeModifier(t))
+		}
+	}
+	return out, nil
+}
+
+// jsonInitiativeTerm is the stored form of one initiative modifier
+// (round_state.initiative_modifiers, a JSON list).
+type jsonInitiativeTerm struct {
+	Source    buffsvc.InitiativeSource `json:"source"`
+	Value     int                      `json:"value"`
+	ItemID    string                   `json:"itemId,omitempty"`
+	Name      string                   `json:"name,omitempty"`
+	SpellID   string                   `json:"spellId,omitempty"`
+	MagicKind string                   `json:"magicKind,omitempty"`
+	Timing    buffsvc.CastTiming       `json:"timing,omitempty"`
 }
 
 // SaveInitiative upserts the initiative; nil writes NULL (none).
@@ -166,6 +191,17 @@ func (d *DAL) SaveInitiative(ctx context.Context, characterID int64, initiative 
 	if initiative != nil {
 		row.InitiativeD10 = sql.NullInt64{Int64: int64(initiative.D10), Valid: true}
 		row.InitiativeEntryID = sql.NullInt64{Int64: initiative.LogEntryID, Valid: true}
+		if len(initiative.Modifiers) > 0 {
+			terms := make([]jsonInitiativeTerm, len(initiative.Modifiers))
+			for i, m := range initiative.Modifiers {
+				terms[i] = jsonInitiativeTerm(m)
+			}
+			raw, err := json.Marshal(terms)
+			if err != nil {
+				return fmt.Errorf("encode initiative modifiers: %w", err)
+			}
+			row.InitiativeModifiers = sql.NullString{String: string(raw), Valid: true}
+		}
 	}
 	if err := d.q.UpsertInitiative(ctx, row); err != nil {
 		return fmt.Errorf("upsert initiative: %w", err)

@@ -23,6 +23,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/pkg/formula"
 )
 
@@ -78,6 +79,16 @@ type fixture struct {
 	buffs   *mocks.MockBuffs
 	items   *mocks.MockItems
 	attacks *mocks.MockAttacks
+	// initiative records the causes the casts corrected the initiative by
+	// (ADR 0035 item 6.2).
+	initiative  *mocks.MockInitiative
+	corrections []buffsvc.InitiativeModifier
+	// correctedAfter is how many entries were recorded when each correction
+	// came (it must be the transaction's last entry).
+	correctedAfter []int
+	// stats are the parsed stat blocks Describe serves, by spell id (none:
+	// a spell without, its casting time special).
+	stats   map[string]spellstats.Stats
 	dice    *seqDice
 	tx      *fakeTx
 	entries []actionlog.NewEntry
@@ -100,13 +111,14 @@ func newFixtureWith(t *testing.T, effects spelleffectsvc.Catalog, dice ...int) *
 func newFixtureOf(t *testing.T, effects spelleffectsvc.Catalog, caster *charactersvc.Character, dice ...int) *fixture {
 	t.Helper()
 	f := &fixture{
-		slots:   mocks.NewMockSlots(t),
-		texts:   mocks.NewMockTexts(t),
-		buffs:   mocks.NewMockBuffs(t),
-		items:   mocks.NewMockItems(t),
-		attacks: mocks.NewMockAttacks(t),
-		dice:    &seqDice{t: t, vals: dice},
-		tx:      &fakeTx{},
+		slots:      mocks.NewMockSlots(t),
+		texts:      mocks.NewMockTexts(t),
+		buffs:      mocks.NewMockBuffs(t),
+		items:      mocks.NewMockItems(t),
+		attacks:    mocks.NewMockAttacks(t),
+		initiative: mocks.NewMockInitiative(t),
+		dice:       &seqDice{t: t, vals: dice},
+		tx:         &fakeTx{},
 	}
 	chars := mocks.NewMockCharacters(t)
 	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(caster, nil).Maybe()
@@ -131,7 +143,7 @@ func newFixtureOf(t *testing.T, effects spelleffectsvc.Catalog, caster *characte
 			if id == "no_such_spell" {
 				return spellsvc.Spell{}, false, nil
 			}
-			return spellsvc.Spell{Name: localized.Of("Text of " + id), Description: localized.Of("desc " + id)}, true, nil
+			return spellsvc.Spell{Name: localized.Of("Text of " + id), Description: localized.Of("desc " + id), Stats: f.stats[id]}, true, nil
 		}).Maybe()
 	f.buffs.EXPECT().Add(mock.Anything, charID, mock.Anything).RunAndReturn(
 		func(_ context.Context, _ int64, b buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error) {
@@ -139,13 +151,19 @@ func newFixtureOf(t *testing.T, effects spelleffectsvc.Catalog, caster *characte
 			f.added = append(f.added, b)
 			return b, actionlog.Snapshot{Key: buffsvc.StateKeyBuffs, Before: json.RawMessage(`[]`), After: json.RawMessage(`[1]`)}, nil
 		}).Maybe()
+	f.initiative.EXPECT().CorrectInitiative(mock.Anything, charID, mock.Anything).RunAndReturn(
+		func(_ context.Context, _ int64, cause buffsvc.InitiativeModifier) (*buffsvc.Initiative, error) {
+			f.corrections = append(f.corrections, cause)
+			f.correctedAfter = append(f.correctedAfter, len(f.entries))
+			return nil, nil
+		}).Maybe()
 	f.slots.EXPECT().SaveSlots(mock.Anything, charID, mock.Anything).RunAndReturn(
 		func(_ context.Context, _ int64, s []spellsvc.SpellSlot) error {
 			f.saved = append(f.saved, s)
 			return nil
 		}).Maybe()
 	svc, err := castsvc.New(castsvc.Deps{
-		Slots: f.slots, Effects: effects, Texts: f.texts, Buffs: f.buffs,
+		Slots: f.slots, Effects: effects, Texts: f.texts, Buffs: f.buffs, Initiative: f.initiative,
 		Items: f.items, Attacks: f.attacks,
 		Characters: chars, Dice: f.dice, Log: log, Tx: f.tx,
 	})
@@ -203,12 +221,13 @@ func TestCast_PerSeedEntry(t *testing.T) {
 			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Mirror Image", SpellID: "mirror_image", Duration: 45, Charges: 8},
 		},
 		{
-			name:     "haste: 3 + level rounds; extra attacks, movement and initiative are shown, not tracked",
+			// ADR 0033 step 11: haste's -2 is the buff's initiative effect.
+			name:     "haste: 3 + level rounds, initiative -2; extra attacks and movement are shown, not tracked",
 			slot:     slot("haste", "Haste", 3),
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", SpellID: "haste", Duration: 18},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", SpellID: "haste", Duration: 18, Effects: buffsvc.BuffEffects{Initiative: intPtr(-2)}},
 			check: func(t *testing.T, r castsvc.CastResult) {
 				assert.Equal(t, []castsvc.Untracked{
-					{Key: "attacks_pct", Value: 200}, {Key: "initiative", Value: -2}, {Key: "move_pct", Value: 200},
+					{Key: "attacks_pct", Value: 200}, {Key: "move_pct", Value: 200},
 				}, r.Untracked)
 			},
 		},
@@ -434,7 +453,7 @@ func TestReceive(t *testing.T) {
 		{
 			name:     "haste received (area) lands on the Bard",
 			req:      castsvc.ReceiveRequest{SpellID: "haste", CasterLevel: 7},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", SpellID: "haste", Duration: 10},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", SpellID: "haste", Duration: 10, Effects: buffsvc.BuffEffects{Initiative: intPtr(-2)}},
 		},
 		{
 			name: "stoneskin received at the caster's level",
@@ -563,7 +582,7 @@ func TestCast_BuffErrorAborts(t *testing.T) {
 	chars := mocks.NewMockCharacters(t)
 	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{Derived: charactersvc.Derived{RealizedLevel: bardLevel}}, nil)
 	svc, err := castsvc.New(castsvc.Deps{
-		Slots: f.slots, Effects: catalog(t), Texts: f.texts, Buffs: buffs, Items: f.items, Attacks: f.attacks,
+		Slots: f.slots, Effects: catalog(t), Texts: f.texts, Buffs: buffs, Initiative: f.initiative, Items: f.items, Attacks: f.attacks,
 		Characters: chars, Dice: f.dice, Log: mocks.NewMockLog(t), Tx: f.tx,
 	})
 	require.NoError(t, err)

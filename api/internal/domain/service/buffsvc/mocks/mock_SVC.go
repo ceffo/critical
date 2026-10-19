@@ -340,6 +340,66 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
+// CorrectInitiative provides a mock function with given fields: ctx, characterID, cause
+func (_m *MockSVC) CorrectInitiative(ctx context.Context, characterID int64, cause buffsvc.InitiativeModifier) (*buffsvc.Initiative, error) {
+	ret := _m.Called(ctx, characterID, cause)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CorrectInitiative")
+	}
+
+	var r0 *buffsvc.Initiative
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, buffsvc.InitiativeModifier) (*buffsvc.Initiative, error)); ok {
+		return rf(ctx, characterID, cause)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, buffsvc.InitiativeModifier) *buffsvc.Initiative); ok {
+		r0 = rf(ctx, characterID, cause)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*buffsvc.Initiative)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, buffsvc.InitiativeModifier) error); ok {
+		r1 = rf(ctx, characterID, cause)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_CorrectInitiative_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CorrectInitiative'
+type MockSVC_CorrectInitiative_Call struct {
+	*mock.Call
+}
+
+// CorrectInitiative is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - cause buffsvc.InitiativeModifier
+func (_e *MockSVC_Expecter) CorrectInitiative(ctx interface{}, characterID interface{}, cause interface{}) *MockSVC_CorrectInitiative_Call {
+	return &MockSVC_CorrectInitiative_Call{Call: _e.mock.On("CorrectInitiative", ctx, characterID, cause)}
+}
+
+func (_c *MockSVC_CorrectInitiative_Call) Run(run func(ctx context.Context, characterID int64, cause buffsvc.InitiativeModifier)) *MockSVC_CorrectInitiative_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(buffsvc.InitiativeModifier))
+	})
+	return _c
+}
+
+func (_c *MockSVC_CorrectInitiative_Call) Return(_a0 *buffsvc.Initiative, _a1 error) *MockSVC_CorrectInitiative_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_CorrectInitiative_Call) RunAndReturn(run func(context.Context, int64, buffsvc.InitiativeModifier) (*buffsvc.Initiative, error)) *MockSVC_CorrectInitiative_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteSaved provides a mock function with given fields: ctx, characterID, id
 func (_m *MockSVC) DeleteSaved(ctx context.Context, characterID int64, id int64) ([]buffsvc.SavedBuff, error) {
 	ret := _m.Called(ctx, characterID, id)

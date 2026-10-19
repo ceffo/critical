@@ -46,7 +46,7 @@ func TestInitiative_Step1_NextRoundRollsOneD10(t *testing.T) {
 	assert.Equal(t, buffsvc.Initiative{D10: 7, LogEntryID: 2}, initiative, "Next Round returns the roll it made")
 	f.dice.AssertNumberOfCalls(t, "RollDie", 1)
 	require.Len(t, f.entries, 2)
-	assert.Equal(t, map[string]any{"round": 6.0, "d10": 7.0}, initiativePayload(t, f.entries[1]))
+	assert.Equal(t, map[string]any{"round": 6.0, "d10": 7.0, "total": 7.0}, initiativePayload(t, f.entries[1]))
 	require.Len(t, f.initiatives, 1)
 	assert.Equal(t, &buffsvc.Initiative{D10: 7, LogEntryID: 2}, f.initiatives[0],
 		"the stored initiative is the die and the id of the entry that rolled it")
@@ -83,8 +83,10 @@ func TestInitiative_Step2_OwnEntryAfterTheAdvance(t *testing.T) {
 	assert.Equal(t, 1, f.tx.calls, "the advance and the initiative commit together")
 }
 
-// ADR 0013 step 3: the initiative is the plain d10, no modifier from buffs or
-// anything else, for every face (lowest acts first is the display's).
+// ADR 0013 step 3 (amended by ADR 0035 item 6): with no weapon in hand and
+// no initiative effect, the initiative is the plain d10: a to-hit or AC buff
+// adds nothing, for every face (lowest acts first is the display's). The
+// modifiers are TestInitiative_ADR0035Item6_NextRoundAddsTheWeaponSpeedAndEffects.
 func TestInitiative_Step3_PlainD10NoModifier(t *testing.T) {
 	bless := buffsvc.BuffEffect{ID: "b", Name: "Bless", Duration: 9, Effects: buffsvc.BuffEffects{ToHit: intPtr(1), AC: intPtr(-2)}}
 	for _, d10 := range []int{1, 6, 10} {
@@ -129,7 +131,7 @@ func TestInitiative_Step4_RerollReplacesTheNewestInitiative(t *testing.T) {
 		require.Len(t, f.entries, 1)
 		assert.Equal(t, actionlog.KindInitiative, f.entries[0].Kind)
 		assert.Equal(t, 3, f.entries[0].Round)
-		assert.Equal(t, map[string]any{"round": 3.0, "d10": 9.0}, initiativePayload(t, f.entries[0]))
+		assert.Equal(t, map[string]any{"round": 3.0, "d10": 9.0, "total": 9.0}, initiativePayload(t, f.entries[0]))
 		require.Len(t, f.entries[0].Snapshots, 1)
 		snap := f.entries[0].Snapshots[0]
 		assert.Equal(t, buffsvc.StateKeyInitiative, snap.Key)

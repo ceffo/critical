@@ -197,9 +197,10 @@ func TestRestorers_RejectBadSnapshots(t *testing.T) {
 // fixture holds the collaborators UseItem needs besides the DAL.
 type fixture struct {
 	itemsvc.Deps
-	dice  *mocks.MockDice
-	log   *mocks.MockLog
-	chars *mocks.MockCharacters
+	dice       *mocks.MockDice
+	log        *mocks.MockLog
+	chars      *mocks.MockCharacters
+	initiative *mocks.MockInitiative
 }
 
 // noTx runs the unit of work directly.
@@ -208,8 +209,11 @@ type noTx struct{}
 func (noTx) InTx(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
 
 func deps(t *testing.T) fixture {
-	dice, log, chars := mocks.NewMockDice(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t)
-	return fixture{Deps: itemsvc.Deps{Dice: dice, Log: log, Tx: noTx{}, Chars: chars}, dice: dice, log: log, chars: chars}
+	dice, log, chars, initiative := mocks.NewMockDice(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t), mocks.NewMockInitiative(t)
+	return fixture{
+		Deps: itemsvc.Deps{Dice: dice, Log: log, Tx: noTx{}, Chars: chars, Initiative: initiative},
+		dice: dice, log: log, chars: chars, initiative: initiative,
+	}
 }
 
 func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {

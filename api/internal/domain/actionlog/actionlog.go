@@ -136,9 +136,17 @@ const KindTimePassed Kind = "time_passed"
 
 // KindInitiative is the round's initiative roll (buffsvc, ADR 0013), recorded
 // right after the round_advance entry of Next Round and on a reroll. Its
-// payload is {round, d10}. Not one of RollKinds: it leaves the result card and
+// payload is {round, d10, modifiers, total} ({round, d10} before the
+// modifiers, ADR 0035 item 6). Not one of RollKinds: it leaves the result card and
 // the adjustment of the latest roll alone.
 const KindInitiative Kind = "initiative"
+
+// KindInitiativeCorrect is the correction of the round's initiative by a
+// spell cast or a magic item used in it (buffsvc, ADR 0035 item 6.2), the
+// last entry of the cast's or the use's transaction. Its payload is {round,
+// d10, before, after, modifiers, cause}; no die is rolled. Not one of
+// RollKinds.
+const KindInitiativeCorrect Kind = "initiative_correct"
 
 // KindDice is a free roll of the dice composer (dicesvc). Its payload is
 // {formula, groups, modifier, total}. Not one of RollKinds: a stray composer

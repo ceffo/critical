@@ -259,18 +259,27 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err != nil {
 		return nil, err
 	}
+	// A magic item used corrects the round's initiative (ADR 0035 item 6.2)
+	// through buffsvc, built after the items: bound below.
+	initiativeItems, _ := ruleTables.InitiativeItems()
+	itemInitiative := &lateInitiative{}
 	bs.Items, err = itemsvc.New(itemDAL, itemsvc.Deps{
 		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Equipment: equipment,
+		Initiative: itemInitiative, InitiativeItems: initiativeItems,
 	})
 	if err := bs.add(bs.Items, err); err != nil {
 		return nil, err
 	}
 	// The worn and wielded pieces' powers join the buffs' aggregate (ADR 0016
-	// step 11, ADR 0033 step 9).
-	bs.Buffs, err = buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, bs.Items)
+	// step 11, ADR 0033 step 9). Next Round adds the weapon in hand's speed
+	// to the initiative (ADR 0035 item 6): the attack form's weapon, read
+	// from its store and the weapon pieces.
+	weapons := combatsvc.ItemWeapons(bs.Items)
+	bs.Buffs, err = buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, bs.Items, weaponInHand{forms: st.Forms, weapons: weapons})
 	if err := bs.add(bs.Buffs, err); err != nil {
 		return nil, err
 	}
+	itemInitiative.buffs = bs.Buffs
 	bs.Spells, err = spellsvc.New(spellDAL, catalogue, prepSource)
 	if err := bs.add(bs.Spells, err); err != nil {
 		return nil, err
@@ -283,14 +292,14 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		return nil, err
 	}
 	bs.Combat, err = combatsvc.New(combatsvc.Deps{
-		Chars: charSvc, Buffs: bs.Buffs, Dice: dice, Weapons: combatsvc.ItemWeapons(bs.Items), Crit: critDAL,
+		Chars: charSvc, Buffs: bs.Buffs, Dice: dice, Weapons: weapons, Crit: critDAL,
 		Items: bs.Items, Forms: st.Forms, Rules: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err := bs.add(bs.Combat, err); err != nil {
 		return nil, err
 	}
 	bs.Cast, err = castsvc.New(castsvc.Deps{
-		Slots: spellDAL, Effects: effects, Texts: catalogue, Buffs: bs.Buffs, Items: bs.Items, Attacks: bs.Combat,
+		Slots: spellDAL, Effects: effects, Texts: catalogue, Buffs: bs.Buffs, Initiative: bs.Buffs, Items: bs.Items, Attacks: bs.Combat,
 		Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
 	})
 	if err := bs.add(bs.Cast, err); err != nil {
@@ -453,6 +462,35 @@ func (r roundReader) GetRound(ctx context.Context, characterID int64) (int, erro
 // pieces through their DAL): the worn body armour's Table 29 column (ADR 0033
 // step 14). It follows the ctx transaction.
 type wornArmour struct{ dal itemsvc.DAL }
+
+// lateInitiative is itemsvc's Initiative port, bound to buffsvc once it is
+// built (buffsvc reads the items' powers, so the items come first).
+type lateInitiative struct{ buffs buffsvc.SVC }
+
+func (l *lateInitiative) CorrectInitiative(ctx context.Context, characterID int64, cause buffsvc.InitiativeModifier) (*buffsvc.Initiative, error) {
+	if l.buffs == nil {
+		return nil, errors.New("initiative: buffsvc not bound")
+	}
+	return l.buffs.CorrectInitiative(ctx, characterID, cause)
+}
+
+// weaponInHand is buffsvc's Weapons port: the attack form's weapon in hand
+// (combatsvc.InHand), as the initiative reads it (ADR 0035 item 6).
+type weaponInHand struct {
+	forms   combatsvc.FormStore
+	weapons combatsvc.Weapons
+}
+
+func (w weaponInHand) WeaponInHand(ctx context.Context, characterID int64) (buffsvc.HeldWeapon, bool, error) {
+	held, ok, err := combatsvc.InHand(ctx, w.forms, w.weapons, characterID)
+	if err != nil || !ok {
+		return buffsvc.HeldWeapon{}, false, err
+	}
+	return buffsvc.HeldWeapon{
+		ItemID: held.ID, Name: held.Name.Any(), Kind: buffsvc.WeaponKind(held.Kind),
+		Speed: held.Speed, MagicToHit: held.MagicToHit, MagicDamage: held.MagicDamage,
+	}, true, nil
+}
 
 func (a wornArmour) WornSkillColumn(ctx context.Context, characterID int64) (string, error) {
 	pieces, err := a.dal.List(ctx, characterID)

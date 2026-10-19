@@ -32,18 +32,19 @@ func (q *Queries) GetActiveBuffs(ctx context.Context, characterID int64) (string
 }
 
 const getInitiative = `-- name: GetInitiative :one
-SELECT initiative_d10, initiative_entry_id FROM round_state WHERE character_id = $1
+SELECT initiative_d10, initiative_entry_id, initiative_modifiers FROM round_state WHERE character_id = $1
 `
 
 type GetInitiativeRow struct {
-	InitiativeD10     sql.NullInt64
-	InitiativeEntryID sql.NullInt64
+	InitiativeD10       sql.NullInt64
+	InitiativeEntryID   sql.NullInt64
+	InitiativeModifiers sql.NullString
 }
 
 func (q *Queries) GetInitiative(ctx context.Context, characterID int64) (GetInitiativeRow, error) {
 	row := q.db.QueryRowContext(ctx, getInitiative, characterID)
 	var i GetInitiativeRow
-	err := row.Scan(&i.InitiativeD10, &i.InitiativeEntryID)
+	err := row.Scan(&i.InitiativeD10, &i.InitiativeEntryID, &i.InitiativeModifiers)
 	return i, err
 }
 
@@ -176,18 +177,25 @@ func (q *Queries) UpsertActiveBuffs(ctx context.Context, arg UpsertActiveBuffsPa
 }
 
 const upsertInitiative = `-- name: UpsertInitiative :exec
-INSERT INTO round_state (character_id, initiative_d10, initiative_entry_id) VALUES ($1, $2, $3)
-ON CONFLICT(character_id) DO UPDATE SET initiative_d10 = excluded.initiative_d10, initiative_entry_id = excluded.initiative_entry_id
+INSERT INTO round_state (character_id, initiative_d10, initiative_entry_id, initiative_modifiers) VALUES ($1, $2, $3, $4)
+ON CONFLICT(character_id) DO UPDATE SET initiative_d10 = excluded.initiative_d10, initiative_entry_id = excluded.initiative_entry_id,
+    initiative_modifiers = excluded.initiative_modifiers
 `
 
 type UpsertInitiativeParams struct {
-	CharacterID       int64
-	InitiativeD10     sql.NullInt64
-	InitiativeEntryID sql.NullInt64
+	CharacterID         int64
+	InitiativeD10       sql.NullInt64
+	InitiativeEntryID   sql.NullInt64
+	InitiativeModifiers sql.NullString
 }
 
 func (q *Queries) UpsertInitiative(ctx context.Context, arg UpsertInitiativeParams) error {
-	_, err := q.db.ExecContext(ctx, upsertInitiative, arg.CharacterID, arg.InitiativeD10, arg.InitiativeEntryID)
+	_, err := q.db.ExecContext(ctx, upsertInitiative,
+		arg.CharacterID,
+		arg.InitiativeD10,
+		arg.InitiativeEntryID,
+		arg.InitiativeModifiers,
+	)
 	return err
 }
 

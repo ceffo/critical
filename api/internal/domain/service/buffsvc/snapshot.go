@@ -41,6 +41,9 @@ type snapEffects struct {
 	ToHit      *int     `json:"to_hit,omitempty"`
 	Damage     *int     `json:"damage,omitempty"`
 	BaseAC     *int     `json:"base_ac,omitempty"`
+	// Initiative is the initiative effect (ADR 0033 step 11), absent from
+	// buffs stored before it existed.
+	Initiative *int `json:"initiative,omitempty"`
 	// WeaponKind is the weapon-kind condition (ADR 0004 step 18), absent
 	// from buffs stored before it existed and from buffs without one.
 	WeaponKind WeaponKind `json:"weapon_kind,omitempty"`
@@ -116,7 +119,7 @@ func (s *service) Module() domain.Module {
 			if st.D10 < 1 || st.D10 > InitiativeDie {
 				return fmt.Errorf("decode initiative snapshot: d10 %d out of range", st.D10)
 			}
-			return s.dal.SaveInitiative(ctx, characterID, &Initiative{D10: st.D10, LogEntryID: st.EntryID})
+			return s.dal.SaveInitiative(ctx, characterID, &Initiative{D10: st.D10, Modifiers: fromTerms(st.Modifiers), LogEntryID: st.EntryID})
 		}, func(ctx context.Context, characterID int64, _ string) error {
 			return s.dal.SaveInitiative(ctx, characterID, nil)
 		}),

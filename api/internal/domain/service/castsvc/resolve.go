@@ -264,6 +264,10 @@ func applyModifier(fx *buffsvc.BuffEffects, key string, v int) bool {
 		fx.BaseAC = ptr(v)
 	case "save":
 		fx.SaveBonus = ptr(v)
+	case "initiative":
+		// Haste -2 (ADR 0033 step 11): added to the initiative (ADR 0035
+		// item 6).
+		fx.Initiative = ptr(v)
 	case "weapon_buff":
 		if v < 1 {
 			return false

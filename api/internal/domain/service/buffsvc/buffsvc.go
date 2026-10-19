@@ -90,6 +90,11 @@ type SVC interface {
 	// 5). Refused (a conflict) when there is no initiative or a newer
 	// transaction is on the log.
 	RerollInitiative(ctx context.Context, characterID int64) (Initiative, error)
+	// CorrectInitiative replaces the round's initiative by the same d10 with
+	// a spell cast's or an item used's term (ADR 0035 item 6.2), logged as
+	// its own entry inside the caller's transaction, which it must end. It
+	// does nothing (nil) out of combat or with no initiative.
+	CorrectInitiative(ctx context.Context, characterID int64, cause InitiativeModifier) (*Initiative, error)
 }
 
 // DAL is the storage-driven port. Every method must use the transaction
@@ -128,27 +133,35 @@ type Items interface {
 	ItemPowers(ctx context.Context, characterID int64) ([]ItemPower, error)
 }
 
+// Weapons supplies the weapon in hand (ADR 0033 step 8), whose speed Next
+// Round adds to the initiative (ADR 0035 item 6); ok is false with no weapon
+// in hand. Wired in the composition root over the attack form.
+type Weapons interface {
+	WeaponInHand(ctx context.Context, characterID int64) (weapon HeldWeapon, ok bool, err error)
+}
+
 // Characters supplies the base STR from the sheet (charactersvc).
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
 
 type service struct {
-	dal   DAL
-	tx    domain.TxRunner
-	log   Log
-	chars Characters
-	dice  Dice
-	items Items
+	dal     DAL
+	tx      domain.TxRunner
+	log     Log
+	chars   Characters
+	dice    Dice
+	items   Items
+	weapons Weapons
 }
 
 // New constructs the service.
-func New(dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items) (SVC, error) {
-	return NewWithConfig(DefaultConfig(), dal, tx, log, chars, dice, items)
+func New(dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items, weapons Weapons) (SVC, error) {
+	return NewWithConfig(DefaultConfig(), dal, tx, log, chars, dice, items, weapons)
 }
 
 // NewWithConfig is the test-friendly constructor.
-func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items) (SVC, error) {
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items, weapons Weapons) (SVC, error) {
 	switch {
 	case cfg == nil:
 		return nil, fmt.Errorf("buffsvc: nil config")
@@ -164,11 +177,13 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Char
 		return nil, fmt.Errorf("buffsvc: nil dice")
 	case items == nil:
 		return nil, fmt.Errorf("buffsvc: nil items")
+	case weapons == nil:
+		return nil, fmt.Errorf("buffsvc: nil weapons")
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("buffsvc: invalid config: %w", err)
 	}
-	return &service{dal: dal, tx: tx, log: log, chars: chars, dice: dice, items: items}, nil
+	return &service{dal: dal, tx: tx, log: log, chars: chars, dice: dice, items: items, weapons: weapons}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

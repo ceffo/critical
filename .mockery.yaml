@@ -31,6 +31,7 @@ packages:
       Characters:
       Dice:
       Items:
+      Weapons:
   github.com/ceffo/critical/api/internal/domain/service/spellsvc:
     config:
       dir: "internal/domain/service/spellsvc/mocks"
@@ -122,6 +123,7 @@ packages:
       Dice:
       Log:
       Characters:
+      Initiative:
   github.com/ceffo/critical/api/internal/domain/service/restsvc:
     config:
       dir: "internal/domain/service/restsvc/mocks"
@@ -151,6 +153,7 @@ packages:
       Slots:
       Texts:
       Buffs:
+      Initiative:
       Items:
       Attacks:
       Characters:

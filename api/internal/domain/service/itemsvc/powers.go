@@ -78,17 +78,19 @@ type jsonTrigger struct {
 
 // jsonEffects mirrors buffsvc.BuffEffects with the buffs' wire keys.
 type jsonEffects struct {
-	MinStr     *int               `json:"min_str,omitempty"`
-	SpellsBuff *float64           `json:"spells_buff,omitempty"`
-	WeaponBuff *int               `json:"weapon_buff,omitempty"`
-	Multiplier *float64           `json:"multiplier,omitempty"`
-	SaveBonus  *int               `json:"save_bonus,omitempty"`
-	StrBonus   *int               `json:"str_bonus,omitempty"`
-	StrMax     *int               `json:"str_max,omitempty"`
-	AC         *int               `json:"ac,omitempty"`
-	ToHit      *int               `json:"to_hit,omitempty"`
-	Damage     *int               `json:"damage,omitempty"`
-	BaseAC     *int               `json:"base_ac,omitempty"`
+	MinStr     *int     `json:"min_str,omitempty"`
+	SpellsBuff *float64 `json:"spells_buff,omitempty"`
+	WeaponBuff *int     `json:"weapon_buff,omitempty"`
+	Multiplier *float64 `json:"multiplier,omitempty"`
+	SaveBonus  *int     `json:"save_bonus,omitempty"`
+	StrBonus   *int     `json:"str_bonus,omitempty"`
+	StrMax     *int     `json:"str_max,omitempty"`
+	AC         *int     `json:"ac,omitempty"`
+	ToHit      *int     `json:"to_hit,omitempty"`
+	Damage     *int     `json:"damage,omitempty"`
+	BaseAC     *int     `json:"base_ac,omitempty"`
+	// Initiative is the initiative effect (ADR 0033 step 11).
+	Initiative *int               `json:"initiative,omitempty"`
 	WeaponKind buffsvc.WeaponKind `json:"weapon_kind,omitempty"`
 	// WithoutMagicArmour is the AC effects' condition (ADR 0033 step 12).
 	WithoutMagicArmour bool `json:"without_magic_armour,omitempty"`

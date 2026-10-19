@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // noWeapon is the wire tail of a piece that is no weapon, armour or shield
@@ -267,4 +268,54 @@ func TestItems_Step1_1_ComponentOnTheWire(t *testing.T) {
 		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 16}, nil)
 	rec = do(h, "PATCH", "/api/items/w", `{"component":""}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}
+
+// ADR 0033 step 24: a POST with a catalogue code passes the code, the
+// player's fields and equip on; the service copies the row.
+func TestItems_Step24_CreatePickedFromTheCatalogue(t *testing.T) {
+	h, m := newRouter(t)
+	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{
+		CatalogueCode: "long_sword", Equip: true, Name: localized.Text{"fr": "Épée de Kelsen"}, Count: 1, MagicToHit: 1, MagicDamage: 1,
+	}).Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 12}, nil)
+	rec := do(h, "POST", "/api/items", `{"catalogueCode":"long_sword","equip":true,"name":{"fr":"Épée de Kelsen"},"count":1,
+		"magicToHit":1,"magicDamage":1}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"item":`+wandJSON+`,"logEntryId":12}`, rec.Body.String())
+}
+
+// ADR 0033 step 25: an unknown catalogue code is a 400 on its field with the
+// code unknown.
+func TestItems_Step25_UnknownCatalogueCode(t *testing.T) {
+	h, m := newRouter(t)
+	m.items.EXPECT().Create(mock.Anything, int64(1), mock.Anything).
+		Return(nil, &domain.FieldError{Field: "catalogueCode", Message: itemsvc.CodeUnknown})
+	rec := do(h, "POST", "/api/items", `{"catalogueCode":"katana"}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.JSONEq(t, `{"error":"unknown","field":"catalogueCode","code":"invalid_input"}`, rec.Body.String())
+}
+
+// ADR 0033 steps 21 and 24: the catalogue rows are served with their codes,
+// numbers and language maps, lists never null.
+func TestItems_Step21_CatalogueWireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.items.EXPECT().Catalogue().Return(ruletablesvc.Equipment{
+		Weapons: []ruletablesvc.Weapon{{
+			Code: "long_bow", Name: localized.Text{"en": "Long bow", "fr": "Arc long"}, WeaponType: "long_bow",
+			Kind: "missile", Size: "l", Speed: 8, TwoHanded: true, Fires: []string{"arrow"},
+		}},
+		Ammunition: []ruletablesvc.Ammunition{{
+			Code: "sheaf_arrow", Name: localized.Of("Sheaf arrow"), AmmoKind: "arrow",
+			Types: []string{"p"}, DamageSM: "1d8", DamageL: "1d8",
+		}},
+		Armour:  []ruletablesvc.Armour{{Code: "chain_mail", Name: localized.Of("Chain mail"), BaseAC: 5, SkillColumn: "metal", ArmorRow: "chain"}},
+		Shields: []ruletablesvc.Shield{{Code: "buckler", Name: localized.Of("Buckler"), Kind: "buckler", ACMelee: 1, ACMissile: 1}},
+	})
+	rec := do(h, "GET", "/api/equipment/catalogue", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{
+		"weapons":[{"code":"long_bow","name":{"en":"Long bow","fr":"Arc long"},"weaponType":"long_bow","weaponKind":"missile",
+			"size":"l","damageTypes":[],"speed":8,"damageSm":"","damageL":"","twoHanded":true,"fires":["arrow"]}],
+		"ammunition":[{"code":"sheaf_arrow","name":{"en":"Sheaf arrow"},"ammoKind":"arrow","damageTypes":["p"],"damageSm":"1d8","damageL":"1d8"}],
+		"armour":[{"code":"chain_mail","name":{"en":"Chain mail"},"baseAc":5,"skillColumn":"metal","armorRow":"chain"}],
+		"shields":[{"code":"buckler","name":{"en":"Buckler"},"shieldKind":"buckler","acMelee":1,"acMissile":1}]}`, rec.Body.String())
 }

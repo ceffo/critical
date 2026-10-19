@@ -132,16 +132,17 @@ func (i Item) Validate() error {
 // validateWeapon is ADR 0016 step 8 and ADR 0033 step 3: NdM damage, magic
 // within ±MaxBonus, a kind, a launcher is a missile weapon, known codes, a
 // speed factor of 0 to 20. A launcher may have no dice of its own (step 4:
-// its ammunition's are rolled), both or none.
+// its ammunition's are rolled), and so may a weapon with no damage type (the
+// catalogue's mancatcher, ADR 0021 step 13): both or none.
 func (i Item) validateWeapon() error {
-	if i.Fires != "" && i.DamageSM == "" && i.DamageL == "" {
+	if (i.Fires != "" || len(i.DamageTypes) == 0) && i.DamageSM == "" && i.DamageL == "" {
 		return i.validateWeaponRest()
 	}
 	if !validWeaponDice(i.DamageSM) {
-		return fieldErr("damageSm", "Damage must look like 1d8 or 2d4")
+		return fieldErr("damageSm", "Damage must look like 1d8, 1d4+1 or 1")
 	}
 	if !validWeaponDice(i.DamageL) {
-		return fieldErr("damageL", "Damage must look like 1d8 or 2d4")
+		return fieldErr("damageL", "Damage must look like 1d8, 1d4+1 or 1")
 	}
 	return i.validateWeaponRest()
 }
@@ -190,10 +191,10 @@ func (i Item) validateAmmunition() error {
 		return fieldErr("damageL", "Give the damage against both sizes, or neither")
 	}
 	if i.DamageSM != "" && !validWeaponDice(i.DamageSM) {
-		return fieldErr("damageSm", "Damage must look like 1d8 or 2d4")
+		return fieldErr("damageSm", "Damage must look like 1d8, 1d4+1 or 1")
 	}
 	if i.DamageL != "" && !validWeaponDice(i.DamageL) {
-		return fieldErr("damageL", "Damage must look like 1d8 or 2d4")
+		return fieldErr("damageL", "Damage must look like 1d8, 1d4+1 or 1")
 	}
 	return validDamageTypes(i.DamageTypes)
 }
@@ -241,16 +242,37 @@ func validDamageTypes(types []string) error {
 	return nil
 }
 
-// The attack rolls a weapon's damage dice as NdM (the weapon's magic is its
-// own field), so a "+K" is refused here rather than silently dropped.
-var weaponDiceRE = regexp.MustCompile(`^(\d+)d(\d+)$`)
+// MaxDamageModifier bounds the flat part of a damage as printed ("1d4+1",
+// "1d3-1", "1"; ADR 0016 step 8 as amended by ADR 0003 step 1).
+const MaxDamageModifier = 20
+
+// damageRE is a weapon's or ammunition's damage as printed: NdM, NdM+K,
+// NdM-K, or a flat K.
+var damageRE = regexp.MustCompile(`^(?:(\d+)d(\d+)([+-]\d+)?|(\d+))$`)
+
+// ParseDamage reads a damage as printed (ADR 0016 step 8, ADR 0003 step 1):
+// n dice of the given sides plus the flat part k (k alone for a flat damage,
+// n = 0). ok is false for anything else or out of range: 1 to 100 dice of 2
+// to 1000 sides, |k| at most MaxDamageModifier, a flat damage of at least 1.
+func ParseDamage(dice string) (n, sides, k int, ok bool) {
+	m := damageRE.FindStringSubmatch(strings.ToLower(strings.TrimSpace(dice)))
+	if m == nil {
+		return 0, 0, 0, false
+	}
+	if m[4] != "" {
+		k, _ = strconv.Atoi(m[4])
+		return 0, 0, k, k >= 1 && k <= MaxDamageModifier
+	}
+	n, _ = strconv.Atoi(m[1])
+	sides, _ = strconv.Atoi(m[2])
+	if m[3] != "" {
+		k, _ = strconv.Atoi(m[3])
+	}
+	ok = n >= 1 && n <= maxDiceCount && sides >= 2 && sides <= maxDiceSides && k >= -MaxDamageModifier && k <= MaxDamageModifier
+	return n, sides, k, ok
+}
 
 func validWeaponDice(dice string) bool {
-	m := weaponDiceRE.FindStringSubmatch(dice)
-	if m == nil {
-		return false
-	}
-	n, _ := strconv.Atoi(m[1])
-	sides, _ := strconv.Atoi(m[2])
-	return n >= 1 && n <= maxDiceCount && sides >= 2 && sides <= maxDiceSides
+	_, _, _, ok := ParseDamage(dice)
+	return ok
 }

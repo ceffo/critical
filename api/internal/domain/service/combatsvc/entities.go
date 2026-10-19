@@ -30,6 +30,10 @@ const (
 	// damage term, PHB Table 30's multiplier at the realized level. An option of the attack
 	// request; Detail is empty.
 	ModBackstab ModifierKind = "backstab"
+	// ModDiceModifier is the flat part of the damage as printed (1d4+1,
+	// a flat 1; ADR 0003 step 2), a weapon damage term; Detail is the damage
+	// as printed.
+	ModDiceModifier ModifierKind = "dice_modifier"
 )
 
 // Modifier is a labeled bonus or penalty applied to a roll. ItemID is set
@@ -46,15 +50,15 @@ type Modifier struct {
 }
 
 // DamageTermKind is the place of a contribution in the damage formula
-// ((Base × Spells × DiceMultiplier) + Weapon) × Crit + Strength + Bonus
-// (ADR 0003 step 2).
+// ((Base × Spells × DiceMultiplier) + DiceModifier + Weapon) × Crit +
+// Strength + Bonus (ADR 0003 step 2).
 type DamageTermKind string
 
 // Damage formula terms.
 const (
 	TermSpells     DamageTermKind = "spells"          // × on the dice
 	TermDiceMult   DamageTermKind = "dice_multiplier" // × on the raw dice only (Power Gem ×2, backstab)
-	TermWeapon     DamageTermKind = "weapon"          // + before the crit multiplier
+	TermWeapon     DamageTermKind = "weapon"          // + before the crit multiplier (the damage's flat part, then magic)
 	TermMultiplier DamageTermKind = "multiplier"      // crit × on dice and weapon
 	TermStrength   DamageTermKind = "strength"        // + after the multipliers
 	TermBonus      DamageTermKind = "bonus"           // + after the multipliers (buff damage)
@@ -175,11 +179,15 @@ type RollResult struct {
 	Hit       bool
 	HitMargin int
 
-	BaseDamage  int
-	DamageDice  string
-	SpellsBuff  float64
-	WeaponBuff  int
-	Multipliers float64 // crit multiplier (1 without a crit)
+	BaseDamage int
+	DamageDice string
+	// DiceModifier is the flat part K of the damage as printed (1d4+1:
+	// 1), added after the raw-dice factors, before the crit (ADR 0003
+	// step 2).
+	DiceModifier int
+	SpellsBuff   float64
+	WeaponBuff   int
+	Multipliers  float64 // crit multiplier (1 without a crit)
 	// DiceMultiplier is the buffs' multiplier on the raw dice only.
 	DiceMultiplier float64
 	StrengthBonus  int
@@ -235,13 +243,15 @@ type DieRoll struct {
 
 // RolledDamage is the damage side of an attack as rolled, before the crit:
 // the weapon dice and every buff, weapon and strength term. The damage of a
-// hit is ((Dice × SpellsBuff × BuffMultipliers) + WeaponBuff) × crit +
-// StrengthBonus + BonusDamage.
+// hit is ((Dice × SpellsBuff × BuffMultipliers) + DiceModifier +
+// WeaponBuff) × crit + StrengthBonus + BonusDamage.
 type RolledDamage struct {
 	Dice  string
 	Total int // the dice total
 	// Rolls are the dice thrown for Total, in order.
-	Rolls           []DieRoll
+	Rolls []DieRoll
+	// DiceModifier is the flat part of Dice ("1d4+1": 1, a flat "1": 1).
+	DiceModifier    int
 	SpellsBuff      float64
 	WeaponBuff      int
 	BuffMultipliers float64

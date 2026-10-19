@@ -13,11 +13,20 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
-// ItemInput is a new piece (ADR 0033 step 24, typed). MaxCount is the daily
-// number (daily items only; for the others it is stored as the starting
-// count, informational). The fields of the other categories are ignored. A
-// new piece is carried (step 6).
+// ItemInput is a new piece (ADR 0033 step 24), typed or picked. MaxCount is
+// the daily number (daily items only; for the others it is stored as the
+// starting count, informational). The fields of the other categories are
+// ignored. A new piece is carried (step 6), unless Equip.
 type ItemInput struct {
+	// CatalogueCode picks the piece from the catalogue row of that code: the
+	// row's fields are copied and only the name, count, notes and magic are
+	// read from the input (picked). Empty: typed (homebrew).
+	CatalogueCode string
+	// Equip equips the new piece in the same transaction (ADR 0033 step 24's
+	// "wear it now"): one equipment_state entry after the item_add, popped
+	// with it by one undo; a body armour or shield worn in the way is taken
+	// off (swap). A piece that cannot be equipped is refused (field equip).
+	Equip bool
 	// Name holds the languages the player typed (ADR 0023 step 11).
 	Name       localized.Text
 	Category   Category
@@ -114,26 +123,29 @@ type FieldChange struct {
 // rename: entries logged before the equipment model have no category (the
 // web reads them as before).
 type changeRecord struct {
-	ItemID     string        `json:"itemId"`
-	Name       string        `json:"name"`
-	Category   string        `json:"category,omitempty"`
-	MagicKind  string        `json:"magicKind,omitempty"`
-	Component  string        `json:"component,omitempty"`
-	Type       string        `json:"type"`
-	Behaviour  string        `json:"behaviour"`
-	Count      int           `json:"count"`
-	MaxCount   int           `json:"maxCount"`
-	MagicBonus int           `json:"magicalBonus"`
-	AmmoKind   string        `json:"ammoKind"`
-	EffectDice string        `json:"effectDice"`
-	EffectSave string        `json:"effectSave"`
-	Notes      string        `json:"notes"`
-	Changes    []FieldChange `json:"changes,omitempty"`
+	ItemID    string `json:"itemId"`
+	Name      string `json:"name"`
+	Category  string `json:"category,omitempty"`
+	MagicKind string `json:"magicKind,omitempty"`
+	// CatalogueCode is the catalogue row a piece was picked from (ADR 0033
+	// step 24), absent for a typed one and on entries logged before it.
+	CatalogueCode string        `json:"catalogueCode,omitempty"`
+	Component     string        `json:"component,omitempty"`
+	Type          string        `json:"type"`
+	Behaviour     string        `json:"behaviour"`
+	Count         int           `json:"count"`
+	MaxCount      int           `json:"maxCount"`
+	MagicBonus    int           `json:"magicalBonus"`
+	AmmoKind      string        `json:"ammoKind"`
+	EffectDice    string        `json:"effectDice"`
+	EffectSave    string        `json:"effectSave"`
+	Notes         string        `json:"notes"`
+	Changes       []FieldChange `json:"changes,omitempty"`
 }
 
 func record(i Item, changes []FieldChange) changeRecord {
 	return changeRecord{
-		ItemID: i.ID, Name: i.Name.Any(), Category: string(i.Category), MagicKind: i.MagicKind,
+		ItemID: i.ID, Name: i.Name.Any(), Category: string(i.Category), MagicKind: i.MagicKind, CatalogueCode: i.CatalogueCode,
 		Component: i.Component, Type: i.Type, Behaviour: string(i.Behaviour), Count: i.Count,
 		MaxCount: i.MaxCount, MagicBonus: i.MagicBonus, AmmoKind: i.AmmoKind,
 		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Changes: changes,
@@ -185,29 +197,24 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 	if err := nameLanguages(in.Name); err != nil {
 		return nil, err
 	}
-	item := clean(Item{
-		Name: in.Name, Category: in.Category, MagicKind: in.MagicKind, Component: in.Component, State: StateCarried,
-		Behaviour: in.Behaviour, Count: in.Count, MaxCount: in.MaxCount,
-		EffectDice: in.EffectDice, EffectSave: in.EffectSave, Notes: in.Notes,
-		AmmoKind: in.AmmoKind, MagicBonus: in.MagicBonus,
-		DamageTypes: in.DamageTypes, DamageSM: in.DamageSM, DamageL: in.DamageL,
-		WeaponType: in.WeaponType, WeaponKind: in.WeaponKind, Size: in.Size, Speed: in.Speed,
-		MagicToHit: in.MagicToHit, MagicDamage: in.MagicDamage, TwoHanded: in.TwoHanded, Fires: in.Fires,
-		Specialized: in.Specialized,
-		BaseAC:      in.BaseAC, SkillColumn: in.SkillColumn, ArmorRow: in.ArmorRow,
-		ShieldKind: in.ShieldKind, ACMelee: in.ACMelee, ACMissile: in.ACMissile,
-	})
+	item, err := s.newPiece(in)
+	if err != nil {
+		return nil, err
+	}
 	if item.Behaviour != BehaviourDaily {
 		item.MaxCount = item.Count
 	}
 	if err := item.Validate(); err != nil {
 		return nil, err
 	}
+	if in.Equip && item.EquipState() == "" {
+		return nil, fieldErr("equip", CodeNotAllowed)
+	}
 	if err := s.checkSpecialized(ctx, characterID, item); err != nil {
 		return nil, err
 	}
 	var res *ChangeResult
-	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		all, err := s.dal.List(ctx, characterID)
 		if err != nil {
 			return err
@@ -237,12 +244,39 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 			return err
 		}
 		res = &ChangeResult{Item: item, LogEntryID: logID}
+		if in.Equip {
+			moved, err := s.setState(ctx, characterID, item.ID, item.EquipState(), true)
+			if err != nil {
+				return err
+			}
+			res.Item = moved.Items[0]
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
+}
+
+// newPiece is the piece in describes: picked from the catalogue row of its
+// code, or typed.
+func (s *service) newPiece(in ItemInput) (Item, error) {
+	if in.CatalogueCode != "" {
+		return s.picked(in)
+	}
+	return clean(Item{
+		Name: in.Name, Category: in.Category, MagicKind: in.MagicKind, Component: in.Component, State: StateCarried,
+		Behaviour: in.Behaviour, Count: in.Count, MaxCount: in.MaxCount,
+		EffectDice: in.EffectDice, EffectSave: in.EffectSave, Notes: in.Notes,
+		AmmoKind: in.AmmoKind, MagicBonus: in.MagicBonus,
+		DamageTypes: in.DamageTypes, DamageSM: in.DamageSM, DamageL: in.DamageL,
+		WeaponType: in.WeaponType, WeaponKind: in.WeaponKind, Size: in.Size, Speed: in.Speed,
+		MagicToHit: in.MagicToHit, MagicDamage: in.MagicDamage, TwoHanded: in.TwoHanded, Fires: in.Fires,
+		Specialized: in.Specialized,
+		BaseAC:      in.BaseAC, SkillColumn: in.SkillColumn, ArmorRow: in.ArmorRow,
+		ShieldKind: in.ShieldKind, ACMelee: in.ACMelee, ACMissile: in.ACMissile,
+	}), nil
 }
 
 // clean trims the typed text and lower-cases the codes and dice.

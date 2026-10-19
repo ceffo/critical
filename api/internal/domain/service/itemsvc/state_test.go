@@ -207,7 +207,9 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 		{"magic without kind", itemsvc.Item{Category: itemsvc.CategoryMagic}, "magicKind"},
 		{"kind on gear", itemsvc.Item{Category: itemsvc.CategoryGear, MagicKind: itemsvc.MagicRing}, "magicKind"},
 		{"worn gear", itemsvc.Item{Category: itemsvc.CategoryGear, State: itemsvc.StateWorn}, "state"},
-		{"weapon dice +K", withWeapon(func(i *itemsvc.Item) { i.DamageSM = "1d8+1" }), "damageSm"},
+		{"weapon dice malformed", withWeapon(func(i *itemsvc.Item) { i.DamageSM = "1d8+" }), "damageSm"},
+		{"weapon flat part out of range", withWeapon(func(i *itemsvc.Item) { i.DamageL = "1d8+21" }), "damageL"},
+		{"weapon flat damage 0", withWeapon(func(i *itemsvc.Item) { i.DamageL = "0" }), "damageL"},
 		{"weapon kind", withWeapon(func(i *itemsvc.Item) { i.WeaponKind = "thrown" }), "weaponKind"},
 		{"melee fires", withWeapon(func(i *itemsvc.Item) { i.Fires = "arrow" }), "fires"},
 		{"unknown weapon type", withWeapon(func(i *itemsvc.Item) { i.WeaponType = "katana" }), "weaponType"},
@@ -240,7 +242,14 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 		})
 	}
 	t.Run("valid pieces", func(t *testing.T) {
-		for _, it := range []itemsvc.Item{withWeapon(nil), withLauncher(nil), withArmour(nil), chain, sword} {
+		for _, it := range []itemsvc.Item{
+			withWeapon(nil), withLauncher(nil), withArmour(nil), chain, sword,
+			// ADR 0016 step 8 (amended): the damage as printed, NdM±K or a flat K.
+			withWeapon(func(i *itemsvc.Item) { i.DamageSM, i.DamageL = "1d4+1", "1" }),
+			withWeapon(func(i *itemsvc.Item) { i.DamageSM, i.DamageL = "1d3-1", "1d2-1" }),
+			// The mancatcher: no damage type, no dice.
+			withWeapon(func(i *itemsvc.Item) { i.DamageTypes, i.DamageSM, i.DamageL = nil, "", "" }),
+		} {
 			assert.NoError(t, it.Validate(), it.ID)
 		}
 	})

@@ -157,8 +157,9 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	}
 	// The catalogue's weapons (format 7), none before.
 	var catalogueWeapons []ruletablesvc.Weapon
-	if eq, ok := ruleTables.Equipment(); ok {
-		catalogueWeapons = eq.Weapons
+	equipment, hasEquipment := ruleTables.Equipment()
+	if hasEquipment {
+		catalogueWeapons = equipment.Weapons
 	}
 	if err := db.Migrate(ctx, cfg.SeedsDir, catalogueWeapons); err != nil {
 		return nil, fmt.Errorf("migrate: %w", err)
@@ -258,7 +259,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		return nil, err
 	}
 	bs.Items, err = itemsvc.New(itemDAL, itemsvc.Deps{
-		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Catalogue: catalogueWeapons,
+		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Equipment: equipment,
 	})
 	if err := bs.add(bs.Items, err); err != nil {
 		return nil, err

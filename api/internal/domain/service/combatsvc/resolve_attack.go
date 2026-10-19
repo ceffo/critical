@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"strconv"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -164,7 +163,10 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	// Checked before any die is rolled: an attack with no damage dice is refused.
 	dice := damageDice(weapon, ammo, req.TargetSize)
 	if dice == "" {
-		return nil, domain.FieldErrorf("ammoItemId", "neither %s nor its ammunition has damage dice", weapon.Name.Any())
+		if weapon.FiresAmmo() {
+			return nil, domain.FieldErrorf("ammoItemId", "neither %s nor its ammunition has damage dice", weapon.Name.Any())
+		}
+		return nil, domain.FieldErrorf("weaponId", "%s has no damage dice", weapon.Name.Any())
 	}
 
 	// ADR 0001 steps 1 and 3: the d20 and the crit-check d100 together,
@@ -182,12 +184,12 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	// ADR 0003 step 1: the dice for the target size, rolled on every attack,
 	// even a miss, so a target AC corrected after the roll (AdjustAttackAC)
 	// never rolls again.
-	base, dieRolls, err := rollDice(s.dice, dice)
+	base, dieRolls, flat, err := rollDice(s.dice, dice)
 	if err != nil {
 		return nil, fmt.Errorf("weapon %s damage: %w", weapon.ID, err)
 	}
 	rolled := &RolledDamage{
-		Dice: dice, Total: base, Rolls: dieRolls, SpellsBuff: mods.SpellsBuff, WeaponBuff: weaponDmg + ammoDmg,
+		Dice: dice, Total: base, Rolls: dieRolls, DiceModifier: flat, SpellsBuff: mods.SpellsBuff, WeaponBuff: weaponDmg + ammoDmg,
 		BuffMultipliers: mods.Multipliers, StrengthBonus: strDmg, BonusDamage: mods.Damage,
 		Terms: []DamageTerm{},
 	}
@@ -203,6 +205,12 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	if req.Backstab {
 		rolled.BuffMultipliers *= float64(char.Derived.Backstab)
 		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermDiceMult, Kind: ModBackstab, Value: float64(char.Derived.Backstab)})
+	}
+	// ADR 0003 step 2: the flat part of the damage as printed (1d4+1) is the
+	// weapon's base damage, added after the raw-dice factors (Enlarge, the
+	// Power Gem, backstab), before the crit.
+	if flat != 0 {
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermWeapon, Kind: ModDiceModifier, Detail: dice, Value: float64(flat)})
 	}
 	rolled.Terms = append(rolled.Terms, weaponTerms...)
 	rolled.Terms = append(rolled.Terms, strTerms...)
@@ -274,7 +282,7 @@ func settle(res *RollResult) {
 		withDamage = true
 	}
 
-	res.BaseDamage, res.DamageDice = 0, ""
+	res.BaseDamage, res.DamageDice, res.DiceModifier = 0, "", 0
 	res.SpellsBuff, res.WeaponBuff, res.Multipliers, res.DiceMultiplier = 0, 0, 0, 0
 	res.StrengthBonus, res.BonusDamage = 0, 0
 	res.DamageTerms = []DamageTerm{}
@@ -303,6 +311,7 @@ func settle(res *RollResult) {
 	}
 	res.DamageTerms = append(res.DamageTerms, d.Terms[critAt:]...)
 
+	res.DiceModifier = d.DiceModifier
 	res.SpellsBuff = d.SpellsBuff
 	res.WeaponBuff = d.WeaponBuff
 	res.Multipliers = res.CritMultiplier
@@ -312,7 +321,7 @@ func settle(res *RollResult) {
 
 	// ADR 0003 steps 2, 9 and 10: full precision through the whole formula,
 	// floored once at the end, never below 0.
-	res.UnroundedDamage = (float64(res.BaseDamage)*res.SpellsBuff*res.DiceMultiplier+float64(res.WeaponBuff))*res.Multipliers +
+	res.UnroundedDamage = (float64(res.BaseDamage)*res.SpellsBuff*res.DiceMultiplier+float64(res.DiceModifier)+float64(res.WeaponBuff))*res.Multipliers +
 		float64(res.StrengthBonus) + float64(res.BonusDamage)
 	res.TotalDamage = max(int(math.Floor(res.UnroundedDamage+floorEpsilon)), 0)
 }
@@ -340,8 +349,6 @@ func weaponMagic(weaponName string, own int, mods buffsvc.BuffModifiers) (Modifi
 // 11.000000000000002 but 0.1 sums can land just under) before the final floor.
 const floorEpsilon = 1e-9
 
-// rollDice rolls "NdM" (case-insensitive) through the dice port and returns
-// the total and every die thrown, in order.
 // damageDice is ADR 0003 step 1 as amended by ADR 0033 step 4: a launcher
 // that fires ammunition with dice rolls the ammunition's dice; any other
 // weapon (and a launcher whose ammunition has none) its own. Of the pair
@@ -359,12 +366,13 @@ func damageDice(weapon Weapon, ammo *itemsvc.Item, size TargetSize) string {
 	return sm
 }
 
-func rollDice(d Dice, dice string) (int, []DieRoll, error) {
-	n, m, ok := strings.Cut(strings.ToLower(strings.TrimSpace(dice)), "d")
-	num, err1 := strconv.Atoi(n)
-	sides, err2 := strconv.Atoi(m)
-	if !ok || err1 != nil || err2 != nil || num < 1 || sides < 1 {
-		return 0, nil, fmt.Errorf("invalid damage dice %q", dice)
+// rollDice rolls a damage as printed ("NdM", "NdM+K", "NdM-K" or a flat
+// "K", itemsvc.ParseDamage) through the dice port and returns the dice
+// total, every die thrown in order, and the flat part K (ADR 0003 step 1).
+func rollDice(d Dice, dice string) (int, []DieRoll, int, error) {
+	num, sides, k, ok := itemsvc.ParseDamage(dice)
+	if !ok {
+		return 0, nil, 0, fmt.Errorf("invalid damage dice %q", dice)
 	}
 	total := 0
 	rolls := make([]DieRoll, 0, num)
@@ -373,7 +381,7 @@ func rollDice(d Dice, dice string) (int, []DieRoll, error) {
 		total += v
 		rolls = append(rolls, DieRoll{Sides: sides, Value: v})
 	}
-	return total, rolls, nil
+	return total, rolls, k, nil
 }
 
 // ListWeapons returns the character's weapon pieces in list order, wielded

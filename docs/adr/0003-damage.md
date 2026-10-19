@@ -4,7 +4,7 @@
 critical-qki.12 and critical-qki.39, until then in `docs/backend.md` "Damage Formula"); steps 4, 5
 and 11 amended 2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers)
 
-_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 1 (a launcher's attack rolls its ammunition's dice; the launcher's own dice when the ammunition has none, ADR 0033 step 4)._
+_Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 1 (a launcher's attack rolls its ammunition's dice; the launcher's own dice when the ammunition has none, ADR 0033 step 4). Steps 1 and 2 amended 2026-10-19 (the supervisor's ruling, picking from the catalogue): the damage as printed, its flat part K in the formula._
 
 ## Context
 
@@ -29,18 +29,34 @@ return a distinct value for each call and expect an exact number of calls.
    dice stored). _Amended by ADR 0033 step 4_: a launcher that fires ammunition with dice rolls the
    ammunition's dice for the target size; a launcher with none of its own and ammunition without
    dice is refused before any die is rolled (field `ammoItemId`). Test:
-   `TestDamage_ADR0033Step4_LauncherRollsAmmunitionDice`.
+   `TestDamage_ADR0033Step4_LauncherRollsAmmunitionDice`. A weapon with no dice and no
+   ammunition (the mancatcher) is refused the same way on field `weaponId`.
+   1.1. **The damage as printed** (2026-10-19, [ADR 0016](0016-inventory.md) step 8): `NdM`,
+   `NdM+K`, `NdM-K` or a flat `K`. The N dice are rolled (none for a flat damage); their sum is
+   BaseDamage, and K, the **DiceModifier**, is kept apart for step 2. The result and its log
+   payload carry `diceModifier` (absent when 0), so a target AC correction recomputes it.
+   Test: `TestDamage_Step1_DamageAsPrinted`.
 2. **Formula.**
 
    ```
-   Damage = floor(((BaseDamage × SpellsBuff × DiceMultiplier) + WeaponBuff) × Crit
+   Damage = floor(((BaseDamage × SpellsBuff × DiceMultiplier) + DiceModifier + WeaponBuff) × Crit
                   + StrengthBonus + BuffDamage)
    ```
 
    with the terms of steps 3 to 8, computed at full precision and floored **once**, on the whole
    (step 9), never below 0 (step 10).
+   **DiceModifier** (2026-10-19, the supervisor's ruling) is the flat part of the damage as printed
+   (step 1.1): part of the weapon's base damage, added **after** the raw-dice factors (SpellsBuff,
+   DiceMultiplier: the Power Gem's "raw dice x2" is the dice only, K is not doubled) and **before**
+   the crit, which multiplies it. The backstab ([ADR 0030](0030-classes-and-races.md) step 19) is a
+   factor of DiceMultiplier in the code (it multiplies the weapon's dice), so it does not multiply K
+   either. In the breakdown (step 11) K is a `weapon` term of kind `dice_modifier` whose detail is
+   the damage as printed, first of the weapon terms.
    Tests: `TestResolveAttack_DamageTermsListEveryModifier` (every term at once:
-   `((5 × 1.5 × 2) + 2) × 2 + 2 + 1 = 37`), `TestCrit_Step5_MultipliersStackFlooredOnce`.
+   `((5 × 1.5 × 2) + 2) × 2 + 2 + 1 = 37`), `TestCrit_Step5_MultipliersStackFlooredOnce`; K's place,
+   one test per multiplier: `TestDamage_Step2_FlatPartAfterSpellsBuff`,
+   `TestDamage_Step2_FlatPartAfterDiceMultiplier`, `TestDamage_Step2_FlatPartAfterBackstab`,
+   `TestDamage_Step2_FlatPartMultipliedByCrit`.
 3. **SpellsBuff.** The product of the buffs' `spells_buff` factors (Enlarge), 1 without any. It
    multiplies the dice. Tests: `buffsvc` `TestAggregate` ("multipliers stack multiplicatively…"),
    `TestResolveAttack_DamageTermsListEveryModifier`.

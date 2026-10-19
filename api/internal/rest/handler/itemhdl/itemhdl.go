@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/wire"
 )
@@ -35,6 +36,7 @@ type itemSvc interface {
 	SetState(ctx context.Context, characterID int64, itemID string, state itemsvc.State, swap bool) (*itemsvc.StateResult, error)
 	Reviews(ctx context.Context, characterID int64) ([]itemsvc.Review, error)
 	DismissReview(ctx context.Context, characterID int64, itemID string) error
+	Catalogue() ruletablesvc.Equipment
 }
 
 // RegisterRoutes wires item endpoints onto r.
@@ -47,6 +49,16 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc itemsvc.SVC) {
 	r.Post("/api/items/{id}/restock", render.Handle(Restock(charID, svc)))
 	r.Post("/api/items/{id}/state", render.Handle(SetState(charID, svc)))
 	r.Delete("/api/items/{id}/review", render.Handle(DismissReview(charID, svc)))
+	r.Get("/api/equipment/catalogue", render.Handle(Catalogue(svc)))
+}
+
+// Catalogue serves the equipment rows a piece is picked from (ADR 0033 steps
+// 21 and 24): the same for every character.
+func Catalogue(svc itemSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		render.OK(r.Context(), w, wire.EquipmentCatalogueToDTO(svc.Catalogue()))
+		return nil
+	}
 }
 
 // UseResultDTO is the wire shape of POST /api/items/{id}/use: the dice
@@ -162,8 +174,13 @@ type ChangeDTO struct {
 // ItemBody is the body of POST and PATCH /api/items. On a PATCH only the
 // fields present change. maxCount is the daily number (daily items only).
 // The fields of the piece's category count; the others are stored as sent
-// (ADR 0033 step 1).
+// (ADR 0033 step 1). On a POST, a catalogueCode picks the piece from that
+// catalogue row (ADR 0033 step 24): only name, count, notes and the magic
+// (magicToHit and magicDamage, magicalBonus) are read with it; equip equips
+// the new piece in the same undo. A PATCH ignores both.
 type ItemBody struct {
+	CatalogueCode *string `json:"catalogueCode"`
+	Equip         *bool   `json:"equip"`
 	// Name is a language map: the languages typed (ADR 0023 step 11).
 	Name         localized.Text `json:"name"`
 	Category     *string        `json:"category"`
@@ -198,14 +215,12 @@ type ItemBody struct {
 	// Accepted and ignored, so a piece served back as is still decodes: the
 	// powers come from the seed and data migrations only (ADR 0016 step 15),
 	// the type label is no longer edited (ADR 0033 step 1), the state moves
-	// through POST /api/items/{id}/state, the catalogue code and the review
-	// are not the editor's.
-	Powers        json.RawMessage `json:"powers"`
-	Type          json.RawMessage `json:"type"`
-	State         json.RawMessage `json:"state"`
-	EquipState    json.RawMessage `json:"equipState"`
-	CatalogueCode json.RawMessage `json:"catalogueCode"`
-	Review        json.RawMessage `json:"review"`
+	// through POST /api/items/{id}/state, the review is not the editor's.
+	Powers     json.RawMessage `json:"powers"`
+	Type       json.RawMessage `json:"type"`
+	State      json.RawMessage `json:"state"`
+	EquipState json.RawMessage `json:"equipState"`
+	Review     json.RawMessage `json:"review"`
 }
 
 func decodeBody(r *http.Request) (ItemBody, error) {
@@ -238,6 +253,7 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			return err
 		}
 		res, err := svc.Create(r.Context(), charID(r), itemsvc.ItemInput{
+			CatalogueCode: deref(b.CatalogueCode), Equip: deref(b.Equip),
 			Name: b.Name, Category: itemsvc.Category(deref(b.Category)), MagicKind: deref(b.MagicKind),
 			Component: deref(b.Component), Behaviour: itemsvc.Behaviour(deref(b.Behaviour)),
 			Count: deref(b.Count), MaxCount: deref(b.MaxCount), MagicBonus: deref(b.MagicalBonus),

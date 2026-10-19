@@ -306,3 +306,25 @@ test("identity and review: arrows choose, an unreadable weight blocks at its fie
   );
   await snap(page, "creation-review-skills-fr");
 });
+
+test("extras: skill points typed as no number show at their field and block Next there", async ({
+  page,
+}) => {
+  page.on("dialog", (d) => void d.accept());
+  const { step } = await toIdentity(page, "fr", async (extras) => {
+    const next = extras.getByRole("button", {
+      name: "Passer à l'étape suivante",
+    });
+    await extras.getByLabel("Escalade").fill("heavy");
+    await expect(
+      extras.getByText("Saisissez un nombre entier", { exact: false }).first(),
+    ).toBeVisible();
+    await expect(next).toBeDisabled();
+    await expect(extras.getByTestId("next-blocked")).toHaveText(
+      "Corrigez la valeur illisible pour continuer.",
+    );
+    await extras.getByLabel("Escalade").fill("15");
+    await expect(next).toBeEnabled();
+  });
+  await expect(step).toHaveAttribute("data-step", "identity");
+});

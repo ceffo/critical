@@ -300,7 +300,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     wording,
     language: i18n.language,
   };
-  const unreadable = step === "identity" && built && "error" in built;
+  // A value the web cannot read blocks the step that holds its field, where it is shown; the
+  // review and Créer send the player back to that step.
+  const unreadable =
+    built && "error" in built && stepOfField(built.error.field) === step;
   const blocked =
     blockedReason(step, {
       cls: draft.cls,

@@ -47,8 +47,8 @@ domain, it was just for ingestion, to kickstart the whole thing".
    codes (`skill_armor`, `armor_type`, `spelleffectsvc.Catalog`) are not renamed for spelling
    alone.
 7. **Legacy names are not vocabulary.** `fil`, `moi` (the ADR 0009 columns), `turn` for the
-   round in the web, and the `hp_events` table are legacy; nothing new uses them, and renaming
-   them is an ordinary refactor item, not a rule change.
+   round in the web are legacy (and the `hp_events` table was, until it was dropped); nothing new
+   uses them, and renaming them is an ordinary refactor item, not a rule change.
 
 Checks: the wording items that implement steps 3 and 4 add a locale test refusing the avoided
 words (`GM`, `MD`, `fiche`, `bonus` for a buff, `round` in French, `test de`); until it exists,

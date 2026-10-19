@@ -140,10 +140,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   // The server's preview of the draft on the identity step and the review (ADR 0034): the warnings
   // and the derived figures. Every change of the draft asks again after a short rest; a reply to an
   // older draft (or one landing after the player left these steps) is dropped by the gate.
-  const [preview, setPreview] = useState<PreviewState>({
-    data: null,
-    error: null,
-  });
+  const [answered, setPreview] = useState<{
+    key: string;
+    state: PreviewState;
+  } | null>(null);
   const [previewGate] = useState(replyGate);
   const built = options ? buildBody(options, draft, xp, i18n.language) : null;
   const body = built && "body" in built ? built.body : null;
@@ -158,15 +158,27 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
           : body,
       )
     : "";
+  // A reply belongs to the draft it answered: once the draft moves on (or becomes unreadable) the
+  // old figures and the "no warning" verdict are not shown, whatever the reply's arrival.
+  const preview: PreviewState =
+    answered && answered.key === bodyKey && bodyKey !== ""
+      ? answered.state
+      : { data: null, error: null };
   const previewing = step === "identity" || step === "review";
   useEffect(() => {
     if (!previewing || bodyKey === "") return;
     const current = previewGate.open();
     const timer = setTimeout(() => {
       previewCharacter(JSON.parse(bodyKey)).then(
-        (data) => current() && setPreview({ data, error: null }),
+        (data) =>
+          current() &&
+          setPreview({ key: bodyKey, state: { data, error: null } }),
         (err: unknown) =>
-          current() && setPreview({ data: null, error: fieldErrorOf(err) }),
+          current() &&
+          setPreview({
+            key: bodyKey,
+            state: { data: null, error: fieldErrorOf(err) },
+          }),
       );
     }, PREVIEW_DELAY_MS);
     return () => {

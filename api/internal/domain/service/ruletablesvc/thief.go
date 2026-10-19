@@ -157,6 +157,24 @@ func SkillPointBudget(level int, points map[string]int) []BudgetWarning {
 	return budget(level, points, ThiefSkills, SkillPointsFirstLevel, SkillPointsPerLevel, SkillPointsPerSkillFirst, SkillPointsPerSkillPerLevel)
 }
 
+// SkillBudgetLimits are the limits SkillBudgetOf checks at level (ADR 0030
+// steps 17 and 18): the points in all, and in one skill (0: no limit on one
+// skill, the bard's). ok is false for a class without skill points or a level
+// under 1.
+func SkillBudgetLimits(class string, level int) (total, perSkill int, ok bool) {
+	if level < 1 {
+		return 0, 0, false
+	}
+	switch {
+	case HasThiefSkills(class):
+		return SkillPointsFirstLevel + SkillPointsPerLevel*(level-1),
+			SkillPointsPerSkillFirst + SkillPointsPerSkillPerLevel*(level-1), true
+	case HasBardSkills(class):
+		return BardSkillPointsFirstLevel + BardSkillPointsPerLevel*(level-1), 0, true
+	}
+	return 0, 0, false
+}
+
 // budget checks points over skills against first plus perLevel a level
 // after the first in all, and perSkillFirst plus perSkillPerLevel a level
 // after the first in one skill; a perSkillFirst of 0 checks no skill on its

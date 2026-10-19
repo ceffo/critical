@@ -396,6 +396,10 @@ type ClassOption struct {
 	// of the level in the class's table (ADR 0030 step 3). A level the
 	// player picks is sent as that XP; the web computes no threshold.
 	LevelXP []LevelXP
+	// Minimums are the class's ability minimums (PHB Table 13), in ability
+	// order; empty for none. Shown on the class card, not enforced (ADR 0030
+	// step 21's stance on requirements).
+	Minimums []ruletablesvc.AbilityMinimum
 }
 
 // LevelXP is a level and the XP that reaches it.
@@ -520,6 +524,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		opt := ClassOption{
 			Class: class, Alignments: ruletablesvc.AlignmentsOf(class), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, ruletablesvc.MaxLevel),
+			Minimums: ruletablesvc.ClassMinimums(class),
 		}
 		for level := 1; level <= ruletablesvc.MaxLevel; level++ {
 			xp, err := s.rules.XPThreshold(class, level)
@@ -553,5 +558,69 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			})
 		}
 	}
+	return out, nil
+}
+
+// DraftInput is a creation draft as far as it is entered: the scores typed
+// or rolled so far (an ability absent has none yet), the starting XP when
+// readable, and the skill points by skill.
+type DraftInput struct {
+	Class       string
+	Scores      map[string]int
+	XP          *int
+	SkillPoints map[string]int
+}
+
+// SkillBudget is the skill point budget of a thief or a bard at the starting
+// level (ADR 0030 steps 17 and 18): the points the level allows in all, those
+// entered, and what is left (negative when over). PerSkill is the most one
+// skill may hold at the level, 0 for no such limit (the bard's).
+type SkillBudget struct {
+	Level, Total, Spent, Left, PerSkill int
+}
+
+// DraftChecks are the verdicts on a draft the creation steps show before the
+// character can be previewed.
+type DraftChecks struct {
+	// UnmetMinimums are, for every creatable class, the abilities whose
+	// entered score is under the class's minimum (PHB Table 13); empty
+	// where the scores meet them or are not entered yet.
+	UnmetMinimums []ClassUnmet
+	// SkillBudget is the draft class's budget at the level its XP gives;
+	// nil for a class without skill points or an XP that gives no level.
+	SkillBudget *SkillBudget
+}
+
+// ClassUnmet is a class and the abilities under its minimum.
+type ClassUnmet struct {
+	Class     string
+	Abilities []string
+}
+
+// CreationChecks reads a draft against the class minimums and the skill
+// point budget (ADR 0034, the class and skills steps). Nothing is refused: a
+// draft too raw to read (a class that is none of CreatableClasses, an XP
+// that gives no level) just has no budget.
+func (s *service) CreationChecks(_ context.Context, in DraftInput) (DraftChecks, error) {
+	out := DraftChecks{UnmetMinimums: make([]ClassUnmet, 0, len(CreatableClasses))}
+	for _, class := range CreatableClasses {
+		out.UnmetMinimums = append(out.UnmetMinimums, ClassUnmet{Class: class, Abilities: ruletablesvc.UnmetMinimums(class, in.Scores)})
+	}
+	if in.XP == nil || !slices.Contains(CreatableClasses, in.Class) || !ruletablesvc.HasSkillPoints(in.Class) {
+		return out, nil
+	}
+	level, err := s.rules.LevelFor(in.Class, *in.XP)
+	if err != nil {
+		return out, nil //nolint:nilerr // an XP outside the table has no level, hence no budget; the creation refuses it
+	}
+	total, perSkill, ok := ruletablesvc.SkillBudgetLimits(in.Class, level)
+	if !ok {
+		return out, nil
+	}
+	spent := 0
+	for _, skill := range ruletablesvc.SkillsOf(in.Class) {
+		spent += in.SkillPoints[skill]
+	}
+	out.SkillBudget = &SkillBudget{Level: level, Total: total, Spent: spent, Left: total - spent, PerSkill: perSkill}
 	return out, nil
 }

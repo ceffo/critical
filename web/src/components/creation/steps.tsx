@@ -11,6 +11,7 @@ import {
   Prohibit,
   Sword,
   UserCircle,
+  Warning,
 } from "@phosphor-icons/react";
 import { rollHp, rollScores } from "@/api/characters";
 import { ApiError } from "@/api/http";
@@ -74,7 +75,14 @@ function fieldProps(field: string, text: string | null, extra?: string) {
 
 // --- Step 1: class ------------------------------------------------------------------------
 
-export function ClassStep({ options, draft, update, errorFor, xp }: StepProps) {
+export function ClassStep({
+  options,
+  draft,
+  update,
+  errorFor,
+  xp,
+  checks,
+}: StepProps) {
   const { t, i18n } = useTranslation();
   const raceList = allRaces(options);
   const cls = classOf(options, draft.cls);
@@ -115,6 +123,10 @@ export function ClassStep({ options, draft, update, errorFor, xp }: StepProps) {
           const limit = alignmentLimit(c.alignments, ALIGNMENT_CODES);
           const names = (codes: string[]) =>
             codes.map((a) => t(`details.alignments.${a}`)).join(", ");
+          // The server says which minimums the entered scores miss (PHB Table 13).
+          const unmet =
+            checks?.unmetMinimums.find((u) => u.class === c.class)?.abilities ??
+            [];
           return (
             <Choice
               key={c.class}
@@ -150,6 +162,44 @@ export function ClassStep({ options, draft, update, errorFor, xp }: StepProps) {
                     : c.races.map((r) => t(`details.races.${r}`)).join(", ")
                 }
               />
+              {c.minimums && c.minimums.length > 0 ? (
+                <Row
+                  k={t("creation.class.minimums")}
+                  v={
+                    <span
+                      className="flex flex-wrap gap-x-3 gap-y-0.5"
+                      data-testid={`minimums-${c.class}`}
+                    >
+                      {c.minimums.map((m) => {
+                        const missed = unmet.includes(m.ability);
+                        return (
+                          <span
+                            key={m.ability}
+                            data-unmet={missed ? "true" : undefined}
+                            title={
+                              missed
+                                ? t("creation.class.minimumUnmet")
+                                : undefined
+                            }
+                            className={cn(
+                              "inline-flex items-center gap-1 tabular-nums",
+                              missed && "font-semibold text-danger",
+                            )}
+                          >
+                            {missed && <Warning aria-hidden />}
+                            {t(`attr.${m.ability}`)} {m.min}
+                            {missed && (
+                              <span className="sr-only">
+                                {t("creation.class.minimumUnmet")}
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  }
+                />
+              ) : null}
             </Choice>
           );
         })}
@@ -700,6 +750,7 @@ export function ExtrasStep({
   errorFor,
   xp,
   watch,
+  checks,
 }: StepProps) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -875,6 +926,39 @@ export function ExtrasStep({
                 <p className="text-label text-ink-muted">
                   {t("characters.skillPointsLead")}
                 </p>
+                {checks?.skillBudget && (
+                  <p
+                    className="flex flex-wrap gap-x-4 gap-y-0.5 text-body tabular-nums"
+                    data-testid="skill-budget"
+                  >
+                    <span>
+                      {t("creation.extras.budget", {
+                        level: checks.skillBudget.level,
+                        total: checks.skillBudget.total,
+                      })}
+                    </span>
+                    <span
+                      data-over={
+                        checks.skillBudget.left < 0 ? "true" : undefined
+                      }
+                      className={cn(
+                        "font-semibold",
+                        checks.skillBudget.left < 0 && "text-danger",
+                      )}
+                    >
+                      {t("creation.extras.budgetLeft", {
+                        left: checks.skillBudget.left,
+                      })}
+                    </span>
+                    {checks.skillBudget.perSkill > 0 && (
+                      <span className="text-ink-muted">
+                        {t("creation.extras.budgetPerSkill", {
+                          max: checks.skillBudget.perSkill,
+                        })}
+                      </span>
+                    )}
+                  </p>
+                )}
                 <table className="w-full text-body">
                   <thead>
                     <tr className="text-left text-label text-ink-muted">

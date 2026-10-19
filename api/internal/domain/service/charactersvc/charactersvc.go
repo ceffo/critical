@@ -59,6 +59,9 @@ type SVC interface {
 	// CreationOptions are the classes a new character may have, the races
 	// each admits and the entered values' ranges.
 	CreationOptions(ctx context.Context) (CreationOptions, error)
+	// CreationChecks reads a draft against the class ability minimums and
+	// the skill point budget (ADR 0034); it refuses nothing.
+	CreationChecks(ctx context.Context, in DraftInput) (DraftChecks, error)
 }
 
 // Reader is the read-side driven port. Per clean_architecture.md §5.4, reads

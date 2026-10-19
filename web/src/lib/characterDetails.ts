@@ -20,6 +20,10 @@ export interface Draft {
   sex: string;
   height: string;
   weight: string;
+  /** The exact figure (cm, kg) of a fresh roll that filled the field, which shows it rounded (whole
+   * inches and pounds in en): kept while the field still shows that roll. */
+  rolledHeight?: number;
+  rolledWeight?: number;
   hair: string;
   eyes: string;
   /** The language catalogue codes picked (ADR 0032 step 4). */
@@ -79,16 +83,24 @@ export function toBody(
   const units = unitsFor(language);
   // A field left as `toDraft` showed it keeps the stored number: the imperial field is rounded to
   // whole inches and pounds, and sending that back would drift the figure on an unrelated edit.
+  // A fresh roll still shown in its field beats the stored number: both can show the same rounded
+  // figure (5'11" for 180 and 180.3 cm), but the roll is what the player just got.
   const height =
-    original &&
-    draft.height === heightField(original.height_cm, units, language)
-      ? { value: original.height_cm, invalid: false }
-      : parseHeight(draft.height, units);
+    draft.rolledHeight !== undefined &&
+    draft.height === heightField(draft.rolledHeight, units, language)
+      ? { value: draft.rolledHeight, invalid: false }
+      : original &&
+          draft.height === heightField(original.height_cm, units, language)
+        ? { value: original.height_cm, invalid: false }
+        : parseHeight(draft.height, units);
   const weight =
-    original &&
-    draft.weight === weightField(original.weight_kg, units, language)
-      ? { value: original.weight_kg, invalid: false }
-      : parseWeight(draft.weight, units);
+    draft.rolledWeight !== undefined &&
+    draft.weight === weightField(draft.rolledWeight, units, language)
+      ? { value: draft.rolledWeight, invalid: false }
+      : original &&
+          draft.weight === weightField(original.weight_kg, units, language)
+        ? { value: original.weight_kg, invalid: false }
+        : parseWeight(draft.weight, units);
   return {
     ageInvalid,
     invalid: [

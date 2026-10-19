@@ -1001,15 +1001,23 @@ export function IdentityStep({ options, draft, update, errorFor }: StepProps) {
     update({ details: { [f]: v } });
   const units = unitsFor(i18n.language);
   // A rolled figure fills its field, in the units the player types in (ADR 0032 step 5.3).
-  const filled = (f: "age" | "height" | "weight", v: number) =>
-    setDetail(
-      f,
-      f === "height"
-        ? heightField(v, units, i18n.language)
-        : f === "weight"
-          ? weightField(v, units, i18n.language)
-          : String(v),
-    );
+  const filled = (f: "age" | "height" | "weight", v: number) => {
+    if (f === "height")
+      update({
+        details: {
+          height: heightField(v, units, i18n.language),
+          rolledHeight: v,
+        },
+      });
+    else if (f === "weight")
+      update({
+        details: {
+          weight: weightField(v, units, i18n.language),
+          rolledWeight: v,
+        },
+      });
+    else setDetail(f, String(v));
+  };
 
   const pick = (f: "alignment" | "sex", codes: string[]) => {
     const field = `details.${f}`;

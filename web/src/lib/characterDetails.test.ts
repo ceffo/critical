@@ -42,6 +42,26 @@ describe("an unrelated edit does not drift the measures", () => {
   });
 });
 
+describe("a fresh roll is kept over the stored number it displays like", () => {
+  it("saves the rolled 180.3 cm and 74.8 kg, not the stored 180 cm and 75 kg, in en", () => {
+    const d = { ...details, height_cm: 180, weight_kg: 75 };
+    const draft = {
+      ...toDraft(d, "en"),
+      rolledHeight: 180.3,
+      rolledWeight: 74.8,
+    };
+    expect(draft.height).toBe(`5'11"`);
+    expect(toBody(draft, "en", d).body).toMatchObject({
+      height_cm: 180.3,
+      weight_kg: 74.8,
+    });
+    // Typing over the roll parses what is typed.
+    expect(toBody({ ...draft, height: `6'0"` }, "en", d).body).toMatchObject({
+      height_cm: 182.9,
+    });
+  });
+});
+
 describe("character details draft", () => {
   it("round-trips the details", () => {
     expect(toBody(toDraft(details))).toEqual({

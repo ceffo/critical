@@ -376,11 +376,13 @@ function DetailsForm({
       setDraft((d) => ({
         ...d,
         height: heightField(v, units, i18n.language),
+        rolledHeight: v,
       })),
     weight: (v: number) =>
       setDraft((d) => ({
         ...d,
         weight: weightField(v, units, i18n.language),
+        rolledWeight: v,
       })),
   };
   const input = (

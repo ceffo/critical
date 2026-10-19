@@ -26,4 +26,9 @@ describe("roster card identity", () => {
     expect(toPickKey(["alignment"])).toBe("roster.toPick.alignment");
     expect(toPickKey(["alignment", "sex"])).toBe("roster.toPick.alignment_sex");
   });
+  it("copes with a summary from the previous API release, which has none of the new fields", () => {
+    const old = { id: 1, name: "Aria", class: "bard", level: 3 };
+    expect(identityLine(old, word)).toBe("");
+    expect(toPickKey(undefined)).toBeNull();
+  });
 });

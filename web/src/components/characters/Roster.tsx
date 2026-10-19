@@ -275,9 +275,11 @@ function RosterCard({
           </span>
         )}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-body font-semibold" data-testid="roster-hp">
-            {t("roster.hp", { current: c.currentHp, max: c.maxHp })}
-          </span>
+          {c.currentHp !== undefined && c.maxHp !== undefined && (
+            <span className="text-body font-semibold" data-testid="roster-hp">
+              {t("roster.hp", { current: c.currentHp, max: c.maxHp })}
+            </span>
+          )}
           {toPick && (
             <span
               className="rounded-md bg-tint px-1.5 py-0.5 text-label font-semibold text-on-accent"

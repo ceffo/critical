@@ -19,5 +19,7 @@ export function identityLine(
 
 /** The tag's i18n key for what is still to choose, null when nothing is. */
 export function toPickKey(missing: CharacterSummary["missing"]): string | null {
-  return missing.length === 0 ? null : `roster.toPick.${missing.join("_")}`;
+  return !missing || missing.length === 0
+    ? null
+    : `roster.toPick.${missing.join("_")}`;
 }

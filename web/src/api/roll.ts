@@ -2,7 +2,7 @@ import type { RollResult, SaveBreakdown, SaveCategory } from "@/types/combat";
 import { post } from "./http";
 
 /**
- * TRANSITION ONLY (rolling deploy of CRI-61): a still-old machine answers a save with the previous
+ * TRANSITION ONLY (rolling deploy): a still-old machine answers a save with the previous
  * release's names, saveCategory/baseThac0/hit/hitMargin, where this release reads
  * category/target/passed/margin. Accept both here, at the boundary, so the rest of the web sees one
  * shape. Remove with the server's compat keys (saveAnswer in combathdl) in the follow-up release.

@@ -10,20 +10,6 @@ export interface SaveNumbers {
   spell: number;
 }
 
-/** A value the imported sheet states differently from the rules (ADR 0030 step 24). */
-export interface SheetDifference {
-  value:
-    | "level"
-    | "thac0"
-    | "save_para_poison"
-    | "save_rod_staff_wand"
-    | "save_petri_poly"
-    | "save_breath"
-    | "save_spell";
-  sheet: number;
-  computed: number;
-}
-
 /**
  * One level whose hit points are owed (ADR 0030 step 7): `die` the hit die's sides to roll up to
  * the class group's name level (0 above it), `fixedGain` the gain above it (0 up to it).
@@ -82,7 +68,6 @@ export interface Derived {
   raceSaveBonus: SaveNumbers;
   /** Slots per day by ascending spell level (levels without a slot left out). */
   spellSlots: { level: number; count: number }[];
-  sheetDifferences: SheetDifference[];
   levelUp: LevelUp;
   /** Step 12: the class may specialize in a weapon (the weapon editor offers the flag). */
   specializes: boolean;

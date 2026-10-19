@@ -37,8 +37,7 @@ func derivedOf(t *testing.T, bs *composition.BackingServices, id int64) (charact
 // (the XP ledger's level, the pending level-ups): the THAC0, saves and slots
 // stay level 15's until the level-up step takes 16 and 17, then they are
 // level 17's (Table 53: 12; Table 60, rogues 17-20; Table 32) for every
-// reader. Undoing the two rolls and the award brings them all back. The sheet
-// comparison (step 24) stays empty: it reads the sheet's own XP.
+// reader. Undoing the two rolls and the award brings them all back.
 func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
@@ -50,8 +49,8 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	at15 := charactersvc.Derived{
 		XPTotal: 1_293_418, TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13,
 		Saves:      charactersvc.Saves{ParaPoison: 10, RodStaffWand: 8, PetriPoly: 9, Breath: 13, Spell: 9},
-		SpellSlots: map[int]int{1: 3, 2: 3, 3: 3, 4: 3, 5: 2}, SheetDifferences: []charactersvc.SheetDifference{},
-		LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		SpellSlots: map[int]int{1: 3, 2: 3, 3: 3, 4: 3, 5: 2},
+		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
 		// Kelsen's Intelligence 14 (PHB Table 4, ADR 0030 step 20.1).
 		Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 		// His seeded points give his sheet's 85 / 90 / 50 / 75 (ADR 0030
@@ -85,9 +84,9 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	assert.Equal(t, charactersvc.Derived{
 		XPTotal: 1_540_000, TargetLevel: 17, RealizedLevel: 17, NextLevelXP: &next17, THAC0: 12,
 		Saves:      charactersvc.Saves{ParaPoison: 9, RodStaffWand: 6, PetriPoly: 8, Breath: 12, Spell: 7},
-		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1}, SheetDifferences: []charactersvc.SheetDifference{},
-		LevelUp:   charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
-		Spellbook: at15.Spellbook, BardSkills: kelsenBardSkills, SkillBudget: []ruletablesvc.BudgetWarning{},
+		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1},
+		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		Spellbook:  at15.Spellbook, BardSkills: kelsenBardSkills, SkillBudget: []ruletablesvc.BudgetWarning{},
 	}, d)
 	assert.Equal(t, 17, ledgerLevel)
 	assert.Equal(t, []prepsvc.LevelLimit{

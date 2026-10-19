@@ -147,14 +147,18 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     effects timeline, not in any breakdown, not in the preview. While it is on, the effects list
     (`GET` of the active buffs) serves it in its own list next to the buffs, never mixed into them:
     the item's id, the power's id and its effects, no counters, nothing to edit, absorb or dismiss.
-    The timeline shows it under the item's name. Hand-made buffs with a `min_str` keep ADR 0004
+    The timeline shows it under the item's name, **only when it has a trigger**: a power with none
+    (magic armour, a ring, a cloak) is on for as long as the piece is equipped, so it would hold a
+    permanent row on a timeline meant for what comes and goes; it gets no row, yet joins the
+    aggregate (step 11) and keeps its item's name in the breakdowns (step 14). Hand-made buffs with a `min_str` keep ADR 0004
     step 10: on the list, shown as not applying ("needs STR N").
     The list answers every buff change too (`{buffs, powers}`), so a Strength buff added or
     dismissed brings the power with it. The timeline shows how long it lasts from the item's
     trigger ("while STR ≥ 18").
     Tests: `domain/service/buffsvc` `TestItemPowers_Step13_ListedOnlyWhileOn`; `rest/router`
     `TestItemPowers_Step13_PowersOnTheWire`; `web/src/lib/itemPowers.test.ts` "powerRows" (the
-    power at STR 18 under the item's name, none at 17, nothing to edit or dismiss); e2e
+    power at STR 18 under the item's name, none at 17, none without a trigger, nothing to edit or
+    dismiss); e2e
     `buffs.spec` "a Strength buff reaching 18 turns the Power Gem's hammer on".
 14. **Named by its item.** Every contribution of a power in the aggregate, in the attack and save
     breakdowns (`Modifiers`, `DamageTerms`) and in the log entries that store them carries the

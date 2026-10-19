@@ -1926,31 +1926,24 @@
     "loadFailed": "The admin section could not be loaded: {{message}}"
   },
   "characters": {
-    "menu": "Character",
-    "switch": "Switch",
-    "switchHint": "Switch character: play another of your characters",
     "new": "Create",
     "newHint": "Create a new character",
     "retire": "Retire",
     "retireHint": "Retire {{name}}: hidden from your lists, nothing is deleted",
-    "retireMenuHint": "Retire the character you play: hidden from your lists, nothing is deleted",
     "rename": "Rename",
-    "renameMenuHint": "Rename the character you play",
     "renameHint": "Save the new name of {{name}}",
     "renameTitle": "Rename the character",
     "details": "Details",
     "detailsLead": "Alignment and sex are required, the rest is optional; you can change them later on the card, by clicking the name.",
-    "switchTitle": "Your characters",
     "newTitle": "New character",
     "retireTitle": "Retire the character",
     "retireLead": "Retire {{name}}? It disappears from your lists, but nothing is deleted. You then play your first character left.",
+    "retireLeadOther": "Retire {{name}}? It disappears from your lists, but nothing is deleted.",
     "close": "Close",
     "cancel": "Cancel",
     "current": "Playing",
     "play": "Play",
     "playHint": "Play {{name}}",
-    "none": "You have no character.",
-    "yours": "Your characters",
     "classLevel": "{{className}} · level {{level}}",
     "firstLead": "You have no character yet. Create your first one: enter its values as its sheet states them.",
     "noCurrentLead": "Pick one of your characters above, or create one.",
@@ -1987,6 +1980,14 @@
       "elven_chain": "Elven chain",
       "metal": "Metal, up to chain mail"
     }
+  },
+  "roster": {
+    "title": "Your characters",
+    "open": "Your characters: play, rename, retire or create a character",
+    "back": "Back",
+    "backHint": "Back to the game",
+    "renameHint": "Rename {{name}}",
+    "createLead": "Opens the full-screen creation."
   },
   "turning": {
     "title": "Turn undead",
@@ -2170,8 +2171,7 @@
     "steps_other": "Start by creating your character, in {{count}} steps:",
     "dm": "For each value, roll the dice here or copy your paper sheet. Everything stays editable later, and the DM always has the last word.",
     "start": "Start",
-    "startHint": "Start creating your character",
-    "others": "Play one of your characters, or create a new one."
+    "startHint": "Start creating your character"
   },
   "creation": {
     "stepOf": "Step {{n}} of {{of}}",

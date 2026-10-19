@@ -1,22 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Archive,
-  ArrowsLeftRight,
   Desktop,
   GearSix,
   Moon,
-  PencilSimple,
   ShieldCheck,
   SignOut,
   Sun,
-  UserPlus,
 } from "@phosphor-icons/react";
 import { logout } from "@/api/auth";
-import {
-  CharacterDialogs,
-  type CharacterDialog,
-} from "@/components/characters/CharacterDialogs";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Popover,
@@ -36,8 +28,6 @@ import {
   type Mode,
 } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-import { navigate } from "@/lib/navigation";
-import { CREATE_PATH } from "@/lib/session";
 import { useSessionStore } from "@/stores/session";
 import { useSettingsStore } from "@/stores/settings";
 
@@ -96,8 +86,7 @@ function Swatch({ id, light }: { id: string; light: boolean }) {
  * dark theme and the light theme. Each choice applies live and is saved; opened from the cog at the
  * left of the dice footer (ADR 0022 step 2.6). Under them the account: the logged-in email and Log
  * out (ADR 0029 step 4.4; account actions live in the cog menu), and for an admin the link to the
- * admin section (step 1.3). Above them the rare character actions (step 7.2): Switch, New, Rename and Retire,
- * each opening its dialog over the page.
+ * admin section (step 1.3). No character action: those live on the roster (ADR 0034 steps 7 and 8).
  */
 export function SettingsPopover() {
   const { t } = useTranslation();
@@ -105,11 +94,6 @@ export function SettingsPopover() {
   const me = useSessionStore((s) => s.me);
   const [leaving, setLeaving] = useState(false);
   const [open, setOpen] = useState(false);
-  const [dialog, setDialog] = useState<CharacterDialog | null>(null);
-  const openDialog = (d: CharacterDialog) => {
-    setOpen(false);
-    setDialog(d);
-  };
   // The list follows the appearance in effect; "system" follows the OS live (ADR 0026 step 4.6).
   const [osDark, setOsDark] = useState(systemPrefersDark);
   useEffect(() => watchSystemScheme(() => setOsDark(systemPrefersDark())), []);
@@ -119,182 +103,123 @@ export function SettingsPopover() {
   const chosen = (on: boolean) =>
     on ? "chip-chosen" : "chip hover:bg-raised-hover";
 
-  const characterActions: {
-    id: CharacterDialog | "new";
-    hint: string;
-    icon: ReactNode;
-  }[] = [
-    {
-      id: "switch",
-      hint: t("characters.switchHint"),
-      icon: <ArrowsLeftRight aria-hidden />,
-    },
-    {
-      id: "new",
-      hint: t("characters.newHint"),
-      icon: <UserPlus aria-hidden />,
-    },
-    {
-      id: "rename",
-      hint: t("characters.renameMenuHint"),
-      icon: <PencilSimple aria-hidden />,
-    },
-    {
-      id: "retire",
-      hint: t("characters.retireMenuHint"),
-      icon: <Archive aria-hidden />,
-    },
-  ];
-
   return (
-    <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          data-testid="settings-trigger"
-          aria-label={t("settings.open")}
-          title={t("settings.open")}
-          className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-raised-hover hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-raised-hover data-popup-open:text-foreground [&_svg]:size-5"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        data-testid="settings-trigger"
+        aria-label={t("settings.open")}
+        title={t("settings.open")}
+        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-raised-hover hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-raised-hover data-popup-open:text-foreground [&_svg]:size-5"
+      >
+        <GearSix />
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="start"
+        className="flex w-80 flex-col gap-3"
+        aria-label={t("settings.title")}
+        data-testid="settings-popover"
+      >
+        <PopoverTitle className="section-label">
+          {t("settings.title")}
+        </PopoverTitle>
+
+        <Choice label={t("settings.language")}>
+          {LANGUAGES.map((l) => (
+            <button
+              key={l}
+              type="button"
+              role="radio"
+              aria-checked={lang === l}
+              className={cn(segment, chosen(lang === l))}
+              onClick={() => update({ lang: l })}
+            >
+              {t(`language.${l}`)}
+            </button>
+          ))}
+        </Choice>
+
+        <Choice label={t("settings.appearance")}>
+          {MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              className={cn(segment, chosen(mode === m))}
+              onClick={() => update({ mode: m })}
+            >
+              {MODE_ICONS[m]}
+              {t(`settings.mode.${m}`)}
+            </button>
+          ))}
+        </Choice>
+
+        <Choice
+          label={t("settings.theme")}
+          testId="settings-theme"
+          mode={light ? "light" : "dark"}
         >
-          <GearSix />
-        </PopoverTrigger>
-        <PopoverContent
-          side="top"
-          align="start"
-          className="flex w-80 flex-col gap-3"
-          aria-label={t("settings.title")}
-          data-testid="settings-popover"
-        >
-          <PopoverTitle className="section-label">
-            {t("settings.title")}
-          </PopoverTitle>
+          {themesFor(light).map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={shown === id}
+              className={cn(segment, chosen(shown === id))}
+              onClick={() => update(themePatch(light, id))}
+            >
+              <Swatch id={id} light={light} />
+              <span className="break-words">{t(`settings.themes.${id}`)}</span>
+            </button>
+          ))}
+        </Choice>
 
-          <Choice label={t("settings.language")}>
-            {LANGUAGES.map((l) => (
-              <button
-                key={l}
-                type="button"
-                role="radio"
-                aria-checked={lang === l}
-                className={cn(segment, chosen(lang === l))}
-                onClick={() => update({ lang: l })}
-              >
-                {t(`language.${l}`)}
-              </button>
-            ))}
-          </Choice>
-
-          <Choice label={t("settings.appearance")}>
-            {MODES.map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                aria-checked={mode === m}
-                className={cn(segment, chosen(mode === m))}
-                onClick={() => update({ mode: m })}
-              >
-                {MODE_ICONS[m]}
-                {t(`settings.mode.${m}`)}
-              </button>
-            ))}
-          </Choice>
-
-          <Choice
-            label={t("settings.theme")}
-            testId="settings-theme"
-            mode={light ? "light" : "dark"}
-          >
-            {themesFor(light).map((id) => (
-              <button
-                key={id}
-                type="button"
-                role="radio"
-                aria-checked={shown === id}
-                className={cn(segment, chosen(shown === id))}
-                onClick={() => update(themePatch(light, id))}
-              >
-                <Swatch id={id} light={light} />
-                <span className="break-words">
-                  {t(`settings.themes.${id}`)}
-                </span>
-              </button>
-            ))}
-          </Choice>
-
-          <div className="flex flex-col gap-2" data-testid="settings-character">
-            <span className="text-label text-muted-foreground">
-              {t("characters.menu")}
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {characterActions.map((a) => (
-                <Button
-                  key={a.id}
-                  variant="quiet"
-                  aria-label={a.hint}
-                  title={a.hint}
-                  onClick={() =>
-                    // Creation is a full-screen route (ADR 0034 step 2), no dialog any more; client
-                    // navigation, so nothing reloads.
-                    a.id === "new" ? navigate(CREATE_PATH) : openDialog(a.id)
-                  }
-                >
-                  {a.icon}
-                  {t(`characters.${a.id}`)}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2" data-testid="settings-account">
-            <span className="text-label text-muted-foreground">
-              {t("settings.account")}
-            </span>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              {me && (
-                <span className="min-w-0 text-body [overflow-wrap:anywhere]">
-                  {me.email}
-                </span>
-              )}
-              <Button
-                variant="quiet"
-                aria-label={
-                  me
-                    ? t("settings.logoutHint", { email: me.email })
-                    : t("settings.logoutHintNoEmail")
-                }
-                title={
-                  me
-                    ? t("settings.logoutHint", { email: me.email })
-                    : t("settings.logoutHintNoEmail")
-                }
-                disabled={leaving}
-                onClick={() => {
-                  setLeaving(true);
-                  void logout();
-                }}
-              >
-                <SignOut aria-hidden />
-                {t("settings.logout")}
-              </Button>
-            </div>
-            {me?.role === "admin" && (
-              <a
-                href={ADMIN_PATH}
-                className={cn(
-                  buttonVariants({ variant: "quiet" }),
-                  "self-start",
-                )}
-                aria-label={t("admin.openHint")}
-                title={t("admin.openHint")}
-              >
-                <ShieldCheck aria-hidden />
-                {t("admin.open")}
-              </a>
+        <div className="flex flex-col gap-2" data-testid="settings-account">
+          <span className="text-label text-muted-foreground">
+            {t("settings.account")}
+          </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {me && (
+              <span className="min-w-0 text-body [overflow-wrap:anywhere]">
+                {me.email}
+              </span>
             )}
+            <Button
+              variant="quiet"
+              aria-label={
+                me
+                  ? t("settings.logoutHint", { email: me.email })
+                  : t("settings.logoutHintNoEmail")
+              }
+              title={
+                me
+                  ? t("settings.logoutHint", { email: me.email })
+                  : t("settings.logoutHintNoEmail")
+              }
+              disabled={leaving}
+              onClick={() => {
+                setLeaving(true);
+                void logout();
+              }}
+            >
+              <SignOut aria-hidden />
+              {t("settings.logout")}
+            </Button>
           </div>
-        </PopoverContent>
-      </Popover>
-      <CharacterDialogs open={dialog} onClose={() => setDialog(null)} />
-    </>
+          {me?.role === "admin" && (
+            <a
+              href={ADMIN_PATH}
+              className={cn(buttonVariants({ variant: "quiet" }), "self-start")}
+              aria-label={t("admin.openHint")}
+              title={t("admin.openHint")}
+            >
+              <ShieldCheck aria-hidden />
+              {t("admin.open")}
+            </a>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -2,32 +2,29 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, SignOut } from "@phosphor-icons/react";
 import { logout } from "@/api/auth";
-import { fetchCharacters } from "@/api/characters";
-import { CharacterList } from "@/components/characters/CharacterDialogs";
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/brand";
 import { STEPS } from "@/lib/creationFlow";
 import { LANGUAGES } from "@/lib/settings";
 import { navigate } from "@/lib/navigation";
+import { ROSTER_PATH } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/stores/session";
 import { useSettingsStore } from "@/stores/settings";
 import { CreationFlow } from "./CreationFlow";
-import { CardHead, StepDot, Wordmark } from "./kit";
+import { StepDot, Wordmark } from "./kit";
 
 /**
- * Every creation goes through one full-screen route (ADR 0034 step 2). A user with no current
- * character first sees the intro (step 1: a new player's first login; one whose current character
- * was retired elsewhere also finds their others there); Commencer opens the flow and Quitter comes
- * back to it. A user who plays a character reaches the flow from the cog menu, and Quitter returns
- * to the game.
+ * Every creation goes through one full-screen route (ADR 0034 step 2). A user with no character
+ * first sees the intro (step 1); Commencer opens the flow and Quitter comes back to it. Every other
+ * creation starts from the roster's Créer (step 7), and Quitter returns to the roster.
  */
-export function CreationRoute({ hasCurrent }: { hasCurrent: boolean }) {
-  const [started, setStarted] = useState(hasCurrent);
+export function CreationRoute({ withIntro }: { withIntro: boolean }) {
+  const [started, setStarted] = useState(!withIntro);
   if (!started) return <Intro onStart={() => setStarted(true)} />;
   return (
     <CreationFlow
-      onLeave={() => (hasCurrent ? navigate("/") : setStarted(false))}
+      onLeave={() => (withIntro ? setStarted(false) : navigate(ROSTER_PATH))}
     />
   );
 }
@@ -37,21 +34,10 @@ function Intro({ onStart }: { onStart: () => void }) {
   const { t } = useTranslation();
   const { lang, update } = useSettingsStore();
   const me = useSessionStore((s) => s.me);
-  const [others, setOthers] = useState(false);
   const [leaving, setLeaving] = useState(false);
   useEffect(() => {
     document.title = `${t("intro.title")} · ${APP_NAME}`;
   }, [t]);
-  useEffect(() => {
-    let live = true;
-    fetchCharacters().then(
-      (l) => live && setOthers(l.characters.length > 0),
-      () => undefined,
-    );
-    return () => {
-      live = false;
-    };
-  }, []);
   const logoutHint = me
     ? t("settings.logoutHint", { email: me.email })
     : t("settings.logoutHintNoEmail");
@@ -136,23 +122,6 @@ function Intro({ onStart }: { onStart: () => void }) {
             </Button>
           </div>
         </section>
-        {others && (
-          <section
-            aria-labelledby="intro-yours"
-            className="zone-card flex flex-col"
-            data-testid="create-yours"
-          >
-            <CardHead>
-              <span id="intro-yours">{t("characters.yours")}</span>
-            </CardHead>
-            <div className="px-4 pt-3 pb-4">
-              <p className="mb-3 text-body text-ink-muted">
-                {t("intro.others")}
-              </p>
-              <CharacterList />
-            </div>
-          </section>
-        )}
       </div>
     </main>
   );

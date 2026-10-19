@@ -21,11 +21,13 @@
 set -uo pipefail
 W=${SUPERVISOR_DIR:-$HOME/code/critical.worktrees/supervisor}
 R=${REPORTS_DIR:-$(dirname "$W")/reports}
+B=${BRIEFS_DIR:-$(dirname "$W")/briefs}
 pidf="$W/fleet-watch.pid"
 old=$(cat "$pidf" 2>/dev/null) && [ -n "$old" ] && [ "$old" != $$ ] && kill "$old" 2>/dev/null
 echo $$ > "$pidf"
 trap '[ "$(cat "$pidf" 2>/dev/null)" = $$ ] && rm -f "$pidf"' EXIT
 declare -A seen state
+pending=""
 WS=${HERDR_WORKSPACE_ID:-}
 snap() { herdr agent list 2>/dev/null | jq -r --arg ws "$WS" '.result.agents[]|select((.name // "sup-")|startswith("sup-")|not)|select($ws=="" or .workspace_id==$ws)|"\(.name) \(.agent_status) \(.state_change_seq) \(.tab_id)"'; }
 # The agent's last message, without herdr/Claude chrome (status bar, prompt, recap, spinner lines).
@@ -43,19 +45,30 @@ mark() { # mark <tab> <prefix|""> : set or clear the tab's waiting prefix
 }
 notify() { herdr notification show "$1" --body "$2" --sound request >/dev/null 2>&1 || true; }
 user_facing() { [[ "$1" == scoper-* || "$1" == designer-* ]]; }
+fresh_report() { # the agent's report newer than the supervisor's last prompt for its item
+  # (an agent suffix is dropped: dev-x-12b -> X-12). The marker is a .prompt-<item> file or, without one, the item's newest
+  # brief (written just before each prompt), so a forgotten marker never hides a report.
+  local item=${1#*-}; item=${item^^}; item=$(sed -E 's/([0-9]+)[A-Z]+$/\1/' <<<"$item"); local f p
+  # The newest of all markers is the last prompt: a report must be newer than it.
+  # Exact item only (a "-" or the end after it), so item 3 never matches item 34's files.
+  p=$(ls -td "$W"/.prompt-"$item" "$W"/.prompt-"$item"-* "$W"/.prompt-*-"$item" \
+    "$B"/*"$item"-[0-9]*.md "$B"/*"$item".md 2>/dev/null | head -1)
+  [ -n "$p" ] || return 1
+  for f in "$R"/"$item"-*.md "$R"/*-"$item".md "$R"/"$item".md; do
+    [ -f "$f" ] && [ "$f" -nt "$p" ] && return 0
+  done; return 1
+}
 while read -r n s q t; do
   [ -n "$n" ] || continue; seen[$n]=$q; state[$n]=$s
   if [ "$s" = blocked ]; then mark "$t" "⛔ "
+  elif { [ "$s" = idle ] || [ "$s" = done ]; } && ! user_facing "$n" && fresh_report "$n"; then
+    # finished while no watcher ran: its report is for the supervisor, never a question to the user
+    mark "$t" ""; pending="$pending $n"
   elif { [ "$s" = idle ] || [ "$s" = done ]; } && m=$(last_msg "$n") && ! finished "$n" "$m" && asks_user "$m"; then mark "$t" "❓ "
   else mark "$t" ""; fi
 done < <(snap)
-fresh_report() { # the agent's report newer than the supervisor's last prompt marker for its item
-  local item=${1#*-}; item=${item^^}; local f
-  for f in "$R"/*"$item"*-dev.md "$R"/*"${item}"*.md; do
-    [ -f "$f" ] || continue
-    for p in "$W"/.prompt-"$item"*; do [ -f "$p" ] && [ "$f" -nt "$p" ] && return 0; done
-  done; return 1
-}
+for n in $pending; do echo "NEEDS-SUPERVISOR $n (report written before this watcher started)"; done
+[ -z "$pending" ] || exit 0
 while sleep 30; do
   declare -A now=()
   while read -r n s q t; do

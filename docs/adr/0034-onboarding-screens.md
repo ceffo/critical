@@ -2,7 +2,8 @@
 
 **Status**: accepted 2026-10-18 (the user approved the design round after three rounds: "approved";
 the points marked _user_ are his words, the points marked _proposed_ are the designer's, accepted
-with "the rest is good"). Not implemented. Settles the layout that
+with "the rest is good"). Steps 1 to 4 (the creation route) and 7 and 8 (the roster and the cog menu)
+implemented, see "As built". Settles the layout that
 [ADR 0032](0032-character-identity-and-creation-rolls.md) left to the design round and amends
 [ADR 0030](0030-classes-and-races.md) step 1 and [ADR 0029](0029-users-login-and-access.md) steps
 7.2 and 7.3 (as amended by 0032). Follows [ADR 0027](0027-space-follows-frequency-of-use.md) (French
@@ -103,6 +104,34 @@ content. This ADR records the decisions; the README and the shots are the pictur
 - **Not shown yet**, for want of server data: the class cards' ability minimums and the arrangement
   table's minimum check, the race cards' height and starting age (the identity step's dice), and the
   skill budget and percentages on step 4 (the server warns at creation). The web computes none of them.
+
+## As built (the roster and the cog menu)
+
+2026-10-19, the item that built steps 7 and 8. ADR 0029 steps 7.2 and 7.3 (as amended by 0032) now
+read as built here; their endpoints are unchanged and no backend change was made.
+
+- **Roster** at `/characters`, reached from the button right of the level in the character card's
+  header (step 7.1). Each card has Jouer (but the current one), Renommer and Retirer, the current one is
+  "En jeu", and the dashed Créer card opens the creation at step 1, whose Quitter returns to the roster
+  (it used to return to the game). Retour goes back to the game. Rename and Retire are dialogs over the
+  roster and work on any of the user's characters, not only the one in play (ADR 0029 amendment item 2
+  allowed it; the cog menu's dialogs only acted on the current one); their answer, the list, is shown as
+  it is, and retiring the last character loads the page again (the intro).
+- **Difference with the mock-up: the cards show the name, class and level and "En jeu" only.** The
+  race, alignment, HP and the tag for a missing alignment or sex are not in `GET /api/characters` (its
+  summary is `id`, `name`, `class`, `level`), and this item used the existing endpoints only. They come
+  with an additive change to that summary, a follow-up item.
+- **Rename in the details** (step 7.2): Nom is the first row of the details and the first field of their
+  form. Saving a changed name renames it on `PATCH /api/characters/{id}` before the details are saved on
+  `PATCH /api/character/details`; a refused name stops before the details and shows under Nom.
+- **Cog menu** (step 8): language, appearance, theme, account and admin; the Character group and its
+  dialogs are gone.
+- **No current character.** A user with none and no character sees the intro (step 1); with other
+  characters, the roster without Retour (no game to go back to). The intro no longer lists other
+  characters. Through the API this second case does not arise (retiring the current character makes the
+  first one left current), so it is a guard. A current character retired in another tab is ADR 0029 step
+  7.2's `character_changed`: back in the game, the page loads again on the one the server made current,
+  or shows the intro when none is left.
 
 ## Consequences
 

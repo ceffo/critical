@@ -574,7 +574,7 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   the Go build (`CGO_ENABLED=0`, on the `golang` tag of the Go version in `api/go.mod`: the build fails when
   they differ), and an Alpine runtime running as the non-root user `critical`, with a `HEALTHCHECK` on
   `/api/health`. `.dockerignore` keeps `.catalogue/`, `.dev/`, databases and any `catalogue.json` (at any
-  depth), `.git`, `.beads`, `docs/`, `node_modules`, test results and `api/testdata` out of the default
+  depth), `.git`, `docs/`, `node_modules`, test results and `api/testdata` out of the default
   build context.
 - **Build inputs**: the named build context `catalogue` (a directory holding `catalogue.json`) and the build
   argument `COMMIT`. Without the `catalogue` context the build stops with a message naming the flag. PR and CI

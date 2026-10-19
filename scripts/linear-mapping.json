@@ -1,5 +1,5 @@
 {
-  "_comment": "The one place the beads -> Linear mapping is written. Read by scripts/linear-configure.sh (the workspace shape) and by the import and the agents' scripts; described in docs/linear.md. Change it here only.",
+  "_comment": "The one place the Linear workspace shape (priorities, states, labels) is written. Read by scripts/linear-configure.sh and the agents' scripts; described in docs/linear.md. Change it here only.",
   "team": "CRI",
   "project": "critical-app",
   "priority": {

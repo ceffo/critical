@@ -70,13 +70,10 @@ type OptionsDTO struct {
 	Sexes []string `json:"sexes"`
 	// Languages is the language catalogue with its names by language (ADR
 	// 0032 step 4.3: the form offers all of it), RaceLanguages each race's
-	// own language and PHB list, which the form marks, and LanguageLimits
-	// PHB Table 4's number of additional languages by Intelligence score
-	// (step 4.2). Never null; the first two are empty before catalogue
-	// format 8.
-	Languages      []LanguageDTO          `json:"languages"`
-	RaceLanguages  []RaceLanguagesDTO     `json:"raceLanguages"`
-	LanguageLimits []LanguageLimitBandDTO `json:"languageLimits"`
+	// own language and PHB list, which the form marks. Never null; both are
+	// empty before catalogue format 8.
+	Languages     []LanguageDTO      `json:"languages"`
+	RaceLanguages []RaceLanguagesDTO `json:"raceLanguages"`
 }
 
 // LanguageDTO is a catalogue language: its code and its name by language.
@@ -90,14 +87,6 @@ type RaceLanguagesDTO struct {
 	Race      string   `json:"race"`
 	Native    string   `json:"native"`
 	Languages []string `json:"languages"`
-}
-
-// LanguageLimitBandDTO is the number of additional languages for the
-// Intelligence scores intMin to intMax.
-type LanguageLimitBandDTO struct {
-	IntMin int `json:"intMin"`
-	IntMax int `json:"intMax"`
-	Limit  int `json:"limit"`
 }
 
 // Options is GET /api/characters/options.
@@ -118,16 +107,12 @@ func Options(svc optionsReader) render.HandlerFunc {
 			Sexes:          o.Sexes,
 			Languages:      make([]LanguageDTO, 0, len(o.Languages)),
 			RaceLanguages:  make([]RaceLanguagesDTO, 0, len(o.RaceLanguages)),
-			LanguageLimits: make([]LanguageLimitBandDTO, 0, len(o.LanguageLimits)),
 		}
 		for _, l := range o.Languages {
 			out.Languages = append(out.Languages, LanguageDTO{Code: l.Code, Name: l.Name})
 		}
 		for _, rl := range o.RaceLanguages {
 			out.RaceLanguages = append(out.RaceLanguages, RaceLanguagesDTO{Race: rl.Race, Native: rl.Native, Languages: rl.List})
-		}
-		for _, b := range o.LanguageLimits {
-			out.LanguageLimits = append(out.LanguageLimits, LanguageLimitBandDTO(b))
 		}
 		for _, c := range o.Classes {
 			out.Classes = append(out.Classes, ClassOptionDTO{

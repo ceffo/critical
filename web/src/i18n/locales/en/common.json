@@ -1533,8 +1533,6 @@
     },
     "languagesRaceList": "From the race's list",
     "languagesOthers": "Others, if the DM allows",
-    "languagesCount": "Besides the native one: {{n}} of {{limit}} for this Intelligence.",
-    "languagesOver": "Over the count: the DM decides.",
     "languageNative": "The race's own language, always known",
     "classes": {
       "bard": "Bard",

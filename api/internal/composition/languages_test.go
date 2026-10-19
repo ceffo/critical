@@ -95,11 +95,6 @@ func TestLanguages_Step4_TheCreationOptionsOfferTheCatalogue(t *testing.T) {
 			Native    string   `json:"native"`
 			Languages []string `json:"languages"`
 		} `json:"raceLanguages"`
-		LanguageLimits []struct {
-			IntMin int `json:"intMin"`
-			IntMax int `json:"intMax"`
-			Limit  int `json:"limit"`
-		} `json:"languageLimits"`
 	}
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &got))
 	require.NotEmpty(t, got.Languages)
@@ -111,7 +106,4 @@ func TestLanguages_Step4_TheCreationOptionsOfferTheCatalogue(t *testing.T) {
 	for _, r := range got.RaceLanguages {
 		assert.Contains(t, r.Languages, r.Native, r.Race)
 	}
-	require.NotEmpty(t, got.LanguageLimits)
-	assert.Equal(t, 1, got.LanguageLimits[0].IntMin)
-	assert.Equal(t, 0, got.LanguageLimits[0].Limit)
 }

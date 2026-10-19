@@ -301,7 +301,6 @@ export interface CreationOptions {
    */
   languages?: LanguageOption[];
   raceLanguages?: { race: string; native: string; languages: string[] }[];
-  languageLimits?: { intMin: number; intMax: number; limit: number }[];
   ability: ValueRange;
   /** The 18/xx percentile's range (1 = 18/01, 100 = 18/00). */
   strExceptional: ValueRange;

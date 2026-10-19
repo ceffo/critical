@@ -48,21 +48,9 @@ test("character details: view, edit with a field error, save, reload", async ({
   const common = pop.getByRole("checkbox", { name: "Common", exact: true });
   await expect(common).toBeChecked();
   await expect(common).toBeDisabled();
-  await expect(pop.getByTestId("language-count")).toHaveText(
-    "Besides the native one: 0 of 4 for this Intelligence.",
-  );
   for (const name of ["Elvish", "Gnomish", "Halfling", "Goblin"])
     await pop.getByRole("checkbox", { name, exact: true }).check();
-  await expect(pop.getByTestId("language-count")).not.toContainText(
-    "the DM decides",
-  );
   await pop.getByRole("checkbox", { name: "Orcish", exact: true }).check();
-  await expect(pop.getByTestId("language-count")).toContainText(
-    "Besides the native one: 5 of 4",
-  );
-  await expect(pop.getByTestId("language-count")).toContainText(
-    "Over the count: the DM decides.",
-  );
   await snap(page, "details-languages-over-1440x900");
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
@@ -212,7 +200,6 @@ test("details card: options without the language catalogue show no picker", asyn
     const body = await res.json();
     delete body.languages;
     delete body.raceLanguages;
-    delete body.languageLimits;
     await route.fulfill({ response: res, json: body });
   });
   await openDashboard(page);

@@ -226,3 +226,33 @@ func TestUpdate_Step4_3_AnyCatalogueLanguageIsAcceptedAndAnUnknownOneRefused(t *
 	assert.Equal(t, "languages", fe.Field)
 	assert.Equal(t, detailssvc.CodeUnknown, fe.Message)
 }
+
+// Catalogue format 7 has no language book: a character stored with codes sends them back with every
+// card edit (the new web and the previous web alike), which must not lock the edit. Only the codes
+// it already holds are accepted there; any other is still `unknown`.
+func TestUpdate_Step8_1_OnAnEmptyCatalogueTheStoredCodesSurviveAnEdit(t *testing.T) {
+	held := charactersvc.Details{Hair: "red", Languages: []string{"elvish", "common"}}
+	for _, book := range []charactersvc.LanguageBook{nil, (*ruletablesvc.Languages)(nil)} {
+		dal := mocks.NewMockDAL(t)
+		svc, err := detailssvc.New(dal, inlineTx{}, book)
+		require.NoError(t, err)
+		dal.EXPECT().GetDetails(mockAny, int64(1)).Return(held, bard, nil).Times(3)
+
+		want := held
+		want.Hair = "brown"
+		dal.EXPECT().UpdateDetails(mockAny, int64(1), want).Return(nil).Twice()
+		// The card: the whole draft, languages as the stored codes.
+		got, err := svc.Update(context.Background(), 1, detailssvc.Patch{Hair: ptr("brown"), Languages: &[]string{"elvish", "common"}})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"elvish", "common"}, got.Languages)
+		// The previous web: the same codes as an array in its own body.
+		_, err = svc.Update(context.Background(), 1, detailssvc.Patch{Hair: ptr("brown"), Languages: &[]string{"elvish", "common"}})
+		require.NoError(t, err)
+
+		_, err = svc.Update(context.Background(), 1, detailssvc.Patch{Languages: &[]string{"elvish", "draconic"}})
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, "languages", fe.Field)
+		assert.Equal(t, detailssvc.CodeUnknown, fe.Message)
+	}
+}

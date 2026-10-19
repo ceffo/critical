@@ -125,10 +125,6 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
   const offersExceptional =
     !!classOption?.exceptionalStrengthRaces.includes(race) &&
     parseWhole(numbers.str) === 18;
-  // The Intelligence typed so far, for the languages' count (ADR 0032 step 4.2).
-  const typedInt = parseWhole(numbers.int);
-  const intelligence =
-    typedInt === null || Number.isNaN(typedInt) ? null : typedInt;
   const rangeOf = (f: NumberField): ValueRange | undefined =>
     options
       ? f === "hpMax"
@@ -588,7 +584,6 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
               idPrefix="new-character-languages"
               options={options}
               race={race}
-              intelligence={intelligence}
               picked={details.languages}
               onChange={(languages) => {
                 setDetails((d) => ({ ...d, languages }));

@@ -463,13 +463,11 @@ type CreationOptions struct {
 	Sexes []string
 	// Languages are the catalogue languages with their names, RaceLanguages
 	// each race's own language and PHB list (ADR 0032 step 4.3: the form
-	// offers the whole catalogue, the race's list marked), and
-	// LanguageLimits PHB Table 4's number of additional languages by
-	// Intelligence score (step 4.2). The first two are empty before catalogue
-	// format 8.
-	Languages      []ruletablesvc.Language
-	RaceLanguages  []RaceLanguageOption
-	LanguageLimits []LanguageLimitBand
+	// offers the whole catalogue, the race's list marked). Both are empty
+	// before catalogue format 8. The Table 4 count stays in Go: the server
+	// warns (step 4.2), the form computes nothing.
+	Languages     []ruletablesvc.Language
+	RaceLanguages []RaceLanguageOption
 
 	MinAbility, MaxAbility int
 	MinHPMax, MaxHPMax     int
@@ -485,12 +483,6 @@ type RaceLanguageOption struct {
 	Race   string
 	Native string
 	List   []string
-}
-
-// LanguageLimitBand is PHB Table 4's "# of Lang." for the Intelligence scores
-// IntMin to IntMax.
-type LanguageLimitBand struct {
-	IntMin, IntMax, Limit int
 }
 
 // CreationOptions reads the races of each creatable class from the rules.
@@ -532,6 +524,5 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			})
 		}
 	}
-	out.LanguageLimits = languageLimitBands()
 	return out, nil
 }

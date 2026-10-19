@@ -41,9 +41,9 @@ type Languages struct {
 	lists  map[string][]string
 }
 
-// raceCodes are the six PHB races (ADR 0030 step 1), the races a
-// race_languages table covers.
-var raceCodes = []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}
+// RaceCodes are the six PHB races (ADR 0030 step 1), human first: the races a
+// race_languages table covers, and charactersvc.Races.
+var RaceCodes = append([]string{"human"}, Races...)
 
 // NewLanguages validates what the schema cannot express (ADR 0021 step 14.3):
 // a language code once and with an English name, a race's list naming only
@@ -66,7 +66,7 @@ func NewLanguages(list []Language, rows []RaceLanguageRow) (*Languages, error) {
 	seen := map[string]bool{}
 	for _, r := range rows {
 		switch {
-		case !slices.Contains(raceCodes, r.Race):
+		case !slices.Contains(RaceCodes, r.Race):
 			return nil, fmt.Errorf("race_languages: unknown race %q", r.Race)
 		case !out.known[r.Language]:
 			return nil, fmt.Errorf("race_languages: %s names the unknown language %q", r.Race, r.Language)
@@ -82,7 +82,7 @@ func NewLanguages(list []Language, rows []RaceLanguageRow) (*Languages, error) {
 			out.native[r.Race] = r.Language
 		}
 	}
-	for _, race := range raceCodes {
+	for _, race := range RaceCodes {
 		if _, ok := out.native[race]; !ok {
 			return nil, fmt.Errorf("race_languages: %s has no native language", race)
 		}

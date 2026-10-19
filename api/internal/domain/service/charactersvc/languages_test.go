@@ -226,23 +226,6 @@ func TestCreationOptions_Step4_OfferTheCatalogueTheRaceListsAndTheLimits(t *test
 	assert.Equal(t, "dwarvish", byRace["dwarf"].Native)
 	assert.Equal(t, []string{"common", "dwarvish", "gnomish", "goblin", "kobold", "orcish"}, byRace["dwarf"].List)
 	assert.Equal(t, "common", byRace["half_elf"].Native)
-	assert.Equal(t, []charactersvc.LanguageLimitBand{
-		{IntMin: 1, IntMax: 1, Limit: 0},
-		{IntMin: 2, IntMax: 8, Limit: 1},
-		{IntMin: 9, IntMax: 11, Limit: 2},
-		{IntMin: 12, IntMax: 13, Limit: 3},
-		{IntMin: 14, IntMax: 15, Limit: 4},
-		{IntMin: 16, IntMax: 16, Limit: 5},
-		{IntMin: 17, IntMax: 17, Limit: 6},
-		{IntMin: 18, IntMax: 18, Limit: 7},
-		{IntMin: 19, IntMax: 19, Limit: 8},
-		{IntMin: 20, IntMax: 20, Limit: 9},
-		{IntMin: 21, IntMax: 21, Limit: 10},
-		{IntMin: 22, IntMax: 22, Limit: 11},
-		{IntMin: 23, IntMax: 23, Limit: 12},
-		{IntMin: 24, IntMax: 24, Limit: 15},
-		{IntMin: 25, IntMax: 25, Limit: 20},
-	}, o.LanguageLimits)
 
 	// Before catalogue format 8 the form is offered no language.
 	none := newEnv(t)

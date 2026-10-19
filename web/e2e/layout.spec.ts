@@ -2124,9 +2124,6 @@ test("details card: the languages picker, its count and the warning uncut in Fre
   await pop.getByRole("button", { name: "Modifier" }).click();
   for (const name of ["Elfique", "Gnome", "Halfelin", "Gobelin", "Orque"])
     await pop.getByRole("checkbox", { name, exact: true }).check();
-  await expect(pop.getByTestId("language-count")).toContainText(
-    "Hors langue natale : 5 sur 4",
-  );
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },

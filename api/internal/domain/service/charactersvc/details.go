@@ -262,7 +262,7 @@ func (d Details) Apply(k Kind, book LanguageBook, p DetailsPatch) (Details, erro
 		cur.Age = *p.Age
 	}
 	if p.Languages != nil {
-		langs, err := cleanLanguages(book, *p.Languages)
+		langs, err := cleanLanguages(book, d.Languages, *p.Languages)
 		if err != nil {
 			return d, err
 		}
@@ -275,16 +275,19 @@ func (d Details) Apply(k Kind, book LanguageBook, p DetailsPatch) (Details, erro
 }
 
 // cleanLanguages checks the codes against the book: non-empty (CodeEmpty), in
-// the catalogue (CodeUnknown), each once (CodeDuplicate). A nil book is the
-// empty catalogue, which knows no language.
-func cleanLanguages(book LanguageBook, in []string) ([]string, error) {
+// the catalogue (CodeUnknown), each once (CodeDuplicate). A nil or empty book
+// (every catalogue before format 8) knows no language, but the codes the
+// character already holds stay valid there: its card sends them back with
+// every edit, and refusing them would lock the edit (ADR 0032 step 8.1).
+func cleanLanguages(book LanguageBook, stored, in []string) ([]string, error) {
+	empty := book == nil || len(book.All()) == 0
 	out := make([]string, 0, len(in))
 	seen := map[string]bool{}
 	for _, l := range in {
 		switch {
 		case l == "":
 			return nil, &domain.FieldError{Field: FieldLanguages, Message: CodeEmpty}
-		case book == nil || !book.Has(l):
+		case (book == nil || !book.Has(l)) && (!empty || !slices.Contains(stored, l)):
 			return nil, &domain.FieldError{Field: FieldLanguages, Message: CodeUnknown}
 		case seen[l]:
 			return nil, &domain.FieldError{Field: FieldLanguages, Message: CodeDuplicate}
@@ -315,20 +318,4 @@ func newDetails(k Kind, book LanguageBook, p DetailsPatch) (Details, error) {
 		return Details{}, &domain.FieldError{Field: DetailsField + fe.Field, Message: fe.Message}
 	}
 	return d, err
-}
-
-// languageLimitBands are PHB Table 4's language counts as runs of equal
-// scores (ADR 0032 step 4.2), over the scores the table gives.
-func languageLimitBands() []LanguageLimitBand {
-	const lowest, highest = 1, 25
-	var out []LanguageLimitBand
-	for score := lowest; score <= highest; score++ {
-		limit := ruletablesvc.LanguageLimit(score)
-		if n := len(out); n > 0 && out[n-1].Limit == limit {
-			out[n-1].IntMax = score
-			continue
-		}
-		out = append(out, LanguageLimitBand{IntMin: score, IntMax: score, Limit: limit})
-	}
-	return out
 }

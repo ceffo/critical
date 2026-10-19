@@ -1,33 +1,25 @@
 import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
 import { useLanguageNames } from "@/lib/useLanguageNames";
-import {
-  additionalLanguages,
-  languageLimit,
-  raceLanguages,
-} from "@/lib/languages";
+import { raceLanguages } from "@/lib/languages";
 import type { CreationOptions } from "@/types/character";
 
 /**
  * The languages of a character (ADR 0032 step 4.3): the whole catalogue is offered, the race's PHB
  * list first and the others after it, since the DM may allow any. The race's own language is always
- * known and cannot be unticked (step 4.1); the others are counted against PHB Table 4's number for
- * the Intelligence score, and going over is a warning, never a refusal (step 4.2). Offers nothing
+ * known and cannot be unticked (step 4.1). Going over PHB Table 4's number is a warning the server
+ * returns (step 4.2), never computed here. Offers nothing
  * without a catalogue (before catalogue format 8, or a release that predates it).
  */
 export function LanguagePicker({
   idPrefix,
   options,
   race,
-  intelligence,
   picked,
   onChange,
 }: {
   idPrefix: string;
   options: CreationOptions;
   race: string;
-  /** The Intelligence score, null while it is not a number. */
-  intelligence: number | null;
   picked: string[];
   onChange: (codes: string[]) => void;
 }) {
@@ -38,9 +30,6 @@ export function LanguagePicker({
   const { native, list } = raceLanguages(options, race);
   const inList = catalogue.filter((l) => list.includes(l.code));
   const others = catalogue.filter((l) => !list.includes(l.code));
-  const count = additionalLanguages(picked, native).length;
-  const limit = languageLimit(options, intelligence);
-  const over = limit !== undefined && count > limit;
 
   const toggle = (code: string, on: boolean) =>
     onChange(
@@ -88,19 +77,6 @@ export function LanguagePicker({
     >
       {group(t("details.languagesRaceList"), inList)}
       {group(t("details.languagesOthers"), others)}
-      {limit !== undefined && (
-        <p
-          className={cn(
-            "text-label",
-            over ? "text-danger" : "text-muted-foreground",
-          )}
-          data-testid="language-count"
-          role={over ? "status" : undefined}
-        >
-          {t("details.languagesCount", { n: count, limit })}
-          {over && ` ${t("details.languagesOver")}`}
-        </p>
-      )}
     </div>
   );
 }

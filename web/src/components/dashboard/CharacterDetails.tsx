@@ -376,7 +376,6 @@ function DetailsForm({
             idPrefix="details-languages"
             options={options}
             race={character.raceCode}
-            intelligence={character.int}
             picked={draft.languages}
             onChange={(languages) => setDraft((d) => ({ ...d, languages }))}
           />

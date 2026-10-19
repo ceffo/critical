@@ -1533,8 +1533,6 @@
     },
     "languagesRaceList": "De la liste de la race",
     "languagesOthers": "Autres, si le MD l’autorise",
-    "languagesCount": "Hors langue natale : {{n}} sur {{limit}} pour cette Intelligence.",
-    "languagesOver": "Au-delà du nombre, le MD décide.",
     "languageNative": "La langue propre de la race, toujours connue",
     "classes": {
       "bard": "Barde",

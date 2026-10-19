@@ -278,11 +278,13 @@ roster and creation items land.
   Idempotent. The seed character's seed names codes.
 - **Native language** is added by the server on creation and on every languages edit, and on every read (a character stored without it
   reads with it). A word that is no catalogue code (written by the release before, during a rolling deploy) is not read.
-- **Count.** PHB Table 4 is committed Go data (`ruletablesvc.LanguageLimit`). `GET /api/character` `warnings` gains
+  Before a format-8 artifact is published the book is empty and nothing is hidden; an edit then accepts the codes the character already
+  holds (the card sends them back with every save) and refuses any other as `unknown`, so the empty catalogue never locks an edit.
+- **Count.** PHB Table 4 is committed Go data (`ruletablesvc.LanguageLimit`), applied only by the server: the form computes and shows no
+  verdict; the card shows the server's warning. `GET /api/character` `warnings` gains
   `{code: "languages_over_limit", field: "languages", count, limit}`, read again at every read, so an edited Intelligence warns.
 - **Refusals**, `languages` (`details.languages` at creation): `empty`, `unknown`, `duplicate`; no `too_many`/`too_long` any more.
-- **Options.** `GET /api/characters/options` gains `languages` (`{code, name}`), `raceLanguages` (`{race, native, languages}`) and
-  `languageLimits` (Table 4 as `{intMin, intMax, limit}` bands, for the form's live count; the card's warning is the server's).
+- **Options.** `GET /api/characters/options` gains `languages` (`{code, name}`) and `raceLanguages` (`{race, native, languages}`).
   The form and the card offer the whole catalogue, the race's list first. A previous release's options lack these: no picker.
 
 ## Consequences

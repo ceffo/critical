@@ -281,7 +281,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    `TestLevelUp_TwoLevelsAtOnceAreTwoDiceThroughTheDicePort`,
    `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (composition);
    `TestGetCharacter_MapsEveryColumn`, `TestSetRealizedLevel_WritesTheLevelAndItsMaxHP` (characterdal);
-   `TestLevelUp_*` (router); `LevelUpPrompt.test.tsx`, `logSummary.test.ts` "level-up entries"
+   `TestLevelUp_*` (router); `LevelUpPrompt.test.tsx`, `journal/entryText.test.ts` "level-up entries"
    (web); `web/e2e/xp.spec.ts` "level up: …" and `web/e2e/layout.spec.ts` "level-up prompt: …".
 
 ### Spells

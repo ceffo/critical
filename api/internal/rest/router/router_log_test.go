@@ -31,7 +31,7 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	rec := do(h, "GET", "/api/log", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"topId":4,"redo":null,"entries":[{
-		"id":4,"transactionId":3,"characterId":1,"round":2,"kind":"hp_change","summary":"orc","hpDelta":-8,
+		"id":4,"transactionId":3,"characterId":1,"round":2,"kind":"hp_change","roll":false,"summary":"orc","hpDelta":-8,
 		"effectiveHpDelta":-12,"effectiveSummary":"orc axe","note":"","status":"amended","payload":{},"effectivePayload":{},
 		"snapshots":[],
 		"corrections":[{"id":1,"kind":"amend","hpDelta":-12,"source":"orc axe","createdAt":"2026-10-17T20:00:00Z"}],
@@ -48,11 +48,40 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	rec = do(h, "POST", "/api/log/5/amend", `{"note":"DM: axe, not club"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
-		"id":5,"transactionId":5,"characterId":1,"round":2,"kind":"buff_change","summary":"Activated Haste","hpDelta":0,
+		"id":5,"transactionId":5,"characterId":1,"round":2,"kind":"buff_change","roll":false,"summary":"Activated Haste","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"Activated Haste","note":"DM: axe, not club","status":"active",
 		"payload":{},"effectivePayload":{},"snapshots":[],
 		"corrections":[{"id":3,"kind":"amend","note":"DM: axe, not club","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
+}
+
+// ADR 0018 step 10: GET /api/log marks each entry of the roll kinds
+// (actionlog.RollKinds) and no other, so the web keeps no copy of the list.
+func TestLogList_MarksTheRollKinds(t *testing.T) {
+	kinds := []actionlog.Kind{actionlog.KindHPChange, actionlog.KindDice, actionlog.KindInitiative, actionlog.KindCorrection}
+	kinds = append(kinds, actionlog.RollKinds...)
+	entries := make([]actionlog.Entry, 0, len(kinds))
+	for i, k := range kinds {
+		entries = append(entries, actionlog.Entry{ID: int64(i + 1), TransactionID: int64(i + 1), CharacterID: 1, Kind: k, CreatedAt: at})
+	}
+	h, m := newRouter(t)
+	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return(entries, nil)
+	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(int64(len(kinds)), true, nil)
+	m.log.EXPECT().RedoTarget(mock.Anything, int64(1)).Return(nil, nil)
+	rec := do(h, "GET", "/api/log", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got struct {
+		Entries []struct {
+			Kind string `json:"kind"`
+			Roll *bool  `json:"roll"`
+		} `json:"entries"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Len(t, got.Entries, len(kinds))
+	for i, e := range got.Entries {
+		require.NotNil(t, e.Roll, "every entry says whether it is a roll: %s", e.Kind)
+		assert.Equal(t, i >= 4, *e.Roll, e.Kind)
+	}
 }
 
 // ADR 0018 step 3: the HP undo and the per-row void are retired; the global
@@ -79,7 +108,7 @@ func TestLogUndo_WireShape(t *testing.T) {
 	rec := do(h, "POST", "/api/log/undo", `{"expectedTopId":9}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
-		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"attack","summary":"","hpDelta":0,
+		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"attack","roll":true,"summary":"","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"voided","payload":{"hit":true},"effectivePayload":{"hit":true},
 		"snapshots":[{"key":"items:arrows_plus3","before":{"count":20},"after":{"count":19}}],
 		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"}],
@@ -102,7 +131,7 @@ func TestLogRedo_WireShape(t *testing.T) {
 	rec := do(h, "GET", "/api/log", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"topId":8,"entries":[],"redo":{
-		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"round_advance","summary":"","hpDelta":0,
+		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"round_advance","roll":false,"summary":"","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"voided",
 		"payload":{"fromRound":3,"toRound":4},"effectivePayload":{"fromRound":3,"toRound":4},"snapshots":[],
 		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"}],
@@ -115,7 +144,7 @@ func TestLogRedo_WireShape(t *testing.T) {
 	rec = do(h, "POST", "/api/log/redo", `{"expectedRedoId":9}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
-		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"round_advance","summary":"","hpDelta":0,
+		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"round_advance","roll":false,"summary":"","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"active",
 		"payload":{"fromRound":3,"toRound":4},"effectivePayload":{"fromRound":3,"toRound":4},"snapshots":[],
 		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"},{"id":3,"kind":"redo","createdAt":"2026-10-17T20:00:00Z"}],
@@ -159,7 +188,7 @@ func TestLogEndpoints_AdjustedSaveShape(t *testing.T) {
 	rec := do(h, "GET", "/api/log", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"topId":null,"redo":null,"entries":[{
-		"id":7,"transactionId":7,"characterId":1,"round":1,"kind":"save","summary":"Save vs Spells: d20 12 vs 14, FAILED","hpDelta":0,
+		"id":7,"transactionId":7,"characterId":1,"round":1,"kind":"save","roll":true,"summary":"Save vs Spells: d20 12 vs 14, FAILED","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
 		"note":"","status":"amended","payload":{"passed":false},"effectivePayload":{"passed":true},
 		"snapshots":[],
@@ -192,13 +221,13 @@ func TestLogEndpoints_CorrectionStepShape(t *testing.T) {
 	rec := do(h, "GET", "/api/log", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"topId":9,"redo":null,"entries":[{
-		"id":9,"transactionId":9,"characterId":1,"round":1,"kind":"correction","summary":"","hpDelta":0,
+		"id":9,"transactionId":9,"characterId":1,"round":1,"kind":"correction","roll":false,"summary":"","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"active",
 		"payload":{"entryId":7,"entryKind":"attack","field":"targetAc","from":5,"to":2},
 		"effectivePayload":{"entryId":7,"entryKind":"attack","field":"targetAc","from":5,"to":2},
 		"snapshots":[],"corrections":[],"createdAt":"2026-10-17T20:00:00Z"
 	},{
-		"id":7,"transactionId":7,"characterId":1,"round":1,"kind":"attack","summary":"","hpDelta":0,
+		"id":7,"transactionId":7,"characterId":1,"round":1,"kind":"attack","roll":true,"summary":"","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"amended",
 		"payload":{"targetAc":5},"effectivePayload":{"targetAc":2},"snapshots":[],
 		"corrections":[

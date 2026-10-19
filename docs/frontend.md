@@ -19,7 +19,7 @@ web/
     api/              ← typed fetch wrappers (hp.ts, combat.ts, buffs.ts, spells.ts)
     components/
       ui/             ← shadcn/ui primitives (Button, Card, Badge, etc.)
-      dashboard/      ← Header (TurnBlock, EffectsTimeline, LastResult, BuffForms), HpBar, ResultCard, QuickHp, CombatLog, JournalBar, DiceComposer, Notices
+      dashboard/      ← Header (RoundBlock, EffectsTimeline, LastResult, BuffForms), HpBar, ResultCard, QuickHp, CombatLog, JournalBar, DiceComposer, Notices
       actions/        ← ActionArea tabs and one panel per tab
       shell/          ← Rail, ActStage (now band, journal split), BrandMark, SettingsPopover
     stores/           ← Zustand stores (hp.ts, combat.ts, buffs.ts, spells.ts)
@@ -48,7 +48,7 @@ their regions as they drop their remaining `truncate`s. `App.tsx` composes it.
 ```mermaid
 flowchart TD
   subgraph H["Header card, full width, at most 120 px at rest (components/dashboard/Header.tsx)"]
-    TB["TurnBlock: TURN over its number (text-headline); Next turn and the ⋯ menu over the initiative (text-hero) with reroll"]
+    TB["RoundBlock: ROUND over its number (text-headline); Next turn and the ⋯ menu over the initiative (text-hero) with reroll"]
     ET["EffectsTimeline: one row per buff over 5 turns, all the width up to the right column; add / edit forms"]
     subgraph DK["Right column, docked at the right edge, right-aligned"]
       BM["BrandMark: Facet · Bare mark and Cinzel wordmark"]
@@ -88,7 +88,7 @@ flowchart TD
 ```
 
 - Always visible (ADR 0022 step 2.1): the header card, the character card on the left edge and the
-  dice footer. The last result (`LastResult.tsx`, `lib/filCard.ts` `lastResultEntry` /
+  dice footer. The last result (`LastResult.tsx`, `journal/card.ts` `lastResultEntry` /
   `lastResultChip`) is the newest result entry (attack, save, cast, item use, skill check,
   exposure) or free dice roll not undone, worded as its journal row: a roll made from any activity
   shows there at once. The result panel and the journal are the Act activity's.
@@ -106,13 +106,13 @@ flowchart TD
 - Header card budget (ADR 0022 step 3.1): at most 120 px tall at rest, outline included, with 3
   effect rows. Layout per ADR 0027 step 4: turn | Next turn over the initiative | timeline (all the
   spare width) | brand over the last result, docked right, 6 px apart.
-- Result panel and journal (`ResultCard.tsx`, `CombatLog.tsx`, logic in `lib/filCard.ts`, UI state in
-  `stores/fil.ts`), in the Act activity: the result panel shows the latest result by default: this session's last roll
-  response while it is the newest attack / save / cast / item use entry (the server's
-  `actionlog.RollKinds`), else that entry rendered from its payload (after a reload). A click on a
+- Result panel and journal (`ResultCard.tsx`, `CombatLog.tsx`, logic in the journal registry below, UI state in
+  `stores/journal.ts`), in the Act activity: the result panel shows the latest result by default: this session's last roll
+  response while it is the newest entry of a roll kind (marked `roll: true` by `GET /api/log`, the server's
+  `actionlog.RollKinds`, ADR 0018 step 10; the web keeps no list), else that entry rendered from its payload (after a reload). A click on a
   journal row shows that entry instead, read-only, with an accent ring and "Latest" to return; a
   new roll returns to the latest too. Only the latest result offers corrections (target AC, save
-  adjustment), by entry id. One layout per kind, from the payload (`cardModel`): attack (hexagon
+  adjustment), by entry id. One layout per kind, from the payload (its view's `card`): attack (hexagon
   d20, "Hits AC X" with the verdict pill beside it, the stat tiles d20 / target AC / margin, damage
   dice and total, the AC correction folded to one line, "Calculation details" closed by default),
   save (d20, "roll total vs adjusted target+" with the verdict pill, the stat tiles, the buff
@@ -131,7 +131,7 @@ flowchart TD
   (`bg-sub-band`), each **one 22 px line per entry** ([ADR 0022](adr/0022-activity-focus-layout.md)
   step 5.1, [ADR 0027](adr/0027-space-follows-frequency-of-use.md) step 9): a narrow turn marker
   ("T3", a campfire icon out of combat; the full "Turn 3 · current" in its tooltip and for screen
-  readers, `turnMarker` in `lib/filCard.ts`) beside the group's first entry, the current turn's in
+  readers, `roundMarker` in `journal/rounds.ts`) beside the group's first entry, the current turn's in
   the tint (its one mark); then the value right-aligned before the kind icon (a roll total in ink,
   gold only when the payload says crit, `rowValue`; ADR 0026 step 5.8), the entry text (with
   Amended / capped and a muted Undone tag inline after it; an undone row is muted and struck)
@@ -143,6 +143,20 @@ flowchart TD
   dice, shows before the time on hover, on keyboard focus in the row and on the selected row (step
   5.3). The row shown in the card is highlighted. Attack damage dice
   show as "1d8 → 6": the attack payload has no per-die values.
+- Journal registry (`web/src/journal/`, the architecture review's W4): one view per entry kind,
+  `KIND_VIEWS: Record<LogKind, KindView>` in `registry.ts`, so the type checker refuses a kind
+  without its view. A kind's file in `journal/kinds/` owns everything about it: `decode` (reads the
+  payload, or the payload in effect, once), the journal `text`, the row `value`, `rolled` (the
+  Rolls filter), the card's `subtitle`, the header's `short` line, the `icon`, the result card's
+  body (`card`, with its corrections) and, for the roll endpoints, `live` (the answer as the
+  payload). `entry.ts` asks the views for the journal, its bar, the header and the undo labels;
+  `card.ts` picks what the card shows (`cardSource`) and its content; `ResultCard.tsx` is a shell
+  with no per-kind branch. A new kind is its file, one line in the registry, its i18n and the
+  `LogKind` member. `parts.tsx` holds the card's shared pieces (hexagon die, tiles, verdict pill,
+  correction fold, check layout). Each kind has `kinds/<kind>.test.ts` over
+  `fixtures/<kind>.json` (entries as `GET /api/log` serves them), in English and French
+  (`kindCase.tsx`). The fast-refresh lint rule is off for `journal/kinds/*.tsx` only: a kind's file
+  exports its record beside its card.
 - Admin section (`components/admin/AdminPage.tsx`, [ADR 0029](adr/0029-users-login-and-access.md) step
   1.3, amendment "the admin section as built"): `/admin`, a page of its own (`startFor` shows it to an
   admin; a player goes to `/`), reached from the cog menu's Admin link (admins only). A header card
@@ -238,7 +252,7 @@ flowchart TD
   (`TABS` with its Phosphor icon, the tab label shows a count where it has one: spells left, combat
   items); each activity is one `Pane` in `App.tsx` (`lib/activities.ts`); the Act stage's two
   panels and journal are slots in `ActStage.tsx`.
-- Turn header (`TurnBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): turn row
+- Round header (`RoundBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): turn row
   plus up to 3 effect rows, the card at most 120px at rest (ADR 0022 step 3.1); with more effects an expander
   next to "Effects" ("+N", `aria-expanded`) grows the track in place. The turn
   block shows the turn (the round counter, its label stacked over it), Next turn and a ⋯ popover
@@ -263,7 +277,7 @@ flowchart TD
   `POST /api/log/undo` and that `topId` ([ADR 0010](adr/0010-action-stack-and-undo.md)); the Redo button next to it
   and Ctrl/Cmd+Shift+Z replay the `redo` target of `GET /api/log` with `POST /api/log/redo`
   ([ADR 0019](adr/0019-redo.md)); values are never edited in the log. Buff/round entries are rendered from their
-  payload in the player's language (`lib/logSummary.ts`). The character card's STR is the effective STR
+  payload in the player's language (the kind's view, `journal/kinds/`). The character card's STR is the effective STR
   (`GET /api/stats/str`; when buffed only that value, in the success colour, the sheet value in a
   tooltip on hover and keyboard focus); a buff whose `min_str` is not met
   (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; an applying buff with `weapon_buff` / `multiplier` shows its effect under its name ("weapon +5 · dice ×2"); a Strength
@@ -293,8 +307,8 @@ flowchart TD
   reloaded when buffs, effective STR, items or weapons change. An attack sends the saved choices
   (an offered first arrow becomes the choice first, so it stays chosen once spent); the result
   card labels each modifier and damage term by its `kind` (`result.mods.*`); attack log entries
-  are rendered from their payload (`lib/logSummary.ts`). An attack's answer names the log and the
-  arrow's `items:` key, read again (log, item counts), so voiding it shows the arrow back.
+  are rendered from their payload (the kind's view, `journal/kinds/`). An attack's answer names the
+  log and the arrow's `items:` key, read again (log, item counts), so voiding it shows the arrow back.
 - Items tab (`ItemsTab.tsx`): every item but ammunition (`lib/combatItems.ts`) on a grid row: the
   name (wrapping, never cut), behaviour and count, dice, Roll (it has dice) or Use, through
   `stores/roll.ts` `spendItem`; "Manage" (tooltip "Manage the inventory") focuses the Inventory activity.
@@ -398,7 +412,7 @@ flowchart TD
   and `statText` use it. No type has a property per language. A spell
   known only by id (spellbook, slots, journal, cast and exposure cards, the add-effect form, HP bar) is named by
   `useSpellName()`, over every spell's names loaded once at start (`GET /api/spells/names`,
-  `stores/spellNames.ts`); lib functions that word spells (`entryText`, `cardModel`, `cardHeader`,
+  `stores/spellNames.ts`); lib functions that word spells (`entryText`, `cardContent`, `shortResult`,
   the undo/redo labels) take that namer as a parameter (English names by default). The lookup shows
   a spell's name in the UI language only. Descriptions are the catalogue's Markdown
   subset, parsed by `lib/spellMarkdown.ts` and rendered as React text by
@@ -439,7 +453,7 @@ flowchart TD
   wraps, never cut), current over max, and the bar (`lib/hpBar.ts` `hpBarModel`): the scale runs
   from the server's `floor` (-10) to max, a hatched dying zone (`hatch-danger`) below 0 filled from
   0 down to current HP, the fill from 0 coloured by threshold band, the last damage taken as a
-  faint segment after the fill when the newest change is damage (`lib/moiLog.ts`), and the server's
+  faint segment after the fill when the newest change is damage (`journal/hpAndSaves.ts`), and the server's
   `condition` labelled next to the value when not ok (ADR 0011); "HP CHANGE": the amount labelled
   "Amount" above its field, Damage (`Drop`), Healing (`Heart`) on its line, the source under it,
   smaller (`text-label`), its placeholder never cut (Enter in either field applies damage,
@@ -449,8 +463,8 @@ flowchart TD
   at 1280), target (the sheet's), the newest logged roll in that category
   (server verdict ✓ / ✗ and the d20), a click rolls it. The card has the full height (ADR 0022
   step 2.3), so on a tall screen the space under the saves stays empty.
-- Saves (`Saves.tsx`, character card): a save is logged (kind `save`, rendered from `effectivePayload` in
-  `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" fold
+- Saves (`Saves.tsx`, character card): a save is logged (kind `save`, rendered from `effectivePayload` by
+  `journal/kinds/save.tsx`). The save card (`SaveCard` in that file) has an "Adjust after the roll" fold
   (shared with the skill check, `AdjustCheck`): − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
   `POST /api/roll/save/{logEntryId}/adjust` (`stores/roll.ts` `adjustLastSave`); the server returns
   the recomputed save (same d20 and roll total, the target moved: ADR 0006 step 5). Hidden once the entry is voided; a save that is no longer the latest roll is fixed by void + reroll.
@@ -527,7 +541,7 @@ export interface RollResult {
   multipliers: number;
   strengthBonus: number;
   totalDamage: number;
-  unroundedDamage?: number; // the formula text is built by lib/rollText.ts
+  unroundedDamage?: number; // the formula text is built by journal/kinds/attack.tsx
   // … see web/src/types/combat.ts for the full shape (damageTerms, ammo, critPlaceholder…)
 }
 ```

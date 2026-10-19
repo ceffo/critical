@@ -1,42 +1,41 @@
 import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Campfire, Sparkle } from "@phosphor-icons/react";
+import { Campfire } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
-import { useFilStore } from "@/stores/fil";
+import { useJournalStore } from "@/stores/journal";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
-import { groupByRound, isUndone, opensTurn } from "@/lib/groupByRound";
+import { groupByRound, isUndone, opensRound } from "@/lib/groupByRound";
 import { formatSigned, formatTime } from "@/lib/format";
-import { entryText } from "@/lib/logSummary";
 import { useSpellName } from "@/i18n/spellName";
 import { useInventoryName } from "@/i18n/inventoryName";
+import { cardEntryId, cardSource } from "@/journal/card";
 import {
-  cappedHeal,
-  cardEntryId,
-  cardSource,
+  entryCapped,
+  entryText,
   filterEntries,
+  rerollFormula,
   rowValue,
-  turnLabel,
-  turnMarker,
   type LogFilter,
-} from "@/lib/filCard";
+} from "@/journal/entry";
+import { EntryIcon } from "@/journal/EntryIcon";
+import { roundLabel, roundMarker } from "@/journal/rounds";
 import { cn } from "@/lib/utils";
 import type { LogEntry } from "@/types/log";
 import { RedoButton } from "./RedoButton";
 import { UndoButton } from "./UndoButton";
-import { KIND_ICONS, VALUE_TONES } from "./journalStyle";
+import { VALUE_TONES } from "./journalStyle";
 import { useDiceStore } from "@/stores/dice";
-import { dicePayload } from "@/lib/logSummary";
 
 const FILTERS: LogFilter[] = ["all", "rolls"];
 
 /**
  * The journal (GET /api/log, ADR 0022 step 5): a head with the All / Rolls filter, the entry count,
- * Undo and Redo, then the entries grouped by turn, newest first, one 22 px line each: value · icon
+ * Undo and Redo, then the entries grouped by round, newest first, one 22 px line each: value · icon
  * · entry, the time right-aligned last (ADR 0027 step 9). A narrow marker ("T3", an icon out of
- * combat) sits beside a turn's first entry, the current turn's in the tint; turn blocks touch and
- * alternate between the card's tone and the sub-band. A turn's opening rows (the advance and the
+ * combat) sits beside a round's first entry, the current round's in the tint; round blocks touch and
+ * alternate between the card's tone and the sub-band. A round's opening rows (the advance and the
  * initiative) are plain rows of its block. A click on an entry shows it in the result panel. The log is a stack: Undo pops the newest entry, values are never edited (and there is no
  * note to add).
  */
@@ -45,7 +44,7 @@ export function CombatLog() {
   const entries = useLogStore((s) => s.entries);
   const round = useBuffsStore((s) => s.round);
   const last = useRollStore((s) => s.last);
-  const { selectedId, filter, setFilter, select } = useFilStore();
+  const { selectedId, filter, setFilter, select } = useJournalStore();
   const shownId = cardEntryId(cardSource(last, entries, selectedId));
   const groups = groupByRound(filterEntries(entries, filter), round);
 
@@ -59,7 +58,7 @@ export function CombatLog() {
         <h2 className="section-label">{t("log.title")}</h2>
         <div
           role="radiogroup"
-          aria-label={t("fil.filter.label")}
+          aria-label={t("journal.filter.label")}
           className="flex rounded-lg bg-raised p-0.5"
         >
           {FILTERS.map((f) => (
@@ -76,7 +75,7 @@ export function CombatLog() {
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {t(`fil.filter.${f}`)}
+              {t(`journal.filter.${f}`)}
             </button>
           ))}
         </div>
@@ -92,31 +91,31 @@ export function CombatLog() {
         </span>
       </div>
       {/* The scroller is its rows' containing block (relative): an absolute box inside, such as a
-          turn marker's sr-only label, then scrolls and clips with it instead of stretching the page. */}
+          round marker's sr-only label, then scrolls and clips with it instead of stretching the page. */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
         {groups.map((g, i) => {
-          const marker = turnMarker(t, g.round, g.current);
+          const marker = roundMarker(t, g.round, g.current);
           return (
             <section
               key={g.key}
               className={cn(
-                // The narrow turn marker, then the turn's entries. Turn blocks touch; every other
+                // The narrow round marker, then the round's entries. Round blocks touch; every other
                 // one is on the sub-band tone, never a rule between them (ADR 0027 step 9.1).
                 "grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-x-1 px-2",
                 i % 2 === 1 && "bg-sub-band",
               )}
-              aria-label={turnLabel(t, g.round)}
+              aria-label={roundLabel(t, g.round)}
               data-current={g.current}
-              data-testid="journal-turn"
+              data-testid="journal-round"
             >
               <h3
                 className={cn(
                   "flex h-[1.375rem] items-center justify-center text-label font-semibold tabular-nums",
-                  // The current turn's one mark: its marker in the tint (ADR 0027 step 9.1).
+                  // The current round's one mark: its marker in the tint (ADR 0027 step 9.1).
                   g.current ? "text-tint" : "text-muted-foreground",
                 )}
                 title={marker.full}
-                data-testid="journal-turn-marker"
+                data-testid="journal-round-marker"
               >
                 {marker.short ? (
                   <span aria-hidden>{marker.short}</span>
@@ -130,15 +129,15 @@ export function CombatLog() {
                   {entries.length === 0
                     ? t("log.empty")
                     : filter === "rolls"
-                      ? t("fil.noRollsThisTurn")
+                      ? t("journal.noRollsThisRound")
                       : t("log.nothingThisRound")}
                 </p>
               ) : (
                 <div className="flex min-w-0 flex-col">
                   {g.transactions.map((tx) => {
-                    // A turn's opening rows read as the turn's own (ADR 0027 step 9.6), each with
+                    // A round's opening rows read as the round's own (ADR 0027 step 9.6), each with
                     // its own Undone tag; any other multi-entry transaction is framed.
-                    const framed = tx.length > 1 && !opensTurn(tx);
+                    const framed = tx.length > 1 && !opensRound(tx);
                     const rows = (
                       <ul className="flex flex-col">
                         {tx.map((e) => (
@@ -217,14 +216,13 @@ function LogRow({
   const names = useInventoryName();
   const reroll = useDiceStore((s) => s.roll);
   const rolling = useDiceStore((s) => s.rolling);
-  const diceFormula = dicePayload(e)?.formula;
+  const diceFormula = rerollFormula(e);
   const voided = e.status === "voided";
   const amended = e.status === "amended";
   const isHp = e.kind === "hp_change";
   const text = entryText(e, t, spellName, names);
-  const capped = cappedHeal(e);
+  const capped = entryCapped(e);
   const value = rowValue(e);
-  const KindIcon = KIND_ICONS[e.kind] ?? Sparkle;
   const kindLabel = t(`log.kinds.${e.kind}`, { defaultValue: e.kind });
   // A click anywhere on the row but its own controls shows the entry in the result panel.
   const onRowClick = (ev: MouseEvent<HTMLLIElement>) => {
@@ -270,7 +268,7 @@ function LogRow({
           className="flex h-[1.125rem] shrink-0 items-center text-muted-foreground"
           title={kindLabel}
         >
-          <KindIcon aria-hidden className="size-[1.125rem]" />
+          <EntryIcon entry={e} className="size-[1.125rem]" />
           <span className="sr-only">{kindLabel}</span>
         </span>
         <span className="min-w-0 flex-1 text-body break-words">
@@ -298,7 +296,7 @@ function LogRow({
           )}
         </span>
       </button>
-      {!voided && diceFormula !== undefined && (
+      {diceFormula !== null && (
         // On hover, on keyboard focus in the row, and on the selected row (ADR 0022 step 5.3).
         <Button
           size="xs"

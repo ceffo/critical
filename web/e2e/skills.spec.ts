@@ -12,7 +12,7 @@ const VIEWPORTS = [
 // pre-roll adjustment in the tab, ADR 0027 step 12), the result card shows the check and adjusts the
 // latest one after the roll, the journal words both, and Undo pops a check. The rules (d20 / d100,
 // the natural 20, targets, ranges) are Go tests (skillsvc, composition), the wording unit tests
-// (skillAdjust, logSummary); the outcome of a roll is random, so nothing assumes success or failure.
+// (skillAdjust, the journal registry); the outcome of a roll is random, so nothing assumes success or failure.
 test("skills: roll a proficiency, adjust it on the card, roll a bard skill, undo pops", async ({
   page,
 }) => {
@@ -131,7 +131,7 @@ test("skills: roll a proficiency, adjust it on the card, roll a bard skill, undo
 // (click, Enter and Space), the result card shows the check, its adjustment after the roll re-judges
 // the same roll, the journal words it and Undo pops the adjustment. The d20 is random: the tile is
 // rolled until the die lands where −2 decides against DEX 17 (16 or 17). The rules (target in
-// effect, natural 20, ranges) are Go tests (skillsvc), the wording unit tests (logSummary).
+// effect, natural 20, ranges) are Go tests (skillsvc), the wording unit tests (web/src/journal).
 test("ability check: click DEX, adjust −2 on the card, the verdict changes, undo restores it", async ({
   page,
 }) => {

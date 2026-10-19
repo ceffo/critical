@@ -100,7 +100,10 @@ async function fullSet(page: Page, theme: string, lang: "en" | "fr") {
     .getByRole("button", { name: new RegExp(`^${t("spellSlots.cast")}\\b`) })
     .first()
     .click();
-  const result = page.getByRole("region", { name: t("fil.card"), exact: true });
+  const result = page.getByRole("region", {
+    name: t("journal.card"),
+    exact: true,
+  });
   await expect(result.getByTestId("cast-damage")).toBeVisible();
   await shot(page, theme, "act-spells-cast");
   // Give the slot back (the cast is the newest transaction), so the next theme can cast again.
@@ -164,7 +167,7 @@ async function fullSet(page: Page, theme: string, lang: "en" | "fr") {
   await closePopover(page, addPopover);
   await page
     .getByRole("button", {
-      name: t("turn.menu"),
+      name: t("round.menu"),
     })
     .click();
   await expect(page.getByRole("menuitem").first()).toBeVisible();

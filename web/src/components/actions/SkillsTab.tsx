@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ThiefArmorPicker } from "./ThiefArmorPicker";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
 import { useCharacterStore } from "@/stores/character";
-import { skillName } from "@/lib/logSummary";
+import { skillName } from "@/journal/words";
 import { formatSigned } from "@/lib/format";
 import type { SkillKind } from "@/types/skills";
 

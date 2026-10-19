@@ -143,7 +143,7 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     its first language (a name typed in French only).
     Tests: `TestAny_FallbackElseFirstLanguage` (domain/localized), `TestResolveAttack_WeaponBuffPlusMagicAmmo`
     (combatsvc); `web/src/i18n/inventoryName.test.ts`, `web/src/i18n/localized.test.ts`,
-    `web/src/lib/itemPowers.test.ts`, `web/src/lib/logSummary.test.ts`.
+    `web/src/lib/itemPowers.test.ts`, `web/src/journal/entryText.test.ts`.
 
 Known limits: an item's `type` label and `notes` stay plain text (labels and notes the player types);
 a name typed before 033 in another language than English (the live "Diamant") is stored as `en` and

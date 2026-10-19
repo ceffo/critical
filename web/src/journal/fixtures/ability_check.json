@@ -1,0 +1,45 @@
+{
+  "success": {
+    "roll": true,
+    "payload": {
+      "ability": "str",
+      "die": 20,
+      "roll": 15,
+      "abilityScore": 16,
+      "target": 16,
+      "adjustment": 0,
+      "adjustedTarget": 16,
+      "success": true,
+      "rolledSuccess": true
+    }
+  },
+  "adjusted": {
+    "roll": true,
+    "status": "amended",
+    "payload": {
+      "ability": "dex",
+      "die": 20,
+      "roll": 14,
+      "abilityScore": 15,
+      "target": 15,
+      "adjustment": 0,
+      "adjustedTarget": 15,
+      "success": true,
+      "rolledSuccess": true
+    },
+    "effectivePayload": {
+      "ability": "dex",
+      "die": 20,
+      "roll": 14,
+      "abilityScore": 15,
+      "target": 15,
+      "adjustment": -2,
+      "adjustmentReason": "ledge",
+      "adjustedTarget": 13,
+      "success": false,
+      "rolledSuccess": true,
+      "previousSuccess": true,
+      "previousAdjustment": 0
+    }
+  }
+}

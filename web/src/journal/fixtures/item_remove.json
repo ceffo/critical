@@ -1,0 +1,18 @@
+{
+  "removed": {
+    "payload": {
+      "itemId": "rope",
+      "name": "Rope",
+      "category": "gear",
+      "type": "",
+      "behaviour": "stock",
+      "count": 2,
+      "maxCount": 0,
+      "magicalBonus": 0,
+      "ammoKind": "",
+      "effectDice": "",
+      "effectSave": "",
+      "notes": ""
+    }
+  }
+}

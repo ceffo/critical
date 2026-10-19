@@ -208,7 +208,9 @@ W4 and W7); not implemented. Each point is built by the item named and gets its 
    follow-up's re-run of the step, a failing step rolling the run back, and every stack popped and
    replayed with the same state as the release before.
 10. **The log says which entries are rolls.** `GET /api/log` marks each entry that is one of the roll
-    kinds (`actionlog.RollKinds`); the web keeps no copy of the list (W4).
+    kinds (`actionlog.RollKinds`); the web keeps no copy of the list (W4). Built: each entry carries
+    `roll` (true for a roll kind, false otherwise; undo, redo and amend answers too). Tests:
+    `rest/router` `TestLogList_MarksTheRollKinds`.
 11. **A mutation answers with its state keys.** Every state-changing request, undo and redo included,
     answers with the state keys of the transaction it wrote; the web refetches by key family and
     nothing else. Moves outside the log ([ADR 0029](0029-users-login-and-access.md) amendment "creating,

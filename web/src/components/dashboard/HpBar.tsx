@@ -4,7 +4,7 @@ import { useHpStore } from "@/stores/hp";
 import { useLogStore } from "@/stores/log";
 import { formatSigned } from "@/lib/format";
 import { HP_BAR_FILL as TONE, hpBarModel } from "@/lib/hpBar";
-import { lastDamage, lastHpChange } from "@/lib/moiLog";
+import { lastDamage, lastHpChange } from "@/journal/hpAndSaves";
 import { cn } from "@/lib/utils";
 import { groupHeadClass } from "./fieldStyles";
 import { useSpellName } from "@/i18n/spellName";

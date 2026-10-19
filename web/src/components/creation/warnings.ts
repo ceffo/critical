@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { skillName } from "@/lib/logSummary";
+import { skillName } from "@/journal/words";
 import {
   formatHeight,
   formatWeight,

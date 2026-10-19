@@ -8,7 +8,7 @@ import {
 } from "@/api/dice";
 import { addDie, removeDie, stepConstant } from "@/lib/diceFormula";
 import type { DiceFavourite } from "@/types/dice";
-import { useFilStore } from "./fil";
+import { useJournalStore } from "./journal";
 import { useTableStore } from "./table";
 
 interface DiceStore {
@@ -79,7 +79,7 @@ export const useDiceStore = create<DiceStore>((set, get) => {
           entry = res.logEntryId;
         }, false);
         // The action module has read the journal again: the roll's entry is in it.
-        if (ok && entry !== undefined) useFilStore.getState().select(entry);
+        if (ok && entry !== undefined) useJournalStore.getState().select(entry);
         return ok;
       } finally {
         set({ rolling: false });

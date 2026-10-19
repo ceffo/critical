@@ -1,0 +1,9 @@
+{
+  "endCombat": {
+    "payload": {
+      "action": "end_combat",
+      "fromRound": 4,
+      "toRound": 0
+    }
+  }
+}

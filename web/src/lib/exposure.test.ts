@@ -11,17 +11,11 @@ import type {
 } from "@/types/spells";
 import { exposureDamageText } from "./spellDice";
 import { exposureRows, exposureText } from "./spellMode";
-import { entryText } from "./logSummary";
-import {
-  cardHeader,
-  cardModel,
-  cardSource,
-  isRollEntry,
-  latestResult,
-  liveModel,
-  rowValue,
-} from "./filCard";
-import { lastHpChange } from "./moiLog";
+import { entryText, isRolledEntry, rowValue } from "@/journal/entry";
+import { cardContent, cardSource, latestResult } from "@/journal/card";
+import { lastHpChange } from "@/journal/hpAndSaves";
+import { cardOf } from "@/journal/testing";
+import { recordedNames } from "@/i18n/inventoryName";
 import { spellNamer } from "@/i18n/spellName";
 
 async function makeT(lng: string) {
@@ -81,6 +75,7 @@ function entry(payload: unknown, over: Partial<LogEntry> = {}): LogEntry {
     characterId: 1,
     round: 2,
     kind: "exposure",
+    roll: true,
     summary: "",
     hpDelta: 0,
     effectiveHpDelta: 0,
@@ -157,7 +152,7 @@ describe("exposure dice text", () => {
 describe("exposure entries", () => {
   it("are rolls and the latest result", () => {
     const e = entry(payload);
-    expect(isRollEntry(e)).toBe(true);
+    expect(isRolledEntry(e)).toBe(true);
     expect(latestResult([e])).toBe(e);
   });
 
@@ -200,20 +195,14 @@ describe("exposure entries", () => {
 
   it("the card renders from the payload, the endpoint's answer shape, with the served exposure", async () => {
     const t = await makeT("en");
-    const model = cardModel(entry(payload), t);
-    expect(model).toEqual({
-      layout: "exposure",
-      exposure: { ...payload, logEntryId: 7, hpDelta: 0 },
-    });
-    expect(cardHeader("exposure", model, entry(payload), t, "en").tag).toBe(
-      "Exposure",
-    );
-    expect(
-      cardHeader("exposure", model, entry(payload), t, "en").subtitle,
-    ).toBe("Cloudkill");
+    const card = cardOf(entry(payload), t);
+    expect(card.payload).toEqual({ ...payload, logEntryId: 7, hpDelta: 0 });
+    expect(card.tag).toBe("Exposure");
+    expect(card.subtitle).toBe("Cloudkill");
   });
 
-  it("a live exposure is the card until the log has caught up", () => {
+  it("a live exposure is the card until the log has caught up", async () => {
+    const t = await makeT("en");
     const result: ExposureResult = {
       logEntryId: 8,
       spellId: "cloudkill",
@@ -232,7 +221,15 @@ describe("exposure entries", () => {
       },
     };
     const last = { kind: "exposure" as const, result };
-    expect(liveModel(last)).toEqual({ layout: "exposure", exposure: result });
+    expect(
+      cardContent(
+        { kind: "live", last, entry: null },
+        t,
+        "en",
+        (_id, name) => name ?? "",
+        recordedNames,
+      ).payload,
+    ).toEqual(result);
     expect(cardSource(last, [entry(payload)], null)).toMatchObject({
       kind: "live",
     });
@@ -262,8 +259,7 @@ describe("exposure entries", () => {
       },
       { hpDelta: -2, effectiveHpDelta: -2 },
     );
-    const model = cardModel(floored, t);
-    expect(model.layout === "exposure" && model.exposure.hpDelta).toBe(-2);
+    expect((cardOf(floored, t).payload as ExposureResult).hpDelta).toBe(-2);
     expect(rowValue(floored)).toEqual({ text: "−2", tone: "damage" });
     expect(entryText(floored, t)).toBe(
       "Cloudkill exposure, round 2: 10 poison damage to me · −10 requested, stopped at the HP floor",
@@ -307,8 +303,10 @@ describe("exposure entries", () => {
       }),
       kind: "cast" as const,
     };
-    const model = cardModel(cast, t);
-    expect(model.layout).toBe("cast");
-    expect(model.layout === "cast" && model.cast.exposure).toEqual(cloud);
+    const card = cardOf(cast, t);
+    expect(card.kind).toBe("cast");
+    expect(
+      (card.payload as { breakdown: { exposure: unknown } }).breakdown.exposure,
+    ).toEqual(cloud);
   });
 });

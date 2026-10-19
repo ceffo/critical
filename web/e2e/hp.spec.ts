@@ -8,7 +8,7 @@ import {
   openDashboard,
   readsAfter,
   recordHp,
-  turnGroup,
+  roundGroup,
 } from "./helpers";
 
 test("damage then heal change current HP by the amounts entered, without reload", async ({
@@ -41,7 +41,7 @@ test("damage then heal change current HP by the amounts entered, without reload"
 
   // Both land in the current round's group of the combat log.
   const round = (await page.getByTestId("round-value").textContent())!.trim();
-  const group = turnGroup(page, round);
+  const group = roundGroup(page, round);
   await expect(group.getByRole("listitem")).toHaveCount(2);
 
   await expectNoReload(page);
@@ -75,12 +75,12 @@ test("a heal never takes HP above max: the excess is dropped and shown", async (
   await snap(page, "heal-capped-at-max");
 });
 
-test("Moi column: Enter applies damage, Shift+Enter healing; last change, ghost and last save follow", async ({
+test("Character card: Enter applies damage, Shift+Enter healing; last change, ghost and last save follow", async ({
   page,
 }) => {
   await openDashboard(page);
-  const moi = page.getByRole("complementary", { name: "Character" });
-  const box = moi.getByRole("group", { name: "HP change" });
+  const character = page.getByRole("complementary", { name: "Character" });
+  const box = character.getByRole("group", { name: "HP change" });
   const before = await currentHp(page);
   await addBuff(page, { name: "e2e kbd Stoneskin", charges: 3 });
 
@@ -89,8 +89,10 @@ test("Moi column: Enter applies damage, Shift+Enter healing; last change, ghost 
   await box.getByLabel("Source").fill("e2e kbd orc");
   await box.getByLabel("Source").press("Enter");
   await expect.poll(() => currentHp(page)).toBe(before - 6);
-  await expect(moi.getByTestId("hp-last-change")).toHaveText("−6 e2e kbd orc");
-  await expect(moi.getByTestId("hp-ghost")).toBeVisible();
+  await expect(character.getByTestId("hp-last-change")).toHaveText(
+    "−6 e2e kbd orc",
+  );
+  await expect(character.getByTestId("hp-ghost")).toBeVisible();
   await expect(box.getByLabel("Amount")).toHaveValue("");
 
   // Shift+Enter in the amount field: healing.
@@ -98,13 +100,13 @@ test("Moi column: Enter applies damage, Shift+Enter healing; last change, ghost 
   await box.getByLabel("Source").fill("e2e kbd potion");
   await box.getByLabel("Amount").press("Shift+Enter");
   await expect.poll(() => currentHp(page)).toBe(before - 2);
-  await expect(moi.getByTestId("hp-last-change")).toHaveText(
+  await expect(character.getByTestId("hp-last-change")).toHaveText(
     "+4 e2e kbd potion",
   );
-  await expect(moi.getByTestId("hp-ghost")).toHaveCount(0);
+  await expect(character.getByTestId("hp-ghost")).toHaveCount(0);
 
-  // A save rolled from its row shows its last roll there and its card in the Fil.
-  const spells = moi.getByRole("button", { name: "Roll save vs Spells" });
+  // A save rolled from its row shows its last roll there and its card in the result card.
+  const spells = character.getByRole("button", { name: "Roll save vs Spells" });
   await spells.click();
   await expect(
     page
@@ -121,9 +123,9 @@ test("Moi column: Enter applies damage, Shift+Enter healing; last change, ghost 
   ]) {
     await page.setViewportSize(vp);
     await expect(
-      moi.getByRole("group", { name: "e2e kbd Stoneskin" }),
+      character.getByRole("group", { name: "e2e kbd Stoneskin" }),
     ).toBeVisible();
-    await snap(page, `moi-${vp.width}x${vp.height}`);
+    await snap(page, `character-card-${vp.width}x${vp.height}`);
   }
 });
 
@@ -131,17 +133,17 @@ test("below 0 HP: the condition and the dying zone show, and HP stops at the flo
   page,
 }) => {
   await openDashboard(page);
-  const moi = page.getByRole("complementary", { name: "Character" });
+  const character = page.getByRole("complementary", { name: "Character" });
   const max = await currentHp(page); // a fresh character starts at full HP
-  await expect(moi.getByTestId("hp-condition")).toHaveCount(0);
-  await expect(moi.getByTestId("hp-dying-fill")).toHaveCount(0);
+  await expect(character.getByTestId("hp-condition")).toHaveCount(0);
+  await expect(character.getByTestId("hp-dying-fill")).toHaveCount(0);
 
   // Down to 4 below 0: unconscious, the dying zone fills from 0.
   await recordHp(page, "damage", max + 4, "e2e dragon breath");
   await expect.poll(() => currentHp(page)).toBe(-4);
-  await expect(moi.getByTestId("hp-condition")).toHaveText("Unconscious");
-  await expect(moi.getByTestId("hp-dying-fill")).toBeVisible();
-  await expect(moi.getByTestId("hp-scale")).toContainText("0");
+  await expect(character.getByTestId("hp-condition")).toHaveText("Unconscious");
+  await expect(character.getByTestId("hp-dying-fill")).toBeVisible();
+  await expect(character.getByTestId("hp-scale")).toContainText("0");
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
@@ -153,7 +155,7 @@ test("below 0 HP: the condition and the dying zone show, and HP stops at the flo
   // Further damage stops at the floor; the log shows what was asked.
   await recordHp(page, "damage", 20, "e2e ogre club");
   await expect.poll(() => currentHp(page)).toBe(-10);
-  await expect(moi.getByTestId("hp-condition")).toHaveText("Dead");
+  await expect(character.getByTestId("hp-condition")).toHaveText("Dead");
   const club = logEntry(page, "e2e ogre club");
   await expect(club.getByTestId("log-delta")).toHaveText("−6");
   await expect(club.getByTestId("log-capped")).toHaveText(
@@ -167,7 +169,7 @@ test("below 0 HP: the condition and the dying zone show, and HP stops at the flo
     { width: 2560, height: 1440 },
   ]) {
     await page.setViewportSize(vp);
-    await expect(moi.getByTestId("hp-dying-zone")).toBeVisible();
+    await expect(character.getByTestId("hp-dying-zone")).toBeVisible();
     await snap(page, `hp-floor-${vp.width}x${vp.height}`);
   }
 });

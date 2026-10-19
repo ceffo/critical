@@ -55,7 +55,7 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    and nothing can land between the check and the pop.
    Tests: `TestUndo` (one transaction call; "restorer fails: no void written").
 5. **Annuler and Ctrl/Cmd+Z.** The journal header has an Annuler button whose tooltip names the
-   action on top, worded in the frontend from the entry's payload (`lib/logSummary.ts`); it is
+   action on top, worded in the frontend from the entry's payload (its kind's view in `web/src/journal/kinds/`); it is
    disabled when `topId` is null. Ctrl+Z (Cmd+Z on macOS) does the same, except while the focus
    is in a text-entry field (text-like input, textarea, select, editable element; a checkbox or
    radio does not count) and while a popover, dialog or menu is open. Both send the `topId` the
@@ -95,7 +95,7 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    `TestUnknownAC_Step4_VerdictSettlesWithoutCrit`, `TestUnknownAC_Step6_SameDiceAsKnownAC`; `router`
    `TestLogEndpoints_CorrectionStepShape`; `web/src/lib/undoButton.test.ts` (the correction
    tooltip, en/fr); `web/src/stores/undo.test.ts` ("a pop drops this session's live roll");
-   `web/src/lib/filCard.test.ts` ("a popped correction under the Rolls filter");
+   `web/src/journal/card.test.ts` ("a popped correction under the Rolls filter");
    `web/e2e/attack.spec.ts` "the target AC is corrected on the card after the roll" (Annuler
    pops the corrections back to the rolled AC, then the attack is voided).
 

@@ -26,8 +26,8 @@ test("experience: add with the bonus, edit, delete, then undo each", async ({
   page,
 }) => {
   await openDashboard(page);
-  const moi = page.getByRole("complementary", { name: "Character" });
-  await moi.getByRole("button", { name: /^Level \d+$/ }).click();
+  const character = page.getByRole("complementary", { name: "Character" });
+  await character.getByRole("button", { name: /^Level \d+$/ }).click();
   const ws = page.getByRole("region", { name: "Experience", exact: true });
   await expect(ws).toBeVisible();
   await expect(
@@ -101,7 +101,7 @@ test("experience: add with the bonus, edit, delete, then undo each", async ({
   await snap(page, "experience-journal");
 });
 
-/** The max HP as shown in the Moi column ("current / max"). */
+/** The max HP as shown on the character card ("current / max"). */
 async function maxHp(page: Page): Promise<number> {
   const text = (await page.getByTestId("hp-value").textContent()) ?? "";
   const m = /\/\s*(\d+)/.exec(text);
@@ -120,12 +120,12 @@ test("level up: an XP add crossing a level prompts, the prompt adds the hit poin
 }) => {
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  const moi = page.getByRole("complementary", { name: "Personnage" });
+  const character = page.getByRole("complementary", { name: "Personnage" });
   await expect(page.getByTestId("level-up")).toHaveCount(0);
   const before = await maxHp(page);
 
   // 1,293,418 + 30,000 XP (no bonus) reaches Table 25's level 16 (1,320,000).
-  await moi.getByRole("button", { name: /^Niveau 15$/ }).click();
+  await character.getByRole("button", { name: /^Niveau 15$/ }).click();
   const add = page.getByRole("region", { name: "Ajouter des XP" });
   await add.getByRole("checkbox").uncheck();
   await add.getByLabel("Montant").fill("30000");

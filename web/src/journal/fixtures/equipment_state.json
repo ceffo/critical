@@ -1,0 +1,38 @@
+{
+  "equipped": {
+    "payload": {
+      "itemId": "chain",
+      "name": "Chain mail",
+      "category": "armour",
+      "before": "carried",
+      "after": "worn"
+    }
+  },
+  "swapped": {
+    "payload": {
+      "itemId": "plate",
+      "name": "Plate mail",
+      "category": "armour",
+      "before": "carried",
+      "after": "worn",
+      "off": [
+        {
+          "itemId": "chain",
+          "name": "Chain mail",
+          "category": "armour",
+          "before": "worn",
+          "after": "carried"
+        }
+      ]
+    }
+  },
+  "unequipped": {
+    "payload": {
+      "itemId": "chain",
+      "name": "Chain mail",
+      "category": "armour",
+      "before": "worn",
+      "after": "carried"
+    }
+  }
+}

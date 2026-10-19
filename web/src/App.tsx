@@ -65,7 +65,7 @@ function Pane({
  * the ground, padded 12 px, every zone is a card 12 px apart: the header card across the top, then
  * the character card on the left edge, the rail on the ground and the stage with the focused
  * activity, then the dice footer card across the bottom. The header, the character card and the
- * footer are always visible: together they show the last result, HP and the turn with its effects
+ * footer are always visible: together they show the last result, HP and the round with its effects
  * in every activity. Each zone scrolls on its own.
  */
 /** What the page reads on start, and again once the database answers after an uncertain write. */

@@ -197,10 +197,14 @@ type EntryDTO struct {
 	// TransactionID is the id of the first entry of the entry's transaction
 	// (its own id when it is that entry): an undo pops the whole transaction
 	// and the UI names it by that first entry (ADR 0018 steps 1 and 2).
-	TransactionID    int64  `json:"transactionId"`
-	CharacterID      int64  `json:"characterId"`
-	Round            int    `json:"round"`
-	Kind             string `json:"kind"`
+	TransactionID int64  `json:"transactionId"`
+	CharacterID   int64  `json:"characterId"`
+	Round         int    `json:"round"`
+	Kind          string `json:"kind"`
+	// Roll is true for the roll kinds (actionlog.RollKinds): the entry's result
+	// takes the result card, and only the newest of them takes a correction
+	// (ADR 0018 step 10). The web keeps no copy of the list.
+	Roll             bool   `json:"roll"`
 	Summary          string `json:"summary"`
 	HPDelta          int    `json:"hpDelta"`
 	EffectiveHPDelta int    `json:"effectiveHpDelta"`
@@ -254,7 +258,7 @@ func toDTO(e actionlog.Entry) EntryDTO {
 	}
 	out := EntryDTO{
 		ID: e.ID, TransactionID: e.TransactionID, CharacterID: e.CharacterID, Round: e.Round, Kind: string(e.Kind),
-		Summary: e.Summary, HPDelta: e.HPDelta,
+		Roll: actionlog.IsRoll(e.Kind), Summary: e.Summary, HPDelta: e.HPDelta,
 		EffectiveHPDelta: e.EffectiveHPDelta(), EffectiveSummary: e.EffectiveSummary(), Note: e.Note(),
 		Status: string(e.Status()), Payload: payload, EffectivePayload: effective, CreatedAt: e.CreatedAt,
 		Snapshots:   make([]SnapshotDTO, 0, len(e.Snapshots)),

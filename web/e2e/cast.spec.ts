@@ -11,9 +11,9 @@ import {
   recordHp,
   undoEntry,
   expectUndoOn,
-  nextTurn,
-  turnMenu,
-  undoNextTurn,
+  nextRound,
+  roundMenu,
+  undoNextRound,
   expectSlotDots,
   readsAfter,
 } from "./helpers";
@@ -394,13 +394,13 @@ test("after Next round the journal Undo is not on the cast until Next round is p
   await openSpells(page);
   await page.getByRole("button", { name: "Cast Stoneskin" }).click();
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
-  await nextTurn(page);
+  await nextRound(page);
   await expect(logEntry(page, "Round 0 → 1")).toBeVisible();
 
   await expectUndoOn(page, "Cast Stoneskin", true);
   await snap(page, "undo-not-on-the-cast-after-next-round");
 
-  await undoNextTurn(page, logEntry(page, "Round 0 → 1"));
+  await undoNextRound(page, logEntry(page, "Round 0 → 1"));
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
   await undoEntry(page, "Cast Stoneskin");
   await expect(buffBadge(page, "Stoneskin")).toHaveCount(0);
@@ -513,7 +513,7 @@ test("a cast buff expired by Time passes: pop the fast-forward, then the cast", 
   await expect(buffBadge(page, "Haste")).toBeVisible();
 
   const form = page.getByRole("form", { name: "Time passes…" });
-  await turnMenu(page, "Time passes…");
+  await roundMenu(page, "Time passes…");
   await form.getByLabel("Hours that pass").fill("1");
   await form.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByRole("status")).toContainText(

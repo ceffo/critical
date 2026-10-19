@@ -42,4 +42,10 @@ export default defineConfig([
       ],
     },
   },
+  {
+    // One file per journal entry kind holds its record and its result card (docs/frontend.md,
+    // "Journal registry"): an edit there reloads the page instead of hot-swapping the card.
+    files: ["src/journal/kinds/*.tsx"],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
 ]);

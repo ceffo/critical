@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, X } from "@phosphor-icons/react";
-import { lastSaves } from "@/lib/moiLog";
+import { lastSaves } from "@/journal/hpAndSaves";
 import { cn } from "@/lib/utils";
 import { groupHeadClass } from "./fieldStyles";
 import { useCharacterStore } from "@/stores/character";

@@ -5,7 +5,7 @@ import {
   type Request,
 } from "@playwright/test";
 
-/** Current HP as shown in the Moi column ("current / max"). */
+/** Current HP as shown on the character card ("current / max"). */
 export async function currentHp(page: Page): Promise<number> {
   const text = (await page.getByTestId("hp-value").textContent()) ?? "";
   const m = /^\s*(-?\d+)\s*\/\s*(\d+)/.exec(text);
@@ -108,7 +108,7 @@ export function combatLog(page: Page): Locator {
 }
 
 /** The journal's group of turn n ("Round 3"; turn 0 is "Out of combat"). */
-export function turnGroup(page: Page, n: number | string): Locator {
+export function roundGroup(page: Page, n: number | string): Locator {
   const turn = Number(n);
   return combatLog(page).getByRole("region", {
     name: turn > 0 ? `Round ${turn}` : "Out of combat",
@@ -256,12 +256,12 @@ export async function chooseLanguage(page: Page, lang: "en" | "fr") {
 }
 
 /** Next turn from the turn block (English UI). */
-export async function nextTurn(page: Page) {
+export async function nextRound(page: Page) {
   await page.getByRole("button", { name: "Next round" }).click();
 }
 
 /** Open the turn block's ⋯ menu and pick an action (English UI). */
-export async function turnMenu(
+export async function roundMenu(
   page: Page,
   item: "Time passes…" | "Set round number…" | "End combat",
 ) {
@@ -273,7 +273,7 @@ export async function turnMenu(
  * Undo the Next turn on top: its advance and the initiative it rolled are one transaction
  * (ADR 0018), so the journal's one Undo pops both. `advance` is the advance entry's text.
  */
-export async function undoNextTurn(page: Page, advance: Locator) {
+export async function undoNextRound(page: Page, advance: Locator) {
   const id = await page
     .getByTestId("initiative-value")
     .getAttribute("data-entry-id");

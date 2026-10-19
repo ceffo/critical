@@ -1,18 +1,18 @@
 import { useTranslation } from "react-i18next";
-import { Sparkle } from "@phosphor-icons/react";
 import { useSpellName } from "@/i18n/spellName";
 import { useInventoryName } from "@/i18n/inventoryName";
-import { rowValue, turnLabel } from "@/lib/filCard";
+import { entryText, rowValue } from "@/journal/entry";
+import { EntryIcon } from "@/journal/EntryIcon";
+import { roundLabel } from "@/journal/rounds";
 import { formatTime } from "@/lib/format";
-import { entryText } from "@/lib/logSummary";
 import { cn } from "@/lib/utils";
 import { useLogStore } from "@/stores/log";
-import { KIND_ICONS, VALUE_TONES } from "./journalStyle";
+import { VALUE_TONES } from "./journalStyle";
 import { RedoButton } from "./RedoButton";
 import { UndoButton } from "./UndoButton";
 
 /**
- * The collapsed journal (ADR 0022 step 5.4): one line in the journal's column order (turn, value,
+ * The collapsed journal (ADR 0022 step 5.4): one line in the journal's column order (round, value,
  * icon, the newest entry, time), then the entry count and Undo / Redo. The entry text wraps rather
  * than being cut.
  */
@@ -24,7 +24,6 @@ export function JournalBar() {
   const last = entries[0];
   const value = last ? rowValue(last) : null;
   const voided = last?.status === "voided";
-  const KindIcon = last ? (KIND_ICONS[last.kind] ?? Sparkle) : null;
 
   return (
     <section
@@ -33,13 +32,13 @@ export function JournalBar() {
       data-testid="journal-bar"
     >
       <h2 className="shrink-0 section-label">{t("log.title")}</h2>
-      {last && KindIcon ? (
+      {last ? (
         <p
           className="flex min-w-0 flex-1 items-center gap-3 text-body"
           data-entry-id={last.id}
         >
           <span className="shrink-0 chip px-1.5 text-label font-medium">
-            {turnLabel(t, last.round)}
+            {roundLabel(t, last.round)}
           </span>
           {value && (
             <span
@@ -51,8 +50,8 @@ export function JournalBar() {
               {value.text}
             </span>
           )}
-          <KindIcon
-            aria-hidden
+          <EntryIcon
+            entry={last}
             className="size-[1.125rem] shrink-0 text-muted-foreground"
           />
           <span

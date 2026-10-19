@@ -1,0 +1,48 @@
+{
+  "proficiency": {
+    "roll": true,
+    "payload": {
+      "id": "musical_instrument",
+      "kind": "proficiency",
+      "die": 20,
+      "roll": 17,
+      "target": 16,
+      "adjustment": 0,
+      "adjustedTarget": 16,
+      "success": false,
+      "rolledSuccess": false,
+      "ability": "dex",
+      "abilityScore": 17,
+      "modifier": -1
+    }
+  },
+  "bardAdjusted": {
+    "roll": true,
+    "status": "amended",
+    "payload": {
+      "id": "climb_walls",
+      "kind": "bardSkill",
+      "die": 100,
+      "roll": 42,
+      "target": 40,
+      "adjustment": 0,
+      "adjustedTarget": 40,
+      "success": false,
+      "rolledSuccess": false
+    },
+    "effectivePayload": {
+      "id": "climb_walls",
+      "kind": "bardSkill",
+      "die": 100,
+      "roll": 42,
+      "target": 40,
+      "adjustment": 10,
+      "adjustmentReason": "rope",
+      "adjustedTarget": 50,
+      "success": true,
+      "rolledSuccess": false,
+      "previousSuccess": false,
+      "previousAdjustment": 0
+    }
+  }
+}

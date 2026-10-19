@@ -150,7 +150,7 @@
     "dyingZone": "Dying, down to {{floor}}",
     "lastExposure": "{{delta}} {{spell}}"
   },
-  "turn": {
+  "round": {
     "title": "Round",
     "next": "Next round",
     "menu": "More round actions",
@@ -160,7 +160,7 @@
     "initiativeHint": "1d10, the lowest acts first",
     "initiativeReroll": "Reroll initiative",
     "passTime": "Time passes…",
-    "setTurn": "Set round number…",
+    "setRound": "Set round number…",
     "endCombat": "End combat",
     "endCombatConfirm": "End combat? The round goes back to 0; effects keep their rounds.",
     "setLabel": "Round number",
@@ -181,14 +181,14 @@
     "title": "Effects",
     "none": "No active effects",
     "column": "R{{n}}",
-    "turns_one": "{{count}} round",
-    "turns_other": "{{count}} rounds",
+    "rounds_one": "{{count}} round",
+    "rounds_other": "{{count}} rounds",
     "charges_one": "{{count}} charge",
     "charges_other": "{{count}} charges",
     "chargesOf": "{{count}} / {{total}} charges",
     "untilSpent": "until spent",
     "untilDismissed": "until dismissed",
-    "lastTurn": "Last round",
+    "lastRound": "Last round",
     "showMore_one": "Show {{count}} more effect",
     "showMore_other": "Show {{count}} more effects",
     "showLess": "Show fewer effects",
@@ -1505,18 +1505,18 @@
       "bonus": "To-hit / dmg"
     }
   },
-  "moi": {
+  "chargeCards": {
     "chargesLeft_one": "{{count}} charge left",
     "chargesLeft_other": "{{count}} charges left",
     "absorb": "Absorb",
     "absorbLabel": "Absorb a hit with {{name}}",
     "chargesHint": "A hit taken uses one"
   },
-  "fil": {
+  "journal": {
     "card": "Detail",
     "latest": "Latest",
-    "turn": "Round {{round}}",
-    "turnShort": "R{{round}}",
+    "round": "Round {{round}}",
+    "roundShort": "R{{round}}",
     "outOfCombat": "Out of combat",
     "when": "R{{round}} · {{time}}",
     "whenOutOfCombat": "Out of combat · {{time}}",
@@ -1527,7 +1527,7 @@
     "saveVs": "{{total}} vs {{target}}+",
     "castVsAc": "To-hit roll against AC {{ac}}",
     "castBuff": "{{buff}}: {{counters}}",
-    "noRollsThisTurn": "No rolls this round.",
+    "noRollsThisRound": "No rolls this round.",
     "filter": {
       "label": "Journal filter",
       "all": "All",

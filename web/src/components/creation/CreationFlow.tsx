@@ -27,6 +27,7 @@ import {
   ABILITIES,
   type CreationOptions,
   type DraftChecks,
+  type DraftChecksRequest,
 } from "@/types/character";
 import { CardHead, Note, StepDot, Wordmark } from "./kit";
 import {
@@ -196,7 +197,12 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   // The server's verdicts on the class and skills steps (ADR 0034): the classes whose ability
   // minimums the scores miss, and the skill point budget with what is left. The last answer stays
   // shown while a newer one is asked for, so the figures do not blink as the player types.
-  const [checks, setChecks] = useState<DraftChecks | null>(null);
+  const [answeredChecks, setChecks] = useState<{
+    cls: string;
+    data: DraftChecks;
+  } | null>(null);
+  // An answer about another class (the player picked again meanwhile) is never shown.
+  const checks = answeredChecks?.cls === draft.cls ? answeredChecks.data : null;
   const [checksGate] = useState(replyGate);
   const checking = step === "class" || step === "extras";
   const checksKey = options
@@ -206,8 +212,9 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     if (!checking || checksKey === "") return;
     const current = checksGate.open();
     const timer = setTimeout(() => {
-      checkDraft(JSON.parse(checksKey)).then(
-        (data) => current() && setChecks(data),
+      const asked = JSON.parse(checksKey) as DraftChecksRequest;
+      checkDraft(asked).then(
+        (data) => current() && setChecks({ cls: asked.class, data }),
         // An older server has no checks: the steps show what the options carry.
         () => current() && setChecks(null),
       );

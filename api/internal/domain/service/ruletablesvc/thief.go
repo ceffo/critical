@@ -154,13 +154,14 @@ type BudgetWarning struct {
 // the first in one skill. The points are entered as one total per skill, so
 // the check is on the totals the levels allow. Skills in ThiefSkills order.
 func SkillPointBudget(level int, points map[string]int) []BudgetWarning {
-	return budget(level, points, ThiefSkills, SkillPointsFirstLevel, SkillPointsPerLevel, SkillPointsPerSkillFirst, SkillPointsPerSkillPerLevel)
+	total, perSkill, _ := SkillBudgetLimits("thief", level)
+	return budget(level, points, ThiefSkills, total, perSkill)
 }
 
 // SkillBudgetLimits are the limits SkillBudgetOf checks at level (ADR 0030
-// steps 17 and 18): the points in all, and in one skill (0: no limit on one
-// skill, the bard's). ok is false for a class without skill points or a level
-// under 1.
+// steps 17 and 18), the one source of both: the points in all, and in one
+// skill (0: no limit on one skill, the bard's). ok is false for a class
+// without skill points or a level under 1.
 func SkillBudgetLimits(class string, level int) (total, perSkill int, ok bool) {
 	if level < 1 {
 		return 0, 0, false
@@ -175,21 +176,19 @@ func SkillBudgetLimits(class string, level int) (total, perSkill int, ok bool) {
 	return 0, 0, false
 }
 
-// budget checks points over skills against first plus perLevel a level
-// after the first in all, and perSkillFirst plus perSkillPerLevel a level
-// after the first in one skill; a perSkillFirst of 0 checks no skill on its
-// own (the bard's, step 18). No warning under level 1.
-func budget(level int, points map[string]int, skills []string, first, perLevel, perSkillFirst, perSkillPerLevel int) []BudgetWarning {
+// budget checks points over skills against totalLimit in all and perSkill in
+// one skill; a perSkill of 0 checks no skill on its own (the bard's, step 18).
+// No warning under level 1.
+func budget(level int, points map[string]int, skills []string, totalLimit, perSkill int) []BudgetWarning {
 	out := []BudgetWarning{}
 	if level < 1 {
 		return out
 	}
-	total, totalLimit := 0, first+perLevel*(level-1)
-	skillLimit := perSkillFirst + perSkillPerLevel*(level-1)
+	total := 0
 	for _, skill := range skills {
 		total += points[skill]
-		if perSkillFirst > 0 && points[skill] > skillLimit {
-			out = append(out, BudgetWarning{Code: BudgetPerSkill, Skill: skill, Points: points[skill], Limit: skillLimit})
+		if perSkill > 0 && points[skill] > perSkill {
+			out = append(out, BudgetWarning{Code: BudgetPerSkill, Skill: skill, Points: points[skill], Limit: perSkill})
 		}
 	}
 	if total > totalLimit {

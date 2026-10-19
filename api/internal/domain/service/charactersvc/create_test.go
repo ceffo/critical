@@ -623,9 +623,19 @@ func TestCreationChecks_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
 // An XP the class table gives no level for has no budget, and no refusal (Create refuses it).
 func TestCreationChecks_AnXPWithNoLevelHasNoBudget(t *testing.T) {
 	e := newEnv(t)
-	xp := -5
+	xp := 5
 	e.rules.EXPECT().LevelFor("thief", xp).Return(0, errors.New("outside the table")).Once()
 	got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: "thief", XP: &xp})
 	require.NoError(t, err)
 	assert.Nil(t, got.SkillBudget)
+}
+
+// An XP outside the creation's range is never looked up: no budget, no error.
+func TestCreationChecks_AnXPOutsideTheRangeHasNoBudget(t *testing.T) {
+	e := newEnv(t)
+	for _, xp := range []int{-5, charactersvc.MaxStartingXP + 1} {
+		got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: "thief", XP: &xp})
+		require.NoError(t, err)
+		assert.Nil(t, got.SkillBudget)
+	}
 }

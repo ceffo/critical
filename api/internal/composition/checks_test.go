@@ -60,3 +60,68 @@ func TestCreationChecks_OverTheWire(t *testing.T) {
 	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks", `{"class":"fighter","xp":0}`, &fighter))
 	assert.Nil(t, fighter.SkillBudget)
 }
+
+type checksAnswer struct {
+	UnmetMinimums []struct {
+		Class     string   `json:"class"`
+		Abilities []string `json:"abilities"`
+	} `json:"unmetMinimums"`
+	SkillBudget *struct {
+		Level, Total, Spent, Left, PerSkill int
+	} `json:"skillBudget"`
+}
+
+func (a checksAnswer) unmet() map[string][]string {
+	out := map[string][]string{}
+	for _, u := range a.UnmetMinimums {
+		out[u.Class] = u.Abilities
+	}
+	return out
+}
+
+// PHB Table 13 on the wire: Dex 11 misses the bard's 12 and only the bard's (the thief asks 9), Dex 12
+// clears it, and abilities with no score yet are never flagged.
+func TestCreationChecks_Table13_DexFlagsTheBardOnlyAndPartialScoresFlagNothing(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var a checksAnswer
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks", `{"class":"bard","scores":{"dex":11,"int":13,"cha":15}}`, &a))
+	assert.Equal(t, []string{"dex"}, a.unmet()["bard"])
+	for _, c := range []string{"fighter", "mage", "cleric", "thief"} {
+		assert.Empty(t, a.unmet()[c], c)
+	}
+	var b checksAnswer
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks", `{"class":"bard","scores":{"dex":12,"int":13,"cha":15}}`, &b))
+	assert.Empty(t, b.unmet()["bard"])
+	var c checksAnswer
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks", `{"class":"bard","scores":{"str":3}}`, &c))
+	assert.Empty(t, c.unmet()["bard"])
+}
+
+// ADR 0030 steps 17 and 18: at the level 2 threshold a thief has 90 points in all and 45 in one
+// skill; the bard's has no per-skill limit.
+func TestCreationChecks_Steps17And18_LevelTwoBudgets(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var thief, bard checksAnswer
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks", `{"class":"thief","xp":1250}`, &thief))
+	require.NotNil(t, thief.SkillBudget)
+	assert.Equal(t, 2, thief.SkillBudget.Level)
+	assert.Equal(t, 90, thief.SkillBudget.Total)
+	assert.Equal(t, 45, thief.SkillBudget.PerSkill)
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks", `{"class":"bard","xp":1250}`, &bard))
+	require.NotNil(t, bard.SkillBudget)
+	assert.Equal(t, 35, bard.SkillBudget.Total)
+	assert.Zero(t, bard.SkillBudget.PerSkill)
+}
+
+// A draft too raw to read is no error: a negative XP or a class nobody can create has no budget.
+func TestCreationChecks_RawDraftsGetNoBudgetAndNoError(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	for _, body := range []string{`{"class":"thief","xp":-5}`, `{"class":"paladin","xp":0}`, `{"class":"","xp":0}`} {
+		var a checksAnswer
+		require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks", body, &a), body)
+		assert.Nil(t, a.SkillBudget, body)
+	}
+}

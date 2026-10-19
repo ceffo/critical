@@ -606,7 +606,7 @@ func (s *service) CreationChecks(_ context.Context, in DraftInput) (DraftChecks,
 	for _, class := range CreatableClasses {
 		out.UnmetMinimums = append(out.UnmetMinimums, ClassUnmet{Class: class, Abilities: ruletablesvc.UnmetMinimums(class, in.Scores)})
 	}
-	if in.XP == nil || !slices.Contains(CreatableClasses, in.Class) || !ruletablesvc.HasSkillPoints(in.Class) {
+	if in.XP == nil || *in.XP < MinStartingXP || *in.XP > MaxStartingXP || !slices.Contains(CreatableClasses, in.Class) || !ruletablesvc.HasSkillPoints(in.Class) {
 		return out, nil
 	}
 	level, err := s.rules.LevelFor(in.Class, *in.XP)

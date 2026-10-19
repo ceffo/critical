@@ -102,5 +102,34 @@
       "untracked": null
     },
     "roll": true
+  },
+  "onOther": {
+    "payload": {
+      "action": "cast",
+      "spellId": "sleep",
+      "spell": "Sleep",
+      "casterLevel": 15,
+      "buff": {
+        "name": "Sleep",
+        "rounds": 75,
+        "applied": false,
+        "onOther": true,
+        "id": "row-1",
+        "durationRoll": {
+          "formula": "5*level",
+          "dice": [],
+          "total": 75
+        },
+        "effects": {}
+      },
+      "level": 1,
+      "slotIndex": 0,
+      "kind": "utility",
+      "confidence": "high",
+      "target": "area",
+      "textOnly": "utility",
+      "untracked": []
+    },
+    "roll": true
   }
 }

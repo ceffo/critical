@@ -16,8 +16,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 // Router is the chi subset we need.
@@ -203,7 +203,7 @@ type CharacterDTO struct {
 	// Warnings are the rules the stored character breaks without being
 	// refused (step 8.4: an alignment its class does not admit).
 	Warnings []WarningDTO `json:"warnings"`
-	detailshdl.DetailsDTO
+	wire.DetailsDTO
 }
 
 // WarningDTO is a code and the field it is about; the web words it. The
@@ -342,31 +342,13 @@ type SpellbookRulesDTO struct {
 	NoMaximum          bool `json:"noMaximum"`
 }
 
-// PendingLevelDTO is one level whose hit points are owed (ADR 0030 step 7):
-// `die` the hit die's sides to roll up to the name level (0 above it),
-// `fixedGain` the gain above it (0 up to it).
-type PendingLevelDTO struct {
-	Level     int `json:"level"`
-	Die       int `json:"die"`
-	FixedGain int `json:"fixedGain"`
-}
-
 // LevelUpDTO is ADR 0030 step 7: `pending` the levels from the realized one
 // to the target, lowest first (the prompt, one per level),
 // `realizedAboveTarget` an XP correction brought the target under the
 // realized level (step 7.4, the card warns).
 type LevelUpDTO struct {
-	Pending             []PendingLevelDTO `json:"pending"`
-	RealizedAboveTarget bool              `json:"realizedAboveTarget"`
-}
-
-// PendingDTO maps the pending levels, never null.
-func PendingDTO(p []charactersvc.PendingLevel) []PendingLevelDTO {
-	out := make([]PendingLevelDTO, 0, len(p))
-	for _, l := range p {
-		out = append(out, PendingLevelDTO{Level: l.Level, Die: l.Die, FixedGain: l.FixedGain})
-	}
-	return out
+	Pending             []wire.PendingLevelDTO `json:"pending"`
+	RealizedAboveTarget bool                   `json:"realizedAboveTarget"`
 }
 
 func savesDTO(s charactersvc.Saves) SavesDTO {
@@ -379,7 +361,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		Saves: savesDTO(d.Saves), RaceSaveBonus: savesDTO(d.RaceSaveBonus),
 		SpellSlots: []SlotCountDTO{}, SheetDifferences: []struct{}{},
 		LevelUp: LevelUpDTO{
-			Pending: PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
+			Pending: wire.PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
 		},
 		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
 		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab,
@@ -416,7 +398,7 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 		ID: c.ID, Name: c.Name,
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race, SkillArmor: c.SkillArmor,
-		Derived: derivedDTO(c.Derived), DetailsDTO: detailshdl.ToDTO(c.Details),
+		Derived: derivedDTO(c.Derived), DetailsDTO: wire.DetailsToDTO(c.Details),
 		Missing: c.Details.Missing(), Warnings: warningsDTO(c.Warnings),
 	}
 }

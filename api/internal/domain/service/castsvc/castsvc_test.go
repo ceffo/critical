@@ -497,7 +497,13 @@ func TestReceive_LogPayload(t *testing.T) {
 	assert.NotContains(t, p, "note", "the catalog's English note stays out of the ledger")
 	assert.Equal(t, map[string]any{
 		"action": "received", "spellId": "strength", "spell": "Strength", "casterLevel": float64(9),
-		"buff": map[string]any{"name": "Strength", "rounds": float64(540), "strGain": float64(4), "applied": true},
+		"buff": map[string]any{
+			"name": "Strength", "rounds": float64(540), "strGain": float64(4), "applied": true, "id": "added-buff",
+			"durationRoll": map[string]any{"formula": "60*level", "dice": []any{}, "total": float64(540)},
+			"strGainRoll":  map[string]any{"formula": "1d6", "dice": []any{map[string]any{"sides": float64(6), "value": float64(4)}}, "total": float64(4)},
+			"effects":      map[string]any{"str_bonus": float64(4), "str_max": float64(18)},
+		},
+		"level": float64(2), "kind": "buff", "confidence": "high", "target": "self_or_other", "untracked": []any{},
 	}, p)
 }
 

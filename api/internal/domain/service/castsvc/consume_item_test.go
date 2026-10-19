@@ -57,7 +57,7 @@ func TestCast_ConsumeItemAttackRoll_HitShowsTheItemSpent(t *testing.T) {
 	require.Len(t, f.entries, 1)
 	assert.Contains(t, keys(f.entries[0].Snapshots), "items:diamond", "voiding gives the gem back")
 	assert.JSONEq(t, `{"itemId":"diamond","name":"Diamond","remaining":40}`, field(t, f.entries[0].Payload, "item"))
-	assert.JSONEq(t, `{"d20":20,"targetAc":4,"hit":true}`, field(t, f.entries[0].Payload, "attack"))
+	assert.JSONEq(t, `{"d20":20,"targetAc":4,"hit":true,"baseThac0":12,"modifiers":[],"effectiveThac0":12,"targetACNeeded":8,"hitMargin":12,"d20Roll":20}`, field(t, f.entries[0].Payload, "attack"))
 }
 
 func TestCast_ConsumeItemAttackRoll_MissSpendsTheItemNoEffect(t *testing.T) {

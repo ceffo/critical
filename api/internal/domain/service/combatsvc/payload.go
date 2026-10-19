@@ -87,7 +87,9 @@ type BreakdownRolled struct {
 	Rolls []BreakdownDie `json:"rolls,omitempty"`
 }
 
-// BreakdownDie is one die thrown: its sides and the value it showed.
+// BreakdownDie is one die thrown: its sides and the value it showed. It is
+// the one wire shape of a die: the attack's and the cast's payloads (castsvc)
+// and their answers all use it.
 type BreakdownDie struct {
 	Sides int `json:"sides"`
 	Value int `json:"value"`
@@ -117,7 +119,9 @@ type BreakdownCritRow struct {
 	Placeholder bool    `json:"placeholder"`
 }
 
-// BreakdownModifier is one to-hit (or save) modifier; the UI labels it from
+// BreakdownModifier is one to-hit (or save) modifier, the one wire shape of a
+// modifier: the attack, the save, the attack form's preview and a spell's
+// to-hit roll (castsvc) all use it. The UI labels it from
 // Kind and Detail. Entries logged before the UI labelled them also carry an
 // English "source", no longer read. ItemID is the item of an item power's
 // contribution (ADR 0016 step 14), absent otherwise and from entries logged
@@ -165,6 +169,16 @@ func fromBreakdownTerms(in []BreakdownTerm) []DamageTerm {
 	return out
 }
 
+// BreakdownModifiers is mods in their wire shape, never nil (an empty list
+// is "[]" on the wire).
+func BreakdownModifiers(mods []Modifier) []BreakdownModifier {
+	out := make([]BreakdownModifier, len(mods))
+	for i, m := range mods {
+		out[i] = BreakdownModifier{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional}
+	}
+	return out
+}
+
 // NewAttackBreakdown is the breakdown of r as the attack endpoints answer it:
 // the payload logged for r plus the id of its entry.
 func NewAttackBreakdown(r *RollResult) AttackBreakdown {
@@ -175,10 +189,7 @@ func NewAttackBreakdown(r *RollResult) AttackBreakdown {
 
 // toBreakdown is the payload logged for r: its breakdown without the entry id.
 func toBreakdown(r *RollResult) AttackBreakdown {
-	mods := make([]BreakdownModifier, len(r.Modifiers))
-	for i, m := range r.Modifiers {
-		mods[i] = BreakdownModifier{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional}
-	}
+	mods := BreakdownModifiers(r.Modifiers)
 	terms := toBreakdownTerms(r.DamageTerms)
 	out := AttackBreakdown{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,

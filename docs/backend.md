@@ -70,6 +70,10 @@ id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, ste
 -- an attack's and a save's payload is also their endpoints' answer: one Go struct
 -- (combatsvc.AttackBreakdown, combatsvc.SaveBreakdown), the answer adding only logEntryId as its
 -- last key (and, for one release, the save's previous names hit, hitMargin and baseThac0)
+-- a cast's and an exposure's payload is likewise their endpoints' answer (castsvc.CastBreakdown,
+-- castsvc.ExposureBreakdown), which adds logEntryId, then what is not part of the roll and never
+-- logged (a cast: catalogueSpell, slots; an exposure: hpDelta), then, for one release, the previous
+-- answer's names (entryId, source, name, consumedItem, the spell attack's d20Roll)
 
 -- hp_events: the legacy HP ledger, carried into action_log by the SQLite migration 007 (before the PostgreSQL baseline) and dropped by 018
 

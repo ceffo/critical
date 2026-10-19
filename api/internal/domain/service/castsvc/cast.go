@@ -350,7 +350,7 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 }
 
 func (s *service) record(ctx context.Context, characterID int64, res CastResult, snaps []actionlog.Snapshot) (int64, error) {
-	payload, err := json.Marshal(toRecord(res))
+	payload, err := json.Marshal(toBreakdown(res))
 	if err != nil {
 		return 0, fmt.Errorf("encode cast payload: %w", err)
 	}

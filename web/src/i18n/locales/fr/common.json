@@ -1807,6 +1807,7 @@
     "nothing_to_undo": "Il n'y a rien à annuler.",
     "log_redo_changed": "Ce qui peut être rétabli a changé entre-temps. Vérifiez le journal et réessayez.",
     "nothing_to_redo": "Il n'y a rien à rétablir.",
+    "snapshot_not_reencoded": "Cette entrée a été enregistrée pendant une mise à jour : elle ne peut pas encore être annulée ni rétablie.",
     "no_initiative": "Il n'y a pas d'initiative à relancer : lancez d'abord un combat.",
     "initiative_not_on_top": "L'initiative n'est plus la dernière action : annulez ce qui a suivi, ou relancez au prochain tour.",
     "too_many_favourites": "Trop de jets favoris : supprimez-en un d'abord.",

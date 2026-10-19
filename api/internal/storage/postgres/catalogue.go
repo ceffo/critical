@@ -465,9 +465,18 @@ func StateSpellRefs(ctx context.Context, q storeq.Querier) ([]catalogue.Ref, err
 	}
 	for _, r := range bookSnaps {
 		where := fmt.Sprintf("action_snapshots %d", r.ID)
-		for _, c := range [][2]string{{"before_envelope", r.BeforeEnvelope}, {"after_envelope", r.AfterEnvelope}} {
-			col, blob := c[0], c[1]
-			id, _, err := actionlog.DecodeEnvelope(json.RawMessage(blob))
+		for _, c := range []struct {
+			col  string
+			blob sql.NullString
+		}{{"before_envelope", r.BeforeEnvelope}, {"after_envelope", r.AfterEnvelope}} {
+			col, blob := c.col, c.blob
+			if !blob.Valid {
+				// Recorded by the release before the codec, not re-encoded yet (ADR 0018 step 9):
+				// its key names the spell.
+				add(strings.TrimPrefix(r.StateKey, spellbookSnapshotPrefix), where)
+				continue
+			}
+			id, _, err := actionlog.DecodeEnvelope(json.RawMessage(blob.String))
 			if err != nil {
 				return nil, fmt.Errorf("action_snapshots %d %s: %w", r.ID, col, err)
 			}
@@ -522,7 +531,13 @@ func StateSpellRefs(ctx context.Context, q storeq.Querier) ([]catalogue.Ref, err
 				if col == "after_envelope" {
 					envelope = r.AfterEnvelope
 				}
-				_, state, err := actionlog.DecodeEnvelope(json.RawMessage(envelope))
+				if !envelope.Valid {
+					// Recorded by the release before the codec during a rolling deploy, not
+					// re-encoded yet (ADR 0018 step 9): no reader of the old encoding is kept,
+					// and the data step run before the envelopes become required encodes it.
+					continue
+				}
+				_, state, err := actionlog.DecodeEnvelope(json.RawMessage(envelope.String))
 				if err != nil {
 					return nil, fmt.Errorf("action_snapshots %d %s: %w", r.ID, col, err)
 				}

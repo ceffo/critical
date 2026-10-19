@@ -118,6 +118,9 @@ func (s *service) replay(ctx context.Context, characterID int64, e *actionlog.En
 		if r == nil {
 			return fmt.Errorf("no restorer registered for state %q", snap.Key)
 		}
+		if snap.After == nil {
+			return fmt.Errorf("%w: entry #%d, state %q", ErrSnapshotNotReencoded, e.ID, snap.Key)
+		}
 		var err error
 		if rp, ok := r.(actionlog.Replayer); ok {
 			err = rp.Replay(ctx, characterID, e.ID, snap.After)

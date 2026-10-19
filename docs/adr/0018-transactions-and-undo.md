@@ -156,8 +156,9 @@ W4 and W7); not implemented. Each point is built by the item named and gets its 
    the player can see. No legacy decoder survives the step (W1).
    _As built (CRI-59)_: the envelopes live in two new columns, `action_snapshots.before_envelope`
    and `after_envelope` (migration 019); the data step `reencodeSnapshots` (`storage/postgres`),
-   run just before migration 020 makes them required, writes every stored snapshot into them and
-   holds the only reader of the old encodings. What a restorer used to settle when it read an old
+   run right after migration 019 adds them, writes every stored snapshot into them and holds the
+   only reader of the old encodings. It reads only the rows without their envelopes, so it can run
+   again: the later migration that makes the envelopes required runs it just before. What a restorer used to settle when it read an old
    encoding is settled there, the same way: `null` was no initiative (absent); an item's or a
    weapon's `absent` / `removed` flags are the absence; an item count of before the equipment model
    takes the id the conversion renamed it to (`item_id_renames`, [ADR 0033](0033-equipment.md) step
@@ -172,16 +173,28 @@ W4 and W7); not implemented. Each point is built by the item named and gets its 
    machine still running the release before keeps reading the old columns and its undo of an entry
    recorded before the deploy restores it as before. A snapshot the new release records leaves the
    old columns at a JSON string every old decoder refuses, so the old release's undo of such an
-   entry fails and changes nothing (never a misread state). Migration 020 makes the envelopes
-   required, so the old release cannot record a snapshot in the old encoding the new one would not
-   read: its state-changing request fails and rolls back during the minutes both run.
+   entry fails and changes nothing (never a misread state). The envelopes stay nullable in this
+   release, so the old release keeps recording its actions during the minutes both run; its
+   snapshots go to the old columns only (no dual write: that would bring the old encoders back).
+   The new release reads such a row's envelopes as missing (a `null` before and after in
+   `GET /api/log`) and refuses to undo or redo that entry (`snapshot_not_reencoded`, 409; nothing is
+   written), until the data step encodes it. The scan of the spells game state references reads a
+   spellbook one's spell from its key and skips a slot or buff list one meanwhile. The envelopes
+   become required, and the old columns are dropped, by a later migration, in a later release
+   (expand, then contract), with the data step run once more just before it.
+   `GET /api/log` returns the envelopes as each snapshot's `before` / `after` (typed `unknown`, read
+   by no web code).
    Tests: `storage/postgres` `TestReencodeSnapshots_EveryOldEncodingBecomesTheEnvelope` (one
    fixture per old encoding of the nine services and the AC override, an item name saved before
-   localisation and an item renamed by the conversion among them),
-   `TestMigrate_SnapshotsAreReencodedBeforeTheEnvelopesAreRequired`,
-   `TestReencodeSnapshots_SkipsWhatIsAlreadyReencoded`, `TestReencodeSnapshots_RefusesWhatItCannotRead`;
-   `adapters/actionlogdal` `TestInsertEntry_NewTransactionStartsUnderTheEntrysID` and
-   `TestPop_KeepsEntriesAndSnapshots` (the adapter writes and reads the envelope columns).
+   localisation and an item renamed by the conversion among them; `snapshotfixtures`, whose
+   envelopes composition's restorer test restores),
+   `TestMigrate_SnapshotsAreReencodedRightAfterTheEnvelopesAreAdded`,
+   `TestReencodeSnapshots_ARerunEncodesOnlyWhatIsMissing`, `TestReencodeSnapshots_RefusesWhatItCannotRead`,
+   `TestStateSpellRefs_SnapshotsWithoutEnvelopesDoNotFailTheScan`;
+   `adapters/actionlogdal` `TestInsertEntry_NewTransactionStartsUnderTheEntrysID`,
+   `TestPop_KeepsEntriesAndSnapshots` (the adapter writes and reads the envelope columns) and
+   `TestGetEntry_ASnapshotWithoutEnvelopesReadsAsNil`; `domain/service/actionlogsvc` `TestUndo`
+   and `TestRedo_ReplaysTheNewestPoppedTransaction` ("a snapshot not re-encoded yet is refused").
 10. **The log says which entries are rolls.** `GET /api/log` marks each entry that is one of the roll
     kinds (`actionlog.RollKinds`); the web keeps no copy of the list (W4).
 11. **A mutation answers with its state keys.** Every state-changing request, undo and redo included,

@@ -15,15 +15,21 @@ import (
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 )
 
-// snapshotEnvelopesMigration makes the snapshot envelopes of migration 019 required. Just before
-// it the run re-encodes every stored snapshot into them (reencodeSnapshots).
-const snapshotEnvelopesMigration = "020_snapshot_envelopes_required.sql"
+// snapshotEnvelopesMigration adds the snapshot envelopes. Right after it the run re-encodes every
+// stored snapshot into them (reencodeSnapshots). The envelopes stay nullable in this release (ADR
+// 0024 step 5.2: the release before keeps recording snapshots during a rolling deploy); the
+// migration that makes them required runs the step again just before it, for the rows that
+// release wrote meanwhile.
+const snapshotEnvelopesMigration = "019_snapshot_envelopes.sql"
 
 // reencodeSnapshots writes every stored snapshot's "before" and "after" again as the action log
 // codec's envelope (ADR 0018 steps 8 and 9): the same state, in the encoding the restorers read.
 // It changes an encoding, never a before, an after, a delta, a payload or a correction: each
 // family's old encoding (the snapshot encoders of before the codec) is read here and nowhere else.
 // The old columns are left as they are, for the release before the codec during a rolling deploy.
+// It reads only the rows without their envelopes, so it can run again: a row the release before
+// recorded after a first run is re-encoded by the next one, and a re-encoded row is never read
+// again.
 // A snapshot of a family no restorer knows, or one that does not read, fails the run: the start
 // fails, the run rolls back and nothing is half re-encoded.
 func reencodeSnapshots(ctx context.Context, q storeq.Querier) error {

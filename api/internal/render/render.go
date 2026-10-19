@@ -190,6 +190,7 @@ var mappings = []mapping{
 	{target: actionlogsvc.ErrNothingToUndo, status: http.StatusConflict, code: "nothing_to_undo"},
 	{target: actionlogsvc.ErrRedoChanged, status: http.StatusConflict, code: "log_redo_changed"},
 	{target: actionlogsvc.ErrNothingToRedo, status: http.StatusConflict, code: "nothing_to_redo"},
+	{target: actionlogsvc.ErrSnapshotNotReencoded, status: http.StatusConflict, code: "snapshot_not_reencoded"},
 }
 
 // Code is the stable error code of err, as Error would render it (the login

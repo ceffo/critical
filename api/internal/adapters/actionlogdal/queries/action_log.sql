@@ -13,7 +13,7 @@ WHERE id = $1;
 
 -- name: InsertSnapshot :exec
 INSERT INTO action_snapshots (action_id, state_key, before_envelope, after_envelope)
-VALUES ($1, $2, $3, $4);
+VALUES (@action_id, @state_key, sqlc.arg(before_envelope)::text, sqlc.arg(after_envelope)::text);
 
 -- name: InsertCorrection :exec
 INSERT INTO action_corrections (action_id, kind, hp_delta, summary, payload, note, step_id)

@@ -116,7 +116,7 @@ func (q *Queries) InsertCorrection(ctx context.Context, arg InsertCorrectionPara
 
 const insertSnapshot = `-- name: InsertSnapshot :exec
 INSERT INTO action_snapshots (action_id, state_key, before_envelope, after_envelope)
-VALUES ($1, $2, $3, $4)
+VALUES ($1, $2, $3::text, $4::text)
 `
 
 type InsertSnapshotParams struct {
@@ -467,8 +467,8 @@ type ListSnapshotsFromRow struct {
 	ID             int64
 	ActionID       int64
 	StateKey       string
-	BeforeEnvelope string
-	AfterEnvelope  string
+	BeforeEnvelope sql.NullString
+	AfterEnvelope  sql.NullString
 }
 
 func (q *Queries) ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromParams) ([]ListSnapshotsFromRow, error) {

@@ -61,6 +61,9 @@ func (s *service) pop(ctx context.Context, characterID int64, e *actionlog.Entry
 		if r == nil {
 			return fmt.Errorf("no restorer registered for state %q", snap.Key)
 		}
+		if snap.Before == nil {
+			return fmt.Errorf("%w: entry #%d, state %q", ErrSnapshotNotReencoded, e.ID, snap.Key)
+		}
 		if err := r.Restore(ctx, characterID, snap.Before); err != nil {
 			return fmt.Errorf("restore %s: %w", snap.Key, err)
 		}

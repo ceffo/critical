@@ -95,10 +95,13 @@ flowchart TD
             Tests: `TestMigrate_ADataStepRunsJustBeforeItsPendingMigration`,
             `TestMigrationDataSteps_NameEmbeddedMigrations`,
             `TestMigrate_RowsWithoutOwnerAreOwnedBeforeTheOwnerKeys`. The snapshots re-encoded into
-            the action log codec's envelopes before migration 020 makes them required
-            (`reencodeSnapshots`, [ADR 0018](0018-transactions-and-undo.md) step 9; deleted with its
-            queries by the migration that drops the old snapshot columns).
-            Tests: `TestMigrate_SnapshotsAreReencodedBeforeTheEnvelopesAreRequired`.
+            the action log codec's envelopes right after migration 019 adds them
+            (`reencodeSnapshots`, [ADR 0018](0018-transactions-and-undo.md) step 9). It reads only
+            the rows without envelopes, so the later migration that makes them required (and drops
+            the old snapshot columns) runs it again just before it, for the rows the release before
+            019 recorded during the rolling deploy; the step and its queries are deleted after that.
+            Tests: `TestMigrate_SnapshotsAreReencodedRightAfterTheEnvelopesAreAdded`,
+            `TestReencodeSnapshots_ARerunEncodesOnlyWhatIsMissing`.
    2. Migrations after the baseline are new files only, never an edited applied one, and are
       schema-only too.
    3. The per-migration SQLite tests are deleted with the squash. An ADR that cites one of them

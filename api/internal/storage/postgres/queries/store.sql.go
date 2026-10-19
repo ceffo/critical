@@ -1053,7 +1053,8 @@ func (q *Queries) SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsI
 }
 
 const setSnapshotEnvelopes = `-- name: SetSnapshotEnvelopes :exec
-UPDATE action_snapshots SET before_envelope = $1, after_envelope = $2
+UPDATE action_snapshots
+SET before_envelope = $1::text, after_envelope = $2::text
 WHERE id = $3
 `
 
@@ -1102,8 +1103,8 @@ SELECT id, before_envelope, after_envelope FROM action_snapshots WHERE state_key
 
 type SnapshotsOfRow struct {
 	ID             int64
-	BeforeEnvelope string
-	AfterEnvelope  string
+	BeforeEnvelope sql.NullString
+	AfterEnvelope  sql.NullString
 }
 
 func (q *Queries) SnapshotsOf(ctx context.Context, stateKey string) ([]SnapshotsOfRow, error) {
@@ -1176,14 +1177,15 @@ func (q *Queries) SnapshotsToReencode(ctx context.Context) ([]SnapshotsToReencod
 }
 
 const snapshotsWithPrefix = `-- name: SnapshotsWithPrefix :many
-SELECT id, before_envelope, after_envelope FROM action_snapshots
+SELECT id, state_key, before_envelope, after_envelope FROM action_snapshots
 WHERE state_key LIKE $1::text || '%' ORDER BY id
 `
 
 type SnapshotsWithPrefixRow struct {
 	ID             int64
-	BeforeEnvelope string
-	AfterEnvelope  string
+	StateKey       string
+	BeforeEnvelope sql.NullString
+	AfterEnvelope  sql.NullString
 }
 
 func (q *Queries) SnapshotsWithPrefix(ctx context.Context, prefix string) ([]SnapshotsWithPrefixRow, error) {
@@ -1195,7 +1197,12 @@ func (q *Queries) SnapshotsWithPrefix(ctx context.Context, prefix string) ([]Sna
 	items := []SnapshotsWithPrefixRow{}
 	for rows.Next() {
 		var i SnapshotsWithPrefixRow
-		if err := rows.Scan(&i.ID, &i.BeforeEnvelope, &i.AfterEnvelope); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.StateKey,
+			&i.BeforeEnvelope,
+			&i.AfterEnvelope,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

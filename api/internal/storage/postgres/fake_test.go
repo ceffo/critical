@@ -821,11 +821,14 @@ func (f *fakeStore) ActiveBuffLists(context.Context) ([]storeq.ActiveBuffListsRo
 	return out, nil
 }
 
+// nullEnv is an envelope column: "" is NULL (not re-encoded yet).
+func nullEnv(s string) sql.NullString { return sql.NullString{String: s, Valid: s != ""} }
+
 func (f *fakeStore) SnapshotsOf(_ context.Context, stateKey string) ([]storeq.SnapshotsOfRow, error) {
 	out := []storeq.SnapshotsOfRow{}
 	for _, s := range f.t.Snapshots {
 		if s.Key == stateKey {
-			out = append(out, storeq.SnapshotsOfRow{ID: s.ID, BeforeEnvelope: s.BeforeEnv, AfterEnvelope: s.AfterEnv})
+			out = append(out, storeq.SnapshotsOfRow{ID: s.ID, BeforeEnvelope: nullEnv(s.BeforeEnv), AfterEnvelope: nullEnv(s.AfterEnv)})
 		}
 	}
 	return out, nil
@@ -835,7 +838,9 @@ func (f *fakeStore) SnapshotsWithPrefix(_ context.Context, prefix string) ([]sto
 	out := []storeq.SnapshotsWithPrefixRow{}
 	for _, s := range f.t.Snapshots {
 		if strings.HasPrefix(s.Key, prefix) {
-			out = append(out, storeq.SnapshotsWithPrefixRow{ID: s.ID, BeforeEnvelope: s.BeforeEnv, AfterEnvelope: s.AfterEnv})
+			out = append(out, storeq.SnapshotsWithPrefixRow{
+				ID: s.ID, StateKey: s.Key, BeforeEnvelope: nullEnv(s.BeforeEnv), AfterEnvelope: nullEnv(s.AfterEnv),
+			})
 		}
 	}
 	return out, nil

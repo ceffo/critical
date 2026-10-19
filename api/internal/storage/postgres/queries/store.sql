@@ -171,7 +171,8 @@ WHERE s.before_envelope IS NULL OR s.after_envelope IS NULL
 ORDER BY s.id;
 
 -- name: SetSnapshotEnvelopes :exec
-UPDATE action_snapshots SET before_envelope = @before_envelope, after_envelope = @after_envelope
+UPDATE action_snapshots
+SET before_envelope = sqlc.arg(before_envelope)::text, after_envelope = sqlc.arg(after_envelope)::text
 WHERE id = @id;
 
 -- name: InsertItemRename :exec
@@ -288,7 +289,7 @@ SELECT character_id, spell_key FROM spellbook_entries ORDER BY character_id, pos
 SELECT id, before_envelope, after_envelope FROM action_snapshots WHERE state_key = $1 ORDER BY id;
 
 -- name: SnapshotsWithPrefix :many
-SELECT id, before_envelope, after_envelope FROM action_snapshots
+SELECT id, state_key, before_envelope, after_envelope FROM action_snapshots
 WHERE state_key LIKE sqlc.arg('prefix')::text || '%' ORDER BY id;
 
 -- name: LearnFailureRefs :many

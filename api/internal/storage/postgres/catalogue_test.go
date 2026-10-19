@@ -477,6 +477,26 @@ func TestStateSpellRefs_ScansEveryPlace(t *testing.T) {
 	}, got)
 }
 
+// ADR 0018 step 9, rolling deploy: a snapshot the release before the codec recorded has no
+// envelopes until the data step re-encodes it. The scan does not fail on it: a spellbook one
+// names its spell in its key; a slot or buff list one is skipped (no reader of the old encoding
+// is kept), until the step encodes it.
+func TestStateSpellRefs_SnapshotsWithoutEnvelopesDoNotFailTheScan(t *testing.T) {
+	f := newFakeStore()
+	f.t.Snapshots = []snapshotRow{
+		{ID: 1, ActionID: 3, Key: "spellbook:sleep", Before: `{"spellId":"sleep","known":false}`, After: `{"spellId":"sleep","known":true}`},
+		{ID: 2, ActionID: 4, Key: "spell_slots", Before: `[{"SpellID":"alarm"}]`, After: `[]`},
+		{ID: 3, ActionID: 5, Key: "buffs", Before: `[{"spell_id":"haste"}]`, After: `[]`},
+	}
+	refs, err := StateSpellRefs(context.Background(), f)
+	require.NoError(t, err)
+	got := map[string]string{}
+	for _, r := range refs {
+		got[r.ID] = r.Where
+	}
+	assert.Equal(t, map[string]string{"sleep": "action_snapshots 1"}, got)
+}
+
 func TestStateSpellRefs_UnreadableJSONIsAnError(t *testing.T) {
 	f := newFakeStore()
 	f.plantState()

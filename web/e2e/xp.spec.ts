@@ -5,6 +5,8 @@ import {
   openDashboard,
   openWorkspace,
   recordHp,
+  apiCall,
+  reloadSettled,
 } from "./helpers";
 import type { Page } from "@playwright/test";
 
@@ -184,17 +186,7 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
 }) => {
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
-    page.evaluate(
-      async ([m, u, b]) =>
-        (
-          await fetch(u as string, {
-            method: m as string,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(b),
-          })
-        ).ok,
-      [method, url, body] as const,
-    );
+    apiCall(page, method, url, body);
   // A level 1 bard with 6 max HP (CON 12: no adjustment), then 2,500 XP: levels 2 and 3 owe a d6.
   expect(
     await call("POST", "/api/characters", {
@@ -220,7 +212,7 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
       reason: "Goblins",
     }),
   ).toBe(true);
-  await page.reload();
+  await reloadSettled(page);
   const prompt = page.getByTestId("level-up");
   await expect(prompt.getByTestId("level-up-title")).toHaveText(
     "Level 2 reached",

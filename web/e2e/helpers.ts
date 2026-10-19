@@ -31,18 +31,19 @@ export async function readsAfter(
   quietMs = 600,
 ): Promise<string[]> {
   const reads: string[] = [];
-  let inFlight = 0;
+  // The requests this window saw start: one that began before it and ends inside it must not count.
+  const inFlight = new Set<Request>();
   let last = Date.now();
   const started = (r: Request) => {
     const url = new URL(r.url());
     if (!url.pathname.startsWith("/api/")) return;
-    inFlight++;
+    inFlight.add(r);
     last = Date.now();
     if (r.method() === "GET") reads.push(url.pathname);
   };
   const ended = (r: Request) => {
     if (!new URL(r.url()).pathname.startsWith("/api/")) return;
-    inFlight--;
+    inFlight.delete(r);
     last = Date.now();
   };
   page.on("request", started);
@@ -51,8 +52,9 @@ export async function readsAfter(
   try {
     await act();
     await expect
-      .poll(() => inFlight === 0 && Date.now() - last >= quietMs, {
+      .poll(() => inFlight.size === 0 && Date.now() - last >= quietMs, {
         intervals: [100],
+        timeout: 15_000,
       })
       .toBe(true);
   } finally {
@@ -68,6 +70,40 @@ export async function openDashboard(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
   await expect(page.getByTestId("round-value")).toHaveText(/^\d+$/);
+}
+
+/**
+ * An API call made from the test, with the page's cookies and its Origin, not from inside the page:
+ * the page may reload itself ("character changed", api/http.ts) and destroy the context a
+ * `page.evaluate` runs in. True when the call succeeded, else the status and body.
+ */
+export async function apiCall(
+  page: Page,
+  method: string,
+  url: string,
+  body: unknown,
+): Promise<true | string> {
+  const res = await page.request.fetch(url, {
+    method,
+    data: body,
+    headers: { Origin: new URL(page.url()).origin },
+  });
+  return res.ok() || `${res.status()} ${await res.text()}`;
+}
+
+/**
+ * Reload the page after the test changed the current character through the API. A request the page had
+ * in flight then answers "character changed" and the page reloads itself, which can abort this reload
+ * (then that reload is the one wanted); wait for the load.
+ */
+export async function reloadSettled(page: Page) {
+  try {
+    await page.reload();
+  } catch (e) {
+    // The page's own reload got there first: that is the fresh load wanted.
+    if (!/ERR_ABORTED|detached|not attached/i.test(String(e))) throw e;
+  }
+  await page.waitForLoadState("load");
 }
 
 /** Mark the window; `expectNoReload` later proves the page was never reloaded. */

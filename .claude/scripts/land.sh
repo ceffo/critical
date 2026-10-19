@@ -30,8 +30,8 @@ unanswered=$(gh api --paginate "repos/$repo/pulls/$pr/comments" | jq -s 'add // 
   | [$c[]|select(.in_reply_to_id==null and (.user.login|test("greptile")))|.id as $r
      |select([$c[]|select(.in_reply_to_id==$r)]|length==0)]|length')
 [ "$unanswered" = 0 ] || refuse "$unanswered Greptile comment thread(s) without a reply"
-gh pr merge "$pr" -R "$repo" --squash --delete-branch --match-head-commit "$sha" >/dev/null 2>&1 \
-  || gh stack merge "$pr" --squash --yes >/dev/null 2>&1 || { echo "MERGE FAILED #$pr"; exit 1; }
+# No fallback (no gh stack merge): if the head moved after the checks, the merge fails and nothing is merged.
+gh pr merge "$pr" -R "$repo" --squash --delete-branch --match-head-commit "$sha" >/dev/null 2>&1 || { echo "MERGE FAILED #$pr (head moved from ${sha:0:7}, or GitHub refused)"; exit 1; }
 git worktree prune
 [ -z "${2:-}" ] || herdr tab close "$2" >/dev/null 2>&1 || true
 if [ "$(git branch --show-current)" = main ]; then git fetch -q origin && git merge -q --ff-only origin/main; fi

@@ -81,7 +81,7 @@ esac
 case "$1 $2" in
   "pr create") echo "https://github.com/o/r/pull/77" ;;
   "pr view") echo MERGEABLE ;;
-  "pr merge") ;;
+  "pr merge") [ -z "${STUB_MERGE_FAIL:-}" ] || exit 1 ;;
 esac
 GH
 chmod +x "$tmp/bin/gh"
@@ -120,6 +120,8 @@ STUB_CHECK=FAILURE refused "red check"
 STUB_MERGE_STATE=BLOCKED refused "not clean"
 STUB_GREPTILE=in_progress refused "greptile pending"
 STUB_COMMENTS='[{"id":1,"in_reply_to_id":null,"user":{"login":"greptile-apps[bot]"}}]' refused "unanswered greptile thread"
+: > "$GH_LOG"; STUB_MERGE_FAIL=1 "$S/land.sh" 77 >/dev/null 2>&1; [ $? = 1 ] || fail "land: a refused merge did not exit 1"
+! grep -q "stack merge" "$GH_LOG" || fail "land fell back to an unchecked stack merge"
 set -e
 STUB_COMMENTS='[{"id":1,"in_reply_to_id":null,"user":{"login":"greptile-apps[bot]"}},{"id":2,"in_reply_to_id":1,"user":{"login":"ceffo"}}]' \
   "$S/land.sh" 77 >/dev/null 2>&1 || fail "land refused an answered greptile thread"

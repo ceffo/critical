@@ -58,7 +58,10 @@ transaction_id
 -- (transaction_id: the id of the first entry of the request that recorded it, ADR 0018 step 1;
 --  undo pops a transaction whole. Rows older than the column are each their own transaction)
 -- action_snapshots: before/after state an entry changed, one row per state key
-id, action_id, state_key, before_state JSON, after_state JSON
+id, action_id, state_key, before_envelope JSON, after_envelope JSON, before_state, after_state
+-- (before_envelope / after_envelope: the action log codec's envelope, {"id","state"} or
+--  {"id","absent":true}, ADR 0018 steps 8 and 9; before_state / after_state hold the encoding of
+--  before the codec, no longer read, kept for the release before it and dropped later)
 -- action_corrections: audited amend/void events pointing at an entry (never edit an entry)
 id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, step_id, created_at
 -- (step_id: the 'correction' entry a post-roll correction belongs to, ADR 0010 step 6; popping

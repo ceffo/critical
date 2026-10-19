@@ -121,12 +121,15 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     language, or a language code that is not a UI language (`localized.UILanguages`, the
     `web/src/i18n/locales` folders), is refused (`name` field error).
     The `item_edit` / `weapon_edit` changes list one `name` change per language whose body differs.
-    A pop restores the snapshot's whole name; a snapshot written before 033 holds a plain string,
-    which restores the English body only and keeps the other languages the row has now.
+    A pop restores the snapshot's whole name; a snapshot written before 033 held a plain string,
+    which restores the English body only and keeps the other languages the row has now (since the
+    action log codec, [ADR 0018](0018-transactions-and-undo.md) step 9, that string is stored as its
+    English body marked `namePartial`, re-encoded once by a data step).
     Tests: `TestUpdate_Step11_NameEditKeepsTheOtherLanguages`, `TestCreate_Step11_NameInThePlayersLanguage`,
     `TestCreate_Step11_RefusesAnUnknownLanguage`, `TestUpdate_Step11_RefusesAnUnknownLanguage`,
     `TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages` (itemsvc, weaponsvc),
-    `TestWith_EditsOnlyTheLanguagesSent`, `TestSnap_ReadsAMapOrAPlainString`,
+    `TestWith_EditsOnlyTheLanguagesSent`, `storage/postgres`
+    `TestReencodeSnapshots_EveryOldEncodingBecomesTheEnvelope` (the plain strings re-encoded),
     `TestUILanguages_AreTheWebLocales` (domain/localized),
     `web/src/lib/itemForm.test.ts`,
     `web/src/lib/weaponForm.test.ts`.

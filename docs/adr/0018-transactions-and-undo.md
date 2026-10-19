@@ -131,11 +131,57 @@ W4 and W7); not implemented. Each point is built by the item named and gets its 
    and after, decodes them and implements `Restorer` (and `Replayer`) from a service's write and
    delete functions; a service declares what it snapshots and nothing else (W1). The meaning of a
    snapshot (step 2: the before written back on undo, the after on redo) is unchanged.
+   _As built (CRI-59)_: `actionlog.Snapshotter[T]`, declared once per state-key family
+   (`NewSnapshotter`, `MayBeAbsent` for things that can be absent, `WithReplay` for the initiative,
+   whose "after" gets the replayed entry's id) and registered as `Restorer(write, remove)`. Every
+   "before" and "after" is an envelope, `{"id":…,"state":…}` or `{"id":…,"absent":true}`: the id
+   is the part of the key after `:` (left out for a key without one), the state the service's own
+   encoding of `T`, and absent means the thing did not exist or is gone (restoring it calls the
+   service's remove). Anything else is refused (`actionlog.ErrNotAnEnvelope`) and nothing is
+   written. The ten families (buffs, saved buffs, round, initiative, spell slots, items, the
+   weapons of before the equipment model, XP, realized level, spellbook, skill points, skill
+   armour, AC override) all go through it; `restoreFunc` is gone.
+   Tests: `domain/actionlog` `TestSnapshotter_EncodesBeforeAndAfterInTheEnvelope`,
+   `TestSnapshotter_AbsentOnlyWhereTheFamilyAllowsIt`,
+   `TestSnapshotter_RestoreWritesTheStateOrRemovesTheThing` (the absent / reinsert protocol, tested
+   once here), `TestSnapshotter_TheEnvelopeNamesTheThing`, `TestSnapshotter_AFailingWriteFailsTheRestore`,
+   `TestSnapshotter_ReplayStampsTheReplayedEntry`, `TestDecodeEnvelope_RefusesWhatIsNotAnEnvelope`;
+   each service's restorer tests, on the envelope; `composition`
+   `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (unchanged cases and expectations,
+   its stored states written as envelopes).
 9. **Re-encoding is not editing.** A migration-time data step ([ADR 0025](0025-postgresql-storage.md)
    step 2.1.1) may rewrite stored snapshots into the codec's envelope (user, 2026-10-19: "Data step
    rewrites old snapshots"). It changes an encoding, never a before, an after, a delta, a payload or a
    correction: "entries are never edited" ([ADR 0007](0007-hp-ledger.md) step 1) stands for everything
    the player can see. No legacy decoder survives the step (W1).
+   _As built (CRI-59)_: the envelopes live in two new columns, `action_snapshots.before_envelope`
+   and `after_envelope` (migration 019); the data step `reencodeSnapshots` (`storage/postgres`),
+   run just before migration 020 makes them required, writes every stored snapshot into them and
+   holds the only reader of the old encodings. What a restorer used to settle when it read an old
+   encoding is settled there, the same way: `null` was no initiative (absent); an item's or a
+   weapon's `absent` / `removed` flags are the absence; an item count of before the equipment model
+   takes the id the conversion renamed it to (`item_id_renames`, [ADR 0033](0033-equipment.md) step
+   26.3, a table written once by that conversion); a name saved as a plain string before names were
+   localized becomes its English body marked `namePartial` (restoring it still replaces that body
+   only, [ADR 0023](0023-localized-text.md) step 11). A snapshot that predates powers or the
+   equipment model keeps saying so (no `powers`, no `piece`), and its restore keeps reading the item
+   as it is then ([ADR 0016](0016-inventory.md) Consequences, ADR 0033 step 26.2): that is the
+   state's meaning, not its encoding. The old columns (`before_state`, `after_state`) keep the old
+   encoding unchanged and are no longer read; a later migration drops them, with the step.
+   **Rolling deploy** ([ADR 0024](0024-deployment.md) step 5.2): migration 019 is additive, so the
+   machine still running the release before keeps reading the old columns and its undo of an entry
+   recorded before the deploy restores it as before. A snapshot the new release records leaves the
+   old columns at a JSON string every old decoder refuses, so the old release's undo of such an
+   entry fails and changes nothing (never a misread state). Migration 020 makes the envelopes
+   required, so the old release cannot record a snapshot in the old encoding the new one would not
+   read: its state-changing request fails and rolls back during the minutes both run.
+   Tests: `storage/postgres` `TestReencodeSnapshots_EveryOldEncodingBecomesTheEnvelope` (one
+   fixture per old encoding of the nine services and the AC override, an item name saved before
+   localisation and an item renamed by the conversion among them),
+   `TestMigrate_SnapshotsAreReencodedBeforeTheEnvelopesAreRequired`,
+   `TestReencodeSnapshots_SkipsWhatIsAlreadyReencoded`, `TestReencodeSnapshots_RefusesWhatItCannotRead`;
+   `adapters/actionlogdal` `TestInsertEntry_NewTransactionStartsUnderTheEntrysID` and
+   `TestPop_KeepsEntriesAndSnapshots` (the adapter writes and reads the envelope columns).
 10. **The log says which entries are rolls.** `GET /api/log` marks each entry that is one of the roll
     kinds (`actionlog.RollKinds`); the web keeps no copy of the list (W4).
 11. **A mutation answers with its state keys.** Every state-changing request, undo and redo included,

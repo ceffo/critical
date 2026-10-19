@@ -1,11 +1,38 @@
 #!/usr/bin/env bash
-# land.sh <pr> [tab] : squash-merge the PR, close the dev tab, fast-forward the main checkout, print the new
-# main sha. No tracker step: Linear's GitHub integration closes the issue on merge.
+# land.sh <pr> [tab] : THE supervisor's only merge path for ceffo/critical (user-approved 2026-10-18).
+# It enforces the review gate itself and refuses (exit 2, prints why) unless ALL hold on the PR's head:
+#   - every check has completed and is SUCCESS / SKIPPED / NEUTRAL, at least one check exists;
+#   - GitHub says MERGEABLE and CLEAN (required checks reported, not behind or blocked);
+#   - the "Greptile Review" check has completed on the head sha;
+#   - every Greptile inline comment thread has a reply (handled: fixed, or answered why not).
+# Then: squash-merge (pinned to the checked head sha), close the dev tab if given, prune worktrees,
+# fast-forward the main checkout. Call it as ONE plain command (absolute path, nothing chained) so the
+# permission allow rule matches. No tracker step: Linear's GitHub integration closes the issue on merge.
 set -euo pipefail
+pr="${1:?usage: land.sh <pr> [tab]}"
 main="${CRITICAL_MAIN:-/home/moncef/code/critical}"
+repo="${CRITICAL_REPO:-ceffo/critical}"
 cd "$main"
-gh pr merge "$1" --squash --delete-branch >/dev/null 2>&1 || gh stack merge "$1" --squash --yes >/dev/null 2>&1 || { echo "MERGE FAILED"; exit 1; }
+refuse() { echo "REFUSED #$pr: $*"; exit 2; }
+j=$(gh pr view "$pr" -R "$repo" --json state,mergeable,mergeStateStatus,headRefOid,statusCheckRollup)
+[ "$(jq -r .state <<<"$j")" = OPEN ] || refuse "state $(jq -r .state <<<"$j")"
+sha=$(jq -r .headRefOid <<<"$j")
+[ "$(jq '.statusCheckRollup|length' <<<"$j")" -gt 0 ] || refuse "no checks reported yet"
+pending=$(jq -r '[.statusCheckRollup[]|select((.status // "COMPLETED")!="COMPLETED")|.name]|join(",")' <<<"$j")
+[ -z "$pending" ] || refuse "checks pending: $pending"
+bad=$(jq -r '[.statusCheckRollup[]|select(((.conclusion // .state)|IN("SUCCESS","SKIPPED","NEUTRAL"))|not)|(.name // .context)]|join(",")' <<<"$j")
+[ -z "$bad" ] || refuse "checks not green: $bad"
+[ "$(jq -r .mergeable <<<"$j")" = MERGEABLE ] || refuse "mergeable=$(jq -r .mergeable <<<"$j")"
+[ "$(jq -r .mergeStateStatus <<<"$j")" = CLEAN ] || refuse "mergeStateStatus=$(jq -r .mergeStateStatus <<<"$j")"
+g=$(gh api "repos/$repo/commits/$sha/check-runs" --jq '[.check_runs[]|select(.name=="Greptile Review")|.status]|first // "missing"')
+[ "$g" = completed ] || refuse "Greptile Review on ${sha:0:7}: $g"
+unanswered=$(gh api --paginate "repos/$repo/pulls/$pr/comments" | jq -s 'add // [] | . as $c
+  | [$c[]|select(.in_reply_to_id==null and (.user.login|test("greptile")))|.id as $r
+     |select([$c[]|select(.in_reply_to_id==$r)]|length==0)]|length')
+[ "$unanswered" = 0 ] || refuse "$unanswered Greptile comment thread(s) without a reply"
+gh pr merge "$pr" -R "$repo" --squash --delete-branch --match-head-commit "$sha" >/dev/null 2>&1 \
+  || gh stack merge "$pr" --squash --yes >/dev/null 2>&1 || { echo "MERGE FAILED #$pr"; exit 1; }
 git worktree prune
 [ -z "${2:-}" ] || herdr tab close "$2" >/dev/null 2>&1 || true
-git fetch -q origin && git merge -q --ff-only origin/main
-git log --oneline -1 | cut -c1-90
+if [ "$(git branch --show-current)" = main ]; then git fetch -q origin && git merge -q --ff-only origin/main; fi
+echo "MERGED #$pr (head ${sha:0:7})"

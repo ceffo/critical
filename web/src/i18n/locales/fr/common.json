@@ -2022,7 +2022,8 @@
       "name": "Saisissez un nom.",
       "alignment": "Choisissez un alignement.",
       "alignmentAllowed": "Choisissez un alignement permis pour continuer.",
-      "sex": "Choisissez un sexe."
+      "sex": "Choisissez un sexe.",
+      "unreadable": "Corrigez la valeur illisible pour continuer."
     },
     "class": {
       "name": "Classe",
@@ -2159,6 +2160,8 @@
       "rolledMethod": "Tirées · méthode {{method}}",
       "hpMax": "PV max",
       "hpRolled": "{{hp}} (tirés : {{gains}})",
+      "skillWithPoints_one": "{{percent}} % ({{count}} point)",
+      "skillWithPoints_other": "{{percent}} % ({{count}} points)",
       "warningOf": "{{field}} : {{text}}",
       "skillsField": "talents",
       "refusedFoot": "Le serveur refuse une valeur : corrigez-la à son étape.",

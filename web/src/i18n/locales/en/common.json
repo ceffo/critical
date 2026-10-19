@@ -2022,7 +2022,8 @@
       "name": "Enter a name.",
       "alignment": "Pick an alignment.",
       "alignmentAllowed": "Pick an allowed alignment to go on.",
-      "sex": "Pick a sex."
+      "sex": "Pick a sex.",
+      "unreadable": "Fix the unreadable value to continue."
     },
     "class": {
       "name": "Class",
@@ -2159,6 +2160,8 @@
       "rolledMethod": "Rolled · method {{method}}",
       "hpMax": "Max HP",
       "hpRolled": "{{hp}} (rolled: {{gains}})",
+      "skillWithPoints_one": "{{percent}} % ({{count}} point)",
+      "skillWithPoints_other": "{{percent}} % ({{count}} points)",
       "warningOf": "{{field}}: {{text}}",
       "skillsField": "skills",
       "refusedFoot": "The server refuses a value: fix it on its step.",

@@ -31,6 +31,7 @@ import {
 import { Group, Note } from "./kit";
 import { useReviewWarnings, useShow, useWarningText } from "./warnings";
 import type { StepProps } from "./flow";
+import { radioKeys } from "./radioKeys";
 
 type Figure = IdentityFigure;
 
@@ -87,6 +88,14 @@ export function IdentityStep(props: StepProps) {
   const warnings = preview.data?.warnings ?? [];
   const warningText = useWarningText();
   const languagesOver = warnings.find((w) => w.code === "languages_over_limit");
+  const alignmentKeys = radioKeys(
+    ALIGNMENT_CODES,
+    draft.details.alignment,
+    (alignment) => update({ details: { alignment } }),
+  );
+  const sexKeys = radioKeys(options.sexes, draft.details.sex, (sex) =>
+    update({ details: { sex } }),
+  );
 
   return (
     <div
@@ -115,6 +124,7 @@ export function IdentityStep(props: StepProps) {
           role="radiogroup"
           aria-label={t("details.fields.alignment")}
           className="grid grid-cols-3 gap-1.5"
+          onKeyDown={alignmentKeys.onKeyDown}
         >
           {ALIGNMENT_CODES.map((code) => {
             const ok = allowed.includes(code);
@@ -126,6 +136,7 @@ export function IdentityStep(props: StepProps) {
                 type="button"
                 role="radio"
                 aria-checked={on}
+                tabIndex={alignmentKeys.tabIndex(code)}
                 aria-label={
                   ok
                     ? name
@@ -181,6 +192,7 @@ export function IdentityStep(props: StepProps) {
           role="radiogroup"
           aria-label={t("details.fields.sex")}
           className="flex flex-wrap gap-1"
+          onKeyDown={sexKeys.onKeyDown}
         >
           {options.sexes.map((code) => (
             <button
@@ -188,6 +200,7 @@ export function IdentityStep(props: StepProps) {
               type="button"
               role="radio"
               aria-checked={draft.details.sex === code}
+              tabIndex={sexKeys.tabIndex(code)}
               onClick={() => update({ details: { sex: code } })}
               className={cn(
                 "flex min-h-7 items-center rounded-md px-3 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
@@ -757,11 +770,25 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
                   : (body?.hpMax ?? dash),
                 "review-hp",
               ],
+              ...(body?.skillArmor
+                ? [
+                    [
+                      t("characters.skillArmor"),
+                      t(`characters.armors.${body.skillArmor}`, {
+                        defaultValue: body.skillArmor,
+                      }),
+                      "review-skill-armor",
+                    ] as [string, ReactNode, string],
+                  ]
+                : []),
               ...skills.map(
                 (s) =>
                   [
                     skillName(t, s.skill),
-                    `${s.percent} %`,
+                    t("creation.review.skillWithPoints", {
+                      percent: s.percent,
+                      count: body?.skillPoints?.[s.skill] ?? 0,
+                    }),
                     `review-skill-${s.skill}`,
                   ] as [string, ReactNode, string],
               ),

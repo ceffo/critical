@@ -224,9 +224,12 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   const errorFor = (field: string) =>
     error?.field === field
       ? wording(error)
-      : !error && preview.error?.field === field
-        ? wording(preview.error)
-        : null;
+      : // A value the web cannot read (a weight typed as "heavy") shows at its field at once.
+        !error && built && "error" in built && built.error.field === field
+        ? wording(built.error)
+        : !error && preview.error?.field === field
+          ? wording(preview.error)
+          : null;
 
   const index = STEPS.indexOf(step);
   const go = (to: StepId) => {
@@ -297,17 +300,19 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     wording,
     language: i18n.language,
   };
-  const blocked = blockedReason(step, {
-    cls: draft.cls,
-    race: draft.race,
-    xp,
-    scores: draft.scores,
-    hpMax: draft.hpMax,
-    name: draft.name,
-    alignment: draft.details.alignment,
-    sex: draft.details.sex,
-    alignments: classOf(options, draft.cls)?.alignments ?? [],
-  });
+  const unreadable = step === "identity" && built && "error" in built;
+  const blocked =
+    blockedReason(step, {
+      cls: draft.cls,
+      race: draft.race,
+      xp,
+      scores: draft.scores,
+      hpMax: draft.hpMax,
+      name: draft.name,
+      alignment: draft.details.alignment,
+      sex: draft.details.sex,
+      alignments: classOf(options, draft.cls)?.alignments ?? [],
+    }) ?? (unreadable ? "unreadable" : null);
   const last = index === STEPS.length - 1;
   const lead =
     step === "race" && draft.cls

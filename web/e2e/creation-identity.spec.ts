@@ -1,5 +1,5 @@
-import type { Page } from "@playwright/test";
-import { test, expect } from "./fixtures";
+import type { Locator, Page } from "@playwright/test";
+import { test, expect, snap } from "./fixtures";
 import { openDashboard, chooseLanguage } from "./helpers";
 
 // The identity step and the review of the creation route (ADR 0034 steps 3.5 and 3.6): what only a
@@ -18,7 +18,11 @@ const scores = [
 ] as const;
 
 /** Opens the flow and fills a bard's first four steps (typed scores, HP 6); stops on the identity step. */
-async function toIdentity(page: Page, lang: "fr" | "en" = "fr") {
+async function toIdentity(
+  page: Page,
+  lang: "fr" | "en" = "fr",
+  extras?: (step: Locator) => Promise<void>,
+) {
   await openDashboard(page);
   await chooseLanguage(page, lang);
   await page.goto("/create");
@@ -40,6 +44,7 @@ async function toIdentity(page: Page, lang: "fr" | "en" = "fr") {
     await step.getByLabel(tr(fr, en), { exact: true }).fill(score);
   await next.click();
   await step.getByLabel(tr("PV max", "Max HP")).fill("6");
+  await extras?.(step);
   await next.click();
   await expect(step).toHaveAttribute("data-step", "identity");
   return { step, next, tr };
@@ -246,4 +251,58 @@ test("review: no stale figures after a change, a refusal from an earlier step la
   await expect(step.getByTestId("next-blocked")).toBeVisible();
   await create.click();
   await expect(page.getByTestId("character")).toContainText("Lyra II");
+});
+
+test("identity and review: arrows choose, an unreadable weight blocks at its field, the review shows the skill choices", async ({
+  page,
+}) => {
+  page.on("dialog", (d) => void d.accept());
+  const { step, next } = await toIdentity(page, "fr", async (extras) => {
+    await extras
+      .getByLabel("Armure portée")
+      .selectOption({ label: "Métal, jusqu’à la maille" });
+    await extras.getByLabel("Escalade").fill("15");
+  });
+  const details = step.getByTestId("new-character-details");
+  await details.getByLabel("Nom", { exact: true }).fill("Lyra");
+
+  // Radio groups: one Tab stop, arrows choose and focus the neighbour.
+  const sex = details.getByRole("radiogroup", { name: "Sexe" });
+  const radios = sex.getByRole("radio");
+  await expect(radios.first()).toHaveAttribute("tabindex", "0");
+  await expect(radios.nth(1)).toHaveAttribute("tabindex", "-1");
+  await radios.first().focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(radios.nth(1)).toHaveAttribute("aria-checked", "true");
+  await expect(radios.nth(1)).toBeFocused();
+  await page.keyboard.press("ArrowLeft");
+  await expect(radios.first()).toHaveAttribute("aria-checked", "true");
+  const grid = details.getByTestId("alignment-grid").getByRole("radio");
+  await grid.nth(1).click();
+  await page.keyboard.press("ArrowDown");
+  await expect(grid.nth(2)).toHaveAttribute("aria-checked", "true");
+  await grid.nth(1).click();
+
+  // A weight no figure: the error shows at its field now, and Suivant waits.
+  await details.getByRole("textbox", { name: "Poids" }).fill("heavy");
+  await expect(
+    details.getByText("Saisissez le poids en nombre."),
+  ).toBeVisible();
+  await expect(next).toBeDisabled();
+  await expect(step.getByTestId("next-blocked")).toHaveText(
+    "Corrigez la valeur illisible pour continuer.",
+  );
+  await details.getByRole("textbox", { name: "Poids" }).fill("");
+  await expect(next).toBeEnabled();
+  await next.click();
+
+  // The review shows the armour worn and the points beside the final percentage.
+  const review = step.getByTestId("review");
+  await expect(review.getByTestId("review-skill-armor")).toHaveText(
+    "Métal, jusqu’à la maille",
+  );
+  await expect(review.getByTestId("review-skill-climb_walls")).toHaveText(
+    /\d+ % \(15 points\)/,
+  );
+  await snap(page, "creation-review-skills-fr");
 });

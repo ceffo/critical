@@ -2072,6 +2072,7 @@
       "hpRollLead": "Roll the hit dice, or type your sheet's max HP.",
       "hpNeedsCon": "Type the Constitution and the XP to roll, or type the max HP.",
       "hpEditable": "The roll fills the box; you may change it.",
+      "hpOutdated": "The class, the level or the Constitution changed since the roll: roll the hit points again.",
       "skills": "{{className}} skills",
       "skill": "Skill",
       "points": "Points",

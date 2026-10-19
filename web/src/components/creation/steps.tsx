@@ -35,7 +35,7 @@ import { useLanguageNames } from "@/lib/useLanguageNames";
 import { parseWhole } from "@/lib/wholeNumber";
 import { cn } from "@/lib/utils";
 import { ABILITIES, type AbilityCode } from "@/types/character";
-import { arrangeFor } from "./arrange";
+import { arrangeFor, pickRace } from "./arrange";
 import { Choice, Die, Group, Note, Row, Seg } from "./kit";
 import type { FlowDraft, StepProps } from "./flow";
 
@@ -237,7 +237,13 @@ export function ClassStep({ options, draft, update, errorFor, xp }: StepProps) {
 
 // --- Step 2: race -------------------------------------------------------------------------
 
-export function RaceStep({ options, draft, update, errorFor }: StepProps) {
+export function RaceStep({
+  options,
+  draft,
+  update,
+  errorFor,
+  watch,
+}: StepProps) {
   const { t } = useTranslation();
   const languageName = useLanguageNames(options);
   const cls = classOf(options, draft.cls);
@@ -245,22 +251,6 @@ export function RaceStep({ options, draft, update, errorFor }: StepProps) {
   const className = t(`details.classes.${draft.cls}`, {
     defaultValue: draft.cls,
   }).toLocaleLowerCase();
-  // The roll stays; the server adjusts its placement for the new race (PHB Table 8), so the scores
-  // and the Race column follow. If it cannot, the roll is dropped rather than left on the old race.
-  const pickRace = async (r: string) => {
-    update({ race: r });
-    if (draft.race === r || !draft.roll) return;
-    try {
-      update(await arrangeFor(draft.roll, draft.placement, r, draft.scores));
-    } catch {
-      update({
-        roll: null,
-        placement: emptyPlacement(),
-        picked: null,
-        arranged: null,
-      });
-    }
-  };
   return (
     <>
       <div
@@ -281,7 +271,7 @@ export function RaceStep({ options, draft, update, errorFor }: StepProps) {
               key={r}
               on={draft.race === r}
               off={!ok}
-              onPick={() => void pickRace(r)}
+              onPick={() => void pickRace(draft, r, update, watch)}
               label={
                 ok ? name : t("creation.race.refusedHint", { name, className })
               }
@@ -322,7 +312,13 @@ export function RaceStep({ options, draft, update, errorFor }: StepProps) {
 
 // --- Step 3: ability scores ---------------------------------------------------------------
 
-export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
+export function ScoresStep({
+  options,
+  draft,
+  update,
+  errorFor,
+  watch,
+}: StepProps) {
   const { t } = useTranslation();
   const methods = options.scoreMethods ?? [];
   const [busy, setBusy] = useState(false);
@@ -340,14 +336,18 @@ export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
     setBusy(true);
     setRollError(null);
     setPlaceError(null);
+    // A reply that lands after another change (an edited score) is dropped, its refusal too.
+    const current = watch();
     try {
       const r = await rollScores(draft.method, draft.race);
-      update({
+      const patch = {
         roll: r,
         picked: null,
-        ...(await arrangeFor(r, initialPlacement(r), draft.race, draft.scores)),
-      });
+        ...(await arrangeFor(r, initialPlacement(r), draft.race, draft)),
+      };
+      if (current()) update(patch);
     } catch (e) {
+      if (!current()) return;
       setRollError(
         e instanceof ApiError && e.field
           ? t(`creation.rollErrors.${e.message}`, {
@@ -370,12 +370,15 @@ export function ScoresStep({ options, draft, update, errorFor }: StepProps) {
     if (!next) return;
     setBusy(true);
     setPlaceError(null);
+    const current = watch();
     try {
-      update({
+      const patch = {
         picked: null,
-        ...(await arrangeFor(roll, next, draft.race, draft.scores)),
-      });
+        ...(await arrangeFor(roll, next, draft.race, draft)),
+      };
+      if (current()) update(patch);
     } catch (e) {
+      if (!current()) return;
       setPlaceError(
         e instanceof ApiError && e.field
           ? t(`creation.placeErrors.${e.message}`, {
@@ -697,6 +700,7 @@ export function ExtrasStep({
   update,
   errorFor,
   xp,
+  watch,
 }: StepProps) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -724,10 +728,18 @@ export function ExtrasStep({
     if (!canRoll) return;
     setBusy(true);
     setRollError(null);
+    const current = watch();
     try {
       const r = await rollHp(draft.cls, con, xpValue);
-      update({ hpRoll: r, hpMax: String(r.total) });
+      if (!current()) return;
+      update({
+        hpRoll: r,
+        hpRollFor: { cls: draft.cls, con, xp: xpValue },
+        hpOutdated: false,
+        hpMax: String(r.total),
+      });
     } catch (e) {
+      if (!current()) return;
       setRollError(
         e instanceof ApiError && e.field
           ? t(`creation.rollErrors.${e.message}`, {
@@ -767,6 +779,11 @@ export function ExtrasStep({
           }
         >
           {rollError && <Note kind="refusal">{rollError}</Note>}
+          {!hp && draft.hpOutdated && (
+            <Note kind="warning" testId="hp-outdated">
+              {t("creation.extras.hpOutdated")}
+            </Note>
+          )}
           {hp ? (
             <>
               <table className="w-full text-body">

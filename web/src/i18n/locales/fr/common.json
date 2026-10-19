@@ -2072,6 +2072,7 @@
       "hpRollLead": "Tirez les dés de vie, ou saisissez les PV max de votre fiche.",
       "hpNeedsCon": "Saisissez la Constitution et les XP pour tirer, ou saisissez les PV max.",
       "hpEditable": "Le tirage remplit la case ; vous pouvez la changer.",
+      "hpOutdated": "La classe, le niveau ou la Constitution ont changé depuis le tirage : tirez à nouveau les points de vie.",
       "skills": "Talents de {{className}}",
       "skill": "Talent",
       "points": "Points",

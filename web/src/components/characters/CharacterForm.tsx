@@ -5,6 +5,7 @@ import { createCharacter, fetchCreationChoices } from "@/api/characters";
 import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
+import { LanguagePicker } from "@/components/characters/LanguagePicker";
 import { parseWhole } from "@/lib/wholeNumber";
 import { toBody, type Draft } from "@/lib/characterDetails";
 import { skillName } from "@/lib/logSummary";
@@ -28,8 +29,11 @@ type Field =
   | `skillPoints.${string}`
   | `details.${keyof Draft}`;
 
+/** The draft's fields typed as text; the languages are a list of picked codes. */
+type TextDraftField = Exclude<keyof Draft, "languages">;
+
 /** The details the form takes, in the card's order (the card's edit checks them the same way). */
-const DETAIL_FIELDS: (keyof Draft)[] = [
+const DETAIL_FIELDS: TextDraftField[] = [
   "age",
   "height",
   "weight",
@@ -45,7 +49,7 @@ const NO_DETAILS: Draft = {
   weight: "",
   hair: "",
   eyes: "",
-  languages: "",
+  languages: [],
 };
 
 /** The server's field names for the form's: the race is `race` in its errors. */
@@ -121,6 +125,10 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
   const offersExceptional =
     !!classOption?.exceptionalStrengthRaces.includes(race) &&
     parseWhole(numbers.str) === 18;
+  // The Intelligence typed so far, for the languages' count (ADR 0032 step 4.2).
+  const typedInt = parseWhole(numbers.int);
+  const intelligence =
+    typedInt === null || Number.isNaN(typedInt) ? null : typedInt;
   const rangeOf = (f: NumberField): ValueRange | undefined =>
     options
       ? f === "hpMax"
@@ -280,7 +288,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
     );
   };
 
-  const detail = (f: keyof Draft, hint?: string) => {
+  const detail = (f: TextDraftField, hint?: string) => {
     const field: Field = `details.${f}`;
     return (
       <div key={f} className="flex min-w-0 flex-col gap-1">
@@ -573,7 +581,23 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
           {pick("sex", options?.sexes ?? [])}
           {DETAIL_FIELDS.map((f) => detail(f))}
         </div>
-        {detail("languages", t("details.languagesHint"))}
+        {(options.languages ?? []).length > 0 && (
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className={labelClass}>{t("details.fields.languages")}</span>
+            <LanguagePicker
+              idPrefix="new-character-languages"
+              options={options}
+              race={race}
+              intelligence={intelligence}
+              picked={details.languages}
+              onChange={(languages) => {
+                setDetails((d) => ({ ...d, languages }));
+                setError(null);
+              }}
+            />
+            {errorFor("details.languages")}
+          </div>
+        )}
       </fieldset>
 
       <div className="flex flex-wrap items-center justify-end gap-2">

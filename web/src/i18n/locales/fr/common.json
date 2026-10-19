@@ -1531,7 +1531,11 @@
       "eyes": "Yeux",
       "languages": "Langues"
     },
-    "languagesHint": "Séparez les langues par des virgules",
+    "languagesRaceList": "De la liste de la race",
+    "languagesOthers": "Autres, si le MD l’autorise",
+    "languagesCount": "Hors langue natale : {{n}} sur {{limit}} pour cette Intelligence.",
+    "languagesOver": "Au-delà du nombre, le MD décide.",
+    "languageNative": "La langue propre de la race, toujours connue",
     "classes": {
       "bard": "Barde",
       "cleric": "Clerc",
@@ -1539,18 +1543,14 @@
       "mage": "Magicien",
       "thief": "Voleur"
     },
-    "language": {
-      "elfique": "Elfique",
-      "commun": "Commun",
-      "orque": "Orque",
-      "nain": "Nain"
-    },
     "errors": {
       "too_long": "Trop long.",
       "out_of_range": "Saisissez un âge entier entre 1 et 10 000.",
-      "too_many": "Trop de langues.",
-      "empty": "Une langue est vide.",
-      "duplicate": "Une langue est en double.",
+      "languages": {
+        "empty": "Une langue est vide.",
+        "unknown": "Choisissez les langues dans la liste.",
+        "duplicate": "Une langue est en double."
+      },
       "alignment": {
         "empty": "Choisissez un alignement.",
         "unknown": "Choisissez l’un des alignements proposés.",
@@ -1589,7 +1589,8 @@
       "female": "Femme"
     },
     "warnings": {
-      "alignment_not_allowed": "Cet alignement n’est pas permis à un personnage de classe {{className}} ; conservé tel qu’enregistré."
+      "alignment_not_allowed": "Cet alignement n’est pas permis à un personnage de classe {{className}} ; conservé tel qu’enregistré.",
+      "languages_over_limit": "{{n}} langues au-delà de la langue natale, {{limit}} pour cette Intelligence : le MD décide."
     }
   },
   "xp": {

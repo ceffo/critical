@@ -3,7 +3,7 @@ import {
   ALIGNMENT_CODES,
   codeOrEmpty,
   hasAlignmentWarning,
-  languageKey,
+  languageWarning,
   toBody,
   toDraft,
 } from "./characterDetails";
@@ -16,7 +16,7 @@ const details = {
   weight: "",
   hair: "",
   eyes: "",
-  languages: ["Elfique", "Commun"],
+  languages: ["common", "elvish"],
 };
 
 describe("character details draft", () => {
@@ -32,7 +32,7 @@ describe("character details draft", () => {
     expect(body).not.toHaveProperty("sex");
   });
   it("an empty age clears it and no languages is an empty list", () => {
-    const { body } = toBody({ ...toDraft(details), age: " ", languages: "  " });
+    const { body } = toBody({ ...toDraft(details), age: " ", languages: [] });
     expect(body.age).toBeNull();
     expect(body.languages).toEqual([]);
   });
@@ -41,18 +41,31 @@ describe("character details draft", () => {
     expect(toBody({ ...toDraft(details), age: "-3" }).ageInvalid).toBe(true);
     expect(toBody({ ...toDraft(details), age: "0" }).ageInvalid).toBe(true);
   });
-  it("keeps blank entries so the server can reject them", () => {
+  it("sends the picked language codes as they are, the server checks them", () => {
     expect(
-      toBody({ ...toDraft(details), languages: "Commun, ,Nain" }).body
+      toBody({ ...toDraft(details), languages: ["gnoll", "nope"] }).body
         .languages,
-    ).toEqual(["Commun", "", "Nain"]);
+    ).toEqual(["gnoll", "nope"]);
+  });
+  it("copies the character's languages into the draft", () => {
+    const draft = toDraft(details);
+    expect(draft.languages).toEqual(["common", "elvish"]);
+    expect(draft.languages).not.toBe(details.languages);
   });
 });
 
-describe("languageKey", () => {
-  it("drops case and accents", () => {
-    expect(languageKey("Élfique")).toBe("elfique");
-    expect(languageKey("Haut Elfique")).toBe("hautelfique");
+describe("languageWarning", () => {
+  it("reads the figures of the languages warning, and an answer without warnings as none", () => {
+    expect(
+      languageWarning({
+        warnings: [
+          { code: "alignment_not_allowed" },
+          { code: "languages_over_limit", count: 5, limit: 0 },
+        ],
+      }),
+    ).toEqual({ count: 5, limit: 0 });
+    expect(languageWarning({ warnings: [] })).toBeUndefined();
+    expect(languageWarning({})).toBeUndefined();
   });
 });
 

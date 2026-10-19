@@ -1,3 +1,4 @@
+import type { LocalizedText } from "@/types/localized";
 // Mirrors api/internal/rest/handler/characterhdl (CharacterDTO, DerivedDTO).
 
 /** Five numbers, one per save category (targets, or a bonus per category). */
@@ -217,13 +218,17 @@ export interface Character {
   weight: string;
   hair: string;
   eyes: string;
+  /** The language catalogue codes the character knows, its race's native language included (ADR
+   * 0032 step 4); named by the creation options' `languages`. */
   languages: string[];
 
   /** The required details the character lacks ("alignment", "sex"): the card asks to pick them
    * (ADR 0032 step 8.2). */
   missing: ("alignment" | "sex")[];
-  /** Rules the stored character breaks without being refused (step 8.4), worded by the web. */
-  warnings: { code: string; field: string }[];
+  /** Rules the stored character breaks without being refused (steps 4.2 and 8.4), worded by the
+   * web; `languages_over_limit` also carries how many additional languages it knows (`count`, the
+   * native one not counted) and its Intelligence allows (`limit`). */
+  warnings: { code: string; field: string; count?: number; limit?: number }[];
 }
 
 /** The editable details, as the server stores them. */
@@ -263,6 +268,12 @@ export interface ValueRange {
   max: number;
 }
 
+/** A catalogue language: its code and its name by language code. */
+export interface LanguageOption {
+  code: string;
+  name: LocalizedText;
+}
+
 /** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 export interface CreationOptions {
   /**
@@ -282,6 +293,15 @@ export interface CreationOptions {
   }[];
   /** The sex codes (ADR 0032 step 3). */
   sexes: string[];
+  /**
+   * The language catalogue (ADR 0032 step 4.3), the names by language (ADR 0023), each race's own
+   * language and PHB list, and PHB Table 4's number of additional languages by Intelligence
+   * score. Absent from a release that predates them (a rolling deploy, ADR 0024) and empty
+   * before catalogue format 8: no language is offered.
+   */
+  languages?: LanguageOption[];
+  raceLanguages?: { race: string; native: string; languages: string[] }[];
+  languageLimits?: { intMin: number; intMax: number; limit: number }[];
   ability: ValueRange;
   /** The 18/xx percentile's range (1 = 18/01, 100 = 18/00). */
   strExceptional: ValueRange;

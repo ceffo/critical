@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { CharacterSummary } from "@/types/character";
 import { identityLine, toPickKey } from "./rosterCard";
 
 const word = (key: string, code: string) => `${key}.${code}`;
@@ -27,7 +28,12 @@ describe("roster card identity", () => {
     expect(toPickKey(["alignment", "sex"])).toBe("roster.toPick.alignment_sex");
   });
   it("copes with a summary from the previous API release, which has none of the new fields", () => {
-    const old = { id: 1, name: "Aria", class: "bard", level: 3 };
+    const old: CharacterSummary = {
+      id: 1,
+      name: "Aria",
+      class: "bard",
+      level: 3,
+    };
     expect(identityLine(old, word)).toBe("");
     expect(toPickKey(undefined)).toBeNull();
   });

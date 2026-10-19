@@ -124,7 +124,7 @@ func TestAttack_Step8_OneToHitModifierPerBuff(t *testing.T) {
 // large dice against a large target, its base dice otherwise, and its base
 // dice against a large target when it has no large dice.
 func TestDamage_Step1_DiceByTargetSize(t *testing.T) {
-	noLarge := combatsvc.Weapon{ID: "club", Name: localized.Of("Club"), BaseDamage: "1d6", Kind: combatsvc.WeaponMelee}
+	noLarge := combatsvc.Weapon{Wielded: true, ID: "club", Name: localized.Of("Club"), BaseDamage: "1d6", Kind: combatsvc.WeaponMelee}
 	cases := []struct {
 		name      string
 		weapon    combatsvc.Weapon

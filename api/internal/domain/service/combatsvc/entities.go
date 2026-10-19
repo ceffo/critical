@@ -1,6 +1,9 @@
 package combatsvc
 
-import "github.com/ceffo/critical/api/internal/domain/localized"
+import (
+	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+)
 
 // ModifierKind says where a modifier comes from, so the UI can label it in
 // the player's language from the kind and the detail.
@@ -271,7 +274,8 @@ const (
 	WeaponMissile WeaponKind = "missile"
 )
 
-// Weapon is the catalog entry consumed by ResolveAttack.
+// Weapon is a weapon piece of the character's equipment (ADR 0033 step 3) as
+// the attack reads it (weaponOf).
 type Weapon struct {
 	ID string
 	// Name is a localized text (ADR 0023 step 9); results and payloads
@@ -283,10 +287,29 @@ type Weapon struct {
 	MagicDamage int
 	Kind        WeaponKind
 	TwoHanded   bool
-	AmmoKind    string // ammo item kind a missile weapon fires, e.g. "arrow"
-	Type        string // weapon type code (weaponsvc.Types); empty: none
+	AmmoKind    string // ammo kind a missile weapon fires, e.g. "arrow" (the piece's Fires)
+	Type        string // weapon type code (itemsvc.WeaponTypes); empty: none
 	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
 	Specialized bool
+	// Speed is the speed factor (0 to 20), Wielded whether the piece is
+	// wielded (ADR 0033 step 6): only a wielded weapon is in hand.
+	Speed   int
+	Wielded bool
+}
+
+// weaponOf is a weapon piece as the attack reads it.
+func weaponOf(it itemsvc.Item) Weapon {
+	return Weapon{
+		ID: it.ID, Name: it.Name, BaseDamage: it.DamageSM, DamageLarge: it.DamageL,
+		MagicToHit: it.MagicToHit, MagicDamage: it.MagicDamage, Kind: WeaponKind(it.WeaponKind),
+		TwoHanded: it.TwoHanded, AmmoKind: it.Fires, Type: it.WeaponType, Specialized: it.Specialized,
+		Speed: it.Speed, Wielded: it.State == itemsvc.StateWielded,
+	}
+}
+
+// isAmmo reports whether the piece is ammunition the weapon fires.
+func isAmmo(it itemsvc.Item, w Weapon) bool {
+	return it.Category == itemsvc.CategoryAmmunition && w.AmmoKind != "" && it.AmmoKind == w.AmmoKind
 }
 
 // FiresAmmo reports whether the weapon is a launcher (a bow) that spends

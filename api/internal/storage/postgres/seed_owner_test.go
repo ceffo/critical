@@ -42,7 +42,7 @@ func (f *fakeStore) everyRowOwnedBy(id int64) map[string]int64 {
 // disown makes every row ownerless and empties the spellbooks: the database as it was before
 // each character owned its equipment (before migration 004 the owner may be NULL).
 func (f *fakeStore) disown() {
-	f.t.Weapons = rekey(f.t.Weapons, func(w *storeq.InsertWeaponParams) (*int64, string) { return &w.CharacterID, w.ID })
+	f.t.Weapons = rekey(f.t.Weapons, func(w *weaponRow) (*int64, string) { return &w.CharacterID, w.ID })
 	f.t.Items = rekey(f.t.Items, func(it *storeq.InsertItemParams) (*int64, string) { return &it.CharacterID, it.ID })
 	f.t.Profs = rekey(f.t.Profs, func(p *storeq.UpsertProficiencyParams) (*int64, string) { return &p.CharacterID, p.ID })
 	f.t.Bard = rekey(f.t.Bard, func(b *storeq.UpsertBardSkillParams) (*int64, string) { return &b.CharacterID, b.ID })
@@ -83,9 +83,8 @@ func (f *fakeStore) item(id string) storeq.InsertItemParams {
 	return only(f.t.Items, id, func(r storeq.InsertItemParams) string { return r.ID })
 }
 
-func (f *fakeStore) weapon(id string) storeq.InsertWeaponParams {
-	return only(f.t.Weapons, id, func(r storeq.InsertWeaponParams) string { return r.ID })
-}
+// weapon is a weapon piece (ADR 0033 step 1).
+func (f *fakeStore) weapon(id string) storeq.InsertItemParams { return f.item(id) }
 
 func (f *fakeStore) prof(id string) storeq.UpsertProficiencyParams {
 	return only(f.t.Profs, id, func(r storeq.UpsertProficiencyParams) string { return r.ID })
@@ -111,7 +110,6 @@ func TestSeed_TheStartingSetIsTheSeedCharacters(t *testing.T) {
 	require.Len(t, f.t.Characters, 1)
 	id := f.t.Characters[0]
 
-	require.NotEmpty(t, f.t.Weapons)
 	require.NotEmpty(t, f.t.Items)
 	require.NotEmpty(t, f.t.Profs)
 	require.NotEmpty(t, f.t.Bard)
@@ -177,7 +175,7 @@ func TestSeed_AnotherCharacterGetsNothing(t *testing.T) {
 	require.NoError(t, seedOn(f, repoSeeds()))
 	assert.Equal(t, f.everyRowOwnedBy(id), f.owners(), "nothing is the other character's")
 	assert.Empty(t, f.spellbookOf(other))
-	n, err := f.CountWeapons(t.Context(), other)
+	n, err := f.CountItems(t.Context(), other)
 	require.NoError(t, err)
 	assert.Zero(t, n)
 }
@@ -223,7 +221,7 @@ func TestSeed_AnotherCharacterMayHoldTheSameIDs(t *testing.T) {
 	ctx := t.Context()
 	for _, w := range copyTables(f.t).Weapons {
 		w.CharacterID = other
-		require.NoError(t, f.InsertWeapon(ctx, w))
+		require.NoError(t, f.addWeapon(w))
 	}
 	for _, it := range copyTables(f.t).Items {
 		it.CharacterID, it.Count = other, 0
@@ -243,7 +241,7 @@ func TestSeed_AnotherCharacterMayHoldTheSameIDs(t *testing.T) {
 	assert.Equal(t, before, f.t, "each character keeps its own rows")
 	n, err := f.CountItems(ctx, other)
 	require.NoError(t, err)
-	assert.Equal(t, int64(6), n)
+	assert.Equal(t, int64(12), n)
 }
 
 // The spellbook seed is applied once, while the seed character has no spellbook, as its weapons

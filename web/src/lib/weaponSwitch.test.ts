@@ -14,18 +14,33 @@ const weapon = (id: string): Weapon => ({
   ammo_kind: "",
   weapon_type: "long_sword",
   specialized: false,
+  speed: 5,
+  wielded: true,
 });
 const WEAPONS = ["sword", "bow", "dagger", "mace"].map(weapon);
 const ids = (ws: Weapon[]) => ws.map((w) => w.id);
 
 describe("weaponSwitch", () => {
   it("offers the previous weapon and lists the rest in the served order", () => {
-    const { previous, others } = weaponSwitch(WEAPONS, {
+    const { previous, equipped } = weaponSwitch(WEAPONS, {
       weaponId: "bow",
       previousWeaponId: "mace",
     });
     expect(previous?.id).toBe("mace");
-    expect(ids(others)).toEqual(["sword", "dagger"]);
+    expect(ids(equipped)).toEqual(["sword", "dagger"]);
+  });
+
+  // ADR 0035 item 12: the equipped weapons, then the others (picking one equips it); a previous
+  // weapon put away is offered among the others, not as the one-click switch.
+  it("lists the equipped weapons, then the ones not equipped", () => {
+    const put = (id: string) => ({ ...weapon(id), wielded: false });
+    const { previous, equipped, unequipped } = weaponSwitch(
+      [weapon("sword"), put("halberd"), weapon("bow"), put("mace")],
+      { weaponId: "bow", previousWeaponId: "mace" },
+    );
+    expect(previous).toBeNull();
+    expect(ids(equipped)).toEqual(["sword"]);
+    expect(ids(unequipped)).toEqual(["halberd", "mace"]);
   });
 
   it.each([
@@ -33,12 +48,12 @@ describe("weaponSwitch", () => {
     ["a previous weapon since deleted", "halberd"],
     ["the previous weapon is the one in hand", "bow"],
   ])("lists every other weapon with %s", (_, previousWeaponId) => {
-    const { previous, others } = weaponSwitch(WEAPONS, {
+    const { previous, equipped } = weaponSwitch(WEAPONS, {
       weaponId: "bow",
       previousWeaponId,
     });
     expect(previous).toBeNull();
-    expect(ids(others)).toEqual(["sword", "dagger", "mace"]);
+    expect(ids(equipped)).toEqual(["sword", "dagger", "mace"]);
   });
 
   it("has nothing to offer with a single weapon", () => {
@@ -47,7 +62,7 @@ describe("weaponSwitch", () => {
         weaponId: "sword",
         previousWeaponId: "",
       }),
-    ).toEqual({ previous: null, others: [] });
+    ).toEqual({ previous: null, equipped: [], unequipped: [] });
   });
 });
 

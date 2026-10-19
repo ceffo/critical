@@ -30,8 +30,6 @@ import (
 	spellq "github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/textdal"
 	textq "github.com/ceffo/critical/api/internal/adapters/textdal/queries"
-	"github.com/ceffo/critical/api/internal/adapters/weapondal"
-	weaponq "github.com/ceffo/critical/api/internal/adapters/weapondal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/xpdal"
 	xpq "github.com/ceffo/critical/api/internal/adapters/xpdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
@@ -48,9 +46,9 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 	"github.com/ceffo/critical/api/internal/storage/postgres"
@@ -63,11 +61,14 @@ import (
 type Store interface {
 	domain.TxRunner
 	// Migrate applies the pending migrations; seedsDir's character.json names
-	// the seed character, the owner of rows a migration finds without one.
-	Migrate(ctx context.Context, seedsDir string) error
+	// the seed character, the owner of rows a migration finds without one;
+	// catalogue is the catalogue's weapons the equipment conversion matches
+	// (ADR 0033 step 26.4).
+	Migrate(ctx context.Context, seedsDir string, catalogue []ruletablesvc.Weapon) error
 	// Seed loads the seed files of seedsDir; spellbook is the spellbook
-	// seed's catalogue keys, checked against the catalogue.
-	Seed(ctx context.Context, seedsDir string, spellbook []string) error
+	// seed's catalogue keys, checked against the catalogue; catalogue the
+	// catalogue's weapons the seeded weapons are matched to.
+	Seed(ctx context.Context, seedsDir string, spellbook []string, catalogue []ruletablesvc.Weapon) error
 	ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, seedRefs []catalogue.Ref) error
 	Close() error
 }
@@ -108,22 +109,20 @@ type SpellbookStore interface {
 // step 6.1: the services, this root and the router are tested on mocks of
 // these).
 type Storage struct {
-	Store        Store
-	Character    CharacterStore
-	HP           hpsvc.DAL
-	Log          actionlogsvc.DAL
-	Buff         BuffStore
-	Spell        SpellStore
-	Weapons      combatsvc.Weapons
-	WeaponEditor weaponsvc.DAL
-	Crit         combatsvc.CritStore
-	Items        itemsvc.DAL
-	Forms        combatsvc.FormStore
-	XP           xpsvc.DAL
-	Skill        skillsvc.DAL
-	Spellbook    SpellbookStore
-	Dice         dicesvc.DAL
-	Auth         authsvc.DAL
+	Store     Store
+	Character CharacterStore
+	HP        hpsvc.DAL
+	Log       actionlogsvc.DAL
+	Buff      BuffStore
+	Spell     SpellStore
+	Crit      combatsvc.CritStore
+	Items     itemsvc.DAL
+	Forms     combatsvc.FormStore
+	XP        xpsvc.DAL
+	Skill     skillsvc.DAL
+	Spellbook SpellbookStore
+	Dice      dicesvc.DAL
+	Auth      authsvc.DAL
 }
 
 // postgresStorage wires the PostgreSQL adapters over db. The sqlc-generated
@@ -135,25 +134,23 @@ func postgresStorage(db *postgres.DB) Storage { return storageOn(db, postgres.Ro
 // root routes: a query package built over anything else would escape the
 // caller's transaction.
 func storageOn(store Store, conn postgres.DBTX) Storage {
-	// Item and weapon names are localized texts (ADR 0023 step 9).
+	// Item names are localized texts (ADR 0023 step 9).
 	texts := textdal.New(textq.New(conn))
 	return Storage{
-		Store:        store,
-		Character:    characterdal.New(charq.New(conn)),
-		HP:           hpdal.New(hpq.New(conn)),
-		Log:          actionlogdal.New(logq.New(conn)),
-		Buff:         buffdal.New(buffq.New(conn)),
-		Spell:        spelldal.New(spellq.New(conn)),
-		Weapons:      weapondal.New(weaponq.New(conn), texts),
-		WeaponEditor: weapondal.NewEditor(weaponq.New(conn), texts),
-		Crit:         critdal.New(critq.New(conn)),
-		Items:        itemdal.New(itemq.New(conn), texts),
-		Forms:        attackformdal.New(formq.New(conn)),
-		XP:           xpdal.New(xpq.New(conn)),
-		Skill:        skilldal.New(skillq.New(conn)),
-		Spellbook:    spellbookdal.New(spellbookq.New(conn)),
-		Dice:         dicedal.New(diceq.New(conn)),
-		Auth:         authdal.New(authq.New(conn)),
+		Store:     store,
+		Character: characterdal.New(charq.New(conn)),
+		HP:        hpdal.New(hpq.New(conn)),
+		Log:       actionlogdal.New(logq.New(conn)),
+		Buff:      buffdal.New(buffq.New(conn)),
+		Spell:     spelldal.New(spellq.New(conn)),
+		Crit:      critdal.New(critq.New(conn)),
+		Items:     itemdal.New(itemq.New(conn), texts),
+		Forms:     attackformdal.New(formq.New(conn)),
+		XP:        xpdal.New(xpq.New(conn)),
+		Skill:     skilldal.New(skillq.New(conn)),
+		Spellbook: spellbookdal.New(spellbookq.New(conn)),
+		Dice:      dicedal.New(diceq.New(conn)),
+		Auth:      authdal.New(authq.New(conn)),
 	}
 }
 
@@ -161,21 +158,19 @@ func storageOn(store Store, conn postgres.DBTX) Storage {
 // over the one store m, which runs the transactions (ADR 0025 step 8.1).
 func memoryStorage(m *memory.Store) Storage {
 	return Storage{
-		Store:        m,
-		Character:    m.Characters(),
-		HP:           m.Characters(),
-		Log:          m.ActionLog(),
-		Buff:         m.Buffs(),
-		Spell:        m.Spells(),
-		Weapons:      m.Weapons(),
-		WeaponEditor: m.WeaponEditor(),
-		Crit:         m.Crit(),
-		Items:        m.Items(),
-		Forms:        m.Forms(),
-		XP:           m.XP(),
-		Skill:        m.Skills(),
-		Spellbook:    m.Spellbooks(),
-		Dice:         m.Dice(),
-		Auth:         m.Auth(),
+		Store:     m,
+		Character: m.Characters(),
+		HP:        m.Characters(),
+		Log:       m.ActionLog(),
+		Buff:      m.Buffs(),
+		Spell:     m.Spells(),
+		Crit:      m.Crit(),
+		Items:     m.Items(),
+		Forms:     m.Forms(),
+		XP:        m.XP(),
+		Skill:     m.Skills(),
+		Spellbook: m.Spellbooks(),
+		Dice:      m.Dice(),
+		Auth:      m.Auth(),
 	}
 }

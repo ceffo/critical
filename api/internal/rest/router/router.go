@@ -36,7 +36,6 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellprephdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/turnhdl"
-	"github.com/ceffo/critical/api/internal/rest/handler/weaponhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/xphdl"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 )
@@ -160,7 +159,6 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		casthdl.RegisterRoutes(r, charID, bs.Cast)
 		combathdl.RegisterRoutes(r, charID, bs.Combat)
 		itemhdl.RegisterRoutes(r, charID, bs.Items)
-		weaponhdl.RegisterRoutes(r, charID, bs.Weapons)
 		resthdl.RegisterRoutes(r, charID, bs.Rest)
 		xphdl.RegisterRoutes(r, charID, bs.XP)
 		leveluphdl.RegisterRoutes(r, charID, bs.LevelUp)

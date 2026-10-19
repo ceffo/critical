@@ -143,7 +143,8 @@ func DecodePowers(raw string) ([]Power, error) {
 	return fromJSONPowers(js), nil
 }
 
-// ItemPowers is every power of every carried item, in item list order then
+// ItemPowers is every power of every worn or wielded piece (ADR 0033 step 9),
+// in item list order then
 // power order, whatever the item's count (ADR 0016 step 9: the Power Gem's
 // powers work at 0 dispels left). It is buffsvc's Items port; whether a
 // power is on is buffsvc's to decide (step 10).
@@ -154,6 +155,10 @@ func (s *service) ItemPowers(ctx context.Context, characterID int64) ([]buffsvc.
 	}
 	out := []buffsvc.ItemPower{}
 	for _, it := range items {
+		// A carried ring protects nothing (ADR 0033 step 9).
+		if !it.Equipped() {
+			continue
+		}
 		for _, p := range it.Powers {
 			out = append(out, buffsvc.ItemPower{
 				ItemID: it.ID, ItemName: it.Name.Any(), PowerID: p.ID, MinStr: p.MinStr, Effects: p.Effects,

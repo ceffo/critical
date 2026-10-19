@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
@@ -53,14 +54,15 @@ const ownerKeysMigration = "004_per_character_keys.sql"
 // Migrate applies every embedded migration the database does not record yet, in lexical order,
 // and records each one in schema_migrations (ADR 0025 step 3). seedsDir is the seeds' directory:
 // its character.json names the seed character, the owner of rows without one before
-// ownerKeysMigration.
-func (d *DB) Migrate(ctx context.Context, seedsDir string) error {
+// ownerKeysMigration. catalogue is the catalogue's weapons, which the equipment conversion
+// matches (ADR 0033 step 26.4; none before catalogue format 7).
+func (d *DB) Migrate(ctx context.Context, seedsDir string, catalogue []ruletablesvc.Weapon) error {
 	embedded, err := embeddedMigrations()
 	if err != nil {
 		return err
 	}
 	return d.migrations(ctx, func(tx migrationTx) error {
-		before, after := migrationDataSteps(seedsDir)
+		before, after := migrationDataSteps(seedsDir, catalogue)
 		return runMigrations(ctx, tx, embedded, before, after)
 	})
 }
@@ -92,7 +94,7 @@ const measuresMigration = "015_identity_numbers.sql"
 
 // migrationDataSteps are the data steps run just before the named migrations, then those run just
 // after the named migrations.
-func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
+func migrationDataSteps(seedsDir string, catalogue []ruletablesvc.Weapon) (before, after map[string]dataStep) {
 	characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
 	weaponsPath := seedfile.Path(seedsDir, seedfile.WeaponsFile)
 	before = map[string]dataStep{
@@ -110,6 +112,7 @@ func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
 		},
 		languagesMigration: mapLanguages,
 		measuresMigration:  mapMeasures,
+		equipmentMigration: func(ctx context.Context, q storeq.Querier) error { return convertEquipment(ctx, q, catalogue) },
 	}
 	return before, after
 }

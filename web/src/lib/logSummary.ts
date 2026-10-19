@@ -180,7 +180,12 @@ function castText(
     );
   return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
 }
-import type { ItemChangeRecord, RestockResult, UseResult } from "@/types/items";
+import type {
+  EquipmentStateRecord,
+  ItemChangeRecord,
+  RestockResult,
+  UseResult,
+} from "@/types/items";
 
 /** Payload of long_rest entries (restsvc restRecord). */
 function restText(e: LogEntry, t: TFunction): string | null {
@@ -461,6 +466,26 @@ function weaponChangeText(
     )
     .join(", ");
   return t("log.weapon.edited", { name, changes });
+}
+
+/**
+ * Payload of equipment_state entries (itemsvc stateRecord, ADR 0033 step 7), worded with the one
+ * term of ADR 0035 item 3: "Equipped: X", "Unequipped: X", a swap "Equipped: X (in place of Y)".
+ */
+function equipmentStateText(
+  e: LogEntry,
+  t: TFunction,
+  names: InventoryNamer,
+): string | null {
+  if (e.kind !== "equipment_state") return null;
+  const p = e.payload as Partial<EquipmentStateRecord> | null;
+  if (!p || typeof p.name !== "string") return null;
+  const name = names.item(p.itemId, p.name);
+  if (p.after === "carried") return t("log.equipment.unequipped", { name });
+  const off = (p.off ?? []).map((o) => names.item(o.itemId, o.name));
+  if (off.length > 0)
+    return t("log.equipment.swapped", { name, off: off.join(", ") });
+  return t("log.equipment.equipped", { name });
 }
 
 /** Payload of xp_add, xp_edit and xp_remove entries (xpsvc changeRecord, ADR 0015 step 4). */
@@ -906,6 +931,8 @@ export function entryText(
   if (itemChange) return itemChange;
   const weaponChange = weaponChangeText(e, t, names);
   if (weaponChange) return weaponChange;
+  const equipment = equipmentStateText(e, t, names);
+  if (equipment) return equipment;
   const xpChange = xpChangeText(e, t);
   if (xpChange) return xpChange;
   const levelUp = levelUpText(e, t);

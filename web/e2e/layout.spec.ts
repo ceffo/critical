@@ -752,9 +752,7 @@ test("rail: focuses activities and each keeps its state", async ({ page }) => {
   );
   await expect(page.getByRole("region", { name: "Actions" })).toBeHidden();
   const inventory = page.getByRole("region", { name: "Inventory" });
-  await expect(
-    inventory.getByRole("button", { name: "Add weapon" }),
-  ).toBeVisible();
+  await expect(inventory.getByTestId("category-chips")).toBeVisible();
   await inventory.getByRole("button", { name: "Add item" }).click();
   await expect(inventory.getByTestId("item-form")).toBeVisible();
 
@@ -1035,7 +1033,7 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
-  await api("PATCH", "/api/weapons/darts", {
+  await api("PATCH", "/api/items/darts", {
     name: { en: LONG_WEAPON, fr: LONG_WEAPON },
   });
   await api("PATCH", "/api/items/power_gem_dispel", {
@@ -1135,7 +1133,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
-  await api("PATCH", "/api/weapons/darts", {
+  await api("PATCH", "/api/items/darts", {
     name: { en: LONG_WEAPON, fr: LONG_WEAPON },
   });
   await api("PATCH", "/api/items/power_gem_dispel", {
@@ -1413,29 +1411,13 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await rail.nth(2).click();
     await expectNoClippedText(stage, `inventory, ${where}`);
     await expectWholeWords(stage, `inventory, ${where}`);
-    if (vp.width === 1707) {
-      // ADR 0027 step 14.3: from a 1200 px stage, items and weapons side by side, both whole.
-      const [items, weapons] = await stage
-        .getByTestId("inventory-cards")
-        .locator(":scope > section")
-        .all();
-      for (const [card, what] of [
-        [items, "items"],
-        [weapons, "weapons"],
-      ] as const) {
-        await expectInside(card, stage, `${what} card, ${where}`);
-        await expectNoScroll(
-          card.locator(":scope > div").last(),
-          `${what} card, ${where}`,
-        );
-      }
-      const a = (await items.boundingBox())!;
-      const b = (await weapons.boundingBox())!;
-      expect(b.y, `cards side by side, ${where}`).toBe(a.y);
-      expect(b.x, `weapons right of items, ${where}`).toBeGreaterThan(
-        a.x + a.width,
-      );
-    }
+    // ADR 0027 step 14.3 and ADR 0035 item 2: one possessions card, inside the stage (the page never
+    // scrolls; a long list scrolls inside the card).
+    await expectInside(
+      stage.getByRole("region", { name: "Possessions" }),
+      stage,
+      `possessions card, ${where}`,
+    );
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `inventory-long-fr-${vp.width}x${vp.height}`);
   }
@@ -2429,7 +2411,7 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
 });
 
 // ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
-// attack card's rate, "spécialisée" tag and point-blank checkbox, and the weapon editor's Catégorie
+// attack card's rate, "spécialisée" tag and point-blank checkbox, and the weapon editor's Type d’arme
 // and Spécialisée controls, none of them cut. Screenshot of the weapon editor at both sizes.
 test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1280 to 2560", async ({
   page,
@@ -2466,26 +2448,48 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       xp: 0,
     }),
   ).toBe(true);
-  for (const w of [
-    {
-      name: { en: "Long Sword", fr: "Épée longue" },
-      damage_sm: "1d8",
-      damage_l: "1d12",
-      kind: "melee",
-      weapon_type: "long_sword",
-      specialized: true,
-    },
-    {
-      name: { en: "Heavy Crossbow", fr: "Arbalète lourde" },
-      damage_sm: "1d4",
-      damage_l: "1d6",
-      kind: "missile",
-      ammo_kind: "bolt",
-      weapon_type: "heavy_crossbow",
-      specialized: true,
-    },
-  ])
-    expect(await call("POST", "/api/weapons", w), w.name.en).toBe(true);
+  // The new character is the current one: a request the page had in flight answers "character
+  // changed" and reloads it (api/http.ts). Reload now and wait for the new sheet, so no reload
+  // lands in the middle of the calls below.
+  await page.reload();
+  await expect(page.getByText("Borin Gueule-de-Fer").first()).toBeVisible();
+  // Weapon pieces (ADR 0033 step 1), equipped to be held (step 6).
+  for (const [id, w] of [
+    [
+      "long_sword",
+      {
+        name: { en: "Long Sword", fr: "Épée longue" },
+        category: "weapon",
+        behaviour: "stock",
+        count: 1,
+        damageSm: "1d8",
+        damageL: "1d12",
+        weaponKind: "melee",
+        weaponType: "long_sword",
+        specialized: true,
+      },
+    ],
+    [
+      "heavy_crossbow",
+      {
+        name: { en: "Heavy Crossbow", fr: "Arbalète lourde" },
+        category: "weapon",
+        behaviour: "stock",
+        count: 1,
+        damageSm: "1d4",
+        damageL: "1d6",
+        weaponKind: "missile",
+        fires: "quarrel",
+        weaponType: "heavy_crossbow",
+        specialized: true,
+      },
+    ],
+  ] as const) {
+    expect(await call("POST", "/api/items", w), w.name.en).toBe(true);
+    expect(
+      await call("POST", `/api/items/${id}/state`, { state: "wielded" }),
+    ).toBe(true);
+  }
   await page.reload();
   await expect(page.getByTestId("str-value")).toHaveText("18/50");
 
@@ -2530,11 +2534,11 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
   ]) {
     await page.setViewportSize(vp);
     await page
-      .getByTestId("weapon-long_sword")
+      .getByTestId("item-long_sword")
       .getByRole("button", { name: "Modifier Épée longue" })
       .click();
-    const wf = page.getByTestId("weapon-form");
-    await expect(wf.getByLabel("Catégorie")).toBeVisible();
+    const wf = page.getByTestId("item-form");
+    await expect(wf.getByLabel("Type d’arme")).toBeVisible();
     await expect(wf.getByLabel("Spécialisée")).toBeChecked();
     const where = `weapon editor, fr, ${vp.width}x${vp.height}`;
     await expectNoClippedText(wf, where);
@@ -2821,13 +2825,19 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     }),
   ).toBe(true);
   expect(
-    await call("POST", "/api/weapons", {
+    await call("POST", "/api/items", {
       name: { en: "Dagger", fr: "Dague" },
-      damage_sm: "1d4",
-      damage_l: "1d3",
-      kind: "melee",
-      weapon_type: "dagger",
+      category: "weapon",
+      behaviour: "stock",
+      count: 1,
+      damageSm: "1d4",
+      damageL: "1d3",
+      weaponKind: "melee",
+      weaponType: "dagger",
     }),
+  ).toBe(true);
+  expect(
+    await call("POST", "/api/items/dagger/state", { state: "wielded" }),
   ).toBe(true);
   await page.reload();
   await chooseLanguage(page, "en");
@@ -2865,5 +2875,25 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(f, `backstab attack card, fr, ${where}`);
     await snap(page, `thief-backstab-card-fr-${where}`);
+  }
+});
+
+// ADR 0033 step 1.1 and ADR 0022 step 1: the piece editor with its spell component select, in French
+// (ADR 0027 step 2), uncut at every layout viewport; screens at 1920x1080 and 2560x1440.
+test("the piece editor's spell component uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await openWorkspace(page, "Inventory");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("button", { name: "Ajouter un objet" }).click();
+  const wf = page.getByTestId("item-form");
+  await wf.getByLabel("Composante de sort").selectOption("gem");
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    await expectNoPageScroll(page);
+    await expectNoClippedText(wf, `piece editor, fr, ${vp.width}x${vp.height}`);
+    if (vp.width >= 1920)
+      await snap(page, `component-editor-fr-${vp.width}x${vp.height}`);
   }
 });

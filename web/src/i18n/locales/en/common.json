@@ -348,7 +348,11 @@
       "thac0": "THAC0"
     },
     "backstab": "Backstab ×{{n}}",
-    "backstabHint": "Backstab: {{toHit}} to hit, the weapon’s damage dice ×{{n}}"
+    "backstabHint": "Backstab: {{toHit}} to hit, the weapon’s damage dice ×{{n}}",
+    "equippedWeapons": "Equipped",
+    "otherWeaponsGroup": "Not equipped",
+    "pickEquips": "Picking one equips it.",
+    "noWeaponInHand": "No weapon in hand: pick one."
   },
   "saves": {
     "title": "Saving Throws",
@@ -1240,7 +1244,8 @@
       "spell_learn": "Learn",
       "turn_undead": "Turning",
       "skill_points": "Skills",
-      "skill_armor": "Armour"
+      "skill_armor": "Armour",
+      "equipment_state": "Equipment"
     },
     "status": {
       "active": "Active",
@@ -1317,7 +1322,30 @@
         "ammoKind": "ammo kind",
         "effectDice": "effect dice",
         "effectSave": "effect save",
-        "notes": "note"
+        "notes": "note",
+        "category": "category",
+        "magicKind": "magic kind",
+        "state": "state",
+        "damageTypes": "damage types",
+        "damageSm": "damage S-M",
+        "damageL": "damage large",
+        "weaponType": "weapon type",
+        "weaponKind": "kind",
+        "size": "size",
+        "speed": "speed",
+        "magicToHit": "to-hit bonus",
+        "magicDamage": "damage bonus",
+        "twoHanded": "two-handed",
+        "fires": "fires",
+        "specialized": "specialized",
+        "baseAc": "base AC",
+        "skillColumn": "skills column",
+        "armorRow": "armour type",
+        "shieldKind": "shield kind",
+        "acMelee": "AC bonus (melee)",
+        "acMissile": "AC bonus (missiles)",
+        "catalogueCode": "catalogue row",
+        "component": "spell component"
       }
     },
     "initiative": "Initiative {{value}} (d10) for round {{round}}",
@@ -1405,6 +1433,11 @@
     },
     "skillArmor": {
       "text": "Skill armour: {{from}} → {{to}}"
+    },
+    "equipment": {
+      "equipped": "Equipped: {{name}}",
+      "unequipped": "Unequipped: {{name}}",
+      "swapped": "Equipped: {{name}} (in place of {{off}})"
     }
   },
   "critTable": {
@@ -1985,6 +2018,150 @@
       "special": "Special"
     },
     "turnLabel": "Turn: {{undead}}"
+  },
+  "equipment": {
+    "title": "Possessions",
+    "all": "All",
+    "filter": "Show a category",
+    "categories": {
+      "weapon": "Weapons",
+      "ammunition": "Ammunition",
+      "armour": "Armour",
+      "shield": "Shields",
+      "magic": "Magic",
+      "gear": "Gear"
+    },
+    "category": {
+      "weapon": "Weapon",
+      "ammunition": "Ammunition",
+      "armour": "Body armour",
+      "shield": "Shield",
+      "magic": "Magic item",
+      "gear": "Gear"
+    },
+    "magicKinds": {
+      "potion": "Potion",
+      "scroll": "Scroll",
+      "ring": "Ring",
+      "rod": "Rod",
+      "staff": "Staff",
+      "wand": "Wand",
+      "misc": "Miscellaneous"
+    },
+    "ammoKinds": {
+      "arrow": "Arrow",
+      "quarrel": "Quarrel",
+      "bullet": "Bullet",
+      "needle": "Needle",
+      "blowgun_dart": "Blowgun dart"
+    },
+    "sizes": {
+      "s": "Small",
+      "m": "Medium",
+      "l": "Large"
+    },
+    "damageTypes": {
+      "b": "Bludgeoning",
+      "p": "Piercing",
+      "s": "Slashing"
+    },
+    "damageTypesShort": {
+      "b": "B",
+      "p": "P",
+      "s": "S"
+    },
+    "skillColumns": {
+      "none": "No armour",
+      "leather": "Leather",
+      "padded_studded": "Padded or studded",
+      "elven_chain": "Elven chain",
+      "metal": "Metal (bard)",
+      "none_allowed": "Not for thieves or bards"
+    },
+    "armorRows": {
+      "banded": "Banded mail",
+      "brigandine": "Brigandine",
+      "chain": "Chain mail",
+      "field_plate": "Field plate",
+      "full_plate": "Full plate",
+      "leather": "Leather",
+      "plate": "Plate mail",
+      "ring": "Ring mail",
+      "scale": "Scale mail",
+      "splint": "Splint mail",
+      "studded_leather": "Studded leather"
+    },
+    "shieldKinds": {
+      "buckler": "Buckler",
+      "small": "Small shield",
+      "medium": "Medium shield",
+      "body": "Body shield"
+    },
+    "components": {
+      "gem": "Gem"
+    },
+    "equip": "Equip",
+    "unequip": "Unequip",
+    "equipped": "Equipped",
+    "equipHint": "Equip {{name}}",
+    "unequipHint": "Unequip {{name}}",
+    "none": "No possessions.",
+    "noneInCategory": "None in this category.",
+    "stats": {
+      "speed": "speed {{speed}}",
+      "magic": "{{hit}}/{{dmg}}",
+      "fires": "ammo: {{kind}}",
+      "twoHanded": "two-handed",
+      "ac": "AC {{ac}}",
+      "skills": "skills: {{column}}",
+      "type": "type: {{row}}",
+      "shield": "AC −{{melee}}",
+      "shieldMissile": "AC −{{melee}} / −{{missile}} vs missiles",
+      "large": "L {{dice}}"
+    },
+    "review": {
+      "band_one": "{{count}} possession to check after the move to the new inventory",
+      "band_other": "{{count}} possessions to check after the move to the new inventory",
+      "open": "Check",
+      "openHint": "Check the possessions the move could not sort",
+      "close": "Close",
+      "title": "To check",
+      "intro": "The move to the new inventory could not sort everything.",
+      "tag": "To check",
+      "edit": "Edit",
+      "editHint": "Edit {{name}}",
+      "dismiss": "Dismiss",
+      "dismissHint": "Take {{name}} off the list as it is",
+      "reasons": {
+        "weapon_unmatched": "Weapon not recognised: give its speed and damage type.",
+        "uncategorised": "Unknown category (old type “{{type}}”): stored as gear.",
+        "ammo_kind_unknown": "Unknown ammunition kind: pick one.",
+        "powers_off": "Its powers work only equipped, and this category cannot be equipped."
+      }
+    },
+    "form": {
+      "category": "Category",
+      "magicKind": "Magic kind",
+      "damageTypes": "Damage types",
+      "size": "Size",
+      "noSize": "Unknown",
+      "speed": "Speed factor",
+      "fires": "Fires",
+      "firesNone": "Nothing (hurled)",
+      "baseAc": "Base AC",
+      "skillColumn": "Skills column",
+      "armorRow": "Armour type",
+      "shieldKind": "Shield kind",
+      "acMelee": "AC bonus (melee)",
+      "acMissile": "AC bonus (missiles)",
+      "component": "Spell component",
+      "noComponent": "None",
+      "componentHint": "A spell that spends this component can spend this piece",
+      "errors": {
+        "not_allowed": "Not allowed for this piece.",
+        "slot_taken": "Another one is already equipped."
+      }
+    }
   },
   "intro": {
     "title": "Welcome to the table",

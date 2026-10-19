@@ -7,12 +7,30 @@ import { cn } from "@/lib/utils";
 import {
   changedFields,
   draftToBody,
+  hasField,
   type DraftErrors,
   type ItemDraft,
   type ItemField,
 } from "@/lib/itemForm";
 import type { ApiError } from "@/api/http";
-import type { Item, ItemBehaviour, ItemBody } from "@/types/items";
+import {
+  AMMO_KINDS,
+  ARMOR_ROWS,
+  CATEGORIES,
+  COMPONENTS,
+  DAMAGE_TYPES,
+  MAGIC_KINDS,
+  SHIELD_KINDS,
+  SIZES,
+  SKILL_COLUMNS,
+  type Category,
+  type Component,
+  type Item,
+  type ItemBehaviour,
+  type ItemBody,
+  type MagicKind,
+} from "@/types/items";
+import { WEAPON_TYPES, type WeaponType } from "@/types/combat";
 
 const BEHAVIOURS: ItemBehaviour[] = ["stock", "charges", "daily"];
 /** Save categories an item effect may allow (the server rejects anything else). */
@@ -27,10 +45,10 @@ const SAVES = [
 interface Props {
   /** Starting values. */
   initial: ItemDraft;
-  /** The item being edited; undefined when adding. */
+  /** The piece being edited; undefined when adding. */
   editing?: Item;
-  /** Existing item types, offered as suggestions. */
-  types: string[];
+  /** The character's class specializes (ADR 0030 step 12): the form offers the flag. */
+  specializes?: boolean;
   busy: boolean;
   /** Save a body; resolves the server's rejection, or null when saved. */
   onSave: (body: ItemBody) => Promise<ApiError | null>;
@@ -38,13 +56,15 @@ interface Props {
 }
 
 /**
- * Add / edit form of an inventory item. Validation is the server's: its message
- * is shown under the field it names. Only number parsing happens here.
+ * Add / edit form of a piece of equipment (ADR 0033 step 1: one editor for every category): the
+ * category first, then the shared fields and the category's own (ADR 0033 steps 3 to 5).
+ * Validation is the server's: its message, or the wording of its code, is shown under the field it
+ * names. Only number parsing happens here.
  */
 export function ItemForm({
   initial,
   editing,
-  types,
+  specializes = false,
   busy,
   onSave,
   onCancel,
@@ -57,6 +77,7 @@ export function ItemForm({
     setDraft((d) => ({ ...d, [k]: v }));
     setErrors((e) => ({ ...e, [k]: undefined }));
   };
+  const shows = (f: ItemField) => hasField(draft.category, f);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,7 +98,13 @@ export function ItemForm({
       return;
     }
     const rejected = await onSave(toSend);
-    if (rejected?.field) setErrors({ [rejected.field]: rejected.message });
+    // The server's message, or the wording of its code (ADR 0023: not_allowed).
+    if (rejected?.field)
+      setErrors({
+        [rejected.field]: t(`equipment.form.errors.${rejected.message}`, {
+          defaultValue: rejected.message,
+        }),
+      });
   }
 
   const field = (
@@ -121,10 +148,43 @@ export function ItemForm({
         {...props}
         {...extra}
         className={cn(fieldClass, errors[name] && "border-destructive")}
-        value={draft[name]}
+        value={draft[name] as string}
         onChange={(e) => set(name, e.target.value as never)}
       />
     );
+  const select =
+    (
+      name: ItemField,
+      options: readonly string[],
+      label: (o: string) => string,
+    ) =>
+    (props: object) => (
+      <select
+        {...props}
+        className={cn(fieldClass, errors[name] && "border-destructive")}
+        value={draft[name] as string}
+        onChange={(e) => set(name, e.target.value as never)}
+      >
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {label(o)}
+          </option>
+        ))}
+      </select>
+    );
+  const check = (name: "twoHanded" | "specialized", hint?: string) =>
+    function Check(props: object) {
+      return (
+        <input
+          {...props}
+          type="checkbox"
+          className="size-5"
+          title={hint}
+          checked={draft[name]}
+          onChange={(e) => set(name, e.target.checked)}
+        />
+      );
+    };
 
   return (
     <form
@@ -142,27 +202,240 @@ export function ItemForm({
     >
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {field("name", t("items.form.name"), text("name"), "col-span-2")}
-        {field(
-          "type",
-          t("items.form.type"),
-          (props) => (
-            <>
-              <input
-                {...props}
-                list={`${id}-types`}
-                className={fieldClass}
-                value={draft.type}
-                onChange={(e) => set("type", e.target.value)}
-              />
-              <datalist id={`${id}-types`}>
-                {types.map((ty) => (
-                  <option key={ty} value={ty} />
-                ))}
-              </datalist>
-            </>
-          ),
-          "col-span-2",
+        {field("category", t("equipment.form.category"), (props) => (
+          <select
+            {...props}
+            className={cn(fieldClass, errors.category && "border-destructive")}
+            value={draft.category}
+            onChange={(e) => {
+              const c = e.target.value as Category;
+              set("category", c);
+              if (c === "magic" && draft.magicKind === "")
+                set("magicKind", "misc");
+            }}
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {t(`equipment.category.${c}`)}
+              </option>
+            ))}
+          </select>
+        ))}
+        {shows("magicKind") &&
+          field(
+            "magicKind",
+            t("equipment.form.magicKind"),
+            select("magicKind", MAGIC_KINDS, (k) =>
+              t(`equipment.magicKinds.${k as MagicKind}`),
+            ),
+          )}
+
+        {/* Weapon (ADR 0033 step 3). */}
+        {shows("weaponKind") &&
+          field("weaponKind", t("weapons.form.kind"), (props) => (
+            <select
+              {...props}
+              className={fieldClass}
+              value={draft.weaponKind}
+              onChange={(e) =>
+                set("weaponKind", e.target.value as "melee" | "missile")
+              }
+            >
+              <option value="melee">{t("weapons.kind.melee")}</option>
+              <option value="missile">{t("weapons.kind.missile")}</option>
+            </select>
+          ))}
+        {shows("weaponType") &&
+          field("weaponType", t("weapons.form.weaponType"), (props) => (
+            <select
+              {...props}
+              className={cn(
+                fieldClass,
+                errors.weaponType && "border-destructive",
+              )}
+              title={t("weapons.form.weaponTypeHint")}
+              value={draft.weaponType}
+              onChange={(e) => set("weaponType", e.target.value as WeaponType)}
+            >
+              <option value="">{t("weapons.types.none")}</option>
+              {WEAPON_TYPES.map((wt) => (
+                <option key={wt} value={wt}>
+                  {t(`weapons.types.${wt}`)}
+                </option>
+              ))}
+            </select>
+          ))}
+        {shows("damageSm") &&
+          field(
+            "damageSm",
+            t("weapons.form.damageSm"),
+            text("damageSm", { placeholder: "1d8" }),
+          )}
+        {shows("damageL") &&
+          field(
+            "damageL",
+            t("weapons.form.damageL"),
+            text("damageL", { placeholder: "1d12" }),
+          )}
+        {shows("magicToHit") &&
+          field(
+            "magicToHit",
+            t("weapons.form.magicToHit"),
+            text("magicToHit", { inputMode: "numeric" }),
+          )}
+        {shows("magicDamage") &&
+          field(
+            "magicDamage",
+            t("weapons.form.magicDamage"),
+            text("magicDamage", { inputMode: "numeric" }),
+          )}
+        {shows("speed") &&
+          field(
+            "speed",
+            t("equipment.form.speed"),
+            text("speed", { inputMode: "numeric" }),
+          )}
+        {shows("size") &&
+          field("size", t("equipment.form.size"), (props) => (
+            <select
+              {...props}
+              className={fieldClass}
+              value={draft.size}
+              onChange={(e) => set("size", e.target.value)}
+            >
+              <option value="">{t("equipment.form.noSize")}</option>
+              {SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {t(`equipment.sizes.${s}`)}
+                </option>
+              ))}
+            </select>
+          ))}
+        {shows("damageTypes") && (
+          <fieldset
+            className="col-span-2 flex min-w-0 flex-col gap-1"
+            data-field="damageTypes"
+          >
+            <legend className="text-label text-muted-foreground">
+              {t("equipment.form.damageTypes")}
+            </legend>
+            <div className="flex flex-wrap gap-3">
+              {DAMAGE_TYPES.map((dt) => (
+                <label key={dt} className="flex items-center gap-1 text-body">
+                  <input
+                    type="checkbox"
+                    className="size-4"
+                    checked={draft.damageTypes.includes(dt)}
+                    onChange={(e) =>
+                      set(
+                        "damageTypes",
+                        e.target.checked
+                          ? DAMAGE_TYPES.filter(
+                              (x) => x === dt || draft.damageTypes.includes(x),
+                            )
+                          : draft.damageTypes.filter((x) => x !== dt),
+                      )
+                    }
+                  />
+                  {t(`equipment.damageTypes.${dt}`)}
+                </label>
+              ))}
+            </div>
+            {errors.damageTypes && (
+              <p role="alert" className="text-label text-destructive">
+                {errors.damageTypes}
+              </p>
+            )}
+          </fieldset>
         )}
+        {shows("twoHanded") &&
+          field("twoHanded", t("weapons.form.twoHanded"), check("twoHanded"))}
+        {shows("specialized") &&
+          (specializes || initial.specialized) &&
+          field(
+            "specialized",
+            t("weapons.form.specialized"),
+            check("specialized", t("weapons.form.specializedHint")),
+          )}
+        {shows("fires") &&
+          draft.weaponKind === "missile" &&
+          field("fires", t("equipment.form.fires"), (props) => (
+            <select
+              {...props}
+              className={cn(fieldClass, errors.fires && "border-destructive")}
+              value={draft.fires}
+              onChange={(e) => set("fires", e.target.value)}
+            >
+              <option value="">{t("equipment.form.firesNone")}</option>
+              {AMMO_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {t(`equipment.ammoKinds.${k}`)}
+                </option>
+              ))}
+            </select>
+          ))}
+
+        {/* Ammunition (ADR 0033 step 4). */}
+        {shows("ammoKind") &&
+          field(
+            "ammoKind",
+            t("items.form.ammoKind"),
+            select("ammoKind", AMMO_KINDS, (k) =>
+              t(`equipment.ammoKinds.${k}`),
+            ),
+          )}
+        {shows("magicalBonus") &&
+          field(
+            "magicalBonus",
+            t("items.magicalBonus"),
+            text("magicalBonus", { inputMode: "numeric" }),
+          )}
+
+        {/* Armour and shield (ADR 0033 step 5). */}
+        {shows("baseAc") &&
+          field(
+            "baseAc",
+            t("equipment.form.baseAc"),
+            text("baseAc", { inputMode: "numeric" }),
+          )}
+        {shows("skillColumn") &&
+          field(
+            "skillColumn",
+            t("equipment.form.skillColumn"),
+            select("skillColumn", SKILL_COLUMNS, (c) =>
+              t(`equipment.skillColumns.${c}`),
+            ),
+          )}
+        {shows("armorRow") &&
+          field(
+            "armorRow",
+            t("equipment.form.armorRow"),
+            select("armorRow", ARMOR_ROWS, (r) =>
+              t(`equipment.armorRows.${r}`),
+            ),
+          )}
+        {shows("shieldKind") &&
+          field(
+            "shieldKind",
+            t("equipment.form.shieldKind"),
+            select("shieldKind", SHIELD_KINDS, (k) =>
+              t(`equipment.shieldKinds.${k}`),
+            ),
+          )}
+        {shows("acMelee") &&
+          field(
+            "acMelee",
+            t("equipment.form.acMelee"),
+            text("acMelee", { inputMode: "numeric" }),
+          )}
+        {shows("acMissile") &&
+          field(
+            "acMissile",
+            t("equipment.form.acMissile"),
+            text("acMissile", { inputMode: "numeric" }),
+          )}
+
+        {/* Shared (ADR 0016 steps 1 to 5). */}
         {field("behaviour", t("items.form.behaviour"), (props) => (
           <select
             {...props}
@@ -189,16 +462,6 @@ export function ItemForm({
             text("maxCount", { inputMode: "numeric" }),
           )}
         {field(
-          "magicalBonus",
-          t("items.magicalBonus"),
-          text("magicalBonus", { inputMode: "numeric" }),
-        )}
-        {field(
-          "ammoKind",
-          t("items.form.ammoKind"),
-          text("ammoKind", { placeholder: "arrow" }),
-        )}
-        {field(
           "effectDice",
           t("items.form.effectDice"),
           text("effectDice", { placeholder: "2d6, 1d8+2" }),
@@ -214,6 +477,22 @@ export function ItemForm({
             {SAVES.map((s) => (
               <option key={s} value={s}>
                 {t(`saves.categories.${s}`)}
+              </option>
+            ))}
+          </select>
+        ))}
+        {field("component", t("equipment.form.component"), (props) => (
+          <select
+            {...props}
+            className={cn(fieldClass, errors.component && "border-destructive")}
+            title={t("equipment.form.componentHint")}
+            value={draft.component}
+            onChange={(e) => set("component", e.target.value as Component | "")}
+          >
+            <option value="">{t("equipment.form.noComponent")}</option>
+            {COMPONENTS.map((c) => (
+              <option key={c} value={c}>
+                {t(`equipment.components.${c}`)}
               </option>
             ))}
           </select>

@@ -233,6 +233,18 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Weapon",
     fr: "Arme",
   },
+  equipment_state: {
+    e: entry("equipment_state", {
+      itemId: "chain",
+      name: "Chain mail",
+      category: "armour",
+      before: "carried",
+      after: "worn",
+    }),
+    value: null,
+    en: "Equipment",
+    fr: "Équipement",
+  },
   xp_add: { e: entry("xp_add", null), value: null, en: "XP", fr: "XP" },
   xp_edit: { e: entry("xp_edit", null), value: null, en: "XP", fr: "XP" },
   xp_remove: { e: entry("xp_remove", null), value: null, en: "XP", fr: "XP" },

@@ -74,7 +74,8 @@ named otherwise.
    `TestCast_GrantSlots_RejectsAWrongSplit`, `TestCast_ExtraSlot_PicksTheSpell`,
    `TestPrepare_KeepsExtraSlots`, `TestResetSlots_DropsExtraSlots`.
 10. **A spell can spend an item and roll a to-hit.** A spell whose effect data has
-    `consume_item` spends one inventory item of that type when cast (never a daily item such as
+    `consume_item` spends one inventory item of that type when cast (the piece's component code,
+    [ADR 0033](0033-equipment.md) step 1.1) (never a daily item such as
     the Power Gem; the item is named when several are left, refused when none); one with
     `attack_roll` needs a target AC and rolls one d20 against it
     ([ADR 0002](0002-attack-resolution.md), Consequences). The target AC is checked before anything

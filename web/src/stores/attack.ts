@@ -7,6 +7,7 @@ import type {
 } from "@/types/combat";
 import { useRollStore } from "./roll";
 import { useTableStore } from "./table";
+import { useItemsStore } from "./items";
 
 interface AttackStore {
   /** The server's attack form with its preview; null until loaded. */
@@ -85,7 +86,17 @@ export const useAttackStore = create<AttackStore>((set, get) => {
           },
         });
       }
-      return send(() => patchAttackForm(patch));
+      // ADR 0033 step 8: picking a weapon that is not equipped equips it on the server, a logged
+      // move: the journal and the inventory are read again once the form is saved.
+      const equips =
+        patch.weaponId !== undefined &&
+        useItemsStore
+          .getState()
+          .weapons.some((w) => w.id === patch.weaponId && !w.wielded);
+      const saved = send(() => patchAttackForm(patch));
+      return equips
+        ? saved.then(() => useTableStore.getState().refresh())
+        : saved;
     },
     attack: async () => {
       await queue;

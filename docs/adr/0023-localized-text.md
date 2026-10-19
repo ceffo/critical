@@ -94,7 +94,7 @@ Tests live under `api/internal/` unless their path starts with `web/`.
    replaced under the same key on update) and deleted with it.
    Tests: SQLite migration 033 moved the existing names (a past migration, the per-migration test was deleted with the squash into the PostgreSQL baseline, [ADR 0025](0025-postgresql-storage.md) step 2.3),
    `TestSeed_Step10_FreshDatabaseGetsEveryLanguage` (storage/postgres), `TestName_Step9_WrittenAsLocalizedTextRows`
-   (itemdal), `TestItems_Step9_NameIsALanguageMap`, `TestWeapons_Step9_NameIsALanguageMap` (rest/router);
+   (itemdal), `TestItems_Step9_NameIsALanguageMap` (rest/router; a weapon is a piece since ADR 0033);
    the live-database check of the time was retired, [ADR 0025](0025-postgresql-storage.md) step 6.
 10. **The seeds hold every language; a restart adds what a name lacks.** In `seeds/items.json` and
     `seeds/weapons.json`, `name` is a language map (`en` and `fr`). An empty table is filled from the

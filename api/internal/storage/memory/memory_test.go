@@ -22,7 +22,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
@@ -39,12 +38,12 @@ func seeded(t *testing.T) (*memory.Store, int64) {
 	t.Helper()
 	ctx := context.Background()
 	s := memory.New()
-	require.NoError(t, s.Migrate(ctx, ""))
+	require.NoError(t, s.Migrate(ctx, "", nil))
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	book, err := spellbookadpt.ReadSeed(seedsDir, artifact.Catalogue)
 	require.NoError(t, err)
-	require.NoError(t, s.Seed(ctx, seedsDir, book))
+	require.NoError(t, s.Seed(ctx, seedsDir, book, nil))
 	require.NoError(t, s.ImportCatalogue(ctx, artifact.Catalogue, nil))
 	return s, seedCharacter(t, s)
 }
@@ -75,7 +74,7 @@ type state struct {
 	Round     int
 	Slots     []spellsvc.SpellSlot
 	Items     []itemsvc.Item
-	Weapons   []weaponsvc.Weapon
+	Reviews   []itemsvc.Review
 	XP        []xpsvc.Entry
 	Favourite int
 }
@@ -95,7 +94,7 @@ func read(t *testing.T, s *memory.Store, characterID int64) state {
 	require.NoError(t, err)
 	st.Items, err = s.Items().List(ctx, characterID)
 	require.NoError(t, err)
-	st.Weapons, err = s.WeaponEditor().List(ctx, characterID)
+	st.Reviews, err = s.Items().Reviews(ctx, characterID)
 	require.NoError(t, err)
 	st.XP, err = s.XP().List(ctx, characterID)
 	require.NoError(t, err)
@@ -116,7 +115,8 @@ func writeEverything(t *testing.T, ctx context.Context, s *memory.Store, charact
 	require.NoError(t, s.Spells().SaveSlots(ctx, characterID, []spellsvc.SpellSlot{{Level: 1, Used: true}}))
 	_, err = s.Items().Decrement(ctx, characterID, "arrows_plus1")
 	require.NoError(t, err)
-	require.NoError(t, s.WeaponEditor().Delete(ctx, characterID, "longsword"))
+	require.NoError(t, s.Items().Delete(ctx, characterID, "longsword"))
+	require.NoError(t, s.Items().DeleteReviews(ctx, characterID, "mace"))
 	_, err = s.XP().Insert(ctx, characterID, xpsvc.Entry{Date: "2026-01-01", Reason: "orc", Base: 10})
 	require.NoError(t, err)
 	_, err = s.Dice().Insert(ctx, characterID, "1d6")
@@ -487,17 +487,21 @@ func TestStore_Step8_1_SeededLikeTheDatabase(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 85, maxHP)
 
-	weapons, err := s.Weapons().List(ctx, id)
-	require.NoError(t, err)
-	assert.NotEmpty(t, weapons)
-	for i, w := range weapons {
-		assert.NotEmpty(t, w.Name, "weapon %d has its name", i)
-	}
 	items, err := s.Items().List(ctx, id)
 	require.NoError(t, err)
+	weapons := 0
 	for i, it := range items {
-		assert.Equal(t, i, it.Position, "items keep the seed's order")
+		assert.Equal(t, i, it.Position, "the pieces keep the seed's order, the weapons after the items")
+		assert.NotEmpty(t, it.Name, "piece %d has its name", i)
+		if it.Category == itemsvc.CategoryWeapon {
+			weapons++
+			assert.Equal(t, itemsvc.StateWielded, it.State)
+		}
 	}
+	assert.NotZero(t, weapons)
+	reviews, err := s.Items().Reviews(ctx, id)
+	require.NoError(t, err)
+	assert.NotEmpty(t, reviews, "the seeded other_melee weapons are on the review list")
 	profs, err := s.Skills().ListProficiencies(ctx, id)
 	require.NoError(t, err)
 	assert.NotEmpty(t, profs)
@@ -531,9 +535,6 @@ func TestStore_Step8_1_SeededLikeTheDatabase(t *testing.T) {
 func TestStore_Step8_2_KeysRefusedLikeTheDatabase(t *testing.T) {
 	s, id := seeded(t)
 	ctx := context.Background()
-	w, err := s.WeaponEditor().Get(ctx, id, "longsword")
-	require.NoError(t, err)
-	require.Error(t, s.WeaponEditor().Insert(ctx, id, w))
 	it, err := s.Items().Get(ctx, id, "arrows_plus1")
 	require.NoError(t, err)
 	require.Error(t, s.Items().Insert(ctx, id, it))
@@ -561,8 +562,7 @@ func TestStore_EachCharacterOwnsItsRows(t *testing.T) {
 	assert.NotEmpty(t, book, "the seed character gets the spellbook seed")
 	for _, empty := range []func() (int, error){
 		func() (int, error) { l, err := s.Items().List(ctx, other); return len(l), err },
-		func() (int, error) { l, err := s.WeaponEditor().List(ctx, other); return len(l), err },
-		func() (int, error) { l, err := s.Weapons().List(ctx, other); return len(l), err },
+		func() (int, error) { l, err := s.Items().Reviews(ctx, other); return len(l), err },
 		func() (int, error) { l, err := s.Skills().ListProficiencies(ctx, other); return len(l), err },
 		func() (int, error) { l, err := s.Spellbooks().Keys(ctx, other); return len(l), err },
 	} {
@@ -586,10 +586,10 @@ func TestStore_EachCharacterOwnsItsRows(t *testing.T) {
 	assert.Zero(t, theirs.Count)
 	assert.NotZero(t, mine.Count, "spending the other's arrow leaves the seed character's")
 
-	sword, err := s.WeaponEditor().Get(ctx, kelsen, "longsword")
+	sword, err := s.Items().Get(ctx, kelsen, "longsword")
 	require.NoError(t, err)
-	require.NoError(t, s.WeaponEditor().Insert(ctx, other, sword))
-	require.NoError(t, s.WeaponEditor().Delete(ctx, other, "longsword"))
-	_, err = s.Weapons().Get(ctx, kelsen, "longsword")
+	require.NoError(t, s.Items().Insert(ctx, other, sword))
+	require.NoError(t, s.Items().Delete(ctx, other, "longsword"))
+	_, err = s.Items().Get(ctx, kelsen, "longsword")
 	require.NoError(t, err, "deleting the other's sword leaves the seed character's")
 }

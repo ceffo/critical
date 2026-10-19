@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // The seed file names, in seedsDir.
@@ -313,4 +314,42 @@ func (s Skills) validate() error {
 		}
 	}
 	return nil
+}
+
+// Equipment is the seed character's starting equipment: the items and weapons seeds converted
+// into pieces by the conversion of the existing data (itemsvc.Convert, ADR 0033 step 26), so a
+// new database holds what an upgraded one does. The items come first, in their order, then the
+// weapons. An item and a weapon of the same id are refused: the seed names each piece once; so
+// is a piece the editor would refuse (itemsvc.Item.Validate).
+func Equipment(items []SeededItem, weapons []Weapon, catalogue []ruletablesvc.Weapon) (itemsvc.Conversion, error) {
+	legacyItems := make([]itemsvc.Item, 0, len(items))
+	ids := map[string]bool{}
+	for i, it := range items {
+		ids[it.ID] = true
+		legacyItems = append(legacyItems, itemsvc.Item{
+			ID: it.ID, Position: i, Name: it.Name.Trimmed(), Type: it.Type, Behaviour: itemsvc.Behaviour(it.Behaviour),
+			MagicBonus: it.MagicBonus, AmmoKind: it.AmmoKind, Count: it.Count, MaxCount: it.Max(),
+			EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes, Powers: it.PowerList,
+		})
+	}
+	legacyWeapons := make([]itemsvc.LegacyWeapon, 0, len(weapons))
+	for i, w := range weapons {
+		if ids[w.ID] {
+			return itemsvc.Conversion{}, fmt.Errorf("weapon %q: an item of the seed has that id", w.ID)
+		}
+		legacyWeapons = append(legacyWeapons, itemsvc.LegacyWeapon{
+			ID: w.ID, Position: i, Name: w.Name.Trimmed(), DamageSM: w.DamageSM, DamageL: w.DamageL,
+			MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: w.Kind, TwoHanded: w.TwoHanded,
+			AmmoKind: w.AmmoKind, Type: w.WeaponType,
+		})
+	}
+	conv := itemsvc.Convert(legacyItems, legacyWeapons, catalogue)
+	// The seed's pieces are what the editor would accept (a weapon of an unknown kind, an
+	// unknown ammunition kind are refused, as the weapons table's CHECK refused the first).
+	for _, p := range conv.Pieces {
+		if err := p.Validate(); err != nil {
+			return itemsvc.Conversion{}, fmt.Errorf("%q: %w", p.ID, err)
+		}
+	}
+	return conv, nil
 }

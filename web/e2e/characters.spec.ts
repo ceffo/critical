@@ -308,7 +308,7 @@ test("create a bard through the creation route, switch to the first and back, re
 // at Strength 18, the sheet tile reading 18/50 after the reload, the weapon editor's type and
 // specialized controls, and the attack card's rate and tag on the server's numbers. The rules
 // (refusals, Table 1 at 18/xx, the bonuses, Tables 15/35/45) are Go tests (charactersvc, buffsvc,
-// combatsvc, weaponsvc, ruletablesadpt).
+// combatsvc, itemsvc, ruletablesadpt).
 test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   page,
 }) => {
@@ -333,17 +333,20 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   // The weapon editor and the attack, with the English helpers.
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Inventory");
-  await page.getByRole("button", { name: "Add weapon" }).click();
-  const wf = page.getByTestId("weapon-form");
+  await page.getByRole("button", { name: "Add item" }).click();
+  const wf = page.getByTestId("item-form");
   await wf.getByLabel("Name").fill("Long Sword");
+  await wf.getByLabel("Category").selectOption("weapon");
   await wf.getByLabel("Damage S-M").fill("1d8");
   await wf.getByLabel("Damage Large").fill("1d12");
   await wf.getByLabel("Weapon type").selectOption("long_sword");
   await wf.getByLabel("Specialized").check();
   await wf.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByTestId("weapon-long_sword")).toContainText(
-    "specialized",
-  );
+  const sword = page.getByTestId("item-long_sword");
+  await expect(sword.getByTestId("item-stats")).toContainText("specialized");
+  // A new piece is carried (ADR 0033 step 6): equip it to hold it.
+  await sword.getByRole("button", { name: "Equip Long Sword" }).click();
+  await expect(sword.getByTestId("item-equipped")).toBeVisible();
 
   await openWorkspace(page, "Act");
   await openWeapons(page);
@@ -441,12 +444,20 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
 
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Inventory");
-  await page.getByRole("button", { name: "Add weapon" }).click();
-  const wf = page.getByTestId("weapon-form");
+  await page.getByRole("button", { name: "Add item" }).click();
+  const wf = page.getByTestId("item-form");
   await wf.getByLabel("Name").fill("Dagger");
+  await wf.getByLabel("Category").selectOption("weapon");
   await wf.getByLabel("Damage S-M").fill("1d4");
   await wf.getByLabel("Damage Large").fill("1d3");
   await wf.getByRole("button", { name: "Add", exact: true }).click();
+  await page
+    .getByTestId("item-dagger")
+    .getByRole("button", { name: "Equip Dagger" })
+    .click();
+  await expect(
+    page.getByTestId("item-dagger").getByTestId("item-equipped"),
+  ).toBeVisible();
   await openWorkspace(page, "Act");
   await openWeapons(page);
   const f = attackForm(page);

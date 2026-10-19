@@ -88,7 +88,7 @@ func TestMigrate_Step8_FreeTextBecomesCodesTheRestIsClearedAndTheRaceDetailIsDis
 	run := func(recorded []string) {
 		f := &fakeMigrations{recorded: recorded, store: store}
 		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds())
+			before, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
 			return runMigrations(ctx, f, embedded, before, after)
 		}))
 	}
@@ -142,7 +142,7 @@ func TestMigrate_Step8_TheSeedCharacterGetsAnAlignmentAndSexThatPassTheCheck(t *
 	}
 	f := &fakeMigrations{recorded: recorded, store: store}
 	require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-		before, after := migrationDataSteps(repoSeeds())
+		before, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
 		return runMigrations(ctx, f, embedded, before, after)
 	}))
 	assert.Equal(t, "neutral_good", store.t.Alignments[kelsen], "the free text is mapped")

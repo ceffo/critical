@@ -16,7 +16,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -115,7 +114,7 @@ func TestCharacters_EachOwnsItsEquipmentSkillsAndSpellbook(t *testing.T) {
 
 	// The other character's play, under ids the seeded character also holds.
 	flask, err := bs.Items.Create(ctx, other, itemsvc.ItemInput{
-		Name: localized.Of("Fire Flask"), Type: "flask", Behaviour: itemsvc.BehaviourStock, Count: 2,
+		Name: localized.Of("Fire Flask"), Category: itemsvc.CategoryGear, Behaviour: itemsvc.BehaviourStock, Count: 2,
 	})
 	require.NoError(t, err)
 	require.Equal(t, "fire_flask", flask.Item.ID, "the seeded character's id, for another character")
@@ -125,14 +124,14 @@ func TestCharacters_EachOwnsItsEquipmentSkillsAndSpellbook(t *testing.T) {
 	require.NoError(t, err)
 	_, err = bs.Items.Update(ctx, other, "fire_flask", itemsvc.ItemPatch{Notes: new("theirs")})
 	require.NoError(t, err)
-	sword, err := bs.Weapons.Create(ctx, other, weaponsvc.WeaponInput{
-		Name: localized.Of("Longsword"), DamageSM: "1d8", DamageL: "1d12", Kind: "melee",
-	})
+	sword, err := bs.Items.Create(ctx, other, newWeapon("Longsword", "1d8", "1d12"))
 	require.NoError(t, err)
-	require.Equal(t, "longsword", sword.Weapon.ID)
-	_, err = bs.Weapons.Update(ctx, other, "longsword", weaponsvc.WeaponPatch{MagicToHit: new(3)})
+	require.Equal(t, "longsword", sword.Item.ID)
+	_, err = bs.Items.Update(ctx, other, "longsword", itemsvc.ItemPatch{MagicToHit: new(3)})
 	require.NoError(t, err)
-	_, err = bs.Weapons.Delete(ctx, other, "longsword")
+	_, err = bs.Items.SetState(ctx, other, "longsword", itemsvc.StateWielded, false)
+	require.NoError(t, err)
+	_, err = bs.Items.Delete(ctx, other, "longsword")
 	require.NoError(t, err)
 	_, err = bs.Rest.LongRest(ctx, other)
 	require.NoError(t, err)
@@ -141,8 +140,8 @@ func TestCharacters_EachOwnsItsEquipmentSkillsAndSpellbook(t *testing.T) {
 	// What only the seeded character owns is unknown to the other.
 	_, err = bs.Items.UseItem(ctx, other, "arrows_plus1")
 	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
-	_, err = bs.Weapons.Update(ctx, other, "dagger", weaponsvc.WeaponPatch{MagicToHit: new(1)})
-	require.ErrorIs(t, err, weaponsvc.ErrWeaponNotFound)
+	_, err = bs.Items.Update(ctx, other, "dagger", itemsvc.ItemPatch{MagicToHit: new(1)})
+	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 	_, err = bs.Combat.ResolveAttack(ctx, other, combatsvc.AttackRequest{WeaponID: "dagger"})
 	require.ErrorIs(t, err, combatsvc.ErrWeaponNotFound)
 	_, err = bs.Skills.Roll(ctx, other, "tumbling", skillsvc.Adjustment{})
@@ -156,7 +155,7 @@ func TestCharacters_EachOwnsItsEquipmentSkillsAndSpellbook(t *testing.T) {
 	require.NoError(t, err)
 	_, err = bs.Items.Restock(ctx, seeded, "arrows_plus1", 2)
 	require.NoError(t, err)
-	_, err = bs.Weapons.Update(ctx, seeded, "dagger", weaponsvc.WeaponPatch{MagicToHit: new(2)})
+	_, err = bs.Items.Update(ctx, seeded, "dagger", itemsvc.ItemPatch{MagicToHit: new(2)})
 	require.NoError(t, err)
 	_, err = bs.Items.Delete(ctx, seeded, "wand_lightning")
 	require.NoError(t, err)
@@ -170,12 +169,10 @@ func TestCharacters_UndoRestoresTheEntrysCharactersRow(t *testing.T) {
 	ctx := context.Background()
 	bs, seeded, other := twoCharacters(t)
 	_, err := bs.Items.Create(ctx, other, itemsvc.ItemInput{
-		Name: localized.Of("Fire Flask"), Type: "flask", Behaviour: itemsvc.BehaviourStock, Count: 7,
+		Name: localized.Of("Fire Flask"), Category: itemsvc.CategoryGear, Behaviour: itemsvc.BehaviourStock, Count: 7,
 	})
 	require.NoError(t, err)
-	_, err = bs.Weapons.Create(ctx, other, weaponsvc.WeaponInput{
-		Name: localized.Of("Dagger"), DamageSM: "1d4", DamageL: "1d3", Kind: "melee",
-	})
+	_, err = bs.Items.Create(ctx, other, newWeapon("Dagger", "1d4", "1d3"))
 	require.NoError(t, err)
 
 	count := func(characterID int64) int {
@@ -218,12 +215,20 @@ func TestCharacters_UndoRestoresTheEntrysCharactersRow(t *testing.T) {
 	assert.Equal(t, 7, count(other))
 	assert.Equal(t, flasks, count(seeded))
 
-	edit, err := bs.Weapons.Update(ctx, other, "dagger", weaponsvc.WeaponPatch{MagicToHit: new(4)})
+	edit, err := bs.Items.Update(ctx, other, "dagger", itemsvc.ItemPatch{MagicToHit: new(4)})
 	require.NoError(t, err)
-	_, err = bs.Weapons.Update(ctx, seeded, "dagger", weaponsvc.WeaponPatch{MagicToHit: new(daggerToHit + 1)})
+	_, err = bs.Items.Update(ctx, seeded, "dagger", itemsvc.ItemPatch{MagicToHit: new(daggerToHit + 1)})
 	require.NoError(t, err)
 	_, err = bs.Log.Undo(ctx, other, edit.LogEntryID)
 	require.NoError(t, err)
 	assert.Zero(t, toHit(other), "the other's dagger is restored")
 	assert.Equal(t, daggerToHit+1, toHit(seeded), "the seeded character's edit stands")
+}
+
+// newWeapon is a homebrew melee weapon as the editor adds it (ADR 0033 step 24): carried.
+func newWeapon(name, sm, l string) itemsvc.ItemInput {
+	return itemsvc.ItemInput{
+		Name: localized.Of(name), Category: itemsvc.CategoryWeapon, Behaviour: itemsvc.BehaviourStock, Count: 1,
+		DamageSM: sm, DamageL: l, WeaponKind: "melee",
+	}
 }

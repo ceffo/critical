@@ -69,7 +69,8 @@ func RegisterAdminRoutes(r Router, svc combatsvc.SVC) {
 	r.Put("/api/crit-table", render.Handle(PutCritTable(svc)))
 }
 
-// WeaponDTO is the wire shape of a weapon catalog entry.
+// WeaponDTO is the wire shape of a weapon piece as the attack reads it (ADR
+// 0033 step 3); the piece itself is served by GET /api/items.
 type WeaponDTO struct {
 	ID string `json:"id"`
 	// Name is a language map (ADR 0023 step 9).
@@ -81,10 +82,14 @@ type WeaponDTO struct {
 	Kind        string         `json:"kind"`
 	TwoHanded   bool           `json:"two_handed"`
 	AmmoKind    string         `json:"ammo_kind"`
-	// WeaponType is a code of weaponsvc.Types ("" when untyped); the UI words it.
+	// WeaponType is a code of itemsvc.WeaponTypes ("" when untyped); the UI words it.
 	WeaponType string `json:"weapon_type"`
 	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
 	Specialized bool `json:"specialized"`
+	// Speed is the speed factor (0 to 20); Wielded whether the weapon is
+	// wielded, the only ones the attack form holds (ADR 0033 step 8).
+	Speed   int  `json:"speed"`
+	Wielded bool `json:"wielded"`
 }
 
 // ListWeapons returns the character's weapons.
@@ -100,6 +105,7 @@ func ListWeapons(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 				ID: wp.ID, Name: wp.Name, DamageSM: wp.BaseDamage, DamageL: wp.DamageLarge,
 				MagicToHit: wp.MagicToHit, MagicDamage: wp.MagicDamage, Kind: string(wp.Kind),
 				TwoHanded: wp.TwoHanded, AmmoKind: wp.AmmoKind, WeaponType: wp.Type, Specialized: wp.Specialized,
+				Speed: wp.Speed, Wielded: wp.Wielded,
 			})
 		}
 		render.OK(r.Context(), w, out)

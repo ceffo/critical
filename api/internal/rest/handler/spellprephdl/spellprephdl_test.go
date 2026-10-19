@@ -29,7 +29,7 @@ func TestGetInfo_ServesTheSpendableItems(t *testing.T) {
 		{
 			ID: "chromatic_orb", Name: "Chromatic Orb", Level: 1,
 			Cast:  prepsvc.CastInputs{ConsumeItemType: "gem", AttackRoll: true},
-			Items: []itemsvc.Item{{ID: "ruby", Name: localized.Of("Ruby"), Type: "gem", Count: 2}},
+			Items: []itemsvc.Item{{ID: "ruby", Name: localized.Of("Ruby"), Component: "gem", Count: 2}},
 		},
 	}}, nil)
 

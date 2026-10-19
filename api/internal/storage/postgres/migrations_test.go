@@ -196,7 +196,7 @@ func TestMigrationDataSteps_NameEmbeddedMigrations(t *testing.T) {
 	for _, m := range embedded {
 		names[m.name] = true
 	}
-	before, after := migrationDataSteps(repoSeeds())
+	before, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
 	require.Contains(t, before, ownerKeysMigration)
 	require.Contains(t, after, weaponTypeMigration)
 	require.Contains(t, after, raceMigration)
@@ -227,7 +227,7 @@ func TestMigrate_RowsWithoutOwnerAreOwnedBeforeTheOwnerKeys(t *testing.T) {
 	}
 
 	require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-		before, after := migrationDataSteps(repoSeeds())
+		before, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
 		return runMigrations(ctx, f, embedded, before, after)
 	}))
 	assert.Equal(t, store.everyRowOwnedBy(id), ownedAtApply, "every row owned when the owner becomes required")
@@ -244,15 +244,13 @@ func TestMigrate_SeededWeaponsAreTypedAfterTheWeaponTypeMigration(t *testing.T) 
 	// A second character holds a seeded id untyped, and a weapon the owner typed differently.
 	other := int64(99)
 	store.t.Characters = append(store.t.Characters, other)
-	store.t.Weapons[rowKey(other, "dagger")] = storeq.InsertWeaponParams{CharacterID: other, ID: "dagger", Kind: "melee"}
-	store.t.Weapons[rowKey(other, "mace")] = storeq.InsertWeaponParams{CharacterID: other, ID: "mace", Kind: "melee", WeaponType: "short_sword"}
-	store.t.Weapons[rowKey(other, "homebrew")] = storeq.InsertWeaponParams{CharacterID: other, ID: "homebrew", Kind: "melee"}
-	for k, w := range store.t.Weapons {
-		if w.CharacterID == owner {
-			w.WeaponType = "" // as the column's default left them
-			store.t.Weapons[k] = w
-		}
-	}
+	store.t.Weapons[rowKey(other, "dagger")] = weaponRow{CharacterID: other, ID: "dagger", Kind: "melee"}
+	store.t.Weapons[rowKey(other, "mace")] = weaponRow{CharacterID: other, ID: "mace", Kind: "melee", WeaponType: "short_sword"}
+	store.t.Weapons[rowKey(other, "homebrew")] = weaponRow{CharacterID: other, ID: "homebrew", Kind: "melee"}
+	// The owner's seeded weapons as the weapons table held them before 005 (the seed now writes
+	// pieces, ADR 0033): untyped, the column's default.
+	store.t.Weapons[rowKey(owner, "longsword")] = weaponRow{CharacterID: owner, ID: "longsword", Kind: "melee"}
+	store.t.Weapons[rowKey(owner, "shortbow")] = weaponRow{CharacterID: owner, ID: "shortbow", Kind: "missile"}
 	var recorded []string
 	for _, m := range embedded {
 		if m.name != weaponTypeMigration {
@@ -262,7 +260,7 @@ func TestMigrate_SeededWeaponsAreTypedAfterTheWeaponTypeMigration(t *testing.T) 
 	run := func() {
 		f := &fakeMigrations{recorded: recorded, store: store}
 		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds())
+			before, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
 			return runMigrations(ctx, f, embedded, before, after)
 		}))
 	}
@@ -276,9 +274,9 @@ func TestMigrate_SeededWeaponsAreTypedAfterTheWeaponTypeMigration(t *testing.T) 
 	assert.Equal(t, "", typeOf(other, "homebrew"), "a weapon the seeds do not know stays untyped")
 
 	// Applied already: no step runs, even with an untyped seeded weapon present.
-	store.t.Weapons[rowKey(other, "longsword")] = storeq.InsertWeaponParams{CharacterID: other, ID: "longsword", Kind: "melee"}
+	store.t.Weapons[rowKey(other, "longsword")] = weaponRow{CharacterID: other, ID: "longsword", Kind: "melee"}
 	f := &fakeMigrations{recorded: append(recorded, weaponTypeMigration), store: store}
-	steps, afterSteps := migrationDataSteps(repoSeeds())
+	steps, afterSteps := migrationDataSteps(repoSeeds(), catalogueWeapons)
 	require.NoError(t, runMigrations(context.Background(), f, embedded, steps, afterSteps))
 	assert.Equal(t, "", typeOf(other, "longsword"), "an applied migration runs no step")
 }
@@ -305,7 +303,7 @@ func TestMigrate_TheSeedCharacterGetsItsRaceAfterTheRaceMigration(t *testing.T) 
 	run := func(recorded []string) {
 		f := &fakeMigrations{recorded: recorded, store: store}
 		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds())
+			before, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
 			return runMigrations(ctx, f, embedded, before, after)
 		}))
 	}
@@ -349,7 +347,7 @@ func TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration(t
 	run := func(recorded []string) {
 		f := &fakeMigrations{recorded: recorded, store: store}
 		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds())
+			before, after := migrationDataSteps(repoSeeds(), catalogueWeapons)
 			return runMigrations(ctx, f, embedded, before, after)
 		}))
 	}

@@ -22,6 +22,14 @@ func buffEntry(target spelleffectsvc.Target, modifiers map[string]string) spelle
 	return e
 }
 
+// rowEntry is a spell that adds no buff and lasts its level in rounds.
+func rowEntry(kind spelleffectsvc.Kind, target spelleffectsvc.Target) spelleffectsvc.Entry {
+	return spelleffectsvc.Entry{
+		ID: "x", Kind: kind, Confidence: spelleffectsvc.ConfidenceLow, Target: target,
+		Duration: spelleffectsvc.Duration{Kind: spelleffectsvc.DurationRounds, Rounds: must.Do(formula.Parse("level"))},
+	}
+}
+
 // ADR 0027 step 10.1: a cast offers a choice of target only for a defensive
 // buff it can put on the Bard that is not self-only: its default is where a
 // cast naming no target lands, its alternate the other one. A hostile buff
@@ -49,7 +57,13 @@ func TestEntry_TargetChoiceAt(t *testing.T) {
 		{"a low-confidence buff adds none: no choice", lowConfidence, nil},
 		{"an ability set is applied by hand: no choice", abilitySet, nil},
 		{"a damage spell: no choice", spelleffectsvc.Entry{Kind: spelleffectsvc.KindDamage, Confidence: spelleffectsvc.ConfidenceHigh, Target: spelleffectsvc.TargetOther}, nil},
-		{"a utility spell: no choice", spelleffectsvc.Entry{Kind: spelleffectsvc.KindUtility, Confidence: spelleffectsvc.ConfidenceHigh, Target: spelleffectsvc.TargetArea}, nil},
+		{"a utility spell that does not last: no choice", spelleffectsvc.Entry{Kind: spelleffectsvc.KindUtility, Confidence: spelleffectsvc.ConfidenceHigh, Target: spelleffectsvc.TargetArea}, nil},
+		{"a damage spell that lasts: no choice", rowEntry(spelleffectsvc.KindDamage, spelleffectsvc.TargetOther), nil},
+		{"a row-only spell on another: on an ally, else the Bard", rowEntry(spelleffectsvc.KindUtility, spelleffectsvc.TargetOther), other},
+		{"a row-only spell on an area: not on the Bard, else him", rowEntry(spelleffectsvc.KindUtility, spelleffectsvc.TargetArea), other},
+		{"a row-only spell, self or other: on the Bard, else an ally", rowEntry(spelleffectsvc.KindUtility, spelleffectsvc.TargetSelfOrOther), self},
+		{"a row-only spell, self-only: no choice", rowEntry(spelleffectsvc.KindUtility, spelleffectsvc.TargetSelf), nil},
+		{"a row-only spell with no target: no choice", rowEntry(spelleffectsvc.KindUtility, spelleffectsvc.TargetNone), nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

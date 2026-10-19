@@ -84,3 +84,26 @@ func TestRepoSeeds_EveryBuffDefaultTargetAndChoice(t *testing.T) {
 		assert.True(t, seen[id], "%s is no longer a buff in the seeds", id)
 	}
 }
+
+// ADR 0004 step 20.5 on the real seeds: a spell that adds no buff but lasts a
+// number of rounds offers the target choice when its target can be someone
+// else, except a damage spell. The list is every such spell: a seed that adds
+// one fails the test until its row is written here.
+func TestRepoSeeds_EveryRowOnlySpellTargetChoice(t *testing.T) {
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"))
+	require.NoError(t, err)
+
+	got := map[string]*spelleffectsvc.TargetChoice{}
+	for _, e := range c.All() {
+		if e.AddsBuff() {
+			continue
+		}
+		choice, err := e.TargetChoiceAt(15)
+		require.NoError(t, err, e.ID)
+		if choice != nil {
+			got[e.ID] = choice
+		}
+	}
+	onAlly := &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnOther, Alternate: spelleffectsvc.CastOnSelf}
+	assert.Equal(t, map[string]*spelleffectsvc.TargetChoice{"sleep": onAlly, "tashas_uncontrollable_hideous_laughter": onAlly}, got)
+}

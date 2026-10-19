@@ -2,7 +2,7 @@
 
 **Status**: accepted 2026-10-18 (the user approved the design round after three rounds: "approved";
 the points marked _user_ are his words, the points marked _proposed_ are the designer's, accepted
-with "the rest is good"). Not implemented. Settles the layout that
+with "the rest is good"). The creation route (items 1 to 6) implemented 2026-10-18/19, see "As built"; the roster and the cog menu (items 7 and 8) not implemented. Settles the layout that
 [ADR 0032](0032-character-identity-and-creation-rolls.md) left to the design round and amends
 [ADR 0030](0030-classes-and-races.md) step 1 and [ADR 0029](0029-users-login-and-access.md) steps
 7.2 and 7.3 (as amended by 0032). Follows [ADR 0027](0027-space-follows-frequency-of-use.md) (French
@@ -103,6 +103,27 @@ content. This ADR records the decisions; the README and the shots are the pictur
 - **Not shown yet**, for want of server data: the class cards' ability minimums and the arrangement
   table's minimum check, the race cards' height and starting age (the identity step's dice), and the
   skill budget and percentages on step 4 (the server warns at creation). The web computes none of them.
+
+## As built (the identity step and the review)
+
+2026-10-19, the item that finished the creation route.
+
+- **Preview** (`POST /api/characters/preview`, additive). The creation's body, checked and derived as
+  `POST /api/characters` would, storing nothing: `{derived, warnings, languages, missing}`, the derived
+  block and warnings in `GET /api/character`'s shapes, the languages with the native one added, and
+  `missing` the blank required fields (`name`, `alignment`, `sex`), which are no refusal here so the
+  identity step gets the server's warnings while they are blank. Every other refusal is the creation's,
+  field and code alike (one validation, `charactersvc` `validate`; tested for parity in composition
+  `preview_test.go`, and the preview equals the created character's read for each class). The web asks it
+  on the identity step and the review, without an alignment the class's list leaves out (that refusal is
+  shown from the options), and drops a reply to an older draft.
+- **Options** gain `raceIdentity`: by race, `height` and `weight` per sex and `age`, each
+  `{count, sides, min, max}` (the roll's dice and ADR 0032 step 5.1's range, stored units), and
+  `startAge` (the starting ages a roll gives). The identity step shows them beside Tirer; the race
+  cards' height and starting age (item 3.2) can now be shown and are not yet.
+- **Web** (`components/creation/identity.tsx`): items 3.5 and 3.6 as the shots, French first. The
+  review's figures are the preview's (THAC0, the five saves, the bard's or thief's percentages); its
+  height and weight are the body's numbers, so what shows is what is stored. The interim step is gone.
 
 ## Consequences
 

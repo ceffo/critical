@@ -65,7 +65,8 @@ describe("stepOfField", () => {
     expect(stepOfField("skillArmor")).toBe("extras");
     expect(stepOfField("name")).toBe("identity");
     expect(stepOfField("details.alignment")).toBe("identity");
-    expect(stepOfField("whatever")).toBe("identity");
+    expect(stepOfField("details.height")).toBe("identity");
+    expect(stepOfField("whatever")).toBe("review");
   });
 });
 
@@ -180,6 +181,10 @@ describe("blockedReason", () => {
       cha: "16",
     },
     hpMax: "20",
+    name: "Lyra",
+    alignment: "neutral_good",
+    sex: "female",
+    alignments: ["neutral_good", "true_neutral"],
   };
   it("blocks only on missing or unreadable input", () => {
     expect(blockedReason("class", ok)).toBeNull();
@@ -190,7 +195,18 @@ describe("blockedReason", () => {
       blockedReason("scores", { ...ok, scores: { ...ok.scores, wis: "x" } }),
     ).toBe("scores");
     expect(blockedReason("extras", { ...ok, hpMax: " " })).toBe("hpMax");
-    expect(blockedReason("identity", { ...ok, cls: "" })).toBeNull();
+    expect(blockedReason("identity", ok)).toBeNull();
+    expect(blockedReason("identity", { ...ok, name: "  " })).toBe("name");
+    expect(blockedReason("identity", { ...ok, alignment: "" })).toBe(
+      "alignment",
+    );
+    expect(blockedReason("identity", { ...ok, sex: "" })).toBe("sex");
+    expect(blockedReason("review", { ...ok, name: "" })).toBeNull();
+  });
+  it("blocks the identity on an alignment the class's list leaves out", () => {
+    expect(blockedReason("identity", { ...ok, alignment: "lawful_good" })).toBe(
+      "alignmentAllowed",
+    );
   });
   it("leaves the ranges to the server", () => {
     expect(

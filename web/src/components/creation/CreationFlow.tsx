@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, UserPlus, X } from "@phosphor-icons/react";
-import { createCharacter, fetchCreationChoices } from "@/api/characters";
+import {
+  createCharacter,
+  fetchCreationChoices,
+  previewCharacter,
+} from "@/api/characters";
 import { ApiError } from "@/api/http";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { toBody } from "@/lib/characterDetails";
 import {
   STEPS,
   blockedReason,
@@ -14,36 +17,47 @@ import {
   type StepId,
 } from "@/lib/creationFlow";
 import { holdPath } from "@/lib/navigation";
+import { formatHeight, formatWeight, unitsFor } from "@/lib/measures";
+import { replyGate } from "@/lib/replyGate";
 import { useLanguageNames } from "@/lib/useLanguageNames";
-import { parseWhole } from "@/lib/wholeNumber";
 import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
-import {
-  ABILITIES,
-  type CreationOptions,
-  type NewCharacter,
-} from "@/types/character";
-import { CardHead, StepDot, Wordmark } from "./kit";
+import { ABILITIES, type CreationOptions } from "@/types/character";
+import { CardHead, Note, StepDot, Wordmark } from "./kit";
 import {
   EMPTY_DRAFT,
+  buildBody,
   draftXp,
   settle,
   type FieldError,
   type DraftPatch,
   mergeDraft,
   type FlowDraft,
+  type PreviewState,
   type StepProps,
 } from "./flow";
-import {
-  ClassStep,
-  ExtrasStep,
-  IdentityStep,
-  RaceStep,
-  ScoresStep,
-} from "./steps";
+import { ClassStep, ExtrasStep, RaceStep, ScoresStep } from "./steps";
+import { IdentityStep, ReviewStep } from "./identity";
+import { useReviewWarnings, warnedFields } from "./warnings";
 
 /** The server's field names for the flow's: the race is `race` in its errors. */
 const ERROR_FIELD: Record<string, string> = { race: "raceCode" };
+
+/** A server refusal as the flow's field error; anything else (a network error) as a message. */
+function fieldErrorOf(err: unknown): FieldError {
+  if (err instanceof ApiError && err.field) {
+    const field = ERROR_FIELD[err.field] ?? err.field;
+    return { field, code: err.message, message: err.message };
+  }
+  return {
+    field: "",
+    code: "",
+    message: err instanceof Error ? err.message : String(err),
+  };
+}
+
+/** How long the draft rests before the preview is asked again (typing a name asks once). */
+const PREVIEW_DELAY_MS = 250;
 
 /** True once the player entered anything: leaving then asks first. */
 function isDirty(d: FlowDraft): boolean {
@@ -123,11 +137,50 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   const xp = draftXp(options, draft);
 
+  // The server's preview of the draft on the identity step and the review (ADR 0034): the warnings
+  // and the derived figures. Every change of the draft asks again after a short rest; a reply to an
+  // older draft (or one landing after the player left these steps) is dropped by the gate.
+  const [preview, setPreview] = useState<PreviewState>({
+    data: null,
+    error: null,
+  });
+  const [previewGate] = useState(replyGate);
+  const built = options ? buildBody(options, draft, xp, i18n.language) : null;
+  const body = built && "body" in built ? built.body : null;
+  // An alignment the class's list leaves out is already shown refused (from the options); the
+  // preview is asked without it, so the step still gets the server's other warnings meanwhile.
+  const allowedAlignments = classOf(options, draft.cls)?.alignments ?? [];
+  const bodyKey = body
+    ? JSON.stringify(
+        body.details?.alignment !== undefined &&
+          !allowedAlignments.includes(body.details.alignment)
+          ? { ...body, details: { ...body.details, alignment: undefined } }
+          : body,
+      )
+    : "";
+  const previewing = step === "identity" || step === "review";
+  useEffect(() => {
+    if (!previewing || bodyKey === "") return;
+    const current = previewGate.open();
+    const timer = setTimeout(() => {
+      previewCharacter(JSON.parse(bodyKey)).then(
+        (data) => current() && setPreview({ data, error: null }),
+        (err: unknown) =>
+          current() && setPreview({ data: null, error: fieldErrorOf(err) }),
+      );
+    }, PREVIEW_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+      previewGate.close();
+    };
+  }, [previewing, bodyKey, previewGate]);
+
   const className = t(`details.classes.${draft.cls}`, {
     defaultValue: draft.cls,
   });
 
   const wording = (e: FieldError): string => {
+    if (e.field === "") return e.message ?? "";
     if (e.field.startsWith("details.")) {
       const detail = e.field.slice("details.".length);
       return t(
@@ -155,8 +208,13 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       defaultValue: e.message ?? e.code,
     });
   };
+  // Créer's refusal first, else the preview's (the identity step shows it at its field).
   const errorFor = (field: string) =>
-    error?.field === field ? wording(error) : null;
+    error?.field === field
+      ? wording(error)
+      : !error && preview.error?.field === field
+        ? wording(preview.error)
+        : null;
 
   const index = STEPS.indexOf(step);
   const go = (to: StepId) => {
@@ -165,91 +223,24 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   };
 
   const submit = async () => {
-    if (!options) return;
-    const fail = (field: string, code: string) => {
-      setError({ field, code });
-      go(stepOfField(field));
-    };
-    const whole = (raw: string) => parseWhole(raw);
-    const body: NewCharacter = {
-      name: draft.name,
-      class: draft.cls,
-      raceCode: draft.race,
-      str: null,
-      dex: null,
-      con: null,
-      int: null,
-      wis: null,
-      cha: null,
-      hpMax: null,
-      xp: null,
-      strExceptional: 0,
-    };
-    for (const a of ABILITIES) {
-      const v = whole(draft.scores[a]);
-      if (Number.isNaN(v)) return fail(a, "out_of_range");
-      body[a] = v;
+    if (!options || !built) return;
+    if ("error" in built) {
+      setError(built.error);
+      go(stepOfField(built.error.field));
+      return;
     }
-    for (const [f, raw] of [
-      ["hpMax", draft.hpMax],
-      ["xp", xp],
-    ] as const) {
-      const v = whole(raw);
-      if (Number.isNaN(v)) return fail(f, "out_of_range");
-      body[f] = v;
-    }
-    const cls = classOf(options, draft.cls);
-    if (
-      cls?.exceptionalStrengthRaces.includes(draft.race) &&
-      body.str === 18 &&
-      draft.strExceptional.trim() !== ""
-    ) {
-      const v = whole(draft.strExceptional);
-      if (v === null || Number.isNaN(v))
-        return fail("strExceptional", "out_of_range");
-      body.strExceptional = v;
-    }
-    if ((cls?.skills ?? []).length > 0) {
-      body.skillArmor = draft.skillArmor;
-      body.skillPoints = {};
-      for (const skill of cls!.skills) {
-        const raw = draft.skillPoints[skill] ?? "";
-        if (raw.trim() === "") continue;
-        const v = whole(raw);
-        if (v === null || Number.isNaN(v))
-          return fail(`skillPoints.${skill}`, "out_of_range");
-        body.skillPoints[skill] = v;
-      }
-    }
-    const {
-      body: details,
-      ageInvalid,
-      invalid,
-    } = toBody(draft.details, i18n.language);
-    if (ageInvalid) return fail("details.age", "out_of_range");
-    if (invalid.length > 0)
-      return fail(`details.${invalid[0]}`, "not_a_number");
-    body.details = details;
     setBusy(true);
     setError(null);
     try {
-      await createCharacter(body);
+      await createCharacter(built.body);
       going.current = true;
       globalThis.location.assign("/");
     } catch (err) {
       setBusy(false);
-      if (err instanceof ApiError && err.field) {
-        const field = ERROR_FIELD[err.field] ?? err.field;
-        setError({ field, code: err.message, message: err.message });
-        go(stepOfField(field));
-      } else {
-        setError({
-          field: "name",
-          code: "",
-          message: err instanceof Error ? err.message : String(err),
-        });
-        go("identity");
-      }
+      const e = fieldErrorOf(err);
+      setError(e);
+      // A refusal opens the step that holds its field (ADR 0034); a network error stays here.
+      if (e.field !== "") go(stepOfField(e.field));
     }
   };
 
@@ -289,6 +280,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     errorFor,
     xp,
     watch,
+    preview,
+    body,
+    wording,
+    language: i18n.language,
   };
   const blocked = blockedReason(step, {
     cls: draft.cls,
@@ -296,6 +291,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     xp,
     scores: draft.scores,
     hpMax: draft.hpMax,
+    name: draft.name,
+    alignment: draft.details.alignment,
+    sex: draft.details.sex,
+    alignments: classOf(options, draft.cls)?.alignments ?? [],
   });
   const last = index === STEPS.length - 1;
   const lead =
@@ -353,6 +352,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             {step === "scores" && <ScoresStep {...props} />}
             {step === "extras" && <ExtrasStep {...props} />}
             {step === "identity" && <IdentityStep {...props} />}
+            {step === "review" && <ReviewStep {...props} go={go} />}
           </div>
           <div className="flex shrink-0 items-center gap-3 border-t border-border px-5 py-3">
             {index > 0 && (
@@ -371,7 +371,11 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
               className="min-w-0 flex-1 text-right text-body text-ink-muted"
               data-testid="next-blocked"
             >
-              {blocked ? t(`creation.blocked.${blocked}`) : null}
+              {blocked ? (
+                t(`creation.blocked.${blocked}`)
+              ) : last ? (
+                <ReviewFoot props={props} error={error} wording={wording} />
+              ) : null}
             </span>
             {last ? (
               <Button
@@ -400,7 +404,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             )}
           </div>
         </main>
-        <Building options={options} draft={draft} xp={xp} />
+        <Building {...props} />
       </div>
       <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
         <DialogContent
@@ -458,8 +462,10 @@ function useStepChoice(draft: FlowDraft): (step: StepId) => string | null {
         return draft.hpMax
           ? t("creation.extras.hpN", { hp: draft.hpMax })
           : null;
-      default:
+      case "identity":
         return draft.name.trim() || null;
+      default:
+        return null;
     }
   };
 }
@@ -539,18 +545,34 @@ function StepList({
   );
 }
 
-/** The character being built, filled step by step (the dashboard character card's width). */
-function Building({
-  options,
-  draft,
-  xp,
+/** The review's foot: Créer's network error, else the preview's verdict ("1 avertissement, rien de
+ * bloquant"). */
+function ReviewFoot({
+  props,
+  error,
+  wording,
 }: {
-  options: CreationOptions;
-  draft: FlowDraft;
-  xp: string;
+  props: StepProps;
+  error: FieldError | null;
+  wording: (e: FieldError) => string;
 }) {
   const { t } = useTranslation();
+  const warnings = useReviewWarnings(props);
+  if (error) return <span className="text-danger">{wording(error)}</span>;
+  if (props.preview.error) return <>{t("creation.review.refusedFoot")}</>;
+  if (!props.preview.data) return null;
+  return warnings.length > 0 ? (
+    <>{t("creation.review.warningsFoot", { count: warnings.length })}</>
+  ) : (
+    <>{t("creation.review.noWarning")}</>
+  );
+}
+
+/** The character being built, filled step by step (the dashboard character card's width). */
+function Building({ options, draft, xp, preview, body, language }: StepProps) {
+  const { t } = useTranslation();
   const languageName = useLanguageNames(options);
+  const units = unitsFor(language);
   const dash = <span className="text-ink-muted">—</span>;
   const line = [
     draft.cls
@@ -559,6 +581,24 @@ function Building({
     draft.race ? t(`details.races.${draft.race}`) : null,
     draft.cls ? levelText(t, { ...draft, xp }) : null,
   ].filter(Boolean);
+  // The languages the server reads (the native one added) once it answered, else the ones picked.
+  const languages = preview.data?.languages ?? draft.details.languages;
+  const details = body?.details;
+  const build = [
+    details?.height_cm
+      ? formatHeight(details.height_cm, units, language)
+      : null,
+    details?.weight_kg
+      ? formatWeight(details.weight_kg, units, language)
+      : null,
+  ].filter(Boolean);
+  const warned = preview.data
+    ? warnedFields(
+        t,
+        preview.data.warnings,
+        preview.data.derived.skillBudget.length,
+      )
+    : [];
   return (
     <aside
       className="zone-card flex w-[clamp(280px,21vw,384px)] shrink-0 flex-col overflow-y-auto"
@@ -607,11 +647,29 @@ function Building({
           </dd>
           <dt className="text-ink-muted">{t("details.fields.languages")}</dt>
           <dd className="break-words">
-            {draft.details.languages.length > 0
-              ? draft.details.languages.map(languageName).join(", ")
+            {languages.length > 0
+              ? languages.map(languageName).join(", ")
+              : dash}
+          </dd>
+          <dt className="text-ink-muted">{t("creation.heightWeight")}</dt>
+          <dd className="break-words">
+            {build.length > 0 ? build.join(" · ") : dash}
+          </dd>
+          <dt className="text-ink-muted">{t("details.fields.age")}</dt>
+          <dd>
+            {details?.age
+              ? `${details.age} ${t("details.roll.units.year")}`
               : dash}
           </dd>
         </dl>
+        {warned.length > 0 && (
+          <Note kind="warning" testId="building-warnings">
+            {t("creation.warningsOn", {
+              count: warned.length,
+              fields: warned.join(", "),
+            })}
+          </Note>
+        )}
       </div>
     </aside>
   );

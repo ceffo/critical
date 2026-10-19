@@ -2228,12 +2228,41 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
     await step
       .getByLabel(tr("Nom", "Name"), { exact: true })
       .fill("Aldéric de la Tour-d'Auvergne-Lesparre");
+    // The longest content: a refused alignment (its note), the languages over the count (the
+    // server's warning) and the three rolls' breakdowns.
+    const grid = step.getByTestId("alignment-grid");
+    await grid.getByRole("radio").first().click();
+    await expect(step.getByTestId("alignment-refusal")).toBeVisible();
+    await step
+      .getByRole("radiogroup", { name: tr("Sexe", "Sex") })
+      .getByRole("radio")
+      .nth(1)
+      .click();
+    const chips = step.getByTestId("language-chips").getByRole("checkbox");
+    // Eight extra languages: more than any rolled Intelligence allows (Table 4: 7 at 18).
+    for (let i = 0; i < 8; i++) await chips.nth(i).click();
+    await expect(step.getByTestId("languages-warning")).toBeVisible();
+    for (const f of ["height", "weight", "age"]) {
+      await step.getByTestId(`details-roll-${f}`).click();
+      await expect(
+        step.getByTestId(`details-roll-${f}-breakdown`),
+      ).toBeVisible();
+    }
+    await step
+      .getByLabel(tr("Cheveux", "Hair"))
+      .fill(tr("Auburn, tressés en couronne", "Auburn, braided in a crown"));
     await audit("5-identity");
+    await grid.getByRole("radio").nth(1).click();
+    await next.click();
+    await expect(step.getByTestId("review-thac0")).toHaveText(/^\d+$/);
+    await audit("6-review");
 
     if (lang === "fr") {
       // A refusal opens its step: max HP 0 is out of range, shown on "Points de vie et talents".
       await step.getByRole("button", { name: /^Revenir/ }).click();
+      await step.getByRole("button", { name: /^Revenir/ }).click();
       await step.getByLabel("PV max").fill("0");
+      await next.click();
       await next.click();
       await step
         .getByRole("button", { name: "Créer ce personnage et le jouer" })

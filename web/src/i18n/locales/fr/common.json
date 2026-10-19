@@ -1906,7 +1906,6 @@
     "renameHint": "Enregistrer le nouveau nom de {{name}}",
     "renameTitle": "Renommer le personnage",
     "details": "Détails",
-    "detailsLead": "L’alignement et le sexe sont obligatoires, le reste est facultatif ; modifiables ensuite sur la fiche, en cliquant sur le nom.",
     "switchTitle": "Vos personnages",
     "newTitle": "Nouveau personnage",
     "retireTitle": "Retirer le personnage",
@@ -2019,7 +2018,11 @@
       "xp": "Saisissez les XP de départ.",
       "race": "Choisissez une race.",
       "scores": "Saisissez les six caractéristiques.",
-      "hpMax": "Saisissez les PV max."
+      "hpMax": "Saisissez les PV max.",
+      "name": "Saisissez un nom.",
+      "alignment": "Choisissez un alignement.",
+      "alignmentAllowed": "Choisissez un alignement permis pour continuer.",
+      "sex": "Choisissez un sexe."
     },
     "class": {
       "name": "Classe",
@@ -2130,7 +2133,41 @@
     "identity": {
       "name": "Identité",
       "title": "Identité",
-      "lead": "Le nom et les détails du personnage, puis Créer."
-    }
+      "lead": "Qui est votre personnage.",
+      "alignmentRefusedHint": "{{name}} : interdit au {{className}}",
+      "alignmentRefused_one": "Un {{className}} ne peut pas être {{alignment}}. Choisissez l'alignement permis.",
+      "alignmentRefused_other": "Un {{className}} ne peut pas être {{alignment}}. Choisissez un des {{count}} alignements permis.",
+      "sexLead": "Fixe les fourchettes de taille et de poids.",
+      "languagesCount_one": "{{count}} en plus · {{limit}} permises",
+      "languagesCount_other": "{{count}} en plus · {{limit}} permises",
+      "languagesOver_one": "{{count}} langue en plus de la maternelle, l'Intelligence {{int}} en permet {{limit}}.",
+      "languagesOver_other": "{{count}} langues en plus de la maternelle, l'Intelligence {{int}} en permet {{limit}}.",
+      "onlyWarning": "Ce n'est qu'un avertissement : la création reste possible.",
+      "build": "Mensurations",
+      "native": "maternelle",
+      "languagesLead": "En clair, les langues de la race ({{race}}) ; en grisé, les autres, si le MD les permet.",
+      "raceSex": "{{race}}, {{sex}}",
+      "range": "{{who}} : {{min}} – {{max}} · {{count}}d{{sides}}"
+    },
+    "review": {
+      "name": "Récapitulatif",
+      "title": "Récapitulatif",
+      "lead": "Vérifiez, puis créez : le personnage devient celui que vous jouez.",
+      "classRace": "Classe et race",
+      "editHint": "Modifier : {{step}}",
+      "classLevel": "{{className}} · niveau {{level}} ({{xp}} XP)",
+      "rolledMethod": "Tirées · méthode {{method}}",
+      "hpMax": "PV max",
+      "hpRolled": "{{hp}} (tirés : {{gains}})",
+      "warningOf": "{{field}} : {{text}}",
+      "skillsField": "talents",
+      "refusedFoot": "Le serveur refuse une valeur : corrigez-la à son étape.",
+      "warningsFoot_one": "{{count}} avertissement, rien de bloquant.",
+      "warningsFoot_other": "{{count}} avertissements, rien de bloquant.",
+      "noWarning": "Aucun avertissement."
+    },
+    "heightWeight": "Taille, poids",
+    "warningsOn_one": "{{count}} avertissement : {{fields}}",
+    "warningsOn_other": "{{count}} avertissements : {{fields}}"
   }
 }

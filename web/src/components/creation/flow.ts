@@ -1,13 +1,16 @@
-import type { Draft } from "@/lib/characterDetails";
+import { toBody, type Draft } from "@/lib/characterDetails";
 import type { Placement } from "@/lib/creationFlow";
-import { emptyPlacement, xpOfLevel } from "@/lib/creationFlow";
+import { classOf, emptyPlacement, xpOfLevel } from "@/lib/creationFlow";
 import { parseWhole } from "@/lib/wholeNumber";
-import type {
-  AbilityCode,
-  CreationOptions,
-  HpRoll,
-  ScoresArrangement,
-  ScoresRoll,
+import {
+  ABILITIES,
+  type AbilityCode,
+  type CharacterPreview,
+  type CreationOptions,
+  type HpRoll,
+  type NewCharacter,
+  type ScoresArrangement,
+  type ScoresRoll,
 } from "@/types/character";
 
 /**
@@ -129,11 +132,95 @@ export function settle(d: FlowDraft, xp: string): FlowDraft {
   };
 }
 
+/**
+ * The creation body of a draft (the preview's and Créer's), or the field a value is unreadable in
+ * (not a number where one is needed). Only the shape is checked; every range and rule is the server's.
+ * A blank alignment or sex is left out (the server says it is missing).
+ */
+export function buildBody(
+  options: CreationOptions,
+  draft: FlowDraft,
+  xp: string,
+  language: string,
+): { body: NewCharacter } | { error: FieldError } {
+  const fail = (field: string, code: string) => ({
+    error: { field, code },
+  });
+  const body: NewCharacter = {
+    name: draft.name,
+    class: draft.cls,
+    raceCode: draft.race,
+    str: null,
+    dex: null,
+    con: null,
+    int: null,
+    wis: null,
+    cha: null,
+    hpMax: null,
+    xp: null,
+    strExceptional: 0,
+  };
+  for (const a of ABILITIES) {
+    const v = parseWhole(draft.scores[a]);
+    if (v !== null && Number.isNaN(v)) return fail(a, "out_of_range");
+    body[a] = v;
+  }
+  for (const [f, raw] of [
+    ["hpMax", draft.hpMax],
+    ["xp", xp],
+  ] as const) {
+    const v = parseWhole(raw);
+    if (v !== null && Number.isNaN(v)) return fail(f, "out_of_range");
+    body[f] = v;
+  }
+  const cls = classOf(options, draft.cls);
+  if (
+    cls?.exceptionalStrengthRaces.includes(draft.race) &&
+    body.str === 18 &&
+    draft.strExceptional.trim() !== ""
+  ) {
+    const v = parseWhole(draft.strExceptional);
+    if (v === null || Number.isNaN(v))
+      return fail("strExceptional", "out_of_range");
+    body.strExceptional = v;
+  }
+  if (cls && cls.skills.length > 0) {
+    body.skillArmor = draft.skillArmor;
+    body.skillPoints = {};
+    for (const skill of cls.skills) {
+      const raw = draft.skillPoints[skill] ?? "";
+      if (raw.trim() === "") continue;
+      const v = parseWhole(raw);
+      if (v === null || Number.isNaN(v))
+        return fail(`skillPoints.${skill}`, "out_of_range");
+      body.skillPoints[skill] = v;
+    }
+  }
+  const {
+    body: details,
+    ageInvalid,
+    invalid,
+  } = toBody(draft.details, language);
+  if (ageInvalid) return fail("details.age", "out_of_range");
+  if (invalid.length > 0) return fail(`details.${invalid[0]}`, "not_a_number");
+  body.details = details;
+  return { body };
+}
+
 /** A refusal shown on its step: the form's field, the server's code, its message as a fallback. */
 export interface FieldError {
   field: string;
   code: string;
   message?: string;
+}
+
+/**
+ * The server's preview of the draft (`POST /api/characters/preview`): its derived figures and
+ * warnings, or its refusal; both null before the first answer or when the draft cannot be sent yet.
+ */
+export interface PreviewState {
+  data: CharacterPreview | null;
+  error: FieldError | null;
 }
 
 /** What every step receives. */
@@ -153,4 +240,12 @@ export interface StepProps {
    * reply that lands after a newer choice (or a newer edit) is dropped instead of overwriting it.
    */
   watch: () => () => boolean;
+  /** The server's preview of the draft (the identity step's warnings, the review's figures). */
+  preview: PreviewState;
+  /** The body Créer would send, null while a value is unreadable. */
+  body: NewCharacter | null;
+  /** A refusal in words. */
+  wording: (e: FieldError) => string;
+  /** The UI language (number formatting). */
+  language: string;
 }

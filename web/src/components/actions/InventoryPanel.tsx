@@ -33,6 +33,7 @@ import {
 } from "@/api/items";
 import { draftFromItem } from "@/lib/itemForm";
 import { cn } from "@/lib/utils";
+import { useSpellName } from "@/i18n/spellName";
 import { ItemForm } from "./ItemForm";
 import { AddPiece } from "./AddPiece";
 import { AcCard } from "@/components/ac/AcCard";
@@ -366,6 +367,7 @@ function ItemRow({
 }) {
   const { t, i18n } = useTranslation();
   const name = localized(i18n.language, i.name);
+  const spellName = useSpellName();
   const counted = isCounted(i);
   return (
     <li
@@ -415,7 +417,7 @@ function ItemRow({
           className="min-w-0 break-words text-label text-muted-foreground"
           data-testid="item-stats"
         >
-          {pieceStats(i, t).map((part, n) => (
+          {pieceStats(i, t, spellName).map((part, n) => (
             <span key={n}>
               {n > 0 && " · "}
               {part.behaviour ? (

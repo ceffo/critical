@@ -208,6 +208,8 @@ test("a scroll names its spell in the editor: logged; pop clears it", async ({
   await snap(page, "scroll-spell-form");
   await form(page).getByRole("button", { name: "Save" }).click();
   await expect(form(page)).toHaveCount(0);
+  // The row names the spell; clearing it (below, by the pop) takes it away.
+  await expect(scroll.getByTestId("item-stats")).toContainText("Burning Hands");
 
   await openWorkspace(page, "Act");
   await expect(logEntry(page, "Edited Scroll of flames")).toContainText(
@@ -217,4 +219,8 @@ test("a scroll names its spell in the editor: logged; pop clears it", async ({
   await openWorkspace(page, "Inventory");
   await scroll.getByRole("button", { name: "Edit Scroll of flames" }).click();
   await expect(form(page).getByLabel("Spell", { exact: true })).toHaveValue("");
+  await form(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(scroll.getByTestId("item-stats")).not.toContainText(
+    "Burning Hands",
+  );
 });

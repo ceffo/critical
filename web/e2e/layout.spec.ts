@@ -3171,7 +3171,8 @@ test("AC: the shield beside the HP, its breakdown popover and the Inventaire's A
 
 // ADR 0033 step 2, ADR 0035 item 6.2: a scroll that names the catalogue's longest spell name, in
 // French at 1280, 1920 and 2560 (real scrollbars): the editor's Spell picker (the form) and the
-// initiative breakdown's "Parchemin (Sort) : +1" term are not cut. Screenshots of each.
+// initiative breakdown's "Parchemin (Sort) : +1" term and the scroll's inventory row are not cut.
+// Screenshots of each.
 test("scroll spell: picker and initiative term uncut, fr, 1280 to 2560", async ({
   page,
 }) => {
@@ -3224,6 +3225,12 @@ test("scroll spell: picker and initiative term uncut, fr, 1280 to 2560", async (
     await expect(breakdown).toBeHidden();
     // The editor's Spell picker shows the long name whole.
     await rail.nth(2).click();
+    // The scroll's row in the possessions list names the spell, whole.
+    const scrollRow = page.getByTestId("item-scroll_of_the_ancient_archmages");
+    await expect(scrollRow.getByTestId("item-stats")).toContainText(FR_SPELL);
+    await expectNoClippedText(scrollRow, `scroll row, ${where}`);
+    await expectWholeWords(scrollRow, `scroll row, ${where}`);
+    await snap(page, `scroll-row-spell-${vp.width}x${vp.height}`);
     await page
       .getByRole("button", {
         name: "Modifier Parchemin des anciens archimages",

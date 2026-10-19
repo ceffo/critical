@@ -528,6 +528,14 @@ func (f *fakeStore) InsertItemRename(_ context.Context, arg storeq.InsertItemRen
 	return nil
 }
 
+func (f *fakeStore) RenamedItemID(_ context.Context, arg storeq.RenamedItemIDParams) (string, error) {
+	id, ok := f.t.Renames[rowKey(arg.CharacterID, arg.OldID)]
+	if !ok {
+		return "", sql.ErrNoRows
+	}
+	return id, nil
+}
+
 func offer(kind, id, lang string) string { return kind + "|" + id + "|" + lang }
 
 func (f *fakeStore) SeedOffers(_ context.Context, arg storeq.SeedOffersParams) ([]string, error) {

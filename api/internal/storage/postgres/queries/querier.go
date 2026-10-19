@@ -71,6 +71,8 @@ type Querier interface {
 	RecordSeedOffer(ctx context.Context, arg RecordSeedOfferParams) error
 	// The chosen ammunition follows an item the conversion gave a new id.
 	RenameAttackFormAmmo(ctx context.Context, arg RenameAttackFormAmmoParams) error
+	// The id the conversion gave an item that shared its id with a weapon; no row when it kept its id.
+	RenamedItemID(ctx context.Context, arg RenamedItemIDParams) (string, error)
 	// The character the seed files belong to: the one named in character.json (the lowest id when
 	// two share the name).
 	SeedCharacterID(ctx context.Context, name string) (int64, error)

@@ -223,3 +223,34 @@ func TestConvertEquipment_Step26_3_IdsOnlyInTheLogAreKeptApart(t *testing.T) {
 	assert.NotContains(t, f.t.Items, rowKey(owner, "mace_2"), "no piece is made for it")
 	assert.NotContains(t, f.t.Renames, rowKey(owner, "never_clashes"))
 }
+
+// A seeded item the conversion renamed (a player's weapon has its id) still gains the seed's
+// translations: the reconcile reads it under its new id, its offers stay under the seed's id, and the
+// weapon that took the id is not touched.
+func TestSeed_Step26_3_ARenamedSeededItemStillGainsTranslations(t *testing.T) {
+	f := newFakeStore()
+	require.NoError(t, seedOn(f, repoSeeds()))
+	owner := f.t.Characters[0]
+	ctx := context.Background()
+
+	ammo := f.item("arrows_plus1")
+	delete(f.t.Items, rowKey(owner, "arrows_plus1"))
+	renamed := ammo
+	renamed.ID = "arrows_plus1_2"
+	f.t.Items[rowKey(owner, renamed.ID)] = renamed
+	f.t.Renames[rowKey(owner, "arrows_plus1")] = renamed.ID
+	// The player's weapon took the id, under a name of its own.
+	key, err := addSeedText(ctx, f, localized.Of("My bow"))
+	require.NoError(t, err)
+	weapon := ammo
+	weapon.Name, weapon.Category = key, "weapon"
+	f.t.Items[rowKey(owner, "arrows_plus1")] = weapon
+	// The seed's French name is new to this database.
+	delete(f.t.Texts[ammo.Name], "fr")
+	delete(f.t.Offers, offer("item", "arrows_plus1", "fr"))
+
+	require.NoError(t, seedOn(f, repoSeeds()))
+	assert.Equal(t, "Flèches +1", f.t.Texts[ammo.Name]["fr"])
+	assert.Equal(t, localized.Of("My bow"), f.t.Texts[key], "the weapon's name is untouched")
+	assert.True(t, f.t.Offers[offer("item", "arrows_plus1", "fr")], "recorded under the seed's id")
+}

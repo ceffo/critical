@@ -165,6 +165,10 @@ WHERE character_id = sqlc.arg(character_id)::bigint AND ammo_item_id = @old_id;
 -- name: InsertItemRename :exec
 INSERT INTO item_id_renames (character_id, old_id, new_id) VALUES (sqlc.arg(character_id)::bigint, @old_id, @new_id);
 
+-- The id the conversion gave an item that shared its id with a weapon; no row when it kept its id.
+-- name: RenamedItemID :one
+SELECT new_id FROM item_id_renames WHERE character_id = sqlc.arg(character_id)::bigint AND old_id = @old_id;
+
 -- name: SeedOffers :many
 SELECT lang FROM seeded_name_languages WHERE kind = $1 AND id = $2;
 

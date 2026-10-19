@@ -891,6 +891,23 @@ func (q *Queries) RenameAttackFormAmmo(ctx context.Context, arg RenameAttackForm
 	return err
 }
 
+const renamedItemID = `-- name: RenamedItemID :one
+SELECT new_id FROM item_id_renames WHERE character_id = $1::bigint AND old_id = $2
+`
+
+type RenamedItemIDParams struct {
+	CharacterID int64
+	OldID       string
+}
+
+// The id the conversion gave an item that shared its id with a weapon; no row when it kept its id.
+func (q *Queries) RenamedItemID(ctx context.Context, arg RenamedItemIDParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, renamedItemID, arg.CharacterID, arg.OldID)
+	var new_id string
+	err := row.Scan(&new_id)
+	return new_id, err
+}
+
 const seedCharacterID = `-- name: SeedCharacterID :one
 SELECT id FROM characters WHERE name = $1 ORDER BY id LIMIT 1
 `

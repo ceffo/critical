@@ -329,7 +329,16 @@ var (
 	weaponName = seededName{kind: "weapon", nameKey: func(ctx context.Context, q storeq.Querier, owner int64, id string) (int64, error) {
 		return q.ItemNameKey(ctx, storeq.ItemNameKeyParams{CharacterID: owner, ID: id})
 	}}
+	// An item the conversion renamed (it shared its id with a weapon) is read under its new id; its
+	// offers stay recorded under the seed's id.
 	itemName = seededName{kind: "item", nameKey: func(ctx context.Context, q storeq.Querier, owner int64, id string) (int64, error) {
+		renamed, err := q.RenamedItemID(ctx, storeq.RenamedItemIDParams{CharacterID: owner, OldID: id})
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return 0, fmt.Errorf("read the item's rename: %w", err)
+		}
+		if err == nil {
+			id = renamed
+		}
 		return q.ItemNameKey(ctx, storeq.ItemNameKeyParams{CharacterID: owner, ID: id})
 	}}
 )

@@ -19,6 +19,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 func intPtr(v int) *int           { return &v }
@@ -319,6 +320,11 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 }
 
 // noTx runs the unit of work directly.
+// noSpells is a spell-effect catalogue without entries (buffsvc's Spells).
+type noSpells struct{}
+
+func (noSpells) Get(string) (spelleffectsvc.Entry, bool) { return spelleffectsvc.Entry{}, false }
+
 type noTx struct{}
 
 func (noTx) InTx(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }

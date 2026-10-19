@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 const charID = int64(1)
@@ -32,8 +33,17 @@ func (f *fakeTx) InTx(ctx context.Context, fn func(context.Context) error) error
 	return fn(ctx)
 }
 
+// fakeSpells is the spell-effect catalogue: the entries by spell id.
+type fakeSpells map[string]spelleffectsvc.Entry
+
+func (f fakeSpells) Get(id string) (spelleffectsvc.Entry, bool) {
+	e, ok := f[id]
+	return e, ok
+}
+
 type fixture struct {
 	svc     buffsvc.SVC
+	spells  fakeSpells
 	dal     *mocks.MockDAL
 	log     *mocks.MockLog
 	chars   *mocks.MockCharacters
@@ -59,8 +69,9 @@ func newFixture(t *testing.T) *fixture {
 		items:   mocks.NewMockItems(t),
 		weapons: mocks.NewMockWeapons(t),
 		tx:      &fakeTx{},
+		spells:  fakeSpells{},
 	}
-	svc, err := buffsvc.NewWithConfig(buffsvc.DefaultConfig(), f.dal, f.tx, f.log, f.chars, f.dice, f.items, f.weapons)
+	svc, err := buffsvc.NewWithConfig(buffsvc.DefaultConfig(), f.dal, f.tx, f.log, f.chars, f.dice, f.items, f.weapons, f.spells)
 	require.NoError(t, err)
 	f.svc = svc
 	return f
@@ -158,15 +169,24 @@ func TestNew_NilDependencies(t *testing.T) {
 	tx := &fakeTx{}
 	for name, build := range map[string]func() (buffsvc.SVC, error){
 		"config": func() (buffsvc.SVC, error) {
-			return buffsvc.NewWithConfig(nil, dal, tx, log, chars, dice, items, weapons)
+			return buffsvc.NewWithConfig(nil, dal, tx, log, chars, dice, items, weapons, fakeSpells{})
 		},
-		"dal":     func() (buffsvc.SVC, error) { return buffsvc.New(nil, tx, log, chars, dice, items, weapons) },
-		"tx":      func() (buffsvc.SVC, error) { return buffsvc.New(dal, nil, log, chars, dice, items, weapons) },
-		"log":     func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, nil, chars, dice, items, weapons) },
-		"chars":   func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, nil, dice, items, weapons) },
-		"dice":    func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, nil, items, weapons) },
-		"items":   func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, dice, nil, weapons) },
-		"weapons": func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, dice, items, nil) },
+		"dal": func() (buffsvc.SVC, error) {
+			return buffsvc.New(nil, tx, log, chars, dice, items, weapons, fakeSpells{})
+		},
+		"tx": func() (buffsvc.SVC, error) {
+			return buffsvc.New(dal, nil, log, chars, dice, items, weapons, fakeSpells{})
+		},
+		"log": func() (buffsvc.SVC, error) {
+			return buffsvc.New(dal, tx, nil, chars, dice, items, weapons, fakeSpells{})
+		},
+		"chars": func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, nil, dice, items, weapons, fakeSpells{}) },
+		"dice": func() (buffsvc.SVC, error) {
+			return buffsvc.New(dal, tx, log, chars, nil, items, weapons, fakeSpells{})
+		},
+		"items":   func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, dice, nil, weapons, fakeSpells{}) },
+		"weapons": func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, dice, items, nil, fakeSpells{}) },
+		"spells":  func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, dice, items, weapons, nil) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := build()
@@ -432,7 +452,7 @@ func TestDismiss(t *testing.T) {
 		f.records()
 		f.saves([]buffsvc.BuffEffect{b})
 
-		got, err := f.svc.Dismiss(context.Background(), charID, "a")
+		got, _, err := f.svc.Dismiss(context.Background(), charID, "a", "")
 		require.NoError(t, err)
 		assert.Equal(t, []buffsvc.BuffEffect{b}, got)
 		assert.JSONEq(t, `{"action":"dismiss","buff":"Bless"}`, string(f.entries[0].Payload))
@@ -442,7 +462,7 @@ func TestDismiss(t *testing.T) {
 		f := newFixture(t)
 		f.state([]buffsvc.BuffEffect{a, b}, 0)
 
-		_, err := f.svc.Dismiss(context.Background(), charID, "zzz")
+		_, _, err := f.svc.Dismiss(context.Background(), charID, "zzz", "")
 		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
 }
@@ -512,7 +532,7 @@ func TestAdvanceRound(t *testing.T) {
 			f.initiativeIs(nil) // no initiative to end
 			f.rollsInitiative(7)
 
-			active, expired, round, _, err := f.svc.AdvanceRound(context.Background(), charID)
+			active, expired, round, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
 			require.NoError(t, err)
 			assert.Equal(t, tt.round+1, round)
 			assert.Equal(t, tt.wantActive, active)
@@ -540,7 +560,7 @@ func TestAdvanceRound(t *testing.T) {
 		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(nil, nil)
 		f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(0, boom)
 
-		active, expired, round, _, err := f.svc.AdvanceRound(context.Background(), charID)
+		active, expired, round, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
 		assert.ErrorIs(t, err, boom)
 		assert.Nil(t, active)
 		assert.Nil(t, expired)
@@ -904,15 +924,15 @@ func TestRestorers_CoverEverySnapshotKey(t *testing.T) {
 	require.NoError(t, err)
 	_, err = f.svc.Trigger(ctx, charID, "c")
 	require.NoError(t, err)
-	_, err = f.svc.Dismiss(ctx, charID, "c")
+	_, _, err = f.svc.Dismiss(ctx, charID, "c", "")
 	require.NoError(t, err)
-	_, _, _, _, err = f.svc.AdvanceRound(ctx, charID)
+	_, _, _, _, _, err = f.svc.AdvanceRound(ctx, charID)
 	require.NoError(t, err)
 	_, err = f.svc.RerollInitiative(ctx, charID)
 	require.NoError(t, err)
 	_, _, err = f.svc.ResetRound(ctx, charID)
 	require.NoError(t, err)
-	_, _, _, _, err = f.svc.PassTime(ctx, charID, 1)
+	_, _, _, _, _, err = f.svc.PassTime(ctx, charID, 1)
 	require.NoError(t, err)
 
 	module := f.svc.Module()
@@ -938,7 +958,7 @@ func TestRestorers_WriteTheSnapshotBack(t *testing.T) {
 		f.state(before, 3)
 		f.records()
 		f.saves([]buffsvc.BuffEffect{strength(6), powerGem, before[3]})
-		_, err := f.svc.Dismiss(context.Background(), charID, "m")
+		_, _, err := f.svc.Dismiss(context.Background(), charID, "m", "")
 		require.NoError(t, err)
 
 		f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, before).Return(nil).Once()

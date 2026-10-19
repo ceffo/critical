@@ -46,7 +46,7 @@ func TestInitiative_ADR0035Item6_WeaponSpeedThenAnItemUsedCorrectsTheRound(t *te
 	})
 	require.NoError(t, err)
 
-	_, _, round, rolled, err := bs.Buffs.AdvanceRound(ctx, id)
+	_, _, round, rolled, _, err := bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, 1, round)
 	assert.Equal(t, 7, rolled.D10)
@@ -158,7 +158,7 @@ func TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell(t *tes
 	require.NoError(t, err)
 	assert.Equal(t, "burning_hands", spellOf(), "undo gives the spell back")
 
-	_, _, round, rolled, err := bs.Buffs.AdvanceRound(ctx, id)
+	_, _, round, rolled, _, err := bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, 1, round)
 	assert.Equal(t, 7, rolled.Total())

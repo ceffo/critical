@@ -3640,3 +3640,50 @@ test("spell description: one capped column in the lookup and the cast result, 12
     }
   }
 });
+
+// ADR 0004 step 21: the stop menu of a row with end effects, the notice that says what the end
+// effects did and the journal's end-effect line are uncut, in French and English, 1280 to 2560.
+test("end effects: stop menu, notice and journal line uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      expect(
+        await apiCall(page, "POST", "/api/hp/event", {
+          delta: -8,
+          source: "e2e goblin",
+        }),
+      ).toBe(true);
+      expect(
+        await apiCall(page, "POST", "/api/spells/receive", {
+          spellId: "polymorph_self",
+          casterLevel: 15,
+        }),
+      ).toBe(true);
+      await reloadSettled(page);
+      await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
+      await page.getByTestId("buff-stop").click();
+      const menu = page.getByRole("menu");
+      await expect(menu).toBeVisible();
+      await expectNoClippedText(menu, `stop menu, ${where}`);
+      await expectWholeWords(menu, `stop menu, ${where}`);
+      await page.getByTestId("buff-end-voluntary").click();
+      const ended = page.getByTestId("notice-ended");
+      await expect(ended).toBeVisible();
+      await expectNoClippedText(ended, `end notice, ${where}`);
+      await expectWholeWords(ended, `end notice, ${where}`);
+      await expectNoClippedText(page.getByRole("status"), `notice, ${where}`);
+      await expectNoClippedText(combatLog(page), `journal, ${where}`);
+      await snap(page, `end-effects-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+});

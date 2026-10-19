@@ -60,7 +60,7 @@ func TestStateKeys_EachWriteNamesWhatItChanged(t *testing.T) {
 	}), "and so does the redo")
 
 	assert.Equal(t, []string{"buffs", "initiative", "log", "round"}, keysOf(func(ctx context.Context) error {
-		_, _, _, _, err := bs.Buffs.AdvanceRound(ctx, id)
+		_, _, _, _, _, err := bs.Buffs.AdvanceRound(ctx, id)
 		return err
 	}), "Next Round: the round, the buffs' expiry and the initiative")
 

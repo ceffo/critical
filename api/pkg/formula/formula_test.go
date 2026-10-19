@@ -185,3 +185,15 @@ func TestParseStep(t *testing.T) {
 	_, err = formula.ParseStep("(stepx)d6")
 	require.Error(t, err)
 }
+
+func TestUsesLevel(t *testing.T) {
+	tests := map[string]bool{
+		"1d12": false, "2d4+1": false, "3": false, "max(1d6,2)": false,
+		"level": true, "leveld6": true, "1d6+level": true, "(min(level,10))d6": true, "-level": true,
+	}
+	for src, want := range tests {
+		t.Run(src, func(t *testing.T) {
+			assert.Equal(t, want, must.Do(formula.Parse(src)).UsesLevel())
+		})
+	}
+}

@@ -4,12 +4,15 @@ package buffhdl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/wire"
 )
@@ -31,15 +34,15 @@ type buffSvc interface {
 	ListPowers(ctx context.Context, characterID int64) ([]buffsvc.ItemPower, error)
 	Activate(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) ([]buffsvc.BuffEffect, error)
 	Edit(ctx context.Context, characterID int64, buffID string, e buffsvc.BuffEdit) ([]buffsvc.BuffEffect, error)
-	Dismiss(ctx context.Context, characterID int64, buffID string) ([]buffsvc.BuffEffect, error)
+	Dismiss(ctx context.Context, characterID int64, buffID string, cause spelleffectsvc.EndCause) ([]buffsvc.BuffEffect, buffsvc.EndResult, error)
 	Trigger(ctx context.Context, characterID int64, buffID string) ([]buffsvc.BuffEffect, error)
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	GetInitiative(ctx context.Context, characterID int64) (*buffsvc.Initiative, error)
 	RerollInitiative(ctx context.Context, characterID int64) (buffsvc.Initiative, error)
-	AdvanceRound(ctx context.Context, characterID int64) (active, expired []buffsvc.BuffEffect, round int, initiative buffsvc.Initiative, err error)
+	AdvanceRound(ctx context.Context, characterID int64) (active, expired []buffsvc.BuffEffect, round int, initiative buffsvc.Initiative, end buffsvc.EndResult, err error)
 	ResetRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, round int, err error)
 	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
-	PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []buffsvc.BuffEffect, rounds, round int, err error)
+	PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []buffsvc.BuffEffect, rounds, round int, end buffsvc.EndResult, err error)
 	PreviewPassTime(ctx context.Context, characterID int64, hours float64) (rounds int, expiring []buffsvc.BuffEffect, err error)
 	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
 	ListSaved(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error)
@@ -70,6 +73,12 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
 // renderList writes the effects list: the active buffs with each one's
 // applies flag, and the item powers that are on.
 func renderList(w http.ResponseWriter, r *http.Request, charID CharacterIDFunc, svc buffSvc) error {
+	return renderListEnded(w, r, charID, svc, buffsvc.EndResult{})
+}
+
+// renderListEnded is renderList with what a dismissed row's end effects did
+// (ADR 0004 step 21; omitted when nothing applied).
+func renderListEnded(w http.ResponseWriter, r *http.Request, charID CharacterIDFunc, svc buffSvc, end buffsvc.EndResult) error {
 	buffs, err := svc.ListStatus(r.Context(), charID(r))
 	if err != nil {
 		return err
@@ -78,7 +87,7 @@ func renderList(w http.ResponseWriter, r *http.Request, charID CharacterIDFunc, 
 	if err != nil {
 		return err
 	}
-	render.OK(r.Context(), w, BuffListDTO{Buffs: toStatusDTOs(buffs), Powers: toPowerDTOs(powers)})
+	render.OK(r.Context(), w, BuffListDTO{Buffs: toStatusDTOs(buffs), Powers: toPowerDTOs(powers), Ended: toEndedDTO(end)})
 	return nil
 }
 
@@ -125,13 +134,20 @@ func Edit(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	}
 }
 
-// Dismiss removes the buff with the given id.
+// Dismiss removes the buff with the given id. ?cause=voluntary|dispelled
+// says how it ended when its spell has end effects (ADR 0004 step 21); the
+// answer then carries what they did (ended).
 func Dismiss(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		if _, err := svc.Dismiss(r.Context(), charID(r), chi.URLParam(r, "id")); err != nil {
+		cause, err := spelleffectsvc.ParseEndCause(r.URL.Query().Get("cause"))
+		if err != nil {
+			return fmt.Errorf("%w: %w", domain.ErrInvalidInput, err)
+		}
+		_, end, err := svc.Dismiss(r.Context(), charID(r), chi.URLParam(r, "id"), cause)
+		if err != nil {
 			return err
 		}
-		return renderList(w, r, charID, svc)
+		return renderListEnded(w, r, charID, svc, end)
 	}
 }
 
@@ -211,7 +227,7 @@ func GetRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 // round's initiative.
 func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		active, expired, round, initiative, err := svc.AdvanceRound(r.Context(), charID(r))
+		active, expired, round, initiative, end, err := svc.AdvanceRound(r.Context(), charID(r))
 		if err != nil {
 			return err
 		}
@@ -220,6 +236,7 @@ func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 			ActiveBuffs:  toDTOs(active),
 			ExpiredBuffs: toDTOs(expired),
 			Initiative:   toInitiativeDTO(&initiative),
+			Ended:        toEndedDTO(end),
 		})
 		return nil
 	}
@@ -286,7 +303,7 @@ func PassTime(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil || dto.Hours == nil {
 			return render.BadRequestError("invalid request body")
 		}
-		active, expired, rounds, round, err := svc.PassTime(r.Context(), charID(r), *dto.Hours)
+		active, expired, rounds, round, end, err := svc.PassTime(r.Context(), charID(r), *dto.Hours)
 		if err != nil {
 			return err
 		}
@@ -295,6 +312,7 @@ func PassTime(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 			ActiveBuffs:  toDTOs(active),
 			ExpiredBuffs: toDTOs(expired),
 			RoundsPassed: rounds,
+			Ended:        toEndedDTO(end),
 		})
 		return nil
 	}
@@ -378,6 +396,9 @@ type BuffEffectDTO struct {
 	// for a buff on the character. Response only, like spellId.
 	OnOther bool  `json:"onOther,omitempty"`
 	Applies *bool `json:"applies,omitempty"`
+	// AsksEndCause: the row's spell has end effects, so stopping it sends
+	// a cause (ADR 0004 step 21). Omitted otherwise. Response only.
+	AsksEndCause bool `json:"asksEndCause,omitempty"`
 }
 
 // BuffListDTO is the effects list of GET /api/buffs, also answered by every
@@ -387,6 +408,53 @@ type BuffEffectDTO struct {
 type BuffListDTO struct {
 	Buffs  []BuffEffectDTO `json:"buffs"`
 	Powers []ItemPowerDTO  `json:"powers"`
+	// Ended is what a dismissed row's end effects did (ADR 0004 step 21),
+	// omitted when none applied.
+	Ended *EndedDTO `json:"ended,omitempty"`
+}
+
+// EndedDTO is what the end of one or more rows did (ADR 0004 step 21): each
+// end effect with its dice, and the current HP before and after.
+type EndedDTO struct {
+	Effects  []EndEffectDTO `json:"effects"`
+	HPBefore int            `json:"hpBefore"`
+	HPAfter  int            `json:"hpAfter"`
+}
+
+// EndEffectDTO is one end effect applied, with every die it threw.
+type EndEffectDTO struct {
+	SpellID  string       `json:"spellId"`
+	Buff     string       `json:"buff"`
+	Cause    string       `json:"cause"`
+	Kind     string       `json:"kind"`
+	Dice     string       `json:"dice"`
+	Rolls    []DieRollDTO `json:"rolls"`
+	Constant int          `json:"constant"`
+	Total    int          `json:"total"`
+}
+
+// DieRollDTO is one die thrown.
+type DieRollDTO struct {
+	Sides int `json:"sides"`
+	Value int `json:"value"`
+}
+
+func toEndedDTO(end buffsvc.EndResult) *EndedDTO {
+	if len(end.Effects) == 0 {
+		return nil
+	}
+	out := &EndedDTO{Effects: make([]EndEffectDTO, 0, len(end.Effects)), HPBefore: end.HPBefore, HPAfter: end.HPAfter}
+	for _, e := range end.Effects {
+		rolls := make([]DieRollDTO, 0, len(e.Rolls))
+		for _, d := range e.Rolls {
+			rolls = append(rolls, DieRollDTO(d))
+		}
+		out.Effects = append(out.Effects, EndEffectDTO{
+			SpellID: e.SpellID, Buff: e.Buff, Cause: string(e.Cause), Kind: string(e.Kind),
+			Dice: e.Dice, Rolls: rolls, Constant: e.Constant, Total: e.Total,
+		})
+	}
+	return out
 }
 
 // ItemPowerDTO is an item power that is on: its item's id (the client
@@ -415,6 +483,9 @@ type RoundAdvanceDTO struct {
 	RoundsPassed int `json:"roundsPassed,omitempty"`
 	// Initiative is set by Next Round only: the new round's roll.
 	Initiative *InitiativeDTO `json:"initiative,omitempty"`
+	// Ended is what the expired rows' end effects did (Next Round, pass
+	// time; ADR 0004 step 21), omitted when none applied.
+	Ended *EndedDTO `json:"ended,omitempty"`
 }
 
 func (d BuffEffectDTO) toDomain() buffsvc.BuffEffect {
@@ -446,6 +517,7 @@ func toStatusDTOs(bs []buffsvc.BuffStatus) []BuffEffectDTO {
 		d := toDTO(b.BuffEffect)
 		applies := b.Applies
 		d.Applies = &applies
+		d.AsksEndCause = b.AsksEndCause
 		out = append(out, d)
 	}
 	return out

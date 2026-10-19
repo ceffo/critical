@@ -275,7 +275,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// to the initiative (ADR 0035 item 6): the attack form's weapon, read
 	// from its store and the weapon pieces.
 	weapons := combatsvc.ItemWeapons(bs.Items)
-	bs.Buffs, err = buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, bs.Items, weaponInHand{forms: st.Forms, weapons: weapons})
+	bs.Buffs, err = buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, bs.Items, weaponInHand{forms: st.Forms, weapons: weapons}, effects)
 	if err := bs.add(bs.Buffs, err); err != nil {
 		return nil, err
 	}

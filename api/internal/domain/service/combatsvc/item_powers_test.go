@@ -38,7 +38,7 @@ func withRealBuffs(t *testing.T, buffs []buffsvc.BuffEffect, powers []buffsvc.It
 	dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(buffs, nil)
 	items := buffmocks.NewMockItems(t)
 	items.EXPECT().ItemPowers(mock.Anything, charID).Return(powers, nil)
-	real, err := buffsvc.New(dal, noTx{}, buffmocks.NewMockLog(t), buffmocks.NewMockCharacters(t), buffmocks.NewMockDice(t), items, buffmocks.NewMockWeapons(t))
+	real, err := buffsvc.New(dal, noTx{}, buffmocks.NewMockLog(t), buffmocks.NewMockCharacters(t), buffmocks.NewMockDice(t), items, buffmocks.NewMockWeapons(t), noSpells{})
 	require.NoError(t, err)
 
 	f := newFixture(t)

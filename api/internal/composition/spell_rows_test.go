@@ -50,10 +50,10 @@ func TestBuffs_Step20_RowCountsDownAndUndoRemovesIt(t *testing.T) {
 
 	_, err = tb.bs.Cast.Receive(tb.ctx, tb.id, castsvc.ReceiveRequest{SpellID: "polymorph_self", CasterLevel: 15})
 	require.NoError(t, err)
-	_, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+	_, _, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 	require.NoError(t, err)
 	assert.Equal(t, 299, list()[0].Duration, "Next Round counts it down")
-	_, _, _, _, err = tb.bs.Buffs.PassTime(tb.ctx, tb.id, 1)
+	_, _, _, _, _, err = tb.bs.Buffs.PassTime(tb.ctx, tb.id, 1)
 	require.NoError(t, err)
 	assert.Equal(t, 239, list()[0].Duration, "an hour is 60 rounds")
 
@@ -136,7 +136,7 @@ func TestBuffs_Step20_VoidingARenewalRestoresTheOldRounds(t *testing.T) {
 	_, err := tb.bs.Cast.Receive(tb.ctx, tb.id, castsvc.ReceiveRequest{SpellID: "polymorph_self", CasterLevel: 15})
 	require.NoError(t, err)
 	for range 3 {
-		_, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+		_, _, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 		require.NoError(t, err)
 	}
 	require.Equal(t, 297, list()[0].Duration)

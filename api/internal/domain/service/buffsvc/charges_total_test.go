@@ -93,7 +93,7 @@ func TestBuffs_Step16_ChargesTotal(t *testing.T) {
 		f.state(before, 1)
 		f.records()
 		f.saves([]buffsvc.BuffEffect{old})
-		_, err := f.svc.Dismiss(ctx, charID, "m")
+		_, _, err := f.svc.Dismiss(ctx, charID, "m", "")
 		require.NoError(t, err)
 
 		f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, before).Return(nil).Once()

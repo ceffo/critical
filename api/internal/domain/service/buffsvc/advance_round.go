@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 // AdvanceRound increments the round counter and counts timed buffs down,
@@ -13,7 +14,7 @@ import (
 // after the advance (ADR 0013 steps 1 and 2). Both entries are one action-log
 // transaction (ADR 0018 step 1), so one undo pops the advance and its
 // initiative together (step 2).
-func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, expired []BuffEffect, round int, initiative Initiative, err error) {
+func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, expired []BuffEffect, round int, initiative Initiative, end EndResult, err error) {
 	var ch change
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
@@ -29,6 +30,10 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, 
 				// The previous round's initiative ends here; the new one is
 				// its own entry (ADR 0013 step 2).
 				clearInitiative: true,
+				// ADR 0004 step 21: the rows that run out apply their
+				// "expired" end effects in this entry.
+				ended:    expired,
+				endCause: spelleffectsvc.EndExpired,
 			}, nil
 		})
 		if err != nil {
@@ -44,7 +49,7 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, 
 		return err
 	})
 	if err != nil {
-		return nil, nil, 0, Initiative{}, err
+		return nil, nil, 0, Initiative{}, EndResult{}, err
 	}
-	return active, expired, *ch.round, initiative, nil
+	return active, expired, *ch.round, initiative, ch.end, nil
 }

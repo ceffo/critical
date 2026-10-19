@@ -157,6 +157,15 @@ type entryDTO struct {
 	GrantSlots  *grantSlotsDTO            `json:"grant_slots"`
 	ConsumeItem *consumeItemDTO           `json:"consume_item"`
 	AttackRoll  bool                      `json:"attack_roll"`
+	EndEffects  []endEffectDTO            `json:"end_effects"`
+}
+
+// endEffectDTO is one effect applied when the spell's row ends (ADR 0004
+// step 21): its kind, its dice and the causes that trigger it.
+type endEffectDTO struct {
+	Kind string     `json:"kind"`
+	Dice flexString `json:"dice"`
+	On   []string   `json:"on"`
 }
 
 type grantSlotsDTO struct {
@@ -310,7 +319,31 @@ func (d entryDTO) toDomain() (spelleffectsvc.Entry, error) {
 	if e.Buff, err = d.buffToDomain(); err != nil {
 		return e, err
 	}
+	if e.EndEffects, err = endEffectsToDomain(d.EndEffects); err != nil {
+		return e, err
+	}
 	return e, nil
+}
+
+// endEffectsToDomain maps the end effects; an empty "end_effects": [] stays
+// an empty, non-nil list: validation refuses it.
+func endEffectsToDomain(effects []endEffectDTO) ([]spelleffectsvc.EndEffect, error) {
+	if effects == nil {
+		return nil, nil
+	}
+	out := make([]spelleffectsvc.EndEffect, 0, len(effects))
+	for i, x := range effects {
+		dice, err := parseFormula(fmt.Sprintf("end_effects[%d].dice", i), x.Dice)
+		if err != nil {
+			return nil, err
+		}
+		on := make([]spelleffectsvc.EndCause, 0, len(x.On))
+		for _, c := range x.On {
+			on = append(on, spelleffectsvc.EndCause(c))
+		}
+		out = append(out, spelleffectsvc.EndEffect{Kind: spelleffectsvc.EndKind(x.Kind), Dice: dice, On: on})
+	}
+	return out, nil
 }
 
 // modesToDomain maps a list of modes; field is its JSON path in errors. An

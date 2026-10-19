@@ -227,7 +227,7 @@ var endpoints = []endpoint{
 		m.buffs.On("Activate", anyArgs(3)...).Return(nil, err)
 	}},
 	{"DELETE buffs/{id}", "DELETE", "/api/buffs/b1", "", func(m *mocksSet, err error) {
-		m.buffs.On("Dismiss", anyArgs(3)...).Return(nil, err)
+		m.buffs.On("Dismiss", anyArgs(4)...).Return(nil, buffsvc.EndResult{}, err)
 	}},
 	{"POST buffs/{id}/trigger", "POST", "/api/buffs/b1/trigger", "", func(m *mocksSet, err error) {
 		m.buffs.On("Trigger", anyArgs(3)...).Return(nil, err)
@@ -236,7 +236,7 @@ var endpoints = []endpoint{
 		m.buffs.On("GetRound", anyArgs(2)...).Return(0, err)
 	}},
 	{"POST round/advance", "POST", "/api/round/advance", "", func(m *mocksSet, err error) {
-		m.buffs.On("AdvanceRound", anyArgs(2)...).Return(nil, nil, 0, buffsvc.Initiative{}, err)
+		m.buffs.On("AdvanceRound", anyArgs(2)...).Return(nil, nil, 0, buffsvc.Initiative{}, buffsvc.EndResult{}, err)
 	}},
 	{"POST round/initiative/reroll", "POST", "/api/round/initiative/reroll", "", func(m *mocksSet, err error) {
 		m.buffs.On("RerollInitiative", anyArgs(2)...).Return(buffsvc.Initiative{}, err)
@@ -248,7 +248,7 @@ var endpoints = []endpoint{
 		m.buffs.On("SetRound", anyArgs(3)...).Return(nil, 0, err)
 	}},
 	{"POST round/pass-time", "POST", "/api/round/pass-time", `{"hours":1}`, func(m *mocksSet, err error) {
-		m.buffs.On("PassTime", anyArgs(3)...).Return(nil, nil, 0, 0, err)
+		m.buffs.On("PassTime", anyArgs(3)...).Return(nil, nil, 0, 0, buffsvc.EndResult{}, err)
 	}},
 	{"GET spells/slots", "GET", "/api/spells/slots", "", func(m *mocksSet, err error) {
 		m.spell.On("GetSlots", anyArgs(2)...).Return(nil, err)

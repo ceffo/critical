@@ -267,7 +267,10 @@
     "deleteSaved": "Delete saved effect {{name}}",
     "roundsWithTime": "{{rounds}} · {{time}}",
     "hoursMinutes": "{{h}} h {{mm}}",
-    "hoursOnly": "{{h}} h"
+    "hoursOnly": "{{h}} h",
+    "endBy": "Ended by me",
+    "endDispelled": "Dispelled / slain",
+    "endHint": "How did {{name}} end?"
   },
   "actions": {
     "label": "Actions",
@@ -1276,7 +1279,16 @@
       "endCombat": "Combat ended: round {{from}} → {{to}}",
       "setRound": "Round set: {{from}} → {{to}}",
       "expired": "— expired: {{names}}",
-      "passTime": "Time passed: {{hours, number}} h ({{rounds}}), round {{from}} → {{to}}"
+      "passTime": "Time passed: {{hours, number}} h ({{rounds}}), round {{from}} → {{to}}",
+      "dismissVoluntary": "Ended {{buff}}",
+      "dismissDispelled": "{{buff}} dispelled or slain",
+      "endHeal": "regains {{total}} HP ({{dice}}: {{rolls}})",
+      "endHp": "{{heals}}, HP {{before}} → {{after}}",
+      "endHealNamed": "{{buff}} regains {{total}} HP ({{dice}}: {{rolls}})",
+      "endCapped": "rolls {{dice}}: {{rolls}}, no HP regained",
+      "endCappedNamed": "{{buff}} rolls {{dice}}: {{rolls}}, no HP regained",
+      "withEnd": "{{text}}: {{end}}",
+      "withEndAfter": "{{text}}. {{end}}"
     },
     "attack": {
       "miss": "{{weapon}} vs AC {{ac}}: miss",
@@ -1863,7 +1875,8 @@
     "spellbook_level_full": "The spellbook already holds the most spells of that level this Intelligence allows.",
     "spell_learn_failed_at_level": "Failed at this level: try again at the next level.",
     "cannot_turn_undead": "This priest cannot turn that undead yet.",
-    "class_cannot_turn": "This class does not turn undead."
+    "class_cannot_turn": "This class does not turn undead.",
+    "end_cause_required": "This spell does something when it ends: say whether you ended it or it was dispelled."
   },
   "lastShort": {
     "attack": "Attack",

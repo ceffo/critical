@@ -63,7 +63,7 @@ func TestBuffs_Step20_OnOtherCountsInNoAggregate(t *testing.T) {
 	t.Run("initiative", func(t *testing.T) {
 		f := newFixture(t)
 		advanceWith(f, []buffsvc.BuffEffect{everyEffect}, nil, nil, 4)
-		_, _, _, got, err := f.svc.AdvanceRound(context.Background(), charID)
+		_, _, _, got, _, err := f.svc.AdvanceRound(context.Background(), charID)
 		require.NoError(t, err)
 		assert.Nil(t, got.Modifiers, "no initiative effect")
 		assert.Equal(t, 4, got.Total())
@@ -118,7 +118,7 @@ func TestBuffs_Step20_OnOtherRoundTrips(t *testing.T) {
 		f.state(before, 3)
 		f.records()
 		f.saves([]buffsvc.BuffEffect{before[0]})
-		_, err := f.svc.Dismiss(context.Background(), charID, "h")
+		_, _, err := f.svc.Dismiss(context.Background(), charID, "h", "")
 		require.NoError(t, err)
 		assert.Equal(t, true, decodeSnap(t, f.entries[0].Snapshots[0].Before)[0]["on_other"])
 		assert.NotContains(t, decodeSnap(t, f.entries[0].Snapshots[0].Before)[1], "on_other", "absent for a buff on him")

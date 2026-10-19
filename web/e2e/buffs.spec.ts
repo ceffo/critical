@@ -1,6 +1,9 @@
 import { test, expect, snap } from "./fixtures";
 import {
   addBuff,
+  apiCall,
+  combatLog,
+  currentHp,
   buffBadge,
   currentRound,
   effectiveStr,
@@ -10,6 +13,7 @@ import {
   nextRound,
   openAddEffect,
   openDashboard,
+  reloadSettled,
   undoEntry,
   undoNextRound,
   roundGroup,
@@ -280,4 +284,77 @@ test("a saved buff is added from the Saved effect tab, deleting it leaves active
   await expect(again.getByTestId("saved-buff")).toHaveCount(1);
 
   await expectNoReload(page);
+});
+
+// ADR 0004 step 21, the one browser flow: the stop of a row whose spell has end effects (Polymorph
+// Self) offers the two causes; "ended by me" heals the rolled d12, shown in the notice and the
+// journal, in French. What only a browser proves: the menu's wiring and the words on screen; the
+// rules (each cause and action, the cap, undo) are Go tests.
+test("stopping Polymorph Self asks how it ended; ended by me heals the d12 (French)", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "critical.settings.v1",
+      JSON.stringify({ lang: "fr", mode: "system", amb: "arcane" }),
+    ),
+  );
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "POST", "/api/hp/event", {
+      delta: -12,
+      source: "e2e goblin",
+    }),
+  ).toBe(true);
+  expect(
+    await apiCall(page, "POST", "/api/spells/receive", {
+      spellId: "polymorph_self",
+      casterLevel: 15,
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
+  const before = await currentHp(page);
+
+  const row = buffBadge(page, "Polymorph Self");
+  await expect(row).toContainText("Métamorphose");
+  await row.getByTestId("buff-stop").click();
+  await expect(page.getByTestId("buff-end-voluntary")).toHaveText(
+    "Terminé par moi",
+  );
+  await expect(page.getByTestId("buff-end-dispelled")).toHaveText(
+    "Dissipé / tué",
+  );
+  for (const [w, h] of [
+    [1920, 1080],
+    [2560, 1440],
+  ]) {
+    await page.setViewportSize({ width: w, height: h });
+    await snap(page, `end-cause-menu-${w}`);
+  }
+
+  await page.getByTestId("buff-end-voluntary").click();
+  await expect(row).toHaveCount(0);
+  await expect(page.getByTestId("notice-ended")).toHaveText(
+    /^Métamorphose regagne (\d+) PV \(1d12 : \1\), PV \d+ → \d+$/,
+  );
+  const healed = await currentHp(page);
+  expect(healed).toBeGreaterThan(before);
+  expect(healed - before).toBeLessThanOrEqual(12);
+  await expect(
+    combatLog(page)
+      .getByRole("listitem")
+      .filter({
+        hasText: new RegExp(
+          `^.*Métamorphose : fin par moi, regagne \\d+ PV \\(1d12 : \\d+\\), PV ${before} → ${healed}`,
+        ),
+      }),
+  ).toBeVisible();
+  for (const [w, h] of [
+    [1920, 1080],
+    [2560, 1440],
+  ]) {
+    await page.setViewportSize({ width: w, height: h });
+    await snap(page, `end-cause-journal-${w}`);
+  }
 });

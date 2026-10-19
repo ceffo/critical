@@ -233,7 +233,7 @@ func TestRestorers_Step26_2_OldWeaponEntriesPopIntoThePiece(t *testing.T) {
 		f := deps(t)
 		f.Catalogue = catalogueWeapons
 		svc, _ := itemsvc.New(dal, f.Deps)
-		return svc.Restorers()[itemsvc.StateKeyWeapons].Restore(context.Background(), 1, state)
+		return svc.Module().Restorer(itemsvc.StateKeyWeapons).Restore(context.Background(), 1, state)
 	}
 	t.Run("edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)

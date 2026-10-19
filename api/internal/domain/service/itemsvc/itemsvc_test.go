@@ -155,7 +155,7 @@ func TestRestorers_WriteTheBeforeCountsBack(t *testing.T) {
 	require.NoError(t, err)
 
 	dal.EXPECT().SetCount(mock.Anything, int64(1), "arrows_plus3", 1).Return(nil).Once()
-	r := svc.Restorers()[itemsvc.StateKeyItems]
+	r := svc.Module().Restorer(itemsvc.StateKeyItems)
 	require.NotNil(t, r)
 	require.NoError(t, r.Restore(context.Background(), 1, snap.Before))
 }
@@ -171,7 +171,7 @@ func TestRestorers_PutBackARemovedItem(t *testing.T) {
 	back := wand
 	back.Count = 1
 	dal.EXPECT().Insert(mock.Anything, int64(1), back).Return(nil).Once()
-	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, snap.Before))
+	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snap.Before))
 }
 
 // A count-only state (a use that kept the item) cannot recreate a missing item.
@@ -179,7 +179,7 @@ func TestRestorers_MissingItemWithoutDataFails(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
 	dal.EXPECT().SetCount(mock.Anything, int64(1), "x", 2).Return(fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
-	err := svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, snaptest.EnvID("x", `{"count":2}`))
+	err := svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snaptest.EnvID("x", `{"count":2}`))
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
@@ -189,7 +189,7 @@ func TestRestorers_RejectBadSnapshots(t *testing.T) {
 	} {
 		dal := mocks.NewMockDAL(t) // nothing is written
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
-		err := svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, state)
+		err := svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, state)
 		assert.Error(t, err, string(state))
 	}
 }

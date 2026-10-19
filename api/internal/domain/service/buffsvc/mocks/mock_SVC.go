@@ -10,6 +10,8 @@ import (
 
 	context "context"
 
+	domain "github.com/ceffo/critical/api/internal/domain"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -1032,6 +1034,51 @@ func (_c *MockSVC_ListStatus_Call) RunAndReturn(run func(context.Context, int64)
 	return _c
 }
 
+// Module provides a mock function with no fields
+func (_m *MockSVC) Module() domain.Module {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Module")
+	}
+
+	var r0 domain.Module
+	if rf, ok := ret.Get(0).(func() domain.Module); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(domain.Module)
+	}
+
+	return r0
+}
+
+// MockSVC_Module_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Module'
+type MockSVC_Module_Call struct {
+	*mock.Call
+}
+
+// Module is a helper method to define mock.On call
+func (_e *MockSVC_Expecter) Module() *MockSVC_Module_Call {
+	return &MockSVC_Module_Call{Call: _e.mock.On("Module")}
+}
+
+func (_c *MockSVC_Module_Call) Run(run func()) *MockSVC_Module_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockSVC_Module_Call) Return(_a0 domain.Module) *MockSVC_Module_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_Module_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PassTime provides a mock function with given fields: ctx, characterID, hours
 func (_m *MockSVC) PassTime(ctx context.Context, characterID int64, hours float64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, int, error) {
 	ret := _m.Called(ctx, characterID, hours)
@@ -1301,53 +1348,6 @@ func (_c *MockSVC_ResetRound_Call) Return(active []buffsvc.BuffEffect, round int
 }
 
 func (_c *MockSVC_ResetRound_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.BuffEffect, int, error)) *MockSVC_ResetRound_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Restorers provides a mock function with no fields
-func (_m *MockSVC) Restorers() map[string]actionlog.Restorer {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Restorers")
-	}
-
-	var r0 map[string]actionlog.Restorer
-	if rf, ok := ret.Get(0).(func() map[string]actionlog.Restorer); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]actionlog.Restorer)
-		}
-	}
-
-	return r0
-}
-
-// MockSVC_Restorers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Restorers'
-type MockSVC_Restorers_Call struct {
-	*mock.Call
-}
-
-// Restorers is a helper method to define mock.On call
-func (_e *MockSVC_Expecter) Restorers() *MockSVC_Restorers_Call {
-	return &MockSVC_Restorers_Call{Call: _e.mock.On("Restorers")}
-}
-
-func (_c *MockSVC_Restorers_Call) Run(run func()) *MockSVC_Restorers_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockSVC_Restorers_Call) Return(_a0 map[string]actionlog.Restorer) *MockSVC_Restorers_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockSVC_Restorers_Call) RunAndReturn(run func() map[string]actionlog.Restorer) *MockSVC_Restorers_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -328,9 +328,9 @@ func TestRestore_WritesTheSnapshotBack(t *testing.T) {
 	}).Return(nil)
 	raw, err := json.Marshal([]spellsvc.SpellSlot{{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true}})
 	require.NoError(t, err)
-	require.NoError(t, f.svc.Restore(context.Background(), 1, snaptest.Env(string(raw))))
+	require.NoError(t, f.svc.Module().Restorer(prepsvc.StateKey).Restore(context.Background(), 1, snaptest.Env(string(raw))))
 
-	require.Error(t, f.svc.Restore(context.Background(), 1, json.RawMessage(`{`)))
+	require.Error(t, f.svc.Module().Restorer(prepsvc.StateKey).Restore(context.Background(), 1, json.RawMessage(`{`)))
 }
 
 // ADR 0008 step 9: extra slots are not part of the preparation, so

@@ -407,7 +407,7 @@ func TestChange_ABardsSkillArmourIsSetAndLogged(t *testing.T) {
 func TestRestorers_TheSkillArmourSnapshotIsWrittenBack(t *testing.T) {
 	e := newEnv(t)
 	e.owners.EXPECT().RestoreSkillArmor(mock.Anything, int64(5), "none").Return(nil).Once()
-	r := e.svc.Restorers()[charactersvc.ArmorStateKey]
+	r := e.svc.Module().Restorer(charactersvc.ArmorStateKey)
 	require.NotNil(t, r)
 	require.NoError(t, r.Restore(context.Background(), 5, snaptest.Env(`{"armor":"none"}`)))
 }

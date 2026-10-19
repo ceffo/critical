@@ -2,8 +2,8 @@
 // spellbook, the spells to have ready today, within the PHB Table 32 limit per
 // spell level for the character's level. The preparation is stored as the
 // spell slot list (spellsvc owns casting and the used flags), changed and
-// recorded in the action log in one transaction, and voidable: prepsvc is the
-// Restorer of the StateKey snapshots.
+// recorded in the action log in one transaction, and voidable: prepsvc's
+// module declares the codec of the StateKey snapshots.
 package prepsvc
 
 import (
@@ -83,7 +83,6 @@ type Info struct {
 // SVC is the driver port.
 type SVC interface {
 	domain.Service
-	actionlog.Restorer
 
 	// Info returns the spellbook and the per-level limits for the character.
 	Info(ctx context.Context, characterID int64) (Info, error)
@@ -290,11 +289,14 @@ func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []str
 	return out, nil
 }
 
-// Restore writes a snapshotted slot list back (void of a preparation).
-func (s *service) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
-	return slotsSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, slots []spellsvc.SpellSlot) error {
-		return s.Slots.SaveSlots(ctx, characterID, slots)
-	}, nil).Restore(ctx, characterID, state)
+// Module declares the codec that writes a snapshotted slot list back (undo
+// of a preparation, a cast or a rest; its redo).
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "prepsvc", Codecs: []actionlog.Codec{
+		slotsSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, slots []spellsvc.SpellSlot) error {
+			return s.Slots.SaveSlots(ctx, characterID, slots)
+		}, nil),
+	}}
 }
 
 // carryUsed builds the new slot list; a spell that was already prepared keeps
@@ -356,7 +358,7 @@ func prepRecordOf(picked []SpellbookEntry) prepRecord {
 var slotsSnaps = actionlog.NewSnapshotter[[]spellsvc.SpellSlot](StateKey)
 
 // SlotsSnapshot is the StateKey snapshot of a slot-list change, in the
-// encoding Restore reads. Other services that change the slot list (a spell
+// encoding its codec reads. Other services that change the slot list (a spell
 // cast) record it so voiding their entry restores the slots.
 func SlotsSnapshot(before, after []spellsvc.SpellSlot) (actionlog.Snapshot, error) {
 	if before == nil {

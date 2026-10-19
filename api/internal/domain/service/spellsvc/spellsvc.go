@@ -79,3 +79,6 @@ func NewWithConfig(_ *Config, dal DAL, reader Reader, book Spellbook) (SVC, erro
 
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
+
+// Module declares no codec: spellsvc writes no logged state.
+func (s *service) Module() domain.Module { return domain.Module{Name: "spellsvc"} }

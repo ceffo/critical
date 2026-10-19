@@ -44,9 +44,6 @@ type SVC interface {
 	// *domain.FieldError on "die" for an entered die that is out of range or
 	// not wanted (a fixed gain).
 	Roll(ctx context.Context, characterID int64, in RollInput) (*Result, error)
-	// Restorers writes the realized level and max HP back when a roll's entry is popped (and
-	// again when it is redone), keyed by StateKey.
-	Restorers() map[string]actionlog.Restorer
 }
 
 // RollInput is one level-up roll.

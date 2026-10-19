@@ -44,7 +44,7 @@ func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment)
 	if err != nil {
 		return nil, err
 	}
-	return s.views.EntryPtr(out), nil
+	return s.payloadViews().EntryPtr(out), nil
 }
 
 // AmendLatest corrects entry id after the roll as its own step on the action
@@ -101,7 +101,7 @@ func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind a
 	if err != nil {
 		return nil, err
 	}
-	return s.views.EntryPtr(out), nil
+	return s.payloadViews().EntryPtr(out), nil
 }
 
 // latestRoll is the id of the newest entry of any roll kind (0: none).

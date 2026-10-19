@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
@@ -54,11 +55,11 @@ func entrySnapshot(id int64, before, after *Entry) (actionlog.Snapshot, error) {
 	return xpSnaps.Snapshot(strconv.FormatInt(id, 10), toSnap(before), toSnap(after))
 }
 
-// Restorers writes an XP snapshot back (registered for the StateKeyXP
+// Module declares the codec that writes an XP snapshot back (the StateKeyXP
 // family). It runs inside the undo's transaction.
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		StateKeyXP: xpSnaps.Restorer(func(ctx context.Context, characterID int64, key string, c snapEntry) error {
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "xpsvc", Codecs: []actionlog.Codec{
+		xpSnaps.Restorer(func(ctx context.Context, characterID int64, key string, c snapEntry) error {
 			id, err := entryID(key)
 			if err != nil {
 				return err
@@ -75,7 +76,7 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 			}
 			return s.dal.Delete(ctx, characterID, id)
 		}),
-	}
+	}}
 }
 
 // entryID reads an XP snapshot's id.

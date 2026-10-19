@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
@@ -93,12 +94,12 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, points map[s
 	return out, nil
 }
 
-// Restorers writes a thief's or a bard's skill points back: undo writes the spend's
-// "before", redo its "after" (ADR 0019). It runs inside the undo's
-// transaction.
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		PointsStateKey: pointsSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st pointsState) error {
+// Module declares the codec that writes a thief's or a bard's skill points
+// back: undo writes the spend's "before", redo its "after" (ADR 0019). It runs
+// inside the undo's transaction.
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "skillsvc", Codecs: []actionlog.Codec{
+		pointsSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st pointsState) error {
 			if len(st.Points) == 0 {
 				st.Points = nil
 			}
@@ -107,5 +108,5 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 			}
 			return nil
 		}, nil),
-	}
+	}}
 }

@@ -8,8 +8,11 @@ package domain
 import "context"
 
 // Service is the uniform shape every business service exposes so the
-// composition root can iterate a []Service to shut everything down.
+// composition root can iterate a []Service: it registers each one's module
+// on the action log, and shuts everything down.
 type Service interface {
 	Health(ctx context.Context) error
 	Close(ctx context.Context) error
+	// Module is what the service declares to the composition root.
+	Module() Module
 }

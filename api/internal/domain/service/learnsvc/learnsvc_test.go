@@ -253,13 +253,13 @@ func TestRestore_Step20_3_UndoLiftsTheBlock(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			tc.expect(f)
-			r := f.svc.Restorers()[learnsvc.StateFamily]
+			r := f.svc.Module().Restorer(learnsvc.StateFamily)
 			require.NotNil(t, r)
 			require.NoError(t, r.Restore(context.Background(), charID, snaptest.EnvID("new3", tc.state)))
 		})
 	}
 	f := newFixture(t)
-	require.Error(t, f.svc.Restorers()[learnsvc.StateFamily].Restore(context.Background(), charID, snaptest.Env(`{"known":true}`)),
+	require.Error(t, f.svc.Module().Restorer(learnsvc.StateFamily).Restore(context.Background(), charID, snaptest.Env(`{"known":true}`)),
 		"a snapshot that names no spell")
 }
 

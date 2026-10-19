@@ -60,9 +60,6 @@ type SVC interface {
 	// CreationOptions are the classes a new character may have, the races
 	// each admits and the entered values' ranges.
 	CreationOptions(ctx context.Context) (CreationOptions, error)
-	// Restorers are the state keys Change snapshots (a thief's or bard's armour),
-	// with the writers an undo or a redo calls.
-	Restorers() map[string]actionlog.Restorer
 }
 
 // Reader is the read-side driven port. Per clean_architecture.md §5.4, reads

@@ -5,6 +5,7 @@ package actionlogsvc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -51,11 +52,17 @@ type SVC interface {
 	// and returns the new HP state. The cap and floor apply as in Record.
 	AppendHPEvent(ctx context.Context, characterID int64, delta int, source string) (*actionlog.HPState, error)
 
-	// RegisterRestorer binds the service that owns stateKey, so voiding an
-	// entry with a snapshot under that key can write the "before" state back.
-	// Called by the composition root.
-	RegisterRestorer(stateKey string, r actionlog.Restorer)
+	// Register binds a service's module: its codecs, so voiding an entry
+	// with a snapshot under one of their families writes the "before" state
+	// back (and a redo the "after"), and its payload views, applied to every
+	// entry the log hands out. A family or an entry kind another module
+	// claimed, or a codec that cannot restore, is refused and nothing of the
+	// module is bound. Called by the composition root, before any request.
+	Register(m domain.Module) error
 }
+
+// ErrClaimed is a state-key family or an entry kind two modules claim.
+var ErrClaimed = errors.New("claimed by two modules")
 
 // DAL is the storage port. Every method must use the transaction carried by
 // ctx when there is one (see domain.TxRunner).
@@ -108,28 +115,31 @@ type service struct {
 	tx     domain.TxRunner
 	rounds Rounds
 	maxHP  MaxHP
+	mu     sync.RWMutex
+	// restorers are the registered codecs by family, owners the module that
+	// claimed each family and each kind's view.
+	restorers map[string]actionlog.Restorer
+	owners    map[string]string
 	// views fill, on every read the service hands out, the payload fields an
 	// entry's kind gained after it was logged. Internal reads (amend, undo,
 	// redo logic) use the stored payload.
-	views actionlog.PayloadViews
-
-	mu        sync.RWMutex
-	restorers map[string]actionlog.Restorer
+	views     actionlog.PayloadViews
+	viewOwner map[actionlog.Kind]string
 }
 
-// New constructs the service from environment-driven config. views (nil: none)
-// are applied to every entry the service returns, so no reader serves an entry
-// in the shape it was logged in.
-func New(dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP, views actionlog.PayloadViews) (SVC, error) {
+// New constructs the service from environment-driven config. The payload
+// views registered modules declare (Register) are applied to every entry the
+// service returns, so no reader serves an entry in the shape it was logged in.
+func New(dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: parse env: %w", err)
 	}
-	return NewWithConfig(cfg, dal, tx, rounds, maxHP, views)
+	return NewWithConfig(cfg, dal, tx, rounds, maxHP)
 }
 
 // NewWithConfig is the test-friendly constructor.
-func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP, views actionlog.PayloadViews) (SVC, error) {
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
 	switch {
 	case cfg == nil:
 		return nil, fmt.Errorf("actionlogsvc: nil config")
@@ -145,25 +155,66 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxH
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: invalid config: %w", err)
 	}
-	return &service{cfg: cfg, dal: dal, tx: Transactions(tx), rounds: rounds, maxHP: maxHP, views: views, restorers: map[string]actionlog.Restorer{}}, nil
+	return &service{
+		cfg: cfg, dal: dal, tx: Transactions(tx), rounds: rounds, maxHP: maxHP,
+		restorers: map[string]actionlog.Restorer{}, owners: map[string]string{},
+		views: actionlog.PayloadViews{}, viewOwner: map[actionlog.Kind]string{},
+	}, nil
 }
 
-func (s *service) RegisterRestorer(stateKey string, r actionlog.Restorer) {
+func (s *service) Register(m domain.Module) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.restorers[stateKey] = r
+	families := map[string]bool{}
+	for _, c := range m.Codecs {
+		family := c.Family()
+		switch {
+		case family == "" || actionlog.Family(family) != family:
+			return fmt.Errorf("module %s: state-key family %q is not a family", m.Name, family)
+		case families[family]:
+			return fmt.Errorf("state-key family %q: %w (%s twice)", family, ErrClaimed, m.Name)
+		}
+		if owner, ok := s.owners[family]; ok {
+			return fmt.Errorf("state-key family %q: %w (%s and %s)", family, ErrClaimed, owner, m.Name)
+		}
+		if err := c.CanRestore(); err != nil {
+			return fmt.Errorf("module %s: %w", m.Name, err)
+		}
+		families[family] = true
+	}
+	for kind := range m.Views {
+		if owner, ok := s.viewOwner[kind]; ok {
+			return fmt.Errorf("payload view of %q: %w (%s and %s)", kind, ErrClaimed, owner, m.Name)
+		}
+	}
+	for _, c := range m.Codecs {
+		s.restorers[c.Family()] = c
+		s.owners[c.Family()] = m.Name
+	}
+	for kind, v := range m.Views {
+		s.views[kind] = v
+		s.viewOwner[kind] = m.Name
+	}
+	return nil
 }
 
-// restorer is the Restorer registered for stateKey, else the one registered
-// for its family ("items" restores "items:arrows_plus3").
+// payloadViews are the registered payload views.
+func (s *service) payloadViews() actionlog.PayloadViews {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.views
+}
+
+// restorer is the codec registered for stateKey's family ("items" restores
+// "items:arrows_plus3").
 func (s *service) restorer(stateKey string) actionlog.Restorer {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if r, ok := s.restorers[stateKey]; ok {
-		return r
-	}
 	return s.restorers[actionlog.Family(stateKey)]
 }
 
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
+
+// Module is the log's own: it snapshots nothing.
+func (s *service) Module() domain.Module { return domain.Module{Name: "actionlogsvc"} }

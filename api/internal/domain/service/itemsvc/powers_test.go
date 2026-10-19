@@ -111,7 +111,7 @@ func TestItemPowers_Step15_SnapshotCarriesThePowers(t *testing.T) {
 	rsvc, _ := itemsvc.New(restore, deps(t).Deps)
 	restore.EXPECT().Update(mock.Anything, int64(1), gem).Return(itemsvc.ErrItemNotFound).Once()
 	restore.EXPECT().Insert(mock.Anything, int64(1), gem).Return(nil).Once()
-	require.NoError(t, rsvc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, got.Snapshots[0].Before))
+	require.NoError(t, rsvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
 }
 
 // ADR 0016 step 15: an edit never sets powers (the patch has no field for
@@ -154,7 +154,7 @@ func TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers(t *testing.T) {
 	want := gem
 	want.Name, want.Notes = localized.Of("Power Gem: Dispel Magic"), "old"
 	dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
-	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, old))
+	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, old))
 }
 
 // The stored encoding round-trips and refuses an unknown key (a typo in the

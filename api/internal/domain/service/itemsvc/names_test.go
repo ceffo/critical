@@ -118,7 +118,7 @@ func TestCreate_Step11_NameInThePlayersLanguage(t *testing.T) {
 func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) {
 	restore := func(dal *mocks.MockDAL, state string) error {
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
-		return svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, snaptest.EnvID("wand_lightning", state))
+		return svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snaptest.EnvID("wand_lightning", state))
 	}
 	const tail = `"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}`
 	t.Run("partial name", func(t *testing.T) {

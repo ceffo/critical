@@ -181,3 +181,32 @@ func TestEncodeState_RefusesAnEmptyState(t *testing.T) {
 	_, err := actionlog.EncodeState("x", nil)
 	require.Error(t, err)
 }
+
+// A codec declared to the log must write back every state it decodes: one
+// without a write, or whose things may be absent without a remove, is
+// refused when it is registered (domain.Module), not at the player's undo.
+func TestSnapshotter_CanRestoreOnlyWithItsWriteAndRemove(t *testing.T) {
+	var calls []call
+	write, remove := recorder(&calls, nil)
+	tests := []struct {
+		name  string
+		codec actionlog.Codec
+		ok    bool
+	}{
+		{"always present, with a write", actionlog.NewSnapshotter[thing]("things").Restorer(write, nil), true},
+		{"may be absent, with a write and a remove", actionlog.NewSnapshotter[thing]("things").MayBeAbsent().Restorer(write, remove), true},
+		{"no restorer", actionlog.NewSnapshotter[thing]("things"), false},
+		{"no write", actionlog.NewSnapshotter[thing]("things").MayBeAbsent().Restorer(nil, remove), false},
+		{"may be absent, no remove", actionlog.NewSnapshotter[thing]("things").MayBeAbsent().Restorer(write, nil), false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.codec.CanRestore()
+			if tc.ok {
+				assert.NoError(t, err)
+				return
+			}
+			assert.ErrorIs(t, err, actionlog.ErrNoRestorer)
+		})
+	}
+}

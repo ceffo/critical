@@ -117,6 +117,33 @@ func (s Snapshotter[T]) Restorer(write WriteFunc[T], remove RemoveFunc) Snapshot
 // Family is the state-key family the codec is registered for.
 func (s Snapshotter[T]) Family() string { return s.family }
 
+// Codec is a family's Snapshotter with its restorer, as a service's module
+// declares it to the log (domain.Module): it restores every key of Family()
+// (and a Snapshotter replays them too: Replayer).
+type Codec interface {
+	Restorer
+	Family() string
+	// CanRestore is nil when the codec can write back every state it
+	// decodes: it has a write, and a remove when its things may be absent.
+	CanRestore() error
+}
+
+// CanRestore is nil when s was given a write (Restorer), and a remove when
+// its things may be absent (MayBeAbsent).
+func (s Snapshotter[T]) CanRestore() error {
+	switch {
+	case s.write == nil:
+		return fmt.Errorf("%w: %s has no write", ErrNoRestorer, s.family)
+	case s.absent && s.remove == nil:
+		return fmt.Errorf("%w: %s may be absent but has no remove", ErrNoRestorer, s.family)
+	}
+	return nil
+}
+
+// ErrNoRestorer is a codec declared without the functions that write its
+// states back.
+var ErrNoRestorer = errors.New("snapshot codec cannot restore")
+
 // Key is the state key of thing id: the family, or "family:id".
 func (s Snapshotter[T]) Key(id string) string {
 	if id == "" {

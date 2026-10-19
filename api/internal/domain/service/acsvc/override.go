@@ -132,15 +132,16 @@ func (s *service) record(ctx context.Context, characterID int64, before, after *
 	return nil
 }
 
-// Restorers writes the override back: undo writes the entry's "before",
-// redo its "after" (ADR 0019). It runs inside the undo's transaction.
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		StateKey: overrideSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st overrideState) error {
+// Module declares the codec that writes the override back: undo writes the
+// entry's "before", redo its "after" (ADR 0019). It runs inside the undo's
+// transaction.
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "acsvc", Codecs: []actionlog.Codec{
+		overrideSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st overrideState) error {
 			if err := s.overrides.SetACOverride(ctx, characterID, fromJSON(st.Override)); err != nil {
 				return fmt.Errorf("restore ac override: %w", err)
 			}
 			return nil
 		}, nil),
-	}
+	}}
 }

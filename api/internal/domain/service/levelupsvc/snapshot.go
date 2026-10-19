@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
@@ -61,13 +62,13 @@ func (s *service) record(ctx context.Context, characterID int64, r Result, befor
 	return nil
 }
 
-// Restorers writes a realized level snapshot back: the undo of a roll gives
-// the realized level and its max HP back, so the level-up is pending again
-// and the level's benefits go with it; a redo writes the roll's "after" (ADR
-// 0019). It runs inside the undo's transaction.
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		StateKey: realizedSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, r realized) error {
+// Module declares the codec that writes a realized level snapshot back: the
+// undo of a roll gives the realized level and its max HP back, so the level-up
+// is pending again and the level's benefits go with it; a redo writes the
+// roll's "after" (ADR 0019). It runs inside the undo's transaction.
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "levelupsvc", Codecs: []actionlog.Codec{
+		realizedSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, r realized) error {
 			if r.HPMax < 1 || r.RealizedLevel < 1 {
 				return fmt.Errorf("decode realized level snapshot: level %d with max HP %d", r.RealizedLevel, r.HPMax)
 			}
@@ -76,5 +77,5 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 			}
 			return nil
 		}, nil),
-	}
+	}}
 }

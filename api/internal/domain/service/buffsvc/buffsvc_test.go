@@ -900,12 +900,12 @@ func TestRestorers_CoverEverySnapshotKey(t *testing.T) {
 	_, _, _, _, err = f.svc.PassTime(ctx, charID, 1)
 	require.NoError(t, err)
 
-	restorers := f.svc.Restorers()
+	module := f.svc.Module()
 	seen := map[string]bool{}
 	for _, e := range f.entries {
 		for _, s := range e.Snapshots {
 			seen[s.Key] = true
-			assert.Contains(t, restorers, s.Key, "no Restorer for state key %q", s.Key)
+			assert.NotNil(t, module.Restorer(s.Key), "no Restorer for state key %q", s.Key)
 		}
 	}
 	assert.Equal(t, map[string]bool{buffsvc.StateKeyBuffs: true, buffsvc.StateKeyRound: true, buffsvc.StateKeyInitiative: true}, seen)
@@ -927,14 +927,14 @@ func TestRestorers_WriteTheSnapshotBack(t *testing.T) {
 		require.NoError(t, err)
 
 		f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, before).Return(nil).Once()
-		err = f.svc.Restorers()[buffsvc.StateKeyBuffs].Restore(context.Background(), charID, f.entries[0].Snapshots[0].Before)
+		err = f.svc.Module().Restorer(buffsvc.StateKeyBuffs).Restore(context.Background(), charID, f.entries[0].Snapshots[0].Before)
 		require.NoError(t, err)
 	})
 
 	t.Run("round", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 7).Return(nil)
-		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyRound].Restore(context.Background(), charID, snaptest.Env(`7`)))
+		require.NoError(t, f.svc.Module().Restorer(buffsvc.StateKeyRound).Restore(context.Background(), charID, snaptest.Env(`7`)))
 	})
 
 	bad := []struct {
@@ -948,7 +948,7 @@ func TestRestorers_WriteTheSnapshotBack(t *testing.T) {
 	for _, tt := range bad {
 		t.Run("rejects "+tt.key+" "+tt.state, func(t *testing.T) {
 			f := newFixture(t) // nothing is written
-			err := f.svc.Restorers()[tt.key].Restore(context.Background(), charID, snaptest.Env(tt.state))
+			err := f.svc.Module().Restorer(tt.key).Restore(context.Background(), charID, snaptest.Env(tt.state))
 			assert.Error(t, err)
 		})
 	}
@@ -1033,7 +1033,7 @@ func TestRoundMoves(t *testing.T) {
 	t.Run("voiding restores the previous round", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 5).Return(nil).Once()
-		err := f.svc.Restorers()[buffsvc.StateKeyRound].Restore(context.Background(), charID, snaptest.Env(`5`))
+		err := f.svc.Module().Restorer(buffsvc.StateKeyRound).Restore(context.Background(), charID, snaptest.Env(`5`))
 		require.NoError(t, err)
 	})
 }

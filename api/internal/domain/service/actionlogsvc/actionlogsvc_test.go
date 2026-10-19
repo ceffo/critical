@@ -33,6 +33,25 @@ func (f restorerFunc) Restore(ctx context.Context, characterID int64, state json
 	return f(ctx, characterID, state)
 }
 
+// codec is a test actionlog.Codec of family, restoring through restore.
+type codec struct {
+	family  string
+	restore restorerFunc
+}
+
+func (c codec) Family() string    { return c.family }
+func (c codec) CanRestore() error { return nil }
+func (c codec) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
+	return c.restore(ctx, characterID, state)
+}
+
+// registerCodec registers a module whose one codec restores family through
+// restore.
+func registerCodec(t *testing.T, svc actionlogsvc.SVC, family string, restore restorerFunc) {
+	t.Helper()
+	require.NoError(t, svc.Register(domain.Module{Name: "test " + family, Codecs: []actionlog.Codec{codec{family, restore}}}))
+}
+
 var errBoom = errors.New("boom")
 
 func newSvc(t *testing.T) (actionlogsvc.SVC, *mocks.MockDAL, *mocks.MockRounds, *passTx) {
@@ -49,7 +68,7 @@ func newSvcMaxHP(t *testing.T) (actionlogsvc.SVC, *mocks.MockDAL, *mocks.MockRou
 	rounds := mocks.NewMockRounds(t)
 	maxHP := mocks.NewMockMaxHP(t)
 	tx := &passTx{}
-	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, rounds, maxHP, nil)
+	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, rounds, maxHP)
 	require.NoError(t, err)
 	return svc, dal, rounds, tx, maxHP
 }
@@ -78,7 +97,7 @@ func TestNewWithConfig_Validation(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := actionlogsvc.NewWithConfig(c.cfg, c.dal, c.tx, c.rounds, c.maxHP, nil)
+			_, err := actionlogsvc.NewWithConfig(c.cfg, c.dal, c.tx, c.rounds, c.maxHP)
 			require.Error(t, err)
 		})
 	}
@@ -341,7 +360,7 @@ func TestUndo_RestoresThroughRestorers(t *testing.T) {
 			svc, dal, _, tx := newSvc(t)
 			var restored []string
 			for _, k := range c.restorers {
-				svc.RegisterRestorer(k, restorerFunc(func(_ context.Context, charID int64, state json.RawMessage) error {
+				registerCodec(t, svc, k, restorerFunc(func(_ context.Context, charID int64, state json.RawMessage) error {
 					assert.Equal(t, int64(1), charID)
 					restored = append(restored, string(state))
 					return c.restoreErr

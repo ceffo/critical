@@ -93,7 +93,7 @@ func TestSetPoints_Step17_RefusalsAndNoChange(t *testing.T) {
 // empty one as none.
 func TestSetPoints_Step17_RestorerWritesThePointsBack(t *testing.T) {
 	f := pointsFixture(t, "thief", nil)
-	r := f.svc.Restorers()[skillsvc.PointsStateKey]
+	r := f.svc.Module().Restorer(skillsvc.PointsStateKey)
 	require.NotNil(t, r)
 	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, map[string]int{"open_locks": 30}).Return(nil).Once()
 	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":30}}`)))

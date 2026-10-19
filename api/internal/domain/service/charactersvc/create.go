@@ -443,17 +443,18 @@ type armorRecord struct {
 	After  string `json:"after"`
 }
 
-// Restorers writes a thief's or a bard's skill armour back: undo writes the change's
-// "before", redo its "after" (ADR 0019), inside the undo's transaction.
-func (s *service) Restorers() map[string]actionlog.Restorer {
-	return map[string]actionlog.Restorer{
-		ArmorStateKey: armorSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st armorState) error {
+// Module declares the codec that writes a thief's or a bard's skill armour
+// back: undo writes the change's "before", redo its "after" (ADR 0019), inside
+// the undo's transaction.
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "charactersvc", Codecs: []actionlog.Codec{
+		armorSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st armorState) error {
 			if err := s.owners.RestoreSkillArmor(ctx, characterID, st.Armor); err != nil {
 				return fmt.Errorf("restore skill armor: %w", err)
 			}
 			return nil
 		}, nil),
-	}
+	}}
 }
 
 // ClassOption is a class a new character may have and the races it admits

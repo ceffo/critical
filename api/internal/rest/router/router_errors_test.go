@@ -16,6 +16,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain"
+	acmocks "github.com/ceffo/critical/api/internal/domain/service/acsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	logmocks "github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
@@ -78,6 +79,7 @@ type mocksSet struct {
 	skills  *skillmocks.MockSVC
 	dice    *dicemocks.MockSVC
 	levelUp *levelupmocks.MockSVC
+	ac      *acmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -108,10 +110,11 @@ func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handl
 		skills:  skillmocks.NewMockSVC(t),
 		dice:    dicemocks.NewMockSVC(t),
 		levelUp: levelupmocks.NewMockSVC(t),
+		ac:      acmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		Character: m.char, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Rest: m.rest,
-		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, Auth: a,
+		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, AC: m.ac, Auth: a,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs, opts), m

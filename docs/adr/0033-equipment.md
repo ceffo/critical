@@ -480,6 +480,25 @@ makes no skill armour worn. CRI-36 brings its own data step: it reads each chara
 and makes the matching armour piece worn (or adds it, on the review list as a guessed armour, step
 27).
 
+_Steps 10 to 13 (as built, CRI-35)_: `acsvc` derives the AC on every read (`acsvc.Derive`, tests
+`TestAC_Step10_*`, `TestAC_Step11_*`, `TestAC_Step12_*`) from the worn armour and shield
+(`itemsvc`), the buffs that apply and the powers that are on (`buffsvc.ListStatus`, `ListPowers`)
+and the sheet's Dexterity; served at `GET /api/ac` as rows of codes (`term`: `base`,
+`armour_magic`, `shield`, `shield_magic`, `dexterity`, `protection`, `buffs`; a source `itemId` or
+`buff`/`spellId`; `off`: `magic_armour`, `duplicate`, `armour_worn`, `not_best` for a row shown
+that does not add). Readings the ADR leaves open, fixed here: an effect with a `weapon_kind`
+condition never moves the AC (it conditions the character's own attack); a `base_ac` that does not
+count is shown as not adding; the shield's own `ac` powers are their own term, `shield_magic`; the
+spell seed's `ac_set` (the Armor spell, Spirit Armor) casts as `base_ac`; a seed's `condition` limits only the
+modifiers its `condition_keys` names, all of them without it (Spirit Armor's and Blur's limit their
+save bonus, so Spirit Armor's `ac_set` applies). The override (step 13) is
+`characters.ac_override` and `ac_override_label` (migration 017), set by `PUT /api/ac/override
+{value, label}` and cleared by `DELETE`, one `ac_override` entry (`{before, after}`, snapshot
+`ac_override`) each, nothing logged for the same value again (`TestAC_Step13_*`). The `initiative`
+effect of step 11 is left to CRI-39. The step 12 duplicate rule reads the pieces' catalogue code; no
+catalogue row is a magic item today (step 22), so it applies once the editor's templates (CRI-38)
+give one.
+
 CRI-32 (the design round) comes before the UI of slices 2 to 9. Slices 3 to 9 need slice 2; slices
 5, 7 and 8 need slice 1's data.
 

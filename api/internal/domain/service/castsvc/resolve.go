@@ -197,9 +197,12 @@ func (s *service) rollBuff(e spelleffectsvc.Entry, level int) (*AppliedBuff, []U
 		}
 		v := r.Total
 		// Conditional bonuses (vs evil, from the front) are not tracked:
-		// the engine has no notion of the condition.
-		if e.Buff.Condition != "" || !applyModifier(fx, key, v) {
+		// the engine has no notion of the condition. A condition limited to
+		// some modifiers (condition_keys) leaves the others applied.
+		if e.Buff.Conditional(key) {
 			untracked = append(untracked, Untracked{Key: key, Value: v, Condition: e.Buff.Condition})
+		} else if !applyModifier(fx, key, v) {
+			untracked = append(untracked, Untracked{Key: key, Value: v})
 		}
 	}
 	for _, ability := range sortedKeys(e.Buff.AbilityGain) {
@@ -255,6 +258,10 @@ func applyModifier(fx *buffsvc.BuffEffects, key string, v int) bool {
 		fx.Damage = ptr(v)
 	case "ac":
 		fx.AC = ptr(v)
+	case "ac_set":
+		// "AC becomes N as if armoured" (the Armor spell, Spirit Armor): the
+		// base_ac effect of ADR 0033 step 11.
+		fx.BaseAC = ptr(v)
 	case "save":
 		fx.SaveBonus = ptr(v)
 	case "weapon_buff":

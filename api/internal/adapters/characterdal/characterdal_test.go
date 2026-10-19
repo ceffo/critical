@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
@@ -310,4 +311,45 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, points, got.SkillPoints)
 	assert.Equal(t, "none", got.SkillArmor)
+}
+
+// ADR 0033 step 13: the AC override is read as nil when the column is NULL,
+// as a value and label otherwise; a missing row is ErrCharacterNotFound.
+func TestGetACOverride_NullIsNone(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	dal := characterdal.New(q)
+	q.EXPECT().GetACOverride(ctx, int64(3)).Return(queries.GetACOverrideRow{}, nil).Once()
+	o, err := dal.GetACOverride(ctx, 3)
+	require.NoError(t, err)
+	assert.Nil(t, o)
+
+	q.EXPECT().GetACOverride(ctx, int64(3)).Return(queries.GetACOverrideRow{
+		AcOverride: sql.NullInt32{Int32: -1, Valid: true}, AcOverrideLabel: "Shield spell",
+	}, nil).Once()
+	o, err = dal.GetACOverride(ctx, 3)
+	require.NoError(t, err)
+	assert.Equal(t, &acsvc.Override{Value: -1, Label: "Shield spell"}, o)
+
+	q.EXPECT().GetACOverride(ctx, int64(9)).Return(queries.GetACOverrideRow{}, sql.ErrNoRows).Once()
+	_, err = dal.GetACOverride(ctx, 9)
+	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
+}
+
+// ADR 0033 step 13: setting writes the value and label, clearing (nil)
+// writes NULL and no label; no row is ErrCharacterNotFound.
+func TestSetACOverride_WritesOrClears(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	dal := characterdal.New(q)
+	q.EXPECT().SetACOverride(ctx, queries.SetACOverrideParams{
+		AcOverride: sql.NullInt32{Int32: 4, Valid: true}, AcOverrideLabel: "Shield", ID: 3,
+	}).Return(1, nil).Once()
+	require.NoError(t, dal.SetACOverride(ctx, 3, &acsvc.Override{Value: 4, Label: "Shield"}))
+
+	q.EXPECT().SetACOverride(ctx, queries.SetACOverrideParams{ID: 3}).Return(1, nil).Once()
+	require.NoError(t, dal.SetACOverride(ctx, 3, nil))
+
+	q.EXPECT().SetACOverride(ctx, queries.SetACOverrideParams{ID: 9}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.SetACOverride(ctx, 9, nil), domain.ErrCharacterNotFound)
 }

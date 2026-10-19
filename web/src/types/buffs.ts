@@ -11,6 +11,7 @@ export const BUFF_EFFECT_KEYS = [
   "str_max",
   "min_str",
   "ac",
+  "base_ac",
   "to_hit",
   "damage",
 ] as const;
@@ -26,6 +27,8 @@ export type WeaponKind = "melee" | "missile";
  */
 export type BuffEffects = Partial<Record<BuffEffectKey, number>> & {
   weapon_kind?: WeaponKind;
+  /** A condition on the AC effects (ADR 0033 step 12): they count only without magic armour. */
+  without_magic_armour?: boolean;
 };
 
 export interface BuffEffect {

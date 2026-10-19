@@ -7,6 +7,11 @@ export function formatSigned(n: number): string {
   return "0";
 }
 
+/** An armour class for display: "5", "−2" (U+2212 minus), never a plus sign. */
+export function formatAc(n: number): string {
+  return n < 0 ? `−${Math.abs(n)}` : String(n);
+}
+
 /** A number in the UI language: 1.5 → "1.5" (en), "1,5" (fr). */
 export function formatNumber(n: number, lang?: string): string {
   return new Intl.NumberFormat(lang, { maximumFractionDigits: 4 }).format(n);

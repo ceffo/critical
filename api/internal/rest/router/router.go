@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/internal/rest/handler/achdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/actionloghdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/adminhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/authhdl"
@@ -166,6 +167,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		turnhdl.RegisterRoutes(r, charID, bs.Turn)
 		detailshdl.RegisterRoutes(r, charID, bs.Details)
 		skillhdl.RegisterRoutes(r, charID, bs.Skills)
+		achdl.RegisterRoutes(r, charID, bs.AC)
 		dicehdl.RegisterRoutes(r, charID, bs.Dice)
 	})
 

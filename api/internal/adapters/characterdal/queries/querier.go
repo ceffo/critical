@@ -26,6 +26,8 @@ type Querier interface {
 	// The user's current character, read through the ownership: no row when it is none, retired or
 	// not theirs.
 	CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, error)
+	// The AC override (ADR 0033 step 13), NULL for none.
+	GetACOverride(ctx context.Context, id int64) (GetACOverrideRow, error)
 	// level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
 	// step 24): compared with the derived values, never read as inputs.
 	// realized_level is the level the character has taken (ADR 0030 step 7); NULL is the sheet's level
@@ -44,6 +46,8 @@ type Querier interface {
 	RestoreSkillArmor(ctx context.Context, arg RestoreSkillArmorParams) (int64, error)
 	// Only a character the user owns and has not retired (ADR 0029 step 7.3): nothing is deleted.
 	RetireCharacter(ctx context.Context, arg RetireCharacterParams) (int64, error)
+	// Setting, clearing (NULL and an empty label) and the undo of either.
+	SetACOverride(ctx context.Context, arg SetACOverrideParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
 	// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.

@@ -230,7 +230,8 @@
       "min_str": "FOR requise",
       "ac": "CA ±N",
       "to_hit": "Toucher +N",
-      "damage": "Dégâts +N"
+      "damage": "Dégâts +N",
+      "base_ac": "CA de base N"
     },
     "activate": "Activer",
     "save": "Enregistrer",
@@ -1103,7 +1104,8 @@
         "min_str": "Exige FOR {{value}}",
         "dex_gain": "DEX +{{value}}",
         "cha_gain": "CHA +{{value}}",
-        "charges_hp_damage_taken": "Absorbe {{value}} PV de dégâts"
+        "charges_hp_damage_taken": "Absorbe {{value}} PV de dégâts",
+        "base_ac": "CA {{value}} comme en armure"
       },
       "totalOnSave": "Si la cible sauvegarde : {{total}}",
       "partSave": {
@@ -1231,7 +1233,8 @@
       "turn_undead": "Renvoi",
       "skill_points": "Talents",
       "skill_armor": "Armure",
-      "equipment_state": "Équipement"
+      "equipment_state": "Équipement",
+      "ac_override": "CA"
     },
     "status": {
       "active": "Actif",
@@ -1424,6 +1427,11 @@
       "equipped": "Équipé : {{name}}",
       "unequipped": "Retiré : {{name}}",
       "swapped": "Équipé : {{name}} (à la place de {{off}})"
+    },
+    "acOverride": {
+      "set": "CA forcée : {{value}}",
+      "setWith": "CA forcée : {{value}} ({{label}})",
+      "cleared": "CA forcée effacée"
     }
   },
   "critTable": {
@@ -2335,5 +2343,57 @@
     "heightWeight": "Taille, poids",
     "warningsOn_one": "{{count}} avertissement : {{fields}}",
     "warningsOn_other": "{{count}} avertissements : {{fields}}"
+  },
+  "ac": {
+    "title": "Classe d'armure",
+    "titleWith": "Classe d'armure {{value}}",
+    "open": "Classe d'armure {{value}} : voir le détail",
+    "openOverridden": "Classe d'armure {{value}} (forcée, calculée {{derived}}) : voir le détail",
+    "terms": {
+      "base": "Base",
+      "armour_magic": "Magie de l'armure",
+      "shield": "Bouclier",
+      "shield_magic": "Magie du bouclier",
+      "dexterity": "Dextérité",
+      "protection": "Protection",
+      "buffs": "Effets"
+    },
+    "none": {
+      "base": "sans armure",
+      "armour_magic": "aucune",
+      "shield": "aucun"
+    },
+    "missileValue": "{{value}} contre les projectiles",
+    "off": {
+      "magic_armour": "pas avec une armure magique",
+      "duplicate": "ne se cumule pas",
+      "armour_worn": "armure portée",
+      "not_best": "une meilleure compte"
+    },
+    "total": "CA",
+    "floor": "jamais mieux que −10",
+    "floored": "limitée à −10",
+    "missile": "contre les projectiles {{value}}",
+    "inventory": "Inventaire",
+    "inventoryHint": "Ouvrir l'inventaire : les pièces portées",
+    "override": {
+      "open": "Forcer",
+      "openHint": "Forcer la CA : pour ce que le détail ne couvre pas (sort Bouclier…)",
+      "value": "CA",
+      "label": "Pourquoi",
+      "labelPlaceholder": "sort Bouclier",
+      "save": "Forcer",
+      "saveHint": "Forcer la CA à cette valeur",
+      "cancel": "Annuler",
+      "clear": "Effacer",
+      "clearHint": "Effacer la CA forcée : la CA calculée s'applique de nouveau",
+      "shown": "Forcée",
+      "shownWith": "Forcée : {{label}}",
+      "derived": "Calculée",
+      "errors": {
+        "value": "Entre −10 et 10",
+        "label": "60 caractères au plus"
+      }
+    }
   }
 }

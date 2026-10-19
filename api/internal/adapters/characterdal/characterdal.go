@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 )
@@ -28,6 +29,7 @@ var (
 	_ charactersvc.Reader = (*DAL)(nil)
 	_ charactersvc.Owners = (*DAL)(nil)
 	_ detailssvc.DAL      = (*DAL)(nil)
+	_ acsvc.Overrides     = (*DAL)(nil)
 )
 
 // New returns a DAL running its queries on q. The composition root builds q
@@ -97,6 +99,40 @@ func (d *DAL) SetSkillPoints(ctx context.Context, id int64, points map[string]in
 	n, err := d.q.SetSkillPoints(ctx, queries.SetSkillPointsParams{SkillPoints: raw, ID: id})
 	if err != nil {
 		return fmt.Errorf("set skill points: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
+}
+
+// GetACOverride implements acsvc.Overrides: nil for none (ADR 0033 step
+// 13). domain.ErrCharacterNotFound when the row is missing.
+func (d *DAL) GetACOverride(ctx context.Context, id int64) (*acsvc.Override, error) {
+	row, err := d.q.GetACOverride(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, domain.ErrCharacterNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get ac override: %w", err)
+	}
+	if !row.AcOverride.Valid {
+		return nil, nil
+	}
+	return &acsvc.Override{Value: int(row.AcOverride.Int32), Label: row.AcOverrideLabel}, nil
+}
+
+// SetACOverride implements acsvc.Overrides: nil clears it.
+// domain.ErrCharacterNotFound when the row is missing.
+func (d *DAL) SetACOverride(ctx context.Context, id int64, o *acsvc.Override) error {
+	p := queries.SetACOverrideParams{ID: id}
+	if o != nil {
+		p.AcOverride = sql.NullInt32{Int32: int32(o.Value), Valid: true} //nolint:gosec // -10..10, checked by acsvc
+		p.AcOverrideLabel = o.Label
+	}
+	n, err := d.q.SetACOverride(ctx, p)
+	if err != nil {
+		return fmt.Errorf("set ac override: %w", err)
 	}
 	if n == 0 {
 		return domain.ErrCharacterNotFound

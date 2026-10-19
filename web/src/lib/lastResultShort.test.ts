@@ -310,6 +310,12 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Armour",
     fr: "Armure",
   },
+  ac_override: {
+    e: entry("ac_override", { before: null, after: { value: 4 } }),
+    value: null,
+    en: "AC",
+    fr: "CA",
+  },
   spell_prep: {
     e: entry("spell_prep", null),
     value: null,

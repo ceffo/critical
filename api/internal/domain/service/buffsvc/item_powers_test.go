@@ -233,3 +233,19 @@ func TestBuffs_Step18_RejectsAnUnknownWeaponKind(t *testing.T) {
 func sheetStr(score int) buffsvc.BaseStrength {
 	return buffsvc.BaseStrength{StrScore: buffsvc.StrScore{Score: score}}
 }
+
+// ADR 0033 step 11: a base_ac is an AC number, -10 to 10, on a buff and on
+// a saved template alike.
+func TestBuffs_ADR0033Step11_BaseACIsAnACNumber(t *testing.T) {
+	for _, bad := range []int{-11, 11} {
+		err := buffsvc.ValidateEffects(buffsvc.BuffEffects{BaseAC: intPtr(bad)})
+		require.ErrorIs(t, err, domain.ErrInvalidInput, bad)
+		assert.Contains(t, err.Error(), "base_ac")
+	}
+	for _, ok := range []int{-10, 6, 10} {
+		require.NoError(t, buffsvc.ValidateEffects(buffsvc.BuffEffects{BaseAC: intPtr(ok), WithoutMagicArmour: true}), ok)
+	}
+	f := newFixture(t)
+	_, err := f.svc.SaveBuff(context.Background(), charID, buffsvc.SavedBuff{Name: "X", Effects: buffsvc.BuffEffects{BaseAC: intPtr(12)}})
+	require.ErrorIs(t, err, domain.ErrInvalidInput)
+}

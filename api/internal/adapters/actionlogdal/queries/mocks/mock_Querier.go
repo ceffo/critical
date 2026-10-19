@@ -642,23 +642,23 @@ func (_c *MockQuerier_ListPopCorrections_Call) RunAndReturn(run func(context.Con
 }
 
 // ListSnapshotsFrom provides a mock function with given fields: ctx, arg
-func (_m *MockQuerier) ListSnapshotsFrom(ctx context.Context, arg queries.ListSnapshotsFromParams) ([]queries.ActionSnapshot, error) {
+func (_m *MockQuerier) ListSnapshotsFrom(ctx context.Context, arg queries.ListSnapshotsFromParams) ([]queries.ListSnapshotsFromRow, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListSnapshotsFrom")
 	}
 
-	var r0 []queries.ActionSnapshot
+	var r0 []queries.ListSnapshotsFromRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListSnapshotsFromParams) ([]queries.ActionSnapshot, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.ListSnapshotsFromParams) ([]queries.ListSnapshotsFromRow, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListSnapshotsFromParams) []queries.ActionSnapshot); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.ListSnapshotsFromParams) []queries.ListSnapshotsFromRow); ok {
 		r0 = rf(ctx, arg)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.ActionSnapshot)
+			r0 = ret.Get(0).([]queries.ListSnapshotsFromRow)
 		}
 	}
 
@@ -690,12 +690,12 @@ func (_c *MockQuerier_ListSnapshotsFrom_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockQuerier_ListSnapshotsFrom_Call) Return(_a0 []queries.ActionSnapshot, _a1 error) *MockQuerier_ListSnapshotsFrom_Call {
+func (_c *MockQuerier_ListSnapshotsFrom_Call) Return(_a0 []queries.ListSnapshotsFromRow, _a1 error) *MockQuerier_ListSnapshotsFrom_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_ListSnapshotsFrom_Call) RunAndReturn(run func(context.Context, queries.ListSnapshotsFromParams) ([]queries.ActionSnapshot, error)) *MockQuerier_ListSnapshotsFrom_Call {
+func (_c *MockQuerier_ListSnapshotsFrom_Call) RunAndReturn(run func(context.Context, queries.ListSnapshotsFromParams) ([]queries.ListSnapshotsFromRow, error)) *MockQuerier_ListSnapshotsFrom_Call {
 	_c.Call.Return(run)
 	return _c
 }

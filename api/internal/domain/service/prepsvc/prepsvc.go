@@ -292,14 +292,9 @@ func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []str
 
 // Restore writes a snapshotted slot list back (void of a preparation).
 func (s *service) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
-	var slots []spellsvc.SpellSlot
-	if err := json.Unmarshal(state, &slots); err != nil {
-		return fmt.Errorf("decode spell_slots snapshot: %w", err)
-	}
-	if err := s.Slots.SaveSlots(ctx, characterID, slots); err != nil {
-		return fmt.Errorf("restore slots: %w", err)
-	}
-	return nil
+	return slotsSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, slots []spellsvc.SpellSlot) error {
+		return s.Slots.SaveSlots(ctx, characterID, slots)
+	}, nil).Restore(ctx, characterID, state)
 }
 
 // carryUsed builds the new slot list; a spell that was already prepared keeps
@@ -356,28 +351,19 @@ func prepRecordOf(picked []SpellbookEntry) prepRecord {
 	return rec
 }
 
+// slotsSnaps is the snapshotter of the slot list (ADR 0018 step 8); its state
+// is spellsvc.SpellSlot encoded without JSON tags.
+var slotsSnaps = actionlog.NewSnapshotter[[]spellsvc.SpellSlot](StateKey)
+
 // SlotsSnapshot is the StateKey snapshot of a slot-list change, in the
 // encoding Restore reads. Other services that change the slot list (a spell
 // cast) record it so voiding their entry restores the slots.
 func SlotsSnapshot(before, after []spellsvc.SpellSlot) (actionlog.Snapshot, error) {
-	b, err := encode(before)
-	if err != nil {
-		return actionlog.Snapshot{}, err
+	if before == nil {
+		before = []spellsvc.SpellSlot{}
 	}
-	a, err := encode(after)
-	if err != nil {
-		return actionlog.Snapshot{}, err
+	if after == nil {
+		after = []spellsvc.SpellSlot{}
 	}
-	return actionlog.Snapshot{Key: StateKey, Before: b, After: a}, nil
-}
-
-func encode(slots []spellsvc.SpellSlot) (json.RawMessage, error) {
-	if slots == nil {
-		slots = []spellsvc.SpellSlot{}
-	}
-	b, err := json.Marshal(slots)
-	if err != nil {
-		return nil, fmt.Errorf("encode slots: %w", err)
-	}
-	return b, nil
+	return slotsSnaps.Snapshot("", &before, &after)
 }

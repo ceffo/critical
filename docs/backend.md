@@ -58,7 +58,12 @@ transaction_id
 -- (transaction_id: the id of the first entry of the request that recorded it, ADR 0018 step 1;
 --  undo pops a transaction whole. Rows older than the column are each their own transaction)
 -- action_snapshots: before/after state an entry changed, one row per state key
-id, action_id, state_key, before_state JSON, after_state JSON
+id, action_id, state_key, before_envelope JSON, after_envelope JSON, before_state, after_state
+-- (before_envelope / after_envelope: the action log codec's envelope, {"id","state"} or
+--  {"id","absent":true}, ADR 0018 steps 8 and 9; NULL on a row the release before the codec
+--  recorded during a rolling deploy, until the data step re-encodes it: that entry cannot be undone
+--  or redone meanwhile. before_state / after_state hold the encoding of before the codec, no longer
+--  read, kept for the release before it; a later release makes the envelopes NOT NULL and drops them)
 -- action_corrections: audited amend/void events pointing at an entry (never edit an entry)
 id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, step_id, created_at
 -- (step_id: the 'correction' entry a post-roll correction belongs to, ADR 0010 step 6; popping
@@ -160,7 +165,8 @@ one statement list (no parameters), so it may hold several statements; DDL is tr
 Data a schema change needs first (rows a `NOT NULL` would refuse) is a **data step**: Go code the run
 executes on its transaction just before that migration, only when the migration is pending
 (`migrationDataSteps`; today the owners before migration 004, "Per-character data"; after a migration,
-the seeded weapons' types after 005 and the seed character's race code after 007). Its rules,
+the seeded weapons' types after 005, the seed character's race code after 007 and the action log
+snapshots re-encoded into the codec's envelopes after 019, ADR 0018 step 9). Its rules,
 including when a step and its queries may be deleted, are [ADR 0025](adr/0025-postgresql-storage.md)
 step 2.1.1.
 

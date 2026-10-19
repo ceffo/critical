@@ -102,6 +102,29 @@ func TestRedo_ReplaysTheNewestPoppedTransaction(t *testing.T) {
 		require.ErrorIs(t, tx.bodyErr, errBoom, "the error leaves the transaction body, so the DB transaction rolls back #10's replay and redo")
 	})
 
+	// ADR 0018 step 9, rolling deploy: an entry the release before the codec
+	// recorded has no "after" envelope until the data step re-encodes it. Its
+	// redo is refused, nothing is written for it, and the run rolls back.
+	t.Run("a snapshot not re-encoded yet is refused", func(t *testing.T) {
+		dal := mocks.NewMockDAL(t)
+		tx := &errTx{}
+		svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t), nil)
+		require.NoError(t, err)
+		var calls []string
+		register(svc, dal, &calls, "")
+		target(dal)
+		old := initiative
+		old.Snapshots = []actionlog.Snapshot{{Key: "initiative"}}
+		dal.EXPECT().ListTransaction(mock.Anything, int64(1), int64(10)).
+			Return([]actionlog.Entry{old, advance}, nil).Once()
+
+		_, err = svc.Redo(context.Background(), 1, 10)
+		require.ErrorIs(t, err, actionlogsvc.ErrSnapshotNotReencoded)
+		assert.Contains(t, err.Error(), `entry #11, state "initiative"`)
+		assert.Equal(t, []string{"replay buffs []", "replay round 2", "redo #10"}, calls, "#11 is never replayed")
+		require.ErrorIs(t, tx.bodyErr, actionlogsvc.ErrSnapshotNotReencoded, "the DB transaction rolls #10's replay back")
+	})
+
 	t.Run("stale expected redo changes nothing", func(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
 		var calls []string

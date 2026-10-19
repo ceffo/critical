@@ -421,17 +421,22 @@ func (f *fakeStore) plantState() {
 	}
 	f.t.Snapshots = []snapshotRow{
 		{
-			1, 3, "spell_slots", `[{"Level":1,"SpellID":"identify","PreparedSpellName":"Identify","Used":false,"Extra":false}]`,
-			`[{"Level":1,"SpellID":"light","PreparedSpellName":"Light","Used":false,"Extra":false}]`,
+			ID: 1, ActionID: 3, Key: "spell_slots",
+			BeforeEnv: `{"state":[{"Level":1,"SpellID":"identify","PreparedSpellName":"Identify","Used":false,"Extra":false}]}`,
+			AfterEnv:  `{"state":[{"Level":1,"SpellID":"light","PreparedSpellName":"Light","Used":false,"Extra":false}]}`,
 		},
-		{2, 4, "buffs", `[{"SpellID":"not_a_slot","spell_id":"improved_strength"}]`, `[{"spell_id":"mirror_image"}]`},
-		{3, 5, "round", `[{"spell_id":"not_a_buff_list"}]`, `[]`},
-		// A spellbook snapshot (ADR 0030 step 20.3); "spellbook" alone is not one.
+		{ID: 2, ActionID: 4, Key: "buffs", BeforeEnv: `{"state":[{"SpellID":"not_a_slot","spell_id":"improved_strength"}]}`, AfterEnv: `{"state":[{"spell_id":"mirror_image"}]}`},
+		{ID: 3, ActionID: 5, Key: "round", BeforeEnv: `{"state":[{"spell_id":"not_a_buff_list"}]}`, AfterEnv: `{"state":[]}`},
+		// A spellbook snapshot (ADR 0030 step 20.3), its envelope naming the spell; "spellbook"
+		// alone is not one.
 		{
-			4, 10, "spellbook:melfs_acid_arrow", `{"spellId":"melfs_acid_arrow","known":false,"failedAtLevel":0}`,
-			`{"spellId":"melfs_acid_arrow","known":true,"failedAtLevel":0}`,
+			ID: 4, ActionID: 10, Key: "spellbook:melfs_acid_arrow",
+			BeforeEnv: `{"id":"melfs_acid_arrow","state":{"known":false,"failedAtLevel":0}}`,
+			AfterEnv:  `{"id":"melfs_acid_arrow","state":{"known":true,"failedAtLevel":0}}`,
 		},
-		{5, 10, "spellbook", `{"spellId":"not_a_spellbook_snapshot"}`, `{}`},
+		{ID: 5, ActionID: 10, Key: "spellbook", BeforeEnv: `{"id":"not_a_spellbook_snapshot","state":{}}`, AfterEnv: `{"state":{}}`},
+		// A buff list absent from a state names no spell.
+		{ID: 6, ActionID: 11, Key: "buffs", BeforeEnv: `{"absent":true}`, AfterEnv: `{"state":[]}`},
 	}
 	f.t.LearnFailures = []storeq.LearnFailureRefsRow{{CharacterID: 1, SpellKey: "alarm"}}
 	f.t.Corrections = []correctionRow{{1, 5, `{"spellId":"enlarge","casterLevel":5}`}}
@@ -470,6 +475,26 @@ func TestStateSpellRefs_ScansEveryPlace(t *testing.T) {
 		"melfs_acid_arrow": "action_snapshots 4",
 		"lightning_bolt":   "action_log 10",
 	}, got)
+}
+
+// ADR 0018 step 9, rolling deploy: a snapshot the release before the codec recorded has no
+// envelopes until the data step re-encodes it. The scan does not fail on it: a spellbook one
+// names its spell in its key; a slot or buff list one is skipped (no reader of the old encoding
+// is kept), until the step encodes it.
+func TestStateSpellRefs_SnapshotsWithoutEnvelopesDoNotFailTheScan(t *testing.T) {
+	f := newFakeStore()
+	f.t.Snapshots = []snapshotRow{
+		{ID: 1, ActionID: 3, Key: "spellbook:sleep", Before: `{"spellId":"sleep","known":false}`, After: `{"spellId":"sleep","known":true}`},
+		{ID: 2, ActionID: 4, Key: "spell_slots", Before: `[{"SpellID":"alarm"}]`, After: `[]`},
+		{ID: 3, ActionID: 5, Key: "buffs", Before: `[{"spell_id":"haste"}]`, After: `[]`},
+	}
+	refs, err := StateSpellRefs(context.Background(), f)
+	require.NoError(t, err)
+	got := map[string]string{}
+	for _, r := range refs {
+		got[r.ID] = r.Where
+	}
+	assert.Equal(t, map[string]string{"sleep": "action_snapshots 1"}, got)
 }
 
 func TestStateSpellRefs_UnreadableJSONIsAnError(t *testing.T) {

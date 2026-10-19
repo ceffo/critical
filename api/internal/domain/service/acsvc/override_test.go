@@ -2,7 +2,6 @@ package acsvc_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -109,8 +109,8 @@ func TestAC_Step13_SetTheOverrideIsOneLoggedMove(t *testing.T) {
 	assert.JSONEq(t, `{"before":null,"after":{"value":4,"label":"Shield spell"}}`, string(entry.Payload))
 	require.Len(t, entry.Snapshots, 1)
 	assert.Equal(t, acsvc.StateKey, entry.Snapshots[0].Key)
-	assert.JSONEq(t, `{"override":null}`, string(entry.Snapshots[0].Before))
-	assert.JSONEq(t, `{"override":{"value":4,"label":"Shield spell"}}`, string(entry.Snapshots[0].After))
+	assert.JSONEq(t, `{"override":null}`, snaptest.State(t, entry.Snapshots[0].Before))
+	assert.JSONEq(t, `{"override":{"value":4,"label":"Shield spell"}}`, snaptest.State(t, entry.Snapshots[0].After))
 }
 
 // ADR 0033 step 13: clearing is logged the same way; the same override
@@ -175,10 +175,10 @@ func TestAC_Step13_RestorerWritesTheSnapshotBack(t *testing.T) {
 	r := f.svc.Restorers()[acsvc.StateKey]
 	require.NotNil(t, r)
 	f.overrides.EXPECT().SetACOverride(mock.Anything, charID, &acsvc.Override{Value: 4, Label: "Shield"}).Return(nil).Once()
-	require.NoError(t, r.Restore(ctx, charID, json.RawMessage(`{"override":{"value":4,"label":"Shield"}}`)))
+	require.NoError(t, r.Restore(ctx, charID, snaptest.Env(`{"override":{"value":4,"label":"Shield"}}`)))
 	f.overrides.EXPECT().SetACOverride(mock.Anything, charID, (*acsvc.Override)(nil)).Return(nil).Once()
-	require.NoError(t, r.Restore(ctx, charID, json.RawMessage(`{"override":null}`)))
+	require.NoError(t, r.Restore(ctx, charID, snaptest.Env(`{"override":null}`)))
 
 	f.overrides.EXPECT().SetACOverride(mock.Anything, charID, mock.Anything).Return(errors.New("boom")).Once()
-	require.Error(t, r.Restore(ctx, charID, json.RawMessage(`{"override":null}`)))
+	require.Error(t, r.Restore(ctx, charID, snaptest.Env(`{"override":null}`)))
 }

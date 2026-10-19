@@ -143,23 +143,23 @@ func (s *service) applyIn(ctx context.Context, characterID int64, decide func(bu
 
 func snapshots(before, after []BuffEffect, round int, newRound *int, roundOnly bool) ([]actionlog.Snapshot, error) {
 	if roundOnly {
-		rb, _ := json.Marshal(round)
-		ra, _ := json.Marshal(*newRound)
-		return []actionlog.Snapshot{{Key: StateKeyRound, Before: rb, After: ra}}, nil
+		snap, err := roundSnapshot(round, *newRound)
+		if err != nil {
+			return nil, err
+		}
+		return []actionlog.Snapshot{snap}, nil
 	}
-	b, err := encodeBuffs(before)
+	snap, err := buffsSnapshot(before, after)
 	if err != nil {
-		return nil, fmt.Errorf("encode buffs: %w", err)
+		return nil, err
 	}
-	a, err := encodeBuffs(after)
-	if err != nil {
-		return nil, fmt.Errorf("encode buffs: %w", err)
-	}
-	snaps := []actionlog.Snapshot{{Key: StateKeyBuffs, Before: b, After: a}}
+	snaps := []actionlog.Snapshot{snap}
 	if newRound != nil {
-		rb, _ := json.Marshal(round)
-		ra, _ := json.Marshal(*newRound)
-		snaps = append(snaps, actionlog.Snapshot{Key: StateKeyRound, Before: rb, After: ra})
+		rs, err := roundSnapshot(round, *newRound)
+		if err != nil {
+			return nil, err
+		}
+		snaps = append(snaps, rs)
 	}
 	return snaps, nil
 }

@@ -64,7 +64,3 @@ ORDER BY item_id, reason;
 
 -- name: DeleteReviews :exec
 DELETE FROM equipment_review WHERE character_id = sqlc.arg(character_id)::bigint AND item_id = @item_id;
-
--- The id the conversion gave an item whose id a weapon had (ADR 0033 step 26.3).
--- name: RenamedItemID :one
-SELECT new_id FROM item_id_renames WHERE character_id = sqlc.arg(character_id)::bigint AND old_id = @old_id;

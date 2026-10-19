@@ -266,16 +266,3 @@ func (d *DAL) DeleteReviews(ctx context.Context, characterID int64, itemID strin
 	}
 	return nil
 }
-
-// RenamedID is the id the conversion gave itemID (ADR 0033 step 26.3), or
-// itemID when it was not renamed.
-func (d *DAL) RenamedID(ctx context.Context, characterID int64, itemID string) (string, error) {
-	id, err := d.q.RenamedItemID(ctx, queries.RenamedItemIDParams{CharacterID: characterID, OldID: itemID})
-	if errors.Is(err, sql.ErrNoRows) {
-		return itemID, nil
-	}
-	if err != nil {
-		return "", fmt.Errorf("renamed id of %s: %w", itemID, err)
-	}
-	return id, nil
-}

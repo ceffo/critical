@@ -2,7 +2,6 @@ package skillsvc_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
@@ -50,8 +50,8 @@ func TestSetPoints_Step17_WritesAndLogsTheSpend(t *testing.T) {
 	assert.JSONEq(t, `{"before":{"open_locks":30},"after":{"open_locks":60,"pick_pockets":15}}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, skillsvc.PointsStateKey, e.Snapshots[0].Key)
-	assert.JSONEq(t, `{"points":{"open_locks":30}}`, string(e.Snapshots[0].Before))
-	assert.JSONEq(t, `{"points":{"open_locks":60,"pick_pockets":15}}`, string(e.Snapshots[0].After))
+	assert.JSONEq(t, `{"points":{"open_locks":30}}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"points":{"open_locks":60,"pick_pockets":15}}`, snaptest.State(t, e.Snapshots[0].After))
 }
 
 // Step 17: points refused (out of range, an unknown skill, any point of a
@@ -96,7 +96,7 @@ func TestSetPoints_Step17_RestorerWritesThePointsBack(t *testing.T) {
 	r := f.svc.Restorers()[skillsvc.PointsStateKey]
 	require.NotNil(t, r)
 	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, map[string]int{"open_locks": 30}).Return(nil).Once()
-	require.NoError(t, r.Restore(context.Background(), charID, json.RawMessage(`{"points":{"open_locks":30}}`)))
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":30}}`)))
 	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, map[string]int(nil)).Return(nil).Once()
-	require.NoError(t, r.Restore(context.Background(), charID, json.RawMessage(`{"points":{}}`)))
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{}}`)))
 }

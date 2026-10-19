@@ -240,8 +240,11 @@ const KindSkillArmor Kind = "skill_armor"
 const KindACOverride Kind = "ac_override"
 
 // Snapshot is the state an entry changed, under a state key owned by one
-// service (for example "buffs" or "spell_slots"). Before and After are that
-// service's own JSON encoding of the state.
+// service (for example "buffs" or "spell_slots"). Before and After are the
+// codec's envelopes of that state (Snapshotter). Both are nil on a snapshot
+// the release before the codec recorded during a rolling deploy, until the
+// migration data step re-encodes it (ADR 0018 step 9): it shows in the log,
+// and its entry cannot be undone or redone meanwhile.
 //
 // A key may be "family:id" (for example "items:arrows_plus3") to scope the
 // state to one thing: a void is then only blocked by later entries touching

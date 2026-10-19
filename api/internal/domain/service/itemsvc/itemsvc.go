@@ -103,9 +103,6 @@ type DAL interface {
 	Reviews(ctx context.Context, characterID int64) ([]Review, error)
 	// DeleteReviews removes every review row of a piece (none: no error).
 	DeleteReviews(ctx context.Context, characterID int64, itemID string) error
-	// RenamedID is the id the conversion gave an item whose id a weapon had
-	// (ADR 0033 step 26.3), or itemID itself when it was not renamed.
-	RenamedID(ctx context.Context, characterID int64, itemID string) (string, error)
 }
 
 // Characters reads the character whose pieces change: a specialized weapon

@@ -29,7 +29,7 @@ type Querier interface {
 	// 0007 step 2).
 	ListHPDeltas(ctx context.Context, characterID int64) ([]ListHPDeltasRow, error)
 	ListPopCorrections(ctx context.Context, characterID int64) ([]ListPopCorrectionsRow, error)
-	ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromParams) ([]ActionSnapshot, error)
+	ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromParams) ([]ListSnapshotsFromRow, error)
 	ListTransactionActions(ctx context.Context, arg ListTransactionActionsParams) ([]ListTransactionActionsRow, error)
 	StartActionTransaction(ctx context.Context, id int64) error
 }

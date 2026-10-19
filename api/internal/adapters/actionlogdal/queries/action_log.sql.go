@@ -115,23 +115,23 @@ func (q *Queries) InsertCorrection(ctx context.Context, arg InsertCorrectionPara
 }
 
 const insertSnapshot = `-- name: InsertSnapshot :exec
-INSERT INTO action_snapshots (action_id, state_key, before_state, after_state)
-VALUES ($1, $2, $3, $4)
+INSERT INTO action_snapshots (action_id, state_key, before_envelope, after_envelope)
+VALUES ($1, $2, $3::text, $4::text)
 `
 
 type InsertSnapshotParams struct {
-	ActionID    int64
-	StateKey    string
-	BeforeState string
-	AfterState  string
+	ActionID       int64
+	StateKey       string
+	BeforeEnvelope string
+	AfterEnvelope  string
 }
 
 func (q *Queries) InsertSnapshot(ctx context.Context, arg InsertSnapshotParams) error {
 	_, err := q.db.ExecContext(ctx, insertSnapshot,
 		arg.ActionID,
 		arg.StateKey,
-		arg.BeforeState,
-		arg.AfterState,
+		arg.BeforeEnvelope,
+		arg.AfterEnvelope,
 	)
 	return err
 }
@@ -451,7 +451,7 @@ func (q *Queries) ListPopCorrections(ctx context.Context, characterID int64) ([]
 
 const listSnapshotsFrom = `-- name: ListSnapshotsFrom :many
 SELECT action_snapshots.id, action_snapshots.action_id, action_snapshots.state_key,
-       action_snapshots.before_state, action_snapshots.after_state
+       action_snapshots.before_envelope, action_snapshots.after_envelope
 FROM action_snapshots
 JOIN action_log ON action_log.id = action_snapshots.action_id
 WHERE action_log.character_id = $1 AND action_snapshots.action_id >= $2
@@ -463,21 +463,29 @@ type ListSnapshotsFromParams struct {
 	ActionID    int64
 }
 
-func (q *Queries) ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromParams) ([]ActionSnapshot, error) {
+type ListSnapshotsFromRow struct {
+	ID             int64
+	ActionID       int64
+	StateKey       string
+	BeforeEnvelope sql.NullString
+	AfterEnvelope  sql.NullString
+}
+
+func (q *Queries) ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromParams) ([]ListSnapshotsFromRow, error) {
 	rows, err := q.db.QueryContext(ctx, listSnapshotsFrom, arg.CharacterID, arg.ActionID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ActionSnapshot{}
+	items := []ListSnapshotsFromRow{}
 	for rows.Next() {
-		var i ActionSnapshot
+		var i ListSnapshotsFromRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ActionID,
 			&i.StateKey,
-			&i.BeforeState,
-			&i.AfterState,
+			&i.BeforeEnvelope,
+			&i.AfterEnvelope,
 		); err != nil {
 			return nil, err
 		}

@@ -2,13 +2,13 @@ package buffsvc_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
@@ -106,7 +106,7 @@ func TestBuffs_Step15_StartRound(t *testing.T) {
 	t.Run("an entry recorded before the field restores round 0", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, []buffsvc.BuffEffect{{ID: "o", Name: "Old", Duration: 3}}).Return(nil).Once()
-		old := json.RawMessage(`[{"id":"o","name":"Old","charges":0,"duration":3,"effects":{}}]`)
+		old := snaptest.Env(`[{"id":"o","name":"Old","charges":0,"duration":3,"effects":{}}]`)
 		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyBuffs].Restore(ctx, charID, old))
 	})
 }

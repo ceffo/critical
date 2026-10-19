@@ -110,9 +110,10 @@ func migrationDataSteps(seedsDir string, catalogue []ruletablesvc.Weapon) (befor
 			}
 			return identitySeedCharacter(ctx, q, characterPath)
 		},
-		languagesMigration: mapLanguages,
-		measuresMigration:  mapMeasures,
-		equipmentMigration: func(ctx context.Context, q storeq.Querier) error { return convertEquipment(ctx, q, catalogue) },
+		languagesMigration:         mapLanguages,
+		measuresMigration:          mapMeasures,
+		equipmentMigration:         func(ctx context.Context, q storeq.Querier) error { return convertEquipment(ctx, q, catalogue) },
+		snapshotEnvelopesMigration: reencodeSnapshots,
 	}
 	return before, after
 }

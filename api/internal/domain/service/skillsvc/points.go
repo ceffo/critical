@@ -20,6 +20,9 @@ type Points interface {
 	SetSkillPoints(ctx context.Context, characterID int64, points map[string]int) error
 }
 
+// pointsSnaps is the snapshotter of the skill points (ADR 0018 step 8).
+var pointsSnaps = actionlog.NewSnapshotter[pointsState](PointsStateKey)
+
 // pointsState is the JSON encoding of a "skill_points" snapshot and the
 // payload of a skill_points entry: the points per skill, without zeros.
 // Entries already in the log must stay decodable: add fields, never rename.
@@ -71,17 +74,14 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, points map[s
 		if err != nil {
 			return fmt.Errorf("encode skill_points payload: %w", err)
 		}
-		b, err := json.Marshal(pointsState{Points: before})
+		b, a := pointsState{Points: before}, pointsState{Points: out}
+		snap, err := pointsSnaps.Snapshot("", &b, &a)
 		if err != nil {
-			return fmt.Errorf("encode skill points snapshot: %w", err)
-		}
-		a, err := json.Marshal(pointsState{Points: out})
-		if err != nil {
-			return fmt.Errorf("encode skill points snapshot: %w", err)
+			return err
 		}
 		if _, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID, Kind: actionlog.KindSkillPoints, Payload: payload,
-			Snapshots: []actionlog.Snapshot{{Key: PointsStateKey, Before: b, After: a}},
+			Snapshots: []actionlog.Snapshot{snap},
 		}); err != nil {
 			return fmt.Errorf("record skill_points: %w", err)
 		}
@@ -93,22 +93,12 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, points map[s
 	return out, nil
 }
 
-type restoreFunc func(ctx context.Context, characterID int64, state json.RawMessage) error
-
-func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
-	return f(ctx, characterID, state)
-}
-
 // Restorers writes a thief's or a bard's skill points back: undo writes the spend's
 // "before", redo its "after" (ADR 0019). It runs inside the undo's
 // transaction.
 func (s *service) Restorers() map[string]actionlog.Restorer {
 	return map[string]actionlog.Restorer{
-		PointsStateKey: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
-			var st pointsState
-			if err := json.Unmarshal(state, &st); err != nil {
-				return fmt.Errorf("decode skill points snapshot: %w", err)
-			}
+		PointsStateKey: pointsSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st pointsState) error {
 			if len(st.Points) == 0 {
 				st.Points = nil
 			}
@@ -116,6 +106,6 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 				return fmt.Errorf("restore skill points: %w", err)
 			}
 			return nil
-		}),
+		}, nil),
 	}
 }

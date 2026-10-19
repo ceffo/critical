@@ -96,6 +96,26 @@ func TestUndo(t *testing.T) {
 		require.ErrorIs(t, err, errBoom)
 	})
 
+	// ADR 0018 step 9, rolling deploy: an entry the release before the codec
+	// recorded has no "before" envelope until the data step re-encodes it. Its
+	// undo is refused: nothing is restored and no void is written.
+	t.Run("a snapshot not re-encoded yet is refused", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		svc.RegisterRestorer("items", restorerFunc(func(context.Context, int64, json.RawMessage) error {
+			t.Fatal("nothing may be restored")
+			return nil
+		}))
+		old := attack()
+		old.Snapshots = []actionlog.Snapshot{{Key: "items:arrows_plus3"}}
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(9, true, nil).Once()
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(9)).Return(old, nil).Once()
+		dal.EXPECT().ListTransaction(mock.Anything, int64(1), int64(9)).Return([]actionlog.Entry{*old}, nil).Once()
+
+		_, err := svc.Undo(context.Background(), 1, 9)
+		require.ErrorIs(t, err, actionlogsvc.ErrSnapshotNotReencoded)
+		assert.Contains(t, err.Error(), `entry #9, state "items:arrows_plus3"`)
+	})
+
 	t.Run("latest lookup fails", func(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
 		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(0, false, errBoom).Once()

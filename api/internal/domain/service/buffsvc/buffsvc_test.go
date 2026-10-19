@@ -12,6 +12,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -124,7 +125,7 @@ func (f *fixture) base(str int) {
 func decodeSnap(t *testing.T, raw json.RawMessage) []map[string]any {
 	t.Helper()
 	var out []map[string]any
-	require.NoError(t, json.Unmarshal(raw, &out))
+	require.NoError(t, json.Unmarshal([]byte(snaptest.State(t, raw)), &out))
 	return out
 }
 
@@ -512,8 +513,8 @@ func TestAdvanceRound(t *testing.T) {
 			assert.Empty(t, e.Summary, "the UI words the entry")
 			assert.JSONEq(t, tt.wantPayload, string(e.Payload))
 			assert.Equal(t, []string{buffsvc.StateKeyBuffs, buffsvc.StateKeyRound}, snapKeys(e))
-			assert.JSONEq(t, jsonInt(tt.round), string(e.Snapshots[1].Before))
-			assert.JSONEq(t, jsonInt(tt.round+1), string(e.Snapshots[1].After))
+			assert.JSONEq(t, jsonInt(tt.round), snaptest.State(t, e.Snapshots[1].Before))
+			assert.JSONEq(t, jsonInt(tt.round+1), snaptest.State(t, e.Snapshots[1].After))
 			assert.Len(t, decodeSnap(t, e.Snapshots[0].Before), len(tt.start))
 			assert.Equal(t, []string{"record", "save buffs", "save round", "record", "save initiative"}, f.calls,
 				"the entry is recorded before the round moves, so it belongs to the round it ends")
@@ -933,7 +934,7 @@ func TestRestorers_WriteTheSnapshotBack(t *testing.T) {
 	t.Run("round", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 7).Return(nil)
-		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyRound].Restore(context.Background(), charID, json.RawMessage(`7`)))
+		require.NoError(t, f.svc.Restorers()[buffsvc.StateKeyRound].Restore(context.Background(), charID, snaptest.Env(`7`)))
 	})
 
 	bad := []struct {
@@ -947,7 +948,7 @@ func TestRestorers_WriteTheSnapshotBack(t *testing.T) {
 	for _, tt := range bad {
 		t.Run("rejects "+tt.key+" "+tt.state, func(t *testing.T) {
 			f := newFixture(t) // nothing is written
-			err := f.svc.Restorers()[tt.key].Restore(context.Background(), charID, json.RawMessage(tt.state))
+			err := f.svc.Restorers()[tt.key].Restore(context.Background(), charID, snaptest.Env(tt.state))
 			assert.Error(t, err)
 		})
 	}
@@ -1014,8 +1015,8 @@ func TestRoundMoves(t *testing.T) {
 			assert.Empty(t, e.Summary, "the UI words the entry")
 			assert.JSONEq(t, tt.wantPayload, string(e.Payload))
 			assert.Equal(t, []string{buffsvc.StateKeyRound}, snapKeys(e), "round key only")
-			assert.JSONEq(t, jsonInt(tt.from), string(e.Snapshots[0].Before))
-			assert.JSONEq(t, jsonInt(tt.to), string(e.Snapshots[0].After))
+			assert.JSONEq(t, jsonInt(tt.from), snaptest.State(t, e.Snapshots[0].Before))
+			assert.JSONEq(t, jsonInt(tt.to), snaptest.State(t, e.Snapshots[0].After))
 			assert.Equal(t, []string{"record", "save round"}, f.calls)
 			assert.Equal(t, 1, f.tx.calls)
 		})
@@ -1032,7 +1033,7 @@ func TestRoundMoves(t *testing.T) {
 	t.Run("voiding restores the previous round", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 5).Return(nil).Once()
-		err := f.svc.Restorers()[buffsvc.StateKeyRound].Restore(context.Background(), charID, json.RawMessage(`5`))
+		err := f.svc.Restorers()[buffsvc.StateKeyRound].Restore(context.Background(), charID, snaptest.Env(`5`))
 		require.NoError(t, err)
 	})
 }

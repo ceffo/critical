@@ -80,11 +80,8 @@ func (s *service) changeSaved(ctx context.Context, characterID int64,
 		if err != nil {
 			return fmt.Errorf("list saved buffs: %w", err)
 		}
-		b, err := encodeSaved(before)
-		if err != nil {
-			return err
-		}
-		a, err := encodeSaved(out)
+		b, a := toSnapSaved(before), toSnapSaved(out)
+		snap, err := savedSnaps.Snapshot("", &b, &a)
 		if err != nil {
 			return err
 		}
@@ -96,7 +93,7 @@ func (s *service) changeSaved(ctx context.Context, characterID int64,
 			CharacterID: characterID,
 			Kind:        actionlog.KindBuffChange,
 			Payload:     raw,
-			Snapshots:   []actionlog.Snapshot{{Key: StateKeySavedBuffs, Before: b, After: a}},
+			Snapshots:   []actionlog.Snapshot{snap},
 		}); err != nil {
 			return fmt.Errorf("record %s: %w", actionlog.KindBuffChange, err)
 		}
@@ -121,26 +118,18 @@ type snapSaved struct {
 	CreatedAt time.Time `json:"createdAt,omitzero"`
 }
 
-func encodeSaved(list []SavedBuff) (json.RawMessage, error) {
+func toSnapSaved(list []SavedBuff) []snapSaved {
 	out := make([]snapSaved, len(list))
 	for i, b := range list {
 		out[i] = snapSaved{ID: b.ID, Name: b.Name, Duration: b.Duration, Charges: b.Charges, Effects: snapEffects(b.Effects), Note: b.Note, CreatedAt: b.CreatedAt}
 	}
-	raw, err := json.Marshal(out)
-	if err != nil {
-		return nil, fmt.Errorf("encode saved buffs: %w", err)
-	}
-	return raw, nil
+	return out
 }
 
-func decodeSaved(raw json.RawMessage) ([]SavedBuff, error) {
-	var in []snapSaved
-	if err := json.Unmarshal(raw, &in); err != nil {
-		return nil, fmt.Errorf("decode saved buffs snapshot: %w", err)
-	}
+func fromSnapSaved(in []snapSaved) []SavedBuff {
 	out := make([]SavedBuff, len(in))
 	for i, b := range in {
 		out[i] = SavedBuff{ID: b.ID, Name: b.Name, Duration: b.Duration, Charges: b.Charges, Effects: BuffEffects(b.Effects), Note: b.Note, CreatedAt: b.CreatedAt}
 	}
-	return out, nil
+	return out
 }

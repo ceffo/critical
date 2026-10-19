@@ -20,14 +20,13 @@ func StateKey(id int64) string {
 	return StateKeyXP + actionlog.KeySeparator + strconv.FormatInt(id, 10)
 }
 
-// snapEntry is the JSON encoding of one entry inside a snapshot. Entries
-// already in the log must stay decodable: add fields, never rename. Absent
-// marks a "before" in which the entry did not exist (restoring deletes it),
-// otherwise the entry is the whole truth: restoring overwrites every field,
-// or writes it back under its id when it is gone.
+// snapEntry is the state of an "xp:<id>" snapshot (xpSnaps), the envelope's
+// id naming the entry. Entries already in the log must stay decodable: add
+// fields, never rename. The entry is the whole truth: restoring overwrites
+// every field, or writes it back under its id when it is gone; an absent one
+// did not exist (an add's "before") or is gone (a remove's "after"), and
+// restoring it deletes it.
 type snapEntry struct {
-	ID      int64  `json:"id"`
-	Absent  bool   `json:"absent,omitempty"`
 	Date    string `json:"date"`
 	Session string `json:"session"`
 	Reason  string `json:"reason"`
@@ -35,64 +34,57 @@ type snapEntry struct {
 	Bonus   bool   `json:"bonus"`
 }
 
-func toSnap(id int64, e *Entry) snapEntry {
+// xpSnaps is the snapshotter of the XP ledger's entries (ADR 0018 step 8).
+var xpSnaps = actionlog.NewSnapshotter[snapEntry](StateKeyXP).MayBeAbsent()
+
+func toSnap(e *Entry) *snapEntry {
 	if e == nil {
-		return snapEntry{ID: id, Absent: true}
+		return nil
 	}
-	return snapEntry{ID: e.ID, Date: e.Date, Session: e.Session, Reason: e.Reason, Base: e.Base, Bonus: e.Bonus}
+	return &snapEntry{Date: e.Date, Session: e.Session, Reason: e.Reason, Base: e.Base, Bonus: e.Bonus}
 }
 
-func (c snapEntry) entry() Entry {
-	return Entry{ID: c.ID, Date: c.Date, Session: c.Session, Reason: c.Reason, Base: c.Base, Bonus: c.Bonus}
+func (c snapEntry) entry(id int64) Entry {
+	return Entry{ID: id, Date: c.Date, Session: c.Session, Reason: c.Reason, Base: c.Base, Bonus: c.Bonus}
 }
 
 // entrySnapshot is the snapshot of an entry going from before to after (nil =
 // it did not exist / no longer exists).
 func entrySnapshot(id int64, before, after *Entry) (actionlog.Snapshot, error) {
-	b, err := json.Marshal(toSnap(id, before))
-	if err != nil {
-		return actionlog.Snapshot{}, fmt.Errorf("encode xp snapshot: %w", err)
-	}
-	a, err := json.Marshal(toSnap(id, after))
-	if err != nil {
-		return actionlog.Snapshot{}, fmt.Errorf("encode xp snapshot: %w", err)
-	}
-	return actionlog.Snapshot{Key: StateKey(id), Before: b, After: a}, nil
-}
-
-type restoreFunc func(ctx context.Context, characterID int64, state json.RawMessage) error
-
-func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
-	return f(ctx, characterID, state)
+	return xpSnaps.Snapshot(strconv.FormatInt(id, 10), toSnap(before), toSnap(after))
 }
 
 // Restorers writes an XP snapshot back (registered for the StateKeyXP
 // family). It runs inside the undo's transaction.
 func (s *service) Restorers() map[string]actionlog.Restorer {
 	return map[string]actionlog.Restorer{
-		StateKeyXP: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
-			var c snapEntry
-			if err := json.Unmarshal(state, &c); err != nil {
-				return fmt.Errorf("decode xp snapshot: %w", err)
-			}
-			if c.ID == 0 {
-				return fmt.Errorf("decode xp snapshot: missing id")
-			}
-			var err error
-			if c.Absent {
-				err = s.dal.Delete(ctx, characterID, c.ID)
-			} else {
-				err = s.dal.Update(ctx, characterID, c.entry())
-				if errors.Is(err, ErrEntryNotFound) {
-					err = s.dal.Reinsert(ctx, characterID, c.entry())
-				}
-			}
+		StateKeyXP: xpSnaps.Restorer(func(ctx context.Context, characterID int64, key string, c snapEntry) error {
+			id, err := entryID(key)
 			if err != nil {
-				return fmt.Errorf("restore xp entry %d: %w", c.ID, err)
+				return err
 			}
-			return nil
+			err = s.dal.Update(ctx, characterID, c.entry(id))
+			if errors.Is(err, ErrEntryNotFound) {
+				err = s.dal.Reinsert(ctx, characterID, c.entry(id))
+			}
+			return err
+		}, func(ctx context.Context, characterID int64, key string) error {
+			id, err := entryID(key)
+			if err != nil {
+				return err
+			}
+			return s.dal.Delete(ctx, characterID, id)
 		}),
 	}
+}
+
+// entryID reads an XP snapshot's id.
+func entryID(key string) (int64, error) {
+	id, err := strconv.ParseInt(key, 10, 64)
+	if err != nil || id <= 0 {
+		return 0, fmt.Errorf("decode xp snapshot: id %q", key)
+	}
+	return id, nil
 }
 
 // entryRecord is one entry in an xp_add / xp_edit / xp_remove log payload,

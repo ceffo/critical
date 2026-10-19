@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc/mocks"
@@ -187,9 +188,9 @@ func TestLearn_Step20_2_OneD100AtOrUnderTheChance(t *testing.T) {
 		failedAt int
 		retry    int
 	}{
-		{60, true, `{"spellId":"new3","known":false,"failedAtLevel":0}`, `{"spellId":"new3","known":true,"failedAtLevel":0}`, 0, 0},
+		{60, true, `{"known":false,"failedAtLevel":0}`, `{"known":true,"failedAtLevel":0}`, 0, 0},
 		// A failure at level 5 may be tried again from level 6, the next one.
-		{61, false, `{"spellId":"new3","known":false,"failedAtLevel":0}`, `{"spellId":"new3","known":false,"failedAtLevel":5}`, 5, 6},
+		{61, false, `{"known":false,"failedAtLevel":0}`, `{"known":false,"failedAtLevel":5}`, 5, 6},
 	} {
 		t.Run(map[bool]string{true: "learned", false: "failed"}[tc.learned], func(t *testing.T) {
 			f := newFixture(t)
@@ -222,8 +223,9 @@ func TestLearn_Step20_2_OneD100AtOrUnderTheChance(t *testing.T) {
 				map[bool]string{true: "true", false: "false"}[tc.learned]+`,"characterLevel":5,"retryLevel":`+itoa(tc.retry)+`}`, string(got.Payload))
 			require.Len(t, got.Snapshots, 1)
 			assert.Equal(t, "spellbook:new3", got.Snapshots[0].Key)
-			assert.JSONEq(t, tc.before, string(got.Snapshots[0].Before))
-			assert.JSONEq(t, tc.after, string(got.Snapshots[0].After))
+			assert.Equal(t, "new3", snaptest.ID(t, got.Snapshots[0].Before), "the envelope names the spell")
+			assert.JSONEq(t, tc.before, snaptest.State(t, got.Snapshots[0].Before))
+			assert.JSONEq(t, tc.after, snaptest.State(t, got.Snapshots[0].After))
 		})
 	}
 }
@@ -235,15 +237,15 @@ func TestRestore_Step20_3_UndoLiftsTheBlock(t *testing.T) {
 		name, state string
 		expect      func(f fixture)
 	}{
-		{"before a success", `{"spellId":"new3","known":false,"failedAtLevel":0}`, func(f fixture) {
+		{"before a success", `{"known":false,"failedAtLevel":0}`, func(f fixture) {
 			f.dal.EXPECT().RemoveEntry(mock.Anything, charID, "new3").Return(nil).Once()
 			f.dal.EXPECT().DeleteLearnFailure(mock.Anything, charID, "new3").Return(nil).Once()
 		}},
-		{"before a failure at level 6, an older one at 4", `{"spellId":"new3","known":false,"failedAtLevel":4}`, func(f fixture) {
+		{"before a failure at level 6, an older one at 4", `{"known":false,"failedAtLevel":4}`, func(f fixture) {
 			f.dal.EXPECT().RemoveEntry(mock.Anything, charID, "new3").Return(nil).Once()
 			f.dal.EXPECT().SetLearnFailure(mock.Anything, charID, "new3", 4).Return(nil).Once()
 		}},
-		{"a redo of a success", `{"spellId":"new3","known":true,"failedAtLevel":0}`, func(f fixture) {
+		{"a redo of a success", `{"known":true,"failedAtLevel":0}`, func(f fixture) {
 			f.dal.EXPECT().AddEntry(mock.Anything, charID, "new3").Return(nil).Once()
 			f.dal.EXPECT().DeleteLearnFailure(mock.Anything, charID, "new3").Return(nil).Once()
 		}},
@@ -253,11 +255,11 @@ func TestRestore_Step20_3_UndoLiftsTheBlock(t *testing.T) {
 			tc.expect(f)
 			r := f.svc.Restorers()[learnsvc.StateFamily]
 			require.NotNil(t, r)
-			require.NoError(t, r.Restore(context.Background(), charID, json.RawMessage(tc.state)))
+			require.NoError(t, r.Restore(context.Background(), charID, snaptest.EnvID("new3", tc.state)))
 		})
 	}
 	f := newFixture(t)
-	require.Error(t, f.svc.Restorers()[learnsvc.StateFamily].Restore(context.Background(), charID, json.RawMessage(`{"known":true}`)),
+	require.Error(t, f.svc.Restorers()[learnsvc.StateFamily].Restore(context.Background(), charID, snaptest.Env(`{"known":true}`)),
 		"a snapshot that names no spell")
 }
 

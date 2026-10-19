@@ -319,7 +319,7 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		{
 			name: "low-confidence spell shows its text only",
 			slot: slot("tashas_uncontrollable_hideous_laughter", "Tasha's Uncontrollable Hideous Laughter", 2), textOnly: castsvc.TextOnlyLowConfidence,
-			wantRow: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Tasha's Uncontrollable Hideous Laughter", SpellID: "tashas_uncontrollable_hideous_laughter", Duration: 15},
+			wantRow: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Tasha's Uncontrollable Hideous Laughter", SpellID: "tashas_uncontrollable_hideous_laughter", Duration: 15, OnOther: true},
 		},
 		{
 			name: "slot saved before preparation: id from the name",

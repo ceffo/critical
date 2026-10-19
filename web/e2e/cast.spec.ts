@@ -1,6 +1,7 @@
 import { test, expect, snap, catalogueSpell } from "./fixtures";
 import {
   addBuff,
+  chooseLanguage,
   buffBadge,
   currentHp,
   effectiveStr,
@@ -177,6 +178,30 @@ test("a low-confidence spell shows its text only; Cloudkill rolls an exposure on
     "cloudkill",
   ]);
   await openSpells(page);
+  // A spell that only lasts, whose target is someone else: the arrow offers the Bard himself (the
+  // server serves it from the effect's target), in French at the big viewports too.
+  await page
+    .getByRole("button", {
+      name: "Choose the target of Tasha's Uncontrollable Hideous Laughter",
+    })
+    .click();
+  await expect(page.getByRole("menuitem", { name: "On me" })).toBeVisible();
+  await expect(page.getByRole("menuitem")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await chooseLanguage(page, "fr");
+  for (const vp of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await page
+      .getByRole("button", { name: /Choisir la cible de Tasha/ })
+      .click();
+    await snap(page, `row-only-cast-target-fr-${vp.width}x${vp.height}`);
+    await page.keyboard.press("Escape");
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await chooseLanguage(page, "en");
   await page
     .getByRole("button", {
       name: "Cast Tasha's Uncontrollable Hideous Laughter",

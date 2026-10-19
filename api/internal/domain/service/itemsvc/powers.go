@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -16,8 +18,8 @@ import (
 // the item is carried. It has an id (a slug, unique within its item), an
 // optional trigger, MinStr (on while the effective STR is at least that;
 // nil: always on), and no name, rounds or charges: the item names it. Powers
-// come from the seed and data migrations only, never from the item editor
-// (step 15).
+// come from the seed, data migrations and the equipment editor (ADR 0033
+// step 17, amending step 15), validated alike.
 type Power struct {
 	ID      string
 	MinStr  *int
@@ -62,6 +64,77 @@ func ValidatePowers(powers []Power) error {
 		}
 	}
 	return nil
+}
+
+// MagicPowerID is the reserved id of an armour's or a shield's "+N" (ADR 0033
+// step 17): the one power of that id is one effect ac -N, no trigger and no
+// condition. The AC breakdown names it armour magic or shield magic.
+const MagicPowerID = "magic"
+
+// MagicPower is the power an armour's or a shield's "+N" stands for (ADR
+// 0033 step 17): ac -n.
+func MagicPower(n int) Power {
+	ac := -n
+	return Power{ID: MagicPowerID, Effects: buffsvc.BuffEffects{AC: &ac}}
+}
+
+// validPiecePowers is the editor's check of a piece's powers (ADR 0033 step
+// 17): the seed's (ValidatePowers), and the reserved magic power only on an
+// armour or a shield, as one ac effect of -1 or better (the "+N", N at least
+// 1, at most MaxBonus) with no trigger and no condition. A refusal names the
+// field powers.
+func (i Item) validPiecePowers() error {
+	if err := ValidatePowers(i.Powers); err != nil {
+		return &domain.FieldError{Field: "powers", Message: strings.TrimPrefix(err.Error(), domain.ErrInvalidInput.Error()+": ")}
+	}
+	for _, p := range i.Powers {
+		if p.ID != MagicPowerID {
+			continue
+		}
+		if i.Category != CategoryArmour && i.Category != CategoryShield {
+			return fieldErr("powers", `Only an armour or a shield has the "magic" power (its +N)`)
+		}
+		rest := p.Effects
+		rest.AC = nil
+		if p.MinStr != nil || rest != (buffsvc.BuffEffects{}) || magicN(p) < 1 || magicN(p) > MaxBonus {
+			return domain.FieldErrorf("powers", `The "magic" power is one ac effect of -1 to -%d, without trigger or condition`, MaxBonus)
+		}
+	}
+	return nil
+}
+
+// magicN is the N of a magic power's ac -N (0 without an ac effect).
+func magicN(p Power) int {
+	if p.Effects.AC == nil {
+		return 0
+	}
+	return -*p.Effects.AC
+}
+
+// withPowerIDs gives every power sent without an id the first free
+// power_<n> (n from 1), so the editor need not invent slugs; an id sent is
+// kept as is (ValidatePowers checks it).
+func withPowerIDs(powers []Power) []Power {
+	if len(powers) == 0 {
+		return nil
+	}
+	out := slices.Clone(powers)
+	taken := map[string]bool{}
+	for _, p := range out {
+		taken[p.ID] = true
+	}
+	n := 1
+	for i := range out {
+		if out[i].ID != "" {
+			continue
+		}
+		for taken["power_"+strconv.Itoa(n)] {
+			n++
+		}
+		out[i].ID = "power_" + strconv.Itoa(n)
+		taken[out[i].ID] = true
+	}
+	return out
 }
 
 // jsonPower is the one encoding of a power: the items.powers column, the

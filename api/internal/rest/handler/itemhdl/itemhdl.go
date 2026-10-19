@@ -212,11 +212,14 @@ type ItemBody struct {
 	ShieldKind   *string        `json:"shieldKind"`
 	ACMelee      *int           `json:"acMelee"`
 	ACMissile    *int           `json:"acMissile"`
+	// Powers is the whole power list, as served (ADR 0033 step 17, amending
+	// ADR 0016 step 15): on a PATCH it replaces the stored one, absent keeps
+	// it. A power sent without an id gets power_<n>. An armour's or a
+	// shield's "+N" is the power of id "magic", one effect ac -N.
+	Powers *[]wire.PowerDTO `json:"powers"`
 	// Accepted and ignored, so a piece served back as is still decodes: the
-	// powers come from the seed and data migrations only (ADR 0016 step 15),
-	// the type label is no longer edited (ADR 0033 step 1), the state moves
+	// type label is no longer edited (ADR 0033 step 1), the state moves
 	// through POST /api/items/{id}/state, the review is not the editor's.
-	Powers     json.RawMessage `json:"powers"`
 	Type       json.RawMessage `json:"type"`
 	State      json.RawMessage `json:"state"`
 	EquipState json.RawMessage `json:"equipState"`
@@ -245,6 +248,14 @@ func deref[T any](p *T) T {
 	return *p
 }
 
+// powers is the domain list of a body's powers (none: nil).
+func powers(dtos *[]wire.PowerDTO) []itemsvc.Power {
+	if dtos == nil {
+		return nil
+	}
+	return wire.PowersFromDTO(*dtos)
+}
+
 // Create adds an item and logs it.
 func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
@@ -264,7 +275,7 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			MagicDamage: deref(b.MagicDamage), TwoHanded: deref(b.TwoHanded), Fires: deref(b.Fires),
 			Specialized: deref(b.Specialized), BaseAC: deref(b.BaseAC), SkillColumn: deref(b.SkillColumn),
 			ArmorRow: deref(b.ArmorRow), ShieldKind: deref(b.ShieldKind), ACMelee: deref(b.ACMelee),
-			ACMissile: deref(b.ACMissile),
+			ACMissile: deref(b.ACMissile), Powers: powers(b.Powers),
 		})
 		if err != nil {
 			return err
@@ -289,6 +300,10 @@ func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			MagicDamage: b.MagicDamage, TwoHanded: b.TwoHanded, Fires: b.Fires, Specialized: b.Specialized,
 			BaseAC: b.BaseAC, SkillColumn: b.SkillColumn, ArmorRow: b.ArmorRow, ShieldKind: b.ShieldKind,
 			ACMelee: b.ACMelee, ACMissile: b.ACMissile,
+		}
+		if b.Powers != nil {
+			ps := powers(b.Powers)
+			p.Powers = &ps
 		}
 		if b.Behaviour != nil {
 			bh := itemsvc.Behaviour(*b.Behaviour)

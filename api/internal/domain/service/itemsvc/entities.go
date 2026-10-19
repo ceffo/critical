@@ -63,8 +63,9 @@ type Item struct {
 	EffectDice string // damage dice of a use, e.g. "6d6"
 	EffectSave string // save category for the effect, e.g. "rod_staff_wand"
 	Notes      string
-	// Powers are the piece's own powers (ADR 0016 steps 9 to 16), never set
-	// by the editor; on only while the piece is worn or wielded (step 9).
+	// Powers are the piece's own powers (ADR 0016 steps 9 to 16), set by
+	// the seed, data migrations and the editor (ADR 0033 step 17); on only
+	// while the piece is worn or wielded (step 9).
 	Powers []Power
 
 	// Ammunition (step 4): its ammo kind and its magic, to hit and damage.

@@ -662,6 +662,34 @@ test.describe("with the sheet's STR 12", () => {
   });
 });
 
+// ADR 0016 step 13: magic armour worn has no row on the effects timeline (it is always on); French
+// first (ADR 0027 step 2). Screens at 1920x1080 and 2560x1440.
+test("effects timeline with magic armour worn: no row for it, 1920 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await openWorkspace(page, "Inventory");
+  await page
+    .getByTestId("item-leather")
+    .getByRole("button", { name: /^Edit / })
+    .click();
+  const af = page.getByTestId("item-form");
+  await af.getByRole("button", { name: "More magic" }).click();
+  await af.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(af).toHaveCount(0);
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  for (const vp of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expect(page.getByTestId("effects-track")).toBeVisible();
+    await expect(page.getByTestId("item-power")).toHaveCount(0);
+    await snap(page, `timeline-magic-armour-fr-${vp.width}x${vp.height}`);
+  }
+});
+
 // ADR 0022 step 5.4: the handle between the now band and the journal resizes the journal by drag
 // (mouse) and arrows (keyboard); a click (or Enter) on it folds the journal into a one-line bar and
 // back, a drag of 4 px or more only resizes; both are kept per device

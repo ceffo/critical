@@ -519,6 +519,11 @@ test("the editor's +N and a ring of protection template move the AC shield, name
   await form(page).getByRole("button", { name: "Save", exact: true }).click();
   await expect(form(page)).toHaveCount(0);
   await expect(value).toHaveText(String(start - 2));
+  // The armour's always-on +2 is no row of the effects timeline (ADR 0016 step 13).
+  await openWorkspace(page, "Act");
+  await expect(page.getByTestId("effects-track")).toBeVisible();
+  await expect(page.getByTestId("item-power")).toHaveCount(0);
+  await openWorkspace(page, "Inventory");
 
   await page.getByTestId("ac-shield").click();
   const magic = page

@@ -55,4 +55,17 @@ describeKind("initiative_correct", fixtures, {
     },
     value: { text: "8", tone: "ink" },
   },
+  // A scroll that names its spell: that spell's casting time, the spell named after the scroll.
+  namedScroll: {
+    en: {
+      text: "Round 2 initiative corrected: 13 → 11 (Scroll (fireball): +3)",
+      subtitle: "Round 2",
+      card: ["<li>Scroll (fireball): +3</li>"],
+    },
+    fr: {
+      text: "Initiative du tour 2 corrigée : 13 → 11 (Scroll (fireball) : +3)",
+      subtitle: "Tour 2",
+    },
+    value: { text: "11", tone: "ink" },
+  },
 });

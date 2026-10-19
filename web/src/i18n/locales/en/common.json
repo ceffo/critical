@@ -183,6 +183,7 @@
     "endOfRoundTerm": "{{name}}: end of round",
     "specialTerm": "{{name}}: special casting time",
     "spellCastingTimeTerm": "{{name}}: casting time of its spell, not counted",
+    "itemWithSpell": "{{item}} ({{spell}})",
     "total": "= {{value}}, the lowest acts first",
     "endOfRound": "end of round",
     "breakdown": "Initiative breakdown"
@@ -1313,6 +1314,7 @@
       "added": "Added {{name}} ({{count}})",
       "removedItem": "Removed {{name}} ({{count}})",
       "edited": "Edited {{name}}: {{changes}}",
+      "noSpell": "none",
       "change": "{{field}} {{before}} → {{after}}",
       "fields": {
         "name": "name",
@@ -1348,6 +1350,7 @@
         "acMissile": "AC bonus (missiles)",
         "catalogueCode": "catalogue row",
         "component": "spell component",
+        "spellId": "spell",
         "powers": "powers"
       }
     },
@@ -2173,6 +2176,9 @@
       "acMissile": "AC bonus (missiles)",
       "component": "Spell component",
       "noComponent": "None",
+      "spell": "Spell",
+      "noSpell": "None",
+      "spellHint": "The spell this scroll holds: using it adds that spell's casting time to the initiative",
       "componentHint": "A spell that spends this component can spend this item",
       "errors": {
         "not_allowed": "Not allowed for this item.",

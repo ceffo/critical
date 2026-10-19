@@ -165,8 +165,9 @@ func ScrollInitiative(itemID, name, magicKind, spellID string, ct spellstats.Cas
 
 // ItemInitiative is the term of a magic item used that round (ADR 0035 item
 // 6.2): its magic kind's PHB Table 56 modifier. A row without one (the
-// scroll's: the casting time of its spell) is not counted, since an item
-// does not hold its spell: it adds nothing, with timing spell_casting_time.
+// scroll's: the casting time of its spell) is not counted for a scroll that
+// names no spell: it adds nothing, with timing spell_casting_time. A scroll
+// that names its spell is ScrollInitiative.
 func ItemInitiative(itemID, name, magicKind string, modifier int, hasModifier bool) InitiativeModifier {
 	m := InitiativeModifier{Source: InitiativeItem, ItemID: itemID, Name: name, MagicKind: magicKind}
 	if !hasModifier {

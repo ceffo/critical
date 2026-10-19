@@ -183,6 +183,7 @@
     "endOfRoundTerm": "{{name}} : fin du tour",
     "specialTerm": "{{name}} : temps d’incantation spécial",
     "spellCastingTimeTerm": "{{name}} : temps d’incantation de son sort, non compté",
+    "itemWithSpell": "{{item}} ({{spell}})",
     "total": "= {{value}}, le plus bas agit en premier",
     "endOfRound": "fin du tour",
     "breakdown": "Détail de l’initiative"
@@ -1313,6 +1314,7 @@
       "added": "Objet ajouté : {{name}} ({{count}})",
       "removedItem": "Objet retiré : {{name}} ({{count}})",
       "edited": "Objet modifié : {{name}}, {{changes}}",
+      "noSpell": "aucun",
       "change": "{{field}} {{before}} → {{after}}",
       "fields": {
         "name": "nom",
@@ -1348,6 +1350,7 @@
         "acMissile": "bonus de CA (projectiles)",
         "catalogueCode": "ligne du catalogue",
         "component": "composante de sort",
+        "spellId": "sort",
         "powers": "pouvoirs"
       }
     },
@@ -2173,6 +2176,9 @@
       "acMissile": "Bonus de CA (projectiles)",
       "component": "Composante de sort",
       "noComponent": "Aucune",
+      "spell": "Sort",
+      "noSpell": "Aucun",
+      "spellHint": "Le sort que contient ce parchemin : l'utiliser ajoute son temps d'incantation à l'initiative",
       "componentHint": "Un sort qui dépense cette composante peut dépenser cet objet",
       "errors": {
         "not_allowed": "Pas permis pour cet objet.",

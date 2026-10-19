@@ -100,5 +100,31 @@
         "timing": "spell_casting_time"
       }
     }
+  },
+  "namedScroll": {
+    "payload": {
+      "round": 2,
+      "d10": 8,
+      "before": 13,
+      "after": 11,
+      "modifiers": [
+        {
+          "source": "item",
+          "value": 3,
+          "itemId": "scroll",
+          "name": "Scroll",
+          "magicKind": "scroll",
+          "spellId": "fireball"
+        }
+      ],
+      "cause": {
+        "source": "item",
+        "value": 3,
+        "itemId": "scroll",
+        "name": "Scroll",
+        "magicKind": "scroll",
+        "spellId": "fireball"
+      }
+    }
   }
 }

@@ -9,6 +9,7 @@ import {
   changedFields,
   draftToBody,
   hasField,
+  holdsSpell,
   type DraftErrors,
   type ItemDraft,
   type ItemField,
@@ -35,6 +36,7 @@ import { WEAPON_TYPES, type WeaponType } from "@/types/combat";
 import { hasPlus, MAX_PLUS } from "@/lib/powerEditor";
 import { formatSigned } from "@/lib/format";
 import { PowersEditor } from "./PowersEditor";
+import { useSpellNamesStore } from "@/stores/spellNames";
 
 const BEHAVIOURS: ItemBehaviour[] = ["stock", "charges", "daily"];
 /** Save categories an item effect may allow (the server rejects anything else). */
@@ -82,6 +84,13 @@ export function ItemForm({
     setErrors((e) => ({ ...e, [k]: undefined }));
   };
   const shows = (f: ItemField) => hasField(draft.category, f);
+  const spellNames = useSpellNamesStore((s) => s.names);
+  // The catalogue's spells by name in the UI language, for a scroll's spell (ADR 0033 step 2).
+  const spellOptions = Object.values(spellNames)
+    .map((s) => ({ id: s.id, name: localized(i18n.language, s.name) || s.id }))
+    .sort((a, b) => a.name.localeCompare(b.name, i18n.language));
+  if (draft.spellId && !spellNames[draft.spellId])
+    spellOptions.unshift({ id: draft.spellId, name: draft.spellId });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -233,6 +242,23 @@ export function ItemForm({
               t(`equipment.magicKinds.${k as MagicKind}`),
             ),
           )}
+        {holdsSpell(draft) &&
+          field("spellId", t("equipment.form.spell"), (props) => (
+            <select
+              {...props}
+              className={cn(fieldClass, errors.spellId && "border-destructive")}
+              title={t("equipment.form.spellHint")}
+              value={draft.spellId}
+              onChange={(e) => set("spellId", e.target.value)}
+            >
+              <option value="">{t("equipment.form.noSpell")}</option>
+              {spellOptions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          ))}
 
         {/* Weapon (ADR 0033 step 3). */}
         {shows("weaponKind") &&

@@ -20,4 +20,13 @@ describeKind("item_edit", fixtures, {
       text: "Objet modifié : Chain mail, pouvoirs aucun → magie +2 ; Sauvegardes +1 · CA −1 (sans armure magique)",
     },
   },
+  // ADR 0033 step 2: the spell a scroll holds, logged by id, named by the catalogue (tests: the id).
+  editedSpell: {
+    en: { text: "Edited Scroll: spell none → burning_hands" },
+    fr: { text: "Objet modifié : Scroll, sort aucun → burning_hands" },
+  },
+  clearedSpell: {
+    en: { text: "Edited Scroll: spell burning_hands → none" },
+    fr: { text: "Objet modifié : Scroll, sort burning_hands → aucun" },
+  },
 });

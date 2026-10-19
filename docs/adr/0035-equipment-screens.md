@@ -94,10 +94,19 @@ README and the shots are the picture, French first. Rules of ADR 0033 not named 
        `timing: special`.
      - The item term is Table 56 by magic kind. Before catalogue format 7 (no Table 56) a use
        corrects nothing.
-     - **Gap: the scroll.** Table 56's scroll row is the casting time of the spell it holds (ADR 0033
-       step 15.1: a scroll as its spell), but an item doesn't hold its spell. The scroll's term adds
-       nothing and is shown as not counted (`timing: spell_casting_time`, "casting time of its
-       spell, not counted"), never as a computed +0. It closes when a scroll names its spell.
+     - **The scroll** (CRI-73, closing the gap CRI-39 left). Table 56's scroll row is the casting time
+       of the spell it holds (ADR 0033 step 15.1: a scroll as its spell). A scroll names its spell
+       (ADR 0033 step 2, `items.spell_id`, migration 022). Used, a named scroll's term
+       (`buffsvc.ScrollInitiative`) is an `item` term carrying `spellId`, worth that spell's
+       catalogue casting time by the cast's rules above (segments add, a round or more is
+       `end_of_round`, special is `special`). A spell the catalogue no longer knows reads as
+       `special`. The casting time is read at caster level 6: DMG p.145 ("Spell Level of Scroll
+       Spells") writes a scroll spell one level above the minimum needed to cast it, never below 6th,
+       so 6 is a floor, not always the level. No scroll records its level; the one catalogue casting
+       time that depends on the level ("3 rounds + 1 round/level") is a round or more at any level,
+       so the floor gives the same term. A scroll that names no spell still adds nothing and is shown
+       as not counted (`timing: spell_casting_time`, "casting time of its spell, not counted"), never
+       as a computed +0. The journal and the tooltip name it "Scroll (Burning Hands): +1".
      - The correction keeps the d10 and the effect terms recorded at the roll. Its cause replaces the
        weapon term, or an earlier cause. Effects are not re-read, so casting Haste does not speed up
        its own round.
@@ -127,15 +136,19 @@ README and the shots are the picture, French first. Rules of ADR 0033 not named 
    Tests:
    - `buffsvc`: `TestWeaponSpeed_ADR0035Item6_*`, `TestSpellInitiative_ADR0035Item6_2_*`,
      `TestItemInitiative_ADR0035Item6_2_Table56AndTheScrollNotCounted`,
+     `TestScrollInitiative_ADR0035Item6_2_TheSpellsCastingTimeAtLevelSix`,
      `TestInitiative_ADR0035Item6_NextRoundAddsTheWeaponSpeedAndEffects`,
      `TestInitiative_ADR0035Item6_2_ACastOrAnItemUsedCorrectsTheRound`,
      `TestInitiative_ADR0035Item6_4_RerollKeepsTheModifiers` and
      `TestInitiativeRestorer_ADR0035Item6_RestoresTheModifiers`.
    - `castsvc`: `TestCast_ADR0035Item6_2_CastingCorrectsTheInitiative`.
-   - `itemsvc`: `TestUseItem_ADR0035Item6_2_AMagicItemUsedCorrectsTheInitiative`.
+   - `itemsvc`: `TestUseItem_ADR0035Item6_2_AMagicItemUsedCorrectsTheInitiative`,
+     `TestUseItem_ADR0035Item6_2_ANamedScrollAddsItsSpellsCastingTime`; a scroll's spell (ADR 0033
+     step 2): `TestUpdate_ADR0033Step2_AScrollNamesItsSpell`,
+     `TestItems_ADR0033Step2_OnlyAScrollNamesAKnownSpell`.
    - `composition`: `TestInitiative_ADR0035Item6_WeaponSpeedThenAnItemUsedCorrectsTheRound` (undo,
-     redo, reroll).
-   - `router`: `TestRoundInitiative_WireShape`.
+     redo, reroll), `TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell`.
+   - `router`: `TestRoundInitiative_WireShape`, `TestItems_ADR0033Step2_ScrollSpellOnTheWire`.
    - `buffdal`: `TestInitiative_ADR0035Item6_ModifiersBelongToTheirEntry`; `spelleffectsadpt`:
      `TestRepoSeeds_ADR0033Step11_InitiativeEffects`.
    - e2e: `round.spec` and `layout.spec`.

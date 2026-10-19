@@ -72,8 +72,8 @@ func TestSpellInitiative_ADR0035Item6_2_CastingTimeInSegments(t *testing.T) {
 }
 
 // ADR 0035 item 6.2 with PHB Table 56: an item used adds its row's modifier.
-// The scroll's row is the casting time of its spell, which an item doesn't
-// hold: that term is not counted (spell_casting_time), never a computed +0.
+// The scroll's row is the casting time of its spell: for a scroll that names
+// none, that term is not counted (spell_casting_time), never a computed +0.
 func TestItemInitiative_ADR0035Item6_2_Table56AndTheScrollNotCounted(t *testing.T) {
 	assert.Equal(t, buffsvc.InitiativeModifier{
 		Source: buffsvc.InitiativeItem, Value: 3, ItemID: "w", Name: "Wand", MagicKind: "wand",

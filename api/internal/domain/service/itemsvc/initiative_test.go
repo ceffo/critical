@@ -36,8 +36,8 @@ func table56(t *testing.T) *ruletablesvc.InitiativeItems {
 // its magic kind's Table 56 modifier, after the
 // use's entry, the transaction's last. Any other piece corrects nothing, nor
 // does a use before catalogue format 7 (no Table 56). A scroll's row is the
-// casting time of its spell, which the item doesn't hold: its term is not
-// counted (timing spell_casting_time), never a computed +0.
+// casting time of its spell: a scroll that names none is not counted
+// (timing spell_casting_time), never a computed +0.
 func TestUseItem_ADR0035Item6_2_AMagicItemUsedCorrectsTheInitiative(t *testing.T) {
 	tests := []struct {
 		name  string

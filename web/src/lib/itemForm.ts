@@ -29,6 +29,8 @@ export interface ItemDraft {
   magicKind: MagicKind | "";
   /** The spell component it is, any category (ADR 0033 step 1.1); empty for none. */
   component: Component | "";
+  /** The spell a magic scroll holds (ADR 0033 step 2), a catalogue id; empty for none. */
+  spellId: string;
   behaviour: ItemBehaviour;
   count: string;
   maxCount: string;
@@ -97,6 +99,13 @@ const CATEGORY_FIELDS: Record<Category, ItemField[]> = {
   gear: [],
 };
 
+/** Whether the piece may name the spell it holds: a magic scroll (ADR 0033 step 2). */
+export function holdsSpell(
+  d: Pick<ItemDraft, "category" | "magicKind">,
+): boolean {
+  return d.category === "magic" && d.magicKind === "scroll";
+}
+
 /** Whether the form shows (and sends) field for category. */
 export function hasField(category: Category, field: ItemField): boolean {
   return CATEGORY_FIELDS[category].includes(field);
@@ -109,6 +118,7 @@ export function emptyDraft(category: Category = "gear"): ItemDraft {
     category,
     magicKind: category === "magic" ? "misc" : "",
     component: "",
+    spellId: "",
     behaviour: "stock",
     count: "1",
     maxCount: "1",
@@ -148,6 +158,7 @@ export function draftFromItem(i: Item, lang: string): ItemDraft {
     category: i.category,
     magicKind: i.magicKind,
     component: i.component ?? "",
+    spellId: i.spellId ?? "",
     behaviour: i.behaviour,
     count: String(i.count),
     maxCount: String(i.maxCount),
@@ -244,6 +255,8 @@ export function draftToBody(
   for (const f of CATEGORY_FIELDS[d.category])
     out[f] = (all as Record<string, unknown>)[f];
   if (d.behaviour === "daily") body.maxCount = num("maxCount", d.maxCount);
+  // Only a magic scroll holds a spell; another piece sends none and the server drops it.
+  if (holdsSpell(d)) body.spellId = d.spellId;
   // Every piece has powers (ADR 0033 step 17); the "+N" is an armour's or a shield's.
   const powers = draftsToPowers(d.category, d.plus, d.powers);
   if (powers) body.powers = powers;

@@ -18,6 +18,7 @@ function piece(p: Partial<Item>): Item {
     magicKind: "",
     catalogueCode: "",
     component: "",
+    spellId: "",
     state: "carried",
     equipState: "",
     type: "",
@@ -198,6 +199,29 @@ describe("draftToBody", () => {
 });
 
 describe("changedFields", () => {
+  // ADR 0033 step 2: a magic scroll names the spell it holds; the form sends it, sets and clears it.
+  it("sends a scroll's spell when it is set or cleared, and none for another piece", () => {
+    const scroll = piece({ id: "s", category: "magic", magicKind: "scroll" });
+    const named = draftToBody(
+      { ...draftFromItem(scroll, "en"), spellId: "burning_hands" },
+      "en",
+    ).body;
+    expect(changedFields(scroll, named, "en")).toEqual({
+      spellId: "burning_hands",
+    });
+    const held = { ...scroll, spellId: "burning_hands" };
+    const cleared = draftToBody(
+      { ...draftFromItem(held, "en"), spellId: "" },
+      "en",
+    ).body;
+    expect(changedFields(held, cleared, "en")).toEqual({ spellId: "" });
+    const potion = draftToBody(
+      { ...draftFromItem(held, "en"), magicKind: "potion" },
+      "en",
+    ).body;
+    expect(potion.spellId).toBeUndefined();
+  });
+
   it("sends only what changed: the wand's charges 4 to 3", () => {
     const { body } = draftToBody(
       { ...draftFromItem(wand, "en"), count: "3" },

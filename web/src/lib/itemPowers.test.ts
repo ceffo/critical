@@ -35,6 +35,7 @@ const gem: Item = {
   magicKind: "misc",
   catalogueCode: "",
   component: "gem",
+  spellId: "",
   state: "worn",
   equipState: "worn",
   damageTypes: [],

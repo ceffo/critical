@@ -9,6 +9,7 @@ import { formatSigned } from "./format";
 /** The name of what a modifier comes from: the weapon, the buff or power, the spell, the item. */
 export function initiativeTermName(
   m: InitiativeModifier,
+  t: TFunction,
   spellName: SpellNamer,
   names: InventoryNamer,
 ): string {
@@ -16,8 +17,13 @@ export function initiativeTermName(
   switch (m.source) {
     case "weapon":
       return names.weapon(m.itemId, recorded);
-    case "item":
-      return names.item(m.itemId, recorded);
+    case "item": {
+      // A scroll that names its spell (ADR 0035 item 6.2): "Scroll (Burning Hands)".
+      const item = names.item(m.itemId, recorded);
+      return m.spellId
+        ? t("initiative.itemWithSpell", { item, spell: spellName(m.spellId) })
+        : item;
+    }
     case "spell":
       return m.spellId ? spellName(m.spellId, recorded) : recorded;
     case "effect":
@@ -33,7 +39,7 @@ export function initiativeTermText(
   spellName: SpellNamer,
   names: InventoryNamer,
 ): string {
-  const name = initiativeTermName(m, spellName, names);
+  const name = initiativeTermName(m, t, spellName, names);
   if (m.timing === "end_of_round")
     return t("initiative.endOfRoundTerm", { name });
   if (m.timing === "special") return t("initiative.specialTerm", { name });

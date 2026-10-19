@@ -195,6 +195,8 @@ test("the review list: the band counts the pieces to check, Dismiss and a classi
 
   // Settling the bastard sword: its speed and damage type.
   await review.getByRole("button", { name: "Edit Bastard Sword +2" }).click();
+  // The form opens in the list below the panel: it is brought into view.
+  await expect(form(page)).toBeInViewport();
   await form(page).getByLabel("Speed factor").fill("6");
   await form(page).getByLabel("Slashing").check();
   await form(page).getByRole("button", { name: "Save" }).click();

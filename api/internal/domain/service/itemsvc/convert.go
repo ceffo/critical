@@ -1,6 +1,7 @@
 package itemsvc
 
 import (
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -53,9 +54,11 @@ var matchable = []string{
 //  2. (the snapshots are the restorers', see Restorers);
 //  3. an item whose id a weapon has takes the next free suffix, recorded in
 //     Renames;
-//  4. a weapon is matched to the catalogue row of its type, which adds the
-//     code, the size, the damage types and the speed and overwrites no
-//     stored stat; an unmatched one is on the review list;
+//  4. a weapon is matched to the catalogue row of its type, else to the one
+//     row its name (without a magic suffix such as "+2" or "+1/+2") or id
+//     names unambiguously (matchByName), which adds the code, the size, the
+//     damage types and the speed and overwrites no stored stat; an unmatched
+//     or ambiguous one is on the review list;
 //  5. an item is categorised from its type label when it is obvious (an item
 //     with an ammo kind is ammunition); ammunition with no dice gets the dice
 //     of the first launcher that fires its kind; the rest is gear on the
@@ -256,6 +259,9 @@ func ConvertWeapon(w LegacyWeapon, catalogue []ruletablesvc.Weapon) (Item, []str
 	}
 	row, matched := match(w.Type, catalogue)
 	if !matched {
+		row, matched = matchByName(w, catalogue)
+	}
+	if !matched {
 		return piece, append(reasons, ReasonWeaponUnmatched)
 	}
 	piece.CatalogueCode, piece.Size, piece.Speed = row.Code, row.Size, row.Speed
@@ -272,6 +278,70 @@ func match(weaponType string, catalogue []ruletablesvc.Weapon) (ruletablesvc.Wea
 	for _, row := range catalogue {
 		if row.Code == weaponType && row.WeaponType == weaponType {
 			return row, true
+		}
+	}
+	return ruletablesvc.Weapon{}, false
+}
+
+// magicSuffix is the magic bonus a weapon's name may end with: "+2", "+1/+2".
+var magicSuffix = regexp.MustCompile(`\s*\(?\+\d+(\s*/\s*\+\d+)?\)?\s*$`)
+
+// matchByName is the catalogue row a weapon that no type matched names
+// unambiguously (ADR 0033 step 26.4): of the rows of its kind, those whose
+// code is its id or its name (any language, case ignored, the magic suffix
+// dropped) written with underscores, or whose name is its name; failing that
+// those whose name is its name followed by a qualifier after a comma
+// ("Bastard sword, two-handed"), kept only when the weapon's two-handed flag
+// is the row's. Exactly one row matches, or none: nothing is guessed.
+func matchByName(w LegacyWeapon, catalogue []ruletablesvc.Weapon) (ruletablesvc.Weapon, bool) {
+	var bases []string
+	for _, n := range w.Name {
+		if b := strings.ToLower(strings.TrimSpace(magicSuffix.ReplaceAllString(n, ""))); b != "" {
+			bases = append(bases, b)
+		}
+	}
+	id := strings.ToLower(w.ID)
+	exact := func(row ruletablesvc.Weapon) bool {
+		if row.Code == id {
+			return true
+		}
+		for _, b := range bases {
+			if row.Code == strings.ReplaceAll(b, " ", "_") {
+				return true
+			}
+		}
+		for _, n := range row.Name {
+			if slices.Contains(bases, strings.ToLower(strings.TrimSpace(n))) {
+				return true
+			}
+		}
+		return false
+	}
+	qualified := func(row ruletablesvc.Weapon) bool {
+		if row.TwoHanded != w.TwoHanded {
+			return false
+		}
+		for _, n := range row.Name {
+			for _, b := range bases {
+				if strings.HasPrefix(strings.ToLower(n), b+", ") || strings.HasPrefix(strings.ToLower(n), b+" (") {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	for _, test := range []func(ruletablesvc.Weapon) bool{exact, qualified} {
+		var found []ruletablesvc.Weapon
+		for _, row := range catalogue {
+			if row.Kind == w.Kind && test(row) {
+				found = append(found, row)
+			}
+		}
+		if len(found) == 1 {
+			return found[0], true
+		}
+		if len(found) > 1 {
+			return ruletablesvc.Weapon{}, false
 		}
 	}
 	return ruletablesvc.Weapon{}, false

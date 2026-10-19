@@ -396,7 +396,13 @@ name or comment); this ADR names none yet.
        `long_sword` → long sword, `short_bow` → short bow, `dagger`, `dart`, `sling`, `short_sword`,
        `long_bow`, the three crossbows. The match adds the code, the size, the damage types and the
        speed; it never overwrites a stored stat. `other_melee`, `other_thrown`, `other_missile` and
-       no type are not matched and go on the review list.
+       no type are not matched by type. _Amended in implementation (CRI-34, round 6)_: such a weapon
+       (and one whose type has no row) is then matched by **name**: among the catalogue rows of its kind,
+       the one whose code is its id, or whose code or name (any language, any case, a trailing magic
+       suffix `+2` / `+1/+2` dropped from its own name) is its name; failing that the one whose name is
+       its name followed by a qualifier (`Bastard sword, two-handed`) and whose two-handed flag is the
+       weapon's. Exactly one row matches or none: an ambiguous or missing name stays unmatched and goes
+       on the review list (nothing is guessed). The weapon keeps its own name and bonus.
     5. **Items** are categorised from their type label when it is obvious: `arrow`, `quarrel`,
        `bolt`, `bullet` → ammunition (its ammo kind); `potion`, `scroll`, `ring`, `rod`, `staff`,
        `wand` → magic of that kind; `gem` → magic `misc` (and the component `gem`, step 1.1); `flask` →

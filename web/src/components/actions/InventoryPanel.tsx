@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Backpack,
   Crosshair,
@@ -93,6 +93,13 @@ export function InventoryPanel() {
   const [filter, setFilter] = useState<Category | "all">("all");
   const [reviewOpen, setReviewOpen] = useState(false);
   const close = () => setForm(null);
+  // Edit from the "To check" panel opens the form in the list below it, often out of view: bring it up.
+  useEffect(() => {
+    if (form === null) return;
+    document
+      .querySelector("[data-testid='inventory-form']")
+      ?.scrollIntoView({ block: "nearest" });
+  }, [form]);
   const toReview = items.filter((i) => i.review.length > 0);
   const shown = piecesIn(items, filter);
   const nameOf = (i: Item) => localized(i18n.language, i.name);
@@ -242,7 +249,7 @@ export function InventoryPanel() {
           </div>
         )}
         {form === "add" && (
-          <div className="mb-2">
+          <div className="mb-2" data-testid="inventory-form">
             <ItemForm
               initial={emptyDraft(filter === "all" ? "gear" : filter)}
               specializes={specializes}
@@ -271,7 +278,11 @@ export function InventoryPanel() {
           >
             {shown.map((i) =>
               form === i.id ? (
-                <li key={i.id} className="col-span-full">
+                <li
+                  key={i.id}
+                  className="col-span-full"
+                  data-testid="inventory-form"
+                >
                   {editor(i)}
                 </li>
               ) : (

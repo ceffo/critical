@@ -258,3 +258,69 @@ func TestRestorers_Step26_2_OldWeaponEntriesPopIntoThePiece(t *testing.T) {
 		require.NoError(t, restore(dal, json.RawMessage(`{"id":"longsword","absent":true}`)))
 	})
 }
+
+// ADR 0033 step 26.4: a weapon whose type matches no row is matched by its
+// name without the magic suffix, or by its id, when exactly one row of its
+// kind names it; a qualified name ("Bastard sword, two-handed") is told by the
+// two-handed flag; an ambiguous or missing name stays on the review list. The
+// stored stats and the weapon's own name are kept.
+func TestConvert_Step26_4_WeaponMatchedByName(t *testing.T) {
+	rows := []ruletablesvc.Weapon{
+		{
+			Code: "bastard_sword_one_handed", WeaponType: "other_melee", Kind: "melee", Size: "m", Types: []string{"s"}, Speed: 6,
+			Name: localized.Text{"en": "Bastard sword, one-handed", "fr": "Épée bâtarde à une main"},
+		},
+		{
+			Code: "bastard_sword_two_handed", WeaponType: "other_melee", Kind: "melee", Size: "m", Types: []string{"s"}, Speed: 8, TwoHanded: true,
+			Name: localized.Text{"en": "Bastard sword, two-handed", "fr": "Épée bâtarde à deux mains"},
+		},
+		{
+			Code: "footmans_mace", WeaponType: "other_melee", Kind: "melee", Size: "m", Types: []string{"b"}, Speed: 7,
+			Name: localized.Text{"en": "Footman's mace"},
+		},
+		{
+			Code: "horsemans_mace", WeaponType: "other_melee", Kind: "melee", Size: "m", Types: []string{"b"}, Speed: 6,
+			Name: localized.Text{"en": "Horseman's mace"},
+		},
+		{
+			Code: "scimitar", WeaponType: "other_melee", Kind: "melee", Size: "m", Types: []string{"s"}, Speed: 5,
+			Name: localized.Text{"en": "Scimitar", "fr": "Cimeterre"},
+		},
+		{Code: "spear", WeaponType: "other_melee", Kind: "melee", Speed: 6, Name: localized.Text{"en": "Spear"}},
+		{Code: "spear_2", WeaponType: "other_melee", Kind: "melee", Speed: 6, Name: localized.Text{"en": "Spear"}},
+	}
+	w := func(id string, name localized.Text, twoHanded bool) itemsvc.LegacyWeapon {
+		return itemsvc.LegacyWeapon{
+			ID: id, Name: name, Kind: "melee", Type: "other_melee", TwoHanded: twoHanded,
+			DamageSM: "2d4", MagicToHit: 2, MagicDamage: 2,
+		}
+	}
+
+	two, reasons := itemsvc.ConvertWeapon(w("bastard_sword", localized.Text{"en": "Bastard Sword +2", "fr": "Épée bâtarde +2"}, true), rows)
+	assert.Empty(t, reasons)
+	assert.Equal(t, "bastard_sword_two_handed", two.CatalogueCode, "the flag tells the qualified rows apart")
+	assert.Equal(t, 8, two.Speed)
+	assert.Equal(t, []string{"s"}, two.DamageTypes)
+	assert.Equal(t, "Bastard Sword +2", two.Name["en"], "its own name stays")
+	assert.Equal(t, 2, two.MagicToHit, "its own bonus stays")
+	assert.Equal(t, "2d4", two.DamageSM, "its own dice stay")
+
+	one, _ := itemsvc.ConvertWeapon(w("bastard_sword", localized.Of("Bastard sword +1/+2"), false), rows)
+	assert.Equal(t, "bastard_sword_one_handed", one.CatalogueCode, "a +N/+M suffix is dropped too")
+
+	fr, _ := itemsvc.ConvertWeapon(w("sabre", localized.Text{"fr": "Cimeterre +1"}, false), rows)
+	assert.Equal(t, "scimitar", fr.CatalogueCode, "the name in any language")
+
+	byID, _ := itemsvc.ConvertWeapon(w("scimitar", localized.Of("My blade"), false), rows)
+	assert.Equal(t, "scimitar", byID.CatalogueCode, "the id is the code")
+
+	for name, lw := range map[string]itemsvc.LegacyWeapon{
+		"mace: no row is named so": w("mace", localized.Of("Mace +1"), false),
+		"two rows of one name":     w("spear", localized.Of("Spear"), false),
+		"a name no row has":        w("x", localized.Of("Flamberge +3"), false),
+	} {
+		piece, reasons := itemsvc.ConvertWeapon(lw, rows)
+		assert.Equal(t, []string{itemsvc.ReasonWeaponUnmatched}, reasons, name)
+		assert.Empty(t, piece.CatalogueCode, name)
+	}
+}

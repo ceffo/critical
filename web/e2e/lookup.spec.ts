@@ -416,7 +416,7 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
   expect(full.length).toBeGreaterThan(200); // not cut
   expect(full.trimEnd().endsWith("as desired.")).toBe(true);
   // Bounded: a text longer than the room left scrolls inside its own area (at 1280x800 it
-  // overflows; at 1440 the two text columns hold it).
+  // overflows; at 1440 it fits).
   await page.setViewportSize({ width: 1280, height: 800 });
   expect(await text.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(
     true,

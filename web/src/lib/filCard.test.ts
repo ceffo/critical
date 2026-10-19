@@ -484,7 +484,7 @@ describe("cardHeader", () => {
     ["cast", castPayload, "Cast", "Magic Missile"],
     ["item_use", usePayload, "Item", "Wand of lightning"],
     ["initiative", { round: 3, d10: 7 }, "Initiative", "Round 3"],
-    ["buff_change", { action: "dismiss", buff: "Haste" }, "Buff", ""],
+    ["buff_change", { action: "dismiss", buff: "Haste" }, "Effect", ""],
   ] as const)(
     "%s: tag %s, subtitle %s",
     async (kind, payload, tag, subtitle) => {

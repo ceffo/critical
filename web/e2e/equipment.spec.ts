@@ -96,7 +96,9 @@ test("a new bow is carried: the attack's drop-down lists it under Not equipped, 
   const f = form(page);
   await f.getByLabel("Name").fill("Long Bow");
   await f.getByLabel("Category").selectOption("weapon");
-  await f.getByLabel("Kind", { exact: true }).selectOption("missile");
+  await f
+    .getByLabel("Melee or missile", { exact: true })
+    .selectOption("missile");
   await f.getByLabel("Damage S-M").fill("1d8");
   await f.getByLabel("Damage Large").fill("1d8");
   await f.getByLabel("Two-handed").check();
@@ -180,8 +182,8 @@ test("the review list: the band counts the pieces to check, Dismiss and a classi
 }) => {
   await openInventory(page);
   const band = page.getByTestId("review-band");
-  await expect(band).toContainText("2 possessions to check");
-  await band.getByRole("button", { name: /Check the possessions/ }).click();
+  await expect(band).toContainText("2 items to check");
+  await band.getByRole("button", { name: /Check the items/ }).click();
   const review = page.getByTestId("inventory-review");
   await expect(review.getByTestId("review-mace")).toContainText(
     "Weapon not recognised",
@@ -193,7 +195,7 @@ test("the review list: the band counts the pieces to check, Dismiss and a classi
     .getByRole("button", { name: "Take Mace +1 off the list as it is" })
     .click();
   await expect(review.getByTestId("review-mace")).toHaveCount(0);
-  await expect(band).toContainText("1 possession to check");
+  await expect(band).toContainText("1 item to check");
 
   // Settling the bastard sword: its speed and damage type.
   await review.getByRole("button", { name: "Edit Bastard Sword +2" }).click();
@@ -269,7 +271,7 @@ test("the review section is bounded and its list scrolls, so the rows below stay
   await openInventory(page);
   await page
     .getByTestId("review-band")
-    .getByRole("button", { name: /Check the possessions/ })
+    .getByRole("button", { name: /Check the items/ })
     .click();
   const section = page.getByTestId("inventory-review");
   await expect(section).toBeVisible();
@@ -302,7 +304,7 @@ test("AC: follows the Armor spell and an Equip with no entry of its own; the ove
   await expect(value).toHaveText("7"); // 10, Dexterity 17 -3
 
   const picker = await receivePicker(page);
-  await picker.getByLabel("Search for a spell cast on me").fill("Armor");
+  await picker.getByLabel("Search for a received spell").fill("Armor");
   await picker.getByLabel("Caster level").fill("1");
   await picker.getByRole("button", { name: "Apply Armor" }).click();
   await expect(value).toHaveText("3"); // Armor's base 6, Dexterity -3

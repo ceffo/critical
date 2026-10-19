@@ -75,6 +75,8 @@ export function formatNumber(
   ).format(n);
 }
 
+const ROUNDS_PER_TURN = 10;
+
 /**
  * Factor and unit a value in `unit` is shown in: converted to metric where the language is. The
  * French books do not round the converted number ("75 feet" is "22,5 mètres", "260 feet" "78
@@ -86,6 +88,9 @@ export function shownUnit(
   unit: string,
   largest: number,
 ): [number, string] {
+  // The book's turn is ten rounds; the UI has one word for time in combat, the round (the
+  // glossary's Round), so a duration in turns is shown in rounds in every language.
+  if (labelKey(unit) === "turn") return [ROUNDS_PER_TURN, "round"];
   const [f, shown] = (loc.metric && METRIC[unit]) || [1, unit];
   if (shown === "m" && largest > 0 && largest * f < 1) return [f * 100, "cm"];
   return [f, shown];
@@ -166,6 +171,8 @@ function termText(
     : "";
   if (term.per && !per) return null;
   const unit = term.unit ?? "";
+  // Dice cannot be scaled to rounds: the book's own text stands.
+  if (term.dice && labelKey(unit) === "turn") return null;
   const [f, shown] = term.dice
     ? [1, unit]
     : shownUnit(loc, unit, Math.max(term.count, term.upper ?? 0));

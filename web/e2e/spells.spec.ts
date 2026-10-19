@@ -246,7 +246,7 @@ test("the spell names follow the language: the catalogue's French name, English 
   await page.reload();
   await page.getByRole("button", { name: "Tour suivant" }).click();
   await expect(page.getByRole("status")).toContainText(
-    "Bonus expirés : Image miroir, Rage",
+    "Effets expirés : Image miroir, Rage",
   );
   await expect(
     combatLog(page).getByText("— expirés : Image miroir, Rage"),

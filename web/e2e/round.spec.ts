@@ -147,7 +147,7 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   await form.getByRole("button", { name: "Confirm" }).click();
   await expect.poll(() => currentRound(page)).toBe(0);
   await expect(page.getByRole("status")).toContainText(
-    "Expired buffs: e2e Short",
+    "Expired effects: e2e Short",
   );
   await expect(buffBadge(page, "e2e Short")).toHaveCount(0);
   await expect(
@@ -276,7 +276,7 @@ test("Time passes in French: '1,5' previews 90 rounds; a later Next Round must b
   await snap(page, "pass-time-form-fr");
   await form.getByRole("button", { name: "Confirmer" }).click();
   await expect.poll(() => currentRound(page)).toBe(0);
-  const text = "Temps écoulé : 1,5 h (90 rd.), tour 1 → 0";
+  const text = "Temps écoulé : 1,5 h (90 tr.), tour 1 → 0";
   await expect(logEntryFrench(page, text)).toBeVisible();
   await expect(
     buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
@@ -363,7 +363,7 @@ test("Next round moves the timeline window; a 1-turn effect shows the warning, t
   await nextTurn(page);
   await expect(blink).toHaveCount(0);
   await expect(page.getByRole("status")).toContainText(
-    "Expired buffs: e2e Blink",
+    "Expired effects: e2e Blink",
   );
 });
 

@@ -19,7 +19,7 @@ interface BuffsStore {
   round: number;
   /** The round's initiative, from the server; null out of combat or until rolled. */
   initiative: Initiative | null;
-  /** Saved buff templates, oldest first. */
+  /** Saved effect templates, oldest first. */
   saved: SavedBuff[];
   /** Sheet STR and STR with buffs (null until loaded). */
   strength: Strength | null;

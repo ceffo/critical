@@ -209,9 +209,9 @@
     "effDice": "dice ×{{n}}",
     "inactiveHint": "No effect until STR reaches {{min}}",
     "replaced": "replaced by Improved Strength",
-    "replacedHint": "Improved Strength replaces the other Strength bonuses while it lasts",
+    "replacedHint": "Improved Strength replaces the other Strength effects while it lasts",
     "add": "Add effect",
-    "name": "Buff name",
+    "name": "Effect name",
     "roundsLeft": "Rounds",
     "chargesLeft": "Charges",
     "roundsHint": "Rounds left, counted down by Next round (0: not timed)",
@@ -236,21 +236,21 @@
     "activate": "Activate",
     "save": "Save",
     "cancel": "Cancel",
-    "expired": "Expired buffs: {{names}}",
+    "expired": "Expired effects: {{names}}",
     "note": "Note",
     "notePlaceholder": "Note (e.g. +4 saves vs fire)",
     "saveForReuse": "Save for reuse",
-    "saved": "Saved buffs",
+    "saved": "Saved effects",
     "saveFailedAfterAdd": "{{name}} was activated but not saved for reuse",
     "addShort": "Add",
     "savedNone": "No saved effects yet. Tick “Save for reuse” on a new effect.",
     "addSaved": "Add saved effect {{name}}",
     "tab": {
-      "spell": "Spell cast on me",
+      "spell": "Received spell",
       "saved": "Saved effect",
       "new": "New effect"
     },
-    "deleteSaved": "Delete saved buff {{name}}",
+    "deleteSaved": "Delete saved effect {{name}}",
     "roundsWithTime": "{{rounds}} · {{time}}",
     "hoursMinutes": "{{h}} h {{mm}}",
     "hoursOnly": "{{h}} h"
@@ -445,9 +445,9 @@
     "overBudget_one": "Too many spells at level {{levels}}",
     "overBudget_other": "Too many spells at levels {{levels}}",
     "noMatch": "No spell matches.",
-    "receiveTitle": "Spell cast on me",
+    "receiveTitle": "Received spell",
     "receiveSearch": "Search the spell database...",
-    "receiveSearchLabel": "Search for a spell cast on me",
+    "receiveSearchLabel": "Search for a received spell",
     "casterLevel": "Caster level",
     "receive": "Apply",
     "receiveLabel": "Apply {{name}}",
@@ -1069,8 +1069,8 @@
         "special": "see the text"
       },
       "textOnly": {
-        "no_effect": "No tracked effect for this spell: add a buff by hand if it matters.",
-        "low_confidence": "The effect is not reliable: read the text and add a buff by hand.",
+        "no_effect": "No tracked effect for this spell: add an effect by hand if it matters.",
+        "low_confidence": "The effect is not reliable: read the text and add an effect by hand.",
         "utility": "No numeric effect to track.",
         "not_on_self": "Cast on someone else: nothing applied to you.",
         "by_hand": "Only part of you is affected: apply it by hand."
@@ -1148,7 +1148,7 @@
       "realTitle": "Real AC",
       "realValue": "Real target AC",
       "give": "Correct",
-      "given": "AC given by the GM"
+      "given": "AC given by the DM"
     },
     "critLegacy": "Critical ×{{mult, number}} (d100 in {{from}}–{{to}})",
     "critPlaceholderLegacy": "Critical ×{{mult, number}} (placeholder)",
@@ -1168,14 +1168,14 @@
     "attackHeadingAmmoUnknown": "{{weapon}} with {{ammo}} vs unknown AC",
     "critsFromAc": "Crits from AC",
     "unknownAc": {
-      "tellGm": "Tell the GM: “hits AC {{hits}}”. A crit from AC {{crits}}.",
-      "tellGmNoCrit": "Tell the GM: “hits AC {{hits}}”.",
+      "tellGm": "Tell the DM: “hits AC {{hits}}”. A crit from AC {{crits}}.",
+      "tellGmNoCrit": "Tell the DM: “hits AC {{hits}}”.",
       "noCrit": "No crit without the AC: give it to settle a crit.",
-      "unsettled": "Waiting for the GM: give the AC, or Hit / Miss",
-      "byGm": "GM’s call",
+      "unsettled": "Waiting for the DM: give the AC, or Hit / Miss",
+      "byGm": "DM’s call",
       "damageIfHit": "Damage if it hits",
-      "verdictTitle": "GM says",
-      "verdictLabel": "The GM’s hit or miss"
+      "verdictTitle": "DM says",
+      "verdictLabel": "The DM’s hit or miss"
     },
     "turn": {
       "heading": "Cleric level {{level}}",
@@ -1202,7 +1202,7 @@
     "kinds": {
       "hp_change": "HP",
       "cast": "Cast",
-      "buff_change": "Buff",
+      "buff_change": "Effect",
       "round_advance": "Round",
       "round_reset": "Round",
       "round_set": "Round",
@@ -1254,8 +1254,8 @@
       "editNote": "{{buff}}: note “{{note}}”",
       "editNoteCleared": "{{buff}}: note removed",
       "noteAlso": "(note changed)",
-      "saveTemplate": "Saved buff {{buff}} ({{counters}})",
-      "deleteTemplate": "Deleted saved buff {{buff}}",
+      "saveTemplate": "Saved effect {{buff}} ({{counters}})",
+      "deleteTemplate": "Deleted saved effect {{buff}}",
       "nextRound": "Round {{from}} → {{to}}",
       "endCombat": "Combat ended: round {{from}} → {{to}}",
       "setRound": "Round set: {{from}} → {{to}}",
@@ -1275,12 +1275,12 @@
         "crit": "CRIT"
       },
       "unknown": "{{weapon}} vs unknown AC: hits AC {{hits}}",
-      "verdictHit": "{{weapon}} vs unknown AC: hit (GM), {{damage}} damage",
-      "verdictMiss": "{{weapon}} vs unknown AC: miss (GM)"
+      "verdictHit": "{{weapon}} vs unknown AC: hit (DM), {{damage}} damage",
+      "verdictMiss": "{{weapon}} vs unknown AC: miss (DM)"
     },
     "cast": {
       "cast": "Cast {{spell}}",
-      "received": "{{spell}} cast on me (caster level {{level}})",
+      "received": "{{spell}} received (caster level {{level}})",
       "effect": "{{spell}} added as an effect (level {{level}})",
       "damage": "{{total}} {{type}} damage",
       "strGain": "STR +{{gain}}",
@@ -1382,7 +1382,7 @@
     "correction": {
       "targetAc": "Correction AC {{from}} → {{to}}",
       "saveAdjustment": "Correction save adjustment {{from}} → {{to}}",
-      "verdict": "Correction GM verdict {{from}} → {{to}}",
+      "verdict": "Correction DM verdict {{from}} → {{to}}",
       "skillAdjustment": "Correction skill check adjustment {{from}} → {{to}}",
       "abilityAdjustment": "Correction ability check adjustment {{from}} → {{to}}",
       "other": "Correction of #{{id}}",
@@ -1487,7 +1487,7 @@
       "damageL": "Damage Large",
       "magicToHit": "To-hit bonus",
       "magicDamage": "Damage bonus",
-      "kind": "Kind",
+      "kind": "Melee or missile",
       "twoHanded": "Two-handed",
       "ammoKind": "Ammo kind",
       "ammoNone": "none (hurled)",
@@ -2020,7 +2020,7 @@
     "turnLabel": "Turn: {{undead}}"
   },
   "equipment": {
-    "title": "Possessions",
+    "title": "Items",
     "all": "All",
     "filter": "Show a category",
     "categories": {
@@ -2105,7 +2105,7 @@
     "equipped": "Equipped",
     "equipHint": "Equip {{name}}",
     "unequipHint": "Unequip {{name}}",
-    "none": "No possessions.",
+    "none": "No items.",
     "noneInCategory": "None in this category.",
     "stats": {
       "speed": "speed {{speed}}",
@@ -2120,10 +2120,10 @@
       "large": "L {{dice}}"
     },
     "review": {
-      "band_one": "{{count}} possession to check after the move to the new inventory",
-      "band_other": "{{count}} possessions to check after the move to the new inventory",
+      "band_one": "{{count}} item to check after the move to the new inventory",
+      "band_other": "{{count}} items to check after the move to the new inventory",
       "open": "Check",
-      "openHint": "Check the possessions the move could not sort",
+      "openHint": "Check the items the move could not sort",
       "close": "Close",
       "title": "To check",
       "intro": "The move to the new inventory could not sort everything.",
@@ -2156,9 +2156,9 @@
       "acMissile": "AC bonus (missiles)",
       "component": "Spell component",
       "noComponent": "None",
-      "componentHint": "A spell that spends this component can spend this piece",
+      "componentHint": "A spell that spends this component can spend this item",
       "errors": {
-        "not_allowed": "Not allowed for this piece.",
+        "not_allowed": "Not allowed for this item.",
         "slot_taken": "Another one is already equipped."
       }
     }
@@ -2381,7 +2381,7 @@
     "floored": "floored at −10",
     "missile": "vs missiles {{value}}",
     "inventory": "Inventory",
-    "inventoryHint": "Open the inventory: the pieces worn",
+    "inventoryHint": "Open the inventory: the items worn",
     "override": {
       "open": "Override",
       "openHint": "Override the AC: for what the breakdown cannot hold (Shield spell…)",

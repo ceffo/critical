@@ -7,7 +7,7 @@
     "abilities": "Caractéristiques",
     "error": "Erreur",
     "dismiss": "Fermer",
-    "strTitle": "FOR {{effective}} (fiche {{base}})",
+    "strTitle": "FOR {{effective}} (feuille {{base}})",
     "levelUp": {
       "title": "Niveau {{level}} atteint",
       "rollHint": "Dé de vie d{{die}}, plus l'ajustement de CON",
@@ -109,7 +109,7 @@
     "cha": "CHA"
   },
   "abilityCheck": {
-    "roll": "Test de {{name}} ({{score}})",
+    "roll": "Jet de {{name}} ({{score}})",
     "names": {
       "str": "Force",
       "dex": "Dextérité",
@@ -119,13 +119,13 @@
       "cha": "Charisme"
     },
     "heading": "Caractéristique · d{{die}} sous {{name}} {{score}}",
-    "headingEffect": "Caractéristique · d{{die}} sous {{name}} {{score}} (fiche {{sheet}})",
-    "adjustLabel": "Ajuster ce test",
+    "headingEffect": "Caractéristique · d{{die}} sous {{name}} {{score}} (feuille {{sheet}})",
+    "adjustLabel": "Ajuster ce jet",
     "log": {
-      "success": "Test de {{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
-      "failure": "Test de {{name}} : d{{die}} {{roll}} contre {{target}}, échec",
-      "successAdjusted": "Test de {{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), réussi",
-      "failureAdjusted": "Test de {{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), échec"
+      "success": "Jet de {{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
+      "failure": "Jet de {{name}} : d{{die}} {{roll}} contre {{target}}, échec",
+      "successAdjusted": "Jet de {{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), réussi",
+      "failureAdjusted": "Jet de {{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), échec"
     }
   },
   "hp": {
@@ -198,7 +198,7 @@
   },
   "buffs": {
     "charges": "{{count}} ch.",
-    "rounds": "{{count}} rd.",
+    "rounds": "{{count}} tr.",
     "untilDismissed": "jusqu'à retrait",
     "absorb": "{{name}} a absorbé un coup",
     "edit": "Modifier {{name}}",
@@ -209,9 +209,9 @@
     "effDice": "dés ×{{n}}",
     "inactiveHint": "Sans effet tant que la FOR n'atteint pas {{min}}",
     "replaced": "remplacée par Improved Strength",
-    "replacedHint": "Improved Strength remplace les autres bonus de Force tant qu'elle dure",
+    "replacedHint": "Improved Strength remplace les autres effets de Force tant qu'elle dure",
     "add": "Ajouter un effet",
-    "name": "Nom du bonus",
+    "name": "Nom de l'effet",
     "roundsLeft": "Tours",
     "chargesLeft": "Charges",
     "roundsHint": "Tours restants, décomptés à chaque tour suivant (0 : sans durée)",
@@ -236,11 +236,11 @@
     "activate": "Activer",
     "save": "Enregistrer",
     "cancel": "Annuler",
-    "expired": "Bonus expirés : {{names}}",
+    "expired": "Effets expirés : {{names}}",
     "note": "Note",
     "notePlaceholder": "Note (p. ex. +4 aux JS contre le feu)",
     "saveForReuse": "Enregistrer pour réutiliser",
-    "saved": "Bonus enregistrés",
+    "saved": "Effets enregistrés",
     "saveFailedAfterAdd": "Effet activé : {{name}}, mais il n'a pas été enregistré pour réutilisation",
     "addShort": "Ajouter",
     "savedNone": "Aucun effet enregistré. Cochez « Enregistrer pour réutiliser » sur un nouvel effet.",
@@ -250,7 +250,7 @@
       "saved": "Effet enregistré",
       "new": "Nouvel effet"
     },
-    "deleteSaved": "Supprimer le bonus enregistré {{name}}",
+    "deleteSaved": "Supprimer l'effet enregistré {{name}}",
     "roundsWithTime": "{{rounds}} · {{time}}",
     "hoursMinutes": "{{h}} h {{mm}}",
     "hoursOnly": "{{h}} h"
@@ -302,8 +302,8 @@
     "twoHanded": "à deux mains",
     "specialized": "spécialisée",
     "rate": "{{attacks}}/{{rounds}} att.",
-    "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} ce round",
-    "rateHint": "Attaques par round : {{attacks}} tous les {{rounds}} rounds ; ce round : {{count}}",
+    "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} ce tour",
+    "rateHint": "Attaques par tour : {{attacks}} tous les {{rounds}} tours ; ce tour : {{count}}",
     "pointBlank": "Bout portant",
     "pointBlankHint": "Cible à bout portant : +2 au toucher pour un spécialiste de l’arc ou de l’arbalète",
     "sizesShort": {
@@ -434,7 +434,7 @@
     "searchLabel": "Chercher dans le grimoire",
     "spellbook": "Grimoire",
     "draft": "Préparation du jour",
-    "staleTitle": "Absents du livre de sorts, seront retirés :",
+    "staleTitle": "Absents du grimoire, seront retirés :",
     "staleUnknown": "sort inconnu",
     "draftEmpty": "Rien de préparé. Ajoutez des sorts depuis le grimoire.",
     "add": "Ajouter {{name}}",
@@ -445,9 +445,9 @@
     "overBudget_one": "Trop de sorts au niveau {{levels}}",
     "overBudget_other": "Trop de sorts aux niveaux {{levels}}",
     "noMatch": "Aucun sort ne correspond.",
-    "receiveTitle": "Sort lancé sur moi",
+    "receiveTitle": "Sort reçu",
     "receiveSearch": "Chercher dans les sorts...",
-    "receiveSearchLabel": "Chercher un sort lancé sur moi",
+    "receiveSearchLabel": "Chercher un sort reçu",
     "casterLevel": "Niveau du lanceur",
     "receive": "Appliquer",
     "receiveLabel": "Appliquer {{name}}",
@@ -479,9 +479,9 @@
   "spellDice": {
     "typed": "{{dice}} {{type}}",
     "instances": "{{instances}} × {{dice}}",
-    "perRound": "{{text}} par round, {{rounds}} rounds",
+    "perRound": "{{text}} par tour, {{rounds}} tours",
     "steps": {
-      "round": "par round : {{steps}}",
+      "round": "par tour : {{steps}}",
       "instance": "successivement : {{steps}}"
     },
     "types": {
@@ -500,8 +500,8 @@
       "none": "{{dice}} [sans sauvegarde]",
       "negates": "{{dice}} [annulé par la sauvegarde]"
     },
-    "exposure": "{{damage}} par round d'exposition",
-    "exposureSteps": "{{steps}} par round d'exposition, puis {{last}} chaque round"
+    "exposure": "{{damage}} par tour d'exposition",
+    "exposureSteps": "{{steps}} par tour d'exposition, puis {{last}} chaque tour"
   },
   "lookup": {
     "search": "Rechercher des sorts...",
@@ -593,8 +593,8 @@
     "unitWords": {
       "segment_one": "segment",
       "segment_other": "segments",
-      "round_one": "round",
-      "round_other": "rounds",
+      "round_one": "tour",
+      "round_other": "tours",
       "turn_one": "tour",
       "turn_other": "tours",
       "hour_one": "heure",
@@ -773,7 +773,7 @@
     "perWords": {
       "priest": "prêtre",
       "meteor": "météore",
-      "round": "round"
+      "round": "tour"
     },
     "axes": {
       "wide": "de large",
@@ -991,12 +991,12 @@
     "saveHeading": "Sauvegarde contre {{name}}",
     "hit": "Touché",
     "miss": "Raté",
-    "crit": "Test critique {{check}} · multiplicateur {{roll}} → ×{{mult, number}} ({{from}}–{{to}})",
+    "crit": "Jet critique {{check}} · multiplicateur {{roll}} → ×{{mult, number}} ({{from}}–{{to}})",
     "passed": "Réussie",
     "failed": "Échouée",
     "totalDamage": "Dégâts totaux",
     "d20": "d20",
-    "critRoll": "d100 test critique",
+    "critRoll": "d100 jet critique",
     "baseThac0": "TAC0 de base",
     "effectiveThac0": "TAC0 effectif",
     "hitsAc": "Touche la CA",
@@ -1011,7 +1011,7 @@
       "sm": "cible P/M",
       "l": "grande cible"
     },
-    "critPlaceholder": "Test critique {{check}} · multiplicateur {{roll}} → ×{{mult, number}} (provisoire)",
+    "critPlaceholder": "Jet critique {{check}} · multiplicateur {{roll}} → ×{{mult, number}} (provisoire)",
     "ammoLeft": "{{name}} : {{count}} restantes",
     "damageTerms": "Modificateurs de dégâts",
     "mods": {
@@ -1069,8 +1069,8 @@
         "special": "voir le texte"
       },
       "textOnly": {
-        "no_effect": "Aucun effet suivi pour ce sort : ajoutez un buff à la main si besoin.",
-        "low_confidence": "L'effet n'est pas fiable : lisez le texte et ajoutez un buff à la main.",
+        "no_effect": "Aucun effet suivi pour ce sort : ajoutez un effet à la main si besoin.",
+        "low_confidence": "L'effet n'est pas fiable : lisez le texte et ajoutez un effet à la main.",
         "utility": "Aucun effet chiffré à suivre.",
         "not_on_self": "Lancé sur quelqu'un d'autre : rien ne vous est appliqué.",
         "by_hand": "Une partie de vous seulement est affectée : à appliquer à la main."
@@ -1196,13 +1196,13 @@
     "hpHeal": "Soins {{amount}}",
     "nothingThisRound": "Rien d'enregistré ce tour.",
     "exposure": {
-      "onMe": "{{spell}}, exposition au round {{round}} : {{total}} dégâts ({{type}}) sur moi",
-      "forDm": "{{spell}}, exposition au round {{round}} : {{total}} dégâts ({{type}})"
+      "onMe": "{{spell}}, exposition au tour {{round}} : {{total}} dégâts ({{type}}) sur moi",
+      "forDm": "{{spell}}, exposition au tour {{round}} : {{total}} dégâts ({{type}})"
     },
     "kinds": {
       "hp_change": "PV",
       "cast": "Sort",
-      "buff_change": "Bonus",
+      "buff_change": "Effet",
       "round_advance": "Tour",
       "round_reset": "Tour",
       "round_set": "Tour",
@@ -1254,8 +1254,8 @@
       "editNote": "{{buff}} : note « {{note}} »",
       "editNoteCleared": "{{buff}} : note retirée",
       "noteAlso": "(note modifiée)",
-      "saveTemplate": "Bonus {{buff}} enregistré ({{counters}})",
-      "deleteTemplate": "Bonus enregistré {{buff}} supprimé",
+      "saveTemplate": "Effet {{buff}} enregistré ({{counters}})",
+      "deleteTemplate": "Effet enregistré {{buff}} supprimé",
       "nextRound": "Tour {{from}} → {{to}}",
       "endCombat": "Combat terminé : tour {{from}} → {{to}}",
       "setRound": "Tour réglé : {{from}} → {{to}}",
@@ -1266,7 +1266,7 @@
       "miss": "{{weapon}} contre CA {{ac}} : attaque ratée",
       "hit": "{{weapon}} contre CA {{ac}} : attaque réussie, {{damage}} dégâts",
       "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult, number}}, {{damage}} dégâts",
-      "critRolls": "{{weapon}} contre CA {{ac}} : critique (test {{check}} · multiplicateur {{roll}} → ×{{mult, number}}), {{damage}} dégâts",
+      "critRolls": "{{weapon}} contre CA {{ac}} : critique (jet {{check}} · multiplicateur {{roll}} → ×{{mult, number}}), {{damage}} dégâts",
       "withAmmo": "{{weapon}} ({{ammo}})",
       "corrected": "{{text}} (CA {{from}} → {{to}} : {{was}} → {{now}})",
       "outcome": {
@@ -1357,7 +1357,7 @@
         "damage_l": "dégâts grande",
         "magic_to_hit": "bonus au toucher",
         "magic_damage": "bonus aux dégâts",
-        "kind": "type",
+        "kind": "mêlée ou tir",
         "two_handed": "à deux mains",
         "ammo_kind": "type de munition"
       }
@@ -1383,7 +1383,7 @@
       "targetAc": "Correction CA {{from}} → {{to}}",
       "saveAdjustment": "Correction ajustement de sauvegarde {{from}} → {{to}}",
       "skillAdjustment": "Correction ajustement de jet de compétence {{from}} → {{to}}",
-      "abilityAdjustment": "Correction ajustement de test de caractéristique {{from}} → {{to}}",
+      "abilityAdjustment": "Correction ajustement de jet de caractéristique {{from}} → {{to}}",
       "verdict": "Correction verdict du MJ {{from}} → {{to}}",
       "other": "Correction de #{{id}}",
       "unknown": "?",
@@ -1487,12 +1487,12 @@
       "damageL": "Dégâts Grande",
       "magicToHit": "Bonus au toucher",
       "magicDamage": "Bonus aux dégâts",
-      "kind": "Type",
+      "kind": "Mêlée ou tir",
       "twoHanded": "À deux mains",
       "ammoKind": "Type de munition",
       "ammoNone": "aucune (lancée)",
       "weaponType": "Type d’arme",
-      "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par round)",
+      "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par tour)",
       "specialized": "Spécialisée",
       "specializedHint": "Spécialisation du guerrier : +1 au toucher et +2 aux dégâts en mêlée ou lancée ; une arme de tir gagne +2 au toucher à bout portant",
       "errors": {
@@ -1559,7 +1559,7 @@
       "languages": "Langues"
     },
     "languagesRaceList": "De la liste de la race",
-    "languagesOthers": "Autres, si le MD l’autorise",
+    "languagesOthers": "Autres, si le MJ l’autorise",
     "languageNative": "La langue propre de la race, toujours connue",
     "classes": {
       "bard": "Barde",
@@ -1627,10 +1627,10 @@
     },
     "warnings": {
       "alignment_not_allowed": "Cet alignement n’est pas permis à un personnage de classe {{className}} ; conservé tel qu’enregistré.",
-      "languages_over_limit": "{{n}} langues au-delà de la langue natale, {{limit}} pour cette Intelligence : le MD décide.",
-      "height_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MD décide.",
-      "weight_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MD décide.",
-      "age_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}} ans) : le MD décide."
+      "languages_over_limit": "{{n}} langues au-delà de la langue natale, {{limit}} pour cette Intelligence : le MJ décide.",
+      "height_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MJ décide.",
+      "weight_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MJ décide.",
+      "age_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}} ans) : le MJ décide."
     },
     "unitHint": {
       "height": {
@@ -1703,7 +1703,7 @@
       "editing": "Modification d'une entrée",
       "save": "Enregistrer",
       "cancel": "Annuler",
-      "opening": "XP de départ (fiche de personnage)",
+      "opening": "XP de départ (feuille de personnage)",
       "confirm": "Confirmer",
       "confirmDelete": "Confirmer la suppression de {{reason}}"
     }
@@ -1779,15 +1779,15 @@
     "rollFormula": "Lancer {{formula}}"
   },
   "exposure": {
-    "title": "Exposition, jetée à chaque round",
+    "title": "Exposition, jetée à chaque tour",
     "mode": "Où",
-    "round": "Round d'exposition",
+    "round": "Tour d'exposition",
     "onMe": "Je suis exposé",
     "roll": "Jeter l'exposition",
     "rollShort": "Jeter",
-    "heading": "{{name}}, exposition au round {{round}} (niveau de lanceur {{casterLevel}})",
+    "heading": "{{name}}, exposition au tour {{round}} (niveau de lanceur {{casterLevel}})",
     "onYou": "Retiré de vos PV : {{delta}}",
-    "forDm": "Pour le MD : vos PV ne changent pas"
+    "forDm": "Pour le MJ : vos PV ne changent pas"
   },
   "apiError": {
     "character_not_found": "Ce personnage n'existe plus.",
@@ -1829,7 +1829,7 @@
     "already_invited": "Cette adresse e-mail a déjà une invitation en attente.",
     "invite_not_found": "Cette invitation n'est plus en attente.",
     "user_not_found": "Cet utilisateur n'existe pas.",
-    "level_up_not_pending": "Ce niveau n'est plus à lancer : la fiche se met à jour.",
+    "level_up_not_pending": "Ce niveau n'est plus à lancer : la feuille de personnage se met à jour.",
     "no_spellbook": "Cette classe n'a pas de grimoire.",
     "not_a_wizard_spell": "Seul un sort de magicien s'inscrit au grimoire.",
     "already_in_spellbook": "Ce sort est déjà dans le grimoire.",
@@ -1863,14 +1863,14 @@
   },
   "database": {
     "unavailable": "La base de données ne répond pas. Nouvel essai…",
-    "uncertainWrite": "Votre dernière action n'a peut-être pas été enregistrée. Les actions reprennent une fois la fiche rechargée : vérifiez le journal avant de réessayer."
+    "uncertainWrite": "Votre dernière action n'a peut-être pas été enregistrée. Les actions reprennent une fois la feuille de personnage rechargée : vérifiez le journal avant de réessayer."
   },
   "admin": {
     "open": "Administration",
     "openHint": "Ouvrir l'administration : utilisateurs et invitations",
     "title": "Administration",
     "back": "Retour",
-    "backHint": "Retour à la fiche du personnage",
+    "backHint": "Retour à la feuille de personnage",
     "invites": "Invitations",
     "invitesLead": "Une adresse invitée peut se connecter avec Google. Aucun e-mail n'est envoyé : prévenez la personne et donnez-lui le lien de l'application.",
     "email": "Adresse e-mail",
@@ -1938,20 +1938,20 @@
     "play": "Jouer",
     "playHint": "Jouer {{name}}",
     "classLevel": "{{className}} · niveau {{level}}",
-    "firstLead": "Vous n'avez pas encore de personnage. Créez le premier : saisissez ses valeurs telles qu'elles figurent sur sa fiche.",
+    "firstLead": "Vous n'avez pas encore de personnage. Créez le premier : saisissez ses valeurs telles qu'elles figurent sur sa feuille de personnage.",
     "noCurrentLead": "Choisissez un de vos personnages ci-dessus, ou créez-en un.",
     "formTitle": "Nouveau personnage",
     "name": "Nom",
     "race": "Race",
     "abilities": "Caractéristiques",
-    "abilitiesLead": "Les valeurs de la fiche, ajustements raciaux compris.",
+    "abilitiesLead": "Les valeurs de la feuille de personnage, ajustements raciaux compris.",
     "abilityHint": "{{name}} : de {{min}} à {{max}}",
     "strExceptional": "Force exceptionnelle (18/xx)",
     "strExceptionalHint": "Le pourcentage d'une Force 18 de guerrier, de {{min}} à {{max}} (100 = 18/00) ; vide : aucun",
     "range": "De {{min}} à {{max}}",
     "hpMax": "PV max",
     "xp": "XP de départ",
-    "derivedLead": "Le niveau, le TAC0 et les jets de protection découlent de la classe, de la race et des XP. Le personnage commence sans équipement.",
+    "derivedLead": "Le niveau, le TAC0 et les jets de sauvegarde découlent de la classe, de la race et des XP. Le personnage commence sans équipement.",
     "create": "Créer",
     "createHint": "Créer ce personnage et le jouer",
     "errors": {
@@ -2020,7 +2020,7 @@
     "turnLabel": "Repousser : {{undead}}"
   },
   "equipment": {
-    "title": "Possessions",
+    "title": "Objets",
     "all": "Tout",
     "filter": "Afficher une catégorie",
     "categories": {
@@ -2105,7 +2105,7 @@
     "equipped": "Équipé",
     "equipHint": "Équiper {{name}}",
     "unequipHint": "Retirer {{name}}",
-    "none": "Aucune possession.",
+    "none": "Aucun objet.",
     "noneInCategory": "Rien dans cette catégorie.",
     "stats": {
       "speed": "vitesse {{speed}}",
@@ -2120,10 +2120,10 @@
       "large": "G {{dice}}"
     },
     "review": {
-      "band_one": "{{count}} possession à vérifier après le passage au nouvel inventaire",
-      "band_other": "{{count}} possessions à vérifier après le passage au nouvel inventaire",
+      "band_one": "{{count}} objet à vérifier après le passage au nouvel inventaire",
+      "band_other": "{{count}} objets à vérifier après le passage au nouvel inventaire",
       "open": "Vérifier",
-      "openHint": "Vérifier les possessions que le passage n’a pas pu classer",
+      "openHint": "Vérifier les objets que le passage n’a pas pu classer",
       "close": "Fermer",
       "title": "À vérifier",
       "intro": "Le passage au nouvel inventaire n’a pas pu tout classer.",
@@ -2156,19 +2156,19 @@
       "acMissile": "Bonus de CA (projectiles)",
       "component": "Composante de sort",
       "noComponent": "Aucune",
-      "componentHint": "Un sort qui dépense cette composante peut dépenser cette possession",
+      "componentHint": "Un sort qui dépense cette composante peut dépenser cet objet",
       "errors": {
-        "not_allowed": "Pas permis pour cette possession.",
+        "not_allowed": "Pas permis pour cet objet.",
         "slot_taken": "Une autre est déjà équipée."
       }
     }
   },
   "intro": {
     "title": "Bienvenue à la table",
-    "what": "Critical! tient la fiche de votre personnage AD&D 2e pendant la partie : points de vie, sorts, effets en cours et jets de dés, chaque résultat avec son calcul.",
+    "what": "Critical! tient la feuille de personnage AD&D 2e pendant la partie : points de vie, sorts, effets en cours et jets de dés, chaque résultat avec son calcul.",
     "steps_one": "Commencez par créer votre personnage, en une étape :",
     "steps_other": "Commencez par créer votre personnage, en {{count}} étapes :",
-    "dm": "À chaque valeur, tirez les dés ici ou recopiez votre fiche papier. Tout reste modifiable ensuite, et le MD a toujours le dernier mot.",
+    "dm": "À chaque valeur, tirez les dés ici ou recopiez votre feuille de personnage papier. Tout reste modifiable ensuite, et le MJ a toujours le dernier mot.",
     "start": "Commencer",
     "startHint": "Commencer la création de votre personnage"
   },
@@ -2217,10 +2217,10 @@
       "title": "Niveau de départ",
       "level": "Niveau",
       "xp": "XP",
-      "lead": "Choisissez un niveau : il vaut le minimum d'XP de ce niveau pour la classe. Ou saisissez les XP exacts de votre fiche.",
+      "lead": "Choisissez un niveau : il vaut le minimum d'XP de ce niveau pour la classe. Ou saisissez les XP exacts de votre feuille de personnage.",
       "pick": "Niveau {{level}}",
       "levelN": "Niveau {{level}}",
-      "xpOfLevel": " · {{xp}} XP, le minimum du niveau {{level}} pour un {{className}}. Le TAC0, les jets de protection et les points de vie en découlent.",
+      "xpOfLevel": " · {{xp}} XP, le minimum du niveau {{level}} pour un {{className}}. Le TAC0, les jets de sauvegarde et les points de vie en découlent.",
       "xpOfLevelNoClass": " · choisissez d'abord une classe : ses XP en découlent.",
       "levelLower": "niveau {{level}}",
       "xpN": "{{xp}} XP"
@@ -2238,7 +2238,7 @@
     "scores": {
       "name": "Caractéristiques",
       "title": "Caractéristiques",
-      "lead": "Tirez-les selon une méthode du Guide du maître, ou saisissez celles de votre fiche.",
+      "lead": "Tirez-les selon une méthode du Guide du maître, ou saisissez celles de votre feuille de personnage.",
       "mode": "Tirer ou saisir",
       "roll": "Tirer",
       "type": "Saisir",
@@ -2297,7 +2297,7 @@
       "counted": "compte {{n}}",
       "total": "Total",
       "hpLead": "Un dé de vie par niveau, du niveau 1 au niveau {{level}} de départ ; au-delà du niveau nominal, un gain fixe.",
-      "hpRollLead": "Tirez les dés de vie, ou saisissez les PV max de votre fiche.",
+      "hpRollLead": "Tirez les dés de vie, ou saisissez les PV max de votre feuille de personnage.",
       "hpNeedsCon": "Saisissez la Constitution et les XP pour tirer, ou saisissez les PV max.",
       "hpEditable": "Le tirage remplit la case ; vous pouvez la changer.",
       "hpOutdated": "La classe, le niveau ou la Constitution ont changé depuis le tirage : tirez à nouveau les points de vie.",
@@ -2323,7 +2323,7 @@
       "onlyWarning": "Ce n'est qu'un avertissement : la création reste possible.",
       "build": "Mensurations",
       "native": "maternelle",
-      "languagesLead": "En clair, les langues de la race ({{race}}) ; en grisé, les autres, si le MD les permet.",
+      "languagesLead": "En clair, les langues de la race ({{race}}) ; en grisé, les autres, si le MJ les permet.",
       "raceSex": "{{race}}, {{sex}}",
       "range": "{{who}} : {{min}} – {{max}} · {{count}}d{{sides}}"
     },
@@ -2381,7 +2381,7 @@
     "floored": "limitée à −10",
     "missile": "contre les projectiles {{value}}",
     "inventory": "Inventaire",
-    "inventoryHint": "Ouvrir l'inventaire : les pièces portées",
+    "inventoryHint": "Ouvrir l'inventaire : les objets portés",
     "override": {
       "open": "Forcer",
       "openHint": "Forcer la CA : pour ce que le détail ne couvre pas (sort Bouclier…)",

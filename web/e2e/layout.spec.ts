@@ -1414,7 +1414,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     // ADR 0027 step 14.3 and ADR 0035 item 2: one possessions card, inside the stage (the page never
     // scrolls; a long list scrolls inside the card).
     await expectInside(
-      stage.getByRole("region", { name: "Possessions" }),
+      stage.getByRole("region", { name: "Objets" }),
       stage,
       `possessions card, ${where}`,
     );
@@ -1588,10 +1588,10 @@ test("ability check card: adjusted with a long reason, uncut, fr and en, 1280 to
   await page.setViewportSize({ width: 1280, height: 800 });
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  await page.getByRole("button", { name: "Test de Dextérité (17)" }).click();
+  await page.getByRole("button", { name: "Jet de Dextérité (17)" }).click();
   const card = page.getByTestId("ability-result");
   await expect(card).toBeVisible();
-  const form = await openFold(card, "Ajuster après le jet", "Ajuster ce test");
+  const form = await openFold(card, "Ajuster après le jet", "Ajuster ce jet");
   const harder = form.getByRole("button", { name: "Diminuer l'ajustement" });
   await harder.click();
   await harder.click();

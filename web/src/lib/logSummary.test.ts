@@ -111,11 +111,11 @@ describe("entryText", () => {
     ],
     [
       { action: "save_template", buff: "Hammer form", rounds: 10 },
-      "Saved buff Hammer form (10 rd)",
+      "Saved effect Hammer form (10 rd)",
     ],
     [
       { action: "delete_template", buff: "Hammer form" },
-      "Deleted saved buff Hammer form",
+      "Deleted saved effect Hammer form",
     ],
     [{ action: "next_round", fromRound: 0, toRound: 1 }, "Round 0 → 1"],
     [
@@ -138,10 +138,10 @@ describe("entryText", () => {
     const t = await makeT("fr");
     const text = (p: object) => entryText(entry("buff_change", p), t);
     expect(text({ action: "save_template", buff: "Marteau", rounds: 10 })).toBe(
-      "Bonus Marteau enregistré (10 rd.)",
+      "Effet Marteau enregistré (10 tr.)",
     );
     expect(text({ action: "delete_template", buff: "Marteau" })).toBe(
-      "Bonus enregistré Marteau supprimé",
+      "Effet enregistré Marteau supprimé",
     );
     expect(
       text({
@@ -255,7 +255,7 @@ describe("entryText", () => {
         d100MultiplierRoll: 63,
       },
       "fr",
-      "Long Sword +2 contre CA 5 : critique (test 7 · multiplicateur 63 → ×1,5), 10 dégâts",
+      "Long Sword +2 contre CA 5 : critique (jet 7 · multiplicateur 63 → ×1,5), 10 dégâts",
     ],
   ])("renders attack %j in %s", async (payload, lng, want) => {
     const t = await makeT(lng);
@@ -359,7 +359,7 @@ describe("entryText", () => {
         rolledHit: false,
         rolledCrit: false,
       },
-      "Long Sword +2 contre CA 10 : critique (test 3 · multiplicateur 77 → ×1,5), 10 dégâts (CA -10 → 10 : RATÉ → CRITIQUE)",
+      "Long Sword +2 contre CA 10 : critique (jet 3 · multiplicateur 77 → ×1,5), 10 dégâts (CA -10 → 10 : RATÉ → CRITIQUE)",
     ],
   ])(
     "renders a corrected attack in %s from the effective payload",
@@ -388,7 +388,7 @@ describe("entryText", () => {
     [
       "en",
       { verdict: "hit", hit: true, totalDamage: 7 },
-      "Long Sword +2 vs unknown AC: hit (GM), 7 damage",
+      "Long Sword +2 vs unknown AC: hit (DM), 7 damage",
     ],
     [
       "fr",
@@ -549,7 +549,7 @@ describe("time_passed entries", () => {
       "Time passed: 1.5 h (90 rd), round 4 → 0 — expired: Bless",
     );
     expect(entryText(entry("time_passed", payload), await makeT("fr"))).toBe(
-      "Temps écoulé : 1,5 h (90 rd.), tour 4 → 0 — expirés : Bless",
+      "Temps écoulé : 1,5 h (90 tr.), tour 4 → 0 — expirés : Bless",
     );
   });
   it("without expiries", async () => {
@@ -926,7 +926,7 @@ describe("cast entries", () => {
       damage: { total: 50, type: "fire", dice: "5d4", instances: 8 },
     });
     expect(entryText(swarm, t)).toBe(
-      "Meteor Swarm cast on me (caster level 18): 8 small spheres, 50 fire damage",
+      "Meteor Swarm received (caster level 18): 8 small spheres, 50 fire damage",
     );
     const wall = entry("cast", {
       action: "cast",
@@ -1227,7 +1227,7 @@ describe("entryText for ability checks", () => {
       "DEX check: d20 14 vs 15, success",
     );
     expect(entryText(entry("ability_check", dex, ""), await makeT("fr"))).toBe(
-      "Test de DEX : d20 14 contre 15, réussi",
+      "Jet de DEX : d20 14 contre 15, réussi",
     );
   });
 
@@ -1247,7 +1247,7 @@ describe("entryText for ability checks", () => {
         entry("ability_check", { ...harder, adjustmentReason: undefined }, ""),
         await makeT("fr"),
       ),
-    ).toBe("Test de DEX : d20 14 contre 13 (15 −2), échec");
+    ).toBe("Jet de DEX : d20 14 contre 13 (15 −2), échec");
   });
 
   it("words the adjustment's correction step (en, fr)", async () => {
@@ -1262,7 +1262,7 @@ describe("entryText for ability checks", () => {
       "Correction ability check adjustment 0 → −2",
     );
     expect(entryText(entry("correction", step, ""), await makeT("fr"))).toBe(
-      "Correction ajustement de test de caractéristique 0 → −2",
+      "Correction ajustement de jet de caractéristique 0 → −2",
     );
   });
 

@@ -124,7 +124,7 @@ describe("acCorrectionInEffect", () => {
       true,
     ],
     [
-      "the real AC given by the GM",
+      "the real AC given by the DM",
       { targetAc: 4, rolledAcUnknown: true },
       true,
     ],

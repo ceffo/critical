@@ -167,7 +167,7 @@ test("a low-confidence spell shows its text only; Cloudkill rolls an exposure on
     })
     .click();
   await expect(resultCard(page).getByTestId("cast-text-only")).toContainText(
-    "add a buff by hand",
+    "add an effect by hand",
   );
   await expect(page.locator('[data-testid="buff"]')).toHaveCount(0);
   await snap(page, "low-confidence");
@@ -236,7 +236,7 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
 
   // Received from a party wizard, Ice Storm as sleet: no damage, no text-only banner.
   const picker = await receivePicker(page);
-  await picker.getByLabel("Search for a spell cast on me").fill("Ice Storm");
+  await picker.getByLabel("Search for a received spell").fill("Ice Storm");
   await picker.getByLabel("Caster level").fill("9");
   await picker.getByLabel("Option of Ice Storm").selectOption("sleet");
   await picker.getByRole("button", { name: "Apply Ice Storm" }).click();
@@ -250,7 +250,7 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   // own, the two smoke rounds without dice.
   const receive = async (name: string, level: string) => {
     const p = await receivePicker(page);
-    await p.getByLabel("Search for a spell cast on me").fill(name);
+    await p.getByLabel("Search for a received spell").fill(name);
     await p.getByLabel("Caster level").fill(level);
     await p.getByRole("button", { name: `Apply ${name}` }).click();
     await expect(page.getByTestId("add-effect-popover")).toBeHidden();
@@ -325,7 +325,7 @@ test("Strength cast on me by a party wizard, found by its French name; a saved e
   await openDashboard(page);
   const before = await effectiveStr(page);
   const picker = await receivePicker(page);
-  await picker.getByLabel("Search for a spell cast on me").fill("Force");
+  await picker.getByLabel("Search for a received spell").fill("Force");
   await picker.getByLabel("Caster level").fill("9");
   await picker.getByRole("button", { name: "Apply Strength" }).click();
 
@@ -341,7 +341,7 @@ test("Strength cast on me by a party wizard, found by its French name; a saved e
   ).toContainText("540 rounds");
   await expect.poll(() => effectiveStr(page)).toBeGreaterThan(before);
   await expect(
-    logEntry(page, "Strength cast on me (caster level 9)"),
+    logEntry(page, "Strength received (caster level 9)"),
   ).toBeVisible();
 
   // A saved effect from the same popover.
@@ -359,7 +359,7 @@ test("Strength cast on me by a party wizard, found by its French name; a saved e
     { width: 2560, height: 1440 },
   ]) {
     await page.setViewportSize(vp);
-    await openAddEffect(page, "Spell cast on me");
+    await openAddEffect(page, "Received spell");
     await snap(page, `add-effect-${vp.width}x${vp.height}`);
     await page.keyboard.press("Escape");
   }
@@ -452,7 +452,7 @@ test.describe("same-named spells", () => {
   async function receive(page: Page, query: string, row: string) {
     await openDashboard(page);
     const picker = await receivePicker(page);
-    await picker.getByLabel("Search for a spell cast on me").fill(query);
+    await picker.getByLabel("Search for a received spell").fill(query);
     await picker.getByLabel("Caster level").fill("9");
     const item = picker.getByRole("listitem").filter({ hasText: row });
     const req = page.waitForRequest(
@@ -482,7 +482,7 @@ test.describe("same-named spells", () => {
   }) => {
     await openDashboard(page);
     const picker = await receivePicker(page);
-    await picker.getByLabel("Search for a spell cast on me").fill("Cure Test");
+    await picker.getByLabel("Search for a received spell").fill("Cure Test");
     await expect(picker.getByRole("listitem")).toHaveCount(50);
     await expect(picker.getByTestId("receive-more")).toHaveText(
       "10 more, refine your search",
@@ -504,7 +504,9 @@ test("a cast buff expired by Time passes: pop the fast-forward, then the cast", 
   await turnMenu(page, "Time passes…");
   await form.getByLabel("Hours that pass").fill("1");
   await form.getByRole("button", { name: "Confirm" }).click();
-  await expect(page.getByRole("status")).toContainText("Expired buffs: Haste");
+  await expect(page.getByRole("status")).toContainText(
+    "Expired effects: Haste",
+  );
   await expect(buffBadge(page, "Haste")).toHaveCount(0);
 
   await expectUndoOn(page, "Cast Haste", true);

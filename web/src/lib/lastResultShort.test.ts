@@ -164,8 +164,8 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
   buff_change: {
     e: entry("buff_change", null),
     value: null,
-    en: "Buff",
-    fr: "Bonus",
+    en: "Effect",
+    fr: "Effet",
   },
   round_advance: {
     e: entry("round_advance", null),

@@ -55,7 +55,7 @@ describe("cast entry actions", () => {
       /^Strength added as an effect \(level 15\): /,
     );
     expect(entryText(castEntry(payload("received")), t)).toMatch(
-      /^Strength cast on me \(caster level 15\): /,
+      /^Strength received \(caster level 15\): /,
     );
     expect(entryText(castEntry(payload("cast")), t)).toMatch(
       /^Cast Strength: /,

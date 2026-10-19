@@ -75,7 +75,13 @@ export function powerEffectsText(t: TFunction, e: BuffEffects): string {
     parts.push(t("buffs.effDice", { n: e.multiplier }));
   if (e.spells_buff !== undefined)
     parts.push(t("result.cast.fx.spells_buff", { value: e.spells_buff }));
-  for (const key of ["to_hit", "damage", "save_bonus", "ac"] as const) {
+  for (const key of [
+    "to_hit",
+    "damage",
+    "save_bonus",
+    "ac",
+    "initiative",
+  ] as const) {
     const v = e[key];
     if (v !== undefined)
       parts.push(t(`result.cast.fx.${key}`, { value: formatSigned(v) }));

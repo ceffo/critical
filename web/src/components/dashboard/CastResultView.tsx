@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import type {
   CastResult,
   DamagePartSave,
-  DiceRoll,
   ExposureResult,
+  FormulaRoll,
   SpellFailure,
 } from "@/types/spells";
 import { spellTexts, useSpellName } from "@/i18n/spellName";
@@ -32,7 +32,7 @@ function Die({ sides, value }: { sides: number; value: number }) {
 }
 
 /** The dice actually rolled, resolved ("10d6", "1d4+7"): the seed formula ("(min(level,10))d6") stays out of the UI. */
-function resolved(r: DiceRoll): string {
+function resolved(r: FormulaRoll): string {
   if (r.dice.length === 0) return String(r.total);
   const counts = new Map<number, number>();
   for (const d of r.dice) counts.set(d.sides, (counts.get(d.sides) ?? 0) + 1);
@@ -45,7 +45,7 @@ function resolved(r: DiceRoll): string {
  * A roll from its structured fields: the formula, every die, the flat modifier (total minus the dice)
  * and the total. Wraps, never truncates.
  */
-function RollView({ roll: r }: { roll: DiceRoll }) {
+function RollView({ roll: r }: { roll: FormulaRoll }) {
   const mod = r.total - r.dice.reduce((sum, d) => sum + d.value, 0);
   return (
     <span className="inline-flex flex-wrap items-center gap-2 text-body">
@@ -67,7 +67,7 @@ function PartsView({
   saves,
   total,
 }: {
-  parts: DiceRoll[];
+  parts: FormulaRoll[];
   saves: DamagePartSave[];
   total: number;
 }) {
@@ -153,14 +153,15 @@ export function CastResultView({ result: r }: { result: CastResult }) {
   const { t, i18n } = useTranslation();
   const names = useInventoryName();
   const spellName = useSpellName();
-  const name = spellName(r.spellId, r.name);
-  const description = r.spell
-    ? spellTexts(i18n.language, r.spell).description
+  const name = spellName(r.spellId, r.spell);
+  const catalogue = r.catalogueSpell;
+  const description = catalogue
+    ? spellTexts(i18n.language, catalogue).description
     : "";
   const heading =
-    r.source === "received"
+    r.action === "received"
       ? t("result.cast.receivedHeading", { name, casterLevel: r.casterLevel })
-      : r.source === "effect"
+      : r.action === "effect"
         ? t("result.cast.effectHeading", { name, casterLevel: r.casterLevel })
         : t("result.cast.castHeading", {
             name,
@@ -168,6 +169,9 @@ export function CastResultView({ result: r }: { result: CastResult }) {
             casterLevel: r.casterLevel,
           });
   const b = r.buff;
+  // The answer always carries the damage's rolls and counts; an entry logged before they were
+  // recorded may not.
+  const rolls = r.damage?.rolls ?? [];
 
   return (
     <div className="flex flex-col gap-3" data-testid="cast-result">
@@ -178,12 +182,13 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           {t("result.cast.mode", { mode: modeName(t, r.spellId, r.mode) })}
         </p>
       )}
-      {r.spell?.class && (
+      {catalogue?.class && (
         <div
           className="text-label text-muted-foreground"
           data-testid="cast-spell-ident"
         >
-          {r.spell.class} · {t("lookup.levelShort", { level: r.spell.level })}
+          {catalogue.class} ·{" "}
+          {t("lookup.levelShort", { level: catalogue.level })}
         </div>
       )}
 
@@ -230,7 +235,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               </div>
             )}
           </dl>
-          {Object.keys(b.effects).length > 0 && (
+          {b.effects && Object.keys(b.effects).length > 0 && (
             <div>
               <div className={labelClass}>{t("result.cast.tracked")}</div>
               <ul className="mt-1 flex flex-wrap gap-1">
@@ -264,7 +269,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
             </span>
             <span className="inline-flex items-center gap-2 text-body">
               <span className={labelClass}>d20</span>
-              <Die sides={20} value={r.attack.d20Roll} />
+              <Die sides={20} value={r.attack.d20} />
             </span>
           </div>
           <p className="text-body text-muted-foreground">
@@ -277,11 +282,11 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         </div>
       )}
 
-      {r.consumedItem && (
+      {r.item && (
         <p className="text-body" data-testid="cast-item">
           {t("result.cast.itemSpent", {
-            name: names.item(r.consumedItem.itemId, r.consumedItem.name),
-            left: r.consumedItem.remaining,
+            name: names.item(r.item.itemId, r.item.name),
+            left: r.item.remaining,
           })}
         </p>
       )}
@@ -297,16 +302,14 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div className="min-w-0 text-body">
               {r.damage.stepsPer ? (
-                stepsHeader(t, r.damage.stepsPer, r.damage.rolls.length)
+                stepsHeader(t, r.damage.stepsPer, rolls.length)
               ) : (
                 <>
                   {t("result.cast.damageRoll", {
-                    instances: r.damage.instances,
-                    dice: r.damage.rolls[0]
-                      ? resolved(r.damage.rolls[0])
-                      : r.damage.dice,
+                    instances: r.damage.instances ?? 1,
+                    dice: rolls[0] ? resolved(rolls[0]) : (r.damage.dice ?? ""),
                   })}
-                  {r.damage.rounds > 1 && (
+                  {(r.damage.rounds ?? 1) > 1 && (
                     <>
                       ,{" "}
                       {t("result.cast.damageRounds", {
@@ -338,9 +341,9 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               )}
             </div>
           </div>
-          {r.damage.rolls.length > 0 && (
+          {rolls.length > 0 && (
             <ul className="flex flex-col gap-1">
-              {r.damage.rolls.map((roll, i) => (
+              {rolls.map((roll, i) => (
                 <li
                   key={i}
                   className="flex flex-wrap items-center gap-x-2 gap-y-1"
@@ -399,7 +402,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         </p>
       )}
 
-      {r.untracked.length > 0 && (
+      {r.untracked && r.untracked.length > 0 && (
         <div>
           <div className={labelClass}>{t("result.cast.byHand")}</div>
           <ul
@@ -452,8 +455,8 @@ export function ExposureResultView({
 }) {
   const { t } = useTranslation();
   const spellName = useSpellName();
-  const name = spellName(r.spellId, r.name);
-  const roll = r.damage.rolls[0];
+  const name = spellName(r.spellId, r.spell);
+  const roll = r.damage.rolls?.[0];
   const type = r.damage.type
     ? t(`spellDice.types.${r.damage.type}`, { defaultValue: r.damage.type })
     : "";
@@ -520,7 +523,7 @@ export function ExposureResultView({
       </div>
       {interactive && r.exposure && (
         <ExposureControls
-          key={r.entryId}
+          key={r.logEntryId}
           spellId={r.spellId}
           casterLevel={r.casterLevel}
           exposure={r.exposure}

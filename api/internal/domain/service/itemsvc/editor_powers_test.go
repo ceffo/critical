@@ -100,6 +100,9 @@ func TestEditor_ADR0033Step17_PowersValidatedAsTheSeeds(t *testing.T) {
 		Name: localized.Of("Plate"), Category: itemsvc.CategoryArmour, Behaviour: itemsvc.BehaviourStock, Count: 1,
 		BaseAC: 3, SkillColumn: "metal", ArmorRow: "plate",
 	}
+	weapon := itemsvc.ItemInput{
+		Name: localized.Of("Sword"), Category: itemsvc.CategoryWeapon, Behaviour: itemsvc.BehaviourStock, Count: 1,
+	}
 	with := func(in itemsvc.ItemInput, ps ...itemsvc.Power) itemsvc.ItemInput {
 		in.Powers = ps
 		return in
@@ -123,6 +126,8 @@ func TestEditor_ADR0033Step17_PowersValidatedAsTheSeeds(t *testing.T) {
 		"magic with a condition":    with(armour, magic(func(p *itemsvc.Power) { p.Effects.WithoutMagicArmour = true })),
 		"magic that worsens the AC": with(armour, magic(func(p *itemsvc.Power) { p.Effects.AC = new(1) })),
 		"magic of +11":              with(armour, itemsvc.MagicPower(11)),
+		"magic of +0 (ac -0)":       with(armour, itemsvc.MagicPower(0)),
+		"magic on a weapon":         with(weapon, itemsvc.MagicPower(1)),
 		"magic without an ac":       with(armour, magic(func(p *itemsvc.Power) { p.Effects.AC = nil })),
 	}
 	for name, in := range refused {

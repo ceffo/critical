@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -118,4 +119,96 @@ func TestEditor_ADR0033Step17_PowersJoinTheAggregateAndTheACAndPop(t *testing.T)
 	_, err = bs.Log.Redo(ctx, id, edit.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 2, ac().Value, "the redo takes it off again")
+}
+
+// ADR 0033 step 17, popped through the real ledger: a worn plain chain mail
+// (AC 5, Dexterity -2: 3) edited to hold the magic power ac -2 is AC 1 with an
+// armour_magic row; popping the edit gives AC 3 back. Editing it to gear drops
+// the magic power (one powers change); popping that gives back the category
+// and the magic power. A ledger entry's snapshot from before powers (no
+// "powers" key) keeps the powers the piece holds.
+func TestEditor_ADR0033Step17_PatchPopAndOldSnapshots(t *testing.T) {
+	ctx := context.Background()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 16, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+	})
+	require.NoError(t, err)
+	acValue := func() int {
+		t.Helper()
+		a, err := bs.AC.Get(ctx, id)
+		require.NoError(t, err)
+		return a.Value
+	}
+	top := func() actionlog.Entry {
+		t.Helper()
+		es, err := bs.Log.List(ctx, id, 1)
+		require.NoError(t, err)
+		require.Len(t, es, 1)
+		return es[0]
+	}
+	powers := func() []itemsvc.Power {
+		t.Helper()
+		got, err := bs.Items.List(ctx, id)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		return got[0].Powers
+	}
+
+	_, err = bs.Items.Create(ctx, id, itemsvc.ItemInput{
+		Name: localized.Of("Chain mail"), Category: itemsvc.CategoryArmour, Behaviour: itemsvc.BehaviourStock, Count: 1,
+		BaseAC: 5, SkillColumn: "metal", ArmorRow: "chain", Equip: true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 3, acValue())
+
+	plus2 := []itemsvc.Power{itemsvc.MagicPower(2)}
+	_, err = bs.Items.Update(ctx, id, "chain_mail", itemsvc.ItemPatch{Powers: &plus2})
+	require.NoError(t, err)
+	a, err := bs.AC.Get(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 1, a.Value)
+	found := false
+	for _, r := range a.Rows {
+		if r.Term == acsvc.TermArmourMagic && r.ItemID == "chain_mail" {
+			found = true
+			assert.Equal(t, -2, r.Value)
+		}
+	}
+	assert.True(t, found, "the +N is an armour_magic row of the piece")
+	_, err = bs.Log.Undo(ctx, id, top().ID)
+	require.NoError(t, err)
+	assert.Equal(t, 3, acValue(), "popped: the AC is back")
+	assert.Empty(t, powers())
+	_, err = bs.Log.Redo(ctx, id, top().ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, acValue())
+
+	gear := itemsvc.CategoryGear
+	_, err = bs.Items.Update(ctx, id, "chain_mail", itemsvc.ItemPatch{Category: &gear})
+	require.NoError(t, err)
+	e := top()
+	assert.Equal(t, actionlog.KindItemEdit, e.Kind)
+	assert.Contains(t, string(e.Payload), `"field":"powers"`, "dropping the +N is a powers change")
+	assert.Empty(t, powers())
+	_, err = bs.Log.Undo(ctx, id, e.ID)
+	require.NoError(t, err)
+	got, err := bs.Items.List(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, itemsvc.CategoryArmour, got[0].Category)
+	assert.Equal(t, plus2, got[0].Powers, "popped: the category and the magic power are back")
+
+	// An old snapshot (no "powers" key) restores the rest and keeps the powers held now.
+	old := snaptest.EnvID("chain_mail", `{"count":1,"replace":true,"item":{"position":0,"name":{"en":"Chain mail"},"namePartial":true,"type":"armour",
+		"behaviour":"stock","magicalBonus":0,"ammoKind":"","maxCount":1,"effectDice":"","effectSave":"","notes":"old"}}`)
+	require.NoError(t, bs.Items.Module().Restorer(itemsvc.StateKeyItems).Restore(ctx, id, old))
+	got, err = bs.Items.List(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, "old", got[0].Notes, "the old snapshot restored the item")
+	assert.Equal(t, plus2, got[0].Powers, "and left its powers alone")
 }

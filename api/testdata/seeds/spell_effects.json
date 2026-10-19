@@ -361,6 +361,18 @@
   }
  },
  {
+  "id": "polymorph_self",
+  "name": "Polymorph Self",
+  "level": 4,
+  "kind": "utility",
+  "confidence": "high",
+  "target": "none",
+  "duration": {
+   "kind": "rounds",
+   "rounds": "20*level"
+  }
+ },
+ {
   "id": "stoneskin",
   "name": "Stoneskin",
   "level": 4,

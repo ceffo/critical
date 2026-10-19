@@ -127,6 +127,10 @@ type CastBuff struct {
 	Charges int    `json:"charges,omitempty"`
 	StrGain int    `json:"strGain,omitempty"`
 	Applied bool   `json:"applied"`
+	// OnOther: the spell was cast on someone else or on an area and a row
+	// marked so went on the timeline (ADR 0004 step 20.5); absent otherwise
+	// and on casts logged before it existed.
+	OnOther bool `json:"onOther,omitempty"`
 
 	ID           string       `json:"id,omitempty"`
 	DurationRoll *FormulaRoll `json:"durationRoll,omitempty"`
@@ -189,7 +193,7 @@ func toBreakdown(res CastResult) CastBreakdown {
 	}
 	if b := res.Buff; b != nil {
 		r.Buff = &CastBuff{
-			Name: b.Buff.Name, Rounds: b.Buff.Duration, Charges: b.Buff.Charges, Applied: b.Applied,
+			Name: b.Buff.Name, Rounds: b.Buff.Duration, Charges: b.Buff.Charges, Applied: b.Applied, OnOther: b.OnOther,
 			ID: b.Buff.ID, DurationRoll: toFormulaRoll(b.Duration), ChargesRoll: toFormulaRoll(b.Charges),
 			ChargeUnit: b.ChargeUnit, StrGainRoll: toFormulaRoll(b.StrGain), Effects: buffEffects(b),
 		}

@@ -42,6 +42,37 @@ func TestBuffs_SpellIDOnTheWire(t *testing.T) {
 	})
 }
 
+// ADR 0004 step 20.5: a row for a spell cast on someone else or on an area
+// is served with onOther (omitted for a buff on the character) and as not
+// applying; an onOther in an activation body is ignored.
+func TestBuffs_Step20_OnOtherOnTheWire(t *testing.T) {
+	t.Run("served on a row on someone else", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().ListStatus(mock.Anything, int64(1)).Return([]buffsvc.BuffStatus{
+			{BuffEffect: buffsvc.BuffEffect{ID: "w", Name: "Web", Duration: 30, SpellID: "web", OnOther: true}},
+			{BuffEffect: buffsvc.BuffEffect{ID: "p", Name: "Polymorph Self", Duration: 300, SpellID: "polymorph_self"}, Applies: true},
+		}, nil)
+		m.buffs.EXPECT().ListPowers(mock.Anything, int64(1)).Return(nil, nil)
+		rec := do(h, "GET", "/api/buffs", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"buffs":[
+			{"id":"w","name":"Web","charges":0,"duration":30,"effects":{},"note":"","startRound":0,"chargesTotal":0,"spellId":"web","onOther":true,"applies":false},
+			{"id":"p","name":"Polymorph Self","charges":0,"duration":300,"effects":{},"note":"","startRound":0,"chargesTotal":0,"spellId":"polymorph_self","applies":true}],
+			"powers":[]}`,
+			rec.Body.String())
+	})
+
+	t.Run("ignored in an activation body", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().Activate(mock.Anything, int64(1), buffsvc.BuffEffect{Name: "Web", Duration: 4}).
+			Return([]buffsvc.BuffEffect{}, nil).Once()
+		m.buffs.EXPECT().ListStatus(mock.Anything, int64(1)).Return([]buffsvc.BuffStatus{}, nil).Maybe()
+		m.buffs.EXPECT().ListPowers(mock.Anything, int64(1)).Return(nil, nil).Maybe()
+		rec := do(h, "POST", "/api/buffs", `{"name":"Web","duration":4,"onOther":true}`)
+		assert.Less(t, rec.Code, 300, rec.Body.String())
+	})
+}
+
 // ADR 0016 step 13: the effects list serves the item powers that are on in
 // a list of their own, next to the buffs and never mixed into them: the
 // item's id, the power's id and its effects (weapon-kind condition

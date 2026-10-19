@@ -6,6 +6,7 @@ import {
   logEntry,
   markNoReload,
   openDashboard,
+  readsAfter,
   recordHp,
   turnGroup,
 } from "./helpers";
@@ -25,9 +26,14 @@ test("damage then heal change current HP by the amounts entered, without reload"
   await expect(apply).toBeEnabled();
   await box.getByLabel("Source").fill("e2e trap");
 
-  await recordHp(page, "damage", 4, "e2e goblin club");
-  await expect.poll(() => currentHp(page)).toBe(before - 4);
-  await expect(logEntry(page, "e2e goblin club")).toContainText("−4");
+  // The answer carries the new HP and names "hp,log": only the journal is read again.
+  const reads = await readsAfter(page, async () => {
+    await recordHp(page, "damage", 4, "e2e goblin club");
+    await expect.poll(() => currentHp(page)).toBe(before - 4);
+    await expect(logEntry(page, "e2e goblin club")).toContainText("−4");
+  });
+  test.info().annotations.push({ type: "reads", description: reads.join(" ") });
+  expect(reads).toEqual(["/api/log"]);
 
   await recordHp(page, "heal", 2, "e2e potion");
   await expect.poll(() => currentHp(page)).toBe(before - 2);

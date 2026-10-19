@@ -15,6 +15,7 @@ import {
   turnMenu,
   undoNextTurn,
   expectSlotDots,
+  readsAfter,
 } from "./helpers";
 import type { Page } from "@playwright/test";
 
@@ -51,11 +52,22 @@ test("casting Stoneskin shows the result card, adds the buff; undoing gives the 
   const level4 = page.getByRole("region", { name: "Level 4" });
   await expectSlotDots(level4, 4, 1, 1);
 
-  await level4.getByRole("button", { name: "Cast Stoneskin" }).click();
   const card = resultCard(page).getByTestId("cast-result");
-  await expect(card).toContainText(
-    "Stoneskin (level 4), cast at caster level 15",
-  );
+  const reads = await readsAfter(page, async () => {
+    await level4.getByRole("button", { name: "Cast Stoneskin" }).click();
+    await expect(card).toContainText(
+      "Stoneskin (level 4), cast at caster level 15",
+    );
+  });
+  test.info().annotations.push({ type: "reads", description: reads.join(" ") });
+  // The answer carries the slots and names "buffs,log,spell_slots": the journal, the effects and
+  // what follows them (STR, AC) are read again, nothing else.
+  expect(reads).toEqual([
+    "/api/ac",
+    "/api/buffs",
+    "/api/log",
+    "/api/stats/str",
+  ]);
   await expect(card.getByTestId("cast-buff")).toContainText("On you");
   await expect(card.getByTestId("cast-charges")).toContainText(/1d4\+\d+/);
   await expect(card.getByTestId("cast-text")).toBeHidden(); // folded by default

@@ -227,7 +227,7 @@ export function SpellsPanel() {
         busy={busy}
         onCancel={() => setEditing(false)}
         onSave={(ids) =>
-          void run(() => prepare(ids)).then((ok) => {
+          void run(() => prepare(ids), { fresh: ["slots"] }).then((ok) => {
             if (ok) setEditing(false);
           })
         }
@@ -250,7 +250,7 @@ export function SpellsPanel() {
           size="sm"
           title={t("spellSlots.longRestLabel")}
           aria-label={t("spellSlots.longRestLabel")}
-          onClick={() => void run(resetSlots)}
+          onClick={() => void run(resetSlots, { fresh: ["slots"] })}
           disabled={busy}
         >
           <Moon aria-hidden />
@@ -317,11 +317,14 @@ export function SpellsPanel() {
                     } = plan;
                     const acText = targetAcs[slot.index] ?? "";
                     const cast = (onSelf?: boolean) =>
-                      void run(() =>
-                        castSpell(slot.index, {
-                          ...plan.options,
-                          onSelf,
-                        } satisfies CastOptions),
+                      void run(
+                        () =>
+                          castSpell(slot.index, {
+                            ...plan.options,
+                            onSelf,
+                          } satisfies CastOptions),
+                        // The answer carries the slots: not read again.
+                        { fresh: ["slots"] },
                       );
                     return (
                       <li

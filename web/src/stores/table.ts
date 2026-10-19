@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { appendHpEvent } from "@/api/hp";
-import { ApiError } from "@/api/http";
+import { ApiError, UNAVAILABLE } from "@/api/http";
 import { redoLogEntry, undoLogEntry } from "@/api/log";
 import { SLICES, slicesFor, takeChanges, type Slice } from "@/lib/stateKeys";
 import { useHpStore } from "./hp";
@@ -151,8 +151,12 @@ export const useTableStore = create<TableStore>((set, get) => {
   // What the writes answered since the last action changed, but what the action set from its
   // answer and the slices no panel has loaded. A failed action reads everything again: a refusal
   // names nothing, and the player must see the state that refused it (a stale undo's new top).
-  const changed = (failed: boolean, opts?: ActionOptions) => {
+  // One the database could not serve reads nothing: the reads would wait for it (and the busy
+  // controls with them), and the sheet is read again once it answers (api/http.ts setReload).
+  const changed = (failure: unknown, opts?: ActionOptions) => {
     const answered = takeChanges();
+    if (failure instanceof ApiError && failure.code === UNAVAILABLE) return [];
+    const failed = failure !== undefined;
     const slices = slicesFor(failed ? { known: false } : answered);
     if (!failed) for (const s of opts?.fresh ?? []) slices.delete(s);
     return [...slices].filter(shown);
@@ -176,30 +180,30 @@ export const useTableStore = create<TableStore>((set, get) => {
 
     run: async (action, opts) => {
       start(opts);
-      let ok = true;
+      let failure: unknown = undefined;
       try {
         await action();
       } catch (e) {
-        ok = false;
+        failure = e ?? new Error("failed");
         set({ error: message(e) });
       }
-      await read(changed(!ok, opts));
+      await read(changed(failure, opts));
       end(opts);
-      return ok;
+      return failure === undefined;
     },
 
     submit: async (action, opts) => {
       start(opts);
       let rejected: ApiError | null = null;
-      let failed = false;
+      let failure: unknown = undefined;
       try {
         await action();
       } catch (e) {
-        failed = true;
+        failure = e ?? new Error("failed");
         if (e instanceof ApiError && e.field) rejected = e;
         else set({ error: message(e) });
       }
-      await read(changed(failed, opts));
+      await read(changed(failure, opts));
       end(opts);
       return rejected;
     },

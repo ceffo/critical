@@ -187,36 +187,38 @@ type ItemBody struct {
 	CatalogueCode *string `json:"catalogueCode"`
 	Equip         *bool   `json:"equip"`
 	// Name is a language map: the languages typed (ADR 0023 step 11).
-	Name         localized.Text `json:"name"`
-	Category     *string        `json:"category"`
-	MagicKind    *string        `json:"magicKind"`
-	Component    *string        `json:"component"`
-	Behaviour    *string        `json:"behaviour"`
-	Count        *int           `json:"count"`
-	MaxCount     *int           `json:"maxCount"`
-	MagicalBonus *int           `json:"magicalBonus"`
-	AmmoKind     *string        `json:"ammoKind"`
-	EffectDice   *string        `json:"effectDice"`
-	EffectSave   *string        `json:"effectSave"`
-	Notes        *string        `json:"notes"`
-	DamageTypes  *[]string      `json:"damageTypes"`
-	DamageSM     *string        `json:"damageSm"`
-	DamageL      *string        `json:"damageL"`
-	WeaponType   *string        `json:"weaponType"`
-	WeaponKind   *string        `json:"weaponKind"`
-	Size         *string        `json:"size"`
-	Speed        *int           `json:"speed"`
-	MagicToHit   *int           `json:"magicToHit"`
-	MagicDamage  *int           `json:"magicDamage"`
-	TwoHanded    *bool          `json:"twoHanded"`
-	Fires        *string        `json:"fires"`
-	Specialized  *bool          `json:"specialized"`
-	BaseAC       *int           `json:"baseAc"`
-	SkillColumn  *string        `json:"skillColumn"`
-	ArmorRow     *string        `json:"armorRow"`
-	ShieldKind   *string        `json:"shieldKind"`
-	ACMelee      *int           `json:"acMelee"`
-	ACMissile    *int           `json:"acMissile"`
+	Name      localized.Text `json:"name"`
+	Category  *string        `json:"category"`
+	MagicKind *string        `json:"magicKind"`
+	Component *string        `json:"component"`
+	// SpellID is the spell a magic scroll holds (ADR 0033 step 2); "" clears it.
+	SpellID      *string   `json:"spellId"`
+	Behaviour    *string   `json:"behaviour"`
+	Count        *int      `json:"count"`
+	MaxCount     *int      `json:"maxCount"`
+	MagicalBonus *int      `json:"magicalBonus"`
+	AmmoKind     *string   `json:"ammoKind"`
+	EffectDice   *string   `json:"effectDice"`
+	EffectSave   *string   `json:"effectSave"`
+	Notes        *string   `json:"notes"`
+	DamageTypes  *[]string `json:"damageTypes"`
+	DamageSM     *string   `json:"damageSm"`
+	DamageL      *string   `json:"damageL"`
+	WeaponType   *string   `json:"weaponType"`
+	WeaponKind   *string   `json:"weaponKind"`
+	Size         *string   `json:"size"`
+	Speed        *int      `json:"speed"`
+	MagicToHit   *int      `json:"magicToHit"`
+	MagicDamage  *int      `json:"magicDamage"`
+	TwoHanded    *bool     `json:"twoHanded"`
+	Fires        *string   `json:"fires"`
+	Specialized  *bool     `json:"specialized"`
+	BaseAC       *int      `json:"baseAc"`
+	SkillColumn  *string   `json:"skillColumn"`
+	ArmorRow     *string   `json:"armorRow"`
+	ShieldKind   *string   `json:"shieldKind"`
+	ACMelee      *int      `json:"acMelee"`
+	ACMissile    *int      `json:"acMissile"`
 	// Powers is the whole power list, as served (ADR 0033 step 17, amending
 	// ADR 0016 step 15): on a PATCH it replaces the stored one, absent keeps
 	// it. A power sent without an id gets power_<n>. An armour's or a
@@ -281,7 +283,7 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		res, err := svc.Create(r.Context(), charID(r), itemsvc.ItemInput{
 			CatalogueCode: deref(b.CatalogueCode), Equip: deref(b.Equip),
 			Name: b.Name, Category: itemsvc.Category(deref(b.Category)), MagicKind: deref(b.MagicKind),
-			Component: deref(b.Component), Behaviour: itemsvc.Behaviour(deref(b.Behaviour)),
+			Component: deref(b.Component), SpellID: deref(b.SpellID), Behaviour: itemsvc.Behaviour(deref(b.Behaviour)),
 			Count: deref(b.Count), MaxCount: deref(b.MaxCount), MagicBonus: deref(b.MagicalBonus),
 			AmmoKind: deref(b.AmmoKind), EffectDice: deref(b.EffectDice), EffectSave: deref(b.EffectSave),
 			Notes: deref(b.Notes), DamageTypes: deref(b.DamageTypes), DamageSM: deref(b.DamageSM),
@@ -307,7 +309,7 @@ func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			return err
 		}
 		p := itemsvc.ItemPatch{
-			Name: b.Name, MagicKind: b.MagicKind, Component: b.Component, Count: b.Count, MaxCount: b.MaxCount, MagicBonus: b.MagicalBonus,
+			Name: b.Name, MagicKind: b.MagicKind, Component: b.Component, SpellID: b.SpellID, Count: b.Count, MaxCount: b.MaxCount, MagicBonus: b.MagicalBonus,
 			AmmoKind: b.AmmoKind, EffectDice: b.EffectDice, EffectSave: b.EffectSave, Notes: b.Notes,
 			DamageTypes: b.DamageTypes, DamageSM: b.DamageSM, DamageL: b.DamageL, WeaponType: b.WeaponType,
 			WeaponKind: b.WeaponKind, Size: b.Size, Speed: b.Speed, MagicToHit: b.MagicToHit,

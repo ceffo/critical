@@ -39,11 +39,11 @@ func TestItems_ListWireShape(t *testing.T) {
 	m.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return([]itemsvc.Warning{{ItemID: "mace", Code: itemsvc.WarnWeaponNotAllowed}}, nil)
 	rec := do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `[{"id":"arrows_plus1","name":{"en":"Arrows +1"},"category":"ammunition","magicKind":"","catalogueCode":"","component":"",
+	assert.JSONEq(t, `[{"id":"arrows_plus1","name":{"en":"Arrows +1"},"category":"ammunition","magicKind":"","catalogueCode":"","component":"","spellId":"",
 		"state":"carried","equipState":"","type":"arrow","behaviour":"stock","magicalBonus":1,
 		"ammoKind":"arrow","count":18,"maxCount":18,"effectDice":"","effectSave":"","notes":"","powers":[],
 		"damageSm":"1d6","damageL":"1d6",`+noWeapon+`,"review":[],"warnings":[]},
-		{"id":"mace","name":{"en":"Mace +1"},"category":"weapon","magicKind":"","catalogueCode":"","component":"","state":"wielded","equipState":"wielded","type":"",
+		{"id":"mace","name":{"en":"Mace +1"},"category":"weapon","magicKind":"","catalogueCode":"","component":"","spellId":"","state":"wielded","equipState":"wielded","type":"",
 		"behaviour":"stock","magicalBonus":0,"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[],"damageTypes":[],"damageSm":"1d6","damageL":"1d6","weaponType":"other_melee","weaponKind":"melee","size":"",
 		"speed":0,"magicToHit":1,"magicDamage":1,"twoHanded":false,"fires":"","specialized":false,"baseAc":0,"skillColumn":"",
@@ -139,7 +139,7 @@ func TestItems_Restock(t *testing.T) {
 	}
 }
 
-const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","component":"","state":"carried","equipState":"",
+const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","component":"","spellId":"","state":"carried","equipState":"",
 	"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
 	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[],"damageSm":"","damageL":"",` + noWeapon + `,"review":[],"warnings":[]}`
 
@@ -232,7 +232,7 @@ func TestItems_ADR0033Step17_PowersInTheBody(t *testing.T) {
 	m.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(nil, nil)
 	rec = do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":{"en":"Power Gem"},"category":"magic","magicKind":"misc","catalogueCode":"","component":"",
+	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":{"en":"Power Gem"},"category":"magic","magicKind":"misc","catalogueCode":"","component":"","spellId":"",
 		"state":"worn","equipState":"worn","type":"gem","behaviour":"daily","magicalBonus":0,
 		"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[{"id":"thunder_hammer","minStr":18,"effects":{"weapon_buff":5,"multiplier":2,"weapon_kind":"melee"}}],
@@ -298,6 +298,28 @@ func TestItems_Step1_1_ComponentOnTheWire(t *testing.T) {
 	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Component: &none}).
 		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 16}, nil)
 	rec = do(h, "PATCH", "/api/items/w", `{"component":""}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}
+
+// ADR 0033 step 2: the spell a scroll holds is read from a create and a
+// patch body ("" clears it) and served; a patch without it leaves it (nil).
+func TestItems_ADR0033Step2_ScrollSpellOnTheWire(t *testing.T) {
+	h, m := newRouter(t)
+	noWarnings(m)
+	named := wandItem
+	named.MagicKind, named.SpellID = itemsvc.MagicScroll, "burning_hands"
+	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{
+		Name: localized.Of("Scroll"), Category: itemsvc.CategoryMagic, MagicKind: "scroll", SpellID: "burning_hands",
+		Behaviour: itemsvc.BehaviourStock, Count: 1,
+	}).Return(&itemsvc.ChangeResult{Item: named, LogEntryID: 15}, nil)
+	rec := do(h, "POST", "/api/items", `{"name":{"en":"Scroll"},"category":"magic","magicKind":"scroll","spellId":"burning_hands","behaviour":"stock","count":1}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"spellId":"burning_hands"`)
+
+	none := ""
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{SpellID: &none}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 16}, nil)
+	rec = do(h, "PATCH", "/api/items/w", `{"spellId":""}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 

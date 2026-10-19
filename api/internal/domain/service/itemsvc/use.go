@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
 // UseResult is what one use of an item produced: the dice rolled (none for an
@@ -118,9 +119,10 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 
 // correctInitiative is ADR 0035 item 6.2 for an item used: a magic piece
 // makes the round's initiative the same d10 plus its magic kind's PHB Table
-// 56 modifier (a scroll's row is the casting time of its spell, which an item
-// doesn't hold: not counted, buffsvc.ItemInitiative). It is the use transaction's last
-// entry. Any other piece (ammunition, gear) corrects nothing, nor does a use
+// 56 modifier. A scroll's row is the casting time of its spell: a scroll
+// that names its spell adds that spell's casting time
+// (buffsvc.ScrollInitiative); one that names none is not counted
+// (buffsvc.ItemInitiative). It is the use transaction's last entry. Any other piece (ammunition, gear) corrects nothing, nor does a use
 // before catalogue format 7 (no Table 56).
 func (s *service) correctInitiative(ctx context.Context, characterID int64, item Item) error {
 	if item.Category != CategoryMagic || s.initiativeItems == nil {
@@ -131,6 +133,33 @@ func (s *service) correctInitiative(ctx context.Context, characterID int64, item
 		return nil
 	}
 	cause := buffsvc.ItemInitiative(item.ID, item.Name.Any(), item.MagicKind, row.Modifier, row.HasModifier)
+	if !row.HasModifier && item.SpellID != "" {
+		var err error
+		if cause, err = s.scrollInitiative(ctx, item); err != nil {
+			return err
+		}
+	}
+	return s.correctBy(ctx, characterID, cause)
+}
+
+// scrollInitiative is the term of a scroll that names its spell: the
+// catalogue's casting time of that spell (a spell it no longer knows, or no
+// catalogue, reads as special).
+func (s *service) scrollInitiative(ctx context.Context, item Item) (buffsvc.InitiativeModifier, error) {
+	var ct spellstats.CastingTime
+	found := false
+	if s.spells != nil {
+		spell, ok, err := s.spells.Describe(ctx, item.SpellID)
+		if err != nil {
+			return buffsvc.InitiativeModifier{}, fmt.Errorf("describe %s: %w", item.SpellID, err)
+		}
+		ct, found = spell.Stats.CastingTime, ok
+	}
+	return buffsvc.ScrollInitiative(item.ID, item.Name.Any(), item.MagicKind, item.SpellID, ct, found), nil
+}
+
+// correctBy corrects the round's initiative by cause.
+func (s *service) correctBy(ctx context.Context, characterID int64, cause buffsvc.InitiativeModifier) error {
 	if _, err := s.initiative.CorrectInitiative(ctx, characterID, cause); err != nil {
 		return fmt.Errorf("correct initiative: %w", err)
 	}

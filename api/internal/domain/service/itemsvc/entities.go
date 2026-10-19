@@ -56,7 +56,12 @@ type Item struct {
 	// Component is the spell component the piece is (step 1.1), a code of
 	// Components, empty for none: what a spell that spends an item matches
 	// (Spendable), whatever the piece's category.
-	Component  string
+	Component string
+	// SpellID is the spell catalogue id of the spell a scroll holds (ADR
+	// 0033 step 2: a magic scroll names its spell, one per scroll), empty
+	// for none and on every other piece. Using a named scroll corrects the
+	// round's initiative with that spell's casting time (ADR 0035 item 6.2).
+	SpellID    string
 	Behaviour  Behaviour
 	Count      int
 	MaxCount   int    // a daily item's refill value (informational otherwise)
@@ -108,6 +113,9 @@ type Item struct {
 func (i Item) Spendable(component string) bool {
 	return i.Component != "" && i.Component == component && i.Behaviour != BehaviourDaily && i.Count > 0
 }
+
+// HoldsSpell reports whether the piece may name a spell: a magic scroll.
+func (i Item) HoldsSpell() bool { return i.Category == CategoryMagic && i.MagicKind == MagicScroll }
 
 // Removed reports whether this item, as returned by a use, is gone: a
 // charges item at 0.

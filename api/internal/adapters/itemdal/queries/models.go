@@ -43,6 +43,7 @@ type Item struct {
 	ShieldKind    string
 	AcMelee       int64
 	AcMissile     int64
+	SpellID       string
 }
 
 type LocalizedText struct {

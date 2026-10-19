@@ -191,3 +191,15 @@ func TestUseItem_ADR0035Item6_2_ANamedScrollAddsItsSpellsCastingTime(t *testing.
 		})
 	}
 }
+
+// ADR 0033 step 2 with step 24: a pick carries the spell sent with it
+// through to the piece's validation like a pick's powers. No catalogue row
+// is a scroll, so it is refused (spellId not_allowed), not silently dropped.
+func TestCreate_ADR0033Step2_APickedPieceHoldsNoSpell(t *testing.T) {
+	svc, _, _ := pickSvc(t)
+	_, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{CatalogueCode: "body_shield", SpellID: "magic_missile"})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "spellId", fe.Field)
+	assert.Equal(t, itemsvc.CodeNotAllowed, fe.Message)
+}

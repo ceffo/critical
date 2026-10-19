@@ -243,22 +243,31 @@ export function ItemForm({
             ),
           )}
         {holdsSpell(draft) &&
-          field("spellId", t("equipment.form.spell"), (props) => (
-            <select
-              {...props}
-              className={cn(fieldClass, errors.spellId && "border-destructive")}
-              title={t("equipment.form.spellHint")}
-              value={draft.spellId}
-              onChange={(e) => set("spellId", e.target.value)}
-            >
-              <option value="">{t("equipment.form.noSpell")}</option>
-              {spellOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          ))}
+          field(
+            "spellId",
+            t("equipment.form.spell"),
+            (props) => (
+              <select
+                {...props}
+                className={cn(
+                  fieldClass,
+                  errors.spellId && "border-destructive",
+                )}
+                title={t("equipment.form.spellHint")}
+                value={draft.spellId}
+                onChange={(e) => set("spellId", e.target.value)}
+              >
+                <option value="">{t("equipment.form.noSpell")}</option>
+                {spellOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            ),
+            // A spell name is long: the picker takes the whole row, never cut.
+            "col-span-2 sm:col-span-4",
+          )}
 
         {/* Weapon (ADR 0033 step 3). */}
         {shows("weaponKind") &&

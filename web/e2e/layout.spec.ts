@@ -2002,10 +2002,10 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
   }
 });
 
-// The character dialogs of the cog menu and the page of a user with no character (ADR 0029 step
-// 7.2), French first: the creation form with its details, the rename dialog and the switch list (a
-// long name) and the creation page are never cut, fr and en, 1280x800 and 2560x1440.
-test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", async ({
+// The character dialogs of the cog menu and the intro of a user with no character (ADR 0029 step
+// 7.2, ADR 0034 step 1), French first: the rename dialog and the switch list (a long name) and the
+// intro are never cut, fr and en, 1280x800 and 2560x1440. The creation route is the next test.
+test("character dialogs and the intro uncut, fr and en, 1280 and 2560", async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -2048,18 +2048,10 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
 
   for (const lang of ["fr", "en"] as const) {
     if (lang === "en") await chooseLanguage(page, "en");
-    const [switchHint, newHint, renameHint] =
+    const [switchHint, renameHint] =
       lang === "fr"
-        ? [
-            /^Changer de personnage/,
-            "Créer un nouveau personnage",
-            "Renommer le personnage joué",
-          ]
-        : [
-            /^Switch character/,
-            "Create a new character",
-            "Rename the character you play",
-          ];
+        ? [/^Changer de personnage/, "Renommer le personnage joué"]
+        : [/^Switch character/, "Rename the character you play"];
     for (const vp of [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
@@ -2072,13 +2064,7 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
         settings.getByTestId("settings-character"),
         `cog menu characters, ${where}`,
       );
-      await settings.getByRole("button", { name: newHint }).click();
-      await expect(dialog.getByTestId("character-form")).toBeVisible();
-      await expectNoClippedText(dialog, `new character form, ${where}`);
-      await expectWholeWords(dialog, `new character form, ${where}`);
-      await snap(page, `character-form-${lang}-${vp.width}x${vp.height}`);
       await page.keyboard.press("Escape");
-      await expect(dialog).toBeHidden();
 
       settings = await openSettings(page);
       await settings.getByRole("button", { name: renameHint }).click();
@@ -2100,37 +2086,144 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
     }
   }
 
-  // Both characters retired: the creation page, the first one's lead (no character left).
+  // Both characters retired: the intro (no character left), then Commencer opens the flow.
   const list = await call("GET", "/api/characters", undefined);
   for (const c of list.body.characters)
     expect(
       (await call("PATCH", `/api/characters/${c.id}`, { retired: true })).ok,
     ).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  const intro = page.getByTestId("intro");
+  await expect(intro).toBeVisible();
   for (const lang of ["fr", "en"] as const) {
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/");
-    const card = page.getByTestId("create-card");
-    await expect(card.getByTestId("character-form")).toBeVisible();
-    if (lang === "fr")
-      await page.getByRole("radio", { name: "Français", exact: true }).click();
-    else
-      await page.getByRole("radio", { name: "English", exact: true }).click();
+    await page
+      .getByRole("radio", {
+        name: lang === "fr" ? "Français" : "English",
+        exact: true,
+      })
+      .click();
     for (const vp of [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
     ]) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
-      await expectNoClippedText(
-        page.locator("body"),
-        `creation page, ${where}`,
-      );
-      await snap(page, `create-page-${lang}-${vp.width}x${vp.height}`);
+      await expectNoClippedText(page.locator("body"), `intro, ${where}`);
+      await expectWholeWords(intro, `intro, ${where}`);
+      await expectNoPageScroll(page);
+      await snap(page, `intro-${lang}-${vp.width}x${vp.height}`);
     }
-    // A window shorter than the form: the page itself still never scrolls, the form's card does.
-    await page.setViewportSize({ width: 1280, height: 600 });
-    await expectNoPageScroll(page);
-    await expect(card.getByTestId("character-form")).toBeVisible();
+  }
+  await page
+    .getByRole("button", { name: "Start creating your character" })
+    .click();
+  await expect(page.getByTestId("creation-step")).toBeVisible();
+  // Quitter with nothing entered goes straight back to the intro.
+  await page.getByRole("button", { name: "Leave the creation" }).click();
+  await expect(intro).toBeVisible();
+});
+
+// The creation route (ADR 0034 steps 2 to 4), judged in French first (ADR 0027 step 2) and audited
+// in English: each step, filled as a level 5 half-elf bard with the server's rolls (the longest
+// content: method V's six totals, five HP rows, the bard's skills), is never cut at 1280x800,
+// 1920x1080 and 2560x1440, the page never scrolls (the step card does) and the frame is capped at
+// 1680 px on wide screens (step 2.2). A refusal opens its step with the field's error.
+test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  // Leaving a filled-in flow asks the browser's beforeunload question: accept it.
+  page.on("dialog", (d) => void d.accept());
+  await openDashboard(page);
+  const sizes = [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ];
+  for (const lang of ["fr", "en"] as const) {
+    await page.setViewportSize(sizes[0]!);
+    await page.goto("/");
+    await chooseLanguage(page, lang);
+    await page.goto("/create");
+    const step = page.getByTestId("creation-step");
+    const next = step.getByRole("button", {
+      name: lang === "fr" ? "Passer à l'étape suivante" : "Go to the next step",
+    });
+    const audit = async (name: string) => {
+      for (const vp of sizes) {
+        await page.setViewportSize(vp);
+        const where = `${name}, ${lang}, ${vp.width}x${vp.height}`;
+        await expectNoClippedText(page.locator("body"), `creation ${where}`);
+        await expectNoPageScroll(page);
+        const frame = await page
+          .locator("[data-screen=create-character]")
+          .boundingBox();
+        expect(frame!.width, `frame width, ${where}`).toBeLessThanOrEqual(1680);
+        await snap(page, `creation-${name}-${lang}-${vp.width}x${vp.height}`);
+      }
+      await page.setViewportSize(sizes[0]!);
+    };
+    const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
+
+    await step
+      .getByRole("radio", { name: tr("Barde", "Bard"), exact: true })
+      .click();
+    await step
+      .getByRole("radio", { name: tr("Niveau 5", "Level 5"), exact: true })
+      .click();
+    await audit("1-class");
+    await next.click();
+    await step
+      .getByRole("radio", { name: tr("Demi-elfe", "Half-elf"), exact: true })
+      .click();
+    await audit("2-race");
+    await next.click();
+    await step.getByTestId("score-mode").getByRole("radio").first().click();
+    await step.getByRole("radiogroup").nth(1).getByRole("radio").nth(4).click();
+    await step.getByTestId("score-roll").getByRole("button").first().click();
+    await expect(step.getByTestId("score-total-5")).toBeVisible();
+    for (const [i, code] of [
+      "dex",
+      "int",
+      "cha",
+      "str",
+      "wis",
+      "con",
+    ].entries()) {
+      await step.getByTestId(`score-total-${i}`).click();
+      await step.getByTestId(`place-${code}`).click();
+    }
+    await audit("3-scores");
+    await next.click();
+    await step.getByTestId("hp-roll").getByRole("button").first().click();
+    await expect(step.getByTestId("hp-roll").locator("tbody tr")).toHaveCount(
+      6,
+    );
+    for (const [label, points] of [
+      [tr("Escalade", "Climb walls"), "25"],
+      [tr("Détection des bruits", "Detect noise"), "20"],
+    ] as const)
+      await step.getByLabel(label).fill(points);
+    await audit("4-hp-skills");
+    await next.click();
+    await step
+      .getByLabel(tr("Nom", "Name"), { exact: true })
+      .fill("Aldéric de la Tour-d'Auvergne-Lesparre");
+    await audit("5-identity");
+
+    if (lang === "fr") {
+      // A refusal opens its step: max HP 0 is out of range, shown on "Points de vie et talents".
+      await step.getByRole("button", { name: /^Revenir/ }).click();
+      await step.getByLabel("PV max").fill("0");
+      await next.click();
+      await step
+        .getByRole("button", { name: "Créer ce personnage et le jouer" })
+        .click();
+      await expect(step).toHaveAttribute("data-step", "extras");
+      await expect(step.getByTestId("field-error")).toBeVisible();
+      await audit("refusal");
+    }
   }
 });
 
@@ -2588,15 +2681,21 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await page.setViewportSize({ width: 1280, height: 800 });
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  const settings = await openSettings(page);
-  await settings
-    .getByRole("button", { name: "Créer un nouveau personnage" })
-    .click();
-  const form = page
-    .getByTestId("character-dialog")
-    .getByTestId("character-form");
-  await form.getByLabel("Classe").selectOption({ label: "Voleur" });
-  const entry = form.getByTestId("thief-skills-entry");
+  // The creation route's "Points de vie et talents" step of a thief; leaving it accepts the
+  // browser's beforeunload question.
+  page.on("dialog", (d) => void d.accept());
+  await page.goto("/create");
+  const step = page.getByTestId("creation-step");
+  const next = step.getByRole("button", { name: "Passer à l'étape suivante" });
+  await step.getByRole("radio", { name: "Voleur", exact: true }).click();
+  await next.click();
+  await step.getByRole("radio", { name: "Petite-gens", exact: true }).click();
+  await next.click();
+  await step.getByRole("radio", { name: "Saisir" }).click();
+  for (const a of ["FOR", "DEX", "CON", "INT", "SAG", "CHA"])
+    await step.getByLabel(a, { exact: true }).fill("12");
+  await next.click();
+  const entry = step.getByTestId("thief-skills-entry");
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
@@ -2606,7 +2705,8 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     await expectNoClippedText(entry, `thief creation fields, fr, ${where}`);
     await snap(page, `thief-form-fr-${where}`);
   }
-  await page.keyboard.press("Escape");
+  await page.goto("/");
+  await expect(page.getByTestId("character")).toBeVisible();
 
   await page.setViewportSize({ width: 1280, height: 800 });
   const call = (method: string, url: string, body: unknown) =>

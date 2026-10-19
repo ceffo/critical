@@ -1,5 +1,6 @@
 // Package creationrollhdl exposes the creation's rolls (ADR 0032 steps 6 and
-// 7): POST /api/characters/rolls/scores and POST /api/characters/rolls/hp.
+// 7): POST /api/characters/rolls/scores, POST
+// /api/characters/rolls/scores/arrangement and POST /api/characters/rolls/hp.
 // They need a session but no current character (a new player creating their
 // first one has none), and write nothing.
 package creationrollhdl
@@ -22,6 +23,10 @@ type scoresRoller interface {
 	Scores(ctx context.Context, in creationrollsvc.ScoresInput) (*creationrollsvc.ScoresResult, error)
 }
 
+type arranger interface {
+	Arrange(ctx context.Context, in creationrollsvc.ArrangeInput) (*creationrollsvc.ArrangeResult, error)
+}
+
 type hpRoller interface {
 	HP(ctx context.Context, in creationrollsvc.HPInput) (*creationrollsvc.HPResult, error)
 }
@@ -29,6 +34,7 @@ type hpRoller interface {
 // RegisterRoutes wires the creation's rolls onto r.
 func RegisterRoutes(r Router, svc creationrollsvc.SVC) {
 	r.Post("/api/characters/rolls/scores", render.Handle(Scores(svc)))
+	r.Post("/api/characters/rolls/scores/arrangement", render.Handle(Arrange(svc)))
 	r.Post("/api/characters/rolls/hp", render.Handle(HP(svc)))
 }
 
@@ -73,6 +79,26 @@ type ScoresDTO struct {
 	Method      MethodDTO      `json:"method"`
 	Rolls       []ScoreRollDTO `json:"rolls"`
 	Adjustments map[string]int `json:"adjustments"`
+	Scores      map[string]int `json:"scores"`
+}
+
+// ArrangeBody is the body of POST /api/characters/rolls/scores/arrangement:
+// the method rolled, optionally the race code, and by ability code the
+// totals the player placed there (method VI: the dice added to its base).
+type ArrangeBody struct {
+	Method string           `json:"method"`
+	Race   string           `json:"raceCode"`
+	Placed map[string][]int `json:"placed"`
+}
+
+// ArrangeDTO is the placement's scores. `rolled` (the method's base plus
+// the totals placed) and `scores` (rolled plus the race's adjustment, the
+// score to store) are by ability code, an ability with nothing placed and no
+// base absent; `adjustments` (PHB Table 8) is null without a race.
+type ArrangeDTO struct {
+	Method      string         `json:"method"`
+	Adjustments map[string]int `json:"adjustments"`
+	Rolled      map[string]int `json:"rolled"`
 	Scores      map[string]int `json:"scores"`
 }
 
@@ -141,6 +167,24 @@ func Scores(svc scoresRoller) render.HandlerFunc {
 			out.Rolls[i] = ScoreRollDTO{Dice: roll.Dice, Dropped: roll.Dropped, Total: roll.Total, Ability: roll.Ability}
 		}
 		render.OK(r.Context(), w, out)
+		return nil
+	}
+}
+
+// Arrange is POST /api/characters/rolls/scores/arrangement.
+func Arrange(svc arranger) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var b ArrangeBody
+		if err := decode(r, &b); err != nil {
+			return err
+		}
+		res, err := svc.Arrange(r.Context(), creationrollsvc.ArrangeInput{Method: b.Method, Race: b.Race, Placed: b.Placed})
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, ArrangeDTO{
+			Method: res.Method.Code, Adjustments: res.Adjustments, Rolled: res.Rolled, Scores: res.Scores,
+		})
 		return nil
 	}
 }

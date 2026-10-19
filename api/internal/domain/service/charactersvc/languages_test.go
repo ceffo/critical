@@ -232,6 +232,7 @@ func TestGetCharacter_Step4_2_NoLanguageWarningOnAnEmptyCatalogue(t *testing.T) 
 func TestCreationOptions_Step4_OfferTheCatalogueTheRaceListsAndTheLimits(t *testing.T) {
 	e := newEnvWithLanguages(t)
 	e.rules.EXPECT().RaceAllows(mock.Anything, mock.Anything).Return(true, nil).Maybe()
+	expectOptionTables(e)
 	o, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
 	assert.Len(t, o.Languages, 11)
@@ -248,6 +249,7 @@ func TestCreationOptions_Step4_OfferTheCatalogueTheRaceListsAndTheLimits(t *test
 	// Before catalogue format 8 the form is offered no language.
 	none := newEnv(t)
 	none.rules.EXPECT().RaceAllows(mock.Anything, mock.Anything).Return(true, nil).Maybe()
+	expectOptionTables(none)
 	o, err = none.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
 	assert.Empty(t, o.Languages)

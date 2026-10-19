@@ -27,6 +27,45 @@ type SVC interface {
 	// *domain.FieldError on "class" (unknown, not_creatable), "con" or "xp"
 	// (out_of_range).
 	HP(ctx context.Context, in HPInput) (*HPResult, error)
+	// Arrange is the scores a placement of a roll's totals gives (step 6):
+	// the method's base, the totals placed and PHB Table 8's adjustment. It
+	// rolls nothing. A *domain.FieldError on "method" or "race" (unknown),
+	// "placed" (unknown ability, too_many totals) or "placed.<ability>"
+	// (too_many, out_of_range, above_max).
+	Arrange(ctx context.Context, in ArrangeInput) (*ArrangeResult, error)
+}
+
+// The refusals of a placement beyond charactersvc's codes.
+const (
+	// CodeTooMany: more totals than the method keeps, or than one ability
+	// takes.
+	CodeTooMany = "too_many"
+	// CodeAboveMax: method VI's dice raise an ability above the method's max.
+	CodeAboveMax = "above_max"
+)
+
+// ArrangeInput is a placement the player chose: the method rolled, the race
+// whose Table 8 adjustments apply ("" for none yet) and, by ability code, the
+// totals placed there (method VI: the dice added to the base; the others: at
+// most one total). The server keeps no roll: it checks each value against
+// what the method can make, not against the roll.
+type ArrangeInput struct {
+	Method string
+	Race   string
+	Placed map[string][]int
+}
+
+// ArrangeResult is the placement's scores by ability code.
+type ArrangeResult struct {
+	Method ruletablesvc.ScoreMethod
+	// Adjustments are PHB Table 8 for the race, nil without a race.
+	Adjustments map[string]int
+	// Rolled is the method's base plus the totals placed; an ability with
+	// nothing placed and no base is absent.
+	Rolled map[string]int
+	// Scores are Rolled plus the race's adjustment: the score stored (ADR
+	// 0030 step 1). Absent where Rolled is.
+	Scores map[string]int
 }
 
 // ScoresInput is a score roll: a method code (ruletablesvc.ScoreMethods)
@@ -140,21 +179,11 @@ func (s *service) Close(_ context.Context) error  { return nil }
 // order, method V's lowest die dropped; methods I and II give each total its
 // ability in order (II two per ability, together).
 func (s *service) Scores(_ context.Context, in ScoresInput) (*ScoresResult, error) {
-	m, ok := ruletablesvc.ScoreMethodFor(in.Method)
-	if !ok {
-		return nil, &domain.FieldError{Field: "method", Message: charactersvc.CodeUnknown}
+	m, adj, err := s.methodAndRace(in.Method, in.Race)
+	if err != nil {
+		return nil, err
 	}
-	res := &ScoresResult{Method: m, Rolls: make([]ScoreRoll, 0, m.Rolls)}
-	if in.Race != "" {
-		if !slices.Contains(charactersvc.Races, in.Race) {
-			return nil, &domain.FieldError{Field: "race", Message: charactersvc.CodeUnknown}
-		}
-		adj, err := s.rules.RaceAdjustmentsFor(in.Race)
-		if err != nil {
-			return nil, fmt.Errorf("score roll: %w", err)
-		}
-		res.Adjustments = adj
-	}
+	res := &ScoresResult{Method: m, Rolls: make([]ScoreRoll, 0, m.Rolls), Adjustments: adj}
 	perAbility := 0
 	if m.Assign == ruletablesvc.AssignInOrder || m.Assign == ruletablesvc.AssignKeepPerAbility {
 		perAbility = m.Rolls / len(ruletablesvc.Abilities)
@@ -171,6 +200,81 @@ func (s *service) Scores(_ context.Context, in ScoresInput) (*ScoresResult, erro
 		for _, r := range res.Rolls {
 			res.Scores[r.Ability] = r.Total + res.Adjustments[r.Ability]
 		}
+	}
+	return res, nil
+}
+
+// methodAndRace reads the method of code and Table 8 for race ("" for none:
+// nil adjustments), refusing an unknown one on "method" or "race".
+func (s *service) methodAndRace(code, race string) (ruletablesvc.ScoreMethod, map[string]int, error) {
+	m, ok := ruletablesvc.ScoreMethodFor(code)
+	if !ok {
+		return m, nil, &domain.FieldError{Field: "method", Message: charactersvc.CodeUnknown}
+	}
+	if race == "" {
+		return m, nil, nil
+	}
+	if !slices.Contains(charactersvc.Races, race) {
+		return m, nil, &domain.FieldError{Field: "race", Message: charactersvc.CodeUnknown}
+	}
+	adj, err := s.rules.RaceAdjustmentsFor(race)
+	if err != nil {
+		return m, nil, fmt.Errorf("score method: %w", err)
+	}
+	return m, adj, nil
+}
+
+// Arrange is ADR 0032 step 6's arithmetic on the player's arrangement: an
+// ability's score is the method's base (VI: 8, else 0) plus the totals placed
+// on it, never above the method's max (VI: 18), plus PHB Table 8's
+// adjustment for the race (the stored score is the adjusted one). Which
+// total goes where is the player's choice; each value is checked against
+// what one total of the method can be (VI: one d6; V: the three dice kept).
+func (s *service) Arrange(_ context.Context, in ArrangeInput) (*ArrangeResult, error) {
+	m, adj, err := s.methodAndRace(in.Method, in.Race)
+	if err != nil {
+		return nil, err
+	}
+	for a := range in.Placed {
+		if !slices.Contains(ruletablesvc.Abilities, a) {
+			return nil, &domain.FieldError{Field: "placed", Message: charactersvc.CodeUnknown}
+		}
+	}
+	kept := m.Dice
+	if m.DropLowest {
+		kept--
+	}
+	perAbility := 1
+	if m.Assign == ruletablesvc.AssignAddToBase {
+		perAbility = m.Keep
+	}
+	res := &ArrangeResult{Method: m, Adjustments: adj, Rolled: map[string]int{}, Scores: map[string]int{}}
+	count := 0
+	for _, a := range ruletablesvc.Abilities {
+		placed := in.Placed[a]
+		field := "placed." + a
+		if len(placed) > perAbility {
+			return nil, &domain.FieldError{Field: field, Message: CodeTooMany}
+		}
+		count += len(placed)
+		if len(placed) == 0 && m.Base == 0 {
+			continue
+		}
+		rolled := m.Base
+		for _, v := range placed {
+			if v < kept || v > kept*6 {
+				return nil, &domain.FieldError{Field: field, Message: charactersvc.CodeOutOfRange}
+			}
+			rolled += v
+		}
+		if m.Max > 0 && rolled > m.Max {
+			return nil, &domain.FieldError{Field: field, Message: CodeAboveMax}
+		}
+		res.Rolled[a] = rolled
+		res.Scores[a] = rolled + adj[a]
+	}
+	if count > m.Keep {
+		return nil, &domain.FieldError{Field: "placed", Message: CodeTooMany}
 	}
 	return res, nil
 }

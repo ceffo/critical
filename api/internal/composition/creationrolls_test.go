@@ -143,3 +143,49 @@ func TestCreationRolls_RefusalsAreFieldErrors(t *testing.T) {
 		assert.Equal(t, "bad_request", refused["code"], body)
 	}
 }
+
+type arrangeView struct {
+	Method      string         `json:"method"`
+	Adjustments map[string]int `json:"adjustments"`
+	Rolled      map[string]int `json:"rolled"`
+	Scores      map[string]int `json:"scores"`
+}
+
+// Step 6's arrangement over HTTP: method VI's dice placed for a half-elf
+// give the base 8 plus the dice, the creation accepts those scores as typed;
+// a dwarf's Charisma 3 is 2 (Table 8), which the creation refuses on "cha";
+// a placement above method VI's 18 is a field error and nothing is created.
+func TestCreationRolls_ArrangeThenCreate(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+
+	var a arrangeView
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/rolls/scores/arrangement",
+		`{"method":"VI","raceCode":"half_elf","placed":{"dex":[6,3],"cha":[5,4],"int":[2]}}`, &a))
+	assert.Equal(t, "VI", a.Method)
+	assert.Equal(t, map[string]int{"str": 8, "dex": 17, "con": 8, "int": 10, "wis": 8, "cha": 17}, a.Scores)
+	var list listView
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", bardBody(a.Scores, 6), &list))
+
+	var low arrangeView
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/rolls/scores/arrangement",
+		`{"method":"III","raceCode":"dwarf","placed":{"cha":[3]}}`, &low))
+	assert.Equal(t, map[string]int{"cha": 2}, low.Scores)
+	assert.Equal(t, map[string]int{"cha": 3}, low.Rolled)
+	two := map[string]int{}
+	for k, v := range a.Scores {
+		two[k] = v
+	}
+	two["cha"] = low.Scores["cha"]
+	var tooLow map[string]string
+	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", bardBody(two, 6), &tooLow))
+	assert.Equal(t, "cha", tooLow["field"])
+	assert.Equal(t, "out_of_range", tooLow["error"])
+
+	var refused map[string]string
+	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters/rolls/scores/arrangement",
+		`{"method":"VI","placed":{"str":[6,5]}}`, &refused))
+	assert.Equal(t, "invalid_input", refused["code"])
+	assert.Equal(t, "placed.str", refused["field"])
+	assert.Equal(t, "above_max", refused["error"])
+}

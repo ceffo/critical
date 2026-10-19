@@ -1,7 +1,10 @@
 import type {
   CharacterList,
   CreationOptions,
+  HpRoll,
   NewCharacter,
+  ScoresArrangement,
+  ScoresRoll,
 } from "@/types/character";
 import { patch, post, request } from "./http";
 
@@ -62,4 +65,34 @@ export function changeSkillArmor(
   skillArmor: string,
 ): Promise<CharacterList> {
   return patch<CharacterList>(`/api/characters/${id}`, { skillArmor });
+}
+
+/** Rolls the six scores by a method (ADR 0032 step 6); writes nothing. The race adds Table 8's adjustments. */
+export function rollScores(
+  method: string,
+  raceCode: string,
+): Promise<ScoresRoll> {
+  return post<ScoresRoll>("/api/characters/rolls/scores", { method, raceCode });
+}
+
+/**
+ * The scores a placement gives (ADR 0032 step 6): the server adds the method's base, the totals placed
+ * on each ability and the race's Table 8 adjustment, and refuses what the method cannot make (method
+ * VI above its max). Writes nothing.
+ */
+export function arrangeScores(
+  method: string,
+  raceCode: string,
+  placed: Record<string, number[]>,
+): Promise<ScoresArrangement> {
+  return post<ScoresArrangement>("/api/characters/rolls/scores/arrangement", {
+    method,
+    raceCode,
+    placed,
+  });
+}
+
+/** Rolls the max HP of a new character (ADR 0032 step 7); writes nothing. */
+export function rollHp(cls: string, con: number, xp: number): Promise<HpRoll> {
+  return post<HpRoll>("/api/characters/rolls/hp", { class: cls, con, xp });
 }

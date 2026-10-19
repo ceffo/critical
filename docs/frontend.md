@@ -181,16 +181,28 @@ flowchart TD
   (`stores/session.ts`, from start-up's `GET /api/auth/me`) and "Log out" (the full "Log out of
   <email>" in its tooltip and `aria-label`), which posts `POST /api/auth/logout` and shows the login page.
   Above the account, the Character group ([ADR 0029](adr/0029-users-login-and-access.md) step 7.2,
-  amendment "creating, switching and retiring characters as built"): Switch, Create and Retire, each
-  opening its `ui/dialog` (`components/characters/CharacterDialogs.tsx`) outside the popover, which
-  closes: the user's characters with Play (`PUT /api/characters/current`), the new character form
-  (`CharacterForm.tsx`: class and race from `GET /api/characters/options`, name, the six abilities, max
-  HP, starting XP; the server derives the rest) and the confirmed Retire (`PATCH /api/characters/{id}`).
-  Each change loads the page again on `/`.
-- Creation page (`components/characters/CreateCharacterPage.tsx`): `startFor` shows it to a user whose
-  `currentCharacterId` is null (a new player, or their current one retired), on every path but `/admin`.
-  The brand, the user's other characters to play when they have some, the form in a `stage-card`, and
-  the language switch and Log out (the cog menu is the dashboard's).
+  amendment "creating, switching and retiring characters as built"): Switch, Create, Rename and Retire.
+  Create opens the creation route (`/create`); the others open their `ui/dialog`
+  (`components/characters/CharacterDialogs.tsx`) outside the popover, which closes: the user's
+  characters with Play (`PUT /api/characters/current`) and the confirmed Retire (`PATCH
+  /api/characters/{id}`). Each change loads the page again on `/`.
+- Creation route ([ADR 0034](adr/0034-onboarding-screens.md), `components/creation/`): `startFor` shows
+  the intro (`CreationRoute.tsx`) to a user whose `currentCharacterId` is null (a new player, or their
+  current one retired, who also finds their other characters there), on every path but `/admin`;
+  Commencer opens the flow and Quitter comes back. `/create` opens the flow straight away for a player
+  with a character; the cog menu's Create and Quitter move between `/create` and `/` without a reload
+  (`lib/navigation.ts` `navigate`, `components/shell/Playing.tsx`). The flow (`CreationFlow.tsx`) is the header band, the step
+  list, the step card (scrolls inside; Retour / Suivant with the blocking reason) and "Votre personnage",
+  capped at 1680 px. Steps (`steps.tsx`, order in `lib/creationFlow.ts` `STEPS`): class (cards with the
+  options' `hitDie`, alignments and races; the level chips read the options' `levelXp`, a picked level is
+  sent as its XP), race (all six, the refused ones dimmed; Table 8 from `raceAdjustments`), scores (Tirer
+  with a method from `scoreMethods` and `POST /api/characters/rolls/scores`; the player's choice of which total goes where
+  in `lib/creationFlow.ts` `place`, its scores from `POST /api/characters/rolls/scores/arrangement`
+  (`components/creation/arrange.ts`, again when the race changes after the roll); or Saisir), HP and talents (`POST /api/characters/rolls/hp`, the class
+  extras), and, until the identity screen, the name and details with Créer. The values live in the flow,
+  so back and forth keep them; Quitter with values entered asks first (and `beforeunload`). Suivant is
+  blocked only by a missing or unreadable value; ranges and rules are the server's refusals, which open
+  their step (`stepOfField`) with the field's error.
 - Theme (ADR 0020, amended by ADR 0026: the contrast ladder, the raised stage and four themes,
   Arcane, Deep, Parchment and Plain, with a dark and a light theme per device): `lib/theme.ts`
   `THEMES` holds one hand-tuned role table per theme and mode (Deep is dark only, Parchment light
@@ -634,7 +646,7 @@ outside `ui/`).
   `details.errors.<code>`, falling back to the code. Free-text values (race, languages...) are shown as
   entered, except a language whose name has a `details.language.<key>` entry (key: lower case, no accents or
   spaces), which is shown translated; the class key is read-only and translated by `details.classes.<key>`.
-  The new character form does the same with `characters.errors.<code>` (`empty`, `too_long`,
+  The creation route does the same with `characters.errors.<code>` (`empty`, `too_long`,
   `out_of_range`, `not_creatable`, `unknown`, `race_not_allowed`), with the field's range from the
   options; a typed value that is no whole number is refused in the form (parsing, `lib/wholeNumber.ts`).
 

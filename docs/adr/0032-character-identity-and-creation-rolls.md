@@ -313,6 +313,23 @@ items'). Package `creationrollsvc`, handler `creationrollhdl`.
   as by the creation; Table 3's raised dice are tested on `HitDieGain` (Constitution 21).
 - **Not here:** the method list and ADR 0034 item 4.1's level to XP table in the form's options, and
   the web types: the creation-flow item adds them with the screens.
+- **Arrangement** (added by the creation-flow item: the web does no rules arithmetic, so the score a
+  placement gives is the server's). `POST /api/characters/rolls/scores/arrangement`, stateless like the
+  rolls: `{"method", "raceCode", "placed": {"<ability>": [values]}}`, the values being the totals the
+  player put on each ability (method VI: the dice added to it; the others at most one). The answer is
+  `{"method", "adjustments", "rolled", "scores"}`: `rolled` is the method's base plus the values
+  (`creationrollsvc.Arrange`), `scores` that plus PHB Table 8 for the race (the stored score), by ability
+  code, an ability with nothing placed and no base absent; `adjustments` null without a race. The server
+  keeps no roll, so it checks each value against what one total of the method can be (3 to 18; method VI's
+  die 1 to 6), not against the roll. Method VI's max applies to the dice before Table 8 (an elf's 18
+  Dexterity is 19). The adjusted score is not clamped: a dwarf's Charisma 3 is 2, which the creation then
+  refuses (`cha` `out_of_range`, ADR 0030 step 1). Refusals, 400 `invalid_input`: `method` / `race`
+  `unknown`; `placed` `unknown` (not an ability) or `too_many` (more values than the method keeps);
+  `placed.<ability>` `too_many` (two totals on one ability, II to V), `out_of_range`, `above_max` (VI).
+  The web keeps only the choice of which total goes where (`lib/creationFlow.ts` `place`) and asks the
+  server on every placement and on a race changed after the roll, so the scores and the Race column follow
+  the race. Additive: a previous web never calls it; this web against a previous server (404) keeps the
+  placement and leaves the scores to be typed.
 
 ## Consequences
 

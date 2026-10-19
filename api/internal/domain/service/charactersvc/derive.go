@@ -28,6 +28,9 @@ type Rules interface {
 	// HitDiceFor is the group's hit die, name level and fixed gain after it
 	// (step 7).
 	HitDiceFor(group string) (ruletablesvc.HitDiceRow, error)
+	// RaceAdjustmentsFor is PHB Table 8 for a race (the creation form's
+	// race cards, ADR 0034 step 3.2).
+	RaceAdjustmentsFor(race string) (map[string]int, error)
 	// RaceAllows is DMG Table 7: false for a race the class does not admit
 	// (step 21, checked when a character is created).
 	RaceAllows(race, class string) (bool, error)

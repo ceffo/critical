@@ -116,7 +116,7 @@ describe("pickBody", () => {
       ),
     ).toEqual({ catalogueCode: "long_sword", name: { fr: "Lame de Kelsen" } });
   });
-  it("sends an ammunition's count and bonus, never equip; null for a count that is no number", () => {
+  it("sends an ammunition's count and bonus, never equip; null for a count below 1 or no number", () => {
     const arrows = {
       code: "sheaf_arrow",
       name: { en: "Sheaf arrow" },
@@ -130,9 +130,10 @@ describe("pickBody", () => {
         "en",
       ),
     ).toEqual({ catalogueCode: "sheaf_arrow", magicalBonus: 1, count: 12 });
-    expect(
-      pickBody(arrows, "ammunition", copy({ count: "x" }), "en"),
-    ).toBeNull();
+    for (const count of ["x", "", "0", "-2", "1.5"])
+      expect(
+        pickBody(arrows, "ammunition", copy({ count }), "en"),
+      ).toBeNull();
   });
   it("gives armour no magic (its +N is a power)", () => {
     const mail = {

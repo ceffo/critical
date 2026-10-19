@@ -310,7 +310,7 @@ function YourCopy({
     if (!row) return;
     const body = pickBody(row, category, copy, i18n.language);
     if (!body) {
-      setError(t("items.form.notANumber"));
+      setError(t("equipment.add.countInvalid"));
       return;
     }
     const rejected = await onSave(body);

@@ -2195,6 +2195,7 @@
       },
       "cell": "{{label}} : {{value}}",
       "yourCopy": "Votre exemplaire",
+      "countInvalid": "Le nombre doit être un entier, au moins 1",
       "name": "Nom",
       "magic": "Magie",
       "magicLess": "Un de magie en moins",

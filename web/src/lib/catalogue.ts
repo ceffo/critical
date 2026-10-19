@@ -140,7 +140,8 @@ export function pickBody(
   if (category === "ammunition") {
     if (copy.magic !== 0) body.magicalBonus = copy.magic;
     const count = Number(copy.count);
-    if (!Number.isInteger(count) || copy.count.trim() === "") return null;
+    if (!Number.isInteger(count) || count < 1 || copy.count.trim() === "")
+      return null;
     body.count = count;
   }
   if (canEquip(category) && copy.equip) body.equip = true;

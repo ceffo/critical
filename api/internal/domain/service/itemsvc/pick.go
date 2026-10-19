@@ -21,11 +21,15 @@ func (s *service) Catalogue() ruletablesvc.Equipment {
 
 // picked is the piece a pick makes (ADR 0033 steps 23 and 24): the row's
 // category, numbers and codes copied, its code kept; from the player only the
-// name (the row's when none is typed), the count (at least 1), the note and
-// the magic of a weapon (to hit, damage) or ammunition. Everything else of in
-// is ignored: the piece is edited afterwards like any other. A code no row
+// name (the row's when none is typed), the count (at least 1, 1 when not
+// given), the note and the magic of a weapon (to hit, damage) or ammunition.
+// Everything else of in is ignored: the piece is edited afterwards like any other. A code no row
 // has is refused (field catalogueCode, CodeUnknown).
 func (s *service) picked(in ItemInput) (Item, error) {
+	// 0 is a count not given (1); a negative one is refused, not raised to 1.
+	if in.Count < 0 {
+		return Item{}, fieldErr("count", "Count must be at least 1")
+	}
 	e := s.Catalogue()
 	item := Item{
 		CatalogueCode: in.CatalogueCode, Name: in.Name.Trimmed(), State: StateCarried,

@@ -2195,6 +2195,7 @@
       },
       "cell": "{{label}}: {{value}}",
       "yourCopy": "Your copy",
+      "countInvalid": "The count must be a whole number, at least 1",
       "name": "Name",
       "magic": "Magic",
       "magicLess": "One less magic",

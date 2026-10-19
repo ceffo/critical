@@ -507,7 +507,7 @@ _Steps 4, 24 and 25 (as built, CRI-37)_: the catalogue rows are served at `GET
 language maps, damage as printed; empty lists before format 7); the web filters them by the name in
 the player's language. `POST /api/items` with a `catalogueCode` picks: the service copies the row
 (`itemsvc` `picked`) and reads only the name (a typed name replaces the languages it holds, the row's
-others stay), the count (at least 1), the note and the magic of a weapon (`magicToHit`,
+others stay), the count (at least 1; 1 when not given, a negative one refused on field `count`, `TestCreate_Step24_PickedCountAtLeastOne`), the note and the magic of a weapon (`magicToHit`,
 `magicDamage`) or ammunition (`magicalBonus`); one `item_add` entry whose payload carries
 `catalogueCode`. An unknown code is refused on field `catalogueCode` with the code `unknown`
 (`TestCreate_Step25_UnknownCatalogueCode`). `equip: true` equips the new piece in the same

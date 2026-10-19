@@ -149,6 +149,19 @@ func TestCreate_Step25_UnknownCatalogueCode(t *testing.T) {
 	}
 }
 
+// ADR 0033 step 24: a picked count is at least 1 (0 is one not given, 1); a
+// negative one is refused on field count before anything is written.
+func TestCreate_Step24_PickedCountAtLeastOne(t *testing.T) {
+	dal := mocks.NewMockDAL(t) // no write expected
+	f := deps(t)
+	f.Equipment = &pickRows
+	svc, _ := itemsvc.New(dal, f.Deps)
+	_, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{CatalogueCode: pickRows.Ammunition[0].Code, Count: -2})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "count", fe.Field)
+}
+
 // ADR 0033 step 24 ("wear it now"): Equip makes the add and the move one
 // transaction (one undo): the item_add, then the equipment_state entry, a
 // worn armour in the way taken off in it. A piece that cannot be equipped is

@@ -262,7 +262,7 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 	if r.source == SourceReceived && entry.Target == spelleffectsvc.TargetSelf {
 		return CastResult{}, nil, fmt.Errorf("%w: %s affects only its caster and cannot be cast on you", domain.ErrInvalidInput, entry.Name)
 	}
-	res.Kind, res.Confidence, res.Target, res.Note = entry.Kind, entry.Confidence, entry.Target, entry.Note
+	res.Kind, res.Confidence, res.Target = entry.Kind, entry.Confidence, entry.Target
 	if r.mode != nil {
 		res.Mode = r.mode.Key
 	}

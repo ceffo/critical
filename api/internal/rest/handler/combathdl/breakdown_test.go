@@ -161,8 +161,7 @@ func TestAttack_AnswerIsTheLoggedPayload(t *testing.T) {
 
 // The save's answer and its log entry's payload are one struct
 // (combatsvc.SaveBreakdown): the bytes the endpoint sends are the bytes it
-// logged, plus the entry's id, then hit, hitMargin and baseThac0 for the
-// previous release's web (kept for one release). Checked on the roll (a race
+// logged, plus the entry's id. Checked on the roll (a race
 // modifier and a buff) and on an adjustment (the amended payload).
 func TestSave_AnswerIsTheLoggedPayload(t *testing.T) {
 	w := newWire(t, actionlog.KindSave, nil)
@@ -176,13 +175,13 @@ func TestSave_AnswerIsTheLoggedPayload(t *testing.T) {
 	// 8 + 4 (dwarf) + 1 (Luck) = 13 against 14: failed by 1.
 	rolled := w.post(t, "/api/roll/save", `{"category":"spell"}`)
 	require.NotEmpty(t, w.entry.Payload)
-	assert.Equal(t, withKeys(t, w.entry.Payload, `,"hit":false,"hitMargin":-1,"baseThac0":14`), rolled)
+	assert.Equal(t, withKeys(t, w.entry.Payload, ""), rolled)
 	assert.Contains(t, rolled, `"rollTotal":13`)
 
 	// +2 moves the target to 12: passed by 1.
 	adjusted := w.post(t, "/api/roll/save/42/adjust", `{"adjustment":2,"reason":"Gaia fire"}`)
 	require.Len(t, w.entry.Corrections, 1)
-	assert.Equal(t, withKeys(t, w.entry.EffectivePayload(), `,"hit":true,"hitMargin":1,"baseThac0":14`), adjusted)
+	assert.Equal(t, withKeys(t, w.entry.EffectivePayload(), ""), adjusted)
 	assert.Contains(t, adjusted, `"previousPassed":false`)
 }
 
@@ -212,8 +211,7 @@ func TestAttack_CorrectedLegacyEntry_AnswerIsTheAmendedPayload(t *testing.T) {
 
 // A save logged before the adjustment moved the target (no rollTotal or
 // adjustedTarget, an English "label"), then adjusted: the answer is the
-// amended payload as SavePayloadView serves it, plus the entry id and the
-// previous release's three keys.
+// amended payload as SavePayloadView serves it, plus the entry id.
 func TestSave_AdjustedLegacyEntry_AnswerIsTheViewedPayload(t *testing.T) {
 	legacy := json.RawMessage(`{"category":"spell","label":"Spells","d20Roll":12,` +
 		`"modifiers":[{"kind":"buff","detail":"Luck","value":1,"source":"Luck"}],"target":14,"rolledPassed":false,` +
@@ -228,6 +226,6 @@ func TestSave_AdjustedLegacyEntry_AnswerIsTheViewedPayload(t *testing.T) {
 	require.Len(t, w.entry.Corrections, 1)
 	served, err := combatsvc.SavePayloadView(w.entry.EffectivePayload())
 	require.NoError(t, err)
-	assert.Equal(t, withKeys(t, served, `,"hit":true,"hitMargin":1,"baseThac0":14`), adjusted)
+	assert.Equal(t, withKeys(t, served, ""), adjusted)
 	assert.Contains(t, adjusted, `"rollTotal":13,"adjustedTarget":12`)
 }

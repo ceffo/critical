@@ -16,8 +16,7 @@ import (
 
 // POST /api/roll/save/{id}/adjust passes the entry id, adjustment and reason
 // to the service and returns the recomputed save (combatsvc.SaveBreakdown)
-// with its log entry id, then hit, hitMargin and baseThac0 for the previous
-// release's web.
+// with its log entry id.
 func TestAdjustSave_WireShape(t *testing.T) {
 	h, m := newRouter(t)
 	prevPassed, prevAdj := false, 0
@@ -31,8 +30,7 @@ func TestAdjustSave_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, `{"category":"spell","d20Roll":12,"modifiers":[],"target":14,"rolledPassed":false,`+
 		`"adjustment":4,"adjustmentReason":"Gaia fire","rollTotal":12,"adjustedTarget":10,"total":16,"passed":true,"margin":2,`+
-		`"previousPassed":false,"previousAdjustment":0,"logEntryId":7,`+
-		`"hit":true,"hitMargin":2,"baseThac0":14}`+"\n", rec.Body.String())
+		`"previousPassed":false,"previousAdjustment":0,"logEntryId":7}`+"\n", rec.Body.String())
 }
 
 // A save always carries its adjustment, 0 included, so the card can show it.

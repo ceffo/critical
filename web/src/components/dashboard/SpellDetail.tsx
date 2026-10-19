@@ -8,6 +8,8 @@ import { useTableStore } from "@/stores/table";
 import { localized } from "@/i18n/localized";
 import { spellName, spellTexts } from "@/i18n/spellName";
 import { SpellDescription } from "@/components/dashboard/SpellDescription";
+import { ValueText } from "@/components/dashboard/ValueText";
+import { plainText } from "@/lib/valueMarks";
 import { statDice, statValue, type StatKey } from "@/lib/spellValues";
 import { statLocale, statText, type StatField } from "@/lib/statText";
 import { damageFormula, damageText, exposureDamageText } from "@/lib/spellDice";
@@ -76,6 +78,8 @@ export function SpellDetail({
   const run = useTableStore((s) => s.run);
   const busy = useTableStore((s) => s.busy);
   const loc = statLocale(t, i18n.language);
+  // The tiles word the stats with their gameplay values marked (ADR 0021 step 15).
+  const tileLoc = statLocale(t, i18n.language, true);
   const value = (key: StatKey): string | null =>
     key === "save"
       ? spell.stats.save.kinds.length
@@ -83,7 +87,7 @@ export function SpellDetail({
             .map((k) => t(`lookup.saveKinds.${k}`))
             .join(" / ")
         : null
-      : statValue(spell, key, loc);
+      : statValue(spell, key, tileLoc);
   const meta = [
     classLabel(t, spell.class),
     t("lookup.levelLabel", { level: spell.level }),
@@ -137,7 +141,7 @@ export function SpellDetail({
       <dl className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-2">
         {STATS.map((key) => {
           const v = value(key);
-          const raw = statText(loc, spell, FIELD[key]).text;
+          const raw = statText(tileLoc, spell, FIELD[key]).text;
           return (
             <div
               key={key}
@@ -149,14 +153,14 @@ export function SpellDetail({
                 {v ? (
                   <>
                     <span className="text-key" data-testid="stat-value">
-                      {v}
+                      <ValueText text={v} />
                     </span>
-                    {raw && !same(v, raw) && (
+                    {raw && !same(plainText(v), plainText(raw)) && (
                       <span
                         className="text-label text-muted-foreground"
                         data-testid="stat-raw"
                       >
-                        {raw}
+                        <ValueText text={raw} />
                       </span>
                     )}
                   </>
@@ -165,7 +169,7 @@ export function SpellDetail({
                     className="text-body font-medium"
                     data-testid="stat-raw"
                   >
-                    {raw || "—"}
+                    {raw ? <ValueText text={raw} /> : "—"}
                   </span>
                 )}
               </dd>

@@ -12,6 +12,7 @@ import {
   buffBadge,
   chooseLanguage,
   chooseSetting,
+  chooseTheme,
   openDashboard,
   openWorkspace,
   receivePicker,
@@ -698,4 +699,105 @@ test("lookup: level chips are the catalogue's levels and show the bare number; F
   await expect(rows(page)).toHaveCount(1);
   expect(await names(rows(page))).toEqual(["Quixotic Probe"]);
   await snap(page, "french-spheres");
+});
+
+// Gameplay values stand out in one style (ADR 0021 step 15). Only a browser proves that the API's
+// spans reach the screen as one painted style in a paragraph, a list item, a table cell and a stat
+// tile, in both languages, and read in every theme; the recognition itself is Go-tested.
+test("lookup: gameplay values are highlighted in one style in the text and the tiles, in English and French, in every theme", async ({
+  page,
+}) => {
+  const paint = (loc: Locator) =>
+    loc.evaluateAll((els) =>
+      els.map((e) => {
+        const s = getComputedStyle(e);
+        return `${s.color}|${s.fontWeight}`;
+      }),
+    );
+  const valuesOf = (loc: Locator) =>
+    loc
+      .locator("[data-value]")
+      .evaluateAll((els) =>
+        els.map((e) => `${e.getAttribute("data-value")}:${e.textContent}`),
+      );
+  await openLookup(page);
+  await search(page).fill("light");
+  await expect(detail(page).getByRole("heading")).toHaveText("Light");
+  const text = detail(page).getByTestId("spell-description-text");
+  expect(await valuesOf(text)).toEqual([
+    "distance:20-foot",
+    "time:1 turn/level",
+    "modifier:+1",
+    "level:5th level",
+    "dice:1d4",
+    "percent:10%",
+  ]);
+  // One style for the six kinds, and different from the text around them.
+  const painted = await paint(text.locator("[data-value]"));
+  expect(new Set(painted).size).toBe(1);
+  const plain = await text.locator("p").evaluate((e) => {
+    const s = getComputedStyle(e);
+    return `${s.color}|${s.fontWeight}`;
+  });
+  expect(painted[0]).not.toBe(plain);
+  // The tile's book text (raw, with the API's spans) uses the same style.
+  const tile = detail(page).getByTestId("stat-range");
+  expect(await valuesOf(tile)).not.toHaveLength(0);
+  expect(new Set(await paint(tile.locator("[data-value]")))).toEqual(
+    new Set(painted),
+  );
+
+  // A list item and a table cell, as in a paragraph.
+  await search(page).fill("mirror image");
+  await expect(detail(page).getByRole("heading")).toHaveText("Mirror Image");
+  expect(await valuesOf(detail(page).locator("li"))).toEqual([
+    "time:2d4 rounds",
+  ]);
+  await search(page).fill("chromatic");
+  await expect(detail(page).getByRole("heading")).toHaveText("Chromatic Orb");
+  expect(await valuesOf(detail(page).locator("td"))).toEqual([
+    "dice:1d4",
+    "modifier:+2",
+  ]);
+
+  // The French text's values, and the stat tile worded from the typed stats.
+  await chooseLanguage(page, "fr");
+  const searchFrench = page.getByRole("combobox", {
+    name: "Rechercher des sorts...",
+  });
+  await searchFrench.fill("lumière");
+  await expect(detail(page).getByRole("heading")).toHaveText("Lumière");
+  expect(await valuesOf(text)).toEqual([
+    "distance:6 m",
+    "time:1 tour/niveau",
+    "modifier:+1",
+    "level:5e niveau",
+    "dice:1d4",
+    "percent:10%",
+  ]);
+  const frTile = detail(page).getByTestId("stat-duration");
+  expect(await valuesOf(frTile)).toContain("time:10 tours/niveau");
+  expect(new Set(await paint(frTile.locator("[data-value]")))).toEqual(
+    new Set(painted),
+  );
+
+  // Screenshots at the big sizes, in four themes (the colours' contrast is unit-tested per theme).
+  for (const size of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(size);
+    for (const [mode, theme] of [
+      ["Sombre", "Arcane"],
+      ["Clair", "Parchemin"],
+      ["Sombre", "Braise"],
+      ["Clair", "Sobre"],
+    ] as const) {
+      await chooseSetting(page, mode);
+      await chooseTheme(page, theme);
+      await page.waitForTimeout(150);
+      await expectWholeWords(detail(page), `${theme} ${size.width}`);
+      await snap(page, `values-${theme.toLowerCase()}-${size.width}`);
+    }
+  }
 });

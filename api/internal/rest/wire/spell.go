@@ -5,6 +5,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
+	"github.com/ceffo/critical/api/internal/domain/spellvalues"
 )
 
 // Text is t as served: a text in human languages (ADR 0023 step 6), body by
@@ -55,6 +56,12 @@ type SpellDTO struct {
 	// no book was matched).
 	Source string `json:"source"`
 
+	// Marked are the gameplay values of the description and of the six stat texts
+	// (ADR 0021 step 15): by field name, then language code, the text as spans that
+	// concatenate to it, each value with its kind. Only a text with a value is
+	// listed; the client shows any other plain.
+	Marked map[string]map[string][]spellvalues.Span `json:"marked"`
+
 	Stats       spellstats.Stats   `json:"stats"`
 	CasterLevel int                `json:"caster_level,omitempty"`
 	Values      *spellstats.Values `json:"values,omitempty"`
@@ -91,10 +98,33 @@ func SpellToDTO(s spellsvc.Spell, casterLevel int) SpellDTO {
 		AreaOfEffect: Text(s.AreaOfEffect), Components: Text(s.Components),
 		SavingThrow: Text(s.SavingThrow), Description: Text(s.Description), Source: s.Source,
 		Stats: s.Stats, CasterLevel: casterLevel,
+		Marked: markValues(s),
 	}
 	if casterLevel > 0 {
 		v := s.Stats.At(casterLevel)
 		dto.Values = &v
 	}
 	return dto
+}
+
+// markValues is the one place where a spell's texts get their gameplay values marked
+// (ADR 0021 step 15; at serve time, so moving it to the import only moves this call).
+func markValues(s spellsvc.Spell) map[string]map[string][]spellvalues.Span {
+	texts := map[string]localized.Text{
+		"description": s.Description, "casting_time": s.CastingTime, "range": s.Range,
+		"duration": s.Duration, "area_of_effect": s.AreaOfEffect,
+		"components": s.Components, "saving_throw": s.SavingThrow,
+	}
+	out := map[string]map[string][]spellvalues.Span{}
+	for _, field := range spellvalues.Fields {
+		for lang, body := range texts[field] {
+			if spans := spellvalues.Mark(lang, body); spellvalues.HasValue(spans) {
+				if out[field] == nil {
+					out[field] = map[string][]spellvalues.Span{}
+				}
+				out[field][lang] = spans
+			}
+		}
+	}
+	return out
 }

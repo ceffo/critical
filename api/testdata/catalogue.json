@@ -66,8 +66,8 @@
       "saving_throw": "Neg.",
       "name": { "en": "Chromatic Orb", "fr": "Orbe chromatique" },
       "description": {
-        "en": "Fixture text for Chromatic Orb: the colour of the orb follows the caster's level.\n\n| Level | Colour | Effect |\n| --- | --- | --- |\n| 1 | Pearl | Placeholder glow |\n| 2 | Ruby | Placeholder heat |\n\nThe table above is invented for the tests.",
-        "fr": "Texte de test pour Orbe chromatique : la couleur de l'orbe suit le niveau du lanceur.\n\n| Niveau | Couleur | Effet |\n| --- | --- | --- |\n| 1 | Perle | Lueur de remplissage |\n| 2 | Rubis | Chaleur de remplissage |\n| 3 | Flamme | Étincelles inventées |\n\nLa table ci-dessus est inventée pour les tests."
+        "en": "Fixture text for Chromatic Orb: the colour of the orb follows the caster's level.\n\n| Level | Colour | Effect |\n| --- | --- | --- |\n| 1 | Pearl | Placeholder glow, 1d4 |\n| 2 | Ruby | Placeholder heat, +2 |\n\nThe table above is invented for the tests.",
+        "fr": "Texte de test pour Orbe chromatique : la couleur de l'orbe suit le niveau du lanceur.\n\n| Niveau | Couleur | Effet |\n| --- | --- | --- |\n| 1 | Perle | Lueur de remplissage, 1d4 |\n| 2 | Rubis | Chaleur de remplissage, +2 |\n| 3 | Flamme | Étincelles inventées |\n\nLa table ci-dessus est inventée pour les tests."
       },
       "source": "PHB"
     },
@@ -132,8 +132,8 @@
       "saving_throw": "Special",
       "name": { "en": "Light", "fr": "Lumière" },
       "description": {
-        "en": "Fixture text for Light: a lamp made of placeholder.",
-        "fr": "Texte de test pour Lumière : une lampe de remplissage."
+        "en": "Fixture text for Light: a lamp made of placeholder. It sheds light in a 20-foot radius for 1 turn/level, gains +1 to hit at 5th level, flickers on 1d4 and fails 10% of the time.",
+        "fr": "Texte de test pour Lumière : une lampe de remplissage. Elle éclaire dans un rayon de 6 m pendant 1 tour/niveau, donne +1 au toucher au 5e niveau, vacille sur 1d4 et échoue 10% du temps."
       },
       "source": "PHB"
     },
@@ -201,8 +201,8 @@
       "saving_throw": "None",
       "name": { "en": "Mirror Image", "fr": "Image miroir" },
       "description": {
-        "en": "Fixture text for Mirror Image: copies of the caster appear.\n\n- One copy per invented rule.\n- A copy struck vanishes.\n\nThe list above is invented for the tests.",
-        "fr": "Texte de test pour Image miroir : des copies du lanceur apparaissent.\n\n- Une copie par règle inventée.\n- Une copie touchée disparaît."
+        "en": "Fixture text for Mirror Image: copies of the caster appear.\n\n- One copy per invented rule, for 2d4 rounds.\n- A copy struck vanishes.\n\nThe list above is invented for the tests.",
+        "fr": "Texte de test pour Image miroir : des copies du lanceur apparaissent.\n\n- Une copie par règle inventée, pendant 2d4 rounds.\n- Une copie touchée disparaît."
       },
       "source": "PHB"
     },

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SpellDescription } from "./SpellDescription";
+import { mark } from "@/lib/valueMarks";
 
 const TEXT = [
   "First paragraph.",
@@ -40,5 +41,34 @@ describe("SpellDescription (one readable column)", () => {
     expect(at("First paragraph.")).toBeLessThan(at("<ul"));
     expect(at("<ul")).toBeLessThan(at("<table"));
     expect(at("<table")).toBeLessThan(at("Last paragraph."));
+  });
+});
+
+describe("SpellDescription (gameplay values)", () => {
+  const marked = (s: string) => `${mark("dice", s)}`;
+  const text = [
+    `Deals ${marked("1d6")} damage.`,
+    `- lasts ${mark("time", "2 rounds")}`,
+    `| Roll | Effect |\n| --- | --- |\n| 1 | ${mark("distance", "10 feet")} |`,
+  ].join("\n\n");
+
+  it("shows a value in the value style in a paragraph, a list item and a table cell", () => {
+    const out = renderToStaticMarkup(<SpellDescription text={text} />);
+    expect(out).toMatch(
+      /<p[^>]*>Deals <span[^>]*text-highlight[^>]*data-value="dice">1d6<\/span> damage\./,
+    );
+    expect(out).toMatch(
+      /<li>lasts <span[^>]*data-value="time">2 rounds<\/span><\/li>/,
+    );
+    expect(out).toMatch(
+      /<td[^>]*>1<\/td><td[^>]*><span[^>]*data-value="distance">10 feet<\/span><\/td>/,
+    );
+  });
+
+  it("is the same style for every kind, and plain text is untouched", () => {
+    const out = renderToStaticMarkup(<SpellDescription text={text} />);
+    const classes = new Set(out.match(/class="[^"]*text-highlight[^"]*"/g));
+    expect(classes.size).toBe(1);
+    expect(html("Just words.")).not.toContain("<span");
   });
 });

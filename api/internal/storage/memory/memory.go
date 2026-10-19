@@ -129,6 +129,7 @@ func (t *tables) save() *tables {
 	c.learnFailures = maps.Clone(t.learnFailures)
 	c.forms = maps.Clone(t.forms)
 	c.xp = maps.Clone(t.xp)
+	c.acOverrides = maps.Clone(t.acOverrides)
 	c.dice = maps.Clone(t.dice)
 	c.users = maps.Clone(t.users)
 	c.invites = maps.Clone(t.invites)

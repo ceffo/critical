@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -77,6 +78,8 @@ type state struct {
 	Reviews   []itemsvc.Review
 	XP        []xpsvc.Entry
 	Favourite int
+	// ACOverride is the character's AC override (ADR 0033 step 13).
+	ACOverride *acsvc.Override
 }
 
 func read(t *testing.T, s *memory.Store, characterID int64) state {
@@ -101,6 +104,8 @@ func read(t *testing.T, s *memory.Store, characterID int64) state {
 	favs, err := s.Dice().List(ctx, characterID)
 	require.NoError(t, err)
 	st.Favourite = len(favs)
+	st.ACOverride, err = s.Characters().GetACOverride(ctx, characterID)
+	require.NoError(t, err)
 	return st
 }
 
@@ -121,6 +126,7 @@ func writeEverything(t *testing.T, ctx context.Context, s *memory.Store, charact
 	require.NoError(t, err)
 	_, err = s.Dice().Insert(ctx, characterID, "1d6")
 	require.NoError(t, err)
+	require.NoError(t, s.Characters().SetACOverride(ctx, characterID, &acsvc.Override{Value: 4, Label: "Shield"}))
 }
 
 // ADR 0025 step 8.2: a transaction is all or nothing. A failing fn leaves

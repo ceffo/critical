@@ -13,8 +13,8 @@ const details = {
   alignment: "neutral_good",
   age: 112,
   sex: "male",
-  height: 177.8,
-  weight: 72.6,
+  height_cm: 177.8,
+  weight_kg: 72.6,
   hair: "",
   eyes: "",
   languages: ["common", "elvish"],
@@ -38,18 +38,18 @@ describe("character details draft", () => {
       weight: "160",
     });
     expect(toBody(toDraft(details, "en"), "en").body).toMatchObject({
-      height: 177.8,
-      weight: 72.6,
+      height_cm: 177.8,
+      weight_kg: 72.6,
     });
     expect(toBody(toDraft(details, "fr"), "fr").body).toMatchObject({
-      height: 177.8,
-      weight: 72.6,
+      height_cm: 177.8,
+      weight_kg: 72.6,
     });
   });
   it("sends null for an empty height or weight and flags text that is no figure", () => {
     const d = { ...toDraft(details), height: " ", weight: "heavy" };
     const { body, invalid } = toBody(d);
-    expect(body.height).toBeNull();
+    expect(body.height_cm).toBeNull();
     expect(invalid).toEqual(["weight"]);
     expect(toBody({ ...d, height: "tall" }).invalid).toEqual([
       "height",

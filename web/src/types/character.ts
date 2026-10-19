@@ -214,10 +214,12 @@ export interface Character {
   alignment: string;
   age: number | null;
   sex: string;
-  /** Centimetres, null when not set (ADR 0032 step 5); shown per language by `lib/measures`. */
-  height: number | null;
+  /** Centimetres, null when not set (ADR 0032 step 5); shown per language by `lib/measures`. The
+   * keys `height` and `weight` stay free text for the previous release's clients (step 8) and are
+   * not read here. */
+  height_cm: number | null;
   /** Kilograms, null when not set. */
-  weight: number | null;
+  weight_kg: number | null;
   hair: string;
   eyes: string;
   /** The language catalogue codes the character knows, its race's native language included (ADR
@@ -249,8 +251,8 @@ export type CharacterDetails = Pick<
   | "alignment"
   | "age"
   | "sex"
-  | "height"
-  | "weight"
+  | "height_cm"
+  | "weight_kg"
   | "hair"
   | "eyes"
   | "languages"

@@ -30,8 +30,8 @@ type identityRollView struct {
 }
 
 type numbersView struct {
-	Height   *float64 `json:"height"`
-	Weight   *float64 `json:"weight"`
+	Height   *float64 `json:"height_cm"`
+	Weight   *float64 `json:"weight_kg"`
 	Age      *int     `json:"age"`
 	Warnings []struct {
 		Code  string   `json:"code"`
@@ -45,7 +45,7 @@ type numbersView struct {
 func numbersBody(height, weight, age string) string {
 	return `{"name":"Numbers","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
 		`"hpMax":10,"xp":2500,"skillArmor":"leather","details":{"alignment":"neutral_good","sex":"female",` +
-		`"height":` + height + `,"weight":` + weight + `,"age":` + age + `}}`
+		`"height_cm":` + height + `,"weight_kg":` + weight + `,"age":` + age + `}}`
 }
 
 func TestIdentityRoll_Step5_RollCreateWarnTypeAndRefuse(t *testing.T) {
@@ -83,7 +83,7 @@ func TestIdentityRoll_Step5_RollCreateWarnTypeAndRefuse(t *testing.T) {
 
 	// Typed outside the table: accepted, with the value and the range.
 	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details",
-		`{"height":210,"weight":45.5,"age":400}`, nil))
+		`{"height_cm":210,"weight_kg":45.5,"age":400}`, nil))
 	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
 	require.Len(t, got.Warnings, 2)
 	assert.Equal(t, "height_outside_range", got.Warnings[0].Code)
@@ -93,14 +93,14 @@ func TestIdentityRoll_Step5_RollCreateWarnTypeAndRefuse(t *testing.T) {
 	assert.Equal(t, "age_outside_range", got.Warnings[1].Code)
 
 	// Null clears; a string is no number; a figure beyond the sanity bound is refused.
-	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height":null}`, nil))
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height_cm":null}`, nil))
 	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
 	assert.Nil(t, got.Height)
 	for _, c := range []struct{ body, field, code string }{
-		{`{"height":"tall"}`, "height", "not_a_number"},
-		{`{"weight":true}`, "weight", "not_a_number"},
-		{`{"height":0}`, "height", "out_of_range"},
-		{`{"weight":501}`, "weight", "out_of_range"},
+		{`{"height_cm":"tall"}`, "height", "not_a_number"},
+		{`{"weight_kg":true}`, "weight", "not_a_number"},
+		{`{"height_cm":0}`, "height", "out_of_range"},
+		{`{"weight_kg":501}`, "weight", "out_of_range"},
 	} {
 		var refused map[string]string
 		require.Equal(t, http.StatusBadRequest, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", c.body, &refused), c.body)
@@ -138,3 +138,52 @@ func TestIdentityRoll_Step5_3_RefusalsAreFieldErrors(t *testing.T) {
 
 func fmtF(v float64) string { return strconv.FormatFloat(v, 'f', -1, 64) }
 func fmtI(v int) string     { return strconv.Itoa(v) }
+
+// ADR 0032 step 8: a client of the release before sends and reads the free-text height and weight
+// keys; they are parsed into the numbers and read back as text, so the rolling deploy breaks nothing.
+func TestIdentityNumbers_Step8_5_PreviousReleaseClientStillWorks(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var list listView
+	old := `{"name":"Old","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
+		`"hpMax":10,"xp":2500,"skillArmor":"leather","details":{"alignment":"neutral_good","sex":"female",` +
+		`"height":"1m80","weight":"150 lb","hair":"red","eyes":"","age":30}}`
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", old, &list))
+	var got struct {
+		Height string `json:"height"`
+		Weight string `json:"weight"`
+	}
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.Equal(t, "180 cm", got.Height)
+	assert.Equal(t, "68 kg", got.Weight)
+
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height":"","weight":"70 kg"}`, nil))
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.Empty(t, got.Height)
+	assert.Equal(t, "70 kg", got.Weight)
+
+	var refused map[string]string
+	require.Equal(t, http.StatusBadRequest, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height":"tall"}`, &refused))
+	assert.Equal(t, "not_a_number", refused["error"])
+}
+
+// ADR 0032 step 5.2: the range is checked on the stored value, after the rounding to a tenth: 177.84
+// is stored 177.8 (the top of a half-elf woman's range, no warning), 177.86 is stored 177.9 (a tenth
+// beyond, warned).
+func TestIdentityNumbers_Step5_2_TheEdgeIsCheckedAfterTheRoundingToATenth(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var list listView
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", numbersBody(`170`, `45`, `30`), &list))
+	for _, c := range []struct {
+		sent     string
+		stored   float64
+		warnings int
+	}{{"177.84", 177.8, 0}, {"177.86", 177.9, 1}, {"152.4", 152.4, 0}, {"152.34", 152.3, 1}} {
+		var got numbersView
+		require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height_cm":`+c.sent+`}`, nil))
+		require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+		assert.InDelta(t, c.stored, *got.Height, 1e-9, c.sent)
+		assert.Len(t, got.Warnings, c.warnings, c.sent)
+	}
+}

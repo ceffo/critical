@@ -202,25 +202,33 @@ type CreateBody struct {
 
 // detailsPatch is the details as the patch a new character applies: every text
 // field set (empty is none), the age and the languages when given.
-func detailsPatch(d *detailshdl.DetailsDTO) charactersvc.DetailsPatch {
+func detailsPatch(d *detailshdl.DetailsDTO) (charactersvc.DetailsPatch, error) {
 	if d == nil {
-		return charactersvc.DetailsPatch{}
+		return charactersvc.DetailsPatch{}, nil
 	}
 	p := charactersvc.DetailsPatch{
 		Alignment: &d.Alignment, Age: d.Age, Sex: &d.Sex, Hair: &d.Hair, Eyes: &d.Eyes,
 	}
-	if d.Height != nil {
-		h := float64(*d.Height)
-		p.Height = &h
+	var cm, kg *float64
+	if d.HeightCm != nil {
+		v := float64(*d.HeightCm)
+		cm = &v
 	}
-	if d.Weight != nil {
-		w := float64(*d.Weight)
-		p.Weight = &w
+	if d.WeightKg != nil {
+		v := float64(*d.WeightKg)
+		kg = &v
+	}
+	var err error
+	if p.Height, p.ClearHeight, err = detailshdl.ResolveMeasure(charactersvc.FieldHeight, cm, false, &d.Height, charactersvc.ParseHeight); err != nil {
+		return p, err
+	}
+	if p.Weight, p.ClearWeight, err = detailshdl.ResolveMeasure(charactersvc.FieldWeight, kg, false, &d.Weight, charactersvc.ParseWeight); err != nil {
+		return p, err
 	}
 	if d.Languages != nil {
 		p.Languages = &d.Languages
 	}
-	return p
+	return p, nil
 }
 
 // required is the field's value, or the field error of a missing one.
@@ -232,9 +240,17 @@ func required(field string, v *int) (int, error) {
 }
 
 func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
+	details, err := detailsPatch(b.Details)
+	if err != nil {
+		// A height or weight that is no number names its field under details.
+		if fe, ok := errors.AsType[*domain.FieldError](err); ok {
+			return charactersvc.NewCharacter{}, &domain.FieldError{Field: charactersvc.DetailsField + fe.Field, Message: fe.Message}
+		}
+		return charactersvc.NewCharacter{}, err
+	}
 	n := charactersvc.NewCharacter{
 		Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional,
-		SkillPoints: b.SkillPoints, SkillArmor: b.SkillArmor, Details: detailsPatch(b.Details),
+		SkillPoints: b.SkillPoints, SkillArmor: b.SkillArmor, Details: details,
 	}
 	for _, f := range []struct {
 		field string

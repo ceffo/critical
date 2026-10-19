@@ -49,8 +49,8 @@ export function toDraft(d: CharacterDetails, language = "fr"): Draft {
   const units = unitsFor(language);
   return {
     ...d,
-    height: heightField(d.height, units, language),
-    weight: weightField(d.weight, units, language),
+    height: heightField(d.height_cm, units, language),
+    weight: weightField(d.weight_kg, units, language),
     alignment: codeOrEmpty(d.alignment, ALIGNMENT_CODES),
     sex: codeOrEmpty(d.sex, SEX_CODES),
     age: d.age === null ? "" : String(d.age),
@@ -89,8 +89,8 @@ export function toBody(
       // left out, not sent empty (the server refuses an empty one).
       ...(draft.alignment === "" ? {} : { alignment: draft.alignment }),
       ...(draft.sex === "" ? {} : { sex: draft.sex }),
-      height: height.value,
-      weight: weight.value,
+      height_cm: height.value,
+      weight_kg: weight.value,
       hair: draft.hair,
       eyes: draft.eyes,
       age: age === "" || ageInvalid ? null : Number(age),

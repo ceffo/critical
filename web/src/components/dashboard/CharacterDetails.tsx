@@ -209,15 +209,15 @@ function DetailsView({
           {sex === "" ? toPick : t(`details.sexes.${sex}`)}
         </Row>
         <Row label={t("details.fields.height")}>
-          {c.height === null
+          {c.height_cm === null
             ? none
-            : formatHeight(c.height, units, i18n.language)}
+            : formatHeight(c.height_cm, units, i18n.language)}
           {rangeNote("height")}
         </Row>
         <Row label={t("details.fields.weight")}>
-          {c.weight === null
+          {c.weight_kg === null
             ? none
-            : formatWeight(c.weight, units, i18n.language)}
+            : formatWeight(c.weight_kg, units, i18n.language)}
           {rangeNote("weight")}
         </Row>
         {TEXT_FIELDS.map((f) => (

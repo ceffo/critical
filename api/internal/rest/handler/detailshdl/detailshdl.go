@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -32,15 +33,21 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc detailssvc.SVC) {
 }
 
 // DetailsDTO is the wire shape of the details, also embedded in
-// GET /api/character. age, height (centimetres) and weight (kilograms) are
-// null when not set (ADR 0032 step 5); alignment and sex are codes (steps 2
-// and 3), "" when missing.
+// GET /api/character. age, height_cm and weight_kg are null when not set (ADR
+// 0032 step 5); alignment and sex are codes (steps 2 and 3), "" when missing.
+// height and weight are the previous release's free-text keys, kept for one
+// release so that a client of that release still works (ADR 0032 step 8):
+// read as "180 cm" / "75.5 kg" ("" when not set), written as a text the
+// migration's parser reads (an empty one clears). height_cm and weight_kg
+// win when both are sent.
 type DetailsDTO struct {
 	Alignment string   `json:"alignment"`
 	Age       *int     `json:"age"`
 	Sex       string   `json:"sex"`
-	Height    *Height  `json:"height"`
-	Weight    *Weight  `json:"weight"`
+	Height    string   `json:"height"`
+	Weight    string   `json:"weight"`
+	HeightCm  *Height  `json:"height_cm"`
+	WeightKg  *Weight  `json:"weight_kg"`
 	Hair      string   `json:"hair"`
 	Eyes      string   `json:"eyes"`
 	Languages []string `json:"languages"`
@@ -59,11 +66,13 @@ func ToDTO(d charactersvc.Details) DetailsDTO {
 	}
 	if d.Height > 0 {
 		h := Height(d.Height)
-		out.Height = &h
+		out.HeightCm = &h
+		out.Height = charactersvc.FormatHeight(d.Height)
 	}
 	if d.Weight > 0 {
 		w := Weight(d.Weight)
-		out.Weight = &w
+		out.WeightKg = &w
+		out.Weight = charactersvc.FormatWeight(d.Weight)
 	}
 	return out
 }
@@ -135,38 +144,72 @@ type Body struct {
 	Alignment field[string]   `json:"alignment"`
 	Age       field[int]      `json:"age"`
 	Sex       field[string]   `json:"sex"`
-	Height    field[Height]   `json:"height"`
-	Weight    field[Weight]   `json:"weight"`
+	Height    field[string]   `json:"height"`
+	Weight    field[string]   `json:"weight"`
+	HeightCm  field[Height]   `json:"height_cm"`
+	WeightKg  field[Weight]   `json:"weight_kg"`
 	Hair      field[string]   `json:"hair"`
 	Eyes      field[string]   `json:"eyes"`
 	Languages field[[]string] `json:"languages"`
 }
 
-func (b Body) patch() detailssvc.Patch {
+func (b Body) patch() (detailssvc.Patch, error) {
 	p := detailssvc.Patch{
 		Alignment: b.Alignment.ptr(), Age: b.Age.ptr(), Sex: b.Sex.ptr(),
-		Height: measure(b.Height), Weight: measure(b.Weight), Hair: b.Hair.ptr(), Eyes: b.Eyes.ptr(),
-		Languages: b.Languages.ptr(),
+		Hair: b.Hair.ptr(), Eyes: b.Eyes.ptr(), Languages: b.Languages.ptr(),
 	}
 	if b.Age.null {
 		p.Age, p.ClearAge = nil, true
 	}
-	p.ClearHeight, p.ClearWeight = b.Height.null, b.Weight.null
+	var err error
+	if p.Height, p.ClearHeight, err = ResolveMeasure(charactersvc.FieldHeight,
+		numeric(b.HeightCm), b.HeightCm.null, text(b.Height), charactersvc.ParseHeight); err != nil {
+		return p, err
+	}
+	if p.Weight, p.ClearWeight, err = ResolveMeasure(charactersvc.FieldWeight,
+		numeric(b.WeightKg), b.WeightKg.null, text(b.Weight), charactersvc.ParseWeight); err != nil {
+		return p, err
+	}
 	if p.Languages != nil && b.Languages.null {
 		empty := []string{}
 		p.Languages = &empty
 	}
-	return p
+	return p, nil
 }
 
-// measure is the value to apply: nil when absent or null (null clears, see
-// DetailsPatch.ClearHeight), else the number.
-func measure[N ~float64](f field[N]) *float64 {
+// numeric is the number of a height_cm / weight_kg field: nil when absent or
+// null (null clears, see ResolveMeasure).
+func numeric[N ~float64](f field[N]) *float64 {
 	if !f.present || f.null {
 		return nil
 	}
 	v := float64(f.val)
 	return &v
+}
+
+// text is the legacy text key: nil when absent, "" when null.
+func text(f field[string]) *string { return f.ptr() }
+
+// ResolveMeasure is the height or weight a request names, in the number key
+// (num, or nullNum to clear it) or in the previous release's text key (txt):
+// the number wins; a text is parsed with parse, an empty one clears and one
+// that names no figure is refused as not_a_number (ADR 0032 step 8).
+func ResolveMeasure(name string, num *float64, nullNum bool, txt *string, parse func(string) (float64, bool)) (v *float64, clear bool, err error) {
+	switch {
+	case num != nil:
+		return num, false, nil
+	case nullNum:
+		return nil, true, nil
+	case txt == nil:
+		return nil, false, nil
+	case strings.TrimSpace(*txt) == "":
+		return nil, true, nil
+	}
+	f, ok := parse(*txt)
+	if !ok {
+		return nil, false, &domain.FieldError{Field: name, Message: charactersvc.CodeNotANumber}
+	}
+	return &f, false, nil
 }
 
 // Update applies the fields present in the body and returns the details.
@@ -181,7 +224,11 @@ func Update(charID CharacterIDFunc, svc updater) render.HandlerFunc {
 			}
 			return render.BadRequestError("invalid JSON body")
 		}
-		d, err := svc.Update(r.Context(), charID(r), b.patch())
+		patch, err := b.patch()
+		if err != nil {
+			return err
+		}
+		d, err := svc.Update(r.Context(), charID(r), patch)
 		if err != nil {
 			return err
 		}

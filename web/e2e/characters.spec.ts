@@ -5,15 +5,15 @@ import {
   chooseLanguage,
   createInFlow,
   openDashboard,
-  openSettings,
+  openRoster,
   openWeapons,
   openWorkspace,
   undoEntry,
 } from "./helpers";
 
 // Creating a character through the creation route (ADR 0034), then switching, renaming and retiring
-// from the cog menu (ADR 0029 step 7.2): the one flow only a browser proves. The cog menu's Create
-// opens the route; the steps keep their values back and forth, Quitter asks first, the server's rolls
+// from the roster (ADR 0034 step 7): the one flow only a browser proves. The roster opens from the
+// character card's header and its Créer opens the route, whose Quitter returns to the roster; the steps keep their values back and forth, Quitter asks first, the server's rolls
 // fill the scores and the HP and stay editable, and the page loads again on the character the server
 // made current. French first (ADR 0027 step 2). The placement choice, the step rules and a race
 // changed after the roll are unit tests (lib/creationFlow.test.ts, components/creation/arrange.test.ts);
@@ -27,21 +27,25 @@ test("create a bard through the creation route, switch to the first and back, re
   const character = page.getByTestId("character");
   await expect(character).toContainText("Test Bard");
 
-  // ADR 0034 step 2: creation is a full-screen route, opened and left without a page load (a marker
-  // set on the window survives); Quitter with nothing entered goes straight back to the character.
+  // ADR 0034 steps 2 and 7: the roster and the creation are full-screen routes, opened and left
+  // without a page load (a marker set on the window survives); Quitter with nothing entered goes
+  // straight back to the roster, and Retour to the character.
   await page.evaluate(() => {
     (window as unknown as { stayed: boolean }).stayed = true;
   });
-  let settings = await openSettings(page);
-  await settings
+  let roster = await openRoster(page);
+  await expect(page).toHaveURL(/\/characters$/);
+  await roster
     .getByRole("button", { name: "Créer un nouveau personnage" })
     .click();
   await expect(page).toHaveURL(/\/create$/);
   await page.getByRole("button", { name: "Quitter la création" }).click();
+  await expect(page).toHaveURL(/\/characters$/);
+  await page.getByRole("button", { name: "Revenir à la partie" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(character).toContainText("Test Bard");
-  settings = await openSettings(page);
-  await settings
+  roster = await openRoster(page);
+  await roster
     .getByRole("button", { name: "Créer un nouveau personnage" })
     .click();
   await expect(page).toHaveURL(/\/create$/);
@@ -251,33 +255,27 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(page.getByTestId("thief-armor")).toHaveValue("metal");
   await snap(page, "new-bard-skills-fr");
 
-  settings = await openSettings(page);
-  await settings
-    .getByRole("button", { name: /^Changer de personnage/ })
-    .click();
-  const dialog = page.getByTestId("character-dialog");
-  const list = dialog.getByTestId("character-list");
-  await expect(list.getByRole("listitem")).toHaveCount(2);
-  await expect(list.locator("[data-current]")).toContainText("Lyra");
-  await expect(list.locator("[data-current]")).toContainText(
-    "Barde · niveau 3",
-  );
-  await snap(page, "switch-character-fr");
-  await list.getByRole("button", { name: "Jouer Test Bard" }).click();
+  // The roster: a card per character, "En jeu" on the current one, Jouer on the others.
+  roster = await openRoster(page);
+  const cards = roster.getByTestId("roster-card");
+  await expect(cards).toHaveCount(2);
+  const current = roster.locator("[data-current]");
+  await expect(current).toContainText("Lyra");
+  await expect(current).toContainText("En jeu");
+  await expect(current).toContainText("Barde · niveau 3");
+  await expect(current.getByRole("button", { name: /^Jouer/ })).toHaveCount(0);
+  await snap(page, "roster-fr");
+  await roster.getByRole("button", { name: "Jouer Test Bard" }).click();
   await expect(character).toContainText("Test Bard");
 
-  settings = await openSettings(page);
-  await settings
-    .getByRole("button", { name: /^Changer de personnage/ })
-    .click();
-  await list.getByRole("button", { name: "Jouer Lyra" }).click();
+  roster = await openRoster(page);
+  await roster.getByRole("button", { name: "Jouer Lyra" }).click();
   await expect(character).toContainText("Lyra");
 
-  // Rename from the cog menu: the page loads again with the new name.
-  settings = await openSettings(page);
-  await settings
-    .getByRole("button", { name: "Renommer le personnage joué" })
-    .click();
+  // Rename from the roster: the card shows the new name, and the game too.
+  roster = await openRoster(page);
+  await roster.getByRole("button", { name: "Renommer Lyra" }).click();
+  const dialog = page.getByTestId("character-dialog");
   const rename = dialog.getByTestId("rename-form");
   await expect(rename.getByRole("textbox", { name: "Nom" })).toHaveValue(
     "Lyra",
@@ -287,19 +285,22 @@ test("create a bard through the creation route, switch to the first and back, re
   await rename
     .getByRole("button", { name: "Enregistrer le nouveau nom de Lyra" })
     .click();
+  await expect(dialog).toBeHidden();
+  await expect(current).toContainText("Lyra la Brave");
+  await page.getByRole("button", { name: "Revenir à la partie" }).click();
   await expect(character).toContainText("Lyra la Brave");
 
-  settings = await openSettings(page);
-  await settings
-    .getByRole("button", { name: /^Retirer le personnage joué/ })
-    .click();
+  // Retire the one in play from the roster: the server makes the first one left current.
+  roster = await openRoster(page);
+  await roster.getByRole("button", { name: /^Retirer Lyra la Brave/ }).click();
   await snap(page, "retire-character-fr");
   await dialog
     .getByTestId("retire-confirm")
-    .getByRole("button", {
-      name: /^Retirer Lyra/,
-    })
+    .getByRole("button", { name: /^Retirer Lyra la Brave/ })
     .click();
+  await expect(cards).toHaveCount(1);
+  await expect(current).toContainText("Test Bard");
+  await page.getByRole("button", { name: "Revenir à la partie" }).click();
   await expect(character).toContainText("Test Bard");
 });
 

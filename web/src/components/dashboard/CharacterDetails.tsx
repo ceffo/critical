@@ -36,9 +36,10 @@ import type { ApiError } from "@/api/http";
 import type { Character, CreationOptions } from "@/types/character";
 
 /**
- * The character's name, opening a popover with the details: class and level read-only, the rest
- * as the player entered it, switched to a form by "Edit". The server validates every field and
- * names the rejected one, whose error shows under it.
+ * The character's name, opening a popover with the details: the name first (Rename lives here too,
+ * ADR 0034 step 7.2), class and level read-only, the rest as the player entered it, switched to a
+ * form by "Edit". The server validates every field and names the rejected one, whose error shows
+ * under it.
  */
 export function CharacterDetails({
   character,
@@ -175,6 +176,7 @@ function DetailsView({
   return (
     <>
       <dl className="flex flex-col gap-2">
+        <Row label={t("characters.name")}>{c.name}</Row>
         <Row label={t("details.class")}>
           {i18n.exists(classKey) ? t(classKey) : c.class}
         </Row>
@@ -263,6 +265,7 @@ function DetailsForm({
   const [draft, setDraft] = useState<Draft>(() =>
     toDraft(character, i18n.language),
   );
+  const [name, setName] = useState(character.name);
   const [error, setError] = useState<{ field: string; code: string } | null>(
     null,
   );
@@ -309,7 +312,7 @@ function DetailsForm({
       return;
     }
     setBusy(true);
-    const rejected: ApiError | null = await save(body);
+    const rejected: ApiError | null = await save(body, name);
     setBusy(false);
     if (rejected)
       setError({ field: rejected.field ?? "", code: rejected.message });
@@ -318,6 +321,16 @@ function DetailsForm({
 
   const message = (field: string) => {
     if (error?.field !== field) return null;
+    // The name's refusals are the rename's, worded as on the roster (ADR 0029 step 7.3).
+    if (field === "name")
+      return (
+        <span role="alert" className="text-label text-danger">
+          {t(`characters.errors.${error.code}`, {
+            max: options?.maxNameLength,
+            defaultValue: error.code,
+          })}
+        </span>
+      );
     const fieldKey = `details.errors.${field}.${error.code}`;
     const key = i18n.exists(fieldKey)
       ? fieldKey
@@ -445,6 +458,23 @@ function DetailsForm({
         </div>
       )}
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+        <div className="col-span-2 flex min-w-0 flex-col gap-1 text-body">
+          <label
+            htmlFor="details-name"
+            className="text-label text-muted-foreground"
+          >
+            {t("characters.name")}
+          </label>
+          <input
+            id="details-name"
+            autoComplete="off"
+            className={fieldClass}
+            value={name}
+            aria-invalid={error?.field === "name"}
+            onChange={(e) => setName(e.target.value)}
+          />
+          {message("name")}
+        </div>
         {pick("alignment", alignments)}
         {input("age", { inputMode: "numeric", roll: "age" })}
         {pick("sex", sexes)}

@@ -1,10 +1,14 @@
 import { useTranslation } from "react-i18next";
+import { ArrowsLeftRight } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatStrength } from "@/lib/format";
+import { navigate } from "@/lib/navigation";
+import { ROSTER_PATH } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
@@ -19,7 +23,8 @@ const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
 
 /**
  * Who: the name, the class under it (muted), the level right-aligned on the name's line (a button opening the Expérience workspace, underlined with the server's
- * progress to the next level, ADR 0015), then the abilities in one row of seven cells and THAC0 last.
+ * progress to the next level, ADR 0015) and right of it the way into the roster, "Vos personnages"
+ * (ADR 0034 step 7.1), then the abilities in one row of seven cells and THAC0 last.
  * Each ability tile rolls its check on the server (ADR 0028): the result card shows it.
  * STR is the server's effective value; changed by an effect, it shows only that value, in the
  * success colour, and the sheet value is in a tooltip on hover and keyboard focus, never under it
@@ -70,34 +75,47 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
           )}
         </div>
         {character && (
-          <button
-            type="button"
-            onClick={onOpenXp}
-            title={
-              xp?.nextLevel
-                ? t("xp.levelLinkTitle", {
-                    xp: new Intl.NumberFormat(i18n.language).format(xp.total),
-                    percent: xp.progressPercent,
-                    level: xp.nextLevel,
-                  })
-                : undefined
-            }
-            className="relative shrink-0 pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            {t("app.levelValue", { level: character.derived.realizedLevel })}
-            {xp && (
-              <span
-                aria-hidden
-                className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-input"
-              >
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenXp}
+              title={
+                xp?.nextLevel
+                  ? t("xp.levelLinkTitle", {
+                      xp: new Intl.NumberFormat(i18n.language).format(xp.total),
+                      percent: xp.progressPercent,
+                      level: xp.nextLevel,
+                    })
+                  : undefined
+              }
+              className="relative shrink-0 pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              {t("app.levelValue", { level: character.derived.realizedLevel })}
+              {xp && (
                 <span
-                  className="absolute inset-y-0 left-0 rounded-full bg-tint"
-                  style={{ width: `${xp.progress * 100}%` }}
-                  data-testid="level-progress"
-                />
-              </span>
-            )}
-          </button>
+                  aria-hidden
+                  className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-input"
+                >
+                  <span
+                    className="absolute inset-y-0 left-0 rounded-full bg-tint"
+                    style={{ width: `${xp.progress * 100}%` }}
+                    data-testid="level-progress"
+                  />
+                </span>
+              )}
+            </button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 shadow-[inset_0_0_0_1.5px_var(--tint)]"
+              aria-label={t("roster.open")}
+              title={t("roster.open")}
+              data-testid="roster-open"
+              onClick={() => navigate(ROSTER_PATH)}
+            >
+              <ArrowsLeftRight aria-hidden />
+            </Button>
+          </div>
         )}
       </div>
       {character && (

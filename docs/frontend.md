@@ -180,18 +180,23 @@ flowchart TD
   Under the themes, the account (ADR 0029: account actions live in the cog menu): the logged-in email
   (`stores/session.ts`, from start-up's `GET /api/auth/me`) and "Log out" (the full "Log out of
   <email>" in its tooltip and `aria-label`), which posts `POST /api/auth/logout` and shows the login page.
-  Above the account, the Character group ([ADR 0029](adr/0029-users-login-and-access.md) step 7.2,
-  amendment "creating, switching and retiring characters as built"): Switch, Create, Rename and Retire.
-  Create opens the creation route (`/create`); the others open their `ui/dialog`
-  (`components/characters/CharacterDialogs.tsx`) outside the popover, which closes: the user's
-  characters with Play (`PUT /api/characters/current`) and the confirmed Retire (`PATCH
-  /api/characters/{id}`). Each change loads the page again on `/`.
-- Creation route ([ADR 0034](adr/0034-onboarding-screens.md), `components/creation/`): `startFor` shows
-  the intro (`CreationRoute.tsx`) to a user whose `currentCharacterId` is null (a new player, or their
-  current one retired, who also finds their other characters there), on every path but `/admin`;
-  Commencer opens the flow and Quitter comes back. `/create` opens the flow straight away for a player
-  with a character; the cog menu's Create and Quitter move between `/create` and `/` without a reload
-  (`lib/navigation.ts` `navigate`, `components/shell/Playing.tsx`). The flow (`CreationFlow.tsx`) is the header band, the step
+  No character action ([ADR 0034](adr/0034-onboarding-screens.md) step 8): they live on the roster.
+- Roster, "Vos personnages" ([ADR 0034](adr/0034-onboarding-screens.md) step 7,
+  `components/characters/Roster.tsx`), at `/characters` (`lib/session.ts` `ROSTER_PATH`): opened from the
+  button right of the level in the character card's header (`Identity.tsx`, step 7.1), a full screen: a
+  header card (wordmark, title, Retour back to `/`) and a stage card with a grid of cards
+  (`repeat(auto-fill, minmax(19rem, 1fr))`), one per character from `GET /api/characters` (name, class and
+  level, "En jeu" on the current one) with Jouer (`PUT /api/characters/current`, then the page loads again
+  on `/`), Renommer and Retirer (confirmed; each a `ui/dialog`, `PATCH /api/characters/{id}`, whose answer
+  the roster shows as is), and a dashed Créer card that opens `/create`. Rename is also the details'
+  first field, Nom (`CharacterDetails.tsx`; `stores/character.ts` `saveDetails` renames on its own
+  endpoint before saving the details). A user with no current character (`components/shell/NoCurrent.tsx`)
+  gets the roster without Retour when they have other characters, the intro when they have none.
+- Creation route ([ADR 0034](adr/0034-onboarding-screens.md), `components/creation/`): a user whose
+  `currentCharacterId` is null and who has no character sees the intro (`CreationRoute.tsx`), on every
+  path but `/admin`; Commencer opens the flow and Quitter comes back. `/create` opens the flow straight
+  away otherwise; the roster's Créer and the flow's Quitter move between `/characters` and `/create`
+  without a reload (`lib/navigation.ts` `navigate`, `components/shell/Playing.tsx`). The flow (`CreationFlow.tsx`) is the header band, the step
   list, the step card (scrolls inside; Retour / Suivant with the blocking reason) and "Votre personnage",
   capped at 1680 px. Steps (`steps.tsx`, order in `lib/creationFlow.ts` `STEPS`): class (cards with the
   options' `hitDie`, alignments and races; the level chips read the options' `levelXp`, a picked level is

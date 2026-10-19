@@ -367,9 +367,17 @@ export interface FlowCharacter {
  * Creates a character through the creation route from the cog menu (ADR 0034 step 2), typing every
  * value, then picks the first alignment and sex offered, and Créer: the page loads on it.
  */
+/** Open the roster, "Vos personnages", from the character card's header (ADR 0034 step 7.1). */
+export async function openRoster(page: Page) {
+  await page.getByTestId("roster-open").click();
+  const roster = page.getByTestId("roster");
+  await expect(roster.getByTestId("roster-card").first()).toBeVisible();
+  return roster;
+}
+
 export async function createInFlow(page: Page, c: FlowCharacter) {
-  const settings = await openSettings(page);
-  await settings
+  const roster = await openRoster(page);
+  await roster
     .getByRole("button", { name: "Créer un nouveau personnage" })
     .click();
   const step = page.getByTestId("creation-step");

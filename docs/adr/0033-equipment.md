@@ -461,7 +461,10 @@ with the column defaults (`gear`, carried, no component, no review row), so new 
 ammunition and a new gem is not a component until edited; its attack compares the converted, normalised
 item `ammo_kind` with the raw `weapons.ammo_kind`. **The later migration that drops `weapons` first
 converts the `weapons` rows absent from `items`** (by the same `itemsvc.Convert`, wielded, matched,
-reviewed), so a weapon written in that window is not lost.
+reviewed), so a weapon written in that window is not lost. The upgrade itself is rehearsed on a
+throwaway PostgreSQL written by the release before it by `just equipment-rehearsal`
+(`scripts/equipment-upgrade-rehearsal.sh`: conversion, old entries popped and redone, restarts, the
+attack, Equip, the swap and the spell components).
 
 _Step 14 carry-over (as built)._ The conversion runs once (it is the data step of its migration), so it
 makes no skill armour worn. CRI-36 brings its own data step: it reads each character's `skill_armor`

@@ -4,12 +4,8 @@
       "action": "next_round",
       "fromRound": 2,
       "toRound": 3,
-      "expired": [
-        "Bless"
-      ],
-      "expiredSpellIds": [
-        "bless"
-      ]
+      "expired": ["Bless"],
+      "expiredSpellIds": ["bless"]
     }
   }
 }

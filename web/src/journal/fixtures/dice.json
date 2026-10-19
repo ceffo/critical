@@ -5,18 +5,13 @@
       "groups": [
         {
           "sides": 6,
-          "rolls": [
-            2,
-            5
-          ],
+          "rolls": [2, 5],
           "negative": false,
           "subtotal": 7
         },
         {
           "sides": 4,
-          "rolls": [
-            3
-          ],
+          "rolls": [3],
           "negative": true,
           "subtotal": -3
         }

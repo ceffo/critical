@@ -12,7 +12,7 @@ import { RedoButton } from "./RedoButton";
 import { UndoButton } from "./UndoButton";
 
 /**
- * The collapsed journal (ADR 0022 step 5.4): one line in the journal's column order (turn, value,
+ * The collapsed journal (ADR 0022 step 5.4): one line in the journal's column order (round, value,
  * icon, the newest entry, time), then the entry count and Undo / Redo. The entry text wraps rather
  * than being cut.
  */

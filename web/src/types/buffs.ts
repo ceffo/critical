@@ -43,7 +43,7 @@ export interface BuffEffect {
   note: string;
   /**
    * Round the buff was added in (0: out of combat, or stored before the server kept it). Set by the
-   * server; never sent. The timeline draws the elapsed turns from it.
+   * server; never sent. The timeline draws the elapsed rounds from it.
    */
   startRound: number;
   /**

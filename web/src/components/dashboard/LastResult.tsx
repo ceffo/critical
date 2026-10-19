@@ -48,7 +48,7 @@ export function LastResult() {
     <div
       role="group"
       aria-label={t("shell.lastResult")}
-      // A banded cell of the header card (ADR 0026 step 6.3), like the turn block.
+      // A banded cell of the header card (ADR 0026 step 6.3), like the round block.
       className="group-band flex max-w-[16.67vw] min-w-0 flex-col items-end gap-0.5 rounded-lg px-3 py-1"
       data-testid="last-result"
     >

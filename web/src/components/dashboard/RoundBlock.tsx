@@ -21,15 +21,15 @@ import { fieldClass } from "./fieldStyles";
 type Mode = "menu" | "passing" | "setting" | "confirmEnd";
 
 /**
- * The turn cells of the header card (ADR 0027 steps 4.1 and 4.2): the turn, its label stacked over
- * its number (`text-headline`), then Next turn (the header's main button) and a menu with Time passes,
- * Set turn number and End combat, over the initiative the server rolled for the turn: the header's
+ * The round cells of the header card (ADR 0027 steps 4.1 and 4.2): the round, its label stacked over
+ * its number (`text-headline`), then Next round (the header's main button) and a menu with Time passes,
+ * Set round number and End combat, over the initiative the server rolled for the round: the header's
  * `text-hero` number, its die in the tooltip, with a reroll. Every action goes through the round
  * endpoints and is logged server-side.
  */
-export function TurnBlock() {
+export function RoundBlock() {
   const { t } = useTranslation();
-  const turn = useBuffsStore((s) => s.round);
+  const round = useBuffsStore((s) => s.round);
   const initiative = useBuffsStore((s) => s.initiative);
   const { nextRound, rerollInitiative, busy } = useTableStore();
   const [open, setOpen] = useState(false);
@@ -42,13 +42,13 @@ export function TurnBlock() {
       role="group"
       aria-label={t("round.title")}
     >
-      <div className="flex flex-col items-center" data-testid="turn">
+      <div className="flex flex-col items-center" data-testid="round">
         <span className="section-label">{t("round.title")}</span>
         <span
           className="min-w-[2ch] text-center text-headline tabular-nums"
           data-testid="round-value"
         >
-          {turn}
+          {round}
         </span>
       </div>
       <div className="flex flex-col items-start gap-1">
@@ -77,12 +77,12 @@ export function TurnBlock() {
               <DotsThree weight="bold" />
             </PopoverTrigger>
             <PopoverContent side="bottom" align="start" className="w-80 p-2">
-              {mode === "menu" && <TurnMenu onPick={setMode} />}
+              {mode === "menu" && <RoundMenu onPick={setMode} />}
               {mode === "passing" && (
                 <PassTimeForm onDone={() => setOpen(false)} />
               )}
               {mode === "setting" && (
-                <SetTurnForm onDone={() => setOpen(false)} />
+                <SetRoundForm onDone={() => setOpen(false)} />
               )}
               {mode === "confirmEnd" && (
                 <EndCombatConfirm onDone={() => setOpen(false)} />
@@ -94,7 +94,7 @@ export function TurnBlock() {
           className="flex min-h-9 max-w-48 items-center text-body text-muted-foreground"
           data-testid="initiative-row"
         >
-          {turn === 0 ? (
+          {round === 0 ? (
             t("round.outOfCombatInitiative")
           ) : (
             <span
@@ -136,7 +136,7 @@ export function TurnBlock() {
 const menuItem =
   "flex h-7 w-full items-center rounded-md px-2 text-left text-body outline-none hover:bg-raised-hover focus-visible:bg-raised-hover";
 
-function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
+function RoundMenu({ onPick }: { onPick: (m: Mode) => void }) {
   const { t } = useTranslation();
   return (
     <div role="menu" aria-label={t("round.menu")} className="flex flex-col">
@@ -169,7 +169,7 @@ function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
 }
 
 /**
- * Hours (decimal, "1.5" or "1,5"). The server answers what they would do: the turns and the
+ * Hours (decimal, "1.5" or "1,5"). The server answers what they would do: the rounds and the
  * effects that would end (GET /api/round/pass-time/preview), or why it refuses them. Only the
  * answer for the hours typed now is shown (`previewFor`); older requests are aborted.
  */
@@ -272,11 +272,11 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function SetTurnForm({ onDone }: { onDone: () => void }) {
+function SetRoundForm({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
-  const turn = useBuffsStore((s) => s.round);
+  const round = useBuffsStore((s) => s.round);
   const { setRound, busy } = useTableStore();
-  const [draft, setDraft] = useState(String(turn));
+  const [draft, setDraft] = useState(String(round));
   const valid = /^\d+$/.test(draft.trim());
   return (
     <form

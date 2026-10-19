@@ -11,10 +11,7 @@
       "d20": 12,
       "success": true,
       "effect": "turn",
-      "affected": [
-        3,
-        4
-      ],
+      "affected": [3, 4],
       "destroyed": 0,
       "turned": 7
     }
@@ -27,14 +24,8 @@
       "outcome": "destroy_more",
       "success": true,
       "effect": "destroy",
-      "affected": [
-        2,
-        3
-      ],
-      "more": [
-        1,
-        2
-      ],
+      "affected": [2, 3],
+      "more": [1, 2],
       "destroyed": 5,
       "turned": 3
     }

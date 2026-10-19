@@ -32,10 +32,10 @@ const FILTERS: LogFilter[] = ["all", "rolls"];
 
 /**
  * The journal (GET /api/log, ADR 0022 step 5): a head with the All / Rolls filter, the entry count,
- * Undo and Redo, then the entries grouped by turn, newest first, one 22 px line each: value · icon
+ * Undo and Redo, then the entries grouped by round, newest first, one 22 px line each: value · icon
  * · entry, the time right-aligned last (ADR 0027 step 9). A narrow marker ("T3", an icon out of
- * combat) sits beside a turn's first entry, the current turn's in the tint; turn blocks touch and
- * alternate between the card's tone and the sub-band. A turn's opening rows (the advance and the
+ * combat) sits beside a round's first entry, the current round's in the tint; round blocks touch and
+ * alternate between the card's tone and the sub-band. A round's opening rows (the advance and the
  * initiative) are plain rows of its block. A click on an entry shows it in the result panel. The log is a stack: Undo pops the newest entry, values are never edited (and there is no
  * note to add).
  */
@@ -91,7 +91,7 @@ export function CombatLog() {
         </span>
       </div>
       {/* The scroller is its rows' containing block (relative): an absolute box inside, such as a
-          turn marker's sr-only label, then scrolls and clips with it instead of stretching the page. */}
+          round marker's sr-only label, then scrolls and clips with it instead of stretching the page. */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
         {groups.map((g, i) => {
           const marker = roundMarker(t, g.round, g.current);
@@ -99,23 +99,23 @@ export function CombatLog() {
             <section
               key={g.key}
               className={cn(
-                // The narrow turn marker, then the turn's entries. Turn blocks touch; every other
+                // The narrow round marker, then the round's entries. Round blocks touch; every other
                 // one is on the sub-band tone, never a rule between them (ADR 0027 step 9.1).
                 "grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-x-1 px-2",
                 i % 2 === 1 && "bg-sub-band",
               )}
               aria-label={roundLabel(t, g.round)}
               data-current={g.current}
-              data-testid="journal-turn"
+              data-testid="journal-round"
             >
               <h3
                 className={cn(
                   "flex h-[1.375rem] items-center justify-center text-label font-semibold tabular-nums",
-                  // The current turn's one mark: its marker in the tint (ADR 0027 step 9.1).
+                  // The current round's one mark: its marker in the tint (ADR 0027 step 9.1).
                   g.current ? "text-tint" : "text-muted-foreground",
                 )}
                 title={marker.full}
-                data-testid="journal-turn-marker"
+                data-testid="journal-round-marker"
               >
                 {marker.short ? (
                   <span aria-hidden>{marker.short}</span>
@@ -135,7 +135,7 @@ export function CombatLog() {
               ) : (
                 <div className="flex min-w-0 flex-col">
                   {g.transactions.map((tx) => {
-                    // A turn's opening rows read as the turn's own (ADR 0027 step 9.6), each with
+                    // A round's opening rows read as the round's own (ADR 0027 step 9.6), each with
                     // its own Undone tag; any other multi-entry transaction is framed.
                     const framed = tx.length > 1 && !opensRound(tx);
                     const rows = (

@@ -8,7 +8,7 @@ import {
   chooseTheme,
   chooseWeapon,
   combatLog,
-  nextTurn,
+  nextRound,
   openDashboard,
   openSettings,
   openWeapons,
@@ -80,7 +80,7 @@ async function escapedAbsolutes(page: Page): Promise<string[]> {
 
 /** The always-visible zones (ADR 0022 step 2.1) and the focused activity's stage. */
 async function expectZones(page: Page) {
-  await expect(page.locator("[data-screen=turn-header]")).toBeVisible();
+  await expect(page.locator("[data-screen=round-header]")).toBeVisible();
   await expect(
     page.getByRole("complementary", { name: "Character" }),
   ).toBeVisible();
@@ -145,7 +145,7 @@ async function expectCompactJournal(
       `one-line row, ${where}: ${text}`,
     ).toBeLessThanOrEqual(24);
   }
-  const turns = await log.getByTestId("journal-turn").all();
+  const turns = await log.getByTestId("journal-round").all();
   expect(turns.length, `turn blocks, ${where}`).toBeGreaterThanOrEqual(2);
   for (let i = 1; i < turns.length; i++) {
     const [a, b] = [
@@ -158,7 +158,7 @@ async function expectCompactJournal(
     ).toBeLessThanOrEqual(1);
   }
   const marker = (await log
-    .getByTestId("journal-turn-marker")
+    .getByTestId("journal-round-marker")
     .first()
     .boundingBox())!;
   expect(
@@ -270,12 +270,12 @@ async function expectCharacterCardLines(page: Page, where: string) {
  * one line.
  */
 async function expectHeaderLayout(page: Page, where: string) {
-  const header = page.locator("[data-screen=turn-header]");
+  const header = page.locator("[data-screen=round-header]");
   const box = async (l: Locator) => (await l.boundingBox())!;
   const h = await box(header);
   expect(h.height, `header at rest, ${where}`).toBeLessThanOrEqual(120);
   const label = await box(
-    header.getByTestId("turn").getByText("Tour", { exact: true }),
+    header.getByTestId("round").getByText("Tour", { exact: true }),
   );
   const turn = await box(page.getByTestId("round-value"));
   expect(
@@ -410,7 +410,7 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
 
   // The header is as tall as its effects need, up to the turn row + 3 effect rows; the rest sits
   // behind the expander.
-  const header = page.locator("[data-screen=turn-header]");
+  const header = page.locator("[data-screen=round-header]");
   const heightOf = async () => (await header.boundingBox())!.height;
   const empty = await heightOf();
   await addBuff(page, { name: "Aid", rounds: 6 });
@@ -440,7 +440,7 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
   const last = page.getByTestId("last-result");
   await expect(last.getByTestId("last-result-text")).toContainText("Attack");
   // The journal: a long entry, and a second turn so a past turn sits under the current one.
-  await nextTurn(page);
+  await nextRound(page);
   await recordHp(page, "damage", 3, LONG_SOURCE);
   await expect(
     combatLog(page).getByRole("listitem").filter({ hasText: LONG_SOURCE }),
@@ -605,7 +605,7 @@ test.describe("with the sheet's STR 12", () => {
         ["str_max", 18],
       ],
     });
-    const header = page.locator("[data-screen=turn-header]");
+    const header = page.locator("[data-screen=round-header]");
     const hammer = page.locator(
       '[data-testid="item-power"][data-item="power_gem_dispel"]',
     );

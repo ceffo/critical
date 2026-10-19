@@ -17,9 +17,9 @@ export function isUndone(tx: LogEntry[]): boolean {
 }
 
 /**
- * True when the transaction opens a turn: Next Round's advance and the new turn's initiative (ADR
- * 0013, one transaction per ADR 0018). The journal shows those rows as the turn's own first rows,
- * not framed as a multi-entry transaction: the turn block and its marker already say what they are
+ * True when the transaction opens a round: Next Round's advance and the new round's initiative (ADR
+ * 0013, one transaction per ADR 0018). The journal shows those rows as the round's own first rows,
+ * not framed as a multi-entry transaction: the round block and its marker already say what they are
  * (ADR 0027 step 9.6).
  */
 export function opensRound(tx: LogEntry[]): boolean {

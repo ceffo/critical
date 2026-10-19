@@ -194,7 +194,7 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   user-facing text in Go (error messages excepted). Enforced by golangci `forbidigo` on
   `api/internal/domain/` (production code): the `fmt.Sprint*`/`Fprint*` family is refused, errors
   use `fmt.Errorf` or `domain.FieldErrorf`. The action log's `summary` is only text the player typed;
-  every other entry is a structured payload the UI words (`web/src/lib/logSummary.ts`).
+  every other entry is a structured payload the UI words (its kind's view, `web/src/journal/kinds/`).
 - Rules items end the report with a `RULES TRACE` block: `ADR step -> code location -> test name`.
   A step with no test is not done.
 

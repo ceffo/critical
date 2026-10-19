@@ -4,7 +4,7 @@ import { combatLog, logEntry, openDashboard, recordHp } from "./helpers";
 
 // Only a browser proves the wiring between the journal and the card: a click on a row swaps the
 // card, the selection highlight, "Latest" and the filter. What each kind renders is unit-tested
-// (lib/filCard.test.ts).
+// (src/journal, one test file per kind).
 
 function card(page: Page) {
   return page.getByRole("region", { name: "Detail", exact: true });
@@ -24,8 +24,8 @@ test("a journal entry opens read-only in the card, Latest returns, Rolls filters
 }) => {
   await openDashboard(page);
   await rollSpellSave(page);
-  await recordHp(page, "damage", 3, "e2e fil orc");
-  await expect(logEntry(page, "e2e fil orc")).toBeVisible();
+  await recordHp(page, "damage", 3, "e2e journal orc");
+  await expect(logEntry(page, "e2e journal orc")).toBeVisible();
   await rollSpellSave(page);
   const saves = logEntry(page, "Save vs Spells");
   await expect(saves).toHaveCount(2);
@@ -46,9 +46,9 @@ test("a journal entry opens read-only in the card, Latest returns, Rolls filters
   await expect(latest).toBeVisible();
 
   // An entry without a roll: its text and the damage value.
-  await logEntry(page, "e2e fil orc").getByTestId("log-select").click();
+  await logEntry(page, "e2e journal orc").getByTestId("log-select").click();
   const info = card(page).getByTestId("info-result");
-  await expect(info).toContainText("e2e fil orc");
+  await expect(info).toContainText("e2e journal orc");
   await expect(info.getByTestId("info-value")).toHaveText("−3");
   await snap(page, "older-entry");
 
@@ -59,7 +59,7 @@ test("a journal entry opens read-only in the card, Latest returns, Rolls filters
 
   // Rolls: the HP change is filtered out, the saves stay. Select the older save for the shots.
   await combatLog(page).getByRole("radio", { name: "Rolls" }).click();
-  await expect(logEntry(page, "e2e fil orc")).toHaveCount(0);
+  await expect(logEntry(page, "e2e journal orc")).toHaveCount(0);
   await expect(saves).toHaveCount(2);
   await saves.last().getByTestId("log-select").click();
   for (const vp of [
@@ -70,6 +70,6 @@ test("a journal entry opens read-only in the card, Latest returns, Rolls filters
   ]) {
     await page.setViewportSize(vp);
     await expect(card(page).getByTestId("save-result")).toBeVisible();
-    await snap(page, `fil-${vp.width}x${vp.height}`);
+    await snap(page, `result-card-${vp.width}x${vp.height}`);
   }
 });

@@ -236,7 +236,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3, 4, 5, 6 and 7")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3, 4, 5, 6, 7 and 8")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -388,9 +388,18 @@ func TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits(t *testing.T) {
 	})
 }
 
-// asFormat6 turns the format-7 fixture into a format-6 artifact: no equipment,
+// asFormat7 turns the format-8 fixture into a format-7 artifact: no languages
+// and no race_languages table (ADR 0021 step 14).
+func asFormat7(d map[string]any) {
+	d["format"] = 7
+	delete(d, "languages")
+	delete(d["rule_tables"].(map[string]any), "race_languages")
+}
+
+// asFormat6 turns the format-8 fixture into a format-6 artifact: no equipment,
 // no Table 52 or 56 (ADR 0021 step 13).
 func asFormat6(d map[string]any) {
+	asFormat7(d)
 	d["format"] = 6
 	delete(d, "equipment")
 	delete(d["rule_tables"].(map[string]any), "weapon_vs_armor")
@@ -462,6 +471,22 @@ func TestStartup_Step13_RefusesBrokenEquipmentAndStillReadsFormat6(t *testing.T)
 
 	six := writeArtifact(t, asFormat6)
 	assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: six}))
+}
+
+// ADR 0021 steps 14.3 and 14.4: a format-8 artifact whose racial list names a
+// language the catalogue lacks refuses the start, naming the race and the
+// language; a format-7 artifact, without the languages, still starts.
+func TestStartup_Step14_RefusesAnUnknownLanguageAndStillReadsFormat7(t *testing.T) {
+	artifact := writeArtifact(t, func(d map[string]any) {
+		rows := d["rule_tables"].(map[string]any)["race_languages"].([]any)
+		d["rule_tables"].(map[string]any)["race_languages"] = append(rows, map[string]any{"race": "dwarf", "language": "draconic"})
+	})
+	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+	require.ErrorContains(t, err, `dwarf names the unknown language "draconic"`)
+	require.ErrorContains(t, err, "spell catalogue "+artifact)
+
+	seven := writeArtifact(t, asFormat7)
+	assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: seven}))
 }
 
 // The spellbook seed is checked against the catalogue before anything is

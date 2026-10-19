@@ -99,12 +99,12 @@ func TestDetails_UpdateStoresWhatGetMapsBack(t *testing.T) {
 			require.NoError(t, dal.UpdateDetails(ctx, 1, d))
 
 			q.EXPECT().GetCharacterDetails(ctx, int64(1)).Return(queries.GetCharacterDetailsRow{
-				Class: "bard", Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, Height: d.Height,
+				Class: "bard", RaceCode: "elf", Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, Height: d.Height,
 				Weight: d.Weight, Hair: d.Hair, Eyes: d.Eyes, Languages: tc.stored,
 			}, nil).Once()
-			got, class, err := dal.GetDetails(ctx, 1)
+			got, kind, err := dal.GetDetails(ctx, 1)
 			require.NoError(t, err)
-			assert.Equal(t, "bard", class, "the class comes with the details")
+			assert.Equal(t, charactersvc.Kind{Class: "bard", Race: "elf"}, kind, "the class and race come with the details")
 			d.Languages = tc.back
 			assert.Equal(t, d, got)
 		})

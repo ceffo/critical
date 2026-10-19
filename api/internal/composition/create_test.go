@@ -89,7 +89,7 @@ func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 func TestCreate_TheDetailsEnteredAreStored(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
-	body := bardWith(`{"alignment":" chaotic_neutral ","sex":"female","age":23,"eyes":"verts","languages":["Commun"," Elfique "]}`)
+	body := bardWith(`{"alignment":" chaotic_neutral ","sex":"female","age":23,"eyes":"verts","languages":["elvish","gnoll"]}`)
 	var list listView
 	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, &list))
 	var got struct {
@@ -109,7 +109,7 @@ func TestCreate_TheDetailsEnteredAreStored(t *testing.T) {
 	assert.Equal(t, 23, *got.Age)
 	assert.Equal(t, "verts", got.Eyes)
 	assert.Empty(t, got.Hair)
-	assert.Equal(t, []string{"Commun", "Elfique"}, got.Languages)
+	assert.Equal(t, []string{"common", "elvish", "gnoll"}, got.Languages, "Common, a half-elf's native language, first (ADR 0032 step 4.1)")
 }
 
 // ADR 0032 steps 2 and 3, end to end: creating a character without an alignment or a sex, with
@@ -182,7 +182,7 @@ func TestCreate_RefusedInputStoresNothing(t *testing.T) {
 	// named under "details." (the race code is "race").
 	for body, field := range map[string]string{
 		bardWith(`{"alignment":"neutral_good","sex":"male","age":0}`):                                  "details.age",
-		bardWith(`{"alignment":"neutral_good","sex":"male","languages":["Commun","commun"]}`):          "details.languages",
+		bardWith(`{"alignment":"neutral_good","sex":"male","languages":["common","common"]}`):          "details.languages",
 		bardWith(`{"alignment":"neutral_good","sex":"male","hair":"` + strings.Repeat("e", 41) + `"}`): "details.hair",
 	} {
 		var refused map[string]string

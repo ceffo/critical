@@ -298,23 +298,24 @@ func decodeLanguages(raw string) ([]string, error) {
 	return langs, nil
 }
 
-// GetDetails reads the editable details. Returns domain.ErrCharacterNotFound when the row is missing.
-func (d *DAL) GetDetails(ctx context.Context, id int64) (charactersvc.Details, string, error) {
+// GetDetails reads the editable details and the character's class and race
+// codes. Returns domain.ErrCharacterNotFound when the row is missing.
+func (d *DAL) GetDetails(ctx context.Context, id int64) (charactersvc.Details, charactersvc.Kind, error) {
 	r, err := d.q.GetCharacterDetails(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return charactersvc.Details{}, "", domain.ErrCharacterNotFound
+		return charactersvc.Details{}, charactersvc.Kind{}, domain.ErrCharacterNotFound
 	}
 	if err != nil {
-		return charactersvc.Details{}, "", fmt.Errorf("get character details: %w", err)
+		return charactersvc.Details{}, charactersvc.Kind{}, fmt.Errorf("get character details: %w", err)
 	}
 	langs, err := decodeLanguages(r.Languages)
 	if err != nil {
-		return charactersvc.Details{}, "", err
+		return charactersvc.Details{}, charactersvc.Kind{}, err
 	}
 	return charactersvc.Details{
 		Alignment: r.Alignment, Age: int(r.Age), Sex: r.Sex,
 		Height: r.Height, Weight: r.Weight, Hair: r.Hair, Eyes: r.Eyes, Languages: langs,
-	}, r.Class, nil
+	}, charactersvc.Kind{Class: r.Class, Race: r.RaceCode}, nil
 }
 
 // UpdateDetails overwrites every editable detail of the character.

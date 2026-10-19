@@ -193,10 +193,15 @@ type CharacterDTO struct {
 	detailshdl.DetailsDTO
 }
 
-// WarningDTO is a code and the field it is about; the web words it.
+// WarningDTO is a code and the field it is about; the web words it. The
+// languages over the limit (ADR 0032 step 4.2) also carry how many
+// additional languages the character knows (count) and its Intelligence
+// allows (limit).
 type WarningDTO struct {
 	Code  string `json:"code"`
 	Field string `json:"field"`
+	Count *int   `json:"count,omitempty"`
+	Limit *int   `json:"limit,omitempty"`
 }
 
 // SavesDTO are five numbers, one per save category.
@@ -401,7 +406,7 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race, SkillArmor: c.SkillArmor,
 		Derived: derivedDTO(c.Derived), DetailsDTO: detailshdl.ToDTO(c.Details),
-		Missing: c.Details.Missing(), Warnings: warningsDTO(c.Details.Warnings(c.Class)),
+		Missing: c.Details.Missing(), Warnings: warningsDTO(c.Warnings),
 	}
 }
 

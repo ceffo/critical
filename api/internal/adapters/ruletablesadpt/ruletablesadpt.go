@@ -32,6 +32,9 @@ type fileDTO struct {
 	// ADR 0021 step 13); nil when the artifact does not carry them.
 	WeaponVsArmor  []weaponVsArmorDTO  `json:"weapon_vs_armor"`
 	InitiativeItem []initiativeItemDTO `json:"initiative_item"`
+	// RaceLanguages is each race's language list (format 8, ADR 0021 step
+	// 14); nil when the artifact does not carry it.
+	RaceLanguages []raceLanguageDTO `json:"race_languages"`
 }
 
 type sphereAccessDTO struct {
@@ -80,9 +83,12 @@ type bardDTO struct {
 // class and race table (a missing one is named) but the racial level limits,
 // format 5 those too, format 6 also the sphere access; format 3 carries none.
 // equipment is the artifact's top-level equipment object as written, nil when
-// absent (format 7, ADR 0021 step 13): format 7 needs it and the two tables
-// Table 52 and Table 56; formats 3 to 6 carry none of them.
-func Parse(format int, raw, equipment []byte) (*ruletablesvc.Tables, error) {
+// absent (format 7, ADR 0021 step 13): formats 7 and 8 need it and the two
+// tables Table 52 and Table 56; formats 3 to 6 carry none of them. languages
+// is the artifact's top-level languages list as written, nil when absent
+// (format 8, step 14): format 8 needs it and the race_languages table;
+// formats 3 to 7 carry neither.
+func Parse(format int, raw, equipment, languages []byte) (*ruletablesvc.Tables, error) {
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -118,8 +124,12 @@ func Parse(format int, raw, equipment []byte) (*ruletablesvc.Tables, error) {
 	if err != nil {
 		return nil, err
 	}
-	if format != catalogue.FormatEquipment && (f.WeaponVsArmor != nil || f.InitiativeItem != nil || equipment != nil) {
+	hasEquipment := format == catalogue.FormatEquipment || format == catalogue.FormatLanguages
+	if !hasEquipment && (f.WeaponVsArmor != nil || f.InitiativeItem != nil || equipment != nil) {
 		return nil, fmt.Errorf("format %d carries no equipment, weapon_vs_armor or initiative_item", format)
+	}
+	if format != catalogue.FormatLanguages && (f.RaceLanguages != nil || languages != nil) {
+		return nil, fmt.Errorf("format %d carries no languages or race_languages", format)
 	}
 	switch format {
 	case catalogue.FormatRuleTables:
@@ -139,7 +149,7 @@ func Parse(format int, raw, equipment []byte) (*ruletablesvc.Tables, error) {
 			return nil, err
 		}
 		return tables.WithClasses(classes), nil
-	case catalogue.FormatLevelLimits, catalogue.FormatSpheres, catalogue.FormatEquipment:
+	case catalogue.FormatLevelLimits, catalogue.FormatSpheres, catalogue.FormatEquipment, catalogue.FormatLanguages:
 		classes, err := f.classes()
 		if err != nil {
 			return nil, err
@@ -163,7 +173,11 @@ func Parse(format int, raw, equipment []byte) (*ruletablesvc.Tables, error) {
 		if format == catalogue.FormatSpheres {
 			return tables, nil
 		}
-		return withEquipment(tables, f, equipment)
+		tables, err = withEquipment(tables, f, equipment)
+		if err != nil || format == catalogue.FormatEquipment {
+			return tables, err
+		}
+		return withLanguages(tables, f, languages)
 	default:
 		return nil, fmt.Errorf("unknown format %d", format)
 	}

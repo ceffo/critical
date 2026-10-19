@@ -29,6 +29,14 @@ SELECT id, alignment, sex FROM characters ORDER BY id;
 -- name: SetCharacterIdentity :exec
 UPDATE characters SET alignment = sqlc.arg(alignment), sex = sqlc.arg(sex), race = '' WHERE id = sqlc.arg(id);
 
+-- The languages migration (014): every character's stored language list, to map to codes.
+-- name: ListCharacterLanguages :many
+SELECT id, languages FROM characters ORDER BY id;
+
+-- The mapped language list of a character (a JSON list of codes).
+-- name: SetCharacterLanguages :exec
+UPDATE characters SET languages = sqlc.arg(languages) WHERE id = sqlc.arg(id);
+
 -- The seed character's alignment and sex when it lacks them (migration 013): a value set since is
 -- kept, so a rerun changes nothing.
 -- name: SetIdentityIfUnset :exec

@@ -2080,6 +2080,7 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
           ];
     for (const vp of [
       { width: 1280, height: 800 },
+      { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
     ]) {
       await page.setViewportSize(vp);
@@ -2148,6 +2149,45 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
     await page.setViewportSize({ width: 1280, height: 600 });
     await expectNoPageScroll(page);
     await expect(card.getByTestId("character-form")).toBeVisible();
+  }
+});
+
+// ADR 0032 step 4 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the card's languages, in
+// the edit (the catalogue's checkboxes, the race's list first, the count over the limit) and in the
+// view (the names and the warning), are never cut from 1280 to 2560.
+test("details card: the languages picker, its count and the warning uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.getByTestId("details-trigger").click();
+  const pop = page.getByTestId("details-popover");
+  await pop.getByRole("button", { name: "Modifier" }).click();
+  for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])
+    await pop.getByRole("checkbox", { name, exact: true }).check();
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(pop, `details card languages edit, ${where}`);
+    await expectWholeWords(pop, `details card languages edit, ${where}`);
+    await snap(page, `details-languages-edit-fr-${where}`);
+  }
+  await pop.getByRole("button", { name: "Enregistrer" }).click();
+  await expect(pop.getByTestId("details-languages-warning")).toBeVisible();
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(pop, `details card languages view, ${where}`);
+    await snap(page, `details-languages-view-fr-${where}`);
   }
 });
 

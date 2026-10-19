@@ -13,7 +13,8 @@ export interface Draft {
   weight: string;
   hair: string;
   eyes: string;
-  languages: string;
+  /** The language catalogue codes picked (ADR 0032 step 4). */
+  languages: string[];
 }
 
 /** The alignment and sex codes (ADR 0032): a stored value that is none (an old release's free text) is missing. */
@@ -41,7 +42,7 @@ export function toDraft(d: CharacterDetails): Draft {
     alignment: codeOrEmpty(d.alignment, ALIGNMENT_CODES),
     sex: codeOrEmpty(d.sex, SEX_CODES),
     age: d.age === null ? "" : String(d.age),
-    languages: d.languages.join(", "),
+    languages: [...d.languages],
   };
 }
 
@@ -56,10 +57,6 @@ export function toBody(draft: Draft): {
 } {
   const age = draft.age.trim();
   const ageInvalid = age !== "" && !/^0*[1-9]\d*$/.test(age);
-  const languages =
-    draft.languages.trim() === ""
-      ? []
-      : draft.languages.split(",").map((l) => l.trim());
   return {
     ageInvalid,
     body: {
@@ -72,18 +69,9 @@ export function toBody(draft: Draft): {
       hair: draft.hair,
       eyes: draft.eyes,
       age: age === "" || ageInvalid ? null : Number(age),
-      languages,
+      languages: draft.languages,
     },
   };
-}
-
-/** i18n key suffix of a language name: lower case, accents and spaces removed. */
-export function languageKey(name: string): string {
-  return name
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
 }
 
 /**
@@ -96,4 +84,14 @@ export function hasAlignmentWarning(c: {
   return (c.warnings ?? []).some(
     (w) => w.code === "alignment_not_allowed" && w.field === "alignment",
   );
+}
+
+/** The figures of the server's `languages_over_limit` warning (ADR 0032 step 4.2), none without it. */
+export function languageWarning(c: {
+  warnings?: { code: string; count?: number; limit?: number }[];
+}): { count: number; limit: number } | undefined {
+  const w = (c.warnings ?? []).find((x) => x.code === "languages_over_limit");
+  return w && w.count !== undefined && w.limit !== undefined
+    ? { count: w.count, limit: w.limit }
+    : undefined;
 }

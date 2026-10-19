@@ -1,0 +1,11 @@
+-- A character's languages are codes of the language catalogue (ADR 0032 steps 4 and 8): the
+-- characters.languages JSON list holds codes (common, elvish, ...), no longer free text. The column
+-- stays TEXT.
+--
+-- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): no column is added, changed or dropped, so the
+-- release before this one keeps working on the schema while the new one is deployed (it reads and
+-- writes the same list as strings, and a free-text word it writes after this migration is not a
+-- code, so the new release does not show it). Schema only (step 2.1): the stored words are mapped
+-- to codes, the unrecognised ones dropped and logged, by a data step run just after this file
+-- (mapLanguages), and the seed character already stored keeps the codes its seed names.
+COMMENT ON COLUMN characters.languages IS 'JSON list of language catalogue codes (common, elvish, ...); the race''s native language may be missing, it is added on read';

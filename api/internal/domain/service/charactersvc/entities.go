@@ -52,10 +52,13 @@ type Character struct {
 	Derived Derived
 
 	Details Details
+	// Warnings are the rules the stored character breaks without being
+	// refused (ADR 0032 steps 4.2 and 8.4); set by the service.
+	Warnings []Warning
 }
 
 // Races are the race codes of the six PHB races (ADR 0030 step 1).
-var Races = []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}
+var Races = ruletablesvc.RaceCodes
 
 // Saves are the five saving throw numbers, one per category of ADR 0006 step
 // 1 (targets, or a bonus per category).

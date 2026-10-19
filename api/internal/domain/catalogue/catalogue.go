@@ -33,8 +33,14 @@ const FormatSpheres = 6
 // are format 7 (step 13.4).
 const FormatEquipment = 7
 
+// FormatLanguages is format 8 (ADR 0021 step 14, ADR 0032 step 4): format 7
+// plus the language catalogue and each race's language list. The API reads it
+// beside format 7 until the published artifact and the dev checkouts are
+// format 8 (step 14.4).
+const FormatLanguages = 8
+
 // Formats lists the formats this API reads, in order.
-var Formats = []int{FormatRuleTables, FormatClassTables, FormatLevelLimits, FormatSpheres, FormatEquipment}
+var Formats = []int{FormatRuleTables, FormatClassTables, FormatLevelLimits, FormatSpheres, FormatEquipment, FormatLanguages}
 
 // Catalogue is one artifact's spells: a version compared for equality only,
 // and the spells. A format-3 artifact's PHB rule tables are not part of it:

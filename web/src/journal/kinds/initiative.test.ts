@@ -26,13 +26,13 @@ describeKind("initiative", fixtures, {
   },
   withModifiers: {
     en: {
-      text: "Initiative 10 for round 3 (d10 7, Long sword +5, Haste −2)",
+      text: "Initiative 10 for round 3 (d10 7, Long sword: +5, Haste: −2)",
       short: "Initiative",
       subtitle: "Round 3",
-      card: ["<li>Long sword +5</li>", "<li>Haste −2</li>", ">10<"],
+      card: ["<li>Long sword: +5</li>", "<li>Haste: −2</li>", ">10<"],
     },
     fr: {
-      text: "Initiative 10 pour le tour 3 (d10 7, Long sword +5, Haste −2)",
+      text: "Initiative 10 pour le tour 3 (d10 7, Long sword : +5, Haste : −2)",
       short: "Initiative",
       subtitle: "Tour 3",
       card: ['data-testid="initiative-terms"'],

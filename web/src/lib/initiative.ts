@@ -26,7 +26,7 @@ export function initiativeTermName(
   }
 }
 
-/** One modifier as a line of the breakdown: "Long sword +5", "Fly: end of round". */
+/** One modifier as a line of the breakdown: "Long sword: +5", "Fly: end of round". */
 export function initiativeTermText(
   m: InitiativeModifier,
   t: TFunction,
@@ -40,7 +40,7 @@ export function initiativeTermText(
   return t("initiative.term", { name, value: formatSigned(m.value) });
 }
 
-/** The breakdown in one line: "d10 7, Long sword +5, Haste −2". */
+/** The breakdown in one line: "d10 7, Long sword: +5, Haste: −2". */
 export function initiativeBreakdown(
   d10: number,
   modifiers: readonly InitiativeModifier[],

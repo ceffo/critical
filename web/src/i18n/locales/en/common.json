@@ -179,7 +179,7 @@
   },
   "initiative": {
     "die": "d10 {{value}}",
-    "term": "{{name}} {{value}}",
+    "term": "{{name}}: {{value}}",
     "endOfRoundTerm": "{{name}}: end of round",
     "specialTerm": "{{name}}: special casting time",
     "total": "= {{value}}, the lowest acts first",

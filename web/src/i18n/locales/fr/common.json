@@ -179,7 +179,7 @@
   },
   "initiative": {
     "die": "d10 {{value}}",
-    "term": "{{name}} {{value}}",
+    "term": "{{name}} : {{value}}",
     "endOfRoundTerm": "{{name}} : fin du tour",
     "specialTerm": "{{name}} : temps d’incantation spécial",
     "total": "= {{value}}, le plus bas agit en premier",

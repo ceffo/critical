@@ -539,7 +539,8 @@ save bonus, so Spirit Armor's `ac_set` applies). The override (step 13) is
 `characters.ac_override` and `ac_override_label` (migration 017), set by `PUT /api/ac/override
 {value, label}` and cleared by `DELETE`, one `ac_override` entry (`{before, after}`, snapshot
 `ac_override`) each, nothing logged for the same value again (`TestAC_Step13_*`). The `initiative`
-effect of step 11 is left to CRI-39. The step 12 duplicate rule reads the pieces' catalogue code; no
+effect of step 11 is left to CRI-39 (_built there, 2026-10-19_: `BuffEffects.Initiative`, JSON
+`initiative`, on buffs and powers; see ADR 0035 item 6's as-built note). The step 12 duplicate rule reads the pieces' catalogue code; no
 catalogue row is a magic item today (step 22), so it applies once the editor's templates (CRI-38)
 give one.
 

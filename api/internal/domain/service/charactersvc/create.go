@@ -170,7 +170,7 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 	if n.XP < MinStartingXP || n.XP > MaxStartingXP {
 		return Character{}, &domain.FieldError{Field: "xp", Message: CodeOutOfRange}
 	}
-	details, err := newDetails(n.Class, n.Details)
+	details, err := newDetails(Kind{Class: n.Class, Race: n.Race}, s.languages, n.Details)
 	if err != nil {
 		return Character{}, err
 	}
@@ -460,7 +460,17 @@ type ClassOption struct {
 type CreationOptions struct {
 	Classes []ClassOption
 	// Sexes are the sex codes (ADR 0032 step 3).
-	Sexes                  []string
+	Sexes []string
+	// Languages are the catalogue languages with their names, RaceLanguages
+	// each race's own language and PHB list (ADR 0032 step 4.3: the form
+	// offers the whole catalogue, the race's list marked), and
+	// LanguageLimits PHB Table 4's number of additional languages by
+	// Intelligence score (step 4.2). The first two are empty before catalogue
+	// format 8.
+	Languages      []ruletablesvc.Language
+	RaceLanguages  []RaceLanguageOption
+	LanguageLimits []LanguageLimitBand
+
 	MinAbility, MaxAbility int
 	MinHPMax, MaxHPMax     int
 	MinXP, MaxXP           int
@@ -468,6 +478,19 @@ type CreationOptions struct {
 	MaxStrExceptional      int
 	MaxSkillPoints         int
 	MaxNameLen             int
+}
+
+// RaceLanguageOption is a race's own language and its PHB list of languages.
+type RaceLanguageOption struct {
+	Race   string
+	Native string
+	List   []string
+}
+
+// LanguageLimitBand is PHB Table 4's "# of Lang." for the Intelligence scores
+// IntMin to IntMax.
+type LanguageLimitBand struct {
+	IntMin, IntMax, Limit int
 }
 
 // CreationOptions reads the races of each creatable class from the rules.
@@ -501,5 +524,14 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		}
 		out.Classes = append(out.Classes, opt)
 	}
+	out.Languages = s.languages.All()
+	if len(out.Languages) > 0 {
+		for _, race := range Races {
+			out.RaceLanguages = append(out.RaceLanguages, RaceLanguageOption{
+				Race: race, Native: s.languages.Native(race), List: s.languages.RaceList(race),
+			})
+		}
+	}
+	out.LanguageLimits = languageLimitBands()
 	return out, nil
 }

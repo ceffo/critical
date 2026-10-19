@@ -34,7 +34,7 @@ func equipmentOf(t *testing.T, format int, mutate func(rules, equipment map[stri
 		rawEquipment, err = json.Marshal(equipment)
 		require.NoError(t, err)
 	}
-	return ruletablesadpt.Parse(format, rawRules, rawEquipment)
+	return ruletablesadpt.Parse(format, rawRules, rawEquipment, nil)
 }
 
 func list(d map[string]any, key string) []any { return d[key].([]any) }
@@ -121,7 +121,7 @@ func TestParse_Step13_1_ReadsFormat7Equipment(t *testing.T) {
 func TestParse_Step13_2_EquipmentBelongsToFormat7(t *testing.T) {
 	_, err := equipmentOf(t, catalogue.FormatSpheres, func(_, _ map[string]any) {})
 	require.ErrorContains(t, err, "format 6 carries no equipment", "the fixture's equipment is refused in format 6")
-	_, err = ruletablesadpt.Parse(catalogue.FormatSpheres, mustRules(t, catalogue.FormatEquipment), nil)
+	_, err = ruletablesadpt.Parse(catalogue.FormatSpheres, mustRules(t, catalogue.FormatEquipment), nil, nil)
 	require.ErrorContains(t, err, "format 6 carries no equipment", "the two tables are refused in format 6")
 
 	tests := []struct {
@@ -139,9 +139,9 @@ func TestParse_Step13_2_EquipmentBelongsToFormat7(t *testing.T) {
 		})
 	}
 	// A format-6 artifact without any of it still starts.
-	_, err = ruletablesadpt.Parse(catalogue.FormatSpheres, mustRules(t, catalogue.FormatSpheres), nil)
+	_, err = ruletablesadpt.Parse(catalogue.FormatSpheres, mustRules(t, catalogue.FormatSpheres), nil, nil)
 	require.NoError(t, err)
-	_, err = ruletablesadpt.Parse(catalogue.FormatEquipment, mustRules(t, catalogue.FormatEquipment), nil)
+	_, err = ruletablesadpt.Parse(catalogue.FormatEquipment, mustRules(t, catalogue.FormatEquipment), nil, nil)
 	require.ErrorContains(t, err, "format 7 needs the equipment object")
 }
 

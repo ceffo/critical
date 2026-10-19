@@ -464,6 +464,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	}
 	got, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
+	got.LanguageLimits = nil // Table 4's bands are TestCreationOptions_Step4_OfferTheCatalogueTheRaceListsAndTheLimits's
 	assert.Equal(t, charactersvc.CreationOptions{
 		Classes: []charactersvc.ClassOption{
 			{

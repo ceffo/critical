@@ -234,9 +234,12 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 	// The character's level, THAC0, saves and slots are derived from its
 	// class, race and XP total (ADR 0030 steps 3 to 8): the class tables and
 	// what the XP ledger's entries add.
+	// The language catalogue (ADR 0032 step 4) is the artifact's: nil before
+	// format 8, which knows no language.
+	languages, _ := ruleTables.Languages()
 	charSvc, err := charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
-		Owners: characterDAL, Tx: tx, Sessions: authSvc, Log: logSvc,
+		Owners: characterDAL, Tx: tx, Sessions: authSvc, Log: logSvc, Languages: languages,
 	})
 	if err != nil {
 		_ = db.Close()
@@ -314,7 +317,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		_ = db.Close()
 		return nil, err
 	}
-	detailsSvc, err := detailssvc.New(characterDAL, tx)
+	detailsSvc, err := detailssvc.New(characterDAL, tx, languages)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -473,7 +476,7 @@ func registerRestorers(log actionlogsvc.SVC, restorers map[string]actionlog.Rest
 // database recorded (step 9.5).
 // The seeds hold no rule tables (step 9.6.3).
 func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.Tables, error) {
-	t, err := ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment)
+	t, err := ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment, artifact.Languages)
 	if err != nil {
 		return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
 	}

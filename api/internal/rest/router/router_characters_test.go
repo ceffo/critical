@@ -248,6 +248,7 @@ func TestCharacters_SlowDatabaseIsUnavailable(t *testing.T) {
 // level, null at the last level; the race code apart from the free-text race.
 // The stored sheet figures are not served.
 func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
+	five, zero := 5, 0
 	h, m := newRouterWith(t, usersAuth(t, map[string]authsvc.User{
 		"ann": {ID: annID, Email: "ann@example.com", Role: authsvc.RolePlayer, CurrentCharacterID: 3},
 	}))
@@ -267,6 +268,10 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 			Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 		},
 		Details: charactersvc.Details{Alignment: "lawful_good", Languages: []string{}},
+		Warnings: []charactersvc.Warning{
+			{Code: "alignment_not_allowed", Field: "alignment"},
+			{Code: "languages_over_limit", Field: "languages", Count: &five, Limit: &zero},
+		},
 	}, nil).Once()
 
 	rec := as(h, "ann", "GET", "/api/character", "")
@@ -277,7 +282,10 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 	assert.NotContains(t, body, "race", "the free-text race detail is gone")
 	// ADR 0032 step 8: the sex is missing, and the bard's lawful good is kept with a warning.
 	assert.Equal(t, []any{"sex"}, body["missing"])
-	assert.Equal(t, []any{map[string]any{"code": "alignment_not_allowed", "field": "alignment"}}, body["warnings"])
+	assert.Equal(t, []any{
+		map[string]any{"code": "alignment_not_allowed", "field": "alignment"},
+		map[string]any{"code": "languages_over_limit", "field": "languages", "count": float64(5), "limit": float64(0)},
+	}, body["warnings"], "the languages warning carries its figures, a limit of 0 included (ADR 0032 step 4.2)")
 	for _, gone := range []string{"level", "thac0Base", "saveParaPoison", "saveSpell"} {
 		assert.NotContains(t, body, gone)
 	}

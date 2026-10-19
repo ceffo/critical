@@ -47,6 +47,8 @@ type Querier interface {
 	LearnFailureRefs(ctx context.Context) ([]LearnFailureRefsRow, error)
 	// The identity migration (013): every character's stored alignment and sex, to map to codes.
 	ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error)
+	// The languages migration (014): every character's stored language list, to map to codes.
+	ListCharacterLanguages(ctx context.Context) ([]ListCharacterLanguagesRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
 	// rollback releases it. One fixed key for the whole database.
 	LockWriters(ctx context.Context) error
@@ -59,6 +61,8 @@ type Querier interface {
 	SeedOffers(ctx context.Context, arg SeedOffersParams) ([]string, error)
 	// The mapped (or cleared) alignment and sex of a character, and its race detail discarded.
 	SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error
+	// The mapped language list of a character (a JSON list of codes).
+	SetCharacterLanguages(ctx context.Context, arg SetCharacterLanguagesParams) error
 	// The seed character's alignment and sex when it lacks them (migration 013): a value set since is
 	// kept, so a rerun changes nothing.
 	SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error

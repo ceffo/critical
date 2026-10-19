@@ -1,5 +1,5 @@
 {
-  "format": 7,
+  "format": 8,
   "version": "1970-01-01",
   "spells": [
     {
@@ -1313,6 +1313,45 @@
       {"kind": "staff", "modifier": 2},
       {"kind": "wand", "modifier": 3},
       {"kind": "misc", "modifier": 3}
+    ],
+    "race_languages": [
+      {"race": "human", "language": "common", "native": true},
+      {"race": "dwarf", "language": "common"},
+      {"race": "dwarf", "language": "dwarvish", "native": true},
+      {"race": "dwarf", "language": "gnomish"},
+      {"race": "dwarf", "language": "goblin"},
+      {"race": "dwarf", "language": "kobold"},
+      {"race": "dwarf", "language": "orcish"},
+      {"race": "elf", "language": "common"},
+      {"race": "elf", "language": "elvish", "native": true},
+      {"race": "elf", "language": "gnomish"},
+      {"race": "elf", "language": "halfling"},
+      {"race": "elf", "language": "goblin"},
+      {"race": "elf", "language": "hobgoblin"},
+      {"race": "elf", "language": "orcish"},
+      {"race": "elf", "language": "gnoll"},
+      {"race": "gnome", "language": "common"},
+      {"race": "gnome", "language": "dwarvish"},
+      {"race": "gnome", "language": "gnomish", "native": true},
+      {"race": "gnome", "language": "halfling"},
+      {"race": "gnome", "language": "goblin"},
+      {"race": "gnome", "language": "kobold"},
+      {"race": "gnome", "language": "burrowers"},
+      {"race": "half_elf", "language": "common", "native": true},
+      {"race": "half_elf", "language": "elvish"},
+      {"race": "half_elf", "language": "gnomish"},
+      {"race": "half_elf", "language": "halfling"},
+      {"race": "half_elf", "language": "goblin"},
+      {"race": "half_elf", "language": "hobgoblin"},
+      {"race": "half_elf", "language": "orcish"},
+      {"race": "half_elf", "language": "gnoll"},
+      {"race": "halfling", "language": "common"},
+      {"race": "halfling", "language": "halfling", "native": true},
+      {"race": "halfling", "language": "dwarvish"},
+      {"race": "halfling", "language": "elvish"},
+      {"race": "halfling", "language": "gnomish"},
+      {"race": "halfling", "language": "goblin"},
+      {"race": "halfling", "language": "orcish"}
     ]
   },
   "equipment": {
@@ -1415,5 +1454,18 @@
       {"code": "medium_shield", "name": {"en": "Fixture medium shield", "fr": "Banc d'essai medium shield"}, "kind": "medium", "ac_melee": 1, "ac_missile": 1},
       {"code": "body_shield", "name": {"en": "Fixture body shield", "fr": "Banc d'essai body shield"}, "kind": "body", "ac_melee": 1, "ac_missile": 2}
     ]
-  }
+  },
+  "languages": [
+    {"code": "common", "name": {"en": "Common", "fr": "Commun"}},
+    {"code": "dwarvish", "name": {"en": "Dwarvish", "fr": "Nain"}},
+    {"code": "elvish", "name": {"en": "Elvish", "fr": "Elfique"}},
+    {"code": "gnomish", "name": {"en": "Gnomish", "fr": "Gnome"}},
+    {"code": "halfling", "name": {"en": "Halfling", "fr": "Halfelin"}},
+    {"code": "goblin", "name": {"en": "Goblin", "fr": "Gobelin"}},
+    {"code": "hobgoblin", "name": {"en": "Hobgoblin", "fr": "Hobgobelin"}},
+    {"code": "kobold", "name": {"en": "Kobold", "fr": "Kobold"}},
+    {"code": "orcish", "name": {"en": "Orcish", "fr": "Orque"}},
+    {"code": "gnoll", "name": {"en": "Gnoll", "fr": "Gnoll"}},
+    {"code": "burrowers", "name": {"en": "Burrowers' speech", "fr": "Parler des fouisseurs"}}
+  ]
 }

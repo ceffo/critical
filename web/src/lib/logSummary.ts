@@ -15,77 +15,10 @@ import { checkAdjustedTarget } from "./skillAdjust";
 import { formatAc, formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
-import type { SpellExposure, SpellFailure } from "@/types/spells";
+import type { CastBreakdown, ExposureBreakdown } from "@/types/spells";
 
-/** Payload of cast entries (castsvc castRecord). */
-export interface CastLogPayload {
-  action: "cast" | "received" | "effect";
-  spellId: string;
-  spell: string;
-  casterLevel: number;
-  /** The key of the cast-time mode; absent for a spell without modes and on older casts. */
-  mode?: string;
-  buff?: {
-    name: string;
-    rounds?: number;
-    charges?: number;
-    strGain?: number;
-    applied: boolean;
-  };
-  damage?: {
-    total: number;
-    type: string;
-    /** Absent on casts logged before the dice were recorded. */
-    dice?: string;
-    instances?: number;
-    rounds?: number;
-    /** Every instance roll, round by round; `parts` are its part rolls (damage made of parts). */
-    rolls?: {
-      formula: string;
-      dice: { sides: number; value: number }[];
-      total: number;
-      parts?: {
-        formula: string;
-        dice: { sides: number; value: number }[];
-        total: number;
-      }[];
-      /** The round or instance of a damage made of dice steps; absent without steps and on older casts. */
-      step?: number;
-    }[];
-    /** The parts of one instance and what a save does to each; absent without parts and on older casts. */
-    parts?: { formula: string; save: string }[];
-    /** The total without the parts a save negates; absent without parts and on older casts. */
-    totalOnSave?: number;
-    /** "round" or "instance" for a damage made of dice steps; absent otherwise and on older casts. */
-    stepsPer?: "round" | "instance";
-  };
-  /** Levels of the extra slots the cast granted. */
-  extraSlots?: number[];
-  /** The inventory item the cast spent. */
-  item?: { itemId: string; name: string; remaining: number };
-  /** The spell's to-hit roll. */
-  attack?: { d20: number; targetAc: number; hit: boolean };
-  /** The target's saving throw (the DM's side); absent on older casts. */
-  save?: { type: string; effect: string };
-  /** The exposure damage served at casterLevel (as GET /api/spells serves it); absent without one. */
-  exposure?: SpellExposure;
-  /** The low-Wisdom spell failure d100 (ADR 0030 step 14); absent: no die. */
-  failure?: SpellFailure;
-}
-
-/** Payload of exposure entries (castsvc exposureRecord, ADR 0008 step 16). */
-export interface ExposureLogPayload {
-  spellId: string;
-  spell: string;
-  casterLevel: number;
-  /** The exposure mode's key; absent without modes. */
-  mode?: string;
-  round: number;
-  /** The Bard was exposed: the entry's HP delta is the damage. */
-  onSelf: boolean;
-  damage: NonNullable<CastLogPayload["damage"]>;
-  /** The exposure damage served at casterLevel, for the next round. */
-  exposure?: SpellExposure;
+/** Payload of exposure entries (castsvc.ExposureBreakdown, ADR 0008 step 16). */
+export interface ExposureLogPayload extends ExposureBreakdown {
   /** Set by the server when the HP floor cut an exposure on the Bard: what was asked and applied. */
   hpRequested?: number;
   hpApplied?: number;
@@ -129,16 +62,16 @@ function exposureText(
   return parts.join(" · ");
 }
 
-export function castPayload(e: LogEntry): CastLogPayload | null {
+export function castPayload(e: LogEntry): CastBreakdown | null {
   if (e.kind !== "cast") return null;
-  const p = e.payload as Partial<CastLogPayload> | null;
+  const p = e.payload as Partial<CastBreakdown> | null;
   return p && typeof p.action === "string" && typeof p.spellId === "string"
-    ? (p as CastLogPayload)
+    ? (p as CastBreakdown)
     : null;
 }
 
 function castText(
-  p: CastLogPayload,
+  p: CastBreakdown,
   t: TFunction,
   spellName: SpellNamer,
   names: InventoryNamer,

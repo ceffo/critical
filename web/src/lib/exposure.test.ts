@@ -198,32 +198,12 @@ describe("exposure entries", () => {
     });
   });
 
-  it("the card renders from the payload as the endpoint's result, with the served exposure", async () => {
+  it("the card renders from the payload, the endpoint's answer shape, with the served exposure", async () => {
     const t = await makeT("en");
     const model = cardModel(entry(payload), t);
     expect(model).toEqual({
       layout: "exposure",
-      exposure: {
-        entryId: 7,
-        spellId: "cloudkill",
-        name: "Cloudkill",
-        casterLevel: 15,
-        mode: undefined,
-        round: 2,
-        onSelf: true,
-        hpDelta: 0,
-        damage: {
-          dice: "1d10",
-          type: "poison",
-          instances: 1,
-          rounds: 1,
-          rolls: payload.damage.rolls,
-          total: 7,
-          parts: undefined,
-          stepsPer: undefined,
-        },
-        exposure: cloud,
-      },
+      exposure: { ...payload, logEntryId: 7, hpDelta: 0 },
     });
     expect(cardHeader("exposure", model, entry(payload), t, "en").tag).toBe(
       "Exposure",
@@ -235,9 +215,9 @@ describe("exposure entries", () => {
 
   it("a live exposure is the card until the log has caught up", () => {
     const result: ExposureResult = {
-      entryId: 8,
+      logEntryId: 8,
       spellId: "cloudkill",
-      name: "Cloudkill",
+      spell: "Cloudkill",
       casterLevel: 15,
       round: 3,
       onSelf: false,

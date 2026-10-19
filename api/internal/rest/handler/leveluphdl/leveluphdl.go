@@ -9,7 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/ceffo/critical/api/internal/rest/handler/characterhdl"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 // Router is the chi subset we need.
@@ -42,17 +42,17 @@ type RollBody struct {
 // value after the Constitution 20+ floor (both null for a fixed gain),
 // `pending` the levels still owed.
 type ResultDTO struct {
-	Level         int                            `json:"level"`
-	HitDie        int                            `json:"hitDie"`
-	Rolled        *int                           `json:"rolled"`
-	Counted       *int                           `json:"counted"`
-	ConAdjustment int                            `json:"conAdjustment"`
-	Gain          int                            `json:"gain"`
-	Fixed         bool                           `json:"fixed"`
-	Manual        bool                           `json:"manual"`
-	HPMaxBefore   int                            `json:"hpMaxBefore"`
-	HPMaxAfter    int                            `json:"hpMaxAfter"`
-	Pending       []characterhdl.PendingLevelDTO `json:"pending"`
+	Level         int                    `json:"level"`
+	HitDie        int                    `json:"hitDie"`
+	Rolled        *int                   `json:"rolled"`
+	Counted       *int                   `json:"counted"`
+	ConAdjustment int                    `json:"conAdjustment"`
+	Gain          int                    `json:"gain"`
+	Fixed         bool                   `json:"fixed"`
+	Manual        bool                   `json:"manual"`
+	HPMaxBefore   int                    `json:"hpMaxBefore"`
+	HPMaxAfter    int                    `json:"hpMaxAfter"`
+	Pending       []wire.PendingLevelDTO `json:"pending"`
 }
 
 // Roll is POST /api/character/levelup/roll.
@@ -75,7 +75,7 @@ func Roll(charID CharacterIDFunc, svc roller) render.HandlerFunc {
 			Level: res.Level, HitDie: res.HitDie, Rolled: res.Rolled, Counted: res.Counted,
 			ConAdjustment: res.ConAdjustment, Gain: res.Gain, Fixed: res.Fixed, Manual: res.Manual,
 			HPMaxBefore: res.HPMaxBefore, HPMaxAfter: res.HPMaxAfter,
-			Pending: characterhdl.PendingDTO(res.Pending),
+			Pending: wire.PendingDTO(res.Pending),
 		})
 		return nil
 	}

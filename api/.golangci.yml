@@ -14,7 +14,20 @@ linters:
     - unconvert
     - misspell
     - forbidigo
+    - depguard
   settings:
+    depguard:
+      # A handler package never imports another (docs/clean_architecture.md, section 7.3): a
+      # wire shape served by several handlers lives once, in internal/rest/wire or in the
+      # domain's wire types (combatsvc, castsvc, spelleffectsvc, localized.Text).
+      rules:
+        handlers:
+          files:
+            - "**/internal/rest/handler/**"
+            - "!$test"
+          deny:
+            - pkg: github.com/ceffo/critical/api/internal/rest/handler
+              desc: "a handler package never imports another handler package: share the shape through internal/rest/wire"
     govet:
       enable-all: true
       disable:

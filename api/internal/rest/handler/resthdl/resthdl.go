@@ -7,8 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/ceffo/critical/api/internal/rest/handler/itemhdl"
-	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 // Router is the chi subset we need.
@@ -27,8 +26,8 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc restsvc.SVC) {
 
 // LongRestDTO is the wire shape of a long rest.
 type LongRestDTO struct {
-	Slots []spellhdl.SpellSlotDTO `json:"slots"`
-	Items []itemhdl.ItemDTO       `json:"items"`
+	Slots []wire.SpellSlotDTO `json:"slots"`
+	Items []wire.ItemDTO      `json:"items"`
 	// EntryID is the long rest's action-log entry.
 	EntryID int64 `json:"entryId"`
 }
@@ -40,7 +39,7 @@ func LongRest(charID CharacterIDFunc, svc restsvc.SVC) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, LongRestDTO{Slots: spellhdl.SlotsToDTO(res.Slots), Items: itemhdl.ToDTOs(res.Items), EntryID: res.EntryID})
+		render.OK(r.Context(), w, LongRestDTO{Slots: wire.SlotsToDTO(res.Slots), Items: wire.ItemsToDTO(res.Items), EntryID: res.EntryID})
 		return nil
 	}
 }
@@ -53,7 +52,7 @@ func ResetSlotsAlias(charID CharacterIDFunc, svc restsvc.SVC) render.HandlerFunc
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, spellhdl.SlotsToDTO(res.Slots))
+		render.OK(r.Context(), w, wire.SlotsToDTO(res.Slots))
 		return nil
 	}
 }

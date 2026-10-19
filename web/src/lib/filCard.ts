@@ -5,7 +5,7 @@ import type { TFunction } from "i18next";
 import type { HpBreakdown, LogEntry, LogKind } from "@/types/log";
 import type { Modifier, RollResult, SaveBreakdown } from "@/types/combat";
 import type { UseResult } from "@/types/items";
-import type { CastResult, ExposureResult } from "@/types/spells";
+import type { CastBreakdown, CastResult, ExposureResult } from "@/types/spells";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { TurnResult } from "@/types/character";
@@ -29,7 +29,6 @@ import {
   skillName,
   turnPayload,
   undeadName,
-  type CastLogPayload,
 } from "./logSummary";
 
 /** The last roll of this session as the roll endpoints returned it (stores/roll.ts LastRoll). */
@@ -101,9 +100,7 @@ export function filterEntries(
 
 /** The log entry recording a live result. */
 export function liveEntryId(last: LiveResult): number | undefined {
-  return last.kind === "cast" || last.kind === "exposure"
-    ? last.result.entryId
-    : last.result.logEntryId;
+  return last.result.logEntryId;
 }
 
 /**
@@ -205,7 +202,7 @@ export interface InfoView {
 export type CardModel =
   | { layout: "attack"; roll: RollResult }
   | { layout: "save"; save: SaveView }
-  | { layout: "cast"; cast: CastLogPayload }
+  | { layout: "cast"; cast: CastBreakdown }
   | { layout: "castLive"; result: CastResult }
   | { layout: "exposure"; exposure: ExposureResult }
   | { layout: "item"; item: UseResult }
@@ -289,28 +286,9 @@ export function exposureFromPayload(
   p: ExposureLogPayload,
 ): ExposureResult {
   return {
-    entryId: e.id,
-    spellId: p.spellId,
-    name: p.spell,
-    casterLevel: p.casterLevel,
-    mode: p.mode,
-    round: p.round,
-    onSelf: p.onSelf,
+    ...p,
+    logEntryId: e.id,
     hpDelta: e.status === "voided" ? e.hpDelta : e.effectiveHpDelta,
-    damage: {
-      dice: p.damage.dice ?? "",
-      type: p.damage.type,
-      instances: p.damage.instances ?? 1,
-      rounds: p.damage.rounds ?? 1,
-      rolls: p.damage.rolls ?? [],
-      total: p.damage.total,
-      parts: p.damage.parts?.map((x) => ({
-        formula: x.formula,
-        save: x.save as "none" | "negates",
-      })),
-      stepsPer: p.damage.stepsPer,
-    },
-    exposure: p.exposure,
   };
 }
 
@@ -405,10 +383,10 @@ export function cardHeader(
       subtitle = spellName(model.cast.spellId, model.cast.spell);
       break;
     case "castLive":
-      subtitle = spellName(model.result.spellId, model.result.name);
+      subtitle = spellName(model.result.spellId, model.result.spell);
       break;
     case "exposure":
-      subtitle = spellName(model.exposure.spellId, model.exposure.name);
+      subtitle = spellName(model.exposure.spellId, model.exposure.spell);
       break;
     case "item":
       subtitle = names.item(model.item.itemId, model.item.name);
@@ -580,7 +558,7 @@ export interface CastPartView {
  * The dice instances of a cast's damage, from its payload; null on a cast logged before they were
  * recorded (the card then shows the total only).
  */
-export function castInstances(c: CastLogPayload): CastInstanceView[] | null {
+export function castInstances(c: CastBreakdown): CastInstanceView[] | null {
   const rolls = c.damage?.rolls;
   if (!rolls || rolls.length === 0) return null;
   const saves = c.damage?.parts;

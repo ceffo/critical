@@ -62,7 +62,7 @@ func (s *service) Expose(ctx context.Context, characterID int64, req ExposureReq
 	if res.Damage, err = s.rollExposure(entry, damage, req.CasterLevel, round); err != nil {
 		return ExposureResult{}, fmt.Errorf("%s exposure: %w", entry.ID, err)
 	}
-	payload, err := json.Marshal(toExposureRecord(res))
+	payload, err := json.Marshal(toExposureBreakdown(res))
 	if err != nil {
 		return ExposureResult{}, fmt.Errorf("encode exposure payload: %w", err)
 	}

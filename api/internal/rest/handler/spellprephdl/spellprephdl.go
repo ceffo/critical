@@ -11,7 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 // Router is the chi subset we need.
@@ -43,13 +43,13 @@ type SpellbookEntryDTO struct {
 	AttackRoll      bool    `json:"attack_roll,omitempty"`
 	// Modes are the cast-time modes the cast picks from, with the damage a
 	// cast in each rolls (the first is the default; absent: none).
-	Modes []spellhdl.SpellModeDTO `json:"modes,omitempty"`
+	Modes []spelleffectsvc.ModeAtWire `json:"modes,omitempty"`
 	// Damage is what a cast rolls at the character's level, in the shape
 	// of the spell lookup's (absent: the cast rolls no damage).
-	Damage *spellhdl.SpellDamageDTO `json:"damage,omitempty"`
+	Damage *spelleffectsvc.DamageAtWire `json:"damage,omitempty"`
 	// Exposure is the damage of one round of exposure to the spell's area
 	// at the character's level (absent: none; ADR 0008 step 16).
-	Exposure *spellhdl.SpellExposureDTO `json:"exposure,omitempty"`
+	Exposure *spelleffectsvc.ExposureAtWire `json:"exposure,omitempty"`
 	// CastTarget is the choice of target a buff's cast offers (absent: none,
 	// the cast lands where the spell does): where a cast that names no target
 	// lands, and the one other target the caster may name (onSelf on the
@@ -111,8 +111,8 @@ func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 			dto := SpellbookEntryDTO{
 				ID: e.ID, Name: e.Name, Level: e.Level,
 				SlotSplits: e.Cast.SlotSplits, ConsumeItemType: e.Cast.ConsumeItemType, AttackRoll: e.Cast.AttackRoll,
-				Damage: spellhdl.DamageToDTO(e.Damage), Modes: spellhdl.ModesToDTO(e.Cast.Modes),
-				Exposure: spellhdl.ExposureToDTO(e.Exposure), CastTarget: castTargetToDTO(e.Cast.Target),
+				Damage: e.Damage.Wire(), Modes: spelleffectsvc.ModesWire(e.Cast.Modes),
+				Exposure: e.Exposure.Wire(), CastTarget: castTargetToDTO(e.Cast.Target),
 			}
 			for _, it := range e.Items {
 				dto.Items = append(dto.Items, SpendableItemDTO{ID: it.ID, Name: it.Name, Count: it.Count})
@@ -138,7 +138,7 @@ func Prepare(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, spellhdl.SlotsToDTO(slots))
+		render.OK(r.Context(), w, wire.SlotsToDTO(slots))
 		return nil
 	}
 }

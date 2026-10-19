@@ -1,165 +1,284 @@
 package castsvc
 
 import (
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
-	"github.com/ceffo/critical/api/pkg/formula"
 )
 
-// castRecord is castsvc's JSON encoding of a cast inside its action-log entry
-// (payload), rendered by the UI in the player's language. Entries already in
-// the log must stay decodable: add fields, never rename them.
-type castRecord struct {
+// CastBreakdown is the one wire shape of a cast (a cast, a received spell or
+// an added effect): the payload of its action-log entry and the answer of
+// the cast endpoints (POST /api/spells/{id}/cast, /receive and /effect) are
+// this struct, so the UI reads both with one type. The answer adds the entry
+// id and what is not part of the cast (the catalogue spell, the slots left;
+// see casthdl). Entries already in the log must stay decodable: add fields,
+// never rename them (ADR 0010, ADR 0018); where the payload and the previous
+// answer named a field differently, the payload's name won.
+type CastBreakdown struct {
 	// Action is "cast", "received" or "effect" (added from the lookup, ADR
 	// 0004 step 19).
-	Action      string `json:"action"`
-	SpellID     string `json:"spellId"`
+	Action  string `json:"action"`
+	SpellID string `json:"spellId"`
+	// Spell is the spell's name as recorded at write time (ADR 0023
+	// consequences); the UI names the spell from its id.
 	Spell       string `json:"spell"`
 	CasterLevel int    `json:"casterLevel"`
 	// Mode is the key of the cast-time mode the spell was cast in; absent for
 	// a spell without modes and on casts logged before modes existed.
-	Mode   string        `json:"mode,omitempty"`
-	Buff   *buffRecord   `json:"buff,omitempty"`
-	Damage *damageRecord `json:"damage,omitempty"`
+	Mode   string      `json:"mode,omitempty"`
+	Buff   *CastBuff   `json:"buff,omitempty"`
+	Damage *CastDamage `json:"damage,omitempty"`
 	// ExtraSlots are the levels of the extra slots the cast granted.
 	ExtraSlots []int `json:"extraSlots,omitempty"`
 	// Item is the inventory item the cast spent.
-	Item *itemRecord `json:"item,omitempty"`
-	// Attack is the spell's to-hit roll. Entries logged before the cast
-	// mechanics were general carry it as "orb" (with the gem name), which the
-	// UI no longer reads.
-	Attack *attackRecord `json:"attack,omitempty"`
+	Item *CastItem `json:"item,omitempty"`
+	// Attack is the spell's to-hit roll (one d20, no crit). Entries logged
+	// before the cast mechanics were general carry it as "orb" (with the gem
+	// name), which the UI no longer reads.
+	Attack *CastAttack `json:"attack,omitempty"`
 	// Save is the target's saving throw; absent on casts logged before it
 	// was recorded.
-	Save *saveRecord `json:"save,omitempty"`
+	Save *CastSave `json:"save,omitempty"`
 	// Failure is the low-Wisdom spell failure roll (ADR 0030 step 14);
-	// absent when no die was rolled.
-	Failure *failureRecord `json:"failure,omitempty"`
+	// absent when no die was rolled. Failed: the spell failed (d100 at or
+	// under the chance), its slot spent and nothing applied.
+	Failure *CastFailure `json:"failure,omitempty"`
 	// Exposure is the exposure damage served at the caster level, so the
 	// journal's cast card rolls an exposure from it (ADR 0008 step 16);
 	// absent without one.
-	Exposure *exposureAtRecord `json:"exposure,omitempty"`
+	Exposure *spelleffectsvc.ExposureAtWire `json:"exposure,omitempty"`
+
+	// Level to Untracked are absent on casts logged before the payload was
+	// the answer (ADR 0018: add fields). Level is the spell's level; SlotIndex the slot spent (a
+	// cast only).
+	Level     int  `json:"level"`
+	SlotIndex *int `json:"slotIndex,omitempty"`
+	// Kind, Confidence and Target describe the spell-effects entry (absent:
+	// not in it). Its English note is neither logged nor served: the UI
+	// never showed it, and the backend serves no presentation text.
+	Kind       string `json:"kind,omitempty"`
+	Confidence string `json:"confidence,omitempty"`
+	Target     string `json:"target,omitempty"`
+	// TextOnly is why the cast shows only its text (absent: it does more).
+	TextOnly string `json:"textOnly,omitempty"`
+	// Untracked are the effects to apply by hand ("[]": none).
+	Untracked []CastUntracked `json:"untracked"`
+
+	// LogEntryID is the entry recording the cast: set on the endpoints'
+	// answer, never in the payload (the entry carries its own id).
+	LogEntryID int64 `json:"logEntryId,omitempty"`
 }
 
-// saveRecord is the target's saving throw (the DM's side).
-type saveRecord struct {
+// CastSave is the target's saving throw (the DM's side).
+type CastSave struct {
 	Type   string `json:"type"`
 	Effect string `json:"effect"`
 }
 
-// dieRecord is one die thrown: its sides and the value it showed.
-type dieRecord struct {
-	Sides int `json:"sides"`
-	Value int `json:"value"`
-}
-
-// rollRecord is one evaluated damage formula (one instance). Parts are the
-// rolls of the instance's damage parts (absent: no parts, or logged before
-// parts existed).
-type rollRecord struct {
-	Formula string       `json:"formula"`
-	Dice    []dieRecord  `json:"dice"`
-	Total   int          `json:"total"`
-	Parts   []rollRecord `json:"parts,omitempty"`
+// FormulaRoll is one evaluated formula of a cast: the formula, every die it
+// threw (combatsvc.BreakdownDie, the one die shape) and the result. Parts
+// are the rolls of the instance's damage parts, in the order of
+// CastDamage.Parts (absent: no parts, or logged before parts existed).
+type FormulaRoll struct {
+	Formula string                   `json:"formula"`
+	Dice    []combatsvc.BreakdownDie `json:"dice"`
+	Total   int                      `json:"total"`
+	Parts   []FormulaRoll            `json:"parts,omitempty"`
 	// Step is the dice step (round or instance number) of the roll; absent
 	// without steps and on casts logged before steps existed.
 	Step int `json:"step,omitempty"`
 }
 
-// itemRecord is the item a cast spent and how many are left.
-type itemRecord struct {
+// CastItem is the item a cast spent and how many are left.
+type CastItem struct {
 	ItemID    string `json:"itemId"`
 	Name      string `json:"name"`
 	Remaining int    `json:"remaining"`
 }
 
-// failureRecord is a cast's spell failure d100: failed at or under the
+// CastFailure is a cast's spell failure d100: failed at or under the
 // chance.
-type failureRecord struct {
+type CastFailure struct {
 	D100   int  `json:"d100"`
 	Chance int  `json:"chance"`
 	Failed bool `json:"failed"`
 }
 
-// attackRecord is a spell's to-hit roll.
-type attackRecord struct {
+// CastAttack is a spell's to-hit roll; what a hit does is the DM's call.
+// BaseThac0 to HitMargin are absent on casts logged before the payload was
+// the answer.
+type CastAttack struct {
 	D20      int  `json:"d20"`
 	TargetAC int  `json:"targetAc"`
 	Hit      bool `json:"hit"`
+
+	BaseThac0      int                           `json:"baseThac0"`
+	Modifiers      []combatsvc.BreakdownModifier `json:"modifiers"`
+	EffectiveThac0 int                           `json:"effectiveThac0"`
+	TargetACNeeded int                           `json:"targetACNeeded"`
+	HitMargin      int                           `json:"hitMargin"`
+	// D20Roll is D20 under the name the previous release's web reads from
+	// the answer, kept for one release so a page of that release still shows
+	// the die against this server during the rolling deploy (ADR 0024 step
+	// 5.2). Unlike the other compat keys it is part of the shared payload, so
+	// it is logged too (a harmless duplicate of d20). Drop it in the next
+	// release.
+	D20Roll int `json:"d20Roll,omitempty"`
 }
 
-type buffRecord struct {
+// CastBuff is the buff a cast puts on (or tells an ally about) and the rolls
+// behind it. ID to Effects are absent on casts logged before the payload was
+// the answer.
+type CastBuff struct {
 	Name    string `json:"name"`
 	Rounds  int    `json:"rounds,omitempty"`
 	Charges int    `json:"charges,omitempty"`
 	StrGain int    `json:"strGain,omitempty"`
 	Applied bool   `json:"applied"`
+
+	ID           string       `json:"id,omitempty"`
+	DurationRoll *FormulaRoll `json:"durationRoll,omitempty"`
+	ChargesRoll  *FormulaRoll `json:"chargesRoll,omitempty"`
+	ChargeUnit   string       `json:"chargeUnit,omitempty"`
+	StrGainRoll  *FormulaRoll `json:"strGainRoll,omitempty"`
+	// Effects are the engine-tracked effects, keyed like the buff API
+	// (to_hit, ac, str_bonus, ...; "{}": none).
+	Effects map[string]float64 `json:"effects"`
 }
 
-// damageRecord: Dice, Instances, Rounds and Rolls (every instance roll, round
-// by round, with its dice) are absent on casts logged before they were
-// recorded. Parts and TotalOnSave are set only for a damage made of parts.
-type damageRecord struct {
-	Total       int          `json:"total"`
-	Type        string       `json:"type"`
-	Dice        string       `json:"dice,omitempty"`
-	Instances   int          `json:"instances,omitempty"`
-	Rounds      int          `json:"rounds,omitempty"`
-	Rolls       []rollRecord `json:"rolls,omitempty"`
-	Parts       []partRecord `json:"parts,omitempty"`
-	TotalOnSave *int         `json:"totalOnSave,omitempty"`
+// CastDamage is a damage roll: Dice, Instances, Rounds and Rolls (every
+// instance roll, round by round, with its dice) are absent on casts logged
+// before they were recorded. Parts and TotalOnSave are set only for a damage
+// made of parts.
+type CastDamage struct {
+	Total       int              `json:"total"`
+	Type        string           `json:"type"`
+	Dice        string           `json:"dice,omitempty"`
+	Instances   int              `json:"instances"`
+	Rounds      int              `json:"rounds"`
+	Rolls       []FormulaRoll    `json:"rolls"`
+	Parts       []CastDamagePart `json:"parts,omitempty"`
+	TotalOnSave *int             `json:"totalOnSave,omitempty"`
 	// StepsPer is "round" or "instance" for a damage made of dice steps (each
 	// roll carries its step); absent otherwise.
 	StepsPer string `json:"stepsPer,omitempty"`
 }
 
-// partRecord is one damage part: its formula and what a save does to it.
-type partRecord struct {
+// CastDamagePart is one damage part: its formula and what a save does to it
+// (none, negates).
+type CastDamagePart struct {
 	Formula string `json:"formula"`
 	Save    string `json:"save"`
 }
 
-func toRecord(res CastResult) castRecord {
-	r := castRecord{Action: string(res.Source), SpellID: res.SpellID, Spell: res.Name, CasterLevel: res.CasterLevel, Mode: res.Mode}
+// CastUntracked is an effect to apply by hand.
+type CastUntracked struct {
+	Key       string `json:"key"`
+	Value     int    `json:"value"`
+	Condition string `json:"condition,omitempty"`
+}
+
+// NewCastBreakdown is the breakdown of res as the cast endpoints answer it:
+// the payload logged for res plus the id of its entry.
+func NewCastBreakdown(res CastResult) CastBreakdown {
+	out := toBreakdown(res)
+	out.LogEntryID = res.EntryID
+	return out
+}
+
+// toBreakdown is the payload logged for res: its breakdown without the
+// entry id.
+func toBreakdown(res CastResult) CastBreakdown {
+	r := CastBreakdown{
+		Action: string(res.Source), SpellID: res.SpellID, Spell: res.Name, CasterLevel: res.CasterLevel, Mode: res.Mode,
+		Level: res.Level, SlotIndex: res.SlotIndex, Kind: string(res.Kind), Confidence: string(res.Confidence),
+		Target: string(res.Target), TextOnly: string(res.TextOnly),
+		Untracked: []CastUntracked{},
+	}
 	if b := res.Buff; b != nil {
-		r.Buff = &buffRecord{Name: b.Buff.Name, Rounds: b.Buff.Duration, Charges: b.Buff.Charges, Applied: b.Applied}
+		r.Buff = &CastBuff{
+			Name: b.Buff.Name, Rounds: b.Buff.Duration, Charges: b.Buff.Charges, Applied: b.Applied,
+			ID: b.Buff.ID, DurationRoll: toFormulaRoll(b.Duration), ChargesRoll: toFormulaRoll(b.Charges),
+			ChargeUnit: b.ChargeUnit, StrGainRoll: toFormulaRoll(b.StrGain), Effects: buffEffects(b),
+		}
 		if b.StrGain != nil {
 			r.Buff.StrGain = b.StrGain.Total
 		}
 	}
-	r.Damage = toDamageRecord(res.Damage)
-	r.Exposure = toExposureAtRecord(res.Exposure)
+	r.Damage = toCastDamage(res.Damage)
+	r.Exposure = res.Exposure.Wire()
 	if s := res.Save; s != nil {
-		r.Save = &saveRecord{Type: string(s.Type), Effect: string(s.Effect)}
+		r.Save = &CastSave{Type: string(s.Type), Effect: string(s.Effect)}
 	}
 	r.ExtraSlots = res.ExtraSlots
 	if c := res.Consumed; c != nil {
-		r.Item = &itemRecord{ItemID: c.ItemID, Name: c.Name, Remaining: c.Remaining}
+		r.Item = &CastItem{ItemID: c.ItemID, Name: c.Name, Remaining: c.Remaining}
 	}
 	if a := res.Attack; a != nil {
-		r.Attack = &attackRecord{D20: a.D20Roll, TargetAC: a.TargetAC, Hit: a.Hit}
+		r.Attack = &CastAttack{
+			D20: a.D20Roll, TargetAC: a.TargetAC, Hit: a.Hit,
+			BaseThac0: a.BaseThac0, Modifiers: combatsvc.BreakdownModifiers(a.Modifiers), EffectiveThac0: a.EffectiveThac0,
+			TargetACNeeded: a.TargetACNeeded, HitMargin: a.HitMargin, D20Roll: a.D20Roll,
+		}
 	}
 	if f := res.Failure; f != nil {
-		r.Failure = &failureRecord{D100: f.Roll, Chance: f.Chance, Failed: f.Failed}
+		r.Failure = &CastFailure{D100: f.Roll, Chance: f.Chance, Failed: f.Failed}
+	}
+	for _, u := range res.Untracked {
+		r.Untracked = append(r.Untracked, CastUntracked(u))
 	}
 	return r
 }
 
-func toRollRecord(roll Roll) rollRecord {
-	dice := make([]dieRecord, len(roll.Dice))
-	for i, die := range roll.Dice {
-		dice[i] = dieRecord(die)
+// buffEffects are the engine-tracked effects of b, keyed like the buff API.
+func buffEffects(b *AppliedBuff) map[string]float64 {
+	fx := b.Buff.Effects
+	out := map[string]float64{}
+	ints := map[string]*int{
+		"min_str": fx.MinStr, "weapon_buff": fx.WeaponBuff, "save_bonus": fx.SaveBonus,
+		"str_bonus": fx.StrBonus, "str_max": fx.StrMax,
+		"ac": fx.AC, "to_hit": fx.ToHit, "damage": fx.Damage,
 	}
-	out := rollRecord{Formula: roll.Formula, Dice: dice, Total: roll.Total, Step: roll.Step}
-	for _, p := range roll.Parts {
-		out.Parts = append(out.Parts, toRollRecord(p))
+	for k, v := range ints {
+		if v != nil {
+			out[k] = float64(*v)
+		}
+	}
+	if fx.SpellsBuff != nil {
+		out["spells_buff"] = *fx.SpellsBuff
+	}
+	if fx.Multiplier != nil {
+		out["multiplier"] = *fx.Multiplier
 	}
 	return out
 }
 
-// exposureRecord is castsvc's JSON encoding of one round of exposure inside
-// its action-log entry (ADR 0008 step 16). Add fields, never rename them.
-type exposureRecord struct {
-	SpellID     string `json:"spellId"`
+func toFormulaRoll(roll *Roll) *FormulaRoll {
+	if roll == nil {
+		return nil
+	}
+	out := formulaRoll(*roll)
+	return &out
+}
+
+func formulaRoll(roll Roll) FormulaRoll {
+	dice := make([]combatsvc.BreakdownDie, len(roll.Dice))
+	for i, die := range roll.Dice {
+		dice[i] = combatsvc.BreakdownDie(die)
+	}
+	out := FormulaRoll{Formula: roll.Formula, Dice: dice, Total: roll.Total, Step: roll.Step}
+	for _, p := range roll.Parts {
+		out.Parts = append(out.Parts, formulaRoll(p))
+	}
+	return out
+}
+
+// ExposureBreakdown is the one wire shape of one round of exposure (ADR 0008
+// step 16): the payload of its action-log entry and the answer of POST
+// /api/spells/exposure, which adds the entry id and the HP the ledger
+// applied (see casthdl). Add fields, never rename them.
+type ExposureBreakdown struct {
+	SpellID string `json:"spellId"`
+	// Spell is the spell's name as recorded at write time (as on a cast).
 	Spell       string `json:"spell"`
 	CasterLevel int    `json:"casterLevel"`
 	// Mode is the key of the exposure mode rolled; absent without modes.
@@ -167,114 +286,45 @@ type exposureRecord struct {
 	// Round is the round of exposure, from 1.
 	Round int `json:"round"`
 	// OnSelf: the Bard was exposed and the entry's HP delta is the damage.
-	OnSelf bool          `json:"onSelf"`
-	Damage *damageRecord `json:"damage"`
+	OnSelf bool        `json:"onSelf"`
+	Damage *CastDamage `json:"damage"`
 	// Exposure is the exposure damage served at the caster level, so the
 	// next round of exposure rolls from the entry.
-	Exposure *exposureAtRecord `json:"exposure,omitempty"`
+	Exposure *spelleffectsvc.ExposureAtWire `json:"exposure,omitempty"`
+	// LogEntryID is the entry recording the round: set on the endpoint's
+	// answer, never in the payload.
+	LogEntryID int64 `json:"logEntryId,omitempty"`
 }
 
-// exposureAtRecord is an exposure damage served at a caster level, in the
-// wire shape of the spell lookup's (snake_case keys, as GET /api/spells), so
-// the UI reads both alike.
-type exposureAtRecord struct {
-	Damage *damageAtRecord `json:"damage,omitempty"`
-	Modes  []modeAtRecord  `json:"modes,omitempty"`
-}
-
-type modeAtRecord struct {
-	Key    string          `json:"key"`
-	Damage *damageAtRecord `json:"damage,omitempty"`
-}
-
-type damageAtRecord struct {
-	CasterLevel int            `json:"caster_level"`
-	Dice        sumRecord      `json:"dice"`
-	Instances   sumRecord      `json:"instances"`
-	Rounds      sumRecord      `json:"rounds"`
-	Type        string         `json:"type,omitempty"`
-	Parts       []partAtRecord `json:"parts,omitempty"`
-	StepsPer    string         `json:"steps_per,omitempty"`
-	Steps       []stepAtRecord `json:"steps,omitempty"`
-}
-
-type sumRecord struct {
-	Groups   []groupRecord `json:"groups"`
-	Modifier int           `json:"modifier"`
-}
-
-type groupRecord struct {
-	Count int `json:"count"`
-	Sides int `json:"sides"`
-}
-
-type partAtRecord struct {
-	Dice sumRecord `json:"dice"`
-	Save string    `json:"save"`
-}
-
-type stepAtRecord struct {
-	Step int       `json:"step"`
-	Dice sumRecord `json:"dice"`
-}
-
-func toExposureAtRecord(x *spelleffectsvc.ExposureAt) *exposureAtRecord {
-	if x == nil {
-		return nil
-	}
-	out := &exposureAtRecord{Damage: toDamageAtRecord(x.Damage)}
-	for _, m := range x.Modes {
-		out.Modes = append(out.Modes, modeAtRecord{Key: m.Key, Damage: toDamageAtRecord(m.Damage)})
-	}
+// NewExposureBreakdown is the breakdown of res as the exposure endpoint
+// answers it: the payload logged for res plus the id of its entry.
+func NewExposureBreakdown(res ExposureResult) ExposureBreakdown {
+	out := toExposureBreakdown(res)
+	out.LogEntryID = res.EntryID
 	return out
 }
 
-func toDamageAtRecord(d *spelleffectsvc.DamageAt) *damageAtRecord {
-	if d == nil {
-		return nil
-	}
-	out := &damageAtRecord{
-		CasterLevel: d.CasterLevel, Dice: toSumRecord(d.Dice), Instances: toSumRecord(d.Instances),
-		Rounds: toSumRecord(d.Rounds), Type: d.Type, StepsPer: string(d.StepsPer),
-	}
-	for _, p := range d.Parts {
-		out.Parts = append(out.Parts, partAtRecord{Dice: toSumRecord(p.Dice), Save: string(p.Save)})
-	}
-	for _, st := range d.Steps {
-		out.Steps = append(out.Steps, stepAtRecord{Step: st.Step, Dice: toSumRecord(st.Dice)})
-	}
-	return out
-}
-
-func toSumRecord(s formula.Sum) sumRecord {
-	out := sumRecord{Groups: make([]groupRecord, 0, len(s.Dice)), Modifier: s.Constant}
-	for _, g := range s.Dice {
-		out.Groups = append(out.Groups, groupRecord{Count: g.Count, Sides: g.Sides})
-	}
-	return out
-}
-
-func toExposureRecord(res ExposureResult) exposureRecord {
-	return exposureRecord{
+func toExposureBreakdown(res ExposureResult) ExposureBreakdown {
+	return ExposureBreakdown{
 		SpellID: res.SpellID, Spell: res.Name, CasterLevel: res.CasterLevel, Mode: res.Mode,
-		Round: res.Round, OnSelf: res.OnSelf, Damage: toDamageRecord(res.Damage),
-		Exposure: toExposureAtRecord(res.Exposure),
+		Round: res.Round, OnSelf: res.OnSelf, Damage: toCastDamage(res.Damage),
+		Exposure: res.Exposure.Wire(),
 	}
 }
 
-func toDamageRecord(d *DamageResult) *damageRecord {
+func toCastDamage(d *DamageResult) *CastDamage {
 	if d == nil {
 		return nil
 	}
-	r := &damageRecord{
+	r := &CastDamage{
 		Total: d.Total, Type: d.Type, Dice: d.Dice, Instances: d.Instances, Rounds: d.Rounds,
-		TotalOnSave: d.TotalOnSave, StepsPer: string(d.StepsPer),
+		Rolls: make([]FormulaRoll, 0, len(d.Rolls)), TotalOnSave: d.TotalOnSave, StepsPer: string(d.StepsPer),
 	}
 	for _, roll := range d.Rolls {
-		r.Rolls = append(r.Rolls, toRollRecord(roll))
+		r.Rolls = append(r.Rolls, formulaRoll(roll))
 	}
 	for _, p := range d.Parts {
-		r.Parts = append(r.Parts, partRecord{Formula: p.Formula, Save: string(p.Save)})
+		r.Parts = append(r.Parts, CastDamagePart{Formula: p.Formula, Save: string(p.Save)})
 	}
 	return r
 }

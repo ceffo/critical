@@ -11,7 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/ceffo/critical/api/internal/rest/handler/buffhdl"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 // Router is the chi subset we need.
@@ -139,7 +139,7 @@ func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		out := ToDTOs(items)
+		out := wire.ItemsToDTO(items)
 		for i := range out {
 			for _, rv := range reviews {
 				if rv.ItemID == out[i].ID {
@@ -152,104 +152,11 @@ func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 	}
 }
 
-// ItemDTO is the wire shape of a piece of equipment (ADR 0033 step 1): the
-// shared fields, then the fields of each category, zero (or empty) for the
-// others. Codes go on the wire, the web names them (ADR 0023): category,
-// magicKind, state (carried, worn, wielded), behaviour (stock, charges,
-// daily), component (the spell component it is, empty for none; ADR 0033
-// step 1.1). type is the free-text label of before the model, read only.
-type ItemDTO struct {
-	ID string `json:"id"`
-	// Name is a language map (ADR 0023 step 9).
-	Name          localized.Text `json:"name"`
-	Category      string         `json:"category"`
-	MagicKind     string         `json:"magicKind"`
-	CatalogueCode string         `json:"catalogueCode"`
-	Component     string         `json:"component"`
-	State         string         `json:"state"`
-	// EquipState is the state Equip moves the piece to (worn or wielded),
-	// empty for a piece that is carried only (ADR 0033 step 6).
-	EquipState   string `json:"equipState"`
-	Type         string `json:"type"`
-	Behaviour    string `json:"behaviour"`
-	MagicalBonus int    `json:"magicalBonus"`
-	AmmoKind     string `json:"ammoKind"`
-	Count        int    `json:"count"`
-	MaxCount     int    `json:"maxCount"`
-	EffectDice   string `json:"effectDice"`
-	EffectSave   string `json:"effectSave"`
-	Notes        string `json:"notes"`
-	// Powers are the item's own powers (ADR 0016 steps 9 to 16), read only:
-	// whether one is on is served with the effects list (GET /api/buffs).
-	Powers []PowerDTO `json:"powers"`
-	// Weapon and ammunition.
-	DamageTypes []string `json:"damageTypes"`
-	DamageSM    string   `json:"damageSm"`
-	DamageL     string   `json:"damageL"`
-	// Weapon.
-	WeaponType  string `json:"weaponType"`
-	WeaponKind  string `json:"weaponKind"`
-	Size        string `json:"size"`
-	Speed       int    `json:"speed"`
-	MagicToHit  int    `json:"magicToHit"`
-	MagicDamage int    `json:"magicDamage"`
-	TwoHanded   bool   `json:"twoHanded"`
-	Fires       string `json:"fires"`
-	Specialized bool   `json:"specialized"`
-	// Armour.
-	BaseAC      int    `json:"baseAc"`
-	SkillColumn string `json:"skillColumn"`
-	ArmorRow    string `json:"armorRow"`
-	// Shield.
-	ShieldKind string `json:"shieldKind"`
-	ACMelee    int    `json:"acMelee"`
-	ACMissile  int    `json:"acMissile"`
-	// Review is the piece's review reasons (ADR 0033 step 27), empty when it
-	// is not on the review list. Served by the list only.
-	Review []string `json:"review"`
-}
-
-// PowerDTO is one of an item's powers: its id, its trigger (minStr, omitted:
-// always on) and its effects, in the buffs' effect keys.
-type PowerDTO struct {
-	ID      string                 `json:"id"`
-	MinStr  *int                   `json:"minStr,omitempty"`
-	Effects buffhdl.BuffEffectsDTO `json:"effects"`
-}
-
-// ToDTOs maps items to their wire shape.
-func ToDTOs(items []itemsvc.Item) []ItemDTO {
-	out := make([]ItemDTO, 0, len(items))
-	for _, i := range items {
-		powers := make([]PowerDTO, 0, len(i.Powers))
-		for _, p := range i.Powers {
-			powers = append(powers, PowerDTO{ID: p.ID, MinStr: p.MinStr, Effects: buffhdl.BuffEffectsDTO(p.Effects)})
-		}
-		damageTypes := i.DamageTypes
-		if damageTypes == nil {
-			damageTypes = []string{}
-		}
-		out = append(out, ItemDTO{
-			ID: i.ID, Name: i.Name, Category: string(i.Category), MagicKind: i.MagicKind,
-			CatalogueCode: i.CatalogueCode, Component: i.Component, State: string(i.State), EquipState: string(i.EquipState()),
-			Type: i.Type, Behaviour: string(i.Behaviour),
-			MagicalBonus: i.MagicBonus, AmmoKind: i.AmmoKind, Count: i.Count, MaxCount: i.MaxCount,
-			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers,
-			DamageTypes: damageTypes, DamageSM: i.DamageSM, DamageL: i.DamageL,
-			WeaponType: i.WeaponType, WeaponKind: i.WeaponKind, Size: i.Size, Speed: i.Speed,
-			MagicToHit: i.MagicToHit, MagicDamage: i.MagicDamage, TwoHanded: i.TwoHanded, Fires: i.Fires,
-			Specialized: i.Specialized, BaseAC: i.BaseAC, SkillColumn: i.SkillColumn, ArmorRow: i.ArmorRow,
-			ShieldKind: i.ShieldKind, ACMelee: i.ACMelee, ACMissile: i.ACMissile, Review: []string{},
-		})
-	}
-	return out
-}
-
 // ChangeDTO is the wire shape of POST/PATCH/DELETE /api/items: the item as it
 // is now (as it was, for a delete) and the log entry written.
 type ChangeDTO struct {
-	Item       ItemDTO `json:"item"`
-	LogEntryID int64   `json:"logEntryId"`
+	Item       wire.ItemDTO `json:"item"`
+	LogEntryID int64        `json:"logEntryId"`
 }
 
 // ItemBody is the body of POST and PATCH /api/items. On a PATCH only the
@@ -312,7 +219,7 @@ func decodeBody(r *http.Request) (ItemBody, error) {
 }
 
 func change(ctx context.Context, w http.ResponseWriter, res *itemsvc.ChangeResult) {
-	render.OK(ctx, w, ChangeDTO{Item: ToDTOs([]itemsvc.Item{res.Item})[0], LogEntryID: res.LogEntryID})
+	render.OK(ctx, w, ChangeDTO{Item: wire.ItemsToDTO([]itemsvc.Item{res.Item})[0], LogEntryID: res.LogEntryID})
 }
 
 func deref[T any](p *T) T {
@@ -408,8 +315,8 @@ type StateRequest struct {
 // (the one moved first) and the log entry written (0: nothing changed, none
 // written).
 type StateDTO struct {
-	Items      []ItemDTO `json:"items"`
-	LogEntryID int64     `json:"logEntryId"`
+	Items      []wire.ItemDTO `json:"items"`
+	LogEntryID int64          `json:"logEntryId"`
 }
 
 // SetState wears, takes off, wields or puts away a piece (ADR 0033 steps 6
@@ -426,7 +333,7 @@ func SetState(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, StateDTO{Items: ToDTOs(res.Items), LogEntryID: res.LogEntryID})
+		render.OK(r.Context(), w, StateDTO{Items: wire.ItemsToDTO(res.Items), LogEntryID: res.LogEntryID})
 		return nil
 	}
 }

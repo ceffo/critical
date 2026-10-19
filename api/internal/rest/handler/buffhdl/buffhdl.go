@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 // Router is the chi subset we need.
@@ -329,12 +330,12 @@ func GetEffectiveStr(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 // absorb (0: none). applies is set on list responses: false while the buff's
 // min_str is not met by the effective STR.
 type BuffEffectDTO struct {
-	ID       string         `json:"id"`
-	Name     string         `json:"name"`
-	Charges  int            `json:"charges"`
-	Duration int            `json:"duration"`
-	Effects  BuffEffectsDTO `json:"effects"`
-	Note     string         `json:"note"`
+	ID       string              `json:"id"`
+	Name     string              `json:"name"`
+	Charges  int                 `json:"charges"`
+	Duration int                 `json:"duration"`
+	Effects  wire.BuffEffectsDTO `json:"effects"`
+	Note     string              `json:"note"`
 	// StartRound is the round the buff was added in (0: out of combat or
 	// unknown). Response only: a request's value is ignored, the server
 	// stamps it.
@@ -350,26 +351,6 @@ type BuffEffectDTO struct {
 	Applies *bool  `json:"applies,omitempty"`
 }
 
-// BuffEffectsDTO is the modifier payload.
-type BuffEffectsDTO struct {
-	MinStr     *int     `json:"min_str,omitempty"`
-	SpellsBuff *float64 `json:"spells_buff,omitempty"`
-	WeaponBuff *int     `json:"weapon_buff,omitempty"`
-	Multiplier *float64 `json:"multiplier,omitempty"`
-	SaveBonus  *int     `json:"save_bonus,omitempty"`
-	StrBonus   *int     `json:"str_bonus,omitempty"`
-	StrMax     *int     `json:"str_max,omitempty"`
-	AC         *int     `json:"ac,omitempty"`
-	ToHit      *int     `json:"to_hit,omitempty"`
-	Damage     *int     `json:"damage,omitempty"`
-	BaseAC     *int     `json:"base_ac,omitempty"`
-	// WeaponKind is the weapon-kind condition of the other effects, melee or
-	// missile (ADR 0004 step 18); omitted: every roll.
-	WeaponKind buffsvc.WeaponKind `json:"weapon_kind,omitempty"`
-	// WithoutMagicArmour is the AC effects' condition (ADR 0033 step 12).
-	WithoutMagicArmour bool `json:"without_magic_armour,omitempty"`
-}
-
 // BuffListDTO is the effects list of GET /api/buffs, also answered by every
 // buff change: the active buffs, each with its applies flag, and in a list
 // of their own the carried items' powers that are on (ADR 0016 step 13),
@@ -383,15 +364,15 @@ type BuffListDTO struct {
 // names it from the item), its id within the item and its effects. No
 // counters, nothing to edit or dismiss.
 type ItemPowerDTO struct {
-	ItemID  string         `json:"itemId"`
-	PowerID string         `json:"powerId"`
-	Effects BuffEffectsDTO `json:"effects"`
+	ItemID  string              `json:"itemId"`
+	PowerID string              `json:"powerId"`
+	Effects wire.BuffEffectsDTO `json:"effects"`
 }
 
 func toPowerDTOs(ps []buffsvc.ItemPower) []ItemPowerDTO {
 	out := make([]ItemPowerDTO, 0, len(ps))
 	for _, p := range ps {
-		out = append(out, ItemPowerDTO{ItemID: p.ItemID, PowerID: p.PowerID, Effects: BuffEffectsDTO(p.Effects)})
+		out = append(out, ItemPowerDTO{ItemID: p.ItemID, PowerID: p.PowerID, Effects: wire.BuffEffectsDTO(p.Effects)})
 	}
 	return out
 }
@@ -417,7 +398,7 @@ func (d BuffEffectDTO) toDomain() buffsvc.BuffEffect {
 func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 	return BuffEffectDTO{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-		Effects: BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
+		Effects: wire.BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		SpellID: b.SpellID,
 	}
 }
@@ -444,12 +425,12 @@ func toStatusDTOs(bs []buffsvc.BuffStatus) []BuffEffectDTO {
 // SavedBuffDTO is the wire shape of a saved buff template: the starting
 // values of a buff (duration = rounds, charges), its effects and note.
 type SavedBuffDTO struct {
-	ID       int64          `json:"id"`
-	Name     string         `json:"name"`
-	Duration int            `json:"duration"`
-	Charges  int            `json:"charges"`
-	Effects  BuffEffectsDTO `json:"effects"`
-	Note     string         `json:"note"`
+	ID       int64               `json:"id"`
+	Name     string              `json:"name"`
+	Duration int                 `json:"duration"`
+	Charges  int                 `json:"charges"`
+	Effects  wire.BuffEffectsDTO `json:"effects"`
+	Note     string              `json:"note"`
 }
 
 func toSavedDTOs(list []buffsvc.SavedBuff) []SavedBuffDTO {
@@ -457,7 +438,7 @@ func toSavedDTOs(list []buffsvc.SavedBuff) []SavedBuffDTO {
 	for _, s := range list {
 		out = append(out, SavedBuffDTO{
 			ID: s.ID, Name: s.Name, Duration: s.Duration, Charges: s.Charges,
-			Effects: BuffEffectsDTO(s.Effects), Note: s.Note,
+			Effects: wire.BuffEffectsDTO(s.Effects), Note: s.Note,
 		})
 	}
 	return out

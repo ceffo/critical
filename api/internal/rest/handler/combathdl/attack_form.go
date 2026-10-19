@@ -29,25 +29,14 @@ type AmmoChoiceDTO struct {
 	Count int            `json:"count"`
 }
 
-// ModifierDTO is one to-hit modifier of the preview, in the shape of the
-// attack's (combatsvc.BreakdownModifier). The UI labels it in the player's
-// language from Kind and Detail; an item power's carries its item's id (ADR
-// 0016 step 14).
-type ModifierDTO struct {
-	Kind           string `json:"kind"`
-	Detail         string `json:"detail,omitempty"`
-	ItemID         string `json:"itemId,omitempty"`
-	Value          int    `json:"value"`
-	StrExceptional int    `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
-}
-
 // AttackPreviewDTO is the effective THAC0 of the current choices, before
 // rolling (ADR 0002 step 12).
 type AttackPreviewDTO struct {
-	BaseThac0      int           `json:"baseThac0"`
-	Modifiers      []ModifierDTO `json:"modifiers"`
-	EffectiveThac0 int           `json:"effectiveThac0"`
-	ToHit          int           `json:"toHit"`
+	BaseThac0 int `json:"baseThac0"`
+	// Modifiers are in the attack's shape (combatsvc.BreakdownModifier).
+	Modifiers      []combatsvc.BreakdownModifier `json:"modifiers"`
+	EffectiveThac0 int                           `json:"effectiveThac0"`
+	ToHit          int                           `json:"toHit"`
 	// RollNeeded is null while the target AC is unknown.
 	RollNeeded  *int `json:"rollNeeded"`
 	DamageBonus int  `json:"damageBonus"`
@@ -165,12 +154,8 @@ func toPreviewDTO(p *combatsvc.AttackPreview) *AttackPreviewDTO {
 	if p == nil {
 		return nil
 	}
-	mods := make([]ModifierDTO, 0, len(p.Modifiers))
-	for _, m := range p.Modifiers {
-		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional})
-	}
 	return &AttackPreviewDTO{
-		BaseThac0: p.BaseThac0, Modifiers: mods, EffectiveThac0: p.EffectiveThac0,
+		BaseThac0: p.BaseThac0, Modifiers: combatsvc.BreakdownModifiers(p.Modifiers), EffectiveThac0: p.EffectiveThac0,
 		ToHit: p.ToHit, RollNeeded: p.RollNeeded, DamageBonus: p.DamageBonus,
 		PointBlank: toPreviewDTO(p.PointBlank),
 		Backstab:   toPreviewDTO(p.Backstab),

@@ -1,4 +1,5 @@
 import type { LocalizedText } from "@/types/localized";
+import type { Modifier } from "@/types/combat";
 
 export interface SpellSlot {
   level: number;
@@ -121,14 +122,14 @@ export interface SpellValues {
   area: { dims?: SpellValue[]; targets?: SpellValue };
 }
 
-/** Mirrors spellhdl.DiceSumDTO: dice groups (in the data's order) plus a constant; no groups is a plain number. */
+/** Mirrors spelleffectsvc.DiceSumWire: dice groups (in the data's order) plus a constant; no groups is a plain number. */
 export interface DiceSum {
   groups: { count: number; sides: number }[];
   modifier: number;
 }
 
 /**
- * Mirrors spellhdl.SpellDamageDTO: the damage a cast rolls at caster_level, evaluated by the
+ * Mirrors spelleffectsvc.DamageAtWire: the damage a cast rolls at caster_level, evaluated by the
  * server. `dice` is one instance; `instances` of them every round, for `rounds` rounds.
  */
 export interface SpellDamage {
@@ -152,7 +153,7 @@ export interface SpellDamage {
 /** What one dice step of a damage is: a round, or one separate roll of the casting. */
 export type StepPer = "round" | "instance";
 
-/** Mirrors spellhdl.SpellDamageStepDTO: one dice step at caster_level (no groups and 0: no damage). */
+/** Mirrors spelleffectsvc.DamageStepAtWire: one dice step at caster_level (no groups and 0: no damage). */
 export interface SpellDamageStep {
   step: number;
   dice: DiceSum;
@@ -161,14 +162,14 @@ export interface SpellDamageStep {
 /** What a successful save does to a damage part. */
 export type DamagePartSave = "none" | "negates";
 
-/** Mirrors spellhdl.SpellDamagePartDTO: one part of a damage instance at caster_level. */
+/** Mirrors spelleffectsvc.DamagePartAtWire: one part of a damage instance at caster_level. */
 export interface SpellDamagePart {
   dice: DiceSum;
   save: DamagePartSave;
 }
 
 /**
- * Mirrors spellhdl.SpellModeDTO: a cast-time mode the caster picks (ADR 0008 step 14), worded by
+ * Mirrors spelleffectsvc.ModeAtWire: a cast-time mode the caster picks (ADR 0008 step 14), worded by
  * its key, and the damage a cast in it rolls (absent: none).
  */
 export interface SpellMode {
@@ -177,7 +178,7 @@ export interface SpellMode {
 }
 
 /**
- * Mirrors spellhdl.SpellExposureDTO: the damage of one round of exposure to the area a spell leaves
+ * Mirrors spelleffectsvc.ExposureAtWire: the damage of one round of exposure to the area a spell leaves
  * (ADR 0008 step 16), at caster_level: one `damage` (its `steps`, if any, are the rounds of
  * exposure; a later round rolls the last step), or the `modes` picked at each exposure.
  */
@@ -196,7 +197,7 @@ export interface SpellName {
 export type SpellNames = Readonly<Record<string, SpellName>>;
 
 /**
- * Mirrors spellhdl.SpellDTO. Every human-language text is a language map (ADR 0023): pick the UI
+ * Mirrors wire.SpellDTO (api/internal/rest/wire). Every human-language text is a language map (ADR 0023): pick the UI
  * language with `localized`, which falls back to English per field. The six stat texts, the school
  * and the sphere are the English books' only. Descriptions are in the catalogue's Markdown subset
  * (paragraphs, `- ` bullet lists, pipe tables, blocks separated by a blank line).
@@ -288,39 +289,44 @@ export interface PreparationInfo {
   limits: LevelLimit[];
 }
 
-/** Mirrors api/internal/rest/handler/casthdl (RollDTO). */
-export interface DiceRoll {
+/** Mirrors castsvc.FormulaRoll: one evaluated formula of a cast, every die it threw. */
+export interface FormulaRoll {
   formula: string;
   dice: { sides: number; value: number }[];
   total: number;
   /** A damage instance's part rolls, in the order of CastDamage.parts; absent when it has none. */
-  parts?: DiceRoll[];
+  parts?: FormulaRoll[];
   /** The round or instance (1-based) of a damage made of dice steps; absent without steps. */
   step?: number;
 }
 
-/** Mirrors casthdl AppliedBuffDTO. `applied` is false when the buff went on somebody else. */
+/**
+ * Mirrors castsvc.CastBuff. `applied` is false when the buff went on somebody else. The fields
+ * from `id` on are absent on casts logged before the payload was the cast's answer.
+ */
 export interface CastBuff {
-  id: string;
   name: string;
-  rounds: number;
-  charges: number;
+  rounds?: number;
+  charges?: number;
+  strGain?: number;
   applied: boolean;
-  durationRoll?: DiceRoll;
-  chargesRoll?: DiceRoll;
+  id?: string;
+  durationRoll?: FormulaRoll;
+  chargesRoll?: FormulaRoll;
   chargeUnit?: string;
-  strGainRoll?: DiceRoll;
+  strGainRoll?: FormulaRoll;
   /** Engine-tracked effects, keyed like the buff API (to_hit, ac, str_bonus, spells_buff...). */
-  effects: Record<string, number>;
+  effects?: Record<string, number>;
 }
 
+/** Mirrors castsvc.CastDamage. `dice` to `rolls` are absent on casts logged before they were recorded. */
 export interface CastDamage {
-  dice: string;
-  type: string;
-  instances: number;
-  rounds: number;
-  rolls: DiceRoll[];
   total: number;
+  type: string;
+  dice?: string;
+  instances?: number;
+  rounds?: number;
+  rolls?: FormulaRoll[];
   /** The parts of one instance and what a save does to each; absent when it has none. */
   parts?: CastDamagePart[];
   /** The total without the parts a save negates; absent when the damage has no parts. */
@@ -329,7 +335,7 @@ export interface CastDamage {
   stepsPer?: StepPer;
 }
 
-/** Mirrors casthdl DamagePartDTO. */
+/** Mirrors castsvc.CastDamagePart. */
 export interface CastDamagePart {
   formula: string;
   save: DamagePartSave;
@@ -345,39 +351,56 @@ export interface CastUntracked {
 export type CastTextOnly =
   "no_effect" | "low_confidence" | "utility" | "not_on_self" | "by_hand";
 
-/** Mirrors casthdl CastResultDTO: what POST /api/spells/{slot}/cast and /api/spells/receive did. */
-export interface CastResult {
-  entryId: number;
-  source: "cast" | "received" | "effect";
+/**
+ * Mirrors castsvc.CastBreakdown: what a cast, a received spell or an added effect did. It is both
+ * the payload of the cast's journal entry and (with CastResult's keys) the cast endpoints' answer.
+ * Fields marked "older casts" are absent on entries logged before they were recorded.
+ */
+export interface CastBreakdown {
+  action: "cast" | "received" | "effect";
   spellId: string;
-  name: string;
-  level: number;
+  /** The spell's name as recorded; the UI names the spell from its id. */
+  spell: string;
   casterLevel: number;
-  slotIndex?: number;
   /** The key of the cast-time mode the spell was cast in; absent for a spell without modes. */
   mode?: string;
-  kind?: "buff" | "damage" | "utility";
-  confidence?: "high" | "low";
-  target?: string;
-  note?: string;
-  spell?: Spell;
-  save?: { type: string; effect: string };
-  textOnly?: CastTextOnly;
   buff?: CastBuff;
   damage?: CastDamage;
-  untracked: CastUntracked[];
-  slots?: SpellSlot[];
   /** Levels of the extra slots this cast added. */
   extraSlots?: number[];
   /** The inventory item the cast spent. */
-  consumedItem?: CastConsumedItem;
+  item?: CastItem;
   /** The spell's to-hit roll. */
   attack?: CastAttack;
-  /** The exposure damage at casterLevel, to roll each round of exposure from; absent: none. */
-  exposure?: SpellExposure;
+  /** The target's saving throw (the DM's side); absent on older casts. */
+  save?: { type: string; effect: string };
   /** The low-Wisdom spell failure d100 (ADR 0030 step 14); absent: no die. `failed`: the slot is
    * spent and nothing else applies. */
   failure?: SpellFailure;
+  /** The exposure damage at casterLevel, to roll each round of exposure from; absent: none. */
+  exposure?: SpellExposure;
+  /** The spell's level (older casts: absent). */
+  level?: number;
+  /** The slot spent (a cast only). */
+  slotIndex?: number;
+  kind?: "buff" | "damage" | "utility";
+  confidence?: "high" | "low";
+  target?: string;
+  textOnly?: CastTextOnly;
+  /** Effects to apply by hand (older casts: absent). */
+  untracked?: CastUntracked[];
+}
+
+/**
+ * Mirrors casthdl castAnswer: the answer of POST /api/spells/{slot}/cast, /receive and /effect,
+ * the cast's logged payload plus the entry id, the catalogue spell and the slots after a cast.
+ */
+export interface CastResult extends CastBreakdown {
+  logEntryId: number;
+  /** The spell from the catalogue, values at casterLevel; absent when not in the catalogue. */
+  catalogueSpell?: Spell;
+  /** The slots after a cast. */
+  slots?: SpellSlot[];
 }
 
 /** A cast's spell failure roll (ADR 0030 step 14): failed when the d100 is at or under the chance. */
@@ -399,47 +422,53 @@ export interface ExposureRequest {
   onSelf?: boolean;
 }
 
-/** Mirrors casthdl ExposureResultDTO: one round of exposure rolled and logged. */
-export interface ExposureResult {
-  entryId: number;
+/**
+ * Mirrors castsvc.ExposureBreakdown: one round of exposure, the payload of its journal entry and
+ * (with ExposureResult's keys) the exposure endpoint's answer.
+ */
+export interface ExposureBreakdown {
   spellId: string;
-  name: string;
+  /** The spell's name as recorded. */
+  spell: string;
   casterLevel: number;
   /** The exposure mode rolled; absent when the exposure has none. */
   mode?: string;
   round: number;
+  /** The Bard was exposed: the entry's HP delta is the damage. */
   onSelf: boolean;
-  /** The HP change the ledger applied on the Bard (the floor may cut it); 0 when not on him. */
-  hpDelta: number;
   damage: CastDamage;
   /** The exposure damage at casterLevel, for the next round of exposure. */
   exposure?: SpellExposure;
 }
 
-/** Mirrors casthdl ConsumedItemDTO. */
-export interface CastConsumedItem {
+/** Mirrors casthdl exposureAnswer: one round of exposure rolled and logged. */
+export interface ExposureResult extends ExposureBreakdown {
+  logEntryId: number;
+  /** The HP change the ledger applied on the Bard (the floor may cut it); 0 when not on him. */
+  hpDelta: number;
+}
+
+/** Mirrors castsvc.CastItem: the item a cast spent and how many are left. */
+export interface CastItem {
   itemId: string;
   name: string;
   remaining: number;
 }
 
-/** Mirrors casthdl SpellAttackDTO: a spell's to-hit roll (one d20, no crit). */
+/**
+ * Mirrors castsvc.CastAttack: a spell's to-hit roll (one d20, no crit). The fields from
+ * `baseThac0` on are absent on casts logged before the payload was the cast's answer.
+ */
 export interface CastAttack {
-  d20Roll: number;
-  baseThac0: number;
-  modifiers: {
-    kind: string;
-    detail?: string;
-    itemId?: string;
-    value: number;
-    /** As on Modifier (combat.ts). */
-    strExceptional?: number;
-  }[];
-  effectiveThac0: number;
+  d20: number;
   targetAc: number;
-  targetACNeeded: number;
   hit: boolean;
-  hitMargin: number;
+  baseThac0?: number;
+  /** As the attack's (combatsvc.BreakdownModifier, the one modifier shape). */
+  modifiers?: Modifier[];
+  effectiveThac0?: number;
+  targetACNeeded?: number;
+  hitMargin?: number;
 }
 
 /** Mirrors spellhdl.SpellPageDTO: one page of GET /api/spells. */

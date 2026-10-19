@@ -32,6 +32,7 @@ internal/storage/<engine>/        # shared infra primitives: pool, transaction w
 internal/rest/server/             # generic HTTP server (lifecycle only)
 internal/rest/<router>/           # router(s) — wire routes to handlers and middleware
 internal/rest/handler/<svc>hdl/   # one package per service of HTTP handlers (transport)
+internal/rest/wire/               # wire shapes several handler packages serve (handlers never import one another)
 internal/rest/middleware/         # request-scoped concerns (logging, auth, rate-limit, tracing)
 pkg/                              # exportable utilities (pure libraries; no domain knowledge)
 ```
@@ -488,6 +489,12 @@ Conventions:
   service struct satisfies it implicitly. This is the Go idiom (accept
   interfaces, return structs) applied at the transport boundary.
 - Handlers do three things: parse input, call the service, render output.
+- A handler package never imports another handler package (depguard rule `handlers`,
+  `api/.golangci.yml`). A wire shape that several handlers serve is defined once: in
+  `internal/rest/wire`, or, when the action log also stores it, as the service's exported wire
+  type (an attack, a save, a cast: the logged payload is the answer, see `docs/backend.md`). The
+  service builds that type (`combatsvc.NewAttackBreakdown`, `castsvc.NewCastBreakdown`); the
+  handler only adds what is not part of the roll.
 - Rendering helpers (`render.JSON`, `render.Error`, …) live in `pkg/` so they
   can be reused across handler packages.
 - Handlers are tested with a one-method fake of their narrow interface — no

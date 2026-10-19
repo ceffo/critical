@@ -14,7 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 type creator interface {
@@ -250,12 +250,12 @@ type CreateBody struct {
 	// Details are the free-text details, in the shape GET /api/character
 	// shows them (age null for none); absent for none. A refusal names its
 	// field under "details." (details.age).
-	Details *detailshdl.DetailsDTO `json:"details"`
+	Details *wire.DetailsDTO `json:"details"`
 }
 
 // detailsPatch is the details as the patch a new character applies: every text
 // field set (empty is none), the age and the languages when given.
-func detailsPatch(d *detailshdl.DetailsDTO) (charactersvc.DetailsPatch, error) {
+func detailsPatch(d *wire.DetailsDTO) (charactersvc.DetailsPatch, error) {
 	if d == nil {
 		return charactersvc.DetailsPatch{}, nil
 	}
@@ -272,10 +272,10 @@ func detailsPatch(d *detailshdl.DetailsDTO) (charactersvc.DetailsPatch, error) {
 		kg = &v
 	}
 	var err error
-	if p.Height, p.ClearHeight, err = detailshdl.ResolveMeasure(charactersvc.FieldHeight, cm, d.HeightNull, &d.Height, charactersvc.ParseHeight); err != nil {
+	if p.Height, p.ClearHeight, err = wire.ResolveMeasure(charactersvc.FieldHeight, cm, d.HeightNull, &d.Height, charactersvc.ParseHeight); err != nil {
 		return p, err
 	}
-	if p.Weight, p.ClearWeight, err = detailshdl.ResolveMeasure(charactersvc.FieldWeight, kg, d.WeightNull, &d.Weight, charactersvc.ParseWeight); err != nil {
+	if p.Weight, p.ClearWeight, err = wire.ResolveMeasure(charactersvc.FieldWeight, kg, d.WeightNull, &d.Weight, charactersvc.ParseWeight); err != nil {
 		return p, err
 	}
 	if d.Languages != nil {

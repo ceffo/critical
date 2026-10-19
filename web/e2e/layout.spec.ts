@@ -2749,15 +2749,15 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
   await page.route("**/api/spells/*/cast", (route) =>
     route.fulfill({
       json: {
-        entryId: 999_999,
-        source: "cast",
+        action: "cast",
         spellId: "bless",
-        name: "Bless",
+        spell: "Bless",
         level: 1,
         casterLevel: 1,
         slotIndex: 0,
         untracked: [],
         failure: { d100: 12, chance: 20, failed: true },
+        logEntryId: 999_999,
       },
     }),
   );

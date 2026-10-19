@@ -22,6 +22,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 	"github.com/ceffo/critical/api/pkg/formula"
 )
 
@@ -134,11 +135,11 @@ func (f fakeDamage) DamageAt(_ context.Context, id string, level int) (*spelleff
 	}, nil
 }
 
-func search(t *testing.T, url string) (int, []spellhdl.SpellDTO) {
+func search(t *testing.T, url string) (int, []wire.SpellDTO) {
 	return searchAs(t, url, fakeChars{level: 15})
 }
 
-func searchAs(t *testing.T, url string, chars fakeChars) (int, []spellhdl.SpellDTO) {
+func searchAs(t *testing.T, url string, chars fakeChars) (int, []wire.SpellDTO) {
 	t.Helper()
 	raw := spellstats.Raw{CastingTime: "1", Range: "60 yds. + 10 yds./level", Duration: "3 rds./level", SavingThrow: "None"}
 	svc := fakeSvc{spells: []spellsvc.Spell{{
@@ -159,7 +160,7 @@ func TestSearch_ReturnsRawTextTypedStatsAndValuesAtCharacterLevel(t *testing.T) 
 	code, out := search(t, "/api/spells")
 	require.Equal(t, http.StatusOK, code)
 	require.Len(t, out, 2)
-	assert.Equal(t, spellhdl.TextDTO{"en": "60 yds. + 10 yds./level"}, out[0].Range, "raw text kept for existing callers")
+	assert.Equal(t, localized.Text{"en": "60 yds. + 10 yds./level"}, out[0].Range, "raw text kept for existing callers")
 	assert.Equal(t, spellstats.RangeDistance, out[0].Stats.Range.Kind)
 	assert.Equal(t, 15, out[0].CasterLevel)
 	require.NotNil(t, out[0].Values)
@@ -187,7 +188,7 @@ func TestSearch_CharacterLookupFailureStillReturnsSpellsWithoutValues(t *testing
 	code, out := searchAs(t, "/api/spells", fakeChars{err: errors.New("no character")})
 	require.Equal(t, http.StatusOK, code)
 	require.Len(t, out, 2)
-	assert.Equal(t, spellhdl.TextDTO{"en": "Magic Missile", "fr": "Projectile magique"}, out[0].Name)
+	assert.Equal(t, localized.Text{"en": "Magic Missile", "fr": "Projectile magique"}, out[0].Name)
 	assert.Nil(t, out[0].Values)
 	assert.Equal(t, spellstats.RangeDistance, out[0].Stats.Range.Kind, "typed stats still returned")
 
@@ -365,11 +366,11 @@ func TestSearch_ServesDamageAtTheCasterLevel(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	require.Len(t, out, 2)
 	assert.Nil(t, out[0].Damage, "magic_missile: the fake serves none")
-	assert.Equal(t, &spellhdl.SpellDamageDTO{
+	assert.Equal(t, &spelleffectsvc.DamageAtWire{
 		CasterLevel: 15,
-		Dice:        spellhdl.DiceSumDTO{Groups: []spellhdl.DiceGroupDTO{{Count: 10, Sides: 6}}, Modifier: 2},
-		Instances:   spellhdl.DiceSumDTO{Groups: []spellhdl.DiceGroupDTO{}, Modifier: 1},
-		Rounds:      spellhdl.DiceSumDTO{Groups: []spellhdl.DiceGroupDTO{}, Modifier: 1},
+		Dice:        spelleffectsvc.DiceSumWire{Groups: []spelleffectsvc.DiceGroupWire{{Count: 10, Sides: 6}}, Modifier: 2},
+		Instances:   spelleffectsvc.DiceSumWire{Groups: []spelleffectsvc.DiceGroupWire{}, Modifier: 1},
+		Rounds:      spelleffectsvc.DiceSumWire{Groups: []spelleffectsvc.DiceGroupWire{}, Modifier: 1},
 		Type:        "fire",
 	}, out[1].Damage)
 
@@ -398,58 +399,6 @@ func TestSearch_CharacterLevelAboveTheMaxServesNoDamage(t *testing.T) {
 	require.Len(t, out, 2)
 	assert.NotNil(t, out[1].Values)
 	assert.Nil(t, out[1].Damage)
-}
-
-// ADR 0008 step 13: the served damage carries each part's dice and save
-// effect key; a damage without parts serves none.
-func TestDamageToDTO_Parts(t *testing.T) {
-	d2d4 := formula.Sum{Dice: []formula.Dice{{Count: 2, Sides: 4}}}
-	got := spellhdl.DamageToDTO(&spelleffectsvc.DamageAt{
-		CasterLevel: 15, Dice: formula.Sum{Dice: d2d4.Dice, Constant: 15},
-		Instances: formula.Sum{Constant: 3}, Rounds: formula.Sum{Constant: 1}, Type: "force",
-		Parts: []spelleffectsvc.DamagePartAt{
-			{Dice: d2d4, Save: spelleffectsvc.SaveNone},
-			{Dice: formula.Sum{Constant: 15}, Save: spelleffectsvc.SaveNegates},
-		},
-	})
-	raw, err := json.Marshal(got)
-	require.NoError(t, err)
-	assert.JSONEq(t, `{"caster_level":15,"type":"force",
-		"dice":{"groups":[{"count":2,"sides":4}],"modifier":15},
-		"instances":{"groups":[],"modifier":3},"rounds":{"groups":[],"modifier":1},
-		"parts":[{"dice":{"groups":[{"count":2,"sides":4}],"modifier":0},"save":"none"},
-		         {"dice":{"groups":[],"modifier":15},"save":"negates"}]}`, string(raw))
-
-	raw, err = json.Marshal(spellhdl.DamageToDTO(&spelleffectsvc.DamageAt{CasterLevel: 1}))
-	require.NoError(t, err)
-	assert.NotContains(t, string(raw), "parts")
-}
-
-// ADR 0008 step 15: the served damage carries the steps' unit and each
-// step's number and dice (none: no groups, 0); a damage without steps serves
-// neither.
-func TestDamageToDTO_Steps(t *testing.T) {
-	got := spellhdl.DamageToDTO(&spelleffectsvc.DamageAt{
-		CasterLevel: 12, Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 3}, Type: "fire",
-		StepsPer: spelleffectsvc.StepPerRound, Steps: []spelleffectsvc.DamageStepAt{
-			{Step: 1},
-			{Step: 2, Dice: formula.Sum{Dice: []formula.Dice{{Count: 12, Sides: 2}}}},
-			{Step: 3, Dice: formula.Sum{Dice: []formula.Dice{{Count: 12, Sides: 4}}, Constant: 1}},
-		},
-	})
-	raw, err := json.Marshal(got)
-	require.NoError(t, err)
-	assert.JSONEq(t, `{"caster_level":12,"type":"fire",
-		"dice":{"groups":[],"modifier":0},
-		"instances":{"groups":[],"modifier":1},"rounds":{"groups":[],"modifier":3},
-		"steps_per":"round","steps":[
-		  {"step":1,"dice":{"groups":[],"modifier":0}},
-		  {"step":2,"dice":{"groups":[{"count":12,"sides":2}],"modifier":0}},
-		  {"step":3,"dice":{"groups":[{"count":12,"sides":4}],"modifier":1}}]}`, string(raw))
-
-	raw, err = json.Marshal(spellhdl.DamageToDTO(&spelleffectsvc.DamageAt{CasterLevel: 1}))
-	require.NoError(t, err)
-	assert.NotContains(t, string(raw), "steps")
 }
 
 // ADR 0008 step 14: the lookup serves every cast-time mode with the damage a
@@ -538,21 +487,21 @@ func getSpell(t *testing.T, url string, chars fakeChars) *httptest.ResponseRecor
 func TestGet_ServesOneSpellByIDWithItsTextsAndDamageAtTheCharacterLevel(t *testing.T) {
 	rec := getSpell(t, "/api/spells/fireball", fakeChars{level: 9})
 	require.Equal(t, http.StatusOK, rec.Code)
-	var got spellhdl.SpellDTO
+	var got wire.SpellDTO
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 	assert.Equal(t, "fireball", got.ID)
-	assert.Equal(t, spellhdl.TextDTO{"en": "Fireball", "fr": "Boule de feu"}, got.Name)
-	assert.Equal(t, spellhdl.TextDTO{"en": "Boom."}, got.Description)
+	assert.Equal(t, localized.Text{"en": "Fireball", "fr": "Boule de feu"}, got.Name)
+	assert.Equal(t, localized.Text{"en": "Boom."}, got.Description)
 	assert.Equal(t, 9, got.CasterLevel)
 	require.NotNil(t, got.Damage)
 	assert.Equal(t, 9, got.Damage.CasterLevel)
-	assert.Equal(t, []spellhdl.DiceGroupDTO{{Count: 10, Sides: 6}}, got.Damage.Dice.Groups)
+	assert.Equal(t, []spelleffectsvc.DiceGroupWire{{Count: 10, Sides: 6}}, got.Damage.Dice.Groups)
 }
 
 func TestGet_CasterLevelQueryOverridesTheCharacter(t *testing.T) {
 	rec := getSpell(t, "/api/spells/fireball?caster_level=5", fakeChars{level: 9})
 	require.Equal(t, http.StatusOK, rec.Code)
-	var got spellhdl.SpellDTO
+	var got wire.SpellDTO
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 	assert.Equal(t, 5, got.CasterLevel)
 	require.NotNil(t, got.Damage)
@@ -566,7 +515,7 @@ func TestGet_BadCasterLevelIs400(t *testing.T) {
 func TestGet_CharacterLevelAboveTheMaxServesTheSpellWithoutDamage(t *testing.T) {
 	rec := getSpell(t, "/api/spells/fireball", fakeChars{level: spelleffectsvc.MaxCasterLevel + 1})
 	require.Equal(t, http.StatusOK, rec.Code)
-	var got spellhdl.SpellDTO
+	var got wire.SpellDTO
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 	assert.Equal(t, "fireball", got.ID)
 	assert.Nil(t, got.Damage)

@@ -54,8 +54,9 @@ import { useSpellName } from "@/i18n/spellName";
 import { type InventoryNamer, useInventoryName } from "@/i18n/inventoryName";
 import { modeName } from "@/lib/spellMode";
 import { rollLabel } from "@/lib/spellDice";
-import { abilityText, counters, type CastLogPayload } from "@/lib/logSummary";
+import { abilityText, counters } from "@/lib/logSummary";
 import type { RollResult } from "@/types/combat";
+import type { CastBreakdown } from "@/types/spells";
 import type { UseResult } from "@/types/items";
 import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
@@ -1225,11 +1226,11 @@ function ItemResult({ r }: { r: UseResult }) {
 }
 
 /** A cast from its journal payload: who cast it, the buff, the to-hit roll, the damage, the item. */
-function CastEntry({
+export function CastEntry({
   cast: c,
   interactive,
 }: {
-  cast: CastLogPayload;
+  cast: CastBreakdown;
   interactive: boolean;
 }) {
   const { t } = useTranslation();

@@ -624,7 +624,11 @@ describe("liveModel", () => {
   });
 
   it("each live kind maps to its layout; a cast keeps the full response", () => {
-    const cast = { entryId: 3, spellId: "sleep", name: "Sleep" } as CastResult;
+    const cast = {
+      logEntryId: 3,
+      spellId: "sleep",
+      spell: "Sleep",
+    } as CastResult;
     expect(liveModel({ kind: "cast", result: cast })).toEqual({
       layout: "castLive",
       result: cast,

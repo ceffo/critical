@@ -17,7 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/ceffo/critical/api/pkg/formula"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 // Router is the chi subset we need.
@@ -65,27 +65,12 @@ func RegisterSharedRoutes(r Router, svc spellsvc.SVC) {
 	r.Get("/api/spells/names", render.Handle(Names(svc)))
 }
 
-// TextDTO is a text in human languages (ADR 0023 step 6): body by language
-// code, only the languages the catalogue has (`{}` for a text in none, such
-// as an absent sphere). The client picks its language and falls back to
-// "en" per field.
-type TextDTO map[string]string
-
-// textDTO is t as a TextDTO, never null on the wire.
-func textDTO(t localized.Text) TextDTO {
-	out := make(TextDTO, len(t))
-	for lang, body := range t {
-		out[lang] = body
-	}
-	return out
-}
-
 // SpellNameDTO is one spell's id with its name in every language the
 // catalogue has: the client names a spell it knows only by id (spellbook,
 // slots, journal) in the player's language.
 type SpellNameDTO struct {
-	ID   string  `json:"id"`
-	Name TextDTO `json:"name"`
+	ID   string         `json:"id"`
+	Name localized.Text `json:"name"`
 }
 
 // Names returns every catalogue spell's names (GET /api/spells/names).
@@ -97,7 +82,7 @@ func Names(svc spellSvc) render.HandlerFunc {
 		}
 		out := make([]SpellNameDTO, 0, len(names))
 		for _, n := range names {
-			out = append(out, SpellNameDTO{ID: n.ID, Name: textDTO(n.Name)})
+			out = append(out, SpellNameDTO{ID: n.ID, Name: wire.Text(n.Name)})
 		}
 		render.OK(r.Context(), w, out)
 		return nil
@@ -132,7 +117,7 @@ func GetSlots(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, SlotsToDTO(slots))
+		render.OK(r.Context(), w, wire.SlotsToDTO(slots))
 		return nil
 	}
 }
@@ -174,7 +159,7 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 // damage, modes and exposure at that level. An explicit caster_level is
 // bounded above; the character's level is not, and a level the formulas are
 // not checked at gets no damage rather than failing the request.
-func enrich(ctx context.Context, items []SpellDTO, level int, damage damageReader) error {
+func enrich(ctx context.Context, items []wire.SpellDTO, level int, damage damageReader) error {
 	for i := range items {
 		items[i].Effect = damage.AddsEffect(ctx, items[i].ID)
 	}
@@ -186,22 +171,22 @@ func enrich(ctx context.Context, items []SpellDTO, level int, damage damageReade
 		if err != nil {
 			return err
 		}
-		items[i].Damage = DamageToDTO(d)
+		items[i].Damage = d.Wire()
 		modes, err := damage.ModesAt(ctx, items[i].ID, level)
 		if err != nil {
 			return err
 		}
-		items[i].Modes = ModesToDTO(modes)
+		items[i].Modes = spelleffectsvc.ModesWire(modes)
 		x, err := damage.ExposureAt(ctx, items[i].ID, level)
 		if err != nil {
 			return err
 		}
-		items[i].Exposure = ExposureToDTO(x)
+		items[i].Exposure = x.Wire()
 	}
 	return nil
 }
 
-// Get returns one spell by its id (GET /api/spells/{id}), the same SpellDTO
+// Get returns one spell by its id (GET /api/spells/{id}), the same wire.SpellDTO
 // as a search item, at the optional caster_level (default: the character's).
 // An id the catalogue does not hold is a 404 (code spell_not_found).
 func Get(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage damageReader) render.HandlerFunc {
@@ -214,7 +199,7 @@ func Get(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage dam
 		if err != nil {
 			return err
 		}
-		items := []SpellDTO{SpellToDTO(sp, level)}
+		items := []wire.SpellDTO{wire.SpellToDTO(sp, level)}
 		if err := enrich(r.Context(), items, level, damage); err != nil {
 			return err
 		}
@@ -345,203 +330,18 @@ func casterLevel(r *http.Request, charID CharacterIDFunc, chars characterGetter)
 	return c.Derived.RealizedLevel, nil
 }
 
-// SpellSlotDTO matches the previous wire shape.
-type SpellSlotDTO struct {
-	Level             int    `json:"level"`
-	PreparedSpellID   string `json:"prepared_spell_id"`
-	PreparedSpellName string `json:"prepared_spell_name"`
-	Used              bool   `json:"used"`
-	// Extra: a slot granted by a spell (grant_slots), blank until cast, gone at the long rest.
-	Extra bool `json:"extra,omitempty"`
-}
-
-// SpellDTO is the wire shape of a spell. Every human-language text is a
-// language map (TextDTO, ADR 0023): the client picks its language and falls
-// back to English per field. The six stat fields keep their raw PHB text
-// (English only); Stats is their typed form and Values the computed values
-// at CasterLevel (domain types carry the JSON tags). Descriptions are in the
-// catalogue's Markdown subset (paragraphs, bullet lists, pipe tables).
-type SpellDTO struct {
-	// ID is the spell's catalogue key; cast and receive take it.
-	ID           string  `json:"id"`
-	Name         TextDTO `json:"name"`
-	Class        string  `json:"class"`
-	Level        int     `json:"level"`
-	School       TextDTO `json:"school"`
-	Sphere       TextDTO `json:"sphere"`
-	CastingTime  TextDTO `json:"casting_time"`
-	Range        TextDTO `json:"range"`
-	Duration     TextDTO `json:"duration"`
-	AreaOfEffect TextDTO `json:"area_of_effect"`
-	Components   TextDTO `json:"components"`
-	SavingThrow  TextDTO `json:"saving_throw"`
-	Description  TextDTO `json:"description"`
-	// Source is the book code of the English text (PHB, TOM, ...; WEB when
-	// no book was matched).
-	Source string `json:"source"`
-
-	Stats       spellstats.Stats   `json:"stats"`
-	CasterLevel int                `json:"caster_level,omitempty"`
-	Values      *spellstats.Values `json:"values,omitempty"`
-	// Damage is what a cast rolls at CasterLevel (absent: no caster level,
-	// or a cast rolls no damage).
-	Damage *SpellDamageDTO `json:"damage,omitempty"`
-	// Modes are the cast-time modes a cast or a receive picks from, each with
-	// the damage a cast in it rolls at CasterLevel (the first is the default;
-	// Damage is its damage). Absent: the spell has none.
-	Modes []SpellModeDTO `json:"modes,omitempty"`
-	// Exposure is the damage of one round of exposure to the spell's area
-	// at CasterLevel (absent: none, or no caster level; ADR 0008 step 16).
-	Exposure *SpellExposureDTO `json:"exposure,omitempty"`
-	// Effect: POST /api/spells/effect takes the spell, it adds a buff
-	// (absent: it adds none; ADR 0004 step 19).
-	Effect bool `json:"effect,omitempty"`
-}
-
-// SpellExposureDTO is a spell's exposure damage at a caster level: one
-// damage, or the modes picked at each exposure (the first is the default),
-// each with its damage.
-type SpellExposureDTO struct {
-	Damage *SpellDamageDTO `json:"damage,omitempty"`
-	Modes  []SpellModeDTO  `json:"modes,omitempty"`
-}
-
-// ExposureToDTO maps an exposure damage to its wire shape (nil: none).
-func ExposureToDTO(x *spelleffectsvc.ExposureAt) *SpellExposureDTO {
-	if x == nil {
-		return nil
-	}
-	return &SpellExposureDTO{Damage: DamageToDTO(x.Damage), Modes: ModesToDTO(x.Modes)}
-}
-
-// SpellModeDTO is one cast-time mode: its key (the client words it) and the
-// damage a cast in it rolls (absent: none).
-type SpellModeDTO struct {
-	Key    string          `json:"key"`
-	Damage *SpellDamageDTO `json:"damage,omitempty"`
-}
-
-// ModesToDTO maps cast-time modes to their wire shape (nil: none).
-func ModesToDTO(modes []spelleffectsvc.ModeAt) []SpellModeDTO {
-	var out []SpellModeDTO
-	for _, m := range modes {
-		out = append(out, SpellModeDTO{Key: m.Key, Damage: DamageToDTO(m.Damage)})
-	}
-	return out
-}
-
-// DiceGroupDTO is Count dice of Sides sides.
-type DiceGroupDTO struct {
-	Count int `json:"count"`
-	Sides int `json:"sides"`
-}
-
-// DiceSumDTO is a formula evaluated at a caster level down to what is left
-// to roll: dice groups, in the order the spell's data writes them, plus a
-// constant. No groups: a plain number.
-type DiceSumDTO struct {
-	Groups   []DiceGroupDTO `json:"groups"`
-	Modifier int            `json:"modifier"`
-}
-
-// SpellDamageDTO is the damage a cast of a spell rolls at CasterLevel: Dice
-// for one instance, Instances separate instances every round, for Rounds
-// rounds; Type is the damage type key ("fire"). The spell lookup and the
-// spellbook serve this same shape; the client words it.
-type SpellDamageDTO struct {
-	CasterLevel int        `json:"caster_level"`
-	Dice        DiceSumDTO `json:"dice"`
-	Instances   DiceSumDTO `json:"instances"`
-	Rounds      DiceSumDTO `json:"rounds"`
-	Type        string     `json:"type,omitempty"`
-	// Parts are the parts of one instance, rolled separately, each with its
-	// save effect key (none, negates); Dice adds them up. Absent when the
-	// damage has no parts.
-	Parts []SpellDamagePartDTO `json:"parts,omitempty"`
-	// StepsPer ("round", "instance") and Steps are the dice of every round or
-	// instance of a damage whose dice change, in order; Dice is then empty
-	// and Rounds or Instances counts the steps. Absent without steps.
-	StepsPer string               `json:"steps_per,omitempty"`
-	Steps    []SpellDamageStepDTO `json:"steps,omitempty"`
-}
-
-// SpellDamageStepDTO is one dice step at the caster level: its 1-based round
-// or instance number and its dice (no groups and 0: no damage that step).
-type SpellDamageStepDTO struct {
-	Step int        `json:"step"`
-	Dice DiceSumDTO `json:"dice"`
-}
-
-// SpellDamagePartDTO is one damage part at the caster level.
-type SpellDamagePartDTO struct {
-	Dice DiceSumDTO `json:"dice"`
-	Save string     `json:"save"`
-}
-
-// DamageToDTO maps the damage at a caster level to its wire shape (nil: none).
-func DamageToDTO(d *spelleffectsvc.DamageAt) *SpellDamageDTO {
-	if d == nil {
-		return nil
-	}
-	out := &SpellDamageDTO{
-		CasterLevel: d.CasterLevel, Dice: sumToDTO(d.Dice), Instances: sumToDTO(d.Instances),
-		Rounds: sumToDTO(d.Rounds), Type: d.Type, StepsPer: string(d.StepsPer),
-	}
-	for _, st := range d.Steps {
-		out.Steps = append(out.Steps, SpellDamageStepDTO{Step: st.Step, Dice: sumToDTO(st.Dice)})
-	}
-	for _, p := range d.Parts {
-		out.Parts = append(out.Parts, SpellDamagePartDTO{Dice: sumToDTO(p.Dice), Save: string(p.Save)})
-	}
-	return out
-}
-
-func sumToDTO(s formula.Sum) DiceSumDTO {
-	out := DiceSumDTO{Groups: make([]DiceGroupDTO, 0, len(s.Dice)), Modifier: s.Constant}
-	for _, g := range s.Dice {
-		out.Groups = append(out.Groups, DiceGroupDTO{Count: g.Count, Sides: g.Sides})
-	}
-	return out
-}
-
 // SpellPageDTO is one page of GET /api/spells; Total counts every match.
 type SpellPageDTO struct {
-	Items    []SpellDTO `json:"items"`
-	Total    int        `json:"total"`
-	Page     int        `json:"page"`
-	PageSize int        `json:"page_size"`
+	Items    []wire.SpellDTO `json:"items"`
+	Total    int             `json:"total"`
+	Page     int             `json:"page"`
+	PageSize int             `json:"page_size"`
 }
 
-// SlotsToDTO maps slots to their wire shape.
-func SlotsToDTO(in []spellsvc.SpellSlot) []SpellSlotDTO {
-	out := make([]SpellSlotDTO, 0, len(in))
+func spellsToDTO(in []spellsvc.Spell, casterLevel int) []wire.SpellDTO {
+	out := make([]wire.SpellDTO, 0, len(in))
 	for _, s := range in {
-		out = append(out, SpellSlotDTO{Level: s.Level, PreparedSpellID: s.SpellID, PreparedSpellName: s.PreparedSpellName, Used: s.Used, Extra: s.Extra})
+		out = append(out, wire.SpellToDTO(s, casterLevel))
 	}
 	return out
-}
-
-func spellsToDTO(in []spellsvc.Spell, casterLevel int) []SpellDTO {
-	out := make([]SpellDTO, 0, len(in))
-	for _, s := range in {
-		out = append(out, SpellToDTO(s, casterLevel))
-	}
-	return out
-}
-
-// SpellToDTO maps one spell to its wire shape, with values at casterLevel.
-func SpellToDTO(s spellsvc.Spell, casterLevel int) SpellDTO {
-	dto := SpellDTO{
-		ID: s.ID, Name: textDTO(s.Name), Class: s.Class, Level: s.Level,
-		School: textDTO(s.School), Sphere: textDTO(s.Sphere),
-		CastingTime: textDTO(s.CastingTime), Range: textDTO(s.Range), Duration: textDTO(s.Duration),
-		AreaOfEffect: textDTO(s.AreaOfEffect), Components: textDTO(s.Components),
-		SavingThrow: textDTO(s.SavingThrow), Description: textDTO(s.Description), Source: s.Source,
-		Stats: s.Stats, CasterLevel: casterLevel,
-	}
-	if casterLevel > 0 {
-		v := s.Stats.At(casterLevel)
-		dto.Values = &v
-	}
-	return dto
 }

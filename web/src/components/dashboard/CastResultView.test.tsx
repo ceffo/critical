@@ -23,20 +23,49 @@ async function render(result: CastResult) {
 }
 
 describe("CastResultView", () => {
-  it("does not show the developer note of a spell effect", async () => {
+  // The answer is the cast's logged payload (castsvc.CastBreakdown): the view reads its names.
+  it("shows the spell, the item spent and the attack's d20 from the logged names", async () => {
     const html = await render({
-      entryId: 1,
-      source: "cast",
+      logEntryId: 1,
+      action: "cast",
       spellId: "magic_missile",
-      name: "Magic Missile",
+      spell: "Magic Missile",
       level: 1,
       casterLevel: 1,
       kind: "damage",
-      note: "Only the damage is modelled, the rest is left to the table.",
       untracked: [],
+      item: { itemId: "diamond", name: "Diamond", remaining: 3 },
+      attack: {
+        d20: 17,
+        targetAc: 5,
+        hit: true,
+        effectiveThac0: 11,
+        targetACNeeded: -6,
+      },
     });
     expect(html).toContain("Magic Missile");
-    expect(html).not.toContain("Only the damage is modelled");
+    expect(html).toContain('data-testid="cast-item"');
+    expect(html).toContain("Diamond");
+    expect(html).toMatch(/title="d20"[^>]*>17</);
+  });
+
+  it("shows the catalogue spell's class and text when the answer carries it", async () => {
+    const html = await render({
+      logEntryId: 1,
+      action: "received",
+      spellId: "sleep",
+      spell: "Sleep",
+      casterLevel: 5,
+      catalogueSpell: {
+        id: "sleep",
+        name: { en: "Sleep" },
+        class: "wizard",
+        level: 1,
+        description: { en: "Puts creatures to sleep." },
+      } as never,
+    });
+    expect(html).toContain('data-testid="cast-spell-ident"');
+    expect(html).toContain("Puts creatures to sleep.");
   });
 });
 
@@ -44,10 +73,10 @@ describe("CastResultView", () => {
 describe("CastResultView spell failure", () => {
   it("shows the d100 of a cast that held", async () => {
     const html = await render({
-      entryId: 2,
-      source: "cast",
+      logEntryId: 2,
+      action: "cast",
       spellId: "bless",
-      name: "Bless",
+      spell: "Bless",
       level: 1,
       casterLevel: 1,
       untracked: [],

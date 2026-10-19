@@ -101,7 +101,13 @@ func TestBuffs_Step19_AddAsEffectLogPayload(t *testing.T) {
 	require.NoError(t, json.Unmarshal(e.Payload, &p))
 	assert.Equal(t, map[string]any{
 		"action": "effect", "spellId": "strength", "spell": "Strength", "casterLevel": float64(bardLevel),
-		"buff": map[string]any{"name": "Strength", "rounds": float64(900), "strGain": float64(4), "applied": true},
+		"buff": map[string]any{
+			"name": "Strength", "rounds": float64(900), "strGain": float64(4), "applied": true, "id": "added-buff",
+			"durationRoll": map[string]any{"formula": "60*level", "dice": []any{}, "total": float64(900)},
+			"strGainRoll":  map[string]any{"formula": "1d6", "dice": []any{map[string]any{"sides": float64(6), "value": float64(4)}}, "total": float64(4)},
+			"effects":      map[string]any{"str_bonus": float64(4), "str_max": float64(18)},
+		},
+		"level": float64(2), "kind": "buff", "confidence": "high", "target": "self_or_other", "untracked": []any{},
 	}, p)
 }
 

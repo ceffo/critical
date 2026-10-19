@@ -71,4 +71,19 @@ describe("SpellDescription (gameplay values)", () => {
     expect(classes.size).toBe(1);
     expect(html("Just words.")).not.toContain("<span");
   });
+
+  it("still sees a list and a table when a mark opens a list item or closes a table line", () => {
+    const list = `- ${mark("modifier", "+2")} to hit\n- ${mark("modifier", "-1")} to AC`;
+    const table = `| Roll | Range |\n| --- | --- |\n|1|${mark("distance", "10 feet")}|`;
+    const out = renderToStaticMarkup(
+      <SpellDescription text={`${list}\n\n${table}`} />,
+    );
+    expect(out).toMatch(
+      /<li><span[^>]*data-value="modifier">\+2<\/span> to hit<\/li>/,
+    );
+    expect(out).toContain("<table");
+    expect(out).toMatch(
+      /<td[^>]*><span[^>]*data-value="distance">10 feet<\/span><\/td>/,
+    );
+  });
 });

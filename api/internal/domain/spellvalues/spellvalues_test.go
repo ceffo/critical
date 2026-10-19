@@ -77,6 +77,14 @@ func TestMark_LeavesNonValuesAlone(t *testing.T) {
 		{"a spell name with digits", "en", "Otiluke's Resilient Sphere of 7 Winds"},
 		{"a saving throw in words", "en", "the target saves vs. spell for half"},
 		{"a word starting like a unit", "fr", "3 mètrerie"},
+		{"a bare ordinal round", "en", "on the 3rd round the door opens"},
+		{"a bare ordinal time", "en", "the 2nd time, 1st, 2nd and 3rd"},
+		{"a bare ordinal in French", "fr", "au 3e round, la 2e fois"},
+		{"a thousands separator in French", "fr", "vaut 1 000 po ou 1,000 po"},
+		{"a multiplier in French", "fr", "fois x10 le montant"},
+		{"THAC0", "en", "THAC0 20 is needed"},
+		{"THAC0 in French", "fr", "un BTH0 20 suffit"},
+		{"a spell name with digits in French", "fr", "Sphère de 7 Vents d'Otiluke"},
 		{"a language with no vocabulary", "de", "3 Runden"},
 	}
 	for _, tc := range tests {

@@ -85,7 +85,7 @@ var vocabularies = map[string]vocabulary{
 		time:      `melee rounds?|rounds?|rds?\.?|turns?|segments?|seconds?|minutes?|hours?|hrs?\.?|days?|weeks?|months?|years?|yrs?\.?`,
 		distance:  `feet|foot|ft\.?|yards?|yds?\.?|inch(?:es)?|in\.|miles?|mi\.?|paces?|meters?|metres?|km|cm|m[²³]?`,
 		per:       `levels?|rounds?|turns?|hours?|days?`,
-		ordinal:   `\d+(?:st|nd|rd|th)(?:[- ]levels?)?`,
+		ordinal:   `\d+(?:st|nd|rd|th)[- ]levels?`,
 		levelWord: `(?:per|each|every)\s+(?:\d+\s+)?levels?|/\s?(?:\d+\s+)?levels?|[Ll]evel\s+\d+`,
 	},
 	"fr": {
@@ -102,6 +102,8 @@ var rules = func() map[string][]rule {
 	for lang, v := range vocabularies {
 		per := `(?:` + perUnit(v.per) + `)?`
 		rs := []rule{
+			// A bare ordinal ("3rd round") is no value, and "3rd" must not read as 3 rd (rounds).
+			compile(Plain, `\d+(?:st|nd|rd|th|er|re|ère|e|è|ème)`, false),
 			compile(Time, quant+`(?:`+v.time+`)`+per, false),
 			compile(Distance, quant+size+`(?:`+v.distance+`)`+per, false),
 			compile(Level, v.ordinal, false),
@@ -179,10 +181,14 @@ func Mark(lang, text string) []Span {
 		return all[i].to > all[j].to
 	})
 	var spans []Span
-	at := 0
+	at, covered := 0, 0 // covered: the end of what a find claimed, plain or not
 	for _, f := range all {
-		if f.from < at {
+		if f.from < covered {
 			continue
+		}
+		covered = f.to
+		if f.kind == Plain {
+			continue // claimed, so no value overlaps it, but left in the surrounding text
 		}
 		if f.from > at {
 			spans = append(spans, Span{Text: text[at:f.from]})

@@ -1,5 +1,6 @@
-// Mirrors api/internal/rest/handler/combathdl (RollResultDTO, ModifierDTO, DamageTermDTO, AmmoDTO,
-// AttackRequestDTO, WeaponDTO). The attack fields also match the attack entries' log payload.
+// Mirrors api/internal/rest/handler/combathdl (RollResultDTO for saves, AttackRequestDTO, WeaponDTO)
+// and combatsvc.AttackBreakdown, which is both the attack endpoints' answer and the attack entries'
+// log payload.
 
 import type { LocalizedText } from "./localized";
 

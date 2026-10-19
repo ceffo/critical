@@ -63,7 +63,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		// step 1): PHB Table 60 for the class group and level.
 		target := savesByCategory(char.Derived.Saves)[category]
 
-		rec := saveRecord{Category: string(category), Target: target, Modifiers: []modifierRecord{}}
+		rec := saveRecord{Category: string(category), Target: target, Modifiers: []BreakdownModifier{}}
 		rec.D20Roll = s.dice.RollD20()
 		mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponNone)
 		if err != nil {
@@ -72,12 +72,12 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		// The race's bonus (ADR 0030 step 22.1) is one named modifier on the
 		// roll, like a buff's: it moves the roll, never the target.
 		if b := savesByCategory(char.Derived.RaceSaveBonus)[category]; b != 0 {
-			rec.Modifiers = append(rec.Modifiers, modifierRecord{Kind: string(ModRace), Detail: char.Race, Value: b})
+			rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: string(ModRace), Detail: char.Race, Value: b})
 		}
 		// One modifier per buff, named like attack buff modifiers (Detail =
 		// buff name), so the card labels each one.
 		for _, c := range mods.SaveBonusFrom {
-			rec.Modifiers = append(rec.Modifiers, modifierRecord{Kind: string(ModBuff), Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})
+			rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: string(ModBuff), Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})
 		}
 		rec.settle()
 		rec.RolledPassed = rec.Passed
@@ -153,7 +153,7 @@ type saveRecord struct {
 	D20Roll  int    `json:"d20Roll"`
 	// Modifiers are the ones applied when rolling (the race's bonus, buffs),
 	// not the adjustment.
-	Modifiers []modifierRecord `json:"modifiers"`
+	Modifiers []BreakdownModifier `json:"modifiers"`
 	// Target is the category's derived target (ADR 0030 step 6), never adjusted.
 	Target int `json:"target"`
 	// RolledPassed is the verdict as rolled, before any adjustment.

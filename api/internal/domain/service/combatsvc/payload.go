@@ -1,51 +1,56 @@
 package combatsvc
 
-// attackRecord is combatsvc's JSON encoding of an attack inside its
-// action-log entry (payload). It uses the same camelCase names as the
-// /api/roll/attack response, so the UI reads both with one type. Entries
-// already in the log must stay decodable: add fields, never rename them.
-type attackRecord struct {
+// AttackBreakdown is the one wire shape of an attack: the payload of its
+// action-log entry and the answer of the attack endpoints (/api/roll/attack
+// and its correction, verdict and unknown-AC routes) are this struct, so the
+// UI reads both with one type. Entries already in the log must stay
+// decodable: add fields, never rename them (ADR 0010, ADR 0018).
+type AttackBreakdown struct {
 	D20Roll      int `json:"d20Roll"`
 	D100CritRoll int `json:"d100CritRoll"`
 	// D100MultiplierRoll is absent on attacks logged before it existed.
-	D100MultiplierRoll int              `json:"d100MultiplierRoll,omitempty"`
-	IsCrit             bool             `json:"isCrit"`
-	CritMultiplier     float64          `json:"critMultiplier"`
-	CritPlaceholder    bool             `json:"critPlaceholder"`
-	CritFrom           int              `json:"critFrom"`
-	CritTo             int              `json:"critTo"`
-	BaseThac0          int              `json:"baseThac0"`
-	Modifiers          []modifierRecord `json:"modifiers"`
-	EffectiveThac0     int              `json:"effectiveThac0"`
-	TargetACNeeded     int              `json:"targetACNeeded"`
+	D100MultiplierRoll int                 `json:"d100MultiplierRoll,omitempty"`
+	IsCrit             bool                `json:"isCrit"`
+	CritMultiplier     float64             `json:"critMultiplier"`
+	CritPlaceholder    bool                `json:"critPlaceholder"`
+	CritFrom           int                 `json:"critFrom"`
+	CritTo             int                 `json:"critTo"`
+	BaseThac0          int                 `json:"baseThac0"`
+	Modifiers          []BreakdownModifier `json:"modifiers"`
+	EffectiveThac0     int                 `json:"effectiveThac0"`
+	TargetACNeeded     int                 `json:"targetACNeeded"`
 	// HitsAC and CritsFromAC (ADR 0012 steps 2 and 3); 0 on attacks logged
 	// before them (targetACNeeded is HitsAC there).
-	HitsAC         int          `json:"hitsAc"`
-	CritsFromAC    int          `json:"critsFromAc"`
-	Hit            bool         `json:"hit"`
-	HitMargin      int          `json:"hitMargin"`
-	BaseDamage     int          `json:"baseDamage"`
-	DamageDice     string       `json:"damageDice"`
-	SpellsBuff     float64      `json:"spellsBuff"`
-	WeaponBuff     int          `json:"weaponBuff"`
-	Multipliers    float64      `json:"multipliers"`
-	DiceMultiplier float64      `json:"diceMultiplier"`
-	StrengthBonus  int          `json:"strengthBonus"`
-	BonusDamage    int          `json:"bonusDamage"`
-	DamageTerms    []termRecord `json:"damageTerms"`
+	HitsAC      int `json:"hitsAc"`
+	CritsFromAC int `json:"critsFromAc"`
+	// CritPossible: some real AC (at most 10) is crit, i.e. critsFromAc is
+	// not beyond every AC (ADR 0012 step 7). Absent on attacks logged before
+	// it was recorded; the UI reads absent as possible.
+	CritPossible   *bool           `json:"critPossible,omitempty"`
+	Hit            bool            `json:"hit"`
+	HitMargin      int             `json:"hitMargin"`
+	BaseDamage     int             `json:"baseDamage"`
+	DamageDice     string          `json:"damageDice"`
+	SpellsBuff     float64         `json:"spellsBuff"`
+	WeaponBuff     int             `json:"weaponBuff"`
+	Multipliers    float64         `json:"multipliers"`
+	DiceMultiplier float64         `json:"diceMultiplier"`
+	StrengthBonus  int             `json:"strengthBonus"`
+	BonusDamage    int             `json:"bonusDamage"`
+	DamageTerms    []BreakdownTerm `json:"damageTerms"`
 	// DamageRolls are the damage dice as thrown (absent on attacks logged
 	// before they were recorded, and when the attack deals no damage).
-	DamageRolls []dieRecord `json:"damageRolls,omitempty"`
-	TotalDamage int         `json:"totalDamage"`
+	DamageRolls []BreakdownDie `json:"damageRolls,omitempty"`
+	TotalDamage int            `json:"totalDamage"`
 	// UnroundedDamage is the formula result before the final floor (absent
 	// on attacks logged before it was recorded).
 	UnroundedDamage float64 `json:"unroundedDamage,omitempty"`
 	WeaponID        string  `json:"weaponId"`
 	WeaponName      string  `json:"weaponName"`
 	// TargetAC is null while the AC is unknown (ADR 0012).
-	TargetAC   *int        `json:"targetAc"`
-	TargetSize string      `json:"targetSize"`
-	Ammo       *ammoRecord `json:"ammo,omitempty"`
+	TargetAC   *int           `json:"targetAc"`
+	TargetSize string         `json:"targetSize"`
+	Ammo       *BreakdownAmmo `json:"ammo,omitempty"`
 	// ACKnown is absent on attacks logged before unknown ACs existed, which
 	// all had one. RolledACUnknown: rolled without the AC. Verdict: the GM's
 	// hit or miss while the AC is unknown.
@@ -54,44 +59,49 @@ type attackRecord struct {
 	Verdict         string `json:"verdict,omitempty"`
 	// Rolled and CritRow are what a target AC correction recomputes the
 	// outcome from (absent on attacks logged before corrections existed).
-	Rolled  *rolledRecord  `json:"rolled,omitempty"`
-	CritRow *critRowRecord `json:"critRow,omitempty"`
+	Rolled  *BreakdownRolled  `json:"rolled,omitempty"`
+	CritRow *BreakdownCritRow `json:"critRow,omitempty"`
 	// RolledTargetAC, RolledHit and RolledCrit are the target AC and
 	// outcome as rolled, set while a correction differs from them.
 	RolledTargetAC *int  `json:"rolledTargetAc,omitempty"`
 	RolledHit      *bool `json:"rolledHit,omitempty"`
 	RolledCrit     *bool `json:"rolledCrit,omitempty"`
+	// LogEntryID is the entry recording the attack: set on the endpoints'
+	// answer, never in the payload (the entry carries its own id). Last, so
+	// an answer is its entry's payload plus this one key.
+	LogEntryID int64 `json:"logEntryId,omitempty"`
 }
 
-// rolledRecord is RolledDamage.
-type rolledRecord struct {
-	Dice            string       `json:"dice"`
-	Total           int          `json:"total"`
-	SpellsBuff      float64      `json:"spellsBuff"`
-	WeaponBuff      int          `json:"weaponBuff"`
-	BuffMultipliers float64      `json:"buffMultipliers"`
-	StrengthBonus   int          `json:"strengthBonus"`
-	BonusDamage     int          `json:"bonusDamage"`
-	Terms           []termRecord `json:"terms"`
+// BreakdownRolled is RolledDamage: the damage as rolled, which a target AC
+// correction recomputes the outcome from.
+type BreakdownRolled struct {
+	Dice            string          `json:"dice"`
+	Total           int             `json:"total"`
+	SpellsBuff      float64         `json:"spellsBuff"`
+	WeaponBuff      int             `json:"weaponBuff"`
+	BuffMultipliers float64         `json:"buffMultipliers"`
+	StrengthBonus   int             `json:"strengthBonus"`
+	BonusDamage     int             `json:"bonusDamage"`
+	Terms           []BreakdownTerm `json:"terms"`
 	// Rolls are the dice thrown for Total, in order.
-	Rolls []dieRecord `json:"rolls,omitempty"`
+	Rolls []BreakdownDie `json:"rolls,omitempty"`
 }
 
-// dieRecord is one die thrown: its sides and the value it showed.
-type dieRecord struct {
+// BreakdownDie is one die thrown: its sides and the value it showed.
+type BreakdownDie struct {
 	Sides int `json:"sides"`
 	Value int `json:"value"`
 }
 
-func toDieRecords(in []DieRoll) []dieRecord {
-	var out []dieRecord
+func toDieRecords(in []DieRoll) []BreakdownDie {
+	var out []BreakdownDie
 	for _, d := range in {
-		out = append(out, dieRecord(d))
+		out = append(out, BreakdownDie(d))
 	}
 	return out
 }
 
-func fromDieRecords(in []dieRecord) []DieRoll {
+func fromDieRecords(in []BreakdownDie) []DieRoll {
 	var out []DieRoll
 	for _, d := range in {
 		out = append(out, DieRoll(d))
@@ -99,19 +109,20 @@ func fromDieRecords(in []dieRecord) []DieRoll {
 	return out
 }
 
-// critRowRecord is the crit-table row of the multiplier d100 when rolling.
-type critRowRecord struct {
+// BreakdownCritRow is the crit-table row of the multiplier d100 when rolling.
+type BreakdownCritRow struct {
 	From        int     `json:"from"`
 	To          int     `json:"to"`
 	Multiplier  float64 `json:"multiplier"`
 	Placeholder bool    `json:"placeholder"`
 }
 
-// modifierRecord and termRecord: entries logged before the UI labelled them
-// also carry an English "source", no longer read.
-// ItemID is the item of an item power's contribution (ADR 0016 step 14),
-// absent otherwise and from entries logged before powers.
-type modifierRecord struct {
+// BreakdownModifier is one to-hit (or save) modifier; the UI labels it from
+// Kind and Detail. Entries logged before the UI labelled them also carry an
+// English "source", no longer read. ItemID is the item of an item power's
+// contribution (ADR 0016 step 14), absent otherwise and from entries logged
+// before powers.
+type BreakdownModifier struct {
 	Kind           string `json:"kind"`
 	Detail         string `json:"detail,omitempty"`
 	ItemID         string `json:"itemId,omitempty"`
@@ -119,7 +130,9 @@ type modifierRecord struct {
 	StrExceptional int    `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
-type termRecord struct {
+// BreakdownTerm is one contribution to the damage formula (Detail, ItemID
+// and the English "source" of old entries as on BreakdownModifier).
+type BreakdownTerm struct {
 	Term           string  `json:"term"`
 	Kind           string  `json:"kind"`
 	Detail         string  `json:"detail,omitempty"`
@@ -128,22 +141,23 @@ type termRecord struct {
 	StrExceptional int     `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
-type ammoRecord struct {
+// BreakdownAmmo is the ammunition an attack spent and what is left.
+type BreakdownAmmo struct {
 	ItemID    string `json:"itemId"`
 	Name      string `json:"name"`
 	Magic     int    `json:"magic"`
 	Remaining int    `json:"remaining"`
 }
 
-func toTermRecords(in []DamageTerm) []termRecord {
-	out := make([]termRecord, len(in))
+func toTermRecords(in []DamageTerm) []BreakdownTerm {
+	out := make([]BreakdownTerm, len(in))
 	for i, t := range in {
-		out[i] = termRecord{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional}
+		out[i] = BreakdownTerm{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional}
 	}
 	return out
 }
 
-func fromTermRecords(in []termRecord) []DamageTerm {
+func fromTermRecords(in []BreakdownTerm) []DamageTerm {
 	out := make([]DamageTerm, len(in))
 	for i, t := range in {
 		out[i] = DamageTerm{Term: DamageTermKind(t.Term), Kind: ModifierKind(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional}
@@ -151,13 +165,22 @@ func fromTermRecords(in []termRecord) []DamageTerm {
 	return out
 }
 
-func toRecord(r *RollResult) attackRecord {
-	mods := make([]modifierRecord, len(r.Modifiers))
+// NewAttackBreakdown is the breakdown of r as the attack endpoints answer it:
+// the payload logged for r plus the id of its entry.
+func NewAttackBreakdown(r *RollResult) AttackBreakdown {
+	out := toRecord(r)
+	out.LogEntryID = r.LogEntryID
+	return out
+}
+
+// toRecord is the payload logged for r: its breakdown without the entry id.
+func toRecord(r *RollResult) AttackBreakdown {
+	mods := make([]BreakdownModifier, len(r.Modifiers))
 	for i, m := range r.Modifiers {
-		mods[i] = modifierRecord{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional}
+		mods[i] = BreakdownModifier{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional}
 	}
 	terms := toTermRecords(r.DamageTerms)
-	out := attackRecord{
+	out := AttackBreakdown{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
 		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo, BaseThac0: r.BaseThac0, Modifiers: mods,
 		EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded, HitsAC: r.HitsAC, CritsFromAC: r.CritsFromAC,
@@ -168,22 +191,24 @@ func toRecord(r *RollResult) attackRecord {
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize),
 		ACKnown: &r.ACKnown, RolledACUnknown: r.RolledACUnknown, Verdict: string(r.Verdict),
 	}
+	possible := r.CritPossible()
+	out.CritPossible = &possible
 	if r.ACKnown {
 		ac := r.TargetAC
 		out.TargetAC = &ac
 	}
 	if a := r.Ammo; a != nil {
-		out.Ammo = &ammoRecord{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Remaining: a.Remaining}
+		out.Ammo = &BreakdownAmmo{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Remaining: a.Remaining}
 	}
 	if d := r.Rolled; d != nil {
-		out.Rolled = &rolledRecord{
+		out.Rolled = &BreakdownRolled{
 			Dice: d.Dice, Total: d.Total, SpellsBuff: d.SpellsBuff, WeaponBuff: d.WeaponBuff,
 			BuffMultipliers: d.BuffMultipliers, StrengthBonus: d.StrengthBonus, BonusDamage: d.BonusDamage,
 			Terms: toTermRecords(d.Terms), Rolls: toDieRecords(d.Rolls),
 		}
 	}
 	if c := r.RollCritRow; c != nil {
-		out.CritRow = &critRowRecord{From: c.From, To: c.To, Multiplier: c.Multiplier, Placeholder: r.RollCritPlaceholder}
+		out.CritRow = &BreakdownCritRow{From: c.From, To: c.To, Multiplier: c.Multiplier, Placeholder: r.RollCritPlaceholder}
 	}
 	out.RolledTargetAC, out.RolledHit, out.RolledCrit = r.RolledTargetAC, r.RolledHit, r.RolledCrit
 	return out
@@ -192,7 +217,7 @@ func toRecord(r *RollResult) attackRecord {
 // result decodes the attack as rolled: the inputs settle needs (dice,
 // modifiers, target, rolled damage, crit row) and the context. The outcome
 // fields are copied as stored; settle recomputes them.
-func (a attackRecord) result(entryID int64) *RollResult {
+func (a AttackBreakdown) result(entryID int64) *RollResult {
 	mods := make([]Modifier, len(a.Modifiers))
 	for i, m := range a.Modifiers {
 		mods[i] = Modifier{Kind: ModifierKind(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional}

@@ -142,7 +142,8 @@ type SaveRequestDTO struct {
 	Category combatsvc.SaveCategory `json:"category"`
 }
 
-// ResolveAttack runs an attack and returns the RollResult JSON.
+// ResolveAttack runs an attack and returns its breakdown, the payload of its
+// log entry plus the entry id (combatsvc.AttackBreakdown).
 func ResolveAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		var req AttackRequestDTO
@@ -161,7 +162,7 @@ func ResolveAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(res))
+		render.OK(r.Context(), w, combatsvc.NewAttackBreakdown(res))
 		return nil
 	}
 }
@@ -191,7 +192,7 @@ type AttackAdjustmentDTO struct {
 // AdjustAttack corrects the target AC of the latest attack (log entry {id});
 // the server recomputes hit, margin, crit and damage with the dice rolled
 // with the attack (no reroll, no ammo spent) and returns the updated
-// RollResult. 409 when the entry is voided or not the latest roll, 400 when
+// breakdown. 409 when the entry is voided or not the latest roll, 400 when
 // it is not an attack or the AC is out of range, 404 when it does not exist.
 func AdjustAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
@@ -210,7 +211,7 @@ func AdjustAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(res))
+		render.OK(r.Context(), w, combatsvc.NewAttackBreakdown(res))
 		return nil
 	}
 }
@@ -223,7 +224,7 @@ type AttackVerdictDTO struct {
 
 // AttackVerdict records the GM's hit or miss on the latest attack (log entry
 // {id}) when its target AC is unknown: no crit, damage as rolled, nothing
-// rolled or spent (docs/adr/0012 step 4). Returns the updated RollResult.
+// rolled or spent (docs/adr/0012 step 4). Returns the updated breakdown.
 // 409 when the entry is voided or not the latest roll, 400 when it is not an
 // attack or its AC is known, 404 when it does not exist.
 func AttackVerdict(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
@@ -243,14 +244,14 @@ func AttackVerdict(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(res))
+		render.OK(r.Context(), w, combatsvc.NewAttackBreakdown(res))
 		return nil
 	}
 }
 
 // ClearAttackAC makes the target AC of the latest attack (log entry {id})
 // unknown again (docs/adr/0012 step 8); no body. Returns the updated
-// RollResult. 409 when the entry is voided or not the latest roll, 400 when
+// breakdown. 409 when the entry is voided or not the latest roll, 400 when
 // it is not an attack or its AC is already unknown, 404 when it does not exist.
 func ClearAttackAC(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
@@ -262,7 +263,7 @@ func ClearAttackAC(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(res))
+		render.OK(r.Context(), w, combatsvc.NewAttackBreakdown(res))
 		return nil
 	}
 }
@@ -300,9 +301,9 @@ func AdjustSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	}
 }
 
-// RollResultDTO is the full breakdown of a roll (camelCase JSON). The attack
-// fields match combatsvc's action-log payload, so web/src/types/combat.ts
-// reads both.
+// RollResultDTO is the full breakdown of a saving throw (camelCase JSON), in
+// the shape the attack had before it answered with combatsvc.AttackBreakdown;
+// its attack fields are zero on a save.
 type RollResultDTO struct {
 	D20Roll      int `json:"d20Roll"`
 	D100CritRoll int `json:"d100CritRoll"`

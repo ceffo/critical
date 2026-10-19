@@ -129,7 +129,7 @@ func (s *service) ClearAttackAC(ctx context.Context, characterID, entryID int64)
 // decodeCorrectable decodes an attack entry that stored every die its
 // outcome depends on; older entries are refused.
 func decodeCorrectable(e actionlog.Entry) (*RollResult, error) {
-	var rec attackRecord
+	var rec AttackBreakdown
 	if err := json.Unmarshal(e.EffectivePayload(), &rec); err != nil {
 		return nil, fmt.Errorf("decode attack #%d: %w", e.ID, err)
 	}

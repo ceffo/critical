@@ -19,7 +19,7 @@ WHERE id = sqlc.arg(id);
 UPDATE characters SET skill_points = sqlc.arg(skill_points) WHERE id = sqlc.arg(id);
 
 -- name: GetCharacterDetails :one
-SELECT class, alignment, age, sex, height, weight, hair, eyes, languages
+SELECT class, race_code, alignment, age, sex, height, weight, hair, eyes, languages
 FROM characters WHERE id = $1;
 
 -- name: UpdateCharacterDetails :execrows

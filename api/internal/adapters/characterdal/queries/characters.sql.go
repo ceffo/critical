@@ -253,12 +253,13 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 }
 
 const getCharacterDetails = `-- name: GetCharacterDetails :one
-SELECT class, alignment, age, sex, height, weight, hair, eyes, languages
+SELECT class, race_code, alignment, age, sex, height, weight, hair, eyes, languages
 FROM characters WHERE id = $1
 `
 
 type GetCharacterDetailsRow struct {
 	Class     string
+	RaceCode  string
 	Alignment string
 	Age       int64
 	Sex       string
@@ -274,6 +275,7 @@ func (q *Queries) GetCharacterDetails(ctx context.Context, id int64) (GetCharact
 	var i GetCharacterDetailsRow
 	err := row.Scan(
 		&i.Class,
+		&i.RaceCode,
 		&i.Alignment,
 		&i.Age,
 		&i.Sex,

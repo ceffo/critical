@@ -17,14 +17,11 @@ const (
 	MaxDetailShortLen   = 40 // hair, eyes
 	MaxDetailMeasureLen = 20 // height, weight
 	MaxAge              = 10_000
-	MaxLanguages        = 20
-	MaxLanguageLen      = 30
 )
 
 // Error codes of the details' FieldErrors besides CodeTooLong, CodeOutOfRange
 // and CodeEmpty. The web owns the wording.
 const (
-	CodeTooMany   = "too_many"
 	CodeDuplicate = "duplicate"
 	// CodeAlignmentNotAllowed is an alignment the class does not admit (ADR
 	// 0032 step 2), refused when it is set and read as a warning on a
@@ -41,20 +38,46 @@ const (
 // Sexes are the sex codes.
 var Sexes = []string{SexMale, SexFemale}
 
-// The fields a character may lack (Details.Missing).
+// The fields a character may lack (Details.Missing) or a warning is about.
 const (
 	FieldAlignment = "alignment"
 	FieldSex       = "sex"
+	FieldLanguages = "languages"
 )
+
+// CodeLanguagesOverLimit is the warning of a character that knows more
+// languages than PHB Table 4 gives its Intelligence (ADR 0032 step 4.2): never
+// a refusal, the DM decides.
+const CodeLanguagesOverLimit = "languages_over_limit"
+
+// LanguageBook is the language catalogue the details are checked against (ADR
+// 0032 step 4); ruletablesvc.Languages satisfies it, the empty one included.
+type LanguageBook interface {
+	// Has reports whether code is a catalogue language.
+	Has(code string) bool
+	// Native is the race's own language, "" without a catalogue.
+	Native(race string) string
+	// All are the catalogue's languages and RaceList a race's PHB list (the
+	// native language included), for the creation options.
+	All() []ruletablesvc.Language
+	RaceList(race string) []string
+}
+
+// Kind is the class and race code of the character whose details are checked:
+// the alignment limit depends on the class and the native language on the race.
+type Kind struct {
+	Class, Race string
+}
 
 // DetailsField prefixes the field of a details refusal at creation, where
 // "race" already names the race code: "details.age", "details.languages".
 const DetailsField = "details."
 
 // DetailsPatch holds the details to change, nil leaves a field as it is. An
-// empty string clears a text field, an empty list the languages and ClearAge
-// the age (Age itself must be 1 to MaxAge). Alignment and Sex are codes and
-// cannot be cleared: an empty one is refused.
+// empty string clears a text field, an empty list the languages (but the
+// native one, which the server keeps, ADR 0032 step 4.1) and ClearAge the age
+// (Age itself must be 1 to MaxAge). Alignment and Sex are codes and cannot be
+// cleared: an empty one is refused. Languages are catalogue codes.
 type DetailsPatch struct {
 	Alignment *string
 	Age       *int
@@ -97,10 +120,56 @@ func (d Details) Missing() []string {
 }
 
 // Warning is a rule the stored character breaks without being refused (ADR
-// 0032 step 8.4): a code and the field it is about.
+// 0032 steps 4.2 and 8.4): a code and the field it is about, and for the
+// languages over the limit the figures the web words (Count known, Limit
+// allowed); nil for the others.
 type Warning struct {
-	Code  string
-	Field string
+	Code         string
+	Field        string
+	Count, Limit *int
+}
+
+// Known is d with the languages the book does not hold left out: during a
+// rolling deploy (ADR 0024) the release before keeps writing free-text words
+// after the languages migration ran, and a word that is no catalogue code is
+// not shown (ADR 0032 step 8.1). Without a catalogue (every book is empty
+// before format 8) nothing is left out, so the codes stay.
+func (d Details) Known(book LanguageBook) Details {
+	d.Languages = append([]string{}, d.Languages...)
+	if book == nil || len(book.All()) == 0 {
+		return d
+	}
+	d.Languages = slices.DeleteFunc(d.Languages, func(l string) bool { return !book.Has(l) })
+	return d
+}
+
+// WithNative is d with the race's native language among its languages, first
+// when it was missing (ADR 0032 step 4.1); native "" (no catalogue) changes
+// nothing.
+func (d Details) WithNative(native string) Details {
+	d.Languages = append([]string{}, d.Languages...)
+	if native != "" && !slices.Contains(d.Languages, native) {
+		d.Languages = append([]string{native}, d.Languages...)
+	}
+	return d
+}
+
+// LanguageWarning is ADR 0032 step 4.2: the additional languages (the native
+// one not counted) beyond PHB Table 4's number for the Intelligence score. ok
+// is false while within it. It is read again whenever the score or the
+// languages change, so an Intelligence edited below the languages known warns.
+func (d Details) LanguageWarning(intelligence int, native string) (w Warning, ok bool) {
+	count := 0
+	for _, l := range d.Languages {
+		if l != native {
+			count++
+		}
+	}
+	limit := ruletablesvc.LanguageLimit(intelligence)
+	if count <= limit {
+		return Warning{}, false
+	}
+	return Warning{Code: CodeLanguagesOverLimit, Field: FieldLanguages, Count: &count, Limit: &limit}, true
 }
 
 // Warnings are the warnings the details of a character of class carry: the
@@ -126,14 +195,17 @@ func code(field, v string, allowed []string) error {
 	return nil
 }
 
-// Apply is d with the patch applied for a character of class, every field
+// Apply is d with the patch applied for a character of kind, every field
 // checked: the alignment one of the nine, admitted by the class (ADR 0032 step
 // 2, on every set, at creation and on the card's edit alike), the sex male or
 // female (step 3), text trimmed and bounded, the age 1 to MaxAge, the
-// languages trimmed, non-empty, bounded and without duplicates
-// (case-insensitive). A refusal is a *domain.FieldError naming the field
-// (alignment, age, sex, height, weight, hair, eyes or languages).
-func (d Details) Apply(class string, p DetailsPatch) (Details, error) {
+// languages codes of the book without duplicates (step 4.3), the race's
+// native language added to them (step 4.1); going over the Intelligence count
+// is no refusal (step 4.2, LanguageWarning). A refusal is a *domain.FieldError
+// naming the field (alignment, age, sex, height, weight, hair, eyes or
+// languages).
+func (d Details) Apply(k Kind, book LanguageBook, p DetailsPatch) (Details, error) {
+	class := k.Class
 	cur := d
 	cur.Languages = append([]string{}, d.Languages...)
 	text := func(field string, dst, v *string, limit int) error {
@@ -190,42 +262,52 @@ func (d Details) Apply(class string, p DetailsPatch) (Details, error) {
 		cur.Age = *p.Age
 	}
 	if p.Languages != nil {
-		langs, err := cleanLanguages(*p.Languages)
+		langs, err := cleanLanguages(book, d.Languages, *p.Languages)
 		if err != nil {
 			return d, err
 		}
 		cur.Languages = langs
+		if book != nil {
+			cur = cur.WithNative(book.Native(k.Race))
+		}
 	}
 	return cur, nil
 }
 
-func cleanLanguages(in []string) ([]string, error) {
-	if len(in) > MaxLanguages {
-		return nil, &domain.FieldError{Field: "languages", Message: CodeTooMany}
-	}
+// cleanLanguages checks the codes against the book: non-empty (CodeEmpty), in
+// the catalogue (CodeUnknown), each once (CodeDuplicate). A nil or empty book
+// (every catalogue before format 8) knows no language, but the codes the
+// character already holds stay valid there: its card sends them back with
+// every edit, and refusing them would lock the edit (ADR 0032 step 8.1).
+func cleanLanguages(book LanguageBook, stored, in []string) ([]string, error) {
+	empty := book == nil || len(book.All()) == 0
 	out := make([]string, 0, len(in))
 	seen := map[string]bool{}
-	for _, raw := range in {
-		l := strings.TrimSpace(raw)
+	for _, l := range in {
 		switch {
 		case l == "":
-			return nil, &domain.FieldError{Field: "languages", Message: CodeEmpty}
-		case utf8.RuneCountInString(l) > MaxLanguageLen:
-			return nil, &domain.FieldError{Field: "languages", Message: CodeTooLong}
-		case seen[strings.ToLower(l)]:
-			return nil, &domain.FieldError{Field: "languages", Message: CodeDuplicate}
+			return nil, &domain.FieldError{Field: FieldLanguages, Message: CodeEmpty}
+		case (book == nil || !book.Has(l)) && (!empty || !slices.Contains(stored, l)):
+			return nil, &domain.FieldError{Field: FieldLanguages, Message: CodeUnknown}
+		case seen[l]:
+			return nil, &domain.FieldError{Field: FieldLanguages, Message: CodeDuplicate}
 		}
-		seen[strings.ToLower(l)] = true
+		seen[l] = true
 		out = append(out, l)
 	}
 	return out, nil
 }
 
-// newDetails are a new character's details of class: none, with p applied,
+// newDetails are a new character's details of kind: none, with p applied,
 // the alignment and the sex required (ADR 0032 steps 2 and 3). A refusal names
 // its field under DetailsField.
-func newDetails(class string, p DetailsPatch) (Details, error) {
-	d, err := Details{Languages: []string{}}.Apply(class, p)
+func newDetails(k Kind, book LanguageBook, p DetailsPatch) (Details, error) {
+	// A new character always gets its native language (ADR 0032 step 4.1),
+	// whether or not the form sent languages.
+	if p.Languages == nil {
+		p.Languages = &[]string{}
+	}
+	d, err := Details{Languages: []string{}}.Apply(k, book, p)
 	if err == nil && d.Alignment == "" {
 		err = &domain.FieldError{Field: FieldAlignment, Message: CodeEmpty}
 	}

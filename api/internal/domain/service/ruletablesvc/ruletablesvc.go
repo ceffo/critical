@@ -88,6 +88,9 @@ type Tables struct {
 	equipment       *Equipment
 	weaponVsArmor   *WeaponVsArmor
 	initiativeItems *InitiativeItems
+	// languages is the language catalogue of a format-8 catalogue (ADR 0021
+	// step 14); nil before format 8.
+	languages *Languages
 }
 
 var _ Lookup = (*Tables)(nil)

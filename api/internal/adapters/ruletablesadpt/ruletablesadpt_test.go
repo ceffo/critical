@@ -21,8 +21,22 @@ import (
 // (ADR 0021 step 9.7).
 var fixture = filepath.Join("..", "..", "..", "testdata", "catalogue.json")
 
-// fixtureRuleTables is the fixture's rule_tables object, as written.
+// fixtureRuleTables is the fixture's rule_tables object as a format-7 artifact
+// carries it: without the race_languages table (format 8, see
+// fixtureRuleTablesFormat8).
 func fixtureRuleTables(t *testing.T) []byte {
+	t.Helper()
+	tables := fixtureRuleTablesFormat8(t)
+	var doc map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(tables, &doc))
+	delete(doc, "race_languages")
+	out, err := json.Marshal(doc)
+	require.NoError(t, err)
+	return out
+}
+
+// fixtureRuleTablesFormat8 is the fixture's rule_tables object, as written.
+func fixtureRuleTablesFormat8(t *testing.T) []byte {
 	t.Helper()
 	raw, err := os.ReadFile(fixture) //nolint:gosec // test path
 	require.NoError(t, err)
@@ -32,6 +46,19 @@ func fixtureRuleTables(t *testing.T) []byte {
 	require.NoError(t, json.Unmarshal(raw, &a))
 	require.NotEmpty(t, a.RuleTables)
 	return a.RuleTables
+}
+
+// fixtureLanguages is the fixture's top-level languages list (format 8).
+func fixtureLanguages(t *testing.T) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(fixture) //nolint:gosec // test path
+	require.NoError(t, err)
+	var a struct {
+		Languages json.RawMessage `json:"languages"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &a))
+	require.NotEmpty(t, a.Languages)
+	return a.Languages
 }
 
 // fixtureEquipment is the fixture's top-level equipment object (format 7).
@@ -51,7 +78,7 @@ func fixtureEquipment(t *testing.T) []byte {
 // does for the artifact's.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	return must.Do(ruletablesadpt.Parse(catalogue.FormatEquipment, fixtureRuleTables(t), fixtureEquipment(t)))
+	return must.Do(ruletablesadpt.Parse(catalogue.FormatEquipment, fixtureRuleTables(t), fixtureEquipment(t), nil))
 }
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
@@ -191,7 +218,7 @@ func TestBardXPThreshold(t *testing.T) {
 // ADR 0021 step 9.3: a gap, an overlap or a malformed row refuses the
 // tables, naming the table.
 func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
-	good := fixtureRuleTables(t)
+	good := fixtureRuleTablesFormat8(t)
 	tests := map[string]struct{ from, to, table string }{
 		"gap in strength":    {`{"str_min": 8, "str_max": 15,`, `{"str_min": 9, "str_max": 15,`, "strength table"},
 		"gap in 18/xx":       {`"exc_min": 51, "exc_max": 75`, `"exc_min": 52, "exc_max": 75`, "strength table"},
@@ -206,11 +233,11 @@ func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Contains(t, string(good), tt.from)
-			_, err := ruletablesadpt.Parse(catalogue.FormatEquipment, []byte(strings.Replace(string(good), tt.from, tt.to, 1)), fixtureEquipment(t))
+			_, err := ruletablesadpt.Parse(catalogue.FormatLanguages, []byte(strings.Replace(string(good), tt.from, tt.to, 1)), fixtureEquipment(t), fixtureLanguages(t))
 			require.ErrorContains(t, err, tt.table)
 		})
 	}
-	_, err := ruletablesadpt.Parse(catalogue.FormatEquipment, good, fixtureEquipment(t))
+	_, err := ruletablesadpt.Parse(catalogue.FormatLanguages, good, fixtureEquipment(t), fixtureLanguages(t))
 	require.NoError(t, err)
 }
 
@@ -233,7 +260,7 @@ func classTablesOf(t *testing.T, format int, mutate func(map[string]any)) (*rule
 	mutate(doc)
 	raw, err := json.Marshal(doc)
 	require.NoError(t, err)
-	return ruletablesadpt.Parse(format, raw, equipment)
+	return ruletablesadpt.Parse(format, raw, equipment, nil)
 }
 
 func classRows(d map[string]any, table string) []any { return d[table].([]any) }

@@ -37,9 +37,11 @@ type tables struct {
 	// Alignments and Sexes are characters.alignment and characters.sex ('' missing), RaceDetails
 	// the free-text characters.race ('' none).
 	Alignments, Sexes, RaceDetails map[int64]string
-	Slots                          map[int64]string
-	Buffs                          map[int64]string
-	Rounds                         map[int64]bool
+	// Languages are characters.languages, a JSON list.
+	Languages map[int64]string
+	Slots     map[int64]string
+	Buffs     map[int64]string
+	Rounds    map[int64]bool
 	// Weapons, Items, Profs and Bard are by rowKey.
 	Weapons map[string]storeq.InsertWeaponParams
 	Items   map[string]storeq.InsertItemParams
@@ -95,7 +97,7 @@ func newFakeStore() *fakeStore {
 		Weapons: map[string]storeq.InsertWeaponParams{}, Items: map[string]storeq.InsertItemParams{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
-		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -168,7 +170,24 @@ func (f *fakeStore) InsertCharacter(_ context.Context, arg storeq.InsertCharacte
 	f.t.Races[id] = arg.RaceCode
 	f.t.SkillPoints[id] = arg.SkillPoints
 	f.t.Alignments[id], f.t.Sexes[id] = arg.Alignment, arg.Sex
+	f.t.Languages[id] = arg.Languages
 	return id, nil
+}
+
+func (f *fakeStore) ListCharacterLanguages(context.Context) ([]storeq.ListCharacterLanguagesRow, error) {
+	rows := []storeq.ListCharacterLanguagesRow{}
+	for _, id := range f.t.Characters {
+		rows = append(rows, storeq.ListCharacterLanguagesRow{ID: id, Languages: f.t.Languages[id]})
+	}
+	return rows, nil
+}
+
+func (f *fakeStore) SetCharacterLanguages(_ context.Context, arg storeq.SetCharacterLanguagesParams) error {
+	if err := f.hasCharacter(arg.ID); err != nil {
+		return err
+	}
+	f.t.Languages[arg.ID] = arg.Languages
+	return nil
 }
 
 func (f *fakeStore) ListCharacterIdentity(context.Context) ([]storeq.ListCharacterIdentityRow, error) {

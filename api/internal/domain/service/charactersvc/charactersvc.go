@@ -15,6 +15,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // ErrNoCurrentCharacter is a per-character request of a user who has no
@@ -121,6 +122,9 @@ type Deps struct {
 	// Log records a skill armour change (ADR 0030 step 1); Tx must be the
 	// action-log transaction runner.
 	Log actionlog.Recorder
+	// Languages is the language catalogue (ADR 0032 step 4); nil is the empty
+	// one of a catalogue before format 8, which knows no language.
+	Languages LanguageBook
 }
 
 type service struct {
@@ -131,6 +135,8 @@ type service struct {
 	tx       domain.TxRunner
 	sessions Sessions
 	log      actionlog.Recorder
+	// languages is never nil: the empty catalogue when Deps holds none.
+	languages LanguageBook
 }
 
 // New constructs the service.
@@ -138,7 +144,10 @@ func New(d Deps) (SVC, error) {
 	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil || d.Log == nil {
 		return nil, errors.New("charactersvc: nil dependency")
 	}
-	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, log: d.Log}, nil
+	if d.Languages == nil {
+		d.Languages = (*ruletablesvc.Languages)(nil)
+	}
+	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, log: d.Log, languages: d.Languages}, nil
 }
 
 // NewWithConfig is here for symmetry with the other services. There is no
@@ -161,6 +170,19 @@ func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error
 	}
 	if c.Derived, err = Derive(c, ledger, s.rules); err != nil {
 		return nil, fmt.Errorf("character %d: %w", id, err)
+	}
+	// The native language is always among the languages (ADR 0032 step 4.1),
+	// a character stored before it was added included; the warnings follow
+	// what is read (steps 4.2 and 8.4).
+	native := s.languages.Native(c.Race)
+	c.Details = c.Details.Known(s.languages).WithNative(native)
+	c.Warnings = c.Details.Warnings(c.Class)
+	// Without a catalogue (before format 8) the native language is unknown and
+	// would be counted as an additional one: no verdict is possible.
+	if native != "" {
+		if w, over := c.Details.LanguageWarning(c.Int, native); over {
+			c.Warnings = append(c.Warnings, w)
+		}
 	}
 	return c, nil
 }

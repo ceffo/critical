@@ -331,6 +331,17 @@ name or comment); this ADR names none yet.
     The rates of fire stay Table 45's rule table (ADR 0030 step 23). Rollout as ADR 0021 step 12.4:
     the API reads formats 6 and 7, the fixture becomes format 7 with invented names and the real
     numbers, the builder's change is a `critical-rulebooks` item.
+    _As built (CRI-33, [ADR 0021](0021-spell-catalogue.md) step 13)_: `fires` is a list of ammo kinds
+    (the blowgun fires the barbed dart and the needle); `damage_sm` and `damage_l` are strings as printed
+    (`1d4+1`, `1d3-1`, `1`), absent for a launcher, so the picking slice reduces them to ADR 0016's `NdM`
+    where the model needs it; a weapon with no damage type (mancatcher, whip, scourge) has an empty
+    `damage_types`. Readings the books leave open, fixed in the builder: elven chain mail is AC 5 with
+    Table 52's `chain` row (worn as chain mail, DMG); bronze plate mail has no Table 52 row and reads as
+    `plate`, an approximation (at AC 4 with the plate row's +3 against slashing it is better against
+    slashing than field plate, AC 2); hide counts as `leather` for Table 52 and as `metal` for Table 29 (a bard may wear it up to
+    chain mail, a thief may not); padded armour is the `padded_studded` column and the `leather` row; the
+    scroll's `initiative_item` row has no modifier. The French names come from the *Manuel des Joueurs*
+    where its OCR reads cleanly; a name with no French falls back to English.
 22. **What is not catalogue data.** The DMG magic items (hundreds of rows whose rules
     are text: the app models their numbers as powers, step 17), PHB miscellaneous gear, clothing,
     provisions, tack, animals and services (no rule reads them; cost and weight are out of scope),
@@ -391,7 +402,7 @@ name or comment); this ADR names none yet.
 
 The slices that follow this ADR, in order; each amends the ADRs it touches, as built:
 
-1. **CRI-33**: catalogue format 7 (steps 21 to 23): schema, importer, fixture; the builder in
+1. **CRI-33** (built): catalogue format 7 (steps 21 to 23): schema, importer, fixture; the builder in
    `critical-rulebooks`.
 2. **CRI-34**: one equipment model, categories, the three states, the conversion and the review
    list (steps 1 to 9, 26, 27).

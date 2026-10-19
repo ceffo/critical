@@ -64,10 +64,9 @@ type tables struct {
 	xp    map[int64]xpEntry
 	xpSeq int64
 
-	// proficiencies, bardSkills and spellbooks are each character's, by
-	// character id, in sheet order (a spellbook holds catalogue keys).
+	// proficiencies and spellbooks are each character's, by character id,
+	// in sheet order (a spellbook holds catalogue keys).
 	proficiencies map[int64][]skillsvc.ProficiencyDef
-	bardSkills    map[int64][]skillsvc.BardSkillDef
 	spellbooks    map[int64][]string
 	// learnFailures are the spells each character failed to learn, by
 	// catalogue key, at the realized level of the failure (ADR 0030 step 20.2).
@@ -97,7 +96,6 @@ func newTables() *tables {
 		weapons:       map[owned]storedWeapon{},
 		items:         map[owned]storedItem{},
 		proficiencies: map[int64][]skillsvc.ProficiencyDef{},
-		bardSkills:    map[int64][]skillsvc.BardSkillDef{},
 		spellbooks:    map[int64][]string{},
 		learnFailures: map[int64]map[string]int{},
 		forms:         map[int64]combatsvc.AttackForm{},

@@ -236,7 +236,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3, 4, 5 and 6")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3, 4, 5, 6 and 7")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -388,9 +388,19 @@ func TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits(t *testing.T) {
 	})
 }
 
-// asFormat5 turns the format-6 fixture into a format-5 artifact: no sphere
-// access, no sphere codes (ADR 0021 step 12).
+// asFormat6 turns the format-7 fixture into a format-6 artifact: no equipment,
+// no Table 52 or 56 (ADR 0021 step 13).
+func asFormat6(d map[string]any) {
+	d["format"] = 6
+	delete(d, "equipment")
+	delete(d["rule_tables"].(map[string]any), "weapon_vs_armor")
+	delete(d["rule_tables"].(map[string]any), "initiative_item")
+}
+
+// asFormat5 turns the format-7 fixture into a format-5 artifact: no sphere
+// access, no sphere codes (ADR 0021 step 12), no equipment.
 func asFormat5(d map[string]any) {
+	asFormat6(d)
 	d["format"] = 5
 	delete(d["rule_tables"].(map[string]any), "sphere_access")
 	for _, s := range d["spells"].([]any) {
@@ -413,6 +423,45 @@ func TestStartup_Step12_RefusesABrokenSphereAccessAndStillReadsFormat5(t *testin
 
 	five := writeArtifact(t, asFormat5)
 	assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: five}))
+}
+
+// ADR 0021 steps 13.3 and 13.4: a format-7 artifact with a broken equipment
+// table or row refuses the start, naming it; a format-6 artifact, without the
+// equipment, still starts.
+func TestStartup_Step13_RefusesBrokenEquipmentAndStillReadsFormat6(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"Table 52 row twice", func(d map[string]any) {
+			rows := d["rule_tables"].(map[string]any)["weapon_vs_armor"].([]any)
+			rows[1].(map[string]any)["armor_row"] = "banded"
+		}, `rule_tables: weapon_vs_armor table: "banded" twice`},
+		{"a scroll with a modifier", func(d map[string]any) {
+			rows := d["rule_tables"].(map[string]any)["initiative_item"].([]any)
+			rows[1].(map[string]any)["modifier"] = 3
+		}, "initiative_item table: \"scroll\": a scroll has no modifier"},
+		{"a launcher that fires an ammunition kind nobody carries", func(d map[string]any) {
+			e := d["equipment"].(map[string]any)
+			e["ammunition"] = e["ammunition"].([]any)[:1]
+		}, "which no ammunition row carries"},
+		{"a code twice", func(d map[string]any) {
+			w := d["equipment"].(map[string]any)["weapons"].([]any)
+			w[1].(map[string]any)["code"] = w[0].(map[string]any)["code"]
+		}, `code "battle_axe" twice`},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			artifact := writeArtifact(t, tc.mutate)
+			err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+			require.ErrorContains(t, err, tc.want)
+			require.ErrorContains(t, err, "spell catalogue "+artifact)
+		})
+	}
+
+	six := writeArtifact(t, asFormat6)
+	assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: six}))
 }
 
 // The spellbook seed is checked against the catalogue before anything is

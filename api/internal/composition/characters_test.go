@@ -45,8 +45,12 @@ func sheetOf(t *testing.T, bs *composition.BackingServices, characterID int64) s
 	for _, p := range skills.Proficiencies {
 		s.Skills = append(s.Skills, p.ID)
 	}
+	// The bard skills are derived from the character's own points (ADR
+	// 0030 step 18), not owned rows: the points are the character's.
 	for _, b := range skills.BardSkills {
-		s.Skills = append(s.Skills, b.ID)
+		if b.Points > 0 {
+			s.Skills = append(s.Skills, b.Skill)
+		}
 	}
 	info, err := bs.Prep.Info(ctx, characterID)
 	require.NoError(t, err)

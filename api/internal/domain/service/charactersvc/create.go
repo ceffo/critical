@@ -22,7 +22,8 @@ import (
 // and fills by learning, step 20). Each class item adds its class here with
 // its own entries. The cleric enters nothing more: its slots, spell failure
 // and turning follow its Wisdom and level (steps 13 to 16). The thief enters
-// its skill points and the armour it wears for its skills (steps 1 and 17).
+// its skill points and the armour it wears for its skills (steps 1 and 17),
+// and so does the bard (step 18).
 var CreatableClasses = []string{"bard", "fighter", "mage", "cleric", "thief"}
 
 // The ranges a new character's entered values must fall in.
@@ -66,7 +67,7 @@ const (
 	// CodeNotAllowed is an exceptional strength for a character that has
 	// none (ADR 0030 step 9: not a warrior, a Strength other than 18, or a
 	// halfling), or skill points or a skill armour for a class without
-	// thieving skills (step 17).
+	// skill points (steps 17 and 18).
 	CodeNotAllowed = "not_allowed"
 )
 
@@ -81,26 +82,28 @@ type NewCharacter struct {
 	StrExceptional int
 	HPMax          int
 	XP             int
-	// SkillPoints and SkillArmor are a thief's (steps 1 and 17): the points
-	// by skill code (0 to MaxSkillPoints each, absent is 0) and one of
-	// ruletablesvc.ThiefArmors. Empty for the other classes.
+	// SkillPoints and SkillArmor are a thief's or a bard's (steps 1, 17 and
+	// 18): the points by skill code (0 to MaxSkillPoints each, absent is 0)
+	// and one of ruletablesvc.SkillArmorsOf the class. Empty for the other
+	// classes.
 	SkillPoints map[string]int
 	SkillArmor  string
-	// Details are the free-text details entered with the character, checked
-	// as the card's edit checks them (Details.Apply); nil fields stay unset.
+	// Details are the details entered with the character, checked as the
+	// card's edit checks them (Details.Apply); the alignment and the sex are
+	// required, the other nil fields stay unset.
 	Details DetailsPatch
 }
 
 // Change is a rename (Name), a retirement (Retired true) or a new skill
-// armour (SkillArmor, a thief's only) of a character; nil leaves a field as
+// armour (SkillArmor, a thief's or a bard's only) of a character; nil leaves a field as
 // it is, and Retired false retires nothing (a retired character is not found,
 // so none is brought back).
 type Change struct {
 	Name    *string
 	Retired *bool
 	// SkillArmor is ADR 0030 step 1's armour, changed after creation: one of
-	// ruletablesvc.ThiefArmors, and only a thief has one. The thief skills
-	// are derived on read, so they follow it.
+	// ruletablesvc.SkillArmorsOf the class, and only a thief or a bard has
+	// one. The skills are derived on read, so they follow it.
 	SkillArmor *string
 }
 
@@ -167,7 +170,7 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 	if n.XP < MinStartingXP || n.XP > MaxStartingXP {
 		return Character{}, &domain.FieldError{Field: "xp", Message: CodeOutOfRange}
 	}
-	details, err := newDetails(n.Details)
+	details, err := newDetails(n.Class, n.Details)
 	if err != nil {
 		return Character{}, err
 	}
@@ -179,13 +182,14 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 	}, nil
 }
 
-// validSkills is ADR 0030 steps 1 and 17: a thief enters its armour (one of
-// ThiefArmors) and its points, each a skill of ThiefSkills from 0 to
-// MaxSkillPoints; any other class enters neither. The points come back
+// validSkills is ADR 0030 steps 1, 17 and 18: a thief or a bard enters its
+// armour (one of SkillArmorsOf its class) and its points, each a skill of
+// SkillsOf its class from 0 to MaxSkillPoints; any other class enters
+// neither. The points come back
 // without the zeros, nil for none. A refusal names the field (skillArmor,
 // or skillPoints.<skill>).
 func validSkills(n NewCharacter) (map[string]int, error) {
-	if !ruletablesvc.HasThiefSkills(n.Class) {
+	if !ruletablesvc.HasSkillPoints(n.Class) {
 		switch {
 		case n.SkillArmor != "":
 			return nil, &domain.FieldError{Field: "skillArmor", Message: CodeNotAllowed}
@@ -197,21 +201,22 @@ func validSkills(n NewCharacter) (map[string]int, error) {
 	switch {
 	case n.SkillArmor == "":
 		return nil, &domain.FieldError{Field: "skillArmor", Message: CodeEmpty}
-	case !slices.Contains(ruletablesvc.ThiefArmors, n.SkillArmor):
+	case !slices.Contains(ruletablesvc.SkillArmorsOf(n.Class), n.SkillArmor):
 		return nil, &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
 	}
 	return ValidSkillPoints(n.Class, n.SkillPoints)
 }
 
-// ValidSkillPoints is ADR 0030 step 17's entry check on a thief's points,
-// at creation and when the player spends them later: each skill of
-// ThiefSkills from 0 to MaxSkillPoints. The budget is no refusal, only the
-// derived warning (step 17 as built). The points come back without the
-// zeros, nil for none. A class without thieving skills enters none: any
+// ValidSkillPoints is ADR 0030 steps 17 and 18's entry check on a thief's or
+// a bard's points, at creation and when the player spends them later: each
+// skill of SkillsOf the class from 0 to MaxSkillPoints. The budget is no
+// refusal, only the derived warning (step 17 as built, step 18). The points
+// come back without the zeros, nil for none. A class without skill points
+// enters none: any
 // point is refused with field skillPoints; another refusal names the field
 // skillPoints.<skill>.
 func ValidSkillPoints(class string, points map[string]int) (map[string]int, error) {
-	if !ruletablesvc.HasThiefSkills(class) {
+	if !ruletablesvc.HasSkillPoints(class) {
 		if len(points) > 0 {
 			return nil, &domain.FieldError{Field: "skillPoints", Message: CodeNotAllowed}
 		}
@@ -221,7 +226,7 @@ func ValidSkillPoints(class string, points map[string]int) (map[string]int, erro
 	for _, skill := range slices.Sorted(maps.Keys(points)) {
 		pts := points[skill]
 		switch {
-		case !slices.Contains(ruletablesvc.ThiefSkills, skill):
+		case !slices.Contains(ruletablesvc.SkillsOf(class), skill):
 			return nil, &domain.FieldError{Field: "skillPoints." + skill, Message: CodeUnknown}
 		case pts < 0 || pts > MaxSkillPoints:
 			return nil, &domain.FieldError{Field: "skillPoints." + skill, Message: CodeOutOfRange}
@@ -286,8 +291,8 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 
 // Change renames, re-arms and retires in one transaction. A rename and a
 // retirement are outside the action log (managing one's characters is no move
-// of the game); a new skill armour is a move (it changes the thief's
-// percentages, ADR 0030 step 1) and is one skill_armor entry with a snapshot,
+// of the game); a new skill armour is a move (it changes the thief's or
+// the bard's percentages, ADR 0030 step 1) and is one skill_armor entry with a snapshot,
 // so Undo gives the armour back; the same armour records nothing. Retiring
 // picks the owner's next current character in the same transaction (ADR 0029
 // step 7.2, item 6 of its 2026-10-18 amendment).
@@ -303,7 +308,8 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 		switch armor := *c.SkillArmor; {
 		case armor == "":
 			return 0, &domain.FieldError{Field: "skillArmor", Message: CodeEmpty}
-		case !slices.Contains(ruletablesvc.ThiefArmors, armor):
+		// The class's own armours are checked once the character is read.
+		case !ruletablesvc.IsSkillArmor(armor):
 			return 0, &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
 		}
 	}
@@ -334,8 +340,11 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 			if err != nil {
 				return err
 			}
-			if !ruletablesvc.HasThiefSkills(ch.Class) {
+			if !ruletablesvc.HasSkillPoints(ch.Class) {
 				return &domain.FieldError{Field: "skillArmor", Message: CodeNotAllowed}
+			}
+			if !slices.Contains(ruletablesvc.SkillArmorsOf(ch.Class), *c.SkillArmor) {
+				return &domain.FieldError{Field: "skillArmor", Message: CodeUnknown}
 			}
 			if err := s.recordArmor(ctx, id, before, *c.SkillArmor); err != nil {
 				return err
@@ -388,7 +397,8 @@ func (s *service) recordArmor(ctx context.Context, id int64, before, after strin
 	return nil
 }
 
-// ArmorStateKey is the action-log state key of a thief's skill armour.
+// ArmorStateKey is the action-log state key of a thief's or a bard's skill
+// armour.
 const ArmorStateKey = "skill_armor"
 
 // armorState is the JSON encoding of a "skill_armor" snapshot, armorRecord
@@ -409,7 +419,7 @@ func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.
 	return f(ctx, characterID, state)
 }
 
-// Restorers writes a thief's skill armour back: undo writes the change's
+// Restorers writes a thief's or a bard's skill armour back: undo writes the change's
 // "before", redo its "after" (ADR 0019), inside the undo's transaction.
 func (s *service) Restorers() map[string]actionlog.Restorer {
 	return map[string]actionlog.Restorer{
@@ -434,18 +444,23 @@ type ClassOption struct {
 	// ExceptionalStrengthRaces are the races of Races that enter an 18/xx
 	// at Strength 18 with the class (ADR 0030 step 9), empty for none.
 	ExceptionalStrengthRaces []string
-	// Skills are the skills the class enters points in (step 17, in
-	// ruletablesvc.ThiefSkills order) and SkillArmors the armours it picks
-	// for them; both empty for a class without thieving skills.
+	// Skills are the skills the class enters points in (steps 17 and 18, in
+	// ruletablesvc.SkillsOf order) and SkillArmors the armours it picks
+	// for them; both empty for a class without skill points.
 	Skills      []string
 	SkillArmors []string
+	// Alignments are the alignments the class admits (ADR 0032 step 2), in
+	// ruletablesvc.Alignments order.
+	Alignments []string
 }
 
 // CreationOptions are what the creation form offers: the creatable classes
 // with their races, and the ranges the entered values must fall in (the
 // same ones Create checks).
 type CreationOptions struct {
-	Classes                []ClassOption
+	Classes []ClassOption
+	// Sexes are the sex codes (ADR 0032 step 3).
+	Sexes                  []string
 	MinAbility, MaxAbility int
 	MinHPMax, MaxHPMax     int
 	MinXP, MaxXP           int
@@ -461,16 +476,16 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
-		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Classes: make([]ClassOption, 0, len(CreatableClasses)),
+		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Sexes: slices.Clone(Sexes), Classes: make([]ClassOption, 0, len(CreatableClasses)),
 	}
 	for _, class := range CreatableClasses {
 		if _, err := ruletablesvc.ClassGroup(class); err != nil {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
-		opt := ClassOption{Class: class, Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}}
-		if ruletablesvc.HasThiefSkills(class) {
-			opt.Skills = slices.Clone(ruletablesvc.ThiefSkills)
-			opt.SkillArmors = slices.Clone(ruletablesvc.ThiefArmors)
+		opt := ClassOption{Class: class, Alignments: ruletablesvc.AlignmentsOf(class), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}}
+		if ruletablesvc.HasSkillPoints(class) {
+			opt.Skills = slices.Clone(ruletablesvc.SkillsOf(class))
+			opt.SkillArmors = slices.Clone(ruletablesvc.SkillArmorsOf(class))
 		}
 		for _, race := range Races {
 			ok, err := s.rules.RaceAllows(race, class)

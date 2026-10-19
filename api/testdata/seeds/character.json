@@ -1,6 +1,8 @@
 {
  "name": "Test Bard",
  "race": "half_elf",
+ "alignment": "neutral_good",
+ "sex": "male",
  "str": 12,
  "dex": 17,
  "con": 16,
@@ -16,5 +18,6 @@
  "save_petri_poly": 9,
  "save_breath": 13,
  "save_spell": 9,
+ "skill_points": { "climb_walls": 35, "detect_noise": 70, "pick_pockets": 25, "read_languages": 70 },
  "slots": []
 }

@@ -27,8 +27,14 @@ const FormatLevelLimits = 5
 // dev checkouts are format 6 (step 12.4).
 const FormatSpheres = 6
 
+// FormatEquipment is format 7 (ADR 0021 step 13, ADR 0033 steps 21 to 23):
+// format 6 plus the equipment reference data and its two rule tables. The API
+// reads it beside format 6 until the published artifact and the dev checkouts
+// are format 7 (step 13.4).
+const FormatEquipment = 7
+
 // Formats lists the formats this API reads, in order.
-var Formats = []int{FormatRuleTables, FormatClassTables, FormatLevelLimits, FormatSpheres}
+var Formats = []int{FormatRuleTables, FormatClassTables, FormatLevelLimits, FormatSpheres, FormatEquipment}
 
 // Catalogue is one artifact's spells: a version compared for equality only,
 // and the spells. A format-3 artifact's PHB rule tables are not part of it:

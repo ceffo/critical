@@ -7,14 +7,17 @@ import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
 
 /**
- * The armour a thief wears for its skills (ADR 0030 step 1), changeable after creation since armour
- * changes in play. The choices come from the server (the creation options); a pick saves at once
- * and the skills are read again, the server deriving each percentage from the new armour.
+ * The armour a thief or a bard wears for its skills (ADR 0030 step 1), changeable after creation
+ * since armour changes in play. The choices are the character's class's, from the server (the
+ * creation options; a bard's add metal armour); a pick saves at once and the skills are read again,
+ * the server deriving each percentage from the new armour. No armour stored (the imported bard)
+ * reads as leather, as the server reads it.
  */
 export function ThiefArmorPicker() {
   const { t } = useTranslation();
   const id = useCharacterStore((s) => s.character?.id);
-  const armor = useCharacterStore((s) => s.character?.skillArmor);
+  const stored = useCharacterStore((s) => s.character?.skillArmor);
+  const cls = useCharacterStore((s) => s.character?.class);
   const fetchSkills = useSkillsStore((s) => s.fetchSkills);
   const run = useTableStore((s) => s.run);
   const [armors, setArmors] = useState<string[]>([]);
@@ -24,16 +27,15 @@ export function ThiefArmorPicker() {
     fetchCreationOptions()
       .then((o) => {
         if (live)
-          setArmors(
-            o.classes.find((c) => c.skillArmors.length > 0)?.skillArmors ?? [],
-          );
+          setArmors(o.classes.find((c) => c.class === cls)?.skillArmors ?? []);
       })
       .catch(() => undefined);
     return () => {
       live = false;
     };
-  }, []);
-  if (id === undefined || !armor || armors.length === 0) return null;
+  }, [cls]);
+  if (id === undefined || armors.length === 0) return null;
+  const armor = stored || "leather";
 
   const pick = async (next: string) => {
     setSaving(true);

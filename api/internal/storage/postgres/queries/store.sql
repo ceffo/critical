@@ -11,14 +11,36 @@ SELECT COUNT(*) FROM characters;
 -- name: InsertCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
-    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code,
+    skill_points, alignment, sex
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 RETURNING id;
 
 -- The race of a character stored before races had codes (migration 007): only while it has none,
 -- so a rerun changes nothing and a race set since is kept.
 -- name: SetRaceIfUnset :exec
 UPDATE characters SET race_code = sqlc.arg(race_code) WHERE id = sqlc.arg(id) AND race_code = '';
+
+-- The identity migration (013): every character's stored alignment and sex, to map to codes.
+-- name: ListCharacterIdentity :many
+SELECT id, alignment, sex FROM characters ORDER BY id;
+
+-- The mapped (or cleared) alignment and sex of a character, and its race detail discarded.
+-- name: SetCharacterIdentity :exec
+UPDATE characters SET alignment = sqlc.arg(alignment), sex = sqlc.arg(sex), race = '' WHERE id = sqlc.arg(id);
+
+-- The seed character's alignment and sex when it lacks them (migration 013): a value set since is
+-- kept, so a rerun changes nothing.
+-- name: SetIdentityIfUnset :exec
+UPDATE characters
+SET alignment = CASE WHEN alignment = '' THEN sqlc.arg(alignment) ELSE alignment END,
+    sex = CASE WHEN sex = '' THEN sqlc.arg(sex) ELSE sex END
+WHERE id = sqlc.arg(id);
+
+-- The skill points of a character stored before bards entered them (migration 012): only while it
+-- has none, so a rerun changes nothing and points spent since are kept.
+-- name: SetSkillPointsIfUnset :exec
+UPDATE characters SET skill_points = sqlc.arg(skill_points) WHERE id = sqlc.arg(id) AND skill_points = '{}';
 
 -- name: InsertSpellSlots :exec
 INSERT INTO spell_slots (character_id, slots) VALUES ($1, $2);

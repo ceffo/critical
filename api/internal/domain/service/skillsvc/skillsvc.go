@@ -1,12 +1,13 @@
 // Package skillsvc owns skill checks (ADR 0014) and plain ability checks
 // (ADR 0028, the proficiency check's d20 with no proficiency): the non-weapon proficiencies
 // of the sheet (a d20 at or under an ability score plus a modifier, a natural
-// 20 always fails) and the bard skills (a d100 at or under a percentage). The
+// 20 always fails) and the bard and thief skills (a d100 at or under the
+// percentage the character service derives, ADR 0030 steps 17 and 18). The
 // DM may move the target before the roll or on the latest check after it. A
 // check changes no state: it is one skill_check entry of the action log, so
 // popping it only removes it. The last check of each skill is read back from
-// the log. It also writes a thief's skill points (ADR 0030 step 17), a
-// skill_points entry undone by its snapshot.
+// the log. It also writes a thief's or a bard's skill points (ADR 0030 steps
+// 17 and 18), a skill_points entry undone by its snapshot.
 package skillsvc
 
 import (
@@ -48,9 +49,10 @@ type SVC interface {
 	// 8). It is an audited amend, its own undoable step; refusals are
 	// AmendLatest's (actionlog.LatestAmender) and domain.ErrInvalidInput.
 	AdjustAbility(ctx context.Context, characterID, entryID int64, adj Adjustment) (*AbilityCheckResult, error)
-	// SetPoints sets a thief's skill points per skill, logged and undoable
-	// (ADR 0030 step 17). A *domain.FieldError for points refused (or any
-	// point of a class without thieving skills); nothing is logged then.
+	// SetPoints sets a thief's or a bard's skill points per skill, logged
+	// and undoable (ADR 0030 steps 17 and 18). A *domain.FieldError for
+	// points refused (or any point of a class without skill points);
+	// nothing is logged then.
 	SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error)
 	// Restorers are the state keys SetPoints snapshots, with the writers
 	// that restore them.
@@ -58,11 +60,11 @@ type SVC interface {
 }
 
 // DAL is the driven port over the skill catalog: the character's own
-// proficiencies and bard skills. Both lists come back in the order of the
-// sheet. Every method joins the ctx transaction.
+// proficiencies, in the order of the sheet. It joins the ctx transaction.
+// The bard's and the thief's skills are derived on the character (ADR 0030
+// steps 17 and 18), not stored.
 type DAL interface {
 	ListProficiencies(ctx context.Context, characterID int64) ([]ProficiencyDef, error)
-	ListBardSkills(ctx context.Context, characterID int64) ([]BardSkillDef, error)
 }
 
 // Characters reads the sheet's ability scores.

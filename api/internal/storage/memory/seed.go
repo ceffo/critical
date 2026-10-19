@@ -87,12 +87,12 @@ func (t *tables) seedCharacter(path string) (id int64, ok bool, err error) {
 	id = nextID(&t.characterSeq)
 	t.characters[id] = charactersvc.Character{
 		ID: id, Name: c.Name, Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
-		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: seedfile.DefaultClass, Race: c.Race,
+		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: seedfile.DefaultClass, Race: c.Race, SkillPoints: c.SkillPoints,
 		Sheet: charactersvc.Sheet{Level: c.Level, THAC0: c.Thac0Base, Saves: charactersvc.Saves{
 			ParaPoison: c.SaveParaPoison, RodStaffWand: c.SaveRodStaffWand, PetriPoly: c.SavePetriPoly,
 			Breath: c.SaveBreath, Spell: c.SaveSpell,
 		}},
-		Details: charactersvc.Details{Languages: append([]string{}, c.Languages...)},
+		Details: charactersvc.Details{Alignment: c.Alignment, Sex: c.Sex, Languages: append([]string{}, c.Languages...)},
 	}
 	t.slots[id] = slots
 	t.buffs[id] = []buffsvc.BuffEffect{}
@@ -140,11 +140,10 @@ func (t *tables) seedSkills(owner int64, path string) error {
 	for i, p := range seed.Proficiencies {
 		profs[i] = skillsvc.ProficiencyDef{ID: p.ID, Ability: skillsvc.Ability(p.Ability), Modifier: p.Modifier}
 	}
-	skills := make([]skillsvc.BardSkillDef, len(seed.BardSkills))
-	for i, b := range seed.BardSkills {
-		skills[i] = skillsvc.BardSkillDef{ID: b.ID, Percent: b.Percent}
-	}
-	t.proficiencies[owner], t.bardSkills[owner] = profs, skills
+	// The seed's bard skill percentages are the sheet's figures (ADR 0030
+	// step 24), not inputs: the bard's skills are derived from its points
+	// (step 18), so the memory store keeps none of them.
+	t.proficiencies[owner] = profs
 	return nil
 }
 

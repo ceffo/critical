@@ -1286,9 +1286,10 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expectWholeWords(actions, `skills tab, ${where}`);
     if (vp.width === 1440) {
       await expectNoScroll(skills, `Skills tab, ${where}`);
+      // The bard's block holds its skills, the armour and the Spend button (ADR 0030 step 18).
       const [proficiencies, bard] = await skills
         .getByTestId("skills-blocks")
-        .locator(":scope > section")
+        .locator(":scope > *")
         .all();
       for (const [block, what] of [
         [proficiencies, "proficiencies"],
@@ -2006,6 +2007,7 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
     name: "Aldéric de la Tour-d'Auvergne-Lesparre",
     class: "bard",
     raceCode: "half_elf",
+    details: { alignment: "neutral_good", sex: "male" },
     str: 10,
     dex: 15,
     con: 12,
@@ -2014,6 +2016,7 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
     cha: 16,
     hpMax: 6,
     xp: 0,
+    skillArmor: "leather",
   });
   expect(created.ok).toBe(true);
   await page.reload();
@@ -2099,6 +2102,10 @@ test("character dialogs and the creation page uncut, fr and en, 1280 and 2560", 
       );
       await snap(page, `create-page-${lang}-${vp.width}x${vp.height}`);
     }
+    // A window shorter than the form: the page itself still never scrolls, the form's card does.
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await expectNoPageScroll(page);
+    await expect(card.getByTestId("character-form")).toBeVisible();
   }
 });
 
@@ -2127,6 +2134,7 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
       name: "Aldéric de la Tour-d'Auvergne-Lesparre",
       class: "bard",
       raceCode: "half_elf",
+      details: { alignment: "neutral_good", sex: "male" },
       str: 10,
       dex: 15,
       con: 12,
@@ -2135,6 +2143,7 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
       cha: 16,
       hpMax: 6,
       xp: 0,
+      skillArmor: "leather",
     }),
   ).toBe(true);
   expect(await call("POST", "/api/xp", { base: 2500, bonus: false })).toBe(
@@ -2190,6 +2199,7 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       name: "Borin Gueule-de-Fer",
       class: "fighter",
       raceCode: "human",
+      details: { alignment: "neutral_good", sex: "male" },
       str: 18,
       strExceptional: 50,
       dex: 14,
@@ -2295,6 +2305,7 @@ test("mage: the lookup's Learn button and its answer uncut in French, 1280 to 25
         name: "Mordenkainen l'Archimage de Greyhawk",
         class: "mage",
         raceCode: "human",
+        details: { alignment: "neutral_good", sex: "male" },
         str: 9,
         dex: 12,
         con: 11,
@@ -2398,6 +2409,7 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
         name: "Frère Anselme de la Haute-Marche",
         class: "cleric",
         raceCode: "human",
+        details: { alignment: "neutral_good", sex: "male" },
         str: 12,
         dex: 10,
         con: 13,
@@ -2533,6 +2545,7 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
       name: "Vex Main-Légère de la Basse-Ville",
       class: "thief",
       raceCode: "halfling",
+      details: { alignment: "neutral_good", sex: "male" },
       str: 16,
       dex: 17,
       con: 12,

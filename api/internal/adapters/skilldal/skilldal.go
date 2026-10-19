@@ -34,16 +34,3 @@ func (d *DAL) ListProficiencies(ctx context.Context, characterID int64) ([]skill
 	}
 	return out, nil
 }
-
-// ListBardSkills returns the character's bard skills in sheet order.
-func (d *DAL) ListBardSkills(ctx context.Context, characterID int64) ([]skillsvc.BardSkillDef, error) {
-	rows, err := d.q.ListBardSkills(ctx, characterID)
-	if err != nil {
-		return nil, fmt.Errorf("list bard skills: %w", err)
-	}
-	out := make([]skillsvc.BardSkillDef, 0, len(rows))
-	for _, r := range rows {
-		out = append(out, skillsvc.BardSkillDef{ID: r.ID, Percent: int(r.Percent)})
-	}
-	return out, nil
-}

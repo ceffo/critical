@@ -65,7 +65,8 @@ func TestLearn_Step20_LearnFailUndoAndPrepareAMage(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Elminster", Class: "mage", Race: "human", Str: 9, Dex: 12, Con: 11, Int: 15, Wis: 12, Cha: 10, HPMax: 3,
+		Details: identity(),
+		Name:    "Elminster", Class: "mage", Race: "human", Str: 9, Dex: 12, Con: 11, Int: 15, Wis: 12, Cha: 10, HPMax: 3,
 	})
 	require.NoError(t, err)
 	assert.Empty(t, spellbookOf(t, bs, id), "a created mage's spellbook starts empty")

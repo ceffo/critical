@@ -1,3 +1,4 @@
+import type { Locator } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
   attackForm,
@@ -9,6 +10,12 @@ import {
   openWorkspace,
   undoEntry,
 } from "./helpers";
+
+// The first alignment and sex the form offers (both are required, ADR 0032 steps 2 and 3).
+async function pickIdentity(form: Locator) {
+  await form.getByLabel("Alignement").selectOption({ index: 1 });
+  await form.getByLabel("Sexe").selectOption({ index: 1 });
+}
 
 // Creating, switching and renaming characters from the cog menu (ADR 0029 step 7.2), the one flow
 // only a browser proves: the menu's dialogs, the form's selects and details, and the page loading
@@ -45,9 +52,20 @@ test("create a second bard with details, switch to the first and back, rename an
     await form.getByLabel(ability, { exact: true }).fill(score);
   await form.getByLabel("PV max").fill("6");
   await form.getByLabel("XP de départ").fill("2500");
+  // ADR 0030 step 18: a bard enters its points and the armour worn for its skills.
+  await form
+    .getByLabel("Armure portée")
+    .selectOption({ label: "Métal, jusqu’à la maille" });
+  await form.getByLabel("Escalade").fill("15");
   // The details go with it: the card shows them after the reload.
   const details = form.getByTestId("new-character-details");
-  await details.getByLabel("Alignement").fill("Neutre bon");
+  // ADR 0032 steps 2 and 3: alignment and sex are required picks; a bard is offered only the
+  // alignments with a neutral part.
+  await expect(
+    details.getByLabel("Alignement").getByRole("option", { name: "Loyal bon" }),
+  ).toHaveCount(0);
+  await details.getByLabel("Alignement").selectOption({ label: "Neutre bon" });
+  await details.getByLabel("Sexe").selectOption({ label: "Femme" });
   await details.getByLabel("Langues").fill("Commun, Elfique");
   await snap(page, "new-character-form-fr");
   await form
@@ -60,8 +78,19 @@ test("create a second bard with details, switch to the first and back, rename an
   await page.getByTestId("details-trigger").click();
   const pop = page.getByTestId("details-popover");
   await expect(pop).toContainText("Neutre bon");
+  await expect(pop).toContainText("Femme");
+  await expect(pop.getByTestId("details-missing")).toHaveCount(0);
   await expect(pop).toContainText("Commun, Elfique");
   await page.keyboard.press("Escape");
+
+  // 50 + 15 + 0 (half-elf) - 20 (elven chain column) - 5 (metal armour) = 40, the server's.
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  await expect(page.getByTestId("bard-percent-climb_walls")).toHaveText("40 %");
+  await expect(page.getByTestId("thief-armor")).toHaveValue("metal");
+  await snap(page, "new-bard-skills-fr");
 
   settings = await openSettings(page);
   await settings
@@ -148,6 +177,7 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   await form.getByLabel("Force exceptionnelle (18/xx)").fill("50");
   await form.getByLabel("PV max").fill("10");
   await snap(page, "new-fighter-form-fr");
+  await pickIdentity(form);
   await form
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
     .click();
@@ -224,6 +254,7 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
   await form.getByLabel("Vol à la tire").fill("30");
   await form.getByLabel("PV max").fill("5");
   await snap(page, "new-thief-form-fr");
+  await pickIdentity(form);
   await form
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
     .click();
@@ -337,6 +368,7 @@ test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
   ])
     await form.getByLabel(ability, { exact: true }).fill(score);
   await form.getByLabel("PV max").fill("4");
+  await pickIdentity(form);
   await form
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
     .click();
@@ -414,6 +446,7 @@ test("create a cleric, prepare and cast a spell, turn undead", async ({
   ])
     await form.getByLabel(ability, { exact: true }).fill(score);
   await form.getByLabel("PV max").fill("8");
+  await pickIdentity(form);
   await form
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
     .click();

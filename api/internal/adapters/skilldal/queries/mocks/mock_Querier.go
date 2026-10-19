@@ -22,65 +22,6 @@ func (_m *MockQuerier) EXPECT() *MockQuerier_Expecter {
 	return &MockQuerier_Expecter{mock: &_m.Mock}
 }
 
-// ListBardSkills provides a mock function with given fields: ctx, characterID
-func (_m *MockQuerier) ListBardSkills(ctx context.Context, characterID int64) ([]queries.ListBardSkillsRow, error) {
-	ret := _m.Called(ctx, characterID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListBardSkills")
-	}
-
-	var r0 []queries.ListBardSkillsRow
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListBardSkillsRow, error)); ok {
-		return rf(ctx, characterID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListBardSkillsRow); ok {
-		r0 = rf(ctx, characterID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.ListBardSkillsRow)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
-		r1 = rf(ctx, characterID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockQuerier_ListBardSkills_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListBardSkills'
-type MockQuerier_ListBardSkills_Call struct {
-	*mock.Call
-}
-
-// ListBardSkills is a helper method to define mock.On call
-//   - ctx context.Context
-//   - characterID int64
-func (_e *MockQuerier_Expecter) ListBardSkills(ctx interface{}, characterID interface{}) *MockQuerier_ListBardSkills_Call {
-	return &MockQuerier_ListBardSkills_Call{Call: _e.mock.On("ListBardSkills", ctx, characterID)}
-}
-
-func (_c *MockQuerier_ListBardSkills_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ListBardSkills_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64))
-	})
-	return _c
-}
-
-func (_c *MockQuerier_ListBardSkills_Call) Return(_a0 []queries.ListBardSkillsRow, _a1 error) *MockQuerier_ListBardSkills_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockQuerier_ListBardSkills_Call) RunAndReturn(run func(context.Context, int64) ([]queries.ListBardSkillsRow, error)) *MockQuerier_ListBardSkills_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // ListProficiencies provides a mock function with given fields: ctx, characterID
 func (_m *MockQuerier) ListProficiencies(ctx context.Context, characterID int64) ([]queries.ListProficienciesRow, error) {
 	ret := _m.Called(ctx, characterID)

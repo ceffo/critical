@@ -188,16 +188,6 @@ func (p Skills) ListProficiencies(ctx context.Context, characterID int64) ([]ski
 	return out, err
 }
 
-// ListBardSkills returns the character's bard skills in sheet order.
-func (p Skills) ListBardSkills(ctx context.Context, characterID int64) ([]skillsvc.BardSkillDef, error) {
-	out := []skillsvc.BardSkillDef{}
-	err := p.s.read(ctx, func(t *tables) error {
-		out = append(out, t.bardSkills[characterID]...)
-		return nil
-	})
-	return out, err
-}
-
 // Dice is the dice composer's favourites (dicesvc.DAL).
 type Dice struct{ s *Store }
 

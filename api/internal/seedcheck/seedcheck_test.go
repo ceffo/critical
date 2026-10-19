@@ -68,7 +68,7 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	assert.NotEmpty(t, artifact.Catalogue.Spells)
-	_, err = ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables)
+	_, err = ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment)
 	require.NoError(t, err, "the artifact's rule tables")
 
 	effects, err := spelleffectsadpt.New(seedsDir)
@@ -95,9 +95,9 @@ func TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables(t *testin
 	require.NoError(t, err)
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
 	require.NoError(t, err)
 	// Compared by lookup, not row by row: the builder may group equal rows
 	// differently (one row per book line) for the same numbers.
@@ -146,9 +146,9 @@ func TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables(t *
 	}
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
 	require.NoError(t, err)
 	rc, ok := fromReal.Classes()
 	require.True(t, ok)
@@ -169,9 +169,9 @@ func TestRealCatalogue_Step11_5_TheFixtureCarriesTheRealArtifactsLevelLimits(t *
 	}
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
 	require.NoError(t, err)
 	rl, ok := fromReal.LevelLimits()
 	require.True(t, ok)
@@ -185,6 +185,72 @@ func TestRealCatalogue_Step11_5_TheFixtureCarriesTheRealArtifactsLevelLimits(t *
 			assert.Equal(t, r, f, "%s %s", race, class)
 		}
 	}
+}
+
+// ADR 0021 step 13.5: the fixture's equipment is the real artifact's, row for
+// row but for the names (invented in the fixture), and Tables 52 and 56 cell for
+// cell, so tests on the fixture check the numbers the app uses. Skipped while the
+// real artifact is before format 7.
+func TestRealCatalogue_Step13_5_TheFixtureCarriesTheRealArtifactsEquipment(t *testing.T) {
+	realCatalogue(t)
+	real, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	if real.Catalogue.Format < catalogue.FormatEquipment {
+		t.Skipf("the real artifact is format %d: run `just catalogue` for format %d", real.Catalogue.Format, catalogue.FormatEquipment)
+	}
+	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
+	require.NoError(t, err)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment)
+	require.NoError(t, err)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment)
+	require.NoError(t, err)
+	re, ok := fromReal.Equipment()
+	require.True(t, ok)
+	fe, ok := fromFixture.Equipment()
+	require.True(t, ok)
+	nameless := func(e *ruletablesvc.Equipment) ruletablesvc.Equipment {
+		out := ruletablesvc.Equipment{
+			Weapons:    append([]ruletablesvc.Weapon(nil), e.Weapons...),
+			Ammunition: append([]ruletablesvc.Ammunition(nil), e.Ammunition...),
+			Armour:     append([]ruletablesvc.Armour(nil), e.Armour...),
+			Shields:    append([]ruletablesvc.Shield(nil), e.Shields...),
+		}
+		for i := range out.Weapons {
+			out.Weapons[i].Name = nil
+		}
+		for i := range out.Ammunition {
+			out.Ammunition[i].Name = nil
+		}
+		for i := range out.Armour {
+			out.Armour[i].Name = nil
+		}
+		for i := range out.Shields {
+			out.Shields[i].Name = nil
+		}
+		return out
+	}
+	assert.Equal(t, nameless(re), nameless(fe))
+	for _, row := range ruletablesvc.ArmorRows {
+		r, rok := mustTable52(t, fromReal).Row(row)
+		f, fok := mustTable52(t, fromFixture).Row(row)
+		require.True(t, rok && fok, row)
+		assert.Equal(t, r, f, row)
+	}
+	for _, kind := range ruletablesvc.MagicKinds {
+		ri, _ := fromReal.InitiativeItems()
+		fi, _ := fromFixture.InitiativeItems()
+		r, rok := ri.Row(kind)
+		f, fok := fi.Row(kind)
+		require.True(t, rok && fok, kind)
+		assert.Equal(t, r, f, kind)
+	}
+}
+
+func mustTable52(t *testing.T, tables *ruletablesvc.Tables) *ruletablesvc.WeaponVsArmor {
+	t.Helper()
+	w, ok := tables.WeaponVsArmor()
+	require.True(t, ok)
+	return w
 }
 
 func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {

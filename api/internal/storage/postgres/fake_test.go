@@ -31,10 +31,15 @@ type tables struct {
 	Characters []int64
 	Names      map[int64]string
 	// Races are characters.race_code ('' none, the column's default).
-	Races  map[int64]string
-	Slots  map[int64]string
-	Buffs  map[int64]string
-	Rounds map[int64]bool
+	Races map[int64]string
+	// SkillPoints are characters.skill_points ('{}' none, the column's default).
+	SkillPoints map[int64]string
+	// Alignments and Sexes are characters.alignment and characters.sex ('' missing), RaceDetails
+	// the free-text characters.race ('' none).
+	Alignments, Sexes, RaceDetails map[int64]string
+	Slots                          map[int64]string
+	Buffs                          map[int64]string
+	Rounds                         map[int64]bool
 	// Weapons, Items, Profs and Bard are by rowKey.
 	Weapons map[string]storeq.InsertWeaponParams
 	Items   map[string]storeq.InsertItemParams
@@ -90,7 +95,7 @@ func newFakeStore() *fakeStore {
 		Weapons: map[string]storeq.InsertWeaponParams{}, Items: map[string]storeq.InsertItemParams{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
-		Names: map[int64]string{}, Races: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -161,7 +166,45 @@ func (f *fakeStore) InsertCharacter(_ context.Context, arg storeq.InsertCharacte
 	f.t.Characters = append(f.t.Characters, id)
 	f.t.Names[id] = arg.Name
 	f.t.Races[id] = arg.RaceCode
+	f.t.SkillPoints[id] = arg.SkillPoints
+	f.t.Alignments[id], f.t.Sexes[id] = arg.Alignment, arg.Sex
 	return id, nil
+}
+
+func (f *fakeStore) ListCharacterIdentity(context.Context) ([]storeq.ListCharacterIdentityRow, error) {
+	rows := []storeq.ListCharacterIdentityRow{}
+	for _, id := range f.t.Characters {
+		rows = append(rows, storeq.ListCharacterIdentityRow{ID: id, Alignment: f.t.Alignments[id], Sex: f.t.Sexes[id]})
+	}
+	return rows, nil
+}
+
+func (f *fakeStore) SetCharacterIdentity(_ context.Context, arg storeq.SetCharacterIdentityParams) error {
+	if err := f.hasCharacter(arg.ID); err != nil {
+		return err
+	}
+	f.t.Alignments[arg.ID], f.t.Sexes[arg.ID], f.t.RaceDetails[arg.ID] = arg.Alignment, arg.Sex, ""
+	return nil
+}
+
+func (f *fakeStore) SetIdentityIfUnset(_ context.Context, arg storeq.SetIdentityIfUnsetParams) error {
+	if !slices.Contains(f.t.Characters, arg.ID) {
+		return nil
+	}
+	if f.t.Alignments[arg.ID] == "" {
+		f.t.Alignments[arg.ID] = arg.Alignment
+	}
+	if f.t.Sexes[arg.ID] == "" {
+		f.t.Sexes[arg.ID] = arg.Sex
+	}
+	return nil
+}
+
+func (f *fakeStore) SetSkillPointsIfUnset(_ context.Context, arg storeq.SetSkillPointsIfUnsetParams) error {
+	if slices.Contains(f.t.Characters, arg.ID) && f.t.SkillPoints[arg.ID] == "{}" {
+		f.t.SkillPoints[arg.ID] = arg.SkillPoints
+	}
+	return nil
 }
 
 func (f *fakeStore) SetRaceIfUnset(_ context.Context, arg storeq.SetRaceIfUnsetParams) error {

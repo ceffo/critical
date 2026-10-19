@@ -170,7 +170,7 @@ func (q *Queries) CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, er
 const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-       class, race_code, race, alignment, age, sex, height, weight, hair, eyes, languages,
+       class, race_code, alignment, age, sex, height, weight, hair, eyes, languages,
        COALESCE(realized_level, level)::BIGINT AS realized_level, skill_points, skill_armor
 FROM characters WHERE id = $1
 `
@@ -196,7 +196,6 @@ type GetCharacterRow struct {
 	SaveSpell        int64
 	Class            string
 	RaceCode         string
-	Race             string
 	Alignment        string
 	Age              int64
 	Sex              string
@@ -238,7 +237,6 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.SaveSpell,
 		&i.Class,
 		&i.RaceCode,
-		&i.Race,
 		&i.Alignment,
 		&i.Age,
 		&i.Sex,
@@ -255,12 +253,12 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 }
 
 const getCharacterDetails = `-- name: GetCharacterDetails :one
-SELECT race, alignment, age, sex, height, weight, hair, eyes, languages
+SELECT class, alignment, age, sex, height, weight, hair, eyes, languages
 FROM characters WHERE id = $1
 `
 
 type GetCharacterDetailsRow struct {
-	Race      string
+	Class     string
 	Alignment string
 	Age       int64
 	Sex       string
@@ -275,7 +273,7 @@ func (q *Queries) GetCharacterDetails(ctx context.Context, id int64) (GetCharact
 	row := q.db.QueryRowContext(ctx, getCharacterDetails, id)
 	var i GetCharacterDetailsRow
 	err := row.Scan(
-		&i.Race,
+		&i.Class,
 		&i.Alignment,
 		&i.Age,
 		&i.Sex,
@@ -456,12 +454,11 @@ func (q *Queries) SetSkillPoints(ctx context.Context, arg SetSkillPointsParams) 
 
 const updateCharacterDetails = `-- name: UpdateCharacterDetails :execrows
 UPDATE characters
-SET race = $1, alignment = $2, age = $3, sex = $4, height = $5, weight = $6, hair = $7, eyes = $8, languages = $9
-WHERE id = $10
+SET alignment = $1, age = $2, sex = $3, height = $4, weight = $5, hair = $6, eyes = $7, languages = $8
+WHERE id = $9
 `
 
 type UpdateCharacterDetailsParams struct {
-	Race      string
 	Alignment string
 	Age       int64
 	Sex       string
@@ -475,7 +472,6 @@ type UpdateCharacterDetailsParams struct {
 
 func (q *Queries) UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateCharacterDetails,
-		arg.Race,
 		arg.Alignment,
 		arg.Age,
 		arg.Sex,

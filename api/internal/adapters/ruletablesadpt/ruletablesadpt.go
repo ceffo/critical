@@ -28,6 +28,10 @@ type fileDTO struct {
 	// SphereAccess is the classes' sphere access (format 6, ADR 0021 step
 	// 12); nil when the artifact does not carry it.
 	SphereAccess []sphereAccessDTO `json:"sphere_access"`
+	// WeaponVsArmor is PHB Table 52 and InitiativeItem Table 56 (format 7,
+	// ADR 0021 step 13); nil when the artifact does not carry them.
+	WeaponVsArmor  []weaponVsArmorDTO  `json:"weapon_vs_armor"`
+	InitiativeItem []initiativeItemDTO `json:"initiative_item"`
 }
 
 type sphereAccessDTO struct {
@@ -75,7 +79,10 @@ type bardDTO struct {
 // validated Tables. A violation names the table. Format 4 carries every
 // class and race table (a missing one is named) but the racial level limits,
 // format 5 those too, format 6 also the sphere access; format 3 carries none.
-func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
+// equipment is the artifact's top-level equipment object as written, nil when
+// absent (format 7, ADR 0021 step 13): format 7 needs it and the two tables
+// Table 52 and Table 56; formats 3 to 6 carry none of them.
+func Parse(format int, raw, equipment []byte) (*ruletablesvc.Tables, error) {
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -111,6 +118,9 @@ func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
 	if err != nil {
 		return nil, err
 	}
+	if format != catalogue.FormatEquipment && (f.WeaponVsArmor != nil || f.InitiativeItem != nil || equipment != nil) {
+		return nil, fmt.Errorf("format %d carries no equipment, weapon_vs_armor or initiative_item", format)
+	}
 	switch format {
 	case catalogue.FormatRuleTables:
 		if f.present() || f.LevelLimits != nil || f.SphereAccess != nil {
@@ -129,7 +139,7 @@ func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
 			return nil, err
 		}
 		return tables.WithClasses(classes), nil
-	case catalogue.FormatLevelLimits, catalogue.FormatSpheres:
+	case catalogue.FormatLevelLimits, catalogue.FormatSpheres, catalogue.FormatEquipment:
 		classes, err := f.classes()
 		if err != nil {
 			return nil, err
@@ -149,10 +159,32 @@ func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
 		if err != nil {
 			return nil, err
 		}
-		return tables.WithSphereAccess(access), nil
+		tables = tables.WithSphereAccess(access)
+		if format == catalogue.FormatSpheres {
+			return tables, nil
+		}
+		return withEquipment(tables, f, equipment)
 	default:
 		return nil, fmt.Errorf("unknown format %d", format)
 	}
+}
+
+// withEquipment adds the format-7 equipment data and its two tables (the
+// rules are ruletablesvc's); format 7 requires all three.
+func withEquipment(t *ruletablesvc.Tables, f fileDTO, equipment []byte) (*ruletablesvc.Tables, error) {
+	e, err := parseEquipment(equipment)
+	if err != nil {
+		return nil, err
+	}
+	w, err := weaponVsArmor(f.WeaponVsArmor)
+	if err != nil {
+		return nil, err
+	}
+	i, err := initiativeItems(f.InitiativeItem)
+	if err != nil {
+		return nil, err
+	}
+	return t.WithEquipment(e, w, i), nil
 }
 
 // sphereAccess maps sphere_access to the validated sphere access (the rules

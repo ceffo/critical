@@ -1,5 +1,6 @@
 import { test, expect, snap } from "./fixtures";
-import { openDashboard } from "./helpers";
+import { chooseLanguage, openDashboard, openSettings } from "./helpers";
+import { expectNoClippedText } from "./noClip";
 
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -20,7 +21,7 @@ test("character details: view, edit with a field error, save, reload", async ({
   const pop = page.getByTestId("details-popover");
   await expect(pop).toBeVisible();
   await expect(pop.getByText("Bard", { exact: true })).toBeVisible();
-  // The PHB race the rules read (ADR 0030 step 1), apart from the free-text race.
+  // The PHB race the rules read (ADR 0030 step 1); there is no free-text race detail any more.
   await expect(pop.getByText("Half-elf", { exact: true })).toBeVisible();
   await expect(pop.getByText("Not set").first()).toBeVisible();
 
@@ -32,15 +33,13 @@ test("character details: view, edit with a field error, save, reload", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await pop.getByRole("button", { name: "Edit" }).click();
-  await pop.getByLabel("Race", { exact: true }).fill("Sylvan half-elf");
+  await pop.getByLabel("Hair", { exact: true }).fill("Chestnut");
   await pop.getByLabel("Age", { exact: true }).fill("10001");
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("alert")).toHaveText(
     "Enter a whole age between 1 and 10,000.",
   );
-  await expect(pop.getByLabel("Race", { exact: true })).toHaveValue(
-    "Sylvan half-elf",
-  );
+  await expect(pop.getByLabel("Hair", { exact: true })).toHaveValue("Chestnut");
   await snap(page, "details-error-1440x900");
 
   await pop.getByLabel("Age", { exact: true }).fill("112");
@@ -50,18 +49,16 @@ test("character details: view, edit with a field error, save, reload", async ({
     .fill("Commun, Nain, Sylvain");
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
-  await expect(pop.getByText("Sylvan half-elf")).toBeVisible();
+  await expect(pop.getByText("Chestnut")).toBeVisible();
   await expect(pop.getByText("112")).toBeVisible();
   await expect(pop.getByText("Common, Dwarvish, Sylvain")).toBeVisible();
 
   // Cancel drops the draft, and an emptied age is cleared (null), not kept.
   await pop.getByRole("button", { name: "Edit" }).click();
-  await pop.getByLabel("Race", { exact: true }).fill("Dwarf");
+  await pop.getByLabel("Hair", { exact: true }).fill("Dwarf");
   await pop.getByRole("button", { name: "Cancel" }).click();
   await pop.getByRole("button", { name: "Edit" }).click();
-  await expect(pop.getByLabel("Race", { exact: true })).toHaveValue(
-    "Sylvan half-elf",
-  );
+  await expect(pop.getByLabel("Hair", { exact: true })).toHaveValue("Chestnut");
   await pop.getByLabel("Age", { exact: true }).fill("0");
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("alert")).toBeVisible();
@@ -76,4 +73,105 @@ test("character details: view, edit with a field error, save, reload", async ({
   await expect(pop.getByText("green")).toBeVisible();
   await expect(pop.getByText("112")).toHaveCount(0);
   await expect(pop.getByText("Common, Dwarvish, Sylvain")).toBeVisible();
+});
+
+// ADR 0032 step 8: a character that lacks its alignment or sex (a migrated one) is asked to pick
+// them, in French without cut text; it still saves an unrelated edit, and the picks stay after a reload.
+test.describe("a character lacking its alignment and sex", () => {
+  test.use({ character: { alignment: "", sex: "" } });
+
+  test("the card asks for them, saves an unrelated edit, then the picks", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    await chooseLanguage(page, "fr");
+    await page.getByTestId("details-trigger").click();
+    const pop = page.getByTestId("details-popover");
+    await expect(pop.getByTestId("details-missing")).toHaveCount(2);
+    await expect(pop.getByTestId("details-missing").first()).toHaveText(
+      "À choisir",
+    );
+    await expectNoClippedText(pop, "the card with its identity to pick");
+    await snap(page, "details-to-pick-fr");
+
+    await pop.getByRole("button", { name: "Modifier" }).click();
+    await pop.getByLabel("Cheveux", { exact: true }).fill("châtain");
+    await pop.getByRole("button", { name: "Enregistrer" }).click();
+    await expect(pop.getByText("châtain")).toBeVisible();
+    await expect(pop.getByTestId("details-missing")).toHaveCount(2);
+
+    await pop.getByRole("button", { name: "Modifier" }).click();
+    await pop.getByLabel("Alignement").selectOption({ label: "Neutre bon" });
+    await pop.getByLabel("Sexe").selectOption({ label: "Femme" });
+    await pop.getByRole("button", { name: "Enregistrer" }).click();
+    await expect(pop.getByTestId("details-missing")).toHaveCount(0);
+
+    await page.reload();
+    await page.getByTestId("details-trigger").click();
+    await expect(pop).toContainText("Neutre bon");
+    await expect(pop).toContainText("Femme");
+    await expectNoClippedText(pop, "the card with its identity picked");
+  });
+});
+
+// A rolling deploy (ADR 0024): the page may meet an old server whose character answer has no
+// `warnings`/`missing`, and the choices' request can fail. The card still opens; the form says the
+// choices did not load and Retry fetches them.
+test("details card: an answer without warnings opens, failed choices show an error and retry", async ({
+  page,
+}) => {
+  await page.route("**/api/character", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const res = await route.fetch();
+    const body = await res.json();
+    delete body.warnings;
+    delete body.missing;
+    await route.fulfill({ response: res, json: body });
+  });
+  let fail = true;
+  await page.route("**/api/characters/options", (route) =>
+    fail ? route.abort() : route.fallback(),
+  );
+  await openDashboard(page);
+  await page.getByTestId("details-trigger").click();
+  const pop = page.getByTestId("details-popover");
+  await expect(pop.getByText("Bard", { exact: true })).toBeVisible();
+  await pop.getByRole("button", { name: "Edit" }).click();
+  await expect(pop.getByTestId("details-options-error")).toBeVisible();
+  fail = false;
+  await pop.getByRole("button", { name: "Retry" }).click();
+  await expect(pop.getByTestId("details-options-error")).toHaveCount(0);
+  await expect(
+    pop.getByLabel("Alignment").getByRole("option", { name: "Neutral good" }),
+  ).toHaveCount(1);
+});
+
+// A rolling deploy (ADR 0024): an old server's options carry no alignment or sex lists. The
+// creation form says the choices did not load, never shows empty pickers, and Retry loads them.
+test("new character form: options without the identity lists show an error, retry loads them", async ({
+  page,
+}) => {
+  let old = true;
+  await page.route("**/api/characters/options", async (route) => {
+    if (!old) return route.fallback();
+    const res = await route.fetch();
+    const body = await res.json();
+    delete body.sexes;
+    for (const c of body.classes) delete c.alignments;
+    await route.fulfill({ response: res, json: body });
+  });
+  await openDashboard(page);
+  const settings = await openSettings(page);
+  await settings.getByRole("button", { name: "New character" }).click();
+  const dialog = page.getByTestId("character-dialog");
+  await expect(dialog.getByRole("alert")).toContainText(
+    "The choices could not be loaded.",
+  );
+  old = false;
+  await dialog.getByRole("button", { name: "Retry" }).click();
+  await expect(
+    dialog
+      .getByLabel("Alignment")
+      .getByRole("option", { name: "Neutral good" }),
+  ).toHaveCount(1);
 });

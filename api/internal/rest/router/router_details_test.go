@@ -15,23 +15,23 @@ import (
 
 func TestDetails_PatchMapsBodyToPatchAndAnswersWithDetails(t *testing.T) {
 	h, m := newRouter(t)
-	race, age := "Half-elf", 112
+	hair, age := "red", 112
 	langs := []string{"Elfique"}
-	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{Race: &race, Age: &age, Languages: &langs}).
-		Return(charactersvc.Details{Race: "Half-elf", Age: 112, Languages: []string{"Elfique"}}, nil)
-	rec := do(h, "PATCH", "/api/character/details", `{"race":"Half-elf","age":112,"languages":["Elfique"]}`)
+	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{Hair: &hair, Age: &age, Languages: &langs}).
+		Return(charactersvc.Details{Hair: "red", Age: 112, Languages: []string{"Elfique"}}, nil)
+	rec := do(h, "PATCH", "/api/character/details", `{"hair":"red","age":112,"languages":["Elfique"]}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"race":"Half-elf","alignment":"","age":112,"sex":"","height":"","weight":"","hair":"","eyes":"","languages":["Elfique"]}`, rec.Body.String())
+	assert.JSONEq(t, `{"alignment":"","age":112,"sex":"","height":"","weight":"","hair":"red","eyes":"","languages":["Elfique"]}`, rec.Body.String())
 }
 
 func TestDetails_NullClearsAndAbsentLeavesAlone(t *testing.T) {
 	h, m := newRouter(t)
 	empty, none := "", []string{}
-	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{ClearAge: true, Race: &empty, Languages: &none}).
+	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{ClearAge: true, Hair: &empty, Languages: &none}).
 		Return(charactersvc.Details{}, nil)
-	rec := do(h, "PATCH", "/api/character/details", `{"age":null,"race":null,"languages":null}`)
+	rec := do(h, "PATCH", "/api/character/details", `{"age":null,"hair":null,"languages":null}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"race":"","alignment":"","age":null,"sex":"","height":"","weight":"","hair":"","eyes":"","languages":[]}`, rec.Body.String())
+	assert.JSONEq(t, `{"alignment":"","age":null,"sex":"","height":"","weight":"","hair":"","eyes":"","languages":[]}`, rec.Body.String())
 }
 
 func TestDetails_OnlyPresentFieldsReachTheService(t *testing.T) {

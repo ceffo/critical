@@ -9,38 +9,6 @@ import (
 	"context"
 )
 
-const listBardSkills = `-- name: ListBardSkills :many
-SELECT id, percent FROM bard_skills WHERE character_id = $1::bigint ORDER BY position, id
-`
-
-type ListBardSkillsRow struct {
-	ID      string
-	Percent int64
-}
-
-func (q *Queries) ListBardSkills(ctx context.Context, characterID int64) ([]ListBardSkillsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listBardSkills, characterID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListBardSkillsRow{}
-	for rows.Next() {
-		var i ListBardSkillsRow
-		if err := rows.Scan(&i.ID, &i.Percent); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listProficiencies = `-- name: ListProficiencies :many
 
 SELECT id, ability, modifier FROM proficiencies WHERE character_id = $1::bigint ORDER BY position, id

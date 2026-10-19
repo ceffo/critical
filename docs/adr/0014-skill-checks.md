@@ -3,7 +3,7 @@
 **Status**: accepted, 2026-10-15; amended 2026-10-16 (DM adjustment, steps 5 to 8); 2026-10-17, by
 [ADR 0027](0027-space-follows-frequency-of-use.md) step 12 (proposed): the Skills tab no longer offers
 step 5's adjustment before the roll, every check is adjusted on the result card (step 6); step 5's
-API is unchanged. Step 3 amended by [ADR 0030](0030-classes-and-races.md) (bard skill percentages computed), on its implementation.
+API is unchanged. Step 3 amended by [ADR 0030](0030-classes-and-races.md) (bard skill percentages computed), implemented 2026-10-18 (step 18).
 
 ## Context
 
@@ -36,7 +36,9 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
 2. **A natural 20 always fails** a proficiency check, whatever the target.
    Test: `TestSkillCheck_Step2_NaturalTwentyAlwaysFails` (target 22: 20 fails, 19 succeeds).
 3. **Bard skill check.** One d100 through the dice port; the check succeeds when the roll is at or
-   under the skill's percentage. No natural is special.
+   under the skill's percentage. No natural is special. _(Amended by ADR 0030 step 18, 2026-10-18:
+   the percentage is the one the rules derive from the bard's entered points, race, Dexterity and
+   armour, no longer the sheet's stored figure; the thief's skills roll the same way, step 17.)_
    Test: `TestSkillCheck_Step3_BardSkillD100AtOrUnderPercent` (at the percentage, one over, 20,
    100; exactly one d100, no d20).
 4. **Logged and poppable.** Each check is one `skill_check` entry recorded in the check's
@@ -98,7 +100,9 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
   data"; another character's are its own and the seed never touches them_): a
   new id is added, an existing one takes the seed's values and order, a row the seed no longer
   lists is kept. Ids are stable keys the UI names in en and fr. A new proficiency or a raised
-  percentage is a seed change, never code. Editing them in the app is not covered.
+  percentage is a seed change, never code. Editing them in the app is not covered. _(Amended
+  2026-10-18, ADR 0030 step 18: the `bard_skills` percentages are the imported sheet's figures,
+  no longer read; the bard spends points instead.)_
 - The ability score is the sheet's. Spells that raise an ability (Strength) do not change a
   proficiency's target.
 - A skill check is one of the roll kinds (`actionlog.RollKinds`): it replaces the result card,

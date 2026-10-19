@@ -38,7 +38,8 @@ func TestCleric_Steps13to16_PrepareCastAndTurn(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Ansel", Class: "cleric", Race: "human", Str: 12, Dex: 10, Con: 13, Int: 10, Wis: 9, Cha: 11, HPMax: 7,
+		Details: identity(),
+		Name:    "Ansel", Class: "cleric", Race: "human", Str: 12, Dex: 10, Con: 13, Int: 10, Wis: 9, Cha: 11, HPMax: 7,
 	})
 	require.NoError(t, err)
 
@@ -93,7 +94,8 @@ func TestCleric_Steps13_15_AThirdLevelClericOfWisdom15(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Brenna", Class: "cleric", Race: "dwarf", Str: 12, Dex: 10, Con: 14, Int: 10, Wis: 15, Cha: 9, HPMax: 20, XP: 3000,
+		Details: identity(),
+		Name:    "Brenna", Class: "cleric", Race: "dwarf", Str: 12, Dex: 10, Con: 14, Int: 10, Wis: 15, Cha: 9, HPMax: 20, XP: 3000,
 	})
 	require.NoError(t, err)
 	info, err := bs.Prep.Info(ctx, id)
@@ -125,7 +127,8 @@ func TestCleric_Step14_UndoAFailedCast(t *testing.T) {
 	s, err := bs.Auth.DevLogin(ctx, "")
 	require.NoError(t, err)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
-		Name: "Ansel", Class: "cleric", Race: "human", Str: 12, Dex: 10, Con: 13, Int: 10, Wis: 9, Cha: 11, HPMax: 7,
+		Details: identity(),
+		Name:    "Ansel", Class: "cleric", Race: "human", Str: 12, Dex: 10, Con: 13, Int: 10, Wis: 9, Cha: 11, HPMax: 7,
 	})
 	require.NoError(t, err)
 	_, err = bs.Prep.Prepare(ctx, id, []string{"bless"})

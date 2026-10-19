@@ -201,6 +201,7 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
       name: "Lyra",
       class: "bard",
       raceCode: "half_elf",
+      details: { alignment: "neutral_good", sex: "male" },
       str: 10,
       dex: 15,
       con: 12,
@@ -209,6 +210,7 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
       cha: 16,
       hpMax: 6,
       xp: 0,
+      skillArmor: "leather",
     }),
   ).toBe(true);
   expect(

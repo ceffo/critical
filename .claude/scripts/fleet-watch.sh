@@ -7,6 +7,13 @@
 #     (supervisor / ship / push / PR / merge), or its report file is newer than   -> "NEEDS-SUPERVISOR <name>"
 #     the last prompt it got
 #   - disappears                                                                   -> "GONE <name>"
+#   - ends a turn on a question or a request to the user (herdr shows it as idle/done, not blocked)
+#                                                                                  -> "WAITING-ON-USER <name>"
+# Waiting (a question) or blocked: the agent's tab gets a "❓ " / "⛔ " prefix and a herdr notification
+# (sound "request") so the user sees it; the prefix goes when the agent works again. scoper-* and
+# designer-* talk to the user by design: they get the mark and the notification, but don't wake the
+# supervisor. Agents already waiting when the watcher starts are marked, not reported.
+# Only the agents of this herdr workspace ($HERDR_WORKSPACE_ID) are watched.
 # An agent ending a turn that only talks to the user (live steps, a scoper's questions) doesn't wake it.
 # Prints the agent's last lines. Records its pid in supervisor/fleet-watch.pid, which the Stop hook
 # (.claude/hooks/supervisor-ci-guard.sh) checks: a supervisor can't end a turn with live agents and no
@@ -19,8 +26,29 @@ old=$(cat "$pidf" 2>/dev/null) && [ -n "$old" ] && [ "$old" != $$ ] && kill "$ol
 echo $$ > "$pidf"
 trap '[ "$(cat "$pidf" 2>/dev/null)" = $$ ] && rm -f "$pidf"' EXIT
 declare -A seen state
-snap() { herdr agent list 2>/dev/null | jq -r '.result.agents[]|select((.name // "sup-")|startswith("sup-")|not)|"\(.name) \(.agent_status) \(.state_change_seq)"'; }
-while read -r n s q; do [ -n "$n" ] && { seen[$n]=$q; state[$n]=$s; }; done < <(snap)
+WS=${HERDR_WORKSPACE_ID:-}
+snap() { herdr agent list 2>/dev/null | jq -r --arg ws "$WS" '.result.agents[]|select((.name // "sup-")|startswith("sup-")|not)|select($ws=="" or .workspace_id==$ws)|"\(.name) \(.agent_status) \(.state_change_seq) \(.tab_id)"'; }
+# The agent's last message, without herdr/Claude chrome (status bar, prompt, recap, spinner lines).
+last_msg() { herdr agent read "$1" --source recent-unwrapped --lines 40 2>/dev/null \
+  | sed '/※ recap/,$d' | grep -vE '^\s*$|tokens ·|───|^\s*❯|auto mode|^\s*~/|^\s*✻' | tail -10; }
+# A developer/reviewer that wrote its report is finished, not waiting: its summary often ends with a
+# line for the user ("log in and confirm"), which is the supervisor's to relay, never a question.
+finished() { ! user_facing "$1" && grep -qiE 'report (is|written) (in|to)|reports/[^ ]+\.md|^\s*STATUS: done' <<<"$2"; }
+asks_user() { grep -qE '\?\s*$|\?["»)]?\s' <<<"$1" || grep -qiE "tell me|let me know|your (call|verdict|ok|go|choice)|once you('ve| have)|you run|run (this|these)|please (run|confirm|check|log in)|confirm (that|you)|waiting (on|for) you|which (one|do you)|for you to|over to you" <<<"$1"; }
+label_of() { herdr tab list 2>/dev/null | jq -r --arg t "$1" '.result.tabs[]|select(.tab_id==$t)|.label'; }
+mark() { # mark <tab> <prefix|""> : set or clear the tab's waiting prefix
+  local l; l=$(label_of "$1"); [ -n "$l" ] || return 0
+  local base=${l#❓ }; base=${base#⛔ }
+  [ "$l" = "$2$base" ] || herdr tab rename "$1" "$2$base" >/dev/null 2>&1
+}
+notify() { herdr notification show "$1" --body "$2" --sound request >/dev/null 2>&1 || true; }
+user_facing() { [[ "$1" == scoper-* || "$1" == designer-* ]]; }
+while read -r n s q t; do
+  [ -n "$n" ] || continue; seen[$n]=$q; state[$n]=$s
+  if [ "$s" = blocked ]; then mark "$t" "⛔ "
+  elif { [ "$s" = idle ] || [ "$s" = done ]; } && m=$(last_msg "$n") && ! finished "$n" "$m" && asks_user "$m"; then mark "$t" "❓ "
+  else mark "$t" ""; fi
+done < <(snap)
 fresh_report() { # the agent's report newer than the supervisor's last prompt marker for its item
   local item=${1#*-}; item=${item^^}; local f
   for f in "$R"/*"$item"*-dev.md "$R"/*"${item}"*.md; do
@@ -30,16 +58,25 @@ fresh_report() { # the agent's report newer than the supervisor's last prompt ma
 }
 while sleep 30; do
   declare -A now=()
-  while read -r n s q; do
+  while read -r n s q t; do
     [ -n "$n" ] || continue; now[$n]=1
     [ "${seen[$n]:-}" = "$q" ] && continue
     prev=${state[$n]:-working}; seen[$n]=$q; state[$n]=$s
+    [ "$s" = working ] && { mark "$t" ""; continue; }
     tail=$(herdr agent read "$n" --source recent-unwrapped --lines 25 2>/dev/null | grep -v '^\s*$' | tail -15)
-    # scoper-* / designer-* talk to the user by design: their questions (blocked) are for the user.
-    if [ "$s" = blocked ] && [[ "$n" != scoper-* && "$n" != designer-* ]]; then echo "BLOCKED $n"; echo "$tail"; exit 0; fi
-    if [ "$prev" = working ] && { [ "$s" = idle ] || [ "$s" = done ]; }; then
-      if grep -qiE 'supervisor|ship|push|pull request|\bPR\b|merge' <<<"$tail" || fresh_report "$n"; then
-        echo "NEEDS-SUPERVISOR $n"; echo "$tail"; exit 0
+    if [ "$s" = blocked ]; then
+      mark "$t" "⛔ "; notify "$n is blocked" "A permission prompt or question in its tab."
+      user_facing "$n" || { echo "BLOCKED $n"; echo "$tail"; exit 0; }
+      continue
+    fi
+    if [ "$prev" != idle ] && [ "$prev" != done ] && { [ "$s" = idle ] || [ "$s" = done ]; }; then
+      msg=$(last_msg "$n")
+      if ! user_facing "$n" && { finished "$n" "$msg" || grep -qiE 'supervisor|ship|push|pull request|\bPR\b|merge' <<<"$tail" || fresh_report "$n"; }; then
+        mark "$t" ""; echo "NEEDS-SUPERVISOR $n"; echo "$tail"; exit 0
+      fi
+      if asks_user "$msg"; then
+        mark "$t" "❓ "; notify "$n is waiting for you" "$(tail -1 <<<"$msg" | cut -c1-120)"
+        user_facing "$n" || { echo "WAITING-ON-USER $n"; echo "$tail"; exit 0; }
       fi
     fi
   done < <(snap)

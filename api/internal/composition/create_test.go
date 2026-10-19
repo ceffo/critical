@@ -12,11 +12,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
-const newBard = `{"name":"Lyra","class":"bard","raceCode":"half_elf",` +
-	`"str":10,"dex":15,"con":12,"int":14,"wis":9,"cha":16,"hpMax":6,"xp":2500}`
+const bardStart = `{"name":"Lyra","class":"bard","raceCode":"half_elf",` +
+	`"str":10,"dex":15,"con":12,"int":14,"wis":9,"cha":16,"hpMax":6,"xp":2500,"skillArmor":"leather"`
+
+// bardWith is the body creating a bard with the given details object.
+func bardWith(details string) string { return bardStart + `,"details":` + details + `}` }
+
+var newBard = bardWith(`{"alignment":"neutral_good","sex":"male"}`)
 
 type createdSheet struct {
 	ID       int64  `json:"id"`
@@ -83,26 +89,62 @@ func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 func TestCreate_TheDetailsEnteredAreStored(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
-	body := newBard[:len(newBard)-1] +
-		`,"details":{"alignment":" Neutre bon ","age":23,"eyes":"verts","languages":["Commun"," Elfique "]}}`
+	body := bardWith(`{"alignment":" chaotic_neutral ","sex":"female","age":23,"eyes":"verts","languages":["Commun"," Elfique "]}`)
 	var list listView
 	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, &list))
 	var got struct {
-		Race      string   `json:"race"`
 		Alignment string   `json:"alignment"`
+		Sex       string   `json:"sex"`
+		Missing   []string `json:"missing"`
 		Age       *int     `json:"age"`
 		Eyes      string   `json:"eyes"`
 		Hair      string   `json:"hair"`
 		Languages []string `json:"languages"`
 	}
 	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
-	assert.Equal(t, "Neutre bon", got.Alignment)
+	assert.Equal(t, "chaotic_neutral", got.Alignment)
+	assert.Equal(t, "female", got.Sex)
+	assert.Empty(t, got.Missing)
 	require.NotNil(t, got.Age)
 	assert.Equal(t, 23, *got.Age)
 	assert.Equal(t, "verts", got.Eyes)
 	assert.Empty(t, got.Hair)
-	assert.Empty(t, got.Race)
 	assert.Equal(t, []string{"Commun", "Elfique"}, got.Languages)
+}
+
+// ADR 0032 steps 2 and 3, end to end: creating a character without an alignment or a sex, with
+// one that is not a code, or with an alignment the class forbids is refused with the field and the
+// code, and nothing is stored (no character, none made current).
+func TestCreate_Step2And3_AlignmentAndSexAreRequiredCodesAndTheClassLimitRefuses(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	for body, want := range map[string][2]string{
+		bardWith(`{"sex":"male"}`):                             {"details.alignment", "empty"},
+		bardWith(`{"alignment":"neutral_good"}`):               {"details.sex", "empty"},
+		bardWith(`{"alignment":"good","sex":"male"}`):          {"details.alignment", "unknown"},
+		bardWith(`{"alignment":"neutral_good","sex":"other"}`): {"details.sex", "unknown"},
+		bardWith(`{"alignment":"lawful_good","sex":"male"}`):   {"details.alignment", "alignment_not_allowed"},
+		bardWith(`{"alignment":"Neutral Good","sex":"male"}`):  {"details.alignment", "unknown"},
+		bardStart + `}`: {"details.alignment", "empty"},
+		bardWith(`{"alignment":"neutral_good","sex":"male","race":"elf"}`): {"", "bad_request"},
+	} {
+		var refused map[string]string
+		require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused), body)
+		assert.Equal(t, want[0], refused["field"], body)
+		if want[0] != "" {
+			assert.Equal(t, want[1], refused["error"], body)
+		} else {
+			assert.Equal(t, want[1], refused["code"], body, "the race detail is an unknown field")
+		}
+	}
+	var list listView
+	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters", "", &list))
+	assert.Empty(t, list.Characters, "a refused creation stores nothing")
+	assert.Nil(t, list.CurrentID)
+
+	// A bard accepts lawful neutral.
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters",
+		bardWith(`{"alignment":"lawful_neutral","sex":"female"}`), &list))
 }
 
 // emptied maps the nil lists of an empty sheet to their zero value.
@@ -139,16 +181,16 @@ func TestCreate_RefusedInputStoresNothing(t *testing.T) {
 	// The details are checked as the card's edit checks them, their field
 	// named under "details." (the race code is "race").
 	for body, field := range map[string]string{
-		newBard[:len(newBard)-1] + `,"details":{"age":0}}`:                                  "details.age",
-		newBard[:len(newBard)-1] + `,"details":{"languages":["Commun","commun"]}}`:          "details.languages",
-		newBard[:len(newBard)-1] + `,"details":{"race":"` + strings.Repeat("e", 41) + `"}}`: "details.race",
+		bardWith(`{"alignment":"neutral_good","sex":"male","age":0}`):                                  "details.age",
+		bardWith(`{"alignment":"neutral_good","sex":"male","languages":["Commun","commun"]}`):          "details.languages",
+		bardWith(`{"alignment":"neutral_good","sex":"male","hair":"` + strings.Repeat("e", 41) + `"}`): "details.hair",
 	} {
 		var refused map[string]string
 		require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused), body)
 		assert.Equal(t, field, refused["field"], body)
 	}
 	for _, extra := range []string{`"level":3`, `"thac0":19`} {
-		body := newBard[:len(newBard)-1] + `,` + extra + `}`
+		body := bardStart + `,` + extra + `}`
 		assert.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, nil), extra)
 	}
 	var list listView
@@ -167,7 +209,8 @@ func TestCreate_SwitchAndRetire(t *testing.T) {
 	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", newBard, &list))
 	first := *list.CurrentID
 	second := `{"name":"Mira","class":"bard","raceCode":"human",` +
-		`"str":9,"dex":16,"con":10,"int":13,"wis":11,"cha":17,"hpMax":4,"xp":0}`
+		`"str":9,"dex":16,"con":10,"int":13,"wis":11,"cha":17,"hpMax":4,"xp":0,"skillArmor":"none",` +
+		`"details":{"alignment":"true_neutral","sex":"female"}}`
 	require.Equal(t, http.StatusCreated, tb.showing(bob, first, "POST", "/api/characters", second, &list))
 	require.Len(t, list.Characters, 2)
 	mira := *list.CurrentID
@@ -235,8 +278,16 @@ func TestCreate_Options(t *testing.T) {
 		"hide_in_shadows", "detect_noise", "climb_walls", "read_languages",
 	}, got.Classes[4].Skills, "PHB Table 26")
 	assert.Equal(t, []string{"none", "leather", "padded_studded_leather", "elven_chain"}, got.Classes[4].SkillArmors)
-	assert.Empty(t, got.Classes[0].Skills, "a bard enters no thieving skill")
+	assert.Equal(t, []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"}, got.Classes[0].Skills, "PHB Table 33")
+	assert.Equal(t, []string{"none", "leather", "padded_studded_leather", "elven_chain", "metal"}, got.Classes[0].SkillArmors)
 	assert.Equal(t, struct{ Min, Max int }{1, 100}, got.StrExceptional)
 	assert.Equal(t, 3, got.Ability.Min)
 	assert.Equal(t, 19, got.Ability.Max)
+}
+
+// identity is the alignment and sex every test character enters (both required, ADR 0032 steps 2
+// and 3), valid for each creatable class.
+func identity() charactersvc.DetailsPatch {
+	alignment, sex := "neutral_good", "male"
+	return charactersvc.DetailsPatch{Alignment: &alignment, Sex: &sex}
 }

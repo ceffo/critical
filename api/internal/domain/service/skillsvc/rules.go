@@ -45,6 +45,13 @@ const (
 // (ADR 0030 step 17, PHB p.39): under it the player must spend points first.
 const MinThiefSkillPercent = 1
 
+// SkillUsable reports whether a skill of kind at percent can be rolled: a
+// thieving skill under MinThiefSkillPercent cannot, whatever else (the
+// server owns this rule; the web reads it).
+func SkillUsable(kind Kind, percent int) bool {
+	return kind != KindThiefSkill || percent >= MinThiefSkillPercent
+}
+
 // CodeSkillUnusable is the FieldError code of a roll of a thieving skill
 // under MinThiefSkillPercent. The web owns the wording.
 const CodeSkillUnusable = "skill_unusable"

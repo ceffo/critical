@@ -73,6 +73,15 @@ const weaponTypeMigration = "005_weapon_type.sql"
 // already stored the race its seed names (raceSeedCharacter).
 const raceMigration = "007_character_race.sql"
 
+// bardSkillsMigration lets a bard wear metal armour for its skills. Right after it the run gives
+// the seed character already stored the skill points its seed names (pointSeedCharacter).
+const bardSkillsMigration = "012_bard_skills.sql"
+
+// identityMigration makes alignment and sex codes. Right after it the run maps the stored free text
+// (mapIdentity), then gives the seed character already stored the identity its seed names
+// (identitySeedCharacter).
+const identityMigration = "013_identity_codes.sql"
+
 // migrationDataSteps are the data steps run just before the named migrations, then those run just
 // after the named migrations.
 func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
@@ -84,6 +93,13 @@ func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
 	after = map[string]dataStep{
 		weaponTypeMigration: func(ctx context.Context, q storeq.Querier) error { return typeSeedWeapons(ctx, q, weaponsPath) },
 		raceMigration:       func(ctx context.Context, q storeq.Querier) error { return raceSeedCharacter(ctx, q, characterPath) },
+		bardSkillsMigration: func(ctx context.Context, q storeq.Querier) error { return pointSeedCharacter(ctx, q, characterPath) },
+		identityMigration: func(ctx context.Context, q storeq.Querier) error {
+			if err := mapIdentity(ctx, q); err != nil {
+				return err
+			}
+			return identitySeedCharacter(ctx, q, characterPath)
+		},
 	}
 	return before, after
 }

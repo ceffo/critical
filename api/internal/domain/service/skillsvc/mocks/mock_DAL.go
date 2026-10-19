@@ -22,65 +22,6 @@ func (_m *MockDAL) EXPECT() *MockDAL_Expecter {
 	return &MockDAL_Expecter{mock: &_m.Mock}
 }
 
-// ListBardSkills provides a mock function with given fields: ctx, characterID
-func (_m *MockDAL) ListBardSkills(ctx context.Context, characterID int64) ([]skillsvc.BardSkillDef, error) {
-	ret := _m.Called(ctx, characterID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListBardSkills")
-	}
-
-	var r0 []skillsvc.BardSkillDef
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]skillsvc.BardSkillDef, error)); ok {
-		return rf(ctx, characterID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) []skillsvc.BardSkillDef); ok {
-		r0 = rf(ctx, characterID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]skillsvc.BardSkillDef)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
-		r1 = rf(ctx, characterID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockDAL_ListBardSkills_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListBardSkills'
-type MockDAL_ListBardSkills_Call struct {
-	*mock.Call
-}
-
-// ListBardSkills is a helper method to define mock.On call
-//   - ctx context.Context
-//   - characterID int64
-func (_e *MockDAL_Expecter) ListBardSkills(ctx interface{}, characterID interface{}) *MockDAL_ListBardSkills_Call {
-	return &MockDAL_ListBardSkills_Call{Call: _e.mock.On("ListBardSkills", ctx, characterID)}
-}
-
-func (_c *MockDAL_ListBardSkills_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_ListBardSkills_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64))
-	})
-	return _c
-}
-
-func (_c *MockDAL_ListBardSkills_Call) Return(_a0 []skillsvc.BardSkillDef, _a1 error) *MockDAL_ListBardSkills_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockDAL_ListBardSkills_Call) RunAndReturn(run func(context.Context, int64) ([]skillsvc.BardSkillDef, error)) *MockDAL_ListBardSkills_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // ListProficiencies provides a mock function with given fields: ctx, characterID
 func (_m *MockDAL) ListProficiencies(ctx context.Context, characterID int64) ([]skillsvc.ProficiencyDef, error) {
 	ret := _m.Called(ctx, characterID)

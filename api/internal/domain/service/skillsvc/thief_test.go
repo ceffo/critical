@@ -29,7 +29,6 @@ func thiefFixture(t *testing.T) *fixture {
 	require.NoError(t, err)
 	f.svc = svc
 	f.dal.EXPECT().ListProficiencies(mock.Anything, charID).Return(nil, nil).Maybe()
-	f.dal.EXPECT().ListBardSkills(mock.Anything, charID).Return(nil, nil).Maybe()
 	thief := &charactersvc.Character{ID: charID, Class: "thief", Dex: 17}
 	thief.Derived.ThiefSkills = []ruletablesvc.SkillPercent{
 		{Skill: "open_locks", Base: 10, Points: 20, Dexterity: 10, Percent: 40},
@@ -113,7 +112,6 @@ func TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie(t *testing.T) {
 	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Tx: f.tx})
 	require.NoError(t, err)
 	f.dal.EXPECT().ListProficiencies(mock.Anything, charID).Return(nil, nil)
-	f.dal.EXPECT().ListBardSkills(mock.Anything, charID).Return(nil, nil)
 	thief := &charactersvc.Character{ID: charID, Class: "thief"}
 	thief.Derived.ThiefSkills = []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 60, Race: -15, Armor: -50, Percent: 0}}
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(thief, nil)

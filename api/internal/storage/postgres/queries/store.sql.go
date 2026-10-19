@@ -254,8 +254,9 @@ func (q *Queries) InsertActiveBuffs(ctx context.Context, characterID int64) erro
 const insertCharacter = `-- name: InsertCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
-    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code,
+    skill_points, alignment, sex
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 RETURNING id
 `
 
@@ -278,6 +279,9 @@ type InsertCharacterParams struct {
 	SaveSpell        int64
 	Languages        string
 	RaceCode         string
+	SkillPoints      string
+	Alignment        string
+	Sex              string
 }
 
 // The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
@@ -302,6 +306,9 @@ func (q *Queries) InsertCharacter(ctx context.Context, arg InsertCharacterParams
 		arg.SaveSpell,
 		arg.Languages,
 		arg.RaceCode,
+		arg.SkillPoints,
+		arg.Alignment,
+		arg.Sex,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -493,6 +500,40 @@ func (q *Queries) LearnFailureRefs(ctx context.Context) ([]LearnFailureRefsRow, 
 	return items, nil
 }
 
+const listCharacterIdentity = `-- name: ListCharacterIdentity :many
+SELECT id, alignment, sex FROM characters ORDER BY id
+`
+
+type ListCharacterIdentityRow struct {
+	ID        int64
+	Alignment string
+	Sex       string
+}
+
+// The identity migration (013): every character's stored alignment and sex, to map to codes.
+func (q *Queries) ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCharacterIdentity)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCharacterIdentityRow{}
+	for rows.Next() {
+		var i ListCharacterIdentityRow
+		if err := rows.Scan(&i.ID, &i.Alignment, &i.Sex); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockWriters = `-- name: LockWriters :exec
 SELECT pg_advisory_xact_lock(7240531)
 `
@@ -590,6 +631,42 @@ func (q *Queries) SeedOffers(ctx context.Context, arg SeedOffersParams) ([]strin
 	return items, nil
 }
 
+const setCharacterIdentity = `-- name: SetCharacterIdentity :exec
+UPDATE characters SET alignment = $1, sex = $2, race = '' WHERE id = $3
+`
+
+type SetCharacterIdentityParams struct {
+	Alignment string
+	Sex       string
+	ID        int64
+}
+
+// The mapped (or cleared) alignment and sex of a character, and its race detail discarded.
+func (q *Queries) SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error {
+	_, err := q.db.ExecContext(ctx, setCharacterIdentity, arg.Alignment, arg.Sex, arg.ID)
+	return err
+}
+
+const setIdentityIfUnset = `-- name: SetIdentityIfUnset :exec
+UPDATE characters
+SET alignment = CASE WHEN alignment = '' THEN $1 ELSE alignment END,
+    sex = CASE WHEN sex = '' THEN $2 ELSE sex END
+WHERE id = $3
+`
+
+type SetIdentityIfUnsetParams struct {
+	Alignment string
+	Sex       string
+	ID        int64
+}
+
+// The seed character's alignment and sex when it lacks them (migration 013): a value set since is
+// kept, so a rerun changes nothing.
+func (q *Queries) SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error {
+	_, err := q.db.ExecContext(ctx, setIdentityIfUnset, arg.Alignment, arg.Sex, arg.ID)
+	return err
+}
+
 const setRaceIfUnset = `-- name: SetRaceIfUnset :exec
 UPDATE characters SET race_code = $1 WHERE id = $2 AND race_code = ''
 `
@@ -603,6 +680,22 @@ type SetRaceIfUnsetParams struct {
 // so a rerun changes nothing and a race set since is kept.
 func (q *Queries) SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error {
 	_, err := q.db.ExecContext(ctx, setRaceIfUnset, arg.RaceCode, arg.ID)
+	return err
+}
+
+const setSkillPointsIfUnset = `-- name: SetSkillPointsIfUnset :exec
+UPDATE characters SET skill_points = $1 WHERE id = $2 AND skill_points = '{}'
+`
+
+type SetSkillPointsIfUnsetParams struct {
+	SkillPoints string
+	ID          int64
+}
+
+// The skill points of a character stored before bards entered them (migration 012): only while it
+// has none, so a rerun changes nothing and points spent since are kept.
+func (q *Queries) SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsIfUnsetParams) error {
+	_, err := q.db.ExecContext(ctx, setSkillPointsIfUnset, arg.SkillPoints, arg.ID)
 	return err
 }
 

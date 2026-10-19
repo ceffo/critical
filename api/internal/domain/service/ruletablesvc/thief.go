@@ -71,6 +71,15 @@ func (t *Tables) ThiefSkills(race string, dex int, armor string, points map[stri
 	if !slices.Contains(ThiefArmors, armor) {
 		return nil, fmt.Errorf("thief skills: unknown armour %q", armor)
 	}
+	return rogueSkills(c, ThiefSkills, c.ThiefSkillBase, race, dex, armor, 0, points), nil
+}
+
+// rogueSkills is the sum of ADR 0030 steps 17 and 18 for each of skills, in
+// order: the base from base (the class's table), the entered points, Table 27
+// for race, Table 28 for dex (a skill without a column: 0), Table 29's armor
+// column (leather: 0) plus extra (the bard's metal armour penalty, step 18),
+// capped at MaxSkillPercent and floored at MinSkillPercent.
+func rogueSkills(c *ClassTables, skills []string, base []SkillBaseRow, race string, dex int, armor string, extra int, points map[string]int) []SkillPercent {
 	var dexRow SkillDexterityRow
 	for _, r := range c.ThiefSkillDexterity {
 		if dex >= r.DexMin && dex <= r.DexMax {
@@ -78,10 +87,10 @@ func (t *Tables) ThiefSkills(race string, dex int, armor string, points map[stri
 			break
 		}
 	}
-	out := make([]SkillPercent, 0, len(ThiefSkills))
-	for _, skill := range ThiefSkills {
-		p := SkillPercent{Skill: skill, Points: points[skill], Dexterity: dexterityColumn(dexRow, skill)}
-		for _, r := range c.ThiefSkillBase {
+	out := make([]SkillPercent, 0, len(skills))
+	for _, skill := range skills {
+		p := SkillPercent{Skill: skill, Points: points[skill], Dexterity: dexterityColumn(dexRow, skill), Armor: extra}
+		for _, r := range base {
 			if r.Skill == skill {
 				p.Base = r.Base
 			}
@@ -93,13 +102,13 @@ func (t *Tables) ThiefSkills(race string, dex int, armor string, points map[stri
 		}
 		for _, r := range c.ThiefSkillArmor {
 			if r.Armor == armor && r.Skill == skill {
-				p.Armor = r.Adjustment
+				p.Armor += r.Adjustment
 			}
 		}
 		p.Percent = min(max(p.Base+p.Points+p.Race+p.Dexterity+p.Armor, MinSkillPercent), MaxSkillPercent)
 		out = append(out, p)
 	}
-	return out, nil
+	return out
 }
 
 // dexterityColumn is Table 28's column of skill (0 for a skill without one).
@@ -145,15 +154,23 @@ type BudgetWarning struct {
 // the first in one skill. The points are entered as one total per skill, so
 // the check is on the totals the levels allow. Skills in ThiefSkills order.
 func SkillPointBudget(level int, points map[string]int) []BudgetWarning {
+	return budget(level, points, ThiefSkills, SkillPointsFirstLevel, SkillPointsPerLevel, SkillPointsPerSkillFirst, SkillPointsPerSkillPerLevel)
+}
+
+// budget checks points over skills against first plus perLevel a level
+// after the first in all, and perSkillFirst plus perSkillPerLevel a level
+// after the first in one skill; a perSkillFirst of 0 checks no skill on its
+// own (the bard's, step 18). No warning under level 1.
+func budget(level int, points map[string]int, skills []string, first, perLevel, perSkillFirst, perSkillPerLevel int) []BudgetWarning {
 	out := []BudgetWarning{}
 	if level < 1 {
 		return out
 	}
-	total, totalLimit := 0, SkillPointsFirstLevel+SkillPointsPerLevel*(level-1)
-	skillLimit := SkillPointsPerSkillFirst + SkillPointsPerSkillPerLevel*(level-1)
-	for _, skill := range ThiefSkills {
+	total, totalLimit := 0, first+perLevel*(level-1)
+	skillLimit := perSkillFirst + perSkillPerLevel*(level-1)
+	for _, skill := range skills {
 		total += points[skill]
-		if points[skill] > skillLimit {
+		if perSkillFirst > 0 && points[skill] > skillLimit {
 			out = append(out, BudgetWarning{Code: BudgetPerSkill, Skill: skill, Points: points[skill], Limit: skillLimit})
 		}
 	}

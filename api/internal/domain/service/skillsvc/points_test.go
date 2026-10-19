@@ -66,7 +66,8 @@ func TestSetPoints_Step17_RefusalsAndNoChange(t *testing.T) {
 		{"over 95", "thief", map[string]int{"open_locks": 96}, "skillPoints.open_locks"},
 		{"negative", "thief", map[string]int{"open_locks": -1}, "skillPoints.open_locks"},
 		{"unknown skill", "thief", map[string]int{"fly": 5}, "skillPoints.fly"},
-		{"a bard", "bard", map[string]int{"open_locks": 5}, "skillPoints"},
+		{"a thieving skill a bard lacks", "bard", map[string]int{"open_locks": 5}, "skillPoints.open_locks"},
+		{"a fighter's points", "fighter", map[string]int{"climb_walls": 5}, "skillPoints"},
 		{"no change", "thief", map[string]int{"open_locks": 30, "hide_in_shadows": 0}, ""},
 		{"a fighter with none", "fighter", map[string]int{}, ""},
 	} {

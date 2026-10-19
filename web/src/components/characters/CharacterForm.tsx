@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { UserPlus } from "@phosphor-icons/react";
-import { createCharacter, fetchCreationOptions } from "@/api/characters";
+import { createCharacter, fetchCreationChoices } from "@/api/characters";
 import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
@@ -30,10 +30,7 @@ type Field =
 
 /** The details the form takes, in the card's order (the card's edit checks them the same way). */
 const DETAIL_FIELDS: (keyof Draft)[] = [
-  "race",
-  "alignment",
   "age",
-  "sex",
   "height",
   "weight",
   "hair",
@@ -41,7 +38,6 @@ const DETAIL_FIELDS: (keyof Draft)[] = [
 ];
 
 const NO_DETAILS: Draft = {
-  race: "",
   alignment: "",
   age: "",
   sex: "",
@@ -75,6 +71,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
   const { t } = useTranslation();
   const [options, setOptions] = useState<CreationOptions | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [name, setName] = useState("");
   const [cls, setCls] = useState("");
   const [race, setRace] = useState("");
@@ -99,7 +96,7 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
 
   useEffect(() => {
     let live = true;
-    fetchCreationOptions().then(
+    fetchCreationChoices().then(
       (o) => {
         if (!live) return;
         setOptions(o);
@@ -114,10 +111,11 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
     return () => {
       live = false;
     };
-  }, []);
+  }, [attempt]);
 
   const classOption = options?.classes.find((c) => c.class === cls);
   const races = classOption?.races ?? [];
+  const alignments = classOption?.alignments ?? [];
   const skills = classOption?.skills ?? [];
   const armors = classOption?.skillArmors ?? [];
   const offersExceptional =
@@ -134,9 +132,14 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
 
   const wording = (e: FieldError): string => {
     if (e.field.startsWith("details.")) {
-      return t(`details.errors.${e.code}`, {
-        defaultValue: e.message ?? e.code,
-      });
+      const detail = e.field.slice("details.".length);
+      return t(
+        [`details.errors.${detail}.${e.code}`, `details.errors.${e.code}`],
+        {
+          className: t(`details.classes.${cls}`, { defaultValue: cls }),
+          defaultValue: e.message ?? e.code,
+        },
+      );
     }
     const r =
       e.field === "name"
@@ -285,13 +288,12 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
           htmlFor={`new-character-${field}`}
           className={cn(labelClass, "break-words")}
         >
-          {t(f === "race" ? "characters.raceDetail" : `details.fields.${f}`)}
+          {t(`details.fields.${f}`)}
         </label>
         <input
           {...fieldProps(field)}
           autoComplete="off"
           inputMode={f === "age" ? "numeric" : undefined}
-          title={f === "race" ? t("characters.raceDetailHint") : undefined}
           value={details[f]}
           onChange={(e) => {
             setDetails((d) => ({ ...d, [f]: e.target.value }));
@@ -306,11 +308,53 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
     );
   };
 
+  // ADR 0032 steps 2 and 3: alignment and sex are required codes, picked from the server's lists
+  // (the class's admitted alignments, the sexes).
+  const pick = (f: "alignment" | "sex", codes: string[]) => {
+    const field: Field = `details.${f}`;
+    return (
+      <div key={f} className="flex min-w-0 flex-col gap-1">
+        <label
+          htmlFor={`new-character-${field}`}
+          className={cn(labelClass, "break-words")}
+        >
+          {t(`details.fields.${f}`)}
+        </label>
+        <select
+          {...fieldProps(field)}
+          value={details[f]}
+          onChange={(e) => {
+            setDetails((d) => ({ ...d, [f]: e.target.value }));
+            setError(null);
+          }}
+        >
+          <option value="">{t("details.pick")}</option>
+          {codes.map((code) => (
+            <option key={code} value={code}>
+              {t(`details.${f === "sex" ? "sexes" : "alignments"}.${code}`)}
+            </option>
+          ))}
+        </select>
+        {errorFor(field)}
+      </div>
+    );
+  };
+
   if (loadError)
     return (
-      <p role="alert" className="text-body text-danger">
-        {loadError}
-      </p>
+      <div role="alert" className="flex flex-col items-start gap-2">
+        <p className="text-body text-danger">{t("details.optionsError")}</p>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setLoadError(null);
+            setAttempt((n) => n + 1);
+          }}
+        >
+          {t("details.optionsRetry")}
+        </Button>
+      </div>
     );
   if (!options)
     return <p className="text-body text-muted-foreground">{t("loading")}</p>;
@@ -354,6 +398,12 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
               const allowed =
                 options.classes.find((c) => c.class === next)?.races ?? [];
               if (!allowed.includes(race)) setRace(allowed[0] ?? "");
+              // The class limits the alignment (ADR 0032 step 2): a pick it no longer admits is cleared.
+              const admitted =
+                options.classes.find((c) => c.class === next)?.alignments ?? [];
+              setDetails((d) =>
+                admitted.includes(d.alignment) ? d : { ...d, alignment: "" },
+              );
               setError(null);
             }}
           >
@@ -519,6 +569,8 @@ export function CharacterForm({ onCancel }: { onCancel?: () => void }) {
           {t("characters.detailsLead")}
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {pick("alignment", alignments)}
+          {pick("sex", options?.sexes ?? [])}
           {DETAIL_FIELDS.map((f) => detail(f))}
         </div>
         {detail("languages", t("details.languagesHint"))}

@@ -2368,6 +2368,11 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       xp: 0,
     }),
   ).toBe(true);
+  // The new character is the current one: a request the page had in flight answers "character
+  // changed" and reloads it (api/http.ts). Reload now and wait for the new sheet, so no reload
+  // lands in the middle of the calls below.
+  await page.reload();
+  await expect(page.getByText("Borin Gueule-de-Fer").first()).toBeVisible();
   // Weapon pieces (ADR 0033 step 1), equipped to be held (step 6).
   for (const [id, w] of [
     [

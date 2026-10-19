@@ -207,14 +207,15 @@ type Summary struct {
 
 // Details are the facts about the character that the player edits. Alignment
 // and Sex are codes (ADR 0032 steps 2 and 3), "" when a migrated character
-// lacks them (Missing); the other text fields are stored as entered, Age 0
-// means not set and Languages are the names as entered.
+// lacks them (Missing); hair and eyes are stored as entered, Height (cm),
+// Weight (kg) and Age 0 mean not set (ADR 0032 step 5) and Languages are
+// catalogue codes.
 type Details struct {
 	Alignment string
 	Age       int
 	Sex       string
-	Height    string
-	Weight    string
+	Height    float64
+	Weight    float64
 	Hair      string
 	Eyes      string
 	Languages []string

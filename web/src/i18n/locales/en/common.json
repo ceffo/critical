@@ -1557,6 +1557,18 @@
       "sex": {
         "empty": "Pick a sex.",
         "unknown": "Pick one of the listed sexes."
+      },
+      "height": {
+        "out_of_range": "Enter a plausible height.",
+        "not_a_number": "Enter the height as a number."
+      },
+      "weight": {
+        "out_of_range": "Enter a plausible weight.",
+        "not_a_number": "Enter the weight as a number."
+      },
+      "age": {
+        "out_of_range": "Enter a whole age between 1 and 10,000.",
+        "not_a_number": "Enter the age as a number."
       }
     },
     "races": {
@@ -1588,7 +1600,42 @@
     },
     "warnings": {
       "alignment_not_allowed": "This alignment is not allowed for a {{className}}; kept as recorded.",
-      "languages_over_limit": "{{n}} languages beyond the native one, {{limit}} for this Intelligence: the DM decides."
+      "languages_over_limit": "{{n}} languages beyond the native one, {{limit}} for this Intelligence: the DM decides.",
+      "height_outside_range": "Outside the usual range for this race ({{min}} to {{max}}): the DM decides.",
+      "weight_outside_range": "Outside the usual range for this race ({{min}} to {{max}}): the DM decides.",
+      "age_outside_range": "Outside the usual range for this race ({{min}} to {{max}} years): the DM decides."
+    },
+    "unitHint": {
+      "height": {
+        "metric": "In centimetres, e.g. 178.",
+        "imperial": "In feet and inches, e.g. 5'10\"."
+      },
+      "weight": {
+        "metric": "In kilograms.",
+        "imperial": "In pounds."
+      }
+    },
+    "roll": {
+      "hint": {
+        "height": "Roll the height for the race and sex",
+        "weight": "Roll the weight for the race and sex",
+        "age": "Roll the starting age for the race"
+      },
+      "need": {
+        "race": "Pick a race first",
+        "sex": "Pick a sex first"
+      },
+      "errors": {
+        "race_required": "Pick a race first.",
+        "sex_required": "Pick a sex first.",
+        "unknown": "The server does not know this choice: reload the page."
+      },
+      "breakdown": "{{count}}d{{sides}} ({{dice}}) + {{base}} {{unit}} = {{total}} {{unit}}",
+      "units": {
+        "in": "in",
+        "lb": "lb",
+        "year": "years"
+      }
     }
   },
   "xp": {

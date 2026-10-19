@@ -86,6 +86,10 @@ const identityMigration = "013_identity_codes.sql"
 // the stored words (mapLanguages).
 const languagesMigration = "014_language_codes.sql"
 
+// measuresMigration makes the height and weight numbers. Right after it the run parses the stored
+// free text (mapMeasures).
+const measuresMigration = "015_identity_numbers.sql"
+
 // migrationDataSteps are the data steps run just before the named migrations, then those run just
 // after the named migrations.
 func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
@@ -105,6 +109,7 @@ func migrationDataSteps(seedsDir string) (before, after map[string]dataStep) {
 			return identitySeedCharacter(ctx, q, characterPath)
 		},
 		languagesMigration: mapLanguages,
+		measuresMigration:  mapMeasures,
 	}
 	return before, after
 }

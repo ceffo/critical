@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HpRoll } from "@/types/character";
-import { EMPTY_DRAFT, settle, type FlowDraft } from "./flow";
+import { EMPTY_DRAFT, mergeDraft, settle, type FlowDraft } from "./flow";
 
 // A level 1 fighter with CON 15 rolled 9 hit points.
 const roll: HpRoll = {
@@ -60,5 +60,19 @@ describe("settle (an HP roll stays current only for its class, Constitution and 
   it("typed HP without a roll is left alone", () => {
     const typed = { ...EMPTY_DRAFT, hpMax: "30" };
     expect(settle(typed, "5000")).toBe(typed);
+  });
+});
+
+describe("mergeDraft (a late reply never rebuilds the details from an older copy)", () => {
+  it("keeps the details typed since a roll left, and both rolls of a pair", () => {
+    let d: FlowDraft = { ...EMPTY_DRAFT };
+    d = mergeDraft(d, { details: { height: "180" } });
+    d = mergeDraft(d, { details: { hair: "red" } }); // typed while the weight roll is pending
+    d = mergeDraft(d, { details: { weight: "75" } }); // the weight reply, built from no copy
+    expect(d.details).toMatchObject({
+      height: "180",
+      hair: "red",
+      weight: "75",
+    });
   });
 });

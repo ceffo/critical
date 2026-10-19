@@ -99,6 +99,58 @@ test("character details: view, edit with a field error, save, reload", async ({
   await expect(pop.getByTestId("details-languages-warning")).toBeVisible();
 });
 
+// ADR 0032 step 5, what only a browser proves: the roll button fills the field from the server's
+// dice and shows its breakdown, a typed value outside the race's table is saved with a note (never
+// refused), and the same stored number reads feet-inches and pounds in English, centimetres and
+// kilograms in French. The tables, the ranges and the conversions are Go and unit tests.
+test("height, weight and age: roll, save outside the range with a note, per-language units", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await page.getByTestId("details-trigger").click();
+  const pop = page.getByTestId("details-popover");
+  await pop.getByRole("button", { name: "Edit" }).click();
+
+  await pop.getByTestId("details-roll-height").click();
+  // A half-elf man: 2d6 on a base of 60 inches (PHB Table 10).
+  await expect(pop.getByTestId("details-roll-height-breakdown")).toHaveText(
+    /^2d6 \(\d \+ \d\) \+ 60 in = \d+ in$/,
+  );
+  await expect(pop.getByLabel("Height", { exact: true })).toHaveValue(
+    /^\d+'\d+"$/,
+  );
+  await pop.getByTestId("details-roll-age").click();
+  await expect(pop.getByTestId("details-roll-age-breakdown")).toHaveText(
+    /^1d6 \(\d\) \+ 15 years = \d+ years$/,
+  );
+
+  // 300 lb is beyond a half-elf's weights: saved, with a note.
+  await pop.getByLabel("Weight", { exact: true }).fill("300");
+  await pop.getByRole("button", { name: "Save" }).click();
+  await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(pop.getByText("300 lb")).toBeVisible();
+  await expect(pop.getByTestId("details-weight-warning")).toBeVisible();
+  await expect(pop.getByTestId("details-height-warning")).toHaveCount(0);
+  await snap(page, "details-numbers-en");
+
+  // The same stored numbers, in French: kilograms and centimetres.
+  await page.keyboard.press("Escape");
+  await chooseLanguage(page, "fr");
+  await page.getByTestId("details-trigger").click();
+  await expect(pop.getByText("136,1 kg")).toBeVisible();
+  await expect(pop.getByText(/^\d+(,\d)? cm$/)).toBeVisible();
+  await expect(pop.getByTestId("details-weight-warning")).toContainText(
+    "Hors de la plage habituelle",
+  );
+  await expectNoClippedText(pop, "the card with its numbers, in French");
+  await snap(page, "details-numbers-fr");
+
+  // They survive a reload.
+  await page.reload();
+  await page.getByTestId("details-trigger").click();
+  await expect(pop.getByText("136,1 kg")).toBeVisible();
+});
+
 // ADR 0032 step 8: a character that lacks its alignment or sex (a migrated one) is asked to pick
 // them, in French without cut text; it still saves an unrelated edit, and the picks stay after a reload.
 test.describe("a character lacking its alignment and sex", () => {

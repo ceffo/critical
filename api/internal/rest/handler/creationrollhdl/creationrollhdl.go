@@ -31,11 +31,16 @@ type hpRoller interface {
 	HP(ctx context.Context, in creationrollsvc.HPInput) (*creationrollsvc.HPResult, error)
 }
 
+type identityRoller interface {
+	Identity(ctx context.Context, in creationrollsvc.IdentityInput) (*creationrollsvc.IdentityResult, error)
+}
+
 // RegisterRoutes wires the creation's rolls onto r.
 func RegisterRoutes(r Router, svc creationrollsvc.SVC) {
 	r.Post("/api/characters/rolls/scores", render.Handle(Scores(svc)))
 	r.Post("/api/characters/rolls/scores/arrangement", render.Handle(Arrange(svc)))
 	r.Post("/api/characters/rolls/hp", render.Handle(HP(svc)))
+	r.Post("/api/characters/rolls/identity", render.Handle(Identity(svc)))
 }
 
 // ScoresBody is the body of POST /api/characters/rolls/scores: the method
@@ -209,6 +214,57 @@ func HP(svc hpRoller) render.HandlerFunc {
 				Level: l.Level, HitDie: l.HitDie, Rolled: l.Rolled, Counted: l.Counted,
 				ConAdjustment: l.ConAdjustment, Gain: l.Gain, Fixed: l.Fixed,
 			}
+		}
+		render.OK(r.Context(), w, out)
+		return nil
+	}
+}
+
+// IdentityBody is the body of POST /api/characters/rolls/identity: the race
+// code, the sex (`male` or `female`, needed for a height or a weight) and the
+// figures to roll, any of `height`, `weight` and `age`.
+type IdentityBody struct {
+	Race    string   `json:"raceCode"`
+	Sex     string   `json:"sex"`
+	Figures []string `json:"figures"`
+}
+
+// IdentityRollDTO is one figure's breakdown. `dice` are `sides`-sided dice in
+// the order drawn, `base` the PHB table's base for the race (and the sex),
+// `total` base plus dice in `unit` (`in`, `lb` or `year`) and `value` the
+// number to store: centimetres, kilograms or years.
+type IdentityRollDTO struct {
+	Figure string  `json:"figure"`
+	Dice   []int   `json:"dice"`
+	Sides  int     `json:"sides"`
+	Base   int     `json:"base"`
+	Total  int     `json:"total"`
+	Unit   string  `json:"unit"`
+	Value  float64 `json:"value"`
+}
+
+// IdentityDTO is the identity roll's breakdown: one roll per figure asked,
+// in the order height, weight, age. Nothing is written.
+type IdentityDTO struct {
+	RaceCode string            `json:"raceCode"`
+	Sex      string            `json:"sex"`
+	Rolls    []IdentityRollDTO `json:"rolls"`
+}
+
+// Identity is POST /api/characters/rolls/identity.
+func Identity(svc identityRoller) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var b IdentityBody
+		if err := decode(r, &b); err != nil {
+			return err
+		}
+		res, err := svc.Identity(r.Context(), creationrollsvc.IdentityInput{Race: b.Race, Sex: b.Sex, Figures: b.Figures})
+		if err != nil {
+			return err
+		}
+		out := IdentityDTO{RaceCode: res.Race, Sex: res.Sex, Rolls: make([]IdentityRollDTO, len(res.Rolls))}
+		for i, roll := range res.Rolls {
+			out.Rolls[i] = IdentityRollDTO(roll)
 		}
 		render.OK(r.Context(), w, out)
 		return nil

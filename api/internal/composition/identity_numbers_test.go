@@ -1,0 +1,209 @@
+package composition_test
+
+// The identity numbers end to end (ADR 0032 step 5): a player with no
+// character yet rolls a half-elf woman's height, weight and age over the
+// router with the real dice, creates the character with them (no warning),
+// then types values outside the table (accepted, with a warning carrying the
+// value and the range), and a value that is no number is refused.
+
+import (
+	"net/http"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+type identityRollView struct {
+	RaceCode string `json:"raceCode"`
+	Sex      string `json:"sex"`
+	Rolls    []struct {
+		Figure string  `json:"figure"`
+		Dice   []int   `json:"dice"`
+		Sides  int     `json:"sides"`
+		Base   int     `json:"base"`
+		Total  int     `json:"total"`
+		Unit   string  `json:"unit"`
+		Value  float64 `json:"value"`
+	} `json:"rolls"`
+}
+
+type numbersView struct {
+	Height   *float64 `json:"height_cm"`
+	Weight   *float64 `json:"weight_kg"`
+	Age      *int     `json:"age"`
+	Warnings []struct {
+		Code  string   `json:"code"`
+		Field string   `json:"field"`
+		Value *float64 `json:"value"`
+		Min   *float64 `json:"min"`
+		Max   *float64 `json:"max"`
+	} `json:"warnings"`
+}
+
+func numbersBody(height, weight, age string) string {
+	return `{"name":"Numbers","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
+		`"hpMax":10,"xp":2500,"skillArmor":"leather","details":{"alignment":"neutral_good","sex":"female",` +
+		`"height_cm":` + height + `,"weight_kg":` + weight + `,"age":` + age + `}}`
+}
+
+func TestIdentityRoll_Step5_RollCreateWarnTypeAndRefuse(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+
+	var roll identityRollView
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/rolls/identity",
+		`{"raceCode":"half_elf","sex":"female","figures":["height","weight","age"]}`, &roll))
+	require.Len(t, roll.Rolls, 3)
+	h, w, a := roll.Rolls[0], roll.Rolls[1], roll.Rolls[2]
+	assert.Equal(t, "height", h.Figure)
+	assert.Equal(t, 58, h.Base, "a half-elf woman's base height")
+	assert.Len(t, h.Dice, 2)
+	assert.Equal(t, 6, h.Sides)
+	assert.Equal(t, "in", h.Unit)
+	assert.Equal(t, 3, len(w.Dice))
+	assert.Equal(t, 85, w.Base)
+	assert.Equal(t, "lb", w.Unit)
+	assert.Equal(t, 15, a.Base)
+	assert.Len(t, a.Dice, 1)
+	assert.Equal(t, "year", a.Unit)
+	assert.Greater(t, h.Value, 100.0, "centimetres")
+
+	// The rolled numbers are accepted by the creation and warn nothing.
+	var list listView
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", numbersBody(
+		fmtF(h.Value), fmtF(w.Value), fmtI(int(a.Value))), &list))
+	var got numbersView
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.InDelta(t, h.Value, *got.Height, 1e-9)
+	assert.InDelta(t, w.Value, *got.Weight, 1e-9)
+	assert.Equal(t, int(a.Value), *got.Age)
+	assert.Empty(t, got.Warnings, "a rolled value is inside its range")
+
+	// Typed outside the table: accepted, with the value and the range.
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details",
+		`{"height_cm":210,"weight_kg":45.5,"age":400}`, nil))
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	require.Len(t, got.Warnings, 2)
+	assert.Equal(t, "height_outside_range", got.Warnings[0].Code)
+	assert.Equal(t, 210.0, *got.Warnings[0].Value)
+	assert.Equal(t, 152.4, *got.Warnings[0].Min)
+	assert.Equal(t, 177.8, *got.Warnings[0].Max)
+	assert.Equal(t, "age_outside_range", got.Warnings[1].Code)
+
+	// Null clears; a string is no number; a figure beyond the sanity bound is refused.
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height_cm":null}`, nil))
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.Nil(t, got.Height)
+	for _, c := range []struct{ body, field, code string }{
+		{`{"height_cm":"tall"}`, "height", "not_a_number"},
+		{`{"weight_kg":true}`, "weight", "not_a_number"},
+		{`{"height_cm":0}`, "height", "out_of_range"},
+		{`{"weight_kg":501}`, "weight", "out_of_range"},
+	} {
+		var refused map[string]string
+		require.Equal(t, http.StatusBadRequest, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", c.body, &refused), c.body)
+		assert.Equal(t, "invalid_input", refused["code"], c.body)
+		assert.Equal(t, c.field, refused["field"], c.body)
+		assert.Equal(t, c.code, refused["error"], c.body)
+	}
+	var refused map[string]string
+	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", numbersBody(`"tall"`, `70`, `30`), &refused))
+	assert.Equal(t, "details.height", refused["field"], "the creation names the field under details")
+	assert.Equal(t, "not_a_number", refused["error"])
+}
+
+func TestIdentityRoll_Step5_3_RefusalsAreFieldErrors(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	for _, c := range []struct{ body, field, code string }{
+		{`{"sex":"male","figures":["age"]}`, "age", "race_required"},
+		{`{"raceCode":"elf","figures":["height"]}`, "height", "sex_required"},
+		{`{"raceCode":"orc","sex":"male","figures":["age"]}`, "race", "unknown"},
+		{`{"raceCode":"elf","sex":"male","figures":[]}`, "figures", "empty"},
+		{`{"raceCode":"elf","sex":"male","figures":["hair"]}`, "figures", "unknown"},
+	} {
+		var refused map[string]string
+		require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters/rolls/identity", c.body, &refused), c.body)
+		assert.Equal(t, "invalid_input", refused["code"], c.body)
+		assert.Equal(t, c.field, refused["field"], c.body)
+		assert.Equal(t, c.code, refused["error"], c.body)
+	}
+	var refused map[string]string
+	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters/rolls/identity",
+		`{"raceCode":"elf","sex":"male","figures":["age"],"level":3}`, &refused))
+	assert.Equal(t, "bad_request", refused["code"])
+}
+
+func fmtF(v float64) string { return strconv.FormatFloat(v, 'f', -1, 64) }
+func fmtI(v int) string     { return strconv.Itoa(v) }
+
+// ADR 0032 step 8: a client of the release before sends and reads the free-text height and weight
+// keys; they are parsed into the numbers and read back as text, so the rolling deploy breaks nothing.
+func TestIdentityNumbers_Step8_5_PreviousReleaseClientStillWorks(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var list listView
+	old := `{"name":"Old","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
+		`"hpMax":10,"xp":2500,"skillArmor":"leather","details":{"alignment":"neutral_good","sex":"female",` +
+		`"height":"1m80","weight":"150 lb","hair":"red","eyes":"","age":30}}`
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", old, &list))
+	var got struct {
+		Height string `json:"height"`
+		Weight string `json:"weight"`
+	}
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.Equal(t, "180 cm", got.Height)
+	assert.Equal(t, "68 kg", got.Weight)
+
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height":"","weight":"70 kg"}`, nil))
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.Empty(t, got.Height)
+	assert.Equal(t, "70 kg", got.Weight)
+
+	var refused map[string]string
+	require.Equal(t, http.StatusBadRequest, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height":"tall"}`, &refused))
+	assert.Equal(t, "not_a_number", refused["error"])
+}
+
+// ADR 0032 step 5.2: the range is checked on the stored value, after the rounding to a tenth: 177.84
+// is stored 177.8 (the top of a half-elf woman's range, no warning), 177.86 is stored 177.9 (a tenth
+// beyond, warned).
+func TestIdentityNumbers_Step5_2_TheEdgeIsCheckedAfterTheRoundingToATenth(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var list listView
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", numbersBody(`170`, `45`, `30`), &list))
+	for _, c := range []struct {
+		sent     string
+		stored   float64
+		warnings int
+	}{{"177.84", 177.8, 0}, {"177.86", 177.9, 1}, {"152.4", 152.4, 0}, {"152.34", 152.3, 1}} {
+		var got numbersView
+		require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height_cm":`+c.sent+`}`, nil))
+		require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+		assert.InDelta(t, c.stored, *got.Height, 1e-9, c.sent)
+		assert.Len(t, got.Warnings, c.warnings, c.sent)
+	}
+}
+
+// A creation that names height_cm as null clears it, as a PATCH does: the number key wins over the
+// text key whether it is a number or a null.
+func TestIdentityNumbers_CreateNullNumberKeyBeatsTheTextKey(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var list listView
+	body := `{"name":"Null","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
+		`"hpMax":10,"xp":2500,"skillArmor":"leather","details":{"alignment":"neutral_good","sex":"female",` +
+		`"height_cm":null,"height":"180 cm","weight":"60 kg"}}`
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, &list))
+	var got numbersView
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
+	assert.Nil(t, got.Height, "height_cm null wins over the text")
+	require.NotNil(t, got.Weight)
+	assert.Equal(t, 60.0, *got.Weight, "an omitted weight_kg leaves the text")
+	// An unknown key under details is still refused.
+	assert.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", strings.Replace(body, `"height_cm":null,`, `"bogus":1,`, 1), nil))
+}

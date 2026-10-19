@@ -171,6 +171,8 @@ var mappings = []mapping{
 	{target: domain.ErrInvalidInput, status: http.StatusBadRequest, code: "invalid_input"},
 	{target: domain.ErrConflict, status: http.StatusConflict, code: "conflict"},
 	{target: domain.ErrCharacterNotFound, status: http.StatusNotFound, code: "character_not_found"},
+	// Also the row of authsvc.ErrDevLoginDisabled and ErrGoogleLoginDisabled, which wrap it: a login
+	// route that does not exist on this server answers 404, not 500.
 	{target: domain.ErrNotFound, status: http.StatusNotFound, code: "not_found"},
 	{target: combatsvc.ErrWeaponNotFound, status: http.StatusNotFound, code: "weapon_not_found", message: fixed("weapon not found")},
 	{target: itemsvc.ErrItemNotFound, status: http.StatusNotFound, code: "item_not_found"},

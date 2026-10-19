@@ -71,7 +71,7 @@ id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, ste
 -- (combatsvc.AttackBreakdown, combatsvc.SaveBreakdown), the answer adding only logEntryId as its
 -- last key (and, for one release, the save's previous names hit, hitMargin and baseThac0)
 
--- hp_events: legacy HP ledger, carried into action_log by migration 007; no longer written
+-- hp_events: the legacy HP ledger, carried into action_log by migration 007 and dropped by 018
 
 -- xp_entries: the XP ledger, outside the action log (edited and deleted in place, ADR 0015);
 -- the total is characters.xp_total plus every entry (base + 10% when bonus)

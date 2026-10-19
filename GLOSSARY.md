@@ -63,7 +63,7 @@ from them, and the HP **floor**. [ADR 0007](docs/adr/0007-hp-ledger.md),
 
 **HP ledger**:
 How current HP is derived from the action log, not a table.
-[ADR 0007](docs/adr/0007-hp-ledger.md) step 2. _Avoid_: hp_events (a dead legacy table).
+[ADR 0007](docs/adr/0007-hp-ledger.md) step 2. _Avoid_: hp_events (a legacy table, dropped).
 
 **THAC0** (fr: TAC0), **AC** (fr: CA):
 To Hit Armour Class 0, derived from class group and level; the armour class, descending (lower is

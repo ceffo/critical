@@ -13,6 +13,8 @@ weapon speed and casting time), [ADR 0016](0016-inventory.md) (steps 1, 4, 7, 8,
 [ADR 0030](0030-classes-and-races.md) (steps 1, 17, 18 and 23, and its Consequences on class
 armour and weapon limits).
 
+_Amended by [ADR 0035](0035-equipment-screens.md) (the design round, accepted 2026-10-18), on implementation: steps 15 and 16 (initiative: no declaration, the weapon in hand's speed, a cast or item used corrects the round's initiative) and steps 18 and 19 (removed: no target armour) are replaced; the web says Equip / Equipped for steps 6 and 7._
+
 ## Context
 
 User, CRI-29: _"The equipment "type" is deeply flawed. We need to research into phb and dmg to

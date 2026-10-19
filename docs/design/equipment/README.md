@@ -1,6 +1,6 @@
 # Equipment design round: possessions, worn and wielded, the AC, pick list, review list (CRI-32)
 
-**Approved by the user, 2026-10-18** ("agree"), after two rounds.
+**Approved by the user, 2026-10-18** ("agree"), after two rounds.  The decisions are recorded in [ADR 0035](../../adr/0035-equipment-screens.md).
 
 Round 1 feedback (user): the target's armour type is dropped from the attack ("the dm gives (or
 not) the final AC"); no groups by state ("adds nothing but confusion"); one domain term,

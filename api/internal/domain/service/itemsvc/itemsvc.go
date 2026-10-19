@@ -63,6 +63,9 @@ type SVC interface {
 	// Wield is SetState(wielded) inside the caller's transaction: the attack
 	// form wields the weapon picked (ADR 0033 step 8).
 	Wield(ctx context.Context, characterID int64, itemID string) (*StateResult, error)
+	// Warnings is the character's class warnings (ADR 0033 step 20) for the
+	// pieces worn or wielded, computed on every read.
+	Warnings(ctx context.Context, characterID int64) ([]Warning, error)
 	// Reviews is the review list (ADR 0033 step 27), in list order.
 	Reviews(ctx context.Context, characterID int64) ([]Review, error)
 	// DismissReview takes a piece off the review list, not logged.

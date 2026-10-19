@@ -17,6 +17,7 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { ClassWarningTag } from "@/components/ClassWarning";
 import { InventoryCard, ROW_ACTIONS } from "./InventoryCard";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
@@ -397,6 +398,9 @@ function ItemRow({
               {t("equipment.equipped")}
             </span>
           )}
+          {i.warnings.map((code) => (
+            <ClassWarningTag key={code} code={code} />
+          ))}
           {i.review.length > 0 && (
             <span
               className="flex shrink-0 items-center gap-1 text-label text-warning"

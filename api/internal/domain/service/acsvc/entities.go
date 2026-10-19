@@ -1,5 +1,7 @@
 package acsvc
 
+import "github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+
 // Term is one term of the AC (ADR 0033 step 10), a code the web names.
 type Term string
 
@@ -78,6 +80,9 @@ type AC struct {
 	Rows []Row
 	// Override is the AC the player set (step 13); nil: none.
 	Override *Override
+	// Warnings are the class warnings (ADR 0033 step 20) of the worn body
+	// armour and shield, with the piece's id; nothing is refused or changed.
+	Warnings []itemsvc.Warning
 }
 
 // Override is an AC the player sets for what the model cannot hold (ADR

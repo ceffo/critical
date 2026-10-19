@@ -76,16 +76,29 @@ type ACDTO struct {
 	Floored  bool         `json:"floored"`
 	Rows     []RowDTO     `json:"rows"`
 	Override *OverrideDTO `json:"override"`
+	// Warnings are the class warnings of the worn armour and shield (ADR
+	// 0033 step 20), codes with the piece's id; empty for none.
+	Warnings []WarningDTO `json:"warnings"`
+}
+
+// WarningDTO is one class warning: the code the web words and the piece it
+// is about.
+type WarningDTO struct {
+	ItemID string `json:"itemId"`
+	Code   string `json:"code"`
 }
 
 // ToDTO maps the AC to its wire shape.
 func ToDTO(a *acsvc.AC) ACDTO {
-	out := ACDTO{AC: a.Value, Missile: a.Missile, Floored: a.Floored, Rows: make([]RowDTO, 0, len(a.Rows))}
+	out := ACDTO{AC: a.Value, Missile: a.Missile, Floored: a.Floored, Rows: make([]RowDTO, 0, len(a.Rows)), Warnings: make([]WarningDTO, 0, len(a.Warnings))}
 	for _, r := range a.Rows {
 		out.Rows = append(out.Rows, RowDTO{
 			Term: string(r.Term), ItemID: r.ItemID, Buff: r.Buff, SpellID: r.SpellID, Value: r.Value,
 			MissileValue: r.MissileValue, Dexterity: r.Dexterity, Off: string(r.Off),
 		})
+	}
+	for _, w := range a.Warnings {
+		out.Warnings = append(out.Warnings, WarningDTO{ItemID: w.ItemID, Code: w.Code})
 	}
 	if a.Override != nil {
 		out.Override = &OverrideDTO{Value: a.Override.Value, Label: a.Override.Label}

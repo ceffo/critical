@@ -35,6 +35,7 @@ type itemSvc interface {
 	Delete(ctx context.Context, characterID int64, itemID string) (*itemsvc.ChangeResult, error)
 	SetState(ctx context.Context, characterID int64, itemID string, state itemsvc.State, swap bool) (*itemsvc.StateResult, error)
 	Reviews(ctx context.Context, characterID int64) ([]itemsvc.Review, error)
+	Warnings(ctx context.Context, characterID int64) ([]itemsvc.Warning, error)
 	DismissReview(ctx context.Context, characterID int64, itemID string) error
 	Catalogue() ruletablesvc.Equipment
 }
@@ -139,8 +140,8 @@ func Restock(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 // Compile-time check that *chi.Mux satisfies our small Router interface.
 var _ Router = (*chi.Mux)(nil)
 
-// List returns every piece with its current count and its review reasons
-// (ADR 0033 step 27).
+// List returns every piece with its current count, its review reasons
+// (ADR 0033 step 27) and its class warnings (step 20).
 func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		items, err := svc.List(r.Context(), charID(r))
@@ -151,8 +152,17 @@ func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
+		warnings, err := svc.Warnings(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
 		out := wire.ItemsToDTO(items)
 		for i := range out {
+			for _, wn := range warnings {
+				if wn.ItemID == out[i].ID {
+					out[i].Warnings = append(out[i].Warnings, wn.Code)
+				}
+			}
 			for _, rv := range reviews {
 				if rv.ItemID == out[i].ID {
 					out[i].Review = append(out[i].Review, rv.Reason)
@@ -224,6 +234,7 @@ type ItemBody struct {
 	State      json.RawMessage `json:"state"`
 	EquipState json.RawMessage `json:"equipState"`
 	Review     json.RawMessage `json:"review"`
+	Warnings   json.RawMessage `json:"warnings"`
 }
 
 func decodeBody(r *http.Request) (ItemBody, error) {

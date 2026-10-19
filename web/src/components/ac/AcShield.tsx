@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Warning } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -12,6 +13,7 @@ import { shownAc } from "@/lib/acView";
 import { formatAc } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AcBreakdown } from "./AcBreakdown";
+import { AcWarnings } from "./AcWarnings";
 import { AcOverrideForm } from "./AcOverrideForm";
 import { AcOverrideLine } from "./AcOverrideLine";
 
@@ -28,9 +30,10 @@ export function AcShield({ onOpenInventory }: { onOpenInventory: () => void }) {
   const [overriding, setOverriding] = useState(false);
   if (!ac) return null;
   const shown = formatAc(shownAc(ac));
-  const name = ac.override
+  const base = ac.override
     ? t("ac.openOverridden", { value: shown, derived: formatAc(ac.ac) })
     : t("ac.open", { value: shown });
+  const name = ac.warnings.length > 0 ? `${base} (${t("ac.warned")})` : base;
   return (
     <Popover
       open={open}
@@ -48,6 +51,7 @@ export function AcShield({ onOpenInventory }: { onOpenInventory: () => void }) {
         aria-label={name}
         data-testid="ac-shield"
         data-overridden={ac.override ? true : undefined}
+        data-warned={ac.warnings.length > 0 ? true : undefined}
       >
         <svg
           viewBox="0 0 48 56"
@@ -67,6 +71,15 @@ export function AcShield({ onOpenInventory }: { onOpenInventory: () => void }) {
         >
           {shown}
         </span>
+        {ac.warnings.length > 0 && (
+          // ADR 0035 item 4: a class warning adds a warning badge on the shield.
+          <Warning
+            weight="fill"
+            aria-hidden
+            className="absolute -right-0.5 -top-0.5 size-5 text-warning"
+            data-testid="ac-shield-warning"
+          />
+        )}
       </PopoverTrigger>
       <PopoverContent
         side="right"
@@ -84,6 +97,7 @@ export function AcShield({ onOpenInventory }: { onOpenInventory: () => void }) {
             onDone={() => setOverriding(false)}
           />
         ) : null}
+        <AcWarnings ac={ac} />
         <AcBreakdown ac={ac} />
         <div className="flex flex-wrap justify-between gap-2">
           <Button

@@ -1,5 +1,7 @@
 // Mirrors api/internal/rest/handler/achdl (ACDTO, RowDTO, OverrideDTO).
 
+import type { ClassWarningCode } from "./items";
+
 /** A term of the AC (ADR 0033 step 10), in the order the server sums them. */
 export type AcTerm =
   | "base"
@@ -38,6 +40,12 @@ export interface AcOverride {
   label: string;
 }
 
+/** A class warning of the worn armour or shield (ADR 0033 step 20), with the piece's id. */
+export interface AcWarning {
+  itemId: string;
+  code: ClassWarningCode;
+}
+
 /** GET /api/ac: derived on every read, never stored; the override shown while it is set. */
 export interface ArmourClass {
   ac: number;
@@ -47,4 +55,6 @@ export interface ArmourClass {
   floored: boolean;
   rows: AcRow[];
   override: AcOverride | null;
+  /** The class warnings of the worn armour and shield (ADR 0033 step 20). */
+  warnings: AcWarning[];
 }

@@ -323,6 +323,12 @@ name or comment); this ADR names none yet.
     those do not settle it (`other_melee` for a thief), no warning. Amends ADR 0030's Consequences
     ("class armour limits (not enforced)", "the cleric's blunt-weapon restriction"): still not
     enforced, now warned.
+    Wire: `GET /api/items` serves `warnings` (codes) on each piece, `GET /api/ac` serves `warnings`
+    (`{itemId, code}`) for the worn armour and shield; the web words them ("Pas pour un barde").
+    `hands` is on both the weapon and the shield. The lists are the table in `itemsvc/classwarn.go`.
+    Tests: `TestClassWarnings_Step20_Wizard`, `_Cleric`, `_Thief`, `_Bard`, `_FighterNone`, `_HandsEveryone`
+    (itemsvc), `TestClassWarnings_Step20_ServedOnReadNeverRefused` (composition), `TestAC_GetWireShape`
+    and `TestItems_ListWireShape` (router), e2e `layout.spec` ("class warnings").
 
 ### Catalogue content
 

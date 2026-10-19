@@ -36,17 +36,18 @@ func TestItems_ListWireShape(t *testing.T) {
 		WeaponKind: "melee", WeaponType: "other_melee", MagicToHit: 1, MagicDamage: 1,
 	}}, nil)
 	m.items.EXPECT().Reviews(mock.Anything, int64(1)).Return([]itemsvc.Review{{ItemID: "mace", Reason: itemsvc.ReasonWeaponUnmatched}}, nil)
+	m.items.EXPECT().Warnings(mock.Anything, int64(1)).Return([]itemsvc.Warning{{ItemID: "mace", Code: itemsvc.WarnWeaponNotAllowed}}, nil)
 	rec := do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"arrows_plus1","name":{"en":"Arrows +1"},"category":"ammunition","magicKind":"","catalogueCode":"","component":"",
 		"state":"carried","equipState":"","type":"arrow","behaviour":"stock","magicalBonus":1,
 		"ammoKind":"arrow","count":18,"maxCount":18,"effectDice":"","effectSave":"","notes":"","powers":[],
-		"damageSm":"1d6","damageL":"1d6",`+noWeapon+`,"review":[]},
+		"damageSm":"1d6","damageL":"1d6",`+noWeapon+`,"review":[],"warnings":[]},
 		{"id":"mace","name":{"en":"Mace +1"},"category":"weapon","magicKind":"","catalogueCode":"","component":"","state":"wielded","equipState":"wielded","type":"",
 		"behaviour":"stock","magicalBonus":0,"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[],"damageTypes":[],"damageSm":"1d6","damageL":"1d6","weaponType":"other_melee","weaponKind":"melee","size":"",
 		"speed":0,"magicToHit":1,"magicDamage":1,"twoHanded":false,"fires":"","specialized":false,"baseAc":0,"skillColumn":"",
-		"armorRow":"","shieldKind":"","acMelee":0,"acMissile":0,"review":["weapon_unmatched"]}]`, rec.Body.String())
+		"armorRow":"","shieldKind":"","acMelee":0,"acMissile":0,"review":["weapon_unmatched"],"warnings":["weapon_not_allowed"]}]`, rec.Body.String())
 }
 
 // ADR 0033 steps 6 and 7: POST /api/items/{id}/state moves a piece and
@@ -78,6 +79,7 @@ func TestItems_DismissReview(t *testing.T) {
 	m.items.EXPECT().DismissReview(mock.Anything, int64(1), "mace").Return(nil).Once()
 	m.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{}, nil)
 	m.items.EXPECT().Reviews(mock.Anything, int64(1)).Return([]itemsvc.Review{}, nil)
+	m.items.EXPECT().Warnings(mock.Anything, int64(1)).Return(nil, nil)
 	rec := do(h, "DELETE", "/api/items/mace/review", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[]`, rec.Body.String())
@@ -138,7 +140,7 @@ func TestItems_Restock(t *testing.T) {
 
 const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","component":"","state":"carried","equipState":"",
 	"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
-	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[],"damageSm":"","damageL":"",` + noWeapon + `,"review":[]}`
+	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[],"damageSm":"","damageL":"",` + noWeapon + `,"review":[],"warnings":[]}`
 
 var wandItem = itemsvc.Item{
 	ID: "w", Name: localized.Of("Wand"), Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4,
@@ -223,13 +225,14 @@ func TestItems_ADR0033Step17_PowersInTheBody(t *testing.T) {
 		}}},
 	}}, nil)
 	m.items.EXPECT().Reviews(mock.Anything, int64(1)).Return(nil, nil)
+	m.items.EXPECT().Warnings(mock.Anything, int64(1)).Return(nil, nil)
 	rec = do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":{"en":"Power Gem"},"category":"magic","magicKind":"misc","catalogueCode":"","component":"",
 		"state":"worn","equipState":"worn","type":"gem","behaviour":"daily","magicalBonus":0,
 		"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[{"id":"thunder_hammer","minStr":18,"effects":{"weapon_buff":5,"multiplier":2,"weapon_kind":"melee"}}],
-		"damageSm":"","damageL":"",`+noWeapon+`,"review":[]}]`,
+		"damageSm":"","damageL":"",`+noWeapon+`,"review":[],"warnings":[]}]`,
 		rec.Body.String())
 }
 

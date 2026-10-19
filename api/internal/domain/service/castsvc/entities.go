@@ -176,7 +176,6 @@ type CastResult struct {
 	Kind       spelleffectsvc.Kind
 	Confidence spelleffectsvc.Confidence
 	Target     spelleffectsvc.Target
-	Note       string
 	// Spell is the spell database row (zero when not found).
 	Spell     spellsvc.Spell
 	Save      *spelleffectsvc.Save

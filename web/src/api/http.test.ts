@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
 import { useSessionStore } from "@/stores/session";
+import { takeChanges } from "@/lib/stateKeys";
 import { ApiError, CHARACTER_HEADER, post, request } from "./http";
 
 function respond(status: number, body: unknown) {
@@ -135,5 +136,63 @@ describe("the character the page shows (ADR 0029 step 7.2)", () => {
     );
     expect((err as ApiError).code).toBe("character_changed");
     expect(reload).toHaveBeenCalledOnce();
+  });
+});
+
+// ADR 0018 step 11: what a write's answer says it changed, for the action module.
+describe("a write's answer, noted for the refetch", () => {
+  const answer = (status: number, headers?: Record<string, string>) =>
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            JSON.stringify(status < 300 ? {} : { error: "no", code: "x" }),
+            { status, headers },
+          ),
+        ),
+    );
+
+  it.each([
+    [
+      "a success names its keys",
+      200,
+      { "X-State-Keys": "hp,log" },
+      ["hp", "log"],
+    ],
+    ["a success that logged nothing", 200, { "X-State-Keys": "" }, []],
+    ["a refusal changed nothing", 400, undefined, []],
+    ["a missing entity changed nothing", 404, undefined, []],
+  ])("%s", async (_, status, headers, keys) => {
+    takeChanges();
+    answer(status, headers);
+    await post("/api/x").catch(() => undefined);
+    expect(takeChanges()).toEqual({ known: true, keys });
+  });
+
+  it.each([
+    ["a success without the header (a server of the release before)", 200],
+    ["a conflict (a stale undo top)", 409],
+    ["a server error", 500],
+  ])("%s is unknown", async (_, status) => {
+    takeChanges();
+    answer(status);
+    await post("/api/x").catch(() => undefined);
+    expect(takeChanges()).toEqual({ known: false });
+  });
+
+  it("a lost answer is unknown", async () => {
+    takeChanges();
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("down")));
+    await post("/api/x").catch(() => undefined);
+    expect(takeChanges()).toEqual({ known: false });
+  });
+
+  it("a read notes nothing", async () => {
+    takeChanges();
+    answer(500);
+    await request("/api/x").catch(() => undefined);
+    expect(takeChanges()).toEqual({ known: true, keys: [] });
   });
 });

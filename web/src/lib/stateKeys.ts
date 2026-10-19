@@ -2,8 +2,9 @@
  * What a write changed, as the server names it (ADR 0018 step 11), and what the web reads again for
  * it. Every state-changing answer carries the state keys of the transactions it committed in
  * `X-State-Keys` ("buffs,hp,items:arrows,log"; empty: nothing logged). The web refetches the slices
- * mapped to each key's family and nothing else. Without the header (an error answer, a failed
- * request, a server of the release before) the change is unknown and every slice is read again.
+ * mapped to each key's family and nothing else. A refusal (4xx) names nothing and reads nothing. A
+ * success without the header (a server of the release before), a conflict (409), a server error or
+ * a lost answer is unknown: every slice is read again (noteAnswer).
  */
 
 /** The answer header naming the state keys a write changed. */
@@ -150,6 +151,18 @@ export function noteWrite(header: string | null) {
     pending.known && next.known
       ? { known: true, keys: [...pending.keys, ...next.keys] }
       : { known: false };
+}
+
+/**
+ * Notes a write's answer by its status. A success names what it changed in its header. A refusal
+ * (4xx) rolled back and changed nothing. A conflict (409: a stale undo or redo top, a level-up no
+ * longer pending, a slot already used) says the page's state is stale, and a server error (5xx)
+ * leaves the outcome unknown: both read every slice, so the player sees the state that refused it.
+ */
+export function noteAnswer(status: number, header: string | null) {
+  if (status >= 200 && status < 300) noteWrite(header);
+  else if (status === 409 || status >= 500) noteWrite(null);
+  else noteWrite("");
 }
 
 /** The changes of every write answered since the last call, and forget them. */

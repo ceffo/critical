@@ -62,7 +62,12 @@ vi.mock("@/api/xp", () => ({
   fetchXp: h.read("xp", { total: 0, entries: [] }),
 }));
 
-import { noteWrite, STATE_FAMILIES, takeChanges } from "@/lib/stateKeys";
+import {
+  noteAnswer,
+  noteWrite,
+  STATE_FAMILIES,
+  takeChanges,
+} from "@/lib/stateKeys";
 import { ApiError } from "@/api/http";
 import { useBuffsStore } from "./buffs";
 import { useHpStore } from "./hp";
@@ -78,6 +83,19 @@ const readSlices = () => Object.keys(h.reads).sort();
 
 /** A write whose answer named header (null: none). */
 const write = (header: string | null) => async () => noteWrite(header);
+
+/** A write the server refused with status and code (on field), noted as api/http.ts notes it. */
+const refused = (status: number, code: string, field?: string) => async () => {
+  noteAnswer(status, null);
+  throw new ApiError(code, status, field, code);
+};
+
+/** Every slice, each once. */
+const allSlices = () =>
+  Object.keys(expected)
+    .flatMap((f) => expected[f as keyof typeof expected])
+    .filter((s, i, all) => all.indexOf(s) === i)
+    .sort();
 
 function reset() {
   h.reads = {};
@@ -171,25 +189,45 @@ describe("the action module reads again what a write's keys name", () => {
     ["an answer without the header", write(null)],
     ["a family this web does not know", write("log,familiars")],
     [
-      "a failed write",
+      "a lost answer",
       async () => {
-        throw new Error("boom");
+        noteWrite(null);
+        throw new TypeError("Failed to fetch");
       },
     ],
-    [
-      "a refused field",
-      async () => {
-        throw new ApiError("bad", 400, "base", "invalid_input");
-      },
-    ],
+    // A stale undo or redo top, a level-up no longer pending: the player sees the new state.
+    ["a conflict (stale undo top)", refused(409, "log_top_changed")],
+    ["a conflict (stale level-up)", refused(409, "level_up_not_pending")],
+    ["a server error", refused(500, "internal")],
   ])("%s reads every slice again", async (_, action) => {
     await useTableStore.getState().submit(action);
-    expect(readSlices()).toEqual(
-      Object.keys(expected)
-        .flatMap((f) => expected[f as keyof typeof expected])
-        .filter((s, i, all) => all.indexOf(s) === i)
-        .sort(),
-    );
+    expect(readSlices()).toEqual(allSlices());
+  });
+
+  // A refusal rolled back: nothing changed, nothing is read again (a dice typo, a bad form field).
+  it.each([
+    ["a refused dice formula", refused(400, "invalid_formula"), false],
+    ["a refused form field", refused(400, "invalid_input", "base"), true],
+    ["an entity not found", refused(404, "not_found"), false],
+  ])("%s reads nothing", async (_, action, onField) => {
+    const rejected = await useTableStore.getState().submit(action);
+    expect(readSlices()).toEqual([]);
+    expect(rejected !== null).toBe(onField);
+  });
+
+  it("a refusal after a write that landed reads that write's keys only", async () => {
+    await useTableStore.getState().run(async () => {
+      await write("spell_slots")();
+      await refused(400, "invalid_input")();
+    });
+    expect(readSlices()).toEqual(expected.spell_slots.slice().sort());
+  });
+
+  it("a slice the action set from its answer is read again after a conflict", async () => {
+    await useTableStore.getState().run(refused(409, "conflict"), {
+      fresh: ["hp"],
+    });
+    expect(readSlices()).toEqual(allSlices());
   });
 
   it("the busy flag and the error belong to the action module", async () => {
@@ -206,6 +244,47 @@ describe("the action module reads again what a write's keys name", () => {
     // A background action leaves both alone.
     await useTableStore.getState().run(write(""), { quiet: true });
     expect(useTableStore.getState().error).toBe("refused");
+  });
+});
+
+describe("overlapping writes", () => {
+  beforeEach(() => {
+    reset();
+    everyPanelShown();
+  });
+
+  /** A write held until answered with header. */
+  function held() {
+    let answer!: (header: string) => void;
+    const done = new Promise<string>((r) => (answer = r));
+    return {
+      answer,
+      action: async () => noteWrite(await done),
+    };
+  }
+
+  it.each([
+    ["the newer answers first", true],
+    ["the older answers first", false],
+  ])("%s: neither loses the other's keys", async (_, newerFirst) => {
+    const a = held();
+    const b = held();
+    const first = useTableStore.getState().run(a.action);
+    const second = useTableStore.getState().run(b.action);
+    await tick();
+    if (newerFirst) {
+      b.answer("spell_slots");
+      await tick();
+      a.answer("xp:3");
+    } else {
+      a.answer("xp:3");
+      await tick();
+      b.answer("spell_slots");
+    }
+    await Promise.all([first, second]);
+    expect(readSlices()).toEqual(
+      [...new Set([...expected.xp, ...expected.spell_slots])].sort(),
+    );
   });
 });
 

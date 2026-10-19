@@ -1,6 +1,6 @@
 import i18n from "@/i18n";
 import { loginUrl } from "@/lib/session";
-import { noteWrite, STATE_KEYS_HEADER } from "@/lib/stateKeys";
+import { noteAnswer, noteWrite, STATE_KEYS_HEADER } from "@/lib/stateKeys";
 import { useDatabaseStore } from "@/stores/database";
 import { useSessionStore } from "@/stores/session";
 
@@ -218,9 +218,8 @@ async function send<T>(url: string, init?: RequestInit): Promise<T> {
       if (!read) noteWrite(null);
       throw e;
     }
-    // What a write changed, for the action module's refetch (ADR 0018 step 11). An error answer
-    // names nothing: it is read as unknown.
-    if (!read) noteWrite(res.headers.get(STATE_KEYS_HEADER));
+    // What a write changed, for the action module's refetch (ADR 0018 step 11).
+    if (!read) noteAnswer(res.status, res.headers.get(STATE_KEYS_HEADER));
     if (res.ok) {
       void markAnswered();
       return res.json() as Promise<T>;

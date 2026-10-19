@@ -7,6 +7,7 @@ import {
   openDashboard,
   openWeapons,
   openWorkspace,
+  readsAfter,
   undoEntry,
 } from "./helpers";
 
@@ -141,8 +142,12 @@ test("an empty name and invalid dice are rejected with a message under the field
 
   await f.getByLabel("Name").fill("Bomb");
   await f.getByLabel("Effect dice").fill("2x6");
-  await save.click();
-  await expect(fieldError(page, "effectDice")).toContainText("2d6");
+  // The server's refusal of the field changed nothing: the page reads nothing again.
+  const reads = await readsAfter(page, async () => {
+    await save.click();
+    await expect(fieldError(page, "effectDice")).toContainText("2d6");
+  });
+  expect(reads).toEqual([]);
   await expect(fieldError(page, "name")).toHaveCount(0);
 
   await snap(page, "field-errors");

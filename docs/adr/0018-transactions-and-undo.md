@@ -221,8 +221,10 @@ W4 and W7); not implemented. Each point is built by the item named and gets its 
     the log names itself, `log` (the journal changed) and `hp` (an entry moved current HP), which no
     module may claim. The log's transaction scope notes them and hands them to the request
     (`actionlog.Changes`) only once the outermost transaction commits. The web maps each family to
-    the slices it reads again (`web/src/lib/stateKeys.ts`, exhaustive by type); no header, an
-    unknown family or a failed action reads every slice again (the rolling deploy's fallback). The
+    the slices it reads again (`web/src/lib/stateKeys.ts`, exhaustive by type); a refusal (4xx)
+    changed nothing and reads nothing; no header (the rolling deploy's fallback), an unknown family,
+    a conflict (409: a stale undo top, a level-up no longer pending), a server error or a lost answer
+    reads every slice again. The
     action module (`stores/table.ts`) owns the one error, notice and busy flag; the data stores
     expose their data and fetches only. Details: `docs/backend.md`, "State keys on write answers".
     Tests: `domain/service/actionlogsvc` `TestChanges_ARecordedTransactionNamesItsKeys`,

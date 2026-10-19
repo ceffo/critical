@@ -14,8 +14,8 @@ import { useSkillsStore } from "./skills";
 import { useSpellStore } from "./spells";
 import { useXpStore } from "./xp";
 
-/** Something to tell the player after an action (rendered with i18n by the Notices component). */
-/** Buffs that just expired, named at render time in the player's language (buffName). */
+/** Something to tell the player after an action, rendered with i18n by the Notices component: the
+ * buffs that just expired, named at render time in the player's language (buffName). */
 export type Notice = {
   kind: "expired";
   buffs: { name: string; spellId?: string }[];
@@ -149,16 +149,17 @@ export const useTableStore = create<TableStore>((set, get) => {
   };
   const shown = (s: Slice) => fetchers[s].loaded?.() ?? true;
   // What the writes answered since the last action changed, but what the action set from its
-  // answer and the slices no panel has loaded. A failed action reads everything again: a refusal
-  // names nothing, and the player must see the state that refused it (a stale undo's new top).
+  // answer and the slices no panel has loaded. A refused write (4xx) names nothing and reads
+  // nothing; a conflict (409), a server error or a lost answer is unknown and reads everything, so
+  // the player sees the state that refused it (a stale undo's new top) (api/http.ts send).
   // One the database could not serve reads nothing: the reads would wait for it (and the busy
   // controls with them), and the sheet is read again once it answers (api/http.ts setReload).
   const changed = (failure: unknown, opts?: ActionOptions) => {
     const answered = takeChanges();
     if (failure instanceof ApiError && failure.code === UNAVAILABLE) return [];
-    const failed = failure !== undefined;
-    const slices = slicesFor(failed ? { known: false } : answered);
-    if (!failed) for (const s of opts?.fresh ?? []) slices.delete(s);
+    const slices = slicesFor(answered);
+    if (failure === undefined)
+      for (const s of opts?.fresh ?? []) slices.delete(s);
     return [...slices].filter(shown);
   };
   const start = (opts?: ActionOptions) => {

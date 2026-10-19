@@ -51,7 +51,7 @@ export function LearnSpell({
 
   const learn = async () => {
     const got: { res: LearnResult | null } = { res: null };
-    // The spellbook is read again by the key the answer names (a refusal reads everything).
+    // The spellbook is read again by the key the answer names (a conflict reads everything).
     await run(async () => {
       got.res = await learnSpell(spellId);
     });

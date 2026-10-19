@@ -3169,6 +3169,92 @@ test("AC: the shield beside the HP, its breakdown popover and the Inventaire's A
   }
 });
 
+// ADR 0033 step 2, ADR 0035 item 6.2: a scroll that names the catalogue's longest spell name, in
+// French at 1280, 1920 and 2560 (real scrollbars): the editor's Spell picker (the form) and the
+// initiative breakdown's "Parchemin (Sort) : +1" term are not cut. Screenshots of each.
+test("scroll spell: picker and initiative term uncut, fr, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const FR_SPELL =
+    "Nom de sortilège invraisemblablement long des anciens archimages";
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    apiCall(page, method, url, body);
+  expect(
+    await call("POST", "/api/items", {
+      name: {
+        en: "Scroll of the ancient archmages",
+        fr: "Parchemin des anciens archimages",
+      },
+      category: "magic",
+      magicKind: "scroll",
+      spellId: "long_spell",
+      behaviour: "stock",
+      count: 2,
+    }),
+  ).toBe(true);
+  expect(await call("POST", "/api/round/advance", {})).toBe(true);
+  expect(
+    await call("POST", "/api/items/scroll_of_the_ancient_archmages/use", {}),
+  ).toBe(true);
+  await reloadSettled(page);
+  await chooseLanguage(page, "fr");
+  // The rail's buttons in order (French names): Act, Spells, XP, Inventory.
+  const rail = page.getByTestId("rail").getByRole("button");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `fr, ${vp.width}x${vp.height}`;
+    // The initiative breakdown's term names the scroll and its spell.
+    await page.getByTestId("initiative-value").hover();
+    const breakdown = page.getByTestId("initiative-breakdown");
+    await expect(breakdown).toContainText(
+      `Parchemin des anciens archimages (${FR_SPELL}) : +1`,
+    );
+    await expectNoClippedText(breakdown, `scroll initiative term, ${where}`);
+    await expectWholeWords(breakdown, `scroll initiative term, ${where}`);
+    await expectInside(breakdown, page.locator("body"), `breakdown, ${where}`);
+    await snap(page, `scroll-initiative-term-${vp.width}x${vp.height}`);
+    await page.mouse.move(0, 0);
+    await expect(breakdown).toBeHidden();
+    // The editor's Spell picker shows the long name whole.
+    await rail.nth(2).click();
+    await page
+      .getByRole("button", {
+        name: "Modifier Parchemin des anciens archimages",
+      })
+      .click();
+    const form = page.getByTestId("item-form");
+    const picker = form.getByLabel("Sort", { exact: true });
+    await expect(picker).toHaveValue("long_spell");
+    await expect(picker.locator("option:checked")).toHaveText(FR_SPELL);
+    await expectNoClippedText(form, `item form, ${where}`);
+    await expectWholeWords(form, `item form, ${where}`);
+    await expectInside(picker, form, `spell picker, ${where}`);
+    // A native select cuts its selected text without any scroll width: measure it in the select's font.
+    const room = await picker.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      const ctx = document.createElement("canvas").getContext("2d")!;
+      ctx.font = cs.font;
+      const text = (el as HTMLSelectElement).selectedOptions[0].text;
+      const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      return el.clientWidth - pad - ctx.measureText(text).width;
+    });
+    expect(room, `long spell name fits its picker, ${where}`).toBeGreaterThan(
+      24,
+    );
+    await snap(page, `scroll-spell-form-${vp.width}x${vp.height}`);
+    await form.getByRole("button", { name: "Annuler" }).click();
+    await expect(form).toHaveCount(0);
+    await rail.nth(0).click();
+  }
+});
+
 // ADR 0033 step 20, ADR 0035 item 9: a mage in plate, with a shield and a two-handed sword, is
 // warned on the rows, the AC card, the shield (badge and popover) and the attack card; nothing is
 // refused. In French and English at every layout viewport (1920x1080 and 2560x1440 included, real

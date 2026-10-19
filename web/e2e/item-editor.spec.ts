@@ -182,3 +182,39 @@ test("a daily item and an effect with a modifier: add, use rolls the modifier in
   expect(total).toBeLessThanOrEqual(7);
   await expect(page.getByTestId("item-result")).toContainText("1d4+3");
 });
+
+// ADR 0033 step 2: a magic scroll names the spell it holds, picked from the catalogue in the
+// editor; the edit is logged with the spell's name and popping it gives the scroll back its spell
+// as it was (none). Only a browser shows the picker filled from the catalogue's names and the
+// round trip through the form; the rules (the casting time it adds) are Go tests.
+test("a scroll names its spell in the editor: logged; pop clears it", async ({
+  page,
+}) => {
+  await openInventory(page);
+  await openTypedAdd(page);
+  const f = form(page);
+  await f.getByLabel("Name").fill("Scroll of flames");
+  await f.getByLabel("Category").selectOption("magic");
+  await f.getByLabel("Magic kind").selectOption("scroll");
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(form(page)).toHaveCount(0);
+  const scroll = row(page, "scroll_of_flames");
+  await expect(scroll).toBeVisible();
+
+  await scroll.getByRole("button", { name: "Edit Scroll of flames" }).click();
+  await form(page)
+    .getByLabel("Spell", { exact: true })
+    .selectOption({ label: "Burning Hands" });
+  await snap(page, "scroll-spell-form");
+  await form(page).getByRole("button", { name: "Save" }).click();
+  await expect(form(page)).toHaveCount(0);
+
+  await openWorkspace(page, "Act");
+  await expect(logEntry(page, "Edited Scroll of flames")).toContainText(
+    "spell none → Burning Hands",
+  );
+  await undoEntry(page, "Edited Scroll of flames");
+  await openWorkspace(page, "Inventory");
+  await scroll.getByRole("button", { name: "Edit Scroll of flames" }).click();
+  await expect(form(page).getByLabel("Spell", { exact: true })).toHaveValue("");
+});

@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
 const fixture = "../../../testdata/catalogue.json"
@@ -516,5 +517,21 @@ func TestParse_Step14_2_LanguagesBelongToFormat8(t *testing.T) {
 				assert.Contains(t, err.Error(), w)
 			}
 		})
+	}
+}
+
+// buffsvc.ScrollLevel reads a scroll's spell at one caster level, which is
+// exact only while no casting time under a round grows with the level. Guards
+// that assumption on the fixture: a casting time under a round (10 segments)
+// is the same at levels 1 and 20.
+func TestFixture_ADR0035Item6_2_NoCastingTimeUnderARoundVariesWithLevel(t *testing.T) {
+	a, err := LoadArtifact(fixture)
+	require.NoError(t, err)
+	for _, s := range a.Catalogue.Spells {
+		ct := spellstats.ParseCastingTime(s.CastingTime.Default())
+		lo, hi := ct.At(1), ct.At(20)
+		if lo.Unit == "segment" && lo.Amount < 10 || hi.Unit == "segment" && hi.Amount < 10 {
+			assert.Equal(t, lo, hi, "%s (%q) varies with level below a round", s.ID, ct.Raw)
+		}
 	}
 }

@@ -4,6 +4,7 @@
 import type { TFunction } from "i18next";
 import { Package, Sword, TShirt } from "@phosphor-icons/react";
 import type { InventoryNamer } from "@/i18n/inventoryName";
+import type { SpellNamer } from "@/i18n/spellName";
 import type {
   EquipmentStateRecord,
   ItemChangeRecord,
@@ -48,7 +49,10 @@ function itemEditText(
   p: ItemChangeRecord,
   t: TFunction,
   names: InventoryNamer,
+  spellName: SpellNamer,
 ): string {
+  // The spell a scroll holds (ADR 0033 step 2) is logged by its catalogue id.
+  const spell = (id: string) => (id ? spellName(id) : t("log.item.noSpell"));
   const changes = (p.changes ?? [])
     .map((c) =>
       t("log.item.change", {
@@ -59,6 +63,9 @@ function itemEditText(
               before: powersChangeText(t, c.before),
               after: powersChangeText(t, c.after),
             }
+          : {}),
+        ...(c.field === "spellId"
+          ? { before: spell(c.before), after: spell(c.after) }
           : {}),
         field: t(`log.item.fields.${c.field}`, { defaultValue: c.field }),
       }),
@@ -77,7 +84,7 @@ export const itemAddKind: KindView<ItemChangeRecord> = {
 export const itemEditKind: KindView<ItemChangeRecord> = {
   decode: decodeItemChange,
   icon: Package,
-  text: (p, { t, names }) => itemEditText(p, t, names),
+  text: (p, { t, names, spellName }) => itemEditText(p, t, names, spellName),
 };
 
 export const itemRemoveKind: KindView<ItemChangeRecord> = {

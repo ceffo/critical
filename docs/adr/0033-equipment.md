@@ -131,6 +131,12 @@ name or comment); this ADR names none yet.
    cloaks, gems, boots…). Magic weapons, ammunition, armour and shields keep their category and carry
    their magic as in steps 3 to 5. A piece the conversion cannot place is `gear` and on the review
    list (step 27). The codes go on the wire; the web names them (ADR 0023).
+   A `scroll` may **name the spell it holds** (`spellId`, a spell catalogue id; one spell per scroll,
+   a scroll of several spells is several pieces), set and cleared in the editor like any field (an
+   `item_edit` change, undone by its snapshot). No other piece holds a spell (400 on `spellId`,
+   `not_allowed`), and a spell the catalogue doesn't know is refused (`unknown`); a piece that stops
+   being a scroll drops it. Step 15.1's "a scroll as the spell it holds" reads it (ADR 0035 item 6.2).
+   *Added (CRI-73).*
 3. **A weapon** carries: the **weapon type** (ADR 0030 step 23's codes, unchanged; the class rules
    keep reading it), the **kind** (`melee` or `missile`, ADR 0016 step 8; a hurled weapon is
    `missile`), the **size** (`s`, `m`, `l`, informative: armour and weapon sizes against the

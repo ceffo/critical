@@ -76,6 +76,7 @@ type snapPiece struct {
 	MagicKind     string   `json:"magicKind,omitempty"`
 	CatalogueCode string   `json:"catalogueCode,omitempty"`
 	Component     string   `json:"component,omitempty"`
+	SpellID       string   `json:"spellId,omitempty"`
 	State         string   `json:"state"`
 	DamageTypes   []string `json:"damageTypes,omitempty"`
 	DamageSM      string   `json:"damageSm,omitempty"`
@@ -105,7 +106,7 @@ func toSnapItem(i Item) *snapItem {
 		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: &powers,
 		Piece: &snapPiece{
 			Category: string(i.Category), MagicKind: i.MagicKind, CatalogueCode: i.CatalogueCode,
-			Component: i.Component, State: string(i.State), DamageTypes: i.DamageTypes, DamageSM: i.DamageSM, DamageL: i.DamageL,
+			Component: i.Component, SpellID: i.SpellID, State: string(i.State), DamageTypes: i.DamageTypes, DamageSM: i.DamageSM, DamageL: i.DamageL,
 			WeaponType: i.WeaponType, WeaponKind: i.WeaponKind, Size: i.Size, Speed: i.Speed,
 			MagicToHit: i.MagicToHit, MagicDamage: i.MagicDamage, TwoHanded: i.TwoHanded, Fires: i.Fires,
 			Specialized: i.Specialized, BaseAC: i.BaseAC, SkillColumn: i.SkillColumn, ArmorRow: i.ArmorRow,
@@ -126,7 +127,7 @@ func (c itemState) item(id string) Item {
 	}
 	if p := it.Piece; p != nil {
 		out.Category, out.MagicKind, out.CatalogueCode = Category(p.Category), p.MagicKind, p.CatalogueCode
-		out.Component = p.Component
+		out.Component, out.SpellID = p.Component, p.SpellID
 		out.State, out.DamageTypes, out.DamageSM, out.DamageL = State(p.State), p.DamageTypes, p.DamageSM, p.DamageL
 		out.WeaponType, out.WeaponKind, out.Size, out.Speed = p.WeaponType, p.WeaponKind, p.Size, p.Speed
 		out.MagicToHit, out.MagicDamage, out.TwoHanded, out.Fires = p.MagicToHit, p.MagicDamage, p.TwoHanded, p.Fires

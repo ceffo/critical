@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
 // SVC is the driver port.
@@ -142,6 +143,17 @@ type Deps struct {
 	// nothing).
 	Initiative      Initiative
 	InitiativeItems *ruletablesvc.InitiativeItems
+	// Spells is the spell catalogue: a scroll names one of its spells (ADR
+	// 0033 step 2) and its use reads that spell's casting time (ADR 0035
+	// item 6.2). Nil: no spell is known (naming one is refused, a named
+	// scroll's casting time reads as special).
+	Spells Spells
+}
+
+// Spells looks a spell up in the catalogue (spelldal's catalogue, as
+// castsvc reads it).
+type Spells interface {
+	Describe(ctx context.Context, spellID string) (spellsvc.Spell, bool, error)
 }
 
 // Initiative corrects the round's initiative by an item used (buffsvc),
@@ -162,6 +174,7 @@ type service struct {
 	// initiative and initiativeItems: ADR 0035 item 6.2 (Deps).
 	initiative      Initiative
 	initiativeItems *ruletablesvc.InitiativeItems
+	spells          Spells
 }
 
 // New constructs the service.
@@ -171,7 +184,7 @@ func New(dal DAL, d Deps) (SVC, error) {
 	}
 	s := &service{
 		dal: dal, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment,
-		initiative: d.Initiative, initiativeItems: d.InitiativeItems,
+		initiative: d.Initiative, initiativeItems: d.InitiativeItems, spells: d.Spells,
 	}
 	if d.Equipment != nil {
 		s.catalogue = d.Equipment.Weapons

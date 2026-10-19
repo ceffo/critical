@@ -76,8 +76,9 @@ const (
 	// adds nothing.
 	TimingSpecial CastTiming = "special"
 	// TimingSpellCastingTime is an item whose Table 56 term is the casting
-	// time of the spell it holds (the scroll): items don't hold their
-	// spell, so the term is not counted and adds nothing.
+	// time of the spell it holds (the scroll) when it names no spell: the
+	// term is not counted and adds nothing. A scroll that names its spell
+	// reads that spell's casting time (ScrollInitiative).
 	TimingSpellCastingTime CastTiming = "spell_casting_time"
 )
 

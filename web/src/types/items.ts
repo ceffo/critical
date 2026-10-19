@@ -107,6 +107,8 @@ export interface Item {
   catalogueCode: string;
   /** The spell component it is (ADR 0033 step 1.1); empty for none. */
   component: Component | "";
+  /** The catalogue id of the spell a magic scroll holds (ADR 0033 step 2); empty for none. */
+  spellId: string;
   state: ItemState;
   /** The state Equip moves the piece to (server rule, ADR 0033 step 6); empty: carried only. */
   equipState: ItemState | "";
@@ -206,6 +208,8 @@ export interface ItemBody {
   category?: Category;
   magicKind?: MagicKind | "";
   component?: Component | "";
+  /** The spell a magic scroll holds (a catalogue id); "" clears it. */
+  spellId?: string;
   behaviour?: ItemBehaviour;
   count?: number;
   /** The daily number (daily items only). */

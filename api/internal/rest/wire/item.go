@@ -20,7 +20,10 @@ type ItemDTO struct {
 	MagicKind     string         `json:"magicKind"`
 	CatalogueCode string         `json:"catalogueCode"`
 	Component     string         `json:"component"`
-	State         string         `json:"state"`
+	// SpellID is the catalogue id of the spell a scroll holds (ADR 0033
+	// step 2), empty for none and on every other piece.
+	SpellID string `json:"spellId"`
+	State   string `json:"state"`
 	// EquipState is the state Equip moves the piece to (worn or wielded),
 	// empty for a piece that is carried only (ADR 0033 step 6).
 	EquipState   string `json:"equipState"`
@@ -109,7 +112,7 @@ func ItemsToDTO(items []itemsvc.Item, warnings []itemsvc.Warning) []ItemDTO {
 		}
 		out = append(out, ItemDTO{
 			ID: i.ID, Name: i.Name, Category: string(i.Category), MagicKind: i.MagicKind,
-			CatalogueCode: i.CatalogueCode, Component: i.Component, State: string(i.State), EquipState: string(i.EquipState()),
+			CatalogueCode: i.CatalogueCode, Component: i.Component, SpellID: i.SpellID, State: string(i.State), EquipState: string(i.EquipState()),
 			Type: i.Type, Behaviour: string(i.Behaviour),
 			MagicalBonus: i.MagicBonus, AmmoKind: i.AmmoKind, Count: i.Count, MaxCount: i.MaxCount,
 			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers,

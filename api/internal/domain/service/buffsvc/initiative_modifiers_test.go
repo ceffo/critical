@@ -72,8 +72,8 @@ func TestSpellInitiative_ADR0035Item6_2_CastingTimeInSegments(t *testing.T) {
 }
 
 // ADR 0035 item 6.2 with PHB Table 56: an item used adds its row's modifier.
-// The scroll's row is the casting time of its spell, which an item doesn't
-// hold: that term is not counted (spell_casting_time), never a computed +0.
+// The scroll's row is the casting time of its spell: for a scroll that names
+// none, that term is not counted (spell_casting_time), never a computed +0.
 func TestItemInitiative_ADR0035Item6_2_Table56AndTheScrollNotCounted(t *testing.T) {
 	assert.Equal(t, buffsvc.InitiativeModifier{
 		Source: buffsvc.InitiativeItem, Value: 3, ItemID: "w", Name: "Wand", MagicKind: "wand",
@@ -298,4 +298,36 @@ func TestInitiativeRestorer_ADR0035Item6_RestoresTheModifiers(t *testing.T) {
 	}}).Return(nil).Once()
 	require.NoError(t, f.svc.Module().Restorer(buffsvc.StateKeyInitiative).Restore(ctx, charID,
 		snaptest.Env(`{"d10":4,"entryId":12,"modifiers":[{"source":"spell","value":0,"spellId":"fly","name":"Fly","timing":"end_of_round"}]}`)))
+}
+
+// ADR 0035 item 6.2 with PHB Table 56's scroll row and ADR 0033 step 15.1:
+// a scroll that names its spell adds that spell's casting time by the cast's
+// rules, as an item term carrying the spell. It is read at caster level 6
+// (ScrollLevel, DMG p.145's floor), so a casting time that grows with the
+// level reads its level-6 value. A spell the catalogue does not know reads
+// as special.
+func TestScrollInitiative_ADR0035Item6_2_TheSpellsCastingTimeAtLevelSix(t *testing.T) {
+	tests := []struct {
+		raw    string
+		found  bool
+		value  int
+		timing buffsvc.CastTiming
+	}{
+		{"1", true, 1, buffsvc.TimingSegments},
+		{"9", true, 9, buffsvc.TimingSegments},
+		{"1 segment/level", true, 6, buffsvc.TimingSegments},
+		{"1 rd.", true, 0, buffsvc.TimingEndOfRound},
+		{"3 rounds + 1 round/level", true, 0, buffsvc.TimingEndOfRound},
+		{"Special", true, 0, buffsvc.TimingSpecial},
+		{"1", false, 0, buffsvc.TimingSpecial},
+	}
+	for _, tt := range tests {
+		t.Run(tt.raw, func(t *testing.T) {
+			got := buffsvc.ScrollInitiative("s", "Scroll", "scroll", "x", spellstats.ParseCastingTime(tt.raw), tt.found)
+			assert.Equal(t, buffsvc.InitiativeModifier{
+				Source: buffsvc.InitiativeItem, Value: tt.value, ItemID: "s", Name: "Scroll", MagicKind: "scroll",
+				SpellID: "x", Timing: tt.timing,
+			}, got)
+		})
+	}
 }

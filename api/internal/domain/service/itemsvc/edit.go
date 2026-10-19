@@ -29,10 +29,12 @@ type ItemInput struct {
 	// off (swap). A piece that cannot be equipped is refused (field equip).
 	Equip bool
 	// Name holds the languages the player typed (ADR 0023 step 11).
-	Name       localized.Text
-	Category   Category
-	MagicKind  string
-	Component  string
+	Name      localized.Text
+	Category  Category
+	MagicKind string
+	Component string
+	// SpellID is the spell a scroll holds (a magic scroll only).
+	SpellID    string
 	Behaviour  Behaviour
 	Count      int
 	MaxCount   int
@@ -76,10 +78,13 @@ type ItemPatch struct {
 	// Name replaces the bodies of the languages it holds and keeps the
 	// others; a blank body removes its language; nil: unchanged (ADR 0023
 	// step 11).
-	Name       localized.Text
-	Category   *Category
-	MagicKind  *string
-	Component  *string
+	Name      localized.Text
+	Category  *Category
+	MagicKind *string
+	Component *string
+	// SpellID names the spell a scroll holds; "" clears it. A piece that
+	// stops being a magic scroll drops it unless the patch sets it.
+	SpellID    *string
 	Behaviour  *Behaviour
 	Count      *int
 	MaxCount   *int
@@ -220,6 +225,9 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 	if err := s.checkSpecialized(ctx, characterID, item); err != nil {
 		return nil, err
 	}
+	if err := s.knownSpell(ctx, item); err != nil {
+		return nil, err
+	}
 	var res *ChangeResult
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		all, err := s.dal.List(ctx, characterID)
@@ -273,7 +281,7 @@ func (s *service) newPiece(in ItemInput) (Item, error) {
 		return s.picked(in)
 	}
 	return clean(Item{
-		Name: in.Name, Category: in.Category, MagicKind: in.MagicKind, Component: in.Component, State: StateCarried,
+		Name: in.Name, Category: in.Category, MagicKind: in.MagicKind, Component: in.Component, SpellID: in.SpellID, State: StateCarried,
 		Behaviour: in.Behaviour, Count: in.Count, MaxCount: in.MaxCount,
 		EffectDice: in.EffectDice, EffectSave: in.EffectSave, Notes: in.Notes, Powers: withPowerIDs(in.Powers),
 		AmmoKind: in.AmmoKind, MagicBonus: in.MagicBonus,
@@ -290,7 +298,7 @@ func (s *service) newPiece(in ItemInput) (Item, error) {
 func clean(i Item) Item {
 	low := func(v string) string { return strings.ToLower(strings.TrimSpace(v)) }
 	i.Name = i.Name.Trimmed()
-	i.MagicKind, i.Component = low(i.MagicKind), low(i.Component)
+	i.MagicKind, i.Component, i.SpellID = low(i.MagicKind), low(i.Component), low(i.SpellID)
 	i.EffectDice = strings.TrimSpace(i.EffectDice)
 	i.Notes = strings.TrimSpace(i.Notes)
 	i.AmmoKind = low(i.AmmoKind)
@@ -347,6 +355,11 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		}
 		if err := s.checkSpecialized(ctx, characterID, item); err != nil {
 			return err
+		}
+		if item.SpellID != old.SpellID {
+			if err := s.knownSpell(ctx, item); err != nil {
+				return err
+			}
 		}
 		changes := diff(old, item)
 		if len(changes) == 0 {
@@ -420,6 +433,12 @@ func patched(old Item, p ItemPatch) Item {
 	}
 	set(&item.MagicKind, p.MagicKind)
 	set(&item.Component, p.Component)
+	set(&item.SpellID, p.SpellID)
+	// A piece that stops being a magic scroll holds no spell (logged with
+	// the edit); one the patch names is refused by Validate.
+	if p.SpellID == nil && !item.HoldsSpell() {
+		item.SpellID = ""
+	}
 	set(&item.EffectDice, p.EffectDice)
 	set(&item.EffectSave, p.EffectSave)
 	set(&item.Notes, p.Notes)
@@ -481,6 +500,25 @@ func (s *service) checkSpecialized(ctx context.Context, characterID int64, i Ite
 	return nil
 }
 
+// knownSpell refuses a scroll naming a spell the catalogue does not know
+// (ADR 0033 step 2): field "spellId", code CodeUnknown. None is fine.
+func (s *service) knownSpell(ctx context.Context, i Item) error {
+	if i.SpellID == "" {
+		return nil
+	}
+	if s.spells == nil {
+		return fieldErr("spellId", CodeUnknown)
+	}
+	_, found, err := s.spells.Describe(ctx, i.SpellID)
+	if err != nil {
+		return fmt.Errorf("describe %s: %w", i.SpellID, err)
+	}
+	if !found {
+		return fieldErr("spellId", CodeUnknown)
+	}
+	return nil
+}
+
 func (s *service) Delete(ctx context.Context, characterID int64, itemID string) (*ChangeResult, error) {
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -527,6 +565,7 @@ func diff(a, b Item) []FieldChange {
 	add("magicKind", a.MagicKind, b.MagicKind)
 	add("catalogueCode", a.CatalogueCode, b.CatalogueCode)
 	add("component", a.Component, b.Component)
+	add("spellId", a.SpellID, b.SpellID)
 	add("state", string(a.State), string(b.State))
 	add("type", a.Type, b.Type)
 	add("behaviour", string(a.Behaviour), string(b.Behaviour))

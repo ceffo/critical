@@ -81,6 +81,11 @@ func (i Item) Validate() error {
 	if i.Component != "" && !slices.Contains(Components, i.Component) {
 		return fieldErr("component", "Unknown component")
 	}
+	// A scroll names its spell (ADR 0033 step 2); no other piece holds one.
+	// Whether the catalogue knows it is the service's check (knownSpell).
+	if i.SpellID != "" && !i.HoldsSpell() {
+		return fieldErr("spellId", CodeNotAllowed)
+	}
 	if !i.State.Valid() || !Allows(i.Category, i.MagicKind, i.State) {
 		return fieldErr("state", CodeNotAllowed)
 	}

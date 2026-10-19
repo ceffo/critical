@@ -121,23 +121,53 @@ func WeaponSpeed(w HeldWeapon, weaponBuff int) int {
 // time is not counted.
 func SpellInitiative(spellID, name string, ct spellstats.CastingTime, casterLevel int) InitiativeModifier {
 	m := InitiativeModifier{Source: InitiativeSpell, SpellID: spellID, Name: name}
+	m.Value, m.Timing = castingTimeTerm(ct, casterLevel)
+	return m
+}
+
+// castingTimeTerm is a casting time's initiative value and timing at a
+// caster level (ADR 0033 step 15.1): segments under a round add their
+// amount, a round or more adds nothing and reads end of round, a special
+// one adds nothing.
+func castingTimeTerm(ct spellstats.CastingTime, casterLevel int) (int, CastTiming) {
 	if ct.Kind != spellstats.KindTimed {
-		m.Timing = TimingSpecial
-		return m
+		return 0, TimingSpecial
 	}
 	v := ct.At(casterLevel)
 	if v.Unit != "segment" || v.Amount >= segmentsPerRound {
-		m.Timing = TimingEndOfRound
+		return 0, TimingEndOfRound
+	}
+	return max(0, int(v.Amount)), TimingSegments
+}
+
+// ScrollLevel is the caster level a scroll's spell is read at: DMG p.145
+// writes a scroll spell one level above the minimum needed to cast it, but
+// never below 6th, so 6 is a floor. No scroll records its level; the one
+// catalogue casting time that depends on the level is a round or more at
+// any level (end of round), so the floor gives the same term.
+const ScrollLevel = 6
+
+// ScrollInitiative is the term of a scroll used that round that names its
+// spell (ADR 0035 item 6.2 with PHB Table 56's scroll row and ADR 0033 step
+// 15.1: a scroll as the spell it holds): an item term carrying the spell,
+// worth that spell's casting time by the cast's rules (SpellInitiative) at
+// ScrollLevel. A spell the catalogue does not know (found false) reads as
+// a special casting time.
+func ScrollInitiative(itemID, name, magicKind, spellID string, ct spellstats.CastingTime, found bool) InitiativeModifier {
+	m := InitiativeModifier{Source: InitiativeItem, ItemID: itemID, Name: name, MagicKind: magicKind, SpellID: spellID}
+	if !found {
+		m.Timing = TimingSpecial
 		return m
 	}
-	m.Value = max(0, int(v.Amount))
+	m.Value, m.Timing = castingTimeTerm(ct, ScrollLevel)
 	return m
 }
 
 // ItemInitiative is the term of a magic item used that round (ADR 0035 item
 // 6.2): its magic kind's PHB Table 56 modifier. A row without one (the
-// scroll's: the casting time of its spell) is not counted, since an item
-// does not hold its spell: it adds nothing, with timing spell_casting_time.
+// scroll's: the casting time of its spell) is not counted for a scroll that
+// names no spell: it adds nothing, with timing spell_casting_time. A scroll
+// that names its spell is ScrollInitiative.
 func ItemInitiative(itemID, name, magicKind string, modifier int, hasModifier bool) InitiativeModifier {
 	m := InitiativeModifier{Source: InitiativeItem, ItemID: itemID, Name: name, MagicKind: magicKind}
 	if !hasModifier {

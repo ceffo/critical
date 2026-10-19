@@ -1,6 +1,6 @@
 # Equipment design round: possessions, worn and wielded, the AC, pick list, review list (CRI-32)
 
-**Round 2, 2026-10-18: round 1's feedback applied, awaiting the user's verdict.**
+**Approved by the user, 2026-10-18** ("agree"), after two rounds.
 
 Round 1 feedback (user): the target's armour type is dropped from the attack ("the dm gives (or
 not) the final AC"); no groups by state ("adds nothing but confusion"); one domain term,

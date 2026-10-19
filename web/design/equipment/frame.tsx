@@ -121,8 +121,8 @@ function InitiativeTip({ kind }: { kind: "weapon" | "cast" }) {
         {kind === "cast"
           ? tr("Projectile magique", "Magic missile")
           : tr("Épée longue +2", "Long sword +2")}{" "}
-        <b>{kind === "cast" ? "+1" : "+3"}</b> · {tr("Hâte", "Haste")} <b>−2</b> ={" "}
-        <b>{kind === "cast" ? "4" : "6"}</b>
+        <b>{kind === "cast" ? "+1" : "+3"}</b> · {tr("Hâte", "Haste")} <b>−2</b>{" "}
+        = <b>{kind === "cast" ? "4" : "6"}</b>
       </span>
       {kind === "cast" && (
         <span className="text-label text-ink-muted">
@@ -189,7 +189,9 @@ export function CharacterCard({
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="section-label">{tr("Modifier les PV", "HP change")}</span>
+        <span className="section-label">
+          {tr("Modifier les PV", "HP change")}
+        </span>
         <div className="flex gap-2">
           <span className="flex h-7 w-14 items-center rounded-md border border-input px-2 text-body text-ink-muted">
             {tr("PV", "HP")}
@@ -255,7 +257,9 @@ function AcTile({
           strokeWidth="2"
         />
       </svg>
-      <span className="relative -mt-1 text-key font-bold tabular-nums">{value}</span>
+      <span className="relative -mt-1 text-key font-bold tabular-nums">
+        {value}
+      </span>
       {warning && (
         <Warning
           weight="fill"

@@ -30,7 +30,13 @@ import {
   type Piece,
 } from "./data";
 
-export function CategoryIcon({ p, className }: { p: Piece; className?: string }) {
+export function CategoryIcon({
+  p,
+  className,
+}: {
+  p: Piece;
+  className?: string;
+}) {
   const c = cn("size-5 shrink-0 text-ink-muted", className);
   const map: Record<Category, ReactNode> = {
     weapon: <Sword className={c} aria-hidden />,
@@ -54,12 +60,15 @@ export function CategoryIcon({ p, className }: { p: Piece; className?: string })
 }
 
 /** Worn and wielded are one concept on screen (user, round 1): Équipé / Equipped. */
-export const equipped = (p: Piece) => p.state !== "carried";
+const equipped = (p: Piece) => p.state !== "carried";
 
 /** The one-word move of a row: Équiper / Retirer, for the categories that can be equipped. */
 function stateMove(p: Piece): string | null {
   const equippable =
-    p.category === "weapon" || p.category === "armour" || p.category === "shield" || (p.category === "magic" && p.id !== "wand");
+    p.category === "weapon" ||
+    p.category === "armour" ||
+    p.category === "shield" ||
+    (p.category === "magic" && p.id !== "wand");
   if (!equippable) return null;
   return equipped(p) ? tr("Retirer", "Unequip") : tr("Équiper", "Equip");
 }
@@ -80,7 +89,9 @@ export function Tag({
         tone === "muted" && "chip text-ink-muted",
       )}
     >
-      {tone === "warning" && <Warning weight="fill" className="size-3" aria-hidden />}
+      {tone === "warning" && (
+        <Warning weight="fill" className="size-3" aria-hidden />
+      )}
       {children}
     </span>
   );
@@ -123,7 +134,11 @@ export function PieceRow({
           <Button variant="ghost" size="icon-sm" title={tr("Modifier", "Edit")}>
             <PencilSimple aria-hidden />
           </Button>
-          <Button variant="ghost" size="icon-sm" title={tr("Supprimer", "Delete")}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            title={tr("Supprimer", "Delete")}
+          >
             <Trash aria-hidden />
           </Button>
         </span>
@@ -145,7 +160,9 @@ function Count({ c }: { c: NonNullable<Piece["count"]> }) {
         <Button variant="quiet" size="icon-xs">
           <Minus aria-hidden />
         </Button>
-        <span className="w-7 text-center text-body font-medium tabular-nums">{c.value}</span>
+        <span className="w-7 text-center text-body font-medium tabular-nums">
+          {c.value}
+        </span>
         <Button variant="quiet" size="icon-xs">
           <Plus aria-hidden />
         </Button>
@@ -153,7 +170,9 @@ function Count({ c }: { c: NonNullable<Piece["count"]> }) {
     );
   return (
     <span className="text-label whitespace-nowrap text-ink-muted">
-      {c.behaviour === "charges" ? tr("Charges", "Charges") : tr("Quotidien", "Daily")}{" "}
+      {c.behaviour === "charges"
+        ? tr("Charges", "Charges")
+        : tr("Quotidien", "Daily")}{" "}
       <b className="text-body text-ink tabular-nums">
         {c.value}
         {c.max ? ` / ${c.max}` : ""}
@@ -234,7 +253,12 @@ export function PossessionsCard({
       )}
       <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4">
         {pieces.map((p) => (
-          <PieceRow key={p.id} p={p} hover={p.id === hoverId} warning={warnings[p.id]} />
+          <PieceRow
+            key={p.id}
+            p={p}
+            hover={p.id === hoverId}
+            warning={warnings[p.id]}
+          />
         ))}
       </ul>
     </section>
@@ -263,9 +287,18 @@ export function AcCard({
       )}
     >
       <div className="card-band flex min-h-9 items-center justify-between gap-3 px-4 py-2">
-        <h2 className="section-label">{tr("Classe d'armure", "Armour class")}</h2>
+        <h2 className="section-label">
+          {tr("Classe d'armure", "Armour class")}
+        </h2>
         {!override && (
-          <Button variant="quiet" size="sm" title={tr("Forcer une CA (sort Bouclier…)", "Override the AC (Shield spell…)")}>
+          <Button
+            variant="quiet"
+            size="sm"
+            title={tr(
+              "Forcer une CA (sort Bouclier…)",
+              "Override the AC (Shield spell…)",
+            )}
+          >
             {tr("Forcer", "Override")}
           </Button>
         )}
@@ -280,8 +313,12 @@ export function AcCard({
               <span className="text-hero leading-none tabular-nums">4</span>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-label text-ink-muted">{tr("Calculée", "Derived")}</span>
-              <span className="text-key text-ink-muted tabular-nums">{total}</span>
+              <span className="text-label text-ink-muted">
+                {tr("Calculée", "Derived")}
+              </span>
+              <span className="text-key text-ink-muted tabular-nums">
+                {total}
+              </span>
             </div>
             <Button variant="quiet" size="sm">
               <ArrowCounterClockwise aria-hidden />
@@ -296,7 +333,11 @@ export function AcCard({
             key={w}
             className="flex items-start gap-2 rounded-md bg-raised px-3 py-2 text-body text-warning shadow-[inset_3px_0_0_var(--warning)]"
           >
-            <Warning weight="fill" className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <Warning
+              weight="fill"
+              className="mt-0.5 size-4 shrink-0"
+              aria-hidden
+            />
             <span className="min-w-0">{w}</span>
           </p>
         ))}
@@ -306,11 +347,20 @@ export function AcCard({
   );
 }
 
-export function AcBreakdown({ rows, total }: { rows: typeof AC_ROWS; total: string }) {
+export function AcBreakdown({
+  rows,
+  total,
+}: {
+  rows: typeof AC_ROWS;
+  total: string;
+}) {
   return (
     <dl className="grid grid-cols-[auto_1fr_auto] gap-x-3 gap-y-1.5 text-body">
       {rows.map((r) => (
-        <div key={r.term.en} className={cn("contents", r.muted && "text-ink-muted")}>
+        <div
+          key={r.term.en}
+          className={cn("contents", r.muted && "text-ink-muted")}
+        >
           <dt className={r.muted ? "" : "font-medium"}>{lt(r.term)}</dt>
           <dd className="min-w-0 text-ink-muted">{lt(r.source)}</dd>
           <dd className="text-right tabular-nums">{r.value}</dd>
@@ -318,7 +368,9 @@ export function AcBreakdown({ rows, total }: { rows: typeof AC_ROWS; total: stri
       ))}
       <div className="col-span-3 my-0.5 h-px bg-border" />
       <dt className="font-semibold">{tr("CA", "AC")}</dt>
-      <dd className="text-label text-ink-muted">{tr("jamais mieux que −10", "never better than −10")}</dd>
+      <dd className="text-label text-ink-muted">
+        {tr("jamais mieux que −10", "never better than −10")}
+      </dd>
       <dd className="text-right font-semibold tabular-nums">{total}</dd>
     </dl>
   );
@@ -345,12 +397,17 @@ export function ReviewCard() {
         {REVIEW.map((r) => {
           const p = byId(r.id);
           return (
-            <li key={r.id} className="flex flex-col gap-2 rounded-md bg-raised px-3 py-2">
+            <li
+              key={r.id}
+              className="flex flex-col gap-2 rounded-md bg-raised px-3 py-2"
+            >
               <div className="flex items-start gap-3">
                 <CategoryIcon p={p} className="mt-0.5" />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="text-body font-medium">{lt(p.name)}</span>
-                  <span className="text-body text-ink-muted">{lt(r.reason)}</span>
+                  <span className="text-body text-ink-muted">
+                    {lt(r.reason)}
+                  </span>
                 </div>
                 <span className="flex shrink-0 gap-1">
                   {r.id === "mace" && (
@@ -365,7 +422,14 @@ export function ReviewCard() {
                       {tr("Modifier", "Edit")}
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" title={tr("Garder tel quel et retirer de la liste", "Keep as is and take off the list")}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title={tr(
+                      "Garder tel quel et retirer de la liste",
+                      "Keep as is and take off the list",
+                    )}
+                  >
                     {tr("Ignorer", "Dismiss")}
                   </Button>
                 </span>

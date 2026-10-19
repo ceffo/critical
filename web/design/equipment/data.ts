@@ -6,12 +6,7 @@ export type L = { fr: string; en: string };
 export const l = (fr: string, en: string): L => ({ fr, en });
 
 export type Category =
-  | "weapon"
-  | "ammunition"
-  | "armour"
-  | "shield"
-  | "magic"
-  | "gear";
+  "weapon" | "ammunition" | "armour" | "shield" | "magic" | "gear";
 export type State = "worn" | "wielded" | "carried";
 
 export interface Piece {
@@ -23,7 +18,11 @@ export interface Piece {
   /** The kind under the category: "Mêlée", "Anneau", "Flèche", "CA 5"... */
   kind: L;
   state: State;
-  count?: { value: number; max?: number; behaviour: "stock" | "charges" | "daily" };
+  count?: {
+    value: number;
+    max?: number;
+    behaviour: "stock" | "charges" | "daily";
+  };
   dice?: string;
   review?: boolean;
   warning?: L;
@@ -89,7 +88,10 @@ export const POSSESSIONS: Piece[] = [
     name: l("Anneau de protection +2", "Ring of protection +2"),
     category: "magic",
     kind: l("Anneau", "Ring"),
-    stats: l("CA −2 sans armure magique · sauvegardes +2", "AC −2 without magic armour · saves +2"),
+    stats: l(
+      "CA −2 sans armure magique · sauvegardes +2",
+      "AC −2 without magic armour · saves +2",
+    ),
     state: "worn",
   },
   {
@@ -106,7 +108,10 @@ export const POSSESSIONS: Piece[] = [
     name: l("Épée longue +2", "Long sword +2"),
     category: "weapon",
     kind: l("Mêlée", "Melee"),
-    stats: l("1d8 · G 1d12 · +2/+2 · vitesse 3", "1d8 · L 1d12 · +2/+2 · speed 3"),
+    stats: l(
+      "1d8 · G 1d12 · +2/+2 · vitesse 3",
+      "1d8 · L 1d12 · +2/+2 · speed 3",
+    ),
     state: "wielded",
   },
   {
@@ -114,7 +119,10 @@ export const POSSESSIONS: Piece[] = [
     name: l("Arc court +2", "Short bow +2"),
     category: "weapon",
     kind: l("Tir · deux mains", "Missile · two-handed"),
-    stats: l("tire des flèches · +2/+2 · vitesse 5", "fires arrows · +2/+2 · speed 5"),
+    stats: l(
+      "tire des flèches · +2/+2 · vitesse 5",
+      "fires arrows · +2/+2 · speed 5",
+    ),
     state: "wielded",
   },
   {
@@ -122,7 +130,10 @@ export const POSSESSIONS: Piece[] = [
     name: l("Dague +3", "Dagger +3"),
     category: "weapon",
     kind: l("Mêlée", "Melee"),
-    stats: l("1d4 · G 1d3 · +3/+3 · vitesse 0", "1d4 · L 1d3 · +3/+3 · speed 0"),
+    stats: l(
+      "1d4 · G 1d3 · +3/+3 · vitesse 0",
+      "1d4 · L 1d3 · +3/+3 · speed 0",
+    ),
     state: "wielded",
   },
   {
@@ -168,7 +179,10 @@ export const POSSESSIONS: Piece[] = [
     name: l("Épée bâtarde +2", "Bastard sword +2"),
     category: "weapon",
     kind: l("Mêlée · deux mains", "Melee · two-handed"),
-    stats: l("2d4 · G 2d8 · +2/+2 · vitesse 6", "2d4 · L 2d8 · +2/+2 · speed 6"),
+    stats: l(
+      "2d4 · G 2d8 · +2/+2 · vitesse 6",
+      "2d4 · L 2d8 · +2/+2 · speed 6",
+    ),
     state: "carried",
   },
   {
@@ -176,7 +190,10 @@ export const POSSESSIONS: Piece[] = [
     name: l("Masse d'armes +1", "Mace +1"),
     category: "weapon",
     kind: l("Mêlée", "Melee"),
-    stats: l("1d6 · G 1d6 · +1/+1 · vitesse ?", "1d6 · L 1d6 · +1/+1 · speed ?"),
+    stats: l(
+      "1d6 · G 1d6 · +1/+1 · vitesse ?",
+      "1d6 · L 1d6 · +1/+1 · speed ?",
+    ),
     state: "carried",
     review: true,
   },
@@ -231,31 +248,141 @@ export const REVIEW: { id: string; reason: L; choices?: L[] }[] = [
 ];
 
 /** The AC breakdown (ADR 0033 step 10), one row per term with its source. */
-export const AC_ROWS: { term: L; source: L; value: string; muted?: boolean }[] = [
-  { term: l("Base", "Base"), source: l("Cotte de mailles", "Chain mail"), value: "5" },
-  { term: l("Magie de l'armure", "Armour magic"), source: l("aucune", "none"), value: "—", muted: true },
-  { term: l("Bouclier", "Shield"), source: l("aucun", "none"), value: "—", muted: true },
-  { term: l("Dextérité", "Dexterity"), source: l("17", "17"), value: "−3" },
-  { term: l("Protection", "Protection"), source: l("Anneau de protection +2", "Ring of protection +2"), value: "−2" },
-  { term: l("Effets", "Effects"), source: l("Protection contre le mal", "Protection from evil"), value: "−2" },
-];
+export const AC_ROWS: { term: L; source: L; value: string; muted?: boolean }[] =
+  [
+    {
+      term: l("Base", "Base"),
+      source: l("Cotte de mailles", "Chain mail"),
+      value: "5",
+    },
+    {
+      term: l("Magie de l'armure", "Armour magic"),
+      source: l("aucune", "none"),
+      value: "—",
+      muted: true,
+    },
+    {
+      term: l("Bouclier", "Shield"),
+      source: l("aucun", "none"),
+      value: "—",
+      muted: true,
+    },
+    { term: l("Dextérité", "Dexterity"), source: l("17", "17"), value: "−3" },
+    {
+      term: l("Protection", "Protection"),
+      source: l("Anneau de protection +2", "Ring of protection +2"),
+      value: "−2",
+    },
+    {
+      term: l("Effets", "Effects"),
+      source: l("Protection contre le mal", "Protection from evil"),
+      value: "−2",
+    },
+  ];
 
 /** Catalogue armour rows (PHB Table 44 / 46), with the bard's class warning (ADR 0033 step 20). */
-export const CATALOGUE_ARMOUR: { name: L; ac: number; skill: L; row: L; warn?: boolean }[] = [
-  { name: l("Armure matelassée", "Padded armour"), ac: 8, skill: l("Clouté", "Studded"), row: l("Cuir", "Leather") },
-  { name: l("Armure de cuir", "Leather armour"), ac: 8, skill: l("Cuir", "Leather"), row: l("Cuir", "Leather") },
-  { name: l("Armure de cuir clouté", "Studded leather"), ac: 7, skill: l("Clouté", "Studded"), row: l("Cuir clouté", "Studded leather") },
-  { name: l("Broigne", "Ring mail"), ac: 7, skill: l("Métal", "Metal"), row: l("Anneaux", "Ring") },
-  { name: l("Armure de peau", "Hide armour"), ac: 6, skill: l("Métal", "Metal"), row: l("Cuir", "Leather") },
-  { name: l("Armure d'écailles", "Scale mail"), ac: 6, skill: l("Métal", "Metal"), row: l("Écailles", "Scale") },
-  { name: l("Brigandine", "Brigandine"), ac: 6, skill: l("Interdite", "Not allowed"), row: l("Brigandine", "Brigandine"), warn: true },
-  { name: l("Cotte de mailles", "Chain mail"), ac: 5, skill: l("Métal", "Metal"), row: l("Mailles", "Chain") },
-  { name: l("Cotte de mailles elfique", "Elven chain mail"), ac: 5, skill: l("Mailles elfiques", "Elven chain"), row: l("Mailles", "Chain") },
-  { name: l("Armure à bandes", "Banded mail"), ac: 4, skill: l("Interdite", "Not allowed"), row: l("Bandes", "Banded"), warn: true },
-  { name: l("Armure de plates de bronze", "Bronze plate mail"), ac: 4, skill: l("Interdite", "Not allowed"), row: l("Plates", "Plate"), warn: true },
-  { name: l("Clibanion", "Splint mail"), ac: 4, skill: l("Interdite", "Not allowed"), row: l("Lamelles", "Splint"), warn: true },
-  { name: l("Armure de plates", "Plate mail"), ac: 3, skill: l("Interdite", "Not allowed"), row: l("Plates", "Plate"), warn: true },
-  { name: l("Harnois", "Field plate"), ac: 2, skill: l("Interdite", "Not allowed"), row: l("Harnois", "Field plate"), warn: true },
-  { name: l("Armure de plates complète", "Full plate"), ac: 1, skill: l("Interdite", "Not allowed"), row: l("Plates complètes", "Full plate"), warn: true },
+export const CATALOGUE_ARMOUR: {
+  name: L;
+  ac: number;
+  skill: L;
+  row: L;
+  warn?: boolean;
+}[] = [
+  {
+    name: l("Armure matelassée", "Padded armour"),
+    ac: 8,
+    skill: l("Clouté", "Studded"),
+    row: l("Cuir", "Leather"),
+  },
+  {
+    name: l("Armure de cuir", "Leather armour"),
+    ac: 8,
+    skill: l("Cuir", "Leather"),
+    row: l("Cuir", "Leather"),
+  },
+  {
+    name: l("Armure de cuir clouté", "Studded leather"),
+    ac: 7,
+    skill: l("Clouté", "Studded"),
+    row: l("Cuir clouté", "Studded leather"),
+  },
+  {
+    name: l("Broigne", "Ring mail"),
+    ac: 7,
+    skill: l("Métal", "Metal"),
+    row: l("Anneaux", "Ring"),
+  },
+  {
+    name: l("Armure de peau", "Hide armour"),
+    ac: 6,
+    skill: l("Métal", "Metal"),
+    row: l("Cuir", "Leather"),
+  },
+  {
+    name: l("Armure d'écailles", "Scale mail"),
+    ac: 6,
+    skill: l("Métal", "Metal"),
+    row: l("Écailles", "Scale"),
+  },
+  {
+    name: l("Brigandine", "Brigandine"),
+    ac: 6,
+    skill: l("Interdite", "Not allowed"),
+    row: l("Brigandine", "Brigandine"),
+    warn: true,
+  },
+  {
+    name: l("Cotte de mailles", "Chain mail"),
+    ac: 5,
+    skill: l("Métal", "Metal"),
+    row: l("Mailles", "Chain"),
+  },
+  {
+    name: l("Cotte de mailles elfique", "Elven chain mail"),
+    ac: 5,
+    skill: l("Mailles elfiques", "Elven chain"),
+    row: l("Mailles", "Chain"),
+  },
+  {
+    name: l("Armure à bandes", "Banded mail"),
+    ac: 4,
+    skill: l("Interdite", "Not allowed"),
+    row: l("Bandes", "Banded"),
+    warn: true,
+  },
+  {
+    name: l("Armure de plates de bronze", "Bronze plate mail"),
+    ac: 4,
+    skill: l("Interdite", "Not allowed"),
+    row: l("Plates", "Plate"),
+    warn: true,
+  },
+  {
+    name: l("Clibanion", "Splint mail"),
+    ac: 4,
+    skill: l("Interdite", "Not allowed"),
+    row: l("Lamelles", "Splint"),
+    warn: true,
+  },
+  {
+    name: l("Armure de plates", "Plate mail"),
+    ac: 3,
+    skill: l("Interdite", "Not allowed"),
+    row: l("Plates", "Plate"),
+    warn: true,
+  },
+  {
+    name: l("Harnois", "Field plate"),
+    ac: 2,
+    skill: l("Interdite", "Not allowed"),
+    row: l("Harnois", "Field plate"),
+    warn: true,
+  },
+  {
+    name: l("Armure de plates complète", "Full plate"),
+    ac: 1,
+    skill: l("Interdite", "Not allowed"),
+    row: l("Plates complètes", "Full plate"),
+    warn: true,
+  },
 ];
-

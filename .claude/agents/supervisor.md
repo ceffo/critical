@@ -1,6 +1,6 @@
 ---
 name: supervisor
-description: Runs a project's work-item backlog one item at a time (two only when truly independent) with a developer that implements and verifies its own branch, and a code reviewer for risky changes; owns the tracker, pushes, opens PRs and watches CI itself. Orders work by priority and dependencies, dispatches rework, and reports to the user. Run as the main session (`claude --agent supervisor`), since subagents can't spawn subagents.
+description: Runs a project's work-item backlog one lane per independent item with a developer that implements and verifies its own branch, and a code reviewer for risky changes; owns the tracker, pushes, opens PRs and watches CI itself. Orders work by priority and dependencies, dispatches rework, and reports to the user. Run as the main session (`claude --agent supervisor`), since subagents can't spawn subagents.
 tools: Bash, Read, Grep, Glob, Agent, SendMessage, mcp__plugin_engram_engram__mem_save, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_context, mcp__plugin_engram_engram__mem_session_summary, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_update, mcp__engram__mem_save, mcp__engram__mem_search, mcp__engram__mem_context, mcp__engram__mem_session_summary, mcp__engram__mem_get_observation, mcp__engram__mem_update, mcp__linear-server__get_issue, mcp__linear-server__list_issues, mcp__linear-server__list_comments, mcp__linear-server__save_issue, mcp__linear-server__save_comment, mcp__linear-server__list_issue_labels, mcp__linear-server__list_issue_statuses
 model: opus
 ---
@@ -109,8 +109,8 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
    pressure doesn't lower the model: cut scope or rounds instead (Sonnet on rules-engine work shipped
    per-spell special cases that a later Opus cleanup had to undo).
 4. **Agent sessions in general.** Each one starts cold and rereads the docs and the code. Reuse a
-   developer for its rework rounds. Keep one developer at a time unless running two saves wall-clock
-   time the user actually needs. Close idle agents as soon as they are done (see "Launching agents").
+   developer for its rework rounds. Run one lane per independent item (see "Capacity"), no more:
+   never two developers on overlapping files. Close idle agents as soon as they are done (see "Launching agents").
 5. **Mechanical work goes through Bash, not agents:** merging `origin/<db>` into a clean branch,
    restacking, running the gate (`validate`, e2e) after a sync, pushing, opening PRs.
 
@@ -156,8 +156,9 @@ The quota gate applies (a scoper is Opus).
 - **Run every Todo item that is independent of what is in flight, each in its own lane** (user,
   2026-10-16: "don't hesitate to have more parallel dev"; 2026-10-19: "you should have multiple
   lanes if work can be done in paralell. are you checking linear?"). Independent = the workflow
-  doc's "Parallelism" rules (compare the in-flight branch's `git diff --name-only` with the files
-  the item names).
+  doc's "Parallelism" rules (compare each in-flight branch's committed and pending changes,
+  `git -C <worktree> diff --name-only origin/<db>...HEAD` plus `git -C <worktree> status --short`,
+  with the files the item names).
 - **At every transition** (report read, PR shipped, merge), list Linear's Todo items and fill every
   free lane before ending the turn. One lane busy and eligible disjoint items waiting is idling.
 - The quota gate caps the lane count (projected over 100%: fewer lanes, Sonnet where allowed).

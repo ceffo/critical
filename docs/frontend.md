@@ -482,8 +482,9 @@ flowchart TD
 - Every mutation goes through the action module, `stores/table.ts` (`run`, `submit`, `recordHp`,
   `undo`, `nextRound`; the journal's Undo button and Ctrl+Z are the one global undo, ADR 0018 step 3):
   call the API, then read again what the answer's `X-State-Keys` names, by the one map from key
-  family to slice (`lib/stateKeys.ts` `INVALIDATES`, ADR 0018 step 11; a refusal (4xx) reads nothing; an
-  answer without keys, a conflict (409), a server error or a lost answer reads every slice again).
+  family to slice (`lib/stateKeys.ts` `INVALIDATES`, ADR 0018 step 11; a refused input (400) reads nothing;
+  an answer without keys, a stale refusal (404, 409), a server error or a lost answer reads every
+  slice again).
   A write outside `run` (the dice favourites, the attack form, log out) adds its keys to the same
   `pending` list, and the next action takes them: a superset, never a stale panel. The action module owns the one error, notice and busy
   flag; the data stores hold their data and fetches only: none calls `refresh` or sets the action

@@ -163,7 +163,7 @@ describe("a write's answer, noted for the refetch", () => {
     ],
     ["a success that logged nothing", 200, { "X-State-Keys": "" }, []],
     ["a refusal changed nothing", 400, undefined, []],
-    ["a missing entity changed nothing", 404, undefined, []],
+    ["a refused input changed nothing", 422, undefined, []],
   ])("%s", async (_, status, headers, keys) => {
     takeChanges();
     answer(status, headers);
@@ -174,6 +174,7 @@ describe("a write's answer, noted for the refetch", () => {
   it.each([
     ["a success without the header (a server of the release before)", 200],
     ["a conflict (a stale undo top)", 409],
+    ["a missing entity (removed elsewhere)", 404],
     ["a server error", 500],
   ])("%s is unknown", async (_, status) => {
     takeChanges();

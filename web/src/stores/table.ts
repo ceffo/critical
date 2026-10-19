@@ -149,9 +149,9 @@ export const useTableStore = create<TableStore>((set, get) => {
   };
   const shown = (s: Slice) => fetchers[s].loaded?.() ?? true;
   // What the writes answered since the last action changed, but what the action set from its
-  // answer and the slices no panel has loaded. A refused write (4xx) names nothing and reads
-  // nothing; a conflict (409), a server error or a lost answer is unknown and reads everything, so
-  // the player sees the state that refused it (a stale undo's new top) (api/http.ts send).
+  // answer and the slices no panel has loaded. A refused input (400) names nothing and reads
+  // nothing; a stale refusal (404, 409), a server error or a lost answer is unknown and reads
+  // everything, so the player sees the state that refused it (a stale undo's new top) (noteAnswer).
   // One the database could not serve reads nothing: the reads would wait for it (and the busy
   // controls with them), and the sheet is read again once it answers (api/http.ts setReload).
   const changed = (failure: unknown, opts?: ActionOptions) => {

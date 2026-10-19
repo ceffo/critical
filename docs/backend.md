@@ -454,9 +454,9 @@ an error answer (the `render` contract) carries no header.
 - **The web.** `web/src/lib/stateKeys.ts` maps each family to the slices it reads again
   (`INVALIDATES`, exhaustive by type over `STATE_FAMILIES`); `composition`
   `TestStateKeys_TheWebMapsEveryFamily` keeps that list equal to the server's. An error answer carries
-  no header: a refusal (4xx) rolled back and reads nothing, a conflict (409: a stale undo or redo
-  top, a level-up no longer pending) or a server error reads every slice again, so the player sees
-  the state that refused the write. A success without the header (a server of the release before)
+  no header: a refused input (400, 422) rolled back and reads nothing; a stale refusal (409: a
+  stale undo or redo top, a level-up no longer pending; 404: an entity removed elsewhere) or a server
+  error reads every slice again, so the player sees the state that refused the write. A success without the header (a server of the release before)
   or naming a family the web does not know reads every slice again.
 - **Rolling deploy** ([ADR 0024](adr/0024-deployment.md) step 5.2): a client of the release before
   ignores the header; this client reads everything again when a server of the release before sends

@@ -198,6 +198,7 @@ describe("the action module reads again what a write's keys name", () => {
     // A stale undo or redo top, a level-up no longer pending: the player sees the new state.
     ["a conflict (stale undo top)", refused(409, "log_top_changed")],
     ["a conflict (stale level-up)", refused(409, "level_up_not_pending")],
+    ["a weapon removed elsewhere", refused(404, "weapon_not_found")],
     ["a server error", refused(500, "internal")],
   ])("%s reads every slice again", async (_, action) => {
     await useTableStore.getState().submit(action);
@@ -208,7 +209,7 @@ describe("the action module reads again what a write's keys name", () => {
   it.each([
     ["a refused dice formula", refused(400, "invalid_formula"), false],
     ["a refused form field", refused(400, "invalid_input", "base"), true],
-    ["an entity not found", refused(404, "not_found"), false],
+    ["a refused input", refused(422, "invalid_input"), false],
   ])("%s reads nothing", async (_, action, onField) => {
     const rejected = await useTableStore.getState().submit(action);
     expect(readSlices()).toEqual([]);

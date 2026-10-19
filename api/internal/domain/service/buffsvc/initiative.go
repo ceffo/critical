@@ -135,9 +135,17 @@ func SpellInitiative(spellID, name string, ct spellstats.CastingTime, casterLeve
 }
 
 // ItemInitiative is the term of a magic item used that round (ADR 0035 item
-// 6.2): its magic kind's PHB Table 56 modifier (a scroll has none: 0).
-func ItemInitiative(itemID, name, magicKind string, modifier int) InitiativeModifier {
-	return InitiativeModifier{Source: InitiativeItem, Value: modifier, ItemID: itemID, Name: name, MagicKind: magicKind}
+// 6.2): its magic kind's PHB Table 56 modifier. A row without one (the
+// scroll's: the casting time of its spell) is not counted, since an item
+// does not hold its spell: it adds nothing, with timing spell_casting_time.
+func ItemInitiative(itemID, name, magicKind string, modifier int, hasModifier bool) InitiativeModifier {
+	m := InitiativeModifier{Source: InitiativeItem, ItemID: itemID, Name: name, MagicKind: magicKind}
+	if !hasModifier {
+		m.Timing = TimingSpellCastingTime
+		return m
+	}
+	m.Value = modifier
+	return m
 }
 
 // initiativeEffects are the initiative effects of the buffs that apply and

@@ -37,6 +37,8 @@ export function initiativeTermText(
   if (m.timing === "end_of_round")
     return t("initiative.endOfRoundTerm", { name });
   if (m.timing === "special") return t("initiative.specialTerm", { name });
+  if (m.timing === "spell_casting_time")
+    return t("initiative.spellCastingTimeTerm", { name });
   return t("initiative.term", { name, value: formatSigned(m.value) });
 }
 

@@ -116,8 +116,11 @@ export interface Strength {
 /** What an initiative modifier comes from (ADR 0035 item 6). */
 export type InitiativeSource = "weapon" | "effect" | "spell" | "item";
 
-/** How a spell's casting time counted: absent, its segments; a round or more; special (adds 0). */
-export type CastTiming = "end_of_round" | "special";
+/**
+ * How a casting time counted: absent, its segments; a round or more; special (adds 0); an item whose
+ * term is the casting time of the spell it holds (a scroll), not counted (adds 0).
+ */
+export type CastTiming = "end_of_round" | "special" | "spell_casting_time";
 
 /**
  * One term of the initiative, named by its source: the weapon in hand's speed, an initiative effect

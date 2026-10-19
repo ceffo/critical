@@ -182,6 +182,7 @@
     "term": "{{name}}: {{value}}",
     "endOfRoundTerm": "{{name}}: end of round",
     "specialTerm": "{{name}}: special casting time",
+    "spellCastingTimeTerm": "{{name}}: casting time of its spell, not counted",
     "total": "= {{value}}, the lowest acts first",
     "endOfRound": "end of round",
     "breakdown": "Initiative breakdown"

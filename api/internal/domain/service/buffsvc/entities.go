@@ -75,6 +75,10 @@ const (
 	// TimingSpecial is a casting time the catalogue gives as special: it
 	// adds nothing.
 	TimingSpecial CastTiming = "special"
+	// TimingSpellCastingTime is an item whose Table 56 term is the casting
+	// time of the spell it holds (the scroll): items don't hold their
+	// spell, so the term is not counted and adds nothing.
+	TimingSpellCastingTime CastTiming = "spell_casting_time"
 )
 
 // InitiativeModifier is one term of the initiative, named by its source:

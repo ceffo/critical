@@ -118,7 +118,8 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 
 // correctInitiative is ADR 0035 item 6.2 for an item used: a magic piece
 // makes the round's initiative the same d10 plus its magic kind's PHB Table
-// 56 modifier (a scroll's row has none: 0). It is the use transaction's last
+// 56 modifier (a scroll's row is the casting time of its spell, which an item
+// doesn't hold: not counted, buffsvc.ItemInitiative). It is the use transaction's last
 // entry. Any other piece (ammunition, gear) corrects nothing, nor does a use
 // before catalogue format 7 (no Table 56).
 func (s *service) correctInitiative(ctx context.Context, characterID int64, item Item) error {
@@ -129,7 +130,7 @@ func (s *service) correctInitiative(ctx context.Context, characterID int64, item
 	if !ok {
 		return nil
 	}
-	cause := buffsvc.ItemInitiative(item.ID, item.Name.Any(), item.MagicKind, row.Modifier)
+	cause := buffsvc.ItemInitiative(item.ID, item.Name.Any(), item.MagicKind, row.Modifier, row.HasModifier)
 	if _, err := s.initiative.CorrectInitiative(ctx, characterID, cause); err != nil {
 		return fmt.Errorf("correct initiative: %w", err)
 	}

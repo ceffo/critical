@@ -2480,7 +2480,8 @@
       "move_pct": 50,
       "attacks_pct": 50,
       "ac": 4,
-      "to_hit": -4
+      "to_hit": -4,
+      "initiative": 2
     }
   },
   {

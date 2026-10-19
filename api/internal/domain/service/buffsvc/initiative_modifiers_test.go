@@ -71,6 +71,18 @@ func TestSpellInitiative_ADR0035Item6_2_CastingTimeInSegments(t *testing.T) {
 	}
 }
 
+// ADR 0035 item 6.2 with PHB Table 56: an item used adds its row's modifier.
+// The scroll's row is the casting time of its spell, which an item doesn't
+// hold: that term is not counted (spell_casting_time), never a computed +0.
+func TestItemInitiative_ADR0035Item6_2_Table56AndTheScrollNotCounted(t *testing.T) {
+	assert.Equal(t, buffsvc.InitiativeModifier{
+		Source: buffsvc.InitiativeItem, Value: 3, ItemID: "w", Name: "Wand", MagicKind: "wand",
+	}, buffsvc.ItemInitiative("w", "Wand", "wand", 3, true))
+	assert.Equal(t, buffsvc.InitiativeModifier{
+		Source: buffsvc.InitiativeItem, ItemID: "s", Name: "Scroll", MagicKind: "scroll", Timing: buffsvc.TimingSpellCastingTime,
+	}, buffsvc.ItemInitiative("s", "Scroll", "scroll", 0, false))
+}
+
 // advanceWith sets up a Next Round from round 5 to 6 with buffs (each counted
 // down by one), the character's powers, the weapon in hand (nil: none) and
 // a d10 showing d10.
@@ -235,7 +247,7 @@ func TestInitiative_ADR0035Item6_2_ACastOrAnItemUsedCorrectsTheRound(t *testing.
 	t.Run("a second cause replaces the first", func(t *testing.T) {
 		f := newFixture(t)
 		corrected := &buffsvc.Initiative{D10: 6, LogEntryID: 41, Modifiers: []buffsvc.InitiativeModifier{missile, haste}}
-		wand := buffsvc.ItemInitiative("wand", "Wand of frost", "wand", 3)
+		wand := buffsvc.ItemInitiative("wand", "Wand of frost", "wand", 3, true)
 		f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(2, nil).Once()
 		f.initiativeIs(corrected)
 		f.records()

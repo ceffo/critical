@@ -74,5 +74,31 @@
         "magicKind": "wand"
       }
     }
+  },
+  "scroll": {
+    "payload": {
+      "round": 2,
+      "d10": 8,
+      "before": 13,
+      "after": 8,
+      "modifiers": [
+        {
+          "source": "item",
+          "value": 0,
+          "itemId": "scroll_fireball",
+          "name": "Scroll of fireball",
+          "magicKind": "scroll",
+          "timing": "spell_casting_time"
+        }
+      ],
+      "cause": {
+        "source": "item",
+        "value": 0,
+        "itemId": "scroll_fireball",
+        "name": "Scroll of fireball",
+        "magicKind": "scroll",
+        "timing": "spell_casting_time"
+      }
+    }
   }
 }

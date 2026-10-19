@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ceffo/critical/api/internal/adapters/buffdal/queries"
@@ -161,20 +162,37 @@ func (d *DAL) GetInitiative(ctx context.Context, characterID int64) (*buffsvc.In
 	}
 	out := &buffsvc.Initiative{D10: int(row.InitiativeD10.Int64), LogEntryID: row.InitiativeEntryID.Int64}
 	// NULL: a plain d10 (every initiative stored before the modifiers).
-	if row.InitiativeModifiers.Valid && row.InitiativeModifiers.String != "" {
-		var terms []jsonInitiativeTerm
-		if err := json.Unmarshal([]byte(row.InitiativeModifiers.String), &terms); err != nil {
+	// A bare JSON list (an unreleased build's form) carries no entry: a
+	// plain d10 too.
+	raw := strings.TrimSpace(row.InitiativeModifiers.String)
+	if row.InitiativeModifiers.Valid && raw != "" && !strings.HasPrefix(raw, "[") {
+		var stored jsonInitiativeModifiers
+		if err := json.Unmarshal([]byte(raw), &stored); err != nil {
 			return nil, fmt.Errorf("decode initiative modifiers: %w", err)
 		}
-		for _, t := range terms {
-			out.Modifiers = append(out.Modifiers, buffsvc.InitiativeModifier(t))
+		// The modifiers belong to the initiative of the entry they were
+		// written with. The release before migration 021 writes the d10 and
+		// the entry id but leaves this column as it was (its upsert doesn't
+		// name it): modifiers stamped with another entry are a previous
+		// round's, and the initiative reads as a plain d10.
+		if stored.EntryID == out.LogEntryID {
+			for _, t := range stored.Terms {
+				out.Modifiers = append(out.Modifiers, buffsvc.InitiativeModifier(t))
+			}
 		}
 	}
 	return out, nil
 }
 
-// jsonInitiativeTerm is the stored form of one initiative modifier
-// (round_state.initiative_modifiers, a JSON list).
+// jsonInitiativeModifiers is the stored form of an initiative's modifiers
+// (round_state.initiative_modifiers): the terms and the log entry of the
+// initiative they were written with (initiative_entry_id at the write).
+type jsonInitiativeModifiers struct {
+	EntryID int64                `json:"entryId"`
+	Terms   []jsonInitiativeTerm `json:"terms"`
+}
+
+// jsonInitiativeTerm is the stored form of one initiative modifier.
 type jsonInitiativeTerm struct {
 	Source    buffsvc.InitiativeSource `json:"source"`
 	Value     int                      `json:"value"`
@@ -196,7 +214,7 @@ func (d *DAL) SaveInitiative(ctx context.Context, characterID int64, initiative 
 			for i, m := range initiative.Modifiers {
 				terms[i] = jsonInitiativeTerm(m)
 			}
-			raw, err := json.Marshal(terms)
+			raw, err := json.Marshal(jsonInitiativeModifiers{EntryID: initiative.LogEntryID, Terms: terms})
 			if err != nil {
 				return fmt.Errorf("encode initiative modifiers: %w", err)
 			}

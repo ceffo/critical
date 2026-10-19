@@ -160,7 +160,8 @@ type InitiativeDTO struct {
 // InitiativeModifierDTO is one term of the initiative: its source code
 // (weapon, effect, spell, item), its value and what names it (the piece's
 // id, the stored name, the spell, the magic kind; timing for a spell's
-// casting time: "", end_of_round or special).
+// casting time: "", end_of_round or special; an item whose term is its
+// spell's casting time: spell_casting_time).
 type InitiativeModifierDTO struct {
 	Source    buffsvc.InitiativeSource `json:"source"`
 	Value     int                      `json:"value"`

@@ -1,5 +1,6 @@
 // The initiative correction's view (kinds/initiative.tsx) on its logged fixtures, in English and
-// French (ADR 0035 item 6.2): a spell's casting time, a spell of a round or more, a magic item.
+// French (ADR 0035 item 6.2): a spell's casting time, a spell of a round or more, a magic item, a
+// scroll (the casting time of its spell, not counted: never a "+0").
 import { describeKind } from "../kindCase";
 import fixtures from "../fixtures/initiative_correct.json";
 
@@ -39,5 +40,19 @@ describeKind("initiative_correct", fixtures, {
       subtitle: "Tour 4",
     },
     value: { text: "9", tone: "ink" },
+  },
+  scroll: {
+    en: {
+      text: "Round 2 initiative corrected: 13 → 8 (Scroll of fireball: casting time of its spell, not counted)",
+      subtitle: "Round 2",
+      card: [
+        "<li>Scroll of fireball: casting time of its spell, not counted</li>",
+      ],
+    },
+    fr: {
+      text: "Initiative du tour 2 corrigée : 13 → 8 (Scroll of fireball : temps d’incantation de son sort, non compté)",
+      subtitle: "Tour 2",
+    },
+    value: { text: "8", tone: "ink" },
   },
 });

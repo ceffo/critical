@@ -182,6 +182,7 @@
     "term": "{{name}} : {{value}}",
     "endOfRoundTerm": "{{name}} : fin du tour",
     "specialTerm": "{{name}} : temps d’incantation spécial",
+    "spellCastingTimeTerm": "{{name}} : temps d’incantation de son sort, non compté",
     "total": "= {{value}}, le plus bas agit en premier",
     "endOfRound": "fin du tour",
     "breakdown": "Détail de l’initiative"

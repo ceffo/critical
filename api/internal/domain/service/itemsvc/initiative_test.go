@@ -33,9 +33,11 @@ func table56(t *testing.T) *ruletablesvc.InitiativeItems {
 }
 
 // ADR 0035 item 6.2: using a magic item corrects the round's initiative by
-// its magic kind's Table 56 modifier (a scroll's row has none: 0), after the
+// its magic kind's Table 56 modifier, after the
 // use's entry, the transaction's last. Any other piece corrects nothing, nor
-// does a use before catalogue format 7 (no Table 56).
+// does a use before catalogue format 7 (no Table 56). A scroll's row is the
+// casting time of its spell, which the item doesn't hold: its term is not
+// counted (timing spell_casting_time), never a computed +0.
 func TestUseItem_ADR0035Item6_2_AMagicItemUsedCorrectsTheInitiative(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -56,10 +58,10 @@ func TestUseItem_ADR0035Item6_2_AMagicItemUsedCorrectsTheInitiative(t *testing.T
 			[]buffsvc.InitiativeModifier{{Source: buffsvc.InitiativeItem, Value: 4, ItemID: "p", Name: "Potion", MagicKind: "potion"}},
 		},
 		{
-			"a scroll: 0",
+			"a scroll: the casting time of its spell, not counted",
 			itemsvc.Item{ID: "s", Name: localized.Of("Scroll"), Category: itemsvc.CategoryMagic, MagicKind: "scroll", Behaviour: itemsvc.BehaviourStock, Count: 1},
 			true,
-			[]buffsvc.InitiativeModifier{{Source: buffsvc.InitiativeItem, Value: 0, ItemID: "s", Name: "Scroll", MagicKind: "scroll"}},
+			[]buffsvc.InitiativeModifier{{Source: buffsvc.InitiativeItem, Value: 0, ItemID: "s", Name: "Scroll", MagicKind: "scroll", Timing: buffsvc.TimingSpellCastingTime}},
 		},
 		{
 			"gear: nothing",

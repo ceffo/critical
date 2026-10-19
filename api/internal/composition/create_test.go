@@ -32,17 +32,15 @@ type createdSheet struct {
 	RaceCode string `json:"raceCode"`
 	HPMax    int    `json:"hpMax"`
 	Derived  struct {
-		TargetLevel      int   `json:"targetLevel"`
-		RealizedLevel    int   `json:"realizedLevel"`
-		THAC0            int   `json:"thac0"`
-		SheetDifferences []any `json:"sheetDifferences"`
+		TargetLevel   int `json:"targetLevel"`
+		RealizedLevel int `json:"realizedLevel"`
+		THAC0         int `json:"thac0"`
 	} `json:"derived"`
 }
 
 // A player with no character creates a bard: it is theirs and current at
 // once, its level and THAC0 come from the rules at the XP entered (2,500 XP
-// is a level 3 bard, THAC0 19), it shows no sheet difference (its sheet
-// figures are the derived ones), and it owns nothing: no weapon, item,
+// is a level 3 bard, THAC0 19), and it owns nothing: no weapon, item,
 // proficiency, bard skill or spellbook entry. Another user never sees it.
 func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 	m := memory.New()
@@ -66,7 +64,6 @@ func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 	assert.Equal(t, 3, got.Derived.TargetLevel, "PHB Table 25: 2,500 XP is level 3")
 	assert.Equal(t, 3, got.Derived.RealizedLevel, "created realized at its starting level (ADR 0030 step 7.5)")
 	assert.Equal(t, 19, got.Derived.THAC0, "PHB Table 53: a level 3 rogue")
-	assert.Empty(t, got.Derived.SheetDifferences, "a created character states no sheet")
 
 	var hp hpView
 	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "GET", "/api/hp", "", &hp))

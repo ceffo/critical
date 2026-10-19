@@ -59,7 +59,6 @@ func TestKelsen_TheSheetMatchesTheDerivedValues(t *testing.T) {
 			tables := parseTables(t, path)
 			d, err := charactersvc.Derive(c, 0, tables)
 			require.NoError(t, err)
-			assert.Empty(t, d.SheetDifferences, "the sheet's figures against the rules")
 			sheetSlots, err := tables.BardSpellsPerDay(seed.Level)
 			require.NoError(t, err)
 			assert.Equal(t, sheetSlots, d.SpellSlots, "the slots of the sheet's level against the derived ones")

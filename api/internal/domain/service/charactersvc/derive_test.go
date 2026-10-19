@@ -48,9 +48,9 @@ func kelsenDerived() charactersvc.Derived {
 	next := 1_320_000
 	return charactersvc.Derived{
 		XPTotal: 1_293_418, TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
-		SpellSlots: level15Slots, SheetDifferences: []charactersvc.SheetDifference{},
-		LevelUp:   charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
-		Spellbook: &kelsenSpellbook, SkillBudget: []ruletablesvc.BudgetWarning{},
+		SpellSlots: level15Slots,
+		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		Spellbook:  &kelsenSpellbook, SkillBudget: []ruletablesvc.BudgetWarning{},
 	}
 }
 
@@ -85,9 +85,6 @@ func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 		r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 		r.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
 		r.EXPECT().BardSpellsPerDay(15).Return(map[int]int{1: 3}, nil).Once()
-		// The sheet comparison reads the rules at the sheet's own XP: level
-		// 15, the realized level's values already read.
-		r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
 
 		got, err := charactersvc.Derive(kelsen(), 26_582, r)
@@ -311,49 +308,20 @@ func TestDerive_Step22_1_RaceSaveBonus(t *testing.T) {
 	}
 }
 
-// ADR 0030 step 24: each figure the imported sheet states differently from
-// the rules is listed (the value, the sheet's figure, the computed one), in
-// the sheet's order; the computed value is the one used. The comparison reads
-// the rules at the sheet's own XP: XP awarded since does not make the sheet
-// "wrong".
-func TestDerive_Step24_SheetDifferences(t *testing.T) {
-	t.Run("every differing figure", func(t *testing.T) {
-		c := kelsen()
-		c.Sheet = charactersvc.Sheet{Level: 14, THAC0: 14, Saves: charactersvc.Saves{ParaPoison: 11, RodStaffWand: 8, PetriPoly: 10, Breath: 14, Spell: 10}}
-		r := newRules(t)
-		expectKelsenRules(r, 1_293_418, 15)
-		got, err := charactersvc.Derive(c, 0, r)
-		require.NoError(t, err)
-		assert.Equal(t, []charactersvc.SheetDifference{
-			{Value: charactersvc.SheetLevel, Sheet: 14, Computed: 15},
-			{Value: charactersvc.SheetTHAC0, Sheet: 14, Computed: 13},
-			{Value: charactersvc.SheetSaveParaPoison, Sheet: 11, Computed: 10},
-			{Value: charactersvc.SheetSavePetriPoly, Sheet: 10, Computed: 9},
-			{Value: charactersvc.SheetSaveBreath, Sheet: 14, Computed: 13},
-			{Value: charactersvc.SheetSaveSpell, Sheet: 10, Computed: 9},
-		}, got.SheetDifferences)
-		assert.Equal(t, 15, got.TargetLevel, "the computed level is used")
-		assert.Equal(t, 13, got.THAC0, "the computed THAC0 is used")
-	})
-	t.Run("XP awarded since the import is no difference", func(t *testing.T) {
-		r := newRules(t)
-		r.EXPECT().LevelFor("bard", 1_293_418+300_000).Return(17, nil).Once()
-		r.EXPECT().XPThreshold("bard", 18).Return(1_760_000, nil).Once()
-		r.EXPECT().THAC0For("rogue", 17).Return(12, nil).Once()
-		r.EXPECT().SavesFor("rogue", 17).Return(ruletablesvc.SavingThrowRow{ParaPoison: 9, RodStaffWand: 6, PetriPoly: 8, Breath: 12, Spell: 7}, nil).Once()
-		r.EXPECT().BardSpellsPerDay(17).Return(map[int]int{1: 4}, nil).Once()
-		r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
-		r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
-		r.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
-		// Kelsen took levels 16 and 17 since: his benefits are 17's.
-		c := kelsen()
-		c.RealizedLevel = 17
-		got, err := charactersvc.Derive(c, 300_000, r)
-		require.NoError(t, err)
-		assert.Equal(t, 17, got.TargetLevel)
-		assert.Equal(t, 17, got.RealizedLevel)
-		assert.Empty(t, got.SheetDifferences)
-	})
+// ADR 0030 step 24 (retired): the sheet's figures are not compared with the
+// rules. A sheet that disagrees changes nothing, and the rules are read once
+// (at the realized level, the mocks refuse any other read): the computed
+// values are the ones used.
+func TestDerive_Step24_SheetIsNotCompared(t *testing.T) {
+	c := kelsen()
+	c.Sheet = charactersvc.Sheet{Level: 14, THAC0: 14, Saves: charactersvc.Saves{ParaPoison: 11, RodStaffWand: 8, PetriPoly: 10, Breath: 14, Spell: 10}}
+	r := newRules(t)
+	expectKelsenRules(r, 1_293_418, 15)
+	got, err := charactersvc.Derive(c, 0, r)
+	require.NoError(t, err)
+	assert.Equal(t, 15, got.TargetLevel, "the computed level is used")
+	assert.Equal(t, 13, got.THAC0, "the computed THAC0 is used")
+	assert.Equal(t, kelsenSaves, got.Saves, "the computed saves are used")
 }
 
 // ADR 0030 step 7: a level-up is pending for each level above the realized
@@ -371,7 +339,6 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 		r.EXPECT().THAC0For("rogue", 9).Return(16, nil).Once()
 		r.EXPECT().SavesFor("rogue", 9).Return(rogue13to16, nil).Once()
 		r.EXPECT().BardSpellsPerDay(9).Return(map[int]int{1: 3}, nil).Once()
-		r.EXPECT().LevelFor("bard", 500_000).Return(9, nil).Once()
 		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
 		got, err := charactersvc.Derive(c, 250_000, r)
 		require.NoError(t, err)
@@ -385,11 +352,9 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 		r := newRules(t)
 		r.EXPECT().LevelFor("fighter", 2_000).Return(2, nil).Once()
 		r.EXPECT().XPThreshold("fighter", 3).Return(4_000, nil).Once()
-		// The benefits are level 1's; the sheet comparison reads level 2.
+		// The benefits are level 1's.
 		r.EXPECT().THAC0For("warrior", 1).Return(20, nil).Once()
 		r.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
-		r.EXPECT().THAC0For("warrior", 2).Return(19, nil).Once()
-		r.EXPECT().SavesFor("warrior", 2).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
 		r.EXPECT().HitDiceFor("warrior").Return(ruletablesvc.HitDiceRow{Group: "warrior", Die: 10, NameLevel: 9, GainAfter: 3}, nil).Once()
 		got, err := charactersvc.Derive(c, 0, r)
 		require.NoError(t, err)
@@ -430,8 +395,6 @@ func TestDerive_Step7_4_ATargetUnderTheRealizedLevelIsFlagged(t *testing.T) {
 	r.EXPECT().THAC0For("rogue", 16).Return(12, nil).Once()
 	r.EXPECT().SavesFor("rogue", 16).Return(rogue13to16, nil).Once()
 	r.EXPECT().BardSpellsPerDay(16).Return(map[int]int{1: 4}, nil).Once()
-	r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
-	r.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
 	got, err := charactersvc.Derive(c, 0, r)
 	require.NoError(t, err)
 	assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}, RealizedAboveTarget: true}, got.LevelUp)
@@ -521,7 +484,6 @@ func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
 			// 40,000 XP is level 8 in Table 25: two levels pending; the
 			// realized level 1 gives the backstab and the budget.
 			r.EXPECT().LevelFor("thief", 40_000).Return(8, nil).Once()
-			r.EXPECT().LevelFor("thief", 0).Return(1, nil).Once()
 			r.EXPECT().XPThreshold("thief", 9).Return(70_000, nil).Once()
 			r.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
 			r.EXPECT().SavesFor("rogue", mock.Anything).Return(ruletablesvc.SavingThrowRow{}, nil)
@@ -569,7 +531,6 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 			// 40,000 XP is level 7 in Table 25; the realized level 2 gives
 			// the budget: 20 + 15 = 35.
 			r.EXPECT().LevelFor("bard", 40_000).Return(7, nil).Once()
-			r.EXPECT().LevelFor("bard", 0).Return(1, nil).Once()
 			r.EXPECT().XPThreshold("bard", 8).Return(70_000, nil).Once()
 			r.EXPECT().THAC0For("rogue", mock.Anything).Return(20, nil)
 			r.EXPECT().SavesFor("rogue", mock.Anything).Return(ruletablesvc.SavingThrowRow{}, nil)

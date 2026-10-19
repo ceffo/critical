@@ -60,14 +60,14 @@ type Rules interface {
 var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 
 // Derive computes the derived block of c (ADR 0030 steps 3 to 8, 17, 19,
-// 22.1 and 24, and the pending level-ups of step 7). Two levels meet here (step 7):
+// 22.1, and the pending level-ups of step 7). Two levels meet here (step 7):
 // the target level is step 3, the class's experience table at the XP total
 // (the starting XP, c.XPTotal, plus ledgerXP, what the XP ledger's entries
 // add; ADR 0015 step 1), never stored; the realized level is the stored one
 // (c.RealizedLevel), which only the level-up step moves. Every benefit of a
 // level (THAC0, saves, spell slots) follows the realized level; the target
 // only drives the pending level-ups and the XP progress. Nothing derived is
-// read from c.Sheet but the comparison of step 24.
+// read from c.Sheet.
 func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 	d := Derived{XPTotal: c.XPTotal + ledgerXP}
 	if _, err := ruletablesvc.ClassGroup(c.Class); err != nil {
@@ -136,22 +136,6 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 			return Derived{}, fmt.Errorf("derive %s backstab: %w", c.Class, err)
 		}
 	}
-	// Step 24: the sheet's figures against the rules at the sheet's own XP
-	// (the starting XP, without the ledger): the awards since the import
-	// raise the level, they are no difference with the sheet.
-	importLevel := target
-	if ledgerXP != 0 {
-		if importLevel, err = levelAt(c, c.XPTotal, rules); err != nil {
-			return Derived{}, err
-		}
-	}
-	atImport := core
-	if importLevel != realized {
-		if atImport, err = coreAt(c, importLevel, rules); err != nil {
-			return Derived{}, err
-		}
-	}
-	d.SheetDifferences = sheetDifferences(c.Sheet, atImport)
 	if d.LevelUp, err = levelUp(c, realized, target, rules); err != nil {
 		return Derived{}, err
 	}
@@ -282,28 +266,4 @@ func spellSlots(c *Character, level int, rules Rules) (map[int]int, error) {
 		return nil, fmt.Errorf("derive %s spell slots: %w", class, err)
 	}
 	return slots, nil
-}
-
-// sheetDifferences lists each figure of the sheet that differs from the
-// rules' value at the sheet's XP, in the sheet's order (step 24).
-func sheetDifferences(sheet Sheet, rules core) []SheetDifference {
-	pairs := []struct {
-		value           SheetValue
-		sheet, computed int
-	}{
-		{SheetLevel, sheet.Level, rules.level},
-		{SheetTHAC0, sheet.THAC0, rules.thac0},
-		{SheetSaveParaPoison, sheet.Saves.ParaPoison, rules.saves.ParaPoison},
-		{SheetSaveRodStaffWand, sheet.Saves.RodStaffWand, rules.saves.RodStaffWand},
-		{SheetSavePetriPoly, sheet.Saves.PetriPoly, rules.saves.PetriPoly},
-		{SheetSaveBreath, sheet.Saves.Breath, rules.saves.Breath},
-		{SheetSaveSpell, sheet.Saves.Spell, rules.saves.Spell},
-	}
-	out := []SheetDifference{}
-	for _, p := range pairs {
-		if p.sheet != p.computed {
-			out = append(out, SheetDifference{Value: p.value, Sheet: p.sheet, Computed: p.computed})
-		}
-	}
-	return out
 }

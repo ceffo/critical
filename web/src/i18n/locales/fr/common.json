@@ -8,20 +8,6 @@
     "error": "Erreur",
     "dismiss": "Fermer",
     "strTitle": "FOR {{effective}} (fiche {{base}})",
-    "sheetDiff": {
-      "title": "La feuille diffère des règles",
-      "hint": "L'appli utilise la valeur des règles.",
-      "item": "{{value}} : feuille {{sheet}}, règles {{computed}}",
-      "values": {
-        "level": "Niveau",
-        "thac0": "TAC0",
-        "save_para_poison": "JS Paralysie/Poison",
-        "save_rod_staff_wand": "JS Bâton/Sceptre/Baguette",
-        "save_petri_poly": "JS Pétrification/Métamorphose",
-        "save_breath": "JS Souffle",
-        "save_spell": "JS Sorts"
-      }
-    },
     "levelUp": {
       "title": "Niveau {{level}} atteint",
       "rollHint": "Dé de vie d{{die}}, plus l'ajustement de CON",

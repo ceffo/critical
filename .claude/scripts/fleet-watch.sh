@@ -44,7 +44,9 @@ mark() { # mark <tab> <prefix|""> : set or clear the tab's waiting prefix
   [ "$l" = "$2$base" ] || herdr tab rename "$1" "$2$base" >/dev/null 2>&1
 }
 notify() { herdr notification show "$1" --body "$2" --sound request >/dev/null 2>&1 || true; }
-user_facing() { [[ "$1" == scoper-* || "$1" == designer-* ]]; }
+# Agents the user drives in their own tab: scoper-*, designer-*, and any name listed (one per line)
+# in $W/user-facing-agents (e.g. a Fable session launched by the user's request).
+user_facing() { [[ "$1" == scoper-* || "$1" == designer-* ]] || grep -qxF "$1" "$W/user-facing-agents" 2>/dev/null; }
 fresh_report() { # the agent's report newer than the supervisor's last prompt for its item
   # (an agent suffix is dropped: dev-x-12b -> X-12). The marker is a .prompt-<item> file or, without one, the item's newest
   # brief (written just before each prompt), so a forgotten marker never hides a report.

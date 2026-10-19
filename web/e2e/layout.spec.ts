@@ -2122,7 +2122,7 @@ test("details card: the languages picker, its count and the warning uncut in Fre
   await page.getByTestId("details-trigger").click();
   const pop = page.getByTestId("details-popover");
   await pop.getByRole("button", { name: "Modifier" }).click();
-  for (const name of ["Elfique", "Gnome", "Halfelin", "Gobelin", "Orque"])
+  for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])
     await pop.getByRole("checkbox", { name, exact: true }).check();
   for (const vp of [
     { width: 1280, height: 800 },

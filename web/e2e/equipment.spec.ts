@@ -330,6 +330,30 @@ test("AC: follows the Armor spell and an Equip with no entry of its own; the ove
   await expect(base.nth(1)).toHaveAttribute("data-off", "armour_worn");
   await expect(base.nth(1)).toContainText("armour worn");
 
+  // On a short screen the panel is capped to the room the positioner gives it and scrolls, so the
+  // buttons at its foot stay reachable.
+  const tall = page.viewportSize();
+  await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 1920, height: 200 });
+  await shield.click();
+  await expect
+    .poll(
+      async () => {
+        const box = await pop.boundingBox();
+        return box !== null && box.y >= 0 && box.y + box.height <= 200;
+      },
+      { message: "the panel fits the screen" },
+    )
+    .toBe(true);
+  expect(
+    await pop.evaluate((el) => el.scrollHeight > el.clientHeight),
+    "the panel scrolls",
+  ).toBe(true);
+  await pop.getByTestId("ac-override-open").scrollIntoViewIfNeeded();
+  await expect(pop.getByTestId("ac-override-open")).toBeInViewport();
+  await snap(page, "ac-popover-short-screen");
+  if (tall) await page.setViewportSize(tall);
+
   // Refused: 11 is out of range, a 61-character label too long; worded, nothing logged.
   const logged = await entries();
   await pop.getByTestId("ac-override-open").click();

@@ -71,7 +71,7 @@ export function AcShield({ onOpenInventory }: { onOpenInventory: () => void }) {
       <PopoverContent
         side="right"
         align="start"
-        className="flex w-[23rem] max-w-[calc(100vw-2rem)] flex-col gap-3 p-4"
+        className="flex max-h-(--available-height) w-[23rem] max-w-[calc(100vw-2rem)] flex-col gap-3 overflow-y-auto p-4"
         data-testid="ac-popover"
       >
         <PopoverTitle className="section-label">

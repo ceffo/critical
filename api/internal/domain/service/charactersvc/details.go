@@ -374,17 +374,25 @@ func cleanLanguages(book LanguageBook, stored, in []string) ([]string, error) {
 // newDetails are a new character's details of kind: none, with p applied,
 // the alignment and the sex required (ADR 0032 steps 2 and 3). A refusal names
 // its field under DetailsField.
-func newDetails(k Kind, book LanguageBook, p DetailsPatch) (Details, error) {
+func newDetails(k Kind, book LanguageBook, p DetailsPatch, required bool) (Details, error) {
 	// A new character always gets its native language (ADR 0032 step 4.1),
 	// whether or not the form sent languages.
 	if p.Languages == nil {
 		p.Languages = &[]string{}
 	}
+	// A draft (the preview) leaves a blank alignment or sex unset.
+	if !required {
+		for _, f := range []**string{&p.Alignment, &p.Sex} {
+			if *f != nil && strings.TrimSpace(**f) == "" {
+				*f = nil
+			}
+		}
+	}
 	d, err := Details{Languages: []string{}}.Apply(k, book, p)
-	if err == nil && d.Alignment == "" {
+	if err == nil && required && d.Alignment == "" {
 		err = &domain.FieldError{Field: FieldAlignment, Message: CodeEmpty}
 	}
-	if err == nil && d.Sex == "" {
+	if err == nil && required && d.Sex == "" {
 		err = &domain.FieldError{Field: FieldSex, Message: CodeEmpty}
 	}
 	if fe, ok := errors.AsType[*domain.FieldError](err); ok {

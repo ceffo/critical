@@ -204,7 +204,14 @@ flowchart TD
   with a method from `scoreMethods` and `POST /api/characters/rolls/scores`; the player's choice of which total goes where
   in `lib/creationFlow.ts` `place`, its scores from `POST /api/characters/rolls/scores/arrangement`
   (`components/creation/arrange.ts`, again when the race changes after the roll); or Saisir), HP and talents (`POST /api/characters/rolls/hp`, the class
-  extras), and, until the identity screen, the name and details with Créer. The values live in the flow,
+  extras), identity and review (`components/creation/identity.tsx`): name, the nine alignments as a grid
+  (the class's list from the options; a refused one shows the refusal and blocks Suivant), sex, the
+  languages as chips (native locked), height / weight / age with the options' `raceIdentity` range and
+  dice and `POST /api/characters/rolls/identity`, hair, eyes; then the review's blocks with an edit button
+  each and Créer. Both steps ask `POST /api/characters/preview` (debounced, `lib/replyGate.ts` drops a reply
+  to an older draft) for the server's warnings and derived figures (THAC0, saves, skills); the body is
+  built once (`flow.ts` `buildBody`) for the preview and Créer, so the review shows what is sent (a rolled
+  height keeps its exact centimetres). The values live in the flow,
   so back and forth keep them; Quitter with values entered asks first (and `beforeunload`). Suivant is
   blocked only by a missing or unreadable value; ranges and rules are the server's refusals, which open
   their step (`stepOfField`) with the field's error.

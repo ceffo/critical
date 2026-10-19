@@ -469,7 +469,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	for i := range got.Classes {
 		got.Classes[i].HitDie, got.Classes[i].LevelXP = 0, nil
 	}
-	got.ScoreMethods, got.RaceAdjustments = nil, nil
+	got.ScoreMethods, got.RaceAdjustments, got.RaceIdentity = nil, nil, nil
 	assert.Equal(t, charactersvc.CreationOptions{
 		Classes: []charactersvc.ClassOption{
 			{

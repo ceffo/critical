@@ -47,6 +47,7 @@ func RegisterUserRoutes(r Router, svc charactersvc.SVC) {
 	r.Put("/api/characters/current", render.Handle(SetCurrent(svc)))
 	r.Get("/api/characters/options", render.Handle(Options(svc)))
 	r.Post("/api/characters", render.Handle(Create(svc)))
+	r.Post("/api/characters/preview", render.Handle(Preview(svc)))
 	r.Patch("/api/characters/{id}", render.Handle(Change(svc)))
 }
 

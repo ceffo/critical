@@ -315,6 +315,9 @@ export interface CreationOptions {
   scoreMethods?: ScoreMethod[];
   /** PHB Table 8 by race (each ability's adjustment); absent from an older release. */
   raceAdjustments?: { race: string; adjustments: Record<string, number> }[];
+  /** PHB Tables 10 and 11 by race (ADR 0032 step 5): the dice each figure's roll draws and the range
+   * outside which a value warns; absent from an older release. */
+  raceIdentity?: RaceIdentity[];
   /** The sex codes (ADR 0032 step 3). */
   sexes: string[];
   /**
@@ -333,6 +336,40 @@ export interface CreationOptions {
   hpMax: ValueRange;
   xp: ValueRange;
   maxNameLength: number;
+}
+
+/** One identity figure of a race: `count` dice of `sides` and the range (`min`, `max`) in the stored
+ * unit (centimetres, kilograms or years); `sex` names a height or weight row. */
+export interface IdentityFigureRange {
+  sex?: string;
+  count: number;
+  sides: number;
+  min: number;
+  max: number;
+}
+
+/** A race's height and weight by sex, its age range, and the starting ages a roll gives. */
+export interface RaceIdentity {
+  race: string;
+  height: IdentityFigureRange[];
+  weight: IdentityFigureRange[];
+  age: IdentityFigureRange;
+  startAge: ValueRange;
+}
+
+/** A warning the server reads on a character (ADR 0032 steps 4.2, 5.2 and 8.4), worded by the web. */
+export type CharacterWarning = Character["warnings"][number];
+
+/**
+ * `POST /api/characters/preview`: what the creation's body would be read as once created (the
+ * derived block, the warnings, the languages with the native one), and the required fields still
+ * blank (`name`, `alignment`, `sex`). Writes nothing.
+ */
+export interface CharacterPreview {
+  derived: Derived;
+  warnings: CharacterWarning[];
+  languages: string[];
+  missing: string[];
 }
 
 /** A level and the lowest XP that reaches it, for one class. */

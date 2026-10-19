@@ -60,7 +60,7 @@ var characterFree = map[string]bool{
 	"GET /api/health": true, "GET /api/spells/filters": true, "GET /api/spells/names": true,
 	"GET /api/crit-table": true, "PUT /api/crit-table": true, "GET /api/xp/preview": true,
 	"GET /api/characters": true, "PUT /api/characters/current": true,
-	"GET /api/characters/options": true, "POST /api/characters": true, "PATCH /api/characters/{id}": true,
+	"GET /api/characters/options": true, "POST /api/characters": true, "POST /api/characters/preview": true, "PATCH /api/characters/{id}": true,
 	"POST /api/characters/rolls/scores": true, "POST /api/characters/rolls/hp": true,
 	"POST /api/characters/rolls/scores/arrangement": true, "POST /api/characters/rolls/identity": true,
 }

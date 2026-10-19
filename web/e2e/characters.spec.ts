@@ -157,23 +157,77 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(step.getByLabel("Escalade")).toHaveValue("15");
   await next.click();
 
-  // Step 5, until the identity screen: the name and the details, as the form had them.
+  // Step 5, identity (ADR 0034 step 3.5): Suivant waits for a name, an alignment and a sex.
   const details = step.getByTestId("new-character-details");
   await details.getByLabel("Nom", { exact: true }).fill("Lyra");
-  // ADR 0032 steps 2 and 3: alignment and sex are required picks; a bard is offered only the
-  // alignments with a neutral part.
+  await expect(step.getByTestId("next-blocked")).toHaveText(
+    "Choisissez un alignement.",
+  );
+  // ADR 0032 step 2: the nine alignments as a grid, the four a bard refuses marked; picking one
+  // shows the refusal and blocks Suivant.
+  const alignments = details.getByTestId("alignment-grid");
+  await alignments
+    .getByRole("radio", { name: "Loyal bon : interdit au barde" })
+    .click();
+  await expect(details.getByTestId("alignment-refusal")).toBeVisible();
+  await expect(next).toBeDisabled();
+  await alignments
+    .getByRole("radio", { name: "Neutre bon", exact: true })
+    .click();
+  await expect(details.getByTestId("alignment-refusal")).toHaveCount(0);
+  await details
+    .getByRole("radiogroup", { name: "Sexe" })
+    .getByRole("radio", { name: "Femme" })
+    .click();
+  // ADR 0032 step 4: the half-elf's own language (Commun) is locked; five more at Intelligence 14
+  // (four allowed) bring the server's warning, which never blocks.
+  await expect(details.getByTestId("language-native")).toContainText("Commun");
+  const chips = details.getByTestId("language-chips");
+  for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])
+    await chips.getByRole("checkbox", { name, exact: true }).click();
+  await expect(details.getByTestId("languages-warning")).toContainText(
+    "5 langues en plus de la maternelle, l'Intelligence 14 en permet 4.",
+  );
+  // ADR 0032 step 5.3: the server rolls the height for a female half-elf; the range and the dice
+  // come from the options.
+  await expect(details.getByTestId("range-height")).toContainText(
+    "Demi-elfe, femme : 152,4 – 177,8 cm · 2d6",
+  );
+  await details.getByTestId("details-roll-height").click();
   await expect(
-    details.getByLabel("Alignement").getByRole("option", { name: "Loyal bon" }),
-  ).toHaveCount(0);
-  await details.getByLabel("Alignement").selectOption({ label: "Neutre bon" });
-  await details.getByLabel("Sexe").selectOption({ label: "Femme" });
-  // ADR 0032 step 4: the half-elf's own language (Commun) is known without picking it and cannot
-  // be unticked; Elfe is picked from the race's list.
-  const commun = details.getByRole("checkbox", { name: "Commun", exact: true });
-  await expect(commun).toBeChecked();
-  await expect(commun).toBeDisabled();
-  await details.getByRole("checkbox", { name: "Elfe", exact: true }).check();
+    details.getByTestId("details-roll-height-breakdown"),
+  ).toContainText("2d6");
+  await expect(details.getByRole("textbox", { name: "Taille" })).toHaveValue(
+    /^\d+(,\d)?$/,
+  );
+  const height = await details
+    .getByRole("textbox", { name: "Taille" })
+    .inputValue();
+  await details.getByRole("textbox", { name: "Âge" }).fill("23");
+  await expect(next).toBeEnabled();
   await snap(page, "creation-identity-fr");
+  await next.click();
+
+  // Step 6, review: every value as it will be sent, the server's figures (THAC0 19 for a level 3
+  // bard, the preview's) and its warning on top; an edit button opens its step.
+  const review = step.getByTestId("review");
+  await expect(review.getByTestId("review-thac0")).toHaveText("19");
+  await expect(review.getByTestId("review-class-level")).toContainText(
+    /Barde · niveau 3 \(2\s500 XP\)/,
+  );
+  await expect(review.getByTestId("review-languages")).toHaveText(
+    "Commun, Elfe, Gnome, Petites-gens, Gobelin, Orque",
+  );
+  await expect(review.getByTestId("review-height")).toHaveText(`${height} cm`);
+  await expect(review.getByTestId("review-warning")).toHaveCount(1);
+  await expect(step.getByTestId("next-blocked")).toHaveText(
+    "1 avertissement, rien de bloquant.",
+  );
+  await snap(page, "creation-review-fr");
+  await review.getByRole("button", { name: "Modifier : Identité" }).click();
+  await expect(step).toHaveAttribute("data-step", "identity");
+  await expect(details.getByLabel("Nom", { exact: true })).toHaveValue("Lyra");
+  await next.click();
   await step
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
     .click();
@@ -186,7 +240,10 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(pop).toContainText("Neutre bon");
   await expect(pop).toContainText("Femme");
   await expect(pop.getByTestId("details-missing")).toHaveCount(0);
-  await expect(pop).toContainText("Commun, Elfe");
+  await expect(pop).toContainText(
+    "Commun, Elfe, Gnome, Petites-gens, Gobelin, Orque",
+  );
+  await expect(pop).toContainText(height);
   await page.keyboard.press("Escape");
 
   // 50 + 15 + 0 (half-elf) - 20 (elven chain column) - 5 (metal armour) = 40, the server's.

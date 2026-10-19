@@ -446,3 +446,42 @@ func TestCheckAgainst_ListsEveryIDTheCatalogueDoesNotHold(t *testing.T) {
 	require.Error(t, err)
 	assert.EqualError(t, err, "spell effects: ids not in the spell catalogue: sleep, lihgt")
 }
+
+// ADR 0004 step 21: the loader maps a spell's end effects, each with its
+// kind, its dice and its causes, in the data's order.
+func TestBuffs_Step21_ParseEndEffects(t *testing.T) {
+	c, err := spelleffectsadpt.New(writeSeed(t, entry(`,"end_effects":[{"kind":"heal","dice":"1d12","on":["voluntary","expired"]}]`)))
+	require.NoError(t, err)
+	e, ok := c.Get("light")
+	require.True(t, ok)
+	require.Len(t, e.EndEffects, 1)
+	assert.Equal(t, spelleffectsvc.EndHeal, e.EndEffects[0].Kind)
+	assert.Equal(t, "1d12", e.EndEffects[0].Dice.String())
+	assert.Equal(t, []spelleffectsvc.EndCause{spelleffectsvc.EndVoluntary, spelleffectsvc.EndExpired}, e.EndEffects[0].On)
+	assert.True(t, e.AsksEndCause())
+}
+
+// ADR 0004 step 21: an unknown kind or cause, an empty or repeated cause
+// list, bad dice and dice that use the level are refused at startup.
+func TestBuffs_Step21_ParseEndEffectsRefused(t *testing.T) {
+	tests := map[string]struct{ effects, want string }{
+		"unknown kind":    {`[{"kind":"damage","dice":"1d6","on":["voluntary"]}]`, "end_effects[0].kind"},
+		"unknown cause":   {`[{"kind":"heal","dice":"1d6","on":["slain"]}]`, "end_effects[0].on"},
+		"empty causes":    {`[{"kind":"heal","dice":"1d6","on":[]}]`, "at least one cause"},
+		"no causes":       {`[{"kind":"heal","dice":"1d6"}]`, "at least one cause"},
+		"duplicate cause": {`[{"kind":"heal","dice":"1d6","on":["expired","expired"]}]`, "expired twice"},
+		"malformed dice":  {`[{"kind":"heal","dice":"1d","on":["voluntary"]}]`, "end_effects[0].dice"},
+		"missing dice":    {`[{"kind":"heal","on":["voluntary"]}]`, "end_effects[0].dice"},
+		"dice not a sum":  {`[{"kind":"heal","dice":"2*1d6","on":["voluntary"]}]`, "not a sum of dice"},
+		"dice use level":  {`[{"kind":"heal","dice":"leveld4","on":["voluntary"]}]`, "may not use level"},
+		"empty list":      {`[]`, "end_effects: empty list"},
+		"unknown field":   {`[{"kind":"heal","dice":"1d6","on":["voluntary"],"when":"x"}]`, "unknown field"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := spelleffectsadpt.New(writeSeed(t, entry(`,"end_effects":`+tt.effects)))
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.want)
+		})
+	}
+}

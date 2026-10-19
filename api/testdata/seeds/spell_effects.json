@@ -370,7 +370,14 @@
   "duration": {
    "kind": "rounds",
    "rounds": "20*level"
-  }
+  },
+  "end_effects": [
+   {
+    "kind": "heal",
+    "dice": "1d12",
+    "on": ["voluntary", "expired"]
+   }
+  ]
  },
  {
   "id": "stoneskin",

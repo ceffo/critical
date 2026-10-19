@@ -101,6 +101,9 @@ func (e Entry) Validate() error {
 	if e.ConsumeItem != nil && strings.TrimSpace(e.ConsumeItem.Type) == "" {
 		return fmt.Errorf("consume_item.type is required")
 	}
+	if err := e.validateEndEffects(); err != nil {
+		return err
+	}
 	if e.Modes != nil && e.Kind != KindDamage {
 		return fmt.Errorf("only a damage spell can have modes")
 	}

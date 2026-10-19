@@ -233,6 +233,9 @@ type Entry struct {
 	GrantSlots  *GrantSlots
 	ConsumeItem *ConsumeItem
 	AttackRoll  bool
+	// EndEffects apply when the spell's row ends, each by the causes it
+	// names (ADR 0004 step 21; nil: none).
+	EndEffects []EndEffect
 }
 
 // ErrNotAnEffect is a spell added as an effect that adds no buff (ADR 0004

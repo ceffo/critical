@@ -161,6 +161,27 @@ func (f *Formula) ExpandStep(level, step int) (Sum, error) {
 	return s, nil
 }
 
+// UsesLevel reports whether the formula reads the caster level anywhere
+// (an end effect's dice may not: the row it ends keeps no caster level).
+func (f *Formula) UsesLevel() bool { return usesLevel(f.root) }
+
+func usesLevel(n node) bool {
+	switch n := n.(type) {
+	case levelNode:
+		return true
+	case diceNode:
+		return usesLevel(n.count)
+	case negNode:
+		return usesLevel(n.x)
+	case binNode:
+		return usesLevel(n.l) || usesLevel(n.r)
+	case minMaxNode:
+		return usesLevel(n.l) || usesLevel(n.r)
+	default: // numNode, stepNode
+		return false
+	}
+}
+
 // noRoll is the roller of a subtree without dice: it is never called.
 func noRoll(int) int { return 0 }
 

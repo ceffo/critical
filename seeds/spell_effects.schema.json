@@ -193,7 +193,28 @@
         "description": "Cast mechanic: casting spends one unit of an inventory item of this type (never a daily item), chosen by the caster when several are left (docs/adr/0008 step 10).",
         "properties": { "type": { "type": "string" } }
       },
-      "attack_roll": { "type": "boolean", "description": "Cast mechanic: casting needs a target AC and rolls one spell to-hit d20, never a crit (docs/adr/0002 Consequences)." }
+      "attack_roll": { "type": "boolean", "description": "Cast mechanic: casting needs a target AC and rolls one spell to-hit d20, never a crit (docs/adr/0002 Consequences)." },
+      "end_effects": {
+        "type": "array",
+        "minItems": 1,
+        "description": "Effects that apply when the spell's row ends (docs/adr/0004 step 21), each by the causes it names. Stopping a row whose spell has any asks the player how it ended.",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "dice", "on"],
+          "properties": {
+            "kind": { "enum": ["heal"], "description": "heal = the bearer regains the dice in hit points (capped at max HP by the ledger)" },
+            "dice": { "$ref": "#/definitions/formula", "description": "A sum of dice plus a constant; may not use level (the row keeps no caster level)." },
+            "on": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["expired", "voluntary", "dispelled"] },
+              "description": "expired = runs out (Next Round or passing time takes its last round); voluntary = ended by the player; dispelled = dispelled, or its bearer slain."
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {

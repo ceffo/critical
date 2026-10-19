@@ -27,13 +27,13 @@ import {
   deleteItem,
   dismissReview,
   patchItem,
-  postCreateItem,
   postItemState,
   postRestockItem,
 } from "@/api/items";
-import { draftFromItem, emptyDraft } from "@/lib/itemForm";
+import { draftFromItem } from "@/lib/itemForm";
 import { cn } from "@/lib/utils";
 import { ItemForm } from "./ItemForm";
+import { AddPiece } from "./AddPiece";
 import { AcCard } from "@/components/ac/AcCard";
 import { formatSigned } from "@/lib/format";
 import { CATEGORIES, type Category, type Item } from "@/types/items";
@@ -134,6 +134,22 @@ export function InventoryPanel() {
       }}
     />
   );
+
+  // Ajouter opens in the stage in place of the possessions (ADR 0035 item 10).
+  if (form === "add")
+    return (
+      <div className="flex min-h-0 flex-1 gap-3">
+        <div className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+          <AddPiece
+            filter={filter}
+            specializes={specializes}
+            busy={busy}
+            onClose={close}
+          />
+        </div>
+        <AcCard />
+      </div>
+    );
 
   // The possessions, and the AC card on the right (ADR 0035 item 7).
   return (
@@ -272,21 +288,6 @@ export function InventoryPanel() {
                   ? t("equipment.review.close")
                   : t("equipment.review.open")}
               </Button>
-            </div>
-          )}
-          {form === "add" && (
-            <div className="mb-2" data-testid="inventory-form">
-              <ItemForm
-                initial={emptyDraft(filter === "all" ? "gear" : filter)}
-                specializes={specializes}
-                busy={busy}
-                onCancel={close}
-                onSave={async (body) => {
-                  const rejected = await submit(() => postCreateItem(body));
-                  if (!rejected) close();
-                  return rejected;
-                }}
-              />
             </div>
           )}
           {items.length === 0 ? (

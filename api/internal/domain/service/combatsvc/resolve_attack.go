@@ -356,10 +356,7 @@ const floorEpsilon = 1e-9
 // else the small-medium dice. Empty when the pair chosen has none (a
 // catalogue launcher firing dice-less ammunition).
 func damageDice(weapon Weapon, ammo *itemsvc.Item, size TargetSize) string {
-	sm, l := weapon.BaseDamage, weapon.DamageLarge
-	if weapon.FiresAmmo() && ammo != nil && ammo.DamageSM != "" {
-		sm, l = ammo.DamageSM, ammo.DamageL
-	}
+	sm, l := damagePair(weapon, ammo)
 	if size == SizeLarge && l != "" {
 		return l
 	}
@@ -369,6 +366,16 @@ func damageDice(weapon Weapon, ammo *itemsvc.Item, size TargetSize) string {
 // rollDice rolls a damage as printed ("NdM", "NdM+K", "NdM-K" or a flat
 // "K", itemsvc.ParseDamage) through the dice port and returns the dice
 // total, every die thrown in order, and the flat part K (ADR 0003 step 1).
+// damagePair is the pair of dice (small-medium, large) an attack with weapon
+// and ammo rolls from (ADR 0033 step 4): the ammunition's when the weapon
+// fires it and it has dice, else the weapon's own.
+func damagePair(weapon Weapon, ammo *itemsvc.Item) (sm, l string) {
+	if weapon.FiresAmmo() && ammo != nil && ammo.DamageSM != "" {
+		return ammo.DamageSM, ammo.DamageL
+	}
+	return weapon.BaseDamage, weapon.DamageLarge
+}
+
 func rollDice(d Dice, dice string) (int, []DieRoll, int, error) {
 	num, sides, k, ok := itemsvc.ParseDamage(dice)
 	if !ok {

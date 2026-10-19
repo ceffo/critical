@@ -500,3 +500,21 @@ export async function createInFlow(page: Page, c: FlowCharacter) {
     .click();
   await expect(page.getByTestId("character")).toContainText(c.name);
 }
+
+/**
+ * Ajouter > Saisir (ADR 0035 item 10): opens Add in the Inventaire and its typed tab, the homebrew
+ * form (Catalogue is the first tab).
+ */
+export async function openTypedAdd(
+  scope: Page | Locator,
+  lang: "en" | "fr" = "en",
+): Promise<void> {
+  await scope
+    .getByRole("button", {
+      name: lang === "fr" ? "Ajouter un objet" : "Add item",
+    })
+    .click();
+  await scope
+    .getByRole("tab", { name: lang === "fr" ? "Saisir" : "Type in" })
+    .click();
+}

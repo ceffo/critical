@@ -17,7 +17,9 @@ export type ModifierKind =
   | "crit"
   | "specialization"
   | "point_blank"
-  | "backstab";
+  | "backstab"
+  /** The flat part of the damage as printed (1d4+1), a weapon damage term; detail is the damage (ADR 0003 step 2). */
+  | "dice_modifier";
 
 export interface Modifier {
   kind: ModifierKind;
@@ -96,6 +98,8 @@ export interface RollResult {
   hitMargin: number;
   baseDamage: number;
   damageDice: string;
+  /** The flat part of damageDice ("1d4+1": 1), absent when none (ADR 0003 step 2). */
+  diceModifier?: number;
   spellsBuff: number;
   weaponBuff: number;
   multipliers: number;
@@ -211,6 +215,12 @@ export interface AttackPreview {
   rollNeeded: number | null;
   /** Flat damage terms: weapon or buff "+N", ammunition, Strength, specialization, buff damage. */
   damageBonus: number;
+  /**
+   * The dice the attack rolls against each size, as printed (ADR 0033 step 4: a launcher's come from
+   * its ammunition); both empty when there are none.
+   */
+  damageSm: string;
+  damageL: string;
   /** The same preview with the point-blank option (ADR 0030 step 12); absent when not offered. */
   pointBlank?: AttackPreview;
   /** The same preview with the backstab option (ADR 0030 step 19); absent for another class. */

@@ -119,7 +119,8 @@ function attackText(
 
 /**
  * The damage formula of a hit with its numbers (docs/adr/0003 step 2):
- * ((dice × spells [× dice multiplier]) + weapon) × crit + strength [± bonus] = total. A result the
+ * ((dice × spells [× dice multiplier]) [± the damage's flat part] + weapon) × crit + strength
+ * [± bonus] = total. A result the
  * server floored (or clamped at 0) shows its unrounded value first: "= 10.5 → 10".
  */
 export function damageFormula(r: RollResult, lang?: string): string {
@@ -132,7 +133,8 @@ export function damageFormula(r: RollResult, lang?: string): string {
   ) {
     dice += ` × ${m(r.diceMultiplier)}`;
   }
-  let s = `((${dice}) + ${r.weaponBuff}) × ${m(r.multipliers)} + ${r.strengthBonus}`;
+  const flat = r.diceModifier ? plusTerm(r.diceModifier) : "";
+  let s = `((${dice})${flat} + ${r.weaponBuff}) × ${m(r.multipliers)} + ${r.strengthBonus}`;
   if (r.bonusDamage !== 0) s += plusTerm(r.bonusDamage);
   const unrounded = r.unroundedDamage;
   if (unrounded !== undefined && Math.abs(unrounded - r.totalDamage) > 1e-9) {

@@ -227,6 +227,74 @@ export interface ItemBody {
   shieldKind?: string;
   acMelee?: number;
   acMissile?: number;
+  /**
+   * POST only: pick the piece from this catalogue row (ADR 0033 step 24). The server copies the row
+   * and reads only name, count, notes and the magic (magicToHit and magicDamage, magicalBonus) with
+   * it; an unknown code is refused (field `catalogueCode`, code `unknown`).
+   */
+  catalogueCode?: string;
+  /** POST only: equip the new piece in the same undo (a worn armour or shield in the way comes off). */
+  equip?: boolean;
+}
+
+/** The categories a piece is picked from the catalogue in (ADR 0033 step 24). */
+export const PICKED_CATEGORIES = [
+  "weapon",
+  "ammunition",
+  "armour",
+  "shield",
+] as const;
+export type PickedCategory = (typeof PICKED_CATEGORIES)[number];
+
+/** A catalogue weapon (wire.CatalogueWeaponDTO). Damage as printed ("1d4+1", "1"); none for a launcher. */
+export interface CatalogueWeapon {
+  code: string;
+  name: LocalizedText;
+  weaponType: WeaponType;
+  weaponKind: "melee" | "missile";
+  size: string;
+  damageTypes: string[];
+  speed: number;
+  damageSm: string;
+  damageL: string;
+  twoHanded: boolean;
+  fires: string[];
+}
+
+/** A catalogue ammunition row (wire.CatalogueAmmunitionDTO). */
+export interface CatalogueAmmunition {
+  code: string;
+  name: LocalizedText;
+  ammoKind: string;
+  damageTypes: string[];
+  damageSm: string;
+  damageL: string;
+}
+
+/** A catalogue body armour (wire.CatalogueArmourDTO). */
+export interface CatalogueArmour {
+  code: string;
+  name: LocalizedText;
+  baseAc: number;
+  skillColumn: string;
+  armorRow: string;
+}
+
+/** A catalogue shield (wire.CatalogueShieldDTO). */
+export interface CatalogueShield {
+  code: string;
+  name: LocalizedText;
+  shieldKind: string;
+  acMelee: number;
+  acMissile: number;
+}
+
+/** GET /api/equipment/catalogue (wire.EquipmentCatalogueDTO): every list empty before catalogue format 7. */
+export interface EquipmentCatalogue {
+  weapons: CatalogueWeapon[];
+  ammunition: CatalogueAmmunition[];
+  armour: CatalogueArmour[];
+  shields: CatalogueShield[];
 }
 
 /** POST /api/items/{id}/state (itemhdl StateRequest): swap takes off the armour or shield worn. */

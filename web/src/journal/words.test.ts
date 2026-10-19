@@ -50,6 +50,21 @@ describe("damageFormula", () => {
       "((5 × 1.0) + 2) × 1.5 + 0 − 20 = -9.5 → 0",
     ],
     [{ unroundedDamage: undefined }, "((5 × 1.0) + 2) × 1.0 + 0 = 7"],
+    // ADR 0003 step 2: the flat part of a 1d6+1 after the dice factors, before the crit.
+    [
+      {
+        diceModifier: 1,
+        diceMultiplier: 2,
+        multipliers: 2,
+        totalDamage: 26,
+        unroundedDamage: 26,
+      },
+      "((5 × 1.0 × 2.0) + 1 + 2) × 2.0 + 0 = 26",
+    ],
+    [
+      { diceModifier: -1, weaponBuff: 0, totalDamage: 4, unroundedDamage: 4 },
+      "((5 × 1.0) − 1 + 0) × 1.0 + 0 = 4",
+    ],
   ])("%o", (over, want) => expect(damageFormula(hit(over), "en")).toBe(want));
 
   it("uses the language's decimal separator", () => {

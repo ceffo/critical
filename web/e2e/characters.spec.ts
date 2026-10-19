@@ -9,6 +9,7 @@ import {
   openWeapons,
   openWorkspace,
   undoEntry,
+  openTypedAdd,
 } from "./helpers";
 
 // Creating a character through the creation route (ADR 0034), then switching, renaming and retiring
@@ -333,7 +334,7 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   // The weapon editor and the attack, with the English helpers.
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Inventory");
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const wf = page.getByTestId("item-form");
   await wf.getByLabel("Name").fill("Long Sword");
   await wf.getByLabel("Category").selectOption("weapon");
@@ -444,7 +445,7 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
 
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Inventory");
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const wf = page.getByTestId("item-form");
   await wf.getByLabel("Name").fill("Dagger");
   await wf.getByLabel("Category").selectOption("weapon");

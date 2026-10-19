@@ -82,6 +82,8 @@ describe("attack form store", () => {
         toHit: 4,
         rollNeeded: 4,
         damageBonus: 2,
+        damageSm: "1d8",
+        damageL: "1d12",
       },
     });
     useAttackStore.setState({ view: bow(true) });
@@ -119,6 +121,8 @@ describe("attack form store", () => {
           toHit: 2,
           rollNeeded: null,
           damageBonus: 2,
+          damageSm: "1d8",
+          damageL: "1d12",
         },
       },
     });

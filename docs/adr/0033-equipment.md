@@ -519,7 +519,13 @@ by an edit (a piece fires one kind, step 3); the damage strings stay as printed 
 their flat part (ADR 0003 steps 1.1 and 2, ADR 0016 step 8, the supervisor's ruling of 2026-10-19);
 a weapon with no damage type and no dice (the mancatcher) is valid and its attack is refused (no
 dice). The armour and shield "+N" (step 17) and the class warnings (step 20) are not part of the
-pick. Step 4: `TestDamage_ADR0033Step4_LauncherRollsAmmunitionDice`.
+pick. Step 4: `TestDamage_ADR0033Step4_LauncherRollsAmmunitionDice`; the attack form's preview
+serves the dice pair the attack rolls (`damageSm`, `damageL`: a launcher's from its ammunition), which
+the weapon-in-hand line shows (`TestGetAttackForm_ADR0033Step4_PreviewShowsTheDiceRolled`). The web
+(ADR 0035 item 10): Ajouter replaces the possessions card in the stage, tabs Catalogue (first) and
+Saisir; the catalogue is read once (`GET /api/equipment/catalogue`, reference data, no state key);
+"Votre exemplaire" has the name, the "+N" (weapon and ammunition only), the count (ammunition) and
+"Équiper tout de suite" (checked; not for ammunition).
 
 CRI-32 (the design round) comes before the UI of slices 2 to 9. Slices 3 to 9 need slice 2; slices
 5, 7 and 8 need slice 1's data.

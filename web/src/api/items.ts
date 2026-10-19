@@ -1,4 +1,5 @@
 import type {
+  EquipmentCatalogue,
   Item,
   ItemBody,
   ItemChange,
@@ -53,4 +54,9 @@ export function postItemState(
 /** Take a piece off the review list (ADR 0033 step 27): not a game move; answers the list. */
 export function dismissReview(id: string): Promise<Item[]> {
   return del<Item[]>(`/api/items/${encodeURIComponent(id)}/review`);
+}
+
+/** The catalogue rows a piece is picked from (ADR 0033 steps 21 and 24), the same for every character. */
+export function fetchEquipmentCatalogue(): Promise<EquipmentCatalogue> {
+  return request<EquipmentCatalogue>("/api/equipment/catalogue");
 }

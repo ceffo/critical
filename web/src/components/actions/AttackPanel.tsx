@@ -530,16 +530,22 @@ function StatsLine({
     weapon.specialized && (
       <span data-testid="tile-specialized">{t("attack.specialized")}</span>
     ),
-    <span className={cn(size !== "sm" && "opacity-60")}>
-      <Value testId="tile-damage-sm">{weapon.damage_sm}</Value>{" "}
-      {t("attack.line.sm")}
-    </span>,
-    <span className={cn(size !== "l" && "opacity-60")}>
-      <Value testId="tile-damage-l">
-        {weapon.damage_l || weapon.damage_sm}
-      </Value>{" "}
-      {t("attack.line.l")}
-    </span>,
+    // The dice the attack rolls, from the server (ADR 0033 step 4: a bow's are its arrow's); none
+    // shown when there are none.
+    preview.damageSm && (
+      <span className={cn(size !== "sm" && "opacity-60")}>
+        <Value testId="tile-damage-sm">{preview.damageSm}</Value>{" "}
+        {t("attack.line.sm")}
+      </span>
+    ),
+    preview.damageSm && (
+      <span className={cn(size !== "l" && "opacity-60")}>
+        <Value testId="tile-damage-l">
+          {preview.damageL || preview.damageSm}
+        </Value>{" "}
+        {t("attack.line.l")}
+      </span>
+    ),
     <>
       <Value testId="tile-bonus">
         {`${formatSigned(preview.toHit)} / ${formatSigned(preview.damageBonus)}`}

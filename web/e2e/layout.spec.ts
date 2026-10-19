@@ -17,6 +17,7 @@ import {
   apiCall,
   reloadSettled,
   openFold,
+  openTypedAdd,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
 import {
@@ -755,7 +756,7 @@ test("rail: focuses activities and each keeps its state", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Actions" })).toBeHidden();
   const inventory = page.getByRole("region", { name: "Inventory" });
   await expect(inventory.getByTestId("category-chips")).toBeVisible();
-  await inventory.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(inventory);
   await expect(inventory.getByTestId("item-form")).toBeVisible();
 
   // Spells: the spell lookup; type a search.
@@ -2866,7 +2867,7 @@ test("the piece editor's spell component uncut in French, 1280 to 2560", async (
   await openDashboard(page);
   await openWorkspace(page, "Inventory");
   await chooseLanguage(page, "fr");
-  await page.getByRole("button", { name: "Ajouter un objet" }).click();
+  await openTypedAdd(page, "fr");
   const wf = page.getByTestId("item-form");
   await wf.getByLabel("Composante de sort").selectOption("gem");
   for (const vp of VIEWPORTS) {
@@ -2875,6 +2876,68 @@ test("the piece editor's spell component uncut in French, 1280 to 2560", async (
     await expectNoClippedText(wf, `piece editor, fr, ${vp.width}x${vp.height}`);
     if (vp.width >= 1920)
       await snap(page, `component-editor-fr-${vp.width}x${vp.height}`);
+  }
+});
+
+// ADR 0035 item 10 and ADR 0022 step 1: Ajouter in the stage, French first (ADR 0027 step 2), then
+// English. Each catalogue category with its first row chosen (the copy panel filled): no cut text
+// and no page scroll from 1280 to 2560 (the rows scroll inside the card); the Saisir tab too.
+// Screens at 1920x1080 and 2560x1440.
+test("Ajouter: the catalogue rows and the copy panel uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await openWorkspace(page, "Inventory");
+  const names = {
+    fr: ["Armes", "Munitions", "Armures", "Boucliers"],
+    en: ["Weapons", "Ammunition", "Armour", "Shields"],
+  } as const;
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page
+      .getByRole("button", {
+        name: lang === "fr" ? "Ajouter un objet" : "Add item",
+      })
+      .click();
+    const add = page.getByTestId("add-piece");
+    for (const category of names[lang]) {
+      await add.getByRole("button", { name: category, exact: true }).click();
+      await add.getByTestId("add-rows").getByRole("button").first().click();
+      await expect(add.getByTestId("add-submit")).toBeVisible();
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize(vp);
+        const where = `${category}, ${lang}, ${vp.width}x${vp.height}`;
+        await expectNoPageScroll(page);
+        await expectNoClippedText(add, `add from the catalogue, ${where}`);
+        if (
+          vp.width >= 1920 &&
+          (category === "Armures" ||
+            category === "Armes" ||
+            category === "Armour")
+        )
+          await snap(
+            page,
+            `add-catalogue-${category.toLowerCase()}-${lang}-${vp.width}x${vp.height}`,
+          );
+      }
+    }
+    await add
+      .getByRole("tab", { name: lang === "fr" ? "Saisir" : "Type in" })
+      .click();
+    for (const vp of [VIEWPORTS[0], VIEWPORTS[3]]) {
+      await page.setViewportSize(vp);
+      await expectNoPageScroll(page);
+      await expectNoClippedText(
+        add,
+        `add typed, ${lang}, ${vp.width}x${vp.height}`,
+      );
+      if (lang === "fr" && vp.width === 1920)
+        await snap(page, `add-typed-fr-${vp.width}x${vp.height}`);
+    }
+    await add
+      .getByRole("button", { name: lang === "fr" ? "Fermer" : "Close" })
+      .click();
+    await expect(add).toHaveCount(0);
   }
 });
 
@@ -2891,7 +2954,7 @@ test("AC: the shield beside the HP, its breakdown popover and the Inventaire's A
     effects: [["ac", -2]],
   });
   await openWorkspace(page, "Inventory");
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   const f = page.getByTestId("item-form");
   await f.getByLabel("Name").fill("Chain mail of the long winter watch");
   await f.getByLabel("Category").selectOption("armour");
@@ -2901,7 +2964,7 @@ test("AC: the shield beside the HP, its breakdown popover and the Inventaire's A
     .getByRole("button", { name: "Equip Chain mail of the long winter watch" })
     .click();
   // A body shield: +1 against melee, +2 against missiles (ADR 0033 step 10.3).
-  await page.getByRole("button", { name: "Add item" }).click();
+  await openTypedAdd(page);
   await f.getByLabel("Name").fill("Body shield");
   await f.getByLabel("Category").selectOption("shield");
   await f.getByLabel("Shield kind").selectOption("body");

@@ -29,6 +29,18 @@ type AmmoChoiceDTO struct {
 	Count int            `json:"count"`
 }
 
+// ModifierDTO is one to-hit modifier of the preview, in the shape of the
+// attack's (combatsvc.BreakdownModifier). The UI labels it in the player's
+// language from Kind and Detail; an item power's carries its item's id (ADR
+// 0016 step 14).
+type ModifierDTO struct {
+	Kind           string `json:"kind"`
+	Detail         string `json:"detail,omitempty"`
+	ItemID         string `json:"itemId,omitempty"`
+	Value          int    `json:"value"`
+	StrExceptional int    `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
+}
+
 // AttackPreviewDTO is the effective THAC0 of the current choices, before
 // rolling (ADR 0002 step 12).
 type AttackPreviewDTO struct {

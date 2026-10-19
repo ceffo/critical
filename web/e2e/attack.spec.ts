@@ -483,6 +483,18 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   );
   await snap(page, "miss-to-crit");
 
+  // After a reload the card is drawn from the entry's payload, the shape the correction answered with.
+  await page.reload();
+  await expect(card.getByTestId("verdict")).toHaveText("Hit");
+  await expect(card.getByTestId("crit-badge")).toHaveText(
+    `Crit check ${check} · multiplier ${mult} → ×2 (placeholder)`,
+  );
+  expect(await fact("Crit check d100")).toBe(check);
+  expect(await fact("Multiplier d100")).toBe(mult);
+  await expect(logEntry(page, "Long Sword +2 vs AC 10")).toContainText(
+    "(AC -20 → 10: MISS → CRIT)",
+  );
+
   // In French: the three dice facts and the crit text.
   await chooseLanguage(page, "fr");
   const frCard = page

@@ -85,23 +85,23 @@ func (_c *MockSVC_AdjustAttackAC_Call) RunAndReturn(run func(context.Context, in
 }
 
 // AdjustSave provides a mock function with given fields: ctx, characterID, entryID, adj
-func (_m *MockSVC) AdjustSave(ctx context.Context, characterID int64, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.RollResult, error) {
+func (_m *MockSVC) AdjustSave(ctx context.Context, characterID int64, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.SaveBreakdown, error) {
 	ret := _m.Called(ctx, characterID, entryID, adj)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AdjustSave")
 	}
 
-	var r0 *combatsvc.RollResult
+	var r0 *combatsvc.SaveBreakdown
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, combatsvc.SaveAdjustment) (*combatsvc.RollResult, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, combatsvc.SaveAdjustment) (*combatsvc.SaveBreakdown, error)); ok {
 		return rf(ctx, characterID, entryID, adj)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, combatsvc.SaveAdjustment) *combatsvc.RollResult); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, combatsvc.SaveAdjustment) *combatsvc.SaveBreakdown); ok {
 		r0 = rf(ctx, characterID, entryID, adj)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*combatsvc.RollResult)
+			r0 = ret.Get(0).(*combatsvc.SaveBreakdown)
 		}
 	}
 
@@ -135,12 +135,12 @@ func (_c *MockSVC_AdjustSave_Call) Run(run func(ctx context.Context, characterID
 	return _c
 }
 
-func (_c *MockSVC_AdjustSave_Call) Return(_a0 *combatsvc.RollResult, _a1 error) *MockSVC_AdjustSave_Call {
+func (_c *MockSVC_AdjustSave_Call) Return(_a0 *combatsvc.SaveBreakdown, _a1 error) *MockSVC_AdjustSave_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSVC_AdjustSave_Call) RunAndReturn(run func(context.Context, int64, int64, combatsvc.SaveAdjustment) (*combatsvc.RollResult, error)) *MockSVC_AdjustSave_Call {
+func (_c *MockSVC_AdjustSave_Call) RunAndReturn(run func(context.Context, int64, int64, combatsvc.SaveAdjustment) (*combatsvc.SaveBreakdown, error)) *MockSVC_AdjustSave_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -532,23 +532,23 @@ func (_c *MockSVC_ResolveAttack_Call) RunAndReturn(run func(context.Context, int
 }
 
 // ResolveSavingThrow provides a mock function with given fields: ctx, characterID, category
-func (_m *MockSVC) ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.RollResult, error) {
+func (_m *MockSVC) ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.SaveBreakdown, error) {
 	ret := _m.Called(ctx, characterID, category)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResolveSavingThrow")
 	}
 
-	var r0 *combatsvc.RollResult
+	var r0 *combatsvc.SaveBreakdown
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, combatsvc.SaveCategory) (*combatsvc.RollResult, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64, combatsvc.SaveCategory) (*combatsvc.SaveBreakdown, error)); ok {
 		return rf(ctx, characterID, category)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, combatsvc.SaveCategory) *combatsvc.RollResult); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64, combatsvc.SaveCategory) *combatsvc.SaveBreakdown); ok {
 		r0 = rf(ctx, characterID, category)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*combatsvc.RollResult)
+			r0 = ret.Get(0).(*combatsvc.SaveBreakdown)
 		}
 	}
 
@@ -581,12 +581,12 @@ func (_c *MockSVC_ResolveSavingThrow_Call) Run(run func(ctx context.Context, cha
 	return _c
 }
 
-func (_c *MockSVC_ResolveSavingThrow_Call) Return(_a0 *combatsvc.RollResult, _a1 error) *MockSVC_ResolveSavingThrow_Call {
+func (_c *MockSVC_ResolveSavingThrow_Call) Return(_a0 *combatsvc.SaveBreakdown, _a1 error) *MockSVC_ResolveSavingThrow_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSVC_ResolveSavingThrow_Call) RunAndReturn(run func(context.Context, int64, combatsvc.SaveCategory) (*combatsvc.RollResult, error)) *MockSVC_ResolveSavingThrow_Call {
+func (_c *MockSVC_ResolveSavingThrow_Call) RunAndReturn(run func(context.Context, int64, combatsvc.SaveCategory) (*combatsvc.SaveBreakdown, error)) *MockSVC_ResolveSavingThrow_Call {
 	_c.Call.Return(run)
 	return _c
 }

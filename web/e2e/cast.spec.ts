@@ -125,7 +125,11 @@ test("Spells tab: Rary's adds slot dots, the arrow casts on an ally, a name open
   await expect(resultCard(page).getByTestId("cast-text-only")).toContainText(
     "Cast on someone else",
   );
-  await expect(buffBadge(page, "Strength")).toHaveCount(0);
+  // ADR 0004 step 20.5: its row counts down, marked as not on him.
+  await expect(buffBadge(page, "Strength")).toHaveAttribute(
+    "data-applies",
+    "false",
+  );
   await expectSlotDots(level2, 2, 0, 1);
   await snap(page, "spells-tab-after-casts");
 
@@ -181,7 +185,12 @@ test("a low-confidence spell shows its text only; Cloudkill rolls an exposure on
   await expect(resultCard(page).getByTestId("cast-text-only")).toContainText(
     "add an effect by hand",
   );
-  await expect(page.locator('[data-testid="buff"]')).toHaveCount(0);
+  // ADR 0004 step 20.4: it still lasts its rounds, a row with no effects.
+  await expect(
+    buffBadge(page, "Tasha's Uncontrollable Hideous Laughter").getByTestId(
+      "buff-rounds",
+    ),
+  ).toHaveText("15 rounds");
   await snap(page, "low-confidence");
 
   // ADR 0008 step 16: the cast card serves the exposure dice; one exposure on me is one journal
@@ -242,7 +251,10 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   expect(total).toBeGreaterThanOrEqual(3);
   expect(total).toBeLessThanOrEqual(30);
   await expect(
-    logEntry(page, `Cast Wall of Ice: Ice sheet, ${total} cold damage`),
+    logEntry(
+      page,
+      `Cast Wall of Ice: Ice sheet, ${total} cold damage, 150 rd, not on you`,
+    ),
   ).toBeVisible();
   await snap(page, "wall-of-ice-sheet");
 
@@ -604,4 +616,36 @@ test("cast, heal, cast: the journal Undo pops the cast on top, then the heal", a
   await expect(redo).toBeDisabled();
   await expectUndoOn(page, "Cast Stoneskin");
   await snap(page, "redone-heal-then-cast");
+});
+
+// ADR 0004 step 20: a spell that lasts rounds gets a timeline row whether or not the engine models
+// it. Only a browser shows the cast landing on the timeline and Next round counting it down; the
+// rules (which spells, how many rounds, not on him) are castsvc's and buffsvc's Go tests.
+test("a utility spell cast gets a timeline row that counts down; one cast on another is marked", async ({
+  page,
+  stack,
+}) => {
+  await prepare(stack.apiUrl, ["identify", "melfs_acid_arrow"]);
+  await openSpells(page);
+  await page
+    .getByRole("region", { name: "Level 1" })
+    .getByRole("button", { name: "Cast Identify" })
+    .click();
+  const identify = buffBadge(page, "Identify");
+  await expect(identify.getByTestId("buff-rounds")).toHaveText("15 rounds");
+  await expect(identify).toHaveAttribute("data-applies", "true");
+
+  await page
+    .getByRole("region", { name: "Level 2" })
+    .getByRole("button", { name: "Cast Melf's Acid Arrow" })
+    .click();
+  const arrow = buffBadge(page, "Melf's Acid Arrow");
+  await expect(arrow).toHaveAttribute("data-applies", "false");
+  await expect(arrow.getByTestId("effect-bar")).toContainText("not on you");
+  await snap(page, "spell-rows-cast");
+
+  await nextRound(page);
+  await expect(identify.getByTestId("buff-rounds")).toHaveText("14 rounds");
+  await expect(arrow.getByTestId("buff-rounds")).toHaveText("5 rounds");
+  await snap(page, "spell-rows-next-round");
 });

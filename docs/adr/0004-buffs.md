@@ -5,6 +5,8 @@ critical-qki.8, critical-qki.20, critical-qki.29 and critical-qki.33, until then
 `docs/backend.md` "Buff rules"); steps 10 and 11 and the Consequences amended and step 18 added
 2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers); step 19 (add a
 spell as an effect from the lookup) added 2026-10-16. Steps 7 to 10 amended for warriors by [ADR 0030](0030-classes-and-races.md) (18/xx), on its implementation.
+Step 20 (a row for every spell that lasts rounds) added and step 19 amended with it 2026-10-19 (user
+triage of 2026-10-19).
 
 _Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 11 (an `ac` effect is a change of the AC number, negative betters it; new effect kinds `base_ac` and `initiative`, ADR 0033 step 11) and step 18 (a second condition, `without_magic_armour`, ADR 0033 step 12)._
 
@@ -193,25 +195,91 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     `TestBuffs_Step18_RejectsAnUnknownWeaponKind`.
 
 19. **Add as effect.** From the spell lookup's cast box ([ADR 0022](0022-activity-focus-layout.md)
-    step 2.5), a spell that adds a buff can be put on the Bard as an effect at **his** level, with no
-    slot spent: `POST /api/spells/effect {"spellId"}`; the client sends no level. A spell adds a buff
-    when its effect entry is a `buff`, not low confidence, and sets no ability (an ability set is
-    applied by hand); the same rule decides whether a cast or a received spell puts a buff on, so the
-    offer and the action cannot drift. The lookup's spells say so (`effect: true`, absent otherwise);
-    the rule is generic, hostile buffs (Slow, Malison) and self-only spells (Shield, Mirror Image)
-    included. The buff is rolled as a cast rolls it (rounds, charges, ability gain at the Bard's
-    level); nothing else is: no damage, no to-hit, no item spent, no slots granted. It always lands
-    on the Bard. Any other spell (damage, utility, low confidence, ability set, no effect entry) is
-    refused with `spell_not_an_effect` before anything is rolled or written; an unknown spell is
+    step 2.5), a spell that gets a row (step 20) can be put on the Bard as an effect at **his** level,
+    with no slot spent: `POST /api/spells/effect {"spellId"}`; the client sends no level. A spell
+    adds a buff when its effect entry is a `buff`, not low confidence, and sets no ability (an
+    ability set is applied by hand); a spell that adds none still gets a row, with no effects, when
+    it lasts a number of rounds (step 20). The one rule of step 20 decides it for the cast, the
+    receive, the added effect and the offer, so the offer and the action cannot drift. The lookup's
+    spells say so (`effect: true`, absent otherwise); the rule is generic, hostile buffs (Slow,
+    Malison) and self-only spells (Shield, Mirror Image) included. The row is rolled as a cast rolls
+    it (rounds, charges, ability gain at the Bard's level); nothing else is: no damage, no to-hit, no
+    item spent, no slots granted. It always lands on the Bard. A spell that gets no row (step 20.2)
+    is refused with `spell_not_an_effect` before anything is rolled or written; an unknown spell is
     `not_found`. Like a receive, it is one cast entry (step 13), its payload's `action` being
     `"effect"`, with the buff list's snapshots, so voiding it removes the buff; renewal (step 6),
     start round (15), starting charges (16) and spell id (17) apply as for a cast.
     Tests: `castsvc` `TestBuffs_Step19_AddAsEffect` (the buffs at level 15, the exact dice, self-only
     and hostile accepted, one entry with only the buff snapshot), `TestBuffs_Step19_AddAsEffectLogPayload`,
     `TestBuffs_Step19_AddAsEffectRefusals` (nothing rolled, written or logged, not offered),
-    `TestBuffs_Step19_FlagMatchesTheAction` (every seed entry: offered exactly when a buff goes on);
+    `TestBuffs_Step20_OfferMatchesTheAction` (step 20);
     `spelleffectsvc` `TestEntry_AddsBuff`; `TestSearch_EffectFlag` (`spellhdl`), `TestAddEffect_Handler`
     (`casthdl`).
+
+20. **A row for every spell that lasts rounds.** A spell the Bard casts, receives or adds as an
+    effect (step 19) puts a row on the buff list when it **lasts a number of rounds**, whether or not
+    the engine models what it does (user, 2026-10-19: "Spells with a duration should always show in
+    the timeline when cast, even if the engine does not handle their effect"). One rule decides it
+    (`spelleffectsvc.RowOf`), for the three actions and the lookup's offer (`effect: true`).
+    20.1 **Its duration.** The spell's effect entry, when it has one, says how long it lasts (its
+         `rounds` formula; turns, hours and days were converted when the entry was written).
+         Without an entry (the Priest spells), the duration is the catalogue's duration as the
+         importer parsed it ([ADR 0021](0021-spell-catalogue.md)) from the English stat line, never
+         from text in a language ([ADR 0023](0023-localized-text.md)), converted to rounds
+         (`spellstats.Duration.RoundsFormula`): 1 turn = 10 rounds, 1 hour = 60, 1 day = 1,440,
+         1 week = 10,080; a term per N levels counts once every N levels; dice are rolled in their
+         own unit, then converted; a range ("1-4 days") is rolled evenly between its ends; "up to"
+         takes the top; a cap ("max. 10 turns") caps the total; a term per N levels scales everything in it
+         (dice count, flat count), except a range, which rolls once and is multiplied ("1-4 rds./level"
+         is 1d4 × level); a part of a round rounds up to a whole round. A duration the parser left special, that names no time unit, or that is
+         divided by something other than the level ("per recipient") gets no row.
+    20.2 **No row.** A duration that is instantaneous, permanent, concentration, special or "until
+         …" puts no row; an "until discharged" spell keeps its charge behaviour (step 3). A
+         duration that rolls 0 rounds or less puts no row.
+    20.3 **The rounds** are rolled at the caster's level as a buff's are (the receive's caster
+         level; the Bard's for a cast or an added effect), through the dice port; a buff cast on
+         someone else keeps the rounds its own roll gave (rolled once). The row then is a buff in
+         every other respect: it counts down on Next Round and when time passes (step 2,
+         [ADR 0005](0005-rounds-and-time.md)), it is edited, dismissed and voided like any buff
+         (steps 5 and 13), it carries its start round, its spell id and its starting charges (steps
+         15 to 17), and the cast's entry holds its snapshot beside the slot's, so voiding the cast
+         removes it ([ADR 0018](0018-transactions-and-undo.md)). Its log entries name the spell from
+         its id (step 17).
+    20.4 **Effects.** The row carries the spell's effects only when the spell adds a buff (step
+         19's rule); any other spell's row has none: it only counts down. A low-confidence entry
+         and an entry that sets an ability get a row with no effects when they last rounds; the
+         ability set is still applied by hand (user, 2026-10-19). The buff spells that land on the
+         Bard are unchanged.
+    20.5 **Not on the Bard.** A spell the Bard casts on someone else or on an area puts a row
+         marked as not on him (`OnOther`, served `onOther`, stored and snapshotted `on_other`;
+         absent: on him). Where a cast lands: a spell that adds a buff picks its target as a buff
+         does (his explicit choice, else the entry's default; step 19's `DefaultOnSelf`); any other
+         spell lands on him when it is self-only, else as he says, else unless its target is
+         another creature or an area (a "self or other" spell, one with no target such as
+         Polymorph Self, and a spell with no effect entry land on him; user, 2026-10-19). A buff
+         spell cast on someone else, which put no row before, now puts a marked row with no
+         effects; the result still shows its rolls for the one it landed on (user, 2026-10-19). A
+         marked row counts in no aggregate (to-hit, damage, AC, saves, STR, initiative, the
+         abilities), whatever it holds: every aggregate reads the list through one filter
+         (`onTheBearer`). The list shows it as not applying, the client wording the reason from the
+         mark. It is never renewed by another cast and never renews or replaces an on-Bard row of
+         the same name (two Webs on two areas are two rows; user, 2026-10-19). A received or added
+         spell is always on him. Only the spell cast stamps the mark; a value sent by the client is
+         ignored. No SQL migration: the active buffs are a JSON list (steps 15, 16).
+    Tests: `castsvc` `TestBuffs_Step20_UtilityCastGetsARow` (Polymorph Self at 15: 300 rounds, its
+    id, the cast's one entry), `TestBuffs_Step20_NotOnTheBard` (an area spell, a buff named on
+    another, a damage spell's rounds rolled once, no target, self-only, no entry with and without
+    the choice), `TestBuffs_Step20_PriestDurationFromTheCatalogue` (a received Priest spell, the
+    exact dice), `TestBuffs_Step20_NoRow` (each duration of 20.2; until discharged unchanged),
+    `TestBuffs_Step20_OfferMatchesTheAction` (every fixture entry and catalogue spell: offered
+    exactly when a row goes on), `TestCast_PerSeedEntry` (the rows of the utility, low-confidence,
+    ability-set and on-another spells); `buffsvc` `TestBuffs_Step20_OnOtherCountsInNoAggregate`,
+    `TestBuffs_Step20_OnOtherIsNeverRenewed`, `TestBuffs_Step20_OnOtherRoundTrips` (snapshot, void,
+    activate drops it); `spellstats` `TestBuffs_Step20_DurationInRounds`,
+    `TestBuffs_Step20_NoRoundsFormula`, `TestBuffs_Step20_SegmentsRoundUp`; `buffdal`
+    `TestActiveBuffs_Step20_OnOtherRoundTripsAndOldRowsReadFalse`; `router`
+    `TestBuffs_Step20_OnOtherOnTheWire`; `composition` `TestBuffs_Step20_RowCountsDownAndUndoRemovesIt`
+    (Next Round, an hour passed, undo, an area cast changing no number); the e2e `spell-rows.spec`.
 
 ## Consequences
 
@@ -223,5 +291,7 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
 - The Power Gem is an item, not a buff: its daily Dispel Magic and its thunder hammer (`min_str`
   18 trigger, melee only, +5 and ×2) are [ADR 0016](0016-inventory.md) steps 9 to 16. Its powers
   join the aggregate of step 11; they are never on the buff list.
-- Not covered: how long a received spell lasts (the caster's level and the spell table give the
-  rounds at cast time), resistances, dispelling.
+- Not covered: resistances, dispelling, and what a spell does when it ends.
+- A spell with a duration in rounds is tracked whether or not the engine models it (step 20), so
+  the timeline can hold rows that change nothing (Polymorph Self, Web on an area); the player
+  dismisses one that ended early.

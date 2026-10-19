@@ -252,12 +252,15 @@ function EffectRow({
     duration: b.duration,
     startRound: b.startRound,
   });
-  const reason =
-    b.effects.min_str !== undefined
+  // ADR 0004 step 20.5: a spell cast on someone else or on an area only counts down here.
+  const reason = b.onOther
+    ? t("buffs.onOther")
+    : b.effects.min_str !== undefined
       ? t("buffs.inactive", { min: b.effects.min_str })
       : t("buffs.replaced");
-  const reasonHint =
-    b.effects.min_str !== undefined
+  const reasonHint = b.onOther
+    ? t("buffs.onOtherHint")
+    : b.effects.min_str !== undefined
       ? t("buffs.inactiveHint", { min: b.effects.min_str })
       : t("buffs.replacedHint");
   return (

@@ -59,6 +59,11 @@ export interface BuffEffect {
    */
   spellId?: string;
   /**
+   * A row for a spell cast on someone else or on an area (ADR 0004 step 20.5): it only counts down
+   * and never applies. Absent for a buff on the character. Set by the server; never sent.
+   */
+  onOther?: boolean;
+  /**
    * On list responses: false while min_str is not met by the effective STR, or (a Strength bonus)
    * while an Improved Strength replaces it.
    */

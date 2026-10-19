@@ -389,3 +389,22 @@ func TestSavedBuffs_ReplaceStopsAtTheFailingWrite(t *testing.T) {
 		require.ErrorIs(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{{Name: "New"}, {Name: "Never"}}), errBoom)
 	})
 }
+
+// ADR 0004 step 20.5: the "not on the character" mark round-trips; it is
+// omitted for a buff on him, and a row stored before it reads false.
+func TestActiveBuffs_Step20_OnOtherRoundTripsAndOldRowsReadFalse(t *testing.T) {
+	got := read(t, oldRow)
+	require.Len(t, got, 1)
+	assert.False(t, got[0].OnOther, "a buff stored before the field is on him")
+
+	got = append(got, buffsvc.BuffEffect{ID: "w", Name: "Web", Duration: 30, SpellID: "web", OnOther: true})
+	blob := stored(t, got)
+	var raw []map[string]any
+	require.NoError(t, json.Unmarshal([]byte(blob), &raw))
+	require.Len(t, raw, 2)
+	assert.NotContains(t, raw[0], "on_other", "omitted for a buff on him")
+	assert.Equal(t, true, raw[1]["on_other"])
+	back := read(t, blob)
+	assert.False(t, back[0].OnOther)
+	assert.True(t, back[1].OnOther)
+}

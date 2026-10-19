@@ -79,6 +79,13 @@ function castText(
         ac: p.attack.targetAc,
       }),
     );
+  // ADR 0004 step 20.5: cast on someone else or on an area, its row is on the timeline, marked.
+  if (p.buff?.onOther)
+    details.push(
+      t("log.cast.onOther", {
+        counters: counters(t, p.buff.rounds, p.buff.charges),
+      }),
+    );
   return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
 }
 
@@ -216,9 +223,9 @@ function CastEntry({
           </div>
         </div>
       )}
-      {c.buff?.applied && (
+      {(c.buff?.applied || c.buff?.onOther) && (
         <p className="text-body" data-testid="cast-entry-buff">
-          {t("journal.castBuff", {
+          {t(c.buff.onOther ? "journal.castBuffOther" : "journal.castBuff", {
             buff: spellName(c.spellId, c.buff.name),
             counters: counters(t, c.buff.rounds, c.buff.charges),
           })}

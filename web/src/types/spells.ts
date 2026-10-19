@@ -310,6 +310,11 @@ export interface CastBuff {
   charges?: number;
   strGain?: number;
   applied: boolean;
+  /**
+   * Cast on someone else or on an area, its row is on the timeline marked as not on you (ADR 0004
+   * step 20.5); absent otherwise and on older casts.
+   */
+  onOther?: boolean;
   id?: string;
   durationRoll?: FormulaRoll;
   chargesRoll?: FormulaRoll;

@@ -221,6 +221,8 @@
     "inactiveHint": "Sans effet tant que la FOR n'atteint pas {{min}}",
     "replaced": "remplacée par Improved Strength",
     "replacedHint": "Improved Strength remplace les autres effets de Force tant qu'elle dure",
+    "onOther": "pas sur vous",
+    "onOtherHint": "Lancé sur quelqu'un d'autre ou sur une zone : il ne fait que décompter, rien ne vous est appliqué",
     "add": "Ajouter un effet",
     "name": "Nom de l'effet",
     "roundsLeft": "Tours",
@@ -1303,7 +1305,8 @@
       "attackHit": "attaque réussie (d20 {{d20}} contre CA {{ac}})",
       "attackMiss": "attaque ratée (d20 {{d20}} contre CA {{ac}})",
       "spellFailed": "échec du sort (d100 {{roll}} ≤ {{chance}} %)",
-      "spellHeld": "pas d'échec du sort (d100 {{roll}} > {{chance}} %)"
+      "spellHeld": "pas d'échec du sort (d100 {{roll}} > {{chance}} %)",
+      "onOther": "{{counters}}, pas sur vous"
     },
     "item": {
       "rolled": "Objet utilisé : {{name}}, {{dice}} = {{total}} ({{left}} restant)",
@@ -1546,6 +1549,7 @@
     "saveVs": "{{total}} contre {{target}}+",
     "castVsAc": "Jet pour toucher contre CA {{ac}}",
     "castBuff": "{{buff}} : {{counters}}",
+    "castBuffOther": "{{buff}} : {{counters}}, pas sur vous",
     "noRollsThisRound": "Aucun jet ce tour-ci.",
     "filter": {
       "label": "Filtre du journal",

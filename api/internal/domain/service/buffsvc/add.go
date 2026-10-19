@@ -18,7 +18,8 @@ import (
 // An active buff with the same name is replaced: spell effects are not
 // cumulative with themselves, so casting one again renews it. A Strength
 // bonus (not Improved) is the exception: it stacks with itself, so a second
-// cast is a second buff (ADR 0004 steps 6 and 7).
+// cast is a second buff (ADR 0004 steps 6 and 7), and so is a row on someone
+// else (step 20.5).
 func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (BuffEffect, actionlog.Snapshot, error) {
 	buff.Name = strings.TrimSpace(buff.Name)
 	buff.Note = strings.TrimSpace(buff.Note)
@@ -41,9 +42,11 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 	buff.StartRound = round
 	buff.ChargesTotal = buff.Charges // ADR 0004 step 16
 	after := make([]BuffEffect, 0, len(before)+1)
-	stacks := isStrengthBonus(buff.Effects)
+	// ADR 0004 step 20.5: a row on someone else or on an area never renews
+	// and is never renewed (two Webs on two areas are two rows).
+	stacks := isStrengthBonus(buff.Effects) || buff.OnOther
 	for _, b := range before {
-		if stacks || !strings.EqualFold(b.Name, buff.Name) {
+		if stacks || b.OnOther || !strings.EqualFold(b.Name, buff.Name) {
 			after = append(after, b)
 		}
 	}

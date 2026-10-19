@@ -966,7 +966,8 @@ test("theme: the main screens in dark and light, every theme in each of its mode
     expect(
       await detail.evaluate((el) => el.scrollHeight - el.clientHeight),
     ).toBeLessThanOrEqual(1);
-    // In two text columns at 1440 (ADR 0022 step 2.5): a paragraph starts in the right half.
+    // One column, no paragraph in a right half (ADR 0022 step 2.5; the matrix is in the
+    // description spec below).
     expect(
       await text.evaluate((el) => {
         const mid = el.getBoundingClientRect().left + el.clientWidth / 2;
@@ -974,7 +975,7 @@ test("theme: the main screens in dark and light, every theme in each of its mode
           (p) => p.getBoundingClientRect().left > mid,
         );
       }),
-    ).toBe(true);
+    ).toBe(false);
     await snap(page, `${m}-spells-long`);
     await text.evaluate((el) => el.scrollTo({ top: el.scrollHeight / 3 }));
     await snap(page, `${m}-spells-scrolled`);
@@ -3427,5 +3428,123 @@ test("class warnings: rows, AC card, shield and attack card uncut, en and fr, 12
   for (const lang of ["en", "fr"] as const) {
     await chooseLanguage(page, lang);
     for (const vp of VIEWPORTS) await check(lang, vp);
+  }
+});
+
+// ADR 0022 steps 2.5 and 3.5: a spell description is one column capped at 75 characters, in the
+// lookup and in the cast result alike, at every layout viewport, in English and French; blocks are
+// clearly further apart than the lines of a paragraph, a table has room and scrolls inside its own
+// box without widening the page, and nothing is cut. One spec for the whole matrix: only a browser
+// measures the column, the measure and the rhythm.
+test("spell description: one capped column in the lookup and the cast result, 1280 to 2560", async ({
+  page,
+  stack,
+}) => {
+  test.setTimeout(120_000);
+  const put = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spells: ["chromatic_orb", "magic_missile"] }),
+  });
+  expect(put.ok).toBe(true);
+  await openDashboard(page);
+
+  /** The description box's shape: one column, the measure, the rhythm and the tables. */
+  const expectOneColumn = async (box: Locator, where: string) => {
+    const m = await box.evaluate((el) => {
+      const probe = document.createElement("span");
+      probe.style.cssText = "position:absolute;visibility:hidden;width:1ch";
+      el.appendChild(probe);
+      const ch = probe.getBoundingClientRect().width;
+      probe.remove();
+      const blocks = [...el.children] as HTMLElement[];
+      const rect = (e: Element) => e.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return {
+        columns: cs.columnCount + "/" + cs.columnWidth,
+        widthCh: rect(el).width / ch,
+        lefts: blocks.map((b) => Math.round(rect(b).left)),
+        gaps: blocks
+          .slice(1)
+          .map((b, i) => Math.round(rect(b).top - rect(blocks[i]).bottom)),
+        lineHeight: parseFloat(cs.lineHeight),
+        blocks: blocks.length,
+        tables: [...el.querySelectorAll("[data-testid=spell-table]")].map(
+          (t) => {
+            const cell = t.querySelector("td")!;
+            const ccs = getComputedStyle(cell);
+            return {
+              pad: [ccs.paddingLeft, ccs.paddingTop],
+              inside: rect(t).right <= rect(el).right + 1,
+            };
+          },
+        ),
+        page: document.documentElement.scrollWidth - innerWidth,
+      };
+    });
+    expect(m.columns, `no CSS columns, ${where}`).toMatch(/^auto\/auto$/);
+    expect(m.widthCh, `measure, ${where}`).toBeLessThanOrEqual(75.5);
+    expect(new Set(m.lefts).size, `one left edge, ${where}`).toBe(1);
+    expect(m.blocks).toBeGreaterThan(1);
+    for (const g of m.gaps)
+      expect(g, `blocks apart, ${where}`).toBeGreaterThanOrEqual(16);
+    for (const t of m.tables) {
+      expect(t.pad, `cell padding, ${where}`).toEqual(["12px", "8px"]);
+      expect(t.inside, `table in its box, ${where}`).toBe(true);
+    }
+    expect(m.page, `page does not widen, ${where}`).toBeLessThanOrEqual(0);
+  };
+
+  // The cast result's folded text (a long spell; the table spell cannot be cast in the fixture).
+  await page.getByRole("tab", { name: "Spells" }).click();
+  await page.getByRole("button", { name: "Cast Magic Missile" }).click();
+  const card = page.getByTestId("cast-result");
+  await expect(card).toBeVisible();
+  await card.getByText("Spell text").click();
+
+  const rail = page.getByTestId("rail").getByRole("button");
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      const where = `${lang} ${vp.width}x${vp.height}`;
+      const shot = lang === "fr" || vp.width >= 1920;
+      // The cast result.
+      await rail.nth(0).click();
+      if (!(await card.getByTestId("cast-text").isVisible()))
+        await card.getByText(/Spell text|Texte du sort/).click();
+      await expect(card.getByTestId("cast-text")).toBeVisible();
+      await expectOneColumn(card.getByTestId("cast-text"), `cast, ${where}`);
+      await expectNoClippedText(card, `cast result, ${where}`);
+      if (shot)
+        await snap(page, `description-cast-${lang}-${vp.width}x${vp.height}`);
+      // The lookup, a table spell then a long one.
+      await rail.nth(1).click();
+      for (const [query, name, title] of [
+        ["chromatic", "chromatic", /Chromatic Orb|Orbe chromatique/],
+        ["magic missile", "missile", /Magic Missile|Projectile magique/],
+      ] as const) {
+        await page
+          .getByRole("combobox", {
+            name:
+              lang === "fr" ? "Rechercher des sorts..." : "Search spells...",
+          })
+          .fill(query);
+        const detail = page.getByTestId("spell-detail");
+        await expect(detail.getByRole("heading").first()).toHaveText(title);
+        const text = detail.getByTestId("spell-description-text");
+        await expectOneColumn(
+          text.locator("> div"),
+          `lookup ${name}, ${where}`,
+        );
+        await expectNoClippedText(detail, `spell detail ${name}, ${where}`);
+        await expectNoPageScroll(page);
+        if (shot)
+          await snap(
+            page,
+            `description-lookup-${name}-${lang}-${vp.width}x${vp.height}`,
+          );
+      }
+    }
   }
 });

@@ -246,8 +246,8 @@ export function SpellDetail({
           )}
         </section>
       ) : null}
-      {/* The description takes the pane's width and the height left below the stats, in two text
-          columns when wide enough, and scrolls inside it. When the pane is too short for its
+      {/* The description takes the height left below the stats, in one column capped at 75
+          characters, and scrolls inside it. When the pane is too short for its
           floor, the whole detail scrolls instead. */}
       {description && (
         <section
@@ -260,7 +260,7 @@ export function SpellDetail({
             data-testid="spell-description-text"
             tabIndex={0}
           >
-            <SpellDescription text={description} columns />
+            <SpellDescription text={description} />
           </div>
         </section>
       )}

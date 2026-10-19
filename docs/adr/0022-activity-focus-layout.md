@@ -131,7 +131,8 @@ B's choice and is marked "(design)".
         chips under it (one click switches, never attacks). The target bar stays above.
       - **Spells (lookup)**: A2's pane: filter and list on the left, `minmax(18rem, 22rem)` (design);
         the detail on the right: name and meta, the stats as tiles, the cast box (dice at the
-        Bard's level, Add as effect), the description in two text columns, scrolling on its own.
+        Bard's level, Add as effect), the description in one column capped at 75 characters (step 3.5),
+        scrolling on its own (*amended 2026-10-19, user: one readable column; was two text columns*).
       - **Experience**: progress and the Add XP form side by side in one card (form 24rem, design),
         the ledger card below with the rest of the height.
       - **Inventory**: the inventory and weapons cards (not drawn in B; the area item lays them out
@@ -164,7 +165,8 @@ B's choice and is marked "(design)".
       (`py-3.5 px-4`; was `p-3`; *amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 6.5, 2026-10-17:* a
       card's header band replaces its top padding). The ground's padding and the gutter between cards are 12 px. Gaps
       inside a card stay 4 / 8 / 12 px, except the gutter between two text columns in one card (the
-      two-column spell list, the lookup description, XP progress | form): 24 px (design).
+      two-column spell list, XP progress | form): 24 px (design). The lookup description is no longer
+      one of them (step 3.5).
    3. **The one tall control** (amends ADR 0017 step 5): the Weapons tab's **Attack** button is
       **44 px** tall, primary, two lines ("Attack" / "needs 6 vs AC 5"), with the Phosphor `Sword`
       icon centred in its own 44 x 44 cell left of the words. It is the only control above 32 px;
@@ -174,6 +176,15 @@ B's choice and is marked "(design)".
       the result panel, the XP total. At most one per card; `text-headline` stays the panel number
       (HP in the character card). B draws the XP total at 40 px; it takes the one hero size, so there
       is no seventh.
+   5. **A spell description is one readable column** (*added 2026-10-19, user: "some are rendered in
+      two columns, some in one"; one column everywhere*). In the lookup and in the cast result's text
+      alike (`SpellDescription`, no CSS columns), the measure is capped at 75 characters (`max-w-[75ch]`,
+      left-aligned) at every layout viewport. Blocks (paragraph, list, table) are 16 px apart, clearly
+      more than the lines of a paragraph (the one exception to the 4 / 8 / 12 px gaps of step 3.2); a
+      list's items are 8 px apart. A table's cells are 12 x 8 px, its header a raised band (`bg-raised`)
+      above the rows; a table too wide for the column scrolls inside its own box and never widens the
+      page. Checked in `layout.spec` (one column, measure, rhythm, cell padding, no cut text, in
+      English and French).
 4. **Panel style: cards, no rules** (amends ADR 0009 step 5).
    1. Every zone (header, character, each stage panel, journal, dice footer) is a **card on the
       ground**: `bg-surface`, a 1 px outline (`border`), radius 8-10 px (design). Zones never touch:

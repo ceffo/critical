@@ -7,6 +7,8 @@ critical-qki.8, critical-qki.20, critical-qki.29 and critical-qki.33, until then
 spell as an effect from the lookup) added 2026-10-16. Steps 7 to 10 amended for warriors by [ADR 0030](0030-classes-and-races.md) (18/xx), on its implementation.
 Step 20 (a row for every spell that lasts rounds) added and step 19 amended with it 2026-10-19 (user
 triage of 2026-10-19).
+Step 21 (end effects: what a spell does when its row ends) added 2026-10-19 (user triage of
+2026-10-19).
 
 _Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 11 (an `ac` effect is a change of the AC number, negative betters it; new effect kinds `base_ac` and `initiative`, ADR 0033 step 11) and step 18 (a second condition, `without_magic_armour`, ADR 0033 step 12)._
 
@@ -281,6 +283,57 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     `TestBuffs_Step20_OnOtherOnTheWire`; `composition` `TestBuffs_Step20_RowCountsDownAndUndoRemovesIt`
     (Next Round, an hour passed, undo, an area cast changing no number); the e2e `spell-rows.spec`.
 
+21. **End effects.** A spell's effect entry may list effects that apply when its row ends
+    (`end_effects` in `seeds/spell_effects.json`), each naming the causes that trigger it. User,
+    2026-10-19: "Metamorphosis spell has an effect when the spells finishes (naturally or stopped by
+    the player). It triggers a 1d12 throw of gain life." It is generic: no spell is special-cased in
+    code, the seed says which spell does what.
+    21.1 **Causes.** A row ends by **running out** (`expired`: Next Round or passing time takes its
+         last round, step 2 and [ADR 0005](0005-rounds-and-time.md)), by **the player's voluntary
+         end** (`voluntary`, "ended by me") or by **dispel or death** (`dispelled`, "dispelled /
+         slain"). Nothing else is an end cause: editing the rounds to 0 (step 5), a last charge
+         used (step 3), a renewal by a new cast (step 6) and undoing the cast apply no end effect.
+    21.2 **Kinds.** The one kind is `heal`: the bearer regains the dice in hit points. The dice are
+         a formula of the grammar of `api/pkg/formula`, a sum of dice plus a constant that never goes
+         below 0 and never reads the caster level (the row keeps no caster level). The loader
+         refuses an unknown kind or cause, an empty or repeated cause list and such dice, at start-up.
+    21.3 **Stopping a row asks.** `DELETE /api/buffs/{id}?cause=voluntary|dispelled`. A row on the
+         bearer whose spell has any end effect is served with `asksEndCause: true`, and its stop
+         offers the two causes; stopping it without one is refused (400, `end_cause_required`) and
+         nothing is written. `expired` or an unknown cause is invalid input. Any other row (no
+         spell, no end effect, a row on someone else, step 20.5) stops as before and ignores a cause;
+         a row on someone else never applies an end effect.
+    21.4 **Which actions apply them.** The dismiss applies the effects of the cause the player named;
+         Next Round and passing time apply the `expired` effects of every row they expire, in row
+         order. The engine rolls the dice through the dice port (one applier,
+         `buffsvc.rollEndEffects`); on Next Round they are rolled before the initiative's d10.
+         The time-passes preview (ADR 0005 step 8) lists the rows that would expire, not their
+         heals.
+    21.5 **HP through the ledger, one transaction, one undo.** The heals are the HP delta of the
+         action's own entry (`buff_change` for a dismiss, `round_advance`, `time_passed`), capped at
+         max HP by the recording path ([ADR 0007](0007-hp-ledger.md) steps 4 and 5,
+         [ADR 0018](0018-transactions-and-undo.md) step 4), in the transaction that ends the row.
+         One undo pops it: the row comes back from the entry's buff snapshot and the heal stops
+         counting. No new snapshot key.
+    21.6 **What the entry and the answer carry.** The entry's payload has `cause` (a dismiss that
+         asked), `endEffects` (per effect: `spellId`, `buff`, `cause`, `kind`, `dice`, every die as
+         `rolls`, `constant`, `total`) and the current HP around them (`hpBefore`, `hpAfter`), beside
+         the ledger's `hpRequested` / `hpApplied`; the dismiss, Next Round and pass-time answers carry
+         the same as `ended`. The client words them (journal, notice), in the player's language.
+    21.7 **Polymorph Self** heals 1d12 when ended by the player **and when it runs out**, nothing when
+         dispelled or slain (user ruling, 2026-10-19). The PHB grants the heal only on a voluntary
+         end and says nothing of running out; the ruling wins.
+    Tests: `spelleffectsvc` `TestBuffs_Step21_ValidateEndEffects`, `TestBuffs_Step21_EndEffectsOn`,
+    `TestBuffs_Step21_ParseEndCause`; `spelleffectsadpt` `TestBuffs_Step21_ParseEndEffects`,
+    `TestBuffs_Step21_ParseEndEffectsRefused`; `formula` `TestUsesLevel`; `buffsvc`
+    `TestBuffs_Step21_Dismiss` (each cause, the cap, the refusal, rows without end effects and on
+    someone else), `TestBuffs_Step21_RunsOut` (Next Round and passing time, several rows, exact
+    dice), `TestBuffs_Step21_ListAsksEndCause`; `router` `TestBuffs_Step21_EndCauseOnTheWire`;
+    `composition` `TestBuffs_Step21_EndEffectsThroughTheLedgerAndUndo` (Polymorph Self from the
+    fixture seed: each cause and action, the cap, undo restoring the row and the HP); web
+    `journal/entryText.test.ts` ("end effects"), `stores/dismiss.test.ts`; the e2e `buffs.spec`
+    "stopping Polymorph Self asks how it ended".
+
 ## Consequences
 
 - A second Strength cast adds its bonus rather than renewing the first, so a player who casts it
@@ -291,7 +344,8 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
 - The Power Gem is an item, not a buff: its daily Dispel Magic and its thunder hammer (`min_str`
   18 trigger, melee only, +5 and ×2) are [ADR 0016](0016-inventory.md) steps 9 to 16. Its powers
   join the aggregate of step 11; they are never on the buff list.
-- Not covered: resistances, dispelling, and what a spell does when it ends.
+- Not covered: resistances and dispelling as actions. What a spell does when it ends is step 21:
+  only a heal so far; damage or conditions at the end come as new kinds when a spell needs one.
 - A spell with a duration in rounds is tracked whether or not the engine models it (step 20), so
   the timeline can hold rows that change nothing (Polymorph Self, Web on an area); the player
   dismisses one that ended early.

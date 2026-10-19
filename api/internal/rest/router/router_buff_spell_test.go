@@ -1,6 +1,7 @@
 package router_test
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 // ADR 0004 step 17: a buff from a spell is served with its spellId (omitted
@@ -114,5 +116,60 @@ func TestItemPowers_Step13_PowersOnTheWire(t *testing.T) {
 		m.buffs.EXPECT().ListPowers(mock.Anything, int64(1)).Return(nil, nil)
 		rec := do(h, "GET", "/api/buffs", "")
 		assert.JSONEq(t, `{"buffs":[],"powers":[]}`, rec.Body.String())
+	})
+}
+
+// ADR 0004 step 21 on the wire: the list marks a row whose stop asks how it
+// ended (asksEndCause); DELETE /api/buffs/{id} takes ?cause=voluntary or
+// dispelled; a row of a spell with end effects stopped without one is
+// refused with the code end_cause_required; running out or an unknown cause
+// is not the player's to send (invalid_input, the service is not called);
+// the answer carries what the end effects did.
+func TestBuffs_Step21_EndCauseOnTheWire(t *testing.T) {
+	t.Run("the list marks the rows that ask", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().ListStatus(mock.Anything, int64(1)).Return([]buffsvc.BuffStatus{
+			{BuffEffect: buffsvc.BuffEffect{ID: "p", Name: "Polymorph Self", Duration: 300, SpellID: "polymorph_self"}, Applies: true, AsksEndCause: true},
+		}, nil)
+		m.buffs.EXPECT().ListPowers(mock.Anything, int64(1)).Return(nil, nil)
+		rec := do(h, "GET", "/api/buffs", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"buffs":[
+			{"id":"p","name":"Polymorph Self","charges":0,"duration":300,"effects":{},"note":"","startRound":0,"chargesTotal":0,"spellId":"polymorph_self","applies":true,"asksEndCause":true}],
+			"powers":[]}`, rec.Body.String())
+	})
+
+	t.Run("no cause for a spell with end effects is refused with its code", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().Dismiss(mock.Anything, int64(1), "p", spelleffectsvc.EndCause("")).
+			Return(nil, buffsvc.EndResult{}, fmt.Errorf("%w: buff %q", spelleffectsvc.ErrEndCauseRequired, "p")).Once()
+		rec := do(h, "DELETE", "/api/buffs/p", "")
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), `"code":"end_cause_required"`)
+	})
+
+	for _, bad := range []string{"expired", "slain"} {
+		t.Run("cause "+bad+" is invalid input", func(t *testing.T) {
+			h, _ := newRouter(t)
+			rec := do(h, "DELETE", "/api/buffs/p?cause="+bad, "")
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Contains(t, rec.Body.String(), `"code":"invalid_input"`)
+		})
+	}
+
+	t.Run("ended by me answers the list and what the end did", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().Dismiss(mock.Anything, int64(1), "p", spelleffectsvc.EndVoluntary).
+			Return([]buffsvc.BuffEffect{}, buffsvc.EndResult{HPBefore: 3, HPAfter: 7, Effects: []buffsvc.EndEffectRoll{{
+				SpellID: "polymorph_self", Buff: "Polymorph Self", Cause: spelleffectsvc.EndVoluntary, Kind: spelleffectsvc.EndHeal,
+				Dice: "1d12", Rolls: []buffsvc.DieRoll{{Sides: 12, Value: 4}}, Total: 4,
+			}}}, nil).Once()
+		m.buffs.EXPECT().ListStatus(mock.Anything, int64(1)).Return([]buffsvc.BuffStatus{}, nil)
+		m.buffs.EXPECT().ListPowers(mock.Anything, int64(1)).Return(nil, nil)
+		rec := do(h, "DELETE", "/api/buffs/p?cause=voluntary", "")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.JSONEq(t, `{"buffs":[],"powers":[],"ended":{"hpBefore":3,"hpAfter":7,"effects":[
+			{"spellId":"polymorph_self","buff":"Polymorph Self","cause":"voluntary","kind":"heal","dice":"1d12","rolls":[{"sides":12,"value":4}],"constant":0,"total":4}]}}`,
+			rec.Body.String())
 	})
 }

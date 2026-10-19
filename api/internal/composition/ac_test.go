@@ -80,7 +80,7 @@ func TestAC_Steps10_13_FollowsItsInputsAndTheOverrideUndoes(t *testing.T) {
 	buffs, err := bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{Name: "Protection from Evil", Effects: buffsvc.BuffEffects{AC: new(-2)}})
 	require.NoError(t, err)
 	assert.Equal(t, 1, ac().Value)
-	_, err = bs.Buffs.Dismiss(ctx, id, buffs[len(buffs)-1].ID)
+	_, _, err = bs.Buffs.Dismiss(ctx, id, buffs[len(buffs)-1].ID, "")
 	require.NoError(t, err)
 	assert.Equal(t, actionlog.KindBuffChange, top().Kind)
 	assert.Equal(t, 3, ac().Value)

@@ -98,9 +98,10 @@ Tests live in `api/internal/domain/service/actionlogsvc/` unless named otherwise
   accepted price of a stack that always walks the state back consistently.
 - A heal's excess is lost for good: popping the damage that made room for it is refused while the
   heal sits above it, so the total cannot be pushed past max through the back door.
-- Today the only positive deltas come from the manual HP event (cure spells and potions are typed
-  there); casts, item uses and rests change no HP. Step 4 holds for any future source because it
-  lives in the recording path.
+- The positive deltas come from the manual HP event (cure spells and potions are typed there) and
+  from a spell's end effect that heals ([ADR 0004](0004-buffs.md) step 21: Polymorph Self's 1d12,
+  the delta of the dismiss, Next Round or time-passed entry that ends the row); casts, item uses
+  and rests change no HP. Step 4 holds for every source because it lives in the recording path.
 - Level-up (max HP growth) is not an app action yet; `hp_max` is the character sheet's.
 - Not covered: temporary HP, regeneration over time. The floor at -10 and the death and
   unconsciousness thresholds are [ADR 0011](0011-hp-below-zero.md).

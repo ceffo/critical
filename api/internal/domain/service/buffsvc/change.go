@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 // logPayload is the structured record of a buff entry, worded by the UI in
@@ -38,6 +39,14 @@ type logPayload struct {
 	FromNote    string  `json:"fromNote,omitempty"`
 	NoteChanged bool    `json:"noteChanged,omitempty"`
 	Hours       float64 `json:"hours,omitempty"`
+	// Cause is how the player said a dismissed row ended, when its spell
+	// has end effects (ADR 0004 step 21).
+	Cause string `json:"cause,omitempty"`
+	// EndEffects are the end effects the action applied, with their dice;
+	// HPBefore and HPAfter the current HP around them (set with them).
+	EndEffects []endEffectPayload `json:"endEffects,omitempty"`
+	HPBefore   *int               `json:"hpBefore,omitempty"`
+	HPAfter    *int               `json:"hpAfter,omitempty"`
 }
 
 // change is what a use case decided: the new buff list, the new round when
@@ -54,6 +63,11 @@ type change struct {
 	// Round, and any move to round 0: ADR 0013 steps 2 and 5). When there is
 	// one, the entry snapshots it so voiding the entry brings it back.
 	clearInitiative bool
+	// ended are the rows the change ends by endCause, whose spells' end
+	// effects it applies (ADR 0004 step 21; "": none); end is what they did.
+	ended    []BuffEffect
+	endCause spelleffectsvc.EndCause
+	end      EndResult
 }
 
 // apply runs decide on the current state and, in one transaction, records
@@ -89,6 +103,20 @@ func (s *service) applyIn(ctx context.Context, characterID int64, decide func(bu
 		if err != nil {
 			return err
 		}
+		// ADR 0004 step 21: the end effects of the rows the change ends are
+		// rolled now and their heal is this entry's HP delta, so the one
+		// transaction (and the one undo) holds the end and the HP.
+		rolls, heal, err := s.rollEndEffects(ch.ended, ch.endCause)
+		if err != nil {
+			return err
+		}
+		if len(rolls) > 0 {
+			if ch.end, err = s.endResult(ctx, characterID, rolls, heal); err != nil {
+				return err
+			}
+			ch.payload.EndEffects = endEffectPayloads(rolls)
+			ch.payload.HPBefore, ch.payload.HPAfter = &ch.end.HPBefore, &ch.end.HPAfter
+		}
 		snaps, err := snapshots(buffs, ch.buffs, round, ch.round, ch.roundOnly)
 		if err != nil {
 			return err
@@ -113,6 +141,7 @@ func (s *service) applyIn(ctx context.Context, characterID int64, decide func(bu
 		if _, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        ch.kind,
+			HPDelta:     heal,
 			Payload:     payload,
 			Snapshots:   snaps,
 		}); err != nil {

@@ -125,7 +125,7 @@ func TestPassTime(t *testing.T) {
 			f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 0).Return(nil).Once()
 			f.initiativeIs(nil)
 
-			active, expired, rounds, round, err := f.svc.PassTime(context.Background(), charID, tt.hours)
+			active, expired, rounds, round, _, err := f.svc.PassTime(context.Background(), charID, tt.hours)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantRounds, rounds)
 			assert.Zero(t, round, "the round counter goes to 0")
@@ -157,7 +157,7 @@ func TestPassTime(t *testing.T) {
 	t.Run("invalid hours write nothing", func(t *testing.T) {
 		f := newFixture(t) // no DAL or log expectations: any call fails the test
 		for _, h := range []float64{0, -2, 0.01, 721} {
-			_, _, _, _, err := f.svc.PassTime(context.Background(), charID, h)
+			_, _, _, _, _, err := f.svc.PassTime(context.Background(), charID, h)
 			assert.ErrorIs(t, err, domain.ErrInvalidInput, "%g h", h)
 		}
 		assert.Zero(t, f.tx.calls)

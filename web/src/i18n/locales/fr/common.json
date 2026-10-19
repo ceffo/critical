@@ -267,7 +267,10 @@
     "deleteSaved": "Supprimer l'effet enregistré {{name}}",
     "roundsWithTime": "{{rounds}} · {{time}}",
     "hoursMinutes": "{{h}} h {{mm}}",
-    "hoursOnly": "{{h}} h"
+    "hoursOnly": "{{h}} h",
+    "endBy": "Terminé par moi",
+    "endDispelled": "Dissipé / tué",
+    "endHint": "Comment se termine {{name}} ?"
   },
   "actions": {
     "label": "Actions",
@@ -1276,7 +1279,16 @@
       "endCombat": "Combat terminé : tour {{from}} → {{to}}",
       "setRound": "Tour réglé : {{from}} → {{to}}",
       "expired": "— expirés : {{names}}",
-      "passTime": "Temps écoulé : {{hours, number}} h ({{rounds}}), tour {{from}} → {{to}}"
+      "passTime": "Temps écoulé : {{hours, number}} h ({{rounds}}), tour {{from}} → {{to}}",
+      "dismissVoluntary": "{{buff}} : fin par moi",
+      "dismissDispelled": "{{buff}} : dissipation ou mort",
+      "endHeal": "regagne {{total}} PV ({{dice}} : {{rolls}})",
+      "endHp": "{{heals}}, PV {{before}} → {{after}}",
+      "endHealNamed": "{{buff}} regagne {{total}} PV ({{dice}} : {{rolls}})",
+      "endCapped": "jette {{dice}} : {{rolls}}, aucun PV regagné",
+      "endCappedNamed": "{{buff}} jette {{dice}} : {{rolls}}, aucun PV regagné",
+      "withEnd": "{{text}}, {{end}}",
+      "withEndAfter": "{{text}}. {{end}}"
     },
     "attack": {
       "miss": "{{weapon}} contre CA {{ac}} : attaque ratée",
@@ -1863,7 +1875,8 @@
     "spellbook_level_full": "Le grimoire contient déjà le maximum de sorts de ce niveau pour cette Intelligence.",
     "spell_learn_failed_at_level": "Sort raté à ce niveau : à retenter au niveau suivant.",
     "cannot_turn_undead": "Ce prêtre ne peut pas encore repousser ce mort-vivant.",
-    "class_cannot_turn": "Cette classe ne repousse pas les morts-vivants."
+    "class_cannot_turn": "Cette classe ne repousse pas les morts-vivants.",
+    "end_cause_required": "Ce sort agit quand il prend fin : dites si vous l'avez terminé ou s'il a été dissipé."
   },
   "lastShort": {
     "attack": "Attaque",

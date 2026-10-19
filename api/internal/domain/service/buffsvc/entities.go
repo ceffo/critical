@@ -249,6 +249,9 @@ func (b BuffEffect) Charged() bool { return b.Charges > 0 }
 type BuffStatus struct {
 	BuffEffect
 	Applies bool
+	// AsksEndCause: the row's spell has end effects, so stopping it asks
+	// how it ended (ADR 0004 step 21).
+	AsksEndCause bool
 }
 
 // BuffEdit sets a buff's remaining rounds, charges and/or note. Nil leaves

@@ -40,7 +40,7 @@ func TestInitiative_Step1_NextRoundRollsOneD10(t *testing.T) {
 	f := newFixture(t)
 	nextRound(f, nil, 7) // the dice mock fails on any other roll or a second one
 
-	_, _, round, initiative, err := f.svc.AdvanceRound(context.Background(), charID)
+	_, _, round, initiative, _, err := f.svc.AdvanceRound(context.Background(), charID)
 	require.NoError(t, err)
 	assert.Equal(t, 6, round)
 	assert.Equal(t, buffsvc.Initiative{D10: 7, LogEntryID: 2}, initiative, "Next Round returns the roll it made")
@@ -61,7 +61,7 @@ func TestInitiative_Step2_OwnEntryAfterTheAdvance(t *testing.T) {
 	f := newFixture(t)
 	nextRound(f, prev, 8)
 
-	_, _, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
+	_, _, _, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
 	require.NoError(t, err)
 
 	require.Len(t, f.entries, 2)
@@ -98,7 +98,7 @@ func TestInitiative_Step3_PlainD10NoModifier(t *testing.T) {
 		f.initiativeIs(nil)
 		f.rollsInitiative(d10)
 
-		_, _, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
+		_, _, _, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
 		require.NoError(t, err)
 		assert.Equal(t, float64(d10), initiativePayload(t, f.entries[1])["d10"])
 		assert.Equal(t, d10, f.initiatives[0].D10)
@@ -195,7 +195,7 @@ func TestInitiative_Step5_NoneOutOfCombat(t *testing.T) {
 		}},
 		{"passing time", func(f *fixture) error {
 			f.saves([]buffsvc.BuffEffect{})
-			_, _, _, _, err := f.svc.PassTime(ctx, charID, 1)
+			_, _, _, _, _, err := f.svc.PassTime(ctx, charID, 1)
 			return err
 		}},
 	}

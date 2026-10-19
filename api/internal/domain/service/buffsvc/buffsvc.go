@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 // SVC is the driver port.
@@ -31,14 +32,17 @@ type SVC interface {
 	// entry, inside the transaction ctx carries (a spell cast).
 	Add(ctx context.Context, characterID int64, buff BuffEffect) (BuffEffect, actionlog.Snapshot, error)
 	Edit(ctx context.Context, characterID int64, buffID string, e BuffEdit) ([]BuffEffect, error)
-	Dismiss(ctx context.Context, characterID int64, buffID string) ([]BuffEffect, error)
+	// Dismiss stops a row; cause is how it ended when its spell has end
+	// effects (ADR 0004 step 21), and end what they did.
+	Dismiss(ctx context.Context, characterID int64, buffID string, cause spelleffectsvc.EndCause) (active []BuffEffect, end EndResult, err error)
 	// Trigger uses one charge of a charged buff (a Stoneskin layer absorbed a
 	// hit); the buff ends at 0.
 	Trigger(ctx context.Context, characterID int64, buffID string) ([]BuffEffect, error)
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	// AdvanceRound is Next Round; it returns the new round's initiative
-	// (ADR 0013 steps 1 and 2).
-	AdvanceRound(ctx context.Context, characterID int64) (active, expired []BuffEffect, round int, initiative Initiative, err error)
+	// (ADR 0013 steps 1 and 2) and what the expired rows' end effects did
+	// (ADR 0004 step 21).
+	AdvanceRound(ctx context.Context, characterID int64) (active, expired []BuffEffect, round int, initiative Initiative, end EndResult, err error)
 	// ResetRound ends combat: the counter goes back to 0 (Next Round then
 	// gives 1). Active buffs are untouched. Logged, voidable.
 	ResetRound(ctx context.Context, characterID int64) (active []BuffEffect, round int, err error)
@@ -49,7 +53,8 @@ type SVC interface {
 	// RoundsForHours(hours) rounds (expired at <= 0), charge-only and untimed
 	// buffs are untouched, the round counter goes to 0. Invalid hours (<= 0,
 	// > MaxPassHours, under one round): ErrInvalidInput. Logged, voidable.
-	PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []BuffEffect, rounds, round int, err error)
+	// end is what the expired rows' end effects did (ADR 0004 step 21).
+	PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []BuffEffect, rounds, round int, end EndResult, err error)
 	// PreviewPassTime is what PassTime(hours) would do, without writing or
 	// logging anything: the rounds the hours give and the buffs that would
 	// expire. Same validation (ErrInvalidInput).
@@ -120,6 +125,9 @@ type DAL interface {
 type Log interface {
 	actionlog.Recorder
 	TopID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
+	// HPTotal is the ledger's HP total (ADR 0007 step 2), read for the HP
+	// around an end effect's heal (ADR 0004 step 21).
+	HPTotal(ctx context.Context, characterID int64) (int, error)
 }
 
 // Dice is the dice port (diceadpt): initiative is rolled through it.
@@ -153,15 +161,16 @@ type service struct {
 	dice    Dice
 	items   Items
 	weapons Weapons
+	spells  Spells
 }
 
 // New constructs the service.
-func New(dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items, weapons Weapons) (SVC, error) {
-	return NewWithConfig(DefaultConfig(), dal, tx, log, chars, dice, items, weapons)
+func New(dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items, weapons Weapons, spells Spells) (SVC, error) {
+	return NewWithConfig(DefaultConfig(), dal, tx, log, chars, dice, items, weapons, spells)
 }
 
 // NewWithConfig is the test-friendly constructor.
-func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items, weapons Weapons) (SVC, error) {
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items, weapons Weapons, spells Spells) (SVC, error) {
 	switch {
 	case cfg == nil:
 		return nil, fmt.Errorf("buffsvc: nil config")
@@ -179,11 +188,13 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Char
 		return nil, fmt.Errorf("buffsvc: nil items")
 	case weapons == nil:
 		return nil, fmt.Errorf("buffsvc: nil weapons")
+	case spells == nil:
+		return nil, fmt.Errorf("buffsvc: nil spells")
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("buffsvc: invalid config: %w", err)
 	}
-	return &service{dal: dal, tx: tx, log: log, chars: chars, dice: dice, items: items, weapons: weapons}, nil
+	return &service{dal: dal, tx: tx, log: log, chars: chars, dice: dice, items: items, weapons: weapons, spells: spells}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

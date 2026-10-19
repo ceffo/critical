@@ -1600,3 +1600,94 @@ describe("spell failure on a cast", () => {
     );
   });
 });
+
+// ADR 0004 step 21: the entry of a row that ended with end effects words the cause, each effect's
+// dice and total, and the HP before and after, in the player's language; the spell named from its id.
+describe("end effects", () => {
+  const names = spellNamer("fr", {
+    polymorph_self: {
+      id: "polymorph_self",
+      name: { en: "Polymorph Self", fr: "Métamorphose" },
+    },
+  });
+  const heal = (cause: string, value: number, constant = 0) => ({
+    spellId: "polymorph_self",
+    buff: "Polymorph Self",
+    cause,
+    kind: "heal",
+    dice: constant ? `1d12+${constant}` : "1d12",
+    rolls: [{ sides: 12, value }],
+    constant,
+    total: value + constant,
+  });
+  const dismiss = (cause: string, effects?: object[]) =>
+    entry("buff_change", {
+      action: "dismiss",
+      buff: "Polymorph Self",
+      spellId: "polymorph_self",
+      cause,
+      ...(effects ? { endEffects: effects, hpBefore: 3, hpAfter: 7 } : {}),
+    });
+
+  it("ended by me: the roll and the HP, in English and French", async () => {
+    expect(
+      entryText(
+        dismiss("voluntary", [heal("voluntary", 4)]),
+        await makeT("en"),
+      ),
+    ).toBe("Ended Polymorph Self: regains 4 HP (1d12: 4), HP 3 → 7");
+    expect(
+      entryText(
+        dismiss("voluntary", [heal("voluntary", 4)]),
+        await makeT("fr"),
+        names,
+      ),
+    ).toBe("Métamorphose : fin par moi, regagne 4 PV (1d12 : 4), PV 3 → 7");
+  });
+
+  it("dispelled or slain: the cause, no heal", async () => {
+    expect(entryText(dismiss("dispelled"), await makeT("en"))).toBe(
+      "Polymorph Self dispelled or slain",
+    );
+    expect(entryText(dismiss("dispelled"), await makeT("fr"), names)).toBe(
+      "Métamorphose : dissipation ou mort",
+    );
+  });
+
+  it("running out on Next Round: the expired names, then the heal; a constant is shown", async () => {
+    const got = entryText(
+      entry("round_advance", {
+        action: "next_round",
+        fromRound: 3,
+        toRound: 4,
+        expired: ["Polymorph Self"],
+        expiredSpellIds: ["polymorph_self"],
+        endEffects: [heal("expired", 9, 1)],
+        hpBefore: 20,
+        hpAfter: 30,
+      }),
+      await makeT("en"),
+    );
+    expect(got).toBe(
+      "Round 3 → 4 — expired: Polymorph Self. Polymorph Self regains 10 HP (1d12+1: 9 + 1), HP 20 → 30",
+    );
+  });
+
+  it("at full HP the cap gave nothing: the roll shows, not a gain", async () => {
+    const full = entry("buff_change", {
+      action: "dismiss",
+      buff: "Polymorph Self",
+      spellId: "polymorph_self",
+      cause: "voluntary",
+      endEffects: [heal("voluntary", 9)],
+      hpBefore: 40,
+      hpAfter: 40,
+    });
+    expect(entryText(full, await makeT("en"))).toBe(
+      "Ended Polymorph Self: rolls 1d12: 9, no HP regained, HP 40 → 40",
+    );
+    expect(entryText(full, await makeT("fr"))).toContain(
+      "jette 1d12 : 9, aucun PV regagné, PV 40 → 40",
+    );
+  });
+});

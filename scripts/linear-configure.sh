@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shapes the Linear workspace for this project (idempotent):  just linear-configure [--dry-run]
 #
-#   - project "critical-app" belongs to team CRI (CRI is added to its teams; nothing is removed),
+#   - project "critical-hit" belongs to team CRI (CRI is added to its teams; nothing is removed),
 #   - team CRI has every label of scripts/linear-mapping.json (Bug and Feature are the workspace labels
 #     and are only checked),
 #   - the states the mapping names exist in team CRI (the built-in ones; checked, never created).

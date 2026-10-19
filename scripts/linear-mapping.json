@@ -1,7 +1,7 @@
 {
   "_comment": "The one place the Linear workspace shape (priorities, states, labels) is written. Read by scripts/linear-configure.sh and the agents' scripts; described in docs/linear.md. Change it here only.",
   "team": "CRI",
-  "project": "critical-app",
+  "project": "critical-hit",
   "priority": {
     "P0": {"name": "Urgent", "linear": 1},
     "P1": {"name": "High", "linear": 2},

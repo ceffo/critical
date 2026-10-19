@@ -82,7 +82,7 @@ func TestBuffs_Step17_SpellID(t *testing.T) {
 		},
 		{
 			"dismiss names it", func(f *fixture) error {
-				_, err := f.svc.Dismiss(ctx, charID, "m")
+				_, _, err := f.svc.Dismiss(ctx, charID, "m", "")
 				return err
 			},
 			[]buffsvc.BuffEffect{gem},
@@ -90,7 +90,7 @@ func TestBuffs_Step17_SpellID(t *testing.T) {
 		},
 		{
 			"a buff not from a spell has no spellId", func(f *fixture) error {
-				_, err := f.svc.Dismiss(ctx, charID, "g")
+				_, _, err := f.svc.Dismiss(ctx, charID, "g", "")
 				return err
 			},
 			[]buffsvc.BuffEffect{mirror},
@@ -119,7 +119,7 @@ func TestBuffs_Step17_SpellID(t *testing.T) {
 		f.initiativeIs(nil)
 		f.rollsInitiative(4)
 
-		_, _, _, _, err := f.svc.AdvanceRound(ctx, charID)
+		_, _, _, _, _, err := f.svc.AdvanceRound(ctx, charID)
 		require.NoError(t, err)
 		assert.JSONEq(t, `{"action":"next_round","fromRound":2,"toRound":3,"expired":["Haste","Rage"],"expiredSpellIds":["haste",""]}`,
 			string(f.entries[0].Payload))
@@ -133,7 +133,7 @@ func TestBuffs_Step17_SpellID(t *testing.T) {
 		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 0).Return(nil).Once()
 		f.initiativeIs(nil)
 
-		_, _, _, _, err := f.svc.PassTime(ctx, charID, 0.02)
+		_, _, _, _, _, err := f.svc.PassTime(ctx, charID, 0.02)
 		require.NoError(t, err)
 		assert.JSONEq(t, `{"action":"pass_time","hours":0.02,"rounds":1,"fromRound":0,"toRound":0,"expired":["Rage"]}`,
 			string(f.entries[0].Payload))
@@ -147,7 +147,7 @@ func TestBuffs_Step17_SpellID(t *testing.T) {
 		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 0).Return(nil).Once()
 		f.initiativeIs(nil)
 
-		_, _, _, _, err := f.svc.PassTime(ctx, charID, 1)
+		_, _, _, _, _, err := f.svc.PassTime(ctx, charID, 1)
 		require.NoError(t, err)
 		assert.JSONEq(t, `{"action":"pass_time","hours":1,"rounds":60,"fromRound":0,"toRound":0,"expired":["Mirror Image"],"expiredSpellIds":["mirror_image"]}`,
 			string(f.entries[0].Payload))
@@ -159,7 +159,7 @@ func TestBuffs_Step17_SpellID(t *testing.T) {
 		f.state(before, 1)
 		f.records()
 		f.saves([]buffsvc.BuffEffect{gem})
-		_, err := f.svc.Dismiss(ctx, charID, "m")
+		_, _, err := f.svc.Dismiss(ctx, charID, "m", "")
 		require.NoError(t, err)
 
 		f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, before).Return(nil).Once()

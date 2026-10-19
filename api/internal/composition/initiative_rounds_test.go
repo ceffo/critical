@@ -105,7 +105,7 @@ func TestInitiative_ADR0035Item6_MagicMissileWithHasteUndoRedoReroll(t *testing.
 	_, err = tb.bs.Cast.AddEffect(tb.ctx, tb.id, castsvc.AddEffectRequest{SpellID: "haste"})
 	require.NoError(t, err)
 
-	_, _, _, rolled, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+	_, _, _, rolled, _, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 	require.NoError(t, err)
 	assert.Equal(t, []buffsvc.InitiativeModifier{
 		{Source: buffsvc.InitiativeWeapon, Value: 5, ItemID: sword.Item.ID, Name: "Fixture long sword"}, hasteTerm,
@@ -152,7 +152,7 @@ func TestInitiative_ADR0035Item6_2_AWandAfterASpellReplacesItsTerm(t *testing.T)
 		Behaviour: itemsvc.BehaviourCharges, Count: 5, MaxCount: 5,
 	})
 	require.NoError(t, err)
-	_, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+	_, _, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 	require.NoError(t, err)
 	_, err = tb.bs.Cast.Cast(tb.ctx, tb.id, 0, castsvc.CastRequest{})
 	require.NoError(t, err)
@@ -195,7 +195,7 @@ func TestInitiative_ADR0035Item6_2_AFailedCastCorrectsARoundZeroCastDoesNot(t *t
 	_, err = tb.bs.Log.Undo(tb.ctx, tb.id, tb.top(t).ID) // the slot back
 	require.NoError(t, err)
 
-	_, _, _, rolled, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+	_, _, _, rolled, _, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 	require.NoError(t, err)
 	assert.Equal(t, 4, rolled.D10)
 	failed, err := tb.bs.Cast.Cast(tb.ctx, tb.id, 0, castsvc.CastRequest{})
@@ -218,7 +218,7 @@ func TestInitiative_ADR0035Item6_2_ARoundSpellIsEndOfRoundUntilNextRound(t *test
 	require.NoError(t, err)
 	_, err = tb.bs.Cast.AddEffect(tb.ctx, tb.id, castsvc.AddEffectRequest{SpellID: "haste"})
 	require.NoError(t, err)
-	_, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+	_, _, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 	require.NoError(t, err)
 
 	_, err = tb.bs.Cast.Cast(tb.ctx, tb.id, 0, castsvc.CastRequest{})
@@ -229,7 +229,7 @@ func TestInitiative_ADR0035Item6_2_ARoundSpellIsEndOfRoundUntilNextRound(t *test
 	}, got.Modifiers)
 	assert.Equal(t, 6, got.Total(), "d10 8 + effects (−2)")
 
-	_, _, _, next, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+	_, _, _, next, _, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 	require.NoError(t, err)
 	for _, m := range next.Modifiers {
 		assert.NotEqual(t, buffsvc.TimingEndOfRound, m.Timing, "Next Round: no end of round")
@@ -261,7 +261,7 @@ func TestInitiative_ADR0035Item6_AWeaponBuffSpeedsTheSwordUntilItExpires(t *test
 				Name: "Weapon +3", Duration: tt.duration, Effects: buffsvc.BuffEffects{WeaponBuff: &three, WeaponKind: buffsvc.WeaponMelee},
 			})
 			require.NoError(t, err)
-			_, _, _, rolled, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+			_, _, _, rolled, _, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 			require.NoError(t, err)
 			assert.Equal(t, []buffsvc.InitiativeModifier{
 				{Source: buffsvc.InitiativeWeapon, Value: tt.speed, ItemID: sword.Item.ID, Name: "Fixture long sword"},
@@ -286,7 +286,7 @@ func TestInitiative_ADR0035Item6_2_AScrollUsedIsNotCounted(t *testing.T) {
 		Behaviour: itemsvc.BehaviourStock, Count: 1,
 	})
 	require.NoError(t, err)
-	_, _, _, rolled, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+	_, _, _, rolled, _, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 	require.NoError(t, err)
 	assert.Equal(t, 13, rolled.Total(), "8 + the sword's 5")
 

@@ -3,6 +3,8 @@ import type {
   BuffEdit,
   BuffEffect,
   BuffList,
+  EndCause,
+  Ended,
   Initiative,
   ItemPower,
   RoundAdvanceResponse,
@@ -32,7 +34,8 @@ interface BuffsStore {
     buff: Omit<Partial<BuffEffect>, "startRound">,
   ) => Promise<void>;
   editBuff: (id: string, edit: BuffEdit) => Promise<void>;
-  dismissBuff: (id: string) => Promise<void>;
+  /** Stops a row (with how it ended when its spell has end effects); resolves what they did. */
+  dismissBuff: (id: string, cause?: EndCause) => Promise<Ended | undefined>;
   triggerBuff: (id: string) => Promise<void>;
   saveBuffTemplate: (saved: Omit<SavedBuff, "id">) => Promise<void>;
   deleteSavedBuff: (id: number) => Promise<void>;
@@ -74,8 +77,10 @@ export const useBuffsStore = create<BuffsStore>((set) => ({
   editBuff: async (id, edit) => {
     set(fromList(await api.editBuff(id, edit)));
   },
-  dismissBuff: async (id) => {
-    set(fromList(await api.dismissBuff(id)));
+  dismissBuff: async (id, cause) => {
+    const list = await api.dismissBuff(id, cause);
+    set(fromList(list));
+    return list?.ended;
   },
   triggerBuff: async (id) => {
     set(fromList(await api.triggerBuff(id)));

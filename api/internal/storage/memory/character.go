@@ -9,16 +9,16 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
-	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
 // Characters is the character port: the sheet reads (charactersvc.Reader),
 // who owns and plays which character (charactersvc.Owners), the details edit
-// (detailssvc.DAL), the maximum HP (hpsvc.DAL) and the realized level
+// (detailssvc.DAL), the maximum HP (actionlogsvc.MaxHP) and the realized level
 // (levelupsvc.DAL).
 type Characters struct{ s *Store }
 
@@ -26,7 +26,7 @@ var (
 	_ charactersvc.Reader = Characters{}
 	_ charactersvc.Owners = Characters{}
 	_ detailssvc.DAL      = Characters{}
-	_ hpsvc.DAL           = Characters{}
+	_ actionlogsvc.MaxHP  = Characters{}
 )
 
 // Characters returns the character port.

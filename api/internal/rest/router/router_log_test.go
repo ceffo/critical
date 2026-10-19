@@ -12,7 +12,6 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 )
 
 var at = time.Date(2026, 10, 17, 20, 0, 0, 0, time.UTC)
@@ -132,9 +131,9 @@ func TestLogRedo_WireShape(t *testing.T) {
 // GET /api/hp events use the camelCase keys of web/src/types/hp.ts.
 func TestHPEndpoint_WireShape(t *testing.T) {
 	h, m := newRouter(t)
-	m.hp.EXPECT().GetState(mock.Anything, int64(1)).Return(&hpsvc.HPState{
-		CurrentHp: 15, MaxHp: 20, FloorHp: -10, Condition: hpsvc.ConditionOK,
-		Events: []hpsvc.HpEvent{{ID: 4, CharacterID: 1, Delta: -5, Source: "orc", CreatedAt: at}},
+	m.log.EXPECT().GetHPState(mock.Anything, int64(1)).Return(&actionlog.HPState{
+		CurrentHp: 15, MaxHp: 20, FloorHp: -10, Condition: actionlog.ConditionOK,
+		Events: []actionlog.HPEvent{{ID: 4, CharacterID: 1, Delta: -5, Source: "orc", CreatedAt: at}},
 	}, nil)
 	rec := do(h, "GET", "/api/hp", "")
 	require.Equal(t, http.StatusOK, rec.Code)

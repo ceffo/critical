@@ -11,7 +11,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
 
@@ -23,12 +24,12 @@ type Router interface {
 }
 
 // Narrow consumer-side interfaces — one per endpoint. Each handler takes
-// exactly the methods it calls. The fat hpsvc.SVC satisfies them implicitly.
+// exactly the methods it calls. The fat actionlogsvc.SVC satisfies them implicitly.
 type stateGetter interface {
-	GetState(ctx context.Context, characterID int64) (*hpsvc.HPState, error)
+	GetHPState(ctx context.Context, characterID int64) (*actionlog.HPState, error)
 }
 type eventAppender interface {
-	AppendEvent(ctx context.Context, characterID int64, delta int, source string) (*hpsvc.HPState, error)
+	AppendHPEvent(ctx context.Context, characterID int64, delta int, source string) (*actionlog.HPState, error)
 }
 
 // CharacterIDFunc resolves the active character ID from the request context.
@@ -37,7 +38,7 @@ type eventAppender interface {
 type CharacterIDFunc func(r *http.Request) int64
 
 // RegisterRoutes wires HP endpoints onto r.
-func RegisterRoutes(r Router, charID CharacterIDFunc, svc hpsvc.SVC) {
+func RegisterRoutes(r Router, charID CharacterIDFunc, svc actionlogsvc.SVC) {
 	r.Get("/api/hp", render.Handle(GetHP(charID, svc)))
 	r.Post("/api/hp/event", render.Handle(AppendEvent(charID, svc)))
 }
@@ -45,7 +46,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc hpsvc.SVC) {
 // GetHP returns the current HP state.
 func GetHP(charID CharacterIDFunc, svc stateGetter) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		state, err := svc.GetState(r.Context(), charID(r))
+		state, err := svc.GetHPState(r.Context(), charID(r))
 		if err != nil {
 			return err
 		}
@@ -66,7 +67,7 @@ func AppendEvent(charID CharacterIDFunc, svc eventAppender) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		state, err := svc.AppendEvent(r.Context(), charID(r), body.Delta, body.Source)
+		state, err := svc.AppendHPEvent(r.Context(), charID(r), body.Delta, body.Source)
 		if err != nil {
 			return err
 		}
@@ -97,9 +98,9 @@ type HpEventDTO struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
-func toDTO(s *hpsvc.HPState) HPStateDTO {
+func toDTO(s *actionlog.HPState) HPStateDTO {
 	if s == nil {
-		return HPStateDTO{Condition: string(hpsvc.ConditionOK), Events: []HpEventDTO{}}
+		return HPStateDTO{Condition: string(actionlog.ConditionOK), Events: []HpEventDTO{}}
 	}
 	events := make([]HpEventDTO, 0, len(s.Events))
 	for _, e := range s.Events {

@@ -42,7 +42,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
-	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
@@ -111,7 +110,7 @@ type SpellbookStore interface {
 type Storage struct {
 	Store     Store
 	Character CharacterStore
-	HP        hpsvc.DAL
+	HP        actionlogsvc.MaxHP
 	Log       actionlogsvc.DAL
 	Buff      BuffStore
 	Spell     SpellStore

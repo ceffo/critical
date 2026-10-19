@@ -32,7 +32,7 @@ func TestNew_Step8_1_InMemoryOpensNoDatabase(t *testing.T) {
 	ch, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, "Test Bard", ch.Name)
-	hp, err := bs.HP.GetState(ctx, id)
+	hp, err := bs.Log.GetHPState(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, 85, hp.CurrentHp)
 }

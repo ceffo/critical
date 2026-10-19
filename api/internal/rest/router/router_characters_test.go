@@ -101,7 +101,7 @@ func TestCurrentCharacter_Step7_1_EachUserActsOnTheirOwn(t *testing.T) {
 	}))
 	m.char.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(&charactersvc.Character{ID: 3, Name: "Kelsen"}, nil).Once()
 	m.char.EXPECT().GetCharacter(mock.Anything, int64(8)).Return(&charactersvc.Character{ID: 8, Name: "Bram"}, nil).Once()
-	m.hp.EXPECT().AppendEvent(mock.Anything, int64(8), -4, "orc").Return(nil, nil).Once()
+	m.log.EXPECT().AppendHPEvent(mock.Anything, int64(8), -4, "orc").Return(nil, nil).Once()
 
 	ann := as(h, "ann", "GET", "/api/character", "")
 	require.Equal(t, http.StatusOK, ann.Code)
@@ -180,12 +180,12 @@ func TestCurrentCharacter_Step7_2_TheShownCharacterOrNone(t *testing.T) {
 	a := usersAuth(t, map[string]authsvc.User{"ann": ann})
 	h, m := newRouterWith(t, a)
 
-	m.hp.EXPECT().AppendEvent(mock.Anything, int64(3), -1, "a").Return(nil, nil).Once()
+	m.log.EXPECT().AppendHPEvent(mock.Anything, int64(3), -1, "a").Return(nil, nil).Once()
 	assert.Equal(t, http.StatusOK, shown(h, "ann", "3", "POST", "/api/hp/event", `{"delta":-1,"source":"a"}`).Code)
 
 	// Switched to 5 on the other server: this one remembers 3.
 	a.EXPECT().FreshCurrentCharacter(mock.Anything, mock.Anything).Return(5, nil).Once()
-	m.hp.EXPECT().AppendEvent(mock.Anything, int64(5), -2, "b").Return(nil, nil).Once()
+	m.log.EXPECT().AppendHPEvent(mock.Anything, int64(5), -2, "b").Return(nil, nil).Once()
 	assert.Equal(t, http.StatusOK, shown(h, "ann", "5", "POST", "/api/hp/event", `{"delta":-2,"source":"b"}`).Code)
 
 	// The page shows 7, the database says 5: nothing runs.

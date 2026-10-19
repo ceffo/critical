@@ -33,13 +33,13 @@ Tests live in `api/internal/domain/` unless named otherwise.
    `GET /api/hp` returns the floor as `floor: -10`.
    Tests: `TestFloorDamage` (actionlog), `TestRecord_FloorsDamage` (actionlogsvc: "damage past
    the floor is clamped", "damage at the floor logs 0", boundaries, errors),
-   `TestGetState_NeverBelowFloor` (hpsvc).
+   `TestGetState_NeverBelowFloor` (actionlogsvc).
 2. **Condition, evaluated on the server.** From the HP shown (step 1 and ADR 0007 step 6), first
    match wins: `dead` at or below -10; `unconscious` at or below 0; `badlyWounded` at or below a
    quarter of max HP, compared as `4 × HP ≤ hp_max` so no rounding is involved (10 of 40 is badly
    wounded, 11 of 41 is not); `ok` otherwise. `GET /api/hp` (and every HP response) returns it as
    `condition`. The client only maps the code to a label and a style.
-   Tests: `TestConditionOf` (hpsvc: each boundary), `TestGetState_Condition` (hpsvc).
+   Tests: `TestConditionOf` (actionlog: each boundary), `TestGetState_Condition` (actionlogsvc).
 
 ## Consequences
 

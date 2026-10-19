@@ -208,6 +208,67 @@ func (_c *MockSVC_AmendLatest_Call) RunAndReturn(run func(context.Context, int64
 	return _c
 }
 
+// AppendHPEvent provides a mock function with given fields: ctx, characterID, delta, source
+func (_m *MockSVC) AppendHPEvent(ctx context.Context, characterID int64, delta int, source string) (*actionlog.HPState, error) {
+	ret := _m.Called(ctx, characterID, delta, source)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AppendHPEvent")
+	}
+
+	var r0 *actionlog.HPState
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, string) (*actionlog.HPState, error)); ok {
+		return rf(ctx, characterID, delta, source)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, string) *actionlog.HPState); ok {
+		r0 = rf(ctx, characterID, delta, source)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*actionlog.HPState)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int, string) error); ok {
+		r1 = rf(ctx, characterID, delta, source)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AppendHPEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AppendHPEvent'
+type MockSVC_AppendHPEvent_Call struct {
+	*mock.Call
+}
+
+// AppendHPEvent is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - delta int
+//   - source string
+func (_e *MockSVC_Expecter) AppendHPEvent(ctx interface{}, characterID interface{}, delta interface{}, source interface{}) *MockSVC_AppendHPEvent_Call {
+	return &MockSVC_AppendHPEvent_Call{Call: _e.mock.On("AppendHPEvent", ctx, characterID, delta, source)}
+}
+
+func (_c *MockSVC_AppendHPEvent_Call) Run(run func(ctx context.Context, characterID int64, delta int, source string)) *MockSVC_AppendHPEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AppendHPEvent_Call) Return(_a0 *actionlog.HPState, _a1 error) *MockSVC_AppendHPEvent_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AppendHPEvent_Call) RunAndReturn(run func(context.Context, int64, int, string) (*actionlog.HPState, error)) *MockSVC_AppendHPEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -250,6 +311,65 @@ func (_c *MockSVC_Close_Call) Return(_a0 error) *MockSVC_Close_Call {
 }
 
 func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *MockSVC_Close_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetHPState provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) GetHPState(ctx context.Context, characterID int64) (*actionlog.HPState, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetHPState")
+	}
+
+	var r0 *actionlog.HPState
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (*actionlog.HPState, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) *actionlog.HPState); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*actionlog.HPState)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_GetHPState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetHPState'
+type MockSVC_GetHPState_Call struct {
+	*mock.Call
+}
+
+// GetHPState is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) GetHPState(ctx interface{}, characterID interface{}) *MockSVC_GetHPState_Call {
+	return &MockSVC_GetHPState_Call{Call: _e.mock.On("GetHPState", ctx, characterID)}
+}
+
+func (_c *MockSVC_GetHPState_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_GetHPState_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_GetHPState_Call) Return(_a0 *actionlog.HPState, _a1 error) *MockSVC_GetHPState_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_GetHPState_Call) RunAndReturn(run func(context.Context, int64) (*actionlog.HPState, error)) *MockSVC_GetHPState_Call {
 	_c.Call.Return(run)
 	return _c
 }

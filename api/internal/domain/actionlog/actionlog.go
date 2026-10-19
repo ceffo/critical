@@ -19,7 +19,7 @@ import (
 // Kind classifies an entry.
 type Kind string
 
-// Entry kinds. hp_change (hpsvc), buff_change and round_advance (buffsvc)
+// Entry kinds. hp_change (actionlogsvc), buff_change and round_advance (buffsvc)
 // are recorded today; the others are reserved for the services that plug
 // into the log.
 const (

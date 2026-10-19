@@ -11,14 +11,6 @@ packages:
       SVC:
       DAL:
       IdentityProvider:
-  github.com/ceffo/critical/api/internal/domain/service/hpsvc:
-    config:
-      dir: "internal/domain/service/hpsvc/mocks"
-      outpkg: "mocks"
-    interfaces:
-      SVC:
-      DAL:
-      Log:
   github.com/ceffo/critical/api/internal/domain/service/actionlogsvc:
     config:
       dir: "internal/domain/service/actionlogsvc/mocks"

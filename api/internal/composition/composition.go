@@ -28,7 +28,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/creationrollsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
-	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
@@ -53,7 +52,6 @@ type BackingServices struct {
 	DB *postgres.DB
 
 	Character charactersvc.SVC
-	HP        hpsvc.SVC
 	Log       actionlogsvc.SVC
 	Buffs     buffsvc.SVC
 	Spells    spellsvc.SVC
@@ -285,11 +283,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		return nil, err
 	}
 	registerRestorers(logSvc, buffSvc.Restorers())
-	hpSvc, err := hpsvc.New(hpDAL, logSvc)
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
 	spellSvc, err := spellsvc.New(spellDAL, catalogue, prepSource)
 	if err != nil {
 		_ = db.Close()
@@ -408,7 +401,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 
 	return &BackingServices{
 		Character: charSvc,
-		HP:        hpSvc,
 		Log:       logSvc,
 		Buffs:     buffSvc,
 		Spells:    spellSvc,
@@ -429,7 +421,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error
 		Auth:      authSvc,
 		store:     db,
 		services: []domain.Service{
-			authSvc, charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, restSvc, xpSvc, levelUpSvc, creationRollSvc, learnSvc, skillSvc, acSvc, detailsSvc, diceSvc,
+			authSvc, charSvc, buffSvc, logSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, restSvc, xpSvc, levelUpSvc, creationRollSvc, learnSvc, skillSvc, acSvc, detailsSvc, diceSvc,
 		},
 	}, nil
 }

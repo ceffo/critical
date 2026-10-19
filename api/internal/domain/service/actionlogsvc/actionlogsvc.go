@@ -43,6 +43,13 @@ type SVC interface {
 	HPTotal(ctx context.Context, characterID int64) (int, error)
 	// ActiveEntries returns the newest non-voided entries of kind.
 	ActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
+	// GetHPState is the HP read model: max HP, current HP (max plus the log's
+	// total, within the floor and max, ADR 0007 step 6, ADR 0011 step 1), the
+	// condition (ADR 0011 step 2) and the last HistoryLimit HP changes.
+	GetHPState(ctx context.Context, characterID int64) (*actionlog.HPState, error)
+	// AppendHPEvent logs an hp_change entry (delta signed, source optional)
+	// and returns the new HP state. The cap and floor apply as in Record.
+	AppendHPEvent(ctx context.Context, characterID int64, delta int, source string) (*actionlog.HPState, error)
 
 	// RegisterRestorer binds the service that owns stateKey, so voiding an
 	// entry with a snapshot under that key can write the "before" state back.

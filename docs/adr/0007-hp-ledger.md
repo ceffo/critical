@@ -17,7 +17,7 @@ elements"*.
 
 ## Decision
 
-Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
+Tests live in `api/internal/domain/service/actionlogsvc/` unless named otherwise.
 
 1. **Entries.** An HP change is an `hp_change` entry of the action log with a signed `hp_delta`
    (negative for damage, positive for healing) and a source text, which is required (blank is

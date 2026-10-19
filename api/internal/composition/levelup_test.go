@@ -44,7 +44,7 @@ func levelUpOf(t *testing.T, bs *composition.BackingServices, id int64) (charact
 	ctx := context.Background()
 	c, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
-	hp, err := bs.HP.GetState(ctx, id)
+	hp, err := bs.Log.GetHPState(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, c.HPMax, hp.MaxHp)
 	return c.Derived.LevelUp, hp.MaxHp, hp.CurrentHp
@@ -73,7 +73,7 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	id := rootCharacter(t, bs)
 
-	_, err = bs.HP.AppendEvent(ctx, id, -10, "an ogre")
+	_, err = bs.Log.AppendHPEvent(ctx, id, -10, "an ogre")
 	require.NoError(t, err)
 	_, err = bs.XP.Add(ctx, id, xpsvc.EntryInput{Base: 1_540_000 - 1_293_418, Reason: "the dragon"})
 	require.NoError(t, err)

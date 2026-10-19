@@ -1,4 +1,5 @@
-// Package hpdal is the storage adapter for hpsvc. HP changes live in the
+// Package hpdal is the storage adapter for the HP read model
+// (actionlogsvc.MaxHP). HP changes live in the
 // action log (actionlogdal); this adapter only reads the character's maximum.
 package hpdal
 
@@ -12,7 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 )
 
-// DAL is the implementation of hpsvc.DAL over the sqlc-generated queries.
+// DAL is the implementation of actionlogsvc.MaxHP over the sqlc-generated queries.
 type DAL struct {
 	q queries.Querier
 }

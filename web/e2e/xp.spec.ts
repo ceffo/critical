@@ -178,7 +178,7 @@ async function hp(page: Page): Promise<[number, number]> {
 // back and away; a heal after a level-up fills to the new max; the manual entry's Confirm stays off
 // for a die the group can't roll and the journal words the entered die; an XP delete under the
 // rolled level turns the prompt into the step 7.4 warning, in French. The math (the die, CON, the
-// heal cap, the snapshot undo restores) is Go tests (levelupsvc, composition, hpsvc).
+// heal cap, the snapshot undo restores) is Go tests (levelupsvc, composition, actionlogsvc).
 test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then an XP delete warns", async ({
   page,
 }) => {

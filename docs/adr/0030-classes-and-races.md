@@ -119,6 +119,10 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    not book text, step 18)_. _(As built for the bard, 2026-10-18: the code `metal`, stored in
    `characters.skill_armor` (migration 012 widens its CHECK) and refused for a thief (`unknown`);
    a bard's points share `characters.skill_points` with the thief's.)_
+   _(Amended by [ADR 0033](0033-equipment.md) step 14, as built: the armour for skills is the body
+   armour the character **wears**, never entered. The entered field, its creation input and its
+   drop-down are removed; `characters.skill_armor` is read by nothing (only an old `skill_armor`
+   entry's undo writes it), and migration 020 carried every entered value over to a worn armour.)_
    _(As built)_ The race is a code in `characters.race_code` (`''` when none is set: no racial
    adjustment applies); the free-text race of the character's details stays as the player wrote it.
    The seed names Kelsen's (`half_elf`), given to him by the migration's data step. The derived values
@@ -459,7 +463,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 
 17. **Thieving skills.** Each of the eight skills of PHB Table 26 is: base (Table 26) + the
     entered points + race (Table 27) + Dexterity (Table 28, the sheet's Dexterity; skills without a
-    column get 0) + armour (Table 29, the armour of step 1; leather is the table's baseline, 0), capped at 95% (PHB p.39: no skill above
+    column get 0) + armour (Table 29, the column of the body armour worn, [ADR 0033](0033-equipment.md)
+    step 14: none worn is the none column, an armour a thief may not wear the padded or studded
+    one; leather is the table's baseline, 0), capped at 95% (PHB p.39: no skill above
     95 with every adjustment) and floored at 0. _(proposed: the points are checked against the
     book's budget (PHB p.39): 60 at level 1 and 30 a level after; at most 30 in one skill at level
     1 and at most 15 in one skill per level after. The entered points are per skill and per level
@@ -467,7 +473,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     a refusal.)_
     _(As built for the thief, 2026-10-18)_ A thief enters its armour (`none`, `leather`,
     `padded_studded_leather`, `elven_chain`; stored in `characters.skill_armor`, none stored reads
-    as leather) and its points per skill, 0 to 95 each (more could never count), stored as one
+    as leather; _superseded by ADR 0033 step 14: the armour is the worn one, not entered_) and its points per skill, 0 to 95 each (more could never count), stored as one
     JSON object in `characters.skill_points` (migration 011); another class enters neither
     (`not_allowed`). The percentages are derived on every read with every term
     (`derived.thiefSkills`) and rolled through [ADR 0014](0014-skill-checks.md)'s flow as the
@@ -495,7 +501,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     (skillsvc), `TestThief_Step17_SpendPointsAfterALevelUpAndUndo` (composition).
 18. **Bard skills.** The four bard skills (Climb Walls, Detect Noise, Pick Pockets, Read
     Languages) are: base (PHB Table 33) + the entered points + race (Table 27) + Dexterity (Table
-    28: Pick Pockets only) + armour (Table 29; metal armour up to chain mail is the elven chain column plus the extra -5%
+    28: Pick Pockets only) + armour (Table 29 on the body armour worn, ADR 0033 step 14; metal armour up to chain mail is the elven chain column plus the extra -5%
     of the table's note, step 1), capped at 95% and floored at 0. The budget is a warning as step
     17's, 20 points at level 1 and 15 a level after (PHB p.42; accepted by the user in triage,
     2026-10-18); the PHB gives the bard no per-skill limit, so none is checked. The computed
@@ -507,7 +513,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     (`charactersvc.ValidSkillPoints` on the class's skills, `ruletablesvc.SkillsOf` and
     `SkillArmorsOf`; refusals `empty`, `unknown`, `out_of_range`, `not_allowed`), the same spend
     (`PUT /api/skills/points`, a `skill_points` entry undone by its snapshot) and the same armour
-    change (a `skill_armor` entry). The outputs stay per class: the derived block's `bardSkills`
+    change (a `skill_armor` entry; _superseded by ADR 0033 step 14: the armour is the worn one, its
+    entry, `SkillArmorsOf` and the `skill_armor` move are gone_). The outputs stay per class: the derived block's `bardSkills`
     beside `thiefSkills` (`ruletablesvc.BardSkills` on `rogueSkills`, the shared sum), the budget
     in `skillBudget` (`ruletablesvc.BardSkillPointBudget`, code `skill_points_total` only), and the
     check kind `bardSkill` (ADR 0014 step 3, kept so the logged checks still read). A bard skill at
@@ -518,8 +525,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestBardSkills_Step18_Race`, `TestBardSkills_Step18_DexterityOnPickPocketsOnly`,
     `TestBardSkills_Step18_Armour` (metal included), `TestBardSkills_Step18_CapAndFloor`,
     `TestBardSkillPointBudget_Step18` (ruletablesadpt), `TestDerive_Step18_TheBardsSkillsAndBudget`,
-    `TestCreate_Step18_BardSkillPointsAndArmour`, `TestChange_ABardsSkillArmourIsSetAndLogged`
-    (charactersvc), `TestBardSkill_Step18_D100AtOrUnderTheDerivedPercent`,
+    `TestCreate_Step18_BardSkillPointsAndArmour` (charactersvc; the armour's tests are ADR 0033
+    step 14's), `TestBardSkill_Step18_D100AtOrUnderTheDerivedPercent`,
     `TestBardSkill_Step18_ListedWithTheirTermsAndLastCheck`, `TestSetPoints_Step18_ABardSpendsItsPoints`
     (skillsvc), `TestBard_Step18_CreateRollSpendAndUndo`,
     `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
@@ -542,7 +549,10 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestResolveAttack_Step19_BackstabRefusedBeforeAnyDie`, `TestGetAttackForm_Step19_BackstabPreview`,
     `TestBackstab_Step19_MeleeWeaponOnly` (combatsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition).
 
-    _(Armour changed after creation, 2026-10-18)_ The armour is edited later with
+    _(Armour changed after creation, 2026-10-18; superseded by [ADR 0033](0033-equipment.md) step 14:
+    the armour is the one worn, changed by wearing or taking off a piece, one `equipment_state`
+    move; `skillArmor` on `PATCH /api/characters/{id}` is refused as an unknown field, and an old
+    `skill_armor` entry still pops and shows in the journal.)_ The armour was edited later with
     `PATCH /api/characters/{id}` `{"skillArmor": …}` (the rename's path, in the same transaction as
     a rename or a retirement in the same body). It is a move of the game, like spending points:
     it moves every thief percentage, so it is logged (one `skill_armor` entry, payload

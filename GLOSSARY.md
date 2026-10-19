@@ -228,7 +228,8 @@ The UI's one word for a worn or wielded item; `worn`, `wielded` and `carried` st
 internal states. [ADR 0033](docs/adr/0033-equipment.md) step 6, [ADR 0035](docs/adr/0035-equipment-screens.md) item 3.
 
 **Skill armour** (fr: armure des talents):
-The armour a thief's or bard's skills are adjusted for; the worn armour once ADR 0033 is built.
+The armour a thief's or bard's skills are adjusted for: the Table 29 column of the body armour it
+wears (none worn: the none column), never entered.
 [ADR 0030](docs/adr/0030-classes-and-races.md) step 17, [ADR 0033](docs/adr/0033-equipment.md) step 14.
 
 ### The action log

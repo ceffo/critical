@@ -483,6 +483,36 @@ makes no skill armour worn. CRI-36 brings its own data step: it reads each chara
 and makes the matching armour piece worn (or adds it, on the review list as a guessed armour, step
 27).
 
+_Step 14 (as built, CRI-36)_: `charactersvc` derives a thief's or bard's skills on every read from the
+worn body armour's Table 29 column (`charactersvc.Armour`, implemented in the composition root over
+the items' store: the item service reads the characters, so the character service reads the pieces
+through their DAL; `ruletablesvc.SkillArmorFor` maps the column to the skill armour Table 29 reads:
+`none_allowed`, `metal` for a thief and an unknown column read `padded_studded_leather`). The
+derived block (`GET /api/character`) and `GET /api/skills` carry `skillArmor`, the skill armour read
+(the Skills tab names it; it is changed by wearing armour in the Inventaire, never there). The
+`skillArmor` entry is gone from `POST /api/characters`, `POST /api/characters/preview` and `PATCH
+/api/characters/{id}` (a body naming it is an unknown field, 400) and from the creation options
+(`skillArmors`); `characters.skill_armor` is no longer read or written, except by the restorer of an
+old `skill_armor` entry. The carry-over is the data step of migration 020 (`carrySkillArmour`, schema:
+a column comment), on `itemsvc.CarrySkillArmour`. Readings the ADR leaves open, fixed here: "the
+matching armour piece" is the first **carried** armour of the entered column (none: the catalogue
+piece is added; a piece worn already is kept, and its column decides); the added piece is the
+catalogue row by code (`leather`, `studded_leather`, `elven_chain_mail`, `chain_mail`), its name in
+every language the row has, `stock`, count 1, at the end of the list, the row's code as its id (a
+free suffix if taken); the guessed pieces' review reason is `armour_guessed`; a carry-over that needs
+a row a catalogue without armour lacks refuses the start, as step 26.4's conversion does. The seed
+character (the database's and the memory store's) gets the same carry-over when its equipment is
+seeded, so a new database holds what an upgraded one does (Kelsen, none entered: Leather armour,
+worn). The class warning of a thief in armour it may not wear is step 20's (CRI-41). Tests:
+`TestSkillArmorFor_Step14_TheWornArmoursColumn` (ruletablesvc),
+`TestCarrySkillArmour_Step14`, `TestWornSkillColumn_Step14` (itemsvc),
+`TestGetCharacter_Step14_TheSkillsReadTheWornArmour`, `TestRestorers_Step14_AnOldSkillArmourEntryStillPops`
+(charactersvc), `TestCarrySkillArmour_Step14_*` (storage/postgres),
+`TestSeed_Step14_TheSeedBardWearsTheArmourItEntered` (storage/memory),
+`TestThief_Step14_TheSkillsFollowTheWornArmour`, `TestBard_Step14_MetalArmourReadsTheBardsColumn`,
+`TestCharacters_Step14_SkillArmourIsNoEntry`, `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages`
+(composition).
+
 _Steps 10 to 13 (as built, CRI-35)_: `acsvc` derives the AC on every read (`acsvc.Derive`, tests
 `TestAC_Step10_*`, `TestAC_Step11_*`, `TestAC_Step12_*`) from the worn armour and shield
 (`itemsvc`), the buffs that apply and the powers that are on (`buffsvc.ListStatus`, `ListPowers`)

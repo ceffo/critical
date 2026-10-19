@@ -6,6 +6,8 @@ import {
   ABILITIES,
   type AbilityCode,
   type CharacterPreview,
+  type DraftChecks,
+  type DraftChecksRequest,
   type CreationOptions,
   type HpRoll,
   type NewCharacter,
@@ -204,6 +206,35 @@ export function buildBody(
   return { body };
 }
 
+/**
+ * What the server is asked about the draft on the class and skills steps (ADR 0034): the scores
+ * and skill points that read as whole numbers, and the XP when it does. Only the shape is read; the
+ * verdicts (a minimum missed, the points left) are the server's.
+ */
+export function checksRequest(
+  options: CreationOptions,
+  draft: FlowDraft,
+  xp: string,
+): DraftChecksRequest {
+  const scores: Record<string, number> = {};
+  for (const a of ABILITIES) {
+    const v = parseWhole(draft.scores[a]);
+    if (v !== null && !Number.isNaN(v)) scores[a] = v;
+  }
+  const skillPoints: Record<string, number> = {};
+  for (const skill of classOf(options, draft.cls)?.skills ?? []) {
+    const v = parseWhole(draft.skillPoints[skill] ?? "");
+    if (v !== null && !Number.isNaN(v)) skillPoints[skill] = v;
+  }
+  const x = parseWhole(xp);
+  return {
+    class: draft.cls,
+    scores,
+    xp: x === null || Number.isNaN(x) ? null : x,
+    skillPoints,
+  };
+}
+
 /** A refusal shown on its step: the form's field, the server's code, its message as a fallback. */
 export interface FieldError {
   field: string;
@@ -239,6 +270,8 @@ export interface StepProps {
   watch: () => () => boolean;
   /** The server's preview of the draft (the identity step's warnings, the review's figures). */
   preview: PreviewState;
+  /** The server's checks of the draft on the class and skills steps; null before the first answer. */
+  checks: DraftChecks | null;
   /** The body Créer would send, null while a value is unreadable. */
   body: NewCharacter | null;
   /** A refusal in words. */

@@ -6,6 +6,7 @@ import type { TFunction } from "i18next";
 import { localized } from "@/i18n/localized";
 import { labelKey, translateValue } from "@/lib/lookupLabels";
 import type { StatKey } from "@/lib/spellValues";
+import { mark, markedField, type ValueKind } from "@/lib/valueMarks";
 import type {
   Spell,
   SpellArea,
@@ -21,10 +22,58 @@ export interface StatLocale {
   lang: string;
   /** Lengths in metres (`lookup.lengths` is "metric"), else in the book's feet and yards. */
   metric: boolean;
+  /**
+   * Wrap the gameplay values the wording composes in value marks (lib/valueMarks), for the tiles.
+   * The wording knows which pieces are values because it builds them from the typed stat: this
+   * is composition, not recognition. Off, the texts are plain.
+   */
+  marks: boolean;
 }
 
-export function statLocale(t: TFunction, lang: string): StatLocale {
-  return { t, lang, metric: t("lookup.lengths") === "metric" };
+export function statLocale(
+  t: TFunction,
+  lang: string,
+  marks = false,
+): StatLocale {
+  return { t, lang, metric: t("lookup.lengths") === "metric", marks };
+}
+
+/** The time units of the typed stats (the others are lengths and areas). */
+const TIME_UNITS = new Set([
+  "segment",
+  "round",
+  "turn",
+  "minute",
+  "second",
+  "hour",
+  "day",
+  "week",
+  "month",
+  "year",
+]);
+
+/** `text` as a gameplay value of the unit's kind, when the stat is worded with marks. */
+function valued(loc: StatLocale, unit: string, text: string): string {
+  if (!loc.marks) return text;
+  const kind: ValueKind = TIME_UNITS.has(labelKey(unit)) ? "time" : "distance";
+  return mark(kind, text);
+}
+
+/** Dice as a value, when the stat is worded with marks. */
+function dicey(loc: StatLocale, dice: string): string {
+  return loc.marks ? mark("dice", dice) : dice;
+}
+
+/** The text a template puts around its value: the template with a placeholder, split there. */
+function around(
+  loc: StatLocale,
+  key: string,
+  params: Record<string, unknown> = {},
+): [string, string] {
+  const [before, after = ""] = loc
+    .t(key, { ...params, value: "\uE003" })
+    .split("\uE003");
+  return [before, after];
 }
 
 /**
@@ -145,7 +194,9 @@ export function formatValue(
     const a = formatNumber(loc, v.amount * f, unit);
     parts.push(v.upper ? `${a}-${formatNumber(loc, v.upper * f, unit)}` : a);
   }
-  if (v.dice) parts.push(v.dice);
+  // A count of something keeps its dice as the only value; a unit makes the whole a value.
+  const counted = !!noun || !unit;
+  if (v.dice) parts.push(counted ? dicey(loc, v.dice) : v.dice);
   // Dice make it several; "1,5" is singular in French, as Intl.PluralRules says.
   const count = v.dice ? 2 : (v.upper || v.amount) * f;
   const word = noun
@@ -153,7 +204,8 @@ export function formatValue(
     : unit
       ? (unitText(loc, unit, count) ?? unit)
       : null;
-  return withUnit(loc, parts.join(" + "), word);
+  const text = withUnit(loc, parts.join(" + "), word);
+  return counted ? text : valued(loc, unit, text);
 }
 
 /**
@@ -190,12 +242,21 @@ function termText(
     word = unitText(loc, shown, count);
     if (!word) return null;
   }
+  // With a unit the whole term is a value ("2 rounds/level"); a count of something keeps only its
+  // dice and its "per level" as values ("1d4 creatures", "1 creature" "/level").
+  const counted = !!noun || !shown;
+  if (counted && term.dice) value = dicey(loc, value);
   const text = withUnit(loc, value, word);
-  if (per) return loc.t("lookup.stat.perWord", { value: text, per });
-  if (!term.per_level) return text;
-  return (term.step ?? 1) > 1
-    ? loc.t("lookup.stat.perLevels", { value: text, step: term.step })
-    : loc.t("lookup.stat.perLevel", { value: text });
+  const done = (s: string) => (counted ? s : valued(loc, shown, s));
+  if (per) return done(loc.t("lookup.stat.perWord", { value: text, per }));
+  if (!term.per_level) return done(text);
+  const key =
+    (term.step ?? 1) > 1 ? "lookup.stat.perLevels" : "lookup.stat.perLevel";
+  const params = (term.step ?? 1) > 1 ? { step: term.step } : {};
+  if (!counted || !loc.marks)
+    return done(loc.t(key, { ...params, value: text }));
+  const [before, after] = around(loc, key, params);
+  return `${before}${text}${after ? mark("level", after) : ""}`;
 }
 
 /** A book quantity: its terms, "up to" and its cap; null when a word has no translation. */
@@ -214,7 +275,11 @@ export function quantityText(
     const [f, shown] = shownUnit(loc, q.max_unit ?? "", q.max);
     const word = shown ? unitText(loc, shown, q.max * f) : null;
     if (shown && !word) return null;
-    const max = withUnit(loc, formatNumber(loc, q.max * f, shown), word);
+    const max = valued(
+      loc,
+      shown,
+      withUnit(loc, formatNumber(loc, q.max * f, shown), word),
+    );
     text = loc.t("lookup.stat.max", { value: text, max });
   }
   return text;
@@ -581,7 +646,7 @@ const LABEL_GROUP: Record<StatField, StatKey | null> = {
  */
 export function statText(
   loc: StatLocale,
-  spell: Pick<Spell, StatField | "stats">,
+  spell: Pick<Spell, StatField | "stats" | "marked">,
   field: StatField,
 ): { text: string; source: StatSource } {
   if (!isBookLanguage(loc.lang)) {
@@ -591,5 +656,12 @@ export function statText(
   const raw = localized(loc.lang, spell[field]);
   const group = LABEL_GROUP[field];
   const text = group ? translateValue(loc.t, group, raw) : raw;
-  return { text, source: text === raw ? "book" : "label" };
+  if (text !== raw) return { text, source: "label" };
+  // The book's own text: its gameplay values are the API's marks (ADR 0021 step 15).
+  return {
+    text: loc.marks
+      ? markedField(loc.lang, spell[field], spell.marked, field)
+      : text,
+    source: "book",
+  };
 }

@@ -9,6 +9,7 @@ Step 12 (the spheres, format 6) is **decided as built**, 2026-10-18 (critical-re
 user; the API reads formats 5 and 6, the builder publishing format 6 is a separate item).
 Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; the API reads formats 6 and 7).
 Step 14 (the languages, format 8) is **decided as built**, 2026-10-18 (the API reads formats 7 and 8).
+Step 15 (the gameplay values of a spell text, marked by the API, no format change) is **decided as built**, 2026-10-19.
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -582,6 +583,30 @@ is only ever appended to by play.
     Tests: `TestSchema_Step14_Format8Languages` (cataloguecheck), `TestParse_Step14_1_ReadsFormat8`, `TestParse_Step14_2_LanguagesBelongToFormat8`
     (catalogueadpt), `TestParse_Step14_1_ReadsFormat8Languages`, `TestParse_Step14_2_LanguagesBelongToFormat8`,
     `TestParse_Step14_3_RefusesABrokenLanguageCatalogue` (ruletablesadpt), `TestStartup_Step14_RefusesAnUnknownLanguageAndStillReadsFormat7` (composition).
+
+15. **Gameplay values are marked by the API when it serves a spell** (**decided as built** 2026-10-19; user, 2026-10-19: at serve time, not at import).
+    The artifact (format 8) and the database do not change.
+    1. **Six kinds**, in English and French: dice (`1d12`, `3d6+2`), times (`2 turns/level`, `1 round`, `2 rounds/niveau`), levels (`15th level`,
+       `per level`, `12e niveau`), distances and areas (`10 feet`, `60-foot arc`, `3 m`), percentages (`10%`) and modifiers (`+3`, `-2`). A saving
+       throw is named in words, so it is not a value; neither are a year, a number in words, a "+" in prose or a digit in a spell name.
+    2. **Where: at serve time.** `wire.SpellToDTO` calls `spellvalues.Mark(lang, text)` (pure Go, `domain/spellvalues`) on the description and on
+       the six stat texts, in every language the spell has. One call site (`markValues`), so moving it to the import later only moves the call
+       and adds storage. Nothing is stored, so a better rule applies at the next release without a catalogue version.
+    3. **How it is served: `marked`**, an additive field of the spell payload (lookup, spellbook, cast result): by field name
+       (`description`, `casting_time`, `range`, `duration`, `area_of_effect`, `components`, `saving_throw`), then language code (ADR 0023: the
+       language is a key, never a field), a list of spans `{text, kind?}` that concatenate to exactly the served text. Only a text with a value
+       is listed; any other is shown plain. The texts themselves (`description`, the stat texts) are unchanged.
+    4. **The vocabulary is parsing input.** The unit words in `spellvalues` ("round", "feet", "tour", "pieds"...) are matching data for the
+       books' words, like the stat parser's (`spellstats`): never emitted, never displayed. A language without a vocabulary gets only the
+       language-neutral kinds (dice, percentages, modifiers). Recognition is generic: no rule names a spell.
+    5. **The client recognises nothing.** The description subset's parser (step 1) is unchanged; the spans travel through it as marks and are
+       rendered as React text, each value in one style (the theme's highlight accent, semibold), a table cell or a list item as in a paragraph.
+       The stat tiles show the book's text with the API's spans; the stat text the client words from the typed stats (step 8, French, and the
+       value at the caster level) marks the pieces it composes (unit terms, dice, "per level"), which is composition from typed values, not
+       recognition. The kind is kept on the wire and in a data attribute, so a style per kind stays possible.
+    Tests: `TestMark_FindsTheSixKindsInEnglishAndFrench`, `TestMark_LeavesNonValuesAlone`, `TestMark_TheFixtureCatalogueLosesNothing` (and the real
+    catalogue's, when fetched), `TestSpellToDTO_MarksTheValuesOfTheDescriptionAndTheStatsPerLanguage` (api); `value marks`, `stats worded with
+    their values marked`, `SpellDescription (gameplay values)` (web).
 
 ## Consequences
 

@@ -1,9 +1,11 @@
 import { cn } from "@/lib/utils";
 import { parseSpellText } from "@/lib/spellMarkdown";
+import { ValueText } from "@/components/dashboard/ValueText";
 
 /**
  * A spell description in the catalogue's subset (ADR 0021): paragraphs, bullet lists and pipe
- * tables, rendered as React text only (no HTML). Table cells wrap; a table still too wide for the
+ * tables, rendered as React text only (no HTML). `text` may carry the API's value marks
+ * (lib/valueMarks), shown in the value style wherever they sit, a table cell or a list item included. Table cells wrap; a table still too wide for the
  * block (many columns) scrolls sideways inside its own box.
  *
  * One column wherever it is shown (the lookup and the cast result), its measure capped at 75
@@ -32,14 +34,16 @@ export function SpellDescription({
           case "paragraph":
             return (
               <p key={i} className="whitespace-pre-line">
-                {b.text}
+                <ValueText text={b.text} />
               </p>
             );
           case "list":
             return (
               <ul key={i} className="flex list-disc flex-col gap-2 pl-5">
                 {b.items.map((item, j) => (
-                  <li key={j}>{item}</li>
+                  <li key={j}>
+                    <ValueText text={item} />
+                  </li>
                 ))}
               </ul>
             );
@@ -59,7 +63,7 @@ export function SpellDescription({
                           scope="col"
                           className="min-w-20 border-b border-border px-3 py-2 align-bottom font-semibold"
                         >
-                          {h}
+                          <ValueText text={h} />
                         </th>
                       ))}
                     </tr>
@@ -72,7 +76,7 @@ export function SpellDescription({
                       >
                         {row.map((c, k) => (
                           <td key={k} className="min-w-20 px-3 py-2 align-top">
-                            {c}
+                            <ValueText text={c} />
                           </td>
                         ))}
                       </tr>

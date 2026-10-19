@@ -75,6 +75,14 @@ packages:
       Characters:
       Dice:
       Log:
+  github.com/ceffo/critical/api/internal/domain/service/creationrollsvc:
+    config:
+      dir: "internal/domain/service/creationrollsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      Rules:
+      Dice:
   github.com/ceffo/critical/api/internal/domain/service/levelupsvc:
     config:
       dir: "internal/domain/service/levelupsvc/mocks"

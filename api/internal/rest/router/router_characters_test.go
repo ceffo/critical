@@ -55,12 +55,13 @@ func as(h http.Handler, token, method, path, body string) *httptest.ResponseReco
 
 // The routes a user without a current character still reaches: the login's,
 // the health check, the reference data no character owns (step 7.5), the
-// user's characters and the admin section (adminPrefix).
+// user's characters, the creation's rolls and the admin section (adminPrefix).
 var characterFree = map[string]bool{
 	"GET /api/health": true, "GET /api/spells/filters": true, "GET /api/spells/names": true,
 	"GET /api/crit-table": true, "PUT /api/crit-table": true, "GET /api/xp/preview": true,
 	"GET /api/characters": true, "PUT /api/characters/current": true,
 	"GET /api/characters/options": true, "POST /api/characters": true, "PATCH /api/characters/{id}": true,
+	"POST /api/characters/rolls/scores": true, "POST /api/characters/rolls/hp": true,
 }
 
 var urlParam = regexp.MustCompile(`\{[^}]+\}`)

@@ -266,3 +266,34 @@ func TestSpellbookMaxLevel_Step20_1(t *testing.T) {
 		assert.Equal(t, want > 0, ok, class)
 	}
 }
+
+// ADR 0032 step 6 shows PHB Table 8 (p.21) next to the rolled totals: each
+// race's adjustment by ability, 0 elsewhere, a human's all 0.
+func TestRaceAdjustmentsFor_Step6_Table8(t *testing.T) {
+	tbl := phb(t)
+	zero := map[string]int{"str": 0, "dex": 0, "con": 0, "int": 0, "wis": 0, "cha": 0}
+	with := func(changes map[string]int) map[string]int {
+		out := map[string]int{}
+		for k, v := range zero {
+			out[k] = v
+		}
+		for k, v := range changes {
+			out[k] = v
+		}
+		return out
+	}
+	for race, want := range map[string]map[string]int{
+		"human":    zero,
+		"half_elf": zero,
+		"dwarf":    with(map[string]int{"con": 1, "cha": -1}),
+		"elf":      with(map[string]int{"dex": 1, "con": -1}),
+		"gnome":    with(map[string]int{"int": 1, "wis": -1}),
+		"halfling": with(map[string]int{"dex": 1, "str": -1}),
+	} {
+		got, err := tbl.RaceAdjustmentsFor(race)
+		require.NoError(t, err)
+		assert.Equal(t, want, got, race)
+	}
+	_, err := tbl.RaceAdjustmentsFor("orc")
+	require.Error(t, err)
+}

@@ -349,3 +349,68 @@ func identity() charactersvc.DetailsPatch {
 	alignment, sex := "neutral_good", "male"
 	return charactersvc.DetailsPatch{Alignment: &alignment, Sex: &sex}
 }
+
+// The roster card's HP is the HP panel's: after damage, a heal, an undone
+// entry (voided) and an amended note, the list and GET /api/hp agree (ADR 0007
+// step 6, ADR 0011 step 1), and the list carries the identity the card shows.
+func TestList_TheCardsHPIsTheHPPanels(t *testing.T) {
+	tb, _ := serverOn(t, memory.New())
+	tok, _ := tb.login("hp@example.com")
+	var created listView
+	body := strings.Replace(newBard, `"hpMax":6`, `"hpMax":40`, 1)
+	require.Equal(t, http.StatusCreated, tb.call(tok, "POST", "/api/characters", body, &created))
+	id := created.Characters[0].ID
+
+	var hp hpView
+	for _, ev := range []string{
+		`{"delta":-12,"source":"orc"}`, `{"delta":-9,"source":"trap"}`, `{"delta":5,"source":"potion"}`,
+	} {
+		require.Equal(t, http.StatusOK, tb.showing(tok, id, "POST", "/api/hp/event", ev, &hp))
+	}
+	// A voided entry: damage, then undone.
+	require.Equal(t, http.StatusOK, tb.showing(tok, id, "POST", "/api/hp/event", `{"delta":-20,"source":"fall"}`, &hp))
+	type logView struct {
+		Entries []struct {
+			ID     int64  `json:"id"`
+			Status string `json:"status"`
+		} `json:"entries"`
+		TopID int64 `json:"topId"`
+	}
+	var log logView
+	require.Equal(t, http.StatusOK, tb.showing(tok, id, "GET", "/api/log", "", &log))
+	require.Equal(t, http.StatusOK, tb.showing(tok, id, "POST", "/api/log/undo", `{"expectedTopId":`+itoa(log.TopID)+`}`, nil))
+	// An amended entry: its note changes, never its HP.
+	log = logView{}
+	require.Equal(t, http.StatusOK, tb.showing(tok, id, "GET", "/api/log", "", &log))
+	var amend int64
+	for _, e := range log.Entries {
+		if e.Status == "active" && amend == 0 {
+			amend = e.ID
+		}
+	}
+	require.NotZero(t, amend)
+	require.Equal(t, http.StatusOK, tb.showing(tok, id, "POST", "/api/log/"+itoa(amend)+"/amend", `{"note":"corrected"}`, nil))
+
+	require.Equal(t, http.StatusOK, tb.showing(tok, id, "GET", "/api/hp", "", &hp))
+	require.Equal(t, 40-12-9+5, hp.CurrentHp, "the panel: the voided entry counts for nothing")
+
+	var list struct {
+		Characters []struct {
+			Race      string   `json:"race"`
+			Alignment string   `json:"alignment"`
+			Sex       string   `json:"sex"`
+			Missing   []string `json:"missing"`
+			CurrentHP int      `json:"currentHp"`
+			MaxHP     int      `json:"maxHp"`
+		} `json:"characters"`
+	}
+	require.Equal(t, http.StatusOK, tb.call(tok, "GET", "/api/characters", "", &list))
+	require.Len(t, list.Characters, 1)
+	c := list.Characters[0]
+	assert.Equal(t, hp.CurrentHp, c.CurrentHP, "the card shows the panel's HP")
+	assert.Equal(t, 40, c.MaxHP)
+	assert.Equal(t, "half_elf", c.Race)
+	assert.Equal(t, "neutral_good", c.Alignment)
+	assert.Equal(t, "male", c.Sex)
+	assert.Equal(t, []string{}, c.Missing)
+}

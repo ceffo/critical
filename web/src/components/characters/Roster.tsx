@@ -42,6 +42,7 @@ import {
   type RosterDialog as Opened,
   type RosterState,
 } from "@/lib/rosterWrites";
+import { identityLine, toPickKey } from "@/lib/rosterCard";
 import { CREATE_PATH } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import type { CharacterList, CharacterSummary } from "@/types/character";
@@ -236,12 +237,10 @@ function RosterCard({
 }) {
   const { t } = useTranslation();
   // Race · alignment: what is still to choose is the tag's, not a blank here.
-  const identity = [
-    c.race && t(`details.races.${c.race}`, { defaultValue: c.race }),
-    c.alignment && t(`details.alignments.${c.alignment}`),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const identity = identityLine(c, (key, code) =>
+    t(`${key}.${code}`, { defaultValue: code }),
+  );
+  const toPick = toPickKey(c.missing);
   return (
     <li
       className={cn("zone-card flex flex-col", current && "latest")}
@@ -269,7 +268,7 @@ function RosterCard({
         </span>
         {identity && (
           <span
-            className="text-body text-ink-muted"
+            className="text-body text-ink-muted [overflow-wrap:anywhere]"
             data-testid="roster-identity"
           >
             {identity}
@@ -279,12 +278,12 @@ function RosterCard({
           <span className="text-body font-semibold" data-testid="roster-hp">
             {t("roster.hp", { current: c.currentHp, max: c.maxHp })}
           </span>
-          {c.missing.length > 0 && (
+          {toPick && (
             <span
               className="rounded-md bg-tint px-1.5 py-0.5 text-label font-semibold text-on-accent"
               data-testid="roster-missing"
             >
-              {t(`roster.toPick.${c.missing.join("_")}`)}
+              {t(toPick)}
             </span>
           )}
         </div>

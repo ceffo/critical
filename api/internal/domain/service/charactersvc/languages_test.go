@@ -209,6 +209,24 @@ func TestGetCharacter_Step4_TheReadAddsTheNativeLanguageAndWarnsOverTheCount(t *
 	assert.Equal(t, 4, *got.Warnings[0].Limit)
 }
 
+// Before catalogue format 8 the native language is unknown: a migrated half-elf with Intelligence 13
+// (three additional languages) knowing common, elvish, orcish and dwarvish must not be warned for
+// counting the native one.
+func TestGetCharacter_Step4_2_NoLanguageWarningOnAnEmptyCatalogue(t *testing.T) {
+	c := kelsen()
+	c.Int = 13
+	c.Details = charactersvc.Details{Alignment: "neutral_good", Sex: "male", Languages: []string{"common", "elvish", "orcish", "dwarvish"}}
+	e := newEnv(t) // no language book
+	e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(c, nil).Once()
+	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+	expectKelsenRules(e.rules, 1_293_418, 15)
+
+	got, err := e.svc.GetCharacter(context.Background(), 3)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"common", "elvish", "orcish", "dwarvish"}, got.Details.Languages)
+	assert.Empty(t, got.Warnings)
+}
+
 // ADR 0032 step 4.3: the creation options hold the whole catalogue with its names, each race's own
 // language and PHB list (the form marks it), and Table 4 as bands of Intelligence scores.
 func TestCreationOptions_Step4_OfferTheCatalogueTheRaceListsAndTheLimits(t *testing.T) {

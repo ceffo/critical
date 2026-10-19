@@ -19,7 +19,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "240+30*level"
     }
   },
   {
@@ -572,7 +573,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "10+5*level"
     }
   },
   {
@@ -825,7 +827,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "level"
     }
   },
   {
@@ -1031,7 +1034,8 @@
     "note": "Hands deal 1d4 per round (save half), -2 to attack; duration missing from the source text. Not modelled.",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "level"
     }
   },
   {
@@ -2023,7 +2027,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "level"
     }
   },
   {
@@ -2056,7 +2061,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "10*level+10*1d6"
     }
   },
   {
@@ -2611,7 +2617,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "60*level+60*1d4"
     }
   },
   {
@@ -2729,7 +2736,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "10*1d6+10*level"
     }
   },
   {
@@ -2838,7 +2846,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "60*1d4+60*level"
     }
   },
   {
@@ -3081,7 +3090,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "60*(1d4+1)+60*level"
     }
   },
   {
@@ -3103,7 +3113,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "10*level"
     }
   },
   {
@@ -3454,7 +3465,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "10*1d6"
     }
   },
   {
@@ -4033,7 +4045,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "60*1d4+60*level"
     }
   },
   {
@@ -4594,7 +4607,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "60*4d6"
     }
   },
   {
@@ -4778,7 +4792,8 @@
     "note": "Gaze effects (fear, sicken, ...) chosen at casting. Not modelled.",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "(level/3)"
     }
   },
   {
@@ -5068,7 +5083,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "(level/2)"
     }
   },
   {
@@ -5103,7 +5119,8 @@
     "note": "Magnet with damaging effects (2d6). Not modelled.",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "(level/5)"
     }
   },
   {
@@ -5369,7 +5386,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "60+10*level"
     }
   },
   {
@@ -5555,7 +5573,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "10080+1440*level"
     }
   },
   {
@@ -5614,7 +5633,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "(1d4+1)"
     }
   },
   {
@@ -5626,7 +5646,8 @@
     "note": "Rebounds spells onto the original caster. Not modelled.",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "3*level"
     }
   },
   {
@@ -5761,7 +5782,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "(level/2)"
     }
   },
   {
@@ -6030,7 +6052,8 @@
     "note": "Dancing victim: AC worse by 4, saves at -10, cannot attack. Not modelled.",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "(1d4+1)"
     }
   },
   {
@@ -6157,7 +6180,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "10*2d6"
     }
   },
   {
@@ -6433,7 +6457,8 @@
     "confidence": "high",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "10*(1d4+1)"
     }
   },
   {
@@ -6511,7 +6536,8 @@
     "note": "Wall of lights doing 2d6 to creatures struck. Not modelled.",
     "target": "none",
     "duration": {
-      "kind": "special"
+      "kind": "rounds",
+      "rounds": "10*1d3"
     }
   },
   {

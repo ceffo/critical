@@ -174,3 +174,16 @@ func AgeRange(race string) (Range, bool) {
 		Max: float64(row.MaxAge + row.MaxAgeDice.Max()),
 	}, true
 }
+
+// StartAgeRange is the range a starting age roll gives (Table 11's base plus
+// the variable dice at their lowest and highest), inside AgeRange.
+func StartAgeRange(race string) (Range, bool) {
+	row, ok := IdentityFor(race)
+	if !ok {
+		return Range{}, false
+	}
+	return Range{
+		Min: float64(row.StartAge + row.StartAgeDice.Min()),
+		Max: float64(row.StartAge + row.StartAgeDice.Max()),
+	}, true
+}

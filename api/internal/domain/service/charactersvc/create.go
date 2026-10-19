@@ -120,10 +120,11 @@ func cleanName(raw string) (string, error) {
 }
 
 // validate checks n field by field, in the form's order, and returns the
-// character it enters.
-func (s *service) validate(n NewCharacter) (Character, error) {
+// character it enters. A draft (the preview) may leave the name, the
+// alignment and the sex blank; every other refusal is the creation's.
+func (s *service) validate(n NewCharacter, draft bool) (Character, error) {
 	name, err := cleanName(n.Name)
-	if err != nil {
+	if err != nil && (!draft || strings.TrimSpace(n.Name) != "") {
 		return Character{}, err
 	}
 	if !slices.Contains(CreatableClasses, n.Class) {
@@ -170,7 +171,7 @@ func (s *service) validate(n NewCharacter) (Character, error) {
 	if n.XP < MinStartingXP || n.XP > MaxStartingXP {
 		return Character{}, &domain.FieldError{Field: "xp", Message: CodeOutOfRange}
 	}
-	details, err := newDetails(Kind{Class: n.Class, Race: n.Race}, s.languages, n.Details)
+	details, err := newDetails(Kind{Class: n.Class, Race: n.Race}, s.languages, n.Details, !draft)
 	if err != nil {
 		return Character{}, err
 	}
@@ -263,18 +264,13 @@ func validExceptional(n NewCharacter) error {
 // character is no move of the game and is not undone). This server forgets
 // the owner's sessions once it committed (ADR 0029 step 4.7).
 func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (int64, error) {
-	c, err := s.validate(n)
+	c, err := s.validate(n, false)
 	if err != nil {
 		return 0, err
 	}
-	d, err := Derive(&c, 0, s.rules)
-	if err != nil {
-		return 0, fmt.Errorf("new character: %w", err)
+	if err := started(&c, s.rules); err != nil {
+		return 0, err
 	}
-	c.Sheet = Sheet{Level: d.TargetLevel, THAC0: d.THAC0, Saves: d.Saves}
-	// Step 7.5: the max HP entered is the max HP at that level, the level
-	// the character starts realized at.
-	c.RealizedLevel = d.TargetLevel
 	var id int64
 	if err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
@@ -287,6 +283,41 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	s.sessions.ForgetUser(owner)
 	return id, nil
+}
+
+// started gives a new character the sheet and the realized level it is
+// stored with: its sheet states the rules' own figures (so it shows no
+// difference, ADR 0030 step 24) and, step 7.5, the max HP entered is the max
+// HP at the target level, the level the character starts realized at.
+func started(c *Character, rules Rules) error {
+	d, err := Derive(c, 0, rules)
+	if err != nil {
+		return fmt.Errorf("new character: %w", err)
+	}
+	c.Sheet = Sheet{Level: d.TargetLevel, THAC0: d.THAC0, Saves: d.Saves}
+	c.RealizedLevel = d.TargetLevel
+	return nil
+}
+
+// Preview is the character Create would store from n, read as GET
+// /api/character reads it once created (its derived block and its warnings),
+// without storing anything: the creation's identity step and review show the
+// server's figures before the player creates (ADR 0034). A blank name,
+// alignment or sex is no refusal here (the caller lists them as missing);
+// every other refusal is Create's, field for field.
+func (s *service) Preview(_ context.Context, n NewCharacter) (*Character, error) {
+	c, err := s.validate(n, true)
+	if err != nil {
+		return nil, err
+	}
+	if err := started(&c, s.rules); err != nil {
+		return nil, err
+	}
+	if c.Derived, err = Derive(&c, 0, s.rules); err != nil {
+		return nil, fmt.Errorf("preview: %w", err)
+	}
+	s.readWarnings(&c)
+	return &c, nil
 }
 
 // Change renames, re-arms and retires in one transaction. A rename and a
@@ -493,6 +524,10 @@ type CreationOptions struct {
 	ScoreMethods []ruletablesvc.ScoreMethod
 	// RaceAdjustments are PHB Table 8 for every race, in Races order.
 	RaceAdjustments []RaceAdjustmentOption
+	// RaceIdentity are ADR 0032 step 5's dice and ranges for every race, in
+	// Races order: the identity step shows them beside each roll button and
+	// the race cards the height and starting age (ADR 0034).
+	RaceIdentity []RaceIdentityOption
 
 	MinAbility, MaxAbility int
 	MinHPMax, MaxHPMax     int
@@ -501,6 +536,44 @@ type CreationOptions struct {
 	MaxStrExceptional      int
 	MaxSkillPoints         int
 	MaxNameLen             int
+}
+
+// FigureOption is one identity figure's roll dice (Count dice of Sides) and
+// its range in the stored unit (cm, kg or years), outside which a value warns
+// (ADR 0032 step 5.1). Sex is the sex of a height or weight row.
+type FigureOption struct {
+	Sex          string
+	Count, Sides int
+	Range        ruletablesvc.Range
+}
+
+// RaceIdentityOption is a race's height and weight per sex (male, then
+// female), its age, and the starting ages a roll gives (within Age.Range).
+type RaceIdentityOption struct {
+	Race           string
+	Height, Weight []FigureOption
+	Age            FigureOption
+	StartAge       ruletablesvc.Range
+}
+
+// raceIdentity is the race's RaceIdentityOption, false for a race with no
+// Table 10 row.
+func raceIdentity(race string) (RaceIdentityOption, bool) {
+	row, ok := ruletablesvc.IdentityFor(race)
+	if !ok {
+		return RaceIdentityOption{}, false
+	}
+	out := RaceIdentityOption{Race: race}
+	for _, sex := range Sexes {
+		h, _ := ruletablesvc.HeightRange(race, sex)
+		w, _ := ruletablesvc.WeightRange(race, sex)
+		out.Height = append(out.Height, FigureOption{Sex: sex, Count: row.HeightDice.Count, Sides: row.HeightDice.Sides, Range: h})
+		out.Weight = append(out.Weight, FigureOption{Sex: sex, Count: row.WeightDice.Count, Sides: row.WeightDice.Sides, Range: w})
+	}
+	age, _ := ruletablesvc.AgeRange(race)
+	out.Age = FigureOption{Count: row.StartAgeDice.Count, Sides: row.StartAgeDice.Sides, Range: age}
+	out.StartAge, _ = ruletablesvc.StartAgeRange(race)
+	return out, true
 }
 
 // RaceLanguageOption is a race's own language and its PHB list of languages.
@@ -525,6 +598,9 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
 		out.RaceAdjustments = append(out.RaceAdjustments, RaceAdjustmentOption{Race: race, Adjustments: adj})
+		if id, ok := raceIdentity(race); ok {
+			out.RaceIdentity = append(out.RaceIdentity, id)
+		}
 	}
 	for _, class := range CreatableClasses {
 		group, err := ruletablesvc.ClassGroup(class)

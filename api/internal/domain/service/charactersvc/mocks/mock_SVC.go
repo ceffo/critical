@@ -409,6 +409,65 @@ func (_c *MockSVC_List_Call) RunAndReturn(run func(context.Context, uuid.UUID) (
 	return _c
 }
 
+// Preview provides a mock function with given fields: ctx, n
+func (_m *MockSVC) Preview(ctx context.Context, n charactersvc.NewCharacter) (*charactersvc.Character, error) {
+	ret := _m.Called(ctx, n)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Preview")
+	}
+
+	var r0 *charactersvc.Character
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, charactersvc.NewCharacter) (*charactersvc.Character, error)); ok {
+		return rf(ctx, n)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, charactersvc.NewCharacter) *charactersvc.Character); ok {
+		r0 = rf(ctx, n)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*charactersvc.Character)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, charactersvc.NewCharacter) error); ok {
+		r1 = rf(ctx, n)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Preview_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Preview'
+type MockSVC_Preview_Call struct {
+	*mock.Call
+}
+
+// Preview is a helper method to define mock.On call
+//   - ctx context.Context
+//   - n charactersvc.NewCharacter
+func (_e *MockSVC_Expecter) Preview(ctx interface{}, n interface{}) *MockSVC_Preview_Call {
+	return &MockSVC_Preview_Call{Call: _e.mock.On("Preview", ctx, n)}
+}
+
+func (_c *MockSVC_Preview_Call) Run(run func(ctx context.Context, n charactersvc.NewCharacter)) *MockSVC_Preview_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(charactersvc.NewCharacter))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Preview_Call) Return(_a0 *charactersvc.Character, _a1 error) *MockSVC_Preview_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Preview_Call) RunAndReturn(run func(context.Context, charactersvc.NewCharacter) (*charactersvc.Character, error)) *MockSVC_Preview_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Restorers provides a mock function with no fields
 func (_m *MockSVC) Restorers() map[string]actionlog.Restorer {
 	ret := _m.Called()

@@ -19,7 +19,7 @@ import type { EndCause, Ended } from "@/types/buffs";
  * buffs that just expired, named at render time in the player's language (buffName), and what the
  * end effects of the rows that ended did (ADR 0004 step 21). */
 export type Notice = {
-  kind: "expired";
+  kind: "ended";
   buffs: { name: string; spellId?: string }[];
   ended?: Ended;
 };
@@ -120,13 +120,13 @@ const fetchers: Record<
   },
 };
 
-function expiredNotice(
+function endedNotice(
   expired: { name: string; spellId?: string }[] | undefined,
   ended?: Ended,
 ): Notice | null {
   return (expired && expired.length > 0) || ended
     ? {
-        kind: "expired",
+        kind: "ended",
         buffs: (expired ?? []).map((b) => ({
           name: b.name,
           spellId: b.spellId,
@@ -228,7 +228,7 @@ export const useTableStore = create<TableStore>((set, get) => {
       ),
     // One undo system (ADR 0018 step 3), the journal's Undo button and Ctrl+Z: the global undo
     // with the top this client last read, so a stale top (another client acted since) is refused
-    // and nothing changes. A pop can bring expired buffs back (an "expired" notice would now be
+    // and nothing changes. A pop can bring expired buffs back (an "ended" notice would now be
     // stale) and can take back a correction (ADR 0010 step 6): the card then shows the latest roll
     // from the refreshed log, not this session's (corrected) roll response. What the pop restored
     // is read again by the keys it names, like any action (ADR 0019: undo and redo are two more).
@@ -253,7 +253,7 @@ export const useTableStore = create<TableStore>((set, get) => {
         useRollStore.setState({ last: null });
       });
     },
-    // A round change leaves buffs alone, but an "expired" notice is stale after either.
+    // A round change leaves buffs alone, but an "ended" notice is stale after either.
     endCombat: () =>
       get().run(async () => {
         await useBuffsStore.getState().resetRound();
@@ -267,19 +267,19 @@ export const useTableStore = create<TableStore>((set, get) => {
     nextRound: () =>
       get().run(async () => {
         const res = await useBuffsStore.getState().advanceRound();
-        set({ notice: expiredNotice(res.expiredBuffs, res.ended) });
+        set({ notice: endedNotice(res.expiredBuffs, res.ended) });
       }),
     dismissBuff: (id, cause) =>
       get().run(async () => {
         const ended = await useBuffsStore.getState().dismissBuff(id, cause);
-        set({ notice: expiredNotice([], ended) });
+        set({ notice: endedNotice([], ended) });
       }),
     rerollInitiative: () =>
       get().run(() => useBuffsStore.getState().rerollInitiative()),
     passTime: (hours) =>
       get().run(async () => {
         const res = await useBuffsStore.getState().passTime(hours);
-        set({ notice: expiredNotice(res.expiredBuffs, res.ended) });
+        set({ notice: endedNotice(res.expiredBuffs, res.ended) });
       }),
   };
 });

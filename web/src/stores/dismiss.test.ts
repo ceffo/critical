@@ -47,7 +47,7 @@ describe("dismissBuff", () => {
     );
     expect(h.calls).toEqual([{ id: "p", cause: "voluntary" }]);
     expect(useTableStore.getState().notice).toEqual({
-      kind: "expired",
+      kind: "ended",
       buffs: [],
       ended,
     });

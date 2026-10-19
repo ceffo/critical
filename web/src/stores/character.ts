@@ -5,6 +5,7 @@ import {
   patchCharacterDetails,
   rollLevelUp,
 } from "@/api/character";
+import { renameCharacter } from "@/api/characters";
 import { ApiError } from "@/api/http";
 import { useTableStore } from "./table";
 
@@ -13,9 +14,14 @@ interface CharacterStore {
   loading: boolean;
   error: string | null;
   loadCharacter: () => Promise<void>;
-  /** Saves the details: null on success, or the ApiError naming the rejected field (shown under
-   * it). Other failures go to the table's error notice. */
-  saveDetails: (body: Partial<CharacterDetails>) => Promise<ApiError | null>;
+  /** Saves the details, and the name first when `name` differs from the character's (Rename lives in
+   * the details too, ADR 0034 step 7.2; the name is renamed on its own endpoint, ADR 0029 step 7.3):
+   * null on success, or the ApiError naming the rejected field (shown under it; a refused name stops
+   * before the details). Other failures go to the table's error notice. */
+  saveDetails: (
+    body: Partial<CharacterDetails>,
+    name?: string,
+  ) => Promise<ApiError | null>;
   /** A level-up roll in flight. */
   levelUpBusy: boolean;
   /** Roll the hit points of `level`, the lowest pending one (ADR 0030 step 7), on the server, or
@@ -25,7 +31,7 @@ interface CharacterStore {
   rollLevelUp: (level: number, die?: number) => Promise<ApiError | null>;
 }
 
-export const useCharacterStore = create<CharacterStore>((set) => ({
+export const useCharacterStore = create<CharacterStore>((set, get) => ({
   character: null,
   levelUpBusy: false,
   rollLevelUp: async (level, die) => {
@@ -57,13 +63,25 @@ export const useCharacterStore = create<CharacterStore>((set) => ({
       set({ error: (e as Error).message, loading: false });
     }
   },
-  saveDetails: async (body) => {
+  saveDetails: async (body, name) => {
+    let renamed = false;
     try {
+      const c = get().character;
+      if (c && name !== undefined && name !== c.name) {
+        await renameCharacter(c.id, name);
+        renamed = true;
+      }
       await patchCharacterDetails(body);
       // The sheet is read again: the missing fields and the warnings are the server's to say.
       set({ character: await fetchCharacter() });
       return null;
     } catch (e) {
+      // A name saved before the details were refused shows at once.
+      if (renamed)
+        await fetchCharacter().then(
+          (character) => set({ character }),
+          () => undefined,
+        );
       if (e instanceof ApiError && e.field) return e;
       useTableStore.setState({
         error: e instanceof Error ? e.message : String(e),

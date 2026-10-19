@@ -9,7 +9,8 @@ const VIEWPORTS = [
   { width: 2560, height: 1440 },
 ];
 
-// What only a browser proves: the name opens the popover, Edit switches it to a form, the server's
+// What only a browser proves: the name opens the popover, Edit switches it to a form whose first
+// field is the name (Rename lives in the details too, ADR 0034 step 7.2), the server's
 // field error shows under its field (the rule itself is a Go test in detailssvc), Save shows the
 // stored values, and they survive a reload. Languages are catalogue names, picked from the
 // catalogue with the race's own language ticked and fixed (the rules are Go tests); going over the
@@ -45,6 +46,10 @@ test("character details: view, edit with a field error, save, reload", async ({
 
   await pop.getByLabel("Age", { exact: true }).fill("112");
   await pop.getByLabel("Eyes", { exact: true }).fill("green");
+  await expect(pop.getByLabel("Name", { exact: true })).toHaveValue(
+    "Test Bard",
+  );
+  await pop.getByLabel("Name", { exact: true }).fill("Test Bard the Bold");
   const common = pop.getByRole("checkbox", { name: "Common", exact: true });
   await expect(common).toBeChecked();
   await expect(common).toBeDisabled();
@@ -56,6 +61,9 @@ test("character details: view, edit with a field error, save, reload", async ({
   await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
   await expect(pop.getByText("Chestnut")).toBeVisible();
   await expect(pop.getByText("112")).toBeVisible();
+  await expect(page.getByTestId("details-trigger")).toHaveText(
+    "Test Bard the Bold",
+  );
   await expect(
     pop.getByText("Common, Elvish, Gnomish, Halfling, Goblin, Orcish"),
   ).toBeVisible();
@@ -79,6 +87,9 @@ test("character details: view, edit with a field error, save, reload", async ({
 
   await page.reload();
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
+  await expect(page.getByTestId("details-trigger")).toHaveText(
+    "Test Bard the Bold",
+  );
   await page.getByTestId("details-trigger").click();
   await expect(pop.getByText("green")).toBeVisible();
   await expect(pop.getByText("112")).toHaveCount(0);

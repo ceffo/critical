@@ -39,7 +39,7 @@ func (noTx) InTx(ctx context.Context, fn func(context.Context) error) error { re
 
 // wire is the real combat service on mocked ports behind the combat routes,
 // with a log that keeps the one entry it records (id entryID) and applies
-// its amends.
+// its amend.
 type wire struct {
 	chars   *mocks.MockCharacters
 	buffs   *mocks.MockBuffs
@@ -50,7 +50,9 @@ type wire struct {
 	entry   actionlog.Entry
 }
 
-func newWire(t *testing.T, kind actionlog.Kind) *wire {
+// newWire builds the wire; a non-nil logged is the entry's payload as an
+// older release logged it (nothing is recorded then).
+func newWire(t *testing.T, kind actionlog.Kind, logged json.RawMessage) *wire {
 	t.Helper()
 	artifact, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
@@ -60,15 +62,17 @@ func newWire(t *testing.T, kind actionlog.Kind) *wire {
 	w := &wire{
 		chars: mocks.NewMockCharacters(t), buffs: mocks.NewMockBuffs(t), dice: mocks.NewMockDice(t),
 		weapons: mocks.NewMockWeapons(t), items: mocks.NewMockItems(t),
-		entry: actionlog.Entry{ID: entryID, CharacterID: charID, Kind: kind},
+		entry: actionlog.Entry{ID: entryID, CharacterID: charID, Kind: kind, Payload: logged},
 	}
 	crit, log := mocks.NewMockCritStore(t), mocks.NewMockLog(t)
 	crit.EXPECT().List(mock.Anything).Return(nil, nil).Maybe()
-	log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(
-		func(_ context.Context, e actionlog.NewEntry) (int64, error) {
-			w.entry.Payload = e.Payload
-			return entryID, nil
-		}).Once()
+	if logged == nil {
+		log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(
+			func(_ context.Context, e actionlog.NewEntry) (int64, error) {
+				w.entry.Payload = e.Payload
+				return entryID, nil
+			}).Once()
+	}
 	log.EXPECT().AmendLatest(mock.Anything, charID, entryID, kind, mock.Anything).RunAndReturn(
 		func(_ context.Context, _, _ int64, _ actionlog.Kind, fn actionlog.AmendFunc) (*actionlog.Entry, error) {
 			a, err := fn(w.entry)
@@ -126,7 +130,7 @@ func withKeys(t *testing.T, payload json.RawMessage, tail string) string {
 // attack with ammunition, so every optional part is present) and on a
 // target AC correction (the amended payload).
 func TestAttack_AnswerIsTheLoggedPayload(t *testing.T) {
-	w := newWire(t, actionlog.KindAttack)
+	w := newWire(t, actionlog.KindAttack, nil)
 	w.weapons.EXPECT().Get(mock.Anything, charID, "shortbow").Return(combatsvc.Weapon{
 		Wielded: true, ID: "shortbow", Name: localized.Of("Short Bow +2"), BaseDamage: "1d6", DamageLarge: "1d6",
 		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
@@ -161,7 +165,7 @@ func TestAttack_AnswerIsTheLoggedPayload(t *testing.T) {
 // previous release's web (kept for one release). Checked on the roll (a race
 // modifier and a buff) and on an adjustment (the amended payload).
 func TestSave_AnswerIsTheLoggedPayload(t *testing.T) {
-	w := newWire(t, actionlog.KindSave)
+	w := newWire(t, actionlog.KindSave, nil)
 	mods := buffsvc.BuffModifiers{
 		SpellsBuff: 1, Multipliers: 1, EffectiveStr: 12, SaveBonus: 1,
 		SaveBonusFrom: []buffsvc.Contribution{{Buff: "Luck", Value: 1}},
@@ -180,4 +184,50 @@ func TestSave_AnswerIsTheLoggedPayload(t *testing.T) {
 	require.Len(t, w.entry.Corrections, 1)
 	assert.Equal(t, withKeys(t, w.entry.EffectivePayload(), `,"hit":true,"hitMargin":1,"baseThac0":14`), adjusted)
 	assert.Contains(t, adjusted, `"previousPassed":false`)
+}
+
+// An attack logged before critPossible was recorded (its "source" labels
+// from before the UI named modifiers included), then corrected: the answer
+// is the amended payload, which gains critPossible, plus the entry id. No
+// view serves attack entries, so the amended payload is what the journal
+// shows.
+func TestAttack_CorrectedLegacyEntry_AnswerIsTheAmendedPayload(t *testing.T) {
+	w := newWire(t, actionlog.KindAttack, json.RawMessage(`{"d20Roll":14,"d100CritRoll":30,"d100MultiplierRoll":77,"isCrit":false,`+
+		`"critMultiplier":1,"critPlaceholder":false,"critFrom":0,"critTo":0,"baseThac0":13,`+
+		`"modifiers":[{"kind":"dexterity","detail":"17","value":2,"source":"DEX 17"},{"kind":"weapon_magic","detail":"Short Bow +2","value":2}],`+
+		`"effectiveThac0":9,"targetACNeeded":-5,"hitsAc":-5,"critsFromAc":25,"hit":true,"hitMargin":7,`+
+		`"baseDamage":4,"damageDice":"1d6","spellsBuff":1,"weaponBuff":2,"multipliers":1,"diceMultiplier":1,`+
+		`"strengthBonus":0,"bonusDamage":0,"damageTerms":[],"totalDamage":6,"weaponId":"shortbow","weaponName":"Short Bow +2",`+
+		`"targetAc":2,"targetSize":"sm","acKnown":true,`+
+		`"rolled":{"dice":"1d6","total":4,"spellsBuff":1,"weaponBuff":2,"buffMultipliers":1,"strengthBonus":0,"bonusDamage":0,"terms":[]},`+
+		`"critRow":{"from":1,"to":100,"multiplier":2,"placeholder":true}}`))
+
+	corrected := w.post(t, "/api/roll/attack/42/adjust", `{"targetAc":7}`)
+	require.Len(t, w.entry.Corrections, 1)
+	amended := w.entry.EffectivePayload()
+	assert.Equal(t, withKeys(t, amended, ""), corrected)
+	assert.Contains(t, string(amended), `"critPossible":`, "the amend records critPossible")
+	assert.Contains(t, corrected, `"rolledTargetAc":2`)
+}
+
+// A save logged before the adjustment moved the target (no rollTotal or
+// adjustedTarget, an English "label"), then adjusted: the answer is the
+// amended payload as SavePayloadView serves it, plus the entry id and the
+// previous release's three keys.
+func TestSave_AdjustedLegacyEntry_AnswerIsTheViewedPayload(t *testing.T) {
+	legacy := json.RawMessage(`{"category":"spell","label":"Spells","d20Roll":12,` +
+		`"modifiers":[{"kind":"buff","detail":"Luck","value":1,"source":"Luck"}],"target":14,"rolledPassed":false,` +
+		`"adjustment":0,"total":13,"passed":false,"margin":-1}`)
+	w := newWire(t, actionlog.KindSave, legacy)
+	viewed, err := combatsvc.SavePayloadView(legacy)
+	require.NoError(t, err)
+	assert.Contains(t, string(viewed), `"rollTotal":13`, "the view fills the old entry")
+
+	// +2 moves the target to 12: 12 + 1 = 13 passes by 1.
+	adjusted := w.post(t, "/api/roll/save/42/adjust", `{"adjustment":2,"reason":"Gaia fire"}`)
+	require.Len(t, w.entry.Corrections, 1)
+	served, err := combatsvc.SavePayloadView(w.entry.EffectivePayload())
+	require.NoError(t, err)
+	assert.Equal(t, withKeys(t, served, `,"hit":true,"hitMargin":1,"baseThac0":14`), adjusted)
+	assert.Contains(t, adjusted, `"rollTotal":13,"adjustedTarget":12`)
 }

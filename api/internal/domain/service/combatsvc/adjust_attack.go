@@ -140,7 +140,7 @@ func decodeCorrectable(e actionlog.Entry) (*RollResult, error) {
 }
 
 func encodeAmendment(r *RollResult, c actionlog.Change) (actionlog.PayloadAmendment, error) {
-	payload, err := json.Marshal(toRecord(r))
+	payload, err := json.Marshal(toBreakdown(r))
 	if err != nil {
 		return actionlog.PayloadAmendment{}, fmt.Errorf("encode attack payload: %w", err)
 	}

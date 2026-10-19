@@ -93,7 +93,7 @@ type BreakdownDie struct {
 	Value int `json:"value"`
 }
 
-func toDieRecords(in []DieRoll) []BreakdownDie {
+func toBreakdownDice(in []DieRoll) []BreakdownDie {
 	var out []BreakdownDie
 	for _, d := range in {
 		out = append(out, BreakdownDie(d))
@@ -101,7 +101,7 @@ func toDieRecords(in []DieRoll) []BreakdownDie {
 	return out
 }
 
-func fromDieRecords(in []BreakdownDie) []DieRoll {
+func fromBreakdownDice(in []BreakdownDie) []DieRoll {
 	var out []DieRoll
 	for _, d := range in {
 		out = append(out, DieRoll(d))
@@ -149,7 +149,7 @@ type BreakdownAmmo struct {
 	Remaining int    `json:"remaining"`
 }
 
-func toTermRecords(in []DamageTerm) []BreakdownTerm {
+func toBreakdownTerms(in []DamageTerm) []BreakdownTerm {
 	out := make([]BreakdownTerm, len(in))
 	for i, t := range in {
 		out[i] = BreakdownTerm{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional}
@@ -157,7 +157,7 @@ func toTermRecords(in []DamageTerm) []BreakdownTerm {
 	return out
 }
 
-func fromTermRecords(in []BreakdownTerm) []DamageTerm {
+func fromBreakdownTerms(in []BreakdownTerm) []DamageTerm {
 	out := make([]DamageTerm, len(in))
 	for i, t := range in {
 		out[i] = DamageTerm{Term: DamageTermKind(t.Term), Kind: ModifierKind(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional}
@@ -168,18 +168,18 @@ func fromTermRecords(in []BreakdownTerm) []DamageTerm {
 // NewAttackBreakdown is the breakdown of r as the attack endpoints answer it:
 // the payload logged for r plus the id of its entry.
 func NewAttackBreakdown(r *RollResult) AttackBreakdown {
-	out := toRecord(r)
+	out := toBreakdown(r)
 	out.LogEntryID = r.LogEntryID
 	return out
 }
 
-// toRecord is the payload logged for r: its breakdown without the entry id.
-func toRecord(r *RollResult) AttackBreakdown {
+// toBreakdown is the payload logged for r: its breakdown without the entry id.
+func toBreakdown(r *RollResult) AttackBreakdown {
 	mods := make([]BreakdownModifier, len(r.Modifiers))
 	for i, m := range r.Modifiers {
 		mods[i] = BreakdownModifier{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional}
 	}
-	terms := toTermRecords(r.DamageTerms)
+	terms := toBreakdownTerms(r.DamageTerms)
 	out := AttackBreakdown{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
 		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo, BaseThac0: r.BaseThac0, Modifiers: mods,
@@ -187,7 +187,7 @@ func toRecord(r *RollResult) AttackBreakdown {
 		Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,
-		DamageTerms: terms, DamageRolls: toDieRecords(r.DamageRolls), TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
+		DamageTerms: terms, DamageRolls: toBreakdownDice(r.DamageRolls), TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize),
 		ACKnown: &r.ACKnown, RolledACUnknown: r.RolledACUnknown, Verdict: string(r.Verdict),
 	}
@@ -204,7 +204,7 @@ func toRecord(r *RollResult) AttackBreakdown {
 		out.Rolled = &BreakdownRolled{
 			Dice: d.Dice, Total: d.Total, SpellsBuff: d.SpellsBuff, WeaponBuff: d.WeaponBuff,
 			BuffMultipliers: d.BuffMultipliers, StrengthBonus: d.StrengthBonus, BonusDamage: d.BonusDamage,
-			Terms: toTermRecords(d.Terms), Rolls: toDieRecords(d.Rolls),
+			Terms: toBreakdownTerms(d.Terms), Rolls: toBreakdownDice(d.Rolls),
 		}
 	}
 	if c := r.RollCritRow; c != nil {
@@ -229,7 +229,7 @@ func (a AttackBreakdown) result(entryID int64) *RollResult {
 		Hit: a.Hit, HitMargin: a.HitMargin,
 		BaseDamage: a.BaseDamage, DamageDice: a.DamageDice, SpellsBuff: a.SpellsBuff, WeaponBuff: a.WeaponBuff,
 		Multipliers: a.Multipliers, DiceMultiplier: a.DiceMultiplier, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
-		DamageTerms: fromTermRecords(a.DamageTerms), DamageRolls: fromDieRecords(a.DamageRolls), TotalDamage: a.TotalDamage, UnroundedDamage: a.UnroundedDamage,
+		DamageTerms: fromBreakdownTerms(a.DamageTerms), DamageRolls: fromBreakdownDice(a.DamageRolls), TotalDamage: a.TotalDamage, UnroundedDamage: a.UnroundedDamage,
 		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetSize: TargetSize(a.TargetSize),
 		ACKnown: a.ACKnown == nil || *a.ACKnown, RolledACUnknown: a.RolledACUnknown, Verdict: Verdict(a.Verdict),
 		RolledTargetAC: a.RolledTargetAC, RolledHit: a.RolledHit, RolledCrit: a.RolledCrit,
@@ -245,7 +245,7 @@ func (a AttackBreakdown) result(entryID int64) *RollResult {
 		r.Rolled = &RolledDamage{
 			Dice: d.Dice, Total: d.Total, SpellsBuff: d.SpellsBuff, WeaponBuff: d.WeaponBuff,
 			BuffMultipliers: d.BuffMultipliers, StrengthBonus: d.StrengthBonus, BonusDamage: d.BonusDamage,
-			Terms: fromTermRecords(d.Terms), Rolls: fromDieRecords(d.Rolls),
+			Terms: fromBreakdownTerms(d.Terms), Rolls: fromBreakdownDice(d.Rolls),
 		}
 	}
 	if c := a.CritRow; c != nil {

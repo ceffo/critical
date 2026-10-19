@@ -215,6 +215,10 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 		{"speed", withWeapon(func(i *itemsvc.Item) { i.Speed = 21 }), "speed"},
 		{"three damage types", withWeapon(func(i *itemsvc.Item) { i.DamageTypes = []string{"b", "p", "s"} }), "damageTypes"},
 		{"damage type twice", withWeapon(func(i *itemsvc.Item) { i.DamageTypes = []string{"p", "p"} }), "damageTypes"},
+		// ADR 0033 step 4: only a launcher may have no dice of its own, and then both or none.
+		{"melee without dice", withWeapon(func(i *itemsvc.Item) { i.DamageSM, i.DamageL = "", "" }), "damageSm"},
+		{"hurled without dice", withWeapon(func(i *itemsvc.Item) { i.WeaponKind, i.DamageSM, i.DamageL = "missile", "", "" }), "damageSm"},
+		{"launcher with one dice", withLauncher(func(i *itemsvc.Item) { i.DamageSM = "1d6" }), "damageL"},
 		{"ammo kind", itemsvc.Item{Category: itemsvc.CategoryAmmunition, AmmoKind: "stone"}, "ammoKind"},
 		{"ammo one dice", itemsvc.Item{Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", DamageSM: "1d6"}, "damageL"},
 		{"base AC", withArmour(func(i *itemsvc.Item) { i.BaseAC = 11 }), "baseAc"},
@@ -236,7 +240,7 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 		})
 	}
 	t.Run("valid pieces", func(t *testing.T) {
-		for _, it := range []itemsvc.Item{withWeapon(nil), withArmour(nil), chain, sword} {
+		for _, it := range []itemsvc.Item{withWeapon(nil), withLauncher(nil), withArmour(nil), chain, sword} {
 			assert.NoError(t, it.Validate(), it.ID)
 		}
 	})
@@ -245,6 +249,17 @@ func TestValidate_Steps2To5_CategoryFields(t *testing.T) {
 func withWeapon(mut func(*itemsvc.Item)) itemsvc.Item {
 	it := sword
 	it.DamageTypes = []string{"s"}
+	if mut != nil {
+		mut(&it)
+	}
+	return it
+}
+
+// withLauncher is a catalogue long bow: no dice of its own (ADR 0033 step 4).
+func withLauncher(mut func(*itemsvc.Item)) itemsvc.Item {
+	it := withWeapon(func(i *itemsvc.Item) {
+		i.ID, i.WeaponKind, i.Fires, i.DamageSM, i.DamageL, i.TwoHanded = "long_bow", "missile", "arrow", "", "", true
+	})
 	if mut != nil {
 		mut(&it)
 	}

@@ -15,10 +15,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
 // seqDice is a Dice that hands out scripted values and records the order of
@@ -260,5 +262,76 @@ func TestAttack_CorrectionKeepsTheRolledDamageDice(t *testing.T) {
 		assert.Equal(t, 5, res.BaseDamage)
 		assert.Empty(t, res.DamageRolls)
 		assert.NotContains(t, payloadOf(t, e.EffectivePayload()), "damageRolls")
+	})
+}
+
+// ADR 0033 step 4 (amends ADR 0003 step 1): a launcher's attack rolls its
+// ammunition's dice for the target size; a launcher with dice of its own uses
+// them only when the ammunition has none; with none at all the attack is
+// refused before any die is rolled. Fails on the old code, which always
+// rolled the launcher's dice (and refused a launcher without any).
+func TestDamage_ADR0033Step4_LauncherRollsAmmunitionDice(t *testing.T) {
+	catalogueBow := combatsvc.Weapon{
+		Wielded: true, ID: "long_bow", Name: localized.Of("Long Bow"),
+		Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
+	}
+	ownDiceBow := catalogueBow
+	ownDiceBow.ID, ownDiceBow.BaseDamage, ownDiceBow.DamageLarge = "old_bow", "1d4", "1d10"
+	sheaf := itemsvc.Item{
+		ID: "sheaf", Name: localized.Of("Sheaf Arrows"), Behaviour: itemsvc.BehaviourStock,
+		Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", DamageSM: "1d8", DamageL: "1d12", Count: 5,
+	}
+	bare := itemsvc.Item{
+		ID: "bare", Name: localized.Of("Arrows"), Behaviour: itemsvc.BehaviourStock,
+		Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", Count: 5,
+	}
+	cases := []struct {
+		name     string
+		weapon   combatsvc.Weapon
+		ammo     itemsvc.Item
+		size     combatsvc.TargetSize
+		sides    int
+		roll     int
+		wantDice string
+	}{
+		{"catalogue launcher, small-medium: the ammunition's", catalogueBow, sheaf, combatsvc.SizeSmallMedium, 8, 7, "1d8"},
+		{"catalogue launcher, large: the ammunition's large dice", catalogueBow, sheaf, combatsvc.SizeLarge, 12, 11, "1d12"},
+		{"launcher with dice, ammunition with dice: the ammunition's", ownDiceBow, sheaf, combatsvc.SizeLarge, 12, 9, "1d12"},
+		{"launcher with dice, ammunition without: the launcher's", ownDiceBow, bare, combatsvc.SizeLarge, 10, 6, "1d10"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.weapons.EXPECT().Get(mock.Anything, charID, c.weapon.ID).Return(c.weapon, nil).Once()
+			f.withChar(bard())
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil).Once()
+			f.items.EXPECT().Use(mock.Anything, charID, c.ammo.ID).Return(c.ammo, nil).Once()
+			f.dice.EXPECT().RollD20().Return(17).Once()
+			f.d100s(t, 92, 38)
+			f.dice.EXPECT().RollDie(c.sides).Return(c.roll).Once()
+			f.records()
+
+			res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{
+				WeaponID: c.weapon.ID, AmmoItemID: c.ammo.ID, TargetAC: new(5), TargetSize: c.size,
+			})
+			require.NoError(t, err)
+			require.True(t, res.Hit)
+			assert.Equal(t, c.wantDice, res.DamageDice)
+			assert.Equal(t, c.roll, res.BaseDamage)
+		})
+	}
+	t.Run("no dice anywhere: refused, no die rolled", func(t *testing.T) {
+		f := newFixture(t)
+		f.weapons.EXPECT().Get(mock.Anything, charID, catalogueBow.ID).Return(catalogueBow, nil).Once()
+		f.withChar(bard())
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil).Once()
+		f.items.EXPECT().Use(mock.Anything, charID, bare.ID).Return(bare, nil).Once()
+
+		_, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{
+			WeaponID: catalogueBow.ID, AmmoItemID: bare.ID, TargetAC: new(5),
+		})
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, "ammoItemId", fe.Field)
 	})
 }

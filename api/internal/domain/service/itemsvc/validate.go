@@ -131,14 +131,23 @@ func (i Item) Validate() error {
 
 // validateWeapon is ADR 0016 step 8 and ADR 0033 step 3: NdM damage, magic
 // within ±MaxBonus, a kind, a launcher is a missile weapon, known codes, a
-// speed factor of 0 to 20.
+// speed factor of 0 to 20. A launcher may have no dice of its own (step 4:
+// its ammunition's are rolled), both or none.
 func (i Item) validateWeapon() error {
+	if i.Fires != "" && i.DamageSM == "" && i.DamageL == "" {
+		return i.validateWeaponRest()
+	}
 	if !validWeaponDice(i.DamageSM) {
 		return fieldErr("damageSm", "Damage must look like 1d8 or 2d4")
 	}
 	if !validWeaponDice(i.DamageL) {
 		return fieldErr("damageL", "Damage must look like 1d8 or 2d4")
 	}
+	return i.validateWeaponRest()
+}
+
+// validateWeaponRest is validateWeapon past the damage dice.
+func (i Item) validateWeaponRest() error {
 	if i.MagicToHit < -MaxBonus || i.MagicToHit > MaxBonus {
 		return domain.FieldErrorf("magicToHit", "To-hit bonus must be between -%d and %d", MaxBonus, MaxBonus)
 	}

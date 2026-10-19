@@ -26,7 +26,10 @@ return a distinct value for each call and expect an exact number of calls.
    Large target when it has no large-target dice. They are rolled on every attack (ADR 0002
    step 1); a miss deals no damage and lists no damage term.
    Tests: `TestDamage_Step1_DiceByTargetSize`, `TestResolveAttack` (the misses: no damage, the
-   dice stored).
+   dice stored). _Amended by ADR 0033 step 4_: a launcher that fires ammunition with dice rolls the
+   ammunition's dice for the target size; a launcher with none of its own and ammunition without
+   dice is refused before any die is rolled (field `ammoItemId`). Test:
+   `TestDamage_ADR0033Step4_LauncherRollsAmmunitionDice`.
 2. **Formula.**
 
    ```

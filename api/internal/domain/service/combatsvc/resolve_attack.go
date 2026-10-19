@@ -161,6 +161,11 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	weaponTerms, strTerms := am.weaponTerms, am.strTerms
 
 	res.EffectiveThac0 = res.BaseThac0 - am.toHit()
+	// Checked before any die is rolled: an attack with no damage dice is refused.
+	dice := damageDice(weapon, ammo, req.TargetSize)
+	if dice == "" {
+		return nil, domain.FieldErrorf("ammoItemId", "neither %s nor its ammunition has damage dice", weapon.Name.Any())
+	}
 
 	// ADR 0001 steps 1 and 3: the d20 and the crit-check d100 together,
 	// then a second, independent d100 for the multiplier, on every attack.
@@ -177,10 +182,6 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	// ADR 0003 step 1: the dice for the target size, rolled on every attack,
 	// even a miss, so a target AC corrected after the roll (AdjustAttackAC)
 	// never rolls again.
-	dice := weapon.BaseDamage
-	if req.TargetSize == SizeLarge && weapon.DamageLarge != "" {
-		dice = weapon.DamageLarge
-	}
 	base, dieRolls, err := rollDice(s.dice, dice)
 	if err != nil {
 		return nil, fmt.Errorf("weapon %s damage: %w", weapon.ID, err)
@@ -341,6 +342,23 @@ const floorEpsilon = 1e-9
 
 // rollDice rolls "NdM" (case-insensitive) through the dice port and returns
 // the total and every die thrown, in order.
+// damageDice is ADR 0003 step 1 as amended by ADR 0033 step 4: a launcher
+// that fires ammunition with dice rolls the ammunition's dice; any other
+// weapon (and a launcher whose ammunition has none) its own. Of the pair
+// chosen, the large-target dice against a Large target when it has them,
+// else the small-medium dice. Empty when the pair chosen has none (a
+// catalogue launcher firing dice-less ammunition).
+func damageDice(weapon Weapon, ammo *itemsvc.Item, size TargetSize) string {
+	sm, l := weapon.BaseDamage, weapon.DamageLarge
+	if weapon.FiresAmmo() && ammo != nil && ammo.DamageSM != "" {
+		sm, l = ammo.DamageSM, ammo.DamageL
+	}
+	if size == SizeLarge && l != "" {
+		return l
+	}
+	return sm
+}
+
 func rollDice(d Dice, dice string) (int, []DieRoll, error) {
 	n, m, ok := strings.Cut(strings.ToLower(strings.TrimSpace(dice)), "d")
 	num, err1 := strconv.Atoi(n)

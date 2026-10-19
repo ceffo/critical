@@ -313,7 +313,9 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             <h1 className="text-headline">{t(`creation.${step}.title`)}</h1>
             <p className="text-body text-ink-muted">{lead}</p>
           </div>
-          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-4">
+          {/* The scroller is its content's containing block (relative): an absolute box inside, such
+              as a score's sr-only label, scrolls and clips with it instead of stretching the page. */}
+          <div className="relative flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-4">
             {step === "class" && <ClassStep {...props} />}
             {step === "race" && <RaceStep {...props} />}
             {step === "scores" && <ScoresStep {...props} />}

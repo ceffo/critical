@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
+import { Minus, Plus } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,9 @@ import {
   type MagicKind,
 } from "@/types/items";
 import { WEAPON_TYPES, type WeaponType } from "@/types/combat";
+import { hasPlus, MAX_PLUS } from "@/lib/powerEditor";
+import { formatSigned } from "@/lib/format";
+import { PowersEditor } from "./PowersEditor";
 
 const BEHAVIOURS: ItemBehaviour[] = ["stock", "charges", "daily"];
 /** Save categories an item effect may allow (the server rejects anything else). */
@@ -434,6 +438,50 @@ export function ItemForm({
             t("equipment.form.acMissile"),
             text("acMissile", { inputMode: "numeric" }),
           )}
+        {/* The armour's or shield's "+N" (ADR 0033 step 17): its magic power, ac -N. */}
+        {hasPlus(draft.category) && (
+          <div
+            role="group"
+            aria-labelledby={`${id}-plus`}
+            className="flex min-w-0 flex-col gap-1"
+            data-field="plus"
+          >
+            <span
+              id={`${id}-plus`}
+              className="text-label text-muted-foreground"
+            >
+              {t("equipment.form.plus")}
+            </span>
+            <span className="flex items-center gap-1">
+              <Button
+                size="icon-sm"
+                type="button"
+                disabled={draft.plus <= 0}
+                aria-label={t("equipment.form.plusLess")}
+                title={t("equipment.form.plusLess")}
+                onClick={() => set("plus", draft.plus - 1)}
+              >
+                <Minus />
+              </Button>
+              <span
+                className="min-w-10 text-center font-semibold tabular-nums"
+                data-testid="item-plus"
+              >
+                {formatSigned(draft.plus)}
+              </span>
+              <Button
+                size="icon-sm"
+                type="button"
+                disabled={draft.plus >= MAX_PLUS}
+                aria-label={t("equipment.form.plusMore")}
+                title={t("equipment.form.plusMore")}
+                onClick={() => set("plus", draft.plus + 1)}
+              >
+                <Plus />
+              </Button>
+            </span>
+          </div>
+        )}
 
         {/* Shared (ADR 0016 steps 1 to 5). */}
         {field("behaviour", t("items.form.behaviour"), (props) => (
@@ -503,6 +551,13 @@ export function ItemForm({
           text("notes"),
           "col-span-2 sm:col-span-4",
         )}
+        <PowersEditor
+          powers={draft.powers}
+          onChange={(powers) => set("powers", powers)}
+          others={hasPlus(draft.category)}
+          templates={draft.category === "magic"}
+          error={errors.powers}
+        />
       </div>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={busy}>

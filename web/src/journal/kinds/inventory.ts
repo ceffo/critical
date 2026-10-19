@@ -12,6 +12,7 @@ import type {
 import type { WeaponChangeRecord } from "@/types/combat";
 import type { LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
+import { powersChangeText } from "@/lib/itemPowers";
 
 /** Payload of item_restock entries (itemsvc restockRecord, same shape as RestockResult). */
 function decodeRestock(e: LogEntry): RestockResult | null {
@@ -52,6 +53,13 @@ function itemEditText(
     .map((c) =>
       t("log.item.change", {
         ...c,
+        // The powers change holds the stored lists (ADR 0033 step 17): worded here.
+        ...(c.field === "powers"
+          ? {
+              before: powersChangeText(t, c.before),
+              after: powersChangeText(t, c.after),
+            }
+          : {}),
         field: t(`log.item.fields.${c.field}`, { defaultValue: c.field }),
       }),
     )

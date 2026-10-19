@@ -10,7 +10,7 @@ import {
   COLUMNS,
   canEquip,
   catalogueRows,
-  hasMagic,
+  minMagic,
   pickBody,
   type CatalogueRow,
   type CopyDraft,
@@ -346,44 +346,43 @@ function YourCopy({
                 data-testid="add-name"
               />
             </label>
-            {hasMagic(category) && (
-              <div
-                role="group"
-                aria-labelledby={`${id}-magic`}
-                className="flex flex-col gap-1"
+            <div
+              role="group"
+              aria-labelledby={`${id}-magic`}
+              className="flex flex-col gap-1"
+            >
+              <span
+                id={`${id}-magic`}
+                className="text-label text-muted-foreground"
               >
-                <span
-                  id={`${id}-magic`}
-                  className="text-label text-muted-foreground"
+                {t("equipment.add.magic")}
+              </span>
+              <span className="flex items-center gap-1">
+                <Button
+                  size="icon-sm"
+                  disabled={copy.magic <= minMagic(category)}
+                  aria-label={t("equipment.add.magicLess")}
+                  onClick={() => set({ magic: copy.magic - 1 })}
                 >
-                  {t("equipment.add.magic")}
+                  <Minus />
+                </Button>
+                <span
+                  className="min-w-10 text-center font-semibold tabular-nums"
+                  data-testid="add-magic"
+                >
+                  {formatSigned(copy.magic)}
                 </span>
-                <span className="flex items-center gap-1">
-                  <Button
-                    size="icon-sm"
-                    disabled={copy.magic <= -MAX_MAGIC}
-                    aria-label={t("equipment.add.magicLess")}
-                    onClick={() => set({ magic: copy.magic - 1 })}
-                  >
-                    <Minus />
-                  </Button>
-                  <span
-                    className="min-w-10 text-center font-semibold tabular-nums"
-                    data-testid="add-magic"
-                  >
-                    {formatSigned(copy.magic)}
-                  </span>
-                  <Button
-                    size="icon-sm"
-                    disabled={copy.magic >= MAX_MAGIC}
-                    aria-label={t("equipment.add.magicMore")}
-                    onClick={() => set({ magic: copy.magic + 1 })}
-                  >
-                    <Plus />
-                  </Button>
-                </span>
-              </div>
-            )}
+                <Button
+                  size="icon-sm"
+                  disabled={copy.magic >= MAX_MAGIC}
+                  aria-label={t("equipment.add.magicMore")}
+                  onClick={() => set({ magic: copy.magic + 1 })}
+                >
+                  <Plus />
+                </Button>
+              </span>
+            </div>
+
             {category === "ammunition" && (
               <label className="flex w-20 flex-col gap-1">
                 <span className="text-label text-muted-foreground">

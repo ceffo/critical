@@ -124,8 +124,7 @@ func marshal(t *testing.T, v any) string {
 // The cast's answer and its log entry's payload are one struct
 // (castsvc.CastBreakdown): the bytes the endpoint sends are the bytes it
 // logged, plus the entry's id, then the catalogue spell and the slots left
-// (never logged) and the previous release's four keys (kept for one
-// release). Checked on a damage cast from a slot (ten d6, the save noted).
+// (never logged). Checked on a damage cast from a slot (ten d6, the save noted).
 func TestCast_AnswerIsTheLoggedPayload(t *testing.T) {
 	w := newCastWire(t)
 	slots := []spellsvc.SpellSlot{{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball"}}
@@ -143,12 +142,9 @@ func TestCast_AnswerIsTheLoggedPayload(t *testing.T) {
 	for _, key := range []string{`"damage":`, `"rolls":`, `"save":`, `"slotIndex":0`, `"level":3`} {
 		assert.Contains(t, string(w.payload), key)
 	}
-	assert.ElementsMatch(t, []string{"catalogueSpell", "slots", "entryId", "source", "name"}, keysOf(tail))
+	assert.ElementsMatch(t, []string{"catalogueSpell", "slots"}, keysOf(tail))
 	assert.JSONEq(t, marshal(t, wire.SpellToDTO(spell, bardLevel)), string(tail["catalogueSpell"]))
 	assert.JSONEq(t, `[{"level":3,"prepared_spell_id":"fireball","prepared_spell_name":"Fireball","used":true}]`, string(tail["slots"]))
-	assert.JSONEq(t, `42`, string(tail["entryId"]))
-	assert.JSONEq(t, `"cast"`, string(tail["source"]))
-	assert.JSONEq(t, `"Fireball"`, string(tail["name"]))
 }
 
 // The same on a received buff spell: the buff's rolls and tracked effects
@@ -168,13 +164,12 @@ func TestReceive_AnswerIsTheLoggedPayload(t *testing.T) {
 	for _, key := range []string{`"durationRoll":`, `"strGainRoll":`, `"effects":{`, `"untracked":[]`} {
 		assert.Contains(t, string(w.payload), key)
 	}
-	assert.ElementsMatch(t, []string{"catalogueSpell", "entryId", "source", "name"}, keysOf(tail))
-	assert.JSONEq(t, `"received"`, string(tail["source"]))
+	assert.ElementsMatch(t, []string{"catalogueSpell"}, keysOf(tail))
 }
 
 // The exposure's answer and its entry's payload are one struct
-// (castsvc.ExposureBreakdown): the logged bytes, the entry id, the HP the
-// ledger applied, then the previous release's entryId and name.
+// (castsvc.ExposureBreakdown): the logged bytes, the entry id and the HP the
+// ledger applied.
 func TestExpose_AnswerIsTheLoggedPayload(t *testing.T) {
 	w := newCastWire(t)
 	w.dice.EXPECT().RollDie(mock.Anything).Return(3).Maybe()
@@ -182,9 +177,8 @@ func TestExpose_AnswerIsTheLoggedPayload(t *testing.T) {
 	answer := w.post(t, "/api/spells/exposure", `{"spellId":"wall_of_fire","casterLevel":12}`)
 	tail := answerTail(t, w.payload, answer)
 	assert.Contains(t, string(w.payload), `"exposure":{`, "the entry records the exposure served")
-	assert.ElementsMatch(t, []string{"hpDelta", "entryId", "name"}, keysOf(tail))
+	assert.ElementsMatch(t, []string{"hpDelta"}, keysOf(tail))
 	assert.JSONEq(t, `0`, string(tail["hpDelta"]), "not on the Bard")
-	assert.JSONEq(t, `42`, string(tail["entryId"]))
 }
 
 // The spell in a cast result carries the caster level of that cast and the
@@ -313,7 +307,7 @@ func TestExpose_Handler(t *testing.T) {
 	assert.JSONEq(t, `{"spellId":"wall_of_fire","spell":"Wall of Fire","casterLevel":9,"mode":"within_10_ft",
 		"round":2,"onSelf":true,"damage":{"dice":"2d4","type":"fire","instances":1,"rounds":1,"total":5,
 		"rolls":[{"formula":"2d4","dice":[{"sides":4,"value":2},{"sides":4,"value":3}],"total":5}]},
-		"logEntryId":7,"hpDelta":-4,"entryId":7,"name":"Wall of Fire"}`, body)
+		"logEntryId":7,"hpDelta":-4}`, body)
 
 	rec := httptest.NewRecorder()
 	r := chi.NewRouter()
@@ -345,7 +339,7 @@ func TestAddEffect_Handler(t *testing.T) {
 	body := serve(t, svc, "/api/spells/effect", `{"spellId":"strength","casterLevel":3}`)
 	assert.Equal(t, castsvc.AddEffectRequest{SpellID: "strength"}, *svc.effect, "a caster level sent is ignored")
 	assert.JSONEq(t, `{"action":"effect","spellId":"strength","spell":"","casterLevel":15,"level":0,"untracked":[],
-		"logEntryId":3,"entryId":3,"source":"effect","name":""}`, body)
+		"logEntryId":3}`, body)
 
 	rec := httptest.NewRecorder()
 	r := chi.NewRouter()

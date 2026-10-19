@@ -9,9 +9,6 @@ import { resources } from "@/i18n";
 import type { LogEntry } from "@/types/log";
 import { castInstances, castKind, type CastPayload } from "./kinds/cast";
 import { exposureKind } from "./kinds/exposure";
-import { normalizeCastAnswer } from "@/api/spells";
-import type { CastResult } from "@/types/spells";
-import { CastResultView } from "@/components/dashboard/CastResultView";
 
 async function i18n() {
   const inst = i18next.createInstance();
@@ -91,6 +88,21 @@ describe("entries logged before the payload was the answer", () => {
     expect(html).toContain("24");
   });
 
+  it("a cast logged with the retired d20Roll alias beside d20 still renders its die", async () => {
+    const inst = await i18n();
+    const e = entry("cast", {
+      ...oldCast,
+      attack: { d20: 17, d20Roll: 17, targetAc: 5, hit: true },
+    });
+    const p = castKind.decode(e) as CastPayload;
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={inst}>
+        {castKind.card?.({ payload: p, entry: e, text: "", interactive: true })}
+      </I18nextProvider>,
+    );
+    expect(html).toContain('aria-label="d20: 17"');
+  });
+
   it("an old exposure renders in the journal and offers the next round", async () => {
     const inst = await i18n();
     const e = entry("exposure", oldExposure);
@@ -110,32 +122,5 @@ describe("entries logged before the payload was the answer", () => {
     expect(html).toContain("7");
     expect(html).toContain('data-testid="cast-exposure"');
     expect(html).toMatch(/value="3"/); // the round after the logged 2
-  });
-
-  it("a previous release's cast answer, normalised, shows the spell, the d20 and the item", async () => {
-    const inst = await i18n();
-    const old = {
-      entryId: 12,
-      source: "cast",
-      spellId: "magic_missile",
-      name: "Magic Missile",
-      casterLevel: 3,
-      spell: {
-        id: "magic_missile",
-        name: { en: "Magic Missile" },
-        class: "wizard",
-        level: 1,
-      },
-      consumedItem: { itemId: "diamond", name: "Diamond", remaining: 3 },
-      attack: { d20Roll: 17, targetAc: 5, hit: true },
-    } as unknown as CastResult;
-    const html = renderToStaticMarkup(
-      <I18nextProvider i18n={inst}>
-        <CastResultView result={normalizeCastAnswer(old)} />
-      </I18nextProvider>,
-    );
-    expect(html).toContain("Magic Missile");
-    expect(html).toContain('data-testid="cast-item"');
-    expect(html).toMatch(/title="d20"[^>]*>17</);
   });
 });

@@ -168,7 +168,7 @@ func ResolveAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 }
 
 // RollSave runs a saving throw and returns its breakdown, the payload of its
-// log entry plus the entry id (combatsvc.SaveBreakdown, see saveAnswer).
+// log entry plus the entry id (combatsvc.SaveBreakdown).
 func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		var req SaveRequestDTO
@@ -179,7 +179,7 @@ func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, newSaveAnswer(res))
+		render.OK(r.Context(), w, res)
 		return nil
 	}
 }
@@ -297,27 +297,9 @@ func AdjustSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, newSaveAnswer(res))
+		render.OK(r.Context(), w, res)
 		return nil
 	}
-}
-
-// saveAnswer is the answer of the save endpoints: the save's breakdown
-// (combatsvc.SaveBreakdown, the logged payload plus logEntryId) followed by
-// hit, hitMargin and baseThac0, the passed, margin and target under the
-// names the previous release's web reads from this answer. They are kept for
-// one release so that a page of that release still shows the right verdict
-// against this server during the rolling deploy (ADR 0024 step 5.2, as ADR
-// 0032 step 8 did); they are never logged. Drop them in the next release.
-type saveAnswer struct {
-	combatsvc.SaveBreakdown
-	Hit       bool `json:"hit"`
-	HitMargin int  `json:"hitMargin"`
-	BaseThac0 int  `json:"baseThac0"`
-}
-
-func newSaveAnswer(b *combatsvc.SaveBreakdown) saveAnswer {
-	return saveAnswer{SaveBreakdown: *b, Hit: b.Passed, HitMargin: b.Margin, BaseThac0: b.Target}
 }
 
 // CritRowDTO is one inclusive D100 range of the crit table.

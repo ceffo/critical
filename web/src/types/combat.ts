@@ -249,7 +249,7 @@ export const WEAPON_TYPES = [
 ] as const;
 export type WeaponType = (typeof WEAPON_TYPES)[number] | "";
 
-/** GET /api/weapons */
+/** GET /api/weapons: the weapon pieces as the attack reads them (combathdl WeaponDTO). */
 export interface Weapon {
   id: string;
   /** A language map (ADR 0023 step 9): pick with `localized`. */
@@ -265,6 +265,10 @@ export interface Weapon {
   weapon_type: WeaponType;
   /** The fighter's weapon specialization (ADR 0030 step 12). */
   specialized: boolean;
+  /** The speed factor (ADR 0033 step 3). */
+  speed: number;
+  /** Wielded (ADR 0033 step 6): only a wielded weapon is in hand; picking another wields it. */
+  wielded: boolean;
 }
 
 /** Saving throw categories accepted by POST /api/roll/save. */
@@ -292,27 +296,6 @@ export interface CritTable {
 }
 
 /** Body of POST /api/weapons and PATCH /api/weapons/{id} (weaponhdl WeaponBody); a PATCH changes only the fields present. */
-export interface WeaponBody {
-  /** The languages typed (ADR 0023 step 11): the others are kept. */
-  name?: LocalizedText;
-  damage_sm?: string;
-  damage_l?: string;
-  magic_to_hit?: number;
-  magic_damage?: number;
-  kind?: "melee" | "missile";
-  two_handed?: boolean;
-  ammo_kind?: string;
-  weapon_type?: WeaponType;
-  /** Refused (field `specialized`, code `not_allowed`) for a class that does not specialize. */
-  specialized?: boolean;
-}
-
-/** POST/PATCH/DELETE /api/weapons (weaponhdl ChangeDTO): the weapon as it is now (as it was, for a delete). */
-export interface WeaponChange {
-  weapon: Weapon;
-  logEntryId: number;
-}
-
 /** One edited field in a weapon_edit log payload (values as text). */
 export interface WeaponFieldChange {
   field: string;
@@ -320,7 +303,10 @@ export interface WeaponFieldChange {
   after: string;
 }
 
-/** Payload of weapon_add, weapon_edit and weapon_remove log entries (weaponsvc changeRecord). */
+/**
+ * Payload of weapon_add, weapon_edit and weapon_remove log entries, written before the one
+ * equipment model (ADR 0033 step 26.2): they still show in the journal and pop.
+ */
 export interface WeaponChangeRecord extends Omit<Weapon, "name"> {
   weapon_id: string;
   /** The name recorded at write time (ADR 0023 step 12): one string, not a language map. */

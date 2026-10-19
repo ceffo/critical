@@ -75,6 +75,19 @@ func Allows(c Category, kind string, s State) bool {
 	return false
 }
 
+// EquipState is the state the piece is equipped in (ADR 0033 step 6): wielded
+// for a weapon, worn for what may be worn, empty for a piece carried only.
+// The web's Equip moves the piece there (ADR 0035 item 3).
+func (i Item) EquipState() State {
+	switch {
+	case Allows(i.Category, i.MagicKind, StateWielded):
+		return StateWielded
+	case Allows(i.Category, i.MagicKind, StateWorn):
+		return StateWorn
+	}
+	return ""
+}
+
 // slotted reports whether at most one piece of the category may be worn (one
 // body armour, one shield: step 6).
 func slotted(c Category) bool { return c == CategoryArmour || c == CategoryShield }

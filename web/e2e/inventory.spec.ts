@@ -176,7 +176,7 @@ test("a wand used down to 0 disappears; popping that use brings it back with 1 c
     .getByRole("list", { name: "Inventory", exact: true })
     .getByRole("listitem")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-testid")));
-  expect(ids.slice(3)).toEqual([
+  expect(ids.slice(3, 6)).toEqual([
     "item-fire_flask",
     "item-wand_lightning",
     "item-power_gem_dispel",

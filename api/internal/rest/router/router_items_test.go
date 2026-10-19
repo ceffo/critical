@@ -38,10 +38,10 @@ func TestItems_ListWireShape(t *testing.T) {
 	rec := do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"arrows_plus1","name":{"en":"Arrows +1"},"category":"ammunition","magicKind":"","catalogueCode":"",
-		"state":"carried","type":"arrow","behaviour":"stock","magicalBonus":1,
+		"state":"carried","equipState":"","type":"arrow","behaviour":"stock","magicalBonus":1,
 		"ammoKind":"arrow","count":18,"maxCount":18,"effectDice":"","effectSave":"","notes":"","powers":[],
 		"damageSm":"1d6","damageL":"1d6",`+noWeapon+`,"review":[]},
-		{"id":"mace","name":{"en":"Mace +1"},"category":"weapon","magicKind":"","catalogueCode":"","state":"wielded","type":"",
+		{"id":"mace","name":{"en":"Mace +1"},"category":"weapon","magicKind":"","catalogueCode":"","state":"wielded","equipState":"wielded","type":"",
 		"behaviour":"stock","magicalBonus":0,"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[],"damageTypes":[],"damageSm":"1d6","damageL":"1d6","weaponType":"other_melee","weaponKind":"melee","size":"",
 		"speed":0,"magicToHit":1,"magicDamage":1,"twoHanded":false,"fires":"","specialized":false,"baseAc":0,"skillColumn":"",
@@ -135,7 +135,7 @@ func TestItems_Restock(t *testing.T) {
 	}
 }
 
-const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","state":"carried",
+const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","state":"carried","equipState":"",
 	"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
 	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[],"damageSm":"","damageL":"",` + noWeapon + `,"review":[]}`
 
@@ -204,7 +204,7 @@ func TestItems_PowersInABodyAreIgnored(t *testing.T) {
 	rec = do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":{"en":"Power Gem"},"category":"magic","magicKind":"misc","catalogueCode":"",
-		"state":"worn","type":"gem","behaviour":"daily","magicalBonus":0,
+		"state":"worn","equipState":"worn","type":"gem","behaviour":"daily","magicalBonus":0,
 		"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[{"id":"thunder_hammer","minStr":18,"effects":{"weapon_buff":5,"multiplier":2,"weapon_kind":"melee"}}],
 		"damageSm":"","damageL":"",`+noWeapon+`,"review":[]}]`,

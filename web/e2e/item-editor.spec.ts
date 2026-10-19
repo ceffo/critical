@@ -10,8 +10,9 @@ import {
   undoEntry,
 } from "./helpers";
 
-// Inventory editor: add, edit and remove items; each is one log entry and the
-// newest can be popped. The journal is the Act activity's (ADR 0022 step 2.5).
+// Inventory editor (one editor for every piece, ADR 0033 step 1): add, edit and remove possessions;
+// each is one log entry and the newest can be popped. The journal is the Act activity's (ADR 0022
+// step 2.5).
 
 async function openInventory(page: Page) {
   await openDashboard(page);
@@ -40,10 +41,10 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   await page.getByRole("button", { name: "Add item" }).click();
   const f = form(page);
   await f.getByLabel("Name").fill("Arrows +3 (blessed)");
-  await f.getByLabel("Type").fill("arrow");
+  await f.getByLabel("Category").selectOption("ammunition");
   await f.getByLabel("Count").fill("6");
   await f.getByLabel("Magical bonus").fill("3");
-  await f.getByLabel("Ammo kind").fill("arrow");
+  await f.getByLabel("Ammo kind").selectOption("arrow");
   await snap(page, "add-form");
   await f.getByRole("button", { name: "Add", exact: true }).click();
 
@@ -158,7 +159,8 @@ test("a daily item and an effect with a modifier: add, use rolls the modifier in
   await page.getByRole("button", { name: "Add item" }).click();
   const f = form(page);
   await f.getByLabel("Name").fill("Holy water");
-  await f.getByLabel("Type").fill("potion");
+  await f.getByLabel("Category").selectOption("magic");
+  await f.getByLabel("Magic kind").selectOption("potion");
   await f.getByLabel("Behaviour").selectOption("daily");
   await f.getByLabel("Daily number").fill("2");
   await f.getByLabel("Count").fill("2");

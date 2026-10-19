@@ -96,7 +96,7 @@ export function AttackPanel() {
       : preview.rollNeeded === null || form.targetAc === null
         ? t("attack.needsUnknown")
         : t("attack.needs", { ac: form.targetAc, n: preview.rollNeeded });
-  const { previous, others } = weaponSwitch(weapons, form);
+  const { previous, equipped, unequipped } = weaponSwitch(weapons, form);
   const nameOf = (w: Weapon) => localized(i18n.language, w.name);
 
   return (
@@ -207,7 +207,16 @@ export function AttackPanel() {
             })}
           </p>
         )}
-        {(previous || others.length > 0) && (
+        {!weapon && (
+          // ADR 0033 step 8: the weapon in hand was put away; the drop-down picks (and equips) one.
+          <p
+            className="text-body text-muted-foreground"
+            data-testid="no-weapon"
+          >
+            {t("attack.noWeaponInHand")}
+          </p>
+        )}
+        {(previous || equipped.length > 0 || unequipped.length > 0) && (
           // ADR 0027 step 7.1: one click back to the previous weapon, the others in a drop-down.
           <div
             role="group"
@@ -228,10 +237,15 @@ export function AttackPanel() {
                 <span className="break-words">{nameOf(previous)}</span>
               </Button>
             )}
-            {others.length > 0 && (
+            {(equipped.length > 0 || unequipped.length > 0) && (
+              // ADR 0035 item 12: the equipped weapons, then the others; picking one of those equips it.
               <select
                 aria-label={t("attack.otherWeapon")}
-                title={t("attack.otherWeapon")}
+                title={
+                  unequipped.length > 0
+                    ? `${t("attack.otherWeapon")} — ${t("attack.pickEquips")}`
+                    : t("attack.otherWeapon")
+                }
                 className={cn(fieldClass, "w-auto max-w-56")}
                 value=""
                 onChange={(e) => void update({ weaponId: e.target.value })}
@@ -239,11 +253,24 @@ export function AttackPanel() {
                 <option value="" disabled>
                   {t("attack.otherWeaponPlaceholder")}
                 </option>
-                {others.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {nameOf(w)}
-                  </option>
-                ))}
+                {equipped.length > 0 && (
+                  <optgroup label={t("attack.equippedWeapons")}>
+                    {equipped.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {nameOf(w)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {unequipped.length > 0 && (
+                  <optgroup label={t("attack.otherWeaponsGroup")}>
+                    {unequipped.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {nameOf(w)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             )}
           </div>
@@ -493,6 +520,12 @@ function StatsLine({
   // Each segment stays on one line; the line breaks between segments when the row is narrow.
   const segments: ReactNode[] = [
     t(`attack.kinds.${weapon.kind}`),
+    // ADR 0033 step 3: the speed factor, when the piece has one.
+    weapon.speed > 0 && (
+      <span data-testid="tile-speed">
+        {t("equipment.stats.speed", { speed: weapon.speed })}
+      </span>
+    ),
     weapon.two_handed && t("attack.twoHanded"),
     weapon.specialized && (
       <span data-testid="tile-specialized">{t("attack.specialized")}</span>

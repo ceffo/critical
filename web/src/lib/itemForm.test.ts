@@ -5,24 +5,82 @@ import {
   draftFromItem,
   draftToBody,
   emptyDraft,
+  hasField,
   parseInteger,
-  typeSuggestions,
 } from "./itemForm";
 
-const wand: Item = {
+/** A piece as GET /api/items serves it: every category's fields, zero for the others. */
+function piece(p: Partial<Item>): Item {
+  return {
+    id: "x",
+    name: { en: "X" },
+    category: "gear",
+    magicKind: "",
+    catalogueCode: "",
+    state: "carried",
+    equipState: "",
+    type: "",
+    behaviour: "stock",
+    magicalBonus: 0,
+    ammoKind: "",
+    count: 1,
+    maxCount: 1,
+    effectDice: "",
+    effectSave: "",
+    notes: "",
+    powers: [],
+    damageTypes: [],
+    damageSm: "",
+    damageL: "",
+    weaponType: "",
+    weaponKind: "",
+    size: "",
+    speed: 0,
+    magicToHit: 0,
+    magicDamage: 0,
+    twoHanded: false,
+    fires: "",
+    specialized: false,
+    baseAc: 0,
+    skillColumn: "",
+    armorRow: "",
+    shieldKind: "",
+    acMelee: 0,
+    acMissile: 0,
+    review: [],
+    ...p,
+  };
+}
+
+const wand = piece({
   id: "wand_lightning",
   name: { en: "Wand of lightning", fr: "Baguette de foudre" },
+  category: "magic",
+  magicKind: "wand",
   type: "wand",
   behaviour: "charges",
-  magicalBonus: 0,
-  ammoKind: "",
   count: 4,
   maxCount: 4,
   effectDice: "6d6",
   effectSave: "rod_staff_wand",
-  notes: "",
-  powers: [],
-};
+});
+
+const sword = piece({
+  id: "longsword",
+  name: { en: "Long Sword +2" },
+  category: "weapon",
+  state: "wielded",
+  equipState: "wielded",
+  damageSm: "1d8",
+  damageL: "1d12",
+  damageTypes: ["s"],
+  weaponType: "long_sword",
+  weaponKind: "melee",
+  size: "m",
+  speed: 5,
+  magicToHit: 2,
+  magicDamage: 2,
+});
 
 describe("parseInteger", () => {
   it("accepts whole numbers only", () => {
@@ -35,55 +93,87 @@ describe("parseInteger", () => {
 });
 
 describe("draftToBody", () => {
-  it("builds the add body for Arrows +3", () => {
+  it("builds the add body for Arrows +3: the shared fields and ammunition's own (ADR 0033 step 4)", () => {
     const { body, errors } = draftToBody(
       {
-        ...emptyDraft,
+        ...emptyDraft("ammunition"),
         name: "Arrows +3",
-        type: "arrow",
         count: "6",
         magicalBonus: "3",
         ammoKind: "arrow",
+        damageSm: "1d6",
+        damageL: "1d6",
       },
       "en",
     );
     expect(errors).toEqual({});
     expect(body).toEqual({
       name: { en: "Arrows +3" },
-      type: "arrow",
+      category: "ammunition",
       behaviour: "stock",
       count: 6,
       magicalBonus: 3,
       ammoKind: "arrow",
+      damageSm: "1d6",
+      damageL: "1d6",
+      damageTypes: [],
       effectDice: "",
       effectSave: "",
       notes: "",
     });
   });
 
+  it("sends a weapon's fields, and fires nothing for a melee weapon (ADR 0033 step 3)", () => {
+    const { body } = draftToBody(
+      { ...draftFromItem(sword, "en"), fires: "arrow" },
+      "en",
+    );
+    expect(body).toMatchObject({
+      category: "weapon",
+      weaponKind: "melee",
+      fires: "",
+      speed: 5,
+      damageTypes: ["s"],
+    });
+    expect(body).not.toHaveProperty("ammoKind");
+    expect(body).not.toHaveProperty("baseAc");
+  });
+
+  it("shows each category's fields only", () => {
+    expect(hasField("armour", "baseAc")).toBe(true);
+    expect(hasField("armour", "speed")).toBe(false);
+    expect(hasField("shield", "acMissile")).toBe(true);
+    expect(hasField("magic", "magicKind")).toBe(true);
+    expect(hasField("gear", "magicKind")).toBe(false);
+  });
+
   it("sends the daily number for daily items only", () => {
     expect(
-      draftToBody({ ...emptyDraft, behaviour: "daily", maxCount: "2" }, "en")
+      draftToBody({ ...emptyDraft(), behaviour: "daily", maxCount: "2" }, "en")
         .body.maxCount,
     ).toBe(2);
     expect(
-      draftToBody({ ...emptyDraft, behaviour: "stock", maxCount: "2" }, "en")
+      draftToBody({ ...emptyDraft(), behaviour: "stock", maxCount: "2" }, "en")
         .body,
     ).not.toHaveProperty("maxCount");
   });
 
-  it("flags text that is not a number instead of sending NaN; a blank bonus is 0", () => {
+  it("flags text that is not a number instead of sending NaN; a blank bonus is 0; another category's field is not read", () => {
     const { errors } = draftToBody(
       {
-        ...emptyDraft,
+        ...emptyDraft("ammunition"),
         count: "six",
         behaviour: "daily",
         maxCount: "",
+        baseAc: "x",
       },
       "en",
     );
     expect(errors).toEqual({ count: "notANumber", maxCount: "notANumber" });
-    const blank = draftToBody({ ...emptyDraft, magicalBonus: " " }, "en");
+    const blank = draftToBody(
+      { ...emptyDraft("ammunition"), magicalBonus: " " },
+      "en",
+    );
     expect(blank.errors).toEqual({});
     expect(blank.body.magicalBonus).toBe(0);
   });
@@ -91,7 +181,7 @@ describe("draftToBody", () => {
   it("leaves a negative count and bad dice to the server", () => {
     const { body, errors } = draftToBody(
       {
-        ...emptyDraft,
+        ...emptyDraft(),
         count: "-1",
         effectDice: "2x6",
       },
@@ -112,6 +202,16 @@ describe("changedFields", () => {
     expect(changedFields(wand, body, "en")).toEqual({ count: 3 });
   });
 
+  it("sends a weapon's damage types when they change", () => {
+    const { body } = draftToBody(
+      { ...draftFromItem(sword, "en"), damageTypes: ["p", "s"] },
+      "en",
+    );
+    expect(changedFields(sword, body, "en")).toEqual({
+      damageTypes: ["p", "s"],
+    });
+  });
+
   it("sends the daily number when an item becomes daily, even if equal to its old max", () => {
     const stock: Item = { ...wand, behaviour: "stock", count: 4, maxCount: 4 };
     const { body } = draftToBody(
@@ -129,13 +229,10 @@ describe("changedFields", () => {
   });
 
   it("is empty when nothing changed", () => {
-    expect(
-      changedFields(
-        wand,
-        draftToBody(draftFromItem(wand, "en"), "en").body,
-        "en",
-      ),
-    ).toEqual({});
+    for (const p of [wand, sword])
+      expect(
+        changedFields(p, draftToBody(draftFromItem(p, "en"), "en").body, "en"),
+      ).toEqual({});
   });
 });
 
@@ -159,21 +256,9 @@ describe("names in the player's language", () => {
 
   it("creates an item in the UI language", () => {
     expect(
-      draftToBody({ ...emptyDraft, name: "Corde" }, "fr").body.name,
+      draftToBody({ ...emptyDraft(), name: "Corde" }, "fr").body.name,
     ).toEqual({
       fr: "Corde",
     });
-  });
-});
-
-describe("typeSuggestions", () => {
-  it("lists each existing type once, sorted, without blanks", () => {
-    const items = [
-      wand,
-      { ...wand, id: "a", type: "arrow" },
-      { ...wand, id: "b", type: "arrow" },
-      { ...wand, id: "c", type: "" },
-    ];
-    expect(typeSuggestions(items)).toEqual(["arrow", "wand"]);
   });
 });

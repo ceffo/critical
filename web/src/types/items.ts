@@ -1,7 +1,8 @@
 // Mirrors api/internal/rest/handler/itemhdl (ItemDTO, PowerDTO, UseResultDTO, RestockResultDTO, ChangeDTO,
-// ItemBody).
+// ItemBody, StateRequest, StateDTO). An item is any piece of equipment (ADR 0033 step 1).
 
 import type { BuffEffects } from "./buffs";
+import type { WeaponType } from "./combat";
 import type { LocalizedText } from "./localized";
 
 /**
@@ -10,11 +11,93 @@ import type { LocalizedText } from "./localized";
  */
 export type ItemBehaviour = "stock" | "charges" | "daily";
 
+/** A piece's category (ADR 0033 step 2), in display order (itemsvc.Categories). */
+export const CATEGORIES = [
+  "weapon",
+  "ammunition",
+  "armour",
+  "shield",
+  "magic",
+  "gear",
+] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+/** A magic piece's kind (ADR 0033 step 2, itemsvc.MagicKinds). */
+export const MAGIC_KINDS = [
+  "potion",
+  "scroll",
+  "ring",
+  "rod",
+  "staff",
+  "wand",
+  "misc",
+] as const;
+export type MagicKind = (typeof MAGIC_KINDS)[number];
+
+/** Ammunition kinds (ADR 0033 step 4, itemsvc.AmmoKinds). */
+export const AMMO_KINDS = [
+  "arrow",
+  "quarrel",
+  "bullet",
+  "needle",
+  "blowgun_dart",
+] as const;
+
+/** PHB Table 29 columns an armour reads (ADR 0033 step 5, itemsvc.SkillColumns). */
+export const SKILL_COLUMNS = [
+  "none",
+  "leather",
+  "padded_studded",
+  "elven_chain",
+  "metal",
+  "none_allowed",
+] as const;
+
+/** PHB Table 52 rows (ADR 0033 step 5, ruletablesvc.ArmorRows). */
+export const ARMOR_ROWS = [
+  "banded",
+  "brigandine",
+  "chain",
+  "field_plate",
+  "full_plate",
+  "leather",
+  "plate",
+  "ring",
+  "scale",
+  "splint",
+  "studded_leather",
+] as const;
+
+/** Shield kinds (ADR 0033 step 5, itemsvc.ShieldKinds). */
+export const SHIELD_KINDS = ["buckler", "small", "medium", "body"] as const;
+
+/** Weapon sizes and damage types (ADR 0033 step 3). */
+export const SIZES = ["s", "m", "l"] as const;
+export const DAMAGE_TYPES = ["b", "p", "s"] as const;
+
+/**
+ * Where a piece is (ADR 0033 step 6). The web says Equipped for worn and wielded alike (ADR 0035
+ * item 3); the codes stay on the wire.
+ */
+export type ItemState = "carried" | "worn" | "wielded";
+
+/** Why a piece is on the review list (ADR 0033 step 27, itemsvc.Reason*). */
+export type ReviewReason =
+  "weapon_unmatched" | "uncategorised" | "ammo_kind_unknown" | "powers_off";
+
 export interface Item {
   id: string;
   /** A language map (ADR 0023 step 9): pick with `localized`. */
   name: LocalizedText;
-  /** Free-text label: arrow, flask, wand, gem… */
+  category: Category;
+  /** A magic piece's kind; empty for the other categories. */
+  magicKind: MagicKind | "";
+  /** The catalogue row it was picked from or matched to; empty for homebrew. */
+  catalogueCode: string;
+  state: ItemState;
+  /** The state Equip moves the piece to (server rule, ADR 0033 step 6); empty: carried only. */
+  equipState: ItemState | "";
+  /** The free-text label of before the equipment model, read only (not shown). */
   type: string;
   behaviour: ItemBehaviour;
   /** Magical bonus (+N): to hit and damage when fired as ammo. */
@@ -29,9 +112,35 @@ export interface Item {
   notes: string;
   /**
    * The item's own powers (ADR 0016 steps 9 to 16), read only: never sent by the editor. Whether one
-   * is on is served with the effects list (GET /api/buffs).
+   * is on is served with the effects list (GET /api/buffs); only while the piece is equipped.
    */
   powers: ItemPowerDef[];
+  /** Weapon and ammunition: one or two of b, p, s, and the damage S-M / L (NdM). */
+  damageTypes: string[];
+  damageSm: string;
+  damageL: string;
+  /** Weapon (ADR 0033 step 3). */
+  weaponType: WeaponType;
+  weaponKind: "melee" | "missile" | "";
+  size: string;
+  speed: number;
+  magicToHit: number;
+  magicDamage: number;
+  twoHanded: boolean;
+  /** The ammo kind a launcher fires; empty for melee and hurled weapons. */
+  fires: string;
+  /** The fighter's weapon specialization (ADR 0030 step 12). */
+  specialized: boolean;
+  /** Armour (ADR 0033 step 5). */
+  baseAc: number;
+  skillColumn: string;
+  armorRow: string;
+  /** Shield (ADR 0033 step 5). */
+  shieldKind: string;
+  acMelee: number;
+  acMissile: number;
+  /** The review reasons (ADR 0033 step 27); empty when the piece is settled. */
+  review: ReviewReason[];
 }
 
 /** One of an item's powers: its trigger (minStr; absent: always on) and its effects. */
@@ -78,7 +187,8 @@ export interface RestockResult {
 export interface ItemBody {
   /** The languages typed (ADR 0023 step 11): the others are kept. */
   name?: LocalizedText;
-  type?: string;
+  category?: Category;
+  magicKind?: MagicKind | "";
   behaviour?: ItemBehaviour;
   count?: number;
   /** The daily number (daily items only). */
@@ -88,6 +198,54 @@ export interface ItemBody {
   effectDice?: string;
   effectSave?: string;
   notes?: string;
+  damageTypes?: string[];
+  damageSm?: string;
+  damageL?: string;
+  weaponType?: WeaponType;
+  weaponKind?: "melee" | "missile" | "";
+  size?: string;
+  speed?: number;
+  magicToHit?: number;
+  magicDamage?: number;
+  twoHanded?: boolean;
+  fires?: string;
+  /** Refused (field `specialized`, code `not_allowed`) for a class that does not specialize. */
+  specialized?: boolean;
+  baseAc?: number;
+  skillColumn?: string;
+  armorRow?: string;
+  shieldKind?: string;
+  acMelee?: number;
+  acMissile?: number;
+}
+
+/** POST /api/items/{id}/state (itemhdl StateRequest): swap takes off the armour or shield worn. */
+export interface StateBody {
+  state: ItemState;
+  swap?: boolean;
+}
+
+/** POST /api/items/{id}/state (itemhdl StateDTO): the pieces changed, the moved one first. */
+export interface StateChange {
+  items: Item[];
+  /** 0: the piece already was in that state, nothing logged. */
+  logEntryId: number;
+}
+
+/** One piece's move in an equipment_state payload (itemsvc stateMove). */
+export interface StateMove {
+  itemId: string;
+  /** The name recorded at write time (ADR 0023 step 12). */
+  name: string;
+  category: Category;
+  before: ItemState;
+  after: ItemState;
+}
+
+/** Payload of equipment_state entries (itemsvc stateRecord, ADR 0033 step 7). */
+export interface EquipmentStateRecord extends StateMove {
+  /** The pieces a swap took off. */
+  off?: StateMove[];
 }
 
 /** POST/PATCH/DELETE /api/items (itemhdl ChangeDTO): the item as it is now (as it was, for a delete). */
@@ -107,6 +265,9 @@ export interface FieldChange {
 export interface ItemChangeRecord {
   itemId: string;
   name: string;
+  /** Absent in entries logged before the equipment model (ADR 0033). */
+  category?: Category;
+  magicKind?: MagicKind;
   type: string;
   behaviour: ItemBehaviour;
   count: number;

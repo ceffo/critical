@@ -417,6 +417,29 @@ The slices that follow this ADR, in order; each amends the ADRs it touches, as b
 8. **CRI-40**: weapon type against armour type (steps 18, 19).
 9. **CRI-41**: class warnings (step 20).
 
+_As built (CRI-34, slice 2)_: the one model is the `items` table (migration 014, additive: the
+category, magic kind, catalogue code, state and every category's columns; `weapons` is no longer read
+and is dropped later), served and edited at `/api/items` (`POST /api/items/{id}/state {state, swap}`
+for step 7, which answers the pieces changed; `DELETE /api/items/{id}/review` dismisses, step 27;
+`GET /api/items` carries each piece's `review` reasons and its `equipState`, the state Equip moves it
+to, so the web never re-derives step 6). `GET /api/weapons` stays as the attack's read of the weapon
+pieces (with `wielded` and `speed`); `/api/weapons`' editor routes are gone. New pieces log
+`item_add` / `item_edit` / `item_remove` (payload with `category`); old `weapon_*` entries pop into the
+piece (step 26.2), old `items:<id>` snapshots are told from new ones by a `model` marker and read
+through `item_id_renames` (step 26.3). Readings the ADR leaves open, fixed here: the review reasons are
+`weapon_unmatched`, `uncategorised`, `ammo_kind_unknown` (an ammo kind none of step 4's codes,
+kept as typed) and `powers_off`; an item with powers and an unknown label becomes `magic` `misc`, worn,
+on the review list (so its powers stay on, step 9), one whose category cannot be worn stays carried
+with `powers_off`; labels are read in English, singular or plural, `bolt` as `quarrel`, and an item
+with an ammo kind is ammunition; any edit of a classifying field (category, magic kind, the category's
+codes, speed, size, damage types) takes the piece off the review list, a rename does not, and popping
+that edit does not put it back; the attack refuses a weapon that is not wielded (field `weaponId`);
+a stored form weapon that was put away leaves the hand empty, one that is gone falls back to the first
+wielded weapon. The free-text `type` label is kept as stored and read only by the spells that spend an
+item (`consume_item`, the Chromatic Orb's gem); the editor no longer sets it (open question for the
+user, see the PR). The seeds keep their two files and are converted by the same function as the data
+(`seedfile.Equipment`). The skill-armour carry-over of step 14 is CRI-36's.
+
 CRI-32 (the design round) comes before the UI of slices 2 to 9. Slices 3 to 9 need slice 2; slices
 5, 7 and 8 need slice 1's data.
 

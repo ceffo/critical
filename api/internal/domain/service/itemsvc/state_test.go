@@ -67,6 +67,16 @@ func TestAllows_Step6_StateByCategory(t *testing.T) {
 	}
 }
 
+// ADR 0033 step 6: Equip moves a weapon to wielded, a piece that may be worn
+// to worn; a piece carried only has no equip state.
+func TestEquipState_Step6(t *testing.T) {
+	assert.Equal(t, itemsvc.StateWielded, sword.EquipState())
+	assert.Equal(t, itemsvc.StateWorn, chain.EquipState())
+	assert.Equal(t, itemsvc.StateWorn, gem.EquipState())
+	assert.Equal(t, itemsvc.State(""), wand4.EquipState())
+	assert.Equal(t, itemsvc.State(""), itemsvc.Item{Category: itemsvc.CategoryAmmunition}.EquipState())
+}
+
 // ADR 0033 step 6: a state the category does not allow is refused (state,
 // not_allowed), a second body armour without the swap too (state,
 // slot_taken); nothing is written or logged.

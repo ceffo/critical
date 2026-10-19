@@ -80,7 +80,10 @@ id, character_id, entry_date TEXT, session TEXT, reason TEXT, base INTEGER, bonu
 id TEXT, character_id, position, ability TEXT ('str'..'cha'), modifier INTEGER
 id TEXT, character_id, position, percent INTEGER (0-100)
 
--- weapons, items: each character's (character_id; "Per-character data" below)
+-- items: each character's possessions, weapons included (character_id; "Per-character data" below;
+-- ADR 0033: category, magic_kind, catalogue_code, state carried/worn/wielded and each category's
+-- columns); equipment_review: the review list (ADR 0033 step 27); item_id_renames: the conversion's
+-- renamed item ids (step 26.3); weapons: unread since migration 014 (converted into items)
 -- spellbook_entries: the spells each character knows, by catalogue key, in sheet order
 character_id, spell_key TEXT, position
 
@@ -486,8 +489,9 @@ character's row of the same id is unknown: not found).
   the catalogue artifact and checks the seeds before it seeds. Reading a spellbook names each entry
   from the catalogue (`spellbookadpt.Book`); the catalogue import keeps every spell a spellbook
   holds (`StateSpellRefs`, ADR 0021 step 5.4.3).
-- **Undo**: snapshot keys stay `items:<id>` and `weapons:<id>`; a restorer writes the row of the
-  popped entry's character (the `characterID` every `Restorer` receives).
+- **Undo**: snapshot keys are `items:<id>` (every piece, ADR 0033); old `weapons:<id>` snapshots are
+  restored into the piece of that id by itemsvc. A restorer writes the row of the popped entry's
+  character (the `characterID` every `Restorer` receives).
 - **Expand, then contract** (the migrations are additive across a rolling deploy, ADR 0024 step
   5.2): migration 002 added `character_id` nullable, with a unique index on `(character_id, id)`,
   and kept the single-column primary keys the release before still upserted on. Migration 004 is

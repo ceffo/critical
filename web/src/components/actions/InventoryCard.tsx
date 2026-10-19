@@ -15,8 +15,7 @@ export const ROW_ACTIONS =
 /**
  * A card of the Inventaire stage: its section-label title, the quiet one-word Add (ADR 0027 steps
  * 3.4 and 14.2, the detail in its tooltip and `aria-label`), then its body, which scrolls inside the
- * card when the stage is shorter than it (step 14.3: the page never scrolls). Side by side (the
- * Inventaire stage's container from 1200 px), the two cards share the width. The title and Add sit
+ * card when the stage is shorter than it (step 14.3: the page never scrolls). The title and Add sit
  * in the card's header band (ADR 0026 step 6.2); `focused`: the activity's focused card (step 6.1),
  * one tone up with the 2 px outline.
  */
@@ -29,6 +28,7 @@ export function InventoryCard({
   busy,
   onAdd,
   focused = false,
+  toolbar,
   children,
 }: {
   titleId?: string;
@@ -41,6 +41,8 @@ export function InventoryCard({
   busy: boolean;
   onAdd: () => void;
   focused?: boolean;
+  /** A line under the title and Add, in the band (the category chips, ADR 0035 item 2). */
+  toolbar?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -50,24 +52,27 @@ export function InventoryCard({
       aria-label={label}
       className={cn(
         focused ? "stage-card" : "zone-card",
-        "flex min-h-0 min-w-0 flex-col pb-3 @min-[75rem]:max-h-full @min-[75rem]:flex-1",
+        "flex min-h-0 min-w-0 flex-col pb-3",
       )}
     >
-      <div className="card-band mb-1.5 flex min-h-10 shrink-0 items-center justify-between gap-3 px-3 py-1">
-        <h2 id={titleId} className="section-label">
-          {title}
-        </h2>
-        {showAdd && (
-          <Button
-            size="sm"
-            disabled={busy}
-            title={addLabel}
-            aria-label={addLabel}
-            onClick={onAdd}
-          >
-            <Plus /> {t("items.form.add")}
-          </Button>
-        )}
+      <div className="card-band mb-1.5 flex shrink-0 flex-col gap-1.5 px-3 py-1.5">
+        <div className="flex min-h-7 items-center justify-between gap-3">
+          <h2 id={titleId} className="section-label">
+            {title}
+          </h2>
+          {showAdd && (
+            <Button
+              size="sm"
+              disabled={busy}
+              title={addLabel}
+              aria-label={addLabel}
+              onClick={onAdd}
+            >
+              <Plus /> {t("items.form.add")}
+            </Button>
+          )}
+        </div>
+        {toolbar}
       </div>
       <div className="flex min-h-0 flex-col gap-1 overflow-y-auto px-3">
         {children}

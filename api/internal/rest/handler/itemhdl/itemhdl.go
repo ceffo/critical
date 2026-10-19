@@ -165,15 +165,18 @@ type ItemDTO struct {
 	MagicKind     string         `json:"magicKind"`
 	CatalogueCode string         `json:"catalogueCode"`
 	State         string         `json:"state"`
-	Type          string         `json:"type"`
-	Behaviour     string         `json:"behaviour"`
-	MagicalBonus  int            `json:"magicalBonus"`
-	AmmoKind      string         `json:"ammoKind"`
-	Count         int            `json:"count"`
-	MaxCount      int            `json:"maxCount"`
-	EffectDice    string         `json:"effectDice"`
-	EffectSave    string         `json:"effectSave"`
-	Notes         string         `json:"notes"`
+	// EquipState is the state Equip moves the piece to (worn or wielded),
+	// empty for a piece that is carried only (ADR 0033 step 6).
+	EquipState   string `json:"equipState"`
+	Type         string `json:"type"`
+	Behaviour    string `json:"behaviour"`
+	MagicalBonus int    `json:"magicalBonus"`
+	AmmoKind     string `json:"ammoKind"`
+	Count        int    `json:"count"`
+	MaxCount     int    `json:"maxCount"`
+	EffectDice   string `json:"effectDice"`
+	EffectSave   string `json:"effectSave"`
+	Notes        string `json:"notes"`
 	// Powers are the item's own powers (ADR 0016 steps 9 to 16), read only:
 	// whether one is on is served with the effects list (GET /api/buffs).
 	Powers []PowerDTO `json:"powers"`
@@ -226,7 +229,8 @@ func ToDTOs(items []itemsvc.Item) []ItemDTO {
 		}
 		out = append(out, ItemDTO{
 			ID: i.ID, Name: i.Name, Category: string(i.Category), MagicKind: i.MagicKind,
-			CatalogueCode: i.CatalogueCode, State: string(i.State), Type: i.Type, Behaviour: string(i.Behaviour),
+			CatalogueCode: i.CatalogueCode, State: string(i.State), EquipState: string(i.EquipState()),
+			Type: i.Type, Behaviour: string(i.Behaviour),
 			MagicalBonus: i.MagicBonus, AmmoKind: i.AmmoKind, Count: i.Count, MaxCount: i.MaxCount,
 			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers,
 			DamageTypes: damageTypes, DamageSM: i.DamageSM, DamageL: i.DamageL,
@@ -289,6 +293,7 @@ type ItemBody struct {
 	Powers        json.RawMessage `json:"powers"`
 	Type          json.RawMessage `json:"type"`
 	State         json.RawMessage `json:"state"`
+	EquipState    json.RawMessage `json:"equipState"`
 	CatalogueCode json.RawMessage `json:"catalogueCode"`
 	Review        json.RawMessage `json:"review"`
 }

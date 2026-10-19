@@ -702,6 +702,45 @@ describe("inventory entries", () => {
     ).toBe("srv");
   });
 
+  // ADR 0033 step 7 worded with the one term of ADR 0035 item 3: équipé / retiré, a swap names
+  // the piece taken off.
+  it("renders an equipment state change in both languages", async () => {
+    const move = {
+      itemId: "chain",
+      name: "Chain mail",
+      category: "armour",
+      before: "carried",
+      after: "worn",
+    };
+    const en = await makeT("en");
+    const fr = await makeT("fr");
+    expect(entryText(entry("equipment_state", move), en)).toBe(
+      "Equipped: Chain mail",
+    );
+    expect(entryText(entry("equipment_state", move), fr)).toBe(
+      "Équipé : Chain mail",
+    );
+    const putAway = { ...move, before: "worn", after: "carried" };
+    expect(entryText(entry("equipment_state", putAway), fr)).toBe(
+      "Retiré : Chain mail",
+    );
+    const swap = {
+      ...move,
+      off: [
+        {
+          ...move,
+          itemId: "leather",
+          name: "Leather",
+          before: "worn",
+          after: "carried",
+        },
+      ],
+    };
+    expect(entryText(entry("equipment_state", swap), en)).toBe(
+      "Equipped: Chain mail (in place of Leather)",
+    );
+  });
+
   it("renders XP add, edit and remove entries in both languages", async () => {
     const award = (base: number, bonus: boolean, reason: string) => ({
       id: 3,

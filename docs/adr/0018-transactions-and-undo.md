@@ -122,6 +122,27 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    `TestDelete_RecordsTheRemovedAwardOrReportsNotFound`, `TestRestorer_WritesTheSnapshotBack`;
    `adapters/xpdal` `TestReinsert_KeepsIDAndDate`.
 
+## Amendment 2026-10-19: the log's codec, re-encoding, state keys on the wire (decided, on implementation)
+
+Decided in the architecture review grilled with the user (reports/architecture-review.html, items W1,
+W4 and W7); not implemented. Each point is built by the item named and gets its tests then.
+
+8. **The snapshot codec is the log's.** One snapshotter in `domain/actionlog` encodes a key's before
+   and after, decodes them and implements `Restorer` (and `Replayer`) from a service's write and
+   delete functions; a service declares what it snapshots and nothing else (W1). The meaning of a
+   snapshot (step 2: the before written back on undo, the after on redo) is unchanged.
+9. **Re-encoding is not editing.** A migration-time data step ([ADR 0025](0025-postgresql-storage.md)
+   step 2.1.1) may rewrite stored snapshots into the codec's envelope (user, 2026-10-19: "Data step
+   rewrites old snapshots"). It changes an encoding, never a before, an after, a delta, a payload or a
+   correction: "entries are never edited" ([ADR 0007](0007-hp-ledger.md) step 1) stands for everything
+   the player can see. No legacy decoder survives the step (W1).
+10. **The log says which entries are rolls.** `GET /api/log` marks each entry that is one of the roll
+    kinds (`actionlog.RollKinds`); the web keeps no copy of the list (W4).
+11. **A mutation answers with its state keys.** Every state-changing request, undo and redo included,
+    answers with the state keys of the transaction it wrote; the web refetches by key family and
+    nothing else. Moves outside the log ([ADR 0029](0029-users-login-and-access.md) amendment "creating,
+    switching and retiring", step 4) keep an explicit refetch (W7).
+
 ## Consequences
 
 - Within a transaction the order of the entries matters only for the restores: newest first, so a

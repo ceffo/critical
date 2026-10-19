@@ -267,9 +267,10 @@ When the developer reports the full verification passed on HEAD:
 - **Greptile review gate** (user, 2026-10-18: "you must wait for the greptile review and handle
   feedback and not merge right away"): never arm auto-merge or merge before the `Greptile Review`
   check has completed and you have read its findings (`gh api repos/<repo>/pulls/<n>/comments` and
-  its summary comment). Treat them like a reviewer's: fix valid ones (a rework round, or yourself for
+  its summary comment). Greptile reviews only a PR's first push: after every later push, comment `@greptileai review` (ci-state.sh flags a head with no Greptile review). Treat them like a reviewer's: fix valid ones (a rework round, or yourself for
   a process PR), reply on the thread with why for the ones you reject, then merge. Log each PR's
   findings in `<wt>/supervisor/greptile-eval.md` (useful / noise / missed by our reviewer).
+- **Anything blocking is flagged at once** (user, 2026-10-19: "if something is blocking you have to raise a flag. not wait til the end of time"): a review that doesn't come, a check stuck, an agent stalled. Say it to the user in that turn with what you did about it; never just wait.
 - Done from your side. **Never merge** unless the user explicitly tells you to for that PR.
 - **How to merge**: only with `/home/moncef/code/critical/.claude/scripts/land.sh <pr> [tab]`, as one plain command with nothing chained to it. land.sh checks CI, the Greptile review and its replies, and refuses otherwise. A merge chained in a compound command misses the allow rule and gets refused.
 - A PR that changes a design decision (an ADR, an API or data contract, a schema) is the user's

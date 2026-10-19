@@ -303,7 +303,6 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"saves": {"paraPoison": 10, "rodStaffWand": 8, "petriPoly": 9, "breath": 13, "spell": 9},
 		"raceSaveBonus": {"paraPoison": 0, "rodStaffWand": 4, "petriPoly": 0, "breath": 0, "spell": 4},
 		"spellSlots": [{"level": 1, "count": 3}, {"level": 5, "count": 2}],
-		"sheetDifferences": [],
 		"levelUp": {"realizedAboveTarget": false, "pending": [
 			{"level": 10, "die": 6, "fixedGain": 0}, {"level": 11, "die": 0, "fixedGain": 2}
 		]},

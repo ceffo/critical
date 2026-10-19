@@ -71,13 +71,30 @@ describe("startFor", () => {
     expect(startFor("/spells/42", "", me)).toEqual({ show: "app" });
   });
 
+  it("opens the creation route at its address, the flow straight away for a player with a character", () => {
+    expect(startFor("/create", "", me)).toEqual({
+      show: "create",
+      hasCurrent: true,
+    });
+  });
+
   it("shows the creation page to a user with no current character, the admin section still to an admin", () => {
     const none = {
       kind: "in" as const,
       me: { ...me.me, currentCharacterId: null },
     };
-    expect(startFor("/", "", none)).toEqual({ show: "create" });
-    expect(startFor("/spells/42", "", none)).toEqual({ show: "create" });
+    expect(startFor("/", "", none)).toEqual({
+      show: "create",
+      hasCurrent: false,
+    });
+    expect(startFor("/spells/42", "", none)).toEqual({
+      show: "create",
+      hasCurrent: false,
+    });
+    expect(startFor("/create", "", none)).toEqual({
+      show: "create",
+      hasCurrent: false,
+    });
     const admin = {
       kind: "in" as const,
       me: { ...none.me, role: "admin" as const },

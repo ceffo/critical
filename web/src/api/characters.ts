@@ -1,7 +1,9 @@
 import type {
   CharacterList,
   CreationOptions,
+  HpRoll,
   NewCharacter,
+  ScoresRoll,
 } from "@/types/character";
 import { patch, post, request } from "./http";
 
@@ -62,4 +64,17 @@ export function changeSkillArmor(
   skillArmor: string,
 ): Promise<CharacterList> {
   return patch<CharacterList>(`/api/characters/${id}`, { skillArmor });
+}
+
+/** Rolls the six scores by a method (ADR 0032 step 6); writes nothing. The race adds Table 8's adjustments. */
+export function rollScores(
+  method: string,
+  raceCode: string,
+): Promise<ScoresRoll> {
+  return post<ScoresRoll>("/api/characters/rolls/scores", { method, raceCode });
+}
+
+/** Rolls the max HP of a new character (ADR 0032 step 7); writes nothing. */
+export function rollHp(cls: string, con: number, xp: number): Promise<HpRoll> {
+  return post<HpRoll>("/api/characters/rolls/hp", { class: cls, con, xp });
 }

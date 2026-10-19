@@ -36,8 +36,11 @@ export type Start =
   | { show: "login"; error: string | null }
   | { show: "app" }
   | { show: "admin" }
-  | { show: "create" }
+  | { show: "create"; hasCurrent: boolean }
   | { go: string };
+
+/** The creation route (ADR 0034 step 2), which the cog menu's Create opens. */
+export const CREATE_PATH = "/create";
 
 /** The admin section's page (ADR 0029 step 1.3). */
 export const ADMIN_PATH = "/admin";
@@ -51,8 +54,8 @@ export function isLoginPath(path: string): boolean {
  * What to show for a path and the session (ADR 0029 step 6): the login page only without a session
  * (a logged-in user who opens it goes to the app), the app only with one (without, the login page,
  * saying the session ended when it did), and the admin section only to an admin. A user with no
- * current character (a new player, or their current one retired) lands on the creation page (ADR
- * 0029 step 7.2). With no answer from the API the app or the page loads and shows the failure.
+ * current character (a new player, or their current one retired) lands on the creation route's intro
+ * (ADR 0029 step 7.2, ADR 0034 step 1); `/create` opens the flow itself for a player with one. With no answer from the API the app or the page loads and shows the failure.
  */
 export function startFor(
   path: string,
@@ -76,6 +79,7 @@ export function startFor(
     return { show: "admin" };
   }
   if (session.kind === "in" && session.me.currentCharacterId == null)
-    return { show: "create" };
+    return { show: "create", hasCurrent: false };
+  if (path === CREATE_PATH) return { show: "create", hasCurrent: true };
   return { show: "app" };
 }

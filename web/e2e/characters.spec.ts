@@ -1,9 +1,9 @@
-import type { Locator } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
   attackForm,
   combatLog,
   chooseLanguage,
+  createInFlow,
   openDashboard,
   openSettings,
   openWeapons,
@@ -11,18 +11,14 @@ import {
   undoEntry,
 } from "./helpers";
 
-// The first alignment and sex the form offers (both are required, ADR 0032 steps 2 and 3).
-async function pickIdentity(form: Locator) {
-  await form.getByLabel("Alignement").selectOption({ index: 1 });
-  await form.getByLabel("Sexe").selectOption({ index: 1 });
-}
-
-// Creating, switching and renaming characters from the cog menu (ADR 0029 step 7.2), the one flow
-// only a browser proves: the menu's dialogs, the form's selects and details, and the page loading
-// again on the character the server made current, its sheet and details on screen. French first (ADR 0027 step 2). The
-// validation (abilities, race and class, a cleric, an entered level), the empty start, ownership
-// and retiring are Go tests (composition create_test.go); the no-cut audit is in layout.spec.ts.
-test("create a second bard with details, switch to the first and back, rename and retire it", async ({
+// Creating a character through the creation route (ADR 0034), then switching, renaming and retiring
+// from the cog menu (ADR 0029 step 7.2): the one flow only a browser proves. The cog menu's Create
+// opens the route; the steps keep their values back and forth, Quitter asks first, the server's rolls
+// fill the scores and the HP and stay editable, and the page loads again on the character the server
+// made current. French first (ADR 0027 step 2). The arrangement and the step rules are unit tests
+// (lib/creationFlow.test.ts); the validation, the rolls and the options are Go tests (composition
+// create_test.go, creationrolls_test.go); the no-cut audit is in layout.spec.ts.
+test("create a bard through the creation route, switch to the first and back, rename and retire it", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -34,31 +30,90 @@ test("create a second bard with details, switch to the first and back, rename an
   await settings
     .getByRole("button", { name: "Créer un nouveau personnage" })
     .click();
-  const dialog = page.getByTestId("character-dialog");
-  const form = dialog.getByTestId("character-form");
-  await form.getByLabel("Nom", { exact: true }).fill("Lyra");
-  await expect(form.getByLabel("Classe")).toHaveValue("bard");
-  await form
-    .getByLabel("Race", { exact: true })
-    .selectOption({ label: "Demi-elfe" });
-  for (const [ability, score] of [
-    ["FOR", "10"],
-    ["DEX", "15"],
-    ["CON", "12"],
-    ["INT", "14"],
-    ["SAG", "9"],
-    ["CHA", "16"],
-  ])
-    await form.getByLabel(ability, { exact: true }).fill(score);
-  await form.getByLabel("PV max").fill("6");
-  await form.getByLabel("XP de départ").fill("2500");
+  // ADR 0034 step 2: creation is a full-screen route.
+  await expect(page).toHaveURL(/\/create$/);
+  const step = page.getByTestId("creation-step");
+  const next = step.getByRole("button", { name: "Passer à l'étape suivante" });
+  const back = step.getByRole("button", {
+    name: /^Revenir à l'étape précédente/,
+  });
+
+  // Step 1: Suivant waits for a class; a level stands for the class's lowest XP, the server's table.
+  await expect(next).toBeDisabled();
+  await expect(step.getByTestId("next-blocked")).toHaveText(
+    "Choisissez une classe.",
+  );
+  await step.getByRole("radio", { name: "Barde", exact: true }).click();
+  await step.getByRole("radio", { name: "Niveau 3", exact: true }).click();
+  await expect(step.getByTestId("level-xp")).toContainText(/2\s500 XP/);
+  // Leaving with values entered asks first; Rester keeps them.
+  await page.getByRole("button", { name: "Quitter la création" }).click();
+  const confirm = page.getByTestId("leave-confirm");
+  await expect(confirm).toBeVisible();
+  await confirm
+    .getByRole("button", { name: "Rester et continuer la création" })
+    .click();
+  await expect(confirm).toBeHidden();
+  await next.click();
+
+  // Step 2: the races the bard refuses are shown, marked, not pickable.
+  await expect(
+    step.getByRole("radio", { name: /^Elfe : pas permis/ }),
+  ).toHaveAttribute("aria-disabled", "true");
+  await step.getByRole("radio", { name: "Demi-elfe", exact: true }).click();
+  await next.click();
+
+  // Step 3: method V, rolled by the server (each total's dice, the lowest struck), placed by the
+  // player; the scores it gives stay editable, here typed over with the sheet's.
+  await step
+    .getByRole("radio", { name: "V 4d6 sans le plus bas, répartir" })
+    .click();
+  await step
+    .getByRole("button", { name: "Tirer les dés de la méthode choisie" })
+    .click();
+  const roll = step.getByTestId("score-roll");
+  await expect(roll.locator(".line-through")).toHaveCount(6);
+  const abilities = [
+    ["str", "Force", "10"],
+    ["dex", "Dextérité", "15"],
+    ["con", "Constitution", "12"],
+    ["int", "Intelligence", "14"],
+    ["wis", "Sagesse", "9"],
+    ["cha", "Charisme", "16"],
+  ] as const;
+  for (const [i, [code]] of abilities.entries()) {
+    await step.getByTestId(`score-total-${i}`).click();
+    await step.getByTestId(`place-${code}`).click();
+  }
+  for (const [, name] of abilities)
+    await expect(step.getByLabel(name, { exact: true })).toHaveValue(/^\d+$/);
+  await snap(page, "creation-scores-rolled-fr");
+  for (const [, name, score] of abilities)
+    await step.getByLabel(name, { exact: true }).fill(score);
+  await next.click();
+
+  // Step 4: the HP roll at level 3 shows one row per level and fills the box, which stays editable.
+  await step.getByRole("button", { name: /^Tirer les dés de vie/ }).click();
+  await expect(step.getByTestId("hp-roll").locator("tbody tr")).toHaveCount(4);
+  await expect(step.getByLabel("PV max")).toHaveValue(/^\d+$/);
+  await snap(page, "creation-hp-rolled-fr");
+  await step.getByLabel("PV max").fill("6");
   // ADR 0030 step 18: a bard enters its points and the armour worn for its skills.
-  await form
+  await step
     .getByLabel("Armure portée")
     .selectOption({ label: "Métal, jusqu’à la maille" });
-  await form.getByLabel("Escalade").fill("15");
-  // The details go with it: the card shows them after the reload.
-  const details = form.getByTestId("new-character-details");
+  await step.getByLabel("Escalade").fill("15");
+  // Back and forward keep the values.
+  await back.click();
+  await expect(step.getByLabel("Force", { exact: true })).toHaveValue("10");
+  await next.click();
+  await expect(step.getByLabel("PV max")).toHaveValue("6");
+  await expect(step.getByLabel("Escalade")).toHaveValue("15");
+  await next.click();
+
+  // Step 5, until the identity screen: the name and the details, as the form had them.
+  const details = step.getByTestId("new-character-details");
+  await details.getByLabel("Nom", { exact: true }).fill("Lyra");
   // ADR 0032 steps 2 and 3: alignment and sex are required picks; a bard is offered only the
   // alignments with a neutral part.
   await expect(
@@ -72,8 +127,8 @@ test("create a second bard with details, switch to the first and back, rename an
   await expect(commun).toBeChecked();
   await expect(commun).toBeDisabled();
   await details.getByRole("checkbox", { name: "Elfique", exact: true }).check();
-  await snap(page, "new-character-form-fr");
-  await form
+  await snap(page, "creation-identity-fr");
+  await step
     .getByRole("button", { name: "Créer ce personnage et le jouer" })
     .click();
 
@@ -101,6 +156,7 @@ test("create a second bard with details, switch to the first and back, rename an
   await settings
     .getByRole("button", { name: /^Changer de personnage/ })
     .click();
+  const dialog = page.getByTestId("character-dialog");
   const list = dialog.getByTestId("character-list");
   await expect(list.getByRole("listitem")).toHaveCount(2);
   await expect(list.locator("[data-current]")).toContainText("Lyra");
@@ -158,35 +214,18 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
 }) => {
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  const settings = await openSettings(page);
-  await settings
-    .getByRole("button", { name: "Créer un nouveau personnage" })
-    .click();
-  const form = page
-    .getByTestId("character-dialog")
-    .getByTestId("character-form");
-  await form.getByLabel("Nom", { exact: true }).fill("Borin");
-  await form.getByLabel("Classe").selectOption({ label: "Guerrier" });
-  await form
-    .getByLabel("Race", { exact: true })
-    .selectOption({ label: "Humain" });
-  for (const [ability, score] of [
-    ["FOR", "18"],
-    ["DEX", "14"],
-    ["CON", "15"],
-    ["INT", "10"],
-    ["SAG", "10"],
-    ["CHA", "9"],
-  ])
-    await form.getByLabel(ability, { exact: true }).fill(score);
-  await form.getByLabel("Force exceptionnelle (18/xx)").fill("50");
-  await form.getByLabel("PV max").fill("10");
-  await snap(page, "new-fighter-form-fr");
-  await pickIdentity(form);
-  await form
-    .getByRole("button", { name: "Créer ce personnage et le jouer" })
-    .click();
-
+  // The 18/xx field appears on the "Points de vie et talents" step at Strength 18.
+  await createInFlow(page, {
+    name: "Borin",
+    className: "Guerrier",
+    race: "Humain",
+    scores: { FOR: "18", DEX: "14", CON: "15", INT: "10", SAG: "10", CHA: "9" },
+    hpMax: "10",
+    extras: async (step) => {
+      await step.getByLabel("Pourcentage (18/xx)").fill("50");
+      await snap(page, "new-fighter-extras-fr");
+    },
+  });
   const character = page.getByTestId("character");
   await expect(character).toContainText("Borin");
   await expect(page.getByTestId("str-value")).toHaveText("18/50");
@@ -233,37 +272,19 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
 test("create a thief, roll a skill, backstab", async ({ page }) => {
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  const settings = await openSettings(page);
-  await settings
-    .getByRole("button", { name: "Créer un nouveau personnage" })
-    .click();
-  const form = page
-    .getByTestId("character-dialog")
-    .getByTestId("character-form");
-  await form.getByLabel("Nom", { exact: true }).fill("Vex");
-  await form.getByLabel("Classe").selectOption({ label: "Voleur" });
-  await form
-    .getByLabel("Race", { exact: true })
-    .selectOption({ label: "Petite-gens" });
-  for (const [ability, score] of [
-    ["FOR", "16"],
-    ["DEX", "17"],
-    ["CON", "12"],
-    ["INT", "11"],
-    ["SAG", "9"],
-    ["CHA", "10"],
-  ])
-    await form.getByLabel(ability, { exact: true }).fill(score);
-  await form.getByLabel("Armure portée").selectOption({ label: "Aucune" });
-  await form.getByLabel("Crochetage").fill("30");
-  await form.getByLabel("Vol à la tire").fill("30");
-  await form.getByLabel("PV max").fill("5");
-  await snap(page, "new-thief-form-fr");
-  await pickIdentity(form);
-  await form
-    .getByRole("button", { name: "Créer ce personnage et le jouer" })
-    .click();
-  await expect(page.getByTestId("character")).toContainText("Vex");
+  await createInFlow(page, {
+    name: "Vex",
+    className: "Voleur",
+    race: "Petite-gens",
+    scores: { FOR: "16", DEX: "17", CON: "12", INT: "11", SAG: "9", CHA: "10" },
+    hpMax: "5",
+    extras: async (step) => {
+      await step.getByLabel("Armure portée").selectOption({ label: "Aucune" });
+      await step.getByLabel("Crochetage").fill("30");
+      await step.getByLabel("Vol à la tire").fill("30");
+      await snap(page, "new-thief-extras-fr");
+    },
+  });
 
   // 10 + 30 + 5 (halfling) + 10 (Dexterity 17) + 0 (no armour) = 55, the server's.
   await chooseLanguage(page, "en");
@@ -351,33 +372,13 @@ test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
   test.setTimeout(60_000);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  const settings = await openSettings(page);
-  await settings
-    .getByRole("button", { name: "Créer un nouveau personnage" })
-    .click();
-  const form = page
-    .getByTestId("character-dialog")
-    .getByTestId("character-form");
-  await form.getByLabel("Nom", { exact: true }).fill("Elminster");
-  await form.getByLabel("Classe").selectOption({ label: "Magicien" });
-  await form
-    .getByLabel("Race", { exact: true })
-    .selectOption({ label: "Humain" });
-  for (const [ability, score] of [
-    ["FOR", "9"],
-    ["DEX", "12"],
-    ["CON", "11"],
-    ["INT", "19"],
-    ["SAG", "12"],
-    ["CHA", "10"],
-  ])
-    await form.getByLabel(ability, { exact: true }).fill(score);
-  await form.getByLabel("PV max").fill("4");
-  await pickIdentity(form);
-  await form
-    .getByRole("button", { name: "Créer ce personnage et le jouer" })
-    .click();
-  await expect(page.getByTestId("character")).toContainText("Elminster");
+  await createInFlow(page, {
+    name: "Elminster",
+    className: "Magicien",
+    race: "Humain",
+    scores: { FOR: "9", DEX: "12", CON: "11", INT: "19", SAG: "12", CHA: "10" },
+    hpMax: "4",
+  });
 
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Spells");
@@ -429,33 +430,20 @@ test("create a cleric, prepare and cast a spell, turn undead", async ({
   test.setTimeout(60_000);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  const settings = await openSettings(page);
-  await settings
-    .getByRole("button", { name: "Créer un nouveau personnage" })
-    .click();
-  const form = page
-    .getByTestId("character-dialog")
-    .getByTestId("character-form");
-  await form.getByLabel("Nom", { exact: true }).fill("Frère Anselme");
-  await form.getByLabel("Classe").selectOption({ label: "Clerc" });
-  await form
-    .getByLabel("Race", { exact: true })
-    .selectOption({ label: "Humain" });
-  for (const [ability, score] of [
-    ["FOR", "12"],
-    ["DEX", "10"],
-    ["CON", "13"],
-    ["INT", "10"],
-    ["SAG", "15"],
-    ["CHA", "11"],
-  ])
-    await form.getByLabel(ability, { exact: true }).fill(score);
-  await form.getByLabel("PV max").fill("8");
-  await pickIdentity(form);
-  await form
-    .getByRole("button", { name: "Créer ce personnage et le jouer" })
-    .click();
-  await expect(page.getByTestId("character")).toContainText("Frère Anselme");
+  await createInFlow(page, {
+    name: "Frère Anselme",
+    className: "Clerc",
+    race: "Humain",
+    scores: {
+      FOR: "12",
+      DEX: "10",
+      CON: "13",
+      INT: "10",
+      SAG: "15",
+      CHA: "11",
+    },
+    hpMax: "8",
+  });
   await expect(page.getByTestId("character")).toContainText("Clerc");
 
   await chooseLanguage(page, "en");

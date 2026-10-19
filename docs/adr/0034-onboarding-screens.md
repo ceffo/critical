@@ -87,6 +87,11 @@ content. This ADR records the decisions; the README and the shots are the pictur
   `scoreMethods` (ADR 0032 step 6's table, the roll endpoint's `method` shape: `code`, `rolls`, `dice`,
   `dropLowest`, `assign`, `keep`, `base`, `max`) and `raceAdjustments` (`[{race, adjustments}]`, PHB
   Table 8 for the six races). Tested on the fixture's tables, level 5 of every class.
+- **Web** (`web/src/components/creation/`, `docs/frontend.md`): the intro for a user with no current
+  character, `/create` for the others (the cog menu's Create; the creation dialog is gone). Five steps
+  for now: the identity step carries the former form's name and details inputs and Créer until the
+  identity and review screens land. A server refusal opens its step with the field's error; Suivant
+  is blocked only by a missing or unreadable value.
 - **Not shown yet**, for want of server data: the class cards' ability minimums and the arrangement
   table's minimum check, the race cards' height and starting age (the identity step's dice), and the
   skill budget and percentages on step 4 (the server warns at creation). The web computes none of them.

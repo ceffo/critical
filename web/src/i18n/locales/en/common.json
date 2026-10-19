@@ -1938,5 +1938,145 @@
       "special": "Special"
     },
     "turnLabel": "Turn: {{undead}}"
+  },
+  "intro": {
+    "title": "Welcome to the table",
+    "what": "Critical! keeps your AD&D 2e character's sheet during play: hit points, spells, running effects and dice rolls, each result with its working.",
+    "steps_one": "Start by creating your character, in one step:",
+    "steps_other": "Start by creating your character, in {{count}} steps:",
+    "dm": "For each value, roll the dice here or copy your paper sheet. Everything stays editable later, and the DM always has the last word.",
+    "start": "Start",
+    "startHint": "Start creating your character",
+    "others": "Play one of your characters, or create a new one."
+  },
+  "creation": {
+    "stepOf": "Step {{n}} of {{of}}",
+    "steps": "Steps",
+    "yourCharacter": "Your character",
+    "noName": "No name yet",
+    "leave": "Leave",
+    "leaveHint": "Leave the creation",
+    "leaveTitle": "Discard this character?",
+    "leaveLead": "The values entered will be lost.",
+    "stay": "Stay",
+    "stayHint": "Stay and go on with the creation",
+    "discard": "Discard",
+    "discardHint": "Discard this character and leave the creation",
+    "back": "Back",
+    "backHint": "Back to the previous step, the values stay",
+    "next": "Next",
+    "nextHint": "Go to the next step",
+    "reroll": "Reroll",
+    "blocked": {
+      "class": "Choose a class.",
+      "xp": "Type the starting XP.",
+      "race": "Choose a race.",
+      "scores": "Type the six ability scores.",
+      "hpMax": "Type the max HP."
+    },
+    "class": {
+      "name": "Class",
+      "title": "Choose a class",
+      "lead": "The class sets the hit die, the skills and the alignments allowed.",
+      "hitDie": "Hit die",
+      "alignment": "Alignment",
+      "allAlignments": "Any",
+      "allBut": "Any but {{list}}",
+      "races": "Races",
+      "allRaces": "All"
+    },
+    "level": {
+      "title": "Starting level",
+      "level": "Level",
+      "xp": "XP",
+      "lead": "Pick a level: it counts as the class's lowest XP for that level. Or type the exact XP from your sheet.",
+      "pick": "Level {{level}}",
+      "levelN": "Level {{level}}",
+      "xpOfLevel": " · {{xp}} XP, a {{className}}'s lowest for level {{level}}. THAC0, saving throws and hit points follow from it.",
+      "xpOfLevelNoClass": " · choose a class first: its XP follow from it.",
+      "levelLower": "level {{level}}",
+      "xpN": "{{xp}} XP"
+    },
+    "race": {
+      "name": "Race",
+      "title": "Choose a race",
+      "lead": "Only the races a {{className}} allows can be picked; the others stay visible.",
+      "refused": "No {{className}}",
+      "refusedHint": "{{name}}: not allowed for a {{className}}",
+      "adjustments": "Adjustments",
+      "noAdjustment": "None",
+      "native": "Native language"
+    },
+    "scores": {
+      "name": "Ability scores",
+      "title": "Ability scores",
+      "lead": "Roll them by a Dungeon Master's Guide method, or type your sheet's.",
+      "mode": "Roll or type",
+      "roll": "Roll",
+      "type": "Type",
+      "method": "Method",
+      "rollOf": "Roll · method {{method}}",
+      "rollTitle": "Roll",
+      "rollHint": "Roll the chosen method's dice",
+      "rollLead": "Roll the dice: the server throws them, then you arrange.",
+      "pickMethod": "Choose a method first.",
+      "totalHint": "Total {{n}}: {{total}}",
+      "how": {
+        "in_order": "The totals go to the abilities in order, race adjustments included.",
+        "keep_per_ability": "Two totals per ability: click the one to keep, then its ability.",
+        "arrange": "Click a total, then an ability, to place it. A struck die is dropped.",
+        "add_to_base": "Every ability starts at {{base}}: click a die, then an ability, to add it, up to {{max}}. Click it again to take it back."
+      },
+      "arrangement": "Arrangement",
+      "ability": "Ability",
+      "rolled": "Roll",
+      "race": "Race",
+      "score": "Score",
+      "placeHint": "Place the chosen total on {{ability}}",
+      "editable": "The scores stay editable. The server checks the {{className}}'s minimums on creation.",
+      "methodN": "Method {{method}}",
+      "typed": "Typed"
+    },
+    "methods": {
+      "I": "3d6, in order",
+      "II": "3d6 twice, keep the better",
+      "III": "3d6 six times, arrange",
+      "IV": "3d6 twelve times, keep six",
+      "V": "4d6 drop the lowest, arrange",
+      "VI": "8 each + 7d6 to share"
+    },
+    "rollErrors": {
+      "unknown": "The server does not know this choice: reload the page.",
+      "out_of_range": "Constitution or XP out of range: fix them on their step.",
+      "not_creatable": "This class cannot be created yet."
+    },
+    "extras": {
+      "name": "Hit points and skills",
+      "title": "Hit points and skills",
+      "lead": "What the class adds: the hit points of each level up to the starting one, and the {{className}}'s choices.",
+      "hp": "Hit points",
+      "rollHint": "Roll the hit dice, from level 1 to the starting level",
+      "level": "Level",
+      "die": "Die",
+      "gain": "Gain",
+      "fixed": "fixed",
+      "counted": "counts {{n}}",
+      "total": "Total",
+      "hpLead": "One hit die per level, from level 1 to the starting level {{level}}; past the name level, a fixed gain.",
+      "hpRollLead": "Roll the hit dice, or type your sheet's max HP.",
+      "hpNeedsCon": "Type the Constitution and the XP to roll, or type the max HP.",
+      "hpEditable": "The roll fills the box; you may change it.",
+      "skills": "{{className}} skills",
+      "skill": "Skill",
+      "points": "Points",
+      "percentile": "Percentile (18/xx)",
+      "nothingElse": "Nothing else to choose for a {{className}}: only the hit points.",
+      "hpN": "HP {{hp}}"
+    },
+    "identity": {
+      "name": "Identity",
+      "title": "Identity",
+      "lead": "The character's name and details, then Create."
+    }
   }
 }

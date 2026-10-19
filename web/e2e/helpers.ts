@@ -347,3 +347,54 @@ export async function expectSlotDots(
     new RegExp(`^a{${left}}u{${total - left}}e*$`),
   );
 }
+
+/** A character to create through the creation route, French labels (the page is in French). */
+export interface FlowCharacter {
+  name: string;
+  /** The class and race cards' names, e.g. "Guerrier", "Humain". */
+  className: string;
+  race: string;
+  /** The six scores by their short label (FOR, DEX ...), typed. */
+  scores: Record<string, string>;
+  hpMax: string;
+  /** Typed as XP; the starting level 1 when absent. */
+  xp?: string;
+  /** Fills the class extras on the "Points de vie et talents" step. */
+  extras?: (step: Locator) => Promise<void>;
+}
+
+/**
+ * Creates a character through the creation route from the cog menu (ADR 0034 step 2), typing every
+ * value, then picks the first alignment and sex offered, and Créer: the page loads on it.
+ */
+export async function createInFlow(page: Page, c: FlowCharacter) {
+  const settings = await openSettings(page);
+  await settings
+    .getByRole("button", { name: "Créer un nouveau personnage" })
+    .click();
+  const step = page.getByTestId("creation-step");
+  const next = () =>
+    step.getByRole("button", { name: "Passer à l'étape suivante" }).click();
+  await step.getByRole("radio", { name: c.className, exact: true }).click();
+  if (c.xp !== undefined) {
+    await step.getByRole("radio", { name: "XP", exact: true }).click();
+    await step.getByLabel("XP de départ").fill(c.xp);
+  }
+  await next();
+  await step.getByRole("radio", { name: c.race, exact: true }).click();
+  await next();
+  await step.getByRole("radio", { name: "Saisir" }).click();
+  for (const [ability, score] of Object.entries(c.scores))
+    await step.getByLabel(ability, { exact: true }).fill(score);
+  await next();
+  await step.getByLabel("PV max").fill(c.hpMax);
+  if (c.extras) await c.extras(step);
+  await next();
+  await step.getByLabel("Nom", { exact: true }).fill(c.name);
+  await step.getByLabel("Alignement").selectOption({ index: 1 });
+  await step.getByLabel("Sexe").selectOption({ index: 1 });
+  await step
+    .getByRole("button", { name: "Créer ce personnage et le jouer" })
+    .click();
+  await expect(page.getByTestId("character")).toContainText(c.name);
+}

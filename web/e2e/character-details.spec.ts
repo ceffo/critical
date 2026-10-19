@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard, openSettings } from "./helpers";
+import { chooseLanguage, openDashboard } from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
 const VIEWPORTS = [
@@ -160,8 +160,8 @@ test("details card: an answer without warnings opens, failed choices show an err
 });
 
 // A rolling deploy (ADR 0024): an old server's options carry no alignment or sex lists. The
-// creation form says the choices did not load, never shows empty pickers, and Retry loads them.
-test("new character form: options without the identity lists show an error, retry loads them", async ({
+// creation route says the choices did not load, never shows empty pickers, and Retry loads them.
+test("creation route: options without the identity lists show an error, retry loads them", async ({
   page,
 }) => {
   let old = true;
@@ -174,19 +174,15 @@ test("new character form: options without the identity lists show an error, retr
     await route.fulfill({ response: res, json: body });
   });
   await openDashboard(page);
-  const settings = await openSettings(page);
-  await settings.getByRole("button", { name: "New character" }).click();
-  const dialog = page.getByTestId("character-dialog");
-  await expect(dialog.getByRole("alert")).toContainText(
+  await page.goto("/create");
+  await expect(page.getByRole("alert")).toContainText(
     "The choices could not be loaded.",
   );
   old = false;
-  await dialog.getByRole("button", { name: "Retry" }).click();
+  await page.getByRole("button", { name: "Retry" }).click();
   await expect(
-    dialog
-      .getByLabel("Alignment")
-      .getByRole("option", { name: "Neutral good" }),
-  ).toHaveCount(1);
+    page.getByRole("radio", { name: "Bard", exact: true }),
+  ).toBeVisible();
 });
 
 // A rolling deploy (ADR 0024): the options of a release that predates the language catalogue carry

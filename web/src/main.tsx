@@ -6,7 +6,7 @@ import { startSettings } from "./stores/settings";
 import App from "./App.tsx";
 import { readSession } from "./api/auth";
 import { AdminPage } from "./components/admin/AdminPage";
-import { CreateCharacterPage } from "./components/characters/CreateCharacterPage";
+import { CreationRoute } from "./components/creation/CreationRoute";
 import { LoginPage } from "./components/login/LoginPage";
 import { startFor } from "./lib/session";
 import { useSessionStore } from "./stores/session";
@@ -36,7 +36,7 @@ void readSession().then((session) => {
     start.show === "admin" ? (
       <AdminPage />
     ) : start.show === "create" ? (
-      <CreateCharacterPage />
+      <CreationRoute hasCurrent={start.hasCurrent} />
     ) : (
       <App />
     ),

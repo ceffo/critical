@@ -13,7 +13,7 @@ PRs, `just sync-main`); the user wants issues in a tool with a UI, relations, an
 
 ## Decision
 
-1. **Linear holds the work items.** Team `CRI`, project "critical-app"; an issue is `CRI-<n>`. The
+1. **Linear holds the work items.** Team `CRI`, project "critical-hit"; an issue is `CRI-<n>`. The
    mapping (priorities, states, labels) is written once in `scripts/linear-mapping.json` and described in
    [docs/linear.md](../linear.md); no doc copies it. Agents reach Linear through the MCP tools named in their
    `tools:` list and through `scripts/linear.sh` (GraphQL with a personal `LINEAR_API_KEY`, never in the

@@ -11,9 +11,9 @@ import {
   blockedReason,
   classOf,
   stepOfField,
-  xpOfLevel,
   type StepId,
 } from "@/lib/creationFlow";
+import { holdPath } from "@/lib/navigation";
 import { useLanguageNames } from "@/lib/useLanguageNames";
 import { parseWhole } from "@/lib/wholeNumber";
 import { APP_NAME } from "@/lib/brand";
@@ -26,6 +26,8 @@ import {
 import { CardHead, StepDot, Wordmark } from "./kit";
 import {
   EMPTY_DRAFT,
+  draftXp,
+  settle,
   type FieldError,
   type FlowDraft,
   type StepProps,
@@ -93,17 +95,31 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     addEventListener("beforeunload", warn);
     return () => removeEventListener("beforeunload", warn);
   }, [dirty]);
+  // The browser's Back or Forward stays in the document (no beforeunload): with values entered it
+  // asks the same question as Quitter instead of dropping them.
+  useEffect(() => {
+    if (!dirty) return;
+    return holdPath(() => {
+      if (!going.current) setConfirmLeave(true);
+    });
+  }, [dirty]);
 
+  // Every change makes a new revision; a request's reply is applied only if none came since.
+  const revision = useRef(0);
+  const watch = () => {
+    const at = revision.current;
+    return () => revision.current === at;
+  };
   const update = (patch: Partial<FlowDraft>) => {
-    setDraft((d) => ({ ...d, ...patch }));
+    revision.current += 1;
+    setDraft((d) => {
+      const next = { ...d, ...patch };
+      return settle(next, draftXp(options, next));
+    });
     setError(null);
   };
 
-  const levelXp = xpOfLevel(options, draft.cls, draft.level);
-  const xp =
-    draft.levelMode === "level" && levelXp !== undefined
-      ? String(levelXp)
-      : draft.xp;
+  const xp = draftXp(options, draft);
 
   const className = t(`details.classes.${draft.cls}`, {
     defaultValue: draft.cls,
@@ -263,7 +279,15 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       </main>
     );
 
-  const props: StepProps = { options, draft, update, error, errorFor, xp };
+  const props: StepProps = {
+    options,
+    draft,
+    update,
+    error,
+    errorFor,
+    xp,
+    watch,
+  };
   const blocked = blockedReason(step, {
     cls: draft.cls,
     race: draft.race,

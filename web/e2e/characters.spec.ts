@@ -84,6 +84,18 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(
     step.getByRole("radio", { name: "Barde", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
+  // The browser's Back stays in the page (no beforeunload): it asks the same question as Quitter, and
+  // Rester keeps the route and the values.
+  await page.evaluate(() => history.back());
+  await expect(confirm).toBeVisible();
+  await expect(page).toHaveURL(/\/create$/);
+  await confirm
+    .getByRole("button", { name: "Rester et continuer la création" })
+    .click();
+  await expect(confirm).toBeHidden();
+  await expect(
+    step.getByRole("radio", { name: "Barde", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
   await next.click();
 
   // Step 2: the races the bard refuses are shown, marked, not pickable.

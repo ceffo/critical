@@ -92,6 +92,14 @@ content. This ADR records the decisions; the README and the shots are the pictur
   for now: the identity step carries the former form's name and details inputs and Créer until the
   identity and review screens land. A server refusal opens its step with the field's error; Suivant
   is blocked only by a missing or unreadable value.
+- **Leaving and late answers.** With values entered, Quitter, a reload and the browser's Back or
+  Forward all ask before discarding (Back stays in the document, so it is held in
+  `lib/navigation.ts` and asks the Quitter question). A server answer that lands after the draft
+  changed again (a second race picked, a score edited during a roll) is dropped, its refusal too. The
+  arrangement's answer is the whole truth: a field it no longer names is emptied unless the player
+  typed over it. An HP roll whose class, Constitution or XP changed is dropped with its total (a
+  typed total stays) and the step says to roll again (ADR 0032 step 7: one roll is for one class,
+  Constitution and level).
 - **Not shown yet**, for want of server data: the class cards' ability minimums and the arrangement
   table's minimum check, the race cards' height and starting age (the identity step's dice), and the
   skill budget and percentages on step 4 (the server warns at creation). The web computes none of them.

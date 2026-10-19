@@ -14,6 +14,8 @@ import {
   openWeapons,
   openWorkspace,
   recordHp,
+  apiCall,
+  reloadSettled,
   openFold,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
@@ -687,7 +689,7 @@ test("journal split: drag resizes, click toggles, kept across reload", async ({
   await snap(page, "act-journal-collapsed");
 
   // Kept across a reload; A click brings back the dragged height.
-  await page.reload();
+  await reloadSettled(page);
   await expect(page.getByTestId("journal-bar")).toContainText("Split goblin");
   await page.getByTestId("journal-handle").click();
   await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
@@ -835,12 +837,12 @@ test("settings: language, appearance and both themes apply live and persist acro
   // First paint, the app's script blocked: index.html alone paints Deep in dark.
   const appScript = /\/assets\/.*\.js$/;
   await page.route(appScript, (route) => route.abort());
-  await page.reload();
+  await reloadSettled(page);
   expect(await isDark(page)).toBe(true);
   expect(await rootVar(page, "--tint")).toMatch(DEEP);
   await page.unroute(appScript);
 
-  await page.reload();
+  await reloadSettled(page);
   await expect(
     page.getByRole("button", { name: "Tour suivant" }),
   ).toBeVisible();
@@ -1885,7 +1887,7 @@ test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", a
         }),
       );
     }, dark);
-    await page.reload();
+    await reloadSettled(page);
     await expect(page.locator("html")).toHaveClass(/dark/);
     await expect(card.getByTestId("login-error")).toBeVisible();
     await expectNoClippedText(card, `login page dark ${dark}`);
@@ -2053,7 +2055,7 @@ test.describe("roster cards", () => {
       skillArmor: "leather",
     });
     expect(created.ok).toBe(true);
-    await page.reload();
+    await reloadSettled(page);
     const sizes = [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
@@ -2376,17 +2378,7 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
 }) => {
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
-    page.evaluate(
-      async ([m, u, b]) =>
-        (
-          await fetch(u as string, {
-            method: m as string,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(b),
-          })
-        ).ok,
-      [method, url, body] as const,
-    );
+    apiCall(page, method, url, body);
   // A level 1 bard (made current), then 2,500 XP: levels 2 and 3 owe a d6 each (Table 25).
   expect(
     await call("POST", "/api/characters", {
@@ -2408,7 +2400,7 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
   expect(await call("POST", "/api/xp", { base: 2500, bonus: false })).toBe(
     true,
   );
-  await page.reload();
+  await reloadSettled(page);
   await chooseLanguage(page, "fr");
   const prompt = page.getByTestId("level-up");
   await expect(prompt.getByTestId("level-up-title")).toHaveText(
@@ -2442,17 +2434,7 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
   await page.setViewportSize({ width: 1280, height: 800 });
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
-    page.evaluate(
-      async ([m, u, b]) => {
-        const r = await fetch(u as string, {
-          method: m as string,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(b),
-        });
-        return r.ok || `${r.status} ${await r.text()}`;
-      },
-      [method, url, body] as const,
-    );
+    apiCall(page, method, url, body);
   expect(
     await call("POST", "/api/characters", {
       name: "Borin Gueule-de-Fer",
@@ -2473,7 +2455,7 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
   // The new character is the current one: a request the page had in flight answers "character
   // changed" and reloads it (api/http.ts). Reload now and wait for the new sheet, so no reload
   // lands in the middle of the calls below.
-  await page.reload();
+  await reloadSettled(page);
   await expect(page.getByText("Borin Gueule-de-Fer").first()).toBeVisible();
   // Weapon pieces (ADR 0033 step 1), equipped to be held (step 6).
   for (const [id, w] of [
@@ -2512,7 +2494,7 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       await call("POST", `/api/items/${id}/state`, { state: "wielded" }),
     ).toBe(true);
   }
-  await page.reload();
+  await reloadSettled(page);
   await expect(page.getByTestId("str-value")).toHaveText("18/50");
 
   await openWorkspace(page, "Act");
@@ -2578,29 +2560,23 @@ test("mage: the lookup's Learn button and its answer uncut in French, 1280 to 25
   test.setTimeout(60_000);
   await page.setViewportSize({ width: 1280, height: 800 });
   await openDashboard(page);
-  const created = await page.evaluate(async () => {
-    const r = await fetch("/api/characters", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: "Mordenkainen l'Archimage de Greyhawk",
-        class: "mage",
-        raceCode: "human",
-        details: { alignment: "neutral_good", sex: "male" },
-        str: 9,
-        dex: 12,
-        con: 11,
-        int: 19,
-        wis: 12,
-        cha: 10,
-        hpMax: 4,
-        xp: 0,
-      }),
-    });
-    return r.ok || `${r.status} ${await r.text()}`;
+  const created = await apiCall(page, "POST", "/api/characters", {
+    name: "Mordenkainen l'Archimage de Greyhawk",
+    class: "mage",
+    raceCode: "human",
+    details: { alignment: "neutral_good", sex: "male" },
+    str: 9,
+    dex: 12,
+    con: 11,
+    int: 19,
+    wis: 12,
+    cha: 10,
+    hpMax: 4,
+    xp: 0,
   });
+
   expect(created).toBe(true);
-  await page.reload();
+  await reloadSettled(page);
   await openWorkspace(page, "Spells");
   await chooseLanguage(page, "fr");
   await page
@@ -2682,35 +2658,27 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
   test.setTimeout(60_000);
   await page.setViewportSize({ width: 1280, height: 800 });
   await openDashboard(page);
-  const created = await page.evaluate(async () => {
-    const r = await fetch("/api/characters", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: "Frère Anselme de la Haute-Marche",
-        class: "cleric",
-        raceCode: "human",
-        details: { alignment: "neutral_good", sex: "male" },
-        str: 12,
-        dex: 10,
-        con: 13,
-        int: 10,
-        wis: 9,
-        cha: 11,
-        hpMax: 8,
-        xp: 0,
-      }),
-    });
-    if (!r.ok) return `${r.status} ${await r.text()}`;
-    const p = await fetch("/api/spells/prepared", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ spells: ["bless"] }),
-    });
-    return p.ok || `${p.status} ${await p.text()}`;
+  let created = await apiCall(page, "POST", "/api/characters", {
+    name: "Frère Anselme de la Haute-Marche",
+    class: "cleric",
+    raceCode: "human",
+    details: { alignment: "neutral_good", sex: "male" },
+    str: 12,
+    dex: 10,
+    con: 13,
+    int: 10,
+    wis: 9,
+    cha: 11,
+    hpMax: 8,
+    xp: 0,
   });
+  if (created === true)
+    created = await apiCall(page, "PUT", "/api/spells/prepared", {
+      spells: ["bless"],
+    });
+
   expect(created).toBe(true);
-  await page.reload();
+  await reloadSettled(page);
   await openWorkspace(page, "Act");
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Renvoi" }).click();
@@ -2817,17 +2785,7 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
 
   await page.setViewportSize({ width: 1280, height: 800 });
   const call = (method: string, url: string, body: unknown) =>
-    page.evaluate(
-      async ([m, u, b]) => {
-        const r = await fetch(u as string, {
-          method: m as string,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(b),
-        });
-        return r.ok || `${r.status} ${await r.text()}`;
-      },
-      [method, url, body] as const,
-    );
+    apiCall(page, method, url, body);
   expect(
     await call("POST", "/api/characters", {
       name: "Vex Main-Légère de la Basse-Ville",
@@ -2861,7 +2819,7 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   expect(
     await call("POST", "/api/items/dagger/state", { state: "wielded" }),
   ).toBe(true);
-  await page.reload();
+  await reloadSettled(page);
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Act");
   await chooseLanguage(page, "fr");

@@ -23,6 +23,8 @@ import (
 	"context"
 	"maps"
 	"sync"
+
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // Store is the in-memory database: the tables and the lock that serialises
@@ -99,7 +101,7 @@ func (s *Store) write(ctx context.Context, fn func(t *tables) error) error {
 
 // Migrate does nothing: the tables are Go values, there is no schema to bring
 // up to date, and every row has its owner from the start.
-func (s *Store) Migrate(context.Context, string) error { return nil }
+func (s *Store) Migrate(context.Context, string, []ruletablesvc.Weapon) error { return nil }
 
 // Close does nothing: the data goes with the process.
 func (s *Store) Close() error { return nil }
@@ -120,7 +122,7 @@ func (t *tables) save() *tables {
 	c.rounds = maps.Clone(t.rounds)
 	c.savedBuffs = maps.Clone(t.savedBuffs)
 	c.spells = maps.Clone(t.spells)
-	c.weapons = maps.Clone(t.weapons)
+	c.reviews = maps.Clone(t.reviews)
 	c.items = maps.Clone(t.items)
 	c.proficiencies = maps.Clone(t.proficiencies)
 	c.spellbooks = maps.Clone(t.spellbooks)

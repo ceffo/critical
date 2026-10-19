@@ -69,12 +69,6 @@ sql:
         <<: *go
         out: internal/adapters/textdal/queries
   - <<: *adapter
-    queries: internal/adapters/weapondal/queries
-    gen:
-      go:
-        <<: *go
-        out: internal/adapters/weapondal/queries
-  - <<: *adapter
     queries: internal/adapters/actionlogdal/queries
     gen:
       go:

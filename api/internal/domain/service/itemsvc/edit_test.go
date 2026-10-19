@@ -21,7 +21,10 @@ func ptr[T any](v T) *T { return &v }
 // Validation: every bad field is rejected with a *domain.FieldError naming
 // the wire field, before anything is stored or logged.
 func TestCreate_ValidationNamesTheField(t *testing.T) {
-	good := itemsvc.ItemInput{Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6}
+	good := itemsvc.ItemInput{
+		Name: localized.Of("Arrows +3"), Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow",
+		Behaviour: itemsvc.BehaviourStock, Count: 6,
+	}
 	cases := map[string]struct {
 		mut   func(*itemsvc.ItemInput)
 		field string
@@ -39,6 +42,7 @@ func TestCreate_ValidationNamesTheField(t *testing.T) {
 		"bonus out of range":  {func(i *itemsvc.ItemInput) { i.MagicBonus = 11 }, "magicalBonus"},
 		"daily without daily": {func(i *itemsvc.ItemInput) { i.Behaviour = itemsvc.BehaviourDaily }, "maxCount"},
 		"daily count > daily": {func(i *itemsvc.ItemInput) { i.Behaviour = itemsvc.BehaviourDaily; i.MaxCount = 2; i.Count = 3 }, "count"},
+		"unknown component":   {func(i *itemsvc.ItemInput) { i.Component = "pearl" }, "component"},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -77,16 +81,19 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 		{ID: "arrows_3", Position: 4}, {ID: "arrows_3_2", Position: 7},
 	}, nil)
 	want := itemsvc.Item{
-		ID: "arrows_3_3", Position: 8, Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock,
+		ID: "arrows_3_3", Position: 8, Name: localized.Of("Arrows +3"), Category: itemsvc.CategoryAmmunition,
+		State: itemsvc.StateCarried, Behaviour: itemsvc.BehaviourStock,
 		MagicBonus: 3, AmmoKind: "arrow", Count: 6, MaxCount: 6,
 	}
 	dal.EXPECT().Insert(mock.Anything, int64(1), want).Return(nil).Once()
+	dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "arrows_3_3").Return(nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(5), nil)
 
 	// The id slug of "Arrows +3" is arrows_3; two of those exist already.
 	res, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{
-		Name: localized.Of(" Arrows +3 "), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6, MagicBonus: 3, AmmoKind: "arrow",
+		Name: localized.Of(" Arrows +3 "), Category: itemsvc.CategoryAmmunition, Behaviour: itemsvc.BehaviourStock,
+		Count: 6, MagicBonus: 3, AmmoKind: " Arrow",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, &itemsvc.ChangeResult{Item: want, LogEntryID: 5}, res)
@@ -94,9 +101,10 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	assert.False(t, actionlog.IsRoll(got.Kind))
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "items:arrows_3_3", got.Snapshots[0].Key)
-	assert.JSONEq(t, `[{"id":"arrows_3_3","count":0,"removed":true,"absent":true}]`, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"arrows_3_3","count":6,"replace":true,"item":{"position":8,"name":{"en":"Arrows +3"},"type":"arrow",
-		"behaviour":"stock","magicalBonus":3,"ammoKind":"arrow","maxCount":6,"effectDice":"","effectSave":"","notes":"","powers":[]}}]`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, `[{"id":"arrows_3_3","count":0,"removed":true,"absent":true,"model":2}]`, string(got.Snapshots[0].Before))
+	assert.JSONEq(t, `[{"id":"arrows_3_3","count":6,"replace":true,"model":2,"item":{"position":8,"name":{"en":"Arrows +3"},"type":"",
+		"behaviour":"stock","magicalBonus":3,"ammoKind":"arrow","maxCount":6,"effectDice":"","effectSave":"","notes":"","powers":[],
+		"piece":{"category":"ammunition","state":"carried"}}}]`, string(got.Snapshots[0].After))
 	var p map[string]any
 	require.NoError(t, json.Unmarshal(got.Payload, &p))
 	assert.Equal(t, "Arrows +3", p["name"])
@@ -104,7 +112,8 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 }
 
 var wand4 = itemsvc.Item{
-	ID: "wand_lightning", Position: 4, Name: localized.Of("Wand of lightning"), Type: "wand", Behaviour: itemsvc.BehaviourCharges,
+	ID: "wand_lightning", Position: 4, Name: localized.Of("Wand of lightning"), Type: "wand",
+	Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicWand, State: itemsvc.StateCarried, Behaviour: itemsvc.BehaviourCharges,
 	Count: 4, MaxCount: 4, EffectDice: "6d6", EffectSave: "rod_staff_wand",
 }
 
@@ -127,16 +136,47 @@ func TestUpdate_ChangesOneFieldAndLogsBeforeAfter(t *testing.T) {
 	assert.Equal(t, actionlog.KindItemEdit, got.Kind)
 	assert.Empty(t, got.Summary, "the UI words the change from its payload")
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
-		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}]`,
+	assert.JSONEq(t, `[{"id":"wand_lightning","count":4,"replace":true,"model":2,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
+		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[],
+		"piece":{"category":"magic","magicKind":"wand","state":"carried"}}}]`,
 		string(got.Snapshots[0].Before))
 	assert.Contains(t, string(got.Snapshots[0].After), `"count":3`)
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
 }
 
+// ADR 0033 step 1.1: the component code is set by an edit (any category),
+// logged as a change, held by the snapshots so a pop takes it back, and does
+// not settle a piece on the review list (it classifies nothing).
+func TestUpdate_Step1_1_SetsTheComponent(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil)
+	after := wand4
+	after.Component = itemsvc.ComponentGem
+	dal.EXPECT().Update(mock.Anything, int64(1), after).Return(nil).Once() // no DeleteReviews
+	var got actionlog.NewEntry
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(9), nil)
+
+	res, err := svc.Update(context.Background(), 1, "wand_lightning", itemsvc.ItemPatch{Component: ptr(" GEM ")})
+	require.NoError(t, err)
+	assert.Equal(t, itemsvc.ComponentGem, res.Item.Component, "cleaned to the code")
+	assert.Contains(t, string(got.Payload), `"changes":[{"field":"component","before":"","after":"gem"}]`)
+	assert.NotContains(t, string(got.Snapshots[0].Before), `"component"`)
+	assert.Contains(t, string(got.Snapshots[0].After), `"component":"gem"`)
+
+	pop := mocks.NewMockDAL(t)
+	popSvc, _ := itemsvc.New(pop, deps(t).Deps)
+	pop.EXPECT().Update(mock.Anything, int64(1), wand4).Return(nil).Once()
+	require.NoError(t, popSvc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, got.Snapshots[0].Before))
+}
+
 // A stock item turned daily keeps its count and takes the daily number sent with the change.
 func TestUpdate_StockToDailyKeepsCountAndTakesDailyNumber(t *testing.T) {
-	flask := itemsvc.Item{ID: "fire_flask", Position: 1, Name: localized.Of("Fire flasks"), Type: "flask", Behaviour: itemsvc.BehaviourStock, Count: 5, MaxCount: 1, EffectDice: "5d6"}
+	flask := itemsvc.Item{
+		ID: "fire_flask", Position: 1, Name: localized.Of("Fire flasks"), Type: "flask", Category: itemsvc.CategoryGear,
+		State: itemsvc.StateCarried, Behaviour: itemsvc.BehaviourStock, Count: 5, MaxCount: 1, EffectDice: "5d6",
+	}
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
@@ -205,19 +245,26 @@ func TestDelete_RemovesAndLogsWholeItem(t *testing.T) {
 	assert.Equal(t, actionlog.KindItemRemove, got.Kind)
 	assert.Contains(t, string(got.Snapshots[0].Before), `"replace":true`)
 	assert.Contains(t, string(got.Snapshots[0].Before), `"count":4`)
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true,"absent":true}]`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true,"absent":true,"model":2}]`, string(got.Snapshots[0].After))
 }
 
 // Restoring: an item added by hand is deleted, an edited one overwritten
 // whole, a deleted one inserted back whole. These snapshots predate powers
-// (no "powers" key): the item keeps the powers it has now.
+// (no "powers" key): the item keeps the powers it has now. They predate the
+// equipment model too (ADR 0033 step 26.2): the piece keeps its category and
+// state, and one that is gone comes back converted (a wand is a magic wand,
+// carried). Their id is read through the conversion's renames (step 26.3).
 func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 	restore := func(dal *mocks.MockDAL, before json.RawMessage) error {
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
 		return svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, before)
 	}
+	renamed := func(dal *mocks.MockDAL, id string) {
+		dal.EXPECT().RenamedID(mock.Anything, int64(1), id).Return(id, nil).Once()
+	}
 	t.Run("create", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
+		renamed(dal, "new")
 		dal.EXPECT().Delete(mock.Anything, int64(1), "new").Return(nil).Once()
 		require.NoError(t, restore(dal, json.RawMessage(`[{"id":"new","count":0,"removed":true,"absent":true}]`)))
 	})
@@ -225,16 +272,30 @@ func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}]`)
 	t.Run("edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
+		renamed(dal, "wand_lightning")
 		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil).Once()
 		dal.EXPECT().Update(mock.Anything, int64(1), wand4).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
 	})
 	t.Run("delete", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
+		renamed(dal, "wand_lightning")
+		back := wand4
 		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
-		dal.EXPECT().Update(mock.Anything, int64(1), wand4).Return(itemsvc.ErrItemNotFound).Once()
-		dal.EXPECT().Insert(mock.Anything, int64(1), wand4).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), back).Return(itemsvc.ErrItemNotFound).Once()
+		dal.EXPECT().Insert(mock.Anything, int64(1), back).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
+	})
+	t.Run("renamed by the conversion", func(t *testing.T) {
+		dal := mocks.NewMockDAL(t)
+		dal.EXPECT().RenamedID(mock.Anything, int64(1), "dagger").Return("dagger_2", nil).Once()
+		dal.EXPECT().SetCount(mock.Anything, int64(1), "dagger_2", 3).Return(nil).Once()
+		require.NoError(t, restore(dal, json.RawMessage(`[{"id":"dagger","count":3}]`)))
+	})
+	t.Run("a snapshot of the model is not renamed", func(t *testing.T) {
+		dal := mocks.NewMockDAL(t) // no RenamedID
+		dal.EXPECT().SetCount(mock.Anything, int64(1), "dagger", 3).Return(nil).Once()
+		require.NoError(t, restore(dal, json.RawMessage(`[{"id":"dagger","count":3,"model":2}]`)))
 	})
 }
 

@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -46,9 +47,18 @@ type tables struct {
 	Slots     map[int64]string
 	Buffs     map[int64]string
 	Rounds    map[int64]bool
-	// Weapons, Items, Profs and Bard are by rowKey.
-	Weapons map[string]storeq.InsertWeaponParams
+	// Weapons, Items, Profs and Bard are by rowKey. Weapons is the weapons table as stored before
+	// the equipment model (migration 016), which only the migration run reads.
+	Weapons map[string]weaponRow
 	Items   map[string]storeq.InsertItemParams
+	// Reviews are equipment_review rows, "character|item|reason"; Renames item_id_renames, by rowKey
+	// of the old id.
+	Reviews map[string]bool
+	Renames map[string]string
+	// SnapshotKeys are the state keys of the action log's snapshots, by character; AttackAmmo the
+	// attack form's chosen ammunition item id, by character.
+	SnapshotKeys map[int64][]string
+	AttackAmmo   map[int64]string
 	// Offers are seeded_name_languages rows, "kind|id|lang".
 	Offers map[string]bool
 	Profs  map[string]storeq.UpsertProficiencyParams
@@ -64,6 +74,23 @@ type tables struct {
 	Snapshots   []snapshotRow
 	Log         []logRow
 	Corrections []correctionRow
+}
+
+// weaponRow is a weapons row (the table no query writes since migration 016).
+type weaponRow struct {
+	CharacterID int64
+	ID          string
+	Position    int64
+	Name        int64
+	DamageSm    string
+	DamageL     string
+	MagicToHit  int64
+	MagicDamage int64
+	Kind        string
+	TwoHanded   int64
+	AmmoKind    string
+	WeaponType  string
+	Specialized int64
 }
 
 type spellRow struct {
@@ -98,7 +125,8 @@ type correctionRow struct {
 func newFakeStore() *fakeStore {
 	return &fakeStore{t: tables{
 		Slots: map[int64]string{}, Buffs: map[int64]string{}, Rounds: map[int64]bool{},
-		Weapons: map[string]storeq.InsertWeaponParams{}, Items: map[string]storeq.InsertItemParams{},
+		Weapons: map[string]weaponRow{}, Items: map[string]storeq.InsertItemParams{},
+		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
 		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, Heights: map[int64]string{}, Weights: map[int64]string{}, HeightsCm: map[int64]float64{}, WeightsKg: map[int64]float64{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
@@ -287,7 +315,7 @@ func unowned(characterID int64) int64 {
 }
 
 func (f *fakeStore) AdoptWeapons(_ context.Context, characterID int64) error {
-	return adopt(f, f.t.Weapons, characterID, func(w *storeq.InsertWeaponParams) *int64 { return &w.CharacterID })
+	return adopt(f, f.t.Weapons, characterID, func(w *weaponRow) *int64 { return &w.CharacterID })
 }
 
 func (f *fakeStore) AdoptItems(_ context.Context, characterID int64) error {
@@ -350,10 +378,6 @@ func (f *fakeStore) InsertRoundState(_ context.Context, characterID int64) error
 	return nil
 }
 
-func (f *fakeStore) CountWeapons(_ context.Context, characterID int64) (int64, error) {
-	return count(f.t.Weapons, func(w storeq.InsertWeaponParams) bool { return w.CharacterID == characterID }), nil
-}
-
 func (f *fakeStore) CountItems(_ context.Context, characterID int64) (int64, error) {
 	return count(f.t.Items, func(it storeq.InsertItemParams) bool { return it.CharacterID == characterID }), nil
 }
@@ -383,12 +407,16 @@ func (f *fakeStore) TypeWeaponIfUntyped(_ context.Context, arg storeq.TypeWeapon
 	return nil
 }
 
-func (f *fakeStore) InsertWeapon(_ context.Context, arg storeq.InsertWeaponParams) error {
+// addWeapon puts a weapons row as a release before migration 016 wrote it, refusing what the
+// table's CHECKs and keys refuse.
+func (f *fakeStore) addWeapon(arg weaponRow) error {
 	if !slices.Contains([]string{"melee", "missile"}, arg.Kind) || (arg.TwoHanded != 0 && arg.TwoHanded != 1) {
 		return fmt.Errorf("check violation: weapon %q kind %q two_handed %d", arg.ID, arg.Kind, arg.TwoHanded)
 	}
-	if err := f.hasCharacter(arg.CharacterID); err != nil {
-		return err
+	if arg.CharacterID != 0 {
+		if err := f.hasCharacter(arg.CharacterID); err != nil {
+			return err
+		}
 	}
 	key := rowKey(arg.CharacterID, arg.ID)
 	if _, ok := f.t.Weapons[key]; ok {
@@ -413,20 +441,99 @@ func (f *fakeStore) InsertItem(_ context.Context, arg storeq.InsertItemParams) e
 	return nil
 }
 
-func (f *fakeStore) WeaponNameKey(_ context.Context, arg storeq.WeaponNameKeyParams) (int64, error) {
-	w, ok := f.t.Weapons[rowKey(arg.CharacterID, arg.ID)]
-	if !ok {
-		return 0, sql.ErrNoRows
-	}
-	return w.Name, nil
-}
-
 func (f *fakeStore) ItemNameKey(_ context.Context, arg storeq.ItemNameKeyParams) (int64, error) {
 	it, ok := f.t.Items[rowKey(arg.CharacterID, arg.ID)]
 	if !ok {
 		return 0, sql.ErrNoRows
 	}
 	return it.Name, nil
+}
+
+func (f *fakeStore) InsertReview(_ context.Context, arg storeq.InsertReviewParams) error {
+	if err := f.hasCharacter(arg.CharacterID); err != nil {
+		return err
+	}
+	f.t.Reviews[fmt.Sprintf("%d|%s|%s", arg.CharacterID, arg.ItemID, arg.Reason)] = true
+	return nil
+}
+
+func (f *fakeStore) EquipmentOwners(context.Context) ([]int64, error) {
+	seen := map[int64]bool{}
+	for _, it := range f.t.Items {
+		seen[it.CharacterID] = true
+	}
+	for _, w := range f.t.Weapons {
+		seen[w.CharacterID] = true
+	}
+	out := make([]int64, 0, len(seen))
+	for id := range seen {
+		out = append(out, id)
+	}
+	slices.Sort(out)
+	return out, nil
+}
+
+func (f *fakeStore) ListLegacyItems(_ context.Context, characterID int64) ([]storeq.ListLegacyItemsRow, error) {
+	var out []storeq.ListLegacyItemsRow
+	for _, it := range f.t.Items {
+		if it.CharacterID == characterID {
+			out = append(out, storeq.ListLegacyItemsRow{
+				ID: it.ID, Position: it.Position, Name: it.Name, Type: it.Type, Behaviour: it.Behaviour,
+				MagicBonus: it.MagicBonus, AmmoKind: it.AmmoKind, Count: it.Count, MaxCount: it.MaxCount,
+				EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes, Powers: it.Powers,
+			})
+		}
+	}
+	slices.SortFunc(out, func(a, b storeq.ListLegacyItemsRow) int {
+		return cmp.Or(cmp.Compare(a.Position, b.Position), cmp.Compare(a.ID, b.ID))
+	})
+	return out, nil
+}
+
+func (f *fakeStore) ListLegacyWeapons(_ context.Context, characterID int64) ([]storeq.ListLegacyWeaponsRow, error) {
+	var out []storeq.ListLegacyWeaponsRow
+	for _, w := range f.t.Weapons {
+		if w.CharacterID == characterID {
+			out = append(out, storeq.ListLegacyWeaponsRow{
+				ID: w.ID, Position: w.Position, Name: w.Name, DamageSm: w.DamageSm, DamageL: w.DamageL,
+				MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: w.Kind, TwoHanded: w.TwoHanded,
+				AmmoKind: w.AmmoKind, WeaponType: w.WeaponType, Specialized: w.Specialized,
+			})
+		}
+	}
+	slices.SortFunc(out, func(a, b storeq.ListLegacyWeaponsRow) int {
+		return cmp.Or(cmp.Compare(a.Position, b.Position), cmp.Compare(a.ID, b.ID))
+	})
+	return out, nil
+}
+
+func (f *fakeStore) DeleteCharacterItems(_ context.Context, characterID int64) error {
+	for k, it := range f.t.Items {
+		if it.CharacterID == characterID {
+			delete(f.t.Items, k)
+		}
+	}
+	return nil
+}
+
+func (f *fakeStore) InsertItemRename(_ context.Context, arg storeq.InsertItemRenameParams) error {
+	if err := f.hasCharacter(arg.CharacterID); err != nil {
+		return err
+	}
+	key := rowKey(arg.CharacterID, arg.OldID)
+	if _, ok := f.t.Renames[key]; ok {
+		return fmt.Errorf("duplicate key item_id_renames %s", key)
+	}
+	f.t.Renames[key] = arg.NewID
+	return nil
+}
+
+func (f *fakeStore) RenamedItemID(_ context.Context, arg storeq.RenamedItemIDParams) (string, error) {
+	id, ok := f.t.Renames[rowKey(arg.CharacterID, arg.OldID)]
+	if !ok {
+		return "", sql.ErrNoRows
+	}
+	return id, nil
 }
 
 func offer(kind, id, lang string) string { return kind + "|" + id + "|" + lang }
@@ -753,4 +860,15 @@ func (f *fakeStore) SpellCorrectionPayloads(_ context.Context, kinds []string) (
 		}
 	}
 	return out, nil
+}
+
+func (f *fakeStore) LegacySnapshotKeys(_ context.Context, characterID int64) ([]string, error) {
+	return slices.Clone(f.t.SnapshotKeys[characterID]), nil
+}
+
+func (f *fakeStore) RenameAttackFormAmmo(_ context.Context, arg storeq.RenameAttackFormAmmoParams) error {
+	if f.t.AttackAmmo[arg.CharacterID] == arg.OldID {
+		f.t.AttackAmmo[arg.CharacterID] = arg.NewID
+	}
+	return nil
 }

@@ -11,13 +11,19 @@ import (
 type Querier interface {
 	DecrementItem(ctx context.Context, arg DecrementItemParams) (Item, error)
 	DeleteItem(ctx context.Context, arg DeleteItemParams) (int64, error)
+	DeleteReviews(ctx context.Context, arg DeleteReviewsParams) error
 	GetItem(ctx context.Context, arg GetItemParams) (Item, error)
 	IncrementItem(ctx context.Context, arg IncrementItemParams) (Item, error)
 	InsertItem(ctx context.Context, arg InsertItemParams) error
 	ItemNames(ctx context.Context, characterID int64) ([]LocalizedText, error)
 	// Every query is one character's: items belong to a character (character_id). The selected
-	// columns are the whole row, so sqlc maps them to the Item model.
+	// columns are the whole row, so sqlc maps them to the Item model. An item is any piece of
+	// equipment (ADR 0033 step 1), weapons included.
 	ListItems(ctx context.Context, characterID int64) ([]Item, error)
+	// The review list (ADR 0033 step 27).
+	ListReviews(ctx context.Context, characterID int64) ([]ListReviewsRow, error)
+	// The id the conversion gave an item whose id a weapon had (ADR 0033 step 26.3).
+	RenamedItemID(ctx context.Context, arg RenamedItemIDParams) (string, error)
 	ResetDailyItems(ctx context.Context, characterID int64) error
 	SetItemCount(ctx context.Context, arg SetItemCountParams) (int64, error)
 	UpdateItem(ctx context.Context, arg UpdateItemParams) (int64, error)

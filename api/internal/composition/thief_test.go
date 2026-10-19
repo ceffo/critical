@@ -10,13 +10,12 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
-	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
@@ -85,9 +84,12 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 	assert.Equal(t, 65, check.AdjustedTarget)
 	assert.True(t, check.Success, "60 at or under 55 + 10")
 
-	_, err = bs.Weapons.Create(ctx, id, weaponsvc.WeaponInput{
-		Name: localized.Of("Dagger"), DamageSM: "1d4", DamageL: "1d3", Kind: "melee", Type: "dagger",
-	})
+	dagger := newWeapon("Dagger", "1d4", "1d3")
+	dagger.WeaponType = "dagger"
+	_, err = bs.Items.Create(ctx, id, dagger)
+	require.NoError(t, err)
+	// A new piece is carried (ADR 0033 step 6): the attack needs it wielded.
+	_, err = bs.Items.SetState(ctx, id, "dagger", itemsvc.StateWielded, false)
 	require.NoError(t, err)
 	res, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{
 		WeaponID: "dagger", TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium, Backstab: true,
@@ -97,11 +99,12 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 	assert.True(t, res.Hit)
 	assert.Equal(t, 7, res.TotalDamage)
 	assert.Equal(t, map[string]int{"d20": 1, "d100": 3, "die": 1}, dice.calls)
-	entries, err := bs.Log.List(ctx, id, 3)
+	entries, err := bs.Log.List(ctx, id, 4)
 	require.NoError(t, err)
-	require.Len(t, entries, 3)
+	require.Len(t, entries, 4)
 	assert.Equal(t, actionlog.KindAttack, entries[0].Kind)
-	assert.Equal(t, actionlog.KindSkillCheck, entries[2].Kind, "after it the dagger's weapon_add")
+	assert.Equal(t, actionlog.KindEquipmentState, entries[1].Kind, "the dagger wielded")
+	assert.Equal(t, actionlog.KindSkillCheck, entries[3].Kind, "after it the dagger's item_add")
 }
 
 // ADR 0030 step 17 after creation, through the real services: the thief of
@@ -243,9 +246,12 @@ func TestThief_Step19_BackstabAtAnUnknownACKeepsItsMultiplier(t *testing.T) {
 		SkillArmor: "none",
 	})
 	require.NoError(t, err)
-	_, err = bs.Weapons.Create(ctx, id, weaponsvc.WeaponInput{
-		Name: localized.Of("Dagger"), DamageSM: "1d4", DamageL: "1d3", Kind: "melee", Type: "dagger",
-	})
+	dagger := newWeapon("Dagger", "1d4", "1d3")
+	dagger.WeaponType = "dagger"
+	_, err = bs.Items.Create(ctx, id, dagger)
+	require.NoError(t, err)
+	// A new piece is carried (ADR 0033 step 6): the attack needs it wielded.
+	_, err = bs.Items.SetState(ctx, id, "dagger", itemsvc.StateWielded, false)
 	require.NoError(t, err)
 	res, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{
 		WeaponID: "dagger", TargetSize: combatsvc.SizeSmallMedium, Backstab: true,

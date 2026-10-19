@@ -26,6 +26,7 @@ var hammer = itemsvc.Power{
 // gem is the Power Gem as seeded: daily, 1 a day, with its hammer.
 var gem = itemsvc.Item{
 	ID: "power_gem_dispel", Position: 5, Name: localized.Of("Power Gem"), Type: "gem", Behaviour: itemsvc.BehaviourDaily,
+	Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicMisc, State: itemsvc.StateWorn,
 	Count: 1, MaxCount: 1, Notes: "Dispel Magic once a day", Powers: []itemsvc.Power{hammer},
 }
 
@@ -68,6 +69,7 @@ func TestItemPowers_Step9_CountDoesNotGateThePowers(t *testing.T) {
 	spent.Count = 0
 	ring := itemsvc.Item{
 		ID: "ring", Name: localized.Of("Ring"), Behaviour: itemsvc.BehaviourStock, Count: 1,
+		Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicRing, State: itemsvc.StateWorn,
 		Powers: []itemsvc.Power{{ID: "luck", Effects: buffsvc.BuffEffects{ToHit: ptr(1)}}},
 	}
 	arrows := itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), Behaviour: itemsvc.BehaviourStock, Count: 0}
@@ -130,8 +132,12 @@ func TestItemPowers_Step15_EditBodyCannotSetPowers(t *testing.T) {
 
 	dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil).Once()
 	dal.EXPECT().Insert(mock.Anything, int64(1), mock.MatchedBy(func(it itemsvc.Item) bool { return it.Powers == nil })).Return(nil).Once()
+	dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "gem").Return(nil).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(5), nil).Once()
-	created, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1})
+	created, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{
+		Name: localized.Of("Gem"), Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicMisc,
+		Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1,
+	})
 	require.NoError(t, err)
 	assert.Nil(t, created.Item.Powers)
 }
@@ -143,6 +149,7 @@ func TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers(t *testing.T) {
 		"type":"gem","behaviour":"daily","magicalBonus":0,"ammoKind":"","maxCount":1,"effectDice":"","effectSave":"","notes":"old"}}]`)
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
+	dal.EXPECT().RenamedID(mock.Anything, int64(1), "power_gem_dispel").Return("power_gem_dispel", nil).Once()
 	dal.EXPECT().Get(mock.Anything, int64(1), "power_gem_dispel").Return(gem, nil).Once()
 	want := gem
 	want.Name, want.Notes = localized.Of("Power Gem: Dispel Magic"), "old"

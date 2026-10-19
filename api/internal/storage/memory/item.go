@@ -185,3 +185,38 @@ func (p Items) Insert(ctx context.Context, characterID int64, it itemsvc.Item) e
 		return nil
 	})
 }
+
+// Reviews returns the character's review rows (ADR 0033 step 27).
+func (p Items) Reviews(ctx context.Context, characterID int64) ([]itemsvc.Review, error) {
+	out := []itemsvc.Review{}
+	err := p.s.read(ctx, func(t *tables) error {
+		for r := range t.reviews {
+			if r.characterID == characterID {
+				out = append(out, itemsvc.Review{ItemID: r.itemID, Reason: r.reason})
+			}
+		}
+		return nil
+	})
+	slices.SortFunc(out, func(a, b itemsvc.Review) int {
+		return cmp.Or(cmp.Compare(a.ItemID, b.ItemID), cmp.Compare(a.Reason, b.Reason))
+	})
+	return out, err
+}
+
+// DeleteReviews removes every review row of a piece.
+func (p Items) DeleteReviews(ctx context.Context, characterID int64, itemID string) error {
+	return p.s.write(ctx, func(t *tables) error {
+		for r := range t.reviews {
+			if r.characterID == characterID && r.itemID == itemID {
+				delete(t.reviews, r)
+			}
+		}
+		return nil
+	})
+}
+
+// RenamedID is itemID: the store starts empty, so no conversion renamed any
+// item (ADR 0033 step 26.3).
+func (p Items) RenamedID(_ context.Context, _ int64, itemID string) (string, error) {
+	return itemID, nil
+}

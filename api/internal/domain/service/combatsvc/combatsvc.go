@@ -76,10 +76,13 @@ type Dice interface {
 	RollD100() int
 }
 
-// Weapons is the weapons-catalog port.
+// Weapons is the character's weapons: its weapon pieces (ADR 0033 step 3),
+// wielded or not, as the attack reads them; ItemWeapons builds it over the
+// equipment.
 type Weapons interface {
 	// Get returns the weapon, or an error wrapping ErrWeaponNotFound.
 	Get(ctx context.Context, characterID int64, id string) (Weapon, error)
+	// List returns the weapons in list order.
 	List(ctx context.Context, characterID int64) ([]Weapon, error)
 }
 
@@ -90,11 +93,14 @@ type CritStore interface {
 	Replace(ctx context.Context, rows []CritRow) error
 }
 
-// Items spends ammunition (itemsvc) and lists the items the attack form
-// offers as ammunition. Use must join the ctx transaction.
+// Items is the character's equipment (itemsvc, ADR 0033): Use spends
+// ammunition, List lists the pieces the attack form offers as ammunition,
+// Wield wields the weapon the form picks (step 8). Use and Wield join the
+// ctx transaction.
 type Items interface {
 	Use(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error)
 	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
+	Wield(ctx context.Context, characterID int64, itemID string) (*itemsvc.StateResult, error)
 }
 
 // FormStore keeps the attack form of each character. Get's ok is false when

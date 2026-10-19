@@ -1,54 +1,167 @@
-// Input parsing for the item editor form. The server validates every value (and names the field);
-// this only turns what was typed into the request body and flags text that is not a number.
+// Input parsing for the equipment editor form (one editor for every piece, ADR 0033 step 1). The
+// server validates every value (and names the field); this only turns what was typed into the
+// request body and flags text that is not a number.
 import { editLang, localized } from "@/i18n/localized";
-import type { Item, ItemBehaviour, ItemBody } from "@/types/items";
+import type {
+  Category,
+  Component,
+  Item,
+  ItemBehaviour,
+  ItemBody,
+  MagicKind,
+} from "@/types/items";
+import type { WeaponType } from "@/types/combat";
 
 /**
  * What the form holds: numbers stay text until submit; the name in the UI language (ADR 0023 step
- * 11).
+ * 11). The fields of every category are held; only the chosen category's are sent.
  */
 export interface ItemDraft {
   name: string;
-  type: string;
+  category: Category;
+  magicKind: MagicKind | "";
+  /** The spell component it is, any category (ADR 0033 step 1.1); empty for none. */
+  component: Component | "";
   behaviour: ItemBehaviour;
   count: string;
   maxCount: string;
-  magicalBonus: string;
-  ammoKind: string;
   effectDice: string;
   effectSave: string;
   notes: string;
+  // Ammunition.
+  ammoKind: string;
+  magicalBonus: string;
+  // Weapon and ammunition.
+  damageSm: string;
+  damageL: string;
+  damageTypes: string[];
+  // Weapon.
+  weaponType: WeaponType;
+  weaponKind: "melee" | "missile";
+  size: string;
+  speed: string;
+  magicToHit: string;
+  magicDamage: string;
+  twoHanded: boolean;
+  fires: string;
+  specialized: boolean;
+  // Armour.
+  baseAc: string;
+  skillColumn: string;
+  armorRow: string;
+  // Shield.
+  shieldKind: string;
+  acMelee: string;
+  acMissile: string;
 }
 
 /** Fields of the form, named like the API's. */
 export type ItemField = keyof ItemDraft;
 
-export const emptyDraft: ItemDraft = {
-  name: "",
-  type: "",
-  behaviour: "stock",
-  count: "1",
-  maxCount: "1",
-  magicalBonus: "0",
-  ammoKind: "",
-  effectDice: "",
-  effectSave: "",
-  notes: "",
+/** The fields each category sends besides the shared ones (ADR 0033 steps 3 to 5). */
+const CATEGORY_FIELDS: Record<Category, ItemField[]> = {
+  weapon: [
+    "damageSm",
+    "damageL",
+    "damageTypes",
+    "weaponType",
+    "weaponKind",
+    "size",
+    "speed",
+    "magicToHit",
+    "magicDamage",
+    "twoHanded",
+    "fires",
+    "specialized",
+  ],
+  ammunition: [
+    "ammoKind",
+    "magicalBonus",
+    "damageSm",
+    "damageL",
+    "damageTypes",
+  ],
+  armour: ["baseAc", "skillColumn", "armorRow"],
+  shield: ["shieldKind", "acMelee", "acMissile"],
+  magic: ["magicKind"],
+  gear: [],
 };
 
-/** The form for an item, its name as shown in the UI language `lang`. */
+/** Whether the form shows (and sends) field for category. */
+export function hasField(category: Category, field: ItemField): boolean {
+  return CATEGORY_FIELDS[category].includes(field);
+}
+
+/** An empty form for a piece of category (gear unless given). */
+export function emptyDraft(category: Category = "gear"): ItemDraft {
+  return {
+    name: "",
+    category,
+    magicKind: category === "magic" ? "misc" : "",
+    component: "",
+    behaviour: "stock",
+    count: "1",
+    maxCount: "1",
+    effectDice: "",
+    effectSave: "",
+    notes: "",
+    ammoKind: "arrow",
+    magicalBonus: "0",
+    damageSm: "",
+    damageL: "",
+    damageTypes: [],
+    weaponType: "",
+    weaponKind: "melee",
+    size: "",
+    speed: "0",
+    magicToHit: "0",
+    magicDamage: "0",
+    twoHanded: false,
+    fires: "",
+    specialized: false,
+    baseAc: "10",
+    skillColumn: "none",
+    armorRow: "leather",
+    shieldKind: "small",
+    acMelee: "1",
+    acMissile: "1",
+  };
+}
+
+/** The form for a piece, its name as shown in the UI language `lang`. */
 export function draftFromItem(i: Item, lang: string): ItemDraft {
+  const empty = emptyDraft(i.category);
   return {
     name: localized(lang, i.name),
-    type: i.type,
+    category: i.category,
+    magicKind: i.magicKind,
+    component: i.component ?? "",
     behaviour: i.behaviour,
     count: String(i.count),
     maxCount: String(i.maxCount),
-    magicalBonus: String(i.magicalBonus),
-    ammoKind: i.ammoKind,
     effectDice: i.effectDice,
     effectSave: i.effectSave,
     notes: i.notes,
+    ammoKind: i.ammoKind || empty.ammoKind,
+    magicalBonus: String(i.magicalBonus),
+    damageSm: i.damageSm,
+    damageL: i.damageL,
+    damageTypes: [...i.damageTypes],
+    weaponType: i.weaponType,
+    weaponKind: i.weaponKind || "melee",
+    size: i.size,
+    speed: String(i.speed),
+    magicToHit: String(i.magicToHit),
+    magicDamage: String(i.magicDamage),
+    twoHanded: i.twoHanded,
+    fires: i.fires,
+    specialized: i.specialized,
+    baseAc: i.category === "armour" ? String(i.baseAc) : empty.baseAc,
+    skillColumn: i.skillColumn || empty.skillColumn,
+    armorRow: i.armorRow || empty.armorRow,
+    shieldKind: i.shieldKind || empty.shieldKind,
+    acMelee: i.category === "shield" ? String(i.acMelee) : empty.acMelee,
+    acMissile: i.category === "shield" ? String(i.acMissile) : empty.acMissile,
   };
 }
 
@@ -64,7 +177,7 @@ export type DraftErrors = Partial<Record<ItemField, "notANumber">>;
 /**
  * The request body for a draft, and the number fields that are not numbers. The name is sent in the
  * UI language `lang` only (ADR 0023 step 11: the server keeps the other languages). The daily number
- * is sent for daily items only.
+ * is sent for daily items only; the category's own fields only (a melee weapon fires nothing).
  */
 export function draftToBody(
   d: ItemDraft,
@@ -80,18 +193,51 @@ export function draftToBody(
     if (Number.isNaN(n)) errors[field] = "notANumber";
     return n;
   };
+  const all: ItemBody = {
+    magicKind: d.magicKind,
+    ammoKind: d.ammoKind,
+    magicalBonus: num("magicalBonus", d.magicalBonus, true),
+    damageSm: d.damageSm,
+    damageL: d.damageL,
+    damageTypes: d.damageTypes,
+    weaponType: d.weaponType,
+    weaponKind: d.weaponKind,
+    size: d.size,
+    speed: num("speed", d.speed, true),
+    magicToHit: num("magicToHit", d.magicToHit, true),
+    magicDamage: num("magicDamage", d.magicDamage, true),
+    twoHanded: d.twoHanded,
+    fires: d.weaponKind === "missile" ? d.fires : "",
+    specialized: d.specialized,
+    baseAc: num("baseAc", d.baseAc),
+    skillColumn: d.skillColumn,
+    armorRow: d.armorRow,
+    shieldKind: d.shieldKind,
+    acMelee: num("acMelee", d.acMelee, true),
+    acMissile: num("acMissile", d.acMissile, true),
+  };
   const body: ItemBody = {
     name: { [editLang(lang)]: d.name },
-    type: d.type,
+    category: d.category,
+    component: d.component,
     behaviour: d.behaviour,
     count: num("count", d.count),
-    magicalBonus: num("magicalBonus", d.magicalBonus, true),
-    ammoKind: d.ammoKind,
     effectDice: d.effectDice,
     effectSave: d.effectSave,
     notes: d.notes,
   };
+  const out = body as Record<string, unknown>;
+  for (const f of CATEGORY_FIELDS[d.category])
+    out[f] = (all as Record<string, unknown>)[f];
   if (d.behaviour === "daily") body.maxCount = num("maxCount", d.maxCount);
+  // Only the category's number fields count as errors.
+  for (const f of Object.keys(errors) as ItemField[])
+    if (
+      !["count", "maxCount"].includes(f) &&
+      !CATEGORY_FIELDS[d.category].includes(f)
+    )
+      delete errors[f];
+  if (d.behaviour !== "daily") delete errors.maxCount;
   return { body, errors };
 }
 
@@ -106,23 +252,19 @@ export function changedFields(
   lang: string,
 ): ItemBody {
   const out: Record<string, unknown> = {};
+  const stored = item as unknown as Record<string, unknown>;
   for (const [k, v] of Object.entries(body)) {
     if (k === "name") {
       if (sentName(body) !== localized(lang, item.name)) out[k] = v;
-    } else if ((item as unknown as Record<string, unknown>)[k] !== v)
-      out[k] = v;
+    } else if (Array.isArray(v)) {
+      const was = stored[k];
+      if (!Array.isArray(was) || was.join("/") !== v.join("/")) out[k] = v;
+    } else if (stored[k] !== v) out[k] = v;
   }
   // Becoming daily always sends the daily number (the old max of a stock item is not one).
   if (out.behaviour === "daily" && body.maxCount !== undefined)
     out.maxCount = body.maxCount;
   return out as ItemBody;
-}
-
-/** Existing item types, each once, for the type field's suggestions. */
-export function typeSuggestions(items: Item[]): string[] {
-  return [
-    ...new Set(items.map((i) => i.type.trim()).filter((t) => t !== "")),
-  ].sort();
 }
 
 /** The one body a form's name holds. */

@@ -46,6 +46,10 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		if err != nil {
 			return fmt.Errorf("get weapon %s: %w", req.WeaponID, err)
 		}
+		// The weapon in hand is a wielded one (ADR 0033 step 8).
+		if !weapon.Wielded {
+			return domain.FieldErrorf("weaponId", "%s is not wielded", weapon.Name.Any())
+		}
 		char, err := s.chars.GetCharacter(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
@@ -118,7 +122,7 @@ func (s *service) spendAmmo(ctx context.Context, characterID int64, weapon Weapo
 	}
 	// Ammo is any item of the weapon's ammo kind, whatever its behaviour
 	// (ADR 0002 step 10). The weapon fires ammo, so its kind is never empty.
-	if item.AmmoKind != weapon.AmmoKind {
+	if !isAmmo(item, weapon) {
 		return nil, fmt.Errorf("%w: %s cannot fire %s", domain.ErrInvalidInput, weapon.Name.Any(), item.Name.Any())
 	}
 	return &item, nil
@@ -354,7 +358,8 @@ func rollDice(d Dice, dice string) (int, []DieRoll, error) {
 	return total, rolls, nil
 }
 
-// ListWeapons returns the weapons catalog in sheet order.
+// ListWeapons returns the character's weapon pieces in list order, wielded
+// or not (ADR 0033 step 8: the form offers the wielded ones first).
 func (s *service) ListWeapons(ctx context.Context, characterID int64) ([]Weapon, error) {
 	return s.weapons.List(ctx, characterID)
 }

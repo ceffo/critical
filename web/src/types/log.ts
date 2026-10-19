@@ -15,9 +15,12 @@ export type LogKind =
   | "item_add"
   | "item_edit"
   | "item_remove"
+  /** Written before the one equipment model (ADR 0033 step 26.2): still shown and popped. */
   | "weapon_add"
   | "weapon_edit"
   | "weapon_remove"
+  /** A piece equipped or unequipped (ADR 0033 step 7); popping it puts the pieces back. */
+  | "equipment_state"
   /** An XP award added, edited or removed (ADR 0015 step 4); popping it gives the XP total back. */
   | "xp_add"
   | "xp_edit"

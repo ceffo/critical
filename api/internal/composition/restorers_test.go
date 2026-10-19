@@ -43,11 +43,11 @@ func TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage(t *testing.T) {
 				return len(s) == 1 && s[0].SpellID == "alarm"
 			})).Return(nil).Once()
 		}},
-		{"an item's count (family items), the entry's character's", "items:wand_lightning", `[{"id":"wand_lightning","count":4}]`, func(h *harness) {
+		{"an item's count (family items), the entry's character's", "items:wand_lightning", `[{"id":"wand_lightning","count":4,"model":2}]`, func(h *harness) {
 			h.Items.EXPECT().SetCount(mock.Anything, characterID, "wand_lightning", 4).Return(nil).Once()
 		}},
-		{"a weapon added by hand (family weapons), the entry's character's", "weapons:dagger2", `{"id":"dagger2","absent":true}`, func(h *harness) {
-			h.WeaponEditor.EXPECT().Delete(mock.Anything, characterID, "dagger2").Return(nil).Once()
+		{"a weapon added by hand before the equipment model (family weapons): the piece", "weapons:dagger2", `{"id":"dagger2","absent":true}`, func(h *harness) {
+			h.Items.EXPECT().Delete(mock.Anything, characterID, "dagger2").Return(nil).Once()
 		}},
 		{"a level-up roll's realized level", "realized_level", `{"realizedLevel":15,"hpMax":85}`, func(h *harness) {
 			h.Character.EXPECT().SetRealizedLevel(mock.Anything, characterID, 15, 85).Return(nil).Once()

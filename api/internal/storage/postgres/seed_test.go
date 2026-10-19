@@ -27,7 +27,7 @@ func seedOn(f *fakeStore, dir string) error { return seedBookOn(f, dir, seedBook
 
 // seedBookOn is seedOn with the spellbook seed book (catalogue keys, in order).
 func seedBookOn(f *fakeStore, dir string, book []string) error {
-	return seed(context.Background(), f, f, dir, book)
+	return seed(context.Background(), f, f, dir, book, catalogueWeapons)
 }
 
 // seedBook is a spellbook seed: the seed writes the keys the caller checked, in order.
@@ -54,15 +54,20 @@ func copySeeds(t *testing.T, replace map[string]string) string {
 func (f *fakeStore) itemNames() map[string]localized.Text {
 	out := map[string]localized.Text{}
 	for _, it := range f.t.Items {
-		out[it.ID] = f.t.Texts[it.Name]
+		if it.Category != "weapon" {
+			out[it.ID] = f.t.Texts[it.Name]
+		}
 	}
 	return out
 }
 
+// weaponNames are the weapon pieces' names (ADR 0033 step 1: weapons are pieces).
 func (f *fakeStore) weaponNames() map[string]localized.Text {
 	out := map[string]localized.Text{}
-	for _, w := range f.t.Weapons {
-		out[w.ID] = f.t.Texts[w.Name]
+	for _, w := range f.t.Items {
+		if w.Category == "weapon" {
+			out[w.ID] = f.t.Texts[w.Name]
+		}
 	}
 	return out
 }
@@ -75,11 +80,6 @@ func (f *fakeStore) sheet() map[string]any {
 		id := it.ID
 		it.Name, it.CharacterID = 0, 0
 		out["item:"+id] = it
-	}
-	for _, w := range f.t.Weapons {
-		id := w.ID
-		w.Name, w.CharacterID = 0, 0
-		out["weapon:"+id] = w
 	}
 	return out
 }
@@ -104,8 +104,8 @@ func TestSeed_WeaponsAndItemsMatchSheetAndAreIdempotent(t *testing.T) {
 	f := newFakeStore()
 	require.NoError(t, seedOn(f, repoSeeds()))
 
-	assert.Len(t, f.t.Weapons, 6)
-	assert.Len(t, f.t.Items, 6)
+	assert.Empty(t, f.t.Weapons, "weapons are pieces (ADR 0033 step 1)")
+	assert.Len(t, f.t.Items, 12)
 	assert.Equal(t, int64(18), f.item("arrows_plus1").Count)
 	assert.Equal(t, int64(16), f.item("arrows_plus2").Count)
 	assert.Equal(t, int64(2), f.item("arrows_plus3").Count)
@@ -120,16 +120,15 @@ func TestSeed_WeaponsAndItemsMatchSheetAndAreIdempotent(t *testing.T) {
 			stock++
 		}
 	}
-	assert.Equal(t, 4, stock, "arrows and flasks")
+	assert.Equal(t, 10, stock, "arrows, flasks and the six weapons")
 
 	// A table change must survive a re-seed (a restart).
 	arrows := f.item("arrows_plus1")
 	arrows.Count = 3
 	f.t.Items[rowKey(arrows.CharacterID, arrows.ID)] = arrows
 	require.NoError(t, seedOn(f, repoSeeds()))
-	assert.Len(t, f.t.Items, 6)
+	assert.Len(t, f.t.Items, 12)
 	assert.Equal(t, int64(3), f.item("arrows_plus1").Count)
-	assert.Len(t, f.t.Weapons, 6)
 }
 
 func TestSeed_InvalidCatalogsFailWithoutPartialRows(t *testing.T) {
@@ -354,15 +353,14 @@ func (f *fakeStore) plantItem(t *testing.T, it storeq.InsertItemParams, name loc
 	f.t.Items[rowKey(it.CharacterID, it.ID)] = it
 }
 
-func (f *fakeStore) plantWeapon(t *testing.T, w storeq.InsertWeaponParams, name localized.Text) {
+// plantWeapon plants a weapon piece (as the conversion of ADR 0033 step 26 stores one).
+func (f *fakeStore) plantWeapon(t *testing.T, w weaponRow, name localized.Text) {
 	t.Helper()
-	key, err := addSeedText(context.Background(), f, name)
-	require.NoError(t, err)
-	w.Name = key
-	if w.CharacterID == 0 {
-		w.CharacterID = firstCharacter
-	}
-	f.t.Weapons[rowKey(w.CharacterID, w.ID)] = w
+	f.plantItem(t, storeq.InsertItemParams{
+		CharacterID: w.CharacterID, ID: w.ID, Position: 10 + w.Position, Category: "weapon", State: "wielded",
+		Behaviour: "stock", Count: 1, MaxCount: 1, DamageSm: w.DamageSm, DamageL: w.DamageL, WeaponKind: w.Kind,
+		DamageTypes: []string{},
+	}, name)
 }
 
 // ADR 0023 step 10: on a played database, the seed gives a name it still holds unchanged the
@@ -378,8 +376,8 @@ func TestSeed_Step10_ReconcileAddsLanguagesKeepingPlayerNamesAndRows(t *testing.
 	f.plantItem(t, storeq.InsertItemParams{ID: "wand_lightning", Position: 4, Type: "wand", Behaviour: "charges", Count: 2, MaxCount: 4}, localized.Of("My wand"))
 	f.plantItem(t, storeq.InsertItemParams{ID: "power_gem_dispel", Position: 5, Type: "gem", Behaviour: "daily", MaxCount: 1, Notes: "mine"}, localized.Of("Power Gem"))
 	f.plantItem(t, storeq.InsertItemParams{ID: "rope", Position: 6, Type: "gear", Behaviour: "stock", Count: 1, MaxCount: 1}, localized.Of("Rope"))
-	f.plantWeapon(t, storeq.InsertWeaponParams{ID: "dagger", DamageSm: "1d4", DamageL: "1d3", Kind: "melee"}, localized.Of("Dagger +3"))
-	f.plantWeapon(t, storeq.InsertWeaponParams{ID: "mace", Position: 1, DamageSm: "1d6", DamageL: "1d6", Kind: "melee"}, localized.Of("Big mace"))
+	f.plantWeapon(t, weaponRow{ID: "dagger", DamageSm: "1d4", DamageL: "1d3", Kind: "melee"}, localized.Of("Dagger +3"))
+	f.plantWeapon(t, weaponRow{ID: "mace", Position: 1, DamageSm: "1d6", DamageL: "1d6", Kind: "melee"}, localized.Of("Big mace"))
 	before := f.sheet()
 
 	require.NoError(t, seedOn(f, campaignSeeds()))

@@ -200,6 +200,7 @@ func TestName_Step9_WrittenAsLocalizedTextRows(t *testing.T) {
 		q.EXPECT().UpdateItem(ctx, queries.UpdateItemParams{
 			Position: 9, Type: "staff", Behaviour: "daily", MagicBonus: 1, AmmoKind: "bolt", Count: 2, MaxCount: 3,
 			EffectDice: "1d4+1", EffectSave: "spell", Notes: "hum", Powers: raw, CharacterID: owner, ID: "w",
+			DamageTypes: []string{},
 		}).Return(100, nil).Once(),
 		tq.EXPECT().DeleteText(ctx, int64(100)).Return(nil).Once(),
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 100, Lang: "de", Body: "Stab"}).Return(nil).Once(),
@@ -213,7 +214,7 @@ func TestName_Step9_WrittenAsLocalizedTextRows(t *testing.T) {
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 101, Lang: "en", Body: "Rope"}).Return(nil).Once(),
 		q.EXPECT().InsertItem(ctx, queries.InsertItemParams{
 			CharacterID: owner, ID: "x", Position: 9, Name: 101, Type: "staff", Behaviour: "daily", MagicBonus: 1, AmmoKind: "bolt",
-			Count: 2, MaxCount: 3, EffectDice: "1d4+1", EffectSave: "spell", Notes: "hum", Powers: raw,
+			Count: 2, MaxCount: 3, EffectDice: "1d4+1", EffectSave: "spell", Notes: "hum", Powers: raw, DamageTypes: []string{},
 		}).Return(nil).Once(),
 	)
 	require.NoError(t, dal.Insert(ctx, owner, it))
@@ -270,4 +271,67 @@ func TestStorageErrors_AreReturnedAndStopTheWrite(t *testing.T) {
 
 	q.EXPECT().ResetDailyItems(ctx, owner).Return(assert.AnError).Once()
 	require.ErrorIs(t, dal.ResetDaily(ctx, owner), assert.AnError)
+}
+
+// ADR 0033 steps 1 to 6: every field of a piece round-trips through its
+// row (category, state, the weapon's, the armour's and the shield's
+// columns; the flags as 0/1).
+func TestPiece_EveryColumnMapped(t *testing.T) {
+	ctx := context.Background()
+	dal, q, tq := mocked(t)
+	piece := itemsvc.Item{
+		ID: "bow", Position: 2, Name: localized.Text{"en": "Bow"}, Category: itemsvc.CategoryWeapon,
+		CatalogueCode: "short_bow", State: itemsvc.StateWielded, Behaviour: itemsvc.BehaviourStock, Count: 1, MaxCount: 1,
+		DamageTypes: []string{"p"}, DamageSM: "1d6", DamageL: "1d6", WeaponType: "short_bow", WeaponKind: "missile",
+		Size: "m", Speed: 7, MagicToHit: 2, MagicDamage: 1, TwoHanded: true, Fires: "arrow", Specialized: true,
+		BaseAC: 4, SkillColumn: "metal", ArmorRow: "chain", ShieldKind: "body", ACMelee: 1, ACMissile: 2,
+		MagicKind: "misc",
+	}
+	row := queries.Item{
+		ID: "bow", Position: 2, Name: 7, Behaviour: "stock", Count: 1, MaxCount: 1, Powers: "[]", CharacterID: owner,
+		Category: "weapon", MagicKind: "misc", CatalogueCode: "short_bow", State: "wielded", WeaponType: "short_bow",
+		WeaponKind: "missile", Size: "m", DamageTypes: []string{"p"}, Speed: 7, DamageSm: "1d6", DamageL: "1d6",
+		MagicToHit: 2, MagicDamage: 1, TwoHanded: 1, Fires: "arrow", Specialized: 1, BaseAc: 4, SkillColumn: "metal",
+		ArmorRow: "chain", ShieldKind: "body", AcMelee: 1, AcMissile: 2,
+	}
+	q.EXPECT().GetItem(ctx, queries.GetItemParams{CharacterID: owner, ID: "bow"}).Return(row, nil).Once()
+	tq.EXPECT().GetText(ctx, int64(7)).Return([]textq.GetTextRow{{Lang: "en", Body: "Bow"}}, nil).Once()
+	got, err := dal.Get(ctx, owner, "bow")
+	require.NoError(t, err)
+	assert.Equal(t, piece, got)
+
+	q.EXPECT().UpdateItem(ctx, queries.UpdateItemParams{
+		Position: 2, Behaviour: "stock", Count: 1, MaxCount: 1, Powers: "[]", CharacterID: owner, ID: "bow",
+		Category: "weapon", MagicKind: "misc", CatalogueCode: "short_bow", State: "wielded", WeaponType: "short_bow",
+		WeaponKind: "missile", Size: "m", DamageTypes: []string{"p"}, Speed: 7, DamageSm: "1d6", DamageL: "1d6",
+		MagicToHit: 2, MagicDamage: 1, TwoHanded: 1, Fires: "arrow", Specialized: 1, BaseAc: 4, SkillColumn: "metal",
+		ArmorRow: "chain", ShieldKind: "body", AcMelee: 1, AcMissile: 2,
+	}).Return(7, nil).Once()
+	tq.EXPECT().DeleteText(ctx, int64(7)).Return(nil).Once()
+	tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 7, Lang: "en", Body: "Bow"}).Return(nil).Once()
+	require.NoError(t, dal.Update(ctx, owner, piece))
+}
+
+// ADR 0033 steps 26.3 and 27: the review rows map to reviews; a piece's
+// rows are deleted by its id; a renamed item's new id is read, an item not
+// renamed keeps its id.
+func TestReviewsAndRenames(t *testing.T) {
+	ctx := context.Background()
+	dal, q, _ := mocked(t)
+	q.EXPECT().ListReviews(ctx, owner).Return([]queries.ListReviewsRow{{ItemID: "mace", Reason: "weapon_unmatched"}}, nil).Once()
+	got, err := dal.Reviews(ctx, owner)
+	require.NoError(t, err)
+	assert.Equal(t, []itemsvc.Review{{ItemID: "mace", Reason: "weapon_unmatched"}}, got)
+
+	q.EXPECT().DeleteReviews(ctx, queries.DeleteReviewsParams{CharacterID: owner, ItemID: "mace"}).Return(nil).Once()
+	require.NoError(t, dal.DeleteReviews(ctx, owner, "mace"))
+
+	q.EXPECT().RenamedItemID(ctx, queries.RenamedItemIDParams{CharacterID: owner, OldID: "dagger"}).Return("dagger_2", nil).Once()
+	id, err := dal.RenamedID(ctx, owner, "dagger")
+	require.NoError(t, err)
+	assert.Equal(t, "dagger_2", id)
+	q.EXPECT().RenamedItemID(ctx, queries.RenamedItemIDParams{CharacterID: owner, OldID: "rope"}).Return("", sql.ErrNoRows).Once()
+	id, err = dal.RenamedID(ctx, owner, "rope")
+	require.NoError(t, err)
+	assert.Equal(t, "rope", id)
 }

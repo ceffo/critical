@@ -350,6 +350,14 @@ db-backup env:
 db-restore-drill dump="":
     scripts/db-restore-drill.sh {{dump}}
 
+# Local only: a database written by the release before the one equipment model (old ref, default the merge
+# base with origin/main) is upgraded by this checkout's server on a throwaway compose PostgreSQL (own project
+# and port, never `just dev`'s), then the conversion, old entries' pop/redo, restarts, the attack, Equip and
+# the spell components are checked through the API. Removes the compose project. Needs docker, psql, jq, go.
+# Rehearse the equipment upgrade
+equipment-rehearsal ref="":
+    scripts/equipment-upgrade-rehearsal.sh {{ref}}
+
 # ADR 0024 step 9.2, docs/deploy.md "Promotion". Admin, once: a random passphrase in
 # ~/.config/critical/restore-point.passphrase (never overwritten), set as the production secret
 # RESTORE_POINT_PASSPHRASE. Keep a copy in a password manager: GitHub never shows a secret back.

@@ -50,21 +50,19 @@ func TestPostgresStorage_EveryAdapterRunsOnTheCallersTransaction(t *testing.T) {
 	ctx := postgres.WithTx(context.Background(), conn{})
 	s := postgresStorage(&postgres.DB{})
 	calls := map[string]func(){
-		"Character":    func() { _, _ = s.Character.CharactersOf(ctx, uuid.New()) },
-		"HP":           func() { _, _ = s.HP.GetMaxHP(ctx, 1) },
-		"Log":          func() { _, _ = s.Log.HPTotal(ctx, 1) },
-		"Buff":         func() { _, _ = s.Buff.GetActiveBuffs(ctx, 1) },
-		"Spell":        func() { _, _ = s.Spell.GetSlots(ctx, 1) },
-		"Weapons":      func() { _, _ = s.Weapons.List(ctx, 1) },
-		"WeaponEditor": func() { _, _ = s.WeaponEditor.List(ctx, 1) },
-		"Crit":         func() { _, _ = s.Crit.List(ctx) },
-		"Items":        func() { _, _ = s.Items.List(ctx, 1) },
-		"Forms":        func() { _, _, _ = s.Forms.Get(ctx, 1) },
-		"XP":           func() { _, _ = s.XP.List(ctx, 1) },
-		"Skill":        func() { _, _ = s.Skill.ListProficiencies(ctx, 1) },
-		"Spellbook":    func() { _, _ = s.Spellbook.Keys(ctx, 1) },
-		"Dice":         func() { _, _ = s.Dice.List(ctx, 1) },
-		"Auth":         func() { _, _ = s.Auth.RootUser(ctx) },
+		"Character": func() { _, _ = s.Character.CharactersOf(ctx, uuid.New()) },
+		"HP":        func() { _, _ = s.HP.GetMaxHP(ctx, 1) },
+		"Log":       func() { _, _ = s.Log.HPTotal(ctx, 1) },
+		"Buff":      func() { _, _ = s.Buff.GetActiveBuffs(ctx, 1) },
+		"Spell":     func() { _, _ = s.Spell.GetSlots(ctx, 1) },
+		"Crit":      func() { _, _ = s.Crit.List(ctx) },
+		"Items":     func() { _, _ = s.Items.List(ctx, 1) },
+		"Forms":     func() { _, _, _ = s.Forms.Get(ctx, 1) },
+		"XP":        func() { _, _ = s.XP.List(ctx, 1) },
+		"Skill":     func() { _, _ = s.Skill.ListProficiencies(ctx, 1) },
+		"Spellbook": func() { _, _ = s.Spellbook.Keys(ctx, 1) },
+		"Dice":      func() { _, _ = s.Dice.List(ctx, 1) },
+		"Auth":      func() { _, _ = s.Auth.RootUser(ctx) },
 	}
 
 	fields := reflect.TypeFor[Storage]()

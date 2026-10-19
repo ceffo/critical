@@ -348,7 +348,11 @@
       "thac0": "TAC0"
     },
     "backstab": "Dans le dos ×{{n}}",
-    "backstabHint": "Attaque dans le dos : {{toHit}} au toucher, dés de dégâts de l’arme ×{{n}}"
+    "backstabHint": "Attaque dans le dos : {{toHit}} au toucher, dés de dégâts de l’arme ×{{n}}",
+    "equippedWeapons": "Équipées",
+    "otherWeaponsGroup": "Non équipées",
+    "pickEquips": "En choisir une l’équipe.",
+    "noWeaponInHand": "Aucune arme en main : choisissez-en une."
   },
   "saves": {
     "title": "Jets de sauvegarde",
@@ -1240,7 +1244,8 @@
       "spell_learn": "Apprentissage",
       "turn_undead": "Renvoi",
       "skill_points": "Talents",
-      "skill_armor": "Armure"
+      "skill_armor": "Armure",
+      "equipment_state": "Équipement"
     },
     "status": {
       "active": "Actif",
@@ -1317,7 +1322,30 @@
         "ammoKind": "type de munition",
         "effectDice": "dés d'effet",
         "effectSave": "JS de l'effet",
-        "notes": "note"
+        "notes": "note",
+        "category": "catégorie",
+        "magicKind": "type d’objet magique",
+        "state": "état",
+        "damageTypes": "types de dégâts",
+        "damageSm": "dégâts P-M",
+        "damageL": "dégâts G",
+        "weaponType": "type d’arme",
+        "weaponKind": "genre",
+        "size": "taille",
+        "speed": "vitesse",
+        "magicToHit": "bonus au toucher",
+        "magicDamage": "bonus aux dégâts",
+        "twoHanded": "à deux mains",
+        "fires": "tire",
+        "specialized": "spécialisée",
+        "baseAc": "CA de base",
+        "skillColumn": "colonne des talents",
+        "armorRow": "type d’armure",
+        "shieldKind": "type de bouclier",
+        "acMelee": "bonus de CA (mêlée)",
+        "acMissile": "bonus de CA (projectiles)",
+        "catalogueCode": "ligne du catalogue",
+        "component": "composante de sort"
       }
     },
     "initiative": "Initiative {{value}} (d10) pour le tour {{round}}",
@@ -1405,6 +1433,11 @@
     },
     "skillArmor": {
       "text": "Armure des talents : {{from}} → {{to}}"
+    },
+    "equipment": {
+      "equipped": "Équipé : {{name}}",
+      "unequipped": "Retiré : {{name}}",
+      "swapped": "Équipé : {{name}} (à la place de {{off}})"
     }
   },
   "critTable": {
@@ -1464,7 +1497,7 @@
       "twoHanded": "À deux mains",
       "ammoKind": "Type de munition",
       "ammoNone": "aucune (lancée)",
-      "weaponType": "Catégorie",
+      "weaponType": "Type d’arme",
       "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par round)",
       "specialized": "Spécialisée",
       "specializedHint": "Spécialisation du guerrier : +1 au toucher et +2 aux dégâts en mêlée ou lancée ; une arme de tir gagne +2 au toucher à bout portant",
@@ -1986,6 +2019,150 @@
       "special": "Spécial"
     },
     "turnLabel": "Repousser : {{undead}}"
+  },
+  "equipment": {
+    "title": "Possessions",
+    "all": "Tout",
+    "filter": "Afficher une catégorie",
+    "categories": {
+      "weapon": "Armes",
+      "ammunition": "Munitions",
+      "armour": "Armures",
+      "shield": "Boucliers",
+      "magic": "Magie",
+      "gear": "Équipement"
+    },
+    "category": {
+      "weapon": "Arme",
+      "ammunition": "Munition",
+      "armour": "Armure",
+      "shield": "Bouclier",
+      "magic": "Objet magique",
+      "gear": "Équipement"
+    },
+    "magicKinds": {
+      "potion": "Potion",
+      "scroll": "Parchemin",
+      "ring": "Anneau",
+      "rod": "Sceptre",
+      "staff": "Bâton",
+      "wand": "Baguette",
+      "misc": "Divers"
+    },
+    "ammoKinds": {
+      "arrow": "Flèche",
+      "quarrel": "Carreau",
+      "bullet": "Bille",
+      "needle": "Aiguille",
+      "blowgun_dart": "Fléchette de sarbacane"
+    },
+    "sizes": {
+      "s": "Petite",
+      "m": "Moyenne",
+      "l": "Grande"
+    },
+    "damageTypes": {
+      "b": "Contondant",
+      "p": "Perforant",
+      "s": "Tranchant"
+    },
+    "damageTypesShort": {
+      "b": "C",
+      "p": "P",
+      "s": "T"
+    },
+    "skillColumns": {
+      "none": "Sans armure",
+      "leather": "Cuir",
+      "padded_studded": "Matelassée ou cloutée",
+      "elven_chain": "Mailles elfiques",
+      "metal": "Métal (barde)",
+      "none_allowed": "Interdite aux voleurs et bardes"
+    },
+    "armorRows": {
+      "banded": "Armure à bandes",
+      "brigandine": "Brigandine",
+      "chain": "Cotte de mailles",
+      "field_plate": "Armure de plates",
+      "full_plate": "Armure de plates complète",
+      "leather": "Cuir",
+      "plate": "Harnois",
+      "ring": "Armure d’anneaux",
+      "scale": "Armure d’écailles",
+      "splint": "Armure de lamelles",
+      "studded_leather": "Cuir clouté"
+    },
+    "shieldKinds": {
+      "buckler": "Rondache",
+      "small": "Petit bouclier",
+      "medium": "Bouclier moyen",
+      "body": "Pavois"
+    },
+    "components": {
+      "gem": "Gemme"
+    },
+    "equip": "Équiper",
+    "unequip": "Retirer",
+    "equipped": "Équipé",
+    "equipHint": "Équiper {{name}}",
+    "unequipHint": "Retirer {{name}}",
+    "none": "Aucune possession.",
+    "noneInCategory": "Rien dans cette catégorie.",
+    "stats": {
+      "speed": "vitesse {{speed}}",
+      "magic": "{{hit}}/{{dmg}}",
+      "fires": "munition : {{kind}}",
+      "twoHanded": "deux mains",
+      "ac": "CA {{ac}}",
+      "skills": "talents : {{column}}",
+      "type": "type : {{row}}",
+      "shield": "CA −{{melee}}",
+      "shieldMissile": "CA −{{melee}} / −{{missile}} contre les projectiles",
+      "large": "G {{dice}}"
+    },
+    "review": {
+      "band_one": "{{count}} possession à vérifier après le passage au nouvel inventaire",
+      "band_other": "{{count}} possessions à vérifier après le passage au nouvel inventaire",
+      "open": "Vérifier",
+      "openHint": "Vérifier les possessions que le passage n’a pas pu classer",
+      "close": "Fermer",
+      "title": "À vérifier",
+      "intro": "Le passage au nouvel inventaire n’a pas pu tout classer.",
+      "tag": "À vérifier",
+      "edit": "Modifier",
+      "editHint": "Modifier {{name}}",
+      "dismiss": "Ignorer",
+      "dismissHint": "Retirer {{name}} de la liste tel quel",
+      "reasons": {
+        "weapon_unmatched": "Arme non reconnue : précisez sa vitesse et son type de dégâts.",
+        "uncategorised": "Catégorie inconnue (ancien type « {{type}} ») : rangée en équipement.",
+        "ammo_kind_unknown": "Type de munition inconnu : choisissez-en un.",
+        "powers_off": "Ses pouvoirs n’agissent qu’équipé, et cette catégorie ne s’équipe pas."
+      }
+    },
+    "form": {
+      "category": "Catégorie",
+      "magicKind": "Type d’objet magique",
+      "damageTypes": "Types de dégâts",
+      "size": "Taille",
+      "noSize": "Inconnue",
+      "speed": "Facteur de vitesse",
+      "fires": "Tire",
+      "firesNone": "Rien (lancée)",
+      "baseAc": "CA de base",
+      "skillColumn": "Colonne des talents",
+      "armorRow": "Type d’armure",
+      "shieldKind": "Type de bouclier",
+      "acMelee": "Bonus de CA (mêlée)",
+      "acMissile": "Bonus de CA (projectiles)",
+      "component": "Composante de sort",
+      "noComponent": "Aucune",
+      "componentHint": "Un sort qui dépense cette composante peut dépenser cette possession",
+      "errors": {
+        "not_allowed": "Pas permis pour cette possession.",
+        "slot_taken": "Une autre est déjà équipée."
+      }
+    }
   },
   "intro": {
     "title": "Bienvenue à la table",

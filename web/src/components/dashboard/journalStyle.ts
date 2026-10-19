@@ -21,6 +21,7 @@ import {
   Sparkle,
   Sword,
   TrendUp,
+  TShirt,
   type Icon,
   ListNumbers,
 } from "@phosphor-icons/react";
@@ -46,6 +47,7 @@ export const KIND_ICONS: Record<LogKind, Icon> = {
   weapon_add: Sword,
   weapon_edit: Sword,
   weapon_remove: Sword,
+  equipment_state: TShirt,
   xp_add: TrendUp,
   xp_edit: TrendUp,
   xp_remove: TrendUp,

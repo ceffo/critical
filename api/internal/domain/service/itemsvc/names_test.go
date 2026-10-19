@@ -100,8 +100,11 @@ func TestCreate_Step11_NameInThePlayersLanguage(t *testing.T) {
 	dal.EXPECT().Insert(mock.Anything, int64(1), mock.MatchedBy(func(it itemsvc.Item) bool {
 		return it.ID == "corde" && it.Name.Equal(localized.Text{"fr": "Corde"})
 	})).Return(nil).Once()
+	dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "corde").Return(nil).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
-	res, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{Name: localized.Text{"fr": " Corde "}, Behaviour: itemsvc.BehaviourStock, Count: 1})
+	res, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{
+		Name: localized.Text{"fr": " Corde "}, Category: itemsvc.CategoryGear, Behaviour: itemsvc.BehaviourStock, Count: 1,
+	})
 	require.NoError(t, err)
 	assert.Equal(t, localized.Text{"fr": "Corde"}, res.Item.Name)
 }
@@ -112,6 +115,8 @@ func TestCreate_Step11_NameInThePlayersLanguage(t *testing.T) {
 // now (an item that is gone comes back with that one).
 func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) {
 	restore := func(dal *mocks.MockDAL, state string) error {
+		// These snapshots predate the equipment model: read through the renames.
+		dal.EXPECT().RenamedID(mock.Anything, int64(1), "wand_lightning").Return("wand_lightning", nil).Once()
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
 		return svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, json.RawMessage(state))
 	}
@@ -125,7 +130,10 @@ func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) 
 		require.NoError(t, restore(dal, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Old wand",`+tail))
 	})
 	t.Run("language map", func(t *testing.T) {
-		dal := mocks.NewMockDAL(t) // no Get: the snapshot is the whole truth
+		dal := mocks.NewMockDAL(t)
+		// The name is the whole truth; the piece's own fields are read (the
+		// snapshot predates the model).
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wandBoth, nil).Once()
 		want := wandBoth
 		want.Name = localized.Text{"en": "Old wand"}
 		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()

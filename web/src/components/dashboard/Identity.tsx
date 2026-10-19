@@ -14,7 +14,6 @@ import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
 import { useRollStore } from "@/stores/roll";
 import { useXpStore } from "@/stores/xp";
-import type { Character } from "@/types/character";
 import { CharacterDetails } from "./CharacterDetails";
 import { LevelUpPrompt } from "./LevelUpPrompt";
 
@@ -22,16 +21,16 @@ const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
 
 /**
- * Who: the name, the class under it (muted), the level right-aligned on the name's line (a button opening the Expérience workspace, underlined with the server's
- * progress to the next level, ADR 0015) and right of it the way into the roster, "Vos personnages"
- * (ADR 0034 step 7.1), then the abilities in one row of seven cells and THAC0 last.
+ * Who: the name, the class under it (muted), the level right-aligned on the name's line (a button
+ * opening the Expérience workspace, underlined with the server's progress to the next level, ADR
+ * 0015) and right of it the way into the roster, "Vos personnages" (ADR 0034 step 7.1), then the
+ * abilities in one row of seven cells and THAC0 last.
  * Each ability tile rolls its check on the server (ADR 0028): the result card shows it.
  * STR is the server's effective value; changed by an effect, it shows only that value, in the
  * success colour, and the sheet value is in a tooltip on hover and keyboard focus, never under it
  * (ADR 0027 step 5.4: a click on a stat is kept for the ability check). The level and THAC0 are the
- * server's, derived from class and XP (ADR 0030 steps 3 and 5); a difference with the imported
- * sheet is listed under the abilities (step 24). A level whose hit points are owed shows its prompt
- * there too (step 7, LevelUpPrompt).
+ * server's, derived from class and XP (ADR 0030 steps 3 and 5). A level whose hit points are owed
+ * shows its prompt there too (step 7, LevelUpPrompt).
  */
 export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   const { t, i18n } = useTranslation();
@@ -224,43 +223,6 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
           onRoll={rollLevelUp}
         />
       )}
-      {character && character.derived.sheetDifferences.length > 0 && (
-        <SheetDifferences differences={character.derived.sheetDifferences} />
-      )}
-    </div>
-  );
-}
-
-/**
- * The values the imported sheet states differently from the server's rules (ADR 0030 step 24):
- * each one with the sheet's figure and the computed one, which the app uses. Rare (a data or rules
- * error), so it shows only when there is one; the server sends codes and numbers, worded here.
- */
-export function SheetDifferences({
-  differences,
-}: {
-  differences: Character["derived"]["sheetDifferences"];
-}) {
-  const { t } = useTranslation();
-  return (
-    <div
-      role="status"
-      data-testid="sheet-differences"
-      className="flex flex-col gap-0.5 rounded-md bg-raised px-2.5 py-1.5 text-body"
-    >
-      <p className="font-semibold text-warning">{t("app.sheetDiff.title")}</p>
-      <ul className="flex flex-col">
-        {differences.map((d) => (
-          <li key={d.value} className="tabular-nums">
-            {t("app.sheetDiff.item", {
-              value: t(`app.sheetDiff.values.${d.value}`),
-              sheet: d.sheet,
-              computed: d.computed,
-            })}
-          </li>
-        ))}
-      </ul>
-      <p className="text-muted-foreground">{t("app.sheetDiff.hint")}</p>
     </div>
   );
 }

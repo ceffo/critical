@@ -23,8 +23,7 @@ type previewView struct {
 }
 
 // The preview of a body is what a read of the character created from it
-// shows: the same derived block (level, THAC0, saves, slots, skills, budget,
-// no sheet difference) and the same warnings and languages, for every
+// shows: the same derived block (level, THAC0, saves, slots, skills, budget) and the same warnings and languages, for every
 // creatable class; and previewing stores nothing.
 func TestPreview_IsWhatTheCreatedCharacterReads(t *testing.T) {
 	bodies := map[string]string{

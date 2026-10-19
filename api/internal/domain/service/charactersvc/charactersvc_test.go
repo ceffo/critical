@@ -95,7 +95,6 @@ func TestList_IsTheOwnersCharactersAtTheirRealizedLevel(t *testing.T) {
 	e.rules.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 	e.rules.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
 	e.rules.EXPECT().BardSpellsPerDay(15).Return(level15Slots, nil).Once()
-	e.rules.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 	e.rules.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
 	got, err := e.svc.List(context.Background(), owner)
 	require.NoError(t, err)

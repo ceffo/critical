@@ -58,7 +58,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
 		HPMax: int(row.HpMax), RealizedLevel: int(row.RealizedLevel), XPTotal: int(row.XpTotal),
 		Class: row.Class, Race: row.RaceCode, SkillPoints: points, SkillArmor: row.SkillArmor,
-		// The figures the imported sheet stated (ADR 0030 step 24).
+		// The figures the imported sheet stated, kept as imported (ADR 0030 step 24, retired).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
 			ParaPoison: int(row.SaveParaPoison), RodStaffWand: int(row.SaveRodStaffWand),
 			PetriPoly: int(row.SavePetriPoly), Breath: int(row.SaveBreath), Spell: int(row.SaveSpell),
@@ -137,7 +137,7 @@ func (d *DAL) SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id int64
 
 // CreateCharacter implements charactersvc.Owners: the character's row, then
 // the rows that refer to it (its spell slots, buffs and round state). The
-// sheet's figures are c.Sheet (the derived values, ADR 0030 step 24); the
+// sheet's figures are c.Sheet (the derived values, kept as stored); the
 // details start empty.
 func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c charactersvc.Character) (int64, error) {
 	if err := d.lockUser(ctx, owner); err != nil {

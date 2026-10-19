@@ -49,8 +49,8 @@ id, name, str, dex, con, int, wis, cha,
 hp_max, thac0_base, level, xp_total, class, race_code
 -- (class and race_code are codes, '' race: none set; level, THAC0, saves and slots are derived
 --  from them and the XP total on every read, ADR 0030 steps 3 to 8 (charactersvc.Derive): the stored
---  level, thac0_base and save_* columns are the figures the imported sheet stated, only compared
---  with the derived ones (step 24, the response's derived.sheetDifferences), never inputs)
+--  level, thac0_base and save_* columns are the figures the imported sheet stated, kept as
+--  imported and compared with nothing (step 24, retired), never inputs)
 
 -- action_log: THE append-only log of table actions (HP ledger + combat log)
 id, character_id, round, kind TEXT, summary TEXT, hp_delta INTEGER, payload JSON, created_at,

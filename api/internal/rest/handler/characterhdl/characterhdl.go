@@ -226,31 +226,26 @@ type SlotCountDTO struct {
 	Count int `json:"count"`
 }
 
-// SheetDifferenceDTO is a value the imported sheet states differently from
-// the rules (ADR 0030 step 24): `value` is a code the web words.
-type SheetDifferenceDTO struct {
-	Value    string `json:"value"`
-	Sheet    int    `json:"sheet"`
-	Computed int    `json:"computed"`
-}
-
-// DerivedDTO is the values the rules derive (ADR 0030 steps 3 to 8, 22.1 and
-// 24). `xpTotal` is the starting XP plus the ledger, `targetLevel` the level
+// DerivedDTO is the values the rules derive (ADR 0030 steps 3 to 8, and 22.1).
+// `xpTotal` is the starting XP plus the ledger, `targetLevel` the level
 // it gives (step 3, never stored), `realizedLevel` the level taken (step 7),
 // which THAC0, saves and slots follow, `nextLevelXp` (the target's next
 // level) null at the last level, `raceSaveBonus` the race's bonus per category (0: none), the
 // slots by ascending spell level (levels without a slot left out).
 type DerivedDTO struct {
-	XPTotal          int                  `json:"xpTotal"`
-	TargetLevel      int                  `json:"targetLevel"`
-	RealizedLevel    int                  `json:"realizedLevel"`
-	NextLevelXP      *int                 `json:"nextLevelXp"`
-	THAC0            int                  `json:"thac0"`
-	Saves            SavesDTO             `json:"saves"`
-	RaceSaveBonus    SavesDTO             `json:"raceSaveBonus"`
-	SpellSlots       []SlotCountDTO       `json:"spellSlots"`
-	SheetDifferences []SheetDifferenceDTO `json:"sheetDifferences"`
-	LevelUp          LevelUpDTO           `json:"levelUp"`
+	XPTotal       int            `json:"xpTotal"`
+	TargetLevel   int            `json:"targetLevel"`
+	RealizedLevel int            `json:"realizedLevel"`
+	NextLevelXP   *int           `json:"nextLevelXp"`
+	THAC0         int            `json:"thac0"`
+	Saves         SavesDTO       `json:"saves"`
+	RaceSaveBonus SavesDTO       `json:"raceSaveBonus"`
+	SpellSlots    []SlotCountDTO `json:"spellSlots"`
+	// SheetDifferences is retired (ADR 0030 step 24) and always empty. The
+	// previous release's web reads `.length` on it, so the field stays one
+	// release for the rolling deploy; drop it after.
+	SheetDifferences []struct{} `json:"sheetDifferences"`
+	LevelUp          LevelUpDTO `json:"levelUp"`
 	// Specializes is ADR 0030 step 12: the class may specialize in a weapon.
 	Specializes bool `json:"specializes"`
 	// Spellbook is ADR 0030 step 20.1: the learning rules of a class with a
@@ -370,7 +365,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 	out := DerivedDTO{
 		XPTotal: d.XPTotal, TargetLevel: d.TargetLevel, RealizedLevel: d.RealizedLevel, NextLevelXP: d.NextLevelXP, THAC0: d.THAC0,
 		Saves: savesDTO(d.Saves), RaceSaveBonus: savesDTO(d.RaceSaveBonus),
-		SpellSlots: []SlotCountDTO{}, SheetDifferences: []SheetDifferenceDTO{},
+		SpellSlots: []SlotCountDTO{}, SheetDifferences: []struct{}{},
 		LevelUp: LevelUpDTO{
 			Pending: PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
 		},
@@ -397,9 +392,6 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		if n := d.SpellSlots[level]; n > 0 {
 			out.SpellSlots = append(out.SpellSlots, SlotCountDTO{Level: level, Count: n})
 		}
-	}
-	for _, diff := range d.SheetDifferences {
-		out.SheetDifferences = append(out.SheetDifferences, SheetDifferenceDTO{Value: string(diff.Value), Sheet: diff.Sheet, Computed: diff.Computed})
 	}
 	return out
 }

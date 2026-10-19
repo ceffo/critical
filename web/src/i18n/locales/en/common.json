@@ -8,20 +8,6 @@
     "error": "Error",
     "dismiss": "Dismiss",
     "strTitle": "STR {{effective}} (sheet {{base}})",
-    "sheetDiff": {
-      "title": "The sheet differs from the rules",
-      "hint": "The app uses the rules' value.",
-      "item": "{{value}}: sheet {{sheet}}, rules {{computed}}",
-      "values": {
-        "level": "Level",
-        "thac0": "THAC0",
-        "save_para_poison": "Save vs Paralysis/Poison",
-        "save_rod_staff_wand": "Save vs Rod/Staff/Wand",
-        "save_petri_poly": "Save vs Petrification/Polymorph",
-        "save_breath": "Save vs Breath",
-        "save_spell": "Save vs Spells"
-      }
-    },
     "levelUp": {
       "title": "Level {{level}} reached",
       "rollHint": "Hit die d{{die}}, plus the CON adjustment",

@@ -72,7 +72,7 @@ test("a natural 1 or 20 save reads the same live and after a reload", async ({
     await rollSpellSave(page);
     await expect
       .poll(async () => await logEntry(page, "Save vs Spells").count())
-      .toBe(i + 1);
+      .toBe(Math.min(i + 1, 50)); // the page reads the journal's newest 50 (the default page)
     live = await facts(card);
   }
   expect([1, 20], "no natural 1 or 20 in 100 saves").toContain(live.d20);

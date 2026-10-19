@@ -499,3 +499,58 @@ test("AC: follows the Armor spell and an Equip with no entry of its own; the ove
   await openWorkspace(page, "Act");
   await expect(logEntry(page, "AC override cleared")).toBeVisible();
 });
+
+// ADR 0033 step 17: the editor's "+N" and powers. What only a browser proves: the form's stepper and
+// template menu reach the server, the AC shield and its breakdown follow the saved edit and the
+// journal words the powers change; the rules (validation, aggregate, AC terms, pop) are Go tests.
+test("the editor's +N and a ring of protection template move the AC shield, named in its breakdown; undo gives the +N back", async ({
+  page,
+}) => {
+  await openInventory(page);
+  const value = page.getByTestId("ac-shield").getByTestId("ac-value");
+  const start = Number(await value.textContent());
+
+  await row(page, "leather")
+    .getByRole("button", { name: /^Edit / })
+    .click();
+  await form(page).getByRole("button", { name: "More magic" }).click();
+  await form(page).getByRole("button", { name: "More magic" }).click();
+  await expect(form(page).getByTestId("item-plus")).toHaveText("+2");
+  await form(page).getByRole("button", { name: "Save", exact: true }).click();
+  await expect(form(page)).toHaveCount(0);
+  await expect(value).toHaveText(String(start - 2));
+
+  await page.getByTestId("ac-shield").click();
+  const magic = page
+    .getByTestId("ac-popover")
+    .locator('[data-testid="ac-row"][data-term="armour_magic"]');
+  await expect(magic).toContainText("Fixture leather");
+  await expect(magic).toContainText("−2");
+  await page.keyboard.press("Escape");
+
+  await openTypedAdd(page);
+  await form(page).getByLabel("Name").fill("Ring of protection +1");
+  await form(page).getByLabel("Category").selectOption("magic");
+  await form(page).getByLabel("Magic kind").selectOption("ring");
+  await form(page).getByTestId("power-templates").click();
+  await page.getByTestId("power-template-ring_of_protection").click();
+  await expect(form(page).getByTestId("power-row")).toHaveCount(1);
+  await form(page).getByRole("button", { name: "Add", exact: true }).click();
+  await expect(form(page)).toHaveCount(0);
+  await row(page, "ring_of_protection_1")
+    .getByRole("button", { name: "Equip Ring of protection +1" })
+    .click();
+  await expect(
+    row(page, "ring_of_protection_1").getByTestId("item-equipped"),
+  ).toHaveText("Equipped");
+  // Over magic armour the ring's AC does not add (ADR 0033 step 12).
+  await expect(value).toHaveText(String(start - 2));
+
+  // The journal words the powers change; undo the Equip, the add, then the +N edit.
+  await openWorkspace(page, "Act");
+  await expect(logEntry(page, "powers none → magic +2")).toBeVisible();
+  await undoEntry(page, "Equipped: Ring of protection +1");
+  await undoEntry(page, "Added Ring of protection +1");
+  await undoEntry(page, "powers none → magic +2");
+  await expect(value).toHaveText(String(start));
+});

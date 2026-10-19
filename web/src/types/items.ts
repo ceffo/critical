@@ -120,8 +120,9 @@ export interface Item {
   effectSave: string;
   notes: string;
   /**
-   * The item's own powers (ADR 0016 steps 9 to 16), read only: never sent by the editor. Whether one
-   * is on is served with the effects list (GET /api/buffs); only while the piece is equipped.
+   * The item's own powers (ADR 0016 steps 9 to 16), set by the editor (ADR 0033 step 17; an armour's
+   * or a shield's "+N" is the power of id "magic", ac -N). Whether one is on is served with the
+   * effects list (GET /api/buffs); only while the piece is equipped.
    */
   powers: ItemPowerDef[];
   /** Weapon and ammunition: one or two of b, p, s, and the damage S-M / L (NdM). */
@@ -227,6 +228,11 @@ export interface ItemBody {
   shieldKind?: string;
   acMelee?: number;
   acMissile?: number;
+  /**
+   * The whole power list (ADR 0033 step 17): a PATCH's replaces the stored one, absent keeps it. A
+   * power sent with an empty id gets one. Refused on field `powers` (validated as the seed's).
+   */
+  powers?: ItemPowerDef[];
   /**
    * POST only: pick the piece from this catalogue row (ADR 0033 step 24). The server copies the row
    * and reads only name, count, notes and the magic (magicToHit and magicDamage, magicalBonus) with

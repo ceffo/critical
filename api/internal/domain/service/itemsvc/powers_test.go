@@ -114,10 +114,11 @@ func TestItemPowers_Step15_SnapshotCarriesThePowers(t *testing.T) {
 	require.NoError(t, rsvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
 }
 
-// ADR 0016 step 15: an edit never sets powers (the patch has no field for
-// them): editing the gem's name keeps its hammer, in the row and in the
-// snapshot's "after"; a created item has none.
-func TestItemPowers_Step15_EditBodyCannotSetPowers(t *testing.T) {
+// ADR 0016 step 15 (amended by ADR 0033 step 17: the editor sets powers):
+// an edit without powers keeps them: editing the gem's name keeps its
+// hammer, in the row and in the snapshot's "after"; a created item given
+// none has none.
+func TestItemPowers_Step15_AnEditWithoutPowersKeepsThem(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)

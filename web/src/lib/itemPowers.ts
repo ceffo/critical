@@ -84,3 +84,64 @@ export function powerEffectsText(t: TFunction, e: BuffEffects): string {
     parts.push(t("result.cast.fx.base_ac", { value: formatAc(e.base_ac) }));
   return parts.join(" · ");
 }
+
+/** A power as stored (itemsvc jsonPower: the item_edit change values, ADR 0033 step 17). */
+interface StoredPower {
+  id?: string;
+  trigger?: { min_str?: number };
+  effects?: BuffEffects;
+}
+
+/**
+ * One power in words: its effects, then its conditions and trigger ("Saves +2 · AC −2, without
+ * magic armour"). An armour's or a shield's "+N" (id magic) reads "+N".
+ */
+export function powerText(
+  t: TFunction,
+  p: { id?: string; minStr?: number; effects: BuffEffects },
+): string {
+  if (p.id === "magic" && p.effects.ac !== undefined && p.minStr === undefined)
+    return t("equipment.powers.plusText", {
+      value: formatSigned(-p.effects.ac),
+    });
+  const conditions: string[] = [];
+  if (p.effects.weapon_kind === "melee")
+    conditions.push(t("equipment.powers.meleeOnly"));
+  if (p.effects.weapon_kind === "missile")
+    conditions.push(t("equipment.powers.missileOnly"));
+  if (p.effects.without_magic_armour)
+    conditions.push(t("equipment.powers.withoutMagicArmour"));
+  if (p.minStr !== undefined)
+    conditions.push(t("result.cast.fx.min_str", { value: p.minStr }));
+  const effects = powerEffectsText(t, p.effects);
+  return conditions.length > 0
+    ? t("equipment.powers.withConditions", {
+        effects,
+        conditions: conditions.join(", "),
+      })
+    : effects;
+}
+
+/**
+ * An item_edit change value of the powers field (the stored encoding, ADR 0033 step 17) in words:
+ * each power, "none" for an empty list; the text as logged when it is not a list.
+ */
+export function powersChangeText(t: TFunction, value: string): string {
+  let list: unknown;
+  try {
+    list = JSON.parse(value);
+  } catch {
+    return value;
+  }
+  if (!Array.isArray(list)) return value;
+  if (list.length === 0) return t("equipment.powers.noneShort");
+  return (list as StoredPower[])
+    .map((p) =>
+      powerText(t, {
+        id: p.id,
+        minStr: p.trigger?.min_str,
+        effects: p.effects ?? {},
+      }),
+    )
+    .join(" ; ");
+}

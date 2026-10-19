@@ -11,6 +11,13 @@ import type {
   MagicKind,
 } from "@/types/items";
 import type { WeaponType } from "@/types/combat";
+import {
+  draftsToPowers,
+  plusOf,
+  powerDrafts,
+  powersKey,
+  type PowerDraft,
+} from "./powerEditor";
 
 /**
  * What the form holds: numbers stay text until submit; the name in the UI language (ADR 0023 step
@@ -53,6 +60,9 @@ export interface ItemDraft {
   shieldKind: string;
   acMelee: string;
   acMissile: string;
+  // Powers (ADR 0033 step 17): an armour's or a shield's "+N", and the other powers.
+  plus: number;
+  powers: PowerDraft[];
 }
 
 /** Fields of the form, named like the API's. */
@@ -125,6 +135,8 @@ export function emptyDraft(category: Category = "gear"): ItemDraft {
     shieldKind: "small",
     acMelee: "1",
     acMissile: "1",
+    plus: 0,
+    powers: [],
   };
 }
 
@@ -162,6 +174,8 @@ export function draftFromItem(i: Item, lang: string): ItemDraft {
     shieldKind: i.shieldKind || empty.shieldKind,
     acMelee: i.category === "shield" ? String(i.acMelee) : empty.acMelee,
     acMissile: i.category === "shield" ? String(i.acMissile) : empty.acMissile,
+    plus: plusOf(i.powers ?? []),
+    powers: powerDrafts(i.category, i.powers ?? []),
   };
 }
 
@@ -171,7 +185,7 @@ export function parseInteger(s: string): number {
   return /^[+-]?\d+$/.test(text) ? Number(text) : Number.NaN;
 }
 
-/** i18n key suffix per field that failed to parse as a number. */
+/** i18n key suffix per field that failed to parse as a number (a power's value: field powers). */
 export type DraftErrors = Partial<Record<ItemField, "notANumber">>;
 
 /**
@@ -230,10 +244,14 @@ export function draftToBody(
   for (const f of CATEGORY_FIELDS[d.category])
     out[f] = (all as Record<string, unknown>)[f];
   if (d.behaviour === "daily") body.maxCount = num("maxCount", d.maxCount);
+  // Every piece has powers (ADR 0033 step 17); the "+N" is an armour's or a shield's.
+  const powers = draftsToPowers(d.category, d.plus, d.powers);
+  if (powers) body.powers = powers;
+  else errors.powers = "notANumber";
   // Only the category's number fields count as errors.
   for (const f of Object.keys(errors) as ItemField[])
     if (
-      !["count", "maxCount"].includes(f) &&
+      !["count", "maxCount", "powers"].includes(f) &&
       !CATEGORY_FIELDS[d.category].includes(f)
     )
       delete errors[f];
@@ -256,6 +274,9 @@ export function changedFields(
   for (const [k, v] of Object.entries(body)) {
     if (k === "name") {
       if (sentName(body) !== localized(lang, item.name)) out[k] = v;
+    } else if (k === "powers") {
+      if (powersKey(body.powers ?? []) !== powersKey(item.powers ?? []))
+        out[k] = v;
     } else if (Array.isArray(v)) {
       const was = stored[k];
       if (!Array.isArray(was) || was.join("/") !== v.join("/")) out[k] = v;

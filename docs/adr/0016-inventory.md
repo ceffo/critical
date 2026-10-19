@@ -178,8 +178,8 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     existed has no `powers` key: popping it leaves the item's stored powers as they are, and an item
     it puts back while it is gone comes back without powers (see Consequences).
     Tests: `domain/service/itemsvc` `TestItemPowers_Step15_SnapshotCarriesThePowers`,
-    `TestItemPowers_Step15_EditBodyCannotSetPowers`, `TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers`;
-    `rest/router` `TestItems_PowersInABodyAreIgnored`.
+    `TestItemPowers_Step15_AnEditWithoutPowersKeepsThem`, `TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers`;
+    `rest/router` `TestItems_ADR0033Step17_PowersInTheBody` (since ADR 0033 step 17).
 16. **The Power Gem.** One item, "Power Gem" (type `gem`, `daily`, 1 a day), with two powers: its
     daily Dispel Magic, which stays the item's daily use (steps 1 to 3: no STR condition, 1/day, the
     10 m radius in its note, as today; not an entry of its power list), and the **thunder hammer**,

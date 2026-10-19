@@ -1346,7 +1346,8 @@
         "acMelee": "bonus de CA (mêlée)",
         "acMissile": "bonus de CA (projectiles)",
         "catalogueCode": "ligne du catalogue",
-        "component": "composante de sort"
+        "component": "composante de sort",
+        "powers": "pouvoirs"
       }
     },
     "initiative": "Initiative {{value}} (d10) pour le tour {{round}}",
@@ -2176,7 +2177,10 @@
         "not_allowed": "Pas permis pour cet objet.",
         "slot_taken": "Une autre est déjà équipée.",
         "unknown": "Absent du catalogue."
-      }
+      },
+      "plus": "Magie (+N)",
+      "plusLess": "Moins de magie",
+      "plusMore": "Plus de magie"
     },
     "add": {
       "title": "Ajouter",
@@ -2221,6 +2225,45 @@
       "addHint": "Ajouter {{name}} aux objets",
       "noMatch": "Rien ne correspond à « {{query}} ».",
       "noCatalogue": "Le catalogue n’a pas d’équipement : saisissez l’objet."
+    },
+    "powers": {
+      "title": "Pouvoirs",
+      "others": "Autres pouvoirs",
+      "hint": "actifs quand l’objet est équipé",
+      "othersHint": "la magie +N est déjà un pouvoir",
+      "none": "Aucun.",
+      "noneShort": "aucun",
+      "power": "Pouvoir {{n}}",
+      "effect": "Effet",
+      "value": "Valeur",
+      "removeEffect": "Retirer cet effet",
+      "addEffect": "Effet",
+      "addEffectHint": "Ajouter un effet à ce pouvoir",
+      "minStr": "FOR min.",
+      "minStrHint": "Le pouvoir n’agit qu’à partir de cette Force (vide : toujours)",
+      "weaponKind": "Jets concernés",
+      "everyRoll": "Tous les jets",
+      "meleeOnly": "mêlée seulement",
+      "missileOnly": "projectiles seulement",
+      "withoutMagicArmour": "sans armure magique",
+      "withoutMagicArmourHint": "Sa CA ne compte que si l’armure portée n’est pas magique (anneau de protection)",
+      "remove": "Retirer le pouvoir {{n}}",
+      "add": "Pouvoir",
+      "addHint": "Ajouter un pouvoir",
+      "templates": "Modèles",
+      "templatesHint": "Ajouter un anneau, une cape ou des bracelets courants",
+      "template": {
+        "ring_of_protection": "Anneau de protection +N",
+        "cloak_of_protection": "Cape de protection +N",
+        "bracers_of_defense": "Bracelets de défense CA N"
+      },
+      "templateHint": {
+        "ring_of_protection": "CA −N sans armure magique, sauvegardes +N",
+        "cloak_of_protection": "CA −N, sauvegardes +N",
+        "bracers_of_defense": "CA N comme une armure, sans armure"
+      },
+      "withConditions": "{{effects}} ({{conditions}})",
+      "plusText": "magie {{value}}"
     }
   },
   "intro": {

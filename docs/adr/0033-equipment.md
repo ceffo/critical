@@ -569,6 +569,26 @@ Saisir; the catalogue is read once (`GET /api/equipment/catalogue`, reference da
 "Votre exemplaire" has the name, the "+N" (weapon and ammunition only), the count (ammunition) and
 "Équiper tout de suite" (checked; not for ammunition).
 
+_Step 17 (as built, CRI-38)_: `POST` and `PATCH /api/items` take `powers` in the shape `GET` serves
+them (`{id, minStr?, effects}`, the buffs' effect keys): a PATCH's list replaces the stored one (`[]`
+removes them, absent keeps them), a POST's (typed or picked) is the new piece's. Validation is the
+seed's (`itemsvc.ValidatePowers`), refused as a field error on `powers`. Readings the ADR leaves open,
+fixed here: a power sent with an empty id gets the first free `power_<n>`; the reserved `magic` power
+is allowed on an armour or a shield only, as exactly one `ac` effect of -1 to -10 (`MaxBonus`), no
+trigger and no condition, and an edit that makes the piece another category drops it (logged with the
+edit); the picked armour or shield takes its "+N" too (ADR 0035 item 10's "Votre exemplaire"); the
+`item_edit` payload carries one `powers` change whose `before` / `after` are the stored encodings
+(`[]` for none), worded by the web ("magie +2", "Sauvegardes +1 · CA −1 (sans armure magique)").
+The editor shows the powers for every category (each power: effects, a STR trigger, the weapon-kind
+condition and `without_magic_armour`) and **Modèles** for a magic piece; armour and shields have the
+"+N" stepper (0 to 10) and their other powers. The `initiative` effect of step 11 is not offered:
+it does not exist before CRI-39 adds it. Tests: `TestEditor_ADR0033Step17_*` (itemsvc, composition:
+the +N and a ring of protection through the aggregate, the AC rows and a pop),
+`TestCreate_ADR0033Step17_PickedArmourKeepsItsPlusN`, `TestItems_ADR0033Step17_PowersInTheBody`
+(router); `web/src/lib/powerEditor.test.ts`, `catalogue.test.ts`, the `item_edit` journal fixture
+`editedPowers`; e2e `equipment.spec` "the editor's +N and a ring of protection template…" and
+`layout.spec` "the piece editor's powers and +N uncut…".
+
 CRI-32 (the design round) comes before the UI of slices 2 to 9. Slices 3 to 9 need slice 2; slices
 5, 7 and 8 need slice 1's data.
 

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
-import { catalogueRows, fold, pickBody, type CopyDraft } from "./catalogue";
+import {
+  catalogueRows,
+  fold,
+  minMagic,
+  pickBody,
+  type CopyDraft,
+} from "./catalogue";
 import type { EquipmentCatalogue } from "@/types/items";
 
 const catalogue: EquipmentCatalogue = {
@@ -133,7 +139,7 @@ describe("pickBody", () => {
     for (const count of ["x", "", "0", "-2", "1.5"])
       expect(pickBody(arrows, "ammunition", copy({ count }), "en")).toBeNull();
   });
-  it("gives armour no magic (its +N is a power)", () => {
+  it("gives armour its +N as the magic power, ac -N (ADR 0033 step 17)", () => {
     const mail = {
       code: "chain_mail",
       name: catalogue.armour[0].name,
@@ -141,6 +147,15 @@ describe("pickBody", () => {
     };
     expect(
       pickBody(mail, "armour", copy({ name: "Chain mail", magic: 3 }), "en"),
+    ).toEqual({
+      catalogueCode: "chain_mail",
+      powers: [{ id: "magic", effects: { ac: -3 } }],
+      equip: true,
+    });
+    expect(
+      pickBody(mail, "shield", copy({ name: "Chain mail", magic: 0 }), "en"),
     ).toEqual({ catalogueCode: "chain_mail", equip: true });
+    expect(minMagic("armour")).toBe(0);
+    expect(minMagic("weapon")).toBe(-10);
   });
 });

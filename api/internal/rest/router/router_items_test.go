@@ -181,18 +181,39 @@ func TestItems_UpdatePatchesOnlyTheFieldsSent(t *testing.T) {
 // ignored (an item served back as is still decodes, any other unknown key
 // stays refused); the patch and the input carry no powers. An item is
 // served with its powers, read only.
-func TestItems_PowersInABodyAreIgnored(t *testing.T) {
+// ADR 0033 step 17 (amending ADR 0016 step 15): a body's powers, in the
+// shape they are served, reach the service: a PATCH's replace the list (an
+// empty list too), a POST's are the new piece's; a PATCH without them keeps
+// them; an unknown key in a power is refused. The list is served back.
+func TestItems_ADR0033Step17_PowersInTheBody(t *testing.T) {
 	h, m := newRouter(t)
 	three := 3
-	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Count: &three}).
-		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 13}, nil)
-	rec := do(h, "PATCH", "/api/items/w", `{"count":3,"powers":[{"id":"x","effects":{"weapon_buff":9}}]}`)
+	ring := []itemsvc.Power{{ID: "protection", Effects: buffsvc.BuffEffects{AC: new(-1), SaveBonus: new(1), WithoutMagicArmour: true}}}
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Count: &three, Powers: &ring}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 13}, nil).Once()
+	rec := do(h, "PATCH", "/api/items/w", `{"count":3,"powers":[{"id":"protection","effects":{"ac":-1,"save_bonus":1,"without_magic_armour":true}}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1}).
-		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 14}, nil)
-	rec = do(h, "POST", "/api/items", `{"name":{"en":"Gem"},"behaviour":"daily","count":1,"maxCount":1,"powers":[{"id":"x"}]}`)
+	none := []itemsvc.Power(nil)
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Powers: &none}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 14}, nil).Once()
+	rec = do(h, "PATCH", "/api/items/w", `{"powers":[]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Count: &three}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 15}, nil).Once()
+	rec = do(h, "PATCH", "/api/items/w", `{"count":3}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{
+		Name: localized.Of("Plate +1"), Category: itemsvc.CategoryArmour, Behaviour: itemsvc.BehaviourStock, Count: 1,
+		Powers: []itemsvc.Power{itemsvc.MagicPower(1)},
+	}).Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 16}, nil).Once()
+	rec = do(h, "POST", "/api/items", `{"name":{"en":"Plate +1"},"category":"armour","behaviour":"stock","count":1,"powers":[{"id":"magic","effects":{"ac":-1}}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	rec = do(h, "PATCH", "/api/items/w", `{"powers":[{"id":"x","effects":{"bogus":1}}]}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
 	m.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{{
 		ID: "power_gem_dispel", Name: localized.Of("Power Gem"), Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1,

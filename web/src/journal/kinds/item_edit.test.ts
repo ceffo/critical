@@ -11,4 +11,13 @@ describeKind("item_edit", fixtures, {
       text: "Objet modifié : Rope, quantité 1 → 2",
     },
   },
+  // ADR 0033 step 17: a power change holds the stored lists; the journal words them.
+  editedPowers: {
+    en: {
+      text: "Edited Chain mail: powers none → magic +2 ; Saves +1 · AC −1 (without magic armour)",
+    },
+    fr: {
+      text: "Objet modifié : Chain mail, pouvoirs aucun → magie +2 ; Sauvegardes +1 · CA −1 (sans armure magique)",
+    },
+  },
 });

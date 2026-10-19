@@ -122,6 +122,7 @@ describe("draftToBody", () => {
       effectDice: "",
       effectSave: "",
       notes: "",
+      powers: [],
     });
   });
 

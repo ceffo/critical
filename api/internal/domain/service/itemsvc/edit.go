@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -38,6 +39,9 @@ type ItemInput struct {
 	EffectDice string
 	EffectSave string
 	Notes      string
+	// Powers are the piece's powers as the editor sets them (ADR 0033 step
+	// 17), picked or typed; one without an id gets power_<n>.
+	Powers []Power
 	// Ammunition.
 	AmmoKind   string
 	MagicBonus int
@@ -72,16 +76,19 @@ type ItemPatch struct {
 	// Name replaces the bodies of the languages it holds and keeps the
 	// others; a blank body removes its language; nil: unchanged (ADR 0023
 	// step 11).
-	Name        localized.Text
-	Category    *Category
-	MagicKind   *string
-	Component   *string
-	Behaviour   *Behaviour
-	Count       *int
-	MaxCount    *int
-	EffectDice  *string
-	EffectSave  *string
-	Notes       *string
+	Name       localized.Text
+	Category   *Category
+	MagicKind  *string
+	Component  *string
+	Behaviour  *Behaviour
+	Count      *int
+	MaxCount   *int
+	EffectDice *string
+	EffectSave *string
+	Notes      *string
+	// Powers replaces the whole power list (ADR 0033 step 17); nil:
+	// unchanged. One without an id gets power_<n>.
+	Powers      *[]Power
 	AmmoKind    *string
 	MagicBonus  *int
 	DamageTypes *[]string
@@ -268,7 +275,7 @@ func (s *service) newPiece(in ItemInput) (Item, error) {
 	return clean(Item{
 		Name: in.Name, Category: in.Category, MagicKind: in.MagicKind, Component: in.Component, State: StateCarried,
 		Behaviour: in.Behaviour, Count: in.Count, MaxCount: in.MaxCount,
-		EffectDice: in.EffectDice, EffectSave: in.EffectSave, Notes: in.Notes,
+		EffectDice: in.EffectDice, EffectSave: in.EffectSave, Notes: in.Notes, Powers: withPowerIDs(in.Powers),
 		AmmoKind: in.AmmoKind, MagicBonus: in.MagicBonus,
 		DamageTypes: in.DamageTypes, DamageSM: in.DamageSM, DamageL: in.DamageL,
 		WeaponType: in.WeaponType, WeaponKind: in.WeaponKind, Size: in.Size, Speed: in.Speed,
@@ -401,6 +408,16 @@ func patched(old Item, p ItemPatch) Item {
 	if p.DamageTypes != nil {
 		item.DamageTypes = *p.DamageTypes
 	}
+	if p.Powers != nil {
+		item.Powers = withPowerIDs(*p.Powers)
+	} else if p.Category != nil && item.Category != CategoryArmour && item.Category != CategoryShield {
+		// The "+N" is an armour's or a shield's (ADR 0033 step 17): a piece
+		// that stops being one drops it, logged with the edit.
+		item.Powers = slices.DeleteFunc(slices.Clone(item.Powers), func(pw Power) bool { return pw.ID == MagicPowerID })
+		if len(item.Powers) == 0 {
+			item.Powers = nil
+		}
+	}
 	set(&item.MagicKind, p.MagicKind)
 	set(&item.Component, p.Component)
 	set(&item.EffectDice, p.EffectDice)
@@ -520,6 +537,7 @@ func diff(a, b Item) []FieldChange {
 	add("effectDice", a.EffectDice, b.EffectDice)
 	add("effectSave", a.EffectSave, b.EffectSave)
 	add("notes", a.Notes, b.Notes)
+	add("powers", powersText(a.Powers), powersText(b.Powers))
 	add("damageTypes", strings.Join(a.DamageTypes, "/"), strings.Join(b.DamageTypes, "/"))
 	add("damageSm", a.DamageSM, b.DamageSM)
 	add("damageL", a.DamageL, b.DamageL)
@@ -539,4 +557,14 @@ func diff(a, b Item) []FieldChange {
 	add("acMelee", num(a.ACMelee), num(b.ACMelee))
 	add("acMissile", num(a.ACMissile), num(b.ACMissile))
 	return out
+}
+
+// powersText is a power list as an item_edit change value (ADR 0033 step 17):
+// its stored JSON encoding ("[]" for none), which the web words.
+func powersText(powers []Power) string {
+	text, err := EncodePowers(powers)
+	if err != nil {
+		return ""
+	}
+	return text
 }

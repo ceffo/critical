@@ -9,6 +9,7 @@ import type {
   PickedCategory,
 } from "@/types/items";
 import type { LocalizedText } from "@/types/localized";
+import { hasPlus, MAX_PLUS, plusPower } from "./powerEditor";
 
 /** One catalogue row as the list shows it: its code, its name and its cells after the name. */
 export interface CatalogueRow {
@@ -101,16 +102,22 @@ export function catalogueRows(
 export interface CopyDraft {
   /** The name as shown; sent only when the player changed it from the row's. */
   name: string;
-  /** The "+N": a weapon's to hit and damage, an ammunition's bonus; none for armour and shields. */
+  /**
+   * The "+N": a weapon's to hit and damage, an ammunition's bonus, an armour's or a shield's magic
+   * power (ac -N, ADR 0033 step 17).
+   */
   magic: number;
   /** Ammunition only. */
   count: string;
   equip: boolean;
 }
 
-/** Whether a category's copy takes a "+N" here (the armour and shield "+N" is a power, ADR 0033 step 17). */
-export function hasMagic(category: PickedCategory): boolean {
-  return category === "weapon" || category === "ammunition";
+/**
+ * The lowest "+N" a category's copy takes: a weapon's or ammunition's magic may be a minus, an
+ * armour's or a shield's is a power that betters the AC, from +1 (ADR 0033 step 17), 0 for none.
+ */
+export function minMagic(category: PickedCategory): number {
+  return hasPlus(category) ? 0 : -MAX_PLUS;
 }
 
 /** Whether a category's copy can be equipped at once (ammunition is carried only, ADR 0033 step 6). */
@@ -144,6 +151,7 @@ export function pickBody(
       return null;
     body.count = count;
   }
+  if (hasPlus(category) && copy.magic > 0) body.powers = plusPower(copy.magic);
   if (canEquip(category) && copy.equip) body.equip = true;
   return body;
 }

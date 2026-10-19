@@ -1346,7 +1346,8 @@
         "acMelee": "AC bonus (melee)",
         "acMissile": "AC bonus (missiles)",
         "catalogueCode": "catalogue row",
-        "component": "spell component"
+        "component": "spell component",
+        "powers": "powers"
       }
     },
     "initiative": "Initiative {{value}} (d10) for round {{round}}",
@@ -2176,7 +2177,10 @@
         "not_allowed": "Not allowed for this item.",
         "slot_taken": "Another one is already equipped.",
         "unknown": "Not in the catalogue."
-      }
+      },
+      "plus": "Magic (+N)",
+      "plusLess": "Less magic",
+      "plusMore": "More magic"
     },
     "add": {
       "title": "Add",
@@ -2221,6 +2225,45 @@
       "addHint": "Add {{name}} to the inventory",
       "noMatch": "Nothing matches “{{query}}”.",
       "noCatalogue": "The catalogue has no equipment: type the item in."
+    },
+    "powers": {
+      "title": "Powers",
+      "others": "Other powers",
+      "hint": "on while the item is equipped",
+      "othersHint": "the +N magic is a power already",
+      "none": "None.",
+      "noneShort": "none",
+      "power": "Power {{n}}",
+      "effect": "Effect",
+      "value": "Value",
+      "removeEffect": "Remove this effect",
+      "addEffect": "Effect",
+      "addEffectHint": "Add an effect to this power",
+      "minStr": "Min. STR",
+      "minStrHint": "The power works only from this Strength on (empty: always)",
+      "weaponKind": "Rolls it counts for",
+      "everyRoll": "Every roll",
+      "meleeOnly": "melee only",
+      "missileOnly": "missiles only",
+      "withoutMagicArmour": "without magic armour",
+      "withoutMagicArmourHint": "Its AC counts only while the worn armour has no magic (a ring of protection)",
+      "remove": "Remove power {{n}}",
+      "add": "Power",
+      "addHint": "Add a power",
+      "templates": "Templates",
+      "templatesHint": "Add a common protection item",
+      "template": {
+        "ring_of_protection": "Ring of protection +N",
+        "cloak_of_protection": "Cloak of protection +N",
+        "bracers_of_defense": "Bracers of defense AC N"
+      },
+      "templateHint": {
+        "ring_of_protection": "AC −N without magic armour, saves +N",
+        "cloak_of_protection": "AC −N, saves +N",
+        "bracers_of_defense": "AC N as if armoured, without armour"
+      },
+      "withConditions": "{{effects}} ({{conditions}})",
+      "plusText": "magic {{value}}"
     }
   },
   "intro": {

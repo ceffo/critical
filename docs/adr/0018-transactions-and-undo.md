@@ -195,6 +195,10 @@ W4 and W7); not implemented. Each point is built by the item named and gets its 
    `TestPop_KeepsEntriesAndSnapshots` (the adapter writes and reads the envelope columns) and
    `TestGetEntry_ASnapshotWithoutEnvelopesReadsAsNil`; `domain/service/actionlogsvc` `TestUndo`
    and `TestRedo_ReplaysTheNewestPoppedTransaction` ("a snapshot not re-encoded yet is refused").
+   Rehearsal on copies of a real database (`just snapshot-rehearsal`,
+   `scripts/snapshot-codec-rehearsal.sh`): the rolling deploy beside the release before, the
+   follow-up's re-run of the step, a failing step rolling the run back, and every stack popped and
+   replayed with the same state as the release before.
 10. **The log says which entries are rolls.** `GET /api/log` marks each entry that is one of the roll
     kinds (`actionlog.RollKinds`); the web keeps no copy of the list (W4).
 11. **A mutation answers with its state keys.** Every state-changing request, undo and redo included,

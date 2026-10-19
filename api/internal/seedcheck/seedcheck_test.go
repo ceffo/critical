@@ -340,6 +340,34 @@ func TestWebWeaponTypes_MatchTheServicesList(t *testing.T) {
 	assert.Equal(t, itemsvc.WeaponTypes, codes)
 }
 
+// ADR 0033 step 1.1: every component a spell spends (consume_item.type) is a
+// code of itemsvc.Components, so a piece the editor marks can be spent.
+func TestRepoSeeds_Step1_1_EverySpentComponentIsKnown(t *testing.T) {
+	effects, err := spelleffectsadpt.New(seedsDir)
+	require.NoError(t, err)
+	n := 0
+	for _, e := range effects.All() {
+		if e.ConsumeItem != nil {
+			n++
+			assert.Contains(t, itemsvc.Components, e.ConsumeItem.Type, "spell %s spends an unknown component", e.ID)
+		}
+	}
+	assert.NotZero(t, n, "the Chromatic Orb spends a gem")
+}
+
+// The web's COMPONENTS is itemsvc.Components, in the same order (one owner, no drift).
+func TestWebComponents_MatchTheServicesList(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "src", "types", "items.ts"))
+	require.NoError(t, err)
+	m := regexp.MustCompile(`(?s)export const COMPONENTS = \[(.*?)\] as const`).FindSubmatch(raw)
+	require.NotNil(t, m, "COMPONENTS not found in web/src/types/items.ts")
+	var codes []string
+	for _, q := range regexp.MustCompile(`"([a-z_]+)"`).FindAllSubmatch(m[1], -1) {
+		codes = append(codes, string(q[1]))
+	}
+	assert.Equal(t, itemsvc.Components, codes)
+}
+
 func TestRepoSeeds_ItemsReferenceRealWeapons(t *testing.T) {
 	var weapons []struct {
 		ID       string `json:"id"`

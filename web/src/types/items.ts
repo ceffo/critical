@@ -43,6 +43,13 @@ export const AMMO_KINDS = [
   "blowgun_dart",
 ] as const;
 
+/**
+ * The spell components a piece may be (ADR 0033 step 1.1, itemsvc.Components): a spell that spends
+ * one (consume_item, the Chromatic Orb's gem) spends a piece of that code, whatever its category.
+ */
+export const COMPONENTS = ["gem"] as const;
+export type Component = (typeof COMPONENTS)[number];
+
 /** PHB Table 29 columns an armour reads (ADR 0033 step 5, itemsvc.SkillColumns). */
 export const SKILL_COLUMNS = [
   "none",
@@ -94,10 +101,12 @@ export interface Item {
   magicKind: MagicKind | "";
   /** The catalogue row it was picked from or matched to; empty for homebrew. */
   catalogueCode: string;
+  /** The spell component it is (ADR 0033 step 1.1); empty for none. */
+  component: Component | "";
   state: ItemState;
   /** The state Equip moves the piece to (server rule, ADR 0033 step 6); empty: carried only. */
   equipState: ItemState | "";
-  /** The free-text label of before the equipment model, read only (not shown). */
+  /** The free-text label of before the equipment model, read only (not shown, read by nothing). */
   type: string;
   behaviour: ItemBehaviour;
   /** Magical bonus (+N): to hit and damage when fired as ammo. */
@@ -189,6 +198,7 @@ export interface ItemBody {
   name?: LocalizedText;
   category?: Category;
   magicKind?: MagicKind | "";
+  component?: Component | "";
   behaviour?: ItemBehaviour;
   count?: number;
   /** The daily number (daily items only). */

@@ -78,6 +78,9 @@ func (i Item) Validate() error {
 	} else if i.MagicKind != "" {
 		return fieldErr("magicKind", "Only a magic piece has a magic kind")
 	}
+	if i.Component != "" && !slices.Contains(Components, i.Component) {
+		return fieldErr("component", "Unknown component")
+	}
 	if !i.State.Valid() || !Allows(i.Category, i.MagicKind, i.State) {
 		return fieldErr("state", CodeNotAllowed)
 	}

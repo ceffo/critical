@@ -188,6 +188,23 @@ func TestConvert_Step26_5_ItemsByLabelAndLauncherDice(t *testing.T) {
 // uncategorised one becomes a miscellaneous magic piece, worn, on the review
 // list; one that cannot be worn stays carried with the powers off, on the
 // review list.
+// ADR 0033 step 1.1: the conversion copies a type label that names a
+// component (the label the spells matched, any case, singular or plural)
+// into the component code; any other label leaves it empty.
+func TestConvert_Step1_1_ComponentFromTheLabel(t *testing.T) {
+	for label, want := range map[string]string{"gem": "gem", " Gem ": "gem", "GEMS": "gem", "sac": "", "": "", "gemme": ""} {
+		t.Run(label, func(t *testing.T) {
+			it := legacySack
+			it.Type = label
+			piece, _ := itemsvc.ConvertItem(it)
+			assert.Equal(t, want, piece.Component)
+			assert.Equal(t, label, piece.Type, "the label is kept as stored")
+		})
+	}
+	conv := itemsvc.Convert([]itemsvc.Item{legacyGem}, nil, catalogueWeapons)
+	assert.Equal(t, itemsvc.ComponentGem, conv.Pieces[0].Component, "the Power Gem is a gem (daily: never spent)")
+}
+
 func TestConvert_Step26_6_PowersStayOnOrAreReviewed(t *testing.T) {
 	luck := []itemsvc.Power{{ID: "luck", Effects: buffsvc.BuffEffects{SaveBonus: ptr(1)}}}
 	amulet, reasons := itemsvc.ConvertItem(itemsvc.Item{ID: "amulet", Type: "amulet", Behaviour: itemsvc.BehaviourStock, Count: 1, Powers: luck})

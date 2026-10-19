@@ -183,16 +183,17 @@ func TestInfo_DamageAtTheCharacterLevel(t *testing.T) {
 }
 
 // A spell that consumes an item lists the inventory items it can spend now:
-// of its type, not daily, some left (itemsvc.Item.Spendable). A spell that
+// of its component (ADR 0033 step 1.1), not daily, some left (itemsvc.Item.Spendable). A spell that
 // consumes nothing lists none, whatever the inventory holds.
 func TestInfo_ServesTheItemsTheSpellCanSpend(t *testing.T) {
 	f := newFixture(t)
 	f.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{
-		{ID: "ruby", Name: localized.Of("Ruby"), Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2},
-		{ID: "opal", Name: localized.Of("Opal"), Type: "Gem", Behaviour: itemsvc.BehaviourCharges, Count: 1},
-		{ID: "spent", Name: localized.Of("Spent"), Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 0},
-		{ID: "daily", Name: localized.Of("Daily"), Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 3},
+		{ID: "ruby", Name: localized.Of("Ruby"), Component: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2},
+		{ID: "opal", Name: localized.Of("Opal"), Component: "gem", Behaviour: itemsvc.BehaviourCharges, Count: 1},
+		{ID: "spent", Name: localized.Of("Spent"), Component: "gem", Behaviour: itemsvc.BehaviourStock, Count: 0},
+		{ID: "daily", Name: localized.Of("Daily"), Component: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 3},
 		{ID: "arrow", Name: localized.Of("Arrow"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 20},
+		{ID: "label", Name: localized.Of("Old gem"), Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 1},
 	}, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)

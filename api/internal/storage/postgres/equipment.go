@@ -113,7 +113,7 @@ func insertPiece(ctx context.Context, q storeq.Querier, owner int64, p itemsvc.I
 		Behaviour: string(p.Behaviour), MagicBonus: int64(p.MagicBonus), AmmoKind: p.AmmoKind,
 		Count: int64(p.Count), MaxCount: int64(p.MaxCount), EffectDice: p.EffectDice, EffectSave: p.EffectSave,
 		Notes: p.Notes, Powers: powers, Category: string(p.Category), MagicKind: p.MagicKind,
-		CatalogueCode: p.CatalogueCode, State: string(p.State), WeaponType: p.WeaponType, WeaponKind: p.WeaponKind,
+		CatalogueCode: p.CatalogueCode, Component: p.Component, State: string(p.State), WeaponType: p.WeaponType, WeaponKind: p.WeaponKind,
 		Size: p.Size, DamageTypes: damageTypes, Speed: int64(p.Speed), DamageSm: p.DamageSM, DamageL: p.DamageL,
 		MagicToHit: int64(p.MagicToHit), MagicDamage: int64(p.MagicDamage), TwoHanded: boolInt(p.TwoHanded),
 		Fires: p.Fires, Specialized: boolInt(p.Specialized), BaseAc: int64(p.BaseAC), SkillColumn: p.SkillColumn,

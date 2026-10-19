@@ -358,8 +358,10 @@ func TestRestock_UnknownItem(t *testing.T) {
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
-func TestItem_Spendable(t *testing.T) {
-	base := itemsvc.Item{Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 1}
+// ADR 0033 step 1.1: a spell spends a piece by its component code, never by
+// the free-text type label, whatever its category.
+func TestItem_Step1_1_Spendable(t *testing.T) {
+	base := itemsvc.Item{Component: itemsvc.ComponentGem, Category: itemsvc.CategoryGear, Behaviour: itemsvc.BehaviourStock, Count: 1}
 	tests := []struct {
 		name string
 		mod  func(*itemsvc.Item)
@@ -367,8 +369,9 @@ func TestItem_Spendable(t *testing.T) {
 	}{
 		{"stock with some left", func(*itemsvc.Item) {}, true},
 		{"charges with some left", func(i *itemsvc.Item) { i.Behaviour = itemsvc.BehaviourCharges }, true},
-		{"type compared without case", func(i *itemsvc.Item) { i.Type = "GEM" }, true},
-		{"other type", func(i *itemsvc.Item) { i.Type = "arrow" }, false},
+		{"any category", func(i *itemsvc.Item) { i.Category, i.MagicKind = itemsvc.CategoryMagic, itemsvc.MagicMisc }, true},
+		{"no component", func(i *itemsvc.Item) { i.Component = "" }, false},
+		{"the type label alone", func(i *itemsvc.Item) { i.Component, i.Type = "", "gem" }, false},
 		{"daily item", func(i *itemsvc.Item) { i.Behaviour = itemsvc.BehaviourDaily }, false},
 		{"none left", func(i *itemsvc.Item) { i.Count = 0 }, false},
 	}

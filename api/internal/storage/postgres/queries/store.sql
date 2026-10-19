@@ -104,13 +104,13 @@ SELECT ((SELECT COUNT(*) FROM proficiencies p WHERE p.character_id = sqlc.arg(ch
 -- A piece of equipment (ADR 0033 step 1), every column: the seed and the conversion write it.
 -- name: InsertItem :exec
 INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,
-                   effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, state,
-                   weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit,
+                   effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, component,
+                   state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit,
                    magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind,
                    ac_melee, ac_missile)
 VALUES (sqlc.arg(character_id)::bigint, @id, @position, @name, @type, @behaviour, @magic_bonus, @ammo_kind, @count,
-        @max_count, @effect_dice, @effect_save, @notes, @powers, @category, @magic_kind, @catalogue_code, @state,
-        @weapon_type, @weapon_kind, @size, @damage_types, @speed, @damage_sm, @damage_l, @magic_to_hit,
+        @max_count, @effect_dice, @effect_save, @notes, @powers, @category, @magic_kind, @catalogue_code, @component,
+        @state, @weapon_type, @weapon_kind, @size, @damage_types, @speed, @damage_sm, @damage_l, @magic_to_hit,
         @magic_damage, @two_handed, @fires, @specialized, @base_ac, @skill_column, @armor_row, @shield_kind,
         @ac_melee, @ac_missile);
 

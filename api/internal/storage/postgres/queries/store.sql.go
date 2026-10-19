@@ -345,15 +345,15 @@ func (q *Queries) InsertCharacter(ctx context.Context, arg InsertCharacterParams
 
 const insertItem = `-- name: InsertItem :exec
 INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,
-                   effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, state,
-                   weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit,
+                   effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, component,
+                   state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit,
                    magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind,
                    ac_melee, ac_missile)
 VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8, $9,
         $10, $11, $12, $13, $14, $15, $16, $17, $18,
-        $19, $20, $21, $22, $23, $24, $25, $26,
-        $27, $28, $29, $30, $31, $32, $33, $34,
-        $35, $36)
+        $19, $20, $21, $22, $23, $24, $25, $26, $27,
+        $28, $29, $30, $31, $32, $33, $34, $35,
+        $36, $37)
 `
 
 type InsertItemParams struct {
@@ -374,6 +374,7 @@ type InsertItemParams struct {
 	Category      string
 	MagicKind     string
 	CatalogueCode string
+	Component     string
 	State         string
 	WeaponType    string
 	WeaponKind    string
@@ -415,6 +416,7 @@ func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
 		arg.Category,
 		arg.MagicKind,
 		arg.CatalogueCode,
+		arg.Component,
 		arg.State,
 		arg.WeaponType,
 		arg.WeaponKind,

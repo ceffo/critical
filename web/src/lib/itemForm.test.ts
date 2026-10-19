@@ -17,6 +17,7 @@ function piece(p: Partial<Item>): Item {
     category: "gear",
     magicKind: "",
     catalogueCode: "",
+    component: "",
     state: "carried",
     equipState: "",
     type: "",
@@ -110,6 +111,7 @@ describe("draftToBody", () => {
     expect(body).toEqual({
       name: { en: "Arrows +3" },
       category: "ammunition",
+      component: "",
       behaviour: "stock",
       count: 6,
       magicalBonus: 3,
@@ -226,6 +228,17 @@ describe("changedFields", () => {
       behaviour: "daily",
       maxCount: 4,
     });
+  });
+
+  it("sends the spell component, whatever the category (ADR 0033 step 1.1)", () => {
+    const { body } = draftToBody(
+      { ...draftFromItem(wand, "en"), component: "gem" },
+      "en",
+    );
+    expect(changedFields(wand, body, "en")).toEqual({ component: "gem" });
+    expect(draftFromItem({ ...wand, component: "gem" }, "en").component).toBe(
+      "gem",
+    );
   });
 
   it("is empty when nothing changed", () => {

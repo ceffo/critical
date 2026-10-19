@@ -159,6 +159,19 @@ func label(t string) (Category, string, bool) {
 	return "", "", false
 }
 
+// component is the component code a type label names (ADR 0033 step 1.1:
+// the label a spell's consume_item matched, case-insensitive, singular or
+// plural), empty for none.
+func component(t string) string {
+	t = strings.ToLower(strings.TrimSpace(t))
+	for _, c := range Components {
+		if t == c || t == c+"s" {
+			return c
+		}
+	}
+	return ""
+}
+
 // ammoKinds reads the ammo kinds typed before the model (ADR 0033 step 4's
 // codes, their plurals, and bolt for quarrel); any other is kept as typed.
 func ammoKind(kind string) (string, bool) {
@@ -185,6 +198,7 @@ func ConvertItem(it Item) (Item, []string) {
 	var reasons []string
 	piece := it
 	piece.State = StateCarried
+	piece.Component = component(it.Type)
 	cat, value, known := label(it.Type)
 	switch {
 	case strings.TrimSpace(it.AmmoKind) != "" || (known && cat == CategoryAmmunition):

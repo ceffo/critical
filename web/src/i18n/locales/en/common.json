@@ -1344,7 +1344,8 @@
         "shieldKind": "shield kind",
         "acMelee": "AC bonus (melee)",
         "acMissile": "AC bonus (missiles)",
-        "catalogueCode": "catalogue row"
+        "catalogueCode": "catalogue row",
+        "component": "spell component"
       }
     },
     "initiative": "Initiative {{value}} (d10) for round {{round}}",
@@ -2049,6 +2050,9 @@
       "medium": "Medium shield",
       "body": "Body shield"
     },
+    "components": {
+      "gem": "Gem"
+    },
     "equip": "Equip",
     "unequip": "Unequip",
     "equipped": "Equipped",
@@ -2103,6 +2107,9 @@
       "shieldKind": "Shield kind",
       "acMelee": "AC bonus (melee)",
       "acMissile": "AC bonus (missiles)",
+      "component": "Spell component",
+      "noComponent": "None",
+      "componentHint": "A spell that spends this component can spend this piece",
       "errors": {
         "not_allowed": "Not allowed for this piece.",
         "slot_taken": "Another one is already equipped."

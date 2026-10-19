@@ -17,12 +17,14 @@ import {
   AMMO_KINDS,
   ARMOR_ROWS,
   CATEGORIES,
+  COMPONENTS,
   DAMAGE_TYPES,
   MAGIC_KINDS,
   SHIELD_KINDS,
   SIZES,
   SKILL_COLUMNS,
   type Category,
+  type Component,
   type Item,
   type ItemBehaviour,
   type ItemBody,
@@ -475,6 +477,22 @@ export function ItemForm({
             {SAVES.map((s) => (
               <option key={s} value={s}>
                 {t(`saves.categories.${s}`)}
+              </option>
+            ))}
+          </select>
+        ))}
+        {field("component", t("equipment.form.component"), (props) => (
+          <select
+            {...props}
+            className={cn(fieldClass, errors.component && "border-destructive")}
+            title={t("equipment.form.componentHint")}
+            value={draft.component}
+            onChange={(e) => set("component", e.target.value as Component | "")}
+          >
+            <option value="">{t("equipment.form.noComponent")}</option>
+            {COMPONENTS.map((c) => (
+              <option key={c} value={c}>
+                {t(`equipment.components.${c}`)}
               </option>
             ))}
           </select>

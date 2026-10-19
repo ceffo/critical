@@ -1344,7 +1344,8 @@
         "shieldKind": "type de bouclier",
         "acMelee": "bonus de CA (mêlée)",
         "acMissile": "bonus de CA (projectiles)",
-        "catalogueCode": "ligne du catalogue"
+        "catalogueCode": "ligne du catalogue",
+        "component": "composante de sort"
       }
     },
     "initiative": "Initiative {{value}} (d10) pour le tour {{round}}",
@@ -2049,6 +2050,9 @@
       "medium": "Bouclier moyen",
       "body": "Pavois"
     },
+    "components": {
+      "gem": "Gemme"
+    },
     "equip": "Équiper",
     "unequip": "Retirer",
     "equipped": "Équipé",
@@ -2103,6 +2107,9 @@
       "shieldKind": "Type de bouclier",
       "acMelee": "Bonus de CA (mêlée)",
       "acMissile": "Bonus de CA (projectiles)",
+      "component": "Composante de sort",
+      "noComponent": "Aucune",
+      "componentHint": "Un sort qui dépense cette composante peut dépenser cette possession",
       "errors": {
         "not_allowed": "Pas permis pour cette possession.",
         "slot_taken": "Une autre est déjà équipée."

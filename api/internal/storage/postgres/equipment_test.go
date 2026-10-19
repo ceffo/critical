@@ -86,7 +86,8 @@ func TestConvertEquipment_Step26_ExistingDatabase(t *testing.T) {
 		[]any{arrows.Category, arrows.AmmoKind, arrows.State, arrows.Count, arrows.MagicBonus, arrows.DamageSm, arrows.DamageL},
 		"the bow's dice, so the attack rolls the same")
 	gem := piece("power_gem_dispel")
-	assert.Equal(t, []any{"magic", "misc", "worn"}, []any{gem.Category, gem.MagicKind, gem.State})
+	assert.Equal(t, []any{"magic", "misc", "worn", "gem"}, []any{gem.Category, gem.MagicKind, gem.State, gem.Component},
+		"step 1.1: the gem label is copied into the component code")
 	assert.Contains(t, gem.Powers, "thunder_hammer")
 
 	spare := piece("dagger_2")

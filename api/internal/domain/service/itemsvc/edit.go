@@ -22,6 +22,7 @@ type ItemInput struct {
 	Name       localized.Text
 	Category   Category
 	MagicKind  string
+	Component  string
 	Behaviour  Behaviour
 	Count      int
 	MaxCount   int
@@ -65,6 +66,7 @@ type ItemPatch struct {
 	Name        localized.Text
 	Category    *Category
 	MagicKind   *string
+	Component   *string
 	Behaviour   *Behaviour
 	Count       *int
 	MaxCount    *int
@@ -116,6 +118,7 @@ type changeRecord struct {
 	Name       string        `json:"name"`
 	Category   string        `json:"category,omitempty"`
 	MagicKind  string        `json:"magicKind,omitempty"`
+	Component  string        `json:"component,omitempty"`
 	Type       string        `json:"type"`
 	Behaviour  string        `json:"behaviour"`
 	Count      int           `json:"count"`
@@ -131,7 +134,7 @@ type changeRecord struct {
 func record(i Item, changes []FieldChange) changeRecord {
 	return changeRecord{
 		ItemID: i.ID, Name: i.Name.Any(), Category: string(i.Category), MagicKind: i.MagicKind,
-		Type: i.Type, Behaviour: string(i.Behaviour), Count: i.Count,
+		Component: i.Component, Type: i.Type, Behaviour: string(i.Behaviour), Count: i.Count,
 		MaxCount: i.MaxCount, MagicBonus: i.MagicBonus, AmmoKind: i.AmmoKind,
 		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Changes: changes,
 	}
@@ -183,7 +186,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 		return nil, err
 	}
 	item := clean(Item{
-		Name: in.Name, Category: in.Category, MagicKind: in.MagicKind, State: StateCarried,
+		Name: in.Name, Category: in.Category, MagicKind: in.MagicKind, Component: in.Component, State: StateCarried,
 		Behaviour: in.Behaviour, Count: in.Count, MaxCount: in.MaxCount,
 		EffectDice: in.EffectDice, EffectSave: in.EffectSave, Notes: in.Notes,
 		AmmoKind: in.AmmoKind, MagicBonus: in.MagicBonus,
@@ -246,7 +249,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 func clean(i Item) Item {
 	low := func(v string) string { return strings.ToLower(strings.TrimSpace(v)) }
 	i.Name = i.Name.Trimmed()
-	i.MagicKind = low(i.MagicKind)
+	i.MagicKind, i.Component = low(i.MagicKind), low(i.Component)
 	i.EffectDice = strings.TrimSpace(i.EffectDice)
 	i.Notes = strings.TrimSpace(i.Notes)
 	i.AmmoKind = low(i.AmmoKind)
@@ -365,6 +368,7 @@ func patched(old Item, p ItemPatch) Item {
 		item.DamageTypes = *p.DamageTypes
 	}
 	set(&item.MagicKind, p.MagicKind)
+	set(&item.Component, p.Component)
 	set(&item.EffectDice, p.EffectDice)
 	set(&item.EffectSave, p.EffectSave)
 	set(&item.Notes, p.Notes)
@@ -471,6 +475,7 @@ func diff(a, b Item) []FieldChange {
 	add("category", string(a.Category), string(b.Category))
 	add("magicKind", a.MagicKind, b.MagicKind)
 	add("catalogueCode", a.CatalogueCode, b.CatalogueCode)
+	add("component", a.Component, b.Component)
 	add("state", string(a.State), string(b.State))
 	add("type", a.Type, b.Type)
 	add("behaviour", string(a.Behaviour), string(b.Behaviour))

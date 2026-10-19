@@ -43,6 +43,17 @@ const (
 // MagicKinds is every magic kind, in display order.
 var MagicKinds = ruletablesvc.MagicKinds
 
+// The spell components (ADR 0033 step 1.1): what a spell's consume_item names
+// (ADR 0008), a language-neutral code the web names (ADR 0023).
+const (
+	ComponentGem = "gem"
+)
+
+// Components is every component code, in display order (the one owner of
+// the list: the column has no CHECK, and the spells' consume_item is checked
+// against it).
+var Components = []string{ComponentGem}
+
 // State is where a piece is (ADR 0033 step 6).
 type State string
 

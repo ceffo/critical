@@ -131,6 +131,28 @@ test("a new bow is carried: the attack's drop-down lists it under Not equipped, 
   await expect(bow.getByTestId("item-equipped")).toHaveCount(0);
 });
 
+test("a new gem marked as a spell component in the editor keeps it after a reload", async ({
+  page,
+}) => {
+  // ADR 0033 step 1.1: the component select is wired to the API and persisted (which piece a spell
+  // spends is the Go tests'). What only a browser proves: the select, its labels and the reload.
+  await openInventory(page);
+  await page.getByRole("button", { name: "Add item" }).click();
+  const f = form(page);
+  await f.getByLabel("Name").fill("Ruby");
+  await expect(f.getByLabel("Spell component")).toHaveValue("");
+  await f.getByLabel("Spell component").selectOption("gem");
+  await snap(page, "component-form");
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(form(page)).toHaveCount(0);
+  await expect(row(page, "ruby")).toContainText("Ruby");
+
+  await page.reload();
+  await openInventory(page);
+  await row(page, "ruby").getByRole("button", { name: "Edit Ruby" }).click();
+  await expect(form(page).getByLabel("Spell component")).toHaveValue("gem");
+});
+
 test("Unequip and Equip in the Inventaire: the Equipped tag follows, each a journal line popped by undo", async ({
   page,
 }) => {

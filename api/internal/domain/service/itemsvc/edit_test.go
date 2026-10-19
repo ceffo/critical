@@ -42,6 +42,7 @@ func TestCreate_ValidationNamesTheField(t *testing.T) {
 		"bonus out of range":  {func(i *itemsvc.ItemInput) { i.MagicBonus = 11 }, "magicalBonus"},
 		"daily without daily": {func(i *itemsvc.ItemInput) { i.Behaviour = itemsvc.BehaviourDaily }, "maxCount"},
 		"daily count > daily": {func(i *itemsvc.ItemInput) { i.Behaviour = itemsvc.BehaviourDaily; i.MaxCount = 2; i.Count = 3 }, "count"},
+		"unknown component":   {func(i *itemsvc.ItemInput) { i.Component = "pearl" }, "component"},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -141,6 +142,33 @@ func TestUpdate_ChangesOneFieldAndLogsBeforeAfter(t *testing.T) {
 		string(got.Snapshots[0].Before))
 	assert.Contains(t, string(got.Snapshots[0].After), `"count":3`)
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
+}
+
+// ADR 0033 step 1.1: the component code is set by an edit (any category),
+// logged as a change, held by the snapshots so a pop takes it back, and does
+// not settle a piece on the review list (it classifies nothing).
+func TestUpdate_Step1_1_SetsTheComponent(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil)
+	after := wand4
+	after.Component = itemsvc.ComponentGem
+	dal.EXPECT().Update(mock.Anything, int64(1), after).Return(nil).Once() // no DeleteReviews
+	var got actionlog.NewEntry
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(9), nil)
+
+	res, err := svc.Update(context.Background(), 1, "wand_lightning", itemsvc.ItemPatch{Component: ptr(" GEM ")})
+	require.NoError(t, err)
+	assert.Equal(t, itemsvc.ComponentGem, res.Item.Component, "cleaned to the code")
+	assert.Contains(t, string(got.Payload), `"changes":[{"field":"component","before":"","after":"gem"}]`)
+	assert.NotContains(t, string(got.Snapshots[0].Before), `"component"`)
+	assert.Contains(t, string(got.Snapshots[0].After), `"component":"gem"`)
+
+	pop := mocks.NewMockDAL(t)
+	popSvc, _ := itemsvc.New(pop, deps(t).Deps)
+	pop.EXPECT().Update(mock.Anything, int64(1), wand4).Return(nil).Once()
+	require.NoError(t, popSvc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, got.Snapshots[0].Before))
 }
 
 // A stock item turned daily keeps its count and takes the daily number sent with the change.

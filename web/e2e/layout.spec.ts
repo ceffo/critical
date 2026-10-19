@@ -2792,3 +2792,23 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     await snap(page, `thief-backstab-card-fr-${where}`);
   }
 });
+
+// ADR 0033 step 1.1 and ADR 0022 step 1: the piece editor with its spell component select, in French
+// (ADR 0027 step 2), uncut at every layout viewport; screens at 1920x1080 and 2560x1440.
+test("the piece editor's spell component uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await openWorkspace(page, "Inventory");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("button", { name: "Ajouter un objet" }).click();
+  const wf = page.getByTestId("item-form");
+  await wf.getByLabel("Composante de sort").selectOption("gem");
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    await expectNoPageScroll(page);
+    await expectNoClippedText(wf, `piece editor, fr, ${vp.width}x${vp.height}`);
+    if (vp.width >= 1920)
+      await snap(page, `component-editor-fr-${vp.width}x${vp.height}`);
+  }
+});

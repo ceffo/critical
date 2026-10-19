@@ -23,6 +23,7 @@ type Item struct {
 	Category      string
 	MagicKind     string
 	CatalogueCode string
+	Component     string
 	State         string
 	WeaponType    string
 	WeaponKind    string

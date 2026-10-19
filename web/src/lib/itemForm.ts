@@ -4,6 +4,7 @@
 import { editLang, localized } from "@/i18n/localized";
 import type {
   Category,
+  Component,
   Item,
   ItemBehaviour,
   ItemBody,
@@ -19,6 +20,8 @@ export interface ItemDraft {
   name: string;
   category: Category;
   magicKind: MagicKind | "";
+  /** The spell component it is, any category (ADR 0033 step 1.1); empty for none. */
+  component: Component | "";
   behaviour: ItemBehaviour;
   count: string;
   maxCount: string;
@@ -95,6 +98,7 @@ export function emptyDraft(category: Category = "gear"): ItemDraft {
     name: "",
     category,
     magicKind: category === "magic" ? "misc" : "",
+    component: "",
     behaviour: "stock",
     count: "1",
     maxCount: "1",
@@ -131,6 +135,7 @@ export function draftFromItem(i: Item, lang: string): ItemDraft {
     name: localized(lang, i.name),
     category: i.category,
     magicKind: i.magicKind,
+    component: i.component ?? "",
     behaviour: i.behaviour,
     count: String(i.count),
     maxCount: String(i.maxCount),
@@ -214,6 +219,7 @@ export function draftToBody(
   const body: ItemBody = {
     name: { [editLang(lang)]: d.name },
     category: d.category,
+    component: d.component,
     behaviour: d.behaviour,
     count: num("count", d.count),
     effectDice: d.effectDice,

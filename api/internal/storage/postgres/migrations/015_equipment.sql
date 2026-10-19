@@ -4,11 +4,13 @@
 -- A piece has a category (weapon, ammunition, armour, shield, magic, gear; step 2), a magic kind
 -- (a magic piece's potion ... misc), an optional catalogue code (the catalogue row it was picked
 -- from, step 21) and a state (carried, worn, wielded; step 6), plus the fields of its category
--- (steps 3 to 5). The codes are validated by itemsvc on every write and have no CHECK, so each
+-- (steps 3 to 5), and the spell component it is (step 1.1: the code a spell's consume_item names,
+-- empty for none). The codes are validated by itemsvc on every write and have no CHECK, so each
 -- list lives in one place (as weapons.weapon_type, migration 005). The columns a weapon had move
 -- here under the same names; weapons.ammo_kind, the ammunition a launcher fires, is fires (an
 -- ammunition piece's own kind stays ammo_kind). items.type, the free-text label, is kept as stored
--- (step 26.1) and no longer edited.
+-- (step 26.1), no longer edited and no longer read: the conversion copies a component label into
+-- component.
 --
 -- equipment_review is the review list of step 27: the pieces the conversion could not settle, each
 -- with its reason code; a row goes when the player fixes the piece or dismisses it (not logged).
@@ -25,6 +27,7 @@
 ALTER TABLE items ADD COLUMN category       TEXT   NOT NULL DEFAULT 'gear';
 ALTER TABLE items ADD COLUMN magic_kind     TEXT   NOT NULL DEFAULT '';
 ALTER TABLE items ADD COLUMN catalogue_code TEXT   NOT NULL DEFAULT '';
+ALTER TABLE items ADD COLUMN component      TEXT   NOT NULL DEFAULT '';
 ALTER TABLE items ADD COLUMN state          TEXT   NOT NULL DEFAULT 'carried';
 ALTER TABLE items ADD COLUMN weapon_type    TEXT   NOT NULL DEFAULT '';
 ALTER TABLE items ADD COLUMN weapon_kind    TEXT   NOT NULL DEFAULT '';

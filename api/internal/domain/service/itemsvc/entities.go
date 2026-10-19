@@ -1,8 +1,6 @@
 package itemsvc
 
 import (
-	"strings"
-
 	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
@@ -53,9 +51,12 @@ type Item struct {
 	// State is carried, worn or wielded (step 6).
 	State State
 	// Type is the free-text label of before the equipment model, kept as
-	// stored (step 26.1) and no longer edited. The spells that spend an item
-	// still match it (Spendable).
-	Type       string
+	// stored (step 26.1), no longer edited and read by nothing.
+	Type string
+	// Component is the spell component the piece is (step 1.1), a code of
+	// Components, empty for none: what a spell that spends an item matches
+	// (Spendable), whatever the piece's category.
+	Component  string
 	Behaviour  Behaviour
 	Count      int
 	MaxCount   int    // a daily item's refill value (informational otherwise)
@@ -99,12 +100,12 @@ type Item struct {
 	ACMissile  int
 }
 
-// Spendable tells whether a spell that consumes an item of itemType can spend
-// it: of that type (the stored label, case-insensitive), not a daily item (it
-// recharges and is never spent by a spell), some left. The one rule behind
-// both the cast and the list of items offered for a spell.
-func (i Item) Spendable(itemType string) bool {
-	return strings.EqualFold(i.Type, itemType) && i.Behaviour != BehaviourDaily && i.Count > 0
+// Spendable tells whether a spell that consumes the component code component
+// can spend the piece (ADR 0033 step 1.1, ADR 0008): that component, not a
+// daily item (it recharges and is never spent by a spell), some left. The one
+// rule behind both the cast and the list of items offered for a spell.
+func (i Item) Spendable(component string) bool {
+	return i.Component != "" && i.Component == component && i.Behaviour != BehaviourDaily && i.Count > 0
 }
 
 // Removed reports whether this item, as returned by a use, is gone: a

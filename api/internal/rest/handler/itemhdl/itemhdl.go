@@ -156,7 +156,8 @@ func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 // shared fields, then the fields of each category, zero (or empty) for the
 // others. Codes go on the wire, the web names them (ADR 0023): category,
 // magicKind, state (carried, worn, wielded), behaviour (stock, charges,
-// daily). type is the free-text label of before the model, read only.
+// daily), component (the spell component it is, empty for none; ADR 0033
+// step 1.1). type is the free-text label of before the model, read only.
 type ItemDTO struct {
 	ID string `json:"id"`
 	// Name is a language map (ADR 0023 step 9).
@@ -164,6 +165,7 @@ type ItemDTO struct {
 	Category      string         `json:"category"`
 	MagicKind     string         `json:"magicKind"`
 	CatalogueCode string         `json:"catalogueCode"`
+	Component     string         `json:"component"`
 	State         string         `json:"state"`
 	// EquipState is the state Equip moves the piece to (worn or wielded),
 	// empty for a piece that is carried only (ADR 0033 step 6).
@@ -229,7 +231,7 @@ func ToDTOs(items []itemsvc.Item) []ItemDTO {
 		}
 		out = append(out, ItemDTO{
 			ID: i.ID, Name: i.Name, Category: string(i.Category), MagicKind: i.MagicKind,
-			CatalogueCode: i.CatalogueCode, State: string(i.State), EquipState: string(i.EquipState()),
+			CatalogueCode: i.CatalogueCode, Component: i.Component, State: string(i.State), EquipState: string(i.EquipState()),
 			Type: i.Type, Behaviour: string(i.Behaviour),
 			MagicalBonus: i.MagicBonus, AmmoKind: i.AmmoKind, Count: i.Count, MaxCount: i.MaxCount,
 			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers,
@@ -259,6 +261,7 @@ type ItemBody struct {
 	Name         localized.Text `json:"name"`
 	Category     *string        `json:"category"`
 	MagicKind    *string        `json:"magicKind"`
+	Component    *string        `json:"component"`
 	Behaviour    *string        `json:"behaviour"`
 	Count        *int           `json:"count"`
 	MaxCount     *int           `json:"maxCount"`
@@ -329,8 +332,8 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		}
 		res, err := svc.Create(r.Context(), charID(r), itemsvc.ItemInput{
 			Name: b.Name, Category: itemsvc.Category(deref(b.Category)), MagicKind: deref(b.MagicKind),
-			Behaviour: itemsvc.Behaviour(deref(b.Behaviour)),
-			Count:     deref(b.Count), MaxCount: deref(b.MaxCount), MagicBonus: deref(b.MagicalBonus),
+			Component: deref(b.Component), Behaviour: itemsvc.Behaviour(deref(b.Behaviour)),
+			Count: deref(b.Count), MaxCount: deref(b.MaxCount), MagicBonus: deref(b.MagicalBonus),
 			AmmoKind: deref(b.AmmoKind), EffectDice: deref(b.EffectDice), EffectSave: deref(b.EffectSave),
 			Notes: deref(b.Notes), DamageTypes: deref(b.DamageTypes), DamageSM: deref(b.DamageSM),
 			DamageL: deref(b.DamageL), WeaponType: deref(b.WeaponType), WeaponKind: deref(b.WeaponKind),
@@ -356,7 +359,7 @@ func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			return err
 		}
 		p := itemsvc.ItemPatch{
-			Name: b.Name, MagicKind: b.MagicKind, Count: b.Count, MaxCount: b.MaxCount, MagicBonus: b.MagicalBonus,
+			Name: b.Name, MagicKind: b.MagicKind, Component: b.Component, Count: b.Count, MaxCount: b.MaxCount, MagicBonus: b.MagicalBonus,
 			AmmoKind: b.AmmoKind, EffectDice: b.EffectDice, EffectSave: b.EffectSave, Notes: b.Notes,
 			DamageTypes: b.DamageTypes, DamageSM: b.DamageSM, DamageL: b.DamageL, WeaponType: b.WeaponType,
 			WeaponKind: b.WeaponKind, Size: b.Size, Speed: b.Speed, MagicToHit: b.MagicToHit,

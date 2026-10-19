@@ -5,7 +5,8 @@
 [ADR 0002](0002-attack-resolution.md) (steps 2, 11 and 12: the armour-type modifier),
 [ADR 0003](0003-damage.md) (step 1: a launcher's dice come from its ammunition),
 [ADR 0004](0004-buffs.md) (step 11: the `ac` sign, the `base_ac` and `initiative` effects; step
-18: the `without_magic_armour` condition), [ADR 0012](0012-attack-against-unknown-ac.md) (the
+18: the `without_magic_armour` condition), [ADR 0008](0008-spell-slots-and-long-rest.md) (step 10:
+a spell spends a piece by its component code, step 1.1), [ADR 0012](0012-attack-against-unknown-ac.md) (the
 target's armour is optional like its AC), [ADR 0013](0013-initiative.md) (step 3 and Consequences:
 weapon speed and casting time), [ADR 0016](0016-inventory.md) (steps 1, 4, 7, 8, 9 and 15),
 [ADR 0021](0021-spell-catalogue.md) (step 13 added: format 7),
@@ -92,6 +93,15 @@ name or comment); this ADR names none yet.
    steps 9 to 16), its **state** (step 6), and the fields of its category (steps 3 to 5). Weapons are
    pieces of equipment: there is no second model, table or editor. The free-text type label is gone;
    its meaning is the category.
+   1.1. **Spell component** (amendment, 2026-10-18, the supervisor's decision on the review of the
+   slice: the label the spells matched could no longer be set). A piece of any category may carry a
+   **component** code: what a spell that spends an item (`consume_item`, [ADR
+   0008](0008-spell-slots-and-long-rest.md) step 10) names, so a spell spends a piece of that code
+   whatever its category, never by its name or a label. The codes are one closed list owned by the
+   service (`gem`, the Chromatic Orb's), and every spell's `consume_item` names one of them; the web
+   names them (ADR 0023). The editor sets it (none by default); the conversion copies a type label
+   that names a component (any case, singular or plural) into it (step 26.5). Matching by category or
+   magic kind is not used: a plain gem is `gear`, and `magic` `misc` holds bracers and cloaks too.
 
    ```mermaid
    classDiagram
@@ -389,7 +399,8 @@ name or comment); this ADR names none yet.
        no type are not matched and go on the review list.
     5. **Items** are categorised from their type label when it is obvious: `arrow`, `quarrel`,
        `bolt`, `bullet` → ammunition (its ammo kind); `potion`, `scroll`, `ring`, `rod`, `staff`,
-       `wand` → magic of that kind; `gem` → magic `misc`; `flask` → gear. Ammunition of a kind a
+       `wand` → magic of that kind; `gem` → magic `misc` (and the component `gem`, step 1.1); `flask` →
+       gear. Ammunition of a kind a
        launcher fires and that has no dice gets the launcher's dice (step 4), so the attack rolls the
        same. Everything else becomes gear on the review list.
     6. **States**: every weapon is `wielded` (all are usable today), every piece with powers is
@@ -435,10 +446,27 @@ with an ammo kind is ammunition; any edit of a classifying field (category, magi
 codes, speed, size, damage types) takes the piece off the review list, a rename does not, and popping
 that edit does not put it back; the attack refuses a weapon that is not wielded (field `weaponId`);
 a stored form weapon that was put away leaves the hand empty, one that is gone falls back to the first
-wielded weapon. The free-text `type` label is kept as stored and read only by the spells that spend an
-item (`consume_item`, the Chromatic Orb's gem); the editor no longer sets it (open question for the
-user, see the PR). The seeds keep their two files and are converted by the same function as the data
-(`seedfile.Equipment`). The skill-armour carry-over of step 14 is CRI-36's.
+wielded weapon. The free-text `type` label is kept as stored and read by nothing: the spells that spend an
+item match the piece's `component` (step 1.1: `items.component`, `component` on the wire, optional in
+a create or edit body, a patch without it keeps it; logged as an `item_edit` change and held by the
+snapshots). The seeds keep their two files and are converted by the same function as the data
+(`seedfile.Equipment`), so the seeded Power Gem is a `gem` (daily: never spent). Undoing a
+classifying edit does not put the piece back on the review list (accepted: the review is not a game
+move, step 27).
+
+_The rolling deploy (as built)._ For the minutes both releases run after the migration (two machines,
+ADR 0024 step 5.2), writes by the old release go wrong, accepted rather than coded around: a weapon it
+adds or edits goes to `weapons`, which the new release never reads (lost to it); an item it adds lands
+with the column defaults (`gear`, carried, no component, no review row), so new arrows are not
+ammunition and a new gem is not a component until edited; its attack compares the converted, normalised
+item `ammo_kind` with the raw `weapons.ammo_kind`. **The later migration that drops `weapons` first
+converts the `weapons` rows absent from `items`** (by the same `itemsvc.Convert`, wielded, matched,
+reviewed), so a weapon written in that window is not lost.
+
+_Step 14 carry-over (as built)._ The conversion runs once (it is the data step of its migration), so it
+makes no skill armour worn. CRI-36 brings its own data step: it reads each character's `skill_armor`
+and makes the matching armour piece worn (or adds it, on the review list as a guessed armour, step
+27).
 
 CRI-32 (the design round) comes before the UI of slices 2 to 9. Slices 3 to 9 need slice 2; slices
 5, 7 and 8 need slice 1's data.

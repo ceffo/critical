@@ -157,7 +157,7 @@
     "initiative": "Initiative",
     "initiativeNone": "Pas lancée",
     "outOfCombatInitiative": "Hors combat · l’initiative sera lancée",
-    "initiativeHint": "1d10, le plus bas agit en premier",
+    "initiativeHint": "1d10 plus ses modificateurs, le plus bas agit en premier",
     "initiativeReroll": "Relancer l’initiative",
     "passTime": "Le temps passe…",
     "setRound": "Régler le numéro de tour…",
@@ -176,6 +176,16 @@
     "passTimePlaceholder": "1,5",
     "passTimeEnding": "Prend fin : {{names}}",
     "passTimeNothingEnds": "Aucun effet ne prend fin"
+  },
+  "initiative": {
+    "die": "d10 {{value}}",
+    "term": "{{name}} : {{value}}",
+    "endOfRoundTerm": "{{name}} : fin du tour",
+    "specialTerm": "{{name}} : temps d’incantation spécial",
+    "spellCastingTimeTerm": "{{name}} : temps d’incantation de son sort, non compté",
+    "total": "= {{value}}, le plus bas agit en premier",
+    "endOfRound": "fin du tour",
+    "breakdown": "Détail de l’initiative"
   },
   "effects": {
     "title": "Effets",
@@ -231,7 +241,8 @@
       "ac": "CA ±N",
       "to_hit": "Toucher +N",
       "damage": "Dégâts +N",
-      "base_ac": "CA de base N"
+      "base_ac": "CA de base N",
+      "initiative": "Initiative ±N"
     },
     "activate": "Activer",
     "save": "Enregistrer",
@@ -1218,6 +1229,7 @@
       "weapon_edit": "Arme",
       "weapon_remove": "Arme",
       "initiative": "Initiative",
+      "initiative_correct": "Initiative",
       "item_add": "Objet",
       "item_edit": "Objet",
       "item_remove": "Objet",
@@ -1340,6 +1352,8 @@
       }
     },
     "initiative": "Initiative {{value}} (d10) pour le tour {{round}}",
+    "initiativeWith": "Initiative {{value}} pour le tour {{round}} ({{breakdown}})",
+    "initiativeCorrect": "Initiative du tour {{round}} corrigée : {{before}} → {{after}} ({{cause}})",
     "rest": "Repos long : {{slots}} emplacements de sort et {{items}} objets rechargés",
     "prep": "Préparé : {{spells}}",
     "prepNone": "Aucun sort préparé",

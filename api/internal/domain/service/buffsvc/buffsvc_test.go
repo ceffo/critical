@@ -33,13 +33,14 @@ func (f *fakeTx) InTx(ctx context.Context, fn func(context.Context) error) error
 }
 
 type fixture struct {
-	svc   buffsvc.SVC
-	dal   *mocks.MockDAL
-	log   *mocks.MockLog
-	chars *mocks.MockCharacters
-	dice  *mocks.MockDice
-	items *mocks.MockItems
-	tx    *fakeTx
+	svc     buffsvc.SVC
+	dal     *mocks.MockDAL
+	log     *mocks.MockLog
+	chars   *mocks.MockCharacters
+	dice    *mocks.MockDice
+	items   *mocks.MockItems
+	weapons *mocks.MockWeapons
+	tx      *fakeTx
 	// entries recorded through the log mock, in order.
 	entries []actionlog.NewEntry
 	// order of Record / Save* calls, to prove the entry precedes the writes.
@@ -51,14 +52,15 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
-		dal:   mocks.NewMockDAL(t),
-		log:   mocks.NewMockLog(t),
-		chars: mocks.NewMockCharacters(t),
-		dice:  mocks.NewMockDice(t),
-		items: mocks.NewMockItems(t),
-		tx:    &fakeTx{},
+		dal:     mocks.NewMockDAL(t),
+		log:     mocks.NewMockLog(t),
+		chars:   mocks.NewMockCharacters(t),
+		dice:    mocks.NewMockDice(t),
+		items:   mocks.NewMockItems(t),
+		weapons: mocks.NewMockWeapons(t),
+		tx:      &fakeTx{},
 	}
-	svc, err := buffsvc.NewWithConfig(buffsvc.DefaultConfig(), f.dal, f.tx, f.log, f.chars, f.dice, f.items)
+	svc, err := buffsvc.NewWithConfig(buffsvc.DefaultConfig(), f.dal, f.tx, f.log, f.chars, f.dice, f.items, f.weapons)
 	require.NoError(t, err)
 	f.svc = svc
 	return f
@@ -106,7 +108,13 @@ func (f *fixture) savesInitiative() {
 
 // rollsInitiative expects one initiative roll: the read of the state before
 // it (none), exactly one d10 that shows d10, its entry, then the store.
+//
+// The roll reads the modifiers first: here a character with no item power
+// and no weapon in hand (initiative_test.go proves the modifiers).
 func (f *fixture) rollsInitiative(d10 int) {
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: 10}, nil).Maybe()
+	f.items.EXPECT().ItemPowers(mock.Anything, charID).Return(nil, nil).Maybe()
+	f.weapons.EXPECT().WeaponInHand(mock.Anything, charID).Return(buffsvc.HeldWeapon{}, false, nil).Maybe()
 	f.initiativeIs(nil)
 	f.dice.EXPECT().RollDie(10).Return(d10).Once()
 	f.records()
@@ -146,15 +154,19 @@ func payload(t *testing.T, e actionlog.NewEntry) map[string]any {
 
 func TestNew_NilDependencies(t *testing.T) {
 	dal, log, chars, dice, items := mocks.NewMockDAL(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t), mocks.NewMockDice(t), mocks.NewMockItems(t)
+	weapons := mocks.NewMockWeapons(t)
 	tx := &fakeTx{}
 	for name, build := range map[string]func() (buffsvc.SVC, error){
-		"config": func() (buffsvc.SVC, error) { return buffsvc.NewWithConfig(nil, dal, tx, log, chars, dice, items) },
-		"dal":    func() (buffsvc.SVC, error) { return buffsvc.New(nil, tx, log, chars, dice, items) },
-		"tx":     func() (buffsvc.SVC, error) { return buffsvc.New(dal, nil, log, chars, dice, items) },
-		"log":    func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, nil, chars, dice, items) },
-		"chars":  func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, nil, dice, items) },
-		"dice":   func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, nil, items) },
-		"items":  func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, dice, nil) },
+		"config": func() (buffsvc.SVC, error) {
+			return buffsvc.NewWithConfig(nil, dal, tx, log, chars, dice, items, weapons)
+		},
+		"dal":     func() (buffsvc.SVC, error) { return buffsvc.New(nil, tx, log, chars, dice, items, weapons) },
+		"tx":      func() (buffsvc.SVC, error) { return buffsvc.New(dal, nil, log, chars, dice, items, weapons) },
+		"log":     func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, nil, chars, dice, items, weapons) },
+		"chars":   func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, nil, dice, items, weapons) },
+		"dice":    func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, nil, items, weapons) },
+		"items":   func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, dice, nil, weapons) },
+		"weapons": func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, dice, items, nil) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := build()
@@ -882,6 +894,9 @@ func TestRestorers_CoverEverySnapshotKey(t *testing.T) {
 	f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(1, nil)
 	f.dice.EXPECT().RollDie(10).Return(4)
 	f.log.EXPECT().TopID(mock.Anything, charID).Return(1, true, nil)
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: 10}, nil)
+	f.items.EXPECT().ItemPowers(mock.Anything, charID).Return(nil, nil)
+	f.weapons.EXPECT().WeaponInHand(mock.Anything, charID).Return(buffsvc.HeldWeapon{}, false, nil)
 
 	_, err := f.svc.Activate(ctx, charID, buffsvc.BuffEffect{Name: "X", Duration: 1})
 	require.NoError(t, err)

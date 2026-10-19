@@ -368,11 +368,11 @@ describe("cardContent: every log kind renders from its payload", () => {
     );
   });
 
-  it("initiative: the round and its d10", async () => {
+  it("initiative: the round and its d10, an older entry's total the die", async () => {
     expect(
       cardOf(entry("initiative", { round: 3, d10: 7 }), await makeT("en"))
         .payload,
-    ).toEqual({ round: 3, d10: 7 });
+    ).toEqual({ round: 3, d10: 7, modifiers: [], total: 7 });
   });
 
   it("an HP change carries its value (damage red, heal green) and the cap", async () => {

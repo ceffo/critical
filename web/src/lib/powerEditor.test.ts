@@ -5,6 +5,7 @@ import i18next from "i18next";
 import { resources } from "@/i18n";
 import { powersChangeText, powerText } from "./itemPowers";
 import {
+  POWER_EFFECT_KEYS,
   draftsToPowers,
   newPowerDraft,
   plusOf,
@@ -73,6 +74,21 @@ describe("ADR 0033 step 17: the drafts", () => {
     ).toBeNull();
   });
 
+  it("offer the initiative effect (ADR 0033 step 11) and send it", () => {
+    expect(POWER_EFFECT_KEYS).toContain("initiative");
+    const d = {
+      ...newPowerDraft(),
+      effects: [{ key: "initiative" as const, value: "-2" }],
+    };
+    expect(draftsToPowers("magic", 0, [d])).toEqual([
+      { id: "", effects: { initiative: -2 } },
+    ]);
+    expect(
+      powerDrafts("magic", [{ id: "p", effects: { initiative: -2 } }])[0]
+        .effects,
+    ).toEqual([{ key: "initiative", value: "-2" }]);
+  });
+
   it("round-trip a stored power, so an untouched form changes nothing", () => {
     const sent = draftsToPowers("magic", 0, powerDrafts("magic", [ring]));
     expect(sent).not.toBeNull();
@@ -110,6 +126,9 @@ describe("ADR 0033 step 17: a power in words", () => {
       );
       expect(powersChangeText(t, '[{"id":"magic","effects":{"ac":-1}}]')).toBe(
         lang === "en" ? "magic +1" : "magie +1",
+      );
+      expect(powerText(t, { id: "p", effects: { initiative: -2 } })).toBe(
+        "Initiative −2",
       );
       expect(powersChangeText(t, "[]")).toBe(lang === "en" ? "none" : "aucun");
     });

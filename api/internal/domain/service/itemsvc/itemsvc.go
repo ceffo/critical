@@ -131,6 +131,19 @@ type Deps struct {
 	Tx        domain.TxRunner
 	Chars     Characters
 	Equipment *ruletablesvc.Equipment
+	// Initiative corrects the round's initiative when a magic item is used
+	// (ADR 0035 item 6.2); InitiativeItems is PHB Table 56, the modifier of
+	// each magic kind (nil before catalogue format 7: a use corrects
+	// nothing).
+	Initiative      Initiative
+	InitiativeItems *ruletablesvc.InitiativeItems
+}
+
+// Initiative corrects the round's initiative by an item used (buffsvc),
+// inside the use's transaction, as its last entry; it does nothing out of
+// combat.
+type Initiative interface {
+	CorrectInitiative(ctx context.Context, characterID int64, cause buffsvc.InitiativeModifier) (*buffsvc.Initiative, error)
 }
 
 type service struct {
@@ -141,14 +154,20 @@ type service struct {
 	chars     Characters
 	catalogue []ruletablesvc.Weapon
 	equipment *ruletablesvc.Equipment
+	// initiative and initiativeItems: ADR 0035 item 6.2 (Deps).
+	initiative      Initiative
+	initiativeItems *ruletablesvc.InitiativeItems
 }
 
 // New constructs the service.
 func New(dal DAL, d Deps) (SVC, error) {
-	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil || d.Chars == nil {
+	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil || d.Chars == nil || d.Initiative == nil {
 		return nil, fmt.Errorf("itemsvc: nil dependency")
 	}
-	s := &service{dal: dal, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment}
+	s := &service{
+		dal: dal, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment,
+		initiative: d.Initiative, initiativeItems: d.InitiativeItems,
+	}
 	if d.Equipment != nil {
 		s.catalogue = d.Equipment.Weapons
 	}

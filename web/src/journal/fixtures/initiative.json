@@ -4,5 +4,26 @@
       "round": 3,
       "d10": 7
     }
+  },
+  "withModifiers": {
+    "payload": {
+      "round": 3,
+      "d10": 7,
+      "modifiers": [
+        {
+          "source": "weapon",
+          "value": 5,
+          "itemId": "long_sword",
+          "name": "Long sword"
+        },
+        {
+          "source": "effect",
+          "value": -2,
+          "name": "Haste",
+          "spellId": "haste"
+        }
+      ],
+      "total": 10
+    }
   }
 }

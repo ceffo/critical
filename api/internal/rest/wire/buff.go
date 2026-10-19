@@ -15,6 +15,8 @@ type BuffEffectsDTO struct {
 	ToHit      *int     `json:"to_hit,omitempty"`
 	Damage     *int     `json:"damage,omitempty"`
 	BaseAC     *int     `json:"base_ac,omitempty"`
+	// Initiative is added to the initiative (ADR 0033 step 11).
+	Initiative *int `json:"initiative,omitempty"`
 	// WeaponKind is the weapon-kind condition of the other effects, melee or
 	// missile (ADR 0004 step 18); omitted: every roll.
 	WeaponKind buffsvc.WeaponKind `json:"weapon_kind,omitempty"`

@@ -338,6 +338,33 @@ async function expectHeaderLayout(page: Page, where: string) {
   }
 }
 
+/**
+ * ADR 0035 item 6.3: the initiative's breakdown is its number's tooltip, shown on hover, whole
+ * and inside the screen; the "fin du tour" tag sits in the header (which stays at rest,
+ * expectHeaderLayout) when the round's spell takes a round or more.
+ */
+async function expectInitiativeBreakdown(page: Page, where: string) {
+  await expect(page.getByTestId("initiative-end-of-round")).toHaveText(
+    "fin du tour",
+  );
+  const value = page.getByTestId("initiative-value");
+  await value.hover();
+  const breakdown = page.getByTestId("initiative-breakdown");
+  await expect(breakdown).toBeVisible();
+  await expect(breakdown).toContainText(/^d10 \d+/);
+  await expect(breakdown).toContainText("fin du tour");
+  await expect(breakdown).toContainText("le plus bas agit en premier");
+  await expectNoClippedText(breakdown, `initiative breakdown, ${where}`);
+  await expectInside(breakdown, page.locator("body"), `breakdown, ${where}`);
+  if (
+    SHOTS.has(where.replace(/^.*?(\d+x\d+)$/, "$1")) ||
+    /1920|2560/.test(where)
+  )
+    await snap(page, `initiative-breakdown-${where.replace(/[ ,]+/g, "-")}`);
+  await page.mouse.move(0, 0);
+  await expect(breakdown).toBeHidden();
+}
+
 /** The lines `el`'s text lays out on: its text boxes grouped by vertical overlap. */
 function lineCount(el: Element): number {
   const range = document.createRange();
@@ -1150,7 +1177,6 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   const rary = slots.findIndex(
     (sl) => sl.prepared_spell_id === "rarys_mnemonic_enhancer",
   );
-  await api("POST", `/api/spells/${rary}/cast`, {});
   // A known AC and both rare modifiers set: the target bar at its widest (ADR 0027 step 7.2).
   await api("PATCH", "/api/attack/form", {
     targetAc: -10,
@@ -1170,6 +1196,9 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   // The journal with two turns, a transaction, a dice total and an undone row (ADR 0027 step 9).
   await api("POST", "/api/hp/event", { delta: -3, source: LONG_SOURCE });
   await api("POST", "/api/round/advance", {});
+  // Rary's takes a turn to cast: in combat it corrects the round's initiative, which then reads
+  // "fin du tour" beside its number (ADR 0035 item 6.2).
+  await api("POST", `/api/spells/${rary}/cast`, {});
   await api("POST", "/api/roll/dice", { formula: "2d6+1" });
   await api("POST", "/api/hp/event", { delta: 2, source: "Potion de soins" });
   const log = (await (await fetch(`${stack.apiUrl}/api/log`)).json()) as {
@@ -1214,6 +1243,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expectNoClippedText(page.locator("body"), `screen, ${where}`);
     await rail.nth(0).click();
     await expectHeaderLayout(page, where);
+    await expectInitiativeBreakdown(page, where);
     await expectNoClippedText(character, `character card, ${where}`);
     await expectWholeWords(character, `character card, ${where}`);
     if (SHOTS.has(`${vp.width}x${vp.height}`))

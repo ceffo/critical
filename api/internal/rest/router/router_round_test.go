@@ -180,7 +180,23 @@ func TestRoundInitiative_WireShape(t *testing.T) {
 		m.buffs.EXPECT().GetInitiative(mock.Anything, int64(1)).Return(&buffsvc.Initiative{D10: 4, LogEntryID: 12}, nil)
 		rec := do(h, "GET", "/api/round", "")
 		require.Equal(t, http.StatusOK, rec.Code)
-		assert.JSONEq(t, `{"round":3,"initiative":{"value":4,"logEntryId":12}}`, rec.Body.String())
+		assert.JSONEq(t, `{"round":3,"initiative":{"value":4,"d10":4,"modifiers":[],"endOfRound":false,"logEntryId":12}}`, rec.Body.String())
+	})
+
+	// ADR 0035 item 6.3: the value is the total; the d10 and the modifiers
+	// are the breakdown, endOfRound a casting time of a round or more.
+	t.Run("GET /api/round carries the breakdown", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil)
+		m.buffs.EXPECT().GetInitiative(mock.Anything, int64(1)).Return(&buffsvc.Initiative{D10: 4, LogEntryID: 12, Modifiers: []buffsvc.InitiativeModifier{
+			{Source: buffsvc.InitiativeSpell, SpellID: "fly", Name: "Fly", Timing: buffsvc.TimingEndOfRound},
+			{Source: buffsvc.InitiativeEffect, Value: -2, Name: "Haste", SpellID: "haste"},
+		}}, nil)
+		rec := do(h, "GET", "/api/round", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"round":3,"initiative":{"value":2,"d10":4,"endOfRound":true,"logEntryId":12,"modifiers":[
+			{"source":"spell","value":0,"spellId":"fly","name":"Fly","timing":"end_of_round"},
+			{"source":"effect","value":-2,"name":"Haste","spellId":"haste"}]}}`, rec.Body.String())
 	})
 
 	t.Run("GET /api/round out of combat: null", func(t *testing.T) {
@@ -199,7 +215,7 @@ func TestRoundInitiative_WireShape(t *testing.T) {
 		// No GetInitiative: the advance returns the roll it made.
 		rec := do(h, "POST", "/api/round/advance", "")
 		require.Equal(t, http.StatusOK, rec.Code)
-		assert.JSONEq(t, `{"roundNumber":1,"activeBuffs":[],"expiredBuffs":[],"initiative":{"value":9,"logEntryId":2}}`, rec.Body.String())
+		assert.JSONEq(t, `{"roundNumber":1,"activeBuffs":[],"expiredBuffs":[],"initiative":{"value":9,"d10":9,"modifiers":[],"endOfRound":false,"logEntryId":2}}`, rec.Body.String())
 	})
 
 	t.Run("reroll returns the new roll", func(t *testing.T) {
@@ -207,7 +223,7 @@ func TestRoundInitiative_WireShape(t *testing.T) {
 		m.buffs.EXPECT().RerollInitiative(mock.Anything, int64(1)).Return(buffsvc.Initiative{D10: 2, LogEntryID: 13}, nil)
 		rec := do(h, "POST", "/api/round/initiative/reroll", "")
 		require.Equal(t, http.StatusOK, rec.Code)
-		assert.JSONEq(t, `{"value":2,"logEntryId":13}`, rec.Body.String())
+		assert.JSONEq(t, `{"value":2,"d10":2,"modifiers":[],"endOfRound":false,"logEntryId":13}`, rec.Body.String())
 	})
 
 	t.Run("reroll: 409 when another transaction is newer", func(t *testing.T) {

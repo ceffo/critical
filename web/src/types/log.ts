@@ -9,6 +9,8 @@ export type LogKind =
   | "round_set"
   | "time_passed"
   | "initiative"
+  /** The round's initiative corrected by a spell cast or an item used (ADR 0035 item 6.2). */
+  | "initiative_correct"
   | "attack"
   | "item_use"
   | "item_restock"

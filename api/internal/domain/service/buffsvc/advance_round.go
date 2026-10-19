@@ -34,7 +34,13 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, 
 		if err != nil {
 			return err
 		}
-		initiative, err = s.rollInitiative(ctx, characterID, *ch.round)
+		// ADR 0035 item 6: the weapon in hand's speed and the effects of the
+		// buffs still on after the advance.
+		mods, err := s.initiativeModifiers(ctx, characterID, active)
+		if err != nil {
+			return err
+		}
+		initiative, err = s.rollInitiative(ctx, characterID, *ch.round, mods)
 		return err
 	})
 	if err != nil {

@@ -12,8 +12,8 @@ export const MAGIC_POWER_ID = "magic";
 export const MAX_PLUS = 10;
 
 /**
- * The effects a power may carry from the editor: ADR 0016 step 9's list plus base_ac (ADR 0033 step
- * 11). The Strength effects are not offered (a power never has one).
+ * The effects a power may carry from the editor: ADR 0016 step 9's list plus base_ac and initiative
+ * (ADR 0033 step 11). The Strength effects are not offered (a power never has one).
  */
 export const POWER_EFFECT_KEYS = [
   "ac",
@@ -24,6 +24,7 @@ export const POWER_EFFECT_KEYS = [
   "multiplier",
   "spells_buff",
   "base_ac",
+  "initiative",
 ] as const satisfies readonly BuffEffectKey[];
 export type PowerEffectKey = (typeof POWER_EFFECT_KEYS)[number];
 

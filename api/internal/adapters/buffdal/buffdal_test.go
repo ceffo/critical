@@ -232,6 +232,54 @@ func TestInitiative(t *testing.T) {
 	require.ErrorIs(t, dal.SaveInitiative(ctx, charID, nil), errBoom)
 }
 
+// ADR 0035 item 6: the modifiers are stored with the entry of the
+// initiative they were written with, and read back only for that entry. The
+// release before migration 021 updates the d10 and the entry id but leaves
+// the column, so modifiers stamped with another entry (or the bare list of
+// an unreleased build) read as a plain d10.
+func TestInitiative_ADR0035Item6_ModifiersBelongToTheirEntry(t *testing.T) {
+	ctx := context.Background()
+	dal, q := mocked(t)
+	ini := &buffsvc.Initiative{D10: 7, LogEntryID: 21, Modifiers: []buffsvc.InitiativeModifier{
+		{Source: buffsvc.InitiativeWeapon, Value: 5, ItemID: "ls", Name: "Long sword"},
+		{Source: buffsvc.InitiativeItem, ItemID: "s", Name: "Scroll", MagicKind: "scroll", Timing: buffsvc.TimingSpellCastingTime},
+	}}
+	var blob string
+	q.EXPECT().UpsertInitiative(ctx, mock.Anything).RunAndReturn(func(_ context.Context, p queries.UpsertInitiativeParams) error {
+		assert.Equal(t, sql.NullInt64{Int64: 21, Valid: true}, p.InitiativeEntryID)
+		require.True(t, p.InitiativeModifiers.Valid)
+		blob = p.InitiativeModifiers.String
+		return nil
+	}).Once()
+	require.NoError(t, dal.SaveInitiative(ctx, charID, ini))
+	assert.JSONEq(t, `{"entryId":21,"terms":[
+		{"source":"weapon","value":5,"itemId":"ls","name":"Long sword"},
+		{"source":"item","value":0,"itemId":"s","name":"Scroll","magicKind":"scroll","timing":"spell_casting_time"}]}`, blob)
+
+	readWith := func(entryID int64, modifiers string) *buffsvc.Initiative {
+		t.Helper()
+		q.EXPECT().GetInitiative(ctx, charID).Return(queries.GetInitiativeRow{
+			InitiativeD10:       sql.NullInt64{Int64: 7, Valid: true},
+			InitiativeEntryID:   sql.NullInt64{Int64: entryID, Valid: true},
+			InitiativeModifiers: sql.NullString{String: modifiers, Valid: true},
+		}, nil).Once()
+		got, err := dal.GetInitiative(ctx, charID)
+		require.NoError(t, err)
+		return got
+	}
+	assert.Equal(t, ini, readWith(21, blob), "its own entry: the modifiers")
+	assert.Equal(t, &buffsvc.Initiative{D10: 7, LogEntryID: 30}, readWith(30, blob),
+		"an entry the previous release rolled: a plain d10")
+	assert.Equal(t, &buffsvc.Initiative{D10: 7, LogEntryID: 21}, readWith(21, `[{"source":"weapon","value":5}]`),
+		"a bare list: a plain d10")
+
+	q.EXPECT().GetInitiative(ctx, charID).Return(queries.GetInitiativeRow{
+		InitiativeD10: sql.NullInt64{Int64: 7, Valid: true}, InitiativeModifiers: sql.NullString{String: "{", Valid: true},
+	}, nil).Once()
+	_, err := dal.GetInitiative(ctx, charID)
+	require.Error(t, err, "unreadable modifiers are an error")
+}
+
 // The saved buffs (templates) read with their effects and creation time, in
 // the query's order; unreadable effects are an error.
 func TestSavedBuffs_List(t *testing.T) {

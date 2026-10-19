@@ -70,6 +70,76 @@ README and the shots are the picture, French first. Rules of ADR 0033 not named 
    4. Reroll (ADR 0013 step 4) keeps its meaning. Group initiative, multiple attacks, sizes, breath
       weapons and the casting-while-hasted exception stay uncovered (ADR 0033 step 16).
 
+   _As built (CRI-39)_. `buffsvc` owns it. Next turn rolls the d10, then adds the modifiers, each
+   a term `{source, value, itemId, name, spellId, magicKind, timing}`, source `weapon` | `effect` |
+   `spell` | `item`:
+   - **Weapon** (`buffsvc.WeaponSpeed`): the weapon in hand is the attack form's, as the form
+     resolves it (`combatsvc.InHand`, read through buffsvc's `Weapons` port, wired in the root).
+     Its speed is lowered by max(min(to-hit magic, damage magic), the "weapon becomes +N" that
+     applies to its kind), never below 0. A negative magic (a cursed weapon) does not slow it. A
+     weapon with only a to-hit plus (no damage plus) gets no reduction: the lesser plus is 0. With
+     no weapon in hand there is no term.
+   - **Effects**: the `initiative` effect kind (ADR 0033 step 11, built here) on buffs and item
+     powers, one term per source. Buffs are read after the advance, so one that expires with it does
+     not count. The aggregate's gating applies (MinStr, power triggers), and an effect with a
+     `weapon_kind` condition does not count (it conditions an attack). The spell seed's `initiative`
+     (Haste −2, Slow +2) now applies instead of being listed as untracked. The equipment editor
+     offers it on a power (ADR 0033 step 17).
+   - **Correction** (`CorrectInitiative`): `castsvc.Cast` (a failed cast too, since the casting time
+     was spent) and `itemsvc.UseItem` on a `magic` piece. A spell received, an effect added or an
+     ammunition or gear use corrects nothing.
+     - The spell term (`buffsvc.SpellInitiative`) is the catalogue's parsed casting time at the
+       caster level: segments under 10 add their amount (a dice part is not counted). A round or
+       more adds 0 with `timing: end_of_round`. A special or unknown casting time adds 0 with
+       `timing: special`.
+     - The item term is Table 56 by magic kind. Before catalogue format 7 (no Table 56) a use
+       corrects nothing.
+     - **Gap: the scroll.** Table 56's scroll row is the casting time of the spell it holds (ADR 0033
+       step 15.1: a scroll as its spell), but an item doesn't hold its spell. The scroll's term adds
+       nothing and is shown as not counted (`timing: spell_casting_time`, "casting time of its
+       spell, not counted"), never as a computed +0. It closes when a scroll names its spell.
+     - The correction keeps the d10 and the effect terms recorded at the roll. Its cause replaces the
+       weapon term, or an earlier cause. Effects are not re-read, so casting Haste does not speed up
+       its own round.
+     - It is an `initiative_correct` entry `{round, d10, before, after, modifiers, cause}` with the
+       `initiative` snapshot, recorded as the last entry of the cast's or the use's transaction. So
+       one undo pops both, redo replays it (the snapshot's replay names the entry), and the reroll
+       guard (the initiative's entry on top) still lets a reroll follow.
+     - Out of combat or with no initiative it does nothing.
+   - **Reroll** keeps the modifiers and rolls a new d10.
+
+   Storage: migration 021 adds `round_state.initiative_modifiers` (TEXT, nullable and additive;
+   NULL, as every row before it, reads as a plain d10). It holds `{entryId, terms}`: the terms and
+   the `initiative_entry_id` they were written with. The release before it updates the d10 and the
+   entry id but leaves this column, so during a rolling deploy a row can keep an earlier entry's
+   modifiers. The reader serves them only when `entryId` matches `initiative_entry_id`, and a plain
+   d10 otherwise. The `initiative`
+   snapshot gains `modifiers` (absent: a plain d10). The `initiative` payload becomes `{round, d10,
+   modifiers, total}`; old `{round, d10}` entries read their total as the die.
+
+   Wire: `GET /api/round`, Next turn and the reroll serve `initiative` as `{value (the total, was
+   the die), d10, modifiers, endOfRound, logEntryId}`.
+
+   Web: the turn header's number has the breakdown as its tooltip (d10, each term, "= total, the
+   lowest acts first"), plus a "fin du tour" tag when a spell takes a round or more. The journal
+   words both entries, e.g. "Initiative du tour 2 corrigée : 8 → 4 (Projectile magique : +1)".
+
+   Tests:
+   - `buffsvc`: `TestWeaponSpeed_ADR0035Item6_*`, `TestSpellInitiative_ADR0035Item6_2_*`,
+     `TestItemInitiative_ADR0035Item6_2_Table56AndTheScrollNotCounted`,
+     `TestInitiative_ADR0035Item6_NextRoundAddsTheWeaponSpeedAndEffects`,
+     `TestInitiative_ADR0035Item6_2_ACastOrAnItemUsedCorrectsTheRound`,
+     `TestInitiative_ADR0035Item6_4_RerollKeepsTheModifiers` and
+     `TestInitiativeRestorer_ADR0035Item6_RestoresTheModifiers`.
+   - `castsvc`: `TestCast_ADR0035Item6_2_CastingCorrectsTheInitiative`.
+   - `itemsvc`: `TestUseItem_ADR0035Item6_2_AMagicItemUsedCorrectsTheInitiative`.
+   - `composition`: `TestInitiative_ADR0035Item6_WeaponSpeedThenAnItemUsedCorrectsTheRound` (undo,
+     redo, reroll).
+   - `router`: `TestRoundInitiative_WireShape`.
+   - `buffdal`: `TestInitiative_ADR0035Item6_ModifiersBelongToTheirEntry`; `spelleffectsadpt`:
+     `TestRepoSeeds_ADR0033Step11_InitiativeEffects`.
+   - e2e: `round.spec` and `layout.spec`.
+
 ### The screens (proposed, accepted with "agree")
 
 7. **Inventaire.** The possessions as the stage card; on the right the AC card

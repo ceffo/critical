@@ -72,7 +72,7 @@ func newCastWire(t *testing.T) *castWire {
 		}).Once()
 	log.EXPECT().HPTotal(mock.Anything, charID).Return(30, nil).Maybe()
 	svc, err := castsvc.New(castsvc.Deps{
-		Slots: w.slots, Effects: effects, Texts: w.texts, Buffs: w.buffs,
+		Slots: w.slots, Effects: effects, Texts: w.texts, Buffs: w.buffs, Initiative: noInitiative(t),
 		Items: mocks.NewMockItems(t), Attacks: mocks.NewMockAttacks(t),
 		Characters: chars, Dice: w.dice, Log: log, Tx: noTx{},
 	})
@@ -131,7 +131,7 @@ func TestCast_AnswerIsTheLoggedPayload(t *testing.T) {
 	w.slots.EXPECT().GetSlots(mock.Anything, charID).Return(slots, nil).Once()
 	w.slots.EXPECT().SaveSlots(mock.Anything, charID, mock.Anything).Return(nil).Once()
 	spell := spellsvc.Spell{ID: "fireball", Name: localized.Of("Fireball"), Class: "wizard", Level: 3, Description: localized.Of("A burst of flame.")}
-	w.texts.EXPECT().Describe(mock.Anything, "fireball").Return(spell, true, nil).Once()
+	w.texts.EXPECT().Describe(mock.Anything, "fireball").Return(spell, true, nil).Times(2) // the text, then the casting time (ADR 0035 item 6.2)
 	for _, v := range []int{6, 5, 4, 3, 2, 1, 6, 5, 4, 3} {
 		w.dice.EXPECT().RollDie(6).Return(v).Once()
 	}
@@ -346,4 +346,12 @@ func TestAddEffect_Handler(t *testing.T) {
 	r.Post("/api/spells/effect", render.Handle(casthdl.AddEffect(func(*http.Request) int64 { return 1 }, svc)))
 	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/spells/effect", strings.NewReader(`{`)))
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a malformed body")
+}
+
+// noInitiative is the initiative port out of combat: a cast corrects
+// nothing (ADR 0035 item 6.2).
+func noInitiative(t *testing.T) *mocks.MockInitiative {
+	i := mocks.NewMockInitiative(t)
+	i.EXPECT().CorrectInitiative(mock.Anything, charID, mock.Anything).Return(nil, nil).Maybe()
+	return i
 }

@@ -28,7 +28,7 @@ import { correctionKind } from "./kinds/correction";
 import { diceKind } from "./kinds/dice";
 import { exposureKind } from "./kinds/exposure";
 import { hpChangeKind } from "./kinds/hpChange";
-import { initiativeKind } from "./kinds/initiative";
+import { initiativeCorrectKind, initiativeKind } from "./kinds/initiative";
 import {
   equipmentStateKind,
   itemAddKind,
@@ -54,6 +54,7 @@ export const KIND_VIEWS: Record<LogKind, AnyKindView> = {
   round_set: roundSetKind,
   time_passed: timePassedKind,
   initiative: initiativeKind,
+  initiative_correct: initiativeCorrectKind,
   attack: attackKind,
   item_use: itemUseKind,
   item_restock: itemRestockKind,

@@ -145,18 +145,43 @@ func Trigger(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	}
 }
 
-// InitiativeDTO is the round's initiative: the d10 (lowest acts first) and
-// the log entry that rolled it.
+// InitiativeDTO is the round's initiative (ADR 0035 item 6): its value, the
+// total (lowest acts first); the d10 and the modifiers added to it, the
+// breakdown the web shows; endOfRound when a spell cast that round takes a
+// round or more; and the log entry that rolled or last corrected it.
 type InitiativeDTO struct {
-	Value      int   `json:"value"`
-	LogEntryID int64 `json:"logEntryId"`
+	Value      int                     `json:"value"`
+	D10        int                     `json:"d10"`
+	Modifiers  []InitiativeModifierDTO `json:"modifiers"`
+	EndOfRound bool                    `json:"endOfRound"`
+	LogEntryID int64                   `json:"logEntryId"`
+}
+
+// InitiativeModifierDTO is one term of the initiative: its source code
+// (weapon, effect, spell, item), its value and what names it (the piece's
+// id, the stored name, the spell, the magic kind; timing for a spell's
+// casting time: "", end_of_round or special; an item whose term is its
+// spell's casting time: spell_casting_time).
+type InitiativeModifierDTO struct {
+	Source    buffsvc.InitiativeSource `json:"source"`
+	Value     int                      `json:"value"`
+	ItemID    string                   `json:"itemId,omitempty"`
+	Name      string                   `json:"name,omitempty"`
+	SpellID   string                   `json:"spellId,omitempty"`
+	MagicKind string                   `json:"magicKind,omitempty"`
+	Timing    buffsvc.CastTiming       `json:"timing,omitempty"`
 }
 
 func toInitiativeDTO(i *buffsvc.Initiative) *InitiativeDTO {
 	if i == nil {
 		return nil
 	}
-	return &InitiativeDTO{Value: i.D10, LogEntryID: i.LogEntryID}
+	out := &InitiativeDTO{Value: i.Total(), D10: i.D10, Modifiers: []InitiativeModifierDTO{}, LogEntryID: i.LogEntryID}
+	for _, m := range i.Modifiers {
+		out.Modifiers = append(out.Modifiers, InitiativeModifierDTO(m))
+		out.EndOfRound = out.EndOfRound || m.Timing == buffsvc.TimingEndOfRound
+	}
+	return out
 }
 
 // RoundDTO is GET /api/round: the counter and its initiative (null out of
@@ -200,8 +225,8 @@ func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	}
 }
 
-// RerollInitiative pops the round's initiative entry and rolls a new one;
-// 409 when there is none or another entry is newer.
+// RerollInitiative rolls a new d10 for the round's initiative, its
+// modifiers kept; 409 when there is none or another entry is newer.
 func RerollInitiative(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		initiative, err := svc.RerollInitiative(r.Context(), charID(r))

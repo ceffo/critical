@@ -3,11 +3,19 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, ArrowsClockwise, DotsThree } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { buffName, useSpellName } from "@/i18n/spellName";
+import { useInventoryName } from "@/i18n/inventoryName";
+import { initiativeTermText } from "@/lib/initiative";
+import type { Initiative } from "@/types/buffs";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { previewPassTime } from "@/api/round";
 import {
   hoursToAsk,
@@ -24,7 +32,7 @@ type Mode = "menu" | "passing" | "setting" | "confirmEnd";
  * The round cells of the header card (ADR 0027 steps 4.1 and 4.2): the round, its label stacked over
  * its number (`text-headline`), then Next round (the header's main button) and a menu with Time passes,
  * Set round number and End combat, over the initiative the server rolled for the round: the header's
- * `text-hero` number, its die in the tooltip, with a reroll. Every action goes through the round
+ * `text-hero` number, its breakdown in the tooltip (ADR 0035 item 6.3), with a reroll. Every action goes through the round
  * endpoints and is logged server-side.
  */
 export function RoundBlock() {
@@ -98,19 +106,13 @@ export function RoundBlock() {
             t("round.outOfCombatInitiative")
           ) : (
             <span
-              className="flex items-center gap-2"
-              title={t("round.initiativeHint")}
+              className="flex flex-wrap items-center gap-x-2"
+              title={initiative ? undefined : t("round.initiativeHint")}
             >
               {t("round.initiative")}
               {initiative ? (
                 <>
-                  <span
-                    className="text-hero text-foreground tabular-nums"
-                    data-testid="initiative-value"
-                    data-entry-id={initiative.logEntryId}
-                  >
-                    {initiative.value}
-                  </span>
+                  <InitiativeValue initiative={initiative} />
                   <button
                     type="button"
                     aria-label={t("round.initiativeReroll")}
@@ -121,6 +123,14 @@ export function RoundBlock() {
                   >
                     <ArrowsClockwise />
                   </button>
+                  {initiative.endOfRound && (
+                    <span
+                      className="chip px-2"
+                      data-testid="initiative-end-of-round"
+                    >
+                      {t("initiative.endOfRound")}
+                    </span>
+                  )}
                 </>
               ) : (
                 <span className="chip px-2">{t("round.initiativeNone")}</span>
@@ -130,6 +140,56 @@ export function RoundBlock() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The initiative number (the total, ADR 0035 item 6.3) with its breakdown as its tooltip: the d10,
+ * each modifier named by its source (the weapon in hand, an effect, the spell cast or item used that
+ * corrected the round), then the total. The words are built here; the terms are the server's.
+ */
+function InitiativeValue({ initiative }: { initiative: Initiative }) {
+  const { t } = useTranslation();
+  const spellName = useSpellName();
+  const names = useInventoryName();
+  const lines = [
+    t("initiative.die", { value: initiative.d10 }),
+    ...initiative.modifiers.map((m) =>
+      initiativeTermText(m, t, spellName, names),
+    ),
+  ];
+  const total = t("initiative.total", { value: initiative.value });
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        delay={200}
+        render={
+          <span
+            tabIndex={0}
+            aria-label={`${t("round.initiative")} ${initiative.value} (${lines.join(", ")})`}
+            className="rounded-md text-hero text-foreground tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            data-testid="initiative-value"
+            data-entry-id={initiative.logEntryId}
+          />
+        }
+      >
+        {initiative.value}
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        <div
+          className="flex flex-col gap-0.5"
+          data-testid="initiative-breakdown"
+          aria-label={t("initiative.breakdown")}
+        >
+          {lines.map((line, i) => (
+            <span key={i} className="tabular-nums">
+              {line}
+            </span>
+          ))}
+          <span className="font-semibold tabular-nums">{total}</span>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

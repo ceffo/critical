@@ -8,9 +8,11 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
 // Cast spends the slot and applies its spell at the character's level, in
@@ -80,7 +82,11 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 				SlotIndex: &slotIndex, Slots: after, Failure: failure,
 			}
 			res.EntryID, err = s.record(ctx, characterID, res, []actionlog.Snapshot{slotSnap})
-			return err
+			if err != nil {
+				return err
+			}
+			// A failed cast still took its casting time.
+			return s.correctInitiative(ctx, characterID, id, name, c.Derived.RealizedLevel)
 		}
 		var extra []int
 		// ADR 0008 step 9: a spell that grants slots adds them, blank.
@@ -112,12 +118,36 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		res.ExtraSlots = extra
 		res.Slots = after
 		res.EntryID, err = s.record(ctx, characterID, res, append([]actionlog.Snapshot{slotSnap}, snaps...))
-		return err
+		if err != nil {
+			return err
+		}
+		return s.correctInitiative(ctx, characterID, id, name, c.Derived.RealizedLevel)
 	})
 	if err != nil {
 		return CastResult{}, err
 	}
 	return res, nil
+}
+
+// correctInitiative is ADR 0035 item 6.2 for a cast: the round's
+// initiative becomes the same d10 plus the spell's casting time at the
+// caster level (buffsvc.SpellInitiative). It is the cast transaction's last
+// entry. A spell the catalogue does not know reads as a special casting
+// time. A spell received or added as an effect is not cast by the
+// character and corrects nothing.
+func (s *service) correctInitiative(ctx context.Context, characterID int64, spellID, name string, casterLevel int) error {
+	spell, found, err := s.Texts.Describe(ctx, spellID)
+	if err != nil {
+		return fmt.Errorf("describe %s: %w", spellID, err)
+	}
+	ct := spellstats.CastingTime{Kind: spellstats.KindSpecial}
+	if found {
+		ct = spell.Stats.CastingTime
+	}
+	if _, err := s.Initiative.CorrectInitiative(ctx, characterID, buffsvc.SpellInitiative(spellID, name, ct, casterLevel)); err != nil {
+		return fmt.Errorf("correct initiative: %w", err)
+	}
+	return nil
 }
 
 // Receive applies a spell another caster put on the character.

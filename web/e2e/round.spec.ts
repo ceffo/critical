@@ -38,7 +38,7 @@ test("Next round advances the counter and starts a new log group", async ({
   const newGroup = roundGroup(page, r0 + 1);
   await expect(newGroup).toContainText("current");
   await expect(newGroup.getByRole("listitem")).toHaveText([
-    /Initiative \d+ \(d10\) for round/,
+    /Initiative -?\d+ for round \d+ \(d10 \d+/,
     new RegExp(`Round ${r0} → ${r0 + 1}`),
   ]);
   await expect(newGroup.getByTestId("log-transaction")).toHaveCount(0);
@@ -367,9 +367,16 @@ test("Next round moves the timeline window; a 1-turn effect shows the warning, t
   );
 });
 
-test("Next round rolls the initiative; one Undo pops a round with its initiative; reroll replaces it", async ({
+test("Next round rolls the initiative; one Undo pops a round with its initiative; reroll replaces it; a cast corrects it", async ({
   page,
+  stack,
 }) => {
+  const prepared = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spells: ["stoneskin", "rarys_mnemonic_enhancer"] }),
+  });
+  expect(prepared.ok).toBe(true);
   await openDashboard(page);
   const row = page.getByTestId("initiative-row");
   await expect(row).toHaveText("Out of combat · initiative will be rolled");
@@ -377,13 +384,24 @@ test("Next round rolls the initiative; one Undo pops a round with its initiative
   await nextRound(page);
   await expect.poll(() => currentRound(page)).toBe(1);
   const value = page.getByTestId("initiative-value");
-  await expect(value).toHaveText(/^([1-9]|10)$/);
+  await expect(value).toHaveText(/^-?\d+$/);
   const firstValue = await value.textContent();
   const firstId = await value.getAttribute("data-entry-id");
   const first = combatLog(page).locator(`[data-entry-id="${firstId}"]`);
+  // ADR 0035 item 6: the d10 plus the weapon in hand's speed, named in the journal and in the
+  // number's tooltip.
   await expect(first).toContainText(
-    `Initiative ${firstValue} (d10) for round 1`,
+    new RegExp(
+      `Initiative ${firstValue} for round 1 \\(d10 \\d+, Bastard Sword \\+2: \\d+\\)`,
+    ),
   );
+  await value.hover();
+  const breakdown = page.getByTestId("initiative-breakdown");
+  await expect(breakdown).toContainText(/^d10 \d+Bastard Sword \+2: \d+/);
+  await expect(breakdown).toContainText(
+    `= ${firstValue}, the lowest acts first`,
+  );
+  await page.mouse.move(0, 0);
 
   // Next turn and the initiative it rolls are one transaction (ADR 0018): the Undo names the
   // turn, and one click brings back turn 1 with its initiative.
@@ -413,8 +431,43 @@ test("Next round rolls the initiative; one Undo pops a round with its initiative
   );
   await expect(rerolled).toHaveAttribute("data-status", "active");
   await expect(rerolled).toContainText(
-    `Initiative ${await value.textContent()} (d10) for round 1`,
+    `Initiative ${await value.textContent()} for round 1 (d10 `,
   );
+
+  // ADR 0035 item 6.2: casting in the round corrects its initiative live, the same d10 plus the
+  // casting time (Stoneskin: 1 segment) in place of the weapon's speed; one Undo pops the cast and
+  // the correction.
+  const before = await value.textContent();
+  const rolledId = await value.getAttribute("data-entry-id");
+  await value.hover();
+  const d10 = Number(
+    /^d10 (\d+)/.exec((await breakdown.textContent()) ?? "")?.[1],
+  );
+  await page.mouse.move(0, 0);
+  await page.getByRole("tab", { name: "Spells" }).click();
+  await page.getByRole("button", { name: "Cast Stoneskin" }).click();
+  await expect(value).toHaveText(String(d10 + 1));
+  const corrected = logEntry(page, "Round 1 initiative corrected");
+  await expect(corrected).toContainText(
+    `Round 1 initiative corrected: ${before} → ${d10 + 1} (Stoneskin: +1)`,
+  );
+  await snap(page, "initiative-corrected-by-a-cast");
+  await undoEntry(page, "Cast Stoneskin");
+  await expect(value).toHaveText(before ?? "");
+  await expect(value).toHaveAttribute("data-entry-id", rolledId ?? "");
+
+  // A spell of a round or more (Rary's: 1 turn) adds nothing and tags the number "end of round";
+  // the tag goes with the round at Next Round.
+  const endOfRound = page.getByTestId("initiative-end-of-round");
+  await expect(endOfRound).toBeHidden();
+  await page
+    .getByRole("button", { name: "Cast Rary's Mnemonic Enhancer" })
+    .click();
+  await expect(endOfRound).toHaveText("end of round");
+  await expect(value).toHaveText(String(d10));
+  await nextRound(page);
+  await expect.poll(() => currentRound(page)).toBe(2);
+  await expect(endOfRound).toBeHidden();
 
   for (const vp of HEADER_VIEWPORTS) {
     await page.setViewportSize(vp);

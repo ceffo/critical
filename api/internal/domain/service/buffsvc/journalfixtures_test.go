@@ -10,6 +10,7 @@ import (
 // The web journal's fixtures of the kinds this service logs are what it logs.
 func TestJournalFixturesAreWhatIsLogged(t *testing.T) {
 	journalfixture.Matches[initiativePayload](t, actionlog.KindInitiative)
+	journalfixture.Matches[initiativeCorrectPayload](t, actionlog.KindInitiativeCorrect)
 	journalfixture.Matches[logPayload](t, actionlog.KindBuffChange)
 	journalfixture.Matches[logPayload](t, actionlog.KindRoundAdvance)
 	journalfixture.Matches[logPayload](t, actionlog.KindRoundReset)

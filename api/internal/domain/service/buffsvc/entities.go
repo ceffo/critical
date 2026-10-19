@@ -22,12 +22,90 @@ const (
 // InitiativeDie is the die initiative is rolled with (ADR 0013 step 1).
 const InitiativeDie = 10
 
-// Initiative is the round's initiative roll (ADR 0013): the plain d10,
-// lowest acts first, and the action-log entry that rolled it. There is
-// none out of combat (round 0).
+// Initiative is the round's initiative (ADR 0013, as amended by ADR 0035
+// item 6): the d10, the modifiers added to it, and the action-log entry that
+// rolled or last corrected it. Its value is Total, the lowest acts first.
+// There is none out of combat (round 0).
 type Initiative struct {
-	D10        int
+	D10 int
+	// Modifiers are the terms added to the die, in order: the weapon in
+	// hand's speed (or the spell cast or item used that corrected the round),
+	// then the initiative effects. Nil: the plain die.
+	Modifiers  []InitiativeModifier
 	LogEntryID int64
+}
+
+// Total is the initiative: the die plus every modifier.
+func (i Initiative) Total() int {
+	t := i.D10
+	for _, m := range i.Modifiers {
+		t += m.Value
+	}
+	return t
+}
+
+// InitiativeSource is what an initiative modifier comes from (ADR 0035 item
+// 6). The codes go on the wire; the web names them.
+type InitiativeSource string
+
+// Initiative modifier sources.
+const (
+	// InitiativeWeapon is the weapon in hand's speed factor.
+	InitiativeWeapon InitiativeSource = "weapon"
+	// InitiativeEffect is a buff's or an item power's initiative effect (ADR
+	// 0033 step 11: haste -2, slow +2).
+	InitiativeEffect InitiativeSource = "effect"
+	// InitiativeSpell is the casting time of the spell cast that round.
+	InitiativeSpell InitiativeSource = "spell"
+	// InitiativeItem is the magic item used that round (PHB Table 56).
+	InitiativeItem InitiativeSource = "item"
+)
+
+// CastTiming says how a spell's casting time counted (ADR 0033 step 15.1's
+// rules, kept by ADR 0035 item 6).
+type CastTiming string
+
+// Casting time readings.
+const (
+	// TimingSegments is a casting time under a round: its segments add.
+	TimingSegments CastTiming = ""
+	// TimingEndOfRound is a casting time of a round or more: it adds
+	// nothing and the spell takes effect at the end of the round.
+	TimingEndOfRound CastTiming = "end_of_round"
+	// TimingSpecial is a casting time the catalogue gives as special: it
+	// adds nothing.
+	TimingSpecial CastTiming = "special"
+	// TimingSpellCastingTime is an item whose Table 56 term is the casting
+	// time of the spell it holds (the scroll): items don't hold their
+	// spell, so the term is not counted and adds nothing.
+	TimingSpellCastingTime CastTiming = "spell_casting_time"
+)
+
+// InitiativeModifier is one term of the initiative, named by its source:
+// ItemID the weapon, item or power's piece; Name its stored name, the buff's
+// name or the spell's (the client's fallback label); SpellID the spell cast
+// or the buff's spell; MagicKind the item's kind; Timing a spell's casting
+// time reading.
+type InitiativeModifier struct {
+	Source    InitiativeSource
+	Value     int
+	ItemID    string
+	Name      string
+	SpellID   string
+	MagicKind string
+	Timing    CastTiming
+}
+
+// HeldWeapon is the weapon in hand as the initiative reads it (ADR 0033
+// step 8): its speed factor and magic, and its kind for the "weapon becomes
+// +N" effects conditioned on it.
+type HeldWeapon struct {
+	ItemID      string
+	Name        string
+	Kind        WeaponKind
+	Speed       int
+	MagicToHit  int
+	MagicDamage int
 }
 
 // BuffEffects is the modifier payload of one buff. Pointers are used so a
@@ -65,6 +143,9 @@ type BuffEffects struct {
 	// spell, bracers of defense): it replaces the base 10 only while no body
 	// armour is worn, and the best (lowest) one counts.
 	BaseAC *int
+	// Initiative is added to the initiative (ADR 0033 step 11: haste -2,
+	// slow +2; ADR 0035 item 6).
+	Initiative *int
 
 	// WeaponKind is a condition on the effects above, not an effect (ADR
 	// 0004 step 18): with one (melee or missile) they count only for an

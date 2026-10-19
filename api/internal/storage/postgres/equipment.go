@@ -11,7 +11,7 @@ import (
 
 // equipmentMigration makes items every piece of equipment (ADR 0033). Right after it the run
 // converts every character's items and weapons (convertEquipment).
-const equipmentMigration = "015_equipment.sql"
+const equipmentMigration = "016_equipment.sql"
 
 // convertEquipment is the conversion of ADR 0033 step 26, a data step run just after
 // equipmentMigration (migrations hold no data, ADR 0025 step 2.1.1): for every character that

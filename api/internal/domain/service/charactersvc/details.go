@@ -2,6 +2,7 @@ package charactersvc
 
 import (
 	"errors"
+	"math"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -14,9 +15,13 @@ import (
 // card's edit (detailssvc) and the creation form (Create) both apply a
 // DetailsPatch through Details.Apply.
 const (
-	MaxDetailShortLen   = 40 // hair, eyes
-	MaxDetailMeasureLen = 20 // height, weight
-	MaxAge              = 10_000
+	MaxDetailShortLen = 40 // hair, eyes
+	MaxAge            = 10_000
+	// MaxHeightCm and MaxWeightKg are the sanity bounds of a height and a
+	// weight (ADR 0032 step 5.2): above every value of PHB Table 10. A value
+	// beyond a race's range is a warning; beyond these it is no figure.
+	MaxHeightCm = 300.0
+	MaxWeightKg = 500.0
 )
 
 // Error codes of the details' FieldErrors besides CodeTooLong, CodeOutOfRange
@@ -27,6 +32,21 @@ const (
 	// 0032 step 2), refused when it is set and read as a warning on a
 	// character that already holds it (step 8.4).
 	CodeAlignmentNotAllowed = "alignment_not_allowed"
+	// CodeNotANumber is a height, weight or age that is no number (ADR 0032
+	// step 5.2).
+	CodeNotANumber = "not_a_number"
+	// CodeRaceRequired and CodeSexRequired are an identity roll asked without
+	// the race, or without the sex for a height or a weight (step 5.3).
+	CodeRaceRequired = "race_required"
+	CodeSexRequired  = "sex_required"
+)
+
+// The warnings of an identity number outside its table range (ADR 0032 step
+// 5.2); the figures are in stored units (cm, kg, years).
+const (
+	CodeHeightOutsideRange = "height_outside_range"
+	CodeWeightOutsideRange = "weight_outside_range"
+	CodeAgeOutsideRange    = "age_outside_range"
 )
 
 // The sex codes (ADR 0032 step 3): the two rows of PHB Table 10.
@@ -43,6 +63,9 @@ const (
 	FieldAlignment = "alignment"
 	FieldSex       = "sex"
 	FieldLanguages = "languages"
+	FieldHeight    = "height"
+	FieldWeight    = "weight"
+	FieldAge       = "age"
 )
 
 // CodeLanguagesOverLimit is the warning of a character that knows more
@@ -83,11 +106,15 @@ type DetailsPatch struct {
 	Age       *int
 	ClearAge  bool
 	Sex       *string
-	Height    *string
-	Weight    *string
-	Hair      *string
-	Eyes      *string
-	Languages *[]string
+	// Height (cm) and Weight (kg) are positive numbers up to MaxHeightCm and
+	// MaxWeightKg, kept to a tenth; ClearHeight and ClearWeight unset them.
+	Height      *float64
+	ClearHeight bool
+	Weight      *float64
+	ClearWeight bool
+	Hair        *string
+	Eyes        *string
+	Languages   *[]string
 }
 
 // Coded is d with an alignment or sex that is not a code blanked: during a
@@ -120,13 +147,17 @@ func (d Details) Missing() []string {
 }
 
 // Warning is a rule the stored character breaks without being refused (ADR
-// 0032 steps 4.2 and 8.4): a code and the field it is about, and for the
+// 0032 steps 4.2, 5.2 and 8.4): a code and the field it is about, and for the
 // languages over the limit the figures the web words (Count known, Limit
-// allowed); nil for the others.
+// allowed), for a number outside its range the value and the range; nil for
+// the others.
 type Warning struct {
 	Code         string
 	Field        string
 	Count, Limit *int
+	// Value, Min and Max are an identity number outside its table range (ADR
+	// 0032 step 5.2), in stored units; nil for the other warnings.
+	Value, Min, Max *float64
 }
 
 // Known is d with the languages the book does not hold left out: during a
@@ -170,6 +201,29 @@ func (d Details) LanguageWarning(intelligence int, native string) (w Warning, ok
 		return Warning{}, false
 	}
 	return Warning{Code: CodeLanguagesOverLimit, Field: FieldLanguages, Count: &count, Limit: &limit}, true
+}
+
+// RangeWarnings are ADR 0032 step 5.2: the height, weight and age of a
+// character of race and the details' sex that lie outside the table range, one
+// warning each, never a refusal. A number not set is not checked, a race
+// that is none of the six checks nothing, and a missing sex checks against the
+// union of the two (step 5.1).
+func (d Details) RangeWarnings(race string) []Warning {
+	d = d.Coded()
+	var out []Warning
+	check := func(code, field string, v float64, r ruletablesvc.Range, ok bool) {
+		if v == 0 || !ok || (v >= r.Min && v <= r.Max) {
+			return
+		}
+		out = append(out, Warning{Code: code, Field: field, Value: &v, Min: &r.Min, Max: &r.Max})
+	}
+	r, ok := ruletablesvc.HeightRange(race, d.Sex)
+	check(CodeHeightOutsideRange, FieldHeight, d.Height, r, ok)
+	r, ok = ruletablesvc.WeightRange(race, d.Sex)
+	check(CodeWeightOutsideRange, FieldWeight, d.Weight, r, ok)
+	r, ok = ruletablesvc.AgeRange(race)
+	check(CodeAgeOutsideRange, FieldAge, float64(d.Age), r, ok)
+	return out
 }
 
 // Warnings are the warnings the details of a character of class carry: the
@@ -225,8 +279,6 @@ func (d Details) Apply(k Kind, book LanguageBook, p DetailsPatch) (Details, erro
 		v     *string
 		limit int
 	}{
-		{"height", &cur.Height, p.Height, MaxDetailMeasureLen},
-		{"weight", &cur.Weight, p.Weight, MaxDetailMeasureLen},
 		{"hair", &cur.Hair, p.Hair, MaxDetailShortLen},
 		{"eyes", &cur.Eyes, p.Eyes, MaxDetailShortLen},
 	} {
@@ -251,6 +303,27 @@ func (d Details) Apply(k Kind, book LanguageBook, p DetailsPatch) (Details, erro
 			return d, err
 		}
 		cur.Sex = sex
+	}
+	for _, f := range []struct {
+		name  string
+		dst   *float64
+		v     *float64
+		clear bool
+		max   float64
+	}{
+		{FieldHeight, &cur.Height, p.Height, p.ClearHeight, MaxHeightCm},
+		{FieldWeight, &cur.Weight, p.Weight, p.ClearWeight, MaxWeightKg},
+	} {
+		if f.clear {
+			*f.dst = 0
+		}
+		if f.v != nil {
+			v := math.Round(*f.v*10) / 10
+			if math.IsNaN(v) || v <= 0 || v > f.max {
+				return d, &domain.FieldError{Field: f.name, Message: CodeOutOfRange}
+			}
+			*f.dst = v
+		}
 	}
 	if p.ClearAge {
 		cur.Age = 0

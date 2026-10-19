@@ -65,7 +65,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 		}},
 		Details: charactersvc.Details{
 			Alignment: row.Alignment, Age: int(row.Age), Sex: row.Sex,
-			Height: row.Height, Weight: row.Weight, Hair: row.Hair, Eyes: row.Eyes, Languages: langs,
+			Height: row.HeightCm, Weight: row.WeightKg, Hair: row.Hair, Eyes: row.Eyes, Languages: langs,
 		},
 	}, nil
 }
@@ -314,7 +314,7 @@ func (d *DAL) GetDetails(ctx context.Context, id int64) (charactersvc.Details, c
 	}
 	return charactersvc.Details{
 		Alignment: r.Alignment, Age: int(r.Age), Sex: r.Sex,
-		Height: r.Height, Weight: r.Weight, Hair: r.Hair, Eyes: r.Eyes, Languages: langs,
+		Height: r.HeightCm, Weight: r.WeightKg, Hair: r.Hair, Eyes: r.Eyes, Languages: langs,
 	}, charactersvc.Kind{Class: r.Class, Race: r.RaceCode}, nil
 }
 
@@ -325,8 +325,8 @@ func (d *DAL) UpdateDetails(ctx context.Context, id int64, v charactersvc.Detail
 		return fmt.Errorf("encode languages: %w", err)
 	}
 	n, err := d.q.UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
-		Alignment: v.Alignment, Age: int64(v.Age), Sex: v.Sex, Height: v.Height,
-		Weight: v.Weight, Hair: v.Hair, Eyes: v.Eyes, Languages: string(langs), ID: id,
+		Alignment: v.Alignment, Age: int64(v.Age), Sex: v.Sex, HeightCm: v.Height,
+		WeightKg: v.Weight, Hair: v.Hair, Eyes: v.Eyes, Languages: string(langs), ID: id,
 	})
 	if err != nil {
 		return fmt.Errorf("update character details: %w", err)

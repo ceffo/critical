@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  rangeWarnings,
   ALIGNMENT_CODES,
   codeOrEmpty,
   hasAlignmentWarning,
@@ -12,19 +13,90 @@ const details = {
   alignment: "neutral_good",
   age: 112,
   sex: "male",
-  height: "",
-  weight: "",
+  height_cm: 177.8,
+  weight_kg: 72.6,
   hair: "",
   eyes: "",
   languages: ["common", "elvish"],
 };
 
+describe("an unrelated edit does not drift the measures", () => {
+  it("keeps the stored numbers of fields left as toDraft showed them, in en", () => {
+    const d = { ...details, height_cm: 180, weight_kg: 75 };
+    const draft = { ...toDraft(d, "en"), hair: "red" };
+    expect(toBody(draft, "en", d).body).toMatchObject({
+      height_cm: 180,
+      weight_kg: 75,
+    });
+    // Without the original the whole-inch field would be sent back: 180.3 and 74.8.
+    expect(toBody(draft, "en").body).toMatchObject({
+      height_cm: 180.3,
+      weight_kg: 74.8,
+    });
+    // A field the player did change is parsed.
+    const typed = { ...draft, weight: "160" };
+    expect(toBody(typed, "en", d).body).toMatchObject({
+      height_cm: 180,
+      weight_kg: 72.6,
+    });
+  });
+});
+
+describe("a fresh roll is kept over the stored number it displays like", () => {
+  it("saves the rolled 180.3 cm and 74.8 kg, not the stored 180 cm and 75 kg, in en", () => {
+    const d = { ...details, height_cm: 180, weight_kg: 75 };
+    const draft = {
+      ...toDraft(d, "en"),
+      rolledHeight: 180.3,
+      rolledWeight: 74.8,
+    };
+    expect(draft.height).toBe(`5'11"`);
+    expect(toBody(draft, "en", d).body).toMatchObject({
+      height_cm: 180.3,
+      weight_kg: 74.8,
+    });
+    // Typing over the roll parses what is typed.
+    expect(toBody({ ...draft, height: `6'0"` }, "en", d).body).toMatchObject({
+      height_cm: 182.9,
+    });
+  });
+});
+
 describe("character details draft", () => {
   it("round-trips the details", () => {
     expect(toBody(toDraft(details))).toEqual({
       ageInvalid: false,
+      invalid: [],
       body: details,
     });
+  });
+  it("shows the same height and weight per language and sends the same numbers", () => {
+    expect(toDraft(details, "fr")).toMatchObject({
+      height: "177,8",
+      weight: "72,6",
+    });
+    expect(toDraft(details, "en")).toMatchObject({
+      height: `5'10"`,
+      weight: "160",
+    });
+    expect(toBody(toDraft(details, "en"), "en").body).toMatchObject({
+      height_cm: 177.8,
+      weight_kg: 72.6,
+    });
+    expect(toBody(toDraft(details, "fr"), "fr").body).toMatchObject({
+      height_cm: 177.8,
+      weight_kg: 72.6,
+    });
+  });
+  it("sends null for an empty height or weight and flags text that is no figure", () => {
+    const d = { ...toDraft(details), height: " ", weight: "heavy" };
+    const { body, invalid } = toBody(d);
+    expect(body.height_cm).toBeNull();
+    expect(invalid).toEqual(["weight"]);
+    expect(toBody({ ...d, height: "tall" }).invalid).toEqual([
+      "height",
+      "weight",
+    ]);
   });
   it("leaves out an alignment or sex not picked yet", () => {
     const { body } = toBody({ ...toDraft(details), alignment: "", sex: "" });
@@ -94,5 +166,36 @@ describe("an old release's free text", () => {
     expect(body).not.toHaveProperty("alignment");
     expect(body).not.toHaveProperty("sex");
     expect(codeOrEmpty("lawful_good", ALIGNMENT_CODES)).toBe("lawful_good");
+  });
+});
+
+describe("rangeWarnings", () => {
+  it("reads each outside-range warning with its value and range, and none without warnings", () => {
+    expect(
+      rangeWarnings({
+        warnings: [
+          { code: "alignment_not_allowed", field: "alignment" },
+          {
+            code: "height_outside_range",
+            field: "height",
+            value: 210,
+            min: 152.4,
+            max: 177.8,
+          },
+          {
+            code: "age_outside_range",
+            field: "age",
+            value: 400,
+            min: 16,
+            max: 185,
+          },
+          { code: "weight_outside_range", field: "weight" },
+        ],
+      }),
+    ).toEqual({
+      height: { field: "height", value: 210, min: 152.4, max: 177.8 },
+      age: { field: "age", value: 400, min: 16, max: 185 },
+    });
+    expect(rangeWarnings({})).toEqual({});
   });
 });

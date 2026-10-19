@@ -83,7 +83,7 @@ id TEXT, character_id, position, percent INTEGER (0-100)
 -- items: each character's possessions, weapons included (character_id; "Per-character data" below;
 -- ADR 0033: category, magic_kind, catalogue_code, state carried/worn/wielded and each category's
 -- columns); equipment_review: the review list (ADR 0033 step 27); item_id_renames: the conversion's
--- renamed item ids (step 26.3); weapons: unread since migration 015 (converted into items)
+-- renamed item ids (step 26.3); weapons: unread since migration 016 (converted into items)
 -- spellbook_entries: the spells each character knows, by catalogue key, in sheet order
 character_id, spell_key TEXT, position
 

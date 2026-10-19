@@ -21,7 +21,7 @@ var catalogueWeapons = []ruletablesvc.Weapon{
 	{Code: "dart", WeaponType: "dart", Kind: "missile", Size: "s", Types: []string{"p"}, Speed: 2, DamageSM: "1d3", DamageL: "1d2"},
 }
 
-// legacyCharacter is a database as a release before migration 015 left it: a character with
+// legacyCharacter is a database as a release before migration 016 left it: a character with
 // items and weapons in their own tables, an item and a weapon of the same id.
 func legacyCharacter(t *testing.T) (*fakeStore, int64) {
 	t.Helper()
@@ -57,7 +57,7 @@ func legacyCharacter(t *testing.T) (*fakeStore, int64) {
 	return f, id
 }
 
-// ADR 0033 step 26: the data step after migration 015 converts every character's items and
+// ADR 0033 step 26: the data step after migration 016 converts every character's items and
 // weapons into pieces with no manual step: ids, names (the same text keys), counts and stats
 // kept, the weapons after the items, the weapons matched by type and wielded, the gem worn, the
 // item whose id a weapon has renamed (step 26.3) and the review list filled (step 27).

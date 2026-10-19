@@ -5,7 +5,7 @@
 #
 #   scripts/equipment-upgrade-rehearsal.sh [old ref]   # default: the merge base of HEAD and origin/main
 #
-# 1. The old release (built from <old ref>, which must not hold 015_equipment.sql) migrates and seeds the
+# 1. The old release (built from <old ref>, which must not hold 016_equipment.sql) migrates and seeds the
 #    fixture character, then the API writes what a player had: an item whose id a weapon has (dagger),
 #    "Arrows" with the ammo kind "arrows", a plain gem (Ruby), an attack with the bow and arrows (the
 #    stored form keeps the bow), then a weapon_edit, an item_use of the dagger item and an item_remove.
@@ -29,7 +29,7 @@ fail() { echo "equipment-rehearsal: FAIL: $*" >&2; exit 1; }
 ok() { echo "equipment-rehearsal: ok: $*"; }
 
 old_ref="${1:-$(git -C "$root" merge-base HEAD origin/main)}"
-git -C "$root" cat-file -e "$old_ref:api/internal/storage/postgres/migrations/015_equipment.sql" 2>/dev/null &&
+git -C "$root" cat-file -e "$old_ref:api/internal/storage/postgres/migrations/016_equipment.sql" 2>/dev/null &&
     fail "$old_ref already holds the equipment migration: pass a ref of before it"
 
 free_port() { python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
@@ -138,7 +138,7 @@ piece() { items | jq -r --arg id "$1" ".[] | select(.id == \$id) | $2"; }
 
 # --- 2. this checkout upgrades it ---
 start "$work/new-srv" "$new_testdata"
-expect "one conversion recorded" 1 "$(sql "SELECT COUNT(*) FROM schema_migrations WHERE name = '015_equipment.sql'")"
+expect "one conversion recorded" 1 "$(sql "SELECT COUNT(*) FROM schema_migrations WHERE name = '016_equipment.sql'")"
 expect "every item and weapon is a piece" 14 "$(items | jq length)"
 expect "the item whose id a weapon had is renamed (step 26.3)" "dagger=dagger_2" "$(sql "SELECT old_id || '=' || new_id FROM item_id_renames")"
 expect "the dagger is the weapon, wielded and matched" "weapon wielded dagger" "$(piece dagger '"\(.category) \(.state) \(.catalogueCode)"')"

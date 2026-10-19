@@ -29,6 +29,15 @@ SELECT id, alignment, sex FROM characters ORDER BY id;
 -- name: SetCharacterIdentity :exec
 UPDATE characters SET alignment = sqlc.arg(alignment), sex = sqlc.arg(sex), race = '' WHERE id = sqlc.arg(id);
 
+-- The identity numbers migration (015): every character's stored free-text height and weight,
+-- to parse into centimetres and kilograms.
+-- name: ListCharacterMeasures :many
+SELECT id, height, weight FROM characters ORDER BY id;
+
+-- The parsed height and weight of a character (0: none, the text was not recognised).
+-- name: SetCharacterMeasures :exec
+UPDATE characters SET height_cm = sqlc.arg(height_cm), weight_kg = sqlc.arg(weight_kg) WHERE id = sqlc.arg(id);
+
 -- The languages migration (014): every character's stored language list, to map to codes.
 -- name: ListCharacterLanguages :many
 SELECT id, languages FROM characters ORDER BY id;
@@ -121,9 +130,9 @@ SELECT name FROM items WHERE character_id = sqlc.arg(character_id)::bigint AND i
 INSERT INTO equipment_review (character_id, item_id, reason) VALUES (sqlc.arg(character_id)::bigint, @item_id, @reason)
 ON CONFLICT DO NOTHING;
 
--- The conversion of migration 015 (ADR 0033 step 26, convertEquipment): every character that holds
+-- The conversion of migration 016 (ADR 0033 step 26, convertEquipment): every character that holds
 -- items or weapons, their rows as stored before it, and the item rows rewritten as pieces. Delete
--- them with their step once every environment is past 015 (ADR 0025 step 2.1.1).
+-- them with their step once every environment is past 016 (ADR 0025 step 2.1.1).
 -- name: EquipmentOwners :many
 SELECT character_id FROM items UNION SELECT character_id FROM weapons ORDER BY character_id;
 

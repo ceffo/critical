@@ -33,6 +33,56 @@ type SVC interface {
 	// "placed" (unknown ability, too_many totals) or "placed.<ability>"
 	// (too_many, out_of_range, above_max).
 	Arrange(ctx context.Context, in ArrangeInput) (*ArrangeResult, error)
+	// Identity rolls the figures asked of height, weight and age (step 5.3).
+	// A *domain.FieldError on "figures" (empty, unknown, duplicate), "race"
+	// (unknown), "sex" (unknown), or the rolled figure itself (race_required,
+	// sex_required).
+	Identity(ctx context.Context, in IdentityInput) (*IdentityResult, error)
+}
+
+// The figures an identity roll rolls (ADR 0032 step 5.3), in the order they
+// are drawn whatever the order asked.
+const (
+	FigureHeight = "height"
+	FigureWeight = "weight"
+	FigureAge    = "age"
+)
+
+// Figures are the identity figures, in the order an identity roll draws them.
+var Figures = []string{FigureHeight, FigureWeight, FigureAge}
+
+// The units a figure's table total is in.
+const (
+	UnitInch  = "in"
+	UnitPound = "lb"
+	UnitYear  = "year"
+)
+
+// IdentityInput is an identity roll: the race (required), the sex (required
+// for a height or a weight) and the figures to roll.
+type IdentityInput struct {
+	Race, Sex string
+	Figures   []string
+}
+
+// IdentityRoll is one figure's breakdown: the dice in the order drawn (Count
+// dice of Sides), the table's Base for the race (and the sex), their Total in
+// Unit (inches, pounds or years), and the Value in the stored unit (cm, kg or
+// years) that fills the field.
+type IdentityRoll struct {
+	Figure string
+	Dice   []int
+	Sides  int
+	Base   int
+	Total  int
+	Unit   string
+	Value  float64
+}
+
+// IdentityResult is the identity roll's breakdown, one roll per figure asked.
+type IdentityResult struct {
+	Race, Sex string
+	Rolls     []IdentityRoll
 }
 
 // The refusals of a placement beyond charactersvc's codes.
@@ -345,6 +395,79 @@ func (s *service) HP(_ context.Context, in HPInput) (*HPResult, error) {
 		}
 		res.Levels = append(res.Levels, row)
 		res.Total += row.Gain
+	}
+	return res, nil
+}
+
+// Identity is ADR 0032 step 5.3: for each figure asked, in the order height,
+// weight, age, the table's dice for the race are drawn in order and added to
+// its base (for the sex, in the case of a height and a weight); the answer
+// holds the dice, the base, the total in the table's unit and the stored value.
+func (s *service) Identity(_ context.Context, in IdentityInput) (*IdentityResult, error) {
+	asked := map[string]bool{}
+	for _, f := range in.Figures {
+		switch {
+		case !slices.Contains(Figures, f):
+			return nil, &domain.FieldError{Field: "figures", Message: charactersvc.CodeUnknown}
+		case asked[f]:
+			return nil, &domain.FieldError{Field: "figures", Message: charactersvc.CodeDuplicate}
+		}
+		asked[f] = true
+	}
+	if len(asked) == 0 {
+		return nil, &domain.FieldError{Field: "figures", Message: charactersvc.CodeEmpty}
+	}
+	var order []string // the figures asked, in drawing order
+	for _, f := range Figures {
+		if asked[f] {
+			order = append(order, f)
+		}
+	}
+	if in.Race == "" {
+		return nil, &domain.FieldError{Field: order[0], Message: charactersvc.CodeRaceRequired}
+	}
+	row, ok := ruletablesvc.IdentityFor(in.Race)
+	if !ok {
+		return nil, &domain.FieldError{Field: "race", Message: charactersvc.CodeUnknown}
+	}
+	if in.Sex != "" && !slices.Contains(charactersvc.Sexes, in.Sex) {
+		return nil, &domain.FieldError{Field: "sex", Message: charactersvc.CodeUnknown}
+	}
+	if in.Sex == "" {
+		for _, f := range order {
+			if f != FigureAge {
+				return nil, &domain.FieldError{Field: f, Message: charactersvc.CodeSexRequired}
+			}
+		}
+	}
+	res := &IdentityResult{Race: in.Race, Sex: in.Sex, Rolls: make([]IdentityRoll, 0, len(order))}
+	for _, f := range order {
+		r := IdentityRoll{Figure: f}
+		var dice ruletablesvc.Dice
+		switch f {
+		case FigureHeight:
+			r.Base, _ = row.BaseHeight(in.Sex)
+			dice, r.Unit = row.HeightDice, UnitInch
+		case FigureWeight:
+			r.Base, _ = row.BaseWeight(in.Sex)
+			dice, r.Unit = row.WeightDice, UnitPound
+		case FigureAge:
+			r.Base, dice, r.Unit = row.StartAge, row.StartAgeDice, UnitYear
+		}
+		r.Sides, r.Dice, r.Total = dice.Sides, make([]int, dice.Count), r.Base
+		for i := range r.Dice {
+			r.Dice[i] = s.dice.RollDie(dice.Sides)
+			r.Total += r.Dice[i]
+		}
+		switch f {
+		case FigureHeight:
+			r.Value = ruletablesvc.InchesToCm(float64(r.Total))
+		case FigureWeight:
+			r.Value = ruletablesvc.PoundsToKg(float64(r.Total))
+		default:
+			r.Value = float64(r.Total)
+		}
+		res.Rolls = append(res.Rolls, r)
 	}
 	return res, nil
 }

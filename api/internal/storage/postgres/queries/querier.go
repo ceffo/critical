@@ -33,9 +33,9 @@ type Querier interface {
 	DeleteSpell(ctx context.Context, key sql.NullString) error
 	DeleteText(ctx context.Context, textID int64) error
 	DeleteTextLanguage(ctx context.Context, arg DeleteTextLanguageParams) error
-	// The conversion of migration 015 (ADR 0033 step 26, convertEquipment): every character that holds
+	// The conversion of migration 016 (ADR 0033 step 26, convertEquipment): every character that holds
 	// items or weapons, their rows as stored before it, and the item rows rewritten as pieces. Delete
-	// them with their step once every environment is past 015 (ADR 0025 step 2.1.1).
+	// them with their step once every environment is past 016 (ADR 0025 step 2.1.1).
 	EquipmentOwners(ctx context.Context) ([]int64, error)
 	InsertActiveBuffs(ctx context.Context, characterID int64) error
 	// The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
@@ -55,6 +55,9 @@ type Querier interface {
 	ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error)
 	// The languages migration (014): every character's stored language list, to map to codes.
 	ListCharacterLanguages(ctx context.Context) ([]ListCharacterLanguagesRow, error)
+	// The identity numbers migration (015): every character's stored free-text height and weight,
+	// to parse into centimetres and kilograms.
+	ListCharacterMeasures(ctx context.Context) ([]ListCharacterMeasuresRow, error)
 	ListLegacyItems(ctx context.Context, characterID int64) ([]ListLegacyItemsRow, error)
 	ListLegacyWeapons(ctx context.Context, characterID int64) ([]ListLegacyWeaponsRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
@@ -71,6 +74,8 @@ type Querier interface {
 	SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error
 	// The mapped language list of a character (a JSON list of codes).
 	SetCharacterLanguages(ctx context.Context, arg SetCharacterLanguagesParams) error
+	// The parsed height and weight of a character (0: none, the text was not recognised).
+	SetCharacterMeasures(ctx context.Context, arg SetCharacterMeasuresParams) error
 	// The seed character's alignment and sex when it lacks them (migration 013): a value set since is
 	// kept, so a rerun changes nothing.
 	SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error

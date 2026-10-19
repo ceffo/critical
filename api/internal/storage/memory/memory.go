@@ -101,7 +101,7 @@ func (s *Store) write(ctx context.Context, fn func(t *tables) error) error {
 
 // Migrate does nothing: the tables are Go values, there is no schema to bring
 // up to date, and every row has its owner from the start.
-func (s *Store) Migrate(context.Context, string, []ruletablesvc.Weapon) error { return nil }
+func (s *Store) Migrate(context.Context, string, ruletablesvc.Equipment) error { return nil }
 
 // Close does nothing: the data goes with the process.
 func (s *Store) Close() error { return nil }
@@ -130,6 +130,7 @@ func (t *tables) save() *tables {
 	c.forms = maps.Clone(t.forms)
 	c.xp = maps.Clone(t.xp)
 	c.acOverrides = maps.Clone(t.acOverrides)
+	c.skillArmors = maps.Clone(t.skillArmors)
 	c.dice = maps.Clone(t.dice)
 	c.users = maps.Clone(t.users)
 	c.invites = maps.Clone(t.invites)

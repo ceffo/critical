@@ -82,6 +82,9 @@ export interface Derived {
   thiefSkills: ThiefSkillTerms[] | null;
   /** Step 18: each bard skill with its terms; null for a class without them. */
   bardSkills: ThiefSkillTerms[] | null;
+  /** ADR 0033 step 14: the skill armour the thief's or bard's skills read, from the worn body
+   * armour (none, leather, padded_studded_leather, elven_chain, metal); "" for another class. */
+  skillArmor: string;
   /** Steps 17 and 18: the entered points against the class's budget at the realized level
    * (warnings; a bard's has no per-skill limit). */
   skillBudget: SkillBudgetWarning[];
@@ -189,9 +192,6 @@ export interface Character {
   class: string;
   /** The PHB race the rules read ("half_elf"…), "" when none is set. */
   raceCode: string;
-  /** The armour a thief or a bard wears for its skills (ADR 0030 step 1); "" for another class or
-   * none entered (the server reads it as leather). */
-  skillArmor: string;
   derived: Derived;
 
   // Details the player edits; age is null when not set. `alignment` and `sex` are codes (ADR 0032
@@ -296,8 +296,6 @@ export interface CreationOptions {
     exceptionalStrengthRaces: string[];
     /** The skills the class enters points in (ADR 0030 steps 17 and 18); empty for none. */
     skills: string[];
-    /** The armours it picks for its skills (step 1); empty for none. */
-    skillArmors: string[];
     /** The alignment codes the class admits (ADR 0032 step 2). */
     alignments: string[];
     /**
@@ -478,11 +476,9 @@ export type NewCharacter = {
   xp: number | null;
   /** The 18/xx percentile (ADR 0030 step 9), 0 for none. */
   strExceptional: number;
-  /** A thief's or a bard's points by skill and the armour worn for its skills (ADR 0030 steps 1,
-   * 17 and 18);
-   * absent for the other classes. */
+  /** A thief's or a bard's points by skill (ADR 0030 steps 1, 17 and 18); absent for the other
+   * classes. The skills' armour is the one worn (ADR 0033 step 14), never entered. */
   skillPoints?: Record<string, number>;
-  skillArmor?: string;
   /** The details, as the card shows them (age null for none); a refusal's field is `details.<field>`. */
   details?: Partial<CharacterDetails>;
 } & Record<AbilityCode, number | null>;

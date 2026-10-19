@@ -62,7 +62,6 @@ describe("stepOfField", () => {
     expect(stepOfField("hpMax")).toBe("extras");
     expect(stepOfField("strExceptional")).toBe("extras");
     expect(stepOfField("skillPoints.climb_walls")).toBe("extras");
-    expect(stepOfField("skillArmor")).toBe("extras");
     expect(stepOfField("name")).toBe("identity");
     expect(stepOfField("details.alignment")).toBe("identity");
     expect(stepOfField("details.height")).toBe("identity");

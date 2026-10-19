@@ -60,7 +60,9 @@ type Rules interface {
 var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 
 // Derive computes the derived block of c (ADR 0030 steps 3 to 8, 17, 19,
-// 22.1, and the pending level-ups of step 7). Two levels meet here (step 7):
+// 22.1, and the pending level-ups of step 7). armour is the Table 29 column of
+// the body armour c wears, "" for none (ADR 0033 step 14); only a thief's or a
+// bard's skills read it. Two levels meet here (step 7):
 // the target level is step 3, the class's experience table at the XP total
 // (the starting XP, c.XPTotal, plus ledgerXP, what the XP ledger's entries
 // add; ADR 0015 step 1), never stored; the realized level is the stored one
@@ -68,7 +70,7 @@ var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 // level (THAC0, saves, spell slots) follows the realized level; the target
 // only drives the pending level-ups and the XP progress. Nothing derived is
 // read from c.Sheet.
-func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
+func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, error) {
 	d := Derived{XPTotal: c.XPTotal + ledgerXP}
 	if _, err := ruletablesvc.ClassGroup(c.Class); err != nil {
 		return Derived{}, fmt.Errorf("derive: %w", err)
@@ -114,13 +116,10 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 	}
 	if ruletablesvc.HasSkillPoints(c.Class) {
 		// Steps 17 and 18: the sheet's Dexterity, the entered points and
-		// armour; the budget at the realized level. No armour stored is
-		// leather, Table 29's baseline (creation always stores one; the
-		// imported bard has none).
-		armor := c.SkillArmor
-		if armor == "" {
-			armor = ruletablesvc.ArmorLeather
-		}
+		// the worn body armour's Table 29 column (ADR 0033 step 14: none
+		// worn is the none column); the budget at the realized level.
+		armor := ruletablesvc.SkillArmorFor(c.Class, armour)
+		d.SkillArmor = armor
 		if ruletablesvc.HasThiefSkills(c.Class) {
 			d.ThiefSkills, err = rules.ThiefSkills(c.Race, c.Dex, armor, c.SkillPoints)
 		} else {

@@ -165,17 +165,17 @@ func (_c *MockStore_InTx_Call) RunAndReturn(run func(context.Context, func(conte
 	return _c
 }
 
-// Migrate provides a mock function with given fields: ctx, seedsDir, _a2
-func (_m *MockStore) Migrate(ctx context.Context, seedsDir string, _a2 []ruletablesvc.Weapon) error {
-	ret := _m.Called(ctx, seedsDir, _a2)
+// Migrate provides a mock function with given fields: ctx, seedsDir, equipment
+func (_m *MockStore) Migrate(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment) error {
+	ret := _m.Called(ctx, seedsDir, equipment)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Migrate")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, []ruletablesvc.Weapon) error); ok {
-		r0 = rf(ctx, seedsDir, _a2)
+	if rf, ok := ret.Get(0).(func(context.Context, string, ruletablesvc.Equipment) error); ok {
+		r0 = rf(ctx, seedsDir, equipment)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -191,14 +191,14 @@ type MockStore_Migrate_Call struct {
 // Migrate is a helper method to define mock.On call
 //   - ctx context.Context
 //   - seedsDir string
-//   - _a2 []ruletablesvc.Weapon
-func (_e *MockStore_Expecter) Migrate(ctx interface{}, seedsDir interface{}, _a2 interface{}) *MockStore_Migrate_Call {
-	return &MockStore_Migrate_Call{Call: _e.mock.On("Migrate", ctx, seedsDir, _a2)}
+//   - equipment ruletablesvc.Equipment
+func (_e *MockStore_Expecter) Migrate(ctx interface{}, seedsDir interface{}, equipment interface{}) *MockStore_Migrate_Call {
+	return &MockStore_Migrate_Call{Call: _e.mock.On("Migrate", ctx, seedsDir, equipment)}
 }
 
-func (_c *MockStore_Migrate_Call) Run(run func(ctx context.Context, seedsDir string, _a2 []ruletablesvc.Weapon)) *MockStore_Migrate_Call {
+func (_c *MockStore_Migrate_Call) Run(run func(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment)) *MockStore_Migrate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].([]ruletablesvc.Weapon))
+		run(args[0].(context.Context), args[1].(string), args[2].(ruletablesvc.Equipment))
 	})
 	return _c
 }
@@ -208,22 +208,22 @@ func (_c *MockStore_Migrate_Call) Return(_a0 error) *MockStore_Migrate_Call {
 	return _c
 }
 
-func (_c *MockStore_Migrate_Call) RunAndReturn(run func(context.Context, string, []ruletablesvc.Weapon) error) *MockStore_Migrate_Call {
+func (_c *MockStore_Migrate_Call) RunAndReturn(run func(context.Context, string, ruletablesvc.Equipment) error) *MockStore_Migrate_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Seed provides a mock function with given fields: ctx, seedsDir, spellbook, _a3
-func (_m *MockStore) Seed(ctx context.Context, seedsDir string, spellbook []string, _a3 []ruletablesvc.Weapon) error {
-	ret := _m.Called(ctx, seedsDir, spellbook, _a3)
+// Seed provides a mock function with given fields: ctx, seedsDir, spellbook, equipment
+func (_m *MockStore) Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error {
+	ret := _m.Called(ctx, seedsDir, spellbook, equipment)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Seed")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, []string, []ruletablesvc.Weapon) error); ok {
-		r0 = rf(ctx, seedsDir, spellbook, _a3)
+	if rf, ok := ret.Get(0).(func(context.Context, string, []string, ruletablesvc.Equipment) error); ok {
+		r0 = rf(ctx, seedsDir, spellbook, equipment)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -240,14 +240,14 @@ type MockStore_Seed_Call struct {
 //   - ctx context.Context
 //   - seedsDir string
 //   - spellbook []string
-//   - _a3 []ruletablesvc.Weapon
-func (_e *MockStore_Expecter) Seed(ctx interface{}, seedsDir interface{}, spellbook interface{}, _a3 interface{}) *MockStore_Seed_Call {
-	return &MockStore_Seed_Call{Call: _e.mock.On("Seed", ctx, seedsDir, spellbook, _a3)}
+//   - equipment ruletablesvc.Equipment
+func (_e *MockStore_Expecter) Seed(ctx interface{}, seedsDir interface{}, spellbook interface{}, equipment interface{}) *MockStore_Seed_Call {
+	return &MockStore_Seed_Call{Call: _e.mock.On("Seed", ctx, seedsDir, spellbook, equipment)}
 }
 
-func (_c *MockStore_Seed_Call) Run(run func(ctx context.Context, seedsDir string, spellbook []string, _a3 []ruletablesvc.Weapon)) *MockStore_Seed_Call {
+func (_c *MockStore_Seed_Call) Run(run func(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment)) *MockStore_Seed_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].([]string), args[3].([]ruletablesvc.Weapon))
+		run(args[0].(context.Context), args[1].(string), args[2].([]string), args[3].(ruletablesvc.Equipment))
 	})
 	return _c
 }
@@ -257,7 +257,7 @@ func (_c *MockStore_Seed_Call) Return(_a0 error) *MockStore_Seed_Call {
 	return _c
 }
 
-func (_c *MockStore_Seed_Call) RunAndReturn(run func(context.Context, string, []string, []ruletablesvc.Weapon) error) *MockStore_Seed_Call {
+func (_c *MockStore_Seed_Call) RunAndReturn(run func(context.Context, string, []string, ruletablesvc.Equipment) error) *MockStore_Seed_Call {
 	_c.Call.Return(run)
 	return _c
 }

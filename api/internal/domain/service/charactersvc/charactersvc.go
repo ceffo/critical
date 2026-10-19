@@ -50,8 +50,7 @@ type SVC interface {
 	// warned as a read of it, storing nothing; a blank name, alignment or
 	// sex is no refusal (ADR 0034, the creation's identity step and review).
 	Preview(ctx context.Context, n NewCharacter) (*Character, error)
-	// Change renames, retires or re-arms (a thief's or a bard's skill armour) the
-	// owner's character id (step 7.3).
+	// Change renames or retires the owner's character id (step 7.3).
 	// Another user's character, a retired one and an unknown id are all
 	// domain.ErrCharacterNotFound; retiring the current character makes the
 	// owner's first one left current (none: no current character).
@@ -97,12 +96,11 @@ type Owners interface {
 	// domain.ErrCharacterNotFound and change nothing (one statement each).
 	RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, name string) error
 	RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error
-	// RestoreSkillArmor writes a character's skill armour back for an undo
-	// or a redo (no owner: the log already ties the entry to the character).
+	// RestoreSkillArmor writes a character's entered skill armour back for
+	// the undo or redo of a skill_armor entry logged before ADR 0033 step 14
+	// (no owner: the log already ties the entry to the character). Nothing
+	// reads the column any more.
 	RestoreSkillArmor(ctx context.Context, id int64, armor string) error
-	// SetSkillArmor sets the armour a thief or a bard wears for its skills, with the
-	// same ownership rule as RenameCharacter.
-	SetSkillArmor(ctx context.Context, owner uuid.UUID, id int64, armor string) error
 	// RepairCurrentCharacter makes the owner's first character not retired
 	// current unless their current one is such a character (none left: no
 	// current character).
@@ -110,6 +108,13 @@ type Owners interface {
 	// CurrentCharacter is the owner's current character, read through the
 	// ownership: 0 when it is none, retired or not theirs.
 	CurrentCharacter(ctx context.Context, owner uuid.UUID) (int64, error)
+}
+
+// Armour reads the body armour a character wears (ADR 0033 step 14): its
+// PHB Table 29 column (one of ruletablesvc.SkillColumns), "" when it wears
+// none. The composition root implements it over the equipment's store.
+type Armour interface {
+	WornSkillColumn(ctx context.Context, characterID int64) (string, error)
 }
 
 // Sessions is the login's session cache (authsvc.SVC satisfies it): a user
@@ -126,9 +131,9 @@ type Deps struct {
 	Owners   Owners
 	Tx       domain.TxRunner
 	Sessions Sessions
-	// Log records a skill armour change (ADR 0030 step 1); Tx must be the
-	// action-log transaction runner.
-	Log actionlog.Recorder
+	// Armour is the worn body armour a thief's or a bard's skills read
+	// (ADR 0033 step 14).
+	Armour Armour
 	// Languages is the language catalogue (ADR 0032 step 4); nil is the empty
 	// one of a catalogue before format 8, which knows no language.
 	Languages LanguageBook
@@ -143,7 +148,7 @@ type service struct {
 	owners   Owners
 	tx       domain.TxRunner
 	sessions Sessions
-	log      actionlog.Recorder
+	armour   Armour
 	// languages is never nil: the empty catalogue when Deps holds none.
 	languages LanguageBook
 	hp        HPLedger
@@ -151,13 +156,13 @@ type service struct {
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil || d.Log == nil || d.HP == nil {
+	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil || d.Armour == nil || d.HP == nil {
 		return nil, errors.New("charactersvc: nil dependency")
 	}
 	if d.Languages == nil {
 		d.Languages = (*ruletablesvc.Languages)(nil)
 	}
-	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, log: d.Log, languages: d.Languages, hp: d.HP}, nil
+	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour, languages: d.Languages, hp: d.HP}, nil
 }
 
 // NewWithConfig is here for symmetry with the other services. There is no
@@ -178,7 +183,15 @@ func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error
 	if err != nil {
 		return nil, fmt.Errorf("character %d XP: %w", id, err)
 	}
-	if c.Derived, err = Derive(c, ledger, s.rules); err != nil {
+	// ADR 0033 step 14: a thief's or a bard's skills read the worn body
+	// armour (no other class reads it, so no other class pays the read).
+	var column string
+	if ruletablesvc.HasSkillPoints(c.Class) {
+		if column, err = s.armour.WornSkillColumn(ctx, id); err != nil {
+			return nil, fmt.Errorf("character %d worn armour: %w", id, err)
+		}
+	}
+	if c.Derived, err = Derive(c, ledger, column, s.rules); err != nil {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
 	s.readWarnings(c)

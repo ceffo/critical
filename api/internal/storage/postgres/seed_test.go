@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 )
 
@@ -25,9 +26,16 @@ func campaignSeeds() string { return filepath.Join("..", "..", "..", "..", "seed
 // seedBook as the spellbook seed.
 func seedOn(f *fakeStore, dir string) error { return seedBookOn(f, dir, seedBook) }
 
+// seedWithoutArmourOn is seedOn with a catalogue that has no body armour: the seed character
+// wears none (ADR 0033 step 14's carry-over has nothing to give), for the tests about the other
+// seeded rows.
+func seedWithoutArmourOn(f *fakeStore, dir string) error {
+	return seed(context.Background(), f, f, dir, seedBook, ruletablesvc.Equipment{Weapons: catalogueWeapons})
+}
+
 // seedBookOn is seedOn with the spellbook seed book (catalogue keys, in order).
 func seedBookOn(f *fakeStore, dir string, book []string) error {
-	return seed(context.Background(), f, f, dir, book, catalogueWeapons)
+	return seed(context.Background(), f, f, dir, book, catalogueEquipment)
 }
 
 // seedBook is a spellbook seed: the seed writes the keys the caller checked, in order.
@@ -105,7 +113,11 @@ func TestSeed_WeaponsAndItemsMatchSheetAndAreIdempotent(t *testing.T) {
 	require.NoError(t, seedOn(f, repoSeeds()))
 
 	assert.Empty(t, f.t.Weapons, "weapons are pieces (ADR 0033 step 1)")
-	assert.Len(t, f.t.Items, 12)
+	// The twelve seeded pieces and the Leather armour the seed bard wears, none entered being
+	// leather (ADR 0033 step 14's carry-over, as an upgraded database's).
+	assert.Len(t, f.t.Items, 13)
+	leather := f.item("leather")
+	assert.Equal(t, []any{"armour", "worn", "leather", "leather"}, []any{leather.Category, leather.State, leather.CatalogueCode, leather.SkillColumn})
 	assert.Equal(t, int64(18), f.item("arrows_plus1").Count)
 	assert.Equal(t, int64(16), f.item("arrows_plus2").Count)
 	assert.Equal(t, int64(2), f.item("arrows_plus3").Count)
@@ -120,14 +132,14 @@ func TestSeed_WeaponsAndItemsMatchSheetAndAreIdempotent(t *testing.T) {
 			stock++
 		}
 	}
-	assert.Equal(t, 10, stock, "arrows, flasks and the six weapons")
+	assert.Equal(t, 11, stock, "arrows, flasks, the six weapons and the armour")
 
 	// A table change must survive a re-seed (a restart).
 	arrows := f.item("arrows_plus1")
 	arrows.Count = 3
 	f.t.Items[rowKey(arrows.CharacterID, arrows.ID)] = arrows
 	require.NoError(t, seedOn(f, repoSeeds()))
-	assert.Len(t, f.t.Items, 12)
+	assert.Len(t, f.t.Items, 13, "no second armour")
 	assert.Equal(t, int64(3), f.item("arrows_plus1").Count)
 }
 
@@ -428,17 +440,17 @@ func TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved(t *testing.T) {
 		})
 	}
 	f := newFakeStore()
-	require.NoError(t, seedOn(f, seeds(`{"en":"Gem"}`, `{"en":"Axe"}`)))
+	require.NoError(t, seedWithoutArmourOn(f, seeds(`{"en":"Gem"}`, `{"en":"Axe"}`)))
 	axe := func() int64 { return f.weapon("axe").Name }
 
 	// The player renamed the axe: the French seed name is not given...
 	f.t.Texts[axe()]["en"] = "Big axe"
 	both := seeds(`{"en":"Gem","fr":"Gemme"}`, `{"en":"Axe","fr":"Hache"}`)
-	require.NoError(t, seedOn(f, both))
+	require.NoError(t, seedWithoutArmourOn(f, both))
 	require.Equal(t, map[string]localized.Text{"axe": {"en": "Big axe"}}, f.weaponNames())
 	// ...until the name reads as the seed's again (an undo).
 	f.t.Texts[axe()]["en"] = "Axe"
-	require.NoError(t, seedOn(f, both))
+	require.NoError(t, seedWithoutArmourOn(f, both))
 	require.Equal(t, map[string]localized.Text{"gem": {"en": "Gem", "fr": "Gemme"}}, f.itemNames(),
 		"a language added to the seed later is offered")
 	require.Equal(t, map[string]localized.Text{"axe": {"en": "Axe", "fr": "Hache"}}, f.weaponNames())
@@ -446,7 +458,7 @@ func TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved(t *testing.T) {
 	// The player blanks the French names (the DAL deletes the language's row).
 	delete(f.t.Texts[f.item("gem").Name], "fr")
 	delete(f.t.Texts[axe()], "fr")
-	require.NoError(t, seedOn(f, both))
+	require.NoError(t, seedWithoutArmourOn(f, both))
 	assert.Equal(t, map[string]localized.Text{"gem": {"en": "Gem"}}, f.itemNames(), "a removed language stays removed")
 	assert.Equal(t, map[string]localized.Text{"axe": {"en": "Axe"}}, f.weaponNames())
 
@@ -459,7 +471,7 @@ func TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved(t *testing.T) {
 	gem.Name = key
 	f.t.Items[rowKey(gem.CharacterID, gem.ID)] = gem
 	texts := copyTables(f.t).Texts
-	require.NoError(t, seedOn(f, both))
+	require.NoError(t, seedWithoutArmourOn(f, both))
 	assert.Equal(t, texts, f.t.Texts, "the record follows the id, not the key")
 	assertTextIntegrity(t, f)
 }

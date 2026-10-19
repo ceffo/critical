@@ -86,6 +86,9 @@ type Skills struct {
 	Proficiencies []Proficiency
 	BardSkills    []BardSkill
 	ThiefSkills   []ThiefSkill
+	// SkillArmor is the skill armour the bard or thief skills read (ADR
+	// 0033 step 14: from the worn body armour), "" for another class.
+	SkillArmor string
 }
 
 // Adjustment is the DM's adjustment of one check (ADR 0014 steps 5 to 7):

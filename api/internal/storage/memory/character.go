@@ -227,28 +227,13 @@ func (c Characters) RenameCharacter(ctx context.Context, owner uuid.UUID, id int
 	})
 }
 
-// SetSkillArmor implements charactersvc.Owners.
-func (c Characters) SetSkillArmor(ctx context.Context, owner uuid.UUID, id int64, armor string) error {
-	return c.s.write(ctx, func(t *tables) error {
-		ch, err := t.ownedBy(owner, id)
-		if err != nil {
-			return err
-		}
-		ch.SkillArmor = armor
-		t.characters[id] = ch
-		return nil
-	})
-}
-
 // RestoreSkillArmor implements charactersvc.Owners.
 func (c Characters) RestoreSkillArmor(ctx context.Context, id int64, armor string) error {
 	return c.s.write(ctx, func(t *tables) error {
-		ch, ok := t.characters[id]
-		if !ok {
+		if _, ok := t.characters[id]; !ok {
 			return domain.ErrCharacterNotFound
 		}
-		ch.SkillArmor = armor
-		t.characters[id] = ch
+		t.skillArmors[id] = armor
 		return nil
 	})
 }

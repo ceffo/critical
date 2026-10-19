@@ -76,6 +76,10 @@ type tables struct {
 	// acOverrides are the characters' AC overrides (ADR 0033 step 13); no
 	// entry: none.
 	acOverrides map[int64]acsvc.Override
+	// skillArmors are the skill armours entered before ADR 0033 step 14
+	// (characters.skill_armor): written back by the undo of an old
+	// skill_armor entry, read by nothing; none is none entered.
+	skillArmors map[int64]string
 
 	dice    map[int64]diceFavourite
 	diceSeq int64
@@ -106,6 +110,7 @@ func newTables() *tables {
 		forms:         map[int64]combatsvc.AttackForm{},
 		xp:            map[int64]xpEntry{},
 		acOverrides:   map[int64]acsvc.Override{},
+		skillArmors:   map[int64]string{},
 		dice:          map[int64]diceFavourite{},
 		users:         map[uuid.UUID]authsvc.User{},
 		invites:       map[uuid.UUID]storedInvite{},

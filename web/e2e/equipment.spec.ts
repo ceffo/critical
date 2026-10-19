@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
+  apiCall,
   attackForm,
   chooseLanguage,
   receivePicker,
@@ -9,6 +10,7 @@ import {
   openDashboard,
   openWeapons,
   openWorkspace,
+  reloadSettled,
   undoEntry,
 } from "./helpers";
 
@@ -299,6 +301,13 @@ test("AC: follows the Armor spell and an Equip with no entry of its own; the ove
       }
     ).entries.length;
   await openDashboard(page);
+  // The seed bard wears the leather armour he entered (ADR 0033 step 14): off, for an unarmoured start.
+  expect(
+    await apiCall(page, "POST", "/api/items/leather/state", {
+      state: "carried",
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
   const shield = page.getByTestId("ac-shield");
   const value = shield.getByTestId("ac-value");
   await expect(value).toHaveText("7"); // 10, Dexterity 17 -3

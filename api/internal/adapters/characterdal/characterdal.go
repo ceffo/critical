@@ -59,7 +59,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 		Str: int(row.Str), StrExceptional: int(row.StrExceptional), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
 		HPMax: int(row.HpMax), RealizedLevel: int(row.RealizedLevel), XPTotal: int(row.XpTotal),
-		Class: row.Class, Race: row.RaceCode, SkillPoints: points, SkillArmor: row.SkillArmor,
+		Class: row.Class, Race: row.RaceCode, SkillPoints: points,
 		// The figures the imported sheet stated, kept as imported (ADR 0030 step 24, retired).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
 			ParaPoison: int(row.SaveParaPoison), RodStaffWand: int(row.SaveRodStaffWand),
@@ -192,7 +192,7 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		SaveSpell: int64(c.Sheet.Saves.Spell), Class: c.Class, RaceCode: c.Race,
 		OwnerUserID:   uuid.NullUUID{UUID: owner, Valid: true},
 		RealizedLevel: sql.NullInt64{Int64: int64(c.RealizedLevel), Valid: true},
-		SkillPoints:   points, SkillArmor: c.SkillArmor,
+		SkillPoints:   points,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create character: %w", err)
@@ -221,20 +221,6 @@ func (d *DAL) RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, na
 	})
 	if err != nil {
 		return fmt.Errorf("rename character: %w", err)
-	}
-	if n == 0 {
-		return domain.ErrCharacterNotFound
-	}
-	return nil
-}
-
-// SetSkillArmor implements charactersvc.Owners.
-func (d *DAL) SetSkillArmor(ctx context.Context, owner uuid.UUID, id int64, armor string) error {
-	n, err := d.q.SetSkillArmor(ctx, queries.SetSkillArmorParams{
-		SkillArmor: armor, ID: id, OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
-	})
-	if err != nil {
-		return fmt.Errorf("set skill armor: %w", err)
 	}
 	if n == 0 {
 		return domain.ErrCharacterNotFound

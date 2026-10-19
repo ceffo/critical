@@ -36,16 +36,17 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 	// The seeds' character.json names the owner of rows a migration finds
 	// without one.
 	// The catalogue's weapons are the ones the equipment conversion and the
-	// seed match (ADR 0033 step 26.4).
-	var migrated, seeded []ruletablesvc.Weapon
+	// seed match (ADR 0033 step 26.4), its armours the ones the skill armour
+	// carry-over gives (step 14).
+	var migrated, seeded ruletablesvc.Equipment
 	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything).
-		RunAndReturn(func(_ context.Context, _ string, w []ruletablesvc.Weapon) error {
+		RunAndReturn(func(_ context.Context, _ string, w ruletablesvc.Equipment) error {
 			migrated = w
 			return nil
 		}).Once()
 	var book []string
 	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).
-		RunAndReturn(func(_ context.Context, _ string, b []string, w []ruletablesvc.Weapon) error {
+		RunAndReturn(func(_ context.Context, _ string, b []string, w ruletablesvc.Equipment) error {
 			book, seeded = b, w
 			return nil
 		}).Once()
@@ -66,7 +67,8 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 	bs, err := h.build(t, fixtureConfig())
 	require.NoError(t, err)
 	assert.NotEmpty(t, cat.Spells)
-	require.NotEmpty(t, migrated, "the fixture catalogue (format 7) has weapons")
+	require.NotEmpty(t, migrated.Weapons, "the fixture catalogue (format 7) has weapons")
+	require.NotEmpty(t, migrated.Armour, "and body armours")
 	assert.Equal(t, migrated, seeded)
 	assert.Contains(t, book, "alarm", "the seed gets the spellbook seed, checked against the catalogue")
 	assert.Contains(t, refs, catalogue.Ref{ID: "alarm", Where: "spellbook seed"})
@@ -204,6 +206,8 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 	}, nil).Once()
 	// Read twice: by the character's derivation (ADR 0030 step 3), then by the ledger.
 	h.XP.EXPECT().List(mock.Anything, characterID).Return(nil, nil).Twice()
+	// The bard's skills read the armour it wears (ADR 0033 step 14): none.
+	h.Items.EXPECT().List(mock.Anything, characterID).Return(nil, nil).Once()
 
 	bs, err := h.build(t, cfg)
 	require.NoError(t, err)

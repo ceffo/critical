@@ -35,6 +35,9 @@ type tables struct {
 	Races map[int64]string
 	// SkillPoints are characters.skill_points ('{}' none, the column's default).
 	SkillPoints map[int64]string
+	// Classes are characters.class (absent: 'bard', the column's default); SkillArmors
+	// characters.skill_armor (absent: '', the column's default).
+	Classes, SkillArmors map[int64]string
 	// Alignments and Sexes are characters.alignment and characters.sex ('' missing), RaceDetails
 	// the free-text characters.race ('' none).
 	Alignments, Sexes, RaceDetails map[int64]string
@@ -134,7 +137,7 @@ func newFakeStore() *fakeStore {
 		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
-		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, Heights: map[int64]string{}, Weights: map[int64]string{}, HeightsCm: map[int64]float64{}, WeightsKg: map[int64]float64{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, Heights: map[int64]string{}, Weights: map[int64]string{}, HeightsCm: map[int64]float64{}, WeightsKg: map[int64]float64{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -901,5 +904,54 @@ func (f *fakeStore) RenameAttackFormAmmo(_ context.Context, arg storeq.RenameAtt
 	if f.t.AttackAmmo[arg.CharacterID] == arg.OldID {
 		f.t.AttackAmmo[arg.CharacterID] = arg.NewID
 	}
+	return nil
+}
+
+func (f *fakeStore) SkillArmourCharacters(context.Context) ([]storeq.SkillArmourCharactersRow, error) {
+	rows := []storeq.SkillArmourCharactersRow{}
+	for _, id := range f.t.Characters {
+		rows = append(rows, storeq.SkillArmourCharactersRow{ID: id, Class: f.class(id), SkillArmor: f.t.SkillArmors[id]})
+	}
+	return rows, nil
+}
+
+func (f *fakeStore) CharacterSkillArmour(_ context.Context, id int64) (storeq.CharacterSkillArmourRow, error) {
+	if !slices.Contains(f.t.Characters, id) {
+		return storeq.CharacterSkillArmourRow{}, sql.ErrNoRows
+	}
+	return storeq.CharacterSkillArmourRow{Class: f.class(id), SkillArmor: f.t.SkillArmors[id]}, nil
+}
+
+// class is characters.class, 'bard' (the column's default) when none was set.
+func (f *fakeStore) class(id int64) string {
+	if c, ok := f.t.Classes[id]; ok {
+		return c
+	}
+	return "bard"
+}
+
+func (f *fakeStore) CarryOverItems(_ context.Context, characterID int64) ([]storeq.CarryOverItemsRow, error) {
+	rows := []storeq.CarryOverItemsRow{}
+	for _, it := range f.t.Items {
+		if it.CharacterID == characterID {
+			rows = append(rows, storeq.CarryOverItemsRow{
+				ID: it.ID, Position: it.Position, Category: it.Category, State: it.State, SkillColumn: it.SkillColumn,
+			})
+		}
+	}
+	slices.SortFunc(rows, func(a, b storeq.CarryOverItemsRow) int {
+		return cmp.Or(cmp.Compare(a.Position, b.Position), cmp.Compare(a.ID, b.ID))
+	})
+	return rows, nil
+}
+
+func (f *fakeStore) WearItem(_ context.Context, arg storeq.WearItemParams) error {
+	key := rowKey(arg.CharacterID, arg.ID)
+	it, ok := f.t.Items[key]
+	if !ok {
+		return nil
+	}
+	it.State = "worn"
+	f.t.Items[key] = it
 	return nil
 }

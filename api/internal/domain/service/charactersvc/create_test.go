@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -27,7 +26,6 @@ func lyra() charactersvc.NewCharacter {
 		Details: identity(),
 		Name:    "  Lyra ", Class: "bard", Race: "half_elf",
 		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, XP: 0,
-		SkillArmor: "leather",
 	}
 }
 
@@ -61,9 +59,8 @@ func TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent(t *tes
 	want := charactersvc.Character{
 		Name: "Lyra", Class: "bard", Race: "half_elf",
 		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 1, XPTotal: 0,
-		SkillArmor: "leather",
-		Sheet:      charactersvc.Sheet{Level: 1, THAC0: 20, Saves: rogue1to4Saves},
-		Details:    charactersvc.Details{Alignment: "neutral_good", Sex: "male", Languages: []string{}},
+		Sheet:   charactersvc.Sheet{Level: 1, THAC0: 20, Saves: rogue1to4Saves},
+		Details: charactersvc.Details{Alignment: "neutral_good", Sex: "male", Languages: []string{}},
 	}
 	created := e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, want).Return(12, nil).Once()
 	e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(12)).Return(nil).Once().NotBefore(created)
@@ -211,23 +208,24 @@ func TestCreate_Step9_ExceptionalStrength(t *testing.T) {
 	}
 }
 
-// ADR 0030 steps 1 and 17: a thief enters its armour (one of the four) and
-// its points (each a thieving skill, 0 to 95); any other class enters
-// neither. Refused before anything is written, the field named; the points
-// are stored without the zeros, with the armour.
+// ADR 0030 steps 1 and 17: a thief enters its points (each a thieving
+// skill, 0 to 95); any other class enters none. Refused before anything is
+// written, the field named; the points are stored without the zeros. No
+// armour is entered (ADR 0033 step 14): nothing is worn yet, so the skills
+// read the none column.
 func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
-	thief := func(armor string, points map[string]int) charactersvc.NewCharacter {
+	thief := func(points map[string]int) charactersvc.NewCharacter {
 		return charactersvc.NewCharacter{
 			Details: identity(),
 			Name:    "Vex", Class: "thief", Race: "halfling", Str: 10, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-			SkillArmor: armor, SkillPoints: points,
+			SkillPoints: points,
 		}
 	}
-	fighter := func(armor string, points map[string]int) charactersvc.NewCharacter {
+	fighter := func(points map[string]int) charactersvc.NewCharacter {
 		return charactersvc.NewCharacter{
 			Details: identity(),
 			Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
-			SkillArmor: armor, SkillPoints: points,
+			SkillPoints: points,
 		}
 	}
 	for _, tt := range []struct {
@@ -235,14 +233,10 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 		n           charactersvc.NewCharacter
 		field, code string
 	}{
-		{"no armour", thief("", nil), "skillArmor", "empty"},
-		{"an armour Table 29 lacks", thief("plate", nil), "skillArmor", "unknown"},
-		{"an unknown skill", thief("none", map[string]int{"backstab": 10}), "skillPoints.backstab", "unknown"},
-		{"negative points", thief("none", map[string]int{"open_locks": -1}), "skillPoints.open_locks", "out_of_range"},
-		{"more than 95 points", thief("none", map[string]int{"open_locks": 96}), "skillPoints.open_locks", "out_of_range"},
-		{"a bard's metal armour", thief("metal", nil), "skillArmor", "unknown"},
-		{"a fighter's armour", fighter("none", nil), "skillArmor", "not_allowed"},
-		{"a fighter's points", fighter("", map[string]int{"climb_walls": 10}), "skillPoints", "not_allowed"},
+		{"an unknown skill", thief(map[string]int{"backstab": 10}), "skillPoints.backstab", "unknown"},
+		{"negative points", thief(map[string]int{"open_locks": -1}), "skillPoints.open_locks", "out_of_range"},
+		{"more than 95 points", thief(map[string]int{"open_locks": 96}), "skillPoints.open_locks", "out_of_range"},
+		{"a fighter's points", fighter(map[string]int{"climb_walls": 10}), "skillPoints", "not_allowed"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			e := newEnv(t)
@@ -264,28 +258,29 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Once()
 		want := map[string]int{"open_locks": 30, "pick_pockets": 95}
-		e.rules.EXPECT().ThiefSkills("halfling", 17, "padded_studded_leather", want).Return(nil, nil).Once()
+		e.rules.EXPECT().ThiefSkills("halfling", 17, "none", want).Return(nil, nil).Once()
 		e.rules.EXPECT().BackstabFor(1).Return(2, nil).Once()
 		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
-			return c.Class == "thief" && c.SkillArmor == "padded_studded_leather" && assert.ObjectsAreEqual(want, c.SkillPoints)
+			return c.Class == "thief" && assert.ObjectsAreEqual(want, c.SkillPoints)
 		})).Return(6, nil).Once()
 		e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(6)).Return(nil).Once()
 		e.sessions.EXPECT().ForgetUser(ownerID).Once()
-		_, err := e.svc.Create(context.Background(), ownerID, thief("padded_studded_leather", map[string]int{
+		_, err := e.svc.Create(context.Background(), ownerID, thief(map[string]int{
 			"open_locks": 30, "pick_pockets": 95, "climb_walls": 0,
 		}))
 		require.NoError(t, err)
+		assert.Zero(t, e.armour.reads, "a character being created wears nothing")
 	})
 }
 
-// ADR 0030 steps 1 and 18: a bard enters its armour (the thief's four or
-// metal armour up to chain mail) and its points (each one of its four
+// ADR 0030 steps 1 and 18: a bard enters its points (each one of its four
 // skills, 0 to 95), refused as the thief's are; the budget is no refusal.
-// The points are stored without the zeros, with the armour.
+// The points are stored without the zeros; no armour is entered (ADR 0033
+// step 14).
 func TestCreate_Step18_BardSkillPointsAndArmour(t *testing.T) {
-	bard := func(armor string, points map[string]int) charactersvc.NewCharacter {
+	bard := func(points map[string]int) charactersvc.NewCharacter {
 		n := lyra()
-		n.SkillArmor, n.SkillPoints = armor, points
+		n.SkillPoints = points
 		return n
 	}
 	for _, tt := range []struct {
@@ -293,11 +288,9 @@ func TestCreate_Step18_BardSkillPointsAndArmour(t *testing.T) {
 		n           charactersvc.NewCharacter
 		field, code string
 	}{
-		{"no armour", bard("", nil), "skillArmor", "empty"},
-		{"an armour Table 29 lacks", bard("plate", nil), "skillArmor", "unknown"},
-		{"a thieving skill the bard lacks", bard("leather", map[string]int{"open_locks": 10}), "skillPoints.open_locks", "unknown"},
-		{"negative points", bard("leather", map[string]int{"climb_walls": -1}), "skillPoints.climb_walls", "out_of_range"},
-		{"more than 95 points", bard("leather", map[string]int{"read_languages": 96}), "skillPoints.read_languages", "out_of_range"},
+		{"a thieving skill the bard lacks", bard(map[string]int{"open_locks": 10}), "skillPoints.open_locks", "unknown"},
+		{"negative points", bard(map[string]int{"climb_walls": -1}), "skillPoints.climb_walls", "out_of_range"},
+		{"more than 95 points", bard(map[string]int{"read_languages": 96}), "skillPoints.read_languages", "out_of_range"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			e := newEnv(t)
@@ -317,11 +310,11 @@ func TestCreate_Step18_BardSkillPointsAndArmour(t *testing.T) {
 		// 95 points at level 1 is over the bard's 20: a warning, not a refusal.
 		want := map[string]int{"climb_walls": 45, "pick_pockets": 50}
 		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
-			return c.Class == "bard" && c.SkillArmor == "metal" && assert.ObjectsAreEqual(want, c.SkillPoints)
+			return c.Class == "bard" && assert.ObjectsAreEqual(want, c.SkillPoints)
 		})).Return(7, nil).Once()
 		e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(7)).Return(nil).Once()
 		e.sessions.EXPECT().ForgetUser(ownerID).Once()
-		_, err := e.svc.Create(context.Background(), ownerID, bard("metal", map[string]int{
+		_, err := e.svc.Create(context.Background(), ownerID, bard(map[string]int{
 			"climb_walls": 45, "pick_pockets": 50, "detect_noise": 0,
 		}))
 		require.NoError(t, err)
@@ -360,87 +353,75 @@ func TestChange_Rename(t *testing.T) {
 	assert.Equal(t, "name", fe.Field)
 }
 
-// ADR 0030 step 1 after creation: a thief's skill armour is set to one of
-// Table 29's armours and logged as one skill_armor entry whose snapshot holds
-// the armour before and after, which the restorer writes back on undo and redo.
-func TestChange_ASkillArmourIsSetAndLoggedOnAThief(t *testing.T) {
-	e := newEnv(t)
-	e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{Class: "thief", SkillArmor: "none"}, nil).Twice()
-	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "elven_chain").Return(nil).Once()
-	e.owners.EXPECT().CurrentCharacter(mock.Anything, ownerID).Return(3, nil).Twice()
-
-	current, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr("elven_chain")})
-	require.NoError(t, err)
-	assert.Equal(t, int64(3), current)
-	require.Len(t, e.log.entries, 1)
-	got := e.log.entries[0]
-	assert.Equal(t, actionlog.KindSkillArmor, got.Kind)
-	assert.Equal(t, int64(5), got.CharacterID)
-	assert.JSONEq(t, `{"before":"none","after":"elven_chain"}`, string(got.Payload))
-	require.Len(t, got.Snapshots, 1)
-	assert.Equal(t, "skill_armor", got.Snapshots[0].Key)
-	assert.JSONEq(t, `{"armor":"none"}`, snaptest.State(t, got.Snapshots[0].Before))
-	assert.JSONEq(t, `{"armor":"elven_chain"}`, snaptest.State(t, got.Snapshots[0].After))
-
-	// The same armour as stored records nothing.
-	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "none").Return(nil).Once()
-	e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{Class: "thief", SkillArmor: "none"}, nil).Twice()
-	_, err = e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr("none")})
-	require.NoError(t, err)
-	assert.Len(t, e.log.entries, 1)
+// ADR 0033 step 14: a thief's or a bard's skills read the body armour it
+// wears, through the Armour port, on every read: wearing, changing or taking
+// off a piece (a logged equipment move) moves the percentages, and so does
+// its undo. Another class's read never asks.
+func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
+	for _, tc := range []struct {
+		name, class, worn, asked string
+	}{
+		{"a thief in elven chain", "thief", "elven_chain", "elven_chain"},
+		{"a thief wearing none", "thief", "", "none"},
+		{"a thief in metal armour reads the worst column", "thief", "metal", "padded_studded_leather"},
+		{"a thief in an armour none may wear reads the worst column", "thief", "none_allowed", "padded_studded_leather"},
+		{"a bard in metal armour", "bard", "metal", "metal"},
+		{"a bard in leather", "bard", "leather", "leather"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEnv(t)
+			// The skills are what this test asks: none of newRules' defaults.
+			e.rules.ExpectedCalls = nil
+			e.rules.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
+			e.armour.columns[5] = tc.worn
+			e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{
+				ID: 5, Class: tc.class, Race: "human", Dex: 12, RealizedLevel: 1,
+			}, nil).Once()
+			e.xp.EXPECT().EntriesTotal(mock.Anything, int64(5)).Return(0, nil).Once()
+			e.rules.EXPECT().LevelFor(tc.class, 0).Return(1, nil).Once()
+			e.rules.EXPECT().XPThreshold(tc.class, 2).Return(1_250, nil).Once()
+			e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
+			e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
+			skills := []ruletablesvc.SkillPercent{{Skill: "climb_walls", Percent: 60}}
+			if tc.class == "thief" {
+				e.rules.EXPECT().ThiefSkills("human", 12, tc.asked, map[string]int(nil)).Return(skills, nil).Once()
+				e.rules.EXPECT().BackstabFor(1).Return(2, nil).Once()
+			} else {
+				e.rules.EXPECT().BardSkills("human", 12, tc.asked, map[string]int(nil)).Return(skills, nil).Once()
+				e.rules.EXPECT().BardSpellsPerDay(1).Return(map[int]int{}, nil).Once()
+			}
+			got, err := e.svc.GetCharacter(context.Background(), 5)
+			require.NoError(t, err)
+			assert.Equal(t, tc.asked, got.Derived.SkillArmor)
+			assert.Equal(t, 1, e.armour.reads)
+		})
+	}
+	t.Run("a fighter's read asks for no armour", func(t *testing.T) {
+		e := newEnv(t)
+		e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{
+			ID: 5, Class: "fighter", Race: "human", Str: 12, RealizedLevel: 1,
+		}, nil).Once()
+		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(5)).Return(0, nil).Once()
+		e.rules.EXPECT().LevelFor("fighter", 0).Return(1, nil).Once()
+		e.rules.EXPECT().XPThreshold("fighter", 2).Return(2_000, nil).Once()
+		e.rules.EXPECT().THAC0For("warrior", 1).Return(20, nil).Once()
+		e.rules.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
+		got, err := e.svc.GetCharacter(context.Background(), 5)
+		require.NoError(t, err)
+		assert.Empty(t, got.Derived.SkillArmor)
+		assert.Zero(t, e.armour.reads)
+	})
 }
 
-// ADR 0030 steps 1 and 18 after creation: a bard changes its skill armour
-// too, to metal armour up to chain mail as well, logged as a thief's is.
-func TestChange_ABardsSkillArmourIsSetAndLogged(t *testing.T) {
-	e := newEnv(t)
-	e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{Class: "bard"}, nil).Twice()
-	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "metal").Return(nil).Once()
-	e.owners.EXPECT().CurrentCharacter(mock.Anything, ownerID).Return(5, nil).Once()
-	_, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr("metal")})
-	require.NoError(t, err)
-	require.Len(t, e.log.entries, 1)
-	assert.JSONEq(t, `{"before":"","after":"metal"}`, string(e.log.entries[0].Payload))
-}
-
-// Undo writes the snapshot's armour back through the owner-less writer.
-func TestRestorers_TheSkillArmourSnapshotIsWrittenBack(t *testing.T) {
+// ADR 0033 step 14: the skill_armor entries logged before the entered armour
+// was retired still pop and redo: the restorer writes the snapshot's armour
+// back through the owner-less writer (into a column nothing reads).
+func TestRestorers_Step14_AnOldSkillArmourEntryStillPops(t *testing.T) {
 	e := newEnv(t)
 	e.owners.EXPECT().RestoreSkillArmor(mock.Anything, int64(5), "none").Return(nil).Once()
 	r := e.svc.Module().Restorer(charactersvc.ArmorStateKey)
 	require.NotNil(t, r)
 	require.NoError(t, r.Restore(context.Background(), 5, snaptest.Env(`{"armor":"none"}`)))
-}
-
-// An armour that is empty or none of Table 29's is refused before anything
-// runs; a class without thieving skills has no armour to change (the write
-// and its entry are rolled back with the refusal; nothing is recorded).
-func TestChange_ASkillArmourIsRefusedWhenInvalid(t *testing.T) {
-	e := newEnv(t)
-	for armor, code := range map[string]string{"": "empty", "plate": "unknown", "chain_mail": "unknown"} {
-		_, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr(armor)})
-		var fe *domain.FieldError
-		require.ErrorAs(t, err, &fe)
-		assert.Equal(t, "skillArmor", fe.Field)
-		assert.Equal(t, code, fe.Message)
-	}
-
-	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(5), "leather").Return(nil).Once()
-	e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{Class: "fighter"}, nil).Twice()
-	_, err := e.svc.Change(context.Background(), ownerID, 5, charactersvc.Change{SkillArmor: ptr("leather")})
-	var fe *domain.FieldError
-	require.ErrorAs(t, err, &fe)
-	assert.Equal(t, "not_allowed", fe.Message)
-	assert.Empty(t, e.log.entries)
-
-	// ADR 0030 step 1: metal armour is a bard's armour, not a thief's.
-	e.owners.EXPECT().SetSkillArmor(mock.Anything, ownerID, int64(6), "metal").Return(nil).Once()
-	e.reader.EXPECT().GetCharacter(mock.Anything, int64(6)).Return(&charactersvc.Character{Class: "thief"}, nil).Twice()
-	_, err = e.svc.Change(context.Background(), ownerID, 6, charactersvc.Change{SkillArmor: ptr("metal")})
-	require.ErrorAs(t, err, &fe)
-	assert.Equal(t, "skillArmor", fe.Field)
-	assert.Equal(t, "unknown", fe.Message)
-	assert.Empty(t, e.log.entries)
 }
 
 // Another user's character, a retired one and an unknown id are not found
@@ -475,17 +456,16 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		Classes: []charactersvc.ClassOption{
 			{
 				Class: "bard", Races: []string{"human", "half_elf"}, ExceptionalStrengthRaces: []string{},
-				Skills:      []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
-				SkillArmors: []string{"none", "leather", "padded_studded_leather", "elven_chain", "metal"},
+				Skills: []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 				// ADR 0032 step 2: the bard admits the five alignments with a neutral part.
 				Alignments: []string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},
 			},
-			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}, Skills: []string{}, SkillArmors: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "cleric", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, SkillArmors: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "cleric", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
 			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
 			{
-				Class: "thief", Races: charactersvc.Races, ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills, SkillArmors: ruletablesvc.ThiefArmors,
+				Class: "thief", Races: charactersvc.Races, ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills,
 				Alignments: []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"},
 			},
 		},

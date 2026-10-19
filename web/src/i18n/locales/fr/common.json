@@ -2349,7 +2349,9 @@
       "allAlignments": "Tous",
       "allBut": "Tous sauf {{list}}",
       "races": "Races",
-      "allRaces": "Toutes"
+      "allRaces": "Toutes",
+      "minimums": "Minimums",
+      "minimumUnmet": "Score sous le minimum"
     },
     "level": {
       "title": "Niveau de départ",
@@ -2440,6 +2442,9 @@
       "hpEditable": "Le tirage remplit la case ; vous pouvez la changer.",
       "hpOutdated": "La classe, le niveau ou la Constitution ont changé depuis le tirage : tirez à nouveau les points de vie.",
       "skills": "Talents de {{className}}",
+      "budget": "Budget du niveau {{level}} : {{total}} points",
+      "budgetLeft": "Restants : {{left}}",
+      "budgetPerSkill": "Au plus {{max}} par talent",
       "skill": "Talent",
       "points": "Points",
       "percentile": "Pourcentage (18/xx)",

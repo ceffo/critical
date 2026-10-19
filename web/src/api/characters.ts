@@ -1,6 +1,8 @@
 import type {
   CharacterList,
   CharacterPreview,
+  DraftChecks,
+  DraftChecksRequest,
   CreationOptions,
   HpRoll,
   IdentityFigure,
@@ -58,6 +60,15 @@ export function previewCharacter(
   body: NewCharacter,
 ): Promise<CharacterPreview> {
   return post<CharacterPreview>("/api/characters/preview", body);
+}
+
+/**
+ * The server's verdicts on a raw draft (ADR 0034, the class and skills steps): the classes whose
+ * ability minimums the entered scores miss and a thief's or a bard's skill point budget. Refuses
+ * nothing, writes nothing.
+ */
+export function checkDraft(body: DraftChecksRequest): Promise<DraftChecks> {
+  return post<DraftChecks>("/api/characters/checks", body);
 }
 
 /** Retires a character (ADR 0029 step 7.3: hidden, never deleted); the server picks the next current one. */

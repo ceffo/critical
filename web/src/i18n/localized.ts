@@ -12,17 +12,22 @@ export function localized(
   lang: string,
   text: LocalizedText | undefined,
 ): string {
-  if (!text) return "";
+  return localizedPick(lang, text).body;
+}
+
+/** `localized`, with the language the body was found in ("" when the text is in none). */
+export function localizedPick(
+  lang: string,
+  text: LocalizedText | undefined,
+): { lang: string; body: string } {
+  if (!text) return { lang: "", body: "" };
   const any = Object.keys(text)
     .filter((l) => text[l])
     .sort()[0];
-  return (
-    text[lang] ||
-    text[lang.split("-")[0]] ||
-    text[FALLBACK_LANG] ||
-    (any ? text[any] : "") ||
-    ""
-  );
+  for (const l of [lang, lang.split("-")[0], FALLBACK_LANG, any]) {
+    if (l && text[l]) return { lang: l, body: text[l] };
+  }
+  return { lang: "", body: "" };
 }
 
 /**

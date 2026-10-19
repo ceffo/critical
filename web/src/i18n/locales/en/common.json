@@ -2349,7 +2349,9 @@
       "allAlignments": "Any",
       "allBut": "Any but {{list}}",
       "races": "Races",
-      "allRaces": "All"
+      "allRaces": "All",
+      "minimums": "Minimums",
+      "minimumUnmet": "Score under the minimum"
     },
     "level": {
       "title": "Starting level",
@@ -2440,6 +2442,9 @@
       "hpEditable": "The roll fills the box; you may change it.",
       "hpOutdated": "The class, the level or the Constitution changed since the roll: roll the hit points again.",
       "skills": "{{className}} skills",
+      "budget": "Level {{level}} budget: {{total}} points",
+      "budgetLeft": "Left: {{left}}",
+      "budgetPerSkill": "At most {{max}} per skill",
       "skill": "Skill",
       "points": "Points",
       "percentile": "Percentile (18/xx)",

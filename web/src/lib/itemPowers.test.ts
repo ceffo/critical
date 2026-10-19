@@ -103,6 +103,19 @@ describe("powerRows", () => {
     );
   });
 
+  it("has no row for a power with no trigger (magic armour), however many are on", () => {
+    const armour: Item = {
+      ...gem,
+      id: "plate_p1",
+      name: { en: "Plate +1", fr: "Harnois +1" },
+      powers: [{ id: "magic", effects: { ac: -1 } }],
+    };
+    const magic = { itemId: "plate_p1", powerId: "magic", effects: { ac: -1 } };
+    expect(powerRows([magic], [armour], "en")).toEqual([]);
+    expect(powerRows([magic, hammer], [armour, gem], "en")).toHaveLength(1);
+    expect(powerRows([magic], [], "en")).toEqual([]);
+  });
+
   it("has no row at STR 17 (the server lists no power)", () => {
     expect(powerRows([], [gem], "en")).toEqual([]);
   });

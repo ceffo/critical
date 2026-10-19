@@ -37,30 +37,37 @@ export interface PowerRow {
   itemId: string;
   /** The item's current name in the UI language (its id when no item has it). */
   name: string;
-  /** The power's trigger (effective STR it needs), when the item list says it has one. */
-  minStr?: number;
+  /** The power's trigger (effective STR it needs): a power with none has no row. */
+  minStr: number;
   effects: BuffEffects;
 }
 
 /**
- * The timeline rows of the item powers that are on, in the server's order, each under its item's
- * name (ADR 0016 step 13). A power the server does not list (below its trigger) has no row.
+ * The timeline rows of the item powers that are on and have a trigger, in the server's order, each
+ * under its item's name (ADR 0016 step 13). A power the server does not list (below its trigger) has
+ * no row; neither has one with no trigger (magic armour, a ring): it is on for as long as the piece
+ * is equipped, so it is not something that comes and goes. Both still count in the aggregate and the
+ * breakdowns.
  */
 export function powerRows(
   powers: readonly ItemPower[],
   items: readonly Item[],
   lang: string,
 ): PowerRow[] {
-  return powers.map((p) => {
+  const rows: PowerRow[] = [];
+  for (const p of powers) {
     const item = items.find((i) => i.id === p.itemId);
-    return {
+    const minStr = item?.powers?.find((d) => d.id === p.powerId)?.minStr;
+    if (minStr === undefined) continue;
+    rows.push({
       key: `${p.itemId}/${p.powerId}`,
       itemId: p.itemId,
       name: item ? localized(lang, item.name) : p.itemId,
-      minStr: item?.powers?.find((d) => d.id === p.powerId)?.minStr,
+      minStr,
       effects: p.effects,
-    };
-  });
+    });
+  }
+  return rows;
 }
 
 /**

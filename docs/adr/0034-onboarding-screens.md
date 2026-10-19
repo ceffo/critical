@@ -101,9 +101,22 @@ content. This ADR records the decisions; the README and the shots are the pictur
   typed over it. An HP roll whose class, Constitution or XP changed is dropped with its total (a
   typed total stays) and the step says to roll again (ADR 0032 step 7: one roll is for one class,
   Constitution and level).
-- **Not shown yet**, for want of server data: the class cards' ability minimums and the arrangement
-  table's minimum check, the race cards' height and starting age (the identity step's dice), and the
-  skill budget and percentages on step 4 (the server warns at creation). The web computes none of them.
+- **Not shown yet**, for want of server data: the arrangement table's minimum check, the race cards'
+  height and starting age (the identity step's dice), and the skill percentages on step 4 (the server
+  warns at creation). The web computes none of them.
+- **Class minimums and the skill budget** (added later). The options carry each class's ability
+  minimums (PHB Table 13, `minimums` on the class: `ability`, `min`; Go data in `ruletablesvc`, like the
+  alignment limits). They are shown, not enforced (ADR 0030 step 21's stance on requirements). The
+  verdicts on a raw draft come from `POST /api/characters/checks` (body: `class`, `scores` entered so
+  far, `xp`, `skillPoints`; it refuses nothing and stores nothing): `unmetMinimums` (for every
+  creatable class, the abilities whose entered score is under the minimum; an ability without a score is
+  not unmet) and `skillBudget` (the thief's or bard's budget at the level the XP gives: `level`,
+  `total`, `spent`, `left`, `perSkill`, 0 for the bard's no per-skill limit; null otherwise). "Meets the
+  minimum" and "points left" are rules math, so the server answers them and the web only words them
+  (the class cards flag the unmet ones, the skills step shows "Restants"). Tests:
+  `TestCreationOptions_Table13_EachClassCarriesItsAbilityMinimums`,
+  `TestCreationChecks_Table13_ScoresUnderAClassMinimumAreUnmet`,
+  `TestCreationChecks_Steps17And18_TheBudgetAndWhatIsLeft`, `TestCreationChecks_OverTheWire`.
 
 ## As built (the identity step and the review)
 

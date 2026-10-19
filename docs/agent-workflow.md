@@ -7,14 +7,14 @@ contract; keep them stable.
 
 ## Project docs to read
 
-| Always | `AGENTS.md`, `docs/all.md` (scope, vocabulary, core architectural rule, REST conventions) |
+| Always | `AGENTS.md`, `GLOSSARY.md` (the vocabulary), `docs/all.md` (scope, core architectural rule, REST conventions) |
 |---|---|
 | Backend work | `docs/backend.md` (infrastructure), `docs/clean_architecture.md` |
 | Deployment work | `docs/deploy.md` (fly.io runbook), ADR 0024 |
 | Rules / game math | `docs/adr/README.md` (index), the relevant ADRs |
 | Frontend work | `docs/frontend.md` |
 
-Domain vocabulary and phase scope live in `docs/all.md`.
+Domain vocabulary lives in `GLOSSARY.md` ([ADR 0036](adr/0036-vocabulary.md)); phase scope in `docs/all.md`.
 
 Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and rules are indexed in
 `docs/adr/README.md`. Design decisions are read from these docs and the tracker, never from engram.

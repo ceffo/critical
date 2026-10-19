@@ -181,22 +181,17 @@ type CharacterDTO struct {
 	Str  int    `json:"str"`
 	// StrExceptional is a fighter's 18/xx percentile (ADR 0030 step 9), 0
 	// for none.
-	StrExceptional int    `json:"strExceptional"`
-	Dex            int    `json:"dex"`
-	Con            int    `json:"con"`
-	Int            int    `json:"int"`
-	Wis            int    `json:"wis"`
-	Cha            int    `json:"cha"`
-	HPMax          int    `json:"hpMax"`
-	XPTotal        int    `json:"xpTotal"`
-	Class          string `json:"class"`
-	RaceCode       string `json:"raceCode"`
-	// SkillArmor is the armour a thief or a bard wears for its skills (ADR
-	// 0030 step 1), "" for a class without skill points or none entered
-	// (read as leather); its points are in derived.thiefSkills or
-	// derived.bardSkills.
-	SkillArmor string     `json:"skillArmor"`
-	Derived    DerivedDTO `json:"derived"`
+	StrExceptional int        `json:"strExceptional"`
+	Dex            int        `json:"dex"`
+	Con            int        `json:"con"`
+	Int            int        `json:"int"`
+	Wis            int        `json:"wis"`
+	Cha            int        `json:"cha"`
+	HPMax          int        `json:"hpMax"`
+	XPTotal        int        `json:"xpTotal"`
+	Class          string     `json:"class"`
+	RaceCode       string     `json:"raceCode"`
+	Derived        DerivedDTO `json:"derived"`
 	// Missing lists the required fields the character lacks (ADR 0032 step
 	// 8.2: "alignment", "sex"); the card asks the player to pick them.
 	Missing []string `json:"missing"`
@@ -275,6 +270,11 @@ type DerivedDTO struct {
 	// BardSkills is ADR 0030 step 18: each bard skill with its terms and
 	// percentage; null for a class without them.
 	BardSkills []ThiefSkillDTO `json:"bardSkills"`
+	// SkillArmor is the skill armour the thief's or the bard's skills read
+	// (ADR 0033 step 14: from the worn body armour's Table 29 column; none,
+	// leather, padded_studded_leather, elven_chain or metal), "" for a class
+	// without them.
+	SkillArmor string `json:"skillArmor"`
 	// SkillBudget is step 17's or 18's warnings on the entered points,
 	// never null.
 	SkillBudget []BudgetWarningDTO `json:"skillBudget"`
@@ -364,7 +364,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 			Pending: wire.PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
 		},
 		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
-		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab,
+		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab, SkillArmor: d.SkillArmor,
 	}
 	out.ThiefSkills, out.BardSkills = skillDTOs(d.ThiefSkills), skillDTOs(d.BardSkills)
 	for _, w := range d.SkillBudget {
@@ -397,7 +397,7 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 	return CharacterDTO{
 		ID: c.ID, Name: c.Name,
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
-		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race, SkillArmor: c.SkillArmor,
+		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race,
 		Derived: derivedDTO(c.Derived), DetailsDTO: wire.DetailsToDTO(c.Details),
 		Missing: c.Details.Missing(), Warnings: warningsDTO(c.Warnings),
 	}

@@ -17,6 +17,7 @@ type Querier interface {
 	AdoptWeapons(ctx context.Context, characterID int64) error
 	AllTexts(ctx context.Context) ([]LocalizedText, error)
 	CatalogueVersion(ctx context.Context) (CatalogueVersionRow, error)
+	CharacterSkillArmour(ctx context.Context, id int64) (CharacterSkillArmourRow, error)
 	CountCharacters(ctx context.Context) (int64, error)
 	CountItems(ctx context.Context, characterID int64) (int64, error)
 	CountKeyedSpells(ctx context.Context) (int64, error)
@@ -54,6 +55,7 @@ type Querier interface {
 	// The ids the action log still holds item and weapon snapshots of (the conversion of migration 016
 	// keeps an item and a weapon of one id apart even when one of them is only in the log).
 	LegacySnapshotKeys(ctx context.Context, characterID int64) ([]string, error)
+	ListArmourPieces(ctx context.Context, characterID int64) ([]ListArmourPiecesRow, error)
 	// The identity migration (013): every character's stored alignment and sex, to map to codes.
 	ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error)
 	// The languages migration (014): every character's stored language list, to map to codes.
@@ -95,6 +97,11 @@ type Querier interface {
 	SetSnapshotEnvelopes(ctx context.Context, arg SetSnapshotEnvelopesParams) error
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error
+	// The skill armour carry-over of migration 020 (ADR 0033 step 14, carrySkillArmour): each
+	// character's class and entered skill armour, its pieces as the carry-over reads them, and a
+	// carried piece put on. Delete them with their step once every environment is past 020 (ADR 0025
+	// step 2.1.1); the seed keeps CharacterSkillArmour, ListArmourPieces and WearItem.
+	SkillArmourCharacters(ctx context.Context) ([]SkillArmourCharactersRow, error)
 	SnapshotsOf(ctx context.Context, stateKey string) ([]SnapshotsOfRow, error)
 	// The snapshots stored before the codec's envelopes (migration 019), with their character, for the
 	// re-encoding (reencodeSnapshots, ADR 0018 step 9).
@@ -116,6 +123,7 @@ type Querier interface {
 	UpsertProficiency(ctx context.Context, arg UpsertProficiencyParams) error
 	UpsertSpell(ctx context.Context, arg UpsertSpellParams) error
 	UpsertText(ctx context.Context, arg UpsertTextParams) error
+	WearItem(ctx context.Context, arg WearItemParams) error
 }
 
 var _ Querier = (*Queries)(nil)

@@ -62,13 +62,15 @@ type Store interface {
 	domain.TxRunner
 	// Migrate applies the pending migrations; seedsDir's character.json names
 	// the seed character, the owner of rows a migration finds without one;
-	// catalogue is the catalogue's weapons the equipment conversion matches
-	// (ADR 0033 step 26.4).
-	Migrate(ctx context.Context, seedsDir string, catalogue []ruletablesvc.Weapon) error
+	// equipment is the catalogue's: the weapons the equipment conversion
+	// matches (ADR 0033 step 26.4) and the body armours the skill armour
+	// carry-over gives (step 14); none before catalogue format 7.
+	Migrate(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment) error
 	// Seed loads the seed files of seedsDir; spellbook is the spellbook
-	// seed's catalogue keys, checked against the catalogue; catalogue the
-	// catalogue's weapons the seeded weapons are matched to.
-	Seed(ctx context.Context, seedsDir string, spellbook []string, catalogue []ruletablesvc.Weapon) error
+	// seed's catalogue keys, checked against the catalogue; equipment the
+	// catalogue's weapons the seeded weapons are matched to and the body
+	// armours the seed character's skill armour is carried over to.
+	Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error
 	ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, seedRefs []catalogue.Ref) error
 	Close() error
 }

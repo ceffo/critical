@@ -52,31 +52,6 @@ func SkillsOf(class string) []string {
 	return nil
 }
 
-// SkillArmorsOf are the armours class picks for its skills (nil for a class
-// without skill points).
-func SkillArmorsOf(class string) []string {
-	switch {
-	case HasThiefSkills(class):
-		return ThiefArmors
-	case HasBardSkills(class):
-		return BardArmors
-	}
-	return nil
-}
-
-// IsSkillArmor reports whether armor is one of some class's skill armours
-// (the union of SkillArmorsOf over the classes with skill points).
-func IsSkillArmor(armor string) bool {
-	for _, classes := range [][]string{thiefSkillClasses, bardSkillClasses} {
-		for _, c := range classes {
-			if slices.Contains(SkillArmorsOf(c), armor) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // SkillBudgetOf is SkillPointBudget or BardSkillPointBudget by class (an
 // empty list for a class without skill points).
 func SkillBudgetOf(class string, level int, points map[string]int) []BudgetWarning {

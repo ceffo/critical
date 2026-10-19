@@ -1,5 +1,6 @@
 import { test, expect, snap } from "./fixtures";
 import {
+  apiCall,
   attackForm,
   combatLog,
   chooseLanguage,
@@ -144,10 +145,9 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(step.getByLabel("PV max")).toHaveValue(/^\d+$/);
   await snap(page, "creation-hp-rolled-fr");
   await step.getByLabel("PV max").fill("6");
-  // ADR 0030 step 18: a bard enters its points and the armour worn for its skills.
-  await step
-    .getByLabel("Armure portée")
-    .selectOption({ label: "Métal, jusqu’à la maille" });
+  // ADR 0030 step 18: a bard enters its points; its skills read the armour it wears (ADR 0033
+  // step 14), none at creation.
+  await expect(step.getByLabel("Armure portée")).toHaveCount(0);
   await step.getByLabel("Escalade").fill("15");
   // Back and forward keep the values.
   await back.click();
@@ -246,13 +246,15 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(pop).toContainText(height);
   await page.keyboard.press("Escape");
 
-  // 50 + 15 + 0 (half-elf) - 20 (elven chain column) - 5 (metal armour) = 40, the server's.
+  // 50 + 15 + 0 (half-elf) + 10 (Table 29's none column: nothing worn) = 75, the server's.
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Act");
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Compétences" }).click();
-  await expect(page.getByTestId("bard-percent-climb_walls")).toHaveText("40 %");
-  await expect(page.getByTestId("thief-armor")).toHaveValue("metal");
+  await expect(page.getByTestId("bard-percent-climb_walls")).toHaveText("75 %");
+  await expect(page.getByTestId("skill-armor")).toHaveText(
+    "Armure des talents : Aucune",
+  );
   await snap(page, "new-bard-skills-fr");
 
   // The roster: a card per character, "En jeu" on the current one, Jouer on the others.
@@ -382,7 +384,6 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
     scores: { FOR: "16", DEX: "17", CON: "12", INT: "11", SAG: "9", CHA: "10" },
     hpMax: "5",
     extras: async (step) => {
-      await step.getByLabel("Armure portée").selectOption({ label: "Aucune" });
       await step.getByLabel("Crochetage").fill("30");
       await step.getByLabel("Vol à la tire").fill("30");
       await snap(page, "new-thief-extras-fr");
@@ -413,33 +414,43 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
   await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("55 %");
   await expect(page.getByTestId("skill-budget")).toHaveCount(0);
 
-  // The armour changes in play (step 1): elven chain takes 5 off Open Locks (Table 29), and the
-  // choice survives a reload.
-  // A refused request leaves the select enabled and the armour as it was.
-  await page.route("**/api/characters/*", (route) =>
-    route.request().method() === "PATCH"
-      ? route.fulfill({ status: 500, body: "boom" })
-      : route.continue(),
-  );
-  await page
-    .getByTestId("thief-armor")
-    .selectOption({ label: "Cotte de mailles elfique" });
-  await expect(page.getByTestId("thief-armor")).toBeEnabled();
-  await expect(page.getByTestId("thief-armor")).toHaveValue("none");
-  await page.unroute("**/api/characters/*");
-  await page
-    .getByTestId("thief-armor")
-    .selectOption({ label: "Cotte de mailles elfique" });
-  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
-  await expect(
-    page
-      .getByText("Armure des talents : Aucune → Cotte de mailles elfique")
-      .first(),
-  ).toBeVisible();
-  await snap(page, "thief-armor-changed-fr");
+  // The skills follow the armour worn (ADR 0033 step 14): an elven chain mail carried changes
+  // nothing; equipping it in the inventory takes 5 off Open Locks (Table 29) on the Skills tab, the
+  // journal's Undo of the equip gives it back, and the worn armour survives a reload.
+  expect(
+    await apiCall(page, "POST", "/api/items", {
+      name: { en: "Elven chain mail", fr: "Cotte de mailles elfique" },
+      category: "armour",
+      behaviour: "stock",
+      count: 1,
+      baseAc: 5,
+      skillColumn: "elven_chain",
+      armorRow: "chain",
+    }),
+  ).toBe(true);
   await page.reload();
   await page.getByRole("tab", { name: "Compétences" }).click();
-  await expect(page.getByTestId("thief-armor")).toHaveValue("elven_chain");
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("55 %");
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Inventory");
+  await page.getByRole("button", { name: "Equip Elven chain mail" }).click();
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
+  await expect(page.getByTestId("skill-armor")).toHaveText(
+    "Armure des talents : Cotte de mailles elfique",
+  );
+  await snap(page, "thief-armor-worn-fr");
+  await undoEntry(page, "Équipé : Cotte de mailles elfique");
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("55 %");
+  await expect(page.getByTestId("skill-armor")).toHaveText(
+    "Armure des talents : Aucune",
+  );
+  await page.getByTestId("redo").click();
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
+  await page.reload();
+  await page.getByRole("tab", { name: "Compétences" }).click();
   await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
 
   await chooseLanguage(page, "en");

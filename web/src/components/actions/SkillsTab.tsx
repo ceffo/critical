@@ -4,7 +4,6 @@ import { useTableStore } from "@/stores/table";
 import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
 import { Button } from "@/components/ui/button";
-import { ThiefArmorPicker } from "./ThiefArmorPicker";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
 import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/journal/words";
@@ -21,7 +20,8 @@ const HEADINGS: Record<SkillKind, string> = {
  * Skills tab of the Act panel (ADR 0014; layout ADR 0027 step 12): the non-weapon proficiencies
  * (d20 at or under the target) and the bard or thief skills (d100 at or under the percentage,
  * computed by the server from the entered points, ADR 0030 steps 17 and 18, with a budget warning,
- * the armour worn and the "Spend" editor), side by side
+ * the skill armour the server read from the body armour worn (ADR 0033 step 14: changed by wearing
+ * armour in the inventory, never here) and the "Spend" editor), side by side
  * when the panel holds two 16rem columns, stacked otherwise. Each row is one button that rolls the
  * check on the server; a proficiency shows its ability with the modifier as a pill, a bard skill its
  * percentage. The target, the verdict and the DM's adjustment are on the result card, after the
@@ -149,7 +149,19 @@ export function SkillsTab() {
               ))}
             </ul>
           )}
-          <ThiefArmorPicker />
+          {skills.skillArmor && (
+            <p
+              className="px-2.5 text-body break-words text-muted-foreground"
+              title={t("skills.armorHint")}
+              data-testid="skill-armor"
+            >
+              {t("skills.armor", {
+                armor: t(`characters.armors.${skills.skillArmor}`, {
+                  defaultValue: skills.skillArmor,
+                }),
+              })}
+            </p>
+          )}
           {editingPoints ? (
             <ThiefPointsEditor
               skills={classSkills}

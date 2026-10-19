@@ -123,6 +123,22 @@ func (q *Queries) CatalogueVersion(ctx context.Context) (CatalogueVersionRow, er
 	return i, err
 }
 
+const characterSkillArmour = `-- name: CharacterSkillArmour :one
+SELECT class, skill_armor FROM characters WHERE id = $1::bigint
+`
+
+type CharacterSkillArmourRow struct {
+	Class      string
+	SkillArmor string
+}
+
+func (q *Queries) CharacterSkillArmour(ctx context.Context, id int64) (CharacterSkillArmourRow, error) {
+	row := q.db.QueryRowContext(ctx, characterSkillArmour, id)
+	var i CharacterSkillArmourRow
+	err := row.Scan(&i.Class, &i.SkillArmor)
+	return i, err
+}
+
 const countCharacters = `-- name: CountCharacters :one
 SELECT COUNT(*) FROM characters
 `
@@ -594,6 +610,48 @@ func (q *Queries) LegacySnapshotKeys(ctx context.Context, characterID int64) ([]
 			return nil, err
 		}
 		items = append(items, state_key)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listArmourPieces = `-- name: ListArmourPieces :many
+SELECT id, position, category, state, skill_column
+FROM items WHERE character_id = $1::bigint ORDER BY position, id
+`
+
+type ListArmourPiecesRow struct {
+	ID          string
+	Position    int64
+	Category    string
+	State       string
+	SkillColumn string
+}
+
+func (q *Queries) ListArmourPieces(ctx context.Context, characterID int64) ([]ListArmourPiecesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listArmourPieces, characterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListArmourPiecesRow{}
+	for rows.Next() {
+		var i ListArmourPiecesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Position,
+			&i.Category,
+			&i.State,
+			&i.SkillColumn,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -1095,6 +1153,43 @@ type SetSpellStatsParams struct {
 func (q *Queries) SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error {
 	_, err := q.db.ExecContext(ctx, setSpellStats, arg.Stats, arg.ID)
 	return err
+}
+
+const skillArmourCharacters = `-- name: SkillArmourCharacters :many
+SELECT id, class, skill_armor FROM characters ORDER BY id
+`
+
+type SkillArmourCharactersRow struct {
+	ID         int64
+	Class      string
+	SkillArmor string
+}
+
+// The skill armour carry-over of migration 020 (ADR 0033 step 14, carrySkillArmour): each
+// character's class and entered skill armour, its pieces as the carry-over reads them, and a
+// carried piece put on. Delete them with their step once every environment is past 020 (ADR 0025
+// step 2.1.1); the seed keeps CharacterSkillArmour, ListArmourPieces and WearItem.
+func (q *Queries) SkillArmourCharacters(ctx context.Context) ([]SkillArmourCharactersRow, error) {
+	rows, err := q.db.QueryContext(ctx, skillArmourCharacters)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SkillArmourCharactersRow{}
+	for rows.Next() {
+		var i SkillArmourCharactersRow
+		if err := rows.Scan(&i.ID, &i.Class, &i.SkillArmor); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const snapshotsOf = `-- name: SnapshotsOf :many
@@ -1659,5 +1754,19 @@ type UpsertTextParams struct {
 
 func (q *Queries) UpsertText(ctx context.Context, arg UpsertTextParams) error {
 	_, err := q.db.ExecContext(ctx, upsertText, arg.TextID, arg.Lang, arg.Body)
+	return err
+}
+
+const wearItem = `-- name: WearItem :exec
+UPDATE items SET state = 'worn' WHERE character_id = $1::bigint AND id = $2
+`
+
+type WearItemParams struct {
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) WearItem(ctx context.Context, arg WearItemParams) error {
+	_, err := q.db.ExecContext(ctx, wearItem, arg.CharacterID, arg.ID)
 	return err
 }

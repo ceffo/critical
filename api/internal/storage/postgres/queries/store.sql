@@ -302,3 +302,20 @@ SELECT id, payload FROM action_log WHERE kind = ANY(sqlc.arg('kinds')::text[]) O
 SELECT c.id, COALESCE(c.payload, '')::text AS payload
 FROM action_corrections c JOIN action_log l ON l.id = c.action_id
 WHERE l.kind = ANY(sqlc.arg('kinds')::text[]) ORDER BY c.id;
+
+-- The skill armour carry-over of migration 020 (ADR 0033 step 14, carrySkillArmour): each
+-- character's class and entered skill armour, its pieces as the carry-over reads them, and a
+-- carried piece put on. Delete them with their step once every environment is past 020 (ADR 0025
+-- step 2.1.1); the seed keeps CharacterSkillArmour, ListArmourPieces and WearItem.
+-- name: SkillArmourCharacters :many
+SELECT id, class, skill_armor FROM characters ORDER BY id;
+
+-- name: CharacterSkillArmour :one
+SELECT class, skill_armor FROM characters WHERE id = sqlc.arg(id)::bigint;
+
+-- name: ListArmourPieces :many
+SELECT id, position, category, state, skill_column
+FROM items WHERE character_id = sqlc.arg(character_id)::bigint ORDER BY position, id;
+
+-- name: WearItem :exec
+UPDATE items SET state = 'worn' WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;

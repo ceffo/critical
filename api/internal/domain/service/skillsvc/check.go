@@ -273,7 +273,7 @@ func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) 
 		}
 		out = &Skills{
 			Proficiencies: make([]Proficiency, 0, len(profs)), BardSkills: make([]BardSkill, 0, len(char.Derived.BardSkills)),
-			ThiefSkills: make([]ThiefSkill, 0, len(char.Derived.ThiefSkills)),
+			ThiefSkills: make([]ThiefSkill, 0, len(char.Derived.ThiefSkills)), SkillArmor: char.Derived.SkillArmor,
 		}
 		for _, t := range char.Derived.ThiefSkills {
 			out.ThiefSkills = append(out.ThiefSkills, ThiefSkill{SkillPercent: t, Last: last[t.Skill]})

@@ -52,7 +52,6 @@ export interface FlowDraft {
   hpMax: string;
   strExceptional: string;
   skillPoints: Record<string, string>;
-  skillArmor: string;
   name: string;
   details: Draft;
 }
@@ -76,7 +75,6 @@ export const EMPTY_DRAFT: FlowDraft = {
   hpMax: "",
   strExceptional: "",
   skillPoints: {},
-  skillArmor: "leather",
   name: "",
   details: {
     alignment: "",
@@ -185,7 +183,6 @@ export function buildBody(
     body.strExceptional = v;
   }
   if (cls && cls.skills.length > 0) {
-    body.skillArmor = draft.skillArmor;
     body.skillPoints = {};
     for (const skill of cls.skills) {
       const raw = draft.skillPoints[skill] ?? "";

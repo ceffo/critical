@@ -29,13 +29,13 @@ func TestPreview_IsWhatTheCreatedCharacterReads(t *testing.T) {
 	bodies := map[string]string{
 		// Five additional languages at Intelligence 14 (limit 4), a height
 		// outside the half-elf male range, bard points over the budget.
-		"bard": bardStart[:len(bardStart)-len(`,"skillArmor":"leather"`)] +
-			`,"skillArmor":"padded_studded_leather","skillPoints":{"climb_walls":60,"detect_noise":30},"details":{"alignment":"neutral_good","sex":"male",` +
+		"bard": bardStart +
+			`,"skillPoints":{"climb_walls":60,"detect_noise":30},"details":{"alignment":"neutral_good","sex":"male",` +
 			`"languages":["elvish","gnomish","halfling","goblin","orcish"],"height_cm":250,"weight_kg":70,"age":20}}`,
 		"fighter": `{"name":"Brom","class":"fighter","raceCode":"human","str":18,"strExceptional":76,"dex":12,"con":16,"int":9,"wis":10,"cha":8,` +
 			`"hpMax":28,"xp":9000,"details":{"alignment":"lawful_good","sex":"male","age":200}}`,
 		"thief": `{"name":"Nib","class":"thief","raceCode":"halfling","str":9,"dex":17,"con":12,"int":11,"wis":10,"cha":12,"hpMax":4,"xp":0,` +
-			`"skillArmor":"none","skillPoints":{"pick_pockets":30,"open_locks":30},"details":{"alignment":"chaotic_neutral","sex":"female"}}`,
+			`"skillPoints":{"pick_pockets":30,"open_locks":30},"details":{"alignment":"chaotic_neutral","sex":"female"}}`,
 		"mage": `{"name":"Ivo","class":"mage","raceCode":"elf","str":8,"dex":14,"con":10,"int":17,"wis":12,"cha":11,"hpMax":3,"xp":2600,` +
 			`"details":{"alignment":"true_neutral","sex":"male"}}`,
 		"cleric": `{"name":"Sol","class":"cleric","raceCode":"dwarf","str":12,"dex":9,"con":15,"int":10,"wis":16,"cha":10,"hpMax":20,"xp":13000,` +
@@ -88,7 +88,7 @@ func TestPreview_ABlankNameAlignmentOrSexIsMissingNotRefused(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
 	body := `{"name":"  ","class":"bard","raceCode":"half_elf","str":10,"dex":15,"con":12,"int":9,"wis":9,"cha":16,"hpMax":6,"xp":0,` +
-		`"skillArmor":"leather","details":{"alignment":"","sex":"","languages":["elvish","gnomish","goblin"]}}`
+		`"details":{"alignment":"","sex":"","languages":["elvish","gnomish","goblin"]}}`
 	var preview previewView
 	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/preview", body, &preview))
 	assert.Equal(t, []string{"name", "alignment", "sex"}, preview.Missing)

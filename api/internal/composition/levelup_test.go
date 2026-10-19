@@ -136,7 +136,6 @@ func TestLevelUp_TwoLevelsAtOnceAreTwoDiceThroughTheDicePort(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Lyra", Class: "bard", Race: "half_elf", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6,
-		SkillArmor: "leather",
 	})
 	require.NoError(t, err)
 	lu, _, _ := levelUpOf(t, bs, id)

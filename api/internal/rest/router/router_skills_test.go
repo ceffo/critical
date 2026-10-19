@@ -27,6 +27,7 @@ func TestSkills_ListWireShape(t *testing.T) {
 		BardSkills: []skillsvc.BardSkill{{SkillPercent: ruletablesvc.SkillPercent{
 			Skill: "climb_walls", Base: 50, Points: 35, Race: 0, Dexterity: 0, Armor: -5, Percent: 80,
 		}}},
+		SkillArmor: ruletablesvc.ArmorMetal,
 	}, nil)
 	rec := do(h, "GET", "/api/skills", "")
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -35,7 +36,7 @@ func TestSkills_ListWireShape(t *testing.T) {
 			"last":{"entryId":7,"roll":18,"target":16,"adjustment":3,"adjustmentReason":"rope","adjustedTarget":19,"success":true}}],
 		"bardSkills":[{"id":"climb_walls","base":50,"points":35,"race":0,"dexterity":0,"armor":-5,"percent":80,
 			"maxPercent":95,"maxPoints":95,"usable":true,"last":null}],
-		"thiefSkills":[]}`, rec.Body.String())
+		"thiefSkills":[],"skillArmor":"metal"}`, rec.Body.String())
 }
 
 func TestSkills_ListUsableIsTheServersCall(t *testing.T) {
@@ -181,7 +182,7 @@ func TestSkills_SetPointsWireShape(t *testing.T) {
 
 	rec := do(h, "PUT", "/api/skills/points", `{"points":{"open_locks":45}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"proficiencies":[],"bardSkills":[],"thiefSkills":[]}`, rec.Body.String())
+	assert.JSONEq(t, `{"proficiencies":[],"bardSkills":[],"thiefSkills":[],"skillArmor":""}`, rec.Body.String())
 
 	rec = do(h, "PUT", "/api/skills/points", `{"points":{"open_locks":96}}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)

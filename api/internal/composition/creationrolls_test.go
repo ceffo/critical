@@ -44,7 +44,7 @@ type hpRollView struct {
 
 func bardBody(s map[string]int, hpMax int) string {
 	return fmt.Sprintf(`{"name":"Rolled","class":"bard","raceCode":"half_elf",`+
-		`"str":%d,"dex":%d,"con":%d,"int":%d,"wis":%d,"cha":%d,"hpMax":%d,"xp":2500,"skillArmor":"leather",`+
+		`"str":%d,"dex":%d,"con":%d,"int":%d,"wis":%d,"cha":%d,"hpMax":%d,"xp":2500,`+
 		`"details":{"alignment":"neutral_good","sex":"female"}}`,
 		s["str"], s["dex"], s["con"], s["int"], s["wis"], s["cha"], hpMax)
 }

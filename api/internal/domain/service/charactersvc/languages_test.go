@@ -50,7 +50,7 @@ func newEnvWithLanguages(t *testing.T) *env {
 	t.Helper()
 	e := newEnv(t)
 	svc, err := charactersvc.New(charactersvc.Deps{
-		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Log: e.log, HP: e.hp,
+		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Armour: e.armour, HP: e.hp,
 		Languages: phbLanguages(t),
 	})
 	require.NoError(t, err)

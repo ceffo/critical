@@ -42,11 +42,9 @@ type ClassOptionDTO struct {
 	// ExceptionalStrengthRaces are the races that enter an 18/xx at
 	// Strength 18 with the class (ADR 0030 step 9).
 	ExceptionalStrengthRaces []string `json:"exceptionalStrengthRaces"`
-	// Skills are the thieving skills the class enters points in and
-	// SkillArmors the armours it picks for them (ADR 0030 steps 1 and 17);
-	// empty for a class without them.
-	Skills      []string `json:"skills"`
-	SkillArmors []string `json:"skillArmors"`
+	// Skills are the thieving skills the class enters points in (ADR 0030
+	// steps 1 and 17); empty for a class without them.
+	Skills []string `json:"skills"`
 	// Alignments are the alignment codes the class admits (ADR 0032 step 2),
 	// so the form offers only those.
 	Alignments []string `json:"alignments"`
@@ -216,7 +214,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 		for _, c := range o.Classes {
 			out.Classes = append(out.Classes, ClassOptionDTO{
 				Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces,
-				Skills: c.Skills, SkillArmors: c.SkillArmors, Alignments: c.Alignments,
+				Skills: c.Skills, Alignments: c.Alignments,
 				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP),
 			})
 		}
@@ -242,11 +240,10 @@ type CreateBody struct {
 	Cha            *int `json:"cha"`
 	HPMax          *int `json:"hpMax"`
 	XP             *int `json:"xp"`
-	// SkillPoints and SkillArmor are a thief's (ADR 0030 steps 1 and 17):
-	// points by skill code, the armour worn for the skills; absent for the
-	// other classes.
+	// SkillPoints are a thief's or a bard's (ADR 0030 steps 1, 17 and 18):
+	// points by skill code; absent for the other classes. The skills' armour
+	// is the worn one (ADR 0033 step 14), no entry.
 	SkillPoints map[string]int `json:"skillPoints"`
-	SkillArmor  string         `json:"skillArmor"`
 	// Details are the free-text details, in the shape GET /api/character
 	// shows them (age null for none); absent for none. A refusal names its
 	// field under "details." (details.age).
@@ -303,7 +300,7 @@ func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
 	}
 	n := charactersvc.NewCharacter{
 		Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional,
-		SkillPoints: b.SkillPoints, SkillArmor: b.SkillArmor, Details: details,
+		SkillPoints: b.SkillPoints, Details: details,
 	}
 	for _, f := range []struct {
 		field string
@@ -409,14 +406,13 @@ func Create(svc creator) render.HandlerFunc {
 	}
 }
 
-// ChangeBody is the body of PATCH /api/characters/{id}: a new name, a
-// thief's new skill armour (ADR 0030 step 1, logged and undoable), or retired
-// true (ADR 0029 step 7.3; a retired character never comes back here).
+// ChangeBody is the body of PATCH /api/characters/{id}: a new name, or
+// retired true (ADR 0029 step 7.3; a retired character never comes back
+// here). The skill armour is no entry (ADR 0033 step 14): a body naming it is
+// an unknown field, refused.
 type ChangeBody struct {
 	Name    *string `json:"name"`
 	Retired *bool   `json:"retired"`
-	// SkillArmor is a thief's new skill armour (ADR 0030 step 1).
-	SkillArmor *string `json:"skillArmor"`
 }
 
 // Change is PATCH /api/characters/{id}: renames or retires one of the user's
@@ -440,12 +436,12 @@ func Change(svc changer) render.HandlerFunc {
 			return render.BadRequestError("invalid JSON body")
 		}
 		switch {
-		case b.Name == nil && b.Retired == nil && b.SkillArmor == nil:
-			return render.BadRequestError("name, retired or skillArmor is required")
+		case b.Name == nil && b.Retired == nil:
+			return render.BadRequestError("name or retired is required")
 		case b.Retired != nil && !*b.Retired:
 			return render.BadRequestError("a character is only ever retired")
 		}
-		current, err := svc.Change(r.Context(), u.ID, id, charactersvc.Change{Name: b.Name, Retired: b.Retired, SkillArmor: b.SkillArmor})
+		current, err := svc.Change(r.Context(), u.ID, id, charactersvc.Change{Name: b.Name, Retired: b.Retired})
 		if err != nil {
 			return err
 		}

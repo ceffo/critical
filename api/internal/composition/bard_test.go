@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
@@ -33,7 +34,9 @@ var kelsenBardSkills = []ruletablesvc.SkillPercent{
 // rolled as a bard skill check against it; Pick Pockets 10 - 25 is floored at
 // 0. After creation the bard spends 10 more points in Read Languages (5 + 10
 // - 5 = 10), over the budget (a warning), as one skill_points entry; undoing
-// it gives the points back. A new armour changes the percentages.
+// it gives the points back. A new armour changes the percentages. The armour
+// is the one the bard wears (ADR 0033 step 14): a chain mail put on after
+// creation, swapped for a leather armour at the end.
 func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 	ctx := context.Background()
 	dice := &attackDice{t: t, d100s: []int{40, 41}, calls: map[string]int{}}
@@ -47,9 +50,20 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Lyra", Class: "bard", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 13, Wis: 11, Cha: 17, HPMax: 4,
-		SkillArmor: ruletablesvc.ArmorMetal, SkillPoints: map[string]int{"climb_walls": 15, "detect_noise": 5},
+		SkillPoints: map[string]int{"climb_walls": 15, "detect_noise": 5},
 	})
 	require.NoError(t, err)
+	wear := func(name, column, row string) {
+		t.Helper()
+		res, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
+			Name: map[string]string{"en": name}, Category: itemsvc.CategoryArmour, Behaviour: itemsvc.BehaviourStock,
+			Count: 1, BaseAC: 5, SkillColumn: column, ArmorRow: row,
+		})
+		require.NoError(t, err)
+		_, err = bs.Items.SetState(ctx, id, res.Item.ID, itemsvc.StateWorn, true)
+		require.NoError(t, err)
+	}
+	wear("Chain mail", "metal", "chain")
 	percents := func() map[string]int {
 		t.Helper()
 		skills, err := bs.Skills.List(ctx, id)
@@ -88,7 +102,7 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 
 	entries, err := bs.Log.List(ctx, id, 10)
 	require.NoError(t, err)
-	require.Len(t, entries, 3, "two checks and one spend")
+	require.Len(t, entries, 5, "the armour added and worn, two checks and one spend")
 	assert.Equal(t, actionlog.KindSkillPoints, entries[0].Kind)
 	top, ok, err := bs.Log.TopID(ctx, id)
 	require.NoError(t, err)
@@ -102,8 +116,7 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 	assert.Equal(t, map[string]int{"climb_walls": 15, "detect_noise": 5}, c.SkillPoints)
 	assert.Empty(t, c.Derived.SkillBudget)
 
-	_, err = bs.Character.Change(ctx, s.User.ID, id, charactersvc.Change{SkillArmor: new(ruletablesvc.ArmorLeather)})
-	require.NoError(t, err)
+	wear("Leather armor", "leather", "leather")
 	assert.Equal(t, 65, percents()["climb_walls"], "50 + 15 in leather")
 }
 

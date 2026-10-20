@@ -410,7 +410,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
     `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP` (composition: roll, undo and redo move
     `toSpend`). The web: after the hit-point step the card shows "Le niveau N apporte" with
     Choisir / Dépenser opening the Skills tab's weapon, non-weapon or points editor, until closed
-    or undone; otherwise "À dépenser" while any count is above 0.)_
+    or undone; while any `toSpend` count is above 0, an "À dépenser" tag beside the class opens a
+    popover with the same links (a tag, not a panel: the card never scrolls for it at 1440x900,
+    ADR 0022 step 2.8, ADR 0027 step 1).)_
 
 ### Existing data
 

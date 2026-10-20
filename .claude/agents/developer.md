@@ -1,7 +1,7 @@
 ---
 name: developer
 description: Implements one work item (Linear issue) in its own git worktree, verifies it with the project's validation gate, and commits it. Never pushes, never opens PRs, never writes to the tracker. Dispatched by the supervisor and resumed by it for every rework round; reports back with branch, worktree path and what was and wasn't verified.
-tools: Read, Write, Edit, Bash, Grep, Glob, mcp__linear-server__get_issue, mcp__linear-server__list_issues, mcp__linear-server__list_comments
+tools: Read, Write, Edit, Bash, Grep, Glob, Agent(rules-lookup), mcp__linear-server__get_issue, mcp__linear-server__list_issues, mcp__linear-server__list_comments
 model: sonnet
 ---
 

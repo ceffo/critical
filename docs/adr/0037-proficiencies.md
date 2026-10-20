@@ -189,6 +189,10 @@ writes `Test<name>` and adds the prefix here in the same PR.
     `SetPoints_Step10_SkillPointsRefusedOverAndGrowing` (skillsvc: total, a thief's per-skill cap,
     the bard's total), `Create_Step10_OverBudgetRefused` (charactersvc), `ErrorMapping_Step10_OverBudget`
     (render).
+    _(As built for the skill points, 2026-10-20: `domain.ErrOverBudget` and `domain.BudgetError`
+    (`Field`, `Spent`, `Limit`); the body adds `field`, `spent` and `limit`, which the web's
+    `apiError.over_budget` wording shows. Details in ADR 0030 step 17's as-built note. The slot
+    pools are not built yet.)_
 11. **Warnings and reminders, never refusals.** Served on `GET /api/character` (`warnings`) and
     with every editor preview and save answer:
     - `slots_over_budget` `{pool, spent, available}` (`pool` `weapon` or `nonweapon`);

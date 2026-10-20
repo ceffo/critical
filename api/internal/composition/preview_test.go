@@ -28,9 +28,9 @@ type previewView struct {
 func TestPreview_IsWhatTheCreatedCharacterReads(t *testing.T) {
 	bodies := map[string]string{
 		// Five additional languages at Intelligence 14 (limit 4), a height
-		// outside the half-elf male range, bard points over the budget.
+		// outside the half-elf male range; the bard spends its 50 points at level 3.
 		"bard": bardStart +
-			`,"skillPoints":{"climb_walls":60,"detect_noise":30},"details":{"alignment":"neutral_good","sex":"male",` +
+			`,"skillPoints":{"climb_walls":30,"detect_noise":20},"details":{"alignment":"neutral_good","sex":"male",` +
 			`"languages":["elvish","gnomish","halfling","goblin","orcish"],"height_cm":250,"weight_kg":70,"age":20}}`,
 		"fighter": `{"name":"Brom","class":"fighter","raceCode":"human","str":18,"strExceptional":76,"dex":12,"con":16,"int":9,"wis":10,"cha":8,` +
 			`"hpMax":28,"xp":9000,"details":{"alignment":"lawful_good","sex":"male","age":200}}`,

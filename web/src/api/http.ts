@@ -26,10 +26,24 @@ export class ApiError extends Error {
   }
 }
 
-/** The localized message of an error code, or null when the web has no wording for it (the server text then stands). */
-export function codeMessage(code: string | undefined): string | null {
+/** The localized message of an error code, or null when the web has no wording for it (the server text then stands).
+ * params are the figures the error came with (an over_budget's `spent` and `limit`). */
+export function codeMessage(
+  code: string | undefined,
+  params?: Record<string, number>,
+): string | null {
   const key = `apiError.${code}`;
-  return code && i18n.exists(key) ? i18n.t(key) : null;
+  return code && i18n.exists(key) ? i18n.t(key, params) : null;
+}
+
+/** The numbers of an error body (an over_budget's `spent` and `limit`, ADR 0037 step 10): the
+ * figures its wording shows. */
+function figuresOf(body: Record<string, unknown>): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(body).filter(
+      (e): e is [string, number] => typeof e[1] === "number",
+    ),
+  );
 }
 
 /** Message (and the field and code it comes with, if any) from an error response: the JSON body, else the raw text. */
@@ -42,11 +56,11 @@ async function errorBody(
       error?: unknown;
       field?: unknown;
       code?: unknown;
-    };
+    } & Record<string, unknown>;
     if (typeof body.error === "string" && body.error) {
       const code = typeof body.code === "string" ? body.code : undefined;
       return {
-        message: codeMessage(code) ?? body.error,
+        message: codeMessage(code, figuresOf(body)) ?? body.error,
         field: typeof body.field === "string" ? body.field : undefined,
         code,
       };
@@ -56,6 +70,10 @@ async function errorBody(
   }
   return { message: text.trim() || `${res.status} ${res.statusText}` };
 }
+
+/** The code of a save refused over a budget (ADR 0037 step 10, HTTP 409): it names the field, and
+ * its message is worded with the figures the server sent. */
+export const OVER_BUDGET = "over_budget";
 
 /** The code of a request the database could not serve in time (HTTP 503). */
 export const UNAVAILABLE = "database_unavailable";

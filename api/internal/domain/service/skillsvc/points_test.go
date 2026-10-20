@@ -16,8 +16,16 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 )
 
-// pointsFixture is a character of class whose sheet stores points.
+// pointsFixture is a character of class at realized level 5 whose sheet
+// stores points.
 func pointsFixture(t *testing.T, class string, points map[string]int) *fixture {
+	t.Helper()
+	return pointsFixtureAt(t, class, 5, points)
+}
+
+// pointsFixtureAt is a character of class at realized level whose sheet
+// stores points.
+func pointsFixtureAt(t *testing.T, class string, level int, points map[string]int) *fixture {
 	t.Helper()
 	f := &fixture{
 		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
@@ -26,15 +34,18 @@ func pointsFixture(t *testing.T, class string, points map[string]int) *fixture {
 	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Class: class, SkillPoints: points}, nil).Maybe()
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
+		ID: charID, Class: class, SkillPoints: points, RealizedLevel: level,
+		Derived: charactersvc.Derived{RealizedLevel: level},
+	}, nil).Maybe()
 	return f
 }
 
 // ADR 0030 step 17 after creation: the player sets each skill's total
 // points, checked as at creation; the zeros are dropped, the write and its
 // skill_points entry (the points before and after, snapshotted under
-// "skill_points") share one transaction, and the budget is no refusal (60 in
-// one skill is above any 1st-level budget).
+// "skill_points") share one transaction (75 points, 60 in one skill, within
+// a 5th-level thief's 180, 90 in one skill).
 func TestSetPoints_Step17_WritesAndLogsTheSpend(t *testing.T) {
 	f := pointsFixture(t, "thief", map[string]int{"open_locks": 30})
 	f.records()
@@ -99,4 +110,68 @@ func TestSetPoints_Step17_RestorerWritesThePointsBack(t *testing.T) {
 	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":30}}`)))
 	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, map[string]int(nil)).Return(nil).Once()
 	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{}}`)))
+}
+
+// ADR 0037 step 10 on the skill points: a spend is refused when, after it,
+// the total is over the realized level's budget and above the total before,
+// or (the thief's per-skill cap) one skill is over the cap and above its
+// points before. The refusal names the field, the points and the limit, and
+// nothing is written or logged. Any other spend is stored: within the
+// budget, leftovers included, and an existing overspend that shrinks or
+// stays (it keeps the derived warning). At level 1 a thief has 60 points,
+// 30 in one skill; at level 2, 90 and 45; a bard at level 1 has 20.
+func TestSetPoints_Step10_SkillPointsRefusedOverAndGrowing(t *testing.T) {
+	type refusal struct {
+		field        string
+		spent, limit int
+	}
+	for _, tt := range []struct {
+		name, class string
+		level       int
+		stored, set map[string]int
+		refused     *refusal
+	}{
+		{"within the budget, points left", "thief", 1, nil, map[string]int{"open_locks": 30, "pick_pockets": 20}, nil},
+		{"the budget spent exactly", "thief", 1, nil, map[string]int{"open_locks": 30, "pick_pockets": 30}, nil},
+		{"the realized level's budget", "thief", 2, nil, map[string]int{"open_locks": 45, "pick_pockets": 45}, nil},
+		{"a new overspend of the total", "thief", 1, map[string]int{"open_locks": 30}, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 1}, &refusal{"skillPoints", 61, 60}},
+		{"a new overspend of one skill", "thief", 1, map[string]int{"open_locks": 30}, map[string]int{"open_locks": 31}, &refusal{"skillPoints.open_locks", 31, 30}},
+		{"an overspent total reduced", "thief", 1, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 10}, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 5}, nil},
+		{"an overspent total moved between skills", "thief", 1, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 10}, map[string]int{"open_locks": 30, "pick_pockets": 25, "climb_walls": 15}, nil},
+		{"an overspent total grown", "thief", 1, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 10}, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 11}, &refusal{"skillPoints", 71, 60}},
+		{"an overspent skill kept, another raised", "thief", 1, map[string]int{"open_locks": 40}, map[string]int{"open_locks": 40, "pick_pockets": 5}, nil},
+		{"an overspent skill reduced", "thief", 1, map[string]int{"open_locks": 40}, map[string]int{"open_locks": 35}, nil},
+		{"an overspent skill grown", "thief", 1, map[string]int{"open_locks": 40}, map[string]int{"open_locks": 41}, &refusal{"skillPoints.open_locks", 41, 30}},
+		{"a bard within its total, all in one skill", "bard", 1, nil, map[string]int{"climb_walls": 20}, nil},
+		{"a bard's new overspend", "bard", 1, nil, map[string]int{"climb_walls": 15, "read_languages": 6}, &refusal{"skillPoints", 21, 20}},
+		{"a bard's overspend reduced", "bard", 1, map[string]int{"climb_walls": 25}, map[string]int{"climb_walls": 22}, nil},
+		{"a bard's overspend grown", "bard", 1, map[string]int{"climb_walls": 25}, map[string]int{"climb_walls": 25, "detect_noise": 1}, &refusal{"skillPoints", 26, 20}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			f := pointsFixtureAt(t, tt.class, tt.level, tt.stored) // the mocks fail any unexpected write or record
+			if tt.refused == nil {
+				f.records()
+				f.points.EXPECT().SetSkillPoints(mock.Anything, charID, tt.set).Return(nil).Once()
+			}
+			got, err := f.svc.SetPoints(context.Background(), charID, tt.set)
+			if tt.refused == nil {
+				require.NoError(t, err)
+				assert.Equal(t, tt.set, got)
+				assert.Len(t, f.entries, 1)
+				return
+			}
+			require.ErrorIs(t, err, domain.ErrOverBudget)
+			var be *domain.BudgetError
+			require.ErrorAs(t, err, &be)
+			assert.Equal(t, domain.BudgetError{Field: tt.refused.field, Spent: tt.refused.spent, Limit: tt.refused.limit}, *be)
+			assert.Empty(t, f.entries, "no skill_points entry")
+		})
+	}
+	t.Run("an overspend unchanged writes nothing and is no refusal", func(t *testing.T) {
+		stored := map[string]int{"open_locks": 40, "pick_pockets": 30}
+		f := pointsFixtureAt(t, "thief", 1, stored)
+		got, err := f.svc.SetPoints(context.Background(), charID, stored)
+		require.NoError(t, err)
+		assert.Equal(t, stored, got)
+	})
 }

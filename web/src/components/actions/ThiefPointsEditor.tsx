@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { OVER_BUDGET } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { skillName } from "@/journal/words";
@@ -14,8 +15,10 @@ import { classSkillsOf, previewDraft, typedPoints } from "./skillsPreview";
  * A thief or a bard spends skill points after creation (ADR 0030 steps 17 and 18): the total
  * points of each skill, saved in one move the journal's Undo takes back. As the points change, the
  * server derives the percentages with their terms and the budget of the draft (a preview that
- * writes and logs nothing); the web only shows them. The server checks each total's range; the
- * budget stays a warning, never a refusal. A field the server refused shows its error under it.
+ * writes and logs nothing); the web only shows them. The server checks each total's range and
+ * the budget (ADR 0037 step 10: points that grow an overspend are refused, the save as the
+ * preview; an overspend kept or reduced is a warning). A field the server refused shows its error
+ * under it.
  */
 export function ThiefPointsEditor({
   skills,
@@ -43,6 +46,7 @@ export function ThiefPointsEditor({
   const [previewError, setPreviewError] = useState<{
     field: string;
     message?: string;
+    code?: string;
   } | null>(null);
   useEffect(() => {
     let current = true;
@@ -60,7 +64,7 @@ export function ThiefPointsEditor({
         }
         setStale(true);
         setPreviewError(
-          p.field ? { field: p.field, message: p.message } : null,
+          p.field ? { field: p.field, message: p.message, code: p.code } : null,
         );
       });
     }, 150);
@@ -71,6 +75,14 @@ export function ThiefPointsEditor({
   }, [values, skills]);
   const maxPoints = skills[0]?.maxPoints ?? 0;
   const range = { min: 0, max: maxPoints };
+  // A refusal's wording: an over-budget one is the server code's, with its figures (the error's
+  // message); a range or any other is the editor's own.
+  const refusalText = (r: { message?: string; code?: string }) =>
+    r.code === OVER_BUDGET && r.message
+      ? r.message
+      : r.message === "out_of_range"
+        ? t("skills.pointsOutOfRange", range)
+        : t("skills.pointsRefused");
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -92,10 +104,7 @@ export function ThiefPointsEditor({
     }
     setError({
       field: rejected.field ?? "skillPoints",
-      text:
-        rejected.message === "out_of_range"
-          ? t("skills.pointsOutOfRange", range)
-          : t("skills.pointsRefused"),
+      text: refusalText(rejected),
     });
   };
 
@@ -104,9 +113,7 @@ export function ThiefPointsEditor({
       error?.field === field
         ? error.text
         : previewError?.field === field
-          ? previewError.message === "out_of_range"
-            ? t("skills.pointsOutOfRange", range)
-            : t("skills.pointsRefused")
+          ? refusalText(previewError)
           : null;
     return text ? (
       <p role="alert" className="text-label break-words text-danger">

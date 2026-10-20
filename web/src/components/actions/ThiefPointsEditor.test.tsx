@@ -107,6 +107,27 @@ describe("previewDraft", () => {
     });
   });
 
+  it("keeps an over-budget refusal's code and worded message, so the editor shows it", async () => {
+    const fetchPreview = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(
+          "Over budget: 31 for 30 available.",
+          409,
+          "skillPoints.open_locks",
+          "over_budget",
+        ),
+      );
+    expect(
+      await previewDraft({ open_locks: "31" }, skills, fetchPreview),
+    ).toEqual({
+      ok: false,
+      field: "skillPoints.open_locks",
+      message: "Over budget: 31 for 30 available.",
+      code: "over_budget",
+    });
+  });
+
   it("is not ok, with no field, when the call fails", async () => {
     const fetchPreview = vi.fn().mockRejectedValue(new TypeError("offline"));
     expect(

@@ -36,7 +36,8 @@ type SVC interface {
 	// PreviewSkillPoints is character id derived as if its skill points were
 	// points (ADR 0030 steps 17 and 18): the skills and budget a spend would
 	// give. It writes nothing. The points are checked as ValidSkillPoints
-	// does (a *domain.FieldError).
+	// does (a *domain.FieldError), then against the budget as the spend
+	// checks them (SkillPointsWithinBudget, a *domain.BudgetError).
 	PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*Character, error)
 	// List is the owner's characters they have not retired, in creation
 	// order (ADR 0029 steps 7.1 and 7.3).
@@ -206,6 +207,7 @@ func (s *service) read(ctx context.Context, id int64, draft *map[string]int) (*C
 	if err != nil {
 		return nil, err
 	}
+	stored := c.SkillPoints
 	if draft != nil {
 		if c.SkillPoints, err = ValidSkillPoints(c.Class, *draft); err != nil {
 			return nil, err
@@ -225,6 +227,12 @@ func (s *service) read(ctx context.Context, id int64, draft *map[string]int) (*C
 	}
 	if c.Derived, err = Derive(c, ledger, column, s.rules); err != nil {
 		return nil, fmt.Errorf("character %d: %w", id, err)
+	}
+	// ADR 0037 step 10: the preview refuses what the spend would refuse.
+	if draft != nil {
+		if err := SkillPointsWithinBudget(c.Class, c.Derived.RealizedLevel, stored, c.SkillPoints); err != nil {
+			return nil, err
+		}
 	}
 	s.readWarnings(c)
 	return c, nil

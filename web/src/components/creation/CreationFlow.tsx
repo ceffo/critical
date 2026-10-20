@@ -7,7 +7,7 @@ import {
   checkDraft,
   previewCharacter,
 } from "@/api/characters";
-import { ApiError } from "@/api/http";
+import { ApiError, OVER_BUDGET } from "@/api/http";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -50,11 +50,14 @@ import { useReviewWarnings, warnedFields } from "./warnings";
 /** The server's field names for the flow's: the race is `race` in its errors. */
 const ERROR_FIELD: Record<string, string> = { race: "raceCode" };
 
-/** A server refusal as the flow's field error; anything else (a network error) as a message. */
+/** A server refusal as the flow's field error; anything else (a network error) as a message. An
+ * invalid input's code is its message; an over-budget refusal (ADR 0037 step 10) keeps its code,
+ * its message worded with the server's figures. */
 function fieldErrorOf(err: unknown): FieldError {
   if (err instanceof ApiError && err.field) {
     const field = ERROR_FIELD[err.field] ?? err.field;
-    return { field, code: err.message, message: err.message };
+    const code = err.code === OVER_BUDGET ? OVER_BUDGET : err.message;
+    return { field, code, message: err.message };
   }
   return {
     field: "",
@@ -230,7 +233,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   });
 
   const wording = (e: FieldError): string => {
-    if (e.field === "") return e.message ?? "";
+    if (e.field === "" || e.code === OVER_BUDGET) return e.message ?? "";
     if (e.field.startsWith("details.")) {
       const detail = e.field.slice("details.".length);
       return t(

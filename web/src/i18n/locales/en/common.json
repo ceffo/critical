@@ -1843,7 +1843,7 @@
     "armor": "Skill armour: {{armor}}",
     "armorHint": "Read from the body armour worn: wear or take off armour in the inventory to change it",
     "pointsTitle": "Skill points",
-    "pointsLead": "The total points in each skill. The budget at your level is a warning, not a limit.",
+    "pointsLead": "The total points in each skill, within the budget of your level. Budget already exceeded: you may lower them, not raise them.",
     "pointsLabel": "Points in {{name}}",
     "savePoints": "Save",
     "cancelPoints": "Cancel",
@@ -1893,6 +1893,7 @@
     "forDm": "For the DM: your HP is unchanged"
   },
   "apiError": {
+    "over_budget": "Over budget: {{spent}} for {{limit}} available.",
     "character_not_found": "This character no longer exists.",
     "no_character": "You have no character yet: create your first one.",
     "character_changed": "Your character was changed elsewhere: the page reloads to show it.",

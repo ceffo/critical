@@ -402,33 +402,43 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
     page.getByTestId("skill-result").getByTestId("skill-vs"),
   ).toHaveText(/^\d+ contre 55\u00a0%$/);
 
-  // The player spends points after creation (step 17): the server's percentage rises, the budget
-  // warns (75 of 60 at 1st) without refusing, and the journal's Undo gives the points back.
+  // The player spends points after creation (step 17): the editor shows the server's preview of
+  // the typed points; points over the budget are refused (ADR 0037 step 10), by the preview and by
+  // Save alike, the message under the editor; points within it are saved, and the journal's Undo
+  // gives them back.
   await page.getByTestId("thief-points-edit").click();
-  await page.getByTestId("thief-points-open_locks").fill("45");
-  // The editor shows the server's preview of the typed points: 75 spent of 60, Open Locks at 70.
   const editor = page.getByTestId("thief-points-editor");
+  await editor.getByTestId("thief-points-open_locks").fill("25");
   await expect(editor.getByTestId("skill-points-left")).toContainText(
-    "Dépensés 75, restants -15",
+    "Dépensés 55, restants 5",
   );
   await expect(editor.getByTestId("skill-terms-open_locks")).toContainText(
-    "= 70 %",
+    "= 50 %",
   );
   await snap(page, "thief-points-editor-fr");
+  const refusal = "Budget dépassé : 75 pour 60 disponibles.";
+  await editor.getByTestId("thief-points-open_locks").fill("45");
+  await expect(editor.getByRole("alert")).toHaveText(refusal);
+  await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
+  const refused = page.waitForResponse(
+    (r) => r.url().endsWith("/api/skills/points") && r.status() === 409,
+  );
+  await page.getByTestId("thief-points-save").click();
+  await refused;
+  await expect(editor.getByRole("alert")).toHaveText(refusal);
+  await snap(page, "thief-points-over-budget-fr");
   // The preview call failing (offline): the figures are marked out of date, the editor stays
   // usable and Save still works.
   await page.route("**/api/skills/points/preview", (r) => r.abort());
-  await editor.getByTestId("thief-points-open_locks").fill("46");
+  await editor.getByTestId("thief-points-open_locks").fill("26");
   await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
-  await editor.getByTestId("thief-points-open_locks").fill("45");
+  await editor.getByTestId("thief-points-open_locks").fill("25");
   await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
   await page.getByTestId("thief-points-save").click();
-  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("70 %");
-  await expect(page.getByTestId("skill-budget")).toBeVisible();
+  await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("50 %");
   await expect(page.getByTestId("thief-points-editor")).toHaveCount(0);
-  await undoEntry(page, "Points de talent : Crochetage 30 → 45");
+  await undoEntry(page, "Points de talent : Crochetage 30 → 25");
   await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("55 %");
-  await expect(page.getByTestId("skill-budget")).toHaveCount(0);
 
   // The skills follow the armour worn (ADR 0033 step 14): an elven chain mail carried changes
   // nothing; equipping it in the inventory takes 5 off Open Locks (Table 29) on the Skills tab, the

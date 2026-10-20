@@ -20,6 +20,7 @@ import { XpPanel } from "@/components/xp/XpPanel";
 import type { Activity } from "@/lib/activities";
 import { cn } from "@/lib/utils";
 import { useTableStore } from "@/stores/table";
+import { useLanguagesStore } from "@/stores/languages";
 import { useSpellNamesStore } from "@/stores/spellNames";
 import type { Slice } from "@/lib/stateKeys";
 
@@ -88,6 +89,7 @@ function App() {
   const { t } = useTranslation();
   const refresh = useTableStore((s) => s.refresh);
   const loadSpellNames = useSpellNamesStore((s) => s.load);
+  const loadLanguages = useLanguagesStore((s) => s.load);
   const [activity, setActivity] = useState<Activity>("act");
   const [visited, setVisited] = useState<ReadonlySet<Activity>>(
     () => new Set(["act"]),
@@ -99,13 +101,14 @@ function App() {
 
   useEffect(() => {
     // The sheet; the skills and the spellbook are read by their panels once shown.
-    const load = () => Promise.all([refresh(SHEET), loadSpellNames()]);
+    const load = () =>
+      Promise.all([refresh(SHEET), loadSpellNames(), loadLanguages()]);
     void load();
     // After a write the database may or may not have saved, the whole sheet is read again before
     // writes are allowed (ADR 0025 step 10.4).
     setReload(load);
     return () => setReload(null);
-  }, [refresh, loadSpellNames]);
+  }, [refresh, loadSpellNames, loadLanguages]);
 
   return (
     <div className="flex h-app flex-col gap-3 overflow-hidden bg-background px-3 pt-3">

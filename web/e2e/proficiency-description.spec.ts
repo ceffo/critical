@@ -73,8 +73,8 @@ test("proficiency description: from the Skills tab row and the picker, en and fr
 
   // French: the same pop-up in the UI language.
   await chooseLanguage(page, "fr");
-  const panelFr = page.getByRole("tabpanel", { name: "Compétences" });
-  await panelFr.getByTestId("proficiency-name-musical_instrument").click();
+  const translatedPanel = page.getByRole("tabpanel", { name: "Compétences" });
+  await translatedPanel.getByTestId("proficiency-name-musical_instrument").click();
   await expect(dialog.getByTestId("proficiency-description")).toContainText(
     "Texte inventé pour musical instrument.",
   );

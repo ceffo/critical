@@ -6,7 +6,7 @@
 #   - ends a turn (working -> idle/done) and its last screen speaks to the supervisor
 #     (supervisor / ship / push / PR / merge), or its report file is newer than   -> "NEEDS-SUPERVISOR <name>"
 #     the last prompt it got
-#   - disappears                                                                   -> "GONE <name>"
+#   - disappears (unless closed through close-agent.sh, listed in supervisor/closed-agents) -> "GONE <name>"
 #   - ends a turn on a question or a request to the user (herdr shows it as idle/done, not blocked)
 #                                                                                  -> "WAITING-ON-USER <name>"
 # Waiting (a question) or blocked: the agent's tab gets a "❓ " / "⛔ " prefix and a herdr notification
@@ -95,6 +95,6 @@ while sleep 30; do
       fi
     fi
   done < <(snap)
-  for n in "${!seen[@]}"; do [ -n "${now[$n]:-}" ] || { echo "GONE $n"; exit 0; }; done
+  for n in "${!seen[@]}"; do [ -n "${now[$n]:-}" ] || grep -qxF "$n" "$W/closed-agents" 2>/dev/null || { echo "GONE $n"; exit 0; }; done
   unset now
 done

@@ -18,6 +18,9 @@ version computed from the commits, baked into the image and tagged by CI once st
 newest version that passed staging or the one asked, and only a repository admin may run it (steps 4 and
 10.2). Amended again 2026-10-17, **accepted, user OK 2026-10-17** (see "Amendment (a manual major,
 2026-10-17)"): `just major` makes the next staging release the next major version (step 3).
+Amended again 2026-10-20 (see "Amendment (a production record and the promote picker, 2026-10-20)"): a
+promotion records the version production runs, and `just promote` offers the versions between production's and
+staging's (step 4).
 Amended again 2026-10-17 (see "Amendment (one tag ruleset, 2026-10-17)"): GitHub refuses the Actions-app
 bypass on a personal repository, so only the `release tags` ruleset (step 10.2) remains.
 Amended again 2026-10-17, **accepted, user decision 2026-10-17** (see "Amendment (restore point: a backup
@@ -657,3 +660,36 @@ custom domain). Step 8.3 as built:
   `scripts/fly-google-secrets.sh`; one Google OAuth client per environment, with its `fly.dev` redirect URI.
 - **The tunnel is no longer a login path.** `just fly-open` takes a free port; the fixed login ports 8091 and
   8092 of the private era are gone.
+
+## Amendment (a production record and the promote picker, 2026-10-20)
+
+User, 2026-10-20: _"Promotion to prod is choosing a staging version (default latest) and promoting it to prod.
+The just promote command lists versions between current prod and staging (using gum), initial selection being
+current staging."_ Versions are already made at the staging release and the promotion already takes a staging
+version (the amendments of 2026-10-17); this adds the choice and what it needs: which version each environment
+runs.
+
+- **Step 4, the production record.** Once the deploy and its smoke check passed (and after the GitHub
+  Release), `promote.sh` writes a GitHub deployment of the environment `production`, task `deploy-production`,
+  ref the version's commit, payload `{commit, digest, version}` (the shape of the staging record), then a
+  `success` status; the rollback writes one too. A promotion that failed before that writes nothing. A refused
+  write is a `::warning::`, never a red run (production runs the version and the Release exists; a failure
+  here would repeat on every re-run): the picker then shows production as unknown or older until a re-run of
+  the same version (the floor accepts an equal one) writes it. GitHub's
+  automatic deployment of the job (task `deploy`, ref `main`, no payload) is never read. No record exists for
+  the promotions made before this: production's version is then _unknown_.
+- **Step 4, the candidates.** `scripts/release-guards.sh candidates` prints what the picker offers: the `v*`
+  versions on main that passed staging as that version, **above** production's recorded version (the latest
+  successful production record) and **up to** staging's current one (the latest successful staging record),
+  newest first, at most 20; production unknown: every staged version up to staging's, said as such; production
+  at or above staging's: none (going down stays `just promote X.Y.Z`, deliberate). It is the same
+  implementation as the workflow's resolution with no version (`passed_versions`), so the picker never offers
+  what the workflow would refuse. A failed read, or no staging record, stops (exit 3): never a silent fallback.
+- **The picker.** `just promote` in a terminal with no version shows a gum picker of the candidates, staging's
+  preselected; Enter dispatches the Promote workflow with that version, Esc or Ctrl-C dispatches nothing.
+  Production already at staging's version: says so. `just promote X.Y.Z` never prompts; with no terminal and no
+  version the workflow resolves the newest staged version as before. gum is needed on the interactive path only.
+  The workflow's guards and the admin check still decide every run.
+- **Tests**: `scripts/test-promotion.sh` (candidates on the fixture repository: floor, ceiling, unknown
+  production, not-staged skipped, the 20 cap, failed reads; the record's API calls and their order; the picker
+  with gum stubbed), `scripts/test-staging-deploy.sh` (`record-deployment.sh --production`).

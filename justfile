@@ -299,11 +299,13 @@ release-image +apps: catalogue
 # release gets the next version from the conventional commits since the last one, baked into its image, and
 # the tag once staging passed (docs/deploy.md, "How a release flows").
 
-# Promote to production (ADR 0024 step 4): runs the Promote workflow from main. No version: the newest that
-# passed staging; a version (1.2.3 or v1.2.3): that one, also the rollback. Prints the run's URL. Repository
-# admins only (the workflow checks it); the workflow's log says what it resolved and what production ran.
+# Promote to production (ADR 0024 step 4): runs the Promote workflow from main. In a terminal with no version:
+# a gum picker of the versions above production's, up to staging's (staging's preselected; Esc promotes
+# nothing); no terminal and no version: the newest that passed staging; a version (1.2.3 or v1.2.3): that one,
+# no prompt, also the rollback. Prints the run's URL. Repository admins only (the workflow checks it); the
+# workflow's log says what it resolved and what production ran. Needs gum for the picker only.
 promote $version="":
-    gh workflow run promote.yml --ref main ${version:+-f "version=$version"}
+    scripts/promote-pick.sh "$version"
 
 # Make the next staging release the next major version (ADR 0024 step 3): runs the Major workflow from main, which
 # moves the `next-major` marker to main's head. Repository admins only (the workflow checks it). Only the next

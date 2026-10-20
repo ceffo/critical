@@ -235,11 +235,7 @@ func CheckToDTO(c *skillsvc.CheckResult) CheckDTO {
 	}
 	if c.Buff != nil {
 		b := c.Buff.Buff
-		fx := map[string]int{}
-		if b.Effects.AC != nil {
-			fx["ac"] = *b.Effects.AC
-		}
-		out.Buff = &CheckBuffDTO{ID: b.ID, Name: b.Name, ProficiencyID: b.ProficiencyID, Effects: fx, Rounds: b.Duration}
+		out.Buff = &CheckBuffDTO{ID: b.ID, Name: b.Name, ProficiencyID: b.ProficiencyID, Effects: skillsvc.EffectsByKey(b.Effects), Rounds: b.Duration}
 		out.Renewed = c.Buff.Renewed
 	}
 	return out

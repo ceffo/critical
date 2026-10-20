@@ -76,4 +76,22 @@ describeKind("skill_check", fixtures, {
     },
     rolled: true,
   },
+  // ADR 0037 step 20.8: the renewing success adjusted to a failure; the line in effect says no buff.
+  tumblingAdjustedToFailure: {
+    en: {
+      text: "Tumbling: d20 15 vs 14 (17 −3), failure",
+      short: "Tumbling · failed",
+      subtitle: "Tumbling",
+    },
+    fr: {
+      text: "Acrobatie : d20 15 contre 14 (17 −3), échec",
+      short: "Acrobatie · échec",
+      subtitle: "Acrobatie",
+    },
+    value: {
+      text: "15",
+      tone: "fail",
+    },
+    rolled: true,
+  },
 });

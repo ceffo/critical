@@ -96,8 +96,76 @@
         },
         "rounds": 1
       },
-      "renewed": true
+      "renewed": true,
+      "replaced": [
+        {
+          "id": "row-1",
+          "name": "tumbling",
+          "charges": 0,
+          "duration": 1,
+          "effects": {
+            "ac": -4
+          },
+          "proficiency_id": "tumbling"
+        }
+      ]
     },
     "roll": true
+  },
+  "tumblingAdjustedToFailure": {
+    "effectivePayload": {
+      "id": "tumbling",
+      "kind": "proficiency",
+      "die": 20,
+      "roll": 15,
+      "target": 17,
+      "adjustment": -3,
+      "adjustedTarget": 14,
+      "success": false,
+      "rolledSuccess": true,
+      "ability": "dex",
+      "abilityScore": 17,
+      "modifier": 0,
+      "previousSuccess": true,
+      "previousAdjustment": 0
+    },
+    "payload": {
+      "id": "tumbling",
+      "kind": "proficiency",
+      "die": 20,
+      "roll": 15,
+      "target": 17,
+      "adjustment": 0,
+      "adjustedTarget": 17,
+      "success": true,
+      "rolledSuccess": true,
+      "ability": "dex",
+      "abilityScore": 17,
+      "modifier": 0,
+      "buff": {
+        "id": "row-2",
+        "name": "tumbling",
+        "proficiencyId": "tumbling",
+        "effects": {
+          "ac": -4
+        },
+        "rounds": 1
+      },
+      "renewed": true,
+      "replaced": [
+        {
+          "id": "row-1",
+          "name": "tumbling",
+          "charges": 0,
+          "duration": 1,
+          "effects": {
+            "ac": -4
+          },
+          "proficiency_id": "tumbling"
+        }
+      ]
+    },
+    "roll": true,
+    "status": "amended"
   }
 }

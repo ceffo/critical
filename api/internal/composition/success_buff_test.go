@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
@@ -230,4 +231,135 @@ func TestBuffs_Step20_TumblingEndsAtNextRound(t *testing.T) {
 	assert.Empty(t, b.tumbling(t), "1 round: gone at the next Next Round")
 	assert.Equal(t, base, b.ac(t))
 	assert.Equal(t, 2, b.dice.calls["die"], "the d20 and the round's d10")
+}
+
+func (b *tumblerBed) adjust(t *testing.T, check *skillsvc.CheckResult, value int) *skillsvc.CheckResult {
+	t.Helper()
+	r, err := b.bs.Skills.Adjust(b.ctx, b.id, check.LogEntryID, skillsvc.Adjustment{Value: value})
+	require.NoError(t, err)
+	return r
+}
+
+// ADR 0037 steps 20.3 and 20.8 through the real services: a second success renews the first's
+// row; adjusting the second to a failure gives the first row back as it was (the first success
+// still stands: -4 once). Undoing the adjustment brings the renewal back, undoing the second check
+// the first row with its old rounds; redo replays both.
+func TestTumbling_Step20_FailureAfterARenewalGivesTheRenewedRowBack(t *testing.T) {
+	b := newTumblerBed(t, 12, 15)
+	base := b.ac(t)
+	b.roll(t)
+	row0 := b.tumbling(t)
+	require.Len(t, row0, 1)
+	second := b.roll(t)
+	require.True(t, second.Buff.Renewed)
+	row1 := b.tumbling(t)
+	require.Len(t, row1, 1)
+	require.NotEqual(t, row0[0].ID, row1[0].ID)
+
+	adj := b.adjust(t, second, -3) // 15 against 14
+	require.False(t, adj.Success)
+	assert.Nil(t, adj.Buff)
+	assert.Equal(t, row0, b.tumbling(t), "the first success's row back, as it was")
+	assert.Equal(t, base-4, b.ac(t), "-4 once")
+
+	b.undo(t)
+	assert.Equal(t, row1, b.tumbling(t), "undoing the adjustment: the renewal back")
+	b.undo(t)
+	assert.Equal(t, row0, b.tumbling(t), "undoing the second check: the first row with its rounds")
+	b.redo(t)
+	assert.Equal(t, row1, b.tumbling(t))
+	b.redo(t)
+	assert.Equal(t, row0, b.tumbling(t))
+	assert.Equal(t, base-4, b.ac(t))
+	assert.Equal(t, 2, b.dice.calls["die"], "two d20s, each used once")
+}
+
+// ADR 0037 step 20.8 through the real services: a failure adjusted to a success puts the buff on,
+// adjusted back to a failure takes it off; undoing each step walks the list back.
+func TestTumbling_Step20_AdjustedBackAndForth(t *testing.T) {
+	b := newTumblerBed(t, 19)
+	base := b.ac(t)
+	check := b.roll(t)
+	require.False(t, check.Success)
+	require.Empty(t, b.tumbling(t))
+
+	on := b.adjust(t, check, 2)
+	require.True(t, on.Success)
+	row := b.tumbling(t)
+	require.Len(t, row, 1)
+	assert.Equal(t, base-4, b.ac(t))
+	off := b.adjust(t, check, 0)
+	require.False(t, off.Success)
+	assert.Empty(t, b.tumbling(t))
+	assert.Equal(t, base, b.ac(t))
+
+	b.undo(t)
+	assert.Equal(t, row, b.tumbling(t), "undoing the second adjustment: the buff back")
+	b.undo(t)
+	assert.Empty(t, b.tumbling(t), "undoing the first: none")
+	b.undo(t)
+	assert.Empty(t, b.tumbling(t), "undoing the check: none")
+	assert.Equal(t, base, b.ac(t))
+	assert.Equal(t, 1, b.dice.calls["die"])
+}
+
+// ADR 0037 step 20.8 (supervisor ruling 2026-10-20) through the real services: once a Next Round
+// has passed the check's round, a success adjusted to a failure finds its buff already ended (no
+// error, no snapshot on the correction, AC as it was) and a failure adjusted to a success puts
+// nothing on.
+func TestTumbling_Step20_AdjustmentAfterTheChecksRound(t *testing.T) {
+	t.Run("success to failure", func(t *testing.T) {
+		b := newTumblerBed(t, 15, 4)
+		base := b.ac(t)
+		check := b.roll(t)
+		b.nextRound(t)
+		require.Empty(t, b.tumbling(t))
+
+		adj := b.adjust(t, check, -3)
+
+		assert.False(t, adj.Success)
+		step := b.top(t)
+		assert.Equal(t, actionlog.KindCorrection, step.Kind)
+		assert.Empty(t, step.Snapshots)
+		assert.Equal(t, base, b.ac(t))
+	})
+	t.Run("failure to success", func(t *testing.T) {
+		b := newTumblerBed(t, 19, 4)
+		base := b.ac(t)
+		check := b.roll(t)
+		b.nextRound(t)
+
+		adj := b.adjust(t, check, 2)
+
+		assert.True(t, adj.Success)
+		assert.Nil(t, adj.Buff, "its one round is over")
+		assert.Empty(t, b.tumbling(t))
+		assert.Empty(t, b.top(t).Snapshots)
+		assert.Equal(t, base, b.ac(t))
+	})
+}
+
+// ADR 0037 step 20.8 through the real services: a buff dismissed by hand, then its check
+// adjusted to a failure: no error, nothing to take off; undoing in order keeps the list
+// consistent (the adjustment changes nothing, the dismiss brings the row back, the check takes
+// it off).
+func TestTumbling_Step20_FailureAfterAHandDismiss(t *testing.T) {
+	b := newTumblerBed(t, 15)
+	check := b.roll(t)
+	row := b.tumbling(t)
+	require.Len(t, row, 1)
+	_, _, err := b.bs.Buffs.Dismiss(b.ctx, b.id, row[0].ID, spelleffectsvc.EndVoluntary)
+	require.NoError(t, err)
+
+	adj := b.adjust(t, check, -3)
+
+	assert.False(t, adj.Success)
+	assert.Empty(t, b.top(t).Snapshots)
+	assert.Empty(t, b.tumbling(t))
+	b.undo(t)
+	assert.Empty(t, b.tumbling(t), "undoing the adjustment changes no buff")
+	b.undo(t)
+	assert.Equal(t, row, b.tumbling(t), "undoing the dismiss: the row back")
+	b.undo(t)
+	assert.Empty(t, b.tumbling(t), "undoing the check: off")
 }

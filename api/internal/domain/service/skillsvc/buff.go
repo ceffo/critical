@@ -21,8 +21,9 @@ import (
 // returning the snapshot to record (buffsvc satisfies it).
 type Buffs interface {
 	ListActive(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, error)
+	GetRound(ctx context.Context, characterID int64) (int, error)
 	Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
-	Remove(ctx context.Context, characterID int64, buffID string) (bool, actionlog.Snapshot, error)
+	Remove(ctx context.Context, characterID int64, buffID string, putBack []buffsvc.BuffEffect) (bool, actionlog.Snapshot, error)
 }
 
 // AppliedBuff is the buff a check's verdict in effect put on (ADR 0037 step
@@ -31,6 +32,16 @@ type Buffs interface {
 type AppliedBuff struct {
 	Buff    buffsvc.BuffEffect
 	Renewed bool
+}
+
+// EffectsByKey is a check's buff's effects keyed like the buff API ("ac"),
+// the one shape of the payload's buff and of the check's answer.
+func EffectsByKey(fx buffsvc.BuffEffects) map[string]int {
+	out := map[string]int{}
+	if fx.AC != nil {
+		out["ac"] = *fx.AC
+	}
+	return out
 }
 
 // buffRecord is skillsvc's JSON encoding of the buff a check put on, inside
@@ -46,11 +57,7 @@ type buffRecord struct {
 }
 
 func toBuffRecord(b buffsvc.BuffEffect) *buffRecord {
-	fx := map[string]int{}
-	if b.Effects.AC != nil {
-		fx["ac"] = *b.Effects.AC
-	}
-	return &buffRecord{ID: b.ID, Name: b.Name, ProficiencyID: b.ProficiencyID, Effects: fx, Rounds: b.Duration}
+	return &buffRecord{ID: b.ID, Name: b.Name, ProficiencyID: b.ProficiencyID, Effects: EffectsByKey(b.Effects), Rounds: b.Duration}
 }
 
 func (r *buffRecord) applied(renewed bool) *AppliedBuff {
@@ -88,9 +95,10 @@ func successBuff(rec checkRecord) (buffsvc.BuffEffect, bool) {
 
 // putBuff puts on the buff the success of rec gives, if any (ADR 0037 steps
 // 20.1 and 20.3: a buff of the same name already on is renewed, never
-// stacked), recording it in rec, and returns the buff list's snapshot (nil:
-// none put on). It runs inside the check's or the correction's transaction.
-// No die: the effect and the rounds are fixed (step 20.5).
+// stacked), recording it in rec with the rows it replaced (so a later
+// failure gives them back, step 20.8), and returns the buff list's snapshot
+// (nil: none put on). It runs inside the check's or the correction's
+// transaction. No die: the effect and the rounds are fixed (step 20.5).
 func (s *service) putBuff(ctx context.Context, characterID int64, rec *checkRecord) (*actionlog.Snapshot, error) {
 	buff, ok := successBuff(*rec)
 	if !ok {
@@ -100,32 +108,46 @@ func (s *service) putBuff(ctx context.Context, characterID int64, rec *checkReco
 	if err != nil {
 		return nil, fmt.Errorf("active buffs: %w", err)
 	}
-	renewed := false
+	var replaced []buffsvc.BuffEffect
 	for _, b := range active {
 		// buffsvc.Add's renewal: a row on the character of the same name.
 		if !b.OnOther && strings.EqualFold(b.Name, buff.Name) {
-			renewed = true
+			replaced = append(replaced, b)
 		}
 	}
 	added, snap, err := s.buffs.Add(ctx, characterID, buff)
 	if err != nil {
 		return nil, fmt.Errorf("put the %s buff on: %w", rec.ID, err)
 	}
-	rec.Buff, rec.Renewed = toBuffRecord(added), renewed
+	rec.Buff, rec.Renewed, rec.Replaced = toBuffRecord(added), len(replaced) > 0, nil
+	if len(replaced) > 0 {
+		if rec.Replaced, err = buffsvc.EncodeRows(replaced); err != nil {
+			return nil, err
+		}
+	}
 	return &snap, nil
 }
 
 // takeBuff takes off the buff rec's success put on (ADR 0037 step 20.8: the
-// verdict turned to a failure), clearing it from rec, and returns the buff
-// list's snapshot (nil when the buff is no longer on the list: it ended or
-// was dismissed). It runs inside the correction's transaction.
-func (s *service) takeBuff(ctx context.Context, characterID int64, rec *checkRecord) (*actionlog.Snapshot, error) {
+// verdict turned to a failure), clearing it from rec, and gives back the rows
+// it renewed when giveBack (the check's round still runs), so the list reads
+// as if the check had put nothing on. It returns the buff list's snapshot
+// (nil when the buff is no longer on the list: it ended or was dismissed;
+// nothing is given back then). It runs inside the correction's transaction.
+func (s *service) takeBuff(ctx context.Context, characterID int64, rec *checkRecord, giveBack bool) (*actionlog.Snapshot, error) {
 	if rec.Buff == nil {
 		return nil, nil
 	}
+	var putBack []buffsvc.BuffEffect
+	if giveBack && len(rec.Replaced) > 0 {
+		var err error
+		if putBack, err = buffsvc.DecodeRows(rec.Replaced); err != nil {
+			return nil, err
+		}
+	}
 	id := rec.Buff.ID
-	rec.Buff, rec.Renewed = nil, false
-	removed, snap, err := s.buffs.Remove(ctx, characterID, id)
+	rec.Buff, rec.Renewed, rec.Replaced = nil, false, nil
+	removed, snap, err := s.buffs.Remove(ctx, characterID, id, putBack)
 	if err != nil {
 		return nil, fmt.Errorf("take the %s buff off: %w", rec.ID, err)
 	}
@@ -137,19 +159,30 @@ func (s *service) takeBuff(ctx context.Context, characterID int64, rec *checkRec
 
 // followVerdict puts the buff on or takes it off when an adjustment changed
 // rec's verdict from wasSuccess (ADR 0037 step 20.8); an unchanged verdict
-// touches nothing. The snapshots go on the correction.
-func (s *service) followVerdict(ctx context.Context, characterID int64, rec *checkRecord, wasSuccess bool) ([]actionlog.Snapshot, error) {
-	var (
-		snap *actionlog.Snapshot
-		err  error
-	)
-	switch {
-	case rec.Success == wasSuccess:
+// touches nothing. checkRound is the round the check was rolled in: once a
+// Next Round has passed it, the buff's one round is over, so a success puts
+// nothing on and a failure only takes off what the check still has on,
+// giving nothing back. The snapshots go on the correction.
+func (s *service) followVerdict(ctx context.Context, characterID int64, checkRound int, rec *checkRecord, wasSuccess bool) ([]actionlog.Snapshot, error) {
+	if rec.Success == wasSuccess {
 		return nil, nil
-	case rec.Success:
+	}
+	if _, ok := successBuff(*rec); (rec.Success && !ok) || (!rec.Success && rec.Buff == nil) {
+		return nil, nil // no buff to put on or take off
+	}
+	round, err := s.buffs.GetRound(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("current round: %w", err)
+	}
+	current := round == checkRound
+	var snap *actionlog.Snapshot
+	switch {
+	case rec.Success && current:
 		snap, err = s.putBuff(ctx, characterID, rec)
+	case rec.Success:
+		// The check's round is over: no buff (ADR 0037 step 20.8).
 	default:
-		snap, err = s.takeBuff(ctx, characterID, rec)
+		snap, err = s.takeBuff(ctx, characterID, rec, current)
 	}
 	if err != nil || snap == nil {
 		return nil, err

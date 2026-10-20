@@ -77,7 +77,7 @@ func TestBuffs_Step20_ProficiencyID(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{tumbling, gem}, nil).Once()
 		f.saves([]buffsvc.BuffEffect{gem})
-		removed, snap, err := f.svc.Remove(ctx, charID, "t")
+		removed, snap, err := f.svc.Remove(ctx, charID, "t", nil)
 		require.NoError(t, err)
 		assert.True(t, removed)
 		assert.Equal(t, buffsvc.StateKeyBuffs, snap.Key)
@@ -86,10 +86,34 @@ func TestBuffs_Step20_ProficiencyID(t *testing.T) {
 		assert.Empty(t, f.entries)
 	})
 
+	// ADR 0037 step 20.8: the rows a renewal replaced go back in the place of the row taken off,
+	// as they were (the codec keeps every field).
+	t.Run("remove puts the rows given back in the row's place", func(t *testing.T) {
+		f := newFixture(t)
+		ac := -4
+		old := buffsvc.BuffEffect{
+			ID: "t0", Name: "tumbling", ProficiencyID: "tumbling", Duration: 3, StartRound: 2,
+			Note: "by hand", Effects: buffsvc.BuffEffects{AC: &ac},
+		}
+		raw, err := buffsvc.EncodeRows([]buffsvc.BuffEffect{old})
+		require.NoError(t, err)
+		back, err := buffsvc.DecodeRows(raw)
+		require.NoError(t, err)
+		require.Equal(t, []buffsvc.BuffEffect{old}, back)
+		haste := buffsvc.BuffEffect{ID: "h", Name: "Haste", Duration: 1, SpellID: "haste"}
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{haste, tumbling, gem}, nil).Once()
+		f.saves([]buffsvc.BuffEffect{haste, old, gem})
+		removed, snap, err := f.svc.Remove(ctx, charID, "t", back)
+		require.NoError(t, err)
+		assert.True(t, removed)
+		assert.Len(t, decodeSnap(t, snap.After), 3)
+		assert.Empty(t, f.entries)
+	})
+
 	t.Run("remove of a row no longer on the list writes nothing", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{gem}, nil).Once()
-		removed, _, err := f.svc.Remove(ctx, charID, "t")
+		removed, _, err := f.svc.Remove(ctx, charID, "t", []buffsvc.BuffEffect{gem})
 		require.NoError(t, err)
 		assert.False(t, removed)
 	})

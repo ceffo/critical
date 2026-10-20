@@ -166,6 +166,12 @@ func (f *fixture) amendsWithSnaps(e *actionlog.Entry, snaps *[][]actionlog.Snaps
 		})
 }
 
+// inRound makes the buff service's round counter read round (the fixture's checks are rolled in
+// round 0).
+func (f *fixture) inRound(round int) {
+	f.buffs.EXPECT().GetRound(mock.Anything, charID).Return(round, nil).Once()
+}
+
 func (f *fixture) adjust(t *testing.T, e *actionlog.Entry, value int) *skillsvc.CheckResult {
 	t.Helper()
 	r, err := f.svc.Adjust(context.Background(), charID, e.ID, skillsvc.Adjustment{Value: value})
@@ -184,7 +190,8 @@ func TestSkillCheck_Step20_AdjustmentToFailureRemovesTheBuff(t *testing.T) {
 		var snaps [][]actionlog.Snapshot
 		f.amendsWithSnaps(e, &snaps)
 		removed := actionlog.Snapshot{Key: buffsvc.StateKeyBuffs, Before: json.RawMessage(`{"r":1}`), After: json.RawMessage(`{"r":2}`)}
-		f.buffs.EXPECT().Remove(mock.Anything, charID, "row-1").Return(true, removed, nil).Once()
+		f.inRound(0)
+		f.buffs.EXPECT().Remove(mock.Anything, charID, "row-1", []buffsvc.BuffEffect(nil)).Return(true, removed, nil).Once()
 
 		r := f.adjust(t, e, -3)
 
@@ -202,7 +209,8 @@ func TestSkillCheck_Step20_AdjustmentToFailureRemovesTheBuff(t *testing.T) {
 		e := f.rolled(t, "tumbling", 20, 15, skillsvc.Adjustment{})
 		var snaps [][]actionlog.Snapshot
 		f.amendsWithSnaps(e, &snaps)
-		f.buffs.EXPECT().Remove(mock.Anything, charID, "row-1").Return(false, actionlog.Snapshot{}, nil).Once()
+		f.inRound(0)
+		f.buffs.EXPECT().Remove(mock.Anything, charID, "row-1", []buffsvc.BuffEffect(nil)).Return(false, actionlog.Snapshot{}, nil).Once()
 
 		r := f.adjust(t, e, -3)
 
@@ -227,6 +235,7 @@ func TestSkillCheck_Step20_AdjustmentToSuccessAddsOrRenewsTheBuff(t *testing.T) 
 			e := f.rolled(t, "tumbling", 20, 19, skillsvc.Adjustment{})
 			var snaps [][]actionlog.Snapshot
 			f.amendsWithSnaps(e, &snaps)
+			f.inRound(0)
 			f.adds(tc.active, "row-1")
 
 			r := f.adjust(t, e, 2)
@@ -285,4 +294,94 @@ func TestSkillCheck_Step20_AdjustmentKeepingTheVerdictLeavesTheBuff(t *testing.T
 			assert.Equal(t, [][]actionlog.Snapshot{nil}, snaps)
 		})
 	}
+}
+
+// ADR 0037 steps 20.3 and 20.8: a success that renewed a row keeps that row, every field of it,
+// in its payload; an adjustment that turns it into a failure takes the check's row off and puts
+// the renewed one back in its place, so the list reads as if the check had put nothing on (an
+// earlier success's buff, or one made by hand, stays on).
+func TestSkillCheck_Step20_AdjustmentToFailureGivesBackTheRenewedRow(t *testing.T) {
+	ac := -4
+	for _, tc := range []struct {
+		name string
+		old  buffsvc.BuffEffect
+	}{
+		{"an earlier success's row", buffsvc.BuffEffect{ID: "row-0", Name: "tumbling", ProficiencyID: "tumbling", Duration: 1, StartRound: 0, Effects: buffsvc.BuffEffects{AC: &ac}}},
+		{"a row made by hand", buffsvc.BuffEffect{ID: "hand", Name: "Tumbling", Duration: 5, Note: "DM", Effects: buffsvc.BuffEffects{AC: &ac}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newTumbler(t)
+			f.adds([]buffsvc.BuffEffect{tc.old}, "row-1")
+			e := f.rolled(t, "tumbling", 20, 15, skillsvc.Adjustment{})
+			p := payloadOf(t, e.Payload)
+			assert.Equal(t, true, p["renewed"])
+			assert.Contains(t, p, "replaced")
+			var snaps [][]actionlog.Snapshot
+			f.amendsWithSnaps(e, &snaps)
+			f.inRound(0)
+			swapped := actionlog.Snapshot{Key: buffsvc.StateKeyBuffs, Before: json.RawMessage(`{"r":1}`), After: json.RawMessage(`{"r":0}`)}
+			f.buffs.EXPECT().Remove(mock.Anything, charID, "row-1", []buffsvc.BuffEffect{tc.old}).Return(true, swapped, nil).Once()
+
+			r := f.adjust(t, e, -3)
+
+			assert.False(t, r.Success)
+			assert.Nil(t, r.Buff)
+			assert.Equal(t, [][]actionlog.Snapshot{{swapped}}, snaps)
+			p = payloadOf(t, e.EffectivePayload())
+			assert.NotContains(t, p, "buff")
+			assert.NotContains(t, p, "renewed")
+			assert.NotContains(t, p, "replaced")
+			f.dice.AssertNumberOfCalls(t, "RollDie", 1)
+		})
+	}
+}
+
+// ADR 0037 step 20.8 (supervisor ruling 2026-10-20): once a Next Round has passed the check's
+// round, its buff's one round is over. A failure turned into a success puts nothing on (the buff
+// service is only asked the round); a success turned into a failure takes off only what the check
+// still has on, giving nothing back, and a row already ended is no error and no snapshot.
+func TestSkillCheck_Step20_AdjustmentAfterTheChecksRound(t *testing.T) {
+	t.Run("to success: no buff", func(t *testing.T) {
+		f := newTumbler(t)
+		e := f.rolled(t, "tumbling", 20, 19, skillsvc.Adjustment{})
+		var snaps [][]actionlog.Snapshot
+		f.amendsWithSnaps(e, &snaps)
+		f.inRound(1)
+
+		r := f.adjust(t, e, 2)
+
+		assert.True(t, r.Success)
+		assert.Nil(t, r.Buff)
+		assert.Equal(t, [][]actionlog.Snapshot{nil}, snaps)
+		assert.NotContains(t, payloadOf(t, e.EffectivePayload()), "buff")
+		f.buffs.AssertNotCalled(t, "Add", mock.Anything, mock.Anything, mock.Anything)
+	})
+	t.Run("to failure: the row still on taken off, nothing given back", func(t *testing.T) {
+		f := newTumbler(t)
+		f.adds([]buffsvc.BuffEffect{{ID: "row-0", Name: "tumbling", ProficiencyID: "tumbling", Duration: 1}}, "row-1")
+		e := f.rolled(t, "tumbling", 20, 15, skillsvc.Adjustment{})
+		var snaps [][]actionlog.Snapshot
+		f.amendsWithSnaps(e, &snaps)
+		f.inRound(2)
+		f.buffs.EXPECT().Remove(mock.Anything, charID, "row-1", []buffsvc.BuffEffect(nil)).Return(true, buffsSnap, nil).Once()
+
+		r := f.adjust(t, e, -3)
+
+		assert.False(t, r.Success)
+		assert.Equal(t, [][]actionlog.Snapshot{{buffsSnap}}, snaps)
+	})
+	t.Run("to failure: the row already ended", func(t *testing.T) {
+		f := newTumbler(t)
+		f.adds(nil, "row-1")
+		e := f.rolled(t, "tumbling", 20, 15, skillsvc.Adjustment{})
+		var snaps [][]actionlog.Snapshot
+		f.amendsWithSnaps(e, &snaps)
+		f.inRound(1)
+		f.buffs.EXPECT().Remove(mock.Anything, charID, "row-1", []buffsvc.BuffEffect(nil)).Return(false, actionlog.Snapshot{}, nil).Once()
+
+		r := f.adjust(t, e, -3)
+
+		assert.False(t, r.Success)
+		assert.Equal(t, [][]actionlog.Snapshot{nil}, snaps)
+	})
 }

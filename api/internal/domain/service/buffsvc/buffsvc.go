@@ -31,12 +31,13 @@ type SVC interface {
 	// without recording: the caller records the returned snapshot in its own
 	// entry, inside the transaction ctx carries (a spell cast).
 	Add(ctx context.Context, characterID int64, buff BuffEffect) (BuffEffect, actionlog.Snapshot, error)
-	// Remove takes buff buffID off the active list without recording: the
-	// caller records the returned snapshot in its own entry, inside the
-	// transaction ctx carries (a skill check's verdict turned to a failure,
-	// ADR 0037 step 20.8). removed is false, and nothing is written, when
-	// the buff is not on the list.
-	Remove(ctx context.Context, characterID int64, buffID string) (removed bool, snap actionlog.Snapshot, err error)
+	// Remove takes buff buffID off the active list and puts putBack in its
+	// place, without recording: the caller records the returned snapshot in
+	// its own entry, inside the transaction ctx carries (a skill check's
+	// verdict turned to a failure gives back the rows its buff renewed, ADR
+	// 0037 step 20.8). removed is false, and nothing is written, when the
+	// buff is not on the list.
+	Remove(ctx context.Context, characterID int64, buffID string, putBack []BuffEffect) (removed bool, snap actionlog.Snapshot, err error)
 	Edit(ctx context.Context, characterID int64, buffID string, e BuffEdit) ([]BuffEffect, error)
 	// Dismiss stops a row; cause is how it ended when its spell has end
 	// effects (ADR 0004 step 21), and end what they did.

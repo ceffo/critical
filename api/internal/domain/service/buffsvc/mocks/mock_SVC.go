@@ -1313,9 +1313,9 @@ func (_c *MockSVC_PreviewPassTime_Call) RunAndReturn(run func(context.Context, i
 	return _c
 }
 
-// Remove provides a mock function with given fields: ctx, characterID, buffID
-func (_m *MockSVC) Remove(ctx context.Context, characterID int64, buffID string) (bool, actionlog.Snapshot, error) {
-	ret := _m.Called(ctx, characterID, buffID)
+// Remove provides a mock function with given fields: ctx, characterID, buffID, putBack
+func (_m *MockSVC) Remove(ctx context.Context, characterID int64, buffID string, putBack []buffsvc.BuffEffect) (bool, actionlog.Snapshot, error) {
+	ret := _m.Called(ctx, characterID, buffID, putBack)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Remove")
@@ -1324,23 +1324,23 @@ func (_m *MockSVC) Remove(ctx context.Context, characterID int64, buffID string)
 	var r0 bool
 	var r1 actionlog.Snapshot
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (bool, actionlog.Snapshot, error)); ok {
-		return rf(ctx, characterID, buffID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, []buffsvc.BuffEffect) (bool, actionlog.Snapshot, error)); ok {
+		return rf(ctx, characterID, buffID, putBack)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, string) bool); ok {
-		r0 = rf(ctx, characterID, buffID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, []buffsvc.BuffEffect) bool); ok {
+		r0 = rf(ctx, characterID, buffID, putBack)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, string) actionlog.Snapshot); ok {
-		r1 = rf(ctx, characterID, buffID)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, []buffsvc.BuffEffect) actionlog.Snapshot); ok {
+		r1 = rf(ctx, characterID, buffID, putBack)
 	} else {
 		r1 = ret.Get(1).(actionlog.Snapshot)
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, int64, string) error); ok {
-		r2 = rf(ctx, characterID, buffID)
+	if rf, ok := ret.Get(2).(func(context.Context, int64, string, []buffsvc.BuffEffect) error); ok {
+		r2 = rf(ctx, characterID, buffID, putBack)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -1357,13 +1357,14 @@ type MockSVC_Remove_Call struct {
 //   - ctx context.Context
 //   - characterID int64
 //   - buffID string
-func (_e *MockSVC_Expecter) Remove(ctx interface{}, characterID interface{}, buffID interface{}) *MockSVC_Remove_Call {
-	return &MockSVC_Remove_Call{Call: _e.mock.On("Remove", ctx, characterID, buffID)}
+//   - putBack []buffsvc.BuffEffect
+func (_e *MockSVC_Expecter) Remove(ctx interface{}, characterID interface{}, buffID interface{}, putBack interface{}) *MockSVC_Remove_Call {
+	return &MockSVC_Remove_Call{Call: _e.mock.On("Remove", ctx, characterID, buffID, putBack)}
 }
 
-func (_c *MockSVC_Remove_Call) Run(run func(ctx context.Context, characterID int64, buffID string)) *MockSVC_Remove_Call {
+func (_c *MockSVC_Remove_Call) Run(run func(ctx context.Context, characterID int64, buffID string, putBack []buffsvc.BuffEffect)) *MockSVC_Remove_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].([]buffsvc.BuffEffect))
 	})
 	return _c
 }
@@ -1373,7 +1374,7 @@ func (_c *MockSVC_Remove_Call) Return(removed bool, snap actionlog.Snapshot, err
 	return _c
 }
 
-func (_c *MockSVC_Remove_Call) RunAndReturn(run func(context.Context, int64, string) (bool, actionlog.Snapshot, error)) *MockSVC_Remove_Call {
+func (_c *MockSVC_Remove_Call) RunAndReturn(run func(context.Context, int64, string, []buffsvc.BuffEffect) (bool, actionlog.Snapshot, error)) *MockSVC_Remove_Call {
 	_c.Call.Return(run)
 	return _c
 }

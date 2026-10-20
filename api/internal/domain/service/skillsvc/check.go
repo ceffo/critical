@@ -58,6 +58,9 @@ type checkRecord struct {
 	// it put none, and in entries logged before: they read as no buff.
 	Buff    *buffRecord `json:"buff,omitempty"`
 	Renewed bool        `json:"renewed,omitempty"`
+	// Replaced are the rows the buff renewed (buffsvc.EncodeRows), given
+	// back when an adjustment turns the success into a failure (step 20.8).
+	Replaced json.RawMessage `json:"replaced,omitempty"`
 }
 
 // decodeCheck reads a check payload. An entry logged before adjustments has
@@ -220,7 +223,7 @@ func (s *service) amendCheck(ctx context.Context, characterID int64, e actionlog
 	rec.Adjustment, rec.AdjustmentReason = adj.Value, adj.Reason
 	rec.settle()
 	rec.PreviousSuccess, rec.PreviousAdjustment = &prevSuccess, &prevAdj
-	snaps, err := s.followVerdict(ctx, characterID, &rec, prevSuccess)
+	snaps, err := s.followVerdict(ctx, characterID, e.Round, &rec, prevSuccess)
 	if err != nil {
 		return actionlog.PayloadAmendment{}, err
 	}

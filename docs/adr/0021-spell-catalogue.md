@@ -10,7 +10,7 @@ user; the API reads formats 5 and 6, the builder publishing format 6 is a separa
 Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; the API reads formats 6 and 7).
 Step 14 (the languages, format 8) is **decided as built**, 2026-10-18 (the API reads formats 7 and 8).
 Step 15 (the gameplay values of a spell text, marked by the API, no format change) is **decided as built**, 2026-10-19.
-Step 16 (the proficiency descriptions, format 9; the API reads format 9 only) is **decided, not implemented**, 2026-10-20 (user triage of 2026-10-20).
+Step 16 (the proficiency descriptions, format 9; the API reads format 9 only) is **decided as built**, 2026-10-20 (user triage of 2026-10-20).
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -335,7 +335,7 @@ is only ever appended to by play.
       a stray format-2 file is refused (step 5.2), never misread. A format-1 artifact carries no
       `rule_tables`. _Amended 2026-10-16 (step 9.1 amendment below): the schema describes format 3
       only, `format` is the constant 3 and `rule_tables` is required
-      (`TestSchema_Step9_Format3RuleTables`); it described both formats until format 1 was retired._
+      (`Schema_Step9_Format3RuleTables (retired by step 16)`); it described both formats until format 1 was retired._
    2. **Four tables, all required, numbers only.** The keys and rows are exactly those of
       `seeds/rule_tables.json` today, so the seed adapter's parser reads them unchanged:
 
@@ -515,9 +515,9 @@ is only ever appended to by play.
     4. **Rollout, as step 11.4**: the API reads formats 5 and 6; a format-5 catalogue starts, its clerics
        prepare nothing. The fixture is format 6 (ten invented-text priest spells with their codes and the
        cleric's access). The builder (`critical-rulebooks`) publishing format 6 is its own item.
-    Tests: `TestSchema_Step12_Format6Spheres` (cataloguecheck), `TestParse_Step12_1_ReadsFormat6`,
-    `TestParse_Step12_2_SpheresBelongToFormat6` (catalogueadpt),
-    `TestStartup_Step12_RefusesABrokenSphereAccessAndStillReadsFormat5` (composition).
+    Tests: `Schema_Step12_Format6Spheres (retired by step 16)` (cataloguecheck), `Parse_Step12_1_ReadsFormat6 (retired by step 16)`,
+    `Parse_Step12_2_SpheresBelongToFormat6 (retired by step 16)` (catalogueadpt),
+    `Startup_Step12_RefusesABrokenSphereAccessAndStillReadsFormat5 (retired by step 16)` (composition).
 
 13. **The equipment, format 7** (**decided as built** 2026-10-18; [ADR 0033](0033-equipment.md) steps 21 to 23).
     Format 7 is format 6 plus a top-level `equipment` object and two `rule_tables` keys, numbers and codes
@@ -562,10 +562,10 @@ is only ever appended to by play.
     6. **Nothing is imported into the database** (no migration): like the rule tables, the equipment is read
        from the artifact at every start (ADR 0033 step 23: a piece copies a row and keeps its code, so no
        row is ever referenced by game state). The catalogue import of spells (step 5) is unchanged.
-    Tests: `TestSchema_Step13_Format7Equipment` (cataloguecheck), `TestParse_Step13_1_ReadsFormat7`,
-    `TestParse_Step13_2_EquipmentBelongsToFormat7` (catalogueadpt), `TestParse_Step13_1_ReadsFormat7Equipment`,
+    Tests: `Schema_Step13_Format7Equipment (retired by step 16)` (cataloguecheck), `Parse_Step13_1_ReadsFormat7 (retired by step 16)`,
+    `TestParse_Step13_2_EquipmentBelongsToFormat7` (catalogueadpt), `Parse_Step13_1_ReadsFormat7 (retired by step 16)Equipment`,
     `TestParse_Step13_2_EquipmentBelongsToFormat7`, `TestParse_Step13_3_RefusesBrokenEquipment`
-    (ruletablesadpt), `TestStartup_Step13_RefusesBrokenEquipmentAndStillReadsFormat6` (composition).
+    (ruletablesadpt), `Startup_Step13_RefusesBrokenEquipmentAndStillReadsFormat6 (retired by step 16)` (composition).
 14. **The languages, format 8** (**decided as built** 2026-10-18; [ADR 0032](0032-character-identity-and-creation-rolls.md) step 4).
     Format 8 is format 7 plus a top-level `languages` list and one `rule_tables` key; formats 3 to 7 carry neither (schema).
     1. **`languages`**, required, non-empty: rows `{code, name}`, `code` as `^[a-z0-9]+(_[a-z0-9]+)*$` (unique), `name` a language map
@@ -581,9 +581,9 @@ is only ever appended to by play.
        published artifact is format 8, a deployed app has no language catalogue and shows the stored codes as they are.
     5. **Nothing is imported into the database**; the data migration of stored free text uses committed spellings whose codes a test holds
        equal to the fixture's (`TestLanguageSpellings_Step8_1_AreCatalogueCodes`).
-    Tests: `TestSchema_Step14_Format8Languages` (cataloguecheck), `TestParse_Step14_1_ReadsFormat8`, `TestParse_Step14_2_LanguagesBelongToFormat8`
-    (catalogueadpt), `TestParse_Step14_1_ReadsFormat8Languages`, `TestParse_Step14_2_LanguagesBelongToFormat8`,
-    `TestParse_Step14_3_RefusesABrokenLanguageCatalogue` (ruletablesadpt), `TestStartup_Step14_RefusesAnUnknownLanguageAndStillReadsFormat7` (composition).
+    Tests: `Schema_Step14_Format8Languages (retired by step 16)` (cataloguecheck), `Parse_Step14_1_ReadsFormat8 (retired by step 16)`, `TestParse_Step14_2_LanguagesBelongToFormat8`
+    (catalogueadpt), `Parse_Step14_1_ReadsFormat8 (retired by step 16)Languages`, `TestParse_Step14_2_LanguagesBelongToFormat8`,
+    `TestParse_Step14_3_RefusesABrokenLanguageCatalogue` (ruletablesadpt), `Startup_Step14_RefusesAnUnknownLanguageAndStillReadsFormat7 (retired by step 16)` (composition).
 
 15. **Gameplay values are marked by the API when it serves a spell** (**decided as built** 2026-10-19; user, 2026-10-19: at serve time, not at import).
     The artifact (format 8) and the database do not change.
@@ -608,7 +608,7 @@ is only ever appended to by play.
     Tests: `TestMark_FindsTheSixKindsInEnglishAndFrench`, `TestMark_LeavesNonValuesAlone`, `TestMark_TheFixtureCatalogueLosesNothing` (and the real
     catalogue's, when fetched), `TestSpellToDTO_MarksTheValuesOfTheDescriptionAndTheStatsPerLanguage` (api); `value marks`, `stats worded with
     their values marked`, `SpellDescription (gameplay values)` (web).
-16. **The proficiency descriptions, format 9** (**decided** 2026-10-20, not implemented; user triage of 2026-10-20: "extract them from phbs both
+16. **The proficiency descriptions, format 9** (**decided** 2026-10-20, as built 2026-10-20; user triage of 2026-10-20: "extract them from phbs both
     in French and English, make sure they are properly formatted"; [ADR 0037](0037-proficiencies.md) step 19 shows them). Format 9 is format 8 plus
     one top-level list. It covers the 65 non-weapon proficiencies of ADR 0037 step 2; weapon proficiencies have no text of their own, and the thief
     and bard skills' descriptions are another item. English **and** French are required for every row (spells require English only, step 1).
@@ -636,12 +636,28 @@ is only ever appended to by play.
        `just catalogue` (as format 1 was refused, step 9.6.3). Merge order: the builder publishing format 9 first (an item in `critical-rulebooks`),
        then the API change; the domain lists one format and `schemas/catalogue.schema.json` accepts format 9 only (as the amendment of 2026-10-16).
     6. **Served by the API, never by the seeds** (ADR 0037 step 19): the description is read from `localized_texts` at request time as a language map.
-    Tests: `Schema_Step16_Format9ProficiencyDescriptions` (cataloguecheck: the 65 rows, both languages, the lint, no other format carries the list),
-    `Parse_Step16_ReadsFormat9`, `Parse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt), `Import_Step16_DescriptionsInLocalizedTexts`,
-    `Import_Step16_ReimportChangesNothing`, `Import_Step16_FailedImportChangesNothing`, `Import_Step16_RefusesAMissingLanguageOrIdMismatch`
-    (catalogueimport), `Startup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition), `RealCatalogue_Step16_EveryDescriptionPresentInBothLanguages`
-    (skipped without a format-9 `.catalogue/catalogue.json`); in `critical-rulebooks`: `Build_Step16_RefusesAMissingLanguageUnknownIdOrBadText` and
-    `Extract_Step16_OverridesAreApplied`.
+    7. **As built.** (a) *Import*: `importProficiencyDescriptions` (storage/postgres), in the spells' transaction, table
+       `proficiency_descriptions` (migration 029); a row keeps its text key across imports and only changed texts are written. (b) *The id check*
+       (a catalogue id with no description, a description for an unknown id, an id twice, a language missing) is
+       `catalogue.CheckProficiencyDescriptions`, run by the composition root before the migration's seed and the import, like the spell effects' and the
+       spellbook seed's checks, so a mismatch changes nothing at all. (c) *Serving shape*: a lookup by id, `GET /api/proficiencies/{id}/description`
+       ([ADR 0037](0037-proficiencies.md) step 19.4; `profdescsvc`, `profdeschdl`), not a `description` on each `GET /api/characters/options` row:
+       65 descriptions with tables would weigh several tens of kilobytes on a payload the creation flow reads on every open. The server reads the
+       texts back from `localized_texts` **once after the import** (`DB.ProficiencyDescriptions`) and serves them from memory, as the spell catalogue
+       is (a pop-up costs the database nothing, ADR 0024 step 2). (d) *Formats*: the domain lists format 9 only and the schema accepts format 9 only
+       (and requires everything the formats 3 to 8 added, so its per-format conditionals are gone); `ruletablesadpt.Parse` still has its per-format
+       branches, reachable only from its own tests, to be dropped by a later clean-up. (e) *Switch-over*: `just catalogue` takes the rulebooks
+       clone's `dist/catalogue.json` at `CATALOGUE_REF` (default the checked-out branch), so nothing in this repo is pinned: once the
+       builder's format 9 artifact is on the rulebooks default branch, `just catalogue` then `just dev` import the descriptions (the recorded
+       format and version differ, so the import runs). A format-8 `.catalogue/catalogue.json` is refused at start with the `just catalogue` advice.
+    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `TestSchema_Step16_OnlyFormat9IsValid` and
+    `TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId` (cataloguecheck: the 65 rows, both languages, the lint, no other format),
+    `TestParse_Step16_ReadsFormat9`, `TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt),
+    `TestImportCatalogue_Step16_DescriptionsInLocalizedTexts`, `TestImportCatalogue_Step16_ReimportChangesNothing`,
+    `TestImportCatalogue_Step16_FailedImportChangesNothing` (storage/postgres), `TestCheckProficiencyDescriptions_Step16_RefusesAMissingLanguageOrIdMismatch`
+    (domain/catalogue), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` and `TestStartup_Step16_RefusesADescriptionIdMismatch`
+    (composition), `TestRealCatalogue_Step16_EveryDescriptionPresentInBothLanguages` (seedcheck; skipped without a format-9 `.catalogue/catalogue.json`);
+    in `critical-rulebooks`: `Build_Step16_RefusesAMissingLanguageUnknownIdOrBadText` and `Extract_Step16_OverridesAreApplied`.
 
 ## Consequences
 
@@ -812,8 +828,8 @@ Step 9.6.1, the API side of the rollout (formats 1 and 3 read; format 1 still ta
   compared on format and version (step 5.3), so a database last started on the format-1 fixture imports
   it once more (the same spells; nothing removed) and then writes nothing.
 - **Tests per step** (as shipped by 9.6.1; the format-1 tests went with step 9.6.3, see below): 9.1
-  `TestParse_Step9_1_ReadsFormat3` and the schema's `TestSchema_Step9_Format3RuleTables`; 9.2
-  `TestParse_Step9_2_TablesBelongToFormat3Only`; 9.3
+  `Parse_Step9_1_ReadsFormat3 (retired by step 16)` and the schema's `Schema_Step9_Format3RuleTables (retired by step 16)`; 9.2
+  `Parse_Step9_2_TablesBelongToFormat3Only (retired by step 16)`; 9.3
   `TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable` and
   `TestParse_Step9_3_RejectsBrokenTables`; 9.4 and 9.5 `TestStartup_Step9_5_TheTablesAreReadAtEveryStart`
   (a corrected table on the same version applies, a broken one refuses the start). The PHB-page value
@@ -841,7 +857,7 @@ builds them from the published artifact):
 - **The live database**: nothing it stores refers to the format, so a database started on a format-1
   artifact starts on the format-3 one; the recorded catalogue is compared on format and version (step
   5.3), so the first start imports once (same spells) and the next writes nothing.
-- **Tests**: 9.6.3 `TestParse_Step9_6_3_RefusesTheRetiredFormat1` and
+- **Tests**: 9.6.3 `Parse_Step9_6_3_RefusesTheRetiredFormat1 (retired by step 16)` and
   `TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused` (a format-1 artifact refuses the
   start even with a valid seed file beside it; a broken seed file is ignored under format 3); 9.7
   `TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables`; the real seeds booting without
@@ -855,7 +871,7 @@ longer validate a retired shape by mistake:
 
 - `schemas/catalogue.schema.json` accepts format 3 only: `format` is the constant 3, `rule_tables` is
   required, and the format-conditional rules are gone. A format-1 file, with or without `rule_tables`,
-  fails validation, as does format 2 (`TestSchema_Step9_Format3RuleTables`).
+  fails validation, as does format 2 (`Schema_Step9_Format3RuleTables (retired by step 16)`).
 - The API's embedded copy stays identical to it (the existing test), and the rulebooks builder's copy is
   refreshed from it by `scripts/fetch-ref`.
 
@@ -865,9 +881,9 @@ Step 10, critical-reul.9: the builder's `scripts/class_tables.py` and `scripts/c
 equality, the rules of 10.3, spot values against the PHB pages and ADR 0030's Kelsen example, fault
 injection on the parser, the rules and the schema); in the API, `catalogue.FormatClassTables`,
 `ruletablesadpt.Parse(format, raw)` and `ruletablesvc.NewClassTables`. Tests per step: 10.1
-`TestParse_Step10_1_ReadsFormat4`, `TestParse_Step10_1_ReadsTheClassTables` (PHB-page values) and the
-schema's `TestSchema_Step10_Format4ClassTables`; 10.2 the schema test and
-`TestParse_Step9_2_TablesBelongToFormat3Only`'s format-4 cases; 10.3
+`Parse_Step10_1_ReadsFormat4 (retired by step 16)`, `TestParse_Step10_1_ReadsTheClassTables` (PHB-page values) and the
+schema's `Schema_Step10_Format4ClassTables (retired by step 16)`; 10.2 the schema test and
+`Parse_Step9_2_TablesBelongToFormat3Only (retired by step 16)`'s format-4 cases; 10.3
 `TestParse_Step10_3_RejectsAMissingOrBrokenClassTable` and
 `TestStartup_Step10_3_RefusesAMissingOrGappedClassTable`; 10.4 `TestParse_Step10_4_Format3HasNoClassTables`
 and the startup test's "format 3 still starts"; 10.5
@@ -879,9 +895,9 @@ Step 11, critical-reul.20: the builder's `scripts/class_tables.py` (`build_race_
 `scripts/check` (fresh-build equality, every one of the 25 cells compared with a second reading of the page
 image, Kelsen the half-elf bard unlimited, fault injection on the parser and the schema); in the API,
 `catalogue.FormatLevelLimits`, `ruletablesadpt.Parse`'s format-5 case and `ruletablesvc.NewLevelLimits` /
-`LevelLimits.Limit`. Tests per step: 11.1 `TestParse_Step11_1_ReadsFormat5`,
+`LevelLimits.Limit`. Tests per step: 11.1 `Parse_Step11_1_ReadsFormat5 (retired by step 16)`,
 `TestParse_Step11_1_ReadsTheLevelLimits` (every cell against DMG p.15) and the schema's
-`TestSchema_Step11_Format5LevelLimits`; 11.2 the schema test and `TestParse_Step9_2_TablesBelongToFormat3Only`'s
+`Schema_Step11_Format5LevelLimits (retired by step 16)`; 11.2 the schema test and `Parse_Step9_2_TablesBelongToFormat3Only (retired by step 16)`'s
 format-5 cases; 11.3 `TestParse_Step11_3_RejectsMissingOrBrokenLevelLimits` and
 `TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits`; 11.4 `TestParse_Step11_4_Format4HasNoLevelLimits` and
 the startup test's "format 4 still starts"; 11.5 `TestRealCatalogue_Step11_5_TheFixtureCarriesTheRealArtifactsLevelLimits`.

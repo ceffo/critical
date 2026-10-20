@@ -32,6 +32,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/itemhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/learnhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/leveluphdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/profdeschdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/resthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/skillhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
@@ -136,6 +137,10 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	spellhdl.RegisterSharedRoutes(r, bs.Spells)
 	combathdl.RegisterSharedRoutes(r, bs.Combat)
 	xphdl.RegisterSharedRoutes(r, bs.XP)
+	// A proficiency's description (ADR 0037 step 19.4) is a catalogue read, no character's.
+	if bs.ProficiencyDescriptions != nil {
+		profdeschdl.RegisterRoutes(r, bs.ProficiencyDescriptions)
+	}
 	// The user's characters: a session, no current character needed.
 	characterhdl.RegisterUserRoutes(r, bs.Character)
 	// The creation's rolls (ADR 0032 steps 6 and 7) write nothing.

@@ -184,9 +184,21 @@ func (s *Store) ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, _ 
 			}
 		}
 		t.spells = spells
+		t.profDescs = nil
+		for _, d := range cat.ProficiencyDescriptions {
+			t.profDescs = append(t.profDescs, catalogue.ProficiencyDescription{ID: d.ID, Description: stored(d.Description)})
+		}
 		t.catalogue = &catalogueVersion{format: cat.Format, version: cat.Version}
 		return nil
 	})
+}
+
+// ProficiencyDescriptions returns the imported proficiency descriptions as language maps (ADR
+// 0021 step 16), in the artifact's order: what the database's read gives after its import.
+func (s *Store) ProficiencyDescriptions(context.Context) ([]catalogue.ProficiencyDescription, error) {
+	out := make([]catalogue.ProficiencyDescription, len(s.t.profDescs))
+	copy(out, s.t.profDescs)
+	return out, nil
 }
 
 // carrySkillArmour gives the seed character the armour it entered for its

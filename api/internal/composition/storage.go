@@ -70,6 +70,8 @@ type Store interface {
 	// armours the seed character's skill armour is carried over to.
 	Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error
 	ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, seedRefs []catalogue.Ref) error
+	// ProficiencyDescriptions reads back the descriptions the import stored (ADR 0021 step 16.6).
+	ProficiencyDescriptions(ctx context.Context) ([]catalogue.ProficiencyDescription, error)
 	Close() error
 }
 

@@ -213,6 +213,64 @@ func (_c *MockStore_Migrate_Call) RunAndReturn(run func(context.Context, string,
 	return _c
 }
 
+// ProficiencyDescriptions provides a mock function with given fields: ctx
+func (_m *MockStore) ProficiencyDescriptions(ctx context.Context) ([]catalogue.ProficiencyDescription, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ProficiencyDescriptions")
+	}
+
+	var r0 []catalogue.ProficiencyDescription
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]catalogue.ProficiencyDescription, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []catalogue.ProficiencyDescription); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]catalogue.ProficiencyDescription)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_ProficiencyDescriptions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ProficiencyDescriptions'
+type MockStore_ProficiencyDescriptions_Call struct {
+	*mock.Call
+}
+
+// ProficiencyDescriptions is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) ProficiencyDescriptions(ctx interface{}) *MockStore_ProficiencyDescriptions_Call {
+	return &MockStore_ProficiencyDescriptions_Call{Call: _e.mock.On("ProficiencyDescriptions", ctx)}
+}
+
+func (_c *MockStore_ProficiencyDescriptions_Call) Run(run func(ctx context.Context)) *MockStore_ProficiencyDescriptions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockStore_ProficiencyDescriptions_Call) Return(_a0 []catalogue.ProficiencyDescription, _a1 error) *MockStore_ProficiencyDescriptions_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_ProficiencyDescriptions_Call) RunAndReturn(run func(context.Context) ([]catalogue.ProficiencyDescription, error)) *MockStore_ProficiencyDescriptions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Seed provides a mock function with given fields: ctx, seedsDir, spellbook, equipment
 func (_m *MockStore) Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error {
 	ret := _m.Called(ctx, seedsDir, spellbook, equipment)

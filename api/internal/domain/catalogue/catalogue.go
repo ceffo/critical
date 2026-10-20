@@ -3,7 +3,12 @@
 // imported into the database by the storage layer at startup.
 package catalogue
 
-import "github.com/ceffo/critical/api/internal/domain/localized"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/ceffo/critical/api/internal/domain/localized"
+)
 
 // FormatRuleTables is format 3 (ADR 0021 step 9.1): the spells and the PHB
 // rule tables. Format 1 (spells only, the tables in the seeds) is retired
@@ -39,17 +44,35 @@ const FormatEquipment = 7
 // format 8 (step 14.4).
 const FormatLanguages = 8
 
-// Formats lists the formats this API reads, in order.
-var Formats = []int{FormatRuleTables, FormatClassTables, FormatLevelLimits, FormatSpheres, FormatEquipment, FormatLanguages}
+// FormatProficiencyDescriptions is format 9 (ADR 0021 step 16, ADR 0037 step
+// 19): format 8 plus the description of each non-weapon proficiency, in English
+// and French. It is the only format the API reads (step 16.5): the formats 3
+// to 8 are refused like any unknown format, with the advice to run `just
+// catalogue`.
+const FormatProficiencyDescriptions = 9
 
-// Catalogue is one artifact's spells: a version compared for equality only,
-// and the spells. A format-3 artifact's PHB rule tables are not part of it:
+// Formats lists the formats this API reads: format 9 only (step 16.5).
+var Formats = []int{FormatProficiencyDescriptions}
+
+// Catalogue is one artifact's spells and proficiency descriptions: a version
+// compared for equality only. A format-3 artifact's PHB rule tables are not part of it:
 // they are read beside it at every start and never imported (ADR 0021 step
 // 9.4).
 type Catalogue struct {
 	Format  int
 	Version string
 	Spells  []Spell
+	// ProficiencyDescriptions are the format-9 descriptions of the non-weapon
+	// proficiencies (ADR 0021 step 16): one row per proficiency id.
+	ProficiencyDescriptions []ProficiencyDescription
+}
+
+// ProficiencyDescription is one non-weapon proficiency's description, a
+// language map (ADR 0023) in the Markdown subset of ADR 0021 step 1. The
+// artifact carries English and French for every row (step 16.1).
+type ProficiencyDescription struct {
+	ID          string
+	Description localized.Text
 }
 
 // Spell is one catalogue spell. ID is the stable key game state refers to
@@ -94,3 +117,43 @@ type Ref struct {
 	ID    string
 	Where string
 }
+
+// CheckProficiencyDescriptions is the import's check of ADR 0021 step 16.3: the descriptions and
+// the proficiency ids of seeds/proficiencies.json agree. Each refusal names the id, and the
+// language when it is one. It refuses a catalogue id with no description, a description for an
+// unknown id, an id twice, and a description lacking English or French (both are required).
+func CheckProficiencyDescriptions(descs []ProficiencyDescription, ids []string) error {
+	known := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		known[id] = true
+	}
+	seen := make(map[string]bool, len(descs))
+	var problems []string
+	for _, d := range descs {
+		switch {
+		case seen[d.ID]:
+			problems = append(problems, "proficiency "+d.ID+": the description repeats")
+			continue
+		case !known[d.ID]:
+			problems = append(problems, "proficiency "+d.ID+": no such proficiency in seeds/proficiencies.json")
+		}
+		seen[d.ID] = true
+		for _, lang := range RequiredProficiencyLanguages {
+			if d.Description[lang] == "" {
+				problems = append(problems, "proficiency "+d.ID+": the "+lang+" description is missing or empty")
+			}
+		}
+	}
+	for _, id := range ids {
+		if !seen[id] {
+			problems = append(problems, "proficiency "+id+": no description in the catalogue")
+		}
+	}
+	if len(problems) > 0 {
+		return fmt.Errorf("proficiency descriptions: the catalogue and seeds/proficiencies.json disagree: %s", strings.Join(problems, "; "))
+	}
+	return nil
+}
+
+// RequiredProficiencyLanguages are the languages every proficiency description has (step 16.1).
+var RequiredProficiencyLanguages = []string{"en", "fr"}

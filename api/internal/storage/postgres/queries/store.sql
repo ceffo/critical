@@ -350,3 +350,18 @@ SELECT character_id, payload FROM action_log WHERE kind = 'spell_learn' ORDER BY
 
 -- name: SetSpellbookEntryOrigin :exec
 UPDATE spellbook_entries SET origin = $3 WHERE character_id = $1 AND spell_key = $2;
+
+-- name: ProficiencyDescriptionKeys :many
+SELECT proficiency_id, description FROM proficiency_descriptions;
+
+-- name: UpsertProficiencyDescription :exec
+INSERT INTO proficiency_descriptions (proficiency_id, description) VALUES ($1, $2)
+ON CONFLICT (proficiency_id) DO UPDATE SET description = excluded.description;
+
+-- name: DeleteProficiencyDescription :exec
+DELETE FROM proficiency_descriptions WHERE proficiency_id = $1;
+
+-- name: ProficiencyDescriptionTexts :many
+SELECT d.proficiency_id, t.lang, t.body
+FROM proficiency_descriptions d JOIN localized_texts t ON t.text_id = d.description
+ORDER BY d.proficiency_id, t.lang;

@@ -124,11 +124,11 @@ func Parse(format int, raw, equipment, languages []byte) (*ruletablesvc.Tables, 
 	if err != nil {
 		return nil, err
 	}
-	hasEquipment := format == catalogue.FormatEquipment || format == catalogue.FormatLanguages
+	hasEquipment := format >= catalogue.FormatEquipment
 	if !hasEquipment && (f.WeaponVsArmor != nil || f.InitiativeItem != nil || equipment != nil) {
 		return nil, fmt.Errorf("format %d carries no equipment, weapon_vs_armor or initiative_item", format)
 	}
-	if format != catalogue.FormatLanguages && (f.RaceLanguages != nil || languages != nil) {
+	if format < catalogue.FormatLanguages && (f.RaceLanguages != nil || languages != nil) {
 		return nil, fmt.Errorf("format %d carries no languages or race_languages", format)
 	}
 	switch format {
@@ -149,7 +149,8 @@ func Parse(format int, raw, equipment, languages []byte) (*ruletablesvc.Tables, 
 			return nil, err
 		}
 		return tables.WithClasses(classes), nil
-	case catalogue.FormatLevelLimits, catalogue.FormatSpheres, catalogue.FormatEquipment, catalogue.FormatLanguages:
+	case catalogue.FormatLevelLimits, catalogue.FormatSpheres, catalogue.FormatEquipment, catalogue.FormatLanguages,
+		catalogue.FormatProficiencyDescriptions:
 		classes, err := f.classes()
 		if err != nil {
 			return nil, err

@@ -37,7 +37,7 @@ func withVersion(c catalogue.Catalogue, version string, edit func([]catalogue.Sp
 	if edit != nil {
 		spells = edit(spells)
 	}
-	return catalogue.Catalogue{Format: c.Format, Version: version, Spells: spells}
+	return catalogue.Catalogue{Format: c.Format, Version: version, Spells: spells, ProficiencyDescriptions: c.ProficiencyDescriptions}
 }
 
 func without(id string) func([]catalogue.Spell) []catalogue.Spell {
@@ -110,6 +110,10 @@ func assertTextIntegrity(t *testing.T, f *fakeStore) {
 	for _, w := range f.t.Weapons {
 		used[w.Name] = true
 		assert.NotEmpty(t, f.t.Texts[w.Name], "weapon %s: key %d has no row", w.ID, w.Name)
+	}
+	for id, key := range f.t.ProfDescs {
+		used[key] = true
+		assert.NotEmpty(t, f.t.Texts[key], "proficiency %s: key %d has no row", id, key)
 	}
 	for id, text := range f.t.Texts {
 		assert.True(t, used[id], "text %d is keyed by no column", id)

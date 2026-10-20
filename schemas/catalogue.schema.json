@@ -1,26 +1,24 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, formats 3, 4, 5, 6, 7 and 8",
-  "description": "Shape of the catalogue artifact (ADR 0021): format 3 holds the spells and the PHB rule tables (step 9); format 4 adds the class and race tables (step 10, ADR 0030 step 23); format 5 adds the racial level limits (step 11, DMG Table 7); format 6 adds each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23); format 7 adds the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23); format 8 adds the language catalogue and each race's language list (step 14, ADR 0032 step 4). Shape only: the schema carries no book text. Format 1 (spells only) is retired and format 2 named a retracted shape: neither is valid.",
+  "title": "Critical! catalogue, format 9",
+  "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) and the non-weapon proficiency descriptions (step 16, ADR 0037 step 19). The API reads format 9 only: formats 3 to 8 were each the same shape without the parts added later, and are retired (step 16.5). Shape only: the schema carries no book text.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "format",
     "version",
     "spells",
-    "rule_tables"
+    "rule_tables",
+    "equipment",
+    "languages",
+    "proficiency_descriptions"
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 3 (spells and rule_tables, ADR 0021 step 9), 4 (format 3 plus the class and race tables, step 10) 5 (format 4 plus the racial level limits, step 11) 6 (format 5 plus the sphere codes and access, step 12) 7 (format 6 plus the equipment and its two rule tables, step 13) or 8 (format 7 plus the languages and race_languages, step 14). An importer accepts exactly the formats it knows and refuses the rest.",
+      "description": "Artifact format: 9 (ADR 0021 step 16: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
       "enum": [
-        3,
-        4,
-        5,
-        6,
-        7,
-        8
+        9
       ]
     },
     "version": {
@@ -43,318 +41,66 @@
     },
     "languages": {
       "$ref": "#/$defs/languages"
+    },
+    "proficiency_descriptions": {
+      "$ref": "#/$defs/proficiency_descriptions"
     }
   },
   "allOf": [
     {
-      "if": {
-        "properties": {
-          "format": {
-            "enum": [
-              4,
-              5,
-              6,
-              7,
-              8
-            ]
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "rule_tables": {
-            "required": [
-              "experience",
-              "hit_dice",
-              "constitution",
-              "intelligence",
-              "wisdom",
-              "con_save_bonus",
-              "race_requirements",
-              "race_adjustments",
-              "thac0",
-              "saving_throws",
-              "warrior_attacks",
-              "specialist_attacks",
-              "rate_of_fire",
-              "wizard_spells",
-              "priest_spells",
-              "priest_spell_wisdom",
-              "thief_skill_base",
-              "thief_skill_race",
-              "thief_skill_dexterity",
-              "thief_skill_armor",
-              "bard_armor_penalty",
-              "bard_skill_base",
-              "backstab",
-              "turning_undead"
-            ]
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "enum": [
-              5,
-              6,
-              7,
-              8
-            ]
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "rule_tables": {
-            "required": [
-              "race_level_limits"
-            ]
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "const": 4
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "rule_tables": {
-            "properties": {
-              "race_level_limits": false,
-              "sphere_access": false
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "const": 3
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "rule_tables": {
-            "properties": {
-              "experience": false,
-              "hit_dice": false,
-              "constitution": false,
-              "intelligence": false,
-              "wisdom": false,
-              "con_save_bonus": false,
-              "race_requirements": false,
-              "race_adjustments": false,
-              "thac0": false,
-              "saving_throws": false,
-              "warrior_attacks": false,
-              "specialist_attacks": false,
-              "rate_of_fire": false,
-              "wizard_spells": false,
-              "priest_spells": false,
-              "priest_spell_wisdom": false,
-              "thief_skill_base": false,
-              "thief_skill_race": false,
-              "thief_skill_dexterity": false,
-              "thief_skill_armor": false,
-              "bard_armor_penalty": false,
-              "bard_skill_base": false,
-              "backstab": false,
-              "turning_undead": false,
-              "race_level_limits": false,
-              "sphere_access": false
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "const": 5
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "rule_tables": {
-            "properties": {
-              "sphere_access": false
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "enum": [
-              3,
-              4,
-              5
-            ]
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "spells": {
-            "items": {
+      "properties": {
+        "rule_tables": {
+          "required": [
+            "experience",
+            "hit_dice",
+            "constitution",
+            "intelligence",
+            "wisdom",
+            "con_save_bonus",
+            "race_requirements",
+            "race_adjustments",
+            "thac0",
+            "saving_throws",
+            "warrior_attacks",
+            "specialist_attacks",
+            "rate_of_fire",
+            "wizard_spells",
+            "priest_spells",
+            "priest_spell_wisdom",
+            "thief_skill_base",
+            "thief_skill_race",
+            "thief_skill_dexterity",
+            "thief_skill_armor",
+            "bard_armor_penalty",
+            "bard_skill_base",
+            "backstab",
+            "turning_undead",
+            "race_level_limits",
+            "sphere_access",
+            "weapon_vs_armor",
+            "initiative_item",
+            "race_languages"
+          ]
+        },
+        "spells": {
+          "items": {
+            "if": {
+              "properties": {
+                "class": {
+                  "const": "Priest"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "spheres"
+              ]
+            },
+            "else": {
               "properties": {
                 "spheres": false
               }
             }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "enum": [
-              6,
-              7,
-              8
-            ]
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "rule_tables": {
-            "required": [
-              "sphere_access"
-            ]
-          },
-          "spells": {
-            "items": {
-              "if": {
-                "properties": {
-                  "class": {
-                    "const": "Priest"
-                  }
-                }
-              },
-              "then": {
-                "required": [
-                  "spheres"
-                ]
-              },
-              "else": {
-                "properties": {
-                  "spheres": false
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "enum": [
-              3,
-              4,
-              5,
-              6
-            ]
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "equipment": false,
-          "rule_tables": {
-            "properties": {
-              "weapon_vs_armor": false,
-              "initiative_item": false
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "enum": [
-              7,
-              8
-            ]
-          }
-        }
-      },
-      "then": {
-        "required": [
-          "equipment"
-        ],
-        "properties": {
-          "rule_tables": {
-            "required": [
-              "weapon_vs_armor",
-              "initiative_item"
-            ]
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "enum": [
-              3,
-              4,
-              5,
-              6,
-              7
-            ]
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "languages": false,
-          "rule_tables": {
-            "properties": {
-              "race_languages": false
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "const": 8
-          }
-        }
-      },
-      "then": {
-        "required": [
-          "languages"
-        ],
-        "properties": {
-          "rule_tables": {
-            "required": [
-              "race_languages"
-            ]
           }
         }
       }
@@ -1866,6 +1612,47 @@
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/language_row"
+      }
+    },
+    "proficiency_descriptions": {
+      "description": "Format 9: the description of each non-weapon proficiency of ADR 0037 step 2's catalogue (ADR 0021 step 16): exactly 65 rows, one per proficiency id, in English and French, each in step 1's Markdown subset. The name stays an i18n key by id and the figures stay in seeds/proficiencies.json, so a row carries nothing else. That every catalogue id has a row is the builder's and the importer's check (the ids are data, not schema).",
+      "type": "array",
+      "minItems": 65,
+      "maxItems": 65,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/proficiency_description_row"
+      }
+    },
+    "proficiency_description_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$"
+        },
+        "description": {
+          "description": "Both languages are required (spells require English only): a proficiency pop-up has a text in either language.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "en",
+            "fr"
+          ],
+          "properties": {
+            "en": {
+              "$ref": "#/$defs/paragraphs"
+            },
+            "fr": {
+              "$ref": "#/$defs/paragraphs"
+            }
+          }
+        }
       }
     },
     "language_row": {

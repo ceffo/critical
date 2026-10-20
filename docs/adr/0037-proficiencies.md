@@ -11,7 +11,7 @@ proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequ
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
 implementation.
 Steps 19 (the description pop-up) and 20 (the Tumbling buff) added 2026-10-20 (user triage of
-2026-10-20), decided; step 19 not implemented; step 20 as built 2026-10-20 (see 20.9); step 19 reads the descriptions of
+2026-10-20), decided; step 19.4 (the API's description lookup, format 9 import) as built 2026-10-20 (CRI-116), the pop-up itself (19.1 to 19.3) not implemented; step 20 as built 2026-10-20 (see 20.9); step 19 reads the descriptions of
 [ADR 0021](0021-spell-catalogue.md) step 16 (format 9); step 20 amends [ADR 0014](0014-skill-checks.md)
 step 4 and [ADR 0004](0004-buffs.md) step 13.
 
@@ -593,10 +593,13 @@ descriptions and the effects of other proficiencies are separate, deferred items
          `GET /api/proficiencies/{id}/description` answers `{id, description: {en, fr}}`,
          404 `not_found` for an id the catalogue does not hold; the pop-up fetches it when opened, so
          `GET /api/characters/options` does not grow by 65 texts (supervisor ruling 2026-10-20).
+         *As built 2026-10-20 (the API side):* `profdescsvc` and `profdeschdl`, the descriptions read from
+         `localized_texts` once after the catalogue import and served from memory (ADR 0021 step 16.7); the
+         route needs a session, no current character.
     19.5 **No description yet:** a catalogue without format 9 does not start (ADR 0021 step 16.5), so
          the pop-up always has a text; a language the map lacks falls back, which format 9 prevents.
-    Tests: `ProficiencyDescription_Step19_ServedAsALanguageMapFromTheCatalogue` (router: `en` and
-    `fr`, an unknown id), `ProficiencyDescriptions_Step19_NotInTheSeeds` (seedcheck: no description
+    Tests: `TestProficiencyDescription_Step19_ServedAsALanguageMapFromTheCatalogue` (router: `en` and
+    `fr`, an unknown id), `TestProficiencyDescriptions_Step19_NotInTheSeeds` (seedcheck: no description
     key in `seeds/proficiencies.json`, nor in the locale files), `SkillRow_Step19_NameOpensThePopupAbilityRolls`,
     `ProficiencyPopup_Step19_ShowsNameDescriptionThenFigures`,
     `ProficiencyPicker_Step19_NameOpensThePopupAndShowsTheClassCost` (web).

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -263,7 +264,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3, 4, 5, 6, 7 and 8")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 9")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -320,11 +321,10 @@ func TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable(t *testing
 	}
 }
 
-// ADR 0021 step 10.3: a format-4 or -5 artifact missing a class or race table, or
-// with one that breaks the rules the schema cannot check (a gap in a level
-// band or in the scores, XP not increasing, a code twice), refuses the start,
-// naming the artifact and the table. A format-3 artifact still starts (step
-// 10.4), without class tables.
+// ADR 0021 step 10.3: an artifact with a class or race table that breaks the
+// rules the schema cannot check (a gap in a level band or in the scores, XP not
+// increasing, a code twice), or that lacks one, refuses the start, naming the
+// artifact and the table.
 func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
 	tables := func(d map[string]any) map[string]any { return d["rule_tables"].(map[string]any) }
 	row := func(d map[string]any, table string, i int) map[string]any {
@@ -359,31 +359,11 @@ func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
 			require.ErrorContains(t, err, "spell catalogue "+artifact)
 		})
 	}
-
-	// Every character's level, THAC0 and saves are derived from the class
-	// tables (ADR 0030 steps 3 to 6): a format-3 artifact, which has none,
-	// refuses the start, naming `just catalogue`.
-	t.Run("format 3 is refused", func(t *testing.T) {
-		artifact := writeArtifact(t, func(d map[string]any) {
-			asFormat5(d)
-			d["format"] = 3
-			for k := range tables(d) {
-				if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" {
-					delete(tables(d), k)
-				}
-			}
-		})
-		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
-		require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
-		require.ErrorContains(t, err, "just catalogue")
-		require.ErrorContains(t, err, "spell catalogue "+artifact)
-	})
 }
 
-// ADR 0021 steps 11.3 and 11.4: a format-5 artifact without its racial level
-// limits, or with limits that break the rules the schema cannot check (a race
-// and class twice), refuses the start, naming the artifact and the table. A
-// format-4 artifact, without them, still starts.
+// ADR 0021 step 11.3: an artifact without its racial level limits, or with
+// limits that break the rules the schema cannot check (a race and class
+// twice), refuses the start, naming the artifact and the table.
 func TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits(t *testing.T) {
 	tables := func(d map[string]any) map[string]any { return d["rule_tables"].(map[string]any) }
 	tests := []struct {
@@ -404,51 +384,11 @@ func TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits(t *testing.T) {
 			require.ErrorContains(t, err, "spell catalogue "+artifact)
 		})
 	}
-
-	t.Run("format 4 still starts", func(t *testing.T) {
-		artifact := writeArtifact(t, func(d map[string]any) {
-			asFormat5(d)
-			d["format"] = 4
-			delete(tables(d), "race_level_limits")
-		})
-		assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact}))
-	})
 }
 
-// asFormat7 turns the format-8 fixture into a format-7 artifact: no languages
-// and no race_languages table (ADR 0021 step 14).
-func asFormat7(d map[string]any) {
-	d["format"] = 7
-	delete(d, "languages")
-	delete(d["rule_tables"].(map[string]any), "race_languages")
-}
-
-// asFormat6 turns the format-8 fixture into a format-6 artifact: no equipment,
-// no Table 52 or 56 (ADR 0021 step 13).
-func asFormat6(d map[string]any) {
-	asFormat7(d)
-	d["format"] = 6
-	delete(d, "equipment")
-	delete(d["rule_tables"].(map[string]any), "weapon_vs_armor")
-	delete(d["rule_tables"].(map[string]any), "initiative_item")
-}
-
-// asFormat5 turns the format-7 fixture into a format-5 artifact: no sphere
-// access, no sphere codes (ADR 0021 step 12), no equipment.
-func asFormat5(d map[string]any) {
-	asFormat6(d)
-	d["format"] = 5
-	delete(d["rule_tables"].(map[string]any), "sphere_access")
-	for _, s := range d["spells"].([]any) {
-		delete(s.(map[string]any), "spheres")
-	}
-}
-
-// ADR 0021 steps 12.3 and 12.4: a format-6 artifact with a broken sphere
-// access (a sphere twice) refuses the start, naming the table; a format-5
-// artifact, without it, still starts (its clerics prepare nothing until
-// `just catalogue` fetches format 6).
-func TestStartup_Step12_RefusesABrokenSphereAccessAndStillReadsFormat5(t *testing.T) {
+// ADR 0021 step 12.3: an artifact with a broken sphere access (a sphere twice)
+// refuses the start, naming the table.
+func TestStartup_Step12_RefusesABrokenSphereAccess(t *testing.T) {
 	artifact := writeArtifact(t, func(d map[string]any) {
 		rows := d["rule_tables"].(map[string]any)["sphere_access"].([]any)
 		d["rule_tables"].(map[string]any)["sphere_access"] = append(rows, rows[0])
@@ -456,15 +396,11 @@ func TestStartup_Step12_RefusesABrokenSphereAccessAndStillReadsFormat5(t *testin
 	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
 	require.ErrorContains(t, err, "rule_tables: sphere_access table: cleric all twice")
 	require.ErrorContains(t, err, "spell catalogue "+artifact)
-
-	five := writeArtifact(t, asFormat5)
-	assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: five}))
 }
 
-// ADR 0021 steps 13.3 and 13.4: a format-7 artifact with a broken equipment
-// table or row refuses the start, naming it; a format-6 artifact, without the
-// equipment, still starts.
-func TestStartup_Step13_RefusesBrokenEquipmentAndStillReadsFormat6(t *testing.T) {
+// ADR 0021 step 13.3: an artifact with a broken equipment table or row refuses
+// the start, naming it.
+func TestStartup_Step13_RefusesBrokenEquipment(t *testing.T) {
 	tests := []struct {
 		name   string
 		mutate func(map[string]any)
@@ -495,15 +431,11 @@ func TestStartup_Step13_RefusesBrokenEquipmentAndStillReadsFormat6(t *testing.T)
 			require.ErrorContains(t, err, "spell catalogue "+artifact)
 		})
 	}
-
-	six := writeArtifact(t, asFormat6)
-	assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: six}))
 }
 
-// ADR 0021 steps 14.3 and 14.4: a format-8 artifact whose racial list names a
-// language the catalogue lacks refuses the start, naming the race and the
-// language; a format-7 artifact, without the languages, still starts.
-func TestStartup_Step14_RefusesAnUnknownLanguageAndStillReadsFormat7(t *testing.T) {
+// ADR 0021 step 14.3: an artifact whose racial list names a language the
+// catalogue lacks refuses the start, naming the race and the language.
+func TestStartup_Step14_RefusesAnUnknownLanguage(t *testing.T) {
 	artifact := writeArtifact(t, func(d map[string]any) {
 		rows := d["rule_tables"].(map[string]any)["race_languages"].([]any)
 		d["rule_tables"].(map[string]any)["race_languages"] = append(rows, map[string]any{"race": "dwarf", "language": "draconic"})
@@ -511,9 +443,56 @@ func TestStartup_Step14_RefusesAnUnknownLanguageAndStillReadsFormat7(t *testing.
 	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
 	require.ErrorContains(t, err, `dwarf names the unknown language "draconic"`)
 	require.ErrorContains(t, err, "spell catalogue "+artifact)
+}
 
-	seven := writeArtifact(t, asFormat7)
-	assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: seven}))
+// ADR 0021 step 16.5: a format-8 artifact (or any earlier one) is refused at start as an unknown
+// format that names the one this API reads and `just catalogue`; nothing is seeded or imported.
+func TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue(t *testing.T) {
+	for _, format := range []int{3, 4, 5, 6, 7, 8} {
+		artifact := writeArtifact(t, func(d map[string]any) {
+			d["format"] = format
+			delete(d, "proficiency_descriptions")
+		})
+		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 9", artifact, format))
+		require.ErrorContains(t, err, "run `just catalogue`")
+	}
+}
+
+// ADR 0021 step 16.3: the catalogue's proficiency descriptions and seeds/proficiencies.json must
+// agree, or the start is refused before anything is seeded or imported, naming each proficiency:
+// here a description is filed under an id the seeds lack, so one seed id has none and one
+// description has no seed.
+func TestStartup_Step16_RefusesADescriptionIdMismatch(t *testing.T) {
+	artifact := writeArtifact(t, func(d map[string]any) {
+		d["proficiency_descriptions"].([]any)[3].(map[string]any)["id"] = "swordplay"
+	})
+	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+	require.ErrorContains(t, err, "proficiency descriptions: the catalogue and seeds/proficiencies.json disagree")
+	require.ErrorContains(t, err, "proficiency swordplay: no such proficiency in seeds/proficiencies.json")
+	require.ErrorContains(t, err, "proficiency artistic_ability: no description in the catalogue")
+}
+
+// ADR 0021 step 16.3: a description missing for one seed id, or an empty French text, refuses the
+// start before Seed and the import (refusedStart's mocks fail any call to either), so no
+// proficiency_descriptions row is ever written.
+func TestStartup_Step16_RefusesAMissingDescriptionOrAnEmptyFrench(t *testing.T) {
+	t.Run("one id missing", func(t *testing.T) {
+		artifact := writeArtifact(t, func(d map[string]any) {
+			list := d["proficiency_descriptions"].([]any)
+			d["proficiency_descriptions"] = list[1:]
+		})
+		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+		require.ErrorContains(t, err, "proficiency_descriptions") // the schema's minItems catches it first
+	})
+	t.Run("one fr empty", func(t *testing.T) {
+		artifact := writeArtifact(t, func(d map[string]any) {
+			d["proficiency_descriptions"].([]any)[2].(map[string]any)["description"].(map[string]any)["fr"] = ""
+		})
+		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "spell catalogue "+artifact)
+	})
 }
 
 // The spellbook seed is checked against the catalogue before anything is

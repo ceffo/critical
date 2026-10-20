@@ -1,8 +1,8 @@
 // Package catalogueadpt reads the spell catalogue artifact (ADR 0021) from
 // the file at CRITICAL_CATALOGUE and validates it (steps 5.1 and 5.2): the
-// file must exist, carry a format this API knows (3, step 9.1, 4, step 10,
-// 5, step 11, 6, step 12, 7, step 13, or 8, step 14; format 1 is retired, step 9.6.3), match the committed JSON
-// Schema and hold no duplicate id. It maps the spells to catalogue.Catalogue
+// file must exist, carry the one format this API knows (9, step 16.5; the
+// formats 1 to 8 are retired and refused like any unknown format), match the
+// committed JSON Schema and hold no duplicate id. It maps the spells to catalogue.Catalogue
 // and hands the artifact's rule tables (the PHB rule tables, from format 4
 // the class and race tables, from format 5 the racial level limits, in format 6 the sphere access) on as the
 // schema-checked JSON (Artifact.RuleTables): their table rules (steps 9.3,
@@ -128,6 +128,13 @@ type artifactDTO struct {
 	Equipment json.RawMessage `json:"equipment"`
 	// Languages (format 8, step 14) is the language catalogue ruletablesadpt reads.
 	Languages json.RawMessage `json:"languages"`
+	// ProficiencyDescriptions (format 9, step 16) are the non-weapon proficiencies' texts.
+	ProficiencyDescriptions []proficiencyDescriptionDTO `json:"proficiency_descriptions"`
+}
+
+type proficiencyDescriptionDTO struct {
+	ID          string         `json:"id"`
+	Description localized.Text `json:"description"`
 }
 
 // Parse validates artifact bytes and returns the spells (see ParseArtifact).
@@ -193,6 +200,20 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 	}
 	if len(dups) > 0 {
 		return Artifact{}, fmt.Errorf("duplicate spell ids: %s", strings.Join(first(dups), ", "))
+	}
+	seenProf := make(map[string]bool, len(a.ProficiencyDescriptions))
+	out.ProficiencyDescriptions = make([]catalogue.ProficiencyDescription, 0, len(a.ProficiencyDescriptions))
+	for _, p := range a.ProficiencyDescriptions {
+		if seenProf[p.ID] {
+			dups = append(dups, p.ID)
+			continue
+		}
+		seenProf[p.ID] = true
+		out.ProficiencyDescriptions = append(out.ProficiencyDescriptions,
+			catalogue.ProficiencyDescription{ID: p.ID, Description: p.Description.Clean()})
+	}
+	if len(dups) > 0 {
+		return Artifact{}, fmt.Errorf("duplicate proficiency description ids: %s", strings.Join(first(dups), ", "))
 	}
 	return Artifact{Catalogue: out, RuleTables: a.RuleTables, Equipment: a.Equipment, Languages: a.Languages}, nil
 }

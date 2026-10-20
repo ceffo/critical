@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -48,6 +49,8 @@ type tables struct {
 	// artifact's format and version.
 	spells    map[string]spellsvc.Spell
 	catalogue *catalogueVersion
+	// profDescs are the catalogue's proficiency descriptions (ADR 0021 step 16), in the artifact's order.
+	profDescs []catalogue.ProficiencyDescription
 
 	// items (every piece of equipment, ADR 0033) belong to a character:
 	// keyed by the character and the id, so two characters may hold the same

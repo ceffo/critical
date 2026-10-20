@@ -53,7 +53,7 @@ const unauthenticated = `{"code":"unauthenticated","error":"authentication requi
 // 401 (the service mocks would fail on any call).
 func TestGate_Step6_2_NoSessionIs401(t *testing.T) {
 	h, _ := newRouter(t)
-	for _, p := range []string{"/api/character", "/api/spells?q=armor", "/api/spells/names", "/api/nope"} {
+	for _, p := range []string{"/api/character", "/api/spells?q=armor", "/api/spells/names", "/api/proficiencies/tumbling/description", "/api/nope"} {
 		rec := anon(h, "GET", p)
 		assert.Equal(t, http.StatusUnauthorized, rec.Code, p)
 		assert.JSONEq(t, unauthenticated, rec.Body.String(), p)

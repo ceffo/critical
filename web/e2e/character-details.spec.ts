@@ -94,7 +94,7 @@ test("character details: view, edit with a field error, save, reload", async ({
   );
   await editor.getByTestId("proficiency-save").click();
   await expect(editor).toHaveCount(0);
-  await expect(combatLog(page)).toContainText("Languages: 1 → 3");
+  await expect(combatLog(page)).toContainText("Languages: + Elvish, + Gnomish");
   await page.getByTestId("details-trigger").click();
   await expect(pop.getByText("Common, Elvish, Gnomish")).toBeVisible();
   await expect(pop.getByTestId("details-language-slots")).toHaveText(

@@ -1478,7 +1478,9 @@
       "change": "{{name}} {{from}} → {{to}}",
       "weaponText": "Weapon proficiency slots: {{changes}}",
       "specialized": "{{name}} {{from}} → {{to}} (specialization)",
-      "languages": "Languages: {{from}} → {{to}}"
+      "languages": "Languages: {{changes}}",
+      "languageAdded": "+ {{name}}",
+      "languageRemoved": "− {{name}}"
     },
     "skillPoints": {
       "text": "Skill points: {{changes}}",

@@ -263,6 +263,37 @@ describe("entryText", () => {
     expect(entryText(entry("attack", payload, "server"), t)).toBe(want);
   });
 
+  // ADR 0037 step 18: a proficiencies entry names the languages gained and lost, in the player's
+  // language, from the language catalogue (the code when it has none); no change, no language line.
+  it("names the languages a proficiencies entry gains and loses", async () => {
+    const catalogue = [
+      { code: "elvish", name: { en: "Elvish", fr: "Elfique" } },
+      { code: "dwarvish", name: { en: "Dwarvish", fr: "Nain" } },
+    ];
+    const picks = [{ id: "tumbling", slots: 1 }];
+    const withLanguages = (before: string[], after: string[]) =>
+      entry("proficiencies", {
+        before: { nonweapon: picks, languages: before },
+        after: { nonweapon: picks, languages: after },
+      });
+    const text = async (lng: string, before: string[], after: string[]) =>
+      entryText(
+        withLanguages(before, after),
+        await makeT(lng),
+        undefined,
+        inventoryNamer([], [], lng, catalogue),
+      );
+    expect(await text("fr", ["common", "dwarvish"], ["common", "elvish"])).toBe(
+      "Langues : + Elfique, − Nain",
+    );
+    expect(await text("en", ["common"], ["common", "elvish", "gnome"])).toBe(
+      "Languages: + Elvish, + gnome",
+    );
+    expect(
+      await text("fr", ["common", "elvish"], ["elvish", "common"]),
+    ).not.toContain("Langues");
+  });
+
   // ADR 0023 step 12: the weapon, its ammunition and a used item are named by id in the player's
   // language while the inventory has them; a removed one keeps its recorded name.
   it("names the weapon, the ammunition and the item from the inventory", async () => {

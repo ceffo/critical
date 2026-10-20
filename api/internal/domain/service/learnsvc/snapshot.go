@@ -31,6 +31,9 @@ type addRecord struct {
 	SpellID    string           `json:"spellId"`
 	SpellLevel int              `json:"spellLevel"`
 	Origin     spellbook.Origin `json:"origin"`
+	// GrantLevel is the realized level whose free spell this is (step
+	// 20.8); absent for another add.
+	GrantLevel int `json:"grantLevel,omitempty"`
 }
 
 // record is the payload of a spell_learn entry, the roll's breakdown in the

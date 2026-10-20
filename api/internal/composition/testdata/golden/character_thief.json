@@ -42,7 +42,8 @@
           "grants": {
             "weaponSlots": 0,
             "nonWeaponSlots": 0,
-            "skillPoints": 30
+            "skillPoints": 30,
+            "freeSpells": []
           }
         },
         {
@@ -52,7 +53,8 @@
           "grants": {
             "weaponSlots": 0,
             "nonWeaponSlots": 0,
-            "skillPoints": 30
+            "skillPoints": 30,
+            "freeSpells": []
           }
         }
       ],
@@ -60,7 +62,8 @@
       "toSpend": {
         "weaponSlots": 0,
         "nonWeaponSlots": 0,
-        "skillPoints": 0
+        "skillPoints": 0,
+        "freeSpells": []
       }
     },
     "specializes": false,

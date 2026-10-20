@@ -26,7 +26,7 @@
       "realizedAbove": "Niveau {{realized}} acquis, l'XP donne le niveau {{target}}",
       "realizedAboveHint": "Annulez le jet ou corrigez l'XP.",
       "grantsTitle": "Le niveau {{level}} apporte",
-      "toSpendHint": "Emplacements et points de talent pas encore dépensés",
+      "toSpendHint": "Emplacements, points de talent et sorts gratuits pas encore pris",
       "toSpendTitle": "À dépenser",
       "gained": "+{{what}}",
       "grant": {
@@ -35,16 +35,17 @@
         "nonWeaponSlots_one": "{{count}} emplacement de compétence",
         "nonWeaponSlots_other": "{{count}} emplacements de compétence",
         "skillPoints_one": "{{count}} point de talent",
-        "skillPoints_other": "{{count}} points de talent"
+        "skillPoints_other": "{{count}} points de talent",
+        "freeSpell": "1 sort gratuit, niv. {{spellLevel}}"
       },
       "choose": "Choisir",
       "spend": "Dépenser",
       "open": {
         "weapon": "Choisir les maîtrises d’armes",
         "nonWeapon": "Choisir les compétences",
-        "skillPoints": "Dépenser les points de talent"
+        "skillPoints": "Dépenser les points de talent",
+        "freeSpell": "Choisir le sort gratuit de niveau {{spellLevel}} dans la recherche de sorts"
       },
-      "dismiss": "Fermer",
       "dismissTitle": "Fermer ce que le niveau apporte",
       "dieErrors": {
         "out_of_range": "Saisissez un dé de 1 à {{die}}.",
@@ -1022,7 +1023,9 @@
       "learned": "Appris : d100 {{roll}} ≤ {{chance}} %",
       "failed": "Échec : d100 {{roll}} > {{chance}} %, à retenter au niveau {{level}}",
       "add": "Ajouter",
-      "addTitle": "Écrire ce sort dans le grimoire sans jet (don du MJ, entraînement, correction)"
+      "addTitle": "Écrire ce sort dans le grimoire sans jet (don du MJ, entraînement, correction)",
+      "free": "Sort gratuit du niveau {{level}}",
+      "addFreeTitle": "Écrire ce sort dans le grimoire comme sort gratuit du niveau {{level}}, sans jet"
     }
   },
   "result": {
@@ -1466,7 +1469,8 @@
     "learn": {
       "learned": "Appris : {{spell}} (d100 {{roll}} ≤ {{chance}} %)",
       "failed": "Échec : {{spell}} (d100 {{roll}} > {{chance}} %), à retenter au niveau {{level}}",
-      "added": "Ajouté au grimoire : {{spell}} (sans jet)"
+      "added": "Ajouté au grimoire : {{spell}} (sans jet)",
+      "addedFree": "Sort gratuit du niveau {{level}} : {{spell}} (sans jet)"
     },
     "turn": {
       "text": "Renvoi des morts-vivants ({{undead}}) : {{result}}, {{roll}}",
@@ -1974,6 +1978,8 @@
     "spell_level_above_class": "Niveau de sort au-delà de ce que la classe peut apprendre.",
     "spellbook_level_full": "Le grimoire contient déjà le maximum de sorts de ce niveau pour cette Intelligence.",
     "spell_learn_failed_at_level": "Sort raté à ce niveau : à retenter au niveau suivant.",
+    "no_free_spell_owed": "Ce niveau ne doit aucun sort gratuit.",
+    "free_spell_wrong_level": "Le sort gratuit de ce niveau est d'un autre niveau de sort.",
     "cannot_turn_undead": "Ce prêtre ne peut pas encore repousser ce mort-vivant.",
     "class_cannot_turn": "Cette classe ne repousse pas les morts-vivants.",
     "end_cause_required": "Ce sort agit quand il prend fin : dites si vous l'avez terminé ou s'il a été dissipé."

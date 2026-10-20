@@ -79,3 +79,16 @@ func (s *service) Module() domain.Module {
 		}, nil),
 	}}
 }
+
+// LevelReached is the level a level_up entry's payload (record) reached: a
+// level taken in the app (ADR 0030 step 20.8 reads them).
+func LevelReached(payload json.RawMessage) (int, error) {
+	var r record
+	if err := json.Unmarshal(payload, &r); err != nil {
+		return 0, fmt.Errorf("decode level_up payload: %w", err)
+	}
+	if r.Level < 1 {
+		return 0, fmt.Errorf("decode level_up payload: level %d", r.Level)
+	}
+	return r.Level, nil
+}

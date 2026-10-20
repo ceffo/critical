@@ -3,6 +3,7 @@ package charactersvc_test
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // tx runs the body in the caller's context and counts the transactions.
@@ -41,8 +43,26 @@ type hpLedger map[int64]int
 
 func (h hpLedger) HPTotal(_ context.Context, id int64) (int, error) { return h[id], nil }
 
+// freeSpells answers the levels each character took in the app and the free
+// spells its spellbook holds (ADR 0030 step 20.8), and counts the reads.
+type freeSpells struct {
+	taken   map[int64][]int
+	claimed map[int64][]spellbook.FreeSpell
+	reads   int
+}
+
+func (f *freeSpells) LevelsTaken(_ context.Context, id int64) ([]int, error) {
+	f.reads++
+	return slices.Clone(f.taken[id]), nil
+}
+
+func (f *freeSpells) Claimed(_ context.Context, id int64) ([]spellbook.FreeSpell, error) {
+	return f.claimed[id], nil
+}
+
 type env struct {
 	hp       hpLedger
+	free     *freeSpells
 	armour   *wornArmour
 	svc      charactersvc.SVC
 	reader   *mocks.MockReader
@@ -64,10 +84,11 @@ func newEnvWithBook(t *testing.T, book charactersvc.ProficiencyBook) *env {
 	e := &env{
 		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: newRules(t),
 		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{}, armour: &wornArmour{columns: map[int64]string{}}, hp: hpLedger{},
+		free: &freeSpells{taken: map[int64][]int{}, claimed: map[int64][]spellbook.FreeSpell{}},
 	}
 	svc, err := charactersvc.New(charactersvc.Deps{
 		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Armour: e.armour, HP: e.hp,
-		Proficiencies: book,
+		Proficiencies: book, FreeSpells: e.free,
 	})
 	require.NoError(t, err)
 	e.svc = svc
@@ -78,6 +99,7 @@ func TestNew_NilDependency(t *testing.T) {
 	full := charactersvc.Deps{
 		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: newRules(t),
 		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t), Armour: &wornArmour{}, HP: hpLedger{},
+		FreeSpells: &freeSpells{},
 	}
 	without := map[string]func(d *charactersvc.Deps){
 		"reader":   func(d *charactersvc.Deps) { d.Reader = nil },
@@ -88,6 +110,7 @@ func TestNew_NilDependency(t *testing.T) {
 		"sessions": func(d *charactersvc.Deps) { d.Sessions = nil },
 		"armour":   func(d *charactersvc.Deps) { d.Armour = nil },
 		"hp":       func(d *charactersvc.Deps) { d.HP = nil },
+		"free":     func(d *charactersvc.Deps) { d.FreeSpells = nil },
 	}
 	for name, drop := range without {
 		d := full

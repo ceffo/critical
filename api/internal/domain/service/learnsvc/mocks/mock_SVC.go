@@ -84,6 +84,67 @@ func (_c *MockSVC_Add_Call) RunAndReturn(run func(context.Context, int64, string
 	return _c
 }
 
+// AddFreeSpell provides a mock function with given fields: ctx, characterID, spellID, grantLevel
+func (_m *MockSVC) AddFreeSpell(ctx context.Context, characterID int64, spellID string, grantLevel int) (*learnsvc.Added, error) {
+	ret := _m.Called(ctx, characterID, spellID, grantLevel)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddFreeSpell")
+	}
+
+	var r0 *learnsvc.Added
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) (*learnsvc.Added, error)); ok {
+		return rf(ctx, characterID, spellID, grantLevel)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) *learnsvc.Added); ok {
+		r0 = rf(ctx, characterID, spellID, grantLevel)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*learnsvc.Added)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, int) error); ok {
+		r1 = rf(ctx, characterID, spellID, grantLevel)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AddFreeSpell_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddFreeSpell'
+type MockSVC_AddFreeSpell_Call struct {
+	*mock.Call
+}
+
+// AddFreeSpell is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - spellID string
+//   - grantLevel int
+func (_e *MockSVC_Expecter) AddFreeSpell(ctx interface{}, characterID interface{}, spellID interface{}, grantLevel interface{}) *MockSVC_AddFreeSpell_Call {
+	return &MockSVC_AddFreeSpell_Call{Call: _e.mock.On("AddFreeSpell", ctx, characterID, spellID, grantLevel)}
+}
+
+func (_c *MockSVC_AddFreeSpell_Call) Run(run func(ctx context.Context, characterID int64, spellID string, grantLevel int)) *MockSVC_AddFreeSpell_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AddFreeSpell_Call) Return(_a0 *learnsvc.Added, _a1 error) *MockSVC_AddFreeSpell_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AddFreeSpell_Call) RunAndReturn(run func(context.Context, int64, string, int) (*learnsvc.Added, error)) *MockSVC_AddFreeSpell_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)

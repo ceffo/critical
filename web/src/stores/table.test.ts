@@ -130,7 +130,7 @@ const expected: Record<(typeof STATE_FAMILIES)[number], Slice[]> = {
   skill_armor: ["character", "skills"],
   skill_points: ["character", "skills"],
   spell_slots: ["slots"],
-  spellbook: ["spellInfo"],
+  spellbook: ["character", "spellInfo"],
   weapons: [
     "ac",
     "buffs",

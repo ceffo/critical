@@ -123,6 +123,7 @@ function App() {
           <Identity
             onOpenXp={() => focus("xp")}
             onOpenSkills={() => focus("act")}
+            onOpenSpells={() => focus("spells")}
           />
           <div className="flex flex-col gap-3">
             {/* The AC beside the HP (ADR 0035 item 4): smaller, no label, opening its breakdown. */}

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { FreeSpell } from "@/types/character";
 import type { Spell, SpellFilterOptions } from "@/types/spells";
 import {
   getSpellFilterOptions,
@@ -9,6 +10,11 @@ import {
 
 /** The lookup opens on Wizard spells. */
 export const LOOKUP_DEFAULT: SpellQuery = { ...NO_QUERY, cls: "wizard" };
+
+/** The query a free spell's link opens (ADR 0030 step 20.8): the wizard spells of its spell level. */
+export function freeSpellQuery(fs: FreeSpell): SpellQuery {
+  return { ...LOOKUP_DEFAULT, levels: [fs.spellLevel] };
+}
 
 /**
  * Spell Lookup state. A module-level store: search, filters, loaded rows and the
@@ -27,9 +33,16 @@ interface LookupStore {
   error: string | null;
   selectedId: string | null;
   options: SpellFilterOptions | null;
+  /** The free spell the lookup was opened for (ADR 0030 step 20.8): Ajouter claims it while set.
+   * Changing the class or the levels, or Reset, drops it. */
+  grant: FreeSpell | null;
 
   setQuery: (patch: Partial<SpellQuery>) => void;
   reset: () => void;
+  /** Opens the lookup on a free spell's spell level, its Ajouter claiming that free spell. */
+  openFreeSpell: (fs: FreeSpell) => void;
+  /** Drops the free spell being claimed (claimed, or no longer owed). */
+  clearGrant: () => void;
   /** First page of the current query, unless its rows are already shown. Selects the first row. */
   search: () => Promise<void>;
   /** Next page of the current rows' query, if any is left. */
@@ -66,9 +79,10 @@ export const useLookupStore = create<LookupStore>((set, get) => ({
   error: null,
   selectedId: null,
   options: null,
+  grant: null,
 
   setQuery: (patch) =>
-    set(({ query }) => {
+    set(({ query, grant }) => {
       const next = { ...query, ...patch };
       // The dropdown lists spheres in Priest mode and schools otherwise: its value
       // means nothing in the other mode.
@@ -76,13 +90,25 @@ export const useLookupStore = create<LookupStore>((set, get) => ({
         next.school = "";
         next.sphere = "";
       }
-      return { query: next };
+      // The free spell is claimed among its own spell level's wizard spells only.
+      const keep =
+        grant !== null &&
+        next.cls === query.cls &&
+        next.levels.join() === query.levels.join();
+      return { query: next, grant: keep ? grant : null };
     }),
 
   reset: () => {
     pendingMove = 0;
-    set({ query: LOOKUP_DEFAULT, selectedId: null });
+    set({ query: LOOKUP_DEFAULT, selectedId: null, grant: null });
   },
+
+  openFreeSpell: (fs) => {
+    pendingMove = 0;
+    set({ query: freeSpellQuery(fs), grant: fs });
+  },
+
+  clearGrant: () => set({ grant: null }),
 
   search: async () => {
     const { query } = get();

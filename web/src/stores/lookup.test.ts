@@ -7,7 +7,13 @@ vi.mock("@/api/spells_db", async (orig) => ({
   searchSpells: (...a: unknown[]) => searchSpells(...a),
 }));
 
-import { LOOKUP_DEFAULT, isQuerySet, queryKey, useLookupStore } from "./lookup";
+import {
+  LOOKUP_DEFAULT,
+  freeSpellQuery,
+  isQuerySet,
+  queryKey,
+  useLookupStore,
+} from "./lookup";
 
 const spell = (id: string) => ({ id }) as Spell;
 
@@ -22,6 +28,42 @@ beforeEach(() => {
     loading: false,
     error: null,
     selectedId: null,
+    grant: null,
+  });
+});
+
+// ADR 0030 step 20.8: a free spell's link opens the wizard spells of its spell level, and Ajouter
+// claims it there only.
+describe("free spell link", () => {
+  const third = { level: 3, spellLevel: 2 };
+
+  it("filters to the wizard spells of the free spell's spell level", () => {
+    expect(freeSpellQuery(third)).toEqual({
+      ...LOOKUP_DEFAULT,
+      cls: "wizard",
+      levels: [2],
+    });
+    useLookupStore.getState().setQuery({ q: "fire", cls: "all" });
+    useLookupStore.getState().openFreeSpell(third);
+    expect(useLookupStore.getState().query).toEqual(freeSpellQuery(third));
+    expect(useLookupStore.getState().grant).toEqual(third);
+  });
+
+  it("keeps the claim while searching by name or school, drops it when the levels or class change or on Reset", () => {
+    const s = useLookupStore.getState();
+    s.openFreeSpell(third);
+    s.setQuery({ q: "mirror", school: "illusion" });
+    expect(useLookupStore.getState().grant).toEqual(third);
+    s.setQuery({ levels: [2, 3] });
+    expect(useLookupStore.getState().grant).toBeNull();
+
+    s.openFreeSpell(third);
+    s.setQuery({ cls: "all" });
+    expect(useLookupStore.getState().grant).toBeNull();
+
+    s.openFreeSpell(third);
+    s.reset();
+    expect(useLookupStore.getState().grant).toBeNull();
   });
 });
 

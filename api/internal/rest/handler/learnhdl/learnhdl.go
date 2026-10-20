@@ -27,6 +27,7 @@ type learner interface {
 
 type adder interface {
 	Add(ctx context.Context, characterID int64, spellID string) (*learnsvc.Added, error)
+	AddFreeSpell(ctx context.Context, characterID int64, spellID string, grantLevel int) (*learnsvc.Added, error)
 }
 
 // RegisterRoutes registers the learn and add endpoints.
@@ -38,6 +39,14 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc learnsvc.SVC) {
 // LearnBody is the request: the catalogue id of the spell to learn.
 type LearnBody struct {
 	SpellID string `json:"spellId"`
+}
+
+// AddBody is the add's request: the spell, and for a level's free spell
+// (step 20.8) the realized level that grants it (absent or 0: Ajouter, step
+// 20.6).
+type AddBody struct {
+	SpellID    string `json:"spellId"`
+	GrantLevel int    `json:"grantLevel"`
 }
 
 // ResultDTO is the roll's full breakdown (step 20.2).
@@ -54,12 +63,16 @@ type ResultDTO struct {
 }
 
 // AddedDTO is the entry a roll-free add wrote (step 20.6): the spell, its
-// level and the entry's origin (step 20.5).
+// level and the entry's origin (step 20.5), with, for a free spell (step
+// 20.8), the realized level that granted it.
 type AddedDTO struct {
 	SpellID    string `json:"spellId"`
 	SpellLevel int    `json:"spellLevel"`
 	// Origin is "learned", "given", "starting" or "level_grant".
 	Origin string `json:"origin"`
+	// GrantLevel is the granting realized level of a level_grant entry,
+	// absent otherwise.
+	GrantLevel int `json:"grantLevel,omitempty"`
 }
 
 // spellBody decodes the request's body, the spell's catalogue id.
@@ -76,20 +89,36 @@ func spellBody(r *http.Request) (string, error) {
 	return b.SpellID, nil
 }
 
-// Add handles POST /api/character/spellbook/add {spellId}: the spell written
-// in the spellbook with no roll, refused like Learn but for a failure's block.
+// Add handles POST /api/character/spellbook/add {spellId, grantLevel?}: the
+// spell written in the spellbook with no roll, refused like Learn but for a
+// failure's block; with grantLevel, the free spell that level owes (step
+// 20.8).
 func Add(charID CharacterIDFunc, svc adder) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		spellID, err := spellBody(r)
-		if err != nil {
-			return err
+		var b AddBody
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&b); err != nil {
+			return render.BadRequestError("invalid JSON body")
 		}
-		res, err := svc.Add(r.Context(), charID(r), spellID)
+		if b.SpellID == "" {
+			return render.BadRequestError("spellId is required")
+		}
+		if b.GrantLevel < 0 {
+			return render.BadRequestError("grantLevel must not be negative")
+		}
+		var res *learnsvc.Added
+		var err error
+		if b.GrantLevel > 0 {
+			res, err = svc.AddFreeSpell(r.Context(), charID(r), b.SpellID, b.GrantLevel)
+		} else {
+			res, err = svc.Add(r.Context(), charID(r), b.SpellID)
+		}
 		if err != nil {
 			return err
 		}
 		render.OK(r.Context(), w, AddedDTO{
-			SpellID: res.SpellID, SpellLevel: res.SpellLevel, Origin: string(res.Origin),
+			SpellID: res.SpellID, SpellLevel: res.SpellLevel, Origin: string(res.Origin), GrantLevel: res.GrantLevel,
 		})
 		return nil
 	}

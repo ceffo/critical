@@ -12,7 +12,7 @@ Critical is a hosted AD&D 2.5 character sheet engine for a gaming group. Invited
 critical/
   api/              ← Go backend (ALL game logic lives here)
   web/              ← React frontend (presentation only)
-  seeds/            ← JSON seed data (spell_effects.json, spellbook.json, character.json, weapons.json, skills.json); spells and the PHB rule tables come from the catalogue artifact (ADR 0021, `just catalogue`)
+  seeds/            ← JSON seed data (spell_effects.json, spellbook.json, starting_spellbook.json, character.json, weapons.json, skills.json); spells and the PHB rule tables come from the catalogue artifact (ADR 0021, `just catalogue`)
   docs/             ← Agent context files (this folder)
   Dockerfile        ← production image: the API serving the web app (docs/backend.md, "Production image")
   docker-compose.yml

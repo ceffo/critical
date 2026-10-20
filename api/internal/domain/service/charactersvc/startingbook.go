@@ -17,36 +17,34 @@ import (
 // FieldSpellbook + "." + its id.
 const FieldSpellbook = "spellbook"
 
-// The refusals of a starting spellbook, the codes of step 20.1 and of the Learn endpoint (the web
-// words them as it words those), plus CodeUnknown for a spell the catalogue does not hold.
+// The refusals of a starting spellbook: step 20.1's (spellbook.Check), the codes of the Learn
+// endpoint (the web words them as it words those), plus CodeUnknown for a spell the catalogue
+// does not hold, and CodeNoSpellbook for a class without a spellbook.
 const (
 	// CodeNoSpellbook is a spellbook entered for a class without one.
 	CodeNoSpellbook = "no_spellbook"
 	// CodeNotAWizardSpell is a catalogue spell that is not a wizard spell.
-	CodeNotAWizardSpell = "not_a_wizard_spell"
+	CodeNotAWizardSpell = string(spellbook.RefusedNotWizard)
 	// CodeAlreadyInSpellbook is a spell entered twice.
-	CodeAlreadyInSpellbook = "already_in_spellbook"
+	CodeAlreadyInSpellbook = string(spellbook.RefusedAlreadyIn)
 	// CodeSpellLevelAboveClass is a spell level above the class's highest at the starting level.
-	CodeSpellLevelAboveClass = "spell_level_above_class"
+	CodeSpellLevelAboveClass = string(spellbook.RefusedAboveClass)
 	// CodeSpellLevelAboveIntelligence is a spell level above PHB Table 4's for the Intelligence.
-	CodeSpellLevelAboveIntelligence = "spell_level_above_intelligence"
+	CodeSpellLevelAboveIntelligence = string(spellbook.RefusedAboveIntelligence)
 	// CodeSpellbookLevelFull is a spell over Table 4's maximum number of spells of its level.
-	CodeSpellbookLevelFull = "spellbook_level_full"
+	CodeSpellbookLevelFull = string(spellbook.RefusedLevelFull)
 )
 
-// Spell is what the starting spellbook reads of a catalogue spell: its level and whether it is a
-// wizard spell.
-type Spell struct {
-	Level  int
-	Wizard bool
-}
-
-// SpellCatalogue reads the spell catalogue.
+// SpellCatalogue reads the spell catalogue and the starting spellbook's data.
 type SpellCatalogue interface {
 	// Spell is the catalogue spell id; ok is false when the catalogue holds none.
-	Spell(id string) (s Spell, ok bool)
+	Spell(id string) (s spellbook.Spell, ok bool)
 	// WizardSpells are the catalogue's wizard spells, by spell level then id.
 	WizardSpells() []SpellOption
+	// StartingSpells are the catalogue ids a new character of class is offered pre-ticked in
+	// his starting spellbook (step 20.7), wizard spells of the catalogue, in the data's order;
+	// none for a class without.
+	StartingSpells(class string) []string
 }
 
 // SpellOption is one catalogue wizard spell the creation offers: its id and spell level.
@@ -132,23 +130,17 @@ func (s *service) startingBook(c *Character, ids []string) (*StartingSpellbook, 
 }
 
 // startingRefusal is the code refusing spell id after the entries kept (counts: kept by spell
-// level), "" with its spell level when it is kept: step 20.1's refusals in the Learn endpoint's
-// order, the class's highest level read at the starting level.
+// level), "" with its spell level when it is kept: step 20.1's check (spellbook.Check) with the
+// class's highest level read at the starting level (b.ClassMaxSpellLevel, from the slots), not
+// the class's table maximum the Learn endpoint passes.
 func (s *service) startingRefusal(b *StartingSpellbook, id string, kept []string, counts map[int]int) (string, int) {
-	sp, ok := s.spells.Spell(id)
-	switch {
-	case !ok:
-		return CodeUnknown, 0
-	case !sp.Wizard:
-		return CodeNotAWizardSpell, 0
-	case slices.Contains(kept, id):
-		return CodeAlreadyInSpellbook, 0
-	case sp.Level > b.ClassMaxSpellLevel:
-		return CodeSpellLevelAboveClass, 0
-	case sp.Level > b.IntMaxSpellLevel:
-		return CodeSpellLevelAboveIntelligence, 0
-	case !b.NoMaximum && counts[sp.Level] >= b.MaxSpellsPerLevel:
-		return CodeSpellbookLevelFull, 0
+	sp, found := s.spells.Spell(id)
+	limits := spellbook.Limits{
+		ClassMaxSpellLevel: b.ClassMaxSpellLevel, IntMaxSpellLevel: b.IntMaxSpellLevel,
+		MaxSpellsPerLevel: b.MaxSpellsPerLevel, NoMaximum: b.NoMaximum,
+	}
+	if r := spellbook.Check(limits, sp, found, slices.Contains(kept, id), counts[sp.Level]); r != spellbook.Fits {
+		return string(r), 0
 	}
 	return "", sp.Level
 }

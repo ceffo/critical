@@ -79,6 +79,8 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	book, err := spellbookadpt.ReadSeed(seedsDir, cat)
 	require.NoError(t, err)
 	assert.NotEmpty(t, book)
+	_, err = spellbookadpt.ReadStartingSeed(seedsDir, cat)
+	require.NoError(t, err, "the starting spellbook's pre-ticks are wizard spells of the catalogue")
 
 	for _, name := range []string{"character.json", "weapons.json", "items.json", "skills.json"} {
 		var doc json.RawMessage

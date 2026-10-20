@@ -4,11 +4,9 @@
 package composition
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
@@ -193,6 +191,12 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err != nil {
 		return nil, err
 	}
+	// The starting spellbook's pre-ticked spells (ADR 0030 step 20.7) are
+	// data, checked against the catalogue the same way.
+	startingSeed, err := spellbookadpt.ReadStartingSeed(cfg.SeedsDir, cat)
+	if err != nil {
+		return nil, err
+	}
 	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueEquipment); err != nil {
 		return nil, fmt.Errorf("seed: %w", err)
 	}
@@ -254,7 +258,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Armour: wornArmour{itemDAL}, Languages: languages, Proficiencies: proficiencies, HP: logSvc,
 		// A new mage's or bard's starting spellbook (ADR 0030 step 20.7) reads
 		// the catalogue and is written in the creation's transaction.
-		Spells: newCreationSpells(cat), Book: st.Spellbook,
+		Spells: spellbookadpt.NewCreation(cat, startingSeed), Book: st.Spellbook,
 		FreeSpells: freeSpells{log: logSvc, book: spellbook},
 	})
 	if err := bs.add(bs.Character, err); err != nil {
@@ -465,42 +469,6 @@ func (b *BackingServices) Close(ctx context.Context) error {
 
 // roundReader satisfies actionlogsvc.Rounds from buffdal. It runs inside the
 // recording transaction (buffdal follows the ctx transaction).
-// creationSpells is the spell catalogue as the creation's starting spellbook
-// reads it (charactersvc.SpellCatalogue): each spell's level and whether it is
-// a wizard spell, and the wizard spells it offers.
-type creationSpells struct {
-	byID   map[string]catalogue.Spell
-	wizard []charactersvc.SpellOption
-}
-
-// wizardClass is the catalogue's class of a wizard spell.
-const wizardClass = "Wizard"
-
-func newCreationSpells(cat catalogue.Catalogue) creationSpells {
-	out := creationSpells{byID: cat.ByID(), wizard: []charactersvc.SpellOption{}}
-	for id, s := range out.byID {
-		if s.Class == wizardClass {
-			out.wizard = append(out.wizard, charactersvc.SpellOption{ID: id, Level: s.Level})
-		}
-	}
-	slices.SortFunc(out.wizard, func(a, b charactersvc.SpellOption) int {
-		return cmp.Or(cmp.Compare(a.Level, b.Level), cmp.Compare(a.ID, b.ID))
-	})
-	return out
-}
-
-func (c creationSpells) Spell(id string) (charactersvc.Spell, bool) {
-	s, ok := c.byID[id]
-	if !ok {
-		return charactersvc.Spell{}, false
-	}
-	return charactersvc.Spell{Level: s.Level, Wizard: s.Class == wizardClass}, true
-}
-
-func (c creationSpells) WizardSpells() []charactersvc.SpellOption {
-	return slices.Clone(c.wizard)
-}
-
 type roundReader struct{ dal BuffStore }
 
 func (r roundReader) GetRound(ctx context.Context, characterID int64) (int, error) {

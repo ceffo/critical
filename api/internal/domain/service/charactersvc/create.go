@@ -581,8 +581,8 @@ type ClassOption struct {
 
 // SpellbookOption is a class's starting spellbook in the creation options
 // (ADR 0030 step 20.7): the catalogue spells it is offered with, pre-ticked
-// and removable (ruletablesvc.StartingSpells the catalogue holds as wizard
-// spells; none for a bard).
+// and removable (the starting spellbook seed's, SpellCatalogue.StartingSpells;
+// none for a bard).
 type SpellbookOption struct {
 	StartingSpells []string
 }
@@ -811,16 +811,10 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 }
 
 // spellbookOption is class's starting spellbook option: its pre-ticked
-// spells the catalogue holds as wizard spells (a catalogue without one offers
-// it unticked rather than a spell Create refuses).
+// spells, read from the data (the seed is checked against the catalogue at
+// start-up, so each is a wizard spell Create takes).
 func (s *service) spellbookOption(class string) *SpellbookOption {
-	out := &SpellbookOption{StartingSpells: []string{}}
-	for _, id := range ruletablesvc.StartingSpells(class) {
-		if sp, ok := s.spells.Spell(id); ok && sp.Wizard {
-			out.StartingSpells = append(out.StartingSpells, id)
-		}
-	}
-	return out
+	return &SpellbookOption{StartingSpells: append([]string{}, s.spells.StartingSpells(class)...)}
 }
 
 // Draft is the answer to a creation draft (Service.Draft).

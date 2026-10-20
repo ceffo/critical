@@ -18,9 +18,9 @@ import (
 )
 
 // spellCatalogue is a spell catalogue by id.
-type spellCatalogue map[string]charactersvc.Spell
+type spellCatalogue map[string]spellbook.Spell
 
-func (c spellCatalogue) Spell(id string) (charactersvc.Spell, bool) {
+func (c spellCatalogue) Spell(id string) (spellbook.Spell, bool) {
 	s, ok := c[id]
 	return s, ok
 }
@@ -38,9 +38,17 @@ func (c spellCatalogue) WizardSpells() []charactersvc.SpellOption {
 	return out
 }
 
+// StartingSpells are the starting spellbook seed's pre-ticked spells (seeds/starting_spellbook.json).
+func (c spellCatalogue) StartingSpells(class string) []string {
+	if class == "mage" {
+		return []string{"read_magic", "detect_magic"}
+	}
+	return nil
+}
+
 // wizardCatalogue holds wizard spells of levels 1 to 9 (PHB) and a priest spell.
 func wizardCatalogue() spellCatalogue {
-	w := func(level int) charactersvc.Spell { return charactersvc.Spell{Level: level, Wizard: true} }
+	w := func(level int) spellbook.Spell { return spellbook.Spell{Level: level, Wizard: true} }
 	return spellCatalogue{
 		"read_magic": w(1), "detect_magic": w(1), "sleep": w(1), "light": w(1), "magic_missile": w(1),
 		"mirror_image": w(2), "fireball": w(3), "stoneskin": w(4), "cloudkill": w(5), "death_fog": w(6),
@@ -209,7 +217,7 @@ func TestCreate_Step20_7_LimitsAtTheStartingLevel(t *testing.T) {
 			want := tt.want
 			if want == nil { // the per-level maximum: six 1st-level spells, the seventh refused
 				for _, id := range []string{"x1", "x2"} {
-					e.spells[id] = charactersvc.Spell{Level: 1, Wizard: true}
+					e.spells[id] = spellbook.Spell{Level: 1, Wizard: true}
 				}
 				want = spellRefusal("x2", charactersvc.CodeSpellbookLevelFull)
 			}
@@ -295,9 +303,9 @@ func TestCreate_Step20_7_RefusedForAClassWithoutASpellbook(t *testing.T) {
 }
 
 // ADR 0030 step 20.7: the creation options offer a mage's starting spellbook with Read Magic and
-// Detect Magic pre-ticked (DMG p. 40), a bard's with nothing, no spellbook to the other classes,
-// and the catalogue's wizard spells by level; a pre-ticked spell the catalogue does not hold is
-// not offered.
+// Detect Magic pre-ticked (DMG p. 40), as the starting spellbook's data has them (the port; the
+// seed's check against the catalogue is spellbookadpt's), a bard's with nothing, no spellbook to
+// the other classes, and the catalogue's wizard spells by level.
 func TestOptions_Step20_7_ReadMagicAndDetectMagicPreTickedForAMage(t *testing.T) {
 	e := newEnv(t)
 	e.rules.EXPECT().RaceAllows(mock.Anything, mock.Anything).Return(true, nil).Maybe()
@@ -315,13 +323,19 @@ func TestOptions_Step20_7_ReadMagicAndDetectMagicPreTickedForAMage(t *testing.T)
 	}, books)
 	assert.Equal(t, e.spells.WizardSpells(), got.WizardSpells)
 	assert.Equal(t, charactersvc.SpellOption{ID: "detect_magic", Level: 1}, got.WizardSpells[0])
+}
 
-	delete(e.spells, "read_magic")
-	got, err = e.svc.CreationOptions(context.Background())
+// ADR 0030 steps 20.1 and 20.7: the two class maximums stay apart. A level 1 mage's derived
+// spellbook keeps the class table's highest spell level (9th: what Learn and Ajouter check), while
+// his starting spellbook's is the highest of his slots at the starting level (1st), so a 2nd-level
+// spell is refused at creation only.
+func TestDraft_Step20_7_StartingClassMaxIsTheSlotsNotTheTable(t *testing.T) {
+	e := newBookEnv(t, int14)
+	expectClassAt(e, "mage", 0, 1, mage1Slots)
+	d, err := e.svc.Draft(context.Background(), elminster(0, "mirror_image"), nil)
 	require.NoError(t, err)
-	for _, c := range got.Classes {
-		if c.Class == "mage" {
-			assert.Equal(t, []string{"detect_magic"}, c.Spellbook.StartingSpells)
-		}
-	}
+	require.NotNil(t, d.Character)
+	assert.Equal(t, 9, d.Character.Derived.Spellbook.ClassMaxSpellLevel, "the table's, for Learn")
+	assert.Equal(t, 1, d.Spellbook.ClassMaxSpellLevel, "the slots', at the starting level")
+	assert.Equal(t, []error{spellRefusal("mirror_image", charactersvc.CodeSpellLevelAboveClass)}, d.Refusals)
 }

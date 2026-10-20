@@ -28,9 +28,15 @@ the default branch.
 
 ## Launching agents
 
-Preferred when `HERDR_ENV=1`: every developer and reviewer is an **interactive Claude Code session in
-its own herdr tab**, so the user can watch and answer permission prompts (see the `herdr` skill for
-the CLI). Agent names `dev-<id>`, `rev-<id>` (unique among live agents; sanitise the item id).
+When `HERDR_ENV=1`, **every agent you spawn** (developer, reviewer, scoper, designer, tester, an
+ad-hoc session the user asks for) is an **interactive Claude Code session in its own herdr tab**, so
+the user can watch and answer permission prompts (see the `herdr` skill for the CLI); never the Agent
+tool, autonomous scopers included (user, 2026-10-20: "within herdr, spawns are always in a tab").
+Agent names `dev-<id>`, `rev-<id>`, `scoper-<slug>`, `designer-<slug>`, `tester-<id>` (unique among
+live agents; sanitise the item id): `close-agent.sh` closes only those prefixes, and fleet-watch
+treats `scoper-*`/`designer-*` as user-facing. An ad-hoc session the user drives (a skill run, a
+books session) takes a `scoper-` name, or goes in `<wt>/supervisor/user-facing-agents` at launch so
+its questions to the user don't wake you.
 Briefs live in `<wt>/briefs/`, reports in `<wt>/reports/`, outside the repo.
 
 ```sh
@@ -148,7 +154,7 @@ linked by Linear and moved to In Review.
 1. A brief file `<wt>/briefs/scope-<slug>.md`: `mode: interactive` (the user asked) or `autonomous`
    (you found it), the **initial description** verbatim (the user's words, or the evidence you hold),
    related items/PRs, and `report: <wt>/reports/scoper-<slug>.md`.
-2. A tab (or Agent-tool subagent for autonomous mode) on the main checkout, `--agent scoper --model
+2. A tab named `scoper-<slug>` (autonomous mode too) on the main checkout, `--agent scoper --model
    opus`, prompted to "Read and carry out the brief in <path>". Interactive: tell the user which tab
    to open; you keep running the other work meanwhile.
 3. **Wait on the report file's mtime, never on the agent's status** (a scoper waiting for the user

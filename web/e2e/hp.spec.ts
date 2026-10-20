@@ -173,3 +173,40 @@ test("below 0 HP: the condition and the dying zone show, and HP stops at the flo
     await snap(page, `hp-floor-${vp.width}x${vp.height}`);
   }
 });
+
+test("Quick HP: text typed while a change's refetch is pending is kept", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const box = page.getByRole("group", { name: "HP change" });
+  const before = await currentHp(page);
+
+  // The journal read after the change is held until the test releases it.
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let held!: () => void;
+  const heldSeen = new Promise<void>((r) => (held = r));
+  await page.route("**/api/log*", async (route) => {
+    held();
+    await gate;
+    await route.continue().catch(() => {});
+  });
+
+  await box.getByLabel("Amount").fill("2");
+  await box.getByLabel("Source").fill("e2e first");
+  await box.getByRole("button", { name: "Damage", exact: true }).click();
+  await heldSeen;
+  await expect.poll(() => currentHp(page)).toBe(before - 2);
+
+  // The next change is typed while the first one is still reading.
+  await box.getByLabel("Amount").fill("5");
+  await box.getByLabel("Source").fill("e2e second");
+  release();
+  await page.unroute("**/api/log*");
+  await expect(logEntry(page, "e2e first")).toBeVisible();
+  await expect(box.getByLabel("Amount")).toHaveValue("5");
+  await expect(box.getByLabel("Source")).toHaveValue("e2e second");
+
+  await box.getByRole("button", { name: "Damage", exact: true }).click();
+  await expect.poll(() => currentHp(page)).toBe(before - 7);
+});

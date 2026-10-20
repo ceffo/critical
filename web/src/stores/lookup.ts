@@ -52,6 +52,10 @@ export function isQuerySet(q: SpellQuery): boolean {
 // Only the latest request may write: a slow older response must not overwrite it.
 let latest = 0;
 
+// Rows of keyboard movement asked for past the last loaded row while the next page loads; applied
+// when it lands, dropped when the rows change under them.
+let pendingMove = 0;
+
 export const useLookupStore = create<LookupStore>((set, get) => ({
   query: LOOKUP_DEFAULT,
   items: [],
@@ -75,7 +79,10 @@ export const useLookupStore = create<LookupStore>((set, get) => ({
       return { query: next };
     }),
 
-  reset: () => set({ query: LOOKUP_DEFAULT, selectedId: null }),
+  reset: () => {
+    pendingMove = 0;
+    set({ query: LOOKUP_DEFAULT, selectedId: null });
+  },
 
   search: async () => {
     const { query } = get();
@@ -87,6 +94,7 @@ export const useLookupStore = create<LookupStore>((set, get) => ({
       return;
     }
     const seq = ++latest;
+    pendingMove = 0;
     set({ loading: true });
     try {
       const r = await searchSpells(query, 1);
@@ -125,19 +133,30 @@ export const useLookupStore = create<LookupStore>((set, get) => ({
         loading: false,
         error: null,
       });
+      const carried = pendingMove;
+      pendingMove = 0;
+      if (carried !== 0) get().move(carried);
     } catch (e: unknown) {
       if (seq !== latest) return;
+      pendingMove = 0;
       set({ error: (e as Error).message, loading: false });
     }
   },
 
-  select: (id) => set({ selectedId: id }),
+  select: (id) => {
+    pendingMove = 0;
+    set({ selectedId: id });
+  },
 
   move: (delta) => {
     const { items, selectedId, total } = get();
     if (items.length === 0) return;
     const at = items.findIndex((s) => s.id === selectedId);
-    const next = Math.max(0, Math.min(items.length - 1, at + delta));
+    // Moves already asked for past the loaded rows count from where the selection will be.
+    const want = at + pendingMove + delta;
+    const next = Math.max(0, Math.min(items.length - 1, want));
+    // Past the loaded rows with more to come: the rest of the move waits for the next page.
+    pendingMove = want > next && items.length < total ? want - next : 0;
     set({ selectedId: items[next].id });
     if (next >= items.length - 5 && items.length < total) void get().loadMore();
   },

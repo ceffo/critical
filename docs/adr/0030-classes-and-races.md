@@ -490,9 +490,18 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     [ADR 0037](0037-proficiencies.md) step 10, on implementation: a save that leaves the total, or
     one skill's points, over its limit **and** above what it was is refused, `over_budget`; any
     other stays a warning, and points left to spend are the reminder `skill_points_to_spend`.)_
+    _(As built, 2026-10-20: the refusal is `charactersvc.SkillPointsWithinBudget` at the realized
+    level, the total first, then each skill in Table 26's order; a `*domain.BudgetError`
+    (`domain.ErrOverBudget`), HTTP 409 `over_budget` with `field` (`skillPoints`, or
+    `skillPoints.<skill>` for the cap), `spent` and `limit`. It runs on the spend before any write
+    or log entry, on its preview (`POST /api/skills/points/preview`), and at creation and its
+    preview with nothing spent before. Seeded and stored points are not checked: an overspend
+    there keeps the warnings. The reminder `skill_points_to_spend` is ADR 0037 step 11's, not
+    built yet.)_
     The player spends points **after creation** too (the triage ruling: "the player spends
     them"): `PUT /api/skills/points` sets each skill's total, checked as at creation
-    (`charactersvc.ValidSkillPoints`), the budget at the realized level still only a warning. It is
+    (`charactersvc.ValidSkillPoints`), the budget at the realized level still only a warning
+    (_amended by ADR 0037 step 10: refused when it grows an overspend, as built above_). It is
     a `skill_points` entry of the action log with a `skill_points` snapshot (the points before and
     after), so it is undone and redone like any move; the same points as stored log nothing. The
     web edits it from the Skills tab (its "Spend" button). Storing totals loses no budget rule (the
@@ -514,7 +523,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     17's, 20 points at level 1 and 15 a level after (PHB p.42; accepted by the user in triage,
     2026-10-18); the PHB gives the bard no per-skill limit, so none is checked. _(Amended by
     [ADR 0037](0037-proficiencies.md) step 10, on implementation: refused over budget when the
-    total grows, as step 17's.)_ The computed
+    total grows, as step 17's. As built 2026-10-20 by step 17's check, the total only.)_ The computed
     percentage replaces the sheet's in [ADR 0014](0014-skill-checks.md) step 3. The other bard
     abilities stay as they are.
     _(As built, 2026-10-18)_ Step 17's machinery serves the bard, generalised by class rather than

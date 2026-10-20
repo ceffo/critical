@@ -120,6 +120,13 @@ the **bard skill** and **thief skill** checks (d100 under the percentage) and th
 check** (d20 under the score in effect). [ADR 0014](docs/adr/0014-skill-checks.md),
 [ADR 0028](docs/adr/0028-ability-checks.md). _Avoid_: test (fr).
 
+**Skills** (fr: compétences):
+The umbrella for what a character knows how to do and spends its slots and points on: the
+weapon and non-weapon proficiencies, a fighter's specialization, the bard and thief skills with
+their skill points, and the languages beyond the native one and Common. One module owns their
+rules, their edits and their undo (the Skills tab, `skillsvc`).
+[ADR 0037](docs/adr/0037-proficiencies.md) amendment of 2026-10-20. _Avoid_: spends.
+
 **Proficiency** (fr: compétence diverse):
 A non-weapon proficiency with its ability and modifier. **Bard skills** and **thief skills**
 (fr: talents de barde, talents de voleur) are the rogue percentages derived from the entered

@@ -61,8 +61,6 @@ export interface LevelUpRecord {
 }
 
 export interface LevelUpResult extends LevelUpRecord {
-  /** ADR 0037 step 15: what the level reached grants beyond hit points. The card shows the pending level's `grants` (the same value: a roll only takes the first pending level), not this one. */
-  grants: LevelGrants;
   /** The levels still owed after this one. */
   pending: PendingLevel[];
 }

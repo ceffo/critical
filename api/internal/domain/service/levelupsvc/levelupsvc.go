@@ -16,7 +16,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
-	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // ErrNotPending is a roll for a level that is not the lowest pending one:
@@ -79,9 +78,6 @@ type Result struct {
 	Manual bool
 	// HPMaxBefore and HPMaxAfter are the max HP around the roll.
 	HPMaxBefore, HPMaxAfter int
-	// Grants is what the level reached grants beyond hit points (ADR 0037
-	// step 15): the pending level's, as the character read gives it.
-	Grants skills.LevelGrants
 	// Pending are the levels still owed after this one.
 	Pending []charactersvc.PendingLevel
 }
@@ -162,8 +158,6 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 			return err
 		}
 		res.Pending = pending[1:]
-		// ADR 0037 step 15: the answer says what the level grants.
-		res.Grants = pending[0].Grants
 		res.HPMaxBefore, res.HPMaxAfter = c.HPMax, c.HPMax+res.Gain
 		before := realized{RealizedLevel: c.Derived.RealizedLevel, HPMax: c.HPMax}
 		after := realized{RealizedLevel: res.Level, HPMax: res.HPMaxAfter}

@@ -85,14 +85,14 @@ func TestDetails_ZeroAgeIsPassedOnToBeRejected(t *testing.T) {
 	h, m := newRouter(t)
 	zero := 0
 	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{Age: &zero}).
-		Return(charactersvc.Details{}, &domain.FieldError{Field: "age", Message: detailssvc.CodeOutOfRange})
+		Return(charactersvc.Details{}, &domain.FieldError{Field: "age", Message: charactersvc.CodeOutOfRange})
 	assert.Equal(t, http.StatusBadRequest, do(h, "PATCH", "/api/character/details", `{"age":0}`).Code)
 }
 
 func TestDetails_FieldErrorNamesTheField(t *testing.T) {
 	h, m := newRouter(t)
 	m.details.EXPECT().Update(mock.Anything, int64(1), mock.Anything).
-		Return(charactersvc.Details{}, &domain.FieldError{Field: "age", Message: detailssvc.CodeOutOfRange})
+		Return(charactersvc.Details{}, &domain.FieldError{Field: "age", Message: charactersvc.CodeOutOfRange})
 	rec := do(h, "PATCH", "/api/character/details", `{"age":-1}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.JSONEq(t, `{"error":"out_of_range","field":"age","code":"invalid_input"}`, rec.Body.String())

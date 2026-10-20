@@ -26,6 +26,18 @@ func LanguageSlots(languages []string, native string) int {
 	return n
 }
 
+// KnownLanguages is languages with the codes the book does not hold left out, in a new slice:
+// during a rolling deploy (ADR 0024) the release before keeps writing free-text words after the
+// languages migration ran, and a word that is no catalogue code is not shown (ADR 0032 step 8.1).
+// Without a catalogue (every book is empty before format 8) nothing is left out, so the codes stay.
+func KnownLanguages(book LanguageBook, languages []string) []string {
+	out := append([]string{}, languages...)
+	if book == nil || len(book.All()) == 0 {
+		return out
+	}
+	return slices.DeleteFunc(out, func(l string) bool { return !book.Has(l) })
+}
+
 // ValidLanguages is ADR 0032 step 4's check on a list of languages, at creation and on every
 // save: each code non-empty (CodeEmpty), in the catalogue (CodeUnknown), once (CodeDuplicate),
 // a refusal being a *domain.FieldError on field languages; then the native language of the

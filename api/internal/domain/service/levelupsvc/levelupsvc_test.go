@@ -351,10 +351,9 @@ func TestRestorer_WritesTheRealizedLevelBack(t *testing.T) {
 	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`nope`)))
 }
 
-// ADR 0037 step 15: "The pending level-up prompt and the level-up answer carry what the level
-// grants beyond hit points." The answer gives the rolled level's grants as the character read
-// gave them (charactersvc computes them, TestGrantsAt_Step15_GrantsSlotsAndPoints), not the next
-// pending level's.
+// ADR 0037 step 15: the grants are read from the pending levels (charactersvc computes them,
+// TestGrantsAt_Step15_GrantsSlotsAndPoints); the answer carries no grants of its own, only the
+// levels still owed with theirs.
 func TestLevelUp_Step15_GrantsSlotsAndPoints(t *testing.T) {
 	f := newFixture(t)
 	four := d6(4)
@@ -369,6 +368,5 @@ func TestLevelUp_Step15_GrantsSlotsAndPoints(t *testing.T) {
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 4})
 	require.NoError(t, err)
-	assert.Equal(t, four.Grants, got.Grants)
 	assert.Equal(t, []charactersvc.PendingLevel{five}, got.Pending)
 }

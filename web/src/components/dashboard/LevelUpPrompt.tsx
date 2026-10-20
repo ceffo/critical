@@ -55,7 +55,7 @@ export function LevelUpPrompt({
 
   // Step 15: the level just taken says what it grants while it is still realized (an undo takes
   // it back). The grants are the pending level's, as the server sent them (the roll's answer
-  // carries the same value: Roll refuses any level but the first pending).
+  // carries none of its own).
   const summary = taken &&
     realizedLevel >= taken.level &&
     hasGrants(taken.grants) && (

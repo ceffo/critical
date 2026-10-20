@@ -121,13 +121,9 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 		// worn is the none column); the budget at the realized level. The
 		// figures are the skills module's (ADR 0037 step 17).
 		d.SkillArmor = ruletablesvc.SkillArmorFor(c.Class, armour)
-		f, err := skills.PointsFiguresOf(rules, skills.PointsSheet{
-			Class: c.Class, Race: c.Race, Dex: c.Dex, Level: realized, Armor: d.SkillArmor, Points: c.SkillPoints,
-		})
-		if err != nil {
-			return Derived{}, fmt.Errorf("derive: %w", err)
+		if err := d.SetSkillFigures(rules, c, c.SkillPoints); err != nil {
+			return Derived{}, err
 		}
-		d.ThiefSkills, d.BardSkills, d.SkillBudget, d.SkillPoints = f.Thief, f.Bard, f.Budget, f.Points
 	}
 	if ruletablesvc.Backstabs(c.Class) {
 		if d.Backstab, err = rules.BackstabFor(realized); err != nil {
@@ -264,4 +260,20 @@ func spellSlots(c *Character, level int, rules Rules) (map[int]int, error) {
 		return nil, fmt.Errorf("derive %s spell slots: %w", class, err)
 	}
 	return slots, nil
+}
+
+// SetSkillFigures sets d's skill percentages, budget and points from points
+// entered on c, at d's realized level and worn skill armour (SkillArmor must
+// be set): the one place those four fields are filled, for the derivation and
+// for a draft of the points (ADR 0030 steps 17 and 18; the figures are the
+// skills module's, ADR 0037 step 17).
+func (d *Derived) SetSkillFigures(t skills.SkillTables, c *Character, points map[string]int) error {
+	f, err := skills.PointsFiguresOf(t, skills.PointsSheet{
+		Class: c.Class, Race: c.Race, Dex: c.Dex, Level: d.RealizedLevel, Armor: d.SkillArmor, Points: points,
+	})
+	if err != nil {
+		return fmt.Errorf("skill figures: %w", err)
+	}
+	d.ThiefSkills, d.BardSkills, d.SkillBudget, d.SkillPoints = f.Thief, f.Bard, f.Budget, f.Points
+	return nil
 }

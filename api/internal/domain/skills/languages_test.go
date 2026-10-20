@@ -137,3 +137,13 @@ func TestValidLanguages_Step4_CodesCheckedAndTheNativeKept(t *testing.T) {
 	_, err = skills.ValidLanguages((*ruletablesvc.Languages)(nil), "elf", []string{"elvish"}, []string{"draconic"})
 	require.Error(t, err)
 }
+
+// ADR 0032 step 8.1 during a rolling deploy: a free-text word the release before wrote after the
+// migration is not a code, so a read leaves it out; the codes stay, and without a catalogue
+// (before format 8) nothing is left out.
+func TestKnownLanguages_Step8_1_AWordThatIsNoCatalogueCodeIsNotRead(t *testing.T) {
+	in := []string{"elvish", "Elfique", "common", "Orque"}
+	assert.Equal(t, []string{"elvish", "common"}, skills.KnownLanguages(phbLanguages(t), in))
+	assert.Equal(t, in, skills.KnownLanguages((*ruletablesvc.Languages)(nil), in))
+	assert.Equal(t, []string{"elvish", "Elfique", "common", "Orque"}, in, "the list is not changed in place")
+}

@@ -65,7 +65,7 @@ func newEnvWithBook(t *testing.T, book charactersvc.ProficiencyBook) *env {
 		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: newRules(t),
 		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{}, armour: &wornArmour{columns: map[int64]string{}}, hp: hpLedger{},
 	}
-	svc, err := charactersvc.NewWithConfig(charactersvc.DefaultConfig(), charactersvc.Deps{
+	svc, err := charactersvc.New(charactersvc.Deps{
 		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Armour: e.armour, HP: e.hp,
 		Proficiencies: book,
 	})

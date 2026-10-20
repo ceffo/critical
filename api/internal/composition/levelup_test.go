@@ -96,7 +96,6 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, got.Gain)
 	assert.True(t, got.Fixed)
-	assert.Equal(t, grants16, got.Grants)
 	lu, maxHP, current = levelUpOf(t, bs, id)
 	assert.Equal(t, charactersvc.LevelUp{Pending: owed[1:], ToSpend: at16}, lu)
 	assert.Equal(t, 87, maxHP)

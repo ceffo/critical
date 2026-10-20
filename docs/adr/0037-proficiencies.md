@@ -390,8 +390,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
     `TestProficiencies_Step14_CreationWithWeaponPicks`, composition). The web's step 5 ("Compétences
     et armes") shows the weapon editor above the non-weapon one, both on the checks endpoint's
     pools; the weapon picks go in the create request and are cleared when the class changes.)_
-15. **The level-up says what it grants.** The pending level-up prompt and the level-up answer
-    ([ADR 0030](0030-classes-and-races.md) step 7) carry what the level grants beyond hit points:
+15. **The level-up says what it grants.** The pending level-up prompt
+    ([ADR 0030](0030-classes-and-races.md) step 7), through its pending levels (the level-up answer
+    returns the levels still owed, each with its grants), carries what the level grants beyond hit points:
     the weapon and non-weapon slots gained (available at the level minus available at the level
     below) and, for a rogue, the skill points gained (thief 30, bard 15). The web links to the
     editors; nothing blocks the level-up or waits for the spend.
@@ -399,14 +400,15 @@ writes `Test<name>` and adds the prefix here in the same PR.
     at 3, a thief's and a bard's points).
     _(As built, 2026-10-20: `charactersvc.GrantsAt` (`ruletablesvc.SlotsGainedAt`,
     `ruletablesvc.SkillPointsGainedAt`) fills each pending level's `grants` {weaponSlots,
-    nonWeaponSlots, skillPoints} on every read; the roll's answer carries the rolled level's
-    `grants`. User ruling (triage, 2026-10-19): informative, never blocking; the grants follow the
+    nonWeaponSlots, skillPoints} on every read. The roll's answer carries no `grants` of its own (changed 2026-10-20, architecture review 2: the card
+    reads each pending level's, which is the same value, a roll taking only the first pending level; the
+    field was dropped from the answer, the service result and the web type). User ruling (triage, 2026-10-19): informative, never blocking; the grants follow the
     realized level; while anything is left to spend a reminder stays on the character card with
     links to the editors: `derived.levelUp.toSpend` (`charactersvc.ToSpend`: each pool's left
     slots and the skill points left, 0 when none or over budget), so an undone level-up takes its
     grants back with the realized level. Tests: `TestGrantsAt_Step15_GrantsSlotsAndPoints` (each
     group, levels 1 to 6), `TestToSpend_Step15_LeftCountsNeverNegative` (charactersvc),
-    `TestLevelUp_Step15_GrantsSlotsAndPoints` (levelupsvc: the answer carries the rolled level's),
+    `TestLevelUp_Step15_GrantsSlotsAndPoints` (levelupsvc: the answer's remaining pending levels carry theirs),
     `TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain` and
     `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP` (composition: roll, undo and redo move
     `toSpend`). The web: after the hit-point step the card shows "Le niveau N apporte" with

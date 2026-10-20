@@ -296,15 +296,10 @@ func (s *service) withPoints(char *charactersvc.Character, draft map[string]int)
 	if err := skills.SkillPointsWithinBudget(char.Class, char.Derived.RealizedLevel, char.SkillPoints, next); err != nil {
 		return err
 	}
-	f, err := skills.PointsFiguresOf(s.tables, skills.PointsSheet{
-		Class: char.Class, Race: char.Race, Dex: char.Dex, Level: char.Derived.RealizedLevel,
-		Armor: char.Derived.SkillArmor, Points: next,
-	})
-	if err != nil {
+	if err := char.Derived.SetSkillFigures(s.tables, char, next); err != nil {
 		return fmt.Errorf("preview skill points: %w", err)
 	}
 	char.SkillPoints = next
-	char.Derived.ThiefSkills, char.Derived.BardSkills, char.Derived.SkillBudget, char.Derived.SkillPoints = f.Thief, f.Bard, f.Budget, f.Points
 	return nil
 }
 

@@ -5,6 +5,7 @@ import {
   openDashboard,
   openWorkspace,
   recordHp,
+  expectUndoOn,
   apiCall,
   reloadSettled,
 } from "./helpers";
@@ -80,16 +81,20 @@ test("experience: add with the bonus, edit, delete, then undo each", async ({
 
   // Each write is a transaction (ADR 0015 step 4): the global undo pops the delete, the edit, then
   // the add, and the ledger follows.
-  const undo = async () => {
+  // Ctrl+Z is dropped while the page is still reading what the last write changed (the button is
+  // disabled then), so wait for the entry on top to be the one meant, and Undo to be enabled.
+  const undo = async (top: string) => {
+    await expectUndoOn(page, top);
+    await expect(page.getByTestId("undo")).toBeEnabled();
     await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
     await page.keyboard.press("ControlOrMeta+z");
   };
-  await undo();
+  await undo("XP removed: Troll bridge");
   await expect(row.getByTestId("xp-row-total")).toHaveText("1,000");
   await expect.poll(() => xpTotal(page)).toBe(before + 1000);
-  await undo();
+  await undo("XP edited: Troll bridge");
   await expect(row.getByTestId("xp-row-total")).toHaveText("1,326");
-  await undo();
+  await undo("XP +1,326: Troll bridge");
   await expect.poll(() => xpTotal(page)).toBe(before);
   await expect(row).toHaveCount(0);
 
@@ -212,6 +217,7 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
     }),
   ).toBe(true);
   await reloadSettled(page);
+  await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
   const prompt = page.getByTestId("level-up");
   await expect(prompt.getByTestId("level-up-title")).toHaveText(
     "Level 2 reached",
@@ -235,6 +241,8 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
     "Level 3 reached",
   );
   await expect(cardLevel).toHaveText("Level 2");
+  // The card's level and the prompt come with the roll's answer; the HP panel is read again after it.
+  await expect.poll(async () => (await hp(page))[1]).toBeGreaterThan(6);
   const [, rolledMax] = await hp(page);
   const gain = rolledMax - 6;
   expect(gain).toBeGreaterThanOrEqual(1);

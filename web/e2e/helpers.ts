@@ -224,6 +224,8 @@ export async function addBuff(page: Page, buff: NewBuff) {
  * Undo button pops it. */
 export async function undoEntry(page: Page, text: string) {
   const entry = logEntry(page, text);
+  // The journal has read the entry: Undo sends the top this page last read.
+  await expect(entry).toBeVisible();
   await page.getByTestId("undo").click();
   await expect(entry).toHaveAttribute("data-status", "voided");
 }

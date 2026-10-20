@@ -187,6 +187,12 @@ export interface PicksInput {
   weapon?: WeaponPickInput[];
 }
 
+/** The body of `PUT /api/proficiencies` and its preview: the picks by pool and the languages (ADR
+ * 0037 step 18: the codes, the native one kept by the server); a pool absent is left as stored. */
+export interface ProficienciesInput extends PicksInput {
+  languages?: string[];
+}
+
 /** The answer of `PUT /api/proficiencies` and `POST /api/proficiencies/preview`. */
 export interface ProficienciesAnswer {
   proficiencySlots: ProficiencySlots | null;

@@ -25,4 +25,14 @@ describeKind("proficiencies", fixtures, {
       text: "Emplacements de compétence : Pistage 0 → 2 · Emplacements de maîtrise d’arme : Épée longue 1 → 2 (spécialisation)",
     },
   },
+  languages: {
+    en: { text: "Proficiency slots: Tumbling 1 → 2 · Languages: 2 → 3" },
+    fr: {
+      text: "Emplacements de compétence : Acrobatie 1 → 2 · Langues : 2 → 3",
+    },
+  },
+  languagesOnly: {
+    en: { text: "Languages: 3 → 1" },
+    fr: { text: "Langues : 3 → 1" },
+  },
 });

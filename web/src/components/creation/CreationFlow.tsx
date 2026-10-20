@@ -150,8 +150,9 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   const xp = draftXp(options, draft);
 
-  // The server's preview of the draft on the identity step and the review (ADR 0034): the warnings
-  // and the derived figures. Every change of the draft asks again after a short rest; a reply to an
+  // The server's preview of the draft on the proficiency and identity steps and the review (ADR
+  // 0034): the warnings, the derived figures and the refusal a Créer would meet, shown at its field
+  // (the languages' and the picks' overspend on the proficiency step, ADR 0037 steps 10 and 18). Every change of the draft asks again after a short rest; a reply to an
   // older draft (or one landing after the player left these steps) is dropped by the gate.
   const [answered, setPreview] = useState<{
     key: string;
@@ -177,7 +178,8 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     answered && answered.key === bodyKey && bodyKey !== ""
       ? answered.state
       : { data: null, error: null };
-  const previewing = step === "identity" || step === "review";
+  const previewing =
+    step === "proficiencies" || step === "identity" || step === "review";
   useEffect(() => {
     if (!previewing || bodyKey === "") return;
     const current = previewGate.open();

@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Check,
   DiceFive,
-  Lock,
   PencilSimple,
   Prohibit,
   Warning,
@@ -14,7 +12,6 @@ import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { ALIGNMENT_CODES } from "@/lib/characterDetails";
 import { classOf, type StepId } from "@/lib/creationFlow";
-import { raceLanguages } from "@/lib/languages";
 import { heightField, unitsFor, weightField } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
 import { skillName } from "@/journal/words";
@@ -67,13 +64,12 @@ function rangeOf(
 
 /**
  * The identity (ADR 0034 step 3.5): name, alignment as a 3x3 grid (the ones the class refuses marked;
- * picking one shows the refusal and blocks Suivant), sex, languages (the native one locked, the race's
- * list bright, the others dimmed; the server's warning over the Intelligence count, never blocking),
- * height, weight and age each with the server's roll, range and dice, hair and eyes. Every verdict is
+ * picking one shows the refusal and blocks Suivant), sex (the languages are the proficiency step's,
+ * ADR 0034 step 3.5 as amended by ADR 0037 step 18), height, weight and age each with the server's roll, range and dice, hair and eyes. Every verdict is
  * the server's: the class's list from the options, the warnings from the preview.
  */
 export function IdentityStep(props: StepProps) {
-  const { options, draft, update, errorFor, preview } = props;
+  const { options, draft, update, errorFor } = props;
   const { t } = useTranslation();
   const cls = classOf(options, draft.cls);
   const allowed = cls?.alignments ?? [];
@@ -85,9 +81,6 @@ export function IdentityStep(props: StepProps) {
   const refused =
     draft.details.alignment !== "" &&
     !allowed.includes(draft.details.alignment);
-  // ADR 0037 step 6: the languages beyond the native one and Common spend the non-weapon pool the
-  // proficiency step showed; the preview's figures, worded.
-  const pool = preview.data?.derived.proficiencySlots?.nonWeapon;
   const alignmentKeys = radioKeys(
     ALIGNMENT_CODES,
     draft.details.alignment,
@@ -222,42 +215,6 @@ export function IdentityStep(props: StepProps) {
         />
       </Group>
 
-      {(options.languages ?? []).length > 0 && (
-        <Group
-          title={t("details.fields.languages")}
-          className="col-span-2"
-          testId="language-chips"
-          right={
-            pool && (
-              <span
-                className={cn(
-                  "flex items-center gap-1 text-body",
-                  pool.spent > pool.available
-                    ? "text-warning"
-                    : "text-ink-muted",
-                )}
-                data-testid="languages-slots"
-              >
-                {pool.spent > pool.available && (
-                  <Warning aria-hidden weight="bold" className="size-4" />
-                )}
-                {t("creation.identity.languageSlots", {
-                  count: pool.languages,
-                  spent: pool.spent,
-                  available: pool.available,
-                })}
-              </span>
-            )
-          }
-        >
-          <LanguageChips {...props} />
-          <FieldError
-            id="new-character-details.languages"
-            text={errorFor("details.languages")}
-          />
-        </Group>
-      )}
-
       <Group title={t("creation.identity.build")} className="col-span-2">
         <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4">
           {(["height", "weight", "age"] as const).map((f) => (
@@ -287,85 +244,6 @@ export function IdentityStep(props: StepProps) {
         );
       })}
     </div>
-  );
-}
-
-/** The catalogue as chips: the native language locked, the race's list bright, the others dimmed. */
-function LanguageChips({ options, draft, update }: StepProps) {
-  const { t } = useTranslation();
-  const name = useLanguageNames(options);
-  const { native, list } = raceLanguages(options, draft.race);
-  const catalogue = options.languages ?? [];
-  const picked = draft.details.languages;
-  const ordered = [
-    ...catalogue.filter((l) => list.includes(l.code)),
-    ...catalogue.filter((l) => !list.includes(l.code)),
-  ].filter((l) => l.code !== native);
-  const raceName = draft.race ? t(`details.races.${draft.race}`) : "";
-  return (
-    <>
-      <div
-        className="flex flex-wrap items-center gap-1.5"
-        role="group"
-        aria-label={t("details.fields.languages")}
-      >
-        {native && (
-          <span
-            className="flex min-h-7 items-center gap-1.5 rounded-md bg-raised px-2 py-1 text-body"
-            title={t("details.languageNative")}
-            data-testid="language-native"
-          >
-            <Lock aria-hidden className="size-3.5 shrink-0" />
-            {name(native)}
-            <span className="text-label text-ink-muted">
-              {t("creation.identity.native")}
-            </span>
-          </span>
-        )}
-        {ordered.map((l) => {
-          const on = picked.includes(l.code);
-          const inList = list.includes(l.code);
-          return (
-            <button
-              key={l.code}
-              type="button"
-              role="checkbox"
-              aria-checked={on}
-              onClick={() =>
-                update({
-                  details: {
-                    languages: on
-                      ? picked.filter((c) => c !== l.code)
-                      : [...picked, l.code],
-                  },
-                })
-              }
-              className={cn(
-                "flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                on ? "chip-chosen" : "chip hover:bg-raised-hover",
-                !inList && !on && "text-ink-muted",
-              )}
-            >
-              {on && (
-                <Check
-                  aria-hidden
-                  weight="bold"
-                  className="size-3.5 shrink-0"
-                />
-              )}
-              {name(l.code)}
-            </button>
-          );
-        })}
-      </div>
-      {raceName && (
-        <p className="text-label text-ink-muted">
-          {t("creation.identity.languagesLead", {
-            race: raceName,
-          })}
-        </p>
-      )}
-    </>
   );
 }
 

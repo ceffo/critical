@@ -15,12 +15,11 @@ import {
   codeOrEmpty,
   hasAlignmentWarning,
   rangeWarnings,
-  toBody,
   toDraft,
+  toPatch,
   type Draft,
 } from "@/lib/characterDetails";
 import { fetchCreationChoices, fetchCreationOptions } from "@/api/characters";
-import { LanguagePicker } from "@/components/characters/LanguagePicker";
 import { IdentityRoll } from "@/components/dashboard/IdentityRoll";
 import { useLanguageNames } from "@/lib/useLanguageNames";
 import {
@@ -295,7 +294,7 @@ function DetailsForm({
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    const { body, ageInvalid, invalid } = toBody(
+    const { body, ageInvalid, invalid } = toPatch(
       draft,
       i18n.language,
       character,
@@ -486,21 +485,6 @@ function DetailsForm({
         {input("hair")}
         {input("eyes")}
       </div>
-      {options && (options.languages ?? []).length > 0 && (
-        <div className="flex min-w-0 flex-col gap-1 text-body">
-          <span className="text-label text-muted-foreground">
-            {t("details.fields.languages")}
-          </span>
-          <LanguagePicker
-            idPrefix="details-languages"
-            options={options}
-            race={character.raceCode}
-            picked={draft.languages}
-            onChange={(languages) => setDraft((d) => ({ ...d, languages }))}
-          />
-          {message("languages")}
-        </div>
-      )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onDone}>
           {t("details.cancel")}

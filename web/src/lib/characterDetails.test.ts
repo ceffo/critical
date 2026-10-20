@@ -5,6 +5,7 @@ import {
   codeOrEmpty,
   hasAlignmentWarning,
   toBody,
+  toPatch,
   toDraft,
 } from "./characterDetails";
 
@@ -117,6 +118,11 @@ describe("character details draft", () => {
       toBody({ ...toDraft(details), languages: ["gnoll", "nope"] }).body
         .languages,
     ).toEqual(["gnoll", "nope"]);
+  });
+  it("the card's patch carries no languages (ADR 0037 step 18: the Skills tab saves them)", () => {
+    const { body } = toPatch(toDraft(details));
+    expect(body).not.toHaveProperty("languages");
+    expect(body.hair).toBe(details.hair);
   });
   it("copies the character's languages into the draft", () => {
     const draft = toDraft(details);

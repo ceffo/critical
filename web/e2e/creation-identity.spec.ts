@@ -59,38 +59,33 @@ test("identity step: forbidden alignment, a roll dropped after a race change, th
   page,
 }) => {
   page.on("dialog", (d) => void d.accept());
-  const { step, next } = await toIdentity(page);
+  // The languages are picked on the proficiency step (ADR 0034 step 3.5 as amended by ADR 0037
+  // step 18), next to the non-weapon picks whose pool they spend: five spend five slots.
+  const { step, next } = await toIdentity(page, "fr", undefined, async (s) => {
+    const chips = s.getByTestId("language-chips");
+    for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])
+      await chips.getByRole("checkbox", { name, exact: true }).click();
+    await expect(s.getByTestId("languages-slots")).toContainText(
+      "5 emplacements",
+    );
+    await expect(s.getByTestId("proficiency-pool-languages")).toHaveText(
+      "Langues : 5 emplacements",
+    );
+  });
   const details = step.getByTestId("new-character-details");
+  await expect(step.getByTestId("language-chips")).toHaveCount(0);
   await details.getByLabel("Nom", { exact: true }).fill("Lyra");
   await details
     .getByRole("radiogroup", { name: "Sexe" })
     .getByRole("radio", { name: "Femme" })
     .click();
-  // A forbidden alignment: refused at the field, Suivant blocked, the server's figures still come
-  // (five languages spend five non-weapon slots).
+  // A forbidden alignment: refused at the field, Suivant blocked.
   await details
     .getByTestId("alignment-grid")
     .getByRole("radio", { name: "Loyal bon : interdit au barde" })
     .click();
   await expect(details.getByTestId("alignment-refusal")).toBeVisible();
   await expect(next).toBeDisabled();
-  const chips = details.getByTestId("language-chips");
-  for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])
-    await chips.getByRole("checkbox", { name, exact: true }).click();
-  await expect(details.getByTestId("languages-slots")).toContainText(
-    "5 emplacements",
-  );
-  await expect(details.getByTestId("alignment-refusal")).toBeVisible();
-  // The proficiency step's pool counts the languages picked after its picks.
-  await step
-    .getByRole("button", { name: /^Revenir à l'étape précédente/ })
-    .click();
-  await expect(step).toHaveAttribute("data-step", "proficiencies");
-  await expect(step.getByTestId("proficiency-pool-languages")).toHaveText(
-    "Langues : 5 emplacements",
-  );
-  await next.click();
-  await expect(step).toHaveAttribute("data-step", "identity");
 
   // A double click on Tirer sends one reply that counts; a race changed while the roll is in
   // flight drops the late reply.

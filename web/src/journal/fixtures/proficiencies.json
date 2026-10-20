@@ -104,5 +104,43 @@
         ]
       }
     }
+  },
+  "languages": {
+    "payload": {
+      "before": {
+        "nonweapon": [
+          {
+            "id": "tumbling",
+            "slots": 1
+          }
+        ],
+        "weapon": [],
+        "languages": ["elvish", "common"]
+      },
+      "after": {
+        "nonweapon": [
+          {
+            "id": "tumbling",
+            "slots": 2
+          }
+        ],
+        "weapon": [],
+        "languages": ["elvish", "common", "gnomish"]
+      }
+    }
+  },
+  "languagesOnly": {
+    "payload": {
+      "before": {
+        "nonweapon": [],
+        "weapon": [],
+        "languages": ["common", "orcish", "gnomish"]
+      },
+      "after": {
+        "nonweapon": [],
+        "weapon": [],
+        "languages": ["common"]
+      }
+    }
   }
 }

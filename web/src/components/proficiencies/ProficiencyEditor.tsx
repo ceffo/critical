@@ -6,24 +6,31 @@ import { previewProficiencies } from "@/api/proficiencies";
 import { Button } from "@/components/ui/button";
 import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
-import type { ProficiencySlots } from "@/types/character";
+import type { CreationOptions, ProficiencySlots } from "@/types/character";
 import type { PickInput } from "./catalogue";
-import { ProficiencyPicker, type PickerOptions } from "./ProficiencyPicker";
+import { LanguagesPool } from "./LanguagesPool";
+import { ProficiencyPicker } from "./ProficiencyPicker";
 import { usePickRefusal, type Refusal } from "./refusal";
 
 /**
- * The Skills tab's proficiency editor (ADR 0037 steps 12 and 13): the character's non-weapon
- * picks, changed at any time (a level-up, catching up, a correction) and saved in one move the
- * journal's Undo takes back. As the picks change, the server's preview answers the pools and each
- * pick's figures (it writes and logs nothing); a refusal (a pick under its cost, a save that grows
- * an overspend, step 10) is shown with the server's words and marks the figures as out of date.
+ * The Skills tab's proficiency editor (ADR 0037 steps 12, 13 and 18): the character's languages
+ * and non-weapon picks, the two spending the same pool, changed at any time (a level-up, catching
+ * up, a correction) and saved in one move the journal's Undo takes back. As they change, the
+ * server's preview answers the pools and each pick's figures (it writes and logs nothing); a
+ * refusal (a pick under its cost, a save that grows an overspend, step 10, on the picks or the
+ * languages) is shown with the server's words and marks the figures as out of date.
  */
 export function ProficiencyEditor({
   cls,
+  race,
+  languages: stored,
   slots,
   onDone,
 }: {
   cls: string;
+  /** The character's race (its native language, its PHB list) and languages as last read. */
+  race: string;
+  languages: string[];
   /** The character's pools and picks as last read (`derived.proficiencySlots`). */
   slots: ProficiencySlots;
   onDone: () => void;
@@ -31,11 +38,12 @@ export function ProficiencyEditor({
   const { t } = useTranslation();
   const save = useSkillsStore((s) => s.saveProficiencies);
   const saving = useTableStore((s) => s.busy);
-  const [options, setOptions] = useState<PickerOptions | null>(null);
+  const [options, setOptions] = useState<CreationOptions | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [picks, setPicks] = useState<PickInput[]>(() =>
     slots.picks.map((p) => ({ id: p.id, slots: p.slots })),
   );
+  const [languages, setLanguages] = useState<string[]>(() => [...stored]);
   const [figures, setFigures] = useState<ProficiencySlots>(slots);
   const [stale, setStale] = useState(false);
   const [previewError, setPreviewError] = useState<Refusal | null>(null);
@@ -53,12 +61,15 @@ export function ProficiencyEditor({
     };
   }, []);
 
-  // The live preview: the server's figures for the picks shown, asked after a short rest.
-  const key = JSON.stringify(picks);
+  // The live preview: the server's figures for the picks and languages shown, asked after a short
+  // rest.
+  const key = JSON.stringify({ nonweapon: picks, languages });
   useEffect(() => {
     let current = true;
     const timer = setTimeout(() => {
-      previewProficiencies({ nonweapon: JSON.parse(key) as PickInput[] }).then(
+      previewProficiencies(
+        JSON.parse(key) as { nonweapon: PickInput[]; languages: string[] },
+      ).then(
         (a) => {
           if (!current) return;
           if (a.proficiencySlots) setFigures(a.proficiencySlots);
@@ -80,7 +91,7 @@ export function ProficiencyEditor({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const rejected = await save({ nonweapon: picks });
+    const rejected = await save({ nonweapon: picks, languages });
     if (!rejected) {
       onDone();
       return;
@@ -137,6 +148,21 @@ export function ProficiencyEditor({
           {t("details.optionsError")}
         </p>
       )}
+      {/* ADR 0037 steps 6 and 18: the languages beyond the native one and Common spend the pool the
+          picks below spend; the slots they take are the server's preview. */}
+      {options && (
+        <LanguagesPool
+          options={options}
+          race={race}
+          picked={languages}
+          slots={figures.nonWeapon.languages}
+          error={errorFor("languages")}
+          onChange={(next) => {
+            setLanguages(next);
+            setError(null);
+          }}
+        />
+      )}
       {options ? (
         <ProficiencyPicker
           options={options}
@@ -158,6 +184,7 @@ export function ProficiencyEditor({
       {/* A refusal of a field the picker does not show (a pick no longer listed). */}
       {shown &&
         shown.field !== "nonweapon" &&
+        shown.field !== "languages" &&
         !picks.some((p) => `nonweapon.${p.id}` === shown.field) && (
           <p role="alert" className="text-label break-words text-danger">
             {wording(shown)}

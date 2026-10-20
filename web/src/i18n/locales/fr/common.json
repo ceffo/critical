@@ -1477,7 +1477,8 @@
       "text": "Emplacements de compétence : {{changes}}",
       "change": "{{name}} {{from}} → {{to}}",
       "weaponText": "Emplacements de maîtrise d’arme : {{changes}}",
-      "specialized": "{{name}} {{from}} → {{to}} (spécialisation)"
+      "specialized": "{{name}} {{from}} → {{to}} (spécialisation)",
+      "languages": "Langues : {{from}} → {{to}}"
     },
     "skillPoints": {
       "text": "Points de talent : {{changes}}",

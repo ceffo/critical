@@ -2433,8 +2433,9 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       .getByLabel(tr("Nom", "Name"), { exact: true })
       .fill("Aldéric de la Tour-d'Auvergne-Lesparre");
     // The languages over the non-weapon slots (ADR 0037 step 6): eight with the five slots picked,
-    // more than any rolled Intelligence gives; the server's refusal at the field, uncut.
-    // The preview runs once an alignment and a sex are chosen.
+    // more than any rolled Intelligence gives; the server's refusal at the field, uncut. The
+    // preview runs once an alignment and a sex are chosen; the languages are the proficiency
+    // step's (ADR 0037 step 18), where the refusal shows.
     const grid = step.getByTestId("alignment-grid");
     await grid.getByRole("radio").nth(1).click();
     await step
@@ -2442,6 +2443,14 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       .getByRole("radio")
       .nth(1)
       .click();
+    await step
+      .getByRole("button", {
+        name: new RegExp(
+          `^${tr("Revenir à l'étape précédente", "Back to the previous step")}`,
+        ),
+      })
+      .click();
+    await expect(step).toHaveAttribute("data-step", "proficiencies");
     const chips = step.getByTestId("language-chips").getByRole("checkbox");
     for (let i = 0; i < 8; i++) await chips.nth(i).click();
     const languagesError = step
@@ -2454,8 +2463,19 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       step.getByTestId("language-chips"),
       `creation languages refusal, ${lang}`,
     );
+    if (lang === "fr")
+      for (const vp of [sizes[1]!, sizes[2]!]) {
+        await page.setViewportSize(vp);
+        await snap(
+          page,
+          `creation-4b-languages-refused-fr-${vp.width}x${vp.height}`,
+        );
+      }
+    await page.setViewportSize(sizes[0]!);
+    await next.click();
+    await expect(step).toHaveAttribute("data-step", "identity");
     // The longest content: a refused alignment (its note; the preview then answers that refusal
-    // first), the eight languages and the three rolls' breakdowns.
+    // first) and the three rolls' breakdowns.
     await grid.getByRole("radio").first().click();
     await expect(step.getByTestId("alignment-refusal")).toBeVisible();
     for (const f of ["height", "weight", "age"]) {
@@ -2469,9 +2489,18 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       .fill(tr("Auburn, tressés en couronne", "Auburn, braided in a crown"));
     await audit("5-identity");
     await grid.getByRole("radio").nth(1).click();
-    // Back within the slots (the server refuses the eight): the review gets its figures.
+    // Back within the slots (the server refuses the eight), on the proficiency step: the review
+    // gets its figures.
+    await step
+      .getByRole("button", {
+        name: new RegExp(
+          `^${tr("Revenir à l'étape précédente", "Back to the previous step")}`,
+        ),
+      })
+      .click();
     for (let i = 0; i < 8; i++) await chips.nth(i).click();
     await expect(languagesError).toHaveCount(0);
+    await next.click();
     await next.click();
     await expect(step.getByTestId("review-thac0")).toHaveText(/^\d+$/);
     await audit("6-review");
@@ -2492,24 +2521,24 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
   }
 });
 
-// ADR 0032 step 4 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the card's languages, in
-// the edit (the catalogue's checkboxes, the race's list first, the refusal over the non-weapon slots
-// of ADR 0037 step 6) and in the view (the names and the slots they spend), are never cut from 1280
-// to 2560.
-test("details card: the languages picker, its refusal and its slots uncut in French, 1280 to 2560", async ({
+// ADR 0032 step 4, ADR 0037 step 18 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the
+// languages pool of the Skills tab's editor (the catalogue's checkboxes, the race's list first, the
+// refusal over the non-weapon slots of ADR 0037 step 6, the slots they spend) and the details
+// card's read-only view (the names and the slots) are never cut from 1280 to 2560.
+test("skills editor: the languages pool, its refusal and the card's view uncut in French, 1280 to 2560", async ({
   page,
 }) => {
   test.setTimeout(60_000);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  await page.getByTestId("details-trigger").click();
-  const pop = page.getByTestId("details-popover");
-  await pop.getByRole("button", { name: "Modifier" }).click();
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Compétences" });
+  await panel.getByTestId("proficiency-edit").click();
+  const pool = panel.getByTestId("proficiency-languages");
   // Test Bard spends 8 of 10 slots: three languages are one too many.
   for (const name of ["Elfe", "Gnome", "Orque"])
-    await pop.getByRole("checkbox", { name, exact: true }).check();
-  await pop.getByRole("button", { name: "Enregistrer" }).click();
-  await expect(pop.getByRole("alert")).toContainText("Budget dépassé");
+    await pool.getByRole("checkbox", { name, exact: true }).check();
+  await expect(pool.getByRole("alert")).toContainText("Budget dépassé");
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
@@ -2517,12 +2546,18 @@ test("details card: the languages picker, its refusal and its slots uncut in Fre
   ]) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
-    await expectNoClippedText(pop, `details card languages edit, ${where}`);
-    await expectWholeWords(pop, `details card languages edit, ${where}`);
-    await snap(page, `details-languages-edit-fr-${where}`);
+    await expectNoClippedText(pool, `skills editor languages, ${where}`);
+    await expectWholeWords(pool, `skills editor languages, ${where}`);
+    await snap(page, `skills-languages-edit-fr-${where}`);
   }
-  await pop.getByRole("checkbox", { name: "Orque", exact: true }).uncheck();
-  await pop.getByRole("button", { name: "Enregistrer" }).click();
+  await pool.getByRole("checkbox", { name: "Orque", exact: true }).uncheck();
+  await expect(pool.getByTestId("proficiency-languages-slots")).toHaveText(
+    "2 emplacements de compétence",
+  );
+  await panel.getByTestId("proficiency-save").click();
+  await expect(panel.getByTestId("proficiency-editor")).toHaveCount(0);
+  await page.getByTestId("details-trigger").click();
+  const pop = page.getByTestId("details-popover");
   await expect(pop.getByTestId("details-language-slots")).toHaveText(
     "2 emplacements de compétence",
   );

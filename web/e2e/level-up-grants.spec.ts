@@ -266,7 +266,8 @@ test("a fighter at 4 has no grants and no panel; a mage at 3 shows only the non-
 
 // ADR 0030 step 20.8, what only a browser proves: the card's free spell link opens the Spells
 // activity's lookup on the wizard spells of that spell level, Ajouter there claims the free spell
-// (the journal names it), and the reminder drops it with no reload. The rule (which level opens
+// (the journal names it), and the reminder drops it with no reload; a change of the level filter
+// drops the claim (Ajouter sends no grantLevel); the claim's undo and redo move the reminder. The rule (which level opens
 // which spell level, the Intelligence cap, what is owed, the refusals) is Go's (spellbook,
 // charactersvc, learnsvc, composition).
 test("mage 1 to 3: the free spell's link opens the lookup on 2nd-level spells, Ajouter claims it", async ({
@@ -282,6 +283,30 @@ test("mage 1 to 3: the free spell's link opens the lookup on 2nd-level spells, A
   );
   expect(await toSpendText(page)).toContain("1 free level 2 spell");
   await markNoReload(page);
+  const learn = page.getByTestId("learn-spell");
+  const rows = page.locator("[id^=lookup-row-]");
+
+  // From the tag, then a change of the level filter: the claim is dropped, Ajouter adds a plain
+  // spell (no grantLevel) and the free spell stays owed.
+  await page.getByTestId("to-spend-tag").click();
+  await page
+    .getByTestId("level-up-to-spend")
+    .getByTestId("grant-open-freeSpell-3-2")
+    .click();
+  await page.locator("#lookup-row-mirror_image").click();
+  await expect(learn.getByTestId("free-spell-claim")).toBeVisible();
+  await page
+    .getByRole("group", { name: "Spell levels" })
+    .getByRole("button", { name: "Level 1", exact: true })
+    .click();
+  await expect(learn.getByTestId("free-spell-claim")).toHaveCount(0);
+  await page.locator("#lookup-row-sleep").click();
+  await expect(learn.getByTestId("free-spell-claim")).toHaveCount(0);
+  const plain = page.waitForRequest("**/api/character/spellbook/add");
+  await learn.getByTestId("add-spell").click();
+  expect((await plain).postDataJSON()).toEqual({ spellId: "sleep" });
+  await expect(learn).toContainText("In the spellbook");
+  expect(await toSpendText(page)).toContain("1 free level 2 spell");
 
   await grants.getByTestId("grant-open-freeSpell-3-2").click();
   await expect(
@@ -289,14 +314,17 @@ test("mage 1 to 3: the free spell's link opens the lookup on 2nd-level spells, A
       .getByRole("navigation", { name: "Activities" })
       .getByRole("button", { name: "Spells", exact: true }),
   ).toHaveAttribute("aria-current", "page");
-  const rows = page.locator("[id^=lookup-row-]");
   await expect(rows.first()).toBeVisible();
   // Only 2nd-level spells are listed.
-  expect(
-    new Set(await rows.evaluateAll((els) => els.map((e) => e.dataset.level))),
-  ).toEqual(new Set(["2"]));
+  await expect
+    .poll(
+      async () =>
+        new Set(
+          await rows.evaluateAll((els) => els.map((e) => e.dataset.level)),
+        ),
+    )
+    .toEqual(new Set(["2"]));
   await page.locator("#lookup-row-mirror_image").click();
-  const learn = page.getByTestId("learn-spell");
   await expect(learn.getByTestId("free-spell-claim")).toHaveText(
     "Level 3's free spell",
   );
@@ -308,5 +336,11 @@ test("mage 1 to 3: the free spell's link opens the lookup on 2nd-level spells, A
     logEntry(page, "Level 3's free spell: Mirror Image (no roll)"),
   ).toBeVisible();
   expect(await toSpendText(page)).not.toContain("free level");
+
+  // Undo the claim: the reminder owes it again; redo: it goes again. No reload.
+  await page.getByTestId("undo").click();
+  await expect.poll(() => toSpendText(page)).toContain("1 free level 2 spell");
+  await page.getByTestId("redo").click();
+  await expect.poll(() => toSpendText(page)).not.toContain("free level");
   await expectNoReload(page);
 });

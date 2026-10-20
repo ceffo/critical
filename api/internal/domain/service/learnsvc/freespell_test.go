@@ -85,6 +85,23 @@ func TestAdd_Step20_8_RefusedWhenNotOwed(t *testing.T) {
 		_, err := f.svc.AddFreeSpell(context.Background(), charID, "web", 3)
 		require.ErrorIs(t, err, learnsvc.ErrAlreadyKnown)
 	})
+	// "The same limits and refusals": a full spell level refuses the claim and
+	// writes nothing, so the free spell stays owed (the reminder stays).
+	t.Run("spellbook_level_full: the claim's spell level is full", func(t *testing.T) {
+		full := map[string]learnsvc.Spell{"web": {Level: 2, Wizard: true}}
+		book := make([]string, 0, 9)
+		for i := range 9 {
+			k := string(rune('a'+i)) + "_2"
+			book = append(book, k)
+			full[k] = learnsvc.Spell{Level: 2, Wizard: true}
+		}
+		f := newFixture(t)
+		f.catalogue(full)
+		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(owingMage(third), nil).Once()
+		f.book.EXPECT().Keys(mock.Anything, charID).Return(book, nil)
+		_, err := f.svc.AddFreeSpell(context.Background(), charID, "web", 3)
+		require.ErrorIs(t, err, learnsvc.ErrLevelFull)
+	})
 	t.Run("a grant level under 1 reads nothing", func(t *testing.T) {
 		f := newFixture(t)
 		_, err := f.svc.AddFreeSpell(context.Background(), charID, "web", 0)

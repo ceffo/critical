@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { OVER_BUDGET } from "@/api/http";
 
@@ -17,16 +18,20 @@ export interface Refusal {
  */
 export function usePickRefusal(): (r: Refusal) => string {
   const { t } = useTranslation();
-  return (r) =>
-    r.code === OVER_BUDGET
-      ? (r.message ?? "")
-      : r.field.startsWith("nonweapon") && r.message
-        ? t(`proficiencies.errors.${r.message}`, {
-            defaultValue: t("proficiencies.errors.refused"),
+  return (r) => wordRefusal(t, r);
+}
+
+/** `usePickRefusal`'s wording, for a given `t`. */
+export function wordRefusal(t: TFunction, r: Refusal): string {
+  return r.code === OVER_BUDGET
+    ? (r.message ?? "")
+    : r.field.startsWith("nonweapon") && r.message
+      ? t(`proficiencies.errors.${r.message}`, {
+          defaultValue: t("proficiencies.errors.refused"),
+        })
+      : r.field.startsWith("weapon") && r.message
+        ? t(`weaponProficiencies.errors.${r.message}`, {
+            defaultValue: t("weaponProficiencies.errors.refused"),
           })
-        : r.field.startsWith("weapon") && r.message
-          ? t(`weaponProficiencies.errors.${r.message}`, {
-              defaultValue: t("weaponProficiencies.errors.refused"),
-            })
-          : (r.message ?? t("proficiencies.errors.refused"));
+        : (r.message ?? t("proficiencies.errors.refused"));
 }

@@ -271,8 +271,9 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 			RaceSaveBonus: charactersvc.Saves{RodStaffWand: 4, Spell: 4},
 			SpellSlots:    map[int]int{5: 2, 1: 3},
 			LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
-				{Level: 10, Die: 6}, {Level: 11, FixedGain: 2},
-			}},
+				{Level: 10, Die: 6, Grants: charactersvc.LevelGrants{SkillPoints: 15}},
+				{Level: 11, FixedGain: 2, Grants: charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 2}},
+			}, ToSpend: charactersvc.LevelGrants{WeaponSlots: 3, NonweaponSlots: 1, SkillPoints: 45}},
 			Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 		},
 		Details: charactersvc.Details{Alignment: "lawful_good", Languages: []string{}},
@@ -305,8 +306,9 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"raceSaveBonus": {"paraPoison": 0, "rodStaffWand": 4, "petriPoly": 0, "breath": 0, "spell": 4},
 		"spellSlots": [{"level": 1, "count": 3}, {"level": 5, "count": 2}],
 		"levelUp": {"realizedAboveTarget": false, "pending": [
-			{"level": 10, "die": 6, "fixedGain": 0}, {"level": 11, "die": 0, "fixedGain": 2}
-		]},
+			{"level": 10, "die": 6, "fixedGain": 0, "grants": {"weaponSlots": 0, "nonWeaponSlots": 0, "skillPoints": 15}},
+			{"level": 11, "die": 0, "fixedGain": 2, "grants": {"weaponSlots": 1, "nonWeaponSlots": 2, "skillPoints": 0}}
+		], "toSpend": {"weaponSlots": 3, "nonWeaponSlots": 1, "skillPoints": 45}},
 		"specializes": false,
 		"spellFailure": 0,
 		"turning": null,

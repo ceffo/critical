@@ -334,10 +334,13 @@ type SpellbookRulesDTO struct {
 // LevelUpDTO is ADR 0030 step 7: `pending` the levels from the realized one
 // to the target, lowest first (the prompt, one per level),
 // `realizedAboveTarget` an XP correction brought the target under the
-// realized level (step 7.4, the card warns).
+// realized level (step 7.4, the card warns), `toSpend` the slots and skill
+// points left at the realized level (ADR 0037 step 15, 0 when none or over:
+// the card's reminder).
 type LevelUpDTO struct {
 	Pending             []wire.PendingLevelDTO `json:"pending"`
 	RealizedAboveTarget bool                   `json:"realizedAboveTarget"`
+	ToSpend             wire.LevelGrantsDTO    `json:"toSpend"`
 }
 
 func savesDTO(s charactersvc.Saves) SavesDTO {
@@ -351,6 +354,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		SpellSlots: []SlotCountDTO{},
 		LevelUp: LevelUpDTO{
 			Pending: wire.PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
+			ToSpend: wire.GrantsDTO(d.LevelUp.ToSpend),
 		},
 		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
 		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab, SkillArmor: d.SkillArmor,

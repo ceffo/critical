@@ -117,7 +117,10 @@ function App() {
           className="zone-card flex w-[clamp(280px,21vw,384px)] shrink-0 flex-col gap-6 overflow-y-auto px-4 pb-3.5"
           data-testid="character"
         >
-          <Identity onOpenXp={() => focus("xp")} />
+          <Identity
+            onOpenXp={() => focus("xp")}
+            onOpenSkills={() => focus("act")}
+          />
           <div className="flex flex-col gap-3">
             {/* The AC beside the HP (ADR 0035 item 4): smaller, no label, opening its breakdown. */}
             <HpBar

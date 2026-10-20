@@ -203,6 +203,8 @@ func TestGetCharacter(t *testing.T) {
 		require.NoError(t, err)
 		want := kelsen()
 		want.Derived = kelsenDerived()
+		// ADR 0037 step 15: a bard's 230 points left to spend; no catalogue, no pool.
+		want.Derived.LevelUp.ToSpend = charactersvc.LevelGrants{SkillPoints: 230}
 		want.Details.Languages, want.Warnings = []string{}, []charactersvc.Warning{}
 		assert.Equal(t, want, got)
 	})

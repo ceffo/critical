@@ -396,6 +396,23 @@ writes `Test<name>` and adds the prefix here in the same PR.
     editors; nothing blocks the level-up or waits for the spend.
     Tests: `LevelUp_Step15_GrantsSlotsAndPoints` (levelupsvc: a rogue at levels 4 and 5, a warrior
     at 3, a thief's and a bard's points).
+    _(As built, 2026-10-20: `charactersvc.GrantsAt` (`ruletablesvc.SlotsGainedAt`,
+    `ruletablesvc.SkillPointsGainedAt`) fills each pending level's `grants` {weaponSlots,
+    nonWeaponSlots, skillPoints} on every read; the roll's answer carries the rolled level's
+    `grants`. User ruling (triage, 2026-10-19): informative, never blocking; the grants follow the
+    realized level; while anything is left to spend a reminder stays on the character card with
+    links to the editors: `derived.levelUp.toSpend` (`charactersvc.ToSpend`: each pool's left
+    slots and the skill points left, 0 when none or over budget), so an undone level-up takes its
+    grants back with the realized level. Tests: `TestGrantsAt_Step15_GrantsSlotsAndPoints` (each
+    group, levels 1 to 6), `TestToSpend_Step15_LeftCountsNeverNegative` (charactersvc),
+    `TestLevelUp_Step15_GrantsSlotsAndPoints` (levelupsvc: the answer carries the rolled level's),
+    `TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain` and
+    `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP` (composition: roll, undo and redo move
+    `toSpend`). The web: after the hit-point step the card shows "Le niveau N apporte" with
+    Choisir / Dépenser opening the Skills tab's weapon, non-weapon or points editor, until closed
+    or undone; while any `toSpend` count is above 0, an "À dépenser" tag beside the class opens a
+    popover with the same links (a tag, not a panel: the card never scrolls for it at 1440x900,
+    ADR 0022 step 2.8, ADR 0027 step 1).)_
 
 ### Existing data
 

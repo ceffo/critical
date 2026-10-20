@@ -18,6 +18,16 @@ export interface PendingLevel {
   level: number;
   die: number;
   fixedGain: number;
+  /** ADR 0037 step 15: what the level grants beyond hit points. */
+  grants: LevelGrants;
+}
+
+/** ADR 0037 step 15: weapon and non-weapon slots and a thief's or a bard's skill points, granted
+ * by a level or left to spend (0: none). */
+export interface LevelGrants {
+  weaponSlots: number;
+  nonWeaponSlots: number;
+  skillPoints: number;
 }
 
 /** ADR 0030 step 7: the levels from the realized level up to the target, still to take. */
@@ -26,6 +36,9 @@ export interface LevelUp {
   pending: PendingLevel[];
   /** Step 7.4: an XP correction brought the target level under the realized one (the card warns). */
   realizedAboveTarget: boolean;
+  /** ADR 0037 step 15: what is left to spend at the realized level, each 0 when none or over
+   * budget; the card reminds while any is above 0. */
+  toSpend: LevelGrants;
 }
 
 /**
@@ -47,6 +60,8 @@ export interface LevelUpRecord {
 }
 
 export interface LevelUpResult extends LevelUpRecord {
+  /** ADR 0037 step 15: what the level reached grants beyond hit points. The card shows the pending level's `grants` (the same value: a roll only takes the first pending level), not this one. */
+  grants: LevelGrants;
   /** The levels still owed after this one. */
   pending: PendingLevel[];
 }

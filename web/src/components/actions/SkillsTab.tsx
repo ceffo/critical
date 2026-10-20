@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useTableStore } from "@/stores/table";
 import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
 import { Button } from "@/components/ui/button";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
+import { useSkillsEditor } from "@/stores/skillsEditor";
 import { ProficiencyEditor } from "@/components/proficiencies/ProficiencyEditor";
 import { SkillBudgetSummary, SkillTerms } from "./SkillBreakdown";
 import { useCharacterStore } from "@/stores/character";
@@ -45,9 +46,14 @@ export function SkillsTab() {
   const budget = useCharacterStore((s) => s.character?.derived.skillBudget);
   const cls = useCharacterStore((s) => s.character?.class);
   const slots = useCharacterStore((s) => s.character?.derived.proficiencySlots);
-  const [editingPoints, setEditingPoints] = useState(false);
-  const [editingPicks, setEditingPicks] = useState(false);
-  const [editingWeapons, setEditingWeapons] = useState(false);
+  // The open editor lives in a store: the character card's level-up grants open one too (ADR 0037
+  // step 15). Leaving the tab closes it (ActionArea), as it always did.
+  const editor = useSkillsEditor((s) => s.editor);
+  const openEditor = useSkillsEditor((s) => s.open);
+  const closeEditor = useSkillsEditor((s) => s.close);
+  const editingPoints = editor === "skillPoints";
+  const editingPicks = editor === "nonWeapon";
+  const editingWeapons = editor === "weapon";
   // Read once shown; then the action module reads them again when a write names what they follow
   // (an effect, an item, the points, the level).
   useEffect(() => {
@@ -114,21 +120,11 @@ export function SkillsTab() {
 
   // ADR 0037 step 12: the picks are edited in place of the lists, the catalogue needing the room.
   if (editingPicks && slots && cls)
-    return (
-      <ProficiencyEditor
-        cls={cls}
-        slots={slots}
-        onDone={() => setEditingPicks(false)}
-      />
-    );
+    return <ProficiencyEditor cls={cls} slots={slots} onDone={closeEditor} />;
 
   if (editingWeapons && slots && cls)
     return (
-      <WeaponProficiencyEditor
-        cls={cls}
-        slots={slots}
-        onDone={() => setEditingWeapons(false)}
-      />
+      <WeaponProficiencyEditor cls={cls} slots={slots} onDone={closeEditor} />
     );
 
   return (
@@ -156,7 +152,7 @@ export function SkillsTab() {
               size="sm"
               className="mx-2.5 w-fit"
               title={t("proficiencies.editHint")}
-              onClick={() => setEditingPicks(true)}
+              onClick={() => openEditor("nonWeapon")}
               data-testid="proficiency-edit"
             >
               {t("proficiencies.edit")}
@@ -168,7 +164,7 @@ export function SkillsTab() {
         <WeaponProficienciesBlock
           pool={slots.weapon}
           picks={slots.weaponPicks ?? []}
-          onEdit={() => setEditingWeapons(true)}
+          onEdit={() => openEditor("weapon")}
         />
       )}
       {classSkills.length > 0 && (
@@ -235,7 +231,7 @@ export function SkillsTab() {
             <ThiefPointsEditor
               skills={classSkills}
               budget={skills.budget}
-              onDone={() => setEditingPoints(false)}
+              onDone={closeEditor}
             />
           ) : (
             <Button
@@ -243,7 +239,7 @@ export function SkillsTab() {
               size="sm"
               className="mx-2.5 w-fit"
               title={t("skills.spendPointsHint")}
-              onClick={() => setEditingPoints(true)}
+              onClick={() => openEditor("skillPoints")}
               data-testid="thief-points-edit"
             >
               {t("skills.spendPoints")}

@@ -184,8 +184,10 @@ async function hp(page: Page): Promise<[number, number]> {
 // Undo and Redo move the max HP and the current HP the HP panel shows together and bring the prompt
 // back and away; a heal after a level-up fills to the new max; the manual entry's Confirm stays off
 // for a die the group can't roll and the journal words the entered die; an XP delete under the
-// rolled level turns the prompt into the step 7.4 warning, in French. The math (the die, CON, the
-// heal cap, the snapshot undo restores) is Go tests (levelupsvc, composition, actionlogsvc).
+// rolled level turns the prompt into the step 7.4 warning, in French. ADR 0037 step 15: the roll
+// shows what the level grants (a bard's 15 points at 2), the undo takes it away, and its link opens
+// the Skills tab's points editor. The math (the die, CON, the heal cap, the snapshot undo restores,
+// the grants) is Go tests (levelupsvc, composition, actionlogsvc, charactersvc).
 test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then an XP delete warns", async ({
   page,
 }) => {
@@ -241,6 +243,11 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
     "Level 3 reached",
   );
   await expect(cardLevel).toHaveText("Level 2");
+  const grants = page.getByTestId("level-up-grants");
+  await expect(grants).toContainText("Level 2 grants");
+  await expect(grants.getByTestId("grant-skillPoints")).toHaveText(
+    /\+15 skill points/,
+  );
   // The card's level and the prompt come with the roll's answer; the HP panel is read again after it.
   await expect.poll(async () => (await hp(page))[1]).toBeGreaterThan(6);
   const [, rolledMax] = await hp(page);
@@ -261,6 +268,13 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
     "Level 2 reached",
   );
   await expect(cardLevel).toHaveText("Level 1");
+  // The level's grants go with it; what level 1 leaves to spend is in the card's tag.
+  await expect(grants).toHaveCount(0);
+  await page.getByTestId("to-spend-tag").click();
+  await expect(page.getByTestId("level-up-to-spend")).toContainText(
+    "20 skill points",
+  );
+  await page.keyboard.press("Escape");
   await page.getByTestId("redo").click();
   await expect.poll(() => hp(page)).toEqual([3 + gain, 6 + gain]);
   await expect(prompt.getByTestId("level-up-title")).toHaveText(
@@ -295,6 +309,14 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
   await expect(
     logEntry(page, "Level 2: d6 4, max HP +4 (6 → 10), die entered"),
   ).toBeVisible();
+
+  // The grant's link opens the points editor in the Skills tab.
+  await grants.getByRole("button", { name: "Spend the skill points" }).click();
+  await expect(page.getByRole("tab", { name: "Skills" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByTestId("thief-points-editor")).toBeVisible();
 
   // Delete the XP: the XP gives level 1, the max HP is for level 2. Nothing is removed, the card
   // warns in French and prompts for nothing.

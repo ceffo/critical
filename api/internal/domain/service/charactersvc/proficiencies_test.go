@@ -113,34 +113,33 @@ func TestCreate_Step14_PicksCheckedAsTheEditor(t *testing.T) {
 	t.Run("a refused pick: nothing written", func(t *testing.T) {
 		e := newEnvWithBook(t, profBook(t))
 		e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
+		expectLevel1Bard(e) // the picks are judged at the starting level
 		_, err := e.svc.Create(context.Background(), ownerID, withPicks(picks(p("old_skill", 1))))
 		assert.Equal(t, domain.FieldError{Field: "nonweapon.old_skill", Message: "unknown"}, fieldErr(t, err), "nothing before: no unknown id kept")
 		assert.Zero(t, e.tx.n)
 	})
-	t.Run("the preview reminds the leftovers", func(t *testing.T) {
+	t.Run("the draft reminds the leftovers", func(t *testing.T) {
+		e := newEnvWithBook(t, profBook(t))
+		e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
+		expectLevel1Bard(e) // the starting level
+		expectLevel1Bard(e) // the read
+		got, err := e.svc.Draft(context.Background(), withPicks(picks(p("tumbling", 1))), nil)
+		require.NoError(t, err)
+		require.NotNil(t, got.Character)
+		six := 6
+		assert.Contains(t, got.Character.Warnings, charactersvc.Warning{Code: "slots_to_spend", Field: "nonweapon", Pool: "nonweapon", Left: &six})
+	})
+	t.Run("the draft answers the pool", func(t *testing.T) {
 		e := newEnvWithBook(t, profBook(t))
 		e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
 		expectLevel1Bard(e)
-		e.rules.EXPECT().LevelFor("bard", 0).Return(1, nil).Once()
-		e.rules.EXPECT().XPThreshold("bard", 2).Return(1_250, nil).Once()
-		e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
-		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
-		e.rules.EXPECT().BardSpellsPerDay(1).Return(map[int]int{}, nil).Once()
-		got, err := e.svc.Preview(context.Background(), withPicks(picks(p("tumbling", 1))))
+		expectLevel1Bard(e)
+		got, err := e.svc.Draft(context.Background(), withPicks(picks(p("tumbling", 2))), nil)
 		require.NoError(t, err)
-		six := 6
-		assert.Contains(t, got.Warnings, charactersvc.Warning{Code: "slots_to_spend", Field: "nonweapon", Pool: "nonweapon", Left: &six})
-	})
-	t.Run("the checks endpoint answers the pool", func(t *testing.T) {
-		e := newEnvWithBook(t, profBook(t))
-		e.rules.EXPECT().LevelFor("bard", 0).Return(1, nil).Once()
-		xp := 0
-		got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{
-			Class: "bard", XP: &xp, Scores: map[string]int{"int": 14, "dex": 15}, Proficiencies: picks(p("tumbling", 2)),
-		})
-		require.NoError(t, err)
-		require.NotNil(t, got.ProficiencySlots)
-		assert.Equal(t, ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 4, Available: 7, Spent: 2, Left: 5}, got.ProficiencySlots.Nonweapon)
-		assert.Equal(t, 16, got.ProficiencySlots.Picks[0].Target, "Dex 15 + 1 extra slot")
+		require.NotNil(t, got.Character)
+		slots := got.Character.Derived.Proficiencies
+		require.NotNil(t, slots)
+		assert.Equal(t, ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 4, Available: 7, Spent: 2, Left: 5}, slots.Nonweapon)
+		assert.Equal(t, 16, slots.Picks[0].Target, "Dex 15 + 1 extra slot")
 	})
 }

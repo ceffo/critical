@@ -213,19 +213,22 @@ func TestDetails_Step8_1_AWordThatIsNoCatalogueCodeIsNotRead(t *testing.T) {
 	assert.Equal(t, []string{"elvish", "Elfique", "common", "Orque"}, d.Languages, "the details are not changed in place")
 }
 
-// ADR 0037 step 6 in the creation's checks: the draft's languages beyond the race's native one and
+// ADR 0037 step 6 in the creation's draft: the draft's languages beyond the race's native one and
 // Common spend the pool the proficiency step shows (a level 1 half-elf bard, Intelligence 9: 3 + 0 +
 // 2 = 5 slots; Tumbling and two languages spend 3).
-func TestCreationChecks_Step6_TheDraftLanguagesSpendThePool(t *testing.T) {
+func TestDraft_Step6_TheDraftLanguagesSpendThePool(t *testing.T) {
 	e := newEnvWithLanguages(t)
-	e.rules.EXPECT().LevelFor("bard", 0).Return(1, nil).Once()
-	got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{
-		Class: "bard", Scores: map[string]int{"int": 9}, XP: ptr(0), Race: "half_elf",
-		Languages: []string{"common", "elvish", "orcish"}, Proficiencies: picks(p("tumbling", 1)),
-	})
+	e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
+	expectLevel1Bard(e)
+	expectLevel1Bard(e)
+	n := lyra()
+	n.Int, n.Languages, n.Proficiencies = 9, []string{"common", "elvish", "orcish"}, picks(p("tumbling", 1))
+	got, err := e.svc.Draft(context.Background(), n, nil)
 	require.NoError(t, err)
-	require.NotNil(t, got.ProficiencySlots)
-	pool := got.ProficiencySlots.Nonweapon
+	assert.Empty(t, got.Refusals)
+	require.NotNil(t, got.Character)
+	require.NotNil(t, got.Character.Derived.Proficiencies)
+	pool := got.Character.Derived.Proficiencies.Nonweapon
 	assert.Equal(t, 2, pool.Languages)
 	assert.Equal(t, 3, pool.Spent)
 	assert.Equal(t, 5, pool.Available)

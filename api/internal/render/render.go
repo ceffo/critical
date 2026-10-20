@@ -92,6 +92,10 @@ const CodeUnavailable = "database_unavailable"
 // CodeBadRequest is the error code of a request that could not be parsed.
 const CodeBadRequest = "bad_request"
 
+// CodeOverBudget is the code of a refusal over a budget (ADR 0037 step 10): a save that grows an
+// overspend, and a creation draft's refusal of one.
+const CodeOverBudget = "over_budget"
+
 // StatusError is an error that carries its own HTTP status and client-facing
 // message. Handlers return it for request-parsing failures (bad JSON, bad path
 // params), where there is no domain sentinel to map.
@@ -176,7 +180,7 @@ var mappings = []mapping{
 	{target: spelleffectsvc.ErrNotAnEffect, status: http.StatusBadRequest, code: "spell_not_an_effect"},
 	{target: spelleffectsvc.ErrEndCauseRequired, status: http.StatusBadRequest, code: "end_cause_required"},
 	// ADR 0037 step 10: a save that grows an overspend; nothing written.
-	{target: domain.ErrOverBudget, status: http.StatusConflict, code: "over_budget"},
+	{target: domain.ErrOverBudget, status: http.StatusConflict, code: CodeOverBudget},
 	{target: domain.ErrInvalidInput, status: http.StatusBadRequest, code: "invalid_input"},
 	{target: domain.ErrConflict, status: http.StatusConflict, code: "conflict"},
 	{target: domain.ErrCharacterNotFound, status: http.StatusNotFound, code: "character_not_found"},

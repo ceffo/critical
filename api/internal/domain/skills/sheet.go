@@ -36,3 +36,34 @@ func Read(book Book, s Sheet) (*ProficiencySlots, []Warning) {
 	}
 	return &f, SlotWarnings(f)
 }
+
+// Edit is a change of a sheet's picks and languages (ADR 0037 steps 12, 14 and 18): a nil pool of
+// Picks is left as it was (ValidPicks), and nil Languages leave the languages as they were.
+type Edit struct {
+	Picks     Picks
+	Languages []string
+}
+
+// Apply is ADR 0037 steps 6, 10, 12, 14 and 18 on before, the one place an edit of the pools is
+// judged (the editor's preview and save, and the creation, where nothing was picked before): the
+// picks checked by ValidPicks against the sheet's, the languages by ValidLanguages (race's native
+// one added), then the budget at the sheet's level, each pool on its own and the languages in the
+// non-weapon one. It returns the sheet after the edit, or a refusal: a *domain.FieldError or a
+// *domain.BudgetError. Nothing is written.
+func Apply(book Book, languages LanguageBook, race string, before Sheet, e Edit) (Sheet, error) {
+	picks, err := ValidPicks(book, before.Class, e.Picks, before.Picks)
+	if err != nil {
+		return Sheet{}, err
+	}
+	after := before
+	after.Picks = picks
+	if e.Languages != nil {
+		if after.Languages, err = ValidLanguages(languages, race, before.Languages, e.Languages); err != nil {
+			return Sheet{}, err
+		}
+	}
+	if err := PicksWithinBudget(book, before.Class, before.Level, before.Intelligence, before.Spending(), after.Spending()); err != nil {
+		return Sheet{}, err
+	}
+	return after, nil
+}

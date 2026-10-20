@@ -1,14 +1,12 @@
 import { toBody, type Draft } from "@/lib/characterDetails";
-import type { Placement } from "@/lib/creationFlow";
-import { classOf, emptyPlacement, xpOfLevel } from "@/lib/creationFlow";
+import { codeMessage, OVER_BUDGET } from "@/api/http";
 import { parseWhole } from "@/lib/wholeNumber";
 import type { PickInput } from "@/components/proficiencies/catalogue";
 import {
   ABILITIES,
   type AbilityCode,
-  type CharacterPreview,
-  type DraftChecks,
-  type DraftChecksRequest,
+  type CreationDraft,
+  type DraftRefusal,
   type WeaponPickInput,
   type CreationOptions,
   type HpRoll,
@@ -16,6 +14,229 @@ import {
   type ScoresArrangement,
   type ScoresRoll,
 } from "@/types/character";
+
+/*
+ * The creation flow (ADR 0034 steps 3 to 6): its steps and what blocks Suivant, the draft the
+ * player fills in, the one request it sends (`buildBody`, the draft's and Créer's) and the one
+ * answer it reads (`POST /api/characters/draft`), and the arrangement of a score roll. Rules are the
+ * server's: nothing here computes a score, a level or a verdict.
+ */
+
+/** The creation route's steps (ADR 0034 step 3), in order; Créer is on the review. */
+export const STEPS = [
+  "class",
+  "race",
+  "scores",
+  "extras",
+  "proficiencies",
+  "identity",
+  "review",
+] as const;
+export type StepId = (typeof STEPS)[number];
+
+/**
+ * The step a refusal's field belongs to, so the flow opens that step and shows the refusal there.
+ * The fields are the server's, as the creation and the draft name them (`class`, `race`, the six
+ * scores, `skillPoints.x`, `nonweapon.x`, `weapon.x`, `details.x`; `details.languages` is the
+ * proficiency step's); `buildBody` names an unreadable value with the same names. An unknown field
+ * stays on the review, where Créer is.
+ */
+export function stepOfField(field: string): StepId {
+  if (field === "class" || field === "xp") return "class";
+  if (field === "race") return "race";
+  if ((ABILITIES as readonly string[]).includes(field)) return "scores";
+  if (
+    field === "hpMax" ||
+    field === "strExceptional" ||
+    field === "skillPoints" ||
+    field.startsWith("skillPoints.")
+  )
+    return "extras";
+  // The languages are the proficiency step's (ADR 0037 step 18), though the body still carries them
+  // under the details.
+  if (
+    field === "nonweapon" ||
+    field.startsWith("nonweapon.") ||
+    field === "weapon" ||
+    field.startsWith("weapon.") ||
+    field === "details.languages"
+  )
+    return "proficiencies";
+  if (field === "name" || field.startsWith("details.")) return "identity";
+  return "review";
+}
+
+/** The class's options entry, or undefined. */
+export function classOf(options: CreationOptions | null, cls: string) {
+  return options?.classes.find((c) => c.class === cls);
+}
+
+/**
+ * ADR 0034 step 4: the XP a picked level stands for, the class's lowest for that level, read from the
+ * server's table; undefined when the class or the table is missing (an older server: XP is typed).
+ */
+export function xpOfLevel(
+  options: CreationOptions | null,
+  cls: string,
+  level: number,
+): number | undefined {
+  return classOf(options, cls)?.levelXp?.find((r) => r.level === level)?.xp;
+}
+
+/**
+ * How a class's alignment limit reads on its card: all of them, all but a few (at most two), or the
+ * list it admits. A wording of the server's list, never a rule of its own.
+ */
+export function alignmentLimit(
+  admitted: string[],
+  all: readonly string[],
+):
+  | { kind: "all" }
+  | { kind: "except"; codes: string[] }
+  | { kind: "only"; codes: string[] } {
+  const missing = all.filter((a) => !admitted.includes(a));
+  if (missing.length === 0) return { kind: "all" };
+  if (missing.length <= 2) return { kind: "except", codes: missing };
+  return { kind: "only", codes: all.filter((a) => admitted.includes(a)) };
+}
+
+/** Which totals of a roll sit on each ability (indexes into the roll's totals). */
+export type Placement = Record<AbilityCode, number[]>;
+
+export function emptyPlacement(): Placement {
+  return { str: [], dex: [], con: [], int: [], wis: [], cha: [] };
+}
+
+/**
+ * Places total `index` of the roll on `ability` (ADR 0032 step 6: the arrangement is the player's
+ * choice, made in the web; the scores it gives are the server's, `arrangeScores`), by the method's
+ * `assign` mode; null when the method does not allow it:
+ * - `keep_per_ability` (II): a total goes only to its own ability and replaces the one kept there;
+ * - `arrange` (III to V): one total per ability, each total used once (moved if already placed);
+ * - `add_to_base` (VI): each die is added whole to one ability (moved if already placed); the same
+ *   die again takes it back off. The server refuses a sum above the method's max.
+ * Method I places nothing: its totals are on their abilities (`inOrderPlacement`).
+ */
+export function place(
+  roll: ScoresRoll,
+  placement: Placement,
+  index: number,
+  ability: AbilityCode,
+): Placement | null {
+  const total = roll.rolls[index];
+  if (!total) return null;
+  const without = (p: Placement): Placement => {
+    const out = emptyPlacement();
+    for (const a of ABILITIES) out[a] = p[a].filter((i) => i !== index);
+    return out;
+  };
+  switch (roll.method.assign) {
+    case "keep_per_ability":
+      if (total.ability !== ability) return null;
+      return { ...placement, [ability]: [index] };
+    case "arrange":
+      return { ...without(placement), [ability]: [index] };
+    case "add_to_base": {
+      if (placement[ability].includes(index)) return without(placement);
+      const next = without(placement);
+      return { ...next, [ability]: [...next[ability], index] };
+    }
+    default:
+      return null;
+  }
+}
+
+/** A fresh roll's placement: method I's totals on the abilities the server gave them, else none. */
+export function initialPlacement(roll: ScoresRoll): Placement {
+  const out = emptyPlacement();
+  if (roll.method.assign !== "in_order") return out;
+  roll.rolls.forEach((r, i) => {
+    if ((ABILITIES as readonly string[]).includes(r.ability))
+      out[r.ability as AbilityCode].push(i);
+  });
+  return out;
+}
+
+/** True when total `index` already sits on an ability. */
+export function isPlaced(placement: Placement, index: number): boolean {
+  return ABILITIES.some((a) => placement[a].includes(index));
+}
+
+/** What the arrangement request carries: by ability, the rolled values placed there (no sum). */
+export function placedValues(
+  roll: ScoresRoll,
+  placement: Placement,
+): Record<AbilityCode, number[]> {
+  const out = emptyPlacement();
+  for (const a of ABILITIES)
+    out[a] = placement[a].flatMap((i) => {
+      const r = roll.rolls[i];
+      return r ? [r.total] : [];
+    });
+  return out;
+}
+
+/** The entered values a step needs before Suivant; the server checks the ranges and the rules. */
+export interface StepInputs {
+  cls: string;
+  race: string;
+  xp: string;
+  scores: Record<AbilityCode, string>;
+  hpMax: string;
+  name: string;
+  alignment: string;
+  sex: string;
+  /** The alignments the class admits, from the server's options. */
+  alignments: string[];
+}
+
+/** A number typed in a field: a whole number, not blank. */
+function filled(v: string): boolean {
+  const n = parseWhole(v);
+  return n !== null && !Number.isNaN(n);
+}
+
+/**
+ * Why Suivant is blocked on a step (an i18n key under `creation.blocked`), or null. Only missing or
+ * unreadable input blocks; a value out of range or against a rule is the server's refusal, shown on
+ * its step after Créer, and warnings never block (ADR 0034 step 6).
+ */
+export function blockedReason(step: StepId, d: StepInputs): string | null {
+  switch (step) {
+    case "class":
+      if (d.cls === "") return "class";
+      return filled(d.xp) ? null : "xp";
+    case "race":
+      return d.race === "" ? "race" : null;
+    case "scores":
+      return ABILITIES.every((a) => filled(d.scores[a])) ? null : "scores";
+    case "extras":
+      return filled(d.hpMax) ? null : "hpMax";
+    case "identity":
+      if (d.name.trim() === "") return "name";
+      if (d.alignment === "") return "alignment";
+      // The class's limit is a refusal (ADR 0034 step 6): the server's list, not a rule of the web.
+      if (!d.alignments.includes(d.alignment)) return "alignmentAllowed";
+      return d.sex === "" ? "sex" : null;
+    default:
+      return null;
+  }
+}
+
+/** The six races in the server's order (Table 8's list, human first), else the classes' union. */
+export function allRaces(options: CreationOptions): string[] {
+  const listed = options.raceAdjustments?.map((r) => r.race);
+  if (listed && listed.length > 0) return listed;
+  const out: string[] = [];
+  for (const c of options.classes)
+    for (const r of c.races) if (!out.includes(r)) out.push(r);
+  return out;
+}
+
+/** A signed whole number with a true minus sign: +1, −1, +0. */
+export function signed(n: number): string {
+  return n < 0 ? `−${-n}` : `+${n}`;
+}
 
 /**
  * Everything the player entered in the creation route, kept across the steps (back and forward keep
@@ -149,19 +370,23 @@ export function settle(d: FlowDraft, xp: string): FlowDraft {
 }
 
 /**
- * The creation body of a draft (the preview's and Créer's), or the field a value is unreadable in
- * (not a number where one is needed). Only the shape is checked; every range and rule is the server's.
- * A blank alignment or sex is left out (the server says it is missing).
+ * The one request the flow sends: the creation body of the draft as far as it is entered, asked at
+ * `POST /api/characters/draft` on every change and sent by Créer to `POST /api/characters`. A value
+ * left blank or unreadable (not a number where one is needed) is left out (a null number), so the
+ * draft's answer lists it missing; `error` names the first unreadable one, which Créer does not
+ * send. Only the shape is read: every range and rule is the server's. A blank alignment or sex is
+ * left out (the server says it is missing).
  */
 export function buildBody(
   options: CreationOptions,
   draft: FlowDraft,
   xp: string,
   language: string,
-): { body: NewCharacter } | { error: FieldError } {
-  const fail = (field: string, code: string) => ({
-    error: { field, code },
-  });
+): { body: NewCharacter; error: FieldError | null } {
+  let error: FieldError | null = null;
+  const fail = (field: string, code: string) => {
+    error ??= { field, code };
+  };
   const body: NewCharacter = {
     name: draft.name,
     class: draft.cls,
@@ -178,16 +403,16 @@ export function buildBody(
   };
   for (const a of ABILITIES) {
     const v = parseWhole(draft.scores[a]);
-    if (v !== null && Number.isNaN(v)) return fail(a, "out_of_range");
-    body[a] = v;
+    if (v !== null && Number.isNaN(v)) fail(a, "out_of_range");
+    else body[a] = v;
   }
   for (const [f, raw] of [
     ["hpMax", draft.hpMax],
     ["xp", xp],
   ] as const) {
     const v = parseWhole(raw);
-    if (v !== null && Number.isNaN(v)) return fail(f, "out_of_range");
-    body[f] = v;
+    if (v !== null && Number.isNaN(v)) fail(f, "out_of_range");
+    else body[f] = v;
   }
   const cls = classOf(options, draft.cls);
   if (
@@ -196,9 +421,8 @@ export function buildBody(
     draft.strExceptional.trim() !== ""
   ) {
     const v = parseWhole(draft.strExceptional);
-    if (v === null || Number.isNaN(v))
-      return fail("strExceptional", "out_of_range");
-    body.strExceptional = v;
+    if (v === null || Number.isNaN(v)) fail("strExceptional", "out_of_range");
+    else body.strExceptional = v;
   }
   if (cls && cls.skills.length > 0) {
     body.skillPoints = {};
@@ -207,8 +431,8 @@ export function buildBody(
       if (raw.trim() === "") continue;
       const v = parseWhole(raw);
       if (v === null || Number.isNaN(v))
-        return fail(`skillPoints.${skill}`, "out_of_range");
-      body.skillPoints[skill] = v;
+        fail(`skillPoints.${skill}`, "out_of_range");
+      else body.skillPoints[skill] = v;
     }
   }
   if (draft.picks.length > 0 || draft.weaponPicks.length > 0)
@@ -221,43 +445,10 @@ export function buildBody(
     ageInvalid,
     invalid,
   } = toBody(draft.details, language);
-  if (ageInvalid) return fail("details.age", "out_of_range");
-  if (invalid.length > 0) return fail(`details.${invalid[0]}`, "not_a_number");
+  if (ageInvalid) fail("details.age", "out_of_range");
+  if (invalid.length > 0) fail(`details.${invalid[0]}`, "not_a_number");
   body.details = details;
-  return { body };
-}
-
-/**
- * What the server is asked about the draft on the class, skills and proficiency steps (ADR 0034,
- * ADR 0037 step 14): the scores and skill points that read as whole numbers, the XP when it does,
- * and the picks. Only the shape is read; the
- * verdicts (a minimum missed, the points left) are the server's.
- */
-export function checksRequest(
-  options: CreationOptions,
-  draft: FlowDraft,
-  xp: string,
-): DraftChecksRequest {
-  const scores: Record<string, number> = {};
-  for (const a of ABILITIES) {
-    const v = parseWhole(draft.scores[a]);
-    if (v !== null && !Number.isNaN(v)) scores[a] = v;
-  }
-  const skillPoints: Record<string, number> = {};
-  for (const skill of classOf(options, draft.cls)?.skills ?? []) {
-    const v = parseWhole(draft.skillPoints[skill] ?? "");
-    if (v !== null && !Number.isNaN(v)) skillPoints[skill] = v;
-  }
-  const x = parseWhole(xp);
-  return {
-    class: draft.cls,
-    scores,
-    xp: x === null || Number.isNaN(x) ? null : x,
-    skillPoints,
-    proficiencies: { nonweapon: draft.picks, weapon: draft.weaponPicks },
-    race: draft.race,
-    languages: draft.details.languages,
-  };
+  return { body, error };
 }
 
 /** A refusal shown on its step: the form's field, the server's code, its message as a fallback. */
@@ -267,13 +458,32 @@ export interface FieldError {
   message?: string;
 }
 
+/** A refusal of the draft's answer as the flow's field error: an over_budget worded with the server's
+ * figures (ADR 0037 step 10), any other code worded by the step. */
+export function refusalError(r: DraftRefusal): FieldError {
+  if (r.code === OVER_BUDGET)
+    return {
+      field: r.field,
+      code: r.code,
+      message:
+        codeMessage(r.code, { spent: r.spent ?? 0, limit: r.limit ?? 0 }) ??
+        r.code,
+    };
+  return { field: r.field, code: r.code, message: r.code };
+}
+
 /**
- * The server's preview of the draft (`POST /api/characters/preview`): its derived figures and
- * warnings, or its refusal; both null before the first answer or when the draft cannot be sent yet.
+ * The server's answer to the draft (`POST /api/characters/draft`), in two readings. `current`
+ * answers the draft as it stands, null before the answer or while a newer one is asked (the
+ * warnings, the review's figures and the refusals: a verdict on an older draft is not shown).
+ * `latest` is the last answer for the draft's class, kept while a newer one is asked so the figures
+ * do not blink as the player types (the class step's minimums, the extras step's budget, the
+ * proficiency step's pools). `failed` is a request that got no answer (a network error).
  */
-export interface PreviewState {
-  data: CharacterPreview | null;
-  error: FieldError | null;
+export interface DraftAnswer {
+  current: CreationDraft | null;
+  latest: CreationDraft | null;
+  failed: FieldError | null;
 }
 
 /** What every step receives. */
@@ -293,10 +503,11 @@ export interface StepProps {
    * reply that lands after a newer choice (or a newer edit) is dropped instead of overwriting it.
    */
   watch: () => () => boolean;
-  /** The server's preview of the draft (the identity step's warnings, the review's figures). */
-  preview: PreviewState;
-  /** The server's checks of the draft on the class and skills steps; null before the first answer. */
-  checks: DraftChecks | null;
+  /** The server's answer to the draft. */
+  answer: DraftAnswer;
+  /** The draft's refusals as field errors, on the steps that show them (the proficiency and identity
+   * steps and the review), else none. */
+  refusals: FieldError[];
   /** The body Créer would send, null while a value is unreadable. */
   body: NewCharacter | null;
   /** A refusal in words. */

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -62,7 +63,7 @@ var characterFree = map[string]bool{
 	"GET /api/health": true, "GET /api/spells/filters": true, "GET /api/spells/names": true,
 	"GET /api/crit-table": true, "PUT /api/crit-table": true, "GET /api/xp/preview": true,
 	"GET /api/characters": true, "PUT /api/characters/current": true,
-	"GET /api/characters/options": true, "POST /api/characters": true, "POST /api/characters/preview": true, "POST /api/characters/checks": true, "PATCH /api/characters/{id}": true,
+	"GET /api/characters/options": true, "POST /api/characters": true, "POST /api/characters/draft": true, "PATCH /api/characters/{id}": true,
 	"POST /api/characters/rolls/scores": true, "POST /api/characters/rolls/hp": true,
 	"POST /api/characters/rolls/scores/arrangement": true, "POST /api/characters/rolls/identity": true,
 }
@@ -314,46 +315,90 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"spellFailure": 0,
 		"turning": null,
 		"thiefSkills": null, "bardSkills": null,
-		"skillArmor": "", "skillBudget": [],
+		"skillArmor": "", "skillBudget": [], "skillPoints": null,
 		"backstab": 0,
 		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false}
 	}`, string(derived))
 }
 
-// POST /api/characters/checks names the draft's skill budget as GET /api/skills names it
-// (available, perSkillCap), the formula terms included.
-func TestCharacters_ChecksSkillBudgetWireShape(t *testing.T) {
+// POST /api/characters/draft (ADR 0034, amendment of 2026-10-20): the body as far as it is
+// entered goes to the service with the numbers it leaves out; the answer is the sheet's derived
+// block in GET /api/character's shape (the skill budget named as GET /api/skills names it), the
+// refusals with the creation's fields and codes (an over_budget with its figures), the missing
+// fields, the class minimums missed and the skill point budget on its own (the derived block's shape).
+func TestCharacters_DraftWireShape(t *testing.T) {
 	h, m := newRouterWith(t, usersAuth(t, map[string]authsvc.User{
 		"new": {ID: bobID, Email: "new@example.com", Role: authsvc.RolePlayer},
 	}))
-	xp := 1250
-	m.char.EXPECT().CreationChecks(mock.Anything, charactersvc.DraftInput{
-		Class: "thief", Scores: map[string]int{}, XP: &xp, SkillPoints: map[string]int{"open_locks": 40},
-		Proficiencies: skills.Picks{
-			Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}}, Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}},
+	m.char.EXPECT().Draft(mock.Anything, mock.MatchedBy(func(n charactersvc.NewCharacter) bool {
+		return n.Class == "thief" && n.Race == "elf" && n.Dex == 25 && n.XP == 1250 && n.SkillPoints["open_locks"] == 40 &&
+			n.Proficiencies.Equal(skills.Picks{
+				Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}}, Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}},
+			}) && slices.Equal(n.Languages, []string{"elvish", "orcish"})
+	}), []string{"hpMax"}).Return(&charactersvc.Draft{
+		Character: &charactersvc.Character{Derived: charactersvc.Derived{
+			TargetLevel: 2, RealizedLevel: 2,
+			SkillPoints: &ruletablesvc.SkillPointsBudget{
+				Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
+				PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
+			},
+		}, Details: charactersvc.Details{Languages: []string{"elvish", "orcish"}}},
+		Refusals: []error{
+			&domain.FieldError{Field: "dex", Message: charactersvc.CodeOutOfRange},
+			&domain.BudgetError{Field: "nonweapon", Spent: 8, Limit: 7},
 		},
-		Race: "elf", Languages: []string{"elvish", "orcish"},
-	}).Return(charactersvc.DraftChecks{
-		UnmetMinimums: []charactersvc.ClassUnmet{},
-		SkillBudget: &charactersvc.SkillBudget{
+		Missing:       []string{"name", "hpMax", "alignment", "sex"},
+		UnmetMinimums: []charactersvc.ClassUnmet{{Class: "thief", Abilities: []string{}}, {Class: "bard", Abilities: []string{"cha"}}},
+		SkillPoints: &ruletablesvc.SkillPointsBudget{
 			Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
 			PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
 		},
-		ProficiencySlots: &skills.ProficiencySlots{
-			Nonweapon:   ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 2, Available: 5, Spent: 3, Left: 2, Languages: 1},
-			Weapon:      ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, Available: 2, Spent: 1, Left: 1},
-			Picks:       []skills.PickFigures{{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 17, HasCheck: true}},
-			WeaponPicks: []skills.WeaponPickFigures{{Type: "dagger", Slots: 1, Allowed: true}},
-		},
 	}, nil).Once()
-	rec := as(h, "new", "POST", "/api/characters/checks", `{"class":"thief","scores":{},"xp":1250,"skillPoints":{"open_locks":40},
+	rec := as(h, "new", "POST", "/api/characters/draft", `{"class":"thief","raceCode":"elf","str":9,"dex":25,"con":12,"int":11,"wis":10,"cha":12,
+		"xp":1250,"skillPoints":{"open_locks":40},
 		"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}],"weapon":[{"type":"dagger","slots":1}]},
-		"race":"elf","languages":["elvish","orcish"]}`)
+		"details":{"languages":["elvish","orcish"]}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"unmetMinimums":[],"skillBudget":{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,
-		"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45},
-		"proficiencySlots":{"nonWeapon":{"initial":3,"perLevels":4,"levelGained":0,"intelligence":2,"available":5,"spent":3,"left":2,"languages":1},
-		"weapon":{"initial":2,"perLevels":4,"levelGained":0,"available":2,"spent":1,"left":1},
-		"picks":[{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"target":17}],
-		"weaponPicks":[{"type":"dagger","slots":1,"allowed":true}]}}`, rec.Body.String())
+	var got map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.JSONEq(t, `[{"field":"dex","code":"out_of_range"},{"field":"nonweapon","code":"over_budget","spent":8,"limit":7}]`, string(got["refusals"]))
+	assert.JSONEq(t, `["name","hpMax","alignment","sex"]`, string(got["missing"]))
+	assert.JSONEq(t, `[{"class":"thief","abilities":[]},{"class":"bard","abilities":["cha"]}]`, string(got["unmetMinimums"]))
+	assert.JSONEq(t, `["elvish","orcish"]`, string(got["languages"]))
+	assert.JSONEq(t, `[]`, string(got["warnings"]))
+	var derived map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(got["derived"], &derived))
+	assert.JSONEq(t, `{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45}`,
+		string(derived["skillPoints"]))
+	assert.JSONEq(t, string(derived["skillPoints"]), string(got["skillPoints"]), "the draft's own budget, in the derived block's shape")
+	assert.JSONEq(t, `2`, string(derived["targetLevel"]))
+}
+
+// A draft's content is never a 400: an empty body answers 200 with every number blank, a null
+// derived block and empty lists; a height that is no number is the draft's one refusal (the
+// service is not asked). A body that is no JSON or names an unknown field is still a 400.
+func TestCharacters_DraftNeverRefusesContent(t *testing.T) {
+	h, m := newRouterWith(t, usersAuth(t, map[string]authsvc.User{
+		"new": {ID: bobID, Email: "new@example.com", Role: authsvc.RolePlayer},
+	}))
+	m.char.EXPECT().Draft(mock.Anything, mock.MatchedBy(func(n charactersvc.NewCharacter) bool { return n.Class == "" && n.Race == "" }),
+		[]string{"str", "dex", "con", "int", "wis", "cha", "hpMax", "xp"}).
+		Return(&charactersvc.Draft{Missing: []string{"name", "class"}}, nil).Once()
+	rec := as(h, "new", "POST", "/api/characters/draft", `{}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"derived":null,"skillPoints":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[]}`, rec.Body.String())
+
+	rec = as(h, "new", "POST", "/api/characters/draft", `{"details":{"height_cm":"tall"}}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var got struct {
+		Refusals []map[string]any `json:"refusals"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Len(t, got.Refusals, 1)
+	assert.Equal(t, "details.height", got.Refusals[0]["field"])
+
+	for _, body := range []string{`{"level":3}`, `not json`} {
+		rec = as(h, "new", "POST", "/api/characters/draft", body)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, body)
+	}
 }

@@ -100,29 +100,19 @@ func (s picksState) picks() skills.Picks {
 	return out
 }
 
-// edited is the state an edit of c gives (ADR 0037 steps 6, 10, 12 and 18): the picks checked by
-// skills.ValidPicks against the stored ones, the languages by skills.ValidLanguages (nil: as
-// read), then the budget at the realized level, each pool judged on its own and the languages in
-// the non-weapon one; nothing is written. A refusal is a *domain.FieldError or a
-// *domain.BudgetError.
+// edited is the state an edit of c gives (ADR 0037 steps 6, 10, 12 and 18): skills.Apply on the
+// stored sheet at the realized level (the picks, the languages, then the budget); nothing is
+// written. A refusal is a *domain.FieldError or a *domain.BudgetError.
 func (s *service) edited(c *charactersvc.Character, e Edit) (skills.Picks, []string, error) {
-	next, err := skills.ValidPicks(s.book, c.Class, e.Picks, c.Proficiencies)
+	before := skills.Sheet{
+		Class: c.Class, Level: c.Derived.RealizedLevel, Intelligence: c.Int,
+		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: s.languages.Native(c.Race),
+	}
+	after, err := skills.Apply(s.book, s.languages, c.Race, before, skills.Edit(e))
 	if err != nil {
 		return skills.Picks{}, nil, err
 	}
-	langs := c.Details.Languages
-	if e.Languages != nil {
-		if langs, err = skills.ValidLanguages(s.languages, c.Race, c.Details.Languages, e.Languages); err != nil {
-			return skills.Picks{}, nil, err
-		}
-	}
-	native := s.languages.Native(c.Race)
-	before := skills.Sheet{Picks: c.Proficiencies, Languages: c.Details.Languages, Native: native}
-	after := skills.Sheet{Picks: next, Languages: langs, Native: native}
-	if err := skills.PicksWithinBudget(s.book, c.Class, c.Derived.RealizedLevel, c.Int, before.Spending(), after.Spending()); err != nil {
-		return skills.Picks{}, nil, err
-	}
-	return next, langs, nil
+	return after.Picks, after.Languages, nil
 }
 
 // proficiencies reads the pools of c with picks and languages (skills.Read, the sheet's own

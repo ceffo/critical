@@ -118,6 +118,17 @@
     ],
     "skillArmor": "leather",
     "skillBudget": [],
+    "skillPoints": {
+      "level": 15,
+      "first": 20,
+      "perLevel": 15,
+      "available": 230,
+      "spent": 200,
+      "left": 30,
+      "perSkillFirst": 0,
+      "perSkillPerLevel": 0,
+      "perSkillCap": 0
+    },
     "backstab": 0,
     "proficiencySlots": {
       "nonWeapon": {

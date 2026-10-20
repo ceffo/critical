@@ -121,74 +121,163 @@ func cleanName(raw string) (string, error) {
 	return name, nil
 }
 
-// validate checks n field by field, in the form's order, and returns the
-// character it enters. A draft (the preview) may leave the name, the
-// alignment and the sex blank; every other refusal is the creation's.
-func (s *service) validate(n NewCharacter, draft bool) (Character, error) {
+// checked is a new character's entries read field by field (check): the character they enter,
+// the refusals in the form's order (Create answers the first), the fields still blank (a draft's;
+// Create refuses them), whether the class and XP read (levelled: the starting level and the skill
+// point budget need nothing else) and whether every entry the derivation reads does (derivable:
+// the class, race, scores, skill points and XP). The picks and the languages are judged later, at
+// the starting level (skillsAt).
+type checked struct {
+	c         Character
+	refusals  []error
+	missing   []string
+	levelled  bool
+	derivable bool
+}
+
+// check reads n field by field, in the form's order. The creation (draft false) stops at the
+// first refusal. A draft lists a blank name, class, race, alignment or sex and the numbers named
+// in blank as missing instead of refusing them, and goes on past a refusal so that every field's
+// verdict is read; every refusal it gives is the creation's, field and code alike.
+func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, error) {
+	var out checked
+	stop := func() bool { return !draft && len(out.refusals) > 0 }
+	refuse := func(err error) { out.refusals = append(out.refusals, err) }
+	empty := func(field string) {
+		if draft {
+			out.missing = append(out.missing, field)
+		} else {
+			refuse(&domain.FieldError{Field: field, Message: CodeEmpty})
+		}
+	}
 	name, err := cleanName(n.Name)
-	if err != nil && (!draft || strings.TrimSpace(n.Name) != "") {
-		return Character{}, err
+	switch {
+	case err == nil:
+	case strings.TrimSpace(n.Name) == "":
+		empty("name")
+	default:
+		refuse(err)
 	}
-	if !slices.Contains(CreatableClasses, n.Class) {
-		return Character{}, &domain.FieldError{Field: "class", Message: CodeNotCreatable}
+	if stop() {
+		return out, nil
 	}
+	classOK := slices.Contains(CreatableClasses, n.Class)
+	switch {
+	case classOK:
+	case draft && n.Class == "":
+		empty("class")
+	default:
+		refuse(&domain.FieldError{Field: "class", Message: CodeNotCreatable})
+	}
+	if stop() {
+		return out, nil
+	}
+	raceOK := false
 	switch {
 	case n.Race == "":
-		return Character{}, &domain.FieldError{Field: "race", Message: CodeEmpty}
+		empty("race")
 	case !slices.Contains(Races, n.Race):
-		return Character{}, &domain.FieldError{Field: "race", Message: CodeUnknown}
+		refuse(&domain.FieldError{Field: "race", Message: CodeUnknown})
+	case classOK:
+		allowed, err := s.rules.RaceAllows(n.Race, n.Class)
+		if err != nil {
+			return checked{}, fmt.Errorf("new character: %w", err)
+		}
+		if !allowed {
+			refuse(&domain.FieldError{Field: "race", Message: CodeRaceNotAllowed})
+		}
+		raceOK = allowed
 	}
-	allowed, err := s.rules.RaceAllows(n.Race, n.Class)
-	if err != nil {
-		return Character{}, fmt.Errorf("new character: %w", err)
+	if stop() {
+		return out, nil
 	}
-	if !allowed {
-		return Character{}, &domain.FieldError{Field: "race", Message: CodeRaceNotAllowed}
-	}
+	scoresOK := true
 	for _, a := range []struct {
-		field string
-		score int
+		field     string
+		v, lo, hi int
 	}{
-		{string(AbilityStr), n.Str},
-		{string(AbilityDex), n.Dex},
-		{string(AbilityCon), n.Con},
-		{string(AbilityInt), n.Int},
-		{string(AbilityWis), n.Wis},
-		{string(AbilityCha), n.Cha},
+		{string(AbilityStr), n.Str, MinAbility, MaxAbility},
+		{string(AbilityDex), n.Dex, MinAbility, MaxAbility},
+		{string(AbilityCon), n.Con, MinAbility, MaxAbility},
+		{string(AbilityInt), n.Int, MinAbility, MaxAbility},
+		{string(AbilityWis), n.Wis, MinAbility, MaxAbility},
+		{string(AbilityCha), n.Cha, MinAbility, MaxAbility},
 	} {
-		if a.score < MinAbility || a.score > MaxAbility {
-			return Character{}, &domain.FieldError{Field: a.field, Message: CodeOutOfRange}
+		switch {
+		case slices.Contains(blank, a.field):
+			out.missing, scoresOK = append(out.missing, a.field), false
+		case a.v < a.lo || a.v > a.hi:
+			refuse(&domain.FieldError{Field: a.field, Message: CodeOutOfRange})
+			scoresOK = false
+		}
+		if stop() {
+			return out, nil
 		}
 	}
 	if err := validExceptional(n); err != nil {
-		return Character{}, err
+		refuse(err)
+	}
+	if stop() {
+		return out, nil
 	}
 	points, err := validSkills(n)
+	pointsOK := err == nil
 	if err != nil {
-		return Character{}, err
+		refuse(err)
 	}
-	if n.HPMax < MinHPMax || n.HPMax > MaxHPMax {
-		return Character{}, &domain.FieldError{Field: "hpMax", Message: CodeOutOfRange}
+	if stop() {
+		return out, nil
 	}
-	if n.XP < MinStartingXP || n.XP > MaxStartingXP {
-		return Character{}, &domain.FieldError{Field: "xp", Message: CodeOutOfRange}
+	switch {
+	case slices.Contains(blank, "hpMax"):
+		out.missing = append(out.missing, "hpMax")
+	case n.HPMax < MinHPMax || n.HPMax > MaxHPMax:
+		refuse(&domain.FieldError{Field: "hpMax", Message: CodeOutOfRange})
 	}
-	details, err := newDetails(Kind{Class: n.Class, Race: n.Race}, s.languages, n.Details, n.Languages, !draft)
+	if stop() {
+		return out, nil
+	}
+	xpOK := true
+	switch {
+	case slices.Contains(blank, "xp"):
+		out.missing, xpOK = append(out.missing, "xp"), false
+	case n.XP < MinStartingXP || n.XP > MaxStartingXP:
+		refuse(&domain.FieldError{Field: "xp", Message: CodeOutOfRange})
+		xpOK = false
+	}
+	details, missing, err := newDetails(Kind{Class: n.Class, Race: n.Race}, n.Details, !draft)
 	if err != nil {
-		return Character{}, err
+		refuse(err)
 	}
-	// ADR 0037 step 14: the picks are checked as the editor checks them,
-	// with nothing picked before.
-	picks, err := skills.ValidPicks(s.profs, n.Class, n.Proficiencies, skills.Picks{})
-	if err != nil {
-		return Character{}, err
-	}
-	return Character{
+	out.missing = append(out.missing, missing...)
+	out.levelled = classOK && xpOK
+	out.derivable = out.levelled && raceOK && scoresOK && pointsOK
+	out.c = Character{
 		Name: name, Class: n.Class, Race: n.Race,
 		Str: n.Str, StrExceptional: n.StrExceptional, Dex: n.Dex, Con: n.Con, Int: n.Int, Wis: n.Wis, Cha: n.Cha,
-		HPMax: n.HPMax, XPTotal: n.XP, Details: details,
-		SkillPoints: points, Proficiencies: picks,
-	}, nil
+		HPMax: n.HPMax, XPTotal: n.XP, Details: details, SkillPoints: points,
+	}
+	return out, nil
+}
+
+// skillsAt is the skills module's verdict on a new character at its starting level (ADR 0037
+// steps 6, 10, 14 and 18, skills.Apply with nothing picked before): its picks and its languages
+// checked as the editor checks them, then the non-weapon pool. A refusal on the languages names
+// the creation form's field, DetailsField + FieldLanguages.
+func (s *service) skillsAt(c Character, n NewCharacter) (skills.Sheet, error) {
+	before := skills.Sheet{Class: c.Class, Level: c.RealizedLevel, Intelligence: c.Int, Native: s.languages.Native(c.Race)}
+	languages := n.Languages
+	if languages == nil {
+		languages = []string{}
+	}
+	after, err := skills.Apply(s.profs, s.languages, c.Race, before, skills.Edit{Picks: n.Proficiencies, Languages: languages})
+	if fe, ok := errors.AsType[*domain.FieldError](err); ok && fe.Field == FieldLanguages {
+		return skills.Sheet{}, &domain.FieldError{Field: DetailsField + FieldLanguages, Message: fe.Message}
+	}
+	if be, ok := errors.AsType[*domain.BudgetError](err); ok && be.Field == FieldLanguages {
+		return skills.Sheet{}, &domain.BudgetError{Field: DetailsField + FieldLanguages, Spent: be.Spent, Limit: be.Limit}
+	}
+	return after, err
 }
 
 // validSkills is ADR 0030 steps 1, 17 and 18: a thief or a bard enters its
@@ -220,10 +309,14 @@ func validExceptional(n NewCharacter) error {
 // character is no move of the game and is not undone). This server forgets
 // the owner's sessions once it committed (ADR 0029 step 4.7).
 func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (int64, error) {
-	c, err := s.validate(n, false)
+	k, err := s.check(n, nil, false)
 	if err != nil {
 		return 0, err
 	}
+	if len(k.refusals) > 0 {
+		return 0, k.refusals[0]
+	}
+	c := k.c
 	if err := started(&c, s.rules); err != nil {
 		return 0, err
 	}
@@ -232,11 +325,13 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	if err := skills.SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return 0, err
 	}
-	// ADR 0037 steps 6, 10 and 14: nor over its non-weapon slots, its
-	// languages included.
-	if err := s.creationWithinBudget(c); err != nil {
+	// ADR 0037 steps 6, 10, 14 and 18: nor with picks or languages the
+	// editor refuses, nor over its non-weapon slots.
+	sheet, err := s.skillsAt(c, n)
+	if err != nil {
 		return 0, err
 	}
+	c.Proficiencies, c.Details.Languages = sheet.Picks, sheet.Languages
 	var id int64
 	if err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
@@ -249,24 +344,6 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	s.sessions.ForgetUser(owner)
 	return id, nil
-}
-
-// creationWithinBudget is ADR 0037 steps 6, 10 and 14 at creation: nothing was spent before, so
-// the picks and the languages may not overspend the non-weapon pool. A refusal on the languages
-// names the creation form's field, DetailsField + FieldLanguages.
-func (s *service) creationWithinBudget(c Character) error {
-	err := skills.PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, skills.Spending{}, s.creationSpending(c))
-	var be *domain.BudgetError
-	if errors.As(err, &be) && be.Field == FieldLanguages {
-		return &domain.BudgetError{Field: DetailsField + FieldLanguages, Spent: be.Spent, Limit: be.Limit}
-	}
-	return err
-}
-
-// creationSpending is what a new character spends from its pools: its picks and its languages
-// (ADR 0037 steps 6 and 14).
-func (s *service) creationSpending(c Character) skills.Spending {
-	return skills.Spending{Picks: c.Proficiencies, Languages: s.languageSlots(c.Race, c.Details)}
 }
 
 // started gives a new character the sheet and the realized level it is
@@ -282,32 +359,83 @@ func started(c *Character, rules Rules) error {
 	return nil
 }
 
-// Preview is the character Create would store from n, read as GET
-// /api/character reads it once created (its derived block and its warnings),
-// without storing anything: the creation's identity step and review show the
-// server's figures before the player creates (ADR 0034). A blank name,
-// alignment or sex is no refusal here (the caller lists them as missing);
-// every other refusal is Create's, field for field.
-func (s *service) Preview(_ context.Context, n NewCharacter) (*Character, error) {
-	c, err := s.validate(n, true)
+// Draft is a creation draft as far as it is entered (ADR 0034, amendment of 2026-10-20: one
+// draft endpoint): the character Create would store, read as GET /api/character reads it (its
+// derived block, warnings and languages; nil while an entry the derivation reads, the class,
+// race, scores, skill points or XP, is missing or refused), a thief's or a bard's skill point
+// budget as soon as the class and XP read (ADR 0030 steps 17 and 18: the budget reads the class
+// and level only, so a score out of range does not hide it), every refusal Create would give with
+// its field and code, the fields still blank and the class minimums the entered scores miss. blank
+// names the numbers not entered. Nothing is refused (a refusal is an answer here) and nothing is
+// stored.
+func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Draft, error) {
+	k, err := s.check(n, blank, true)
 	if err != nil {
 		return nil, err
 	}
+	out := &Draft{Refusals: k.refusals, Missing: k.missing, UnmetMinimums: unmetMinimums(n, blank)}
+	if !k.derivable {
+		if k.levelled {
+			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
+			level, err := s.rules.LevelFor(n.Class, n.XP)
+			if err != nil {
+				return nil, fmt.Errorf("draft: %w", err)
+			}
+			out.SkillPoints = budgetAt(out, n.Class, level, k.c.SkillPoints)
+		}
+		return out, nil
+	}
+	c := k.c
 	if err := started(&c, s.rules); err != nil {
 		return nil, err
 	}
-	if err := skills.SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
-		return nil, err
-	}
-	if err := s.creationWithinBudget(c); err != nil {
-		return nil, err
+	out.SkillPoints = budgetAt(out, c.Class, c.RealizedLevel, c.SkillPoints)
+	if sheet, err := s.skillsAt(c, n); err != nil {
+		out.Refusals = append(out.Refusals, err)
+		// Refused picks are read as entered, so the step shows their figures beside the refusal.
+		c.Proficiencies, c.Details.Languages = n.Proficiencies, n.Languages
+	} else {
+		c.Proficiencies, c.Details.Languages = sheet.Picks, sheet.Languages
 	}
 	// Nothing is worn before the character exists (ADR 0033 step 14).
 	if c.Derived, err = Derive(&c, 0, "", s.rules); err != nil {
-		return nil, fmt.Errorf("preview: %w", err)
+		return nil, fmt.Errorf("draft: %w", err)
 	}
 	s.readWarnings(&c)
-	return &c, nil
+	out.Character = &c
+	return out, nil
+}
+
+// budgetAt is a draft's skill point budget at level (ADR 0030 steps 17 and 18), nil for a class
+// without skill points, and adds to out the creation's refusal of points over it (ADR 0037 step
+// 10: nothing was spent before).
+func budgetAt(out *Draft, class string, level int, points map[string]int) *ruletablesvc.SkillPointsBudget {
+	if err := skills.SkillPointsWithinBudget(class, level, nil, points); err != nil {
+		out.Refusals = append(out.Refusals, err)
+	}
+	if b, ok := ruletablesvc.SkillPointsFigures(class, level, points); ok {
+		return &b
+	}
+	return nil
+}
+
+// unmetMinimums are, for every creatable class, the abilities whose entered score is under the
+// class's minimum (PHB Table 13); an ability not entered is not unmet.
+func unmetMinimums(n NewCharacter, blank []string) []ClassUnmet {
+	scores := map[string]int{}
+	for _, a := range []struct {
+		ability Ability
+		v       int
+	}{{AbilityStr, n.Str}, {AbilityDex, n.Dex}, {AbilityCon, n.Con}, {AbilityInt, n.Int}, {AbilityWis, n.Wis}, {AbilityCha, n.Cha}} {
+		if !slices.Contains(blank, string(a.ability)) {
+			scores[string(a.ability)] = a.v
+		}
+	}
+	out := make([]ClassUnmet, 0, len(CreatableClasses))
+	for _, class := range CreatableClasses {
+		out = append(out, ClassUnmet{Class: class, Abilities: ruletablesvc.UnmetMinimums(class, scores)})
+	}
+	return out
 }
 
 // Change renames and retires in one transaction, outside the action log
@@ -628,76 +756,30 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 	return out, nil
 }
 
-// DraftInput is a creation draft as far as it is entered: the scores typed
-// or rolled so far (an ability absent has none yet), the starting XP when
-// readable, and the skill points by skill.
-type DraftInput struct {
-	Class       string
-	Scores      map[string]int
-	XP          *int
-	SkillPoints map[string]int
-	// Proficiencies are the non-weapon picks so far (ADR 0037 step 14).
-	Proficiencies skills.Picks
-	// Race and Languages are the draft's race and languages so far: the
-	// languages beyond the race's native one and Common spend a non-weapon
-	// slot each (ADR 0037 step 6). Empty before the identity step.
-	Race      string
-	Languages []string
-}
-
-// SkillBudget is the skill point budget of a thief or a bard at the starting
-// level with the terms of its formula (ADR 0030 steps 17 and 18).
-type SkillBudget = ruletablesvc.SkillPointsBudget
-
-// DraftChecks are the verdicts on a draft the creation steps show before the
-// character can be previewed.
-type DraftChecks struct {
-	// UnmetMinimums are, for every creatable class, the abilities whose
-	// entered score is under the class's minimum (PHB Table 13); empty
-	// where the scores meet them or are not entered yet.
+// Draft is the answer to a creation draft (Service.Draft).
+type Draft struct {
+	// Character is the character Create would store, derived and warned as a read of it; nil
+	// while the class, race, scores, skill points or XP are missing or refused. Its picks and
+	// languages are read as entered when the skills module refuses them, the native language
+	// added as a read adds it.
+	Character *Character
+	// SkillPoints is a thief's or a bard's skill point budget at the starting level, set as soon
+	// as the class and XP read, whatever the race and scores (ADR 0030 steps 17 and 18); nil for
+	// another class or while the class or XP is missing or refused. With a Character, it equals
+	// the derived block's.
+	SkillPoints *ruletablesvc.SkillPointsBudget
+	// Refusals are Create's refusals of the draft, in the form's order: each a
+	// *domain.FieldError or a *domain.BudgetError.
+	Refusals []error
+	// Missing are the fields still blank that Create requires, in the form's order.
+	Missing []string
+	// UnmetMinimums are, for every creatable class, the abilities whose entered score is under
+	// the class's minimum (PHB Table 13); empty where the scores meet them or are not entered.
 	UnmetMinimums []ClassUnmet
-	// SkillBudget is the draft class's budget at the level its XP gives;
-	// nil for a class without skill points or an XP that gives no level.
-	SkillBudget *SkillBudget
-	// ProficiencySlots is the draft class's non-weapon pool at the level its
-	// XP gives and its picks' figures (ADR 0037 steps 3 to 5 and 14); nil
-	// while the class, the XP or the Intelligence is not entered, or the
-	// catalogue has no Table 34 row. Picks the editor would refuse are read
-	// as entered: the checks refuse nothing.
-	ProficiencySlots *skills.ProficiencySlots
 }
 
 // ClassUnmet is a class and the abilities under its minimum.
 type ClassUnmet struct {
 	Class     string
 	Abilities []string
-}
-
-// CreationChecks reads a draft against the class minimums and the skill
-// point budget (ADR 0034, the class and skills steps). Nothing is refused: a
-// draft too raw to read (a class that is none of CreatableClasses, an XP
-// that gives no level) just has no budget.
-func (s *service) CreationChecks(_ context.Context, in DraftInput) (DraftChecks, error) {
-	out := DraftChecks{UnmetMinimums: make([]ClassUnmet, 0, len(CreatableClasses))}
-	for _, class := range CreatableClasses {
-		out.UnmetMinimums = append(out.UnmetMinimums, ClassUnmet{Class: class, Abilities: ruletablesvc.UnmetMinimums(class, in.Scores)})
-	}
-	if in.XP == nil || *in.XP < MinStartingXP || *in.XP > MaxStartingXP || !slices.Contains(CreatableClasses, in.Class) {
-		return out, nil
-	}
-	level, err := s.rules.LevelFor(in.Class, *in.XP)
-	if err != nil {
-		return out, nil //nolint:nilerr // an XP outside the table has no level, hence no budget; the creation refuses it
-	}
-	if b, ok := ruletablesvc.SkillPointsFigures(in.Class, level, in.SkillPoints); ok {
-		out.SkillBudget = &b
-	}
-	if score, ok := in.Scores[string(AbilityInt)]; ok {
-		out.ProficiencySlots, _ = skills.Read(s.profs, skills.Sheet{
-			Class: in.Class, Level: level, Intelligence: score, Picks: in.Proficiencies,
-			Languages: Details{Languages: in.Languages}.Known(s.languages).Languages, Native: s.languages.Native(in.Race),
-			Score: func(a string) (int, bool) { v, ok := in.Scores[a]; return v, ok },
-		})
-	}
-	return out, nil
 }

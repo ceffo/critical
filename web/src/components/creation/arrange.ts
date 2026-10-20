@@ -3,10 +3,10 @@ import { ApiError } from "@/api/http";
 import {
   emptyPlacement,
   placedValues,
+  type FlowDraft,
   type Placement,
-} from "@/lib/creationFlow";
+} from "./flow";
 import { ABILITIES, type ScoresRoll } from "@/types/character";
-import type { FlowDraft } from "./flow";
 
 /**
  * The draft change a placement makes (ADR 0032 step 6): the server turns the placed totals and the

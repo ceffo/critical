@@ -509,8 +509,8 @@ through their DAL; `ruletablesvc.SkillArmorFor` maps the column to the skill arm
 `none_allowed`, `metal` for a thief and an unknown column read `padded_studded_leather`). The
 derived block (`GET /api/character`) and `GET /api/skills` carry `skillArmor`, the skill armour read
 (the Skills tab names it; it is changed by wearing armour in the Inventaire, never there). The
-`skillArmor` entry is gone from `POST /api/characters`, `POST /api/characters/preview` and `PATCH
-/api/characters/{id}` (a body naming it is an unknown field, 400) and from the creation options
+`skillArmor` entry is gone from `POST /api/characters`, ~~`POST /api/characters/preview`~~ (since
+2026-10-20 `POST /api/characters/draft`, ADR 0034) and `PATCH /api/characters/{id}` (a body naming it is an unknown field, 400) and from the creation options
 (`skillArmors`); `characters.skill_armor` is no longer read or written, except by the restorer of an
 old `skill_armor` entry. The carry-over is the data step of migration 020 (`carrySkillArmour`, schema:
 a column comment), on `itemsvc.CarrySkillArmour`. Readings the ADR leaves open, fixed here: "the

@@ -157,13 +157,13 @@ writes `Test<name>` and adds the prefix here in the same PR.
    the pool's `intelligence` term only. The budget applies on a picks save (the languages
    unchanged), on a languages edit (since step 18 the Skills tab's save, `PUT /api/proficiencies`;
    refused 409 `over_budget` on field `languages`) and at creation (the creation's preview and
-   create; field `details.languages`, the form's name). The refusal names the languages when the picks alone, with the languages as before, would pass, else `nonweapon`). `POST /api/characters/checks` takes the
+   create; field `details.languages`, the form's name). The refusal names the languages when the picks alone, with the languages as before, would pass, else `nonweapon`). ~~`POST /api/characters/checks`~~ (since 2026-10-20 `POST /api/characters/draft`, ADR 0034) takes the
    draft's `race` and `languages` so the proficiency step counts them. The tests are in
    charactersvc (no proficiencysvc; the rules' tests in `domain/skills` since step 17) with
    `TestBudget_Step6_LanguagesSpendTheNonweaponPool`,
    `TestCreate_Step6_LanguagesBeyondTheSlotsAreRefused`,
    `TestGetCharacter_Step6_TheLanguagesSpendTheNonweaponPool`,
-   and `TestCreationChecks_Step6_TheDraftLanguagesSpendThePool`; the composition's
+   and `TestDraft_Step6_TheDraftLanguagesSpendThePool` (the checks' test, moved to the draft endpoint of ADR 0034); the composition's
    `TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots` through the API. Kelsen's
    seedcheck reads 11 of 10 on the campaign seeds, a warning (the test fixture's Kelsen has no
    language beyond Common).)_
@@ -383,7 +383,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
     are allowed and reminded (step 11).
     Test: `TestCreate_Step14_PicksCheckedAsTheEditor` (charactersvc).
     _(As built: `POST /api/characters` and its preview take `proficiencies: {nonweapon: [...]}`;
-    `POST /api/characters/checks` takes the same and answers `proficiencySlots` once the class, the
+    ~~`POST /api/characters/checks`~~ (since 2026-10-20 the draft endpoint, ADR 0034) takes the same and answers `proficiencySlots` once the class, the
     XP and the Intelligence are entered. Also `TestProficiencies_Step14_CreationWithPicks`
     (composition). Weapon picks, 2026-10-20: `proficiencies: {weapon: [...]}` on the same
     endpoints (`TestCreate_Step14_WeaponPicksCheckedAsTheEditor`, charactersvc;

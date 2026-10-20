@@ -27,7 +27,9 @@ import {
   place,
   signed,
   emptyPlacement,
-} from "@/lib/creationFlow";
+  type FlowDraft,
+  type StepProps,
+} from "./flow";
 import { raceLanguages } from "@/lib/languages";
 import { formatNumber } from "@/lib/format";
 import { skillName } from "@/journal/words";
@@ -37,7 +39,6 @@ import { cn } from "@/lib/utils";
 import { ABILITIES, type AbilityCode } from "@/types/character";
 import { arrangeFor, pickRace } from "./arrange";
 import { Choice, Die, Group, Note, Row, Seg } from "./kit";
-import type { FlowDraft, StepProps } from "./flow";
 import { budgetFormula, formula } from "@/lib/skillBudget";
 
 const CLASS_ICONS: Record<string, ReactNode> = {
@@ -82,7 +83,7 @@ export function ClassStep({
   update,
   errorFor,
   xp,
-  checks,
+  answer,
 }: StepProps) {
   const { t, i18n } = useTranslation();
   const raceList = allRaces(options);
@@ -126,8 +127,8 @@ export function ClassStep({
             codes.map((a) => t(`details.alignments.${a}`)).join(", ");
           // The server says which minimums the entered scores miss (PHB Table 13).
           const unmet =
-            checks?.unmetMinimums.find((u) => u.class === c.class)?.abilities ??
-            [];
+            answer.latest?.unmetMinimums.find((u) => u.class === c.class)
+              ?.abilities ?? [];
           return (
             <Choice
               key={c.class}
@@ -355,7 +356,7 @@ export function RaceStep({
           );
         })}
       </div>
-      <FieldError id="new-character-raceCode" text={errorFor("raceCode")} />
+      <FieldError id="new-character-raceCode" text={errorFor("race")} />
     </>
   );
 }
@@ -751,9 +752,12 @@ export function ExtrasStep({
   errorFor,
   xp,
   watch,
-  checks,
+  answer,
 }: StepProps) {
   const { t } = useTranslation();
+  // The budget at the level the XP gives, the draft's own: it reads the class and XP only, so a
+  // score out of range leaves it shown (ADR 0030 steps 17, 18).
+  const budget = answer.latest?.skillPoints ?? null;
   const [busy, setBusy] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
   const cls = classOf(options, draft.cls);
@@ -927,34 +931,32 @@ export function ExtrasStep({
                 <p className="text-label text-ink-muted">
                   {t("characters.skillPointsLead")}
                 </p>
-                {checks?.skillBudget && (
+                {budget && (
                   <p
                     className="flex flex-wrap gap-x-4 gap-y-0.5 text-body tabular-nums"
                     data-testid="skill-budget"
                   >
                     <span>
                       {t("creation.extras.budget", {
-                        level: checks.skillBudget.level,
-                        total: checks.skillBudget.available,
+                        level: budget.level,
+                        total: budget.available,
                       })}
                     </span>
                     <span
-                      data-over={
-                        checks.skillBudget.left < 0 ? "true" : undefined
-                      }
+                      data-over={budget.left < 0 ? "true" : undefined}
                       className={cn(
                         "font-semibold",
-                        checks.skillBudget.left < 0 && "text-danger",
+                        budget.left < 0 && "text-danger",
                       )}
                     >
                       {t("creation.extras.budgetLeft", {
-                        left: checks.skillBudget.left,
+                        left: budget.left,
                       })}
                     </span>
-                    {checks.skillBudget.perSkillCap > 0 && (
+                    {budget.perSkillCap > 0 && (
                       <span className="text-ink-muted">
                         {t("creation.extras.budgetPerSkill", {
-                          max: checks.skillBudget.perSkillCap,
+                          max: budget.perSkillCap,
                         })}
                       </span>
                     )}
@@ -963,10 +965,10 @@ export function ExtrasStep({
                       data-testid="skill-budget-formula"
                     >
                       {t("creation.extras.budgetFormula", {
-                        formula: budgetFormula(t, checks.skillBudget),
+                        formula: budgetFormula(t, budget),
                       })}
                     </span>
-                    {checks.skillBudget.perSkillCap > 0 && (
+                    {budget.perSkillCap > 0 && (
                       <span
                         className="text-ink-muted"
                         data-testid="skill-budget-per-skill-formula"
@@ -974,10 +976,10 @@ export function ExtrasStep({
                         {t("creation.extras.budgetPerSkillFormula", {
                           formula: formula(
                             t,
-                            checks.skillBudget.perSkillFirst,
-                            checks.skillBudget.perSkillPerLevel,
-                            checks.skillBudget.level,
-                            checks.skillBudget.perSkillCap,
+                            budget.perSkillFirst,
+                            budget.perSkillPerLevel,
+                            budget.level,
+                            budget.perSkillCap,
                           ),
                         })}
                       </span>

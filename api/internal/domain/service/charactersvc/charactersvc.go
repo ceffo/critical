@@ -52,10 +52,12 @@ type SVC interface {
 	// weapon, item, proficiency, skill or spellbook). A *domain.FieldError
 	// for invalid input (see NewCharacter).
 	Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (int64, error)
-	// Preview is the character Create would store from n, derived and
-	// warned as a read of it, storing nothing; a blank name, alignment or
-	// sex is no refusal (ADR 0034, the creation's identity step and review).
-	Preview(ctx context.Context, n NewCharacter) (*Character, error)
+	// Draft reads a creation draft as far as it is entered (ADR 0034, amendment
+	// of 2026-10-20): the character Create would store, derived and warned as
+	// a read of it, Create's refusals, the fields still blank and the class
+	// minimums missed; blank names the numbers not entered. It refuses
+	// nothing and stores nothing.
+	Draft(ctx context.Context, n NewCharacter, blank []string) (*Draft, error)
 	// Change renames or retires the owner's character id (step 7.3).
 	// Another user's character, a retired one and an unknown id are all
 	// domain.ErrCharacterNotFound; retiring the current character makes the
@@ -65,9 +67,6 @@ type SVC interface {
 	// CreationOptions are the classes a new character may have, the races
 	// each admits and the entered values' ranges.
 	CreationOptions(ctx context.Context) (CreationOptions, error)
-	// CreationChecks reads a draft against the class ability minimums and
-	// the skill point budget (ADR 0034); it refuses nothing.
-	CreationChecks(ctx context.Context, in DraftInput) (DraftChecks, error)
 }
 
 // Reader is the read-side driven port. Per clean_architecture.md §5.4, reads
@@ -258,12 +257,6 @@ func fromSkills(ws []skills.Warning) []Warning {
 		out = append(out, Warning{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left})
 	}
 	return out
-}
-
-// languageSlots is ADR 0037 step 6 on the details of a character of race: the slots its known
-// languages spend.
-func (s *service) languageSlots(race string, d Details) int {
-	return skills.LanguageSlots(d.Known(s.languages).Languages, s.languages.Native(race))
 }
 
 // List names each character with its realized level (ADR 0030 step 3), its

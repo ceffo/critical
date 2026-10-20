@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/api/http";
-import { emptyPlacement, place } from "@/lib/creationFlow";
+import { emptyPlacement, place } from "./flow";
 import type { ScoresArrangement, ScoresRoll } from "@/types/character";
 import { arrangeFor, pickRace } from "./arrange";
 import { EMPTY_DRAFT, type FlowDraft } from "./flow";

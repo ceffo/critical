@@ -1,8 +1,6 @@
 import type {
   CharacterList,
-  CharacterPreview,
-  DraftChecks,
-  DraftChecksRequest,
+  CreationDraft,
   CreationOptions,
   HpRoll,
   IdentityFigure,
@@ -49,23 +47,12 @@ export function createCharacter(body: NewCharacter): Promise<CharacterList> {
 }
 
 /**
- * What a creation body would be once created (ADR 0034: the identity step and the review show the
- * server's figures and warnings); a blank name, alignment or sex is listed as missing, any other
- * invalid value is the creation's refusal. Writes nothing.
+ * A creation draft as far as it is entered (ADR 0034, amendment of 2026-10-20): the sheet it would
+ * read as once created, the creation's refusals, the fields still blank and the class minimums
+ * missed. Never a 400 for the draft's content; writes nothing.
  */
-export function previewCharacter(
-  body: NewCharacter,
-): Promise<CharacterPreview> {
-  return post<CharacterPreview>("/api/characters/preview", body);
-}
-
-/**
- * The server's verdicts on a raw draft (ADR 0034, the class and skills steps): the classes whose
- * ability minimums the entered scores miss and a thief's or a bard's skill point budget. Refuses
- * nothing, writes nothing.
- */
-export function checkDraft(body: DraftChecksRequest): Promise<DraftChecks> {
-  return post<DraftChecks>("/api/characters/checks", body);
+export function draftCharacter(body: NewCharacter): Promise<CreationDraft> {
+  return post<CreationDraft>("/api/characters/draft", body);
 }
 
 /** Retires a character (ADR 0029 step 7.3: hidden, never deleted); the server picks the next current one. */

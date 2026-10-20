@@ -11,7 +11,7 @@ import type { StepProps } from "./flow";
  * The creation's languages (ADR 0032 step 4, ADR 0034 step 3.5 as amended by ADR 0037 step 18): on
  * the proficiency step, next to the non-weapon picks whose pool they spend (ADR 0037 step 6). The
  * catalogue as chips: the native language locked, the race's list bright, the others dimmed. The
- * pool's line is the checks endpoint's figures (`pool`), worded; an overspend is the server's
+ * pool's line is the draft's figures (`pool`), worded; an overspend is the server's
  * refusal at Créer, on `details.languages`.
  */
 export function LanguagesGroup(props: StepProps & { pool?: NonweaponPool }) {

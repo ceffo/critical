@@ -28,16 +28,8 @@ type changer interface {
 	Change(ctx context.Context, owner uuid.UUID, id int64, c charactersvc.Change) (int64, error)
 }
 
-type previewer interface {
-	Preview(ctx context.Context, n charactersvc.NewCharacter) (*charactersvc.Character, error)
-}
-
 type optionsReader interface {
 	CreationOptions(ctx context.Context) (charactersvc.CreationOptions, error)
-}
-
-type draftChecker interface {
-	CreationChecks(ctx context.Context, in charactersvc.DraftInput) (charactersvc.DraftChecks, error)
 }
 
 func minimumDTOs(ms []ruletablesvc.AbilityMinimum) []AbilityMinimumDTO {
@@ -345,22 +337,27 @@ func detailsPatch(d *wire.DetailsDTO) (charactersvc.DetailsPatch, error) {
 	return p, nil
 }
 
-// required is the field's value, or the field error of a missing one.
-func required(field string, v *int) (int, error) {
-	if v == nil {
-		return 0, &domain.FieldError{Field: field, Message: charactersvc.CodeEmpty}
+func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
+	n, blank, err := b.entered()
+	if err != nil {
+		return n, err
 	}
-	return *v, nil
+	if len(blank) > 0 {
+		return n, &domain.FieldError{Field: blank[0], Message: charactersvc.CodeEmpty}
+	}
+	return n, nil
 }
 
-func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
+// entered is the body as a new character and the numbers it leaves out (blank, in the form's
+// order), which are 0 in it: the creation refuses them, a draft lists them as missing.
+func (b CreateBody) entered() (charactersvc.NewCharacter, []string, error) {
 	details, err := detailsPatch(b.Details)
 	if err != nil {
 		// A height or weight that is no number names its field under details.
 		if fe, ok := errors.AsType[*domain.FieldError](err); ok {
-			return charactersvc.NewCharacter{}, &domain.FieldError{Field: charactersvc.DetailsField + fe.Field, Message: fe.Message}
+			return charactersvc.NewCharacter{}, nil, &domain.FieldError{Field: charactersvc.DetailsField + fe.Field, Message: fe.Message}
 		}
-		return charactersvc.NewCharacter{}, err
+		return charactersvc.NewCharacter{}, nil, err
 	}
 	n := charactersvc.NewCharacter{
 		Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional,
@@ -371,6 +368,7 @@ func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
 	if b.Details != nil {
 		n.Languages = b.Details.Languages
 	}
+	var blank []string
 	for _, f := range []struct {
 		field string
 		dst   *int
@@ -385,73 +383,38 @@ func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
 		{"hpMax", &n.HPMax, b.HPMax},
 		{"xp", &n.XP, b.XP},
 	} {
-		v, err := required(f.field, f.v)
-		if err != nil {
-			return n, err
+		if f.v == nil {
+			blank = append(blank, f.field)
+			continue
 		}
-		*f.dst = v
+		*f.dst = *f.v
 	}
-	return n, nil
+	return n, blank, nil
 }
 
-// decodeCreate reads a POST /api/characters body (the creation's and the
-// preview's).
+// decodeCreate reads a POST /api/characters body.
 func decodeCreate(r *http.Request) (charactersvc.NewCharacter, error) {
-	var b CreateBody
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&b); err != nil {
-		// A height or weight that is no number names its field under details.
-		if fe, ok := errors.AsType[*domain.FieldError](err); ok {
-			return charactersvc.NewCharacter{}, &domain.FieldError{Field: charactersvc.DetailsField + fe.Field, Message: fe.Message}
-		}
-		return charactersvc.NewCharacter{}, render.BadRequestError("invalid JSON body")
+	b, err := decodeBody(r)
+	if err != nil {
+		return charactersvc.NewCharacter{}, err
 	}
 	return b.toNew()
 }
 
-// PreviewDTO is POST /api/characters/preview: the derived block and the
-// warnings the character would be read with once created (as GET
-// /api/character), its languages (the native one added), and `missing`, the
-// fields still blank that the creation requires (`name`, `alignment`, `sex`).
-type PreviewDTO struct {
-	Derived   DerivedDTO   `json:"derived"`
-	Warnings  []WarningDTO `json:"warnings"`
-	Languages []string     `json:"languages"`
-	Missing   []string     `json:"missing"`
-}
-
-// Preview is POST /api/characters/preview: the creation's body, checked and
-// derived as POST /api/characters would, storing nothing (ADR 0034, the
-// identity step and the review). A blank name, alignment or sex is listed in
-// `missing`; any other invalid input is the creation's 400, field for field.
-func Preview(svc previewer) render.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		if _, err := user(r); err != nil {
-			return err
+// decodeBody reads a creation body (the creation's and the draft's). An unknown field or a body
+// that is no JSON is a bad request; a height or weight that is no number is a field error under
+// details.
+func decodeBody(r *http.Request) (CreateBody, error) {
+	var b CreateBody
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&b); err != nil {
+		if fe, ok := errors.AsType[*domain.FieldError](err); ok {
+			return CreateBody{}, &domain.FieldError{Field: charactersvc.DetailsField + fe.Field, Message: fe.Message}
 		}
-		n, err := decodeCreate(r)
-		if err != nil {
-			return err
-		}
-		c, err := svc.Preview(r.Context(), n)
-		if err != nil {
-			return err
-		}
-		missing := []string{}
-		if c.Name == "" {
-			missing = append(missing, "name")
-		}
-		missing = append(missing, c.Details.Missing()...)
-		langs := c.Details.Languages
-		if langs == nil {
-			langs = []string{}
-		}
-		render.OK(r.Context(), w, PreviewDTO{
-			Derived: derivedDTO(c.Derived), Warnings: warningsDTO(c.Warnings), Languages: langs, Missing: missing,
-		})
-		return nil
+		return CreateBody{}, render.BadRequestError("invalid JSON body")
 	}
+	return b, nil
 }
 
 // Create is POST /api/characters: a new character of the user's, which
@@ -526,93 +489,11 @@ func levelXPDTO(rows []charactersvc.LevelXP) []LevelXPDTO {
 	return out
 }
 
-// ChecksBody is the body of POST /api/characters/checks: a draft as far as
-// it is entered. `scores` holds the abilities entered so far (by code),
-// `xp` the starting XP when it reads, `skillPoints` the points by skill.
-type ChecksBody struct {
-	Class       string         `json:"class"`
-	Scores      map[string]int `json:"scores"`
-	XP          *int           `json:"xp"`
-	SkillPoints map[string]int `json:"skillPoints"`
-	// Proficiencies are the non-weapon and the weapon picks so far; absent
-	// for none.
-	Proficiencies *wire.PicksDTO `json:"proficiencies"`
-	// Race and Languages are the draft's race and languages so far (ADR 0037
-	// step 6: each beyond the native one and Common spends a non-weapon
-	// slot); absent before the identity step. Additive.
-	Race      string   `json:"race"`
-	Languages []string `json:"languages"`
-}
-
 // ClassUnmetDTO is a class and the abilities whose entered score is under its
 // minimum.
 type ClassUnmetDTO struct {
 	Class     string   `json:"class"`
 	Abilities []string `json:"abilities"`
-}
-
-// SkillBudgetFigureDTO is a thief's or a bard's skill point budget at the
-// starting level, with the terms of its formula, named as GET /api/skills'
-// `budget` names them: `available` the level allows (`first` + `perLevel` x
-// (level - 1)), `spent` entered, `left` (negative when over), `perSkillCap` the
-// most one skill holds (`perSkillFirst` + `perSkillPerLevel` x (level - 1); 0:
-// no such limit).
-type SkillBudgetFigureDTO struct {
-	Level            int `json:"level"`
-	First            int `json:"first"`
-	PerLevel         int `json:"perLevel"`
-	Available        int `json:"available"`
-	Spent            int `json:"spent"`
-	Left             int `json:"left"`
-	PerSkillFirst    int `json:"perSkillFirst"`
-	PerSkillPerLevel int `json:"perSkillPerLevel"`
-	PerSkillCap      int `json:"perSkillCap"`
-}
-
-// ChecksDTO is POST /api/characters/checks: `unmetMinimums` for every
-// creatable class, and `skillBudget` for the draft's class (null for a class
-// without skill points or an XP that gives no level).
-type ChecksDTO struct {
-	UnmetMinimums []ClassUnmetDTO       `json:"unmetMinimums"`
-	SkillBudget   *SkillBudgetFigureDTO `json:"skillBudget"`
-	// ProficiencySlots is the draft's pools and picks (ADR 0037 steps 3 to 5,
-	// 7 and 14), as GET /api/character's derived block names
-	// them; null while the class, the XP or the Intelligence is missing.
-	ProficiencySlots *wire.ProficiencySlotsDTO `json:"proficiencySlots"`
-}
-
-// Checks is POST /api/characters/checks: the verdicts the class and skills
-// steps show on a draft too raw to preview (ADR 0034). It refuses no value
-// and stores nothing.
-func Checks(svc draftChecker) render.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		var b ChecksBody
-		dec := json.NewDecoder(r.Body)
-		dec.DisallowUnknownFields()
-		if err := dec.Decode(&b); err != nil {
-			return render.BadRequestError("invalid JSON body")
-		}
-		c, err := svc.CreationChecks(r.Context(), charactersvc.DraftInput{
-			Class: b.Class, Scores: b.Scores, XP: b.XP, SkillPoints: b.SkillPoints, Proficiencies: b.Proficiencies.Picks(),
-			Race: b.Race, Languages: b.Languages,
-		})
-		if err != nil {
-			return err
-		}
-		out := ChecksDTO{UnmetMinimums: make([]ClassUnmetDTO, 0, len(c.UnmetMinimums)), ProficiencySlots: wire.ProficiencySlotsToDTO(c.ProficiencySlots)}
-		for _, u := range c.UnmetMinimums {
-			out.UnmetMinimums = append(out.UnmetMinimums, ClassUnmetDTO(u))
-		}
-		if c.SkillBudget != nil {
-			b := c.SkillBudget
-			out.SkillBudget = &SkillBudgetFigureDTO{
-				Level: b.Level, First: b.First, PerLevel: b.PerLevel, Available: b.Total, Spent: b.Spent, Left: b.Left,
-				PerSkillFirst: b.PerSkillFirst, PerSkillPerLevel: b.PerSkillPerLevel, PerSkillCap: b.PerSkill,
-			}
-		}
-		render.OK(r.Context(), w, out)
-		return nil
-	}
 }
 
 // weaponTypeDTOs maps a class's weapon type options; never nil.

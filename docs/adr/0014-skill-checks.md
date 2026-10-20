@@ -4,6 +4,7 @@
 [ADR 0027](0027-space-follows-frequency-of-use.md) step 12 (proposed): the Skills tab no longer offers
 step 5's adjustment before the roll, every check is adjusted on the result card (step 6); step 5's
 API is unchanged. Step 3 amended by [ADR 0030](0030-classes-and-races.md) (bard skill percentages computed), implemented 2026-10-18 (step 18).
+Step 1 and the Consequences amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-20), on implementation: the proficiencies are the character's picks from the Table 37 catalogue, and each slot beyond a pick's cost adds +1 to its target.
 
 ## Context
 
@@ -30,7 +31,9 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
 
 1. **Proficiency check.** One d20 through the dice port. The target is the sheet's score of the
    proficiency's ability plus its modifier, computed on the server; the check succeeds when the
-   roll is at or under the target.
+   roll is at or under the target. _(Amended by ADR 0037 step 5, on implementation: the
+   modifier is the catalogue's, and the target also counts the pick's slots beyond its cost, +1
+   each.)_
    Test: `TestSkillCheck_Step1_ProficiencyD20AtOrUnderTarget` (at the target, one over, a
    positive and a negative modifier; exactly one d20, no d100).
 2. **A natural 20 always fails** a proficiency check, whatever the target.
@@ -114,3 +117,7 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
 - The last check of a skill is looked up among the newest 500 checks; an older one is not shown.
 - Not covered: proficiency slots and learning, armour and race adjustments to bard skills (the
   sheet's values are final), an adjustment kept from one check to the next ("sticky").
+  _(Amended by ADR 0037, on implementation: the proficiencies are picks from the Table 37
+  catalogue in `seeds/proficiencies.json` (steps 2 and 12), edited in the app, with slots
+  (step 3); `seeds/skills.json`'s proficiency rows are converted once (step 16) and no longer
+  reconciled. The bard skills' armour and race terms came with ADR 0030 step 18.)_

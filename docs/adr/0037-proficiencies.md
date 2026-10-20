@@ -10,6 +10,10 @@ proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequ
 [ADR 0030](0030-classes-and-races.md) (steps 12, 17 and 18 and the "Not covered" proficiency
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
 implementation.
+Steps 19 (the description pop-up) and 20 (the Tumbling buff) added 2026-10-20 (user triage of
+2026-10-20), decided, not implemented; step 19 reads the descriptions of
+[ADR 0021](0021-spell-catalogue.md) step 16 (format 9); step 20 amends [ADR 0014](0014-skill-checks.md)
+step 4 and [ADR 0004](0004-buffs.md) step 13.
 
 ## Context
 
@@ -557,3 +561,88 @@ _(As built, 2026-10-20.)_
   overspend refusal shows there live; `details.languages` opens that step) and the creation body
   still sends `details.languages`. The journal words a languages change by its count ("Langues :
   1 → 3"): the journal has no language catalogue to name them.
+
+## Amendment 2026-10-20: descriptions and the Tumbling buff (decided, not implemented)
+
+User, triage of 2026-10-20: "now we're missing the descriptions of the proficiencies. they should be
+available for the user when choosing them or as a reference before using them. like spells, we need to
+extract them from phbs both in French and English, make sure they are properly formatted. also, some
+have an effect, like Acrobatics that reduces the AC by 4 for the round". Scope: the 65 non-weapon
+proficiencies of step 2. Weapon proficiencies have no text of their own; the thief and bard skills'
+descriptions and the effects of other proficiencies are separate, deferred items.
+
+19. **The description pop-up.** Every non-weapon proficiency's description, in English and French
+    (ADR 0021 step 16: the catalogue's format 9, imported into `localized_texts`), is shown in a
+    **pop-up** opened from its name:
+    19.1 **Two click targets on a Skills-tab row.** A proficiency's row has the **name**, which
+         opens the pop-up, and the **ability + target** part, which rolls the check (ADR 0014
+         step 1). The two never do each other's job. A pick with no check (step 5: Blind-fighting,
+         Mountaineering) has the name target only.
+    19.2 **The picker opens the same pop-up from the name** of a catalogue row: the creation flow's
+         proficiency step and the Skills tab's non-weapon editor (step 12). Choosing (Ajouter, the
+         stepper) is another control on the row, as the roll is on the Skills row.
+    19.3 **What it shows, in order:** the name, the description (ADR 0021 step 1's subset: paragraphs,
+         lists and tables, rendered by the spell description's component), then the figures: the
+         ability, the modifier, the slots it takes and the extra slots spent when it is a pick, and
+         its groups. In the picker it also shows **the cost for this class** (step 4's
+         `proficiencyCosts`). The figures are the server's (the options and the pick's figures, steps
+         4 and 5); the pop-up computes none.
+    19.4 **Served by the API, never in the seeds.** The description is read from `localized_texts`
+         and served as a language map (ADR 0023 step 6), the client picking the language and falling
+         back to English per field. `seeds/proficiencies.json` and the i18n files hold no description.
+         _(proposed: `GET /api/proficiencies/{id}/description` answers `{id, description: {en, fr}}`,
+         404 `not_found` for an id the catalogue does not hold; the pop-up fetches it when opened, so
+         `GET /api/characters/options` does not grow by 65 texts.)_
+    19.5 **No description yet:** a catalogue without format 9 does not start (ADR 0021 step 16.5), so
+         the pop-up always has a text; a language the map lacks falls back, which format 9 prevents.
+    Tests: `ProficiencyDescription_Step19_ServedAsALanguageMapFromTheCatalogue` (router: `en` and
+    `fr`, an unknown id), `ProficiencyDescriptions_Step19_NotInTheSeeds` (seedcheck: no description
+    key in `seeds/proficiencies.json`, nor in the locale files), `SkillRow_Step19_NameOpensThePopupAbilityRolls`,
+    `ProficiencyPopup_Step19_ShowsNameDescriptionThenFigures`,
+    `ProficiencyPicker_Step19_NameOpensThePopupAndShowsTheClassCost` (web).
+
+20. **A successful Tumbling check adds a buff (a house rule).** The check of step 5 and
+    [ADR 0014](0014-skill-checks.md) step 1 for `tumbling`:
+    20.1 **The buff.** On a **success** it puts one buff on the character, named **Tumbling**
+         (localized from the proficiency id, as a spell's buff is named from its `spellId`, ADR 0004
+         step 17), with the effect `ac` **-4** (ADR 0004 step 11: negative betters the AC; ADR 0033
+         step 11) and **1 round** (`Duration` 1: it ends at the next Next Round, ADR 0004 step 2).
+         It applies to **every attack**: the conditions of the PHB (acting on initiative, forgoing
+         all attacks, light encumbrance or less, attacks directed solely at him) are the player's to
+         answer for; the engine checks none. No button, no prompt, nothing to add to the UX.
+    20.2 **Nothing otherwise.** A failed check, and a natural 20 (always a failure, ADR 0014 step 2),
+         add no buff.
+    20.3 **Renewal, not a stack.** Succeeding again while the buff is active renews it (ADR 0004
+         step 6, same name): the old one is replaced and starts again (step 15), the AC is -4 once.
+    20.4 **One log entry, so one undo.** The buff is part of the check's one `skill_check` entry
+         (ADR 0014 step 4), recorded in the check's transaction. On a success that adds the buff the
+         entry carries the buff list's snapshots before and after (ADR 0004 step 13: `active_buffs`)
+         and its payload gains `buff` (the buff as put on: name, effects, rounds) and `renewed`
+         (true when it replaced one). Undo pops the entry and the snapshot restores the list, so the
+         buff is gone, or the renewed one is back with its old rounds; redo puts it back
+         ([ADR 0018](0018-transactions-and-undo.md)). Any other check keeps no snapshots, as before.
+         Amends ADR 0014 step 4 ("no snapshots": only a check that adds a buff has them) and ADR
+         0004 step 13 (a skill check is a fourth cause of a buff-list entry beside activate/edit/
+         absorb/dismiss and the cast).
+    20.5 **Rolled once.** The buff adds no die: the check's d20 is the only roll, the effect and the
+         rounds are fixed.
+    20.6 **Generic.** The engine's rule is "a proficiency may list a buff to put on a success", keyed
+         by proficiency id in committed rules data (`ruletablesvc`), and Tumbling is its one row;
+         no code names Tumbling. Other proficiencies' effects are a separate deferred audit item.
+    20.7 **A house rule that differs from the PHB.** In the PHB (Tumbling's description) the AC bonus
+         needs no check and the check is for falls; here the check is what grants the AC. The house
+         rule wins. The unarmed +2 to hit and the fall damage stay
+         text only, in the description of step 19.
+    20.8 _(proposed)_ **A DM adjustment after the roll** (ADR 0014 steps 6 and 7) changes the verdict
+         but **not the buff**: the buff follows the verdict as rolled, with a pre-roll adjustment
+         (step 5 of ADR 0014) but not a post-roll one. The player adds or dismisses the Tumbling
+         buff by hand on the buff list when a ruling flips the result; the amend correction
+         touches the buff list not at all, so its undo has nothing to restore.
+    Tests: `SkillCheck_Step20_SuccessAddsTheTumblingBuff` (skillsvc: exactly one d20, the name,
+    `ac` -4, 1 round, the payload's `buff`), `SkillCheck_Step20_FailureAndNaturalTwentyAddNothing`,
+    `SkillCheck_Step20_SuccessAgainRenews` (one buff, rounds 1, a new start round),
+    `SkillCheck_Step20_OtherProficienciesAddNothing`, `SkillCheck_Step20_AdjustmentAfterTheRollLeavesTheBuff`
+    (skillsvc), `Buffs_Step20_TumblingEndsAtNextRound` (buffsvc: the AC is -4 in a following attack,
+    gone after Next Round), `Tumbling_Step20_UndoRemovesTheBuffAndRedoPutsItBack` (composition: a
+    success, a renewal, undo twice, redo), `TumblingRule_Step20_OneRowInTheRulesData` (ruletablesvc),
+    `SkillCheck_Step20_EntryCarriesBuffSnapshots` (router wire shape).

@@ -50,7 +50,8 @@ func kelsenPicks(level int) *charactersvc.ProficiencySlots {
 	wpick := func(t string) charactersvc.WeaponPickFigures {
 		return charactersvc.WeaponPickFigures{Type: t, Slots: 1, Allowed: true}
 	}
-	return &charactersvc.ProficiencySlots{Nonweapon: pool, Weapon: weapon, Picks: []charactersvc.PickFigures{
+	// ADR 0037 step 8: Table 34's penalty for the rogue group.
+	return &charactersvc.ProficiencySlots{Nonweapon: pool, Weapon: weapon, NonproficientPenalty: -3, Picks: []charactersvc.PickFigures{
 		pick("musical_instrument", "dex", -1, 16), pick("tumbling", "dex", 0, 17), pick("ventriloquism", "int", -2, 12),
 		pick("riding_land", "wis", 3, 11), pick("appraising", "int", 0, 14), pick("singing", "cha", 0, 16),
 		pick("reading_writing", "int", 1, 15), pick("local_history", "cha", 0, 16),

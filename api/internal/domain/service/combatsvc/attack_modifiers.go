@@ -73,7 +73,8 @@ func BackstabAllowed(char *charactersvc.Character, weapon Weapon) bool {
 // attackModifiers lists the to-hit modifiers in the order of ADR 0002 steps
 // 4 to 9 (Strength, Dexterity, weapon or buff "+N", ammunition, buffs,
 // situational), weapon specialization after the weapon's magic (ADR 0030
-// step 12) and the backstab after it (step 19). A nil or zero situational
+// step 12), the backstab after it (step 19) and the non-proficiency penalty
+// between the buffs and the situational modifier (ADR 0037 step 8). A nil or zero situational
 // adds nothing. opt.pointBlank is the point-blank option, ErrInvalidInput for
 // a weapon that does not allow it; opt.backstab the backstab, ErrInvalidInput
 // for a character whose class has none (Derived.Backstab 0) or a weapon
@@ -158,6 +159,13 @@ func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, a
 	// ADR 0002 step 8: one modifier per buff; step 9: the situational one.
 	for _, c := range mods.ToHitFrom {
 		add(Modifier{Kind: ModBuff, Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})
+	}
+	// ADR 0037 step 8 (amends ADR 0002 steps 2 and 12): a weapon type
+	// without a pick takes Table 34's penalty for the class group, after
+	// the buffs and before the situational modifier. A launcher is judged by
+	// its own type; a weapon without a type takes none.
+	if p := char.NonproficientPenalty(weapon.Type); p != 0 {
+		add(Modifier{Kind: ModNonproficient, Detail: weapon.Type, Value: p})
 	}
 	if sit != nil && sit.Value != 0 {
 		add(Modifier{Kind: ModSituational, Detail: sit.Label, Value: sit.Value})

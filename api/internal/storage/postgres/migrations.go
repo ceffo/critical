@@ -117,6 +117,7 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment) (befo
 		dropRaceMigration:          mapIdentity,
 		skillArmourMigration:       func(ctx context.Context, q storeq.Querier) error { return carrySkillArmour(ctx, q, equipment.Armour) },
 		picksMigration:             func(ctx context.Context, q storeq.Querier) error { return pickProficienciesFrom(ctx, q, seedsDir) },
+		weaponPicksMigration:       grantOwnedWeaponTypes,
 	}
 	return before, after
 }

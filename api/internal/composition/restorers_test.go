@@ -92,9 +92,9 @@ func undoCases() []undoCase {
 			h.Character.EXPECT().SetSkillPoints(mock.Anything, characterID, map[string]int{"climb_walls": 80}).Return(nil).Once()
 		}},
 		// Recorded with the codec's envelope from the start: no older encoding to re-encode.
-		{"the proficiency picks (ADR 0037 step 13)", "proficiencies", `{"state":{"nonweapon":[{"id":"tumbling","slots":1}]}}`, func(h *harness) {
+		{"the proficiency picks (ADR 0037 step 13)", "proficiencies", `{"state":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1}]}}`, func(h *harness) {
 			h.Character.EXPECT().SetProficiencyPicks(mock.Anything, characterID, charactersvc.Picks{
-				Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 1}},
+				Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 1}}, Weapon: []charactersvc.WeaponPick{{Type: "dagger", Slots: 1}},
 			}).Return(nil).Once()
 		}},
 		{"the AC override cleared", "ac_override", reencoded("AC override (acsvc)"), func(h *harness) {

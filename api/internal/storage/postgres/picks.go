@@ -74,3 +74,68 @@ func pickProficienciesFrom(ctx context.Context, q storeq.Querier, seedsDir strin
 	}
 	return pickProficiencies(ctx, q, book)
 }
+
+// weaponPicksMigration documents the weapon pool of characters.proficiency_picks. Right after it
+// the run grants every character its owned weapon types (grantOwnedWeaponTypes, ADR 0037 step
+// 16.2).
+const weaponPicksMigration = "026_weapon_proficiency_picks.sql"
+
+// grantOwnedWeaponTypes is ADR 0037 step 16.2, the data step after migration 026: each character
+// gets one weapon pick (1 slot) per distinct weapon type among its weapons, in any state, so no
+// attack changes when the non-proficiency penalty (step 8) lands. A weapon without a type gives
+// none. The picks follow the weapon types' display order, after any weapon pick already stored,
+// which is kept: a run on picks that have a type adds nothing for it. Nothing is refused: the
+// class's list (step 7) and the budget (step 10) are not checked, a type outside the list reads as
+// not allowed and an overspend shows the slots_over_budget warning (step 16.4).
+func grantOwnedWeaponTypes(ctx context.Context, q storeq.Querier) error {
+	rows, err := q.CharacterWeaponTypes(ctx)
+	if err != nil {
+		return fmt.Errorf("list weapon types: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	owned := map[int64]map[string]bool{}
+	for _, r := range rows {
+		if owned[r.CharacterID] == nil {
+			owned[r.CharacterID] = map[string]bool{}
+		}
+		owned[r.CharacterID][r.WeaponType] = true
+	}
+	chars, err := q.CharacterPicks(ctx)
+	if err != nil {
+		return fmt.Errorf("list picks: %w", err)
+	}
+	for _, c := range chars {
+		types := owned[c.ID]
+		if len(types) == 0 {
+			continue
+		}
+		picks, err := characterdal.DecodePicks(c.ProficiencyPicks)
+		if err != nil {
+			return fmt.Errorf("character %d: %w", c.ID, err)
+		}
+		had := map[string]bool{}
+		for _, p := range picks.Weapon {
+			had[p.Type] = true
+		}
+		added := false
+		for _, t := range ruletablesvc.WeaponTypes {
+			if types[t] && !had[t] {
+				picks.Weapon = append(picks.Weapon, charactersvc.WeaponPick{Type: t, Slots: charactersvc.WeaponPickSlots})
+				added = true
+			}
+		}
+		if !added {
+			continue
+		}
+		raw, err := characterdal.EncodePicks(picks)
+		if err != nil {
+			return err
+		}
+		if err := q.SetCharacterPicks(ctx, storeq.SetCharacterPicksParams{ProficiencyPicks: raw, ID: c.ID}); err != nil {
+			return fmt.Errorf("character %d picks: %w", c.ID, err)
+		}
+	}
+	return nil
+}

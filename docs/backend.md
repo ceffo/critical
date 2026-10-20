@@ -87,10 +87,12 @@ id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, ste
 id, character_id, entry_date TEXT, session TEXT, reason TEXT, base INTEGER, bonus INTEGER (0/1)
 
 -- characters.proficiency_picks: the character's proficiency picks (ADR 0037 step 12), a JSON
--- object by pool, {"nonweapon": [{"id", "slots"}]} in the player's order ('{}' none); ability and
--- modifier come from the catalogue (seeds/proficiencies.json). Written by PUT /api/proficiencies
+-- object by pool, {"nonweapon": [{"id", "slots"}], "weapon": [{"type", "slots"}]} in the player's
+-- order ('{}' none); ability and modifier come from the catalogue (seeds/proficiencies.json), a
+-- weapon pick's type is a weapon type (ADR 0037 step 7). Written by PUT /api/proficiencies
 -- (a proficiencies entry, undone by its snapshot) and the creation; the seed character's from
--- seeds/character.json when it is inserted. A check is an action_log entry (skill_check).
+-- seeds/character.json when it is inserted; the data step after migration 026 granted every
+-- character its owned weapon types. A check is an action_log entry (skill_check).
 -- proficiencies: the rows before the picks, converted by the data step after migration 025,
 -- read by nothing since (dropped by a later release)
 id TEXT, character_id, position, ability TEXT ('str'..'cha'), modifier INTEGER

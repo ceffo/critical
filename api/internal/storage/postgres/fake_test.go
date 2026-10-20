@@ -935,6 +935,33 @@ func (f *fakeStore) SetCharacterPicks(_ context.Context, arg storeq.SetCharacter
 	return nil
 }
 
+func (f *fakeStore) CharacterWeaponTypes(context.Context) ([]storeq.CharacterWeaponTypesRow, error) {
+	seen := map[storeq.CharacterWeaponTypesRow]bool{}
+	rows := []storeq.CharacterWeaponTypesRow{}
+	for _, it := range f.t.Items {
+		r := storeq.CharacterWeaponTypesRow{CharacterID: it.CharacterID, WeaponType: it.WeaponType}
+		if it.Category == "weapon" && it.WeaponType != "" && !seen[r] {
+			seen[r] = true
+			rows = append(rows, r)
+		}
+	}
+	slices.SortFunc(rows, func(a, b storeq.CharacterWeaponTypesRow) int {
+		if a.CharacterID != b.CharacterID {
+			return int(a.CharacterID - b.CharacterID)
+		}
+		return strings.Compare(a.WeaponType, b.WeaponType)
+	})
+	return rows, nil
+}
+
+func (f *fakeStore) CharacterPicks(context.Context) ([]storeq.CharacterPicksRow, error) {
+	rows := []storeq.CharacterPicksRow{}
+	for _, id := range f.t.Characters {
+		rows = append(rows, storeq.CharacterPicksRow{ID: id, ProficiencyPicks: f.picks(id)})
+	}
+	return rows, nil
+}
+
 // picks is characters.proficiency_picks, '{}' (the column's default) when none was set.
 func (f *fakeStore) picks(id int64) string {
 	if p, ok := f.t.Picks[id]; ok {

@@ -197,7 +197,9 @@ func TestSeed_PicksAndSkillsLoadAndAreIdempotent(t *testing.T) {
 	assert.JSONEq(t, `{"nonweapon":[
 		{"id":"musical_instrument","slots":1},{"id":"tumbling","slots":1},{"id":"ventriloquism","slots":1},
 		{"id":"riding_land","slots":1},{"id":"appraising","slots":1},{"id":"singing","slots":1},
-		{"id":"reading_writing","slots":1},{"id":"local_history","slots":1}]}`, f.picks(id))
+		{"id":"reading_writing","slots":1},{"id":"local_history","slots":1}],
+		"weapon":[{"type":"short_bow","slots":1},{"type":"dagger","slots":1},{"type":"dart","slots":1},
+		{"type":"long_sword","slots":1},{"type":"other_melee","slots":1}]}`, f.picks(id))
 	assert.Len(t, f.t.Bard, 4)
 	for id, want := range map[string]int64{"climb_walls": 85, "detect_noise": 90, "pick_pockets": 50, "read_languages": 75} {
 		assert.Equal(t, want, f.bardSkill(id).Percent, id)

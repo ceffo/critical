@@ -43,8 +43,18 @@ func newPicksFixture(t *testing.T, stored charactersvc.Picks) *picksFixture {
 	return f
 }
 
+// nonweapon are non-weapon picks and no weapon pick.
 func nonweapon(ps ...charactersvc.Pick) charactersvc.Picks {
-	return charactersvc.Picks{Nonweapon: append([]charactersvc.Pick{}, ps...)}
+	return charactersvc.Picks{Nonweapon: append([]charactersvc.Pick{}, ps...), Weapon: []charactersvc.WeaponPick{}}
+}
+
+// withWeapons is ps with the weapon picks of types, 1 slot each.
+func withWeapons(ps charactersvc.Picks, types ...string) charactersvc.Picks {
+	ps.Weapon = []charactersvc.WeaponPick{}
+	for _, t := range types {
+		ps.Weapon = append(ps.Weapon, charactersvc.WeaponPick{Type: t, Slots: 1})
+	}
+	return ps
 }
 
 func pk(id string, slots int) charactersvc.Pick { return charactersvc.Pick{ID: id, Slots: slots} }
@@ -63,12 +73,50 @@ func TestSetPicks_Step13_LogsOneMoveWithASnapshot(t *testing.T) {
 	require.Len(t, f.entries, 1, "one log entry")
 	e := f.entries[0]
 	assert.Equal(t, actionlog.KindProficiencies, e.Kind)
-	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}]},
-		"after":{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}]}}`, string(e.Payload))
+	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[]},
+		"after":{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapon":[]}}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, skillsvc.PicksStateKey, e.Snapshots[0].Key)
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}]}`, snaptest.State(t, e.Snapshots[0].Before))
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}]}`, snaptest.State(t, e.Snapshots[0].After))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[]}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapon":[]}`, snaptest.State(t, e.Snapshots[0].After))
+}
+
+// ADR 0037 steps 7 and 13: a save of the weapon picks alone (no non-weapon list) keeps the
+// non-weapon picks, writes both pools and records one proficiencies entry whose before and after
+// carry the weapon picks.
+func TestSetPicks_Step13_WeaponSaveLogsOneMove(t *testing.T) {
+	stored := withWeapons(nonweapon(pk("tumbling", 1)), "dagger")
+	f := newPicksFixture(t, stored)
+	f.records()
+	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, withWeapons(nonweapon(pk("tumbling", 1)), "dagger", "short_bow")).Return(nil).Once()
+
+	_, err := f.svc.SetProficiencies(context.Background(), charID, charactersvc.Picks{Weapon: withWeapons(charactersvc.Picks{}, "dagger", "short_bow").Weapon})
+	require.NoError(t, err)
+	assert.Equal(t, 1, f.tx.calls, "one transaction")
+	require.Len(t, f.entries, 1, "one log entry")
+	e := f.entries[0]
+	assert.Equal(t, actionlog.KindProficiencies, e.Kind)
+	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1}]},
+		"after":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1},{"type":"short_bow","slots":1}]}}`, string(e.Payload))
+	require.Len(t, e.Snapshots, 1)
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1}]}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1},{"type":"short_bow","slots":1}]}`,
+		snaptest.State(t, e.Snapshots[0].After))
+}
+
+// ADR 0019 on step 13 with the weapon pool: a snapshot with weapon picks writes them back; a
+// snapshot logged before the weapon pool (no "weapon" key) restores the non-weapon picks and
+// leaves the stored weapon picks, so undoing an old entry never drops the migration's grants.
+func TestSetPicks_Step13_RestorerAndTheWeaponPool(t *testing.T) {
+	f := newPicksFixture(t, withWeapons(nonweapon(pk("tumbling", 2)), "dagger", "dart"))
+	r := f.svc.Module().Restorer(skillsvc.PicksStateKey)
+	require.NotNil(t, r)
+	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, withWeapons(nonweapon(pk("tumbling", 1)), "dagger", "dart")).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"tumbling","slots":1}]}`)))
+	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, withWeapons(nonweapon(pk("tumbling", 1)), "sling")).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"sling","slots":1}]}`)))
+	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, nonweapon(pk("tumbling", 1))).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[]}`)))
 }
 
 // ADR 0037 step 13: the same picks as stored write and log nothing.
@@ -114,6 +162,9 @@ func TestSetPicks_Step12_RefusalsWriteNothing(t *testing.T) {
 		{"languages modern", nonweapon(), nonweapon(pk("languages_modern", 1)), "nonweapon.languages_modern", nil},
 		{"a new overspend", nonweapon(pk("tumbling", 5)), nonweapon(pk("tumbling", 6)), "", &domain.BudgetError{Field: "nonweapon", Spent: 6, Limit: 5}},
 		{"an existing overspend increased", nonweapon(pk("tumbling", 7)), nonweapon(pk("tumbling", 7), pk("tracking", 2)), "", &domain.BudgetError{Field: "nonweapon", Spent: 9, Limit: 5}},
+		{"an unknown weapon type", nonweapon(), withWeapons(nonweapon(), "katana"), "weapon.katana", nil},
+		{"a duplicate weapon type", nonweapon(), withWeapons(nonweapon(), "dagger", "dagger"), "weapon.dagger", nil},
+		{"a new weapon overspend (2 slots)", withWeapons(nonweapon(), "dagger", "dart"), withWeapons(nonweapon(), "dagger", "dart", "sling"), "", &domain.BudgetError{Field: "weapon", Spent: 3, Limit: 2}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newPicksFixture(t, tc.stored) // the picks and log mocks fail any write or record

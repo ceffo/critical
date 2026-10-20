@@ -19,7 +19,11 @@ type Querier interface {
 	CarryOverItems(ctx context.Context, characterID int64) ([]CarryOverItemsRow, error)
 	CatalogueVersion(ctx context.Context) (CatalogueVersionRow, error)
 	CharacterClasses(ctx context.Context) ([]CharacterClassesRow, error)
+	CharacterPicks(ctx context.Context) ([]CharacterPicksRow, error)
 	CharacterSkillArmour(ctx context.Context, id int64) (CharacterSkillArmourRow, error)
+	// The weapon picks data step after migration 026 (ADR 0037 step 16.2): the distinct weapon types
+	// each character's weapons have, in any state, and every character's stored picks.
+	CharacterWeaponTypes(ctx context.Context) ([]CharacterWeaponTypesRow, error)
 	CountCharacters(ctx context.Context) (int64, error)
 	CountItems(ctx context.Context, characterID int64) (int64, error)
 	CountKeyedSpells(ctx context.Context) (int64, error)

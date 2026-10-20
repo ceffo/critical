@@ -1,6 +1,6 @@
 package composition_test
 
-// The non-weapon proficiency picks end to end over the in-memory storage (ADR 0037 steps 3, 10 to
+// The proficiency picks, non-weapon and weapon, end to end over the in-memory storage (ADR 0037 steps 3, 7, 10 to
 // 14): the router, the real services and the fixture's catalogue.
 
 import (
@@ -160,4 +160,127 @@ func TestProficiencies_Step14_CreationWithPicks(t *testing.T) {
 		`{"class":"bard","scores":{"int":14},"xp":2500,"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}]}}`, &checks))
 	assert.Equal(t, 7, checks.ProficiencySlots.NonWeapon.Available)
 	assert.Equal(t, 2, checks.ProficiencySlots.NonWeapon.Spent)
+}
+
+// ADR 0037 steps 7, 10, 12 and 13 through the API with the weapon pool: Kelsen (5 weapon slots
+// at level 15, his five seeded weapon types spending them) swaps darts for a sling with a body of
+// the weapon picks alone; it is one proficiencies entry and his non-weapon picks stay. A sixth
+// type is a 409 on the weapon pool that logs nothing. Undo gives the darts back, redo the sling.
+func TestProficiencies_Step13_WeaponPickUndoRedo(t *testing.T) {
+	tb, _ := newTable(t)
+	root, _ := tb.login("")
+	var me struct {
+		CurrentID *int64 `json:"currentId"`
+	}
+	require.Equal(t, http.StatusOK, tb.call(root, "GET", "/api/characters", "", &me))
+	kelsen := *me.CurrentID
+
+	type weaponView struct {
+		Type    string `json:"type"`
+		Slots   int    `json:"slots"`
+		Allowed bool   `json:"allowed"`
+	}
+	type slotsView struct {
+		Weapon struct {
+			Available int `json:"available"`
+			Spent     int `json:"spent"`
+			Left      int `json:"left"`
+		} `json:"weapon"`
+		Picks       []struct{ ID string } `json:"picks"`
+		WeaponPicks []weaponView          `json:"weaponPicks"`
+	}
+	read := func() slotsView {
+		var c struct {
+			Derived struct {
+				Slots slotsView `json:"proficiencySlots"`
+			} `json:"derived"`
+		}
+		require.Equal(t, http.StatusOK, tb.showing(root, kelsen, "GET", "/api/character", "", &c))
+		return c.Derived.Slots
+	}
+	types := func(s slotsView) []string {
+		out := []string{}
+		for _, w := range s.WeaponPicks {
+			out = append(out, w.Type)
+		}
+		return out
+	}
+	readLog := func() picksLog {
+		var l picksLog
+		require.Equal(t, http.StatusOK, tb.showing(root, kelsen, "GET", "/api/log", "", &l))
+		return l
+	}
+	seeded := read()
+	assert.Equal(t, []string{"short_bow", "dagger", "dart", "long_sword", "other_melee"}, types(seeded))
+	assert.Equal(t, 5, seeded.Weapon.Available)
+	assert.Equal(t, 5, seeded.Weapon.Spent)
+	before := readLog()
+
+	save := `{"weapon":[{"type":"short_bow","slots":1},{"type":"dagger","slots":1},{"type":"sling","slots":1},` +
+		`{"type":"long_sword","slots":1},{"type":"other_melee","slots":1}]}`
+	var saved picksAnswer
+	require.Equal(t, http.StatusOK, tb.showing(root, kelsen, "PUT", "/api/proficiencies", save, &saved))
+	now := read()
+	assert.Equal(t, []string{"short_bow", "dagger", "sling", "long_sword", "other_melee"}, types(now))
+	assert.Len(t, now.Picks, len(seeded.Picks), "the non-weapon picks stay")
+	after := readLog()
+	assert.Equal(t, "proficiencies", after.Entries[0].Kind, "one entry, the newest")
+	assert.Len(t, after.Entries, len(before.Entries)+1)
+
+	over := strings.Replace(save, `]}`, `,{"type":"dart","slots":1}]}`, 1)
+	var refused map[string]any
+	require.Equal(t, http.StatusConflict, tb.showing(root, kelsen, "PUT", "/api/proficiencies", over, &refused))
+	assert.Equal(t, "over_budget", refused["code"])
+	assert.Equal(t, "weapon", refused["field"])
+	assert.InDelta(t, 6, refused["spent"], 0)
+	assert.InDelta(t, 5, refused["limit"], 0)
+	assert.Equal(t, after.TopID, readLog().TopID, "a refusal logs nothing")
+	assert.Equal(t, types(now), types(read()), "a refusal writes nothing")
+
+	require.Equal(t, http.StatusOK, tb.showing(root, kelsen, "POST", "/api/log/undo", `{"expectedTopId":`+itoa(after.TopID)+`}`, nil))
+	assert.Equal(t, types(seeded), types(read()), "undo gives the picks back")
+	undone := readLog()
+	require.NotNil(t, undone.Redo)
+	require.Equal(t, http.StatusOK, tb.showing(root, kelsen, "POST", "/api/log/redo", `{"expectedRedoId":`+itoa(undone.Redo.ID)+`}`, nil))
+	assert.Equal(t, types(now), types(read()), "redo saves them again")
+}
+
+// ADR 0037 steps 7, 10 and 14 through the API: a level 3 bard has 2 weapon slots (a rogue's next
+// comes at 4); created with three weapon picks it is a 409 on the weapon pool and nothing is
+// created; with two it is created and reads them; an unknown type is a 400 naming its field.
+func TestProficiencies_Step14_CreationWithWeaponPicks(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	with := func(picks string) string {
+		return strings.Replace(newBard, `"xp":2500`, `"xp":2500,"proficiencies":{"weapon":`+picks+`}`, 1)
+	}
+	var refused map[string]any
+	require.Equal(t, http.StatusConflict, tb.call(bob, "POST", "/api/characters",
+		with(`[{"type":"dagger","slots":1},{"type":"sling","slots":1},{"type":"long_bow","slots":1}]`), &refused))
+	assert.Equal(t, "weapon", refused["field"])
+	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", with(`[{"type":"katana","slots":1}]`), &refused))
+	assert.Equal(t, "weapon.katana", refused["field"])
+	var list listView
+	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters", "", &list))
+	assert.Empty(t, list.Characters, "nothing created")
+
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", with(`[{"type":"dagger","slots":1},{"type":"long_bow","slots":1}]`), &list))
+	var c struct {
+		Derived struct {
+			Slots struct {
+				Weapon struct {
+					Available int `json:"available"`
+					Left      int `json:"left"`
+				} `json:"weapon"`
+				WeaponPicks []struct {
+					Type string `json:"type"`
+				} `json:"weaponPicks"`
+			} `json:"proficiencySlots"`
+		} `json:"derived"`
+	}
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &c))
+	assert.Equal(t, 2, c.Derived.Slots.Weapon.Available)
+	assert.Equal(t, 0, c.Derived.Slots.Weapon.Left)
+	require.Len(t, c.Derived.Slots.WeaponPicks, 2)
+	assert.Equal(t, "long_bow", c.Derived.Slots.WeaponPicks[1].Type)
 }

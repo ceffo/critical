@@ -34,22 +34,23 @@ func proficienciesDTO(c *charactersvc.Character) ProficienciesDTO {
 	return ProficienciesDTO{ProficiencySlots: wire.ProficiencySlotsToDTO(c.Derived.Proficiencies), Warnings: wire.WarningsDTO(ws)}
 }
 
-// decodePicks reads the body {nonweapon: [{id, slots}]}; `nonweapon` is required (an empty list
-// removes every pick).
+// decodePicks reads the body {nonweapon: [{id, slots}], weapon: [{type, slots}]}; at least one
+// pool is required, an absent one is left as stored (an empty list removes its picks).
 func decodePicks(r *http.Request) (charactersvc.Picks, error) {
 	var req wire.PicksDTO
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&req); err != nil || req.Nonweapon == nil {
+	if err := dec.Decode(&req); err != nil || (req.Nonweapon == nil && req.Weapon == nil) {
 		return charactersvc.Picks{}, render.BadRequestError("invalid request body")
 	}
 	return req.Picks(), nil
 }
 
-// SetProficiencies is PUT /api/proficiencies (ADR 0037 steps 12 and 13): the whole list of
-// non-weapon picks, saved as one undoable move. A refused pick is a 400 naming the field
-// (nonweapon.<id>: unknown, duplicate, out_of_range, not_allowed); a save that grows an
-// overspend a 409 over_budget (field nonweapon, spent, limit); nothing is written then.
+// SetProficiencies is PUT /api/proficiencies (ADR 0037 steps 7, 12 and 13): the whole list of
+// the non-weapon picks, the weapon picks or both, saved as one undoable move. A refused pick is a
+// 400 naming the field (nonweapon.<id>: unknown, duplicate, out_of_range, not_allowed;
+// weapon.<type>: unknown, duplicate, out_of_range, weapon_not_allowed); a save that grows an
+// overspend a 409 over_budget (field nonweapon or weapon, spent, limit); nothing is written then.
 func SetProficiencies(charID CharacterIDFunc, svc picksSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		picks, err := decodePicks(r)

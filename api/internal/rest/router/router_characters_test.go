@@ -326,7 +326,9 @@ func TestCharacters_ChecksSkillBudgetWireShape(t *testing.T) {
 	xp := 1250
 	m.char.EXPECT().CreationChecks(mock.Anything, charactersvc.DraftInput{
 		Class: "thief", Scores: map[string]int{}, XP: &xp, SkillPoints: map[string]int{"open_locks": 40},
-		Proficiencies: charactersvc.Picks{Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}}},
+		Proficiencies: charactersvc.Picks{
+			Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}}, Weapon: []charactersvc.WeaponPick{{Type: "dagger", Slots: 1}},
+		},
 	}).Return(charactersvc.DraftChecks{
 		UnmetMinimums: []charactersvc.ClassUnmet{},
 		SkillBudget: &charactersvc.SkillBudget{
@@ -334,15 +336,19 @@ func TestCharacters_ChecksSkillBudgetWireShape(t *testing.T) {
 			PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
 		},
 		ProficiencySlots: &charactersvc.ProficiencySlots{
-			Nonweapon: ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 2, Available: 5, Spent: 2, Left: 3},
-			Picks:     []charactersvc.PickFigures{{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 17, HasCheck: true}},
+			Nonweapon:   ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 2, Available: 5, Spent: 2, Left: 3},
+			Weapon:      ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, Available: 2, Spent: 1, Left: 1},
+			Picks:       []charactersvc.PickFigures{{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 17, HasCheck: true}},
+			WeaponPicks: []charactersvc.WeaponPickFigures{{Type: "dagger", Slots: 1, Allowed: true}},
 		},
 	}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/checks", `{"class":"thief","scores":{},"xp":1250,"skillPoints":{"open_locks":40},
-		"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}]}}`)
+		"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}],"weapon":[{"type":"dagger","slots":1}]}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.JSONEq(t, `{"unmetMinimums":[],"skillBudget":{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,
 		"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45},
 		"proficiencySlots":{"nonWeapon":{"initial":3,"perLevels":4,"levelGained":0,"intelligence":2,"available":5,"spent":2,"left":3},
-		"picks":[{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"target":17}]}}`, rec.Body.String())
+		"weapon":{"initial":2,"perLevels":4,"levelGained":0,"available":2,"spent":1,"left":1},
+		"picks":[{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"target":17}],
+		"weaponPicks":[{"type":"dagger","slots":1,"allowed":true}]}}`, rec.Body.String())
 }

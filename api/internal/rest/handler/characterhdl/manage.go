@@ -290,9 +290,9 @@ type CreateBody struct {
 	// points by skill code; absent for the other classes. The skills' armour
 	// is the worn one (ADR 0033 step 14), no entry.
 	SkillPoints map[string]int `json:"skillPoints"`
-	// Proficiencies are the non-weapon picks (ADR 0037 step 14), checked as
-	// PUT /api/proficiencies checks them with nothing picked before; absent
-	// for none.
+	// Proficiencies are the non-weapon and the weapon picks (ADR 0037 step
+	// 14), checked as PUT /api/proficiencies checks them with nothing picked
+	// before; absent (or a pool absent) for none.
 	Proficiencies *wire.PicksDTO `json:"proficiencies"`
 	// Details are the free-text details, in the shape GET /api/character
 	// shows them (age null for none); absent for none. A refusal names its
@@ -510,7 +510,8 @@ type ChecksBody struct {
 	Scores      map[string]int `json:"scores"`
 	XP          *int           `json:"xp"`
 	SkillPoints map[string]int `json:"skillPoints"`
-	// Proficiencies are the non-weapon picks so far; absent for none.
+	// Proficiencies are the non-weapon and the weapon picks so far; absent
+	// for none.
 	Proficiencies *wire.PicksDTO `json:"proficiencies"`
 }
 
@@ -545,8 +546,8 @@ type SkillBudgetFigureDTO struct {
 type ChecksDTO struct {
 	UnmetMinimums []ClassUnmetDTO       `json:"unmetMinimums"`
 	SkillBudget   *SkillBudgetFigureDTO `json:"skillBudget"`
-	// ProficiencySlots is the draft's non-weapon pool and picks (ADR 0037
-	// steps 3 to 5 and 14), as GET /api/character's derived block names
+	// ProficiencySlots is the draft's pools and picks (ADR 0037 steps 3 to 5,
+	// 7 and 14), as GET /api/character's derived block names
 	// them; null while the class, the XP or the Intelligence is missing.
 	ProficiencySlots *wire.ProficiencySlotsDTO `json:"proficiencySlots"`
 }

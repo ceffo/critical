@@ -7,6 +7,8 @@ critical-qki.13, critical-qki.28, critical-qki.33 and critical-qki.34, until the
 
 _Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: steps 2 and 12 (a new to-hit modifier `armor_type`, weapon type against the target's armour type, ADR 0033 step 19) and step 11 (the target's armour corrected after the roll like its AC, ADR 0033 step 18); then removed by [ADR 0035](0035-equipment-screens.md) item 1 (no target armour, no `armor_type` modifier)._
 
+_Amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-20), on implementation: steps 2 and 12 gain the to-hit modifier `nonproficient` (PHB Table 34's penalty for a weapon type without a pick, listed after the buffs and before the situational modifier, ADR 0037 step 8), and the Consequences' "proficiency penalties" leave the not covered._
+
 ## Context
 
 The app resolves the Bard's weapon attacks: it rolls the dice, adds every to-hit modifier and says
@@ -104,4 +106,6 @@ return a distinct value for each call and expect an exact number of calls.
   spell) follows steps 2 to 5 and 8 but never crits: it rolls
   one d20 only (user, 2026-10-14: "same rules as combat"). Test: `TestRollSpellToHit`.
 - Not covered: called shots, weapon speed, two-weapon fighting, proficiency penalties, range
-  modifiers other than through the situational modifier.
+  modifiers other than through the situational modifier. _(Amended by ADR 0037 step 8, on
+  implementation: the non-proficiency penalty is covered; the related-weapons half penalty is
+  not.)_

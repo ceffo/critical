@@ -126,6 +126,22 @@ A non-weapon proficiency with its ability and modifier. **Bard skills** and **th
 **skill points**, race, Dexterity and the **skill armour**. [ADR 0014](docs/adr/0014-skill-checks.md),
 [ADR 0030](docs/adr/0030-classes-and-races.md) steps 17 and 18. _Avoid_: RogueSkill.
 
+**Proficiency slot** (fr: emplacement de compétence):
+One unit of a character's proficiency budget, in two pools: **weapon slots** and **non-weapon
+slots**, from PHB Table 34 by class group and realized level, the non-weapon pool with
+Intelligence's bonus. A pool is **over budget** when more is spent than available, and has slots
+**to spend** when less is. [ADR 0037](docs/adr/0037-proficiencies.md) steps 3, 10 and 11.
+
+**Pick** (fr: choix):
+One proficiency the character has, with the slots spent on it: a non-weapon proficiency from the
+catalogue, a language beyond the native one and Common, or a weapon type.
+[ADR 0037](docs/adr/0037-proficiencies.md) steps 2, 6, 7 and 12.
+
+**Weapon proficiency** (fr: compétence martiale):
+A pick of a weapon type; attacking with a type not picked takes the **non-proficiency penalty**
+(fr: malus de non-maîtrise). A fighter's **specialization** (fr: spécialisation) is a weapon
+proficiency of more slots. [ADR 0037](docs/adr/0037-proficiencies.md) steps 7 to 9.
+
 **Adjustment** (fr: ajustement):
 The DM's correction of a save or check after the roll: it moves the target, + easier, - harder;
 the roll never changes. [ADR 0006](docs/adr/0006-saving-throws.md) steps 5 to 8,

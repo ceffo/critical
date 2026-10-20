@@ -65,7 +65,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
      wizard and general; cleric priest and general; thief rogue and general; bard rogue, warrior,
      wizard and general.
    PHB Table 4's "# of Lang." (p.16) stays the committed `ruletablesvc.LanguageLimit` of ADR 0032.
-   Test: `ProficiencyTables_Step1_Table34AndTable38` (seedcheck: the four rows and five classes
+   Tests: `TestProficiencyTables_Step1_Table38Crossovers` (seedcheck: Table 38's five rows), `TestProficiencies_Step2_OptionsWireShape` (composition: the catalogue and the groups on `GET /api/characters/options`, as `proficiencies` and `proficiencyGroups`); `ProficiencyTables_Step1_Table34AndTable38` (seedcheck: the four rows and five classes
    above, read from the seed file).
 2. **The non-weapon catalogue.** The same file's `nonweapon` list holds every proficiency of PHB
    Table 37 (p.54-55) once: 65 rows. Each has an `id` (a stable snake_case code; the seed bard's
@@ -77,7 +77,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    three, thirteen others under two) is one row listing them all, the figures being the same in
    each. Names are en/fr i18n keys by id, as the languages' are; a campaign proficiency is a data
    change (a row and its two keys), never code.
-   Test: `NonweaponCatalogue_Step2_Table37Rows` (seedcheck: 65 unique ids, a valid ability, at
+   Tests: `TestNonweaponCatalogue_Step2_Table37Rows`, `TestNonweaponCatalogue_Step2_SeedBardIdsKeepTheirFigures`, `TestNonweaponCatalogue_Step2_EveryIdHasAnEnAndFrName` (seedcheck: 65 unique ids, a valid ability, at
    least one known group, slots of 1 or more; the eight seed ids present with Table 37's figures;
    an i18n key per id in both locale files).
 

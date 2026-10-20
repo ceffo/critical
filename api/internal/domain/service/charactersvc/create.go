@@ -428,6 +428,12 @@ type CreationOptions struct {
 	// warns (step 4.2), the form computes nothing.
 	Languages     []ruletablesvc.Language
 	RaceLanguages []RaceLanguageOption
+	// Proficiencies is the non-weapon catalogue (PHB Table 37) and
+	// ProficiencyGroups the groups each class learns at the table's cost
+	// (Table 38), by class (ADR 0037 steps 1 and 2). The names are the web's
+	// i18n keys by id. Both are empty without the seed.
+	Proficiencies     []ruletablesvc.Proficiency
+	ProficiencyGroups map[string][]string
 	// ScoreMethods are ADR 0032 step 6's methods, in the book's order: the
 	// creation's score step offers them and rolls one through the roll
 	// endpoint.
@@ -549,6 +555,13 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			}
 		}
 		out.Classes = append(out.Classes, opt)
+	}
+	out.Proficiencies = s.profs.All()
+	for _, c := range s.profs.Crossovers() {
+		if out.ProficiencyGroups == nil {
+			out.ProficiencyGroups = map[string][]string{}
+		}
+		out.ProficiencyGroups[c.Class] = c.Groups
 	}
 	out.Languages = s.languages.All()
 	if len(out.Languages) > 0 {

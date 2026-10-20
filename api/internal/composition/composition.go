@@ -240,9 +240,14 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// The language catalogue (ADR 0032 step 4) is the artifact's: nil before
 	// format 8, which knows no language.
 	languages, _ := ruleTables.Languages()
+	// The non-weapon catalogue is a seed file (ADR 0037 steps 1 and 2).
+	proficiencies, err := ruletablesadpt.ReadProficiencies(cfg.SeedsDir)
+	if err != nil {
+		return nil, err
+	}
 	bs.Character, err = charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
-		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Armour: wornArmour{itemDAL}, Languages: languages, HP: logSvc,
+		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Armour: wornArmour{itemDAL}, Languages: languages, Proficiencies: proficiencies, HP: logSvc,
 	})
 	if err := bs.add(bs.Character, err); err != nil {
 		return nil, err

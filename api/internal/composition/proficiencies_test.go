@@ -49,7 +49,8 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 	assert.Equal(t, 1, costs["bard"]["tumbling"], "a bard learns the rogue group at the table's cost")
 	assert.Equal(t, 2, costs["thief"]["blind_fighting"], "rogue and warrior: the thief's rogue group, Table 37's 2")
 	for class, byID := range costs {
-		assert.Len(t, byID, 65, "every catalogue proficiency has a cost for %s", class)
+		assert.Len(t, byID, 64, "every pickable catalogue proficiency has a cost for %s", class)
+		assert.NotContains(t, byID, "languages_modern", "step 6: a language is no pick of its own, so %s gets no cost for it", class)
 	}
 	assert.Len(t, costs, 5)
 }

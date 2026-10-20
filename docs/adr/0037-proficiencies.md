@@ -117,9 +117,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
    Test: `TestNonweaponCost_Step4_CrossoverAddsOne` (proficiencysvc: in and out of the class's
    groups, a proficiency of several groups, each of the five classes). _(As built: in ruletablesvc,
    `NonweaponCost`; no proficiencysvc package, see step 12. `GET /api/characters/options` also
-   serves `proficiencyCosts` `{<class>: {<id>: cost}}`, every catalogue row's cost for each class
-   computed by `NonweaponCost`, so the editor shows and sends the server's cost before a pick
-   exists (`TestProficiencies_Step2_OptionsWireShape`: a fighter pays 2 for Tumbling, a bard 1).)_
+   serves `proficiencyCosts` `{<class>: {<id>: cost}}`, every pickable catalogue row's cost for each
+   class computed by `NonweaponCost`, so the editor shows and sends the server's cost before a pick
+   exists (`TestProficiencies_Step2_OptionsWireShape`: a fighter pays 2 for Tumbling, a bard 1).
+   `languages_modern` has no cost there (step 6: never picked on its own), and the editor offers
+   only the rows that have one.)_
 5. **Extra slots improve the check.** A non-weapon pick spends at least its cost; each slot spent
    beyond it adds +1 to its check target (PHB p.56). Amends [ADR 0014](0014-skill-checks.md)
    step 1: the target is the ability score + the catalogue's modifier + the extra slots; the

@@ -110,8 +110,9 @@ type OptionsDTO struct {
 	Proficiencies     []ProficiencyDTO    `json:"proficiencies"`
 	ProficiencyGroups map[string][]string `json:"proficiencyGroups"`
 	// ProficiencyCosts is each proficiency's cost by class and id (ADR 0037
-	// step 4, the crossover's +1 included): the editor shows and sends it.
-	// Additive; never null.
+	// step 4, the crossover's +1 included): the editor shows and sends it. A
+	// proficiency with no cost is not picked on its own (step 6): the editor
+	// leaves it out. Additive; never null.
 	ProficiencyCosts map[string]map[string]int `json:"proficiencyCosts"`
 	// ScoreMethods are ADR 0032 step 6's methods in the book's order (the
 	// score step's chips); RaceAdjustments PHB Table 8 by race (the race

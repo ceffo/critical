@@ -4,9 +4,10 @@
 // 20 always fails) and the bard and thief skills (a d100 at or under the
 // percentage the character service derives, ADR 0030 steps 17 and 18). The
 // DM may move the target before the roll or on the latest check after it. A
-// check changes no state: it is one skill_check entry of the action log, so
-// popping it only removes it. The last check of each skill is read back from
-// the log.
+// check is one skill_check entry of the action log; it changes no state but
+// the buff a success may put on (ADR 0037 step 20, from the rules data),
+// whose snapshot the entry carries, so popping it takes the buff off. The
+// last check of each skill is read back from the log.
 //
 // It is the skills module's service (ADR 0037 step 17) over the rules of
 // package skills: it owns every write and preview of the skills, a thief's or
@@ -128,7 +129,10 @@ type Deps struct {
 	// Tables are PHB Tables 26 to 29 and 33, for the skill points' preview
 	// (ADR 0030 steps 17 and 18).
 	Tables skills.SkillTables
-	Tx     domain.TxRunner
+	// Buffs puts on the buff a successful check gives and takes it off
+	// when an adjustment turns the verdict (ADR 0037 step 20).
+	Buffs Buffs
+	Tx    domain.TxRunner
 }
 
 type service struct {
@@ -141,12 +145,13 @@ type service struct {
 	book      skills.Book
 	languages skills.LanguageBook
 	tables    skills.SkillTables
+	buffs     Buffs
 	tx        domain.TxRunner
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Characters == nil || d.Abilities == nil || d.Dice == nil || d.Log == nil || d.Points == nil || d.Picks == nil || d.Book == nil || d.Tables == nil || d.Tx == nil {
+	if d.Characters == nil || d.Abilities == nil || d.Dice == nil || d.Log == nil || d.Points == nil || d.Picks == nil || d.Book == nil || d.Tables == nil || d.Buffs == nil || d.Tx == nil {
 		return nil, fmt.Errorf("skillsvc: nil dependency")
 	}
 	if d.Languages == nil {
@@ -154,7 +159,7 @@ func New(d Deps) (SVC, error) {
 	}
 	return &service{
 		chars: d.Characters, abils: d.Abilities, dice: d.Dice, log: d.Log, points: d.Points, picks: d.Picks,
-		book: d.Book, languages: d.Languages, tables: d.Tables, tx: d.Tx,
+		book: d.Book, languages: d.Languages, tables: d.Tables, buffs: d.Buffs, tx: d.Tx,
 	}, nil
 }
 

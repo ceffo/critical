@@ -49,6 +49,10 @@ type jsonBuff struct {
 	// written before it existed that migration 028 could not match to one
 	// spell: they read as "" (ADR 0004 step 17).
 	SpellID string `json:"spell_id,omitempty"`
+	// ProficiencyID is absent from rows of buffs not from a proficiency
+	// check and from rows written before it existed: they read as "" (ADR
+	// 0037 step 20.1).
+	ProficiencyID string `json:"proficiency_id,omitempty"`
 	// OnOther is absent from rows of buffs on the character and from rows
 	// written before it existed: they read as false (ADR 0004 step 20.5).
 	OnOther bool `json:"on_other,omitempty"`
@@ -79,7 +83,7 @@ func (j jsonBuff) toDomain() buffsvc.BuffEffect {
 	return buffsvc.BuffEffect{
 		ID: j.ID, Name: j.Name, Charges: j.Charges, Duration: j.Duration,
 		Effects: buffsvc.BuffEffects(j.Effects), Note: j.Note, StartRound: j.StartRound, ChargesTotal: j.ChargesTotal,
-		SpellID: j.SpellID, OnOther: j.OnOther,
+		SpellID: j.SpellID, ProficiencyID: j.ProficiencyID, OnOther: j.OnOther,
 	}
 }
 
@@ -87,7 +91,7 @@ func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 	return jsonBuff{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 		Effects: jsonEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
-		SpellID: b.SpellID, OnOther: b.OnOther,
+		SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 	}
 }
 

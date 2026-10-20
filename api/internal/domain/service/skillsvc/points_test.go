@@ -31,7 +31,7 @@ func pointsFixtureAt(t *testing.T, class string, level int, points map[string]in
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
@@ -187,7 +187,7 @@ func TestPreviewPoints_Step17_TheDraftReadAsTheSpendChecksIt(t *testing.T) {
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
 	tables := &fakeTables{}
-	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tables: tables, Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Book: testBook(t), Tables: tables, Tx: f.tx})
 	require.NoError(t, err)
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).RunAndReturn(func(context.Context, int64) (*charactersvc.Character, error) {
 		return &charactersvc.Character{

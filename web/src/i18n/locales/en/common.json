@@ -1439,7 +1439,10 @@
       "success": "{{name}}: d{{die}} {{roll}} vs {{target}}, success",
       "failure": "{{name}}: d{{die}} {{roll}} vs {{target}}, failure",
       "successAdjusted": "{{name}}: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), success",
-      "failureAdjusted": "{{name}}: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), failure"
+      "failureAdjusted": "{{name}}: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), failure",
+      "buffOn": "{{check}}; {{buff}} on: {{effects}}",
+      "buffRenewed": "{{check}}; {{buff}} renewed: {{effects}}",
+      "buffAc": "AC {{value}}"
     },
     "dice": "Dice {{formula}} = {{total}}",
     "correction": {

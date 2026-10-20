@@ -2,6 +2,7 @@ package buffsvc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -27,6 +28,9 @@ type snapBuff struct {
 	// SpellID is absent from entries recorded before it existed (and for a
 	// buff not from a spell): they restore it empty.
 	SpellID string `json:"spell_id,omitempty"`
+	// ProficiencyID is absent from entries recorded before it existed and
+	// for a buff not from a proficiency check: they restore it empty.
+	ProficiencyID string `json:"proficiency_id,omitempty"`
 	// OnOther is absent from entries recorded before it existed and for a
 	// buff on the character (ADR 0004 step 20.5): they restore it false.
 	OnOther bool `json:"on_other,omitempty"`
@@ -76,7 +80,7 @@ func toSnapBuffs(buffs []BuffEffect) []snapBuff {
 		out[i] = snapBuff{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: snapEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
-			SpellID: b.SpellID, OnOther: b.OnOther,
+			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 		}
 	}
 	return out
@@ -88,10 +92,31 @@ func fromSnapBuffs(in []snapBuff) []BuffEffect {
 		out[i] = BuffEffect{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: BuffEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
-			SpellID: b.SpellID, OnOther: b.OnOther,
+			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 		}
 	}
 	return out
+}
+
+// EncodeRows encodes rows as buffsvc stores them in snapshots, for a caller
+// that keeps rows in its own entry's payload to give them back later (a
+// skill check keeps the rows its buff renewed, ADR 0037 step 20.8). The
+// encoding stays decodable like the snapshots' (add fields, never rename).
+func EncodeRows(rows []BuffEffect) (json.RawMessage, error) {
+	raw, err := json.Marshal(toSnapBuffs(rows))
+	if err != nil {
+		return nil, fmt.Errorf("encode buff rows: %w", err)
+	}
+	return raw, nil
+}
+
+// DecodeRows reads rows EncodeRows encoded.
+func DecodeRows(raw json.RawMessage) ([]BuffEffect, error) {
+	var in []snapBuff
+	if err := json.Unmarshal(raw, &in); err != nil {
+		return nil, fmt.Errorf("decode buff rows: %w", err)
+	}
+	return fromSnapBuffs(in), nil
 }
 
 // buffsSnapshot is the snapshot of the active buff list going from before to

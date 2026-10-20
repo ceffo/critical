@@ -104,6 +104,21 @@ export interface SkillCheck {
   abilityScore?: number;
   modifier?: number;
   logEntryId?: number;
+  /** The buff the verdict in effect put on (ADR 0037 step 20); absent when none, and in entries
+   * logged before. `renewed`: it replaced an active one. */
+  buff?: SkillCheckBuff;
+  renewed?: boolean;
+}
+
+/** The buff a successful check put on (skillhdl CheckBuffDTO, the skill_check payload's `buff`):
+ * its row id, stored name, the proficiency it is named from, effects keyed like the buff API, and
+ * rounds. */
+export interface SkillCheckBuff {
+  id: string;
+  name: string;
+  proficiencyId: string;
+  effects: Record<string, number>;
+  rounds: number;
 }
 
 /** Body of POST /api/roll/skill/{id} (optional) and POST /api/roll/skill/{id}/adjust: proficiency

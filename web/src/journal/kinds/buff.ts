@@ -36,6 +36,10 @@ export interface BuffLogPayload {
   expired?: string[];
   /** Parallel to `expired`: each expired buff's spell, "" when not from one; absent when none is. */
   expiredSpellIds?: string[];
+  /** The buff's proficiency when a successful check put it on (ADR 0037 step 20). */
+  proficiencyId?: string;
+  /** Parallel to `expired`: each expired buff's proficiency, "" when none; absent when none is. */
+  expiredProficiencyIds?: string[];
   note?: string;
   fromNote?: string;
   noteChanged?: boolean;
@@ -104,9 +108,25 @@ function buffText(
   spellName: SpellNamer,
   e: LogEntry,
 ): string {
-  const buff = buffName(spellName, { name: p.buff ?? "", spellId: p.spellId });
+  const buff = buffName(
+    spellName,
+    {
+      name: p.buff ?? "",
+      spellId: p.spellId,
+      proficiencyId: p.proficiencyId,
+    },
+    t,
+  );
   const expired = (p.expired ?? []).map((name, i) =>
-    buffName(spellName, { name, spellId: p.expiredSpellIds?.[i] }),
+    buffName(
+      spellName,
+      {
+        name,
+        spellId: p.expiredSpellIds?.[i],
+        proficiencyId: p.expiredProficiencyIds?.[i],
+      },
+      t,
+    ),
   );
   // ADR 0004 step 21: a dismiss names its one row; the rows that run out are named by effect.
   const endOfOne = endEffectsText(

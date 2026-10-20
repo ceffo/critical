@@ -120,4 +120,7 @@ type CheckResult struct {
 	// target (ADR 0037 step 5); 0 for a skill and in older entries.
 	ExtraSlots int
 	LogEntryID int64
+	// Buff is the buff the verdict in effect put on (ADR 0037 step 20), nil
+	// when it put none.
+	Buff *AppliedBuff
 }

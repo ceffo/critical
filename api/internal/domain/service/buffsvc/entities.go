@@ -230,6 +230,12 @@ type BuffEffect struct {
 	// the catalogue's name in the player's language, Name otherwise. No rules
 	// meaning.
 	SpellID string
+	// ProficiencyID is the id of the proficiency whose successful check put
+	// the buff on (ADR 0037 step 20.1), stamped by the skill check only;
+	// empty for every other buff. Like SpellID it only names the buff: the
+	// client shows the proficiency's name in the player's language. No
+	// rules meaning.
+	ProficiencyID string
 	// OnOther marks a row for a spell the character cast on someone else or
 	// on an area (ADR 0004 step 20.5): it only counts down. No aggregate
 	// counts it, whatever it holds, the list shows it as not applying, and

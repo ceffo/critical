@@ -207,14 +207,17 @@
  * it, so the badge never covers content and the page never scrolls. `h-app` for a screen that fills
  * the window, `min-h-app` for one that may grow.
  */
+:root {
+  --app-badge-h: 1.25rem;
+}
 @utility h-app {
-  height: calc(100dvh - 1.25rem);
+  height: calc(100dvh - var(--app-badge-h));
 }
 @utility min-h-app {
-  min-height: calc(100dvh - 1.25rem);
+  min-height: calc(100dvh - var(--app-badge-h));
 }
 @utility h-app-badge {
-  height: 1.25rem;
+  height: var(--app-badge-h);
 }
 
 @utility section-label {

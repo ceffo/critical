@@ -156,6 +156,8 @@ cmd_start() {
         say "api: (the database critical is left untouched; \`just catalogue\` fetches the real catalogue)"
     fi
 
+    # The version /api/health reports is computed at each rebuild (build-identity.sh): a commit or an edit
+    # in a file air does not watch shows only after the next .go rebuild.
     # air: rebuilds on .go changes; the server gets SIGINT (graceful shutdown) on every restart
     # and on exit, SIGKILL only after kill_delay (api/.air.toml).
     (

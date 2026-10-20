@@ -46,7 +46,6 @@
         "skillPoints": "Dépenser les points de talent",
         "freeSpell": "Choisir le sort gratuit de niveau {{spellLevel}} dans la recherche de sorts"
       },
-      "dismiss": "Fermer",
       "dismissTitle": "Fermer ce que le niveau apporte",
       "dieErrors": {
         "out_of_range": "Saisissez un dé de 1 à {{die}}.",

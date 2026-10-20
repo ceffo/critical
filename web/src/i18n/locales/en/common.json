@@ -46,7 +46,6 @@
         "skillPoints": "Spend the skill points",
         "freeSpell": "Pick the free level {{spellLevel}} spell in the spell lookup"
       },
-      "dismiss": "Close",
       "dismissTitle": "Close what the level grants",
       "dieErrors": {
         "out_of_range": "Enter a die from 1 to {{die}}.",

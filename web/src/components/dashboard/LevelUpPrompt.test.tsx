@@ -148,7 +148,8 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
     expect(fr).toContain('aria-label="Dépenser les points de talent"');
     expect(fr.match(/>Choisir</g)).toHaveLength(2);
     expect(fr).toContain(">Dépenser<");
-    expect(fr).toContain(">Fermer<");
+    expect(fr).toContain('aria-label="Fermer ce que le niveau apporte"');
+    expect(fr).not.toContain(">Fermer<");
     const en = await markup("en", panel);
     expect(en).toContain("Level 4 grants");
     expect(en).toContain("+30 skill points");

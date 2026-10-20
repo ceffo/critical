@@ -2687,9 +2687,9 @@ test("level-up grants and the to-spend tag uncut in French, 1280 to 2560", async
 
 // ADR 0030 step 20.8 and ADR 0022 step 1, judged in French (ADR 0027 step 2): once a mage takes
 // level 3, its grants (a non-weapon slot and the free 2nd-level spell, each with its link) and the
-// to-spend popover listing the free spell, never cut from 1280 to 2560; at 1440x900 the character
-// card does not scroll for them (ADR 0022 step 2.8) with a two-line name (a three-line one, the other
-// grants test's, already fills the card). Screenshots of both at every viewport.
+// to-spend popover listing the free spell, never cut from 1280 to 2560; the character
+// card does not scroll for them from 1440x900 up (ADR 0022 step 2.8), with a three-line name.
+// Screenshots of both at every viewport.
 test("level-up free spell: the grants and the to-spend popover uncut in French, 1280 to 2560", async ({
   page,
 }) => {
@@ -2698,7 +2698,7 @@ test("level-up free spell: the grants and the to-spend popover uncut in French, 
     apiCall(page, method, url, body);
   expect(
     await call("POST", "/api/characters", {
-      name: "Mélisande de Valombre",
+      name: "Aldéric de la Tour-d'Auvergne-Lesparre",
       class: "mage",
       raceCode: "human",
       details: { alignment: "neutral_good", sex: "male" },
@@ -2736,8 +2736,11 @@ test("level-up free spell: the grants and the to-spend popover uncut in French, 
     await expectNoClippedText(grants, `free spell grants, ${where}`);
     await expectWholeWords(grants, `free spell grants, ${where}`);
     await snap(page, `level-up-free-spell-fr-${vp.width}x${vp.height}`);
-    if (vp.width === 1440)
-      await expectNoScroll(character, "character card with the free spell");
+    if (vp.width >= 1440)
+      await expectNoScroll(
+        character,
+        `character card with the free spell, ${where}`,
+      );
     await tag.click();
     await expect(popover).toContainText("1 sort gratuit, niv. 2");
     await expectNoClippedText(popover, `free spell to-spend, ${where}`);

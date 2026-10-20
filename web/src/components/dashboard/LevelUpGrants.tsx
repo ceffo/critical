@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import type { FreeSpell, LevelGrants } from "@/types/character";
 import type { SkillsEditor } from "@/stores/skillsEditor";
@@ -14,6 +15,10 @@ const ROWS: {
   { key: "nonWeaponSlots", editor: "nonWeapon", action: "choose" },
   { key: "skillPoints", editor: "skillPoints", action: "spend" },
 ];
+
+/** A row's link is as tall as a line of text (18 px), so a one-line row stays one line high and
+ * the card does not scroll for the panel at 1440x900 (ADR 0022 step 2.8). */
+const ROW_BUTTON = "h-[1.125rem]";
 
 /**
  * Slots and skill points beyond hit points (ADR 0037 step 15) as the server counts them, one row
@@ -52,6 +57,7 @@ export function GrantRows({
             <Button
               variant="quiet"
               size="xs"
+              className={ROW_BUTTON}
               aria-label={actionTitle}
               title={actionTitle}
               onClick={() => onOpenEditor(r.editor)}
@@ -81,6 +87,7 @@ export function GrantRows({
             <Button
               variant="quiet"
               size="xs"
+              className={ROW_BUTTON}
               aria-label={actionTitle}
               title={actionTitle}
               onClick={() => onOpenFreeSpell(fs)}
@@ -97,7 +104,9 @@ export function GrantRows({
 
 /**
  * What the level just taken grants beyond hit points (ADR 0037 step 15), under the level-up prompt
- * until closed: a title, the rows and their links. Nothing here blocks play. The caller shows it
+ * until closed: a title with a close icon, the rows and their links, each line one text line high
+ * (ADR 0022 step 2.8: the card does not scroll for it at 1440x900, a three-line name included).
+ * Nothing here blocks play. The caller shows it
  * only when a count is above 0.
  */
 export function LevelUpGrants({
@@ -119,19 +128,20 @@ export function LevelUpGrants({
     <section
       aria-label={title}
       data-testid="level-up-grants"
-      className="flex flex-col gap-1 rounded-md bg-raised px-2.5 py-1.5 text-body"
+      className="flex flex-col rounded-md bg-raised px-2.5 py-1 text-body"
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
         <p className="font-semibold">{title}</p>
         <Button
           variant="ghost"
-          size="xs"
+          size="icon-xs"
+          className="size-[1.125rem]"
           aria-label={t("app.levelUp.dismissTitle")}
           title={t("app.levelUp.dismissTitle")}
           onClick={onDismiss}
           data-testid="level-up-grants-dismiss"
         >
-          {t("app.levelUp.dismiss")}
+          <X aria-hidden weight="bold" />
         </Button>
       </div>
       <GrantRows

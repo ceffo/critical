@@ -179,6 +179,14 @@ describe("modLabel", () => {
     expect(modLabel(await makeT("fr"), race)).toBe("Petite-gens (race)");
   });
 
+  it("names the weapon type of the non-proficiency penalty (ADR 0037 step 8)", async () => {
+    const mod = { kind: "nonproficient", detail: "long_sword", value: -3 };
+    expect(modLabel(await makeT("en"), mod)).toBe(
+      "Non-proficiency (Long sword)",
+    );
+    expect(modLabel(await makeT("fr"), mod)).toBe("Non-maîtrise (Épée longue)");
+  });
+
   it("labels the other kinds from their detail; an unnamed situational one by its kind", async () => {
     const en = await makeT("en");
     expect(modLabel(en, { kind: "strength", detail: "18", value: 1 })).toBe(

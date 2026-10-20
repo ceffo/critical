@@ -17,6 +17,11 @@ const (
 	// WarnHands: a two-handed weapon wielded with a worn shield (every
 	// class), on both pieces.
 	WarnHands = "hands"
+	// WarnWeaponTypeMissing: a wielded weapon with no weapon type (every
+	// class, ADR 0037 step 8): its attacks take no non-proficiency penalty,
+	// since no pick can be judged, until the player sets its type; the app
+	// never guesses one.
+	WarnWeaponTypeMissing = "weapon_type_missing"
 )
 
 // Warning is one class warning, served with the piece's id.
@@ -73,7 +78,8 @@ var classRules = map[string]classRule{
 }
 
 // ClassWarnings is the class warnings of the pieces worn or wielded, in list
-// order (ADR 0033 step 20): computed on every read, never stored. A homebrew
+// order (ADR 0033 step 20), and a wielded weapon's missing type (ADR 0037
+// step 8): computed on every read, never stored. A homebrew
 // weapon without a catalogue code is judged by its weapon type and damage
 // types; when those do not settle it (a type some listed weapon shares, such
 // as other_melee for a thief), no warning.
@@ -95,6 +101,9 @@ func ClassWarnings(class string, pieces []Item) []Warning {
 		case p.Category == CategoryWeapon && p.State == StateWielded:
 			if ruled && !weaponAllowed(rule, p, pieces) {
 				out = append(out, Warning{p.ID, WarnWeaponNotAllowed})
+			}
+			if p.WeaponType == "" {
+				out = append(out, Warning{p.ID, WarnWeaponTypeMissing})
 			}
 			if p.TwoHanded {
 				twoHanded = append(twoHanded, p)

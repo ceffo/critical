@@ -1046,6 +1046,7 @@
       "specialization": "Specialization",
       "point_blank": "Point blank",
       "backstab": "Backstab",
+      "nonproficient": "Non-proficiency ({{type}})",
       "dice_modifier": "{{detail}}: fixed part"
     },
     "cast": {
@@ -2367,6 +2368,7 @@
       "armour_not_allowed": "Not for {{who}}",
       "weapon_not_allowed": "Not for {{who}}",
       "hands": "Two-handed weapon with a shield",
+      "weapon_type_missing": "No weapon type: weapon proficiency not checked",
       "title": "Class warnings",
       "who": {
         "bard": "a bard",

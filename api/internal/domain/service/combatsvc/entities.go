@@ -30,6 +30,10 @@ const (
 	// damage term, PHB Table 30's multiplier at the realized level. An option of the attack
 	// request; Detail is empty.
 	ModBackstab ModifierKind = "backstab"
+	// ModNonproficient is PHB Table 34's non-proficiency penalty for the class group (ADR 0037
+	// step 8): an attack with a weapon whose type has no weapon pick. Not magical; Detail is the
+	// weapon type.
+	ModNonproficient ModifierKind = "nonproficient"
 	// ModDiceModifier is the flat part of the damage as printed (1d4+1,
 	// a flat 1; ADR 0003 step 2), a weapon damage term; Detail is the damage
 	// as printed.

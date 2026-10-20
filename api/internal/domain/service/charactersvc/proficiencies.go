@@ -119,6 +119,28 @@ type ProficiencySlots struct {
 	Weapon      ruletablesvc.WeaponPool
 	Picks       []PickFigures
 	WeaponPicks []WeaponPickFigures
+	// NonproficientPenalty is Table 34's non-proficiency penalty for the class group (ADR 0037
+	// step 8), 0 or less: what an attack with a weapon type without a pick takes to hit.
+	NonproficientPenalty int
+}
+
+// NonproficientPenalty is ADR 0037 step 8 for an attack with a weapon of weaponType: Table 34's
+// penalty for the class group when the type has no weapon pick, else 0. Any pick of the type
+// counts, a kept pick the class may not make included (Allowed false): the step asks for a pick,
+// and wielding is never refused. A weapon with no type takes none (the piece carries the
+// weapon_type_missing warning instead), and so does a character without Table 34 figures (nil
+// Derived.Proficiencies: no catalogue, an unknown class).
+func (c *Character) NonproficientPenalty(weaponType string) int {
+	f := c.Derived.Proficiencies
+	if f == nil || weaponType == "" {
+		return 0
+	}
+	for _, p := range f.WeaponPicks {
+		if p.Type == weaponType {
+			return 0
+		}
+	}
+	return f.NonproficientPenalty
 }
 
 // Proficiency pick limits and wire names.
@@ -212,7 +234,7 @@ func ProficiencyFigures(book ProficiencyBook, class string, level, intelligence 
 		return ProficiencySlots{}, false
 	}
 	groups := book.GroupsOf(class)
-	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon))}
+	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon)), NonproficientPenalty: row.Penalty}
 	spent := 0
 	for _, p := range picks.Nonweapon {
 		f := pickFigures(book, groups, p)

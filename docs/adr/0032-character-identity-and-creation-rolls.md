@@ -254,9 +254,12 @@ roster and creation items land.
   before keeps working on the schema while the new one deploys); its data step maps the stored free
   text (`mapIdentity`, the spellings in `storage/postgres/identity.go`), clears the unmapped values,
   empties `characters.race` and gives the seed character the alignment and sex of `seeds/character.json`
-  when he lacks them. The new code no longer reads or writes `characters.race`: **a later migration
-  drops it**, in the release after this one is deployed everywhere (until then the release before may
-  still write free text into it, which nobody reads).
+  when he lacks them. The new code no longer reads or writes `characters.race`. **Migration 023 drops
+  it** (the contract release, once the 013 release was on staging and prod, 2026-10-19), and its data
+  step runs `mapIdentity` again for the alignment and sex the release before wrote as free text after
+  013 (mapped to a code, or cleared when none fits, as in 013). That release's queries list their
+  columns and never name `race`, so it keeps running on the new schema; one restarted on it refuses to
+  start (an unknown applied migration, [ADR 0024](0024-deployment.md) step 6.2).
 - **Refusals** are field errors `details.alignment` / `details.sex` at creation (the `details.` prefix of
   that route) and `alignment` / `sex` on `PATCH /api/character/details`, codes `empty`, `unknown`,
   `alignment_not_allowed` (the web knows the class, so the response does not name it). The class

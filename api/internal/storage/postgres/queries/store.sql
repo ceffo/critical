@@ -25,9 +25,9 @@ UPDATE characters SET race_code = sqlc.arg(race_code) WHERE id = sqlc.arg(id) AN
 -- name: ListCharacterIdentity :many
 SELECT id, alignment, sex FROM characters ORDER BY id;
 
--- The mapped (or cleared) alignment and sex of a character, and its race detail discarded.
+-- The mapped (or cleared) alignment and sex of a character.
 -- name: SetCharacterIdentity :exec
-UPDATE characters SET alignment = sqlc.arg(alignment), sex = sqlc.arg(sex), race = '' WHERE id = sqlc.arg(id);
+UPDATE characters SET alignment = sqlc.arg(alignment), sex = sqlc.arg(sex) WHERE id = sqlc.arg(id);
 
 -- The identity numbers migration (015): every character's stored free-text height and weight,
 -- to parse into centimetres and kilograms.

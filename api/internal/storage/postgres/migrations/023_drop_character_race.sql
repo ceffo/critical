@@ -1,0 +1,11 @@
+-- Drops characters.race, the free-text race detail (ADR 0032 step 8): migration 013 emptied it and
+-- stopped reading and writing it, and the release that carried 013 is deployed everywhere, so no
+-- running release reads it any more. The rules race is characters.race_code (step 1), untouched.
+--
+-- Contract step of the expand/contract that 013 began (ADR 0024 step 5.2, ADR 0025 step 2.2). The
+-- release before this one never names the column (its queries list their columns), so it keeps
+-- running on the new schema until it is replaced; one restarted on it refuses to start, a database
+-- holding a migration it does not embed (ADR 0024 step 6.2). Schema only (step 2.1): the alignment
+-- and sex the release before wrote as free text after 013 are mapped to codes, or cleared, by a data
+-- step run just after this file (mapIdentity, the same as 013's).
+ALTER TABLE characters DROP COLUMN race;

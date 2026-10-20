@@ -203,7 +203,7 @@ func TestCreate_Step6_LanguagesBeyondTheSlotsAreRefused(t *testing.T) {
 	_, err = createdDetails(t, "half_elf", &eight)
 	var be *domain.BudgetError
 	require.ErrorAs(t, err, &be)
-	assert.Equal(t, domain.BudgetError{Field: "languages", Spent: 8, Limit: 7}, *be)
+	assert.Equal(t, domain.BudgetError{Field: "details.languages", Spent: 8, Limit: 7}, *be, "the creation form's field")
 }
 
 // ADR 0032 step 4.1 and ADR 0037 step 6 on a read: the character carries its native language (added

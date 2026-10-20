@@ -2,6 +2,7 @@ package charactersvc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -302,7 +303,7 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	// ADR 0037 steps 6, 10 and 14: nor over its non-weapon slots, its
 	// languages included.
-	if err := PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, Spending{}, s.creationSpending(c)); err != nil {
+	if err := s.creationWithinBudget(c); err != nil {
 		return 0, err
 	}
 	var id int64
@@ -317,6 +318,18 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	s.sessions.ForgetUser(owner)
 	return id, nil
+}
+
+// creationWithinBudget is ADR 0037 steps 6, 10 and 14 at creation: nothing was spent before, so
+// the picks and the languages may not overspend the non-weapon pool. A refusal on the languages
+// names the creation form's field, DetailsField + FieldLanguages.
+func (s *service) creationWithinBudget(c Character) error {
+	err := PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, Spending{}, s.creationSpending(c))
+	var be *domain.BudgetError
+	if errors.As(err, &be) && be.Field == FieldLanguages {
+		return &domain.BudgetError{Field: DetailsField + FieldLanguages, Spent: be.Spent, Limit: be.Limit}
+	}
+	return err
 }
 
 // creationSpending is what a new character spends from its pools: its picks and its languages
@@ -355,7 +368,7 @@ func (s *service) Preview(_ context.Context, n NewCharacter) (*Character, error)
 	if err := SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return nil, err
 	}
-	if err := PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, Spending{}, s.creationSpending(c)); err != nil {
+	if err := s.creationWithinBudget(c); err != nil {
 		return nil, err
 	}
 	// Nothing is worn before the character exists (ADR 0033 step 14).

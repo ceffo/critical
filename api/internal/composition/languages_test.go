@@ -139,3 +139,35 @@ func TestLanguages_Step4_TheCreationOptionsOfferTheCatalogue(t *testing.T) {
 		assert.Contains(t, r.Languages, r.Native, r.Race)
 	}
 }
+
+// ADR 0037 step 13 and 18: a save of the picks only, then Undo, leaves the languages as stored; a
+// save that only reorders the languages logs no entry.
+func TestLanguages_Step18_PicksOnlyUndoLeavesTheLanguagesAndAReorderLogsNothing(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var list listView
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", newBard, &list))
+	lyra := *list.CurrentID
+	read := func() languagesView {
+		var got languagesView
+		require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "GET", "/api/character", "", &got))
+		return got
+	}
+	readLog := func() picksLog {
+		var l picksLog
+		require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "GET", "/api/log", "", &l))
+		return l
+	}
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PUT", "/api/proficiencies", `{"languages":["elvish","gnomish"]}`, nil))
+	want := read().Languages
+	top := readLog().TopID
+
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PUT", "/api/proficiencies", `{"languages":["gnomish","elvish"]}`, nil))
+	assert.Equal(t, top, readLog().TopID, "only the order changed: no entry")
+
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PUT", "/api/proficiencies", `{"nonweapon":[{"id":"singing","slots":1}]}`, nil))
+	l := readLog()
+	require.NotEqual(t, top, l.TopID, "the picks save is an entry")
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "POST", "/api/log/undo", `{"expectedTopId":`+itoa(l.TopID)+`}`, nil))
+	assert.Equal(t, want, read().Languages, "the undo of a picks-only entry leaves the languages")
+}

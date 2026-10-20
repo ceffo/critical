@@ -92,7 +92,7 @@ jobs:
     environment: production
     permissions:
       contents: write # the GitHub Release
-      deployments: read # the staging deployment record
+      deployments: write # the staging deployment record (read), the production one (written after the smoke check)
     # Production deployments never run concurrently and are never cancelled midway (step 4).
     concurrency:
       group: deploy-production
@@ -164,6 +164,8 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           TAG: ${{ needs.resolve.outputs.tag }}
           RESTORE_POINT_DIR: ${{ runner.temp }}/restore-point
           ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}

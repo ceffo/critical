@@ -5,7 +5,7 @@
 #     private app is deployed from registry.fly.io/<app>:<sha> and the smoke check gets app and sha; a
 #     failed smoke check fails the run and prints the releases; a public IP deploys only while the login gate check
 #     passes (before and after, no bypass); machines on different digests fail; the digest is written to $GITHUB_OUTPUT.
-#   - record-deployment.sh, with gh stubbed: one deployment (task deploy-staging, ref the sha, digest in
+#   - record-deployment.sh (also --production), with gh stubbed: one deployment (task deploy-staging, ref the sha, digest in
 #     the payload) and one status; a success without a digest, a short sha and an unknown state call nothing.
 #   - with a version: the image registry.fly.io/<app>:v<version> is deployed and the smoke check gets the
 #     version; a bad version deploys nothing; the record carries the version;
@@ -174,6 +174,15 @@ for args in "$sha success" "${sha:0:7} success $digest" "$sha pending $digest" "
     [ "$status" != 0 ] || fail "record accepted: $args"
     [ ! -s "$calls" ] || fail "record called gh on a refused input: $args"
 done
+
+# --production: the same record for the environment production (written by promote.sh after the smoke check)
+run_record --production "$sha" success "$digest" 1.4.0
+[ "$status" = 0 ] || fail "record --production: exit $status"
+jq -e --arg sha "$sha" --arg d "$digest" 'select(.task == "deploy-production") | .ref == $sha and .environment == "production" and .payload == {commit: $sha, digest: $d, version: "1.4.0"}' <<<"$(cat "$tmp/gh_stdin")" >/dev/null \
+    || fail "record --production: deployment body wrong: $(cat "$tmp/gh_stdin")"
+jq -e 'select(.state == "success") | .environment == "production"' <<<"$(cat "$tmp/gh_stdin")" >/dev/null || fail "record --production: status not on production"
+run_record --production "$sha" success "$digest"
+[ "$status" != 0 ] && [ ! -s "$calls" ] || fail "record --production: a success without a version is accepted"
 
 # --- the config of the image's commit is the one deployed ---
 printf 'app = "other-app"\n' > "$tmp/image.toml"

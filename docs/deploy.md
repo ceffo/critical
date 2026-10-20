@@ -795,12 +795,19 @@ read an empty token), and a calling job cannot have an environment. The job pass
 - **When.** On demand, by an admin (user, 2026-10-17: staging may run ahead of production for a while):
 
   ```bash
-  just promote          # the newest version that passed staging
-  just promote 1.2.3    # that version (or v1.2.3): a rollback when it is older than production's
+  just promote          # a terminal: a gum picker of the versions above production's, up to staging's
+  just promote 1.2.3    # that version (or v1.2.3), no prompt: a rollback when it is older than production's
   ```
 
-  `just promote` is `gh workflow run promote.yml --ref main [-f version=…]` and prints the run's URL; the
-  same from the UI: Actions > Promote > Run workflow, Use workflow from: `main`, the version or empty. No
+  `just promote` is `gh workflow run promote.yml --ref main [-f version=…]` and prints the run's URL. With no
+  version in a terminal (`scripts/promote-pick.sh`) it first lists `scripts/release-guards.sh candidates`
+  with `gum choose`: Enter promotes the chosen version (staging's current is preselected), Esc or Ctrl-C
+  promotes nothing; production already at staging's version says so; production's version unknown (no
+  promotion has recorded one yet, "Production record") says so and lists the staged versions, at most 20.
+  A failed read of the records refuses and suggests `just promote X.Y.Z`. No terminal and no version: the
+  workflow with none (the newest that passed staging). **gum** is a local tool for the picker only (Arch:
+  `sudo pacman -S gum`, macOS: `brew install gum`, others: charmbracelet/gum); without it the picker stops
+  with that hint and `just promote X.Y.Z` still works. The same from the UI: Actions > Promote > Run workflow, Use workflow from: `main`, the version or empty. No
   tag-push trigger: no tag starts it, CI's or anyone's. The run is **main's** workflow, scripts and fly
   config; the image and the migrations it embeds are the version's. A run from another ref fails at once
   (`refuse a run from another ref than main`), and the environment `production` accepts deployments from
@@ -827,6 +834,15 @@ read an empty token), and a calling job cannot have an environment. The job pass
   `promote.sh` then prints what production runs before it changes anything: its machines' image (version
   label, commit, digest), e.g. `promote: production (critical-hit) runs 1.4.0 (commit <sha>, sha256:…);
   promoting v1.5.0`.
+- **Production record** (ADR 0024 step 4, "Amendment (a production record and the promote picker)"). After
+  the smoke check, before the GitHub Release, `promote.sh` writes (`scripts/record-deployment.sh
+  --production`, the job's `deployments: write`) a deployment of the environment `production`, task
+  `deploy-production`, ref the version's commit, payload `{commit, digest, version}`, status `success`: what
+  `just promote` reads as the version production runs (the latest successful record; GitHub's own deployment
+  of the job, task `deploy`, is ignored). A rollback writes one too; a promotion that failed earlier writes
+  none; a failed write fails the run (re-run it: the same image deploys again). Promotions made before the
+  record existed have none: the picker says "production version unknown" until the next one.
+  `scripts/release-guards.sh candidates` and the resolution above are one implementation.
 - **Secrets.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-hit`) and
   `RESTORE_POINT_PASSPHRASE` (the restore point's encryption, `just restore-point-key`). An empty one **fails**
   the run before anything else (`Promotion` error, `Check the deploy secrets`): a promotion is a deliberate
@@ -943,6 +959,11 @@ read an empty token), and a calling job cannot have an environment. The job pass
   6. `just promote 99.0.0` fails in `resolve the version` ("there is no version v99.0.0"); the `promote to
      production` job is skipped and production's deployments list no new entry.
   7. A run by a collaborator who is not an admin (if there is one) fails in `Check the actor is an admin`.
+  8. The record: the run's job `promote to production` writes it (`record-deployment: production deployment
+     <id> of <sha> (X.Y.Z): success`), `gh api 'repos/<repo>/deployments?environment=production&task=deploy-production'`
+     lists it with the payload, and `just promote` then says `production runs X.Y.Z`. (GitHub applies the
+     environment's branch rule to the deployment's ref; the staging record already uses a commit sha as ref.
+     If it is refused here, the run fails at that step, nothing else is affected.)
 
 By hand, the equivalent of a deploy is
 `$fly deploy -c deploy/fly.<env>.toml -a <app> --image <ref>`: a rolling deploy, one machine

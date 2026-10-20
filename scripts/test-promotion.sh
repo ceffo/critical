@@ -22,6 +22,15 @@
 #   - release-guards.sh resolve: no version, the newest (by number) v* version on main that passed staging,
 #     skipping higher ones that did not; a version asked (X.Y.Z or vX.Y.Z, the rollback) that must exist, be on
 #     main and have passed staging; a malformed one refused;
+#   - release-guards.sh candidates (what `just promote` offers; one implementation with `resolve`): the versions
+#     above production's recorded version up to staging's, newest first, each passed staging as that version;
+#     production unknown (no record): the staged versions, at most 20; production at or above staging's: none;
+#     staging unknown or any failed read: exit 3, nothing offered;
+#   - record-deployment.sh --production, and promote.sh writing that record only after the deploy and smoke
+#     check passed (a failed smoke check, a refused guard, no record), a failed write failing the run;
+#   - scripts/promote-pick.sh (gum stubbed): the picker with staging preselected, Esc promoting nothing, prod
+#     already at staging, an unknown production, a failed read refusing, gum missing, a named version never
+#     prompting, no terminal and no version dispatching with none;
 #   - require-admin.sh: only repository admins pass (who may promote);
 #   - github-environments.sh: production deployable from the branch main only (the old tag rule deleted);
 #   - `just promote [version]`: the dispatch of promote.yml from main, with the version as its input;
@@ -55,6 +64,10 @@ case "\$1 \${2:-}" in
     "release view") [ -f "$tmp/release-exists" ] ;;
     "release create") ;;
     "workflow run") ;;
+    "api -X")
+        shift 2; echo "gh api -X \$*" >> "$calls"; cat >> "$tmp/gh_posts"; echo >> "$tmp/gh_posts"
+        [ ! -f "$tmp/record-fails" ] || { echo "gh: HTTP 422" >&2; exit 1; }
+        case "\$*" in POST\ repos/o/r/deployments\ *) echo 77 ;; esac ;;
     api\ *)
         url="\$2"; shift 2; expr=""
         while [ "\$#" -gt 0 ]; do case "\$1" in --jq) expr="\$2"; shift 2 ;; *) shift ;; esac; done
@@ -137,7 +150,7 @@ cd "$tmp/repo"
 git config user.email t@example.com
 git config user.name test
 mkdir -p scripts deploy
-cp "$root"/scripts/{release-guards,promote,restore-point,prod-db,fly-private-check,fly-access-check}.sh scripts/
+cp "$root"/scripts/{release-guards,promote,promote-pick,record-deployment,restore-point,prod-db,fly-private-check,fly-access-check}.sh scripts/
 cp "$root"/deploy/fly.{staging,prod}.toml deploy/
 mkdir -p api/internal/storage/postgres/migrations
 touch api/internal/storage/postgres/migrations/{001_baseline,002_more}.sql
@@ -299,6 +312,139 @@ resolve
 [ "$status" = 3 ] && [ -z "$out" ] && [[ "$err" == *"records no image digest"* ]] || fail "resolve: a passed record without a digest on the newest version fell back: exit $status, $out $err"
 put "$(deployments "$sha_four")" "[{\"id\":32,\"created_at\":\"2026-10-17T07:00:00Z\",\"payload\":{\"digest\":\"$d10\",\"version\":\"1.10.0\"}}]"
 
+# --- candidates: what `just promote` offers (release-guards.sh candidates) ---
+# Here: v1.2.3 (the bare record 12), v1.9.0 and v1.10.0 passed, v1.11.0 failed, v9.9.9 off main.
+cur() { echo "repos/o/r/deployments?environment=$1&task=deploy-$1&per_page=100"; }
+# record <env> <id> <created> <version> <state>: one record of the environment, with its status.
+records=""
+set_current() { # <env> <json list>
+    put "$(cur "$1")" "$2"
+}
+cands() { status=0; out="$("$guards" candidates 2>"$tmp/cand-err")" || status=$?; err="$(cat "$tmp/cand-err")"; }
+versions() { sed -n 's/^version=//p' <<<"$out" | tr '\n' ' '; }
+rec() { printf '{"id":%s,"created_at":"%s","payload":{"version":"%s","digest":"%s"}}' "$1" "$2" "$3" "$digest"; }
+put "$(statuses 41)" '[{"state":"inactive"},{"state":"success"}]'
+put "$(statuses 42)" '[{"state":"failure"}]'
+put "$(statuses 51)" '[{"state":"success"}]'
+put "$(statuses 52)" '[{"state":"failure"}]'
+put "$(statuses 53)" '[{"state":"success"}]'
+
+# production unknown (no production record): the staged versions up to staging's, newest first
+set_current staging "[$(rec 41 2026-10-18T01:00:00Z 1.10.0)]"
+cands
+[ "$status" = 0 ] && [ "$(head -n2 <<<"$out" | tr '\n' ' ')" = "staging=1.10.0 production=unknown " ] && [ "$(versions)" = "1.10.0 1.9.0 1.2.3 " ] \
+    || fail "candidates, production unknown: exit $status, '$out' $err"
+[ "$("$guards" resolve | sed -n 's/^tag=v//p')" = "$(sed -n 's/^version=//p' <<<"$out" | head -n1)" ] \
+    || fail "candidates and resolve disagree on the newest staged version"
+# the floor: production's recorded version (a newer FAILED production record and an older one change nothing)
+set_current production "[$(rec 52 2026-10-18T05:00:00Z 1.10.0),$(rec 51 2026-10-18T04:00:00Z 1.9.0),$(rec 53 2026-10-18T02:00:00Z 1.2.3)]"
+cands
+[ "$status" = 0 ] && [[ "$out" == *"production=1.9.0"* ]] && [ "$(versions)" = "1.10.0 " ] || fail "candidates, production at 1.9.0: '$out' $err"
+# production at staging's version: nothing to offer
+set_current production "[$(rec 51 2026-10-18T04:00:00Z 1.10.0)]"
+cands
+[ "$status" = 0 ] && [[ "$out" == *"production=1.10.0"* ]] && [ -z "$(versions)" ] || fail "candidates, production at staging's version: '$out' $err"
+# production ahead of staging (a rollback is asked by name, never offered)
+set_current production "[$(rec 51 2026-10-18T04:00:00Z 1.11.0)]"
+cands
+[ "$status" = 0 ] && [ -z "$(versions)" ] || fail "candidates, production ahead of staging: '$out' $err"
+# the ceiling: staging's recorded version, not the highest tag
+set_current production '[]'
+set_current staging "[$(rec 41 2026-10-18T01:00:00Z 1.9.0)]"
+cands
+[ "$status" = 0 ] && [ "$(versions)" = "1.9.0 1.2.3 " ] || fail "candidates, staging at 1.9.0: '$out' $err"
+# a version that did not pass staging is skipped, saying why (staging at 1.11.0, production at 1.2.3)
+put "$(statuses 41)" '[{"state":"success"}]'
+set_current staging "[$(rec 41 2026-10-18T06:00:00Z 1.11.0)]"
+set_current production "[$(rec 51 2026-10-18T04:00:00Z 1.2.3)]"
+cands
+[ "$status" = 0 ] && [ "$(versions)" = "1.10.0 1.9.0 " ] && [[ "$err" == *"skipping v1.11.0"* ]] || fail "candidates, a failed version in range: '$out' $err"
+# staging's latest record is the one that counts, and a failed one is not a record
+set_current staging "[$(rec 42 2026-10-18T09:00:00Z 1.11.0),$(rec 41 2026-10-18T06:00:00Z 1.9.0)]"
+cands
+[ "$status" = 0 ] && [[ "$out" == staging=1.9.0* ]] || fail "candidates: a failed staging record is staging's current: '$out' $err"
+# at most 20 versions
+git tag -a v5.0.0 -m r "$sha_four"
+list=""; for n in $(seq 1 25); do git tag -a "v5.$n.0" -m r "$sha_four"; list="$list${list:+,}$(rec $((100 + n)) 2026-10-17T07:00:00Z "5.$n.0")"; put "$(statuses $((100 + n)))" '[{"state":"success"}]'; done
+git tag -d v5.0.0 >/dev/null
+saved="$(cat "$fx/$(printf '%s' "$(deployments "$sha_four")" | tr -c 'a-zA-Z0-9' '_')")"
+put "$(deployments "$sha_four")" "[$list]"
+set_current staging "[$(rec 41 2026-10-18T06:00:00Z 5.25.0)]"
+set_current production '[]'
+cands
+[ "$status" = 0 ] && [ "$(sed -n 's/^version=//p' <<<"$out" | wc -l)" = 20 ] && [ "$(versions | cut -d' ' -f1)" = 5.25.0 ] && [[ "$(versions)" == *"5.6.0 " ]] \
+    || fail "candidates: not the newest 20: $(versions)"
+for n in $(seq 1 25); do git tag -d "v5.$n.0" >/dev/null; done
+put "$(deployments "$sha_four")" "$saved"
+# staging unknown, or a failed read: exit 3, nothing offered (never a silent fallback)
+set_current staging '[]'
+cands
+[ "$status" = 3 ] && [ -z "$out" ] && [[ "$err" == *"staging has no recorded version"* ]] || fail "candidates, no staging record: exit $status '$out' $err"
+set_current staging "[$(rec 41 2026-10-18T06:00:00Z 1.10.0)]"
+set_current production "[$(rec 51 2026-10-18T04:00:00Z 1.9.0)]"
+for url in "$(cur staging)" "$(cur production)" "$(statuses 41)" "$(statuses 51)" "$(deployments "$sha_four")"; do
+    f="$fx/$(printf '%s' "$url" | tr -c 'a-zA-Z0-9' '_').fail"; touch "$f"; cands; rm -f "$f"
+    [ "$status" = 3 ] && [ -z "$(versions)" ] || fail "candidates: a failed read of $url went on: exit $status '$out' $err"
+done
+put "$(statuses 51)" 'not json'
+cands
+[ "$status" = 3 ] || fail "candidates: unreadable production statuses went on: exit $status '$out'"
+put "$(statuses 51)" '[{"state":"success"}]'
+cands
+[ "$status" = 0 ] && [ "$(versions)" = "1.10.0 " ] || fail "candidates, restored: '$out' $err"
+
+# --- the picker (scripts/promote-pick.sh), gum stubbed ---
+cat > "$stubs/gum" <<STUB
+#!/bin/sh
+echo "gum \$*" >> "$calls"
+[ ! -f "$tmp/gum-cancel" ] || exit 130
+cat "$tmp/gum-pick"
+STUB
+chmod +x "$stubs/gum"
+pick() { : > "$calls"; status=0; out="$(PROMOTE_NO_FETCH=1 "$@" "$tmp/repo/scripts/promote-pick.sh" 2>&1 </dev/null)" || status=$?; }
+dispatches() { grep -c '^gh workflow run' "$calls" || true; }
+# a terminal, production at 1.9.0, staging at 1.10.0: the choice goes to the workflow
+set_current staging "[$(rec 41 2026-10-18T06:00:00Z 1.10.0)]"
+set_current production "[$(rec 51 2026-10-18T04:00:00Z 1.2.3)]"
+echo 1.9.0 > "$tmp/gum-pick"; rm -f "$tmp/gum-cancel"
+pick env PROMOTE_FORCE_TTY=1
+[ "$status" = 0 ] && grep -qx 'gum choose --header Promote to production (now: 1.2.3): --selected 1.10.0 --limit 1 1.10.0 1.9.0' "$calls" \
+    && grep -qx 'gh workflow run promote.yml --ref main -f version=1.9.0' "$calls" && [ "$(dispatches)" = 1 ] \
+    || fail "picker: the choice is not dispatched, or staging is not preselected: exit $status $out $(cat "$calls")"
+# Esc / Ctrl-C: nothing promoted
+touch "$tmp/gum-cancel"
+pick env PROMOTE_FORCE_TTY=1
+[ "$status" = 0 ] && [ "$(dispatches)" = 0 ] && [[ "$out" == *"cancelled, nothing promoted"* ]] || fail "picker: Esc promoted or failed: exit $status $out $(cat "$calls")"
+rm -f "$tmp/gum-cancel"
+# production already at staging's version
+set_current production "[$(rec 51 2026-10-18T04:00:00Z 1.10.0)]"
+pick env PROMOTE_FORCE_TTY=1
+[ "$status" = 0 ] && [ "$(dispatches)" = 0 ] && ! grep -q '^gum' "$calls" && [[ "$out" == *"production already runs staging's version (1.10.0): nothing to promote"* ]] \
+    || fail "picker: prod at staging's version: exit $status $out $(cat "$calls")"
+# production version unknown: says so, lists the staged versions
+set_current production '[]'
+echo 1.10.0 > "$tmp/gum-pick"
+pick env PROMOTE_FORCE_TTY=1
+[ "$status" = 0 ] && [[ "$out" == *"production version unknown"* ]] && grep -qx 'gum choose --header Promote to production (now: unknown): --selected 1.10.0 --limit 1 1.10.0 1.9.0 1.2.3' "$calls" \
+    && grep -qx 'gh workflow run promote.yml --ref main -f version=1.10.0' "$calls" || fail "picker: production unknown: exit $status $out $(cat "$calls")"
+# a failed GitHub read: refused, suggests the explicit version, never a fallback dispatch
+f="$fx/$(printf '%s' "$(cur production)" | tr -c 'a-zA-Z0-9' '_').fail"; touch "$f"
+pick env PROMOTE_FORCE_TTY=1; rm -f "$f"
+[ "$status" != 0 ] && [ "$(dispatches)" = 0 ] && ! grep -q '^gum' "$calls" && [[ "$out" == *"just promote X.Y.Z"* ]] || fail "picker: a failed read: exit $status $out $(cat "$calls")"
+# gum missing on the interactive path: the install hint, nothing promoted; the other paths need no gum
+mv "$stubs/gum" "$tmp/gum.off"
+nogum="$tmp/nogum-bin"; mkdir -p "$nogum"; ln -sf "$(command -v git)" "$(command -v jq)" "$(command -v sed)" "$(command -v bash)" "$(command -v dirname)" "$(command -v mktemp)" "$(command -v rm)" "$(command -v cat)" "$(command -v tr)" "$nogum/" 2>/dev/null; ln -sf "$stubs/gh" "$nogum/gh"
+: > "$calls"; status=0; out="$(PATH="$nogum" PROMOTE_FORCE_TTY=1 PROMOTE_NO_FETCH=1 "$(command -v bash)" "$tmp/repo/scripts/promote-pick.sh" 2>&1 </dev/null)" || status=$?
+[ "$status" != 0 ] && [ "$(dispatches)" = 0 ] && [[ "$out" == *"gum is missing"*"Install it"* ]] || fail "picker: gum missing: exit $status $out"
+: > "$calls"; status=0; PATH="$nogum" "$(command -v bash)" "$tmp/repo/scripts/promote-pick.sh" 1.9.0 >/dev/null 2>&1 </dev/null || status=$?
+[ "$status" = 0 ] && grep -qx 'gh workflow run promote.yml --ref main -f version=1.9.0' "$calls" || fail "picker: a named version needs gum: exit $status $(cat "$calls")"
+mv "$tmp/gum.off" "$stubs/gum"
+# a named version never prompts or reads the records, even on a terminal; no terminal and no version: today's dispatch
+: > "$calls"; status=0; PROMOTE_FORCE_TTY=1 "$tmp/repo/scripts/promote-pick.sh" v1.9.0 >/dev/null 2>&1 </dev/null || status=$?
+[ "$status" = 0 ] && [ "$(cat "$calls")" = 'gh workflow run promote.yml --ref main -f version=v1.9.0' ] || fail "picker: a named version prompted or read records: $(cat "$calls")"
+pick env PROMOTE_NO_TTY=1
+[ "$status" = 0 ] && [ "$(cat "$calls")" = 'gh workflow run promote.yml --ref main' ] || fail "picker: no terminal, no version: not today's dispatch: $(cat "$calls")"
+
 for id in 12 31 32 34; do put "$(statuses "$id")" '[{"state":"failure"}]'; done
 resolve
 [ "$status" != 0 ] && [ -z "$out" ] && [[ "$err" == *"no v* version is on main with a passed staging deploy"* ]] \
@@ -318,7 +464,7 @@ reset() {
 }
 # promote [phase] <tag>: promote.sh with the passphrase and $tmp/points, RESTORE_POINT_KEPT unset by default.
 promote() {
-    : > "$calls"; status=0
+    : > "$calls"; : > "$tmp/gh_posts"; status=0
     out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GATE_CHECK="$stubs/gate" RESTORE_POINT_PASSPHRASE="${PASS-$passphrase}" RESTORE_POINT_DIR="$tmp/points" \
         "$tmp/repo/scripts/promote.sh" "$@" 2>&1)" || status=$?
 }
@@ -329,6 +475,13 @@ image="registry.fly.io/critical-hit@$newer"
 
 reset; promote v1.2.3
 [ "$status" = 0 ] || fail "promote: exit $status: $out"
+# the production record (ADR 0024 step 4): one deployment {commit, digest, version}, then success; after the smoke check, before the release
+grep -qx 'gh api -X POST repos/o/r/deployments --input - --jq .id' "$calls" && grep -qx 'gh api -X POST repos/o/r/deployments/77/statuses --input -' "$calls"     || fail "promote: no production deployment record written: $(grep 'gh api' "$calls")"
+jq -se --arg sha "$main_sha" --arg d "$newer" 'any(.[]; .task == "deploy-production" and .environment == "production" and .ref == $sha and .payload == {commit: $sha, digest: $d, version: "1.2.3"})' "$tmp/gh_posts" >/dev/null \
+    || fail "promote: the production record is wrong: $(cat "$tmp/gh_posts")"
+jq -se 'any(.[]; .state == "success" and .environment == "production")' "$tmp/gh_posts" >/dev/null || fail "promote: the production record is not a success"
+[ "$(line '^smoke')" -lt "$(line 'gh api -X POST repos/o/r/deployments ')" ] && [ "$(line 'gh api -X POST repos/o/r/deployments ')" -lt "$(line '^gh release create')" ] \
+    || fail "promote: the record is not between the smoke check and the release"
 point="$(sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p' "$calls" | head -n1)"
 [[ "$point" =~ ^critical_prod_pre_v1_2_3_[0-9]{14}$ ]] || fail "promote: restore point name '$point'"
 grep -qx "docker buildx imagetools create --prefer-index=false --progress none -t registry.fly.io/critical-hit:$main_sha $staged" "$calls" \
@@ -466,7 +619,8 @@ rm -rf "$tmp/points"; RESTORE_POINT_KEPT="artifact 7" promote deploy v1.2.3
 reset; status=0; out="$(FLY="$stubs/fly" RESTORE_POINT_PASSPHRASE=x "$tmp/repo/scripts/promote.sh" prepare v1.2.3 2>&1)" || status=$?
 [ "$status" != 0 ] && [[ "$out" == *"RESTORE_POINT_DIR is not set"* ]] || fail "promote prepare without RESTORE_POINT_DIR: $out"
 
-reset; touch "$tmp/smoke-fails"; promote v1.2.3
+reset; touch "$tmp/smoke-fails"; : > "$tmp/gh_posts"; promote v1.2.3
+grep -q 'gh api -X POST' "$calls" && fail "promote: a production record after a failed smoke check"
 [ "$status" != 0 ] && [[ "$out" == *"registry.fly.io/critical-hit-staging@previous"* ]] || fail "promote: a failed smoke check: exit $status, no releases listed: $out"
 grep -q '^gh release create' "$calls" && fail "promote: released after a failed smoke check"
 
@@ -474,6 +628,11 @@ reset; echo "[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\"}},{\"id\":\"m2
 promote v1.2.3
 [ "$status" != 0 ] && ! grep -q '^gh release create' "$calls" || fail "promote: machines on another digest still released"
 
+reset; touch "$tmp/record-fails"; promote v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"production deployment record could not be written"* ]] || fail "promote: a failed record write did not fail the run: exit $status $out"
+rm -f "$tmp/record-fails"
+reset; : > "$tmp/gh_posts"; promote v9.9.9
+[ "$status" != 0 ] && [ ! -s "$tmp/gh_posts" ] || fail "promote: a refused guard wrote a record"
 reset; touch "$tmp/release-exists"; promote v1.2.3
 [ "$status" = 0 ] && grep -q '^fly deploy' "$calls" && ! grep -q '^gh release create' "$calls" \
     || fail "promote: a re-run (existing release) did not redeploy, or created the release again"
@@ -647,7 +806,7 @@ grep -q "type=tag" "$calls" && fail "github-environments: a tag rule is still cr
 # --- just promote: the dispatch from main ---
 : > "$calls"
 just -f "$root/justfile" -d "$root" promote 1.2.3 >/dev/null 2>&1 || fail "just promote 1.2.3 failed"
-just -f "$root/justfile" -d "$root" promote >/dev/null 2>&1 || fail "just promote failed"
+PROMOTE_NO_TTY=1 just -f "$root/justfile" -d "$root" promote >/dev/null 2>&1 </dev/null || fail "just promote failed"
 [ "$(cat "$calls")" = "$(printf 'gh workflow run promote.yml --ref main -f version=1.2.3\ngh workflow run promote.yml --ref main')" ] \
     || fail "just promote: wrong dispatches: $(cat "$calls")"
 
@@ -707,7 +866,7 @@ check("uses" not in job, "promote: calls a reusable workflow, which cannot read 
 check(job.get("environment") == "production", "promote: not in the production environment")
 check(job.get("if") == main, "promote: not limited to main")
 check(job["concurrency"] == {"group": "deploy-production", "cancel-in-progress": False}, "promote: not serialized without cancelling")
-check(job["permissions"] == {"contents": "write", "deployments": "read"}, "promote: permissions are not minimal")
+check(job["permissions"] == {"contents": "write", "deployments": "write"}, "promote: permissions are not minimal")
 steps = job["steps"]
 a = admin_first("promote", steps)
 readers = [i for i, st in enumerate(steps) if "secrets." in str(st)]

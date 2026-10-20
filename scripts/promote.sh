@@ -38,6 +38,8 @@
 #   5. `fly deploy` of registry.fly.io/<prod app>@<digest> to the production app (rolling);
 #   6. the smoke check of every machine (scripts/fly-smoke.sh: health with the commit, a database read,
 #      the web app), then every machine runs exactly that digest;
+#      The production deployment record ({commit, digest, version}, status success; `just promote` reads it as
+#      the version production runs) is written here, after step 6 and before the release; none on a failure;
 #   7. the GitHub Release of the tag, with generated notes naming the restore point and where it is kept
 #      (kept when it exists: a rollback re-runs an older tag).
 #
@@ -205,6 +207,11 @@ FLY="$fly" "$here/fly-access-check.sh" "$app" # the release now running must hol
 running="$("$fly" machine list -a "$app" --json | jq -r '[.[].image_ref.digest // empty] | unique | .[]')"
 [ "$running" = "$digest" ] || fail "the machines of $app run '$running', not $digest"
 echo "promote: $app runs $tag ($sha, $digest)"
+
+# The record of what production runs (ADR 0024 step 4), written only now that the deploy and its smoke check
+# passed: `just promote` reads it to offer the versions above this one. The rollback writes it too.
+"$here/record-deployment.sh" --production "$sha" success "$digest" "${tag#v}" \
+    || fail "$app runs $tag, but its production deployment record could not be written: re-run the promotion of $tag (it deploys the same image again) so \`just promote\` knows what production runs"
 
 notes="Image \`$image\` (commit $sha), the one staging ran and smoke-checked as \`$staged\`. Restore point taken before it: \`$point\`, $kept (docs/deploy.md, \"Rollback\")."
 if gh release view "$tag" >/dev/null 2>&1; then

@@ -4,7 +4,11 @@ import {
   attackForm,
   combatLog,
   chooseLanguage,
+  chooseWeapon,
   createInFlow,
+  expectNoReload,
+  expectUndoOn,
+  markNoReload,
   openDashboard,
   openRoster,
   openWeapons,
@@ -313,10 +317,12 @@ test("create a bard through the creation route, switch to the first and back, re
 });
 
 // The fighter (ADR 0030 steps 9, 11 and 12), what only a browser proves: the 18/xx field appearing
-// at Strength 18, the sheet tile reading 18/50 after the reload, the weapon editor's type and
-// specialized controls, and the attack card's rate and tag on the server's numbers. The rules
-// (refusals, Table 1 at 18/xx, the bonuses, Tables 15/35/45) are Go tests (charactersvc, buffsvc,
-// combatsvc, itemsvc, ruletablesadpt).
+// at Strength 18, the sheet tile reading 18/50 after the reload, the weapon editor's type control,
+// and the piece and the attack card showing the specialization derived from the weapon pick (ADR
+// 0037 step 9: the pick is saved through the API until the weapon proficiency editor lands) with
+// the rate and tag on the server's numbers. The rules (refusals, Table 1 at 18/xx, the bonuses,
+// Tables 15/35/45, the pick's cost) are Go tests (charactersvc, buffsvc, combatsvc, itemsvc,
+// ruletablesadpt, composition specialization_test.go).
 test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   page,
 }) => {
@@ -348,13 +354,25 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   await wf.getByLabel("Damage S-M").fill("1d8");
   await wf.getByLabel("Damage Large").fill("1d12");
   await wf.getByLabel("Weapon type").selectOption("long_sword");
-  await wf.getByLabel("Specialized").check();
+  await expect(wf.getByLabel("Specialized")).toHaveCount(0);
   await wf.getByRole("button", { name: "Add", exact: true }).click();
   const sword = page.getByTestId("item-long_sword");
-  await expect(sword.getByTestId("item-stats")).toContainText("specialized");
+  await expect(sword.getByTestId("item-stats")).not.toContainText(
+    "specialized",
+  );
   // A new piece is carried (ADR 0033 step 6): equip it to hold it.
   await sword.getByRole("button", { name: "Equip Long Sword" }).click();
   await expect(sword.getByTestId("item-equipped")).toBeVisible();
+  // The long sword's specialization pick: 2 weapon slots (ADR 0037 step 9).
+  const picked = await page.request.put("/api/proficiencies", {
+    data: { weapon: [{ type: "long_sword", slots: 2 }] },
+  });
+  expect(picked.ok()).toBeTruthy();
+  await page.reload();
+  await openWorkspace(page, "Inventory");
+  await expect(
+    page.getByTestId("item-long_sword").getByTestId("item-stats"),
+  ).toContainText("specialized");
 
   await openWorkspace(page, "Act");
   await openWeapons(page);
@@ -373,6 +391,92 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   await chooseLanguage(page, "fr");
   await expect(page.getByTestId("tile-rate")).toContainText("ce tour");
   await snap(page, "fighter-attack-fr");
+});
+
+// Undoing a specialization (ADR 0037 step 9) from the journal, without a reload: the pick's save
+// names the proficiencies family, and the pieces and the attack form follow it (stateKeys.ts), so
+// the inventory tag, the attack card's tag and a bow's point-blank option clear at once.
+test("undo a fighter's specialization from the journal, no reload", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await createInFlow(page, {
+    name: "Varn",
+    className: "Guerrier",
+    race: "Humain",
+    scores: { FOR: "16", DEX: "14", CON: "15", INT: "10", SAG: "10", CHA: "9" },
+    hpMax: "10",
+  });
+  await expect(page.getByTestId("character")).toContainText("Varn");
+  await chooseLanguage(page, "en");
+  const add = async (body: object): Promise<string> => {
+    const res = await page.request.post("/api/items", {
+      data: body,
+      headers: { Origin: new URL(page.url()).origin },
+    });
+    expect(res.ok(), await res.text()).toBeTruthy();
+    return ((await res.json()) as { item: { id: string } }).item.id;
+  };
+  const swordId = await add({ catalogueCode: "long_sword", equip: true });
+  const bowId = await add({ catalogueCode: "long_bow" });
+  await add({ catalogueCode: "flight_arrow" });
+  const specialize = async (type: string, slots: number) =>
+    expect(
+      await apiCall(page, "PUT", "/api/proficiencies", {
+        weapon: [{ type, slots }],
+      }),
+    ).toBe(true);
+
+  // The long sword: the piece's and the attack card's tag, then the journal's Undo.
+  await specialize("long_sword", 2);
+  await page.reload();
+  await markNoReload(page);
+  await openWorkspace(page, "Inventory");
+  const swordStats = page
+    .getByTestId(`item-${swordId}`)
+    .getByTestId("item-stats");
+  await expect(swordStats).toContainText("specialized");
+  await openWorkspace(page, "Act");
+  await openWeapons(page);
+  const f = attackForm(page);
+  await chooseWeapon(page, "Fixture long sword");
+  await expect(f.getByTestId("tile-specialized")).toBeVisible();
+  await expect(f.getByTestId("tile-rate")).toContainText("3/2 att.");
+  await snap(page, "specialized-sword");
+  await expectUndoOn(page, "Proficiency slots");
+  await page.getByTestId("undo").click();
+  await expect(f.getByTestId("tile-specialized")).toHaveCount(0);
+  await expect(f.getByTestId("tile-rate")).not.toContainText("3/2");
+  await openWorkspace(page, "Inventory");
+  await expect(swordStats).not.toContainText("specialized");
+  await snap(page, "specialized-sword-undone");
+  await expectNoReload(page);
+
+  // The long bow, in hand first (taking it is an entry of its own): point-blank is offered, and
+  // gone once the save is undone.
+  await openWorkspace(page, "Act");
+  await chooseWeapon(page, "Fixture long bow");
+  await specialize("long_bow", 3);
+  await page.reload();
+  await markNoReload(page);
+  await openWorkspace(page, "Inventory");
+  const bowStats = page.getByTestId(`item-${bowId}`).getByTestId("item-stats");
+  await expect(bowStats).toContainText("specialized");
+  await openWorkspace(page, "Act");
+  await openWeapons(page);
+  await expect(f.getByTestId("weapon-in-hand")).toHaveText("Fixture long bow");
+  await expect(f.getByTestId("tile-specialized")).toBeVisible();
+  await expect(f.getByTestId("point-blank")).toBeVisible();
+  await snap(page, "specialized-bow");
+  await expectUndoOn(page, "Proficiency slots");
+  await page.getByTestId("undo").click();
+  await expect(f.getByTestId("point-blank")).toHaveCount(0);
+  await expect(f.getByTestId("tile-specialized")).toHaveCount(0);
+  await snap(page, "specialized-bow-undone");
+  await openWorkspace(page, "Inventory");
+  await expect(bowStats).not.toContainText("specialized");
+  await expectNoReload(page);
 });
 
 // The thief (ADR 0030 steps 1, 17 and 19), what only a browser proves: the skill points and armour

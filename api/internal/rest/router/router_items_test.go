@@ -249,6 +249,25 @@ func TestItems_Delete(t *testing.T) {
 	assert.JSONEq(t, `{"item":`+wandJSON+`,"logEntryId":14}`, rec.Body.String())
 }
 
+// ADR 0037 step 9: a body's specialized is accepted and ignored (the pick specializes): a create
+// sending it creates the piece without it, an edit sending only it patches nothing (the service
+// then refuses the edit as changing nothing).
+func TestItems_Step9_SpecializedInTheBodyIsIgnored(t *testing.T) {
+	h, m := newRouter(t)
+	noWarnings(m)
+	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{
+		Name: localized.Of("Long Sword"), Category: itemsvc.CategoryWeapon, Behaviour: itemsvc.BehaviourStock, Count: 1,
+		WeaponType: "long_sword",
+	}).Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 12}, nil)
+	rec := do(h, "POST", "/api/items", `{"name":{"en":"Long Sword"},"category":"weapon","behaviour":"stock","count":1,
+		"weaponType":"long_sword","specialized":true}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 13}, nil)
+	rec = do(h, "PATCH", "/api/items/w", `{"specialized":true}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}
+
 func TestItems_EditErrors(t *testing.T) {
 	for _, body := range []string{`nope`, `{"bogus":1}`, `{"count":"x"}`} {
 		h, _ := newRouter(t)

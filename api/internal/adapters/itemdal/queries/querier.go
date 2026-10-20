@@ -18,7 +18,9 @@ type Querier interface {
 	ItemNames(ctx context.Context, characterID int64) ([]LocalizedText, error)
 	// Every query is one character's: items belong to a character (character_id). The selected
 	// columns are the whole row, so sqlc maps them to the Item model. An item is any piece of
-	// equipment (ADR 0033 step 1), weapons included.
+	// equipment (ADR 0033 step 1), weapons included. The specialized column is read with the row but
+	// ignored and never written: a weapon's specialization is derived from the character's weapon
+	// picks (ADR 0037 step 9); the column keeps the old flag until a later migration drops it.
 	ListItems(ctx context.Context, characterID int64) ([]Item, error)
 	// The review list (ADR 0033 step 27).
 	ListReviews(ctx context.Context, characterID int64) ([]ListReviewsRow, error)

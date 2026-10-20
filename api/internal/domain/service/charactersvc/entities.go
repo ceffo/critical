@@ -106,8 +106,8 @@ type Derived struct {
 	SpellSlots map[int]int
 	// LevelUp is step 7: the levels the target is above the realized one.
 	LevelUp LevelUp
-	// Specializes is step 12: the class may specialize in a weapon (the
-	// weapon editor offers the flag).
+	// Specializes is step 12: the class may specialize in a weapon (ADR 0037
+	// step 9: the weapon pick editor offers the specialization).
 	Specializes bool
 	// Spellbook is step 20: the learning rules of a class with a spellbook
 	// (mage, bard); nil for the others.

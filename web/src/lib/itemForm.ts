@@ -53,7 +53,6 @@ export interface ItemDraft {
   magicDamage: string;
   twoHanded: boolean;
   fires: string;
-  specialized: boolean;
   // Armour.
   baseAc: string;
   skillColumn: string;
@@ -84,7 +83,6 @@ const CATEGORY_FIELDS: Record<Category, ItemField[]> = {
     "magicDamage",
     "twoHanded",
     "fires",
-    "specialized",
   ],
   ammunition: [
     "ammoKind",
@@ -138,7 +136,6 @@ export function emptyDraft(category: Category = "gear"): ItemDraft {
     magicDamage: "0",
     twoHanded: false,
     fires: "",
-    specialized: false,
     baseAc: "10",
     skillColumn: "none",
     armorRow: "leather",
@@ -178,7 +175,6 @@ export function draftFromItem(i: Item, lang: string): ItemDraft {
     magicDamage: String(i.magicDamage),
     twoHanded: i.twoHanded,
     fires: i.fires,
-    specialized: i.specialized,
     baseAc: i.category === "armour" ? String(i.baseAc) : empty.baseAc,
     skillColumn: i.skillColumn || empty.skillColumn,
     armorRow: i.armorRow || empty.armorRow,
@@ -233,7 +229,6 @@ export function draftToBody(
     magicDamage: num("magicDamage", d.magicDamage, true),
     twoHanded: d.twoHanded,
     fires: d.weaponKind === "missile" ? d.fires : "",
-    specialized: d.specialized,
     baseAc: num("baseAc", d.baseAc),
     skillColumn: d.skillColumn,
     armorRow: d.armorRow,

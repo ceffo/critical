@@ -43,7 +43,7 @@ var pickRows = ruletablesvc.Equipment{
 func pickSvc(t *testing.T) (itemsvc.SVC, *mocks.MockDAL, fixture) {
 	t.Helper()
 	dal := mocks.NewMockDAL(t)
-	f := deps(t)
+	f := readsCharacter(t)
 	f.Equipment = &pickRows
 	svc, err := itemsvc.New(dal, f.Deps)
 	require.NoError(t, err)

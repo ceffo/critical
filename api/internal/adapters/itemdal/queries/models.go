@@ -36,14 +36,15 @@ type Item struct {
 	MagicDamage   int64
 	TwoHanded     int64
 	Fires         string
-	Specialized   int64
-	BaseAc        int64
-	SkillColumn   string
-	ArmorRow      string
-	ShieldKind    string
-	AcMelee       int64
-	AcMissile     int64
-	SpellID       string
+	// unused since the specialization is a weapon pick (ADR 0037 step 9); kept until a later migration drops it
+	Specialized int64
+	BaseAc      int64
+	SkillColumn string
+	ArmorRow    string
+	ShieldKind  string
+	AcMelee     int64
+	AcMissile   int64
+	SpellID     string
 }
 
 type LocalizedText struct {

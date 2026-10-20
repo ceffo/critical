@@ -149,7 +149,10 @@ export interface Item {
   twoHanded: boolean;
   /** The ammo kind a launcher fires; empty for melee and hurled weapons. */
   fires: string;
-  /** The fighter's weapon specialization (ADR 0030 step 12). */
+  /**
+   * The fighter's weapon specialization (ADR 0030 step 12), read-only: derived from the
+   * character's specialization pick of the weapon type (ADR 0037 step 9), never sent.
+   */
   specialized: boolean;
   /** Armour (ADR 0033 step 5). */
   baseAc: number;
@@ -234,8 +237,6 @@ export interface ItemBody {
   magicDamage?: number;
   twoHanded?: boolean;
   fires?: string;
-  /** Refused (field `specialized`, code `not_allowed`) for a class that does not specialize. */
-  specialized?: boolean;
   baseAc?: number;
   skillColumn?: string;
   armorRow?: string;

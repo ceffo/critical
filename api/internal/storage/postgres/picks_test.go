@@ -190,3 +190,72 @@ func TestMigrate_Step16_WeaponPicksRunOnceWithTheMigration(t *testing.T) {
 	assert.Equal(t, []string{"lock", "ensure table", "applied"}, run.steps, "nothing pending")
 	assert.JSONEq(t, `{"weapon":[{"type":"dagger","slots":1}]}`, f.picks(kelsen), "never granted twice")
 }
+
+// specializedItem stores a weapon piece of weaponType flagged specialized (ADR 0030 step 12's
+// per-weapon flag, as a database before migration 027 holds it).
+func specializedItem(t *testing.T, f *fakeStore, id int64, item, weaponType string) {
+	t.Helper()
+	require.NoError(t, f.InsertItem(context.Background(), storeq.InsertItemParams{
+		CharacterID: id, ID: item, Position: int64(len(f.t.Items)), Category: "weapon", WeaponType: weaponType, State: "wielded",
+		Behaviour: "stock", Count: 1, MaxCount: 1, Powers: "[]", DamageTypes: []string{}, Specialized: 1,
+	}))
+}
+
+// ADR 0037 step 16.3: a fighter with a specialized weapon gets that type's pick as the
+// specialization (step 9's slots: 2 for a long sword, 3 for a bow), the plain pick of step 16.2
+// raised, or added when missing; with several specialized types the first in list order, the
+// others plain picks. Another class's flag is dropped, and so is a flag on a type that is no
+// weapon type. The whole run applies it once, after the weapon picks of migration 026: a rerun
+// applies nothing, and a character already holding a specialization is left as it is.
+func TestMigrate_Step16_SpecializedFlagBecomesAPick(t *testing.T) {
+	f := newFakeStore()
+	swordsman := picksCharacter(t, f, "fighter")
+	specializedItem(t, f, swordsman, "longsword", "long_sword")
+	specializedItem(t, f, swordsman, "longbow", "long_bow")
+	weaponItem(t, f, swordsman, "dagger", "dagger", "carried")
+	archer := picksCharacter(t, f, "fighter")
+	weaponItem(t, f, archer, "katana", "katana", "carried")
+	specializedItem(t, f, archer, "katana_spec", "katana") // no weapon type: dropped
+	specializedItem(t, f, archer, "shortbow", "short_bow")
+	bard := picksCharacter(t, f, "bard")
+	specializedItem(t, f, bard, "rapier", "short_sword")
+	plain := picksCharacter(t, f, "fighter")
+	weaponItem(t, f, plain, "mace", "other_melee", "wielded")
+	late := picksCharacter(t, f, "fighter") // created after step 16.2: its flagged types hold no pick
+	specializedItem(t, f, late, "longsword", "long_sword")
+	specializedItem(t, f, late, "longbow", "long_bow")
+
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	run := &fakeMigrations{store: f}
+	for _, m := range embedded {
+		if m.name < weaponPicksMigration {
+			run.recorded = append(run.recorded, m.name)
+		}
+	}
+	require.NoError(t, runMigrations(context.Background(), run, embedded, before, after))
+	assert.Contains(t, run.steps, "apply "+specializationMigration)
+	assert.JSONEq(t, `{"weapon":[{"type":"long_bow","slots":1},{"type":"dagger","slots":1},{"type":"long_sword","slots":2}]}`,
+		f.picks(swordsman), "the first in list order is the specialization, the bow a plain pick")
+	assert.JSONEq(t, `{"weapon":[{"type":"short_bow","slots":3}]}`, f.picks(archer), "a bow costs 3")
+	assert.JSONEq(t, `{"weapon":[{"type":"short_sword","slots":1}]}`, f.picks(bard), "a bard's flag is dropped")
+	assert.JSONEq(t, `{"weapon":[{"type":"other_melee","slots":1}]}`, f.picks(plain), "no flag, no specialization")
+
+	t.Run("a missing pick is added, an existing specialization kept", func(t *testing.T) {
+		f.t.Picks[late] = `{"weapon":[{"type":"dagger","slots":1}]}`
+		f.t.Picks[archer] = `{"nonweapon":[{"id":"singing","slots":1}]}`
+		f.t.Picks[swordsman] = `{"weapon":[{"type":"long_bow","slots":3}]}` // the player's own specialization
+		require.NoError(t, f.InTx(context.Background(), func(ctx context.Context) error {
+			return after[specializationMigration](ctx, f)
+		}))
+		assert.JSONEq(t, `{"nonweapon":[{"id":"singing","slots":1}],"weapon":[{"type":"short_bow","slots":3}]}`, f.picks(archer))
+		assert.JSONEq(t, `{"weapon":[{"type":"long_bow","slots":3}]}`, f.picks(swordsman), "never a second specialization")
+		assert.JSONEq(t, `{"weapon":[{"type":"dagger","slots":1},{"type":"long_sword","slots":2},{"type":"long_bow","slots":1}]}`,
+			f.picks(late), "the other flagged type becomes a plain pick: its attacks keep their proficiency")
+	})
+
+	run.steps = nil
+	require.NoError(t, runMigrations(context.Background(), run, embedded, before, after))
+	assert.Equal(t, []string{"lock", "ensure table", "applied"}, run.steps, "nothing pending")
+}

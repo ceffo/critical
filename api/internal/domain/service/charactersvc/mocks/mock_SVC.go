@@ -787,6 +787,63 @@ func (_c *MockSVC_SetCurrent_Call) RunAndReturn(run func(context.Context, uuid.U
 	return _c
 }
 
+// SpecializedWeaponType provides a mock function with given fields: ctx, id
+func (_m *MockSVC) SpecializedWeaponType(ctx context.Context, id int64) (string, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SpecializedWeaponType")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (string, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) string); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_SpecializedWeaponType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SpecializedWeaponType'
+type MockSVC_SpecializedWeaponType_Call struct {
+	*mock.Call
+}
+
+// SpecializedWeaponType is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockSVC_Expecter) SpecializedWeaponType(ctx interface{}, id interface{}) *MockSVC_SpecializedWeaponType_Call {
+	return &MockSVC_SpecializedWeaponType_Call{Call: _e.mock.On("SpecializedWeaponType", ctx, id)}
+}
+
+func (_c *MockSVC_SpecializedWeaponType_Call) Run(run func(ctx context.Context, id int64)) *MockSVC_SpecializedWeaponType_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_SpecializedWeaponType_Call) Return(_a0 string, _a1 error) *MockSVC_SpecializedWeaponType_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_SpecializedWeaponType_Call) RunAndReturn(run func(context.Context, int64) (string, error)) *MockSVC_SpecializedWeaponType_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockSVC creates a new instance of MockSVC. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockSVC(t interface {

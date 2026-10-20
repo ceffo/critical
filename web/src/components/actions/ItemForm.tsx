@@ -53,8 +53,6 @@ interface Props {
   initial: ItemDraft;
   /** The piece being edited; undefined when adding. */
   editing?: Item;
-  /** The character's class specializes (ADR 0030 step 12): the form offers the flag. */
-  specializes?: boolean;
   busy: boolean;
   /** Save a body; resolves the server's rejection, or null when saved. */
   onSave: (body: ItemBody) => Promise<ApiError | null>;
@@ -67,14 +65,7 @@ interface Props {
  * Validation is the server's: its message, or the wording of its code, is shown under the field it
  * names. Only number parsing happens here.
  */
-export function ItemForm({
-  initial,
-  editing,
-  specializes = false,
-  busy,
-  onSave,
-  onCancel,
-}: Props) {
+export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
   const { t, i18n } = useTranslation();
   const id = useId();
   const [draft, setDraft] = useState<ItemDraft>(initial);
@@ -185,7 +176,7 @@ export function ItemForm({
         ))}
       </select>
     );
-  const check = (name: "twoHanded" | "specialized", hint?: string) =>
+  const check = (name: "twoHanded", hint?: string) =>
     function Check(props: object) {
       return (
         <input
@@ -389,13 +380,6 @@ export function ItemForm({
         )}
         {shows("twoHanded") &&
           field("twoHanded", t("weapons.form.twoHanded"), check("twoHanded"))}
-        {shows("specialized") &&
-          (specializes || initial.specialized) &&
-          field(
-            "specialized",
-            t("weapons.form.specialized"),
-            check("specialized", t("weapons.form.specializedHint")),
-          )}
         {shows("fires") &&
           draft.weaponKind === "missile" &&
           field("fires", t("equipment.form.fires"), (props) => (

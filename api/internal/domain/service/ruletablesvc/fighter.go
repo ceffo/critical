@@ -52,6 +52,24 @@ const (
 // specialists do not gain any additional attacks", ADR 0030 step 11.2).
 var bowTypes = []string{"long_bow", "short_bow"}
 
+// Specialization's cost in weapon slots, in all (ADR 0037 step 9, PHB p.53, "Cost of
+// Specialization"): a bow's specialist spends 3, any other type's 2 (melee weapons and
+// crossbows by the book; darts, slings and the other thrown and missile types by the step's
+// proposed reading).
+const (
+	specializationSlots    = 2
+	bowSpecializationSlots = 3
+)
+
+// SpecializationSlots is what a specialization pick of weaponType spends in all (ADR 0037 step
+// 9): 3 slots for a bow, 2 for any other weapon type.
+func SpecializationSlots(weaponType string) int {
+	if slices.Contains(bowTypes, weaponType) {
+		return bowSpecializationSlots
+	}
+	return specializationSlots
+}
+
 // specialistColumns maps a missile weapon type to its PHB Table 35 column;
 // every other non-bow missile type reads "other_missile" (ADR 0030 step 11.2).
 var specialistColumns = map[string]string{

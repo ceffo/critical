@@ -53,12 +53,10 @@ function isPicked(c: Category | "all"): c is PickedCategory {
  */
 export function AddPiece({
   filter,
-  specializes,
   busy,
   onClose,
 }: {
   filter: Category | "all";
-  specializes: boolean;
   busy: boolean;
   onClose: () => void;
 }) {
@@ -128,7 +126,6 @@ export function AddPiece({
         <div className="min-h-0 overflow-y-auto px-3">
           <ItemForm
             initial={emptyDraft(filter === "all" ? "gear" : filter)}
-            specializes={specializes}
             busy={busy}
             onCancel={onClose}
             onSave={save}

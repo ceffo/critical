@@ -33,6 +33,10 @@ var ErrCharacterChanged = fmt.Errorf("current character changed: %w", domain.Err
 type SVC interface {
 	domain.Service
 	GetCharacter(ctx context.Context, id int64) (*Character, error)
+	// SpecializedWeaponType is the weapon type character id is specialized
+	// in (SpecializedType; "" for none), from the character row alone: no
+	// XP ledger or armour read (ADR 0037 step 9, ADR 0025 step 10).
+	SpecializedWeaponType(ctx context.Context, id int64) (string, error)
 	// PreviewSkillPoints is character id derived as if its skill points were
 	// points (ADR 0030 steps 17 and 18): the skills and budget a spend would
 	// give. It writes nothing. The points are checked as ValidSkillPoints
@@ -205,6 +209,14 @@ func NewWithConfig(_ *Config, d Deps) (SVC, error) { return New(d) }
 // changes them all at once.
 func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error) {
 	return s.read(ctx, id, readDraft{})
+}
+
+func (s *service) SpecializedWeaponType(ctx context.Context, id int64) (string, error) {
+	c, err := s.reader.GetCharacter(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	return SpecializedType(c.Class, c.Proficiencies), nil
 }
 
 // PreviewSkillPoints reads character id with its skill points replaced by

@@ -5,7 +5,11 @@ import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { useSpellName } from "@/i18n/spellName";
 import { fold } from "@/lib/catalogue";
-import type { SpellOption, StartingSpellbook } from "@/types/character";
+import type {
+  CreationDraft,
+  SpellOption,
+  StartingSpellbook,
+} from "@/types/character";
 import { Note } from "./kit";
 import { draftSpellbook, spellbookState, type StepProps } from "./flow";
 
@@ -21,8 +25,16 @@ export function SpellbookStep(props: StepProps) {
   const { t, i18n } = useTranslation();
   const name = useSpellName();
   const [query, setQuery] = useState("");
-  const book = answer.latest?.spellbook ?? null;
-  const state = spellbookState(answer.latest);
+  // Only an answer to the draft as it stands when the step opens is shown: the last answer for the
+  // class (`latest`) may belong to an earlier level or scores, and would say "no spell level yet"
+  // or the wrong limits until the fresh one lands. Ticking a spell changes the draft but not the
+  // limits, so the last fresh answer is kept meanwhile instead of blinking back to "wait".
+  const [settled, setSettled] = useState<CreationDraft | null>(null);
+  if (answer.current?.spellbook && answer.current !== settled)
+    setSettled(answer.current);
+  const shown = answer.current ?? settled;
+  const book = shown?.spellbook ?? null;
+  const state = spellbookState(shown);
   const spells = draftSpellbook(options, draft);
   const levelOf = new Map(
     (options.wizardSpells ?? []).map((s) => [s.id, s.level]),

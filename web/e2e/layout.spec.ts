@@ -2367,14 +2367,20 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
     await step.getByRole("radiogroup").nth(1).getByRole("radio").nth(4).click();
     await step.getByTestId("score-roll").getByRole("button").first().click();
     await expect(step.getByTestId("score-total-5")).toBeVisible();
-    for (const [i, code] of [
-      "dex",
-      "int",
-      "cha",
-      "str",
-      "wis",
-      "con",
-    ].entries()) {
+    // The totals are rolled: Intelligence takes the highest one, so the bard's spellbook below
+    // always has a spell level to enter (a low Intelligence caps it at none, which is right).
+    const totals = await Promise.all(
+      [0, 1, 2, 3, 4, 5].map(async (i) => {
+        const hint = await step
+          .getByTestId(`score-total-${i}`)
+          .getAttribute("aria-label");
+        return Number(/(\d+)$/.exec(hint ?? "")?.[1]);
+      }),
+    );
+    const codes = ["dex", "int", "cha", "str", "wis", "con"];
+    const best = totals.indexOf(Math.max(...totals));
+    [codes[1], codes[best]] = [codes[best]!, codes[1]!];
+    for (const [i, code] of codes.entries()) {
       await step.getByTestId(`score-total-${i}`).click();
       await step.getByTestId(`place-${code}`).click();
     }

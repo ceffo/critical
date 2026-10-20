@@ -3,6 +3,7 @@ package charactersvc_test
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -197,6 +198,11 @@ func TestCreate_Step20_7_LimitsAtTheStartingLevel(t *testing.T) {
 			nil,
 		},
 		{
+			"level 9 mage, Int 9, 5th-level spell", 40_000, 9, mage9Slots, int9,
+			[]string{"stoneskin", "cloudkill"},
+			spellRefusal("cloudkill", charactersvc.CodeSpellLevelAboveIntelligence),
+		},
+		{
 			"a priest spell", 0, 1, mage1Slots, int14,
 			[]string{"bless"},
 			spellRefusal("bless", charactersvc.CodeNotAWizardSpell),
@@ -283,23 +289,32 @@ func TestDraft_Step20_7_ABardAtLevel1HasNoSpellLevel(t *testing.T) {
 	assert.Equal(t, []error{spellRefusal("mirror_image", charactersvc.CodeSpellLevelAboveClass)}, d.Refusals)
 }
 
-// ADR 0030 step 20.7: a class without a spellbook enters none: a fighter's spellbook is refused on
+// ADR 0030 step 20.7: a class without a spellbook enters none: a fighter's, a thief's or a cleric's spellbook is refused on
 // the spellbook field, by the draft and by Create, and the draft answers no spellbook.
 func TestCreate_Step20_7_RefusedForAClassWithoutASpellbook(t *testing.T) {
-	e := newBookEnv(t, int14)
-	expectClassAt(e, "fighter", 0, 1, nil)
-	n := elminster(0, "sleep")
-	n.Class, n.Str = "fighter", 12
-	want := &domain.FieldError{Field: charactersvc.FieldSpellbook, Message: charactersvc.CodeNoSpellbook}
+	for _, class := range []string{"fighter", "thief", "cleric"} {
+		t.Run(class, func(t *testing.T) {
+			e := newBookEnv(t, int14)
+			expectClassAt(e, class, 0, 1, nil)
+			e.rules.EXPECT().PriestSpellsPerDay(mock.Anything, mock.Anything).Return(map[int]int{}, nil).Maybe()
+			e.rules.EXPECT().ThiefSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+			e.rules.EXPECT().BackstabFor(mock.Anything).Return(2, nil).Maybe()
+			e.rules.EXPECT().SpellFailureFor(mock.Anything, mock.Anything).Return(0, nil).Maybe()
+			e.rules.EXPECT().TurningAt(mock.Anything).Return(nil, nil).Maybe()
+			n := elminster(0, "sleep")
+			n.Class, n.Str, n.Dex, n.Wis = class, 12, 12, 12
+			want := &domain.FieldError{Field: charactersvc.FieldSpellbook, Message: charactersvc.CodeNoSpellbook}
 
-	d, err := e.svc.Draft(context.Background(), n, nil)
-	require.NoError(t, err)
-	assert.Nil(t, d.Spellbook)
-	assert.Equal(t, []error{want}, d.Refusals)
+			d, err := e.svc.Draft(context.Background(), n, nil)
+			require.NoError(t, err)
+			assert.Nil(t, d.Spellbook)
+			assert.Equal(t, []error{want}, d.Refusals)
 
-	_, err = e.svc.Create(context.Background(), ownerID, n)
-	assert.Equal(t, want, err)
-	assert.Zero(t, e.tx.n, "nothing written")
+			_, err = e.svc.Create(context.Background(), ownerID, n)
+			assert.Equal(t, want, err)
+			assert.Zero(t, e.tx.n, "nothing written")
+		})
+	}
 }
 
 // ADR 0030 step 20.7: the creation options offer a mage's starting spellbook with Read Magic and
@@ -337,5 +352,26 @@ func TestDraft_Step20_7_StartingClassMaxIsTheSlotsNotTheTable(t *testing.T) {
 	require.NotNil(t, d.Character)
 	assert.Equal(t, 9, d.Character.Derived.Spellbook.ClassMaxSpellLevel, "the table's, for Learn")
 	assert.Equal(t, 1, d.Spellbook.ClassMaxSpellLevel, "the slots', at the starting level")
+	assert.Equal(t, []charactersvc.SpellLevelCount{{Level: 1}}, d.Spellbook.Levels, "only the 1st level offered")
 	assert.Equal(t, []error{spellRefusal("mirror_image", charactersvc.CodeSpellLevelAboveClass)}, d.Refusals)
+}
+
+// ADR 0030 step 20.7 with Table 4's "All": Intelligence 19 has no maximum of spells per level, so
+// a starting book takes nineteen 1st-level spells, more than the 18 of Intelligence 18.
+func TestCreate_Step20_7_Intelligence19HasNoMaximum(t *testing.T) {
+	int19 := ruletablesvc.IntelligenceRow{IntMin: 19, IntMax: 19, MaxSpellLevel: 9, LearnChance: 95, NoMaximum: true}
+	e := newBookEnv(t, int19)
+	ids := []string{}
+	for i := range 19 {
+		id := fmt.Sprintf("first_%02d", i)
+		e.spells[id] = spellbook.Spell{Level: 1, Wizard: true}
+		ids = append(ids, id)
+	}
+	expectClassAt(e, "mage", 0, 1, mage1Slots)
+	expectCreated(e)
+	n := elminster(0, ids...)
+	n.Int = 19
+	id, err := e.svc.Create(context.Background(), ownerID, n)
+	require.NoError(t, err)
+	assert.Len(t, e.book.entries[id], 19)
 }

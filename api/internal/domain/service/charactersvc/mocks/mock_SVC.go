@@ -787,23 +787,23 @@ func (_c *MockSVC_SetCurrent_Call) RunAndReturn(run func(context.Context, uuid.U
 	return _c
 }
 
-// SpecializedWeaponType provides a mock function with given fields: ctx, id
-func (_m *MockSVC) SpecializedWeaponType(ctx context.Context, id int64) (string, error) {
+// WeaponProficiency provides a mock function with given fields: ctx, id
+func (_m *MockSVC) WeaponProficiency(ctx context.Context, id int64) (charactersvc.WeaponProficiency, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SpecializedWeaponType")
+		panic("no return value specified for WeaponProficiency")
 	}
 
-	var r0 string
+	var r0 charactersvc.WeaponProficiency
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (charactersvc.WeaponProficiency, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) charactersvc.WeaponProficiency); ok {
 		r0 = rf(ctx, id)
 	} else {
-		r0 = ret.Get(0).(string)
+		r0 = ret.Get(0).(charactersvc.WeaponProficiency)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
@@ -815,31 +815,31 @@ func (_m *MockSVC) SpecializedWeaponType(ctx context.Context, id int64) (string,
 	return r0, r1
 }
 
-// MockSVC_SpecializedWeaponType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SpecializedWeaponType'
-type MockSVC_SpecializedWeaponType_Call struct {
+// MockSVC_WeaponProficiency_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WeaponProficiency'
+type MockSVC_WeaponProficiency_Call struct {
 	*mock.Call
 }
 
-// SpecializedWeaponType is a helper method to define mock.On call
+// WeaponProficiency is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id int64
-func (_e *MockSVC_Expecter) SpecializedWeaponType(ctx interface{}, id interface{}) *MockSVC_SpecializedWeaponType_Call {
-	return &MockSVC_SpecializedWeaponType_Call{Call: _e.mock.On("SpecializedWeaponType", ctx, id)}
+func (_e *MockSVC_Expecter) WeaponProficiency(ctx interface{}, id interface{}) *MockSVC_WeaponProficiency_Call {
+	return &MockSVC_WeaponProficiency_Call{Call: _e.mock.On("WeaponProficiency", ctx, id)}
 }
 
-func (_c *MockSVC_SpecializedWeaponType_Call) Run(run func(ctx context.Context, id int64)) *MockSVC_SpecializedWeaponType_Call {
+func (_c *MockSVC_WeaponProficiency_Call) Run(run func(ctx context.Context, id int64)) *MockSVC_WeaponProficiency_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
 
-func (_c *MockSVC_SpecializedWeaponType_Call) Return(_a0 string, _a1 error) *MockSVC_SpecializedWeaponType_Call {
+func (_c *MockSVC_WeaponProficiency_Call) Return(_a0 charactersvc.WeaponProficiency, _a1 error) *MockSVC_WeaponProficiency_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSVC_SpecializedWeaponType_Call) RunAndReturn(run func(context.Context, int64) (string, error)) *MockSVC_SpecializedWeaponType_Call {
+func (_c *MockSVC_WeaponProficiency_Call) RunAndReturn(run func(context.Context, int64) (charactersvc.WeaponProficiency, error)) *MockSVC_WeaponProficiency_Call {
 	_c.Call.Return(run)
 	return _c
 }

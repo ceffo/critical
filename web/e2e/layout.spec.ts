@@ -8,6 +8,7 @@ import {
   chooseTheme,
   chooseWeapon,
   combatLog,
+  createInFlow,
   nextRound,
   openDashboard,
   openSettings,
@@ -2391,6 +2392,17 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
     // ADR 0037 step 14: a pick of the bard's groups with an extra slot, and Healing outside them
     // (priest only: the server's cost of 3), within any rolled Intelligence's budget.
     await expect(step.getByTestId("proficiency-pool-terms")).toBeVisible();
+    // ADR 0037 steps 7 and 14: a weapon pick on the same step, on the server's weapon pool.
+    await expect(step.getByTestId("weapon-pool-terms")).toBeVisible();
+    await step
+      .getByTestId("weapon-row-long_sword")
+      .getByTestId("weapon-add")
+      .click();
+    await expect(
+      step
+        .getByTestId("weapon-row-long_sword")
+        .getByTestId("weapon-row-status"),
+    ).toHaveText(tr("Maîtrisée · 1 emplacement", "Proficient · 1 slot"));
     for (const name of [tr("Acrobatie", "Tumbling"), tr("Soins", "Healing")])
       await step
         .getByRole("button", {
@@ -4167,6 +4179,75 @@ test("version badge: bottom right on every screen, three environments, 1920 and 
           page,
           `version-login-${theme.mode === "light" ? theme.lightTheme : theme.darkTheme}-${vp.width}x${vp.height}`,
         );
+    }
+  }
+});
+
+// ADR 0037 steps 7 to 9 and 12, ADR 0022 step 1, ADR 0027 steps 2 and 3: a fighter's weapon
+// proficiency editor (every weapon type, a specialization toggle with its cost, a plain pick, the
+// pool) and the Skills tab's block uncut, in French first and in English, 1280 to 2560; screenshots
+// at 1920x1080 and 2560x1440 with real scrollbars. Only the layout is judged here (the flow is in
+// characters.spec.ts, the rules in Go).
+test("weapon proficiency editor: a fighter's rows uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await createInFlow(page, {
+    name: "Borin",
+    className: "Guerrier",
+    race: "Humain",
+    scores: { FOR: "16", DEX: "14", CON: "15", INT: "10", SAG: "10", CHA: "9" },
+    hpMax: "10",
+  });
+  await expect(page.getByTestId("character")).toContainText("Borin");
+  for (const lang of ["fr", "en"] as const) {
+    const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
+    await chooseLanguage(page, lang);
+    await page.setViewportSize(VIEWPORTS[0]);
+    // A new character opens on Act (Agir), where the Skills tab is.
+    const actions = page.getByRole("region", { name: "Actions" });
+    await actions
+      .getByRole("tab", { name: tr("Compétences", "Skills") })
+      .click();
+    const skills = actions.getByRole("tabpanel");
+    await skills.getByTestId("weapon-edit").click();
+    const editor = skills.getByTestId("weapon-editor");
+    if (lang === "fr") {
+      // The specialization in a long bow (3 slots) and a plain short sword: 4 of 4 spent.
+      const bow = editor.getByTestId("weapon-row-long_bow");
+      await bow.getByTestId("weapon-add").click();
+      await bow.getByTestId("weapon-specialize").click();
+      await editor
+        .getByTestId("weapon-row-short_sword")
+        .getByTestId("weapon-add")
+        .click();
+      await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
+        "Dépensés 4, restants 0",
+      );
+    }
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(editor, `weapon editor, ${where}`);
+      await expectWholeWords(editor, `weapon editor, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `weapon-editor-${lang}-${vp.width}x${vp.height}`);
+    }
+    if (lang === "fr") await editor.getByTestId("weapon-save").click();
+    else await editor.getByTestId("weapon-cancel").click();
+    await expect(editor).toBeHidden();
+    // The Skills tab's block: the picks, the specialization's tag, the pool's line.
+    const block = skills.getByTestId("weapon-proficiencies");
+    await expect(block.getByTestId("weapon-pick-specialized")).toBeVisible();
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(block, `weapon block, ${where}`);
+      await expectWholeWords(block, `weapon block, ${where}`);
+      if (vp.width >= 1920)
+        await snap(page, `skills-weapons-${lang}-${vp.width}x${vp.height}`);
     }
   }
 });

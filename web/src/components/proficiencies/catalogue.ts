@@ -5,7 +5,7 @@ import type {
 } from "@/types/character";
 
 /** One pick as the editor holds and sends it: the catalogue id and the slots spent. */
-export type PickInput = PicksInput["nonweapon"][number];
+export type PickInput = NonNullable<PicksInput["nonweapon"]>[number];
 
 /** A catalogue row as the editor lists it: the option, its name in the UI language and the
  * server's cost for the class. */

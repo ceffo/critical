@@ -197,7 +197,13 @@ writes `Test<name>` and adds the prefix here in the same PR.
    `empty` on `weapon`. A stored type outside the list (step 16.2 grants every owned type) is
    kept, never added, and served with `allowed: false` on its pick; no warning code for it yet.
    A stored pick whose type is no weapon type (older data) is kept too, as step 16 keeps a stored
-   non-weapon id the catalogue does not hold, never added.)_
+   non-weapon id the catalogue does not hold, never added. The editor, 2026-10-20: `GET
+   /api/characters/options` gives each class `weaponTypes` `[{type, specializationSlots}]`, the
+   types the class may pick in display order (`charactersvc.ClassWeaponTypeOptions`), so the web
+   offers only those and holds no class list
+   (`TestClassWeaponTypeOptions_Step7_AllowedTypesAndTheSpecializationCost`, charactersvc;
+   `TestProficiencies_Step7_OptionsWeaponTypes`, composition). A kept pick outside the list shows
+   with its `allowed: false` as such, removable, never re-added.)_
 8. **The non-proficiency penalty.** An attack with a weapon whose type has no pick takes Table
    34's penalty for the class group (warrior -2, wizard -5, priest -3, rogue -3; PHB p.50 and
    p.52) as a named to-hit modifier `nonproficient`, not magical. Amends
@@ -223,7 +229,14 @@ writes `Test<name>` and adds the prefix here in the same PR.
    weapon with no type), served on the piece and the attack card like the class warnings:
    `TestClassWarnings_Step8_WeaponTypeMissing` (itemsvc). Kelsen's six weapons take none
    (`TestKelsen_Step8_OwnWeaponsTakeNoPenalty`, composition, which also checks the preview
-   equals the roll once a pick is removed).)_
+   equals the roll once a pick is removed). Before a roll, 2026-10-20: every weapon piece of
+   `GET /api/items` and every weapon of `GET /api/weapons` carries `nonproficientPenalty` (0:
+   none), the same rule read from the character row (`charactersvc.WeaponProficiency`, in the
+   one read itemsvc already made for step 9's `specialized`), so the weapon card and the attack
+   form mark a weapon without proficiency
+   (`TestWeaponProficiency_Step8_PenaltyFromThePicks`, charactersvc;
+   `TestNonproficientPenalty_Step8_DerivedOnTheWeaponPiece`, itemsvc;
+   `TestNonproficientPenalty_Step8_OnTheWeaponsAndTheItems`, composition).)_
 9. **Specialization is a weapon pick.** Fighters only (`derived.specializes`, ADR 0030 step 12;
    another class `not_allowed`), in **one** weapon type at most (PHB p.52: the fighter chooses a
    single weapon; a second `not_allowed`). The pick spends, in all (PHB p.53): **2 slots** for a
@@ -246,8 +259,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
    `charactersvc.ValidPicks` refuses any other count `out_of_range`, a class that does not
    specialize and a second specialization `not_allowed` (field `weapon.<type>`); the budget (step
    10) counts its slots. `charactersvc.SpecializedType(class, picks)` derives the specialized type
-   (the class specializes and the pick is there), and `SpecializedWeaponType` reads it from the
-   character row alone (no XP ledger or armour read, so a weapon read costs one extra row, ADR
+   (the class specializes and the pick is there), and `WeaponProficiency` (was
+   `SpecializedWeaponType`) reads it from the character row alone (no XP ledger or armour read, so a weapon read costs one extra row, ADR
    0025 step 10); itemsvc sets every weapon piece's `Specialized` from it on every read (a
    decorator of its DAL, and on the piece a creation or an edit answers), so the attack, the
    preview, Table 35's rate and the point-blank option read it unchanged. The item DAL no longer
@@ -256,7 +269,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
    `specialized` stays in the piece and weapon responses, read-only. The item editor's checkbox
    is gone; the specialization's editor comes with the weapon proficiency editor of the web. The
    composition test runs the real item and combat services: the pick gives the +1/+2 and the
-   specialist's 3/2, and undoing the save (step 13) takes them back.)_
+   specialist's 3/2, and undoing the save (step 13) takes them back. The editor, 2026-10-20:
+   the options' `weaponTypes` carry each type's `specializationSlots` for a class that
+   specializes (0 otherwise), and the weapon editor sends that count; the web computes no cost.)_
 
 ### The budget
 
@@ -335,7 +350,17 @@ writes `Test<name>` and adds the prefix here in the same PR.
     optional but at least one; a pool absent (or null) is left as stored, so each pool's editor
     saves alone (`TestValidPicks_Step12_AnAbsentPoolKeepsTheStoredOne`, charactersvc). The
     column holds `{"nonweapon": [...], "weapon": [{"type", "slots"}]}`. The answer's
-    `proficiencySlots` adds `weapon` and `weaponPicks`.)_
+    `proficiencySlots` adds `weapon` and `weaponPicks`. The weapon editor, web, 2026-10-20: the
+    Skills tab's "Maîtrises d'armes" block lists the picks (the specialization tagged, a kept type
+    the class may not pick marked) with the pool's line, and its "Choisir" opens the editor in
+    place of the lists (ADR 0027 step 1: a rare control one click away). One row per type of the
+    options' `weaponTypes`, then each kept pick outside them (removable, never added); Ajouter
+    picks a type (1 slot), and for a class that specializes a picked type's Spécialiser toggle
+    sends the options' `specializationSlots`. It saves `{weapon}` only, with the server's preview
+    live; the second specialization and the overspend are the server's refusals, shown on the
+    row or above the list. The journal words a weapon change "Emplacements de maîtrise d'arme :
+    Épée longue 1 → 2 (spécialisation)" (a weapon pick of more than one slot is the
+    specialization, step 9).)_
 13. **Each save is one undoable move.** A save that changes the picks or the languages is one
     `proficiencies` entry of the action log with a `proficiencies` snapshot (the picks and the
     languages before and after), as the `skill_points` move of ADR 0030 step 17: undo writes the
@@ -361,7 +386,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
     XP and the Intelligence are entered. Also `TestProficiencies_Step14_CreationWithPicks`
     (composition). Weapon picks, 2026-10-20: `proficiencies: {weapon: [...]}` on the same
     endpoints (`TestCreate_Step14_WeaponPicksCheckedAsTheEditor`, charactersvc;
-    `TestProficiencies_Step14_CreationWithWeaponPicks`, composition).)_
+    `TestProficiencies_Step14_CreationWithWeaponPicks`, composition). The web's step 5 ("Compétences
+    et armes") shows the weapon editor above the non-weapon one, both on the checks endpoint's
+    pools; the weapon picks go in the create request and are cleared when the class changes.)_
 15. **The level-up says what it grants.** The pending level-up prompt and the level-up answer
     ([ADR 0030](0030-classes-and-races.md) step 7) carry what the level grants beyond hit points:
     the weapon and non-weapon slots gained (available at the level minus available at the level

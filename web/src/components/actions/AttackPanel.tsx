@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAttackStore } from "@/stores/attack";
 import { useCharacterStore } from "@/stores/character";
-import { ClassWarningTag } from "@/components/ClassWarning";
+import { ClassWarningTag, NonproficientTag } from "@/components/ClassWarning";
 import { useBuffsStore } from "@/stores/buffs";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
@@ -128,6 +128,7 @@ export function AttackPanel() {
                 ?.warnings.map((code) => (
                   <ClassWarningTag key={code} code={code} />
                 ))}
+              <NonproficientTag penalty={weapon.nonproficientPenalty} />
               {preview && (
                 <StatsLine weapon={weapon} view={view} preview={preview} />
               )}

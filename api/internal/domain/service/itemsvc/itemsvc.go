@@ -117,7 +117,7 @@ type DAL interface {
 // character row alone.
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
-	SpecializedWeaponType(ctx context.Context, id int64) (string, error)
+	WeaponProficiency(ctx context.Context, id int64) (charactersvc.WeaponProficiency, error)
 }
 
 // Dice is the dice adapter port.

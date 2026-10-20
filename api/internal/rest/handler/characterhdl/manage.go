@@ -69,6 +69,17 @@ type ClassOptionDTO struct {
 	// Minimums are the class's ability minimums (PHB Table 13), shown on
 	// its card and not enforced; empty for none. Additive.
 	Minimums []AbilityMinimumDTO `json:"minimums"`
+	// WeaponTypes are the weapon types the class may pick (ADR 0037 step 7)
+	// in display order, each with its specialization's slots in all (step 9),
+	// 0 for a class that does not specialize. Additive; never null.
+	WeaponTypes []WeaponTypeOptionDTO `json:"weaponTypes"`
+}
+
+// WeaponTypeOptionDTO is one weapon type a class may pick and the slots its
+// specialization spends (0: the class does not specialize).
+type WeaponTypeOptionDTO struct {
+	Type                string `json:"type"`
+	SpecializationSlots int    `json:"specializationSlots"`
 }
 
 // AbilityMinimumDTO is the lowest score a class asks in one ability.
@@ -271,6 +282,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 				Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces,
 				Skills: c.Skills, Alignments: c.Alignments,
 				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
+				WeaponTypes: weaponTypeDTOs(c.WeaponTypes),
 			})
 		}
 		render.OK(r.Context(), w, out)
@@ -598,4 +610,13 @@ func Checks(svc draftChecker) render.HandlerFunc {
 		render.OK(r.Context(), w, out)
 		return nil
 	}
+}
+
+// weaponTypeDTOs maps a class's weapon type options; never nil.
+func weaponTypeDTOs(ts []charactersvc.WeaponTypeOption) []WeaponTypeOptionDTO {
+	out := make([]WeaponTypeOptionDTO, 0, len(ts))
+	for _, t := range ts {
+		out = append(out, WeaponTypeOptionDTO(t))
+	}
+	return out
 }

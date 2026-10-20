@@ -84,18 +84,30 @@ describe("mergeDraft (a late reply never rebuilds the details from an older copy
   });
 
   it("clears the picks when the class changes (each was spent at the old class's cost)", () => {
-    let d: FlowDraft = { ...EMPTY_DRAFT, cls: "bard" };
-    d = mergeDraft(d, { picks: [{ id: "tumbling", slots: 1 }] });
-    d = mergeDraft(d, { cls: "bard" }); // the same class again keeps them
+    let d: FlowDraft = { ...EMPTY_DRAFT, cls: "fighter" };
+    d = mergeDraft(d, {
+      picks: [{ id: "tumbling", slots: 1 }],
+      weaponPicks: [{ type: "long_sword", slots: 2 }],
+    });
+    d = mergeDraft(d, { cls: "fighter" }); // the same class again keeps them
     expect(d.picks).toEqual([{ id: "tumbling", slots: 1 }]);
     d = mergeDraft(d, { level: 2 }); // any other change keeps them
-    expect(d.picks).toEqual([{ id: "tumbling", slots: 1 }]);
-    d = mergeDraft(d, { cls: "fighter" });
-    expect(d.picks).toEqual([]);
+    expect(d.weaponPicks).toEqual([{ type: "long_sword", slots: 2 }]);
     expect(
       checksRequest({ classes: [] } as unknown as CreationOptions, d, "0")
         .proficiencies,
-    ).toEqual({ nonweapon: [] });
+    ).toEqual({
+      nonweapon: [{ id: "tumbling", slots: 1 }],
+      weapon: [{ type: "long_sword", slots: 2 }],
+    });
+    // A specialization or a weapon type may not be the new class's (ADR 0037 steps 7 and 9).
+    d = mergeDraft(d, { cls: "mage" });
+    expect(d.picks).toEqual([]);
+    expect(d.weaponPicks).toEqual([]);
+    expect(
+      checksRequest({ classes: [] } as unknown as CreationOptions, d, "0")
+        .proficiencies,
+    ).toEqual({ nonweapon: [], weapon: [] });
   });
 });
 
@@ -169,6 +181,20 @@ describe("buildBody", () => {
       ),
     ).toEqual({ error: { field: "details.weight", code: "not_a_number" } });
   });
+
+  it("sends each pool's picks only when it has some (ADR 0037 step 14)", () => {
+    const none = buildBody(options, draft, "2500", "en");
+    expect("body" in none && none.body.proficiencies).toBeUndefined();
+    const weapons = buildBody(
+      options,
+      { ...draft, weaponPicks: [{ type: "dagger", slots: 1 }] },
+      "2500",
+      "en",
+    );
+    expect("body" in weapons && weapons.body.proficiencies).toEqual({
+      weapon: [{ type: "dagger", slots: 1 }],
+    });
+  });
 });
 
 describe("checksRequest (what the class and skills steps ask the server)", () => {
@@ -190,7 +216,7 @@ describe("checksRequest (what the class and skills steps ask the server)", () =>
       scores: { dex: 8 },
       xp: 1250,
       skillPoints: { open_locks: 25 },
-      proficiencies: { nonweapon: [] },
+      proficiencies: { nonweapon: [], weapon: [] },
       // ADR 0037 step 6: the server counts the languages into the non-weapon pool.
       race: "elf",
       languages: ["elvish", "orcish"],

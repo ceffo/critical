@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 var (
@@ -381,7 +382,9 @@ func fighter(picks ...charactersvc.WeaponPick) *charactersvc.Character {
 // follows it), and the edit logs no "specialized" change.
 func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 	// The character row's specialization, as charactersvc reads it.
-	specializedIn := func(c *charactersvc.Character) string { return charactersvc.SpecializedType(c.Class, c.Proficiencies) }
+	specializedIn := func(c *charactersvc.Character) charactersvc.WeaponProficiency {
+		return charactersvc.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), c.Class, c.Proficiencies)
+	}
 	spec := charactersvc.WeaponPick{Type: "long_sword", Slots: 2}
 	plain := charactersvc.WeaponPick{Type: "dagger", Slots: 1}
 	second := sword
@@ -395,7 +398,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
 		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{leather, sword, second, dagger}, nil)
-		f.chars.EXPECT().SpecializedWeaponType(mock.Anything, int64(1)).Return(specializedIn(fighter(spec, plain)), nil).Once()
+		f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).Return(specializedIn(fighter(spec, plain)), nil).Once()
 		got, err := svc.List(context.Background(), 1)
 		require.NoError(t, err)
 		assert.Equal(t, []bool{false, true, true, false}, []bool{got[0].Specialized, got[1].Specialized, got[2].Specialized, got[3].Specialized})
@@ -407,7 +410,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{sword}, nil)
 		bard := fighter(spec)
 		bard.Class, bard.Derived.Specializes = "bard", false
-		f.chars.EXPECT().SpecializedWeaponType(mock.Anything, int64(1)).Return(specializedIn(bard), nil).Once()
+		f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).Return(specializedIn(bard), nil).Once()
 		got, err := svc.List(context.Background(), 1)
 		require.NoError(t, err)
 		assert.False(t, got[0].Specialized)
@@ -423,7 +426,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
-		f.chars.EXPECT().SpecializedWeaponType(mock.Anything, int64(1)).Return(specializedIn(fighter(spec)), nil)
+		f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).Return(specializedIn(fighter(spec)), nil)
 		dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 		dal.EXPECT().Insert(mock.Anything, int64(1), mock.Anything).Return(nil)
 		dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "long_sword").Return(nil)
@@ -440,7 +443,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
 		dal.EXPECT().Get(mock.Anything, int64(1), "longsword").Return(sword, nil)
-		f.chars.EXPECT().SpecializedWeaponType(mock.Anything, int64(1)).Return(specializedIn(fighter(spec)), nil)
+		f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).Return(specializedIn(fighter(spec)), nil)
 		dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Return(nil)
 		dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "longsword").Return(nil)
 		var got actionlog.NewEntry
@@ -471,4 +474,28 @@ func TestDelete_RemovesAndLogsWholeWeapon(t *testing.T) {
 	assert.Contains(t, string(got.Payload), `"category":"weapon"`)
 	assert.Contains(t, string(got.Snapshots[0].Before), `"weaponType":"long_sword"`)
 	assert.Contains(t, string(got.Snapshots[0].After), `"absent":true`)
+}
+
+// ADR 0037 step 8 on the piece: every weapon read carries the penalty an attack with it takes
+// (Table 34's for the class group when its type has no pick, from the same character read as
+// the specialization), so the card and the attack form show it before a roll; a picked type,
+// an untyped weapon and a non-weapon piece carry none, whatever the value read.
+func TestNonproficientPenalty_Step8_DerivedOnTheWeaponPiece(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	dagger := sword
+	dagger.ID, dagger.Position, dagger.WeaponType = "dagger", 3, "dagger"
+	untyped := sword
+	untyped.ID, untyped.Position, untyped.WeaponType = "club", 4, ""
+	stale := leather
+	stale.NonproficientPenalty = -9
+	dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{stale, sword, dagger, untyped}, nil)
+	f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).
+		Return(charactersvc.WeaponProficiency{Picked: []string{"dagger"}, Penalty: -2}, nil).Once()
+	got, err := svc.List(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, []int{0, -2, 0, 0}, []int{
+		got[0].NonproficientPenalty, got[1].NonproficientPenalty, got[2].NonproficientPenalty, got[3].NonproficientPenalty,
+	})
 }

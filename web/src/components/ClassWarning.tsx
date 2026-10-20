@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Warning } from "@phosphor-icons/react";
+import { formatSigned } from "@/lib/format";
 import { useCharacterStore } from "@/stores/character";
 import type { ClassWarningCode } from "@/types/items";
 
@@ -33,6 +34,29 @@ export function ClassWarningTag({
     >
       <Warning aria-hidden className="size-3.5 shrink-0" />
       <span className="min-w-0 break-words">{text}</span>
+    </span>
+  );
+}
+
+/**
+ * A weapon without proficiency (ADR 0037 step 8): "Non maîtrisée : −2 au toucher", the server's
+ * penalty for the piece (`nonproficientPenalty`), so the penalty is no surprise at the roll.
+ * Nothing for a penalty of 0.
+ */
+export function NonproficientTag({ penalty }: { penalty: number }) {
+  const { t } = useTranslation();
+  if (penalty >= 0) return null;
+  const value = formatSigned(penalty);
+  return (
+    <span
+      className="flex items-center gap-1 text-label text-warning"
+      title={t("weaponProficiencies.nonproficientHint", { value })}
+      data-testid="nonproficient"
+    >
+      <Warning aria-hidden className="size-3.5 shrink-0" />
+      <span className="min-w-0 break-words">
+        {t("weaponProficiencies.nonproficient", { value })}
+      </span>
     </span>
   );
 }

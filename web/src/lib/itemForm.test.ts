@@ -43,6 +43,7 @@ function piece(p: Partial<Item>): Item {
     twoHanded: false,
     fires: "",
     specialized: false,
+    nonproficientPenalty: 0,
     baseAc: 0,
     skillColumn: "",
     armorRow: "",

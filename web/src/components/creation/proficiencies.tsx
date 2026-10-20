@@ -1,10 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { ProficiencyPicker } from "@/components/proficiencies/ProficiencyPicker";
+import { WeaponPicker } from "@/components/proficiencies/WeaponPicker";
 import { Note } from "./kit";
 import type { StepProps } from "./flow";
 
 /**
- * The creation's proficiency step (ADR 0037 step 14, ADR 0034): the editor of the Skills tab on the
+ * The creation's proficiency step (ADR 0037 step 14, ADR 0034): the weapon editor and the
+ * non-weapon editor of the Skills tab on the
  * draft. The slots and each pick's figures are the checks endpoint's answer for the draft's class,
  * level and Intelligence, asked again as the picks change; Créer sends the picks and the server
  * checks them as the editor's save does (nothing picked before: a draft over budget is refused).
@@ -18,16 +20,53 @@ export function ProficienciesStep({
   checks,
 }: StepProps) {
   const { t } = useTranslation();
-  if (!options.proficiencies || options.proficiencies.length === 0)
-    return <Note kind="info">{t("creation.proficiencies.none")}</Note>;
+  const figures = checks?.proficiencySlots ?? null;
+  const types = options.classes.find((c) => c.class === draft.cls)?.weaponTypes;
   return (
-    <ProficiencyPicker
-      options={options}
-      cls={draft.cls}
-      picks={draft.picks}
-      onChange={(picks) => update({ picks })}
-      figures={checks?.proficiencySlots ?? null}
-      errorFor={errorFor}
-    />
+    <div className="flex min-w-0 flex-col gap-6">
+      {/* The weapons first: a short list, where the non-weapon catalogue is long. */}
+      <section
+        aria-labelledby="creation-weapons-title"
+        className="flex min-w-0 flex-col gap-2"
+      >
+        <h2 id="creation-weapons-title" className="group-heading section-label">
+          {t("weaponProficiencies.section")}
+        </h2>
+        {types && types.length > 0 ? (
+          <WeaponPicker
+            types={types}
+            picks={draft.weaponPicks}
+            onChange={(weaponPicks) => update({ weaponPicks })}
+            figures={figures}
+            errorFor={errorFor}
+          />
+        ) : (
+          <Note kind="info">{t("creation.proficiencies.weaponsNone")}</Note>
+        )}
+      </section>
+      <section
+        aria-labelledby="creation-nonweapon-title"
+        className="flex min-w-0 flex-col gap-2"
+      >
+        <h2
+          id="creation-nonweapon-title"
+          className="group-heading section-label"
+        >
+          {t("skills.proficiencies")}
+        </h2>
+        {!options.proficiencies || options.proficiencies.length === 0 ? (
+          <Note kind="info">{t("creation.proficiencies.none")}</Note>
+        ) : (
+          <ProficiencyPicker
+            options={options}
+            cls={draft.cls}
+            picks={draft.picks}
+            onChange={(picks) => update({ picks })}
+            figures={figures}
+            errorFor={errorFor}
+          />
+        )}
+      </section>
+    </div>
   );
 }

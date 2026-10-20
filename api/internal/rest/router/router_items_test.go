@@ -19,7 +19,7 @@ import (
 // noWeapon is the wire tail of a piece that is no weapon, armour or shield
 // (ADR 0033 step 1: one flat shape, the other categories' fields zero).
 const noWeapon = `"damageTypes":[],"weaponType":"","weaponKind":"","size":"","speed":0,"magicToHit":0,"magicDamage":0,
-	"twoHanded":false,"fires":"","specialized":false,"baseAc":0,"skillColumn":"","armorRow":"","shieldKind":"","acMelee":0,"acMissile":0`
+	"twoHanded":false,"fires":"","specialized":false,"nonproficientPenalty":0,"baseAc":0,"skillColumn":"","armorRow":"","shieldKind":"","acMelee":0,"acMissile":0`
 
 // ADR 0033 steps 1, 2, 6 and 27: a piece is served with its category, state
 // and the fields of every category, and the list carries each piece's
@@ -46,7 +46,7 @@ func TestItems_ListWireShape(t *testing.T) {
 		{"id":"mace","name":{"en":"Mace +1"},"category":"weapon","magicKind":"","catalogueCode":"","component":"","spellId":"","state":"wielded","equipState":"wielded","type":"",
 		"behaviour":"stock","magicalBonus":0,"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[],"damageTypes":[],"damageSm":"1d6","damageL":"1d6","weaponType":"other_melee","weaponKind":"melee","size":"",
-		"speed":0,"magicToHit":1,"magicDamage":1,"twoHanded":false,"fires":"","specialized":false,"baseAc":0,"skillColumn":"",
+		"speed":0,"magicToHit":1,"magicDamage":1,"twoHanded":false,"fires":"","specialized":false,"nonproficientPenalty":0,"baseAc":0,"skillColumn":"",
 		"armorRow":"","shieldKind":"","acMelee":0,"acMissile":0,"review":["weapon_unmatched"],"warnings":["weapon_not_allowed"]}]`, rec.Body.String())
 }
 

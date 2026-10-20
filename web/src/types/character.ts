@@ -124,15 +124,52 @@ export interface PickFigures {
   target: number | null;
 }
 
+/** ADR 0037 step 3's weapon pool: available = initial (Table 34) + levelGained (one slot every
+ * `perLevels` realized levels); left = available - spent, negative when over. */
+export interface WeaponPool {
+  initial: number;
+  perLevels: number;
+  levelGained: number;
+  available: number;
+  spent: number;
+  left: number;
+}
+
+/** One weapon pick (ADR 0037 steps 7 and 9): the weapon type and the slots spent (1, or the
+ * specialization's cost); `allowed` false for a kept type the class may not pick. */
+export interface WeaponPickFigures {
+  type: string;
+  slots: number;
+  allowed: boolean;
+}
+
+/** One weapon type a class may pick and its specialization's slots (0: the class does not
+ * specialize), from the creation options. */
+export interface WeaponTypeOption {
+  type: string;
+  specializationSlots: number;
+}
+
 /** The slot pools and the picks' figures (`derived.proficiencySlots`). */
 export interface ProficiencySlots {
   nonWeapon: NonweaponPool;
   picks: PickFigures[];
+  /** Absent from a release before the weapon pool. */
+  weapon?: WeaponPool;
+  weaponPicks?: WeaponPickFigures[];
 }
 
-/** The body of `PUT /api/proficiencies` and its preview, and the creation's `proficiencies`. */
+/** One weapon pick as sent: the weapon type and its slots. */
+export interface WeaponPickInput {
+  type: string;
+  slots: number;
+}
+
+/** The body of `PUT /api/proficiencies` and its preview, and the creation's `proficiencies`: a
+ * pool absent is left as stored (none at creation), so each editor sends its own. */
 export interface PicksInput {
-  nonweapon: { id: string; slots: number }[];
+  nonweapon?: { id: string; slots: number }[];
+  weapon?: WeaponPickInput[];
 }
 
 /** The answer of `PUT /api/proficiencies` and `POST /api/proficiencies/preview`. */
@@ -368,6 +405,10 @@ export interface CreationOptions {
     levelXp?: LevelXp[];
     /** The class's ability minimums (PHB Table 13), shown on its card and not enforced; absent from an older release. */
     minimums?: { ability: string; min: number }[];
+    /** ADR 0037 steps 7 and 9: the weapon types the class may pick, in display order, each with
+     * the slots its specialization spends in all (0: the class does not specialize). Absent from
+     * an older release. */
+    weaponTypes?: WeaponTypeOption[];
   }[];
   /** ADR 0032 step 6's score methods, in the book's order; absent from an older release. */
   scoreMethods?: ScoreMethod[];

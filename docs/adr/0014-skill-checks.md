@@ -86,7 +86,7 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
    skill check").
 7. **Audited and undoable.** Each adjustment after the roll is an `amend` correction on the entry
    carrying the recomputed payload (with `previousSuccess` and `previousAdjustment`); the entry is
-   never edited. It is its own step on the action stack ([ADR 0010](0010-action-stack-and-undo.md)
+   never edited (_amended by ADR 0037 step 20.8: for Tumbling, a correction that flips the verdict also carries the buff list's snapshots and adds or removes the buff_). It is its own step on the action stack ([ADR 0010](0010-action-stack-and-undo.md)
    step 6, field `skillAdjustment`, from and to the adjustment): undo pops the newest adjustment
    and the check reads the one before it, down to the check as rolled.
    Tests: `TestSkillCheck_Step7_AdjustmentIsAnAmendCorrection`; `actionlogsvc`

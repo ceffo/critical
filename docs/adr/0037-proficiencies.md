@@ -590,9 +590,9 @@ descriptions and the effects of other proficiencies are separate, deferred items
     19.4 **Served by the API, never in the seeds.** The description is read from `localized_texts`
          and served as a language map (ADR 0023 step 6), the client picking the language and falling
          back to English per field. `seeds/proficiencies.json` and the i18n files hold no description.
-         _(proposed: `GET /api/proficiencies/{id}/description` answers `{id, description: {en, fr}}`,
+         `GET /api/proficiencies/{id}/description` answers `{id, description: {en, fr}}`,
          404 `not_found` for an id the catalogue does not hold; the pop-up fetches it when opened, so
-         `GET /api/characters/options` does not grow by 65 texts.)_
+         `GET /api/characters/options` does not grow by 65 texts (supervisor ruling 2026-10-20).
     19.5 **No description yet:** a catalogue without format 9 does not start (ADR 0021 step 16.5), so
          the pop-up always has a text; a language the map lacks falls back, which format 9 prevents.
     Tests: `ProficiencyDescription_Step19_ServedAsALanguageMapFromTheCatalogue` (router: `en` and
@@ -633,16 +633,23 @@ descriptions and the effects of other proficiencies are separate, deferred items
          needs no check and the check is for falls; here the check is what grants the AC. The house
          rule wins. The unarmed +2 to hit and the fall damage stay
          text only, in the description of step 19.
-    20.8 _(proposed)_ **A DM adjustment after the roll** (ADR 0014 steps 6 and 7) changes the verdict
-         but **not the buff**: the buff follows the verdict as rolled, with a pre-roll adjustment
-         (step 5 of ADR 0014) but not a post-roll one. The player adds or dismisses the Tumbling
-         buff by hand on the buff list when a ruling flips the result; the amend correction
-         touches the buff list not at all, so its undo has nothing to restore.
+    20.8 **The buff follows the verdict in effect, never the raw roll** (supervisor ruling 2026-10-20,
+         from the user's triage: "the buff is automatic when the proficiency roll succeeds. there is
+         nothing to add ux wise"). A DM adjustment after the roll (ADR 0014 steps 6 and 7) that turns a
+         success into a failure removes the buff; one that turns a failure into a success adds it
+         (renewing an active one, step 20.3), and a natural 20 stays a failure. This happens inside
+         the same `amend` correction: it carries the buff list's snapshots before and after, so the
+         adjustment is still one step on the action stack and undoing it restores the buff list as it
+         was (the buff back, gone, or the renewed one with its old rounds). No hand editing. A change
+         of adjustment that leaves the verdict as it was touches the buff list not at all. The
+         pre-roll adjustment counts like any: the first verdict is the one in effect.
     Tests: `SkillCheck_Step20_SuccessAddsTheTumblingBuff` (skillsvc: exactly one d20, the name,
     `ac` -4, 1 round, the payload's `buff`), `SkillCheck_Step20_FailureAndNaturalTwentyAddNothing`,
     `SkillCheck_Step20_SuccessAgainRenews` (one buff, rounds 1, a new start round),
-    `SkillCheck_Step20_OtherProficienciesAddNothing`, `SkillCheck_Step20_AdjustmentAfterTheRollLeavesTheBuff`
-    (skillsvc), `Buffs_Step20_TumblingEndsAtNextRound` (buffsvc: the AC is -4 in a following attack,
+    `SkillCheck_Step20_OtherProficienciesAddNothing`, `SkillCheck_Step20_AdjustmentToFailureRemovesTheBuff`,
+    `SkillCheck_Step20_AdjustmentToSuccessAddsOrRenewsTheBuff`,
+    `SkillCheck_Step20_AdjustmentKeepingTheVerdictLeavesTheBuff`,
+    `SkillCheck_Step20_UndoingTheAdjustmentRestoresTheBuff` (skillsvc, composition for the undo), `Buffs_Step20_TumblingEndsAtNextRound` (buffsvc: the AC is -4 in a following attack,
     gone after Next Round), `Tumbling_Step20_UndoRemovesTheBuffAndRedoPutsItBack` (composition: a
     success, a renewal, undo twice, redo), `TumblingRule_Step20_OneRowInTheRulesData` (ruletablesvc),
     `SkillCheck_Step20_EntryCarriesBuffSnapshots` (router wire shape).

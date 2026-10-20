@@ -621,10 +621,10 @@ is only ever appended to by play.
        the extraction and listed by the builder. The builder **refuses to publish**, naming the id and language, when: a catalogue id has no row; a
        row's id is not in the catalogue; a row lacks `en` or `fr`, or has an empty one; a text breaks step 1's lint (the block rules, a table without its
        delimiter row or with a ragged column count, emphasis or HTML, surrounding whitespace); an id repeats. The catalogue's 65 ids are a committed copy
-       refreshed with the schema by `scripts/fetch-ref` _(proposed)_. The output is validated against the schema before it is written, as step 4 says.
+       refreshed with the schema by `scripts/fetch-ref` (supervisor ruling 2026-10-20, from the user's triage). The output is validated against the schema before it is written, as step 4 says.
     3. **Import** (step 5 amended). In the same transaction as the spells (step 5.4), each description becomes `localized_texts` rows, `en` and `fr`
-       (ADR 0023: a key, never a column per language), keyed from the proficiency id _(proposed: one table `proficiency_descriptions (proficiency_id
-       primary key, description text key)`, no foreign key to the seeds, as `localized_texts` has none)_. Rows are upserted by id and a row the
+       (ADR 0023: a key, never a column per language), keyed from the proficiency id (one table `proficiency_descriptions (proficiency_id
+       primary key, description text key)`, no foreign key to the seeds, as `localized_texts` has none; supervisor ruling 2026-10-20). Rows are upserted by id and a row the
        artifact no longer lists is deleted with its texts: nothing in game state refers to a description (a pick stores the id, ADR 0037 step 12), so
        there is no step 5.4.3 refusal. The import also refuses, naming the id and language, what the builder refuses, and a catalogue id of
        `seeds/proficiencies.json` that has no description or the reverse. A second import of the same artifact changes nothing (step 5.3, same

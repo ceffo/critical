@@ -89,10 +89,6 @@ const identityMigration = "013_identity_codes.sql"
 // the stored words (mapLanguages).
 const languagesMigration = "014_language_codes.sql"
 
-// measuresMigration makes the height and weight numbers. Right after it the run parses the stored
-// free text (mapMeasures).
-const measuresMigration = "015_identity_numbers.sql"
-
 // dropRaceMigration drops characters.race. Right after it the run maps again the alignment and sex
 // the release before wrote as free text since identityMigration (mapIdentity).
 const dropRaceMigration = "023_drop_character_race.sql"
@@ -116,7 +112,6 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment) (befo
 			return identitySeedCharacter(ctx, q, characterPath)
 		},
 		languagesMigration:         mapLanguages,
-		measuresMigration:          mapMeasures,
 		equipmentMigration:         func(ctx context.Context, q storeq.Querier) error { return convertEquipment(ctx, q, equipment.Weapons) },
 		snapshotEnvelopesMigration: reencodeSnapshots,
 		dropRaceMigration:          mapIdentity,

@@ -29,15 +29,6 @@ SELECT id, alignment, sex FROM characters ORDER BY id;
 -- name: SetCharacterIdentity :exec
 UPDATE characters SET alignment = sqlc.arg(alignment), sex = sqlc.arg(sex) WHERE id = sqlc.arg(id);
 
--- The identity numbers migration (015): every character's stored free-text height and weight,
--- to parse into centimetres and kilograms.
--- name: ListCharacterMeasures :many
-SELECT id, height, weight FROM characters ORDER BY id;
-
--- The parsed height and weight of a character (0: none, the text was not recognised).
--- name: SetCharacterMeasures :exec
-UPDATE characters SET height_cm = sqlc.arg(height_cm), weight_kg = sqlc.arg(weight_kg) WHERE id = sqlc.arg(id);
-
 -- The languages migration (014): every character's stored language list, to map to codes.
 -- name: ListCharacterLanguages :many
 SELECT id, languages FROM characters ORDER BY id;

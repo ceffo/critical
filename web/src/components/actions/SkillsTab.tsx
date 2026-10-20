@@ -41,7 +41,8 @@ export function SkillsTab() {
   }, [refresh]);
 
   if (!skills) return null;
-  // A thief's or a bard's skills, derived from its points (ADR 0030 steps 17 and 18).
+  // The server sends the class skills of a thief or a bard and none for another class: no list, no
+  // section (ADR 0030 steps 17 and 18).
   const classKind: SkillKind =
     skills.thiefSkills.length > 0 ? "thiefSkill" : "bardSkill";
   const classSkills =
@@ -105,7 +106,6 @@ export function SkillsTab() {
           ),
         })),
       )}
-      {classSkills.length === 0 && rows("bardSkill", [])}
       {classSkills.length > 0 && (
         <div className="flex min-w-0 flex-col gap-2">
           {rows(

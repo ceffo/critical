@@ -2580,8 +2580,9 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
 });
 
 // ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
-// attack card's rate, "spécialisée" tag and point-blank checkbox, and the weapon editor's Type d’arme
-// and Spécialisée controls, none of them cut. Screenshot of the weapon editor at both sizes.
+// attack card's rate, "spécialisée" tag and point-blank checkbox (the heavy crossbow is the
+// specialization pick, ADR 0037 step 9; the long sword a plain pick), and the weapon editor's Type
+// d’arme control, none of them cut. Screenshot of the weapon editor at both sizes.
 test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1280 to 2560", async ({
   page,
 }) => {
@@ -2625,7 +2626,6 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
         damageL: "1d12",
         weaponKind: "melee",
         weaponType: "long_sword",
-        specialized: true,
       },
     ],
     [
@@ -2640,7 +2640,6 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
         weaponKind: "missile",
         fires: "quarrel",
         weaponType: "heavy_crossbow",
-        specialized: true,
       },
     ],
   ] as const) {
@@ -2649,6 +2648,15 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       await call("POST", `/api/items/${id}/state`, { state: "wielded" }),
     ).toBe(true);
   }
+  // One specialization: the heavy crossbow's (2 slots), the long sword a plain pick.
+  expect(
+    await call("PUT", "/api/proficiencies", {
+      weapon: [
+        { type: "long_sword", slots: 1 },
+        { type: "heavy_crossbow", slots: 2 },
+      ],
+    }),
+  ).toBe(true);
   await reloadSettled(page);
   await expect(page.getByTestId("str-value")).toHaveText("18/50");
 
@@ -2659,10 +2667,11 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
     await chooseLanguage(page, "en");
     await chooseWeapon(page, weapon);
     await chooseLanguage(page, "fr");
-    await expect(f.getByTestId("tile-specialized")).toHaveText("spécialisée");
     await expect(f.getByTestId("tile-rate")).toContainText("att.");
-    if (weapon === "Heavy Crossbow")
+    if (weapon === "Heavy Crossbow") {
+      await expect(f.getByTestId("tile-specialized")).toHaveText("spécialisée");
       await expect(f.getByTestId("point-blank")).toBeVisible();
+    } else await expect(f.getByTestId("tile-specialized")).toHaveCount(0);
     for (const vp of [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
@@ -2698,7 +2707,7 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       .click();
     const wf = page.getByTestId("item-form");
     await expect(wf.getByLabel("Type d’arme")).toBeVisible();
-    await expect(wf.getByLabel("Spécialisée")).toBeChecked();
+    await expect(wf.getByLabel("Spécialisée")).toHaveCount(0);
     const where = `weapon editor, fr, ${vp.width}x${vp.height}`;
     await expectNoClippedText(wf, where);
     await snap(page, `fighter-weapon-editor-fr-${vp.width}x${vp.height}`);

@@ -232,6 +232,10 @@ type ItemBody struct {
 	Review     json.RawMessage `json:"review"`
 	// Warnings are accepted and ignored like the review: a piece served back as is still decodes.
 	Warnings json.RawMessage `json:"warnings"`
+	// Specialized is accepted and ignored (ADR 0037 step 9): a weapon is specialized by its
+	// type's pick (PUT /api/proficiencies), and a piece served back, or the editor of the release
+	// before, still decodes.
+	Specialized json.RawMessage `json:"specialized"`
 }
 
 func decodeBody(r *http.Request) (ItemBody, error) {

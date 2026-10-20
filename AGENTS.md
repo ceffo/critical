@@ -32,8 +32,12 @@ The PHB and DMG live as agent-readable files in a private sibling repo, `~/code/
 (shared by every worktree). Run `just rulebooks` to clone it (or fast-forward it); it needs access to
 the private repo and is never part of `just validate` or `just dev`.
 
-For a rules question: `grep -i '<term>' ~/code/critical-rulebooks/INDEX.md` first, then open only the
-file it names. Never read whole chapters or INDEX.md whole. If the clone is missing, run
+For a rules question, ask the `rules-lookup` agent (Agent tool, `subagent_type: rules-lookup`; Haiku,
+one question per call): it reads the books and returns the rule with its file, section and a short
+quote, so the book text stays out of your context. Check its quote before a rule drives game logic.
+If you can't start agents (you run as a subagent yourself), look it up directly: `grep -i '<term>'
+~/code/critical-rulebooks/INDEX.md` first, then open only the file it names. Never read whole chapters
+or INDEX.md whole. If the clone is missing, run
 `just rulebooks`; if that fails, say so instead of guessing the rule. The book is a reference: the
 project's decided rules (ADRs in `docs/adr`, user rulings) win where they differ. Never copy book text
 into this public repo.

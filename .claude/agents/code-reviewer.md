@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Reviews a developer's committed branch for correctness, architecture and rule violations before it is pushed, using the project's own review checklist. Read-only. Reports findings with severity and confidence; does not fix anything.
-tools: Read, Bash, Grep, Glob, mcp__linear-server__get_issue, mcp__linear-server__list_issues, mcp__linear-server__list_comments
+tools: Read, Bash, Grep, Glob, Agent(rules-lookup), mcp__linear-server__get_issue, mcp__linear-server__list_issues, mcp__linear-server__list_comments
 model: sonnet
 ---
 

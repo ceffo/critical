@@ -181,6 +181,7 @@ The quota gate applies.
   free lane before ending the turn. One lane busy and eligible disjoint items waiting is idling.
 - The quota gate caps the lane count (projected over 100%: fewer lanes, Sonnet where allowed).
 - At most one `code-reviewer` per branch.
+- **Never ask the user what to work on next** (user, 2026-10-20: "the default is not the user to pick. the default is the supervisor getting work done. your boundary is the backlog"). Every ready Todo item is dispatched by priority without asking; Backlog is the boundary: only the user moves items to Todo. An empty ready queue is reported as a status line, never as a question.
 
 Agents run in the background and you're notified when they finish. Don't poll, don't guess at an
 unfinished agent's results.

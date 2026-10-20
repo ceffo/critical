@@ -77,6 +77,9 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
   await page.getByLabel("Round number", { exact: true }).fill("7");
   await snap(page, "set-round-form");
   await page.getByRole("button", { name: "Set", exact: true }).click();
+  // The form closes once the write and its refetches are done: opening the menu again before that
+  // would be closed by it.
+  await expect(page.getByLabel("Round number", { exact: true })).toBeHidden();
   await expect.poll(() => currentRound(page)).toBe(7);
   const setEntry = logEntry(page, `Round set: ${before} → 7`);
   await expect(setEntry).toBeVisible();

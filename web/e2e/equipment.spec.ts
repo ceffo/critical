@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
+  apiSettled,
   apiCall,
   attackForm,
   chooseLanguage,
@@ -194,6 +195,9 @@ test("pick a long sword from the catalogue in French: renamed, +1, equipped at o
   await page.getByTestId("add-row-long_sword").click();
   await page.getByTestId("add-equip").uncheck();
   await page.getByTestId("add-submit").click();
+  // The row shows once the add is saved: a reload sooner would cut the write.
+  await expect(row(page, "fixture_long_sword")).toBeVisible();
+  await apiSettled(page);
   await page.reload();
   await openInventory(page);
   const again = row(page, "fixture_long_sword");

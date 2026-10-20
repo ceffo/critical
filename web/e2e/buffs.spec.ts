@@ -338,8 +338,9 @@ test("stopping Polymorph Self asks how it ended; ended by me heals the d12 (Fren
   await expect(page.getByTestId("notice-ended")).toHaveText(
     /^Métamorphose regagne (\d+) PV \(1d12 : \1\), PV \d+ → \d+$/,
   );
+  // The notice comes with the answer; the HP panel reads its value again after it.
+  await expect.poll(() => currentHp(page)).toBeGreaterThan(before);
   const healed = await currentHp(page);
-  expect(healed).toBeGreaterThan(before);
   expect(healed - before).toBeLessThanOrEqual(12);
   await expect(
     combatLog(page)

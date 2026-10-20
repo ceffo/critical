@@ -654,17 +654,23 @@ func (q *Queries) InsertSpellSlots(ctx context.Context, arg InsertSpellSlotsPara
 }
 
 const insertSpellbookEntry = `-- name: InsertSpellbookEntry :exec
-INSERT INTO spellbook_entries (character_id, spell_key, position) VALUES ($1, $2, $3)
+INSERT INTO spellbook_entries (character_id, spell_key, position, origin) VALUES ($1, $2, $3, $4)
 `
 
 type InsertSpellbookEntryParams struct {
 	CharacterID int64
 	SpellKey    string
 	Position    int64
+	Origin      string
 }
 
 func (q *Queries) InsertSpellbookEntry(ctx context.Context, arg InsertSpellbookEntryParams) error {
-	_, err := q.db.ExecContext(ctx, insertSpellbookEntry, arg.CharacterID, arg.SpellKey, arg.Position)
+	_, err := q.db.ExecContext(ctx, insertSpellbookEntry,
+		arg.CharacterID,
+		arg.SpellKey,
+		arg.Position,
+		arg.Origin,
+	)
 	return err
 }
 
@@ -1253,6 +1259,21 @@ func (q *Queries) SetSpellStats(ctx context.Context, arg SetSpellStatsParams) er
 	return err
 }
 
+const setSpellbookEntryOrigin = `-- name: SetSpellbookEntryOrigin :exec
+UPDATE spellbook_entries SET origin = $3 WHERE character_id = $1 AND spell_key = $2
+`
+
+type SetSpellbookEntryOriginParams struct {
+	CharacterID int64
+	SpellKey    string
+	Origin      string
+}
+
+func (q *Queries) SetSpellbookEntryOrigin(ctx context.Context, arg SetSpellbookEntryOriginParams) error {
+	_, err := q.db.ExecContext(ctx, setSpellbookEntryOrigin, arg.CharacterID, arg.SpellKey, arg.Origin)
+	return err
+}
+
 const skillArmourCharacters = `-- name: SkillArmourCharacters :many
 SELECT id, class, skill_armor FROM characters ORDER BY id
 `
@@ -1553,6 +1574,38 @@ func (q *Queries) SpellIdentities(ctx context.Context, lang string) ([]SpellIden
 	return items, nil
 }
 
+const spellLearnPayloads = `-- name: SpellLearnPayloads :many
+SELECT character_id, payload FROM action_log WHERE kind = 'spell_learn' ORDER BY id
+`
+
+type SpellLearnPayloadsRow struct {
+	CharacterID int64
+	Payload     string
+}
+
+func (q *Queries) SpellLearnPayloads(ctx context.Context) ([]SpellLearnPayloadsRow, error) {
+	rows, err := q.db.QueryContext(ctx, spellLearnPayloads)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SpellLearnPayloadsRow{}
+	for rows.Next() {
+		var i SpellLearnPayloadsRow
+		if err := rows.Scan(&i.CharacterID, &i.Payload); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const spellSlotLists = `-- name: SpellSlotLists :many
 SELECT character_id, slots FROM spell_slots ORDER BY character_id
 `
@@ -1681,6 +1734,44 @@ func (q *Queries) SpellTextKeys(ctx context.Context) ([]SpellTextKeysRow, error)
 			&i.Components,
 			&i.SavingThrow,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const spellbookEntryOrigins = `-- name: SpellbookEntryOrigins :many
+
+SELECT character_id, spell_key, origin FROM spellbook_entries ORDER BY character_id, position, spell_key
+`
+
+type SpellbookEntryOriginsRow struct {
+	CharacterID int64
+	SpellKey    string
+	Origin      string
+}
+
+// The spellbook origins of migration 028 (ADR 0030 step 20.5, markLearnedSpells): the stored
+// entries with their origin, the payloads of the spell_learn entries (a success names the spell it
+// wrote) and an entry's origin set. Delete them with their step once every environment is past 028
+// (ADR 0025 step 2.1.1).
+func (q *Queries) SpellbookEntryOrigins(ctx context.Context) ([]SpellbookEntryOriginsRow, error) {
+	rows, err := q.db.QueryContext(ctx, spellbookEntryOrigins)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SpellbookEntryOriginsRow{}
+	for rows.Next() {
+		var i SpellbookEntryOriginsRow
+		if err := rows.Scan(&i.CharacterID, &i.SpellKey, &i.Origin); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

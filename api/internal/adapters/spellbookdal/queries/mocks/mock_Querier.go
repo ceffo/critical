@@ -176,23 +176,23 @@ func (_c *MockQuerier_GetLearnFailure_Call) RunAndReturn(run func(context.Contex
 }
 
 // ListSpellbook provides a mock function with given fields: ctx, characterID
-func (_m *MockQuerier) ListSpellbook(ctx context.Context, characterID int64) ([]string, error) {
+func (_m *MockQuerier) ListSpellbook(ctx context.Context, characterID int64) ([]queries.ListSpellbookRow, error) {
 	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListSpellbook")
 	}
 
-	var r0 []string
+	var r0 []queries.ListSpellbookRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListSpellbookRow, error)); ok {
 		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) []string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListSpellbookRow); ok {
 		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
+			r0 = ret.Get(0).([]queries.ListSpellbookRow)
 		}
 	}
 
@@ -224,12 +224,12 @@ func (_c *MockQuerier_ListSpellbook_Call) Run(run func(ctx context.Context, char
 	return _c
 }
 
-func (_c *MockQuerier_ListSpellbook_Call) Return(_a0 []string, _a1 error) *MockQuerier_ListSpellbook_Call {
+func (_c *MockQuerier_ListSpellbook_Call) Return(_a0 []queries.ListSpellbookRow, _a1 error) *MockQuerier_ListSpellbook_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_ListSpellbook_Call) RunAndReturn(run func(context.Context, int64) ([]string, error)) *MockQuerier_ListSpellbook_Call {
+func (_c *MockQuerier_ListSpellbook_Call) RunAndReturn(run func(context.Context, int64) ([]queries.ListSpellbookRow, error)) *MockQuerier_ListSpellbook_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // Learning a spell, ADR 0030 step 20. 20.1: "Refused (400, before any die)
@@ -164,9 +165,10 @@ func TestLearn_Step20_1_WhatIsNotRefused(t *testing.T) {
 			f.catalogue(cat)
 			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(tc.c, nil).Once()
 			f.book.EXPECT().Keys(mock.Anything, charID).Return(tc.book, nil)
+			f.book.EXPECT().Entries(mock.Anything, charID).Return(nil, nil)
 			f.dal.EXPECT().LearnFailure(mock.Anything, charID, "new3").Return(tc.failedAt, tc.failedAt > 0, nil)
 			f.dice.EXPECT().RollD100().Return(1).Once()
-			f.dal.EXPECT().AddEntry(mock.Anything, charID, "new3").Return(nil).Once()
+			f.dal.EXPECT().AddEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginLearned}).Return(nil).Once()
 			f.dal.EXPECT().DeleteLearnFailure(mock.Anything, charID, "new3").Return(nil).Once()
 			f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil).Once()
 			res, err := f.svc.Learn(context.Background(), charID, "new3")
@@ -188,7 +190,7 @@ func TestLearn_Step20_2_OneD100AtOrUnderTheChance(t *testing.T) {
 		failedAt int
 		retry    int
 	}{
-		{60, true, `{"known":false,"failedAtLevel":0}`, `{"known":true,"failedAtLevel":0}`, 0, 0},
+		{60, true, `{"known":false,"failedAtLevel":0}`, `{"known":true,"failedAtLevel":0,"origin":"learned"}`, 0, 0},
 		// A failure at level 5 may be tried again from level 6, the next one.
 		{61, false, `{"known":false,"failedAtLevel":0}`, `{"known":false,"failedAtLevel":5}`, 5, 6},
 	} {
@@ -197,10 +199,12 @@ func TestLearn_Step20_2_OneD100AtOrUnderTheChance(t *testing.T) {
 			f.catalogue(map[string]learnsvc.Spell{"new3": {Level: 3, Wizard: true}})
 			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
 			f.book.EXPECT().Keys(mock.Anything, charID).Return([]string{}, nil)
+			f.book.EXPECT().Entries(mock.Anything, charID).Return(nil, nil)
 			f.dal.EXPECT().LearnFailure(mock.Anything, charID, "new3").Return(0, false, nil)
 			f.dice.EXPECT().RollD100().Return(tc.roll).Once()
 			if tc.learned {
-				f.dal.EXPECT().AddEntry(mock.Anything, charID, "new3").Return(nil).Once()
+				// Step 20.5: a Learn success writes the origin learned.
+				f.dal.EXPECT().AddEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginLearned}).Return(nil).Once()
 				f.dal.EXPECT().DeleteLearnFailure(mock.Anything, charID, "new3").Return(nil).Once()
 			} else {
 				f.dal.EXPECT().RemoveEntry(mock.Anything, charID, "new3").Return(nil).Once()
@@ -245,8 +249,12 @@ func TestRestore_Step20_3_UndoLiftsTheBlock(t *testing.T) {
 			f.dal.EXPECT().RemoveEntry(mock.Anything, charID, "new3").Return(nil).Once()
 			f.dal.EXPECT().SetLearnFailure(mock.Anything, charID, "new3", 4).Return(nil).Once()
 		}},
-		{"a redo of a success", `{"known":true,"failedAtLevel":0}`, func(f fixture) {
-			f.dal.EXPECT().AddEntry(mock.Anything, charID, "new3").Return(nil).Once()
+		{"a redo of a success recorded before the origins (learned)", `{"known":true,"failedAtLevel":0}`, func(f fixture) {
+			f.dal.EXPECT().AddEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginLearned}).Return(nil).Once()
+			f.dal.EXPECT().DeleteLearnFailure(mock.Anything, charID, "new3").Return(nil).Once()
+		}},
+		{"a redo of a level grant, origin and level", `{"known":true,"failedAtLevel":0,"origin":"level_grant","grantLevel":5}`, func(f fixture) {
+			f.dal.EXPECT().AddEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginLevelGrant, GrantLevel: 5}).Return(nil).Once()
 			f.dal.EXPECT().DeleteLearnFailure(mock.Anything, charID, "new3").Return(nil).Once()
 		}},
 	} {
@@ -261,6 +269,8 @@ func TestRestore_Step20_3_UndoLiftsTheBlock(t *testing.T) {
 	f := newFixture(t)
 	require.Error(t, f.svc.Module().Restorer(learnsvc.StateFamily).Restore(context.Background(), charID, snaptest.Env(`{"known":true}`)),
 		"a snapshot that names no spell")
+	require.Error(t, f.svc.Module().Restorer(learnsvc.StateFamily).Restore(context.Background(), charID, snaptest.EnvID("new3", `{"known":true,"origin":"bought"}`)),
+		"an origin step 20.5 does not know")
 }
 
 func itoa(n int) string { b, _ := json.Marshal(n); return string(b) }

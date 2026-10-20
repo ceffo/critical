@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
@@ -22,11 +23,11 @@ import (
 // starts empty, so this is the database seed's first run: the character (a
 // missing character file is ignored), then its starting set, as the seed
 // character's: the equipment (a missing file is an error: its sheet
-// would be empty), the skills and the spellbook (spellbook: the spellbook
-// seed's catalogue keys in order, checked against the catalogue by the
-// caller). Without a character file nothing owns the starting set, so it is
+// would be empty), the skills and the spellbook (keys: the spellbook seed's
+// catalogue keys in order, checked against the catalogue by the caller; each
+// entry's origin is starting, ADR 0030 step 20.5). Without a character file nothing owns the starting set, so it is
 // not loaded.
-func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error {
+func (s *Store) Seed(ctx context.Context, seedsDir string, keys []string, equipment ruletablesvc.Equipment) error {
 	return s.InTx(ctx, func(context.Context) error {
 		t := s.t
 		owner, ok, err := t.seedCharacter(seedfile.Path(seedsDir, seedfile.CharacterFile))
@@ -47,7 +48,11 @@ func (s *Store) Seed(ctx context.Context, seedsDir string, spellbook []string, e
 			return fmt.Errorf("seed skills: %w", err)
 		}
 		if len(t.spellbooks[owner]) == 0 { // once, while it has none (as the database's seed)
-			t.spellbooks[owner] = append([]string{}, spellbook...)
+			book := make([]spellbook.Entry, len(keys))
+			for i, k := range keys {
+				book[i] = spellbook.Entry{Key: k, Origin: spellbook.OriginStarting}
+			}
+			t.spellbooks[owner] = book
 		}
 		return nil
 	})

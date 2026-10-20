@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellprephdl"
 	"github.com/ceffo/critical/api/pkg/formula"
 )
@@ -101,4 +102,28 @@ func TestGetInfo_ServesTheCastTarget(t *testing.T) {
 	require.Len(t, got.Spellbook, 2)
 	assert.NotContains(t, got.Spellbook[0], "cast_target", "no choice: the field is absent")
 	assert.JSONEq(t, `{"default":"other","alternate":"self"}`, string(got.Spellbook[1]["cast_target"]))
+}
+
+// ADR 0030 step 20.5: every spellbook entry serves its origin, a level_grant
+// one with its grant level; a priest's sphere spell (no origin) serves none.
+func TestGetInfo_ServesTheOrigin(t *testing.T) {
+	svc := mocks.NewMockSVC(t)
+	svc.EXPECT().Info(mock.Anything, int64(1)).Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{
+		{ID: "sleep", Name: "Sleep", Level: 1, Origin: spellbook.OriginLearned},
+		{ID: "fireball", Name: "Fireball", Level: 3, Origin: spellbook.OriginLevelGrant, GrantLevel: 5},
+		{ID: "bless", Name: "Bless", Level: 1},
+	}}, nil)
+
+	h := spellprephdl.GetInfo(func(*http.Request) int64 { return 1 }, svc)
+	rec := httptest.NewRecorder()
+	require.NoError(t, h(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/spells/preparation", nil)))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got struct {
+		Spellbook []json.RawMessage `json:"spellbook"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Len(t, got.Spellbook, 3)
+	assert.JSONEq(t, `{"id":"sleep","name":"Sleep","level":1,"origin":"learned"}`, string(got.Spellbook[0]))
+	assert.JSONEq(t, `{"id":"fireball","name":"Fireball","level":3,"origin":"level_grant","grant_level":5}`, string(got.Spellbook[1]))
+	assert.JSONEq(t, `{"id":"bless","name":"Bless","level":1}`, string(got.Spellbook[2]))
 }

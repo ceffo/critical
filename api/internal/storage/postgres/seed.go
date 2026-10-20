@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
@@ -486,7 +487,8 @@ func seedSkills(ctx context.Context, q storeq.Querier, owner int64, seedPath str
 // seedSpellbook writes the spellbook seed as the seed character's spellbook, once: only while
 // that character has none, as its weapons and items (spells are then learned and removed in the
 // app, ADR 0030 step 20, never by the seed). keys were checked against the catalogue by the
-// caller (spellbookadpt.ReadSeed), so only catalogue spells are written.
+// caller (spellbookadpt.ReadSeed), so only catalogue spells are written. Each entry's origin is
+// starting (ADR 0030 step 20.5: Kelsen's imported book).
 func seedSpellbook(ctx context.Context, q storeq.Querier, owner int64, keys []string) error {
 	count, err := q.CountSpellbookEntries(ctx, owner)
 	if err != nil {
@@ -497,7 +499,7 @@ func seedSpellbook(ctx context.Context, q storeq.Querier, owner int64, keys []st
 	}
 	for i, k := range keys {
 		if err := q.InsertSpellbookEntry(ctx, storeq.InsertSpellbookEntryParams{
-			CharacterID: owner, SpellKey: k, Position: int64(i),
+			CharacterID: owner, SpellKey: k, Position: int64(i), Origin: string(spellbook.OriginStarting),
 		}); err != nil {
 			return fmt.Errorf("insert spellbook entry %q: %w", k, err)
 		}

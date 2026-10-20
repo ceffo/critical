@@ -23,6 +23,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // FileName is the seed file under the seeds dir.
@@ -39,6 +40,9 @@ type Store interface {
 	// Keys returns the catalogue keys of the character's spellbook, in the
 	// sheet's order (none for a character without a spellbook).
 	Keys(ctx context.Context, characterID int64) ([]string, error)
+	// Entries returns the character's spellbook in the sheet's order, each
+	// entry with its origin (ADR 0030 step 20.5).
+	Entries(ctx context.Context, characterID int64) ([]spellbook.Entry, error)
 }
 
 // Book implements prepsvc.Spellbook and spellsvc.Spellbook over the stored
@@ -59,21 +63,24 @@ func New(store Store, cat catalogue.Catalogue) *Book {
 }
 
 // All returns the character's spellbook in the sheet's order, each entry
-// with the catalogue's English name and level. An entry the catalogue does
+// with the catalogue's English name and level and its origin (ADR 0030 step
+// 20.5). An entry the catalogue does
 // not hold (the catalogue import keeps every spell a spellbook refers to, so
 // only a catalogue file that dropped it) is an error naming it.
 func (b *Book) All(ctx context.Context, characterID int64) ([]prepsvc.SpellbookEntry, error) {
-	keys, err := b.store.Keys(ctx, characterID)
+	entries, err := b.store.Entries(ctx, characterID)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]prepsvc.SpellbookEntry, 0, len(keys))
-	for _, k := range keys {
-		s, ok := b.spells[k]
+	out := make([]prepsvc.SpellbookEntry, 0, len(entries))
+	for _, e := range entries {
+		s, ok := b.spells[e.Key]
 		if !ok {
-			return nil, fmt.Errorf("spellbook of character %d: %q is not in the spell catalogue", characterID, k)
+			return nil, fmt.Errorf("spellbook of character %d: %q is not in the spell catalogue", characterID, e.Key)
 		}
-		out = append(out, prepsvc.SpellbookEntry{ID: k, Name: s.Name.Default(), Level: s.Level})
+		out = append(out, prepsvc.SpellbookEntry{
+			ID: e.Key, Name: s.Name.Default(), Level: s.Level, Origin: e.Origin, GrantLevel: e.GrantLevel,
+		})
 	}
 	return out, nil
 }

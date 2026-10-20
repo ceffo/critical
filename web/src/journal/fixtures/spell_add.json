@@ -1,0 +1,9 @@
+{
+  "given": {
+    "payload": {
+      "spellId": "sleep",
+      "spellLevel": 1,
+      "origin": "given"
+    }
+  }
+}

@@ -7,16 +7,31 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // spellState is the state of a "spellbook:<spell key>" snapshot (the
 // envelope's id names the spell, SpellID is not encoded): the spell is in the
-// spellbook, or blocked by a failure at a realized level (0: none). Entries
-// already in the log must stay decodable: add fields, never rename.
+// spellbook with its entry's origin (step 20.5) and grant level, or blocked
+// by a failure at a realized level (0: none). Entries already in the log must
+// stay decodable: add fields, never rename. A known spell recorded before the
+// origins has none: only a Learn success wrote it (learned).
 type spellState struct {
-	SpellID       string `json:"-"`
-	Known         bool   `json:"known"`
-	FailedAtLevel int    `json:"failedAtLevel"`
+	SpellID       string           `json:"-"`
+	Known         bool             `json:"known"`
+	FailedAtLevel int              `json:"failedAtLevel"`
+	Origin        spellbook.Origin `json:"origin,omitempty"`
+	GrantLevel    int              `json:"grantLevel,omitempty"`
+}
+
+// addRecord is the payload of a spell_add entry (step 20.6), the added entry
+// in the /api/character/spellbook/add wire names. The UI words it. Add
+// fields, never rename.
+type addRecord struct {
+	SpellID    string           `json:"spellId"`
+	SpellLevel int              `json:"spellLevel"`
+	Origin     spellbook.Origin `json:"origin"`
+	GrantLevel int              `json:"grantLevel,omitempty"`
 }
 
 // record is the payload of a spell_learn entry, the roll's breakdown in the
@@ -38,14 +53,14 @@ var spellbookSnaps = actionlog.NewSnapshotter[spellState](StateFamily)
 
 // state reads the spell's place in the character's spellbook.
 func (s *service) state(ctx context.Context, characterID int64, spellID string) (spellState, error) {
-	keys, err := s.d.Book.Keys(ctx, characterID)
+	entries, err := s.d.Book.Entries(ctx, characterID)
 	if err != nil {
 		return spellState{}, fmt.Errorf("read spellbook: %w", err)
 	}
 	st := spellState{SpellID: spellID}
-	for _, k := range keys {
-		if k == spellID {
-			st.Known = true
+	for _, e := range entries {
+		if e.Key == spellID {
+			st.Known, st.Origin, st.GrantLevel = true, e.Origin, e.GrantLevel
 		}
 	}
 	level, failed, err := s.d.DAL.LearnFailure(ctx, characterID, spellID)
@@ -61,7 +76,8 @@ func (s *service) state(ctx context.Context, characterID int64, spellID string) 
 // write sets the spell's place in the character's spellbook to st.
 func (s *service) write(ctx context.Context, characterID int64, spellID string, st spellState) error {
 	if st.Known {
-		if err := s.d.DAL.AddEntry(ctx, characterID, spellID); err != nil {
+		e := spellbook.Entry{Key: spellID, Origin: st.Origin, GrantLevel: st.GrantLevel}
+		if err := s.d.DAL.AddEntry(ctx, characterID, e); err != nil {
 			return fmt.Errorf("add spellbook entry: %w", err)
 		}
 	} else if err := s.d.DAL.RemoveEntry(ctx, characterID, spellID); err != nil {
@@ -97,9 +113,31 @@ func (s *service) record(ctx context.Context, characterID int64, r Result, befor
 	return nil
 }
 
+// recordAdd writes the spell_add entry with the spell's snapshot, inside the
+// caller's transaction (step 20.6, ADR 0018 step 1).
+func (s *service) recordAdd(ctx context.Context, characterID int64, a Added, before, after spellState) error {
+	payload, err := json.Marshal(addRecord(a))
+	if err != nil {
+		return fmt.Errorf("encode spell_add payload: %w", err)
+	}
+	snap, err := spellbookSnaps.Snapshot(a.SpellID, &before, &after)
+	if err != nil {
+		return err
+	}
+	if _, err := s.d.Log.Record(ctx, actionlog.NewEntry{
+		CharacterID: characterID, Kind: actionlog.KindSpellAdd, Payload: payload,
+		Snapshots: []actionlog.Snapshot{snap},
+	}); err != nil {
+		return fmt.Errorf("record spell_add: %w", err)
+	}
+	return nil
+}
+
 // Module declares the codec that writes a spell's spellbook state back:
-// undoing a success takes the spell out of the spellbook, undoing a failure
-// lifts its block (step 20.3); a redo writes the roll's "after" (ADR 0019).
+// undoing a success or an add takes the spell out of the spellbook (an add's
+// undo puts back the block it lifted), undoing a failure lifts its block (step
+// 20.3); a redo writes the entry's "after" (ADR 0019), origin and all (step
+// 20.5).
 // The action log hands the state, which names the spell; it runs inside the
 // undo's transaction.
 func (s *service) Module() domain.Module {
@@ -109,6 +147,12 @@ func (s *service) Module() domain.Module {
 				return fmt.Errorf("decode spellbook snapshot: spell %q failed at level %d", spellID, st.FailedAtLevel)
 			}
 			st.SpellID = spellID
+			if st.Known && st.Origin == "" {
+				st.Origin = spellbook.OriginLearned // recorded before the origins, by a Learn success
+			}
+			if st.Known && !st.Origin.Valid() {
+				return fmt.Errorf("decode spellbook snapshot: spell %q has the unknown origin %q", spellID, st.Origin)
+			}
 			if err := s.write(ctx, characterID, spellID, st); err != nil {
 				return fmt.Errorf("restore spellbook: %w", err)
 			}

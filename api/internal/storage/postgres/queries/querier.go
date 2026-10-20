@@ -101,6 +101,7 @@ type Querier interface {
 	SetSnapshotEnvelopes(ctx context.Context, arg SetSnapshotEnvelopesParams) error
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error
+	SetSpellbookEntryOrigin(ctx context.Context, arg SetSpellbookEntryOriginParams) error
 	// The skill armour carry-over of migration 020 (ADR 0033 step 14, carrySkillArmour): each
 	// character's class and entered skill armour, all its items as the carry-over reads them (every
 	// item, armour or not: an added piece goes after the last position), and a carried piece put on. Delete them with their step once every environment is past 020 (ADR 0025
@@ -117,9 +118,15 @@ type Querier interface {
 	SpellCorrectionPayloads(ctx context.Context, kinds []string) ([]SpellCorrectionPayloadsRow, error)
 	SpellEntryPayloads(ctx context.Context, kinds []string) ([]SpellEntryPayloadsRow, error)
 	SpellIdentities(ctx context.Context, lang string) ([]SpellIdentitiesRow, error)
+	SpellLearnPayloads(ctx context.Context) ([]SpellLearnPayloadsRow, error)
 	SpellSlotLists(ctx context.Context) ([]SpellSlotListsRow, error)
 	SpellStatTexts(ctx context.Context, lang string) ([]SpellStatTextsRow, error)
 	SpellTextKeys(ctx context.Context) ([]SpellTextKeysRow, error)
+	// The spellbook origins of migration 028 (ADR 0030 step 20.5, markLearnedSpells): the stored
+	// entries with their origin, the payloads of the spell_learn entries (a success names the spell it
+	// wrote) and an entry's origin set. Delete them with their step once every environment is past 028
+	// (ADR 0025 step 2.1.1).
+	SpellbookEntryOrigins(ctx context.Context) ([]SpellbookEntryOriginsRow, error)
 	SpellbookRefs(ctx context.Context) ([]SpellbookRefsRow, error)
 	TextLanguages(ctx context.Context, textID int64) ([]TextLanguagesRow, error)
 	// The weapons stored before migration 005 have no type: the data step run just after it gives the

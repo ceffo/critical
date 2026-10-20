@@ -229,6 +229,13 @@ const KindLevelUp Kind = "level_up"
 // is never adjusted after the fact.
 const KindSpellLearn Kind = "spell_learn"
 
+// KindSpellAdd is a wizard spell written in the spellbook with no roll
+// (learnsvc Add, Ajouter, ADR 0030 step 20.6): the spell, its level and the
+// entry's origin. Its "spellbook:<spell key>" snapshot is spell_learn's, so
+// popping it takes the spell out and puts back a failure's block the add
+// lifted. Not one of RollKinds: nothing is rolled.
+const KindSpellAdd Kind = "spell_add"
+
 // KindSkillPoints is a thief spending skill points on the sheet (skillsvc,
 // ADR 0030 step 17): the points per skill before and after. Its
 // "skill_points" snapshot carries the points, so popping it gives them back.

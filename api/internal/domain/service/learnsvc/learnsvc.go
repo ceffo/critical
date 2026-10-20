@@ -1,10 +1,11 @@
-// Package learnsvc owns learning a spell (ADR 0030 step 20): a mage or a
-// bard adds a wizard spell to his spellbook. The class's and PHB Table 4's
-// limits refuse it before any die; otherwise one d100 through the dice port
-// against Table 4's chance to learn writes the spell in the spellbook or
-// blocks it until the character's realized level is higher. Success or
-// failure is one action-log transaction whose snapshot the journal's Undo
-// writes back (ADR 0018).
+// Package learnsvc owns writing a spell in the spellbook (ADR 0030 step 20):
+// a mage or a bard adds a wizard spell to his spellbook. The class's and PHB
+// Table 4's limits refuse it before any die or write. Learn rolls one d100
+// through the dice port against Table 4's chance to learn, which writes the
+// spell in the spellbook or blocks it until the character's realized level is
+// higher; Add (Ajouter, step 20.6) writes it with no roll. Each entry keeps
+// its origin (step 20.5). Every write is one action-log transaction whose
+// snapshot the journal's Undo writes back (ADR 0018).
 package learnsvc
 
 import (
@@ -15,10 +16,12 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
-// The refusals of step 20.1 and 20.2: nothing is rolled or written. The web
-// words them with the limits of the character's derived spellbook block.
+// The refusals of step 20.1 and 20.2 (all but ErrFailedAtLevel also refuse
+// Add, step 20.6): nothing is rolled or written. The web words them with the
+// limits of the character's derived spellbook block.
 var (
 	// ErrNoSpellbook is a class without a spellbook (only mages and bards).
 	ErrNoSpellbook = fmt.Errorf("the class has no spellbook: %w", domain.ErrInvalidInput)
@@ -51,6 +54,22 @@ type SVC interface {
 	// returns the roll's breakdown (Learned false: the failure is recorded).
 	// domain.ErrNotFound (wrapped) for a spell the catalogue does not hold.
 	Learn(ctx context.Context, characterID int64, spellID string) (*Result, error)
+	// Add writes the spell at the end of the character's spellbook with no
+	// roll (Ajouter, step 20.6), origin spellbook.OriginGiven. Refused like
+	// Learn, but not for a spell failed at this level: the add lifts that
+	// block (its undo puts it back). domain.ErrNotFound (wrapped) for a spell
+	// the catalogue does not hold.
+	Add(ctx context.Context, characterID int64, spellID string) (*Added, error)
+}
+
+// Added is the entry a roll-free add wrote (step 20.6).
+type Added struct {
+	SpellID    string
+	SpellLevel int
+	Origin     spellbook.Origin
+	// GrantLevel is the realized level that granted a level_grant entry (0
+	// otherwise).
+	GrantLevel int
 }
 
 // Result is the full breakdown of a learn roll (step 20.2).
@@ -82,15 +101,19 @@ type Spells interface {
 	Spell(id string) (s Spell, ok bool)
 }
 
-// Book reads a character's spellbook: the catalogue keys it holds.
+// Book reads a character's spellbook: the catalogue keys it holds, and its
+// entries with their origin (step 20.5).
 type Book interface {
 	Keys(ctx context.Context, characterID int64) ([]string, error)
+	Entries(ctx context.Context, characterID int64) ([]spellbook.Entry, error)
 }
 
 // DAL writes a character's spellbook and learn failures. It joins the ctx
 // transaction.
 type DAL interface {
-	AddEntry(ctx context.Context, characterID int64, spellKey string) error
+	// AddEntry writes the entry at the end of the spellbook (a spell already
+	// there keeps its place and takes the entry's origin).
+	AddEntry(ctx context.Context, characterID int64, e spellbook.Entry) error
 	RemoveEntry(ctx context.Context, characterID int64, spellKey string) error
 	// LearnFailure returns the realized level the spell was failed at; ok
 	// is false when it was not.
@@ -144,25 +167,20 @@ func (s *service) Close(_ context.Context) error  { return nil }
 func (s *service) Learn(ctx context.Context, characterID int64, spellID string) (*Result, error) {
 	var res *Result
 	err := s.d.Tx.InTx(ctx, func(ctx context.Context) error {
-		c, err := s.d.Characters.GetCharacter(ctx, characterID)
+		c, sp, err := s.writable(ctx, characterID, spellID)
 		if err != nil {
 			return err
 		}
-		rules := c.Derived.Spellbook
-		if rules == nil {
-			return ErrNoSpellbook
-		}
-		sp, ok := s.d.Spells.Spell(spellID)
-		if !ok {
-			return fmt.Errorf("spell %q: %w", spellID, domain.ErrNotFound)
-		}
-		if !sp.Wizard {
-			return ErrNotAWizardSpell
-		}
 		level := c.Derived.RealizedLevel
-		if err := s.refusal(ctx, c.ID, spellID, sp.Level, level, rules); err != nil {
-			return err
+		// The failure's block of step 20.2.
+		failedAt, failed, err := s.d.DAL.LearnFailure(ctx, c.ID, spellID)
+		if err != nil {
+			return fmt.Errorf("read learn failure: %w", err)
 		}
+		if failed && level <= failedAt {
+			return ErrFailedAtLevel
+		}
+		rules := c.Derived.Spellbook
 		// Step 20.2: one d100 against Table 4's chance to learn.
 		roll := s.d.Dice.RollD100()
 		res = &Result{
@@ -174,7 +192,9 @@ func (s *service) Learn(ctx context.Context, characterID int64, spellID string) 
 			return err
 		}
 		after := spellState{SpellID: spellID, Known: res.Learned}
-		if !res.Learned {
+		if res.Learned {
+			after.Origin = spellbook.OriginLearned // step 20.5
+		} else {
 			after.FailedAtLevel = level
 			res.RetryLevel = level + 1
 		}
@@ -189,36 +209,72 @@ func (s *service) Learn(ctx context.Context, characterID int64, spellID string) 
 	return res, nil
 }
 
-// refusal is step 20.1 (and the failure's block of step 20.2): the reason
-// the spell may not be rolled for, nil when it may.
-func (s *service) refusal(ctx context.Context, characterID int64, spellID string, spellLevel, level int, rules *charactersvc.SpellbookRules) error {
-	keys, err := s.d.Book.Keys(ctx, characterID)
+// Add runs step 20.6 in one transaction: the refusals of step 20.1, then the
+// spell written with the origin given and no die. A failure's block is
+// lifted (the snapshot's "before" keeps it for the undo).
+func (s *service) Add(ctx context.Context, characterID int64, spellID string) (*Added, error) {
+	var res *Added
+	err := s.d.Tx.InTx(ctx, func(ctx context.Context) error {
+		c, sp, err := s.writable(ctx, characterID, spellID)
+		if err != nil {
+			return err
+		}
+		before, err := s.state(ctx, c.ID, spellID)
+		if err != nil {
+			return err
+		}
+		res = &Added{SpellID: spellID, SpellLevel: sp.Level, Origin: spellbook.OriginGiven}
+		after := spellState{SpellID: spellID, Known: true, Origin: res.Origin, GrantLevel: res.GrantLevel}
+		if err := s.write(ctx, c.ID, spellID, after); err != nil {
+			return err
+		}
+		return s.recordAdd(ctx, c.ID, *res, before, after)
+	})
 	if err != nil {
-		return fmt.Errorf("read spellbook: %w", err)
+		return nil, err
+	}
+	return res, nil
+}
+
+// writable reads the character and the spell and returns step 20.1's
+// refusal, the reason the spell may not be written in his spellbook (by a
+// roll or not), nil when it may.
+func (s *service) writable(ctx context.Context, characterID int64, spellID string) (*charactersvc.Character, Spell, error) {
+	c, err := s.d.Characters.GetCharacter(ctx, characterID)
+	if err != nil {
+		return nil, Spell{}, err
+	}
+	rules := c.Derived.Spellbook
+	if rules == nil {
+		return nil, Spell{}, ErrNoSpellbook
+	}
+	sp, ok := s.d.Spells.Spell(spellID)
+	if !ok {
+		return nil, Spell{}, fmt.Errorf("spell %q: %w", spellID, domain.ErrNotFound)
+	}
+	if !sp.Wizard {
+		return nil, Spell{}, ErrNotAWizardSpell
+	}
+	keys, err := s.d.Book.Keys(ctx, c.ID)
+	if err != nil {
+		return nil, Spell{}, fmt.Errorf("read spellbook: %w", err)
 	}
 	sameLevel := 0
 	for _, k := range keys {
 		if k == spellID {
-			return ErrAlreadyKnown
+			return nil, Spell{}, ErrAlreadyKnown
 		}
-		if other, ok := s.d.Spells.Spell(k); ok && other.Level == spellLevel {
+		if other, ok := s.d.Spells.Spell(k); ok && other.Level == sp.Level {
 			sameLevel++
 		}
 	}
 	switch {
-	case spellLevel > rules.ClassMaxSpellLevel:
-		return ErrAboveClass
-	case spellLevel > rules.IntMaxSpellLevel:
-		return ErrAboveIntelligence
+	case sp.Level > rules.ClassMaxSpellLevel:
+		return nil, Spell{}, ErrAboveClass
+	case sp.Level > rules.IntMaxSpellLevel:
+		return nil, Spell{}, ErrAboveIntelligence
 	case !rules.NoMaximum && sameLevel >= rules.MaxSpellsPerLevel:
-		return ErrLevelFull
+		return nil, Spell{}, ErrLevelFull
 	}
-	failedAt, failed, err := s.d.DAL.LearnFailure(ctx, characterID, spellID)
-	if err != nil {
-		return fmt.Errorf("read learn failure: %w", err)
-	}
-	if failed && level <= failedAt {
-		return ErrFailedAtLevel
-	}
-	return nil
+	return c, sp, nil
 }

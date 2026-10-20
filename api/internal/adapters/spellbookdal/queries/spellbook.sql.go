@@ -10,19 +10,27 @@ import (
 )
 
 const addSpellbookEntry = `-- name: AddSpellbookEntry :exec
-INSERT INTO spellbook_entries (character_id, spell_key, position)
+INSERT INTO spellbook_entries (character_id, spell_key, position, origin, grant_level)
 SELECT $1, $2,
-       COALESCE(MAX(position), -1) + 1 FROM spellbook_entries WHERE character_id = $1
-ON CONFLICT (character_id, spell_key) DO NOTHING
+       COALESCE(MAX(position), -1) + 1, $3, $4
+FROM spellbook_entries WHERE character_id = $1
+ON CONFLICT (character_id, spell_key) DO UPDATE SET origin = EXCLUDED.origin, grant_level = EXCLUDED.grant_level
 `
 
 type AddSpellbookEntryParams struct {
 	CharacterID int64
 	SpellKey    string
+	Origin      string
+	GrantLevel  int64
 }
 
 func (q *Queries) AddSpellbookEntry(ctx context.Context, arg AddSpellbookEntryParams) error {
-	_, err := q.db.ExecContext(ctx, addSpellbookEntry, arg.CharacterID, arg.SpellKey)
+	_, err := q.db.ExecContext(ctx, addSpellbookEntry,
+		arg.CharacterID,
+		arg.SpellKey,
+		arg.Origin,
+		arg.GrantLevel,
+	)
 	return err
 }
 
@@ -76,23 +84,30 @@ func (q *Queries) GetLearnFailure(ctx context.Context, arg GetLearnFailureParams
 
 const listSpellbook = `-- name: ListSpellbook :many
 
-SELECT spell_key FROM spellbook_entries WHERE character_id = $1 ORDER BY position, spell_key
+SELECT spell_key, origin, grant_level FROM spellbook_entries WHERE character_id = $1 ORDER BY position, spell_key
 `
 
-// The spells a character knows, by catalogue key, in the sheet's order.
-func (q *Queries) ListSpellbook(ctx context.Context, characterID int64) ([]string, error) {
+type ListSpellbookRow struct {
+	SpellKey   string
+	Origin     string
+	GrantLevel int64
+}
+
+// The spells a character knows, by catalogue key, in the sheet's order, each with its origin
+// (ADR 0030 step 20.5).
+func (q *Queries) ListSpellbook(ctx context.Context, characterID int64) ([]ListSpellbookRow, error) {
 	rows, err := q.db.QueryContext(ctx, listSpellbook, characterID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []string{}
+	items := []ListSpellbookRow{}
 	for rows.Next() {
-		var spell_key string
-		if err := rows.Scan(&spell_key); err != nil {
+		var i ListSpellbookRow
+		if err := rows.Scan(&i.SpellKey, &i.Origin, &i.GrantLevel); err != nil {
 			return nil, err
 		}
-		items = append(items, spell_key)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

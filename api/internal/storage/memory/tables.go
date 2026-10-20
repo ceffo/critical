@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // tables are the store's data, one field per table of the database schema.
@@ -65,8 +66,9 @@ type tables struct {
 	xpSeq int64
 
 	// spellbooks are each character's, by character id,
-	// in sheet order (a spellbook holds catalogue keys).
-	spellbooks map[int64][]string
+	// in sheet order (a spellbook holds catalogue keys, each with its
+	// origin).
+	spellbooks map[int64][]spellbook.Entry
 	// learnFailures are the spells each character failed to learn, by
 	// catalogue key, at the realized level of the failure (ADR 0030 step 20.2).
 	learnFailures map[int64]map[string]int
@@ -102,7 +104,7 @@ func newTables() *tables {
 		spells:        map[string]spellsvc.Spell{},
 		items:         map[owned]storedItem{},
 		reviews:       map[review]bool{},
-		spellbooks:    map[int64][]string{},
+		spellbooks:    map[int64][]spellbook.Entry{},
 		learnFailures: map[int64]map[string]int{},
 		forms:         map[int64]combatsvc.AttackForm{},
 		xp:            map[int64]xpEntry{},

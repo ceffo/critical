@@ -1,6 +1,7 @@
 // Package spellbookdal is the storage adapter of the spellbooks
-// (spellbook_entries): the catalogue keys of the spells each character knows.
-// It delegates to sqlc-generated queries in the queries/ subpackage.
+// (spellbook_entries): the catalogue keys of the spells each character knows,
+// each with its origin (ADR 0030 step 20.5). It delegates to sqlc-generated
+// queries in the queries/ subpackage.
 package spellbookdal
 
 import (
@@ -8,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/adapters/spellbookdal/queries"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // DAL is the store of the spellbooks spellbookadpt's Book reads (its Store
@@ -23,18 +25,43 @@ func New(q queries.Querier) *DAL { return &DAL{q: q} }
 // Keys returns the catalogue keys of the character's spellbook, in the
 // sheet's order.
 func (d *DAL) Keys(ctx context.Context, characterID int64) ([]string, error) {
-	keys, err := d.q.ListSpellbook(ctx, characterID)
+	entries, err := d.Entries(ctx, characterID)
 	if err != nil {
-		return nil, fmt.Errorf("list spellbook of character %d: %w", characterID, err)
+		return nil, err
+	}
+	keys := make([]string, len(entries))
+	for i, e := range entries {
+		keys[i] = e.Key
 	}
 	return keys, nil
 }
 
-// AddEntry writes the spell at the end of the character's spellbook (a
-// spell already there stays where it is).
-func (d *DAL) AddEntry(ctx context.Context, characterID int64, spellKey string) error {
-	if err := d.q.AddSpellbookEntry(ctx, queries.AddSpellbookEntryParams{CharacterID: characterID, SpellKey: spellKey}); err != nil {
-		return fmt.Errorf("add %q to the spellbook of character %d: %w", spellKey, characterID, err)
+// Entries returns the character's spellbook in the sheet's order, each entry
+// with its origin. An origin the domain does not know is an error naming the
+// entry (the column's check refuses one).
+func (d *DAL) Entries(ctx context.Context, characterID int64) ([]spellbook.Entry, error) {
+	rows, err := d.q.ListSpellbook(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("list spellbook of character %d: %w", characterID, err)
+	}
+	out := make([]spellbook.Entry, len(rows))
+	for i, r := range rows {
+		o := spellbook.Origin(r.Origin)
+		if !o.Valid() {
+			return nil, fmt.Errorf("spellbook of character %d: %q has the unknown origin %q", characterID, r.SpellKey, r.Origin)
+		}
+		out[i] = spellbook.Entry{Key: r.SpellKey, Origin: o, GrantLevel: int(r.GrantLevel)}
+	}
+	return out, nil
+}
+
+// AddEntry writes the entry at the end of the character's spellbook (a
+// spell already there stays where it is, with the entry's origin).
+func (d *DAL) AddEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
+	if err := d.q.AddSpellbookEntry(ctx, queries.AddSpellbookEntryParams{
+		CharacterID: characterID, SpellKey: e.Key, Origin: string(e.Origin), GrantLevel: int64(e.GrantLevel),
+	}); err != nil {
+		return fmt.Errorf("add %q to the spellbook of character %d: %w", e.Key, characterID, err)
 	}
 	return nil
 }

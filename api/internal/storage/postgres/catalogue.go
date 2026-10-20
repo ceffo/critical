@@ -416,7 +416,7 @@ func retypeStats(ctx context.Context, tx domain.TxRunner, q storeq.Querier) erro
 }
 
 // spellRefKinds are the action-log kinds whose payload may hold a spell id.
-var spellRefKinds = []string{"cast", "exposure", "spell_prep", "buff_change", "round_advance", "time_passed", "spell_learn"}
+var spellRefKinds = []string{"cast", "exposure", "spell_prep", "buff_change", "round_advance", "time_passed", "spell_learn", "spell_add"}
 
 // spellbookSnapshotPrefix starts the state key of a spellbook snapshot, "spellbook:<spell key>"
 // (learnsvc, ADR 0030 step 20.3).
@@ -424,7 +424,8 @@ const spellbookSnapshotPrefix = "spellbook:"
 
 // StateSpellRefs returns every spell id game state holds (ADR 0021 step 5.4.3): the spellbook
 // entries and the failed learns (spellbook_learn_failures) of every character, the spellId of the
-// "spellbook:<key>" snapshots (their envelope's id) and of spell_learn entries (ADR 0030 step 20), the prepared spells of spell_slots, the spell_id of the active buffs (ADR 0004 step 17), the slot and buff
+// "spellbook:<key>" snapshots (their envelope's id) and of spell_learn and spell_add entries (ADR 0030 steps 20
+// and 20.6), the prepared spells of spell_slots, the spell_id of the active buffs (ADR 0004 step 17), the slot and buff
 // lists in the before/after state of action_snapshots (undo and redo restore them), the spellId
 // of cast, exposure and buff entries in action_log and of the payloads of their corrections,
 // expiredSpellIds of round_advance and time_passed entries, and spells[].id of spell_prep

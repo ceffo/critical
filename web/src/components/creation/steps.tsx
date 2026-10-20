@@ -596,7 +596,7 @@ export function ScoresStep({
                         <li key={i}>
                           <button
                             type="button"
-                            disabled={!pickable}
+                            disabled={!pickable || busy}
                             aria-pressed={
                               pickable ? draft.picked === i : undefined
                             }

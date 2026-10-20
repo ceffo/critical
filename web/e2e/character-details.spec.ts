@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard } from "./helpers";
+import { apiSettled, chooseLanguage, openDashboard } from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
 const VIEWPORTS = [
@@ -182,6 +182,8 @@ test.describe("a character lacking its alignment and sex", () => {
     await pop.getByRole("button", { name: "Enregistrer" }).click();
     await expect(pop.getByTestId("details-missing")).toHaveCount(0);
 
+    // The card shows the picks before the save has landed: a reload now would cut the write.
+    await apiSettled(page);
     await page.reload();
     await page.getByTestId("details-trigger").click();
     await expect(pop).toContainText("Neutre bon");

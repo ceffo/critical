@@ -35,7 +35,7 @@ test("an unavailable database shows the banner, refuses writes, then reloads the
   });
   await page.route("**/api/character", (route) => route.fulfill(unavailable));
 
-  await recordHp(page, "damage", 4, "e2e late commit");
+  await recordHp(page, "damage", 4, "e2e late commit", { refused: true });
   const banner = page.getByTestId("database-banner");
   await expect(banner).toContainText("The database is not answering");
   await expect(banner).toContainText(
@@ -43,7 +43,7 @@ test("an unavailable database shows the banner, refuses writes, then reloads the
   );
 
   // A second click while the banner shows never reaches the server.
-  await recordHp(page, "damage", 4, "e2e late commit");
+  await recordHp(page, "damage", 4, "e2e late commit", { refused: true });
   expect(writes).toHaveLength(1);
 
   // The database answers again: the sheet is reloaded, the banner goes, writes resume.

@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import http from "node:http";
+import { trackApi } from "./helpers";
 import { createReadStream, existsSync, statSync } from "node:fs";
 
 const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -332,6 +333,7 @@ export const test = base.extend<
   // The browser starts logged in (the harness's dev login): the session cookie is host-only, so it
   // also reaches the API on its own port.
   context: async ({ context, stack }, provide) => {
+    trackApi(context);
     await context.addCookies([
       {
         name: stack.session.name,

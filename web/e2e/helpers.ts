@@ -1,9 +1,62 @@
 import {
   expect,
   type Locator,
+  type BrowserContext,
   type Page,
   type Request,
 } from "@playwright/test";
+
+/** The API requests a context has in flight, and when one last started or ended (see `apiSettled`). */
+const apiActivity = new WeakMap<
+  BrowserContext,
+  { inFlight: Set<Request>; last: number }
+>();
+
+/** Start counting a context's API requests; the fixtures call it once per context, before any page. */
+export function trackApi(context: BrowserContext) {
+  const state = { inFlight: new Set<Request>(), last: Date.now() };
+  apiActivity.set(context, state);
+  const isApi = (r: Request) => new URL(r.url()).pathname.startsWith("/api/");
+  context.on("request", (r) => {
+    if (!isApi(r)) return;
+    state.inFlight.add(r);
+    state.last = Date.now();
+  });
+  const ended = (r: Request) => {
+    if (!isApi(r)) return;
+    state.inFlight.delete(r);
+    state.last = Date.now();
+  };
+  context.on("requestfinished", ended);
+  context.on("requestfailed", ended);
+  // A navigation drops the requests of the page it leaves without always reporting them.
+  context.on("page", (page) =>
+    page.on("framenavigated", (frame) => {
+      if (frame !== page.mainFrame()) return;
+      for (const r of state.inFlight)
+        if (r.frame() === frame) state.inFlight.delete(r);
+      state.last = Date.now();
+    }),
+  );
+}
+
+/**
+ * Wait until the page has no API request in flight and none has started or ended for `quietMs`: its
+ * loads and the refetches that follow a write have landed. A refetch starts the moment the answer
+ * that names it arrives, so a short quiet window is enough even with slow answers.
+ */
+export async function apiSettled(page: Page, quietMs = 250) {
+  const state = apiActivity.get(page.context());
+  if (!state) throw new Error("trackApi was not called for this context");
+  await expect
+    .poll(
+      () => state.inFlight.size === 0 && Date.now() - state.last >= quietMs,
+      {
+        intervals: [50],
+      },
+    )
+    .toBe(true);
+}
 
 /** Current HP as shown on the character card ("current / max"). */
 export async function currentHp(page: Page): Promise<number> {
@@ -70,6 +123,9 @@ export async function openDashboard(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
   await expect(page.getByTestId("round-value")).toHaveText(/^\d+$/);
+  // The panels load their own state after the first paint (attack form, crit table...): a spec that
+  // counts reads or acts at once would race them.
+  await apiSettled(page);
 }
 
 /**
@@ -121,12 +177,13 @@ export async function expectNoReload(page: Page) {
   ).toBe(true);
 }
 
-/** Record damage or healing through the quick HP entry. */
+/** Record damage or healing through the quick HP entry; waits for it to be done unless it is `refused`. */
 export async function recordHp(
   page: Page,
   kind: "damage" | "heal",
   amount: number,
   source: string,
+  { refused = false }: { refused?: boolean } = {},
 ) {
   const box = page.getByRole("group", { name: "HP change" });
   await box.getByLabel("Amount").fill(String(amount));
@@ -137,6 +194,9 @@ export async function recordHp(
       exact: true,
     })
     .click();
+  // The fields clear once the change and its refetches are done: typing the next change before that
+  // would be wiped. A refused change (`refused`) keeps them.
+  if (!refused) await expect(box.getByLabel("Amount")).toHaveValue("");
 }
 
 export function combatLog(page: Page): Locator {
@@ -218,6 +278,8 @@ export async function addBuff(page: Page, buff: NewBuff) {
   await expect(buffBadge(page, buff.name).or(closed)).toBeVisible();
   if (await closed.isVisible()) await closed.click();
   await expect(buffBadge(page, buff.name)).toBeVisible();
+  // The write's refetches are done: the store ignores an action while one is running.
+  await apiSettled(page);
 }
 
 /** Undo the log entry whose text contains `text`: it must be the one on top; the journal's one

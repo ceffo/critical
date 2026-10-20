@@ -1973,7 +1973,7 @@ test("database banner: both lines uncut, fr and en, 1280 to 2560", async ({
   };
   await page.route("**/api/hp/event", (route) => route.fulfill(unavailable));
   await page.route("**/api/character", (route) => route.fulfill(unavailable));
-  await recordHp(page, "damage", 4, "e2e lost blow");
+  await recordHp(page, "damage", 4, "e2e lost blow", { refused: true });
   const banner = page.getByTestId("database-banner");
   await expect(banner).toContainText(
     "Your last action may not have been saved",

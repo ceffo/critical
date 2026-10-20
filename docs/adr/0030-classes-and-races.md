@@ -18,6 +18,8 @@ and 3, each from its implementation.
 
 _Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: step 1 and steps 17 and 18 (the skill armour is the worn body armour; the entered field and its drop-down are removed, ADR 0033 step 14), step 23 (the weapon type also comes from the catalogue row, ADR 0033 steps 3 and 21) and the Consequences (class armour and weapon limits warned, never enforced, ADR 0033 step 20)._
 
+_Amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-20), on implementation: step 12 (specialization becomes a fighter's weapon pick at the PHB cost, the weapon's flag derived from it, ADR 0037 step 9), steps 17 and 18 (the skill-point budget refuses a save that leaves the points over budget and spends more, the thief's per-skill cap included; otherwise a warning, and leftovers a reminder, ADR 0037 steps 10 and 11) and the Consequences' "proficiency slots" (covered by ADR 0037)._
+
 ## Context
 
 Until now the app manages one level 15 half-elf Bard and stores what the sheet says: level, THAC0
@@ -370,7 +372,10 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     slings and thrown weapons (dagger, dart, hand axe…) get no bonus: the book names only melee
     weapons and bows and crossbows (supervisor, 2026-10-18, the PHB literally; was the melee
     +1/+2).)_ Proficiency slots and the cost of
-    specialization are not tracked.
+    specialization are not tracked. _(Amended by [ADR 0037](0037-proficiencies.md) step 9, on
+    implementation: specialization is a fighter's weapon pick of one weapon type at the PHB's
+    cost, 2 slots in all for a melee weapon or crossbow, 3 for a bow; a weapon is specialized when
+    its type has that pick, and the per-weapon flag is no longer written or read.)_
 
     As built (user, 2026-10-18: point-blank is a per-request flag, the bonuses generic by weapon
     kind, which ones a launcher gets taken from the PHB; supervisor, 2026-10-18: the PHB text
@@ -481,7 +486,10 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     points are entered as **one total per skill**, not per level, so the budget is checked on the
     totals the realized level allows (60 + 30 a level after the 1st in all, 30 + 15 a level after
     the 1st in one skill): `derived.skillBudget`, codes `skill_points_total` and
-    `skill_points_per_skill`, shown under the skills, never a refusal.
+    `skill_points_per_skill`, shown under the skills, never a refusal. _(Amended by
+    [ADR 0037](0037-proficiencies.md) step 10, on implementation: a save that leaves the total, or
+    one skill's points, over its limit **and** above what it was is refused, `over_budget`; any
+    other stays a warning, and points left to spend are the reminder `skill_points_to_spend`.)_
     The player spends points **after creation** too (the triage ruling: "the player spends
     them"): `PUT /api/skills/points` sets each skill's total, checked as at creation
     (`charactersvc.ValidSkillPoints`), the budget at the realized level still only a warning. It is
@@ -504,7 +512,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     28: Pick Pockets only) + armour (Table 29 on the body armour worn, ADR 0033 step 14; metal armour up to chain mail is the elven chain column plus the extra -5%
     of the table's note, step 1), capped at 95% and floored at 0. The budget is a warning as step
     17's, 20 points at level 1 and 15 a level after (PHB p.42; accepted by the user in triage,
-    2026-10-18); the PHB gives the bard no per-skill limit, so none is checked. The computed
+    2026-10-18); the PHB gives the bard no per-skill limit, so none is checked. _(Amended by
+    [ADR 0037](0037-proficiencies.md) step 10, on implementation: refused over budget when the
+    total grows, as step 17's.)_ The computed
     percentage replaces the sheet's in [ADR 0014](0014-skill-checks.md) step 3. The other bard
     abilities stay as they are.
     _(As built, 2026-10-18)_ Step 17's machinery serves the bard, generalised by class rather than
@@ -721,6 +731,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 - The web shows derived values and prompts; it never computes them (house rule).
 - Not covered: paladin, ranger, druid, specialist wizards, priests of specific mythoi, multi-class
   and dual-class, psionics, level drain, levels above 20, thief scroll use and followers, fighter
-  followers, proficiency slots, a race's conditional combat traits (shown as text), the Wisdom
+  followers, proficiency slots (_covered by [ADR 0037](0037-proficiencies.md), on
+  implementation_), a race's conditional combat traits (shown as text), the Wisdom
   magical defence adjustment on saves, the cleric's blunt-weapon restriction and class armour
   limits (not enforced).

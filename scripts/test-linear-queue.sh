@@ -122,7 +122,8 @@ grep -q 'not this' "$tmp/out" && fail "Questions section ran into the next secti
 grep -q '^2\. \[TST-21\] no section$' "$tmp/out" || fail "second item missing"
 grep -q 'no Questions section' "$tmp/out" || fail "missing-section warning absent"
 grep -q '^3\. \[ledger\] 1\. ledger question one$' "$tmp/out" || fail "ledger line missing"
-grep -q '^4\. \[ledger\] 2\. ledger two$' "$tmp/out" || fail "second ledger line missing"
+grep -q '^4\. \[ledger\] not numbered$' "$tmp/out" || fail "un-numbered ledger line skipped"
+grep -q '^5\. \[ledger\] 2\. ledger two$' "$tmp/out" || fail "second ledger line missing"
 grep -q 'not a question' "$tmp/out" && fail "ledger read past its section"
 
 cp "$tmp/empty.json" "$tmp/fixtures.json"

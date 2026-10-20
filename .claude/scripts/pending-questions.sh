@@ -33,6 +33,6 @@ if [ -f "$ledger" ]; then
   while IFS= read -r line; do
     n=$((n + 1)); printf '%d. [ledger] %s\n' "$n" "$line"
   done < <(awk '/^## Pending questions to user/{f=1;next} /^## /{f=0} f' "$ledger" \
-           | grep -E '^[0-9]+\.' || true)
+           | grep -vE '^[[:space:]]*$|^-? *none\.?$' || true)
 fi
 [ "$n" -eq 0 ] || exit 3

@@ -3,7 +3,8 @@
 **Status**: accepted 2026-10-18 (decisions from the user's triage of the onboarding epic, the same
 day; the details this ADR added beyond the triage were accepted by the supervisor in review). Steps 1, 2, 3 and 8 (for alignment, sex and the race detail) implemented 2026-10-18, see "As built"; step 5 (height, weight and age) and its part of step 8 implemented 2026-10-19, see "As built (step 5)"; steps 6 and 7 (the score and max HP rolls) implemented 2026-10-18, see "As built (steps 6 and 7)"; the rest is not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
 step 7.5 on level 1 hit points) and [ADR 0029](0029-users-login-and-access.md) steps 7.2 and 7.3
-(character actions leave the cog menu; creation is a full-screen route).
+(character actions leave the cog menu; creation is a full-screen route). Step 4.2 superseded by
+[ADR 0037](0037-proficiencies.md) step 6 (languages as non-weapon picks), on implementation.
 
 ## Context
 
@@ -106,7 +107,10 @@ flowchart LR
       14 to 15: 4; 16: 5; 17: 6; 18: 7; 19 and up as the table), the native language not counted.
       Going over is a **warning, never a refusal**: `languages_over_limit` with `count` and
       `limit`. The same warning is read again when the Intelligence score is later edited below the
-      languages known.
+      languages known. _(Superseded by [ADR 0037](0037-proficiencies.md) step 6, on
+      implementation: each language beyond the native one and Common is a "Languages, Modern"
+      pick of one non-weapon slot, Table 4's count becomes bonus slots, the warning is no longer
+      served, and a languages edit meets the slot budget of ADR 0037 step 10.)_
    3. **Offered, not restricted**: the form offers the whole catalogue with the
       race's PHB list marked, since the book lets the DM allow any other language; the server accepts
       any catalogue language. Refusals, field `languages`: `unknown` (not in the catalogue),

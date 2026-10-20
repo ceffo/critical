@@ -112,7 +112,9 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     `TestResolveSavingThrow_OneModifierPerBuff`.
 13. **Every change is logged and voidable.** Activating, editing, absorbing and dismissing a buff
     are each one action-log entry with a snapshot of the buff list before and after; casting or
-    receiving a spell records its own entry with the same snapshot (castsvc). Voiding the entry
+    receiving a spell records its own entry with the same snapshot (castsvc); so does a successful
+    skill check that puts a buff on (Tumbling, [ADR 0037](0037-proficiencies.md) step 20, decided
+    2026-10-20, not implemented). Voiding the entry
     restores the list. The entry is written in the same transaction as the change. Next Round,
     End combat, Set round and passing time are in ADR 0005.
     Tests: `TestActivate` ("logs the activation with before/after snapshots, then saves"),

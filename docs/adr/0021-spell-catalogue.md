@@ -10,6 +10,7 @@ user; the API reads formats 5 and 6, the builder publishing format 6 is a separa
 Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; the API reads formats 6 and 7).
 Step 14 (the languages, format 8) is **decided as built**, 2026-10-18 (the API reads formats 7 and 8).
 Step 15 (the gameplay values of a spell text, marked by the API, no format change) is **decided as built**, 2026-10-19.
+Step 16 (the proficiency descriptions, format 9; the API reads format 9 only) is **decided, not implemented**, 2026-10-20 (user triage of 2026-10-20).
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -607,6 +608,40 @@ is only ever appended to by play.
     Tests: `TestMark_FindsTheSixKindsInEnglishAndFrench`, `TestMark_LeavesNonValuesAlone`, `TestMark_TheFixtureCatalogueLosesNothing` (and the real
     catalogue's, when fetched), `TestSpellToDTO_MarksTheValuesOfTheDescriptionAndTheStatsPerLanguage` (api); `value marks`, `stats worded with
     their values marked`, `SpellDescription (gameplay values)` (web).
+16. **The proficiency descriptions, format 9** (**decided** 2026-10-20, not implemented; user triage of 2026-10-20: "extract them from phbs both
+    in French and English, make sure they are properly formatted"; [ADR 0037](0037-proficiencies.md) step 19 shows them). Format 9 is format 8 plus
+    one top-level list. It covers the 65 non-weapon proficiencies of ADR 0037 step 2; weapon proficiencies have no text of their own, and the thief
+    and bard skills' descriptions are another item. English **and** French are required for every row (spells require English only, step 1).
+    1. **`proficiency_descriptions`**, required, exactly 65 rows `{id, description}`: `id` a proficiency id of ADR 0037 step 2's catalogue
+       (`^[a-z0-9]+(_[a-z0-9]+)*$`, once), `description` a language map with **both** `en` and `fr`, each in step 1's Markdown subset (paragraphs, bullet
+       lists, pipe tables kept as tables; no headings, HTML or emphasis; no leading or trailing whitespace). Formats 3 to 8 may not carry it (schema).
+       No other property: the name stays an i18n key by id (ADR 0037 step 2), the figures stay in `seeds/proficiencies.json`.
+    2. **Extraction and the builder** (`critical-rulebooks`; no agent reads pages). A committed script reads the PHB OCR (English) and the
+       *Manuel des Joueurs* OCR (French) and writes step 1's subset; hand fixes go in an `OVERRIDES` file keyed by id and language, applied after
+       the extraction and listed by the builder. The builder **refuses to publish**, naming the id and language, when: a catalogue id has no row; a
+       row's id is not in the catalogue; a row lacks `en` or `fr`, or has an empty one; a text breaks step 1's lint (the block rules, a table without its
+       delimiter row or with a ragged column count, emphasis or HTML, surrounding whitespace); an id repeats. The catalogue's 65 ids are a committed copy
+       refreshed with the schema by `scripts/fetch-ref` (supervisor ruling 2026-10-20, from the user's triage). The output is validated against the schema before it is written, as step 4 says.
+    3. **Import** (step 5 amended). In the same transaction as the spells (step 5.4), each description becomes `localized_texts` rows, `en` and `fr`
+       (ADR 0023: a key, never a column per language), keyed from the proficiency id (one table `proficiency_descriptions (proficiency_id
+       primary key, description text key)`, no foreign key to the seeds, as `localized_texts` has none; supervisor ruling 2026-10-20). Rows are upserted by id and a row the
+       artifact no longer lists is deleted with its texts: nothing in game state refers to a description (a pick stores the id, ADR 0037 step 12), so
+       there is no step 5.4.3 refusal. The import also refuses, naming the id and language, what the builder refuses, and a catalogue id of
+       `seeds/proficiencies.json` that has no description or the reverse. A second import of the same artifact changes nothing (step 5.3, same
+       `format` and `version`); a failed import changes nothing (step 5.5), the texts included.
+    4. **The fixture is format 9** (`api/testdata/catalogue.json`): all 65 ids with **invented** `en` and `fr` text, never book text (step 7), at least
+       one with a list and one with a table, and the fixture still holds every spell id the seeds reference.
+    5. **Rollout, as "Implementation notes (format 1 retired)".** The API reads **format 9 only**: a format-8 artifact (or any other) is
+       refused at start as an unknown format, the message naming the format found, `this API reads format 9`, followed by the advice to run
+       `just catalogue` (as format 1 was refused, step 9.6.3). Merge order: the builder publishing format 9 first (an item in `critical-rulebooks`),
+       then the API change; the domain lists one format and `schemas/catalogue.schema.json` accepts format 9 only (as the amendment of 2026-10-16).
+    6. **Served by the API, never by the seeds** (ADR 0037 step 19): the description is read from `localized_texts` at request time as a language map.
+    Tests: `Schema_Step16_Format9ProficiencyDescriptions` (cataloguecheck: the 65 rows, both languages, the lint, no other format carries the list),
+    `Parse_Step16_ReadsFormat9`, `Parse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt), `Import_Step16_DescriptionsInLocalizedTexts`,
+    `Import_Step16_ReimportChangesNothing`, `Import_Step16_FailedImportChangesNothing`, `Import_Step16_RefusesAMissingLanguageOrIdMismatch`
+    (catalogueimport), `Startup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition), `RealCatalogue_Step16_EveryDescriptionPresentInBothLanguages`
+    (skipped without a format-9 `.catalogue/catalogue.json`); in `critical-rulebooks`: `Build_Step16_RefusesAMissingLanguageUnknownIdOrBadText` and
+    `Extract_Step16_OverridesAreApplied`.
 
 ## Consequences
 

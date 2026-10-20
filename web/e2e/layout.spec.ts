@@ -19,6 +19,8 @@ import {
   reloadSettled,
   openFold,
   openTypedAdd,
+  expectUndoOn,
+  logEntry,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
 import {
@@ -2927,6 +2929,24 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
   await expect(learn).toContainText("Dans le grimoire");
   await expect(learn.getByTestId("add-spell")).toHaveCount(0);
   await snap(page, "mage-add-known-fr-1280x800");
+
+  // The spell_add entry worded in French on top of the journal; its undo reads the spellbook again,
+  // so the detail drops "Dans le grimoire" and offers Ajouter (what the undo writes is a Go test,
+  // composition).
+  await expectUndoOn(page, "Ajouté au grimoire : Alarme (sans jet)");
+  await expect(page.getByTestId("undo")).toBeEnabled();
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(learn).not.toContainText("Dans le grimoire");
+  await expect(learn.getByTestId("add-spell")).toHaveText("Ajouter");
+  await page
+    .getByRole("navigation", { name: "Activités" })
+    .getByRole("button", { name: "Agir", exact: true })
+    .click();
+  await expect(
+    logEntry(page, "Ajouté au grimoire : Alarme (sans jet)"),
+  ).toHaveAttribute("data-status", "voided");
+  await snap(page, "mage-add-undone-journal-fr-1280x800");
 });
 
 // The cleric's screens (ADR 0030 steps 14 and 16) uncut in French at 1280x800 and 2560x1440: the

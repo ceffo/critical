@@ -284,7 +284,6 @@ export interface LanguageOption {
   name: LocalizedText;
 }
 
-/** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 /** One proficiency of the non-weapon catalogue; `slots` is Table 37's cost before the class's crossover. */
 export interface ProficiencyOption {
   id: string;
@@ -294,6 +293,7 @@ export interface ProficiencyOption {
   groups: string[];
 }
 
+/** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 export interface CreationOptions {
   /**
    * `exceptionalStrengthRaces`: the races that enter an 18/xx at Strength 18 with the class (ADR

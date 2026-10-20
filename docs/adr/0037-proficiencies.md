@@ -65,20 +65,26 @@ writes `Test<name>` and adds the prefix here in the same PR.
      wizard and general; cleric priest and general; thief rogue and general; bard rogue, warrior,
      wizard and general.
    PHB Table 4's "# of Lang." (p.16) stays the committed `ruletablesvc.LanguageLimit` of ADR 0032.
-   Tests: `TestProficiencyTables_Step1_Table38Crossovers` (seedcheck: Table 38's five rows), `TestProficiencies_Step2_OptionsWireShape` (composition: the catalogue and the groups on `GET /api/characters/options`, as `proficiencies` and `proficiencyGroups`); `ProficiencyTables_Step1_Table34AndTable38` (seedcheck: the four rows and five classes
-   above, read from the seed file).
+   Tests: `TestProficiencyTables_Step1_Table38Crossovers` (seedcheck: Table 38's five rows),
+   `TestProficiencies_Step2_OptionsWireShape` (composition: the catalogue and the groups on
+   `GET /api/characters/options`, as `proficiencies` and `proficiencyGroups`),
+   `ProficiencyTables_Step1_Table34AndTable38` (seedcheck: the four rows and five classes above,
+   read from the seed file).
 2. **The non-weapon catalogue.** The same file's `nonweapon` list holds every proficiency of PHB
    Table 37 (p.54-55) once: 65 rows. Each has an `id` (a stable snake_case code; the seed bard's
    eight ids are kept: `musical_instrument`, `tumbling`, `ventriloquism`, `riding_land`,
    `appraising`, `singing`, `reading_writing`, `local_history`; "Languages, Modern" is
-   `languages_modern`), its `ability` (`str`, `dex`, `con`, `int`, `wis`, `cha`), its check
+   `languages_modern`), its `ability` (`str`, `dex`, `con`, `int`, `wis`, `cha`; absent for the two rows Table 37 gives
+   no check, Blind-fighting and Mountaineering, "NA", whose modifier is then 0), its check
    `modifier`, its `slots` and its `groups` (`general`, `priest`, `rogue`, `warrior`, `wizard`):
    a proficiency Table 37 prints under several groups (Ancient History and Navigation under
    three, thirteen others under two) is one row listing them all, the figures being the same in
    each. Names are en/fr i18n keys by id, as the languages' are; a campaign proficiency is a data
    change (a row and its two keys), never code.
-   Tests: `TestNonweaponCatalogue_Step2_Table37Rows`, `TestNonweaponCatalogue_Step2_SeedBardIdsKeepTheirFigures`, `TestNonweaponCatalogue_Step2_EveryIdHasAnEnAndFrName` (seedcheck: 65 unique ids, a valid ability, at
-   least one known group, slots of 1 or more; the eight seed ids present with Table 37's figures;
+   Tests: `TestNonweaponCatalogue_Step2_Table37Rows`,
+   `TestNonweaponCatalogue_Step2_SeedBardIdsKeepTheirFigures`,
+   `TestNonweaponCatalogue_Step2_EveryIdHasAnEnAndFrName` (seedcheck: 65 unique ids, a valid ability
+   or none, at least one known group, slots of 1 or more; the eight seed ids present with Table 37's figures;
    an i18n key per id in both locale files).
 
 ### Slots

@@ -10,7 +10,7 @@ user; the API reads formats 5 and 6, the builder publishing format 6 is a separa
 Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; the API reads formats 6 and 7).
 Step 14 (the languages, format 8) is **decided as built**, 2026-10-18 (the API reads formats 7 and 8).
 Step 15 (the gameplay values of a spell text, marked by the API, no format change) is **decided as built**, 2026-10-19.
-Step 16 (the proficiency descriptions, format 9; the API reads format 9 only) is **decided, not implemented**, 2026-10-20 (user triage of 2026-10-20).
+Step 16 (the proficiency descriptions, format 9; the API reads format 9 only) is **decided as built**, 2026-10-20 (user triage of 2026-10-20).
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -608,7 +608,7 @@ is only ever appended to by play.
     Tests: `TestMark_FindsTheSixKindsInEnglishAndFrench`, `TestMark_LeavesNonValuesAlone`, `TestMark_TheFixtureCatalogueLosesNothing` (and the real
     catalogue's, when fetched), `TestSpellToDTO_MarksTheValuesOfTheDescriptionAndTheStatsPerLanguage` (api); `value marks`, `stats worded with
     their values marked`, `SpellDescription (gameplay values)` (web).
-16. **The proficiency descriptions, format 9** (**decided** 2026-10-20, not implemented; user triage of 2026-10-20: "extract them from phbs both
+16. **The proficiency descriptions, format 9** (**decided** 2026-10-20, as built 2026-10-20; user triage of 2026-10-20: "extract them from phbs both
     in French and English, make sure they are properly formatted"; [ADR 0037](0037-proficiencies.md) step 19 shows them). Format 9 is format 8 plus
     one top-level list. It covers the 65 non-weapon proficiencies of ADR 0037 step 2; weapon proficiencies have no text of their own, and the thief
     and bard skills' descriptions are another item. English **and** French are required for every row (spells require English only, step 1).
@@ -636,12 +636,28 @@ is only ever appended to by play.
        `just catalogue` (as format 1 was refused, step 9.6.3). Merge order: the builder publishing format 9 first (an item in `critical-rulebooks`),
        then the API change; the domain lists one format and `schemas/catalogue.schema.json` accepts format 9 only (as the amendment of 2026-10-16).
     6. **Served by the API, never by the seeds** (ADR 0037 step 19): the description is read from `localized_texts` at request time as a language map.
-    Tests: `Schema_Step16_Format9ProficiencyDescriptions` (cataloguecheck: the 65 rows, both languages, the lint, no other format carries the list),
-    `Parse_Step16_ReadsFormat9`, `Parse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt), `Import_Step16_DescriptionsInLocalizedTexts`,
-    `Import_Step16_ReimportChangesNothing`, `Import_Step16_FailedImportChangesNothing`, `Import_Step16_RefusesAMissingLanguageOrIdMismatch`
-    (catalogueimport), `Startup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition), `RealCatalogue_Step16_EveryDescriptionPresentInBothLanguages`
-    (skipped without a format-9 `.catalogue/catalogue.json`); in `critical-rulebooks`: `Build_Step16_RefusesAMissingLanguageUnknownIdOrBadText` and
-    `Extract_Step16_OverridesAreApplied`.
+    7. **As built.** (a) *Import*: `importProficiencyDescriptions` (storage/postgres), in the spells' transaction, table
+       `proficiency_descriptions` (migration 029); a row keeps its text key across imports and only changed texts are written. (b) *The id check*
+       (a catalogue id with no description, a description for an unknown id, an id twice, a language missing) is
+       `catalogue.CheckProficiencyDescriptions`, run by the composition root before the migration's seed and the import, like the spell effects' and the
+       spellbook seed's checks, so a mismatch changes nothing at all. (c) *Serving shape*: a lookup by id, `GET /api/proficiencies/{id}/description`
+       ([ADR 0037](0037-proficiencies.md) step 19.4; `profdescsvc`, `profdeschdl`), not a `description` on each `GET /api/characters/options` row:
+       65 descriptions with tables would weigh several tens of kilobytes on a payload the creation flow reads on every open. The server reads the
+       texts back from `localized_texts` **once after the import** (`DB.ProficiencyDescriptions`) and serves them from memory, as the spell catalogue
+       is (a pop-up costs the database nothing, ADR 0024 step 2). (d) *Formats*: the domain lists format 9 only and the schema accepts format 9 only
+       (and requires everything the formats 3 to 8 added, so its per-format conditionals are gone); `ruletablesadpt.Parse` still has its per-format
+       branches, reachable only from its own tests, to be dropped by a later clean-up. (e) *Switch-over*: `just catalogue` takes the rulebooks
+       clone's `dist/catalogue.json` at `CATALOGUE_REF` (default the checked-out branch), so nothing in this repo is pinned: once the
+       builder's format 9 artifact is on the rulebooks default branch, `just catalogue` then `just dev` import the descriptions (the recorded
+       format and version differ, so the import runs). A format-8 `.catalogue/catalogue.json` is refused at start with the `just catalogue` advice.
+    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `TestSchema_Step16_OnlyFormat9IsValid` and
+    `TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId` (cataloguecheck: the 65 rows, both languages, the lint, no other format),
+    `TestParse_Step16_ReadsFormat9`, `TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt),
+    `TestImportCatalogue_Step16_DescriptionsInLocalizedTexts`, `TestImportCatalogue_Step16_ReimportChangesNothing`,
+    `TestImportCatalogue_Step16_FailedImportChangesNothing` (storage/postgres), `TestCheckProficiencyDescriptions_Step16_RefusesAMissingLanguageOrIdMismatch`
+    (domain/catalogue), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` and `TestStartup_Step16_RefusesADescriptionIdMismatch`
+    (composition), `TestRealCatalogue_Step16_EveryDescriptionPresentInBothLanguages` (seedcheck; skipped without a format-9 `.catalogue/catalogue.json`);
+    in `critical-rulebooks`: `Build_Step16_RefusesAMissingLanguageUnknownIdOrBadText` and `Extract_Step16_OverridesAreApplied`.
 
 ## Consequences
 

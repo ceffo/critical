@@ -611,6 +611,10 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   upserts every spell by `spells.key`, deletes the spells the artifact dropped unless the seeds or the game
   state (slots, undo snapshots, log payloads) refer to them, and records the version. Each step and its test
   are in ADR 0021 step 5.
+- **Proficiency descriptions** (format 9, [ADR 0021](adr/0021-spell-catalogue.md) step 16, migration 029):
+  `proficiency_descriptions (proficiency_id primary key, description)`, `description` a key into
+  `localized_texts` (`en` and `fr`), written in the spells' transaction; the server reads them back once after
+  the import and serves them from memory at `GET /api/proficiencies/{id}/description` (`profdescsvc`).
 - **Columns**: `spells.key` (the artifact id, unique; NULL on older duplicate rows, never served), `class`,
   `level`, `source`, the typed `stats` JSON, and ten text columns (`name`, `description`, `school`, `sphere`,
   the six raw stat texts) that hold a **key into `localized_texts`**, not text

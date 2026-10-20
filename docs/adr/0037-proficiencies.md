@@ -593,10 +593,13 @@ descriptions and the effects of other proficiencies are separate, deferred items
          `GET /api/proficiencies/{id}/description` answers `{id, description: {en, fr}}`,
          404 `not_found` for an id the catalogue does not hold; the pop-up fetches it when opened, so
          `GET /api/characters/options` does not grow by 65 texts (supervisor ruling 2026-10-20).
+         *As built 2026-10-20 (the API side):* `profdescsvc` and `profdeschdl`, the descriptions read from
+         `localized_texts` once after the catalogue import and served from memory (ADR 0021 step 16.7); the
+         route needs a session, no current character.
     19.5 **No description yet:** a catalogue without format 9 does not start (ADR 0021 step 16.5), so
          the pop-up always has a text; a language the map lacks falls back, which format 9 prevents.
-    Tests: `ProficiencyDescription_Step19_ServedAsALanguageMapFromTheCatalogue` (router: `en` and
-    `fr`, an unknown id), `ProficiencyDescriptions_Step19_NotInTheSeeds` (seedcheck: no description
+    Tests: `TestProficiencyDescription_Step19_ServedAsALanguageMapFromTheCatalogue` (router: `en` and
+    `fr`, an unknown id), `TestProficiencyDescriptions_Step19_NotInTheSeeds` (seedcheck: no description
     key in `seeds/proficiencies.json`, nor in the locale files), `SkillRow_Step19_NameOpensThePopupAbilityRolls`,
     `ProficiencyPopup_Step19_ShowsNameDescriptionThenFigures`,
     `ProficiencyPicker_Step19_NameOpensThePopupAndShowsTheClassCost` (web).

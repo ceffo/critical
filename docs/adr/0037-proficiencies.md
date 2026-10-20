@@ -5,7 +5,7 @@ epic on 2026-10-19; this ADR writes them down as steps). Parts marked _(proposed
 this ADR adds where the book leaves a figure open; they await the user's OK in the PR. Not
 implemented. The non-weapon steps (1, 3 to 5, 10 to 14 and 16.1, the non-weapon pool) as built
 2026-10-20; the weapon pool (steps 3, 7, 10 to 14 and 16.2 for weapon picks) as built 2026-10-20;
-steps 6, 8, 9, 15 and 16.3 not implemented. Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
+step 8 as built 2026-10-20; steps 6, 9, 15 and 16.3 not implemented. Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
 proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequences),
 [ADR 0030](0030-classes-and-races.md) (steps 12, 17 and 18 and the "Not covered" proficiency
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
@@ -184,9 +184,22 @@ writes `Test<name>` and adds the prefix here in the same PR.
    roll takes none. _(proposed: a weapon with no weapon type takes no penalty and carries the
    warning `weapon_type_missing`, so the player sets its type; the app never guesses one.)_ The
    related-weapons half penalty is deferred (Consequences).
-   Tests: `ResolveAttack_Step8_NonproficientPenaltyByGroup` (combatsvc: each group; with a pick,
-   none; a launcher by its own type), `PreviewAttack_Step8_ShowsThePenalty`,
-   `ResolveAttack_Step8_NoTypeNoPenaltyWarned` (combatsvc).
+   Tests: `TestResolveAttack_Step8_NonproficientPenaltyByGroup` (combatsvc: each group; with a pick,
+   none), `TestResolveAttack_Step8_LauncherByItsTypeAndOrder` (a launcher by its own type; after
+   the buffs, before the situational), `TestPreviewAttack_Step8_ShowsThePenalty`,
+   `TestResolveAttack_Step8_NoTypeNoPenalty`, `TestRollSpellToHit_Step8_NoPenalty` (combatsvc).
+   _(As built 2026-10-20: Table 34's penalty is served on the character's derived proficiency
+   figures (`charactersvc.ProficiencySlots.NonproficientPenalty`, read from the seed's `slots`
+   rows) and judged by `Character.NonproficientPenalty(weaponType)`; combatsvc adds the modifier
+   `nonproficient` (detail the weapon type, which the web names) in the code the attack and the
+   preview share. Any stored pick of the type counts, a kept pick the class may not make
+   (`allowed: false`, step 7) included: the step asks for a pick, and wielding is never refused.
+   A character without Table 34 figures (no catalogue, an unknown class) takes none. The warning
+   `weapon_type_missing` is a piece warning (ADR 0033 step 20's list, every class, on a wielded
+   weapon with no type), served on the piece and the attack card like the class warnings:
+   `TestClassWarnings_Step8_WeaponTypeMissing` (itemsvc). Kelsen's six weapons take none
+   (`TestKelsen_Step8_OwnWeaponsTakeNoPenalty`, composition, which also checks the preview
+   equals the roll once a pick is removed).)_
 9. **Specialization is a weapon pick.** Fighters only (`derived.specializes`, ADR 0030 step 12;
    another class `not_allowed`), in **one** weapon type at most (PHB p.52: the fighter chooses a
    single weapon; a second `not_allowed`). The pick spends, in all (PHB p.53): **2 slots** for a

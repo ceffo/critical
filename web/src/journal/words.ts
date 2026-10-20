@@ -79,6 +79,11 @@ export function modLabel(
     return t("result.mods.race", {
       race: t(`details.races.${m.detail ?? ""}`, { defaultValue: m.detail }),
     });
+  // The non-proficiency penalty (ADR 0037 step 8): the detail is the weapon type code.
+  if (m.kind === "nonproficient")
+    return t("result.mods.nonproficient", {
+      type: t(`weapons.types.${m.detail ?? ""}`, { defaultValue: m.detail }),
+    });
   // An 18/xx Strength (ADR 0030 step 9): the score and its percentile.
   if (m.kind === "strength" && m.strExceptional)
     return t("result.mods.strength", {

@@ -62,7 +62,7 @@ func TestClassWarnings_Step20_Cleric(t *testing.T) {
 	assert.Empty(t, warned("cleric", weapon("ms", "morning_star", "other_melee", "p", "b")), "P/B is allowed")
 	assert.Equal(t, []itemsvc.Warning{w("s", "weapon_not_allowed")}, warned("cleric", weapon("s", "long_sword", "long_sword", "s")))
 	assert.Equal(t, []itemsvc.Warning{w("b", "weapon_not_allowed")}, warned("cleric", weapon("b", "long_bow", "long_bow")), "a catalogue bow does no b")
-	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_not_allowed")}, warned("cleric", weapon("h", "", "", "p", "s")))
+	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_not_allowed"), w("h", "weapon_type_missing")}, warned("cleric", weapon("h", "", "", "p", "s")))
 	assert.Empty(t, warned("cleric", weapon("h", "", "other_melee")), "homebrew with no damage type is not settled")
 }
 
@@ -141,7 +141,8 @@ func TestClassWarnings_Step20_ClericLauncherJudgedByItsAmmunition(t *testing.T) 
 	arrows := itemsvc.Item{ID: "ar", Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", DamageTypes: []string{"p", "b"}}
 	assert.Empty(t, warned("cleric", launcher("b", "short_bow", "short_bow", "arrow"), arrows), "the ammunition piece says b")
 	assert.Empty(t, warned("cleric", weapon("ms", "morning_star", "other_melee", "p", "b")))
-	assert.Empty(t, warned("cleric", weapon("h", "", "")), "homebrew with no damage type and no code is not settled")
+	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_type_missing")}, warned("cleric", weapon("h", "", "")),
+		"homebrew with no damage type and no code is not settled: only its missing type is warned")
 	assert.Equal(t, []itemsvc.Warning{w("d", "weapon_not_allowed")}, warned("cleric", weapon("d", "dagger", "dagger", "p")))
 }
 
@@ -162,4 +163,20 @@ func TestClassWarnings_Step20_ArmourByColumn(t *testing.T) {
 	assert.Empty(t, warned("thief", armour("elven_chain_mail", "elven_chain")))
 	assert.Equal(t, []itemsvc.Warning{w("chain_mail", "armour_not_allowed")}, warned("thief", armour("chain_mail", "metal")))
 	assert.Empty(t, warned("fighter", armour("plate_mail", "none_allowed"), shield("s"), weapon("a", "battle_axe", "other_melee", "s")))
+}
+
+// ADR 0037 step 8 (proposed there): a wielded weapon with no weapon type carries
+// weapon_type_missing, for every class (the fighter too, whom step 20 never warns), since its
+// attacks take no non-proficiency penalty until the player sets one. A typed weapon, or a
+// typeless one not wielded, is not warned.
+func TestClassWarnings_Step8_WeaponTypeMissing(t *testing.T) {
+	for _, class := range []string{"fighter", "mage", "cleric", "thief", "bard"} {
+		got := warned(class, weapon("h", "", "", "b"))
+		assert.Contains(t, got, w("h", "weapon_type_missing"), class)
+		assert.NotContains(t, warned(class, weapon("d", "dagger", "dagger", "p")), w("d", "weapon_type_missing"), class)
+		carried := weapon("c", "", "", "b")
+		carried.State = itemsvc.StateCarried
+		assert.Empty(t, warned(class, carried), class)
+	}
+	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_type_missing")}, warned("fighter", weapon("h", "", "")))
 }

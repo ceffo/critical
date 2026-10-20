@@ -1046,6 +1046,7 @@
       "specialization": "Spécialisation",
       "point_blank": "Bout portant",
       "backstab": "Attaque dans le dos",
+      "nonproficient": "Non-maîtrise ({{type}})",
       "dice_modifier": "{{detail}} : partie fixe"
     },
     "cast": {
@@ -2366,6 +2367,7 @@
       "armour_not_allowed": "Pas pour {{who}}",
       "weapon_not_allowed": "Pas pour {{who}}",
       "hands": "Arme à deux mains avec un bouclier",
+      "weapon_type_missing": "Sans type d'arme : compétence martiale non vérifiée",
       "title": "Avertissements de classe",
       "who": {
         "bard": "un barde",

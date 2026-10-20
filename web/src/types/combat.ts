@@ -18,6 +18,8 @@ export type ModifierKind =
   | "specialization"
   | "point_blank"
   | "backstab"
+  /** PHB Table 34's non-proficiency penalty (ADR 0037 step 8); detail is the weapon type code. */
+  | "nonproficient"
   /** The flat part of the damage as printed (1d4+1), a weapon damage term; detail is the damage (ADR 0003 step 2). */
   | "dice_modifier";
 

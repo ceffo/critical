@@ -145,3 +145,26 @@ func (b *Book) Spell(id string) (learnsvc.Spell, bool) {
 	}
 	return learnsvc.Spell{Level: s.Level, Wizard: s.Class == "Wizard"}, true
 }
+
+// Claimed are the character's free spells already in the book (ADR 0030
+// step 20.8): its spellbook.OriginLevelGrant entries, each as its grant level
+// and the catalogue's level of its spell. An entry the catalogue does not
+// hold is an error naming it, as in All.
+func (b *Book) Claimed(ctx context.Context, characterID int64) ([]spellbook.FreeSpell, error) {
+	entries, err := b.store.Entries(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+	var out []spellbook.FreeSpell
+	for _, e := range entries {
+		if e.Origin != spellbook.OriginLevelGrant {
+			continue
+		}
+		s, ok := b.spells[e.Key]
+		if !ok {
+			return nil, fmt.Errorf("spellbook of character %d: %q is not in the spell catalogue", characterID, e.Key)
+		}
+		out = append(out, spellbook.FreeSpell{Level: e.GrantLevel, SpellLevel: s.Level})
+	}
+	return out, nil
+}

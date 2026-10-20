@@ -43,6 +43,18 @@ var (
 	ErrFailedAtLevel = fmt.Errorf("spell failed at this level: %w", domain.ErrInvalidInput)
 )
 
+// The refusals of a free spell's claim (step 20.8), after those of Add:
+// nothing is written.
+var (
+	// ErrNoFreeSpellOwed is a claim for a realized level that owes no free
+	// spell: it opened no spell level, the Intelligence allows none, it was
+	// not taken in the app, or its free spell is already in the book.
+	ErrNoFreeSpellOwed = fmt.Errorf("no free spell owed for that level: %w", domain.ErrInvalidInput)
+	// ErrFreeSpellWrongLevel is a claim with a spell of another spell level
+	// than the one the level's free spell must be of.
+	ErrFreeSpellWrongLevel = fmt.Errorf("the free spell is of another spell level: %w", domain.ErrInvalidInput)
+)
+
 // StateFamily is the action-log state key family of one spell's place in a
 // character's spellbook: "spellbook:<spell key>".
 const StateFamily = "spellbook"
@@ -60,13 +72,21 @@ type SVC interface {
 	// block (its undo puts it back). domain.ErrNotFound (wrapped) for a spell
 	// the catalogue does not hold.
 	Add(ctx context.Context, characterID int64, spellID string) (*Added, error)
+	// AddFreeSpell is Add claiming the free spell realized level grantLevel
+	// owes (step 20.8): the entry's origin is spellbook.OriginLevelGrant with
+	// that level. Refused like Add, then ErrNoFreeSpellOwed when that level
+	// owes none, ErrFreeSpellWrongLevel when the spell is not of the spell
+	// level it owes.
+	AddFreeSpell(ctx context.Context, characterID int64, spellID string, grantLevel int) (*Added, error)
 }
 
-// Added is the entry a roll-free add wrote (step 20.6).
+// Added is the entry a roll-free add wrote (step 20.6), and for a free
+// spell (step 20.8) the realized level that granted it (0 otherwise).
 type Added struct {
 	SpellID    string
 	SpellLevel int
 	Origin     spellbook.Origin
+	GrantLevel int
 }
 
 // Result is the full breakdown of a learn roll (step 20.2).
@@ -214,18 +234,38 @@ func (s *service) Learn(ctx context.Context, characterID int64, spellID string) 
 // spell written with the origin given and no die. A failure's block is
 // lifted (the snapshot's "before" keeps it for the undo).
 func (s *service) Add(ctx context.Context, characterID int64, spellID string) (*Added, error) {
+	return s.add(ctx, characterID, spellID, 0)
+}
+
+// AddFreeSpell runs step 20.8's claim: Add's refusals and write, the entry
+// owed by grantLevel, with the origin level_grant.
+func (s *service) AddFreeSpell(ctx context.Context, characterID int64, spellID string, grantLevel int) (*Added, error) {
+	if grantLevel < 1 {
+		return nil, ErrNoFreeSpellOwed
+	}
+	return s.add(ctx, characterID, spellID, grantLevel)
+}
+
+// add is Add (grantLevel 0) and AddFreeSpell, in one transaction.
+func (s *service) add(ctx context.Context, characterID int64, spellID string, grantLevel int) (*Added, error) {
 	var res *Added
 	err := s.d.Tx.InTx(ctx, func(ctx context.Context) error {
 		c, sp, err := s.writable(ctx, characterID, spellID)
 		if err != nil {
 			return err
 		}
+		res = &Added{SpellID: spellID, SpellLevel: sp.Level, Origin: spellbook.OriginGiven}
+		if grantLevel > 0 {
+			if err := owes(c.Derived.LevelUp.FreeSpellsOwed, grantLevel, sp.Level); err != nil {
+				return err
+			}
+			res.Origin, res.GrantLevel = spellbook.OriginLevelGrant, grantLevel
+		}
 		before, err := s.state(ctx, c.ID, spellID)
 		if err != nil {
 			return err
 		}
-		res = &Added{SpellID: spellID, SpellLevel: sp.Level, Origin: spellbook.OriginGiven}
-		after := spellState{SpellID: spellID, Known: true, Origin: res.Origin}
+		after := spellState{SpellID: spellID, Known: true, Origin: res.Origin, GrantLevel: res.GrantLevel}
 		if err := s.write(ctx, c.ID, spellID, after, false); err != nil {
 			return err
 		}
@@ -235,6 +275,22 @@ func (s *service) Add(ctx context.Context, characterID int64, spellID string) (*
 		return nil, err
 	}
 	return res, nil
+}
+
+// owes is step 20.8's check of a claim against the free spells owed: one
+// granted by grantLevel, of spellLevel.
+func owes(owed []spellbook.FreeSpell, grantLevel, spellLevel int) error {
+	err := ErrNoFreeSpellOwed
+	for _, o := range owed {
+		if o.Level != grantLevel {
+			continue
+		}
+		if o.SpellLevel == spellLevel {
+			return nil
+		}
+		err = ErrFreeSpellWrongLevel
+	}
+	return err
 }
 
 // writable reads the character and the spell and returns step 20.1's

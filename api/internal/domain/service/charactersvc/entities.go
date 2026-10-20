@@ -3,6 +3,7 @@ package charactersvc
 import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // Character is the pure domain representation of a character row. No transport
@@ -176,6 +177,10 @@ type PendingLevel struct {
 	Die       int
 	FixedGain int
 	Grants    skills.LevelGrants
+	// FreeSpells are the free spells the level grants a mage (ADR 0030 step
+	// 20.8): one per spell level it opens, none above the Intelligence's
+	// maximum. Set by the service; nil for none.
+	FreeSpells []spellbook.FreeSpell
 }
 
 // LevelUp is ADR 0030 step 7 on a character: its realized level against
@@ -193,6 +198,10 @@ type LevelUp struct {
 	// card reminds the player while any is above 0; nothing blocks play. Set
 	// by the service with the pools, not by Derive.
 	ToSpend skills.LevelGrants
+	// FreeSpellsOwed are the free spells the levels taken in the app granted
+	// and the spellbook does not hold yet (ADR 0030 step 20.8), part of the
+	// same reminder. Set by the service; nil for none.
+	FreeSpellsOwed []spellbook.FreeSpell
 }
 
 // Summary is a character in its owner's list (ADR 0029 step 7.2).

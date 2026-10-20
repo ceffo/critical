@@ -60,7 +60,8 @@
       "toSpend": {
         "weaponSlots": 0,
         "nonWeaponSlots": 2,
-        "skillPoints": 30
+        "skillPoints": 30,
+        "freeSpells": []
       }
     },
     "specializes": false,

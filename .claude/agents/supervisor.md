@@ -233,7 +233,7 @@ likely involved, any user constraint, and **`review: yes|no`**:
 **Reusing an idle developer.** Reuse only if ALL hold: its PR is open or merged and nothing of its is
 in rework; its context is under ~200k tokens (gauge in "Token budget"); same model needed; the new item is in the same area.
 Otherwise close it and start fresh: a stale big context is re-sent every turn and costs more than a
-clean start. A reused developer keeps its old worktree as its cwd: never remove that worktree; switch it to the new branch instead (`git -C <old-worktree> switch -c <branch> origin/<db>` once its PR merged), or the agent loses its cwd (sup-50). An Opus developer on a risky item often passes 200k in round 1: plan its post-review round for a fresh developer with a self-contained brief (round-1 report + review path). Keep `dev-<id>` for the whole item: every later round is a new prompt to it. Start a new
+clean start. A reused developer keeps its old worktree as its cwd: never remove that worktree; switch it to the new branch instead (`git -C <old-worktree> switch -c <branch> origin/<db>` once its PR merged), or the agent loses its cwd (sup-50). An item with `review: yes` always gets a fresh developer for its post-review round, with a self-contained brief (round-1 report + review path): Opus developers on risky items passed 200k in round 1 every time (sup-53: 241k-315k). Keep `dev-<id>` for the whole item: every later round is a new prompt to it. Start a new
 developer on the same worktree only if the original's session is gone, with full context in the brief.
 
 ## 3. When a developer reports
@@ -364,7 +364,8 @@ retargeted, so watch its CI after the parent merges.
 Every CI run the project has is the supervisor's: main's CI, Release and Promote runs, and the checks of
 every open PR (yours and Dependabot's). A developer may watch its own branch's CI, but that never
 replaces yours. `.claude/scripts/ci-state.sh` prints everything that isn't green; `.claude/scripts/ci-watch.sh`
-(with `run_in_background`, one at a time, a new one replaces the old) exits when that state changes.
+(with `run_in_background`, one at a time, a new one replaces the old) exits on red, on everything
+green, or on one of our PRs going green; pending-to-pending moves (CI -> Release) keep it waiting.
 A `Stop` hook (`.claude/hooks/supervisor-ci-guard.sh`) **blocks the end of your turn** while CI is
 pending with no live watcher, or red and not recorded in `<wt>/supervisor/ci-red-handled`. Red →
 act in the same turn (rework brief, a fresh developer for main or a Dependabot PR, a rerun for a

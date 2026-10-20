@@ -8,7 +8,12 @@ import { GrantRows, LevelUpGrants } from "./LevelUpGrants";
 import { ToSpendTag } from "./ToSpendTag";
 import { LevelUpPrompt } from "./LevelUpPrompt";
 
-const none: LevelGrants = { weaponSlots: 0, nonWeaponSlots: 0, skillPoints: 0 };
+const none: LevelGrants = {
+  weaponSlots: 0,
+  nonWeaponSlots: 0,
+  skillPoints: 0,
+  freeSpells: [],
+};
 
 async function i18n(lng: string) {
   const inst = i18next.createInstance();
@@ -38,6 +43,7 @@ async function render(
         busy={false}
         onRoll={() => Promise.resolve(null)}
         onOpenEditor={() => {}}
+        onOpenFreeSpell={() => {}}
       />
     </I18nextProvider>,
   );
@@ -118,6 +124,7 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
     weaponSlots: 1,
     nonWeaponSlots: 1,
     skillPoints: 30,
+    freeSpells: [],
   };
   const noop = () => {};
 
@@ -127,6 +134,7 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
         grants={rogue4}
         level={4}
         onOpenEditor={noop}
+        onOpenFreeSpell={noop}
         onDismiss={noop}
       />
     );
@@ -140,7 +148,8 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
     expect(fr).toContain('aria-label="Dépenser les points de talent"');
     expect(fr.match(/>Choisir</g)).toHaveLength(2);
     expect(fr).toContain(">Dépenser<");
-    expect(fr).toContain(">Fermer<");
+    expect(fr).toContain('aria-label="Fermer ce que le niveau apporte"');
+    expect(fr).not.toContain(">Fermer<");
     const en = await markup("en", panel);
     expect(en).toContain("Level 4 grants");
     expect(en).toContain("+30 skill points");
@@ -151,9 +160,10 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
     const fr = await markup(
       "fr",
       <GrantRows
-        grants={{ weaponSlots: 0, nonWeaponSlots: 2, skillPoints: 0 }}
+        grants={{ ...none, nonWeaponSlots: 2 }}
         gained={false}
         onOpenEditor={noop}
+        onOpenFreeSpell={noop}
       />,
     );
     expect(fr).toContain(">2 emplacements de compétence<");
@@ -164,25 +174,23 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
 
   it("shows the to-spend tag while any count is above 0, none at 0", async () => {
     const tag = (toSpend: LevelGrants) => (
-      <ToSpendTag toSpend={toSpend} onOpenEditor={noop} />
+      <ToSpendTag
+        toSpend={toSpend}
+        onOpenEditor={noop}
+        onOpenFreeSpell={noop}
+      />
     );
-    const fr = await markup(
-      "fr",
-      tag({ weaponSlots: 0, nonWeaponSlots: 0, skillPoints: 5 }),
-    );
+    const fr = await markup("fr", tag({ ...none, skillPoints: 5 }));
     expect(fr).toContain(">À dépenser<");
     expect(fr).toContain('data-testid="to-spend-tag"');
-    expect(
-      await markup(
-        "en",
-        tag({ weaponSlots: 1, nonWeaponSlots: 0, skillPoints: 0 }),
-      ),
-    ).toContain(">To spend<");
+    expect(await markup("en", tag({ ...none, weaponSlots: 1 }))).toContain(
+      ">To spend<",
+    );
     expect(await markup("fr", tag(none))).toBe("");
   });
 
   it("leaves the prompt alone: no reminder panel under it", async () => {
-    const toSpend = { weaponSlots: 1, nonWeaponSlots: 0, skillPoints: 0 };
+    const toSpend = { ...none, weaponSlots: 1 };
     const owed = await render(
       {
         pending: [{ level: 5, die: 6, fixedGain: 0, grants: rogue4 }],
@@ -198,5 +206,53 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
     expect(
       await render({ pending: [], realizedAboveTarget: false, toSpend }, "fr"),
     ).toBe("");
+  });
+});
+
+// ADR 0030 step 20.8: a mage's free spell, in the level's grants and in what is left, with the way
+// into the spell lookup on its spell level; French first.
+describe("the level-up free spell (ADR 0030 step 20.8)", () => {
+  const noop = () => {};
+  const third = { level: 3, spellLevel: 2 };
+
+  it("lists the level's free spell with a link that opens the lookup on its spell level", async () => {
+    const panel = (
+      <LevelUpGrants
+        grants={{ ...none, nonWeaponSlots: 1, freeSpells: [third] }}
+        level={3}
+        onOpenEditor={noop}
+        onOpenFreeSpell={noop}
+        onDismiss={noop}
+      />
+    );
+    const fr = await markup("fr", panel);
+    expect(fr).toContain("Le niveau 3 apporte");
+    expect(fr).toContain("+1 sort gratuit, niv. 2");
+    expect(fr).toContain(
+      'aria-label="Choisir le sort gratuit de niveau 2 dans la recherche de sorts"',
+    );
+    expect(fr).toContain('data-testid="grant-open-freeSpell-3-2"');
+    const en = await markup("en", panel);
+    expect(en).toContain("+1 free level 2 spell");
+  });
+
+  it("shows the to-spend tag for an owed free spell alone, and lists it without the +", async () => {
+    const owed = { ...none, freeSpells: [third] };
+    const fr = await markup(
+      "fr",
+      <ToSpendTag toSpend={owed} onOpenEditor={noop} onOpenFreeSpell={noop} />,
+    );
+    expect(fr).toContain(">À dépenser<");
+    const rows = await markup(
+      "fr",
+      <GrantRows
+        grants={owed}
+        gained={false}
+        onOpenEditor={noop}
+        onOpenFreeSpell={noop}
+      />,
+    );
+    expect(rows).toContain(">1 sort gratuit, niv. 2<");
+    expect(rows).not.toContain("+1");
   });
 });

@@ -29,8 +29,8 @@ func TestLevelUp_RollAnswersTheFullBreakdown(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"level":9,"hitDie":6,"rolled":1,"counted":2,"conAdjustment":2,"gain":4,"fixed":false,
 		"manual":false,"hpMaxBefore":40,"hpMaxAfter":44,
-		"pending":[{"level":10,"die":6,"fixedGain":0,"grants":{"weaponSlots":0,"nonWeaponSlots":0,"skillPoints":30}},
-			{"level":11,"die":0,"fixedGain":2,"grants":{"weaponSlots":0,"nonWeaponSlots":0,"skillPoints":0}}]}`, rec.Body.String())
+		"pending":[{"level":10,"die":6,"fixedGain":0,"grants":{"weaponSlots":0,"nonWeaponSlots":0,"skillPoints":30,"freeSpells":[]}},
+			{"level":11,"die":0,"fixedGain":2,"grants":{"weaponSlots":0,"nonWeaponSlots":0,"skillPoints":0,"freeSpells":[]}}]}`, rec.Body.String())
 
 	// A fixed gain: no die, nulls; nothing owed is an empty list.
 	m.levelUp.EXPECT().Roll(mock.Anything, int64(1), levelupsvc.RollInput{Level: 16}).Return(&levelupsvc.Result{

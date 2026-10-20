@@ -71,7 +71,7 @@ func newBookEnv(t *testing.T, intRow ruletablesvc.IntelligenceRow) *env {
 	e.rules.EXPECT().BardSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 	svc, err := charactersvc.New(charactersvc.Deps{
 		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Armour: e.armour, HP: e.hp,
-		Spells: e.spells, Book: e.book,
+		Spells: e.spells, Book: e.book, FreeSpells: e.free,
 	})
 	require.NoError(t, err)
 	e.svc = svc

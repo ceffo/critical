@@ -24,11 +24,20 @@ export interface PendingLevel {
 }
 
 /** ADR 0037 step 15: weapon and non-weapon slots and a thief's or a bard's skill points, granted
- * by a level or left to spend (0: none). */
+ * by a level or left to spend (0: none). ADR 0030 step 20.8: a mage's free spells, the level's or
+ * the ones owed (empty: none). */
 export interface LevelGrants {
   weaponSlots: number;
   nonWeaponSlots: number;
   skillPoints: number;
+  freeSpells: FreeSpell[];
+}
+
+/** ADR 0030 step 20.8: one free spell, of `spellLevel`, granted by the realized level `level` (the
+ * add's `grantLevel`). */
+export interface FreeSpell {
+  level: number;
+  spellLevel: number;
 }
 
 /** ADR 0030 step 7: the levels from the realized level up to the target, still to take. */
@@ -293,6 +302,8 @@ export interface SpellAdded {
   spellId: string;
   spellLevel: number;
   origin: SpellbookOrigin;
+  /** ADR 0030 step 20.8: the realized level whose free spell this is; absent otherwise. */
+  grantLevel?: number;
 }
 
 export interface Character {

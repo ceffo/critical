@@ -2720,6 +2720,75 @@ test("level-up grants and the to-spend tag uncut in French, 1280 to 2560", async
   }
 });
 
+// ADR 0030 step 20.8 and ADR 0022 step 1, judged in French (ADR 0027 step 2): once a mage takes
+// level 3, its grants (a non-weapon slot and the free 2nd-level spell, each with its link) and the
+// to-spend popover listing the free spell, never cut from 1280 to 2560; the character
+// card does not scroll for them from 1440x900 up (ADR 0022 step 2.8), with a three-line name.
+// Screenshots of both at every viewport.
+test("level-up free spell: the grants and the to-spend popover uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    apiCall(page, method, url, body);
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Aldéric de la Tour-d'Auvergne-Lesparre",
+      class: "mage",
+      raceCode: "human",
+      details: { alignment: "neutral_good", sex: "male" },
+      str: 10,
+      dex: 15,
+      con: 12,
+      int: 14,
+      wis: 9,
+      cha: 16,
+      hpMax: 4,
+      xp: 0,
+    }),
+  ).toBe(true);
+  expect(await call("POST", "/api/xp", { base: 5000, bonus: false })).toBe(
+    true,
+  );
+  await reloadSettled(page);
+  await chooseLanguage(page, "fr");
+  const prompt = page.getByTestId("level-up");
+  await prompt
+    .getByRole("button", { name: "Lancer le dé de vie du niveau 2 (d4)" })
+    .click();
+  await prompt
+    .getByRole("button", { name: "Lancer le dé de vie du niveau 3 (d4)" })
+    .click();
+  const grants = page.getByTestId("level-up-grants");
+  await expect(grants).toContainText("Le niveau 3 apporte");
+  await expect(grants).toContainText("+1 sort gratuit, niv. 2");
+  const tag = page.getByTestId("to-spend-tag");
+  const popover = page.getByTestId("level-up-to-spend");
+  const character = page.getByTestId("character");
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    const where = `fr, ${vp.width}x${vp.height}`;
+    await expectNoClippedText(grants, `free spell grants, ${where}`);
+    await expectWholeWords(grants, `free spell grants, ${where}`);
+    await snap(page, `level-up-free-spell-fr-${vp.width}x${vp.height}`);
+    if (vp.width >= 1440)
+      await expectNoScroll(
+        character,
+        `character card with the free spell, ${where}`,
+      );
+    await tag.click();
+    await expect(popover).toContainText("1 sort gratuit, niv. 2");
+    await expectNoClippedText(popover, `free spell to-spend, ${where}`);
+    await expectWholeWords(popover, `free spell to-spend, ${where}`);
+    await snap(
+      page,
+      `level-up-free-spell-to-spend-fr-${vp.width}x${vp.height}`,
+    );
+    await page.keyboard.press("Escape");
+    await expect(popover).toHaveCount(0);
+  }
+});
+
 // ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
 // attack card's rate, "spécialisée" tag and point-blank checkbox (the heavy crossbow is the
 // specialization pick, ADR 0037 step 9; the long sword a plain pick), and the weapon editor's Type

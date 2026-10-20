@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { hasGrants } from "@/lib/grants";
 import { cn } from "@/lib/utils";
-import type { LevelGrants } from "@/types/character";
+import type { FreeSpell, LevelGrants } from "@/types/character";
 import type { SkillsEditor } from "@/stores/skillsEditor";
 import { GrantRows } from "./LevelUpGrants";
 
@@ -22,9 +22,12 @@ import { GrantRows } from "./LevelUpGrants";
 export function ToSpendTag({
   toSpend,
   onOpenEditor,
+  onOpenFreeSpell,
 }: {
   toSpend: LevelGrants;
   onOpenEditor: (editor: SkillsEditor) => void;
+  /** Opens the spell lookup on a free spell owed (ADR 0030 step 20.8). */
+  onOpenFreeSpell: (fs: FreeSpell) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -55,6 +58,10 @@ export function ToSpendTag({
           onOpenEditor={(editor) => {
             setOpen(false);
             onOpenEditor(editor);
+          }}
+          onOpenFreeSpell={(fs) => {
+            setOpen(false);
+            onOpenFreeSpell(fs);
           }}
         />
       </PopoverContent>

@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // ErrNoCurrentCharacter is a per-character request of a user who has no
@@ -126,6 +128,20 @@ type Armour interface {
 	WornSkillColumn(ctx context.Context, characterID int64) (string, error)
 }
 
+// FreeSpells is what ADR 0030 step 20.8 reads beyond the character row, for
+// a class whose levels grant free spells (a mage): which levels were taken in
+// the app and which free spells the spellbook already holds. It follows the
+// ctx transaction.
+type FreeSpells interface {
+	// LevelsTaken are the realized levels the level-up roll reached (ADR
+	// 0030 step 7), its entries the journal has not undone; a character's
+	// starting level and the levels before the first roll are not among them.
+	LevelsTaken(ctx context.Context, characterID int64) ([]int, error)
+	// Claimed are the spellbook's spellbook.OriginLevelGrant entries, each
+	// as its grant level and its spell's level.
+	Claimed(ctx context.Context, characterID int64) ([]spellbook.FreeSpell, error)
+}
+
 // Sessions is the login's session cache (authsvc.SVC satisfies it): a user
 // whose current character changed is read again by their next request.
 type Sessions interface {
@@ -155,6 +171,9 @@ type Deps struct {
 	// mage's or bard's starting spellbook (ADR 0030 step 20.7).
 	Spells SpellCatalogue
 	Book   StartingBook
+	// FreeSpells are the levels taken and the free spells claimed (ADR 0030
+	// step 20.8).
+	FreeSpells FreeSpells
 }
 
 type service struct {
@@ -171,12 +190,13 @@ type service struct {
 	hp        HPLedger
 	spells    SpellCatalogue
 	book      StartingBook
+	free      FreeSpells
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
 	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil || d.Armour == nil || d.HP == nil ||
-		d.Spells == nil || d.Book == nil {
+		d.Spells == nil || d.Book == nil || d.FreeSpells == nil {
 		return nil, errors.New("charactersvc: nil dependency")
 	}
 	if d.Languages == nil {
@@ -187,7 +207,7 @@ func New(d Deps) (SVC, error) {
 	}
 	return &service{
 		reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour,
-		languages: d.Languages, profs: d.Proficiencies, hp: d.HP, spells: d.Spells, book: d.Book,
+		languages: d.Languages, profs: d.Proficiencies, hp: d.HP, spells: d.Spells, book: d.Book, free: d.FreeSpells,
 	}, nil
 }
 
@@ -230,7 +250,65 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
 	s.readWarnings(c)
+	if err := s.setFreeSpells(ctx, c); err != nil {
+		return nil, fmt.Errorf("character %d free spells: %w", id, err)
+	}
 	return c, nil
+}
+
+// setFreeSpells is ADR 0030 step 20.8 on a read of c: each pending level's
+// free spells, and the ones owed, granted by the levels taken in the app and
+// not yet claimed. Only a class whose levels grant them pays the reads.
+func (s *service) setFreeSpells(ctx context.Context, c *Character) error {
+	if !ruletablesvc.GrantsFreeSpells(c.Class) || c.Derived.Spellbook == nil {
+		return nil
+	}
+	for i := range c.Derived.LevelUp.Pending {
+		p := &c.Derived.LevelUp.Pending[i]
+		var err error
+		if p.FreeSpells, err = s.freeSpellsAt(c, p.Level); err != nil {
+			return err
+		}
+	}
+	taken, err := s.free.LevelsTaken(ctx, c.ID)
+	if err != nil {
+		return err
+	}
+	slices.Sort(taken)
+	var granted []spellbook.FreeSpell
+	for _, level := range slices.Compact(taken) {
+		if level > c.Derived.RealizedLevel {
+			continue // not realized any more: its grant went with it
+		}
+		got, err := s.freeSpellsAt(c, level)
+		if err != nil {
+			return err
+		}
+		granted = append(granted, got...)
+	}
+	claimed, err := s.free.Claimed(ctx, c.ID)
+	if err != nil {
+		return err
+	}
+	c.Derived.LevelUp.FreeSpellsOwed = spellbook.Owed(granted, claimed)
+	return nil
+}
+
+// freeSpellsAt are the free spells c's realized level grants (step 20.8):
+// the spell levels its slot table (step 8) opens there, up to the
+// Intelligence's maximum spell level (PHB Table 4).
+func (s *service) freeSpellsAt(c *Character, level int) ([]spellbook.FreeSpell, error) {
+	at, err := spellSlots(c, level, s.rules)
+	if err != nil {
+		return nil, err
+	}
+	var below map[int]int
+	if level > 1 {
+		if below, err = spellSlots(c, level-1, s.rules); err != nil {
+			return nil, err
+		}
+	}
+	return spellbook.FreeSpellsAt(level, below, at, c.Derived.Spellbook.IntMaxSpellLevel), nil
 }
 
 // readWarnings sets c's languages, pools, level grants and warnings as a read shows them. The

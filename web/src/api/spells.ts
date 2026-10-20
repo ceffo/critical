@@ -82,6 +82,12 @@ export function learnSpell(spellId: string): Promise<LearnResult> {
 }
 
 /** Write `spellId` in the spellbook with no roll (Ajouter, ADR 0030 step 20.6); a refusal is an ApiError. */
-export function addSpell(spellId: string): Promise<SpellAdded> {
-  return post<SpellAdded>("/api/character/spellbook/add", { spellId });
+export function addSpell(
+  spellId: string,
+  grantLevel?: number,
+): Promise<SpellAdded> {
+  return post<SpellAdded>(
+    "/api/character/spellbook/add",
+    grantLevel ? { spellId, grantLevel } : { spellId },
+  );
 }

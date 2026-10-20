@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
@@ -40,6 +41,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spheresvc"
 	"github.com/ceffo/critical/api/internal/domain/service/turnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 	"github.com/ceffo/critical/api/internal/storage/postgres"
 )
@@ -253,6 +255,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		// A new mage's or bard's starting spellbook (ADR 0030 step 20.7) reads
 		// the catalogue and is written in the creation's transaction.
 		Spells: newCreationSpells(cat), Book: st.Spellbook,
+		FreeSpells: freeSpells{log: logSvc, book: spellbook},
 	})
 	if err := bs.add(bs.Character, err); err != nil {
 		return nil, err
@@ -537,6 +540,36 @@ func (w weaponInHand) WeaponInHand(ctx context.Context, characterID int64) (buff
 		ItemID: held.ID, Name: held.Name.Any(), Kind: buffsvc.WeaponKind(held.Kind),
 		Speed: held.Speed, MagicToHit: held.MagicToHit, MagicDamage: held.MagicDamage,
 	}, true, nil
+}
+
+// freeSpells satisfies charactersvc.FreeSpells (ADR 0030 step 20.8): the
+// levels taken are the active level_up entries of the log (an undone roll's
+// is voided, a redone one's active again), the claims the spellbook's
+// level_grant entries. Both follow the ctx transaction.
+type freeSpells struct {
+	log  actionlogsvc.SVC
+	book *spellbookadpt.Book
+}
+
+func (f freeSpells) LevelsTaken(ctx context.Context, characterID int64) ([]int, error) {
+	// One entry per level taken at most: the class table's levels bound them.
+	entries, err := f.log.ActiveEntries(ctx, characterID, actionlog.KindLevelUp, ruletablesvc.MaxLevel)
+	if err != nil {
+		return nil, err
+	}
+	levels := make([]int, 0, len(entries))
+	for _, e := range entries {
+		level, err := levelupsvc.LevelReached(e.Payload)
+		if err != nil {
+			return nil, fmt.Errorf("level_up entry %d: %w", e.ID, err)
+		}
+		levels = append(levels, level)
+	}
+	return levels, nil
+}
+
+func (f freeSpells) Claimed(ctx context.Context, characterID int64) ([]spellbook.FreeSpell, error) {
+	return f.book.Claimed(ctx, characterID)
 }
 
 func (a wornArmour) WornSkillColumn(ctx context.Context, characterID int64) (string, error) {

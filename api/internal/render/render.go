@@ -171,6 +171,8 @@ var mappings = []mapping{
 	{target: learnsvc.ErrAboveClass, status: http.StatusBadRequest, code: "spell_level_above_class"},
 	{target: learnsvc.ErrLevelFull, status: http.StatusBadRequest, code: "spellbook_level_full"},
 	{target: learnsvc.ErrFailedAtLevel, status: http.StatusBadRequest, code: "spell_learn_failed_at_level"},
+	{target: learnsvc.ErrNoFreeSpellOwed, status: http.StatusBadRequest, code: "no_free_spell_owed"},
+	{target: learnsvc.ErrFreeSpellWrongLevel, status: http.StatusBadRequest, code: "free_spell_wrong_level"},
 	{target: ruletablesvc.ErrCannotTurn, status: http.StatusBadRequest, code: "cannot_turn_undead"},
 	{target: turnsvc.ErrClassCannotTurn, status: http.StatusBadRequest, code: "class_cannot_turn"},
 	{target: levelupsvc.ErrNotPending, status: http.StatusConflict, code: "level_up_not_pending"},

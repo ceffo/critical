@@ -356,7 +356,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		SpellSlots: []SlotCountDTO{},
 		LevelUp: LevelUpDTO{
 			Pending: wire.PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
-			ToSpend: wire.GrantsDTO(d.LevelUp.ToSpend),
+			ToSpend: wire.GrantsDTO(d.LevelUp.ToSpend, d.LevelUp.FreeSpellsOwed),
 		},
 		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
 		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab, SkillArmor: d.SkillArmor,

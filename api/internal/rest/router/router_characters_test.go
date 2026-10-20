@@ -27,6 +27,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 	"github.com/ceffo/critical/api/internal/rest/router"
 )
@@ -274,8 +275,8 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 			SpellSlots:    map[int]int{5: 2, 1: 3},
 			LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
 				{Level: 10, Die: 6, Grants: skills.LevelGrants{SkillPoints: 15}},
-				{Level: 11, FixedGain: 2, Grants: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 2}},
-			}, ToSpend: skills.LevelGrants{WeaponSlots: 3, NonweaponSlots: 1, SkillPoints: 45}},
+				{Level: 11, FixedGain: 2, Grants: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 2}, FreeSpells: []spellbook.FreeSpell{{Level: 11, SpellLevel: 6}}},
+			}, ToSpend: skills.LevelGrants{WeaponSlots: 3, NonweaponSlots: 1, SkillPoints: 45}, FreeSpellsOwed: []spellbook.FreeSpell{{Level: 9, SpellLevel: 5}}},
 			Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 		},
 		Details: charactersvc.Details{Alignment: "lawful_good", Languages: []string{}},
@@ -308,9 +309,9 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"raceSaveBonus": {"paraPoison": 0, "rodStaffWand": 4, "petriPoly": 0, "breath": 0, "spell": 4},
 		"spellSlots": [{"level": 1, "count": 3}, {"level": 5, "count": 2}],
 		"levelUp": {"realizedAboveTarget": false, "pending": [
-			{"level": 10, "die": 6, "fixedGain": 0, "grants": {"weaponSlots": 0, "nonWeaponSlots": 0, "skillPoints": 15}},
-			{"level": 11, "die": 0, "fixedGain": 2, "grants": {"weaponSlots": 1, "nonWeaponSlots": 2, "skillPoints": 0}}
-		], "toSpend": {"weaponSlots": 3, "nonWeaponSlots": 1, "skillPoints": 45}},
+			{"level": 10, "die": 6, "fixedGain": 0, "grants": {"weaponSlots": 0, "nonWeaponSlots": 0, "skillPoints": 15, "freeSpells": []}},
+			{"level": 11, "die": 0, "fixedGain": 2, "grants": {"weaponSlots": 1, "nonWeaponSlots": 2, "skillPoints": 0, "freeSpells": [{"level": 11, "spellLevel": 6}]}}
+		], "toSpend": {"weaponSlots": 3, "nonWeaponSlots": 1, "skillPoints": 45, "freeSpells": [{"level": 9, "spellLevel": 5}]}},
 		"specializes": false,
 		"spellFailure": 0,
 		"turning": null,

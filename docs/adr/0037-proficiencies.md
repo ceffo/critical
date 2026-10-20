@@ -250,7 +250,13 @@ writes `Test<name>` and adds the prefix here in the same PR.
     the catalogue no longer holds may be kept (1 slot or more) but never added. Tests also:
     `TestValidPicks_Step12_Refusals`, `TestPreviewPicks_Step12_SameRefusalsAsTheSave`
     (charactersvc), `TestProficiencies_Step12_Refusals` (router); the composition's
-    `TestProficiencies_Step13_PickUndoRedo` checks the preview answers what the save does.)_
+    `TestProficiencies_Step13_PickUndoRedo` checks the preview answers what the save does. The
+    editor, web, 2026-10-20: the Skills tab's "Choisir" opens it in place of the lists (Enregistrer
+    and Annuler beside its title); it shows the non-weapon pool's terms from the server's preview,
+    each pick's cost, extra slots and target, a stepper per pick and the catalogue (a search, the
+    class's Table 38 groups first, each row's cost from the options' `proficiencyCosts`). The web
+    reads the pool from `proficiencySlots.nonWeapon` only, so another pool's warnings (`pool`
+    `weapon`) never show there.)_
 13. **Each save is one undoable move.** A save that changes the picks or the languages is one
     `proficiencies` entry of the action log with a `proficiencies` snapshot (the picks and the
     languages before and after), as the `skill_points` move of ADR 0030 step 17: undo writes the

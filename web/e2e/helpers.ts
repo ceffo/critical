@@ -546,6 +546,9 @@ export async function createInFlow(page: Page, c: FlowCharacter) {
   await step.getByLabel("PV max").fill(c.hpMax);
   if (c.extras) await c.extras(step);
   await next();
+  // The proficiency step (ADR 0037 step 14): nothing picked, the slots left for later.
+  await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await next();
   await step.getByLabel("Nom", { exact: true }).fill(c.name);
   // The first alignment the class admits (a refused one is labelled "… : interdit au …").
   await step

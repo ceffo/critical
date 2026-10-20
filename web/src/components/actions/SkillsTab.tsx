@@ -5,10 +5,13 @@ import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
 import { Button } from "@/components/ui/button";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
+import { ProficiencyEditor } from "@/components/proficiencies/ProficiencyEditor";
 import { SkillBudgetSummary, SkillTerms } from "./SkillBreakdown";
 import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/journal/words";
 import { formatSigned } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { NonweaponPool } from "@/types/character";
 import type { SkillKind } from "@/types/skills";
 
 const HEADINGS: Record<SkillKind, string> = {
@@ -34,7 +37,10 @@ export function SkillsTab() {
   const refresh = useTableStore((s) => s.refresh);
   const { rollSkill, rolling } = useRollStore();
   const budget = useCharacterStore((s) => s.character?.derived.skillBudget);
+  const cls = useCharacterStore((s) => s.character?.class);
+  const slots = useCharacterStore((s) => s.character?.derived.proficiencySlots);
   const [editingPoints, setEditingPoints] = useState(false);
+  const [editingPicks, setEditingPicks] = useState(false);
   // Read once shown; then the action module reads them again when a write names what they follow
   // (an effect, an item, the points, the level).
   useEffect(() => {
@@ -56,6 +62,7 @@ export function SkillsTab() {
       terms?: ReactNode;
       unusable?: boolean;
     }[],
+    after?: ReactNode,
   ) => {
     const label = t(HEADINGS[kind]);
     const id = `skills-${kind}`;
@@ -93,9 +100,20 @@ export function SkillsTab() {
             );
           })}
         </ul>
+        {after}
       </section>
     );
   };
+
+  // ADR 0037 step 12: the picks are edited in place of the lists, the catalogue needing the room.
+  if (editingPicks && slots && cls)
+    return (
+      <ProficiencyEditor
+        cls={cls}
+        slots={slots}
+        onDone={() => setEditingPicks(false)}
+      />
+    );
 
   return (
     <div
@@ -114,6 +132,21 @@ export function SkillsTab() {
             />
           ),
         })),
+        slots && (
+          <>
+            <ProficiencySlotsLine pool={slots.nonWeapon} />
+            <Button
+              type="button"
+              size="sm"
+              className="mx-2.5 w-fit"
+              title={t("proficiencies.editHint")}
+              onClick={() => setEditingPicks(true)}
+              data-testid="proficiency-edit"
+            >
+              {t("proficiencies.edit")}
+            </Button>
+          </>
+        ),
       )}
       {classSkills.length > 0 && (
         <div className="flex min-w-0 flex-col gap-2">
@@ -196,6 +229,29 @@ export function SkillsTab() {
         </div>
       )}
     </div>
+  );
+}
+
+/** The slots spent of the available ones (ADR 0037 step 3) and, as the server's pool says, the
+ * slots left to spend or the overspend's warning (step 11). */
+function ProficiencySlotsLine({ pool }: { pool: NonweaponPool }) {
+  const { t } = useTranslation();
+  return (
+    <p
+      className={cn(
+        "px-2.5 text-body break-words tabular-nums",
+        pool.left < 0 ? "text-warning" : "text-muted-foreground",
+      )}
+      data-testid="proficiency-slots-line"
+    >
+      {t("proficiencies.tabLine", {
+        spent: pool.spent,
+        available: pool.available,
+      })}
+      {pool.left > 0 &&
+        ` · ${t("proficiencies.toSpend", { count: pool.left })}`}
+      {pool.left < 0 && ` · ${t("proficiencies.overShort")}`}
+    </p>
   );
 }
 

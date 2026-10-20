@@ -157,6 +157,9 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(step.getByLabel("PV max")).toHaveValue("6");
   await expect(step.getByLabel("Escalade")).toHaveValue("15");
   await next.click();
+  // The proficiency step (ADR 0037 step 14): nothing picked, the slots wait to be spent.
+  await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await next.click();
 
   // Step 5, identity (ADR 0034 step 3.5): Suivant waits for a name, an alignment and a sex.
   const details = step.getByTestId("new-character-details");

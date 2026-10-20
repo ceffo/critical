@@ -173,6 +173,7 @@ describe("checksRequest (what the class and skills steps ask the server)", () =>
       scores: { dex: 8 },
       xp: 1250,
       skillPoints: { open_locks: 25 },
+      proficiencies: { nonweapon: [] },
     });
   });
 

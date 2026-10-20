@@ -23,6 +23,7 @@ import { replyGate } from "@/lib/replyGate";
 import { useLanguageNames } from "@/lib/useLanguageNames";
 import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
+import { skillName } from "@/journal/words";
 import {
   ABILITIES,
   type CreationOptions,
@@ -45,6 +46,7 @@ import {
 } from "./flow";
 import { ClassStep, ExtrasStep, RaceStep, ScoresStep } from "./steps";
 import { IdentityStep, ReviewStep } from "./identity";
+import { ProficienciesStep } from "./proficiencies";
 import { useReviewWarnings, warnedFields } from "./warnings";
 
 /** The server's field names for the flow's: the race is `race` in its errors. */
@@ -207,7 +209,8 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   // An answer about another class (the player picked again meanwhile) is never shown.
   const checks = answeredChecks?.cls === draft.cls ? answeredChecks.data : null;
   const [checksGate] = useState(replyGate);
-  const checking = step === "class" || step === "extras";
+  const checking =
+    step === "class" || step === "extras" || step === "proficiencies";
   const checksKey = options
     ? JSON.stringify(checksRequest(options, draft, xp))
     : "";
@@ -234,6 +237,11 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   const wording = (e: FieldError): string => {
     if (e.field === "" || e.code === OVER_BUDGET) return e.message ?? "";
+    // A pick's refusal (ADR 0037 step 12): the proficiency editor's wording of its code.
+    if (e.field.startsWith("nonweapon"))
+      return t(`proficiencies.errors.${e.code}`, {
+        defaultValue: t("proficiencies.errors.refused"),
+      });
     if (e.field.startsWith("details.")) {
       const detail = e.field.slice("details.".length);
       return t(
@@ -413,6 +421,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             {step === "race" && <RaceStep {...props} />}
             {step === "scores" && <ScoresStep {...props} />}
             {step === "extras" && <ExtrasStep {...props} />}
+            {step === "proficiencies" && <ProficienciesStep {...props} />}
             {step === "identity" && <IdentityStep {...props} />}
             {step === "review" && <ReviewStep {...props} go={go} />}
           </div>
@@ -523,6 +532,10 @@ function useStepChoice(draft: FlowDraft): (step: StepId) => string | null {
       case "extras":
         return draft.hpMax
           ? t("creation.extras.hpN", { hp: draft.hpMax })
+          : null;
+      case "proficiencies":
+        return draft.picks.length > 0
+          ? t("creation.proficiencies.pickedN", { count: draft.picks.length })
           : null;
       case "identity":
         return draft.name.trim() || null;
@@ -711,6 +724,12 @@ function Building({ options, draft, xp, preview, body, language }: StepProps) {
           <dd className="break-words">
             {languages.length > 0
               ? languages.map(languageName).join(", ")
+              : dash}
+          </dd>
+          <dt className="text-ink-muted">{t("creation.proficiencies.name")}</dt>
+          <dd className="break-words" data-testid="building-proficiencies">
+            {draft.picks.length > 0
+              ? draft.picks.map((p) => skillName(t, p.id)).join(", ")
               : dash}
           </dd>
           <dt className="text-ink-muted">{t("creation.heightWeight")}</dt>

@@ -33,7 +33,11 @@ content. This ADR records the decisions; the README and the shots are the pictur
    2. (_user_) The frame is **capped at 1680 px and centred** on wide screens (2560x1440); below
       that it is full width.
 3. **Steps** (_proposed_), in this order: class, race, scores, "Points de vie et talents", identity,
-   review.
+   review. _(As built 2026-10-20: a "Compétences" step, the non-weapon proficiency picks of
+   [ADR 0037](0037-proficiencies.md) step 14, sits between "Points de vie et talents" and identity,
+   seven steps in all; the triage of the proficiency editor chose "a step or group in the creation
+   flow". It uses the Skills tab's picker, its figures from `POST /api/characters/checks`, and
+   never blocks Suivant: leftover slots are reminded.)_
    1. **Class**: the class cards (hit die, minimums, alignment limit, races) and the starting level
       or XP (item 4).
    2. **Race**: all six races are shown; the ones the chosen class refuses are dimmed and marked

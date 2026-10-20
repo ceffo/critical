@@ -87,8 +87,9 @@ export function useReviewWarnings(props: StepProps): string[] {
   return out;
 }
 
-/** The slot warnings of ADR 0037 step 11 (and a pick the catalogue lost): the proficiency step
- * words them, so the identity summary leaves them out. */
+/** The slot warnings of ADR 0037 step 11 (and a pick the catalogue lost), of any pool (`nonweapon`
+ * or `weapon`): the proficiency editor shows its own pool from the server's figures, so the
+ * identity summary leaves them all out. */
 const SLOT_CODES = new Set([
   "slots_to_spend",
   "slots_over_budget",

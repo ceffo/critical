@@ -87,23 +87,111 @@ func TestRepoSeeds_EveryBuffDefaultTargetAndChoice(t *testing.T) {
 
 // ADR 0004 step 20.5 on the real seeds: a spell that adds no buff but lasts a
 // number of rounds offers the target choice when its target can be someone
-// else, except a damage spell. The list is every such spell: a seed that adds
-// one fails the test until its row is written here.
+// else, except a damage spell: "not on you" by default for a spell cast at a
+// creature or on an area, "on you" by default for one the caster may take
+// himself. The lists are every such spell: a seed that adds one fails the test
+// until it is written here.
 func TestRepoSeeds_EveryRowOnlySpellTargetChoice(t *testing.T) {
 	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"))
 	require.NoError(t, err)
 
-	got := map[string]*spelleffectsvc.TargetChoice{}
+	onMe := &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnSelf, Alternate: spelleffectsvc.CastOnOther}
+	onAlly := &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnOther, Alternate: spelleffectsvc.CastOnSelf}
+	// Creature or area at range: the row reads "not on you" by default.
+	wantOnAlly := []string{
+		"acid_storm", "advanced_illusion", "affect_normal_fires", "alarm", "animal_growth",
+		"bands_of_sirellyn", "bind_undead", "blackmantle", "chaos", "choke", "confusion", "control_undead",
+		"darkness_15_radius", "dig", "distance_distortion", "enervation", "evards_black_tentacles",
+		"eyebite", "fire_charm", "fog_cloud", "forcecage", "fumble", "grease", "gust_of_wind",
+		"hallucinatory_terrain", "hold_monster", "hold_person", "hold_undead", "hypnotism",
+		"insatiable_thirst", "leomunds_hidden_lodge", "leomunds_secure_shelter", "light",
+		"lower_resistance", "mass_suggestion", "maximilians_earthen_grasp", "maximilians_stony_grasp",
+		"mind_fog", "misdirection", "mordenkainens_private_sanctum", "otilukes_dispelling_screen",
+		"otilukes_resilient_sphere", "otilukes_telekinetic_sphere", "ottos_irresistible_dance", "passwall",
+		"phantasmal_killer", "ray_of_enfeeblement", "ray_of_fatigue", "repulsion", "reverse_gravity",
+		"scare", "sleep", "snapping_teeth", "solid_fog", "solvent_of_corrosion", "spectral_hand",
+		"sphere_of_ultimate_destruction", "stabilize", "stinking_cloud", "suffocate", "suggestion",
+		"tashas_uncontrollable_hideous_laughter", "taunt", "there_not_there", "throbbing_bones", "unluck",
+		"vacancy", "veil", "von_gasiks_refusal", "vortex", "wall_of_fog", "wall_of_force", "wall_of_gloom",
+		"waveform", "web", "wildstrike", "wildwind", "wildzone", "wind_wall",
+	}
+	// Self or other (a touch, a creature the caster may be): on the Bard by default.
+	wantOnMe := []string{
+		"claws_of_the_umber_hulk", "comprehend_languages", "corpse_visage", "delay_death", "etherealness",
+		"feather_fall", "feign_death", "filter", "fly", "fools_speech", "hornungs_baneful_deflector",
+		"infravision", "iron_mind", "jump", "lasting_breath", "levitate",
+		"lorloveims_shadowy_transformation", "mind_blank", "nahals_nonsensical_nullifier", "nondetection",
+		"protection_from_cantrips", "protection_from_hunger_and_thirst", "protection_from_normal_missiles",
+		"protection_from_paralysis", "protection_from_poison", "protection_from_vermin",
+		"rarys_telepathic_bond", "ride_the_wind", "seeming", "sertens_spell_immunity", "spider_climb",
+		"statue", "ultravision", "vocalize", "water_breathing",
+	}
+
+	var gotOnAlly, gotOnMe []string
 	for _, e := range c.All() {
 		if e.AddsBuff() {
 			continue
 		}
 		choice, err := e.TargetChoiceAt(15)
 		require.NoError(t, err, e.ID)
-		if choice != nil {
-			got[e.ID] = choice
+		switch choice {
+		case nil:
+		default:
+			if *choice == *onAlly {
+				gotOnAlly = append(gotOnAlly, e.ID)
+			} else {
+				require.Equal(t, onMe, choice, e.ID)
+				gotOnMe = append(gotOnMe, e.ID)
+			}
 		}
 	}
-	onAlly := &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnOther, Alternate: spelleffectsvc.CastOnSelf}
-	assert.Equal(t, map[string]*spelleffectsvc.TargetChoice{"sleep": onAlly, "tashas_uncontrollable_hideous_laughter": onAlly}, got)
+	assert.ElementsMatch(t, wantOnAlly, gotOnAlly, "rows that default to somebody else")
+	assert.ElementsMatch(t, wantOnMe, gotOnMe, "rows that default to the Bard")
+}
+
+// Every spell that lasts a number of rounds without adding a buff and still
+// has no target, each checked against the book: it is the caster's own senses
+// or aura (detections, divinations, wards and globes centred on him), an
+// object, a summoned or created servant, or a spell modelled on none of those.
+// A seed that adds one fails the test until the entry gets a target or is
+// written here as a conscious choice.
+func TestRepoSeeds_RoundLastingEntriesLeftWithNoTarget(t *testing.T) {
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"))
+	require.NoError(t, err)
+
+	want := []string{
+		"airboat", "airy_water", "analyze_dweomer", "antipathy_sympathy", "audible_glamer",
+		"bigbys_clenched_fist", "bigbys_crushing_hand", "bigbys_forceful_hand", "bigbys_grasping_hand",
+		"bigbys_interposing_hand", "bind", "bloodstones_frightful_joining", "bloodstones_spectral_steed",
+		"bone_club", "bone_dance", "cantrip", "clairaudience", "clairvoyance", "conjure_animals",
+		"conjure_elemental", "conjure_elemental_kin", "conjure_spell_component", "control_weather",
+		"corpse_host", "dancing_lights", "dead_mans_eyes", "deeppockets", "demishadow_monsters",
+		"detect_disease", "detect_evil", "detect_invisibility", "detect_life", "detect_magic",
+		"detect_phase", "detect_scrying", "detect_secret_passages_and_portals", "detect_undead",
+		"dictation", "dimensional_blade", "divining_rod", "duplicate", "esp", "false_vision", "fireflow",
+		"fools_gold", "foresight", "forests_fiery_constrictor", "gaze_reflection", "glassee",
+		"globe_of_invulnerability", "guards_and_wards", "halo_of_eyes", "hold_portal", "hovering_skull",
+		"identify", "illusionary_script", "intensify_summoning", "invulnerability_to_magical_weapons",
+		"invulnerability_to_normal_weapons", "item", "khazids_procurement", "know_alignment",
+		"leomunds_secret_chest", "leomunds_tiny_hut", "living_link", "locate_creature", "locate_object",
+		"locate_remains", "lower_water", "magic_mirror", "mask_of_death", "message", "minor_creation",
+		"minor_globe_of_invulnerability", "mislead", "monster_summoning_i", "monster_summoning_ii",
+		"monster_summoning_iii", "monster_summoning_iv", "monster_summoning_v", "monster_summoning_vi",
+		"monster_summoning_vii", "mordenkainens_magnificent_mansion", "mordenkainens_sword", "mount",
+		"nystuls_magical_aura", "part_water", "patternweave", "phantom_steed", "prismatic_sphere",
+		"prismatic_wall", "project_image", "prying_eyes", "read_magic", "rope_trick", "safeguarding",
+		"screen", "sequester", "seven_eyes", "shades", "shadow_door", "shadow_magic", "shadow_monsters",
+		"shadow_walk", "shadowcat", "skeletal_hands", "squaring_the_circle", "summon_shadow",
+		"summon_spirit", "superior_magnetism", "tensers_floating_disc", "true_seeing", "unseen_servant",
+		"ventriloquism", "vile_venom", "wall_of_bones", "wizard_eye", "zombie_double",
+	}
+
+	var got []string
+	for _, e := range c.All() {
+		if e.AddsBuff() || e.Duration.Kind != spelleffectsvc.DurationRounds || e.Target != spelleffectsvc.TargetNone {
+			continue
+		}
+		got = append(got, e.ID)
+	}
+	assert.ElementsMatch(t, want, got)
 }

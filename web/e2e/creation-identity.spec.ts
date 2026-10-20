@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { openDashboard, chooseLanguage } from "./helpers";
+import { openDashboard, chooseLanguage, combatLog } from "./helpers";
 
 // The identity step and the review of the creation route (ADR 0034 steps 3.5 and 3.6): what only a
 // browser proves is the timing and the navigation around the server's replies (a late roll, a stale
@@ -17,11 +17,13 @@ const scores = [
   ["CHA", "CHA", "16"],
 ] as const;
 
-/** Opens the flow and fills a bard's first four steps (typed scores, HP 6); stops on the identity step. */
+/** Opens the flow and fills a bard's first five steps (typed scores, HP 6, the picks `proficiencies`
+ * makes); stops on the identity step. */
 async function toIdentity(
   page: Page,
   lang: "fr" | "en" = "fr",
   extras?: (step: Locator) => Promise<void>,
+  proficiencies?: (step: Locator) => Promise<void>,
 ) {
   await openDashboard(page);
   await chooseLanguage(page, lang);
@@ -45,6 +47,9 @@ async function toIdentity(
   await next.click();
   await step.getByLabel(tr("PV max", "Max HP")).fill("6");
   await extras?.(step);
+  await next.click();
+  await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await proficiencies?.(step);
   await next.click();
   await expect(step).toHaveAttribute("data-step", "identity");
   return { step, next, tr };
@@ -89,15 +94,16 @@ test("identity step: forbidden alignment, a roll dropped after a race change, th
   const back = step.getByRole("button", {
     name: /^Revenir à l'étape précédente/,
   });
-  for (let i = 0; i < 3; i++) await back.click();
+  for (let i = 0; i < 4; i++) await back.click();
   await expect(step).toHaveAttribute("data-step", "race");
   await step.getByRole("radio", { name: "Humain", exact: true }).click();
   const answered = page.waitForResponse("**/api/characters/rolls/identity");
   release();
   await answered;
-  await step.getByRole("button", { name: "Passer à l'étape suivante" }).click();
-  await step.getByRole("button", { name: "Passer à l'étape suivante" }).click();
-  await step.getByRole("button", { name: "Passer à l'étape suivante" }).click();
+  for (let i = 0; i < 4; i++)
+    await step
+      .getByRole("button", { name: "Passer à l'étape suivante" })
+      .click();
   await expect(step).toHaveAttribute("data-step", "identity");
   await expect(details.getByRole("textbox", { name: "Taille" })).toHaveValue(
     "",
@@ -208,7 +214,7 @@ test("review: no stale figures after a change, a refusal from an earlier step la
     await held;
     await route.continue();
   });
-  for (let i = 0; i < 5; i++) await next.click();
+  for (let i = 0; i < 6; i++) await next.click();
   await expect(step).toHaveAttribute("data-step", "review");
   await expect(thac0).toHaveText("…");
   await expect(step.getByTestId("next-blocked")).not.toContainText(
@@ -237,6 +243,7 @@ test("review: no stale figures after a change, a refusal from an earlier step la
   await create.click();
   await expect(step).toHaveAttribute("data-step", "extras");
   await expect(step.getByLabel("PV max")).toHaveValue("6");
+  await next.click();
   await next.click();
   await expect(step).toHaveAttribute("data-step", "identity");
   await expect(details.getByLabel("Nom", { exact: true })).toHaveValue("Lyra");
@@ -323,4 +330,136 @@ test("extras: skill points typed as no number show at their field and block Next
     await expect(next).toBeEnabled();
   });
   await expect(step).toHaveAttribute("data-step", "identity");
+});
+
+// ADR 0037 steps 12 to 14, what only a browser proves: the picks made in the creation flow reach
+// the create request and the new character's Skills tab, the tab's editor saves one more, the
+// journal words the move and Undo takes it back. The slots, costs and refusals are Go tests
+// (charactersvc, composition), the picker's wording of the server's figures a unit test.
+test("proficiencies: create a bard with picks, add one from the Skills tab, undo restores", async ({
+  page,
+}) => {
+  page.on("dialog", (d) => void d.accept());
+  const { step, next } = await toIdentity(page, "fr", undefined, async (s) => {
+    // A level 1 bard with Intelligence 14: 3 + 0 + 4 slots, the server's terms.
+    await expect(s.getByTestId("proficiency-pool-terms")).toContainText("= 7");
+    // The server gives Languages, Modern no cost (a language of the list): not offered.
+    await s.getByTestId("proficiency-search").fill("langues");
+    await expect(s.getByTestId("proficiency-add-languages_modern")).toHaveCount(
+      0,
+    );
+    await s.getByTestId("proficiency-search").fill("acro");
+    await s.getByRole("button", { name: /^Ajouter Acrobatie/ }).click();
+    await s.getByTestId("proficiency-search").fill("");
+    await s
+      .getByTestId("proficiency-own")
+      .getByRole("button", { name: /^Ajouter Chant/ })
+      .click();
+    await expect(s.getByTestId("proficiency-to-spend")).toHaveText(
+      "5 emplacements à dépenser",
+    );
+    await expect(page.getByTestId("building-proficiencies")).toHaveText(
+      "Acrobatie, Chant",
+    );
+  });
+  const details = step.getByTestId("new-character-details");
+  await details.getByLabel("Nom", { exact: true }).fill("Mirel");
+  await details
+    .getByRole("radiogroup", { name: "Sexe" })
+    .getByRole("radio", { name: "Femme" })
+    .click();
+  await details
+    .getByTestId("alignment-grid")
+    .getByRole("radio", { name: "Neutre bon", exact: true })
+    .click();
+  await next.click();
+  await step
+    .getByRole("button", { name: "Créer ce personnage et le jouer" })
+    .click();
+  await expect(page.getByTestId("character")).toContainText("Mirel");
+
+  // The new character's Skills tab lists the two picks; its editor adds Juggling.
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Compétences" });
+  await expect(panel.getByTestId("skill-tumbling")).toBeVisible();
+  await expect(panel.getByTestId("skill-singing")).toBeVisible();
+  await expect(panel.getByTestId("proficiency-slots-line")).toHaveText(
+    "Emplacements : 2 sur 7 · 5 emplacements à dépenser",
+  );
+  await panel.getByTestId("proficiency-edit").click();
+  const editor = panel.getByTestId("proficiency-editor");
+  await editor.getByTestId("proficiency-search").fill("jongl");
+  await editor.getByRole("button", { name: /^Ajouter Jonglerie/ }).click();
+  const spent = editor.getByTestId("proficiency-pool-spent");
+  await expect(spent).toHaveText("Dépensés 3, restants 4");
+  const juggling = editor.getByTestId("proficiency-pick-juggling");
+  const figures = editor.locator("[data-stale]");
+
+  // Previews answer out of order: the one for 2 slots is held back until the one for 3 has
+  // answered, and the late answer is not shown.
+  const preview = "**/api/proficiencies/preview";
+  const isTwo = (body: unknown) =>
+    JSON.stringify(body).includes('{"id":"juggling","slots":2}');
+  await page.route(preview, async (route) => {
+    if (isTwo(route.request().postDataJSON()))
+      await new Promise((r) => setTimeout(r, 800));
+    await route.continue();
+  });
+  const late = page.waitForResponse(
+    (r) => r.url().endsWith("/preview") && isTwo(r.request().postDataJSON()),
+  );
+  await juggling.getByTestId("proficiency-more").click();
+  await page.waitForRequest(
+    (r) => r.url().endsWith("/preview") && isTwo(r.postDataJSON()),
+  );
+  await juggling.getByTestId("proficiency-more").click();
+  await expect(spent).toHaveText("Dépensés 5, restants 2");
+  await late;
+  await page.waitForTimeout(300); // time for a late answer to land, were it applied
+  await expect(spent).toHaveText("Dépensés 5, restants 2");
+  await page.unroute(preview);
+
+  // Growing past the budget: the server's refusal, the figures marked out of date, and a save
+  // refused the same way keeps the editor open.
+  for (let i = 0; i < 3; i++)
+    await juggling.getByTestId("proficiency-more").click();
+  await expect(editor.getByRole("alert").first()).toContainText(
+    "Budget dépassé",
+  );
+  await expect(figures).toHaveAttribute("data-stale", "true");
+  await editor.getByTestId("proficiency-save").click();
+  await expect(editor.getByRole("alert").first()).toContainText(
+    "Budget dépassé",
+  );
+  // Below the cost: the refusal lands on Juggling's row, for the preview and the save alike.
+  for (let i = 0; i < 6; i++)
+    await juggling.getByTestId("proficiency-fewer").click();
+  await expect(juggling.getByTestId("proficiency-slots")).toHaveText("0");
+  await expect(juggling.getByRole("alert")).toHaveText(
+    "Moins d’emplacements que son coût, ou trop : entrez de son coût à 99.",
+  );
+  await editor.getByTestId("proficiency-save").click();
+  await expect(juggling.getByRole("alert")).toHaveText(
+    "Moins d’emplacements que son coût, ou trop : entrez de son coût à 99.",
+  );
+  await expect(editor).toBeVisible();
+  // Back at its cost: the refusal and the out-of-date mark go with the next answer.
+  await juggling.getByTestId("proficiency-more").click();
+  await expect(juggling.getByRole("alert")).toHaveCount(0);
+  await expect(figures).toHaveCount(0);
+  await expect(spent).toHaveText("Dépensés 3, restants 4");
+  await editor.getByTestId("proficiency-save").click();
+  await expect(editor).toHaveCount(0);
+  await expect(panel.getByTestId("skill-juggling")).toBeVisible();
+  await expect(combatLog(page)).toContainText(
+    "Emplacements de compétence : Jonglerie 0 → 1",
+  );
+
+  // Undo in the journal restores the picks before the save.
+  await page.getByTestId("undo").click();
+  await expect(panel.getByTestId("skill-juggling")).toHaveCount(0);
+  await expect(panel.getByTestId("skill-tumbling")).toBeVisible();
+  await expect(panel.getByTestId("proficiency-slots-line")).toHaveText(
+    "Emplacements : 2 sur 7 · 5 emplacements à dépenser",
+  );
 });

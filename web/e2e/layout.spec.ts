@@ -1399,6 +1399,35 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expectNoClippedText(pointsEditor, `bard points editor, ${where}`);
     await expectWholeWords(pointsEditor, `bard points editor, ${where}`);
     await pointsEditor.getByTestId("thief-points-cancel").click();
+    // ADR 0037 step 12: the proficiency editor in place of the lists, Kelsen's eight picks with an
+    // extra slot on Tumbling (the server's figures), the catalogue split by the bard's groups.
+    await skills.getByTestId("proficiency-edit").click();
+    const picksEditor = skills.getByTestId("proficiency-editor");
+    await picksEditor
+      .getByTestId("proficiency-pick-tumbling")
+      .getByTestId("proficiency-more")
+      .click();
+    await expect(picksEditor.getByTestId("proficiency-pool-spent")).toHaveText(
+      "Dépensés 9, restants 1",
+    );
+    await expect(
+      picksEditor
+        .getByTestId("proficiency-pick-tumbling")
+        .getByTestId("proficiency-pick-terms"),
+    ).toContainText("+1 au jet");
+    await expectNoClippedText(picksEditor, `proficiency editor, ${where}`);
+    await expectWholeWords(picksEditor, `proficiency editor, ${where}`);
+    await expectNoPageScroll(page);
+    if (SHOTS.has(`${vp.width}x${vp.height}`) || vp.width >= 1920)
+      await snap(page, `act-proficiencies-fr-${vp.width}x${vp.height}`);
+    if (vp.width === 1920) {
+      // The editor in the dark (the appearance follows the system): for review.
+      await page.emulateMedia({ colorScheme: "dark" });
+      await expect(page.locator("html")).toHaveClass(/dark/);
+      await snap(page, "act-proficiencies-fr-dark-1920x1080");
+      await page.emulateMedia({ colorScheme: "light" });
+    }
+    await picksEditor.getByTestId("proficiency-cancel").click();
     await skills.evaluate((el) => el.scrollTo(0, 0));
     if (vp.width === 1440) {
       // The bard's budget and terms (ADR 0027 step 12.3) make the tab scroll inside
@@ -2359,6 +2388,35 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       await step.getByLabel(label).fill(points);
     await audit("4-hp-skills");
     await next.click();
+    // ADR 0037 step 14: a pick of the bard's groups with an extra slot, and Healing outside them
+    // (priest only: the server's cost of 3), within any rolled Intelligence's budget.
+    await expect(step.getByTestId("proficiency-pool-terms")).toBeVisible();
+    for (const name of [tr("Acrobatie", "Tumbling"), tr("Soins", "Healing")])
+      await step
+        .getByRole("button", {
+          name: new RegExp(`^${tr("Ajouter", "Add")} ${name}`),
+        })
+        .click();
+    await step
+      .getByTestId("proficiency-pick-tumbling")
+      .getByTestId("proficiency-more")
+      .click();
+    await expect(
+      step
+        .getByTestId("proficiency-pick-tumbling")
+        .getByTestId("proficiency-pick-terms"),
+    ).toContainText(tr("+1 au jet", "+1 to the check"));
+    await audit("4b-proficiencies");
+    if (lang === "fr") {
+      // The step in the dark (the appearance follows the system): for review.
+      await page.setViewportSize({ width: 1920, height: 1080 });
+      await page.emulateMedia({ colorScheme: "dark" });
+      await expect(page.locator("html")).toHaveClass(/dark/);
+      await snap(page, "creation-4b-proficiencies-fr-dark-1920x1080");
+      await page.emulateMedia({ colorScheme: "light" });
+      await page.setViewportSize(sizes[0]!);
+    }
+    await next.click();
     await step
       .getByLabel(tr("Nom", "Name"), { exact: true })
       .fill("Aldéric de la Tour-d'Auvergne-Lesparre");
@@ -2393,11 +2451,10 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
 
     if (lang === "fr") {
       // A refusal opens its step: max HP 0 is out of range, shown on "Points de vie et talents".
-      await step.getByRole("button", { name: /^Revenir/ }).click();
-      await step.getByRole("button", { name: /^Revenir/ }).click();
+      for (let i = 0; i < 3; i++)
+        await step.getByRole("button", { name: /^Revenir/ }).click();
       await step.getByLabel("PV max").fill("0");
-      await next.click();
-      await next.click();
+      for (let i = 0; i < 3; i++) await next.click();
       await step
         .getByRole("button", { name: "Créer ce personnage et le jouer" })
         .click();
@@ -2893,13 +2950,16 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await expect(budget.locator("[data-over]")).toHaveCount(1);
   await snap(page, "thief-form-over-budget-fr");
   // The server refuses to create a thief over the budget (ADR 0037 step 10): its preview on the
-  // next step answers the refusal, and back on this step the message shows under the points.
+  // identity step (past the proficiency step) answers the refusal, and back on this step the
+  // message shows under the points.
   await step.getByLabel("PV max").fill("5");
   const refused = page.waitForResponse(
     (r) => r.url().endsWith("/api/characters/preview") && r.status() === 409,
   );
   await next.click();
+  await next.click();
   await refused;
+  await back.click();
   await back.click();
   const overBudget = step.getByText("Budget dépassé : 90 pour 60 disponibles.");
   await expect(overBudget).toBeVisible();

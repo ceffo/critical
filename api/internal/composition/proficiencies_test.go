@@ -41,6 +41,18 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 		"fighter": {"warrior", "general"}, "mage": {"wizard", "general"}, "cleric": {"priest", "general"},
 		"thief": {"rogue", "general"}, "bard": {"rogue", "warrior", "wizard", "general"},
 	}, groups)
+
+	// Step 4: each proficiency's cost by class, the crossover's +1 included.
+	var costs map[string]map[string]int
+	require.NoError(t, json.Unmarshal(raw["proficiencyCosts"], &costs))
+	assert.Equal(t, 2, costs["fighter"]["tumbling"], "tumbling is a rogue proficiency: a fighter pays one more")
+	assert.Equal(t, 1, costs["bard"]["tumbling"], "a bard learns the rogue group at the table's cost")
+	assert.Equal(t, 2, costs["thief"]["blind_fighting"], "rogue and warrior: the thief's rogue group, Table 37's 2")
+	for class, byID := range costs {
+		assert.Len(t, byID, 64, "every pickable catalogue proficiency has a cost for %s", class)
+		assert.NotContains(t, byID, "languages_modern", "step 6: a language is no pick of its own, so %s gets no cost for it", class)
+	}
+	assert.Len(t, costs, 5)
 }
 
 // The fixture's copy is the real seed (api/testdata/README: same format; this

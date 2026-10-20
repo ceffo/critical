@@ -82,6 +82,21 @@ describe("mergeDraft (a late reply never rebuilds the details from an older copy
       weight: "75",
     });
   });
+
+  it("clears the picks when the class changes (each was spent at the old class's cost)", () => {
+    let d: FlowDraft = { ...EMPTY_DRAFT, cls: "bard" };
+    d = mergeDraft(d, { picks: [{ id: "tumbling", slots: 1 }] });
+    d = mergeDraft(d, { cls: "bard" }); // the same class again keeps them
+    expect(d.picks).toEqual([{ id: "tumbling", slots: 1 }]);
+    d = mergeDraft(d, { level: 2 }); // any other change keeps them
+    expect(d.picks).toEqual([{ id: "tumbling", slots: 1 }]);
+    d = mergeDraft(d, { cls: "fighter" });
+    expect(d.picks).toEqual([]);
+    expect(
+      checksRequest({ classes: [] } as unknown as CreationOptions, d, "0")
+        .proficiencies,
+    ).toEqual({ nonweapon: [] });
+  });
 });
 
 describe("buildBody", () => {
@@ -173,6 +188,7 @@ describe("checksRequest (what the class and skills steps ask the server)", () =>
       scores: { dex: 8 },
       xp: 1250,
       skillPoints: { open_locks: 25 },
+      proficiencies: { nonweapon: [] },
     });
   });
 

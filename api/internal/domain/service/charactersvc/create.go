@@ -489,6 +489,12 @@ type CreationOptions struct {
 	// i18n keys by id. Both are empty without the seed.
 	Proficiencies     []ruletablesvc.Proficiency
 	ProficiencyGroups map[string][]string
+	// ProficiencyCosts is each pickable catalogue proficiency's cost by class
+	// (ADR 0037 step 4: Table 37's slots, one more outside the class's Table 38
+	// groups), so the editor shows and sends the server's cost. A proficiency
+	// never picked on its own (LanguagesModernID, step 6) has no cost: the
+	// editor offers only what has one. Empty without the seed.
+	ProficiencyCosts map[string]map[string]int
 	// ScoreMethods are ADR 0032 step 6's methods, in the book's order: the
 	// creation's score step offers them and rolls one through the roll
 	// endpoint.
@@ -617,6 +623,17 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			out.ProficiencyGroups = map[string][]string{}
 		}
 		out.ProficiencyGroups[c.Class] = c.Groups
+		costs := make(map[string]int, len(out.Proficiencies))
+		for _, p := range out.Proficiencies {
+			if p.ID == LanguagesModernID {
+				continue // step 6: a language is a pick of the language list
+			}
+			costs[p.ID] = ruletablesvc.NonweaponCost(p, c.Groups)
+		}
+		if out.ProficiencyCosts == nil {
+			out.ProficiencyCosts = map[string]map[string]int{}
+		}
+		out.ProficiencyCosts[c.Class] = costs
 	}
 	out.Languages = s.languages.All()
 	if len(out.Languages) > 0 {

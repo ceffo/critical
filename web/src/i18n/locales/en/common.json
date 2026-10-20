@@ -2568,7 +2568,15 @@
     },
     "heightWeight": "Height, weight",
     "warningsOn_one": "{{count}} warning: {{fields}}",
-    "warningsOn_other": "{{count}} warnings: {{fields}}"
+    "warningsOn_other": "{{count}} warnings: {{fields}}",
+    "proficiencies": {
+      "name": "Proficiencies",
+      "title": "Non-weapon proficiencies",
+      "lead": "The character's non-weapon proficiencies, within the slots of its class, level and Intelligence. Slots left can be spent later.",
+      "pickedN_one": "{{count}} chosen",
+      "pickedN_other": "{{count}} chosen",
+      "none": "This server has no proficiency catalogue: you will choose them later in the Skills tab."
+    }
   },
   "ac": {
     "title": "Armour class",
@@ -2627,6 +2635,65 @@
     "env": {
       "dev": "dev",
       "staging": "staging"
+    }
+  },
+  "proficiencies": {
+    "edit": "Choose",
+    "editHint": "Choose the non-weapon proficiencies from the catalogue",
+    "title": "Non-weapon proficiencies",
+    "lead": "Add or remove proficiencies, or put extra slots on one: each adds +1 to its check. Already over budget: you may remove slots, not add any.",
+    "save": "Save",
+    "saveHint": "Save the proficiencies (undoable in the journal)",
+    "cancel": "Cancel",
+    "cancelHint": "Close without changing anything",
+    "pool": "Slots: {{initial}} initial + {{levels}} for the levels (one every {{perLevels}}) + {{intelligence}} for Intelligence = {{available}}",
+    "spentLeft": "Spent {{spent}}, left {{left}}",
+    "tabLine": "Slots: {{spent}} of {{available}}",
+    "toSpend_one": "{{count}} slot to spend",
+    "toSpend_other": "{{count}} slots to spend",
+    "over": "Over budget: {{spent}} slots for {{available}} available. You may remove some, not add any.",
+    "overShort": "over budget",
+    "previewStale": "These figures are those of the last choices the server could read.",
+    "picked_one": "Your proficiencies ({{count}})",
+    "picked_other": "Your proficiencies ({{count}})",
+    "none": "No proficiency chosen.",
+    "catalogue": "Catalogue",
+    "search": "Search",
+    "searchPlaceholder": "Proficiency name",
+    "noMatch": "No proficiency matches.",
+    "ownGroups": "Your class's groups: {{groups}}",
+    "otherGroups": "Other groups: one slot more",
+    "groups": {
+      "general": "general",
+      "priest": "priest",
+      "rogue": "rogue",
+      "warrior": "warrior",
+      "wizard": "wizard"
+    },
+    "cost_one": "cost {{count}}",
+    "cost_other": "cost {{count}}",
+    "extra_one": "+{{count}} to the check",
+    "extra_other": "+{{count}} to the check",
+    "target": "target {{ability}} {{target}}",
+    "noCheck": "no check",
+    "unknown": "Not in the catalogue: remove it",
+    "slotsShort_one": "{{count}} slot",
+    "slotsShort_other": "{{count}} slots",
+    "slotsOf_one": "{{name}}: {{count}} slot",
+    "slotsOf_other": "{{name}}: {{count}} slots",
+    "fewer": "One slot fewer on {{name}}",
+    "more": "One slot more on {{name}}",
+    "remove": "Remove {{name}}",
+    "add_one": "Add {{name}} (costs {{count}} slot)",
+    "add_other": "Add {{name}} (costs {{count}} slots)",
+    "alreadyPicked": "{{name}}: already chosen",
+    "errors": {
+      "out_of_range": "Fewer slots than its cost, or too many: enter from its cost to 99.",
+      "duplicate": "This proficiency is already chosen.",
+      "unknown": "This proficiency is not in the catalogue.",
+      "not_allowed": "This proficiency is not chosen here.",
+      "empty": "A proficiency with no name was refused.",
+      "refused": "This choice was refused."
     }
   }
 }

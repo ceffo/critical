@@ -2568,7 +2568,15 @@
     },
     "heightWeight": "Taille, poids",
     "warningsOn_one": "{{count}} avertissement : {{fields}}",
-    "warningsOn_other": "{{count}} avertissements : {{fields}}"
+    "warningsOn_other": "{{count}} avertissements : {{fields}}",
+    "proficiencies": {
+      "name": "Compétences",
+      "title": "Compétences diverses",
+      "lead": "Les compétences diverses du personnage, dans les emplacements de sa classe, de son niveau et de son Intelligence. Les emplacements restants pourront être dépensés plus tard.",
+      "pickedN_one": "{{count}} choisie",
+      "pickedN_other": "{{count}} choisies",
+      "none": "Ce serveur n’a pas de catalogue de compétences : vous les choisirez plus tard dans l’onglet Compétences."
+    }
   },
   "ac": {
     "title": "Classe d'armure",
@@ -2627,6 +2635,65 @@
     "env": {
       "dev": "dev",
       "staging": "préprod"
+    }
+  },
+  "proficiencies": {
+    "edit": "Choisir",
+    "editHint": "Choisir les compétences diverses dans le catalogue",
+    "title": "Compétences diverses",
+    "lead": "Ajoutez ou retirez des compétences, ou mettez des emplacements de plus sur l’une d’elles : chacun ajoute +1 à son jet. Budget déjà dépassé : vous pouvez retirer des emplacements, pas en ajouter.",
+    "save": "Enregistrer",
+    "saveHint": "Enregistrer les compétences (annulable dans le journal)",
+    "cancel": "Annuler",
+    "cancelHint": "Fermer sans rien changer",
+    "pool": "Emplacements : {{initial}} de départ + {{levels}} pour les niveaux (un tous les {{perLevels}}) + {{intelligence}} pour l’Intelligence = {{available}}",
+    "spentLeft": "Dépensés {{spent}}, restants {{left}}",
+    "tabLine": "Emplacements : {{spent}} sur {{available}}",
+    "toSpend_one": "{{count}} emplacement à dépenser",
+    "toSpend_other": "{{count}} emplacements à dépenser",
+    "over": "Budget dépassé : {{spent}} emplacements pour {{available}} disponibles. Vous pouvez en retirer, pas en ajouter.",
+    "overShort": "budget dépassé",
+    "previewStale": "Ces chiffres sont ceux des derniers choix que le serveur a pu lire.",
+    "picked_one": "Vos compétences ({{count}})",
+    "picked_other": "Vos compétences ({{count}})",
+    "none": "Aucune compétence choisie.",
+    "catalogue": "Catalogue",
+    "search": "Rechercher",
+    "searchPlaceholder": "Nom de la compétence",
+    "noMatch": "Aucune compétence ne correspond.",
+    "ownGroups": "Groupes de votre classe : {{groups}}",
+    "otherGroups": "Autres groupes : un emplacement de plus",
+    "groups": {
+      "general": "général",
+      "priest": "prêtre",
+      "rogue": "roublard",
+      "warrior": "combattant",
+      "wizard": "magicien"
+    },
+    "cost_one": "coût {{count}}",
+    "cost_other": "coût {{count}}",
+    "extra_one": "+{{count}} au jet",
+    "extra_other": "+{{count}} au jet",
+    "target": "cible {{ability}} {{target}}",
+    "noCheck": "sans jet",
+    "unknown": "Hors du catalogue : retirez-la",
+    "slotsShort_one": "{{count}} empl.",
+    "slotsShort_other": "{{count}} empl.",
+    "slotsOf_one": "{{name}} : {{count}} emplacement",
+    "slotsOf_other": "{{name}} : {{count}} emplacements",
+    "fewer": "Un emplacement de moins sur {{name}}",
+    "more": "Un emplacement de plus sur {{name}}",
+    "remove": "Retirer {{name}}",
+    "add_one": "Ajouter {{name}} (coût {{count}} emplacement)",
+    "add_other": "Ajouter {{name}} (coût {{count}} emplacements)",
+    "alreadyPicked": "{{name}} : déjà choisie",
+    "errors": {
+      "out_of_range": "Moins d’emplacements que son coût, ou trop : entrez de son coût à 99.",
+      "duplicate": "Cette compétence est déjà choisie.",
+      "unknown": "Cette compétence n’est pas dans le catalogue.",
+      "not_allowed": "Cette compétence ne se choisit pas ici.",
+      "empty": "Une compétence sans nom a été refusée.",
+      "refused": "Ce choix a été refusé."
     }
   }
 }

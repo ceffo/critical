@@ -276,7 +276,7 @@ export interface Character {
     /** ADR 0037 step 11: `slots_over_budget` carries `pool`, `spent` and `available`,
      * `slots_to_spend` `pool` and `left`; `proficiency_unknown` names its pick in `field`
      * (`nonweapon.<id>`). */
-    pool?: "nonweapon";
+    pool?: "nonweapon" | "weapon";
     spent?: number;
     available?: number;
     left?: number;
@@ -393,6 +393,9 @@ export interface CreationOptions {
    */
   proficiencies?: ProficiencyOption[];
   proficiencyGroups?: Record<string, string[]>;
+  /** Each proficiency's cost by class and id, the crossover's +1 included (ADR 0037 step 4): the
+   * editor shows and sends it, never computes it. Absent from a release that predates it. */
+  proficiencyCosts?: Record<string, Record<string, number>>;
   ability: ValueRange;
   /** The 18/xx percentile's range (1 = 18/01, 100 = 18/00). */
   strExceptional: ValueRange;
@@ -550,6 +553,8 @@ export type NewCharacter = {
   /** A thief's or a bard's points by skill (ADR 0030 steps 1, 17 and 18); absent for the other
    * classes. The skills' armour is the one worn (ADR 0033 step 14), never entered. */
   skillPoints?: Record<string, number>;
+  /** The non-weapon picks (ADR 0037 step 14), checked as the editor's save checks them. */
+  proficiencies?: PicksInput;
   /** The details, as the card shows them (age null for none); a refusal's field is `details.<field>`. */
   details?: Partial<CharacterDetails>;
 } & Record<AbilityCode, number | null>;
@@ -561,6 +566,8 @@ export interface DraftChecksRequest {
   scores: Record<string, number>;
   xp: number | null;
   skillPoints: Record<string, number>;
+  /** The non-weapon picks so far (ADR 0037 step 14). */
+  proficiencies?: PicksInput;
 }
 
 /**

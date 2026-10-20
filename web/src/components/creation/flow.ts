@@ -2,6 +2,7 @@ import { toBody, type Draft } from "@/lib/characterDetails";
 import type { Placement } from "@/lib/creationFlow";
 import { classOf, emptyPlacement, xpOfLevel } from "@/lib/creationFlow";
 import { parseWhole } from "@/lib/wholeNumber";
+import type { PickInput } from "@/components/proficiencies/catalogue";
 import {
   ABILITIES,
   type AbilityCode,
@@ -25,9 +26,13 @@ export type DraftPatch = Partial<Omit<FlowDraft, "details">> & {
 };
 
 /** The draft with the patch applied; `details` is merged field by field, so a reply carrying one
- * detail (a rolled height) keeps what was typed since the request left. */
+ * detail (a rolled height) keeps what was typed since the request left. Another class clears the
+ * non-weapon picks: each was spent at the old class's cost (ADR 0037 step 4), so they would be
+ * refused or mispriced under the new one. */
 export function mergeDraft(d: FlowDraft, patch: DraftPatch): FlowDraft {
-  return { ...d, ...patch, details: { ...d.details, ...patch.details } };
+  const next = { ...d, ...patch, details: { ...d.details, ...patch.details } };
+  if (next.cls !== d.cls && patch.picks === undefined) next.picks = [];
+  return next;
 }
 
 export interface FlowDraft {
@@ -54,6 +59,8 @@ export interface FlowDraft {
   hpMax: string;
   strExceptional: string;
   skillPoints: Record<string, string>;
+  /** The non-weapon picks (ADR 0037 step 14), each at the slots the player gave it. */
+  picks: PickInput[];
   name: string;
   details: Draft;
 }
@@ -77,6 +84,7 @@ export const EMPTY_DRAFT: FlowDraft = {
   hpMax: "",
   strExceptional: "",
   skillPoints: {},
+  picks: [],
   name: "",
   details: {
     alignment: "",
@@ -195,6 +203,7 @@ export function buildBody(
       body.skillPoints[skill] = v;
     }
   }
+  if (draft.picks.length > 0) body.proficiencies = { nonweapon: draft.picks };
   const {
     body: details,
     ageInvalid,
@@ -207,8 +216,9 @@ export function buildBody(
 }
 
 /**
- * What the server is asked about the draft on the class and skills steps (ADR 0034): the scores
- * and skill points that read as whole numbers, and the XP when it does. Only the shape is read; the
+ * What the server is asked about the draft on the class, skills and proficiency steps (ADR 0034,
+ * ADR 0037 step 14): the scores and skill points that read as whole numbers, the XP when it does,
+ * and the picks. Only the shape is read; the
  * verdicts (a minimum missed, the points left) are the server's.
  */
 export function checksRequest(
@@ -232,6 +242,7 @@ export function checksRequest(
     scores,
     xp: x === null || Number.isNaN(x) ? null : x,
     skillPoints,
+    proficiencies: { nonweapon: draft.picks },
   };
 }
 

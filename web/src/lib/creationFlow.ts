@@ -12,6 +12,7 @@ export const STEPS = [
   "race",
   "scores",
   "extras",
+  "proficiencies",
   "identity",
   "review",
 ] as const;
@@ -19,7 +20,7 @@ export type StepId = (typeof STEPS)[number];
 
 /**
  * The step a server refusal's field belongs to (the form's field names: `raceCode`, `skillPoints.x`,
- * `details.x`), so the flow opens that step and shows the refusal there. An unknown field stays on
+ * `details.x`, `nonweapon.x`), so the flow opens that step and shows the refusal there. An unknown field stays on
  * the review, where Créer is.
  */
 export function stepOfField(field: string): StepId {
@@ -38,6 +39,8 @@ export function stepOfField(field: string): StepId {
     field.startsWith("skillPoints.")
   )
     return "extras";
+  if (field === "nonweapon" || field.startsWith("nonweapon."))
+    return "proficiencies";
   if (field === "name" || field.startsWith("details.")) return "identity";
   return "review";
 }

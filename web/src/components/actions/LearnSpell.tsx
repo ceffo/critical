@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { addSpell, learnSpell } from "@/api/spells";
 import { useCharacterStore } from "@/stores/character";
 import { useLogStore } from "@/stores/log";
+import { useLookupStore } from "@/stores/lookup";
 import { useSpellStore } from "@/stores/spells";
 import { useTableStore } from "@/stores/table";
 import type { LearnResult } from "@/types/character";
@@ -16,6 +17,8 @@ import { spellbookOffer } from "./spellbookOffer";
  * notice words the code). The answer stays while the roll's journal entry is the top one: an
  * undo (or any later action) clears it. Shows "in the spellbook" once it is there. Add (Ajouter,
  * step 20.6) writes the spell with no roll; the spellbook is read again by the answer's state key.
+ * Opened from a free spell's link (ADR 0030 step 20.8), while the server still lists that free spell
+ * as owed, Ajouter claims it (the add's `grantLevel`); the server refuses a spell of another level.
  * The rules are the server's: this only offers the buttons and words the answer.
  */
 export function LearnSpell({
@@ -34,6 +37,19 @@ export function LearnSpell({
   const run = useTableStore((s) => s.run);
   const busy = useTableStore((s) => s.busy);
   const topId = useLogStore((s) => s.topId);
+  const owed = useCharacterStore(
+    (s) => s.character?.derived.levelUp.toSpend.freeSpells,
+  );
+  const grant = useLookupStore((s) => s.grant);
+  const clearGrant = useLookupStore((s) => s.clearGrant);
+  // The free spell being claimed, while the server still owes it.
+  const claim =
+    grant &&
+    owed?.some(
+      (f) => f.level === grant.level && f.spellLevel === grant.spellLevel,
+    )
+      ? grant
+      : null;
   // The answer and the journal entry it was logged as (the log's top once the roll is in).
   const [result, setResult] = useState<{
     res: LearnResult;
@@ -66,10 +82,14 @@ export function LearnSpell({
 
   const add = async () => {
     setResult(null);
-    await run(async () => {
-      await addSpell(spellId);
+    const ok = await run(async () => {
+      await addSpell(spellId, claim?.level);
     });
+    if (ok && claim) clearGrant();
   };
+  const addTitle = claim
+    ? t("lookup.learn.addFreeTitle", { level: claim.level })
+    : t("lookup.learn.addTitle");
 
   return (
     <div
@@ -97,13 +117,21 @@ export function LearnSpell({
             size="sm"
             disabled={busy}
             onClick={() => void add()}
-            title={t("lookup.learn.addTitle")}
-            aria-label={t("lookup.learn.addTitle")}
+            title={addTitle}
+            aria-label={addTitle}
             data-testid="add-spell"
           >
             <BookmarkSimple aria-hidden />
             {t("lookup.learn.add")}
           </Button>
+          {claim && (
+            <span
+              className="text-label text-magic"
+              data-testid="free-spell-claim"
+            >
+              {t("lookup.learn.free", { level: claim.level })}
+            </span>
+          )}
         </>
       )}
       {shown && (

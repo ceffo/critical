@@ -26,7 +26,7 @@
       "realizedAbove": "Level {{realized}} taken, XP gives level {{target}}",
       "realizedAboveHint": "Undo the roll or correct the XP.",
       "grantsTitle": "Level {{level}} grants",
-      "toSpendHint": "Slots and skill points not spent yet",
+      "toSpendHint": "Slots, skill points and free spells not taken yet",
       "toSpendTitle": "To spend",
       "gained": "+{{what}}",
       "grant": {
@@ -35,14 +35,16 @@
         "nonWeaponSlots_one": "{{count}} proficiency slot",
         "nonWeaponSlots_other": "{{count}} proficiency slots",
         "skillPoints_one": "{{count}} skill point",
-        "skillPoints_other": "{{count}} skill points"
+        "skillPoints_other": "{{count}} skill points",
+        "freeSpell": "1 free level {{spellLevel}} spell"
       },
       "choose": "Choose",
       "spend": "Spend",
       "open": {
         "weapon": "Choose the weapon proficiencies",
         "nonWeapon": "Choose the proficiencies",
-        "skillPoints": "Spend the skill points"
+        "skillPoints": "Spend the skill points",
+        "freeSpell": "Pick the free level {{spellLevel}} spell in the spell lookup"
       },
       "dismiss": "Close",
       "dismissTitle": "Close what the level grants",
@@ -1022,7 +1024,9 @@
       "learned": "Learned: d100 {{roll}} ≤ {{chance}}%",
       "failed": "Failed: d100 {{roll}} > {{chance}}%, try again at level {{level}}",
       "add": "Add",
-      "addTitle": "Write this spell in the spellbook with no roll (a DM gift, a training, a fix)"
+      "addTitle": "Write this spell in the spellbook with no roll (a DM gift, a training, a fix)",
+      "free": "Level {{level}}'s free spell",
+      "addFreeTitle": "Write this spell in the spellbook as level {{level}}'s free spell, with no roll"
     }
   },
   "result": {
@@ -1466,7 +1470,8 @@
     "learn": {
       "learned": "Learned: {{spell}} (d100 {{roll}} ≤ {{chance}}%)",
       "failed": "Failed: {{spell}} (d100 {{roll}} > {{chance}}%), try again at level {{level}}",
-      "added": "Added to the spellbook: {{spell}} (no roll)"
+      "added": "Added to the spellbook: {{spell}} (no roll)",
+      "addedFree": "Level {{level}}'s free spell: {{spell}} (no roll)"
     },
     "turn": {
       "text": "Turning undead ({{undead}}): {{result}}, {{roll}}",
@@ -1974,6 +1979,8 @@
     "spell_level_above_class": "Spell level beyond what the class can learn.",
     "spellbook_level_full": "The spellbook already holds the most spells of that level this Intelligence allows.",
     "spell_learn_failed_at_level": "Failed at this level: try again at the next level.",
+    "no_free_spell_owed": "That level owes no free spell.",
+    "free_spell_wrong_level": "That level's free spell is of another spell level.",
     "cannot_turn_undead": "This priest cannot turn that undead yet.",
     "class_cannot_turn": "This class does not turn undead.",
     "end_cause_required": "This spell does something when it ends: say whether you ended it or it was dispelled."

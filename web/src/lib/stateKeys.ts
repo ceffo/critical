@@ -101,7 +101,8 @@ export const INVALIDATES = {
   // The sheet warns about the budget.
   skill_points: ["skills", "character"],
   spell_slots: ["slots"],
-  spellbook: ["spellInfo"],
+  // The sheet's "to spend" counts the free spells the book does not hold yet (ADR 0030 step 20.8).
+  spellbook: ["spellInfo", "character"],
   // The weapons of before the one equipment model are pieces now (ADR 0033 step 26.2).
   weapons: ITEM_SLICES,
   // The level follows the XP (ADR 0030 step 3).

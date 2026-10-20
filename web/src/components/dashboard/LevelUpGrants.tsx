@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import type { LevelGrants } from "@/types/character";
+import type { FreeSpell, LevelGrants } from "@/types/character";
 import type { SkillsEditor } from "@/stores/skillsEditor";
 
 /** The editor each grant is spent in (the Skills tab's, ADR 0037 steps 7 and 12; ADR 0030 steps
  * 17 and 18), in the order the card lists them. */
 const ROWS: {
-  key: keyof LevelGrants;
+  key: "weaponSlots" | "nonWeaponSlots" | "skillPoints";
   editor: SkillsEditor;
   action: "choose" | "spend";
 }[] = [
@@ -17,17 +17,20 @@ const ROWS: {
 
 /**
  * Slots and skill points beyond hit points (ADR 0037 step 15) as the server counts them, one row
- * per count above 0 with the way into its editor ("Choisir" / "Dépenser"): `gained` words them as
- * what a level grants ("+n"), otherwise as what is left.
+ * per count above 0 with the way into its editor ("Choisir" / "Dépenser"), then a mage's free
+ * spells (ADR 0030 step 20.8), each with the way into the spell lookup on its spell level:
+ * `gained` words them as what a level grants ("+n"), otherwise as what is left.
  */
 export function GrantRows({
   grants,
   gained,
   onOpenEditor,
+  onOpenFreeSpell,
 }: {
   grants: LevelGrants;
   gained: boolean;
   onOpenEditor: (editor: SkillsEditor) => void;
+  onOpenFreeSpell: (fs: FreeSpell) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -59,6 +62,35 @@ export function GrantRows({
           </li>
         );
       })}
+      {grants.freeSpells.map((fs) => {
+        const what = t("app.levelUp.grant.freeSpell", {
+          spellLevel: fs.spellLevel,
+        });
+        const actionTitle = t("app.levelUp.open.freeSpell", {
+          spellLevel: fs.spellLevel,
+        });
+        return (
+          <li
+            key={`free-${fs.level}-${fs.spellLevel}`}
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3"
+            data-testid="grant-freeSpell"
+          >
+            <span className="min-w-0 break-words text-muted-foreground">
+              {gained ? t("app.levelUp.gained", { what }) : what}
+            </span>
+            <Button
+              variant="quiet"
+              size="xs"
+              aria-label={actionTitle}
+              title={actionTitle}
+              onClick={() => onOpenFreeSpell(fs)}
+              data-testid={`grant-open-freeSpell-${fs.level}-${fs.spellLevel}`}
+            >
+              {t("app.levelUp.choose")}
+            </Button>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -72,11 +104,13 @@ export function LevelUpGrants({
   grants,
   level,
   onOpenEditor,
+  onOpenFreeSpell,
   onDismiss,
 }: {
   grants: LevelGrants;
   level: number;
   onOpenEditor: (editor: SkillsEditor) => void;
+  onOpenFreeSpell: (fs: FreeSpell) => void;
   onDismiss: () => void;
 }) {
   const { t } = useTranslation();
@@ -100,7 +134,12 @@ export function LevelUpGrants({
           {t("app.levelUp.dismiss")}
         </Button>
       </div>
-      <GrantRows grants={grants} gained onOpenEditor={onOpenEditor} />
+      <GrantRows
+        grants={grants}
+        gained
+        onOpenEditor={onOpenEditor}
+        onOpenFreeSpell={onOpenFreeSpell}
+      />
     </section>
   );
 }

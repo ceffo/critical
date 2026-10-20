@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { ApiError } from "@/api/http";
-import type { LevelUp, PendingLevel } from "@/types/character";
+import type { FreeSpell, LevelUp, PendingLevel } from "@/types/character";
 import type { SkillsEditor } from "@/stores/skillsEditor";
 import { hasGrants } from "@/lib/grants";
 import { LevelUpGrants } from "./LevelUpGrants";
@@ -34,6 +34,7 @@ export function LevelUpPrompt({
   busy,
   onRoll,
   onOpenEditor,
+  onOpenFreeSpell,
 }: {
   levelUp: LevelUp;
   /** The level taken (step 7), for the step 7.4 warning. */
@@ -44,6 +45,8 @@ export function LevelUpPrompt({
   onRoll: (level: number, die?: number) => Promise<ApiError | null>;
   /** Opens a Skills tab editor (ADR 0037 step 15's links). */
   onOpenEditor: (editor: SkillsEditor) => void;
+  /** Opens the spell lookup on a level's free spell (ADR 0030 step 20.8). */
+  onOpenFreeSpell: (fs: FreeSpell) => void;
 }) {
   const { t } = useTranslation();
   const [entering, setEntering] = useState(false);
@@ -63,6 +66,7 @@ export function LevelUpPrompt({
         grants={taken.grants}
         level={taken.level}
         onOpenEditor={onOpenEditor}
+        onOpenFreeSpell={onOpenFreeSpell}
         onDismiss={() => setTaken(null)}
       />
     );

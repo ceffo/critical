@@ -142,7 +142,12 @@ export const spellAddKind: KindView<SpellAdded> = {
   icon: BookOpen,
   // A spell written in the spellbook with no roll.
   text: (p, { t, spellName }) =>
-    t("log.learn.added", { spell: spellName(p.spellId) }),
+    p.grantLevel
+      ? t("log.learn.addedFree", {
+          spell: spellName(p.spellId),
+          level: p.grantLevel,
+        })
+      : t("log.learn.added", { spell: spellName(p.spellId) }),
 };
 
 /** The points per skill before and after (skillsvc, ADR 0030 step 17). */

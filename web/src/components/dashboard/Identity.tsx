@@ -14,7 +14,9 @@ import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
 import { useRollStore } from "@/stores/roll";
 import { useTableStore } from "@/stores/table";
+import { useLookupStore } from "@/stores/lookup";
 import { useSkillsEditor, type SkillsEditor } from "@/stores/skillsEditor";
+import type { FreeSpell } from "@/types/character";
 import { useXpStore } from "@/stores/xp";
 import { CharacterDetails } from "./CharacterDetails";
 import { LevelUpPrompt } from "./LevelUpPrompt";
@@ -39,10 +41,13 @@ const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
 export function Identity({
   onOpenXp,
   onOpenSkills,
+  onOpenSpells,
 }: {
   onOpenXp: () => void;
   /** Focuses the Act activity, whose Skills tab holds the proficiency and skill point editors. */
   onOpenSkills: () => void;
+  /** Focuses the Spells activity, the spell lookup (a free spell's link, ADR 0030 step 20.8). */
+  onOpenSpells: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const xp = useXpStore((s) => s.ledger);
@@ -68,6 +73,12 @@ export function Identity({
   const openSkillsEditor = (editor: SkillsEditor) => {
     openEditor(editor);
     onOpenSkills();
+  };
+  // ADR 0030 step 20.8's link: the lookup on the free spell's spell level, Ajouter claiming it.
+  const openFreeSpellLookup = useLookupStore((s) => s.openFreeSpell);
+  const openFreeSpell = (fs: FreeSpell) => {
+    openFreeSpellLookup(fs);
+    onOpenSpells();
   };
 
   return (
@@ -95,6 +106,7 @@ export function Identity({
               <ToSpendTag
                 toSpend={character.derived.levelUp.toSpend}
                 onOpenEditor={openSkillsEditor}
+                onOpenFreeSpell={openFreeSpell}
               />
             </div>
           )}
@@ -248,6 +260,7 @@ export function Identity({
           busy={levelUpBusy}
           onRoll={rollLevelUp}
           onOpenEditor={openSkillsEditor}
+          onOpenFreeSpell={openFreeSpell}
         />
       )}
     </div>

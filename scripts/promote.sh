@@ -39,7 +39,9 @@
 #   6. the smoke check of every machine (scripts/fly-smoke.sh: health with the commit, a database read,
 #      the web app), then every machine runs exactly that digest;
 #   7. the GitHub Release of the tag, with generated notes naming the restore point and where it is kept
-#      (kept when it exists: a rollback re-runs an older tag).
+#      (kept when it exists: a rollback re-runs an older tag); then the production deployment record
+#      ({commit, digest, version}, success; `just promote` reads it as the version production runs): none on an
+#      earlier failure, and a refused write is a warning, not a failure.
 #
 # Needs fly (FLY_API_TOKEN), docker with buildx (logged in to registry.fly.io by `fly auth docker`), gh (GH_TOKEN:
 # deployments read, contents write), gpg, and the tag and origin/main fetched. PROD_CONFIG names the fly config
@@ -212,6 +214,15 @@ if gh release view "$tag" >/dev/null 2>&1; then
 else
     gh release create "$tag" --verify-tag --title "$tag" --generate-notes --notes "$notes" >/dev/null
     echo "promote: GitHub Release $tag created"
+fi
+# The record of what production runs (ADR 0024 step 4), written after the Release and only once the deploy and
+# its smoke check passed: `just promote` reads it to offer the versions above this one. The rollback writes it
+# too. A refusal is a warning, never a red run: production already runs the version and the Release exists, and
+# a promotion that fails here would fail again on every re-run. Without it the picker shows production as
+# unknown (or older); a re-run of the same version (the floor accepts an equal one) writes it.
+if ! "$here/record-deployment.sh" --production "$sha" success "$digest" "${tag#v}"; then
+    echo "::warning title=Promotion::$app runs $tag and the Release exists, but its production deployment record could not be written: just promote will show production's version as unknown or older. Re-run the promotion of $tag to write it (docs/deploy.md, Promotion)."
+    echo "promote: WARNING: the production deployment record of $tag was not written" >&2
 fi
 echo "promote: OK ($tag on $app)"
 }

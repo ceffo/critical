@@ -935,7 +935,7 @@ export function ExtrasStep({
                     <span>
                       {t("creation.extras.budget", {
                         level: checks.skillBudget.level,
-                        total: checks.skillBudget.total,
+                        total: checks.skillBudget.available,
                       })}
                     </span>
                     <span
@@ -951,10 +951,10 @@ export function ExtrasStep({
                         left: checks.skillBudget.left,
                       })}
                     </span>
-                    {checks.skillBudget.perSkill > 0 && (
+                    {checks.skillBudget.perSkillCap > 0 && (
                       <span className="text-ink-muted">
                         {t("creation.extras.budgetPerSkill", {
-                          max: checks.skillBudget.perSkill,
+                          max: checks.skillBudget.perSkillCap,
                         })}
                       </span>
                     )}
@@ -966,7 +966,7 @@ export function ExtrasStep({
                         formula: budgetFormula(t, checks.skillBudget),
                       })}
                     </span>
-                    {checks.skillBudget.perSkill > 0 && (
+                    {checks.skillBudget.perSkillCap > 0 && (
                       <span
                         className="text-ink-muted"
                         data-testid="skill-budget-per-skill-formula"
@@ -977,7 +977,7 @@ export function ExtrasStep({
                             checks.skillBudget.perSkillFirst,
                             checks.skillBudget.perSkillPerLevel,
                             checks.skillBudget.level,
-                            checks.skillBudget.perSkill,
+                            checks.skillBudget.perSkillCap,
                           ),
                         })}
                       </span>

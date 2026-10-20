@@ -1,3 +1,4 @@
+import { ApiError } from "@/api/http";
 import { previewSkillPoints } from "@/api/skills";
 import { parseWhole } from "@/lib/wholeNumber";
 import type { RogueSkill, Skills } from "@/types/skills";
@@ -22,22 +23,30 @@ export function classSkillsOf(s: Skills): RogueSkill[] {
   return s.thiefSkills.length > 0 ? s.thiefSkills : s.bardSkills;
 }
 
+/** The answer of a preview: the derived skills, or why none came (a refused field of the typed
+ * points, or no answer at all). */
+export type PreviewResult =
+  | { ok: true; skills: Skills }
+  | { ok: false; field?: string; message?: string };
+
 /**
  * What the server derives from the points typed so far (ADR 0030 steps 17 and 18): the skills with
- * their terms and the budget. Nothing is written or logged. Null when a field is not a whole
- * number or the server refuses the points: the editor then keeps showing its last preview, and the
- * save names the refused field.
+ * their terms and the budget. Nothing is written or logged. A field that is not a whole number, a
+ * refusal (its field is named) or a failed call is `ok: false`: the editor then marks what it
+ * shows as out of date.
  */
 export async function previewDraft(
   values: Record<string, string>,
   skills: RogueSkill[],
   fetchPreview: typeof previewSkillPoints = previewSkillPoints,
-): Promise<Skills | null> {
+): Promise<PreviewResult> {
   const points = typedPoints(values, skills);
-  if (!points) return null;
+  if (!points) return { ok: false };
   try {
-    return await fetchPreview(points);
-  } catch {
-    return null;
+    return { ok: true, skills: await fetchPreview(points) };
+  } catch (e) {
+    return e instanceof ApiError
+      ? { ok: false, field: e.field, message: e.message }
+      : { ok: false };
   }
 }

@@ -492,20 +492,21 @@ type ClassUnmetDTO struct {
 }
 
 // SkillBudgetFigureDTO is a thief's or a bard's skill point budget at the
-// starting level, with the terms of its formula: `total` the level allows
-// (`first` + `perLevel` x (level - 1)), `spent` entered, `left` (negative
-// when over), `perSkill` the most one skill holds (`perSkillFirst` +
-// `perSkillPerLevel` x (level - 1); 0: no such limit).
+// starting level, with the terms of its formula, named as GET /api/skills'
+// `budget` names them: `available` the level allows (`first` + `perLevel` x
+// (level - 1)), `spent` entered, `left` (negative when over), `perSkillCap` the
+// most one skill holds (`perSkillFirst` + `perSkillPerLevel` x (level - 1); 0:
+// no such limit).
 type SkillBudgetFigureDTO struct {
 	Level            int `json:"level"`
 	First            int `json:"first"`
 	PerLevel         int `json:"perLevel"`
-	Total            int `json:"total"`
+	Available        int `json:"available"`
 	Spent            int `json:"spent"`
 	Left             int `json:"left"`
 	PerSkillFirst    int `json:"perSkillFirst"`
 	PerSkillPerLevel int `json:"perSkillPerLevel"`
-	PerSkill         int `json:"perSkill"`
+	PerSkillCap      int `json:"perSkillCap"`
 }
 
 // ChecksDTO is POST /api/characters/checks: `unmetMinimums` for every
@@ -538,8 +539,11 @@ func Checks(svc draftChecker) render.HandlerFunc {
 			out.UnmetMinimums = append(out.UnmetMinimums, ClassUnmetDTO(u))
 		}
 		if c.SkillBudget != nil {
-			f := SkillBudgetFigureDTO(*c.SkillBudget)
-			out.SkillBudget = &f
+			b := c.SkillBudget
+			out.SkillBudget = &SkillBudgetFigureDTO{
+				Level: b.Level, First: b.First, PerLevel: b.PerLevel, Available: b.Total, Spent: b.Spent, Left: b.Left,
+				PerSkillFirst: b.PerSkillFirst, PerSkillPerLevel: b.PerSkillPerLevel, PerSkillCap: b.PerSkill,
+			}
 		}
 		render.OK(r.Context(), w, out)
 		return nil

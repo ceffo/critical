@@ -1791,6 +1791,7 @@
     "savePoints": "Enregistrer",
     "cancelPoints": "Annuler",
     "pointsOutOfRange": "Entrez un nombre entier de {{min}} à {{max}}.",
+    "previewStale": "Ces chiffres sont ceux des derniers points que le serveur a pu lire.",
     "pointsRefused": "Ces points ont été refusés.",
     "unusable": "{{name}} : dépensez des points pour l’augmenter avant de pouvoir l’utiliser"
   },

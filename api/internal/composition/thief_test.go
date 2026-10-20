@@ -446,3 +446,29 @@ func TestThief_Step17_PreviewEqualsTheStoredPointsAndWritesNothing(t *testing.T)
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, "skillPoints.open_locks", fe.Field)
 }
+
+// A class without skill points has no budget; its preview of no points answers and of any point
+// is refused with the field the PUT names.
+func TestSkillPoints_AClassWithoutThemHasNoBudgetAndRefusesAPreviewedPoint(t *testing.T) {
+	ctx := context.Background()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 16, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+	})
+	require.NoError(t, err)
+	got, err := bs.Skills.List(ctx, id)
+	require.NoError(t, err)
+	assert.Nil(t, got.Budget)
+	empty, err := bs.Skills.PreviewPoints(ctx, id, map[string]int{})
+	require.NoError(t, err)
+	assert.Nil(t, empty.Budget)
+	_, err = bs.Skills.PreviewPoints(ctx, id, map[string]int{"open_locks": 5})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "skillPoints", fe.Field)
+}

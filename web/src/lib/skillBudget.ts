@@ -14,7 +14,7 @@ export function formula(
 /** The creation step's budget formula for the figures `POST /api/characters/checks` sends. */
 export function budgetFormula(
   t: TFunction,
-  b: { level: number; first: number; perLevel: number; total: number },
+  b: { level: number; first: number; perLevel: number; available: number },
 ) {
-  return formula(t, b.first, b.perLevel, b.level, b.total);
+  return formula(t, b.first, b.perLevel, b.level, b.available);
 }

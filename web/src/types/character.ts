@@ -507,13 +507,13 @@ export interface DraftChecks {
     first: number;
     perLevel: number;
     /** The points the level allows in all, those entered, and what is left (negative when over). */
-    total: number;
+    available: number;
     spent: number;
     left: number;
     /** The most one skill holds at the level, perSkillFirst + perSkillPerLevel x (level - 1); all
      * 0 for no such limit. */
     perSkillFirst: number;
     perSkillPerLevel: number;
-    perSkill: number;
+    perSkillCap: number;
   } | null;
 }

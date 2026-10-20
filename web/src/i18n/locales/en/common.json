@@ -1791,6 +1791,7 @@
     "savePoints": "Save",
     "cancelPoints": "Cancel",
     "pointsOutOfRange": "Enter a whole number from {{min}} to {{max}}.",
+    "previewStale": "These figures are for the last points the server could read.",
     "pointsRefused": "These points were refused.",
     "unusable": "{{name}}: spend points to raise it before you can use it"
   },

@@ -5,6 +5,7 @@ import { I18nextProvider } from "react-i18next";
 import { resources } from "@/i18n";
 import type { RogueSkill, SkillBudget, Skills } from "@/types/skills";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
+import { ApiError } from "@/api/http";
 import { previewDraft, typedPoints } from "./skillsPreview";
 
 vi.mock("@/stores/skills", () => ({
@@ -79,7 +80,7 @@ describe("previewDraft", () => {
       fetchPreview,
     );
     expect(fetchPreview).toHaveBeenCalledExactlyOnceWith({ open_locks: 40 });
-    expect(got).toBe(answer);
+    expect(got).toEqual({ ok: true, skills: answer });
   });
 
   it("asks nothing while a field is not a whole number", async () => {
@@ -87,14 +88,29 @@ describe("previewDraft", () => {
     expect(typedPoints({ open_locks: "4x" }, skills)).toBeNull();
     expect(
       await previewDraft({ open_locks: "4x" }, skills, fetchPreview),
-    ).toBeNull();
+    ).toEqual({ ok: false });
     expect(fetchPreview).not.toHaveBeenCalled();
   });
 
-  it("is null when the server refuses the points", async () => {
-    const fetchPreview = vi.fn().mockRejectedValue(new Error("400"));
+  it("names the field the server refuses, so the editor can show it", async () => {
+    const fetchPreview = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError("out_of_range", 400, "skillPoints.open_locks"),
+      );
     expect(
       await previewDraft({ open_locks: "96" }, skills, fetchPreview),
-    ).toBeNull();
+    ).toEqual({
+      ok: false,
+      field: "skillPoints.open_locks",
+      message: "out_of_range",
+    });
+  });
+
+  it("is not ok, with no field, when the call fails", async () => {
+    const fetchPreview = vi.fn().mockRejectedValue(new TypeError("offline"));
+    expect(
+      await previewDraft({ open_locks: "40" }, skills, fetchPreview),
+    ).toEqual({ ok: false });
   });
 });

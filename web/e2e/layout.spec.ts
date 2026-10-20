@@ -1383,8 +1383,25 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expect(skills.getByTestId("skill-modifier").first()).toBeVisible();
     await expectNoClippedText(actions, `skills tab, ${where}`);
     await expectWholeWords(actions, `skills tab, ${where}`);
+    // A level 15 bard's budget (20 + 15 × 14 = 230) and its editor wrap uncut in French.
+    await expect(skills.getByTestId("skill-points-available")).toContainText(
+      "Disponibles : 20 + 15 × 14 = 230 (niveau 15)",
+    );
+    await expectNoClippedText(
+      skills.getByTestId("skill-points-budget"),
+      `bard budget, ${where}`,
+    );
+    await skills.getByTestId("thief-points-edit").click();
+    const pointsEditor = skills.getByTestId("thief-points-editor");
+    await expect(
+      pointsEditor.getByTestId("skill-points-available"),
+    ).toBeVisible();
+    await expectNoClippedText(pointsEditor, `bard points editor, ${where}`);
+    await expectWholeWords(pointsEditor, `bard points editor, ${where}`);
+    await pointsEditor.getByTestId("thief-points-cancel").click();
+    await skills.evaluate((el) => el.scrollTo(0, 0));
     if (vp.width === 1440) {
-      // The bard's budget and terms (CRI-90 text, ADR 0027 step 12.3) make the tab scroll inside
+      // The bard's budget and terms (ADR 0027 step 12.3) make the tab scroll inside
       // its panel; the page never scrolls.
       await expectNoPageScroll(page);
       // The bard's block holds its skills, the armour and the Spend button (ADR 0030 step 18).
@@ -2984,11 +3001,29 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await expect(page.getByTestId("skill-points-available")).toContainText(
     "Disponibles : 60 + 30 × 0 = 60",
   );
+  // Over budget on the tab (70 of 60): left is negative, in the warning colour, no refusal.
+  await expect(page.getByTestId("skill-points-left")).toHaveAttribute(
+    "data-over",
+    "true",
+  );
   await page.getByTestId("thief-points-edit").click();
   const editor = page.getByTestId("thief-points-editor");
+  // Above the range the server refuses the preview: its field error shows under the field, the
+  // figures are marked out of date, and Save reports the same field.
+  await editor.getByTestId("thief-points-open_locks").fill("96");
+  await expect(editor.getByRole("alert")).toContainText("de 0 à 95");
+  await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
+  await editor.getByTestId("thief-points-save").click();
+  await expect(editor.getByRole("alert")).toContainText("de 0 à 95");
+  await expect(editor).toBeVisible();
   await editor.getByTestId("thief-points-open_locks").fill("95");
   await expect(editor.getByTestId("skill-limit-open_locks")).toContainText(
     "plafonné à 95 %",
+  );
+  await expect(editor.getByTestId("skill-preview-stale")).toHaveCount(0);
+  await expect(editor.getByTestId("skill-points-left")).toHaveAttribute(
+    "data-over",
+    "true",
   );
   for (const vp of [
     { width: 1280, height: 800 },

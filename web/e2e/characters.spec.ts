@@ -415,6 +415,13 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
     "= 70 %",
   );
   await snap(page, "thief-points-editor-fr");
+  // The preview call failing (offline): the figures are marked out of date, the editor stays
+  // usable and Save still works.
+  await page.route("**/api/skills/points/preview", (r) => r.abort());
+  await editor.getByTestId("thief-points-open_locks").fill("46");
+  await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
+  await editor.getByTestId("thief-points-open_locks").fill("45");
+  await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
   await page.getByTestId("thief-points-save").click();
   await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("70 %");
   await expect(page.getByTestId("skill-budget")).toBeVisible();

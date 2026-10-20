@@ -17,7 +17,6 @@ import {
 } from "@phosphor-icons/react";
 import {
   fetchCharacters,
-  fetchCreationOptions,
   renameCharacter,
   retireCharacter,
   switchCharacter,
@@ -34,6 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { APP_NAME } from "@/lib/brand";
 import { navigate } from "@/lib/navigation";
+import { useCreationOptions } from "@/lib/useCreationOptions";
 import {
   initialRoster,
   rosterReducer,
@@ -465,21 +465,11 @@ function RenameForm({
   send: Send;
 }) {
   const { t } = useTranslation();
-  const [maxName, setMaxName] = useState<number | null>(null);
+  // A failed read leaves the name's length unchecked here; the server still refuses.
+  const maxName = useCreationOptions().options?.maxNameLength ?? null;
   const [name, setName] = useState(character.name);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let live = true;
-    fetchCreationOptions().then(
-      (o) => live && setMaxName(o.maxNameLength),
-      () => {},
-    );
-    return () => {
-      live = false;
-    };
-  }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();

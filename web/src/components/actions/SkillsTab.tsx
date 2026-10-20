@@ -6,13 +6,12 @@ import { useSkillsStore } from "@/stores/skills";
 import { Button } from "@/components/ui/button";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
 import { useSkillsEditor } from "@/stores/skillsEditor";
-import { ProficiencyEditor } from "@/components/proficiencies/ProficiencyEditor";
+import { PickEditor } from "@/components/proficiencies/PickEditor";
 import { SkillBudgetSummary, SkillTerms } from "./SkillBreakdown";
 import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/journal/words";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { WeaponProficiencyEditor } from "@/components/proficiencies/WeaponProficiencyEditor";
 import { isSpecialization } from "@/components/proficiencies/weapons";
 import type {
   NonweaponPool,
@@ -123,7 +122,8 @@ export function SkillsTab() {
   // ADR 0037 step 12: the picks are edited in place of the lists, the catalogue needing the room.
   if (editingPicks && slots && cls)
     return (
-      <ProficiencyEditor
+      <PickEditor
+        pool="nonWeapon"
         cls={cls}
         race={race ?? ""}
         languages={languages ?? []}
@@ -134,7 +134,14 @@ export function SkillsTab() {
 
   if (editingWeapons && slots && cls)
     return (
-      <WeaponProficiencyEditor cls={cls} slots={slots} onDone={closeEditor} />
+      <PickEditor
+        pool="weapon"
+        cls={cls}
+        race={race ?? ""}
+        languages={languages ?? []}
+        slots={slots}
+        onDone={closeEditor}
+      />
     );
 
   return (

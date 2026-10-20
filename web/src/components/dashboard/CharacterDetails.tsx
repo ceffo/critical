@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,7 @@ import {
   toPatch,
   type Draft,
 } from "@/lib/characterDetails";
-import { fetchCreationChoices, fetchCreationOptions } from "@/api/characters";
+import { useCreationOptions } from "@/lib/useCreationOptions";
 import { IdentityRoll } from "@/components/dashboard/IdentityRoll";
 import { useLanguageNames } from "@/lib/useLanguageNames";
 import {
@@ -31,7 +31,7 @@ import {
 } from "@/lib/measures";
 import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
-import type { Character, CreationOptions } from "@/types/character";
+import type { Character } from "@/types/character";
 
 /**
  * The character's name, opening a popover with the details: the name first (Rename lives here too,
@@ -95,31 +95,6 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/**
- * The language catalogue, for the names (ADR 0032 step 4): loaded once the card opens, tolerant of
- * a release that predates it (its codes then show as they are). `loading` until it answers.
- */
-function useLanguageCatalogue(): {
-  options: CreationOptions | null;
-  loading: boolean;
-} {
-  const [state, setState] = useState<{
-    options: CreationOptions | null;
-    loading: boolean;
-  }>({ options: null, loading: true });
-  useEffect(() => {
-    let live = true;
-    fetchCreationOptions().then(
-      (options) => live && setState({ options, loading: false }),
-      () => live && setState({ options: null, loading: false }),
-    );
-    return () => {
-      live = false;
-    };
-  }, []);
-  return state;
-}
-
 function DetailsView({
   character: c,
   onEdit,
@@ -128,7 +103,9 @@ function DetailsView({
   onEdit: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const catalogue = useLanguageCatalogue();
+  // The language catalogue, for the names (ADR 0032 step 4): tolerant of a release that predates
+  // it (its codes then show as they are).
+  const catalogue = useCreationOptions();
   const languageName = useLanguageNames(catalogue.options);
   // ADR 0037 step 6: the slots the languages beyond the native one and Common spend (the server's).
   const languageSlots = c.derived.proficiencySlots?.nonWeapon.languages ?? 0;
@@ -229,7 +206,7 @@ function DetailsView({
         <Row label={t("details.fields.languages")}>
           {c.languages.length === 0
             ? none
-            : catalogue.loading
+            : !catalogue.options && !catalogue.failed
               ? "…"
               : c.languages.map(languageName).join(", ")}
           {languageSlots > 0 && (
@@ -268,23 +245,7 @@ function DetailsForm({
   const [busy, setBusy] = useState(false);
   // The lists the picks are made from come from the server (ADR 0032 conventions): the class's
   // admitted alignments and the sexes.
-  const [options, setOptions] = useState<CreationOptions | null>(null);
-  const [optionsFailed, setOptionsFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    let live = true;
-    fetchCreationChoices().then(
-      (o) => {
-        if (!live) return;
-        setOptions(o);
-        setOptionsFailed(false);
-      },
-      () => live && setOptionsFailed(true),
-    );
-    return () => {
-      live = false;
-    };
-  }, [attempt]);
+  const { options, failed: optionsFailed, retry } = useCreationOptions(true);
   const alignments =
     options?.classes.find((c) => c.class === character.class)?.alignments ?? [];
   const sexes = options?.sexes ?? [];
@@ -441,14 +402,7 @@ function DetailsForm({
           className="flex flex-wrap items-center gap-2 text-label text-danger"
         >
           {t("details.optionsError")}
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setOptionsFailed(false);
-              setAttempt((n) => n + 1);
-            }}
-          >
+          <Button type="button" variant="ghost" onClick={retry}>
             {t("details.optionsRetry")}
           </Button>
         </div>

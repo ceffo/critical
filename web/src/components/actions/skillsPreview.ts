@@ -24,10 +24,10 @@ export function classSkillsOf(s: Skills): RogueSkill[] {
 }
 
 /** The answer of a preview: the derived skills, or why none came (a refused field of the typed
- * points, or no answer at all). */
+ * points with the error code, or no answer at all). */
 export type PreviewResult =
   | { ok: true; skills: Skills }
-  | { ok: false; field?: string; message?: string };
+  | { ok: false; field?: string; message?: string; code?: string };
 
 /**
  * What the server derives from the points typed so far (ADR 0030 steps 17 and 18): the skills with
@@ -46,7 +46,7 @@ export async function previewDraft(
     return { ok: true, skills: await fetchPreview(points) };
   } catch (e) {
     return e instanceof ApiError
-      ? { ok: false, field: e.field, message: e.message }
+      ? { ok: false, field: e.field, message: e.message, code: e.code }
       : { ok: false };
   }
 }

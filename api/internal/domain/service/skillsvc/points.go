@@ -48,8 +48,10 @@ func orEmpty(m map[string]int) map[string]int {
 // SetPoints is ADR 0030 steps 17 and 18 after creation: the player of a
 // thief or a bard sets
 // the total points of each skill (those it leaves out are 0), checked as at
-// creation by charactersvc.ValidSkillPoints; the budget at the realized
-// level stays a warning of the derived sheet. It is one skill_points entry
+// creation by charactersvc.ValidSkillPoints; at the realized level, a spend
+// that leaves the budget over and spends more is refused (ADR 0037 step 10,
+// charactersvc.SkillPointsWithinBudget), an existing overspend that does
+// not grow stays a warning of the derived sheet. It is one skill_points entry
 // of the action log with the points' snapshot, so undo gives them back. The
 // same points as stored record nothing. Returns the points as stored.
 func (s *service) SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error) {
@@ -61,6 +63,11 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, points map[s
 		}
 		next, err := charactersvc.ValidSkillPoints(c.Class, points)
 		if err != nil {
+			return err
+		}
+		// ADR 0037 step 10: over the budget at the realized level and
+		// spending more is refused before any write or log entry.
+		if err := charactersvc.SkillPointsWithinBudget(c.Class, c.Derived.RealizedLevel, c.SkillPoints, next); err != nil {
 			return err
 		}
 		out = orEmpty(next)

@@ -39,6 +39,30 @@ describe("request errors", () => {
   });
 
   it.each([
+    ["en", "Over budget: 31 for 30. You may lower it, not raise it."],
+    ["fr", "Budget dépassé : 31 pour 30. Vous pouvez baisser, pas augmenter."],
+  ])(
+    "words an over-budget refusal in %s with the server's figures, at its field",
+    async (lng, want) => {
+      await i18n.changeLanguage(lng);
+      respond(409, {
+        code: "over_budget",
+        error: "skillPoints.open_locks over budget: 31 of 30",
+        field: "skillPoints.open_locks",
+        spent: 31,
+        limit: 30,
+      });
+      const err = await post("/api/skills/points/preview", {}).catch(
+        (e: unknown) => e,
+      );
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).message).toBe(want);
+      expect((err as ApiError).field).toBe("skillPoints.open_locks");
+      expect((err as ApiError).code).toBe("over_budget");
+    },
+  );
+
+  it.each([
     ["en", "That spell is not in the catalogue."],
     ["fr", "Ce sort n'est pas dans le catalogue."],
   ])(

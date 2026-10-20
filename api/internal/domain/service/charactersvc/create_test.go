@@ -257,7 +257,7 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 		e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
 		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Once()
-		want := map[string]int{"open_locks": 30, "pick_pockets": 95}
+		want := map[string]int{"open_locks": 30, "pick_pockets": 25}
 		e.rules.EXPECT().ThiefSkills("halfling", 17, "none", want).Return(nil, nil).Once()
 		e.rules.EXPECT().BackstabFor(1).Return(2, nil).Once()
 		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
@@ -266,7 +266,7 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 		e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(6)).Return(nil).Once()
 		e.sessions.EXPECT().ForgetUser(ownerID).Once()
 		_, err := e.svc.Create(context.Background(), ownerID, thief(map[string]int{
-			"open_locks": 30, "pick_pockets": 95, "climb_walls": 0,
+			"open_locks": 30, "pick_pockets": 25, "climb_walls": 0,
 		}))
 		require.NoError(t, err)
 		assert.Zero(t, e.armour.reads, "a character being created wears nothing")
@@ -274,7 +274,8 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 }
 
 // ADR 0030 steps 1 and 18: a bard enters its points (each one of its four
-// skills, 0 to 95), refused as the thief's are; the budget is no refusal.
+// skills, 0 to 95), refused as the thief's are; the budget is ADR 0037 step
+// 10's (Create_Step10_OverBudgetRefused).
 // The points are stored without the zeros; no armour is entered (ADR 0033
 // step 14).
 func TestCreate_Step18_BardSkillPointsAndArmour(t *testing.T) {
@@ -303,21 +304,100 @@ func TestCreate_Step18_BardSkillPointsAndArmour(t *testing.T) {
 			assert.Zero(t, e.tx.n, "nothing written")
 		})
 	}
-	t.Run("stored, over the budget", func(t *testing.T) {
+	t.Run("stored", func(t *testing.T) {
 		e := newEnv(t)
 		e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
 		expectLevel1Bard(e)
-		// 95 points at level 1 is over the bard's 20: a warning, not a refusal.
-		want := map[string]int{"climb_walls": 45, "pick_pockets": 50}
+		// The bard's 20 points at level 1, all spent (ADR 0037 step 10
+		// refuses more: Create_Step10_OverBudgetRefused).
+		want := map[string]int{"climb_walls": 10, "pick_pockets": 10}
 		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
 			return c.Class == "bard" && assert.ObjectsAreEqual(want, c.SkillPoints)
 		})).Return(7, nil).Once()
 		e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(7)).Return(nil).Once()
 		e.sessions.EXPECT().ForgetUser(ownerID).Once()
 		_, err := e.svc.Create(context.Background(), ownerID, bard(map[string]int{
-			"climb_walls": 45, "pick_pockets": 50, "detect_noise": 0,
+			"climb_walls": 10, "pick_pockets": 10, "detect_noise": 0,
 		}))
 		require.NoError(t, err)
+	})
+}
+
+// ADR 0037 step 10 at creation: nothing was spent before, so points over the
+// budget of the starting level are refused (a 409 over_budget naming the
+// field, the points and the limit) before anything is written; the preview
+// refuses them as the creation does. At level 1 a thief has 60 points, at
+// most 30 in one skill; a bard 20, with no limit in one skill. Leftover
+// points are no refusal (the thief and bard "stored" cases of steps 17 and
+// 18).
+func TestCreate_Step10_OverBudgetRefused(t *testing.T) {
+	thief := func(points map[string]int) charactersvc.NewCharacter {
+		return charactersvc.NewCharacter{
+			Details: identity(),
+			Name:    "Vex", Class: "thief", Race: "halfling", Str: 10, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+			SkillPoints: points,
+		}
+	}
+	bard := func(points map[string]int) charactersvc.NewCharacter {
+		n := lyra()
+		n.SkillPoints = points
+		return n
+	}
+	expectLevel1Thief := func(e *env, points map[string]int, times int) {
+		e.rules.EXPECT().LevelFor("thief", 0).Return(1, nil).Times(times)
+		e.rules.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Times(times)
+		e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Times(times)
+		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Times(times)
+		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Times(times)
+		e.rules.EXPECT().ThiefSkills("halfling", 17, "none", points).Return(nil, nil).Times(times)
+		e.rules.EXPECT().BackstabFor(1).Return(2, nil).Times(times)
+	}
+	for _, tt := range []struct {
+		name         string
+		n            charactersvc.NewCharacter
+		expect       func(e *env)
+		field        string
+		spent, limit int
+	}{
+		{
+			"a thief's total", thief(map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 1}),
+			func(e *env) {
+				expectLevel1Thief(e, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 1}, 1)
+			},
+			"skillPoints", 61, 60,
+		},
+		{
+			"a thief's skill over its cap", thief(map[string]int{"open_locks": 31}),
+			func(e *env) { expectLevel1Thief(e, map[string]int{"open_locks": 31}, 1) },
+			"skillPoints.open_locks", 31, 30,
+		},
+		{
+			"a bard's total", bard(map[string]int{"climb_walls": 15, "read_languages": 6}),
+			func(e *env) { expectLevel1Bard(e) },
+			"skillPoints", 21, 20,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newEnv(t)
+			e.rules.EXPECT().RaceAllows(tt.n.Race, tt.n.Class).Return(true, nil).Once()
+			tt.expect(e) // the owners and sessions mocks fail any write
+			_, err := e.svc.Create(context.Background(), ownerID, tt.n)
+			require.ErrorIs(t, err, domain.ErrOverBudget)
+			var be *domain.BudgetError
+			require.ErrorAs(t, err, &be)
+			assert.Equal(t, domain.BudgetError{Field: tt.field, Spent: tt.spent, Limit: tt.limit}, *be)
+			assert.Zero(t, e.tx.n, "nothing written")
+		})
+	}
+	t.Run("the preview refuses as the creation", func(t *testing.T) {
+		e := newEnv(t)
+		points := map[string]int{"open_locks": 31}
+		e.rules.EXPECT().RaceAllows("halfling", "thief").Return(true, nil).Once()
+		expectLevel1Thief(e, points, 1)
+		_, err := e.svc.Preview(context.Background(), thief(points))
+		var be *domain.BudgetError
+		require.ErrorAs(t, err, &be)
+		assert.Equal(t, domain.BudgetError{Field: "skillPoints.open_locks", Spent: 31, Limit: 30}, *be)
 	})
 }
 

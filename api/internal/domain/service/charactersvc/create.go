@@ -194,8 +194,8 @@ func validSkills(n NewCharacter) (map[string]int, error) {
 
 // ValidSkillPoints is ADR 0030 steps 17 and 18's entry check on a thief's or
 // a bard's points, at creation and when the player spends them later: each
-// skill of SkillsOf the class from 0 to MaxSkillPoints. The budget is no
-// refusal, only the derived warning (step 17 as built, step 18). The points
+// skill of SkillsOf the class from 0 to MaxSkillPoints. The budget is
+// checked apart, at the realized level (SkillPointsWithinBudget). The points
 // come back without the zeros, nil for none. A class without skill points
 // enters none: any
 // point is refused with field skillPoints; another refusal names the field
@@ -226,6 +226,37 @@ func ValidSkillPoints(class string, points map[string]int) (map[string]int, erro
 	return out, nil
 }
 
+// SkillPointsWithinBudget is ADR 0037 step 10 on a thief's or a bard's skill
+// points (amending ADR 0030 steps 17 and 18): a save from before to after at
+// level is refused when it leaves the total over the level's budget and
+// above the total before, or (the thief's per-skill cap of step 17) one
+// skill over the cap and above its points before. Any other save passes: an
+// existing overspend that shrinks or stays keeps the derived warning, and
+// points left to spend are never refused. At creation before is nil (0
+// spent). The refusal is a *domain.BudgetError (field skillPoints for the
+// total, skillPoints.<skill> for one skill), the total first, then the
+// skills in SkillsOf order. A class without skill points, or a level under
+// 1, has no budget: nil.
+func SkillPointsWithinBudget(class string, level int, before, after map[string]int) error {
+	b, ok := ruletablesvc.SkillPointsFigures(class, level, after)
+	if !ok {
+		return nil
+	}
+	was, _ := ruletablesvc.SkillPointsFigures(class, level, before)
+	if b.Spent > b.Total && b.Spent > was.Spent {
+		return &domain.BudgetError{Field: "skillPoints", Spent: b.Spent, Limit: b.Total}
+	}
+	if b.PerSkill == 0 {
+		return nil
+	}
+	for _, skill := range ruletablesvc.SkillsOf(class) {
+		if pts := after[skill]; pts > b.PerSkill && pts > before[skill] {
+			return &domain.BudgetError{Field: "skillPoints." + skill, Spent: pts, Limit: b.PerSkill}
+		}
+	}
+	return nil
+}
+
 // validExceptional is ADR 0030 step 9: an exceptional strength is optional,
 // 1 to 100, and only a warrior's with Strength 18 who is not a halfling.
 func validExceptional(n NewCharacter) error {
@@ -253,6 +284,11 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 		return 0, err
 	}
 	if err := started(&c, s.rules); err != nil {
+		return 0, err
+	}
+	// ADR 0037 step 10: nothing was spent before, so a new character is
+	// never created over its skill point budget.
+	if err := SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return 0, err
 	}
 	var id int64
@@ -294,6 +330,9 @@ func (s *service) Preview(_ context.Context, n NewCharacter) (*Character, error)
 		return nil, err
 	}
 	if err := started(&c, s.rules); err != nil {
+		return nil, err
+	}
+	if err := SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return nil, err
 	}
 	// Nothing is worn before the character exists (ADR 0033 step 14).

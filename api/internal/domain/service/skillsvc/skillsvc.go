@@ -53,12 +53,13 @@ type SVC interface {
 	// were points (ADR 0030 steps 17 and 18): the percentages with their
 	// terms and the budget, for the editor to show while the player types.
 	// It writes and logs nothing; the points are refused as SetPoints
-	// refuses them (a *domain.FieldError).
+	// refuses them (a *domain.FieldError, or a *domain.BudgetError).
 	PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*Skills, error)
 	// SetPoints sets a thief's or a bard's skill points per skill, logged
 	// and undoable (ADR 0030 steps 17 and 18). A *domain.FieldError for
-	// points refused (or any point of a class without skill points);
-	// nothing is logged then.
+	// points refused (or any point of a class without skill points), a
+	// *domain.BudgetError for a spend that grows an overspend (ADR 0037
+	// step 10); nothing is written or logged then.
 	SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error)
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -32,9 +33,10 @@ var kelsenBardSkills = []ruletablesvc.SkillPercent{
 // points in Climb Walls and 5 in Detect Noise (the whole 20 of the 1st
 // level). Climb Walls is 50 + 15 - 20 (elven chain column) - 5 (metal) = 40,
 // rolled as a bard skill check against it; Pick Pockets 10 - 25 is floored at
-// 0. After creation the bard spends 10 more points in Read Languages (5 + 10
-// - 5 = 10), over the budget (a warning), as one skill_points entry; undoing
-// it gives the points back. A new armour changes the percentages. The armour
+// 0. After creation 10 more points in Read Languages would be over the budget
+// and are refused (ADR 0037 step 10); the bard moves 10 points instead (Read
+// Languages 5 + 10 - 5 = 10), as one skill_points entry; undoing it gives the
+// points back. A new armour changes the percentages. The armour
 // is the one the bard wears (ADR 0033 step 14): a chain mail put on after
 // creation, swapped for a leather armour at the end.
 func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
@@ -90,15 +92,18 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 	assert.False(t, check.Success, "41 over 40")
 	assert.Equal(t, map[string]int{"d100": 2}, dice.calls)
 
-	spend := map[string]int{"climb_walls": 15, "detect_noise": 5, "read_languages": 10}
+	// ADR 0037 step 10: 30 points over the 20 of the 1st level is refused,
+	// nothing stored or logged.
+	_, err = bs.Skills.SetPoints(ctx, id, map[string]int{"climb_walls": 15, "detect_noise": 5, "read_languages": 10})
+	require.ErrorIs(t, err, domain.ErrOverBudget)
+	spend := map[string]int{"climb_walls": 10, "read_languages": 10}
 	got, err := bs.Skills.SetPoints(ctx, id, spend)
 	require.NoError(t, err)
 	assert.Equal(t, spend, got)
 	assert.Equal(t, 10, percents()["read_languages"])
 	c, err = bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
-	assert.Equal(t, []ruletablesvc.BudgetWarning{{Code: ruletablesvc.BudgetTotal, Points: 30, Limit: 20}}, c.Derived.SkillBudget,
-		"over the budget: a warning, the points stored")
+	assert.Empty(t, c.Derived.SkillBudget, "the 20 points moved: within the budget")
 
 	entries, err := bs.Log.List(ctx, id, 10)
 	require.NoError(t, err)

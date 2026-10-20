@@ -93,7 +93,8 @@ func (t *Tables) BardSkills(race string, dex int, armor string, points map[strin
 // BardSkillPointBudget checks the entered points against the bard's budget
 // at level (ADR 0030 step 18): at most BardSkillPointsFirstLevel plus
 // BardSkillPointsPerLevel a level after the first in all (code BudgetTotal);
-// no per-skill check. A warning, never a refusal.
+// no per-skill check. The warning of points stored over it (a save that
+// grows it is refused, ADR 0037 step 10: charactersvc.SkillPointsWithinBudget).
 func BardSkillPointBudget(level int, points map[string]int) []BudgetWarning {
 	total, perSkill, _ := SkillBudgetLimits("bard", level)
 	return budget(level, points, BardSkills, total, perSkill)

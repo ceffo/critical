@@ -1,12 +1,14 @@
 package render_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
@@ -24,4 +26,16 @@ func TestError_LoginDisabledIs404(t *testing.T) {
 			assert.Contains(t, rec.Body.String(), `"code":"not_found"`)
 		})
 	}
+}
+
+// ADR 0037 step 10: a save that grows an overspend is 409 over_budget, the
+// body naming the pool's field, the points spent and the limit (the web words
+// them), even wrapped.
+func TestErrorMapping_Step10_OverBudget(t *testing.T) {
+	err := fmt.Errorf("set points: %w", &domain.BudgetError{Field: "skillPoints.open_locks", Spent: 31, Limit: 30})
+	rec := httptest.NewRecorder()
+	render.Error(t.Context(), rec, err)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	assert.JSONEq(t, `{"error":"set points: skillPoints.open_locks over budget: 31 of 30","code":"over_budget","field":"skillPoints.open_locks","spent":31,"limit":30}`, rec.Body.String())
+	assert.Equal(t, "over_budget", render.Code(err))
 }

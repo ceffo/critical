@@ -168,15 +168,17 @@ func TestThief_Step17_SpendPointsAfterALevelUpAndUndo(t *testing.T) {
 // services: a halfling thief of Dexterity 18 in no armour with 30 points in
 // Open Locks and Pick Pockets has Pick Pockets 15 + 30 + 5 + 10 + 5 = 65 and
 // Open Locks 10 + 30 + 5 + 15 = 60, within the 1st-level budget; a 1st-level
-// thief with 40 and 30 is created with both warnings. A roll the DM adjusts
-// after it changes target and verdict; Read Languages at 0% is refused
-// before the die.
+// thief with 40 and 30 is refused at creation (ADR 0037 step 10), and one
+// whose stored points are 40 and 30 (imported data) reads both warnings and
+// may reduce them, not grow them. A roll the DM adjusts after it changes
+// target and verdict; Read Languages at 0% is refused before the die.
 func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 	ctx := context.Background()
 	dice := &attackDice{t: t, d100s: []int{58}, calls: map[string]int{}}
 	cfg := fixtureConfig()
 	cfg.Dice = dice
-	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), cfg)
+	store := memory.New()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(store), cfg)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	s, err := bs.Auth.DevLogin(ctx, "")
@@ -218,13 +220,32 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrInvalidInput)
 	assert.Equal(t, 1, dice.calls["d100"], "no die for a skill at 0%")
 
-	over := thief(map[string]int{"open_locks": 40, "pick_pockets": 30})
+	overspent := map[string]int{"open_locks": 40, "pick_pockets": 30}
+	_, err = bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Vex", Class: "thief", Race: "halfling", Str: 12, Dex: 18, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		SkillPoints: overspent,
+	})
+	require.ErrorIs(t, err, domain.ErrOverBudget, "never created over the budget")
+
+	over := thief(nil)
+	require.NoError(t, store.Characters().SetSkillPoints(ctx, over, overspent), "imported over the budget")
 	c, err = bs.Character.GetCharacter(ctx, over)
 	require.NoError(t, err)
 	assert.Equal(t, []ruletablesvc.BudgetWarning{
 		{Code: ruletablesvc.BudgetTotal, Points: 70, Limit: 60},
 		{Code: ruletablesvc.BudgetPerSkill, Skill: "open_locks", Points: 40, Limit: 30},
 	}, c.Derived.SkillBudget)
+	_, err = bs.Skills.SetPoints(ctx, over, map[string]int{"open_locks": 40, "pick_pockets": 31})
+	require.ErrorIs(t, err, domain.ErrOverBudget, "the overspend grown")
+	_, err = bs.Skills.SetPoints(ctx, over, map[string]int{"open_locks": 35, "pick_pockets": 30})
+	require.NoError(t, err, "the overspend reduced")
+	c, err = bs.Character.GetCharacter(ctx, over)
+	require.NoError(t, err)
+	assert.Equal(t, []ruletablesvc.BudgetWarning{
+		{Code: ruletablesvc.BudgetTotal, Points: 65, Limit: 60},
+		{Code: ruletablesvc.BudgetPerSkill, Skill: "open_locks", Points: 35, Limit: 30},
+	}, c.Derived.SkillBudget, "still over: the warnings stay")
 }
 
 // ADR 0030 step 19 with ADR 0012 step 5: a backstab rolled at an unknown AC
@@ -397,7 +418,8 @@ func TestBard_Step14_MetalArmourReadsTheBardsColumn(t *testing.T) {
 
 // ADR 0030 step 17: the editor's preview, through the real services, gives the skills and budget
 // the same points give once stored (percentages, terms, 1st-level budget 60 with 30 in one skill),
-// and writes nothing: the stored points and the action log are as they were.
+// and writes nothing: the stored points and the action log are as they were. It refuses what the
+// save refuses: a range, and a new overspend (ADR 0037 step 10).
 func TestThief_Step17_PreviewEqualsTheStoredPointsAndWritesNothing(t *testing.T) {
 	ctx := context.Background()
 	cfg := fixtureConfig()
@@ -418,7 +440,7 @@ func TestThief_Step17_PreviewEqualsTheStoredPointsAndWritesNothing(t *testing.T)
 	logBefore, err := bs.Log.List(ctx, id, 50)
 	require.NoError(t, err)
 
-	draft := map[string]int{"open_locks": 40, "pick_pockets": 30}
+	draft := map[string]int{"open_locks": 30, "pick_pockets": 25}
 	preview, err := bs.Skills.PreviewPoints(ctx, id, draft)
 	require.NoError(t, err)
 
@@ -430,10 +452,10 @@ func TestThief_Step17_PreviewEqualsTheStoredPointsAndWritesNothing(t *testing.T)
 	assert.Equal(t, logBefore, logAfter, "the preview logs nothing")
 
 	assert.Equal(t, &ruletablesvc.SkillPointsBudget{
-		Level: 1, First: 60, PerLevel: 30, Total: 60, Spent: 70, Left: -10, PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 30,
-	}, preview.Budget, "the draft's budget: 70 spent of 60")
-	assert.Equal(t, 65, preview.ThiefSkills[1].Percent, "open locks: 10 + 40 + 5 + 10")
-	assert.Equal(t, 65, preview.ThiefSkills[1].Raw)
+		Level: 1, First: 60, PerLevel: 30, Total: 60, Spent: 55, Left: 5, PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 30,
+	}, preview.Budget, "the draft's budget: 55 spent of 60")
+	assert.Equal(t, 55, preview.ThiefSkills[1].Percent, "open locks: 10 + 30 + 5 + 10")
+	assert.Equal(t, 55, preview.ThiefSkills[1].Raw)
 
 	_, err = bs.Skills.SetPoints(ctx, id, draft)
 	require.NoError(t, err)
@@ -445,6 +467,16 @@ func TestThief_Step17_PreviewEqualsTheStoredPointsAndWritesNothing(t *testing.T)
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, "skillPoints.open_locks", fe.Field)
+
+	over := map[string]int{"open_locks": 20, "pick_pockets": 31}
+	_, err = bs.Skills.PreviewPoints(ctx, id, over)
+	var previewed *domain.BudgetError
+	require.ErrorAs(t, err, &previewed)
+	assert.Equal(t, domain.BudgetError{Field: "skillPoints.pick_pockets", Spent: 31, Limit: 30}, *previewed)
+	_, err = bs.Skills.SetPoints(ctx, id, over)
+	var saved *domain.BudgetError
+	require.ErrorAs(t, err, &saved)
+	assert.Equal(t, *previewed, *saved, "the preview refuses as the save")
 }
 
 // A class without skill points has no budget; its preview of no points answers and of any point

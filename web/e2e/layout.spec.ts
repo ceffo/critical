@@ -2823,8 +2823,8 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
 
 // The thief's screens (ADR 0030 steps 1, 17 and 19) uncut in French at 1280x800 and 2560x1440: the
 // creation form's skill points and armour fields, the Skills tab's thieving skills with the
-// budget warnings (70 points at 1st, 40 in one skill: both breached) and the attack card's backstab
-// option.
+// budget warnings (70 points at 1st, 40 in one skill: both breached), the Spend editor's
+// over-budget refusal (ADR 0037 step 10) and the attack card's backstab option.
 test("thief: creation fields, thieving skills with the budget warnings and backstab uncut in French, 1280 to 2560", async ({
   page,
 }) => {
@@ -2892,6 +2892,21 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await expect(budget).toContainText("Restants : -30");
   await expect(budget.locator("[data-over]")).toHaveCount(1);
   await snap(page, "thief-form-over-budget-fr");
+  // The server refuses to create a thief over the budget (ADR 0037 step 10): its preview on the
+  // next step answers the refusal, and back on this step the message shows under the points.
+  await step.getByLabel("PV max").fill("5");
+  const refused = page.waitForResponse(
+    (r) => r.url().endsWith("/api/characters/preview") && r.status() === 409,
+  );
+  await next.click();
+  await refused;
+  await back.click();
+  const overBudget = step.getByText(
+    "Budget dépassé : 90 pour 60. Vous pouvez baisser, pas augmenter.",
+  );
+  await expect(overBudget).toBeVisible();
+  await expectNoClippedText(entry, "thief creation over budget, fr, 1280x800");
+  await snap(page, "thief-form-refused-over-budget-fr");
   for (const skill of ["Crochetage", "Escalade", "Vol à la tire"])
     await entry.getByLabel(skill).fill("");
   await expect(budget).toContainText("Restants : 60");
@@ -2940,9 +2955,36 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
       cha: 10,
       hpMax: 5,
       xp: 0,
-      skillPoints: { find_remove_traps: 40, hide_in_shadows: 30 },
+      skillPoints: { find_remove_traps: 30, hide_in_shadows: 30 },
     }),
   ).toBe(true);
+  // A character is never created or saved over its budget (ADR 0037 step 10): only imported data
+  // is. The tab's two reads answer as for 40 and 30 points stored, the warnings and the negative
+  // balance the layout must hold; the editor's preview and save stay the server's.
+  const imported = { find_remove_traps: 40, hide_in_shadows: 30 };
+  await page.route("**/api/character", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const res = await route.fetch();
+    const body = await res.json();
+    if (body.class === "thief")
+      body.derived.skillBudget = [
+        { code: "skill_points_total", points: 70, limit: 60 },
+        {
+          code: "skill_points_per_skill",
+          skill: "find_remove_traps",
+          points: imported.find_remove_traps,
+          limit: 30,
+        },
+      ];
+    await route.fulfill({ response: res, json: body });
+  });
+  await page.route("**/api/skills", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const res = await route.fetch();
+    const body = await res.json();
+    if (body.budget) Object.assign(body.budget, { spent: 70, left: -10 });
+    await route.fulfill({ response: res, json: body });
+  });
   // The skills read the armour worn (ADR 0033 step 14): a studded leather, the longest column name.
   expect(
     await call("POST", "/api/items", {
@@ -3016,15 +3058,12 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await editor.getByTestId("thief-points-save").click();
   await expect(editor.getByRole("alert")).toContainText("de 0 à 95");
   await expect(editor).toBeVisible();
-  await editor.getByTestId("thief-points-open_locks").fill("95");
-  await expect(editor.getByTestId("skill-limit-open_locks")).toContainText(
-    "plafonné à 95 %",
+  // Over the budget (the 60 stored, 5 more) the preview is refused, its message under the editor.
+  await editor.getByTestId("thief-points-open_locks").fill("5");
+  await expect(editor.getByRole("alert")).toHaveText(
+    "Budget dépassé : 65 pour 60. Vous pouvez baisser, pas augmenter.",
   );
-  await expect(editor.getByTestId("skill-preview-stale")).toHaveCount(0);
-  await expect(editor.getByTestId("skill-points-left")).toHaveAttribute(
-    "data-over",
-    "true",
-  );
+  await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },

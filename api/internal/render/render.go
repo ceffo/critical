@@ -69,12 +69,18 @@ func Error(ctx context.Context, w http.ResponseWriter, err error) {
 	} else {
 		Logger(ctx).Info("client error", "status", status, "error", err)
 	}
-	body := map[string]string{"error": msg, "code": code}
+	body := map[string]any{"error": msg, "code": code}
 	// A field error's message stays verbatim for the web: invalid_input is
 	// deliberately not localized, the message says what is wrong with the field.
 	var fe *domain.FieldError
 	if errors.As(err, &fe) {
 		body["error"], body["field"] = fe.Message, fe.Field
+	}
+	// A budget refusal (ADR 0037 step 10) names the pool's field and its
+	// figures; the web words them.
+	var be *domain.BudgetError
+	if errors.As(err, &be) {
+		body["field"], body["spent"], body["limit"] = be.Field, be.Spent, be.Limit
 	}
 	JSON(ctx, w, status, body)
 }
@@ -169,6 +175,8 @@ var mappings = []mapping{
 	{target: spelleffectsvc.ErrNoExposure, status: http.StatusBadRequest, code: "no_exposure"},
 	{target: spelleffectsvc.ErrNotAnEffect, status: http.StatusBadRequest, code: "spell_not_an_effect"},
 	{target: spelleffectsvc.ErrEndCauseRequired, status: http.StatusBadRequest, code: "end_cause_required"},
+	// ADR 0037 step 10: a save that grows an overspend; nothing written.
+	{target: domain.ErrOverBudget, status: http.StatusConflict, code: "over_budget"},
 	{target: domain.ErrInvalidInput, status: http.StatusBadRequest, code: "invalid_input"},
 	{target: domain.ErrConflict, status: http.StatusConflict, code: "conflict"},
 	{target: domain.ErrCharacterNotFound, status: http.StatusNotFound, code: "character_not_found"},

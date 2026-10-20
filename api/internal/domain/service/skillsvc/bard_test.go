@@ -83,8 +83,8 @@ func TestBardSkill_Step18_ListedWithTheirTermsAndLastCheck(t *testing.T) {
 }
 
 // ADR 0030 step 18 after creation: a bard spends its points as a thief
-// does, one skill_points entry with the points' snapshot; the bard's budget
-// is no refusal (60 in one skill at any level is accepted here).
+// does, one skill_points entry with the points' snapshot; the bard has no
+// limit in one skill (60 in one skill, 77 of its 80 points at level 5).
 func TestSetPoints_Step18_ABardSpendsItsPoints(t *testing.T) {
 	f := pointsFixture(t, "bard", map[string]int{"detect_noise": 17})
 	f.records()

@@ -245,8 +245,10 @@ writes `Test<name>` and adds the prefix here in the same PR.
    proficiency: a type not picked cannot be specialized, and no separate refusal exists for it.
    `charactersvc.ValidPicks` refuses any other count `out_of_range`, a class that does not
    specialize and a second specialization `not_allowed` (field `weapon.<type>`); the budget (step
-   10) counts its slots. `Character.Specialized(type)` derives the flag (the class specializes and
-   the pick is there); itemsvc sets every weapon piece's `Specialized` from it on every read (a
+   10) counts its slots. `charactersvc.SpecializedType(class, picks)` derives the specialized type
+   (the class specializes and the pick is there), and `SpecializedWeaponType` reads it from the
+   character row alone (no XP ledger or armour read, so a weapon read costs one extra row, ADR
+   0025 step 10); itemsvc sets every weapon piece's `Specialized` from it on every read (a
    decorator of its DAL, and on the piece a creation or an edit answers), so the attack, the
    preview, Table 35's rate and the point-blank option read it unchanged. The item DAL no longer
    reads or writes `items.specialized`; the item API's `specialized` input is gone (a body that

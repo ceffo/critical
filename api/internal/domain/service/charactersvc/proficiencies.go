@@ -151,19 +151,20 @@ func (p WeaponPick) IsSpecialization() bool {
 		p.Slots == ruletablesvc.SpecializationSlots(p.Type)
 }
 
-// Specialized is ADR 0037 step 9 amending ADR 0030 step 12: a weapon of weaponType is
-// specialized when the character's class specializes (Derived.Specializes) and its weapon picks
-// hold that type's specialization pick. Derived on every read; no weapon stores it.
-func (c *Character) Specialized(weaponType string) bool {
-	if c == nil || weaponType == "" || !c.Derived.Specializes {
-		return false
+// SpecializedType is ADR 0037 step 9 amending ADR 0030 step 12: the weapon type a character of
+// class with picks is specialized in, every weapon of it specialized: the type of its specialization pick when the class specializes
+// (ruletablesvc.Specializes), else "". It needs no derived figure, so a read of the character
+// row alone gives it.
+func SpecializedType(class string, picks Picks) string {
+	if !ruletablesvc.Specializes(class) {
+		return ""
 	}
-	for _, p := range c.Proficiencies.Weapon {
-		if p.Type == weaponType && p.IsSpecialization() {
-			return true
+	for _, p := range picks.Weapon {
+		if p.IsSpecialization() {
+			return p.Type
 		}
 	}
-	return false
+	return ""
 }
 
 // Proficiency pick limits and wire names.

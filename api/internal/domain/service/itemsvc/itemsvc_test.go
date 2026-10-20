@@ -221,6 +221,7 @@ func deps(t *testing.T) fixture {
 func readsCharacter(t *testing.T) fixture {
 	f := deps(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, mock.Anything).Return(character(false), nil).Maybe()
+	f.chars.EXPECT().SpecializedWeaponType(mock.Anything, mock.Anything).Return("", nil).Maybe()
 	return f
 }
 

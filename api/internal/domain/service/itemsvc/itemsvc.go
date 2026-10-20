@@ -111,11 +111,13 @@ type DAL interface {
 	DeleteReviews(ctx context.Context, characterID int64, itemID string) error
 }
 
-// Characters reads the character whose pieces are read or change: a weapon's
-// Specialized is derived from its weapon picks (ADR 0037 step 9) and its class
-// warnings from its class (ADR 0033 step 20).
+// Characters reads the character whose pieces are read or change: its class
+// warnings from its class (ADR 0033 step 20), and a weapon's Specialized from
+// the weapon type it is specialized in (ADR 0037 step 9), a read of the
+// character row alone.
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	SpecializedWeaponType(ctx context.Context, id int64) (string, error)
 }
 
 // Dice is the dice adapter port.

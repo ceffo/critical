@@ -380,6 +380,8 @@ func fighter(picks ...charactersvc.WeaponPick) *charactersvc.Character {
 // creation and an edit answer the derived value (an edit moving the weapon to another type
 // follows it), and the edit logs no "specialized" change.
 func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
+	// The character row's specialization, as charactersvc reads it.
+	specializedIn := func(c *charactersvc.Character) string { return charactersvc.SpecializedType(c.Class, c.Proficiencies) }
 	spec := charactersvc.WeaponPick{Type: "long_sword", Slots: 2}
 	plain := charactersvc.WeaponPick{Type: "dagger", Slots: 1}
 	second := sword
@@ -393,7 +395,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
 		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{leather, sword, second, dagger}, nil)
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(fighter(spec, plain), nil).Once()
+		f.chars.EXPECT().SpecializedWeaponType(mock.Anything, int64(1)).Return(specializedIn(fighter(spec, plain)), nil).Once()
 		got, err := svc.List(context.Background(), 1)
 		require.NoError(t, err)
 		assert.Equal(t, []bool{false, true, true, false}, []bool{got[0].Specialized, got[1].Specialized, got[2].Specialized, got[3].Specialized})
@@ -405,7 +407,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{sword}, nil)
 		bard := fighter(spec)
 		bard.Class, bard.Derived.Specializes = "bard", false
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(bard, nil).Once()
+		f.chars.EXPECT().SpecializedWeaponType(mock.Anything, int64(1)).Return(specializedIn(bard), nil).Once()
 		got, err := svc.List(context.Background(), 1)
 		require.NoError(t, err)
 		assert.False(t, got[0].Specialized)
@@ -421,7 +423,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(fighter(spec), nil)
+		f.chars.EXPECT().SpecializedWeaponType(mock.Anything, int64(1)).Return(specializedIn(fighter(spec)), nil)
 		dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 		dal.EXPECT().Insert(mock.Anything, int64(1), mock.Anything).Return(nil)
 		dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "long_sword").Return(nil)
@@ -438,7 +440,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
 		dal.EXPECT().Get(mock.Anything, int64(1), "longsword").Return(sword, nil)
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(fighter(spec), nil)
+		f.chars.EXPECT().SpecializedWeaponType(mock.Anything, int64(1)).Return(specializedIn(fighter(spec)), nil)
 		dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Return(nil)
 		dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "longsword").Return(nil)
 		var got actionlog.NewEntry

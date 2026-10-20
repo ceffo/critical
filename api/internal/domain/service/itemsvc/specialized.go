@@ -9,7 +9,8 @@ import (
 // Specialized derived from the character's weapon picks (ADR 0037 step 9, amending ADR 0030
 // step 12: a weapon is specialized when its type has the fighter's specialization pick). The
 // stored per-weapon flag is ignored: the item DAL neither reads nor writes it. A read with no
-// weapon piece reads no character.
+// weapon piece reads no character; one with weapons reads the character row alone
+// (Characters.SpecializedWeaponType), not the derived character.
 type specializedDAL struct {
 	DAL
 	chars Characters
@@ -51,12 +52,12 @@ func (d specializedDAL) one(ctx context.Context, characterID int64) func(Item, e
 
 // derive sets every weapon piece's Specialized from the character's picks.
 func (d specializedDAL) derive(ctx context.Context, characterID int64, items []Item) error {
-	c, err := d.chars.GetCharacter(ctx, characterID)
+	weaponType, err := d.chars.SpecializedWeaponType(ctx, characterID)
 	if err != nil {
 		return err
 	}
 	for i := range items {
-		items[i].Specialized = isWeapon(items[i]) && c.Specialized(items[i].WeaponType)
+		items[i].Specialized = isWeapon(items[i]) && weaponType != "" && items[i].WeaponType == weaponType
 	}
 	return nil
 }

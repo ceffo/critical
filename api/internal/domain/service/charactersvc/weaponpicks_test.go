@@ -130,16 +130,11 @@ func TestSpecialization_Step9_FighterOnlyOneTypeAtThePhbCost(t *testing.T) {
 	})
 
 	t.Run("the weapon is specialized from the pick", func(t *testing.T) {
-		c := &charactersvc.Character{
-			Class: "fighter", Derived: charactersvc.Derived{Specializes: true},
-			Proficiencies: picks(spec("long_sword", 2), spec("dagger", 1)),
-		}
-		assert.True(t, c.Specialized("long_sword"))
-		assert.False(t, c.Specialized("dagger"), "a plain pick")
-		assert.False(t, c.Specialized("short_bow"), "no pick")
-		assert.False(t, c.Specialized(""), "no type")
-		c.Derived.Specializes = false
-		assert.False(t, c.Specialized("long_sword"), "a class that does not specialize")
+		p := picks(spec("long_sword", 2), spec("dagger", 1))
+		assert.Equal(t, "long_sword", charactersvc.SpecializedType("fighter", p))
+		assert.Empty(t, charactersvc.SpecializedType("fighter", picks(spec("dagger", 1))), "a plain pick")
+		assert.Empty(t, charactersvc.SpecializedType("fighter", charactersvc.Picks{}), "no pick")
+		assert.Empty(t, charactersvc.SpecializedType("bard", p), "a class that does not specialize")
 	})
 }
 

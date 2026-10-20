@@ -153,8 +153,9 @@ const specializationMigration = "027_weapon_specialization_picks.sql"
 // the specialization (step 9's slots, ruletablesvc.SpecializationSlots), the pick added when
 // missing; with several specialized types, the first in list order, the others staying plain
 // picks (logged). Another class's flag is dropped (ADR 0030 step 12 refused it on every save),
-// as is a flag on a weapon without a weapon type or of a type that is no weapon type; logged. A character whose picks already
-// hold a specialization is left as it is, so a rerun changes nothing. Nothing is refused (step
+// as is a flag on a type that is no weapon type, both logged; a flag on a weapon without a
+// weapon type is not read at all (the query skips it), so it is dropped silently. A character
+// whose picks already hold a specialization is left as it is, so a rerun changes nothing. Nothing is refused (step
 // 16.4): an overspend shows the slots_over_budget warning. The flags stay in the column, read by
 // nothing.
 func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier) error {

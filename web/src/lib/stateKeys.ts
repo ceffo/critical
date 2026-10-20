@@ -91,7 +91,8 @@ export const INVALIDATES = {
   initiative: ["round"],
   items: ITEM_SLICES,
   // The picks' checks are skills; the sheet carries the slots and warns (ADR 0037 steps 11 and 12).
-  proficiencies: ["skills", "character"],
+  // A weapon is specialized by its type's pick, so the pieces and the attack form follow (step 9).
+  proficiencies: ["skills", "character", "items", "weapons"],
   // The level and its max HP (ADR 0030 step 7.3).
   realized_level: [...LEVEL_SLICES, "hp"],
   round: ["round"],

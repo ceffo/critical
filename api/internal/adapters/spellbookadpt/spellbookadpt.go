@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -149,7 +150,9 @@ func (b *Book) Spell(id string) (learnsvc.Spell, bool) {
 // Claimed are the character's free spells already in the book (ADR 0030
 // step 20.8): its spellbook.OriginLevelGrant entries, each as its grant level
 // and the catalogue's level of its spell. An entry the catalogue does not
-// hold is an error naming it, as in All.
+// hold is skipped with a warning naming it (it pays for no grant): Claimed runs
+// on every read of a mage, so one stale entry must not break the whole sheet;
+// the spellbook view (All) still reports it as an error.
 func (b *Book) Claimed(ctx context.Context, characterID int64) ([]spellbook.FreeSpell, error) {
 	entries, err := b.store.Entries(ctx, characterID)
 	if err != nil {
@@ -162,7 +165,9 @@ func (b *Book) Claimed(ctx context.Context, characterID int64) ([]spellbook.Free
 		}
 		s, ok := b.spells[e.Key]
 		if !ok {
-			return nil, fmt.Errorf("spellbook of character %d: %q is not in the spell catalogue", characterID, e.Key)
+			slog.WarnContext(ctx, "spellbook: a free spell's entry is not in the spell catalogue; it pays for no grant",
+				"character", characterID, "spell", e.Key, "grantLevel", e.GrantLevel)
+			continue
 		}
 		out = append(out, spellbook.FreeSpell{Level: e.GrantLevel, SpellLevel: s.Level})
 	}

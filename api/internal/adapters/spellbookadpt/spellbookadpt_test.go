@@ -1,7 +1,9 @@
 package spellbookadpt_test
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -111,4 +113,26 @@ func TestBook_EachCharacterReadsItsOwnSpellbook(t *testing.T) {
 func TestBook_AKeyTheCatalogueLacksIsAnError(t *testing.T) {
 	_, err := spellbookadpt.New(books{1: {given("shield")}}, cat).All(context.Background(), 1)
 	require.ErrorContains(t, err, `"shield"`)
+}
+
+// A free spell's entry the catalogue no longer holds pays for no grant: Claimed
+// skips it with a warning naming it instead of failing, since it runs on every
+// read of a mage (ADR 0030 step 20.8); the other claims still count.
+func TestBook_Step20_8_AClaimTheCatalogueLacksIsSkippedAndLogged(t *testing.T) {
+	var logged bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	claimed, err := spellbookadpt.New(books{1: {
+		{Key: "shield", Origin: spellbook.OriginLevelGrant, GrantLevel: 3},
+		{Key: "fireball", Origin: spellbook.OriginLevelGrant, GrantLevel: 5},
+		given("mirror_image"),
+	}}, cat).Claimed(context.Background(), 1)
+
+	require.NoError(t, err)
+	assert.Equal(t, []spellbook.FreeSpell{{Level: 5, SpellLevel: 3}}, claimed)
+	assert.Contains(t, logged.String(), "level=WARN")
+	assert.Contains(t, logged.String(), "spell=shield")
+	assert.Contains(t, logged.String(), "character=1")
 }

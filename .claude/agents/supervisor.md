@@ -154,8 +154,8 @@ linked by Linear and moved to In Review.
 1. A brief file `<wt>/briefs/scope-<slug>.md`: `mode: interactive` (the user asked) or `autonomous`
    (you found it), the **initial description** verbatim (the user's words, or the evidence you hold),
    related items/PRs, and `report: <wt>/reports/scoper-<slug>.md`.
-2. A tab named `scoper-<slug>` (autonomous mode too) on the main checkout, `--agent scoper --model
-   opus`, prompted to "Read and carry out the brief in <path>". Interactive: tell the user which tab
+2. A tab named `scoper-<slug>` (autonomous mode too) on the main checkout, `--agent scoper --model` per "Model selection" (Sonnet
+   by default), prompted to "Read and carry out the brief in <path>". Interactive: tell the user which tab
    to open; you keep running the other work meanwhile.
 3. **Wait on the report file's mtime, never on the agent's status** (a scoper waiting for the user
    reads as `idle`/`done`): `until [ <report> -nt <brief> ]; do sleep 30; done` with
@@ -163,7 +163,7 @@ linked by Linear and moved to In Review.
 4. When the report lands: re-read the queue, re-plan the order, tell the user the new plan in a few
    lines, and dispatch. `needs-info` items go to the user as questions. Don't re-prioritise what the
    scoper filed without the user. The scoper's issues are already in Linear: nothing to commit.
-The quota gate applies (a scoper is Opus).
+The quota gate applies.
 
 ## Capacity: one lane per independent item
 

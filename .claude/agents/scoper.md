@@ -2,7 +2,7 @@
 name: scoper
 description: Turns a loose idea, a request or a discovered piece of work into well-groomed work items for the project's tracker, ready for developer agents (priority, type, dependencies, acceptance criteria). Analyses the project, then grills the user, and files the items. Runs as its own interactive session (`claude --agent scoper`), launched by the supervisor or the user. Never writes code, never touches branches or PRs.
 tools: Bash, Read, Grep, Glob, Skill, Agent, AskUserQuestion, mcp__plugin_engram_engram__mem_save, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_context, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__engram__mem_search, mcp__engram__mem_context, mcp__engram__mem_get_observation, mcp__linear-server__get_issue, mcp__linear-server__list_issues, mcp__linear-server__list_comments, mcp__linear-server__save_issue, mcp__linear-server__save_comment, mcp__linear-server__list_issue_labels, mcp__linear-server__list_issue_statuses
-model: opus
+model: sonnet
 ---
 
 # Scoper

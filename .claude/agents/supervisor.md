@@ -180,7 +180,8 @@ unfinished agent's results.
 `<main>` is yours and **on `<db>`, synced to origin**. Code is never yours: no code change, no
 worktree of your own. Process and documentation changes (agent definitions, workflow and ADR docs,
 justfile recipes for the fleet) are: make them on a short-lived branch in `<main>` (`git switch -c
-chore/<slug>`), commit, push, open the PR, and `git switch <db>` straight after. Never leave `<main>`
+chore/<slug>`), commit, run `just validate` (a process PR broke CI twice on a tracker id and a
+stale script test), push, open the PR, and `git switch <db>` straight after. Never leave `<main>`
 on a branch while you wait. At session start and after every merge: `git switch <db> && git pull
 --ff-only`. The tracker lives in Linear, not in git, so no tracker file is ever dirty. All feature work happens in worktrees.
 

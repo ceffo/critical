@@ -571,6 +571,66 @@ func (_c *MockSVC_Preview_Call) RunAndReturn(run func(context.Context, character
 	return _c
 }
 
+// PreviewProficiencies provides a mock function with given fields: ctx, id, picks
+func (_m *MockSVC) PreviewProficiencies(ctx context.Context, id int64, picks charactersvc.Picks) (*charactersvc.Character, error) {
+	ret := _m.Called(ctx, id, picks)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PreviewProficiencies")
+	}
+
+	var r0 *charactersvc.Character
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Picks) (*charactersvc.Character, error)); ok {
+		return rf(ctx, id, picks)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Picks) *charactersvc.Character); ok {
+		r0 = rf(ctx, id, picks)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*charactersvc.Character)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, charactersvc.Picks) error); ok {
+		r1 = rf(ctx, id, picks)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_PreviewProficiencies_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PreviewProficiencies'
+type MockSVC_PreviewProficiencies_Call struct {
+	*mock.Call
+}
+
+// PreviewProficiencies is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - picks charactersvc.Picks
+func (_e *MockSVC_Expecter) PreviewProficiencies(ctx interface{}, id interface{}, picks interface{}) *MockSVC_PreviewProficiencies_Call {
+	return &MockSVC_PreviewProficiencies_Call{Call: _e.mock.On("PreviewProficiencies", ctx, id, picks)}
+}
+
+func (_c *MockSVC_PreviewProficiencies_Call) Run(run func(ctx context.Context, id int64, picks charactersvc.Picks)) *MockSVC_PreviewProficiencies_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(charactersvc.Picks))
+	})
+	return _c
+}
+
+func (_c *MockSVC_PreviewProficiencies_Call) Return(_a0 *charactersvc.Character, _a1 error) *MockSVC_PreviewProficiencies_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_PreviewProficiencies_Call) RunAndReturn(run func(context.Context, int64, charactersvc.Picks) (*charactersvc.Character, error)) *MockSVC_PreviewProficiencies_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PreviewSkillPoints provides a mock function with given fields: ctx, id, points
 func (_m *MockSVC) PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*charactersvc.Character, error) {
 	ret := _m.Called(ctx, id, points)

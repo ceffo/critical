@@ -31,16 +31,10 @@ type identityRollView struct {
 }
 
 type numbersView struct {
-	Height   *float64 `json:"height_cm"`
-	Weight   *float64 `json:"weight_kg"`
-	Age      *int     `json:"age"`
-	Warnings []struct {
-		Code  string   `json:"code"`
-		Field string   `json:"field"`
-		Value *float64 `json:"value"`
-		Min   *float64 `json:"min"`
-		Max   *float64 `json:"max"`
-	} `json:"warnings"`
+	Height   *float64      `json:"height_cm"`
+	Weight   *float64      `json:"weight_kg"`
+	Age      *int          `json:"age"`
+	Warnings []warningView `json:"warnings"`
 }
 
 func numbersBody(height, weight, age string) string {
@@ -80,18 +74,18 @@ func TestIdentityRoll_Step5_RollCreateWarnTypeAndRefuse(t *testing.T) {
 	assert.InDelta(t, h.Value, *got.Height, 1e-9)
 	assert.InDelta(t, w.Value, *got.Weight, 1e-9)
 	assert.Equal(t, int(a.Value), *got.Age)
-	assert.Empty(t, got.Warnings, "a rolled value is inside its range")
+	assert.Empty(t, withoutSlots(got.Warnings), "a rolled value is inside its range")
 
 	// Typed outside the table: accepted, with the value and the range.
 	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details",
 		`{"height_cm":210,"weight_kg":45.5,"age":400}`, nil))
 	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
-	require.Len(t, got.Warnings, 2)
-	assert.Equal(t, "height_outside_range", got.Warnings[0].Code)
-	assert.Equal(t, 210.0, *got.Warnings[0].Value)
-	assert.Equal(t, 152.4, *got.Warnings[0].Min)
-	assert.Equal(t, 177.8, *got.Warnings[0].Max)
-	assert.Equal(t, "age_outside_range", got.Warnings[1].Code)
+	require.Len(t, withoutSlots(got.Warnings), 2)
+	assert.Equal(t, "height_outside_range", withoutSlots(got.Warnings)[0].Code)
+	assert.Equal(t, 210.0, *withoutSlots(got.Warnings)[0].Value)
+	assert.Equal(t, 152.4, *withoutSlots(got.Warnings)[0].Min)
+	assert.Equal(t, 177.8, *withoutSlots(got.Warnings)[0].Max)
+	assert.Equal(t, "age_outside_range", withoutSlots(got.Warnings)[1].Code)
 
 	// Null clears; a string is no number; a figure beyond the sanity bound is refused.
 	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height_cm":null}`, nil))
@@ -180,7 +174,7 @@ func TestIdentityNumbers_Step5_2_TheEdgeIsCheckedAfterTheRoundingToATenth(t *tes
 		require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height_cm":`+c.sent+`}`, nil))
 		require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
 		assert.InDelta(t, c.stored, *got.Height, 1e-9, c.sent)
-		assert.Len(t, got.Warnings, c.warnings, c.sent)
+		assert.Len(t, withoutSlots(got.Warnings), c.warnings, c.sent)
 	}
 }
 

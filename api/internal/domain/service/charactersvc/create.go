@@ -86,6 +86,9 @@ type NewCharacter struct {
 	// other classes. The armour the skills read is the worn one (ADR 0033
 	// step 14): nothing is worn at creation.
 	SkillPoints map[string]int
+	// Proficiencies are the non-weapon picks (ADR 0037 step 14), checked
+	// as the editor checks them with nothing spent before.
+	Proficiencies Picks
 	// Details are the details entered with the character, checked as the
 	// card's edit checks them (Details.Apply); the alignment and the sex are
 	// required, the other nil fields stay unset.
@@ -169,11 +172,17 @@ func (s *service) validate(n NewCharacter, draft bool) (Character, error) {
 	if err != nil {
 		return Character{}, err
 	}
+	// ADR 0037 step 14: the picks are checked as the editor checks them,
+	// with nothing picked before.
+	picks, err := ValidPicks(s.profs, n.Class, n.Proficiencies, Picks{})
+	if err != nil {
+		return Character{}, err
+	}
 	return Character{
 		Name: name, Class: n.Class, Race: n.Race,
 		Str: n.Str, StrExceptional: n.StrExceptional, Dex: n.Dex, Con: n.Con, Int: n.Int, Wis: n.Wis, Cha: n.Cha,
 		HPMax: n.HPMax, XPTotal: n.XP, Details: details,
-		SkillPoints: points,
+		SkillPoints: points, Proficiencies: picks,
 	}, nil
 }
 
@@ -291,6 +300,10 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	if err := SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return 0, err
 	}
+	// ADR 0037 steps 10 and 14: nor over its non-weapon slots.
+	if err := PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, Picks{}, c.Proficiencies); err != nil {
+		return 0, err
+	}
 	var id int64
 	if err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
@@ -333,6 +346,9 @@ func (s *service) Preview(_ context.Context, n NewCharacter) (*Character, error)
 		return nil, err
 	}
 	if err := SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
+		return nil, err
+	}
+	if err := PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, Picks{}, c.Proficiencies); err != nil {
 		return nil, err
 	}
 	// Nothing is worn before the character exists (ADR 0033 step 14).
@@ -621,6 +637,8 @@ type DraftInput struct {
 	Scores      map[string]int
 	XP          *int
 	SkillPoints map[string]int
+	// Proficiencies are the non-weapon picks so far (ADR 0037 step 14).
+	Proficiencies Picks
 }
 
 // SkillBudget is the skill point budget of a thief or a bard at the starting
@@ -637,6 +655,12 @@ type DraftChecks struct {
 	// SkillBudget is the draft class's budget at the level its XP gives;
 	// nil for a class without skill points or an XP that gives no level.
 	SkillBudget *SkillBudget
+	// ProficiencySlots is the draft class's non-weapon pool at the level its
+	// XP gives and its picks' figures (ADR 0037 steps 3 to 5 and 14); nil
+	// while the class, the XP or the Intelligence is not entered, or the
+	// catalogue has no Table 34 row. Picks the editor would refuse are read
+	// as entered: the checks refuse nothing.
+	ProficiencySlots *ProficiencySlots
 }
 
 // ClassUnmet is a class and the abilities under its minimum.
@@ -654,7 +678,7 @@ func (s *service) CreationChecks(_ context.Context, in DraftInput) (DraftChecks,
 	for _, class := range CreatableClasses {
 		out.UnmetMinimums = append(out.UnmetMinimums, ClassUnmet{Class: class, Abilities: ruletablesvc.UnmetMinimums(class, in.Scores)})
 	}
-	if in.XP == nil || *in.XP < MinStartingXP || *in.XP > MaxStartingXP || !slices.Contains(CreatableClasses, in.Class) || !ruletablesvc.HasSkillPoints(in.Class) {
+	if in.XP == nil || *in.XP < MinStartingXP || *in.XP > MaxStartingXP || !slices.Contains(CreatableClasses, in.Class) {
 		return out, nil
 	}
 	level, err := s.rules.LevelFor(in.Class, *in.XP)
@@ -663,6 +687,12 @@ func (s *service) CreationChecks(_ context.Context, in DraftInput) (DraftChecks,
 	}
 	if b, ok := ruletablesvc.SkillPointsFigures(in.Class, level, in.SkillPoints); ok {
 		out.SkillBudget = &b
+	}
+	if score, ok := in.Scores[string(AbilityInt)]; ok {
+		if f, ok := ProficiencyFigures(s.profs, in.Class, level, score, in.Proficiencies); ok {
+			f.SetTargets(func(a Ability) (int, bool) { v, ok := in.Scores[string(a)]; return v, ok })
+			out.ProficiencySlots = &f
+		}
 	}
 	return out, nil
 }

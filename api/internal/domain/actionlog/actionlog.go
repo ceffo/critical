@@ -235,6 +235,12 @@ const KindSpellLearn Kind = "spell_learn"
 // Not one of RollKinds: nothing is rolled.
 const KindSkillPoints Kind = "skill_points"
 
+// KindProficiencies is a save of the proficiency picks (skillsvc, ADR 0037
+// steps 12 and 13): the picks before and after. Its "proficiencies" snapshot
+// carries the picks, so popping it gives them back. Not one of RollKinds:
+// nothing is rolled.
+const KindProficiencies Kind = "proficiencies"
+
 // KindSkillArmor is a thief changing the armour it wears for its skills
 // (charactersvc, ADR 0030 step 1): the armour before and after. Its
 // "skill_armor" snapshot carries the armour, so popping it gives it back and

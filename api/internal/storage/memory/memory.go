@@ -124,7 +124,6 @@ func (t *tables) save() *tables {
 	c.spells = maps.Clone(t.spells)
 	c.reviews = maps.Clone(t.reviews)
 	c.items = maps.Clone(t.items)
-	c.proficiencies = maps.Clone(t.proficiencies)
 	c.spellbooks = maps.Clone(t.spellbooks)
 	c.learnFailures = maps.Clone(t.learnFailures)
 	c.forms = maps.Clone(t.forms)

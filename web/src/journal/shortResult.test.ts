@@ -317,6 +317,15 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Skills",
     fr: "Talents",
   },
+  proficiencies: {
+    e: entry("proficiencies", {
+      before: { nonweapon: [{ id: "tumbling", slots: 1 }] },
+      after: { nonweapon: [{ id: "tumbling", slots: 2 }] },
+    }),
+    value: null,
+    en: "Proficiencies",
+    fr: "Compétences",
+  },
   skill_armor: {
     e: entry("skill_armor", { before: "none", after: "elven_chain" }),
     value: null,

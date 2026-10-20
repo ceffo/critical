@@ -35,6 +35,8 @@ type tables struct {
 	Races map[int64]string
 	// SkillPoints are characters.skill_points ('{}' none, the column's default).
 	SkillPoints map[int64]string
+	// Picks are characters.proficiency_picks (absent: '{}', the column's default).
+	Picks map[int64]string
 	// Classes are characters.class (absent: 'bard', the column's default); SkillArmors
 	// characters.skill_armor (absent: '', the column's default).
 	Classes, SkillArmors map[int64]string
@@ -132,7 +134,7 @@ func newFakeStore() *fakeStore {
 		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
-		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, SkillPoints: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, SkillPoints: map[int64]string{}, Picks: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -204,6 +206,7 @@ func (f *fakeStore) InsertCharacter(_ context.Context, arg storeq.InsertCharacte
 	f.t.Names[id] = arg.Name
 	f.t.Races[id] = arg.RaceCode
 	f.t.SkillPoints[id] = arg.SkillPoints
+	f.t.Picks[id] = arg.ProficiencyPicks
 	f.t.Alignments[id], f.t.Sexes[id] = arg.Alignment, arg.Sex
 	f.t.Languages[id] = arg.Languages
 	return id, nil
@@ -899,6 +902,45 @@ func (f *fakeStore) CharacterSkillArmour(_ context.Context, id int64) (storeq.Ch
 		return storeq.CharacterSkillArmourRow{}, sql.ErrNoRows
 	}
 	return storeq.CharacterSkillArmourRow{Class: f.class(id), SkillArmor: f.t.SkillArmors[id]}, nil
+}
+
+// ProficiencyRows are the proficiencies rows by character, then position, then id.
+func (f *fakeStore) ProficiencyRows(context.Context) ([]storeq.ProficiencyRowsRow, error) {
+	all := make([]storeq.UpsertProficiencyParams, 0, len(f.t.Profs))
+	for _, p := range f.t.Profs {
+		all = append(all, p)
+	}
+	slices.SortFunc(all, func(a, b storeq.UpsertProficiencyParams) int {
+		return cmp.Or(cmp.Compare(a.CharacterID, b.CharacterID), cmp.Compare(a.Position, b.Position), cmp.Compare(a.ID, b.ID))
+	})
+	rows := make([]storeq.ProficiencyRowsRow, 0, len(all))
+	for _, p := range all {
+		rows = append(rows, storeq.ProficiencyRowsRow{CharacterID: p.CharacterID, ID: p.ID})
+	}
+	return rows, nil
+}
+
+func (f *fakeStore) CharacterClasses(context.Context) ([]storeq.CharacterClassesRow, error) {
+	rows := []storeq.CharacterClassesRow{}
+	for _, id := range f.t.Characters {
+		rows = append(rows, storeq.CharacterClassesRow{ID: id, Class: f.class(id)})
+	}
+	return rows, nil
+}
+
+func (f *fakeStore) SetCharacterPicks(_ context.Context, arg storeq.SetCharacterPicksParams) error {
+	if slices.Contains(f.t.Characters, arg.ID) {
+		f.t.Picks[arg.ID] = arg.ProficiencyPicks
+	}
+	return nil
+}
+
+// picks is characters.proficiency_picks, '{}' (the column's default) when none was set.
+func (f *fakeStore) picks(id int64) string {
+	if p, ok := f.t.Picks[id]; ok {
+		return p
+	}
+	return "{}"
 }
 
 // class is characters.class, 'bard' (the column's default) when none was set.

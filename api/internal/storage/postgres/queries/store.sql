@@ -12,8 +12,8 @@ SELECT COUNT(*) FROM characters;
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code,
-    skill_points, alignment, sex
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+    skill_points, alignment, sex, proficiency_picks
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
 RETURNING id;
 
 -- The race of a character stored before races had codes (migration 007): only while it has none,
@@ -310,3 +310,14 @@ FROM items WHERE character_id = sqlc.arg(character_id)::bigint ORDER BY position
 
 -- name: WearItem :exec
 UPDATE items SET state = 'worn' WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;
+
+-- The proficiency picks data step after migration 025 (ADR 0037 step 16): every stored
+-- proficiencies row, per character in sheet order, and each character's class.
+-- name: ProficiencyRows :many
+SELECT character_id, id FROM proficiencies ORDER BY character_id, position, id;
+
+-- name: CharacterClasses :many
+SELECT id, class FROM characters ORDER BY id;
+
+-- name: SetCharacterPicks :exec
+UPDATE characters SET proficiency_picks = sqlc.arg(proficiency_picks) WHERE id = sqlc.arg(id)::bigint;

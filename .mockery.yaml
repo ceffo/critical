@@ -195,12 +195,12 @@ packages:
       outpkg: "mocks"
     interfaces:
       SVC:
-      DAL:
       Characters:
       Abilities:
       Dice:
       Log:
       Points:
+      Picks:
   github.com/ceffo/critical/api/internal/domain/service/dicesvc:
     config:
       dir: "internal/domain/service/dicesvc/mocks"
@@ -241,12 +241,6 @@ packages:
   github.com/ceffo/critical/api/internal/adapters/hpdal/queries:
     config:
       dir: "internal/adapters/hpdal/queries/mocks"
-      outpkg: "mocks"
-    interfaces:
-      Querier:
-  github.com/ceffo/critical/api/internal/adapters/skilldal/queries:
-    config:
-      dir: "internal/adapters/skilldal/queries/mocks"
       outpkg: "mocks"
     interfaces:
       Querier:

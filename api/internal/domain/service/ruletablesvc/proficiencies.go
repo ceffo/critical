@@ -34,20 +34,38 @@ type Crossover struct {
 	Groups []string
 }
 
+// SlotRow is one row of PHB Table 34 (ADR 0037 step 1): a class group's
+// weapon and non-weapon slots. A pool's slots are Initial plus one at every
+// level divisible by its Levels (step 3).
+type SlotRow struct {
+	Group            string
+	WeaponInitial    int
+	WeaponLevels     int
+	Penalty          int
+	NonweaponInitial int
+	NonweaponLevels  int
+}
+
 // Proficiencies is the validated catalogue. The zero value and nil are the
 // empty catalogue.
 type Proficiencies struct {
 	list       []Proficiency
 	crossovers []Crossover
+	slots      []SlotRow
 }
 
 // NewProficiencies validates the rows: an id once and non-empty, a known
 // ability (or none, with a 0 modifier), at least one slot, one or more known
 // groups once each; the crossovers cover each of Classes exactly once with
-// known groups.
-func NewProficiencies(list []Proficiency, crossovers []Crossover) (*Proficiencies, error) {
+// known groups; the slot rows (Table 34) cover each of Groups exactly once,
+// with initial slots of 0 or more, #Levels of 1 or more and a penalty of 0 or
+// less.
+func NewProficiencies(list []Proficiency, crossovers []Crossover, slots []SlotRow) (*Proficiencies, error) {
 	seen := make(map[string]bool, len(list))
-	out := &Proficiencies{list: make([]Proficiency, len(list)), crossovers: make([]Crossover, len(crossovers))}
+	out := &Proficiencies{list: make([]Proficiency, len(list)), crossovers: make([]Crossover, len(crossovers)), slots: slices.Clone(slots)}
+	if err := checkSlotRows(slots); err != nil {
+		return nil, err
+	}
 	for i, p := range list {
 		switch {
 		case p.ID == "":
@@ -91,6 +109,31 @@ func NewProficiencies(list []Proficiency, crossovers []Crossover) (*Proficiencie
 	return out, nil
 }
 
+func checkSlotRows(rows []SlotRow) error {
+	have := map[string]bool{}
+	for _, r := range rows {
+		switch {
+		case !slices.Contains(Groups, r.Group):
+			return fmt.Errorf("proficiency slots: unknown group %q", r.Group)
+		case have[r.Group]:
+			return fmt.Errorf("proficiency slots: group %q twice", r.Group)
+		case r.WeaponInitial < 0 || r.NonweaponInitial < 0:
+			return fmt.Errorf("proficiency slots: %q has negative initial slots", r.Group)
+		case r.WeaponLevels < 1 || r.NonweaponLevels < 1:
+			return fmt.Errorf("proficiency slots: %q needs #Levels of 1 or more", r.Group)
+		case r.Penalty > 0:
+			return fmt.Errorf("proficiency slots: %q has a positive penalty", r.Group)
+		}
+		have[r.Group] = true
+	}
+	for _, g := range Groups {
+		if len(rows) > 0 && !have[g] {
+			return fmt.Errorf("proficiency slots: group %q is missing", g)
+		}
+	}
+	return nil
+}
+
 func checkGroups(where string, groups []string) error {
 	if len(groups) == 0 {
 		return fmt.Errorf("%s: no group", where)
@@ -132,4 +175,58 @@ func (p *Proficiencies) Crossovers() []Crossover {
 		out[i] = c
 	}
 	return out
+}
+
+// SlotRows are Table 34's rows, in the file's order.
+func (p *Proficiencies) SlotRows() []SlotRow {
+	if p == nil {
+		return nil
+	}
+	return slices.Clone(p.slots)
+}
+
+// SlotRowOf is Table 34's row for class's group; false for an unknown class
+// or a catalogue without the table.
+func (p *Proficiencies) SlotRowOf(class string) (SlotRow, bool) {
+	if p == nil {
+		return SlotRow{}, false
+	}
+	group, err := ClassGroup(class)
+	if err != nil {
+		return SlotRow{}, false
+	}
+	for _, r := range p.slots {
+		if r.Group == group {
+			return r, true
+		}
+	}
+	return SlotRow{}, false
+}
+
+// Get is the catalogue row of id; false when the catalogue has none.
+func (p *Proficiencies) Get(id string) (Proficiency, bool) {
+	if p == nil {
+		return Proficiency{}, false
+	}
+	for _, r := range p.list {
+		if r.ID == id {
+			r.Groups = slices.Clone(r.Groups)
+			return r, true
+		}
+	}
+	return Proficiency{}, false
+}
+
+// GroupsOf are the groups class learns at Table 37's cost (Table 38); nil for
+// a class the catalogue has no row for.
+func (p *Proficiencies) GroupsOf(class string) []string {
+	if p == nil {
+		return nil
+	}
+	for _, c := range p.crossovers {
+		if c.Class == class {
+			return slices.Clone(c.Groups)
+		}
+	}
+	return nil
 }

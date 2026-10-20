@@ -39,6 +39,13 @@ type SVC interface {
 	// does (a *domain.FieldError), then against the budget as the spend
 	// checks them (SkillPointsWithinBudget, a *domain.BudgetError).
 	PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*Character, error)
+	// PreviewProficiencies is character id derived as if its proficiency
+	// picks were picks (ADR 0037 step 12): the pool, each pick's figures and
+	// the warnings a save would give. It writes nothing. The picks are
+	// checked as ValidPicks does (a *domain.FieldError), then against the
+	// budget as the save checks them (PicksWithinBudget, a
+	// *domain.BudgetError).
+	PreviewProficiencies(ctx context.Context, id int64, picks Picks) (*Character, error)
 	// List is the owner's characters they have not retired, in creation
 	// order (ADR 0029 steps 7.1 and 7.3).
 	List(ctx context.Context, owner uuid.UUID) ([]Summary, error)
@@ -191,25 +198,43 @@ func NewWithConfig(_ *Config, d Deps) (SVC, error) { return New(d) }
 // ledger) gets the derived values, so an XP award that crosses a threshold
 // changes them all at once.
 func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error) {
-	return s.read(ctx, id, nil)
+	return s.read(ctx, id, readDraft{})
 }
 
 // PreviewSkillPoints reads character id with its skill points replaced by
 // points, validated, and derives it: nothing is stored.
 func (s *service) PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*Character, error) {
-	return s.read(ctx, id, &points)
+	return s.read(ctx, id, readDraft{points: &points})
 }
 
-// read is GetCharacter; draft, when set, replaces the stored skill points
-// (already validated for the character's class here).
-func (s *service) read(ctx context.Context, id int64, draft *map[string]int) (*Character, error) {
+// PreviewProficiencies reads character id with its picks replaced by picks,
+// validated, and derives it: nothing is stored.
+func (s *service) PreviewProficiencies(ctx context.Context, id int64, picks Picks) (*Character, error) {
+	return s.read(ctx, id, readDraft{picks: &picks})
+}
+
+// readDraft is what a preview reads in place of the stored values; nil
+// fields read the stored ones.
+type readDraft struct {
+	points *map[string]int
+	picks  *Picks
+}
+
+// read is GetCharacter; a draft's fields, when set, replace the stored skill
+// points or picks (validated for the character's class here).
+func (s *service) read(ctx context.Context, id int64, draft readDraft) (*Character, error) {
 	c, err := s.reader.GetCharacter(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	stored := c.SkillPoints
-	if draft != nil {
-		if c.SkillPoints, err = ValidSkillPoints(c.Class, *draft); err != nil {
+	stored, storedPicks := c.SkillPoints, c.Proficiencies
+	if draft.points != nil {
+		if c.SkillPoints, err = ValidSkillPoints(c.Class, *draft.points); err != nil {
+			return nil, err
+		}
+	}
+	if draft.picks != nil {
+		if c.Proficiencies, err = ValidPicks(s.profs, c.Class, *draft.picks, storedPicks); err != nil {
 			return nil, err
 		}
 	}
@@ -229,8 +254,13 @@ func (s *service) read(ctx context.Context, id int64, draft *map[string]int) (*C
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
 	// ADR 0037 step 10: the preview refuses what the spend would refuse.
-	if draft != nil {
+	if draft.points != nil {
 		if err := SkillPointsWithinBudget(c.Class, c.Derived.RealizedLevel, stored, c.SkillPoints); err != nil {
+			return nil, err
+		}
+	}
+	if draft.picks != nil {
+		if err := PicksWithinBudget(s.profs, c.Class, c.Derived.RealizedLevel, c.Int, storedPicks, c.Proficiencies); err != nil {
 			return nil, err
 		}
 	}
@@ -243,6 +273,13 @@ func (s *service) read(ctx context.Context, id int64, draft *map[string]int) (*C
 // character stored before it was added included; the warnings follow what is
 // read (steps 4.2, 5.2 and 8.4).
 func (s *service) readWarnings(c *Character) {
+	// ADR 0037 steps 3 to 5 and 11: the non-weapon pool at the realized
+	// level, the sheet's Intelligence as stored (no effect applied).
+	c.Derived.Proficiencies = nil
+	if f, ok := ProficiencyFigures(s.profs, c.Class, c.Derived.RealizedLevel, c.Int, c.Proficiencies); ok {
+		f.SetTargets(c.Score)
+		c.Derived.Proficiencies = &f
+	}
 	native := s.languages.Native(c.Race)
 	c.Details = c.Details.Known(s.languages).WithNative(native)
 	c.Warnings = c.Details.Warnings(c.Class)
@@ -253,6 +290,9 @@ func (s *service) readWarnings(c *Character) {
 		if w, over := c.Details.LanguageWarning(c.Int, native); over {
 			c.Warnings = append(c.Warnings, w)
 		}
+	}
+	if c.Derived.Proficiencies != nil {
+		c.Warnings = append(c.Warnings, SlotWarnings(*c.Derived.Proficiencies)...)
 	}
 }
 

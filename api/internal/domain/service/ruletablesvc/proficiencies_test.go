@@ -26,34 +26,38 @@ func TestNewProficiencies_RefusesWhatTheSchemaCannotSay(t *testing.T) {
 	cases := map[string]struct {
 		list  []ruletablesvc.Proficiency
 		cross []ruletablesvc.Crossover
+		slots []ruletablesvc.SlotRow
 		want  string
 	}{
-		"no id":             {row(func(p *ruletablesvc.Proficiency) { p.ID = "" }), nil, "no id"},
-		"unknown ability":   {row(func(p *ruletablesvc.Proficiency) { p.Ability = "luck" }), nil, "unknown ability"},
-		"modifier no check": {row(func(p *ruletablesvc.Proficiency) { p.Ability = ""; p.Modifier = 2 }), nil, "modifier but no ability"},
-		"no slots":          {row(func(p *ruletablesvc.Proficiency) { p.Slots = 0 }), nil, "at least 1 slot"},
-		"no group":          {row(func(p *ruletablesvc.Proficiency) { p.Groups = nil }), nil, "no group"},
-		"unknown group":     {row(func(p *ruletablesvc.Proficiency) { p.Groups = []string{"druid"} }), nil, "unknown group"},
-		"group twice":       {row(func(p *ruletablesvc.Proficiency) { p.Groups = []string{"general", "general"} }), nil, "twice"},
-		"unknown class":     {nil, []ruletablesvc.Crossover{{Class: "paladin", Groups: []string{"general"}}}, "unknown class"},
-		"class missing":     {nil, okCrossovers()[:4], "missing"},
+		"no id":             {row(func(p *ruletablesvc.Proficiency) { p.ID = "" }), nil, nil, "no id"},
+		"unknown ability":   {row(func(p *ruletablesvc.Proficiency) { p.Ability = "luck" }), nil, nil, "unknown ability"},
+		"modifier no check": {row(func(p *ruletablesvc.Proficiency) { p.Ability = ""; p.Modifier = 2 }), nil, nil, "modifier but no ability"},
+		"no slots":          {row(func(p *ruletablesvc.Proficiency) { p.Slots = 0 }), nil, nil, "at least 1 slot"},
+		"no group":          {row(func(p *ruletablesvc.Proficiency) { p.Groups = nil }), nil, nil, "no group"},
+		"unknown group":     {row(func(p *ruletablesvc.Proficiency) { p.Groups = []string{"druid"} }), nil, nil, "unknown group"},
+		"group twice":       {row(func(p *ruletablesvc.Proficiency) { p.Groups = []string{"general", "general"} }), nil, nil, "twice"},
+		"unknown class":     {nil, []ruletablesvc.Crossover{{Class: "paladin", Groups: []string{"general"}}}, nil, "unknown class"},
+		"class missing":     {nil, okCrossovers()[:4], nil, "missing"},
+		"slot group":        {nil, nil, []ruletablesvc.SlotRow{{Group: "druid", WeaponLevels: 1, NonweaponLevels: 1}}, "unknown group"},
+		"slot levels":       {nil, nil, []ruletablesvc.SlotRow{{Group: "rogue", WeaponLevels: 1}}, "#Levels"},
+		"slot group gone":   {nil, nil, []ruletablesvc.SlotRow{{Group: "rogue", WeaponLevels: 4, NonweaponLevels: 4}}, "missing"},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := ruletablesvc.NewProficiencies(c.list, c.cross)
+			_, err := ruletablesvc.NewProficiencies(c.list, c.cross, c.slots)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), c.want)
 		})
 	}
 	dup := append(row(func(*ruletablesvc.Proficiency) {}), row(func(*ruletablesvc.Proficiency) {})...)
-	_, err := ruletablesvc.NewProficiencies(dup, okCrossovers())
+	_, err := ruletablesvc.NewProficiencies(dup, okCrossovers(), nil)
 	require.ErrorContains(t, err, "twice")
 }
 
 func TestProficiencies_NoCheckRowAndEmptyCatalogue(t *testing.T) {
 	p, err := ruletablesvc.NewProficiencies([]ruletablesvc.Proficiency{
 		{ID: "blind_fighting", Slots: 2, Groups: []string{"rogue", "warrior"}},
-	}, okCrossovers())
+	}, okCrossovers(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, "blind_fighting", p.All()[0].ID)
 	assert.Len(t, p.Crossovers(), 5)

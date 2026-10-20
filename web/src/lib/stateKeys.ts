@@ -22,6 +22,7 @@ export const STATE_FAMILIES = [
   "buffs",
   "initiative",
   "items",
+  "proficiencies",
   "realized_level",
   "round",
   "saved_buffs",
@@ -89,6 +90,8 @@ export const INVALIDATES = {
   // Read with the round.
   initiative: ["round"],
   items: ITEM_SLICES,
+  // The picks' checks are skills; the sheet carries the slots and warns (ADR 0037 steps 11 and 12).
+  proficiencies: ["skills", "character"],
   // The level and its max HP (ADR 0030 step 7.3).
   realized_level: [...LEVEL_SLICES, "hp"],
   round: ["round"],

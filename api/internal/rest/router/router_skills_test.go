@@ -33,7 +33,7 @@ func TestSkills_ListWireShape(t *testing.T) {
 	rec := do(h, "GET", "/api/skills", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
-		"proficiencies":[{"id":"musical_instrument","ability":"dex","abilityScore":17,"modifier":-1,"target":16,
+		"proficiencies":[{"id":"musical_instrument","ability":"dex","abilityScore":17,"modifier":-1,"extraSlots":0,"target":16,
 			"last":{"entryId":7,"roll":18,"target":16,"adjustment":3,"adjustmentReason":"rope","adjustedTarget":19,"success":true}}],
 		"bardSkills":[{"id":"climb_walls","base":50,"points":35,"race":0,"dexterity":0,"armor":-5,"percent":80,
 			"rawPercent":80,"maxPercent":95,"maxPoints":95,"usable":true,"last":null}],
@@ -76,7 +76,7 @@ func TestSkills_RollWireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"id":"tumbling","kind":"proficiency","die":20,"roll":20,"target":17,
 		"adjustment":-2,"adjustmentReason":"rope","adjustedTarget":15,"success":false,"rolledSuccess":false,
-		"ability":"dex","abilityScore":17,"modifier":0,"logEntryId":12}`, rec.Body.String())
+		"ability":"dex","abilityScore":17,"modifier":0,"extraSlots":0,"logEntryId":12}`, rec.Body.String())
 
 	// No body is no adjustment, as is an empty object.
 	for _, body := range []string{"", "{}"} {
@@ -111,7 +111,7 @@ func TestSkills_AdjustWireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"id":"tumbling","kind":"proficiency","die":20,"roll":18,"target":17,
 		"adjustment":3,"adjustmentReason":"help","adjustedTarget":20,"success":true,"rolledSuccess":false,
-		"ability":"dex","abilityScore":17,"modifier":0,"logEntryId":12}`, rec.Body.String())
+		"ability":"dex","abilityScore":17,"modifier":0,"extraSlots":0,"logEntryId":12}`, rec.Body.String())
 
 	rec = do(h, "POST", "/api/roll/skill/12/adjust", `{"adjustment":0}`)
 	require.Equal(t, http.StatusOK, rec.Code)

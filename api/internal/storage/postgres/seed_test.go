@@ -185,57 +185,52 @@ func TestSeed_MissingCatalogFileIsFineOnceTableIsFilled(t *testing.T) {
 	require.NoError(t, seedOn(f, t.TempDir()))
 }
 
-// The sheet's proficiencies (PHB Table 37 abilities and modifiers) and bard skills load, and a
-// restart with the same seed changes nothing.
-func TestSeed_SkillsMatchSheetAndAreIdempotent(t *testing.T) {
+// A fresh database: the seed character gets the character seed's picks (ADR 0037 step 16), each
+// a catalogue id at its slots; its bard skills load from skills.json; a restart with the same seed
+// changes nothing. No proficiencies row is written any more.
+func TestSeed_PicksAndSkillsLoadAndAreIdempotent(t *testing.T) {
 	f := newFakeStore()
 	require.NoError(t, seedOn(f, repoSeeds()))
+	id := f.t.Characters[0]
 
-	assert.Len(t, f.t.Profs, 8)
+	assert.Empty(t, f.t.Profs, "the proficiencies are picks, not rows")
+	assert.JSONEq(t, `{"nonweapon":[
+		{"id":"musical_instrument","slots":1},{"id":"tumbling","slots":1},{"id":"ventriloquism","slots":1},
+		{"id":"riding_land","slots":1},{"id":"appraising","slots":1},{"id":"singing","slots":1},
+		{"id":"reading_writing","slots":1},{"id":"local_history","slots":1}]}`, f.picks(id))
 	assert.Len(t, f.t.Bard, 4)
-	for id, want := range map[string]struct {
-		ability  string
-		modifier int64
-	}{
-		"musical_instrument": {"dex", -1}, "tumbling": {"dex", 0}, "ventriloquism": {"int", -2},
-		"riding_land": {"wis", 3}, "appraising": {"int", 0}, "singing": {"cha", 0},
-		"reading_writing": {"int", 1}, "local_history": {"cha", 0},
-	} {
-		assert.Equal(t, want.ability, f.prof(id).Ability, id)
-		assert.Equal(t, want.modifier, f.prof(id).Modifier, id)
-	}
 	for id, want := range map[string]int64{"climb_walls": 85, "detect_noise": 90, "pick_pockets": 50, "read_languages": 75} {
 		assert.Equal(t, want, f.bardSkill(id).Percent, id)
 	}
-	assert.Zero(t, f.prof("musical_instrument").Position, "seed order kept")
 
+	again := copyTables(f.t)
 	require.NoError(t, seedOn(f, repoSeeds()))
-	assert.Len(t, f.t.Profs, 8)
-	assert.Len(t, f.t.Bard, 4)
-	assert.Equal(t, int64(50), f.bardSkill("pick_pockets").Percent)
-	assert.Equal(t, int64(7), f.prof("local_history").Position, "order kept")
+	assert.Equal(t, again, f.t, "a second start writes nothing")
 	require.NoError(t, seedOn(f, t.TempDir()), "a missing file is fine once the tables are filled")
 }
 
-// An edited seed reaches an existing database: changed values and order are applied by id, a
-// new row is added, nothing is duplicated, and a row the seed no longer lists is kept.
+// Once stored, the picks are the player's: an edited character seed never reaches them (the
+// character is inserted only into an empty database).
+func TestSeed_PicksAreNotReconciled(t *testing.T) {
+	f := newFakeStore()
+	require.NoError(t, seedOn(f, repoSeeds()))
+	id := f.t.Characters[0]
+	f.t.Picks[id] = `{"nonweapon":[{"id":"tumbling","slots":3}]}` // the player's edit
+	require.NoError(t, seedOn(f, repoSeeds()))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":3}]}`, f.picks(id))
+}
+
+// An edited skills seed reaches an existing database: changed percentages and order are applied by
+// id, nothing is duplicated, and a row the seed no longer lists is kept.
 func TestSeed_SkillsReconcileByID(t *testing.T) {
 	f := newFakeStore()
 	require.NoError(t, seedOn(f, copySeeds(t, map[string]string{"skills.json": `{
-		"proficiencies":[{"id":"tumbling","ability":"dex","modifier":0},{"id":"singing","ability":"cha","modifier":0}],
 		"bard_skills":[{"id":"climb_walls","percent":85},{"id":"pick_pockets","percent":50}]}`})))
 
 	edited := copySeeds(t, map[string]string{"skills.json": `{
-		"proficiencies":[{"id":"singing","ability":"cha","modifier":1},{"id":"tumbling","ability":"dex","modifier":0},
-			{"id":"ventriloquism","ability":"int","modifier":-2}],
 		"bard_skills":[{"id":"climb_walls","percent":90}]}`})
 	for range 2 {
 		require.NoError(t, seedOn(f, edited))
-		assert.Len(t, f.t.Profs, 3, "new row added once")
-		assert.Equal(t, int64(1), f.prof("singing").Modifier, "corrected modifier")
-		assert.Zero(t, f.prof("singing").Position, "new order")
-		assert.Equal(t, int64(2), f.prof("ventriloquism").Position)
-		assert.Equal(t, int64(-2), f.prof("ventriloquism").Modifier)
 		assert.Equal(t, int64(90), f.bardSkill("climb_walls").Percent, "raised percentage")
 		assert.Len(t, f.t.Bard, 2, "a row the seed dropped is kept")
 	}
@@ -243,12 +238,11 @@ func TestSeed_SkillsReconcileByID(t *testing.T) {
 
 func TestSeed_InvalidSkillsFailWithoutPartialRows(t *testing.T) {
 	tests := map[string]string{
-		"unknown ability":        `{"proficiencies":[{"id":"a","ability":"dex"},{"id":"b","ability":"luck"}]}`,
-		"empty id":               `{"proficiencies":[{"id":"","ability":"dex"}]}`,
-		"duplicate across lists": `{"proficiencies":[{"id":"a","ability":"dex"}],"bard_skills":[{"id":"a","percent":5}]}`,
-		"percent above 100":      `{"bard_skills":[{"id":"a","percent":101}]}`,
-		"negative percent":       `{"bard_skills":[{"id":"a","percent":-1}]}`,
-		"invalid json":           `{nope`,
+		"empty id":          `{"bard_skills":[{"id":"","percent":5}]}`,
+		"duplicate id":      `{"bard_skills":[{"id":"a","percent":5},{"id":"a","percent":6}]}`,
+		"percent above 100": `{"bard_skills":[{"id":"a","percent":101}]}`,
+		"negative percent":  `{"bard_skills":[{"id":"a","percent":-1}]}`,
+		"invalid json":      `{nope`,
 	}
 	for name, content := range tests {
 		t.Run(name, func(t *testing.T) {

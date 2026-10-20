@@ -1,0 +1,24 @@
+{
+  "picked": {
+    "payload": {
+      "before": { "nonweapon": [{ "id": "tumbling", "slots": 1 }] },
+      "after": {
+        "nonweapon": [
+          { "id": "tumbling", "slots": 2 },
+          { "id": "tracking", "slots": 2 }
+        ]
+      }
+    }
+  },
+  "removed": {
+    "payload": {
+      "before": {
+        "nonweapon": [
+          { "id": "singing", "slots": 1 },
+          { "id": "old_skill", "slots": 1 }
+        ]
+      },
+      "after": { "nonweapon": [{ "id": "singing", "slots": 1 }] }
+    }
+  }
+}

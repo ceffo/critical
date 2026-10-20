@@ -1,5 +1,6 @@
 // The character's entries: XP awards (ADR 0015 step 4), a level-up (ADR 0030 step 7.3), a spell
-// learned (step 20.2), skill points and skill armour (step 17), the AC override (ADR 0033 step 13),
+// learned (step 20.2), skill points and skill armour (step 17), the proficiency picks (ADR 0037
+// step 13), the AC override (ADR 0033 step 13),
 // the preparation (ADR 0008) and the long rest (steps 11 and 12).
 import {
   ArrowFatLinesUp,
@@ -157,6 +158,45 @@ export const skillPointsKind: KindView<SkillPointsPayload> = {
       )
       .join(", ");
     return t("log.skillPoints.text", { changes });
+  },
+};
+
+/** Payload of a proficiencies entry (skillsvc picksRecord): the picks before and after. */
+interface PicksPayload {
+  before: Record<string, number>;
+  after: Record<string, number>;
+}
+
+type PickList = { nonweapon?: { id: string; slots: number }[] } | undefined;
+
+const bySlots = (l: PickList): Record<string, number> | null =>
+  l && Array.isArray(l.nonweapon)
+    ? Object.fromEntries(l.nonweapon.map((x) => [x.id, x.slots]))
+    : null;
+
+export const proficienciesKind: KindView<PicksPayload> = {
+  decode(e) {
+    const p = e.payload as { before?: PickList; after?: PickList } | null;
+    const before = bySlots(p?.before);
+    const after = bySlots(p?.after);
+    return before && after ? { before, after } : null;
+  },
+  icon: ListNumbers,
+  // "Proficiency slots: Tumbling 1 → 2, Tracking 0 → 2": each pick whose slots changed (0: none).
+  text(p, { t }) {
+    const ids = [
+      ...new Set([...Object.keys(p.before), ...Object.keys(p.after)]),
+    ].filter((k) => (p.before[k] ?? 0) !== (p.after[k] ?? 0));
+    const changes = ids
+      .map((k) =>
+        t("log.proficiencies.change", {
+          name: skillName(t, k),
+          from: p.before[k] ?? 0,
+          to: p.after[k] ?? 0,
+        }),
+      )
+      .join(", ");
+    return t("log.proficiencies.text", { changes });
   },
 };
 

@@ -59,7 +59,6 @@ func TestPostgresStorage_EveryAdapterRunsOnTheCallersTransaction(t *testing.T) {
 		"Items":     func() { _, _ = s.Items.List(ctx, 1) },
 		"Forms":     func() { _, _, _ = s.Forms.Get(ctx, 1) },
 		"XP":        func() { _, _ = s.XP.List(ctx, 1) },
-		"Skill":     func() { _, _ = s.Skill.ListProficiencies(ctx, 1) },
 		"Spellbook": func() { _, _ = s.Spellbook.Keys(ctx, 1) },
 		"Dice":      func() { _, _ = s.Dice.List(ctx, 1) },
 		"Auth":      func() { _, _ = s.Auth.RootUser(ctx) },

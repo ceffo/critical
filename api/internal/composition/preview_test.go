@@ -72,7 +72,7 @@ func TestPreview_CarriesTheWarnings(t *testing.T) {
 	var preview previewView
 	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/preview", body, &preview))
 	codes := []string{}
-	for _, w := range preview.Warnings {
+	for _, w := range withoutSlotMaps(preview.Warnings) {
 		codes = append(codes, w["code"].(string))
 	}
 	assert.ElementsMatch(t, []string{"height_outside_range", "languages_over_limit"}, codes)
@@ -92,8 +92,8 @@ func TestPreview_ABlankNameAlignmentOrSexIsMissingNotRefused(t *testing.T) {
 	var preview previewView
 	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/preview", body, &preview))
 	assert.Equal(t, []string{"name", "alignment", "sex"}, preview.Missing)
-	require.Len(t, preview.Warnings, 1)
-	assert.Equal(t, "languages_over_limit", preview.Warnings[0]["code"])
+	require.Len(t, withoutSlotMaps(preview.Warnings), 1)
+	assert.Equal(t, "languages_over_limit", withoutSlotMaps(preview.Warnings)[0]["code"])
 
 	var refused map[string]string
 	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused))

@@ -92,6 +92,11 @@ type LanguageBook interface {
 type ProficiencyBook interface {
 	All() []ruletablesvc.Proficiency
 	Crossovers() []ruletablesvc.Crossover
+	// Get, GroupsOf and SlotRowOf read the picks against the catalogue
+	// (ADR 0037 steps 3 to 5).
+	Get(id string) (ruletablesvc.Proficiency, bool)
+	GroupsOf(class string) []string
+	SlotRowOf(class string) (ruletablesvc.SlotRow, bool)
 }
 
 // Kind is the class and race code of the character whose details are checked:
@@ -166,6 +171,11 @@ type Warning struct {
 	// Value, Min and Max are an identity number outside its table range (ADR
 	// 0032 step 5.2), in stored units; nil for the other warnings.
 	Value, Min, Max *float64
+	// Pool, Spent, Available and Left are a slot warning's figures (ADR 0037
+	// step 11): slots_over_budget carries spent and available, slots_to_spend
+	// left; nil (Pool "") for the other warnings.
+	Pool                   string
+	Spent, Available, Left *int
 }
 
 // Known is d with the languages the book does not hold left out: during a

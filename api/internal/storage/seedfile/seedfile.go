@@ -67,6 +67,26 @@ type Character struct {
 	// by skill code: the points that give the sheet's percentages (step
 	// 24), checked as a bard's entered points are.
 	SkillPoints map[string]int `json:"skill_points"`
+	// Proficiencies are the seed character's non-weapon picks (ADR 0037
+	// steps 12 and 16): catalogue id and slots spent, written with the
+	// character when it is inserted, never reconciled afterwards (the player
+	// edits them). The catalogue check is the seedcheck's.
+	Proficiencies []SeedPick `json:"proficiencies"`
+}
+
+// SeedPick is one non-weapon pick of the character seed.
+type SeedPick struct {
+	ID    string `json:"id"`
+	Slots int    `json:"slots"`
+}
+
+// Picks are the seed's picks as the character stores them.
+func (c Character) Picks() charactersvc.Picks {
+	out := charactersvc.Picks{Nonweapon: make([]charactersvc.Pick, 0, len(c.Proficiencies))}
+	for _, p := range c.Proficiencies {
+		out.Nonweapon = append(out.Nonweapon, charactersvc.Pick(p))
+	}
+	return out
 }
 
 // ReadCharacter reads the character seed at path. ok is false when there is
@@ -87,6 +107,18 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 		return Character{}, false, fmt.Errorf("character.json: skill points: %w", err)
 	}
 	c.SkillPoints = points
+	seen := map[string]bool{}
+	for i, p := range c.Proficiencies {
+		switch {
+		case p.ID == "":
+			return Character{}, false, fmt.Errorf("character.json: proficiency %d: id is required", i)
+		case seen[p.ID]:
+			return Character{}, false, fmt.Errorf("character.json: proficiency %q twice", p.ID)
+		case p.Slots < 1:
+			return Character{}, false, fmt.Errorf("character.json: proficiency %q: at least 1 slot", p.ID)
+		}
+		seen[p.ID] = true
+	}
 	return c, c.Name != "", nil
 }
 
@@ -248,19 +280,11 @@ func seedPowers(raw json.RawMessage) ([]itemsvc.Power, string, error) {
 	return powers, encoded, nil
 }
 
-// Skills is seeds/skills.json: the non-weapon proficiencies (ability key and
-// modifier) and the bard skills (percentage) of ADR 0014. Ids are shared by
-// both lists (a check is rolled by id) and named by the UI.
+// Skills is seeds/skills.json: the bard skills (percentage) of ADR 0014, the
+// imported sheet's figures. The non-weapon proficiencies are picks of the
+// character seed (Character.Proficiencies, ADR 0037 step 16).
 type Skills struct {
-	Proficiencies []Proficiency `json:"proficiencies"`
-	BardSkills    []BardSkill   `json:"bard_skills"`
-}
-
-// Proficiency is one non-weapon proficiency of the seed.
-type Proficiency struct {
-	ID       string `json:"id"`
-	Ability  string `json:"ability"`
-	Modifier int    `json:"modifier"`
+	BardSkills []BardSkill `json:"bard_skills"`
 }
 
 // BardSkill is one bard skill of the seed.
@@ -268,8 +292,6 @@ type BardSkill struct {
 	ID      string `json:"id"`
 	Percent int    `json:"percent"`
 }
-
-var abilityKeys = map[string]bool{"str": true, "dex": true, "con": true, "int": true, "wis": true, "cha": true}
 
 // ReadSkills reads and checks the skill seed at path: ids present and unique
 // across both lists, a known ability, a percentage within 0-100.
@@ -296,14 +318,6 @@ func (s Skills) validate() error {
 		}
 		seen[id] = true
 		return nil
-	}
-	for i, p := range s.Proficiencies {
-		if err := id("proficiency", i, p.ID); err != nil {
-			return err
-		}
-		if !abilityKeys[p.Ability] {
-			return fmt.Errorf("skills.json proficiency %q: unknown ability %q", p.ID, p.Ability)
-		}
 	}
 	for i, b := range s.BardSkills {
 		if err := id("bard skill", i, b.ID); err != nil {

@@ -28,10 +28,10 @@ func pointsFixture(t *testing.T, class string, points map[string]int) *fixture {
 func pointsFixtureAt(t *testing.T, class string, level int, points map[string]int) *fixture {
 	t.Helper()
 	f := &fixture{
-		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
+		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{

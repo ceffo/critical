@@ -15,12 +15,6 @@ func abilityScore(c *charactersvc.Character, a Ability) (int, error) {
 	return score, nil
 }
 
-// ProficiencyTarget is the ability score plus the proficiency's modifier
-// (ADR 0014 step 1).
-func ProficiencyTarget(score, modifier int) int {
-	return score + modifier
-}
-
 // ProficiencySuccess reports a d20 at or under the target (ADR 0014 step
 // 1), except a natural 20, which always fails (step 2).
 func ProficiencySuccess(roll, target int) bool {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -213,13 +214,19 @@ func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error
 	if err != nil {
 		return err
 	}
+	// ADR 0037 step 16: a new seed character gets the seed's picks; once stored they are the
+	// player's, never reconciled.
+	picks, err := characterdal.EncodePicks(c.Picks())
+	if err != nil {
+		return err
+	}
 	charID, err := q.InsertCharacter(ctx, storeq.InsertCharacterParams{
 		Name: c.Name, Str: int64(c.Str), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
 		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), Thac0Base: int64(c.Thac0Base),
 		Level: int64(c.Level), XpTotal: int64(c.XPTotal), SaveParaPoison: int64(c.SaveParaPoison),
 		SaveRodStaffWand: int64(c.SaveRodStaffWand), SavePetriPoly: int64(c.SavePetriPoly),
 		SaveBreath: int64(c.SaveBreath), SaveSpell: int64(c.SaveSpell), Languages: string(languages),
-		RaceCode: c.Race, SkillPoints: points, Alignment: c.Alignment, Sex: c.Sex,
+		RaceCode: c.Race, SkillPoints: points, Alignment: c.Alignment, Sex: c.Sex, ProficiencyPicks: picks,
 	})
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)
@@ -446,11 +453,11 @@ func recordOffers(ctx context.Context, q storeq.Querier, n seededName, id string
 	return nil
 }
 
-// seedSkills reconciles the seed character's proficiencies and bard skills with skills.json by
-// id (ADR 0014): a new id is inserted, an existing one takes the seed's ability, modifier,
-// percentage and position (a corrected modifier, a percentage raised at level-up). Rows the seed
-// no longer lists are kept, nothing is deleted, and a second run changes nothing. A missing file
-// is an error only while the character has no skill.
+// seedSkills reconciles the seed character's bard skills with skills.json by id (ADR 0014): a new
+// id is inserted, an existing one takes the seed's percentage and position. Rows the seed no
+// longer lists are kept, nothing is deleted, and a second run changes nothing. A missing file is
+// an error only while the character has no skill. The proficiencies are no longer reconciled
+// (ADR 0037 step 16): they are picks, the seed character's from character.json.
 func seedSkills(ctx context.Context, q storeq.Querier, owner int64, seedPath string) error {
 	seed, err := seedfile.ReadSkills(seedPath)
 	if errors.Is(err, seedfile.ErrUnreadable) {
@@ -465,13 +472,6 @@ func seedSkills(ctx context.Context, q storeq.Querier, owner int64, seedPath str
 	}
 	if err != nil {
 		return err
-	}
-	for i, p := range seed.Proficiencies {
-		if err := q.UpsertProficiency(ctx, storeq.UpsertProficiencyParams{
-			CharacterID: owner, ID: p.ID, Position: int64(i), Ability: p.Ability, Modifier: int64(p.Modifier),
-		}); err != nil {
-			return fmt.Errorf("upsert proficiency %q: %w", p.ID, err)
-		}
 	}
 	for i, b := range seed.BardSkills {
 		if err := q.UpsertBardSkill(ctx, storeq.UpsertBardSkillParams{

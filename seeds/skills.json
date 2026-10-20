@@ -1,14 +1,4 @@
 {
-  "proficiencies": [
-    { "id": "musical_instrument", "ability": "dex", "modifier": -1 },
-    { "id": "tumbling", "ability": "dex", "modifier": 0 },
-    { "id": "ventriloquism", "ability": "int", "modifier": -2 },
-    { "id": "riding_land", "ability": "wis", "modifier": 3 },
-    { "id": "appraising", "ability": "int", "modifier": 0 },
-    { "id": "singing", "ability": "cha", "modifier": 0 },
-    { "id": "reading_writing", "ability": "int", "modifier": 1 },
-    { "id": "local_history", "ability": "cha", "modifier": 0 }
-  ],
   "bard_skills": [
     { "id": "climb_walls", "percent": 85 },
     { "id": "detect_noise", "percent": 90 },

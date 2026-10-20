@@ -290,6 +290,10 @@ type CreateBody struct {
 	// points by skill code; absent for the other classes. The skills' armour
 	// is the worn one (ADR 0033 step 14), no entry.
 	SkillPoints map[string]int `json:"skillPoints"`
+	// Proficiencies are the non-weapon picks (ADR 0037 step 14), checked as
+	// PUT /api/proficiencies checks them with nothing picked before; absent
+	// for none.
+	Proficiencies *wire.PicksDTO `json:"proficiencies"`
 	// Details are the free-text details, in the shape GET /api/character
 	// shows them (age null for none); absent for none. A refusal names its
 	// field under "details." (details.age).
@@ -341,7 +345,7 @@ func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
 	}
 	n := charactersvc.NewCharacter{
 		Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional,
-		SkillPoints: b.SkillPoints, Details: details,
+		SkillPoints: b.SkillPoints, Proficiencies: b.Proficiencies.Picks(), Details: details,
 	}
 	for _, f := range []struct {
 		field string
@@ -506,6 +510,8 @@ type ChecksBody struct {
 	Scores      map[string]int `json:"scores"`
 	XP          *int           `json:"xp"`
 	SkillPoints map[string]int `json:"skillPoints"`
+	// Proficiencies are the non-weapon picks so far; absent for none.
+	Proficiencies *wire.PicksDTO `json:"proficiencies"`
 }
 
 // ClassUnmetDTO is a class and the abilities whose entered score is under its
@@ -539,6 +545,10 @@ type SkillBudgetFigureDTO struct {
 type ChecksDTO struct {
 	UnmetMinimums []ClassUnmetDTO       `json:"unmetMinimums"`
 	SkillBudget   *SkillBudgetFigureDTO `json:"skillBudget"`
+	// ProficiencySlots is the draft's non-weapon pool and picks (ADR 0037
+	// steps 3 to 5 and 14), as GET /api/character's derived block names
+	// them; null while the class, the XP or the Intelligence is missing.
+	ProficiencySlots *wire.ProficiencySlotsDTO `json:"proficiencySlots"`
 }
 
 // Checks is POST /api/characters/checks: the verdicts the class and skills
@@ -553,12 +563,12 @@ func Checks(svc draftChecker) render.HandlerFunc {
 			return render.BadRequestError("invalid JSON body")
 		}
 		c, err := svc.CreationChecks(r.Context(), charactersvc.DraftInput{
-			Class: b.Class, Scores: b.Scores, XP: b.XP, SkillPoints: b.SkillPoints,
+			Class: b.Class, Scores: b.Scores, XP: b.XP, SkillPoints: b.SkillPoints, Proficiencies: b.Proficiencies.Picks(),
 		})
 		if err != nil {
 			return err
 		}
-		out := ChecksDTO{UnmetMinimums: make([]ClassUnmetDTO, 0, len(c.UnmetMinimums))}
+		out := ChecksDTO{UnmetMinimums: make([]ClassUnmetDTO, 0, len(c.UnmetMinimums)), ProficiencySlots: wire.ProficiencySlotsToDTO(c.ProficiencySlots)}
 		for _, u := range c.UnmetMinimums {
 			out.UnmetMinimums = append(out.UnmetMinimums, ClassUnmetDTO(u))
 		}

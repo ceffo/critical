@@ -60,8 +60,10 @@ func TestRead_Refusals(t *testing.T) {
 		{"item bad behaviour", `[{"id":"a","name":{"en":"A"},"behaviour":"x"}]`, "behaviour must be", readItems},
 		{"item negative count", `[{"id":"a","name":{"en":"A"},"behaviour":"stock","count":-1}]`, "negative count", readItems},
 		{"item above max", `[{"id":"a","name":{"en":"A"},"behaviour":"daily","count":3,"max_count":2}]`, "exceeds max_count", readItems},
-		{"skill unknown ability", `{"proficiencies":[{"id":"a","ability":"luck"}]}`, "unknown ability", readSkills},
-		{"skill duplicate across lists", `{"proficiencies":[{"id":"a","ability":"str"}],"bard_skills":[{"id":"a","percent":5}]}`, "duplicate id", readSkills},
+		{"bard skill duplicate", `{"bard_skills":[{"id":"a","percent":5},{"id":"a","percent":6}]}`, "duplicate id", readSkills},
+		{"character pick twice", `{"name":"A","proficiencies":[{"id":"a","slots":1},{"id":"a","slots":2}]}`, `proficiency "a" twice`, readCharacter},
+		{"character pick no slot", `{"name":"A","proficiencies":[{"id":"a","slots":0}]}`, "at least 1 slot", readCharacter},
+		{"character pick no id", `{"name":"A","proficiencies":[{"slots":1}]}`, "id is required", readCharacter},
 		{"bard skill above 100", `{"bard_skills":[{"id":"a","percent":101}]}`, "outside 0-100", readSkills},
 		{"character race not a PHB race code", `{"name":"A","race":"Half-Elf"}`, `race "Half-Elf" is not one of`, readCharacter},
 	}

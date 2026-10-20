@@ -24,6 +24,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 	"github.com/ceffo/critical/api/internal/rest/router"
 )
@@ -299,7 +300,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 	derived, err := json.Marshal(body["derived"])
 	require.NoError(t, err)
 	assert.JSONEq(t, `{
-		"xpTotal": 1300000, "targetLevel": 11, "realizedLevel": 9, "nextLevelXp": 1320000, "thac0": 13,
+		"xpTotal": 1300000, "targetLevel": 11, "realizedLevel": 9, "nextLevelXp": 1320000, "thac0": 13, "proficiencySlots": null,
 		"saves": {"paraPoison": 10, "rodStaffWand": 8, "petriPoly": 9, "breath": 13, "spell": 9},
 		"raceSaveBonus": {"paraPoison": 0, "rodStaffWand": 4, "petriPoly": 0, "breath": 0, "spell": 4},
 		"spellSlots": [{"level": 1, "count": 3}, {"level": 5, "count": 2}],
@@ -325,15 +326,23 @@ func TestCharacters_ChecksSkillBudgetWireShape(t *testing.T) {
 	xp := 1250
 	m.char.EXPECT().CreationChecks(mock.Anything, charactersvc.DraftInput{
 		Class: "thief", Scores: map[string]int{}, XP: &xp, SkillPoints: map[string]int{"open_locks": 40},
+		Proficiencies: charactersvc.Picks{Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}}},
 	}).Return(charactersvc.DraftChecks{
 		UnmetMinimums: []charactersvc.ClassUnmet{},
 		SkillBudget: &charactersvc.SkillBudget{
 			Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
 			PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
 		},
+		ProficiencySlots: &charactersvc.ProficiencySlots{
+			Nonweapon: ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 2, Available: 5, Spent: 2, Left: 3},
+			Picks:     []charactersvc.PickFigures{{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 17, HasCheck: true}},
+		},
 	}, nil).Once()
-	rec := as(h, "new", "POST", "/api/characters/checks", `{"class":"thief","scores":{},"xp":1250,"skillPoints":{"open_locks":40}}`)
+	rec := as(h, "new", "POST", "/api/characters/checks", `{"class":"thief","scores":{},"xp":1250,"skillPoints":{"open_locks":40},
+		"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}]}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.JSONEq(t, `{"unmetMinimums":[],"skillBudget":{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,
-		"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45}}`, rec.Body.String())
+		"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45},
+		"proficiencySlots":{"nonWeapon":{"initial":3,"perLevels":4,"levelGained":0,"intelligence":2,"available":5,"spent":2,"left":3},
+		"picks":[{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"target":17}]}}`, rec.Body.String())
 }

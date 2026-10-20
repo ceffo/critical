@@ -54,12 +54,16 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 	if err != nil {
 		return nil, err
 	}
+	picks, err := DecodePicks(row.ProficiencyPicks)
+	if err != nil {
+		return nil, err
+	}
 	return &charactersvc.Character{
 		ID: row.ID, Name: row.Name,
 		Str: int(row.Str), StrExceptional: int(row.StrExceptional), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
 		HPMax: int(row.HpMax), RealizedLevel: int(row.RealizedLevel), XPTotal: int(row.XpTotal),
-		Class: row.Class, Race: row.RaceCode, SkillPoints: points,
+		Class: row.Class, Race: row.RaceCode, SkillPoints: points, Proficiencies: picks,
 		// The figures the imported sheet stated, kept as imported (ADR 0030 step 24, retired).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
 			ParaPoison: int(row.SaveParaPoison), RodStaffWand: int(row.SaveRodStaffWand),
@@ -99,6 +103,23 @@ func (d *DAL) SetSkillPoints(ctx context.Context, id int64, points map[string]in
 	n, err := d.q.SetSkillPoints(ctx, queries.SetSkillPointsParams{SkillPoints: raw, ID: id})
 	if err != nil {
 		return fmt.Errorf("set skill points: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
+}
+
+// SetProficiencyPicks implements skillsvc.Picks: the character's proficiency picks (ADR 0037
+// step 12). domain.ErrCharacterNotFound when the row is missing.
+func (d *DAL) SetProficiencyPicks(ctx context.Context, id int64, picks charactersvc.Picks) error {
+	raw, err := EncodePicks(picks)
+	if err != nil {
+		return err
+	}
+	n, err := d.q.SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: raw, ID: id})
+	if err != nil {
+		return fmt.Errorf("set proficiency picks: %w", err)
 	}
 	if n == 0 {
 		return domain.ErrCharacterNotFound
@@ -183,6 +204,10 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 	if err != nil {
 		return 0, err
 	}
+	picks, err := EncodePicks(c.Proficiencies)
+	if err != nil {
+		return 0, err
+	}
 	id, err := d.q.CreateCharacter(ctx, queries.CreateCharacterParams{
 		Name: c.Name, Str: int64(c.Str), StrExceptional: int64(c.StrExceptional), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
 		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), XpTotal: int64(c.XPTotal),
@@ -192,7 +217,7 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		SaveSpell: int64(c.Sheet.Saves.Spell), Class: c.Class, RaceCode: c.Race,
 		OwnerUserID:   uuid.NullUUID{UUID: owner, Valid: true},
 		RealizedLevel: sql.NullInt64{Int64: int64(c.RealizedLevel), Valid: true},
-		SkillPoints:   points,
+		SkillPoints:   points, ProficiencyPicks: picks,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create character: %w", err)

@@ -11,7 +11,7 @@ import (
 )
 
 // ProficienciesFile is the seed file of the non-weapon catalogue and PHB
-// Table 38's crossovers (ADR 0037 steps 1 and 2), in the seeds directory.
+// Table 38's crossovers and Table 34's slots (ADR 0037 steps 1 and 2), in the seeds directory.
 const ProficienciesFile = "proficiencies.json"
 
 // proficiencyDTO is one catalogue row: ability and modifier are absent for a
@@ -29,7 +29,18 @@ type crossoverDTO struct {
 	Groups []string `json:"groups"`
 }
 
+// slotRowDTO is one row of PHB Table 34 (ADR 0037 step 1).
+type slotRowDTO struct {
+	Group            string `json:"group"`
+	WeaponInitial    int    `json:"weaponInitial"`
+	WeaponLevels     int    `json:"weaponLevels"`
+	Penalty          int    `json:"penalty"`
+	NonweaponInitial int    `json:"nonweaponInitial"`
+	NonweaponLevels  int    `json:"nonweaponLevels"`
+}
+
 type proficienciesFileDTO struct {
+	Slots      []slotRowDTO     `json:"slots"`
 	Crossovers []crossoverDTO   `json:"crossovers"`
 	Nonweapon  []proficiencyDTO `json:"nonweapon"`
 }
@@ -60,5 +71,9 @@ func ParseProficiencies(raw []byte) (*ruletablesvc.Proficiencies, error) {
 	for i, c := range f.Crossovers {
 		cross[i] = ruletablesvc.Crossover(c)
 	}
-	return ruletablesvc.NewProficiencies(list, cross)
+	slots := make([]ruletablesvc.SlotRow, len(f.Slots))
+	for i, r := range f.Slots {
+		slots[i] = ruletablesvc.SlotRow(r)
+	}
+	return ruletablesvc.NewProficiencies(list, cross, slots)
 }

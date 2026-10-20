@@ -14,6 +14,8 @@ n="${BASH_REMATCH[1]}"; next="sup-$((n + 1))"
 [ -n "$(find "$ledger" -mmin -15)" ] || { echo "ledger.md older than 15 min: rewrite it first" >&2; exit 1; }
 grep -q "Notes for the next supervisor ($me handoff" "$ledger" ||
   { echo "ledger has no 'Notes for the next supervisor ($me handoff' section" >&2; exit 1; }
+grep -q "^## Retro ($me)" "$ledger" ||
+  { echo "ledger has no '## Retro ($me)' section: run the retro skill (.claude/skills/retro/SKILL.md) first" >&2; exit 1; }
 ctx="$(herdr agent read "$me" --source recent-unwrapped --lines 8 2>/dev/null | grep -oE '[0-9.]+k' | tail -1 || true)"
 ack="$sup/handoff-ack-$((n + 1))"; rm -f "$ack"
 tab="$(herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$main" --label "$next" --no-focus)"

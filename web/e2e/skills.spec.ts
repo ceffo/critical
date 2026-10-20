@@ -115,7 +115,9 @@ test("skills: roll a proficiency, adjust it on the card, roll a bard skill, undo
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Compétences" }).click();
   const instrumentFrench = page.getByTestId("skill-musical_instrument");
-  await expect(instrumentFrench).toContainText("Instrument de musique");
+  await expect(
+    page.getByTestId("proficiency-name-musical_instrument"),
+  ).toContainText("Instrument de musique");
   await expect(instrumentFrench).toContainText("DEX 17 −1");
   const resultFrench = page.getByTestId("skill-result");
   await expect(resultFrench.getByTestId("skill-vs")).toHaveText(

@@ -116,4 +116,17 @@ describe("ProficiencyPicker", () => {
     );
     expect(fr).toContain("Langues : 1 emplacement");
   });
+
+  it("opens the description from the name and adds from its own button, in the catalogue and in the picks", async () => {
+    const html = await render(figures(1, 40));
+    const row =
+      /<li[^>]*><button[^>]*data-testid="proficiency-name-tracking"[\s\S]*?<\/li>/.exec(
+        html,
+      )?.[0];
+    expect(row).toContain('aria-label="Description of Tracking"');
+    expect(row).toContain('data-testid="proficiency-add-tracking"');
+    expect(row?.match(/<button/g)).toHaveLength(2);
+    // A pick's name opens it too.
+    expect(html).toContain('data-testid="proficiency-name-tumbling"');
+  });
 });

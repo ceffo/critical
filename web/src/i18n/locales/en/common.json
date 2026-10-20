@@ -2753,6 +2753,18 @@
     "target": "target {{ability}} {{target}}",
     "noCheck": "no check",
     "unknown": "Not in the catalogue: remove it",
+    "details": {
+      "open": "Description of {{name}}",
+      "close": "Close",
+      "ability": "Ability",
+      "modifier": "Modifier",
+      "cost": "Cost for your class",
+      "slots": "Slots spent",
+      "extra": "Extra slots",
+      "groups": "Groups",
+      "failed": "The description could not be read.",
+      "empty": "No description."
+    },
     "slotsShort_one": "{{count}} slot",
     "slotsShort_other": "{{count}} slots",
     "slotsOf_one": "{{name}}: {{count}} slot",

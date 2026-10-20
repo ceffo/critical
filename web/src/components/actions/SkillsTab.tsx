@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
 import { useSkillsEditor } from "@/stores/skillsEditor";
 import { PickEditor } from "@/components/proficiencies/PickEditor";
+import {
+  ProficiencyNameButton,
+  type ProficiencyFacts,
+} from "@/components/proficiencies/ProficiencyDialog";
 import { SkillBudgetSummary, SkillTerms } from "./SkillBreakdown";
 import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/journal/words";
@@ -75,6 +79,8 @@ export function SkillsTab() {
       value: ReactNode;
       terms?: ReactNode;
       unusable?: boolean;
+      /** A proficiency: its name opens the description, apart from the roll. */
+      facts?: ProficiencyFacts;
     }[],
     after?: ReactNode,
   ) => {
@@ -86,12 +92,39 @@ export function SkillsTab() {
           {label}
         </h3>
         <ul aria-label={label} className="flex flex-col gap-1">
-          {list.map(({ id: skill, value, terms, unusable }) => {
+          {list.map(({ id: skill, value, terms, unusable, facts }) => {
             const name = skillName(t, skill);
             // ADR 0030 step 17 (PHB p.39): a thieving skill under 1% waits for points.
             const label = unusable
               ? t("skills.unusable", { name })
               : t("skills.rollLabel", { name });
+            if (facts)
+              return (
+                <li key={skill}>
+                  {/* Two targets in one raised stripe: the name opens the description, the ability
+                      and target part rolls the check. */}
+                  <div
+                    className="flex min-h-7 w-full items-stretch gap-1 rounded-md bg-raised text-body"
+                    data-testid={`skill-row-${skill}`}
+                  >
+                    <ProficiencyNameButton
+                      facts={facts}
+                      className="min-w-0 flex-1 rounded-md px-2.5 py-0.5 text-left transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+                    />
+                    <button
+                      type="button"
+                      className="flex items-center rounded-md px-2.5 py-0.5 transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted"
+                      disabled={rolling || unusable}
+                      aria-label={label}
+                      title={label}
+                      data-testid={`skill-${skill}`}
+                      onClick={() => void rollSkill(skill)}
+                    >
+                      {value}
+                    </button>
+                  </div>
+                </li>
+              );
             return (
               <li key={skill}>
                 {/* The shared clickable row (the saves' rows): a raised stripe, hover and focus. */}
@@ -151,16 +184,26 @@ export function SkillsTab() {
     >
       {rows(
         "proficiency",
-        skills.proficiencies.map((p) => ({
-          id: p.id,
-          value: (
-            <Ability
-              ability={p.ability}
-              score={p.abilityScore}
-              modifier={p.modifier}
-            />
-          ),
-        })),
+        skills.proficiencies.map((p) => {
+          const pick = slots?.picks.find((f) => f.id === p.id);
+          return {
+            id: p.id,
+            facts: {
+              id: p.id,
+              ability: p.ability,
+              modifier: p.modifier,
+              slots: pick?.slots,
+              extraSlots: pick?.extraSlots,
+            },
+            value: (
+              <Ability
+                ability={p.ability}
+                score={p.abilityScore}
+                modifier={p.modifier}
+              />
+            ),
+          };
+        }),
         slots && (
           <>
             <ProficiencySlotsLine pool={slots.nonWeapon} />

@@ -107,12 +107,12 @@ describe("spellId", () => {
 describe("buffName", () => {
   const fr = spellNamer("fr", names);
   it("names a buff a proficiency check put on from the proficiency (ADR 0037 step 20)", () => {
-    const tFr = i18n.getFixedT("fr");
+    const french = i18n.getFixedT("fr");
     expect(
-      buffName(fr, { name: "tumbling", proficiencyId: "tumbling" }, tFr),
+      buffName(fr, { name: "tumbling", proficiencyId: "tumbling" }, french),
     ).toBe("Acrobatie");
     expect(
-      buffName(fr, { name: "gone", proficiencyId: "gone" }, tFr),
+      buffName(fr, { name: "gone", proficiencyId: "gone" }, french),
       "an id with no name keeps the stored one",
     ).toBe("gone");
   });

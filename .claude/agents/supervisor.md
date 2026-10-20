@@ -140,7 +140,11 @@ script, a check) as a small PR before you hand off. The process is never done.
 When the user says they need to file work (a request, a bug, an idea, an epic), or you discover work
 while running (a bug a developer or reviewer found, a follow-up), **don't ask a developer to write the item**: spawn a
 `scoper`, except for small follow-ups, which you file yourself once the user agrees (see "Token
-budget").
+budget"). A feature the user asks for is never a small follow-up, however concrete it reads: it goes
+to an interactive scoper so the user can weigh tradeoffs before any developer starts (user,
+2026-10-20: "who's going to discuss with me whether my ask about versioning change is sound?").
+A PR body or title names only the items it closes: any other `CRI-n` (an epic, a done item) gets
+linked by Linear and moved to In Review (CRI-28 sat there for two days that way).
 1. A brief file `<wt>/briefs/scope-<slug>.md`: `mode: interactive` (the user asked) or `autonomous`
    (you found it), the **initial description** verbatim (the user's words, or the evidence you hold),
    related items/PRs, and `report: <wt>/reports/scoper-<slug>.md`.

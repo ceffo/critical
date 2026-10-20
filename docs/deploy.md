@@ -835,12 +835,13 @@ read an empty token), and a calling job cannot have an environment. The job pass
   label, commit, digest), e.g. `promote: production (critical-hit) runs 1.4.0 (commit <sha>, sha256:…);
   promoting v1.5.0`.
 - **Production record** (ADR 0024 step 4, "Amendment (a production record and the promote picker)"). After
-  the smoke check, before the GitHub Release, `promote.sh` writes (`scripts/record-deployment.sh
+  the smoke check and the GitHub Release, `promote.sh` writes (`scripts/record-deployment.sh
   --production`, the job's `deployments: write`) a deployment of the environment `production`, task
   `deploy-production`, ref the version's commit, payload `{commit, digest, version}`, status `success`: what
   `just promote` reads as the version production runs (the latest successful record; GitHub's own deployment
   of the job, task `deploy`, is ignored). A rollback writes one too; a promotion that failed earlier writes
-  none; a failed write fails the run (re-run it: the same image deploys again). Promotions made before the
+  none; a refused write is a `::warning::` (the run stays green, the Release exists; re-run the promotion of the
+  same version to write it). Promotions made before the
   record existed have none: the picker says "production version unknown" until the next one.
   `scripts/release-guards.sh candidates` and the resolution above are one implementation.
 - **Secrets.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-hit`) and
@@ -963,7 +964,7 @@ read an empty token), and a calling job cannot have an environment. The job pass
      <id> of <sha> (X.Y.Z): success`), `gh api 'repos/<repo>/deployments?environment=production&task=deploy-production'`
      lists it with the payload, and `just promote` then says `production runs X.Y.Z`. (GitHub applies the
      environment's branch rule to the deployment's ref; the staging record already uses a commit sha as ref.
-     If it is refused here, the run fails at that step, nothing else is affected.)
+     If it is refused here, the run shows the warning and stays green; the picker then says production is unknown.)
 
 By hand, the equivalent of a deploy is
 `$fly deploy -c deploy/fly.<env>.toml -a <app> --image <ref>`: a rolling deploy, one machine

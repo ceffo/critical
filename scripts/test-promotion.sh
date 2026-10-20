@@ -444,6 +444,20 @@ mv "$tmp/gum.off" "$stubs/gum"
 [ "$status" = 0 ] && [ "$(cat "$calls")" = 'gh workflow run promote.yml --ref main -f version=v1.9.0' ] || fail "picker: a named version prompted or read records: $(cat "$calls")"
 pick env PROMOTE_NO_TTY=1
 [ "$status" = 0 ] && [ "$(cat "$calls")" = 'gh workflow run promote.yml --ref main' ] || fail "picker: no terminal, no version: not today's dispatch: $(cat "$calls")"
+# a rollback record (older version, newer in time) is production's latest: the picker lists the versions above it
+set_current staging "[$(rec 41 2026-10-18T06:00:00Z 1.10.0)]"
+set_current production "[$(rec 61 2026-10-19T01:00:00Z 1.2.3),$(rec 51 2026-10-18T04:00:00Z 1.10.0)]"
+put "$(statuses 61)" '[{"state":"success"}]'
+echo 1.9.0 > "$tmp/gum-pick"
+pick env PROMOTE_FORCE_TTY=1
+grep -qx 'gum choose --header Promote to production (now: 1.2.3): --selected 1.10.0 --limit 1 1.10.0 1.9.0' "$calls" \
+    || fail "picker: after a rollback record the versions above it are not listed: $out $(cat "$calls")"
+# staging's record names a version whose tag does not exist yet: the newest offered version is preselected
+set_current staging "[$(rec 41 2026-10-18T06:00:00Z 1.12.0)]"
+set_current production "[$(rec 51 2026-10-18T04:00:00Z 1.2.3)]"
+pick env PROMOTE_FORCE_TTY=1
+grep -qx 'gum choose --header Promote to production (now: 1.2.3): --selected 1.10.0 --limit 1 1.10.0 1.9.0' "$calls" \
+    || fail "picker: staging's version has no tag: not the newest offered preselected: $out $(cat "$calls")"
 
 for id in 12 31 32 34; do put "$(statuses "$id")" '[{"state":"failure"}]'; done
 resolve
@@ -475,13 +489,13 @@ image="registry.fly.io/critical-hit@$newer"
 
 reset; promote v1.2.3
 [ "$status" = 0 ] || fail "promote: exit $status: $out"
-# the production record (ADR 0024 step 4): one deployment {commit, digest, version}, then success; after the smoke check, before the release
+# the production record (ADR 0024 step 4): one deployment {commit, digest, version}, then success; after the smoke check and the release
 grep -qx 'gh api -X POST repos/o/r/deployments --input - --jq .id' "$calls" && grep -qx 'gh api -X POST repos/o/r/deployments/77/statuses --input -' "$calls"     || fail "promote: no production deployment record written: $(grep 'gh api' "$calls")"
 jq -se --arg sha "$main_sha" --arg d "$newer" 'any(.[]; .task == "deploy-production" and .environment == "production" and .ref == $sha and .payload == {commit: $sha, digest: $d, version: "1.2.3"})' "$tmp/gh_posts" >/dev/null \
     || fail "promote: the production record is wrong: $(cat "$tmp/gh_posts")"
 jq -se 'any(.[]; .state == "success" and .environment == "production")' "$tmp/gh_posts" >/dev/null || fail "promote: the production record is not a success"
-[ "$(line '^smoke')" -lt "$(line 'gh api -X POST repos/o/r/deployments ')" ] && [ "$(line 'gh api -X POST repos/o/r/deployments ')" -lt "$(line '^gh release create')" ] \
-    || fail "promote: the record is not between the smoke check and the release"
+[ "$(line '^smoke')" -lt "$(line '^gh release create')" ] && [ "$(line '^gh release create')" -lt "$(line 'gh api -X POST repos/o/r/deployments ')" ] \
+    || fail "promote: the record is not after the smoke check and the release"
 point="$(sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p' "$calls" | head -n1)"
 [[ "$point" =~ ^critical_prod_pre_v1_2_3_[0-9]{14}$ ]] || fail "promote: restore point name '$point'"
 grep -qx "docker buildx imagetools create --prefer-index=false --progress none -t registry.fly.io/critical-hit:$main_sha $staged" "$calls" \
@@ -628,9 +642,15 @@ reset; echo "[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\"}},{\"id\":\"m2
 promote v1.2.3
 [ "$status" != 0 ] && ! grep -q '^gh release create' "$calls" || fail "promote: machines on another digest still released"
 
-reset; touch "$tmp/record-fails"; promote v1.2.3
-[ "$status" != 0 ] && [[ "$out" == *"production deployment record could not be written"* ]] || fail "promote: a failed record write did not fail the run: exit $status $out"
-rm -f "$tmp/record-fails"
+# A refused record write is a warning, never a red run: the release is created, nothing is lost; a re-run of
+# the same version (the floor accepts an equal one) keeps the release (once) and writes the record.
+reset; runs 1.2.3 1.2.3; touch "$tmp/record-fails"; newest v1.2.3
+[ "$status" = 0 ] && [[ "$out" == *"::warning title=Promotion::"*"production deployment record could not be written"* ]] \
+    && grep -q '^gh release create v1.2.3' "$calls" || fail "promote: a refused record write failed the run or skipped the release: exit $status $out"
+[ "$(line '^gh release create')" -lt "$(line 'gh api -X POST repos/o/r/deployments ')" ] || fail "promote: the record is written before the release"
+rm -f "$tmp/record-fails"; touch "$tmp/release-exists"; newest v1.2.3
+[ "$status" = 0 ] && ! grep -q '^gh release create' "$calls" && grep -qx 'gh api -X POST repos/o/r/deployments/77/statuses --input -' "$calls" \
+    || fail "promote: the re-run after a failed record write: exit $status (floor refused an equal version? release created again? no record?): $out"
 reset; : > "$tmp/gh_posts"; promote v9.9.9
 [ "$status" != 0 ] && [ ! -s "$tmp/gh_posts" ] || fail "promote: a refused guard wrote a record"
 reset; touch "$tmp/release-exists"; promote v1.2.3

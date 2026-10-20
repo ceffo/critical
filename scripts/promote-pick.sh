@@ -59,8 +59,12 @@ if [ "${#choices[@]}" = 0 ]; then
     exit 0
 fi
 
+# Staging's version preselected; when it is not offered (its tag does not exist yet, or it did not pass), the
+# newest version that is.
+selected="${choices[0]}"
+for c in "${choices[@]}"; do [ "$c" != "$staging" ] || selected="$staging"; done
 status=0
-pick="$(gum choose --header "Promote to production (now: $prod):" --selected "$staging" --limit 1 "${choices[@]}")" || status=$?
+pick="$(gum choose --header "Promote to production (now: $prod):" --selected "$selected" --limit 1 "${choices[@]}")" || status=$?
 if [ "$status" != 0 ] || [ -z "$pick" ]; then
     echo "promote: cancelled, nothing promoted"
     exit 0

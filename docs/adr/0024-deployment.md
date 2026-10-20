@@ -669,11 +669,13 @@ current staging."_ Versions are already made at the staging release and the prom
 version (the amendments of 2026-10-17); this adds the choice and what it needs: which version each environment
 runs.
 
-- **Step 4, the production record.** Once the deploy and its smoke check passed (and before the GitHub
+- **Step 4, the production record.** Once the deploy and its smoke check passed (and after the GitHub
   Release), `promote.sh` writes a GitHub deployment of the environment `production`, task `deploy-production`,
   ref the version's commit, payload `{commit, digest, version}` (the shape of the staging record), then a
-  `success` status; the rollback writes one too. A promotion that failed before that writes nothing. A failed
-  write fails the run (production then runs the version, and a re-run deploys the same image again). GitHub's
+  `success` status; the rollback writes one too. A promotion that failed before that writes nothing. A refused
+  write is a `::warning::`, never a red run (production runs the version and the Release exists; a failure
+  here would repeat on every re-run): the picker then shows production as unknown or older until a re-run of
+  the same version (the floor accepts an equal one) writes it. GitHub's
   automatic deployment of the job (task `deploy`, ref `main`, no payload) is never read. No record exists for
   the promotions made before this: production's version is then _unknown_.
 - **Step 4, the candidates.** `scripts/release-guards.sh candidates` prints what the picker offers: the `v*`

@@ -23,7 +23,7 @@ const HEADINGS: Record<SkillKind, string> = {
  * computed by the server from the entered points, ADR 0030 steps 17 and 18, with a budget warning,
  * the skill armour the server read from the body armour worn (ADR 0033 step 14: changed by wearing
  * armour in the inventory, never here) and the "Spend" editor), side by side
- * when the panel holds two 16rem columns, stacked otherwise. Each row is one button that rolls the
+ * when the panel holds two 15rem columns, stacked otherwise. Each row is one button that rolls the
  * check on the server; a proficiency shows its ability with the modifier as a pill, a bard skill its
  * percentage. The target, the verdict and the DM's adjustment are on the result card, after the
  * roll (ADR 0027 step 8.3, ADR 0014 step 6).
@@ -99,7 +99,7 @@ export function SkillsTab() {
 
   return (
     <div
-      className="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] items-start gap-x-6 gap-y-4"
+      className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] items-start gap-x-6 gap-y-4"
       data-testid="skills-blocks"
     >
       {rows(
@@ -143,7 +143,9 @@ export function SkillsTab() {
               ),
             })),
           )}
-          {skills.budget && <SkillBudgetSummary budget={skills.budget} />}
+          {skills.budget && !editingPoints && (
+            <SkillBudgetSummary budget={skills.budget} />
+          )}
           {budget && budget.length > 0 && (
             <ul
               className="flex flex-col gap-1 px-2.5 text-body text-warning"

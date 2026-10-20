@@ -1384,17 +1384,16 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expectNoClippedText(actions, `skills tab, ${where}`);
     await expectWholeWords(actions, `skills tab, ${where}`);
     if (vp.width === 1440) {
-      await expectNoScroll(skills, `Skills tab, ${where}`);
+      // The bard's budget and terms (CRI-90 text, ADR 0027 step 12.3) make the tab scroll inside
+      // its panel; the page never scrolls.
+      await expectNoPageScroll(page);
       // The bard's block holds its skills, the armour and the Spend button (ADR 0030 step 18).
       const [proficiencies, bard] = await skills
         .getByTestId("skills-blocks")
         .locator(":scope > *")
         .all();
-      for (const [block, what] of [
-        [proficiencies, "proficiencies"],
-        [bard, "bard skills"],
-      ] as const)
-        await expectInside(block, skills, `${what}, ${where}`);
+      // The bard's block scrolls in the panel (its top is inside), the proficiencies fit.
+      await expectInside(proficiencies, skills, `proficiencies, ${where}`);
       const a = (await proficiencies.boundingBox())!;
       const b = (await bard.boundingBox())!;
       expect(b.y, `skills blocks side by side, ${where}`).toBe(a.y);

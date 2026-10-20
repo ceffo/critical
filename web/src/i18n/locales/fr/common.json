@@ -2753,6 +2753,18 @@
     "target": "cible {{ability}} {{target}}",
     "noCheck": "sans jet",
     "unknown": "Hors du catalogue : retirez-la",
+    "details": {
+      "open": "Description de {{name}}",
+      "close": "Fermer",
+      "ability": "Caractéristique",
+      "modifier": "Modificateur",
+      "cost": "Coût pour votre classe",
+      "slots": "Emplacements dépensés",
+      "extra": "Emplacements en plus",
+      "groups": "Groupes",
+      "failed": "La description n'a pas pu être lue.",
+      "empty": "Aucune description."
+    },
     "slotsShort_one": "{{count}} empl.",
     "slotsShort_other": "{{count}} empl.",
     "slotsOf_one": "{{name}} : {{count}} emplacement",

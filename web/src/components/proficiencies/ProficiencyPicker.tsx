@@ -4,6 +4,7 @@ import { Check, Minus, Plus, X } from "@phosphor-icons/react";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Note } from "@/components/creation/kit";
 import { Button } from "@/components/ui/button";
+import { ProficiencyNameButton } from "./ProficiencyDialog";
 import { skillName } from "@/journal/words";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -257,7 +258,17 @@ function PickRow({
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <span className="flex min-w-0 flex-col">
-          <span className="text-body break-words">{name}</span>
+          <ProficiencyNameButton
+            facts={{
+              id: pick.id,
+              ability: figure?.ability,
+              modifier: figure?.modifier,
+              slots: figure?.slots ?? pick.slots,
+              extraSlots: figure?.extraSlots,
+              cost: shownCost,
+            }}
+            className="w-fit max-w-full rounded-sm text-left text-body outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
           <span
             className="text-label break-words text-ink-muted"
             data-testid="proficiency-pick-terms"
@@ -377,24 +388,35 @@ function CatalogueGroup({
             ? t("proficiencies.alreadyPicked", { name: r.name })
             : t("proficiencies.add", { name: r.name, count: r.cost });
           return (
-            <li key={id}>
+            <li
+              key={id}
+              className="flex items-stretch gap-1 rounded-md bg-raised text-body"
+            >
+              <ProficiencyNameButton
+                facts={{
+                  id,
+                  ability: r.option.ability ?? "",
+                  modifier: r.option.modifier,
+                  cost: r.cost,
+                }}
+                className="flex min-h-7 min-w-0 flex-1 items-center rounded-md px-2.5 py-0.5 text-left transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                <span className="min-w-0 break-words">{r.name}</span>
+              </ProficiencyNameButton>
               <button
                 type="button"
-                className="grid min-h-7 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-raised px-2.5 py-0.5 text-left text-body transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted"
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-0.5 transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted"
                 disabled={has}
                 aria-label={label}
                 title={label}
                 onClick={() => onAdd(r)}
                 data-testid={`proficiency-add-${id}`}
               >
-                <span className="flex min-w-0 items-center gap-1.5">
-                  {has ? (
-                    <Check aria-hidden className="size-3.5 shrink-0" />
-                  ) : (
-                    <Plus aria-hidden className="size-3.5 shrink-0" />
-                  )}
-                  <span className="min-w-0 break-words">{r.name}</span>
-                </span>
+                {has ? (
+                  <Check aria-hidden className="size-3.5 shrink-0" />
+                ) : (
+                  <Plus aria-hidden className="size-3.5 shrink-0" />
+                )}
                 <span className="flex items-center gap-1.5 whitespace-nowrap tabular-nums">
                   {/* A proficiency with no check (Table 37's "NA") shows a dash. */}
                   <span className="text-ink-muted">

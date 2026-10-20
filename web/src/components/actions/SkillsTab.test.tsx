@@ -154,3 +154,35 @@ describe("SkillsTab budget and terms", () => {
     expect(html).toMatch(/= −5%.{0,80}floored at 0%/);
   });
 });
+
+// A proficiency row is two sibling targets, never one inside the other: the name opens the
+// description, the ability part rolls the check (class skills stay one roll button).
+describe("SkillsTab proficiency row", () => {
+  it("has a name button and a roll button side by side", async () => {
+    const html = await render({
+      ...base,
+      bardSkills: [rogueSkill],
+    });
+    const row = /data-testid="skill-row-swimming">(.*?)<\/li>/.exec(html)?.[1];
+    expect(row).toBeDefined();
+    const name =
+      /<button[^>]*data-testid="proficiency-name-swimming"[^>]*>.*?<\/button>/.exec(
+        row ?? "",
+      )?.[0];
+    const roll =
+      /<button[^>]*data-testid="skill-swimming"[^>]*>.*?<\/button>/.exec(
+        row ?? "",
+      )?.[0];
+    expect(name).toContain("Swimming");
+    expect(name).toContain('aria-label="Description of Swimming"');
+    expect(name).not.toContain("STR");
+    expect(roll).toContain("STR 12");
+    expect(roll).toContain('aria-label="Roll Swimming"');
+    expect(roll).not.toContain("proficiency-name");
+    // No button inside the other.
+    expect(row?.match(/<button/g)).toHaveLength(2);
+    // The class skill stays one roll button.
+    expect(html).toContain('data-testid="skill-hide_in_shadows"');
+    expect(html).not.toContain("proficiency-name-hide_in_shadows");
+  });
+});

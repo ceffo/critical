@@ -4504,3 +4504,51 @@ test("weapon proficiency editor: a fighter's rows uncut, fr and en, 1280 to 2560
     }
   }
 });
+
+// ADR 0037 step 19.4 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the Skills tab's rows
+// (name and ability parts), the proficiency pop-up with its table and figures, and the picker's
+// catalogue rows (name, ability, cost, add) are never cut from 1280 to 2560.
+test("proficiency pop-up: the Skills rows, the pop-up and the picker uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Compétences" });
+  const dialog = page.getByTestId("proficiency-details");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expect(
+      panel.getByTestId("proficiency-name-musical_instrument"),
+    ).toBeVisible();
+    await expectNoClippedText(panel, `skills rows, ${where}`);
+    await expectWholeWords(panel, `skills rows, ${where}`);
+    await snap(page, `proficiency-rows-fr-${where}`);
+    await panel.getByTestId("proficiency-name-musical_instrument").click();
+    await expect(dialog.getByTestId("proficiency-description")).toBeVisible();
+    await expectNoClippedText(dialog, `proficiency pop-up, ${where}`);
+    await expectWholeWords(dialog, `proficiency pop-up, ${where}`);
+    await snap(page, `proficiency-popup-fr-${where}`);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+  }
+  await panel.getByTestId("proficiency-edit").click();
+  const editor = panel.getByTestId("proficiency-editor");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(editor, `picker rows, ${where}`);
+    await expectWholeWords(editor, `picker rows, ${where}`);
+    await snap(page, `proficiency-picker-fr-${where}`);
+  }
+});

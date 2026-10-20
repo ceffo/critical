@@ -33,10 +33,10 @@ func TestBardSkills_Step18_Base(t *testing.T) {
 	got, err := phb(t).BardSkills("human", 13, "leather", nil)
 	require.NoError(t, err)
 	assert.Equal(t, []ruletablesvc.SkillPercent{
-		{Skill: "climb_walls", Base: 50, Percent: 50},
-		{Skill: "detect_noise", Base: 20, Percent: 20},
-		{Skill: "pick_pockets", Base: 10, Percent: 10},
-		{Skill: "read_languages", Base: 5, Percent: 5},
+		{Skill: "climb_walls", Base: 50, Raw: 50, Percent: 50},
+		{Skill: "detect_noise", Base: 20, Raw: 20, Percent: 20},
+		{Skill: "pick_pockets", Base: 10, Raw: 10, Percent: 10},
+		{Skill: "read_languages", Base: 5, Raw: 5, Percent: 5},
 	}, got)
 }
 

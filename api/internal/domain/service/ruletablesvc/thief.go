@@ -51,10 +51,12 @@ func Backstabs(class string) bool { return slices.Contains(backstabClasses, clas
 
 // SkillPercent is one thieving skill of ADR 0030 step 17 with its terms:
 // Percent = Base + Points + Race + Dexterity + Armor, capped at
-// MaxSkillPercent and floored at MinSkillPercent.
+// MaxSkillPercent and floored at MinSkillPercent. Raw is that sum before the
+// cap and the floor: it differs from Percent when one applied.
 type SkillPercent struct {
 	Skill                                string
 	Base, Points, Race, Dexterity, Armor int
+	Raw                                  int
 	Percent                              int
 }
 
@@ -105,7 +107,8 @@ func rogueSkills(c *ClassTables, skills []string, base []SkillBaseRow, race stri
 				p.Armor += r.Adjustment
 			}
 		}
-		p.Percent = min(max(p.Base+p.Points+p.Race+p.Dexterity+p.Armor, MinSkillPercent), MaxSkillPercent)
+		p.Raw = p.Base + p.Points + p.Race + p.Dexterity + p.Armor
+		p.Percent = min(max(p.Raw, MinSkillPercent), MaxSkillPercent)
 		out = append(out, p)
 	}
 	return out
@@ -163,17 +166,45 @@ func SkillPointBudget(level int, points map[string]int) []BudgetWarning {
 // skill (0: no limit on one skill, the bard's). ok is false for a class
 // without skill points or a level under 1.
 func SkillBudgetLimits(class string, level int) (total, perSkill int, ok bool) {
+	b, ok := SkillPointsFigures(class, level, nil)
+	return b.Total, b.PerSkill, ok
+}
+
+// SkillPointsBudget is the skill point budget of a thief or a bard at Level
+// (ADR 0030 steps 17 and 18) with the terms of its formula, for the UI to
+// show it: Total = First + PerLevel x (Level - 1) points in all, Spent
+// entered, Left = Total - Spent (negative when over). PerSkill = PerSkillFirst
+// + PerSkillPerLevel x (Level - 1) is the most one skill holds, all 0 for no
+// such limit (the bard's).
+type SkillPointsBudget struct {
+	Level, First, PerLevel, Total, Spent, Left int
+	PerSkillFirst, PerSkillPerLevel, PerSkill  int
+}
+
+// SkillPointsFigures is the budget of class at level for the entered points
+// (ADR 0030 steps 17 and 18), the one source of the limits. ok is false for a
+// class without skill points or a level under 1.
+func SkillPointsFigures(class string, level int, points map[string]int) (b SkillPointsBudget, ok bool) {
 	if level < 1 {
-		return 0, 0, false
+		return SkillPointsBudget{}, false
 	}
+	b.Level = level
 	switch {
 	case HasThiefSkills(class):
-		return SkillPointsFirstLevel + SkillPointsPerLevel*(level-1),
-			SkillPointsPerSkillFirst + SkillPointsPerSkillPerLevel*(level-1), true
+		b.First, b.PerLevel = SkillPointsFirstLevel, SkillPointsPerLevel
+		b.PerSkillFirst, b.PerSkillPerLevel = SkillPointsPerSkillFirst, SkillPointsPerSkillPerLevel
+		b.PerSkill = b.PerSkillFirst + b.PerSkillPerLevel*(level-1)
 	case HasBardSkills(class):
-		return BardSkillPointsFirstLevel + BardSkillPointsPerLevel*(level-1), 0, true
+		b.First, b.PerLevel = BardSkillPointsFirstLevel, BardSkillPointsPerLevel
+	default:
+		return SkillPointsBudget{}, false
 	}
-	return 0, 0, false
+	b.Total = b.First + b.PerLevel*(level-1)
+	for _, skill := range SkillsOf(class) {
+		b.Spent += points[skill]
+	}
+	b.Left = b.Total - b.Spent
+	return b, true
 }
 
 // budget checks points over skills against totalLimit in all and perSkill in

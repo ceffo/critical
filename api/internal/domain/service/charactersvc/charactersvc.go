@@ -33,6 +33,11 @@ var ErrCharacterChanged = fmt.Errorf("current character changed: %w", domain.Err
 type SVC interface {
 	domain.Service
 	GetCharacter(ctx context.Context, id int64) (*Character, error)
+	// PreviewSkillPoints is character id derived as if its skill points were
+	// points (ADR 0030 steps 17 and 18): the skills and budget a spend would
+	// give. It writes nothing. The points are checked as ValidSkillPoints
+	// does (a *domain.FieldError).
+	PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*Character, error)
 	// List is the owner's characters they have not retired, in creation
 	// order (ADR 0029 steps 7.1 and 7.3).
 	List(ctx context.Context, owner uuid.UUID) ([]Summary, error)
@@ -178,9 +183,26 @@ func NewWithConfig(_ *Config, d Deps) (SVC, error) { return New(d) }
 // ledger) gets the derived values, so an XP award that crosses a threshold
 // changes them all at once.
 func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error) {
+	return s.read(ctx, id, nil)
+}
+
+// PreviewSkillPoints reads character id with its skill points replaced by
+// points, validated, and derives it: nothing is stored.
+func (s *service) PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*Character, error) {
+	return s.read(ctx, id, &points)
+}
+
+// read is GetCharacter; draft, when set, replaces the stored skill points
+// (already validated for the character's class here).
+func (s *service) read(ctx context.Context, id int64, draft *map[string]int) (*Character, error) {
 	c, err := s.reader.GetCharacter(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if draft != nil {
+		if c.SkillPoints, err = ValidSkillPoints(c.Class, *draft); err != nil {
+			return nil, err
+		}
 	}
 	ledger, err := s.xp.EntriesTotal(ctx, id)
 	if err != nil {

@@ -51,6 +51,7 @@ func kelsenDerived() charactersvc.Derived {
 		SpellSlots: level15Slots,
 		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
 		Spellbook:  &kelsenSpellbook, SkillBudget: []ruletablesvc.BudgetWarning{},
+		SkillPoints: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Left: 230},
 		// Nothing worn in these tests: the none column (ADR 0033 step 14).
 		SkillArmor: "none",
 	}

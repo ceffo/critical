@@ -21,10 +21,10 @@ import (
 // Pockets (Table 28) and leather (no armour stored, Table 29's baseline) give
 // his sheet's 85 / 90 / 50 / 75.
 var kelsenBardSkills = []ruletablesvc.SkillPercent{
-	{Skill: "climb_walls", Base: 50, Points: 35, Percent: 85},
-	{Skill: "detect_noise", Base: 20, Points: 70, Percent: 90},
-	{Skill: "pick_pockets", Base: 10, Points: 25, Race: 10, Dexterity: 5, Percent: 50},
-	{Skill: "read_languages", Base: 5, Points: 70, Percent: 75},
+	{Skill: "climb_walls", Base: 50, Points: 35, Raw: 85, Percent: 85},
+	{Skill: "detect_noise", Base: 20, Points: 70, Raw: 90, Percent: 90},
+	{Skill: "pick_pockets", Base: 10, Points: 25, Race: 10, Dexterity: 5, Raw: 50, Percent: 50},
+	{Skill: "read_languages", Base: 5, Points: 70, Raw: 75, Percent: 75},
 }
 
 // ADR 0030 steps 1 and 18 on the fixture's tables, through the real

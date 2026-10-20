@@ -342,6 +342,66 @@ func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_M
 	return _c
 }
 
+// PreviewPoints provides a mock function with given fields: ctx, characterID, points
+func (_m *MockSVC) PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*skillsvc.Skills, error) {
+	ret := _m.Called(ctx, characterID, points)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PreviewPoints")
+	}
+
+	var r0 *skillsvc.Skills
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, map[string]int) (*skillsvc.Skills, error)); ok {
+		return rf(ctx, characterID, points)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, map[string]int) *skillsvc.Skills); ok {
+		r0 = rf(ctx, characterID, points)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*skillsvc.Skills)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, map[string]int) error); ok {
+		r1 = rf(ctx, characterID, points)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_PreviewPoints_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PreviewPoints'
+type MockSVC_PreviewPoints_Call struct {
+	*mock.Call
+}
+
+// PreviewPoints is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - points map[string]int
+func (_e *MockSVC_Expecter) PreviewPoints(ctx interface{}, characterID interface{}, points interface{}) *MockSVC_PreviewPoints_Call {
+	return &MockSVC_PreviewPoints_Call{Call: _e.mock.On("PreviewPoints", ctx, characterID, points)}
+}
+
+func (_c *MockSVC_PreviewPoints_Call) Run(run func(ctx context.Context, characterID int64, points map[string]int)) *MockSVC_PreviewPoints_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(map[string]int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_PreviewPoints_Call) Return(_a0 *skillsvc.Skills, _a1 error) *MockSVC_PreviewPoints_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_PreviewPoints_Call) RunAndReturn(run func(context.Context, int64, map[string]int) (*skillsvc.Skills, error)) *MockSVC_PreviewPoints_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Roll provides a mock function with given fields: ctx, characterID, id, adj
 func (_m *MockSVC) Roll(ctx context.Context, characterID int64, id string, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error) {
 	ret := _m.Called(ctx, characterID, id, adj)

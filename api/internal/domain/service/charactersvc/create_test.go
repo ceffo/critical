@@ -602,10 +602,10 @@ func TestCreationChecks_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
 		points map[string]int
 		want   charactersvc.SkillBudget
 	}{
-		{"thief level 1", "thief", 1, map[string]int{"pick_pockets": 20, "open_locks": 15}, charactersvc.SkillBudget{Level: 1, Total: 60, Spent: 35, Left: 25, PerSkill: 30}},
-		{"thief level 3 over budget", "thief", 3, map[string]int{"pick_pockets": 90, "open_locks": 40}, charactersvc.SkillBudget{Level: 3, Total: 120, Spent: 130, Left: -10, PerSkill: 60}},
-		{"bard level 1", "bard", 1, map[string]int{"climb_walls": 5}, charactersvc.SkillBudget{Level: 1, Total: 20, Spent: 5, Left: 15}},
-		{"bard level 4", "bard", 4, nil, charactersvc.SkillBudget{Level: 4, Total: 65, Left: 65}},
+		{"thief level 1", "thief", 1, map[string]int{"pick_pockets": 20, "open_locks": 15}, charactersvc.SkillBudget{Level: 1, First: 60, PerLevel: 30, Total: 60, Spent: 35, Left: 25, PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 30}},
+		{"thief level 3 over budget", "thief", 3, map[string]int{"pick_pockets": 90, "open_locks": 40}, charactersvc.SkillBudget{Level: 3, First: 60, PerLevel: 30, Total: 120, Spent: 130, Left: -10, PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 60}},
+		{"bard level 1", "bard", 1, map[string]int{"climb_walls": 5}, charactersvc.SkillBudget{Level: 1, First: 20, PerLevel: 15, Total: 20, Spent: 5, Left: 15}},
+		{"bard level 4", "bard", 4, nil, charactersvc.SkillBudget{Level: 4, First: 20, PerLevel: 15, Total: 65, Left: 65}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

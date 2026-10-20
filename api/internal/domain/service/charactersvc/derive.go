@@ -129,6 +129,9 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 			return Derived{}, fmt.Errorf("derive %s skills: %w", c.Class, err)
 		}
 		d.SkillBudget = ruletablesvc.SkillBudgetOf(c.Class, realized, c.SkillPoints)
+		if b, ok := ruletablesvc.SkillPointsFigures(c.Class, realized, c.SkillPoints); ok {
+			d.SkillPoints = &b
+		}
 	}
 	if ruletablesvc.Backstabs(c.Class) {
 		if d.Backstab, err = rules.BackstabFor(realized); err != nil {

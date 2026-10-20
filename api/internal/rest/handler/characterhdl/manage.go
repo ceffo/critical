@@ -492,14 +492,20 @@ type ClassUnmetDTO struct {
 }
 
 // SkillBudgetFigureDTO is a thief's or a bard's skill point budget at the
-// starting level: `total` the level allows, `spent` entered, `left` (negative
-// when over), `perSkill` the most one skill holds (0: no such limit).
+// starting level, with the terms of its formula: `total` the level allows
+// (`first` + `perLevel` x (level - 1)), `spent` entered, `left` (negative
+// when over), `perSkill` the most one skill holds (`perSkillFirst` +
+// `perSkillPerLevel` x (level - 1); 0: no such limit).
 type SkillBudgetFigureDTO struct {
-	Level    int `json:"level"`
-	Total    int `json:"total"`
-	Spent    int `json:"spent"`
-	Left     int `json:"left"`
-	PerSkill int `json:"perSkill"`
+	Level            int `json:"level"`
+	First            int `json:"first"`
+	PerLevel         int `json:"perLevel"`
+	Total            int `json:"total"`
+	Spent            int `json:"spent"`
+	Left             int `json:"left"`
+	PerSkillFirst    int `json:"perSkillFirst"`
+	PerSkillPerLevel int `json:"perSkillPerLevel"`
+	PerSkill         int `json:"perSkill"`
 }
 
 // ChecksDTO is POST /api/characters/checks: `unmetMinimums` for every

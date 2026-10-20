@@ -410,8 +410,10 @@ writes `Test<name>` and adds the prefix here in the same PR.
     As built for 16.3, 2026-10-20: migration 027 (a column comment on `items.specialized`, no
     schema change) and its data step `specializeFlaggedWeapons`: for a fighter, the type of its
     first flagged weapon in list order (`position`) becomes the specialization, the step 16.2 pick
-    raised to the type's slots or the pick added when missing; the other flagged types stay plain
-    picks (logged). A flag on a type that is no weapon type, or of a class that does not
+    raised to the type's slots or the pick added when missing; the other flagged types are plain
+    picks, each added at 1 slot when missing (a fighter created after step 16.2 may hold none), so
+    no attack takes the non-proficiency penalty the day the rule lands; an overspend shows the
+    slots_over_budget warning like the other migrated picks (logged). A flag on a type that is no weapon type, or of a class that does not
     specialize, is dropped (logged). A character whose picks already hold a specialization is
     left as it is, so a rerun changes nothing. The flags stay in the column, read by nothing,
     until a later item drops it.)_

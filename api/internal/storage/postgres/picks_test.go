@@ -221,6 +221,9 @@ func TestMigrate_Step16_SpecializedFlagBecomesAPick(t *testing.T) {
 	specializedItem(t, f, bard, "rapier", "short_sword")
 	plain := picksCharacter(t, f, "fighter")
 	weaponItem(t, f, plain, "mace", "other_melee", "wielded")
+	late := picksCharacter(t, f, "fighter") // created after step 16.2: its flagged types hold no pick
+	specializedItem(t, f, late, "longsword", "long_sword")
+	specializedItem(t, f, late, "longbow", "long_bow")
 
 	embedded, err := embeddedMigrations()
 	require.NoError(t, err)
@@ -240,6 +243,7 @@ func TestMigrate_Step16_SpecializedFlagBecomesAPick(t *testing.T) {
 	assert.JSONEq(t, `{"weapon":[{"type":"other_melee","slots":1}]}`, f.picks(plain), "no flag, no specialization")
 
 	t.Run("a missing pick is added, an existing specialization kept", func(t *testing.T) {
+		f.t.Picks[late] = `{"weapon":[{"type":"dagger","slots":1}]}`
 		f.t.Picks[archer] = `{"nonweapon":[{"id":"singing","slots":1}]}`
 		f.t.Picks[swordsman] = `{"weapon":[{"type":"long_bow","slots":3}]}` // the player's own specialization
 		require.NoError(t, f.InTx(context.Background(), func(ctx context.Context) error {
@@ -247,6 +251,8 @@ func TestMigrate_Step16_SpecializedFlagBecomesAPick(t *testing.T) {
 		}))
 		assert.JSONEq(t, `{"nonweapon":[{"id":"singing","slots":1}],"weapon":[{"type":"short_bow","slots":3}]}`, f.picks(archer))
 		assert.JSONEq(t, `{"weapon":[{"type":"long_bow","slots":3}]}`, f.picks(swordsman), "never a second specialization")
+		assert.JSONEq(t, `{"weapon":[{"type":"dagger","slots":1},{"type":"long_sword","slots":2},{"type":"long_bow","slots":1}]}`,
+			f.picks(late), "the other flagged type becomes a plain pick: its attacks keep their proficiency")
 	})
 
 	run.steps = nil

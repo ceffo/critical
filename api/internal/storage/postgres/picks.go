@@ -151,8 +151,8 @@ const specializationMigration = "027_weapon_specialization_picks.sql"
 // specializeFlaggedWeapons is ADR 0037 step 16.3, the data step after migration 027: a fighter
 // (a class that specializes) with a weapon flagged specialized gets that weapon type's pick as
 // the specialization (step 9's slots, ruletablesvc.SpecializationSlots), the pick added when
-// missing; with several specialized types, the first in list order, the others staying plain
-// picks (logged). Another class's flag is dropped (ADR 0030 step 12 refused it on every save),
+// missing; with several specialized types, the first in list order, the others plain picks
+// (logged), each added at one slot when missing so no attack loses its proficiency. Another class's flag is dropped (ADR 0030 step 12 refused it on every save),
 // as is a flag on a type that is no weapon type, both logged; a flag on a weapon without a
 // weapon type is not read at all (the query skips it), so it is dropped silently. A character
 // whose picks already hold a specialization is left as it is, so a rerun changes nothing. Nothing is refused (step
@@ -216,6 +216,13 @@ func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier) error {
 			picks.Weapon[i].Slots = slots
 		} else {
 			picks.Weapon = append(picks.Weapon, charactersvc.WeaponPick{Type: first, Slots: slots})
+		}
+		// The other flagged types are plain picks, added when missing: no attack loses its
+		// proficiency the day the rule lands.
+		for _, t := range types[1:] {
+			if !slices.ContainsFunc(picks.Weapon, func(p charactersvc.WeaponPick) bool { return p.Type == t }) {
+				picks.Weapon = append(picks.Weapon, charactersvc.WeaponPick{Type: t, Slots: charactersvc.WeaponPickSlots})
+			}
 		}
 		raw, err := characterdal.EncodePicks(picks)
 		if err != nil {

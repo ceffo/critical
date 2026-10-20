@@ -22,9 +22,11 @@ export function QuickHp() {
 
   async function apply(sign: 1 | -1) {
     if (!valid || busy) return;
+    const sent = { amount, source };
     if (await recordHp(sign * n, source.trim())) {
-      setAmount("");
-      setSource("");
+      // The write's refetches take their time: a field the player changed meanwhile keeps its text.
+      setAmount((a) => (a === sent.amount ? "" : a));
+      setSource((s) => (s === sent.source ? "" : s));
     }
   }
 

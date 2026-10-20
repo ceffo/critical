@@ -146,4 +146,49 @@ describe("lookup search", () => {
     useLookupStore.getState().move(99);
     expect(useLookupStore.getState().selectedId).toBe("s11");
   });
+
+  it("moves asked for while the next page loads land after it, not clamped to the last row", async () => {
+    const ids = Array.from({ length: 10 }, (_, i) => `s${i}`);
+    searchSpells.mockResolvedValueOnce({ items: ids.map(spell), total: 20 });
+    await useLookupStore.getState().search();
+    useLookupStore.getState().select("s8");
+    let release!: (v: unknown) => void;
+    searchSpells.mockReturnValueOnce(new Promise((r) => (release = r)));
+    const { move } = useLookupStore.getState();
+    move(1); // s9, the last loaded row: the next page starts loading
+    move(1);
+    move(1);
+    move(1);
+    expect(useLookupStore.getState().selectedId).toBe("s9");
+    move(-1); // an Up cancels one of the waiting Downs
+    expect(useLookupStore.getState().selectedId).toBe("s9");
+    release({
+      items: Array.from({ length: 10 }, (_, i) => spell(`s${10 + i}`)),
+      total: 20,
+    });
+    await vi.waitFor(() =>
+      expect(useLookupStore.getState().items).toHaveLength(20),
+    );
+    // 8 + 4 Downs - 1 Up = 11
+    expect(useLookupStore.getState().selectedId).toBe("s11");
+  });
+
+  it("a new search drops the moves still waiting", async () => {
+    const ids = Array.from({ length: 4 }, (_, i) => `s${i}`);
+    searchSpells.mockResolvedValueOnce({ items: ids.map(spell), total: 8 });
+    await useLookupStore.getState().search();
+    useLookupStore.getState().select("s3");
+    let release!: (v: unknown) => void;
+    searchSpells.mockReturnValueOnce(new Promise((r) => (release = r)));
+    useLookupStore.getState().move(3);
+    useLookupStore.getState().setQuery({ q: "x" });
+    searchSpells.mockResolvedValueOnce({
+      items: [spell("x0"), spell("x1"), spell("x2")],
+      total: 3,
+    });
+    await useLookupStore.getState().search();
+    release({ items: [spell("s4")], total: 8 });
+    await Promise.resolve();
+    expect(useLookupStore.getState().selectedId).toBe("x0");
+  });
 });

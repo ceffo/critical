@@ -592,11 +592,9 @@ test.describe("keyboard past a page", () => {
     // Near the end of the first page, then down across the boundary from the search box.
     await rows(page).nth(195).scrollIntoViewIfNeeded();
     await rows(page).nth(195).click();
-    // The first moves reach the end of the loaded page and start the next page's load; a move
-    // while it loads stays on the last row, so wait for the rows before moving on.
-    for (let i = 0; i < 4; i++) await search(page).press("ArrowDown");
+    // Ten moves in a row, the next page loading under them: none is lost or clamped to the last row.
+    for (let i = 0; i < 10; i++) await search(page).press("ArrowDown");
     await expect(rows(page)).toHaveCount(total);
-    for (let i = 0; i < 6; i++) await search(page).press("ArrowDown");
     const ids = await attr(rows(page), "data-id");
     await expect(selected(page)).toHaveAttribute("data-id", ids[205]);
     await expect(selected(page)).toBeInViewport();

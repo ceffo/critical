@@ -112,7 +112,7 @@ describe("previewDraft", () => {
       .fn()
       .mockRejectedValue(
         new ApiError(
-          "Over budget: 31 for 30. You may lower it, not raise it.",
+          "Over budget: 31 for 30 available.",
           409,
           "skillPoints.open_locks",
           "over_budget",
@@ -123,7 +123,7 @@ describe("previewDraft", () => {
     ).toEqual({
       ok: false,
       field: "skillPoints.open_locks",
-      message: "Over budget: 31 for 30. You may lower it, not raise it.",
+      message: "Over budget: 31 for 30 available.",
       code: "over_budget",
     });
   });

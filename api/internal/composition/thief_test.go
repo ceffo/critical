@@ -238,6 +238,9 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 	}, c.Derived.SkillBudget)
 	_, err = bs.Skills.SetPoints(ctx, over, map[string]int{"open_locks": 40, "pick_pockets": 31})
 	require.ErrorIs(t, err, domain.ErrOverBudget, "the overspend grown")
+	entries, err := bs.Log.List(ctx, over, 10)
+	require.NoError(t, err)
+	assert.Empty(t, entries, "a refused spend logs nothing")
 	_, err = bs.Skills.SetPoints(ctx, over, map[string]int{"open_locks": 35, "pick_pockets": 30})
 	require.NoError(t, err, "the overspend reduced")
 	c, err = bs.Character.GetCharacter(ctx, over)
@@ -246,6 +249,72 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 		{Code: ruletablesvc.BudgetTotal, Points: 65, Limit: 60},
 		{Code: ruletablesvc.BudgetPerSkill, Skill: "open_locks", Points: 35, Limit: 30},
 	}, c.Derived.SkillBudget, "still over: the warnings stay")
+
+	// The undo of the reduction writes the imported overspend back: a restore, no refusal.
+	top, ok, err := bs.Log.TopID(ctx, over)
+	require.NoError(t, err)
+	require.True(t, ok)
+	e, err := bs.Log.Undo(ctx, over, top)
+	require.NoError(t, err)
+	assert.Equal(t, actionlog.KindSkillPoints, e.Kind)
+	c, err = bs.Character.GetCharacter(ctx, over)
+	require.NoError(t, err)
+	assert.Equal(t, overspent, c.SkillPoints)
+	assert.Len(t, c.Derived.SkillBudget, 2, "the overspend's warnings are back")
+}
+
+// ADR 0037 step 10, each pool on its own (a thief's total and each skill's cap, a bard's total):
+// an imported thief with 40 in Open Locks (cap 30 at 1st) may not move the overspend to another
+// skill, nor add points while over; a 1st-level bard may put its 20 points in one skill (no cap),
+// and 21 in all is refused by the preview and the save alike, nothing logged.
+func TestSkillPoints_Step10_EachPoolOnItsOwn(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(store), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+
+	thief, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Vex", Class: "thief", Race: "halfling", Str: 12, Dex: 18, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+	})
+	require.NoError(t, err)
+	require.NoError(t, store.Characters().SetSkillPoints(ctx, thief, map[string]int{"open_locks": 40}), "imported over the cap")
+	for _, tt := range []struct {
+		name   string
+		points map[string]int
+		want   domain.BudgetError
+	}{
+		{"the overspend moved to another skill", map[string]int{"pick_pockets": 40}, domain.BudgetError{Field: "skillPoints.pick_pockets", Spent: 40, Limit: 30}},
+		{"moved and kept partly: the total grows first", map[string]int{"open_locks": 30, "pick_pockets": 40}, domain.BudgetError{Field: "skillPoints", Spent: 70, Limit: 60}},
+	} {
+		_, err := bs.Skills.SetPoints(ctx, thief, tt.points)
+		var be *domain.BudgetError
+		require.ErrorAs(t, err, &be, tt.name)
+		assert.Equal(t, tt.want, *be, tt.name)
+	}
+
+	bard, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Lyra", Class: "bard", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 13, Wis: 11, Cha: 17, HPMax: 4,
+	})
+	require.NoError(t, err)
+	_, err = bs.Skills.SetPoints(ctx, bard, map[string]int{"climb_walls": 20})
+	require.NoError(t, err, "20 points in one skill: no cap for a bard")
+	over := map[string]int{"climb_walls": 20, "detect_noise": 1}
+	_, err = bs.Skills.PreviewPoints(ctx, bard, over)
+	var previewed *domain.BudgetError
+	require.ErrorAs(t, err, &previewed)
+	assert.Equal(t, domain.BudgetError{Field: "skillPoints", Spent: 21, Limit: 20}, *previewed)
+	_, err = bs.Skills.SetPoints(ctx, bard, over)
+	var saved *domain.BudgetError
+	require.ErrorAs(t, err, &saved)
+	assert.Equal(t, *previewed, *saved)
+	entries, err := bs.Log.List(ctx, bard, 10)
+	require.NoError(t, err)
+	assert.Len(t, entries, 1, "only the 20-point spend is logged")
 }
 
 // ADR 0030 step 19 with ADR 0012 step 5: a backstab rolled at an unknown AC

@@ -1786,7 +1786,7 @@
     "armor": "Armure des talents : {{armor}}",
     "armorHint": "Lue sur l’armure portée : porter ou ôter une armure dans l’inventaire la change",
     "pointsTitle": "Points de talent",
-    "pointsLead": "Le total des points de chaque talent, dans le budget de votre niveau. Déjà au-delà, vous pouvez les baisser, pas les augmenter.",
+    "pointsLead": "Le total des points de chaque talent, dans le budget de votre niveau. Budget déjà dépassé : vous pouvez les baisser, pas les augmenter.",
     "pointsLabel": "Points en {{name}}",
     "savePoints": "Enregistrer",
     "cancelPoints": "Annuler",
@@ -1836,7 +1836,7 @@
     "forDm": "Pour le MJ : vos PV ne changent pas"
   },
   "apiError": {
-    "over_budget": "Budget dépassé : {{spent}} pour {{limit}}. Vous pouvez baisser, pas augmenter.",
+    "over_budget": "Budget dépassé : {{spent}} pour {{limit}} disponibles.",
     "character_not_found": "Ce personnage n'existe plus.",
     "no_character": "Vous n'avez pas encore de personnage : créez le premier.",
     "character_changed": "Votre personnage a été changé ailleurs : la page se recharge pour l'afficher.",

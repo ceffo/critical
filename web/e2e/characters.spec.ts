@@ -416,12 +416,15 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
     "= 50 %",
   );
   await snap(page, "thief-points-editor-fr");
-  const refusal =
-    "Budget dépassé : 75 pour 60. Vous pouvez baisser, pas augmenter.";
+  const refusal = "Budget dépassé : 75 pour 60 disponibles.";
   await editor.getByTestId("thief-points-open_locks").fill("45");
   await expect(editor.getByRole("alert")).toHaveText(refusal);
   await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
+  const refused = page.waitForResponse(
+    (r) => r.url().endsWith("/api/skills/points") && r.status() === 409,
+  );
   await page.getByTestId("thief-points-save").click();
+  await refused;
   await expect(editor.getByRole("alert")).toHaveText(refusal);
   await snap(page, "thief-points-over-budget-fr");
   // The preview call failing (offline): the figures are marked out of date, the editor stays

@@ -39,8 +39,8 @@ describe("request errors", () => {
   });
 
   it.each([
-    ["en", "Over budget: 31 for 30. You may lower it, not raise it."],
-    ["fr", "Budget dépassé : 31 pour 30. Vous pouvez baisser, pas augmenter."],
+    ["en", "Over budget: 31 for 30 available."],
+    ["fr", "Budget dépassé : 31 pour 30 disponibles."],
   ])(
     "words an over-budget refusal in %s with the server's figures, at its field",
     async (lng, want) => {

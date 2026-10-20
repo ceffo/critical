@@ -2901,9 +2901,7 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await next.click();
   await refused;
   await back.click();
-  const overBudget = step.getByText(
-    "Budget dépassé : 90 pour 60. Vous pouvez baisser, pas augmenter.",
-  );
+  const overBudget = step.getByText("Budget dépassé : 90 pour 60 disponibles.");
   await expect(overBudget).toBeVisible();
   await expectNoClippedText(entry, "thief creation over budget, fr, 1280x800");
   await snap(page, "thief-form-refused-over-budget-fr");
@@ -3055,15 +3053,43 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await editor.getByTestId("thief-points-open_locks").fill("96");
   await expect(editor.getByRole("alert")).toContainText("de 0 à 95");
   await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
+  // Save's answer lands before the next keystroke (the alert above is already the preview's).
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith("/api/skills/points") && r.status() === 400,
+  );
   await editor.getByTestId("thief-points-save").click();
+  await saved;
   await expect(editor.getByRole("alert")).toContainText("de 0 à 95");
   await expect(editor).toBeVisible();
   // Over the budget (the 60 stored, 5 more) the preview is refused, its message under the editor.
   await editor.getByTestId("thief-points-open_locks").fill("5");
   await expect(editor.getByRole("alert")).toHaveText(
-    "Budget dépassé : 65 pour 60. Vous pouvez baisser, pas augmenter.",
+    "Budget dépassé : 65 pour 60 disponibles.",
   );
   await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
+  // A percentage capped at 95 can't be reached within a 1st-level budget: the preview answers the
+  // stored points with Open Locks at 112 % raw, so the cap tag stands in the layout beside Save's
+  // refusal (the server's, under the editor).
+  await page.route("**/api/skills/points/preview", async (route) => {
+    const res = await route.fetch({
+      postData: JSON.stringify({
+        points: { find_remove_traps: 30, hide_in_shadows: 30 },
+      }),
+    });
+    const body = await res.json();
+    for (const sk of body.thiefSkills)
+      if (sk.id === "open_locks")
+        Object.assign(sk, { points: 6, rawPercent: 112, percent: 95 });
+    await route.fulfill({ response: res, json: body });
+  });
+  await editor.getByTestId("thief-points-open_locks").fill("6");
+  await expect(editor.getByTestId("skill-limit-open_locks")).toContainText(
+    "plafonné à 95 %",
+  );
+  await editor.getByTestId("thief-points-save").click();
+  await expect(editor.getByRole("alert")).toHaveText(
+    "Budget dépassé : 66 pour 60 disponibles.",
+  );
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
@@ -3073,9 +3099,11 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(editor, `skill points editor, fr, ${where}`);
     await expectWholeWords(editor, `skill points editor, fr, ${where}`);
+    await editor.getByTestId("skill-limit-open_locks").scrollIntoViewIfNeeded();
     await snap(page, `thief-points-editor-preview-fr-${where}`);
   }
   await editor.getByTestId("thief-points-cancel").click();
+  await page.unroute("**/api/skills/points/preview");
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.getByRole("tab", { name: "Armes" }).click();

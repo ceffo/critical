@@ -121,6 +121,9 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
    restacking, running the gate (`validate`, e2e) after a sync, pushing, opening PRs.
 
 Keep briefs short (about 30 lines; point at the issue instead of copying it) and PR bodies concise.
+An agent in a repo without `.claude/agents` (a sibling repo) runs as a plain session told to read this
+repo's agent definition, and has no tracker tool: its brief inlines the item's acceptance criteria
+(sup-55: a rulebooks developer reported "partial" because it could not read the item).
 Small follow-ups found while running (a one-line bug, a tooling chore) go to the user as a one-line
 question; file them yourself with their OK instead of spawning a scoper.
 

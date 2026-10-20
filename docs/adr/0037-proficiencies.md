@@ -643,6 +643,14 @@ descriptions and the effects of other proficiencies are separate, deferred items
          was (the buff back, gone, or the renewed one with its old rounds). No hand editing. A change
          of adjustment that leaves the verdict as it was touches the buff list not at all. The
          pre-roll adjustment counts like any: the first verdict is the one in effect.
+         A failure the adjustment makes reads **as if the check had put nothing on**: when the
+         success renewed a row (an earlier success's, or one made by hand with the same name), the
+         row is given back as it was, in place of the check's, not just taken off.
+         **After the check's round** (supervisor ruling 2026-10-20): the check can still be
+         adjusted once a Next Round has passed (it is still the latest roll), but the buff's one
+         round is over. A turn to a success then puts no buff on; a turn to a failure takes off only
+         what the check still has on (usually nothing, the row ended at Next Round) and gives
+         nothing back (the renewed row's time would have run on too).
     20.9 **As built (2026-10-20).** The shapes the steps above left open:
          - The rule table is `ruletablesvc.SuccessBuffFor(id)` (`SuccessBuff{AC, Rounds}`), one row
            `tumbling: {AC: -4, Rounds: 1}`.
@@ -665,14 +673,26 @@ descriptions and the effects of other proficiencies are separate, deferred items
            are recorded on the `correction` entry (amending [ADR 0010](0010-action-stack-and-undo.md)
            step 6's "no snapshot"), so popping the step restores the buff list and a redo replays
            it. A verdict turned to a failure takes the row the check put on off (`buffsvc.Remove`,
-           no entry of its own); a row already gone (ended, dismissed) is no error and no snapshot.
-           The adjustment's amend and the buff write share one transaction.
+           no entry of its own); a row already gone (ended, dismissed) is no error and no snapshot,
+           and nothing is given back.
+         - The rows a renewal replaced ride in the `skill_check` payload as `replaced` (buffsvc's
+           snapshot encoding of a buff row, `buffsvc.EncodeRows`; absent when nothing was
+           renewed, and not read by the client). `buffsvc.Remove(id, putBack)` puts them back in
+           the place of the check's row, in the check's round only. "The check's round" is the
+           round the check's entry is stamped with, compared with the round counter at the
+           adjustment.
+         - The adjustment's amend and the buff write share one transaction.
     Tests: `SkillCheck_Step20_SuccessAddsTheTumblingBuff` (skillsvc: exactly one d20, the name,
     `ac` -4, 1 round, the payload's `buff`), `SkillCheck_Step20_FailureAndNaturalTwentyAddNothing`,
     `SkillCheck_Step20_SuccessAgainRenews` (one buff, rounds 1, a new start round),
     `SkillCheck_Step20_OtherProficienciesAddNothing`, `SkillCheck_Step20_AdjustmentToFailureRemovesTheBuff`,
     `SkillCheck_Step20_AdjustmentToSuccessAddsOrRenewsTheBuff`,
     `SkillCheck_Step20_AdjustmentKeepingTheVerdictLeavesTheBuff`,
+    `SkillCheck_Step20_AdjustmentToFailureGivesBackTheRenewedRow` (skillsvc: an earlier success's
+    row and a hand-made one, every field) and `Tumbling_Step20_FailureAfterARenewalGivesTheRenewedRowBack`
+    (composition: -4 once, undo and redo walk the list), `SkillCheck_Step20_AdjustmentAfterTheChecksRound`
+    and `Tumbling_Step20_AdjustmentAfterTheChecksRound` (the round ruling),
+    `Tumbling_Step20_AdjustedBackAndForth`, `Tumbling_Step20_FailureAfterAHandDismiss`,
     `SkillCheck_Step20_UndoingTheAdjustmentRestoresTheBuff` (skillsvc, composition for the undo), `Buffs_Step20_TumblingEndsAtNextRound` (composition: the AC derived block's row -4,
     gone after Next Round), `Buffs_Step20_ProficiencyID` (buffsvc: kept, dropped by Activate, named
     in the entries; Remove), `AmendLatest_StepCarriesTheAmendmentsSnapshots` (actionlogsvc), `Tumbling_Step20_UndoRemovesTheBuffAndRedoPutsItBack` (composition: a

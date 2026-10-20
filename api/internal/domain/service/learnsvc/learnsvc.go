@@ -106,11 +106,8 @@ type Result struct {
 	RetryLevel int
 }
 
-// Spell is what the rules read of a catalogue spell.
-type Spell struct {
-	Level  int
-	Wizard bool
-}
+// Spell is what the rules read of a catalogue spell (spellbook.Spell).
+type Spell = spellbook.Spell
 
 // Spells reads the spell catalogue.
 type Spells interface {
@@ -294,8 +291,9 @@ func owes(owed []spellbook.FreeSpell, grantLevel, spellLevel int) error {
 }
 
 // writable reads the character and the spell and returns step 20.1's
-// refusal, the reason the spell may not be written in his spellbook (by a
-// roll or not), nil when it may.
+// refusal (spellbook.Check, the class's highest spell level as the class's
+// table has it), the reason the spell may not be written in his spellbook (by
+// a roll or not), nil when it may.
 func (s *service) writable(ctx context.Context, characterID int64, spellID string) (*charactersvc.Character, Spell, error) {
 	c, err := s.d.Characters.GetCharacter(ctx, characterID)
 	if err != nil {
@@ -305,33 +303,39 @@ func (s *service) writable(ctx context.Context, characterID int64, spellID strin
 	if rules == nil {
 		return nil, Spell{}, ErrNoSpellbook
 	}
-	sp, ok := s.d.Spells.Spell(spellID)
-	if !ok {
+	sp, found := s.d.Spells.Spell(spellID)
+	inBook, sameLevel := false, 0
+	if found && sp.Wizard {
+		keys, err := s.d.Book.Keys(ctx, c.ID)
+		if err != nil {
+			return nil, Spell{}, fmt.Errorf("read spellbook: %w", err)
+		}
+		for _, k := range keys {
+			if k == spellID {
+				inBook = true
+			} else if other, ok := s.d.Spells.Spell(k); ok && other.Level == sp.Level {
+				sameLevel++
+			}
+		}
+	}
+	limits := spellbook.Limits{
+		ClassMaxSpellLevel: rules.ClassMaxSpellLevel, IntMaxSpellLevel: rules.IntMaxSpellLevel,
+		MaxSpellsPerLevel: rules.MaxSpellsPerLevel, NoMaximum: rules.NoMaximum,
+	}
+	switch spellbook.Check(limits, sp, found, inBook, sameLevel) {
+	case spellbook.Fits:
+		return c, sp, nil
+	case spellbook.RefusedUnknown:
 		return nil, Spell{}, fmt.Errorf("spell %q: %w", spellID, domain.ErrNotFound)
-	}
-	if !sp.Wizard {
+	case spellbook.RefusedNotWizard:
 		return nil, Spell{}, ErrNotAWizardSpell
-	}
-	keys, err := s.d.Book.Keys(ctx, c.ID)
-	if err != nil {
-		return nil, Spell{}, fmt.Errorf("read spellbook: %w", err)
-	}
-	sameLevel := 0
-	for _, k := range keys {
-		if k == spellID {
-			return nil, Spell{}, ErrAlreadyKnown
-		}
-		if other, ok := s.d.Spells.Spell(k); ok && other.Level == sp.Level {
-			sameLevel++
-		}
-	}
-	switch {
-	case sp.Level > rules.ClassMaxSpellLevel:
+	case spellbook.RefusedAlreadyIn:
+		return nil, Spell{}, ErrAlreadyKnown
+	case spellbook.RefusedAboveClass:
 		return nil, Spell{}, ErrAboveClass
-	case sp.Level > rules.IntMaxSpellLevel:
+	case spellbook.RefusedAboveIntelligence:
 		return nil, Spell{}, ErrAboveIntelligence
-	case !rules.NoMaximum && sameLevel >= rules.MaxSpellsPerLevel:
+	default: // spellbook.RefusedLevelFull
 		return nil, Spell{}, ErrLevelFull
 	}
-	return c, sp, nil
 }

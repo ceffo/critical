@@ -533,8 +533,9 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	// The tables' figures are checked by the tests below; this one checks the classes and ranges.
 	for i := range got.Classes {
 		got.Classes[i].HitDie, got.Classes[i].LevelXP, got.Classes[i].Minimums, got.Classes[i].WeaponTypes = 0, nil, nil, nil
+		got.Classes[i].Spellbook = nil // TestOptions_Step20_7_ReadMagicAndDetectMagicPreTickedForAMage
 	}
-	got.ScoreMethods, got.RaceAdjustments, got.RaceIdentity = nil, nil, nil
+	got.ScoreMethods, got.RaceAdjustments, got.RaceIdentity, got.WizardSpells = nil, nil, nil, nil
 	assert.Equal(t, charactersvc.CreationOptions{
 		Classes: []charactersvc.ClassOption{
 			{

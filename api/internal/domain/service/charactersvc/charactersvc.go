@@ -50,9 +50,10 @@ type SVC interface {
 	// not revealed).
 	SetCurrent(ctx context.Context, owner uuid.UUID, id int64) error
 	// Create stores a new character of the owner's and makes it their
-	// current character (ADR 0029 step 7.2); it starts with nothing (no
-	// weapon, item, proficiency, skill or spellbook). A *domain.FieldError
-	// for invalid input (see NewCharacter).
+	// current character (ADR 0029 step 7.2); it starts with no weapon or
+	// item, and with the picks, skill points, languages and starting
+	// spellbook entered (ADR 0030 step 20.7: no die is rolled). A
+	// *domain.FieldError for invalid input (see NewCharacter).
 	Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (int64, error)
 	// Draft reads a creation draft as far as it is entered (ADR 0034, amendment
 	// of 2026-10-20): the character Create would store, derived and warned as
@@ -166,6 +167,10 @@ type Deps struct {
 	Proficiencies ProficiencyBook
 	// HP is the HP ledger, for the current HP of the list (ADR 0007 step 6).
 	HP HPLedger
+	// Spells is the spell catalogue and Book the spellbook's store, for a new
+	// mage's or bard's starting spellbook (ADR 0030 step 20.7).
+	Spells SpellCatalogue
+	Book   StartingBook
 	// FreeSpells are the levels taken and the free spells claimed (ADR 0030
 	// step 20.8).
 	FreeSpells FreeSpells
@@ -183,12 +188,15 @@ type service struct {
 	languages LanguageBook
 	profs     ProficiencyBook
 	hp        HPLedger
+	spells    SpellCatalogue
+	book      StartingBook
 	free      FreeSpells
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil || d.Armour == nil || d.HP == nil || d.FreeSpells == nil {
+	if d.Reader == nil || d.XP == nil || d.Rules == nil || d.Owners == nil || d.Tx == nil || d.Sessions == nil || d.Armour == nil || d.HP == nil ||
+		d.Spells == nil || d.Book == nil || d.FreeSpells == nil {
 		return nil, errors.New("charactersvc: nil dependency")
 	}
 	if d.Languages == nil {
@@ -197,7 +205,10 @@ func New(d Deps) (SVC, error) {
 	if d.Proficiencies == nil {
 		d.Proficiencies = (*ruletablesvc.Proficiencies)(nil)
 	}
-	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour, languages: d.Languages, profs: d.Proficiencies, hp: d.HP, free: d.FreeSpells}, nil
+	return &service{
+		reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour,
+		languages: d.Languages, profs: d.Proficiencies, hp: d.HP, spells: d.Spells, book: d.Book, free: d.FreeSpells,
+	}, nil
 }
 
 // GetCharacter reads the character and derives its level, THAC0, saves and

@@ -191,6 +191,12 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err != nil {
 		return nil, err
 	}
+	// The starting spellbook's pre-ticked spells (ADR 0030 step 20.7) are
+	// data, checked against the catalogue the same way.
+	startingSeed, err := spellbookadpt.ReadStartingSeed(cfg.SeedsDir, cat)
+	if err != nil {
+		return nil, err
+	}
 	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueEquipment); err != nil {
 		return nil, fmt.Errorf("seed: %w", err)
 	}
@@ -250,6 +256,9 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	bs.Character, err = charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
 		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Armour: wornArmour{itemDAL}, Languages: languages, Proficiencies: proficiencies, HP: logSvc,
+		// A new mage's or bard's starting spellbook (ADR 0030 step 20.7) reads
+		// the catalogue and is written in the creation's transaction.
+		Spells: spellbookadpt.NewCreation(cat, startingSeed), Book: st.Spellbook,
 		FreeSpells: freeSpells{log: logSvc, book: spellbook},
 	})
 	if err := bs.add(bs.Character, err); err != nil {

@@ -2431,6 +2431,23 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       await page.setViewportSize(sizes[0]!);
     }
     await next.click();
+    // ADR 0030 step 20.7: the bard's starting spellbook at level 5 (PHB Table 32: 1st and 2nd
+    // level), nothing pre-ticked; a spell of each level, the counts per level against Table 4.
+    await expect(step).toHaveAttribute("data-step", "spellbook");
+    await expect(step.getByTestId("spellbook-level-2")).toBeVisible();
+    await expect(step.getByTestId("spellbook-picks")).toHaveCount(0);
+    for (const id of ["sleep", "tashas_uncontrollable_hideous_laughter"])
+      await step.getByTestId(`spellbook-add-${id}`).click();
+    await expect(
+      step.getByTestId("spellbook-picks").getByRole("listitem"),
+    ).toHaveCount(2);
+    await expect(
+      step
+        .getByTestId("spellbook-level-2")
+        .getByTestId("spellbook-level-count"),
+    ).toHaveText(/^1 /);
+    await audit("4c-spellbook");
+    await next.click();
     await step
       .getByLabel(tr("Nom", "Name"), { exact: true })
       .fill("Aldéric de la Tour-d'Auvergne-Lesparre");
@@ -2445,6 +2462,14 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       .getByRole("radio")
       .nth(1)
       .click();
+    await step
+      .getByRole("button", {
+        name: new RegExp(
+          `^${tr("Revenir à l'étape précédente", "Back to the previous step")}`,
+        ),
+      })
+      .click();
+    await expect(step).toHaveAttribute("data-step", "spellbook");
     await step
       .getByRole("button", {
         name: new RegExp(
@@ -2475,6 +2500,8 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       }
     await page.setViewportSize(sizes[0]!);
     await next.click();
+    await expect(step).toHaveAttribute("data-step", "spellbook");
+    await next.click();
     await expect(step).toHaveAttribute("data-step", "identity");
     // The longest content: a refused alignment (its note; the preview then answers that refusal
     // first) and the three rolls' breakdowns.
@@ -2500,8 +2527,16 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
         ),
       })
       .click();
+    await step
+      .getByRole("button", {
+        name: new RegExp(
+          `^${tr("Revenir à l'étape précédente", "Back to the previous step")}`,
+        ),
+      })
+      .click();
     for (let i = 0; i < 8; i++) await chips.nth(i).click();
     await expect(languagesError).toHaveCount(0);
+    await next.click();
     await next.click();
     await next.click();
     await expect(step.getByTestId("review-thac0")).toHaveText(/^\d+$/);
@@ -2509,10 +2544,10 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
 
     if (lang === "fr") {
       // A refusal opens its step: max HP 0 is out of range, shown on "Points de vie et talents".
-      for (let i = 0; i < 3; i++)
+      for (let i = 0; i < 4; i++)
         await step.getByRole("button", { name: /^Revenir/ }).click();
       await step.getByLabel("PV max").fill("0");
-      for (let i = 0; i < 3; i++) await next.click();
+      for (let i = 0; i < 4; i++) await next.click();
       await step
         .getByRole("button", { name: "Créer ce personnage et le jouer" })
         .click();

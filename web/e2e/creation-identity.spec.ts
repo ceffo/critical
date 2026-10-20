@@ -51,6 +51,9 @@ async function toIdentity(
   await expect(step).toHaveAttribute("data-step", "proficiencies");
   await proficiencies?.(step);
   await next.click();
+  // The bard's starting spellbook (ADR 0030 step 20.7): left empty.
+  await expect(step).toHaveAttribute("data-step", "spellbook");
+  await next.click();
   await expect(step).toHaveAttribute("data-step", "identity");
   return { step, next, tr };
 }
@@ -101,13 +104,13 @@ test("identity step: forbidden alignment, a roll dropped after a race change, th
   const back = step.getByRole("button", {
     name: /^Revenir à l'étape précédente/,
   });
-  for (let i = 0; i < 4; i++) await back.click();
+  for (let i = 0; i < 5; i++) await back.click();
   await expect(step).toHaveAttribute("data-step", "race");
   await step.getByRole("radio", { name: "Humain", exact: true }).click();
   const answered = page.waitForResponse("**/api/characters/rolls/identity");
   release();
   await answered;
-  for (let i = 0; i < 4; i++)
+  for (let i = 0; i < 5; i++)
     await step
       .getByRole("button", { name: "Passer à l'étape suivante" })
       .click();
@@ -221,7 +224,7 @@ test("review: no stale figures after a change, a refusal from an earlier step la
   });
   await step.getByRole("button", { name: "Modifier : Classe" }).click();
   await step.getByRole("radio", { name: "Niveau 9", exact: true }).click();
-  for (let i = 0; i < 6; i++) await next.click();
+  for (let i = 0; i < 7; i++) await next.click();
   await expect(step).toHaveAttribute("data-step", "review");
   await expect(thac0).toHaveText("…");
   await expect(step.getByTestId("next-blocked")).not.toContainText(
@@ -250,8 +253,7 @@ test("review: no stale figures after a change, a refusal from an earlier step la
   await create.click();
   await expect(step).toHaveAttribute("data-step", "extras");
   await expect(step.getByLabel("PV max")).toHaveValue("6");
-  await next.click();
-  await next.click();
+  for (let i = 0; i < 3; i++) await next.click();
   await expect(step).toHaveAttribute("data-step", "identity");
   await expect(details.getByLabel("Nom", { exact: true })).toHaveValue("Lyra");
   await next.click();

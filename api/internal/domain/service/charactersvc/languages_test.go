@@ -21,7 +21,7 @@ func newEnvWithLanguages(t *testing.T) *env {
 	e := newEnv(t)
 	svc, err := charactersvc.New(charactersvc.Deps{
 		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Armour: e.armour, HP: e.hp, FreeSpells: e.free,
-		Languages: phbLanguages(t), Proficiencies: profBook(t),
+		Languages: phbLanguages(t), Proficiencies: profBook(t), Spells: e.spells, Book: e.book,
 	})
 	require.NoError(t, err)
 	e.svc = svc

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type {
+  CreationDraft,
   CreationOptions,
   HpRoll,
   ScoreMethod,
@@ -11,6 +12,7 @@ import {
   allRaces,
   blockedReason,
   buildBody,
+  draftSpellbook,
   emptyPlacement,
   initialPlacement,
   isPlaced,
@@ -20,7 +22,9 @@ import {
   refusalError,
   settle,
   signed,
+  spellbookState,
   stepOfField,
+  stepsFor,
   xpOfLevel,
   type FlowDraft,
   type StepInputs,
@@ -338,6 +342,9 @@ describe("stepOfField", () => {
     expect(stepOfField("weapon.dagger")).toBe("proficiencies");
     // ADR 0037 step 18: the languages are picked on the proficiency step.
     expect(stepOfField("details.languages")).toBe("proficiencies");
+    // ADR 0030 step 20.7: a starting spell's refusal, and a spellbook for a class without one.
+    expect(stepOfField("spellbook.sleep")).toBe("spellbook");
+    expect(stepOfField("spellbook")).toBe("spellbook");
     expect(stepOfField("name")).toBe("identity");
     expect(stepOfField("details.alignment")).toBe("identity");
     expect(stepOfField("details.height")).toBe("identity");
@@ -515,5 +522,90 @@ describe("allRaces and signed", () => {
     expect(signed(1)).toBe("+1");
     expect(signed(0)).toBe("+0");
     expect(signed(-2)).toBe("−2");
+  });
+});
+
+describe("the starting spellbook (ADR 0030 step 20.7)", () => {
+  const cls = (
+    name: string,
+    spellbook?: { startingSpells: string[] } | null,
+  ) => ({
+    class: name,
+    races: [],
+    exceptionalStrengthRaces: [],
+    skills: [],
+    alignments: [],
+    spellbook,
+  });
+  const options = {
+    classes: [
+      cls("mage", { startingSpells: ["read_magic", "detect_magic"] }),
+      cls("bard", { startingSpells: [] }),
+      cls("fighter", null),
+      cls("thief"),
+    ],
+  } as unknown as CreationOptions;
+  const answer = (levels: { level: number; count: number }[]) =>
+    ({
+      spellbook: {
+        classMaxSpellLevel: levels.length,
+        intMaxSpellLevel: 7,
+        maxSpellsPerLevel: 9,
+        noMaximum: false,
+        levels,
+      },
+    }) as unknown as CreationDraft;
+
+  it("shows the spellbook step for a mage or a bard only, by the server's options", () => {
+    const withBook = [
+      "class",
+      "race",
+      "scores",
+      "extras",
+      "proficiencies",
+      "spellbook",
+      "identity",
+      "review",
+    ];
+    expect(stepsFor(options, "mage")).toEqual(withBook);
+    expect(stepsFor(options, "bard")).toEqual(withBook);
+    for (const cls of ["fighter", "thief", ""])
+      expect(stepsFor(options, cls)).not.toContain("spellbook");
+  });
+
+  it("says by the draft's answer whether the starting level has a spell level (a bard at level 1 has none)", () => {
+    expect(spellbookState(null)).toBe("wait");
+    expect(spellbookState({ spellbook: null } as CreationDraft)).toBe("wait");
+    expect(spellbookState(answer([]))).toBe("none");
+    expect(spellbookState(answer([{ level: 1, count: 0 }]))).toBe("levels");
+  });
+
+  it("sends a mage's pre-ticked spells until the player changes the list, a bard's none", () => {
+    expect(draftSpellbook(options, { cls: "mage", spellbook: null })).toEqual([
+      "read_magic",
+      "detect_magic",
+    ]);
+    expect(draftSpellbook(options, { cls: "mage", spellbook: [] })).toEqual([]);
+    expect(draftSpellbook(options, { cls: "bard", spellbook: null })).toEqual(
+      [],
+    );
+    expect(
+      draftSpellbook(options, { cls: "fighter", spellbook: ["sleep"] }),
+    ).toEqual([]);
+  });
+
+  it("carries the spellbook in the body only when it has spells, and resets it on another class", () => {
+    const mage = { ...EMPTY_DRAFT, cls: "mage" };
+    expect(buildBody(options, mage, "0", "fr").body.spellbook).toEqual([
+      "read_magic",
+      "detect_magic",
+    ]);
+    const unticked = mergeDraft(mage, { spellbook: [] });
+    expect(buildBody(options, unticked, "0", "fr").body.spellbook).toBe(
+      undefined,
+    );
+    const bard = mergeDraft({ ...mage, spellbook: ["sleep"] }, { cls: "bard" });
+    expect(bard.spellbook).toBe(null);
+    expect(buildBody(options, bard, "0", "fr").body.spellbook).toBe(undefined);
   });
 });

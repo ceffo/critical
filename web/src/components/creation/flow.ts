@@ -29,10 +29,56 @@ export const STEPS = [
   "scores",
   "extras",
   "proficiencies",
+  "spellbook",
   "identity",
   "review",
 ] as const;
 export type StepId = (typeof STEPS)[number];
+
+/** True when the class enters a starting spellbook (ADR 0030 step 20.7: a mage or a bard), as the
+ * server's options say (the class's `spellbook`). */
+export function hasSpellbook(
+  options: CreationOptions | null,
+  cls: string,
+): boolean {
+  return Boolean(classOf(options, cls)?.spellbook);
+}
+
+/** The steps the class goes through, in order: the spellbook step only for a class with a
+ * spellbook (ADR 0030 step 20.7); before a class is chosen, the steps of a class without one. */
+export function stepsFor(
+  options: CreationOptions | null,
+  cls: string,
+): StepId[] {
+  return STEPS.filter((s) => s !== "spellbook" || hasSpellbook(options, cls));
+}
+
+/**
+ * The starting spellbook the draft sends (ADR 0030 step 20.7): the spells the player ticked, or,
+ * before he touched the list, the ones the server offers pre-ticked for the class (a mage's Read
+ * Magic and Detect Magic); empty for a class without a spellbook.
+ */
+export function draftSpellbook(
+  options: CreationOptions | null,
+  d: Pick<FlowDraft, "cls" | "spellbook">,
+): string[] {
+  const book = classOf(options, d.cls)?.spellbook;
+  if (!book) return [];
+  return d.spellbook ?? book.startingSpells;
+}
+
+/**
+ * What the spellbook step shows (ADR 0030 step 20.7), from the draft's answer: `wait` before the
+ * server's answer for the class (or while the scores do not derive), `none` when the character has
+ * no spell level to enter at its starting level (a bard at level 1), else `levels`.
+ */
+export function spellbookState(
+  answer: CreationDraft | null,
+): "wait" | "none" | "levels" {
+  const book = answer?.spellbook;
+  if (!book) return "wait";
+  return book.levels.length === 0 ? "none" : "levels";
+}
 
 /**
  * The step a refusal's field belongs to, so the flow opens that step and shows the refusal there.
@@ -62,6 +108,8 @@ export function stepOfField(field: string): StepId {
     field === "details.languages"
   )
     return "proficiencies";
+  if (field === "spellbook" || field.startsWith("spellbook."))
+    return "spellbook";
   if (field === "name" || field.startsWith("details.")) return "identity";
   return "review";
 }
@@ -251,12 +299,15 @@ export type DraftPatch = Partial<Omit<FlowDraft, "details">> & {
  * detail (a rolled height) keeps what was typed since the request left. Another class clears the
  * picks: each non-weapon one was spent at the old class's cost (ADR 0037 step 4), and a weapon
  * type or a specialization may not be the new class's (steps 7 and 9), so they would be
- * refused or mispriced under the new one. */
+ * refused or mispriced under the new one. The starting spellbook goes back to the new class's
+ * pre-ticked spells (ADR 0030 step 20.7). */
 export function mergeDraft(d: FlowDraft, patch: DraftPatch): FlowDraft {
   const next = { ...d, ...patch, details: { ...d.details, ...patch.details } };
   if (next.cls !== d.cls && patch.picks === undefined) next.picks = [];
   if (next.cls !== d.cls && patch.weaponPicks === undefined)
     next.weaponPicks = [];
+  if (next.cls !== d.cls && patch.spellbook === undefined)
+    next.spellbook = null;
   return next;
 }
 
@@ -289,6 +340,9 @@ export interface FlowDraft {
   /** The weapon picks and the specialization (ADR 0037 steps 7, 9 and 14), each type at its
    * slots. */
   weaponPicks: WeaponPickInput[];
+  /** The starting spellbook's spells (ADR 0030 step 20.7) as the player ticked them, in order; null
+   * before he touched the list (the class's pre-ticked spells are sent, `draftSpellbook`). */
+  spellbook: string[] | null;
   name: string;
   details: Draft;
 }
@@ -314,6 +368,7 @@ export const EMPTY_DRAFT: FlowDraft = {
   skillPoints: {},
   picks: [],
   weaponPicks: [],
+  spellbook: null,
   name: "",
   details: {
     alignment: "",
@@ -440,6 +495,8 @@ export function buildBody(
       ...(draft.picks.length > 0 && { nonweapon: draft.picks }),
       ...(draft.weaponPicks.length > 0 && { weapon: draft.weaponPicks }),
     };
+  const spells = draftSpellbook(options, draft);
+  if (spells.length > 0) body.spellbook = spells;
   const {
     body: details,
     ageInvalid,

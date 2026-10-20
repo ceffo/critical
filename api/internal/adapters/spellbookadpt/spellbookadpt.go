@@ -118,7 +118,7 @@ func ParseSeed(book []byte, cat catalogue.Catalogue) ([]string, error) {
 	seen := map[string]bool{}
 	for _, e := range entries {
 		s, ok := spells[e.ID]
-		if !ok || s.Class != "Wizard" {
+		if !ok || !spellbook.FromCatalogue(s).Wizard {
 			return nil, fmt.Errorf("spellbook: %q is not a Wizard spell of the catalogue", e.ID)
 		}
 		if s.Name.Default() != e.Name { // the seed holds the English name
@@ -144,7 +144,7 @@ func (b *Book) Spell(id string) (learnsvc.Spell, bool) {
 	if !ok {
 		return learnsvc.Spell{}, false
 	}
-	return learnsvc.Spell{Level: s.Level, Wizard: s.Class == "Wizard"}, true
+	return spellbook.FromCatalogue(s), true
 }
 
 // Claimed are the character's free spells already in the book (ADR 0030

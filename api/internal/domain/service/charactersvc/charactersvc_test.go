@@ -71,6 +71,8 @@ type env struct {
 	owners   *mocks.MockOwners
 	sessions *mocks.MockSessions
 	tx       *tx
+	spells   spellCatalogue
+	book     *bookWrites
 }
 
 func newEnv(t *testing.T) *env {
@@ -84,11 +86,12 @@ func newEnvWithBook(t *testing.T, book charactersvc.ProficiencyBook) *env {
 	e := &env{
 		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: newRules(t),
 		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{}, armour: &wornArmour{columns: map[int64]string{}}, hp: hpLedger{},
+		spells: wizardCatalogue(), book: &bookWrites{},
 		free: &freeSpells{taken: map[int64][]int{}, claimed: map[int64][]spellbook.FreeSpell{}},
 	}
 	svc, err := charactersvc.New(charactersvc.Deps{
 		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Armour: e.armour, HP: e.hp,
-		Proficiencies: book, FreeSpells: e.free,
+		Proficiencies: book, Spells: e.spells, Book: e.book, FreeSpells: e.free,
 	})
 	require.NoError(t, err)
 	e.svc = svc
@@ -99,7 +102,7 @@ func TestNew_NilDependency(t *testing.T) {
 	full := charactersvc.Deps{
 		Reader: mocks.NewMockReader(t), XP: mocks.NewMockXPLedger(t), Rules: newRules(t),
 		Owners: mocks.NewMockOwners(t), Tx: &tx{}, Sessions: mocks.NewMockSessions(t), Armour: &wornArmour{}, HP: hpLedger{},
-		FreeSpells: &freeSpells{},
+		Spells: wizardCatalogue(), Book: &bookWrites{}, FreeSpells: &freeSpells{},
 	}
 	without := map[string]func(d *charactersvc.Deps){
 		"reader":   func(d *charactersvc.Deps) { d.Reader = nil },
@@ -110,6 +113,8 @@ func TestNew_NilDependency(t *testing.T) {
 		"sessions": func(d *charactersvc.Deps) { d.Sessions = nil },
 		"armour":   func(d *charactersvc.Deps) { d.Armour = nil },
 		"hp":       func(d *charactersvc.Deps) { d.HP = nil },
+		"spells":   func(d *charactersvc.Deps) { d.Spells = nil },
+		"book":     func(d *charactersvc.Deps) { d.Book = nil },
 		"free":     func(d *charactersvc.Deps) { d.FreeSpells = nil },
 	}
 	for name, drop := range without {

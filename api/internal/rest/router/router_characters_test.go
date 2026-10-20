@@ -375,6 +375,31 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 	assert.JSONEq(t, `2`, string(derived["targetLevel"]))
 }
 
+// ADR 0030 step 20.7 on the wire: the body's `spellbook` (catalogue ids, in order) is the new
+// character's starting spellbook; the draft answers its limits at the starting level, the spells
+// entered by spell level, and a refused spell on `spellbook.<id>` with its code.
+func TestCharacters_DraftCarriesTheStartingSpellbook(t *testing.T) {
+	h, m := newRouterWith(t, usersAuth(t, map[string]authsvc.User{
+		"new": {ID: bobID, Email: "new@example.com", Role: authsvc.RolePlayer},
+	}))
+	m.char.EXPECT().Draft(mock.Anything, mock.MatchedBy(func(n charactersvc.NewCharacter) bool {
+		return assert.ObjectsAreEqual([]string{"read_magic", "bless"}, n.Spellbook)
+	}), mock.Anything).Return(&charactersvc.Draft{
+		Spellbook: &charactersvc.StartingSpellbook{
+			ClassMaxSpellLevel: 1, IntMaxSpellLevel: 7, MaxSpellsPerLevel: 9,
+			Levels: []charactersvc.SpellLevelCount{{Level: 1, Count: 1}},
+		},
+		Refusals: []error{&domain.FieldError{Field: "spellbook.bless", Message: charactersvc.CodeNotAWizardSpell}},
+	}, nil).Once()
+	rec := as(h, "new", "POST", "/api/characters/draft", `{"class":"mage","spellbook":["read_magic","bless"]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var got map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.JSONEq(t, `{"classMaxSpellLevel":1,"intMaxSpellLevel":7,"maxSpellsPerLevel":9,"noMaximum":false,"levels":[{"level":1,"count":1}]}`,
+		string(got["spellbook"]))
+	assert.JSONEq(t, `[{"field":"spellbook.bless","code":"not_a_wizard_spell"}]`, string(got["refusals"]))
+}
+
 // A draft's content is never a 400: an empty body answers 200 with every number blank, a null
 // derived block and empty lists; a height that is no number is the draft's one refusal (the
 // service is not asked). A body that is no JSON or names an unknown field is still a 400.
@@ -387,7 +412,7 @@ func TestCharacters_DraftNeverRefusesContent(t *testing.T) {
 		Return(&charactersvc.Draft{Missing: []string{"name", "class"}}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/draft", `{}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"derived":null,"skillPoints":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[]}`, rec.Body.String())
+	assert.JSONEq(t, `{"derived":null,"skillPoints":null,"spellbook":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[]}`, rec.Body.String())
 
 	rec = as(h, "new", "POST", "/api/characters/draft", `{"details":{"height_cm":"tall"}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

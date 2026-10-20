@@ -83,7 +83,8 @@ const weaponPicksMigration = "026_weapon_proficiency_picks.sql"
 // grantOwnedWeaponTypes is ADR 0037 step 16.2, the data step after migration 026: each character
 // gets one weapon pick (1 slot) per distinct weapon type among its weapons, in any state, so no
 // attack changes when the non-proficiency penalty (step 8) lands. A weapon without a type gives
-// none. The picks follow the weapon types' display order, after any weapon pick already stored,
+// none, nor does a stored item type that is no weapon type (items.weapon_type has no check). The
+// picks follow the weapon types' display order, after any weapon pick already stored,
 // which is kept: a run on picks that have a type adds nothing for it. Nothing is refused: the
 // class's list (step 7) and the budget (step 10) are not checked, a type outside the list reads as
 // not allowed and an overspend shows the slots_over_budget warning (step 16.4).

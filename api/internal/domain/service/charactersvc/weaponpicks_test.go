@@ -19,7 +19,8 @@ var allWeaponTypes = ruletablesvc.WeaponTypes
 // ADR 0037 step 7: a weapon pick is one weapon type, once, 1 slot, of a type the class's PHB
 // list allows: a mage is refused a long sword, a cleric an edged weapon, a thief a type outside
 // its list; a fighter and a bard pick any type. A type outside the list that the stored picks
-// already have is kept (the migration grants every owned type), never added. Wielding is not
+// already have is kept (the migration grants every owned type), never added; so is a stored type
+// that is no weapon type (older data is never dropped, as in the non-weapon pool). Wielding is not
 // this check's (ADR 0033 step 20 only warns).
 func TestWeaponPick_Step7_ClassLimitsRefuseThePick(t *testing.T) {
 	book := profBook(t)
@@ -43,6 +44,8 @@ func TestWeaponPick_Step7_ClassLimitsRefuseThePick(t *testing.T) {
 		{"a bard: any type", "bard", weapons(allWeaponTypes...), weapons(), nil},
 		{"a stored type outside the list is kept", "mage", weapons("dagger", "long_sword"), weapons("long_sword"), nil},
 		{"an unknown type", "fighter", weapons("katana"), weapons(), refused("weapon.katana", "unknown")},
+		{"a stored unknown type is kept", "mage", weapons("dagger", "katana"), weapons("katana"), nil},
+		{"a stored unknown type spends 1 slot", "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "katana", Slots: 2}}}, weapons("katana"), refused("weapon.katana", "out_of_range")},
 		{"no type", "fighter", weapons(""), weapons(), refused("weapon", "empty")},
 		{"a duplicate type", "fighter", weapons("dagger", "dagger"), weapons(), refused("weapon.dagger", "duplicate")},
 		{"no slot", "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "dagger"}}}, weapons(), refused("weapon.dagger", "out_of_range")},

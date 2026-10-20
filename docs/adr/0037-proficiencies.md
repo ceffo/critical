@@ -173,7 +173,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
    check is `charactersvc.ValidPicks`; a refusal is a field error on `weapon.<type>` (`unknown`,
    `duplicate`, `out_of_range` for any slot count but 1 until step 9, `weapon_not_allowed`), or
    `empty` on `weapon`. A stored type outside the list (step 16.2 grants every owned type) is
-   kept, never added, and served with `allowed: false` on its pick; no warning code for it yet.)_
+   kept, never added, and served with `allowed: false` on its pick; no warning code for it yet.
+   A stored pick whose type is no weapon type (older data) is kept too, as step 16 keeps a stored
+   non-weapon id the catalogue does not hold, never added.)_
 8. **The non-proficiency penalty.** An attack with a weapon whose type has no pick takes Table
    34's penalty for the class group (warrior -2, wizard -5, priest -3, rogue -3; PHB p.50 and
    p.52) as a named to-hit modifier `nonproficient`, not magical. Amends
@@ -337,7 +339,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
     As built for 16.2, 2026-10-20: migration 026 (a column comment, no schema change) and its data
     step `grantOwnedWeaponTypes`: the distinct non-empty `weapon_type` of each character's
     `items` of category `weapon`, in any state, appended in the weapon types' display order after
-    any stored weapon pick (so a rerun adds nothing). The class lists and the budget are not
+    any stored weapon pick (so a rerun adds nothing); an item type that is no weapon type gives no
+    pick. The class lists and the budget are not
     checked. The seed character's weapon picks are `seeds/character.json`'s
     `weapon_proficiencies`, his weapons' five types. Also
     `TestMigrate_Step16_WeaponPicksRunOnceWithTheMigration`,

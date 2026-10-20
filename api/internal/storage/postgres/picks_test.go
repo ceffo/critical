@@ -117,8 +117,8 @@ func grant(t *testing.T, f *fakeStore) error {
 }
 
 // ADR 0037 step 16.2: each character gets one weapon pick (1 slot) per distinct weapon type among
-// its weapons, in any state, in the weapon types' display order; a weapon without a type and a
-// piece of another category give none; the non-weapon picks stay. Nothing is refused (step
+// its weapons, in any state, in the weapon types' display order; a weapon without a type, one
+// whose stored type is no weapon type and a piece of another category give none; the non-weapon picks stay. Nothing is refused (step
 // 16.4): a mage gets its long sword (outside its list, step 7) and goes over its 1 weapon slot.
 func TestMigrate_Step16_OwnedWeaponTypesBecomePicks(t *testing.T) {
 	f := newFakeStore()
@@ -129,6 +129,7 @@ func TestMigrate_Step16_OwnedWeaponTypesBecomePicks(t *testing.T) {
 	weaponItem(t, f, bard, "longsword", "long_sword", "carried")
 	weaponItem(t, f, bard, "shortbow", "short_bow", "worn")
 	weaponItem(t, f, bard, "odd_stick", "", "carried")
+	weaponItem(t, f, bard, "katana", "katana", "carried") // no weapon type: never granted
 	require.NoError(t, f.InsertItem(context.Background(), storeq.InsertItemParams{
 		CharacterID: bard, ID: "arrows", Category: "ammunition", Behaviour: "stock", Count: 1, MaxCount: 1, Powers: "[]", DamageTypes: []string{},
 	}))

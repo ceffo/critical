@@ -252,7 +252,9 @@ func ValidPicks(book ProficiencyBook, class string, picks, before Picks) (Picks,
 // validWeaponPicks is ADR 0037 step 7 on the weapon picks of a save: each a weapon type
 // (CodeUnknown) once (CodeDuplicate), spending WeaponPickSlots (CodeOutOfRange), of a type the
 // class may pick (CodeWeaponNotAllowed); a type outside the class's list that before already
-// has is kept (step 16.2: the migration grants every owned type), never added. A refusal is a
+// has is kept (step 16.2: the migration grants every owned type), never added. A type that is no
+// weapon type but that before already has is kept too, as the non-weapon pool keeps a stored id
+// the catalogue does not hold (step 16: older data is never dropped). A refusal is a
 // *domain.FieldError on field weapon.<type>. Never nil.
 func validWeaponPicks(class string, picks, before []WeaponPick) ([]WeaponPick, error) {
 	had := map[string]bool{}
@@ -266,7 +268,7 @@ func validWeaponPicks(class string, picks, before []WeaponPick) ([]WeaponPick, e
 		switch {
 		case p.Type == "":
 			return nil, &domain.FieldError{Field: FieldWeapon, Message: CodeEmpty}
-		case !slices.Contains(ruletablesvc.WeaponTypes, p.Type):
+		case !had[p.Type] && !slices.Contains(ruletablesvc.WeaponTypes, p.Type):
 			return nil, &domain.FieldError{Field: field, Message: CodeUnknown}
 		case seen[p.Type]:
 			return nil, &domain.FieldError{Field: field, Message: CodeDuplicate}

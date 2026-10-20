@@ -8,8 +8,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
-// classDTO holds the class and race tables of a format-4 rule_tables (ADR
-// 0021 step 10). A nil slice is a table the artifact does not carry.
+// classDTO holds the class and race tables of the rule_tables (ADR
+// 0021 step 10). A nil slice is a table the artifact lacks.
 type classDTO struct {
 	Experience          []experienceDTO        `json:"experience"`
 	HitDice             []hitDiceDTO           `json:"hit_dice"`
@@ -207,16 +207,11 @@ func (d classDTO) missing() []string {
 	return out
 }
 
-// present reports whether the artifact carries any class or race table.
-func (d classDTO) present() bool {
-	return len(d.missing()) < reflect.TypeOf(d).NumField()
-}
-
 // classes maps the DTOs to validated class tables. Every table is required
 // (a missing one names it); the rules are ruletablesvc.NewClassTables'.
 func (d classDTO) classes() (*ruletablesvc.ClassTables, error) {
 	if m := d.missing(); len(m) > 0 {
-		return nil, fmt.Errorf("formats 4 and 5 need the class and race tables, missing: %s", strings.Join(m, ", "))
+		return nil, fmt.Errorf("the artifact needs the class and race tables, missing: %s", strings.Join(m, ", "))
 	}
 	turning := make([]ruletablesvc.TurningRow, len(d.TurningUndead))
 	for i, r := range d.TurningUndead {

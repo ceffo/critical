@@ -1,8 +1,8 @@
 // Package ruletablesadpt reads the PHB rule tables into a
 // ruletablesvc.Tables from the catalogue artifact's rule_tables (ADR 0021
-// step 9, through Parse), with the class and race tables of a format-4 or
-// format-5 artifact (step 10) and the racial level limits of a format-5 one
-// (step 11). It only holds the private JSON DTOs and the
+// step 9, through Parse), with the class and race tables (step 10), the
+// racial level limits (step 11), the sphere access (step 12), the equipment
+// (step 13) and the languages (step 14). It only holds the private JSON DTOs and the
 // mapping; the entities and their validation live in ruletablesvc.
 package ruletablesadpt
 
@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -22,18 +21,15 @@ type fileDTO struct {
 	Bard      []bardDTO     `json:"bard_spells"`
 	XP        []xpDTO       `json:"bard_experience"`
 	classDTO
-	// LevelLimits is DMG Table 7 (format 5, ADR 0021 step 11); nil when the
-	// artifact does not carry it.
+	// LevelLimits is DMG Table 7 (ADR 0021 step 11).
 	LevelLimits []levelLimitDTO `json:"race_level_limits"`
-	// SphereAccess is the classes' sphere access (format 6, ADR 0021 step
-	// 12); nil when the artifact does not carry it.
+	// SphereAccess is the classes' sphere access (ADR 0021 step 12).
 	SphereAccess []sphereAccessDTO `json:"sphere_access"`
-	// WeaponVsArmor is PHB Table 52 and InitiativeItem Table 56 (format 7,
-	// ADR 0021 step 13); nil when the artifact does not carry them.
+	// WeaponVsArmor is PHB Table 52 and InitiativeItem Table 56 (ADR 0021
+	// step 13).
 	WeaponVsArmor  []weaponVsArmorDTO  `json:"weapon_vs_armor"`
 	InitiativeItem []initiativeItemDTO `json:"initiative_item"`
-	// RaceLanguages is each race's language list (format 8, ADR 0021 step
-	// 14); nil when the artifact does not carry it.
+	// RaceLanguages is each race's language list (ADR 0021 step 14).
 	RaceLanguages []raceLanguageDTO `json:"race_languages"`
 }
 
@@ -78,17 +74,14 @@ type bardDTO struct {
 	PerSpellLevel []int `json:"per_spell_level"`
 }
 
-// Parse maps the rule_tables JSON of an artifact of the given format to
-// validated Tables. A violation names the table. Format 4 carries every
-// class and race table (a missing one is named) but the racial level limits,
-// format 5 those too, format 6 also the sphere access; format 3 carries none.
-// equipment is the artifact's top-level equipment object as written, nil when
-// absent (format 7, ADR 0021 step 13): formats 7 and 8 need it and the two
-// tables Table 52 and Table 56; formats 3 to 6 carry none of them. languages
-// is the artifact's top-level languages list as written, nil when absent
-// (format 8, step 14): format 8 needs it and the race_languages table;
-// formats 3 to 7 carry neither.
-func Parse(format int, raw, equipment, languages []byte) (*ruletablesvc.Tables, error) {
+// Parse maps the rule_tables JSON of a current-format artifact (ADR 0021
+// step 16.5: the only format the API reads, which catalogueadpt enforces
+// before this runs) to validated Tables. A violation names the table. Every
+// class and race table, the racial level limits, the sphere access and the
+// two equipment tables (Table 52, Table 56) are required, as are the artifact's
+// top-level equipment object and languages list (both as written) with the
+// race_languages table.
+func Parse(raw, equipment, languages []byte) (*ruletablesvc.Tables, error) {
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -124,68 +117,28 @@ func Parse(format int, raw, equipment, languages []byte) (*ruletablesvc.Tables, 
 	if err != nil {
 		return nil, err
 	}
-	hasEquipment := format >= catalogue.FormatEquipment
-	if !hasEquipment && (f.WeaponVsArmor != nil || f.InitiativeItem != nil || equipment != nil) {
-		return nil, fmt.Errorf("format %d carries no equipment, weapon_vs_armor or initiative_item", format)
+	classes, err := f.classes()
+	if err != nil {
+		return nil, err
 	}
-	if format < catalogue.FormatLanguages && (f.RaceLanguages != nil || languages != nil) {
-		return nil, fmt.Errorf("format %d carries no languages or race_languages", format)
+	limits, err := levelLimits(f.LevelLimits)
+	if err != nil {
+		return nil, err
 	}
-	switch format {
-	case catalogue.FormatRuleTables:
-		if f.present() || f.LevelLimits != nil || f.SphereAccess != nil {
-			return nil, errors.New("format 3 carries no class or race table")
-		}
-		return tables, nil
-	case catalogue.FormatClassTables:
-		if f.LevelLimits != nil {
-			return nil, errors.New("format 4 carries no race_level_limits table")
-		}
-		if f.SphereAccess != nil {
-			return nil, errors.New("format 4 carries no sphere_access table")
-		}
-		classes, err := f.classes()
-		if err != nil {
-			return nil, err
-		}
-		return tables.WithClasses(classes), nil
-	case catalogue.FormatLevelLimits, catalogue.FormatSpheres, catalogue.FormatEquipment, catalogue.FormatLanguages,
-		catalogue.FormatProficiencyDescriptions:
-		classes, err := f.classes()
-		if err != nil {
-			return nil, err
-		}
-		limits, err := levelLimits(f.LevelLimits)
-		if err != nil {
-			return nil, err
-		}
-		tables = tables.WithClasses(classes).WithLevelLimits(limits)
-		if format == catalogue.FormatLevelLimits {
-			if f.SphereAccess != nil {
-				return nil, errors.New("format 5 carries no sphere_access table")
-			}
-			return tables, nil
-		}
-		access, err := sphereAccess(f.SphereAccess)
-		if err != nil {
-			return nil, err
-		}
-		tables = tables.WithSphereAccess(access)
-		if format == catalogue.FormatSpheres {
-			return tables, nil
-		}
-		tables, err = withEquipment(tables, f, equipment)
-		if err != nil || format == catalogue.FormatEquipment {
-			return tables, err
-		}
-		return withLanguages(tables, f, languages)
-	default:
-		return nil, fmt.Errorf("unknown format %d", format)
+	access, err := sphereAccess(f.SphereAccess)
+	if err != nil {
+		return nil, err
 	}
+	tables = tables.WithClasses(classes).WithLevelLimits(limits).WithSphereAccess(access)
+	tables, err = withEquipment(tables, f, equipment)
+	if err != nil {
+		return nil, err
+	}
+	return withLanguages(tables, f, languages)
 }
 
-// withEquipment adds the format-7 equipment data and its two tables (the
-// rules are ruletablesvc's); format 7 requires all three.
+// withEquipment adds the equipment data and its two tables (the rules
+// are ruletablesvc's); all three are required.
 func withEquipment(t *ruletablesvc.Tables, f fileDTO, equipment []byte) (*ruletablesvc.Tables, error) {
 	e, err := parseEquipment(equipment)
 	if err != nil {
@@ -203,10 +156,10 @@ func withEquipment(t *ruletablesvc.Tables, f fileDTO, equipment []byte) (*ruleta
 }
 
 // sphereAccess maps sphere_access to the validated sphere access (the rules
-// are ruletablesvc.NewSphereAccess'); format 6 requires the table.
+// are ruletablesvc.NewSphereAccess'); the table is required.
 func sphereAccess(rows []sphereAccessDTO) (*ruletablesvc.SphereAccess, error) {
 	if len(rows) == 0 {
-		return nil, errors.New("format 6 needs the sphere_access table")
+		return nil, errors.New("the artifact needs the sphere_access table")
 	}
 	out := make([]ruletablesvc.SphereAccessRow, len(rows))
 	for i, r := range rows {
@@ -223,7 +176,7 @@ func sphereAccess(rows []sphereAccessDTO) (*ruletablesvc.SphereAccess, error) {
 // are ruletablesvc.NewLevelLimits'); the table is required.
 func levelLimits(rows []levelLimitDTO) (*ruletablesvc.LevelLimits, error) {
 	if rows == nil {
-		return nil, errors.New("format 5 needs the race_level_limits table")
+		return nil, errors.New("the artifact needs the race_level_limits table")
 	}
 	out := make([]ruletablesvc.LevelLimitRow, len(rows))
 	for i, r := range rows {

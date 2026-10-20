@@ -54,7 +54,7 @@ func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
 	artifact, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	tables, err := ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment, artifact.Languages)
+	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages)
 	require.NoError(t, err)
 	return tables
 }

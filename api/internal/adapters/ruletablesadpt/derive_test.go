@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -205,35 +204,6 @@ func TestConstitutionFor_Step7_1_Table3(t *testing.T) {
 	}
 	_, err := tbl.ConstitutionFor(26)
 	require.Error(t, err)
-}
-
-// A format-3 artifact has no class tables: every lookup says so (the server
-// refuses to start on one).
-func TestDerivedLookups_Format3HasNoClassTables(t *testing.T) {
-	three, err := classTablesOf(t, catalogue.FormatRuleTables, func(d map[string]any) {
-		for k := range d {
-			if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" {
-				delete(d, k)
-			}
-		}
-	})
-	require.NoError(t, err)
-	_, err = three.LevelFor("bard", 0)
-	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
-	_, err = three.THAC0For("rogue", 1)
-	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
-	_, err = three.SavesFor("rogue", 1)
-	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
-	_, err = three.ConSaveBonusFor(16)
-	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
-	_, err = three.XPThreshold("bard", 1)
-	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
-	_, err = three.WizardSpellsPerDay(1)
-	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
-	_, err = three.HitDiceFor("rogue")
-	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
-	_, err = three.ConstitutionFor(16)
-	require.ErrorIs(t, err, ruletablesvc.ErrNoClassTables)
 }
 
 // PHB Table 4 (ADR 0030 step 20): the highest spell level, the chance to

@@ -10,52 +10,18 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
-// FormatRuleTables is format 3 (ADR 0021 step 9.1): the spells and the PHB
-// rule tables. Format 1 (spells only, the tables in the seeds) is retired
-// (step 9.6.3) and format 2 named a retracted shape: both are refused like
-// any unknown format.
-const FormatRuleTables = 3
-
-// FormatClassTables is format 4 (ADR 0021 step 10): format 3 plus the class
-// and race tables of ADR 0030 step 23. The API reads formats 3 and 4 until
-// the published artifact and the dev checkouts are format 4 (step 10.4).
-const FormatClassTables = 4
-
-// FormatLevelLimits is format 5 (ADR 0021 step 11): format 4 plus the racial
-// level limits of DMG Table 7. The API reads it beside formats 3 and 4 until
-// the published artifact and the dev checkouts are format 5 (step 11.4).
-const FormatLevelLimits = 5
-
-// FormatSpheres is format 6 (ADR 0021 step 12): format 5 plus each priest
-// spell's sphere codes and the classes' sphere access (ADR 0030 steps 15 and
-// 23). The API reads it beside format 5 until the published artifact and the
-// dev checkouts are format 6 (step 12.4).
-const FormatSpheres = 6
-
-// FormatEquipment is format 7 (ADR 0021 step 13, ADR 0033 steps 21 to 23):
-// format 6 plus the equipment reference data and its two rule tables. The API
-// reads it beside format 6 until the published artifact and the dev checkouts
-// are format 7 (step 13.4).
-const FormatEquipment = 7
-
-// FormatLanguages is format 8 (ADR 0021 step 14, ADR 0032 step 4): format 7
-// plus the language catalogue and each race's language list. The API reads it
-// beside format 7 until the published artifact and the dev checkouts are
-// format 8 (step 14.4).
-const FormatLanguages = 8
-
 // FormatProficiencyDescriptions is format 9 (ADR 0021 step 16, ADR 0037 step
-// 19): format 8 plus the description of each non-weapon proficiency, in English
-// and French. It is the only format the API reads (step 16.5): the formats 3
-// to 8 are refused like any unknown format, with the advice to run `just
-// catalogue`.
+// 19): the spells, the PHB rule tables, the equipment, the languages and the
+// description of each non-weapon proficiency, in English and French. It is the
+// only format the API reads (step 16.5): the formats 1 to 8 are refused like
+// any unknown format, with the advice to run `just catalogue`.
 const FormatProficiencyDescriptions = 9
 
 // Formats lists the formats this API reads: format 9 only (step 16.5).
 var Formats = []int{FormatProficiencyDescriptions}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
-// compared for equality only. A format-3 artifact's PHB rule tables are not part of it:
+// compared for equality only. The artifact's PHB rule tables are not part of it:
 // they are read beside it at every start and never imported (ADR 0021 step
 // 9.4).
 type Catalogue struct {

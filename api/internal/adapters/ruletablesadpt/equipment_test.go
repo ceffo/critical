@@ -8,24 +8,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
-	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // equipmentOf parses the fixture's rule tables and equipment with mutate
 // applied to the decoded rule tables and equipment objects first.
-func equipmentOf(t *testing.T, format int, mutate func(rules, equipment map[string]any)) (*ruletablesvc.Tables, error) {
+func equipmentOf(t *testing.T, mutate func(rules, equipment map[string]any)) (*ruletablesvc.Tables, error) {
 	t.Helper()
 	var rules, equipment map[string]any
 	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &rules))
 	require.NoError(t, json.Unmarshal(fixtureEquipment(t), &equipment))
-	if format < catalogue.FormatEquipment {
-		delete(rules, "weapon_vs_armor")
-		delete(rules, "initiative_item")
-	}
-	if format < catalogue.FormatSpheres {
-		delete(rules, sphereAccess)
-	}
 	mutate(rules, equipment)
 	rawRules, err := json.Marshal(rules)
 	require.NoError(t, err)
@@ -34,7 +26,7 @@ func equipmentOf(t *testing.T, format int, mutate func(rules, equipment map[stri
 		rawEquipment, err = json.Marshal(equipment)
 		require.NoError(t, err)
 	}
-	return ruletablesadpt.Parse(format, rawRules, rawEquipment, nil)
+	return ruletablesadpt.Parse(rawRules, rawEquipment, fixtureLanguages(t))
 }
 
 func list(d map[string]any, key string) []any { return d[key].([]any) }
@@ -54,11 +46,11 @@ func weapon(t *testing.T, e *ruletablesvc.Equipment, code string) ruletablesvc.W
 	return ruletablesvc.Weapon{}
 }
 
-// ADR 0021 step 13.1 (ADR 0033 steps 21 and 23): format 7 hands on the
+// ADR 0021 step 13.1 (ADR 0033 steps 21 and 23): the artifact hands on the
 // equipment rows, copied cell for cell from PHB Table 44, and Tables 52 and 56.
 // Expected values are read from the PHB pages, not derived from the artifact.
 func TestParse_Step13_1_ReadsFormat7Equipment(t *testing.T) {
-	tables, err := equipmentOf(t, catalogue.FormatEquipment, func(_, _ map[string]any) {})
+	tables, err := equipmentOf(t, func(_, _ map[string]any) {})
 	require.NoError(t, err)
 	e, ok := tables.Equipment()
 	require.True(t, ok)
@@ -116,47 +108,24 @@ func TestParse_Step13_1_ReadsFormat7Equipment(t *testing.T) {
 	assert.False(t, scroll.HasModifier, "a scroll takes the spell's casting time, no modifier")
 }
 
-// ADR 0021 step 13.2: the equipment and its two tables belong to format 7
-// only, and format 7 requires all three.
-func TestParse_Step13_2_EquipmentBelongsToFormat7(t *testing.T) {
-	_, err := equipmentOf(t, catalogue.FormatSpheres, func(_, _ map[string]any) {})
-	require.ErrorContains(t, err, "format 6 carries no equipment", "the fixture's equipment is refused in format 6")
-	_, err = ruletablesadpt.Parse(catalogue.FormatSpheres, mustRules(t, catalogue.FormatEquipment), nil, nil)
-	require.ErrorContains(t, err, "format 6 carries no equipment", "the two tables are refused in format 6")
-
+// ADR 0021 step 13.2: the equipment and its two tables are all required.
+func TestParse_Step13_2_EquipmentIsRequired(t *testing.T) {
 	tests := []struct {
 		name   string
 		mutate func(rules, equipment map[string]any)
 		want   string
 	}{
-		{"no weapon_vs_armor", func(r, _ map[string]any) { delete(r, "weapon_vs_armor") }, "format 7 needs the weapon_vs_armor table"},
-		{"no initiative_item", func(r, _ map[string]any) { delete(r, "initiative_item") }, "format 7 needs the initiative_item table"},
+		{"no weapon_vs_armor", func(r, _ map[string]any) { delete(r, "weapon_vs_armor") }, "the artifact needs the weapon_vs_armor table"},
+		{"no initiative_item", func(r, _ map[string]any) { delete(r, "initiative_item") }, "the artifact needs the initiative_item table"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := equipmentOf(t, catalogue.FormatEquipment, tc.mutate)
+			_, err := equipmentOf(t, tc.mutate)
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
-	// A format-6 artifact without any of it still starts.
-	_, err = ruletablesadpt.Parse(catalogue.FormatSpheres, mustRules(t, catalogue.FormatSpheres), nil, nil)
-	require.NoError(t, err)
-	_, err = ruletablesadpt.Parse(catalogue.FormatEquipment, mustRules(t, catalogue.FormatEquipment), nil, nil)
-	require.ErrorContains(t, err, "format 7 needs the equipment object")
-}
-
-// mustRules is the fixture's rule_tables as the given format carries them.
-func mustRules(t *testing.T, format int) []byte {
-	t.Helper()
-	var rules map[string]any
-	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &rules))
-	if format < catalogue.FormatEquipment {
-		delete(rules, "weapon_vs_armor")
-		delete(rules, "initiative_item")
-	}
-	raw, err := json.Marshal(rules)
-	require.NoError(t, err)
-	return raw
+	_, err := ruletablesadpt.Parse(fixtureRuleTables(t), nil, fixtureLanguages(t))
+	require.ErrorContains(t, err, "the artifact needs the equipment object")
 }
 
 // ADR 0021 step 13.3: the rules the schema cannot express are the
@@ -203,7 +172,7 @@ func TestParse_Step13_3_RefusesBrokenEquipment(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := equipmentOf(t, catalogue.FormatEquipment, tc.mutate)
+			_, err := equipmentOf(t, tc.mutate)
 			require.ErrorContains(t, err, tc.want)
 		})
 	}

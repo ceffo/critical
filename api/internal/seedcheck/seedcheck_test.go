@@ -70,7 +70,7 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	assert.NotEmpty(t, artifact.Catalogue.Spells)
-	_, err = ruletablesadpt.Parse(artifact.Catalogue.Format, artifact.RuleTables, artifact.Equipment, artifact.Languages)
+	_, err = ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages)
 	require.NoError(t, err, "the artifact's rule tables")
 
 	effects, err := spelleffectsadpt.New(seedsDir)
@@ -99,9 +99,9 @@ func TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables(t *testin
 	require.NoError(t, err)
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment, real.Languages)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment, fixture.Languages)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages)
 	require.NoError(t, err)
 	// Compared by lookup, not row by row: the builder may group equal rows
 	// differently (one row per book line) for the same numbers.
@@ -140,19 +140,15 @@ func TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables(t *testin
 // ADR 0021 step 10.5: the fixture's class and race tables are the real
 // artifact's, row for row (both are the builder's rows), so the PHB-page
 // value tests on the fixture check the tables the app uses. Skipped while
-// the real artifact is format 3.
 func TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables(t *testing.T) {
 	realCatalogue(t)
 	real, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
-	if real.Catalogue.Format < catalogue.FormatClassTables {
-		t.Skipf("the real artifact is format %d: run `just catalogue` for format %d", real.Catalogue.Format, catalogue.FormatClassTables)
-	}
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment, real.Languages)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment, fixture.Languages)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages)
 	require.NoError(t, err)
 	rc, ok := fromReal.Classes()
 	require.True(t, ok)
@@ -163,19 +159,16 @@ func TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables(t *
 
 // ADR 0021 step 11.5: the fixture's racial level limits are the real
 // artifact's, cell for cell, so the DMG-page value tests on the fixture check
-// the table the app uses. Skipped while the real artifact is format 3 or 4.
+// the table the app uses.
 func TestRealCatalogue_Step11_5_TheFixtureCarriesTheRealArtifactsLevelLimits(t *testing.T) {
 	realCatalogue(t)
 	real, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
-	if real.Catalogue.Format < catalogue.FormatLevelLimits {
-		t.Skipf("the real artifact is format %d: run `just catalogue` for format %d", real.Catalogue.Format, catalogue.FormatLevelLimits)
-	}
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment, real.Languages)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment, fixture.Languages)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages)
 	require.NoError(t, err)
 	rl, ok := fromReal.LevelLimits()
 	require.True(t, ok)
@@ -199,14 +192,11 @@ func TestRealCatalogue_Step13_5_TheFixtureCarriesTheRealArtifactsEquipment(t *te
 	realCatalogue(t)
 	real, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
-	if real.Catalogue.Format < catalogue.FormatEquipment {
-		t.Skipf("the real artifact is format %d: run `just catalogue` for format %d", real.Catalogue.Format, catalogue.FormatEquipment)
-	}
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables, real.Equipment, real.Languages)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables, fixture.Equipment, fixture.Languages)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages)
 	require.NoError(t, err)
 	re, ok := fromReal.Equipment()
 	require.True(t, ok)

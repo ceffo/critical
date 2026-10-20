@@ -10,7 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
-// The format-7 equipment object and its two rule tables (ADR 0021 step 13,
+// The equipment object and its two rule tables (ADR 0021 step 13,
 // ADR 0033 steps 21 to 23): private JSON DTOs and the mapping; the entities
 // and their validation live in ruletablesvc.
 
@@ -72,11 +72,10 @@ type initiativeItemDTO struct {
 	Modifier *int   `json:"modifier"`
 }
 
-// parseEquipment maps the equipment object to the validated catalogue; format
-// 7 requires it.
+// parseEquipment maps the equipment object to the validated catalogue; it is required.
 func parseEquipment(raw []byte) (*ruletablesvc.Equipment, error) {
 	if len(raw) == 0 {
-		return nil, errors.New("format 7 needs the equipment object")
+		return nil, errors.New("the artifact needs the equipment object")
 	}
 	var d equipmentDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
@@ -113,11 +112,10 @@ func parseEquipment(raw []byte) (*ruletablesvc.Equipment, error) {
 	return out, nil
 }
 
-// weaponVsArmor maps weapon_vs_armor (Table 52) to the validated table; format
-// 7 requires it.
+// weaponVsArmor maps weapon_vs_armor (Table 52) to the validated table; it is required.
 func weaponVsArmor(rows []weaponVsArmorDTO) (*ruletablesvc.WeaponVsArmor, error) {
 	if len(rows) == 0 {
-		return nil, errors.New("format 7 needs the weapon_vs_armor table")
+		return nil, errors.New("the artifact needs the weapon_vs_armor table")
 	}
 	out := make([]ruletablesvc.WeaponVsArmorRow, len(rows))
 	for i, r := range rows {
@@ -131,10 +129,10 @@ func weaponVsArmor(rows []weaponVsArmorDTO) (*ruletablesvc.WeaponVsArmor, error)
 }
 
 // initiativeItems maps initiative_item (Table 56) to the validated table;
-// format 7 requires it. An absent modifier is the scroll's (the casting time).
+// it is required. An absent modifier is the scroll's (the casting time).
 func initiativeItems(rows []initiativeItemDTO) (*ruletablesvc.InitiativeItems, error) {
 	if len(rows) == 0 {
-		return nil, errors.New("format 7 needs the initiative_item table")
+		return nil, errors.New("the artifact needs the initiative_item table")
 	}
 	out := make([]ruletablesvc.InitiativeItemRow, len(rows))
 	for i, r := range rows {

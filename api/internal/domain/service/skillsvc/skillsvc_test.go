@@ -29,7 +29,6 @@ func (c *countingTx) InTx(ctx context.Context, fn func(context.Context) error) e
 
 type fixture struct {
 	svc     skillsvc.SVC
-	dal     *mocks.MockDAL
 	chars   *mocks.MockCharacters
 	abils   *mocks.MockAbilities
 	dice    *mocks.MockDice
@@ -41,17 +40,50 @@ type fixture struct {
 
 // The sheet's scores (STR 12, DEX 17, CON 16, INT 14, WIS 8, CHA 16) and
 // two of the bard skills its character service derives (ADR 0030 step 18).
+// Its picks are derived by the character service (ADR 0037 steps 3 to 5):
+// each with its catalogue ability and modifier and its target.
 func bard() *charactersvc.Character {
-	return &charactersvc.Character{
+	c := &charactersvc.Character{
 		ID: charID, Class: "bard", Str: 12, Dex: 17, Con: 16, Int: 14, Wis: 8, Cha: 16,
 		Derived: charactersvc.Derived{BardSkills: bardSkills},
 	}
+	slots := charactersvc.ProficiencySlots{Picks: append([]charactersvc.PickFigures{}, catalog...)}
+	slots.SetTargets(c.Score)
+	c.Derived.Proficiencies = &slots
+	return c
 }
 
-var catalog = []skillsvc.ProficiencyDef{
-	{ID: "musical_instrument", Ability: skillsvc.AbilityDex, Modifier: -1}, // 17 - 1 = 16
-	{ID: "riding_land", Ability: skillsvc.AbilityWis, Modifier: 3},         // 8 + 3 = 11
-	{ID: "acrobatics", Ability: skillsvc.AbilityDex, Modifier: 5},          // 17 + 5 = 22
+var catalog = []charactersvc.PickFigures{
+	{ID: "musical_instrument", Ability: skillsvc.AbilityDex, Modifier: -1, Slots: 1, Cost: 1, Known: true}, // 17 - 1 = 16
+	{ID: "riding_land", Ability: skillsvc.AbilityWis, Modifier: 3, Slots: 1, Cost: 1, Known: true},         // 8 + 3 = 11
+	{ID: "acrobatics", Ability: skillsvc.AbilityDex, Modifier: 5, Slots: 1, Cost: 1, Known: true},          // 17 + 5 = 22
+	// A proficiency with no check, and an id the catalogue does not hold: never rolled.
+	{ID: "blind_fighting", Slots: 2, Cost: 2, Known: true},
+	{ID: "old_skill", Slots: 1, Cost: 1},
+}
+
+// testBook is a catalogue of the picks the save tests make: Tumbling (rogue, 1 slot), Tracking
+// (warrior, 2 slots), Healing (priest, 2 slots), Languages, Modern, with Table 34's rogue row and
+// the bard's Table 38 groups.
+func testBook(t *testing.T) *ruletablesvc.Proficiencies {
+	t.Helper()
+	var cross []ruletablesvc.Crossover
+	for _, c := range ruletablesvc.Classes {
+		cross = append(cross, ruletablesvc.Crossover{Class: c, Groups: []string{"general"}})
+	}
+	cross[4] = ruletablesvc.Crossover{Class: "bard", Groups: []string{"rogue", "warrior", "wizard", "general"}}
+	var slots []ruletablesvc.SlotRow
+	for _, g := range ruletablesvc.Groups {
+		slots = append(slots, ruletablesvc.SlotRow{Group: g, WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4})
+	}
+	b, err := ruletablesvc.NewProficiencies([]ruletablesvc.Proficiency{
+		{ID: "tumbling", Ability: "dex", Slots: 1, Groups: []string{"rogue"}},
+		{ID: "tracking", Ability: "wis", Slots: 2, Groups: []string{"warrior"}},
+		{ID: "healing", Ability: "wis", Modifier: -2, Slots: 2, Groups: []string{"priest"}},
+		{ID: "languages_modern", Ability: "int", Slots: 1, Groups: []string{"general"}},
+	}, cross, slots)
+	require.NoError(t, err)
+	return b
 }
 
 var bardSkills = []ruletablesvc.SkillPercent{
@@ -62,13 +94,12 @@ var bardSkills = []ruletablesvc.SkillPercent{
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
-		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
+		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
-	f.dal.EXPECT().ListProficiencies(mock.Anything, charID).Return(catalog, nil).Maybe()
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()
 	return f
 }

@@ -6,7 +6,7 @@
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_points
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_points, proficiency_picks
 FROM characters WHERE id = $1;
 
 -- A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
@@ -17,6 +17,10 @@ WHERE id = sqlc.arg(id);
 -- A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
 -- name: SetSkillPoints :execrows
 UPDATE characters SET skill_points = sqlc.arg(skill_points) WHERE id = sqlc.arg(id);
+
+-- The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
+-- name: SetProficiencyPicks :execrows
+UPDATE characters SET proficiency_picks = sqlc.arg(proficiency_picks) WHERE id = sqlc.arg(id);
 
 -- name: GetCharacterDetails :one
 SELECT class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages
@@ -54,13 +58,13 @@ WHERE users.id = sqlc.arg(user_id) AND EXISTS (
 INSERT INTO characters (
     name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-    class, race_code, owner_user_id, realized_level, skill_points
+    class, race_code, owner_user_id, realized_level, skill_points, proficiency_picks
 ) VALUES (
     sqlc.arg(name), sqlc.arg(str), sqlc.arg(str_exceptional), sqlc.arg(dex), sqlc.arg(con), sqlc.arg(int), sqlc.arg(wis),
     sqlc.arg(cha), sqlc.arg(hp_max), sqlc.arg(thac0_base), sqlc.arg(level), sqlc.arg(xp_total),
     sqlc.arg(save_para_poison), sqlc.arg(save_rod_staff_wand), sqlc.arg(save_petri_poly),
     sqlc.arg(save_breath), sqlc.arg(save_spell), sqlc.arg(class), sqlc.arg(race_code),
-    sqlc.arg(owner_user_id), sqlc.arg(realized_level), sqlc.arg(skill_points)
+    sqlc.arg(owner_user_id), sqlc.arg(realized_level), sqlc.arg(skill_points), sqlc.arg(proficiency_picks)
 ) RETURNING id;
 
 -- A new character's state rows: no spell prepared, no buff, round 0 (the seed character's

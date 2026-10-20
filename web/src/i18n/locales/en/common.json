@@ -1251,6 +1251,7 @@
       "spell_learn": "Learn",
       "turn_undead": "Turning",
       "skill_points": "Skills",
+      "proficiencies": "Proficiencies",
       "skill_armor": "Armour",
       "equipment_state": "Equipment",
       "ac_override": "AC"
@@ -1449,6 +1450,10 @@
       "failed": "failed",
       "roll": "d20 {{d20}} vs {{target}}",
       "noRoll": "no roll"
+    },
+    "proficiencies": {
+      "text": "Proficiency slots: {{changes}}",
+      "change": "{{name}} {{from}} → {{to}}"
     },
     "skillPoints": {
       "text": "Skill points: {{changes}}",

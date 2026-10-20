@@ -35,6 +35,8 @@ export type LogKind =
   | "turn_undead"
   /** A thief's skill points spent on the sheet (ADR 0030 step 17); popping it gives them back. */
   | "skill_points"
+  /** The proficiency picks saved (ADR 0037 steps 12 and 13); popping it gives them back. */
+  | "proficiencies"
   | "skill_armor"
   /** The AC override set or cleared (ADR 0033 step 13); popping it gives the previous one back. */
   | "ac_override"

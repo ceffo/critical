@@ -54,12 +54,19 @@ type env struct {
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
+	return newEnvWithBook(t, nil)
+}
+
+// newEnvWithBook is newEnv with book as the non-weapon catalogue (nil: none).
+func newEnvWithBook(t *testing.T, book charactersvc.ProficiencyBook) *env {
+	t.Helper()
 	e := &env{
 		reader: mocks.NewMockReader(t), xp: mocks.NewMockXPLedger(t), rules: newRules(t),
 		owners: mocks.NewMockOwners(t), sessions: mocks.NewMockSessions(t), tx: &tx{}, armour: &wornArmour{columns: map[int64]string{}}, hp: hpLedger{},
 	}
 	svc, err := charactersvc.NewWithConfig(charactersvc.DefaultConfig(), charactersvc.Deps{
 		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Armour: e.armour, HP: e.hp,
+		Proficiencies: book,
 	})
 	require.NoError(t, err)
 	e.svc = svc

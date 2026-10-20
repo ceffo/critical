@@ -21,13 +21,12 @@ import (
 func derivedBardFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
-		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
+		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
-	f.dal.EXPECT().ListProficiencies(mock.Anything, charID).Return(nil, nil).Maybe()
 	bard := &charactersvc.Character{ID: charID, Class: "bard", Dex: 16, SkillPoints: map[string]int{"detect_noise": 17}}
 	bard.Derived.BardSkills = []ruletablesvc.SkillPercent{
 		{Skill: "climb_walls", Base: 50, Armor: -25, Percent: 25},

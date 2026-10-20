@@ -165,6 +165,38 @@ func (q *Queries) CatalogueVersion(ctx context.Context) (CatalogueVersionRow, er
 	return i, err
 }
 
+const characterClasses = `-- name: CharacterClasses :many
+SELECT id, class FROM characters ORDER BY id
+`
+
+type CharacterClassesRow struct {
+	ID    int64
+	Class string
+}
+
+func (q *Queries) CharacterClasses(ctx context.Context) ([]CharacterClassesRow, error) {
+	rows, err := q.db.QueryContext(ctx, characterClasses)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterClassesRow{}
+	for rows.Next() {
+		var i CharacterClassesRow
+		if err := rows.Scan(&i.ID, &i.Class); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const characterSkillArmour = `-- name: CharacterSkillArmour :one
 SELECT class, skill_armor FROM characters WHERE id = $1::bigint
 `
@@ -341,8 +373,8 @@ const insertCharacter = `-- name: InsertCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code,
-    skill_points, alignment, sex
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+    skill_points, alignment, sex, proficiency_picks
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
 RETURNING id
 `
 
@@ -368,6 +400,7 @@ type InsertCharacterParams struct {
 	SkillPoints      string
 	Alignment        string
 	Sex              string
+	ProficiencyPicks string
 }
 
 // The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
@@ -395,6 +428,7 @@ func (q *Queries) InsertCharacter(ctx context.Context, arg InsertCharacterParams
 		arg.SkillPoints,
 		arg.Alignment,
 		arg.Sex,
+		arg.ProficiencyPicks,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -867,6 +901,40 @@ func (q *Queries) NextTextKey(ctx context.Context) (int64, error) {
 	return next_key, err
 }
 
+const proficiencyRows = `-- name: ProficiencyRows :many
+SELECT character_id, id FROM proficiencies ORDER BY character_id, position, id
+`
+
+type ProficiencyRowsRow struct {
+	CharacterID int64
+	ID          string
+}
+
+// The proficiency picks data step after migration 025 (ADR 0037 step 16): every stored
+// proficiencies row, per character in sheet order, and each character's class.
+func (q *Queries) ProficiencyRows(ctx context.Context) ([]ProficiencyRowsRow, error) {
+	rows, err := q.db.QueryContext(ctx, proficiencyRows)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProficiencyRowsRow{}
+	for rows.Next() {
+		var i ProficiencyRowsRow
+		if err := rows.Scan(&i.CharacterID, &i.ID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recordCatalogueVersion = `-- name: RecordCatalogueVersion :exec
 INSERT INTO catalogue_meta (id, format, version) VALUES (1, $1, $2)
 ON CONFLICT (id) DO UPDATE SET format = excluded.format, version = excluded.version
@@ -1004,6 +1072,20 @@ type SetCharacterLanguagesParams struct {
 // The mapped language list of a character (a JSON list of codes).
 func (q *Queries) SetCharacterLanguages(ctx context.Context, arg SetCharacterLanguagesParams) error {
 	_, err := q.db.ExecContext(ctx, setCharacterLanguages, arg.Languages, arg.ID)
+	return err
+}
+
+const setCharacterPicks = `-- name: SetCharacterPicks :exec
+UPDATE characters SET proficiency_picks = $1 WHERE id = $2::bigint
+`
+
+type SetCharacterPicksParams struct {
+	ProficiencyPicks string
+	ID               int64
+}
+
+func (q *Queries) SetCharacterPicks(ctx context.Context, arg SetCharacterPicksParams) error {
+	_, err := q.db.ExecContext(ctx, setCharacterPicks, arg.ProficiencyPicks, arg.ID)
 	return err
 }
 

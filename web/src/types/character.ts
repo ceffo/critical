@@ -90,6 +90,52 @@ export interface Derived {
   skillBudget: SkillBudgetWarning[];
   /** Step 19: PHB Table 30's damage multiplier at the realized level; 0 without the backstab. */
   backstab: number;
+  /** ADR 0037 steps 3 to 5: the non-weapon pool and each pick's figures; null without the
+   * catalogue's Table 34. */
+  proficiencySlots: ProficiencySlots | null;
+}
+
+/** ADR 0037 step 3: available = initial (Table 34) + levelGained (one slot every `perLevels`
+ * realized levels) + intelligence (Table 4); left = available - spent, negative when over. */
+export interface NonweaponPool {
+  initial: number;
+  perLevels: number;
+  levelGained: number;
+  intelligence: number;
+  available: number;
+  spent: number;
+  left: number;
+}
+
+/** One non-weapon pick (ADR 0037 steps 4 and 5): `cost` for the class, `extraSlots` beyond it (+1
+ * each to the check), `target` null for a pick with no check; `known` false for an id the
+ * catalogue no longer holds. */
+export interface PickFigures {
+  id: string;
+  slots: number;
+  cost: number;
+  extraSlots: number;
+  ability: string;
+  modifier: number;
+  known: boolean;
+  target: number | null;
+}
+
+/** The slot pools and the picks' figures (`derived.proficiencySlots`). */
+export interface ProficiencySlots {
+  nonWeapon: NonweaponPool;
+  picks: PickFigures[];
+}
+
+/** The body of `PUT /api/proficiencies` and its preview, and the creation's `proficiencies`. */
+export interface PicksInput {
+  nonweapon: { id: string; slots: number }[];
+}
+
+/** The answer of `PUT /api/proficiencies` and `POST /api/proficiencies/preview`. */
+export interface ProficienciesAnswer {
+  proficiencySlots: ProficiencySlots | null;
+  warnings: Character["warnings"];
 }
 
 /** ADR 0030 steps 17 and 18: percent = base + points + race + dexterity + armor, capped at 95,
@@ -227,6 +273,13 @@ export interface Character {
     value?: number;
     min?: number;
     max?: number;
+    /** ADR 0037 step 11: `slots_over_budget` carries `pool`, `spent` and `available`,
+     * `slots_to_spend` `pool` and `left`; `proficiency_unknown` names its pick in `field`
+     * (`nonweapon.<id>`). */
+    pool?: "nonweapon";
+    spent?: number;
+    available?: number;
+    left?: number;
   }[];
 }
 
@@ -532,4 +585,7 @@ export interface DraftChecks {
     perSkillPerLevel: number;
     perSkillCap: number;
   } | null;
+  /** ADR 0037 step 14: the draft's non-weapon pool and picks; null while the class, the XP or the
+   * Intelligence is missing. */
+  proficiencySlots: ProficiencySlots | null;
 }

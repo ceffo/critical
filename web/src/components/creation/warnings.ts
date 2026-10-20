@@ -87,6 +87,14 @@ export function useReviewWarnings(props: StepProps): string[] {
   return out;
 }
 
+/** The slot warnings of ADR 0037 step 11 (and a pick the catalogue lost): the proficiency step
+ * words them, so the identity summary leaves them out. */
+const SLOT_CODES = new Set([
+  "slots_to_spend",
+  "slots_over_budget",
+  "proficiency_unknown",
+]);
+
 /** The fields the server warns about, for the character panel's summary ("1 avertissement : langues"). */
 export function warnedFields(
   t: T,
@@ -95,6 +103,7 @@ export function warnedFields(
 ): string[] {
   const out: string[] = [];
   for (const w of warnings) {
+    if (SLOT_CODES.has(w.code)) continue;
     const f = t(`details.fields.${w.field}`, {
       defaultValue: w.field,
     }).toLocaleLowerCase();

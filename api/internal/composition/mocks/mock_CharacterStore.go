@@ -670,6 +670,54 @@ func (_c *MockCharacterStore_SetCurrentCharacter_Call) RunAndReturn(run func(con
 	return _c
 }
 
+// SetProficiencyPicks provides a mock function with given fields: ctx, characterID, picks
+func (_m *MockCharacterStore) SetProficiencyPicks(ctx context.Context, characterID int64, picks charactersvc.Picks) error {
+	ret := _m.Called(ctx, characterID, picks)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetProficiencyPicks")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Picks) error); ok {
+		r0 = rf(ctx, characterID, picks)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_SetProficiencyPicks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetProficiencyPicks'
+type MockCharacterStore_SetProficiencyPicks_Call struct {
+	*mock.Call
+}
+
+// SetProficiencyPicks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - picks charactersvc.Picks
+func (_e *MockCharacterStore_Expecter) SetProficiencyPicks(ctx interface{}, characterID interface{}, picks interface{}) *MockCharacterStore_SetProficiencyPicks_Call {
+	return &MockCharacterStore_SetProficiencyPicks_Call{Call: _e.mock.On("SetProficiencyPicks", ctx, characterID, picks)}
+}
+
+func (_c *MockCharacterStore_SetProficiencyPicks_Call) Run(run func(ctx context.Context, characterID int64, picks charactersvc.Picks)) *MockCharacterStore_SetProficiencyPicks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(charactersvc.Picks))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_SetProficiencyPicks_Call) Return(_a0 error) *MockCharacterStore_SetProficiencyPicks_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_SetProficiencyPicks_Call) RunAndReturn(run func(context.Context, int64, charactersvc.Picks) error) *MockCharacterStore_SetProficiencyPicks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetRealizedLevel provides a mock function with given fields: ctx, id, realizedLevel, hpMax
 func (_m *MockCharacterStore) SetRealizedLevel(ctx context.Context, id int64, realizedLevel int, hpMax int) error {
 	ret := _m.Called(ctx, id, realizedLevel, hpMax)

@@ -512,9 +512,9 @@ func TestStore_Step8_1_SeededLikeTheDatabase(t *testing.T) {
 	reviews, err := s.Items().Reviews(ctx, id)
 	require.NoError(t, err)
 	assert.NotEmpty(t, reviews, "the seeded other_melee weapons are on the review list")
-	profs, err := s.Skills().ListProficiencies(ctx, id)
+	kelsen, err := s.Characters().GetCharacter(ctx, id)
 	require.NoError(t, err)
-	assert.NotEmpty(t, profs)
+	assert.Len(t, kelsen.Proficiencies.Nonweapon, 8, "the seed character's picks")
 
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
@@ -573,7 +573,13 @@ func TestStore_EachCharacterOwnsItsRows(t *testing.T) {
 	for _, empty := range []func() (int, error){
 		func() (int, error) { l, err := s.Items().List(ctx, other); return len(l), err },
 		func() (int, error) { l, err := s.Items().Reviews(ctx, other); return len(l), err },
-		func() (int, error) { l, err := s.Skills().ListProficiencies(ctx, other); return len(l), err },
+		func() (int, error) {
+			c, err := s.Characters().GetCharacter(ctx, other)
+			if err != nil {
+				return 0, err
+			}
+			return len(c.Proficiencies.Nonweapon), nil
+		},
 		func() (int, error) { l, err := s.Spellbooks().Keys(ctx, other); return len(l), err },
 	} {
 		n, err := empty()

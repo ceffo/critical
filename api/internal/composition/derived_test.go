@@ -30,6 +30,26 @@ func derivedOf(t *testing.T, bs *composition.BackingServices, id int64) (charact
 	return c.Derived, l.Level, info.Limits
 }
 
+// kelsenPicks are the seed bard's eight picks (ADR 0037 step 16) with their figures at the realized
+// level: each costs 1 (all in his groups), no extra slot, and each check target is the one the
+// seed's ability and modifier gave before the picks (ADR 0014 step 1): Musical Instrument DEX 17
+// -1, Tumbling DEX 17, Ventriloquism INT 14 -2, Riding WIS 8 +3, Appraising INT 14, Singing CHA 16,
+// Reading/Writing INT 14 +1, Local History CHA 16. The non-weapon pool (step 3) is a rogue's: 3 +
+// one slot every 4 realized levels + 4 for Intelligence 14; 8 spent.
+func kelsenPicks(level int) *charactersvc.ProficiencySlots {
+	pick := func(id, ability string, modifier, target int) charactersvc.PickFigures {
+		return charactersvc.PickFigures{ID: id, Slots: 1, Cost: 1, Ability: charactersvc.Ability(ability), Modifier: modifier, Known: true, Target: target, HasCheck: true}
+	}
+	pool := ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, LevelGained: level / 4, Intelligence: 4, Spent: 8}
+	pool.Available = 3 + level/4 + 4
+	pool.Left = pool.Available - 8
+	return &charactersvc.ProficiencySlots{Nonweapon: pool, Picks: []charactersvc.PickFigures{
+		pick("musical_instrument", "dex", -1, 16), pick("tumbling", "dex", 0, 17), pick("ventriloquism", "int", -2, 12),
+		pick("riding_land", "wis", 3, 11), pick("appraising", "int", 0, 14), pick("singing", "cha", 0, 16),
+		pick("reading_writing", "int", 1, 15), pick("local_history", "cha", 0, 16),
+	}}
+}
+
 // ADR 0030 steps 3, 5, 6, 7 and 8 over the fixture's tables (the books'
 // numbers): the fixture bard (the seed's sheet, 1,293,418 XP) is level 15,
 // THAC0 13, saves 10/8/9/13/9, slots 3/3/3/3/2, as his sheet says. An XP award
@@ -37,7 +57,9 @@ func derivedOf(t *testing.T, bs *composition.BackingServices, id int64) (charact
 // (the XP ledger's level, the pending level-ups): the THAC0, saves and slots
 // stay level 15's until the level-up step takes 16 and 17, then they are
 // level 17's (Table 53: 12; Table 60, rogues 17-20; Table 32) for every
-// reader. Undoing the two rolls and the award brings them all back.
+// reader. Undoing the two rolls and the award brings them all back. The non-weapon slots follow
+// the realized level too (ADR 0037 step 3): 10 at 15, still 10 with 17 pending, 11 once 17 is
+// taken (a rogue's slot at 16).
 func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
@@ -59,7 +81,8 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		SkillBudget: []ruletablesvc.BudgetWarning{},
 		SkillPoints: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Spent: 200, Left: 30},
 		// The seed bard wears the Leather armour none entered gave (ADR 0033 step 14).
-		SkillArmor: ruletablesvc.ArmorLeather,
+		SkillArmor:    ruletablesvc.ArmorLeather,
+		Proficiencies: kelsenPicks(15),
 	}
 	limits15 := []prepsvc.LevelLimit{{Level: 1, Max: 3}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 3}, {Level: 5, Max: 2}}
 	d, ledgerLevel, limits := derivedOf(t, bs, id)
@@ -90,8 +113,9 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1},
 		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
 		Spellbook:  at15.Spellbook, BardSkills: kelsenBardSkills, SkillBudget: []ruletablesvc.BudgetWarning{},
-		SkillPoints: &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
-		SkillArmor:  ruletablesvc.ArmorLeather,
+		SkillPoints:   &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
+		SkillArmor:    ruletablesvc.ArmorLeather,
+		Proficiencies: kelsenPicks(17),
 	}, d)
 	assert.Equal(t, 17, ledgerLevel)
 	assert.Equal(t, []prepsvc.LevelLimit{

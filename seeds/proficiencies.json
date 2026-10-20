@@ -1,4 +1,10 @@
 {
+  "slots": [
+    {"group": "warrior", "weaponInitial": 4, "weaponLevels": 3, "penalty": -2, "nonweaponInitial": 3, "nonweaponLevels": 3},
+    {"group": "wizard", "weaponInitial": 1, "weaponLevels": 6, "penalty": -5, "nonweaponInitial": 4, "nonweaponLevels": 3},
+    {"group": "priest", "weaponInitial": 2, "weaponLevels": 4, "penalty": -3, "nonweaponInitial": 4, "nonweaponLevels": 3},
+    {"group": "rogue", "weaponInitial": 2, "weaponLevels": 4, "penalty": -3, "nonweaponInitial": 3, "nonweaponLevels": 4}
+  ],
   "crossovers": [
     {"class": "fighter", "groups": ["warrior", "general"]},
     {"class": "mage", "groups": ["wizard", "general"]},

@@ -34,8 +34,10 @@ import (
 )
 
 var (
-	seedsDir      = filepath.Join("..", "..", "..", "seeds")
-	catalogueFile = filepath.Join("..", "..", "..", ".catalogue", "catalogue.json")
+	seedsDir = filepath.Join("..", "..", "..", "seeds")
+	// fixtureSeedsDir is the test fixture's seeds (api/testdata/seeds).
+	fixtureSeedsDir = filepath.Join("..", "..", "testdata", "seeds")
+	catalogueFile   = filepath.Join("..", "..", "..", ".catalogue", "catalogue.json")
 )
 
 // realCatalogue loads the real artifact, or skips the test without it.

@@ -19,14 +19,18 @@ describe("catalogues", () => {
     );
   });
 
-  it("every skill id of seeds/skills.json has an en and a fr name", () => {
-    const seed = JSON.parse(
-      readFileSync(
-        join(__dirname, "..", "..", "..", "seeds", "skills.json"),
-        "utf8",
-      ),
-    ) as { proficiencies: { id: string }[]; bard_skills: { id: string }[] };
-    const ids = [...seed.proficiencies, ...seed.bard_skills].map((s) => s.id);
+  it("every skill id of seeds/skills.json and seeds/proficiencies.json has an en and a fr name", () => {
+    const read = (file: string) =>
+      JSON.parse(
+        readFileSync(join(__dirname, "..", "..", "..", "seeds", file), "utf8"),
+      ) as unknown;
+    const skills = read("skills.json") as { bard_skills: { id: string }[] };
+    const catalogue = read("proficiencies.json") as {
+      nonweapon: { id: string }[];
+    };
+    const ids = [...catalogue.nonweapon, ...skills.bard_skills].map(
+      (s) => s.id,
+    );
     expect(ids.length).toBeGreaterThan(0);
     for (const lang of ["en", "fr"] as const) {
       const names = (

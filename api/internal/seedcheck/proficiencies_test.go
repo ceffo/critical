@@ -10,7 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
 // ADR 0037 step 2: seeds/proficiencies.json holds PHB Table 37 once, 65 rows, each with a known
@@ -47,28 +49,69 @@ func TestNonweaponCatalogue_Step2_Table37Rows(t *testing.T) {
 	}
 }
 
+// kelsenSheet are the seed bard's eight proficiencies as seeds/skills.json stated them before they
+// became picks (ADR 0014: id, ability, modifier from his sheet), and the check target each gave
+// with his scores (STR 12, DEX 17, CON 16, INT 14, WIS 8, CHA 16).
+var kelsenSheet = []struct {
+	id, ability      string
+	modifier, target int
+}{
+	{"musical_instrument", "dex", -1, 16},
+	{"tumbling", "dex", 0, 17},
+	{"ventriloquism", "int", -2, 12},
+	{"riding_land", "wis", 3, 11},
+	{"appraising", "int", 0, 14},
+	{"singing", "cha", 0, 16},
+	{"reading_writing", "int", 1, 15},
+	{"local_history", "cha", 0, 16},
+}
+
 // The seed bard's eight proficiencies keep their ids, abilities and modifiers in the catalogue.
 func TestNonweaponCatalogue_Step2_SeedBardIdsKeepTheirFigures(t *testing.T) {
-	var skills struct {
-		Proficiencies []struct {
-			ID       string `json:"id"`
-			Ability  string `json:"ability"`
-			Modifier int    `json:"modifier"`
-		} `json:"proficiencies"`
-	}
-	readJSON(t, "skills.json", &skills)
-	require.Len(t, skills.Proficiencies, 8)
 	p, err := ruletablesadpt.ReadProficiencies(seedsDir)
 	require.NoError(t, err)
-	byID := map[string]ruletablesvc.Proficiency{}
-	for _, r := range p.All() {
-		byID[r.ID] = r
+	for _, s := range kelsenSheet {
+		got, ok := p.Get(s.id)
+		require.True(t, ok, s.id)
+		assert.Equal(t, s.ability, got.Ability, s.id)
+		assert.Equal(t, s.modifier, got.Modifier, s.id)
 	}
-	for _, s := range skills.Proficiencies {
-		got, ok := byID[s.ID]
-		require.True(t, ok, s.ID)
-		assert.Equal(t, s.Ability, got.Ability, s.ID)
-		assert.Equal(t, s.Modifier, got.Modifier, s.ID)
+}
+
+// ADR 0037 step 16 on the seeds (the campaign's and the test fixture's): the seed bard's picks are
+// his eight proficiencies at their cost (1 each, all in a bard's groups), accepted by the editor's
+// checks; each check target is the one his sheet gave (no extra slot); his non-weapon pool at
+// level 15 with Intelligence 14 is 3 + 3 + 4 = 10, 8 spent, 2 to spend: a reminder, within the
+// budget.
+func TestKelsen_Step16_PicksAndPools(t *testing.T) {
+	for name, dir := range map[string]string{"campaign seeds": seedsDir, "test fixture": fixtureSeedsDir} {
+		t.Run(name, func(t *testing.T) {
+			book, err := ruletablesadpt.ReadProficiencies(dir)
+			require.NoError(t, err)
+			c, ok, err := seedfile.ReadCharacter(filepath.Join(dir, seedfile.CharacterFile))
+			require.NoError(t, err)
+			require.True(t, ok)
+			picks := c.Picks()
+			require.Len(t, picks.Nonweapon, len(kelsenSheet))
+			_, err = charactersvc.ValidPicks(book, seedfile.DefaultClass, picks, charactersvc.Picks{})
+			require.NoError(t, err, "the editor accepts the seed's picks")
+
+			sheet := &charactersvc.Character{Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha}
+			f, ok := charactersvc.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, picks)
+			require.True(t, ok)
+			f.SetTargets(sheet.Score)
+			for i, s := range kelsenSheet {
+				got := f.Picks[i]
+				assert.Equal(t, s.id, got.ID)
+				assert.Equal(t, 1, got.Cost, s.id)
+				assert.Zero(t, got.Extra, s.id)
+				assert.Equal(t, s.target, got.Target, "%s: the target his sheet gave", s.id)
+			}
+			assert.Equal(t, ruletablesvc.NonweaponPool{
+				Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 8, Left: 2,
+			}, f.Nonweapon)
+			require.NoError(t, charactersvc.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, charactersvc.Picks{}, picks))
+		})
 	}
 }
 
@@ -102,4 +145,22 @@ func TestNonweaponCatalogue_Step2_EveryIdHasAnEnAndFrName(t *testing.T) {
 			assert.NotEmpty(t, f.Skills.Names[r.ID], "%s name of %s", lang, r.ID)
 		}
 	}
+}
+
+// ADR 0037 step 1: PHB Table 34's four rows (p.50), read from the seed file.
+func TestProficiencyTables_Step1_Table34AndTable38(t *testing.T) {
+	p, err := ruletablesadpt.ReadProficiencies(seedsDir)
+	require.NoError(t, err)
+	assert.Equal(t, []ruletablesvc.SlotRow{
+		{Group: "warrior", WeaponInitial: 4, WeaponLevels: 3, Penalty: -2, NonweaponInitial: 3, NonweaponLevels: 3},
+		{Group: "wizard", WeaponInitial: 1, WeaponLevels: 6, Penalty: -5, NonweaponInitial: 4, NonweaponLevels: 3},
+		{Group: "priest", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 4, NonweaponLevels: 3},
+		{Group: "rogue", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4},
+	}, p.SlotRows())
+	for class, group := range map[string]string{"fighter": "warrior", "mage": "wizard", "cleric": "priest", "thief": "rogue", "bard": "rogue"} {
+		row, ok := p.SlotRowOf(class)
+		require.True(t, ok, class)
+		assert.Equal(t, group, row.Group, class)
+	}
+	assert.Equal(t, []string{"rogue", "warrior", "wizard", "general"}, p.GroupsOf("bard"))
 }

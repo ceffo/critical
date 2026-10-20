@@ -18,7 +18,6 @@ import (
 	combatmocks "github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
 	dicemocks "github.com/ceffo/critical/api/internal/domain/service/dicesvc/mocks"
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
-	skillmocks "github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	xpmocks "github.com/ceffo/critical/api/internal/domain/service/xpsvc/mocks"
 )
@@ -46,7 +45,6 @@ type harness struct {
 	Items     *itemmocks.MockDAL
 	Forms     *combatmocks.MockFormStore
 	XP        *xpmocks.MockDAL
-	Skill     *skillmocks.MockDAL
 	Spellbook *compmocks.MockSpellbookStore
 	Dice      *dicemocks.MockDAL
 	Auth      *authmocks.MockDAL
@@ -65,7 +63,6 @@ func newHarness(t *testing.T) *harness {
 		Items:     itemmocks.NewMockDAL(t),
 		Forms:     combatmocks.NewMockFormStore(t),
 		XP:        xpmocks.NewMockDAL(t),
-		Skill:     skillmocks.NewMockDAL(t),
 		Spellbook: compmocks.NewMockSpellbookStore(t),
 		Dice:      dicemocks.NewMockDAL(t),
 		Auth:      authmocks.NewMockDAL(t),
@@ -73,7 +70,7 @@ func newHarness(t *testing.T) *harness {
 	h.Storage = composition.Storage{
 		Store: h.Store, Character: h.Character, HP: h.HP, Log: h.Log, Buff: h.Buff, Spell: h.Spell,
 		Crit: h.Crit, Items: h.Items, Forms: h.Forms,
-		XP: h.XP, Skill: h.Skill, Spellbook: h.Spellbook, Dice: h.Dice, Auth: h.Auth,
+		XP: h.XP, Spellbook: h.Spellbook, Dice: h.Dice, Auth: h.Auth,
 	}
 	// Every service runs its transactions through the store: the body runs
 	// once, in the caller's context.

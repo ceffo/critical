@@ -358,7 +358,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// snapshot. The ability check's score in effect comes from buffsvc (ADR
 	// 0028 step 2).
 	bs.Skills, err = skillsvc.New(skillsvc.Deps{
-		DAL: st.Skill, Characters: charSvc, Abilities: bs.Buffs, Dice: dice, Log: logSvc, Points: characterDAL, Tx: tx,
+		Characters: charSvc, Abilities: bs.Buffs, Dice: dice, Log: logSvc, Points: characterDAL, Picks: characterDAL, Book: proficiencies, Tx: tx,
 	})
 	if err := bs.add(bs.Skills, err); err != nil {
 		return nil, err

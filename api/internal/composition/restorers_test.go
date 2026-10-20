@@ -22,6 +22,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/storage/postgres/snapshotfixtures"
 )
@@ -89,6 +90,12 @@ func undoCases() []undoCase {
 		}},
 		{"a thief's skill points", "skill_points", reencoded("skill points (skillsvc)"), func(h *harness) {
 			h.Character.EXPECT().SetSkillPoints(mock.Anything, characterID, map[string]int{"climb_walls": 80}).Return(nil).Once()
+		}},
+		// Recorded with the codec's envelope from the start: no older encoding to re-encode.
+		{"the proficiency picks (ADR 0037 step 13)", "proficiencies", `{"state":{"nonweapon":[{"id":"tumbling","slots":1}]}}`, func(h *harness) {
+			h.Character.EXPECT().SetProficiencyPicks(mock.Anything, characterID, charactersvc.Picks{
+				Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 1}},
+			}).Return(nil).Once()
 		}},
 		{"the AC override cleared", "ac_override", reencoded("AC override (acsvc)"), func(h *harness) {
 			h.Character.EXPECT().SetACOverride(mock.Anything, characterID, (*acsvc.Override)(nil)).Return(nil).Once()

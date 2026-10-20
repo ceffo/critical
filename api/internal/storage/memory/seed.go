@@ -12,7 +12,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
-	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
@@ -91,6 +90,7 @@ func (t *tables) seedCharacter(path string) (id int64, ok bool, err error) {
 	t.characters[id] = charactersvc.Character{
 		ID: id, Name: c.Name, Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: seedfile.DefaultClass, Race: c.Race, SkillPoints: c.SkillPoints,
+		Proficiencies: c.Picks(),
 		Sheet: charactersvc.Sheet{Level: c.Level, THAC0: c.Thac0Base, Saves: charactersvc.Saves{
 			ParaPoison: c.SaveParaPoison, RodStaffWand: c.SaveRodStaffWand, PetriPoly: c.SavePetriPoly,
 			Breath: c.SaveBreath, Spell: c.SaveSpell,
@@ -131,20 +131,14 @@ func (t *tables) seedEquipment(owner int64, itemsPath, weaponsPath string, catal
 	return nil
 }
 
-func (t *tables) seedSkills(owner int64, path string) error {
-	seed, err := seedfile.ReadSkills(path)
-	if err != nil {
-		return err
-	}
-	profs := make([]skillsvc.ProficiencyDef, len(seed.Proficiencies))
-	for i, p := range seed.Proficiencies {
-		profs[i] = skillsvc.ProficiencyDef{ID: p.ID, Ability: skillsvc.Ability(p.Ability), Modifier: p.Modifier}
-	}
-	// The seed's bard skill percentages are the sheet's figures (ADR 0030
-	// step 24), not inputs: the bard's skills are derived from its points
-	// (step 18), so the memory store keeps none of them.
-	t.proficiencies[owner] = profs
-	return nil
+// seedSkills checks the skills seed as the database's seed does. The seed's
+// bard skill percentages are the sheet's figures (ADR 0030 step 24), not
+// inputs: the bard's skills are derived from its points (step 18), so the
+// memory store keeps none of them; the proficiencies are the character
+// seed's picks (ADR 0037 step 16).
+func (t *tables) seedSkills(_ int64, path string) error {
+	_, err := seedfile.ReadSkills(path)
+	return err
 }
 
 // ImportCatalogue imports the spell catalogue artifact (ADR 0021 step 5,

@@ -1251,6 +1251,7 @@
       "spell_learn": "Apprentissage",
       "turn_undead": "Renvoi",
       "skill_points": "Talents",
+      "proficiencies": "Compétences",
       "skill_armor": "Armure",
       "equipment_state": "Équipement",
       "ac_override": "CA"
@@ -1449,6 +1450,10 @@
       "failed": "échec",
       "roll": "d20 {{d20}} contre {{target}}",
       "noRoll": "sans jet"
+    },
+    "proficiencies": {
+      "text": "Emplacements de compétence : {{changes}}",
+      "change": "{{name}} {{from}} → {{to}}"
     },
     "skillPoints": {
       "text": "Points de talent : {{changes}}",

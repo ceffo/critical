@@ -33,12 +33,6 @@ sql:
         <<: *go
         out: internal/adapters/hpdal/queries
   - <<: *adapter
-    queries: internal/adapters/skilldal/queries
-    gen:
-      go:
-        <<: *go
-        out: internal/adapters/skilldal/queries
-  - <<: *adapter
     queries: internal/adapters/xpdal/queries
     gen:
       go:

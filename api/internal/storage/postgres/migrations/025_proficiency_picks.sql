@@ -1,0 +1,13 @@
+-- Non-weapon proficiency picks (ADR 0037 steps 12 and 16).
+--
+-- characters.proficiency_picks holds a character's picks as a JSON object by pool, today
+-- {"nonweapon": [{"id": "<catalogue id>", "slots": <slots spent>}, ...]} in the player's order;
+-- '{}' is none. The ability and the modifier of a check come from the catalogue
+-- (seeds/proficiencies.json), never from here; charactersvc validates every write.
+--
+-- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): one column with a default the release before
+-- this one never reads. Schema only (step 2.1): a data step run just after this file turns every
+-- stored proficiencies row into a pick at its catalogue cost for the character's class
+-- (pickProficiencies); the proficiencies table stays, read by nothing, until a later release drops
+-- it.
+ALTER TABLE characters ADD COLUMN proficiency_picks TEXT NOT NULL DEFAULT '{}';

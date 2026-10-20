@@ -13,13 +13,8 @@ import (
 )
 
 type languagesView struct {
-	Languages []string `json:"languages"`
-	Warnings  []struct {
-		Code  string `json:"code"`
-		Field string `json:"field"`
-		Count *int   `json:"count"`
-		Limit *int   `json:"limit"`
-	} `json:"warnings"`
+	Languages []string      `json:"languages"`
+	Warnings  []warningView `json:"warnings"`
 }
 
 // Step 4.1 to 4.3 through the API: a half-elf bard (Intelligence 14: four additional languages)
@@ -40,7 +35,7 @@ func TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheWarning(t *test
 		return got
 	}
 	assert.Equal(t, []string{"common"}, read().Languages, "step 4.1: the native language without picking it")
-	assert.Empty(t, read().Warnings)
+	assert.Empty(t, withoutSlots(read().Warnings))
 
 	// Step 4.3: the burrowers' speech is on no half-elf list, and it is accepted.
 	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PATCH", "/api/character/details", `{"languages":["burrowers","elvish"]}`, nil))
@@ -65,19 +60,19 @@ func TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheWarning(t *test
 		`{"languages":["elvish","gnomish","halfling","goblin","orcish"]}`, nil))
 	got := read()
 	assert.Equal(t, []string{"common", "elvish", "gnomish", "halfling", "goblin", "orcish"}, got.Languages)
-	require.Len(t, got.Warnings, 1)
-	assert.Equal(t, "languages_over_limit", got.Warnings[0].Code)
-	assert.Equal(t, "languages", got.Warnings[0].Field)
-	require.NotNil(t, got.Warnings[0].Count)
-	require.NotNil(t, got.Warnings[0].Limit)
-	assert.Equal(t, 5, *got.Warnings[0].Count, "the native language is not counted")
-	assert.Equal(t, 4, *got.Warnings[0].Limit)
+	require.Len(t, withoutSlots(got.Warnings), 1)
+	assert.Equal(t, "languages_over_limit", withoutSlots(got.Warnings)[0].Code)
+	assert.Equal(t, "languages", withoutSlots(got.Warnings)[0].Field)
+	require.NotNil(t, withoutSlots(got.Warnings)[0].Count)
+	require.NotNil(t, withoutSlots(got.Warnings)[0].Limit)
+	assert.Equal(t, 5, *withoutSlots(got.Warnings)[0].Count, "the native language is not counted")
+	assert.Equal(t, 4, *withoutSlots(got.Warnings)[0].Limit)
 
 	// Step 4.1: the native language cannot be removed.
 	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PATCH", "/api/character/details", `{"languages":null}`, nil))
 	got = read()
 	assert.Equal(t, []string{"common"}, got.Languages)
-	assert.Empty(t, got.Warnings)
+	assert.Empty(t, withoutSlots(got.Warnings))
 }
 
 // Step 4.3: the creation options hold the catalogue with its names, each race's own language and

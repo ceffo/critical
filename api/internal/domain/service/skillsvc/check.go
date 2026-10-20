@@ -45,6 +45,9 @@ type checkRecord struct {
 	Ability      Ability `json:"ability,omitempty"`
 	AbilityScore int     `json:"abilityScore,omitempty"`
 	Modifier     int     `json:"modifier"`
+	// ExtraSlots are the slots spent beyond the cost, each +1 to Target (ADR
+	// 0037 step 5); absent when 0 (and in entries logged before).
+	ExtraSlots int `json:"extraSlots,omitempty"`
 	// PreviousSuccess and PreviousAdjustment are the verdict and adjustment
 	// before the latest post-roll adjustment; set on adjustment amends only.
 	PreviousSuccess    *bool `json:"previousSuccess,omitempty"`
@@ -82,7 +85,7 @@ func (r checkRecord) result(entryID int64) *CheckResult {
 		ID: r.ID, Kind: r.Kind, Die: r.Die, Roll: r.Roll, Target: r.Target,
 		Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason, AdjustedTarget: r.AdjustedTarget,
 		Success: r.Success, RolledSuccess: rolled,
-		Ability: r.Ability, AbilityScore: r.AbilityScore, Modifier: r.Modifier, LogEntryID: entryID,
+		Ability: r.Ability, AbilityScore: r.AbilityScore, Modifier: r.Modifier, ExtraSlots: r.ExtraSlots, LogEntryID: entryID,
 	}
 }
 
@@ -211,36 +214,48 @@ func (s *service) check(ctx context.Context, characterID int64, id string, adj A
 	return rec, nil
 }
 
+// checkable are the character's picks with a check (ADR 0037 steps 2 and 5):
+// a catalogue proficiency with an ability, its target derived on the
+// character. A pick with no check (Blind-fighting, an id the catalogue does
+// not hold) is not rolled.
+func checkable(char *charactersvc.Character) []charactersvc.PickFigures {
+	if char.Derived.Proficiencies == nil {
+		return nil
+	}
+	var out []charactersvc.PickFigures
+	for _, p := range char.Derived.Proficiencies.Picks {
+		if p.HasCheck {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // find is the unrolled check of skill id: its kind, die and target.
 func (s *service) find(ctx context.Context, characterID int64, id string) (checkRecord, error) {
-	profs, err := s.dal.ListProficiencies(ctx, characterID)
+	char, err := s.chars.GetCharacter(ctx, characterID)
 	if err != nil {
-		return checkRecord{}, fmt.Errorf("list proficiencies: %w", err)
+		return checkRecord{}, fmt.Errorf("get character: %w", err)
 	}
-	for _, p := range profs {
+	// ADR 0014 step 1 as amended by ADR 0037 step 5: the ability score plus
+	// the catalogue's modifier plus the extra slots, derived on the
+	// character.
+	for _, p := range checkable(char) {
 		if p.ID != id {
 			continue
-		}
-		char, err := s.chars.GetCharacter(ctx, characterID)
-		if err != nil {
-			return checkRecord{}, fmt.Errorf("get character: %w", err)
 		}
 		score, err := abilityScore(char, p.Ability)
 		if err != nil {
 			return checkRecord{}, fmt.Errorf("proficiency %q: %w", p.ID, err)
 		}
 		return checkRecord{
-			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Target: ProficiencyTarget(score, p.Modifier),
-			Ability: p.Ability, AbilityScore: score, Modifier: p.Modifier,
+			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Target: p.Target,
+			Ability: p.Ability, AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
 		}, nil
 	}
 	// ADR 0030 steps 17 and 18 (ADR 0014 step 3 as amended): a thieving or
 	// a bard skill's target is the percentage the character service derives
 	// (its terms are on the character).
-	char, err := s.chars.GetCharacter(ctx, characterID)
-	if err != nil {
-		return checkRecord{}, fmt.Errorf("get character: %w", err)
-	}
 	for _, b := range char.Derived.BardSkills {
 		if b.Skill == id {
 			return checkRecord{ID: b.Skill, Kind: KindBardSkill, Die: BardSkillDie, Target: b.Percent}, nil
@@ -272,11 +287,8 @@ func (s *service) PreviewPoints(ctx context.Context, characterID int64, points m
 func (s *service) skills(ctx context.Context, characterID int64, draft *map[string]int) (*Skills, error) {
 	var out *Skills
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		profs, err := s.dal.ListProficiencies(ctx, characterID)
-		if err != nil {
-			return fmt.Errorf("list proficiencies: %w", err)
-		}
 		var char *charactersvc.Character
+		var err error
 		if draft != nil {
 			char, err = s.chars.PreviewSkillPoints(ctx, characterID, *draft)
 		} else {
@@ -289,6 +301,7 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *map[stri
 		if err != nil {
 			return err
 		}
+		profs := checkable(char)
 		out = &Skills{
 			Proficiencies: make([]Proficiency, 0, len(profs)), BardSkills: make([]BardSkill, 0, len(char.Derived.BardSkills)),
 			ThiefSkills: make([]ThiefSkill, 0, len(char.Derived.ThiefSkills)), SkillArmor: char.Derived.SkillArmor,
@@ -303,8 +316,8 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *map[stri
 				return fmt.Errorf("proficiency %q: %w", p.ID, err)
 			}
 			out.Proficiencies = append(out.Proficiencies, Proficiency{
-				ID: p.ID, Ability: p.Ability, AbilityScore: score, Modifier: p.Modifier,
-				Target: ProficiencyTarget(score, p.Modifier), Last: last[p.ID],
+				ID: p.ID, Ability: p.Ability, AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
+				Target: p.Target, Last: last[p.ID],
 			})
 		}
 		for _, b := range char.Derived.BardSkills {

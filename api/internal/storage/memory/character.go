@@ -81,6 +81,20 @@ func (c Characters) SetSkillPoints(ctx context.Context, id int64, points map[str
 	})
 }
 
+// SetProficiencyPicks implements skillsvc.Picks (ADR 0037 step 12), or
+// returns domain.ErrCharacterNotFound. It stores a copy of picks.
+func (c Characters) SetProficiencyPicks(ctx context.Context, id int64, picks charactersvc.Picks) error {
+	return c.s.write(ctx, func(t *tables) error {
+		ch, ok := t.characters[id]
+		if !ok {
+			return domain.ErrCharacterNotFound
+		}
+		ch.Proficiencies = picks.Clone()
+		t.characters[id] = ch
+		return nil
+	})
+}
+
 // GetACOverride implements acsvc.Overrides: nil for none, or
 // domain.ErrCharacterNotFound.
 func (c Characters) GetACOverride(ctx context.Context, id int64) (*acsvc.Override, error) {
@@ -201,6 +215,7 @@ func (s *Store) AddCharacterOf(ctx context.Context, owner uuid.UUID, c character
 // CreateCharacter implements charactersvc.Owners.
 func (c Characters) CreateCharacter(ctx context.Context, owner uuid.UUID, ch charactersvc.Character) (int64, error) {
 	ch.Details.Languages = append([]string{}, ch.Details.Languages...)
+	ch.Proficiencies = ch.Proficiencies.Clone()
 	return c.s.AddCharacterOf(ctx, owner, ch)
 }
 

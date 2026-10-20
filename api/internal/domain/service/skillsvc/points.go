@@ -101,9 +101,9 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, points map[s
 	return out, nil
 }
 
-// Module declares the codec that writes a thief's or a bard's skill points
-// back: undo writes the spend's "before", redo its "after" (ADR 0019). It runs
-// inside the undo's transaction.
+// Module declares the codecs that write a thief's or a bard's skill points
+// and the proficiency picks back: undo writes the save's "before", redo its
+// "after" (ADR 0019). They run inside the undo's transaction.
 func (s *service) Module() domain.Module {
 	return domain.Module{Name: "skillsvc", Codecs: []actionlog.Codec{
 		pointsSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st pointsState) error {
@@ -115,5 +115,6 @@ func (s *service) Module() domain.Module {
 			}
 			return nil
 		}, nil),
+		picksSnaps.Restorer(s.restorePicks, nil),
 	}}
 }

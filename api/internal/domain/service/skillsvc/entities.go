@@ -37,14 +37,6 @@ const (
 	ThiefSkillDie  = 100
 )
 
-// ProficiencyDef is a stored non-weapon proficiency: the ability it is
-// checked against and the modifier of PHB Table 37.
-type ProficiencyDef struct {
-	ID       string
-	Ability  Ability
-	Modifier int
-}
-
 // LastCheck is the newest non-voided check of a skill, with the adjustment
 // and verdict in effect. Target is the unadjusted target.
 type LastCheck struct {
@@ -57,12 +49,15 @@ type LastCheck struct {
 	Success          bool
 }
 
-// Proficiency is a proficiency with its target (ability score + modifier).
+// Proficiency is a picked proficiency with a check and its target: ability
+// score + the catalogue's modifier + the slots spent beyond the cost (ADR
+// 0014 step 1 as amended by ADR 0037 step 5).
 type Proficiency struct {
 	ID           string
 	Ability      Ability
 	AbilityScore int
 	Modifier     int
+	ExtraSlots   int
 	Target       int
 	Last         *LastCheck
 }
@@ -121,5 +116,8 @@ type CheckResult struct {
 	Ability          Ability
 	AbilityScore     int
 	Modifier         int
-	LogEntryID       int64
+	// ExtraSlots are a proficiency's slots beyond its cost, each +1 to the
+	// target (ADR 0037 step 5); 0 for a skill and in older entries.
+	ExtraSlots int
+	LogEntryID int64
 }

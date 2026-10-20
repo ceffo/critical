@@ -39,6 +39,9 @@ type Character struct {
 	// steps 1, 17 and 18), by skill code (ruletablesvc.SkillsOf the class);
 	// nil or absent skills have 0.
 	SkillPoints map[string]int
+	// Proficiencies are the proficiency picks (ADR 0037 step 12): catalogue
+	// id and slots spent, in the player's order.
+	Proficiencies Picks
 
 	// Sheet is what the character sheet stated when the character was
 	// imported; never an input. Only its level is read: the realized level of
@@ -137,6 +140,11 @@ type Derived struct {
 	// Backstab is step 19: PHB Table 30's damage multiplier at the realized
 	// level; 0 for a class without the backstab option.
 	Backstab int
+	// Proficiencies is ADR 0037 steps 3 to 5: the non-weapon pool at the
+	// realized level and each pick's cost, extra slots and check; nil
+	// without a Table 34 row for the class. Set by the service (it reads
+	// the catalogue), not by Derive.
+	Proficiencies *ProficiencySlots
 }
 
 // SpellbookRules are ADR 0030 step 20.1 on a character: what it may write

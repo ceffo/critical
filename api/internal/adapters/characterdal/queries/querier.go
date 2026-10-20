@@ -51,6 +51,8 @@ type Querier interface {
 	SetACOverride(ctx context.Context, arg SetACOverrideParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
+	// The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
+	SetProficiencyPicks(ctx context.Context, arg SetProficiencyPicksParams) (int64, error)
 	// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
 	SetRealizedLevel(ctx context.Context, arg SetRealizedLevelParams) (int64, error)
 	// A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).

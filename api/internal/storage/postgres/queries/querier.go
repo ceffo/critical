@@ -18,6 +18,7 @@ type Querier interface {
 	AllTexts(ctx context.Context) ([]LocalizedText, error)
 	CarryOverItems(ctx context.Context, characterID int64) ([]CarryOverItemsRow, error)
 	CatalogueVersion(ctx context.Context) (CatalogueVersionRow, error)
+	CharacterClasses(ctx context.Context) ([]CharacterClassesRow, error)
 	CharacterSkillArmour(ctx context.Context, id int64) (CharacterSkillArmourRow, error)
 	CountCharacters(ctx context.Context) (int64, error)
 	CountItems(ctx context.Context, characterID int64) (int64, error)
@@ -66,6 +67,9 @@ type Querier interface {
 	// rollback releases it. One fixed key for the whole database.
 	LockWriters(ctx context.Context) error
 	NextTextKey(ctx context.Context) (int64, error)
+	// The proficiency picks data step after migration 025 (ADR 0037 step 16): every stored
+	// proficiencies row, per character in sheet order, and each character's class.
+	ProficiencyRows(ctx context.Context) ([]ProficiencyRowsRow, error)
 	RecordCatalogueVersion(ctx context.Context, arg RecordCatalogueVersionParams) error
 	RecordSeedOffer(ctx context.Context, arg RecordSeedOfferParams) error
 	// The chosen ammunition follows an item the conversion gave a new id.
@@ -80,6 +84,7 @@ type Querier interface {
 	SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error
 	// The mapped language list of a character (a JSON list of codes).
 	SetCharacterLanguages(ctx context.Context, arg SetCharacterLanguagesParams) error
+	SetCharacterPicks(ctx context.Context, arg SetCharacterPicksParams) error
 	// The seed character's alignment and sex when it lacks them (migration 013): a value set since is
 	// kept, so a rerun changes nothing.
 	SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error

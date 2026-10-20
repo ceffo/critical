@@ -3,7 +3,8 @@
 // POST /api/roll/skill/{id} (one check, rolled and logged on the server, with
 // an optional DM adjustment) and POST /api/roll/skill/{id}/adjust (the
 // adjustment of the latest check, after the roll), PUT /api/skills/points (a
-// thief's or a bard's skill points, ADR 0030 steps 17 and 18); and the plain ability
+// thief's or a bard's skill points, ADR 0030 steps 17 and 18), PUT /api/proficiencies and POST
+// /api/proficiencies/preview (the proficiency picks, ADR 0037 step 12); and the plain ability
 // checks (ADR 0028): POST /api/roll/ability/{ability} and POST
 // /api/roll/ability/{entryId}/adjust.
 package skillhdl
@@ -51,6 +52,8 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc skillsvc.SVC) {
 	r.Get("/api/skills", render.Handle(List(charID, svc)))
 	r.Put("/api/skills/points", render.Handle(SetPoints(charID, svc)))
 	r.Post("/api/skills/points/preview", render.Handle(PreviewPoints(charID, svc)))
+	r.Put("/api/proficiencies", render.Handle(SetProficiencies(charID, svc)))
+	r.Post("/api/proficiencies/preview", render.Handle(PreviewProficiencies(charID, svc)))
 	r.Post("/api/roll/skill/{id}", render.Handle(Roll(charID, svc)))
 	r.Post("/api/roll/skill/{id}/adjust", render.Handle(Adjust(charID, svc)))
 	// {id} is the ability key on the roll, the log entry on the adjustment
@@ -81,13 +84,15 @@ type LastDTO struct {
 	Success          bool   `json:"success"`
 }
 
-// ProficiencyDTO is one proficiency; target = abilityScore + modifier,
-// computed by the server. last is null before the first check.
+// ProficiencyDTO is one picked proficiency with a check; target =
+// abilityScore + modifier + extraSlots (the slots spent beyond the cost, ADR
+// 0037 step 5), computed by the server. last is null before the first check.
 type ProficiencyDTO struct {
 	ID           string   `json:"id"`
 	Ability      string   `json:"ability"`
 	AbilityScore int      `json:"abilityScore"`
 	Modifier     int      `json:"modifier"`
+	ExtraSlots   int      `json:"extraSlots"`
 	Target       int      `json:"target"`
 	Last         *LastDTO `json:"last"`
 }
@@ -164,7 +169,10 @@ type CheckDTO struct {
 	Ability          string `json:"ability,omitempty"`
 	AbilityScore     *int   `json:"abilityScore,omitempty"`
 	Modifier         *int   `json:"modifier,omitempty"`
-	LogEntryID       int64  `json:"logEntryId"`
+	// ExtraSlots is a proficiency's slots beyond its cost (ADR 0037 step 5),
+	// in target; set for a proficiency only.
+	ExtraSlots *int  `json:"extraSlots,omitempty"`
+	LogEntryID int64 `json:"logEntryId"`
 }
 
 func lastDTO(l *skillsvc.LastCheck) *LastDTO {
@@ -197,7 +205,7 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 	}
 	for _, p := range s.Proficiencies {
 		out.Proficiencies = append(out.Proficiencies, ProficiencyDTO{
-			ID: p.ID, Ability: string(p.Ability), AbilityScore: p.AbilityScore, Modifier: p.Modifier,
+			ID: p.ID, Ability: string(p.Ability), AbilityScore: p.AbilityScore, Modifier: p.Modifier, ExtraSlots: p.ExtraSlots,
 			Target: p.Target, Last: lastDTO(p.Last),
 		})
 	}
@@ -223,8 +231,8 @@ func CheckToDTO(c *skillsvc.CheckResult) CheckDTO {
 		Success: c.Success, RolledSuccess: c.RolledSuccess, LogEntryID: c.LogEntryID,
 	}
 	if c.Kind == skillsvc.KindProficiency {
-		score, mod := c.AbilityScore, c.Modifier
-		out.Ability, out.AbilityScore, out.Modifier = string(c.Ability), &score, &mod
+		score, mod, extra := c.AbilityScore, c.Modifier, c.ExtraSlots
+		out.Ability, out.AbilityScore, out.Modifier, out.ExtraSlots = string(c.Ability), &score, &mod, &extra
 	}
 	return out
 }

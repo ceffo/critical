@@ -33,7 +33,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
 		Class: "bard", RaceCode: "half_elf", Alignment: "chaotic_good", Age: 31, Sex: "male",
 		HeightCm: 177.8, WeightKg: 72.6, Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
-		SkillPoints: `{}`,
+		SkillPoints: `{}`, ProficiencyPicks: `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"singing","slots":1}]}`,
 	}, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 3)
 	require.NoError(t, err)
@@ -48,6 +48,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 			Alignment: "chaotic_good", Age: 31, Sex: "male",
 			Height: 177.8, Weight: 72.6, Hair: "black", Eyes: "green", Languages: []string{"Common", "Elvish"},
 		},
+		Proficiencies: charactersvc.Picks{Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "singing", Slots: 1}}},
 	}, got)
 }
 
@@ -189,7 +190,7 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 		Thac0Base: 19, Level: 3, SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12,
 		SaveBreath: 16, SaveSpell: 15, Class: "bard", RaceCode: "half_elf",
 		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true}, RealizedLevel: sql.NullInt64{Int64: 3, Valid: true},
-		SkillPoints: `{}`,
+		SkillPoints: `{}`, ProficiencyPicks: `{}`,
 	}).Return(int64(7), nil).Once().NotBefore(lock)
 	slots := q.EXPECT().CreateSpellSlots(ctx, int64(7)).Return(nil).Once().NotBefore(row)
 	buffs := q.EXPECT().CreateActiveBuffs(ctx, int64(7)).Return(nil).Once().NotBefore(slots)
@@ -288,7 +289,7 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	q.EXPECT().CreateCharacter(ctx, queries.CreateCharacterParams{
 		Name: "Vex", Class: "thief", RaceCode: "halfling", OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
 		RealizedLevel: sql.NullInt64{Int64: 1, Valid: true},
-		SkillPoints:   `{"open_locks":20,"pick_pockets":15}`,
+		SkillPoints:   `{"open_locks":20,"pick_pockets":15}`, ProficiencyPicks: `{}`,
 	}).Return(int64(8), nil).Once()
 	q.EXPECT().CreateSpellSlots(ctx, int64(8)).Return(nil).Once()
 	q.EXPECT().CreateActiveBuffs(ctx, int64(8)).Return(nil).Once()
@@ -301,7 +302,7 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	require.NoError(t, err)
 
 	q.EXPECT().GetCharacter(ctx, int64(8)).Return(queries.GetCharacterRow{
-		ID: 8, Class: "thief", Languages: `[]`, SkillPoints: `{"open_locks":20,"pick_pockets":15}`,
+		ID: 8, Class: "thief", Languages: `[]`, SkillPoints: `{"open_locks":20,"pick_pockets":15}`, ProficiencyPicks: `{}`,
 	}, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 8)
 	require.NoError(t, err)
@@ -347,4 +348,27 @@ func TestSetACOverride_WritesOrClears(t *testing.T) {
 
 	q.EXPECT().SetACOverride(ctx, queries.SetACOverrideParams{ID: 9}).Return(0, nil).Once()
 	require.ErrorIs(t, dal.SetACOverride(ctx, 9, nil), domain.ErrCharacterNotFound)
+}
+
+// ADR 0037 step 12: the picks are stored as a JSON object by pool, in the player's order (none:
+// '{}'), written by the editor's save and read back as the same picks.
+func TestProficiencyPicks_StoredAsJSONAndReadBack(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	picks := charactersvc.Picks{Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "cooking", Slots: 1}}}
+	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{
+		ProficiencyPicks: `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"cooking","slots":1}]}`, ID: 4,
+	}).Return(1, nil).Once()
+	require.NoError(t, characterdal.New(q).SetProficiencyPicks(ctx, 4, picks))
+	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: `{}`, ID: 4}).Return(1, nil).Once()
+	require.NoError(t, characterdal.New(q).SetProficiencyPicks(ctx, 4, charactersvc.Picks{}))
+	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: `{}`, ID: 9}).Return(0, nil).Once()
+	require.ErrorIs(t, characterdal.New(q).SetProficiencyPicks(ctx, 9, charactersvc.Picks{}), domain.ErrCharacterNotFound)
+
+	got, err := characterdal.DecodePicks(`{"nonweapon":[{"id":"tumbling","slots":2},{"id":"cooking","slots":1}]}`)
+	require.NoError(t, err)
+	assert.Equal(t, picks, got)
+	none, err := characterdal.DecodePicks(`{}`)
+	require.NoError(t, err)
+	assert.Equal(t, charactersvc.Picks{Nonweapon: []charactersvc.Pick{}}, none)
 }

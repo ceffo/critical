@@ -20,5 +20,15 @@
   "save_spell": 9,
   "languages": ["elvish", "common", "orcish", "dwarvish"],
   "skill_points": { "climb_walls": 35, "detect_noise": 70, "pick_pockets": 25, "read_languages": 70 },
+  "proficiencies": [
+    { "id": "musical_instrument", "slots": 1 },
+    { "id": "tumbling", "slots": 1 },
+    { "id": "ventriloquism", "slots": 1 },
+    { "id": "riding_land", "slots": 1 },
+    { "id": "appraising", "slots": 1 },
+    { "id": "singing", "slots": 1 },
+    { "id": "reading_writing", "slots": 1 },
+    { "id": "local_history", "slots": 1 }
+  ],
   "slots": []
 }

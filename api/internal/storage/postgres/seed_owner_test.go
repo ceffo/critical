@@ -86,10 +86,6 @@ func (f *fakeStore) item(id string) storeq.InsertItemParams {
 // weapon is a weapon piece (ADR 0033 step 1).
 func (f *fakeStore) weapon(id string) storeq.InsertItemParams { return f.item(id) }
 
-func (f *fakeStore) prof(id string) storeq.UpsertProficiencyParams {
-	return only(f.t.Profs, id, func(r storeq.UpsertProficiencyParams) string { return r.ID })
-}
-
 func (f *fakeStore) bardSkill(id string) storeq.UpsertBardSkillParams {
 	return only(f.t.Bard, id, func(r storeq.UpsertBardSkillParams) string { return r.ID })
 }
@@ -111,7 +107,7 @@ func TestSeed_TheStartingSetIsTheSeedCharacters(t *testing.T) {
 	id := f.t.Characters[0]
 
 	require.NotEmpty(t, f.t.Items)
-	require.NotEmpty(t, f.t.Profs)
+	require.NotEqual(t, "{}", f.picks(id), "the seed's proficiency picks")
 	require.NotEmpty(t, f.t.Bard)
 	assert.Equal(t, f.everyRowOwnedBy(id), f.owners())
 	assert.Equal(t, seedBook, f.spellbookOf(id))

@@ -86,10 +86,16 @@ id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, ste
 -- the total is characters.xp_total plus every entry (base + 10% when bonus)
 id, character_id, entry_date TEXT, session TEXT, reason TEXT, base INTEGER, bonus INTEGER (0/1)
 
--- proficiencies, bard_skills: each character's skill catalog (ADR 0014); the seed character's is
--- reconciled by id with seeds/skills.json at startup; a check is an action_log entry (skill_check),
--- nothing is stored here
+-- characters.proficiency_picks: the character's proficiency picks (ADR 0037 step 12), a JSON
+-- object by pool, {"nonweapon": [{"id", "slots"}]} in the player's order ('{}' none); ability and
+-- modifier come from the catalogue (seeds/proficiencies.json). Written by PUT /api/proficiencies
+-- (a proficiencies entry, undone by its snapshot) and the creation; the seed character's from
+-- seeds/character.json when it is inserted. A check is an action_log entry (skill_check).
+-- proficiencies: the rows before the picks, converted by the data step after migration 025,
+-- read by nothing since (dropped by a later release)
 id TEXT, character_id, position, ability TEXT ('str'..'cha'), modifier INTEGER
+-- bard_skills: the imported sheet's bard percentages (ADR 0030 step 18: read by nothing),
+-- reconciled by id with seeds/skills.json at startup
 id TEXT, character_id, position, percent INTEGER (0-100)
 
 -- items: each character's possessions, weapons included (character_id; "Per-character data" below;
@@ -177,7 +183,8 @@ Data a schema change needs first (rows a `NOT NULL` would refuse) is a **data st
 executes on its transaction just before that migration, only when the migration is pending
 (`migrationDataSteps`; today the owners before migration 004, "Per-character data"; after a migration,
 the seeded weapons' types after 005, the seed character's race code after 007 and the action log
-snapshots re-encoded into the codec's envelopes after 019, ADR 0018 step 9). Its rules,
+snapshots re-encoded into the codec's envelopes after 019, ADR 0018 step 9, and the proficiencies
+rows turned into picks after 025, ADR 0037 step 16). Its rules,
 including when a step and its queries may be deleted, are [ADR 0025](adr/0025-postgresql-storage.md)
 step 2.1.1.
 

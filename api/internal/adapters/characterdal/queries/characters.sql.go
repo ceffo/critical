@@ -61,13 +61,13 @@ const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO characters (
     name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-    class, race_code, owner_user_id, realized_level, skill_points
+    class, race_code, owner_user_id, realized_level, skill_points, proficiency_picks
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12,
     $13, $14, $15,
     $16, $17, $18, $19,
-    $20, $21, $22
+    $20, $21, $22, $23
 ) RETURNING id
 `
 
@@ -94,6 +94,7 @@ type CreateCharacterParams struct {
 	OwnerUserID      uuid.NullUUID
 	RealizedLevel    sql.NullInt64
 	SkillPoints      string
+	ProficiencyPicks string
 }
 
 // A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
@@ -124,6 +125,7 @@ func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams
 		arg.OwnerUserID,
 		arg.RealizedLevel,
 		arg.SkillPoints,
+		arg.ProficiencyPicks,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -186,7 +188,7 @@ const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_points
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_points, proficiency_picks
 FROM characters WHERE id = $1
 `
 
@@ -221,6 +223,7 @@ type GetCharacterRow struct {
 	Languages        string
 	RealizedLevel    int64
 	SkillPoints      string
+	ProficiencyPicks string
 }
 
 // level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
@@ -261,6 +264,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.Languages,
 		&i.RealizedLevel,
 		&i.SkillPoints,
+		&i.ProficiencyPicks,
 	)
 	return i, err
 }
@@ -424,6 +428,24 @@ type SetCurrentCharacterParams struct {
 // Only a character the user owns and has not retired: none updated is an unknown character.
 func (q *Queries) SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setCurrentCharacter, arg.CharacterID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setProficiencyPicks = `-- name: SetProficiencyPicks :execrows
+UPDATE characters SET proficiency_picks = $1 WHERE id = $2
+`
+
+type SetProficiencyPicksParams struct {
+	ProficiencyPicks string
+	ID               int64
+}
+
+// The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
+func (q *Queries) SetProficiencyPicks(ctx context.Context, arg SetProficiencyPicksParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setProficiencyPicks, arg.ProficiencyPicks, arg.ID)
 	if err != nil {
 		return 0, err
 	}

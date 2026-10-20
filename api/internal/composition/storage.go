@@ -21,8 +21,6 @@ import (
 	hpq "github.com/ceffo/critical/api/internal/adapters/hpdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
 	itemq "github.com/ceffo/critical/api/internal/adapters/itemdal/queries"
-	"github.com/ceffo/critical/api/internal/adapters/skilldal"
-	skillq "github.com/ceffo/critical/api/internal/adapters/skilldal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookdal"
 	spellbookq "github.com/ceffo/critical/api/internal/adapters/spellbookdal/queries"
@@ -83,6 +81,7 @@ type CharacterStore interface {
 	detailssvc.DAL
 	levelupsvc.DAL
 	skillsvc.Points
+	skillsvc.Picks
 	acsvc.Overrides
 }
 
@@ -122,7 +121,6 @@ type Storage struct {
 	Items     itemsvc.DAL
 	Forms     combatsvc.FormStore
 	XP        xpsvc.DAL
-	Skill     skillsvc.DAL
 	Spellbook SpellbookStore
 	Dice      dicesvc.DAL
 	Auth      authsvc.DAL
@@ -150,7 +148,6 @@ func storageOn(store Store, conn postgres.DBTX) Storage {
 		Items:     itemdal.New(itemq.New(conn), texts),
 		Forms:     attackformdal.New(formq.New(conn)),
 		XP:        xpdal.New(xpq.New(conn)),
-		Skill:     skilldal.New(skillq.New(conn)),
 		Spellbook: spellbookdal.New(spellbookq.New(conn)),
 		Dice:      dicedal.New(diceq.New(conn)),
 		Auth:      authdal.New(authq.New(conn)),
@@ -171,7 +168,6 @@ func memoryStorage(m *memory.Store) Storage {
 		Items:     m.Items(),
 		Forms:     m.Forms(),
 		XP:        m.XP(),
-		Skill:     m.Skills(),
 		Spellbook: m.Spellbooks(),
 		Dice:      m.Dice(),
 		Auth:      m.Auth(),

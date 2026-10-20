@@ -3,7 +3,8 @@
 **Status**: proposed 2026-10-20 (the decisions are the user's, from the triage of the proficiency
 epic on 2026-10-19; this ADR writes them down as steps). Parts marked _(proposed)_ are readings
 this ADR adds where the book leaves a figure open; they await the user's OK in the PR. Not
-implemented. Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
+implemented. The non-weapon steps (1, 3 to 5, 10 to 14 and 16.1, the non-weapon pool) as built
+2026-10-20; steps 6 to 9, 15 and 16.2 to 16.3 not implemented. Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
 proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequences),
 [ADR 0030](0030-classes-and-races.md) (steps 12, 17 and 18 and the "Not covered" proficiency
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
@@ -68,7 +69,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    Tests: `TestProficiencyTables_Step1_Table38Crossovers` (seedcheck: Table 38's five rows),
    `TestProficiencies_Step2_OptionsWireShape` (composition: the catalogue and the groups on
    `GET /api/characters/options`, as `proficiencies` and `proficiencyGroups`),
-   `ProficiencyTables_Step1_Table34AndTable38` (seedcheck: the four rows and five classes above,
+   `TestProficiencyTables_Step1_Table34AndTable38` (seedcheck: the four rows and five classes above,
    read from the seed file).
 2. **The non-weapon catalogue.** The same file's `nonweapon` list holds every proficiency of PHB
    Table 37 (p.54-55) once: 65 rows. Each has an `id` (a stable snake_case code; the seed bard's
@@ -100,20 +101,32 @@ writes `Test<name>` and adds the prefix here in the same PR.
    bonus for the non-weapon pool, available, spent, left) so the screen shows why. Examples: the
    PHB's dwarf fighter at level 1, Intelligence 11: 4 weapon and 3 + 0 + 2 = 5 non-weapon slots;
    Kelsen (rogue, level 15, Intelligence 14): 2 + 3 = 5 weapon and 3 + 3 + 4 = 10 non-weapon slots.
-   Tests: `ProficiencySlots_Step3_ByGroupAndLevel` (ruletablesadpt: each group at levels 1, the
-   first gain level, one below it and 20), `Derive_Step3_SlotsFollowTheRealizedLevel`
+   Tests: `TestProficiencySlots_Step3_ByGroupAndLevel` (ruletablesadpt: each group at levels 1, the
+   first gain level, one below it and 20), `TestDerive_Step3_SlotsFollowTheRealizedLevel`
    (charactersvc: a pending level-up grants nothing; the Intelligence term; Kelsen's 5 and 10).
+   _(As built, non-weapon pool, 2026-10-20: `ruletablesvc.NonweaponSlots`, Table 34 read from the
+   seed's `slots` rows; served as `derived.proficiencySlots.nonWeapon` {initial, perLevels,
+   levelGained, intelligence, available, spent, left} on `GET /api/character`, `left` negative
+   when over. The tests are in ruletablesvc (with `TestProficiencySlots_Step3_IntelligenceBonusPerTable4`)
+   and charactersvc; the composition's `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP` reads
+   10 at level 15 with 17 pending and 11 once 17 is taken. Without the languages as picks (step
+   6) Kelsen spends 8 of 10.)_
 4. **Cost of a non-weapon pick.** Table 37's slots when one of the proficiency's groups is among
    the class's Table 38 groups, one more otherwise (PHB p.54). A bard pays 1 for Tumbling
    (rogue), a fighter 2.
-   Test: `NonweaponCost_Step4_CrossoverAddsOne` (proficiencysvc: in and out of the class's
-   groups, a proficiency of several groups, each of the five classes).
+   Test: `TestNonweaponCost_Step4_CrossoverAddsOne` (proficiencysvc: in and out of the class's
+   groups, a proficiency of several groups, each of the five classes). _(As built: in ruletablesvc,
+   `NonweaponCost`; no proficiencysvc package, see step 12.)_
 5. **Extra slots improve the check.** A non-weapon pick spends at least its cost; each slot spent
    beyond it adds +1 to its check target (PHB p.56). Amends [ADR 0014](0014-skill-checks.md)
    step 1: the target is the ability score + the catalogue's modifier + the extra slots; the
    check's payload gains `extraSlots`. A natural 20 still fails (ADR 0014 step 2).
-   Tests: `NonweaponPick_Step5_ExtraSlotsRaiseTheTarget` (proficiencysvc), `SkillCheck_Step5_TargetCountsExtraSlots`
+   Tests: `TestNonweaponPick_Step5_ExtraSlotsRaiseTheTarget` (proficiencysvc), `TestSkillCheck_Step5_TargetCountsExtraSlots`
    (skillsvc: one d20; cost, cost + 1, cost + 3; an entry logged before reads 0).
+   _(As built: the figures are derived on the character (charactersvc, `PickFigures` with `cost`,
+   `extraSlots`, `target`), which skillsvc's checks read; `extraSlots` is in the check's payload
+   and answer, absent from the payload when 0. A pick with no check (Blind-fighting,
+   Mountaineering, an id the catalogue does not hold) is not on the Skills tab and is not rolled.)_
 6. **Languages are picks.** Every language of the character's list
    ([ADR 0032](0032-character-identity-and-creation-rolls.md) step 4) other than the native one
    and Common counts as one "Languages, Modern" pick of 1 slot in the non-weapon pool (the general
@@ -184,15 +197,18 @@ writes `Test<name>` and adds the prefix here in the same PR.
     in `internal/render` and an `apiError.over_budget` key (en, fr); nothing is written. Amends
     ADR 0030 steps 17 and 18 (their budget was a warning only) and their creation: at creation
     the spent before is 0, so a new character can never be created over budget.
-    Tests: `Budget_Step10_RefusedWhenOverAndGrowing` (proficiencysvc: under, at, over and growing
+    Tests: `TestBudget_Step10_RefusedWhenOverAndGrowing` (proficiencysvc: under, at, over and growing
     refused, over and equal stored, over and shrinking stored; each pool),
     `SetPoints_Step10_SkillPointsRefusedOverAndGrowing` (skillsvc: total, a thief's per-skill cap,
     the bard's total), `Create_Step10_OverBudgetRefused` (charactersvc), `ErrorMapping_Step10_OverBudget`
     (render).
     _(As built for the skill points, 2026-10-20: `domain.ErrOverBudget` and `domain.BudgetError`
     (`Field`, `Spent`, `Limit`); the body adds `field`, `spent` and `limit`, which the web's
-    `apiError.over_budget` wording shows. Details in ADR 0030 step 17's as-built note. The slot
-    pools are not built yet.)_
+    `apiError.over_budget` wording shows. Details in ADR 0030 step 17's as-built note. The
+    non-weapon pool as built 2026-10-20: `charactersvc.PicksWithinBudget`, the same error with
+    field `nonweapon`, on the save, the preview and the creation; the weapon pool is not built.
+    Tests: `TestBudget_Step10_RefusedWhenOverAndGrowing` (charactersvc) and
+    `TestBudget_Step10_OverAndShrinkingStored` (skillsvc).)_
 11. **Warnings and reminders, never refusals.** Served on `GET /api/character` (`warnings`) and
     with every editor preview and save answer:
     - `slots_over_budget` `{pool, spent, available}` (`pool` `weapon` or `nonweapon`);
@@ -200,8 +216,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
       after a level-up alike;
     - the skill points keep ADR 0030's over-budget codes `skill_points_total` and
       `skill_points_per_skill`, and gain the reminder `skill_points_to_spend` `{left}`.
-    Tests: `Warnings_Step11_OverBudgetAndToSpend` (charactersvc: each code with its numbers, none
+    Tests: `TestWarnings_Step11_OverBudgetAndToSpend` (charactersvc: each code with its numbers, none
     when the pool is spent exactly).
+    _(As built, non-weapon pool, 2026-10-20: in `warnings` with `field` `nonweapon` beside `pool`;
+    a stored pick whose id the catalogue does not hold adds `proficiency_unknown` with field
+    `nonweapon.<id>` (step 16). `skill_points_to_spend` is not built.)_
 
 ### Picks, the editor and the action log
 
@@ -215,18 +234,37 @@ writes `Test<name>` and adds the prefix here in the same PR.
     `duplicate`, `out_of_range` (fewer slots than the cost, step 5; a weapon pick's count, step
     9), `not_allowed` (steps 6 and 9), `weapon_not_allowed` (step 7), then step 10's
     `over_budget`. The same editor serves creation, a level-up, catching up and a correction.
-    Tests: `SetPicks_Step12_RefusalsWriteNothing`, `PreviewPicks_Step12_SameAnswerAsTheSave`
-    (proficiencysvc), `Proficiencies_Step12_WireShape` (router).
+    Tests: `TestSetPicks_Step12_RefusalsWriteNothing`, `PreviewPicks_Step12_SameAnswerAsTheSave`
+    (proficiencysvc), `TestProficiencies_Step12_WireShape` (router).
+    _(As built, non-weapon picks, 2026-10-20, following the skill points' split (ADR 0030 step 17):
+    the rules (`ValidPicks`, `PicksWithinBudget`, the figures) are in charactersvc, the save and
+    its codec in skillsvc (`SetProficiencies`, `PreviewProficiencies`), so there is no
+    proficiencysvc. The picks are stored per character as the JSON column
+    `characters.proficiency_picks` (`{"nonweapon": [{"id", "slots"}]}`, migration 025), read with
+    the character. The body is `{nonweapon: [{id, slots}]}`, the field required (an empty list
+    removes every pick); `weapon` and `languages` come with their steps. The answer is
+    `{proficiencySlots, warnings}` (the derived block's shape, the slot warnings). A stored id
+    the catalogue no longer holds may be kept (1 slot or more) but never added. Tests also:
+    `TestValidPicks_Step12_Refusals`, `TestPreviewPicks_Step12_SameRefusalsAsTheSave`
+    (charactersvc), `TestProficiencies_Step12_Refusals` (router); the composition's
+    `TestProficiencies_Step13_PickUndoRedo` checks the preview answers what the save does.)_
 13. **Each save is one undoable move.** A save that changes the picks or the languages is one
     `proficiencies` entry of the action log with a `proficiencies` snapshot (the picks and the
     languages before and after), as the `skill_points` move of ADR 0030 step 17: undo writes the
     state before back, redo the one after; a save that changes nothing logs nothing.
-    Tests: `SetPicks_Step13_LogsOneMoveWithASnapshot`, `SetPicks_Step13_RestorerWritesThePicksBack`
-    (proficiencysvc), `Proficiencies_Step13_PickUndoRedo` (composition).
+    Tests: `TestSetPicks_Step13_LogsOneMoveWithASnapshot`, `TestSetPicks_Step13_RestorerWritesThePicksBack`
+    (proficiencysvc), `TestProficiencies_Step13_PickUndoRedo` (composition).
+    _(As built: in skillsvc; the snapshot and the payload's before and after are
+    `{nonweapon: [{id, slots}]}`, the languages to be added with step 6. The journal words the
+    entry per pick whose slots changed.)_
 14. **Creation takes picks.** The creation form uses the editor of step 12; its picks and
     languages are checked by the same code, with an empty state before (step 10). Leftover slots
     are allowed and reminded (step 11).
-    Test: `Create_Step14_PicksCheckedAsTheEditor` (charactersvc).
+    Test: `TestCreate_Step14_PicksCheckedAsTheEditor` (charactersvc).
+    _(As built: `POST /api/characters` and its preview take `proficiencies: {nonweapon: [...]}`;
+    `POST /api/characters/checks` takes the same and answers `proficiencySlots` once the class, the
+    XP and the Intelligence are entered. Also `TestProficiencies_Step14_CreationWithPicks`
+    (composition).)_
 15. **The level-up says what it grants.** The pending level-up prompt and the level-up answer
     ([ADR 0030](0030-classes-and-races.md) step 7) carry what the level grants beyond hit points:
     the weapon and non-weapon slots gained (available at the level minus available at the level
@@ -250,9 +288,18 @@ writes `Test<name>` and adds the prefix here in the same PR.
        slots); with several specialized types, the first in list order (the others plain picks,
        logged). Another class's flag is dropped (ADR 0030 step 12 refused it on every save);
     4. nothing is refused: a character left over budget sees step 11's warning.
-    Tests: `Migrate_Step16_ProficiencyRowsBecomePicks`, `Migrate_Step16_OwnedWeaponTypesBecomePicks`,
-    `Migrate_Step16_SpecializedFlagBecomesAPick` (storage/postgres), `Kelsen_Step16_PicksAndPools` (seedcheck:
+    Tests: `TestMigrate_Step16_ProficiencyRowsBecomePicks`, `Migrate_Step16_OwnedWeaponTypesBecomePicks`,
+    `Migrate_Step16_SpecializedFlagBecomesAPick` (storage/postgres), `TestKelsen_Step16_PicksAndPools` (seedcheck:
     Kelsen's picks and pools as in the Consequences).
+    _(As built for 16.1, 2026-10-20: the data step after migration 025 (`pickProficiencies`)
+    reads the catalogue from the seeds. Unlike 16.1's "not converted", a row whose id is no
+    catalogue id is kept as a pick of 1 slot and served with the warning `proficiency_unknown`
+    (the work item's acceptance: never dropped); the player removes it. The seed character's
+    picks are in `seeds/character.json` (`proficiencies`), written when the character is inserted
+    into an empty database, never reconciled; `seeds/skills.json` keeps the bard skills only. The
+    proficiencies-only DAL (`skilldal`) is gone. Kelsen's seedcheck runs on the campaign seeds and
+    the fixture: 8 of 10 slots until the languages are picks. Also
+    `TestMigrate_Step16_UnknownIDKeptAsOneSlot`, `TestMigrate_Step16_RunsOnceWithTheMigration`.)_
 
 ## Consequences
 

@@ -8,7 +8,6 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
-	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
@@ -168,24 +167,6 @@ func (p XP) Delete(ctx context.Context, characterID, entryID int64) error {
 		delete(t.xp, entryID)
 		return nil
 	})
-}
-
-// Skills is each character's skill catalogue (skillsvc.DAL).
-type Skills struct{ s *Store }
-
-var _ skillsvc.DAL = Skills{}
-
-// Skills returns the skill port.
-func (s *Store) Skills() Skills { return Skills{s} }
-
-// ListProficiencies returns the character's proficiencies in sheet order.
-func (p Skills) ListProficiencies(ctx context.Context, characterID int64) ([]skillsvc.ProficiencyDef, error) {
-	out := []skillsvc.ProficiencyDef{}
-	err := p.s.read(ctx, func(t *tables) error {
-		out = append(out, t.proficiencies[characterID]...)
-		return nil
-	})
-	return out, err
 }
 
 // Dice is the dice composer's favourites (dicesvc.DAL).

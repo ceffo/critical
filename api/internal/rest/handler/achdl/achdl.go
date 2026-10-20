@@ -49,14 +49,17 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc acsvc.SVC) {
 // (the score, on the dexterity row) and off (why a row shown does not add:
 // magic_armour, duplicate, armour_worn, not_best).
 type RowDTO struct {
-	Term         string `json:"term"`
-	ItemID       string `json:"itemId,omitempty"`
-	Buff         string `json:"buff,omitempty"`
-	SpellID      string `json:"spellId,omitempty"`
-	Value        int    `json:"value"`
-	MissileValue *int   `json:"missileValue,omitempty"`
-	Dexterity    int    `json:"dexterity,omitempty"`
-	Off          string `json:"off,omitempty"`
+	Term    string `json:"term"`
+	ItemID  string `json:"itemId,omitempty"`
+	Buff    string `json:"buff,omitempty"`
+	SpellID string `json:"spellId,omitempty"`
+	// ProficiencyID: a buff a successful proficiency check put on (ADR
+	// 0037 step 20.1), named by the web from the proficiency.
+	ProficiencyID string `json:"proficiencyId,omitempty"`
+	Value         int    `json:"value"`
+	MissileValue  *int   `json:"missileValue,omitempty"`
+	Dexterity     int    `json:"dexterity,omitempty"`
+	Off           string `json:"off,omitempty"`
 }
 
 // OverrideDTO is the override: a number -10 to 10 and the label the player
@@ -93,7 +96,7 @@ func ToDTO(a *acsvc.AC) ACDTO {
 	out := ACDTO{AC: a.Value, Missile: a.Missile, Floored: a.Floored, Rows: make([]RowDTO, 0, len(a.Rows)), Warnings: make([]WarningDTO, 0, len(a.Warnings))}
 	for _, r := range a.Rows {
 		out.Rows = append(out.Rows, RowDTO{
-			Term: string(r.Term), ItemID: r.ItemID, Buff: r.Buff, SpellID: r.SpellID, Value: r.Value,
+			Term: string(r.Term), ItemID: r.ItemID, Buff: r.Buff, SpellID: r.SpellID, ProficiencyID: r.ProficiencyID, Value: r.Value,
 			MissileValue: r.MissileValue, Dexterity: r.Dexterity, Off: string(r.Off),
 		})
 	}

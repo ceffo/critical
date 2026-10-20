@@ -161,6 +161,22 @@ type CheckDTO struct {
 	// in target; set for a proficiency only.
 	ExtraSlots *int  `json:"extraSlots,omitempty"`
 	LogEntryID int64 `json:"logEntryId"`
+	// Buff is the buff the verdict in effect put on (ADR 0037 step 20),
+	// omitted when it put none; renewed is true when it replaced an active
+	// one (step 20.3).
+	Buff    *CheckBuffDTO `json:"buff,omitempty"`
+	Renewed bool          `json:"renewed,omitempty"`
+}
+
+// CheckBuffDTO is the buff a check put on: its row id, stored name, the
+// proficiency it is named from, its effects (keyed like the buff API) and
+// rounds, as the skill_check payload records it.
+type CheckBuffDTO struct {
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	ProficiencyID string         `json:"proficiencyId"`
+	Effects       map[string]int `json:"effects"`
+	Rounds        int            `json:"rounds"`
 }
 
 func lastDTO(l *skillsvc.LastCheck) *LastDTO {
@@ -216,6 +232,15 @@ func CheckToDTO(c *skillsvc.CheckResult) CheckDTO {
 	if c.Kind == skillsvc.KindProficiency {
 		score, mod, extra := c.AbilityScore, c.Modifier, c.ExtraSlots
 		out.Ability, out.AbilityScore, out.Modifier, out.ExtraSlots = string(c.Ability), &score, &mod, &extra
+	}
+	if c.Buff != nil {
+		b := c.Buff.Buff
+		fx := map[string]int{}
+		if b.Effects.AC != nil {
+			fx["ac"] = *b.Effects.AC
+		}
+		out.Buff = &CheckBuffDTO{ID: b.ID, Name: b.Name, ProficiencyID: b.ProficiencyID, Effects: fx, Rounds: b.Duration}
+		out.Renewed = c.Buff.Renewed
 	}
 	return out
 }

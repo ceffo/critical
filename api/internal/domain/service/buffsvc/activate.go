@@ -21,6 +21,8 @@ func (s *service) Activate(ctx context.Context, characterID int64, buff BuffEffe
 	// is not from a spell.
 	buff.SpellID = ""
 	buff.OnOther = false // step 20.5: only a spell cast marks a row
+	// ADR 0037 step 20.1: only a successful check stamps a proficiency.
+	buff.ProficiencyID = ""
 	if buff.ID == "" {
 		buff.ID = uuid.New().String()
 	}

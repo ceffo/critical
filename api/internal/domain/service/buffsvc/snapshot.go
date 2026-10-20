@@ -27,6 +27,9 @@ type snapBuff struct {
 	// SpellID is absent from entries recorded before it existed (and for a
 	// buff not from a spell): they restore it empty.
 	SpellID string `json:"spell_id,omitempty"`
+	// ProficiencyID is absent from entries recorded before it existed and
+	// for a buff not from a proficiency check: they restore it empty.
+	ProficiencyID string `json:"proficiency_id,omitempty"`
 	// OnOther is absent from entries recorded before it existed and for a
 	// buff on the character (ADR 0004 step 20.5): they restore it false.
 	OnOther bool `json:"on_other,omitempty"`
@@ -76,7 +79,7 @@ func toSnapBuffs(buffs []BuffEffect) []snapBuff {
 		out[i] = snapBuff{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: snapEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
-			SpellID: b.SpellID, OnOther: b.OnOther,
+			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 		}
 	}
 	return out
@@ -88,7 +91,7 @@ func fromSnapBuffs(in []snapBuff) []BuffEffect {
 		out[i] = BuffEffect{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: BuffEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
-			SpellID: b.SpellID, OnOther: b.OnOther,
+			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 		}
 	}
 	return out

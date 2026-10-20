@@ -29,12 +29,12 @@ type Inputs struct {
 
 // source is where an AC effect comes from: a buff or a piece's power.
 type source struct {
-	itemID, buff, spellID string
-	effects               buffsvc.BuffEffects
+	itemID, buff, spellID, proficiencyID string
+	effects                              buffsvc.BuffEffects
 }
 
 func (s source) row(t Term, v int) Row {
-	return Row{Term: t, ItemID: s.itemID, Buff: s.buff, SpellID: s.spellID, Value: v}
+	return Row{Term: t, ItemID: s.itemID, Buff: s.buff, SpellID: s.spellID, ProficiencyID: s.proficiencyID, Value: v}
 }
 
 // forAC reports whether an effect set may move the character's AC: one
@@ -73,7 +73,7 @@ func Derive(in Inputs) AC {
 	var buffs, powers []source
 	for _, b := range in.Buffs {
 		if b.Applies && forAC(b.Effects) {
-			buffs = append(buffs, source{buff: b.Name, spellID: b.SpellID, effects: b.Effects})
+			buffs = append(buffs, source{buff: b.Name, spellID: b.SpellID, proficiencyID: b.ProficiencyID, effects: b.Effects})
 		}
 	}
 	for _, p := range in.Powers {

@@ -1313,6 +1313,71 @@ func (_c *MockSVC_PreviewPassTime_Call) RunAndReturn(run func(context.Context, i
 	return _c
 }
 
+// Remove provides a mock function with given fields: ctx, characterID, buffID
+func (_m *MockSVC) Remove(ctx context.Context, characterID int64, buffID string) (bool, actionlog.Snapshot, error) {
+	ret := _m.Called(ctx, characterID, buffID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Remove")
+	}
+
+	var r0 bool
+	var r1 actionlog.Snapshot
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (bool, actionlog.Snapshot, error)); ok {
+		return rf(ctx, characterID, buffID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) bool); ok {
+		r0 = rf(ctx, characterID, buffID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) actionlog.Snapshot); ok {
+		r1 = rf(ctx, characterID, buffID)
+	} else {
+		r1 = ret.Get(1).(actionlog.Snapshot)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64, string) error); ok {
+		r2 = rf(ctx, characterID, buffID)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_Remove_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Remove'
+type MockSVC_Remove_Call struct {
+	*mock.Call
+}
+
+// Remove is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - buffID string
+func (_e *MockSVC_Expecter) Remove(ctx interface{}, characterID interface{}, buffID interface{}) *MockSVC_Remove_Call {
+	return &MockSVC_Remove_Call{Call: _e.mock.On("Remove", ctx, characterID, buffID)}
+}
+
+func (_c *MockSVC_Remove_Call) Run(run func(ctx context.Context, characterID int64, buffID string)) *MockSVC_Remove_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Remove_Call) Return(removed bool, snap actionlog.Snapshot, err error) *MockSVC_Remove_Call {
+	_c.Call.Return(removed, snap, err)
+	return _c
+}
+
+func (_c *MockSVC_Remove_Call) RunAndReturn(run func(context.Context, int64, string) (bool, actionlog.Snapshot, error)) *MockSVC_Remove_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RerollInitiative provides a mock function with given fields: ctx, characterID
 func (_m *MockSVC) RerollInitiative(ctx context.Context, characterID int64) (buffsvc.Initiative, error) {
 	ret := _m.Called(ctx, characterID)

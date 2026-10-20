@@ -43,7 +43,7 @@ func newSheetFixture(t *testing.T, c *charactersvc.Character, languages skills.L
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}, picks: mocks.NewMockPicks(t)}
 	svc, err := skillsvc.New(skillsvc.Deps{
-		Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: f.picks,
+		Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: f.picks, Buffs: mocks.NewMockBuffs(t),
 		Book: testBook(t), Languages: languages, Tables: &fakeTables{}, Tx: f.tx,
 	})
 	require.NoError(t, err)
@@ -265,19 +265,19 @@ func TestSkillCheck_Step5_TargetCountsExtraSlots(t *testing.T) {
 			f := newFixture(t)
 			c := bard() // Dex 17
 			c.Derived.Proficiencies = &skills.ProficiencySlots{Picks: []skills.PickFigures{
-				{ID: "tumbling", Ability: "dex", Slots: tc.slots, Cost: 1, Extra: tc.extra, Known: true},
+				{ID: "jumping", Ability: "dex", Slots: tc.slots, Cost: 1, Extra: tc.extra, Known: true},
 			}}
 			c.Derived.Proficiencies.SetTargets(func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) })
 			f.chars.ExpectedCalls = nil
 			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil)
 			f.records()
 			f.dice.EXPECT().RollDie(20).Return(tc.d20).Once()
-			r := f.roll(t, "tumbling")
+			r := f.roll(t, "jumping")
 			f.dice.AssertNumberOfCalls(t, "RollDie", 1)
 			assert.Equal(t, tc.target, r.Target)
 			assert.Equal(t, tc.extra, r.ExtraSlots)
 			assert.Equal(t, tc.success, r.Success)
-			assert.JSONEq(t, `{"id":"tumbling","kind":"proficiency","die":20,"roll":`+itoa(tc.d20)+`,"target":`+itoa(tc.target)+
+			assert.JSONEq(t, `{"id":"jumping","kind":"proficiency","die":20,"roll":`+itoa(tc.d20)+`,"target":`+itoa(tc.target)+
 				`,"adjustment":0,"adjustedTarget":`+itoa(tc.target)+`,"success":true,"rolledSuccess":true,"ability":"dex","abilityScore":17,`+
 				tc.payloadExtras+`"modifier":0}`, string(f.entries[0].Payload))
 		})

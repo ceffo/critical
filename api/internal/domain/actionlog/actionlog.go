@@ -158,9 +158,12 @@ const KindDice Kind = "dice"
 // KindCorrection is a correction made after a roll (a target AC, a save
 // adjustment, a GM verdict): its own step on the action stack (ADR 0010 step
 // 6). Its payload is a CorrectionStep naming what changed; the corrected
-// entry's new payload is an amend linked to it (Correction.StepID). It has no
-// snapshots: popping it only puts that amend out of effect, so the corrected
-// entry reads its previous payload again. Not one of RollKinds.
+// entry's new payload is an amend linked to it (Correction.StepID). Popping it
+// puts that amend out of effect, so the corrected entry reads its previous
+// payload again. It has no snapshots unless the correction changed state
+// beside the payload (PayloadAmendment.Snapshots: a skill check's verdict
+// putting a buff on or taking it off, ADR 0037 step 20.8); popping it then
+// restores that state too. Not one of RollKinds.
 const KindCorrection Kind = "correction"
 
 // CorrectionStep is the payload of a KindCorrection entry: which entry was
@@ -304,6 +307,11 @@ type PayloadAmendment struct {
 	Payload json.RawMessage
 	// Change names what the amendment changed, for the correction step.
 	Change Change
+	// Snapshots is the state the correction changed beside the payload (a
+	// skill check's buff, ADR 0037 step 20.8), recorded on the correction
+	// step, so popping the step restores it and a redo replays it. Nil for
+	// a correction of the payload only.
+	Snapshots []Snapshot
 }
 
 // Change is the field a correction changed, with its value before and after

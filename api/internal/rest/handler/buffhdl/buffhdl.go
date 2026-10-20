@@ -391,6 +391,10 @@ type BuffEffectDTO struct {
 	// name otherwise). Response only, like startRound: a request's value is
 	// ignored, only a spell cast stamps it.
 	SpellID string `json:"spellId,omitempty"`
+	// ProficiencyID is the proficiency whose successful check put the buff
+	// on (ADR 0037 step 20.1), omitted for any other buff; the client names
+	// the buff from it. Response only, like spellId.
+	ProficiencyID string `json:"proficiencyId,omitempty"`
 	// OnOther marks a row for a spell cast on someone else or on an area
 	// (ADR 0004 step 20.5): it only counts down and never applies. Omitted
 	// for a buff on the character. Response only, like spellId.
@@ -499,7 +503,7 @@ func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 	return BuffEffectDTO{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 		Effects: wire.BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
-		SpellID: b.SpellID, OnOther: b.OnOther,
+		SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 	}
 }
 

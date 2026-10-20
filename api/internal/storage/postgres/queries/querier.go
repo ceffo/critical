@@ -37,6 +37,7 @@ type Querier interface {
 	// past 004 (ADR 0025 step 2.1.1).
 	CountUnowned(ctx context.Context) (int64, error)
 	DeleteCharacterItems(ctx context.Context, characterID int64) error
+	DeleteProficiencyDescription(ctx context.Context, proficiencyID string) error
 	DeleteSpell(ctx context.Context, key sql.NullString) error
 	DeleteText(ctx context.Context, textID int64) error
 	DeleteTextLanguage(ctx context.Context, arg DeleteTextLanguageParams) error
@@ -71,6 +72,8 @@ type Querier interface {
 	// rollback releases it. One fixed key for the whole database.
 	LockWriters(ctx context.Context) error
 	NextTextKey(ctx context.Context) (int64, error)
+	ProficiencyDescriptionKeys(ctx context.Context) ([]ProficiencyDescription, error)
+	ProficiencyDescriptionTexts(ctx context.Context) ([]ProficiencyDescriptionTextsRow, error)
 	// The proficiency picks data step after migration 025 (ADR 0037 step 16): every stored
 	// proficiencies row, per character in sheet order, and each character's class.
 	ProficiencyRows(ctx context.Context) ([]ProficiencyRowsRow, error)
@@ -135,6 +138,7 @@ type Querier interface {
 	TypeWeaponIfUntyped(ctx context.Context, arg TypeWeaponIfUntypedParams) error
 	UpsertBardSkill(ctx context.Context, arg UpsertBardSkillParams) error
 	UpsertProficiency(ctx context.Context, arg UpsertProficiencyParams) error
+	UpsertProficiencyDescription(ctx context.Context, arg UpsertProficiencyDescriptionParams) error
 	UpsertSpell(ctx context.Context, arg UpsertSpellParams) error
 	UpsertText(ctx context.Context, arg UpsertTextParams) error
 	WearItem(ctx context.Context, arg WearItemParams) error

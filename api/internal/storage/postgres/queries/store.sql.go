@@ -365,6 +365,15 @@ func (q *Queries) DeleteCharacterItems(ctx context.Context, characterID int64) e
 	return err
 }
 
+const deleteProficiencyDescription = `-- name: DeleteProficiencyDescription :exec
+DELETE FROM proficiency_descriptions WHERE proficiency_id = $1
+`
+
+func (q *Queries) DeleteProficiencyDescription(ctx context.Context, proficiencyID string) error {
+	_, err := q.db.ExecContext(ctx, deleteProficiencyDescription, proficiencyID)
+	return err
+}
+
 const deleteSpell = `-- name: DeleteSpell :exec
 DELETE FROM spells WHERE key = $1
 `
@@ -972,6 +981,68 @@ func (q *Queries) NextTextKey(ctx context.Context) (int64, error) {
 	var next_key int64
 	err := row.Scan(&next_key)
 	return next_key, err
+}
+
+const proficiencyDescriptionKeys = `-- name: ProficiencyDescriptionKeys :many
+SELECT proficiency_id, description FROM proficiency_descriptions
+`
+
+func (q *Queries) ProficiencyDescriptionKeys(ctx context.Context) ([]ProficiencyDescription, error) {
+	rows, err := q.db.QueryContext(ctx, proficiencyDescriptionKeys)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProficiencyDescription{}
+	for rows.Next() {
+		var i ProficiencyDescription
+		if err := rows.Scan(&i.ProficiencyID, &i.Description); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const proficiencyDescriptionTexts = `-- name: ProficiencyDescriptionTexts :many
+SELECT d.proficiency_id, t.lang, t.body
+FROM proficiency_descriptions d JOIN localized_texts t ON t.text_id = d.description
+ORDER BY d.proficiency_id, t.lang
+`
+
+type ProficiencyDescriptionTextsRow struct {
+	ProficiencyID string
+	Lang          string
+	Body          string
+}
+
+func (q *Queries) ProficiencyDescriptionTexts(ctx context.Context) ([]ProficiencyDescriptionTextsRow, error) {
+	rows, err := q.db.QueryContext(ctx, proficiencyDescriptionTexts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProficiencyDescriptionTextsRow{}
+	for rows.Next() {
+		var i ProficiencyDescriptionTextsRow
+		if err := rows.Scan(&i.ProficiencyID, &i.Lang, &i.Body); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const proficiencyRows = `-- name: ProficiencyRows :many
@@ -1911,6 +1982,21 @@ func (q *Queries) UpsertProficiency(ctx context.Context, arg UpsertProficiencyPa
 		arg.Ability,
 		arg.Modifier,
 	)
+	return err
+}
+
+const upsertProficiencyDescription = `-- name: UpsertProficiencyDescription :exec
+INSERT INTO proficiency_descriptions (proficiency_id, description) VALUES ($1, $2)
+ON CONFLICT (proficiency_id) DO UPDATE SET description = excluded.description
+`
+
+type UpsertProficiencyDescriptionParams struct {
+	ProficiencyID string
+	Description   int64
+}
+
+func (q *Queries) UpsertProficiencyDescription(ctx context.Context, arg UpsertProficiencyDescriptionParams) error {
+	_, err := q.db.ExecContext(ctx, upsertProficiencyDescription, arg.ProficiencyID, arg.Description)
 	return err
 }
 

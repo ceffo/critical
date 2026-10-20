@@ -29,6 +29,8 @@ import (
 //     verified against the artifact; 5.4.2 every artifact spell is upserted by key; 5.4.3 keyed
 //     spells the artifact no longer holds are deleted, unless something refers to them, which
 //     rolls the import back.
+//   - 16.3: the proficiency descriptions are upserted as localized_texts in the same transaction
+//     (importProficiencyDescriptions), so a failure anywhere rolls them back with the spells.
 //   - 5.5: format and version are recorded in the same transaction.
 //   - 5.6: the typed stats are parsed from the six raw texts on upsert, and on every start
 //     (retypeStats): a parser change re-types the stored stats without a new artifact version or
@@ -64,6 +66,9 @@ func importCatalogue(ctx context.Context, tx domain.TxRunner, q storeq.Querier, 
 		if err := deleteRemoved(ctx, q, cat, seedRefs, recorded); err != nil {
 			return err
 		}
+		if err := importProficiencyDescriptions(ctx, q, cat); err != nil {
+			return err
+		}
 		if err := q.RecordCatalogueVersion(ctx, storeq.RecordCatalogueVersionParams{
 			Format: int64(cat.Format), Version: cat.Version,
 		}); err != nil {
@@ -71,6 +76,82 @@ func importCatalogue(ctx context.Context, tx domain.TxRunner, q storeq.Querier, 
 		}
 		return nil
 	})
+}
+
+// importProficiencyDescriptions is ADR 0021 step 16.3: each description becomes localized_texts
+// rows (one per language, ADR 0023) keyed from the proficiency id in proficiency_descriptions.
+// Rows are upserted by id, keeping a row's text key across imports and writing only changed
+// rows; a row the artifact no longer lists is deleted with its texts (nothing in game state
+// refers to a description, so no refusal). The ids agree with the seeds, and both languages are
+// present, before the import is called (catalogue.CheckProficiencyDescriptions).
+func importProficiencyDescriptions(ctx context.Context, q storeq.Querier, cat catalogue.Catalogue) error {
+	w, err := newTextWriter(ctx, q)
+	if err != nil {
+		return err
+	}
+	rows, err := q.ProficiencyDescriptionKeys(ctx)
+	if err != nil {
+		return fmt.Errorf("read proficiency descriptions: %w", err)
+	}
+	stored := make(map[string]int64, len(rows))
+	for _, r := range rows {
+		stored[r.ProficiencyID] = r.Description
+	}
+	listed := make(map[string]bool, len(cat.ProficiencyDescriptions))
+	for _, d := range cat.ProficiencyDescriptions {
+		listed[d.ID] = true
+		prev := sql.NullInt64{}
+		if k, ok := stored[d.ID]; ok {
+			prev = sql.NullInt64{Int64: k, Valid: true}
+		}
+		key, err := w.write(ctx, q, prev, d.Description)
+		if err != nil {
+			return fmt.Errorf("proficiency %q: %w", d.ID, err)
+		}
+		if !key.Valid {
+			return fmt.Errorf("proficiency %q: the description has no text", d.ID)
+		}
+		if err := q.UpsertProficiencyDescription(ctx, storeq.UpsertProficiencyDescriptionParams{
+			ProficiencyID: d.ID, Description: key.Int64,
+		}); err != nil {
+			return fmt.Errorf("upsert proficiency description %q: %w", d.ID, err)
+		}
+	}
+	gone := make([]string, 0)
+	for id := range stored {
+		if !listed[id] {
+			gone = append(gone, id)
+		}
+	}
+	sort.Strings(gone)
+	for _, id := range gone {
+		// The row first, then the texts it keyed: nothing is left pointing at a deleted text.
+		if err := q.DeleteProficiencyDescription(ctx, id); err != nil {
+			return fmt.Errorf("delete proficiency description %q: %w", id, err)
+		}
+		if err := q.DeleteText(ctx, stored[id]); err != nil {
+			return fmt.Errorf("delete texts of proficiency %q: %w", id, err)
+		}
+	}
+	return nil
+}
+
+// ProficiencyDescriptions reads every stored proficiency description (ADR 0021 step 16.6, ADR
+// 0037 step 19.4) as a language map, in the order of the ids. The server reads them once after
+// its import, as it does the spells.
+func (d *DB) ProficiencyDescriptions(ctx context.Context) ([]catalogue.ProficiencyDescription, error) {
+	rows, err := d.q.ProficiencyDescriptionTexts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read proficiency descriptions: %w", err)
+	}
+	var out []catalogue.ProficiencyDescription
+	for _, r := range rows {
+		if len(out) == 0 || out[len(out)-1].ID != r.ProficiencyID {
+			out = append(out, catalogue.ProficiencyDescription{ID: r.ProficiencyID, Description: localized.Text{}})
+		}
+		out[len(out)-1].Description[r.Lang] = r.Body
+	}
+	return out, nil
 }
 
 // sameVersion: step 5.3, equality only (a rollback to an older artifact is an import like any

@@ -9,3 +9,8 @@ type LocalizedText struct {
 	Lang   string
 	Body   string
 }
+
+type ProficiencyDescription struct {
+	ProficiencyID string
+	Description   int64
+}

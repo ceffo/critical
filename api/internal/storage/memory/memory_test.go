@@ -680,3 +680,15 @@ func TestSpellbooks_Step20_5_ASecondAddNeverChangesTheOrigin(t *testing.T) {
 		{Key: "fireball", Origin: spellbook.OriginLevelGrant, GrantLevel: 5},
 	}, got, "a restore sets the origin in place, or appends")
 }
+
+// ADR 0021 step 16: the in-memory store keeps the catalogue's proficiency descriptions, as
+// language maps, and gives them back in the artifact's order (what the e2e suite's server serves).
+func TestStore_Step16_KeepsTheProficiencyDescriptions(t *testing.T) {
+	s, _ := seeded(t)
+	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	got, err := s.ProficiencyDescriptions(context.Background())
+	require.NoError(t, err)
+	require.NotEmpty(t, got)
+	assert.Equal(t, artifact.Catalogue.ProficiencyDescriptions, got)
+}

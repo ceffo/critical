@@ -76,6 +76,8 @@ func newHarness(t *testing.T) *harness {
 	// once, in the caller's context.
 	h.Store.EXPECT().InTx(mock.Anything, mock.Anything).RunAndReturn(
 		func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }).Maybe()
+	// The proficiency descriptions are read back after the import (ADR 0021 step 16.6).
+	h.Store.EXPECT().ProficiencyDescriptions(mock.Anything).Return(nil, nil).Maybe()
 	return h
 }
 

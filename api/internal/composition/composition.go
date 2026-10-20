@@ -32,6 +32,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/profdescsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
@@ -64,10 +65,12 @@ type BackingServices struct {
 	XP        xpsvc.SVC
 	LevelUp   levelupsvc.SVC
 	Rolls     creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
-	Learn     learnsvc.SVC
-	Turn      turnsvc.SVC
-	Details   detailssvc.SVC
-	Skills    skillsvc.SVC
+	// ProficiencyDescriptions serves each non-weapon proficiency's description (ADR 0037 step 19.4).
+	ProficiencyDescriptions profdescsvc.SVC
+	Learn                   learnsvc.SVC
+	Turn                    turnsvc.SVC
+	Details                 detailssvc.SVC
+	Skills                  skillsvc.SVC
 	// AC is the character's derived armour class and its override (ADR
 	// 0033 steps 10 to 13).
 	AC   acsvc.SVC
@@ -197,6 +200,15 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err != nil {
 		return nil, err
 	}
+	// The non-weapon catalogue is a seed file (ADR 0037 steps 1 and 2). Its ids and the
+	// catalogue's descriptions must agree (ADR 0021 step 16.3), before anything is written.
+	proficiencies, err := ruletablesadpt.ReadProficiencies(cfg.SeedsDir)
+	if err != nil {
+		return nil, err
+	}
+	if err := checkProficiencyDescriptions(cat, proficiencies); err != nil {
+		return nil, err
+	}
 	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueEquipment); err != nil {
 		return nil, fmt.Errorf("seed: %w", err)
 	}
@@ -208,6 +220,17 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// (spelldal.Catalogue): page loads read none of it from the database.
 	catalogue, err := spelldal.LoadCatalogue(ctx, spellDAL)
 	if err != nil {
+		return nil, err
+	}
+
+	// The proficiency descriptions are read once after the import, as the spells are (ADR 0037
+	// step 19.4): the pop-up's reads cost the database nothing.
+	descriptions, err := db.ProficiencyDescriptions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	bs.ProficiencyDescriptions, err = profdescsvc.New(descriptions)
+	if err := bs.add(bs.ProficiencyDescriptions, err); err != nil {
 		return nil, err
 	}
 
@@ -248,11 +271,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// The language catalogue (ADR 0032 step 4) is the artifact's: nil before
 	// format 8, which knows no language.
 	languages, _ := ruleTables.Languages()
-	// The non-weapon catalogue is a seed file (ADR 0037 steps 1 and 2).
-	proficiencies, err := ruletablesadpt.ReadProficiencies(cfg.SeedsDir)
-	if err != nil {
-		return nil, err
-	}
 	bs.Character, err = charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
 		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Armour: wornArmour{itemDAL}, Languages: languages, Proficiencies: proficiencies, HP: logSvc,
@@ -399,6 +417,17 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		return nil, err
 	}
 	return bs, nil
+}
+
+// checkProficiencyDescriptions is ADR 0021 step 16.3's check: every proficiency of
+// seeds/proficiencies.json has a description and the reverse, English and French each.
+func checkProficiencyDescriptions(cat catalogue.Catalogue, book *ruletablesvc.Proficiencies) error {
+	all := book.All()
+	ids := make([]string, len(all))
+	for i, p := range all {
+		ids[i] = p.ID
+	}
+	return catalogue.CheckProficiencyDescriptions(cat.ProficiencyDescriptions, ids)
 }
 
 // add appends svc, just built (unless err), to the root's services.

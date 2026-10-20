@@ -68,8 +68,10 @@ type tables struct {
 	// LearnFailures is spellbook_learn_failures (ADR 0030 step 20).
 	LearnFailures []storeq.LearnFailureRefsRow
 	Texts         map[int64]localized.Text
-	Meta          *storeq.CatalogueVersionRow
-	Spells        []spellRow
+	// ProfDescs are proficiency_descriptions rows: the proficiency id to its text key.
+	ProfDescs map[string]int64
+	Meta      *storeq.CatalogueVersionRow
+	Spells    []spellRow
 	// Game state that refers to spells.
 	Snapshots   []snapshotRow
 	Log         []logRow
@@ -134,7 +136,7 @@ func newFakeStore() *fakeStore {
 		Weapons: map[string]weaponRow{}, Items: map[string]storeq.InsertItemParams{},
 		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
-		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
+		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{}, ProfDescs: map[string]int64{},
 		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, SkillPoints: map[int64]string{}, Picks: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
@@ -1058,4 +1060,38 @@ func (f *fakeStore) WearItem(_ context.Context, arg storeq.WearItemParams) error
 	it.State = "worn"
 	f.t.Items[key] = it
 	return nil
+}
+
+func (f *fakeStore) ProficiencyDescriptionKeys(context.Context) ([]storeq.ProficiencyDescription, error) {
+	out := []storeq.ProficiencyDescription{}
+	for id, key := range f.t.ProfDescs {
+		out = append(out, storeq.ProficiencyDescription{ProficiencyID: id, Description: key})
+	}
+	return out, nil
+}
+
+func (f *fakeStore) UpsertProficiencyDescription(_ context.Context, arg storeq.UpsertProficiencyDescriptionParams) error {
+	f.t.ProfDescs[arg.ProficiencyID] = arg.Description
+	return nil
+}
+
+func (f *fakeStore) DeleteProficiencyDescription(_ context.Context, id string) error {
+	delete(f.t.ProfDescs, id)
+	return nil
+}
+
+func (f *fakeStore) ProficiencyDescriptionTexts(context.Context) ([]storeq.ProficiencyDescriptionTextsRow, error) {
+	out := []storeq.ProficiencyDescriptionTextsRow{}
+	for id, key := range f.t.ProfDescs {
+		for _, lang := range f.t.Texts[key].Languages() {
+			out = append(out, storeq.ProficiencyDescriptionTextsRow{ProficiencyID: id, Lang: lang, Body: f.t.Texts[key][lang]})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].ProficiencyID != out[j].ProficiencyID {
+			return out[i].ProficiencyID < out[j].ProficiencyID
+		}
+		return out[i].Lang < out[j].Lang
+	})
+	return out, nil
 }

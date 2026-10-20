@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 var cat = catalogue.Catalogue{Spells: []catalogue.Spell{
@@ -58,26 +59,44 @@ func TestParseSeed_KeysInFileOrder(t *testing.T) {
 }
 
 // books is a Store holding a spellbook per character.
-type books map[int64][]string
+type books map[int64][]spellbook.Entry
 
 func (b books) Keys(_ context.Context, characterID int64) ([]string, error) {
+	keys := []string{}
+	for _, e := range b[characterID] {
+		keys = append(keys, e.Key)
+	}
+	return keys, nil
+}
+
+func (b books) Entries(_ context.Context, characterID int64) ([]spellbook.Entry, error) {
 	return b[characterID], nil
 }
 
+// given is an entry of a spell given (ADR 0030 step 20.6).
+func given(key string) spellbook.Entry {
+	return spellbook.Entry{Key: key, Origin: spellbook.OriginGiven}
+}
+
 // Each character reads its own spellbook, named and levelled from the
-// catalogue, in its stored order; a character without one has none.
+// catalogue, in its stored order, each entry with its origin (ADR 0030 step
+// 20.5); a character without one has none.
 func TestBook_EachCharacterReadsItsOwnSpellbook(t *testing.T) {
 	ctx := context.Background()
-	book := spellbookadpt.New(books{1: {"fireball", "mirror_image"}, 2: {"mirror_image"}}, cat)
+	book := spellbookadpt.New(books{
+		1: {{Key: "fireball", Origin: spellbook.OriginLevelGrant, GrantLevel: 5}, {Key: "mirror_image", Origin: spellbook.OriginStarting}},
+		2: {given("mirror_image")},
+	}, cat)
 
 	one, err := book.All(ctx, 1)
 	require.NoError(t, err)
 	assert.Equal(t, []prepsvc.SpellbookEntry{
-		{ID: "fireball", Name: "Fireball", Level: 3}, {ID: "mirror_image", Name: "Mirror Image", Level: 2},
+		{ID: "fireball", Name: "Fireball", Level: 3, Origin: spellbook.OriginLevelGrant, GrantLevel: 5},
+		{ID: "mirror_image", Name: "Mirror Image", Level: 2, Origin: spellbook.OriginStarting},
 	}, one)
 	two, err := book.All(ctx, 2)
 	require.NoError(t, err)
-	assert.Equal(t, []prepsvc.SpellbookEntry{{ID: "mirror_image", Name: "Mirror Image", Level: 2}}, two)
+	assert.Equal(t, []prepsvc.SpellbookEntry{{ID: "mirror_image", Name: "Mirror Image", Level: 2, Origin: spellbook.OriginGiven}}, two)
 	none, err := book.All(ctx, 3)
 	require.NoError(t, err)
 	assert.Empty(t, none)
@@ -90,6 +109,6 @@ func TestBook_EachCharacterReadsItsOwnSpellbook(t *testing.T) {
 // A stored key the catalogue no longer holds is an error naming it, never a
 // silently shorter spellbook.
 func TestBook_AKeyTheCatalogueLacksIsAnError(t *testing.T) {
-	_, err := spellbookadpt.New(books{1: {"shield"}}, cat).All(context.Background(), 1)
+	_, err := spellbookadpt.New(books{1: {given("shield")}}, cat).All(context.Background(), 1)
 	require.ErrorContains(t, err, `"shield"`)
 }

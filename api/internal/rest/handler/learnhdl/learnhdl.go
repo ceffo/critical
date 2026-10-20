@@ -1,6 +1,7 @@
-// Package learnhdl serves learning a spell (ADR 0030 step 20): the
-// chance-to-learn roll that writes a wizard spell in the current
-// character's spellbook, or records the failure.
+// Package learnhdl serves writing a spell in the spellbook (ADR 0030 step
+// 20): the chance-to-learn roll that writes a wizard spell in the current
+// character's spellbook, or records the failure, and the roll-free add
+// (Ajouter, step 20.6).
 package learnhdl
 
 import (
@@ -24,9 +25,14 @@ type learner interface {
 	Learn(ctx context.Context, characterID int64, spellID string) (*learnsvc.Result, error)
 }
 
-// RegisterRoutes registers the learn endpoint.
+type adder interface {
+	Add(ctx context.Context, characterID int64, spellID string) (*learnsvc.Added, error)
+}
+
+// RegisterRoutes registers the learn and add endpoints.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc learnsvc.SVC) {
 	r.Post("/api/character/spellbook/learn", render.Handle(Learn(charID, svc)))
+	r.Post("/api/character/spellbook/add", render.Handle(Add(charID, svc)))
 }
 
 // LearnBody is the request: the catalogue id of the spell to learn.
@@ -47,19 +53,56 @@ type ResultDTO struct {
 	RetryLevel int `json:"retryLevel"`
 }
 
+// AddedDTO is the entry a roll-free add wrote (step 20.6): the spell, its
+// level and the entry's origin (step 20.5).
+type AddedDTO struct {
+	SpellID    string `json:"spellId"`
+	SpellLevel int    `json:"spellLevel"`
+	// Origin is "learned", "given", "starting" or "level_grant".
+	Origin string `json:"origin"`
+}
+
+// spellBody decodes the request's body, the spell's catalogue id.
+func spellBody(r *http.Request) (string, error) {
+	var b LearnBody
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&b); err != nil {
+		return "", render.BadRequestError("invalid JSON body")
+	}
+	if b.SpellID == "" {
+		return "", render.BadRequestError("spellId is required")
+	}
+	return b.SpellID, nil
+}
+
+// Add handles POST /api/character/spellbook/add {spellId}: the spell written
+// in the spellbook with no roll, refused like Learn but for a failure's block.
+func Add(charID CharacterIDFunc, svc adder) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		spellID, err := spellBody(r)
+		if err != nil {
+			return err
+		}
+		res, err := svc.Add(r.Context(), charID(r), spellID)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, AddedDTO{
+			SpellID: res.SpellID, SpellLevel: res.SpellLevel, Origin: string(res.Origin),
+		})
+		return nil
+	}
+}
+
 // Learn handles POST /api/character/spellbook/learn.
 func Learn(charID CharacterIDFunc, svc learner) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		var b LearnBody
-		dec := json.NewDecoder(r.Body)
-		dec.DisallowUnknownFields()
-		if err := dec.Decode(&b); err != nil {
-			return render.BadRequestError("invalid JSON body")
+		spellID, err := spellBody(r)
+		if err != nil {
+			return err
 		}
-		if b.SpellID == "" {
-			return render.BadRequestError("spellId is required")
-		}
-		res, err := svc.Learn(r.Context(), charID(r), b.SpellID)
+		res, err := svc.Learn(r.Context(), charID(r), spellID)
 		if err != nil {
 			return err
 		}

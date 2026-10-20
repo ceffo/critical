@@ -193,7 +193,7 @@ ON CONFLICT (character_id, id) DO UPDATE SET position = excluded.position, perce
 SELECT COUNT(*) FROM spellbook_entries WHERE character_id = $1;
 
 -- name: InsertSpellbookEntry :exec
-INSERT INTO spellbook_entries (character_id, spell_key, position) VALUES ($1, $2, $3);
+INSERT INTO spellbook_entries (character_id, spell_key, position, origin) VALUES ($1, $2, $3, $4);
 
 -- name: NextTextKey :one
 SELECT (COALESCE(MAX(text_id), 0) + 1)::bigint AS next_key FROM localized_texts;
@@ -336,3 +336,17 @@ SELECT id, proficiency_picks FROM characters ORDER BY id;
 -- name: SpecializedWeaponTypes :many
 SELECT character_id, weapon_type FROM items
 WHERE category = 'weapon' AND specialized = 1 AND weapon_type <> '' ORDER BY character_id, position, id;
+
+-- The spellbook origins of migration 028 (ADR 0030 step 20.5, markLearnedSpells): the stored
+-- entries with their origin, the payloads of the spell_learn entries (a success names the spell it
+-- wrote) and an entry's origin set. Delete them with their step once every environment is past 028
+-- (ADR 0025 step 2.1.1).
+
+-- name: SpellbookEntryOrigins :many
+SELECT character_id, spell_key, origin FROM spellbook_entries ORDER BY character_id, position, spell_key;
+
+-- name: SpellLearnPayloads :many
+SELECT character_id, payload FROM action_log WHERE kind = 'spell_learn' ORDER BY id;
+
+-- name: SetSpellbookEntryOrigin :exec
+UPDATE spellbook_entries SET origin = $3 WHERE character_id = $1 AND spell_key = $2;

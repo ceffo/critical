@@ -34,6 +34,12 @@ type SpellbookEntryDTO struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Level int    `json:"level"`
+	// Origin is how the entry came into the spellbook (ADR 0030 step 20.5):
+	// "learned", "given", "starting" or "level_grant"; absent for a priest's
+	// sphere spell, which is in no book. GrantLevel is the realized level
+	// that granted a level_grant entry (absent otherwise).
+	Origin     string `json:"origin,omitempty"`
+	GrantLevel int    `json:"grant_level,omitempty"`
 	// What casting the spell asks of the player (from the spell effects
 	// data): the splits of the extra slots it grants (the first is the
 	// default), the type of the inventory item it spends, and whether it
@@ -109,7 +115,7 @@ func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 		out := InfoDTO{Spellbook: []SpellbookEntryDTO{}, Limits: []LevelLimitDTO{}}
 		for _, e := range info.Spellbook {
 			dto := SpellbookEntryDTO{
-				ID: e.ID, Name: e.Name, Level: e.Level,
+				ID: e.ID, Name: e.Name, Level: e.Level, Origin: string(e.Origin), GrantLevel: e.GrantLevel,
 				SlotSplits: e.Cast.SlotSplits, ConsumeItemType: e.Cast.ConsumeItemType, AttackRoll: e.Cast.AttackRoll,
 				Damage: e.Damage.Wire(), Modes: spelleffectsvc.ModesWire(e.Cast.Modes),
 				Exposure: e.Exposure.Wire(), CastTarget: castTargetToDTO(e.Cast.Target),

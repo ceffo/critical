@@ -5,6 +5,7 @@ package mocks
 import (
 	context "context"
 
+	spellbook "github.com/ceffo/critical/api/internal/domain/spellbook"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -21,17 +22,17 @@ func (_m *MockSpellbookStore) EXPECT() *MockSpellbookStore_Expecter {
 	return &MockSpellbookStore_Expecter{mock: &_m.Mock}
 }
 
-// AddEntry provides a mock function with given fields: ctx, characterID, spellKey
-func (_m *MockSpellbookStore) AddEntry(ctx context.Context, characterID int64, spellKey string) error {
-	ret := _m.Called(ctx, characterID, spellKey)
+// AddEntry provides a mock function with given fields: ctx, characterID, e
+func (_m *MockSpellbookStore) AddEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
+	ret := _m.Called(ctx, characterID, e)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AddEntry")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, string) error); ok {
-		r0 = rf(ctx, characterID, spellKey)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, spellbook.Entry) error); ok {
+		r0 = rf(ctx, characterID, e)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -47,14 +48,14 @@ type MockSpellbookStore_AddEntry_Call struct {
 // AddEntry is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
-//   - spellKey string
-func (_e *MockSpellbookStore_Expecter) AddEntry(ctx interface{}, characterID interface{}, spellKey interface{}) *MockSpellbookStore_AddEntry_Call {
-	return &MockSpellbookStore_AddEntry_Call{Call: _e.mock.On("AddEntry", ctx, characterID, spellKey)}
+//   - e spellbook.Entry
+func (_e *MockSpellbookStore_Expecter) AddEntry(ctx interface{}, characterID interface{}, e interface{}) *MockSpellbookStore_AddEntry_Call {
+	return &MockSpellbookStore_AddEntry_Call{Call: _e.mock.On("AddEntry", ctx, characterID, e)}
 }
 
-func (_c *MockSpellbookStore_AddEntry_Call) Run(run func(ctx context.Context, characterID int64, spellKey string)) *MockSpellbookStore_AddEntry_Call {
+func (_c *MockSpellbookStore_AddEntry_Call) Run(run func(ctx context.Context, characterID int64, e spellbook.Entry)) *MockSpellbookStore_AddEntry_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+		run(args[0].(context.Context), args[1].(int64), args[2].(spellbook.Entry))
 	})
 	return _c
 }
@@ -64,7 +65,7 @@ func (_c *MockSpellbookStore_AddEntry_Call) Return(_a0 error) *MockSpellbookStor
 	return _c
 }
 
-func (_c *MockSpellbookStore_AddEntry_Call) RunAndReturn(run func(context.Context, int64, string) error) *MockSpellbookStore_AddEntry_Call {
+func (_c *MockSpellbookStore_AddEntry_Call) RunAndReturn(run func(context.Context, int64, spellbook.Entry) error) *MockSpellbookStore_AddEntry_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -113,6 +114,65 @@ func (_c *MockSpellbookStore_DeleteLearnFailure_Call) Return(_a0 error) *MockSpe
 }
 
 func (_c *MockSpellbookStore_DeleteLearnFailure_Call) RunAndReturn(run func(context.Context, int64, string) error) *MockSpellbookStore_DeleteLearnFailure_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Entries provides a mock function with given fields: ctx, characterID
+func (_m *MockSpellbookStore) Entries(ctx context.Context, characterID int64) ([]spellbook.Entry, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Entries")
+	}
+
+	var r0 []spellbook.Entry
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]spellbook.Entry, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []spellbook.Entry); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]spellbook.Entry)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSpellbookStore_Entries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Entries'
+type MockSpellbookStore_Entries_Call struct {
+	*mock.Call
+}
+
+// Entries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSpellbookStore_Expecter) Entries(ctx interface{}, characterID interface{}) *MockSpellbookStore_Entries_Call {
+	return &MockSpellbookStore_Entries_Call{Call: _e.mock.On("Entries", ctx, characterID)}
+}
+
+func (_c *MockSpellbookStore_Entries_Call) Run(run func(ctx context.Context, characterID int64)) *MockSpellbookStore_Entries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSpellbookStore_Entries_Call) Return(_a0 []spellbook.Entry, _a1 error) *MockSpellbookStore_Entries_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSpellbookStore_Entries_Call) RunAndReturn(run func(context.Context, int64) ([]spellbook.Entry, error)) *MockSpellbookStore_Entries_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -285,6 +345,54 @@ func (_c *MockSpellbookStore_RemoveEntry_Call) Return(_a0 error) *MockSpellbookS
 }
 
 func (_c *MockSpellbookStore_RemoveEntry_Call) RunAndReturn(run func(context.Context, int64, string) error) *MockSpellbookStore_RemoveEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RestoreEntry provides a mock function with given fields: ctx, characterID, e
+func (_m *MockSpellbookStore) RestoreEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
+	ret := _m.Called(ctx, characterID, e)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RestoreEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, spellbook.Entry) error); ok {
+		r0 = rf(ctx, characterID, e)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSpellbookStore_RestoreEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RestoreEntry'
+type MockSpellbookStore_RestoreEntry_Call struct {
+	*mock.Call
+}
+
+// RestoreEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - e spellbook.Entry
+func (_e *MockSpellbookStore_Expecter) RestoreEntry(ctx interface{}, characterID interface{}, e interface{}) *MockSpellbookStore_RestoreEntry_Call {
+	return &MockSpellbookStore_RestoreEntry_Call{Call: _e.mock.On("RestoreEntry", ctx, characterID, e)}
+}
+
+func (_c *MockSpellbookStore_RestoreEntry_Call) Run(run func(ctx context.Context, characterID int64, e spellbook.Entry)) *MockSpellbookStore_RestoreEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(spellbook.Entry))
+	})
+	return _c
+}
+
+func (_c *MockSpellbookStore_RestoreEntry_Call) Return(_a0 error) *MockSpellbookStore_RestoreEntry_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSpellbookStore_RestoreEntry_Call) RunAndReturn(run func(context.Context, int64, spellbook.Entry) error) *MockSpellbookStore_RestoreEntry_Call {
 	_c.Call.Return(run)
 	return _c
 }

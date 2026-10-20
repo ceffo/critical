@@ -116,9 +116,10 @@ type snapshotRow struct {
 }
 
 type logRow struct {
-	ID      int64
-	Kind    string
-	Payload string
+	ID          int64
+	CharacterID int64
+	Kind        string
+	Payload     string
 }
 
 type correctionRow struct {
@@ -580,6 +581,42 @@ func (f *fakeStore) InsertSpellbookEntry(_ context.Context, arg storeq.InsertSpe
 }
 
 func (f *fakeStore) SpellbookRefs(context.Context) ([]storeq.SpellbookRefsRow, error) {
+	out := []storeq.SpellbookRefsRow{}
+	for _, e := range f.spellbookRows() {
+		out = append(out, storeq.SpellbookRefsRow{CharacterID: e.CharacterID, SpellKey: e.SpellKey})
+	}
+	return out, nil
+}
+
+func (f *fakeStore) SpellbookEntryOrigins(context.Context) ([]storeq.SpellbookEntryOriginsRow, error) {
+	out := []storeq.SpellbookEntryOriginsRow{}
+	for _, e := range f.spellbookRows() {
+		out = append(out, storeq.SpellbookEntryOriginsRow{CharacterID: e.CharacterID, SpellKey: e.SpellKey, Origin: e.Origin})
+	}
+	return out, nil
+}
+
+func (f *fakeStore) SetSpellbookEntryOrigin(_ context.Context, arg storeq.SetSpellbookEntryOriginParams) error {
+	key := spellbookKey(arg.CharacterID, arg.SpellKey)
+	if e, ok := f.t.Spellbook[key]; ok {
+		e.Origin = arg.Origin
+		f.t.Spellbook[key] = e
+	}
+	return nil
+}
+
+func (f *fakeStore) SpellLearnPayloads(context.Context) ([]storeq.SpellLearnPayloadsRow, error) {
+	out := []storeq.SpellLearnPayloadsRow{}
+	for _, e := range f.t.Log {
+		if e.Kind == "spell_learn" {
+			out = append(out, storeq.SpellLearnPayloadsRow{CharacterID: e.CharacterID, Payload: e.Payload})
+		}
+	}
+	return out, nil
+}
+
+// spellbookRows is spellbook_entries in the order of the character, then the position.
+func (f *fakeStore) spellbookRows() []storeq.InsertSpellbookEntryParams {
 	rows := make([]storeq.InsertSpellbookEntryParams, 0, len(f.t.Spellbook))
 	for _, e := range f.t.Spellbook {
 		rows = append(rows, e)
@@ -594,11 +631,7 @@ func (f *fakeStore) SpellbookRefs(context.Context) ([]storeq.SpellbookRefsRow, e
 		}
 		return a.SpellKey < b.SpellKey
 	})
-	out := []storeq.SpellbookRefsRow{}
-	for _, e := range rows {
-		out = append(out, storeq.SpellbookRefsRow{CharacterID: e.CharacterID, SpellKey: e.SpellKey})
-	}
-	return out, nil
+	return rows
 }
 
 // spellbookOf is the character's spellbook keys in its order.

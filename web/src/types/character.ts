@@ -284,6 +284,17 @@ export interface LearnResult {
   retryLevel: number;
 }
 
+/** How a spellbook entry came in (ADR 0030 step 20.5). */
+export type SpellbookOrigin = "learned" | "given" | "starting" | "level_grant";
+
+/** The entry a roll-free add wrote (`POST /api/character/spellbook/add`, ADR 0030 step 20.6;
+ * learnhdl.AddedDTO), also the payload of a spell_add journal entry. */
+export interface SpellAdded {
+  spellId: string;
+  spellLevel: number;
+  origin: SpellbookOrigin;
+}
+
 export interface Character {
   id: number;
   name: string;

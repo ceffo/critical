@@ -101,7 +101,8 @@ type SpellStore interface {
 }
 
 // SpellbookStore is the spellbook adapter: each character's spellbook, read
-// by spellbookadpt's Book, and written by learning a spell (learnsvc).
+// by spellbookadpt's Book, and written by learning or adding a spell
+// (learnsvc).
 type SpellbookStore interface {
 	spellbookadpt.Store
 	learnsvc.DAL

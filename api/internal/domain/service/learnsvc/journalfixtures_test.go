@@ -10,4 +10,5 @@ import (
 // The web journal's fixtures of the kinds this service logs are what it logs.
 func TestJournalFixturesAreWhatIsLogged(t *testing.T) {
 	journalfixture.Matches[record](t, actionlog.KindSpellLearn)
+	journalfixture.Matches[addRecord](t, actionlog.KindSpellAdd)
 }

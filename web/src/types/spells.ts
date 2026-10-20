@@ -1,6 +1,7 @@
 import type { LocalizedText } from "@/types/localized";
 import type { Modifier } from "@/types/combat";
 import type { MarkedTexts } from "@/lib/valueMarks";
+import type { SpellbookOrigin } from "@/types/character";
 
 export interface SpellSlot {
   level: number;
@@ -246,6 +247,11 @@ export interface SpellbookEntry {
   id: string;
   name: string;
   level: number;
+  /** How the entry came into the spellbook (ADR 0030 step 20.5); absent for a priest's sphere
+   * spell, which is in no book. */
+  origin?: SpellbookOrigin;
+  /** The realized level that granted a level_grant entry; absent otherwise. */
+  grant_level?: number;
   /** The spell grants extra slots: the ways to split them (levels, ascending); the first is the default. */
   slot_splits?: number[][];
   /** The spell spends one inventory item of this type. */

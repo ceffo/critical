@@ -19,6 +19,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // StateKey is the action-log snapshot key of the preparation (the slot list).
@@ -38,6 +39,11 @@ type SpellbookEntry struct {
 	ID    string
 	Name  string
 	Level int
+	// Origin is how the entry came into the spellbook and GrantLevel the
+	// realized level that granted a level_grant one (ADR 0030 step 20.5);
+	// both zero for a priest's sphere spell, which is in no book.
+	Origin     spellbook.Origin
+	GrantLevel int
 	// Cast is what casting the spell asks of the player, from the spell
 	// effects catalog (Info fills it).
 	Cast CastInputs

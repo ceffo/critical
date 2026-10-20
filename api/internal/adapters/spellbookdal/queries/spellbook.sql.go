@@ -10,19 +10,28 @@ import (
 )
 
 const addSpellbookEntry = `-- name: AddSpellbookEntry :exec
-INSERT INTO spellbook_entries (character_id, spell_key, position)
+INSERT INTO spellbook_entries (character_id, spell_key, position, origin, grant_level)
 SELECT $1, $2,
-       COALESCE(MAX(position), -1) + 1 FROM spellbook_entries WHERE character_id = $1
+       COALESCE(MAX(position), -1) + 1, $3, $4
+FROM spellbook_entries WHERE character_id = $1
 ON CONFLICT (character_id, spell_key) DO NOTHING
 `
 
 type AddSpellbookEntryParams struct {
 	CharacterID int64
 	SpellKey    string
+	Origin      string
+	GrantLevel  int64
 }
 
+// A spell already in the book is left as it is: an add never relabels an entry.
 func (q *Queries) AddSpellbookEntry(ctx context.Context, arg AddSpellbookEntryParams) error {
-	_, err := q.db.ExecContext(ctx, addSpellbookEntry, arg.CharacterID, arg.SpellKey)
+	_, err := q.db.ExecContext(ctx, addSpellbookEntry,
+		arg.CharacterID,
+		arg.SpellKey,
+		arg.Origin,
+		arg.GrantLevel,
+	)
 	return err
 }
 
@@ -76,23 +85,30 @@ func (q *Queries) GetLearnFailure(ctx context.Context, arg GetLearnFailureParams
 
 const listSpellbook = `-- name: ListSpellbook :many
 
-SELECT spell_key FROM spellbook_entries WHERE character_id = $1 ORDER BY position, spell_key
+SELECT spell_key, origin, grant_level FROM spellbook_entries WHERE character_id = $1 ORDER BY position, spell_key
 `
 
-// The spells a character knows, by catalogue key, in the sheet's order.
-func (q *Queries) ListSpellbook(ctx context.Context, characterID int64) ([]string, error) {
+type ListSpellbookRow struct {
+	SpellKey   string
+	Origin     string
+	GrantLevel int64
+}
+
+// The spells a character knows, by catalogue key, in the sheet's order, each with its origin
+// (ADR 0030 step 20.5).
+func (q *Queries) ListSpellbook(ctx context.Context, characterID int64) ([]ListSpellbookRow, error) {
 	rows, err := q.db.QueryContext(ctx, listSpellbook, characterID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []string{}
+	items := []ListSpellbookRow{}
 	for rows.Next() {
-		var spell_key string
-		if err := rows.Scan(&spell_key); err != nil {
+		var i ListSpellbookRow
+		if err := rows.Scan(&i.SpellKey, &i.Origin, &i.GrantLevel); err != nil {
 			return nil, err
 		}
-		items = append(items, spell_key)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -114,6 +130,33 @@ type RemoveSpellbookEntryParams struct {
 
 func (q *Queries) RemoveSpellbookEntry(ctx context.Context, arg RemoveSpellbookEntryParams) error {
 	_, err := q.db.ExecContext(ctx, removeSpellbookEntry, arg.CharacterID, arg.SpellKey)
+	return err
+}
+
+const restoreSpellbookEntry = `-- name: RestoreSpellbookEntry :exec
+INSERT INTO spellbook_entries (character_id, spell_key, position, origin, grant_level)
+SELECT $1, $2,
+       COALESCE(MAX(position), -1) + 1, $3, $4
+FROM spellbook_entries WHERE character_id = $1
+ON CONFLICT (character_id, spell_key) DO UPDATE SET origin = EXCLUDED.origin, grant_level = EXCLUDED.grant_level
+`
+
+type RestoreSpellbookEntryParams struct {
+	CharacterID int64
+	SpellKey    string
+	Origin      string
+	GrantLevel  int64
+}
+
+// An undo or a redo writing a snapshot back: the entry as the snapshot holds it, a spell already
+// in the book keeping its place.
+func (q *Queries) RestoreSpellbookEntry(ctx context.Context, arg RestoreSpellbookEntryParams) error {
+	_, err := q.db.ExecContext(ctx, restoreSpellbookEntry,
+		arg.CharacterID,
+		arg.SpellKey,
+		arg.Origin,
+		arg.GrantLevel,
+	)
 	return err
 }
 

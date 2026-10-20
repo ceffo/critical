@@ -176,23 +176,23 @@ func (_c *MockQuerier_GetLearnFailure_Call) RunAndReturn(run func(context.Contex
 }
 
 // ListSpellbook provides a mock function with given fields: ctx, characterID
-func (_m *MockQuerier) ListSpellbook(ctx context.Context, characterID int64) ([]string, error) {
+func (_m *MockQuerier) ListSpellbook(ctx context.Context, characterID int64) ([]queries.ListSpellbookRow, error) {
 	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListSpellbook")
 	}
 
-	var r0 []string
+	var r0 []queries.ListSpellbookRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListSpellbookRow, error)); ok {
 		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) []string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListSpellbookRow); ok {
 		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
+			r0 = ret.Get(0).([]queries.ListSpellbookRow)
 		}
 	}
 
@@ -224,12 +224,12 @@ func (_c *MockQuerier_ListSpellbook_Call) Run(run func(ctx context.Context, char
 	return _c
 }
 
-func (_c *MockQuerier_ListSpellbook_Call) Return(_a0 []string, _a1 error) *MockQuerier_ListSpellbook_Call {
+func (_c *MockQuerier_ListSpellbook_Call) Return(_a0 []queries.ListSpellbookRow, _a1 error) *MockQuerier_ListSpellbook_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_ListSpellbook_Call) RunAndReturn(run func(context.Context, int64) ([]string, error)) *MockQuerier_ListSpellbook_Call {
+func (_c *MockQuerier_ListSpellbook_Call) RunAndReturn(run func(context.Context, int64) ([]queries.ListSpellbookRow, error)) *MockQuerier_ListSpellbook_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -277,6 +277,53 @@ func (_c *MockQuerier_RemoveSpellbookEntry_Call) Return(_a0 error) *MockQuerier_
 }
 
 func (_c *MockQuerier_RemoveSpellbookEntry_Call) RunAndReturn(run func(context.Context, queries.RemoveSpellbookEntryParams) error) *MockQuerier_RemoveSpellbookEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RestoreSpellbookEntry provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) RestoreSpellbookEntry(ctx context.Context, arg queries.RestoreSpellbookEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RestoreSpellbookEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RestoreSpellbookEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_RestoreSpellbookEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RestoreSpellbookEntry'
+type MockQuerier_RestoreSpellbookEntry_Call struct {
+	*mock.Call
+}
+
+// RestoreSpellbookEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.RestoreSpellbookEntryParams
+func (_e *MockQuerier_Expecter) RestoreSpellbookEntry(ctx interface{}, arg interface{}) *MockQuerier_RestoreSpellbookEntry_Call {
+	return &MockQuerier_RestoreSpellbookEntry_Call{Call: _e.mock.On("RestoreSpellbookEntry", ctx, arg)}
+}
+
+func (_c *MockQuerier_RestoreSpellbookEntry_Call) Run(run func(ctx context.Context, arg queries.RestoreSpellbookEntryParams)) *MockQuerier_RestoreSpellbookEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.RestoreSpellbookEntryParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_RestoreSpellbookEntry_Call) Return(_a0 error) *MockQuerier_RestoreSpellbookEntry_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_RestoreSpellbookEntry_Call) RunAndReturn(run func(context.Context, queries.RestoreSpellbookEntryParams) error) *MockQuerier_RestoreSpellbookEntry_Call {
 	_c.Call.Return(run)
 	return _c
 }

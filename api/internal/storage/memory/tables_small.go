@@ -9,6 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // Crit is the house crit table (combatsvc.CritStore).
@@ -260,21 +261,52 @@ func (s *Store) Spellbooks() Spellbooks { return Spellbooks{s} }
 func (p Spellbooks) Keys(ctx context.Context, characterID int64) ([]string, error) {
 	out := []string{}
 	err := p.s.read(ctx, func(t *tables) error {
+		for _, e := range t.spellbooks[characterID] {
+			out = append(out, e.Key)
+		}
+		return nil
+	})
+	return out, err
+}
+
+// Entries returns the character's spellbook in sheet order, each entry with
+// its origin.
+func (p Spellbooks) Entries(ctx context.Context, characterID int64) ([]spellbook.Entry, error) {
+	out := []spellbook.Entry{}
+	err := p.s.read(ctx, func(t *tables) error {
 		out = append(out, t.spellbooks[characterID]...)
 		return nil
 	})
 	return out, err
 }
 
-// AddEntry writes the spell at the end of the character's spellbook (a
-// spell already there stays where it is). The slice is copied: a rolled-back
-// transaction shares the one before it.
-func (p Spellbooks) AddEntry(ctx context.Context, characterID int64, spellKey string) error {
+// AddEntry writes the entry at the end of the character's spellbook. A spell
+// already there is left as it is, origin and all.
+func (p Spellbooks) AddEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
+	return p.put(ctx, characterID, e, false)
+}
+
+// RestoreEntry writes the entry as an undo or a redo's snapshot holds it: at
+// the end of the spellbook, or in its place with the entry's origin.
+func (p Spellbooks) RestoreEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
+	return p.put(ctx, characterID, e, true)
+}
+
+// put appends the entry, or replaces the one already there when replace is
+// set. The slice is copied: a rolled-back transaction shares the one before
+// it.
+func (p Spellbooks) put(ctx context.Context, characterID int64, e spellbook.Entry, replace bool) error {
 	return p.s.write(ctx, func(t *tables) error {
-		if slices.Contains(t.spellbooks[characterID], spellKey) {
-			return nil
+		book := slices.Clone(t.spellbooks[characterID])
+		if i := slices.IndexFunc(book, func(x spellbook.Entry) bool { return x.Key == e.Key }); i >= 0 {
+			if !replace {
+				return nil
+			}
+			book[i] = e
+		} else {
+			book = append(book, e)
 		}
-		t.spellbooks[characterID] = append(slices.Clone(t.spellbooks[characterID]), spellKey)
+		t.spellbooks[characterID] = book
 		return nil
 	})
 }
@@ -283,7 +315,7 @@ func (p Spellbooks) AddEntry(ctx context.Context, characterID int64, spellKey st
 func (p Spellbooks) RemoveEntry(ctx context.Context, characterID int64, spellKey string) error {
 	return p.s.write(ctx, func(t *tables) error {
 		t.spellbooks[characterID] = slices.DeleteFunc(slices.Clone(t.spellbooks[characterID]),
-			func(k string) bool { return k == spellKey })
+			func(e spellbook.Entry) bool { return e.Key == spellKey })
 		return nil
 	})
 }

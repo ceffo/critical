@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -135,4 +136,64 @@ func TestLearn_Step20_4_TheSeedSpellbookComesInWithoutRolls(t *testing.T) {
 	for _, e := range entries {
 		assert.NotEqual(t, actionlog.KindSpellLearn, e.Kind)
 	}
+}
+
+// originsOf is the character's spellbook as "key:origin", in its order.
+func originsOf(t *testing.T, bs *composition.BackingServices, id int64) []string {
+	t.Helper()
+	info, err := bs.Prep.Info(context.Background(), id)
+	require.NoError(t, err)
+	out := []string{}
+	for _, e := range info.Spellbook {
+		out = append(out, e.ID+":"+string(e.Origin))
+	}
+	return out
+}
+
+// ADR 0030 steps 20.5 and 20.6 through the wiring and the in-memory store: a
+// mage learns Sleep (learned) and fails Light; Ajouter writes Light with no
+// die (given), lifting the block; undoing the add takes Light out and puts
+// the block back (Learn refuses it again). The seed's book is starting. Two d100s, exactly: the add rolls none.
+func TestAdd_Step20_6_AddLiftsTheBlockAndItsUndoPutsItBack(t *testing.T) {
+	ctx := context.Background()
+	dice := &d100s{t: t, values: []int{65, 66}}
+	cfg := fixtureConfig()
+	cfg.Dice = dice
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	seed := originsOf(t, bs, rootCharacter(t, bs))
+	require.NotEmpty(t, seed)
+	for _, e := range seed {
+		assert.Regexp(t, `:starting$`, e, "the seed's book is starting")
+	}
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Elminster", Class: "mage", Race: "human", Str: 9, Dex: 12, Con: 11, Int: 15, Wis: 12, Cha: 10, HPMax: 3,
+	})
+	require.NoError(t, err)
+
+	_, err = bs.Learn.Learn(ctx, id, "sleep")
+	require.NoError(t, err)
+	got, err := bs.Learn.Learn(ctx, id, "light")
+	require.NoError(t, err)
+	require.False(t, got.Learned)
+
+	added, err := bs.Learn.Add(ctx, id, "light")
+	require.NoError(t, err, "a spell failed at this level is not refused")
+	assert.Equal(t, learnsvc.Added{SpellID: "light", SpellLevel: 1, Origin: spellbook.OriginGiven}, *added)
+	assert.Equal(t, []string{"sleep:learned", "light:given"}, originsOf(t, bs, id), "at the end of the book")
+	entries, err := bs.Log.List(ctx, id, 1)
+	require.NoError(t, err)
+	assert.Equal(t, actionlog.KindSpellAdd, entries[0].Kind)
+	_, err = bs.Learn.Add(ctx, id, "light")
+	require.ErrorIs(t, err, learnsvc.ErrAlreadyKnown)
+
+	undoTop(t, bs, id)
+	assert.Equal(t, []string{"sleep:learned"}, originsOf(t, bs, id), "the undo takes the spell out")
+	_, err = bs.Learn.Learn(ctx, id, "light")
+	require.ErrorIs(t, err, learnsvc.ErrFailedAtLevel, "and puts the block back")
+	assert.Equal(t, 2, dice.calls, "no die for the add or a refusal")
 }

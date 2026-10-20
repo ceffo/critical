@@ -49,6 +49,12 @@ type SVC interface {
 	// 8). It is an audited amend, its own undoable step; refusals are
 	// AmendLatest's (actionlog.LatestAmender) and domain.ErrInvalidInput.
 	AdjustAbility(ctx context.Context, characterID, entryID int64, adj Adjustment) (*AbilityCheckResult, error)
+	// PreviewPoints is the skills tab as it would read if the skill points
+	// were points (ADR 0030 steps 17 and 18): the percentages with their
+	// terms and the budget, for the editor to show while the player types.
+	// It writes and logs nothing; the points are refused as SetPoints
+	// refuses them (a *domain.FieldError).
+	PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*Skills, error)
 	// SetPoints sets a thief's or a bard's skill points per skill, logged
 	// and undoable (ADR 0030 steps 17 and 18). A *domain.FieldError for
 	// points refused (or any point of a class without skill points);
@@ -67,6 +73,9 @@ type DAL interface {
 // Characters reads the sheet's ability scores.
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	// PreviewSkillPoints is the character derived with draft skill points,
+	// nothing stored.
+	PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*charactersvc.Character, error)
 }
 
 // Abilities gives the sheet's score in an ability and the score in effect

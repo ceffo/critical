@@ -572,12 +572,8 @@ type DraftInput struct {
 }
 
 // SkillBudget is the skill point budget of a thief or a bard at the starting
-// level (ADR 0030 steps 17 and 18): the points the level allows in all, those
-// entered, and what is left (negative when over). PerSkill is the most one
-// skill may hold at the level, 0 for no such limit (the bard's).
-type SkillBudget struct {
-	Level, Total, Spent, Left, PerSkill int
-}
+// level with the terms of its formula (ADR 0030 steps 17 and 18).
+type SkillBudget = ruletablesvc.SkillPointsBudget
 
 // DraftChecks are the verdicts on a draft the creation steps show before the
 // character can be previewed.
@@ -613,14 +609,8 @@ func (s *service) CreationChecks(_ context.Context, in DraftInput) (DraftChecks,
 	if err != nil {
 		return out, nil //nolint:nilerr // an XP outside the table has no level, hence no budget; the creation refuses it
 	}
-	total, perSkill, ok := ruletablesvc.SkillBudgetLimits(in.Class, level)
-	if !ok {
-		return out, nil
+	if b, ok := ruletablesvc.SkillPointsFigures(in.Class, level, in.SkillPoints); ok {
+		out.SkillBudget = &b
 	}
-	spent := 0
-	for _, skill := range ruletablesvc.SkillsOf(in.Class) {
-		spent += in.SkillPoints[skill]
-	}
-	out.SkillBudget = &SkillBudget{Level: level, Total: total, Spent: spent, Left: total - spent, PerSkill: perSkill}
 	return out, nil
 }

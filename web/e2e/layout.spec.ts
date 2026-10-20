@@ -1383,18 +1383,34 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expect(skills.getByTestId("skill-modifier").first()).toBeVisible();
     await expectNoClippedText(actions, `skills tab, ${where}`);
     await expectWholeWords(actions, `skills tab, ${where}`);
+    // A level 15 bard's budget (20 + 15 × 14 = 230) and its editor wrap uncut in French.
+    await expect(skills.getByTestId("skill-points-available")).toContainText(
+      "Disponibles : 20 + 15 × 14 = 230 (niveau 15)",
+    );
+    await expectNoClippedText(
+      skills.getByTestId("skill-points-budget"),
+      `bard budget, ${where}`,
+    );
+    await skills.getByTestId("thief-points-edit").click();
+    const pointsEditor = skills.getByTestId("thief-points-editor");
+    await expect(
+      pointsEditor.getByTestId("skill-points-available"),
+    ).toBeVisible();
+    await expectNoClippedText(pointsEditor, `bard points editor, ${where}`);
+    await expectWholeWords(pointsEditor, `bard points editor, ${where}`);
+    await pointsEditor.getByTestId("thief-points-cancel").click();
+    await skills.evaluate((el) => el.scrollTo(0, 0));
     if (vp.width === 1440) {
-      await expectNoScroll(skills, `Skills tab, ${where}`);
+      // The bard's budget and terms (ADR 0027 step 12.3) make the tab scroll inside
+      // its panel; the page never scrolls.
+      await expectNoPageScroll(page);
       // The bard's block holds its skills, the armour and the Spend button (ADR 0030 step 18).
       const [proficiencies, bard] = await skills
         .getByTestId("skills-blocks")
         .locator(":scope > *")
         .all();
-      for (const [block, what] of [
-        [proficiencies, "proficiencies"],
-        [bard, "bard skills"],
-      ] as const)
-        await expectInside(block, skills, `${what}, ${where}`);
+      // The bard's block scrolls in the panel (its top is inside), the proficiencies fit.
+      await expectInside(proficiencies, skills, `proficiencies, ${where}`);
       const a = (await proficiencies.boundingBox())!;
       const b = (await bard.boundingBox())!;
       expect(b.y, `skills blocks side by side, ${where}`).toBe(a.y);
@@ -2979,6 +2995,48 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     await expectNoClippedText(armour, `thief skill armour, fr, ${where}`);
     await snap(page, `thief-skills-fr-${where}`);
   }
+
+  // The budget, each skill's terms and the Spend editor with its live preview, uncut in French
+  // (ADR 0027 step 2): the server's figures, nothing computed here.
+  await expect(page.getByTestId("skill-points-available")).toContainText(
+    "Disponibles : 60 + 30 × 0 = 60",
+  );
+  // Over budget on the tab (70 of 60): left is negative, in the warning colour, no refusal.
+  await expect(page.getByTestId("skill-points-left")).toHaveAttribute(
+    "data-over",
+    "true",
+  );
+  await page.getByTestId("thief-points-edit").click();
+  const editor = page.getByTestId("thief-points-editor");
+  // Above the range the server refuses the preview: its field error shows under the field, the
+  // figures are marked out of date, and Save reports the same field.
+  await editor.getByTestId("thief-points-open_locks").fill("96");
+  await expect(editor.getByRole("alert")).toContainText("de 0 à 95");
+  await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
+  await editor.getByTestId("thief-points-save").click();
+  await expect(editor.getByRole("alert")).toContainText("de 0 à 95");
+  await expect(editor).toBeVisible();
+  await editor.getByTestId("thief-points-open_locks").fill("95");
+  await expect(editor.getByTestId("skill-limit-open_locks")).toContainText(
+    "plafonné à 95 %",
+  );
+  await expect(editor.getByTestId("skill-preview-stale")).toHaveCount(0);
+  await expect(editor.getByTestId("skill-points-left")).toHaveAttribute(
+    "data-over",
+    "true",
+  );
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(editor, `skill points editor, fr, ${where}`);
+    await expectWholeWords(editor, `skill points editor, fr, ${where}`);
+    await snap(page, `thief-points-editor-preview-fr-${where}`);
+  }
+  await editor.getByTestId("thief-points-cancel").click();
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.getByRole("tab", { name: "Armes" }).click();

@@ -571,6 +571,66 @@ func (_c *MockSVC_Preview_Call) RunAndReturn(run func(context.Context, character
 	return _c
 }
 
+// PreviewSkillPoints provides a mock function with given fields: ctx, id, points
+func (_m *MockSVC) PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*charactersvc.Character, error) {
+	ret := _m.Called(ctx, id, points)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PreviewSkillPoints")
+	}
+
+	var r0 *charactersvc.Character
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, map[string]int) (*charactersvc.Character, error)); ok {
+		return rf(ctx, id, points)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, map[string]int) *charactersvc.Character); ok {
+		r0 = rf(ctx, id, points)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*charactersvc.Character)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, map[string]int) error); ok {
+		r1 = rf(ctx, id, points)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_PreviewSkillPoints_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PreviewSkillPoints'
+type MockSVC_PreviewSkillPoints_Call struct {
+	*mock.Call
+}
+
+// PreviewSkillPoints is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - points map[string]int
+func (_e *MockSVC_Expecter) PreviewSkillPoints(ctx interface{}, id interface{}, points interface{}) *MockSVC_PreviewSkillPoints_Call {
+	return &MockSVC_PreviewSkillPoints_Call{Call: _e.mock.On("PreviewSkillPoints", ctx, id, points)}
+}
+
+func (_c *MockSVC_PreviewSkillPoints_Call) Run(run func(ctx context.Context, id int64, points map[string]int)) *MockSVC_PreviewSkillPoints_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(map[string]int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_PreviewSkillPoints_Call) Return(_a0 *charactersvc.Character, _a1 error) *MockSVC_PreviewSkillPoints_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_PreviewSkillPoints_Call) RunAndReturn(run func(context.Context, int64, map[string]int) (*charactersvc.Character, error)) *MockSVC_PreviewSkillPoints_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetCurrent provides a mock function with given fields: ctx, owner, id
 func (_m *MockSVC) SetCurrent(ctx context.Context, owner uuid.UUID, id int64) error {
 	ret := _m.Called(ctx, owner, id)

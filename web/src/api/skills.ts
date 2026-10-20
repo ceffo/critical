@@ -19,6 +19,14 @@ export function setSkillPoints(
   return put<Skills>("/api/skills/points", { points });
 }
 
+/** The skills and budget the points would give, as the server derives them; writes and logs
+ * nothing (ADR 0030 steps 17 and 18). */
+export function previewSkillPoints(
+  points: Record<string, number>,
+): Promise<Skills> {
+  return post<Skills>("/api/skills/points/preview", { points });
+}
+
 /** Rolls one check of the skill on the server; it is logged (skill_check). An adjustment moves its target. */
 export function rollSkill(
   id: string,

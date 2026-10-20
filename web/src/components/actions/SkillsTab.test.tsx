@@ -22,6 +22,7 @@ const rogueSkill: RogueSkill = {
   dexterity: 0,
   armor: 0,
   percent: 15,
+  rawPercent: 15,
   maxPercent: 95,
   maxPoints: 40,
   usable: true,
@@ -42,6 +43,7 @@ const base: Skills = {
   bardSkills: [],
   thiefSkills: [],
   skillArmor: "",
+  budget: null,
 };
 
 async function render(skills: Skills) {
@@ -88,5 +90,67 @@ describe("SkillsTab class skills section", () => {
     expect(html).toContain("Thief skills");
     expect(html).not.toContain("Bard skills");
     expect(html).toContain("skill-armor");
+  });
+});
+
+const thiefBudget = {
+  level: 2,
+  first: 60,
+  perLevel: 30,
+  available: 90,
+  spent: 5,
+  left: 85,
+  perSkillFirst: 30,
+  perSkillPerLevel: 15,
+  perSkillCap: 45,
+};
+
+// ADR 0030 steps 17 and 18: the budget with its formula and each skill's terms are always text.
+describe("SkillsTab budget and terms", () => {
+  it("shows the available points with their formula, spent, left and the thief's cap", async () => {
+    const html = await render({
+      ...base,
+      thiefSkills: [rogueSkill],
+      budget: thiefBudget,
+    });
+    expect(html).toContain("Available: 60 + 30 × 1 = 90 (level 2)");
+    expect(html).toContain("Spent 5, left 85");
+    expect(html).toContain("At most 45 per skill (30 + 15 × 1 = 45)");
+    expect(html).toContain("5 of 45 points");
+  });
+
+  it("shows a bard's budget without a per-skill cap", async () => {
+    const html = await render({
+      ...base,
+      bardSkills: [rogueSkill],
+      budget: {
+        ...thiefBudget,
+        first: 20,
+        perLevel: 15,
+        available: 35,
+        left: 30,
+        perSkillFirst: 0,
+        perSkillPerLevel: 0,
+        perSkillCap: 0,
+      },
+    });
+    expect(html).toContain("Available: 20 + 15 × 1 = 35 (level 2)");
+    expect(html).not.toContain("per skill");
+  });
+
+  it("writes each skill's terms, and says when the cap or the floor applied", async () => {
+    const html = await render({
+      ...base,
+      thiefSkills: [
+        { ...rogueSkill, race: 5, dexterity: -5, armor: 0 },
+        { ...rogueSkill, id: "climb_walls", rawPercent: 112, percent: 95 },
+        { ...rogueSkill, id: "read_languages", rawPercent: -5, percent: 0 },
+      ],
+    });
+    expect(html).toContain(
+      "Base 10, points 5, race +5, Dex −5, armour 0 = 15%",
+    );
+    expect(html).toMatch(/= 112%.{0,80}capped at 95%/);
+    expect(html).toMatch(/= −5%.{0,80}floored at 0%/);
   });
 });

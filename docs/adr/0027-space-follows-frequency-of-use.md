@@ -341,19 +341,21 @@ Per screen, the user's words (the work items of the layout pass carry the full t
        the roll (step 8.3, ADR 0014 step 6). ADR 0014 step 5's API (an optional adjustment with the
        roll) stays, unused by this tab.
     3. **Proficiencies and bard skills side by side** when the act panel holds two columns of at
-       least 16rem, stacked otherwise (*proposed, user OK on the PR*); at 1440x900 in French both
-       blocks are visible without scrolling the tab.
+       least 15rem, stacked otherwise (*proposed, user OK on the PR*); at 1440x900 in French both
+       blocks are side by side. A thief's or a bard's block also writes the skill point budget
+       (available with its formula, spent, left) and each skill's terms as text (user, 2026-10-19:
+       transparency over a short tab), so that tab scrolls inside the act panel; the page does not.
     4. Rows look clickable (the shared row affordance).
 
     *Implementation note (2026-10-17):* the rows are the saves' clickable row (a raised stripe, hover
     and focus ring) and the section labels head each block; the column headers go with the columns
     they named. A proficiency without a modifier shows no pill ("CHA 16"), as the journal words it.
     A bard skill's row keeps its percentage (the skill's own value, not a target column). The two
-    columns are a grid of `minmax(16rem, 1fr)` tracks: side by side at 1440x900 and up, stacked at
+    columns are a grid of `minmax(15rem, 1fr)` tracks: side by side at 1440x900 and up, stacked at
     1280x800, where the act panel scrolls inside (step 6.1) and the page does not.
 
     *Checked by* `layout.spec`'s French no-cut test (the Skills tab at every layout viewport; at
-    1440x900 both blocks side by side inside the panel, no scroll) and the skills spec's
+    1440x900 both blocks side by side inside the panel, the page not scrolling) and the skills spec's
     roll-then-adjust flow.
 13. **Spell lookup** (amends ADR 0022 step 2.5 "Spells (lookup)").
     1. **Search, the class control and the level chips always in view**; the school behind a small

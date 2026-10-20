@@ -89,6 +89,9 @@ type Skills struct {
 	// SkillArmor is the skill armour the bard or thief skills read (ADR
 	// 0033 step 14: from the worn body armour), "" for another class.
 	SkillArmor string
+	// Budget is the skill point budget with the terms of its formula, nil
+	// for a class without skill points (ADR 0030 steps 17 and 18).
+	Budget *ruletablesvc.SkillPointsBudget
 }
 
 // Adjustment is the DM's adjustment of one check (ADR 0014 steps 5 to 7):

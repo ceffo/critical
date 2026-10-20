@@ -20,15 +20,15 @@ func TestThiefSkills_Step17_TheTermsOfEachSkill(t *testing.T) {
 	got, err := tbl.ThiefSkills("halfling", 18, "none", map[string]int{"pick_pockets": 20, "open_locks": 30})
 	require.NoError(t, err)
 	want := []ruletablesvc.SkillPercent{
-		{Skill: "pick_pockets", Base: 15, Points: 20, Race: 5, Dexterity: 10, Armor: 5, Percent: 55},
-		{Skill: "open_locks", Base: 10, Points: 30, Race: 5, Dexterity: 15, Armor: 0, Percent: 60},
-		{Skill: "find_remove_traps", Base: 5, Race: 5, Dexterity: 5, Percent: 15},
-		{Skill: "move_silently", Base: 10, Race: 10, Dexterity: 10, Armor: 10, Percent: 40},
-		{Skill: "hide_in_shadows", Base: 5, Race: 15, Dexterity: 10, Armor: 5, Percent: 35},
-		{Skill: "detect_noise", Base: 15, Race: 5, Percent: 20},
-		{Skill: "climb_walls", Base: 60, Race: -15, Armor: 10, Percent: 55},
+		{Skill: "pick_pockets", Base: 15, Points: 20, Race: 5, Dexterity: 10, Armor: 5, Raw: 55, Percent: 55},
+		{Skill: "open_locks", Base: 10, Points: 30, Race: 5, Dexterity: 15, Armor: 0, Raw: 60, Percent: 60},
+		{Skill: "find_remove_traps", Base: 5, Race: 5, Dexterity: 5, Raw: 15, Percent: 15},
+		{Skill: "move_silently", Base: 10, Race: 10, Dexterity: 10, Armor: 10, Raw: 40, Percent: 40},
+		{Skill: "hide_in_shadows", Base: 5, Race: 15, Dexterity: 10, Armor: 5, Raw: 35, Percent: 35},
+		{Skill: "detect_noise", Base: 15, Race: 5, Raw: 20, Percent: 20},
+		{Skill: "climb_walls", Base: 60, Race: -15, Armor: 10, Raw: 55, Percent: 55},
 		// 0 - 5: floored at 0.
-		{Skill: "read_languages", Race: -5, Percent: 0},
+		{Skill: "read_languages", Race: -5, Raw: -5, Percent: 0},
 	}
 	assert.Equal(t, want, got)
 }

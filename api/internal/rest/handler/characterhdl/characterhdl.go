@@ -302,7 +302,9 @@ type ThiefSkillDTO struct {
 	Race      int    `json:"race"`
 	Dexterity int    `json:"dexterity"`
 	Armor     int    `json:"armor"`
-	Percent   int    `json:"percent"`
+	// RawPercent is the sum before the cap and the floor.
+	Raw     int `json:"rawPercent"`
+	Percent int `json:"percent"`
 }
 
 // BudgetWarningDTO is a breach of the skill point budget (ADR 0030 step 17):

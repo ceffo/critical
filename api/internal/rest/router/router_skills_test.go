@@ -25,9 +25,10 @@ func TestSkills_ListWireShape(t *testing.T) {
 			},
 		},
 		BardSkills: []skillsvc.BardSkill{{SkillPercent: ruletablesvc.SkillPercent{
-			Skill: "climb_walls", Base: 50, Points: 35, Race: 0, Dexterity: 0, Armor: -5, Percent: 80,
+			Skill: "climb_walls", Base: 50, Points: 35, Race: 0, Dexterity: 0, Armor: -5, Raw: 80, Percent: 80,
 		}}},
 		SkillArmor: ruletablesvc.ArmorMetal,
+		Budget:     &ruletablesvc.SkillPointsBudget{Level: 2, First: 20, PerLevel: 15, Total: 35, Spent: 35},
 	}, nil)
 	rec := do(h, "GET", "/api/skills", "")
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -35,8 +36,10 @@ func TestSkills_ListWireShape(t *testing.T) {
 		"proficiencies":[{"id":"musical_instrument","ability":"dex","abilityScore":17,"modifier":-1,"target":16,
 			"last":{"entryId":7,"roll":18,"target":16,"adjustment":3,"adjustmentReason":"rope","adjustedTarget":19,"success":true}}],
 		"bardSkills":[{"id":"climb_walls","base":50,"points":35,"race":0,"dexterity":0,"armor":-5,"percent":80,
-			"maxPercent":95,"maxPoints":95,"usable":true,"last":null}],
-		"thiefSkills":[],"skillArmor":"metal"}`, rec.Body.String())
+			"rawPercent":80,"maxPercent":95,"maxPoints":95,"usable":true,"last":null}],
+		"thiefSkills":[],"skillArmor":"metal",
+		"budget":{"level":2,"first":20,"perLevel":15,"available":35,"spent":35,"left":0,
+			"perSkillFirst":0,"perSkillPerLevel":0,"perSkillCap":0}}`, rec.Body.String())
 }
 
 func TestSkills_ListUsableIsTheServersCall(t *testing.T) {
@@ -182,7 +185,7 @@ func TestSkills_SetPointsWireShape(t *testing.T) {
 
 	rec := do(h, "PUT", "/api/skills/points", `{"points":{"open_locks":45}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"proficiencies":[],"bardSkills":[],"thiefSkills":[],"skillArmor":""}`, rec.Body.String())
+	assert.JSONEq(t, `{"proficiencies":[],"bardSkills":[],"thiefSkills":[],"skillArmor":"","budget":null}`, rec.Body.String())
 
 	rec = do(h, "PUT", "/api/skills/points", `{"points":{"open_locks":96}}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
@@ -190,6 +193,42 @@ func TestSkills_SetPointsWireShape(t *testing.T) {
 
 	for _, body := range []string{`{}`, `{"points":{"open_locks":"x"}}`, `{"points":{},"armor":"none"}`} {
 		rec = do(h, "PUT", "/api/skills/points", body)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, body)
+	}
+}
+
+// The preview answers with the skills' wire shape, a thief's budget with the
+// terms of its formula included, and refuses what the PUT refuses.
+func TestSkills_PreviewPointsWireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.skills.EXPECT().PreviewPoints(mock.Anything, int64(1), map[string]int{"open_locks": 45}).Return(&skillsvc.Skills{
+		ThiefSkills: []skillsvc.ThiefSkill{{SkillPercent: ruletablesvc.SkillPercent{
+			Skill: "open_locks", Base: 10, Points: 45, Race: 5, Dexterity: 15, Armor: 0, Raw: 75, Percent: 75,
+		}}},
+		SkillArmor: "leather",
+		Budget: &ruletablesvc.SkillPointsBudget{
+			Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 45, Left: 45,
+			PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
+		},
+	}, nil).Once()
+	m.skills.EXPECT().PreviewPoints(mock.Anything, int64(1), map[string]int{"open_locks": 96}).
+		Return(nil, &domain.FieldError{Field: "skillPoints.open_locks", Message: "out_of_range"}).Once()
+
+	rec := do(h, "POST", "/api/skills/points/preview", `{"points":{"open_locks":45}}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"proficiencies":[],"bardSkills":[],
+		"thiefSkills":[{"id":"open_locks","base":10,"points":45,"race":5,"dexterity":15,"armor":0,"percent":75,
+			"rawPercent":75,"maxPercent":95,"maxPoints":95,"usable":true,"last":null}],
+		"skillArmor":"leather",
+		"budget":{"level":2,"first":60,"perLevel":30,"available":90,"spent":45,"left":45,
+			"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45}}`, rec.Body.String())
+
+	rec = do(h, "POST", "/api/skills/points/preview", `{"points":{"open_locks":96}}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"field":"skillPoints.open_locks"`)
+
+	for _, body := range []string{`{}`, `{"points":{"open_locks":"x"}}`, `{"points":{},"armor":"none"}`} {
+		rec = do(h, "POST", "/api/skills/points/preview", body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, body)
 	}
 }

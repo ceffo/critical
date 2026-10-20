@@ -442,6 +442,12 @@ must lose nothing, so state lives outside the conversation:
   ledger's compressed questions lost the user's own words at each handoff, and successors re-asked
   settled points. Feedback the user gave a design round or a scoper session is a decision: record
   it, act on it, never ask for it again. **Grep the log before asking the user anything.**
+- **The session report**, `<wt>/supervisor/session-reports/sup-N.md`, for the user to read (user,
+  2026-10-20: "it would be nice if a report session by session would be built somewhere for me to
+  consult"): one file per supervisor session, in plain words, no item ids: what shipped (PRs), what
+  the user decided, what is in progress, what waits on the user. Update it at every merge and
+  decision, finish it at handoff, and add your line at the top of `session-reports/README.md`
+  (newest first). Not tracked in git.
 
 **At session start (or after compaction)**, before planning anything new:
 1. Read the ledger and the whole user log, then reconcile with live state: `git worktree list`, `gh pr list`, the tracker's

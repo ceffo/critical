@@ -56,7 +56,8 @@ func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment)
 // or kind is not a roll (ErrNotAmendable), voided (ErrAlreadyVoided) or not
 // the latest roll: a newer entry of any of actionlog.RollKinds exists, voided
 // ones included (ErrNotLatest). The checks and both writes share one
-// transaction.
+// transaction, with any state fn writes: the amendment's snapshots go on the
+// step, so popping it restores that state.
 func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind actionlog.Kind, fn actionlog.AmendFunc) (*actionlog.Entry, error) {
 	var out *actionlog.Entry
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -84,7 +85,14 @@ func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind a
 		if len(a.Payload) == 0 || a.Change.Field == "" {
 			return fmt.Errorf("%w: amendment needs a payload and the field it changes", domain.ErrInvalidInput)
 		}
-		stepID, err := s.recordStep(ctx, characterID, e, a.Change)
+		seen := map[string]bool{}
+		for _, snap := range a.Snapshots {
+			if snap.Key == "" || seen[snap.Key] {
+				return fmt.Errorf("%w: snapshot keys must be non-empty and unique", domain.ErrInvalidInput)
+			}
+			seen[snap.Key] = true
+		}
+		stepID, err := s.recordStep(ctx, characterID, e, a)
 		if err != nil {
 			return err
 		}
@@ -121,9 +129,11 @@ func (s *service) latestRoll(ctx context.Context, characterID int64) (int64, err
 	return latest, nil
 }
 
-// recordStep inserts the KindCorrection entry of a correction on e; it runs
+// recordStep inserts the KindCorrection entry of a correction on e, with the
+// snapshots of the state the correction changed (ADR 0037 step 20.8); it runs
 // inside AmendLatest's transaction.
-func (s *service) recordStep(ctx context.Context, characterID int64, e *actionlog.Entry, c actionlog.Change) (int64, error) {
+func (s *service) recordStep(ctx context.Context, characterID int64, e *actionlog.Entry, a actionlog.PayloadAmendment) (int64, error) {
+	c := a.Change
 	payload, err := json.Marshal(actionlog.CorrectionStep{EntryID: e.ID, EntryKind: e.Kind, Field: c.Field, From: c.From, To: c.To})
 	if err != nil {
 		return 0, fmt.Errorf("encode correction step: %w", err)
@@ -133,7 +143,7 @@ func (s *service) recordStep(ctx context.Context, characterID int64, e *actionlo
 		return 0, fmt.Errorf("current round: %w", err)
 	}
 	id, err := s.insert(ctx, actionlog.NewEntry{
-		CharacterID: characterID, Round: round, Kind: actionlog.KindCorrection, Payload: payload,
+		CharacterID: characterID, Round: round, Kind: actionlog.KindCorrection, Payload: payload, Snapshots: a.Snapshots,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("insert correction step: %w", err)

@@ -7,5 +7,15 @@
       "expired": ["Bless"],
       "expiredSpellIds": ["bless"]
     }
+  },
+  "tumblingExpired": {
+    "payload": {
+      "action": "next_round",
+      "fromRound": 3,
+      "toRound": 4,
+      "expired": ["Bless", "tumbling"],
+      "expiredSpellIds": ["bless", ""],
+      "expiredProficiencyIds": ["", "tumbling"]
+    }
   }
 }

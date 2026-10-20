@@ -1439,7 +1439,10 @@
       "success": "{{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
       "failure": "{{name}} : d{{die}} {{roll}} contre {{target}}, échec",
       "successAdjusted": "{{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), réussi",
-      "failureAdjusted": "{{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), échec"
+      "failureAdjusted": "{{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), échec",
+      "buffOn": "{{check}} ; {{buff}} actif : {{effects}}",
+      "buffRenewed": "{{check}} ; {{buff}} renouvelé : {{effects}}",
+      "buffAc": "CA {{value}}"
     },
     "dice": "Dés {{formula}} = {{total}}",
     "correction": {

@@ -21,10 +21,10 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, 
 		ch, err = s.applyIn(ctx, characterID, func(buffs []BuffEffect, r int) (change, error) {
 			next := r + 1
 			active, expired = advanceRoundBuffs(buffs)
-			names, spellIDs := expiredNames(expired)
+			names, spellIDs, profIDs := expiredNames(expired)
 			return change{
 				kind:    actionlog.KindRoundAdvance,
-				payload: logPayload{Action: "next_round", FromRound: &r, ToRound: &next, Expired: names, ExpiredSpellIDs: spellIDs},
+				payload: logPayload{Action: "next_round", FromRound: &r, ToRound: &next, Expired: names, ExpiredSpellIDs: spellIDs, ExpiredProficiencyIDs: profIDs},
 				buffs:   active,
 				round:   &next,
 				// The previous round's initiative ends here; the new one is

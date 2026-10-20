@@ -7,7 +7,11 @@ import { formatAc, formatSigned } from "./format";
 /** Names a row's source: a piece by id, a buff by its stored name and spell. */
 export interface AcNamers {
   item: (id: string) => string;
-  buff: (b: { name: string; spellId?: string }) => string;
+  buff: (b: {
+    name: string;
+    spellId?: string;
+    proficiencyId?: string;
+  }) => string;
 }
 
 /** One row as shown: the term, its source, its value, and why it does not add (muted). */
@@ -34,7 +38,11 @@ export function acRowView(
   const source = row.itemId
     ? names.item(row.itemId)
     : row.buff !== undefined
-      ? names.buff({ name: row.buff, spellId: row.spellId })
+      ? names.buff({
+          name: row.buff,
+          spellId: row.spellId,
+          proficiencyId: row.proficiencyId,
+        })
       : row.term === "dexterity"
         ? String(row.dexterity ?? "")
         : noSource(t, row);

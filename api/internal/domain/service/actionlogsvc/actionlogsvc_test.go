@@ -618,6 +618,52 @@ func TestAmendLatest_RecordsTheCorrectionStep(t *testing.T) {
 	})
 }
 
+// ADR 0037 step 20.8: an amendment that changed state beside the payload (a
+// skill check's buff) puts its snapshots on the correction step, so popping
+// the step restores that state; keys must be non-empty and unique, or nothing
+// is written.
+func TestAmendLatest_StepCarriesTheAmendmentsSnapshots(t *testing.T) {
+	snap := actionlog.Snapshot{Key: "buffs", Before: json.RawMessage(`{"b":1}`), After: json.RawMessage(`{"a":1}`)}
+	expect := func(dal *mocks.MockDAL) {
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(skillCheckEntry(5), nil).Once()
+		for _, k := range actionlog.RollKinds {
+			dal.EXPECT().LatestID(mock.Anything, int64(1), k).Return(5, k == actionlog.KindSkillCheck, nil)
+		}
+	}
+	amend := func(svc actionlogsvc.SVC, snaps []actionlog.Snapshot) error {
+		_, err := svc.AmendLatest(context.Background(), 1, 5, actionlog.KindSkillCheck, func(actionlog.Entry) (actionlog.PayloadAmendment, error) {
+			return actionlog.PayloadAmendment{
+				Payload: json.RawMessage(`{"success":false}`), Snapshots: snaps,
+				Change: actionlog.Change{Field: "skillAdjustment", From: 0, To: -3},
+			}, nil
+		})
+		return err
+	}
+	t.Run("on the step", func(t *testing.T) {
+		svc, dal, rounds, _ := newSvc(t)
+		expect(dal)
+		rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil).Once()
+		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).RunAndReturn(func(_ context.Context, e actionlog.NewEntry, _ int64) (int64, error) {
+			assert.Equal(t, actionlog.KindCorrection, e.Kind)
+			assert.Equal(t, []actionlog.Snapshot{snap}, e.Snapshots)
+			return 12, nil
+		}).Once()
+		dal.EXPECT().InsertCorrection(mock.Anything, mock.Anything).Return(nil).Once()
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(skillCheckEntry(5), nil).Once()
+		require.NoError(t, amend(svc, []actionlog.Snapshot{snap}))
+	})
+	for name, snaps := range map[string][]actionlog.Snapshot{
+		"an empty key": {{Key: "", Before: snap.Before, After: snap.After}},
+		"a key twice":  {snap, snap},
+	} {
+		t.Run(name, func(t *testing.T) {
+			svc, dal, _, _ := newSvc(t)
+			expect(dal)
+			require.ErrorIs(t, amend(svc, snaps), domain.ErrInvalidInput)
+		})
+	}
+}
+
 // ADR 0010 step 6: an amend whose correction step was popped is out of
 // effect: the payload, the status and the HP delta read as before it. An
 // amend without a step (written before steps existed) stays in effect.

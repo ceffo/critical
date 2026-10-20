@@ -21,7 +21,7 @@ func (s *service) Trigger(ctx context.Context, characterID int64, buffID string)
 		}
 		return change{
 			kind:    actionlog.KindBuffChange,
-			payload: logPayload{Action: "absorb", Buff: after.Name, SpellID: after.SpellID, Charges: after.Charges, Ended: ended},
+			payload: logPayload{Action: "absorb", Buff: after.Name, SpellID: after.SpellID, ProficiencyID: after.ProficiencyID, Charges: after.Charges, Ended: ended},
 			buffs:   next,
 		}, nil
 	})

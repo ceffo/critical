@@ -14,7 +14,8 @@ import {
 import type { SkillCheck } from "@/types/skills";
 import type { LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
-import { abilityText, skillName } from "../words";
+import { buffName, englishSpellName } from "@/i18n/spellName";
+import { abilityText, counters, skillName } from "../words";
 import { AdjustCheck, CheckView } from "../parts";
 
 /** The skill check's payload in effect, with its entry id. */
@@ -32,7 +33,30 @@ export function decodeSkillCheck(e: LogEntry): SkillCheck | null {
     : null;
 }
 
+/**
+ * The check's line, with the buff its verdict in effect put on (ADR 0037 step 20): "Tumbling: d20
+ * 12 vs 17, success; Tumbling on: AC −4, 1 rd". An entry logged before has no buff.
+ */
 function skillText(c: SkillCheck, t: TFunction): string {
+  const check = checkText(c, t);
+  const b = c.buff;
+  if (!b) return check;
+  const effects = [
+    b.effects.ac !== undefined
+      ? t("log.skill.buffAc", { value: formatSigned(b.effects.ac) })
+      : null,
+    counters(t, b.rounds),
+  ]
+    .filter((p): p is string => p !== null)
+    .join(", ");
+  return t(c.renewed ? "log.skill.buffRenewed" : "log.skill.buffOn", {
+    check,
+    buff: buffName(englishSpellName, b, t),
+    effects,
+  });
+}
+
+function checkText(c: SkillCheck, t: TFunction): string {
   if (c.adjustment) {
     return t(
       c.success ? "log.skill.successAdjusted" : "log.skill.failureAdjusted",

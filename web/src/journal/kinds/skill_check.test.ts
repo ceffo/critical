@@ -41,4 +41,57 @@ describeKind("skill_check", fixtures, {
     },
     rolled: true,
   },
+  // ADR 0037 step 20: the buff the success put on, named from the proficiency.
+  tumblingBuff: {
+    en: {
+      text: "Tumbling: d20 12 vs 17, success; Tumbling on: AC −4, 1 rd",
+      short: "Tumbling · success",
+      subtitle: "Tumbling",
+    },
+    fr: {
+      text: "Acrobatie : d20 12 contre 17, réussi ; Acrobatie actif : CA −4, 1 tr.",
+      short: "Acrobatie · réussi",
+      subtitle: "Acrobatie",
+    },
+    value: {
+      text: "12",
+      tone: "pass",
+    },
+    rolled: true,
+  },
+  tumblingRenewed: {
+    en: {
+      text: "Tumbling: d20 5 vs 17, success; Tumbling renewed: AC −4, 1 rd",
+      short: "Tumbling · success",
+      subtitle: "Tumbling",
+    },
+    fr: {
+      text: "Acrobatie : d20 5 contre 17, réussi ; Acrobatie renouvelé : CA −4, 1 tr.",
+      short: "Acrobatie · réussi",
+      subtitle: "Acrobatie",
+    },
+    value: {
+      text: "5",
+      tone: "pass",
+    },
+    rolled: true,
+  },
+  // ADR 0037 step 20.8: the renewing success adjusted to a failure; the line in effect says no buff.
+  tumblingAdjustedToFailure: {
+    en: {
+      text: "Tumbling: d20 15 vs 14 (17 −3), failure",
+      short: "Tumbling · failed",
+      subtitle: "Tumbling",
+    },
+    fr: {
+      text: "Acrobatie : d20 15 contre 14 (17 −3), échec",
+      short: "Acrobatie · échec",
+      subtitle: "Acrobatie",
+    },
+    value: {
+      text: "15",
+      tone: "fail",
+    },
+    rolled: true,
+  },
 });

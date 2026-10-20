@@ -389,7 +389,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// 0028 step 2).
 	bs.Skills, err = skillsvc.New(skillsvc.Deps{
 		Characters: charSvc, Abilities: bs.Buffs, Dice: dice, Log: logSvc, Points: characterDAL, Picks: characterDAL,
-		Book: proficiencies, Languages: languages, Tables: ruleTables, Tx: tx,
+		Book: proficiencies, Languages: languages, Tables: ruleTables, Buffs: bs.Buffs, Tx: tx,
 	})
 	if err := bs.add(bs.Skills, err); err != nil {
 		return nil, err

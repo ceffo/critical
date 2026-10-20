@@ -33,6 +33,12 @@ type logPayload struct {
 	// ExpiredSpellIDs runs parallel to Expired: the spell of each expired
 	// buff, "" for a buff not from a spell. Omitted when none has one.
 	ExpiredSpellIDs []string `json:"expiredSpellIds,omitempty"`
+	// ProficiencyID is the buff's proficiency (edit, absorb, dismiss) when
+	// a successful check put it on (ADR 0037 step 20.1), so the UI names it
+	// in the player's language; ExpiredProficiencyIDs runs parallel to
+	// Expired, "" for a buff not from a check, omitted when none is.
+	ProficiencyID         string   `json:"proficiencyId,omitempty"`
+	ExpiredProficiencyIDs []string `json:"expiredProficiencyIds,omitempty"`
 	// Note is the buff's note (activate, save_template) or its new note (edit,
 	// with NoteChanged); FromNote is the previous one.
 	Note        string  `json:"note,omitempty"`
@@ -194,20 +200,27 @@ func snapshots(before, after []BuffEffect, round int, newRound *int, roundOnly b
 }
 
 // expiredNames returns the names of the expired buffs and, parallel to them,
-// their spell ids (nil when no expired buff comes from a spell).
-func expiredNames(expired []BuffEffect) (names, spellIDs []string) {
+// their spell ids (nil when no expired buff comes from a spell) and their
+// proficiency ids (nil when none comes from a proficiency check).
+func expiredNames(expired []BuffEffect) (names, spellIDs, proficiencyIDs []string) {
 	names = make([]string, len(expired))
 	ids := make([]string, len(expired))
-	anySpell := false
+	profs := make([]string, len(expired))
+	anySpell, anyProf := false, false
 	for i, b := range expired {
 		names[i] = b.Name
 		ids[i] = b.SpellID
+		profs[i] = b.ProficiencyID
 		anySpell = anySpell || b.SpellID != ""
+		anyProf = anyProf || b.ProficiencyID != ""
 	}
 	if anySpell {
 		spellIDs = ids
 	}
-	return names, spellIDs
+	if anyProf {
+		proficiencyIDs = profs
+	}
+	return names, spellIDs, proficiencyIDs
 }
 
 // find returns the index of buffID or ErrNotFound.

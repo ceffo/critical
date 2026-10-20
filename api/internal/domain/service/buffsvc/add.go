@@ -60,3 +60,34 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 	}
 	return buff, snaps[0], nil
 }
+
+// Remove takes buff buffID off the active list and puts putBack in its
+// place, without recording an entry, for a use case that records one entry
+// covering the change (a skill check's adjustment that turns its success into
+// a failure takes the buff the success put on off and gives back the rows it
+// renewed, ADR 0037 step 20.8). Call it inside the caller's transaction and
+// record the returned snapshot (StateKeyBuffs) in that entry. A buff no
+// longer on the list (it ended, or was dismissed) is not an error: removed is
+// false, putBack is dropped and nothing is written.
+func (s *service) Remove(ctx context.Context, characterID int64, buffID string, putBack []BuffEffect) (bool, actionlog.Snapshot, error) {
+	before, err := s.dal.GetActiveBuffs(ctx, characterID)
+	if err != nil {
+		return false, actionlog.Snapshot{}, fmt.Errorf("get active buffs: %w", err)
+	}
+	i := indexOf(before, buffID)
+	if buffID == "" || i < 0 {
+		return false, actionlog.Snapshot{}, nil
+	}
+	after := make([]BuffEffect, 0, len(before)-1+len(putBack))
+	after = append(after, before[:i]...)
+	after = append(after, putBack...)
+	after = append(after, before[i+1:]...)
+	snap, err := buffsSnapshot(before, after)
+	if err != nil {
+		return false, actionlog.Snapshot{}, err
+	}
+	if err := s.dal.SaveActiveBuffs(ctx, characterID, after); err != nil {
+		return false, actionlog.Snapshot{}, fmt.Errorf("save active buffs: %w", err)
+	}
+	return true, snap, nil
+}

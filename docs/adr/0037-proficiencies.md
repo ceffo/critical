@@ -11,7 +11,7 @@ proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequ
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
 implementation.
 Steps 19 (the description pop-up) and 20 (the Tumbling buff) added 2026-10-20 (user triage of
-2026-10-20), decided, not implemented; step 19 reads the descriptions of
+2026-10-20), decided; step 19 not implemented; step 20 as built 2026-10-20 (see 20.9); step 19 reads the descriptions of
 [ADR 0021](0021-spell-catalogue.md) step 16 (format 9); step 20 amends [ADR 0014](0014-skill-checks.md)
 step 4 and [ADR 0004](0004-buffs.md) step 13.
 
@@ -562,7 +562,7 @@ _(As built, 2026-10-20.)_
   still sends `details.languages`. The journal words a languages change by its count ("Langues :
   1 → 3"): the journal has no language catalogue to name them.
 
-## Amendment 2026-10-20: descriptions and the Tumbling buff (decided, not implemented)
+## Amendment 2026-10-20: descriptions and the Tumbling buff (decided; step 20 as built 2026-10-20)
 
 User, triage of 2026-10-20: "now we're missing the descriptions of the proficiencies. they should be
 available for the user when choosing them or as a reference before using them. like spells, we need to
@@ -646,13 +646,58 @@ descriptions and the effects of other proficiencies are separate, deferred items
          was (the buff back, gone, or the renewed one with its old rounds). No hand editing. A change
          of adjustment that leaves the verdict as it was touches the buff list not at all. The
          pre-roll adjustment counts like any: the first verdict is the one in effect.
+         A failure the adjustment makes reads **as if the check had put nothing on**: when the
+         success renewed a row (an earlier success's, or one made by hand with the same name), the
+         row is given back as it was, in place of the check's, not just taken off.
+         **After the check's round** (supervisor ruling 2026-10-20): the check can still be
+         adjusted once a Next Round has passed (it is still the latest roll), but the buff's one
+         round is over. A turn to a success then puts no buff on; a turn to a failure takes off only
+         what the check still has on (usually nothing, the row ended at Next Round) and gives
+         nothing back (the renewed row's time would have run on too).
+    20.9 **As built (2026-10-20).** The shapes the steps above left open:
+         - The rule table is `ruletablesvc.SuccessBuffFor(id)` (`SuccessBuff{AC, Rounds}`), one row
+           `tumbling: {AC: -4, Rounds: 1}`.
+         - The buff carries the proficiency it comes from, `ProficiencyID` (stored and snapshotted
+           `proficiency_id`, served `proficiencyId`, absent for any other buff and in rows and
+           entries recorded before: they read ""), as `SpellID` does for a spell (ADR 0004 step
+           17): only the check stamps it, Activate drops a caller's. Its stored `Name` is the
+           proficiency id (the fallback label and the renewal key of ADR 0004 step 6). The client
+           names it from `skills.names.<id>` (the Skills tab's i18n key) wherever a buff is named:
+           the buff list, the AC rows (`proficiencyId` beside `spellId`) and the buff entries
+           (`proficiencyId` on edit/absorb/dismiss, `expiredProficiencyIds` parallel to
+           `expired` on Next Round and passing time, omitted when no expired buff has one).
+         - The `skill_check` payload's `buff` is `{id, name, proficiencyId, effects, rounds}`
+           (`effects` keyed like the buff API, `{"ac": -4}`; `id` the row, so a later adjustment
+           takes that row off), `renewed` true when it replaced one; both absent otherwise and in
+           entries logged before (they read as no buff). The check's answer
+           (`POST /api/roll/skill/{id}` and `.../adjust`) carries the same `buff` and `renewed`.
+           The journal line appends it ("Tumbling on: AC −4, 1 rd", "renewed").
+         - 20.8's snapshots ride on the correction step: `actionlog.PayloadAmendment.Snapshots`
+           are recorded on the `correction` entry (amending [ADR 0010](0010-action-stack-and-undo.md)
+           step 6's "no snapshot"), so popping the step restores the buff list and a redo replays
+           it. A verdict turned to a failure takes the row the check put on off (`buffsvc.Remove`,
+           no entry of its own); a row already gone (ended, dismissed) is no error and no snapshot,
+           and nothing is given back.
+         - The rows a renewal replaced ride in the `skill_check` payload as `replaced` (buffsvc's
+           snapshot encoding of a buff row, `buffsvc.EncodeRows`; absent when nothing was
+           renewed, and not read by the client). `buffsvc.Remove(id, putBack)` puts them back in
+           the place of the check's row, in the check's round only. "The check's round" is the
+           round the check's entry is stamped with, compared with the round counter at the
+           adjustment.
+         - The adjustment's amend and the buff write share one transaction.
     Tests: `SkillCheck_Step20_SuccessAddsTheTumblingBuff` (skillsvc: exactly one d20, the name,
     `ac` -4, 1 round, the payload's `buff`), `SkillCheck_Step20_FailureAndNaturalTwentyAddNothing`,
     `SkillCheck_Step20_SuccessAgainRenews` (one buff, rounds 1, a new start round),
     `SkillCheck_Step20_OtherProficienciesAddNothing`, `SkillCheck_Step20_AdjustmentToFailureRemovesTheBuff`,
     `SkillCheck_Step20_AdjustmentToSuccessAddsOrRenewsTheBuff`,
     `SkillCheck_Step20_AdjustmentKeepingTheVerdictLeavesTheBuff`,
-    `SkillCheck_Step20_UndoingTheAdjustmentRestoresTheBuff` (skillsvc, composition for the undo), `Buffs_Step20_TumblingEndsAtNextRound` (buffsvc: the AC is -4 in a following attack,
-    gone after Next Round), `Tumbling_Step20_UndoRemovesTheBuffAndRedoPutsItBack` (composition: a
+    `SkillCheck_Step20_AdjustmentToFailureGivesBackTheRenewedRow` (skillsvc: an earlier success's
+    row and a hand-made one, every field) and `Tumbling_Step20_FailureAfterARenewalGivesTheRenewedRowBack`
+    (composition: -4 once, undo and redo walk the list), `SkillCheck_Step20_AdjustmentAfterTheChecksRound`
+    and `Tumbling_Step20_AdjustmentAfterTheChecksRound` (the round ruling),
+    `Tumbling_Step20_AdjustedBackAndForth`, `Tumbling_Step20_FailureAfterAHandDismiss`,
+    `SkillCheck_Step20_UndoingTheAdjustmentRestoresTheBuff` (skillsvc, composition for the undo), `Buffs_Step20_TumblingEndsAtNextRound` (composition: the AC derived block's row -4,
+    gone after Next Round), `Buffs_Step20_ProficiencyID` (buffsvc: kept, dropped by Activate, named
+    in the entries; Remove), `AmendLatest_StepCarriesTheAmendmentsSnapshots` (actionlogsvc), `Tumbling_Step20_UndoRemovesTheBuffAndRedoPutsItBack` (composition: a
     success, a renewal, undo twice, redo), `TumblingRule_Step20_OneRowInTheRulesData` (ruletablesvc),
     `SkillCheck_Step20_EntryCarriesBuffSnapshots` (router wire shape).

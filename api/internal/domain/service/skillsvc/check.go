@@ -53,6 +53,14 @@ type checkRecord struct {
 	// before the latest post-roll adjustment; set on adjustment amends only.
 	PreviousSuccess    *bool `json:"previousSuccess,omitempty"`
 	PreviousAdjustment *int  `json:"previousAdjustment,omitempty"`
+	// Buff is the buff the verdict in effect put on (ADR 0037 step 20.4),
+	// Renewed true when it replaced an active one (step 20.3). Absent when
+	// it put none, and in entries logged before: they read as no buff.
+	Buff    *buffRecord `json:"buff,omitempty"`
+	Renewed bool        `json:"renewed,omitempty"`
+	// Replaced are the rows the buff renewed (buffsvc.EncodeRows), given
+	// back when an adjustment turns the success into a failure (step 20.8).
+	Replaced json.RawMessage `json:"replaced,omitempty"`
 }
 
 // decodeCheck reads a check payload. An entry logged before adjustments has
@@ -87,6 +95,7 @@ func (r checkRecord) result(entryID int64) *CheckResult {
 		Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason, AdjustedTarget: r.AdjustedTarget,
 		Success: r.Success, RolledSuccess: rolled,
 		Ability: r.Ability, AbilityScore: r.AbilityScore, Modifier: r.Modifier, ExtraSlots: r.ExtraSlots, LogEntryID: entryID,
+		Buff: r.Buff.applied(r.Renewed),
 	}
 }
 
@@ -119,7 +128,9 @@ func checkRange(k Kind, value int) error {
 // thieving skill one d100 against its derived percentage (step 3, ADR 0030
 // steps 17 and 18), the target moved by the pre-roll
 // adjustment (step 5). The check is a skill_check entry with no snapshots,
-// recorded in the same transaction (step 4). An unknown id or an invalid
+// recorded in the same transaction (step 4), unless its success puts a buff
+// on (ADR 0037 step 20.4): the buff list's snapshot is then in the entry,
+// so undoing the check takes the buff off. An unknown id or an invalid
 // adjustment is refused before anything is rolled.
 func (s *service) Roll(ctx context.Context, characterID int64, id string, adj Adjustment) (*CheckResult, error) {
 	adj, err := normalize(adj)
@@ -132,6 +143,16 @@ func (s *service) Roll(ctx context.Context, characterID int64, id string, adj Ad
 		if err != nil {
 			return err
 		}
+		var snaps []actionlog.Snapshot
+		if rec.Success { // ADR 0037 step 20.2: a failure puts nothing on
+			snap, err := s.putBuff(ctx, characterID, &rec)
+			if err != nil {
+				return err
+			}
+			if snap != nil {
+				snaps = append(snaps, *snap)
+			}
+		}
 		payload, err := json.Marshal(rec)
 		if err != nil {
 			return fmt.Errorf("encode skill check payload: %w", err)
@@ -140,6 +161,7 @@ func (s *service) Roll(ctx context.Context, characterID int64, id string, adj Ad
 			CharacterID: characterID,
 			Kind:        actionlog.KindSkillCheck,
 			Payload:     payload,
+			Snapshots:   snaps,
 		})
 		if err != nil {
 			return fmt.Errorf("record skill check: %w", err)
@@ -158,38 +180,61 @@ func (s *service) Roll(ctx context.Context, characterID int64, id string, adj Ad
 // the reason, and the verdict is recomputed from the stored roll and target;
 // the verdict as rolled is kept. The change is an amend correction, its own
 // undoable step (step 7, ADR 0010 step 6); AmendLatest refuses an entry that
-// is not a skill check, is voided or is not the latest roll.
+// is not a skill check, is voided or is not the latest roll. A verdict that
+// changes puts the check's buff on or takes it off in the same correction
+// (ADR 0037 step 20.8), which carries the buff list's snapshot, so undoing
+// the correction restores the list.
 func (s *service) Adjust(ctx context.Context, characterID, entryID int64, adj Adjustment) (*CheckResult, error) {
 	adj, err := normalize(adj)
 	if err != nil {
 		return nil, err
 	}
-	var rec checkRecord
-	e, err := s.log.AmendLatest(ctx, characterID, entryID, actionlog.KindSkillCheck, func(e actionlog.Entry) (actionlog.PayloadAmendment, error) {
-		r, err := decodeCheck(e.EffectivePayload())
-		if err != nil {
-			return actionlog.PayloadAmendment{}, fmt.Errorf("decode skill check #%d: %w", e.ID, err)
-		}
-		rec = r
-		if err := checkRange(rec.Kind, adj.Value); err != nil {
-			return actionlog.PayloadAmendment{}, err
-		}
-		prevSuccess, prevAdj := rec.Success, rec.Adjustment
-		rec.Adjustment, rec.AdjustmentReason = adj.Value, adj.Reason
-		rec.settle()
-		rec.PreviousSuccess, rec.PreviousAdjustment = &prevSuccess, &prevAdj
-		payload, err := json.Marshal(rec)
-		if err != nil {
-			return actionlog.PayloadAmendment{}, fmt.Errorf("encode skill check payload: %w", err)
-		}
-		return actionlog.PayloadAmendment{Payload: payload, Change: actionlog.Change{
-			Field: ChangeSkillAdjustment, From: prevAdj, To: rec.Adjustment,
-		}}, nil
+	var (
+		rec checkRecord
+		e   *actionlog.Entry
+	)
+	// One transaction for the amend and the buff writes: AmendLatest's
+	// joins it, and fn writes with its ctx.
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		var err error
+		e, err = s.log.AmendLatest(ctx, characterID, entryID, actionlog.KindSkillCheck, func(e actionlog.Entry) (actionlog.PayloadAmendment, error) {
+			return s.amendCheck(ctx, characterID, e, adj, &rec)
+		})
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return rec.result(e.ID), nil
+}
+
+// amendCheck is Adjust's amendment of check e: the adjustment replaced, the
+// verdict recomputed, the buff following it (ADR 0037 step 20.8); rec is the
+// amended check.
+func (s *service) amendCheck(ctx context.Context, characterID int64, e actionlog.Entry, adj Adjustment, out *checkRecord) (actionlog.PayloadAmendment, error) {
+	rec, err := decodeCheck(e.EffectivePayload())
+	if err != nil {
+		return actionlog.PayloadAmendment{}, fmt.Errorf("decode skill check #%d: %w", e.ID, err)
+	}
+	if err := checkRange(rec.Kind, adj.Value); err != nil {
+		return actionlog.PayloadAmendment{}, err
+	}
+	prevSuccess, prevAdj := rec.Success, rec.Adjustment
+	rec.Adjustment, rec.AdjustmentReason = adj.Value, adj.Reason
+	rec.settle()
+	rec.PreviousSuccess, rec.PreviousAdjustment = &prevSuccess, &prevAdj
+	snaps, err := s.followVerdict(ctx, characterID, e.Round, &rec, prevSuccess)
+	if err != nil {
+		return actionlog.PayloadAmendment{}, err
+	}
+	payload, err := json.Marshal(rec)
+	if err != nil {
+		return actionlog.PayloadAmendment{}, fmt.Errorf("encode skill check payload: %w", err)
+	}
+	*out = rec
+	return actionlog.PayloadAmendment{Payload: payload, Snapshots: snaps, Change: actionlog.Change{
+		Field: ChangeSkillAdjustment, From: prevAdj, To: rec.Adjustment,
+	}}, nil
 }
 
 // check finds the skill, checks the adjustment's range for its kind and

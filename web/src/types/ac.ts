@@ -25,6 +25,8 @@ export interface AcRow {
   itemId?: string;
   buff?: string;
   spellId?: string;
+  /** A buff a successful proficiency check put on (ADR 0037 step 20), named from the proficiency. */
+  proficiencyId?: string;
   value: number;
   /** The shield row against missiles, when it differs (a body shield). */
   missileValue?: number;

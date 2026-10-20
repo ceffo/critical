@@ -5,7 +5,7 @@
 step 5's adjustment before the roll, every check is adjusted on the result card (step 6); step 5's
 API is unchanged. Step 3 amended by [ADR 0030](0030-classes-and-races.md) (bard skill percentages computed), implemented 2026-10-18 (step 18).
 Step 1 and the Consequences amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-20), implemented 2026-10-20: the proficiencies are the character's picks from the Table 37 catalogue, and each slot beyond a pick's cost adds +1 to its target.
-Step 4 amended by ADR 0037 step 20 (decided 2026-10-20, not implemented): a successful Tumbling check puts a buff on, in the check's one entry.
+Step 4 amended by ADR 0037 step 20 (decided 2026-10-20, as built 2026-10-20): a successful Tumbling check puts a buff on, in the check's one entry.
 
 ## Context
 

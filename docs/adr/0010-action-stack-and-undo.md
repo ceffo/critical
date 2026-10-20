@@ -67,7 +67,9 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    and ADR 0012 step 5; save adjustment, ADR 0006 step 5; GM verdict, ADR 0012 step 4; skill check
    adjustment, ADR 0014 step 7; ability check adjustment, ADR 0028 step 7) records,
    in the transaction that checks it may be made (ADR 0006 step 6), two rows: a `correction`
-   entry on the stack (stamped with the current round, no snapshot), whose payload names the
+   entry on the stack (stamped with the current round, no snapshot unless the correction changed
+   state beside the payload: then it carries that state's snapshots, so popping it restores the
+   state too; ADR 0037 step 20.8/20.9, a skill check's buff, 2026-10-20), whose payload names the
    change (`{entryId, entryKind, field, from, to}`; `field` is `targetAc`, `saveAdjustment`,
    `skillAdjustment`, `abilityAdjustment` or `verdict`; `from` is the value before this correction, null for an unknown AC or no
    verdict), and the amend carrying the corrected entry's new payload, linked to it (`stepId`).

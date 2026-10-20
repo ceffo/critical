@@ -35,6 +35,7 @@ type fixture struct {
 	dice    *mocks.MockDice
 	log     *mocks.MockLog
 	points  *mocks.MockPoints
+	buffs   *mocks.MockBuffs
 	tx      *countingTx
 	entries []actionlog.NewEntry
 }
@@ -121,9 +122,9 @@ func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
-		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
+		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), buffs: mocks.NewMockBuffs(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: f.buffs, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()

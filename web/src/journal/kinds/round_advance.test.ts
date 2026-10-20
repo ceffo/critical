@@ -13,4 +13,15 @@ describeKind("round_advance", fixtures, {
     value: null,
     rolled: false,
   },
+  // ADR 0037 step 20: a buff from a proficiency check is named from the proficiency.
+  tumblingExpired: {
+    en: {
+      text: "Round 3 → 4 — expired: Bless, Tumbling",
+    },
+    fr: {
+      text: "Tour 3 → 4 — expirés : Bless, Acrobatie",
+    },
+    value: null,
+    rolled: false,
+  },
 });

@@ -169,6 +169,25 @@ func TestActiveBuffs_SpellIDRoundTripsAndOldRowsReadEmpty(t *testing.T) {
 	assert.Equal(t, "haste", back[1].SpellID)
 }
 
+// ADR 0037 step 20.1: a buff from a proficiency check keeps its proficiency id; a row stored
+// before the field reads "", and a buff not from a check omits it.
+func TestActiveBuffs_Step20_ProficiencyIDRoundTripsAndOldRowsReadEmpty(t *testing.T) {
+	got := read(t, oldRow)
+	require.Len(t, got, 1)
+	assert.Empty(t, got[0].ProficiencyID)
+
+	got = append(got, buffsvc.BuffEffect{ID: "t", Name: "tumbling", Duration: 1, ProficiencyID: "tumbling"})
+	blob := stored(t, got)
+	var raw []map[string]any
+	require.NoError(t, json.Unmarshal([]byte(blob), &raw))
+	require.Len(t, raw, 2)
+	assert.NotContains(t, raw[0], "proficiency_id")
+	assert.Equal(t, "tumbling", raw[1]["proficiency_id"])
+	back := read(t, blob)
+	assert.Empty(t, back[0].ProficiencyID)
+	assert.Equal(t, "tumbling", back[1].ProficiencyID)
+}
+
 // The round counter: no row is round 0; a save upserts the character's
 // counter.
 func TestRoundNumber(t *testing.T) {

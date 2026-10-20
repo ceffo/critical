@@ -145,6 +145,9 @@ type Deps struct {
 	// Languages is the language catalogue (ADR 0032 step 4); nil is the empty
 	// one of a catalogue before format 8, which knows no language.
 	Languages LanguageBook
+	// Proficiencies is the non-weapon catalogue (ADR 0037 steps 1 and 2); nil
+	// is the empty one.
+	Proficiencies ProficiencyBook
 	// HP is the HP ledger, for the current HP of the list (ADR 0007 step 6).
 	HP HPLedger
 }
@@ -159,6 +162,7 @@ type service struct {
 	armour   Armour
 	// languages is never nil: the empty catalogue when Deps holds none.
 	languages LanguageBook
+	profs     ProficiencyBook
 	hp        HPLedger
 }
 
@@ -170,7 +174,10 @@ func New(d Deps) (SVC, error) {
 	if d.Languages == nil {
 		d.Languages = (*ruletablesvc.Languages)(nil)
 	}
-	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour, languages: d.Languages, hp: d.HP}, nil
+	if d.Proficiencies == nil {
+		d.Proficiencies = (*ruletablesvc.Proficiencies)(nil)
+	}
+	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour, languages: d.Languages, profs: d.Proficiencies, hp: d.HP}, nil
 }
 
 // NewWithConfig is here for symmetry with the other services. There is no

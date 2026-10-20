@@ -104,6 +104,11 @@ type OptionsDTO struct {
 	// empty before catalogue format 8.
 	Languages     []LanguageDTO      `json:"languages"`
 	RaceLanguages []RaceLanguagesDTO `json:"raceLanguages"`
+	// Proficiencies is the non-weapon catalogue (PHB Table 37), ProficiencyGroups
+	// the groups each class learns at the table's cost (Table 38) (ADR 0037
+	// steps 1 and 2). A name is the web's i18n key by id. Additive; never null.
+	Proficiencies     []ProficiencyDTO    `json:"proficiencies"`
+	ProficiencyGroups map[string][]string `json:"proficiencyGroups"`
 	// ScoreMethods are ADR 0032 step 6's methods in the book's order (the
 	// score step's chips); RaceAdjustments PHB Table 8 by race (the race
 	// cards). Additions of ADR 0034: a previous web ignores them.
@@ -184,6 +189,17 @@ type LanguageDTO struct {
 	Name localized.Text `json:"name"`
 }
 
+// ProficiencyDTO is a catalogue proficiency: the slots it costs at the table's
+// price, the ability and modifier of its check (absent without one) and every
+// group it is listed under.
+type ProficiencyDTO struct {
+	ID       string   `json:"id"`
+	Ability  string   `json:"ability,omitempty"`
+	Modifier int      `json:"modifier"`
+	Slots    int      `json:"slots"`
+	Groups   []string `json:"groups"`
+}
+
 // RaceLanguagesDTO is a race's own language and the languages of its PHB list.
 type RaceLanguagesDTO struct {
 	Race      string   `json:"race"`
@@ -199,19 +215,21 @@ func Options(svc optionsReader) render.HandlerFunc {
 			return err
 		}
 		out := OptionsDTO{
-			Classes:         make([]ClassOptionDTO, 0, len(o.Classes)),
-			Ability:         RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
-			HPMax:           RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
-			XP:              RangeDTO{Min: o.MinXP, Max: o.MaxXP},
-			StrExceptional:  RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
-			SkillPoints:     RangeDTO{Min: 0, Max: o.MaxSkillPoints},
-			MaxNameLen:      o.MaxNameLen,
-			Sexes:           o.Sexes,
-			Languages:       make([]LanguageDTO, 0, len(o.Languages)),
-			RaceLanguages:   make([]RaceLanguagesDTO, 0, len(o.RaceLanguages)),
-			ScoreMethods:    make([]ScoreMethodDTO, 0, len(o.ScoreMethods)),
-			RaceAdjustments: make([]RaceAdjustmentsDTO, 0, len(o.RaceAdjustments)),
-			RaceIdentity:    make([]RaceIdentityDTO, 0, len(o.RaceIdentity)),
+			Classes:           make([]ClassOptionDTO, 0, len(o.Classes)),
+			Ability:           RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
+			HPMax:             RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
+			XP:                RangeDTO{Min: o.MinXP, Max: o.MaxXP},
+			StrExceptional:    RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
+			SkillPoints:       RangeDTO{Min: 0, Max: o.MaxSkillPoints},
+			MaxNameLen:        o.MaxNameLen,
+			Sexes:             o.Sexes,
+			Languages:         make([]LanguageDTO, 0, len(o.Languages)),
+			RaceLanguages:     make([]RaceLanguagesDTO, 0, len(o.RaceLanguages)),
+			Proficiencies:     make([]ProficiencyDTO, 0, len(o.Proficiencies)),
+			ProficiencyGroups: map[string][]string{},
+			ScoreMethods:      make([]ScoreMethodDTO, 0, len(o.ScoreMethods)),
+			RaceAdjustments:   make([]RaceAdjustmentsDTO, 0, len(o.RaceAdjustments)),
+			RaceIdentity:      make([]RaceIdentityDTO, 0, len(o.RaceIdentity)),
 		}
 		for _, ri := range o.RaceIdentity {
 			out.RaceIdentity = append(out.RaceIdentity, RaceIdentityDTO{
@@ -229,6 +247,12 @@ func Options(svc optionsReader) render.HandlerFunc {
 		}
 		for _, l := range o.Languages {
 			out.Languages = append(out.Languages, LanguageDTO{Code: l.Code, Name: l.Name})
+		}
+		for _, pr := range o.Proficiencies {
+			out.Proficiencies = append(out.Proficiencies, ProficiencyDTO(pr))
+		}
+		for class, groups := range o.ProficiencyGroups {
+			out.ProficiencyGroups[class] = groups
 		}
 		for _, rl := range o.RaceLanguages {
 			out.RaceLanguages = append(out.RaceLanguages, RaceLanguagesDTO{Race: rl.Race, Native: rl.Native, Languages: rl.List})

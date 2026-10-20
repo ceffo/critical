@@ -284,6 +284,15 @@ export interface LanguageOption {
   name: LocalizedText;
 }
 
+/** One proficiency of the non-weapon catalogue; `slots` is Table 37's cost before the class's crossover. */
+export interface ProficiencyOption {
+  id: string;
+  ability?: string;
+  modifier: number;
+  slots: number;
+  groups: string[];
+}
+
 /** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 export interface CreationOptions {
   /**
@@ -324,6 +333,13 @@ export interface CreationOptions {
    */
   languages?: LanguageOption[];
   raceLanguages?: { race: string; native: string; languages: string[] }[];
+  /**
+   * The non-weapon proficiency catalogue (PHB Table 37) and the groups each class learns at the
+   * table's cost (Table 38) (ADR 0037 steps 1 and 2). A name is the i18n key `skills.names.<id>`.
+   * `ability` is absent for a proficiency with no check. Absent from a release that predates them.
+   */
+  proficiencies?: ProficiencyOption[];
+  proficiencyGroups?: Record<string, string[]>;
   ability: ValueRange;
   /** The 18/xx percentile's range (1 = 18/01, 100 = 18/00). */
   strExceptional: ValueRange;

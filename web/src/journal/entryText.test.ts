@@ -1418,7 +1418,7 @@ describe("entryText for skill checks", () => {
         ),
         fr,
       ),
-    ).toBe("Équitation (terrestre) : d20 12 contre 16 (11 +5), réussi");
+    ).toBe("Équitation, à terre : d20 12 contre 16 (11 +5), réussi");
     // Adjustment removed after the roll: worded as a plain check again.
     expect(
       entryText(

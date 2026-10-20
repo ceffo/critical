@@ -86,6 +86,14 @@ type LanguageBook interface {
 	RaceList(race string) []string
 }
 
+// ProficiencyBook is the non-weapon catalogue and Table 38's crossovers the
+// creation options serve (ADR 0037 steps 1 and 2); ruletablesvc.Proficiencies
+// satisfies it, the empty one included.
+type ProficiencyBook interface {
+	All() []ruletablesvc.Proficiency
+	Crossovers() []ruletablesvc.Crossover
+}
+
 // Kind is the class and race code of the character whose details are checked:
 // the alignment limit depends on the class and the native language on the race.
 type Kind struct {

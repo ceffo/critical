@@ -673,11 +673,13 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        character's levels and Kelsen's earlier levels owe none (the book of 20.7 and Ajouter
        cover them). The shape of the grant in the level-up answer and of the add that claims it
        is left to the implementation item (ADR 0038).
-       Tests: `LevelUp_Step20_8_AMageOpeningASpellLevelOwesOneFreeSpell`,
-       `LevelUp_Step20_8_ABardOwesNone`, `LevelUp_Step20_8_NoneAboveTheIntelligencesMaxLevel`,
-       `LevelUp_Step20_8_NeverBlocksTheLevelUp`, `Add_Step20_8_ClaimingStoresTheLevelGrantOrigin`,
-       `LevelUp_Step20_8_UndoTakesTheGrantBack`, `LevelUp_Step20_8_OwedIsOpenedLevelsMinusGrants`
-       (levelupsvc / learnsvc).
+       Tests: `TestLevelUp_Step20_8_AMageOpeningASpellLevelOwesOneFreeSpell` (it also never
+       blocks the level-up), `TestLevelUp_Step20_8_ABardOwesNone`,
+       `TestLevelUp_Step20_8_NoneAboveTheIntelligencesMaxLevel`,
+       `TestLevelUp_Step20_8_ACharacterCreatedAtLevel7OwesNothing`,
+       `TestLevelUp_Step20_8_UndoTakesTheGrantBack` (composition),
+       `TestOwed_Step20_8_OwedIsOpenedLevelsMinusGrants` (spellbook),
+       `TestAdd_Step20_8_ClaimingStoresTheLevelGrantOrigin` (learnsvc).
     9. **Consequences and out of scope** _(decided 2026-10-20, user)_. No content migration for
        existing characters: they fill their book with Ajouter or Apprendre, Kelsen's imported book
        stays (20.4), only the origin of their entries is set (20.5). Taking a spell out of the
@@ -734,7 +736,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     Tests: `TestFreeSpellsAt_Step20_8_OneFreeSpellPerSpellLevelOpened`,
     `TestOwed_Step20_8_OwedIsOpenedLevelsMinusGrants` (spellbook),
     `TestGetCharacter_Step20_8_OwedIsOpenedLevelsMinusGrants`, `TestGetCharacter_Step20_8_ABardReadsNoFreeSpells`
-    (charactersvc), `TestAdd_Step20_8_ClaimingStoresTheLevelGrantOrigin`, `TestAdd_Step20_8_RefusedWhenNotOwed`,
+    (charactersvc), `TestBook_Step20_8_AClaimTheCatalogueLacksIsSkippedAndLogged` (spellbookadpt), `TestAdd_Step20_8_ClaimingStoresTheLevelGrantOrigin`, `TestAdd_Step20_8_RefusedWhenNotOwed`,
     `TestAdd_Step20_8_RedoRestoresTheLevelGrant` (learnsvc), `TestLevelUp_Step20_8_AMageOpeningASpellLevelOwesOneFreeSpell`,
     `TestLevelUp_Step20_8_ABardOwesNone`, `TestLevelUp_Step20_8_NoneAboveTheIntelligencesMaxLevel`,
     `TestLevelUp_Step20_8_ACharacterCreatedAtLevel7OwesNothing`, `TestLevelUp_Step20_8_UndoTakesTheGrantBack`

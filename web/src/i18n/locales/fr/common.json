@@ -2559,5 +2559,11 @@
       }
     },
     "warned": "Avertissement de classe"
+  },
+  "build": {
+    "env": {
+      "dev": "dev",
+      "staging": "préprod"
+    }
   }
 }

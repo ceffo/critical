@@ -4,7 +4,8 @@
 app = "critical-hit"
 primary_region = "yyz"
 
-# Same values as the image's ENV (Dockerfile), `just check-fly` fails when they differ. No CRITICAL_DSN:
+# Same values as the image's ENV (Dockerfile) plus CRITICAL_ENV, which only names the environment for
+# /api/health (the same image runs in both apps); `just check-fly` fails when they differ. No CRITICAL_DSN:
 # the app has no volume, its data lives in the fly PostgreSQL cluster (tournesol-db, shared), and its
 # DSN is the fly secret CRITICAL_DSN (ADR 0024 steps 2.3, 2.4 and 5.1; docs/deploy.md).
 [env]
@@ -12,6 +13,7 @@ primary_region = "yyz"
   CRITICAL_SEEDS_DIR = "/app/seeds"
   CRITICAL_CATALOGUE = "/app/catalogue.json"
   CRITICAL_WEB_DIR = "/app/web"
+  CRITICAL_ENV = "production"
 
 # Two machines, always running, updated one at a time (ADR 0024 steps 2.2, 5.2): no planned downtime.
 # A release's migrations are additive, so the previous release keeps working while its machines are replaced.

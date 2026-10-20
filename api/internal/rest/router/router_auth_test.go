@@ -110,7 +110,7 @@ func TestGate_Step6_1_PublicPathsReachable(t *testing.T) {
 
 	health := anon(web, "GET", "/api/health")
 	require.Equal(t, http.StatusOK, health.Code)
-	assert.JSONEq(t, `{"status":"ok","commit":"abc123","version":"1.2.3","login":"google"}`, health.Body.String(),
+	assert.JSONEq(t, `{"status":"ok","commit":"abc123","version":"1.2.3","env":"staging","login":"google"}`, health.Body.String(),
 		"the server's build only: nothing about users or characters")
 
 	// /api/auth/me is reached: its own answer, a 401 with no session.

@@ -53,6 +53,9 @@ type Options struct {
 	// Version is the release version (X.Y.Z) baked into the image, reported
 	// by /api/health (ADR 0024 step 1.4); empty is reported as "unknown".
 	Version string
+	// Env is the environment /api/health reports: "dev", "staging" or
+	// "production" (ADR 0024 step 1.4); empty is reported as "unknown".
+	Env string
 	// Login is what /api/health reports as the login the server runs:
 	// "google" (the Google login, ADR 0029 step 8) or "dev" (the dev login of
 	// local runs). The deploy checks allow a public IP only on "google"
@@ -120,7 +123,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	r.Get("/api/health", func(w http.ResponseWriter, req *http.Request) {
 		render.OK(req.Context(), w, map[string]string{
 			"status": "ok", "commit": orUnknown(opts.Commit), "version": orUnknown(opts.Version),
-			"login": orUnknown(opts.Login),
+			"env": orUnknown(opts.Env), "login": orUnknown(opts.Login),
 		})
 	})
 	r.NotFound(notFound(opts.Web))

@@ -4,6 +4,7 @@
 package flycheck_test
 
 import (
+	"maps"
 	"os"
 	"regexp"
 	"strings"
@@ -83,6 +84,7 @@ var apps = map[string]string{"staging": "critical-hit-staging", "prod": "critica
 func TestFly_Step2_RequiredKeysAndImageLayout(t *testing.T) {
 	image := dockerfileEnv(t)
 	require.NotEmpty(t, image)
+	assert.NotContains(t, image, "CRITICAL_ENV", "one image runs in both apps: the environment is each app's [env]")
 	for file, env := range files {
 		t.Run(file, func(t *testing.T) {
 			c := load(t, file)
@@ -90,7 +92,13 @@ func TestFly_Step2_RequiredKeysAndImageLayout(t *testing.T) {
 			assert.True(t, c.HTTPService.ForceHTTPS, "a public app serves HTTPS only")
 			assert.Equal(t, "yyz", c.PrimaryRegion)
 			assert.Empty(t, c.Build, "the image is passed by the workflow (--image), never named here")
-			assert.Equal(t, image, c.Env, "[env] must equal the image's ENV (Dockerfile)")
+			// CRITICAL_ENV names the app's environment (/api/health's env, ADR 0024 step 1.4): the
+			// image is the same in both apps, so it is not in the image's ENV.
+			wantEnv := map[string]string{"staging": "staging", "prod": "production"}[env]
+			assert.Equal(t, wantEnv, c.Env["CRITICAL_ENV"])
+			rest := maps.Clone(c.Env)
+			delete(rest, "CRITICAL_ENV")
+			assert.Equal(t, image, rest, "[env] must equal the image's ENV (Dockerfile), plus CRITICAL_ENV")
 			assert.Equal(t, ":8080", c.Env["CRITICAL_ADDR"])
 			assert.Equal(t, 8080, c.HTTPService.InternalPort)
 			require.Len(t, c.HTTPService.Checks, 1)

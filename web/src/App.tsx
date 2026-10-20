@@ -108,7 +108,7 @@ function App() {
   }, [refresh, loadSpellNames]);
 
   return (
-    <div className="flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">
+    <div className="flex h-app flex-col gap-3 overflow-hidden bg-background px-3 pt-3">
       <DatabaseBanner />
       <Header />
       <div className="flex min-h-0 flex-1 gap-3">

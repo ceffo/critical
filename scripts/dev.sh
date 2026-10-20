@@ -156,6 +156,8 @@ cmd_start() {
         say "api: (the database critical is left untouched; \`just catalogue\` fetches the real catalogue)"
     fi
 
+    # The version /api/health reports is computed at each rebuild (build-identity.sh): a commit or an edit
+    # in a file air does not watch shows only after the next .go rebuild.
     # air: rebuilds on .go changes; the server gets SIGINT (graceful shutdown) on every restart
     # and on exit, SIGKILL only after kill_delay (api/.air.toml).
     (
@@ -165,7 +167,7 @@ cmd_start() {
         # The dev login (ADR 0029 step 8.2): without OAuth settings the server only starts in dev.
         export CRITICAL_ENV=dev
         exec setsid go tool air -c .air.toml -tmp_dir "$dev_dir/tmp" \
-            -build.cmd "go build -o $bin ./cmd/api" -build.entrypoint "$bin"
+            -build.cmd "go build -ldflags \"\$($root/scripts/build-identity.sh)\" -o $bin ./cmd/api" -build.entrypoint "$bin"
     ) &
     record api $!
 

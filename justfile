@@ -59,6 +59,7 @@ check-ci-skip:
 # (scripts/test-release-version.sh, scripts/test-release-scripts.sh, scripts/test-staging-deploy.sh,
 # scripts/test-promotion.sh, scripts/test-gate-check.sh, scripts/test-db-backup.sh, scripts/test-major.sh).
 check-release-scripts:
+    scripts/test-build-identity.sh
     scripts/test-release-version.sh
     scripts/test-release-scripts.sh
     scripts/test-staging-deploy.sh
@@ -195,7 +196,7 @@ generate:
 
 # Build the backend
 build-api:
-    cd api && go build -o ../bin/critical-srv ./cmd/api
+    cd api && go build -ldflags "$(../scripts/build-identity.sh)" -o ../bin/critical-srv ./cmd/api
 
 # Lint the backend, on the Go version go.mod names (CI's): gofmt output differs between Go versions
 lint-api:

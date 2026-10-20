@@ -1,0 +1,243 @@
+{
+  "id": 2,
+  "name": "Ilse",
+  "str": 10,
+  "strExceptional": 0,
+  "dex": 17,
+  "con": 12,
+  "int": 9,
+  "wis": 10,
+  "cha": 11,
+  "hpMax": 6,
+  "xpTotal": 2600,
+  "class": "thief",
+  "raceCode": "elf",
+  "derived": {
+    "xpTotal": 2600,
+    "targetLevel": 3,
+    "realizedLevel": 1,
+    "nextLevelXp": 5000,
+    "thac0": 20,
+    "saves": {
+      "paraPoison": 13,
+      "rodStaffWand": 14,
+      "petriPoly": 12,
+      "breath": 16,
+      "spell": 15
+    },
+    "raceSaveBonus": {
+      "paraPoison": 0,
+      "rodStaffWand": 0,
+      "petriPoly": 0,
+      "breath": 0,
+      "spell": 0
+    },
+    "spellSlots": [],
+    "levelUp": {
+      "pending": [
+        {
+          "level": 2,
+          "die": 6,
+          "fixedGain": 0,
+          "grants": {
+            "weaponSlots": 0,
+            "nonWeaponSlots": 0,
+            "skillPoints": 30
+          }
+        },
+        {
+          "level": 3,
+          "die": 6,
+          "fixedGain": 0,
+          "grants": {
+            "weaponSlots": 0,
+            "nonWeaponSlots": 0,
+            "skillPoints": 30
+          }
+        }
+      ],
+      "realizedAboveTarget": false,
+      "toSpend": {
+        "weaponSlots": 0,
+        "nonWeaponSlots": 0,
+        "skillPoints": 0
+      }
+    },
+    "specializes": false,
+    "spellbook": null,
+    "spellFailure": 0,
+    "turning": null,
+    "thiefSkills": [
+      {
+        "skill": "pick_pockets",
+        "base": 15,
+        "points": 30,
+        "race": 5,
+        "dexterity": 5,
+        "armor": 5,
+        "rawPercent": 60,
+        "percent": 60
+      },
+      {
+        "skill": "open_locks",
+        "base": 10,
+        "points": 20,
+        "race": -5,
+        "dexterity": 10,
+        "armor": 0,
+        "rawPercent": 35,
+        "percent": 35
+      },
+      {
+        "skill": "find_remove_traps",
+        "base": 5,
+        "points": 0,
+        "race": 0,
+        "dexterity": 0,
+        "armor": 0,
+        "rawPercent": 5,
+        "percent": 5
+      },
+      {
+        "skill": "move_silently",
+        "base": 10,
+        "points": 0,
+        "race": 5,
+        "dexterity": 5,
+        "armor": 10,
+        "rawPercent": 30,
+        "percent": 30
+      },
+      {
+        "skill": "hide_in_shadows",
+        "base": 5,
+        "points": 0,
+        "race": 10,
+        "dexterity": 5,
+        "armor": 5,
+        "rawPercent": 25,
+        "percent": 25
+      },
+      {
+        "skill": "detect_noise",
+        "base": 15,
+        "points": 0,
+        "race": 5,
+        "dexterity": 0,
+        "armor": 0,
+        "rawPercent": 20,
+        "percent": 20
+      },
+      {
+        "skill": "climb_walls",
+        "base": 60,
+        "points": 15,
+        "race": 0,
+        "dexterity": 0,
+        "armor": 10,
+        "rawPercent": 85,
+        "percent": 85
+      },
+      {
+        "skill": "read_languages",
+        "base": 0,
+        "points": 0,
+        "race": 0,
+        "dexterity": 0,
+        "armor": 0,
+        "rawPercent": 0,
+        "percent": 0
+      }
+    ],
+    "bardSkills": null,
+    "skillArmor": "none",
+    "skillBudget": [
+      {
+        "code": "skill_points_total",
+        "points": 65,
+        "limit": 60
+      }
+    ],
+    "backstab": 2,
+    "proficiencySlots": {
+      "nonWeapon": {
+        "initial": 3,
+        "perLevels": 4,
+        "levelGained": 0,
+        "intelligence": 2,
+        "available": 5,
+        "spent": 6,
+        "left": -1,
+        "languages": 3
+      },
+      "weapon": {
+        "initial": 2,
+        "perLevels": 4,
+        "levelGained": 0,
+        "available": 2,
+        "spent": 2,
+        "left": 0
+      },
+      "picks": [
+        {
+          "id": "tumbling",
+          "slots": 2,
+          "cost": 1,
+          "extraSlots": 1,
+          "ability": "dex",
+          "modifier": 0,
+          "known": true,
+          "target": 18
+        },
+        {
+          "id": "appraising",
+          "slots": 1,
+          "cost": 1,
+          "extraSlots": 0,
+          "ability": "int",
+          "modifier": 0,
+          "known": true,
+          "target": 9
+        }
+      ],
+      "weaponPicks": [
+        {
+          "type": "dagger",
+          "slots": 1,
+          "allowed": true
+        },
+        {
+          "type": "short_bow",
+          "slots": 1,
+          "allowed": true
+        }
+      ]
+    }
+  },
+  "missing": [
+    "alignment"
+  ],
+  "warnings": [
+    {
+      "code": "slots_over_budget",
+      "field": "nonweapon",
+      "pool": "nonweapon",
+      "spent": 6,
+      "available": 5
+    }
+  ],
+  "alignment": "",
+  "age": null,
+  "sex": "female",
+  "height_cm": null,
+  "weight_kg": null,
+  "hair": "",
+  "eyes": "",
+  "languages": [
+    "elvish",
+    "common",
+    "dwarvish",
+    "gnomish",
+    "orcish"
+  ]
+}

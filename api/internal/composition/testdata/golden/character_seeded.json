@@ -1,0 +1,271 @@
+{
+  "id": 1,
+  "name": "Test Bard",
+  "str": 12,
+  "strExceptional": 0,
+  "dex": 17,
+  "con": 16,
+  "int": 14,
+  "wis": 8,
+  "cha": 16,
+  "hpMax": 85,
+  "xpTotal": 1293418,
+  "class": "bard",
+  "raceCode": "half_elf",
+  "derived": {
+    "xpTotal": 1293418,
+    "targetLevel": 15,
+    "realizedLevel": 15,
+    "nextLevelXp": 1320000,
+    "thac0": 13,
+    "saves": {
+      "paraPoison": 10,
+      "rodStaffWand": 8,
+      "petriPoly": 9,
+      "breath": 13,
+      "spell": 9
+    },
+    "raceSaveBonus": {
+      "paraPoison": 0,
+      "rodStaffWand": 0,
+      "petriPoly": 0,
+      "breath": 0,
+      "spell": 0
+    },
+    "spellSlots": [
+      {
+        "level": 1,
+        "count": 3
+      },
+      {
+        "level": 2,
+        "count": 3
+      },
+      {
+        "level": 3,
+        "count": 3
+      },
+      {
+        "level": 4,
+        "count": 3
+      },
+      {
+        "level": 5,
+        "count": 2
+      }
+    ],
+    "levelUp": {
+      "pending": [],
+      "realizedAboveTarget": false,
+      "toSpend": {
+        "weaponSlots": 0,
+        "nonWeaponSlots": 2,
+        "skillPoints": 30
+      }
+    },
+    "specializes": false,
+    "spellbook": {
+      "classMaxSpellLevel": 6,
+      "intMaxSpellLevel": 7,
+      "learnChance": 60,
+      "maxSpellsPerLevel": 9,
+      "noMaximum": false
+    },
+    "spellFailure": 0,
+    "turning": null,
+    "thiefSkills": null,
+    "bardSkills": [
+      {
+        "skill": "climb_walls",
+        "base": 50,
+        "points": 35,
+        "race": 0,
+        "dexterity": 0,
+        "armor": 0,
+        "rawPercent": 85,
+        "percent": 85
+      },
+      {
+        "skill": "detect_noise",
+        "base": 20,
+        "points": 70,
+        "race": 0,
+        "dexterity": 0,
+        "armor": 0,
+        "rawPercent": 90,
+        "percent": 90
+      },
+      {
+        "skill": "pick_pockets",
+        "base": 10,
+        "points": 25,
+        "race": 10,
+        "dexterity": 5,
+        "armor": 0,
+        "rawPercent": 50,
+        "percent": 50
+      },
+      {
+        "skill": "read_languages",
+        "base": 5,
+        "points": 70,
+        "race": 0,
+        "dexterity": 0,
+        "armor": 0,
+        "rawPercent": 75,
+        "percent": 75
+      }
+    ],
+    "skillArmor": "leather",
+    "skillBudget": [],
+    "backstab": 0,
+    "proficiencySlots": {
+      "nonWeapon": {
+        "initial": 3,
+        "perLevels": 4,
+        "levelGained": 3,
+        "intelligence": 4,
+        "available": 10,
+        "spent": 8,
+        "left": 2,
+        "languages": 0
+      },
+      "weapon": {
+        "initial": 2,
+        "perLevels": 4,
+        "levelGained": 3,
+        "available": 5,
+        "spent": 5,
+        "left": 0
+      },
+      "picks": [
+        {
+          "id": "musical_instrument",
+          "slots": 1,
+          "cost": 1,
+          "extraSlots": 0,
+          "ability": "dex",
+          "modifier": -1,
+          "known": true,
+          "target": 16
+        },
+        {
+          "id": "tumbling",
+          "slots": 1,
+          "cost": 1,
+          "extraSlots": 0,
+          "ability": "dex",
+          "modifier": 0,
+          "known": true,
+          "target": 17
+        },
+        {
+          "id": "ventriloquism",
+          "slots": 1,
+          "cost": 1,
+          "extraSlots": 0,
+          "ability": "int",
+          "modifier": -2,
+          "known": true,
+          "target": 12
+        },
+        {
+          "id": "riding_land",
+          "slots": 1,
+          "cost": 1,
+          "extraSlots": 0,
+          "ability": "wis",
+          "modifier": 3,
+          "known": true,
+          "target": 11
+        },
+        {
+          "id": "appraising",
+          "slots": 1,
+          "cost": 1,
+          "extraSlots": 0,
+          "ability": "int",
+          "modifier": 0,
+          "known": true,
+          "target": 14
+        },
+        {
+          "id": "singing",
+          "slots": 1,
+          "cost": 1,
+          "extraSlots": 0,
+          "ability": "cha",
+          "modifier": 0,
+          "known": true,
+          "target": 16
+        },
+        {
+          "id": "reading_writing",
+          "slots": 1,
+          "cost": 1,
+          "extraSlots": 0,
+          "ability": "int",
+          "modifier": 1,
+          "known": true,
+          "target": 15
+        },
+        {
+          "id": "local_history",
+          "slots": 1,
+          "cost": 1,
+          "extraSlots": 0,
+          "ability": "cha",
+          "modifier": 0,
+          "known": true,
+          "target": 16
+        }
+      ],
+      "weaponPicks": [
+        {
+          "type": "short_bow",
+          "slots": 1,
+          "allowed": true
+        },
+        {
+          "type": "dagger",
+          "slots": 1,
+          "allowed": true
+        },
+        {
+          "type": "dart",
+          "slots": 1,
+          "allowed": true
+        },
+        {
+          "type": "long_sword",
+          "slots": 1,
+          "allowed": true
+        },
+        {
+          "type": "other_melee",
+          "slots": 1,
+          "allowed": true
+        }
+      ]
+    }
+  },
+  "missing": [],
+  "warnings": [
+    {
+      "code": "slots_to_spend",
+      "field": "nonweapon",
+      "pool": "nonweapon",
+      "left": 2
+    }
+  ],
+  "alignment": "neutral_good",
+  "age": null,
+  "sex": "male",
+  "height_cm": null,
+  "weight_kg": null,
+  "hair": "",
+  "eyes": "",
+  "languages": [
+    "common"
+  ]
+}

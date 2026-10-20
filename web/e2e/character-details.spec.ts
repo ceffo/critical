@@ -24,6 +24,12 @@ const VIEWPORTS = [
 test("character details: view, edit with a field error, save, reload", async ({
   page,
 }) => {
+  // The creation options are read once per page load: the card, its edit form and the Skills tab's
+  // editor share the one read, the journal's language names (read at start) included.
+  let optionReads = 0;
+  page.on("request", (r) => {
+    if (new URL(r.url()).pathname === "/api/characters/options") optionReads++;
+  });
   await openDashboard(page);
   await page.getByTestId("details-trigger").click();
   const pop = page.getByTestId("details-popover");
@@ -94,9 +100,10 @@ test("character details: view, edit with a field error, save, reload", async ({
   );
   await editor.getByTestId("proficiency-save").click();
   await expect(editor).toHaveCount(0);
-  await expect(combatLog(page)).toContainText("Languages: 1 → 3");
+  await expect(combatLog(page)).toContainText("Languages: + Elvish, + Gnomish");
   await page.getByTestId("details-trigger").click();
   await expect(pop.getByText("Common, Elvish, Gnomish")).toBeVisible();
+  expect(optionReads).toBe(1);
   await expect(pop.getByTestId("details-language-slots")).toHaveText(
     "2 proficiency slots",
   );

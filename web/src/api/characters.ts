@@ -31,17 +31,14 @@ export function fetchCreationOptions(): Promise<CreationOptions> {
 }
 
 /**
- * The options with the alignment and sex lists (ADR 0032). A release that predates them answers
- * without (a rolling deploy, ADR 0024): that is rejected as not loaded, never read as "no choice".
+ * Whether the options carry the alignment and sex lists (ADR 0032). A release that predates them
+ * answers without (a rolling deploy, ADR 0024): that is "not loaded", never "no choice".
  */
-export async function fetchCreationChoices(): Promise<CreationOptions> {
-  const o = await fetchCreationOptions();
-  if (
-    !Array.isArray(o.sexes) ||
-    o.classes.some((c) => !Array.isArray(c.alignments))
-  )
-    throw new Error("incomplete creation options");
-  return o;
+export function hasIdentityChoices(o: CreationOptions): boolean {
+  return (
+    Array.isArray(o.sexes) &&
+    o.classes.every((c) => Array.isArray(c.alignments))
+  );
 }
 
 /** Creates a character, which becomes current. */

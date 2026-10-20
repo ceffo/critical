@@ -4,7 +4,6 @@ import { ArrowLeft, ArrowRight, UserPlus, X } from "@phosphor-icons/react";
 import {
   createCharacter,
   draftCharacter,
-  fetchCreationChoices,
 } from "@/api/characters";
 import { ApiError, OVER_BUDGET } from "@/api/http";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { holdPath } from "@/lib/navigation";
 import { formatHeight, formatWeight, unitsFor } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
+import { useCreationOptions } from "@/lib/useCreationOptions";
 import { useLanguageNames } from "@/lib/useLanguageNames";
 import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,6 @@ import { skillName } from "@/journal/words";
 import {
   ABILITIES,
   type CreationDraft,
-  type CreationOptions,
 } from "@/types/character";
 import { CardHead, Note, StepDot, Wordmark } from "./kit";
 import {
@@ -79,9 +78,7 @@ function isDirty(d: FlowDraft): boolean {
  */
 export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   const { t, i18n } = useTranslation();
-  const [options, setOptions] = useState<CreationOptions | null>(null);
-  const [loadError, setLoadError] = useState(false);
-  const [attempt, setAttempt] = useState(0);
+  const { options, failed: loadError, retry } = useCreationOptions(true);
   const [draft, setDraft] = useState<FlowDraft>(EMPTY_DRAFT);
   const [step, setStep] = useState<StepId>("class");
   const [reached, setReached] = useState(0);
@@ -92,17 +89,6 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   useEffect(() => {
     document.title = `${t("characters.newTitle")} · ${APP_NAME}`;
   }, [t]);
-
-  useEffect(() => {
-    let live = true;
-    fetchCreationChoices().then(
-      (o) => live && setOptions(o),
-      () => live && setLoadError(true),
-    );
-    return () => {
-      live = false;
-    };
-  }, [attempt]);
 
   const dirty = isDirty(draft);
   // Closing the tab or reloading with values entered asks the browser's question; leaving through
@@ -305,13 +291,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
         {loadError ? (
           <div role="alert" className="flex flex-col items-start gap-2">
             <p className="text-body text-danger">{t("details.optionsError")}</p>
-            <Button
-              variant="quiet"
-              onClick={() => {
-                setLoadError(false);
-                setAttempt((n) => n + 1);
-              }}
-            >
+            <Button variant="quiet" onClick={retry}>
               {t("details.optionsRetry")}
             </Button>
           </div>

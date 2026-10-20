@@ -25,7 +25,7 @@ test("character details: view, edit with a field error, save, reload", async ({
   page,
 }) => {
   // The creation options are read once per page load: the card, its edit form and the Skills tab's
-  // editor share the one read.
+  // editor share the one read, the journal's language names (read at start) included.
   let optionReads = 0;
   page.on("request", (r) => {
     if (new URL(r.url()).pathname === "/api/characters/options") optionReads++;

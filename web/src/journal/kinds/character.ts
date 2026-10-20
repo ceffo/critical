@@ -162,7 +162,9 @@ export const skillPointsKind: KindView<SkillPointsPayload> = {
 };
 
 /** Payload of a proficiencies entry (skillsvc picksRecord): each pool's picks before and after,
- * by id or weapon type and slots; `weapon` null for an entry logged before the weapon pool. */
+ * by id or weapon type and slots; `weapon` null for an entry logged before the weapon pool;
+ * `languages` the languages before and after (ADR 0037 step 18), null for an entry logged before
+ * they moved to the Skills tab. */
 interface PicksPayload {
   before: Record<string, number>;
   after: Record<string, number>;
@@ -170,14 +172,20 @@ interface PicksPayload {
     before: Record<string, number>;
     after: Record<string, number>;
   } | null;
+  languages: { before: string[]; after: string[] } | null;
 }
 
 type PickList =
   | {
       nonweapon?: { id: string; slots: number }[];
       weapon?: { type: string; slots: number }[];
+      languages?: string[];
     }
   | undefined;
+
+/** The same languages, in any order (a save that only reorders them logs nothing). */
+const sameLanguages = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((l) => b.includes(l));
 
 const bySlots = (l: PickList): Record<string, number> | null =>
   l && Array.isArray(l.nonweapon)
@@ -206,20 +214,29 @@ export const proficienciesKind: KindView<PicksPayload> = {
     if (!before || !after) return null;
     const wb = weaponBySlots(p?.before);
     const wa = weaponBySlots(p?.after);
+    const lb = p?.before?.languages;
+    const la = p?.after?.languages;
     return {
       before,
       after,
       weapon: wb || wa ? { before: wb ?? {}, after: wa ?? {} } : null,
+      languages:
+        Array.isArray(lb) && Array.isArray(la)
+          ? { before: lb, after: la }
+          : null,
     };
   },
   icon: ListNumbers,
   // "Proficiency slots: Tumbling 1 → 2, Tracking 0 → 2": each pick whose slots changed (0: none);
   // then "Weapon proficiency slots: Long sword 1 → 2 (specialization)". A weapon pick of more than
-  // one slot is a specialization: the server refuses any other count (ADR 0037 step 9).
+  // one slot is a specialization: the server refuses any other count (ADR 0037 step 9). Then
+  // "Languages: 2 → 3", the count of the languages known (ADR 0037 step 18), when they changed.
   text(p, { t }) {
     const parts: string[] = [];
     const ids = changed(p.before, p.after);
-    if (ids.length > 0 || !p.weapon)
+    const l = p.languages;
+    const languagesChanged = !!l && !sameLanguages(l.before, l.after);
+    if (ids.length > 0 || (!p.weapon && !languagesChanged))
       parts.push(
         t("log.proficiencies.text", {
           changes: ids
@@ -251,6 +268,13 @@ export const proficienciesKind: KindView<PicksPayload> = {
                 : t("log.proficiencies.change", args);
             })
             .join(", "),
+        }),
+      );
+    if (l && languagesChanged)
+      parts.push(
+        t("log.proficiencies.languages", {
+          from: l.before.length,
+          to: l.after.length,
         }),
       );
     return parts.join(" · ");

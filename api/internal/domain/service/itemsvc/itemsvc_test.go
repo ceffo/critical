@@ -15,9 +15,9 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 func TestNew_NilDAL(t *testing.T) {
@@ -222,7 +222,7 @@ func deps(t *testing.T) fixture {
 func readsCharacter(t *testing.T) fixture {
 	f := deps(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, mock.Anything).Return(character(false), nil).Maybe()
-	f.chars.EXPECT().WeaponProficiency(mock.Anything, mock.Anything).Return(charactersvc.WeaponProficiency{}, nil).Maybe()
+	f.chars.EXPECT().WeaponProficiency(mock.Anything, mock.Anything).Return(skills.WeaponProficiency{}, nil).Maybe()
 	return f
 }
 

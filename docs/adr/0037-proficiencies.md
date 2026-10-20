@@ -5,7 +5,7 @@ epic on 2026-10-19; this ADR writes them down as steps). Parts marked _(proposed
 this ADR adds where the book leaves a figure open; they await the user's OK in the PR. Not
 implemented. The non-weapon steps (1, 3 to 5, 10 to 14 and 16.1, the non-weapon pool) as built
 2026-10-20; the weapon pool (steps 3, 7, 10 to 14 and 16.2 for weapon picks) as built 2026-10-20;
-step 6 (languages as picks) and step 8 as built 2026-10-20; steps 9 and 16.3 as built 2026-10-20; step 15 not implemented; the skills module and the languages' editor decided 2026-10-20 (architecture review 2, see the amendment, on implementation). Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
+step 6 (languages as picks) and step 8 as built 2026-10-20; steps 9 and 16.3 as built 2026-10-20; step 15 not implemented; the skills module and the languages' editor (steps 17 and 18) decided and as built 2026-10-20 (architecture review 2, see the amendment). Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
 proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequences),
 [ADR 0030](0030-classes-and-races.md) (steps 12, 17 and 18 and the "Not covered" proficiency
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
@@ -148,21 +148,22 @@ writes `Test<name>` and adds the prefix here in the same PR.
    the non-weapon pool.
    Tests: `TestLanguagePicks_Step6_EachExtraLanguageCostsOneSlot` (proficiencysvc: native and Common
    free, a half-elf whose native is Common, a dwarf with Dwarvish and Common free),
-   `TestLanguages_Step6_EditCheckedByTheBudget` (detailssvc: no `languages_over_limit` any more).
+   `TestLanguages_Step6_EditCheckedByTheBudget` (skillsvc since step 18; detailssvc before it: no
+   `languages_over_limit` any more).
    _(As built, 2026-10-20: `charactersvc.LanguageSlots` counts the languages (no catalogue: none),
    and the pool's figures and budget take a `Spending` (the picks and that count), so the
    non-weapon pool's `spent` includes the languages and `derived.proficiencySlots.nonWeapon` gains
    `languages`, the part they spend; no language is a stored pick, so no migration. Table 4 stays
    the pool's `intelligence` term only. The budget applies on a picks save (the languages
-   unchanged), on a languages edit (detailssvc asks charactersvc's `LanguagesWithinBudget`;
+   unchanged), on a languages edit (since step 18 the Skills tab's save, `PUT /api/proficiencies`;
    refused 409 `over_budget` on field `languages`) and at creation (the creation's preview and
    create; field `details.languages`, the form's name). The refusal names the languages when the picks alone, with the languages as before, would pass, else `nonweapon`). `POST /api/characters/checks` takes the
    draft's `race` and `languages` so the proficiency step counts them. The tests are in
-   charactersvc (no proficiencysvc) with `TestBudget_Step6_LanguagesSpendTheNonweaponPool`,
+   charactersvc (no proficiencysvc; the rules' tests in `domain/skills` since step 17) with
+   `TestBudget_Step6_LanguagesSpendTheNonweaponPool`,
    `TestCreate_Step6_LanguagesBeyondTheSlotsAreRefused`,
    `TestGetCharacter_Step6_TheLanguagesSpendTheNonweaponPool`,
-   `TestLanguagesWithinBudget_Step6_AnEditIsCheckedByTheBudget` and
-   `TestCreationChecks_Step6_TheDraftLanguagesSpendThePool`; the composition's
+   and `TestCreationChecks_Step6_TheDraftLanguagesSpendThePool`; the composition's
    `TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots` through the API. Kelsen's
    seedcheck reads 11 of 10 on the campaign seeds, a warning (the test fixture's Kelsen has no
    language beyond Common).)_
@@ -484,10 +485,10 @@ writes `Test<name>` and adds the prefix here in the same PR.
   beyond its check (tracking's modifiers, Table 39); proficiencies granted free by a class; double
   specialization; multi- and dual-class (Table 34's best line).
 
-## Amendment 2026-10-20: the skills module (decided, on implementation)
+## Amendment 2026-10-20: the skills module (decided, as built 2026-10-20)
 
 Decided in the second architecture review, grilled with the user (reports/architecture-review-2.html,
-item S1); not implemented. The rules of this ADR are unchanged; this settles where they live and
+item S1); as built 2026-10-20 (see below). The rules of this ADR are unchanged; this settles where they live and
 where the languages are edited. The user's words: "how about "skills" for that? would cover
 proficiencies, weapon specialities, thief and bards skills, etc."
 
@@ -508,3 +509,44 @@ proficiencies, weapon specialities, thief and bards skills, etc."
     part of the proficiencies entry of step 13 and its snapshot, so one Undo gives them back.
     Amends ADR 0032 step 4 (where the list is edited) and ADR 0034 step 3.5 (the identity step
     loses the languages) and its details card.
+
+_(As built, 2026-10-20.)_
+- **Step 17.** `api/internal/domain/skills` imports `domain` (the errors) and `ruletablesvc` only. It
+  holds the picks' types (`Picks`, `PickFigures`, `ProficiencySlots`, `LevelGrants`,
+  `WeaponProficiency`…), `ValidPicks`, `PicksWithinBudget`, `ProficiencyFigures`, `SlotWarnings`
+  (its own `Warning`; charactersvc maps it to the sheet's), `LanguageSlots`, `ValidLanguages`,
+  `GrantsAt`, `ToSpend`, `ValidSkillPoints`, `SkillPointsWithinBudget` and `PointsFiguresOf` (the
+  bard's and the thief's percentages and budget over a `SkillTables` port). `skills.Read` is the one
+  assembly of the pools and their warnings: the character's read, the editor's preview and save and
+  the creation's checks call it. `charactersvc.SVC` has no skills preview or budget method any more
+  (`PreviewSkillPoints`, `PreviewProficiencies`, `LanguagesWithinBudget` and the draft read are
+  gone; the creation's `Preview` stays until the draft endpoint of 0034's amendment); detailssvc
+  has no `Budget` port. skillsvc previews over `GetCharacter` and the rules package (the points'
+  preview reads the tables with the character's skill armour). `ProficiencySlots`' Table 34 penalty
+  field is `Penalty` (its `NonproficientPenalty` is the step 8 method); the wire is unchanged.
+  The derived block is pinned by `TestCharacter_Golden_DerivedBlockUnchanged` (composition: GET
+  /api/character byte for byte, recorded before the move). The cited rule tests moved to
+  `domain/skills` under their names (`TestValidPicks_Step12_Refusals`, `TestBudget_Step10_…`,
+  `TestWarnings_Step11_…`, `TestGrantsAt_Step15_GrantsSlotsAndPoints`,
+  `TestToSpend_Step15_LeftCountsNeverNegative`, `TestLanguagePicks_Step6_EachExtraLanguageCostsOneSlot`,
+  `TestBudget_Step6_LanguagesSpendTheNonweaponPool`…); `TestPreviewPicks_Step12_SameRefusalsAsTheSave`
+  and `TestPreviewPoints_Step17_TheDraftReadAsTheSpendChecksIt` are skillsvc's.
+- **Step 18.** `PUT /api/proficiencies` and its preview take `languages` (the codes; absent or null
+  left as stored; the body needs one of `nonweapon`, `weapon`, `languages`), checked by
+  `skills.ValidLanguages` (field `languages`: `empty`, `unknown`, `duplicate`; the native one added)
+  and by the budget with the picks. A save is one `proficiencies` entry whose payload and snapshot
+  add `languages` before and after (the languages as read: known codes, the native one among them);
+  undo and redo write them back, and an entry logged before carries none and leaves the stored ones
+  (`TestSetPicks_Step13_LanguagesInTheOneMove`, `TestLanguages_Step6_EditCheckedByTheBudget`,
+  `TestSetLanguages_Step4_TheNativeLanguageIsKeptAndCodesChecked`,
+  `TestSetLanguages_Step8_1_OnAnEmptyCatalogueTheStoredCodesSurvive` in skillsvc;
+  `TestProficiencies_Step18_TheLanguagesPool` in the router; the composition's
+  `TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots` with its undo and redo).
+  `characters.languages` is written by a new `SetLanguages` query; the details' update no longer
+  writes it, and `PATCH /api/character/details` refuses a `languages` field (400,
+  `TestDetails_Step18_TheLanguagesAreRefused`). The web: the Skills tab's non-weapon editor holds
+  the languages pool (the details card's checkboxes, `LanguagesPool`), the details card shows them
+  read-only, the creation's chips are on the proficiency step (whose preview now runs, so the
+  overspend refusal shows there live; `details.languages` opens that step) and the creation body
+  still sends `details.languages`. The journal words a languages change by its count ("Langues :
+  1 → 3"): the journal has no language catalogue to name them.

@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // ErrNotPending is a roll for a level that is not the lowest pending one:
@@ -80,7 +81,7 @@ type Result struct {
 	HPMaxBefore, HPMaxAfter int
 	// Grants is what the level reached grants beyond hit points (ADR 0037
 	// step 15): the pending level's, as the character read gives it.
-	Grants charactersvc.LevelGrants
+	Grants skills.LevelGrants
 	// Pending are the levels still owed after this one.
 	Pending []charactersvc.PendingLevel
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // Characters is the character port: the sheet reads (charactersvc.Reader),
@@ -83,7 +84,7 @@ func (c Characters) SetSkillPoints(ctx context.Context, id int64, points map[str
 
 // SetProficiencyPicks implements skillsvc.Picks (ADR 0037 step 12), or
 // returns domain.ErrCharacterNotFound. It stores a copy of picks.
-func (c Characters) SetProficiencyPicks(ctx context.Context, id int64, picks charactersvc.Picks) error {
+func (c Characters) SetProficiencyPicks(ctx context.Context, id int64, picks skills.Picks) error {
 	return c.s.write(ctx, func(t *tables) error {
 		ch, ok := t.characters[id]
 		if !ok {
@@ -165,18 +166,35 @@ func (c Characters) GetDetails(ctx context.Context, id int64) (charactersvc.Deta
 	return ch.Details, charactersvc.Kind{Class: ch.Class, Race: ch.Race}, nil
 }
 
-// UpdateDetails overwrites every editable detail of the character, or
-// returns domain.ErrCharacterNotFound.
+// UpdateDetails overwrites every editable detail of the character but its
+// languages (SetLanguages, ADR 0037 step 18), or returns
+// domain.ErrCharacterNotFound.
 func (c Characters) UpdateDetails(ctx context.Context, id int64, v charactersvc.Details) error {
 	return c.s.write(ctx, func(t *tables) error {
 		ch, ok := t.characters[id]
 		if !ok {
 			return domain.ErrCharacterNotFound
 		}
+		langs := ch.Details.Languages
 		ch.Details = clone(v)
+		ch.Details.Languages = langs
 		if ch.Details.Languages == nil {
 			ch.Details.Languages = []string{}
 		}
+		t.characters[id] = ch
+		return nil
+	})
+}
+
+// SetLanguages implements skillsvc.Picks: the character's languages (ADR 0037
+// step 18), or domain.ErrCharacterNotFound. It stores a copy.
+func (c Characters) SetLanguages(ctx context.Context, id int64, languages []string) error {
+	return c.s.write(ctx, func(t *tables) error {
+		ch, ok := t.characters[id]
+		if !ok {
+			return domain.ErrCharacterNotFound
+		}
+		ch.Details.Languages = append([]string{}, languages...)
 		t.characters[id] = ch
 		return nil
 	})

@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 const charID int64 = 1
@@ -47,16 +48,16 @@ func bard() *charactersvc.Character {
 		ID: charID, Class: "bard", Str: 12, Dex: 17, Con: 16, Int: 14, Wis: 8, Cha: 16,
 		Derived: charactersvc.Derived{BardSkills: bardSkills},
 	}
-	slots := charactersvc.ProficiencySlots{Picks: append([]charactersvc.PickFigures{}, catalog...)}
-	slots.SetTargets(c.Score)
+	slots := skills.ProficiencySlots{Picks: append([]skills.PickFigures{}, catalog...)}
+	slots.SetTargets(func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) })
 	c.Derived.Proficiencies = &slots
 	return c
 }
 
-var catalog = []charactersvc.PickFigures{
-	{ID: "musical_instrument", Ability: skillsvc.AbilityDex, Modifier: -1, Slots: 1, Cost: 1, Known: true}, // 17 - 1 = 16
-	{ID: "riding_land", Ability: skillsvc.AbilityWis, Modifier: 3, Slots: 1, Cost: 1, Known: true},         // 8 + 3 = 11
-	{ID: "acrobatics", Ability: skillsvc.AbilityDex, Modifier: 5, Slots: 1, Cost: 1, Known: true},          // 17 + 5 = 22
+var catalog = []skills.PickFigures{
+	{ID: "musical_instrument", Ability: string(skillsvc.AbilityDex), Modifier: -1, Slots: 1, Cost: 1, Known: true}, // 17 - 1 = 16
+	{ID: "riding_land", Ability: string(skillsvc.AbilityWis), Modifier: 3, Slots: 1, Cost: 1, Known: true},         // 8 + 3 = 11
+	{ID: "acrobatics", Ability: string(skillsvc.AbilityDex), Modifier: 5, Slots: 1, Cost: 1, Known: true},          // 17 + 5 = 22
 	// A proficiency with no check, and an id the catalogue does not hold: never rolled.
 	{ID: "blind_fighting", Slots: 2, Cost: 2, Known: true},
 	{ID: "old_skill", Slots: 1, Cost: 1},
@@ -91,13 +92,38 @@ var bardSkills = []ruletablesvc.SkillPercent{
 	{Skill: "pick_pockets", Base: 10, Points: 25, Race: 10, Dexterity: 5, Percent: 50},
 }
 
+// fakeTables are PHB Tables 26 to 29 and 33 as the points' preview asks them: each skill at its
+// points, the terms it was asked for recorded.
+type fakeTables struct {
+	race, armor string
+	dex         int
+	points      map[string]int
+}
+
+func (f *fakeTables) skills(race string, dex int, armor string, points map[string]int, ids []string) []ruletablesvc.SkillPercent {
+	f.race, f.dex, f.armor, f.points = race, dex, armor, points
+	out := make([]ruletablesvc.SkillPercent, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, ruletablesvc.SkillPercent{Skill: id, Points: points[id], Percent: points[id]})
+	}
+	return out
+}
+
+func (f *fakeTables) ThiefSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
+	return f.skills(race, dex, armor, points, ruletablesvc.SkillsOf("thief")), nil
+}
+
+func (f *fakeTables) BardSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
+	return f.skills(race, dex, armor, points, ruletablesvc.SkillsOf("bard")), nil
+}
+
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()
@@ -156,7 +182,7 @@ func TestSkillCheck_Step1_ProficiencyD20AtOrUnderTarget(t *testing.T) {
 func catalogAbility(id string) skillsvc.Ability {
 	for _, p := range catalog {
 		if p.ID == id {
-			return p.Ability
+			return skillsvc.Ability(p.Ability)
 		}
 	}
 	return ""

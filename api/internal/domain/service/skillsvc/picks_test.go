@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 type picksFixture struct {
@@ -22,42 +23,50 @@ type picksFixture struct {
 	picks *mocks.MockPicks
 }
 
-// newPicksFixture is a bard of Intelligence 9 at realized level 1 (testBook's rogue row: 3 + 0 +
-// 2 = 5 non-weapon slots) storing stored; every GetCharacter answers it (the read after a save
-// included).
-func newPicksFixture(t *testing.T, stored charactersvc.Picks) *picksFixture {
+// newPicksFixture is a bard of Intelligence 9 and Dexterity 15 at realized level 1 (testBook's
+// rogue row: 3 + 0 + 2 = 5 non-weapon slots) storing stored, with no language catalogue; every
+// GetCharacter answers it (the read after a save included).
+func newPicksFixture(t *testing.T, stored skills.Picks) *picksFixture {
+	t.Helper()
+	return newSheetFixture(t, &charactersvc.Character{
+		ID: charID, Class: "bard", Int: 9, Dex: 15, RealizedLevel: 1, Proficiencies: stored,
+		Derived: charactersvc.Derived{RealizedLevel: 1},
+	}, nil)
+}
+
+// newSheetFixture is the service over c, read by every GetCharacter, and the language catalogue
+// languages (nil: none).
+func newSheetFixture(t *testing.T, c *charactersvc.Character, languages skills.LanguageBook) *picksFixture {
 	t.Helper()
 	f := &picksFixture{fixture: &fixture{
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}, picks: mocks.NewMockPicks(t)}
 	svc, err := skillsvc.New(skillsvc.Deps{
-		Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: f.picks, Book: testBook(t), Tx: f.tx,
+		Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: f.picks,
+		Book: testBook(t), Languages: languages, Tables: &fakeTables{}, Tx: f.tx,
 	})
 	require.NoError(t, err)
 	f.svc = svc
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
-		ID: charID, Class: "bard", Int: 9, Dex: 15, RealizedLevel: 1, Proficiencies: stored,
-		Derived: charactersvc.Derived{RealizedLevel: 1},
-	}, nil).Maybe()
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil).Maybe()
 	return f
 }
 
 // nonweapon are non-weapon picks and no weapon pick.
-func nonweapon(ps ...charactersvc.Pick) charactersvc.Picks {
-	return charactersvc.Picks{Nonweapon: append([]charactersvc.Pick{}, ps...), Weapon: []charactersvc.WeaponPick{}}
+func nonweapon(ps ...skills.Pick) skills.Picks {
+	return skills.Picks{Nonweapon: append([]skills.Pick{}, ps...), Weapon: []skills.WeaponPick{}}
 }
 
 // withWeapons is ps with the weapon picks of types, 1 slot each.
-func withWeapons(ps charactersvc.Picks, types ...string) charactersvc.Picks {
-	ps.Weapon = []charactersvc.WeaponPick{}
+func withWeapons(ps skills.Picks, types ...string) skills.Picks {
+	ps.Weapon = []skills.WeaponPick{}
 	for _, t := range types {
-		ps.Weapon = append(ps.Weapon, charactersvc.WeaponPick{Type: t, Slots: 1})
+		ps.Weapon = append(ps.Weapon, skills.WeaponPick{Type: t, Slots: 1})
 	}
 	return ps
 }
 
-func pk(id string, slots int) charactersvc.Pick { return charactersvc.Pick{ID: id, Slots: slots} }
+func pk(id string, slots int) skills.Pick { return skills.Pick{ID: id, Slots: slots} }
 
 // ADR 0037 step 13: a save that changes the picks writes them and records one proficiencies entry
 // (the picks before and after, snapshotted under "proficiencies") in one transaction.
@@ -67,18 +76,18 @@ func TestSetPicks_Step13_LogsOneMoveWithASnapshot(t *testing.T) {
 	next := nonweapon(pk("tumbling", 2), pk("tracking", 2))
 	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, next).Return(nil).Once()
 
-	_, err := f.svc.SetProficiencies(context.Background(), charID, next)
+	_, err := f.svc.SetProficiencies(context.Background(), charID, skillsvc.Edit{Picks: next})
 	require.NoError(t, err)
 	assert.Equal(t, 1, f.tx.calls, "one transaction")
 	require.Len(t, f.entries, 1, "one log entry")
 	e := f.entries[0]
 	assert.Equal(t, actionlog.KindProficiencies, e.Kind)
-	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[]},
-		"after":{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapon":[]}}`, string(e.Payload))
+	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[],"languages":[]},
+		"after":{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapon":[],"languages":[]}}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, skillsvc.PicksStateKey, e.Snapshots[0].Key)
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[]}`, snaptest.State(t, e.Snapshots[0].Before))
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapon":[]}`, snaptest.State(t, e.Snapshots[0].After))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[],"languages":[]}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapon":[],"languages":[]}`, snaptest.State(t, e.Snapshots[0].After))
 }
 
 // ADR 0037 steps 7 and 13: a save of the weapon picks alone (no non-weapon list) keeps the
@@ -90,17 +99,17 @@ func TestSetPicks_Step13_WeaponSaveLogsOneMove(t *testing.T) {
 	f.records()
 	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, withWeapons(nonweapon(pk("tumbling", 1)), "dagger", "short_bow")).Return(nil).Once()
 
-	_, err := f.svc.SetProficiencies(context.Background(), charID, charactersvc.Picks{Weapon: withWeapons(charactersvc.Picks{}, "dagger", "short_bow").Weapon})
+	_, err := f.svc.SetProficiencies(context.Background(), charID, skillsvc.Edit{Picks: skills.Picks{Weapon: withWeapons(skills.Picks{}, "dagger", "short_bow").Weapon}})
 	require.NoError(t, err)
 	assert.Equal(t, 1, f.tx.calls, "one transaction")
 	require.Len(t, f.entries, 1, "one log entry")
 	e := f.entries[0]
 	assert.Equal(t, actionlog.KindProficiencies, e.Kind)
-	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1}]},
-		"after":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1},{"type":"short_bow","slots":1}]}}`, string(e.Payload))
+	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1}],"languages":[]},
+		"after":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1},{"type":"short_bow","slots":1}],"languages":[]}}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1}]}`, snaptest.State(t, e.Snapshots[0].Before))
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1},{"type":"short_bow","slots":1}]}`,
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1}],"languages":[]}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1},{"type":"short_bow","slots":1}],"languages":[]}`,
 		snaptest.State(t, e.Snapshots[0].After))
 }
 
@@ -122,7 +131,7 @@ func TestSetPicks_Step13_RestorerAndTheWeaponPool(t *testing.T) {
 // ADR 0037 step 13: the same picks as stored write and log nothing.
 func TestSetPicks_Step13_NoChangeLogsNothing(t *testing.T) {
 	f := newPicksFixture(t, nonweapon(pk("tumbling", 1))) // the picks and log mocks fail any write or record
-	_, err := f.svc.SetProficiencies(context.Background(), charID, nonweapon(pk("tumbling", 1)))
+	_, err := f.svc.SetProficiencies(context.Background(), charID, skillsvc.Edit{Picks: nonweapon(pk("tumbling", 1))})
 	require.NoError(t, err)
 }
 
@@ -130,7 +139,7 @@ func TestSetPicks_Step13_NoChangeLogsNothing(t *testing.T) {
 // journal would show an entry with no change).
 func TestSetPicks_Step13_ReorderLogsNothing(t *testing.T) {
 	f := newPicksFixture(t, nonweapon(pk("tumbling", 1), pk("tracking", 2))) // the picks and log mocks fail any write or record
-	_, err := f.svc.SetProficiencies(context.Background(), charID, nonweapon(pk("tracking", 2), pk("tumbling", 1)))
+	_, err := f.svc.SetProficiencies(context.Background(), charID, skillsvc.Edit{Picks: nonweapon(pk("tracking", 2), pk("tumbling", 1))})
 	require.NoError(t, err)
 }
 
@@ -151,8 +160,8 @@ func TestSetPicks_Step13_RestorerWritesThePicksBack(t *testing.T) {
 func TestSetPicks_Step12_RefusalsWriteNothing(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
-		stored charactersvc.Picks
-		save   charactersvc.Picks
+		stored skills.Picks
+		save   skills.Picks
 		field  string
 		budget *domain.BudgetError
 	}{
@@ -168,7 +177,7 @@ func TestSetPicks_Step12_RefusalsWriteNothing(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newPicksFixture(t, tc.stored) // the picks and log mocks fail any write or record
-			_, err := f.svc.SetProficiencies(context.Background(), charID, tc.save)
+			_, err := f.svc.SetProficiencies(context.Background(), charID, skillsvc.Edit{Picks: tc.save})
 			if tc.budget != nil {
 				require.ErrorIs(t, err, domain.ErrOverBudget)
 				var be *domain.BudgetError
@@ -188,7 +197,7 @@ func TestSetPicks_Step12_RefusalsWriteNothing(t *testing.T) {
 func TestBudget_Step10_OverAndShrinkingStored(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
-		stored, save charactersvc.Picks
+		stored, save skills.Picks
 	}{
 		{"an overspend reduced, still over", nonweapon(pk("tumbling", 8)), nonweapon(pk("tumbling", 6))},
 		{"an overspend kept, moved between picks", nonweapon(pk("tumbling", 7)), nonweapon(pk("tumbling", 5), pk("tracking", 2))},
@@ -198,21 +207,43 @@ func TestBudget_Step10_OverAndShrinkingStored(t *testing.T) {
 			f := newPicksFixture(t, tc.stored)
 			f.records()
 			f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, tc.save).Return(nil).Once()
-			_, err := f.svc.SetProficiencies(context.Background(), charID, tc.save)
+			_, err := f.svc.SetProficiencies(context.Background(), charID, skillsvc.Edit{Picks: tc.save})
 			require.NoError(t, err)
 			assert.Len(t, f.entries, 1)
 		})
 	}
 }
 
-// The editor's preview is the character service's draft read: nothing written or logged.
-func TestPreviewPicks_Step12_WritesNothing(t *testing.T) {
-	f := newPicksFixture(t, nonweapon())
-	draft := nonweapon(pk("tumbling", 2))
-	f.chars.EXPECT().PreviewProficiencies(mock.Anything, charID, draft).Return(&charactersvc.Character{ID: charID}, nil).Once()
-	got, err := f.svc.PreviewProficiencies(context.Background(), charID, draft)
-	require.NoError(t, err)
-	assert.Equal(t, charID, got.ID)
+// ADR 0037 step 12's preview: the pools read with the draft picks, refused as the save refuses
+// (a field error, the budget), writing and logging nothing (the picks and log mocks fail any
+// write or record). The bard's 5 non-weapon slots.
+func TestPreviewPicks_Step12_SameRefusalsAsTheSave(t *testing.T) {
+	t.Run("within budget", func(t *testing.T) {
+		f := newPicksFixture(t, nonweapon())
+		got, err := f.svc.PreviewProficiencies(context.Background(), charID, skillsvc.Edit{Picks: nonweapon(pk("tumbling", 3))})
+		require.NoError(t, err)
+		require.NotNil(t, got.Slots)
+		assert.Equal(t, 2, got.Slots.Nonweapon.Left)
+		assert.Equal(t, 2, got.Slots.Picks[0].Extra)
+		assert.Equal(t, 17, got.Slots.Picks[0].Target, "Dex 15 + 2 extra slots")
+		two := 2
+		assert.Contains(t, got.Warnings, skills.Warning{Code: "slots_to_spend", Field: "nonweapon", Pool: "nonweapon", Left: &two})
+		assert.Equal(t, 1, f.tx.calls, "one transaction")
+	})
+	t.Run("over budget and growing", func(t *testing.T) {
+		f := newPicksFixture(t, nonweapon(pk("tumbling", 5)))
+		_, err := f.svc.PreviewProficiencies(context.Background(), charID, skillsvc.Edit{Picks: nonweapon(pk("tumbling", 6))})
+		var be *domain.BudgetError
+		require.ErrorAs(t, err, &be)
+		assert.Equal(t, domain.BudgetError{Field: "nonweapon", Spent: 6, Limit: 5}, *be)
+	})
+	t.Run("a refused pick", func(t *testing.T) {
+		f := newPicksFixture(t, nonweapon())
+		_, err := f.svc.PreviewProficiencies(context.Background(), charID, skillsvc.Edit{Picks: nonweapon(pk("juggling", 1))})
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, domain.FieldError{Field: "nonweapon.juggling", Message: "unknown"}, *fe)
+	})
 }
 
 // ADR 0037 step 5 (amending ADR 0014 step 1): a proficiency check is one d20 against the target
@@ -233,10 +264,10 @@ func TestSkillCheck_Step5_TargetCountsExtraSlots(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			c := bard() // Dex 17
-			c.Derived.Proficiencies = &charactersvc.ProficiencySlots{Picks: []charactersvc.PickFigures{
+			c.Derived.Proficiencies = &skills.ProficiencySlots{Picks: []skills.PickFigures{
 				{ID: "tumbling", Ability: "dex", Slots: tc.slots, Cost: 1, Extra: tc.extra, Known: true},
 			}}
-			c.Derived.Proficiencies.SetTargets(c.Score)
+			c.Derived.Proficiencies.SetTargets(func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) })
 			f.chars.ExpectedCalls = nil
 			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil)
 			f.records()

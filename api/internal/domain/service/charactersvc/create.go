@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -14,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // CreatableClasses are the classes a new character may have (ADR 0030 step
@@ -49,7 +49,7 @@ const (
 	// MaxSkillPoints bounds a thief's points in one skill (ADR 0030 step 17):
 	// more could never count, a skill being capped at 95%. The budget of
 	// PHB p.39 is a warning (Derived.SkillBudget), not a bound.
-	MaxSkillPoints = ruletablesvc.MaxSkillPercent
+	MaxSkillPoints = skills.MaxSkillPoints
 )
 
 // Error codes carried by the creation's FieldError messages. The web owns
@@ -87,13 +87,17 @@ type NewCharacter struct {
 	// other classes. The armour the skills read is the worn one (ADR 0033
 	// step 14): nothing is worn at creation.
 	SkillPoints map[string]int
-	// Proficiencies are the non-weapon picks (ADR 0037 step 14), checked
-	// as the editor checks them with nothing spent before.
-	Proficiencies Picks
+	// Proficiencies are the picks (ADR 0037 step 14), checked as the
+	// editor checks them with nothing spent before.
+	Proficiencies skills.Picks
 	// Details are the details entered with the character, checked as the
 	// card's edit checks them (Details.Apply); the alignment and the sex are
 	// required, the other nil fields stay unset.
 	Details DetailsPatch
+	// Languages are the languages entered with the character (nil: none),
+	// checked as the Skills tab checks them (skills.ValidLanguages, ADR 0037
+	// step 18); its native language is always added.
+	Languages []string
 }
 
 // Change is a rename (Name) or a retirement (Retired true) of a character;
@@ -169,13 +173,13 @@ func (s *service) validate(n NewCharacter, draft bool) (Character, error) {
 	if n.XP < MinStartingXP || n.XP > MaxStartingXP {
 		return Character{}, &domain.FieldError{Field: "xp", Message: CodeOutOfRange}
 	}
-	details, err := newDetails(Kind{Class: n.Class, Race: n.Race}, s.languages, n.Details, !draft)
+	details, err := newDetails(Kind{Class: n.Class, Race: n.Race}, s.languages, n.Details, n.Languages, !draft)
 	if err != nil {
 		return Character{}, err
 	}
 	// ADR 0037 step 14: the picks are checked as the editor checks them,
 	// with nothing picked before.
-	picks, err := ValidPicks(s.profs, n.Class, n.Proficiencies, Picks{})
+	picks, err := skills.ValidPicks(s.profs, n.Class, n.Proficiencies, skills.Picks{})
 	if err != nil {
 		return Character{}, err
 	}
@@ -188,83 +192,10 @@ func (s *service) validate(n NewCharacter, draft bool) (Character, error) {
 }
 
 // validSkills is ADR 0030 steps 1, 17 and 18: a thief or a bard enters its
-// points, each a skill of SkillsOf its class from 0 to MaxSkillPoints; any
-// other class enters none. The points come back without the zeros, nil for
-// none. A refusal names the field (skillPoints or skillPoints.<skill>). The
-// armour is no entry (ADR 0033 step 14).
+// points (skills.ValidSkillPoints); any other class enters none. The armour is
+// no entry (ADR 0033 step 14).
 func validSkills(n NewCharacter) (map[string]int, error) {
-	if !ruletablesvc.HasSkillPoints(n.Class) {
-		if len(n.SkillPoints) > 0 {
-			return nil, &domain.FieldError{Field: "skillPoints", Message: CodeNotAllowed}
-		}
-		return nil, nil
-	}
-	return ValidSkillPoints(n.Class, n.SkillPoints)
-}
-
-// ValidSkillPoints is ADR 0030 steps 17 and 18's entry check on a thief's or
-// a bard's points, at creation and when the player spends them later: each
-// skill of SkillsOf the class from 0 to MaxSkillPoints. The budget is
-// checked apart, at the realized level (SkillPointsWithinBudget). The points
-// come back without the zeros, nil for none. A class without skill points
-// enters none: any
-// point is refused with field skillPoints; another refusal names the field
-// skillPoints.<skill>.
-func ValidSkillPoints(class string, points map[string]int) (map[string]int, error) {
-	if !ruletablesvc.HasSkillPoints(class) {
-		if len(points) > 0 {
-			return nil, &domain.FieldError{Field: "skillPoints", Message: CodeNotAllowed}
-		}
-		return nil, nil
-	}
-	var out map[string]int
-	for _, skill := range slices.Sorted(maps.Keys(points)) {
-		pts := points[skill]
-		switch {
-		case !slices.Contains(ruletablesvc.SkillsOf(class), skill):
-			return nil, &domain.FieldError{Field: "skillPoints." + skill, Message: CodeUnknown}
-		case pts < 0 || pts > MaxSkillPoints:
-			return nil, &domain.FieldError{Field: "skillPoints." + skill, Message: CodeOutOfRange}
-		case pts == 0:
-			continue
-		}
-		if out == nil {
-			out = map[string]int{}
-		}
-		out[skill] = pts
-	}
-	return out, nil
-}
-
-// SkillPointsWithinBudget is ADR 0037 step 10 on a thief's or a bard's skill
-// points (amending ADR 0030 steps 17 and 18): a save from before to after at
-// level is refused when it leaves the total over the level's budget and
-// above the total before, or (the thief's per-skill cap of step 17) one
-// skill over the cap and above its points before. Any other save passes: an
-// existing overspend that shrinks or stays keeps the derived warning, and
-// points left to spend are never refused. At creation before is nil (0
-// spent). The refusal is a *domain.BudgetError (field skillPoints for the
-// total, skillPoints.<skill> for one skill), the total first, then the
-// skills in SkillsOf order. A class without skill points, or a level under
-// 1, has no budget: nil.
-func SkillPointsWithinBudget(class string, level int, before, after map[string]int) error {
-	b, ok := ruletablesvc.SkillPointsFigures(class, level, after)
-	if !ok {
-		return nil
-	}
-	was, _ := ruletablesvc.SkillPointsFigures(class, level, before)
-	if b.Spent > b.Total && b.Spent > was.Spent {
-		return &domain.BudgetError{Field: "skillPoints", Spent: b.Spent, Limit: b.Total}
-	}
-	if b.PerSkill == 0 {
-		return nil
-	}
-	for _, skill := range ruletablesvc.SkillsOf(class) {
-		if pts := after[skill]; pts > b.PerSkill && pts > before[skill] {
-			return &domain.BudgetError{Field: "skillPoints." + skill, Spent: pts, Limit: b.PerSkill}
-		}
-	}
-	return nil
+	return skills.ValidSkillPoints(n.Class, n.SkillPoints)
 }
 
 // validExceptional is ADR 0030 step 9: an exceptional strength is optional,
@@ -298,7 +229,7 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	// ADR 0037 step 10: nothing was spent before, so a new character is
 	// never created over its skill point budget.
-	if err := SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
+	if err := skills.SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return 0, err
 	}
 	// ADR 0037 steps 6, 10 and 14: nor over its non-weapon slots, its
@@ -324,7 +255,7 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 // the picks and the languages may not overspend the non-weapon pool. A refusal on the languages
 // names the creation form's field, DetailsField + FieldLanguages.
 func (s *service) creationWithinBudget(c Character) error {
-	err := PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, Spending{}, s.creationSpending(c))
+	err := skills.PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, skills.Spending{}, s.creationSpending(c))
 	var be *domain.BudgetError
 	if errors.As(err, &be) && be.Field == FieldLanguages {
 		return &domain.BudgetError{Field: DetailsField + FieldLanguages, Spent: be.Spent, Limit: be.Limit}
@@ -334,8 +265,8 @@ func (s *service) creationWithinBudget(c Character) error {
 
 // creationSpending is what a new character spends from its pools: its picks and its languages
 // (ADR 0037 steps 6 and 14).
-func (s *service) creationSpending(c Character) Spending {
-	return Spending{Picks: c.Proficiencies, Languages: s.languageSlots(c.Race, c.Details)}
+func (s *service) creationSpending(c Character) skills.Spending {
+	return skills.Spending{Picks: c.Proficiencies, Languages: s.languageSlots(c.Race, c.Details)}
 }
 
 // started gives a new character the sheet and the realized level it is
@@ -365,7 +296,7 @@ func (s *service) Preview(_ context.Context, n NewCharacter) (*Character, error)
 	if err := started(&c, s.rules); err != nil {
 		return nil, err
 	}
-	if err := SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
+	if err := skills.SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return nil, err
 	}
 	if err := s.creationWithinBudget(c); err != nil {
@@ -543,7 +474,7 @@ type CreationOptions struct {
 	// ProficiencyCosts is each pickable catalogue proficiency's cost by class
 	// (ADR 0037 step 4: Table 37's slots, one more outside the class's Table 38
 	// groups), so the editor shows and sends the server's cost. A proficiency
-	// never picked on its own (LanguagesModernID, step 6) has no cost: the
+	// never picked on its own (skills.LanguagesModernID, step 6) has no cost: the
 	// editor offers only what has one. Empty without the seed.
 	ProficiencyCosts map[string]map[string]int
 	// ScoreMethods are ADR 0032 step 6's methods, in the book's order: the
@@ -676,7 +607,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		out.ProficiencyGroups[c.Class] = c.Groups
 		costs := make(map[string]int, len(out.Proficiencies))
 		for _, p := range out.Proficiencies {
-			if p.ID == LanguagesModernID {
+			if p.ID == skills.LanguagesModernID {
 				continue // step 6: a language is a pick of the language list
 			}
 			costs[p.ID] = ruletablesvc.NonweaponCost(p, c.Groups)
@@ -706,7 +637,7 @@ type DraftInput struct {
 	XP          *int
 	SkillPoints map[string]int
 	// Proficiencies are the non-weapon picks so far (ADR 0037 step 14).
-	Proficiencies Picks
+	Proficiencies skills.Picks
 	// Race and Languages are the draft's race and languages so far: the
 	// languages beyond the race's native one and Common spend a non-weapon
 	// slot each (ADR 0037 step 6). Empty before the identity step.
@@ -733,7 +664,7 @@ type DraftChecks struct {
 	// while the class, the XP or the Intelligence is not entered, or the
 	// catalogue has no Table 34 row. Picks the editor would refuse are read
 	// as entered: the checks refuse nothing.
-	ProficiencySlots *ProficiencySlots
+	ProficiencySlots *skills.ProficiencySlots
 }
 
 // ClassUnmet is a class and the abilities under its minimum.
@@ -762,11 +693,11 @@ func (s *service) CreationChecks(_ context.Context, in DraftInput) (DraftChecks,
 		out.SkillBudget = &b
 	}
 	if score, ok := in.Scores[string(AbilityInt)]; ok {
-		spend := Spending{Picks: in.Proficiencies, Languages: s.languageSlots(in.Race, Details{Languages: in.Languages})}
-		if f, ok := ProficiencyFigures(s.profs, in.Class, level, score, spend); ok {
-			f.SetTargets(func(a Ability) (int, bool) { v, ok := in.Scores[string(a)]; return v, ok })
-			out.ProficiencySlots = &f
-		}
+		out.ProficiencySlots, _ = skills.Read(s.profs, skills.Sheet{
+			Class: in.Class, Level: level, Intelligence: score, Picks: in.Proficiencies,
+			Languages: Details{Languages: in.Languages}.Known(s.languages).Languages, Native: s.languages.Native(in.Race),
+			Score: func(a string) (int, bool) { v, ok := in.Scores[a]; return v, ok },
+		})
 	}
 	return out, nil
 }

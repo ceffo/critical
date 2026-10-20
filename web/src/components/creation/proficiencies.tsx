@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { ProficiencyPicker } from "@/components/proficiencies/ProficiencyPicker";
 import { WeaponPicker } from "@/components/proficiencies/WeaponPicker";
 import { Note } from "./kit";
+import { LanguagesGroup } from "./languages";
 import type { StepProps } from "./flow";
 
 /**
@@ -10,15 +11,11 @@ import type { StepProps } from "./flow";
  * draft. The slots and each pick's figures are the checks endpoint's answer for the draft's class,
  * level and Intelligence, asked again as the picks change; Créer sends the picks and the server
  * checks them as the editor's save does (nothing picked before: a draft over budget is refused).
- * Leftover slots never block: they are reminded.
+ * Leftover slots never block: they are reminded. The languages are picked here too, next to the
+ * non-weapon picks whose pool they spend (ADR 0034 step 3.5 as amended by ADR 0037 step 18).
  */
-export function ProficienciesStep({
-  options,
-  draft,
-  update,
-  errorFor,
-  checks,
-}: StepProps) {
+export function ProficienciesStep(props: StepProps) {
+  const { options, draft, update, errorFor, checks } = props;
   const { t } = useTranslation();
   const figures = checks?.proficiencySlots ?? null;
   const types = options.classes.find((c) => c.class === draft.cls)?.weaponTypes;
@@ -44,6 +41,7 @@ export function ProficienciesStep({
           <Note kind="info">{t("creation.proficiencies.weaponsNone")}</Note>
         )}
       </section>
+      <LanguagesGroup {...props} pool={figures?.nonWeapon} />
       <section
         aria-labelledby="creation-nonweapon-title"
         className="flex min-w-0 flex-col gap-2"

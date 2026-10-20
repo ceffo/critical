@@ -4,7 +4,7 @@
 day; the details this ADR added beyond the triage were accepted by the supervisor in review). Steps 1, 2, 3 and 8 (for alignment, sex and the race detail) implemented 2026-10-18, see "As built"; step 5 (height, weight and age) and its part of step 8 implemented 2026-10-19, see "As built (step 5)"; steps 6 and 7 (the score and max HP rolls) implemented 2026-10-18, see "As built (steps 6 and 7)"; the rest is not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
 step 7.5 on level 1 hit points) and [ADR 0029](0029-users-login-and-access.md) steps 7.2 and 7.3
 (character actions leave the cog menu; creation is a full-screen route). Step 4.2 superseded by
-[ADR 0037](0037-proficiencies.md) step 6 (languages as non-weapon picks), implemented 2026-10-20; step 4's list is edited by the skills module (ADR 0037 step 18, decided 2026-10-20, on implementation).
+[ADR 0037](0037-proficiencies.md) step 6 (languages as non-weapon picks), implemented 2026-10-20; step 4's list is edited by the skills module (ADR 0037 step 18, as built 2026-10-20: the Skills tab's editor and `PUT /api/proficiencies`; the details card shows it read-only).
 
 ## Context
 

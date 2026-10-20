@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -36,9 +37,9 @@ func derivedOf(t *testing.T, bs *composition.BackingServices, id int64) (charact
 // -1, Tumbling DEX 17, Ventriloquism INT 14 -2, Riding WIS 8 +3, Appraising INT 14, Singing CHA 16,
 // Reading/Writing INT 14 +1, Local History CHA 16. The non-weapon pool (step 3) is a rogue's: 3 +
 // one slot every 4 realized levels + 4 for Intelligence 14; 8 spent.
-func kelsenPicks(level int) *charactersvc.ProficiencySlots {
-	pick := func(id, ability string, modifier, target int) charactersvc.PickFigures {
-		return charactersvc.PickFigures{ID: id, Slots: 1, Cost: 1, Ability: charactersvc.Ability(ability), Modifier: modifier, Known: true, Target: target, HasCheck: true}
+func kelsenPicks(level int) *skills.ProficiencySlots {
+	pick := func(id, ability string, modifier, target int) skills.PickFigures {
+		return skills.PickFigures{ID: id, Slots: 1, Cost: 1, Ability: ability, Modifier: modifier, Known: true, Target: target, HasCheck: true}
 	}
 	pool := ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, LevelGained: level / 4, Intelligence: 4, Spent: 8}
 	pool.Available = 3 + level/4 + 4
@@ -47,15 +48,15 @@ func kelsenPicks(level int) *charactersvc.ProficiencySlots {
 	// types spend 5.
 	weapon := ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: level / 4, Available: 2 + level/4, Spent: 5}
 	weapon.Left = weapon.Available - 5
-	wpick := func(t string) charactersvc.WeaponPickFigures {
-		return charactersvc.WeaponPickFigures{Type: t, Slots: 1, Allowed: true}
+	wpick := func(t string) skills.WeaponPickFigures {
+		return skills.WeaponPickFigures{Type: t, Slots: 1, Allowed: true}
 	}
 	// ADR 0037 step 8: Table 34's penalty for the rogue group.
-	return &charactersvc.ProficiencySlots{Nonweapon: pool, Weapon: weapon, NonproficientPenalty: -3, Picks: []charactersvc.PickFigures{
+	return &skills.ProficiencySlots{Nonweapon: pool, Weapon: weapon, Penalty: -3, Picks: []skills.PickFigures{
 		pick("musical_instrument", "dex", -1, 16), pick("tumbling", "dex", 0, 17), pick("ventriloquism", "int", -2, 12),
 		pick("riding_land", "wis", 3, 11), pick("appraising", "int", 0, 14), pick("singing", "cha", 0, 16),
 		pick("reading_writing", "int", 1, 15), pick("local_history", "cha", 0, 16),
-	}, WeaponPicks: []charactersvc.WeaponPickFigures{
+	}, WeaponPicks: []skills.WeaponPickFigures{
 		wpick("short_bow"), wpick("dagger"), wpick("dart"), wpick("long_sword"), wpick("other_melee"),
 	}}
 }
@@ -87,7 +88,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		SpellSlots: map[int]int{1: 3, 2: 3, 3: 3, 4: 3, 5: 2},
 		LevelUp: charactersvc.LevelUp{
 			Pending: []charactersvc.PendingLevel{},
-			ToSpend: charactersvc.LevelGrants{NonweaponSlots: 2, SkillPoints: 30},
+			ToSpend: skills.LevelGrants{NonweaponSlots: 2, SkillPoints: 30},
 		},
 		// Kelsen's Intelligence 14 (PHB Table 4, ADR 0030 step 20.1).
 		Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
@@ -114,8 +115,8 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	pending.XPTotal, pending.TargetLevel, pending.NextLevelXP = 1_540_000, 17, &next17
 	// Above the rogues' name level, +2 each (step 7.2).
 	pending.LevelUp = charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
-		{Level: 16, FixedGain: 2, Grants: charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 15}},
-		{Level: 17, FixedGain: 2, Grants: charactersvc.LevelGrants{SkillPoints: 15}},
+		{Level: 16, FixedGain: 2, Grants: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 15}},
+		{Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}},
 	}, ToSpend: at15.LevelUp.ToSpend}
 	assert.Equal(t, pending, d, "the benefits wait for the level-up step")
 	assert.Equal(t, 17, ledgerLevel, "the XP ledger shows the target level")
@@ -132,7 +133,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1},
 		LevelUp: charactersvc.LevelUp{
 			Pending: []charactersvc.PendingLevel{},
-			ToSpend: charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 60},
+			ToSpend: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 60},
 		},
 		Spellbook: at15.Spellbook, BardSkills: kelsenBardSkills, SkillBudget: []ruletablesvc.BudgetWarning{},
 		SkillPoints:   &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
@@ -149,8 +150,8 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	undoTop(t, bs, id)
 	d, _, _ = derivedOf(t, bs, id)
 	assert.Equal(t, 16, d.RealizedLevel)
-	assert.Equal(t, []charactersvc.PendingLevel{{Level: 17, FixedGain: 2, Grants: charactersvc.LevelGrants{SkillPoints: 15}}}, d.LevelUp.Pending)
-	assert.Equal(t, charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 45}, d.LevelUp.ToSpend,
+	assert.Equal(t, []charactersvc.PendingLevel{{Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}}}, d.LevelUp.Pending)
+	assert.Equal(t, skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 45}, d.LevelUp.ToSpend,
 		"level 17's points go with its roll")
 	undoTop(t, bs, id)
 	undoTop(t, bs, id)

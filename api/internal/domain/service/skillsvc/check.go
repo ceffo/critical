@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // LastLookup is how many of the newest skill checks List reads to find the
@@ -218,11 +219,11 @@ func (s *service) check(ctx context.Context, characterID int64, id string, adj A
 // a catalogue proficiency with an ability, its target derived on the
 // character. A pick with no check (Blind-fighting, an id the catalogue does
 // not hold) is not rolled.
-func checkable(char *charactersvc.Character) []charactersvc.PickFigures {
+func checkable(char *charactersvc.Character) []skills.PickFigures {
 	if char.Derived.Proficiencies == nil {
 		return nil
 	}
-	var out []charactersvc.PickFigures
+	var out []skills.PickFigures
 	for _, p := range char.Derived.Proficiencies.Picks {
 		if p.HasCheck {
 			out = append(out, p)
@@ -244,13 +245,13 @@ func (s *service) find(ctx context.Context, characterID int64, id string) (check
 		if p.ID != id {
 			continue
 		}
-		score, err := abilityScore(char, p.Ability)
+		score, err := abilityScore(char, Ability(p.Ability))
 		if err != nil {
 			return checkRecord{}, fmt.Errorf("proficiency %q: %w", p.ID, err)
 		}
 		return checkRecord{
 			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Target: p.Target,
-			Ability: p.Ability, AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
+			Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
 		}, nil
 	}
 	// ADR 0030 steps 17 and 18 (ADR 0014 step 3 as amended): a thieving or
@@ -277,9 +278,34 @@ func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) 
 }
 
 // PreviewPoints reads the skills with the character's points replaced by
-// points; only the character's derivation sees them, nothing is written.
+// points, refused as SetPoints refuses them (skills.ValidSkillPoints, then the
+// budget, ADR 0037 step 10); the percentages and the budget are the skills
+// module's figures of the draft (skills.PointsFiguresOf), nothing is written.
 func (s *service) PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*Skills, error) {
 	return s.skills(ctx, characterID, &points)
+}
+
+// withPoints is char derived with the draft points in place of its stored
+// ones: refused as SetPoints refuses them, then the skills' figures of the
+// draft at the realized level and the worn armour's skill armour.
+func (s *service) withPoints(char *charactersvc.Character, draft map[string]int) error {
+	next, err := skills.ValidSkillPoints(char.Class, draft)
+	if err != nil {
+		return err
+	}
+	if err := skills.SkillPointsWithinBudget(char.Class, char.Derived.RealizedLevel, char.SkillPoints, next); err != nil {
+		return err
+	}
+	f, err := skills.PointsFiguresOf(s.tables, skills.PointsSheet{
+		Class: char.Class, Race: char.Race, Dex: char.Dex, Level: char.Derived.RealizedLevel,
+		Armor: char.Derived.SkillArmor, Points: next,
+	})
+	if err != nil {
+		return fmt.Errorf("preview skill points: %w", err)
+	}
+	char.SkillPoints = next
+	char.Derived.ThiefSkills, char.Derived.BardSkills, char.Derived.SkillBudget, char.Derived.SkillPoints = f.Thief, f.Bard, f.Budget, f.Points
+	return nil
 }
 
 // skills builds the tab; draft, when set, is the skill points to read in
@@ -287,15 +313,14 @@ func (s *service) PreviewPoints(ctx context.Context, characterID int64, points m
 func (s *service) skills(ctx context.Context, characterID int64, draft *map[string]int) (*Skills, error) {
 	var out *Skills
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		var char *charactersvc.Character
-		var err error
-		if draft != nil {
-			char, err = s.chars.PreviewSkillPoints(ctx, characterID, *draft)
-		} else {
-			char, err = s.chars.GetCharacter(ctx, characterID)
-		}
+		char, err := s.chars.GetCharacter(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
+		}
+		if draft != nil {
+			if err := s.withPoints(char, *draft); err != nil {
+				return err
+			}
 		}
 		last, err := s.lastChecks(ctx, characterID)
 		if err != nil {
@@ -311,12 +336,12 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *map[stri
 			out.ThiefSkills = append(out.ThiefSkills, ThiefSkill{SkillPercent: t, Last: last[t.Skill]})
 		}
 		for _, p := range profs {
-			score, err := abilityScore(char, p.Ability)
+			score, err := abilityScore(char, Ability(p.Ability))
 			if err != nil {
 				return fmt.Errorf("proficiency %q: %w", p.ID, err)
 			}
 			out.Proficiencies = append(out.Proficiencies, Proficiency{
-				ID: p.ID, Ability: p.Ability, AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
+				ID: p.ID, Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
 				Target: p.Target, Last: last[p.ID],
 			})
 		}

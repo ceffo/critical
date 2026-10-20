@@ -20,7 +20,7 @@ export type StepId = (typeof STEPS)[number];
 
 /**
  * The step a server refusal's field belongs to (the form's field names: `raceCode`, `skillPoints.x`,
- * `details.x`, `nonweapon.x`, `weapon.x`), so the flow opens that step and shows the refusal there. An unknown field stays on
+ * `details.x`, `nonweapon.x`, `weapon.x`; `details.languages` is the proficiency step's), so the flow opens that step and shows the refusal there. An unknown field stays on
  * the review, where Créer is.
  */
 export function stepOfField(field: string): StepId {
@@ -39,11 +39,14 @@ export function stepOfField(field: string): StepId {
     field.startsWith("skillPoints.")
   )
     return "extras";
+  // The languages are the proficiency step's (ADR 0037 step 18), though the body still carries them
+  // under the details.
   if (
     field === "nonweapon" ||
     field.startsWith("nonweapon.") ||
     field === "weapon" ||
-    field.startsWith("weapon.")
+    field.startsWith("weapon.") ||
+    field === "details.languages"
   )
     return "proficiencies";
   if (field === "name" || field.startsWith("details.")) return "identity";

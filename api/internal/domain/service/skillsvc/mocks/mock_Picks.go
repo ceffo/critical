@@ -5,8 +5,7 @@ package mocks
 import (
 	context "context"
 
-	charactersvc "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-
+	skills "github.com/ceffo/critical/api/internal/domain/skills"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -23,8 +22,56 @@ func (_m *MockPicks) EXPECT() *MockPicks_Expecter {
 	return &MockPicks_Expecter{mock: &_m.Mock}
 }
 
+// SetLanguages provides a mock function with given fields: ctx, characterID, languages
+func (_m *MockPicks) SetLanguages(ctx context.Context, characterID int64, languages []string) error {
+	ret := _m.Called(ctx, characterID, languages)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetLanguages")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, []string) error); ok {
+		r0 = rf(ctx, characterID, languages)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockPicks_SetLanguages_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetLanguages'
+type MockPicks_SetLanguages_Call struct {
+	*mock.Call
+}
+
+// SetLanguages is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - languages []string
+func (_e *MockPicks_Expecter) SetLanguages(ctx interface{}, characterID interface{}, languages interface{}) *MockPicks_SetLanguages_Call {
+	return &MockPicks_SetLanguages_Call{Call: _e.mock.On("SetLanguages", ctx, characterID, languages)}
+}
+
+func (_c *MockPicks_SetLanguages_Call) Run(run func(ctx context.Context, characterID int64, languages []string)) *MockPicks_SetLanguages_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].([]string))
+	})
+	return _c
+}
+
+func (_c *MockPicks_SetLanguages_Call) Return(_a0 error) *MockPicks_SetLanguages_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockPicks_SetLanguages_Call) RunAndReturn(run func(context.Context, int64, []string) error) *MockPicks_SetLanguages_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetProficiencyPicks provides a mock function with given fields: ctx, characterID, picks
-func (_m *MockPicks) SetProficiencyPicks(ctx context.Context, characterID int64, picks charactersvc.Picks) error {
+func (_m *MockPicks) SetProficiencyPicks(ctx context.Context, characterID int64, picks skills.Picks) error {
 	ret := _m.Called(ctx, characterID, picks)
 
 	if len(ret) == 0 {
@@ -32,7 +79,7 @@ func (_m *MockPicks) SetProficiencyPicks(ctx context.Context, characterID int64,
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Picks) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64, skills.Picks) error); ok {
 		r0 = rf(ctx, characterID, picks)
 	} else {
 		r0 = ret.Error(0)
@@ -49,14 +96,14 @@ type MockPicks_SetProficiencyPicks_Call struct {
 // SetProficiencyPicks is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
-//   - picks charactersvc.Picks
+//   - picks skills.Picks
 func (_e *MockPicks_Expecter) SetProficiencyPicks(ctx interface{}, characterID interface{}, picks interface{}) *MockPicks_SetProficiencyPicks_Call {
 	return &MockPicks_SetProficiencyPicks_Call{Call: _e.mock.On("SetProficiencyPicks", ctx, characterID, picks)}
 }
 
-func (_c *MockPicks_SetProficiencyPicks_Call) Run(run func(ctx context.Context, characterID int64, picks charactersvc.Picks)) *MockPicks_SetProficiencyPicks_Call {
+func (_c *MockPicks_SetProficiencyPicks_Call) Run(run func(ctx context.Context, characterID int64, picks skills.Picks)) *MockPicks_SetProficiencyPicks_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(charactersvc.Picks))
+		run(args[0].(context.Context), args[1].(int64), args[2].(skills.Picks))
 	})
 	return _c
 }
@@ -66,7 +113,7 @@ func (_c *MockPicks_SetProficiencyPicks_Call) Return(_a0 error) *MockPicks_SetPr
 	return _c
 }
 
-func (_c *MockPicks_SetProficiencyPicks_Call) RunAndReturn(run func(context.Context, int64, charactersvc.Picks) error) *MockPicks_SetProficiencyPicks_Call {
+func (_c *MockPicks_SetProficiencyPicks_Call) RunAndReturn(run func(context.Context, int64, skills.Picks) error) *MockPicks_SetProficiencyPicks_Call {
 	_c.Call.Return(run)
 	return _c
 }

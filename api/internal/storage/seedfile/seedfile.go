@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // The seed file names, in seedsDir.
@@ -91,16 +92,16 @@ type SeedWeaponPick struct {
 }
 
 // Picks are the seed's picks as the character stores them.
-func (c Character) Picks() charactersvc.Picks {
-	out := charactersvc.Picks{
-		Nonweapon: make([]charactersvc.Pick, 0, len(c.Proficiencies)),
-		Weapon:    make([]charactersvc.WeaponPick, 0, len(c.WeaponProficiencies)),
+func (c Character) Picks() skills.Picks {
+	out := skills.Picks{
+		Nonweapon: make([]skills.Pick, 0, len(c.Proficiencies)),
+		Weapon:    make([]skills.WeaponPick, 0, len(c.WeaponProficiencies)),
 	}
 	for _, p := range c.Proficiencies {
-		out.Nonweapon = append(out.Nonweapon, charactersvc.Pick(p))
+		out.Nonweapon = append(out.Nonweapon, skills.Pick(p))
 	}
 	for _, p := range c.WeaponProficiencies {
-		out.Weapon = append(out.Weapon, charactersvc.WeaponPick(p))
+		out.Weapon = append(out.Weapon, skills.WeaponPick(p))
 	}
 	return out
 }
@@ -118,7 +119,7 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 	if c.Race != "" && !slices.Contains(charactersvc.Races, c.Race) {
 		return Character{}, false, fmt.Errorf("character.json: race %q is not one of %v", c.Race, charactersvc.Races)
 	}
-	points, err := charactersvc.ValidSkillPoints(DefaultClass, c.SkillPoints)
+	points, err := skills.ValidSkillPoints(DefaultClass, c.SkillPoints)
 	if err != nil {
 		return Character{}, false, fmt.Errorf("character.json: skill points: %w", err)
 	}
@@ -142,8 +143,8 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %d: unknown weapon type %q", i, p.Type)
 		case types[p.Type]:
 			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %q twice", p.Type)
-		case p.Slots != charactersvc.WeaponPickSlots:
-			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %q: must spend %d slot", p.Type, charactersvc.WeaponPickSlots)
+		case p.Slots != skills.WeaponPickSlots:
+			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %q: must spend %d slot", p.Type, skills.WeaponPickSlots)
 		}
 		types[p.Type] = true
 	}

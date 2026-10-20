@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -66,7 +67,7 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 		SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
 		// Proficient with the dagger, so no non-proficiency penalty (ADR 0037 step 8).
-		Proficiencies: charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "dagger", Slots: 1}}},
+		Proficiencies: skills.Picks{Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}}},
 	})
 	require.NoError(t, err)
 

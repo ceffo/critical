@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // DAL is the implementation of charactersvc.Reader, charactersvc.Owners and
@@ -110,9 +111,26 @@ func (d *DAL) SetSkillPoints(ctx context.Context, id int64, points map[string]in
 	return nil
 }
 
+// SetLanguages implements skillsvc.Picks: the character's languages (ADR 0032 step 4, saved by
+// the Skills tab, ADR 0037 step 18). domain.ErrCharacterNotFound when the row is missing.
+func (d *DAL) SetLanguages(ctx context.Context, id int64, languages []string) error {
+	langs, err := json.Marshal(append([]string{}, languages...))
+	if err != nil {
+		return fmt.Errorf("encode languages: %w", err)
+	}
+	n, err := d.q.SetLanguages(ctx, queries.SetLanguagesParams{Languages: string(langs), ID: id})
+	if err != nil {
+		return fmt.Errorf("set languages: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
+}
+
 // SetProficiencyPicks implements skillsvc.Picks: the character's proficiency picks (ADR 0037
 // step 12). domain.ErrCharacterNotFound when the row is missing.
-func (d *DAL) SetProficiencyPicks(ctx context.Context, id int64, picks charactersvc.Picks) error {
+func (d *DAL) SetProficiencyPicks(ctx context.Context, id int64, picks skills.Picks) error {
 	raw, err := EncodePicks(picks)
 	if err != nil {
 		return err
@@ -232,8 +250,11 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 			return 0, fmt.Errorf("create character %d %s: %w", id, row.what, err)
 		}
 	}
-	// The details entered with the character, in the same transaction.
+	// The details and the languages entered with the character, in the same transaction.
 	if err := d.UpdateDetails(ctx, id, c.Details); err != nil {
+		return 0, fmt.Errorf("create character %d: %w", id, err)
+	}
+	if err := d.SetLanguages(ctx, id, c.Details.Languages); err != nil {
 		return 0, fmt.Errorf("create character %d: %w", id, err)
 	}
 	return id, nil
@@ -365,15 +386,12 @@ func (d *DAL) GetDetails(ctx context.Context, id int64) (charactersvc.Details, c
 	}, charactersvc.Kind{Class: r.Class, Race: r.RaceCode}, nil
 }
 
-// UpdateDetails overwrites every editable detail of the character.
+// UpdateDetails overwrites every editable detail of the character but its languages, which
+// SetLanguages writes (ADR 0037 step 18).
 func (d *DAL) UpdateDetails(ctx context.Context, id int64, v charactersvc.Details) error {
-	langs, err := json.Marshal(append([]string{}, v.Languages...))
-	if err != nil {
-		return fmt.Errorf("encode languages: %w", err)
-	}
 	n, err := d.q.UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
 		Alignment: v.Alignment, Age: int64(v.Age), Sex: v.Sex, HeightCm: v.Height,
-		WeightKg: v.Weight, Hair: v.Hair, Eyes: v.Eyes, Languages: string(langs), ID: id,
+		WeightKg: v.Weight, Hair: v.Hair, Eyes: v.Eyes, ID: id,
 	})
 	if err != nil {
 		return fmt.Errorf("update character details: %w", err)

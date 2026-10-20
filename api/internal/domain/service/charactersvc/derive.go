@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // Rules is the driven port over the class tables the derivation reads
@@ -117,21 +118,16 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 	if ruletablesvc.HasSkillPoints(c.Class) {
 		// Steps 17 and 18: the sheet's Dexterity, the entered points and
 		// the worn body armour's Table 29 column (ADR 0033 step 14: none
-		// worn is the none column); the budget at the realized level.
-		armor := ruletablesvc.SkillArmorFor(c.Class, armour)
-		d.SkillArmor = armor
-		if ruletablesvc.HasThiefSkills(c.Class) {
-			d.ThiefSkills, err = rules.ThiefSkills(c.Race, c.Dex, armor, c.SkillPoints)
-		} else {
-			d.BardSkills, err = rules.BardSkills(c.Race, c.Dex, armor, c.SkillPoints)
-		}
+		// worn is the none column); the budget at the realized level. The
+		// figures are the skills module's (ADR 0037 step 17).
+		d.SkillArmor = ruletablesvc.SkillArmorFor(c.Class, armour)
+		f, err := skills.PointsFiguresOf(rules, skills.PointsSheet{
+			Class: c.Class, Race: c.Race, Dex: c.Dex, Level: realized, Armor: d.SkillArmor, Points: c.SkillPoints,
+		})
 		if err != nil {
-			return Derived{}, fmt.Errorf("derive %s skills: %w", c.Class, err)
+			return Derived{}, fmt.Errorf("derive: %w", err)
 		}
-		d.SkillBudget = ruletablesvc.SkillBudgetOf(c.Class, realized, c.SkillPoints)
-		if b, ok := ruletablesvc.SkillPointsFigures(c.Class, realized, c.SkillPoints); ok {
-			d.SkillPoints = &b
-		}
+		d.ThiefSkills, d.BardSkills, d.SkillBudget, d.SkillPoints = f.Thief, f.Bard, f.Budget, f.Points
 	}
 	if ruletablesvc.Backstabs(c.Class) {
 		if d.Backstab, err = rules.BackstabFor(realized); err != nil {

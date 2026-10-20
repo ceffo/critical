@@ -27,7 +27,7 @@ func TestApply_Step2_AlignmentClassLimit(t *testing.T) {
 	for class, no := range refused {
 		for _, alignment := range ruletablesvc.Alignments {
 			t.Run(class+" "+alignment, func(t *testing.T) {
-				got, err := charactersvc.Details{}.Apply(charactersvc.Kind{Class: class}, nil, charactersvc.DetailsPatch{Alignment: str(alignment)})
+				got, err := charactersvc.Details{}.Apply(charactersvc.Kind{Class: class}, charactersvc.DetailsPatch{Alignment: str(alignment)})
 				if contains(no, alignment) {
 					var fe *domain.FieldError
 					require.ErrorAs(t, err, &fe)
@@ -68,7 +68,7 @@ func TestApply_Step2And3_EmptyUnknownAndUntouched(t *testing.T) {
 		{"unknown sex", charactersvc.DetailsPatch{Sex: str("M")}, "sex", "unknown"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := stored.Apply(charactersvc.Kind{Class: "bard"}, nil, tt.p)
+			got, err := stored.Apply(charactersvc.Kind{Class: "bard"}, tt.p)
 			var fe *domain.FieldError
 			require.ErrorAs(t, err, &fe)
 			assert.Equal(t, tt.field, fe.Field)
@@ -76,7 +76,7 @@ func TestApply_Step2And3_EmptyUnknownAndUntouched(t *testing.T) {
 			assert.Equal(t, stored, got)
 		})
 	}
-	got, err := stored.Apply(charactersvc.Kind{Class: "bard"}, nil, charactersvc.DetailsPatch{Hair: str("black"), Sex: str("female")})
+	got, err := stored.Apply(charactersvc.Kind{Class: "bard"}, charactersvc.DetailsPatch{Hair: str("black"), Sex: str("female")})
 	require.NoError(t, err)
 	assert.Equal(t, charactersvc.Details{Alignment: "neutral_good", Sex: "female", Hair: "black", Languages: []string{}}, got)
 }
@@ -94,19 +94,19 @@ func TestDetails_Step8_MissingAndKeptAlignmentWarning(t *testing.T) {
 	assert.Empty(t, thief.Warnings("fighter"))
 	assert.Empty(t, charactersvc.Details{}.Warnings("thief"), "a missing value is no warning")
 
-	got, err := thief.Apply(charactersvc.Kind{Class: "thief"}, nil, charactersvc.DetailsPatch{Eyes: str("grey")})
+	got, err := thief.Apply(charactersvc.Kind{Class: "thief"}, charactersvc.DetailsPatch{Eyes: str("grey")})
 	require.NoError(t, err)
 	assert.Equal(t, "lawful_good", got.Alignment)
 }
 
 func TestApply_Step8_KeptForbiddenAlignmentDoesNotBlockOtherEdits(t *testing.T) {
 	thief := charactersvc.Details{Alignment: "lawful_good", Sex: "male"}
-	got, err := thief.Apply(charactersvc.Kind{Class: "thief"}, nil, charactersvc.DetailsPatch{Alignment: str("lawful_good"), Hair: str("red")})
+	got, err := thief.Apply(charactersvc.Kind{Class: "thief"}, charactersvc.DetailsPatch{Alignment: str("lawful_good"), Hair: str("red")})
 	require.NoError(t, err, "the unchanged alignment passes")
 	assert.Equal(t, "red", got.Hair)
 
 	neutral := charactersvc.Details{Alignment: "lawful_good"}
-	_, err = neutral.Apply(charactersvc.Kind{Class: "bard"}, nil, charactersvc.DetailsPatch{Alignment: str("lawful_evil")})
+	_, err = neutral.Apply(charactersvc.Kind{Class: "bard"}, charactersvc.DetailsPatch{Alignment: str("lawful_evil")})
 	require.Error(t, err, "a change to a forbidden alignment stays refused")
 }
 

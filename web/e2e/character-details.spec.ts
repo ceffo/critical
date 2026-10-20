@@ -1,5 +1,10 @@
 import { test, expect, snap } from "./fixtures";
-import { apiSettled, chooseLanguage, openDashboard } from "./helpers";
+import {
+  apiSettled,
+  chooseLanguage,
+  combatLog,
+  openDashboard,
+} from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
 const VIEWPORTS = [
@@ -12,9 +17,10 @@ const VIEWPORTS = [
 // What only a browser proves: the name opens the popover, Edit switches it to a form whose first
 // field is the name (Rename lives in the details too, ADR 0034 step 7.2), the server's
 // field error shows under its field (the rule itself is a Go test in detailssvc), Save shows the
-// stored values, and they survive a reload. Languages are catalogue names, picked from the
-// catalogue with the race's own language ticked and fixed (the rules are Go tests); going over the
-// Intelligence count warns in the form and on the card and still saves (ADR 0032 step 4).
+// stored values, and they survive a reload. The card shows the languages read-only: they are
+// picked in the Skills tab's editor (ADR 0037 step 18), from the catalogue with the race's own
+// language ticked and fixed (the rules are Go tests); a save over the non-weapon slots is refused
+// there, a save within them is one journal entry the card then shows, and Undo takes it back.
 test("character details: view, edit with a field error, save, reload", async ({
   page,
 }) => {
@@ -50,18 +56,8 @@ test("character details: view, edit with a field error, save, reload", async ({
     "Test Bard",
   );
   await pop.getByLabel("Name", { exact: true }).fill("Test Bard the Bold");
-  const common = pop.getByRole("checkbox", { name: "Common", exact: true });
-  await expect(common).toBeChecked();
-  await expect(common).toBeDisabled();
-  // ADR 0037 step 6: each language beyond Common spends a non-weapon slot; Test Bard has 8 of 10.
-  for (const name of ["Elvish", "Gnomish", "Orcish"])
-    await pop.getByRole("checkbox", { name, exact: true }).check();
-  await pop.getByRole("button", { name: "Save" }).click();
-  await expect(pop.getByRole("alert")).toHaveText(
-    "Over budget: 11 for 10 available.",
-  );
-  await snap(page, "details-languages-over-1440x900");
-  await pop.getByRole("checkbox", { name: "Orcish", exact: true }).uncheck();
+  // ADR 0037 step 18: no language to pick on the card any more.
+  await expect(pop.getByTestId("language-picker")).toHaveCount(0);
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
   await expect(pop.getByText("Chestnut")).toBeVisible();
@@ -69,6 +65,37 @@ test("character details: view, edit with a field error, save, reload", async ({
   await expect(page.getByTestId("details-trigger")).toHaveText(
     "Test Bard the Bold",
   );
+  await expect(pop.getByText("Common", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // The languages in the Skills tab's editor, with the non-weapon picks whose pool they spend.
+  await page.getByRole("tab", { name: "Skills" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Skills" });
+  await panel.getByTestId("proficiency-edit").click();
+  const editor = panel.getByTestId("proficiency-editor");
+  const pool = editor.getByTestId("proficiency-languages");
+  const common = pool.getByRole("checkbox", { name: "Common", exact: true });
+  await expect(common).toBeChecked();
+  await expect(common).toBeDisabled();
+  // ADR 0037 step 6: each language beyond Common spends a non-weapon slot; Test Bard has 8 of 10.
+  for (const name of ["Elvish", "Gnomish", "Orcish"])
+    await pool.getByRole("checkbox", { name, exact: true }).check();
+  await expect(pool.getByRole("alert")).toHaveText(
+    "Over budget: 11 for 10 available.",
+  );
+  await editor.getByTestId("proficiency-save").click();
+  await expect(pool.getByRole("alert")).toHaveText(
+    "Over budget: 11 for 10 available.",
+  );
+  await snap(page, "skills-languages-over-1440x900");
+  await pool.getByRole("checkbox", { name: "Orcish", exact: true }).uncheck();
+  await expect(pool.getByTestId("proficiency-languages-slots")).toHaveText(
+    "2 proficiency slots",
+  );
+  await editor.getByTestId("proficiency-save").click();
+  await expect(editor).toHaveCount(0);
+  await expect(combatLog(page)).toContainText("Languages: 1 → 3");
+  await page.getByTestId("details-trigger").click();
   await expect(pop.getByText("Common, Elvish, Gnomish")).toBeVisible();
   await expect(pop.getByTestId("details-language-slots")).toHaveText(
     "2 proficiency slots",
@@ -98,6 +125,14 @@ test("character details: view, edit with a field error, save, reload", async ({
   await expect(pop.getByText("112")).toHaveCount(0);
   await expect(pop.getByText("Common, Elvish, Gnomish")).toBeVisible();
   await expect(pop.getByTestId("details-language-slots")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // One Undo gives the languages before the save back (ADR 0037 step 13).
+  await page.getByTestId("undo").click();
+  await expect(combatLog(page)).toContainText("Undone");
+  await page.getByTestId("details-trigger").click();
+  await expect(pop.getByText("Common", { exact: true })).toBeVisible();
+  await expect(pop.getByTestId("details-language-slots")).toHaveCount(0);
 });
 
 // ADR 0032 step 5, what only a browser proves: the roll button fills the field from the server's
@@ -252,8 +287,8 @@ test("creation route: options without the identity lists show an error, retry lo
 });
 
 // A rolling deploy (ADR 0024): the options of a release that predates the language catalogue carry
-// none of it. The card still opens and names the stored codes as they are, and its edit offers no
-// language picker.
+// none of it. The card still opens and names the stored codes as they are, and the Skills tab's
+// editor offers no language picker.
 test("details card: options without the language catalogue show no picker", async ({
   page,
 }) => {
@@ -268,7 +303,10 @@ test("details card: options without the language catalogue show no picker", asyn
   await page.getByTestId("details-trigger").click();
   const pop = page.getByTestId("details-popover");
   await expect(pop.getByText("common", { exact: true })).toBeVisible();
-  await pop.getByRole("button", { name: "Edit" }).click();
-  await expect(pop.getByLabel("Alignment")).toBeVisible();
-  await expect(pop.getByTestId("language-picker")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.getByRole("tab", { name: "Skills" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Skills" });
+  await panel.getByTestId("proficiency-edit").click();
+  await expect(panel.getByTestId("proficiency-search")).toBeVisible();
+  await expect(panel.getByTestId("language-picker")).toHaveCount(0);
 });

@@ -143,7 +143,7 @@ const (
 
 // BudgetWarning is a breach of the skill point budget (ADR 0030 step 17) by
 // the points stored: a warning shown on the skills card. A save that grows
-// it is refused (ADR 0037 step 10: charactersvc.SkillPointsWithinBudget).
+// it is refused (ADR 0037 step 10: skills.SkillPointsWithinBudget).
 type BudgetWarning struct {
 	Code   string
 	Skill  string

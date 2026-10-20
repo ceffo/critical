@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 var ownerID = uuid.MustParse("0b6a8c7e-5f1d-4a59-9a3e-3c2d1e0f4a11")
@@ -61,7 +62,7 @@ func TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMakesItCurrent(t *tes
 		Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 1, XPTotal: 0,
 		Sheet:         charactersvc.Sheet{Level: 1, THAC0: 20, Saves: rogue1to4Saves},
 		Details:       charactersvc.Details{Alignment: "neutral_good", Sex: "male", Languages: []string{}},
-		Proficiencies: charactersvc.Picks{Nonweapon: []charactersvc.Pick{}, Weapon: []charactersvc.WeaponPick{}},
+		Proficiencies: skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{}},
 	}
 	created := e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, want).Return(12, nil).Once()
 	e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(12)).Return(nil).Once().NotBefore(created)

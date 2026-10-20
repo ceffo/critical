@@ -1,4 +1,4 @@
-package charactersvc
+package skills
 
 import (
 	"slices"
@@ -8,8 +8,7 @@ import (
 )
 
 // Proficiency picks against their slots (ADR 0037 steps 3 to 5, 7, 10, 11 and 12: the
-// non-weapon and the weapon pool). The rules live here, as the skill points' do; skillsvc writes
-// the picks.
+// non-weapon and the weapon pool).
 
 // Pick is one stored non-weapon proficiency pick (ADR 0037 step 12): the catalogue id and the
 // slots spent on it. Its ability and modifier are read from the catalogue, never stored.
@@ -72,7 +71,7 @@ type PickFigures struct {
 	Slots    int
 	Cost     int
 	Extra    int
-	Ability  Ability
+	Ability  string
 	Modifier int
 	Known    bool
 	// Target is the check's target (ADR 0014 step 1 as amended by ADR 0037
@@ -92,7 +91,7 @@ func ProficiencyTarget(score, modifier, extra int) int {
 
 // SetTargets fills each pick's check target from score (the sheet's score in
 // an ability, ok false when not known): ADR 0037 step 5.
-func (s *ProficiencySlots) SetTargets(score func(Ability) (int, bool)) {
+func (s *ProficiencySlots) SetTargets(score func(ability string) (int, bool)) {
 	for i := range s.Picks {
 		p := &s.Picks[i]
 		if !p.Known || p.Ability == "" {
@@ -120,24 +119,23 @@ type ProficiencySlots struct {
 	Weapon      ruletablesvc.WeaponPool
 	Picks       []PickFigures
 	WeaponPicks []WeaponPickFigures
-	// NonproficientPenalty is Table 34's non-proficiency penalty for the class group (ADR 0037
-	// step 8), 0 or less: what an attack with a weapon type without a pick takes to hit.
-	NonproficientPenalty int
+	// Penalty is Table 34's non-proficiency penalty for the class group (ADR 0037 step 8), 0 or
+	// less: what an attack with a weapon type without a pick takes to hit.
+	Penalty int
 }
 
 // NonproficientPenalty is ADR 0037 step 8 for an attack with a weapon of weaponType: Table 34's
 // penalty for the class group when the type has no weapon pick, else 0. Any pick of the type
 // counts, a kept pick the class may not make included (Allowed false): the step asks for a pick,
 // and wielding is never refused. A weapon with no type takes none (the piece carries the
-// weapon_type_missing warning instead), and so does a character without Table 34 figures (nil
-// Derived.Proficiencies: no catalogue, an unknown class).
-func (c *Character) NonproficientPenalty(weaponType string) int {
-	f := c.Derived.Proficiencies
-	if f == nil {
+// weapon_type_missing warning instead), and so do no figures (nil: no catalogue, an unknown
+// class).
+func (s *ProficiencySlots) NonproficientPenalty(weaponType string) int {
+	if s == nil {
 		return 0
 	}
-	return nonproficientPenalty(f.NonproficientPenalty, weaponType, func(t string) bool {
-		return slices.ContainsFunc(f.WeaponPicks, func(p WeaponPickFigures) bool { return p.Type == t })
+	return nonproficientPenalty(s.Penalty, weaponType, func(t string) bool {
+		return slices.ContainsFunc(s.WeaponPicks, func(p WeaponPickFigures) bool { return p.Type == t })
 	})
 }
 
@@ -160,7 +158,7 @@ type WeaponProficiency struct {
 	Penalty     int
 }
 
-// NonproficientPenalty is step 8 for a weapon of weaponType, as Character.NonproficientPenalty
+// NonproficientPenalty is step 8 for a weapon of weaponType, as ProficiencySlots.NonproficientPenalty
 // judges it.
 func (w WeaponProficiency) NonproficientPenalty(weaponType string) int {
 	return nonproficientPenalty(w.Penalty, weaponType, func(t string) bool { return slices.Contains(w.Picked, t) })
@@ -168,7 +166,7 @@ func (w WeaponProficiency) NonproficientPenalty(weaponType string) int {
 
 // WeaponProficiencyOf reads a character of class with picks: its specialization (step 9) and
 // its weapon picks against Table 34's penalty from book (step 8).
-func WeaponProficiencyOf(book ProficiencyBook, class string, picks Picks) WeaponProficiency {
+func WeaponProficiencyOf(book Book, class string, picks Picks) WeaponProficiency {
 	out := WeaponProficiency{Specialized: SpecializedType(class, picks), Picked: make([]string, 0, len(picks.Weapon))}
 	if row, ok := book.SlotRowOf(class); ok {
 		out.Penalty = row.Penalty
@@ -202,21 +200,11 @@ func SpecializedType(class string, picks Picks) string {
 	return ""
 }
 
-// Proficiency pick limits and wire names.
+// Proficiency pick limits.
 const (
 	// MaxPickSlots bounds the slots one pick may spend (more could never be
 	// available: Table 34 and Table 4 give at most a few dozen).
 	MaxPickSlots = 99
-	// FieldNonweapon is the wire name of the non-weapon picks: the budget
-	// refusal's field, a pick's field is FieldNonweapon + "." + id.
-	FieldNonweapon = "nonweapon"
-	// PoolNonweapon names the non-weapon pool in the slot warnings.
-	PoolNonweapon = "nonweapon"
-	// FieldWeapon is the wire name of the weapon picks: the budget refusal's
-	// field, a pick's field is FieldWeapon + "." + type.
-	FieldWeapon = "weapon"
-	// PoolWeapon names the weapon pool in the slot warnings.
-	PoolWeapon = "weapon"
 	// WeaponPickSlots is what a plain weapon pick spends (ADR 0037 step 7); a
 	// specialization spends ruletablesvc.SpecializationSlots (step 9).
 	WeaponPickSlots = 1
@@ -225,19 +213,8 @@ const (
 	LanguagesModernID = "languages_modern"
 )
 
-// Warning codes of the slots (ADR 0037 step 11) and of a stored pick the catalogue does not
-// hold (step 16, kept as a pick of its stored slots). The web words them.
-const (
-	CodeSlotsOverBudget    = "slots_over_budget"
-	CodeSlotsToSpend       = "slots_to_spend"
-	CodeProficiencyUnknown = "proficiency_unknown"
-	// CodeWeaponNotAllowed refuses a weapon pick of a type the class may not
-	// pick (ADR 0037 step 7).
-	CodeWeaponNotAllowed = "weapon_not_allowed"
-)
-
 // pickFigures reads one pick for a class learning groups at Table 37's cost.
-func pickFigures(book ProficiencyBook, groups []string, p Pick) PickFigures {
+func pickFigures(book Book, groups []string, p Pick) PickFigures {
 	row, ok := book.Get(p.ID)
 	if !ok {
 		// Unknown to the catalogue: it costs what it spends and has no check.
@@ -246,7 +223,7 @@ func pickFigures(book ProficiencyBook, groups []string, p Pick) PickFigures {
 	cost := ruletablesvc.NonweaponCost(row, groups)
 	return PickFigures{
 		ID: p.ID, Slots: p.Slots, Cost: cost, Extra: ruletablesvc.ExtraSlots(p.Slots, cost),
-		Ability: Ability(row.Ability), Modifier: row.Modifier, Known: true,
+		Ability: row.Ability, Modifier: row.Modifier, Known: true,
 	}
 }
 
@@ -257,43 +234,18 @@ type Spending struct {
 	Languages int
 }
 
-// LanguageSlots is ADR 0037 step 6: the non-weapon slots a list of languages spends, one for
-// each language other than the race's native one and Common. Without a catalogue (native "")
-// no language is known to be free, so none is counted.
-func LanguageSlots(languages []string, native string) int {
-	if native == "" {
-		return 0
-	}
-	n := 0
-	for _, l := range languages {
-		if l != native && l != ruletablesvc.CommonLanguage {
-			n++
-		}
-	}
-	return n
-}
-
-// LanguageSlots is the non-weapon slots c's languages spend as last derived (ADR 0037 step 6);
-// 0 without a pool.
-func (c *Character) LanguageSlots() int {
-	if c.Derived.Proficiencies == nil {
-		return 0
-	}
-	return c.Derived.Proficiencies.Nonweapon.Languages
-}
-
 // ProficiencyFigures is ADR 0037 steps 3 to 7 on what a character of class spends at the
 // realized level with the sheet's intelligence: both pools (the languages in the non-weapon
 // one) and each pick's figures. ok is false when the catalogue has no Table 34 row for the class
 // (no catalogue, an unknown class).
-func ProficiencyFigures(book ProficiencyBook, class string, level, intelligence int, spend Spending) (ProficiencySlots, bool) {
+func ProficiencyFigures(book Book, class string, level, intelligence int, spend Spending) (ProficiencySlots, bool) {
 	picks := spend.Picks
 	row, ok := book.SlotRowOf(class)
 	if !ok {
 		return ProficiencySlots{}, false
 	}
 	groups := book.GroupsOf(class)
-	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon)), NonproficientPenalty: row.Penalty}
+	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon)), Penalty: row.Penalty}
 	spent := 0
 	for _, p := range picks.Nonweapon {
 		f := pickFigures(book, groups, p)
@@ -322,7 +274,7 @@ func ProficiencyFigures(book ProficiencyBook, class string, level, intelligence 
 // kept (step 16: older data is never dropped) when it spends 1 to MaxPickSlots. A refusal is a
 // *domain.FieldError on field nonweapon.<id>. Weapon picks: validWeaponPicks. The picks come
 // back in their order, never nil.
-func ValidPicks(book ProficiencyBook, class string, picks, before Picks) (Picks, error) {
+func ValidPicks(book Book, class string, picks, before Picks) (Picks, error) {
 	weapon := before.Clone().Weapon
 	if picks.Weapon != nil {
 		var err error
@@ -413,7 +365,7 @@ func validWeaponPicks(class string, picks, before []WeaponPick) ([]WeaponPick, e
 // languages when the picks alone, with the languages as before, would pass (a languages edit, or
 // a creation whose languages overspend, step 6), else nonweapon or weapon. No Table 34 row for the
 // class: no budget, nil.
-func PicksWithinBudget(book ProficiencyBook, class string, level, intelligence int, before, after Spending) error {
+func PicksWithinBudget(book Book, class string, level, intelligence int, before, after Spending) error {
 	b, ok := ProficiencyFigures(book, class, level, intelligence, after)
 	if !ok {
 		return nil

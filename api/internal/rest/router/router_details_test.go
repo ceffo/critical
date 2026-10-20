@@ -16,22 +16,30 @@ import (
 func TestDetails_PatchMapsBodyToPatchAndAnswersWithDetails(t *testing.T) {
 	h, m := newRouter(t)
 	hair, age := "red", 112
-	langs := []string{"Elfique"}
-	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{Hair: &hair, Age: &age, Languages: &langs}).
-		Return(charactersvc.Details{Hair: "red", Age: 112, Languages: []string{"Elfique"}}, nil)
-	rec := do(h, "PATCH", "/api/character/details", `{"hair":"red","age":112,"languages":["Elfique"]}`)
+	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{Hair: &hair, Age: &age}).
+		Return(charactersvc.Details{Hair: "red", Age: 112, Languages: []string{"elvish"}}, nil)
+	rec := do(h, "PATCH", "/api/character/details", `{"hair":"red","age":112}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"alignment":"","age":112,"sex":"","height_cm":null,"weight_kg":null,"hair":"red","eyes":"","languages":["Elfique"]}`, rec.Body.String())
+	assert.JSONEq(t, `{"alignment":"","age":112,"sex":"","height_cm":null,"weight_kg":null,"hair":"red","eyes":"","languages":["elvish"]}`, rec.Body.String(),
+		"the answer still shows the languages, read-only")
 }
 
 func TestDetails_NullClearsAndAbsentLeavesAlone(t *testing.T) {
 	h, m := newRouter(t)
-	empty, none := "", []string{}
-	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{ClearAge: true, Hair: &empty, Languages: &none}).
+	empty := ""
+	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{ClearAge: true, Hair: &empty}).
 		Return(charactersvc.Details{}, nil)
-	rec := do(h, "PATCH", "/api/character/details", `{"age":null,"hair":null,"languages":null}`)
+	rec := do(h, "PATCH", "/api/character/details", `{"age":null,"hair":null}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"alignment":"","age":null,"sex":"","height_cm":null,"weight_kg":null,"hair":"","eyes":"","languages":[]}`, rec.Body.String())
+}
+
+// ADR 0037 step 18: the details no longer take the languages (the Skills tab saves them through
+// PUT /api/proficiencies); a body that sends them is a 400 before any service runs.
+func TestDetails_Step18_TheLanguagesAreRefused(t *testing.T) {
+	h, _ := newRouter(t)
+	rec := do(h, "PATCH", "/api/character/details", `{"hair":"red","languages":["elvish"]}`)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
 // ADR 0032 step 5: height (cm) and weight (kg) are JSON numbers, null clears, a value that is no

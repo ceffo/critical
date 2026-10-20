@@ -6,10 +6,14 @@
 // DM may move the target before the roll or on the latest check after it. A
 // check changes no state: it is one skill_check entry of the action log, so
 // popping it only removes it. The last check of each skill is read back from
-// the log. It also writes a thief's or a bard's skill points (ADR 0030 steps
-// 17 and 18), a skill_points entry undone by its snapshot, and the
-// proficiency picks (ADR 0037 steps 12 and 13), a proficiencies entry undone
-// by its snapshot.
+// the log.
+//
+// It is the skills module's service (ADR 0037 step 17) over the rules of
+// package skills: it owns every write and preview of the skills, a thief's or
+// a bard's skill points (ADR 0030 steps 17 and 18, a skill_points entry undone
+// by its snapshot) and the proficiency picks, the specialization and the
+// languages (ADR 0037 steps 12, 13 and 18, one proficiencies entry undone by
+// its snapshot).
 package skillsvc
 
 import (
@@ -20,6 +24,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // SVC is the driver port.
@@ -63,29 +69,26 @@ type SVC interface {
 	// *domain.BudgetError for a spend that grows an overspend (ADR 0037
 	// step 10); nothing is written or logged then.
 	SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error)
-	// PreviewProficiencies is the character as it would read with picks as
-	// its proficiency picks (ADR 0037 step 12), writing and logging nothing;
-	// refused as SetProficiencies refuses.
-	PreviewProficiencies(ctx context.Context, characterID int64, picks charactersvc.Picks) (*charactersvc.Character, error)
+	// PreviewProficiencies is the pools as they would read after the edit
+	// (ADR 0037 step 12), writing and logging nothing; refused as
+	// SetProficiencies refuses.
+	PreviewProficiencies(ctx context.Context, characterID int64, e Edit) (*Proficiencies, error)
 	// SetProficiencies saves the character's whole list of proficiency
-	// picks, logged and undoable (ADR 0037 steps 12 and 13), and returns the
-	// character read after it. A *domain.FieldError for a pick refused
-	// (charactersvc.ValidPicks), a *domain.BudgetError for a save that grows
-	// an overspend (step 10); nothing is written or logged then.
-	SetProficiencies(ctx context.Context, characterID int64, picks charactersvc.Picks) (*charactersvc.Character, error)
+	// picks of a pool or both, and its languages, logged and undoable as one
+	// move (ADR 0037 steps 12, 13 and 18), and returns the pools read after
+	// it. A *domain.FieldError for a pick or a language refused
+	// (skills.ValidPicks, skills.ValidLanguages), a *domain.BudgetError for a
+	// save that grows an overspend (step 10); nothing is written or logged
+	// then.
+	SetProficiencies(ctx context.Context, characterID int64, e Edit) (*Proficiencies, error)
 }
 
-// Characters reads the sheet: its ability scores, its proficiency picks with
-// their figures (ADR 0037 steps 3 to 5) and the bard's and the thief's
-// skills, derived on the character (ADR 0030 steps 17 and 18), not stored.
+// Characters reads the sheet: its ability scores, its proficiency picks and
+// languages with their figures (ADR 0037 steps 3 to 6) and the bard's and the
+// thief's skills, derived on the character (ADR 0030 steps 17 and 18), not
+// stored.
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
-	// PreviewSkillPoints is the character derived with draft skill points,
-	// nothing stored.
-	PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*charactersvc.Character, error)
-	// PreviewProficiencies is the character derived with draft picks,
-	// nothing stored.
-	PreviewProficiencies(ctx context.Context, id int64, picks charactersvc.Picks) (*charactersvc.Character, error)
 }
 
 // Abilities gives the sheet's score in an ability and the score in effect
@@ -115,30 +118,44 @@ type Deps struct {
 	Dice       Dice
 	Log        Log
 	Points     Points
-	// Picks writes the proficiency picks; Book is the non-weapon catalogue
-	// they are checked against (ADR 0037 steps 2 and 12).
-	Picks Picks
-	Book  charactersvc.ProficiencyBook
-	Tx    domain.TxRunner
+	// Picks writes the proficiency picks and the languages; Book is the
+	// non-weapon catalogue they are checked against (ADR 0037 steps 2 and
+	// 12), Languages the language catalogue (ADR 0032 step 4; nil is the
+	// empty one of a catalogue before format 8).
+	Picks     Picks
+	Book      skills.Book
+	Languages skills.LanguageBook
+	// Tables are PHB Tables 26 to 29 and 33, for the skill points' preview
+	// (ADR 0030 steps 17 and 18).
+	Tables skills.SkillTables
+	Tx     domain.TxRunner
 }
 
 type service struct {
-	chars  Characters
-	abils  Abilities
-	dice   Dice
-	log    Log
-	points Points
-	picks  Picks
-	book   charactersvc.ProficiencyBook
-	tx     domain.TxRunner
+	chars     Characters
+	abils     Abilities
+	dice      Dice
+	log       Log
+	points    Points
+	picks     Picks
+	book      skills.Book
+	languages skills.LanguageBook
+	tables    skills.SkillTables
+	tx        domain.TxRunner
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Characters == nil || d.Abilities == nil || d.Dice == nil || d.Log == nil || d.Points == nil || d.Picks == nil || d.Book == nil || d.Tx == nil {
+	if d.Characters == nil || d.Abilities == nil || d.Dice == nil || d.Log == nil || d.Points == nil || d.Picks == nil || d.Book == nil || d.Tables == nil || d.Tx == nil {
 		return nil, fmt.Errorf("skillsvc: nil dependency")
 	}
-	return &service{chars: d.Characters, abils: d.Abilities, dice: d.Dice, log: d.Log, points: d.Points, picks: d.Picks, book: d.Book, tx: d.Tx}, nil
+	if d.Languages == nil {
+		d.Languages = (*ruletablesvc.Languages)(nil)
+	}
+	return &service{
+		chars: d.Characters, abils: d.Abilities, dice: d.Dice, log: d.Log, points: d.Points, picks: d.Picks,
+		book: d.Book, languages: d.Languages, tables: d.Tables, tx: d.Tx,
+	}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

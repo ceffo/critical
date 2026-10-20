@@ -46,6 +46,8 @@ export function SkillsTab() {
   const budget = useCharacterStore((s) => s.character?.derived.skillBudget);
   const cls = useCharacterStore((s) => s.character?.class);
   const slots = useCharacterStore((s) => s.character?.derived.proficiencySlots);
+  const race = useCharacterStore((s) => s.character?.raceCode);
+  const languages = useCharacterStore((s) => s.character?.languages);
   // The open editor lives in a store: the character card's level-up grants open one too (ADR 0037
   // step 15). Leaving the tab closes it (ActionArea), as it always did.
   const editor = useSkillsEditor((s) => s.editor);
@@ -120,7 +122,15 @@ export function SkillsTab() {
 
   // ADR 0037 step 12: the picks are edited in place of the lists, the catalogue needing the room.
   if (editingPicks && slots && cls)
-    return <ProficiencyEditor cls={cls} slots={slots} onDone={closeEditor} />;
+    return (
+      <ProficiencyEditor
+        cls={cls}
+        race={race ?? ""}
+        languages={languages ?? []}
+        slots={slots}
+        onDone={closeEditor}
+      />
+    );
 
   if (editingWeapons && slots && cls)
     return (

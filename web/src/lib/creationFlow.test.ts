@@ -64,6 +64,8 @@ describe("stepOfField", () => {
     expect(stepOfField("skillPoints.climb_walls")).toBe("extras");
     expect(stepOfField("nonweapon")).toBe("proficiencies");
     expect(stepOfField("nonweapon.tumbling")).toBe("proficiencies");
+    // ADR 0037 step 18: the languages are picked on the proficiency step.
+    expect(stepOfField("details.languages")).toBe("proficiencies");
     expect(stepOfField("name")).toBe("identity");
     expect(stepOfField("details.alignment")).toBe("identity");
     expect(stepOfField("details.height")).toBe("identity");

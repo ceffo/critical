@@ -52,7 +52,7 @@ content. This ADR records the decisions; the README and the shots are the pictur
       bard's and thief's skill points against their budget, the armour worn, a fighter's 18/xx).
    5. **Identity**: name; alignment as a 3x3 grid; sex; languages; height, weight and age each with
       **Tirer**, their range and dice; hair; eyes. _(The languages move to the proficiencies step
-      by [ADR 0037](0037-proficiencies.md) step 18, decided 2026-10-20, on implementation.)_
+      by [ADR 0037](0037-proficiencies.md) step 18, as built 2026-10-20.)_
    6. **Review**: the warnings on top, then one block per step with an edit button each; **Créer**.
 4. **Starting level or XP** (_user_; amends [ADR 0030](0030-classes-and-races.md) step 1). Step 1
    offers **Niveau de départ** as a Niveau / XP switch, **Niveau by default**. Niveau shows the
@@ -184,7 +184,7 @@ read as built here; their endpoints are unchanged and no backend change was made
   themes ([ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md)), and narrow or mobile
   layouts ([ADR 0009](0009-dashboard-layout-and-theme-system.md) step 3).
 
-## Amendment 2026-10-20: the languages leave the identity step (decided, on implementation)
+## Amendment 2026-10-20: the languages leave the identity step (decided; the languages as built 2026-10-20, the draft endpoint on implementation)
 
 [ADR 0037](0037-proficiencies.md) step 18 (architecture review 2): the languages are edited on
 the creation's proficiencies step and in the Skills tab's editor, as a pool next to the non-weapon
@@ -194,3 +194,7 @@ which replaces `POST /api/characters/checks` and `POST /api/characters/preview` 
 it takes the draft as far as it is entered and answers the figures it can derive, every refusal by
 field and the fields still missing, never a 400 for a draft; `POST /api/characters` answers as
 today. What each step shows (step 3) and what blocks Suivant (step 6) are unchanged.
+_(As built 2026-10-20, the languages: the chips sit on the proficiencies step between the weapons
+and the non-weapon picks, with the pool's line from the checks; the preview now also runs on that
+step, so an overspend's refusal shows at the chips as it did on the identity step. The draft
+endpoint is not built.)_

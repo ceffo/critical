@@ -123,6 +123,22 @@ export function toBody(
 }
 
 /**
+ * The details card's PATCH body (`toBody` without the languages): the languages are the Skills
+ * tab's, saved through `PUT /api/proficiencies` (ADR 0037 step 18), and the details endpoint no
+ * longer takes them. The creation body keeps them under the details (`toBody`).
+ */
+export function toPatch(
+  draft: Draft,
+  language = "fr",
+  original?: Pick<CharacterDetails, "height_cm" | "weight_kg">,
+): ReturnType<typeof toBody> {
+  const out = toBody(draft, language, original);
+  const body = { ...out.body };
+  delete body.languages;
+  return { ...out, body };
+}
+
+/**
  * Whether the class no longer admits the character's alignment. `warnings` is absent from the
  * answer of a release that predates it (a rolling deploy, ADR 0024): absent reads as none.
  */

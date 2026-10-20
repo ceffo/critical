@@ -25,7 +25,7 @@ func thiefFixture(t *testing.T) *fixture {
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	thief := &charactersvc.Character{ID: charID, Class: "thief", Dex: 17}
@@ -108,7 +108,7 @@ func TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie(t *testing.T) {
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	thief := &charactersvc.Character{ID: charID, Class: "thief"}
 	thief.Derived.ThiefSkills = []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 60, Race: -15, Armor: -50, Percent: 0}}

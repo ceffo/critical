@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
@@ -35,21 +35,21 @@ func TestKelsen_Step16_WeaponPicksAreHisWeaponTypes(t *testing.T) {
 			for _, w := range weapons {
 				owned[w.Type] = true
 			}
-			var want []charactersvc.WeaponPick
+			var want []skills.WeaponPick
 			for _, typ := range ruletablesvc.WeaponTypes {
 				if owned[typ] {
-					want = append(want, charactersvc.WeaponPick{Type: typ, Slots: 1})
+					want = append(want, skills.WeaponPick{Type: typ, Slots: 1})
 				}
 			}
 			picks := c.Picks()
 			assert.Equal(t, want, picks.Weapon)
-			_, err = charactersvc.ValidPicks(book, seedfile.DefaultClass, picks, charactersvc.Picks{})
+			_, err = skills.ValidPicks(book, seedfile.DefaultClass, picks, skills.Picks{})
 			require.NoError(t, err, "the editor accepts the seed's picks")
-			f, ok := charactersvc.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, charactersvc.Spending{Picks: picks})
+			f, ok := skills.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, skills.Spending{Picks: picks})
 			require.True(t, ok)
 			assert.Equal(t, ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 5, Left: 0}, f.Weapon)
-			for _, w := range charactersvc.SlotWarnings(f) {
-				assert.NotEqual(t, charactersvc.PoolWeapon, w.Pool, "no weapon warning: %+v", w)
+			for _, w := range skills.SlotWarnings(f) {
+				assert.NotEqual(t, skills.PoolWeapon, w.Pool, "no weapon warning: %+v", w)
 			}
 		})
 	}

@@ -161,8 +161,19 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(step.getByLabel("PV max")).toHaveValue("6");
   await expect(step.getByLabel("Escalade")).toHaveValue("15");
   await next.click();
-  // The proficiency step (ADR 0037 step 14): nothing picked, the slots wait to be spent.
+  // The proficiency step (ADR 0037 step 14): no pick, the slots wait to be spent. The languages
+  // are picked here (ADR 0034 step 3.5 as amended by ADR 0037 step 18): ADR 0032 step 4, the
+  // half-elf's own language (Commun) is locked; ADR 0037 step 6, five more spend five of the level 3
+  // bard's 7 non-weapon slots (Intelligence 14), as the server counts.
   await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await expect(step.getByTestId("language-native")).toContainText("Commun");
+  const chips = step.getByTestId("language-chips");
+  for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])
+    await chips.getByRole("checkbox", { name, exact: true }).click();
+  await expect(step.getByTestId("languages-slots")).toHaveText(
+    "5 emplacements · 5 sur 7 au total",
+  );
+  await snap(page, "creation-proficiencies-languages-fr");
   await next.click();
 
   // Step 5, identity (ADR 0034 step 3.5): Suivant waits for a name, an alignment and a sex.
@@ -187,15 +198,7 @@ test("create a bard through the creation route, switch to the first and back, re
     .getByRole("radiogroup", { name: "Sexe" })
     .getByRole("radio", { name: "Femme" })
     .click();
-  // ADR 0032 step 4: the half-elf's own language (Commun) is locked; ADR 0037 step 6: five more
-  // spend five of the level 3 bard's 7 non-weapon slots (Intelligence 14), as the server counts.
-  await expect(details.getByTestId("language-native")).toContainText("Commun");
-  const chips = details.getByTestId("language-chips");
-  for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])
-    await chips.getByRole("checkbox", { name, exact: true }).click();
-  await expect(details.getByTestId("languages-slots")).toHaveText(
-    "5 emplacements · 5 sur 7 au total",
-  );
+  await expect(details.getByTestId("language-chips")).toHaveCount(0);
   // ADR 0032 step 5.3: the server rolls the height for a female half-elf; the range and the dice
   // come from the options.
   await expect(details.getByTestId("range-height")).toContainText(
@@ -214,7 +217,6 @@ test("create a bard through the creation route, switch to the first and back, re
   // An age outside the half-elf's range: the server's warning, which never blocks.
   await details.getByRole("textbox", { name: "Âge" }).fill("500");
   await expect(next).toBeEnabled();
-  await expect(details.getByTestId("languages-slots")).toBeVisible();
   await snap(page, "creation-identity-fr");
   await next.click();
 

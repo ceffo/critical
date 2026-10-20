@@ -755,8 +755,9 @@ export function ExtrasStep({
   answer,
 }: StepProps) {
   const { t } = useTranslation();
-  // The budget at the level the XP gives, from the draft's derived block (ADR 0030 steps 17, 18).
-  const budget = answer.latest?.derived?.skillPoints ?? null;
+  // The budget at the level the XP gives, the draft's own: it reads the class and XP only, so a
+  // score out of range leaves it shown (ADR 0030 steps 17, 18).
+  const budget = answer.latest?.skillPoints ?? null;
   const [busy, setBusy] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
   const cls = classOf(options, draft.cls);

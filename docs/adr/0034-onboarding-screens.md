@@ -204,9 +204,11 @@ endpoint as built 2026-10-20: see below.)_
 - **`POST /api/characters/draft`** replaces `POST /api/characters/checks` and `POST
   /api/characters/preview`, both removed (the web was their only client). The body is the creation's,
   every field optional (a number left out or null is blank). The answer is always 200 for the body's
-  content: `derived` (`GET /api/character`'s derived block, one mapping shared with it; null while the
-  class, race, six scores or XP are missing or refused), `warnings` and `languages` (the native one
-  added) as the character's read gives them, `refusals` (`[{field, code}]`, every refusal `POST
+  content: `derived` (`GET /api/character`'s derived block, one mapping shared with it; null while an
+  entry the derivation reads, the class, race, six scores, skill points or XP, is missing or refused;
+  a refused `hpMax` or `strExceptional` leaves it, the derivation reads neither), `skillPoints` (see
+  "The budget" below), `warnings` and `languages` (the native one added, also while the picks or
+  languages are refused: they are then read as entered) as the character's read gives them, `refusals` (`[{field, code}]`, every refusal `POST
   /api/characters` would give, field and code alike: the creation's `error` for an invalid input,
   `over_budget` with `spent` and `limit`), `missing` (the required fields still blank, in the form's
   order: `name`, `class`, `race`, the six scores, `hpMax`, `xp`, `alignment`, `sex`) and
@@ -219,6 +221,15 @@ endpoint as built 2026-10-20: see below.)_
   and save use it too), at the starting level. The derived block gains `skillPoints` (the budget with
   its formula's terms, `GET /api/skills`' `budget` shape, now one `rest/wire` DTO), which the extras
   step reads; additive for `GET /api/character`.
+- **The budget** (decided in review, 2026-10-20). A thief's or a bard's skill point budget reads the
+  class and the level the XP gives, nothing else (ADR 0030 steps 17 and 18), and the scores step lets
+  Suivant through with a score out of range. So the draft carries the budget on its own, top-level
+  `skillPoints` in the derived block's shape (`rest/wire`'s one DTO), set as soon as the class and XP
+  read, whatever the race, scores or refused skill points (then read as none entered); null for another
+  class or while the class or XP is missing or refused. With a derived block it equals the block's.
+  The over-budget refusal is listed whenever the budget is read. The extras step reads this field, so
+  a Strength of 2 still shows the budget there, as the old checks did; every ability-dependent figure
+  (the skills' percentages, THAC0, saves) stays in the derived block and waits for valid scores.
 - **Web.** One flow module (`components/creation/flow.ts`, the former `lib/creationFlow.ts` folded
   in), one request builder (`buildBody`, the draft's and Créer's; an unreadable value is left out and
   named), one answer type (`CreationDraft`). The class step's minimums, the extras step's budget and
@@ -229,5 +240,8 @@ endpoint as built 2026-10-20: see below.)_
 - **Tests**: `TestDraft_IsWhatTheCreatedCharacterReads` (the preview's equality, moved),
   `TestDraft_RefusesAsTheCreationRefuses` (a row per creation refusal),
   `TestDraft_PartialDraftsAnswer200`, `TestDraft_Table13_ScoresUnderAClassMinimumAreUnmet`,
-  `TestDraft_Steps17And18_TheBudgetAndWhatIsLeft`, `TestCharacters_DraftWireShape`,
-  `TestCharacters_DraftNeverRefusesContent`; web `flow.test.ts` (`buildBody`, `stepOfField`).
+  `TestDraft_Steps17And18_TheBudgetAndWhatIsLeft`, `TestDraft_Steps17And18_TheBudgetNeedsTheClassAndXPOnly`,
+  `TestDraft_ListsEveryFaultCreateNamesTheFirst`, `TestDraft_RefusedPicksKeepTheFiguresAndTheNativeLanguage`,
+  `TestCharacters_DraftWireShape`, `TestCharacters_DraftNeverRefusesContent`; web `flow.test.ts`
+  (`buildBody`, `stepOfField`); e2e `layout.spec` (thief: a Strength of 2 keeps the budget on the
+  extras step).

@@ -123,12 +123,15 @@ func cleanName(raw string) (string, error) {
 
 // checked is a new character's entries read field by field (check): the character they enter,
 // the refusals in the form's order (Create answers the first), the fields still blank (a draft's;
-// Create refuses them) and whether the class, race, scores and XP read, which the derivation
-// needs. The picks and the languages are judged later, at the starting level (skillsAt).
+// Create refuses them), whether the class and XP read (levelled: the starting level and the skill
+// point budget need nothing else) and whether every entry the derivation reads does (derivable:
+// the class, race, scores, skill points and XP). The picks and the languages are judged later, at
+// the starting level (skillsAt).
 type checked struct {
 	c         Character
 	refusals  []error
 	missing   []string
+	levelled  bool
 	derivable bool
 }
 
@@ -188,7 +191,7 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 	if stop() {
 		return out, nil
 	}
-	numbersOK := true
+	scoresOK := true
 	for _, a := range []struct {
 		field     string
 		v, lo, hi int
@@ -202,10 +205,10 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 	} {
 		switch {
 		case slices.Contains(blank, a.field):
-			out.missing, numbersOK = append(out.missing, a.field), false
+			out.missing, scoresOK = append(out.missing, a.field), false
 		case a.v < a.lo || a.v > a.hi:
 			refuse(&domain.FieldError{Field: a.field, Message: CodeOutOfRange})
-			numbersOK = false
+			scoresOK = false
 		}
 		if stop() {
 			return out, nil
@@ -218,6 +221,7 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 		return out, nil
 	}
 	points, err := validSkills(n)
+	pointsOK := err == nil
 	if err != nil {
 		refuse(err)
 	}
@@ -233,19 +237,21 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 	if stop() {
 		return out, nil
 	}
+	xpOK := true
 	switch {
 	case slices.Contains(blank, "xp"):
-		out.missing, numbersOK = append(out.missing, "xp"), false
+		out.missing, xpOK = append(out.missing, "xp"), false
 	case n.XP < MinStartingXP || n.XP > MaxStartingXP:
 		refuse(&domain.FieldError{Field: "xp", Message: CodeOutOfRange})
-		numbersOK = false
+		xpOK = false
 	}
 	details, missing, err := newDetails(Kind{Class: n.Class, Race: n.Race}, n.Details, !draft)
 	if err != nil {
 		refuse(err)
 	}
 	out.missing = append(out.missing, missing...)
-	out.derivable = classOK && raceOK && numbersOK
+	out.levelled = classOK && xpOK
+	out.derivable = out.levelled && raceOK && scoresOK && pointsOK
 	out.c = Character{
 		Name: name, Class: n.Class, Race: n.Race,
 		Str: n.Str, StrExceptional: n.StrExceptional, Dex: n.Dex, Con: n.Con, Int: n.Int, Wis: n.Wis, Cha: n.Cha,
@@ -355,10 +361,13 @@ func started(c *Character, rules Rules) error {
 
 // Draft is a creation draft as far as it is entered (ADR 0034, amendment of 2026-10-20: one
 // draft endpoint): the character Create would store, read as GET /api/character reads it (its
-// derived block, warnings and languages; nil while the class, race, scores or XP are missing or
-// refused), every refusal Create would give with its field and code, the fields still blank and
-// the class minimums the entered scores miss. blank names the numbers not entered. Nothing is
-// refused (a refusal is an answer here) and nothing is stored.
+// derived block, warnings and languages; nil while an entry the derivation reads, the class,
+// race, scores, skill points or XP, is missing or refused), a thief's or a bard's skill point
+// budget as soon as the class and XP read (ADR 0030 steps 17 and 18: the budget reads the class
+// and level only, so a score out of range does not hide it), every refusal Create would give with
+// its field and code, the fields still blank and the class minimums the entered scores miss. blank
+// names the numbers not entered. Nothing is refused (a refusal is an answer here) and nothing is
+// stored.
 func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Draft, error) {
 	k, err := s.check(n, blank, true)
 	if err != nil {
@@ -366,15 +375,21 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	}
 	out := &Draft{Refusals: k.refusals, Missing: k.missing, UnmetMinimums: unmetMinimums(n, blank)}
 	if !k.derivable {
+		if k.levelled {
+			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
+			level, err := s.rules.LevelFor(n.Class, n.XP)
+			if err != nil {
+				return nil, fmt.Errorf("draft: %w", err)
+			}
+			out.SkillPoints = budgetAt(out, n.Class, level, k.c.SkillPoints)
+		}
 		return out, nil
 	}
 	c := k.c
 	if err := started(&c, s.rules); err != nil {
 		return nil, err
 	}
-	if err := skills.SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
-		out.Refusals = append(out.Refusals, err)
-	}
+	out.SkillPoints = budgetAt(out, c.Class, c.RealizedLevel, c.SkillPoints)
 	if sheet, err := s.skillsAt(c, n); err != nil {
 		out.Refusals = append(out.Refusals, err)
 		// Refused picks are read as entered, so the step shows their figures beside the refusal.
@@ -389,6 +404,19 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	s.readWarnings(&c)
 	out.Character = &c
 	return out, nil
+}
+
+// budgetAt is a draft's skill point budget at level (ADR 0030 steps 17 and 18), nil for a class
+// without skill points, and adds to out the creation's refusal of points over it (ADR 0037 step
+// 10: nothing was spent before).
+func budgetAt(out *Draft, class string, level int, points map[string]int) *ruletablesvc.SkillPointsBudget {
+	if err := skills.SkillPointsWithinBudget(class, level, nil, points); err != nil {
+		out.Refusals = append(out.Refusals, err)
+	}
+	if b, ok := ruletablesvc.SkillPointsFigures(class, level, points); ok {
+		return &b
+	}
+	return nil
 }
 
 // unmetMinimums are, for every creatable class, the abilities whose entered score is under the
@@ -731,8 +759,15 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 // Draft is the answer to a creation draft (Service.Draft).
 type Draft struct {
 	// Character is the character Create would store, derived and warned as a read of it; nil
-	// while the class, race, scores or XP are missing or refused.
+	// while the class, race, scores, skill points or XP are missing or refused. Its picks and
+	// languages are read as entered when the skills module refuses them, the native language
+	// added as a read adds it.
 	Character *Character
+	// SkillPoints is a thief's or a bard's skill point budget at the starting level, set as soon
+	// as the class and XP read, whatever the race and scores (ADR 0030 steps 17 and 18); nil for
+	// another class or while the class or XP is missing or refused. With a Character, it equals
+	// the derived block's.
+	SkillPoints *ruletablesvc.SkillPointsBudget
 	// Refusals are Create's refusals of the draft, in the form's order: each a
 	// *domain.FieldError or a *domain.BudgetError.
 	Refusals []error

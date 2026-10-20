@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, UserPlus, X } from "@phosphor-icons/react";
-import {
-  createCharacter,
-  draftCharacter,
-} from "@/api/characters";
+import { createCharacter, draftCharacter } from "@/api/characters";
 import { ApiError, OVER_BUDGET } from "@/api/http";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -16,10 +13,7 @@ import { useLanguageNames } from "@/lib/useLanguageNames";
 import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { skillName } from "@/journal/words";
-import {
-  ABILITIES,
-  type CreationDraft,
-} from "@/types/character";
+import { ABILITIES, type CreationDraft } from "@/types/character";
 import { CardHead, Note, StepDot, Wordmark } from "./kit";
 import {
   EMPTY_DRAFT,

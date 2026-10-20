@@ -385,8 +385,8 @@ items'). Package `creationrollsvc`, handler `creationrollhdl`.
   whatever the order asked. Refusals 400 `invalid_input`: `race_required` / `sex_required` on the figure that needs it, `race` /
   `sex` `unknown`, `figures` `empty` / `unknown` / `duplicate`. Needs a session, no current character; writes nothing.
 - **Options** (added by the identity-step item, ADR 0034 "As built"): `raceIdentity`, each figure's dice and step 5.1 range by
-  race (and sex), so the creation shows them before rolling; `POST /api/characters/preview` reads the warnings of steps 4.2 and
-  5.2 on an unsaved draft.
+  race (and sex), so the creation shows them before rolling; ~~`POST /api/characters/preview`~~ reads the warnings of steps 4.2 and
+  5.2 on an unsaved draft (since 2026-10-20 `POST /api/characters/draft`, ADR 0034 "As built (the draft endpoint)").
 - **Web.** `lib/measures.ts` shows and parses the numbers per language (en feet-inches and pounds, others metric); the card
   words the range warnings; the creation step and the card's edit form have a roll button per figure.
 

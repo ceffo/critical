@@ -506,12 +506,16 @@ export interface DraftRefusal {
 /**
  * `POST /api/characters/draft` (ADR 0034, amendment of 2026-10-20): the sheet the draft would read
  * as once created, in `GET /api/character`'s shapes (`derived` null and the lists empty while the
- * class, race, scores or XP are missing or refused; the languages with the native one), the
+ * class, race, scores, skill points or XP are missing or refused; the languages with the native one), the
  * creation's refusals, the required fields still blank, and for every creatable class the abilities
  * whose entered score is under its minimum. Writes nothing.
  */
 export interface CreationDraft {
   derived: Derived | null;
+  /** A thief's or a bard's skill point budget at the starting level, as soon as the class and XP
+   * read (a score out of range does not hide it); null otherwise. The derived block's when there
+   * is one. */
+  skillPoints: SkillBudget | null;
   warnings: CharacterWarning[];
   languages: string[];
   refusals: DraftRefusal[];

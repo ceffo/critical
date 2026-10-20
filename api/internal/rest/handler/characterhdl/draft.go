@@ -9,15 +9,12 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 type drafter interface {
 	Draft(ctx context.Context, n charactersvc.NewCharacter, blank []string) (*charactersvc.Draft, error)
 }
-
-// CodeOverBudget is the code of a refusal over a budget (ADR 0037 step 10), the one POST
-// /api/characters answers it with.
-const CodeOverBudget = "over_budget"
 
 // RefusalDTO is one refusal POST /api/characters would answer the draft with: its `field`, and
 // its `code`, the creation's `error` for an invalid input (out_of_range, race_not_allowed...) or
@@ -31,23 +28,26 @@ type RefusalDTO struct {
 
 // DraftDTO is POST /api/characters/draft (ADR 0034, amendment of 2026-10-20): the sheet as it
 // would read once created, in GET /api/character's shapes (`derived`, `warnings`, `languages`
-// with the native one added; `derived` null and the lists empty while the class, race, scores or
-// XP are missing or refused), the creation's `refusals`, the required fields still blank
+// with the native one added; `derived` null and the lists empty while the class, race, scores,
+// skill points or XP are missing or refused), a thief's or a bard's skill point budget
+// (`skillPoints`, the derived block's shape, as soon as the class and XP read: a score out of
+// range does not hide it; null otherwise), the creation's `refusals`, the required fields still blank
 // (`missing`: name, class, race, the six scores, hpMax, xp, alignment, sex) and, for every
 // creatable class, the abilities whose entered score is under its minimum (`unmetMinimums`).
 type DraftDTO struct {
-	Derived       *DerivedDTO     `json:"derived"`
-	Warnings      []WarningDTO    `json:"warnings"`
-	Languages     []string        `json:"languages"`
-	Refusals      []RefusalDTO    `json:"refusals"`
-	Missing       []string        `json:"missing"`
-	UnmetMinimums []ClassUnmetDTO `json:"unmetMinimums"`
+	Derived       *DerivedDTO                `json:"derived"`
+	SkillPoints   *wire.SkillPointsBudgetDTO `json:"skillPoints"`
+	Warnings      []WarningDTO               `json:"warnings"`
+	Languages     []string                   `json:"languages"`
+	Refusals      []RefusalDTO               `json:"refusals"`
+	Missing       []string                   `json:"missing"`
+	UnmetMinimums []ClassUnmetDTO            `json:"unmetMinimums"`
 }
 
 // refusalDTO maps one of the draft's refusals.
 func refusalDTO(err error) (RefusalDTO, error) {
 	if be, ok := errors.AsType[*domain.BudgetError](err); ok {
-		return RefusalDTO{Field: be.Field, Code: CodeOverBudget, Spent: &be.Spent, Limit: &be.Limit}, nil
+		return RefusalDTO{Field: be.Field, Code: render.CodeOverBudget, Spent: &be.Spent, Limit: &be.Limit}, nil
 	}
 	if fe, ok := errors.AsType[*domain.FieldError](err); ok {
 		return RefusalDTO{Field: fe.Field, Code: fe.Message}, nil
@@ -60,6 +60,7 @@ func draftDTO(d *charactersvc.Draft) (DraftDTO, error) {
 	out := DraftDTO{
 		Warnings: []WarningDTO{}, Languages: []string{}, Refusals: make([]RefusalDTO, 0, len(d.Refusals)),
 		Missing: append([]string{}, d.Missing...), UnmetMinimums: make([]ClassUnmetDTO, 0, len(d.UnmetMinimums)),
+		SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints),
 	}
 	if c := d.Character; c != nil {
 		derived := derivedDTO(c.Derived)

@@ -20,6 +20,7 @@ import (
 // too.
 type draftView struct {
 	Derived       map[string]any   `json:"derived"`
+	SkillPoints   map[string]any   `json:"skillPoints"`
 	Warnings      []map[string]any `json:"warnings"`
 	Languages     []string         `json:"languages"`
 	Missing       []string         `json:"missing"`
@@ -97,6 +98,11 @@ func TestDraft_IsWhatTheCreatedCharacterReads(t *testing.T) {
 			var read readView
 			require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &read))
 			assert.Equal(t, read.Derived, d.Derived)
+			if read.Derived["skillPoints"] == nil {
+				assert.Nil(t, d.SkillPoints, "no budget for a class without skill points")
+			} else {
+				assert.Equal(t, read.Derived["skillPoints"], d.SkillPoints, "the draft's budget is the read's")
+			}
 			assert.Equal(t, read.Warnings, d.Warnings)
 			assert.Equal(t, read.Languages, d.Languages)
 		})
@@ -172,6 +178,14 @@ func TestDraft_PartialDraftsAnswer200(t *testing.T) {
 		assert.Equal(t, want.refusals, d.Refusals, body)
 		assert.Nil(t, d.Derived, body)
 		assert.Empty(t, d.Warnings, body)
+		switch body {
+		case `{"class":"thief","xp":0}`:
+			assert.InDelta(t, 60.0, d.SkillPoints["available"], 0, "the budget reads the class and XP only")
+		case `{"class":"bard","str":10,"dex":11,"con":12,"int":13,"wis":9,"cha":15,"xp":0}`:
+			assert.InDelta(t, 20.0, d.SkillPoints["available"], 0, "the budget reads the class and XP only")
+		default:
+			assert.Nil(t, d.SkillPoints, body)
+		}
 	}
 }
 
@@ -243,6 +257,7 @@ func TestDraft_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
 			var got budget
 			require.NoError(t, json.Unmarshal(raw, &got))
 			assert.Equal(t, tc.want, got)
+			assert.Equal(t, d.Derived["skillPoints"], d.SkillPoints, "the draft's budget is the derived block's")
 			if tc.refusals == nil {
 				tc.refusals = []refusalView{}
 			}
@@ -252,6 +267,81 @@ func TestDraft_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
 	d := tb.draft(t, bob, `{"class":"fighter","raceCode":"human","str":12,"dex":12,"con":12,"int":9,"wis":10,"cha":8,"xp":0}`)
 	require.NotNil(t, d.Derived)
 	assert.Nil(t, d.Derived["skillPoints"], "a fighter has no skill points")
+	assert.Nil(t, d.SkillPoints, "a fighter has no skill points")
+}
+
+// ADR 0030 steps 17 and 18: the budget reads the class and the level the XP gives, nothing else,
+// so a score out of range (which the scores step lets through to the extras step), a race not yet
+// chosen or skill points the creation refuses leave it shown while the derived block is null.
+// Over the budget, the refusal is listed beside the score's.
+func TestDraft_Steps17And18_TheBudgetNeedsTheClassAndXPOnly(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	thief := func(scores, rest string) string {
+		return `{"class":"thief","raceCode":"human",` + scores + `,"con":12,"int":11,"wis":10,"cha":12,"xp":1250` + rest + `}`
+	}
+	for _, tc := range []struct {
+		name, body       string
+		available, spent float64
+		refusals         []refusalView
+	}{
+		{"a Strength of 2", thief(`"str":2,"dex":17`, ""), 90, 0, []refusalView{{Field: "str", Code: "out_of_range"}}},
+		{"a Dexterity of 20", thief(`"str":9,"dex":20`, `,"skillPoints":{"open_locks":20}`), 90, 20, []refusalView{{Field: "dex", Code: "out_of_range"}}},
+		{"no race yet", strings.Replace(thief(`"str":9,"dex":17`, ""), `"raceCode":"human",`, "", 1), 90, 0, []refusalView{}},
+		{
+			"a bad score and over the budget", thief(`"str":2,"dex":17`, `,"skillPoints":{"open_locks":45,"pick_pockets":45,"climb_walls":10}`), 90, 100,
+			[]refusalView{{Field: "str", Code: "out_of_range"}, {Field: "skillPoints", Code: "over_budget", Spent: new(100), Limit: new(90)}},
+		},
+		{"refused skill points", thief(`"str":9,"dex":17`, `,"skillPoints":{"fly":5}`), 90, 0, []refusalView{{Field: "skillPoints.fly", Code: "unknown"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := tb.draft(t, bob, tc.body)
+			assert.Nil(t, d.Derived, "the derived block needs every entry it reads")
+			require.NotNil(t, d.SkillPoints)
+			assert.InDelta(t, 2.0, d.SkillPoints["level"], 0, "1,250 XP is a level 2 thief")
+			assert.InDelta(t, tc.available, d.SkillPoints["available"], 0)
+			assert.InDelta(t, tc.spent, d.SkillPoints["spent"], 0)
+			assert.Equal(t, tc.refusals, d.Refusals)
+		})
+	}
+	bard := tb.draft(t, bob, `{"class":"bard","str":2,"xp":0}`)
+	assert.InDelta(t, 20.0, bard.SkillPoints["available"], 0, "a bard's 20 points at level 1")
+	assert.Nil(t, tb.draft(t, bob, `{"class":"fighter","str":2,"xp":0}`).SkillPoints, "a fighter has none")
+	assert.Nil(t, tb.draft(t, bob, `{"class":"thief","str":2}`).SkillPoints, "no XP, no level")
+}
+
+// A body with several faults: the draft lists every one (a blank alignment as missing, the
+// language as a refusal), the creation names the first in the form's order, the alignment (the
+// languages are judged after the details, at the starting level).
+func TestDraft_ListsEveryFaultCreateNamesTheFirst(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	body := bardWith(`{"sex":"male","languages":["Elfique"]}`)
+	var refused creationRefusal
+	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused))
+	assert.Equal(t, "details.alignment", refused.Field)
+	assert.Equal(t, "empty", refused.Error)
+
+	d := tb.draft(t, bob, body)
+	assert.Equal(t, []string{"alignment"}, d.Missing)
+	assert.Equal(t, []refusalView{{Field: "details.languages", Code: "unknown"}}, d.Refusals)
+}
+
+// Picks over the slots on the proficiency step: the refusal at its field, the derived block and
+// warnings read from the picks as entered, and the languages with the native one, as a read
+// adds it.
+func TestDraft_RefusedPicksKeepTheFiguresAndTheNativeLanguage(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	body := strings.Replace(bardWith(`{"alignment":"neutral_good","sex":"male","languages":["elvish"]}`), `"xp":2500`,
+		`"xp":2500,"proficiencies":{"nonweapon":[{"id":"tumbling","slots":6},{"id":"tracking","slots":2}]}`, 1)
+	d := tb.draft(t, bob, body)
+	require.Len(t, d.Refusals, 1)
+	assert.Equal(t, "nonweapon", d.Refusals[0].Field)
+	assert.Equal(t, "over_budget", d.Refusals[0].Code)
+	require.NotNil(t, d.Derived)
+	assert.Equal(t, []string{"common", "elvish"}, d.Languages, "the native language added")
+	assert.NotEmpty(t, d.Warnings)
 }
 
 // creationRefusal is what POST /api/characters answers a refused body with.

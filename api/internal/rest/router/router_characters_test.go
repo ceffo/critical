@@ -325,7 +325,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 // entered goes to the service with the numbers it leaves out; the answer is the sheet's derived
 // block in GET /api/character's shape (the skill budget named as GET /api/skills names it), the
 // refusals with the creation's fields and codes (an over_budget with its figures), the missing
-// fields and the class minimums missed.
+// fields, the class minimums missed and the skill point budget on its own (the derived block's shape).
 func TestCharacters_DraftWireShape(t *testing.T) {
 	h, m := newRouterWith(t, usersAuth(t, map[string]authsvc.User{
 		"new": {ID: bobID, Email: "new@example.com", Role: authsvc.RolePlayer},
@@ -349,6 +349,10 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 		},
 		Missing:       []string{"name", "hpMax", "alignment", "sex"},
 		UnmetMinimums: []charactersvc.ClassUnmet{{Class: "thief", Abilities: []string{}}, {Class: "bard", Abilities: []string{"cha"}}},
+		SkillPoints: &ruletablesvc.SkillPointsBudget{
+			Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
+			PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
+		},
 	}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/draft", `{"class":"thief","raceCode":"elf","str":9,"dex":25,"con":12,"int":11,"wis":10,"cha":12,
 		"xp":1250,"skillPoints":{"open_locks":40},
@@ -366,6 +370,7 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 	require.NoError(t, json.Unmarshal(got["derived"], &derived))
 	assert.JSONEq(t, `{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45}`,
 		string(derived["skillPoints"]))
+	assert.JSONEq(t, string(derived["skillPoints"]), string(got["skillPoints"]), "the draft's own budget, in the derived block's shape")
 	assert.JSONEq(t, `2`, string(derived["targetLevel"]))
 }
 
@@ -381,7 +386,7 @@ func TestCharacters_DraftNeverRefusesContent(t *testing.T) {
 		Return(&charactersvc.Draft{Missing: []string{"name", "class"}}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/draft", `{}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"derived":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[]}`, rec.Body.String())
+	assert.JSONEq(t, `{"derived":null,"skillPoints":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[]}`, rec.Body.String())
 
 	rec = as(h, "new", "POST", "/api/characters/draft", `{"details":{"height_cm":"tall"}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

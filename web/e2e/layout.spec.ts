@@ -3074,6 +3074,21 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   const budget = entry.getByTestId("skill-budget");
   await expect(budget).toContainText("Budget du niveau 1 : 60 points");
   await expect(budget).toContainText("Restants : 60");
+  // The budget reads the class and level only: a Strength of 2, which the scores step lets
+  // through, leaves it shown.
+  await back.click();
+  const badScore = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/characters/draft") &&
+      r.request().postData()?.includes('"str":2,') === true,
+  );
+  await step.getByLabel("FOR", { exact: true }).fill("2");
+  await next.click();
+  await badScore;
+  await expect(budget).toContainText("Budget du niveau 1 : 60 points");
+  await back.click();
+  await step.getByLabel("FOR", { exact: true }).fill("12");
+  await next.click();
   await entry.getByLabel("Crochetage").fill("25");
   await expect(budget).toContainText("Restants : 35");
   await entry.getByLabel("Crochetage").fill("");

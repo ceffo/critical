@@ -285,8 +285,11 @@ When the developer reports the full verification passed on HEAD:
   the PR link; body (in the scratchpad) with a `Closes CRI-n` line (what the integration reads), the summary, item id, what was and wasn't verified from the developer's report, any merge-order note,
   ending as the workflow doc's "CI and PRs" prescribes.
 - CI, if the project has it: `gh pr checks <n> --watch` with `run_in_background`. Red → `gh run view
-  <id> --log-failed | tail -60`, then a rework brief with the excerpt. No CI → the developer's gate
-  is the gate; say so.
+  <id> --log-failed | tail -60`, then a rework brief with the excerpt. While other jobs of the run are
+  still going, `--log-failed` refuses ("still in progress"): read the failed job directly, `gh api
+  --allow-escape-sequences repos/<owner>/<repo>/actions/jobs/<job-id>/logs | sed 's/\x1b\[[0-9;]*m//g'
+  | grep -B8 -m3 'error'` (sup-56: five calls to find a one-line lint failure). No CI → the
+  developer's gate is the gate; say so.
 - **No Greptile gate** (user, 2026-10-19, after the Greptile trial ran out of credits: "drop the
   wait"): merge on green CI; our `code-reviewer` covers the changes the workflow doc's "Review" triggers
   name. If a Greptile comment still appears on a PR, handle it like a reviewer's finding (land.sh still

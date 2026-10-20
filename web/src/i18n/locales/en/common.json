@@ -2605,6 +2605,42 @@
       "weapons_other": "{{count}} weapons",
       "weaponsName": "Weapons",
       "weaponsNone": "This server has no weapon types for the class: you will choose them later in the Skills tab."
+    },
+    "spellbook": {
+      "name": "Spellbook",
+      "title": "Starting spellbook",
+      "lead": "The spells the DM gave the character, written without a learning roll, within the limits of its starting level and Intelligence. The spellbook may stay empty.",
+      "spellsN_one": "{{count}} spell",
+      "spellsN_other": "{{count}} spells",
+      "picked_one": "Spellbook ({{count}} spell)",
+      "picked_other": "Spellbook ({{count}} spells)",
+      "empty": "No spell: the spellbook starts empty.",
+      "catalogue": "Wizard spells",
+      "search": "Search a spell",
+      "searchPlaceholder": "Spell name",
+      "noMatch": "No spell of this level matches.",
+      "levelN": "Level {{level}}",
+      "countOf": "{{count}} / {{max}}",
+      "countNoMax": "{{count}} (no maximum)",
+      "classMax": "Highest spell level: {{level}} (class)",
+      "intMax": "{{level}} (Intelligence)",
+      "perLevel_one": "at most {{count}} spell per level",
+      "perLevel_other": "at most {{count}} spells per level",
+      "noMaximum": "no maximum per level",
+      "wait": "The spellbook's limits show once the server reads the class, race, ability scores and XP.",
+      "noLevel": "At this level, a {{className}} has no spell level yet: nothing to write.",
+      "add": "Write {{name}}",
+      "alreadyPicked": "{{name}} is already written",
+      "remove": "Take {{name}} out of the spellbook",
+      "errors": {
+        "unknown": "This spell is not in the catalogue.",
+        "not_a_wizard_spell": "Only a wizard spell goes in the spellbook.",
+        "already_in_spellbook": "This spell is already written.",
+        "spell_level_above_class": "At its starting level, the class casts no spell above level {{classMax}}.",
+        "spell_level_above_intelligence": "The Intelligence limits spells to level {{intMax}}.",
+        "spellbook_level_full": "Already {{max}} spells of this level, the most this Intelligence allows.",
+        "no_spellbook": "A {{className}} has no spellbook."
+      }
     }
   },
   "ac": {

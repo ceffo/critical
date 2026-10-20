@@ -13,7 +13,11 @@ import { useLanguageNames } from "@/lib/useLanguageNames";
 import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import { skillName } from "@/journal/words";
-import { ABILITIES, type CreationDraft } from "@/types/character";
+import {
+  ABILITIES,
+  type CreationDraft,
+  type CreationOptions,
+} from "@/types/character";
 import { CardHead, Note, StepDot, Wordmark } from "./kit";
 import {
   EMPTY_DRAFT,
@@ -21,10 +25,13 @@ import {
   blockedReason,
   buildBody,
   classOf,
+  draftSpellbook,
   draftXp,
+  hasSpellbook,
   refusalError,
   settle,
   stepOfField,
+  stepsFor,
   type DraftAnswer,
   type FieldError,
   type DraftPatch,
@@ -36,6 +43,9 @@ import {
 import { ClassStep, ExtrasStep, RaceStep, ScoresStep } from "./steps";
 import { IdentityStep, ReviewStep } from "./identity";
 import { ProficienciesStep } from "./proficiencies";
+import { SpellbookStep } from "./spellbook";
+import { useSpellName } from "@/i18n/spellName";
+import { useSpellNamesStore } from "@/stores/spellNames";
 import { isSpecialization } from "@/components/proficiencies/weapons";
 import { useReviewWarnings, warnedFields } from "./warnings";
 
@@ -83,6 +93,12 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   useEffect(() => {
     document.title = `${t("characters.newTitle")} · ${APP_NAME}`;
   }, [t]);
+  // The starting spellbook names its spells by id (ADR 0030 step 20.7): the catalogue's names, read
+  // once like the dashboard reads them.
+  useEffect(() => {
+    if (Object.keys(useSpellNamesStore.getState().names).length === 0)
+      void useSpellNamesStore.getState().load();
+  }, []);
 
   const dirty = isDirty(draft);
   // Closing the tab or reloading with values entered asks the browser's question; leaving through
@@ -186,7 +202,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   // field on any step, until the draft changes elsewhere; a value out of range typed on an earlier
   // step is the server's refusal at Créer.
   const previewing =
-    step === "proficiencies" || step === "identity" || step === "review";
+    step === "proficiencies" ||
+    step === "spellbook" ||
+    step === "identity" ||
+    step === "review";
   const [previewedKey, setPreviewedKey] = useState("");
   if (previewing && previewedKey !== draftKey) setPreviewedKey(draftKey);
   const seen = previewedKey === draftKey;
@@ -209,6 +228,19 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       return t(`weaponProficiencies.errors.${e.code}`, {
         defaultValue: t("weaponProficiencies.errors.refused"),
       });
+    // A starting spell's refusal (ADR 0030 step 20.7), worded with the draft's limits.
+    if (e.field === "spellbook" || e.field.startsWith("spellbook.")) {
+      const book = answer.latest?.spellbook;
+      return t(`creation.spellbook.errors.${e.code}`, {
+        className,
+        classMax: book?.classMaxSpellLevel ?? 0,
+        intMax: book?.intMaxSpellLevel ?? 0,
+        max: book?.maxSpellsPerLevel ?? 0,
+        defaultValue: t(`apiError.${e.code}`, {
+          defaultValue: e.message ?? e.code,
+        }),
+      });
+    }
     if (e.field.startsWith("details.")) {
       const detail = e.field.slice("details.".length);
       return t(
@@ -245,7 +277,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     return refused ? wording(refused) : null;
   };
 
-  const index = STEPS.indexOf(step);
+  // The class's steps (the spellbook step for a mage or a bard only); `reached` counts in STEPS,
+  // so a class picked again keeps what was reached.
+  const steps = stepsFor(options, draft.cls);
+  const index = steps.indexOf(step);
   const go = (to: StepId) => {
     setStep(to);
     setReached((r) => Math.max(r, STEPS.indexOf(to)));
@@ -325,7 +360,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       sex: draft.details.sex,
       alignments: classOf(options, draft.cls)?.alignments ?? [],
     }) ?? (unreadable ? "unreadable" : null);
-  const last = index === STEPS.length - 1;
+  const last = index === steps.length - 1;
   const lead =
     step === "race" && draft.cls
       ? t("creation.race.lead", { className: className.toLocaleLowerCase() })
@@ -356,10 +391,12 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       </header>
       <div className="flex min-h-0 flex-1 gap-3">
         <StepList
-          current={index}
+          options={options}
+          steps={steps}
+          current={step}
           reached={reached}
           draft={draft}
-          onGo={(i) => go(STEPS[i]!)}
+          onGo={go}
         />
         <main
           className="stage-card flex min-w-0 flex-1 flex-col"
@@ -368,7 +405,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
         >
           <div className="card-band flex shrink-0 flex-col gap-0.5 px-5 py-3">
             <span className="text-label text-ink-muted">
-              {t("creation.stepOf", { n: index + 1, of: STEPS.length })}
+              {t("creation.stepOf", { n: index + 1, of: steps.length })}
             </span>
             <h1 className="text-headline">{t(`creation.${step}.title`)}</h1>
             <p className="text-body text-ink-muted">{lead}</p>
@@ -381,6 +418,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             {step === "scores" && <ScoresStep {...props} />}
             {step === "extras" && <ExtrasStep {...props} />}
             {step === "proficiencies" && <ProficienciesStep {...props} />}
+            {step === "spellbook" && <SpellbookStep {...props} />}
             {step === "identity" && <IdentityStep {...props} />}
             {step === "review" && <ReviewStep {...props} go={go} />}
           </div>
@@ -389,7 +427,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
               <Button
                 variant="quiet"
                 size="lg"
-                onClick={() => go(STEPS[index - 1]!)}
+                onClick={() => go(steps[index - 1]!)}
                 aria-label={t("creation.backHint")}
                 title={t("creation.backHint")}
               >
@@ -424,7 +462,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
                 variant="main"
                 size="lg"
                 disabled={blocked !== null}
-                onClick={() => go(STEPS[index + 1]!)}
+                onClick={() => go(steps[index + 1]!)}
                 aria-label={t("creation.nextHint")}
                 title={t("creation.nextHint")}
               >
@@ -479,7 +517,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 }
 
 /** What a done step shows under its name: the choice made. */
-function useStepChoice(draft: FlowDraft): (step: StepId) => string | null {
+function useStepChoice(
+  draft: FlowDraft,
+  options: CreationOptions,
+): (step: StepId) => string | null {
   const { t } = useTranslation();
   return (step) => {
     switch (step) {
@@ -508,6 +549,10 @@ function useStepChoice(draft: FlowDraft): (step: StepId) => string | null {
         ].filter(Boolean);
         return parts.length > 0 ? parts.join(" · ") : null;
       }
+      case "spellbook": {
+        const n = draftSpellbook(options, draft).length;
+        return n > 0 ? t("creation.spellbook.spellsN", { count: n }) : null;
+      }
       case "identity":
         return draft.name.trim() || null;
       default:
@@ -526,20 +571,25 @@ function levelText(
     : t("creation.level.xpN", { xp: draft.xp });
 }
 
-/** The steps as a vertical list; a done one shows its choice and opens again on a click. */
+/** The steps as a vertical list; a done one shows its choice and opens again on a click. `reached`
+ * is the furthest step reached, counted in STEPS. */
 function StepList({
+  options,
+  steps,
   current,
   reached,
   draft,
   onGo,
 }: {
-  current: number;
+  options: CreationOptions;
+  steps: StepId[];
+  current: StepId;
   reached: number;
   draft: FlowDraft;
-  onGo: (i: number) => void;
+  onGo: (s: StepId) => void;
 }) {
   const { t } = useTranslation();
-  const choice = useStepChoice(draft);
+  const choice = useStepChoice(draft, options);
   return (
     <nav
       className="zone-card flex w-[clamp(14rem,15vw,16rem)] shrink-0 flex-col"
@@ -548,10 +598,11 @@ function StepList({
     >
       <CardHead>{t("creation.steps")}</CardHead>
       <ol className="flex min-h-0 flex-col gap-1 overflow-y-auto p-2">
-        {STEPS.map((s, i) => {
-          const done = i < Math.max(reached, current);
-          const on = i === current;
-          const open = i <= reached && !on;
+        {steps.map((s, i) => {
+          const at = STEPS.indexOf(s);
+          const done = at < Math.max(reached, STEPS.indexOf(current));
+          const on = s === current;
+          const open = at <= reached && !on;
           const shown = done && !on ? choice(s) : null;
           return (
             <li key={s}>
@@ -559,7 +610,7 @@ function StepList({
                 type="button"
                 disabled={!open}
                 aria-current={on ? "step" : undefined}
-                onClick={() => onGo(i)}
+                onClick={() => onGo(s)}
                 className={cn(
                   "flex w-full items-start gap-3 rounded-md px-2 py-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                   on && "selected",
@@ -618,6 +669,8 @@ function ReviewFoot({
 /** The character being built, filled step by step (the dashboard character card's width). */
 function Building({ options, draft, xp, answer, body, language }: StepProps) {
   const { t } = useTranslation();
+  const spellName = useSpellName();
+  const spells = draftSpellbook(options, draft);
   const languageName = useLanguageNames(options);
   const units = unitsFor(language);
   const dash = <span className="text-ink-muted">—</span>;
@@ -715,6 +768,16 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
               ? draft.picks.map((p) => skillName(t, p.id)).join(", ")
               : dash}
           </dd>
+          {hasSpellbook(options, draft.cls) && (
+            <>
+              <dt className="text-ink-muted">{t("creation.spellbook.name")}</dt>
+              <dd className="break-words" data-testid="building-spellbook">
+                {spells.length > 0
+                  ? spells.map((id) => spellName(id)).join(", ")
+                  : dash}
+              </dd>
+            </>
+          )}
           <dt className="text-ink-muted">{t("creation.heightWeight")}</dt>
           <dd className="break-words">
             {build.length > 0 ? build.join(" · ") : dash}

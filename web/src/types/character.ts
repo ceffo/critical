@@ -443,7 +443,14 @@ export interface CreationOptions {
      * the slots its specialization spends in all (0: the class does not specialize). Absent from
      * an older release. */
     weaponTypes?: WeaponTypeOption[];
+    /** ADR 0030 step 20.7: the class's starting spellbook, `startingSpells` the spells it is
+     * offered pre-ticked (removable); null for a class without a spellbook, absent from an older
+     * release. */
+    spellbook?: { startingSpells: string[] } | null;
   }[];
+  /** The catalogue's wizard spells by spell level then id (ADR 0030 step 20.7): the starting
+   * spellbook's choices, named by `GET /api/spells/names`. Absent from an older release. */
+  wizardSpells?: SpellOption[];
   /** ADR 0032 step 6's score methods, in the book's order; absent from an older release. */
   scoreMethods?: ScoreMethod[];
   /** PHB Table 8 by race (each ability's adjustment); absent from an older release. */
@@ -503,6 +510,26 @@ export interface RaceIdentity {
 /** A warning the server reads on a character (ADR 0032 steps 4.2, 5.2 and 8.4), worded by the web. */
 export type CharacterWarning = Character["warnings"][number];
 
+/** A catalogue wizard spell the starting spellbook offers: its id and spell level. */
+export interface SpellOption {
+  id: string;
+  level: number;
+}
+
+/**
+ * A draft's starting spellbook (ADR 0030 step 20.7): the limits of step 20.1 at the starting level
+ * (`classMaxSpellLevel`, the class's highest spell level there, 0 for none; the Intelligence's;
+ * Table 4's maximum per spell level, meaningless when `noMaximum`) and, for each spell level the
+ * character may enter (`levels`, empty for none), the spells entered of it and not refused.
+ */
+export interface StartingSpellbook {
+  classMaxSpellLevel: number;
+  intMaxSpellLevel: number;
+  maxSpellsPerLevel: number;
+  noMaximum: boolean;
+  levels: { level: number; count: number }[];
+}
+
 /** One refusal of a creation draft, as `POST /api/characters` would answer it: the field and the code
  * (an invalid input's code, or `over_budget` with the budget's `spent` and `limit`). */
 export interface DraftRefusal {
@@ -525,6 +552,10 @@ export interface CreationDraft {
    * read (a score out of range does not hide it); null otherwise. The derived block's when there
    * is one. */
   skillPoints: SkillBudget | null;
+  /** A mage's or a bard's starting spellbook at the starting level (ADR 0030 step 20.7); null for
+   * another class or while `derived` is. A refused spell is a refusal on `spellbook.<id>`. Absent
+   * from an older release. */
+  spellbook?: StartingSpellbook | null;
   warnings: CharacterWarning[];
   languages: string[];
   refusals: DraftRefusal[];
@@ -649,4 +680,7 @@ export type NewCharacter = {
   proficiencies?: PicksInput;
   /** The details, as the card shows them (age null for none); a refusal's field is `details.<field>`. */
   details?: Partial<CharacterDetails>;
+  /** A mage's or a bard's starting spellbook (ADR 0030 step 20.7): the catalogue ids, in order,
+   * written without a roll; absent for none. A refused spell's field is `spellbook.<id>`. */
+  spellbook?: string[];
 } & Record<AbilityCode, number | null>;

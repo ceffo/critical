@@ -2605,6 +2605,42 @@
       "weapons_other": "{{count}} armes",
       "weaponsName": "Armes",
       "weaponsNone": "Ce serveur n’a pas les types d’armes de la classe : vous les choisirez plus tard dans l’onglet Compétences."
+    },
+    "spellbook": {
+      "name": "Grimoire",
+      "title": "Grimoire de départ",
+      "lead": "Les sorts que le MJ a donnés au personnage, inscrits sans jet d’apprentissage, dans les limites de son niveau de départ et de son Intelligence. Le grimoire peut rester vide.",
+      "spellsN_one": "{{count}} sort",
+      "spellsN_other": "{{count}} sorts",
+      "picked_one": "Grimoire ({{count}} sort)",
+      "picked_other": "Grimoire ({{count}} sorts)",
+      "empty": "Aucun sort : le grimoire commence vide.",
+      "catalogue": "Sorts de magicien",
+      "search": "Chercher un sort",
+      "searchPlaceholder": "Nom du sort",
+      "noMatch": "Aucun sort de ce niveau ne correspond.",
+      "levelN": "Niveau {{level}}",
+      "countOf": "{{count}} / {{max}}",
+      "countNoMax": "{{count}} (sans maximum)",
+      "classMax": "Niveau de sort le plus haut : {{level}} (classe)",
+      "intMax": "{{level}} (Intelligence)",
+      "perLevel_one": "{{count}} sort par niveau au plus",
+      "perLevel_other": "{{count}} sorts par niveau au plus",
+      "noMaximum": "pas de maximum par niveau",
+      "wait": "Les limites du grimoire s’affichent une fois la classe, la race, les caractéristiques et les XP lus par le serveur.",
+      "noLevel": "À ce niveau, un {{className}} n’a encore aucun niveau de sort : rien à inscrire.",
+      "add": "Inscrire {{name}}",
+      "alreadyPicked": "{{name}} est déjà inscrit",
+      "remove": "Retirer {{name}} du grimoire",
+      "errors": {
+        "unknown": "Ce sort n’est pas au catalogue.",
+        "not_a_wizard_spell": "Seul un sort de magicien s’inscrit au grimoire.",
+        "already_in_spellbook": "Ce sort est déjà inscrit.",
+        "spell_level_above_class": "Au niveau de départ, la classe ne lance pas de sort au-delà du niveau {{classMax}}.",
+        "spell_level_above_intelligence": "L’Intelligence limite les sorts au niveau {{intMax}}.",
+        "spellbook_level_full": "Déjà {{max}} sorts de ce niveau, le maximum pour cette Intelligence.",
+        "no_spellbook": "Un {{className}} n’a pas de grimoire."
+      }
     }
   },
   "ac": {

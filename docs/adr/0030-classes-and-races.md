@@ -686,6 +686,33 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        Test: `Migrate_Step20_9_NoSpellIsAddedOrRemoved` (the migration changes no entry but its
        origin).
 
+    _(As built, 2026-10-20: step 20.7)_ `POST /api/characters` and the draft take `spellbook`
+    (catalogue ids, in order; absent or empty for none). charactersvc checks each spell after the
+    picks, at the starting level: the class's highest spell level there is the highest spell level
+    of its slots (step 8) within the spellbook's (mage 9th, bard 6th), then Table 4's level and
+    per-level maximum; the spells kept count against the maximum, in the order entered. A refusal is a
+    field refusal on `spellbook.<id>` with the Learn endpoint's codes (`not_a_wizard_spell`,
+    `already_in_spellbook` for a spell entered twice, `spell_level_above_class`,
+    `spell_level_above_intelligence`, `spellbook_level_full`) or `unknown` (not in the catalogue);
+    a spellbook for another class is refused on `spellbook` (`no_spellbook`). Create writes the
+    entries (origin `starting`) after the character, in its transaction; charactersvc has no dice
+    port and logs no journal entry. The draft answers `spellbook` (null for another class or while
+    `derived` is): `classMaxSpellLevel` (0 for a bard at level 1), `intMaxSpellLevel`,
+    `maxSpellsPerLevel`, `noMaximum` and `levels` (`{level, count}` for each spell level the
+    character may enter, empty for none). The options carry each class's `spellbook`
+    (`{startingSpells}`, null without a spellbook): the pre-tick is the ruletablesvc table
+    `StartingSpells` (mage: Read Magic, Detect Magic), filtered to the catalogue's wizard spells;
+    and `wizardSpells` (`{id, level}`, the catalogue's, by level then id), the step's choices, so it
+    needs no character-bound spell search (a new player has no current character). The web adds the
+    step "Grimoire" after the proficiencies for a class whose options have a `spellbook`; it sends
+    the pre-ticked spells until the player changes the list, resets it on a class change, and says
+    when the starting level has no spell level. Tests: `TestCreate_Step20_7_StartingSpellsWithoutADie`,
+    `TestCreate_Step20_7_LimitsAtTheStartingLevel`, `TestCreate_Step20_7_RefusedForAClassWithoutASpellbook`,
+    `TestDraft_Step20_7_RefusesBySpellAndCode`, `TestDraft_Step20_7_ABardAtLevel1HasNoSpellLevel`,
+    `TestOptions_Step20_7_ReadMagicAndDetectMagicPreTickedForAMage` (charactersvc),
+    `TestCreate_Step20_7_StartingSpellsWithoutADieThroughTheWiring` (composition: no die, no journal entry),
+    `TestCharacters_DraftCarriesTheStartingSpellbook` (router).
+
     _(As built, 2026-10-20: steps 20.5, 20.6 and 20.9)_ The origin is the domain enum
     `spellbook.Origin` (`domain/spellbook`, with the `Entry`: key, origin, grant level), stored in
     `spellbook_entries.origin` (checked against the four values) and `grant_level` (0 but for

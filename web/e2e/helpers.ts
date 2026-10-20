@@ -509,6 +509,9 @@ export interface FlowCharacter {
   xp?: string;
   /** Fills the class extras on the "Points de vie et talents" step. */
   extras?: (step: Locator) => Promise<void>;
+  /** Ticks the starting spells on a mage's or a bard's "Grimoire" step (left as offered when
+   * absent). */
+  spellbook?: (step: Locator) => Promise<void>;
 }
 
 /**
@@ -549,6 +552,12 @@ export async function createInFlow(page: Page, c: FlowCharacter) {
   // The proficiency step (ADR 0037 step 14): nothing picked, the slots left for later.
   await expect(step).toHaveAttribute("data-step", "proficiencies");
   await next();
+  // A mage's or a bard's spellbook step (ADR 0030 step 20.7): the spells as offered, or ticked.
+  await expect(step).not.toHaveAttribute("data-step", "proficiencies");
+  if ((await step.getAttribute("data-step")) === "spellbook") {
+    if (c.spellbook) await c.spellbook(step);
+    await next();
+  }
   await step.getByLabel("Nom", { exact: true }).fill(c.name);
   // The first alignment the class admits (a refused one is labelled "… : interdit au …").
   await step

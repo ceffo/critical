@@ -11,7 +11,8 @@ import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { ALIGNMENT_CODES } from "@/lib/characterDetails";
-import { classOf, type StepId, type StepProps } from "./flow";
+import { classOf, hasSpellbook, type StepId, type StepProps } from "./flow";
+import { useSpellName } from "@/i18n/spellName";
 import { heightField, unitsFor, weightField } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
 import { skillName } from "@/journal/words";
@@ -539,6 +540,7 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
   const name = useLanguageNames(options);
   const show = useShow();
   const warnings = useReviewWarnings(props);
+  const spellName = useSpellName();
   const read = answer.current?.derived ? answer.current : null;
   const d = read?.derived;
   const refusal = refusals[0] ?? answer.failed;
@@ -662,6 +664,19 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
             ]}
           />
         </ReviewBlock>
+        {hasSpellbook(options, draft.cls) && (
+          <ReviewBlock
+            title={t("creation.spellbook.name")}
+            step="spellbook"
+            go={go}
+          >
+            <p className="text-body break-words" data-testid="review-spellbook">
+              {body?.spellbook && body.spellbook.length > 0
+                ? body.spellbook.map((id) => spellName(id)).join(", ")
+                : t("creation.spellbook.empty")}
+            </p>
+          </ReviewBlock>
+        )}
         <ReviewBlock
           title={t("creation.identity.name")}
           step="identity"

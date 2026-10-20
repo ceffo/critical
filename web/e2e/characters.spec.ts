@@ -175,6 +175,9 @@ test("create a bard through the creation route, switch to the first and back, re
   );
   await snap(page, "creation-proficiencies-languages-fr");
   await next.click();
+  // The bard's starting spellbook (ADR 0030 step 20.7): left empty, it never blocks Suivant.
+  await expect(step).toHaveAttribute("data-step", "spellbook");
+  await next.click();
 
   // Step 5, identity (ADR 0034 step 3.5): Suivant waits for a name, an alignment and a sex.
   const details = step.getByTestId("new-character-details");
@@ -699,6 +702,26 @@ test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
     race: "Humain",
     scores: { FOR: "9", DEX: "12", CON: "11", INT: "19", SAG: "12", CHA: "10" },
     hpMax: "4",
+    // ADR 0030 step 20.7: the starting spellbook, no roll. Detect Magic comes pre-ticked (the
+    // fixture has no Read Magic); Light is ticked from the level 1 list, its count against Table
+    // 4's maximum (Intelligence 19: none).
+    spellbook: async (step) => {
+      const picks = step.getByTestId("spellbook-picks");
+      await expect(picks).toContainText("Détection de la magie");
+      const level1 = step.getByTestId("spellbook-level-1");
+      await expect(level1.getByTestId("spellbook-level-count")).toHaveText(
+        "1 (sans maximum)",
+      );
+      await step.getByTestId("spellbook-search").fill("lumi");
+      await level1.getByRole("button", { name: "Inscrire Lumière" }).click();
+      await expect(level1.getByTestId("spellbook-level-count")).toHaveText(
+        "2 (sans maximum)",
+      );
+      await expect(page.getByTestId("building-spellbook")).toHaveText(
+        "Détection de la magie, Lumière",
+      );
+      await snap(page, "mage-spellbook-fr");
+    },
   });
 
   await chooseLanguage(page, "en");
@@ -729,6 +752,12 @@ test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
   await page.getByRole("tab", { name: "Spells" }).click();
   await page.getByRole("button", { name: "Prepare spells" }).click();
   const editor = page.getByRole("form", { name: "Prepare today's spells" });
+  // The starting spells are in the created mage's book.
+  const book = editor.getByRole("region", { name: "Spellbook" });
+  for (const name of ["Detect Magic", "Light"])
+    await expect(
+      book.getByRole("button", { name: `Add ${name}`, exact: true }),
+    ).toBeVisible();
   await editor
     .getByRole("button", { name: `Add ${learned}`, exact: true })
     .click();

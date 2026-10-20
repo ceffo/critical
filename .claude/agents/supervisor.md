@@ -102,8 +102,8 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
    **Measure it, don't guess.** Under herdr your pane's status line shows your context (`68k (7%)`);
    read it with `herdr agent read <your-name> --source recent-unwrapped --lines 8` and grep
    `[0-9.]+k \([0-9]+%\)` (or the ledger's helper script). Check it at every transition, for
-   yourself and for every agent you prompt again. **The limit is about 200k tokens, for every agent
-   type, supervisor included**: past it, hand yourself off (see "the handoff to the next supervisor") at the next quiet point, and
+   yourself and for every agent you prompt again. **The limit is 150k tokens, for every agent
+   type, supervisor included** (user, 2026-10-20: 54% of a day's usage was at >150k context): past it, hand yourself off (see "the handoff to the next supervisor") at the next quiet point, and
    don't prompt another round into an agent: close it and brief a fresh one. Below it, PR count and
    hours elapsed are not reasons to hand off: a fresh session costs a full cold start. Without herdr
    there is no gauge: fall back to a handoff after a large batch.
@@ -231,9 +231,9 @@ likely involved, any user constraint, and **`review: yes|no`**:
   comes after review.
 
 **Reusing an idle developer.** Reuse only if ALL hold: its PR is open or merged and nothing of its is
-in rework; its context is under ~200k tokens (gauge in "Token budget"); same model needed; the new item is in the same area.
+in rework; its context is under 150k tokens (gauge in "Token budget"); same model needed; the new item is in the same area.
 Otherwise close it and start fresh: a stale big context is re-sent every turn and costs more than a
-clean start. A reused developer keeps its old worktree as its cwd: never remove that worktree; switch it to the new branch instead (`git -C <old-worktree> switch -c <branch> origin/<db>` once its PR merged), or the agent loses its cwd (sup-50). An item with `review: yes` always gets a fresh developer for its post-review round, with a self-contained brief (round-1 report + review path): Opus developers on risky items passed 200k in round 1 every time (sup-53: 241k-315k). Keep `dev-<id>` for the whole item: every later round is a new prompt to it. Start a new
+clean start. A reused developer keeps its old worktree as its cwd: never remove that worktree; switch it to the new branch instead (`git -C <old-worktree> switch -c <branch> origin/<db>` once its PR merged), or the agent loses its cwd (sup-50). An item with `review: yes` always gets a fresh developer for its post-review round, with a self-contained brief (round-1 report + review path): Opus developers on risky items passed 150k in round 1 every time (sup-53: 241k-315k). Keep `dev-<id>` for the whole item: every later round is a new prompt to it. Start a new
 developer on the same worktree only if the original's session is gone, with full context in the brief.
 
 ## 3. When a developer reports
@@ -467,7 +467,7 @@ must lose nothing, so state lives outside the conversation:
 3. Tell the user in a few lines what you picked up (in flight, waiting on whom, pending decisions),
    rewrite the ledger, and carry on.
 
-**Hand yourself off; never wait for the user to restart you.** At 180k context (a PostToolUse hook,
+**Hand yourself off; never wait for the user to restart you.** At 150k context (a PostToolUse hook,
 `.claude/hooks/supervisor-context-gauge.sh`, reminds you on every tool call past it), or when the
 user says so, at the next quiet point (no agent mid-commit, no rework half sent):
 1. Run the retro skill (see "Retro at every handoff") and open its process PR. Then rewrite the

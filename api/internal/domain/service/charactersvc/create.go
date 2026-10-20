@@ -475,6 +475,37 @@ type ClassOption struct {
 	// order; empty for none. Shown on the class card, not enforced (ADR 0030
 	// step 21's stance on requirements).
 	Minimums []ruletablesvc.AbilityMinimum
+	// WeaponTypes are the weapon types the class may pick a proficiency in
+	// (ADR 0037 step 7), in ruletablesvc.WeaponTypes order, each with what
+	// its specialization spends in all (step 9), 0 for a class that does not
+	// specialize: the weapon editor shows and sends the server's cost.
+	WeaponTypes []WeaponTypeOption
+}
+
+// WeaponTypeOption is one weapon type a class may pick (ADR 0037 step 7) and
+// the slots its specialization spends (step 9), 0 when the class does not
+// specialize.
+type WeaponTypeOption struct {
+	Type                string
+	SpecializationSlots int
+}
+
+// ClassWeaponTypeOptions is ADR 0037 steps 7 and 9 for the editor: every weapon
+// type class may pick, in display order, with its specialization's cost when the
+// class specializes (ruletablesvc.Specializes), else 0.
+func ClassWeaponTypeOptions(class string) []WeaponTypeOption {
+	out := make([]WeaponTypeOption, 0, len(ruletablesvc.WeaponTypes))
+	for _, t := range ruletablesvc.WeaponTypes {
+		if !ruletablesvc.WeaponTypeAllowed(class, t) {
+			continue
+		}
+		o := WeaponTypeOption{Type: t}
+		if ruletablesvc.Specializes(class) {
+			o.SpecializationSlots = ruletablesvc.SpecializationSlots(t)
+		}
+		out = append(out, o)
+	}
+	return out
 }
 
 // LevelXP is a level and the XP that reaches it.
@@ -611,7 +642,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		opt := ClassOption{
 			Class: class, Alignments: ruletablesvc.AlignmentsOf(class), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, ruletablesvc.MaxLevel),
-			Minimums: ruletablesvc.ClassMinimums(class),
+			Minimums: ruletablesvc.ClassMinimums(class), WeaponTypes: ClassWeaponTypeOptions(class),
 		}
 		for level := 1; level <= ruletablesvc.MaxLevel; level++ {
 			xp, err := s.rules.XPThreshold(class, level)

@@ -33,10 +33,11 @@ var ErrCharacterChanged = fmt.Errorf("current character changed: %w", domain.Err
 type SVC interface {
 	domain.Service
 	GetCharacter(ctx context.Context, id int64) (*Character, error)
-	// SpecializedWeaponType is the weapon type character id is specialized
-	// in (SpecializedType; "" for none), from the character row alone: no
-	// XP ledger or armour read (ADR 0037 step 9, ADR 0025 step 10).
-	SpecializedWeaponType(ctx context.Context, id int64) (string, error)
+	// WeaponProficiency is what character id's weapon picks make of its
+	// weapons: the type it is specialized in (ADR 0037 step 9) and the
+	// non-proficiency penalty of each type (step 8), from the character row
+	// alone: no XP ledger or armour read (ADR 0025 step 10).
+	WeaponProficiency(ctx context.Context, id int64) (WeaponProficiency, error)
 	// PreviewSkillPoints is character id derived as if its skill points were
 	// points (ADR 0030 steps 17 and 18): the skills and budget a spend would
 	// give. It writes nothing. The points are checked as ValidSkillPoints
@@ -211,12 +212,12 @@ func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error
 	return s.read(ctx, id, readDraft{})
 }
 
-func (s *service) SpecializedWeaponType(ctx context.Context, id int64) (string, error) {
+func (s *service) WeaponProficiency(ctx context.Context, id int64) (WeaponProficiency, error) {
 	c, err := s.reader.GetCharacter(ctx, id)
 	if err != nil {
-		return "", err
+		return WeaponProficiency{}, err
 	}
-	return SpecializedType(c.Class, c.Proficiencies), nil
+	return WeaponProficiencyOf(s.profs, c.Class, c.Proficiencies), nil
 }
 
 // PreviewSkillPoints reads character id with its skill points replaced by

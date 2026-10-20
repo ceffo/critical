@@ -530,7 +530,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	require.NoError(t, err)
 	// The tables' figures are checked by the tests below; this one checks the classes and ranges.
 	for i := range got.Classes {
-		got.Classes[i].HitDie, got.Classes[i].LevelXP, got.Classes[i].Minimums = 0, nil, nil
+		got.Classes[i].HitDie, got.Classes[i].LevelXP, got.Classes[i].Minimums, got.Classes[i].WeaponTypes = 0, nil, nil, nil
 	}
 	got.ScoreMethods, got.RaceAdjustments, got.RaceIdentity = nil, nil, nil
 	assert.Equal(t, charactersvc.CreationOptions{

@@ -10,7 +10,8 @@ import (
 // step 12: a weapon is specialized when its type has the fighter's specialization pick). The
 // stored per-weapon flag is ignored: the item DAL neither reads nor writes it. A read with no
 // weapon piece reads no character; one with weapons reads the character row alone
-// (Characters.SpecializedWeaponType), not the derived character.
+// (Characters.WeaponProficiency), not the derived character. The same read gives each weapon's
+// NonproficientPenalty (step 8).
 type specializedDAL struct {
 	DAL
 	chars Characters
@@ -50,14 +51,20 @@ func (d specializedDAL) one(ctx context.Context, characterID int64) func(Item, e
 	}
 }
 
-// derive sets every weapon piece's Specialized from the character's picks.
+// derive sets every weapon piece's Specialized (ADR 0037 step 9) and NonproficientPenalty
+// (step 8) from the character's picks.
 func (d specializedDAL) derive(ctx context.Context, characterID int64, items []Item) error {
-	weaponType, err := d.chars.SpecializedWeaponType(ctx, characterID)
+	prof, err := d.chars.WeaponProficiency(ctx, characterID)
 	if err != nil {
 		return err
 	}
 	for i := range items {
-		items[i].Specialized = isWeapon(items[i]) && weaponType != "" && items[i].WeaponType == weaponType
+		weapon := isWeapon(items[i])
+		items[i].Specialized = weapon && prof.Specialized != "" && items[i].WeaponType == prof.Specialized
+		items[i].NonproficientPenalty = 0
+		if weapon {
+			items[i].NonproficientPenalty = prof.NonproficientPenalty(items[i].WeaponType)
+		}
 	}
 	return nil
 }

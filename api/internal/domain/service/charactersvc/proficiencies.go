@@ -133,15 +133,50 @@ type ProficiencySlots struct {
 // Derived.Proficiencies: no catalogue, an unknown class).
 func (c *Character) NonproficientPenalty(weaponType string) int {
 	f := c.Derived.Proficiencies
-	if f == nil || weaponType == "" {
+	if f == nil {
 		return 0
 	}
-	for _, p := range f.WeaponPicks {
-		if p.Type == weaponType {
-			return 0
-		}
+	return nonproficientPenalty(f.NonproficientPenalty, weaponType, func(t string) bool {
+		return slices.ContainsFunc(f.WeaponPicks, func(p WeaponPickFigures) bool { return p.Type == t })
+	})
+}
+
+// nonproficientPenalty is step 8's rule once the class's penalty and the picks are known: the
+// penalty when weaponType is set and has no pick, else 0.
+func nonproficientPenalty(penalty int, weaponType string, picked func(string) bool) int {
+	if weaponType == "" || picked(weaponType) {
+		return 0
 	}
-	return f.NonproficientPenalty
+	return penalty
+}
+
+// WeaponProficiency is what a character's weapon picks make of its weapons, read from the
+// character row alone (no derived figure): Specialized the type it is specialized in (step 9,
+// SpecializedType; "" for none), Picked the picked types, Penalty Table 34's non-proficiency
+// penalty for the class group (step 8; 0 without a Table 34 row).
+type WeaponProficiency struct {
+	Specialized string
+	Picked      []string
+	Penalty     int
+}
+
+// NonproficientPenalty is step 8 for a weapon of weaponType, as Character.NonproficientPenalty
+// judges it.
+func (w WeaponProficiency) NonproficientPenalty(weaponType string) int {
+	return nonproficientPenalty(w.Penalty, weaponType, func(t string) bool { return slices.Contains(w.Picked, t) })
+}
+
+// WeaponProficiencyOf reads a character of class with picks: its specialization (step 9) and
+// its weapon picks against Table 34's penalty from book (step 8).
+func WeaponProficiencyOf(book ProficiencyBook, class string, picks Picks) WeaponProficiency {
+	out := WeaponProficiency{Specialized: SpecializedType(class, picks), Picked: make([]string, 0, len(picks.Weapon))}
+	if row, ok := book.SlotRowOf(class); ok {
+		out.Penalty = row.Penalty
+	}
+	for _, p := range picks.Weapon {
+		out.Picked = append(out.Picked, p.Type)
+	}
+	return out
 }
 
 // IsSpecialization reports whether p is a specialization pick (ADR 0037 step 9): a weapon type

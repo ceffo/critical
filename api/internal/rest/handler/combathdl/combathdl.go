@@ -86,6 +86,9 @@ type WeaponDTO struct {
 	WeaponType string `json:"weapon_type"`
 	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
 	Specialized bool `json:"specialized"`
+	// NonproficientPenalty is ADR 0037 step 8: the to-hit penalty an attack
+	// with the weapon takes for its type having no weapon pick (0: none).
+	NonproficientPenalty int `json:"nonproficientPenalty"`
 	// Speed is the speed factor (0 to 20); Wielded whether the weapon is
 	// wielded, the only ones the attack form holds (ADR 0033 step 8).
 	Speed   int  `json:"speed"`
@@ -105,7 +108,8 @@ func ListWeapons(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 				ID: wp.ID, Name: wp.Name, DamageSM: wp.BaseDamage, DamageL: wp.DamageLarge,
 				MagicToHit: wp.MagicToHit, MagicDamage: wp.MagicDamage, Kind: string(wp.Kind),
 				TwoHanded: wp.TwoHanded, AmmoKind: wp.AmmoKind, WeaponType: wp.Type, Specialized: wp.Specialized,
-				Speed: wp.Speed, Wielded: wp.Wielded,
+				NonproficientPenalty: wp.NonproficientPenalty,
+				Speed:                wp.Speed, Wielded: wp.Wielded,
 			})
 		}
 		render.OK(r.Context(), w, out)

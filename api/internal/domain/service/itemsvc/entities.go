@@ -96,6 +96,10 @@ type Item struct {
 	// derived on every read from the character's specialization pick of the
 	// weapon type (ADR 0037 step 9); never stored, never edited.
 	Specialized bool
+	// NonproficientPenalty is the to-hit penalty an attack with the weapon
+	// takes for its type having no weapon pick (ADR 0037 step 8, Table 34 by
+	// class group), 0 or less; derived on every read like Specialized.
+	NonproficientPenalty int
 
 	// Armour (step 5): base AC, Table 29 column, Table 52 row.
 	BaseAC      int

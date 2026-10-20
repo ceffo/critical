@@ -54,6 +54,9 @@ type ItemDTO struct {
 	TwoHanded   bool   `json:"twoHanded"`
 	Fires       string `json:"fires"`
 	Specialized bool   `json:"specialized"`
+	// NonproficientPenalty is ADR 0037 step 8: the to-hit penalty an attack
+	// with the weapon takes for its type having no weapon pick (0: none).
+	NonproficientPenalty int `json:"nonproficientPenalty"`
 	// Armour.
 	BaseAC      int    `json:"baseAc"`
 	SkillColumn string `json:"skillColumn"`
@@ -119,7 +122,7 @@ func ItemsToDTO(items []itemsvc.Item, warnings []itemsvc.Warning) []ItemDTO {
 			DamageTypes: damageTypes, DamageSM: i.DamageSM, DamageL: i.DamageL,
 			WeaponType: i.WeaponType, WeaponKind: i.WeaponKind, Size: i.Size, Speed: i.Speed,
 			MagicToHit: i.MagicToHit, MagicDamage: i.MagicDamage, TwoHanded: i.TwoHanded, Fires: i.Fires,
-			Specialized: i.Specialized, BaseAC: i.BaseAC, SkillColumn: i.SkillColumn, ArmorRow: i.ArmorRow,
+			Specialized: i.Specialized, NonproficientPenalty: i.NonproficientPenalty, BaseAC: i.BaseAC, SkillColumn: i.SkillColumn, ArmorRow: i.ArmorRow,
 			ShieldKind: i.ShieldKind, ACMelee: i.ACMelee, ACMissile: i.ACMissile, Review: []string{}, Warnings: codes,
 		})
 	}

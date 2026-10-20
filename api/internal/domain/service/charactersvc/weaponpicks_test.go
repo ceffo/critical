@@ -316,3 +316,41 @@ func TestPicksEqual_Step13_WeaponOrderDoesNotCount(t *testing.T) {
 	assert.False(t, weapons("dagger", "dart").Equal(weapons("dagger", "sling")))
 	assert.False(t, weapons("dagger").Equal(weapons("dagger", "dart")))
 }
+
+// ADR 0037 steps 7 and 9 for the editor: a class's weapon types in display order with the
+// specialization's slots for a fighter (2, a bow 3), 0 for a class that does not specialize, and
+// only the types the class may pick.
+func TestClassWeaponTypeOptions_Step7_AllowedTypesAndTheSpecializationCost(t *testing.T) {
+	fighter := charactersvc.ClassWeaponTypeOptions("fighter")
+	require.Len(t, fighter, len(allWeaponTypes))
+	assert.Equal(t, charactersvc.WeaponTypeOption{Type: "long_bow", SpecializationSlots: 3}, fighter[0])
+	assert.Equal(t, charactersvc.WeaponTypeOption{Type: "light_crossbow", SpecializationSlots: 2}, fighter[2])
+	assert.Equal(t, []charactersvc.WeaponTypeOption{
+		{Type: "sling"}, {Type: "other_melee"}, {Type: "other_missile"},
+	}, charactersvc.ClassWeaponTypeOptions("cleric"))
+	for _, o := range charactersvc.ClassWeaponTypeOptions("bard") {
+		assert.Zero(t, o.SpecializationSlots, "a bard picks %s but never specializes", o.Type)
+	}
+}
+
+// ADR 0037 step 8 read from the character row: a weapon type without a pick takes Table 34's
+// penalty for the class group, a picked type (a kept one the class may not take included) and a
+// weapon with no type none; the specialization is step 9's.
+func TestWeaponProficiency_Step8_PenaltyFromThePicks(t *testing.T) {
+	book := profBook(t)
+	mage := charactersvc.WeaponProficiencyOf(book, "mage", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{
+		{Type: "dagger", Slots: 1}, {Type: "long_sword", Slots: 1},
+	}})
+	assert.Equal(t, -5, mage.NonproficientPenalty("sling"))
+	assert.Zero(t, mage.NonproficientPenalty("dagger"))
+	assert.Zero(t, mage.NonproficientPenalty("long_sword"), "a kept pick the class may not take still counts")
+	assert.Zero(t, mage.NonproficientPenalty(""), "a weapon with no type takes none")
+	assert.Empty(t, mage.Specialized)
+
+	fighter := charactersvc.WeaponProficiencyOf(book, "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "long_bow", Slots: 3}}})
+	assert.Equal(t, "long_bow", fighter.Specialized)
+	assert.Equal(t, -2, fighter.NonproficientPenalty("dagger"))
+
+	none := charactersvc.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), "fighter", charactersvc.Picks{})
+	assert.Zero(t, none.NonproficientPenalty("dagger"), "without Table 34 no penalty")
+}

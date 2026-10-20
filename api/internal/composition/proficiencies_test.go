@@ -55,6 +55,38 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 	assert.Len(t, costs, 5)
 }
 
+// ADR 0037 steps 7 and 9: each class option carries the weapon types the class
+// may pick, in display order, with the specialization's slots for a class that
+// specializes (2, a bow 3) and 0 for the others, so the weapon editor sends the
+// server's cost.
+func TestProficiencies_Step7_OptionsWeaponTypes(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var body struct {
+		Classes []struct {
+			Class       string           `json:"class"`
+			WeaponTypes []map[string]any `json:"weaponTypes"`
+		} `json:"classes"`
+	}
+	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &body))
+	byClass := map[string][]map[string]any{}
+	for _, c := range body.Classes {
+		byClass[c.Class] = c.WeaponTypes
+	}
+	fighter := byClass["fighter"]
+	require.Len(t, fighter, 13, "a fighter may pick every weapon type")
+	assert.Equal(t, map[string]any{"type": "long_bow", "specializationSlots": float64(3)}, fighter[0], "a bow's specialization spends 3")
+	assert.Equal(t, map[string]any{"type": "long_sword", "specializationSlots": float64(2)}, fighter[9])
+	assert.Equal(t, []map[string]any{
+		{"type": "dagger", "specializationSlots": float64(0)},
+		{"type": "dart", "specializationSlots": float64(0)},
+		{"type": "sling", "specializationSlots": float64(0)},
+		{"type": "other_melee", "specializationSlots": float64(0)},
+	}, byClass["mage"], "a mage picks only its four types and never specializes")
+	require.Len(t, byClass["bard"], 13)
+	assert.Equal(t, float64(0), byClass["bard"][0]["specializationSlots"], "a bard picks any type but does not specialize")
+}
+
 // The fixture's copy is the real seed (api/testdata/README: same format; this
 // one is the data of a rules table, so it must not drift).
 func TestProficiencies_TheFixtureIsTheRealSeed(t *testing.T) {

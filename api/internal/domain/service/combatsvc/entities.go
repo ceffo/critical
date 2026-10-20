@@ -301,6 +301,10 @@ type Weapon struct {
 	Type        string // weapon type code (itemsvc.WeaponTypes); empty: none
 	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
 	Specialized bool
+	// NonproficientPenalty is the piece's derived step 8 penalty (ADR 0037),
+	// 0 or less: what the attack form shows before a roll. The roll itself
+	// judges the character (Character.NonproficientPenalty).
+	NonproficientPenalty int
 	// Speed is the speed factor (0 to 20), Wielded whether the piece is
 	// wielded (ADR 0033 step 6): only a wielded weapon is in hand.
 	Speed   int
@@ -313,7 +317,8 @@ func weaponOf(it itemsvc.Item) Weapon {
 		ID: it.ID, Name: it.Name, BaseDamage: it.DamageSM, DamageLarge: it.DamageL,
 		MagicToHit: it.MagicToHit, MagicDamage: it.MagicDamage, Kind: WeaponKind(it.WeaponKind),
 		TwoHanded: it.TwoHanded, AmmoKind: it.Fires, Type: it.WeaponType, Specialized: it.Specialized,
-		Speed: it.Speed, Wielded: it.State == itemsvc.StateWielded,
+		NonproficientPenalty: it.NonproficientPenalty,
+		Speed:                it.Speed, Wielded: it.State == itemsvc.StateWielded,
 	}
 }
 

@@ -208,6 +208,22 @@ func SkillPointsFigures(class string, level int, points map[string]int) (b Skill
 	return b, true
 }
 
+// SkillPointsGainedAt is ADR 0037 step 15 on ADR 0030 steps 17 and 18: the
+// skill points level grants a thief or a bard, the budget at level minus the
+// budget at the level below. None at level 1 (its points are the first
+// level's) or under, nor for a class without skill points.
+func SkillPointsGainedAt(class string, level int) int {
+	if level < 2 {
+		return 0
+	}
+	now, ok := SkillPointsFigures(class, level, nil)
+	if !ok {
+		return 0
+	}
+	before, _ := SkillPointsFigures(class, level-1, nil)
+	return now.Total - before.Total
+}
+
 // budget checks points over skills against totalLimit in all and perSkill in
 // one skill; a perSkill of 0 checks no skill on its own (the bard's, step 18).
 // No warning under level 1.

@@ -300,7 +300,7 @@ func (s *service) read(ctx context.Context, id int64, draft readDraft) (*Charact
 	return c, nil
 }
 
-// readWarnings sets c's languages and warnings as a read shows them. The
+// readWarnings sets c's languages, pools, level grants and warnings as a read shows them. The
 // native language is always among the languages (ADR 0032 step 4.1), a
 // character stored before it was added included; the warnings follow what is
 // read (steps 4.2, 5.2 and 8.4).
@@ -323,6 +323,8 @@ func (s *service) readWarnings(c *Character) {
 	if c.Derived.Proficiencies != nil {
 		c.Warnings = append(c.Warnings, SlotWarnings(*c.Derived.Proficiencies)...)
 	}
+	// ADR 0037 step 15, once the pools are known.
+	setGrants(s.profs, c)
 }
 
 // languageSlots is ADR 0037 step 6 on the details of a character of race: the slots its known

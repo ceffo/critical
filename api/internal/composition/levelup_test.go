@@ -65,7 +65,9 @@ func undoTop(t *testing.T, bs *composition.BackingServices, id int64) {
 // level 17) owes levels 16 and 17, each +2 above the rogues' name level (no
 // die). Rolling 16 raises the max HP to 87 and keeps the damage taken (75 of
 // 85 becomes 77 of 87); undo gives the max HP and the pending level back,
-// redo the roll again.
+// redo the roll again. ADR 0037 step 15: the roll answers what 16 grants (a
+// weapon slot, a non-weapon slot, a bard's 15 points), what is left to spend
+// grows by it, and the undo takes it back.
 func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
@@ -77,9 +79,15 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	require.NoError(t, err)
 	_, err = bs.XP.Add(ctx, id, xpsvc.EntryInput{Base: 1_540_000 - 1_293_418, Reason: "the dragon"})
 	require.NoError(t, err)
-	owed := []charactersvc.PendingLevel{{Level: 16, FixedGain: 2}, {Level: 17, FixedGain: 2}}
+	grants16 := charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 15}
+	owed := []charactersvc.PendingLevel{
+		{Level: 16, FixedGain: 2, Grants: grants16},
+		{Level: 17, FixedGain: 2, Grants: charactersvc.LevelGrants{SkillPoints: 15}},
+	}
+	at15 := charactersvc.LevelGrants{NonweaponSlots: 2, SkillPoints: 30}
+	at16 := charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 45}
 	lu, maxHP, current := levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{Pending: owed}, lu)
+	assert.Equal(t, charactersvc.LevelUp{Pending: owed, ToSpend: at15}, lu)
 	assert.Equal(t, 85, maxHP)
 	assert.Equal(t, 75, current)
 
@@ -87,8 +95,9 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, got.Gain)
 	assert.True(t, got.Fixed)
+	assert.Equal(t, grants16, got.Grants)
 	lu, maxHP, current = levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{Pending: owed[1:]}, lu)
+	assert.Equal(t, charactersvc.LevelUp{Pending: owed[1:], ToSpend: at16}, lu)
 	assert.Equal(t, 87, maxHP)
 	assert.Equal(t, 77, current, "the damage taken is kept")
 	entries, err := bs.Log.List(ctx, id, 1)
@@ -97,7 +106,7 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 
 	undoTop(t, bs, id)
 	lu, maxHP, current = levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{Pending: owed}, lu, "the level-up is pending again")
+	assert.Equal(t, charactersvc.LevelUp{Pending: owed, ToSpend: at15}, lu, "the level-up is pending again, its grants gone")
 	assert.Equal(t, 85, maxHP)
 	assert.Equal(t, 75, current)
 
@@ -106,7 +115,7 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	_, err = bs.Log.Redo(ctx, id, redo.ID)
 	require.NoError(t, err)
 	lu, maxHP, _ = levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{Pending: owed[1:]}, lu)
+	assert.Equal(t, charactersvc.LevelUp{Pending: owed[1:], ToSpend: at16}, lu)
 	assert.Equal(t, 87, maxHP)
 
 	// Undoing the roll, then the award: the level and the max HP are back
@@ -114,7 +123,7 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	undoTop(t, bs, id)
 	undoTop(t, bs, id)
 	lu, maxHP, _ = levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}}, lu)
+	assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}, ToSpend: at15}, lu)
 	assert.Equal(t, 85, maxHP)
 }
 
@@ -139,12 +148,13 @@ func TestLevelUp_TwoLevelsAtOnceAreTwoDiceThroughTheDicePort(t *testing.T) {
 	})
 	require.NoError(t, err)
 	lu, _, _ := levelUpOf(t, bs, id)
-	assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}}, lu)
+	assert.Empty(t, lu.Pending)
 
 	_, err = bs.XP.Add(ctx, id, xpsvc.EntryInput{Base: 2_500})
 	require.NoError(t, err)
 	lu, _, _ = levelUpOf(t, bs, id)
-	assert.Equal(t, []charactersvc.PendingLevel{{Level: 2, Die: 6}, {Level: 3, Die: 6}}, lu.Pending)
+	points := charactersvc.LevelGrants{SkillPoints: 15}
+	assert.Equal(t, []charactersvc.PendingLevel{{Level: 2, Die: 6, Grants: points}, {Level: 3, Die: 6, Grants: points}}, lu.Pending)
 
 	first, err := bs.LevelUp.Roll(ctx, id, levelupsvc.RollInput{Level: 2})
 	require.NoError(t, err)

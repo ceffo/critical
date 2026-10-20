@@ -349,3 +349,25 @@ func TestRestorer_WritesTheRealizedLevelBack(t *testing.T) {
 	require.Error(t, r.Restore(context.Background(), charID, snaptest.Env(`{"realizedLevel":8,"hpMax":0}`)))
 	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`nope`)))
 }
+
+// ADR 0037 step 15: "The pending level-up prompt and the level-up answer carry what the level
+// grants beyond hit points." The answer gives the rolled level's grants as the character read
+// gave them (charactersvc computes them, TestGrantsAt_Step15_GrantsSlotsAndPoints), not the next
+// pending level's.
+func TestLevelUp_Step15_GrantsSlotsAndPoints(t *testing.T) {
+	f := newFixture(t)
+	four := d6(4)
+	four.Grants = charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 30}
+	five := d6(5)
+	five.Grants = charactersvc.LevelGrants{SkillPoints: 30}
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("thief", 12, 15, 3, four, five), nil).Once()
+	f.dice.EXPECT().RollDie(6).Return(3).Once()
+	f.rules.EXPECT().ConstitutionFor(12).Return(con(0, 0, 0), nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 4, 18).Return(nil).Once()
+	f.recorded()
+
+	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 4})
+	require.NoError(t, err)
+	assert.Equal(t, four.Grants, got.Grants)
+	assert.Equal(t, []charactersvc.PendingLevel{five}, got.Pending)
+}

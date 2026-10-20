@@ -165,11 +165,24 @@ type SpellbookRules struct {
 
 // PendingLevel is one level whose hit points are owed (ADR 0030 step 7): up
 // to the group's name level a hit die to roll (Die, FixedGain 0, step 7.1),
-// above it a fixed gain (FixedGain, Die 0, step 7.2).
+// above it a fixed gain (FixedGain, Die 0, step 7.2). Grants is what the
+// level grants beyond hit points (ADR 0037 step 15), set by the service (the
+// slots read the catalogue), not by Derive.
 type PendingLevel struct {
 	Level     int
 	Die       int
 	FixedGain int
+	Grants    LevelGrants
+}
+
+// LevelGrants are slots and skill points beyond hit points (ADR 0037 step
+// 15): what a level grants, or what is left to spend. WeaponSlots and
+// NonweaponSlots are ADR 0037 step 3's pools, SkillPoints a thief's or a
+// bard's budget (ADR 0030 steps 17 and 18). Never negative.
+type LevelGrants struct {
+	WeaponSlots    int
+	NonweaponSlots int
+	SkillPoints    int
 }
 
 // LevelUp is ADR 0030 step 7 on a character: its realized level against
@@ -182,6 +195,11 @@ type LevelUp struct {
 	// under the realized level. Nothing is removed; the card warns until the
 	// roll is undone or the XP comes back.
 	RealizedAboveTarget bool
+	// ToSpend is what is left to spend at the realized level: each pool's
+	// left slots and the skill points left, 0 when none or over budget. The
+	// card reminds the player while any is above 0; nothing blocks play. Set
+	// by the service with the pools, not by Derive.
+	ToSpend LevelGrants
 }
 
 // Summary is a character in its owner's list (ADR 0029 step 7.2).

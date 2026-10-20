@@ -69,7 +69,10 @@ func kelsenPicks(level int) *charactersvc.ProficiencySlots {
 // level 17's (Table 53: 12; Table 60, rogues 17-20; Table 32) for every
 // reader. Undoing the two rolls and the award brings them all back. The proficiency slots follow
 // the realized level too (ADR 0037 step 3): 10 non-weapon and 5 weapon slots at 15, the same with
-// 17 pending, 11 and 6 once 17 is taken (a rogue's slots at 16).
+// 17 pending, 11 and 6 once 17 is taken (a rogue's slots at 16). Step 15: each pending level says
+// what it grants (16: a weapon slot, a non-weapon slot and a bard's 15 points; 17: 15 points), and
+// what is left to spend (2 non-weapon slots and 30 points at 15) grows with the levels taken (1
+// weapon slot, 3 non-weapon, 60 points at 17); the undo takes it back, with the level.
 func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
@@ -82,7 +85,10 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		XPTotal: 1_293_418, TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13,
 		Saves:      charactersvc.Saves{ParaPoison: 10, RodStaffWand: 8, PetriPoly: 9, Breath: 13, Spell: 9},
 		SpellSlots: map[int]int{1: 3, 2: 3, 3: 3, 4: 3, 5: 2},
-		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		LevelUp: charactersvc.LevelUp{
+			Pending: []charactersvc.PendingLevel{},
+			ToSpend: charactersvc.LevelGrants{NonweaponSlots: 2, SkillPoints: 30},
+		},
 		// Kelsen's Intelligence 14 (PHB Table 4, ADR 0030 step 20.1).
 		Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 		// His seeded points give his sheet's 85 / 90 / 50 / 75 (ADR 0030
@@ -107,7 +113,10 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	pending := at15
 	pending.XPTotal, pending.TargetLevel, pending.NextLevelXP = 1_540_000, 17, &next17
 	// Above the rogues' name level, +2 each (step 7.2).
-	pending.LevelUp = charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{{Level: 16, FixedGain: 2}, {Level: 17, FixedGain: 2}}}
+	pending.LevelUp = charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
+		{Level: 16, FixedGain: 2, Grants: charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 15}},
+		{Level: 17, FixedGain: 2, Grants: charactersvc.LevelGrants{SkillPoints: 15}},
+	}, ToSpend: at15.LevelUp.ToSpend}
 	assert.Equal(t, pending, d, "the benefits wait for the level-up step")
 	assert.Equal(t, 17, ledgerLevel, "the XP ledger shows the target level")
 	assert.Equal(t, limits15, limits)
@@ -121,8 +130,11 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		XPTotal: 1_540_000, TargetLevel: 17, RealizedLevel: 17, NextLevelXP: &next17, THAC0: 12,
 		Saves:      charactersvc.Saves{ParaPoison: 9, RodStaffWand: 6, PetriPoly: 8, Breath: 12, Spell: 7},
 		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1},
-		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
-		Spellbook:  at15.Spellbook, BardSkills: kelsenBardSkills, SkillBudget: []ruletablesvc.BudgetWarning{},
+		LevelUp: charactersvc.LevelUp{
+			Pending: []charactersvc.PendingLevel{},
+			ToSpend: charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 60},
+		},
+		Spellbook: at15.Spellbook, BardSkills: kelsenBardSkills, SkillBudget: []ruletablesvc.BudgetWarning{},
 		SkillPoints:   &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
 		SkillArmor:    ruletablesvc.ArmorLeather,
 		Proficiencies: kelsenPicks(17),
@@ -137,7 +149,9 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	undoTop(t, bs, id)
 	d, _, _ = derivedOf(t, bs, id)
 	assert.Equal(t, 16, d.RealizedLevel)
-	assert.Equal(t, []charactersvc.PendingLevel{{Level: 17, FixedGain: 2}}, d.LevelUp.Pending)
+	assert.Equal(t, []charactersvc.PendingLevel{{Level: 17, FixedGain: 2, Grants: charactersvc.LevelGrants{SkillPoints: 15}}}, d.LevelUp.Pending)
+	assert.Equal(t, charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 45}, d.LevelUp.ToSpend,
+		"level 17's points go with its roll")
 	undoTop(t, bs, id)
 	undoTop(t, bs, id)
 	d, ledgerLevel, limits = derivedOf(t, bs, id)

@@ -712,6 +712,34 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     (learnsvc), `TestAdd_Step20_6_AddLiftsTheBlockAndItsUndoPutsItBack` (composition),
     `TestSpellbooks_Step20_5_ASecondAddNeverChangesTheOrigin` (memory).
 
+    _(As built, 2026-10-20: step 20.8)_ The rule is `domain/spellbook` (`FreeSpell`, `FreeSpellsAt`:
+    the spell levels a level's slot table opens over the level below, up to Table 4's maximum;
+    `Owed`: granted minus claimed, matched by grant level and spell level); the class is
+    `ruletablesvc.GrantsFreeSpells` (the mage). `charactersvc` composes it on every read of a mage
+    only: each pending level's `FreeSpells` (Table 21 through the rules port) and
+    `derived.levelUp.FreeSpellsOwed`, through its `FreeSpells` port. The **levels taken in the app
+    are the active `level_up` entries of the log** (the composition's adapter, decoded by
+    `levelupsvc.LevelReached`, levels above the realized one ignored): an undone roll's entry is
+    voided, so its grant goes with it, a redo brings it back, and a created or imported character's
+    levels have no entry. The claims are the book's `level_grant` entries (`spellbookadpt.Book.Claimed`).
+    The log is a stack, so a level-up whose free spell was claimed is undone only after that claim.
+    Wire: each pending level's `grants` and `toSpend` carry `freeSpells: [{level, spellLevel}]`
+    (never null). The claim is `POST /api/character/spellbook/add {spellId, grantLevel}` (learnsvc
+    `AddFreeSpell`): Add's refusals, then `no_free_spell_owed` and `free_spell_wrong_level` (400);
+    the answer, the `spell_add` payload and its snapshot carry `grantLevel`. The web lists the free
+    spell under "Le niveau N apporte" and in the "À dépenser" popover ("1 sort gratuit, niv. S"),
+    whose Choisir opens the Sorts activity's lookup on that spell level; while the server still owes
+    it, Ajouter there sends `grantLevel` (a "Sort gratuit du niveau N" label beside it); changing the
+    class or the levels, or Reset, drops the claim. A `spellbook` state key now re-reads the sheet.
+    Tests: `TestFreeSpellsAt_Step20_8_OneFreeSpellPerSpellLevelOpened`,
+    `TestOwed_Step20_8_OwedIsOpenedLevelsMinusGrants` (spellbook),
+    `TestGetCharacter_Step20_8_OwedIsOpenedLevelsMinusGrants`, `TestGetCharacter_Step20_8_ABardReadsNoFreeSpells`
+    (charactersvc), `TestAdd_Step20_8_ClaimingStoresTheLevelGrantOrigin`, `TestAdd_Step20_8_RefusedWhenNotOwed`,
+    `TestAdd_Step20_8_RedoRestoresTheLevelGrant` (learnsvc), `TestLevelUp_Step20_8_AMageOpeningASpellLevelOwesOneFreeSpell`,
+    `TestLevelUp_Step20_8_ABardOwesNone`, `TestLevelUp_Step20_8_NoneAboveTheIntelligencesMaxLevel`,
+    `TestLevelUp_Step20_8_ACharacterCreatedAtLevel7OwesNothing`, `TestLevelUp_Step20_8_UndoTakesTheGrantBack`
+    (composition: never blocks the level-up, roll, claim, undo, redo).
+
     _(As built, 2026-10-18)_ `POST /api/character/spellbook/learn {spellId}` (learnsvc) answers the
     roll's breakdown (`spellId`, `spellLevel`, `roll`, `chance`, `learned`, `characterLevel`, the
     realized level, and `retryLevel`, the realized level from which a failed spell may be tried

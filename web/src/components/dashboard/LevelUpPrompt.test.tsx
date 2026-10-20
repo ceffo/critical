@@ -226,7 +226,7 @@ describe("the level-up free spell (ADR 0030 step 20.8)", () => {
     );
     const fr = await markup("fr", panel);
     expect(fr).toContain("Le niveau 3 apporte");
-    expect(fr).toContain("+1 sort gratuit de niveau 2");
+    expect(fr).toContain("+1 sort gratuit, niv. 2");
     expect(fr).toContain(
       'aria-label="Choisir le sort gratuit de niveau 2 dans la recherche de sorts"',
     );
@@ -251,7 +251,7 @@ describe("the level-up free spell (ADR 0030 step 20.8)", () => {
         onOpenFreeSpell={noop}
       />,
     );
-    expect(rows).toContain(">1 sort gratuit de niveau 2<");
+    expect(rows).toContain(">1 sort gratuit, niv. 2<");
     expect(rows).not.toContain("+1");
   });
 });

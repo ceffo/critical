@@ -36,7 +36,7 @@
         "nonWeaponSlots_other": "{{count}} emplacements de compétence",
         "skillPoints_one": "{{count}} point de talent",
         "skillPoints_other": "{{count}} points de talent",
-        "freeSpell": "1 sort gratuit de niveau {{spellLevel}}"
+        "freeSpell": "1 sort gratuit, niv. {{spellLevel}}"
       },
       "choose": "Choisir",
       "spend": "Dépenser",

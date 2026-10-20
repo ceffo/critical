@@ -150,7 +150,8 @@ test("spend every slot and point in the editors: the tag goes with no reload", a
   await expect(tag).toBeVisible();
   const left = async () => {
     await tag.click();
-    const text = (await page.getByTestId("level-up-to-spend").textContent()) ?? "";
+    const text =
+      (await page.getByTestId("level-up-to-spend").textContent()) ?? "";
     await page.keyboard.press("Escape");
     return text;
   };

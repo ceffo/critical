@@ -45,7 +45,7 @@ func TestKelsen_Step16_WeaponPicksAreHisWeaponTypes(t *testing.T) {
 			assert.Equal(t, want, picks.Weapon)
 			_, err = charactersvc.ValidPicks(book, seedfile.DefaultClass, picks, charactersvc.Picks{})
 			require.NoError(t, err, "the editor accepts the seed's picks")
-			f, ok := charactersvc.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, picks)
+			f, ok := charactersvc.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, charactersvc.Spending{Picks: picks})
 			require.True(t, ok)
 			assert.Equal(t, ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 5, Left: 0}, f.Weapon)
 			for _, w := range charactersvc.SlotWarnings(f) {

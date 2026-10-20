@@ -314,7 +314,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := bs.add(bs.Rest, err); err != nil {
 		return nil, err
 	}
-	bs.Details, err = detailssvc.New(characterDAL, tx, languages)
+	bs.Details, err = detailssvc.New(characterDAL, tx, languages, charSvc)
 	if err := bs.add(bs.Details, err); err != nil {
 		return nil, err
 	}

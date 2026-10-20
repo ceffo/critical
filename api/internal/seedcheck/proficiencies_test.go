@@ -81,10 +81,20 @@ func TestNonweaponCatalogue_Step2_SeedBardIdsKeepTheirFigures(t *testing.T) {
 // ADR 0037 step 16 on the seeds (the campaign's and the test fixture's): the seed bard's picks are
 // his eight proficiencies at their cost (1 each, all in a bard's groups), accepted by the editor's
 // checks; each check target is the one his sheet gave (no extra slot); his non-weapon pool at
-// level 15 with Intelligence 14 is 3 + 3 + 4 = 10, 8 spent, 2 to spend: a reminder, within the
-// budget.
+// level 15 with Intelligence 14 is 3 + 3 + 4 = 10, and his eight picks with Elvish, Orcish and
+// Dwarvish (step 6: a half-elf's native language is Common) spend 11: over budget, a warning he
+// loads with, and a save that keeps or shrinks it is stored (ADR 0037 Consequences). The test
+// fixture's Kelsen knows no language but Common: 8 of 10, 2 to spend.
 func TestKelsen_Step16_PicksAndPools(t *testing.T) {
-	for name, dir := range map[string]string{"campaign seeds": seedsDir, "test fixture": fixtureSeedsDir} {
+	for name, tc := range map[string]struct {
+		dir   string
+		langs int
+		code  string
+	}{
+		"campaign seeds": {seedsDir, 3, charactersvc.CodeSlotsOverBudget},
+		"test fixture":   {fixtureSeedsDir, 0, charactersvc.CodeSlotsToSpend},
+	} {
+		dir := tc.dir
 		t.Run(name, func(t *testing.T) {
 			book, err := ruletablesadpt.ReadProficiencies(dir)
 			require.NoError(t, err)
@@ -96,8 +106,13 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 			_, err = charactersvc.ValidPicks(book, seedfile.DefaultClass, picks, charactersvc.Picks{})
 			require.NoError(t, err, "the editor accepts the seed's picks")
 
+			catalogue, ok := parseTables(t, fixtureCatalogue).Languages()
+			require.True(t, ok)
+			langs := charactersvc.LanguageSlots(c.Languages, catalogue.Native(c.Race))
+			assert.Equal(t, tc.langs, langs, "the campaign's Elvish, Orcish and Dwarvish; Common is a half-elf's own")
+			spend := charactersvc.Spending{Picks: picks, Languages: langs}
 			sheet := &charactersvc.Character{Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha}
-			f, ok := charactersvc.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, picks)
+			f, ok := charactersvc.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, spend)
 			require.True(t, ok)
 			f.SetTargets(sheet.Score)
 			for i, s := range kelsenSheet {
@@ -108,9 +123,14 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 				assert.Equal(t, s.target, got.Target, "%s: the target his sheet gave", s.id)
 			}
 			assert.Equal(t, ruletablesvc.NonweaponPool{
-				Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 8, Left: 2,
+				Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 8 + tc.langs, Left: 2 - tc.langs, Languages: tc.langs,
 			}, f.Nonweapon)
-			require.NoError(t, charactersvc.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, charactersvc.Picks{}, picks))
+			w := charactersvc.SlotWarnings(f)
+			require.NotEmpty(t, w)
+			assert.Equal(t, tc.code, w[0].Code, "a warning, never an error")
+			require.NoError(t, charactersvc.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, spend, spend), "kept as is")
+			fewer := charactersvc.Spending{Picks: picks, Languages: max(langs-1, 0)}
+			require.NoError(t, charactersvc.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, spend, fewer), "a language dropped")
 		})
 	}
 }

@@ -52,22 +52,32 @@ type DAL interface {
 	UpdateDetails(ctx context.Context, id int64, v charactersvc.Details) error
 }
 
+// Budget checks a languages edit against the non-weapon slots (ADR 0037 steps 6 and 10);
+// charactersvc's service satisfies it.
+type Budget interface {
+	// LanguagesWithinBudget refuses languages that would leave the pool over budget and
+	// spending more (a *domain.BudgetError); it reads within the ctx transaction.
+	LanguagesWithinBudget(ctx context.Context, id int64, languages []string) error
+}
+
 type service struct {
 	dal       DAL
 	tx        domain.TxRunner
 	languages charactersvc.LanguageBook
+	budget    Budget
 }
 
 // New constructs the service. languages is the language catalogue (ADR 0032
-// step 4); nil is the empty one of a catalogue before format 8.
-func New(dal DAL, tx domain.TxRunner, languages charactersvc.LanguageBook) (SVC, error) {
-	if dal == nil || tx == nil {
+// step 4); nil is the empty one of a catalogue before format 8. budget checks
+// a languages edit against the non-weapon slots.
+func New(dal DAL, tx domain.TxRunner, languages charactersvc.LanguageBook, budget Budget) (SVC, error) {
+	if dal == nil || tx == nil || budget == nil {
 		return nil, fmt.Errorf("detailssvc: nil dependency")
 	}
 	if languages == nil {
 		languages = (*ruletablesvc.Languages)(nil)
 	}
-	return &service{dal: dal, tx: tx, languages: languages}, nil
+	return &service{dal: dal, tx: tx, languages: languages, budget: budget}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }
@@ -86,6 +96,14 @@ func (s *service) Update(ctx context.Context, id int64, p Patch) (charactersvc.D
 		next, err := cur.Apply(kind, s.languages, p)
 		if err != nil {
 			return err
+		}
+		// ADR 0037 steps 6 and 10: the languages beyond the native one and
+		// Common spend non-weapon slots; a new or growing overspend is refused
+		// before any write.
+		if p.Languages != nil {
+			if err := s.budget.LanguagesWithinBudget(ctx, id, next.Languages); err != nil {
+				return err
+			}
 		}
 		if err := s.dal.UpdateDetails(ctx, id, next); err != nil {
 			return err

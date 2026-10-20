@@ -63,8 +63,10 @@ func TestPreview_IsWhatTheCreatedCharacterReads(t *testing.T) {
 	}
 }
 
-// The bard body above warns three times; the test above would pass on two
-// empty answers, so the warnings are named here.
+// The bard body above warns; the test above would pass on two empty answers,
+// so the warnings are named here. Its five languages beyond Common spend five
+// of the seven non-weapon slots (ADR 0037 step 6): two left to spend, no
+// languages warning of their own.
 func TestPreview_CarriesTheWarnings(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
@@ -75,7 +77,8 @@ func TestPreview_CarriesTheWarnings(t *testing.T) {
 	for _, w := range withoutSlotMaps(preview.Warnings) {
 		codes = append(codes, w["code"].(string))
 	}
-	assert.ElementsMatch(t, []string{"height_outside_range", "languages_over_limit"}, codes)
+	assert.ElementsMatch(t, []string{"height_outside_range"}, codes)
+	assert.Contains(t, preview.Warnings, map[string]any{"code": "slots_to_spend", "field": "nonweapon", "pool": "nonweapon", "left": float64(2)})
 	assert.Equal(t, []string{"common", "elvish", "gnomish", "halfling", "goblin", "orcish"}, preview.Languages, "the native language added")
 	assert.InDelta(t, 3.0, preview.Derived["targetLevel"], 0, "2,500 XP is a level 3 bard")
 	assert.InDelta(t, 19.0, preview.Derived["thac0"], 0)
@@ -83,7 +86,7 @@ func TestPreview_CarriesTheWarnings(t *testing.T) {
 
 // A blank name, alignment or sex is no refusal: the preview lists them as
 // missing and still answers the figures and the warnings, so the identity
-// step shows the languages' warning before the player picks the rest.
+// step shows the slots the languages leave before the player picks the rest.
 func TestPreview_ABlankNameAlignmentOrSexIsMissingNotRefused(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
@@ -92,8 +95,9 @@ func TestPreview_ABlankNameAlignmentOrSexIsMissingNotRefused(t *testing.T) {
 	var preview previewView
 	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/preview", body, &preview))
 	assert.Equal(t, []string{"name", "alignment", "sex"}, preview.Missing)
-	require.Len(t, withoutSlotMaps(preview.Warnings), 1)
-	assert.Equal(t, "languages_over_limit", withoutSlotMaps(preview.Warnings)[0]["code"])
+	assert.Empty(t, withoutSlotMaps(preview.Warnings))
+	// Intelligence 9: 3 + 0 + 2 = 5 slots, the three languages beyond Common spend 3.
+	assert.Contains(t, preview.Warnings, map[string]any{"code": "slots_to_spend", "field": "nonweapon", "pool": "nonweapon", "left": float64(2)})
 
 	var refused map[string]string
 	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused))

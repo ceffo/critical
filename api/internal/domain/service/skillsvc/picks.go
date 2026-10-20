@@ -113,7 +113,10 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, picks
 		}
 		// ADR 0037 step 10: over budget at the realized level and spending
 		// more is refused before any write or log entry.
-		if err := charactersvc.PicksWithinBudget(s.book, c.Class, c.Derived.RealizedLevel, c.Int, before, next); err != nil {
+		// The languages are unchanged by a picks save but spend from the same pool (step 6).
+		langs := c.LanguageSlots()
+		if err := charactersvc.PicksWithinBudget(s.book, c.Class, c.Derived.RealizedLevel, c.Int,
+			charactersvc.Spending{Picks: before, Languages: langs}, charactersvc.Spending{Picks: next, Languages: langs}); err != nil {
 			return err
 		}
 		if !before.Equal(next) {

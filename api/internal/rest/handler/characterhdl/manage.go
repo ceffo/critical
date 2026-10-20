@@ -522,6 +522,11 @@ type ChecksBody struct {
 	// Proficiencies are the non-weapon and the weapon picks so far; absent
 	// for none.
 	Proficiencies *wire.PicksDTO `json:"proficiencies"`
+	// Race and Languages are the draft's race and languages so far (ADR 0037
+	// step 6: each beyond the native one and Common spends a non-weapon
+	// slot); absent before the identity step. Additive.
+	Race      string   `json:"race"`
+	Languages []string `json:"languages"`
 }
 
 // ClassUnmetDTO is a class and the abilities whose entered score is under its
@@ -574,6 +579,7 @@ func Checks(svc draftChecker) render.HandlerFunc {
 		}
 		c, err := svc.CreationChecks(r.Context(), charactersvc.DraftInput{
 			Class: b.Class, Scores: b.Scores, XP: b.XP, SkillPoints: b.SkillPoints, Proficiencies: b.Proficiencies.Picks(),
+			Race: b.Race, Languages: b.Languages,
 		})
 		if err != nil {
 			return err

@@ -5,8 +5,9 @@ import "slices"
 // NonweaponPool is ADR 0037 step 3's non-weapon pool with the terms of its
 // formula: Available = Initial (Table 34) + LevelGained (one slot at every
 // realized level divisible by PerLevels) + Intelligence (Table 4's
-// "# of Lang." for the sheet's score). Spent is what the picks spend and Left
-// = Available - Spent (negative when over budget).
+// "# of Lang." for the sheet's score). Spent is what the picks spend, the
+// languages included, and Left = Available - Spent (negative when over
+// budget).
 type NonweaponPool struct {
 	Initial      int
 	PerLevels    int
@@ -15,6 +16,9 @@ type NonweaponPool struct {
 	Available    int
 	Spent        int
 	Left         int
+	// Languages is the part of Spent the character's languages spend (ADR
+	// 0037 step 6: one slot for each beyond the native one and Common).
+	Languages int
 }
 
 // NonweaponSlots is ADR 0037 step 3 for the non-weapon pool at the realized

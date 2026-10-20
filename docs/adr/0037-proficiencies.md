@@ -5,7 +5,7 @@ epic on 2026-10-19; this ADR writes them down as steps). Parts marked _(proposed
 this ADR adds where the book leaves a figure open; they await the user's OK in the PR. Not
 implemented. The non-weapon steps (1, 3 to 5, 10 to 14 and 16.1, the non-weapon pool) as built
 2026-10-20; the weapon pool (steps 3, 7, 10 to 14 and 16.2 for weapon picks) as built 2026-10-20;
-steps 6, 8, 9, 15 and 16.3 not implemented. Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
+step 6 (languages as picks) as built 2026-10-20; steps 8, 9, 15 and 16.3 not implemented. Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
 proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequences),
 [ADR 0030](0030-classes-and-races.md) (steps 12, 17 and 18 and the "Not covered" proficiency
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
@@ -111,7 +111,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    when over. The tests are in ruletablesvc (with `TestProficiencySlots_Step3_IntelligenceBonusPerTable4`)
    and charactersvc; the composition's `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP` reads
    10 at level 15 with 17 pending and 11 once 17 is taken. Without the languages as picks (step
-   6) Kelsen spends 8 of 10. Weapon pool, 2026-10-20: `ruletablesvc.WeaponSlots`, served as
+   6) Kelsen spends 8 of 10; with them (2026-10-20) 11 of 10. Weapon pool, 2026-10-20: `ruletablesvc.WeaponSlots`, served as
    `derived.proficiencySlots.weapon` {initial, perLevels, levelGained, available, spent, left}
    beside `weaponPicks` [{type, slots, allowed}]. Tests `TestWeaponSlots_Step3_ByGroupAndLevel`
    (ruletablesvc), `TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel` (charactersvc), and the
@@ -146,9 +146,26 @@ writes `Test<name>` and adds the prefix here in the same PR.
    4.2: Table 4's count is now the bonus slots of step 3, and `languages_over_limit` is no longer
    served; any save that changes the languages, from whichever editor, is checked by step 10 on
    the non-weapon pool.
-   Tests: `LanguagePicks_Step6_EachExtraLanguageCostsOneSlot` (proficiencysvc: native and Common
+   Tests: `TestLanguagePicks_Step6_EachExtraLanguageCostsOneSlot` (proficiencysvc: native and Common
    free, a half-elf whose native is Common, a dwarf with Dwarvish and Common free),
-   `Languages_Step6_EditCheckedByTheBudget` (detailssvc: no `languages_over_limit` any more).
+   `TestLanguages_Step6_EditCheckedByTheBudget` (detailssvc: no `languages_over_limit` any more).
+   _(As built, 2026-10-20: `charactersvc.LanguageSlots` counts the languages (no catalogue: none),
+   and the pool's figures and budget take a `Spending` (the picks and that count), so the
+   non-weapon pool's `spent` includes the languages and `derived.proficiencySlots.nonWeapon` gains
+   `languages`, the part they spend; no language is a stored pick, so no migration. Table 4 stays
+   the pool's `intelligence` term only. The budget applies on a picks save (the languages
+   unchanged), on a languages edit (detailssvc asks charactersvc's `LanguagesWithinBudget`;
+   refused 409 `over_budget` on field `languages`) and at creation (the creation's preview and
+   create; field `languages` when no pick changed). `POST /api/characters/checks` takes the
+   draft's `race` and `languages` so the proficiency step counts them. The tests are in
+   charactersvc (no proficiencysvc) with `TestBudget_Step6_LanguagesSpendTheNonweaponPool`,
+   `TestCreate_Step6_LanguagesBeyondTheSlotsAreRefused`,
+   `TestGetCharacter_Step6_TheLanguagesSpendTheNonweaponPool`,
+   `TestLanguagesWithinBudget_Step6_AnEditIsCheckedByTheBudget` and
+   `TestCreationChecks_Step6_TheDraftLanguagesSpendThePool`; the composition's
+   `TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots` through the API. Kelsen's
+   seedcheck reads 11 of 10 on the campaign seeds, a warning (the test fixture's Kelsen has no
+   language beyond Common).)_
 
 ### Weapon proficiencies
 
@@ -345,7 +362,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
     picks are in `seeds/character.json` (`proficiencies`), written when the character is inserted
     into an empty database, never reconciled; `seeds/skills.json` keeps the bard skills only. The
     proficiencies-only DAL (`skilldal`) is gone. Kelsen's seedcheck runs on the campaign seeds and
-    the fixture: 8 of 10 slots until the languages are picks. Also
+    the fixture: 8 of 10 slots until the languages are picks (since 2026-10-20 the campaign seeds read 11 of 10, step 6). Also
     `TestMigrate_Step16_UnknownIDKeptAsOneSlot`, `TestMigrate_Step16_RunsOnceWithTheMigration`.
     As built for 16.2, 2026-10-20: migration 026 (a column comment, no schema change) and its data
     step `grantOwnedWeaponTypes`: the distinct non-empty `weapon_type` of each character's

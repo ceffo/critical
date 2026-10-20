@@ -24,6 +24,11 @@ func (inlineTx) InTx(ctx context.Context, fn func(context.Context) error) error 
 
 func ptr[T any](v T) *T { return &v }
 
+// okBudget passes every languages edit: the budget itself is charactersvc's (its tests).
+type okBudget struct{}
+
+func (okBudget) LanguagesWithinBudget(context.Context, int64, []string) error { return nil }
+
 var stored = charactersvc.Details{Hair: "red", Age: 100, Languages: []string{"elvish", "common"}}
 
 // bard and thief are the kinds of the characters read: elves, whose native language is elvish.
@@ -57,14 +62,16 @@ func phbLanguages(t *testing.T) *ruletablesvc.Languages {
 func newSvc(t *testing.T) (detailssvc.SVC, *mocks.MockDAL) {
 	t.Helper()
 	dal := mocks.NewMockDAL(t)
-	svc, err := detailssvc.New(dal, inlineTx{}, phbLanguages(t))
+	svc, err := detailssvc.New(dal, inlineTx{}, phbLanguages(t), okBudget{})
 	require.NoError(t, err)
 	return svc, dal
 }
 
 func TestNew_NilDependency(t *testing.T) {
-	_, err := detailssvc.New(nil, inlineTx{}, nil)
+	_, err := detailssvc.New(nil, inlineTx{}, nil, okBudget{})
 	require.Error(t, err)
+	_, err = detailssvc.New(mocks.NewMockDAL(t), inlineTx{}, nil, nil)
+	require.Error(t, err, "the budget is required")
 }
 
 func TestUpdate_AppliesOnlyThePresentFieldsTrimmed(t *testing.T) {
@@ -203,7 +210,7 @@ func TestUpdate_Step4_1_TheNativeLanguageIsKeptAndNotDuplicated(t *testing.T) {
 	}
 
 	dal2 := mocks.NewMockDAL(t)
-	svc2, err := detailssvc.New(dal2, inlineTx{}, phbLanguages(t))
+	svc2, err := detailssvc.New(dal2, inlineTx{}, phbLanguages(t), okBudget{})
 	require.NoError(t, err)
 	dal2.EXPECT().GetDetails(mockAny, int64(1)).Return(charactersvc.Details{Languages: []string{"common"}}, bard, nil)
 	dal2.EXPECT().UpdateDetails(mockAny, int64(1), mockAnyDetails).Return(nil)
@@ -237,7 +244,7 @@ func TestUpdate_Step8_1_OnAnEmptyCatalogueTheStoredCodesSurviveAnEdit(t *testing
 	held := charactersvc.Details{Hair: "red", Languages: []string{"elvish", "common"}}
 	for _, book := range []charactersvc.LanguageBook{nil, (*ruletablesvc.Languages)(nil)} {
 		dal := mocks.NewMockDAL(t)
-		svc, err := detailssvc.New(dal, inlineTx{}, book)
+		svc, err := detailssvc.New(dal, inlineTx{}, book, okBudget{})
 		require.NoError(t, err)
 		dal.EXPECT().GetDetails(mockAny, int64(1)).Return(held, bard, nil).Times(3)
 
@@ -258,4 +265,28 @@ func TestUpdate_Step8_1_OnAnEmptyCatalogueTheStoredCodesSurviveAnEdit(t *testing
 		assert.Equal(t, "languages", fe.Field)
 		assert.Equal(t, detailssvc.CodeUnknown, fe.Message)
 	}
+}
+
+// ADR 0037 steps 6 and 10 on the edit path: a languages edit asks the budget with the languages it
+// would store and writes nothing when refused; an edit that leaves the languages asks nothing.
+func TestLanguages_Step6_EditCheckedByTheBudget(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	budget := mocks.NewMockBudget(t)
+	svc, err := detailssvc.New(dal, inlineTx{}, phbLanguages(t), budget)
+	require.NoError(t, err)
+	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, bard, nil).Times(3)
+	over := &domain.BudgetError{Field: charactersvc.FieldLanguages, Spent: 12, Limit: 10}
+	budget.EXPECT().LanguagesWithinBudget(mockAny, int64(1), []string{"elvish", "common", "orcish"}).Return(over).Once()
+	_, err = svc.Update(context.Background(), 1, detailssvc.Patch{Languages: &[]string{"elvish", "common", "orcish"}})
+	require.ErrorIs(t, err, domain.ErrOverBudget)
+	var be *domain.BudgetError
+	require.ErrorAs(t, err, &be)
+	assert.Equal(t, "languages", be.Field)
+
+	budget.EXPECT().LanguagesWithinBudget(mockAny, int64(1), []string{"elvish"}).Return(nil).Once()
+	dal.EXPECT().UpdateDetails(mockAny, int64(1), mockAnyDetails).Return(nil).Twice()
+	_, err = svc.Update(context.Background(), 1, detailssvc.Patch{Languages: &[]string{"elvish"}})
+	require.NoError(t, err)
+	_, err = svc.Update(context.Background(), 1, detailssvc.Patch{Hair: ptr("brown")})
+	require.NoError(t, err, "no languages in the edit: the budget is not asked")
 }

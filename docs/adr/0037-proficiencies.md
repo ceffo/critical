@@ -5,7 +5,7 @@ epic on 2026-10-19; this ADR writes them down as steps). Parts marked _(proposed
 this ADR adds where the book leaves a figure open; they await the user's OK in the PR. Not
 implemented. The non-weapon steps (1, 3 to 5, 10 to 14 and 16.1, the non-weapon pool) as built
 2026-10-20; the weapon pool (steps 3, 7, 10 to 14 and 16.2 for weapon picks) as built 2026-10-20;
-step 6 (languages as picks) and step 8 as built 2026-10-20; steps 9 and 16.3 as built 2026-10-20; step 15 not implemented. Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
+step 6 (languages as picks) and step 8 as built 2026-10-20; steps 9 and 16.3 as built 2026-10-20; step 15 not implemented; the skills module and the languages' editor decided 2026-10-20 (architecture review 2, see the amendment, on implementation). Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
 proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequences),
 [ADR 0030](0030-classes-and-races.md) (steps 12, 17 and 18 and the "Not covered" proficiency
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
@@ -483,3 +483,28 @@ writes `Test<name>` and adds the prefix here in the same PR.
   training time and teachers; secondary skills (Table 36); a proficiency's special abilities
   beyond its check (tracking's modifiers, Table 39); proficiencies granted free by a class; double
   specialization; multi- and dual-class (Table 34's best line).
+
+## Amendment 2026-10-20: the skills module (decided, on implementation)
+
+Decided in the second architecture review, grilled with the user (reports/architecture-review-2.html,
+item S1); not implemented. The rules of this ADR are unchanged; this settles where they live and
+where the languages are edited. The user's words: "how about "skills" for that? would cover
+proficiencies, weapon specialities, thief and bards skills, etc."
+
+17. **One skills module.** The rules of the sheet's skills (the pools of step 3, the picks and
+    their figures of steps 4, 5, 7 and 9, the languages' slots of step 6, the budget refusal of
+    step 10, the warnings of step 11, the level grants of step 15, and ADR 0030 steps 17 and 18's
+    skill points and budget) live in one rules package, `api/internal/domain/skills`, that depends
+    on no service (as `ruletablesvc` holds the tables); `skillsvc` is the service over it and owns
+    every write of them (picks, specialization, skill points, languages), every preview and their
+    undo codecs. `charactersvc` reads the figures from the rules package when it derives the
+    sheet and offers no preview and no budget check of its own. Every endpoint keeps its contract;
+    `PUT /api/proficiencies` and its preview gain a `languages` pool (the codes, as the details
+    carried them), absent meaning unchanged.
+18. **The languages are edited as a pool of the Skills tab's editor** (the user's choice over the
+    details card), next to the non-weapon picks, and at creation on the proficiencies step; the
+    details card shows them read-only and `PATCH /api/character/details` no longer takes them.
+    They stay stored as ADR 0032 step 4's list (same column, new writer); a languages save is
+    part of the proficiencies entry of step 13 and its snapshot, so one Undo gives them back.
+    Amends ADR 0032 step 4 (where the list is edited) and ADR 0034 step 3.5 (the identity step
+    loses the languages) and its details card.

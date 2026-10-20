@@ -9,7 +9,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { ApiError } from "@/api/http";
-import type { LevelUp } from "@/types/character";
+import type { LevelUp, PendingLevel } from "@/types/character";
+import type { SkillsEditor } from "@/stores/skillsEditor";
+import { hasGrants } from "@/lib/grants";
+import { LevelUpGrants } from "./LevelUpGrants";
 
 /**
  * The level-up prompt of the character card (ADR 0030 step 7): the lowest level whose hit points
@@ -18,6 +21,11 @@ import type { LevelUp } from "@/types/character";
  * Every number comes from the server; the card only words them. The realized level (the one taken,
  * whose benefits apply) moves only through this prompt; the target level is the one the XP gives.
  * When an XP correction brought the target under the realized level (step 7.4), it warns instead.
+ *
+ * ADR 0037 step 15: once a level's hit points are taken, what that level grants beyond them (the
+ * pending level's `grants`, as the server sent them) shows with the ways into the editors, until
+ * closed or the roll is undone (the realized level falls back under it). What is left to spend is
+ * the card's tag (ToSpendTag). Neither blocks the level-up nor play.
  */
 export function LevelUpPrompt({
   levelUp,
@@ -25,6 +33,7 @@ export function LevelUpPrompt({
   targetLevel,
   busy,
   onRoll,
+  onOpenEditor,
 }: {
   levelUp: LevelUp;
   /** The level taken (step 7), for the step 7.4 warning. */
@@ -33,31 +42,51 @@ export function LevelUpPrompt({
   targetLevel: number;
   busy: boolean;
   onRoll: (level: number, die?: number) => Promise<ApiError | null>;
+  /** Opens a Skills tab editor (ADR 0037 step 15's links). */
+  onOpenEditor: (editor: SkillsEditor) => void;
 }) {
   const { t } = useTranslation();
   const [entering, setEntering] = useState(false);
   const [die, setDie] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // The level whose hit points this prompt last took, with its grants (step 15).
+  const [taken, setTaken] = useState<PendingLevel | null>(null);
   const next = levelUp.pending[0];
 
+  // Step 15: the level just taken says what it grants while it is still realized (an undo takes
+  // it back); otherwise the reminder of what is left to spend.
+  const summary = taken &&
+    realizedLevel >= taken.level &&
+    hasGrants(taken.grants) && (
+      <LevelUpGrants
+        grants={taken.grants}
+        level={taken.level}
+        onOpenEditor={onOpenEditor}
+        onDismiss={() => setTaken(null)}
+      />
+    );
+
   if (!next) {
-    if (!levelUp.realizedAboveTarget) return null;
+    if (!levelUp.realizedAboveTarget) return summary || null;
     return (
-      <div
-        role="status"
-        data-testid="level-up-warning"
-        className="flex flex-col gap-0.5 rounded-md bg-raised px-2.5 py-1.5 text-body"
-      >
-        <p className="font-semibold text-warning">
-          {t("app.levelUp.realizedAbove", {
-            realized: realizedLevel,
-            target: targetLevel,
-          })}
-        </p>
-        <p className="text-muted-foreground">
-          {t("app.levelUp.realizedAboveHint")}
-        </p>
-      </div>
+      <>
+        <div
+          role="status"
+          data-testid="level-up-warning"
+          className="flex flex-col gap-0.5 rounded-md bg-raised px-2.5 py-1.5 text-body"
+        >
+          <p className="font-semibold text-warning">
+            {t("app.levelUp.realizedAbove", {
+              realized: realizedLevel,
+              target: targetLevel,
+            })}
+          </p>
+          <p className="text-muted-foreground">
+            {t("app.levelUp.realizedAboveHint")}
+          </p>
+        </div>
+        {summary}
+      </>
     );
   }
 
@@ -75,6 +104,7 @@ export function LevelUpPrompt({
       );
       return;
     }
+    setTaken(next);
     setEntering(false);
     setDie("");
   };
@@ -86,149 +116,155 @@ export function LevelUpPrompt({
     enteredDie <= next.die;
 
   return (
-    <div
-      role="group"
-      aria-label={t("app.levelUp.title", { level: next.level })}
-      data-testid="level-up"
-      className="flex flex-col gap-1.5 rounded-md bg-raised px-2.5 py-2 text-body"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        <div className="flex min-w-0 items-start gap-2">
-          <ArrowFatLinesUp
-            aria-hidden
-            weight="fill"
-            className="mt-0.5 size-4 shrink-0 text-tint"
-          />
-          <div className="flex min-w-0 flex-col">
-            <p className="font-semibold" data-testid="level-up-title">
-              {t("app.levelUp.title", { level: next.level })}
-            </p>
-            <p className="text-muted-foreground">
-              {fixed
-                ? t("app.levelUp.fixedHint", { gain: next.fixedGain })
-                : t("app.levelUp.rollHint", { die: next.die })}
-            </p>
-            {more > 0 && (
-              <p className="text-muted-foreground" data-testid="level-up-more">
-                {t("app.levelUp.more", { count: more })}
+    <>
+      <div
+        role="group"
+        aria-label={t("app.levelUp.title", { level: next.level })}
+        data-testid="level-up"
+        className="flex flex-col gap-1.5 rounded-md bg-raised px-2.5 py-2 text-body"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+          <div className="flex min-w-0 items-start gap-2">
+            <ArrowFatLinesUp
+              aria-hidden
+              weight="fill"
+              className="mt-0.5 size-4 shrink-0 text-tint"
+            />
+            <div className="flex min-w-0 flex-col">
+              <p className="font-semibold" data-testid="level-up-title">
+                {t("app.levelUp.title", { level: next.level })}
               </p>
-            )}
+              <p className="text-muted-foreground">
+                {fixed
+                  ? t("app.levelUp.fixedHint", { gain: next.fixedGain })
+                  : t("app.levelUp.rollHint", { die: next.die })}
+              </p>
+              {more > 0 && (
+                <p
+                  className="text-muted-foreground"
+                  data-testid="level-up-more"
+                >
+                  {t("app.levelUp.more", { count: more })}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-        {!entering && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            {!fixed && (
+          {!entering && (
+            <div className="flex shrink-0 items-center gap-1.5">
+              {!fixed && (
+                <Tooltip>
+                  <TooltipTrigger
+                    delay={400}
+                    render={
+                      <Button
+                        variant="quiet"
+                        size="sm"
+                        disabled={busy}
+                        aria-label={t("app.levelUp.enterTitle")}
+                        onClick={() => setEntering(true)}
+                      />
+                    }
+                  >
+                    {t("app.levelUp.enter")}
+                  </TooltipTrigger>
+                  <TooltipContent>{t("app.levelUp.enterTitle")}</TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger
                   delay={400}
                   render={
                     <Button
-                      variant="quiet"
+                      variant="main"
                       size="sm"
                       disabled={busy}
-                      aria-label={t("app.levelUp.enterTitle")}
-                      onClick={() => setEntering(true)}
+                      data-testid="level-up-roll"
+                      aria-label={
+                        fixed
+                          ? t("app.levelUp.applyTitle", {
+                              gain: next.fixedGain,
+                              level: next.level,
+                            })
+                          : t("app.levelUp.rollTitle", {
+                              die: next.die,
+                              level: next.level,
+                            })
+                      }
+                      onClick={() => void roll()}
                     />
                   }
                 >
-                  {t("app.levelUp.enter")}
+                  {fixed ? t("app.levelUp.apply") : t("app.levelUp.roll")}
                 </TooltipTrigger>
-                <TooltipContent>{t("app.levelUp.enterTitle")}</TooltipContent>
+                <TooltipContent>
+                  {fixed
+                    ? t("app.levelUp.applyTitle", {
+                        gain: next.fixedGain,
+                        level: next.level,
+                      })
+                    : t("app.levelUp.rollTitle", {
+                        die: next.die,
+                        level: next.level,
+                      })}
+                </TooltipContent>
               </Tooltip>
-            )}
-            <Tooltip>
-              <TooltipTrigger
-                delay={400}
-                render={
-                  <Button
-                    variant="main"
-                    size="sm"
-                    disabled={busy}
-                    data-testid="level-up-roll"
-                    aria-label={
-                      fixed
-                        ? t("app.levelUp.applyTitle", {
-                            gain: next.fixedGain,
-                            level: next.level,
-                          })
-                        : t("app.levelUp.rollTitle", {
-                            die: next.die,
-                            level: next.level,
-                          })
-                    }
-                    onClick={() => void roll()}
-                  />
-                }
-              >
-                {fixed ? t("app.levelUp.apply") : t("app.levelUp.roll")}
-              </TooltipTrigger>
-              <TooltipContent>
-                {fixed
-                  ? t("app.levelUp.applyTitle", {
-                      gain: next.fixedGain,
-                      level: next.level,
-                    })
-                  : t("app.levelUp.rollTitle", {
-                      die: next.die,
-                      level: next.level,
-                    })}
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )}
-      </div>
-      {entering && (
-        <form
-          className="flex flex-wrap items-center gap-1.5"
-          onSubmit={(ev) => {
-            ev.preventDefault();
-            if (dieValid) void roll(enteredDie);
-          }}
-        >
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={next.die}
-            value={die}
-            autoFocus
-            aria-label={t("app.levelUp.dieLabel", { die: next.die })}
-            placeholder={`1–${next.die}`}
-            aria-invalid={error ? true : undefined}
-            onChange={(ev) => setDie(ev.target.value)}
-            className="w-20"
-            data-testid="level-up-die"
-          />
-          <Button
-            type="submit"
-            variant="main"
-            size="sm"
-            disabled={busy || !dieValid}
-          >
-            {t("app.levelUp.confirm")}
-          </Button>
-          <Button
-            type="button"
-            variant="quiet"
-            size="sm"
-            onClick={() => {
-              setEntering(false);
-              setDie("");
-              setError(null);
+            </div>
+          )}
+        </div>
+        {entering && (
+          <form
+            className="flex flex-wrap items-center gap-1.5"
+            onSubmit={(ev) => {
+              ev.preventDefault();
+              if (dieValid) void roll(enteredDie);
             }}
           >
-            {t("app.levelUp.cancel")}
-          </Button>
-          <span className="text-muted-foreground">
-            {t("app.levelUp.dieLabel", { die: next.die })}
-          </span>
-        </form>
-      )}
-      {error && (
-        <p role="alert" className="text-danger">
-          {error}
-        </p>
-      )}
-    </div>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={next.die}
+              value={die}
+              autoFocus
+              aria-label={t("app.levelUp.dieLabel", { die: next.die })}
+              placeholder={`1–${next.die}`}
+              aria-invalid={error ? true : undefined}
+              onChange={(ev) => setDie(ev.target.value)}
+              className="w-20"
+              data-testid="level-up-die"
+            />
+            <Button
+              type="submit"
+              variant="main"
+              size="sm"
+              disabled={busy || !dieValid}
+            >
+              {t("app.levelUp.confirm")}
+            </Button>
+            <Button
+              type="button"
+              variant="quiet"
+              size="sm"
+              onClick={() => {
+                setEntering(false);
+                setDie("");
+                setError(null);
+              }}
+            >
+              {t("app.levelUp.cancel")}
+            </Button>
+            <span className="text-muted-foreground">
+              {t("app.levelUp.dieLabel", { die: next.die })}
+            </span>
+          </form>
+        )}
+        {error && (
+          <p role="alert" className="text-danger">
+            {error}
+          </p>
+        )}
+      </div>
+      {summary}
+    </>
   );
 }

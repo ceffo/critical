@@ -2591,6 +2591,63 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
   }
 });
 
+// ADR 0037 step 15 and ADR 0022 step 1, judged in French (ADR 0027 step 2): once level 2 is taken,
+// what it grants (a bard's 15 points) under the prompt, and what is left to spend (a level 1 bard's
+// slots and points), the class line's tag and its popover, each row with its one-word link, never
+// cut from 1280 to 2560. Screenshots of both at every viewport.
+test("level-up grants and the to-spend tag uncut in French, 1280 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    apiCall(page, method, url, body);
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Aldéric de la Tour-d'Auvergne-Lesparre",
+      class: "bard",
+      raceCode: "half_elf",
+      details: { alignment: "neutral_good", sex: "male" },
+      str: 10,
+      dex: 15,
+      con: 12,
+      int: 14,
+      wis: 9,
+      cha: 16,
+      hpMax: 6,
+      xp: 0,
+    }),
+  ).toBe(true);
+  expect(await call("POST", "/api/xp", { base: 2500, bonus: false })).toBe(
+    true,
+  );
+  await reloadSettled(page);
+  await chooseLanguage(page, "fr");
+  await page
+    .getByTestId("level-up")
+    .getByRole("button", { name: "Lancer le dé de vie du niveau 2 (d6)" })
+    .click();
+  const grants = page.getByTestId("level-up-grants");
+  await expect(grants).toContainText("Le niveau 2 apporte");
+  await expect(grants).toContainText("+15 points de talent");
+  const tag = page.getByTestId("to-spend-tag");
+  const popover = page.getByTestId("level-up-to-spend");
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    const where = `fr, ${vp.width}x${vp.height}`;
+    await expectNoClippedText(grants, `level-up grants, ${where}`);
+    await expectWholeWords(grants, `level-up grants, ${where}`);
+    await expectNoClippedText(tag, `to-spend tag, ${where}`);
+    await snap(page, `level-up-grants-fr-${vp.width}x${vp.height}`);
+    await tag.click();
+    await expect(popover).toContainText("35 points de talent");
+    await expectNoClippedText(popover, `to-spend popover, ${where}`);
+    await expectWholeWords(popover, `to-spend popover, ${where}`);
+    await snap(page, `level-up-to-spend-fr-${vp.width}x${vp.height}`);
+    await page.keyboard.press("Escape");
+    await expect(popover).toHaveCount(0);
+  }
+});
+
 // ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
 // attack card's rate, "spécialisée" tag and point-blank checkbox (the heavy crossbow is the
 // specialization pick, ADR 0037 step 9; the long sword a plain pick), and the weapon editor's Type

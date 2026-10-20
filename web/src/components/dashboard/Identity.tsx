@@ -14,9 +14,11 @@ import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
 import { useRollStore } from "@/stores/roll";
 import { useTableStore } from "@/stores/table";
+import { useSkillsEditor, type SkillsEditor } from "@/stores/skillsEditor";
 import { useXpStore } from "@/stores/xp";
 import { CharacterDetails } from "./CharacterDetails";
 import { LevelUpPrompt } from "./LevelUpPrompt";
+import { ToSpendTag } from "./ToSpendTag";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
@@ -31,9 +33,17 @@ const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
  * success colour, and the sheet value is in a tooltip on hover and keyboard focus, never under it
  * (ADR 0027 step 5.4: a click on a stat is kept for the ability check). The level and THAC0 are the
  * server's, derived from class and XP (ADR 0030 steps 3 and 5). A level whose hit points are owed
- * shows its prompt there too (step 7, LevelUpPrompt).
+ * shows its prompt there too (step 7, LevelUpPrompt), and what a level grants or what is left to
+ * spend, with the ways into the Skills tab's editors (ADR 0037 step 15).
  */
-export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
+export function Identity({
+  onOpenXp,
+  onOpenSkills,
+}: {
+  onOpenXp: () => void;
+  /** Focuses the Act activity, whose Skills tab holds the proficiency and skill point editors. */
+  onOpenSkills: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const xp = useXpStore((s) => s.ledger);
   const character = useCharacterStore((s) => s.character);
@@ -53,6 +63,12 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   const rollAbility = useRollStore((s) => s.rollAbility);
   const rollLevelUp = useCharacterStore((s) => s.rollLevelUp);
   const levelUpBusy = useTableStore((s) => s.busy);
+  const openEditor = useSkillsEditor((s) => s.open);
+  // ADR 0037 step 15's links: the editor, in the Act activity's Skills tab.
+  const openSkillsEditor = (editor: SkillsEditor) => {
+    openEditor(editor);
+    onOpenSkills();
+  };
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
@@ -67,11 +83,20 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             <CharacterDetails character={character} />
           </h1>
           {character && (
-            <p className="text-body text-muted-foreground" data-testid="class">
-              {i18n.exists(`details.classes.${character.class}`)
-                ? t(`details.classes.${character.class}`)
-                : character.class}
-            </p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p
+                className="text-body text-muted-foreground"
+                data-testid="class"
+              >
+                {i18n.exists(`details.classes.${character.class}`)
+                  ? t(`details.classes.${character.class}`)
+                  : character.class}
+              </p>
+              <ToSpendTag
+                toSpend={character.derived.levelUp.toSpend}
+                onOpenEditor={openSkillsEditor}
+              />
+            </div>
           )}
         </div>
         {character && (
@@ -222,6 +247,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
           targetLevel={character.derived.targetLevel}
           busy={levelUpBusy}
           onRoll={rollLevelUp}
+          onOpenEditor={openSkillsEditor}
         />
       )}
     </div>

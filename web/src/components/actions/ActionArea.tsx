@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Backpack,
@@ -17,6 +17,7 @@ import { ItemsTab } from "./ItemsTab";
 import { SkillsTab } from "./SkillsTab";
 import { TurnUndeadPanel } from "./TurnUndeadPanel";
 import { useCharacterStore } from "@/stores/character";
+import { useSkillsEditor } from "@/stores/skillsEditor";
 import { combatItems } from "@/lib/combatItems";
 
 /**
@@ -44,6 +45,19 @@ export function ActionArea({
 }) {
   const { t } = useTranslation();
   const [active, setActive] = useState<TabId>("weapons");
+  // An editor of the Skills tab opened from elsewhere (the card's level-up grants, ADR 0037 step
+  // 15) shows the tab; leaving the tab closes its editor.
+  useEffect(
+    () =>
+      useSkillsEditor.subscribe((s, prev) => {
+        if (s.editor && s.editor !== prev.editor) setActive("skills");
+      }),
+    [],
+  );
+  const select = (id: TabId) => {
+    if (id !== "skills") useSkillsEditor.getState().close();
+    setActive(id);
+  };
   const turns = useCharacterStore((s) => s.character?.derived.turning != null);
   const tabs = TABS.filter((id) => id !== "turning" || turns);
   const spellsLeft = useSpellStore(
@@ -81,7 +95,7 @@ export function ActionArea({
                 "flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
                 active === id && "border-tint text-foreground",
               )}
-              onClick={() => setActive(id)}
+              onClick={() => select(id)}
             >
               <TabIcon
                 aria-hidden

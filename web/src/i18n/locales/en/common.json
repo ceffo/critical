@@ -25,6 +25,27 @@
       "more_other": "+{{count}} more levels to roll next",
       "realizedAbove": "Level {{realized}} taken, XP gives level {{target}}",
       "realizedAboveHint": "Undo the roll or correct the XP.",
+      "grantsTitle": "Level {{level}} grants",
+      "toSpendHint": "Slots and skill points not spent yet",
+      "toSpendTitle": "To spend",
+      "gained": "+{{what}}",
+      "grant": {
+        "weaponSlots_one": "{{count}} weapon proficiency slot",
+        "weaponSlots_other": "{{count}} weapon proficiency slots",
+        "nonWeaponSlots_one": "{{count}} proficiency slot",
+        "nonWeaponSlots_other": "{{count}} proficiency slots",
+        "skillPoints_one": "{{count}} skill point",
+        "skillPoints_other": "{{count}} skill points"
+      },
+      "choose": "Choose",
+      "spend": "Spend",
+      "open": {
+        "weapon": "Choose the weapon proficiencies",
+        "nonWeapon": "Choose the proficiencies",
+        "skillPoints": "Spend the skill points"
+      },
+      "dismiss": "Close",
+      "dismissTitle": "Close what the level grants",
       "dieErrors": {
         "out_of_range": "Enter a die from 1 to {{die}}.",
         "fixed_gain": "This level has a fixed gain, no die."

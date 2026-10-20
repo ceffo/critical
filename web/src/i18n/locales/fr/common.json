@@ -25,6 +25,27 @@
       "more_other": "+{{count}} autres niveaux à lancer ensuite",
       "realizedAbove": "Niveau {{realized}} acquis, l'XP donne le niveau {{target}}",
       "realizedAboveHint": "Annulez le jet ou corrigez l'XP.",
+      "grantsTitle": "Le niveau {{level}} apporte",
+      "toSpendHint": "Emplacements et points de talent pas encore dépensés",
+      "toSpendTitle": "À dépenser",
+      "gained": "+{{what}}",
+      "grant": {
+        "weaponSlots_one": "{{count}} emplacement de maîtrise d’arme",
+        "weaponSlots_other": "{{count}} emplacements de maîtrise d’arme",
+        "nonWeaponSlots_one": "{{count}} emplacement de compétence",
+        "nonWeaponSlots_other": "{{count}} emplacements de compétence",
+        "skillPoints_one": "{{count}} point de talent",
+        "skillPoints_other": "{{count}} points de talent"
+      },
+      "choose": "Choisir",
+      "spend": "Dépenser",
+      "open": {
+        "weapon": "Choisir les maîtrises d’armes",
+        "nonWeapon": "Choisir les compétences",
+        "skillPoints": "Dépenser les points de talent"
+      },
+      "dismiss": "Fermer",
+      "dismissTitle": "Fermer ce que le niveau apporte",
       "dieErrors": {
         "out_of_range": "Saisissez un dé de 1 à {{die}}.",
         "fixed_gain": "Ce niveau a un gain fixe, sans dé."

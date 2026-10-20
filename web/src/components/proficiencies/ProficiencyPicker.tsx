@@ -262,7 +262,9 @@ function PickRow({
             size="icon-xs"
             aria-label={t("proficiencies.fewer", { name })}
             title={t("proficiencies.fewer", { name })}
-            disabled={shownCost !== undefined && pick.slots <= shownCost}
+            // Never a cost comparison here: below the cost, the preview's refusal says so on the
+            // row. A count of slots only stops at zero.
+            disabled={pick.slots <= 0}
             onClick={() => onSlots(pick.slots - 1)}
             data-testid="proficiency-fewer"
           >
@@ -364,13 +366,13 @@ function CatalogueGroup({
           const has = picked.has(id);
           const label = has
             ? t("proficiencies.alreadyPicked", { name: r.name })
-            : t("proficiencies.add", { name: r.name, count: r.cost ?? 0 });
+            : t("proficiencies.add", { name: r.name, count: r.cost });
           return (
             <li key={id}>
               <button
                 type="button"
                 className="grid min-h-7 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-raised px-2.5 py-0.5 text-left text-body transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted"
-                disabled={has || r.cost === undefined}
+                disabled={has}
                 aria-label={label}
                 title={label}
                 onClick={() => onAdd(r)}
@@ -391,14 +393,12 @@ function CatalogueGroup({
                       ? `${t(`attr.${r.option.ability}`, { defaultValue: r.option.ability })}${r.option.modifier !== 0 ? ` ${formatSigned(r.option.modifier)}` : ""}`
                       : "—"}
                   </span>
-                  {r.cost !== undefined && (
-                    <span
-                      className="chip px-1.5 text-center font-semibold"
-                      data-testid="proficiency-cost"
-                    >
-                      {t("proficiencies.slotsShort", { count: r.cost })}
-                    </span>
-                  )}
+                  <span
+                    className="chip px-1.5 text-center font-semibold"
+                    data-testid="proficiency-cost"
+                  >
+                    {t("proficiencies.slotsShort", { count: r.cost })}
+                  </span>
                 </span>
               </button>
             </li>

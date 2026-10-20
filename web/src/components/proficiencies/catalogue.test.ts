@@ -51,7 +51,7 @@ describe("splitCatalogue", () => {
     expect(other.map((r) => [r.option.id, r.cost])).toEqual([["tracking", 9]]);
   });
 
-  it("leaves out Languages, Modern (a language of the list, never a pick of its own)", () => {
+  it("offers only what the server gives a cost for (it gives Languages, Modern none)", () => {
     const { own, other } = splitCatalogue(options, "thief", nameOf, "", "fr");
     expect([...own, ...other].map((r) => r.option.id)).not.toContain(
       "languages_modern",
@@ -70,10 +70,9 @@ describe("splitCatalogue", () => {
     expect(fold("Équitation")).toBe("equitation");
   });
 
-  it("offers no cost for a class the server sent none for", () => {
+  it("offers nothing for a class the server sent no costs for", () => {
     const { own, other } = splitCatalogue(options, "mage", nameOf, "", "fr");
-    expect(own).toEqual([]);
-    expect(other.every((r) => r.cost === undefined)).toBe(true);
+    expect([...own, ...other]).toEqual([]);
   });
 });
 

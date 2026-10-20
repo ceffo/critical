@@ -1420,6 +1420,13 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expectNoPageScroll(page);
     if (SHOTS.has(`${vp.width}x${vp.height}`) || vp.width >= 1920)
       await snap(page, `act-proficiencies-fr-${vp.width}x${vp.height}`);
+    if (vp.width === 1920) {
+      // The editor in the dark (the appearance follows the system): for review.
+      await page.emulateMedia({ colorScheme: "dark" });
+      await expect(page.locator("html")).toHaveClass(/dark/);
+      await snap(page, "act-proficiencies-fr-dark-1920x1080");
+      await page.emulateMedia({ colorScheme: "light" });
+    }
     await picksEditor.getByTestId("proficiency-cancel").click();
     await skills.evaluate((el) => el.scrollTo(0, 0));
     if (vp.width === 1440) {
@@ -2400,6 +2407,15 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
         .getByTestId("proficiency-pick-terms"),
     ).toContainText(tr("+1 au jet", "+1 to the check"));
     await audit("4b-proficiencies");
+    if (lang === "fr") {
+      // The step in the dark (the appearance follows the system): for review.
+      await page.setViewportSize({ width: 1920, height: 1080 });
+      await page.emulateMedia({ colorScheme: "dark" });
+      await expect(page.locator("html")).toHaveClass(/dark/);
+      await snap(page, "creation-4b-proficiencies-fr-dark-1920x1080");
+      await page.emulateMedia({ colorScheme: "light" });
+      await page.setViewportSize(sizes[0]!);
+    }
     await next.click();
     await step
       .getByLabel(tr("Nom", "Name"), { exact: true })

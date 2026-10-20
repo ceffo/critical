@@ -343,6 +343,11 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   const { step, next } = await toIdentity(page, "fr", undefined, async (s) => {
     // A level 1 bard with Intelligence 14: 3 + 0 + 4 slots, the server's terms.
     await expect(s.getByTestId("proficiency-pool-terms")).toContainText("= 7");
+    // The server gives Languages, Modern no cost (a language of the list): not offered.
+    await s.getByTestId("proficiency-search").fill("langues");
+    await expect(s.getByTestId("proficiency-add-languages_modern")).toHaveCount(
+      0,
+    );
     await s.getByTestId("proficiency-search").fill("acro");
     await s.getByRole("button", { name: /^Ajouter Acrobatie/ }).click();
     await s.getByTestId("proficiency-search").fill("");
@@ -385,9 +390,64 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   const editor = panel.getByTestId("proficiency-editor");
   await editor.getByTestId("proficiency-search").fill("jongl");
   await editor.getByRole("button", { name: /^Ajouter Jonglerie/ }).click();
-  await expect(editor.getByTestId("proficiency-pool-spent")).toHaveText(
-    "Dépensés 3, restants 4",
+  const spent = editor.getByTestId("proficiency-pool-spent");
+  await expect(spent).toHaveText("Dépensés 3, restants 4");
+  const juggling = editor.getByTestId("proficiency-pick-juggling");
+  const figures = editor.locator("[data-stale]");
+
+  // Previews answer out of order: the one for 2 slots is held back until the one for 3 has
+  // answered, and the late answer is not shown.
+  const preview = "**/api/proficiencies/preview";
+  const isTwo = (body: unknown) =>
+    JSON.stringify(body).includes('{"id":"juggling","slots":2}');
+  await page.route(preview, async (route) => {
+    if (isTwo(route.request().postDataJSON()))
+      await new Promise((r) => setTimeout(r, 800));
+    await route.continue();
+  });
+  const late = page.waitForResponse(
+    (r) => r.url().endsWith("/preview") && isTwo(r.request().postDataJSON()),
   );
+  await juggling.getByTestId("proficiency-more").click();
+  await page.waitForRequest(
+    (r) => r.url().endsWith("/preview") && isTwo(r.postDataJSON()),
+  );
+  await juggling.getByTestId("proficiency-more").click();
+  await expect(spent).toHaveText("Dépensés 5, restants 2");
+  await late;
+  await page.waitForTimeout(300); // time for a late answer to land, were it applied
+  await expect(spent).toHaveText("Dépensés 5, restants 2");
+  await page.unroute(preview);
+
+  // Growing past the budget: the server's refusal, the figures marked out of date, and a save
+  // refused the same way keeps the editor open.
+  for (let i = 0; i < 3; i++)
+    await juggling.getByTestId("proficiency-more").click();
+  await expect(editor.getByRole("alert").first()).toContainText(
+    "Budget dépassé",
+  );
+  await expect(figures).toHaveAttribute("data-stale", "true");
+  await editor.getByTestId("proficiency-save").click();
+  await expect(editor.getByRole("alert").first()).toContainText(
+    "Budget dépassé",
+  );
+  // Below the cost: the refusal lands on Juggling's row, for the preview and the save alike.
+  for (let i = 0; i < 6; i++)
+    await juggling.getByTestId("proficiency-fewer").click();
+  await expect(juggling.getByTestId("proficiency-slots")).toHaveText("0");
+  await expect(juggling.getByRole("alert")).toHaveText(
+    "Moins d’emplacements que son coût, ou trop : entrez de son coût à 99.",
+  );
+  await editor.getByTestId("proficiency-save").click();
+  await expect(juggling.getByRole("alert")).toHaveText(
+    "Moins d’emplacements que son coût, ou trop : entrez de son coût à 99.",
+  );
+  await expect(editor).toBeVisible();
+  // Back at its cost: the refusal and the out-of-date mark go with the next answer.
+  await juggling.getByTestId("proficiency-more").click();
+  await expect(juggling.getByRole("alert")).toHaveCount(0);
+  await expect(figures).toHaveCount(0);
+  await expect(spent).toHaveText("Dépensés 3, restants 4");
   await editor.getByTestId("proficiency-save").click();
   await expect(editor).toHaveCount(0);
   await expect(panel.getByTestId("skill-juggling")).toBeVisible();

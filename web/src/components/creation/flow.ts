@@ -26,9 +26,13 @@ export type DraftPatch = Partial<Omit<FlowDraft, "details">> & {
 };
 
 /** The draft with the patch applied; `details` is merged field by field, so a reply carrying one
- * detail (a rolled height) keeps what was typed since the request left. */
+ * detail (a rolled height) keeps what was typed since the request left. Another class clears the
+ * non-weapon picks: each was spent at the old class's cost (ADR 0037 step 4), so they would be
+ * refused or mispriced under the new one. */
 export function mergeDraft(d: FlowDraft, patch: DraftPatch): FlowDraft {
-  return { ...d, ...patch, details: { ...d.details, ...patch.details } };
+  const next = { ...d, ...patch, details: { ...d.details, ...patch.details } };
+  if (next.cls !== d.cls && patch.picks === undefined) next.picks = [];
+  return next;
 }
 
 export interface FlowDraft {

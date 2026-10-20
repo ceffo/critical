@@ -1012,7 +1012,7 @@ func (q *Queries) SeedOffers(ctx context.Context, arg SeedOffersParams) ([]strin
 }
 
 const setCharacterIdentity = `-- name: SetCharacterIdentity :exec
-UPDATE characters SET alignment = $1, sex = $2, race = '' WHERE id = $3
+UPDATE characters SET alignment = $1, sex = $2 WHERE id = $3
 `
 
 type SetCharacterIdentityParams struct {
@@ -1021,7 +1021,7 @@ type SetCharacterIdentityParams struct {
 	ID        int64
 }
 
-// The mapped (or cleared) alignment and sex of a character, and its race detail discarded.
+// The mapped (or cleared) alignment and sex of a character.
 func (q *Queries) SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error {
 	_, err := q.db.ExecContext(ctx, setCharacterIdentity, arg.Alignment, arg.Sex, arg.ID)
 	return err

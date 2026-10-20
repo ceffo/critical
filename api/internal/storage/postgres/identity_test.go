@@ -59,25 +59,24 @@ func TestMapSex_Step8_1_EnAndFrSpellings(t *testing.T) {
 }
 
 // ADR 0032 step 8: on existing data the mapped values become codes, the unrecognised ones are
-// cleared (the card then shows them missing), the free-text race detail is discarded whether
-// mapped or not and the rules race is untouched; a second run changes nothing, and a character
-// with no value to map is left as it is.
-func TestMigrate_Step8_FreeTextBecomesCodesTheRestIsClearedAndTheRaceDetailIsDiscarded(t *testing.T) {
+// cleared (the card then shows them missing) and the rules race is untouched; a second run
+// changes nothing, and a character with no value to map is left as it is.
+func TestMigrate_Step8_FreeTextBecomesCodesTheRestIsCleared(t *testing.T) {
 	embedded, err := embeddedMigrations()
 	require.NoError(t, err)
 	store := newFakeStore()
 	for _, c := range []struct {
-		name, alignment, sex, raceDetail, race string
+		name, alignment, sex, race string
 	}{
-		{"Fr", "Chaotique neutre", "Homme", "Nain des collines", "dwarf"},
-		{"En", "CN", "female", "Half-elf", "half_elf"},
-		{"Junk", "plutôt gentil", "yes", "", ""},
-		{"Blank", "", "", "", "human"},
-		{"Done", "lawful_good", "male", "", "elf"}, // a code already: a migrated character
+		{"Fr", "Chaotique neutre", "Homme", "dwarf"},
+		{"En", "CN", "female", "half_elf"},
+		{"Junk", "plutôt gentil", "yes", ""},
+		{"Blank", "", "", "human"},
+		{"Done", "lawful_good", "male", "elf"}, // a code already: a migrated character
 	} {
 		id, err := store.InsertCharacter(context.Background(), insertParams(c.name, c.race))
 		require.NoError(t, err)
-		store.t.Alignments[id], store.t.Sexes[id], store.t.RaceDetails[id] = c.alignment, c.sex, c.raceDetail
+		store.t.Alignments[id], store.t.Sexes[id] = c.alignment, c.sex
 	}
 	var recorded []string
 	for _, m := range embedded {
@@ -99,9 +98,6 @@ func TestMigrate_Step8_FreeTextBecomesCodesTheRestIsClearedAndTheRaceDetailIsDis
 		[]string{store.t.Alignments[ids[0]], store.t.Alignments[ids[1]], store.t.Alignments[ids[2]], store.t.Alignments[ids[3]], store.t.Alignments[ids[4]]})
 	assert.Equal(t, []string{"male", "female", "", "", "male"},
 		[]string{store.t.Sexes[ids[0]], store.t.Sexes[ids[1]], store.t.Sexes[ids[2]], store.t.Sexes[ids[3]], store.t.Sexes[ids[4]]})
-	for _, id := range ids {
-		assert.Empty(t, store.t.RaceDetails[id], "the race detail is discarded")
-	}
 	assert.Equal(t, []string{"dwarf", "half_elf", "", "human", "elf"},
 		[]string{store.t.Races[ids[0]], store.t.Races[ids[1]], store.t.Races[ids[2]], store.t.Races[ids[3]], store.t.Races[ids[4]]},
 		"the rules race is untouched")
@@ -113,6 +109,48 @@ func TestMigrate_Step8_FreeTextBecomesCodesTheRestIsClearedAndTheRaceDetailIsDis
 	store.t.Alignments[ids[2]] = "free text"
 	run(append(recorded, identityMigration))
 	assert.Equal(t, "free text", store.t.Alignments[ids[2]])
+}
+
+// ADR 0032 step 8, the contract release: the alignment and sex the release before wrote as free
+// text after migration 013 are mapped to codes, or cleared, when the race column is dropped; the
+// ones already codes are kept, and the step runs on no database that applied the migration.
+func TestMigrate_Step8_DroppingTheRaceMapsTheFreeTextTheOldReleaseWrote(t *testing.T) {
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	store := newFakeStore()
+	for _, c := range []struct{ name, alignment, sex string }{
+		{"Late", "Loyal bon", "Femme"},
+		{"Junk", "unknown", "?"},
+		{"Code", "chaotic_good", "male"},
+	} {
+		id, err := store.InsertCharacter(context.Background(), insertParams(c.name, ""))
+		require.NoError(t, err)
+		store.t.Alignments[id], store.t.Sexes[id] = c.alignment, c.sex
+	}
+	var recorded []string
+	for _, m := range embedded {
+		if m.name != dropRaceMigration {
+			recorded = append(recorded, m.name)
+		}
+	}
+	run := func(recorded []string) {
+		f := &fakeMigrations{recorded: recorded, store: store}
+		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
+			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+			return runMigrations(ctx, f, embedded, before, after)
+		}))
+	}
+
+	run(recorded)
+	ids := store.t.Characters
+	assert.Equal(t, []string{"lawful_good", "", "chaotic_good"},
+		[]string{store.t.Alignments[ids[0]], store.t.Alignments[ids[1]], store.t.Alignments[ids[2]]})
+	assert.Equal(t, []string{"female", "", "male"},
+		[]string{store.t.Sexes[ids[0]], store.t.Sexes[ids[1]], store.t.Sexes[ids[2]]})
+
+	store.t.Alignments[ids[1]] = "free text"
+	run(append(recorded, dropRaceMigration))
+	assert.Equal(t, "free text", store.t.Alignments[ids[1]], "an applied migration runs no step")
 }
 
 // ADR 0032 step 8 and the seed: the seed character (Kelsen) stored before the migration, holding

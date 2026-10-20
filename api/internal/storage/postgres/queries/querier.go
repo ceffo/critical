@@ -79,7 +79,7 @@ type Querier interface {
 	// two share the name).
 	SeedCharacterID(ctx context.Context, name string) (int64, error)
 	SeedOffers(ctx context.Context, arg SeedOffersParams) ([]string, error)
-	// The mapped (or cleared) alignment and sex of a character, and its race detail discarded.
+	// The mapped (or cleared) alignment and sex of a character.
 	SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error
 	// The mapped language list of a character (a JSON list of codes).
 	SetCharacterLanguages(ctx context.Context, arg SetCharacterLanguagesParams) error

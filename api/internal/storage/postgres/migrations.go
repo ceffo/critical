@@ -93,6 +93,10 @@ const languagesMigration = "014_language_codes.sql"
 // free text (mapMeasures).
 const measuresMigration = "015_identity_numbers.sql"
 
+// dropRaceMigration drops characters.race. Right after it the run maps again the alignment and sex
+// the release before wrote as free text since identityMigration (mapIdentity).
+const dropRaceMigration = "023_drop_character_race.sql"
+
 // migrationDataSteps are the data steps run just before the named migrations, then those run just
 // after the named migrations.
 func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment) (before, after map[string]dataStep) {
@@ -115,6 +119,7 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment) (befo
 		measuresMigration:          mapMeasures,
 		equipmentMigration:         func(ctx context.Context, q storeq.Querier) error { return convertEquipment(ctx, q, equipment.Weapons) },
 		snapshotEnvelopesMigration: reencodeSnapshots,
+		dropRaceMigration:          mapIdentity,
 		skillArmourMigration:       func(ctx context.Context, q storeq.Querier) error { return carrySkillArmour(ctx, q, equipment.Armour) },
 	}
 	return before, after

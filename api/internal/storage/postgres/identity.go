@@ -78,8 +78,8 @@ func mapAlignment(raw string) string { return mapSpelling(alignmentSpellings, ra
 func mapSex(raw string) string { return mapSpelling(sexSpellings, raw) }
 
 // mapIdentity is the data step after identityMigration (ADR 0032 step 8): every character's
-// alignment and sex become the code their free text names, or are cleared when it names none, and
-// the free-text race detail is emptied. A code maps to itself, so a second run changes nothing.
+// alignment and sex become the code their free text names, or are cleared when it names none. A
+// code maps to itself, so a second run changes nothing. It runs after migrations 013 and 023.
 func mapIdentity(ctx context.Context, q storeq.Querier) error {
 	rows, err := q.ListCharacterIdentity(ctx)
 	if err != nil {

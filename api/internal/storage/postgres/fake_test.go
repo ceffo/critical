@@ -38,9 +38,8 @@ type tables struct {
 	// Classes are characters.class (absent: 'bard', the column's default); SkillArmors
 	// characters.skill_armor (absent: '', the column's default).
 	Classes, SkillArmors map[int64]string
-	// Alignments and Sexes are characters.alignment and characters.sex ('' missing), RaceDetails
-	// the free-text characters.race ('' none).
-	Alignments, Sexes, RaceDetails map[int64]string
+	// Alignments and Sexes are characters.alignment and characters.sex ('' missing).
+	Alignments, Sexes map[int64]string
 	// Heights and Weights are the free-text characters.height and characters.weight; HeightsCm and
 	// WeightsKg the numbers (0 none, migration 015).
 	Heights, Weights     map[int64]string
@@ -137,7 +136,7 @@ func newFakeStore() *fakeStore {
 		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{},
-		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, Heights: map[int64]string{}, Weights: map[int64]string{}, HeightsCm: map[int64]float64{}, WeightsKg: map[int64]float64{}, RaceDetails: map[int64]string{}, SkillPoints: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, Heights: map[int64]string{}, Weights: map[int64]string{}, HeightsCm: map[int64]float64{}, WeightsKg: map[int64]float64{}, SkillPoints: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -258,7 +257,7 @@ func (f *fakeStore) SetCharacterIdentity(_ context.Context, arg storeq.SetCharac
 	if err := f.hasCharacter(arg.ID); err != nil {
 		return err
 	}
-	f.t.Alignments[arg.ID], f.t.Sexes[arg.ID], f.t.RaceDetails[arg.ID] = arg.Alignment, arg.Sex, ""
+	f.t.Alignments[arg.ID], f.t.Sexes[arg.ID] = arg.Alignment, arg.Sex
 	return nil
 }
 

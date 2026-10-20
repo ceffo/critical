@@ -101,14 +101,22 @@ flowchart LR
    4. `/api/health` reports the build identity: the commit the image was built from and the release
       version it was built as (`X.Y.Z`, step 3.1), both baked in at build time, each `unknown` when not
       set (as in `just dev`), next to `status`. _Amended 2026-10-17 (staging versions); was: the commit
-      only._
+      only._ _Amended 2026-10-20 (version badge): it also reports `env`, the environment from the
+      runtime setting `CRITICAL_ENV`: `dev` (local runs), `staging` or `production` (each fly app's
+      `[env]`, never the image, which is the same in both), `unknown` when unset or another value; the
+      web shows the version bottom right on every screen, with a "dev" or "staging" pill, none in
+      production. A local build's version is the last `v*` tag plus the short commit as build metadata
+      (`0.61.1+43d0ef8`, `.dirty` on uncommitted changes, `scripts/build-identity.sh`); staging and
+      production keep the plain `X.Y.Z`. Only `dev` has any other effect (the dev login, ADR 0029 step 8.2)._
    5. A main commit is built once; every later deployment of that commit (staging, production,
       rollback) runs that image, identified by its digest.
 
    Tests: `TestWeb_Step1_1_` (router: files, SPA fallback, JSON 404 under `/api`, no escape from the
    web dir, a dir without `index.html` refused), `TestWeb_Step1_2_NoWebDirServesNothingOutsideAPI`,
    `TestHealth_Step1_4_ReportsTheBuildCommit`, `TestHealth_Step1_4_ReportsTheBuildVersion`,
-   `TestHealth_Step1_4_UnknownWithoutABuildIdentity`. Step 1.3 is checked by the CI `image` job
+   `TestHealth_Step1_4_UnknownWithoutABuildIdentity`, `TestConfig_Step1_4_ReportedEnv`,
+   `TestConfigAuth_Step8_2_StagingAndProductionNamesAreNotTheDevLogin`, `scripts/test-build-identity.sh`, the
+   web `build.test.ts` and the `layout.spec` "version badge" test. Step 1.3 is checked by the CI `image` job
    (`scripts/image-smoke.sh`); the image and its inputs are described in `docs/backend.md`,
    "Production image".
 

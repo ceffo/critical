@@ -253,3 +253,34 @@ func TestConfigAuth_Step8_3_HealthLoginMode(t *testing.T) {
 		t.Fatalf("google: %q, %v", a.login(), err)
 	}
 }
+
+// ADR 0024 step 1.4: /api/health reports the environment, from CRITICAL_ENV:
+// dev, staging and production as named, anything else as unset.
+func TestConfig_Step1_4_ReportedEnv(t *testing.T) {
+	for env, want := range map[string]string{
+		EnvDev: "dev", EnvStaging: "staging", EnvProduction: "production",
+		"": "", "prod": "", "Staging": "", "qa": "",
+	} {
+		if got := (Config{Env: env}).reportedEnv(); got != want {
+			t.Errorf("CRITICAL_ENV=%q reports %q, want %q", env, got, want)
+		}
+	}
+}
+
+// ADR 0029 step 8.2 with ADR 0024 step 1.4: the staging and production
+// names change nothing about the login: without OAuth settings they are
+// refused like any other value, only dev opts into the dev login.
+func TestConfigAuth_Step8_2_StagingAndProductionNamesAreNotTheDevLogin(t *testing.T) {
+	for _, env := range []string{EnvStaging, EnvProduction} {
+		c := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c", Env: env}
+		if err := c.Validate(); err == nil {
+			t.Errorf("CRITICAL_ENV=%s without OAuth settings must not start", env)
+		}
+		c.GoogleClientID, c.GoogleClientSecret, c.PublicURL = "id", "secret", "https://critical-hit.fly.dev"
+		c.FlyApp = "critical-hit"
+		a, err := c.auth()
+		if err != nil || a.login() != "google" {
+			t.Errorf("CRITICAL_ENV=%s with settings: %q, %v", env, a.login(), err)
+		}
+	}
+}

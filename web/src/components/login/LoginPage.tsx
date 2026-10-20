@@ -53,7 +53,7 @@ export function LoginPage({ error }: { error: string | null }) {
 
   return (
     <main
-      className="flex min-h-screen items-center justify-center p-3"
+      className="flex min-h-app items-center justify-center p-3"
       data-screen="login"
     >
       <section

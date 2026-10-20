@@ -165,7 +165,7 @@ cmd_start() {
         # The dev login (ADR 0029 step 8.2): without OAuth settings the server only starts in dev.
         export CRITICAL_ENV=dev
         exec setsid go tool air -c .air.toml -tmp_dir "$dev_dir/tmp" \
-            -build.cmd "go build -o $bin ./cmd/api" -build.entrypoint "$bin"
+            -build.cmd "go build -ldflags \"\$($root/scripts/build-identity.sh)\" -o $bin ./cmd/api" -build.entrypoint "$bin"
     ) &
     record api $!
 

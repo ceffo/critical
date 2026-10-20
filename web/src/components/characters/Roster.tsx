@@ -139,7 +139,7 @@ export function Roster({ onBack }: { onBack?: () => void }) {
 
   return (
     <div
-      className="flex h-dvh flex-col gap-3 overflow-hidden p-3"
+      className="flex h-app flex-col gap-3 overflow-hidden p-3"
       data-screen="roster"
     >
       <header className="zone-card flex shrink-0 items-center gap-4 px-4 py-2">

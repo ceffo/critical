@@ -6,6 +6,7 @@ import { startSettings } from "./stores/settings";
 import { readSession } from "./api/auth";
 import { AdminPage } from "./components/admin/AdminPage";
 import { LoginPage } from "./components/login/LoginPage";
+import { VersionBadge } from "./components/shell/VersionBadge";
 import { NoCurrent } from "./components/shell/NoCurrent";
 import { Playing } from "./components/shell/Playing";
 import { startFor } from "./lib/session";
@@ -16,7 +17,10 @@ startSettings();
 
 function render(node: ReactNode) {
   createRoot(document.getElementById("root")!).render(
-    <StrictMode>{node}</StrictMode>,
+    <StrictMode>
+      {node}
+      <VersionBadge />
+    </StrictMode>,
   );
 }
 

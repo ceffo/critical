@@ -395,7 +395,7 @@ machine and for the database. For what the public ingress hides (a machine pinne
 
 ```bash
 just fly-open critical-hit-staging          # or critical-hit: a proxy to the app's Flycast address on a free local port; prints the URL, Ctrl-C stops it
-curl -s http://127.0.0.1:<port>/api/health  # {"commit":"<sha>","login":"google","status":"ok","version":"<X.Y.Z>"}, <port> from the line above
+curl -s http://127.0.0.1:<port>/api/health  # {"commit":"<sha>","env":"staging|production","login":"google","status":"ok","version":"<X.Y.Z>"}, <port> from the line above
 $fly ssh console -a <app>                   # a shell on the machine
 $fly logs -a <app>
 ```
@@ -962,6 +962,11 @@ By hand (operator, production token, from an up-to-date main checkout):
 git fetch origin --tags && git switch --detach origin/main
 fly auth docker && scripts/promote.sh v1.2.2
 ```
+
+**The environment name.** Each app's `[env]` sets `CRITICAL_ENV` (`staging` in `deploy/fly.staging.toml`,
+`production` in `deploy/fly.prod.toml`), because the image is the same in both. `/api/health` reports it as `env`
+and the web shows it as a pill beside the version bottom right (none in production); it changes nothing else
+(`just check-fly` checks the values).
 
 **An old image under main's scripts.** The rollback deploys the old image with main's `deploy/fly.prod.toml`,
 `scripts/fly-smoke.sh` and `scripts/restore-point.sh`. When main has moved past what the old image does (a

@@ -2560,5 +2560,11 @@
       }
     },
     "warned": "Class warning"
+  },
+  "build": {
+    "env": {
+      "dev": "dev",
+      "staging": "staging"
+    }
   }
 }

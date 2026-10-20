@@ -308,7 +308,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   if (loadError || !options)
     return (
-      <main className="flex h-dvh items-center justify-center p-3">
+      <main className="flex h-app items-center justify-center px-3 pt-3">
         {loadError ? (
           <div role="alert" className="flex flex-col items-start gap-2">
             <p className="text-body text-danger">{t("details.optionsError")}</p>
@@ -370,7 +370,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   return (
     <div
-      className="mx-auto flex h-dvh max-w-[1680px] flex-col gap-3 overflow-hidden p-3"
+      className="mx-auto flex h-app max-w-[1680px] flex-col gap-3 overflow-hidden px-3 pt-3"
       data-screen="create-character"
     >
       <header className="zone-card flex shrink-0 items-center gap-4 px-4 py-2">

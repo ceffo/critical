@@ -48,9 +48,10 @@ type Config struct {
 	// FlyApp is set by fly.io on every machine it runs (FLY_APP_NAME): the
 	// in-memory storage is refused there (ADR 0025 step 8.3).
 	FlyApp string `env:"FLY_APP_NAME"`
-	// Env is the environment name (ADR 0029 step 8.2). Only EnvDev means
-	// anything: it opts into the dev login when no OAuth setting is set.
-	// Unset or any other value, a missing OAuth setting stops the start, so
+	// Env is the environment name: EnvDev (local runs), EnvStaging or
+	// EnvProduction (the fly apps' [env], reported by /api/health, ADR 0024
+	// step 1.4). Only EnvDev opts into the dev login when no OAuth setting is
+	// set (ADR 0029 step 8.2). Unset or any other value, a missing OAuth setting stops the start, so
 	// the image run anywhere without settings fails closed. `just dev`, the
 	// e2e stacks and image-smoke set it; it is refused on fly.io.
 	Env string `env:"CRITICAL_ENV"`
@@ -73,6 +74,23 @@ const StorageMemory = "memory"
 // EnvDev is the CRITICAL_ENV value of a local run (`just dev`, e2e,
 // image-smoke): the only environment where the dev login may exist.
 const EnvDev = "dev"
+
+// The CRITICAL_ENV values of the two hosted apps (deploy/fly.*.toml). They
+// only name the environment for /api/health: nothing else reads them.
+const (
+	EnvStaging    = "staging"
+	EnvProduction = "production"
+)
+
+// reportedEnv is the environment /api/health reports: Env when it is one of
+// the three known names, else empty (reported as "unknown", no pill).
+func (c Config) reportedEnv() string {
+	switch c.Env {
+	case EnvDev, EnvStaging, EnvProduction:
+		return c.Env
+	}
+	return ""
+}
 
 // commit is the commit the binary was built from, reported by /api/health
 // (ADR 0024 step 1.4). The image build sets it with
@@ -241,7 +259,7 @@ func Start() error {
 	}
 	// A bad web dir stops the server before it touches the database.
 	opts := router.Options{
-		Commit: commit, Version: version, Login: auth.login(), Host: auth.host, SecureCookies: auth.secure, CookieApp: auth.cookieApp,
+		Commit: commit, Version: version, Env: cfg.reportedEnv(), Login: auth.login(), Host: auth.host, SecureCookies: auth.secure, CookieApp: auth.cookieApp,
 	}
 	if cfg.WebDir != "" {
 		web, werr := webhdl.New(cfg.WebDir)

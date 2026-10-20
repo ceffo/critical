@@ -443,7 +443,7 @@ export function AdminPage() {
 
   return (
     <div
-      className="mx-auto flex min-h-dvh w-full max-w-[120rem] flex-col gap-3 p-3"
+      className="mx-auto flex min-h-app w-full max-w-[120rem] flex-col gap-3 p-3"
       data-screen="admin"
     >
       <header className="zone-card flex items-center gap-3 px-4 py-2">

@@ -202,6 +202,24 @@
  * Section label (ADR 0022 step 4.2): "TARGET", "HIT POINTS", "LAST RESULT"... 11 px, uppercase,
  * letter-spaced, in the full ink (one step above muted, for contrast). Field labels next to a control stay sentence case and don't use it.
  */
+/*
+ * The version badge's strip (components/shell/VersionBadge): a screen is as tall as the window minus
+ * it, so the badge never covers content and the page never scrolls. `h-app` for a screen that fills
+ * the window with no bottom padding of its own (the strip is its bottom gutter), `min-h-app` for one that may grow.
+ */
+:root {
+  --app-badge-h: 0.75rem;
+}
+@utility h-app {
+  height: calc(100dvh - var(--app-badge-h));
+}
+@utility min-h-app {
+  min-height: calc(100dvh - var(--app-badge-h));
+}
+@utility h-app-badge {
+  height: var(--app-badge-h);
+}
+
 @utility section-label {
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);

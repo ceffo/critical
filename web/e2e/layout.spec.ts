@@ -3786,3 +3786,147 @@ test("end effects: stop menu, notice and journal line uncut, fr and en, 1280 to 
     }
   }
 });
+
+// The version badge (ADR 0024 step 1.4): on every screen it sits bottom right under the content, never
+// covering it, with no page scroll or cut text, at 1920x1080 and 2560x1440. The e2e API is a local
+// build, so the real answer shows the dev pill and a version with its commit; staging and production
+// are the health answers given here. Screenshots in French.
+test("version badge: bottom right on every screen, three environments, 1920 and 2560", async ({
+  page,
+  context,
+}) => {
+  test.setTimeout(90_000);
+  page.on("dialog", (d) => void d.accept());
+  const sizes = [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ];
+  const badge = page.getByTestId("version-badge");
+  const expectBadgeFree = async (where: string) => {
+    await expect(badge, where).toBeVisible();
+    await expectNoPageScroll(page);
+    await expectNoClippedText(badge, where);
+    const box = (await badge.boundingBox())!;
+    const vp = page.viewportSize()!;
+    expect(box.x + box.width, `${where}: right edge`).toBeLessThanOrEqual(
+      vp.width,
+    );
+    expect(box.y + box.height, `${where}: bottom edge`).toBeLessThanOrEqual(
+      vp.height,
+    );
+    expect(box.x, `${where}: on the right half`).toBeGreaterThan(vp.width / 2);
+    expect(box.y, `${where}: on the bottom strip`).toBeGreaterThan(
+      vp.height - 40,
+    );
+    // Nothing of the screen reaches into the badge's strip.
+    const lowest = await page.evaluate(() => {
+      let bottom = 0;
+      for (const el of document.querySelectorAll("#root *")) {
+        if (el.closest("[data-testid=version-badge]")) continue;
+        const cs = getComputedStyle(el);
+        if (cs.position === "fixed" || cs.display === "none") continue;
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0 && r.top < innerHeight)
+          bottom = Math.max(bottom, r.bottom);
+      }
+      return bottom;
+    });
+    expect(
+      lowest,
+      `${where}: content ends above the badge`,
+    ).toBeLessThanOrEqual(box.y + 1);
+  };
+
+  // The real answer of this local build: the dev pill and 0.0.0+<sha> (or the last tag).
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await expect(badge.getByTestId("version-pill")).toHaveText("dev");
+  await expect(badge.getByTestId("version-text")).toHaveText(
+    /^\d+\.\d+\.\d+\+[0-9a-f]{7}(\.dirty)?$/,
+  );
+  for (const vp of sizes) {
+    await page.setViewportSize(vp);
+    await expectBadgeFree(`dashboard dev ${vp.width}`);
+    await snap(page, `version-dashboard-dev-${vp.width}x${vp.height}`);
+  }
+
+  // The roster and the creation flow.
+  await page.setViewportSize(sizes[0]!);
+  await page.getByTestId("roster-open").click();
+  await expect(page.getByTestId("roster")).toBeVisible();
+  for (const vp of sizes) {
+    await page.setViewportSize(vp);
+    await expectBadgeFree(`roster ${vp.width}`);
+    await snap(page, `version-roster-${vp.width}x${vp.height}`);
+  }
+  await page.goto("/create");
+  await expect(page.getByTestId("creation-step")).toBeVisible();
+  for (const vp of sizes) {
+    await page.setViewportSize(vp);
+    await expectBadgeFree(`creation ${vp.width}`);
+    await snap(page, `version-creation-${vp.width}x${vp.height}`);
+  }
+
+  // The three environments, from the health answer, on the dashboard and in English.
+  for (const [env, version, pill] of [
+    ["production", "1.4.2", null],
+    ["staging", "1.4.3", "préprod"],
+  ] as const) {
+    await page.route("**/api/health", (r) =>
+      r.fulfill({
+        json: { status: "ok", commit: "abc", version, env, login: "google" },
+      }),
+    );
+    await page.goto("/");
+    await expect(page.getByTestId("version-text")).toHaveText(version);
+    if (pill) await expect(page.getByTestId("version-pill")).toHaveText(pill);
+    else await expect(page.getByTestId("version-pill")).toHaveCount(0);
+    for (const vp of sizes) {
+      await page.setViewportSize(vp);
+      await expectBadgeFree(`dashboard ${env} ${vp.width}`);
+      await snap(page, `version-dashboard-${env}-${vp.width}x${vp.height}`);
+    }
+    await page.unroute("**/api/health");
+  }
+
+  // The login page (no session), staging, in the four themes' modes.
+  await context.clearCookies();
+  await page.route("**/api/health", (r) =>
+    r.fulfill({
+      json: {
+        status: "ok",
+        commit: "abc",
+        version: "1.4.3",
+        env: "staging",
+        login: "google",
+      },
+    }),
+  );
+  for (const theme of [
+    { mode: "dark", darkTheme: "deep", lightTheme: "arcane" },
+    { mode: "dark", darkTheme: "arcane", lightTheme: "arcane" },
+    { mode: "light", darkTheme: "deep", lightTheme: "parchment" },
+    { mode: "dark", darkTheme: "plain", lightTheme: "plain" },
+  ]) {
+    await page.evaluate(
+      (s) =>
+        localStorage.setItem(
+          "critical.settings.v1",
+          JSON.stringify({ lang: "fr", ...s }),
+        ),
+      theme,
+    );
+    await page.goto("/login");
+    for (const vp of sizes) {
+      await page.setViewportSize(vp);
+      await expectBadgeFree(
+        `login ${theme.darkTheme}/${theme.lightTheme} ${vp.width}`,
+      );
+      if (vp.width === 1920)
+        await snap(
+          page,
+          `version-login-${theme.mode === "light" ? theme.lightTheme : theme.darkTheme}-${vp.width}x${vp.height}`,
+        );
+    }
+  }
+});

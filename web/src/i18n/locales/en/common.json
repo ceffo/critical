@@ -1020,7 +1020,9 @@
       "title": "Learn this spell: d100 under {{chance}}% (Intelligence)",
       "known": "In the spellbook",
       "learned": "Learned: d100 {{roll}} ≤ {{chance}}%",
-      "failed": "Failed: d100 {{roll}} > {{chance}}%, try again at level {{level}}"
+      "failed": "Failed: d100 {{roll}} > {{chance}}%, try again at level {{level}}",
+      "add": "Add",
+      "addTitle": "Write this spell in the spellbook with no roll (a DM gift, a training, a fix)"
     }
   },
   "result": {
@@ -1276,7 +1278,8 @@
       "proficiencies": "Proficiencies",
       "skill_armor": "Armour",
       "equipment_state": "Equipment",
-      "ac_override": "AC"
+      "ac_override": "AC",
+      "spell_add": "Spellbook"
     },
     "status": {
       "active": "Active",
@@ -1462,7 +1465,8 @@
     },
     "learn": {
       "learned": "Learned: {{spell}} (d100 {{roll}} ≤ {{chance}}%)",
-      "failed": "Failed: {{spell}} (d100 {{roll}} > {{chance}}%), try again at level {{level}}"
+      "failed": "Failed: {{spell}} (d100 {{roll}} > {{chance}}%), try again at level {{level}}",
+      "added": "Added to the spellbook: {{spell}} (no roll)"
     },
     "turn": {
       "text": "Turning undead ({{undead}}): {{result}}, {{roll}}",

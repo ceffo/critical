@@ -292,6 +292,16 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Learn",
     fr: "Apprentissage",
   },
+  spell_add: {
+    e: entry("spell_add", {
+      spellId: "sleep",
+      spellLevel: 1,
+      origin: "given",
+    }),
+    value: null,
+    en: "Spellbook",
+    fr: "Grimoire",
+  },
   turn_undead: {
     e: entry("turn_undead", {
       undead: "ghoul",

@@ -31,6 +31,8 @@ export type LogKind =
   | "level_up"
   /** A chance-to-learn roll (ADR 0030 step 20.2); popping it takes the spell out or lifts the block. */
   | "spell_learn"
+  /** A spell written in the spellbook with no roll (ADR 0030 step 20.6); popping it takes it out. */
+  | "spell_add"
   /** A cleric's turning undead roll (ADR 0030 step 16); it changes no state. */
   | "turn_undead"
   /** A thief's skill points spent on the sheet (ADR 0030 step 17); popping it gives them back. */

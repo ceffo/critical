@@ -1020,7 +1020,9 @@
       "title": "Apprendre ce sort : jet de d100 sous {{chance}} % (Intelligence)",
       "known": "Dans le grimoire",
       "learned": "Appris : d100 {{roll}} ≤ {{chance}} %",
-      "failed": "Échec : d100 {{roll}} > {{chance}} %, à retenter au niveau {{level}}"
+      "failed": "Échec : d100 {{roll}} > {{chance}} %, à retenter au niveau {{level}}",
+      "add": "Ajouter",
+      "addTitle": "Écrire ce sort dans le grimoire sans jet (don du MJ, entraînement, correction)"
     }
   },
   "result": {
@@ -1276,7 +1278,8 @@
       "proficiencies": "Compétences",
       "skill_armor": "Armure",
       "equipment_state": "Équipement",
-      "ac_override": "CA"
+      "ac_override": "CA",
+      "spell_add": "Grimoire"
     },
     "status": {
       "active": "Actif",
@@ -1462,7 +1465,8 @@
     },
     "learn": {
       "learned": "Appris : {{spell}} (d100 {{roll}} ≤ {{chance}} %)",
-      "failed": "Échec : {{spell}} (d100 {{roll}} > {{chance}} %), à retenter au niveau {{level}}"
+      "failed": "Échec : {{spell}} (d100 {{roll}} > {{chance}} %), à retenter au niveau {{level}}",
+      "added": "Ajouté au grimoire : {{spell}} (sans jet)"
     },
     "turn": {
       "text": "Renvoi des morts-vivants ({{undead}}) : {{result}}, {{roll}}",

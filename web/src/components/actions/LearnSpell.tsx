@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BookOpen } from "@phosphor-icons/react";
+import { BookmarkSimple, BookOpen } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { learnSpell } from "@/api/spells";
+import { addSpell, learnSpell } from "@/api/spells";
 import { useCharacterStore } from "@/stores/character";
 import { useLogStore } from "@/stores/log";
 import { useSpellStore } from "@/stores/spells";
 import { useTableStore } from "@/stores/table";
 import type { LearnResult } from "@/types/character";
+import { spellbookOffer } from "./spellbookOffer";
 
 /**
  * Learning the selected wizard spell (ADR 0030 step 20) for a class with a spellbook: the
  * server rolls the chance to learn and answers the breakdown, or refuses (the table's error
  * notice words the code). The answer stays while the roll's journal entry is the top one: an
- * undo (or any later action) clears it. Shows "in the spellbook" once it is there. The rules are the server's:
- * this only offers the button and words the answer.
+ * undo (or any later action) clears it. Shows "in the spellbook" once it is there. Add (Ajouter,
+ * step 20.6) writes the spell with no roll; the spellbook is read again by the answer's state key.
+ * The rules are the server's: this only offers the buttons and words the answer.
  */
 export function LearnSpell({
   spellId,
@@ -42,8 +44,9 @@ export function LearnSpell({
     if (rules) void fetchInfo();
   }, [rules, fetchInfo]);
 
-  if (!rules || !wizard) return null;
   const known = book.some((e) => e.id === spellId);
+  const offer = spellbookOffer(rules, wizard, known);
+  if (offer === "none" || !rules) return null;
   const shown =
     result?.res.spellId === spellId && result.entry === topId
       ? result.res
@@ -61,27 +64,47 @@ export function LearnSpell({
     );
   };
 
+  const add = async () => {
+    setResult(null);
+    await run(async () => {
+      await addSpell(spellId);
+    });
+  };
+
   return (
     <div
       className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3"
       data-testid="learn-spell"
     >
-      {known ? (
+      {offer === "known" ? (
         <span className="inline-flex items-center gap-1 text-label text-magic">
           <BookOpen aria-hidden />
           {t("lookup.learn.known")}
         </span>
       ) : (
-        <Button
-          size="sm"
-          disabled={busy}
-          onClick={() => void learn()}
-          title={t("lookup.learn.title", { chance: rules.learnChance })}
-          aria-label={t("lookup.learn.title", { chance: rules.learnChance })}
-        >
-          <BookOpen aria-hidden />
-          {t("lookup.learn.button")}
-        </Button>
+        <>
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() => void learn()}
+            title={t("lookup.learn.title", { chance: rules.learnChance })}
+            aria-label={t("lookup.learn.title", { chance: rules.learnChance })}
+          >
+            <BookOpen aria-hidden />
+            {t("lookup.learn.button")}
+          </Button>
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() => void add()}
+            title={t("lookup.learn.addTitle")}
+            aria-label={t("lookup.learn.addTitle")}
+            data-testid="add-spell"
+          >
+            <BookmarkSimple aria-hidden />
+            {t("lookup.learn.add")}
+          </Button>
+        </>
       )}
       {shown && (
         <span

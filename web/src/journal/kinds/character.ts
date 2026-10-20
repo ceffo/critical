@@ -13,7 +13,7 @@ import {
 import type { TFunction } from "i18next";
 import { formatAc, formatSigned } from "@/lib/format";
 import type { XpChangeRecord, XpEntry } from "@/types/xp";
-import type { LearnResult, LevelUpRecord } from "@/types/character";
+import type { LearnResult, LevelUpRecord, SpellAdded } from "@/types/character";
 import type { LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
 import { skillName } from "../words";
@@ -127,6 +127,22 @@ export const spellLearnKind: KindView<LearnResult> = {
       ? t("log.learn.learned", vars)
       : t("log.learn.failed", { ...vars, level: p.retryLevel });
   },
+};
+
+/** The payload of a spell_add entry (learnsvc addRecord, ADR 0030 step 20.6), or null. */
+export function decodeSpellAdd(e: LogEntry): SpellAdded | null {
+  const p = e.payload as Partial<SpellAdded> | null;
+  return p && typeof p.spellId === "string" && typeof p.origin === "string"
+    ? (p as SpellAdded)
+    : null;
+}
+
+export const spellAddKind: KindView<SpellAdded> = {
+  decode: decodeSpellAdd,
+  icon: BookOpen,
+  // A spell written in the spellbook with no roll.
+  text: (p, { t, spellName }) =>
+    t("log.learn.added", { spell: spellName(p.spellId) }),
 };
 
 /** The points per skill before and after (skillsvc, ADR 0030 step 17). */

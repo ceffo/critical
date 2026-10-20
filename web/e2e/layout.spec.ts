@@ -2822,7 +2822,7 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
 
 // The mage's Learn control (ADR 0030 step 20) in the lookup's detail: the button, then the
 // roll's answer (and "in the spellbook" once learned), uncut in French at 1280x800 and 2560x1440.
-test("mage: the lookup's Learn button and its answer uncut in French, 1280 to 2560", async ({
+test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in French, 1280 to 2560; Add writes the spell", async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -2855,6 +2855,7 @@ test("mage: the lookup's Learn button and its answer uncut in French, 1280 to 25
   // The search settles on Sleep before the click (the first row is selected meanwhile).
   await expect(detail.getByRole("heading")).toHaveText("Sommeil");
   await expect(learn.getByRole("button", { name: /^Apprendre/ })).toBeVisible();
+  await expect(learn.getByTestId("add-spell")).toHaveText("Ajouter");
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
@@ -2862,8 +2863,9 @@ test("mage: the lookup's Learn button and its answer uncut in French, 1280 to 25
     await page.setViewportSize(vp);
     await expectNoClippedText(
       learn,
-      `Learn button, fr, ${vp.width}x${vp.height}`,
+      `Learn and Add buttons, fr, ${vp.width}x${vp.height}`,
     );
+    await snap(page, `mage-learn-add-buttons-fr-${vp.width}x${vp.height}`);
   }
   await page.setViewportSize({ width: 1280, height: 800 });
   // The failure's answer, the longest one (with the server's retry level): the dice are real, so
@@ -2913,6 +2915,18 @@ test("mage: the lookup's Learn button and its answer uncut in French, 1280 to 25
     );
     await snap(page, `mage-learn-fr-${where}`);
   }
+
+  // Ajouter (ADR 0030 step 20.6): the add's state key reads the spellbook again, so the detail
+  // shows the spell in the book (the refusals and the no-die rule are Go tests, learnsvc).
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page
+    .getByRole("combobox", { name: "Rechercher des sorts..." })
+    .fill("Alarm");
+  await expect(detail.getByRole("heading")).toHaveText("Alarme");
+  await learn.getByTestId("add-spell").click();
+  await expect(learn).toContainText("Dans le grimoire");
+  await expect(learn.getByTestId("add-spell")).toHaveCount(0);
+  await snap(page, "mage-add-known-fr-1280x800");
 });
 
 // The cleric's screens (ADR 0030 steps 14 and 16) uncut in French at 1280x800 and 2560x1440: the

@@ -5,7 +5,7 @@ import type {
   PreparationInfo,
   SpellSlot,
 } from "../types/spells";
-import type { LearnResult } from "../types/character";
+import type { LearnResult, SpellAdded } from "../types/character";
 import { post, request } from "./http";
 
 export function fetchSpellSlots(): Promise<SpellSlot[]> {
@@ -79,4 +79,9 @@ export function prepareSpells(spells: string[]): Promise<SpellSlot[]> {
 /** Roll the chance to learn `spellId` on the server (ADR 0030 step 20); a refusal is an ApiError. */
 export function learnSpell(spellId: string): Promise<LearnResult> {
   return post<LearnResult>("/api/character/spellbook/learn", { spellId });
+}
+
+/** Write `spellId` in the spellbook with no roll (Ajouter, ADR 0030 step 20.6); a refusal is an ApiError. */
+export function addSpell(spellId: string): Promise<SpellAdded> {
+  return post<SpellAdded>("/api/character/spellbook/add", { spellId });
 }

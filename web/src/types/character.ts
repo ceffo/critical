@@ -199,9 +199,7 @@ export interface Character {
   alignment: string;
   age: number | null;
   sex: string;
-  /** Centimetres, null when not set (ADR 0032 step 5); shown per language by `lib/measures`. The
-   * keys `height` and `weight` stay free text for the previous release's clients (step 8) and are
-   * not read here. */
+  /** Centimetres, null when not set (ADR 0032 step 5); shown per language by `lib/measures`. */
   height_cm: number | null;
   /** Kilograms, null when not set. */
   weight_kg: number | null;

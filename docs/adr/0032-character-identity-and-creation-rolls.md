@@ -345,7 +345,7 @@ items'). Package `creationrollsvc`, handler `creationrollhdl`.
   drops them). Its data step (`mapMeasures`, `storage/postgres/measures.go`) parses the recognisable texts (cm, m, `1m80`,
   feet-inches in several spellings, kg, lb; bare height under 3 = metres, 50 to 300 = cm, anything else, such as a bare `6` or
   `5.5` that may be feet, is left unset rather than read as a wrong height; bare weight = kg) and leaves the rest unset. The
-  parser is `charactersvc.ParseHeight` / `ParseWeight`, shared with the compatibility keys below. `age` is the existing integer.
+  parser is `charactersvc.ParseHeight` / `ParseWeight`, used by that data step only (the compatibility keys it once served are gone, see Wire). `age` is the existing integer.
   Checked on a real PostgreSQL (throwaway database, texts `1m80`, `5'11"`, `180`, `6`, empty, `abc`, `150 lb`): 180, 180.3, 180,
   unset, unset, unset, and 68 kg for the weight; the old columns untouched; a second start changed nothing.
 - **Wire (additive, step 8).** `height_cm` and `weight_kg` are JSON numbers or null in the details (PATCH, create, read); a
@@ -358,10 +358,12 @@ items'). Package `creationrollsvc`, handler `creationrollhdl`.
   server work; this release's web against the release before fails with 400 `invalid JSON body` (an unknown field), the
   unavoidable direction of a mixed window (a page served by a new machine whose request reaches an old one), seconds long.
   A release before also refuses to start on a database holding migration 015, so a rollback restores the backup (ADR 0024
-  step 9.3). **Follow-up, next release:** drop the string keys `height` / `weight` from the wire, then a migration drops the
-  columns `characters.height` / `characters.weight`. Free text written by the release before *after* migration 015 ran (during
-  the window) lands in those old columns and is never parsed by the migration (it ran once); through the compatibility keys of
-  this release the text is parsed at write time, so only the old machines' writes in the window are lost to the numbers.
+  step 9.3). **Follow-up 1, done (CRI-55):** the next release removed
+  the string keys `height` / `weight` from GET, PATCH and create (a body naming one is 400 `invalid JSON body`, an unknown field; a
+  read no longer carries them), `FormatHeight` / `FormatWeight` and the text path of the writes with them. The web of this release sends
+  and reads only the number keys, so it works against that server during the overlap. **Follow-up 2, next release:**
+  a migration drops the columns `characters.height` / `characters.weight`. Free text written by the release before *after* migration 015
+  ran lands in those old columns and is never parsed.
   The sanity bounds are the item's proposal (step 5.2). `GET /api/character` `warnings` gains `height_outside_range`,
   `weight_outside_range`, `age_outside_range` with `value`, `min`, `max` (stored units), read again at every read.
 - **Roll.** `POST /api/characters/rolls/identity`, `{"raceCode", "sex", "figures": ["height","weight","age"]}`; the answer is

@@ -1,4 +1,6 @@
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import { localized } from "@/i18n/localized";
 import { markedField } from "@/lib/valueMarks";
 import { useSpellNamesStore } from "@/stores/spellNames";
@@ -21,14 +23,22 @@ export function spellNamer(lang: string, names: SpellNames): SpellNamer {
 }
 
 /**
- * A buff's name in the player's language: the catalogue's name of the spell it comes from, or its
- * stored name when it is not from a spell (hand-made, or stored before buffs kept their spell).
+ * A buff's name in the player's language: the catalogue's name of the spell it comes from, the
+ * proficiency's name when a successful check put it on (ADR 0037 step 20, the Skills tab's
+ * `skills.names` key, in `t`'s language: the current one when the caller passes none), or its
+ * stored name otherwise (hand-made, or stored before buffs kept their source).
  */
 export function buffName(
   spellName: SpellNamer,
-  buff: { name: string; spellId?: string },
+  buff: { name: string; spellId?: string; proficiencyId?: string },
+  t: TFunction = i18n.t,
 ): string {
-  return buff.spellId ? spellName(buff.spellId, buff.name) : buff.name;
+  if (buff.spellId) return spellName(buff.spellId, buff.name);
+  if (buff.proficiencyId)
+    return t(`skills.names.${buff.proficiencyId}`, {
+      defaultValue: buff.name,
+    });
+  return buff.name;
 }
 
 /** Names from what the caller holds only: the English name, else the id (tests, no catalogue). */

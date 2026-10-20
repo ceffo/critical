@@ -46,5 +46,58 @@
       "modifier": -1
     },
     "roll": true
+  },
+  "tumblingBuff": {
+    "payload": {
+      "id": "tumbling",
+      "kind": "proficiency",
+      "die": 20,
+      "roll": 12,
+      "target": 17,
+      "adjustment": 0,
+      "adjustedTarget": 17,
+      "success": true,
+      "rolledSuccess": true,
+      "ability": "dex",
+      "abilityScore": 17,
+      "modifier": 0,
+      "buff": {
+        "id": "row-1",
+        "name": "tumbling",
+        "proficiencyId": "tumbling",
+        "effects": {
+          "ac": -4
+        },
+        "rounds": 1
+      }
+    },
+    "roll": true
+  },
+  "tumblingRenewed": {
+    "payload": {
+      "id": "tumbling",
+      "kind": "proficiency",
+      "die": 20,
+      "roll": 5,
+      "target": 17,
+      "adjustment": 0,
+      "adjustedTarget": 17,
+      "success": true,
+      "rolledSuccess": true,
+      "ability": "dex",
+      "abilityScore": 17,
+      "modifier": 0,
+      "buff": {
+        "id": "row-2",
+        "name": "tumbling",
+        "proficiencyId": "tumbling",
+        "effects": {
+          "ac": -4
+        },
+        "rounds": 1
+      },
+      "renewed": true
+    },
+    "roll": true
   }
 }

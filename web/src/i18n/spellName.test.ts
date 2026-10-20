@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import i18n from "@/i18n";
 import {
   buffName,
   englishSpellName,
@@ -105,6 +106,17 @@ describe("spellId", () => {
 
 describe("buffName", () => {
   const fr = spellNamer("fr", names);
+  it("names a buff a proficiency check put on from the proficiency (ADR 0037 step 20)", () => {
+    const tFr = i18n.getFixedT("fr");
+    expect(
+      buffName(fr, { name: "tumbling", proficiencyId: "tumbling" }, tFr),
+    ).toBe("Acrobatie");
+    expect(
+      buffName(fr, { name: "gone", proficiencyId: "gone" }, tFr),
+      "an id with no name keeps the stored one",
+    ).toBe("gone");
+  });
+
   it("names a buff from a spell from the catalogue", () => {
     expect(
       buffName(fr, { name: "Magic Missile", spellId: "magic_missile" }),

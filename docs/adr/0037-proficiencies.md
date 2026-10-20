@@ -193,7 +193,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
    rows) and judged by `Character.NonproficientPenalty(weaponType)`; combatsvc adds the modifier
    `nonproficient` (detail the weapon type, which the web names) in the code the attack and the
    preview share. Any stored pick of the type counts, a kept pick the class may not make
-   (`allowed: false`, step 7) included: the step asks for a pick, and wielding is never refused.
+   (`allowed: false`, step 7) included (supervisor ruling, 2026-10-20, from the user's triage
+   intent: no attack changes the day the penalty lands; the step asks for a pick, and wielding
+   is never refused).
    A character without Table 34 figures (no catalogue, an unknown class) takes none. The warning
    `weapon_type_missing` is a piece warning (ADR 0033 step 20's list, every class, on a wielded
    weapon with no type), served on the piece and the attack card like the class warnings:

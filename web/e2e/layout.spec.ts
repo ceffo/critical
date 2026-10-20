@@ -3482,6 +3482,127 @@ test("scroll spell: picker and initiative term uncut, fr, 1280 to 2560", async (
   }
 });
 
+// ADR 0037 step 8: Kelsen without his long sword pick sees the rogue's -3 in the attack card's
+// THAC0, and the roll names it ("Non-proficiency (Long sword)", "Non-maîtrise (Épée longue)") on
+// the result card and in the journal entry; a homebrew weapon with no type, wielded, is tagged
+// weapon_type_missing on its row and on the attack card, never on the AC card, and takes no
+// penalty. What only a browser shows: the wording reaches both views and the tag sits where the
+// class warnings do. En and fr at 1920x1080 and 2560x1440, real scrollbars: nothing is cut.
+test("non-proficiency penalty and missing weapon type: card, journal, rows uncut, en and fr", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    apiCall(page, method, url, body);
+  await openWeapons(page);
+  await chooseWeapon(page, "Long Sword +2");
+  const thac0 = attackForm(page).getByTestId("tile-thac0");
+  const proficient = Number(await thac0.textContent());
+
+  expect(
+    await call("PUT", "/api/proficiencies", {
+      weapon: ["short_bow", "dagger", "dart", "sling", "other_melee"].map(
+        (type) => ({ type, slots: 1 }),
+      ),
+    }),
+  ).toBe(true);
+  expect(
+    await call("POST", "/api/items", {
+      name: { en: "Homebrew cudgel", fr: "Gourdin maison" },
+      category: "weapon",
+      damageSm: "1d6",
+      damageL: "1d3",
+      damageTypes: ["b"],
+      weaponKind: "melee",
+      behaviour: "stock",
+      count: 1,
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await openWeapons(page);
+  await expect(thac0).toHaveText(String(proficient + 3));
+  await attackForm(page).getByLabel("Target AC").fill("5");
+  await attackForm(page)
+    .getByRole("button", { name: "Attack", exact: true })
+    .click();
+  const card = page.getByTestId("attack-result");
+  await expect(card).toContainText("Long Sword +2 vs AC 5");
+  await card.getByText("Calculation details").click();
+  const penalty = card
+    .getByTestId("to-hit-modifiers")
+    .getByRole("listitem")
+    .filter({ hasText: "Non-proficiency (Long sword)" });
+  await expect(penalty).toHaveText(/Non-proficiency \(Long sword\)\s*−3/);
+  // The journal's entry opens in the same Detail view: its row is the selected one.
+  await expect(
+    combatLog(page).getByRole("button", {
+      name: /Attack Long Sword \+2 vs AC 5/,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
+
+  // The typeless homebrew weapon: wielded, tagged, no penalty in its preview.
+  await chooseWeapon(page, "Homebrew cudgel");
+  const missing =
+    '[data-testid="class-warning"][data-code="weapon_type_missing"]';
+  await expect(attackForm(page).locator(missing)).toHaveText(
+    "No weapon type: weapon proficiency not checked",
+  );
+  const form = (await (await page.request.get("/api/attack/form")).json()) as {
+    preview: { modifiers: { kind: string }[] };
+  };
+  expect(form.preview.modifiers.map((m) => m.kind)).not.toContain(
+    "nonproficient",
+  );
+
+  const rail = page.getByTestId("rail").getByRole("button");
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    const attack = page.getByRole("form", {
+      name: lang === "fr" ? "Attaque" : "Attack",
+    });
+    const words =
+      lang === "fr"
+        ? [
+            "Non-maîtrise (Épée longue)",
+            "Sans type d'arme : compétence martiale non vérifiée",
+          ]
+        : [
+            "Non-proficiency (Long sword)",
+            "No weapon type: weapon proficiency not checked",
+          ];
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await rail.nth(0).click();
+      await expect(card.getByTestId("to-hit-modifiers")).toContainText(
+        words[0],
+      );
+      await expect(attack.locator(missing)).toHaveText(words[1]);
+      await expectNoClippedText(card, `result card, ${where}`);
+      await expectNoClippedText(attack, `attack card, ${where}`);
+      await expectNoClippedText(combatLog(page), `journal, ${where}`);
+      await snap(page, `nonproficient-attack-${lang}-${vp.width}x${vp.height}`);
+      await rail.nth(2).click();
+      const row = page.getByTestId("item-homebrew_cudgel");
+      await expect(row.locator(missing)).toHaveText(words[1]);
+      await expect(page.getByTestId("ac-card").locator(missing)).toHaveCount(0);
+      await expectNoClippedText(
+        page.getByTestId("stage"),
+        `inventory, ${where}`,
+      );
+      await snap(
+        page,
+        `nonproficient-inventory-${lang}-${vp.width}x${vp.height}`,
+      );
+    }
+  }
+});
+
 // ADR 0033 step 20, ADR 0035 item 9: a mage in plate, with a shield and a two-handed sword, is
 // warned on the rows, the AC card, the shield (badge and popover) and the attack card; nothing is
 // refused. In French and English at every layout viewport (1920x1080 and 2560x1440 included, real

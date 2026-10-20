@@ -342,6 +342,15 @@ export const test = base.extend<
         sameSite: "Lax",
       },
     ]);
+    // Flake hunting: `E2E_LAT=400 just e2e <spec>` delays every API answer by 0 to 400 ms (random), which
+    // exposes a spec that reads state before the page has it. Off by default.
+    if (process.env.E2E_LAT) {
+      const max = Number(process.env.E2E_LAT);
+      await context.route("**/api/**", async (route) => {
+        await new Promise((r) => setTimeout(r, Math.random() * max));
+        await route.continue();
+      });
+    }
     await provide(context);
   },
 });

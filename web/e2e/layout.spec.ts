@@ -2226,7 +2226,9 @@ test.describe("roster cards", () => {
         (await call("PATCH", `/api/characters/${c.id}`, { retired: true })).ok,
       ).toBe(true);
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/");
+    // Not a goto: a request the page had in flight answers "character changed" now and reloads the
+    // page itself, which interrupts a navigation.
+    await reloadSettled(page);
     const intro = page.getByTestId("intro");
     await expect(intro).toBeVisible();
     for (const lang of ["fr", "en"] as const) {

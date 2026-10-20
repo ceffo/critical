@@ -5,7 +5,7 @@ epic on 2026-10-19; this ADR writes them down as steps). Parts marked _(proposed
 this ADR adds where the book leaves a figure open; they await the user's OK in the PR. Not
 implemented. The non-weapon steps (1, 3 to 5, 10 to 14 and 16.1, the non-weapon pool) as built
 2026-10-20; the weapon pool (steps 3, 7, 10 to 14 and 16.2 for weapon picks) as built 2026-10-20;
-step 6 (languages as picks) and step 8 as built 2026-10-20; steps 9, 15 and 16.3 not implemented. Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
+step 6 (languages as picks) and step 8 as built 2026-10-20; steps 9 and 16.3 as built 2026-10-20; step 15 not implemented. Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
 proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequences),
 [ADR 0030](0030-classes-and-races.md) (steps 12, 17 and 18 and the "Not covered" proficiency
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
@@ -235,10 +235,26 @@ writes `Test<name>` and adds the prefix here in the same PR.
    the specialization pick, derived on read; the per-weapon flag is no longer written or read
    (the item editor drops it), and every effect of step 12 (the bonuses, point-blank, Table 35's
    attacks of step 11) follows the derived value.
-   Tests: `Specialization_Step9_FighterOnlyOneTypeAtThePhbCost` (proficiencysvc: 2 and 3 slots,
-   1 or 4 refused, a mage refused, a second type refused), `Specialized_Step9_DerivedFromThePick`
-   (itemsvc: two weapons of the type both specialized, the stored flag ignored),
-   `ResolveAttack_Step9_SpecializationFromThePick` (combatsvc).
+   Tests: `TestSpecialization_Step9_FighterOnlyOneTypeAtThePhbCost` (charactersvc: 2 and 3 slots,
+   a bow at 2, a sword at 3 and 4 refused (1 is a plain pick), a mage refused, a second type
+   refused),
+   `TestSpecialized_Step9_DerivedFromThePick` (itemsvc: two weapons of the type both specialized,
+   the stored flag ignored), `TestResolveAttack_Step9_SpecializationFromThePick` (composition).
+   _(As built 2026-10-20: the specialization is the type's weapon pick with the type's
+   specialization cost in slots (`ruletablesvc.SpecializationSlots`), so it is also the type's
+   proficiency: a type not picked cannot be specialized, and no separate refusal exists for it.
+   `charactersvc.ValidPicks` refuses any other count `out_of_range`, a class that does not
+   specialize and a second specialization `not_allowed` (field `weapon.<type>`); the budget (step
+   10) counts its slots. `Character.Specialized(type)` derives the flag (the class specializes and
+   the pick is there); itemsvc sets every weapon piece's `Specialized` from it on every read (a
+   decorator of its DAL, and on the piece a creation or an edit answers), so the attack, the
+   preview, Table 35's rate and the point-blank option read it unchanged. The item DAL no longer
+   reads or writes `items.specialized`; the item API's `specialized` input is gone (a body that
+   still sends it has it ignored: a PATCH with only it changes nothing and is refused as such);
+   `specialized` stays in the piece and weapon responses, read-only. The item editor's checkbox
+   is gone; the specialization's editor comes with the weapon proficiency editor of the web. The
+   composition test runs the real item and combat services: the pick gives the +1/+2 and the
+   specialist's 3/2, and undoing the save (step 13) takes them back.)_
 
 ### The budget
 
@@ -368,7 +384,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
        logged). Another class's flag is dropped (ADR 0030 step 12 refused it on every save);
     4. nothing is refused: a character left over budget sees step 11's warning.
     Tests: `TestMigrate_Step16_ProficiencyRowsBecomePicks`, `TestMigrate_Step16_OwnedWeaponTypesBecomePicks`,
-    `Migrate_Step16_SpecializedFlagBecomesAPick` (storage/postgres), `TestKelsen_Step16_PicksAndPools` (seedcheck:
+    `TestMigrate_Step16_SpecializedFlagBecomesAPick` (storage/postgres), `TestKelsen_Step16_PicksAndPools` (seedcheck:
     Kelsen's picks and pools as in the Consequences).
     _(As built for 16.1, 2026-10-20: the data step after migration 025 (`pickProficiencies`)
     reads the catalogue from the seeds. Unlike 16.1's "not converted", a row whose id is no
@@ -388,7 +404,15 @@ writes `Test<name>` and adds the prefix here in the same PR.
     `weapon_proficiencies`, his weapons' five types. Also
     `TestMigrate_Step16_WeaponPicksRunOnceWithTheMigration`,
     `TestKelsen_Step16_WeaponPicksAreHisWeaponTypes` (seedcheck: 5 of 5 slots, no weapon
-    warning).)_
+    warning).
+    As built for 16.3, 2026-10-20: migration 027 (a column comment on `items.specialized`, no
+    schema change) and its data step `specializeFlaggedWeapons`: for a fighter, the type of its
+    first flagged weapon in list order (`position`) becomes the specialization, the step 16.2 pick
+    raised to the type's slots or the pick added when missing; the other flagged types stay plain
+    picks (logged). A flag on a type that is no weapon type, or of a class that does not
+    specialize, is dropped (logged). A character whose picks already hold a specialization is
+    left as it is, so a rerun changes nothing. The flags stay in the column, read by nothing,
+    until a later item drops it.)_
 
 ## Consequences
 

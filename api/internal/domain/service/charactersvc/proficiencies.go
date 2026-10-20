@@ -19,7 +19,8 @@ type Pick struct {
 }
 
 // WeaponPick is one stored weapon proficiency pick (ADR 0037 step 7): a weapon type of ADR 0030
-// step 23 and the slots spent on it (1; specialization, step 9, is not built).
+// step 23 and the slots spent on it: WeaponPickSlots, or the type's specialization cost for a
+// fighter's specialization (step 9, ruletablesvc.SpecializationSlots).
 type WeaponPick struct {
 	Type  string
 	Slots int
@@ -143,6 +144,28 @@ func (c *Character) NonproficientPenalty(weaponType string) int {
 	return f.NonproficientPenalty
 }
 
+// IsSpecialization reports whether p is a specialization pick (ADR 0037 step 9): a weapon type
+// with the slots its specialization costs. A plain pick spends WeaponPickSlots.
+func (p WeaponPick) IsSpecialization() bool {
+	return p.Slots > WeaponPickSlots && slices.Contains(ruletablesvc.WeaponTypes, p.Type) &&
+		p.Slots == ruletablesvc.SpecializationSlots(p.Type)
+}
+
+// Specialized is ADR 0037 step 9 amending ADR 0030 step 12: a weapon of weaponType is
+// specialized when the character's class specializes (Derived.Specializes) and its weapon picks
+// hold that type's specialization pick. Derived on every read; no weapon stores it.
+func (c *Character) Specialized(weaponType string) bool {
+	if c == nil || weaponType == "" || !c.Derived.Specializes {
+		return false
+	}
+	for _, p := range c.Proficiencies.Weapon {
+		if p.Type == weaponType && p.IsSpecialization() {
+			return true
+		}
+	}
+	return false
+}
+
 // Proficiency pick limits and wire names.
 const (
 	// MaxPickSlots bounds the slots one pick may spend (more could never be
@@ -158,8 +181,8 @@ const (
 	FieldWeapon = "weapon"
 	// PoolWeapon names the weapon pool in the slot warnings.
 	PoolWeapon = "weapon"
-	// WeaponPickSlots is what a weapon pick spends (ADR 0037 step 7); step 9's
-	// specialization, which spends more, is not built.
+	// WeaponPickSlots is what a plain weapon pick spends (ADR 0037 step 7); a
+	// specialization spends ruletablesvc.SpecializationSlots (step 9).
 	WeaponPickSlots = 1
 	// LanguagesModernID is "Languages, Modern": a language is a pick of the
 	// language list (ADR 0037 step 6), never picked on its own.
@@ -306,14 +329,17 @@ func ValidPicks(book ProficiencyBook, class string, picks, before Picks) (Picks,
 	return out, nil
 }
 
-// validWeaponPicks is ADR 0037 step 7 on the weapon picks of a save: each a weapon type
-// (CodeUnknown) once (CodeDuplicate), spending WeaponPickSlots (CodeOutOfRange), of a type the
-// class may pick (CodeWeaponNotAllowed); a type outside the class's list that before already
+// validWeaponPicks is ADR 0037 steps 7 and 9 on the weapon picks of a save: each a weapon type
+// (CodeUnknown) once (CodeDuplicate), spending WeaponPickSlots or, as the specialization (step
+// 9), its type's ruletablesvc.SpecializationSlots (any other count CodeOutOfRange), of a type the
+// class may pick (CodeWeaponNotAllowed). A specialization is a fighter's (Specializes; another
+// class CodeNotAllowed), in one type at most (a second CodeNotAllowed); a type outside the class's list that before already
 // has is kept (step 16.2: the migration grants every owned type), never added. A type that is no
 // weapon type but that before already has is kept too, as the non-weapon pool keeps a stored id
 // the catalogue does not hold (step 16: older data is never dropped). A refusal is a
 // *domain.FieldError on field weapon.<type>. Never nil.
 func validWeaponPicks(class string, picks, before []WeaponPick) ([]WeaponPick, error) {
+	specialized := false
 	had := map[string]bool{}
 	for _, p := range before {
 		had[p.Type] = true
@@ -329,11 +355,14 @@ func validWeaponPicks(class string, picks, before []WeaponPick) ([]WeaponPick, e
 			return nil, &domain.FieldError{Field: field, Message: CodeUnknown}
 		case seen[p.Type]:
 			return nil, &domain.FieldError{Field: field, Message: CodeDuplicate}
-		case p.Slots != WeaponPickSlots:
+		case p.Slots != WeaponPickSlots && !p.IsSpecialization():
 			return nil, &domain.FieldError{Field: field, Message: CodeOutOfRange}
 		case !had[p.Type] && !ruletablesvc.WeaponTypeAllowed(class, p.Type):
 			return nil, &domain.FieldError{Field: field, Message: CodeWeaponNotAllowed}
+		case p.IsSpecialization() && (!ruletablesvc.Specializes(class) || specialized):
+			return nil, &domain.FieldError{Field: field, Message: CodeNotAllowed}
 		}
+		specialized = specialized || p.IsSpecialization()
 		seen[p.Type] = true
 		out = append(out, p)
 	}

@@ -1,6 +1,8 @@
 -- Every query is one character's: items belong to a character (character_id). The selected
 -- columns are the whole row, so sqlc maps them to the Item model. An item is any piece of
--- equipment (ADR 0033 step 1), weapons included.
+-- equipment (ADR 0033 step 1), weapons included. The specialized column is read with the row but
+-- ignored and never written: a weapon's specialization is derived from the character's weapon
+-- picks (ADR 0037 step 9); the column keeps the old flag until a later migration drops it.
 
 -- name: ListItems :many
 SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id
@@ -32,12 +34,12 @@ RETURNING name;
 INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,
                    effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, component, spell_id, state,
                    weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit,
-                   magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind,
+                   magic_damage, two_handed, fires, base_ac, skill_column, armor_row, shield_kind,
                    ac_melee, ac_missile)
 VALUES (sqlc.arg(character_id)::bigint, @id, @position, @name, @type, @behaviour, @magic_bonus, @ammo_kind, @count,
         @max_count, @effect_dice, @effect_save, @notes, @powers, @category, @magic_kind, @catalogue_code, @component, @spell_id, @state,
         @weapon_type, @weapon_kind, @size, @damage_types, @speed, @damage_sm, @damage_l, @magic_to_hit,
-        @magic_damage, @two_handed, @fires, @specialized, @base_ac, @skill_column, @armor_row, @shield_kind,
+        @magic_damage, @two_handed, @fires, @base_ac, @skill_column, @armor_row, @shield_kind,
         @ac_melee, @ac_missile);
 
 -- name: UpdateItem :one
@@ -48,7 +50,7 @@ UPDATE items SET position = @position, type = @type, behaviour = @behaviour, mag
                  weapon_type = @weapon_type, weapon_kind = @weapon_kind, size = @size,
                  damage_types = @damage_types, speed = @speed, damage_sm = @damage_sm, damage_l = @damage_l,
                  magic_to_hit = @magic_to_hit, magic_damage = @magic_damage, two_handed = @two_handed,
-                 fires = @fires, specialized = @specialized, base_ac = @base_ac, skill_column = @skill_column,
+                 fires = @fires, base_ac = @base_ac, skill_column = @skill_column,
                  armor_row = @armor_row, shield_kind = @shield_kind, ac_melee = @ac_melee, ac_missile = @ac_missile
 WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id
 RETURNING name;

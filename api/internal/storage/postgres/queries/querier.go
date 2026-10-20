@@ -111,6 +111,9 @@ type Querier interface {
 	// re-encoding (reencodeSnapshots, ADR 0018 step 9).
 	SnapshotsToReencode(ctx context.Context) ([]SnapshotsToReencodeRow, error)
 	SnapshotsWithPrefix(ctx context.Context, prefix string) ([]SnapshotsWithPrefixRow, error)
+	// The specialization data step after migration 027 (ADR 0037 step 16.3): every weapon flagged
+	// specialized that has a weapon type, per character in list order.
+	SpecializedWeaponTypes(ctx context.Context) ([]SpecializedWeaponTypesRow, error)
 	SpellCorrectionPayloads(ctx context.Context, kinds []string) ([]SpellCorrectionPayloadsRow, error)
 	SpellEntryPayloads(ctx context.Context, kinds []string) ([]SpellEntryPayloadsRow, error)
 	SpellIdentities(ctx context.Context, lang string) ([]SpellIdentitiesRow, error)

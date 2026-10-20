@@ -23,7 +23,6 @@ import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
 import { useTableStore } from "@/stores/table";
 import { useDiceStore } from "@/stores/dice";
-import { useCharacterStore } from "@/stores/character";
 import {
   deleteItem,
   dismissReview,
@@ -103,9 +102,6 @@ export function InventoryPanel() {
   const submit = useTableStore((s) => s.submit);
   const busy = useTableStore((s) => s.busy) || rolling;
   const toComposer = useDiceStore((s) => s.setFormula);
-  const specializes = useCharacterStore(
-    (s) => s.character?.derived.specializes ?? false,
-  );
   // "add", a piece id being edited, or nothing.
   const [form, setForm] = useState<"add" | string | null>(null);
   const [filter, setFilter] = useState<Category | "all">("all");
@@ -126,7 +122,6 @@ export function InventoryPanel() {
     <ItemForm
       initial={draftFromItem(i, i18n.language)}
       editing={i}
-      specializes={specializes}
       busy={busy}
       onCancel={close}
       onSave={async (body) => {
@@ -142,12 +137,7 @@ export function InventoryPanel() {
     return (
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="@container flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-          <AddPiece
-            filter={filter}
-            specializes={specializes}
-            busy={busy}
-            onClose={close}
-          />
+          <AddPiece filter={filter} busy={busy} onClose={close} />
         </div>
         <AcCard />
       </div>

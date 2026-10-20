@@ -83,7 +83,7 @@ func TestEquipState_Step6(t *testing.T) {
 func TestSetState_Step6_Refusals(t *testing.T) {
 	t.Run("not allowed", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		svc, _ := itemsvc.New(dal, deps(t).Deps)
+		svc, _ := itemsvc.New(dal, readsCharacter(t).Deps)
 		dal.EXPECT().Get(mock.Anything, int64(1), "longsword").Return(sword, nil)
 		_, err := svc.SetState(context.Background(), 1, "longsword", itemsvc.StateWorn, false)
 		var fe *domain.FieldError
@@ -93,7 +93,7 @@ func TestSetState_Step6_Refusals(t *testing.T) {
 	})
 	t.Run("slot taken", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		svc, _ := itemsvc.New(dal, deps(t).Deps)
+		svc, _ := itemsvc.New(dal, readsCharacter(t).Deps)
 		dal.EXPECT().Get(mock.Anything, int64(1), "chain_mail").Return(chain, nil)
 		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{chain, leather, sword}, nil)
 		_, err := svc.SetState(context.Background(), 1, "chain_mail", itemsvc.StateWorn, false)
@@ -109,7 +109,7 @@ func TestSetState_Step6_Refusals(t *testing.T) {
 // away; the same state again logs nothing.
 func TestSetState_Step7_LoggedMoveWithSnapshot(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
-	f := deps(t)
+	f := readsCharacter(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Get(mock.Anything, int64(1), "longsword").Return(sword, nil).Once()
 	wielded := sword
@@ -131,7 +131,7 @@ func TestSetState_Step7_LoggedMoveWithSnapshot(t *testing.T) {
 
 	// Popping it writes the "before" back: the sword is carried again.
 	restore := mocks.NewMockDAL(t)
-	rsvc, _ := itemsvc.New(restore, deps(t).Deps)
+	rsvc, _ := itemsvc.New(restore, readsCharacter(t).Deps)
 	restore.EXPECT().Update(mock.Anything, int64(1), sword).Return(nil).Once()
 	require.NoError(t, rsvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
 	// Redoing it writes the "after": wielded again.
@@ -140,7 +140,7 @@ func TestSetState_Step7_LoggedMoveWithSnapshot(t *testing.T) {
 
 	t.Run("same state again", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t) // no Update, no Record
-		svc, _ := itemsvc.New(dal, deps(t).Deps)
+		svc, _ := itemsvc.New(dal, readsCharacter(t).Deps)
 		dal.EXPECT().Get(mock.Anything, int64(1), "longsword").Return(wielded, nil)
 		res, err := svc.SetState(context.Background(), 1, "longsword", itemsvc.StateWielded, false)
 		require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestSetState_Step7_LoggedMoveWithSnapshot(t *testing.T) {
 // taken off in the payload's off list.
 func TestSetState_Step7_SwapIsOneEntry(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
-	f := deps(t)
+	f := readsCharacter(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Get(mock.Anything, int64(1), "chain_mail").Return(chain, nil)
 	dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{chain, leather, sword}, nil)
@@ -300,7 +300,7 @@ func TestReview_Step27_SettledByClassifyingEditOrDismiss(t *testing.T) {
 	}
 	t.Run("classifying edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		f := deps(t)
+		f := readsCharacter(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
 		dal.EXPECT().Get(mock.Anything, int64(1), "mace").Return(mace, nil)
 		dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Return(nil)
@@ -311,7 +311,7 @@ func TestReview_Step27_SettledByClassifyingEditOrDismiss(t *testing.T) {
 	})
 	t.Run("rename only", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t) // no DeleteReviews
-		f := deps(t)
+		f := readsCharacter(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
 		dal.EXPECT().Get(mock.Anything, int64(1), "mace").Return(mace, nil)
 		dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Return(nil)
@@ -321,14 +321,14 @@ func TestReview_Step27_SettledByClassifyingEditOrDismiss(t *testing.T) {
 	})
 	t.Run("dismiss", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		svc, _ := itemsvc.New(dal, deps(t).Deps) // no Record
+		svc, _ := itemsvc.New(dal, readsCharacter(t).Deps) // no Record
 		dal.EXPECT().Get(mock.Anything, int64(1), "mace").Return(mace, nil)
 		dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "mace").Return(nil).Once()
 		require.NoError(t, svc.DismissReview(context.Background(), 1, "mace"))
 	})
 	t.Run("listed in list order, pieces held only", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		svc, _ := itemsvc.New(dal, deps(t).Deps)
+		svc, _ := itemsvc.New(dal, readsCharacter(t).Deps)
 		dal.EXPECT().Reviews(mock.Anything, int64(1)).Return([]itemsvc.Review{
 			{ItemID: "sack", Reason: itemsvc.ReasonUncategorised},
 			{ItemID: "gone", Reason: itemsvc.ReasonUncategorised},
@@ -365,84 +365,89 @@ func character(specializes bool) *charactersvc.Character {
 	return &charactersvc.Character{ID: 1, Derived: charactersvc.Derived{Specializes: specializes}}
 }
 
-// ADR 0030 step 12: a specialized weapon is a fighter's (Derived.Specializes);
-// any other class is refused on field "specialized" with code not_allowed,
-// before anything is written. A weapon is a piece (ADR 0033 step 1).
-func TestCreate_Step12_SpecializedFightersOnly(t *testing.T) {
-	in := itemsvc.ItemInput{
-		Name: localized.Of("Long Sword"), Category: itemsvc.CategoryWeapon, Behaviour: itemsvc.BehaviourStock, Count: 1,
-		DamageSM: "1d8", DamageL: "1d12", WeaponKind: "melee", Specialized: true,
-	}
-	t.Run("fighter", func(t *testing.T) {
+// fighter is a fighter whose weapon picks are picks (ADR 0037 steps 7 and 9).
+func fighter(picks ...charactersvc.WeaponPick) *charactersvc.Character {
+	c := character(true)
+	c.Class = "fighter"
+	c.Proficiencies.Weapon = picks
+	return c
+}
+
+// ADR 0037 step 9 (amending ADR 0030 step 12): a weapon is specialized when its type has the
+// fighter's specialization pick, derived on every read: two weapons of the type are both
+// specialized, a weapon of a plain pick's type is not, whatever the stored flag said (the DAL
+// no longer reads it); a class that does not specialize gets none from a stored pick; a
+// creation and an edit answer the derived value (an edit moving the weapon to another type
+// follows it), and the edit logs no "specialized" change.
+func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
+	spec := charactersvc.WeaponPick{Type: "long_sword", Slots: 2}
+	plain := charactersvc.WeaponPick{Type: "dagger", Slots: 1}
+	second := sword
+	second.ID, second.Position = "longsword_2", 3
+	dagger := sword
+	dagger.ID, dagger.Position, dagger.WeaponType = "dagger", 4, "dagger"
+	dagger.Specialized = true // a stale value never wins
+
+	t.Run("list", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(character(true), nil)
-		dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
-		dal.EXPECT().Insert(mock.Anything, int64(1), mock.MatchedBy(func(w itemsvc.Item) bool { return w.Specialized })).Return(nil)
-		dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "long_sword").Return(nil)
-		var snap string
-		f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) {
-			snap = string(e.Snapshots[0].After)
-		}).Return(int64(3), nil)
-		res, err := svc.Create(context.Background(), 1, in)
+		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{leather, sword, second, dagger}, nil)
+		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(fighter(spec, plain), nil).Once()
+		got, err := svc.List(context.Background(), 1)
 		require.NoError(t, err)
-		assert.True(t, res.Item.Specialized)
-		assert.Contains(t, snap, `"specialized":true`)
+		assert.Equal(t, []bool{false, true, true, false}, []bool{got[0].Specialized, got[1].Specialized, got[2].Specialized, got[3].Specialized})
 	})
-	t.Run("bard", func(t *testing.T) {
-		f := deps(t)
-		svc, _ := itemsvc.New(mocks.NewMockDAL(t), f.Deps) // nothing is written
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(character(false), nil)
-		_, err := svc.Create(context.Background(), 1, in)
-		var fe *domain.FieldError
-		require.ErrorAs(t, err, &fe)
-		assert.Equal(t, "specialized", fe.Field)
-		assert.Equal(t, itemsvc.CodeNotAllowed, fe.Message)
-	})
-	t.Run("not specialized reads no character", func(t *testing.T) {
+	t.Run("a class that does not specialize", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
+		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{sword}, nil)
+		bard := fighter(spec)
+		bard.Class, bard.Derived.Specializes = "bard", false
+		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(bard, nil).Once()
+		got, err := svc.List(context.Background(), 1)
+		require.NoError(t, err)
+		assert.False(t, got[0].Specialized)
+	})
+	t.Run("no weapon reads no character", func(t *testing.T) {
+		dal := mocks.NewMockDAL(t)
+		svc, _ := itemsvc.New(dal, deps(t).Deps)
+		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{leather}, nil)
+		_, err := svc.List(context.Background(), 1)
+		require.NoError(t, err)
+	})
+	t.Run("create answers the derived value", func(t *testing.T) {
+		dal := mocks.NewMockDAL(t)
+		f := deps(t)
+		svc, _ := itemsvc.New(dal, f.Deps)
+		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(fighter(spec), nil)
 		dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 		dal.EXPECT().Insert(mock.Anything, int64(1), mock.Anything).Return(nil)
 		dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "long_sword").Return(nil)
 		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(3), nil)
-		plain := in
-		plain.Specialized = false
-		_, err := svc.Create(context.Background(), 1, plain)
+		res, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{
+			Name: localized.Of("Long Sword"), Category: itemsvc.CategoryWeapon, Behaviour: itemsvc.BehaviourStock, Count: 1,
+			DamageSM: "1d8", DamageL: "1d12", WeaponKind: "melee", WeaponType: "long_sword",
+		})
 		require.NoError(t, err)
+		assert.True(t, res.Item.Specialized)
 	})
-}
-
-// ADR 0030 step 12: turning the flag on checks the class and logs the change.
-func TestUpdate_Step12_SpecializedFlag(t *testing.T) {
-	t.Run("refused for a bard", func(t *testing.T) {
+	t.Run("an edit to another type follows it", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
 		dal.EXPECT().Get(mock.Anything, int64(1), "longsword").Return(sword, nil)
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(character(false), nil)
-		_, err := svc.Update(context.Background(), 1, "longsword", itemsvc.ItemPatch{Specialized: ptr(true)})
-		var fe *domain.FieldError
-		require.ErrorAs(t, err, &fe)
-		assert.Equal(t, "specialized", fe.Field)
-	})
-	t.Run("set for a fighter", func(t *testing.T) {
-		dal := mocks.NewMockDAL(t)
-		f := deps(t)
-		svc, _ := itemsvc.New(dal, f.Deps)
-		dal.EXPECT().Get(mock.Anything, int64(1), "longsword").Return(sword, nil)
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(character(true), nil)
-		after := sword
-		after.Specialized = true
-		dal.EXPECT().Update(mock.Anything, int64(1), after).Return(nil)
+		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(fighter(spec), nil)
+		dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Return(nil)
+		dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "longsword").Return(nil)
 		var got actionlog.NewEntry
 		f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(4), nil)
-		_, err := svc.Update(context.Background(), 1, "longsword", itemsvc.ItemPatch{Specialized: ptr(true)})
+		otherType := "short_sword"
+		res, err := svc.Update(context.Background(), 1, "longsword", itemsvc.ItemPatch{WeaponType: &otherType})
 		require.NoError(t, err)
-		assert.Contains(t, string(got.Payload), `{"field":"specialized","before":"false","after":"true"}`)
-		assert.Contains(t, string(got.Snapshots[0].After), `"specialized":true`)
+		assert.False(t, res.Item.Specialized)
+		assert.NotContains(t, string(got.Payload), `"specialized"`)
 	})
 }
 
@@ -450,7 +455,7 @@ func TestUpdate_Step12_SpecializedFlag(t *testing.T) {
 // logs item_remove with its whole snapshot; the payload keeps its name.
 func TestDelete_RemovesAndLogsWholeWeapon(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
-	f := deps(t)
+	f := readsCharacter(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Get(mock.Anything, int64(1), "longsword").Return(sword, nil)
 	dal.EXPECT().Delete(mock.Anything, int64(1), "longsword").Return(nil).Once()

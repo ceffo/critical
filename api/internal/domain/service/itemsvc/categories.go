@@ -176,8 +176,7 @@ const (
 // Field error codes of a state change (ADR 0033 step 6): the message of the
 // *domain.FieldError on "state", worded by the web.
 const (
-	// CodeNotAllowed: a state the piece's category does not allow; also a
-	// specialized weapon for a class that does not specialize.
+	// CodeNotAllowed: a state the piece's category does not allow.
 	CodeNotAllowed = "not_allowed"
 	// CodeSlotTaken: a second body armour or shield worn without the swap.
 	CodeSlotTaken = "slot_taken"

@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
@@ -129,6 +131,90 @@ func grantOwnedWeaponTypes(ctx context.Context, q storeq.Querier) error {
 		}
 		if !added {
 			continue
+		}
+		raw, err := characterdal.EncodePicks(picks)
+		if err != nil {
+			return err
+		}
+		if err := q.SetCharacterPicks(ctx, storeq.SetCharacterPicksParams{ProficiencyPicks: raw, ID: c.ID}); err != nil {
+			return fmt.Errorf("character %d picks: %w", c.ID, err)
+		}
+	}
+	return nil
+}
+
+// specializationMigration documents items.specialized as unused. Right after it the run turns
+// each fighter's specialized weapon type into its specialization pick (specializeFlaggedWeapons,
+// ADR 0037 step 16.3).
+const specializationMigration = "027_weapon_specialization_picks.sql"
+
+// specializeFlaggedWeapons is ADR 0037 step 16.3, the data step after migration 027: a fighter
+// (a class that specializes) with a weapon flagged specialized gets that weapon type's pick as
+// the specialization (step 9's slots, ruletablesvc.SpecializationSlots), the pick added when
+// missing; with several specialized types, the first in list order, the others staying plain
+// picks (logged). Another class's flag is dropped (ADR 0030 step 12 refused it on every save),
+// as is a flag on a weapon without a weapon type or of a type that is no weapon type; logged. A character whose picks already
+// hold a specialization is left as it is, so a rerun changes nothing. Nothing is refused (step
+// 16.4): an overspend shows the slots_over_budget warning. The flags stay in the column, read by
+// nothing.
+func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier) error {
+	rows, err := q.SpecializedWeaponTypes(ctx)
+	if err != nil {
+		return fmt.Errorf("list specialized weapons: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	flagged := map[int64][]string{}
+	for _, r := range rows {
+		if !slices.Contains(ruletablesvc.WeaponTypes, r.WeaponType) {
+			slog.Warn("migration 027: dropped the specialization of a type that is no weapon type",
+				"character", r.CharacterID, "type", r.WeaponType)
+			continue
+		}
+		if !slices.Contains(flagged[r.CharacterID], r.WeaponType) {
+			flagged[r.CharacterID] = append(flagged[r.CharacterID], r.WeaponType)
+		}
+	}
+	classes, err := q.CharacterClasses(ctx)
+	if err != nil {
+		return fmt.Errorf("list classes: %w", err)
+	}
+	classOf := map[int64]string{}
+	for _, c := range classes {
+		classOf[c.ID] = c.Class
+	}
+	chars, err := q.CharacterPicks(ctx)
+	if err != nil {
+		return fmt.Errorf("list picks: %w", err)
+	}
+	for _, c := range chars {
+		types := flagged[c.ID]
+		if len(types) == 0 {
+			continue
+		}
+		if !ruletablesvc.Specializes(classOf[c.ID]) {
+			slog.Warn("migration 027: dropped the specialization of a class that does not specialize",
+				"character", c.ID, "class", classOf[c.ID], "types", types)
+			continue
+		}
+		picks, err := characterdal.DecodePicks(c.ProficiencyPicks)
+		if err != nil {
+			return fmt.Errorf("character %d: %w", c.ID, err)
+		}
+		if slices.ContainsFunc(picks.Weapon, charactersvc.WeaponPick.IsSpecialization) {
+			continue
+		}
+		first := types[0]
+		if len(types) > 1 {
+			slog.Warn("migration 027: specialized in several weapon types; the first is the specialization, the others plain picks",
+				"character", c.ID, "specialization", first, "plain", types[1:])
+		}
+		slots := ruletablesvc.SpecializationSlots(first)
+		if i := slices.IndexFunc(picks.Weapon, func(p charactersvc.WeaponPick) bool { return p.Type == first }); i >= 0 {
+			picks.Weapon[i].Slots = slots
+		} else {
+			picks.Weapon = append(picks.Weapon, charactersvc.WeaponPick{Type: first, Slots: slots})
 		}
 		raw, err := characterdal.EncodePicks(picks)
 		if err != nil {

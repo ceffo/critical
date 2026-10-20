@@ -212,7 +212,6 @@ type ItemBody struct {
 	MagicDamage  *int      `json:"magicDamage"`
 	TwoHanded    *bool     `json:"twoHanded"`
 	Fires        *string   `json:"fires"`
-	Specialized  *bool     `json:"specialized"`
 	BaseAC       *int      `json:"baseAc"`
 	SkillColumn  *string   `json:"skillColumn"`
 	ArmorRow     *string   `json:"armorRow"`
@@ -290,7 +289,7 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			DamageL: deref(b.DamageL), WeaponType: deref(b.WeaponType), WeaponKind: deref(b.WeaponKind),
 			Size: deref(b.Size), Speed: deref(b.Speed), MagicToHit: deref(b.MagicToHit),
 			MagicDamage: deref(b.MagicDamage), TwoHanded: deref(b.TwoHanded), Fires: deref(b.Fires),
-			Specialized: deref(b.Specialized), BaseAC: deref(b.BaseAC), SkillColumn: deref(b.SkillColumn),
+			BaseAC: deref(b.BaseAC), SkillColumn: deref(b.SkillColumn),
 			ArmorRow: deref(b.ArmorRow), ShieldKind: deref(b.ShieldKind), ACMelee: deref(b.ACMelee),
 			ACMissile: deref(b.ACMissile), Powers: powers(b.Powers),
 		})
@@ -313,7 +312,7 @@ func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			AmmoKind: b.AmmoKind, EffectDice: b.EffectDice, EffectSave: b.EffectSave, Notes: b.Notes,
 			DamageTypes: b.DamageTypes, DamageSM: b.DamageSM, DamageL: b.DamageL, WeaponType: b.WeaponType,
 			WeaponKind: b.WeaponKind, Size: b.Size, Speed: b.Speed, MagicToHit: b.MagicToHit,
-			MagicDamage: b.MagicDamage, TwoHanded: b.TwoHanded, Fires: b.Fires, Specialized: b.Specialized,
+			MagicDamage: b.MagicDamage, TwoHanded: b.TwoHanded, Fires: b.Fires,
 			BaseAC: b.BaseAC, SkillColumn: b.SkillColumn, ArmorRow: b.ArmorRow, ShieldKind: b.ShieldKind,
 			ACMelee: b.ACMelee, ACMissile: b.ACMissile,
 		}

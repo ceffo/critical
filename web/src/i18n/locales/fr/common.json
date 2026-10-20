@@ -1532,12 +1532,7 @@
       "ammoKind": "Type de munition",
       "ammoNone": "aucune (lancée)",
       "weaponType": "Type d’arme",
-      "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par tour)",
-      "specialized": "Spécialisée",
-      "specializedHint": "Spécialisation du guerrier : +1 au toucher et +2 aux dégâts en mêlée ou lancée ; une arme de tir gagne +2 au toucher à bout portant",
-      "errors": {
-        "not_allowed": "Seul un guerrier peut se spécialiser dans une arme."
-      }
+      "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par tour)"
     },
     "columns": {
       "name": "Nom",

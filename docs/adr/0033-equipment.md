@@ -143,7 +143,9 @@ name or comment); this ADR names none yet.
    character's size are not covered), the **damage types** (one or two of `b`, `p`, `s`), the **speed
    factor** (0 to 20), the damage S-M and L (`NdM`, ADR 0016 step 8; empty for a launcher, step 4),
    its magic to hit and to damage (ADR 0002 step 6, unchanged), two-handed, the **ammo kind it
-   fires** (a launcher) and the fighter's specialization flag (ADR 0030 step 12). A weapon with one
+   fires** (a launcher) and the fighter's specialization flag (ADR 0030 step 12; since
+   [ADR 0037](0037-proficiencies.md) step 9 derived from the character's specialization pick of
+   the weapon type, read-only, never stored or edited). A weapon with one
    catalogue row per grip (bastard sword) is one piece with one grip; changing the grip is an edit.
 4. **Ammunition** carries its ammo kind (`arrow`, `quarrel`, `bullet`, `needle`, `blowgun_dart`;
    the hand, light and heavy quarrels share `quarrel` and differ by their dice), its damage types, its

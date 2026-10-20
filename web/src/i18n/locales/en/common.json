@@ -1532,12 +1532,7 @@
       "ammoKind": "Ammo kind",
       "ammoNone": "none (hurled)",
       "weaponType": "Weapon type",
-      "weaponTypeHint": "The weapon type the class rules read (attacks per round)",
-      "specialized": "Specialized",
-      "specializedHint": "Fighter specialization: +1 to hit and +2 damage in melee or thrown; a launcher gains +2 to hit at point-blank range",
-      "errors": {
-        "not_allowed": "Only a fighter can specialize in a weapon."
-      }
+      "weaponTypeHint": "The weapon type the class rules read (attacks per round)"
     },
     "columns": {
       "name": "Name",

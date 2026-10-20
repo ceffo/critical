@@ -92,7 +92,9 @@ type Item struct {
 	MagicDamage int
 	TwoHanded   bool
 	Fires       string // the ammo kind a launcher fires; empty: none
-	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
+	// Specialized is the fighter's weapon specialization (ADR 0030 step 12),
+	// derived on every read from the character's specialization pick of the
+	// weapon type (ADR 0037 step 9); never stored, never edited.
 	Specialized bool
 
 	// Armour (step 5): base AC, Table 29 column, Table 52 row.

@@ -1409,6 +1409,41 @@ func (q *Queries) SnapshotsWithPrefix(ctx context.Context, prefix string) ([]Sna
 	return items, nil
 }
 
+const specializedWeaponTypes = `-- name: SpecializedWeaponTypes :many
+SELECT character_id, weapon_type FROM items
+WHERE category = 'weapon' AND specialized = 1 AND weapon_type <> '' ORDER BY character_id, position, id
+`
+
+type SpecializedWeaponTypesRow struct {
+	CharacterID int64
+	WeaponType  string
+}
+
+// The specialization data step after migration 027 (ADR 0037 step 16.3): every weapon flagged
+// specialized that has a weapon type, per character in list order.
+func (q *Queries) SpecializedWeaponTypes(ctx context.Context) ([]SpecializedWeaponTypesRow, error) {
+	rows, err := q.db.QueryContext(ctx, specializedWeaponTypes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SpecializedWeaponTypesRow{}
+	for rows.Next() {
+		var i SpecializedWeaponTypesRow
+		if err := rows.Scan(&i.CharacterID, &i.WeaponType); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const spellCorrectionPayloads = `-- name: SpellCorrectionPayloads :many
 SELECT c.id, COALESCE(c.payload, '')::text AS payload
 FROM action_corrections c JOIN action_log l ON l.id = c.action_id

@@ -232,7 +232,8 @@ An item with an **ammo kind** a launcher fires; its magic adds to the shot. [ADR
 **Weapon** (fr: arme):
 A possession that attacks: damage dice by target size, magic to hit and to damage, its **weapon
 kind** (melee or missile; fr: mêlée / tir), its **weapon type** (the 13 codes the class rules
-read, [ADR 0030](docs/adr/0030-classes-and-races.md) step 23), **specialized** for a fighter.
+read, [ADR 0030](docs/adr/0030-classes-and-races.md) step 23), **specialized** when a fighter's
+specialization pick names its type ([ADR 0037](docs/adr/0037-proficiencies.md) step 9).
 Today a list of its own; a **category** of the inventory after [ADR 0033](docs/adr/0033-equipment.md) step 2.
 
 **Equipment** (fr: équipement):

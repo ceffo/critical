@@ -48,7 +48,7 @@ func toItem(r queries.Item, name localized.Text) (itemsvc.Item, error) {
 		DamageTypes: r.DamageTypes, DamageSM: r.DamageSm, DamageL: r.DamageL,
 		WeaponType: r.WeaponType, WeaponKind: r.WeaponKind, Size: r.Size, Speed: int(r.Speed),
 		MagicToHit: int(r.MagicToHit), MagicDamage: int(r.MagicDamage), TwoHanded: r.TwoHanded == 1,
-		Fires: r.Fires, Specialized: r.Specialized == 1,
+		Fires:  r.Fires,
 		BaseAC: int(r.BaseAc), SkillColumn: r.SkillColumn, ArmorRow: r.ArmorRow,
 		ShieldKind: r.ShieldKind, ACMelee: int(r.AcMelee), ACMissile: int(r.AcMissile),
 	}, nil
@@ -182,7 +182,7 @@ func (d *DAL) Insert(ctx context.Context, characterID int64, it itemsvc.Item) er
 		State: string(it.State), WeaponType: it.WeaponType, WeaponKind: it.WeaponKind, Size: it.Size,
 		DamageTypes: types(it.DamageTypes), Speed: int64(it.Speed), DamageSm: it.DamageSM, DamageL: it.DamageL,
 		MagicToHit: int64(it.MagicToHit), MagicDamage: int64(it.MagicDamage), TwoHanded: flag(it.TwoHanded),
-		Fires: it.Fires, Specialized: flag(it.Specialized), BaseAc: int64(it.BaseAC),
+		Fires: it.Fires, BaseAc: int64(it.BaseAC),
 		SkillColumn: it.SkillColumn, ArmorRow: it.ArmorRow, ShieldKind: it.ShieldKind,
 		AcMelee: int64(it.ACMelee), AcMissile: int64(it.ACMissile),
 	})
@@ -233,7 +233,7 @@ func (d *DAL) Update(ctx context.Context, characterID int64, it itemsvc.Item) er
 		State: string(it.State), WeaponType: it.WeaponType, WeaponKind: it.WeaponKind, Size: it.Size,
 		DamageTypes: types(it.DamageTypes), Speed: int64(it.Speed), DamageSm: it.DamageSM, DamageL: it.DamageL,
 		MagicToHit: int64(it.MagicToHit), MagicDamage: int64(it.MagicDamage), TwoHanded: flag(it.TwoHanded),
-		Fires: it.Fires, Specialized: flag(it.Specialized), BaseAc: int64(it.BaseAC),
+		Fires: it.Fires, BaseAc: int64(it.BaseAC),
 		SkillColumn: it.SkillColumn, ArmorRow: it.ArmorRow, ShieldKind: it.ShieldKind,
 		AcMelee: int64(it.ACMelee), AcMissile: int64(it.ACMissile),
 	})

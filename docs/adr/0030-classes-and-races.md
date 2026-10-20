@@ -391,11 +391,12 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     weapon. A specialized sling, dart, thrown dagger or other thrown weapon gets neither. The flag
     is never saved; the form's preview carries a `pointBlank` variant so the card shows the
     option's numbers without computing them. Missile range bands beyond point-blank are out of
-    scope. `weapons.specialized` (migration 009) is refused on field `specialized`, code
-    `not_allowed`, for a class whose `derived.specializes` is false, on every save that has it
-    set.
-    Tests: `TestSpecializes_Step12_FightersOnly` (ruletablesadpt), `TestCreate_Step12_SpecializedFightersOnly`,
-    `TestUpdate_Step12_SpecializedFlag` (itemsvc since ADR 0033), `TestResolveAttack_Step12_SpecializedMeleeAnd18_50`,
+    scope. `weapons.specialized` (migration 009) was refused on field `specialized`, code
+    `not_allowed`, for a class whose `derived.specializes` is false, on every save that had it
+    set. _(Replaced 2026-10-20 by [ADR 0037](0037-proficiencies.md) step 9: the flag is no longer
+    written or read, a weapon is specialized when its type has the fighter's specialization pick,
+    and the refusal is on the pick; the item editor's tests of the flag went with it.)_
+    Tests: `TestSpecializes_Step12_FightersOnly` (ruletablesadpt), `TestResolveAttack_Step12_SpecializedMeleeAnd18_50`,
     `TestResolveAttack_Step12_LauncherPointBlank`, `TestResolveAttack_Step12_PointBlankRefused`
     (sling with and without an ammo kind, darts, long sword),
     `TestResolveAttack_Step12_SpecializedThrownGetsNoBonus` (combatsvc).

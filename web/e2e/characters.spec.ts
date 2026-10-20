@@ -313,10 +313,12 @@ test("create a bard through the creation route, switch to the first and back, re
 });
 
 // The fighter (ADR 0030 steps 9, 11 and 12), what only a browser proves: the 18/xx field appearing
-// at Strength 18, the sheet tile reading 18/50 after the reload, the weapon editor's type and
-// specialized controls, and the attack card's rate and tag on the server's numbers. The rules
-// (refusals, Table 1 at 18/xx, the bonuses, Tables 15/35/45) are Go tests (charactersvc, buffsvc,
-// combatsvc, itemsvc, ruletablesadpt).
+// at Strength 18, the sheet tile reading 18/50 after the reload, the weapon editor's type control,
+// and the piece and the attack card showing the specialization derived from the weapon pick (ADR
+// 0037 step 9: the pick is saved through the API until the weapon proficiency editor lands) with
+// the rate and tag on the server's numbers. The rules (refusals, Table 1 at 18/xx, the bonuses,
+// Tables 15/35/45, the pick's cost) are Go tests (charactersvc, buffsvc, combatsvc, itemsvc,
+// ruletablesadpt, composition specialization_test.go).
 test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   page,
 }) => {
@@ -348,13 +350,25 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   await wf.getByLabel("Damage S-M").fill("1d8");
   await wf.getByLabel("Damage Large").fill("1d12");
   await wf.getByLabel("Weapon type").selectOption("long_sword");
-  await wf.getByLabel("Specialized").check();
+  await expect(wf.getByLabel("Specialized")).toHaveCount(0);
   await wf.getByRole("button", { name: "Add", exact: true }).click();
   const sword = page.getByTestId("item-long_sword");
-  await expect(sword.getByTestId("item-stats")).toContainText("specialized");
+  await expect(sword.getByTestId("item-stats")).not.toContainText(
+    "specialized",
+  );
   // A new piece is carried (ADR 0033 step 6): equip it to hold it.
   await sword.getByRole("button", { name: "Equip Long Sword" }).click();
   await expect(sword.getByTestId("item-equipped")).toBeVisible();
+  // The long sword's specialization pick: 2 weapon slots (ADR 0037 step 9).
+  const picked = await page.request.put("/api/proficiencies", {
+    data: { weapon: [{ type: "long_sword", slots: 2 }] },
+  });
+  expect(picked.ok()).toBeTruthy();
+  await page.reload();
+  await openWorkspace(page, "Inventory");
+  await expect(
+    page.getByTestId("item-long_sword").getByTestId("item-stats"),
+  ).toContainText("specialized");
 
   await openWorkspace(page, "Act");
   await openWeapons(page);

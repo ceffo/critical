@@ -49,7 +49,7 @@ func TestWeaponPick_Step7_ClassLimitsRefuseThePick(t *testing.T) {
 		{"no type", "fighter", weapons(""), weapons(), refused("weapon", "empty")},
 		{"a duplicate type", "fighter", weapons("dagger", "dagger"), weapons(), refused("weapon.dagger", "duplicate")},
 		{"no slot", "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "dagger"}}}, weapons(), refused("weapon.dagger", "out_of_range")},
-		{"two slots (no specialization yet)", "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "dagger", Slots: 2}}}, weapons(), refused("weapon.dagger", "out_of_range")},
+		{"three slots for a dagger (not its specialization's 2)", "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "dagger", Slots: 3}}}, weapons(), refused("weapon.dagger", "out_of_range")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := charactersvc.ValidPicks(book, tc.class, tc.picks, tc.before)
@@ -61,6 +61,86 @@ func TestWeaponPick_Step7_ClassLimitsRefuseThePick(t *testing.T) {
 			assert.Equal(t, *tc.want, fieldErr(t, err))
 		})
 	}
+}
+
+// spec is a weapon pick of slots.
+func spec(weaponType string, slots int) charactersvc.WeaponPick {
+	return charactersvc.WeaponPick{Type: weaponType, Slots: slots}
+}
+
+// ADR 0037 step 9 (PHB p.52-53): specialization is a fighter's weapon pick of one weapon type at
+// the PHB's cost in all, 2 slots for a melee weapon or a crossbow, 3 for a bow (2 for darts,
+// slings and the other thrown and missile types, the step's proposed reading); any other count
+// is out_of_range, another class's specialization and a second one are not_allowed. The pick is
+// the proficiency: a type is specialized only through its own pick, so a type not picked cannot
+// be. Its slots count in the weapon pool's budget (step 10): a level 1 fighter's 4 slots take a
+// bow's specialization and one plain pick, not two. The weapon is specialized when the fighter's
+// picks hold its type's specialization (Character.Specialized): never for a plain pick, never
+// for a class that does not specialize.
+func TestSpecialization_Step9_FighterOnlyOneTypeAtThePhbCost(t *testing.T) {
+	book := profBook(t)
+	refused := func(field, code string) *domain.FieldError { return &domain.FieldError{Field: field, Message: code} }
+	picks := func(ps ...charactersvc.WeaponPick) charactersvc.Picks { return charactersvc.Picks{Weapon: ps} }
+	tests := []struct {
+		name  string
+		class string
+		picks charactersvc.Picks
+		want  *domain.FieldError
+	}{
+		{"a bow, 3 slots", "fighter", picks(spec("long_bow", 3), spec("dagger", 1)), nil},
+		{"a short bow, 3 slots", "fighter", picks(spec("short_bow", 3)), nil},
+		{"a bow, 2 slots", "fighter", picks(spec("long_bow", 2)), refused("weapon.long_bow", "out_of_range")},
+		{"a melee weapon, 3 slots", "fighter", picks(spec("long_sword", 3)), refused("weapon.long_sword", "out_of_range")},
+		{"4 slots", "fighter", picks(spec("long_sword", 4)), refused("weapon.long_sword", "out_of_range")},
+		{"a mage refused", "mage", picks(spec("dagger", 2)), refused("weapon.dagger", "not_allowed")},
+		{"a bard refused", "bard", picks(spec("long_sword", 2)), refused("weapon.long_sword", "not_allowed")},
+		{"a second type refused", "fighter", picks(spec("long_sword", 2), spec("dagger", 2)), refused("weapon.dagger", "not_allowed")},
+	}
+	twoSlots := []string{
+		"dagger", "short_sword", "long_sword", "other_melee", "light_crossbow", "heavy_crossbow", "hand_crossbow",
+		"dart", "sling", "other_thrown", "other_missile",
+	}
+	for _, typ := range twoSlots {
+		tests = append(tests, struct {
+			name  string
+			class string
+			picks charactersvc.Picks
+			want  *domain.FieldError
+		}{typ + ", 2 slots", "fighter", picks(spec(typ, 2)), nil})
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := charactersvc.ValidPicks(book, tc.class, tc.picks, weapons())
+			if tc.want == nil {
+				require.NoError(t, err)
+				assert.Equal(t, tc.picks.Weapon, got.Weapon)
+				return
+			}
+			assert.Equal(t, *tc.want, fieldErr(t, err))
+		})
+	}
+
+	t.Run("the budget counts its slots", func(t *testing.T) {
+		within := picks(spec("long_bow", 3), spec("dagger", 1))
+		require.NoError(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: weapons()}, charactersvc.Spending{Picks: within}))
+		over := picks(spec("long_bow", 3), spec("dagger", 1), spec("dart", 1))
+		var be *domain.BudgetError
+		require.ErrorAs(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: weapons()}, charactersvc.Spending{Picks: over}), &be)
+		assert.Equal(t, domain.BudgetError{Field: "weapon", Spent: 5, Limit: 4}, *be)
+	})
+
+	t.Run("the weapon is specialized from the pick", func(t *testing.T) {
+		c := &charactersvc.Character{
+			Class: "fighter", Derived: charactersvc.Derived{Specializes: true},
+			Proficiencies: picks(spec("long_sword", 2), spec("dagger", 1)),
+		}
+		assert.True(t, c.Specialized("long_sword"))
+		assert.False(t, c.Specialized("dagger"), "a plain pick")
+		assert.False(t, c.Specialized("short_bow"), "no pick")
+		assert.False(t, c.Specialized(""), "no type")
+		c.Derived.Specializes = false
+		assert.False(t, c.Specialized("long_sword"), "a class that does not specialize")
+	})
 }
 
 // ADR 0037 step 12: an editor of one pool leaves the other as stored. A nil pool in the edit is

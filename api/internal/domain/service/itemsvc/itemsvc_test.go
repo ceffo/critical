@@ -216,6 +216,14 @@ func deps(t *testing.T) fixture {
 	}
 }
 
+// readsCharacter is deps whose character, any number of reads, is a class that does not
+// specialize: a weapon piece read derives its Specialized from it (ADR 0037 step 9).
+func readsCharacter(t *testing.T) fixture {
+	f := deps(t)
+	f.chars.EXPECT().GetCharacter(mock.Anything, mock.Anything).Return(character(false), nil).Maybe()
+	return f
+}
+
 func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)

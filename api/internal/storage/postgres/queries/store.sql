@@ -330,3 +330,9 @@ WHERE category = 'weapon' AND weapon_type <> '' ORDER BY character_id, weapon_ty
 
 -- name: CharacterPicks :many
 SELECT id, proficiency_picks FROM characters ORDER BY id;
+
+-- The specialization data step after migration 027 (ADR 0037 step 16.3): every weapon flagged
+-- specialized that has a weapon type, per character in list order.
+-- name: SpecializedWeaponTypes :many
+SELECT character_id, weapon_type FROM items
+WHERE category = 'weapon' AND specialized = 1 AND weapon_type <> '' ORDER BY character_id, position, id;

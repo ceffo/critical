@@ -1,0 +1,14 @@
+-- Weapon specialization as a weapon pick (ADR 0037 steps 9 and 16.3).
+--
+-- A fighter's specialization is a weapon pick of characters.proficiency_picks (migration 026)
+-- spending its type's specialization cost (2 slots, 3 for a bow); a weapon is specialized when its
+-- type has that pick, derived on read. items.specialized, the per-weapon flag of ADR 0030 step 12,
+-- is no longer written or read by the application; it stays, holding the old flags, until a later
+-- migration drops it. No schema change: this file only documents the column.
+--
+-- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): the release before this one still reads and
+-- writes the flag, which this one ignores, so a flag set in the minutes both run is not turned
+-- into a pick (the player picks the specialization). Schema only (step 2.1): a data step run just
+-- after this file turns each fighter's specialized weapon type into its specialization pick
+-- (specializeFlaggedWeapons).
+COMMENT ON COLUMN items.specialized IS 'unused since the specialization is a weapon pick (ADR 0037 step 9); kept until a later migration drops it';

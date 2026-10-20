@@ -60,7 +60,6 @@ type ItemInput struct {
 	MagicDamage int
 	TwoHanded   bool
 	Fires       string
-	Specialized bool
 	// Armour.
 	BaseAC      int
 	SkillColumn string
@@ -107,7 +106,6 @@ type ItemPatch struct {
 	MagicDamage *int
 	TwoHanded   *bool
 	Fires       *string
-	Specialized *bool
 	BaseAC      *int
 	SkillColumn *string
 	ArmorRow    *string
@@ -222,9 +220,6 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 	if in.Equip && item.EquipState() == "" {
 		return nil, fieldErr("equip", CodeNotAllowed)
 	}
-	if err := s.checkSpecialized(ctx, characterID, item); err != nil {
-		return nil, err
-	}
 	if err := s.knownSpell(ctx, item); err != nil {
 		return nil, err
 	}
@@ -258,7 +253,11 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 		if err != nil {
 			return err
 		}
-		res = &ChangeResult{Item: item, LogEntryID: logID}
+		served, err := s.specialized(ctx, characterID, item)
+		if err != nil {
+			return err
+		}
+		res = &ChangeResult{Item: served, LogEntryID: logID}
 		if in.Equip {
 			moved, err := s.setState(ctx, characterID, item.ID, item.EquipState(), true)
 			if err != nil {
@@ -288,8 +287,7 @@ func (s *service) newPiece(in ItemInput) (Item, error) {
 		DamageTypes: in.DamageTypes, DamageSM: in.DamageSM, DamageL: in.DamageL,
 		WeaponType: in.WeaponType, WeaponKind: in.WeaponKind, Size: in.Size, Speed: in.Speed,
 		MagicToHit: in.MagicToHit, MagicDamage: in.MagicDamage, TwoHanded: in.TwoHanded, Fires: in.Fires,
-		Specialized: in.Specialized,
-		BaseAC:      in.BaseAC, SkillColumn: in.SkillColumn, ArmorRow: in.ArmorRow,
+		BaseAC: in.BaseAC, SkillColumn: in.SkillColumn, ArmorRow: in.ArmorRow,
 		ShieldKind: in.ShieldKind, ACMelee: in.ACMelee, ACMissile: in.ACMissile,
 	}), nil
 }
@@ -353,9 +351,6 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		if err := item.Validate(); err != nil {
 			return err
 		}
-		if err := s.checkSpecialized(ctx, characterID, item); err != nil {
-			return err
-		}
 		if item.SpellID != old.SpellID {
 			if err := s.knownSpell(ctx, item); err != nil {
 				return err
@@ -379,7 +374,11 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		if err != nil {
 			return err
 		}
-		res = &ChangeResult{Item: item, LogEntryID: logID}
+		served, err := s.specialized(ctx, characterID, item)
+		if err != nil {
+			return err
+		}
+		res = &ChangeResult{Item: served, LogEntryID: logID}
 		return nil
 	})
 	if err != nil {
@@ -462,7 +461,6 @@ func patched(old Item, p ItemPatch) Item {
 	setInt(&item.ACMelee, p.ACMelee)
 	setInt(&item.ACMissile, p.ACMissile)
 	setBool(&item.TwoHanded, p.TwoHanded)
-	setBool(&item.Specialized, p.Specialized)
 	return clean(item)
 }
 
@@ -481,23 +479,6 @@ func settles(changes []FieldChange) bool {
 		}
 	}
 	return false
-}
-
-// checkSpecialized refuses a specialized weapon (ADR 0030 step 12) for a
-// character whose class does not specialize: field "specialized", code
-// CodeNotAllowed.
-func (s *service) checkSpecialized(ctx context.Context, characterID int64, i Item) error {
-	if i.Category != CategoryWeapon || !i.Specialized {
-		return nil
-	}
-	c, err := s.chars.GetCharacter(ctx, characterID)
-	if err != nil {
-		return fmt.Errorf("get character: %w", err)
-	}
-	if !c.Derived.Specializes {
-		return fieldErr("specialized", CodeNotAllowed)
-	}
-	return nil
 }
 
 // knownSpell refuses a scroll naming a spell the catalogue does not know
@@ -588,7 +569,6 @@ func diff(a, b Item) []FieldChange {
 	add("magicDamage", num(a.MagicDamage), num(b.MagicDamage))
 	add("twoHanded", flag(a.TwoHanded), flag(b.TwoHanded))
 	add("fires", a.Fires, b.Fires)
-	add("specialized", flag(a.Specialized), flag(b.Specialized))
 	add("baseAc", num(a.BaseAC), num(b.BaseAC))
 	add("skillColumn", a.SkillColumn, b.SkillColumn)
 	add("armorRow", a.ArmorRow, b.ArmorRow)

@@ -196,6 +196,16 @@ and the non-weapon picks, with the pool's line from the checks; the preview now 
 step, so an overspend's refusal shows at the chips as it did on the identity step. The draft
 endpoint as built 2026-10-20: see below.)_
 
+## Amendment 2026-10-20: the spellbook step (decided, on implementation)
+
+[ADR 0030](0030-classes-and-races.md) step 20.7: the creation flow of a **mage** or a **bard** has
+a **spellbook step**, after the proficiencies step and before the review. The player enters the
+spells the DM gave, without learn rolls, within the limits at the starting level; a mage has Read
+Magic and Detect Magic pre-ticked, removable. It never blocks Suivant when empty. The draft
+endpoint refuses a spell by field and code and the create request stores the entries as
+`starting`. A class without a spellbook shows no such step. The step's layout (French first, ADR
+0027) and the request's shape are the implementation's.
+
 ## As built (the draft endpoint)
 
 2026-10-20, the item that built the amendment's draft endpoint (architecture review 2, S3), under

@@ -138,7 +138,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    19**: 3d6, one more or less for a racial adjustment of PHB Table 8), the max HP (1 to 999) and the
    starting XP (0 to 100,000,000). Only the classes whose entries and rules are built may be created:
    the **bard** for now (`charactersvc.CreatableClasses`; the fighter and the **mage** since,
-   a created mage's spellbook starting empty and filling by step 20); each class item adds its own with its entries
+   a created mage's spellbook starting empty and filling by step 20; _amended 2026-10-20, decided,
+   on implementation: the creation's spellbook step enters the starting spells without rolls,
+   step 20.7_); each class item adds its own with its entries
    (a fighter's exceptional strength, a thief's skill points). The **thief** is creatable since steps 17 and 19 (its skill points and armour, step 17); the
    **bard** enters its skill points and armour since step 18 (the armour required as the thief's). The **cleric** is creatable since steps 13
    to 16 (it enters nothing more). A refusal names the field and a code (`empty`, `too_long`,
@@ -600,6 +602,89 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        unlearning); removing it is a sheet correction.
     4. The spellbook of an imported character (Kelsen's) comes in without rolls. Sheet's
        Intelligence.
+    5. **Each entry stores its origin** _(decided 2026-10-20, user; on implementation)_. A spellbook
+       entry is one of `learned` (a Learn roll that succeeded: 20.2), `given` (Ajouter: 20.6),
+       `starting` (the creation's book: 20.7) or `level_grant` (the level's free spell: 20.8), the
+       last with the **realized level** that granted it. The origin is stored with the entry and
+       served with the spellbook; the origin never changes a rule of the book (a spell is the same
+       once in). Existing entries, by the migration's data step: one that a successful `spell_learn`
+       journal entry wrote is `learned`, every other one (Kelsen's imported book included) is
+       `starting`. The undo of a journal entry takes back the entry it wrote, origin and all. Which
+       column or table holds it and the wire shape are left to the implementation item (ADR 0038:
+       the domain is not the wire).
+       Test: `Spellbook_Step20_5_EveryEntryKeepsItsOrigin` (spellbook storage: the four origins
+       round-trip, `level_grant` with its level), `Migrate_Step20_5_ExistingEntriesGetTheirOrigin`
+       (a book with one `spell_learn` success and one other entry).
+    6. **Ajouter: a roll-free add** _(decided 2026-10-20, user; on implementation)_. The player
+       adds a wizard spell to a mage's or bard's spellbook without a roll, for a spell the DM gave,
+       a training, a sheet fix. No die is rolled (the dice port is not called). It is **refused**
+       with the codes of 20.1 and the Learn endpoint, before any write: `no_spellbook`,
+       `not_a_wizard_spell`, `already_in_spellbook`, `spell_level_above_class`,
+       `spell_level_above_intelligence`, `spellbook_level_full`. It is **not** refused for a spell
+       failed at this level (`spell_learn_failed_at_level` does not apply: a DM ruling overrides
+       the block, and the failure stays logged). One transaction and one undoable journal entry
+       ([ADR 0018](0018-transactions-and-undo.md)) whose undo takes the spell out again; the
+       entry's origin is `given` (20.5). A spell goes at the end of the book. The web offers
+       **Ajouter** next to **Apprendre** in the lookup's detail on a wizard spell (the label and
+       the entry's journal wording are the implementation's, in en and fr). Source: the book's
+       spellbook rules leave the DM free to give spells (DMG p. 40 to 42, "Going Up in Levels" and
+       the wizard's spells; PHB p. 82, the wizard's spellbook and Table 4); the limits of 20.1 are this
+       project's, so the book stays consistent. Where the endpoint lives (a sibling of
+       `POST /api/character/spellbook/learn` or a mode of it) is left to the implementation item.
+       Tests: `Add_Step20_6_NoDieAndTheSpellIsInTheBook`, `Add_Step20_6_RefusedLikeLearn`
+       (one row per code), `Add_Step20_6_NotRefusedForASpellFailedAtThisLevel`,
+       `Add_Step20_6_UndoTakesTheSpellOut` (learnsvc or its successor).
+    7. **The starting spellbook at creation** _(decided 2026-10-20, user; on implementation;
+       amends step 1)_. The creation flow ([ADR 0034](0034-onboarding-screens.md), its
+       amendment of 2026-10-20) has a **spellbook step** for a mage or a bard. The player
+       enters the spells the DM gave, **without learn rolls** (the DMG's 3d4 "collaboration" is
+       not played by the app, and no roll is made per starting spell: rejected by the user). Every
+       entry is checked by the limits of 20.1, read at the **starting level**: the class's highest
+       spell level _at that level_ (the highest spell level of its slot allotment, step 8), the
+       Intelligence's maximum spell level and the maximum number of spells per spell level (Table 4).
+       A character created above level 1 may enter spells of every spell level he can cast at that
+       level. A **mage** starts with Read Magic and Detect Magic **pre-ticked** (DMG p. 40, "Player
+       Choice": the DM's starting books hold them), removable; the pre-tick is data (a flag on the
+       catalogue's spell, or the options' list), never an `if spell == "read_magic"` branch
+       (house rule). The step belongs to the draft endpoint ([ADR 0032](0032-character-identity-and-creation-rolls.md)
+       and 0034's amendment): the draft refuses a spell by field and code like any input (the codes
+       of 20.1), the entries are stored on `POST /api/characters` in the same transaction as the
+       character, with the origin `starting` (20.5), and a class without a spellbook enters none
+       (refused). The step never blocks Suivant when left empty (a DM may give none). The request
+       field's name and the options' shape are left to the implementation item.
+       Tests: `Create_Step20_7_StartingSpellsWithoutADie`, `Create_Step20_7_LimitsAtTheStartingLevel`
+       (a level 1 and a level 9 mage, the Intelligence's maximum level and the per-level maximum),
+       `Create_Step20_7_RefusedForAClassWithoutASpellbook`, `Draft_Step20_7_RefusesBySpellAndCode`
+       (charactersvc / the draft), `Options_Step20_7_ReadMagicAndDetectMagicPreTickedForAMage`.
+    8. **The level-up free spell** _(decided 2026-10-20, user; on implementation)_. When a **mage's**
+       realized level opens a new spell level (the first realized level at which step 8's slots
+       for that spell level are above zero), the level **grants one free spell of that new spell
+       level**, added with no roll (DMG p. 41, "Going Up in Levels"). A bard gets none (PHB, bard:
+       he "does not automatically gain additional spells as he advances in level"). No grant when
+       the Intelligence's maximum spell level is below the new spell level (nothing is owed, and it is not deferred to a later Intelligence). It is **information only**, like
+       [ADR 0037](0037-proficiencies.md) step 15: it never blocks the level-up, the pending
+       level's grants and `toSpend` carry it (an "À dépenser" reminder) until the spell is added,
+       and it is added through the roll-free add of 20.6 (the same limits and refusals) with the
+       origin `level_grant` and the realized level that granted it (20.5). **Undoing the level-up
+       takes the grant back**: the free spell it caused is taken out of the book with it, and the
+       owed one with it. **Free spells owed** = the new spell levels opened by the levels taken in
+       the app (by the level-up roll, step 7) that the Intelligence allows, minus the
+       `level_grant` entries for those levels; a level reached by the XP alone, a created
+       character's levels and Kelsen's earlier levels owe none (the book of 20.7 and Ajouter
+       cover them). The shape of the grant in the level-up answer and of the add that claims it
+       is left to the implementation item (ADR 0038).
+       Tests: `LevelUp_Step20_8_AMageOpeningASpellLevelOwesOneFreeSpell`,
+       `LevelUp_Step20_8_ABardOwesNone`, `LevelUp_Step20_8_NoneAboveTheIntelligencesMaxLevel`,
+       `LevelUp_Step20_8_NeverBlocksTheLevelUp`, `Add_Step20_8_ClaimingStoresTheLevelGrantOrigin`,
+       `LevelUp_Step20_8_UndoTakesTheGrantBack`, `LevelUp_Step20_8_OwedIsOpenedLevelsMinusGrants`
+       (levelupsvc / learnsvc).
+    9. **Consequences and out of scope** _(decided 2026-10-20, user)_. No content migration for
+       existing characters: they fill their book with Ajouter or Apprendre, Kelsen's imported book
+       stays (20.4), only the origin of their entries is set (20.5). Taking a spell out of the
+       book stays out of scope (20.3: the undo of a mistaken add is the only way; removal is a
+       sheet correction); so are the specialist wizards' school spells (not covered, below).
+       Test: `Migrate_Step20_9_NoSpellIsAddedOrRemoved` (the migration changes no entry but its
+       origin).
 
     _(As built, 2026-10-18)_ `POST /api/character/spellbook/learn {spellId}` (learnsvc) answers the
     roll's breakdown (`spellId`, `spellLevel`, `roll`, `chance`, `learned`, `characterLevel`, the

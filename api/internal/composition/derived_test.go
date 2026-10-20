@@ -57,6 +57,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		// step 18), within the budget at any of these levels.
 		BardSkills:  kelsenBardSkills,
 		SkillBudget: []ruletablesvc.BudgetWarning{},
+		SkillPoints: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Spent: 200, Left: 30},
 		// The seed bard wears the Leather armour none entered gave (ADR 0033 step 14).
 		SkillArmor: ruletablesvc.ArmorLeather,
 	}
@@ -89,7 +90,8 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1},
 		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
 		Spellbook:  at15.Spellbook, BardSkills: kelsenBardSkills, SkillBudget: []ruletablesvc.BudgetWarning{},
-		SkillArmor: ruletablesvc.ArmorLeather,
+		SkillPoints: &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
+		SkillArmor:  ruletablesvc.ArmorLeather,
 	}, d)
 	assert.Equal(t, 17, ledgerLevel)
 	assert.Equal(t, []prepsvc.LevelLimit{

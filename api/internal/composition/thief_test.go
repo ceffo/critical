@@ -394,3 +394,81 @@ func TestBard_Step14_MetalArmourReadsTheBardsColumn(t *testing.T) {
 		}
 	}
 }
+
+// ADR 0030 step 17: the editor's preview, through the real services, gives the skills and budget
+// the same points give once stored (percentages, terms, 1st-level budget 60 with 30 in one skill),
+// and writes nothing: the stored points and the action log are as they were.
+func TestThief_Step17_PreviewEqualsTheStoredPointsAndWritesNothing(t *testing.T) {
+	ctx := context.Background()
+	cfg := fixtureConfig()
+	cfg.Dice = &attackDice{t: t, calls: map[string]int{}}
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
+		SkillPoints: map[string]int{"open_locks": 30},
+	})
+	require.NoError(t, err)
+	before, err := bs.Skills.List(ctx, id)
+	require.NoError(t, err)
+	logBefore, err := bs.Log.List(ctx, id, 50)
+	require.NoError(t, err)
+
+	draft := map[string]int{"open_locks": 40, "pick_pockets": 30}
+	preview, err := bs.Skills.PreviewPoints(ctx, id, draft)
+	require.NoError(t, err)
+
+	after, err := bs.Skills.List(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, before, after, "the preview stores nothing")
+	logAfter, err := bs.Log.List(ctx, id, 50)
+	require.NoError(t, err)
+	assert.Equal(t, logBefore, logAfter, "the preview logs nothing")
+
+	assert.Equal(t, &ruletablesvc.SkillPointsBudget{
+		Level: 1, First: 60, PerLevel: 30, Total: 60, Spent: 70, Left: -10, PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 30,
+	}, preview.Budget, "the draft's budget: 70 spent of 60")
+	assert.Equal(t, 65, preview.ThiefSkills[1].Percent, "open locks: 10 + 40 + 5 + 10")
+	assert.Equal(t, 65, preview.ThiefSkills[1].Raw)
+
+	_, err = bs.Skills.SetPoints(ctx, id, draft)
+	require.NoError(t, err)
+	stored, err := bs.Skills.List(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, stored, preview, "the preview equals the derived values of the same points")
+
+	_, err = bs.Skills.PreviewPoints(ctx, id, map[string]int{"open_locks": 96})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "skillPoints.open_locks", fe.Field)
+}
+
+// A class without skill points has no budget; its preview of no points answers and of any point
+// is refused with the field the PUT names.
+func TestSkillPoints_AClassWithoutThemHasNoBudgetAndRefusesAPreviewedPoint(t *testing.T) {
+	ctx := context.Background()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 16, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+	})
+	require.NoError(t, err)
+	got, err := bs.Skills.List(ctx, id)
+	require.NoError(t, err)
+	assert.Nil(t, got.Budget)
+	empty, err := bs.Skills.PreviewPoints(ctx, id, map[string]int{})
+	require.NoError(t, err)
+	assert.Nil(t, empty.Budget)
+	_, err = bs.Skills.PreviewPoints(ctx, id, map[string]int{"open_locks": 5})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "skillPoints", fe.Field)
+}

@@ -406,7 +406,22 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
   // warns (75 of 60 at 1st) without refusing, and the journal's Undo gives the points back.
   await page.getByTestId("thief-points-edit").click();
   await page.getByTestId("thief-points-open_locks").fill("45");
+  // The editor shows the server's preview of the typed points: 75 spent of 60, Open Locks at 70.
+  const editor = page.getByTestId("thief-points-editor");
+  await expect(editor.getByTestId("skill-points-left")).toContainText(
+    "Dépensés 75, restants -15",
+  );
+  await expect(editor.getByTestId("skill-terms-open_locks")).toContainText(
+    "= 70 %",
+  );
   await snap(page, "thief-points-editor-fr");
+  // The preview call failing (offline): the figures are marked out of date, the editor stays
+  // usable and Save still works.
+  await page.route("**/api/skills/points/preview", (r) => r.abort());
+  await editor.getByTestId("thief-points-open_locks").fill("46");
+  await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
+  await editor.getByTestId("thief-points-open_locks").fill("45");
+  await expect(editor.getByTestId("skill-preview-stale")).toBeVisible();
   await page.getByTestId("thief-points-save").click();
   await expect(page.getByTestId("thief-percent-open_locks")).toHaveText("70 %");
   await expect(page.getByTestId("skill-budget")).toBeVisible();

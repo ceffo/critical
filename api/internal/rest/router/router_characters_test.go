@@ -315,3 +315,25 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false}
 	}`, string(derived))
 }
+
+// POST /api/characters/checks names the draft's skill budget as GET /api/skills names it
+// (available, perSkillCap), the formula terms included.
+func TestCharacters_ChecksSkillBudgetWireShape(t *testing.T) {
+	h, m := newRouterWith(t, usersAuth(t, map[string]authsvc.User{
+		"new": {ID: bobID, Email: "new@example.com", Role: authsvc.RolePlayer},
+	}))
+	xp := 1250
+	m.char.EXPECT().CreationChecks(mock.Anything, charactersvc.DraftInput{
+		Class: "thief", Scores: map[string]int{}, XP: &xp, SkillPoints: map[string]int{"open_locks": 40},
+	}).Return(charactersvc.DraftChecks{
+		UnmetMinimums: []charactersvc.ClassUnmet{},
+		SkillBudget: &charactersvc.SkillBudget{
+			Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
+			PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
+		},
+	}, nil).Once()
+	rec := as(h, "new", "POST", "/api/characters/checks", `{"class":"thief","scores":{},"xp":1250,"skillPoints":{"open_locks":40}}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"unmetMinimums":[],"skillBudget":{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,
+		"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45}}`, rec.Body.String())
+}

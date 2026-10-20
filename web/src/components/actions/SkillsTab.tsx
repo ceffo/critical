@@ -5,6 +5,7 @@ import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
 import { Button } from "@/components/ui/button";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
+import { SkillBudgetSummary, SkillTerms } from "./SkillBreakdown";
 import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/journal/words";
 import { formatSigned } from "@/lib/format";
@@ -22,7 +23,7 @@ const HEADINGS: Record<SkillKind, string> = {
  * computed by the server from the entered points, ADR 0030 steps 17 and 18, with a budget warning,
  * the skill armour the server read from the body armour worn (ADR 0033 step 14: changed by wearing
  * armour in the inventory, never here) and the "Spend" editor), side by side
- * when the panel holds two 16rem columns, stacked otherwise. Each row is one button that rolls the
+ * when the panel holds two 15rem columns, stacked otherwise. Each row is one button that rolls the
  * check on the server; a proficiency shows its ability with the modifier as a pill, a bard skill its
  * percentage. The target, the verdict and the DM's adjustment are on the result card, after the
  * roll (ADR 0027 step 8.3, ADR 0014 step 6).
@@ -49,7 +50,12 @@ export function SkillsTab() {
     classKind === "thiefSkill" ? skills.thiefSkills : skills.bardSkills;
   const rows = (
     kind: SkillKind,
-    list: { id: string; value: ReactNode; unusable?: boolean }[],
+    list: {
+      id: string;
+      value: ReactNode;
+      terms?: ReactNode;
+      unusable?: boolean;
+    }[],
   ) => {
     const label = t(HEADINGS[kind]);
     const id = `skills-${kind}`;
@@ -59,7 +65,7 @@ export function SkillsTab() {
           {label}
         </h3>
         <ul aria-label={label} className="flex flex-col gap-1">
-          {list.map(({ id: skill, value, unusable }) => {
+          {list.map(({ id: skill, value, terms, unusable }) => {
             const name = skillName(t, skill);
             // ADR 0030 step 17 (PHB p.39): a thieving skill under 1% waits for points.
             const label = unusable
@@ -77,7 +83,10 @@ export function SkillsTab() {
                   data-testid={`skill-${skill}`}
                   onClick={() => void rollSkill(skill)}
                 >
-                  <span className="break-words">{name}</span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="break-words">{name}</span>
+                    {terms}
+                  </span>
                   {value}
                 </button>
               </li>
@@ -90,7 +99,7 @@ export function SkillsTab() {
 
   return (
     <div
-      className="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] items-start gap-x-6 gap-y-4"
+      className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] items-start gap-x-6 gap-y-4"
       data-testid="skills-blocks"
     >
       {rows(
@@ -115,6 +124,7 @@ export function SkillsTab() {
             classSkills.map((s) => ({
               id: s.id,
               unusable: !s.usable,
+              terms: <SkillTerms skill={s} cap={skills.budget?.perSkillCap} />,
               value: (
                 <span
                   className="text-right font-semibold whitespace-nowrap tabular-nums"
@@ -132,6 +142,9 @@ export function SkillsTab() {
                 </span>
               ),
             })),
+          )}
+          {skills.budget && !editingPoints && (
+            <SkillBudgetSummary budget={skills.budget} />
           )}
           {budget && budget.length > 0 && (
             <ul
@@ -165,6 +178,7 @@ export function SkillsTab() {
           {editingPoints ? (
             <ThiefPointsEditor
               skills={classSkills}
+              budget={skills.budget}
               onDone={() => setEditingPoints(false)}
             />
           ) : (

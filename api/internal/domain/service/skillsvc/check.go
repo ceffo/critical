@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
 // LastLookup is how many of the newest skill checks List reads to find the
@@ -257,13 +258,30 @@ func (s *service) find(ctx context.Context, characterID int64, id string) (check
 // of every skill (its adjustment and verdict in effect), read from the newest
 // LastLookup non-voided checks.
 func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) {
+	return s.skills(ctx, characterID, nil)
+}
+
+// PreviewPoints reads the skills with the character's points replaced by
+// points; only the character's derivation sees them, nothing is written.
+func (s *service) PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*Skills, error) {
+	return s.skills(ctx, characterID, &points)
+}
+
+// skills builds the tab; draft, when set, is the skill points to read in
+// place of the stored ones.
+func (s *service) skills(ctx context.Context, characterID int64, draft *map[string]int) (*Skills, error) {
 	var out *Skills
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		profs, err := s.dal.ListProficiencies(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("list proficiencies: %w", err)
 		}
-		char, err := s.chars.GetCharacter(ctx, characterID)
+		var char *charactersvc.Character
+		if draft != nil {
+			char, err = s.chars.PreviewSkillPoints(ctx, characterID, *draft)
+		} else {
+			char, err = s.chars.GetCharacter(ctx, characterID)
+		}
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
 		}
@@ -274,6 +292,7 @@ func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) 
 		out = &Skills{
 			Proficiencies: make([]Proficiency, 0, len(profs)), BardSkills: make([]BardSkill, 0, len(char.Derived.BardSkills)),
 			ThiefSkills: make([]ThiefSkill, 0, len(char.Derived.ThiefSkills)), SkillArmor: char.Derived.SkillArmor,
+			Budget: char.Derived.SkillPoints,
 		}
 		for _, t := range char.Derived.ThiefSkills {
 			out.ThiefSkills = append(out.ThiefSkills, ThiefSkill{SkillPercent: t, Last: last[t.Skill]})

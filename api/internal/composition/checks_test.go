@@ -39,7 +39,7 @@ func TestCreationChecks_OverTheWire(t *testing.T) {
 			Abilities []string `json:"abilities"`
 		} `json:"unmetMinimums"`
 		SkillBudget *struct {
-			Level, Total, Spent, Left, PerSkill int
+			Level, Available, Spent, Left, PerSkillCap int
 		} `json:"skillBudget"`
 	}
 	var got checks
@@ -53,7 +53,7 @@ func TestCreationChecks_OverTheWire(t *testing.T) {
 	assert.Empty(t, unmet["fighter"])
 	require.NotNil(t, got.SkillBudget)
 	assert.Equal(t, 1, got.SkillBudget.Level)
-	assert.Equal(t, 20, got.SkillBudget.Total)
+	assert.Equal(t, 20, got.SkillBudget.Available)
 	assert.Equal(t, 15, got.SkillBudget.Left)
 
 	var fighter checks
@@ -67,7 +67,7 @@ type checksAnswer struct {
 		Abilities []string `json:"abilities"`
 	} `json:"unmetMinimums"`
 	SkillBudget *struct {
-		Level, Total, Spent, Left, PerSkill int
+		Level, Available, Spent, Left, PerSkillCap int
 	} `json:"skillBudget"`
 }
 
@@ -107,12 +107,12 @@ func TestCreationChecks_Steps17And18_LevelTwoBudgets(t *testing.T) {
 	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks", `{"class":"thief","xp":1250}`, &thief))
 	require.NotNil(t, thief.SkillBudget)
 	assert.Equal(t, 2, thief.SkillBudget.Level)
-	assert.Equal(t, 90, thief.SkillBudget.Total)
-	assert.Equal(t, 45, thief.SkillBudget.PerSkill)
+	assert.Equal(t, 90, thief.SkillBudget.Available)
+	assert.Equal(t, 45, thief.SkillBudget.PerSkillCap)
 	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks", `{"class":"bard","xp":1250}`, &bard))
 	require.NotNil(t, bard.SkillBudget)
-	assert.Equal(t, 35, bard.SkillBudget.Total)
-	assert.Zero(t, bard.SkillBudget.PerSkill)
+	assert.Equal(t, 35, bard.SkillBudget.Available)
+	assert.Zero(t, bard.SkillBudget.PerSkillCap)
 }
 
 // A draft too raw to read is no error: a negative XP or a class nobody can create has no budget.

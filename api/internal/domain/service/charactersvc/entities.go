@@ -130,6 +130,10 @@ type Derived struct {
 	// warnings: the entered points against the class's budget at the
 	// realized level; empty when none.
 	SkillBudget []ruletablesvc.BudgetWarning
+	// SkillPoints is the same budget as figures at the realized level, with
+	// the terms of its formula: available, spent, left and the per-skill cap
+	// (steps 17 and 18); nil for a class without skill points.
+	SkillPoints *ruletablesvc.SkillPointsBudget
 	// Backstab is step 19: PHB Table 30's damage multiplier at the realized
 	// level; 0 for a class without the backstab option.
 	Backstab int

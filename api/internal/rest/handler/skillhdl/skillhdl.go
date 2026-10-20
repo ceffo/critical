@@ -43,12 +43,14 @@ type skillSvc interface {
 	RollAbility(ctx context.Context, characterID int64, ability string) (*skillsvc.AbilityCheckResult, error)
 	AdjustAbility(ctx context.Context, characterID, entryID int64, adj skillsvc.Adjustment) (*skillsvc.AbilityCheckResult, error)
 	SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error)
+	PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*skillsvc.Skills, error)
 }
 
 // RegisterRoutes wires the skill endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc skillsvc.SVC) {
 	r.Get("/api/skills", render.Handle(List(charID, svc)))
 	r.Put("/api/skills/points", render.Handle(SetPoints(charID, svc)))
+	r.Post("/api/skills/points/preview", render.Handle(PreviewPoints(charID, svc)))
 	r.Post("/api/roll/skill/{id}", render.Handle(Roll(charID, svc)))
 	r.Post("/api/roll/skill/{id}/adjust", render.Handle(Adjust(charID, svc)))
 	// {id} is the ability key on the roll, the log entry on the adjustment
@@ -96,15 +98,18 @@ type ProficiencyDTO struct {
 // check. maxPercent is that cap and maxPoints the most points one skill
 // takes (the editor's range).
 type RogueSkillDTO struct {
-	ID         string `json:"id"`
-	Base       int    `json:"base"`
-	Points     int    `json:"points"`
-	Race       int    `json:"race"`
-	Dexterity  int    `json:"dexterity"`
-	Armor      int    `json:"armor"`
-	Percent    int    `json:"percent"`
-	MaxPercent int    `json:"maxPercent"`
-	MaxPoints  int    `json:"maxPoints"`
+	ID        string `json:"id"`
+	Base      int    `json:"base"`
+	Points    int    `json:"points"`
+	Race      int    `json:"race"`
+	Dexterity int    `json:"dexterity"`
+	Armor     int    `json:"armor"`
+	Percent   int    `json:"percent"`
+	// RawPercent is the sum of the terms before the 95 cap and the 0 floor;
+	// it differs from percent when one applied.
+	RawPercent int `json:"rawPercent"`
+	MaxPercent int `json:"maxPercent"`
+	MaxPoints  int `json:"maxPoints"`
 	// Usable is false while the skill cannot be rolled (a thieving skill under 1%, PHB p.39).
 	Usable bool     `json:"usable"`
 	Last   *LastDTO `json:"last"`
@@ -119,6 +124,26 @@ type SkillsDTO struct {
 	// 0033 step 14, from the worn body armour: none, leather,
 	// padded_studded_leather, elven_chain or metal), "" for another class.
 	SkillArmor string `json:"skillArmor"`
+	// Budget is the skill point budget with the terms of its formula; null
+	// for a class without skill points.
+	Budget *BudgetDTO `json:"budget"`
+}
+
+// BudgetDTO is a thief's or a bard's skill point budget at the realized
+// level (ADR 0030 steps 17 and 18): available = first + perLevel x (level -
+// 1) points in all, spent entered, left = available - spent (negative when
+// over). perSkillCap = perSkillFirst + perSkillPerLevel x (level - 1) is the
+// most one skill holds (thief), all 0 for no such limit (bard).
+type BudgetDTO struct {
+	Level            int `json:"level"`
+	First            int `json:"first"`
+	PerLevel         int `json:"perLevel"`
+	Available        int `json:"available"`
+	Spent            int `json:"spent"`
+	Left             int `json:"left"`
+	PerSkillFirst    int `json:"perSkillFirst"`
+	PerSkillPerLevel int `json:"perSkillPerLevel"`
+	PerSkillCap      int `json:"perSkillCap"`
 }
 
 // CheckDTO is one check: target is unadjusted, adjustedTarget = target +
@@ -161,6 +186,12 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 		ThiefSkills:   make([]RogueSkillDTO, 0, len(s.ThiefSkills)),
 		SkillArmor:    s.SkillArmor,
 	}
+	if b := s.Budget; b != nil {
+		out.Budget = &BudgetDTO{
+			Level: b.Level, First: b.First, PerLevel: b.PerLevel, Available: b.Total, Spent: b.Spent, Left: b.Left,
+			PerSkillFirst: b.PerSkillFirst, PerSkillPerLevel: b.PerSkillPerLevel, PerSkillCap: b.PerSkill,
+		}
+	}
 	for _, t := range s.ThiefSkills {
 		out.ThiefSkills = append(out.ThiefSkills, rogueSkillDTO(skillsvc.KindThiefSkill, t.SkillPercent, t.Last))
 	}
@@ -179,7 +210,7 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 func rogueSkillDTO(kind skillsvc.Kind, p ruletablesvc.SkillPercent, last *skillsvc.LastCheck) RogueSkillDTO {
 	return RogueSkillDTO{
 		ID: p.Skill, Base: p.Base, Points: p.Points, Race: p.Race, Dexterity: p.Dexterity, Armor: p.Armor,
-		Percent: p.Percent, MaxPercent: ruletablesvc.MaxSkillPercent, MaxPoints: charactersvc.MaxSkillPoints,
+		Percent: p.Percent, RawPercent: p.Raw, MaxPercent: ruletablesvc.MaxSkillPercent, MaxPoints: charactersvc.MaxSkillPoints,
 		Usable: skillsvc.SkillUsable(kind, p.Percent), Last: lastDTO(last),
 	}
 }
@@ -231,6 +262,27 @@ func SetPoints(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
 			return err
 		}
 		s, err := svc.List(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, ToDTO(s))
+		return nil
+	}
+}
+
+// PreviewPoints answers the skills as they would read with the points of the
+// body, as PUT /api/skills/points would leave them, and writes nothing: the
+// editor shows the percentages and the budget of the draft while the player
+// types. Points refused are the same 400 as the PUT's.
+func PreviewPoints(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var req PointsDTO
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&req); err != nil || req.Points == nil {
+			return render.BadRequestError("invalid request body")
+		}
+		s, err := svc.PreviewPoints(r.Context(), charID(r), req.Points)
 		if err != nil {
 			return err
 		}

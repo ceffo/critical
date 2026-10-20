@@ -189,6 +189,10 @@ func TestBudget_Step6_LanguagesSpendTheNonweaponPool(t *testing.T) {
 	assert.Equal(t, "nonweapon", be.Field, "the picks grew")
 	require.ErrorAs(t, budget(charactersvc.Spending{}, spend(6)), &be, "a creation with six languages")
 	assert.Equal(t, domain.BudgetError{Field: "languages", Spent: 6, Limit: 5}, *be)
+	require.ErrorAs(t, budget(charactersvc.Spending{}, spend(4, p("tumbling", 2))), &be, "a creation whose picks fit, not with the languages")
+	assert.Equal(t, "languages", be.Field)
+	require.ErrorAs(t, budget(charactersvc.Spending{}, spend(1, p("tumbling", 6))), &be, "a creation whose picks alone overspend")
+	assert.Equal(t, "nonweapon", be.Field)
 }
 
 // ADR 0037 steps 6 and 10 at creation: Lyra (half-elf bard, level 1, Intelligence 14: 3 + 0 + 4 = 7

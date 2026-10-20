@@ -156,7 +156,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    the pool's `intelligence` term only. The budget applies on a picks save (the languages
    unchanged), on a languages edit (detailssvc asks charactersvc's `LanguagesWithinBudget`;
    refused 409 `over_budget` on field `languages`) and at creation (the creation's preview and
-   create; field `details.languages`, the form's name, when no pick changed). `POST /api/characters/checks` takes the
+   create; field `details.languages`, the form's name). The refusal names the languages when the picks alone, with the languages as before, would pass, else `nonweapon`). `POST /api/characters/checks` takes the
    draft's `race` and `languages` so the proficiency step counts them. The tests are in
    charactersvc (no proficiencysvc) with `TestBudget_Step6_LanguagesSpendTheNonweaponPool`,
    `TestCreate_Step6_LanguagesBeyondTheSlotsAreRefused`,

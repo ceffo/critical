@@ -66,8 +66,8 @@ test("identity step: forbidden alignment, a roll dropped after a race change, th
     .getByRole("radiogroup", { name: "Sexe" })
     .getByRole("radio", { name: "Femme" })
     .click();
-  // A forbidden alignment: refused at the field, Suivant blocked, the server's other warnings still
-  // come (five languages over the count).
+  // A forbidden alignment: refused at the field, Suivant blocked, the server's figures still come
+  // (five languages spend five non-weapon slots).
   await details
     .getByTestId("alignment-grid")
     .getByRole("radio", { name: "Loyal bon : interdit au barde" })
@@ -77,7 +77,9 @@ test("identity step: forbidden alignment, a roll dropped after a race change, th
   const chips = details.getByTestId("language-chips");
   for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])
     await chips.getByRole("checkbox", { name, exact: true }).click();
-  await expect(details.getByTestId("languages-warning")).toBeVisible();
+  await expect(details.getByTestId("languages-slots")).toContainText(
+    "5 emplacements",
+  );
   await expect(details.getByTestId("alignment-refusal")).toBeVisible();
 
   // A double click on Tirer sends one reply that counts; a race changed while the roll is in

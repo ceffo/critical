@@ -204,6 +204,15 @@ export function PoolSummary({ pool }: { pool: NonweaponPool }) {
       >
         {t("proficiencies.spentLeft", { spent: pool.spent, left: pool.left })}
       </p>
+      {/* ADR 0037 step 6: the languages' part of the slots spent, its own line. */}
+      {pool.languages > 0 && (
+        <p
+          className="text-body break-words text-ink-muted tabular-nums"
+          data-testid="proficiency-pool-languages"
+        >
+          {t("proficiencies.languagesLine", { count: pool.languages })}
+        </p>
+      )}
       {pool.left > 0 && (
         <Note kind="info" testId="proficiency-to-spend">
           {t("proficiencies.toSpend", { count: pool.left })}

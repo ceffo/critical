@@ -35,14 +35,8 @@ export function useShow() {
 export function useWarningText() {
   const { t } = useTranslation();
   const show = useShow();
-  return (w: CharacterWarning, int: string): string | null => {
+  return (w: CharacterWarning): string | null => {
     switch (w.code) {
-      case "languages_over_limit":
-        return t("creation.identity.languagesOver", {
-          count: w.count,
-          limit: w.limit,
-          int,
-        });
       case "height_outside_range":
       case "weight_outside_range":
       case "age_outside_range": {
@@ -63,11 +57,11 @@ export function useWarningText() {
 export function useReviewWarnings(props: StepProps): string[] {
   const { t } = useTranslation();
   const warningText = useWarningText();
-  const { preview, draft } = props;
+  const { preview } = props;
   if (!preview.data) return [];
   const out: string[] = [];
   for (const w of preview.data.warnings) {
-    const text = warningText(w, draft.scores.int);
+    const text = warningText(w);
     if (text)
       out.push(
         t("creation.review.warningOf", {

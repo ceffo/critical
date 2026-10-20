@@ -323,17 +323,23 @@ func validWeaponPicks(class string, picks, before []WeaponPick) ([]WeaponPick, e
 // available ones and above the slots that pool spent before. Any other save passes: an existing
 // overspend that shrinks or stays keeps the warning, and slots left to spend are never refused.
 // At creation before is empty (0 spent). The refusal is a *domain.BudgetError on field
-// languages when only the languages changed (a languages edit, step 6), else nonweapon or
-// weapon. No Table 34 row for the class: no budget, nil.
+// languages when the picks alone, with the languages as before, would pass (a languages edit, or
+// a creation whose languages overspend, step 6), else nonweapon or weapon. No Table 34 row for the
+// class: no budget, nil.
 func PicksWithinBudget(book ProficiencyBook, class string, level, intelligence int, before, after Spending) error {
 	b, ok := ProficiencyFigures(book, class, level, intelligence, after)
 	if !ok {
 		return nil
 	}
 	was, _ := ProficiencyFigures(book, class, level, intelligence, before)
-	if b.Nonweapon.Spent > b.Nonweapon.Available && b.Nonweapon.Spent > was.Nonweapon.Spent {
+	over := func(f ProficiencySlots) bool {
+		return f.Nonweapon.Spent > f.Nonweapon.Available && f.Nonweapon.Spent > was.Nonweapon.Spent
+	}
+	if over(b) {
+		// The languages are to blame when the picks alone, with the languages as before, pass.
 		field := FieldNonweapon
-		if sameItems(before.Picks.Nonweapon, after.Picks.Nonweapon) {
+		if picksOnly, _ := ProficiencyFigures(book, class, level, intelligence,
+			Spending{Picks: after.Picks, Languages: before.Languages}); !over(picksOnly) {
 			field = FieldLanguages
 		}
 		return &domain.BudgetError{Field: field, Spent: b.Nonweapon.Spent, Limit: b.Nonweapon.Available}

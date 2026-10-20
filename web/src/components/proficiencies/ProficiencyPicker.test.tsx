@@ -17,6 +17,7 @@ const figures = (left: number, spent: number): ProficiencySlots => ({
     available: 41,
     spent,
     left,
+    languages: 0,
   },
   picks: [
     {
@@ -99,5 +100,20 @@ describe("ProficiencyPicker", () => {
     );
     expect(html).not.toContain("à dépenser");
     expect(html).toContain("coût 5 · +2 au jet · cible DEX 23");
+  });
+
+  it("shows the languages' slots on their own line, as the server counts them (ADR 0037 step 6)", async () => {
+    const f = figures(7, 34);
+    const html = await render({
+      ...f,
+      nonWeapon: { ...f.nonWeapon, languages: 3 },
+    });
+    expect(html).toContain("Languages: 3 slots");
+    expect(await render(figures(7, 34))).not.toContain("Languages:");
+    const fr = await render(
+      { ...f, nonWeapon: { ...f.nonWeapon, languages: 1 } },
+      "fr",
+    );
+    expect(fr).toContain("Langues : 1 emplacement");
   });
 });

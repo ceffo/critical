@@ -53,10 +53,15 @@ test("character details: view, edit with a field error, save, reload", async ({
   const common = pop.getByRole("checkbox", { name: "Common", exact: true });
   await expect(common).toBeChecked();
   await expect(common).toBeDisabled();
-  for (const name of ["Elvish", "Gnomish", "Halfling", "Goblin"])
+  // ADR 0037 step 6: each language beyond Common spends a non-weapon slot; Test Bard has 8 of 10.
+  for (const name of ["Elvish", "Gnomish", "Orcish"])
     await pop.getByRole("checkbox", { name, exact: true }).check();
-  await pop.getByRole("checkbox", { name: "Orcish", exact: true }).check();
+  await pop.getByRole("button", { name: "Save" }).click();
+  await expect(pop.getByRole("alert")).toHaveText(
+    "Over budget: 11 for 10 available.",
+  );
   await snap(page, "details-languages-over-1440x900");
+  await pop.getByRole("checkbox", { name: "Orcish", exact: true }).uncheck();
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
   await expect(pop.getByText("Chestnut")).toBeVisible();
@@ -64,11 +69,9 @@ test("character details: view, edit with a field error, save, reload", async ({
   await expect(page.getByTestId("details-trigger")).toHaveText(
     "Test Bard the Bold",
   );
-  await expect(
-    pop.getByText("Common, Elvish, Gnomish, Halfling, Goblin, Orcish"),
-  ).toBeVisible();
-  await expect(pop.getByTestId("details-languages-warning")).toHaveText(
-    "5 languages beyond the native one, 4 for this Intelligence: the DM decides.",
+  await expect(pop.getByText("Common, Elvish, Gnomish")).toBeVisible();
+  await expect(pop.getByTestId("details-language-slots")).toHaveText(
+    "2 proficiency slots",
   );
 
   // Cancel drops the draft, and an emptied age is cleared (null), not kept.
@@ -93,10 +96,8 @@ test("character details: view, edit with a field error, save, reload", async ({
   await page.getByTestId("details-trigger").click();
   await expect(pop.getByText("green")).toBeVisible();
   await expect(pop.getByText("112")).toHaveCount(0);
-  await expect(
-    pop.getByText("Common, Elvish, Gnomish, Halfling, Goblin, Orcish"),
-  ).toBeVisible();
-  await expect(pop.getByTestId("details-languages-warning")).toBeVisible();
+  await expect(pop.getByText("Common, Elvish, Gnomish")).toBeVisible();
+  await expect(pop.getByTestId("details-language-slots")).toBeVisible();
 });
 
 // ADR 0032 step 5, what only a browser proves: the roll button fills the field from the server's

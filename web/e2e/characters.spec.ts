@@ -183,14 +183,14 @@ test("create a bard through the creation route, switch to the first and back, re
     .getByRole("radiogroup", { name: "Sexe" })
     .getByRole("radio", { name: "Femme" })
     .click();
-  // ADR 0032 step 4: the half-elf's own language (Commun) is locked; five more at Intelligence 14
-  // (four allowed) bring the server's warning, which never blocks.
+  // ADR 0032 step 4: the half-elf's own language (Commun) is locked; ADR 0037 step 6: five more
+  // spend five of the level 3 bard's 7 non-weapon slots (Intelligence 14), as the server counts.
   await expect(details.getByTestId("language-native")).toContainText("Commun");
   const chips = details.getByTestId("language-chips");
   for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])
     await chips.getByRole("checkbox", { name, exact: true }).click();
-  await expect(details.getByTestId("languages-warning")).toContainText(
-    "5 langues en plus de la maternelle, l'Intelligence 14 en permet 4.",
+  await expect(details.getByTestId("languages-slots")).toHaveText(
+    "5 emplacements · 5 sur 7 au total",
   );
   // ADR 0032 step 5.3: the server rolls the height for a female half-elf; the range and the dice
   // come from the options.
@@ -207,8 +207,10 @@ test("create a bard through the creation route, switch to the first and back, re
   const height = await details
     .getByRole("textbox", { name: "Taille" })
     .inputValue();
-  await details.getByRole("textbox", { name: "Âge" }).fill("23");
+  // An age outside the half-elf's range: the server's warning, which never blocks.
+  await details.getByRole("textbox", { name: "Âge" }).fill("500");
   await expect(next).toBeEnabled();
+  await expect(details.getByTestId("languages-slots")).toBeVisible();
   await snap(page, "creation-identity-fr");
   await next.click();
 

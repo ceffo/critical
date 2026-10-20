@@ -686,6 +686,29 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        Test: `Migrate_Step20_9_NoSpellIsAddedOrRemoved` (the migration changes no entry but its
        origin).
 
+    _(As built, 2026-10-20: steps 20.5, 20.6 and 20.9)_ The origin is the domain enum
+    `spellbook.Origin` (`domain/spellbook`, with the `Entry`: key, origin, grant level), stored in
+    `spellbook_entries.origin` (checked against the four values) and `grant_level` (0 but for
+    `level_grant`), added by migration 028 with the default `starting`; its data step
+    (`markLearnedSpells`) marks `learned` each `starting` entry a successful `spell_learn` entry of
+    the same character names, so a rerun, or a run after an add, changes nothing. A spell learned
+    by the release before during a rolling deploy keeps the default `starting`. The spellbook read
+    (`GET /api/spells/preparation`) serves `origin` and `grant_level` on each entry (absent on a
+    priest's sphere spell, in no book). Ajouter is `POST /api/character/spellbook/add {spellId}`
+    (learnsvc `Add`, a sibling of Learn sharing its refusals), answering `{spellId, spellLevel,
+    origin}`; `grantLevel` is not accepted yet (the level-up item adds it). It logs one
+    `spell_add` entry (payload the answer) with the same `spellbook:<spell key>` snapshot as
+    `spell_learn`, which now carries the entry's `origin` and `grantLevel`: the undo writes the
+    "before" back (the spell out, a lifted block back), a redo the "after", origin and all; a
+    known spell in a snapshot recorded before the origins restores as `learned`. The catalogue
+    import's reference scan counts `spell_add` payloads. No new refusal code. The web offers
+    **Ajouter** beside **Apprendre** (`spellbookOffer`), its journal row "Ajouté au grimoire".
+    Tests: `TestSpellbook_Step20_5_EveryEntryKeepsItsOrigin` (spellbookdal),
+    `TestMigrate_Step20_5_ExistingEntriesGetTheirOrigin`, `TestMigrate_Step20_9_NoSpellIsAddedOrRemoved`
+    (postgres), `TestAdd_Step20_6_NoDieAndTheSpellIsInTheBook`, `TestAdd_Step20_6_RefusedLikeLearn`,
+    `TestAdd_Step20_6_NotRefusedForASpellFailedAtThisLevel`, `TestAdd_Step20_6_UndoTakesTheSpellOut`
+    (learnsvc), `TestAdd_Step20_6_AddLiftsTheBlockAndItsUndoPutsItBack` (composition).
+
     _(As built, 2026-10-18)_ `POST /api/character/spellbook/learn {spellId}` (learnsvc) answers the
     roll's breakdown (`spellId`, `spellLevel`, `roll`, `chance`, `learned`, `characterLevel`, the
     realized level, and `retryLevel`, the realized level from which a failed spell may be tried

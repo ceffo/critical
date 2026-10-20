@@ -43,10 +43,19 @@ func kelsenPicks(level int) *charactersvc.ProficiencySlots {
 	pool := ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, LevelGained: level / 4, Intelligence: 4, Spent: 8}
 	pool.Available = 3 + level/4 + 4
 	pool.Left = pool.Available - 8
-	return &charactersvc.ProficiencySlots{Nonweapon: pool, Picks: []charactersvc.PickFigures{
+	// ADR 0037 step 3, weapon pool: 2 + one slot every 4 realized levels; the seed's five weapon
+	// types spend 5.
+	weapon := ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: level / 4, Available: 2 + level/4, Spent: 5}
+	weapon.Left = weapon.Available - 5
+	wpick := func(t string) charactersvc.WeaponPickFigures {
+		return charactersvc.WeaponPickFigures{Type: t, Slots: 1, Allowed: true}
+	}
+	return &charactersvc.ProficiencySlots{Nonweapon: pool, Weapon: weapon, Picks: []charactersvc.PickFigures{
 		pick("musical_instrument", "dex", -1, 16), pick("tumbling", "dex", 0, 17), pick("ventriloquism", "int", -2, 12),
 		pick("riding_land", "wis", 3, 11), pick("appraising", "int", 0, 14), pick("singing", "cha", 0, 16),
 		pick("reading_writing", "int", 1, 15), pick("local_history", "cha", 0, 16),
+	}, WeaponPicks: []charactersvc.WeaponPickFigures{
+		wpick("short_bow"), wpick("dagger"), wpick("dart"), wpick("long_sword"), wpick("other_melee"),
 	}}
 }
 
@@ -57,9 +66,9 @@ func kelsenPicks(level int) *charactersvc.ProficiencySlots {
 // (the XP ledger's level, the pending level-ups): the THAC0, saves and slots
 // stay level 15's until the level-up step takes 16 and 17, then they are
 // level 17's (Table 53: 12; Table 60, rogues 17-20; Table 32) for every
-// reader. Undoing the two rolls and the award brings them all back. The non-weapon slots follow
-// the realized level too (ADR 0037 step 3): 10 at 15, still 10 with 17 pending, 11 once 17 is
-// taken (a rogue's slot at 16).
+// reader. Undoing the two rolls and the award brings them all back. The proficiency slots follow
+// the realized level too (ADR 0037 step 3): 10 non-weapon and 5 weapon slots at 15, the same with
+// 17 pending, 11 and 6 once 17 is taken (a rogue's slots at 16).
 func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())

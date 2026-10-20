@@ -72,6 +72,10 @@ type Character struct {
 	// character when it is inserted, never reconciled afterwards (the player
 	// edits them). The catalogue check is the seedcheck's.
 	Proficiencies []SeedPick `json:"proficiencies"`
+	// WeaponProficiencies are the seed character's weapon picks (ADR 0037
+	// steps 7 and 16.2): a weapon type and its slot, the types of the seed's
+	// weapons, written and never reconciled as Proficiencies are.
+	WeaponProficiencies []SeedWeaponPick `json:"weapon_proficiencies"`
 }
 
 // SeedPick is one non-weapon pick of the character seed.
@@ -80,11 +84,23 @@ type SeedPick struct {
 	Slots int    `json:"slots"`
 }
 
+// SeedWeaponPick is one weapon pick of the character seed.
+type SeedWeaponPick struct {
+	Type  string `json:"type"`
+	Slots int    `json:"slots"`
+}
+
 // Picks are the seed's picks as the character stores them.
 func (c Character) Picks() charactersvc.Picks {
-	out := charactersvc.Picks{Nonweapon: make([]charactersvc.Pick, 0, len(c.Proficiencies))}
+	out := charactersvc.Picks{
+		Nonweapon: make([]charactersvc.Pick, 0, len(c.Proficiencies)),
+		Weapon:    make([]charactersvc.WeaponPick, 0, len(c.WeaponProficiencies)),
+	}
 	for _, p := range c.Proficiencies {
 		out.Nonweapon = append(out.Nonweapon, charactersvc.Pick(p))
+	}
+	for _, p := range c.WeaponProficiencies {
+		out.Weapon = append(out.Weapon, charactersvc.WeaponPick(p))
 	}
 	return out
 }
@@ -118,6 +134,18 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 			return Character{}, false, fmt.Errorf("character.json: proficiency %q: at least 1 slot", p.ID)
 		}
 		seen[p.ID] = true
+	}
+	types := map[string]bool{}
+	for i, p := range c.WeaponProficiencies {
+		switch {
+		case !slices.Contains(ruletablesvc.WeaponTypes, p.Type):
+			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %d: unknown weapon type %q", i, p.Type)
+		case types[p.Type]:
+			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %q twice", p.Type)
+		case p.Slots != charactersvc.WeaponPickSlots:
+			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %q: must spend %d slot", p.Type, charactersvc.WeaponPickSlots)
+		}
+		types[p.Type] = true
 	}
 	return c, c.Name != "", nil
 }

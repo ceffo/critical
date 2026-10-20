@@ -321,3 +321,12 @@ SELECT id, class FROM characters ORDER BY id;
 
 -- name: SetCharacterPicks :exec
 UPDATE characters SET proficiency_picks = sqlc.arg(proficiency_picks) WHERE id = sqlc.arg(id)::bigint;
+
+-- The weapon picks data step after migration 026 (ADR 0037 step 16.2): the distinct weapon types
+-- each character's weapons have, in any state, and every character's stored picks.
+-- name: CharacterWeaponTypes :many
+SELECT DISTINCT character_id, weapon_type FROM items
+WHERE category = 'weapon' AND weapon_type <> '' ORDER BY character_id, weapon_type;
+
+-- name: CharacterPicks :many
+SELECT id, proficiency_picks FROM characters ORDER BY id;

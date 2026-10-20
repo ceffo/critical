@@ -97,3 +97,96 @@ func TestMigrate_Step16_RunsOnceWithTheMigration(t *testing.T) {
 	assert.Equal(t, []string{"lock", "ensure table", "applied"}, run.steps, "nothing pending")
 	assert.JSONEq(t, `{"nonweapon":[{"id":"singing","slots":2}]}`, f.picks(kelsen), "never converted twice")
 }
+
+// weaponItem stores a weapon piece of weaponType ("" for none) in state on character id.
+func weaponItem(t *testing.T, f *fakeStore, id int64, item, weaponType, state string) {
+	t.Helper()
+	require.NoError(t, f.InsertItem(context.Background(), storeq.InsertItemParams{
+		CharacterID: id, ID: item, Position: int64(len(f.t.Items)), Category: "weapon", WeaponType: weaponType, State: state,
+		Behaviour: "stock", Count: 1, MaxCount: 1, Powers: "[]", DamageTypes: []string{},
+	}))
+}
+
+// grant runs the data step after migration 026 on f.
+func grant(t *testing.T, f *fakeStore) error {
+	t.Helper()
+	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	return f.InTx(context.Background(), func(ctx context.Context) error {
+		return after[weaponPicksMigration](ctx, f)
+	})
+}
+
+// ADR 0037 step 16.2: each character gets one weapon pick (1 slot) per distinct weapon type among
+// its weapons, in any state, in the weapon types' display order; a weapon without a type, one
+// whose stored type is no weapon type and a piece of another category give none; the non-weapon picks stay. Nothing is refused (step
+// 16.4): a mage gets its long sword (outside its list, step 7) and goes over its 1 weapon slot.
+func TestMigrate_Step16_OwnedWeaponTypesBecomePicks(t *testing.T) {
+	f := newFakeStore()
+	bard := picksCharacter(t, f, "bard")
+	f.t.Picks[bard] = `{"nonweapon":[{"id":"singing","slots":1}]}`
+	weaponItem(t, f, bard, "bastard_sword", "other_melee", "wielded")
+	weaponItem(t, f, bard, "mace", "other_melee", "carried")
+	weaponItem(t, f, bard, "longsword", "long_sword", "carried")
+	weaponItem(t, f, bard, "shortbow", "short_bow", "worn")
+	weaponItem(t, f, bard, "odd_stick", "", "carried")
+	weaponItem(t, f, bard, "katana", "katana", "carried") // no weapon type: never granted
+	require.NoError(t, f.InsertItem(context.Background(), storeq.InsertItemParams{
+		CharacterID: bard, ID: "arrows", Category: "ammunition", Behaviour: "stock", Count: 1, MaxCount: 1, Powers: "[]", DamageTypes: []string{},
+	}))
+	mage := picksCharacter(t, f, "mage")
+	weaponItem(t, f, mage, "dagger", "dagger", "wielded")
+	weaponItem(t, f, mage, "sword", "long_sword", "carried")
+	none := picksCharacter(t, f, "thief")
+
+	require.NoError(t, grant(t, f))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"singing","slots":1}],
+		"weapon":[{"type":"short_bow","slots":1},{"type":"long_sword","slots":1},{"type":"other_melee","slots":1}]}`, f.picks(bard))
+	assert.JSONEq(t, `{"weapon":[{"type":"dagger","slots":1},{"type":"long_sword","slots":1}]}`, f.picks(mage))
+	assert.Equal(t, "{}", f.picks(none), "no weapon, no pick")
+
+	// Idempotent: a second run adds nothing, and a stored weapon pick is kept as it is.
+	f.t.Picks[mage] = `{"weapon":[{"type":"long_sword","slots":1}]}`
+	require.NoError(t, grant(t, f))
+	assert.JSONEq(t, `{"weapon":[{"type":"long_sword","slots":1},{"type":"dagger","slots":1}]}`, f.picks(mage))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"singing","slots":1}],
+		"weapon":[{"type":"short_bow","slots":1},{"type":"long_sword","slots":1},{"type":"other_melee","slots":1}]}`, f.picks(bard))
+}
+
+// The weapon data step is part of the migration run: on the seed bard of an upgraded database
+// (his six seed weapons as items: bastard sword and mace other_melee, long sword, short bow,
+// dagger, darts) it runs once, after the non-weapon conversion, giving him five weapon picks (5
+// of his 5 slots at level 15); a second run applies nothing and leaves the player's edits.
+func TestMigrate_Step16_WeaponPicksRunOnceWithTheMigration(t *testing.T) {
+	f := newFakeStore()
+	kelsen := picksCharacter(t, f, "bard", "singing")
+	for _, w := range []struct{ id, weaponType string }{
+		{"bastard_sword", "other_melee"},
+		{"longsword", "long_sword"},
+		{"shortbow", "short_bow"},
+		{"dagger", "dagger"},
+		{"mace", "other_melee"},
+		{"darts", "dart"},
+	} {
+		weaponItem(t, f, kelsen, w.id, w.weaponType, "carried")
+	}
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	run := &fakeMigrations{store: f}
+	for _, m := range embedded {
+		if m.name != picksMigration && m.name != weaponPicksMigration {
+			run.recorded = append(run.recorded, m.name)
+		}
+	}
+	require.NoError(t, runMigrations(context.Background(), run, embedded, before, after))
+	assert.Contains(t, run.steps, "apply "+weaponPicksMigration)
+	assert.JSONEq(t, `{"nonweapon":[{"id":"singing","slots":1}],"weapon":[
+		{"type":"short_bow","slots":1},{"type":"dagger","slots":1},{"type":"dart","slots":1},
+		{"type":"long_sword","slots":1},{"type":"other_melee","slots":1}]}`, f.picks(kelsen))
+
+	f.t.Picks[kelsen] = `{"weapon":[{"type":"dagger","slots":1}]}` // the player's edit since
+	run.steps = nil
+	require.NoError(t, runMigrations(context.Background(), run, embedded, before, after))
+	assert.Equal(t, []string{"lock", "ensure table", "applied"}, run.steps, "nothing pending")
+	assert.JSONEq(t, `{"weapon":[{"type":"dagger","slots":1}]}`, f.picks(kelsen), "never granted twice")
+}

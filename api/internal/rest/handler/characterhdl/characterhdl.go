@@ -264,8 +264,9 @@ type DerivedDTO struct {
 	// Backstab is ADR 0030 step 19: PHB Table 30's damage multiplier at the
 	// realized level, 0 for a class without the backstab option.
 	Backstab int `json:"backstab"`
-	// ProficiencySlots is ADR 0037 steps 3 to 5: the non-weapon pool with its
-	// terms and each pick's figures; null without the catalogue's Table 34.
+	// ProficiencySlots is ADR 0037 steps 3 to 5 and 7: the non-weapon and the
+	// weapon pool with their terms and each pick's figures; null without the
+	// catalogue's Table 34.
 	ProficiencySlots *wire.ProficiencySlotsDTO `json:"proficiencySlots"`
 }
 

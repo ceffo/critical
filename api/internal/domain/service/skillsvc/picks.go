@@ -27,11 +27,19 @@ type pickState struct {
 	Slots int    `json:"slots"`
 }
 
+// weaponPickState is one weapon pick in a snapshot or a payload.
+type weaponPickState struct {
+	Type  string `json:"type"`
+	Slots int    `json:"slots"`
+}
+
 // picksState is the JSON encoding of a "proficiencies" snapshot, and the before and after of a
 // proficiencies entry: the picks by pool, in the player's order. Entries already in the log must
-// stay decodable: add fields (the weapon pool, the languages), never rename.
+// stay decodable: add fields (the languages), never rename. Weapon is absent from the entries
+// logged before the weapon pool (nil): restoring one of them leaves the weapon picks as stored.
 type picksState struct {
-	Nonweapon []pickState `json:"nonweapon"`
+	Nonweapon []pickState        `json:"nonweapon"`
+	Weapon    *[]weaponPickState `json:"weapon,omitempty"`
 }
 
 // picksRecord is the payload of a proficiencies entry, the picks before and after the save. The
@@ -46,13 +54,26 @@ func toState(p charactersvc.Picks) picksState {
 	for _, x := range p.Nonweapon {
 		out.Nonweapon = append(out.Nonweapon, pickState(x))
 	}
+	weapon := make([]weaponPickState, 0, len(p.Weapon))
+	for _, x := range p.Weapon {
+		weapon = append(weapon, weaponPickState(x))
+	}
+	out.Weapon = &weapon
 	return out
 }
 
+// picks are the snapshot's picks; Weapon is nil for an entry logged before the weapon pool (the
+// stored weapon picks stay).
 func (s picksState) picks() charactersvc.Picks {
 	out := charactersvc.Picks{Nonweapon: make([]charactersvc.Pick, 0, len(s.Nonweapon))}
 	for _, x := range s.Nonweapon {
 		out.Nonweapon = append(out.Nonweapon, charactersvc.Pick(x))
+	}
+	if s.Weapon != nil {
+		out.Weapon = make([]charactersvc.WeaponPick, 0, len(*s.Weapon))
+		for _, x := range *s.Weapon {
+			out.Weapon = append(out.Weapon, charactersvc.WeaponPick(x))
+		}
 	}
 	return out
 }
@@ -70,8 +91,9 @@ func (s *service) PreviewProficiencies(ctx context.Context, characterID int64, p
 	return out, err
 }
 
-// SetProficiencies is ADR 0037 steps 12 and 13: the player saves the whole list of non-weapon
-// picks, checked by charactersvc.ValidPicks against the stored ones; at the realized level a save
+// SetProficiencies is ADR 0037 steps 12 and 13: the player saves the whole list of picks of a
+// pool or of both (a nil pool is left as stored), checked by charactersvc.ValidPicks against the
+// stored ones; at the realized level a save
 // that leaves the pool over budget and spends more is refused (step 10,
 // charactersvc.PicksWithinBudget), an existing overspend that does not grow stays a warning. It
 // is one proficiencies entry of the action log with the picks' snapshot, in one transaction, so
@@ -124,9 +146,18 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, picks
 }
 
 // restorePicks writes a snapshot's picks back: undo the save's "before", redo its "after" (ADR
-// 0019), inside the undo's transaction.
+// 0019), inside the undo's transaction. A snapshot logged before the weapon pool carries no
+// weapon picks: the stored ones stay.
 func (s *service) restorePicks(ctx context.Context, characterID int64, _ string, st picksState) error {
-	if err := s.picks.SetProficiencyPicks(ctx, characterID, st.picks()); err != nil {
+	picks := st.picks()
+	if picks.Weapon == nil {
+		c, err := s.chars.GetCharacter(ctx, characterID)
+		if err != nil {
+			return err
+		}
+		picks.Weapon = c.Proficiencies.Clone().Weapon
+	}
+	if err := s.picks.SetProficiencyPicks(ctx, characterID, picks); err != nil {
 		return fmt.Errorf("restore proficiency picks: %w", err)
 	}
 	return nil

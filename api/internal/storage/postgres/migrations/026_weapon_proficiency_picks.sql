@@ -1,0 +1,14 @@
+-- Weapon proficiency picks (ADR 0037 steps 7, 12 and 16.2).
+--
+-- characters.proficiency_picks (migration 025) gains a pool: {"nonweapon": [...], "weapon":
+-- [{"type": "<weapon type>", "slots": 1}, ...]}, the weapon types of ADR 0030 step 23 in the
+-- player's order. charactersvc validates every write; no schema change is needed, so this file
+-- only documents the column.
+--
+-- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): the release before this one reads the
+-- column's non-weapon pool and ignores the weapon one; a save of its own keeps only the pool it
+-- knows, so a rolling deploy may drop a weapon pick written in the minutes both run (the player
+-- picks it again). Schema only (step 2.1): a data step run just after this file gives every
+-- character one weapon pick per distinct weapon type among its weapons, in any state
+-- (grantOwnedWeaponTypes), so no attack changes when the non-proficiency penalty lands.
+COMMENT ON COLUMN characters.proficiency_picks IS 'proficiency picks by pool: nonweapon [{id, slots}], weapon [{type, slots}] (ADR 0037)';

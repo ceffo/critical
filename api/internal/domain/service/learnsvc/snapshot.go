@@ -31,7 +31,6 @@ type addRecord struct {
 	SpellID    string           `json:"spellId"`
 	SpellLevel int              `json:"spellLevel"`
 	Origin     spellbook.Origin `json:"origin"`
-	GrantLevel int              `json:"grantLevel,omitempty"`
 }
 
 // record is the payload of a spell_learn entry, the roll's breakdown in the
@@ -73,11 +72,18 @@ func (s *service) state(ctx context.Context, characterID int64, spellID string) 
 	return st, nil
 }
 
-// write sets the spell's place in the character's spellbook to st.
-func (s *service) write(ctx context.Context, characterID int64, spellID string, st spellState) error {
+// write sets the spell's place in the character's spellbook to st. A Learn or
+// an Add writes a new entry and never relabels one already there; only a
+// restore (an undo or a redo) sets the origin of an existing entry to its
+// snapshot's.
+func (s *service) write(ctx context.Context, characterID int64, spellID string, st spellState, restore bool) error {
 	if st.Known {
 		e := spellbook.Entry{Key: spellID, Origin: st.Origin, GrantLevel: st.GrantLevel}
-		if err := s.d.DAL.AddEntry(ctx, characterID, e); err != nil {
+		if restore {
+			if err := s.d.DAL.RestoreEntry(ctx, characterID, e); err != nil {
+				return fmt.Errorf("restore spellbook entry: %w", err)
+			}
+		} else if err := s.d.DAL.AddEntry(ctx, characterID, e); err != nil {
 			return fmt.Errorf("add spellbook entry: %w", err)
 		}
 	} else if err := s.d.DAL.RemoveEntry(ctx, characterID, spellID); err != nil {
@@ -153,7 +159,7 @@ func (s *service) Module() domain.Module {
 			if st.Known && !st.Origin.Valid() {
 				return fmt.Errorf("decode spellbook snapshot: spell %q has the unknown origin %q", spellID, st.Origin)
 			}
-			if err := s.write(ctx, characterID, spellID, st); err != nil {
+			if err := s.write(ctx, characterID, spellID, st, true); err != nil {
 				return fmt.Errorf("restore spellbook: %w", err)
 			}
 			return nil

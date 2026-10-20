@@ -77,7 +77,7 @@ func undoCases() []undoCase {
 		}},
 		// Recorded before the origins (ADR 0030 step 20.5): only a Learn success wrote it.
 		{"a spell back in the spellbook (family spellbook)", "spellbook:sleep", reencoded("spellbook, a known spell"), func(h *harness) {
-			h.Spellbook.EXPECT().AddEntry(mock.Anything, characterID, spellbook.Entry{Key: "sleep", Origin: spellbook.OriginLearned}).Return(nil).Once()
+			h.Spellbook.EXPECT().RestoreEntry(mock.Anything, characterID, spellbook.Entry{Key: "sleep", Origin: spellbook.OriginLearned}).Return(nil).Once()
 			h.Spellbook.EXPECT().DeleteLearnFailure(mock.Anything, characterID, "sleep").Return(nil).Once()
 		}},
 		{"an older learn failure put back (family spellbook)", "spellbook:light", reencoded("spellbook, a failure"), func(h *harness) {

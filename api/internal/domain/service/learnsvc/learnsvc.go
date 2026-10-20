@@ -67,9 +67,6 @@ type Added struct {
 	SpellID    string
 	SpellLevel int
 	Origin     spellbook.Origin
-	// GrantLevel is the realized level that granted a level_grant entry (0
-	// otherwise).
-	GrantLevel int
 }
 
 // Result is the full breakdown of a learn roll (step 20.2).
@@ -111,9 +108,13 @@ type Book interface {
 // DAL writes a character's spellbook and learn failures. It joins the ctx
 // transaction.
 type DAL interface {
-	// AddEntry writes the entry at the end of the spellbook (a spell already
-	// there keeps its place and takes the entry's origin).
+	// AddEntry writes the entry at the end of the spellbook. A spell already
+	// there is left as it is: an add never relabels an entry.
 	AddEntry(ctx context.Context, characterID int64, e spellbook.Entry) error
+	// RestoreEntry writes the entry as an undo or a redo's snapshot holds
+	// it: at the end of the spellbook, or, for a spell already there, in its
+	// place with the entry's origin and grant level.
+	RestoreEntry(ctx context.Context, characterID int64, e spellbook.Entry) error
 	RemoveEntry(ctx context.Context, characterID int64, spellKey string) error
 	// LearnFailure returns the realized level the spell was failed at; ok
 	// is false when it was not.
@@ -198,7 +199,7 @@ func (s *service) Learn(ctx context.Context, characterID int64, spellID string) 
 			after.FailedAtLevel = level
 			res.RetryLevel = level + 1
 		}
-		if err := s.write(ctx, c.ID, spellID, after); err != nil {
+		if err := s.write(ctx, c.ID, spellID, after, false); err != nil {
 			return err
 		}
 		return s.record(ctx, c.ID, *res, before, after)
@@ -224,8 +225,8 @@ func (s *service) Add(ctx context.Context, characterID int64, spellID string) (*
 			return err
 		}
 		res = &Added{SpellID: spellID, SpellLevel: sp.Level, Origin: spellbook.OriginGiven}
-		after := spellState{SpellID: spellID, Known: true, Origin: res.Origin, GrantLevel: res.GrantLevel}
-		if err := s.write(ctx, c.ID, spellID, after); err != nil {
+		after := spellState{SpellID: spellID, Known: true, Origin: res.Origin}
+		if err := s.write(ctx, c.ID, spellID, after, false); err != nil {
 			return err
 		}
 		return s.recordAdd(ctx, c.ID, *res, before, after)

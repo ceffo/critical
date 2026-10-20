@@ -86,3 +86,18 @@ func TestEntries_RefusesAnUnknownOrigin(t *testing.T) {
 	_, err := spellbookdal.New(q).Entries(ctx, 4)
 	require.ErrorContains(t, err, `"alarm" has the unknown origin "bought"`)
 }
+
+// An add and a restore are two queries: AddEntry's insert leaves a spell
+// already in the book as it is (DO NOTHING), only RestoreEntry, an undo or a
+// redo, sets an existing entry's origin and grant level.
+func TestRestoreEntry_RunsTheRestoreQuery(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().RestoreSpellbookEntry(ctx, queries.RestoreSpellbookEntryParams{
+		CharacterID: 4, SpellKey: "fireball", Origin: "level_grant", GrantLevel: 5,
+	}).Return(nil).Once()
+	require.NoError(t, spellbookdal.New(q).RestoreEntry(ctx, 4, spellbook.Entry{Key: "fireball", Origin: spellbook.OriginLevelGrant, GrantLevel: 5}))
+
+	q.EXPECT().RestoreSpellbookEntry(ctx, mock.Anything).Return(assert.AnError).Once()
+	require.ErrorIs(t, spellbookdal.New(q).RestoreEntry(ctx, 4, spellbook.Entry{Key: "fireball"}), assert.AnError)
+}

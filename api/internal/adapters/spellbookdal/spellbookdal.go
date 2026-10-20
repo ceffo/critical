@@ -55,13 +55,26 @@ func (d *DAL) Entries(ctx context.Context, characterID int64) ([]spellbook.Entry
 	return out, nil
 }
 
-// AddEntry writes the entry at the end of the character's spellbook (a
-// spell already there stays where it is, with the entry's origin).
+// AddEntry writes the entry at the end of the character's spellbook. A spell
+// already there is left as it is, origin and all: an add never relabels an
+// entry.
 func (d *DAL) AddEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
 	if err := d.q.AddSpellbookEntry(ctx, queries.AddSpellbookEntryParams{
 		CharacterID: characterID, SpellKey: e.Key, Origin: string(e.Origin), GrantLevel: int64(e.GrantLevel),
 	}); err != nil {
 		return fmt.Errorf("add %q to the spellbook of character %d: %w", e.Key, characterID, err)
+	}
+	return nil
+}
+
+// RestoreEntry writes the entry as an undo or a redo's snapshot holds it: at
+// the end of the spellbook, or, for a spell already there, in its place with
+// the entry's origin and grant level.
+func (d *DAL) RestoreEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
+	if err := d.q.RestoreSpellbookEntry(ctx, queries.RestoreSpellbookEntryParams{
+		CharacterID: characterID, SpellKey: e.Key, Origin: string(e.Origin), GrantLevel: int64(e.GrantLevel),
+	}); err != nil {
+		return fmt.Errorf("restore %q in the spellbook of character %d: %w", e.Key, characterID, err)
 	}
 	return nil
 }

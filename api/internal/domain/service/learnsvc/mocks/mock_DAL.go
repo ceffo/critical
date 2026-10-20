@@ -232,6 +232,54 @@ func (_c *MockDAL_RemoveEntry_Call) RunAndReturn(run func(context.Context, int64
 	return _c
 }
 
+// RestoreEntry provides a mock function with given fields: ctx, characterID, e
+func (_m *MockDAL) RestoreEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
+	ret := _m.Called(ctx, characterID, e)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RestoreEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, spellbook.Entry) error); ok {
+		r0 = rf(ctx, characterID, e)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_RestoreEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RestoreEntry'
+type MockDAL_RestoreEntry_Call struct {
+	*mock.Call
+}
+
+// RestoreEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - e spellbook.Entry
+func (_e *MockDAL_Expecter) RestoreEntry(ctx interface{}, characterID interface{}, e interface{}) *MockDAL_RestoreEntry_Call {
+	return &MockDAL_RestoreEntry_Call{Call: _e.mock.On("RestoreEntry", ctx, characterID, e)}
+}
+
+func (_c *MockDAL_RestoreEntry_Call) Run(run func(ctx context.Context, characterID int64, e spellbook.Entry)) *MockDAL_RestoreEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(spellbook.Entry))
+	})
+	return _c
+}
+
+func (_c *MockDAL_RestoreEntry_Call) Return(_a0 error) *MockDAL_RestoreEntry_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_RestoreEntry_Call) RunAndReturn(run func(context.Context, int64, spellbook.Entry) error) *MockDAL_RestoreEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetLearnFailure provides a mock function with given fields: ctx, characterID, spellKey, level
 func (_m *MockDAL) SetLearnFailure(ctx context.Context, characterID int64, spellKey string, level int) error {
 	ret := _m.Called(ctx, characterID, spellKey, level)

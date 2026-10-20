@@ -281,6 +281,53 @@ func (_c *MockQuerier_RemoveSpellbookEntry_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// RestoreSpellbookEntry provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) RestoreSpellbookEntry(ctx context.Context, arg queries.RestoreSpellbookEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RestoreSpellbookEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RestoreSpellbookEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_RestoreSpellbookEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RestoreSpellbookEntry'
+type MockQuerier_RestoreSpellbookEntry_Call struct {
+	*mock.Call
+}
+
+// RestoreSpellbookEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.RestoreSpellbookEntryParams
+func (_e *MockQuerier_Expecter) RestoreSpellbookEntry(ctx interface{}, arg interface{}) *MockQuerier_RestoreSpellbookEntry_Call {
+	return &MockQuerier_RestoreSpellbookEntry_Call{Call: _e.mock.On("RestoreSpellbookEntry", ctx, arg)}
+}
+
+func (_c *MockQuerier_RestoreSpellbookEntry_Call) Run(run func(ctx context.Context, arg queries.RestoreSpellbookEntryParams)) *MockQuerier_RestoreSpellbookEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.RestoreSpellbookEntryParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_RestoreSpellbookEntry_Call) Return(_a0 error) *MockQuerier_RestoreSpellbookEntry_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_RestoreSpellbookEntry_Call) RunAndReturn(run func(context.Context, queries.RestoreSpellbookEntryParams) error) *MockQuerier_RestoreSpellbookEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetLearnFailure provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) SetLearnFailure(ctx context.Context, arg queries.SetLearnFailureParams) error {
 	ret := _m.Called(ctx, arg)

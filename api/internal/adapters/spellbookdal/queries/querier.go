@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	// A spell already in the book is left as it is: an add never relabels an entry.
 	AddSpellbookEntry(ctx context.Context, arg AddSpellbookEntryParams) error
 	DeleteLearnFailure(ctx context.Context, arg DeleteLearnFailureParams) error
 	// The spells a character failed to learn (ADR 0030 step 20.2), at the realized level of the failure.
@@ -17,6 +18,9 @@ type Querier interface {
 	// (ADR 0030 step 20.5).
 	ListSpellbook(ctx context.Context, characterID int64) ([]ListSpellbookRow, error)
 	RemoveSpellbookEntry(ctx context.Context, arg RemoveSpellbookEntryParams) error
+	// An undo or a redo writing a snapshot back: the entry as the snapshot holds it, a spell already
+	// in the book keeping its place.
+	RestoreSpellbookEntry(ctx context.Context, arg RestoreSpellbookEntryParams) error
 	SetLearnFailure(ctx context.Context, arg SetLearnFailureParams) error
 }
 

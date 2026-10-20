@@ -60,9 +60,6 @@ type AddedDTO struct {
 	SpellLevel int    `json:"spellLevel"`
 	// Origin is "learned", "given", "starting" or "level_grant".
 	Origin string `json:"origin"`
-	// GrantLevel is the realized level that granted a level_grant entry;
-	// absent otherwise.
-	GrantLevel int `json:"grantLevel,omitempty"`
 }
 
 // spellBody decodes the request's body, the spell's catalogue id.
@@ -92,7 +89,7 @@ func Add(charID CharacterIDFunc, svc adder) render.HandlerFunc {
 			return err
 		}
 		render.OK(r.Context(), w, AddedDTO{
-			SpellID: res.SpellID, SpellLevel: res.SpellLevel, Origin: string(res.Origin), GrantLevel: res.GrantLevel,
+			SpellID: res.SpellID, SpellLevel: res.SpellLevel, Origin: string(res.Origin),
 		})
 		return nil
 	}

@@ -280,13 +280,28 @@ func (p Spellbooks) Entries(ctx context.Context, characterID int64) ([]spellbook
 	return out, err
 }
 
-// AddEntry writes the entry at the end of the character's spellbook (a
-// spell already there stays where it is, with the entry's origin). The slice
-// is copied: a rolled-back transaction shares the one before it.
+// AddEntry writes the entry at the end of the character's spellbook. A spell
+// already there is left as it is, origin and all.
 func (p Spellbooks) AddEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
+	return p.put(ctx, characterID, e, false)
+}
+
+// RestoreEntry writes the entry as an undo or a redo's snapshot holds it: at
+// the end of the spellbook, or in its place with the entry's origin.
+func (p Spellbooks) RestoreEntry(ctx context.Context, characterID int64, e spellbook.Entry) error {
+	return p.put(ctx, characterID, e, true)
+}
+
+// put appends the entry, or replaces the one already there when replace is
+// set. The slice is copied: a rolled-back transaction shares the one before
+// it.
+func (p Spellbooks) put(ctx context.Context, characterID int64, e spellbook.Entry, replace bool) error {
 	return p.s.write(ctx, func(t *tables) error {
 		book := slices.Clone(t.spellbooks[characterID])
 		if i := slices.IndexFunc(book, func(x spellbook.Entry) bool { return x.Key == e.Key }); i >= 0 {
+			if !replace {
+				return nil
+			}
 			book[i] = e
 		} else {
 			book = append(book, e)

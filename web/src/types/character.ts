@@ -293,8 +293,6 @@ export interface SpellAdded {
   spellId: string;
   spellLevel: number;
   origin: SpellbookOrigin;
-  /** The realized level that granted a level_grant entry; absent otherwise. */
-  grantLevel?: number;
 }
 
 export interface Character {

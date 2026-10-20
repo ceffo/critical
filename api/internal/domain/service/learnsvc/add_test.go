@@ -141,7 +141,7 @@ func TestAdd_Step20_6_UndoTakesTheSpellOut(t *testing.T) {
 	})
 	t.Run("redo", func(t *testing.T) {
 		f := newFixture(t)
-		f.dal.EXPECT().AddEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginGiven}).Return(nil).Once()
+		f.dal.EXPECT().RestoreEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginGiven}).Return(nil).Once()
 		f.dal.EXPECT().DeleteLearnFailure(mock.Anything, charID, "new3").Return(nil).Once()
 		require.NoError(t, f.svc.Module().Restorer(learnsvc.StateFamily).Restore(context.Background(), charID,
 			snaptest.EnvID("new3", `{"known":true,"failedAtLevel":0,"origin":"given"}`)))

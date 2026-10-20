@@ -4,7 +4,17 @@
 -- name: ListSpellbook :many
 SELECT spell_key, origin, grant_level FROM spellbook_entries WHERE character_id = $1 ORDER BY position, spell_key;
 
+-- A spell already in the book is left as it is: an add never relabels an entry.
 -- name: AddSpellbookEntry :exec
+INSERT INTO spellbook_entries (character_id, spell_key, position, origin, grant_level)
+SELECT sqlc.arg(character_id), sqlc.arg(spell_key),
+       COALESCE(MAX(position), -1) + 1, sqlc.arg(origin), sqlc.arg(grant_level)
+FROM spellbook_entries WHERE character_id = sqlc.arg(character_id)
+ON CONFLICT (character_id, spell_key) DO NOTHING;
+
+-- An undo or a redo writing a snapshot back: the entry as the snapshot holds it, a spell already
+-- in the book keeping its place.
+-- name: RestoreSpellbookEntry :exec
 INSERT INTO spellbook_entries (character_id, spell_key, position, origin, grant_level)
 SELECT sqlc.arg(character_id), sqlc.arg(spell_key),
        COALESCE(MAX(position), -1) + 1, sqlc.arg(origin), sqlc.arg(grant_level)

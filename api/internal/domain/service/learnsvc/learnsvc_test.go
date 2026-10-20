@@ -250,11 +250,11 @@ func TestRestore_Step20_3_UndoLiftsTheBlock(t *testing.T) {
 			f.dal.EXPECT().SetLearnFailure(mock.Anything, charID, "new3", 4).Return(nil).Once()
 		}},
 		{"a redo of a success recorded before the origins (learned)", `{"known":true,"failedAtLevel":0}`, func(f fixture) {
-			f.dal.EXPECT().AddEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginLearned}).Return(nil).Once()
+			f.dal.EXPECT().RestoreEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginLearned}).Return(nil).Once()
 			f.dal.EXPECT().DeleteLearnFailure(mock.Anything, charID, "new3").Return(nil).Once()
 		}},
 		{"a redo of a level grant, origin and level", `{"known":true,"failedAtLevel":0,"origin":"level_grant","grantLevel":5}`, func(f fixture) {
-			f.dal.EXPECT().AddEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginLevelGrant, GrantLevel: 5}).Return(nil).Once()
+			f.dal.EXPECT().RestoreEntry(mock.Anything, charID, spellbook.Entry{Key: "new3", Origin: spellbook.OriginLevelGrant, GrantLevel: 5}).Return(nil).Once()
 			f.dal.EXPECT().DeleteLearnFailure(mock.Anything, charID, "new3").Return(nil).Once()
 		}},
 	} {

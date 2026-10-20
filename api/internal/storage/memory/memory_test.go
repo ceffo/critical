@@ -25,6 +25,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -647,4 +648,35 @@ func TestSeed_Step14_TheSeedBardWearsTheArmourItEntered(t *testing.T) {
 	items, err = bare.Items().List(ctx, bareID)
 	require.NoError(t, err)
 	assert.Empty(t, itemsvc.WornSkillColumn(items), "no catalogue armour: none worn")
+}
+
+// ADR 0030 step 20.5: an add never relabels an entry. A second AddEntry of a
+// spell already in the book leaves its origin and place; only a restore (an
+// undo or a redo writing its snapshot back) sets the origin, in place.
+func TestSpellbooks_Step20_5_ASecondAddNeverChangesTheOrigin(t *testing.T) {
+	s, _ := seeded(t)
+	ctx := context.Background()
+	id, err := s.AddCharacter(ctx, charactersvc.Character{Name: "Other", Class: "mage"})
+	require.NoError(t, err)
+	b := s.Spellbooks()
+	require.NoError(t, b.AddEntry(ctx, id, spellbook.Entry{Key: "sleep", Origin: spellbook.OriginLearned}))
+	require.NoError(t, b.AddEntry(ctx, id, spellbook.Entry{Key: "light", Origin: spellbook.OriginStarting}))
+
+	require.NoError(t, b.AddEntry(ctx, id, spellbook.Entry{Key: "sleep", Origin: spellbook.OriginGiven}))
+	require.NoError(t, b.AddEntry(ctx, id, spellbook.Entry{Key: "sleep", Origin: spellbook.OriginLevelGrant, GrantLevel: 5}))
+	got, err := b.Entries(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, []spellbook.Entry{
+		{Key: "sleep", Origin: spellbook.OriginLearned}, {Key: "light", Origin: spellbook.OriginStarting},
+	}, got, "the second adds change nothing")
+
+	require.NoError(t, b.RestoreEntry(ctx, id, spellbook.Entry{Key: "sleep", Origin: spellbook.OriginGiven}))
+	require.NoError(t, b.RestoreEntry(ctx, id, spellbook.Entry{Key: "fireball", Origin: spellbook.OriginLevelGrant, GrantLevel: 5}))
+	got, err = b.Entries(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, []spellbook.Entry{
+		{Key: "sleep", Origin: spellbook.OriginGiven},
+		{Key: "light", Origin: spellbook.OriginStarting},
+		{Key: "fireball", Origin: spellbook.OriginLevelGrant, GrantLevel: 5},
+	}, got, "a restore sets the origin in place, or appends")
 }

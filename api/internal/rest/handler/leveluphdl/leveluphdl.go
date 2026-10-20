@@ -40,8 +40,8 @@ type RollBody struct {
 // ResultDTO is the roll's full breakdown. `hitDie` is the die's sides (0 for
 // a fixed gain), `rolled` the die as rolled or entered and `counted` its
 // value after the Constitution 20+ floor (both null for a fixed gain),
-// `grants` what the level reached grants beyond hit points (ADR 0037 step
-// 15), `pending` the levels still owed.
+// `pending` the levels still owed, each with what it grants beyond hit
+// points (ADR 0037 step 15: the grants are read from the pending levels).
 type ResultDTO struct {
 	Level         int                    `json:"level"`
 	HitDie        int                    `json:"hitDie"`
@@ -53,7 +53,6 @@ type ResultDTO struct {
 	Manual        bool                   `json:"manual"`
 	HPMaxBefore   int                    `json:"hpMaxBefore"`
 	HPMaxAfter    int                    `json:"hpMaxAfter"`
-	Grants        wire.LevelGrantsDTO    `json:"grants"`
 	Pending       []wire.PendingLevelDTO `json:"pending"`
 }
 
@@ -76,7 +75,7 @@ func Roll(charID CharacterIDFunc, svc roller) render.HandlerFunc {
 		render.OK(r.Context(), w, ResultDTO{
 			Level: res.Level, HitDie: res.HitDie, Rolled: res.Rolled, Counted: res.Counted,
 			ConAdjustment: res.ConAdjustment, Gain: res.Gain, Fixed: res.Fixed, Manual: res.Manual,
-			HPMaxBefore: res.HPMaxBefore, HPMaxAfter: res.HPMaxAfter, Grants: wire.GrantsDTO(res.Grants),
+			HPMaxBefore: res.HPMaxBefore, HPMaxAfter: res.HPMaxAfter,
 			Pending: wire.PendingDTO(res.Pending),
 		})
 		return nil

@@ -13,24 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
-)
-
-// Input bounds: the details' own, kept by charactersvc so that the creation
-// form checks the details the same way (one validation, Details.Apply).
-const (
-	MaxShortLen = charactersvc.MaxDetailShortLen
-	MaxAge      = charactersvc.MaxAge
-)
-
-// Error codes carried by the FieldError messages. The web owns the wording.
-const (
-	CodeTooLong    = charactersvc.CodeTooLong
-	CodeOutOfRange = charactersvc.CodeOutOfRange
-	CodeEmpty      = charactersvc.CodeEmpty
-	CodeDuplicate  = charactersvc.CodeDuplicate
-	CodeUnknown    = charactersvc.CodeUnknown
-	// CodeAlignmentNotAllowed is an alignment the character's class refuses.
-	CodeAlignmentNotAllowed = charactersvc.CodeAlignmentNotAllowed
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // Patch holds the fields to change (charactersvc.DetailsPatch).
@@ -94,7 +77,8 @@ func (s *service) Update(ctx context.Context, id int64, p Patch) (charactersvc.D
 		}
 		// Read as the card reads it: the native language among them (ADR
 		// 0032 step 4.1), a character stored before it was added included.
-		out = next.Known(s.languages).WithNative(s.languages.Native(kind.Race))
+		next.Languages = skills.KnownLanguages(s.languages, next.Languages)
+		out = next.WithNative(s.languages.Native(kind.Race))
 		return nil
 	})
 	return out, err

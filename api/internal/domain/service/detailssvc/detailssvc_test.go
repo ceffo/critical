@@ -97,16 +97,16 @@ func TestUpdate_Validation(t *testing.T) {
 		field string
 		code  string
 	}{
-		{"zero height", detailssvc.Patch{Height: ptr(0.0)}, "height", detailssvc.CodeOutOfRange},
-		{"negative height", detailssvc.Patch{Height: ptr(-170.0)}, "height", detailssvc.CodeOutOfRange},
-		{"huge height", detailssvc.Patch{Height: ptr(300.1)}, "height", detailssvc.CodeOutOfRange},
-		{"zero weight", detailssvc.Patch{Weight: ptr(0.0)}, "weight", detailssvc.CodeOutOfRange},
-		{"huge weight", detailssvc.Patch{Weight: ptr(500.1)}, "weight", detailssvc.CodeOutOfRange},
-		{"hair too long", detailssvc.Patch{Hair: ptr(long(41))}, "hair", detailssvc.CodeTooLong},
-		{"eyes too long", detailssvc.Patch{Eyes: ptr(long(41))}, "eyes", detailssvc.CodeTooLong},
-		{"zero age is not a clear", detailssvc.Patch{Age: ptr(0)}, "age", detailssvc.CodeOutOfRange},
-		{"negative age", detailssvc.Patch{Age: ptr(-1)}, "age", detailssvc.CodeOutOfRange},
-		{"huge age", detailssvc.Patch{Age: ptr(10_001)}, "age", detailssvc.CodeOutOfRange},
+		{"zero height", detailssvc.Patch{Height: ptr(0.0)}, "height", charactersvc.CodeOutOfRange},
+		{"negative height", detailssvc.Patch{Height: ptr(-170.0)}, "height", charactersvc.CodeOutOfRange},
+		{"huge height", detailssvc.Patch{Height: ptr(300.1)}, "height", charactersvc.CodeOutOfRange},
+		{"zero weight", detailssvc.Patch{Weight: ptr(0.0)}, "weight", charactersvc.CodeOutOfRange},
+		{"huge weight", detailssvc.Patch{Weight: ptr(500.1)}, "weight", charactersvc.CodeOutOfRange},
+		{"hair too long", detailssvc.Patch{Hair: ptr(long(41))}, "hair", charactersvc.CodeTooLong},
+		{"eyes too long", detailssvc.Patch{Eyes: ptr(long(41))}, "eyes", charactersvc.CodeTooLong},
+		{"zero age is not a clear", detailssvc.Patch{Age: ptr(0)}, "age", charactersvc.CodeOutOfRange},
+		{"negative age", detailssvc.Patch{Age: ptr(-1)}, "age", charactersvc.CodeOutOfRange},
+		{"huge age", detailssvc.Patch{Age: ptr(10_001)}, "age", charactersvc.CodeOutOfRange},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -154,7 +154,7 @@ func TestUpdate_Step2And3_AlignmentIsCheckedAgainstTheClassOnEdit(t *testing.T) 
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, "alignment", fe.Field)
-	assert.Equal(t, detailssvc.CodeAlignmentNotAllowed, fe.Message)
+	assert.Equal(t, charactersvc.CodeAlignmentNotAllowed, fe.Message)
 
 	want := stored
 	want.Alignment, want.Sex = "lawful_neutral", "female"

@@ -16,19 +16,19 @@ import (
 
 // ADR 0030 step 7.3: POST /api/character/levelup/roll passes the level (and
 // the manual entry's die) and answers the full breakdown, with the levels
-// still owed and what the level grants (ADR 0037 step 15).
+// still owed, each with what it grants (ADR 0037 step 15).
 func TestLevelUp_RollAnswersTheFullBreakdown(t *testing.T) {
 	h, m := newRouter(t)
 	rolled, counted := 1, 2
 	m.levelUp.EXPECT().Roll(mock.Anything, int64(1), levelupsvc.RollInput{Level: 9}).Return(&levelupsvc.Result{
 		Level: 9, HitDie: 6, Rolled: &rolled, Counted: &counted, ConAdjustment: 2, Gain: 4,
-		HPMaxBefore: 40, HPMaxAfter: 44, Grants: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 2, SkillPoints: 30},
+		HPMaxBefore: 40, HPMaxAfter: 44,
 		Pending: []charactersvc.PendingLevel{{Level: 10, Die: 6, Grants: skills.LevelGrants{SkillPoints: 30}}, {Level: 11, FixedGain: 2}},
 	}, nil).Once()
 	rec := do(h, "POST", "/api/character/levelup/roll", `{"level":9}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"level":9,"hitDie":6,"rolled":1,"counted":2,"conAdjustment":2,"gain":4,"fixed":false,
-		"manual":false,"hpMaxBefore":40,"hpMaxAfter":44,"grants":{"weaponSlots":1,"nonWeaponSlots":2,"skillPoints":30},
+		"manual":false,"hpMaxBefore":40,"hpMaxAfter":44,
 		"pending":[{"level":10,"die":6,"fixedGain":0,"grants":{"weaponSlots":0,"nonWeaponSlots":0,"skillPoints":30}},
 			{"level":11,"die":0,"fixedGain":2,"grants":{"weaponSlots":0,"nonWeaponSlots":0,"skillPoints":0}}]}`, rec.Body.String())
 
@@ -39,7 +39,7 @@ func TestLevelUp_RollAnswersTheFullBreakdown(t *testing.T) {
 	rec = do(h, "POST", "/api/character/levelup/roll", `{"level":16}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"level":16,"hitDie":0,"rolled":null,"counted":null,"conAdjustment":0,"gain":2,"fixed":true,
-		"manual":false,"hpMaxBefore":85,"hpMaxAfter":87,"grants":{"weaponSlots":0,"nonWeaponSlots":0,"skillPoints":0},"pending":[]}`, rec.Body.String())
+		"manual":false,"hpMaxBefore":85,"hpMaxAfter":87,"pending":[]}`, rec.Body.String())
 }
 
 // The manual entry sends the die rolled at the table; its field error names

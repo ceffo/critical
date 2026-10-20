@@ -172,20 +172,6 @@ type Warning struct {
 	Spent, Available, Left *int
 }
 
-// Known is d with the languages the book does not hold left out: during a
-// rolling deploy (ADR 0024) the release before keeps writing free-text words
-// after the languages migration ran, and a word that is no catalogue code is
-// not shown (ADR 0032 step 8.1). Without a catalogue (every book is empty
-// before format 8) nothing is left out, so the codes stay.
-func (d Details) Known(book LanguageBook) Details {
-	d.Languages = append([]string{}, d.Languages...)
-	if book == nil || len(book.All()) == 0 {
-		return d
-	}
-	d.Languages = slices.DeleteFunc(d.Languages, func(l string) bool { return !book.Has(l) })
-	return d
-}
-
 // WithNative is d with the race's native language among its languages, first
 // when it was missing (ADR 0032 step 4.1); native "" (no catalogue) changes
 // nothing.

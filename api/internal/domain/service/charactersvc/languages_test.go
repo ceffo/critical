@@ -11,7 +11,6 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
@@ -201,16 +200,6 @@ func TestCreationOptions_Step4_OfferTheCatalogueTheRaceListsAndTheLimits(t *test
 	require.NoError(t, err)
 	assert.Empty(t, o.Languages)
 	assert.Empty(t, o.RaceLanguages)
-}
-
-// ADR 0032 step 8.1 during a rolling deploy: a free-text word the release before wrote after the
-// migration is not a code, so a read leaves it out; the codes stay, and without a catalogue
-// (before format 8) nothing is left out.
-func TestDetails_Step8_1_AWordThatIsNoCatalogueCodeIsNotRead(t *testing.T) {
-	d := charactersvc.Details{Languages: []string{"elvish", "Elfique", "common", "Orque"}}
-	assert.Equal(t, []string{"elvish", "common"}, d.Known(phbLanguages(t)).Languages)
-	assert.Equal(t, d.Languages, d.Known((*ruletablesvc.Languages)(nil)).Languages)
-	assert.Equal(t, []string{"elvish", "Elfique", "common", "Orque"}, d.Languages, "the details are not changed in place")
 }
 
 // ADR 0037 step 6 in the creation's draft: the draft's languages beyond the race's native one and

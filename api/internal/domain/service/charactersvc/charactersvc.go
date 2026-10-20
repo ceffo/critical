@@ -180,10 +180,6 @@ func New(d Deps) (SVC, error) {
 	return &service{reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour, languages: d.Languages, profs: d.Proficiencies, hp: d.HP}, nil
 }
 
-// NewWithConfig is here for symmetry with the other services. There is no
-// configurable surface today.
-func NewWithConfig(_ *Config, d Deps) (SVC, error) { return New(d) }
-
 // GetCharacter reads the character and derives its level, THAC0, saves and
 // slots from its class, race, abilities and XP total (ADR 0030 steps 3 to 8):
 // every reader of a character (attacks, saves, preparation, casting, the XP
@@ -232,7 +228,8 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 // their warnings and the level grants are the skills module's (ADR 0037 step 17).
 func (s *service) readWarnings(c *Character) {
 	native := s.languages.Native(c.Race)
-	c.Details = c.Details.Known(s.languages).WithNative(native)
+	c.Details.Languages = skills.KnownLanguages(s.languages, c.Details.Languages)
+	c.Details = c.Details.WithNative(native)
 	var slotWarnings []skills.Warning
 	c.Derived.Proficiencies, slotWarnings = skills.Read(s.profs, skills.Sheet{
 		Class: c.Class, Level: c.Derived.RealizedLevel, Intelligence: c.Int,

@@ -65,6 +65,21 @@ type ClassOptionDTO struct {
 	// in display order, each with its specialization's slots in all (step 9),
 	// 0 for a class that does not specialize. Additive; never null.
 	WeaponTypes []WeaponTypeOptionDTO `json:"weaponTypes"`
+	// Spellbook is the class's starting spellbook (ADR 0030 step 20.7):
+	// `startingSpells`, the spells it is offered pre-ticked (removable);
+	// null for a class without a spellbook.
+	Spellbook *SpellbookOptionDTO `json:"spellbook"`
+}
+
+// SpellbookOptionDTO is a class's starting spellbook option.
+type SpellbookOptionDTO struct {
+	StartingSpells []string `json:"startingSpells"`
+}
+
+// SpellOptionDTO is a catalogue wizard spell the starting spellbook offers.
+type SpellOptionDTO struct {
+	ID    string `json:"id"`
+	Level int    `json:"level"`
 }
 
 // WeaponTypeOptionDTO is one weapon type a class may pick and the slots its
@@ -125,6 +140,10 @@ type OptionsDTO struct {
 	// RaceIdentity is ADR 0032 step 5's dice and ranges by race: the
 	// identity step's roll buttons and the race cards show them. Additive.
 	RaceIdentity []RaceIdentityDTO `json:"raceIdentity"`
+	// WizardSpells are the catalogue's wizard spells by spell level then
+	// id, the starting spellbook's choices (ADR 0030 step 20.7); the names
+	// are GET /api/spells/names'.
+	WizardSpells []SpellOptionDTO `json:"wizardSpells"`
 }
 
 // FigureDTO is one identity figure: `count` dice of `sides` rolled, and the
@@ -239,6 +258,10 @@ func Options(svc optionsReader) render.HandlerFunc {
 			ScoreMethods:      make([]ScoreMethodDTO, 0, len(o.ScoreMethods)),
 			RaceAdjustments:   make([]RaceAdjustmentsDTO, 0, len(o.RaceAdjustments)),
 			RaceIdentity:      make([]RaceIdentityDTO, 0, len(o.RaceIdentity)),
+			WizardSpells:      make([]SpellOptionDTO, 0, len(o.WizardSpells)),
+		}
+		for _, sp := range o.WizardSpells {
+			out.WizardSpells = append(out.WizardSpells, SpellOptionDTO(sp))
 		}
 		for _, ri := range o.RaceIdentity {
 			out.RaceIdentity = append(out.RaceIdentity, RaceIdentityDTO{
@@ -274,7 +297,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 				Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces,
 				Skills: c.Skills, Alignments: c.Alignments,
 				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
-				WeaponTypes: weaponTypeDTOs(c.WeaponTypes),
+				WeaponTypes: weaponTypeDTOs(c.WeaponTypes), Spellbook: spellbookOptionDTO(c.Spellbook),
 			})
 		}
 		render.OK(r.Context(), w, out)
@@ -311,6 +334,11 @@ type CreateBody struct {
 	// shows them (age null for none); absent for none. A refusal names its
 	// field under "details." (details.age).
 	Details *wire.DetailsDTO `json:"details"`
+	// Spellbook is a mage's or a bard's starting spellbook (ADR 0030 step
+	// 20.7): the catalogue ids of the spells the DM gave, written without a
+	// roll; absent or empty for none. A refused spell names its field
+	// "spellbook.<id>"; a spellbook for another class, "spellbook".
+	Spellbook []string `json:"spellbook"`
 }
 
 // detailsPatch is the details as the patch a new character applies: every text
@@ -362,6 +390,7 @@ func (b CreateBody) entered() (charactersvc.NewCharacter, []string, error) {
 	n := charactersvc.NewCharacter{
 		Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional,
 		SkillPoints: b.SkillPoints, Proficiencies: b.Proficiencies.Picks(), Details: details,
+		Spellbook: b.Spellbook,
 	}
 	// The creation body still carries the languages under details (ADR 0037 step 18 moves
 	// their editor, not this body).
@@ -494,6 +523,14 @@ func levelXPDTO(rows []charactersvc.LevelXP) []LevelXPDTO {
 type ClassUnmetDTO struct {
 	Class     string   `json:"class"`
 	Abilities []string `json:"abilities"`
+}
+
+// spellbookOptionDTO maps a class's starting spellbook option; nil for none.
+func spellbookOptionDTO(o *charactersvc.SpellbookOption) *SpellbookOptionDTO {
+	if o == nil {
+		return nil
+	}
+	return &SpellbookOptionDTO{StartingSpells: append([]string{}, o.StartingSpells...)}
 }
 
 // weaponTypeDTOs maps a class's weapon type options; never nil.

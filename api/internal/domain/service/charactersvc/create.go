@@ -14,12 +14,13 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // CreatableClasses are the classes a new character may have (ADR 0030 step
 // 1): the bard's and the fighter's rules are built (the fighter enters an
-// exceptional strength, step 9), the mage's too (its spellbook starts empty
-// and fills by learning, step 20). Each class item adds its class here with
+// exceptional strength, step 9), the mage's too (it enters its starting
+// spellbook, step 20.7, as a bard does). Each class item adds its class here with
 // its own entries. The cleric enters nothing more: its slots, spell failure
 // and turning follow its Wisdom and level (steps 13 to 16). The thief enters
 // its skill points and the armour it wears for its skills (steps 1 and 17),
@@ -98,6 +99,10 @@ type NewCharacter struct {
 	// checked as the Skills tab checks them (skills.ValidLanguages, ADR 0037
 	// step 18); its native language is always added.
 	Languages []string
+	// Spellbook is a mage's or a bard's starting spellbook (ADR 0030 step
+	// 20.7): the catalogue ids of the spells the DM gave, in order, written
+	// without a roll; nil for none. Another class enters none.
+	Spellbook []string
 }
 
 // Change is a rename (Name) or a retirement (Retired true) of a character;
@@ -317,7 +322,8 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 		return 0, k.refusals[0]
 	}
 	c := k.c
-	if err := started(&c, s.rules); err != nil {
+	derived, err := started(&c, s.rules)
+	if err != nil {
 		return 0, err
 	}
 	// ADR 0037 step 10: nothing was spent before, so a new character is
@@ -332,11 +338,22 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 		return 0, err
 	}
 	c.Proficiencies, c.Details.Languages = sheet.Picks, sheet.Languages
+	// ADR 0030 step 20.7: the starting spellbook within the limits of step
+	// 20.1 at the starting level, no die rolled.
+	entries, err := s.startingSpellbook(c, derived, n.Spellbook)
+	if err != nil {
+		return 0, err
+	}
 	var id int64
 	if err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
 		if id, err = s.owners.CreateCharacter(ctx, owner, c); err != nil {
 			return err
+		}
+		for _, e := range entries {
+			if err := s.book.AddEntry(ctx, id, e); err != nil {
+				return fmt.Errorf("new character spellbook: %w", err)
+			}
 		}
 		return s.owners.SetCurrentCharacter(ctx, owner, id)
 	}); err != nil {
@@ -346,17 +363,31 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	return id, nil
 }
 
+// startingSpellbook is Create's step 20.7: the entries of the starting
+// spellbook ids (origin starting), or its first refusal; d is c's derivation
+// at its starting level.
+func (s *service) startingSpellbook(c Character, d Derived, ids []string) ([]spellbook.Entry, error) {
+	c.Derived = d
+	_, kept, refusals := s.startingBook(&c, ids)
+	if len(refusals) > 0 {
+		return nil, refusals[0]
+	}
+	return startingEntries(kept), nil
+}
+
 // started gives a new character the sheet and the realized level it is
 // stored with: its sheet states the rules' own figures and, step 7.5, the max HP entered is the max
-// HP at the target level, the level the character starts realized at.
-func started(c *Character, rules Rules) error {
+// HP at the target level, the level the character starts realized at. It
+// returns that derivation (before c's level was set: the realized level is the
+// target one).
+func started(c *Character, rules Rules) (Derived, error) {
 	d, err := Derive(c, 0, "", rules)
 	if err != nil {
-		return fmt.Errorf("new character: %w", err)
+		return Derived{}, fmt.Errorf("new character: %w", err)
 	}
 	c.Sheet = Sheet{Level: d.TargetLevel, THAC0: d.THAC0, Saves: d.Saves}
 	c.RealizedLevel = d.TargetLevel
-	return nil
+	return d, nil
 }
 
 // Draft is a creation draft as far as it is entered (ADR 0034, amendment of 2026-10-20: one
@@ -386,7 +417,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 		return out, nil
 	}
 	c := k.c
-	if err := started(&c, s.rules); err != nil {
+	if _, err := started(&c, s.rules); err != nil {
 		return nil, err
 	}
 	out.SkillPoints = budgetAt(out, c.Class, c.RealizedLevel, c.SkillPoints)
@@ -402,6 +433,10 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 		return nil, fmt.Errorf("draft: %w", err)
 	}
 	s.readWarnings(&c)
+	// ADR 0030 step 20.7: the starting spellbook's limits and refusals.
+	book, _, refusals := s.startingBook(&c, n.Spellbook)
+	out.Spellbook = book
+	out.Refusals = append(out.Refusals, refusals...)
 	out.Character = &c
 	return out, nil
 }
@@ -539,6 +574,17 @@ type ClassOption struct {
 	// its specialization spends in all (step 9), 0 for a class that does not
 	// specialize: the weapon editor shows and sends the server's cost.
 	WeaponTypes []WeaponTypeOption
+	// Spellbook is the class's starting spellbook (ADR 0030 step 20.7), nil
+	// for a class without a spellbook.
+	Spellbook *SpellbookOption
+}
+
+// SpellbookOption is a class's starting spellbook in the creation options
+// (ADR 0030 step 20.7): the catalogue spells it is offered with, pre-ticked
+// and removable (ruletablesvc.StartingSpells the catalogue holds as wizard
+// spells; none for a bard).
+type SpellbookOption struct {
+	StartingSpells []string
 }
 
 // WeaponTypeOption is one weapon type a class may pick (ADR 0037 step 7) and
@@ -615,6 +661,10 @@ type CreationOptions struct {
 	// Races order: the identity step shows them beside each roll button and
 	// the race cards the height and starting age (ADR 0034).
 	RaceIdentity []RaceIdentityOption
+	// WizardSpells are the catalogue's wizard spells, by spell level then id:
+	// the starting spellbook's choices (ADR 0030 step 20.7; the limits are
+	// the draft's, by the starting level and the Intelligence).
+	WizardSpells []SpellOption
 
 	MinAbility, MaxAbility int
 	MinHPMax, MaxHPMax     int
@@ -713,6 +763,9 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		if ruletablesvc.HasSkillPoints(class) {
 			opt.Skills = slices.Clone(ruletablesvc.SkillsOf(class))
 		}
+		if _, ok := ruletablesvc.SpellbookMaxLevel(class); ok {
+			opt.Spellbook = s.spellbookOption(class)
+		}
 		for _, race := range Races {
 			ok, err := s.rules.RaceAllows(race, class)
 			if err != nil {
@@ -727,6 +780,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		}
 		out.Classes = append(out.Classes, opt)
 	}
+	out.WizardSpells = s.spells.WizardSpells()
 	out.Proficiencies = s.profs.All()
 	for _, c := range s.profs.Crossovers() {
 		if out.ProficiencyGroups == nil {
@@ -756,6 +810,19 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 	return out, nil
 }
 
+// spellbookOption is class's starting spellbook option: its pre-ticked
+// spells the catalogue holds as wizard spells (a catalogue without one offers
+// it unticked rather than a spell Create refuses).
+func (s *service) spellbookOption(class string) *SpellbookOption {
+	out := &SpellbookOption{StartingSpells: []string{}}
+	for _, id := range ruletablesvc.StartingSpells(class) {
+		if sp, ok := s.spells.Spell(id); ok && sp.Wizard {
+			out.StartingSpells = append(out.StartingSpells, id)
+		}
+	}
+	return out
+}
+
 // Draft is the answer to a creation draft (Service.Draft).
 type Draft struct {
 	// Character is the character Create would store, derived and warned as a read of it; nil
@@ -768,6 +835,10 @@ type Draft struct {
 	// another class or while the class or XP is missing or refused. With a Character, it equals
 	// the derived block's.
 	SkillPoints *ruletablesvc.SkillPointsBudget
+	// Spellbook is a mage's or a bard's starting spellbook at the starting level (ADR 0030 step
+	// 20.7): its limits and the spells entered by spell level; nil for another class or while
+	// Character is nil. Its refusals are among Refusals, by spell.
+	Spellbook *StartingSpellbook
 	// Refusals are Create's refusals of the draft, in the form's order: each a
 	// *domain.FieldError or a *domain.BudgetError.
 	Refusals []error

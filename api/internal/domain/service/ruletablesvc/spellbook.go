@@ -16,6 +16,20 @@ func SpellbookMaxLevel(class string) (level int, ok bool) {
 	return level, ok
 }
 
+// startingSpells are the spells a class's starting spellbook is offered with,
+// ticked and removable (ADR 0030 step 20.7): the DM's starting books hold Read
+// Magic and Detect Magic for a mage (DMG p. 40, "Player Choice"); a bard starts
+// with none ticked. A rules table like the spellbook's highest levels above,
+// served in the creation options, so no service branches on a spell.
+var startingSpells = map[string][]string{"mage": {"read_magic", "detect_magic"}}
+
+// StartingSpells are the catalogue ids of the spells a new character of class
+// is offered pre-ticked in its starting spellbook (ADR 0030 step 20.7), a
+// copy; empty for a class with none.
+func StartingSpells(class string) []string {
+	return append([]string{}, startingSpells[class]...)
+}
+
 // IntelligenceFor is PHB Table 4's row of an Intelligence score (ADR 0030
 // step 20): the highest spell level, the chance to learn a spell and the
 // maximum number of spells per level. A score outside the table is an

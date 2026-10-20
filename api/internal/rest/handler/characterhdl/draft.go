@@ -33,15 +33,53 @@ type RefusalDTO struct {
 // (`skillPoints`, the derived block's shape, as soon as the class and XP read: a score out of
 // range does not hide it; null otherwise), the creation's `refusals`, the required fields still blank
 // (`missing`: name, class, race, the six scores, hpMax, xp, alignment, sex) and, for every
-// creatable class, the abilities whose entered score is under its minimum (`unmetMinimums`).
+// creatable class, the abilities whose entered score is under its minimum (`unmetMinimums`), and a
+// mage's or a bard's starting spellbook at the starting level (`spellbook`, ADR 0030 step 20.7;
+// null for another class or while `derived` is).
 type DraftDTO struct {
 	Derived       *DerivedDTO                `json:"derived"`
 	SkillPoints   *wire.SkillPointsBudgetDTO `json:"skillPoints"`
+	Spellbook     *StartingSpellbookDTO      `json:"spellbook"`
 	Warnings      []WarningDTO               `json:"warnings"`
 	Languages     []string                   `json:"languages"`
 	Refusals      []RefusalDTO               `json:"refusals"`
 	Missing       []string                   `json:"missing"`
 	UnmetMinimums []ClassUnmetDTO            `json:"unmetMinimums"`
+}
+
+// StartingSpellbookDTO is a draft's starting spellbook (ADR 0030 step 20.7): the limits of step
+// 20.1 at the starting level (`classMaxSpellLevel`, the class's highest spell level there, 0 for
+// none; `intMaxSpellLevel`; `maxSpellsPerLevel`, meaningless when `noMaximum`) and, for each spell
+// level the character may enter (`levels`, empty for none), the spells entered of it and not
+// refused (`count`). A refused spell is a refusal on `spellbook.<id>`.
+type StartingSpellbookDTO struct {
+	ClassMaxSpellLevel int                  `json:"classMaxSpellLevel"`
+	IntMaxSpellLevel   int                  `json:"intMaxSpellLevel"`
+	MaxSpellsPerLevel  int                  `json:"maxSpellsPerLevel"`
+	NoMaximum          bool                 `json:"noMaximum"`
+	Levels             []SpellLevelCountDTO `json:"levels"`
+}
+
+// SpellLevelCountDTO is a spell level and the spells entered of it.
+type SpellLevelCountDTO struct {
+	Level int `json:"level"`
+	Count int `json:"count"`
+}
+
+// startingSpellbookDTO maps a draft's starting spellbook; nil for none.
+func startingSpellbookDTO(b *charactersvc.StartingSpellbook) *StartingSpellbookDTO {
+	if b == nil {
+		return nil
+	}
+	out := &StartingSpellbookDTO{
+		ClassMaxSpellLevel: b.ClassMaxSpellLevel, IntMaxSpellLevel: b.IntMaxSpellLevel,
+		MaxSpellsPerLevel: b.MaxSpellsPerLevel, NoMaximum: b.NoMaximum,
+		Levels: make([]SpellLevelCountDTO, 0, len(b.Levels)),
+	}
+	for _, l := range b.Levels {
+		out.Levels = append(out.Levels, SpellLevelCountDTO(l))
+	}
+	return out
 }
 
 // refusalDTO maps one of the draft's refusals.
@@ -60,7 +98,7 @@ func draftDTO(d *charactersvc.Draft) (DraftDTO, error) {
 	out := DraftDTO{
 		Warnings: []WarningDTO{}, Languages: []string{}, Refusals: make([]RefusalDTO, 0, len(d.Refusals)),
 		Missing: append([]string{}, d.Missing...), UnmetMinimums: make([]ClassUnmetDTO, 0, len(d.UnmetMinimums)),
-		SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints),
+		SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints), Spellbook: startingSpellbookDTO(d.Spellbook),
 	}
 	if c := d.Character; c != nil {
 		derived := derivedDTO(c.Derived)

@@ -64,9 +64,9 @@ you've read its report, a developer's once its PR is open and CI is green (a lat
 goes to a fresh developer with a short brief), a scoper's once you've read its report, and at session
 start any agent left over from the previous supervisor. Closing them is yours alone: never ask the
 user to close an agent. Close by agent name, never by a remembered or guessed tab id:
-`herdr tab close "$(herdr agent list | jq -r '.result.agents[]|select(.name=="dev-<id>").tab_id')"`,
-as a command of its own, after checking the tab isn't yours (a supervisor once closed its own tab from a stale
-handoff note and died with no handoff). Never type into an agent's tab other than through
+`.claude/scripts/close-agent.sh dev-<id>`, as a command of its own. It refuses your own tab (a supervisor once
+closed its own tab from a stale handoff note and died with no handoff) and the user's own sessions, and tells
+fleet-watch.sh not to wake you with "GONE" for an agent you closed (sup-51: four empty wake-ups in one session). Never type into an agent's tab other than through
 `herdr agent prompt`.
 
 ## Quota gate (before every dispatch or rework prompt)

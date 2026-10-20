@@ -109,6 +109,10 @@ type OptionsDTO struct {
 	// steps 1 and 2). A name is the web's i18n key by id. Additive; never null.
 	Proficiencies     []ProficiencyDTO    `json:"proficiencies"`
 	ProficiencyGroups map[string][]string `json:"proficiencyGroups"`
+	// ProficiencyCosts is each proficiency's cost by class and id (ADR 0037
+	// step 4, the crossover's +1 included): the editor shows and sends it.
+	// Additive; never null.
+	ProficiencyCosts map[string]map[string]int `json:"proficiencyCosts"`
 	// ScoreMethods are ADR 0032 step 6's methods in the book's order (the
 	// score step's chips); RaceAdjustments PHB Table 8 by race (the race
 	// cards). Additions of ADR 0034: a previous web ignores them.
@@ -227,6 +231,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 			RaceLanguages:     make([]RaceLanguagesDTO, 0, len(o.RaceLanguages)),
 			Proficiencies:     make([]ProficiencyDTO, 0, len(o.Proficiencies)),
 			ProficiencyGroups: map[string][]string{},
+			ProficiencyCosts:  map[string]map[string]int{},
 			ScoreMethods:      make([]ScoreMethodDTO, 0, len(o.ScoreMethods)),
 			RaceAdjustments:   make([]RaceAdjustmentsDTO, 0, len(o.RaceAdjustments)),
 			RaceIdentity:      make([]RaceIdentityDTO, 0, len(o.RaceIdentity)),
@@ -253,6 +258,9 @@ func Options(svc optionsReader) render.HandlerFunc {
 		}
 		for class, groups := range o.ProficiencyGroups {
 			out.ProficiencyGroups[class] = groups
+		}
+		for class, costs := range o.ProficiencyCosts {
+			out.ProficiencyCosts[class] = costs
 		}
 		for _, rl := range o.RaceLanguages {
 			out.RaceLanguages = append(out.RaceLanguages, RaceLanguagesDTO{Race: rl.Race, Native: rl.Native, Languages: rl.List})

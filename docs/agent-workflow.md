@@ -259,9 +259,11 @@ of running the app by hand. Reference: `docs/frontend.md` (dashboard layout, dis
 
 ## Model selection
 
-Opus: core rules-engine math, ledger/state semantics across several packages, wide refactors,
-UI-heavy items (new panel, redesign). Sonnet: everything else. Reviewer: Sonnet, Opus for core
-rules math.
+Sonnet by default, for every role: developers, reviewers, scopers, testers, tooling and fleet
+work, UI (new panels included), refactors. Opus only for core rules-engine math: a change to how the
+game's rules compute (combat, saves, spell and level arithmetic, effects stacking), for its developer
+and its reviewer, and for a scoper whose items will amend a rules ADR. When unsure, Sonnet (user,
+2026-10-20: Opus was assigned too liberally and the weekly limit was projected to run out).
 
 ## Parallelism
 

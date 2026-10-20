@@ -197,6 +197,38 @@ func (q *Queries) CharacterClasses(ctx context.Context) ([]CharacterClassesRow, 
 	return items, nil
 }
 
+const characterPicks = `-- name: CharacterPicks :many
+SELECT id, proficiency_picks FROM characters ORDER BY id
+`
+
+type CharacterPicksRow struct {
+	ID               int64
+	ProficiencyPicks string
+}
+
+func (q *Queries) CharacterPicks(ctx context.Context) ([]CharacterPicksRow, error) {
+	rows, err := q.db.QueryContext(ctx, characterPicks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterPicksRow{}
+	for rows.Next() {
+		var i CharacterPicksRow
+		if err := rows.Scan(&i.ID, &i.ProficiencyPicks); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const characterSkillArmour = `-- name: CharacterSkillArmour :one
 SELECT class, skill_armor FROM characters WHERE id = $1::bigint
 `
@@ -211,6 +243,41 @@ func (q *Queries) CharacterSkillArmour(ctx context.Context, id int64) (Character
 	var i CharacterSkillArmourRow
 	err := row.Scan(&i.Class, &i.SkillArmor)
 	return i, err
+}
+
+const characterWeaponTypes = `-- name: CharacterWeaponTypes :many
+SELECT DISTINCT character_id, weapon_type FROM items
+WHERE category = 'weapon' AND weapon_type <> '' ORDER BY character_id, weapon_type
+`
+
+type CharacterWeaponTypesRow struct {
+	CharacterID int64
+	WeaponType  string
+}
+
+// The weapon picks data step after migration 026 (ADR 0037 step 16.2): the distinct weapon types
+// each character's weapons have, in any state, and every character's stored picks.
+func (q *Queries) CharacterWeaponTypes(ctx context.Context) ([]CharacterWeaponTypesRow, error) {
+	rows, err := q.db.QueryContext(ctx, characterWeaponTypes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterWeaponTypesRow{}
+	for rows.Next() {
+		var i CharacterWeaponTypesRow
+		if err := rows.Scan(&i.CharacterID, &i.WeaponType); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const countCharacters = `-- name: CountCharacters :one

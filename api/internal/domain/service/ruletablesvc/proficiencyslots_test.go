@@ -123,3 +123,55 @@ func TestExtraSlots_Step5_BeyondTheCost(t *testing.T) {
 		assert.Equal(t, c.want, ruletablesvc.ExtraSlots(c.slots, c.cost), "%d slots at cost %d", c.slots, c.cost)
 	}
 }
+
+// ADR 0037 step 3 (weapon pool): initial (Table 34) + one slot at every realized level divisible
+// by #Levels. Each group at level 1, one below its first gain level, the first gain level and 20.
+func TestWeaponSlots_Step3_ByGroupAndLevel(t *testing.T) {
+	cases := []struct {
+		group                       string
+		level, initial, gained, all int
+	}{
+		{"warrior", 1, 4, 0, 4},
+		{"warrior", 2, 4, 0, 4},
+		{"warrior", 3, 4, 1, 5},
+		{"warrior", 20, 4, 6, 10},
+		{"wizard", 1, 1, 0, 1},
+		{"wizard", 5, 1, 0, 1},
+		{"wizard", 6, 1, 1, 2},
+		{"wizard", 20, 1, 3, 4},
+		{"priest", 1, 2, 0, 2},
+		{"priest", 3, 2, 0, 2},
+		{"priest", 4, 2, 1, 3},
+		{"priest", 20, 2, 5, 7},
+		{"rogue", 1, 2, 0, 2},
+		{"rogue", 3, 2, 0, 2},
+		{"rogue", 4, 2, 1, 3},
+		{"rogue", 15, 2, 3, 5},
+		{"rogue", 20, 2, 5, 7},
+	}
+	for _, c := range cases {
+		got := ruletablesvc.WeaponSlots(table34[c.group], c.level, 1)
+		assert.Equal(t, ruletablesvc.WeaponPool{
+			Initial: c.initial, PerLevels: table34[c.group].WeaponLevels, LevelGained: c.gained,
+			Available: c.all, Spent: 1, Left: c.all - 1,
+		}, got, "%s level %d", c.group, c.level)
+	}
+	assert.Equal(t, 0, ruletablesvc.WeaponSlots(table34["warrior"], 0, 0).LevelGained, "no level yet gains nothing")
+}
+
+// ADR 0037 step 7: the weapon types each class may pick, from its PHB list (mage p.30, cleric
+// p.33, thief p.39); the fighter and the bard pick any type.
+func TestClassWeaponTypes_Step7_PhbLists(t *testing.T) {
+	assert.Equal(t, []string{"dagger", "dart", "sling", "other_melee"}, ruletablesvc.ClassWeaponTypes("mage"))
+	assert.Equal(t, []string{"sling", "other_melee", "other_missile"}, ruletablesvc.ClassWeaponTypes("cleric"))
+	assert.Equal(t, []string{
+		"short_bow", "hand_crossbow", "dagger", "dart", "sling", "short_sword", "long_sword", "other_melee", "other_thrown",
+	}, ruletablesvc.ClassWeaponTypes("thief"))
+	assert.Nil(t, ruletablesvc.ClassWeaponTypes("fighter"))
+	assert.Nil(t, ruletablesvc.ClassWeaponTypes("bard"))
+	assert.False(t, ruletablesvc.WeaponTypeAllowed("mage", "long_sword"))
+	assert.False(t, ruletablesvc.WeaponTypeAllowed("cleric", "short_sword"))
+	assert.False(t, ruletablesvc.WeaponTypeAllowed("thief", "long_bow"))
+	assert.True(t, ruletablesvc.WeaponTypeAllowed("fighter", "long_bow"))
+	assert.True(t, ruletablesvc.WeaponTypeAllowed("bard", "heavy_crossbow"))
+}

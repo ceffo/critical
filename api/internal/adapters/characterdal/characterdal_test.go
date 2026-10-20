@@ -48,7 +48,9 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 			Alignment: "chaotic_good", Age: 31, Sex: "male",
 			Height: 177.8, Weight: 72.6, Hair: "black", Eyes: "green", Languages: []string{"Common", "Elvish"},
 		},
-		Proficiencies: charactersvc.Picks{Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "singing", Slots: 1}}},
+		Proficiencies: charactersvc.Picks{
+			Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "singing", Slots: 1}}, Weapon: []charactersvc.WeaponPick{},
+		},
 	}, got)
 }
 
@@ -355,20 +357,26 @@ func TestSetACOverride_WritesOrClears(t *testing.T) {
 func TestProficiencyPicks_StoredAsJSONAndReadBack(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
-	picks := charactersvc.Picks{Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "cooking", Slots: 1}}}
-	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{
-		ProficiencyPicks: `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"cooking","slots":1}]}`, ID: 4,
-	}).Return(1, nil).Once()
+	picks := charactersvc.Picks{
+		Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "cooking", Slots: 1}},
+		Weapon:    []charactersvc.WeaponPick{{Type: "long_sword", Slots: 1}, {Type: "dagger", Slots: 1}},
+	}
+	stored := `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"cooking","slots":1}],"weapon":[{"type":"long_sword","slots":1},{"type":"dagger","slots":1}]}`
+	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: stored, ID: 4}).Return(1, nil).Once()
 	require.NoError(t, characterdal.New(q).SetProficiencyPicks(ctx, 4, picks))
 	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: `{}`, ID: 4}).Return(1, nil).Once()
 	require.NoError(t, characterdal.New(q).SetProficiencyPicks(ctx, 4, charactersvc.Picks{}))
 	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: `{}`, ID: 9}).Return(0, nil).Once()
 	require.ErrorIs(t, characterdal.New(q).SetProficiencyPicks(ctx, 9, charactersvc.Picks{}), domain.ErrCharacterNotFound)
 
-	got, err := characterdal.DecodePicks(`{"nonweapon":[{"id":"tumbling","slots":2},{"id":"cooking","slots":1}]}`)
+	got, err := characterdal.DecodePicks(stored)
 	require.NoError(t, err)
 	assert.Equal(t, picks, got)
 	none, err := characterdal.DecodePicks(`{}`)
 	require.NoError(t, err)
-	assert.Equal(t, charactersvc.Picks{Nonweapon: []charactersvc.Pick{}}, none)
+	assert.Equal(t, charactersvc.Picks{Nonweapon: []charactersvc.Pick{}, Weapon: []charactersvc.WeaponPick{}}, none)
+	// A column written before the weapon pool (migration 025) reads with no weapon pick.
+	old, err := characterdal.DecodePicks(`{"nonweapon":[{"id":"tumbling","slots":2}]}`)
+	require.NoError(t, err)
+	assert.Empty(t, old.Weapon)
 }

@@ -30,5 +30,12 @@
     { "id": "reading_writing", "slots": 1 },
     { "id": "local_history", "slots": 1 }
   ],
+  "weapon_proficiencies": [
+    { "type": "short_bow", "slots": 1 },
+    { "type": "dagger", "slots": 1 },
+    { "type": "dart", "slots": 1 },
+    { "type": "long_sword", "slots": 1 },
+    { "type": "other_melee", "slots": 1 }
+  ],
   "slots": []
 }

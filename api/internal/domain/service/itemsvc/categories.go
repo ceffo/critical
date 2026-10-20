@@ -128,13 +128,10 @@ const (
 	TypeOtherMissile  = "other_missile"
 )
 
-// WeaponTypes is every weapon type code, in display order, and the one owner of the list (the
-// column has no CHECK). The web's WEAPON_TYPES repeats it; seedcheck's tests keep it and the
-// seeds in line.
-var WeaponTypes = []string{
-	TypeLongBow, TypeShortBow, TypeLightCrossbow, TypeHeavyCrossbow, TypeHandCrossbow, TypeDagger,
-	TypeDart, TypeSling, TypeShortSword, TypeLongSword, TypeOtherMelee, TypeOtherThrown, TypeOtherMissile,
-}
+// WeaponTypes is every weapon type code, in display order: ruletablesvc.WeaponTypes, the one
+// owner of the list (the column has no CHECK; the weapon proficiency picks read it too, ADR 0037
+// step 7). The web's WEAPON_TYPES repeats it; seedcheck's tests keep it and the seeds in line.
+var WeaponTypes = ruletablesvc.WeaponTypes
 
 // ValidWeaponType reports whether t is a weapon type code or empty (no type).
 func ValidWeaponType(t string) bool { return t == "" || slices.Contains(WeaponTypes, t) }

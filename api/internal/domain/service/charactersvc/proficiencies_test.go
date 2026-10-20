@@ -42,7 +42,16 @@ func profBook(t *testing.T) *ruletablesvc.Proficiencies {
 }
 
 func picks(ps ...charactersvc.Pick) charactersvc.Picks {
-	return charactersvc.Picks{Nonweapon: append([]charactersvc.Pick{}, ps...)}
+	return charactersvc.Picks{Nonweapon: append([]charactersvc.Pick{}, ps...), Weapon: []charactersvc.WeaponPick{}}
+}
+
+// weapons are weapon picks of types, 1 slot each, and no non-weapon pick.
+func weapons(types ...string) charactersvc.Picks {
+	out := charactersvc.Picks{Nonweapon: []charactersvc.Pick{}, Weapon: []charactersvc.WeaponPick{}}
+	for _, t := range types {
+		out.Weapon = append(out.Weapon, charactersvc.WeaponPick{Type: t, Slots: 1})
+	}
+	return out
 }
 
 func p(id string, slots int) charactersvc.Pick { return charactersvc.Pick{ID: id, Slots: slots} }
@@ -138,6 +147,8 @@ func TestBudget_Step10_RefusedWhenOverAndGrowing(t *testing.T) {
 func TestWarnings_Step11_OverBudgetAndToSpend(t *testing.T) {
 	book := profBook(t)
 	warnings := func(ps charactersvc.Picks) []charactersvc.Warning {
+		// 2 weapon slots, spent exactly: no weapon warning.
+		ps.Weapon = weapons("dagger", "dart").Weapon
 		f, ok := charactersvc.ProficiencyFigures(book, "bard", 1, 9, ps) // 5 slots
 		require.True(t, ok)
 		return charactersvc.SlotWarnings(f)

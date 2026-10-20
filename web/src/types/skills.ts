@@ -39,6 +39,9 @@ export interface RogueSkill {
   dexterity: number;
   armor: number;
   percent: number;
+  /** The sum of the terms before the cap and the floor; it differs from `percent` when one
+   * applied (more: capped at maxPercent, less: floored at 0). */
+  rawPercent: number;
   /** The cap on the percentage, and the most points one skill takes (ADR 0030 steps 17, 18). */
   maxPercent: number;
   maxPoints: number;
@@ -57,6 +60,24 @@ export interface Skills {
   /** ADR 0033 step 14: the skill armour the bard or thief skills read, from the body armour worn
    * (none, leather, padded_studded_leather, elven_chain, metal); "" for another class. */
   skillArmor: string;
+  /** The skill point budget with the terms of its formula; null for a class without skill points. */
+  budget: SkillBudget | null;
+}
+
+/** ADR 0030 steps 17 and 18: available = first + perLevel x (level - 1) points in all, spent
+ * entered, left = available - spent (negative when over). perSkillCap = perSkillFirst +
+ * perSkillPerLevel x (level - 1) is the most one skill holds (a thief); all 0 for no such limit
+ * (a bard). Computed by the server. */
+export interface SkillBudget {
+  level: number;
+  first: number;
+  perLevel: number;
+  available: number;
+  spent: number;
+  left: number;
+  perSkillFirst: number;
+  perSkillPerLevel: number;
+  perSkillCap: number;
 }
 
 /** One check as POST /api/roll/skill/{id} and POST /api/roll/skill/{id}/adjust return it, and the

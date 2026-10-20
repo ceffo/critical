@@ -5,6 +5,7 @@ import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
 import { Button } from "@/components/ui/button";
 import { ThiefPointsEditor } from "./ThiefPointsEditor";
+import { SkillBudgetSummary, SkillTerms } from "./SkillBreakdown";
 import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/journal/words";
 import { formatSigned } from "@/lib/format";
@@ -49,7 +50,12 @@ export function SkillsTab() {
     classKind === "thiefSkill" ? skills.thiefSkills : skills.bardSkills;
   const rows = (
     kind: SkillKind,
-    list: { id: string; value: ReactNode; unusable?: boolean }[],
+    list: {
+      id: string;
+      value: ReactNode;
+      terms?: ReactNode;
+      unusable?: boolean;
+    }[],
   ) => {
     const label = t(HEADINGS[kind]);
     const id = `skills-${kind}`;
@@ -59,7 +65,7 @@ export function SkillsTab() {
           {label}
         </h3>
         <ul aria-label={label} className="flex flex-col gap-1">
-          {list.map(({ id: skill, value, unusable }) => {
+          {list.map(({ id: skill, value, terms, unusable }) => {
             const name = skillName(t, skill);
             // ADR 0030 step 17 (PHB p.39): a thieving skill under 1% waits for points.
             const label = unusable
@@ -77,7 +83,10 @@ export function SkillsTab() {
                   data-testid={`skill-${skill}`}
                   onClick={() => void rollSkill(skill)}
                 >
-                  <span className="break-words">{name}</span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="break-words">{name}</span>
+                    {terms}
+                  </span>
                   {value}
                 </button>
               </li>
@@ -115,6 +124,7 @@ export function SkillsTab() {
             classSkills.map((s) => ({
               id: s.id,
               unusable: !s.usable,
+              terms: <SkillTerms skill={s} cap={skills.budget?.perSkillCap} />,
               value: (
                 <span
                   className="text-right font-semibold whitespace-nowrap tabular-nums"
@@ -133,6 +143,7 @@ export function SkillsTab() {
               ),
             })),
           )}
+          {skills.budget && <SkillBudgetSummary budget={skills.budget} />}
           {budget && budget.length > 0 && (
             <ul
               className="flex flex-col gap-1 px-2.5 text-body text-warning"
@@ -165,6 +176,7 @@ export function SkillsTab() {
           {editingPoints ? (
             <ThiefPointsEditor
               skills={classSkills}
+              budget={skills.budget}
               onDone={() => setEditingPoints(false)}
             />
           ) : (

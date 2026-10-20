@@ -38,6 +38,7 @@ import { ABILITIES, type AbilityCode } from "@/types/character";
 import { arrangeFor, pickRace } from "./arrange";
 import { Choice, Die, Group, Note, Row, Seg } from "./kit";
 import type { FlowDraft, StepProps } from "./flow";
+import { budgetFormula, formula } from "@/lib/skillBudget";
 
 const CLASS_ICONS: Record<string, ReactNode> = {
   bard: <MusicNotes aria-hidden />,
@@ -954,6 +955,30 @@ export function ExtrasStep({
                       <span className="text-ink-muted">
                         {t("creation.extras.budgetPerSkill", {
                           max: checks.skillBudget.perSkill,
+                        })}
+                      </span>
+                    )}
+                    <span
+                      className="text-ink-muted"
+                      data-testid="skill-budget-formula"
+                    >
+                      {t("creation.extras.budgetFormula", {
+                        formula: budgetFormula(t, checks.skillBudget),
+                      })}
+                    </span>
+                    {checks.skillBudget.perSkill > 0 && (
+                      <span
+                        className="text-ink-muted"
+                        data-testid="skill-budget-per-skill-formula"
+                      >
+                        {t("creation.extras.budgetPerSkillFormula", {
+                          formula: formula(
+                            t,
+                            checks.skillBudget.perSkillFirst,
+                            checks.skillBudget.perSkillPerLevel,
+                            checks.skillBudget.level,
+                            checks.skillBudget.perSkill,
+                          ),
                         })}
                       </span>
                     )}

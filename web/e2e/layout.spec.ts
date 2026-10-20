@@ -2980,6 +2980,30 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     await snap(page, `thief-skills-fr-${where}`);
   }
 
+  // The budget, each skill's terms and the Spend editor with its live preview, uncut in French
+  // (ADR 0027 step 2): the server's figures, nothing computed here.
+  await expect(page.getByTestId("skill-points-available")).toContainText(
+    "Disponibles : 60 + 30 × 0 = 60",
+  );
+  await page.getByTestId("thief-points-edit").click();
+  const editor = page.getByTestId("thief-points-editor");
+  await editor.getByTestId("thief-points-open_locks").fill("95");
+  await expect(editor.getByTestId("skill-limit-open_locks")).toContainText(
+    "plafonné à 95 %",
+  );
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(editor, `skill points editor, fr, ${where}`);
+    await expectWholeWords(editor, `skill points editor, fr, ${where}`);
+    await snap(page, `thief-points-editor-preview-fr-${where}`);
+  }
+  await editor.getByTestId("thief-points-cancel").click();
+
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.getByRole("tab", { name: "Armes" }).click();
   const f = page.getByRole("form", { name: "Attaque" });

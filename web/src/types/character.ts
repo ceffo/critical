@@ -101,6 +101,8 @@ export interface ThiefSkillTerms {
   race: number;
   dexterity: number;
   armor: number;
+  /** The sum before the cap and the floor. */
+  rawPercent: number;
   percent: number;
 }
 
@@ -501,11 +503,17 @@ export interface DraftChecks {
   unmetMinimums: { class: string; abilities: string[] }[];
   skillBudget: {
     level: number;
+    /** The terms of the formula: total = first + perLevel x (level - 1). */
+    first: number;
+    perLevel: number;
     /** The points the level allows in all, those entered, and what is left (negative when over). */
     total: number;
     spent: number;
     left: number;
-    /** The most one skill holds at the level; 0 for no such limit. */
+    /** The most one skill holds at the level, perSkillFirst + perSkillPerLevel x (level - 1); all
+     * 0 for no such limit. */
+    perSkillFirst: number;
+    perSkillPerLevel: number;
     perSkill: number;
   } | null;
 }

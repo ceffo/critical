@@ -127,9 +127,13 @@ patterns before anything is built. (Post-mortem of PR #147: a brief that prescri
 in the database went through a developer and a review unchallenged; the rule is now ADR 0023, no
 per-language column or field, and a brief that contradicts it is wrong.)
 
-**Retro at every handoff.** Before a restart, add a short "Retro" to the ledger: what cost the most
-this session and the one process change you propose. Propose changes to this file to the user as a
-small PR. The process is never done.
+**Retro at every handoff: the retro skill** (user, 2026-10-20: "before rebooting, the supervisor
+should use the /retro skill to improve the process"). Before a handoff, run the project's retro skill
+on your own session: its model invocation is disabled, so read `.claude/skills/retro/SKILL.md` and
+carry out its steps yourself (your session is the one to review; include the agents you ran). Write
+its candidates, most severe first, under `## Retro (sup-N)` in the ledger (the handoff script refuses
+a ledger without it), and open the ones that change the process (this file, the workflow doc, a
+script, a check) as a small PR before you hand off. The process is never done.
 
 ## Filing items: the scoper
 
@@ -447,11 +451,12 @@ must lose nothing, so state lives outside the conversation:
 **Hand yourself off; never wait for the user to restart you.** At 180k context (a PostToolUse hook,
 `.claude/hooks/supervisor-context-gauge.sh`, reminds you on every tool call past it), or when the
 user says so, at the next quiet point (no agent mid-commit, no rework half sent):
-1. Rewrite the ledger, with a "Notes for the next supervisor (sup-N handoff" section for anything
-   subtle and a "Retro". Engram gets neither this state, nor decisions, nor process
+1. Run the retro skill (see "Retro at every handoff") and open its process PR. Then rewrite the
+   ledger, with a "Notes for the next supervisor (sup-N handoff" section for anything subtle and a
+   "## Retro (sup-N)" section holding the retro's findings. Engram gets neither this state, nor decisions, nor process
    lessons (see "Reporting to the user").
 2. Run `.claude/scripts/supervisor-handoff.sh` with `run_in_background`. It refuses a ledger older
-   than 15 minutes or without that section, starts `sup-N+1` (Opus) in a new tab on `<main>`,
+   than 15 minutes or without those two sections, starts `sup-N+1` (Opus) in a new tab on `<main>`,
    prompts it to take over, and waits for its `handoff-ack-N+1` file.
 3. On `ACK`, stop: send nothing more and start nothing. The successor closes your tab. On `NO ACK`,
    read its tab (`herdr agent read`) and tell the user.

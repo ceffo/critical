@@ -255,7 +255,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
     Tests: `TestSetPicks_Step13_LogsOneMoveWithASnapshot`, `TestSetPicks_Step13_RestorerWritesThePicksBack`
     (proficiencysvc), `TestProficiencies_Step13_PickUndoRedo` (composition).
     _(As built: in skillsvc; the snapshot and the payload's before and after are
-    `{nonweapon: [{id, slots}]}`, the languages to be added with step 6. The journal words the
+    `{nonweapon: [{id, slots}]}`, the languages to be added with step 6. A save that only
+    reorders the picks changes nothing (`TestSetPicks_Step13_ReorderLogsNothing`,
+    `TestPicksEqual_Step13_OrderDoesNotCount`). The journal words the
     entry per pick whose slots changed.)_
 14. **Creation takes picks.** The creation form uses the editor of step 12; its picks and
     languages are checked by the same code, with an empty state before (step 10). Leftover slots

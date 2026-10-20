@@ -20,15 +20,22 @@ type Picks struct {
 	Nonweapon []Pick
 }
 
-// Equal reports the same picks in the same order.
+// Equal reports the same picks, in any order (ADR 0037 step 13: a save that only reorders the
+// picks changes nothing, so it writes and logs nothing). The order is the sheet's display order,
+// not a rule.
 func (p Picks) Equal(o Picks) bool {
 	if len(p.Nonweapon) != len(o.Nonweapon) {
 		return false
 	}
-	for i := range p.Nonweapon {
-		if p.Nonweapon[i] != o.Nonweapon[i] {
+	count := make(map[Pick]int, len(p.Nonweapon))
+	for _, k := range p.Nonweapon {
+		count[k]++
+	}
+	for _, k := range o.Nonweapon {
+		if count[k] == 0 {
 			return false
 		}
+		count[k]--
 	}
 	return true
 }

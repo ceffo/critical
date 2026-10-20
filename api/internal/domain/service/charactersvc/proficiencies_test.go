@@ -348,3 +348,27 @@ func TestCreate_Step14_PicksCheckedAsTheEditor(t *testing.T) {
 		assert.Equal(t, 16, got.ProficiencySlots.Picks[0].Target, "Dex 15 + 1 extra slot")
 	})
 }
+
+// ADR 0037 step 13: picks are equal whatever their order; a different slot count, id or length
+// is a change.
+func TestPicksEqual_Step13_OrderDoesNotCount(t *testing.T) {
+	p := func(ps ...charactersvc.Pick) charactersvc.Picks { return charactersvc.Picks{Nonweapon: ps} }
+	a, b, c := charactersvc.Pick{ID: "tumbling", Slots: 1}, charactersvc.Pick{ID: "tracking", Slots: 2}, charactersvc.Pick{ID: "tumbling", Slots: 2}
+	for _, tc := range []struct {
+		name string
+		x, y charactersvc.Picks
+		want bool
+	}{
+		{"same order", p(a, b), p(a, b), true},
+		{"reordered", p(a, b), p(b, a), true},
+		{"both empty", p(), p(), true},
+		{"other slots", p(a, b), p(c, b), false},
+		{"one more", p(a), p(a, b), false},
+		{"one less", p(a, b), p(b), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.x.Equal(tc.y))
+			assert.Equal(t, tc.want, tc.y.Equal(tc.x))
+		})
+	}
+}

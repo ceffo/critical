@@ -78,6 +78,14 @@ func TestSetPicks_Step13_NoChangeLogsNothing(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// ADR 0037 step 13: a save that only reorders the stored picks writes and logs nothing (the
+// journal would show an entry with no change).
+func TestSetPicks_Step13_ReorderLogsNothing(t *testing.T) {
+	f := newPicksFixture(t, nonweapon(pk("tumbling", 1), pk("tracking", 2))) // the picks and log mocks fail any write or record
+	_, err := f.svc.SetProficiencies(context.Background(), charID, nonweapon(pk("tracking", 2), pk("tumbling", 1)))
+	require.NoError(t, err)
+}
+
 // ADR 0019 on step 13: the restorer writes a snapshot's picks back (undo the before, redo the
 // after), an empty list as none.
 func TestSetPicks_Step13_RestorerWritesThePicksBack(t *testing.T) {

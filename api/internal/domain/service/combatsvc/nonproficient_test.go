@@ -49,7 +49,7 @@ func profChar(t *testing.T, class string, picks ...string) *charactersvc.Charact
 	for _, p := range picks {
 		weapon = append(weapon, charactersvc.WeaponPick{Type: p, Slots: 1})
 	}
-	f, ok := charactersvc.ProficiencyFigures(book, class, 5, 12, charactersvc.Picks{Weapon: weapon})
+	f, ok := charactersvc.ProficiencyFigures(book, class, 5, 12, charactersvc.Spending{Picks: charactersvc.Picks{Weapon: weapon}})
 	require.True(t, ok, "no Table 34 row for %s", class)
 	return &charactersvc.Character{
 		ID: charID, Str: 12, Dex: 17, Class: class, Race: "human",

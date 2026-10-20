@@ -354,7 +354,7 @@ items'). Package `creationrollsvc`, handler `creationrollhdl`.
   non-number is 400 `not_a_number` on the field (`height`, `details.height` at creation), a value of 0 or less or above 300 cm /
   500 kg `out_of_range`. The old keys `height` and `weight` keep their string type for **one release**, so that a client of the
   release before still works against this server during the rolling deploy ([ADR 0024](0024-deployment.md) step 5.2): read as
-  `"180 cm"` / `"75.5 kg"` (`""` when not set), written as any text `ParseHeight` / `ParseWeight` reads (an empty one or null
+  `"180 cm"` / `"75.5 kg"` (`""` when not set), written as any text `ParseHeight` / `ParseWeight` read, both removed since (an empty one or null
   clears it, one naming no figure is 400 `not_a_number`); when both a number key and a text key are sent, the number wins. The
   web of this release sends and reads only the number keys. Checked for real: an old-style PATCH and create against this
   server work; this release's web against the release before fails with 400 `invalid JSON body` (an unknown field), the

@@ -54,7 +54,7 @@ herdr agent wait dev-<id> --until done --until idle --until blocked
 If `HERDR_ENV` isn't `1`, use the Agent tool (`subagent_type: developer` / `code-reviewer`) with the
 same brief files and `SendMessage` for later rounds, and tell the user.
 
-When the wait returns:
+When the wait returns (after reading a report you act on later, e.g. a developer held until a merge, `touch <wt>/supervisor/.prompt-<item>` so fleet-watch stops re-reporting it):
 - `done` / `idle` → read the report file (overwritten every round; check its mtime is after your
   prompt). Missing or stale → `herdr agent read dev-<id> --source recent-unwrapped --lines 60`: the
   agent stopped early, likely with a question. (herdr reports `done` while an agent waits on a
@@ -173,6 +173,7 @@ The quota gate applies (a scoper is Opus).
   doc's "Parallelism" rules (compare each in-flight branch's committed and pending changes,
   `git -C <worktree> diff --name-only origin/<db>...HEAD` plus `git -C <worktree> status --short`,
   with the files the item names).
+- Parallel lanes in the same area (the web, a shared store): each brief names the shared modules the lane must not add callers to or duplicate (sup-52: a journal lane added a second creation-options fetch while another lane made it once per page load).
 - **At every transition** (report read, PR shipped, merge), list Linear's Todo items and fill every
   free lane before ending the turn. One lane busy and eligible disjoint items waiting is idling.
 - The quota gate caps the lane count (projected over 100%: fewer lanes, Sonnet where allowed).

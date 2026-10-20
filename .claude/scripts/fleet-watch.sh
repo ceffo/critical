@@ -10,8 +10,8 @@
 #   - ends a turn on a question or a request to the user (herdr shows it as idle/done, not blocked)
 #                                                                                  -> "WAITING-ON-USER <name>"
 # Waiting (a question) or blocked: the agent's tab gets a "❓ " / "⛔ " prefix and a herdr notification
-# (sound "request") so the user sees it; the prefix goes when the agent works again. scoper-* and
-# designer-* talk to the user by design: they get the mark and the notification, but don't wake the
+# (sound "request") so the user sees it; the prefix goes when the agent works again. Agents outside the
+# dev-/rev-/tester- lanes (scopers, designers, the user's own sessions) talk to the user by design: they get the mark and the notification, but don't wake the
 # supervisor. Agents already waiting when the watcher starts are marked, not reported.
 # Only the agents of this herdr workspace ($HERDR_WORKSPACE_ID) are watched.
 # An agent ending a turn that only talks to the user (live steps, a scoper's questions) doesn't wake it.
@@ -44,9 +44,10 @@ mark() { # mark <tab> <prefix|""> : set or clear the tab's waiting prefix
   [ "$l" = "$2$base" ] || herdr tab rename "$1" "$2$base" >/dev/null 2>&1
 }
 notify() { herdr notification show "$1" --body "$2" --sound request >/dev/null 2>&1 || true; }
-# Agents the user drives in their own tab: scoper-*, designer-*, and any name listed (one per line)
-# in $W/user-facing-agents (e.g. a Fable session launched by the user's request).
-user_facing() { [[ "$1" == scoper-* || "$1" == designer-* ]] || grep -qxF "$1" "$W/user-facing-agents" 2>/dev/null; }
+# Agents the user drives in their own tab: every name outside the supervisor's dev-/rev-/tester-
+# lanes (scoper-*, designer-*, a session the user started himself, e.g. plain "claude"; sup-53
+# retro), plus any name listed (one per line) in $W/user-facing-agents.
+user_facing() { [[ "$1" != dev-* && "$1" != rev-* && "$1" != tester-* ]] || grep -qxF "$1" "$W/user-facing-agents" 2>/dev/null; }
 fresh_report() { # the agent's report newer than the supervisor's last prompt for its item
   # (an agent suffix is dropped: dev-x-12b -> X-12). The marker is a .prompt-<item> file or, without one, the item's newest
   # brief (written just before each prompt), so a forgotten marker never hides a report.

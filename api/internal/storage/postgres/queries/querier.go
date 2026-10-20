@@ -60,9 +60,6 @@ type Querier interface {
 	ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error)
 	// The languages migration (014): every character's stored language list, to map to codes.
 	ListCharacterLanguages(ctx context.Context) ([]ListCharacterLanguagesRow, error)
-	// The identity numbers migration (015): every character's stored free-text height and weight,
-	// to parse into centimetres and kilograms.
-	ListCharacterMeasures(ctx context.Context) ([]ListCharacterMeasuresRow, error)
 	ListLegacyItems(ctx context.Context, characterID int64) ([]ListLegacyItemsRow, error)
 	ListLegacyWeapons(ctx context.Context, characterID int64) ([]ListLegacyWeaponsRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
@@ -83,8 +80,6 @@ type Querier interface {
 	SetCharacterIdentity(ctx context.Context, arg SetCharacterIdentityParams) error
 	// The mapped language list of a character (a JSON list of codes).
 	SetCharacterLanguages(ctx context.Context, arg SetCharacterLanguagesParams) error
-	// The parsed height and weight of a character (0: none, the text was not recognised).
-	SetCharacterMeasures(ctx context.Context, arg SetCharacterMeasuresParams) error
 	// The seed character's alignment and sex when it lacks them (migration 013): a value set since is
 	// kept, so a rerun changes nothing.
 	SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
+import { useLanguagesStore } from "@/stores/languages";
 import { useItemsStore } from "@/stores/items";
 import type { LocalizedText } from "@/types/localized";
 
@@ -11,6 +12,8 @@ import type { LocalizedText } from "@/types/localized";
 export interface InventoryNamer {
   item: (id: string | undefined, recorded: string) => string;
   weapon: (id: string | undefined, recorded: string) => string;
+  /** A language by its catalogue code; the code itself when the catalogue does not know it. */
+  language: (code: string) => string;
 }
 
 /** What the namer reads of an item or a weapon. */
@@ -24,19 +27,26 @@ export function inventoryNamer(
   items: readonly Named[],
   weapons: readonly Named[],
   lang: string,
+  languages: readonly { code: string; name: LocalizedText }[] = [],
 ): InventoryNamer {
   const named =
     (list: readonly Named[]) => (id: string | undefined, recorded: string) => {
       const found = id ? list.find((x) => x.id === id) : undefined;
       return (found && localized(lang, found.name)) || recorded;
     };
-  return { item: named(items), weapon: named(weapons) };
+  return {
+    item: named(items),
+    weapon: named(weapons),
+    language: (code) =>
+      localized(lang, languages.find((l) => l.code === code)?.name) || code,
+  };
 }
 
 /** Names as recorded in the payloads (tests, no inventory). */
 export const recordedNames: InventoryNamer = {
   item: (_, recorded) => recorded,
   weapon: (_, recorded) => recorded,
+  language: (code) => code,
 };
 
 /** The namer for the current language and lists; re-renders when either changes. */
@@ -44,5 +54,6 @@ export function useInventoryName(): InventoryNamer {
   const { i18n } = useTranslation();
   const items = useItemsStore((s) => s.items);
   const weapons = useItemsStore((s) => s.weapons);
-  return inventoryNamer(items, weapons, i18n.language);
+  const languages = useLanguagesStore((s) => s.languages);
+  return inventoryNamer(items, weapons, i18n.language, languages);
 }

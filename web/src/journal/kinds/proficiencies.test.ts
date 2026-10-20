@@ -26,13 +26,13 @@ describeKind("proficiencies", fixtures, {
     },
   },
   languages: {
-    en: { text: "Proficiency slots: Tumbling 1 → 2 · Languages: 2 → 3" },
+    en: { text: "Proficiency slots: Tumbling 1 → 2 · Languages: + gnomish" },
     fr: {
-      text: "Emplacements de compétence : Acrobatie 1 → 2 · Langues : 2 → 3",
+      text: "Emplacements de compétence : Acrobatie 1 → 2 · Langues : + gnomish",
     },
   },
   languagesOnly: {
-    en: { text: "Languages: 3 → 1" },
-    fr: { text: "Langues : 3 → 1" },
+    en: { text: "Languages: − orcish, − gnomish" },
+    fr: { text: "Langues : − orcish, − gnomish" },
   },
 });

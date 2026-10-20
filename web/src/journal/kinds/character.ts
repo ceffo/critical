@@ -230,8 +230,9 @@ export const proficienciesKind: KindView<PicksPayload> = {
   // "Proficiency slots: Tumbling 1 → 2, Tracking 0 → 2": each pick whose slots changed (0: none);
   // then "Weapon proficiency slots: Long sword 1 → 2 (specialization)". A weapon pick of more than
   // one slot is a specialization: the server refuses any other count (ADR 0037 step 9). Then
-  // "Languages: 2 → 3", the count of the languages known (ADR 0037 step 18), when they changed.
-  text(p, { t }) {
+  // "Languages: + Elvish, − Dwarvish", the languages gained and lost (ADR 0037 step 18), named from
+  // the language catalogue (the code when it has none), when they changed.
+  text(p, { t, names }) {
     const parts: string[] = [];
     const ids = changed(p.before, p.after);
     const l = p.languages;
@@ -273,8 +274,22 @@ export const proficienciesKind: KindView<PicksPayload> = {
     if (l && languagesChanged)
       parts.push(
         t("log.proficiencies.languages", {
-          from: l.before.length,
-          to: l.after.length,
+          changes: [
+            ...l.after
+              .filter((c) => !l.before.includes(c))
+              .map((c) =>
+                t("log.proficiencies.languageAdded", {
+                  name: names.language(c),
+                }),
+              ),
+            ...l.before
+              .filter((c) => !l.after.includes(c))
+              .map((c) =>
+                t("log.proficiencies.languageRemoved", {
+                  name: names.language(c),
+                }),
+              ),
+          ].join(", "),
         }),
       );
     return parts.join(" · ");

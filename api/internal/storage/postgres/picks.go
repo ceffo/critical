@@ -8,8 +8,8 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 )
 
@@ -41,12 +41,12 @@ func pickProficiencies(ctx context.Context, q storeq.Querier, book *ruletablesvc
 	for _, c := range chars {
 		class[c.ID] = c.Class
 	}
-	picks := map[int64]*charactersvc.Picks{}
+	picks := map[int64]*skills.Picks{}
 	var order []int64
 	for _, r := range rows {
 		p, ok := picks[r.CharacterID]
 		if !ok {
-			p = &charactersvc.Picks{}
+			p = &skills.Picks{}
 			picks[r.CharacterID] = p
 			order = append(order, r.CharacterID)
 		}
@@ -54,7 +54,7 @@ func pickProficiencies(ctx context.Context, q storeq.Querier, book *ruletablesvc
 		if row, known := book.Get(r.ID); known {
 			slots = ruletablesvc.NonweaponCost(row, book.GroupsOf(class[r.CharacterID]))
 		}
-		p.Nonweapon = append(p.Nonweapon, charactersvc.Pick{ID: r.ID, Slots: slots})
+		p.Nonweapon = append(p.Nonweapon, skills.Pick{ID: r.ID, Slots: slots})
 	}
 	for _, id := range order {
 		raw, err := characterdal.EncodePicks(*picks[id])
@@ -125,7 +125,7 @@ func grantOwnedWeaponTypes(ctx context.Context, q storeq.Querier) error {
 		added := false
 		for _, t := range ruletablesvc.WeaponTypes {
 			if types[t] && !had[t] {
-				picks.Weapon = append(picks.Weapon, charactersvc.WeaponPick{Type: t, Slots: charactersvc.WeaponPickSlots})
+				picks.Weapon = append(picks.Weapon, skills.WeaponPick{Type: t, Slots: skills.WeaponPickSlots})
 				added = true
 			}
 		}
@@ -203,7 +203,7 @@ func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier) error {
 		if err != nil {
 			return fmt.Errorf("character %d: %w", c.ID, err)
 		}
-		if slices.ContainsFunc(picks.Weapon, charactersvc.WeaponPick.IsSpecialization) {
+		if slices.ContainsFunc(picks.Weapon, skills.WeaponPick.IsSpecialization) {
 			continue
 		}
 		first := types[0]
@@ -212,16 +212,16 @@ func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier) error {
 				"character", c.ID, "specialization", first, "plain", types[1:])
 		}
 		slots := ruletablesvc.SpecializationSlots(first)
-		if i := slices.IndexFunc(picks.Weapon, func(p charactersvc.WeaponPick) bool { return p.Type == first }); i >= 0 {
+		if i := slices.IndexFunc(picks.Weapon, func(p skills.WeaponPick) bool { return p.Type == first }); i >= 0 {
 			picks.Weapon[i].Slots = slots
 		} else {
-			picks.Weapon = append(picks.Weapon, charactersvc.WeaponPick{Type: first, Slots: slots})
+			picks.Weapon = append(picks.Weapon, skills.WeaponPick{Type: first, Slots: slots})
 		}
 		// The other flagged types are plain picks, added when missing: no attack loses its
 		// proficiency the day the rule lands.
 		for _, t := range types[1:] {
-			if !slices.ContainsFunc(picks.Weapon, func(p charactersvc.WeaponPick) bool { return p.Type == t }) {
-				picks.Weapon = append(picks.Weapon, charactersvc.WeaponPick{Type: t, Slots: charactersvc.WeaponPickSlots})
+			if !slices.ContainsFunc(picks.Weapon, func(p skills.WeaponPick) bool { return p.Type == t }) {
+				picks.Weapon = append(picks.Weapon, skills.WeaponPick{Type: t, Slots: skills.WeaponPickSlots})
 			}
 		}
 		raw, err := characterdal.EncodePicks(picks)

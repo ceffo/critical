@@ -26,10 +26,16 @@ UPDATE characters SET proficiency_picks = sqlc.arg(proficiency_picks) WHERE id =
 SELECT class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages
 FROM characters WHERE id = $1;
 
+-- The details card's edit: every detail but the languages, which the Skills tab saves (ADR 0037
+-- step 18, SetLanguages).
 -- name: UpdateCharacterDetails :execrows
 UPDATE characters
-SET alignment = $1, age = $2, sex = $3, height_cm = $4, weight_kg = $5, hair = $6, eyes = $7, languages = $8
-WHERE id = $9;
+SET alignment = $1, age = $2, sex = $3, height_cm = $4, weight_kg = $5, hair = $6, eyes = $7
+WHERE id = $8;
+
+-- The languages saved by the Skills tab's editor and their undo (ADR 0037 steps 13 and 18).
+-- name: SetLanguages :execrows
+UPDATE characters SET languages = sqlc.arg(languages) WHERE id = sqlc.arg(id);
 
 -- name: CharactersOf :many
 -- The owner's characters they have not retired, in creation order (the service derives each level).

@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
@@ -91,8 +92,8 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 		langs int
 		code  string
 	}{
-		"campaign seeds": {seedsDir, 3, charactersvc.CodeSlotsOverBudget},
-		"test fixture":   {fixtureSeedsDir, 0, charactersvc.CodeSlotsToSpend},
+		"campaign seeds": {seedsDir, 3, skills.CodeSlotsOverBudget},
+		"test fixture":   {fixtureSeedsDir, 0, skills.CodeSlotsToSpend},
 	} {
 		dir := tc.dir
 		t.Run(name, func(t *testing.T) {
@@ -103,18 +104,18 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 			require.True(t, ok)
 			picks := c.Picks()
 			require.Len(t, picks.Nonweapon, len(kelsenSheet))
-			_, err = charactersvc.ValidPicks(book, seedfile.DefaultClass, picks, charactersvc.Picks{})
+			_, err = skills.ValidPicks(book, seedfile.DefaultClass, picks, skills.Picks{})
 			require.NoError(t, err, "the editor accepts the seed's picks")
 
 			catalogue, ok := parseTables(t, fixtureCatalogue).Languages()
 			require.True(t, ok)
-			langs := charactersvc.LanguageSlots(c.Languages, catalogue.Native(c.Race))
+			langs := skills.LanguageSlots(c.Languages, catalogue.Native(c.Race))
 			assert.Equal(t, tc.langs, langs, "the campaign's Elvish, Orcish and Dwarvish; Common is a half-elf's own")
-			spend := charactersvc.Spending{Picks: picks, Languages: langs}
+			spend := skills.Spending{Picks: picks, Languages: langs}
 			sheet := &charactersvc.Character{Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha}
-			f, ok := charactersvc.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, spend)
+			f, ok := skills.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, spend)
 			require.True(t, ok)
-			f.SetTargets(sheet.Score)
+			f.SetTargets(func(a string) (int, bool) { return sheet.Score(charactersvc.Ability(a)) })
 			for i, s := range kelsenSheet {
 				got := f.Picks[i]
 				assert.Equal(t, s.id, got.ID)
@@ -125,12 +126,12 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 			assert.Equal(t, ruletablesvc.NonweaponPool{
 				Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 8 + tc.langs, Left: 2 - tc.langs, Languages: tc.langs,
 			}, f.Nonweapon)
-			w := charactersvc.SlotWarnings(f)
+			w := skills.SlotWarnings(f)
 			require.NotEmpty(t, w)
 			assert.Equal(t, tc.code, w[0].Code, "a warning, never an error")
-			require.NoError(t, charactersvc.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, spend, spend), "kept as is")
-			fewer := charactersvc.Spending{Picks: picks, Languages: max(langs-1, 0)}
-			require.NoError(t, charactersvc.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, spend, fewer), "a language dropped")
+			require.NoError(t, skills.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, spend, spend), "kept as is")
+			fewer := skills.Spending{Picks: picks, Languages: max(langs-1, 0)}
+			require.NoError(t, skills.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, spend, fewer), "a language dropped")
 		})
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // picksJSON is the stored form of characters.proficiency_picks (migrations 025 and 026): an
@@ -27,7 +27,7 @@ type pickJSON struct {
 
 // EncodePicks writes characters.proficiency_picks; no pick is '{}'. The seed and the migration's
 // data step write the column with it too.
-func EncodePicks(p charactersvc.Picks) (string, error) {
+func EncodePicks(p skills.Picks) (string, error) {
 	var out picksJSON
 	for _, x := range p.Nonweapon {
 		out.Nonweapon = append(out.Nonweapon, pickJSON(x))
@@ -43,19 +43,19 @@ func EncodePicks(p charactersvc.Picks) (string, error) {
 }
 
 // DecodePicks reads characters.proficiency_picks; the lists are never nil.
-func DecodePicks(raw string) (charactersvc.Picks, error) {
+func DecodePicks(raw string) (skills.Picks, error) {
 	var in picksJSON
 	if err := json.Unmarshal([]byte(raw), &in); err != nil {
-		return charactersvc.Picks{}, fmt.Errorf("decode proficiency picks: %w", err)
+		return skills.Picks{}, fmt.Errorf("decode proficiency picks: %w", err)
 	}
-	out := charactersvc.Picks{
-		Nonweapon: make([]charactersvc.Pick, 0, len(in.Nonweapon)), Weapon: make([]charactersvc.WeaponPick, 0, len(in.Weapon)),
+	out := skills.Picks{
+		Nonweapon: make([]skills.Pick, 0, len(in.Nonweapon)), Weapon: make([]skills.WeaponPick, 0, len(in.Weapon)),
 	}
 	for _, x := range in.Nonweapon {
-		out.Nonweapon = append(out.Nonweapon, charactersvc.Pick(x))
+		out.Nonweapon = append(out.Nonweapon, skills.Pick(x))
 	}
 	for _, x := range in.Weapon {
-		out.Weapon = append(out.Weapon, charactersvc.WeaponPick(x))
+		out.Weapon = append(out.Weapon, skills.WeaponPick(x))
 	}
 	return out, nil
 }

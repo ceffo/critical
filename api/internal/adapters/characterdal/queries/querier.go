@@ -51,12 +51,16 @@ type Querier interface {
 	SetACOverride(ctx context.Context, arg SetACOverrideParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
+	// The languages saved by the Skills tab's editor and their undo (ADR 0037 steps 13 and 18).
+	SetLanguages(ctx context.Context, arg SetLanguagesParams) (int64, error)
 	// The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
 	SetProficiencyPicks(ctx context.Context, arg SetProficiencyPicksParams) (int64, error)
 	// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
 	SetRealizedLevel(ctx context.Context, arg SetRealizedLevelParams) (int64, error)
 	// A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
 	SetSkillPoints(ctx context.Context, arg SetSkillPointsParams) (int64, error)
+	// The details card's edit: every detail but the languages, which the Skills tab saves (ADR 0037
+	// step 18, SetLanguages).
 	UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error)
 }
 

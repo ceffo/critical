@@ -1,6 +1,9 @@
 package wire
 
-import "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+import (
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
+)
 
 // WarningDTO is a code and the field it is about; the web words it. The
 // numbers outside their range (ADR 0032 step 5.2) carry value, min and max.
@@ -28,6 +31,16 @@ func WarningsDTO(ws []charactersvc.Warning) []WarningDTO {
 	out := make([]WarningDTO, 0, len(ws))
 	for _, w := range ws {
 		out = append(out, WarningDTO(w))
+	}
+	return out
+}
+
+// SkillWarningsDTO maps the skills module's warnings (ADR 0037 step 11: the slot warnings of an
+// editor's preview or save), never nil.
+func SkillWarningsDTO(ws []skills.Warning) []WarningDTO {
+	out := make([]WarningDTO, 0, len(ws))
+	for _, w := range ws {
+		out = append(out, WarningDTO{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left})
 	}
 	return out
 }

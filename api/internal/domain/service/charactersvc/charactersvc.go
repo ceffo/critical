@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // ErrNoCurrentCharacter is a per-character request of a user who has no
@@ -37,26 +38,7 @@ type SVC interface {
 	// weapons: the type it is specialized in (ADR 0037 step 9) and the
 	// non-proficiency penalty of each type (step 8), from the character row
 	// alone: no XP ledger or armour read (ADR 0025 step 10).
-	WeaponProficiency(ctx context.Context, id int64) (WeaponProficiency, error)
-	// PreviewSkillPoints is character id derived as if its skill points were
-	// points (ADR 0030 steps 17 and 18): the skills and budget a spend would
-	// give. It writes nothing. The points are checked as ValidSkillPoints
-	// does (a *domain.FieldError), then against the budget as the spend
-	// checks them (SkillPointsWithinBudget, a *domain.BudgetError).
-	PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*Character, error)
-	// PreviewProficiencies is character id derived as if its proficiency
-	// picks were picks (ADR 0037 step 12): the pool, each pick's figures and
-	// the warnings a save would give. It writes nothing. The picks are
-	// checked as ValidPicks does (a *domain.FieldError), then against the
-	// budget as the save checks them (PicksWithinBudget, a
-	// *domain.BudgetError).
-	PreviewProficiencies(ctx context.Context, id int64, picks Picks) (*Character, error)
-	// LanguagesWithinBudget is ADR 0037 steps 6 and 10 on a languages edit
-	// of character id: refused (a *domain.BudgetError on field languages)
-	// when languages would leave the non-weapon pool over budget and
-	// spending more than the stored languages do. It reads within the ctx
-	// transaction and stores nothing.
-	LanguagesWithinBudget(ctx context.Context, id int64, languages []string) error
+	WeaponProficiency(ctx context.Context, id int64) (skills.WeaponProficiency, error)
 	// List is the owner's characters they have not retired, in creation
 	// order (ADR 0029 steps 7.1 and 7.3).
 	List(ctx context.Context, owner uuid.UUID) ([]Summary, error)
@@ -209,64 +191,22 @@ func NewWithConfig(_ *Config, d Deps) (SVC, error) { return New(d) }
 // ledger) gets the derived values, so an XP award that crosses a threshold
 // changes them all at once.
 func (s *service) GetCharacter(ctx context.Context, id int64) (*Character, error) {
-	return s.read(ctx, id, readDraft{})
+	return s.read(ctx, id)
 }
 
-func (s *service) WeaponProficiency(ctx context.Context, id int64) (WeaponProficiency, error) {
+func (s *service) WeaponProficiency(ctx context.Context, id int64) (skills.WeaponProficiency, error) {
 	c, err := s.reader.GetCharacter(ctx, id)
 	if err != nil {
-		return WeaponProficiency{}, err
+		return skills.WeaponProficiency{}, err
 	}
-	return WeaponProficiencyOf(s.profs, c.Class, c.Proficiencies), nil
+	return skills.WeaponProficiencyOf(s.profs, c.Class, c.Proficiencies), nil
 }
 
-// PreviewSkillPoints reads character id with its skill points replaced by
-// points, validated, and derives it: nothing is stored.
-func (s *service) PreviewSkillPoints(ctx context.Context, id int64, points map[string]int) (*Character, error) {
-	return s.read(ctx, id, readDraft{points: &points})
-}
-
-// PreviewProficiencies reads character id with its picks replaced by picks,
-// validated, and derives it: nothing is stored.
-func (s *service) PreviewProficiencies(ctx context.Context, id int64, picks Picks) (*Character, error) {
-	return s.read(ctx, id, readDraft{picks: &picks})
-}
-
-func (s *service) LanguagesWithinBudget(ctx context.Context, id int64, languages []string) error {
-	c, err := s.GetCharacter(ctx, id)
-	if err != nil {
-		return err
-	}
-	after := s.languageSlots(c.Race, Details{Languages: languages})
-	return PicksWithinBudget(s.profs, c.Class, c.Derived.RealizedLevel, c.Int,
-		Spending{Picks: c.Proficiencies, Languages: c.LanguageSlots()},
-		Spending{Picks: c.Proficiencies, Languages: after})
-}
-
-// readDraft is what a preview reads in place of the stored values; nil
-// fields read the stored ones.
-type readDraft struct {
-	points *map[string]int
-	picks  *Picks
-}
-
-// read is GetCharacter; a draft's fields, when set, replace the stored skill
-// points or picks (validated for the character's class here).
-func (s *service) read(ctx context.Context, id int64, draft readDraft) (*Character, error) {
+// read is GetCharacter: the stored character, derived and warned.
+func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 	c, err := s.reader.GetCharacter(ctx, id)
 	if err != nil {
 		return nil, err
-	}
-	stored, storedPicks := c.SkillPoints, c.Proficiencies
-	if draft.points != nil {
-		if c.SkillPoints, err = ValidSkillPoints(c.Class, *draft.points); err != nil {
-			return nil, err
-		}
-	}
-	if draft.picks != nil {
-		if c.Proficiencies, err = ValidPicks(s.profs, c.Class, *draft.picks, storedPicks); err != nil {
-			return nil, err
-		}
 	}
 	ledger, err := s.xp.EntriesTotal(ctx, id)
 	if err != nil {
@@ -283,54 +223,47 @@ func (s *service) read(ctx context.Context, id int64, draft readDraft) (*Charact
 	if c.Derived, err = Derive(c, ledger, column, s.rules); err != nil {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
-	// ADR 0037 step 10: the preview refuses what the spend would refuse.
-	if draft.points != nil {
-		if err := SkillPointsWithinBudget(c.Class, c.Derived.RealizedLevel, stored, c.SkillPoints); err != nil {
-			return nil, err
-		}
-	}
-	if draft.picks != nil {
-		langs := s.languageSlots(c.Race, c.Details)
-		if err := PicksWithinBudget(s.profs, c.Class, c.Derived.RealizedLevel, c.Int,
-			Spending{Picks: storedPicks, Languages: langs}, Spending{Picks: c.Proficiencies, Languages: langs}); err != nil {
-			return nil, err
-		}
-	}
 	s.readWarnings(c)
 	return c, nil
 }
 
 // readWarnings sets c's languages, pools, level grants and warnings as a read shows them. The
-// native language is always among the languages (ADR 0032 step 4.1), a
-// character stored before it was added included; the warnings follow what is
-// read (steps 4.2, 5.2 and 8.4).
+// native language is always among the languages (ADR 0032 step 4.1), a character stored before
+// it was added included; the warnings follow what is read (steps 4.2, 5.2 and 8.4). The pools,
+// their warnings and the level grants are the skills module's (ADR 0037 step 17).
 func (s *service) readWarnings(c *Character) {
 	native := s.languages.Native(c.Race)
 	c.Details = c.Details.Known(s.languages).WithNative(native)
-	// ADR 0037 steps 3 to 6 and 11: the non-weapon pool at the realized
-	// level, the sheet's Intelligence as stored (no effect applied), the
-	// languages beyond the native one and Common spending a slot each. They
-	// replace ADR 0032 step 4.2's languages_over_limit: Table 4's count is
-	// the pool's Intelligence term, counted once.
-	c.Derived.Proficiencies = nil
-	spend := Spending{Picks: c.Proficiencies, Languages: LanguageSlots(c.Details.Languages, native)}
-	if f, ok := ProficiencyFigures(s.profs, c.Class, c.Derived.RealizedLevel, c.Int, spend); ok {
-		f.SetTargets(c.Score)
-		c.Derived.Proficiencies = &f
-	}
+	var slotWarnings []skills.Warning
+	c.Derived.Proficiencies, slotWarnings = skills.Read(s.profs, skills.Sheet{
+		Class: c.Class, Level: c.Derived.RealizedLevel, Intelligence: c.Int,
+		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: native,
+		Score: func(a string) (int, bool) { return c.Score(Ability(a)) },
+	})
 	c.Warnings = c.Details.Warnings(c.Class)
 	c.Warnings = append(c.Warnings, c.Details.RangeWarnings(c.Race)...)
-	if c.Derived.Proficiencies != nil {
-		c.Warnings = append(c.Warnings, SlotWarnings(*c.Derived.Proficiencies)...)
-	}
+	c.Warnings = append(c.Warnings, fromSkills(slotWarnings)...)
 	// ADR 0037 step 15, once the pools are known.
-	setGrants(s.profs, c)
+	for i := range c.Derived.LevelUp.Pending {
+		p := &c.Derived.LevelUp.Pending[i]
+		p.Grants = skills.GrantsAt(s.profs, c.Class, p.Level)
+	}
+	c.Derived.LevelUp.ToSpend = skills.ToSpend(c.Derived.Proficiencies, c.Derived.SkillPoints)
+}
+
+// fromSkills are the skills module's warnings (ADR 0037 step 11) as the sheet's.
+func fromSkills(ws []skills.Warning) []Warning {
+	out := make([]Warning, 0, len(ws))
+	for _, w := range ws {
+		out = append(out, Warning{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left})
+	}
+	return out
 }
 
 // languageSlots is ADR 0037 step 6 on the details of a character of race: the slots its known
 // languages spend.
 func (s *service) languageSlots(race string, d Details) int {
-	return LanguageSlots(d.Known(s.languages).Languages, s.languages.Native(race))
+	return skills.LanguageSlots(d.Known(s.languages).Languages, s.languages.Native(race))
 }
 
 // List names each character with its realized level (ADR 0030 step 3), its

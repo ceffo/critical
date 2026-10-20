@@ -11,6 +11,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -72,7 +74,7 @@ func TestResolveAttack_Step9_SpecializationFromThePick(t *testing.T) {
 
 	before, _, err := bs.Log.TopID(ctx, id)
 	require.NoError(t, err)
-	_, err = bs.Skills.SetProficiencies(ctx, id, charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "long_sword", Slots: 2}}})
+	_, err = bs.Skills.SetProficiencies(ctx, id, skillsvc.Edit{Picks: skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: 2}}}})
 	require.NoError(t, err)
 	top, _, err := bs.Log.TopID(ctx, id)
 	require.NoError(t, err)

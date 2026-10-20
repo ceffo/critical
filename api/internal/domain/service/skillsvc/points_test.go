@@ -31,7 +31,7 @@ func pointsFixtureAt(t *testing.T, class string, level int, points map[string]in
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
@@ -174,4 +174,47 @@ func TestSetPoints_Step10_SkillPointsRefusedOverAndGrowing(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, stored, got)
 	})
+}
+
+// ADR 0030 steps 17 and 18 in the editor's preview (ADR 0037 step 17: the skills module's): the
+// tab as it would read with the draft points, the percentages from the tables at the
+// character's race, Dexterity and skill armour, the budget at the realized level; refused as the
+// spend refuses (an unknown skill, an overspend that grows), nothing written or logged (the
+// points and log mocks fail any write or record).
+func TestPreviewPoints_Step17_TheDraftReadAsTheSpendChecksIt(t *testing.T) {
+	f := &fixture{
+		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
+		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
+	}
+	tables := &fakeTables{}
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Book: testBook(t), Tables: tables, Tx: f.tx})
+	require.NoError(t, err)
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).RunAndReturn(func(context.Context, int64) (*charactersvc.Character, error) {
+		return &charactersvc.Character{
+			ID: charID, Class: "thief", Race: "elf", Dex: 17, SkillPoints: map[string]int{"open_locks": 30}, RealizedLevel: 1,
+			Derived: charactersvc.Derived{RealizedLevel: 1, SkillArmor: "leather"},
+		}, nil
+	})
+	f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, mock.Anything).Return(nil, nil)
+
+	got, err := svc.PreviewPoints(context.Background(), charID, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 0})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int{"open_locks": 30, "pick_pockets": 30}, tables.points, "the draft without its zeros")
+	assert.Equal(t, "elf", tables.race)
+	assert.Equal(t, 17, tables.dex)
+	assert.Equal(t, "leather", tables.armor, "the character's skill armour")
+	require.NotNil(t, got.Budget)
+	assert.Equal(t, 60, got.Budget.Spent)
+	assert.Equal(t, 0, got.Budget.Left, "a level 1 thief's 60 points, spent")
+	assert.Equal(t, "leather", got.SkillArmor)
+
+	_, err = svc.PreviewPoints(context.Background(), charID, map[string]int{"juggling": 5})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "skillPoints.juggling", fe.Field)
+
+	_, err = svc.PreviewPoints(context.Background(), charID, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 5})
+	var be *domain.BudgetError
+	require.ErrorAs(t, err, &be)
+	assert.Equal(t, domain.BudgetError{Field: "skillPoints", Spent: 65, Limit: 60}, *be)
 }

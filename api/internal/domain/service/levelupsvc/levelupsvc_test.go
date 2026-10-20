@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // The level-up roll of ADR 0030 step 7. Step 7.1: "Up to the name level
@@ -357,9 +358,9 @@ func TestRestorer_WritesTheRealizedLevelBack(t *testing.T) {
 func TestLevelUp_Step15_GrantsSlotsAndPoints(t *testing.T) {
 	f := newFixture(t)
 	four := d6(4)
-	four.Grants = charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 30}
+	four.Grants = skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 30}
 	five := d6(5)
-	five.Grants = charactersvc.LevelGrants{SkillPoints: 30}
+	five.Grants = skills.LevelGrants{SkillPoints: 30}
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("thief", 12, 15, 3, four, five), nil).Once()
 	f.dice.EXPECT().RollDie(6).Return(3).Once()
 	f.rules.EXPECT().ConstitutionFor(12).Return(con(0, 0, 0), nil).Once()

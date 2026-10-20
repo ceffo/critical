@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // ADR 0030 step 7.3: POST /api/character/levelup/roll passes the level (and
@@ -21,8 +22,8 @@ func TestLevelUp_RollAnswersTheFullBreakdown(t *testing.T) {
 	rolled, counted := 1, 2
 	m.levelUp.EXPECT().Roll(mock.Anything, int64(1), levelupsvc.RollInput{Level: 9}).Return(&levelupsvc.Result{
 		Level: 9, HitDie: 6, Rolled: &rolled, Counted: &counted, ConAdjustment: 2, Gain: 4,
-		HPMaxBefore: 40, HPMaxAfter: 44, Grants: charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 2, SkillPoints: 30},
-		Pending: []charactersvc.PendingLevel{{Level: 10, Die: 6, Grants: charactersvc.LevelGrants{SkillPoints: 30}}, {Level: 11, FixedGain: 2}},
+		HPMaxBefore: 40, HPMaxAfter: 44, Grants: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 2, SkillPoints: 30},
+		Pending: []charactersvc.PendingLevel{{Level: 10, Die: 6, Grants: skills.LevelGrants{SkillPoints: 30}}, {Level: 11, FixedGain: 2}},
 	}, nil).Once()
 	rec := do(h, "POST", "/api/character/levelup/roll", `{"level":9}`)
 	require.Equal(t, http.StatusOK, rec.Code)

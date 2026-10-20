@@ -76,13 +76,13 @@ func TestRangeWarnings_Step5_1_NoSexIsTheUnionNoRaceIsNothing(t *testing.T) {
 // 10,000; the range of the race refuses nothing. Null clears.
 func TestApply_Step5_2_OnlyANonsenseNumberIsRefused(t *testing.T) {
 	k := charactersvc.Kind{Class: "fighter", Race: "halfling"}
-	_, err := charactersvc.Details{}.Apply(k, nil, charactersvc.DetailsPatch{Height: f64(250.04), Weight: f64(400), Age: new(int)})
+	_, err := charactersvc.Details{}.Apply(k, charactersvc.DetailsPatch{Height: f64(250.04), Weight: f64(400), Age: new(int)})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe, "age 0 is not a clear")
 	assert.Equal(t, "age", fe.Field)
 
 	age := 900
-	got, err := charactersvc.Details{}.Apply(k, nil, charactersvc.DetailsPatch{Height: f64(250.04), Weight: f64(400), Age: &age})
+	got, err := charactersvc.Details{}.Apply(k, charactersvc.DetailsPatch{Height: f64(250.04), Weight: f64(400), Age: &age})
 	require.NoError(t, err, "a 2.5 m, 400 kg, 900 years halfling is the DM's to allow")
 	assert.Equal(t, 250.0, got.Height, "kept to a tenth")
 	assert.Equal(t, 400.0, got.Weight)
@@ -96,12 +96,12 @@ func TestApply_Step5_2_OnlyANonsenseNumberIsRefused(t *testing.T) {
 		"huge weight": {Weight: f64(500.1)},
 		"negative":    {Weight: f64(-3)},
 	} {
-		_, err := charactersvc.Details{}.Apply(k, nil, p)
+		_, err := charactersvc.Details{}.Apply(k, p)
 		require.ErrorAs(t, err, &fe, name)
 		assert.Equal(t, charactersvc.CodeOutOfRange, fe.Message, name)
 	}
 
-	cleared, err := got.Apply(k, nil, charactersvc.DetailsPatch{ClearHeight: true, ClearWeight: true})
+	cleared, err := got.Apply(k, charactersvc.DetailsPatch{ClearHeight: true, ClearWeight: true})
 	require.NoError(t, err)
 	assert.Zero(t, cleared.Height)
 	assert.Zero(t, cleared.Weight)

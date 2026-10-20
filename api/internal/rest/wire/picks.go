@@ -1,6 +1,6 @@
 package wire
 
-import "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+import "github.com/ceffo/critical/api/internal/domain/skills"
 
 // PicksDTO is a character's proficiency picks as the editor and the creation send them (ADR 0037
 // step 12): `nonweapon` the non-weapon picks, each a catalogue id and the slots spent on it,
@@ -25,22 +25,22 @@ type PickInputDTO struct {
 }
 
 // Picks maps the body to the domain picks: a pool absent from the body stays nil (left as
-// stored, charactersvc.ValidPicks); nil is no pick in either pool.
-func (p *PicksDTO) Picks() charactersvc.Picks {
+// stored, skills.ValidPicks); nil is no pick in either pool.
+func (p *PicksDTO) Picks() skills.Picks {
 	if p == nil {
-		return charactersvc.Picks{Nonweapon: []charactersvc.Pick{}, Weapon: []charactersvc.WeaponPick{}}
+		return skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{}}
 	}
-	var out charactersvc.Picks
+	var out skills.Picks
 	if p.Nonweapon != nil {
-		out.Nonweapon = make([]charactersvc.Pick, 0, len(p.Nonweapon))
+		out.Nonweapon = make([]skills.Pick, 0, len(p.Nonweapon))
 		for _, x := range p.Nonweapon {
-			out.Nonweapon = append(out.Nonweapon, charactersvc.Pick{ID: x.ID, Slots: x.Slots})
+			out.Nonweapon = append(out.Nonweapon, skills.Pick{ID: x.ID, Slots: x.Slots})
 		}
 	}
 	if p.Weapon != nil {
-		out.Weapon = make([]charactersvc.WeaponPick, 0, len(p.Weapon))
+		out.Weapon = make([]skills.WeaponPick, 0, len(p.Weapon))
 		for _, x := range p.Weapon {
-			out.Weapon = append(out.Weapon, charactersvc.WeaponPick{Type: x.Type, Slots: x.Slots})
+			out.Weapon = append(out.Weapon, skills.WeaponPick{Type: x.Type, Slots: x.Slots})
 		}
 	}
 	return out
@@ -113,7 +113,7 @@ type PickDTO struct {
 }
 
 // ProficiencySlotsToDTO maps the derived slots; nil stays nil.
-func ProficiencySlotsToDTO(p *charactersvc.ProficiencySlots) *ProficiencySlotsDTO {
+func ProficiencySlotsToDTO(p *skills.ProficiencySlots) *ProficiencySlotsDTO {
 	if p == nil {
 		return nil
 	}
@@ -126,7 +126,7 @@ func ProficiencySlotsToDTO(p *charactersvc.ProficiencySlots) *ProficiencySlotsDT
 	}
 	for _, f := range p.Picks {
 		d := PickDTO{
-			ID: f.ID, Slots: f.Slots, Cost: f.Cost, ExtraSlots: f.Extra, Ability: string(f.Ability), Modifier: f.Modifier, Known: f.Known,
+			ID: f.ID, Slots: f.Slots, Cost: f.Cost, ExtraSlots: f.Extra, Ability: f.Ability, Modifier: f.Modifier, Known: f.Known,
 		}
 		if f.HasCheck {
 			target := f.Target

@@ -14,10 +14,11 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // The non-proficiency penalty (ADR 0037 step 8): the penalties are read from the fixture's
-// Table 34 (seeds/proficiencies.json) through charactersvc.ProficiencyFigures, as the
+// Table 34 (seeds/proficiencies.json) through skills.ProficiencyFigures, as the
 // character service derives them, so a wrong seed row or a figure not carried fails here.
 
 const profTHAC0 = 18
@@ -45,11 +46,11 @@ func profChar(t *testing.T, class string, picks ...string) *charactersvc.Charact
 	t.Helper()
 	book, err := ruletablesadpt.ReadProficiencies(filepath.Join("..", "..", "..", "..", "testdata", "seeds"))
 	require.NoError(t, err)
-	weapon := make([]charactersvc.WeaponPick, 0, len(picks))
+	weapon := make([]skills.WeaponPick, 0, len(picks))
 	for _, p := range picks {
-		weapon = append(weapon, charactersvc.WeaponPick{Type: p, Slots: 1})
+		weapon = append(weapon, skills.WeaponPick{Type: p, Slots: 1})
 	}
-	f, ok := charactersvc.ProficiencyFigures(book, class, 5, 12, charactersvc.Spending{Picks: charactersvc.Picks{Weapon: weapon}})
+	f, ok := skills.ProficiencyFigures(book, class, 5, 12, skills.Spending{Picks: skills.Picks{Weapon: weapon}})
 	require.True(t, ok, "no Table 34 row for %s", class)
 	return &charactersvc.Character{
 		ID: charID, Str: 12, Dex: 17, Class: class, Race: "human",

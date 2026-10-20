@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 var (
@@ -367,7 +368,7 @@ func character(specializes bool) *charactersvc.Character {
 }
 
 // fighter is a fighter whose weapon picks are picks (ADR 0037 steps 7 and 9).
-func fighter(picks ...charactersvc.WeaponPick) *charactersvc.Character {
+func fighter(picks ...skills.WeaponPick) *charactersvc.Character {
 	c := character(true)
 	c.Class = "fighter"
 	c.Proficiencies.Weapon = picks
@@ -382,11 +383,11 @@ func fighter(picks ...charactersvc.WeaponPick) *charactersvc.Character {
 // follows it), and the edit logs no "specialized" change.
 func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 	// The character row's specialization, as charactersvc reads it.
-	specializedIn := func(c *charactersvc.Character) charactersvc.WeaponProficiency {
-		return charactersvc.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), c.Class, c.Proficiencies)
+	specializedIn := func(c *charactersvc.Character) skills.WeaponProficiency {
+		return skills.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), c.Class, c.Proficiencies)
 	}
-	spec := charactersvc.WeaponPick{Type: "long_sword", Slots: 2}
-	plain := charactersvc.WeaponPick{Type: "dagger", Slots: 1}
+	spec := skills.WeaponPick{Type: "long_sword", Slots: 2}
+	plain := skills.WeaponPick{Type: "dagger", Slots: 1}
 	second := sword
 	second.ID, second.Position = "longsword_2", 3
 	dagger := sword
@@ -492,7 +493,7 @@ func TestNonproficientPenalty_Step8_DerivedOnTheWeaponPiece(t *testing.T) {
 	stale.NonproficientPenalty = -9
 	dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{stale, sword, dagger, untyped}, nil)
 	f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).
-		Return(charactersvc.WeaponProficiency{Picked: []string{"dagger"}, Penalty: -2}, nil).Once()
+		Return(skills.WeaponProficiency{Picked: []string{"dagger"}, Penalty: -2}, nil).Once()
 	got, err := svc.List(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, []int{0, -2, 0, 0}, []int{

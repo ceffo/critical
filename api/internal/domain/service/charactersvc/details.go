@@ -9,11 +9,13 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // The bounds of the details' fields. The one validation of the details: the
 // card's edit (detailssvc) and the creation form (Create) both apply a
-// DetailsPatch through Details.Apply.
+// DetailsPatch through Details.Apply. The languages are the skills module's
+// (ADR 0037 step 18): skills.ValidLanguages.
 const (
 	MaxDetailShortLen = 40 // hair, eyes
 	MaxAge            = 10_000
@@ -62,7 +64,7 @@ var Sexes = []string{SexMale, SexFemale}
 const (
 	FieldAlignment = "alignment"
 	FieldSex       = "sex"
-	FieldLanguages = "languages"
+	FieldLanguages = skills.FieldLanguages
 	FieldHeight    = "height"
 	FieldWeight    = "weight"
 	FieldAge       = "age"
@@ -105,10 +107,10 @@ type Kind struct {
 const DetailsField = "details."
 
 // DetailsPatch holds the details to change, nil leaves a field as it is. An
-// empty string clears a text field, an empty list the languages (but the
-// native one, which the server keeps, ADR 0032 step 4.1) and ClearAge the age
-// (Age itself must be 1 to MaxAge). Alignment and Sex are codes and cannot be
-// cleared: an empty one is refused. Languages are catalogue codes.
+// empty string clears a text field and ClearAge the age (Age itself must be 1
+// to MaxAge). Alignment and Sex are codes and cannot be cleared: an empty one
+// is refused. The languages are no detail to edit: the Skills tab saves them
+// (ADR 0037 step 18).
 type DetailsPatch struct {
 	Alignment *string
 	Age       *int
@@ -122,7 +124,6 @@ type DetailsPatch struct {
 	ClearWeight bool
 	Hair        *string
 	Eyes        *string
-	Languages   *[]string
 }
 
 // Coded is d with an alignment or sex that is not a code blanked: during a
@@ -189,10 +190,7 @@ func (d Details) Known(book LanguageBook) Details {
 // when it was missing (ADR 0032 step 4.1); native "" (no catalogue) changes
 // nothing.
 func (d Details) WithNative(native string) Details {
-	d.Languages = append([]string{}, d.Languages...)
-	if native != "" && !slices.Contains(d.Languages, native) {
-		d.Languages = append([]string{native}, d.Languages...)
-	}
+	d.Languages = skills.WithNative(d.Languages, native)
 	return d
 }
 
@@ -245,13 +243,10 @@ func code(field, v string, allowed []string) error {
 // Apply is d with the patch applied for a character of kind, every field
 // checked: the alignment one of the nine, admitted by the class (ADR 0032 step
 // 2, on every set, at creation and on the card's edit alike), the sex male or
-// female (step 3), text trimmed and bounded, the age 1 to MaxAge, the
-// languages codes of the book without duplicates (step 4.3), the race's
-// native language added to them (step 4.1); going over the Intelligence count
-// is no refusal (step 4.2, LanguageWarning). A refusal is a *domain.FieldError
-// naming the field (alignment, age, sex, height, weight, hair, eyes or
-// languages).
-func (d Details) Apply(k Kind, book LanguageBook, p DetailsPatch) (Details, error) {
+// female (step 3), text trimmed and bounded, the age 1 to MaxAge. A refusal
+// is a *domain.FieldError naming the field (alignment, age, sex, height,
+// weight, hair or eyes).
+func (d Details) Apply(k Kind, p DetailsPatch) (Details, error) {
 	class := k.Class
 	cur := d
 	cur.Languages = append([]string{}, d.Languages...)
@@ -327,52 +322,15 @@ func (d Details) Apply(k Kind, book LanguageBook, p DetailsPatch) (Details, erro
 		}
 		cur.Age = *p.Age
 	}
-	if p.Languages != nil {
-		langs, err := cleanLanguages(book, d.Languages, *p.Languages)
-		if err != nil {
-			return d, err
-		}
-		cur.Languages = langs
-		if book != nil {
-			cur = cur.WithNative(book.Native(k.Race))
-		}
-	}
 	return cur, nil
 }
 
-// cleanLanguages checks the codes against the book: non-empty (CodeEmpty), in
-// the catalogue (CodeUnknown), each once (CodeDuplicate). A nil or empty book
-// (every catalogue before format 8) knows no language, but the codes the
-// character already holds stay valid there: its card sends them back with
-// every edit, and refusing them would lock the edit (ADR 0032 step 8.1).
-func cleanLanguages(book LanguageBook, stored, in []string) ([]string, error) {
-	empty := book == nil || len(book.All()) == 0
-	out := make([]string, 0, len(in))
-	seen := map[string]bool{}
-	for _, l := range in {
-		switch {
-		case l == "":
-			return nil, &domain.FieldError{Field: FieldLanguages, Message: CodeEmpty}
-		case (book == nil || !book.Has(l)) && (!empty || !slices.Contains(stored, l)):
-			return nil, &domain.FieldError{Field: FieldLanguages, Message: CodeUnknown}
-		case seen[l]:
-			return nil, &domain.FieldError{Field: FieldLanguages, Message: CodeDuplicate}
-		}
-		seen[l] = true
-		out = append(out, l)
-	}
-	return out, nil
-}
-
 // newDetails are a new character's details of kind: none, with p applied,
-// the alignment and the sex required (ADR 0032 steps 2 and 3). A refusal names
-// its field under DetailsField.
-func newDetails(k Kind, book LanguageBook, p DetailsPatch, required bool) (Details, error) {
-	// A new character always gets its native language (ADR 0032 step 4.1),
-	// whether or not the form sent languages.
-	if p.Languages == nil {
-		p.Languages = &[]string{}
-	}
+// the alignment and the sex required (ADR 0032 steps 2 and 3), and its
+// languages, checked as the Skills tab checks them (skills.ValidLanguages; nil
+// is none sent), its native language always among them (step 4.1). A refusal
+// names its field under DetailsField.
+func newDetails(k Kind, book LanguageBook, p DetailsPatch, languages []string, required bool) (Details, error) {
 	// A draft (the preview) leaves a blank alignment or sex unset.
 	if !required {
 		for _, f := range []**string{&p.Alignment, &p.Sex} {
@@ -381,7 +339,10 @@ func newDetails(k Kind, book LanguageBook, p DetailsPatch, required bool) (Detai
 			}
 		}
 	}
-	d, err := Details{Languages: []string{}}.Apply(k, book, p)
+	d, err := Details{Languages: []string{}}.Apply(k, p)
+	if err == nil {
+		d.Languages, err = skills.ValidLanguages(book, k.Race, nil, languages)
+	}
 	if err == nil && required && d.Alignment == "" {
 		err = &domain.FieldError{Field: FieldAlignment, Message: CodeEmpty}
 	}

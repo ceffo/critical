@@ -5,10 +5,7 @@ package mocks
 import (
 	context "context"
 
-	charactersvc "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-
 	domain "github.com/ceffo/critical/api/internal/domain"
-
 	mock "github.com/stretchr/testify/mock"
 
 	skillsvc "github.com/ceffo/critical/api/internal/domain/service/skillsvc"
@@ -405,29 +402,29 @@ func (_c *MockSVC_PreviewPoints_Call) RunAndReturn(run func(context.Context, int
 	return _c
 }
 
-// PreviewProficiencies provides a mock function with given fields: ctx, characterID, picks
-func (_m *MockSVC) PreviewProficiencies(ctx context.Context, characterID int64, picks charactersvc.Picks) (*charactersvc.Character, error) {
-	ret := _m.Called(ctx, characterID, picks)
+// PreviewProficiencies provides a mock function with given fields: ctx, characterID, e
+func (_m *MockSVC) PreviewProficiencies(ctx context.Context, characterID int64, e skillsvc.Edit) (*skillsvc.Proficiencies, error) {
+	ret := _m.Called(ctx, characterID, e)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PreviewProficiencies")
 	}
 
-	var r0 *charactersvc.Character
+	var r0 *skillsvc.Proficiencies
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Picks) (*charactersvc.Character, error)); ok {
-		return rf(ctx, characterID, picks)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, skillsvc.Edit) (*skillsvc.Proficiencies, error)); ok {
+		return rf(ctx, characterID, e)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Picks) *charactersvc.Character); ok {
-		r0 = rf(ctx, characterID, picks)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, skillsvc.Edit) *skillsvc.Proficiencies); ok {
+		r0 = rf(ctx, characterID, e)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*charactersvc.Character)
+			r0 = ret.Get(0).(*skillsvc.Proficiencies)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, charactersvc.Picks) error); ok {
-		r1 = rf(ctx, characterID, picks)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, skillsvc.Edit) error); ok {
+		r1 = rf(ctx, characterID, e)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -443,24 +440,24 @@ type MockSVC_PreviewProficiencies_Call struct {
 // PreviewProficiencies is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
-//   - picks charactersvc.Picks
-func (_e *MockSVC_Expecter) PreviewProficiencies(ctx interface{}, characterID interface{}, picks interface{}) *MockSVC_PreviewProficiencies_Call {
-	return &MockSVC_PreviewProficiencies_Call{Call: _e.mock.On("PreviewProficiencies", ctx, characterID, picks)}
+//   - e skillsvc.Edit
+func (_e *MockSVC_Expecter) PreviewProficiencies(ctx interface{}, characterID interface{}, e interface{}) *MockSVC_PreviewProficiencies_Call {
+	return &MockSVC_PreviewProficiencies_Call{Call: _e.mock.On("PreviewProficiencies", ctx, characterID, e)}
 }
 
-func (_c *MockSVC_PreviewProficiencies_Call) Run(run func(ctx context.Context, characterID int64, picks charactersvc.Picks)) *MockSVC_PreviewProficiencies_Call {
+func (_c *MockSVC_PreviewProficiencies_Call) Run(run func(ctx context.Context, characterID int64, e skillsvc.Edit)) *MockSVC_PreviewProficiencies_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(charactersvc.Picks))
+		run(args[0].(context.Context), args[1].(int64), args[2].(skillsvc.Edit))
 	})
 	return _c
 }
 
-func (_c *MockSVC_PreviewProficiencies_Call) Return(_a0 *charactersvc.Character, _a1 error) *MockSVC_PreviewProficiencies_Call {
+func (_c *MockSVC_PreviewProficiencies_Call) Return(_a0 *skillsvc.Proficiencies, _a1 error) *MockSVC_PreviewProficiencies_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSVC_PreviewProficiencies_Call) RunAndReturn(run func(context.Context, int64, charactersvc.Picks) (*charactersvc.Character, error)) *MockSVC_PreviewProficiencies_Call {
+func (_c *MockSVC_PreviewProficiencies_Call) RunAndReturn(run func(context.Context, int64, skillsvc.Edit) (*skillsvc.Proficiencies, error)) *MockSVC_PreviewProficiencies_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -646,29 +643,29 @@ func (_c *MockSVC_SetPoints_Call) RunAndReturn(run func(context.Context, int64, 
 	return _c
 }
 
-// SetProficiencies provides a mock function with given fields: ctx, characterID, picks
-func (_m *MockSVC) SetProficiencies(ctx context.Context, characterID int64, picks charactersvc.Picks) (*charactersvc.Character, error) {
-	ret := _m.Called(ctx, characterID, picks)
+// SetProficiencies provides a mock function with given fields: ctx, characterID, e
+func (_m *MockSVC) SetProficiencies(ctx context.Context, characterID int64, e skillsvc.Edit) (*skillsvc.Proficiencies, error) {
+	ret := _m.Called(ctx, characterID, e)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetProficiencies")
 	}
 
-	var r0 *charactersvc.Character
+	var r0 *skillsvc.Proficiencies
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Picks) (*charactersvc.Character, error)); ok {
-		return rf(ctx, characterID, picks)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, skillsvc.Edit) (*skillsvc.Proficiencies, error)); ok {
+		return rf(ctx, characterID, e)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Picks) *charactersvc.Character); ok {
-		r0 = rf(ctx, characterID, picks)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, skillsvc.Edit) *skillsvc.Proficiencies); ok {
+		r0 = rf(ctx, characterID, e)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*charactersvc.Character)
+			r0 = ret.Get(0).(*skillsvc.Proficiencies)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, charactersvc.Picks) error); ok {
-		r1 = rf(ctx, characterID, picks)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, skillsvc.Edit) error); ok {
+		r1 = rf(ctx, characterID, e)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -684,24 +681,24 @@ type MockSVC_SetProficiencies_Call struct {
 // SetProficiencies is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
-//   - picks charactersvc.Picks
-func (_e *MockSVC_Expecter) SetProficiencies(ctx interface{}, characterID interface{}, picks interface{}) *MockSVC_SetProficiencies_Call {
-	return &MockSVC_SetProficiencies_Call{Call: _e.mock.On("SetProficiencies", ctx, characterID, picks)}
+//   - e skillsvc.Edit
+func (_e *MockSVC_Expecter) SetProficiencies(ctx interface{}, characterID interface{}, e interface{}) *MockSVC_SetProficiencies_Call {
+	return &MockSVC_SetProficiencies_Call{Call: _e.mock.On("SetProficiencies", ctx, characterID, e)}
 }
 
-func (_c *MockSVC_SetProficiencies_Call) Run(run func(ctx context.Context, characterID int64, picks charactersvc.Picks)) *MockSVC_SetProficiencies_Call {
+func (_c *MockSVC_SetProficiencies_Call) Run(run func(ctx context.Context, characterID int64, e skillsvc.Edit)) *MockSVC_SetProficiencies_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(charactersvc.Picks))
+		run(args[0].(context.Context), args[1].(int64), args[2].(skillsvc.Edit))
 	})
 	return _c
 }
 
-func (_c *MockSVC_SetProficiencies_Call) Return(_a0 *charactersvc.Character, _a1 error) *MockSVC_SetProficiencies_Call {
+func (_c *MockSVC_SetProficiencies_Call) Return(_a0 *skillsvc.Proficiencies, _a1 error) *MockSVC_SetProficiencies_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSVC_SetProficiencies_Call) RunAndReturn(run func(context.Context, int64, charactersvc.Picks) (*charactersvc.Character, error)) *MockSVC_SetProficiencies_Call {
+func (_c *MockSVC_SetProficiencies_Call) RunAndReturn(run func(context.Context, int64, skillsvc.Edit) (*skillsvc.Proficiencies, error)) *MockSVC_SetProficiencies_Call {
 	_c.Call.Return(run)
 	return _c
 }

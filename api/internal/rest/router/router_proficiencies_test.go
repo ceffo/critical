@@ -10,24 +10,32 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
-// picked is a level 15 bard with Intelligence 14, two non-weapon picks (Tumbling with an extra
-// slot, target Dex 17 + 1, and an id the catalogue no longer holds) and two weapon picks.
-func picked() *charactersvc.Character {
-	return &charactersvc.Character{ID: 1, Class: "bard", Derived: charactersvc.Derived{
-		Proficiencies: &charactersvc.ProficiencySlots{
+// picked are a level 15 bard's pools with Intelligence 14, two non-weapon picks (Tumbling with
+// an extra slot, target Dex 17 + 1, and an id the catalogue no longer holds) and two weapon
+// picks, with their slot warnings.
+func picked() *skillsvc.Proficiencies {
+	seven, three := 7, 3
+	return &skillsvc.Proficiencies{
+		Slots: &skills.ProficiencySlots{
 			Nonweapon: ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 3, Left: 7},
 			Weapon:    ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 2, Left: 3},
-			Picks: []charactersvc.PickFigures{
+			Picks: []skills.PickFigures{
 				{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 18, HasCheck: true},
 				{ID: "old_skill", Slots: 1, Cost: 1},
 			},
-			WeaponPicks: []charactersvc.WeaponPickFigures{{Type: "long_sword", Slots: 1, Allowed: true}, {Type: "dagger", Slots: 1, Allowed: true}},
+			WeaponPicks: []skills.WeaponPickFigures{{Type: "long_sword", Slots: 1, Allowed: true}, {Type: "dagger", Slots: 1, Allowed: true}},
 		},
-	}}
+		Warnings: []skills.Warning{
+			{Code: "slots_to_spend", Field: "nonweapon", Pool: "nonweapon", Left: &seven},
+			{Code: "slots_to_spend", Field: "weapon", Pool: "weapon", Left: &three},
+			{Code: "proficiency_unknown", Field: "nonweapon.old_skill"},
+		},
+	}
 }
 
 const pickedBody = `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"old_skill","slots":1}],
@@ -53,10 +61,10 @@ const pickedAnswer = `{
 // pick's cost, extra slots and check target, each weapon pick, and the slot warnings; POST
 // /api/proficiencies/preview answers the same shape for the same body.
 func TestProficiencies_Step12_WireShape(t *testing.T) {
-	want := charactersvc.Picks{
-		Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "old_skill", Slots: 1}},
-		Weapon:    []charactersvc.WeaponPick{{Type: "long_sword", Slots: 1}, {Type: "dagger", Slots: 1}},
-	}
+	want := skillsvc.Edit{Picks: skills.Picks{
+		Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "old_skill", Slots: 1}},
+		Weapon:    []skills.WeaponPick{{Type: "long_sword", Slots: 1}, {Type: "dagger", Slots: 1}},
+	}}
 	for _, tc := range []struct{ method, path string }{
 		{"PUT", "/api/proficiencies"},
 		{"POST", "/api/proficiencies/preview"},
@@ -75,30 +83,53 @@ func TestProficiencies_Step12_WireShape(t *testing.T) {
 	}
 	t.Run("an empty list removes every pick", func(t *testing.T) {
 		h, m := newRouter(t)
-		none := charactersvc.Picks{Nonweapon: []charactersvc.Pick{}}
-		m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), none).Return(&charactersvc.Character{ID: 1}, nil).Once()
+		none := skillsvc.Edit{Picks: skills.Picks{Nonweapon: []skills.Pick{}}}
+		m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), none).Return(&skillsvc.Proficiencies{}, nil).Once()
 		rec := do(h, "PUT", "/api/proficiencies", `{"nonweapon":[]}`)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.JSONEq(t, `{"proficiencySlots":null,"warnings":[]}`, rec.Body.String())
 	})
 	t.Run("an absent pool is left as stored (nil to the service)", func(t *testing.T) {
 		h, m := newRouter(t)
-		weaponOnly := charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "sling", Slots: 1}}}
-		m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), weaponOnly).Return(&charactersvc.Character{ID: 1}, nil).Once()
+		weaponOnly := skillsvc.Edit{Picks: skills.Picks{Weapon: []skills.WeaponPick{{Type: "sling", Slots: 1}}}}
+		m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), weaponOnly).Return(&skillsvc.Proficiencies{}, nil).Once()
 		rec := do(h, "PUT", "/api/proficiencies", `{"weapon":[{"type":"sling","slots":1}]}`)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		nonweaponOnly := charactersvc.Picks{Nonweapon: []charactersvc.Pick{}}
-		m.skills.EXPECT().PreviewProficiencies(mock.Anything, int64(1), nonweaponOnly).Return(&charactersvc.Character{ID: 1}, nil).Once()
+		nonweaponOnly := skillsvc.Edit{Picks: skills.Picks{Nonweapon: []skills.Pick{}}}
+		m.skills.EXPECT().PreviewProficiencies(mock.Anything, int64(1), nonweaponOnly).Return(&skillsvc.Proficiencies{}, nil).Once()
 		rec = do(h, "POST", "/api/proficiencies/preview", `{"nonweapon":[]}`)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	})
 }
 
-// The refusals: a body with neither list or with an unknown field is a 400; a refused pick a 400
+// ADR 0037 step 18: the body's `languages` (the codes; absent or null left as stored) reach the
+// service with no pick pool, alone or with one; a languages refusal is the 409 over_budget on
+// field languages, as the details' save was.
+func TestProficiencies_Step18_TheLanguagesPool(t *testing.T) {
+	h, m := newRouter(t)
+	alone := skillsvc.Edit{Languages: []string{"elvish", "gnomish"}}
+	m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), alone).Return(picked(), nil).Once()
+	rec := do(h, "PUT", "/api/proficiencies", `{"languages":["elvish","gnomish"]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, pickedAnswer, rec.Body.String())
+
+	both := skillsvc.Edit{Picks: skills.Picks{Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 1}}}, Languages: []string{}}
+	m.skills.EXPECT().PreviewProficiencies(mock.Anything, int64(1), both).Return(picked(), nil).Once()
+	rec = do(h, "POST", "/api/proficiencies/preview", `{"nonweapon":[{"id":"tumbling","slots":1}],"languages":[]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), mock.Anything).
+		Return(nil, &domain.BudgetError{Field: "languages", Spent: 11, Limit: 10}).Once()
+	rec = do(h, "PUT", "/api/proficiencies", `{"languages":["elvish","gnomish","orcish"]}`)
+	require.Equal(t, http.StatusConflict, rec.Code)
+	assert.JSONEq(t, `{"error":"languages over budget: 11 of 10","code":"over_budget","field":"languages","spent":11,"limit":10}`, rec.Body.String())
+}
+
+// The refusals: a body with no pool or with an unknown field is a 400; a refused pick a 400
 // naming its field and code; a save that grows an overspend a 409 over_budget with the field,
 // the slots spent and the slots available (ADR 0037 step 10).
 func TestProficiencies_Step12_Refusals(t *testing.T) {
-	for _, body := range []string{`{}`, `{"nonweapon":null,"weapon":null}`, `{"weapon":[],"languages":[]}`, `nope`} {
+	for _, body := range []string{`{}`, `{"nonweapon":null,"weapon":null,"languages":null}`, `{"weapon":[],"skills":[]}`, `nope`} {
 		h, _ := newRouter(t) // the service mock fails any call
 		rec := do(h, "PUT", "/api/proficiencies", body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, body)

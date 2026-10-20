@@ -73,23 +73,18 @@ type Body struct {
 	WeightKg  field[wire.Weight] `json:"weight_kg"`
 	Hair      field[string]      `json:"hair"`
 	Eyes      field[string]      `json:"eyes"`
-	Languages field[[]string]    `json:"languages"`
 }
 
 func (b Body) patch() detailssvc.Patch {
 	p := detailssvc.Patch{
 		Alignment: b.Alignment.ptr(), Age: b.Age.ptr(), Sex: b.Sex.ptr(),
-		Hair: b.Hair.ptr(), Eyes: b.Eyes.ptr(), Languages: b.Languages.ptr(),
+		Hair: b.Hair.ptr(), Eyes: b.Eyes.ptr(),
 	}
 	if b.Age.null {
 		p.Age, p.ClearAge = nil, true
 	}
 	p.Height, p.ClearHeight = wire.ResolveMeasure(numeric(b.HeightCm), b.HeightCm.null)
 	p.Weight, p.ClearWeight = wire.ResolveMeasure(numeric(b.WeightKg), b.WeightKg.null)
-	if p.Languages != nil && b.Languages.null {
-		empty := []string{}
-		p.Languages = &empty
-	}
 	return p
 }
 

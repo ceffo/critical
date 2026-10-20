@@ -19,6 +19,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // Every column of the row lands in its field, the languages decoded from
@@ -48,8 +49,8 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 			Alignment: "chaotic_good", Age: 31, Sex: "male",
 			Height: 177.8, Weight: 72.6, Hair: "black", Eyes: "green", Languages: []string{"Common", "Elvish"},
 		},
-		Proficiencies: charactersvc.Picks{
-			Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "singing", Slots: 1}}, Weapon: []charactersvc.WeaponPick{},
+		Proficiencies: skills.Picks{
+			Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "singing", Slots: 1}}, Weapon: []skills.WeaponPick{},
 		},
 	}, got)
 }
@@ -69,13 +70,17 @@ func TestNotFound_IsErrCharacterNotFound(t *testing.T) {
 	_, _, err = dal.GetDetails(ctx, 9)
 	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
 
-	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{Languages: "[]", ID: 9}).Return(0, nil).Once()
+	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{ID: 9}).Return(0, nil).Once()
 	require.ErrorIs(t, dal.UpdateDetails(ctx, 9, charactersvc.Details{}), domain.ErrCharacterNotFound)
+
+	q.EXPECT().SetLanguages(ctx, queries.SetLanguagesParams{Languages: "[]", ID: 9}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.SetLanguages(ctx, 9, nil), domain.ErrCharacterNotFound)
 }
 
-// What UpdateDetails stores for a character is what GetDetails maps back:
-// every field, the languages as a JSON list in their order (none as an empty
-// list, read back as an empty list).
+// What UpdateDetails and SetLanguages store for a character is what
+// GetDetails maps back: every field, the languages as a JSON list in their
+// order (none as an empty list, read back as an empty list). UpdateDetails
+// writes no language (ADR 0037 step 18: the Skills tab saves them).
 func TestDetails_UpdateStoresWhatGetMapsBack(t *testing.T) {
 	ctx := context.Background()
 	for name, tc := range map[string]struct {
@@ -98,9 +103,11 @@ func TestDetails_UpdateStoresWhatGetMapsBack(t *testing.T) {
 			d := tc.details
 			q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
 				Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, HeightCm: d.Height,
-				WeightKg: d.Weight, Hair: d.Hair, Eyes: d.Eyes, Languages: tc.stored, ID: 1,
+				WeightKg: d.Weight, Hair: d.Hair, Eyes: d.Eyes, ID: 1,
 			}).Return(1, nil).Once()
 			require.NoError(t, dal.UpdateDetails(ctx, 1, d))
+			q.EXPECT().SetLanguages(ctx, queries.SetLanguagesParams{Languages: tc.stored, ID: 1}).Return(1, nil).Once()
+			require.NoError(t, dal.SetLanguages(ctx, 1, d.Languages))
 
 			q.EXPECT().GetCharacterDetails(ctx, int64(1)).Return(queries.GetCharacterDetailsRow{
 				Class: "bard", RaceCode: "elf", Alignment: d.Alignment, Age: int64(d.Age), Sex: d.Sex, HeightCm: d.Height,
@@ -138,7 +145,7 @@ func TestStorageErrors_AreReturnedNotTakenForNotFound(t *testing.T) {
 	_, _, err = dal.GetDetails(ctx, 1)
 	require.ErrorIs(t, err, assert.AnError)
 
-	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{Languages: "[]", ID: 1}).Return(0, assert.AnError).Once()
+	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{ID: 1}).Return(0, assert.AnError).Once()
 	err = dal.UpdateDetails(ctx, 1, charactersvc.Details{})
 	require.ErrorIs(t, err, assert.AnError)
 	assert.NotErrorIs(t, err, domain.ErrCharacterNotFound)
@@ -197,9 +204,10 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 	slots := q.EXPECT().CreateSpellSlots(ctx, int64(7)).Return(nil).Once().NotBefore(row)
 	buffs := q.EXPECT().CreateActiveBuffs(ctx, int64(7)).Return(nil).Once().NotBefore(slots)
 	round := q.EXPECT().CreateRoundState(ctx, int64(7)).Return(nil).Once().NotBefore(buffs)
-	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
-		Alignment: "neutral_good", Age: 23, Languages: `["Elfique","Commun"]`, ID: 7,
+	details := q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
+		Alignment: "neutral_good", Age: 23, ID: 7,
 	}).Return(1, nil).Once().NotBefore(round)
+	q.EXPECT().SetLanguages(ctx, queries.SetLanguagesParams{Languages: `["Elfique","Commun"]`, ID: 7}).Return(1, nil).Once().NotBefore(details)
 
 	id, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
 		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 3, XPTotal: 2500,
@@ -296,7 +304,8 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	q.EXPECT().CreateSpellSlots(ctx, int64(8)).Return(nil).Once()
 	q.EXPECT().CreateActiveBuffs(ctx, int64(8)).Return(nil).Once()
 	q.EXPECT().CreateRoundState(ctx, int64(8)).Return(nil).Once()
-	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{Languages: `[]`, ID: 8}).Return(1, nil).Once()
+	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{ID: 8}).Return(1, nil).Once()
+	q.EXPECT().SetLanguages(ctx, queries.SetLanguagesParams{Languages: `[]`, ID: 8}).Return(1, nil).Once()
 	points := map[string]int{"pick_pockets": 15, "open_locks": 20}
 	_, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
 		Name: "Vex", Class: "thief", Race: "halfling", RealizedLevel: 1, SkillPoints: points,
@@ -357,24 +366,24 @@ func TestSetACOverride_WritesOrClears(t *testing.T) {
 func TestProficiencyPicks_StoredAsJSONAndReadBack(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
-	picks := charactersvc.Picks{
-		Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "cooking", Slots: 1}},
-		Weapon:    []charactersvc.WeaponPick{{Type: "long_sword", Slots: 1}, {Type: "dagger", Slots: 1}},
+	picks := skills.Picks{
+		Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "cooking", Slots: 1}},
+		Weapon:    []skills.WeaponPick{{Type: "long_sword", Slots: 1}, {Type: "dagger", Slots: 1}},
 	}
 	stored := `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"cooking","slots":1}],"weapon":[{"type":"long_sword","slots":1},{"type":"dagger","slots":1}]}`
 	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: stored, ID: 4}).Return(1, nil).Once()
 	require.NoError(t, characterdal.New(q).SetProficiencyPicks(ctx, 4, picks))
 	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: `{}`, ID: 4}).Return(1, nil).Once()
-	require.NoError(t, characterdal.New(q).SetProficiencyPicks(ctx, 4, charactersvc.Picks{}))
+	require.NoError(t, characterdal.New(q).SetProficiencyPicks(ctx, 4, skills.Picks{}))
 	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: `{}`, ID: 9}).Return(0, nil).Once()
-	require.ErrorIs(t, characterdal.New(q).SetProficiencyPicks(ctx, 9, charactersvc.Picks{}), domain.ErrCharacterNotFound)
+	require.ErrorIs(t, characterdal.New(q).SetProficiencyPicks(ctx, 9, skills.Picks{}), domain.ErrCharacterNotFound)
 
 	got, err := characterdal.DecodePicks(stored)
 	require.NoError(t, err)
 	assert.Equal(t, picks, got)
 	none, err := characterdal.DecodePicks(`{}`)
 	require.NoError(t, err)
-	assert.Equal(t, charactersvc.Picks{Nonweapon: []charactersvc.Pick{}, Weapon: []charactersvc.WeaponPick{}}, none)
+	assert.Equal(t, skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{}}, none)
 	// A column written before the weapon pool (migration 025) reads with no weapon pick.
 	old, err := characterdal.DecodePicks(`{"nonweapon":[{"id":"tumbling","slots":2}]}`)
 	require.NoError(t, err)

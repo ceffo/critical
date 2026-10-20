@@ -7,18 +7,35 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
-// PicksStateKey is the action-log state key of a character's proficiency picks.
+// PicksStateKey is the action-log state key of a character's proficiency picks and languages.
 const PicksStateKey = "proficiencies"
 
-// Picks writes a character's proficiency picks (characters.proficiency_picks). It joins the ctx
-// transaction.
+// Picks writes a character's proficiency picks (characters.proficiency_picks) and its languages
+// (characters.languages, ADR 0037 step 18). Both join the ctx transaction.
 type Picks interface {
-	SetProficiencyPicks(ctx context.Context, characterID int64, picks charactersvc.Picks) error
+	SetProficiencyPicks(ctx context.Context, characterID int64, picks skills.Picks) error
+	SetLanguages(ctx context.Context, characterID int64, languages []string) error
 }
 
-// picksSnaps is the snapshotter of the picks (ADR 0018 step 8).
+// Edit is a save of the Skills tab's editor (ADR 0037 steps 12 and 18): the picks by pool (a nil
+// pool is left as stored) and the languages (nil: left as stored).
+type Edit struct {
+	Picks     skills.Picks
+	Languages []string
+}
+
+// Proficiencies are the pools as a preview or a save of the editor reads them (ADR 0037 steps 3
+// to 6 and 11): each pool with its terms and each pick's figures (nil without the catalogue's
+// Table 34), and the slot warnings.
+type Proficiencies struct {
+	Slots    *skills.ProficiencySlots
+	Warnings []skills.Warning
+}
+
+// picksSnaps is the snapshotter of the picks and the languages (ADR 0018 step 8).
 var picksSnaps = actionlog.NewSnapshotter[picksState](PicksStateKey)
 
 // pickState is one pick in a snapshot or a payload.
@@ -34,22 +51,25 @@ type weaponPickState struct {
 }
 
 // picksState is the JSON encoding of a "proficiencies" snapshot, and the before and after of a
-// proficiencies entry: the picks by pool, in the player's order. Entries already in the log must
-// stay decodable: add fields (the languages), never rename. Weapon is absent from the entries
-// logged before the weapon pool (nil): restoring one of them leaves the weapon picks as stored.
+// proficiencies entry: the picks by pool, in the player's order, and the languages. Entries
+// already in the log must stay decodable: add fields, never rename. Weapon is absent from the
+// entries logged before the weapon pool, Languages from those logged before the languages
+// moved to the Skills tab (ADR 0037 step 18): restoring one of them leaves the stored weapon
+// picks or languages.
 type picksState struct {
 	Nonweapon []pickState        `json:"nonweapon"`
 	Weapon    *[]weaponPickState `json:"weapon,omitempty"`
+	Languages *[]string          `json:"languages,omitempty"`
 }
 
-// picksRecord is the payload of a proficiencies entry, the picks before and after the save. The
-// UI words it. Add fields, never rename.
+// picksRecord is the payload of a proficiencies entry, the picks and the languages before and
+// after the save. The UI words it. Add fields, never rename.
 type picksRecord struct {
 	Before picksState `json:"before"`
 	After  picksState `json:"after"`
 }
 
-func toState(p charactersvc.Picks) picksState {
+func toState(p skills.Picks, languages []string) picksState {
 	out := picksState{Nonweapon: make([]pickState, 0, len(p.Nonweapon))}
 	for _, x := range p.Nonweapon {
 		out.Nonweapon = append(out.Nonweapon, pickState(x))
@@ -59,71 +79,116 @@ func toState(p charactersvc.Picks) picksState {
 		weapon = append(weapon, weaponPickState(x))
 	}
 	out.Weapon = &weapon
+	langs := append([]string{}, languages...)
+	out.Languages = &langs
 	return out
 }
 
 // picks are the snapshot's picks; Weapon is nil for an entry logged before the weapon pool (the
 // stored weapon picks stay).
-func (s picksState) picks() charactersvc.Picks {
-	out := charactersvc.Picks{Nonweapon: make([]charactersvc.Pick, 0, len(s.Nonweapon))}
+func (s picksState) picks() skills.Picks {
+	out := skills.Picks{Nonweapon: make([]skills.Pick, 0, len(s.Nonweapon))}
 	for _, x := range s.Nonweapon {
-		out.Nonweapon = append(out.Nonweapon, charactersvc.Pick(x))
+		out.Nonweapon = append(out.Nonweapon, skills.Pick(x))
 	}
 	if s.Weapon != nil {
-		out.Weapon = make([]charactersvc.WeaponPick, 0, len(*s.Weapon))
+		out.Weapon = make([]skills.WeaponPick, 0, len(*s.Weapon))
 		for _, x := range *s.Weapon {
-			out.Weapon = append(out.Weapon, charactersvc.WeaponPick(x))
+			out.Weapon = append(out.Weapon, skills.WeaponPick(x))
 		}
 	}
 	return out
 }
 
-// PreviewProficiencies is the character as it would read with picks as its proficiency picks
-// (ADR 0037 step 12): the pool, each pick's figures and the warnings, refused as
-// SetProficiencies refuses. It writes and logs nothing.
-func (s *service) PreviewProficiencies(ctx context.Context, characterID int64, picks charactersvc.Picks) (*charactersvc.Character, error) {
-	var out *charactersvc.Character
-	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		var err error
-		out, err = s.chars.PreviewProficiencies(ctx, characterID, picks)
-		return err
-	})
-	return out, err
+// edited is the state an edit of c gives (ADR 0037 steps 6, 10, 12 and 18): the picks checked by
+// skills.ValidPicks against the stored ones, the languages by skills.ValidLanguages (nil: as
+// read), then the budget at the realized level, each pool judged on its own and the languages in
+// the non-weapon one; nothing is written. A refusal is a *domain.FieldError or a
+// *domain.BudgetError.
+func (s *service) edited(c *charactersvc.Character, e Edit) (skills.Picks, []string, error) {
+	next, err := skills.ValidPicks(s.book, c.Class, e.Picks, c.Proficiencies)
+	if err != nil {
+		return skills.Picks{}, nil, err
+	}
+	langs := c.Details.Languages
+	if e.Languages != nil {
+		if langs, err = skills.ValidLanguages(s.languages, c.Race, c.Details.Languages, e.Languages); err != nil {
+			return skills.Picks{}, nil, err
+		}
+	}
+	native := s.languages.Native(c.Race)
+	before := skills.Sheet{Picks: c.Proficiencies, Languages: c.Details.Languages, Native: native}
+	after := skills.Sheet{Picks: next, Languages: langs, Native: native}
+	if err := skills.PicksWithinBudget(s.book, c.Class, c.Derived.RealizedLevel, c.Int, before.Spending(), after.Spending()); err != nil {
+		return skills.Picks{}, nil, err
+	}
+	return next, langs, nil
 }
 
-// SetProficiencies is ADR 0037 steps 12 and 13: the player saves the whole list of picks of a
-// pool or of both (a nil pool is left as stored), checked by charactersvc.ValidPicks against the
-// stored ones; at the realized level a save
-// that leaves the pool over budget and spends more is refused (step 10,
-// charactersvc.PicksWithinBudget), an existing overspend that does not grow stays a warning. It
-// is one proficiencies entry of the action log with the picks' snapshot, in one transaction, so
-// undo gives them back; the same picks as stored record nothing; a refusal writes nothing.
-// Returns the character as read after the save.
-func (s *service) SetProficiencies(ctx context.Context, characterID int64, picks charactersvc.Picks) (*charactersvc.Character, error) {
-	var out *charactersvc.Character
+// proficiencies reads the pools of c with picks and languages (skills.Read, the sheet's own
+// assembly).
+func (s *service) proficiencies(c *charactersvc.Character, picks skills.Picks, languages []string) *Proficiencies {
+	f, ws := skills.Read(s.book, skills.Sheet{
+		Class: c.Class, Level: c.Derived.RealizedLevel, Intelligence: c.Int, Picks: picks,
+		Languages: languages, Native: s.languages.Native(c.Race),
+		Score: func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) },
+	})
+	return &Proficiencies{Slots: f, Warnings: ws}
+}
+
+// PreviewProficiencies is the pools as they would read after the edit (ADR 0037 step 12): each
+// pool, each pick's figures and the warnings, refused as SetProficiencies refuses. It writes and
+// logs nothing.
+func (s *service) PreviewProficiencies(ctx context.Context, characterID int64, e Edit) (*Proficiencies, error) {
+	var out *Proficiencies
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		c, err := s.chars.GetCharacter(ctx, characterID)
 		if err != nil {
 			return err
 		}
-		before := c.Proficiencies.Clone()
-		next, err := charactersvc.ValidPicks(s.book, c.Class, picks, before)
+		next, langs, err := s.edited(c, e)
 		if err != nil {
 			return err
 		}
-		// ADR 0037 step 10: over budget at the realized level and spending
-		// more is refused before any write or log entry.
-		// The languages are unchanged by a picks save but spend from the same pool (step 6).
-		langs := c.LanguageSlots()
-		if err := charactersvc.PicksWithinBudget(s.book, c.Class, c.Derived.RealizedLevel, c.Int,
-			charactersvc.Spending{Picks: before, Languages: langs}, charactersvc.Spending{Picks: next, Languages: langs}); err != nil {
+		out = s.proficiencies(c, next, langs)
+		return nil
+	})
+	return out, err
+}
+
+// SetProficiencies is ADR 0037 steps 12, 13 and 18: the player saves the whole list of picks of
+// a pool or of both (a nil pool is left as stored) and the languages (nil: left as stored),
+// checked against the stored ones; at the realized level a save that leaves a pool over budget
+// and spends more is refused (step 10), an existing overspend that does not grow stays a
+// warning. It is one proficiencies entry of the action log with the picks' and the languages'
+// snapshot, in one transaction, so one undo gives both back; the same picks and languages as
+// stored (in any order) record nothing; a refusal writes nothing. Returns the pools as read
+// after the save.
+func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edit) (*Proficiencies, error) {
+	var out *Proficiencies
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		c, err := s.chars.GetCharacter(ctx, characterID)
+		if err != nil {
 			return err
 		}
-		if !before.Equal(next) {
-			if err := s.picks.SetProficiencyPicks(ctx, characterID, next); err != nil {
-				return fmt.Errorf("set proficiency picks: %w", err)
+		next, langs, err := s.edited(c, e)
+		if err != nil {
+			return err
+		}
+		before, beforeLangs := c.Proficiencies.Clone(), c.Details.Languages
+		picksChanged, langsChanged := !before.Equal(next), !skills.LanguagesEqual(beforeLangs, langs)
+		if picksChanged || langsChanged {
+			if picksChanged {
+				if err := s.picks.SetProficiencyPicks(ctx, characterID, next); err != nil {
+					return fmt.Errorf("set proficiency picks: %w", err)
+				}
 			}
-			b, a := toState(before), toState(next)
+			if langsChanged {
+				if err := s.picks.SetLanguages(ctx, characterID, langs); err != nil {
+					return fmt.Errorf("set languages: %w", err)
+				}
+			}
+			b, a := toState(before, beforeLangs), toState(next, langs)
 			payload, err := json.Marshal(picksRecord{Before: b, After: a})
 			if err != nil {
 				return fmt.Errorf("encode proficiencies payload: %w", err)
@@ -139,8 +204,8 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, picks
 				return fmt.Errorf("record proficiencies: %w", err)
 			}
 		}
-		out, err = s.chars.GetCharacter(ctx, characterID)
-		return err
+		out = s.proficiencies(c, next, langs)
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -148,9 +213,10 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, picks
 	return out, nil
 }
 
-// restorePicks writes a snapshot's picks back: undo the save's "before", redo its "after" (ADR
-// 0019), inside the undo's transaction. A snapshot logged before the weapon pool carries no
-// weapon picks: the stored ones stay.
+// restorePicks writes a snapshot's picks and languages back: undo the save's "before", redo its
+// "after" (ADR 0019), inside the undo's transaction. A snapshot logged before the weapon pool
+// carries no weapon picks, one logged before the languages moved to the Skills tab no
+// languages: the stored ones stay.
 func (s *service) restorePicks(ctx context.Context, characterID int64, _ string, st picksState) error {
 	picks := st.picks()
 	if picks.Weapon == nil {
@@ -162,6 +228,11 @@ func (s *service) restorePicks(ctx context.Context, characterID int64, _ string,
 	}
 	if err := s.picks.SetProficiencyPicks(ctx, characterID, picks); err != nil {
 		return fmt.Errorf("restore proficiency picks: %w", err)
+	}
+	if st.Languages != nil {
+		if err := s.picks.SetLanguages(ctx, characterID, *st.Languages); err != nil {
+			return fmt.Errorf("restore languages: %w", err)
+		}
 	}
 	return nil
 }

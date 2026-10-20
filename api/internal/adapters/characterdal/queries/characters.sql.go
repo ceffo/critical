@@ -434,6 +434,24 @@ func (q *Queries) SetCurrentCharacter(ctx context.Context, arg SetCurrentCharact
 	return result.RowsAffected()
 }
 
+const setLanguages = `-- name: SetLanguages :execrows
+UPDATE characters SET languages = $1 WHERE id = $2
+`
+
+type SetLanguagesParams struct {
+	Languages string
+	ID        int64
+}
+
+// The languages saved by the Skills tab's editor and their undo (ADR 0037 steps 13 and 18).
+func (q *Queries) SetLanguages(ctx context.Context, arg SetLanguagesParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setLanguages, arg.Languages, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const setProficiencyPicks = `-- name: SetProficiencyPicks :execrows
 UPDATE characters SET proficiency_picks = $1 WHERE id = $2
 `
@@ -492,8 +510,8 @@ func (q *Queries) SetSkillPoints(ctx context.Context, arg SetSkillPointsParams) 
 
 const updateCharacterDetails = `-- name: UpdateCharacterDetails :execrows
 UPDATE characters
-SET alignment = $1, age = $2, sex = $3, height_cm = $4, weight_kg = $5, hair = $6, eyes = $7, languages = $8
-WHERE id = $9
+SET alignment = $1, age = $2, sex = $3, height_cm = $4, weight_kg = $5, hair = $6, eyes = $7
+WHERE id = $8
 `
 
 type UpdateCharacterDetailsParams struct {
@@ -504,10 +522,11 @@ type UpdateCharacterDetailsParams struct {
 	WeightKg  float64
 	Hair      string
 	Eyes      string
-	Languages string
 	ID        int64
 }
 
+// The details card's edit: every detail but the languages, which the Skills tab saves (ADR 0037
+// step 18, SetLanguages).
 func (q *Queries) UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, updateCharacterDetails,
 		arg.Alignment,
@@ -517,7 +536,6 @@ func (q *Queries) UpdateCharacterDetails(ctx context.Context, arg UpdateCharacte
 		arg.WeightKg,
 		arg.Hair,
 		arg.Eyes,
-		arg.Languages,
 		arg.ID,
 	)
 	if err != nil {

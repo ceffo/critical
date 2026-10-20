@@ -1,6 +1,9 @@
 package wire
 
-import "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+import (
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
+)
 
 // PendingLevelDTO is one level whose hit points are owed (ADR 0030 step 7):
 // `die` the hit die's sides to roll up to the name level (0 above it),
@@ -23,7 +26,7 @@ type LevelGrantsDTO struct {
 }
 
 // GrantsDTO maps a level's grants.
-func GrantsDTO(g charactersvc.LevelGrants) LevelGrantsDTO { return LevelGrantsDTO(g) }
+func GrantsDTO(g skills.LevelGrants) LevelGrantsDTO { return LevelGrantsDTO(g) }
 
 // PendingDTO maps the pending levels, never null.
 func PendingDTO(p []charactersvc.PendingLevel) []PendingLevelDTO {

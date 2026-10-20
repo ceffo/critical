@@ -322,7 +322,8 @@ type CreateBody struct {
 }
 
 // detailsPatch is the details as the patch a new character applies: every text
-// field set (empty is none), the age and the languages when given.
+// field set (empty is none) and the age when given; the languages go apart
+// (NewCharacter.Languages).
 func detailsPatch(d *wire.DetailsDTO) (charactersvc.DetailsPatch, error) {
 	if d == nil {
 		return charactersvc.DetailsPatch{}, nil
@@ -341,9 +342,6 @@ func detailsPatch(d *wire.DetailsDTO) (charactersvc.DetailsPatch, error) {
 	}
 	p.Height, p.ClearHeight = wire.ResolveMeasure(cm, d.HeightNull)
 	p.Weight, p.ClearWeight = wire.ResolveMeasure(kg, d.WeightNull)
-	if d.Languages != nil {
-		p.Languages = &d.Languages
-	}
 	return p, nil
 }
 
@@ -367,6 +365,11 @@ func (b CreateBody) toNew() (charactersvc.NewCharacter, error) {
 	n := charactersvc.NewCharacter{
 		Name: b.Name, Class: b.Class, Race: b.Race, StrExceptional: b.StrExceptional,
 		SkillPoints: b.SkillPoints, Proficiencies: b.Proficiencies.Picks(), Details: details,
+	}
+	// The creation body still carries the languages under details (ADR 0037 step 18 moves
+	// their editor, not this body).
+	if b.Details != nil {
+		n.Languages = b.Details.Languages
 	}
 	for _, f := range []struct {
 		field string

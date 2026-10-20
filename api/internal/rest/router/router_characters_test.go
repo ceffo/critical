@@ -25,6 +25,7 @@ import (
 	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 	"github.com/ceffo/critical/api/internal/rest/router"
 )
@@ -271,9 +272,9 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 			RaceSaveBonus: charactersvc.Saves{RodStaffWand: 4, Spell: 4},
 			SpellSlots:    map[int]int{5: 2, 1: 3},
 			LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
-				{Level: 10, Die: 6, Grants: charactersvc.LevelGrants{SkillPoints: 15}},
-				{Level: 11, FixedGain: 2, Grants: charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 2}},
-			}, ToSpend: charactersvc.LevelGrants{WeaponSlots: 3, NonweaponSlots: 1, SkillPoints: 45}},
+				{Level: 10, Die: 6, Grants: skills.LevelGrants{SkillPoints: 15}},
+				{Level: 11, FixedGain: 2, Grants: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 2}},
+			}, ToSpend: skills.LevelGrants{WeaponSlots: 3, NonweaponSlots: 1, SkillPoints: 45}},
 			Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 		},
 		Details: charactersvc.Details{Alignment: "lawful_good", Languages: []string{}},
@@ -328,8 +329,8 @@ func TestCharacters_ChecksSkillBudgetWireShape(t *testing.T) {
 	xp := 1250
 	m.char.EXPECT().CreationChecks(mock.Anything, charactersvc.DraftInput{
 		Class: "thief", Scores: map[string]int{}, XP: &xp, SkillPoints: map[string]int{"open_locks": 40},
-		Proficiencies: charactersvc.Picks{
-			Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}}, Weapon: []charactersvc.WeaponPick{{Type: "dagger", Slots: 1}},
+		Proficiencies: skills.Picks{
+			Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}}, Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}},
 		},
 		Race: "elf", Languages: []string{"elvish", "orcish"},
 	}).Return(charactersvc.DraftChecks{
@@ -338,11 +339,11 @@ func TestCharacters_ChecksSkillBudgetWireShape(t *testing.T) {
 			Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
 			PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
 		},
-		ProficiencySlots: &charactersvc.ProficiencySlots{
+		ProficiencySlots: &skills.ProficiencySlots{
 			Nonweapon:   ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 2, Available: 5, Spent: 3, Left: 2, Languages: 1},
 			Weapon:      ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, Available: 2, Spent: 1, Left: 1},
-			Picks:       []charactersvc.PickFigures{{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 17, HasCheck: true}},
-			WeaponPicks: []charactersvc.WeaponPickFigures{{Type: "dagger", Slots: 1, Allowed: true}},
+			Picks:       []skills.PickFigures{{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 17, HasCheck: true}},
+			WeaponPicks: []skills.WeaponPickFigures{{Type: "dagger", Slots: 1, Allowed: true}},
 		},
 	}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/checks", `{"class":"thief","scores":{},"xp":1250,"skillPoints":{"open_locks":40},

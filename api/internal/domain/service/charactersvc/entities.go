@@ -1,6 +1,9 @@
 package charactersvc
 
-import "github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+import (
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
+)
 
 // Character is the pure domain representation of a character row. No transport
 // tags — handlers map to a DTO before serializing.
@@ -41,7 +44,7 @@ type Character struct {
 	SkillPoints map[string]int
 	// Proficiencies are the proficiency picks (ADR 0037 step 12): catalogue
 	// id and slots spent, in the player's order.
-	Proficiencies Picks
+	Proficiencies skills.Picks
 
 	// Sheet is what the character sheet stated when the character was
 	// imported; never an input. Only its level is read: the realized level of
@@ -143,8 +146,8 @@ type Derived struct {
 	// Proficiencies is ADR 0037 steps 3 to 5: the non-weapon pool at the
 	// realized level and each pick's cost, extra slots and check; nil
 	// without a Table 34 row for the class. Set by the service (it reads
-	// the catalogue), not by Derive.
-	Proficiencies *ProficiencySlots
+	// the catalogue through skills.Read), not by Derive.
+	Proficiencies *skills.ProficiencySlots
 }
 
 // SpellbookRules are ADR 0030 step 20.1 on a character: what it may write
@@ -172,17 +175,7 @@ type PendingLevel struct {
 	Level     int
 	Die       int
 	FixedGain int
-	Grants    LevelGrants
-}
-
-// LevelGrants are slots and skill points beyond hit points (ADR 0037 step
-// 15): what a level grants, or what is left to spend. WeaponSlots and
-// NonweaponSlots are ADR 0037 step 3's pools, SkillPoints a thief's or a
-// bard's budget (ADR 0030 steps 17 and 18). Never negative.
-type LevelGrants struct {
-	WeaponSlots    int
-	NonweaponSlots int
-	SkillPoints    int
+	Grants    skills.LevelGrants
 }
 
 // LevelUp is ADR 0030 step 7 on a character: its realized level against
@@ -199,7 +192,7 @@ type LevelUp struct {
 	// left slots and the skill points left, 0 when none or over budget. The
 	// card reminds the player while any is above 0; nothing blocks play. Set
 	// by the service with the pools, not by Derive.
-	ToSpend LevelGrants
+	ToSpend skills.LevelGrants
 }
 
 // Summary is a character in its owner's list (ADR 0029 step 7.2).
@@ -272,4 +265,10 @@ func (c *Character) Score(a Ability) (score int, ok bool) {
 		return c.Cha, true
 	}
 	return 0, false
+}
+
+// NonproficientPenalty is ADR 0037 step 8 for an attack of c with a weapon of weaponType, from its
+// derived picks (skills.ProficiencySlots.NonproficientPenalty): none without them.
+func (c *Character) NonproficientPenalty(weaponType string) int {
+	return c.Derived.Proficiencies.NonproficientPenalty(weaponType)
 }

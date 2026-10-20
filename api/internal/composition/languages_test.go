@@ -27,12 +27,14 @@ type languagesView struct {
 	} `json:"derived"`
 }
 
-// Step 4.1 to 4.3 through the API: a half-elf bard (level 3, Intelligence 14: 3 + 0 + 4 = 7
-// non-weapon slots) gets Common without picking it; a language outside the race's list is accepted;
-// a free text, a repeat and a code of no catalogue language are refused with the field and the
-// code, storing nothing; ADR 0037 step 6: five other languages spend 5 of the 7 slots (Table 4
-// counted once, no languages_over_limit), eight are refused over budget, and the native one stays
-// however the list is edited.
+// Step 4.1 to 4.3 through the API, the languages saved by the Skills tab (PUT /api/proficiencies,
+// ADR 0037 step 18): a half-elf bard (level 3, Intelligence 14: 3 + 0 + 4 = 7 non-weapon slots)
+// gets Common without picking it; a language outside the race's list is accepted; a free text, a
+// repeat and a code of no catalogue language are refused with the field and the code, storing
+// nothing; ADR 0037 step 6: five other languages spend 5 of the 7 slots (Table 4 counted once, no
+// languages_over_limit), eight are refused over budget, and the native one stays however the list
+// is edited; step 13: one undo gives the languages before a save back; the details no longer take
+// them.
 func TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
@@ -49,7 +51,7 @@ func TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots(t *testin
 	assert.Empty(t, withoutSlots(read().Warnings))
 
 	// Step 4.3: the burrowers' speech is on no half-elf list, and it is accepted.
-	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PATCH", "/api/character/details", `{"languages":["burrowers","elvish"]}`, nil))
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PUT", "/api/proficiencies", `{"languages":["burrowers","elvish"]}`, nil))
 	assert.Equal(t, []string{"common", "burrowers", "elvish"}, read().Languages)
 
 	for body, code := range map[string]string{
@@ -60,14 +62,14 @@ func TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots(t *testin
 		`{"languages":["common","dwarvish "]}`: "unknown",
 	} {
 		var refused map[string]string
-		require.Equal(t, http.StatusBadRequest, tb.showing(bob, lyra, "PATCH", "/api/character/details", body, &refused), body)
+		require.Equal(t, http.StatusBadRequest, tb.showing(bob, lyra, "PUT", "/api/proficiencies", body, &refused), body)
 		assert.Equal(t, "languages", refused["field"], body)
 		assert.Equal(t, code, refused["error"], body)
 	}
 	assert.Equal(t, []string{"common", "burrowers", "elvish"}, read().Languages, "a refusal stores nothing")
 
 	// ADR 0037 step 6: five other languages spend five of the seven slots, with no warning of their own.
-	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PATCH", "/api/character/details",
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PUT", "/api/proficiencies",
 		`{"languages":["elvish","gnomish","halfling","goblin","orcish"]}`, nil))
 	got := read()
 	assert.Equal(t, []string{"common", "elvish", "gnomish", "halfling", "goblin", "orcish"}, got.Languages)
@@ -80,7 +82,7 @@ func TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots(t *testin
 
 	// Eight are over the seven slots: refused (409 over_budget on languages), nothing stored.
 	var refused map[string]any
-	require.Equal(t, http.StatusConflict, tb.showing(bob, lyra, "PATCH", "/api/character/details",
+	require.Equal(t, http.StatusConflict, tb.showing(bob, lyra, "PUT", "/api/proficiencies",
 		`{"languages":["elvish","gnomish","halfling","goblin","orcish","hobgoblin","gnoll","dwarvish"]}`, &refused))
 	assert.Equal(t, "over_budget", refused["code"])
 	assert.Equal(t, "languages", refused["field"])
@@ -88,8 +90,23 @@ func TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots(t *testin
 	assert.Equal(t, float64(7), refused["limit"])
 	assert.Len(t, read().Languages, 6, "a refusal stores nothing")
 
+	// Step 13: the save was one proficiencies entry; undo writes the languages before it back.
+	var log picksLog
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "GET", "/api/log", "", &log))
+	require.NotEmpty(t, log.Entries)
+	assert.Equal(t, "proficiencies", log.Entries[0].Kind)
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "POST", "/api/log/undo", `{"expectedTopId":`+itoa(log.TopID)+`}`, nil))
+	assert.Equal(t, []string{"common", "burrowers", "elvish"}, read().Languages, "undo gives the languages back")
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "GET", "/api/log", "", &log))
+	require.NotNil(t, log.Redo)
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "POST", "/api/log/redo", `{"expectedRedoId":`+itoa(log.Redo.ID)+`}`, nil))
+	assert.Len(t, read().Languages, 6, "redo saves them again")
+
+	// The details card's save no longer takes them.
+	require.Equal(t, http.StatusBadRequest, tb.showing(bob, lyra, "PATCH", "/api/character/details", `{"languages":["elvish"]}`, nil))
+
 	// Step 4.1: the native language cannot be removed.
-	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PATCH", "/api/character/details", `{"languages":null}`, nil))
+	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "PUT", "/api/proficiencies", `{"languages":[]}`, nil))
 	got = read()
 	assert.Equal(t, []string{"common"}, got.Languages)
 	assert.Empty(t, withoutSlots(got.Warnings))

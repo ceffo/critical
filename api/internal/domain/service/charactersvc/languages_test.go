@@ -10,40 +10,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
-
-// phbLanguages is the language catalogue of the PHB racial lists (chapter 2) plus Common, with
-// invented names: the six races' lists, each with its own language marked.
-func phbLanguages(t *testing.T) *ruletablesvc.Languages {
-	t.Helper()
-	var list []ruletablesvc.Language
-	for _, c := range []string{"common", "dwarvish", "elvish", "gnomish", "halfling", "goblin", "hobgoblin", "kobold", "orcish", "gnoll", "burrowers"} {
-		list = append(list, ruletablesvc.Language{Code: c, Name: localized.Text{"en": c}})
-	}
-	lists := map[string][]string{
-		"human":    {"common"},
-		"dwarf":    {"common", "dwarvish", "gnomish", "goblin", "kobold", "orcish"},
-		"elf":      {"common", "elvish", "gnomish", "halfling", "goblin", "hobgoblin", "orcish", "gnoll"},
-		"gnome":    {"common", "dwarvish", "gnomish", "halfling", "goblin", "kobold", "burrowers"},
-		"half_elf": {"common", "elvish", "gnomish", "halfling", "goblin", "hobgoblin", "orcish", "gnoll"},
-		"halfling": {"common", "halfling", "dwarvish", "elvish", "gnomish", "goblin", "orcish"},
-	}
-	native := map[string]string{
-		"human": "common", "dwarf": "dwarvish", "elf": "elvish", "gnome": "gnomish", "half_elf": "common", "halfling": "halfling",
-	}
-	var rows []ruletablesvc.RaceLanguageRow
-	for _, race := range charactersvc.Races {
-		for _, l := range lists[race] {
-			rows = append(rows, ruletablesvc.RaceLanguageRow{Race: race, Language: l, Native: l == native[race]})
-		}
-	}
-	l, err := ruletablesvc.NewLanguages(list, rows)
-	require.NoError(t, err)
-	return l
-}
 
 // newEnvWithLanguages is newEnv with the PHB language catalogue and the proficiency book (the
 // languages spend non-weapon slots, ADR 0037 step 6).
@@ -66,7 +36,9 @@ func createdDetails(t *testing.T, race string, languages *[]string) (charactersv
 	e := newEnvWithLanguages(t)
 	n := lyra()
 	n.Race = race
-	n.Details.Languages = languages
+	if languages != nil {
+		n.Languages = *languages
+	}
 	e.rules.EXPECT().RaceAllows(race, "bard").Return(true, nil).Maybe()
 	e.rules.EXPECT().LevelFor("bard", 0).Return(1, nil).Maybe()
 	e.rules.EXPECT().XPThreshold("bard", 2).Return(1_250, nil).Maybe()
@@ -142,59 +114,6 @@ func TestCreate_Step4_3_AnyCatalogueLanguageIsAcceptedOthersRefused(t *testing.T
 	}
 }
 
-// ADR 0037 step 6: every language other than the native one and Common spends one non-weapon slot:
-// an elf's Elvish and Common are free, a half-elf's native language is Common, a dwarf with Dwarvish
-// and Common spends nothing; without a catalogue (no native known) nothing is counted. Table 4's
-// "# of Lang." is the pool's Intelligence term, counted once: the languages spend, they add no slot.
-func TestLanguagePicks_Step6_EachExtraLanguageCostsOneSlot(t *testing.T) {
-	assert.Equal(t, 2, charactersvc.LanguageSlots([]string{"elvish", "common", "gnomish", "orcish"}, "elvish"))
-	assert.Equal(t, 3, charactersvc.LanguageSlots([]string{"common", "elvish", "orcish", "dwarvish"}, "common"), "a half-elf: Common is native")
-	assert.Equal(t, 0, charactersvc.LanguageSlots([]string{"dwarvish", "common"}, "dwarvish"))
-	assert.Equal(t, 0, charactersvc.LanguageSlots([]string{"common", "elvish"}, ""), "no catalogue, no verdict")
-
-	// A level 1 bard (rogue: 3 + 0) with Intelligence 9 (Table 4: 2): 5 slots, the same with or
-	// without languages; Tumbling and two languages spend 3.
-	book := profBook(t)
-	bare, ok := charactersvc.ProficiencyFigures(book, "bard", 1, 9, charactersvc.Spending{Picks: picks(p("tumbling", 1))})
-	require.True(t, ok)
-	f, _ := charactersvc.ProficiencyFigures(book, "bard", 1, 9, charactersvc.Spending{Picks: picks(p("tumbling", 1)), Languages: 2})
-	assert.Equal(t, 2, f.Nonweapon.Intelligence)
-	assert.Equal(t, bare.Nonweapon.Available, f.Nonweapon.Available, "the Intelligence bonus is counted once")
-	assert.Equal(t, 5, f.Nonweapon.Available)
-	assert.Equal(t, 3, f.Nonweapon.Spent)
-	assert.Equal(t, 2, f.Nonweapon.Languages)
-	assert.Equal(t, 2, f.Nonweapon.Left)
-	assert.Len(t, f.Picks, 1, "a language is no pick of its own")
-}
-
-// ADR 0037 steps 6 and 10: the languages spend the non-weapon pool under its budget rule. A languages
-// change that newly overspends or grows an overspend is refused on field languages; dropping one
-// from an overspend is stored; a picks change over budget is refused on field nonweapon; at
-// creation (nothing spent before) languages alone over the pool are refused.
-func TestBudget_Step6_LanguagesSpendTheNonweaponPool(t *testing.T) {
-	book := profBook(t) // a level 1 bard, Intelligence 9: 5 slots
-	spend := func(langs int, ps ...charactersvc.Pick) charactersvc.Spending {
-		return charactersvc.Spending{Picks: picks(ps...), Languages: langs}
-	}
-	budget := func(before, after charactersvc.Spending) error {
-		return charactersvc.PicksWithinBudget(book, "bard", 1, 9, before, after)
-	}
-	var be *domain.BudgetError
-	require.ErrorAs(t, budget(spend(3, p("tumbling", 2)), spend(4, p("tumbling", 2))), &be, "5 to 6 of 5")
-	assert.Equal(t, domain.BudgetError{Field: "languages", Spent: 6, Limit: 5}, *be)
-	require.ErrorAs(t, budget(spend(4, p("tumbling", 3)), spend(5, p("tumbling", 3))), &be, "an overspend that grows")
-	require.NoError(t, budget(spend(4, p("tumbling", 3)), spend(3, p("tumbling", 3))), "7 to 6 of 5: shrinking is stored")
-	require.NoError(t, budget(spend(3, p("tumbling", 2)), spend(3, p("tumbling", 2))), "unchanged")
-	require.ErrorAs(t, budget(spend(3, p("tumbling", 1)), spend(3, p("tumbling", 3))), &be)
-	assert.Equal(t, "nonweapon", be.Field, "the picks grew")
-	require.ErrorAs(t, budget(charactersvc.Spending{}, spend(6)), &be, "a creation with six languages")
-	assert.Equal(t, domain.BudgetError{Field: "languages", Spent: 6, Limit: 5}, *be)
-	require.ErrorAs(t, budget(charactersvc.Spending{}, spend(4, p("tumbling", 2))), &be, "a creation whose picks fit, not with the languages")
-	assert.Equal(t, "languages", be.Field)
-	require.ErrorAs(t, budget(charactersvc.Spending{}, spend(1, p("tumbling", 6))), &be, "a creation whose picks alone overspend")
-	assert.Equal(t, "nonweapon", be.Field)
-}
-
 // ADR 0037 steps 6 and 10 at creation: Lyra (half-elf bard, level 1, Intelligence 14: 3 + 0 + 4 = 7
 // slots) may learn seven languages beyond Common; an eighth is refused over budget, nothing stored.
 func TestCreate_Step6_LanguagesBeyondTheSlotsAreRefused(t *testing.T) {
@@ -231,39 +150,11 @@ func TestGetCharacter_Step6_TheLanguagesSpendTheNonweaponPool(t *testing.T) {
 	assert.Equal(t, 11, pool.Spent)
 	assert.Equal(t, 10, pool.Available)
 	require.NotEmpty(t, got.Warnings)
-	assert.Equal(t, charactersvc.CodeSlotsOverBudget, got.Warnings[0].Code)
+	assert.Equal(t, skills.CodeSlotsOverBudget, got.Warnings[0].Code)
 	assert.Equal(t, 11, *got.Warnings[0].Spent)
 	for _, w := range got.Warnings {
 		assert.NotEqual(t, "languages_over_limit", w.Code)
 	}
-}
-
-// ADR 0037 steps 6 and 10 on a languages edit (detailssvc asks it): Kelsen over budget (11 of 10)
-// may drop a language but not add one; under budget, a language that newly overspends is refused.
-func TestLanguagesWithinBudget_Step6_AnEditIsCheckedByTheBudget(t *testing.T) {
-	kelsenWith := func(slots int) *charactersvc.Character {
-		c := kelsen()
-		c.Details = charactersvc.Details{Languages: []string{"common", "elvish", "gnomish", "halfling", "goblin", "orcish"}}
-		c.Proficiencies = picks(p("tumbling", slots))
-		return c
-	}
-	check := func(c *charactersvc.Character, languages []string) error {
-		e := newEnvWithLanguages(t)
-		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(c, nil).Once()
-		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
-		expectKelsenRules(e.rules, 1_293_418, 15)
-		return e.svc.LanguagesWithinBudget(context.Background(), 3, languages)
-	}
-	var be *domain.BudgetError
-	err := check(kelsenWith(6), []string{"common", "elvish", "gnomish", "halfling", "goblin", "orcish", "gnoll"})
-	require.ErrorAs(t, err, &be)
-	assert.Equal(t, domain.BudgetError{Field: "languages", Spent: 12, Limit: 10}, *be)
-	require.NoError(t, check(kelsenWith(6), []string{"common", "elvish", "gnomish", "halfling", "goblin"}), "11 to 10")
-	require.NoError(t, check(kelsenWith(6), []string{"common", "elvish", "gnomish", "halfling", "orcish", "goblin"}), "the same, reordered")
-
-	err = check(kelsenWith(5), []string{"common", "elvish", "gnomish", "halfling", "goblin", "orcish", "gnoll"})
-	require.ErrorAs(t, err, &be, "10 to 11: a new overspend")
-	require.NoError(t, check(kelsenWith(4), []string{"common", "elvish", "gnomish", "halfling", "goblin", "orcish", "gnoll"}), "9 to 10: at the budget")
 }
 
 // Before catalogue format 8 the native language is unknown: a migrated half-elf knowing common,

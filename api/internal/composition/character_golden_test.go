@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 )
 
@@ -33,9 +34,9 @@ func TestCharacter_Golden_DerivedBlockUnchanged(t *testing.T) {
 		HPMax: 6, XPTotal: 2600, RealizedLevel: 1,
 		SkillPoints: map[string]int{"pick_pockets": 30, "open_locks": 20, "climb_walls": 15},
 		Details:     charactersvc.Details{Alignment: "neutral", Sex: "female", Languages: []string{"elvish", "common", "dwarvish", "gnomish", "orcish"}},
-		Proficiencies: charactersvc.Picks{
-			Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}, {ID: "appraising", Slots: 1}},
-			Weapon:    []charactersvc.WeaponPick{{Type: "dagger", Slots: 1}, {Type: "short_bow", Slots: 1}},
+		Proficiencies: skills.Picks{
+			Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "appraising", Slots: 1}},
+			Weapon:    []skills.WeaponPick{{Type: "dagger", Slots: 1}, {Type: "short_bow", Slots: 1}},
 		},
 	})
 	require.NoError(t, err)

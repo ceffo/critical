@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -79,13 +80,13 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	require.NoError(t, err)
 	_, err = bs.XP.Add(ctx, id, xpsvc.EntryInput{Base: 1_540_000 - 1_293_418, Reason: "the dragon"})
 	require.NoError(t, err)
-	grants16 := charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 15}
+	grants16 := skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 15}
 	owed := []charactersvc.PendingLevel{
 		{Level: 16, FixedGain: 2, Grants: grants16},
-		{Level: 17, FixedGain: 2, Grants: charactersvc.LevelGrants{SkillPoints: 15}},
+		{Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}},
 	}
-	at15 := charactersvc.LevelGrants{NonweaponSlots: 2, SkillPoints: 30}
-	at16 := charactersvc.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 45}
+	at15 := skills.LevelGrants{NonweaponSlots: 2, SkillPoints: 30}
+	at16 := skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 45}
 	lu, maxHP, current := levelUpOf(t, bs, id)
 	assert.Equal(t, charactersvc.LevelUp{Pending: owed, ToSpend: at15}, lu)
 	assert.Equal(t, 85, maxHP)
@@ -153,7 +154,7 @@ func TestLevelUp_TwoLevelsAtOnceAreTwoDiceThroughTheDicePort(t *testing.T) {
 	_, err = bs.XP.Add(ctx, id, xpsvc.EntryInput{Base: 2_500})
 	require.NoError(t, err)
 	lu, _, _ = levelUpOf(t, bs, id)
-	points := charactersvc.LevelGrants{SkillPoints: 15}
+	points := skills.LevelGrants{SkillPoints: 15}
 	assert.Equal(t, []charactersvc.PendingLevel{{Level: 2, Die: 6, Grants: points}, {Level: 3, Die: 6, Grants: points}}, lu.Pending)
 
 	first, err := bs.LevelUp.Roll(ctx, id, levelupsvc.RollInput{Level: 2})

@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // SVC is the driver port.
@@ -117,7 +118,7 @@ type DAL interface {
 // character row alone.
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
-	WeaponProficiency(ctx context.Context, id int64) (charactersvc.WeaponProficiency, error)
+	WeaponProficiency(ctx context.Context, id int64) (skills.WeaponProficiency, error)
 }
 
 // Dice is the dice adapter port.

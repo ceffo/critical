@@ -11,221 +11,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
-
-// allWeaponTypes are every weapon type of ADR 0030 step 23.
-var allWeaponTypes = ruletablesvc.WeaponTypes
-
-// ADR 0037 step 7: a weapon pick is one weapon type, once, 1 slot, of a type the class's PHB
-// list allows: a mage is refused a long sword, a cleric an edged weapon, a thief a type outside
-// its list; a fighter and a bard pick any type. A type outside the list that the stored picks
-// already have is kept (the migration grants every owned type), never added; so is a stored type
-// that is no weapon type (older data is never dropped, as in the non-weapon pool). Wielding is not
-// this check's (ADR 0033 step 20 only warns).
-func TestWeaponPick_Step7_ClassLimitsRefuseThePick(t *testing.T) {
-	book := profBook(t)
-	refused := func(field, code string) *domain.FieldError { return &domain.FieldError{Field: field, Message: code} }
-	for _, tc := range []struct {
-		name   string
-		class  string
-		picks  charactersvc.Picks
-		before charactersvc.Picks
-		want   *domain.FieldError
-	}{
-		{"a mage: dagger, dart, sling, other_melee", "mage", weapons("dagger", "dart", "sling", "other_melee"), weapons(), nil},
-		{"a mage refused a long sword", "mage", weapons("dagger", "long_sword"), weapons(), refused("weapon.long_sword", "weapon_not_allowed")},
-		{"a cleric: sling, other_melee, other_missile", "cleric", weapons("sling", "other_melee", "other_missile"), weapons(), nil},
-		{"a cleric refused an edged weapon", "cleric", weapons("short_sword"), weapons(), refused("weapon.short_sword", "weapon_not_allowed")},
-		{"a cleric refused a bow", "cleric", weapons("long_bow"), weapons(), refused("weapon.long_bow", "weapon_not_allowed")},
-		{"a thief: its list", "thief", weapons("short_bow", "hand_crossbow", "long_sword", "other_thrown"), weapons(), nil},
-		{"a thief refused a type outside its list", "thief", weapons("long_bow"), weapons(), refused("weapon.long_bow", "weapon_not_allowed")},
-		{"a thief refused a heavy crossbow", "thief", weapons("heavy_crossbow"), weapons(), refused("weapon.heavy_crossbow", "weapon_not_allowed")},
-		{"a fighter: any type", "fighter", weapons(allWeaponTypes...), weapons(), nil},
-		{"a bard: any type", "bard", weapons(allWeaponTypes...), weapons(), nil},
-		{"a stored type outside the list is kept", "mage", weapons("dagger", "long_sword"), weapons("long_sword"), nil},
-		{"an unknown type", "fighter", weapons("katana"), weapons(), refused("weapon.katana", "unknown")},
-		{"a stored unknown type is kept", "mage", weapons("dagger", "katana"), weapons("katana"), nil},
-		{"a stored unknown type spends 1 slot", "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "katana", Slots: 2}}}, weapons("katana"), refused("weapon.katana", "out_of_range")},
-		{"no type", "fighter", weapons(""), weapons(), refused("weapon", "empty")},
-		{"a duplicate type", "fighter", weapons("dagger", "dagger"), weapons(), refused("weapon.dagger", "duplicate")},
-		{"no slot", "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "dagger"}}}, weapons(), refused("weapon.dagger", "out_of_range")},
-		{"three slots for a dagger (not its specialization's 2)", "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "dagger", Slots: 3}}}, weapons(), refused("weapon.dagger", "out_of_range")},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := charactersvc.ValidPicks(book, tc.class, tc.picks, tc.before)
-			if tc.want == nil {
-				require.NoError(t, err)
-				assert.Equal(t, tc.picks.Weapon, got.Weapon)
-				return
-			}
-			assert.Equal(t, *tc.want, fieldErr(t, err))
-		})
-	}
-}
-
-// spec is a weapon pick of slots.
-func spec(weaponType string, slots int) charactersvc.WeaponPick {
-	return charactersvc.WeaponPick{Type: weaponType, Slots: slots}
-}
-
-// ADR 0037 step 9 (PHB p.52-53): specialization is a fighter's weapon pick of one weapon type at
-// the PHB's cost in all, 2 slots for a melee weapon or a crossbow, 3 for a bow (2 for darts,
-// slings and the other thrown and missile types, the step's proposed reading); any other count
-// is out_of_range, another class's specialization and a second one are not_allowed. The pick is
-// the proficiency: a type is specialized only through its own pick, so a type not picked cannot
-// be. Its slots count in the weapon pool's budget (step 10): a level 1 fighter's 4 slots take a
-// bow's specialization and one plain pick, not two. The weapon is specialized when the fighter's
-// picks hold its type's specialization (Character.Specialized): never for a plain pick, never
-// for a class that does not specialize.
-func TestSpecialization_Step9_FighterOnlyOneTypeAtThePhbCost(t *testing.T) {
-	book := profBook(t)
-	refused := func(field, code string) *domain.FieldError { return &domain.FieldError{Field: field, Message: code} }
-	picks := func(ps ...charactersvc.WeaponPick) charactersvc.Picks { return charactersvc.Picks{Weapon: ps} }
-	tests := []struct {
-		name  string
-		class string
-		picks charactersvc.Picks
-		want  *domain.FieldError
-	}{
-		{"a bow, 3 slots", "fighter", picks(spec("long_bow", 3), spec("dagger", 1)), nil},
-		{"a short bow, 3 slots", "fighter", picks(spec("short_bow", 3)), nil},
-		{"a bow, 2 slots", "fighter", picks(spec("long_bow", 2)), refused("weapon.long_bow", "out_of_range")},
-		{"a melee weapon, 3 slots", "fighter", picks(spec("long_sword", 3)), refused("weapon.long_sword", "out_of_range")},
-		{"4 slots", "fighter", picks(spec("long_sword", 4)), refused("weapon.long_sword", "out_of_range")},
-		{"a mage refused", "mage", picks(spec("dagger", 2)), refused("weapon.dagger", "not_allowed")},
-		{"a bard refused", "bard", picks(spec("long_sword", 2)), refused("weapon.long_sword", "not_allowed")},
-		{"a second type refused", "fighter", picks(spec("long_sword", 2), spec("dagger", 2)), refused("weapon.dagger", "not_allowed")},
-	}
-	twoSlots := []string{
-		"dagger", "short_sword", "long_sword", "other_melee", "light_crossbow", "heavy_crossbow", "hand_crossbow",
-		"dart", "sling", "other_thrown", "other_missile",
-	}
-	for _, typ := range twoSlots {
-		tests = append(tests, struct {
-			name  string
-			class string
-			picks charactersvc.Picks
-			want  *domain.FieldError
-		}{typ + ", 2 slots", "fighter", picks(spec(typ, 2)), nil})
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := charactersvc.ValidPicks(book, tc.class, tc.picks, weapons())
-			if tc.want == nil {
-				require.NoError(t, err)
-				assert.Equal(t, tc.picks.Weapon, got.Weapon)
-				return
-			}
-			assert.Equal(t, *tc.want, fieldErr(t, err))
-		})
-	}
-
-	t.Run("the budget counts its slots", func(t *testing.T) {
-		within := picks(spec("long_bow", 3), spec("dagger", 1))
-		require.NoError(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: weapons()}, charactersvc.Spending{Picks: within}))
-		over := picks(spec("long_bow", 3), spec("dagger", 1), spec("dart", 1))
-		var be *domain.BudgetError
-		require.ErrorAs(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: weapons()}, charactersvc.Spending{Picks: over}), &be)
-		assert.Equal(t, domain.BudgetError{Field: "weapon", Spent: 5, Limit: 4}, *be)
-	})
-
-	t.Run("the weapon is specialized from the pick", func(t *testing.T) {
-		p := picks(spec("long_sword", 2), spec("dagger", 1))
-		assert.Equal(t, "long_sword", charactersvc.SpecializedType("fighter", p))
-		assert.Empty(t, charactersvc.SpecializedType("fighter", picks(spec("dagger", 1))), "a plain pick")
-		assert.Empty(t, charactersvc.SpecializedType("fighter", charactersvc.Picks{}), "no pick")
-		assert.Empty(t, charactersvc.SpecializedType("bard", p), "a class that does not specialize")
-	})
-}
-
-// ADR 0037 step 12: an editor of one pool leaves the other as stored. A nil pool in the edit is
-// the stored one; an empty list removes every pick of the pool.
-func TestValidPicks_Step12_AnAbsentPoolKeepsTheStoredOne(t *testing.T) {
-	book := profBook(t)
-	stored := charactersvc.Picks{
-		Nonweapon: []charactersvc.Pick{p("tumbling", 1)},
-		Weapon:    []charactersvc.WeaponPick{{Type: "dagger", Slots: 1}},
-	}
-	got, err := charactersvc.ValidPicks(book, "bard", charactersvc.Picks{Nonweapon: []charactersvc.Pick{p("cooking", 1)}}, stored)
-	require.NoError(t, err)
-	assert.Equal(t, charactersvc.Picks{Nonweapon: []charactersvc.Pick{p("cooking", 1)}, Weapon: stored.Weapon}, got)
-
-	got, err = charactersvc.ValidPicks(book, "bard", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "dart", Slots: 1}}}, stored)
-	require.NoError(t, err)
-	assert.Equal(t, charactersvc.Picks{Nonweapon: stored.Nonweapon, Weapon: []charactersvc.WeaponPick{{Type: "dart", Slots: 1}}}, got)
-
-	got, err = charactersvc.ValidPicks(book, "bard", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{}}, stored)
-	require.NoError(t, err)
-	assert.Empty(t, got.Weapon, "an empty list removes every weapon pick")
-	assert.Equal(t, stored.Nonweapon, got.Nonweapon)
-}
-
-// ADR 0037 step 10 on the weapon pool: refused when, after the save, spent > available AND spent >
-// spent before; any other save passes. A level 1 fighter has 4 weapon slots (Table 34).
-func TestBudget_Step10_WeaponPoolRefusedWhenOverAndGrowing(t *testing.T) {
-	book := profBook(t)
-	four := weapons("dagger", "dart", "sling", "long_sword")
-	five := weapons("dagger", "dart", "sling", "long_sword", "short_sword")
-	six := weapons("dagger", "dart", "sling", "long_sword", "short_sword", "long_bow")
-	for _, tc := range []struct {
-		name          string
-		before, after charactersvc.Picks
-		refused       bool
-		spent         int
-	}{
-		{"under budget", weapons(), weapons("dagger"), false, 1},
-		{"at the budget", weapons(), four, false, 4},
-		{"a new overspend", four, five, true, 5},
-		{"created over budget (nothing before)", weapons(), five, true, 5},
-		{"an overspend kept as it is", five, five, false, 5},
-		{"an overspend swapped, same total", five, weapons("dagger", "dart", "sling", "long_sword", "long_bow"), false, 5},
-		{"an overspend reduced, still over", six, five, false, 5},
-		{"an overspend increased", five, six, true, 6},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			err := charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: tc.before}, charactersvc.Spending{Picks: tc.after})
-			if !tc.refused {
-				require.NoError(t, err)
-				return
-			}
-			require.ErrorIs(t, err, domain.ErrOverBudget)
-			var be *domain.BudgetError
-			require.ErrorAs(t, err, &be)
-			assert.Equal(t, domain.BudgetError{Field: "weapon", Spent: tc.spent, Limit: 4}, *be)
-		})
-	}
-	t.Run("each pool is judged on its own", func(t *testing.T) {
-		// The non-weapon pool over budget and kept does not let the weapon pool grow over,
-		// and a weapon overspend kept does not block a non-weapon save within budget.
-		before := charactersvc.Picks{Nonweapon: []charactersvc.Pick{p("tracking", 7)}, Weapon: five.Weapon}
-		after := charactersvc.Picks{Nonweapon: []charactersvc.Pick{p("tracking", 2)}, Weapon: five.Weapon}
-		require.NoError(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: before}, charactersvc.Spending{Picks: after}))
-		after = charactersvc.Picks{Nonweapon: []charactersvc.Pick{p("tracking", 7)}, Weapon: six.Weapon}
-		var be *domain.BudgetError
-		require.ErrorAs(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: before}, charactersvc.Spending{Picks: after}), &be)
-		assert.Equal(t, "weapon", be.Field)
-	})
-}
-
-// ADR 0037 step 11 on the weapon pool: slots_over_budget {pool weapon, spent, available}, the
-// reminder slots_to_spend {pool weapon, left}, none when spent exactly. A level 1 bard has 2
-// weapon slots and, Intelligence 9, 5 non-weapon slots (spent exactly here).
-func TestWarnings_Step11_WeaponPool(t *testing.T) {
-	book := profBook(t)
-	warnings := func(types ...string) []charactersvc.Warning {
-		ps := weapons(types...)
-		ps.Nonweapon = []charactersvc.Pick{p("tumbling", 5)}
-		f, ok := charactersvc.ProficiencyFigures(book, "bard", 1, 9, charactersvc.Spending{Picks: ps})
-		require.True(t, ok)
-		return charactersvc.SlotWarnings(f)
-	}
-	three, two, one := 3, 2, 1
-	assert.Equal(t, []charactersvc.Warning{{Code: "slots_over_budget", Field: "weapon", Pool: "weapon", Spent: &three, Available: &two}},
-		warnings("dagger", "dart", "sling"))
-	assert.Equal(t, []charactersvc.Warning{{Code: "slots_to_spend", Field: "weapon", Pool: "weapon", Left: &one}}, warnings("dagger"))
-	assert.Equal(t, []charactersvc.Warning{{Code: "slots_to_spend", Field: "weapon", Pool: "weapon", Left: &two}}, warnings())
-	assert.Empty(t, warnings("dagger", "dart"), "spent exactly")
-}
 
 // ADR 0037 step 3 on the read: the weapon pool follows the realized level, never the target
 // level; Kelsen (rogue, level 15) has 2 + 3 = 5 weapon slots, a rogue gains its next at 16, which
@@ -245,12 +32,12 @@ func TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel(t *testing.T) {
 			got.Derived.Proficiencies.Weapon, "target %d", target)
 		one := 1
 		assert.Contains(t, got.Warnings, charactersvc.Warning{Code: "slots_to_spend", Field: "weapon", Pool: "weapon", Left: &one})
-		assert.Equal(t, charactersvc.WeaponPickFigures{Type: "other_melee", Slots: 1, Allowed: true}, got.Derived.Proficiencies.WeaponPicks[0])
+		assert.Equal(t, skills.WeaponPickFigures{Type: "other_melee", Slots: 1, Allowed: true}, got.Derived.Proficiencies.WeaponPicks[0])
 	}
 	t.Run("a stored type the class may not pick reads as not allowed", func(t *testing.T) {
-		f, ok := charactersvc.ProficiencyFigures(profBook(t), "mage", 1, 9, charactersvc.Spending{Picks: weapons("dagger", "long_sword")})
+		f, ok := skills.ProficiencyFigures(profBook(t), "mage", 1, 9, skills.Spending{Picks: weapons("dagger", "long_sword")})
 		require.True(t, ok)
-		assert.Equal(t, []charactersvc.WeaponPickFigures{
+		assert.Equal(t, []skills.WeaponPickFigures{
 			{Type: "dagger", Slots: 1, Allowed: true}, {Type: "long_sword", Slots: 1, Allowed: false},
 		}, f.WeaponPicks)
 	})
@@ -260,7 +47,7 @@ func TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel(t *testing.T) {
 // with nothing picked before: within budget stored; over budget, or a type the class may not
 // pick, refused with nothing written. A level 1 bard has 2 weapon slots.
 func TestCreate_Step14_WeaponPicksCheckedAsTheEditor(t *testing.T) {
-	withPicks := func(ps charactersvc.Picks) charactersvc.NewCharacter {
+	withPicks := func(ps skills.Picks) charactersvc.NewCharacter {
 		n := lyra()
 		n.Proficiencies = ps
 		return n
@@ -310,13 +97,6 @@ func TestCreate_Step14_WeaponPicksCheckedAsTheEditor(t *testing.T) {
 	})
 }
 
-// ADR 0037 step 13: weapon picks are equal whatever their order; another type is a change.
-func TestPicksEqual_Step13_WeaponOrderDoesNotCount(t *testing.T) {
-	assert.True(t, weapons("dagger", "dart").Equal(weapons("dart", "dagger")))
-	assert.False(t, weapons("dagger", "dart").Equal(weapons("dagger", "sling")))
-	assert.False(t, weapons("dagger").Equal(weapons("dagger", "dart")))
-}
-
 // ADR 0037 steps 7 and 9 for the editor: a class's weapon types in display order with the
 // specialization's slots for a fighter (2, a bow 3), 0 for a class that does not specialize, and
 // only the types the class may pick.
@@ -331,26 +111,4 @@ func TestClassWeaponTypeOptions_Step7_AllowedTypesAndTheSpecializationCost(t *te
 	for _, o := range charactersvc.ClassWeaponTypeOptions("bard") {
 		assert.Zero(t, o.SpecializationSlots, "a bard picks %s but never specializes", o.Type)
 	}
-}
-
-// ADR 0037 step 8 read from the character row: a weapon type without a pick takes Table 34's
-// penalty for the class group, a picked type (a kept one the class may not take included) and a
-// weapon with no type none; the specialization is step 9's.
-func TestWeaponProficiency_Step8_PenaltyFromThePicks(t *testing.T) {
-	book := profBook(t)
-	mage := charactersvc.WeaponProficiencyOf(book, "mage", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{
-		{Type: "dagger", Slots: 1}, {Type: "long_sword", Slots: 1},
-	}})
-	assert.Equal(t, -5, mage.NonproficientPenalty("sling"))
-	assert.Zero(t, mage.NonproficientPenalty("dagger"))
-	assert.Zero(t, mage.NonproficientPenalty("long_sword"), "a kept pick the class may not take still counts")
-	assert.Zero(t, mage.NonproficientPenalty(""), "a weapon with no type takes none")
-	assert.Empty(t, mage.Specialized)
-
-	fighter := charactersvc.WeaponProficiencyOf(book, "fighter", charactersvc.Picks{Weapon: []charactersvc.WeaponPick{{Type: "long_bow", Slots: 3}}})
-	assert.Equal(t, "long_bow", fighter.Specialized)
-	assert.Equal(t, -2, fighter.NonproficientPenalty("dagger"))
-
-	none := charactersvc.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), "fighter", charactersvc.Picks{})
-	assert.Zero(t, none.NonproficientPenalty("dagger"), "without Table 34 no penalty")
 }

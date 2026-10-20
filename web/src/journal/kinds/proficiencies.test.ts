@@ -11,4 +11,18 @@ describeKind("proficiencies", fixtures, {
     en: { text: "Proficiency slots: old_skill 1 → 0" },
     fr: { text: "Emplacements de compétence : old_skill 1 → 0" },
   },
+  weaponPicked: {
+    en: { text: "Weapon proficiency slots: Long sword 0 → 1, Dagger 0 → 1" },
+    fr: {
+      text: "Emplacements de maîtrise d’arme : Épée longue 0 → 1, Dague 0 → 1",
+    },
+  },
+  specialized: {
+    en: {
+      text: "Proficiency slots: Tracking 0 → 2 · Weapon proficiency slots: Long sword 1 → 2 (specialization)",
+    },
+    fr: {
+      text: "Emplacements de compétence : Pistage 0 → 2 · Emplacements de maîtrise d’arme : Épée longue 1 → 2 (spécialisation)",
+    },
+  },
 });

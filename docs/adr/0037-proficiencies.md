@@ -350,7 +350,17 @@ writes `Test<name>` and adds the prefix here in the same PR.
     optional but at least one; a pool absent (or null) is left as stored, so each pool's editor
     saves alone (`TestValidPicks_Step12_AnAbsentPoolKeepsTheStoredOne`, charactersvc). The
     column holds `{"nonweapon": [...], "weapon": [{"type", "slots"}]}`. The answer's
-    `proficiencySlots` adds `weapon` and `weaponPicks`.)_
+    `proficiencySlots` adds `weapon` and `weaponPicks`. The weapon editor, web, 2026-10-20: the
+    Skills tab's "Maîtrises d'armes" block lists the picks (the specialization tagged, a kept type
+    the class may not pick marked) with the pool's line, and its "Choisir" opens the editor in
+    place of the lists (ADR 0027 step 1: a rare control one click away). One row per type of the
+    options' `weaponTypes`, then each kept pick outside them (removable, never added); Ajouter
+    picks a type (1 slot), and for a class that specializes a picked type's Spécialiser toggle
+    sends the options' `specializationSlots`. It saves `{weapon}` only, with the server's preview
+    live; the second specialization and the overspend are the server's refusals, shown on the
+    row or above the list. The journal words a weapon change "Emplacements de maîtrise d'arme :
+    Épée longue 1 → 2 (spécialisation)" (a weapon pick of more than one slot is the
+    specialization, step 9).)_
 13. **Each save is one undoable move.** A save that changes the picks or the languages is one
     `proficiencies` entry of the action log with a `proficiencies` snapshot (the picks and the
     languages before and after), as the `skill_points` move of ADR 0030 step 17: undo writes the
@@ -376,7 +386,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
     XP and the Intelligence are entered. Also `TestProficiencies_Step14_CreationWithPicks`
     (composition). Weapon picks, 2026-10-20: `proficiencies: {weapon: [...]}` on the same
     endpoints (`TestCreate_Step14_WeaponPicksCheckedAsTheEditor`, charactersvc;
-    `TestProficiencies_Step14_CreationWithWeaponPicks`, composition).)_
+    `TestProficiencies_Step14_CreationWithWeaponPicks`, composition). The web's step 5 ("Compétences
+    et armes") shows the weapon editor above the non-weapon one, both on the checks endpoint's
+    pools; the weapon picks go in the create request and are cleared when the class changes.)_
 15. **The level-up says what it grants.** The pending level-up prompt and the level-up answer
     ([ADR 0030](0030-classes-and-races.md) step 7) carry what the level grants beyond hit points:
     the weapon and non-weapon slots gained (available at the level minus available at the level

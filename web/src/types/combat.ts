@@ -309,6 +309,9 @@ export interface Weapon {
   weapon_type: WeaponType;
   /** The fighter's weapon specialization (ADR 0030 step 12). */
   specialized: boolean;
+  /** ADR 0037 step 8: the to-hit penalty an attack with the weapon takes for its type having no
+   * weapon pick (0: none). */
+  nonproficientPenalty: number;
   /** The speed factor (ADR 0033 step 3). */
   speed: number;
   /** Wielded (ADR 0033 step 6): only a wielded weapon is in hand; picking another wields it. */

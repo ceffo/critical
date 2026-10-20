@@ -161,42 +161,99 @@ export const skillPointsKind: KindView<SkillPointsPayload> = {
   },
 };
 
-/** Payload of a proficiencies entry (skillsvc picksRecord): the picks before and after. */
+/** Payload of a proficiencies entry (skillsvc picksRecord): each pool's picks before and after,
+ * by id or weapon type and slots; `weapon` null for an entry logged before the weapon pool. */
 interface PicksPayload {
   before: Record<string, number>;
   after: Record<string, number>;
+  weapon: {
+    before: Record<string, number>;
+    after: Record<string, number>;
+  } | null;
 }
 
-type PickList = { nonweapon?: { id: string; slots: number }[] } | undefined;
+type PickList =
+  | {
+      nonweapon?: { id: string; slots: number }[];
+      weapon?: { type: string; slots: number }[];
+    }
+  | undefined;
 
 const bySlots = (l: PickList): Record<string, number> | null =>
   l && Array.isArray(l.nonweapon)
     ? Object.fromEntries(l.nonweapon.map((x) => [x.id, x.slots]))
     : null;
 
+const weaponBySlots = (l: PickList): Record<string, number> | null =>
+  l && Array.isArray(l.weapon)
+    ? Object.fromEntries(l.weapon.map((x) => [x.type, x.slots]))
+    : null;
+
+/** The keys whose slots changed between before and after (0: none), in first-seen order. */
+const changed = (
+  before: Record<string, number>,
+  after: Record<string, number>,
+) =>
+  [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+    (k) => (before[k] ?? 0) !== (after[k] ?? 0),
+  );
+
 export const proficienciesKind: KindView<PicksPayload> = {
   decode(e) {
     const p = e.payload as { before?: PickList; after?: PickList } | null;
     const before = bySlots(p?.before);
     const after = bySlots(p?.after);
-    return before && after ? { before, after } : null;
+    if (!before || !after) return null;
+    const wb = weaponBySlots(p?.before);
+    const wa = weaponBySlots(p?.after);
+    return {
+      before,
+      after,
+      weapon: wb || wa ? { before: wb ?? {}, after: wa ?? {} } : null,
+    };
   },
   icon: ListNumbers,
-  // "Proficiency slots: Tumbling 1 → 2, Tracking 0 → 2": each pick whose slots changed (0: none).
+  // "Proficiency slots: Tumbling 1 → 2, Tracking 0 → 2": each pick whose slots changed (0: none);
+  // then "Weapon proficiency slots: Long sword 1 → 2 (specialization)". A weapon pick of more than
+  // one slot is a specialization: the server refuses any other count (ADR 0037 step 9).
   text(p, { t }) {
-    const ids = [
-      ...new Set([...Object.keys(p.before), ...Object.keys(p.after)]),
-    ].filter((k) => (p.before[k] ?? 0) !== (p.after[k] ?? 0));
-    const changes = ids
-      .map((k) =>
-        t("log.proficiencies.change", {
-          name: skillName(t, k),
-          from: p.before[k] ?? 0,
-          to: p.after[k] ?? 0,
+    const parts: string[] = [];
+    const ids = changed(p.before, p.after);
+    if (ids.length > 0 || !p.weapon)
+      parts.push(
+        t("log.proficiencies.text", {
+          changes: ids
+            .map((k) =>
+              t("log.proficiencies.change", {
+                name: skillName(t, k),
+                from: p.before[k] ?? 0,
+                to: p.after[k] ?? 0,
+              }),
+            )
+            .join(", "),
         }),
-      )
-      .join(", ");
-    return t("log.proficiencies.text", { changes });
+      );
+    const w = p.weapon;
+    const types = w ? changed(w.before, w.after) : [];
+    if (w && types.length > 0)
+      parts.push(
+        t("log.proficiencies.weaponText", {
+          changes: types
+            .map((k) => {
+              const to = w.after[k] ?? 0;
+              const args = {
+                name: t(`weapons.types.${k}`, { defaultValue: k }),
+                from: w.before[k] ?? 0,
+                to,
+              };
+              return to > 1
+                ? t("log.proficiencies.specialized", args)
+                : t("log.proficiencies.change", args);
+            })
+            .join(", "),
+        }),
+      );
+    return parts.join(" · ");
   },
 };
 

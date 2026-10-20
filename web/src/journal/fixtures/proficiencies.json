@@ -1,11 +1,24 @@
 {
   "picked": {
     "payload": {
-      "before": { "nonweapon": [{ "id": "tumbling", "slots": 1 }] },
+      "before": {
+        "nonweapon": [
+          {
+            "id": "tumbling",
+            "slots": 1
+          }
+        ]
+      },
       "after": {
         "nonweapon": [
-          { "id": "tumbling", "slots": 2 },
-          { "id": "tracking", "slots": 2 }
+          {
+            "id": "tumbling",
+            "slots": 2
+          },
+          {
+            "id": "tracking",
+            "slots": 2
+          }
         ]
       }
     }
@@ -14,11 +27,82 @@
     "payload": {
       "before": {
         "nonweapon": [
-          { "id": "singing", "slots": 1 },
-          { "id": "old_skill", "slots": 1 }
+          {
+            "id": "singing",
+            "slots": 1
+          },
+          {
+            "id": "old_skill",
+            "slots": 1
+          }
         ]
       },
-      "after": { "nonweapon": [{ "id": "singing", "slots": 1 }] }
+      "after": {
+        "nonweapon": [
+          {
+            "id": "singing",
+            "slots": 1
+          }
+        ]
+      }
+    }
+  },
+  "weaponPicked": {
+    "payload": {
+      "before": {
+        "nonweapon": [
+          {
+            "id": "tumbling",
+            "slots": 1
+          }
+        ],
+        "weapon": []
+      },
+      "after": {
+        "nonweapon": [
+          {
+            "id": "tumbling",
+            "slots": 1
+          }
+        ],
+        "weapon": [
+          {
+            "type": "long_sword",
+            "slots": 1
+          },
+          {
+            "type": "dagger",
+            "slots": 1
+          }
+        ]
+      }
+    }
+  },
+  "specialized": {
+    "payload": {
+      "before": {
+        "nonweapon": [],
+        "weapon": [
+          {
+            "type": "long_sword",
+            "slots": 1
+          }
+        ]
+      },
+      "after": {
+        "nonweapon": [
+          {
+            "id": "tracking",
+            "slots": 2
+          }
+        ],
+        "weapon": [
+          {
+            "type": "long_sword",
+            "slots": 2
+          }
+        ]
+      }
     }
   }
 }

@@ -1454,7 +1454,9 @@
     },
     "proficiencies": {
       "text": "Emplacements de compétence : {{changes}}",
-      "change": "{{name}} {{from}} → {{to}}"
+      "change": "{{name}} {{from}} → {{to}}",
+      "weaponText": "Emplacements de maîtrise d’arme : {{changes}}",
+      "specialized": "{{name}} {{from}} → {{to}} (spécialisation)"
     },
     "skillPoints": {
       "text": "Points de talent : {{changes}}",
@@ -2566,11 +2568,15 @@
     "warningsOn_other": "{{count}} avertissements : {{fields}}",
     "proficiencies": {
       "name": "Compétences",
-      "title": "Compétences diverses",
-      "lead": "Les compétences diverses du personnage, dans les emplacements de sa classe, de son niveau et de son Intelligence. Les emplacements restants pourront être dépensés plus tard.",
+      "title": "Compétences et armes",
+      "lead": "Les maîtrises d’armes et les compétences diverses du personnage, dans les emplacements de sa classe, de son niveau et de son Intelligence. Les emplacements restants pourront être dépensés plus tard.",
       "pickedN_one": "{{count}} choisie",
       "pickedN_other": "{{count}} choisies",
-      "none": "Ce serveur n’a pas de catalogue de compétences : vous les choisirez plus tard dans l’onglet Compétences."
+      "none": "Ce serveur n’a pas de catalogue de compétences : vous les choisirez plus tard dans l’onglet Compétences.",
+      "weapons_one": "{{count}} arme",
+      "weapons_other": "{{count}} armes",
+      "weaponsName": "Armes",
+      "weaponsNone": "Ce serveur n’a pas les types d’armes de la classe : vous les choisirez plus tard dans l’onglet Compétences."
     }
   },
   "ac": {
@@ -2690,6 +2696,45 @@
       "unknown": "Cette compétence n’est pas dans le catalogue.",
       "not_allowed": "Cette compétence ne se choisit pas ici.",
       "empty": "Une compétence sans nom a été refusée.",
+      "refused": "Ce choix a été refusé."
+    }
+  },
+  "weaponProficiencies": {
+    "section": "Maîtrises d’armes",
+    "edit": "Choisir",
+    "editHint": "Choisir les maîtrises d’armes et la spécialisation",
+    "title": "Maîtrises d’armes",
+    "lead": "Maîtriser un type d’arme coûte 1 emplacement ; sans maîtrise, une attaque avec ce type subit la pénalité de votre classe. Budget déjà dépassé : vous pouvez retirer des emplacements, pas en ajouter.",
+    "leadSpecializes": "Un combattant peut aussi se spécialiser dans un seul type d’arme, pour le coût indiqué en tout.",
+    "saveHint": "Enregistrer les maîtrises d’armes (annulable dans le journal)",
+    "pool": "Emplacements : {{initial}} de départ + {{levels}} pour les niveaux (un tous les {{perLevels}}) = {{available}}",
+    "none": "Aucune arme maîtrisée.",
+    "list": "Types d’armes de votre classe",
+    "unpicked": "Non maîtrisée",
+    "plain_one": "Maîtrisée · {{count}} emplacement",
+    "plain_other": "Maîtrisée · {{count}} emplacements",
+    "specialization_one": "Spécialisation · {{count}} emplacement",
+    "specialization_other": "Spécialisation · {{count}} emplacements",
+    "specializationCost_one": "spécialisation : {{count}} emplacement en tout",
+    "specializationCost_other": "spécialisation : {{count}} emplacements en tout",
+    "notAllowed": "Hors des armes de votre classe : gardée, vous pouvez la retirer",
+    "add": "Ajouter",
+    "addHint": "Maîtriser {{name}} (1 emplacement)",
+    "specialize": "Spécialiser",
+    "specializeHint_one": "Se spécialiser en {{name}} : {{count}} emplacement en tout",
+    "specializeHint_other": "Se spécialiser en {{name}} : {{count}} emplacements en tout",
+    "specialized": "Spécialisée",
+    "unspecializeHint": "Retirer la spécialisation en {{name}} (revient à 1 emplacement)",
+    "remove": "Retirer {{name}}",
+    "nonproficient": "Non maîtrisée : {{value}} au toucher",
+    "nonproficientHint": "Aucune maîtrise de ce type d’arme : {{value}} pour toucher. Choisissez-la dans l’onglet Compétences.",
+    "errors": {
+      "out_of_range": "Ce nombre d’emplacements n’est ni une maîtrise ni une spécialisation.",
+      "duplicate": "Ce type d’arme est déjà maîtrisé.",
+      "unknown": "Ce type d’arme n’existe pas.",
+      "not_allowed": "Une seule spécialisation, et seulement pour un combattant.",
+      "weapon_not_allowed": "Votre classe ne peut pas maîtriser ce type d’arme.",
+      "empty": "Un type d’arme vide a été refusé.",
       "refused": "Ce choix a été refusé."
     }
   }

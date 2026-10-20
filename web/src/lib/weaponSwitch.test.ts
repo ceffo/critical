@@ -14,6 +14,7 @@ const weapon = (id: string): Weapon => ({
   ammo_kind: "",
   weapon_type: "long_sword",
   specialized: false,
+  nonproficientPenalty: 0,
   speed: 5,
   wielded: true,
 });

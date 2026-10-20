@@ -9,6 +9,7 @@ import {
   type CharacterPreview,
   type DraftChecks,
   type DraftChecksRequest,
+  type WeaponPickInput,
   type CreationOptions,
   type HpRoll,
   type NewCharacter,
@@ -27,11 +28,14 @@ export type DraftPatch = Partial<Omit<FlowDraft, "details">> & {
 
 /** The draft with the patch applied; `details` is merged field by field, so a reply carrying one
  * detail (a rolled height) keeps what was typed since the request left. Another class clears the
- * non-weapon picks: each was spent at the old class's cost (ADR 0037 step 4), so they would be
+ * picks: each non-weapon one was spent at the old class's cost (ADR 0037 step 4), and a weapon
+ * type or a specialization may not be the new class's (steps 7 and 9), so they would be
  * refused or mispriced under the new one. */
 export function mergeDraft(d: FlowDraft, patch: DraftPatch): FlowDraft {
   const next = { ...d, ...patch, details: { ...d.details, ...patch.details } };
   if (next.cls !== d.cls && patch.picks === undefined) next.picks = [];
+  if (next.cls !== d.cls && patch.weaponPicks === undefined)
+    next.weaponPicks = [];
   return next;
 }
 
@@ -61,6 +65,9 @@ export interface FlowDraft {
   skillPoints: Record<string, string>;
   /** The non-weapon picks (ADR 0037 step 14), each at the slots the player gave it. */
   picks: PickInput[];
+  /** The weapon picks and the specialization (ADR 0037 steps 7, 9 and 14), each type at its
+   * slots. */
+  weaponPicks: WeaponPickInput[];
   name: string;
   details: Draft;
 }
@@ -85,6 +92,7 @@ export const EMPTY_DRAFT: FlowDraft = {
   strExceptional: "",
   skillPoints: {},
   picks: [],
+  weaponPicks: [],
   name: "",
   details: {
     alignment: "",
@@ -203,7 +211,11 @@ export function buildBody(
       body.skillPoints[skill] = v;
     }
   }
-  if (draft.picks.length > 0) body.proficiencies = { nonweapon: draft.picks };
+  if (draft.picks.length > 0 || draft.weaponPicks.length > 0)
+    body.proficiencies = {
+      ...(draft.picks.length > 0 && { nonweapon: draft.picks }),
+      ...(draft.weaponPicks.length > 0 && { weapon: draft.weaponPicks }),
+    };
   const {
     body: details,
     ageInvalid,
@@ -242,7 +254,7 @@ export function checksRequest(
     scores,
     xp: x === null || Number.isNaN(x) ? null : x,
     skillPoints,
-    proficiencies: { nonweapon: draft.picks },
+    proficiencies: { nonweapon: draft.picks, weapon: draft.weaponPicks },
     race: draft.race,
     languages: draft.details.languages,
   };

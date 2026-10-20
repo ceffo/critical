@@ -47,6 +47,7 @@ import {
 import { ClassStep, ExtrasStep, RaceStep, ScoresStep } from "./steps";
 import { IdentityStep, ReviewStep } from "./identity";
 import { ProficienciesStep } from "./proficiencies";
+import { isSpecialization } from "@/components/proficiencies/weapons";
 import { useReviewWarnings, warnedFields } from "./warnings";
 
 /** The server's field names for the flow's: the race is `race` in its errors. */
@@ -241,6 +242,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     if (e.field.startsWith("nonweapon"))
       return t(`proficiencies.errors.${e.code}`, {
         defaultValue: t("proficiencies.errors.refused"),
+      });
+    if (e.field === "weapon" || e.field.startsWith("weapon."))
+      return t(`weaponProficiencies.errors.${e.code}`, {
+        defaultValue: t("weaponProficiencies.errors.refused"),
       });
     if (e.field.startsWith("details.")) {
       const detail = e.field.slice("details.".length);
@@ -533,10 +538,17 @@ function useStepChoice(draft: FlowDraft): (step: StepId) => string | null {
         return draft.hpMax
           ? t("creation.extras.hpN", { hp: draft.hpMax })
           : null;
-      case "proficiencies":
-        return draft.picks.length > 0
-          ? t("creation.proficiencies.pickedN", { count: draft.picks.length })
-          : null;
+      case "proficiencies": {
+        const parts = [
+          draft.weaponPicks.length > 0 &&
+            t("creation.proficiencies.weapons", {
+              count: draft.weaponPicks.length,
+            }),
+          draft.picks.length > 0 &&
+            t("creation.proficiencies.pickedN", { count: draft.picks.length }),
+        ].filter(Boolean);
+        return parts.length > 0 ? parts.join(" · ") : null;
+      }
       case "identity":
         return draft.name.trim() || null;
       default:
@@ -724,6 +736,20 @@ function Building({ options, draft, xp, preview, body, language }: StepProps) {
           <dd className="break-words">
             {languages.length > 0
               ? languages.map(languageName).join(", ")
+              : dash}
+          </dd>
+          <dt className="text-ink-muted">
+            {t("creation.proficiencies.weaponsName")}
+          </dt>
+          <dd className="break-words" data-testid="building-weapons">
+            {draft.weaponPicks.length > 0
+              ? draft.weaponPicks
+                  .map((p) =>
+                    isSpecialization(p)
+                      ? `${t(`weapons.types.${p.type}`, { defaultValue: p.type })} (${t("weaponProficiencies.specialized")})`
+                      : t(`weapons.types.${p.type}`, { defaultValue: p.type }),
+                  )
+                  .join(", ")
               : dash}
           </dd>
           <dt className="text-ink-muted">{t("creation.proficiencies.name")}</dt>

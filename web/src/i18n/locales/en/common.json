@@ -1454,7 +1454,9 @@
     },
     "proficiencies": {
       "text": "Proficiency slots: {{changes}}",
-      "change": "{{name}} {{from}} → {{to}}"
+      "change": "{{name}} {{from}} → {{to}}",
+      "weaponText": "Weapon proficiency slots: {{changes}}",
+      "specialized": "{{name}} {{from}} → {{to}} (specialization)"
     },
     "skillPoints": {
       "text": "Skill points: {{changes}}",
@@ -2566,11 +2568,15 @@
     "warningsOn_other": "{{count}} warnings: {{fields}}",
     "proficiencies": {
       "name": "Proficiencies",
-      "title": "Non-weapon proficiencies",
-      "lead": "The character's non-weapon proficiencies, within the slots of its class, level and Intelligence. Slots left can be spent later.",
+      "title": "Proficiencies and weapons",
+      "lead": "The character’s weapon and non-weapon proficiencies, within the slots of its class, level and Intelligence. Slots left can be spent later.",
       "pickedN_one": "{{count}} chosen",
       "pickedN_other": "{{count}} chosen",
-      "none": "This server has no proficiency catalogue: you will choose them later in the Skills tab."
+      "none": "This server has no proficiency catalogue: you will choose them later in the Skills tab.",
+      "weapons_one": "{{count}} weapon",
+      "weapons_other": "{{count}} weapons",
+      "weaponsName": "Weapons",
+      "weaponsNone": "This server has no weapon types for the class: you will choose them later in the Skills tab."
     }
   },
   "ac": {
@@ -2690,6 +2696,45 @@
       "unknown": "This proficiency is not in the catalogue.",
       "not_allowed": "This proficiency is not chosen here.",
       "empty": "A proficiency with no name was refused.",
+      "refused": "This choice was refused."
+    }
+  },
+  "weaponProficiencies": {
+    "section": "Weapon proficiencies",
+    "edit": "Choose",
+    "editHint": "Choose the weapon proficiencies and the specialization",
+    "title": "Weapon proficiencies",
+    "lead": "A weapon type costs 1 slot; without it, an attack with that type takes your class’s penalty. Budget already exceeded: you may remove slots, not add them.",
+    "leadSpecializes": "A fighter may also specialize in one weapon type, for the cost shown in all.",
+    "saveHint": "Save the weapon proficiencies (undo from the journal)",
+    "pool": "Slots: {{initial}} to start + {{levels}} for the levels (one every {{perLevels}}) = {{available}}",
+    "none": "No weapon proficiency.",
+    "list": "Your class’s weapon types",
+    "unpicked": "Not proficient",
+    "plain_one": "Proficient · {{count}} slot",
+    "plain_other": "Proficient · {{count}} slots",
+    "specialization_one": "Specialization · {{count}} slot",
+    "specialization_other": "Specialization · {{count}} slots",
+    "specializationCost_one": "specialization: {{count}} slot in all",
+    "specializationCost_other": "specialization: {{count}} slots in all",
+    "notAllowed": "Outside your class’s weapons: kept, you may remove it",
+    "add": "Add",
+    "addHint": "Become proficient with {{name}} (1 slot)",
+    "specialize": "Specialize",
+    "specializeHint_one": "Specialize in {{name}}: {{count}} slot in all",
+    "specializeHint_other": "Specialize in {{name}}: {{count}} slots in all",
+    "specialized": "Specialized",
+    "unspecializeHint": "Remove the specialization in {{name}} (back to 1 slot)",
+    "remove": "Remove {{name}}",
+    "nonproficient": "Not proficient: {{value}} to hit",
+    "nonproficientHint": "No proficiency with this weapon type: {{value}} to hit. Choose it in the Skills tab.",
+    "errors": {
+      "out_of_range": "This number of slots is neither a proficiency nor a specialization.",
+      "duplicate": "This weapon type is already picked.",
+      "unknown": "This weapon type does not exist.",
+      "not_allowed": "One specialization only, and only for a fighter.",
+      "weapon_not_allowed": "Your class cannot become proficient with this weapon type.",
+      "empty": "An empty weapon type was refused.",
       "refused": "This choice was refused."
     }
   }

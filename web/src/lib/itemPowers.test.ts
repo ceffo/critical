@@ -50,6 +50,7 @@ const gem: Item = {
   twoHanded: false,
   fires: "",
   specialized: false,
+  nonproficientPenalty: 0,
   baseAc: 0,
   skillColumn: "",
   armorRow: "",

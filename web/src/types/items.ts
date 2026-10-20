@@ -154,6 +154,9 @@ export interface Item {
    * character's specialization pick of the weapon type (ADR 0037 step 9), never sent.
    */
   specialized: boolean;
+  /** ADR 0037 step 8: the to-hit penalty an attack with the weapon takes for its type having no
+   * weapon pick (0: none), read-only. */
+  nonproficientPenalty: number;
   /** Armour (ADR 0033 step 5). */
   baseAc: number;
   skillColumn: string;

@@ -318,9 +318,10 @@ test("create a bard through the creation route, switch to the first and back, re
 
 // The fighter (ADR 0030 steps 9, 11 and 12), what only a browser proves: the 18/xx field appearing
 // at Strength 18, the sheet tile reading 18/50 after the reload, the weapon editor's type control,
-// and the piece and the attack card showing the specialization derived from the weapon pick (ADR
-// 0037 step 9: the pick is saved through the API until the weapon proficiency editor lands) with
-// the rate and tag on the server's numbers. The rules (refusals, Table 1 at 18/xx, the bonuses,
+// the piece marked without proficiency (ADR 0037 step 8, the server's penalty), the Skills tab's
+// weapon proficiency editor picking the long sword and specializing in it (steps 7, 9 and 12: the
+// server's pool and cost, one save the journal words), and the piece and the attack card showing
+// the specialization derived from the pick with the rate and tag on the server's numbers. The rules (refusals, Table 1 at 18/xx, the bonuses,
 // Tables 15/35/45, the pick's cost) are Go tests (charactersvc, buffsvc, combatsvc, itemsvc,
 // ruletablesadpt, composition specialization_test.go).
 test("create a fighter with 18/50, specialize in a long sword, attack", async ({
@@ -363,16 +364,58 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   // A new piece is carried (ADR 0033 step 6): equip it to hold it.
   await sword.getByRole("button", { name: "Equip Long Sword" }).click();
   await expect(sword.getByTestId("item-equipped")).toBeVisible();
-  // The long sword's specialization pick: 2 weapon slots (ADR 0037 step 9).
-  const picked = await page.request.put("/api/proficiencies", {
-    data: { weapon: [{ type: "long_sword", slots: 2 }] },
-  });
-  expect(picked.ok()).toBeTruthy();
-  await page.reload();
+  // No weapon pick yet: the piece says so with the warrior's penalty (ADR 0037 step 8).
+  await expect(sword.getByTestId("nonproficient")).toHaveText(
+    "Not proficient: −2 to hit",
+  );
+
+  // The Skills tab's weapon editor: pick the long sword, then specialize in it (2 slots in all,
+  // the options' cost), on the server's pool (a level 1 fighter: 4 slots).
+  await openWorkspace(page, "Act");
+  await page.getByRole("tab", { name: "Skills" }).click();
+  const skills = page.getByRole("tabpanel", { name: "Skills" });
+  await expect(skills.getByTestId("weapon-slots-line")).toHaveText(
+    "Slots: 0 of 4 · 4 slots to spend",
+  );
+  await skills.getByTestId("weapon-edit").click();
+  const editor = skills.getByTestId("weapon-editor");
+  const row = editor.getByTestId("weapon-row-long_sword");
+  await row
+    .getByRole("button", { name: /^Become proficient with Long sword/ })
+    .click();
+  await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
+    "Spent 1, left 3",
+  );
+  await expect(row.getByTestId("weapon-row-status")).toHaveText(
+    "Proficient · 1 slot · specialization: 2 slots in all",
+  );
+  await row.getByTestId("weapon-specialize").click();
+  await expect(row.getByTestId("weapon-specialize")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
+    "Spent 2, left 2",
+  );
+  await snap(page, "weapon-editor");
+  await editor.getByTestId("weapon-save").click();
+  await expect(editor).toBeHidden();
+  await expect(
+    skills
+      .getByTestId("weapon-pick-long_sword")
+      .getByTestId("weapon-pick-specialized"),
+  ).toBeVisible();
+  await expectUndoOn(
+    page,
+    "Weapon proficiency slots: Long sword 0 → 2 (specialization)",
+  );
   await openWorkspace(page, "Inventory");
   await expect(
     page.getByTestId("item-long_sword").getByTestId("item-stats"),
   ).toContainText("specialized");
+  await expect(
+    page.getByTestId("item-long_sword").getByTestId("nonproficient"),
+  ).toHaveCount(0);
 
   await openWorkspace(page, "Act");
   await openWeapons(page);
@@ -444,7 +487,10 @@ test("undo a fighter's specialization from the journal, no reload", async ({
   await expect(f.getByTestId("tile-specialized")).toBeVisible();
   await expect(f.getByTestId("tile-rate")).toContainText("3/2 att.");
   await snap(page, "specialized-sword");
-  await expectUndoOn(page, "Proficiency slots");
+  await expectUndoOn(
+    page,
+    "Weapon proficiency slots: Long sword 0 → 2 (specialization)",
+  );
   await page.getByTestId("undo").click();
   await expect(f.getByTestId("tile-specialized")).toHaveCount(0);
   await expect(f.getByTestId("tile-rate")).not.toContainText("3/2");
@@ -469,7 +515,10 @@ test("undo a fighter's specialization from the journal, no reload", async ({
   await expect(f.getByTestId("tile-specialized")).toBeVisible();
   await expect(f.getByTestId("point-blank")).toBeVisible();
   await snap(page, "specialized-bow");
-  await expectUndoOn(page, "Proficiency slots");
+  await expectUndoOn(
+    page,
+    "Weapon proficiency slots: Long bow 0 → 3 (specialization)",
+  );
   await page.getByTestId("undo").click();
   await expect(f.getByTestId("point-blank")).toHaveCount(0);
   await expect(f.getByTestId("tile-specialized")).toHaveCount(0);

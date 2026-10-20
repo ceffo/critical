@@ -11,7 +11,13 @@ import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/journal/words";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { NonweaponPool } from "@/types/character";
+import { WeaponProficiencyEditor } from "@/components/proficiencies/WeaponProficiencyEditor";
+import { isSpecialization } from "@/components/proficiencies/weapons";
+import type {
+  NonweaponPool,
+  WeaponPickFigures,
+  WeaponPool,
+} from "@/types/character";
 import type { SkillKind } from "@/types/skills";
 
 const HEADINGS: Record<SkillKind, string> = {
@@ -41,6 +47,7 @@ export function SkillsTab() {
   const slots = useCharacterStore((s) => s.character?.derived.proficiencySlots);
   const [editingPoints, setEditingPoints] = useState(false);
   const [editingPicks, setEditingPicks] = useState(false);
+  const [editingWeapons, setEditingWeapons] = useState(false);
   // Read once shown; then the action module reads them again when a write names what they follow
   // (an effect, an item, the points, the level).
   useEffect(() => {
@@ -115,6 +122,15 @@ export function SkillsTab() {
       />
     );
 
+  if (editingWeapons && slots && cls)
+    return (
+      <WeaponProficiencyEditor
+        cls={cls}
+        slots={slots}
+        onDone={() => setEditingWeapons(false)}
+      />
+    );
+
   return (
     <div
       className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] items-start gap-x-6 gap-y-4"
@@ -147,6 +163,13 @@ export function SkillsTab() {
             </Button>
           </>
         ),
+      )}
+      {slots?.weapon && (
+        <WeaponProficienciesBlock
+          pool={slots.weapon}
+          picks={slots.weaponPicks ?? []}
+          onEdit={() => setEditingWeapons(true)}
+        />
       )}
       {classSkills.length > 0 && (
         <div className="flex min-w-0 flex-col gap-2">
@@ -232,9 +255,95 @@ export function SkillsTab() {
   );
 }
 
+/**
+ * The weapon proficiencies (ADR 0037 steps 7 and 9): the weapon types picked, the specialization
+ * tagged, a kept type the class may not pick marked as such, the pool's line, and Choisir, which
+ * opens the editor (a rare control one click away, ADR 0027 step 1).
+ */
+function WeaponProficienciesBlock({
+  pool,
+  picks,
+  onEdit,
+}: {
+  pool: WeaponPool;
+  picks: WeaponPickFigures[];
+  onEdit: () => void;
+}) {
+  const { t } = useTranslation();
+  const label = t("weaponProficiencies.section");
+  return (
+    <section
+      aria-labelledby="skills-weapons"
+      className="flex min-w-0 flex-col gap-2"
+      data-testid="weapon-proficiencies"
+    >
+      <h3 id="skills-weapons" className="group-heading section-label px-2.5">
+        {label}
+      </h3>
+      {picks.length === 0 ? (
+        <p className="px-2.5 text-body break-words text-ink-muted">
+          {t("weaponProficiencies.none")}
+        </p>
+      ) : (
+        <ul aria-label={label} className="flex flex-col gap-1">
+          {picks.map((p) => (
+            <li
+              key={p.type}
+              className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md bg-raised px-2.5 py-0.5 text-body"
+              data-testid={`weapon-pick-${p.type}`}
+            >
+              <span className="min-w-0 break-words">
+                {t(`weapons.types.${p.type}`, { defaultValue: p.type })}
+              </span>
+              {isSpecialization(p) && (
+                <span
+                  className="chip-chosen shrink-0 px-1.5 text-label font-medium"
+                  data-testid="weapon-pick-specialized"
+                >
+                  {t("weaponProficiencies.specialized")}
+                </span>
+              )}
+              {!p.allowed && (
+                <span
+                  className="min-w-0 text-label break-words text-warning"
+                  data-testid="weapon-pick-not-allowed"
+                >
+                  {t("weaponProficiencies.notAllowed")}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <SlotsLine pool={pool} testId="weapon-slots-line" />
+      <Button
+        type="button"
+        size="sm"
+        className="mx-2.5 w-fit"
+        title={t("weaponProficiencies.editHint")}
+        onClick={onEdit}
+        data-testid="weapon-edit"
+      >
+        {t("weaponProficiencies.edit")}
+      </Button>
+    </section>
+  );
+}
+
 /** The slots spent of the available ones (ADR 0037 step 3) and, as the server's pool says, the
  * slots left to spend or the overspend's warning (step 11). */
 function ProficiencySlotsLine({ pool }: { pool: NonweaponPool }) {
+  return <SlotsLine pool={pool} testId="proficiency-slots-line" />;
+}
+
+/** A pool's line: spent of available, then what is left or the overspend (either pool). */
+function SlotsLine({
+  pool,
+  testId,
+}: {
+  pool: { spent: number; available: number; left: number };
+  testId: string;
+}) {
   const { t } = useTranslation();
   return (
     <p
@@ -242,7 +351,7 @@ function ProficiencySlotsLine({ pool }: { pool: NonweaponPool }) {
         "px-2.5 text-body break-words tabular-nums",
         pool.left < 0 ? "text-warning" : "text-muted-foreground",
       )}
-      data-testid="proficiency-slots-line"
+      data-testid={testId}
     >
       {t("proficiencies.tabLine", {
         spent: pool.spent,

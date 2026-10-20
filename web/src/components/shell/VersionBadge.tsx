@@ -25,7 +25,7 @@ export function VersionBadge({ build }: { build?: Build | null }) {
   return (
     <div
       data-testid="version-badge"
-      className="fixed right-3 bottom-0 z-40 flex h-app-badge items-center gap-1.5 text-label text-ink-muted"
+      className="fixed right-3 bottom-0 z-40 flex h-app-badge items-center gap-1.5 text-label leading-3 text-ink-muted"
     >
       {badge.pill && (
         <span

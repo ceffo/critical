@@ -44,7 +44,7 @@ function Intro({ onStart }: { onStart: () => void }) {
 
   return (
     <main
-      className="flex h-app flex-col items-center overflow-y-auto p-3"
+      className="flex h-app flex-col items-center overflow-y-auto px-3 pt-3"
       data-screen="intro"
     >
       <div className="my-auto flex w-full max-w-[44rem] flex-col gap-3">

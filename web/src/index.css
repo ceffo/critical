@@ -205,10 +205,10 @@
 /*
  * The version badge's strip (components/shell/VersionBadge): a screen is as tall as the window minus
  * it, so the badge never covers content and the page never scrolls. `h-app` for a screen that fills
- * the window, `min-h-app` for one that may grow.
+ * the window with no bottom padding of its own (the strip is its bottom gutter), `min-h-app` for one that may grow.
  */
 :root {
-  --app-badge-h: 1.25rem;
+  --app-badge-h: 0.75rem;
 }
 @utility h-app {
   height: calc(100dvh - var(--app-badge-h));

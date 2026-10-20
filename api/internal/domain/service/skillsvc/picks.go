@@ -218,18 +218,21 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edi
 // carries no weapon picks, one logged before the languages moved to the Skills tab no
 // languages: the stored ones stay.
 func (s *service) restorePicks(ctx context.Context, characterID int64, _ string, st picksState) error {
+	c, err := s.chars.GetCharacter(ctx, characterID)
+	if err != nil {
+		return err
+	}
 	picks := st.picks()
 	if picks.Weapon == nil {
-		c, err := s.chars.GetCharacter(ctx, characterID)
-		if err != nil {
-			return err
-		}
 		picks.Weapon = c.Proficiencies.Clone().Weapon
 	}
 	if err := s.picks.SetProficiencyPicks(ctx, characterID, picks); err != nil {
 		return fmt.Errorf("restore proficiency picks: %w", err)
 	}
-	if st.Languages != nil {
+	// Only when they differ from the stored ones: a picks-only entry has the same languages on
+	// both sides and must not rewrite the column (a hidden free-text word survives, ADR 0032
+	// step 8.1).
+	if st.Languages != nil && !skills.LanguagesEqual(c.Details.Languages, *st.Languages) {
 		if err := s.picks.SetLanguages(ctx, characterID, *st.Languages); err != nil {
 			return fmt.Errorf("restore languages: %w", err)
 		}

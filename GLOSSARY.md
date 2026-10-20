@@ -196,6 +196,12 @@ The spells a character knows; a mage or bard **learns** a wizard spell into it w
 Intelligence roll. [ADR 0008](docs/adr/0008-spell-slots-and-long-rest.md) step 3,
 [ADR 0030](docs/adr/0030-classes-and-races.md) step 20. _Avoid_: livre de sorts.
 
+**Learn** (fr: apprendre) / **Add** (fr: ajouter):
+**Apprendre** is the Intelligence roll (d100 against Table 4) that writes a wizard spell into the
+spellbook or logs a failure. **Ajouter** writes it with no roll (the DM gave it, a training, a
+sheet fix, the level's free spell). Each spellbook entry keeps its **origin**: `learned`, `given`,
+`starting` or `level_grant`. [ADR 0030](docs/adr/0030-classes-and-races.md) step 20.
+
 **Spell slot** (fr: emplacement de sort):
 One prepared spell, cast once until the next long rest; the slot list is the **preparation**
 (fr: préparation). The **slot allotment** is the number of slots per spell level the class

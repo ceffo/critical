@@ -396,6 +396,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
     the weapon and non-weapon slots gained (available at the level minus available at the level
     below) and, for a rogue, the skill points gained (thief 30, bard 15). The web links to the
     editors; nothing blocks the level-up or waits for the spend.
+    _(Amended 2026-10-20, decided, on implementation, by [ADR 0030](0030-classes-and-races.md)
+    step 20.8: a mage whose realized level opens a new spell level also gets **one free spell**
+    of that spell level in the pending level's grants and in `toSpend`, until it is added without
+    a roll; information only, it blocks nothing, and undoing the level-up takes it back. The
+    grant's shape is the implementation's.)_
     Tests: `LevelUp_Step15_GrantsSlotsAndPoints` (levelupsvc: a rogue at levels 4 and 5, a warrior
     at 3, a thief's and a bard's points).
     _(As built, 2026-10-20: `charactersvc.GrantsAt` (`ruletablesvc.SlotsGainedAt`,

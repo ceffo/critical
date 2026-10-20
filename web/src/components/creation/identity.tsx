@@ -11,7 +11,7 @@ import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { ALIGNMENT_CODES } from "@/lib/characterDetails";
-import { classOf, type StepId } from "@/lib/creationFlow";
+import { classOf, type StepId, type StepProps } from "./flow";
 import { heightField, unitsFor, weightField } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
 import { skillName } from "@/journal/words";
@@ -27,7 +27,6 @@ import {
 } from "@/types/character";
 import { Group, Note } from "./kit";
 import { useReviewWarnings, useShow, useWarningText } from "./warnings";
-import type { StepProps } from "./flow";
 import { radioKeys } from "./radioKeys";
 
 type Figure = IdentityFigure;
@@ -66,7 +65,7 @@ function rangeOf(
  * The identity (ADR 0034 step 3.5): name, alignment as a 3x3 grid (the ones the class refuses marked;
  * picking one shows the refusal and blocks Suivant), sex (the languages are the proficiency step's,
  * ADR 0034 step 3.5 as amended by ADR 0037 step 18), height, weight and age each with the server's roll, range and dice, hair and eyes. Every verdict is
- * the server's: the class's list from the options, the warnings from the preview.
+ * the server's: the class's list from the options, the warnings from the draft's answer.
  */
 export function IdentityStep(props: StepProps) {
   const { options, draft, update, errorFor } = props;
@@ -260,7 +259,7 @@ function RollField({
   draft,
   update,
   errorFor,
-  preview,
+  answer,
 }: StepProps & { figure: Figure }) {
   const { t, i18n } = useTranslation();
   const units = unitsFor(i18n.language);
@@ -291,7 +290,7 @@ function RollField({
   const field = `details.${figure}`;
   const id = `new-character-${field}`;
   const text = errorFor(field);
-  const warning = (preview.data?.warnings ?? []).find(
+  const warning = (answer.current?.warnings ?? []).find(
     (w) => w.code === `${figure}_outside_range`,
   );
   const shownRoll =
@@ -530,16 +529,19 @@ function Dl({ rows }: { rows: [string, ReactNode, string?][] }) {
 /**
  * The review (ADR 0034 step 3.6): the warnings on top, then one block per step with an edit button,
  * every value as it will be sent (heights and weights from the body, so what shows is what is
- * stored) and the server's derived figures (THAC0, saves, skills) from the preview; Créer is at the
- * card's foot. A refusal of the preview is shown here; Créer opens the field's step on the creation's.
+ * stored) and the server's derived figures (THAC0, saves, skills) from the draft's answer; Créer is
+ * at the card's foot. The draft's first refusal is shown here; Créer opens the field's step on the
+ * creation's.
  */
 export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
-  const { options, draft, preview, body, go, xp, wording } = props;
+  const { options, draft, answer, refusals, body, go, xp, wording } = props;
   const { t } = useTranslation();
   const name = useLanguageNames(options);
   const show = useShow();
   const warnings = useReviewWarnings(props);
-  const d = preview.data?.derived;
+  const read = answer.current?.derived ? answer.current : null;
+  const d = read?.derived;
+  const refusal = refusals[0] ?? answer.failed;
   const pending = <span className="text-ink-muted">…</span>;
   const dash = <span className="text-ink-muted">—</span>;
   const className = t(`details.classes.${draft.cls}`, {
@@ -547,8 +549,7 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
   });
   const details = body?.details;
   const skills = d?.bardSkills ?? d?.thiefSkills ?? [];
-  const warnedField = (f: string) =>
-    preview.data?.warnings.some((w) => w.field === f);
+  const warnedField = (f: string) => read?.warnings.some((w) => w.field === f);
   const fromRoll =
     draft.hpRoll && draft.hpMax.trim() === String(draft.hpRoll.total)
       ? draft.hpRoll.levels.map((l) => l.gain).join(" + ")
@@ -562,9 +563,9 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
 
   return (
     <div className="flex flex-col gap-4" data-testid="review">
-      {preview.error && (
+      {refusal && (
         <Note kind="refusal" testId="review-refusal">
-          {wording(preview.error)}
+          {wording(refusal)}
         </Note>
       )}
       {warnings.map((w) => (
@@ -682,9 +683,7 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
               ],
               [
                 t("details.fields.languages"),
-                preview.data
-                  ? preview.data.languages.map(name).join(", ")
-                  : pending,
+                read ? read.languages.map(name).join(", ") : pending,
                 "review-languages",
               ],
               [

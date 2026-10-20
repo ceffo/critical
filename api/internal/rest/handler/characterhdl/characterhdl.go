@@ -47,8 +47,7 @@ func RegisterUserRoutes(r Router, svc charactersvc.SVC) {
 	r.Put("/api/characters/current", render.Handle(SetCurrent(svc)))
 	r.Get("/api/characters/options", render.Handle(Options(svc)))
 	r.Post("/api/characters", render.Handle(Create(svc)))
-	r.Post("/api/characters/preview", render.Handle(Preview(svc)))
-	r.Post("/api/characters/checks", render.Handle(Checks(svc)))
+	r.Post("/api/characters/draft", render.Handle(Draft(svc)))
 	r.Patch("/api/characters/{id}", render.Handle(Change(svc)))
 }
 
@@ -261,6 +260,9 @@ type DerivedDTO struct {
 	// SkillBudget is step 17's or 18's warnings on the entered points,
 	// never null.
 	SkillBudget []BudgetWarningDTO `json:"skillBudget"`
+	// SkillPoints is step 17's or 18's budget with the terms of its formula
+	// (GET /api/skills' `budget`), null for a class without skill points.
+	SkillPoints *wire.SkillPointsBudgetDTO `json:"skillPoints"`
 	// Backstab is ADR 0030 step 19: PHB Table 30's damage multiplier at the
 	// realized level, 0 for a class without the backstab option.
 	Backstab int `json:"backstab"`
@@ -358,7 +360,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		},
 		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
 		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab, SkillArmor: d.SkillArmor,
-		ProficiencySlots: wire.ProficiencySlotsToDTO(d.Proficiencies),
+		ProficiencySlots: wire.ProficiencySlotsToDTO(d.Proficiencies), SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints),
 	}
 	out.ThiefSkills, out.BardSkills = skillDTOs(d.ThiefSkills), skillDTOs(d.BardSkills)
 	for _, w := range d.SkillBudget {

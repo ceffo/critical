@@ -217,19 +217,20 @@ flowchart TD
   away otherwise; the roster's Créer and the flow's Quitter move between `/characters` and `/create`
   without a reload (`lib/navigation.ts` `navigate`, `components/shell/Playing.tsx`). The flow (`CreationFlow.tsx`) is the header band, the step
   list, the step card (scrolls inside; Retour / Suivant with the blocking reason) and "Votre personnage",
-  capped at 1680 px. Steps (`steps.tsx`, order in `lib/creationFlow.ts` `STEPS`): class (cards with the
+  capped at 1680 px. Steps (`steps.tsx`, order in `components/creation/flow.ts` `STEPS`): class (cards with the
   options' `hitDie`, alignments and races; the level chips read the options' `levelXp`, a picked level is
   sent as its XP), race (all six, the refused ones dimmed; Table 8 from `raceAdjustments`), scores (Tirer
   with a method from `scoreMethods` and `POST /api/characters/rolls/scores`; the player's choice of which total goes where
-  in `lib/creationFlow.ts` `place`, its scores from `POST /api/characters/rolls/scores/arrangement`
+  in `components/creation/flow.ts` `place`, its scores from `POST /api/characters/rolls/scores/arrangement`
   (`components/creation/arrange.ts`, again when the race changes after the roll); or Saisir), HP and talents (`POST /api/characters/rolls/hp`, the class
   extras), identity and review (`components/creation/identity.tsx`): name, the nine alignments as a grid
   (the class's list from the options; a refused one shows the refusal and blocks Suivant), sex, the
   languages as chips (native locked), height / weight / age with the options' `raceIdentity` range and
   dice and `POST /api/characters/rolls/identity`, hair, eyes; then the review's blocks with an edit button
-  each and Créer. Both steps ask `POST /api/characters/preview` (debounced, `lib/replyGate.ts` drops a reply
-  to an older draft) for the server's warnings and derived figures (THAC0, saves, skills); the body is
-  built once (`flow.ts` `buildBody`) for the preview and Créer, so the review shows what is sent (a rolled
+  each and Créer. Every step asks `POST /api/characters/draft` (debounced, `lib/replyGate.ts` drops a reply
+  to an older draft) for the class minimums, the skill budget, the pools, the server's warnings and
+  derived figures (THAC0, saves, skills) and the refusals; the body is built once (`flow.ts`
+  `buildBody`) for the draft and Créer, so the review shows what is sent (a rolled
   height keeps its exact centimetres). The values live in the flow,
   so back and forth keep them; Quitter with values entered asks first (and `beforeunload`). Suivant is
   blocked only by a missing or unreadable value; ranges and rules are the server's refusals, which open

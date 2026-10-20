@@ -338,7 +338,7 @@ items'). Package `creationrollsvc`, handler `creationrollhdl`.
   refuses (`cha` `out_of_range`, ADR 0030 step 1). Refusals, 400 `invalid_input`: `method` / `race`
   `unknown`; `placed` `unknown` (not an ability) or `too_many` (more values than the method keeps);
   `placed.<ability>` `too_many` (two totals on one ability, II to V), `out_of_range`, `above_max` (VI).
-  The web keeps only the choice of which total goes where (`lib/creationFlow.ts` `place`) and asks the
+  The web keeps only the choice of which total goes where (`components/creation/flow.ts` `place`) and asks the
   server on every placement and on a race changed after the roll, so the scores and the Race column follow
   the race. Additive: a previous web never calls it; this web against a previous server (404) keeps the
   placement and leaves the scores to be typed.

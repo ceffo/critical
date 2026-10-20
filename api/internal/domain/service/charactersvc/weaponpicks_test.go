@@ -79,21 +79,28 @@ func TestCreate_Step14_WeaponPicksCheckedAsTheEditor(t *testing.T) {
 		e := newEnvWithBook(t, profBook(t))
 		n := withPicks(weapons("long_sword"))
 		n.Class, n.Race = "mage", "human"
-		e.rules.EXPECT().RaceAllows("human", "mage").Return(true, nil).Maybe()
+		e.rules.EXPECT().RaceAllows("human", "mage").Return(true, nil).Once()
+		// The picks are judged at the starting level: a level 1 mage's derivation.
+		e.rules.EXPECT().LevelFor("mage", 0).Return(1, nil).Once()
+		e.rules.EXPECT().XPThreshold("mage", 2).Return(2_500, nil).Once()
+		e.rules.EXPECT().THAC0For("wizard", 1).Return(20, nil).Once()
+		e.rules.EXPECT().SavesFor("wizard", 1).Return(ruletablesvc.SavingThrowRow{Group: "wizard", LevelMin: 1, LevelMax: 5}, nil).Once()
+		e.rules.EXPECT().WizardSpellsPerDay(1).Return(map[int]int{1: 1}, nil).Once()
+		e.rules.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 		_, err := e.svc.Create(context.Background(), ownerID, n)
 		assert.Equal(t, domain.FieldError{Field: "weapon.long_sword", Message: "weapon_not_allowed"}, fieldErr(t, err))
 		assert.Zero(t, e.tx.n)
 	})
-	t.Run("the checks endpoint answers the weapon pool", func(t *testing.T) {
+	t.Run("the draft answers the weapon pool", func(t *testing.T) {
 		e := newEnvWithBook(t, profBook(t))
-		e.rules.EXPECT().LevelFor("bard", 0).Return(1, nil).Once()
-		xp := 0
-		got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{
-			Class: "bard", XP: &xp, Scores: map[string]int{"int": 14, "dex": 15}, Proficiencies: weapons("dagger"),
-		})
+		e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
+		expectLevel1Bard(e)
+		expectLevel1Bard(e)
+		got, err := e.svc.Draft(context.Background(), withPicks(weapons("dagger")), nil)
 		require.NoError(t, err)
-		require.NotNil(t, got.ProficiencySlots)
-		assert.Equal(t, ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, Available: 2, Spent: 1, Left: 1}, got.ProficiencySlots.Weapon)
+		require.NotNil(t, got.Character)
+		require.NotNil(t, got.Character.Derived.Proficiencies)
+		assert.Equal(t, ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, Available: 2, Spent: 1, Left: 1}, got.Character.Derived.Proficiencies.Weapon)
 	})
 }
 

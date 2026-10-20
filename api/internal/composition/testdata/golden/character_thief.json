@@ -158,6 +158,17 @@
         "limit": 60
       }
     ],
+    "skillPoints": {
+      "level": 1,
+      "first": 60,
+      "perLevel": 30,
+      "available": 60,
+      "spent": 65,
+      "left": -5,
+      "perSkillFirst": 30,
+      "perSkillPerLevel": 15,
+      "perSkillCap": 30
+    },
     "backstab": 2,
     "proficiencySlots": {
       "nonWeapon": {

@@ -3084,12 +3084,14 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await expect(budget).toContainText("Restants : -30");
   await expect(budget.locator("[data-over]")).toHaveCount(1);
   await snap(page, "thief-form-over-budget-fr");
-  // The server refuses to create a thief over the budget (ADR 0037 step 10): its preview on the
-  // identity step (past the proficiency step) answers the refusal, and back on this step the
-  // message shows under the points.
+  // The server refuses to create a thief over the budget (ADR 0037 step 10): the draft's answer
+  // lists the refusal, shown once the draft is seen past the proficiency step, and back on this
+  // step the message shows under the points.
   await step.getByLabel("PV max").fill("5");
   const refused = page.waitForResponse(
-    (r) => r.url().endsWith("/api/characters/preview") && r.status() === 409,
+    async (r) =>
+      r.url().endsWith("/api/characters/draft") &&
+      (await r.text()).includes('"over_budget"'),
   );
   await next.click();
   await next.click();

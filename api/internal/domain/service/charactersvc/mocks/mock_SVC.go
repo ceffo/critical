@@ -192,63 +192,6 @@ func (_c *MockSVC_Create_Call) RunAndReturn(run func(context.Context, uuid.UUID,
 	return _c
 }
 
-// CreationChecks provides a mock function with given fields: ctx, in
-func (_m *MockSVC) CreationChecks(ctx context.Context, in charactersvc.DraftInput) (charactersvc.DraftChecks, error) {
-	ret := _m.Called(ctx, in)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreationChecks")
-	}
-
-	var r0 charactersvc.DraftChecks
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, charactersvc.DraftInput) (charactersvc.DraftChecks, error)); ok {
-		return rf(ctx, in)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, charactersvc.DraftInput) charactersvc.DraftChecks); ok {
-		r0 = rf(ctx, in)
-	} else {
-		r0 = ret.Get(0).(charactersvc.DraftChecks)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, charactersvc.DraftInput) error); ok {
-		r1 = rf(ctx, in)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockSVC_CreationChecks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreationChecks'
-type MockSVC_CreationChecks_Call struct {
-	*mock.Call
-}
-
-// CreationChecks is a helper method to define mock.On call
-//   - ctx context.Context
-//   - in charactersvc.DraftInput
-func (_e *MockSVC_Expecter) CreationChecks(ctx interface{}, in interface{}) *MockSVC_CreationChecks_Call {
-	return &MockSVC_CreationChecks_Call{Call: _e.mock.On("CreationChecks", ctx, in)}
-}
-
-func (_c *MockSVC_CreationChecks_Call) Run(run func(ctx context.Context, in charactersvc.DraftInput)) *MockSVC_CreationChecks_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(charactersvc.DraftInput))
-	})
-	return _c
-}
-
-func (_c *MockSVC_CreationChecks_Call) Return(_a0 charactersvc.DraftChecks, _a1 error) *MockSVC_CreationChecks_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockSVC_CreationChecks_Call) RunAndReturn(run func(context.Context, charactersvc.DraftInput) (charactersvc.DraftChecks, error)) *MockSVC_CreationChecks_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // CreationOptions provides a mock function with given fields: ctx
 func (_m *MockSVC) CreationOptions(ctx context.Context) (charactersvc.CreationOptions, error) {
 	ret := _m.Called(ctx)
@@ -301,6 +244,66 @@ func (_c *MockSVC_CreationOptions_Call) Return(_a0 charactersvc.CreationOptions,
 }
 
 func (_c *MockSVC_CreationOptions_Call) RunAndReturn(run func(context.Context) (charactersvc.CreationOptions, error)) *MockSVC_CreationOptions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Draft provides a mock function with given fields: ctx, n, blank
+func (_m *MockSVC) Draft(ctx context.Context, n charactersvc.NewCharacter, blank []string) (*charactersvc.Draft, error) {
+	ret := _m.Called(ctx, n, blank)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Draft")
+	}
+
+	var r0 *charactersvc.Draft
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, charactersvc.NewCharacter, []string) (*charactersvc.Draft, error)); ok {
+		return rf(ctx, n, blank)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, charactersvc.NewCharacter, []string) *charactersvc.Draft); ok {
+		r0 = rf(ctx, n, blank)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*charactersvc.Draft)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, charactersvc.NewCharacter, []string) error); ok {
+		r1 = rf(ctx, n, blank)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Draft_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Draft'
+type MockSVC_Draft_Call struct {
+	*mock.Call
+}
+
+// Draft is a helper method to define mock.On call
+//   - ctx context.Context
+//   - n charactersvc.NewCharacter
+//   - blank []string
+func (_e *MockSVC_Expecter) Draft(ctx interface{}, n interface{}, blank interface{}) *MockSVC_Draft_Call {
+	return &MockSVC_Draft_Call{Call: _e.mock.On("Draft", ctx, n, blank)}
+}
+
+func (_c *MockSVC_Draft_Call) Run(run func(ctx context.Context, n charactersvc.NewCharacter, blank []string)) *MockSVC_Draft_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(charactersvc.NewCharacter), args[2].([]string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Draft_Call) Return(_a0 *charactersvc.Draft, _a1 error) *MockSVC_Draft_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Draft_Call) RunAndReturn(run func(context.Context, charactersvc.NewCharacter, []string) (*charactersvc.Draft, error)) *MockSVC_Draft_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -510,65 +513,6 @@ func (_c *MockSVC_Module_Call) Return(_a0 domain.Module) *MockSVC_Module_Call {
 }
 
 func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_Module_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Preview provides a mock function with given fields: ctx, n
-func (_m *MockSVC) Preview(ctx context.Context, n charactersvc.NewCharacter) (*charactersvc.Character, error) {
-	ret := _m.Called(ctx, n)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Preview")
-	}
-
-	var r0 *charactersvc.Character
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, charactersvc.NewCharacter) (*charactersvc.Character, error)); ok {
-		return rf(ctx, n)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, charactersvc.NewCharacter) *charactersvc.Character); ok {
-		r0 = rf(ctx, n)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*charactersvc.Character)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, charactersvc.NewCharacter) error); ok {
-		r1 = rf(ctx, n)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockSVC_Preview_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Preview'
-type MockSVC_Preview_Call struct {
-	*mock.Call
-}
-
-// Preview is a helper method to define mock.On call
-//   - ctx context.Context
-//   - n charactersvc.NewCharacter
-func (_e *MockSVC_Expecter) Preview(ctx interface{}, n interface{}) *MockSVC_Preview_Call {
-	return &MockSVC_Preview_Call{Call: _e.mock.On("Preview", ctx, n)}
-}
-
-func (_c *MockSVC_Preview_Call) Run(run func(ctx context.Context, n charactersvc.NewCharacter)) *MockSVC_Preview_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(charactersvc.NewCharacter))
-	})
-	return _c
-}
-
-func (_c *MockSVC_Preview_Call) Return(_a0 *charactersvc.Character, _a1 error) *MockSVC_Preview_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockSVC_Preview_Call) RunAndReturn(run func(context.Context, charactersvc.NewCharacter) (*charactersvc.Character, error)) *MockSVC_Preview_Call {
 	_c.Call.Return(run)
 	return _c
 }

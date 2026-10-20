@@ -391,15 +391,16 @@ func TestCreate_Step10_OverBudgetRefused(t *testing.T) {
 			assert.Zero(t, e.tx.n, "nothing written")
 		})
 	}
-	t.Run("the preview refuses as the creation", func(t *testing.T) {
+	t.Run("the draft lists the refusal and still reads the sheet", func(t *testing.T) {
 		e := newEnv(t)
 		points := map[string]int{"open_locks": 31}
 		e.rules.EXPECT().RaceAllows("halfling", "thief").Return(true, nil).Once()
-		expectLevel1Thief(e, points, 1)
-		_, err := e.svc.Preview(context.Background(), thief(points))
-		var be *domain.BudgetError
-		require.ErrorAs(t, err, &be)
-		assert.Equal(t, domain.BudgetError{Field: "skillPoints.open_locks", Spent: 31, Limit: 30}, *be)
+		expectLevel1Thief(e, points, 2) // the starting level, then the read
+		got, err := e.svc.Draft(context.Background(), thief(points), nil)
+		require.NoError(t, err)
+		assert.Equal(t, []error{&domain.BudgetError{Field: "skillPoints.open_locks", Spent: 31, Limit: 30}}, got.Refusals)
+		require.NotNil(t, got.Character)
+		assert.Equal(t, 1, got.Character.Derived.TargetLevel)
 	})
 }
 
@@ -642,22 +643,24 @@ func TestCreationOptions_Table13_EachClassCarriesItsAbilityMinimums(t *testing.T
 	}, byClass)
 }
 
-func unmetOf(c charactersvc.DraftChecks) map[string][]string {
+func unmetOf(d *charactersvc.Draft) map[string][]string {
 	out := map[string][]string{}
-	for _, u := range c.UnmetMinimums {
+	for _, u := range d.UnmetMinimums {
 		out[u.Class] = u.Abilities
 	}
 	return out
 }
 
+// allNumbers are the numbers of a creation body, every one blank in an empty draft.
+var allNumbers = []string{"str", "dex", "con", "int", "wis", "cha", "hpMax", "xp"}
+
 // PHB Table 13: a score under a class's minimum is unmet; at the minimum it is met; an ability
-// with no score yet is not unmet.
-func TestCreationChecks_Table13_ScoresUnderAClassMinimumAreUnmet(t *testing.T) {
+// with no score yet is not unmet. A draft with no race and no XP reads no sheet and asks no table.
+func TestDraft_Table13_ScoresUnderAClassMinimumAreUnmet(t *testing.T) {
 	e := newEnv(t)
-	got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{
-		Class:  "fighter",
-		Scores: map[string]int{"str": 8, "dex": 11, "int": 13, "cha": 14, "wis": 9},
-	})
+	got, err := e.svc.Draft(context.Background(), charactersvc.NewCharacter{
+		Class: "fighter", Str: 8, Dex: 11, Int: 13, Cha: 14, Wis: 9,
+	}, []string{"con", "hpMax", "xp"})
 	require.NoError(t, err)
 	assert.Equal(t, map[string][]string{
 		"fighter": {"str"},        // 8 < 9
@@ -666,58 +669,37 @@ func TestCreationChecks_Table13_ScoresUnderAClassMinimumAreUnmet(t *testing.T) {
 		"thief":   {},             // dex 11 >= 9
 		"bard":    {"dex", "cha"}, // dex 11 < 12, int 13 ok, cha 14 < 15
 	}, unmetOf(got))
-	assert.Nil(t, got.SkillBudget, "a fighter has no skill points")
+	assert.Nil(t, got.Character, "no race and no XP: nothing to derive")
 
-	none, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: "bard"})
+	none, err := e.svc.Draft(context.Background(), charactersvc.NewCharacter{Class: "bard"}, allNumbers)
 	require.NoError(t, err)
 	assert.Equal(t, map[string][]string{"fighter": {}, "mage": {}, "cleric": {}, "thief": {}, "bard": {}}, unmetOf(none))
 }
 
-// ADR 0030 steps 17 and 18: the thief's budget is 60 points at level 1 and 30 more a level, 30
-// in one skill and 15 more a level; the bard's is 20 and 15 a level, with no limit on one skill.
-// The level is the one the starting XP gives; left is the total minus the points entered.
-func TestCreationChecks_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
-	cases := []struct {
-		name   string
-		class  string
-		level  int
-		points map[string]int
-		want   charactersvc.SkillBudget
-	}{
-		{"thief level 1", "thief", 1, map[string]int{"pick_pockets": 20, "open_locks": 15}, charactersvc.SkillBudget{Level: 1, First: 60, PerLevel: 30, Total: 60, Spent: 35, Left: 25, PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 30}},
-		{"thief level 3 over budget", "thief", 3, map[string]int{"pick_pockets": 90, "open_locks": 40}, charactersvc.SkillBudget{Level: 3, First: 60, PerLevel: 30, Total: 120, Spent: 130, Left: -10, PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 60}},
-		{"bard level 1", "bard", 1, map[string]int{"climb_walls": 5}, charactersvc.SkillBudget{Level: 1, First: 20, PerLevel: 15, Total: 20, Spent: 5, Left: 15}},
-		{"bard level 4", "bard", 4, nil, charactersvc.SkillBudget{Level: 4, First: 20, PerLevel: 15, Total: 65, Left: 65}},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			e := newEnv(t)
-			xp := 777
-			e.rules.EXPECT().LevelFor(tc.class, xp).Return(tc.level, nil).Once()
-			got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: tc.class, XP: &xp, SkillPoints: tc.points})
-			require.NoError(t, err)
-			require.NotNil(t, got.SkillBudget)
-			assert.Equal(t, tc.want, *got.SkillBudget)
-		})
-	}
-}
-
-// An XP the class table gives no level for has no budget, and no refusal (Create refuses it).
-func TestCreationChecks_AnXPWithNoLevelHasNoBudget(t *testing.T) {
+// ADR 0034 amendment of 2026-10-20: an empty draft is no refusal; it lists every field the
+// creation requires as missing, in the form's order, and reads no sheet.
+func TestDraft_AnEmptyDraftIsAllMissingAndNoRefusal(t *testing.T) {
 	e := newEnv(t)
-	xp := 5
-	e.rules.EXPECT().LevelFor("thief", xp).Return(0, errors.New("outside the table")).Once()
-	got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: "thief", XP: &xp})
+	got, err := e.svc.Draft(context.Background(), charactersvc.NewCharacter{}, allNumbers)
 	require.NoError(t, err)
-	assert.Nil(t, got.SkillBudget)
+	assert.Empty(t, got.Refusals)
+	assert.Equal(t, []string{"name", "class", "race", "str", "dex", "con", "int", "wis", "cha", "hpMax", "xp", "alignment", "sex"}, got.Missing)
+	assert.Nil(t, got.Character)
 }
 
-// An XP outside the creation's range is never looked up: no budget, no error.
-func TestCreationChecks_AnXPOutsideTheRangeHasNoBudget(t *testing.T) {
+// A value the creation refuses is one of the draft's refusals, with the creation's field and
+// code, and the draft goes on reading the other fields: an XP outside the range and a Strength of
+// 25 are both listed, and with the XP refused no sheet is read (no table is asked).
+func TestDraft_EveryRefusalIsListedAndARefusedXPReadsNoSheet(t *testing.T) {
 	e := newEnv(t)
-	for _, xp := range []int{-5, charactersvc.MaxStartingXP + 1} {
-		got, err := e.svc.CreationChecks(context.Background(), charactersvc.DraftInput{Class: "thief", XP: &xp})
-		require.NoError(t, err)
-		assert.Nil(t, got.SkillBudget)
-	}
+	n := lyra()
+	n.Str, n.XP = 25, -5
+	e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
+	got, err := e.svc.Draft(context.Background(), n, nil)
+	require.NoError(t, err)
+	assert.Equal(t, []error{
+		&domain.FieldError{Field: "str", Message: charactersvc.CodeOutOfRange},
+		&domain.FieldError{Field: "xp", Message: charactersvc.CodeOutOfRange},
+	}, got.Refusals)
+	assert.Nil(t, got.Character)
 }

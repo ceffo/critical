@@ -118,7 +118,7 @@ func TestProficiencies_Step13_PickUndoRedo(t *testing.T) {
 
 // ADR 0037 step 14 through the API: a level 3 bard with Intelligence 14 (3 + 0 + 4 = 7 slots) is
 // created with picks within the budget, the leftover reminded on its read; one over the budget is
-// a 409 and creates nothing; the checks endpoint answers the draft's pool.
+// a 409 and creates nothing; the draft answers the pool.
 func TestProficiencies_Step14_CreationWithPicks(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
@@ -148,18 +148,11 @@ func TestProficiencies_Step14_CreationWithPicks(t *testing.T) {
 	three := 3
 	assert.Contains(t, read.Warnings, warningView{Code: "slots_to_spend", Field: "nonweapon", Pool: "nonweapon", Left: &three})
 
-	var checks struct {
-		ProficiencySlots struct {
-			NonWeapon struct {
-				Available int `json:"available"`
-				Spent     int `json:"spent"`
-			} `json:"nonWeapon"`
-		} `json:"proficiencySlots"`
-	}
-	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/checks",
-		`{"class":"bard","scores":{"int":14},"xp":2500,"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}]}}`, &checks))
-	assert.Equal(t, 7, checks.ProficiencySlots.NonWeapon.Available)
-	assert.Equal(t, 2, checks.ProficiencySlots.NonWeapon.Spent)
+	d := tb.draft(t, bob, with(`[{"id":"tumbling","slots":2}]`))
+	require.NotNil(t, d.Derived)
+	pool := d.Derived["proficiencySlots"].(map[string]any)["nonWeapon"].(map[string]any)
+	assert.InDelta(t, 7, pool["available"], 0)
+	assert.InDelta(t, 2, pool["spent"], 0)
 }
 
 // ADR 0037 steps 7, 10, 12 and 13 through the API with the weapon pool: Kelsen (5 weapon slots

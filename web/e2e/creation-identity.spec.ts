@@ -213,14 +213,14 @@ test("review: no stale figures after a change, a refusal from an earlier step la
   const level1 = await thac0.innerText();
 
   // A class level changed from the review: the old figures are gone until the new reply lands.
-  await step.getByRole("button", { name: "Modifier : Classe" }).click();
-  await step.getByRole("radio", { name: "Niveau 9", exact: true }).click();
   let release: () => void = () => {};
   const held = new Promise<void>((r) => (release = r));
-  await page.route("**/api/characters/preview", async (route) => {
+  await page.route("**/api/characters/draft", async (route) => {
     await held;
     await route.continue();
   });
+  await step.getByRole("button", { name: "Modifier : Classe" }).click();
+  await step.getByRole("radio", { name: "Niveau 9", exact: true }).click();
   for (let i = 0; i < 6; i++) await next.click();
   await expect(step).toHaveAttribute("data-step", "review");
   await expect(thac0).toHaveText("…");
@@ -230,7 +230,7 @@ test("review: no stale figures after a change, a refusal from an earlier step la
   release();
   await expect(thac0).toHaveText(/^\d+$/);
   expect(await thac0.innerText()).not.toBe(level1);
-  await page.unroute("**/api/characters/preview");
+  await page.unroute("**/api/characters/draft");
 
   // Créer refused on a field of an earlier step: the flow lands there with the error, and the
   // draft is intact when it goes forward again.
@@ -256,8 +256,8 @@ test("review: no stale figures after a change, a refusal from an earlier step la
   await expect(details.getByLabel("Nom", { exact: true })).toHaveValue("Lyra");
   await next.click();
 
-  // The preview unreachable: the review says so, and Créer still answers for itself.
-  await page.route("**/api/characters/preview", (route) => route.abort());
+  // The draft unreachable: the review says so, and Créer still answers for itself.
+  await page.route("**/api/characters/draft", (route) => route.abort());
   await step.getByRole("button", { name: "Modifier : Identité" }).click();
   await details.getByLabel("Nom", { exact: true }).fill("Lyra II");
   await next.click();

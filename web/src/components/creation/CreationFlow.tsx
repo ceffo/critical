@@ -3,20 +3,12 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, UserPlus, X } from "@phosphor-icons/react";
 import {
   createCharacter,
+  draftCharacter,
   fetchCreationChoices,
-  checkDraft,
-  previewCharacter,
 } from "@/api/characters";
 import { ApiError, OVER_BUDGET } from "@/api/http";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-  STEPS,
-  blockedReason,
-  classOf,
-  stepOfField,
-  type StepId,
-} from "@/lib/creationFlow";
 import { holdPath } from "@/lib/navigation";
 import { formatHeight, formatWeight, unitsFor } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
@@ -26,22 +18,26 @@ import { cn } from "@/lib/utils";
 import { skillName } from "@/journal/words";
 import {
   ABILITIES,
+  type CreationDraft,
   type CreationOptions,
-  type DraftChecks,
-  type DraftChecksRequest,
 } from "@/types/character";
 import { CardHead, Note, StepDot, Wordmark } from "./kit";
 import {
   EMPTY_DRAFT,
+  STEPS,
+  blockedReason,
   buildBody,
-  checksRequest,
+  classOf,
   draftXp,
+  refusalError,
   settle,
+  stepOfField,
+  type DraftAnswer,
   type FieldError,
   type DraftPatch,
   mergeDraft,
   type FlowDraft,
-  type PreviewState,
+  type StepId,
   type StepProps,
 } from "./flow";
 import { ClassStep, ExtrasStep, RaceStep, ScoresStep } from "./steps";
@@ -50,17 +46,13 @@ import { ProficienciesStep } from "./proficiencies";
 import { isSpecialization } from "@/components/proficiencies/weapons";
 import { useReviewWarnings, warnedFields } from "./warnings";
 
-/** The server's field names for the flow's: the race is `race` in its errors. */
-const ERROR_FIELD: Record<string, string> = { race: "raceCode" };
-
 /** A server refusal as the flow's field error; anything else (a network error) as a message. An
  * invalid input's code is its message; an over-budget refusal (ADR 0037 step 10) keeps its code,
  * its message worded with the server's figures. */
 function fieldErrorOf(err: unknown): FieldError {
   if (err instanceof ApiError && err.field) {
-    const field = ERROR_FIELD[err.field] ?? err.field;
     const code = err.code === OVER_BUDGET ? OVER_BUDGET : err.message;
-    return { field, code, message: err.message };
+    return { field: err.field, code, message: err.message };
   }
   return {
     field: "",
@@ -69,7 +61,7 @@ function fieldErrorOf(err: unknown): FieldError {
   };
 }
 
-/** How long the draft rests before the preview is asked again (typing a name asks once). */
+/** How long the draft rests before it is asked again (typing a name asks once). */
 const PREVIEW_DELAY_MS = 250;
 
 /** True once the player entered anything: leaving then asks first. */
@@ -150,89 +142,77 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   const xp = draftXp(options, draft);
 
-  // The server's preview of the draft on the proficiency and identity steps and the review (ADR
-  // 0034): the warnings, the derived figures and the refusal a Créer would meet, shown at its field
-  // (the languages' and the picks' overspend on the proficiency step, ADR 0037 steps 10 and 18). Every change of the draft asks again after a short rest; a reply to an
-  // older draft (or one landing after the player left these steps) is dropped by the gate.
-  const [answered, setPreview] = useState<{
-    key: string;
-    state: PreviewState;
-  } | null>(null);
-  const [previewGate] = useState(replyGate);
+  // The server's answer to the draft (ADR 0034, amendment of 2026-10-20: one draft endpoint): the
+  // class minimums, the skill budget, the pools, the warnings, the derived figures and the refusals
+  // a Créer would meet. Every change of the draft asks again after a short rest; a reply landing
+  // after a newer change (or after the player left) is dropped by the gate.
   const built = options ? buildBody(options, draft, xp, i18n.language) : null;
-  const body = built && "body" in built ? built.body : null;
+  const body = built && !built.error ? built.body : null;
   // An alignment the class's list leaves out is already shown refused (from the options); the
-  // preview is asked without it, so the step still gets the server's other warnings meanwhile.
+  // draft is asked without it, so the step still gets the server's other warnings meanwhile.
   const allowedAlignments = classOf(options, draft.cls)?.alignments ?? [];
-  const bodyKey = body
+  const asked = built?.body;
+  const draftKey = asked
     ? JSON.stringify(
-        body.details?.alignment !== undefined &&
-          !allowedAlignments.includes(body.details.alignment)
-          ? { ...body, details: { ...body.details, alignment: undefined } }
-          : body,
+        asked.details?.alignment !== undefined &&
+          !allowedAlignments.includes(asked.details.alignment)
+          ? { ...asked, details: { ...asked.details, alignment: undefined } }
+          : asked,
       )
     : "";
-  // A reply belongs to the draft it answered: once the draft moves on (or becomes unreadable) the
-  // old figures and the "no warning" verdict are not shown, whatever the reply's arrival.
-  const preview: PreviewState =
-    answered && answered.key === bodyKey && bodyKey !== ""
-      ? answered.state
-      : { data: null, error: null };
-  const previewing =
-    step === "proficiencies" || step === "identity" || step === "review";
+  const [answered, setAnswered] = useState<{
+    key: string;
+    cls: string;
+    data: CreationDraft | null;
+    failed: FieldError | null;
+  } | null>(null);
+  const [draftGate] = useState(replyGate);
   useEffect(() => {
-    if (!previewing || bodyKey === "") return;
-    const current = previewGate.open();
+    if (draftKey === "") return;
+    const current = draftGate.open();
     const timer = setTimeout(() => {
-      previewCharacter(JSON.parse(bodyKey)).then(
+      const sent = JSON.parse(draftKey) as { class: string };
+      draftCharacter(JSON.parse(draftKey)).then(
         (data) =>
           current() &&
-          setPreview({ key: bodyKey, state: { data, error: null } }),
+          setAnswered({ key: draftKey, cls: sent.class, data, failed: null }),
         (err: unknown) =>
           current() &&
-          setPreview({
-            key: bodyKey,
-            state: { data: null, error: fieldErrorOf(err) },
+          setAnswered({
+            key: draftKey,
+            cls: sent.class,
+            data: null,
+            failed: fieldErrorOf(err),
           }),
       );
     }, PREVIEW_DELAY_MS);
     return () => {
       clearTimeout(timer);
-      previewGate.close();
+      draftGate.close();
     };
-  }, [previewing, bodyKey, previewGate]);
-
-  // The server's verdicts on the class and skills steps (ADR 0034): the classes whose ability
-  // minimums the scores miss, and the skill point budget with what is left. The last answer stays
-  // shown while a newer one is asked for, so the figures do not blink as the player types.
-  const [answeredChecks, setChecks] = useState<{
-    cls: string;
-    data: DraftChecks;
-  } | null>(null);
-  // An answer about another class (the player picked again meanwhile) is never shown.
-  const checks = answeredChecks?.cls === draft.cls ? answeredChecks.data : null;
-  const [checksGate] = useState(replyGate);
-  const checking =
-    step === "class" || step === "extras" || step === "proficiencies";
-  const checksKey = options
-    ? JSON.stringify(checksRequest(options, draft, xp))
-    : "";
-  useEffect(() => {
-    if (!checking || checksKey === "") return;
-    const current = checksGate.open();
-    const timer = setTimeout(() => {
-      const asked = JSON.parse(checksKey) as DraftChecksRequest;
-      checkDraft(asked).then(
-        (data) => current() && setChecks({ cls: asked.class, data }),
-        // An older server has no checks: the steps show what the options carry.
-        () => current() && setChecks(null),
-      );
-    }, PREVIEW_DELAY_MS);
-    return () => {
-      clearTimeout(timer);
-      checksGate.close();
-    };
-  }, [checking, checksKey, checksGate]);
+  }, [draftKey, draftGate]);
+  // A reply belongs to the draft it answered: once the draft moves on, its verdicts (the warnings,
+  // the refusals, "no warning") are not shown, whatever the reply's arrival; its figures stay shown
+  // for the same class until the next answer, so they do not blink as the player types. An answer
+  // about another class is never shown.
+  const fresh = answered !== null && answered.key === draftKey;
+  const answer: DraftAnswer = {
+    current: fresh ? answered.data : null,
+    latest: answered?.cls === draft.cls ? answered.data : null,
+    failed: fresh ? answered.failed : null,
+  };
+  // The refusals the creation would meet are shown as the former preview showed them (ADR 0034 step
+  // 6 unchanged): once the draft was seen on the proficiency or identity step or the review, at its
+  // field on any step, until the draft changes elsewhere; a value out of range typed on an earlier
+  // step is the server's refusal at Créer.
+  const previewing =
+    step === "proficiencies" || step === "identity" || step === "review";
+  const [previewedKey, setPreviewedKey] = useState("");
+  if (previewing && previewedKey !== draftKey) setPreviewedKey(draftKey);
+  const seen = previewedKey === draftKey;
+  const refusals = seen
+    ? (answer.current?.refusals ?? []).map(refusalError)
+    : [];
 
   const className = t(`details.classes.${draft.cls}`, {
     defaultValue: draft.cls,
@@ -276,16 +256,14 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       defaultValue: e.message ?? e.code,
     });
   };
-  // Créer's refusal first, else the preview's (the identity step shows it at its field).
-  const errorFor = (field: string) =>
-    error?.field === field
-      ? wording(error)
-      : // A value the web cannot read (a weight typed as "heavy") shows at its field at once.
-        !error && built && "error" in built && built.error.field === field
-        ? wording(built.error)
-        : !error && preview.error?.field === field
-          ? wording(preview.error)
-          : null;
+  // Créer's refusal first, else the draft's (shown at its field).
+  const errorFor = (field: string) => {
+    if (error) return error.field === field ? wording(error) : null;
+    // A value the web cannot read (a weight typed as "heavy") shows at its field at once.
+    if (built?.error?.field === field) return wording(built.error);
+    const refused = refusals.find((r) => r.field === field);
+    return refused ? wording(refused) : null;
+  };
 
   const index = STEPS.indexOf(step);
   const go = (to: StepId) => {
@@ -295,7 +273,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   const submit = async () => {
     if (!options || !built) return;
-    if ("error" in built) {
+    if (built.error) {
       setError(built.error);
       go(stepOfField(built.error.field));
       return;
@@ -351,8 +329,8 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     errorFor,
     xp,
     watch,
-    preview,
-    checks,
+    answer,
+    refusals,
     body,
     wording,
     language: i18n.language,
@@ -360,7 +338,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   // A value the web cannot read blocks the step that holds its field, where it is shown; the
   // review and Créer send the player back to that step.
   const unreadable =
-    built && "error" in built && stepOfField(built.error.field) === step;
+    built?.error != null && stepOfField(built.error.field) === step;
   const blocked =
     blockedReason(step, {
       cls: draft.cls,
@@ -482,7 +460,12 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             )}
           </div>
         </main>
-        <Building {...props} />
+        {/* The panel reads the server's languages and warnings once the draft was seen where the
+            former preview was asked, as it did. */}
+        <Building
+          {...props}
+          answer={{ ...answer, current: seen ? answer.current : null }}
+        />
       </div>
       <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
         <DialogContent
@@ -634,7 +617,7 @@ function StepList({
   );
 }
 
-/** The review's foot: Créer's network error, else the preview's verdict ("1 avertissement, rien de
+/** The review's foot: Créer's network error, else the draft's verdict ("1 avertissement, rien de
  * bloquant"). */
 function ReviewFoot({
   props,
@@ -648,8 +631,9 @@ function ReviewFoot({
   const { t } = useTranslation();
   const warnings = useReviewWarnings(props);
   if (error) return <span className="text-danger">{wording(error)}</span>;
-  if (props.preview.error) return <>{t("creation.review.refusedFoot")}</>;
-  if (!props.preview.data) return null;
+  if (props.refusals.length > 0 || props.answer.failed)
+    return <>{t("creation.review.refusedFoot")}</>;
+  if (!props.answer.current?.derived) return null;
   return warnings.length > 0 ? (
     <>{t("creation.review.warningsFoot", { count: warnings.length })}</>
   ) : (
@@ -658,7 +642,7 @@ function ReviewFoot({
 }
 
 /** The character being built, filled step by step (the dashboard character card's width). */
-function Building({ options, draft, xp, preview, body, language }: StepProps) {
+function Building({ options, draft, xp, answer, body, language }: StepProps) {
   const { t } = useTranslation();
   const languageName = useLanguageNames(options);
   const units = unitsFor(language);
@@ -671,7 +655,8 @@ function Building({ options, draft, xp, preview, body, language }: StepProps) {
     draft.cls ? levelText(t, { ...draft, xp }) : null,
   ].filter(Boolean);
   // The languages the server reads (the native one added) once it answered, else the ones picked.
-  const languages = preview.data?.languages ?? draft.details.languages;
+  const read = answer.current?.derived ? answer.current : null;
+  const languages = read?.languages ?? draft.details.languages;
   const details = body?.details;
   const build = [
     details?.height_cm
@@ -681,12 +666,8 @@ function Building({ options, draft, xp, preview, body, language }: StepProps) {
       ? formatWeight(details.weight_kg, units, language)
       : null,
   ].filter(Boolean);
-  const warned = preview.data
-    ? warnedFields(
-        t,
-        preview.data.warnings,
-        preview.data.derived.skillBudget.length,
-      )
+  const warned = read?.derived
+    ? warnedFields(t, read.warnings, read.derived.skillBudget.length)
     : [];
   return (
     <aside

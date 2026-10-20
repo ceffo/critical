@@ -4,7 +4,7 @@ import { ArrowRight, SignOut } from "@phosphor-icons/react";
 import { logout } from "@/api/auth";
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/brand";
-import { STEPS } from "@/lib/creationFlow";
+import { STEPS } from "./flow";
 import { LANGUAGES } from "@/lib/settings";
 import { navigate } from "@/lib/navigation";
 import { ROSTER_PATH } from "@/lib/session";

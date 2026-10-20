@@ -163,7 +163,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    `TestBudget_Step6_LanguagesSpendTheNonweaponPool`,
    `TestCreate_Step6_LanguagesBeyondTheSlotsAreRefused`,
    `TestGetCharacter_Step6_TheLanguagesSpendTheNonweaponPool`,
-   and `TestCreationChecks_Step6_TheDraftLanguagesSpendThePool`; the composition's
+   and `TestDraft_Step6_TheDraftLanguagesSpendThePool` (the checks' test, moved to the draft endpoint of ADR 0034); the composition's
    `TestLanguages_Step4_NativeAnyCatalogueLanguageRefusalsAndTheSlots` through the API. Kelsen's
    seedcheck reads 11 of 10 on the campaign seeds, a warning (the test fixture's Kelsen has no
    language beyond Common).)_

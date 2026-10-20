@@ -22,7 +22,7 @@ import {
 // character card's header and its Créer opens the route, whose Quitter returns to the roster; the steps keep their values back and forth, Quitter asks first, the server's rolls
 // fill the scores and the HP and stay editable, and the page loads again on the character the server
 // made current. French first (ADR 0027 step 2). The placement choice, the step rules and a race
-// changed after the roll are unit tests (lib/creationFlow.test.ts, components/creation/arrange.test.ts);
+// changed after the roll are unit tests (components/creation/flow.test.ts, components/creation/arrange.test.ts);
 // the validation, the rolls, the arrangement's scores and the options are Go tests (composition
 // create_test.go, creationrolls_test.go, creationrollsvc); the no-cut audit is in layout.spec.ts.
 test("create a bard through the creation route, switch to the first and back, rename and retire it", async ({

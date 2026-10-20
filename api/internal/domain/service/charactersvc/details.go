@@ -325,13 +325,12 @@ func (d Details) Apply(k Kind, p DetailsPatch) (Details, error) {
 	return cur, nil
 }
 
-// newDetails are a new character's details of kind: none, with p applied,
-// the alignment and the sex required (ADR 0032 steps 2 and 3), and its
-// languages, checked as the Skills tab checks them (skills.ValidLanguages; nil
-// is none sent), its native language always among them (step 4.1). A refusal
-// names its field under DetailsField.
-func newDetails(k Kind, book LanguageBook, p DetailsPatch, languages []string, required bool) (Details, error) {
-	// A draft (the preview) leaves a blank alignment or sex unset.
+// newDetails are a new character's details of kind: none, with p applied (Details.Apply), the
+// alignment and the sex required (ADR 0032 steps 2 and 3). A draft (required false) lists a blank
+// alignment or sex in missing instead of refusing it. The languages are the skills module's
+// (skills.Apply at creation, ADR 0037 step 18). A refusal names its field under DetailsField.
+func newDetails(k Kind, p DetailsPatch, required bool) (Details, []string, error) {
+	// A draft leaves a blank alignment or sex unset.
 	if !required {
 		for _, f := range []**string{&p.Alignment, &p.Sex} {
 			if *f != nil && strings.TrimSpace(**f) == "" {
@@ -340,17 +339,15 @@ func newDetails(k Kind, book LanguageBook, p DetailsPatch, languages []string, r
 		}
 	}
 	d, err := Details{Languages: []string{}}.Apply(k, p)
-	if err == nil {
-		d.Languages, err = skills.ValidLanguages(book, k.Race, nil, languages)
+	if err != nil {
+		if fe, ok := errors.AsType[*domain.FieldError](err); ok {
+			return Details{Languages: []string{}}, nil, &domain.FieldError{Field: DetailsField + fe.Field, Message: fe.Message}
+		}
+		return Details{Languages: []string{}}, nil, err
 	}
-	if err == nil && required && d.Alignment == "" {
-		err = &domain.FieldError{Field: FieldAlignment, Message: CodeEmpty}
+	missing := d.Missing()
+	if required && len(missing) > 0 {
+		return Details{}, nil, &domain.FieldError{Field: DetailsField + missing[0], Message: CodeEmpty}
 	}
-	if err == nil && required && d.Sex == "" {
-		err = &domain.FieldError{Field: FieldSex, Message: CodeEmpty}
-	}
-	if fe, ok := errors.AsType[*domain.FieldError](err); ok {
-		return Details{}, &domain.FieldError{Field: DetailsField + fe.Field, Message: fe.Message}
-	}
-	return d, err
+	return d, missing, nil
 }

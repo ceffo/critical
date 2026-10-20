@@ -8,16 +8,16 @@ import type { StepProps } from "./flow";
 /**
  * The creation's proficiency step (ADR 0037 step 14, ADR 0034): the weapon editor and the
  * non-weapon editor of the Skills tab on the
- * draft. The slots and each pick's figures are the checks endpoint's answer for the draft's class,
- * level and Intelligence, asked again as the picks change; Créer sends the picks and the server
+ * draft. The slots and each pick's figures are the draft's derived block (`POST
+ * /api/characters/draft`), asked again as the picks change; Créer sends the picks and the server
  * checks them as the editor's save does (nothing picked before: a draft over budget is refused).
  * Leftover slots never block: they are reminded. The languages are picked here too, next to the
  * non-weapon picks whose pool they spend (ADR 0034 step 3.5 as amended by ADR 0037 step 18).
  */
 export function ProficienciesStep(props: StepProps) {
-  const { options, draft, update, errorFor, checks } = props;
+  const { options, draft, update, errorFor, answer } = props;
   const { t } = useTranslation();
-  const figures = checks?.proficiencySlots ?? null;
+  const figures = answer.latest?.derived?.proficiencySlots ?? null;
   const types = options.classes.find((c) => c.class === draft.cls)?.weaponTypes;
   return (
     <div className="flex min-w-0 flex-col gap-6">

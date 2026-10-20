@@ -23,6 +23,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/internal/rest/wire"
 )
 
 // Router is the chi subset we need.
@@ -134,22 +135,9 @@ type SkillsDTO struct {
 	Budget *BudgetDTO `json:"budget"`
 }
 
-// BudgetDTO is a thief's or a bard's skill point budget at the realized
-// level (ADR 0030 steps 17 and 18): available = first + perLevel x (level -
-// 1) points in all, spent entered, left = available - spent (negative when
-// over). perSkillCap = perSkillFirst + perSkillPerLevel x (level - 1) is the
-// most one skill holds (thief), all 0 for no such limit (bard).
-type BudgetDTO struct {
-	Level            int `json:"level"`
-	First            int `json:"first"`
-	PerLevel         int `json:"perLevel"`
-	Available        int `json:"available"`
-	Spent            int `json:"spent"`
-	Left             int `json:"left"`
-	PerSkillFirst    int `json:"perSkillFirst"`
-	PerSkillPerLevel int `json:"perSkillPerLevel"`
-	PerSkillCap      int `json:"perSkillCap"`
-}
+// BudgetDTO is a thief's or a bard's skill point budget (wire.SkillPointsBudgetDTO, shared with
+// the sheet's derived block).
+type BudgetDTO = wire.SkillPointsBudgetDTO
 
 // CheckDTO is one check: target is unadjusted, adjustedTarget = target +
 // adjustment the one the roll is judged against, success the verdict in
@@ -194,12 +182,7 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 		ThiefSkills:   make([]RogueSkillDTO, 0, len(s.ThiefSkills)),
 		SkillArmor:    s.SkillArmor,
 	}
-	if b := s.Budget; b != nil {
-		out.Budget = &BudgetDTO{
-			Level: b.Level, First: b.First, PerLevel: b.PerLevel, Available: b.Total, Spent: b.Spent, Left: b.Left,
-			PerSkillFirst: b.PerSkillFirst, PerSkillPerLevel: b.PerSkillPerLevel, PerSkillCap: b.PerSkill,
-		}
-	}
+	out.Budget = wire.SkillPointsBudgetToDTO(s.Budget)
 	for _, t := range s.ThiefSkills {
 		out.ThiefSkills = append(out.ThiefSkills, rogueSkillDTO(skillsvc.KindThiefSkill, t.SkillPercent, t.Last))
 	}

@@ -53,14 +53,14 @@ export function useWarningText() {
   };
 }
 
-/** The review's warnings, worded: the preview's, then the skill budget's (ADR 0030 step 17). */
+/** The review's warnings, worded: the draft's, then the skill budget's (ADR 0030 step 17). */
 export function useReviewWarnings(props: StepProps): string[] {
   const { t } = useTranslation();
   const warningText = useWarningText();
-  const { preview } = props;
-  if (!preview.data) return [];
+  const read = props.answer.current;
+  if (!read?.derived) return [];
   const out: string[] = [];
-  for (const w of preview.data.warnings) {
+  for (const w of read.warnings) {
     const text = warningText(w);
     if (text)
       out.push(
@@ -70,7 +70,7 @@ export function useReviewWarnings(props: StepProps): string[] {
         }),
       );
   }
-  for (const b of preview.data.derived.skillBudget)
+  for (const b of read.derived.skillBudget)
     out.push(
       t(`skills.budget.${b.code}`, {
         name: b.skill ? skillName(t, b.skill) : "",

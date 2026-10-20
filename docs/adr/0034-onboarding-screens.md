@@ -36,7 +36,7 @@ content. This ADR records the decisions; the README and the shots are the pictur
    review. _(As built 2026-10-20: a "Compétences" step, the non-weapon proficiency picks of
    [ADR 0037](0037-proficiencies.md) step 14, sits between "Points de vie et talents" and identity,
    seven steps in all; the triage of the proficiency editor chose "a step or group in the creation
-   flow". It uses the Skills tab's picker, its figures from `POST /api/characters/checks`, and
+   flow". It uses the Skills tab's picker, its figures from ~~`POST /api/characters/checks`~~ the draft's derived block (`POST /api/characters/draft`), and
    never blocks Suivant: leftover slots are reminded.)_
    1. **Class**: the class cards (hit die, minimums, alignment limit, races) and the starting level
       or XP (item 4).
@@ -112,28 +112,25 @@ content. This ADR records the decisions; the README and the shots are the pictur
 - **Class minimums and the skill budget** (added later). The options carry each class's ability
   minimums (PHB Table 13, `minimums` on the class: `ability`, `min`; Go data in `ruletablesvc`, like the
   alignment limits). They are shown, not enforced (ADR 0030 step 21's stance on requirements). The
-  verdicts on a raw draft come from `POST /api/characters/checks` (body: `class`, `scores` entered so
-  far, `xp`, `skillPoints`; it refuses nothing and stores nothing): `unmetMinimums` (for every
-  creatable class, the abilities whose entered score is under the minimum; an ability without a score is
-  not unmet) and `skillBudget` (the thief's or bard's budget at the level the XP gives: `level`,
-  `total`, `spent`, `left`, `perSkill`, 0 for the bard's no per-skill limit; null otherwise). "Meets the
-  minimum" and "points left" are rules math, so the server answers them and the web only words them
-  (the class cards flag the unmet ones, the skills step shows "Restants"). Tests:
-  `TestCreationOptions_Table13_EachClassCarriesItsAbilityMinimums`,
-  `TestCreationChecks_Table13_ScoresUnderAClassMinimumAreUnmet`,
-  `TestCreationChecks_Steps17And18_TheBudgetAndWhatIsLeft`, `TestCreationChecks_OverTheWire`.
+  verdicts on a raw draft came from ~~`POST /api/characters/checks`~~ (removed 2026-10-20, see the
+  draft endpoint below; it took `class`, `scores` entered so far, `xp`, `skillPoints`): `unmetMinimums`
+  (for every creatable class, the abilities whose entered score is under the minimum; an ability without
+  a score is not unmet) and the thief's or bard's budget at the level the XP gives. "Meets the minimum"
+  and "points left" are rules math, so the server answers them and the web only words them (the class
+  cards flag the unmet ones, the skills step shows "Restants"). Tests:
+  `TestCreationOptions_Table13_EachClassCarriesItsAbilityMinimums`; the draft's tests below.
 
 ## As built (the identity step and the review)
 
 2026-10-19, the item that finished the creation route.
 
-- **Preview** (`POST /api/characters/preview`, additive). The creation's body, checked and derived as
+- **Preview** (~~`POST /api/characters/preview`~~, removed 2026-10-20 for the draft endpoint below). The creation's body, checked and derived as
   `POST /api/characters` would, storing nothing: `{derived, warnings, languages, missing}`, the derived
   block and warnings in `GET /api/character`'s shapes, the languages with the native one added, and
   `missing` the blank required fields (`name`, `alignment`, `sex`), which are no refusal here so the
   identity step gets the server's warnings while they are blank. Every other refusal is the creation's,
   field and code alike (one validation, `charactersvc` `validate`; tested for parity in composition
-  `preview_test.go`, and the preview equals the created character's read for each class). The web asks it
+  the composition tests, and the preview equals the created character's read for each class). The web asks it
   on the identity step and the review, without an alignment the class's list leaves out (that refusal is
   shown from the options), and drops a reply to an older draft.
 - **Options** gain `raceIdentity`: by race, `height` and `weight` per sex and `age`, each
@@ -197,4 +194,40 @@ today. What each step shows (step 3) and what blocks Suivant (step 6) are unchan
 _(As built 2026-10-20, the languages: the chips sit on the proficiencies step between the weapons
 and the non-weapon picks, with the pool's line from the checks; the preview now also runs on that
 step, so an overspend's refusal shows at the chips as it did on the identity step. The draft
-endpoint is not built.)_
+endpoint as built 2026-10-20: see below.)_
+
+## As built (the draft endpoint)
+
+2026-10-20, the item that built the amendment's draft endpoint (architecture review 2, S3), under
+[ADR 0038](0038-domain-and-wire.md).
+
+- **`POST /api/characters/draft`** replaces `POST /api/characters/checks` and `POST
+  /api/characters/preview`, both removed (the web was their only client). The body is the creation's,
+  every field optional (a number left out or null is blank). The answer is always 200 for the body's
+  content: `derived` (`GET /api/character`'s derived block, one mapping shared with it; null while the
+  class, race, six scores or XP are missing or refused), `warnings` and `languages` (the native one
+  added) as the character's read gives them, `refusals` (`[{field, code}]`, every refusal `POST
+  /api/characters` would give, field and code alike: the creation's `error` for an invalid input,
+  `over_budget` with `spent` and `limit`), `missing` (the required fields still blank, in the form's
+  order: `name`, `class`, `race`, the six scores, `hpMax`, `xp`, `alignment`, `sex`) and
+  `unmetMinimums` (for every creatable class). A body that is no JSON or names an unknown field is
+  still a 400; a height or weight that is no number is the draft's one refusal. `POST /api/characters`
+  answers as before.
+- **One validation.** `charactersvc` reads a new character field by field once (`check`): the
+  creation stops at the first refusal, the draft goes on and lists them all. The picks and the
+  languages are judged by the skills module's one entry point, `skills.Apply` (the editor's preview
+  and save use it too), at the starting level. The derived block gains `skillPoints` (the budget with
+  its formula's terms, `GET /api/skills`' `budget` shape, now one `rest/wire` DTO), which the extras
+  step reads; additive for `GET /api/character`.
+- **Web.** One flow module (`components/creation/flow.ts`, the former `lib/creationFlow.ts` folded
+  in), one request builder (`buildBody`, the draft's and Créer's; an unreadable value is left out and
+  named), one answer type (`CreationDraft`). The class step's minimums, the extras step's budget and
+  the proficiency step's pools read the last answer for the draft's class; the warnings, the review's
+  figures and the refusals read the answer to the draft as it stands, and the refusals show as the
+  preview showed them (once the draft was seen from the proficiency step on). What each step shows and
+  what blocks Suivant are unchanged.
+- **Tests**: `TestDraft_IsWhatTheCreatedCharacterReads` (the preview's equality, moved),
+  `TestDraft_RefusesAsTheCreationRefuses` (a row per creation refusal),
+  `TestDraft_PartialDraftsAnswer200`, `TestDraft_Table13_ScoresUnderAClassMinimumAreUnmet`,
+  `TestDraft_Steps17And18_TheBudgetAndWhatIsLeft`, `TestCharacters_DraftWireShape`,
+  `TestCharacters_DraftNeverRefusesContent`; web `flow.test.ts` (`buildBody`, `stepOfField`).

@@ -1,4 +1,5 @@
 import type { LocalizedText } from "@/types/localized";
+import type { SkillBudget } from "@/types/skills";
 // Mirrors api/internal/rest/handler/characterhdl (CharacterDTO, DerivedDTO).
 
 /** Five numbers, one per save category (targets, or a bonus per category). */
@@ -103,6 +104,9 @@ export interface Derived {
   /** Steps 17 and 18: the entered points against the class's budget at the realized level
    * (warnings; a bard's has no per-skill limit). */
   skillBudget: SkillBudgetWarning[];
+  /** Steps 17 and 18: the budget with the terms of its formula (GET /api/skills' `budget`); null for
+   * a class without skill points. */
+  skillPoints: SkillBudget | null;
   /** Step 19: PHB Table 30's damage multiplier at the realized level; 0 without the backstab. */
   backstab: number;
   /** ADR 0037 steps 3 to 5: the non-weapon pool and each pick's figures; null without the
@@ -490,16 +494,29 @@ export interface RaceIdentity {
 /** A warning the server reads on a character (ADR 0032 steps 4.2, 5.2 and 8.4), worded by the web. */
 export type CharacterWarning = Character["warnings"][number];
 
+/** One refusal of a creation draft, as `POST /api/characters` would answer it: the field and the code
+ * (an invalid input's code, or `over_budget` with the budget's `spent` and `limit`). */
+export interface DraftRefusal {
+  field: string;
+  code: string;
+  spent?: number;
+  limit?: number;
+}
+
 /**
- * `POST /api/characters/preview`: what the creation's body would be read as once created (the
- * derived block, the warnings, the languages with the native one), and the required fields still
- * blank (`name`, `alignment`, `sex`). Writes nothing.
+ * `POST /api/characters/draft` (ADR 0034, amendment of 2026-10-20): the sheet the draft would read
+ * as once created, in `GET /api/character`'s shapes (`derived` null and the lists empty while the
+ * class, race, scores or XP are missing or refused; the languages with the native one), the
+ * creation's refusals, the required fields still blank, and for every creatable class the abilities
+ * whose entered score is under its minimum. Writes nothing.
  */
-export interface CharacterPreview {
-  derived: Derived;
+export interface CreationDraft {
+  derived: Derived | null;
   warnings: CharacterWarning[];
   languages: string[];
+  refusals: DraftRefusal[];
   missing: string[];
+  unmetMinimums: { class: string; abilities: string[] }[];
 }
 
 /** A level and the lowest XP that reaches it, for one class. */
@@ -620,45 +637,3 @@ export type NewCharacter = {
   /** The details, as the card shows them (age null for none); a refusal's field is `details.<field>`. */
   details?: Partial<CharacterDetails>;
 } & Record<AbilityCode, number | null>;
-
-/** The draft as far as it is entered, asked at `POST /api/characters/checks`. */
-export interface DraftChecksRequest {
-  class: string;
-  /** The abilities entered so far, by code. */
-  scores: Record<string, number>;
-  xp: number | null;
-  skillPoints: Record<string, number>;
-  /** The non-weapon picks so far (ADR 0037 step 14). */
-  proficiencies?: PicksInput;
-  /** The race and the languages so far: the languages beyond the native one and Common spend the
-   * non-weapon pool (ADR 0037 step 6), counted by the server. */
-  race?: string;
-  languages?: string[];
-}
-
-/**
- * The server's verdicts on a raw draft (`POST /api/characters/checks`): for every creatable class the
- * abilities whose entered score is under its minimum, and the draft class's skill point budget at the
- * level its XP gives (null for a class without skill points).
- */
-export interface DraftChecks {
-  unmetMinimums: { class: string; abilities: string[] }[];
-  skillBudget: {
-    level: number;
-    /** The terms of the formula: total = first + perLevel x (level - 1). */
-    first: number;
-    perLevel: number;
-    /** The points the level allows in all, those entered, and what is left (negative when over). */
-    available: number;
-    spent: number;
-    left: number;
-    /** The most one skill holds at the level, perSkillFirst + perSkillPerLevel x (level - 1); all
-     * 0 for no such limit. */
-    perSkillFirst: number;
-    perSkillPerLevel: number;
-    perSkillCap: number;
-  } | null;
-  /** ADR 0037 step 14: the draft's non-weapon pool and picks; null while the class, the XP or the
-   * Intelligence is missing. */
-  proficiencySlots: ProficiencySlots | null;
-}

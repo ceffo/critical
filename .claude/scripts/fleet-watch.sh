@@ -87,7 +87,7 @@ while sleep 30; do
     fi
     if [ "$prev" != idle ] && [ "$prev" != done ] && { [ "$s" = idle ] || [ "$s" = done ]; }; then
       msg=$(last_msg "$n")
-      if ! user_facing "$n" && { finished "$n" "$msg" || grep -qiE 'supervisor|ship|push|pull request|\bPR\b|merge' <<<"$tail" || fresh_report "$n"; }; then
+      if ! user_facing "$n" && { finished "$n" "$msg" || grep -qiE 'supervisor|ship|push|pull request|\bPR\b|merge' <<<"$msg" || fresh_report "$n"; }; then
         mark "$t" ""; echo "NEEDS-SUPERVISOR $n"; echo "$tail"; exit 0
       fi
       if asks_user "$msg"; then

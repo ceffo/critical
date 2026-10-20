@@ -11,7 +11,7 @@ proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequ
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
 implementation.
 Steps 19 (the description pop-up) and 20 (the Tumbling buff) added 2026-10-20 (user triage of
-2026-10-20), decided; step 19 not implemented; step 20 as built 2026-10-20 (see 20.9); step 19 reads the descriptions of
+2026-10-20), decided; step 19.4 (the API's description lookup, format 9 import) as built 2026-10-20 (CRI-116), the pop-up itself (19.1 to 19.3) not implemented; step 20 as built 2026-10-20 (see 20.9); step 19 reads the descriptions of
 [ADR 0021](0021-spell-catalogue.md) step 16 (format 9); step 20 amends [ADR 0014](0014-skill-checks.md)
 step 4 and [ADR 0004](0004-buffs.md) step 13.
 

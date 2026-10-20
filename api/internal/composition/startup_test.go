@@ -473,6 +473,28 @@ func TestStartup_Step16_RefusesADescriptionIdMismatch(t *testing.T) {
 	require.ErrorContains(t, err, "proficiency artistic_ability: no description in the catalogue")
 }
 
+// ADR 0021 step 16.3: a description missing for one seed id, or an empty French text, refuses the
+// start before Seed and the import (refusedStart's mocks fail any call to either), so no
+// proficiency_descriptions row is ever written.
+func TestStartup_Step16_RefusesAMissingDescriptionOrAnEmptyFrench(t *testing.T) {
+	t.Run("one id missing", func(t *testing.T) {
+		artifact := writeArtifact(t, func(d map[string]any) {
+			list := d["proficiency_descriptions"].([]any)
+			d["proficiency_descriptions"] = list[1:]
+		})
+		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+		require.ErrorContains(t, err, "proficiency_descriptions") // the schema's minItems catches it first
+	})
+	t.Run("one fr empty", func(t *testing.T) {
+		artifact := writeArtifact(t, func(d map[string]any) {
+			d["proficiency_descriptions"].([]any)[2].(map[string]any)["description"].(map[string]any)["fr"] = ""
+		})
+		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "spell catalogue "+artifact)
+	})
+}
+
 // The spellbook seed is checked against the catalogue before anything is
 // written: a spell the catalogue does not hold refuses the start with the seed
 // not run, so no character ever stores it.

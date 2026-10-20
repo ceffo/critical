@@ -69,8 +69,6 @@ type Body struct {
 	Alignment field[string]      `json:"alignment"`
 	Age       field[int]         `json:"age"`
 	Sex       field[string]      `json:"sex"`
-	Height    field[string]      `json:"height"`
-	Weight    field[string]      `json:"weight"`
 	HeightCm  field[wire.Height] `json:"height_cm"`
 	WeightKg  field[wire.Weight] `json:"weight_kg"`
 	Hair      field[string]      `json:"hair"`
@@ -78,7 +76,7 @@ type Body struct {
 	Languages field[[]string]    `json:"languages"`
 }
 
-func (b Body) patch() (detailssvc.Patch, error) {
+func (b Body) patch() detailssvc.Patch {
 	p := detailssvc.Patch{
 		Alignment: b.Alignment.ptr(), Age: b.Age.ptr(), Sex: b.Sex.ptr(),
 		Hair: b.Hair.ptr(), Eyes: b.Eyes.ptr(), Languages: b.Languages.ptr(),
@@ -86,20 +84,13 @@ func (b Body) patch() (detailssvc.Patch, error) {
 	if b.Age.null {
 		p.Age, p.ClearAge = nil, true
 	}
-	var err error
-	if p.Height, p.ClearHeight, err = wire.ResolveMeasure(charactersvc.FieldHeight,
-		numeric(b.HeightCm), b.HeightCm.null, text(b.Height), charactersvc.ParseHeight); err != nil {
-		return p, err
-	}
-	if p.Weight, p.ClearWeight, err = wire.ResolveMeasure(charactersvc.FieldWeight,
-		numeric(b.WeightKg), b.WeightKg.null, text(b.Weight), charactersvc.ParseWeight); err != nil {
-		return p, err
-	}
+	p.Height, p.ClearHeight = wire.ResolveMeasure(numeric(b.HeightCm), b.HeightCm.null)
+	p.Weight, p.ClearWeight = wire.ResolveMeasure(numeric(b.WeightKg), b.WeightKg.null)
 	if p.Languages != nil && b.Languages.null {
 		empty := []string{}
 		p.Languages = &empty
 	}
-	return p, nil
+	return p
 }
 
 // numeric is the number of a height_cm / weight_kg field: nil when absent or
@@ -111,9 +102,6 @@ func numeric[N ~float64](f field[N]) *float64 {
 	v := float64(f.val)
 	return &v
 }
-
-// text is the legacy text key: nil when absent, "" when null.
-func text(f field[string]) *string { return f.ptr() }
 
 // Update applies the fields present in the body and returns the details.
 func Update(charID CharacterIDFunc, svc updater) render.HandlerFunc {
@@ -127,11 +115,7 @@ func Update(charID CharacterIDFunc, svc updater) render.HandlerFunc {
 			}
 			return render.BadRequestError("invalid JSON body")
 		}
-		patch, err := b.patch()
-		if err != nil {
-			return err
-		}
-		d, err := svc.Update(r.Context(), charID(r), patch)
+		d, err := svc.Update(r.Context(), charID(r), b.patch())
 		if err != nil {
 			return err
 		}

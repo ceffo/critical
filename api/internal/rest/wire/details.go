@@ -3,7 +3,6 @@ package wire
 import (
 	"bytes"
 	"encoding/json"
-	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -12,17 +11,12 @@ import (
 // DetailsDTO is the wire shape of the details, also embedded in
 // GET /api/character. age, height_cm and weight_kg are null when not set (ADR
 // 0032 step 5); alignment and sex are codes (steps 2 and 3), "" when missing.
-// height and weight are the previous release's free-text keys, kept for one
-// release so that a client of that release still works (ADR 0032 step 8):
-// read as "180 cm" / "75.5 kg" ("" when not set), written as a text the
-// migration's parser reads (an empty one clears). height_cm and weight_kg
-// win when both are sent.
+// The free-text height and weight keys of the release before are gone (ADR 0032 step 8): a body
+// naming them is refused as an unknown field.
 type DetailsDTO struct {
 	Alignment string  `json:"alignment"`
 	Age       *int    `json:"age"`
 	Sex       string  `json:"sex"`
-	Height    string  `json:"height"`
-	Weight    string  `json:"weight"`
 	HeightCm  *Height `json:"height_cm"`
 	WeightKg  *Weight `json:"weight_kg"`
 	// HeightNull and WeightNull are set when the body names height_cm / weight_kg as JSON null (a
@@ -66,12 +60,10 @@ func DetailsToDTO(d charactersvc.Details) DetailsDTO {
 	if d.Height > 0 {
 		h := Height(d.Height)
 		out.HeightCm = &h
-		out.Height = charactersvc.FormatHeight(d.Height)
 	}
 	if d.Weight > 0 {
 		w := Weight(d.Weight)
 		out.WeightKg = &w
-		out.Weight = charactersvc.FormatWeight(d.Weight)
 	}
 	return out
 }
@@ -106,24 +98,14 @@ func number(field string, b []byte) (float64, error) {
 	return v, nil
 }
 
-// ResolveMeasure is the height or weight a request names, in the number key
-// (num, or nullNum to clear it) or in the previous release's text key (txt):
-// the number wins; a text is parsed with parse, an empty one clears and one
-// that names no figure is refused as not_a_number (ADR 0032 step 8).
-func ResolveMeasure(name string, num *float64, nullNum bool, txt *string, parse func(string) (float64, bool)) (v *float64, clear bool, err error) {
+// ResolveMeasure is the height or weight a request names in its number key: num when given, a
+// clear when the key is null (nullNum), nothing when it is absent.
+func ResolveMeasure(num *float64, nullNum bool) (v *float64, clear bool) {
 	switch {
 	case num != nil:
-		return num, false, nil
+		return num, false
 	case nullNum:
-		return nil, true, nil
-	case txt == nil:
-		return nil, false, nil
-	case strings.TrimSpace(*txt) == "":
-		return nil, true, nil
+		return nil, true
 	}
-	f, ok := parse(*txt)
-	if !ok {
-		return nil, false, &domain.FieldError{Field: name, Message: charactersvc.CodeNotANumber}
-	}
-	return &f, false, nil
+	return nil, false
 }

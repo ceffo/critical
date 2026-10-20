@@ -140,32 +140,27 @@ func TestIdentityRoll_Step5_3_RefusalsAreFieldErrors(t *testing.T) {
 func fmtF(v float64) string { return strconv.FormatFloat(v, 'f', -1, 64) }
 func fmtI(v int) string     { return strconv.Itoa(v) }
 
-// ADR 0032 step 8: a client of the release before sends and reads the free-text height and weight
-// keys; they are parsed into the numbers and read back as text, so the rolling deploy breaks nothing.
-func TestIdentityNumbers_Step8_5_PreviousReleaseClientStillWorks(t *testing.T) {
+// ADR 0032 step 8, the release after the compatibility one: the free-text height and weight keys are
+// gone. A create or a PATCH naming them is refused as an unknown field, and a read carries no such key.
+func TestIdentityNumbers_Step8_TheFreeTextKeysAreGone(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
 	var list listView
 	old := `{"name":"Old","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
-		`"hpMax":10,"xp":2500,"details":{"alignment":"neutral_good","sex":"female",` +
-		`"height":"1m80","weight":"150 lb","hair":"red","eyes":"","age":30}}`
-	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", old, &list))
-	var got struct {
-		Height string `json:"height"`
-		Weight string `json:"weight"`
+		`"hpMax":10,"xp":2500,"details":{"alignment":"neutral_good","sex":"female",%s,"hair":"red","eyes":"","age":30}}`
+	for _, key := range []string{`"height":"1m80"`, `"weight":"150 lb"`} {
+		assert.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", strings.Replace(old, "%s", key, 1), nil), key)
 	}
-	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
-	assert.Equal(t, "180 cm", got.Height)
-	assert.Equal(t, "68 kg", got.Weight)
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", numbersBody(`180`, `68`, `30`), &list))
 
-	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height":"","weight":"70 kg"}`, nil))
-	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
-	assert.Empty(t, got.Height)
-	assert.Equal(t, "70 kg", got.Weight)
-
-	var refused map[string]string
-	require.Equal(t, http.StatusBadRequest, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", `{"height":"tall"}`, &refused))
-	assert.Equal(t, "not_a_number", refused["error"])
+	var read map[string]any
+	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &read))
+	assert.NotContains(t, read, "height")
+	assert.NotContains(t, read, "weight")
+	assert.Contains(t, read, "height_cm")
+	for _, body := range []string{`{"height":"180 cm"}`, `{"weight":"70 kg"}`, `{"height":null}`} {
+		assert.Equal(t, http.StatusBadRequest, tb.showing(bob, *list.CurrentID, "PATCH", "/api/character/details", body, nil), body)
+	}
 }
 
 // ADR 0032 step 5.2: the range is checked on the stored value, after the rounding to a tenth: 177.84
@@ -189,21 +184,20 @@ func TestIdentityNumbers_Step5_2_TheEdgeIsCheckedAfterTheRoundingToATenth(t *tes
 	}
 }
 
-// A creation that names height_cm as null clears it, as a PATCH does: the number key wins over the
-// text key whether it is a number or a null.
-func TestIdentityNumbers_CreateNullNumberKeyBeatsTheTextKey(t *testing.T) {
+// A creation that names height_cm as null leaves it unset, and an omitted weight_kg is unset too.
+func TestIdentityNumbers_CreateNullNumberKeyIsUnset(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
 	var list listView
 	body := `{"name":"Null","class":"bard","raceCode":"half_elf","str":10,"dex":10,"con":10,"int":12,"wis":10,"cha":10,` +
 		`"hpMax":10,"xp":2500,"details":{"alignment":"neutral_good","sex":"female",` +
-		`"height_cm":null,"height":"180 cm","weight":"60 kg"}}`
+		`"height_cm":null,"weight_kg":60}}`
 	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, &list))
 	var got numbersView
 	require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &got))
-	assert.Nil(t, got.Height, "height_cm null wins over the text")
+	assert.Nil(t, got.Height)
 	require.NotNil(t, got.Weight)
-	assert.Equal(t, 60.0, *got.Weight, "an omitted weight_kg leaves the text")
+	assert.Equal(t, 60.0, *got.Weight)
 	// An unknown key under details is still refused.
 	assert.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", strings.Replace(body, `"height_cm":null,`, `"bogus":1,`, 1), nil))
 }

@@ -54,21 +54,7 @@ func num(s string) float64 {
 // tenth rounds to the stored step.
 func tenth(v float64) float64 { return math.Round(v*10) / 10 }
 
-// FormatHeight and FormatWeight are the text the previous release's clients read in the
-// height and weight keys: "180 cm", "75.5 kg", "" when not set. ParseHeight reads them back.
-func FormatHeight(cm float64) string { return formatMeasure(cm, "cm") }
-
-// FormatWeight is FormatHeight for kilograms.
-func FormatWeight(kg float64) string { return formatMeasure(kg, "kg") }
-
-func formatMeasure(v float64, unit string) string {
-	if v <= 0 {
-		return ""
-	}
-	return strconv.FormatFloat(v, 'f', -1, 64) + " " + unit
-}
-
-// ParseHeight is the height in centimetres a text names, false when it names none (or one
+// ParseHeight is the height in centimetres a stored text names, false when it names none (or one
 // beyond the sanity bound of a height).
 func ParseHeight(raw string) (float64, bool) {
 	s := measureText(raw)

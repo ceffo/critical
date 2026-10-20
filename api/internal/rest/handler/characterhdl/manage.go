@@ -290,13 +290,8 @@ func detailsPatch(d *wire.DetailsDTO) (charactersvc.DetailsPatch, error) {
 		v := float64(*d.WeightKg)
 		kg = &v
 	}
-	var err error
-	if p.Height, p.ClearHeight, err = wire.ResolveMeasure(charactersvc.FieldHeight, cm, d.HeightNull, &d.Height, charactersvc.ParseHeight); err != nil {
-		return p, err
-	}
-	if p.Weight, p.ClearWeight, err = wire.ResolveMeasure(charactersvc.FieldWeight, kg, d.WeightNull, &d.Weight, charactersvc.ParseWeight); err != nil {
-		return p, err
-	}
+	p.Height, p.ClearHeight = wire.ResolveMeasure(cm, d.HeightNull)
+	p.Weight, p.ClearWeight = wire.ResolveMeasure(kg, d.WeightNull)
 	if d.Languages != nil {
 		p.Languages = &d.Languages
 	}

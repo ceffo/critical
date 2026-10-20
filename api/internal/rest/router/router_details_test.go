@@ -21,7 +21,7 @@ func TestDetails_PatchMapsBodyToPatchAndAnswersWithDetails(t *testing.T) {
 		Return(charactersvc.Details{Hair: "red", Age: 112, Languages: []string{"Elfique"}}, nil)
 	rec := do(h, "PATCH", "/api/character/details", `{"hair":"red","age":112,"languages":["Elfique"]}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"alignment":"","age":112,"sex":"","height":"","weight":"","height_cm":null,"weight_kg":null,"hair":"red","eyes":"","languages":["Elfique"]}`, rec.Body.String())
+	assert.JSONEq(t, `{"alignment":"","age":112,"sex":"","height_cm":null,"weight_kg":null,"hair":"red","eyes":"","languages":["Elfique"]}`, rec.Body.String())
 }
 
 func TestDetails_NullClearsAndAbsentLeavesAlone(t *testing.T) {
@@ -31,7 +31,7 @@ func TestDetails_NullClearsAndAbsentLeavesAlone(t *testing.T) {
 		Return(charactersvc.Details{}, nil)
 	rec := do(h, "PATCH", "/api/character/details", `{"age":null,"hair":null,"languages":null}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"alignment":"","age":null,"sex":"","height":"","weight":"","height_cm":null,"weight_kg":null,"hair":"","eyes":"","languages":[]}`, rec.Body.String())
+	assert.JSONEq(t, `{"alignment":"","age":null,"sex":"","height_cm":null,"weight_kg":null,"hair":"","eyes":"","languages":[]}`, rec.Body.String())
 }
 
 // ADR 0032 step 5: height (cm) and weight (kg) are JSON numbers, null clears, a value that is no
@@ -43,38 +43,27 @@ func TestDetails_Step5_HeightAndWeightAreNumbers(t *testing.T) {
 		Return(charactersvc.Details{Height: 172.5}, nil)
 	rec := do(h, "PATCH", "/api/character/details", `{"height_cm":172.5,"weight_kg":null}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"alignment":"","age":null,"sex":"","height":"172.5 cm","weight":"","height_cm":172.5,"weight_kg":null,"hair":"","eyes":"","languages":[]}`, rec.Body.String())
+	assert.JSONEq(t, `{"alignment":"","age":null,"sex":"","height_cm":172.5,"weight_kg":null,"hair":"","eyes":"","languages":[]}`, rec.Body.String())
 
 	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{Weight: &weight}).Return(charactersvc.Details{Weight: 61}, nil)
 	require.Equal(t, http.StatusOK, do(h, "PATCH", "/api/character/details", `{"weight_kg":61}`).Code)
 
-	for body, field := range map[string]string{`{"height_cm":"tall"}`: "height", `{"weight_kg":[1]}`: "weight", `{"height":"tall"}`: "height", `{"weight":"heavy"}`: "weight"} {
+	for body, field := range map[string]string{`{"height_cm":"tall"}`: "height", `{"weight_kg":[1]}`: "weight"} {
 		rec := do(h, "PATCH", "/api/character/details", body)
 		require.Equal(t, http.StatusBadRequest, rec.Code, body)
 		assert.JSONEq(t, `{"error":"not_a_number","field":"`+field+`","code":"invalid_input"}`, rec.Body.String(), body)
 	}
 }
 
-// ADR 0032 step 8: the previous release's clients still send and read the free-text keys; the
-// text is parsed like the migration's, an empty one clears, one with no figure is not_a_number, and
-// height_cm wins over height.
-func TestDetails_Step8_5_LegacyTextKeysStillWork(t *testing.T) {
-	h, m := newRouter(t)
-	height, weight := 180.0, 74.8
-	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{Height: &height, Weight: &weight}).
-		Return(charactersvc.Details{Height: 180, Weight: 74.8}, nil).Once()
-	rec := do(h, "PATCH", "/api/character/details", `{"height":"1m80","weight":"165 lb"}`)
-	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"alignment":"","age":null,"sex":"","height":"180 cm","weight":"74.8 kg","height_cm":180,"weight_kg":74.8,"hair":"","eyes":"","languages":[]}`, rec.Body.String())
-
-	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{ClearHeight: true, ClearWeight: true}).
-		Return(charactersvc.Details{}, nil).Once()
-	require.Equal(t, http.StatusOK, do(h, "PATCH", "/api/character/details", `{"height":"","weight":""}`).Code)
-
-	other := 170.0
-	m.details.EXPECT().Update(mock.Anything, int64(1), detailssvc.Patch{Height: &other}).
-		Return(charactersvc.Details{Height: 170}, nil).Once()
-	require.Equal(t, http.StatusOK, do(h, "PATCH", "/api/character/details", `{"height":"1m80","height_cm":170}`).Code)
+// ADR 0032 step 8: the free-text height and weight keys of the release before are gone; naming one
+// is an unknown field, and nothing reaches the service.
+func TestDetails_Step8_TheFreeTextKeysAreRefused(t *testing.T) {
+	h, _ := newRouter(t)
+	for _, body := range []string{`{"height":"1m80"}`, `{"weight":"165 lb"}`, `{"height":"","weight":""}`, `{"height":"1m80","height_cm":170}`} {
+		rec := do(h, "PATCH", "/api/character/details", body)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, body)
+		assert.JSONEq(t, `{"error":"invalid JSON body","code":"bad_request"}`, rec.Body.String(), body)
+	}
 }
 
 func TestDetails_OnlyPresentFieldsReachTheService(t *testing.T) {

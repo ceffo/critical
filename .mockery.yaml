@@ -177,6 +177,7 @@ packages:
     interfaces:
       SVC:
       DAL:
+      Budget:
   github.com/ceffo/critical/api/internal/domain/service/acsvc:
     config:
       dir: "internal/domain/service/acsvc/mocks"

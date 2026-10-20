@@ -80,7 +80,9 @@ type WeaponPickDTO struct {
 // NonweaponPoolDTO is ADR 0037 step 3's non-weapon pool: `available` =
 // `initial` (Table 34) + `levelGained` (one slot at every realized level
 // divisible by `perLevels`) + `intelligence` (Table 4's languages), `spent`
-// by the picks, `left` = available - spent (negative over budget).
+// by the picks and the languages, `left` = available - spent (negative over
+// budget). `languages` is the part of `spent` the languages beyond the native
+// one and Common spend (step 6). Additive.
 type NonweaponPoolDTO struct {
 	Initial      int `json:"initial"`
 	PerLevels    int `json:"perLevels"`
@@ -89,6 +91,7 @@ type NonweaponPoolDTO struct {
 	Available    int `json:"available"`
 	Spent        int `json:"spent"`
 	Left         int `json:"left"`
+	Languages    int `json:"languages"`
 }
 
 // PickDTO is one non-weapon pick: the slots spent, its cost for the class

@@ -4,7 +4,6 @@ import {
   ALIGNMENT_CODES,
   codeOrEmpty,
   hasAlignmentWarning,
-  languageWarning,
   toBody,
   toDraft,
 } from "./characterDetails";
@@ -123,21 +122,6 @@ describe("character details draft", () => {
     const draft = toDraft(details);
     expect(draft.languages).toEqual(["common", "elvish"]);
     expect(draft.languages).not.toBe(details.languages);
-  });
-});
-
-describe("languageWarning", () => {
-  it("reads the figures of the languages warning, and an answer without warnings as none", () => {
-    expect(
-      languageWarning({
-        warnings: [
-          { code: "alignment_not_allowed" },
-          { code: "languages_over_limit", count: 5, limit: 0 },
-        ],
-      }),
-    ).toEqual({ count: 5, limit: 0 });
-    expect(languageWarning({ warnings: [] })).toBeUndefined();
-    expect(languageWarning({})).toBeUndefined();
   });
 });
 

@@ -125,7 +125,7 @@ func TestBudget_Step10_RefusedWhenOverAndGrowing(t *testing.T) {
 		{"an overspend increased", picks(p("tumbling", 7)), picks(p("tumbling", 8)), true, 8},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := charactersvc.PicksWithinBudget(book, "bard", 1, 9, tc.before, tc.after)
+			err := charactersvc.PicksWithinBudget(book, "bard", 1, 9, charactersvc.Spending{Picks: tc.before}, charactersvc.Spending{Picks: tc.after})
 			if !tc.refused {
 				require.NoError(t, err)
 				return
@@ -137,7 +137,7 @@ func TestBudget_Step10_RefusedWhenOverAndGrowing(t *testing.T) {
 		})
 	}
 	t.Run("no Table 34 row: no budget", func(t *testing.T) {
-		require.NoError(t, charactersvc.PicksWithinBudget((*ruletablesvc.Proficiencies)(nil), "bard", 1, 9, picks(), picks(p("tumbling", 50))))
+		require.NoError(t, charactersvc.PicksWithinBudget((*ruletablesvc.Proficiencies)(nil), "bard", 1, 9, charactersvc.Spending{Picks: picks()}, charactersvc.Spending{Picks: picks(p("tumbling", 50))}))
 	})
 }
 
@@ -149,7 +149,7 @@ func TestWarnings_Step11_OverBudgetAndToSpend(t *testing.T) {
 	warnings := func(ps charactersvc.Picks) []charactersvc.Warning {
 		// 2 weapon slots, spent exactly: no weapon warning.
 		ps.Weapon = weapons("dagger", "dart").Weapon
-		f, ok := charactersvc.ProficiencyFigures(book, "bard", 1, 9, ps) // 5 slots
+		f, ok := charactersvc.ProficiencyFigures(book, "bard", 1, 9, charactersvc.Spending{Picks: ps}) // 5 slots
 		require.True(t, ok)
 		return charactersvc.SlotWarnings(f)
 	}
@@ -173,9 +173,9 @@ func TestWarnings_Step11_OverBudgetAndToSpend(t *testing.T) {
 func TestNonweaponPick_Step5_ExtraSlotsRaiseTheTarget(t *testing.T) {
 	book := profBook(t)
 	c := kelsen() // Dex 17, Wis 8
-	f, ok := charactersvc.ProficiencyFigures(book, "bard", 15, c.Int, picks(
+	f, ok := charactersvc.ProficiencyFigures(book, "bard", 15, c.Int, charactersvc.Spending{Picks: picks(
 		p("tumbling", 1), p("tumbling_more", 1), p("healing", 3), p("tracking", 5), p("blind_fighting", 2),
-	))
+	)})
 	require.True(t, ok)
 	f.Picks[1] = charactersvc.PickFigures{ID: "tumbling_more", Slots: 1, Cost: 1} // unknown to the catalogue
 	f.SetTargets(c.Score)
@@ -188,7 +188,7 @@ func TestNonweaponPick_Step5_ExtraSlotsRaiseTheTarget(t *testing.T) {
 		{ID: "blind_fighting", Slots: 2, Cost: 2, Known: true},
 	}, f.Picks)
 	for _, tc := range []struct{ slots, target int }{{1, 17}, {2, 18}, {4, 20}} {
-		g, _ := charactersvc.ProficiencyFigures(book, "fighter", 1, 10, picks(p("tumbling", tc.slots+1)))
+		g, _ := charactersvc.ProficiencyFigures(book, "fighter", 1, 10, charactersvc.Spending{Picks: picks(p("tumbling", tc.slots+1))})
 		g.SetTargets(c.Score)
 		assert.Equal(t, tc.target, g.Picks[0].Target, "a fighter's Tumbling costs 2: %d extra", tc.slots-1)
 	}

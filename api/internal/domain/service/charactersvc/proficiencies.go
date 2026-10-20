@@ -191,10 +191,44 @@ func pickFigures(book ProficiencyBook, groups []string, p Pick) PickFigures {
 	}
 }
 
-// ProficiencyFigures is ADR 0037 steps 3 to 5 and 7 on picks for a character of class at the
-// realized level with the sheet's intelligence: both pools and each pick's figures. ok is false
-// when the catalogue has no Table 34 row for the class (no catalogue, an unknown class).
-func ProficiencyFigures(book ProficiencyBook, class string, level, intelligence int, picks Picks) (ProficiencySlots, bool) {
+// Spending is what a character spends from its proficiency pools: the picks and the languages
+// that cost a non-weapon slot each (ADR 0037 step 6, LanguageSlots).
+type Spending struct {
+	Picks     Picks
+	Languages int
+}
+
+// LanguageSlots is ADR 0037 step 6: the non-weapon slots a list of languages spends, one for
+// each language other than the race's native one and Common. Without a catalogue (native "")
+// no language is known to be free, so none is counted.
+func LanguageSlots(languages []string, native string) int {
+	if native == "" {
+		return 0
+	}
+	n := 0
+	for _, l := range languages {
+		if l != native && l != ruletablesvc.CommonLanguage {
+			n++
+		}
+	}
+	return n
+}
+
+// LanguageSlots is the non-weapon slots c's languages spend as last derived (ADR 0037 step 6);
+// 0 without a pool.
+func (c *Character) LanguageSlots() int {
+	if c.Derived.Proficiencies == nil {
+		return 0
+	}
+	return c.Derived.Proficiencies.Nonweapon.Languages
+}
+
+// ProficiencyFigures is ADR 0037 steps 3 to 7 on what a character of class spends at the
+// realized level with the sheet's intelligence: both pools (the languages in the non-weapon
+// one) and each pick's figures. ok is false when the catalogue has no Table 34 row for the class
+// (no catalogue, an unknown class).
+func ProficiencyFigures(book ProficiencyBook, class string, level, intelligence int, spend Spending) (ProficiencySlots, bool) {
+	picks := spend.Picks
 	row, ok := book.SlotRowOf(class)
 	if !ok {
 		return ProficiencySlots{}, false
@@ -207,7 +241,8 @@ func ProficiencyFigures(book ProficiencyBook, class string, level, intelligence 
 		out.Picks = append(out.Picks, f)
 		spent += p.Slots
 	}
-	out.Nonweapon = ruletablesvc.NonweaponSlots(row, level, intelligence, spent)
+	out.Nonweapon = ruletablesvc.NonweaponSlots(row, level, intelligence, spent+spend.Languages)
+	out.Nonweapon.Languages = spend.Languages
 	out.WeaponPicks = make([]WeaponPickFigures, 0, len(picks.Weapon))
 	spent = 0
 	for _, p := range picks.Weapon {
@@ -305,20 +340,31 @@ func validWeaponPicks(class string, picks, before []WeaponPick) ([]WeaponPick, e
 	return out, nil
 }
 
-// PicksWithinBudget is ADR 0037 step 10 on each pool (non-weapon, then weapon): a save from
-// before to after is refused when it leaves a pool's slots spent over the available ones and
-// above the slots that pool spent before. Any other save passes: an existing overspend that
-// shrinks or stays keeps the warning, and slots left to spend are never refused. At creation
-// before is empty (0 spent). The refusal is a *domain.BudgetError on field nonweapon or weapon.
-// No Table 34 row for the class: no budget, nil.
-func PicksWithinBudget(book ProficiencyBook, class string, level, intelligence int, before, after Picks) error {
+// PicksWithinBudget is ADR 0037 step 10 on each pool (non-weapon, languages included, then
+// weapon): a save from before to after is refused when it leaves a pool's slots spent over the
+// available ones and above the slots that pool spent before. Any other save passes: an existing
+// overspend that shrinks or stays keeps the warning, and slots left to spend are never refused.
+// At creation before is empty (0 spent). The refusal is a *domain.BudgetError on field
+// languages when the picks alone, with the languages as before, would pass (a languages edit, or
+// a creation whose languages overspend, step 6), else nonweapon or weapon. No Table 34 row for the
+// class: no budget, nil.
+func PicksWithinBudget(book ProficiencyBook, class string, level, intelligence int, before, after Spending) error {
 	b, ok := ProficiencyFigures(book, class, level, intelligence, after)
 	if !ok {
 		return nil
 	}
 	was, _ := ProficiencyFigures(book, class, level, intelligence, before)
-	if b.Nonweapon.Spent > b.Nonweapon.Available && b.Nonweapon.Spent > was.Nonweapon.Spent {
-		return &domain.BudgetError{Field: FieldNonweapon, Spent: b.Nonweapon.Spent, Limit: b.Nonweapon.Available}
+	over := func(f ProficiencySlots) bool {
+		return f.Nonweapon.Spent > f.Nonweapon.Available && f.Nonweapon.Spent > was.Nonweapon.Spent
+	}
+	if over(b) {
+		// The languages are to blame when the picks alone, with the languages as before, pass.
+		field := FieldNonweapon
+		if picksOnly, _ := ProficiencyFigures(book, class, level, intelligence,
+			Spending{Picks: after.Picks, Languages: before.Languages}); !over(picksOnly) {
+			field = FieldLanguages
+		}
+		return &domain.BudgetError{Field: field, Spent: b.Nonweapon.Spent, Limit: b.Nonweapon.Available}
 	}
 	if b.Weapon.Spent > b.Weapon.Available && b.Weapon.Spent > was.Weapon.Spent {
 		return &domain.BudgetError{Field: FieldWeapon, Spent: b.Weapon.Spent, Limit: b.Weapon.Available}

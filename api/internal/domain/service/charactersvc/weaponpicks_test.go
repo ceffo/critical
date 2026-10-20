@@ -108,7 +108,7 @@ func TestBudget_Step10_WeaponPoolRefusedWhenOverAndGrowing(t *testing.T) {
 		{"an overspend increased", five, six, true, 6},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := charactersvc.PicksWithinBudget(book, "fighter", 1, 9, tc.before, tc.after)
+			err := charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: tc.before}, charactersvc.Spending{Picks: tc.after})
 			if !tc.refused {
 				require.NoError(t, err)
 				return
@@ -124,10 +124,10 @@ func TestBudget_Step10_WeaponPoolRefusedWhenOverAndGrowing(t *testing.T) {
 		// and a weapon overspend kept does not block a non-weapon save within budget.
 		before := charactersvc.Picks{Nonweapon: []charactersvc.Pick{p("tracking", 7)}, Weapon: five.Weapon}
 		after := charactersvc.Picks{Nonweapon: []charactersvc.Pick{p("tracking", 2)}, Weapon: five.Weapon}
-		require.NoError(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, before, after))
+		require.NoError(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: before}, charactersvc.Spending{Picks: after}))
 		after = charactersvc.Picks{Nonweapon: []charactersvc.Pick{p("tracking", 7)}, Weapon: six.Weapon}
 		var be *domain.BudgetError
-		require.ErrorAs(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, before, after), &be)
+		require.ErrorAs(t, charactersvc.PicksWithinBudget(book, "fighter", 1, 9, charactersvc.Spending{Picks: before}, charactersvc.Spending{Picks: after}), &be)
 		assert.Equal(t, "weapon", be.Field)
 	})
 }
@@ -140,7 +140,7 @@ func TestWarnings_Step11_WeaponPool(t *testing.T) {
 	warnings := func(types ...string) []charactersvc.Warning {
 		ps := weapons(types...)
 		ps.Nonweapon = []charactersvc.Pick{p("tumbling", 5)}
-		f, ok := charactersvc.ProficiencyFigures(book, "bard", 1, 9, ps)
+		f, ok := charactersvc.ProficiencyFigures(book, "bard", 1, 9, charactersvc.Spending{Picks: ps})
 		require.True(t, ok)
 		return charactersvc.SlotWarnings(f)
 	}
@@ -173,7 +173,7 @@ func TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel(t *testing.T) {
 		assert.Equal(t, charactersvc.WeaponPickFigures{Type: "other_melee", Slots: 1, Allowed: true}, got.Derived.Proficiencies.WeaponPicks[0])
 	}
 	t.Run("a stored type the class may not pick reads as not allowed", func(t *testing.T) {
-		f, ok := charactersvc.ProficiencyFigures(profBook(t), "mage", 1, 9, weapons("dagger", "long_sword"))
+		f, ok := charactersvc.ProficiencyFigures(profBook(t), "mage", 1, 9, charactersvc.Spending{Picks: weapons("dagger", "long_sword")})
 		require.True(t, ok)
 		assert.Equal(t, []charactersvc.WeaponPickFigures{
 			{Type: "dagger", Slots: 1, Allowed: true}, {Type: "long_sword", Slots: 1, Allowed: false},

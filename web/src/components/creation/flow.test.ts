@@ -182,6 +182,8 @@ describe("checksRequest (what the class and skills steps ask the server)", () =>
       cls: "thief",
       scores: { ...EMPTY_DRAFT.scores, dex: "8", str: "x", con: "" },
       skillPoints: { open_locks: "25", pick_pockets: "" },
+      race: "elf",
+      details: { ...EMPTY_DRAFT.details, languages: ["elvish", "orcish"] },
     };
     expect(checksRequest(options, draft, "1250")).toEqual({
       class: "thief",
@@ -189,6 +191,9 @@ describe("checksRequest (what the class and skills steps ask the server)", () =>
       xp: 1250,
       skillPoints: { open_locks: 25 },
       proficiencies: { nonweapon: [] },
+      // ADR 0037 step 6: the server counts the languages into the non-weapon pool.
+      race: "elf",
+      languages: ["elvish", "orcish"],
     });
   });
 

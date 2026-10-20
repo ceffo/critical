@@ -1668,7 +1668,6 @@
     },
     "warnings": {
       "alignment_not_allowed": "Cet alignement n’est pas permis à un personnage de classe {{className}} ; conservé tel qu’enregistré.",
-      "languages_over_limit": "{{n}} langues au-delà de la langue natale, {{limit}} pour cette Intelligence : le MJ décide.",
       "height_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MJ décide.",
       "weight_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MJ décide.",
       "age_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}} ans) : le MJ décide."
@@ -1704,7 +1703,9 @@
         "lb": "lb",
         "year": "ans"
       }
-    }
+    },
+    "languageSlots_one": "{{count}} emplacement de compétence",
+    "languageSlots_other": "{{count}} emplacements de compétence"
   },
   "xp": {
     "heading": "Expérience · niveau {{level}}",
@@ -2538,16 +2539,13 @@
       "alignmentRefused_one": "Un {{className}} ne peut pas être {{alignment}}. Choisissez l'alignement permis.",
       "alignmentRefused_other": "Un {{className}} ne peut pas être {{alignment}}. Choisissez un des {{count}} alignements permis.",
       "sexLead": "Fixe les fourchettes de taille et de poids.",
-      "languagesCount_one": "{{count}} en plus · {{limit}} permises",
-      "languagesCount_other": "{{count}} en plus · {{limit}} permises",
-      "languagesOver_one": "{{count}} langue en plus de la maternelle, l'Intelligence {{int}} en permet {{limit}}.",
-      "languagesOver_other": "{{count}} langues en plus de la maternelle, l'Intelligence {{int}} en permet {{limit}}.",
-      "onlyWarning": "Ce n'est qu'un avertissement : la création reste possible.",
       "build": "Mensurations",
       "native": "maternelle",
       "languagesLead": "En clair, les langues de la race ({{race}}) ; en grisé, les autres, si le MJ les permet.",
       "raceSex": "{{race}}, {{sex}}",
-      "range": "{{who}} : {{min}} – {{max}} · {{count}}d{{sides}}"
+      "range": "{{who}} : {{min}} – {{max}} · {{count}}d{{sides}}",
+      "languageSlots_one": "{{count}} emplacement · {{spent}} sur {{available}} au total",
+      "languageSlots_other": "{{count}} emplacements · {{spent}} sur {{available}} au total"
     },
     "review": {
       "name": "Récapitulatif",
@@ -2650,6 +2648,8 @@
     "cancelHint": "Fermer sans rien changer",
     "pool": "Emplacements : {{initial}} de départ + {{levels}} pour les niveaux (un tous les {{perLevels}}) + {{intelligence}} pour l’Intelligence = {{available}}",
     "spentLeft": "Dépensés {{spent}}, restants {{left}}",
+    "languagesLine_one": "Langues : {{count}} emplacement",
+    "languagesLine_other": "Langues : {{count}} emplacements",
     "tabLine": "Emplacements : {{spent}} sur {{available}}",
     "toSpend_one": "{{count}} emplacement à dépenser",
     "toSpend_other": "{{count}} emplacements à dépenser",

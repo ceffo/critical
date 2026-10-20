@@ -14,7 +14,6 @@ import {
   SEX_CODES,
   codeOrEmpty,
   hasAlignmentWarning,
-  languageWarning,
   rangeWarnings,
   toBody,
   toDraft,
@@ -132,7 +131,8 @@ function DetailsView({
   const { t, i18n } = useTranslation();
   const catalogue = useLanguageCatalogue();
   const languageName = useLanguageNames(catalogue.options);
-  const languagesOver = languageWarning(c);
+  // ADR 0037 step 6: the slots the languages beyond the native one and Common spend (the server's).
+  const languageSlots = c.derived.proficiencySlots?.nonWeapon.languages ?? 0;
   const none = (
     <span className="text-muted-foreground">{t("details.none")}</span>
   );
@@ -233,15 +233,12 @@ function DetailsView({
             : catalogue.loading
               ? "…"
               : c.languages.map(languageName).join(", ")}
-          {languagesOver && (
+          {languageSlots > 0 && (
             <span
               className="block text-label text-muted-foreground"
-              data-testid="details-languages-warning"
+              data-testid="details-language-slots"
             >
-              {t("details.warnings.languages_over_limit", {
-                n: languagesOver.count,
-                limit: languagesOver.limit,
-              })}
+              {t("details.languageSlots", { count: languageSlots })}
             </span>
           )}
         </Row>

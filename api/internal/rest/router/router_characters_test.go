@@ -278,7 +278,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		Details: charactersvc.Details{Alignment: "lawful_good", Languages: []string{}},
 		Warnings: []charactersvc.Warning{
 			{Code: "alignment_not_allowed", Field: "alignment"},
-			{Code: "languages_over_limit", Field: "languages", Count: &five, Limit: &zero},
+			{Code: "slots_over_budget", Field: "nonweapon", Pool: "nonweapon", Spent: &five, Available: &zero},
 		},
 	}, nil).Once()
 
@@ -292,8 +292,8 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 	assert.Equal(t, []any{"sex"}, body["missing"])
 	assert.Equal(t, []any{
 		map[string]any{"code": "alignment_not_allowed", "field": "alignment"},
-		map[string]any{"code": "languages_over_limit", "field": "languages", "count": float64(5), "limit": float64(0)},
-	}, body["warnings"], "the languages warning carries its figures, a limit of 0 included (ADR 0032 step 4.2)")
+		map[string]any{"code": "slots_over_budget", "field": "nonweapon", "pool": "nonweapon", "spent": float64(5), "available": float64(0)},
+	}, body["warnings"], "a slot warning carries its figures, an available of 0 included (ADR 0037 step 11)")
 	for _, gone := range []string{"level", "thac0Base", "saveParaPoison", "saveSpell"} {
 		assert.NotContains(t, body, gone)
 	}
@@ -329,6 +329,7 @@ func TestCharacters_ChecksSkillBudgetWireShape(t *testing.T) {
 		Proficiencies: charactersvc.Picks{
 			Nonweapon: []charactersvc.Pick{{ID: "tumbling", Slots: 2}}, Weapon: []charactersvc.WeaponPick{{Type: "dagger", Slots: 1}},
 		},
+		Race: "elf", Languages: []string{"elvish", "orcish"},
 	}).Return(charactersvc.DraftChecks{
 		UnmetMinimums: []charactersvc.ClassUnmet{},
 		SkillBudget: &charactersvc.SkillBudget{
@@ -336,18 +337,19 @@ func TestCharacters_ChecksSkillBudgetWireShape(t *testing.T) {
 			PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
 		},
 		ProficiencySlots: &charactersvc.ProficiencySlots{
-			Nonweapon:   ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 2, Available: 5, Spent: 2, Left: 3},
+			Nonweapon:   ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 2, Available: 5, Spent: 3, Left: 2, Languages: 1},
 			Weapon:      ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, Available: 2, Spent: 1, Left: 1},
 			Picks:       []charactersvc.PickFigures{{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 17, HasCheck: true}},
 			WeaponPicks: []charactersvc.WeaponPickFigures{{Type: "dagger", Slots: 1, Allowed: true}},
 		},
 	}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/checks", `{"class":"thief","scores":{},"xp":1250,"skillPoints":{"open_locks":40},
-		"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}],"weapon":[{"type":"dagger","slots":1}]}}`)
+		"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}],"weapon":[{"type":"dagger","slots":1}]},
+		"race":"elf","languages":["elvish","orcish"]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.JSONEq(t, `{"unmetMinimums":[],"skillBudget":{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,
 		"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45},
-		"proficiencySlots":{"nonWeapon":{"initial":3,"perLevels":4,"levelGained":0,"intelligence":2,"available":5,"spent":2,"left":3},
+		"proficiencySlots":{"nonWeapon":{"initial":3,"perLevels":4,"levelGained":0,"intelligence":2,"available":5,"spent":3,"left":2,"languages":1},
 		"weapon":{"initial":2,"perLevels":4,"levelGained":0,"available":2,"spent":1,"left":1},
 		"picks":[{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"target":17}],
 		"weaponPicks":[{"type":"dagger","slots":1,"allowed":true}]}}`, rec.Body.String())

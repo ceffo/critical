@@ -134,16 +134,6 @@ export function hasAlignmentWarning(c: {
   );
 }
 
-/** The figures of the server's `languages_over_limit` warning (ADR 0032 step 4.2), none without it. */
-export function languageWarning(c: {
-  warnings?: { code: string; count?: number; limit?: number }[];
-}): { count: number; limit: number } | undefined {
-  const w = (c.warnings ?? []).find((x) => x.code === "languages_over_limit");
-  return w && w.count !== undefined && w.limit !== undefined
-    ? { count: w.count, limit: w.limit }
-    : undefined;
-}
-
 /** A number outside its table range (ADR 0032 step 5.2): the server's verdict, stored units. */
 export interface RangeWarning {
   field: "height" | "weight" | "age";

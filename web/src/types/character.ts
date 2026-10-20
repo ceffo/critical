@@ -105,6 +105,9 @@ export interface NonweaponPool {
   available: number;
   spent: number;
   left: number;
+  /** The part of `spent` the languages beyond the native one and Common spend, one slot each (ADR
+   * 0037 step 6). */
+  languages: number;
 }
 
 /** One non-weapon pick (ADR 0037 steps 4 and 5): `cost` for the class, `extraSlots` beyond it (+1
@@ -260,14 +263,11 @@ export interface Character {
   /** The required details the character lacks ("alignment", "sex"): the card asks to pick them
    * (ADR 0032 step 8.2). */
   missing: ("alignment" | "sex")[];
-  /** Rules the stored character breaks without being refused (steps 4.2 and 8.4), worded by the
-   * web; `languages_over_limit` also carries how many additional languages it knows (`count`, the
-   * native one not counted) and its Intelligence allows (`limit`). */
+  /** Rules the stored character breaks without being refused (steps 5.2 and 8.4, ADR 0037 step
+   * 11), worded by the web. */
   warnings: {
     code: string;
     field: string;
-    count?: number;
-    limit?: number;
     /** `height_outside_range`, `weight_outside_range` and `age_outside_range` (step 5.2): the
      * stored value and the race's range, in centimetres, kilograms or years. */
     value?: number;
@@ -568,6 +568,10 @@ export interface DraftChecksRequest {
   skillPoints: Record<string, number>;
   /** The non-weapon picks so far (ADR 0037 step 14). */
   proficiencies?: PicksInput;
+  /** The race and the languages so far: the languages beyond the native one and Common spend the
+   * non-weapon pool (ADR 0037 step 6), counted by the server. */
+  race?: string;
+  languages?: string[];
 }
 
 /**

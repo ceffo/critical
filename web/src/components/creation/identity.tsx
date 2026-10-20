@@ -85,9 +85,9 @@ export function IdentityStep(props: StepProps) {
   const refused =
     draft.details.alignment !== "" &&
     !allowed.includes(draft.details.alignment);
-  const warnings = preview.data?.warnings ?? [];
-  const warningText = useWarningText();
-  const languagesOver = warnings.find((w) => w.code === "languages_over_limit");
+  // ADR 0037 step 6: the languages beyond the native one and Common spend the non-weapon pool the
+  // proficiency step showed; the preview's figures, worded.
+  const pool = preview.data?.derived.proficiencySlots?.nonWeapon;
   const alignmentKeys = radioKeys(
     ALIGNMENT_CODES,
     draft.details.alignment,
@@ -228,27 +228,29 @@ export function IdentityStep(props: StepProps) {
           className="col-span-2"
           testId="language-chips"
           right={
-            languagesOver && (
+            pool && (
               <span
-                className="flex items-center gap-1 text-body text-warning"
-                data-testid="languages-count"
+                className={cn(
+                  "flex items-center gap-1 text-body",
+                  pool.spent > pool.available
+                    ? "text-warning"
+                    : "text-ink-muted",
+                )}
+                data-testid="languages-slots"
               >
-                <Warning aria-hidden weight="bold" className="size-4" />
-                {t("creation.identity.languagesCount", {
-                  count: languagesOver.count,
-                  limit: languagesOver.limit,
+                {pool.spent > pool.available && (
+                  <Warning aria-hidden weight="bold" className="size-4" />
+                )}
+                {t("creation.identity.languageSlots", {
+                  count: pool.languages,
+                  spent: pool.spent,
+                  available: pool.available,
                 })}
               </span>
             )
           }
         >
           <LanguageChips {...props} />
-          {languagesOver && (
-            <Note kind="warning" testId="languages-warning">
-              {warningText(languagesOver, draft.scores.int)}{" "}
-              {t("creation.identity.onlyWarning")}
-            </Note>
-          )}
           <FieldError
             id="new-character-details.languages"
             text={errorFor("details.languages")}
@@ -580,7 +582,7 @@ function RollField({
             weight="bold"
             className="mt-0.5 size-3.5 shrink-0"
           />
-          {warningText(warning, draft.scores.int)}
+          {warningText(warning)}
         </span>
       )}
     </div>
@@ -667,9 +669,6 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
   });
   const details = body?.details;
   const skills = d?.bardSkills ?? d?.thiefSkills ?? [];
-  const languageWarned = preview.data?.warnings.some(
-    (w) => w.code === "languages_over_limit",
-  );
   const warnedField = (f: string) =>
     preview.data?.warnings.some((w) => w.field === f);
   const fromRoll =
@@ -805,13 +804,9 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
               ],
               [
                 t("details.fields.languages"),
-                preview.data ? (
-                  <span className={cn(languageWarned && "text-warning")}>
-                    {preview.data.languages.map(name).join(", ")}
-                  </span>
-                ) : (
-                  pending
-                ),
+                preview.data
+                  ? preview.data.languages.map(name).join(", ")
+                  : pending,
                 "review-languages",
               ],
               [

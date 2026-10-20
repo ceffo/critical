@@ -35,7 +35,7 @@ const pickedBody = `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"old_skill",
 
 const pickedAnswer = `{
 	"proficiencySlots":{
-		"nonWeapon":{"initial":3,"perLevels":4,"levelGained":3,"intelligence":4,"available":10,"spent":3,"left":7},
+		"nonWeapon":{"initial":3,"perLevels":4,"levelGained":3,"intelligence":4,"available":10,"spent":3,"left":7,"languages":0},
 		"weapon":{"initial":2,"perLevels":4,"levelGained":3,"available":5,"spent":2,"left":3},
 		"weaponPicks":[{"type":"long_sword","slots":1,"allowed":true},{"type":"dagger","slots":1,"allowed":true}],
 		"picks":[

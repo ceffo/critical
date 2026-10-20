@@ -408,6 +408,54 @@ func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *Mo
 	return _c
 }
 
+// LanguagesWithinBudget provides a mock function with given fields: ctx, id, languages
+func (_m *MockSVC) LanguagesWithinBudget(ctx context.Context, id int64, languages []string) error {
+	ret := _m.Called(ctx, id, languages)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LanguagesWithinBudget")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, []string) error); ok {
+		r0 = rf(ctx, id, languages)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSVC_LanguagesWithinBudget_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LanguagesWithinBudget'
+type MockSVC_LanguagesWithinBudget_Call struct {
+	*mock.Call
+}
+
+// LanguagesWithinBudget is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - languages []string
+func (_e *MockSVC_Expecter) LanguagesWithinBudget(ctx interface{}, id interface{}, languages interface{}) *MockSVC_LanguagesWithinBudget_Call {
+	return &MockSVC_LanguagesWithinBudget_Call{Call: _e.mock.On("LanguagesWithinBudget", ctx, id, languages)}
+}
+
+func (_c *MockSVC_LanguagesWithinBudget_Call) Run(run func(ctx context.Context, id int64, languages []string)) *MockSVC_LanguagesWithinBudget_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].([]string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_LanguagesWithinBudget_Call) Return(_a0 error) *MockSVC_LanguagesWithinBudget_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSVC_LanguagesWithinBudget_Call) RunAndReturn(run func(context.Context, int64, []string) error) *MockSVC_LanguagesWithinBudget_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function with given fields: ctx, owner
 func (_m *MockSVC) List(ctx context.Context, owner uuid.UUID) ([]charactersvc.Summary, error) {
 	ret := _m.Called(ctx, owner)

@@ -243,6 +243,8 @@ export function checksRequest(
     xp: x === null || Number.isNaN(x) ? null : x,
     skillPoints,
     proficiencies: { nonweapon: draft.picks },
+    race: draft.race,
+    languages: draft.details.languages,
   };
 }
 

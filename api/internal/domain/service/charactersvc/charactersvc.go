@@ -46,6 +46,12 @@ type SVC interface {
 	// budget as the save checks them (PicksWithinBudget, a
 	// *domain.BudgetError).
 	PreviewProficiencies(ctx context.Context, id int64, picks Picks) (*Character, error)
+	// LanguagesWithinBudget is ADR 0037 steps 6 and 10 on a languages edit
+	// of character id: refused (a *domain.BudgetError on field languages)
+	// when languages would leave the non-weapon pool over budget and
+	// spending more than the stored languages do. It reads within the ctx
+	// transaction and stores nothing.
+	LanguagesWithinBudget(ctx context.Context, id int64, languages []string) error
 	// List is the owner's characters they have not retired, in creation
 	// order (ADR 0029 steps 7.1 and 7.3).
 	List(ctx context.Context, owner uuid.UUID) ([]Summary, error)
@@ -213,6 +219,17 @@ func (s *service) PreviewProficiencies(ctx context.Context, id int64, picks Pick
 	return s.read(ctx, id, readDraft{picks: &picks})
 }
 
+func (s *service) LanguagesWithinBudget(ctx context.Context, id int64, languages []string) error {
+	c, err := s.GetCharacter(ctx, id)
+	if err != nil {
+		return err
+	}
+	after := s.languageSlots(c.Race, Details{Languages: languages})
+	return PicksWithinBudget(s.profs, c.Class, c.Derived.RealizedLevel, c.Int,
+		Spending{Picks: c.Proficiencies, Languages: c.LanguageSlots()},
+		Spending{Picks: c.Proficiencies, Languages: after})
+}
+
 // readDraft is what a preview reads in place of the stored values; nil
 // fields read the stored ones.
 type readDraft struct {
@@ -260,7 +277,9 @@ func (s *service) read(ctx context.Context, id int64, draft readDraft) (*Charact
 		}
 	}
 	if draft.picks != nil {
-		if err := PicksWithinBudget(s.profs, c.Class, c.Derived.RealizedLevel, c.Int, storedPicks, c.Proficiencies); err != nil {
+		langs := s.languageSlots(c.Race, c.Details)
+		if err := PicksWithinBudget(s.profs, c.Class, c.Derived.RealizedLevel, c.Int,
+			Spending{Picks: storedPicks, Languages: langs}, Spending{Picks: c.Proficiencies, Languages: langs}); err != nil {
 			return nil, err
 		}
 	}
@@ -273,27 +292,30 @@ func (s *service) read(ctx context.Context, id int64, draft readDraft) (*Charact
 // character stored before it was added included; the warnings follow what is
 // read (steps 4.2, 5.2 and 8.4).
 func (s *service) readWarnings(c *Character) {
-	// ADR 0037 steps 3 to 5 and 11: the non-weapon pool at the realized
-	// level, the sheet's Intelligence as stored (no effect applied).
+	native := s.languages.Native(c.Race)
+	c.Details = c.Details.Known(s.languages).WithNative(native)
+	// ADR 0037 steps 3 to 6 and 11: the non-weapon pool at the realized
+	// level, the sheet's Intelligence as stored (no effect applied), the
+	// languages beyond the native one and Common spending a slot each. They
+	// replace ADR 0032 step 4.2's languages_over_limit: Table 4's count is
+	// the pool's Intelligence term, counted once.
 	c.Derived.Proficiencies = nil
-	if f, ok := ProficiencyFigures(s.profs, c.Class, c.Derived.RealizedLevel, c.Int, c.Proficiencies); ok {
+	spend := Spending{Picks: c.Proficiencies, Languages: LanguageSlots(c.Details.Languages, native)}
+	if f, ok := ProficiencyFigures(s.profs, c.Class, c.Derived.RealizedLevel, c.Int, spend); ok {
 		f.SetTargets(c.Score)
 		c.Derived.Proficiencies = &f
 	}
-	native := s.languages.Native(c.Race)
-	c.Details = c.Details.Known(s.languages).WithNative(native)
 	c.Warnings = c.Details.Warnings(c.Class)
 	c.Warnings = append(c.Warnings, c.Details.RangeWarnings(c.Race)...)
-	// Without a catalogue (before format 8) the native language is unknown and
-	// would be counted as an additional one: no verdict is possible.
-	if native != "" {
-		if w, over := c.Details.LanguageWarning(c.Int, native); over {
-			c.Warnings = append(c.Warnings, w)
-		}
-	}
 	if c.Derived.Proficiencies != nil {
 		c.Warnings = append(c.Warnings, SlotWarnings(*c.Derived.Proficiencies)...)
 	}
+}
+
+// languageSlots is ADR 0037 step 6 on the details of a character of race: the slots its known
+// languages spend.
+func (s *service) languageSlots(race string, d Details) int {
+	return LanguageSlots(d.Known(s.languages).Languages, s.languages.Native(race))
 }
 
 // List names each character with its realized level (ADR 0030 step 3), its

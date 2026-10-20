@@ -2,6 +2,7 @@ package charactersvc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -300,8 +301,9 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	if err := SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return 0, err
 	}
-	// ADR 0037 steps 10 and 14: nor over its non-weapon slots.
-	if err := PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, Picks{}, c.Proficiencies); err != nil {
+	// ADR 0037 steps 6, 10 and 14: nor over its non-weapon slots, its
+	// languages included.
+	if err := s.creationWithinBudget(c); err != nil {
 		return 0, err
 	}
 	var id int64
@@ -316,6 +318,24 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	s.sessions.ForgetUser(owner)
 	return id, nil
+}
+
+// creationWithinBudget is ADR 0037 steps 6, 10 and 14 at creation: nothing was spent before, so
+// the picks and the languages may not overspend the non-weapon pool. A refusal on the languages
+// names the creation form's field, DetailsField + FieldLanguages.
+func (s *service) creationWithinBudget(c Character) error {
+	err := PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, Spending{}, s.creationSpending(c))
+	var be *domain.BudgetError
+	if errors.As(err, &be) && be.Field == FieldLanguages {
+		return &domain.BudgetError{Field: DetailsField + FieldLanguages, Spent: be.Spent, Limit: be.Limit}
+	}
+	return err
+}
+
+// creationSpending is what a new character spends from its pools: its picks and its languages
+// (ADR 0037 steps 6 and 14).
+func (s *service) creationSpending(c Character) Spending {
+	return Spending{Picks: c.Proficiencies, Languages: s.languageSlots(c.Race, c.Details)}
 }
 
 // started gives a new character the sheet and the realized level it is
@@ -348,7 +368,7 @@ func (s *service) Preview(_ context.Context, n NewCharacter) (*Character, error)
 	if err := SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return nil, err
 	}
-	if err := PicksWithinBudget(s.profs, c.Class, c.RealizedLevel, c.Int, Picks{}, c.Proficiencies); err != nil {
+	if err := s.creationWithinBudget(c); err != nil {
 		return nil, err
 	}
 	// Nothing is worn before the character exists (ADR 0033 step 14).
@@ -656,6 +676,11 @@ type DraftInput struct {
 	SkillPoints map[string]int
 	// Proficiencies are the non-weapon picks so far (ADR 0037 step 14).
 	Proficiencies Picks
+	// Race and Languages are the draft's race and languages so far: the
+	// languages beyond the race's native one and Common spend a non-weapon
+	// slot each (ADR 0037 step 6). Empty before the identity step.
+	Race      string
+	Languages []string
 }
 
 // SkillBudget is the skill point budget of a thief or a bard at the starting
@@ -706,7 +731,8 @@ func (s *service) CreationChecks(_ context.Context, in DraftInput) (DraftChecks,
 		out.SkillBudget = &b
 	}
 	if score, ok := in.Scores[string(AbilityInt)]; ok {
-		if f, ok := ProficiencyFigures(s.profs, in.Class, level, score, in.Proficiencies); ok {
+		spend := Spending{Picks: in.Proficiencies, Languages: s.languageSlots(in.Race, Details{Languages: in.Languages})}
+		if f, ok := ProficiencyFigures(s.profs, in.Class, level, score, spend); ok {
 			f.SetTargets(func(a Ability) (int, bool) { v, ok := in.Scores[string(a)]; return v, ok })
 			out.ProficiencySlots = &f
 		}

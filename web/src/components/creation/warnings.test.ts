@@ -28,8 +28,14 @@ describe("warnedFields", () => {
         spent: 6,
         available: 4,
       },
-      { code: "languages_over_limit", field: "languages", count: 5, limit: 4 },
+      {
+        code: "height_outside_range",
+        field: "height",
+        value: 250,
+        min: 150,
+        max: 190,
+      },
     ];
-    expect(warnedFields(inst.t, warnings, 0)).toEqual(["langues"]);
+    expect(warnedFields(inst.t, warnings, 0)).toEqual(["taille"]);
   });
 });

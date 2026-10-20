@@ -1668,7 +1668,6 @@
     },
     "warnings": {
       "alignment_not_allowed": "This alignment is not allowed for a {{className}}; kept as recorded.",
-      "languages_over_limit": "{{n}} languages beyond the native one, {{limit}} for this Intelligence: the DM decides.",
       "height_outside_range": "Outside the usual range for this race ({{min}} to {{max}}): the DM decides.",
       "weight_outside_range": "Outside the usual range for this race ({{min}} to {{max}}): the DM decides.",
       "age_outside_range": "Outside the usual range for this race ({{min}} to {{max}} years): the DM decides."
@@ -1704,7 +1703,9 @@
         "lb": "lb",
         "year": "years"
       }
-    }
+    },
+    "languageSlots_one": "{{count}} proficiency slot",
+    "languageSlots_other": "{{count}} proficiency slots"
   },
   "xp": {
     "heading": "Experience · level {{level}}",
@@ -2538,16 +2539,13 @@
       "alignmentRefused_one": "A {{className}} cannot be {{alignment}}. Pick the allowed alignment.",
       "alignmentRefused_other": "A {{className}} cannot be {{alignment}}. Pick one of the {{count}} allowed alignments.",
       "sexLead": "Sets the height and weight ranges.",
-      "languagesCount_one": "{{count}} extra · {{limit}} allowed",
-      "languagesCount_other": "{{count}} extra · {{limit}} allowed",
-      "languagesOver_one": "{{count}} language besides the native one; Intelligence {{int}} allows {{limit}}.",
-      "languagesOver_other": "{{count}} languages besides the native one; Intelligence {{int}} allows {{limit}}.",
-      "onlyWarning": "Only a warning: you can still create.",
       "build": "Build",
       "native": "native",
       "languagesLead": "Bright: the race's languages ({{race}}); dimmed: the others, if the DM allows them.",
       "raceSex": "{{race}}, {{sex}}",
-      "range": "{{who}}: {{min}} – {{max}} · {{count}}d{{sides}}"
+      "range": "{{who}}: {{min}} – {{max}} · {{count}}d{{sides}}",
+      "languageSlots_one": "{{count}} slot · {{spent}} of {{available}} in all",
+      "languageSlots_other": "{{count}} slots · {{spent}} of {{available}} in all"
     },
     "review": {
       "name": "Review",
@@ -2650,6 +2648,8 @@
     "cancelHint": "Close without changing anything",
     "pool": "Slots: {{initial}} initial + {{levels}} for the levels (one every {{perLevels}}) + {{intelligence}} for Intelligence = {{available}}",
     "spentLeft": "Spent {{spent}}, left {{left}}",
+    "languagesLine_one": "Languages: {{count}} slot",
+    "languagesLine_other": "Languages: {{count}} slots",
     "tabLine": "Slots: {{spent}} of {{available}}",
     "toSpend_one": "{{count}} slot to spend",
     "toSpend_other": "{{count}} slots to spend",

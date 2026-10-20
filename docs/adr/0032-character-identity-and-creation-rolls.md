@@ -4,7 +4,7 @@
 day; the details this ADR added beyond the triage were accepted by the supervisor in review). Steps 1, 2, 3 and 8 (for alignment, sex and the race detail) implemented 2026-10-18, see "As built"; step 5 (height, weight and age) and its part of step 8 implemented 2026-10-19, see "As built (step 5)"; steps 6 and 7 (the score and max HP rolls) implemented 2026-10-18, see "As built (steps 6 and 7)"; the rest is not implemented. Amends [ADR 0030](0030-classes-and-races.md) step 1 (and the sentence of
 step 7.5 on level 1 hit points) and [ADR 0029](0029-users-login-and-access.md) steps 7.2 and 7.3
 (character actions leave the cog menu; creation is a full-screen route). Step 4.2 superseded by
-[ADR 0037](0037-proficiencies.md) step 6 (languages as non-weapon picks), on implementation.
+[ADR 0037](0037-proficiencies.md) step 6 (languages as non-weapon picks), implemented 2026-10-20.
 
 ## Context
 
@@ -110,7 +110,8 @@ flowchart LR
       languages known. _(Superseded by [ADR 0037](0037-proficiencies.md) step 6, on
       implementation: each language beyond the native one and Common is a "Languages, Modern"
       pick of one non-weapon slot, Table 4's count becomes bonus slots, the warning is no longer
-      served, and a languages edit meets the slot budget of ADR 0037 step 10.)_
+      served, and a languages edit meets the slot budget of ADR 0037 step 10. As built
+      2026-10-20: see ADR 0037 step 6's as-built note.)_
    3. **Offered, not restricted**: the form offers the whole catalogue with the
       race's PHB list marked, since the book lets the DM allow any other language; the server accepts
       any catalogue language. Refusals, field `languages`: `unknown` (not in the catalogue),
@@ -290,6 +291,10 @@ roster and creation items land.
 - **Count.** PHB Table 4 is committed Go data (`ruletablesvc.LanguageLimit`), applied only by the server: the form computes and shows no
   verdict; the card shows the server's warning. `GET /api/character` `warnings` gains
   `{code: "languages_over_limit", field: "languages", count, limit}`, read again at every read, so an edited Intelligence warns.
+  _(Retired 2026-10-20 by ADR 0037 step 6: `languages_over_limit` is no longer served and its web wording is gone;
+  `LanguageLimit` is now only the non-weapon pool's Intelligence term, and the languages beyond the native one and Common
+  spend that pool, `derived.proficiencySlots.nonWeapon.languages`. A languages edit or a creation that newly overspends it
+  is refused, 409 `over_budget` on field `languages`.)_
 - **Refusals**, `languages` (`details.languages` at creation): `empty`, `unknown`, `duplicate`; no `too_many`/`too_long` any more.
 - **Options.** `GET /api/characters/options` gains `languages` (`{code, name}`) and `raceLanguages` (`{race, native, languages}`).
   The form and the card offer the whole catalogue, the race's list first. A previous release's options lack these: no picker.

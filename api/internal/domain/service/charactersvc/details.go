@@ -68,11 +68,6 @@ const (
 	FieldAge       = "age"
 )
 
-// CodeLanguagesOverLimit is the warning of a character that knows more
-// languages than PHB Table 4 gives its Intelligence (ADR 0032 step 4.2): never
-// a refusal, the DM decides.
-const CodeLanguagesOverLimit = "languages_over_limit"
-
 // LanguageBook is the language catalogue the details are checked against (ADR
 // 0032 step 4); ruletablesvc.Languages satisfies it, the empty one included.
 type LanguageBook interface {
@@ -160,14 +155,12 @@ func (d Details) Missing() []string {
 }
 
 // Warning is a rule the stored character breaks without being refused (ADR
-// 0032 steps 4.2, 5.2 and 8.4): a code and the field it is about, and for the
-// languages over the limit the figures the web words (Count known, Limit
-// allowed), for a number outside its range the value and the range; nil for
+// 0032 steps 5.2 and 8.4, ADR 0037 step 11): a code and the field it is
+// about, and for a number outside its range the value and the range; nil for
 // the others.
 type Warning struct {
-	Code         string
-	Field        string
-	Count, Limit *int
+	Code  string
+	Field string
 	// Value, Min and Max are an identity number outside its table range (ADR
 	// 0032 step 5.2), in stored units; nil for the other warnings.
 	Value, Min, Max *float64
@@ -201,24 +194,6 @@ func (d Details) WithNative(native string) Details {
 		d.Languages = append([]string{native}, d.Languages...)
 	}
 	return d
-}
-
-// LanguageWarning is ADR 0032 step 4.2: the additional languages (the native
-// one not counted) beyond PHB Table 4's number for the Intelligence score. ok
-// is false while within it. It is read again whenever the score or the
-// languages change, so an Intelligence edited below the languages known warns.
-func (d Details) LanguageWarning(intelligence int, native string) (w Warning, ok bool) {
-	count := 0
-	for _, l := range d.Languages {
-		if l != native {
-			count++
-		}
-	}
-	limit := ruletablesvc.LanguageLimit(intelligence)
-	if count <= limit {
-		return Warning{}, false
-	}
-	return Warning{Code: CodeLanguagesOverLimit, Field: FieldLanguages, Count: &count, Limit: &limit}, true
 }
 
 // RangeWarnings are ADR 0032 step 5.2: the height, weight and age of a

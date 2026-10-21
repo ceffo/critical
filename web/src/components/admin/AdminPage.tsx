@@ -28,6 +28,7 @@ import {
   invitePayload,
   mailHintKey,
 } from "@/lib/invites";
+import { userName } from "@/lib/userName";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/stores/session";
 import type {
@@ -420,13 +421,13 @@ function UsersCard({
                 data-testid="admin-user"
               >
                 <th scope="row" className={cn(td, "text-left font-normal")}>
-                  {u.displayName?.trim() ? (
+                  {userName(u) ? (
                     <>
                       <span
                         className="[overflow-wrap:anywhere]"
                         data-testid="admin-user-name"
                       >
-                        {u.displayName.trim()}
+                        {userName(u)}
                       </span>
                       {u.id === meId && (
                         <span className="text-muted-foreground">

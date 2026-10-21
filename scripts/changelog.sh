@@ -25,7 +25,7 @@
 #
 # The rule (ADR 0039 steps 2 and 3): only `feat` (and `feat!`) is a Feature and `fix` a Fix; every other
 # type and a non-conventional title is never listed. The title is cleaned in this order: drop the
-# `type(scope)!:` prefix, drop every trailing parenthesised group, trim the spaces, capitalise the first
+# `type(scope)!:` prefix, drop every trailing parenthesised group (and a ` by <author>` that directly follows one), trim the spaces, capitalise the first
 # letter. A title left empty is not listed. Prints no secret.
 set -euo pipefail
 
@@ -46,8 +46,15 @@ clean() {
     case "$type" in feat | fix) ;; *) return 0 ;; esac
     local group='^(.*[^[:space:]])?[[:space:]]*\([^()]*\)[[:space:]]*$'
     rest="${rest%"${rest##*[![:space:]]}"}"
-    while [[ "$rest" =~ $group ]] || [[ "$rest" =~ ^[[:space:]]*\([^()]*\)[[:space:]]*$ ]]; do
-        rest="${BASH_REMATCH[1]:-}"
+    local byline='^(.*\))[[:space:]]+by[[:space:]]+[^[:space:]]+$'
+    while :; do
+        if [[ "$rest" =~ $byline ]]; then
+            rest="${BASH_REMATCH[1]}" # " by <author>" right after a group
+        elif [[ "$rest" =~ $group ]] || [[ "$rest" =~ ^[[:space:]]*\([^()]*\)[[:space:]]*$ ]]; then
+            rest="${BASH_REMATCH[1]:-}"
+        else
+            break
+        fi
         rest="${rest%"${rest##*[![:space:]]}"}"
     done
     rest="${rest#"${rest%%[![:space:]]*}"}"
@@ -89,6 +96,8 @@ range_titles() {
 gen() {
     local commit tag prev="" build="${2:-}" tags
     if [ -n "$build" ] && ! [[ "v$build" =~ $semver ]]; then die "'$build' is not a version (MAJOR.MINOR.PATCH)"; fi
+    # A shallow clone (CI's fetch-depth: 1) cuts the ranges: a half list would look right, so refuse.
+    [ "$(git rev-parse --is-shallow-repository)" = false ] || die "shallow clone: fetch the full history (fetch-depth: 0)"
     commit="$(git rev-parse -q --verify "$1^{commit}")" || die "unknown commit '$1'"
     tags="$(git tag --merged "$commit" -l 'v*' | grep -E "$semver" | sort -V || true)"
     {

@@ -22,7 +22,8 @@ endpoint (CRI-128) and the panel (CRI-129) follow it.
 
 1. **The source and the method are deterministic.**
    1. The source is the conventional-commit title of each squash commit on main, per version tag, read from
-      the same range (`last tag..commit`) the release uses for its bump. No LLM, no network call and no
+      the same range (`last tag..commit`) the release uses for its bump. The ranges follow the tags' version order, not
+      ancestry, which is the same thing on a linear main (as for the release bump). No LLM, no network call and no
       hand-written text takes part.
    2. The same range gives the same changelog: the generator is a committed, rerunnable script with a
       table-driven test (the "No throwaway code" rule).
@@ -33,7 +34,8 @@ endpoint (CRI-128) and the panel (CRI-129) follow it.
 3. **A title is cleaned by a fixed rule**, in this order:
    1. Drop the `type(scope)!:` prefix, the scope included.
    2. Drop every trailing parenthesised group: the ticket `(CRI-n)`, the pull request `(#n)`, and any other
-      `(...)`. The author is not in a title and nothing of an author is kept.
+      `(...)`. A ` by <author>` that directly follows such a group is dropped too (and the groups before it);
+      a `by` anywhere else (`sort by name`) is text and stays.
    3. Trim the spaces, then capitalise the first letter. Nothing else is rewritten.
    4. Example: `feat(web): added twelve new themes (CRI-1234) by ceffo` gives the Feature
       `Added twelve new themes`.

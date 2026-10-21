@@ -26,6 +26,10 @@ clean_case() {
 }
 T=$'\t'
 clean_case 'feat(web): added twelve new themes (ABC-1234) (#456)' "feat${T}Added twelve new themes"
+clean_case 'feat(web): added twelve new themes (CRI-1234) by ceffo' "feat${T}Added twelve new themes"
+clean_case 'fix: a thing (ABC-1) by ceffo (#2)' "fix${T}A thing"
+clean_case 'fix: sort by name' "fix${T}Sort by name"
+clean_case 'fix: sort by name (ABC-1)' "fix${T}Sort by name"
 clean_case 'feat: a panel' "feat${T}A panel"
 clean_case 'feat(ui): scope dropped (#1)' "feat${T}Scope dropped"
 clean_case 'feat!: a breaking one (#2)' "feat${T}A breaking one"
@@ -118,6 +122,11 @@ git_q -C "$bare" init
 echo x > "$bare/f"; git_q -C "$bare" add -A; git_q -C "$bare" commit -m 'feat: untagged'
 [ "$(cd "$bare" && "$script" gen HEAD)" = '{"versions":[]}' ] || fail "gen without tags is not an empty list"
 [ "$(cd "$bare" && "$script" gen HEAD 0.0.1 | jq -c '[.versions[] | .version]')" = '["0.0.1"]' ] || fail "gen without tags, with a build version"
+
+# A shallow clone is refused loudly, never a half list.
+git clone -q --depth 1 "file://$repo" "$tmp/shallow" >/dev/null 2>&1
+out="$(cd "$tmp/shallow" && "$script" gen HEAD 0.3.0 2>&1)" && fail "gen accepted a shallow clone: $out"
+grep -q shallow <<<"$out" || fail "gen on a shallow clone: no clear message: $out"
 
 # Refused inputs.
 for args in "nope" "HEAD v1" "HEAD 1.2" "HEAD 01.2.3" "HEAD 1.2.3 x"; do

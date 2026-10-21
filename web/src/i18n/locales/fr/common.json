@@ -2706,6 +2706,8 @@
     "warned": "Avertissement de classe"
   },
   "build": {
+    "update": "Recharger",
+    "updateHint": "Une version plus récente est disponible : cliquez pour recharger la page",
     "env": {
       "dev": "dev",
       "staging": "préprod"

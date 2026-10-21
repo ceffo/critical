@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { readBuild } from "@/api/health";
+import { useNewVersion } from "@/components/shell/useNewVersion";
 import { badgeOf, type Build } from "@/lib/build";
 import { cn } from "@/lib/utils";
 
@@ -8,7 +9,8 @@ import { cn } from "@/lib/utils";
  * The running version, small and muted, placed by each screen inside a box it already has (the
  * dashboard's dice footer, a screen's header card, the login card's language row): it takes no
  * height of its own. A "dev" or "staging" pill comes before it; production shows the version alone.
- * Read from the server, never guessed from the host (ADR 0024 step 1.4).
+ * Read from the server, never guessed from the host (ADR 0024 step 1.4). When the server later reports
+ * a newer version, a button beside it reloads the page (it never reloads by itself).
  */
 export function VersionBadge({
   build,
@@ -28,6 +30,8 @@ export function VersionBadge({
       env: "unknown",
     },
   );
+  const running = (build === undefined ? read : build)?.version ?? null;
+  const newer = useNewVersion(running);
   if (!badge) return null;
   return (
     <div
@@ -51,6 +55,17 @@ export function VersionBadge({
       <span data-testid="version-text" className="tabular-nums">
         {badge.version}
       </span>
+      {newer && (
+        <button
+          type="button"
+          data-testid="new-version"
+          title={t("build.updateHint")}
+          onClick={() => window.location.reload()}
+          className="chip cursor-pointer px-1.5 font-semibold text-tint hover:bg-tint/10"
+        >
+          {t("build.update")}
+        </button>
+      )}
     </div>
   );
 }

@@ -8,18 +8,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
-	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // languagesOf parses the fixture's tables, equipment and languages as a
-// format-8 artifact, with mutate applied to the decoded race_languages table
+// current artifact, with mutate applied to the decoded race_languages table
 // and languages list first.
 func languagesOf(t *testing.T, mutate func(rows, languages *[]any)) (*ruletablesvc.Tables, error) {
 	t.Helper()
 	var rules map[string]any
-	require.NoError(t, json.Unmarshal(fixtureRuleTablesFormat8(t), &rules))
+	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &rules))
 	var languages []any
 	require.NoError(t, json.Unmarshal(fixtureLanguages(t), &languages))
 	rows := rules["race_languages"].([]any)
@@ -29,10 +28,10 @@ func languagesOf(t *testing.T, mutate func(rows, languages *[]any)) (*ruletables
 	require.NoError(t, err)
 	rawLanguages, err := json.Marshal(languages)
 	require.NoError(t, err)
-	return ruletablesadpt.Parse(catalogue.FormatLanguages, rawRules, fixtureEquipment(t), rawLanguages)
+	return ruletablesadpt.Parse(rawRules, fixtureEquipment(t), rawLanguages)
 }
 
-// ADR 0021 step 14.1 (ADR 0032 step 4): format 8 hands on the language
+// ADR 0021 step 14.1 (ADR 0032 step 4): the artifact hands on the language
 // catalogue and each race's PHB list, the race's own language marked. The
 // expected lists are read from PHB chapter 2, not derived from the artifact.
 func TestParse_Step14_1_ReadsFormat8Languages(t *testing.T) {
@@ -58,17 +57,17 @@ func TestParse_Step14_1_ReadsFormat8Languages(t *testing.T) {
 	assert.Equal(t, []string{"common"}, l.RaceList("human"), "a human has no list of the book beyond Common")
 }
 
-// ADR 0021 step 14.2: the languages and race_languages belong to format 8
-// only, and format 8 requires both.
-func TestParse_Step14_2_LanguagesBelongToFormat8(t *testing.T) {
-	_, err := ruletablesadpt.Parse(catalogue.FormatEquipment, fixtureRuleTablesFormat8(t), fixtureEquipment(t), nil)
-	require.ErrorContains(t, err, "format 7 carries no languages or race_languages")
-	_, err = ruletablesadpt.Parse(catalogue.FormatEquipment, fixtureRuleTables(t), fixtureEquipment(t), fixtureLanguages(t))
-	require.ErrorContains(t, err, "format 7 carries no languages or race_languages")
-	_, err = ruletablesadpt.Parse(catalogue.FormatLanguages, fixtureRuleTables(t), fixtureEquipment(t), fixtureLanguages(t))
-	require.ErrorContains(t, err, "format 8 needs the race_languages table")
-	_, err = ruletablesadpt.Parse(catalogue.FormatLanguages, fixtureRuleTablesFormat8(t), fixtureEquipment(t), nil)
-	require.ErrorContains(t, err, "format 8 needs the languages list")
+// ADR 0021 step 14.2: the languages and race_languages are both required.
+func TestParse_Step14_2_LanguagesAreRequired(t *testing.T) {
+	var rules map[string]any
+	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &rules))
+	delete(rules, "race_languages")
+	raw, err := json.Marshal(rules)
+	require.NoError(t, err)
+	_, err = ruletablesadpt.Parse(raw, fixtureEquipment(t), fixtureLanguages(t))
+	require.ErrorContains(t, err, "the artifact needs the race_languages table")
+	_, err = ruletablesadpt.Parse(fixtureRuleTables(t), fixtureEquipment(t), nil)
+	require.ErrorContains(t, err, "the artifact needs the languages list")
 }
 
 // ADR 0021 step 14.3: the loader refuses a racial list naming an unknown

@@ -563,8 +563,8 @@ is only ever appended to by play.
        from the artifact at every start (ADR 0033 step 23: a piece copies a row and keeps its code, so no
        row is ever referenced by game state). The catalogue import of spells (step 5) is unchanged.
     Tests: `Schema_Step13_Format7Equipment (retired by step 16)` (cataloguecheck), `Parse_Step13_1_ReadsFormat7 (retired by step 16)`,
-    `TestParse_Step13_2_EquipmentBelongsToFormat7` (catalogueadpt), `Parse_Step13_1_ReadsFormat7 (retired by step 16)Equipment`,
-    `TestParse_Step13_2_EquipmentBelongsToFormat7`, `TestParse_Step13_3_RefusesBrokenEquipment`
+    `Parse_Step13_2_EquipmentBelongsToFormat7 (retired by step 16)` (catalogueadpt), `Parse_Step13_1_ReadsFormat7 (retired by step 16)Equipment`,
+    `TestParse_Step13_2_EquipmentIsRequired`, `TestParse_Step13_3_RefusesBrokenEquipment`
     (ruletablesadpt), `Startup_Step13_RefusesBrokenEquipmentAndStillReadsFormat6 (retired by step 16)` (composition).
 14. **The languages, format 8** (**decided as built** 2026-10-18; [ADR 0032](0032-character-identity-and-creation-rolls.md) step 4).
     Format 8 is format 7 plus a top-level `languages` list and one `rule_tables` key; formats 3 to 7 carry neither (schema).
@@ -581,8 +581,8 @@ is only ever appended to by play.
        published artifact is format 8, a deployed app has no language catalogue and shows the stored codes as they are.
     5. **Nothing is imported into the database**; the data migration of stored free text uses committed spellings whose codes a test holds
        equal to the fixture's (`TestLanguageSpellings_Step8_1_AreCatalogueCodes`).
-    Tests: `Schema_Step14_Format8Languages (retired by step 16)` (cataloguecheck), `Parse_Step14_1_ReadsFormat8 (retired by step 16)`, `TestParse_Step14_2_LanguagesBelongToFormat8`
-    (catalogueadpt), `Parse_Step14_1_ReadsFormat8 (retired by step 16)Languages`, `TestParse_Step14_2_LanguagesBelongToFormat8`,
+    Tests: `Schema_Step14_Format8Languages (retired by step 16)` (cataloguecheck), `Parse_Step14_1_ReadsFormat8 (retired by step 16)`, `Parse_Step14_2_LanguagesBelongToFormat8 (retired by step 16)`
+    (catalogueadpt), `Parse_Step14_1_ReadsFormat8 (retired by step 16)Languages`, `TestParse_Step14_2_LanguagesAreRequired`,
     `TestParse_Step14_3_RefusesABrokenLanguageCatalogue` (ruletablesadpt), `Startup_Step14_RefusesAnUnknownLanguageAndStillReadsFormat7 (retired by step 16)` (composition).
 
 15. **Gameplay values are marked by the API when it serves a spell** (**decided as built** 2026-10-19; user, 2026-10-19: at serve time, not at import).
@@ -645,8 +645,8 @@ is only ever appended to by play.
        65 descriptions with tables would weigh several tens of kilobytes on a payload the creation flow reads on every open. The server reads the
        texts back from `localized_texts` **once after the import** (`DB.ProficiencyDescriptions`) and serves them from memory, as the spell catalogue
        is (a pop-up costs the database nothing, ADR 0024 step 2). (d) *Formats*: the domain lists format 9 only and the schema accepts format 9 only
-       (and requires everything the formats 3 to 8 added, so its per-format conditionals are gone); `ruletablesadpt.Parse` still has its per-format
-       branches, reachable only from its own tests, to be dropped by a later clean-up. (e) *Switch-over*: `just catalogue` takes the rulebooks
+       (and requires everything the formats 3 to 8 added, so its per-format conditionals are gone); `ruletablesadpt.Parse` takes no format: it reads the
+       current format's tables, each one required, and the per-format branches are gone (the refusal of an older artifact is `catalogueadpt`'s, step 5.2). (e) *Switch-over*: `just catalogue` takes the rulebooks
        clone's `dist/catalogue.json` at `CATALOGUE_REF` (default the checked-out branch), so nothing in this repo is pinned: once the
        builder's format 9 artifact is on the rulebooks default branch, `just catalogue` then `just dev` import the descriptions (the recorded
        format and version differ, so the import runs). A format-8 `.catalogue/catalogue.json` is refused at start with the `just catalogue` advice.
@@ -885,7 +885,7 @@ injection on the parser, the rules and the schema); in the API, `catalogue.Forma
 schema's `Schema_Step10_Format4ClassTables (retired by step 16)`; 10.2 the schema test and
 `Parse_Step9_2_TablesBelongToFormat3Only (retired by step 16)`'s format-4 cases; 10.3
 `TestParse_Step10_3_RejectsAMissingOrBrokenClassTable` and
-`TestStartup_Step10_3_RefusesAMissingOrGappedClassTable`; 10.4 `TestParse_Step10_4_Format3HasNoClassTables`
+`TestStartup_Step10_3_RefusesAMissingOrGappedClassTable`; 10.4 `Parse_Step10_4_Format3HasNoClassTables (retired by step 16)`
 and the startup test's "format 3 still starts"; 10.5
 `TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables`.
 
@@ -899,5 +899,5 @@ image, Kelsen the half-elf bard unlimited, fault injection on the parser and the
 `TestParse_Step11_1_ReadsTheLevelLimits` (every cell against DMG p.15) and the schema's
 `Schema_Step11_Format5LevelLimits (retired by step 16)`; 11.2 the schema test and `Parse_Step9_2_TablesBelongToFormat3Only (retired by step 16)`'s
 format-5 cases; 11.3 `TestParse_Step11_3_RejectsMissingOrBrokenLevelLimits` and
-`TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits`; 11.4 `TestParse_Step11_4_Format4HasNoLevelLimits` and
+`TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits`; 11.4 `Parse_Step11_4_Format4HasNoLevelLimits (retired by step 16)` and
 the startup test's "format 4 still starts"; 11.5 `TestRealCatalogue_Step11_5_TheFixtureCarriesTheRealArtifactsLevelLimits`.

@@ -27,11 +27,12 @@ func TestNotifier_Step2_5_WordsTheMailsPerLanguage(t *testing.T) {
 		lang    authsvc.Language
 		subject string
 		body    string
+		button  string
 	}{
-		{authsvc.NoticeInvite, "en", "ann@example.com invited you to Critical Hit", "sign in with the Google account"},
-		{authsvc.NoticeInvite, "fr", "ann@example.com vous invite sur Critical Hit", "connectez-vous avec le compte Google"},
-		{authsvc.NoticeAccepted, "en", "cid@example.com accepted your invitation to Critical Hit", "signed in to Critical Hit for the first time"},
-		{authsvc.NoticeAccepted, "fr", "cid@example.com a accepté votre invitation sur Critical Hit", "pour la première fois"},
+		{authsvc.NoticeInvite, "en", "ann@example.com invited you to Critical Hit", "Sign in with the Google account", "Open Critical Hit"},
+		{authsvc.NoticeInvite, "fr", "ann@example.com vous invite sur Critical Hit", "Connectez-vous avec le compte Google", "Ouvrir Critical Hit"},
+		{authsvc.NoticeAccepted, "en", "cid@example.com accepted your invitation to Critical Hit", "signed in to Critical Hit for the first time", "Open Critical Hit"},
+		{authsvc.NoticeAccepted, "fr", "cid@example.com a accepté votre invitation sur Critical Hit", "pour la première fois", "Ouvrir Critical Hit"},
 	} {
 		t.Run(string(tc.kind)+" "+string(tc.lang), func(t *testing.T) {
 			rec := &mailadpt.Recorder{}
@@ -50,6 +51,19 @@ func TestNotifier_Step2_5_WordsTheMailsPerLanguage(t *testing.T) {
 				assert.Contains(t, body, "cid@example.com")
 			}
 			assert.Contains(t, sent[0].TextBody, tc.body)
+			assert.Contains(t, sent[0].HTMLBody, tc.body)
+			// The branded layout: the title header, the button linking to the
+			// application's address, inline styles only, nothing remote.
+			html := sent[0].HTMLBody
+			assert.Contains(t, html, "Critical Hit</td>")
+			assert.Contains(t, html, `<a href="https://critical-hit.fly.dev" style=`)
+			assert.Contains(t, html, ">"+tc.button+"</a>")
+			assert.Contains(t, sent[0].TextBody, tc.button)
+			assert.NotContains(t, html, "<img")
+			assert.NotContains(t, html, "<style")
+			assert.NotContains(t, html, "<link")
+			assert.NotContains(t, html, "src=")
+			assert.NotContains(t, html, "url(")
 		})
 	}
 }

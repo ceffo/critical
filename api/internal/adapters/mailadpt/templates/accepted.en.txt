@@ -2,4 +2,4 @@ Hello,
 
 {{.Invitee}} accepted your invitation and signed in to Critical Hit for the first time.
 
-{{.AppURL}}
+Open Critical Hit: {{.AppURL}}

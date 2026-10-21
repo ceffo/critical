@@ -45,7 +45,7 @@ fetch dependabot dependabot/alerts '{n: .number, name: (.security_vulnerability.
 fetch code-scanning code-scanning/alerts '{n: .number, name: (.rule.id // "unknown"),
   loc: ((.most_recent_instance.location.path // "unknown") + (if .most_recent_instance.location.start_line then ":" + (.most_recent_instance.location.start_line|tostring) else "" end)),
   sev: (.rule.security_severity_level // .rule.severity // "unknown"), url: .html_url,
-  what: (.rule.description // "") + (if .most_recent_instance.message.text then " (" + .most_recent_instance.message.text + ")" else "" end), extra: ""}'
+  what: ((.rule.description // "") + (if .most_recent_instance.message.text then " (" + .most_recent_instance.message.text + ")" else "" end)), extra: ""}'
 fetch secret-scanning secret-scanning/alerts '{n: .number, name: (.secret_type_display_name // .secret_type // "unknown"),
   loc: "unknown", sev: "secret", url: .html_url, what: "A secret was detected. Its value is deliberately not copied here: revoke it and read it in GitHub.", extra: ""}'
 

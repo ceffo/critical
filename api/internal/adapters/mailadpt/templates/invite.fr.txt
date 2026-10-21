@@ -2,6 +2,6 @@ Bonjour,
 
 {{.Inviter}} vous invite sur Critical Hit, une feuille de personnage pour AD&D 2e édition.
 
-Connectez-vous avec le compte Google de cette adresse ({{.Invitee}}).
+Connectez-vous avec le compte Google de cette adresse ({{.InviteeEmail}}).
 
 Ouvrir Critical Hit : {{.AppURL}}

@@ -2,6 +2,6 @@ Hello,
 
 {{.Inviter}} invited you to Critical Hit, a character sheet for AD&D 2nd edition.
 
-Sign in with the Google account of this address ({{.Invitee}}).
+Sign in with the Google account of this address ({{.InviteeEmail}}).
 
 Open Critical Hit: {{.AppURL}}

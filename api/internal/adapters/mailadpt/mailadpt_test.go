@@ -1,6 +1,7 @@
 package mailadpt_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -164,4 +166,128 @@ func TestRecorder(t *testing.T) {
 	r := &mailadpt.Recorder{Err: errors.New("boom")}
 	require.Error(t, r.Send(context.Background(), mailadpt.Message{To: "a"}))
 	assert.Len(t, r.Sent(), 1)
+}
+
+// Step 2.5: the bodies name a person "Name (email)" when the name is known,
+// the email alone otherwise; the subject uses the name alone. The invite's
+// sender name is the inviter's; the accepted notice's is empty (the app's).
+func TestNotifier_Step2_5_NamesThePeople(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		notice       authsvc.Notice
+		subject      string
+		inBody       string
+		senderName   string
+		notInBodyOld string
+	}{
+		{
+			"invite with name",
+			authsvc.Notice{Kind: authsvc.NoticeInvite, Language: "en", InviterName: "Moncef", InviterEmail: "m@example.com", InviteeEmail: "c@example.com"},
+			"Moncef invited you to Critical Hit", "Moncef (m@example.com) invited you", "Moncef", "",
+		},
+		{
+			"invite without name",
+			authsvc.Notice{Kind: authsvc.NoticeInvite, Language: "fr", InviterEmail: "m@example.com", InviteeEmail: "c@example.com"},
+			"m@example.com vous invite sur Critical Hit", "m@example.com vous invite", "", "()",
+		},
+		{
+			"accepted with name",
+			authsvc.Notice{Kind: authsvc.NoticeAccepted, Language: "fr", InviterName: "Moncef", InviterEmail: "m@example.com", InviteeName: "Cid", InviteeEmail: "c@example.com"},
+			"Cid a accepté votre invitation sur Critical Hit", "Cid (c@example.com) a accepté", "", "",
+		},
+		{
+			"accepted without name",
+			authsvc.Notice{Kind: authsvc.NoticeAccepted, Language: "fr", InviterEmail: "m@example.com", InviteeEmail: "c@example.com"},
+			"c@example.com a accepté votre invitation sur Critical Hit", "c@example.com a accepté", "", "()",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := &mailadpt.Recorder{}
+			n, err := mailadpt.New(rec, "https://critical-hit.fly.dev")
+			require.NoError(t, err)
+			tc.notice.To = "to@example.com"
+			require.NoError(t, n.Notify(context.Background(), tc.notice))
+			sent := rec.Sent()[0]
+			assert.Equal(t, tc.subject, sent.Subject)
+			assert.Equal(t, tc.senderName, sent.SenderName)
+			assert.Contains(t, sent.TextBody, tc.inBody)
+			assert.Contains(t, sent.HTMLBody, tc.inBody)
+			if tc.notInBodyOld != "" {
+				assert.NotContains(t, sent.TextBody, tc.notInBodyOld)
+			}
+		})
+	}
+}
+
+// Step 2.5: a hostile name cannot break a header (no control character or
+// newline survives, length is capped) nor the HTML body (escaped).
+func TestNotifier_Step2_5_HostileNameIsMadeSafe(t *testing.T) {
+	hostile := "Eve\r\nBcc: x@evil.test\x00<script>alert(1)</script>\u202e" + strings.Repeat("é", 200)
+	rec := &mailadpt.Recorder{}
+	n, err := mailadpt.New(rec, "https://critical-hit.fly.dev")
+	require.NoError(t, err)
+	require.NoError(t, n.Notify(context.Background(), authsvc.Notice{
+		Kind: authsvc.NoticeInvite, To: "x@example.com", Language: "en",
+		InviterName: hostile, InviterEmail: "e@example.com", InviteeEmail: "x@example.com",
+	}))
+	sent := rec.Sent()[0]
+	for _, field := range []string{sent.SenderName, sent.Subject} {
+		assert.NotContains(t, field, "\n")
+		assert.NotContains(t, field, "\r")
+		assert.NotContains(t, field, "\x00")
+		assert.NotContains(t, field, "\u202e")
+	}
+	assert.LessOrEqual(t, utf8.RuneCountInString(sent.SenderName), mailadpt.MaxNameRunes)
+	assert.NotContains(t, sent.HTMLBody, "<script>")
+	assert.Contains(t, sent.HTMLBody, "&lt;script&gt;")
+}
+
+func TestCleanName(t *testing.T) {
+	for in, want := range map[string]string{
+		"  Ann   Lee ":          "Ann Lee",
+		"a\nb\tc":               "a b c",
+		"":                      "",
+		"\x07\x1b":              "",
+		strings.Repeat("x", 80): strings.Repeat("x", mailadpt.MaxNameRunes),
+	} {
+		assert.Equal(t, want, mailadpt.CleanName(in))
+	}
+}
+
+// Step 2.5: the sender name is "<person> via <app>"; the person alone without
+// an app name; the app alone without a person.
+func TestBrevo_Step2_5_SenderName(t *testing.T) {
+	for _, tc := range []struct{ person, app, want string }{
+		{"Moncef", "Critical Hit", "Moncef via Critical Hit"},
+		{"", "Critical Hit", "Critical Hit"},
+		{"Moncef", "", "Moncef"},
+		{"", "", ""},
+		{"Mon\ncef", "Critical Hit", "Mon cef via Critical Hit"},
+	} {
+		var got map[string]any
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			b, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(b, &got)
+			w.WriteHeader(http.StatusCreated)
+		}))
+		b, err := mailadpt.NewBrevo(mailadpt.BrevoConfig{APIKey: "k", From: "hit@example.com", FromName: tc.app, Endpoint: srv.URL})
+		require.NoError(t, err)
+		require.NoError(t, b.Send(context.Background(), mailadpt.Message{To: "c@example.com", Subject: "S", TextBody: "T", SenderName: tc.person}))
+		srv.Close()
+		sender := got["sender"].(map[string]any)
+		assert.Equal(t, "hit@example.com", sender["email"], "the address never changes")
+		if tc.want == "" {
+			assert.NotContains(t, sender, "name")
+		} else {
+			assert.Equal(t, tc.want, sender["name"])
+		}
+	}
+}
+
+// The dev log mailer prints the sender name.
+func TestLogMailer_PrintsTheSenderName(t *testing.T) {
+	var buf bytes.Buffer
+	m := mailadpt.LogMailer{Log: slog.New(slog.NewTextHandler(&buf, nil))}
+	require.NoError(t, m.Send(context.Background(), mailadpt.Message{To: "c@example.com", Subject: "S", TextBody: "T", SenderName: "Moncef"}))
+	assert.Contains(t, buf.String(), "sender_name=Moncef")
 }

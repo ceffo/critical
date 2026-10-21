@@ -69,7 +69,7 @@ type brevoRequest struct {
 // carrying the status and Brevo's own message, never the key.
 func (b *Brevo) Send(ctx context.Context, m Message) error {
 	body, err := json.Marshal(brevoRequest{
-		Sender: brevoAddress{Name: b.cfg.FromName, Email: b.cfg.From}, To: []brevoAddress{{Email: m.To}},
+		Sender: brevoAddress{Name: SenderDisplayName(m.SenderName, b.cfg.FromName), Email: b.cfg.From}, To: []brevoAddress{{Email: m.To}},
 		Subject: m.Subject, TextContent: m.TextBody, HTMLContent: m.HTMLBody,
 	})
 	if err != nil {
@@ -98,4 +98,18 @@ func (b *Brevo) Send(ctx context.Context, m Message) error {
 	}
 	_ = json.Unmarshal(raw, &e)
 	return fmt.Errorf("%w: status %d %s %s", ErrBrevo, resp.StatusCode, e.Code, e.Message)
+}
+
+// SenderDisplayName is the sender name a mail shows: "<person> via <app>",
+// the person alone when the app has no name, the app's name alone when there
+// is no person. The address is never touched.
+func SenderDisplayName(person, app string) string {
+	person = CleanName(person)
+	switch {
+	case person == "":
+		return app
+	case app == "":
+		return person
+	}
+	return person + " via " + app
 }

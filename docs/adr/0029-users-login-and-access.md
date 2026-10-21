@@ -107,11 +107,11 @@ one item and gets a test that fails on the old code, per the house rule.
       created then, with the role `player`.
    5. **The mails (user, 2026-10-21).** Three triggers: an invite is created (to the invitee), an admin
       **resends** a pending invite (step 2.7; the same mail), and the invite is **accepted** (to the
-      inviter, step 2.9). Cancelling sends nothing. A mail carries only the inviter's email (amended
-      2026-10-21 by step 3.8: users now have a display name, but the mails keep the email until their own
-      item), the invitee's address and the application's address
+      inviter, step 2.9). Cancelling sends nothing. A mail names its people: the inviter's and, in the accepted notice, the invitee's display name
+      (step 3.8) with their email, written "Name (email)" in the bodies (the email alone when the name is
+      unknown; subjects use the name alone) (amended 2026-10-21, mails name the people), plus the application's address
       (`CRITICAL_PUBLIC_URL`): no token, no secret. The domain says which mail, to whom, in which
-      language (`authsvc.Notice`, structured data, no wording); the **mail adapter** (`mailadpt`) words
+      language (`authsvc.Notice`, structured data, names included, no wording); the **mail adapter** (`mailadpt`) words
       it from template files embedded in the binary, one set per language (`en`, `fr`: subject, text,
       HTML), and sends it through a `Mailer` (Brevo's HTTPS API; the server log in a local run; a
       recorder in tests). **Email wording is the one place the backend composes text for a person**:
@@ -119,7 +119,8 @@ one item and gets a test that fails on the old code, per the house rule.
       and it is not a `localized_texts` row (ADR 0023) nor a Go `Sprintf` in the domain (the
       `forbidigo` rule on `internal/domain` still holds: the wording lives in the adapter's templates).
       Tests: `mailadpt` `TestNotifier_Step2_5_WordsTheMailsPerLanguage`,
-      `TestNotifier_Step2_5_HTMLIsEscaped`; `authsvc` `TestCreateInvite_Step2_5_MailsTheInvitee`.
+      `TestNotifier_Step2_5_HTMLIsEscaped`, `TestNotifier_Step2_5_NamesThePeople`,
+      `TestNotifier_Step2_5_HostileNameIsMadeSafe`; `authsvc` `TestCreateInvite_Step2_5_MailsTheInvitee`.
    6. **Language.** The admin picks `en` or `fr` per invite: one `language` column holding a language
       code (existing invites: `en`; a code, not a column per language, ADR 0023). `POST
       /api/admin/invites {email, language?}`: absent means `en` (the admin screen of earlier releases
@@ -138,15 +139,20 @@ one item and gets a test that fails on the old code, per the house rule.
    9. **Accepted.** The first login that consumes an invite (step 2.4) mails the inviter once, **always
       in French** whatever language the invite was sent in (user ruling, 2026-10-21; the inviter's own
       language is not stored), after the login committed and in
-      the background: a failing or slow mail never blocks the login. Tests: `authsvc`
+      the background: a failing or slow mail never blocks the login. It names the invitee "Name (email)". Tests: `authsvc`
       `TestFinishLogin_Step2_9_TellsTheInviter`.
-   10. **Settings.** `CRITICAL_BREVO_API_KEY` and `CRITICAL_MAIL_FROM` (the verified sender) go
+   10. **Settings and sender.** `CRITICAL_BREVO_API_KEY` and `CRITICAL_MAIL_FROM` (the verified sender) go
       together, `CRITICAL_MAIL_FROM_NAME` is optional; none set means no mail is sent and the server
-      still starts (a half-set pair stops the start). With `CRITICAL_ENV=dev` the mail is printed in
+      still starts (a half-set pair stops the start). The sender name of an invite or a resend is
+      "<inviter's name> via <`CRITICAL_MAIL_FROM_NAME`>" (the inviter's name alone when no name is
+      configured, the configured name alone when the inviter has none); the sender address is always the
+      verified one. The accepted notice keeps the configured name (the invitee is not the sender). A name
+      is made safe before it is used: control and format characters become spaces, it is cut at 64
+      characters, and the HTML body escapes it. No new setting. With `CRITICAL_ENV=dev` the mail is printed in
       the server log and never sent, whatever is set: local runs, tests and e2e send no real email.
       On the hosted apps they are fly secrets (`docs/deploy.md`, "Invite emails"). Tests: `api`
       `TestConfigValidate_Step2_10_MailSettingsAreOptional`, `TestConfigNotifier_Step2_10`;
-      `mailadpt` `TestBrevo_Step2_10_RequestShape`, `TestBrevo_Step2_10_ErrorMapping`.
+      `mailadpt` `TestBrevo_Step2_10_RequestShape`, `TestBrevo_Step2_10_ErrorMapping`, `TestBrevo_Step2_5_SenderName`.
 3. **Login: Google OpenID Connect.** Google is the only identity provider (Facebook was dropped,
    2026-10-17).
    1. The server runs the **authorisation-code flow with PKCE (S256) and a `state`** parameter: the

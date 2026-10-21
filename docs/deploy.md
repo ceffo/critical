@@ -557,7 +557,7 @@ static egress IP costs money, and the budget is $0. The API key is the protectio
 Brevo's free tier sends a limited number of mails a day; an invite beyond it is a `failed` outcome, and the
 admin copies the address by hand.
 
-**Privacy.** An invitee's email address, and the inviter's, go to Brevo, which sends the mail as a data
+**Privacy.** An invitee's email address, and the inviter's email address and display name (the invitee's name too, in the accepted notice), go to Brevo, which sends the mail as a data
 processor on our behalf. Nothing else leaves the server: no character data, no token. Brevo keeps the usual
 delivery logs of its service.
 

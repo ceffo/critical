@@ -78,11 +78,13 @@ type Notice struct {
 	// To is the recipient: the invitee, or for NoticeAccepted the inviter.
 	To       string
 	Language Language
-	// InviterEmail is who invited. It is the name the mails give: users have
-	// no display name.
-	InviterEmail string
-	// InviteeEmail is the invited address.
-	InviteeEmail string
+	// InviterEmail is who invited, InviterName their display name (empty
+	// when unknown). The mails name the inviter by both.
+	InviterEmail, InviterName string
+	// InviteeEmail is the invited address, InviteeName the display name of
+	// the invitee (empty when unknown: only the accepted notice has one, as
+	// the invitee has just logged in).
+	InviteeEmail, InviteeName string
 }
 
 // ErrMailNotConfigured is what a notifier without mail settings returns: the
@@ -164,6 +166,6 @@ func (s *service) sendInvite(ctx context.Context, inv Invite) MailOutcome {
 	}
 	return s.send(ctx, Notice{
 		Kind: NoticeInvite, To: inv.Email, Language: inv.Language,
-		InviterEmail: inviter.Email, InviteeEmail: inv.Email,
+		InviterEmail: inviter.Email, InviterName: inviter.DisplayName, InviteeEmail: inv.Email,
 	})
 }

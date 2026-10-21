@@ -84,7 +84,7 @@ func (s *service) FinishLogin(ctx context.Context, in FinishLogin) (*NewSession,
 		if err := s.dal.AcceptInvite(ctx, inv.ID, u.ID, *u.LastLogin); err != nil {
 			return err
 		}
-		accepted = s.acceptedNotice(ctx, inv)
+		accepted = s.acceptedNotice(ctx, inv, u.DisplayName)
 		return nil
 	})
 	if err != nil {
@@ -109,7 +109,7 @@ func keepName(stored, claim string) string {
 // acceptedNotice is the mail to the inviter of inv (step 2.9), nil when the
 // inviter cannot be read: the login does not depend on it. It is always in
 // French, whatever the invite's language (the inviter's own is not stored).
-func (s *service) acceptedNotice(ctx context.Context, inv *Invite) *Notice {
+func (s *service) acceptedNotice(ctx context.Context, inv *Invite, inviteeName string) *Notice {
 	if s.notifier == nil {
 		return nil
 	}
@@ -119,7 +119,7 @@ func (s *service) acceptedNotice(ctx context.Context, inv *Invite) *Notice {
 	}
 	return &Notice{
 		Kind: NoticeAccepted, To: inviter.Email, Language: LanguageFrench,
-		InviterEmail: inviter.Email, InviteeEmail: inv.Email,
+		InviterEmail: inviter.Email, InviterName: inviter.DisplayName, InviteeEmail: inv.Email, InviteeName: inviteeName,
 	}
 }
 

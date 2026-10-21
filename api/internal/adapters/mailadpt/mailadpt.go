@@ -13,7 +13,9 @@ import (
 	"fmt"
 	htmltemplate "html/template"
 	"io/fs"
+	"strings"
 	texttemplate "text/template"
+	"unicode"
 
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 )
@@ -24,6 +26,11 @@ type Message struct {
 	Subject  string
 	TextBody string
 	HTMLBody string
+	// SenderName is the person the mail comes from, when there is one (the
+	// inviter of an invite): the Mailer shows it before the application's own
+	// name. Empty means the configured sender name alone. It is already
+	// sanitised by the Notifier; a Mailer cleans it again for its own medium.
+	SenderName string
 }
 
 // Mailer sends a finished Message.
@@ -34,13 +41,49 @@ type Mailer interface {
 //go:embed templates
 var templateFiles embed.FS
 
-// templateData is what the templates read. The mails carry only the inviter's
-// name, the invitee's address and the application's address: no token, no
-// secret.
+// templateData is what the templates read. The mails carry only the people's
+// names and addresses and the application's address: no token, no secret.
+// Inviter and Invitee are "Name (email)" when the name is known, else the
+// email; the Short forms are the name alone when known (subjects), else the
+// email. Every field is plain text: the HTML template escapes it.
 type templateData struct {
-	Inviter string
-	Invitee string
-	AppURL  string
+	Inviter      string
+	InviterShort string
+	Invitee      string
+	InviteeShort string
+	InviteeEmail string
+	AppURL       string
+}
+
+// MaxNameRunes caps a person's name in a mail: a longer name is cut.
+const MaxNameRunes = 64
+
+// CleanName makes a person's name safe for a mail header and a body: every
+// control character (newlines included) and Unicode format character (such
+// as bidi overrides) becomes a space, runs of spaces collapse, the result is
+// trimmed and cut to MaxNameRunes. HTML is escaped later, by the HTML
+// template.
+func CleanName(name string) string {
+	mapped := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) || r == '\u2028' || r == '\u2029' {
+			return ' '
+		}
+		return r
+	}, name)
+	clean := strings.Join(strings.Fields(mapped), " ")
+	if r := []rune(clean); len(r) > MaxNameRunes {
+		clean = strings.TrimSpace(string(r[:MaxNameRunes]))
+	}
+	return clean
+}
+
+// person gives "Name (email)" and the short form for a person.
+func person(name, email string) (label, short string) {
+	name = CleanName(name)
+	if name == "" {
+		return email, email
+	}
+	return name + " (" + email + ")", name
 }
 
 type kindLanguage struct {
@@ -119,7 +162,15 @@ func (n *Notifier) Notify(ctx context.Context, notice authsvc.Notice) error {
 	if !ok {
 		return fmt.Errorf("mailadpt: no template for %s in %q", notice.Kind, notice.Language)
 	}
-	data := templateData{Inviter: notice.InviterEmail, Invitee: notice.InviteeEmail, AppURL: n.appURL}
+	data := templateData{InviteeEmail: notice.InviteeEmail, AppURL: n.appURL}
+	data.Inviter, data.InviterShort = person(notice.InviterName, notice.InviterEmail)
+	data.Invitee, data.InviteeShort = person(notice.InviteeName, notice.InviteeEmail)
+	// The invitee is not the sender of the accepted notice: it keeps the
+	// application's own sender name.
+	senderName := ""
+	if notice.Kind == authsvc.NoticeInvite {
+		senderName = CleanName(notice.InviterName)
+	}
 	var subject, text, html bytes.Buffer
 	if err := c.subject.Execute(&subject, data); err != nil {
 		return fmt.Errorf("mailadpt: %w", err)
@@ -130,7 +181,7 @@ func (n *Notifier) Notify(ctx context.Context, notice authsvc.Notice) error {
 	if err := c.html.Execute(&html, data); err != nil {
 		return fmt.Errorf("mailadpt: %w", err)
 	}
-	return n.mailer.Send(ctx, Message{To: notice.To, Subject: subject.String(), TextBody: text.String(), HTMLBody: html.String()})
+	return n.mailer.Send(ctx, Message{To: notice.To, Subject: subject.String(), TextBody: text.String(), HTMLBody: html.String(), SenderName: senderName})
 }
 
 // Unconfigured is the notifier of a server without mail settings: every mail

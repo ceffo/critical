@@ -530,3 +530,25 @@ func TestMigrate_Step10_DartsFrenchNameBecomesDards(t *testing.T) {
 		assert.Equal(t, texts, f.t.Texts)
 	})
 }
+
+// The data step is reached through runMigrations from the embedded file: a typo in the step's
+// key would leave it silently never run.
+func TestMigrate_Step10_DartsStepIsWiredToTheEmbeddedFile(t *testing.T) {
+	old := copySeeds(t, map[string]string{
+		"weapons.json": `[{"id":"darts","name":{"en":"Darts","fr":"Fléchettes"},"damage_sm":"1d3","damage_l":"1d2","kind":"missile"}]`,
+	})
+	f := newFakeStore()
+	require.NoError(t, seedWithoutArmourOn(f, old))
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	run := &fakeMigrations{store: f}
+	for _, m := range embedded {
+		if m.name != dardsMigration {
+			run.recorded = append(run.recorded, m.name)
+		}
+	}
+	require.NoError(t, runMigrations(context.Background(), run, embedded, before, after))
+	assert.Contains(t, run.steps, "apply "+dardsMigration)
+	assert.Equal(t, "Dards", f.weaponNames()["darts"]["fr"])
+}

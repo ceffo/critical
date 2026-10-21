@@ -14,7 +14,7 @@ import (
 // seeded before the seed said "Dards" are renamed by renameDarts, once, right after it.
 const dardsMigration = "030_dards_french_name.sql"
 
-// The seed's French name for the darts weapon, Fléchettes the one it gave before.
+// The darts weapon: its id, the French name the seed gave before, and the one it gives now.
 const (
 	dartsID        = "darts"
 	dartsOldFrench = "Fléchettes"

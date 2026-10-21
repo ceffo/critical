@@ -36,7 +36,7 @@ case "$1" in
   *"teams(filter"*) echo '{"data":{"teams":{"nodes":[{"id":"team-1","states":{"nodes":[{"id":"st-bl","name":"Backlog"},{"id":"st-todo","name":"Todo"}]}}]},"projects":{"nodes":[{"id":"proj-1"}]}}}';;
   *issueCreate*)
     [ -z "${LINEAR_FAIL:-}" ] || { echo "linear: HTTP 500" >&2; exit 1; }
-    n=$(grep -c issueCreate "$LOG"); echo "{\"data\":{\"issueCreate\":{\"success\":true,\"issue\":{\"identifier\":\"CRI-$((900 + n))\"}}}}";;
+    n=$(grep -c issueCreate "$LOG"); echo "{\"data\":{\"issueCreate\":{\"success\":true,\"issue\":{\"identifier\":\"TST-$((900 + n))\"}}}}";;
   *) exit 2;;
 esac
 SH
@@ -63,9 +63,9 @@ titles '["Security alert: dependabot #56 braces (web/package-lock.json)","Securi
 # --- 1: files exactly the three unseen alerts
 out="$("$S/security-alerts.sh")" || fail "run 1 exited $?"
 [ "$(wc -l <<<"$out")" = 3 ] || fail "expected 3 FILED lines, got: $out"
-grep -qxF 'FILED CRI-901 Security alert: dependabot #57 example.com/lib (api/go.mod)' <<<"$out" || fail "dependabot line: $out"
-grep -qxF 'FILED CRI-902 Security alert: code-scanning #12 go/sql-injection (api/db.go:9)' <<<"$out" || fail "code-scanning #12 (a #1 prefix match must not hide it): $out"
-grep -qxF 'FILED CRI-903 Security alert: secret-scanning #7 GitHub Personal Access Token (src/config/.env)' <<<"$out" || fail "secret line: $out"
+grep -qxF 'FILED TST-901 Security alert: dependabot #57 example.com/lib (api/go.mod)' <<<"$out" || fail "dependabot line: $out"
+grep -qxF 'FILED TST-902 Security alert: code-scanning #12 go/sql-injection (api/db.go:9)' <<<"$out" || fail "code-scanning #12 (a #1 prefix match must not hide it): $out"
+grep -qxF 'FILED TST-903 Security alert: secret-scanning #7 GitHub Personal Access Token (src/config/.env)' <<<"$out" || fail "secret line: $out"
 n="$(grep -c issueCreate "$LOG")"; [ "$n" = 3 ] || fail "expected 3 creations, got $n"
 while IFS= read -r line; do
   v="$(sed 's/^.*issueCreate(input: \$i) { success issue { identifier } } } //' <<<"$line")"
@@ -111,11 +111,11 @@ out="$(CI_RC=20 CI_TEXT='RED main CI run 1 (failure) u' watch)"
 [ "$out" = $'RED main CI run 1 (failure) u\nexit=20' ] || fail "red without alerts changed: $out"
 out="$(CI_RC=0 CI_TEXT='' watch)"
 [ "$out" = $'\nexit=0' ] || fail "green without alerts changed: $out"
-echo 'FILED CRI-9 Security alert: x' > "$ALERT_FILE"
+echo 'FILED TST-9 Security alert: x' > "$ALERT_FILE"
 out="$(CI_RC=0 CI_TEXT='' watch)"
-[ "$out" = $'FILED CRI-9 Security alert: x\n\nexit=0' ] || fail "alert on idle CI: $out"
+[ "$out" = $'FILED TST-9 Security alert: x\n\nexit=0' ] || fail "alert on idle CI: $out"
 out="$(CI_RC=10 CI_TEXT='PENDING PR #5 @abc: 1 check(s) running' watch)"
-[ "$out" = $'FILED CRI-9 Security alert: x\nPENDING PR #5 @abc: 1 check(s) running\nexit=10' ] || fail "alert while CI pending: $out"
+[ "$out" = $'FILED TST-9 Security alert: x\nPENDING PR #5 @abc: 1 check(s) running\nexit=10' ] || fail "alert while CI pending: $out"
 echo 'ERROR security-alerts: gh api boom' > "$ALERT_FILE"
 out="$(ALERT_RC=1 CI_RC=20 CI_TEXT='RED main CI run 1 (failure) u' watch)"
 [ "$out" = $'ERROR security-alerts: gh api boom\nRED main CI run 1 (failure) u\nexit=20' ] || fail "alert error must not hide CI: $out"

@@ -122,7 +122,13 @@ func (s *service) notifyAccepted(n Notice) {
 	if s.notifier == nil {
 		return
 	}
+	s.mailMu.Lock()
+	if s.closed {
+		s.mailMu.Unlock()
+		return
+	}
 	s.mails.Add(1)
+	s.mailMu.Unlock()
 	go func() {
 		defer s.mails.Done()
 		s.send(context.Background(), n)

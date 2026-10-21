@@ -268,3 +268,29 @@ func TestFinishLogin_Step2_9_TellsTheInviter(t *testing.T) {
 		assert.Empty(t, n.notices())
 	})
 }
+
+// Close stops new background mails (a mail after Close is dropped) and honours
+// its context while a mail is still in flight.
+func TestClose_Step2_9_DropsLateMailsAndHonoursItsContext(t *testing.T) {
+	n := &fakeNotifier{Hang: true}
+	dal := mocks.NewMockDAL(t)
+	idp := mocks.NewMockIdentityProvider(t)
+	svc, err := authsvc.New(authsvc.Deps{
+		DAL: dal, Tx: &tx{}, Provider: idp, Notifier: n, MailTimeout: time.Minute,
+		Now: func() time.Time { return now }, NewID: func() uuid.UUID { return newID },
+		NewToken: func() (string, error) { return "tok", nil },
+	})
+	require.NoError(t, err)
+	expectInvitedLogin(dal, idp)
+	_, err = svc.FinishLogin(context.Background(), callback())
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	assert.ErrorIs(t, svc.Close(ctx), context.DeadlineExceeded, "the hanging mail outlives the context")
+
+	expectInvitedLogin(dal, idp)
+	_, err = svc.FinishLogin(context.Background(), callback())
+	require.NoError(t, err)
+	assert.Len(t, n.notices(), 1, "a login after Close sends nothing")
+}

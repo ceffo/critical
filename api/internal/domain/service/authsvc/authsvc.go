@@ -179,8 +179,9 @@ type IdentityProvider interface {
 }
 
 // Deps are the service's collaborators. Provider nil runs the server in dev
-// login mode (step 8.1). Notifier nil sends no mail (MailNotConfigured). Now, NewID and NewToken default to the clock, random
-// UUIDs and 256-bit tokens from crypto/rand.
+// login mode (step 8.1). Notifier nil sends no mail (MailNotConfigured). Now,
+// NewID and NewToken default to the clock, random UUIDs and 256-bit tokens
+// from crypto/rand.
 type Deps struct {
 	DAL      DAL
 	Tx       domain.TxRunner
@@ -199,7 +200,10 @@ type service struct {
 	idp         IdentityProvider
 	notifier    Notifier
 	mailTimeout time.Duration
-	// mails counts the background mails (step 2.9) Close waits for.
+	// mails counts the background mails (step 2.9) Close waits for; closed
+	// (under mailMu) stops new ones, so Add never races Wait.
+	mailMu   sync.Mutex
+	closed   bool
 	mails    sync.WaitGroup
 	now      func() time.Time
 	newID    func() uuid.UUID
@@ -234,10 +238,20 @@ func New(d Deps) (SVC, error) {
 
 func (s *service) Health(context.Context) error { return nil }
 
-// Close waits for the mails still being sent (step 2.9).
-func (s *service) Close(context.Context) error {
-	s.mails.Wait()
-	return nil
+// Close waits for the mails still being sent (step 2.9), until ctx is done.
+// A mail asked for after Close is dropped.
+func (s *service) Close(ctx context.Context) error {
+	s.mailMu.Lock()
+	s.closed = true
+	s.mailMu.Unlock()
+	done := make(chan struct{})
+	go func() { s.mails.Wait(); close(done) }()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // Module declares no codec: the login is no game move.

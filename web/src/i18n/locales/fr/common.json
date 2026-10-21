@@ -1972,6 +1972,7 @@
     "email_has_user": "Cette adresse e-mail a déjà un compte.",
     "already_invited": "Cette adresse e-mail a déjà une invitation en attente.",
     "invite_not_found": "Cette invitation n'est plus en attente.",
+    "invite_not_pending": "Cette invitation a été annulée ou déjà utilisée : elle ne peut plus être renvoyée.",
     "user_not_found": "Cet utilisateur n'existe pas.",
     "level_up_not_pending": "Ce niveau n'est plus à lancer : la feuille de personnage se met à jour.",
     "no_spellbook": "Cette classe n'a pas de grimoire.",

@@ -1972,6 +1972,7 @@
     "email_has_user": "This email address already has an account.",
     "already_invited": "This email address already has a pending invite.",
     "invite_not_found": "This invite is no longer pending.",
+    "invite_not_pending": "This invite was cancelled or already used, so it cannot be sent again.",
     "user_not_found": "This user does not exist.",
     "level_up_not_pending": "That level is no longer to roll: the sheet refreshes.",
     "no_spellbook": "This class has no spellbook.",

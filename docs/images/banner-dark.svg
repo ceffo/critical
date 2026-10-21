@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 527 160" width="527" height="160" role="img" aria-labelledby="t">
+  <title id="t">Critical!</title>
+  <!-- Critical! banner: the hexagon mark and gold "!" of ADR 0022 step 7, then the wordmark (Cinzel when installed, a serif otherwise). -->
+  <g transform="translate(60 20) scale(3.75)">
+    <polygon points="16,2.5 27.7,9.25 27.7,22.75 16,29.5 4.3,22.75 4.3,9.25" fill="none" stroke="#a99bf5" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="14.5" y="8.5" width="3" height="9.5" rx="1.5" fill="#f0c437"/>
+    <circle cx="16" cy="21.9" r="1.8" fill="#f0c437"/>
+  </g>
+  <text x="200" y="102" font-family="Cinzel, 'Cinzel Variable', Georgia, 'Times New Roman', serif" font-size="68" font-weight="700" letter-spacing="3" fill="#ece9ff">Critical<tspan fill="#f0c437">!</tspan></text>
+</svg>

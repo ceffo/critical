@@ -20,7 +20,7 @@
 #   @<version>          starts a version
 #   <title>             one commit of that version, in the commits' order
 # and it prints the same JSON. clean prints what render lists for one title (nothing when it lists none):
-#   "Feat" or "Fix" TAB the cleaned line, e.g. `feat(web): added twelve new themes (CRI-1234) (#456)`
+#   "Feat" or "Fix" TAB the cleaned line, e.g. `feat(web): added twelve new themes (ABC-1234) (#456)`
 #   gives `feat<TAB>Added twelve new themes`.
 #
 # The rule (ADR 0039 steps 2 and 3): only `feat` (and `feat!`) is a Feature and `fix` a Fix; every other

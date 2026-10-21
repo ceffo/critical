@@ -25,22 +25,22 @@ clean_case() {
     [ "$got" = "$2" ] || fail "clean '$1': got '$got', want '$2'"
 }
 T=$'\t'
-clean_case 'feat(web): added twelve new themes (CRI-1234) (#456)' "feat${T}Added twelve new themes"
+clean_case 'feat(web): added twelve new themes (ABC-1234) (#456)' "feat${T}Added twelve new themes"
 clean_case 'feat: a panel' "feat${T}A panel"
 clean_case 'feat(ui): scope dropped (#1)' "feat${T}Scope dropped"
 clean_case 'feat!: a breaking one (#2)' "feat${T}A breaking one"
-clean_case 'feat(api)!: scoped and breaking (CRI-3) (#4)' "feat${T}Scoped and breaking"
+clean_case 'feat(api)!: scoped and breaking (ABC-3) (#4)' "feat${T}Scoped and breaking"
 clean_case 'fix(api): no ticket here' "fix${T}No ticket here"
-clean_case 'fix: three groups (a) (CRI-5) (#6)' "fix${T}Three groups"
-clean_case 'fix: keeps (inner) groups (CRI-7)' "fix${T}Keeps (inner) groups"
+clean_case 'fix: three groups (a) (ABC-5) (#6)' "fix${T}Three groups"
+clean_case 'fix: keeps (inner) groups (ABC-7)' "fix${T}Keeps (inner) groups"
 clean_case 'fix:   spaces around   (#8)   ' "fix${T}Spaces around"
 clean_case 'FIX: type in capitals' "fix${T}Type in capitals"
 clean_case 'fix: already Capitalised' "fix${T}Already Capitalised"
 clean_case 'fix: ünicode first' "fix${T}ünicode first"
-clean_case 'fix: only a group (CRI-9)' "fix${T}Only a group"
-clean_case 'fix: (CRI-9)' ""
-clean_case 'fix: (CRI-9) (#1)' ""
-for t in 'docs: a page' 'docs(adr): x (CRI-1)' 'test: more' 'chore(deps): bump' 'refactor: x' 'perf: faster' 'ci: a job' \
+clean_case 'fix: only a group (ABC-9)' "fix${T}Only a group"
+clean_case 'fix: (ABC-9)' ""
+clean_case 'fix: (ABC-9) (#1)' ""
+for t in 'docs: a page' 'docs(adr): x (ABC-1)' 'test: more' 'chore(deps): bump' 'refactor: x' 'perf: faster' 'ci: a job' \
     'build: deps' 'style: fmt' 'revert: feat: x' 'Add a thing' 'feat:no space' 'feat : spaced' 'feat(: open' \
     'Merge pull request #3 from a/b' 'chore/sync-tracker (#227)' 'features: not feat' 'feat' ''; do
     clean_case "$t" ""
@@ -50,7 +50,7 @@ done
 want='{"versions":[{"version":"1.1.0","features":["B one","B two"],"fixes":["A fix"]},{"version":"1.0.1","features":[],"fixes":[]},{"version":"1.0.0","features":["A feat"],"fixes":["Fix two","Fix one"]}]}'
 got="$("$script" render <<'IN'
 @1.0.0
-feat: a feat (CRI-1) (#1)
+feat: a feat (ABC-1) (#1)
 docs: not listed
 fix: fix two
 fix: fix one
@@ -75,7 +75,7 @@ mkdir "$repo"
 git_q -C "$repo" init
 c() { echo "$1" >> "$repo/f"; git_q -C "$repo" add -A; git_q -C "$repo" commit -m "$1"; }
 c 'chore: first commit'
-c 'feat: the first feature (CRI-1) (#1)'
+c 'feat: the first feature (ABC-1) (#1)'
 git_q -C "$repo" tag v0.1.0
 c 'fix(api): a first fix (#2)'
 c 'docs: only docs (#3)'

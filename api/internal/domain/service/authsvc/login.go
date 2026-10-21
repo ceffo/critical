@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 )
@@ -65,6 +66,7 @@ func (s *service) FinishLogin(ctx context.Context, in FinishLogin) (*NewSession,
 			if u.Disabled {
 				return ErrUserDisabled
 			}
+			u.DisplayName = keepName(u.DisplayName, id.Name)
 			out, err = s.login(ctx, u, false)
 			return err
 		case !errors.Is(err, domain.ErrNotFound):
@@ -74,6 +76,7 @@ func (s *service) FinishLogin(ctx context.Context, in FinishLogin) (*NewSession,
 		if err != nil {
 			return err
 		}
+		u.DisplayName = keepName(u.DisplayName, id.Name)
 		if out, err = s.login(ctx, u, inv != nil); err != nil || inv == nil {
 			return err
 		}
@@ -92,6 +95,15 @@ func (s *service) FinishLogin(ctx context.Context, in FinishLogin) (*NewSession,
 		s.notifyAccepted(*accepted)
 	}
 	return out, nil
+}
+
+// keepName is the name to store after a login (step 3.8): the token's, trimmed; an absent claim
+// keeps the stored one, never erases it.
+func keepName(stored, claim string) string {
+	if c := strings.TrimSpace(claim); c != "" {
+		return c
+	}
+	return stored
 }
 
 // acceptedNotice is the mail to the inviter of inv (step 2.9), nil when the

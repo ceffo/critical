@@ -28,6 +28,7 @@ import {
   type Mode,
 } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { userLabel } from "@/lib/userName";
 import { useSessionStore } from "@/stores/session";
 import { useSettingsStore } from "@/stores/settings";
 
@@ -182,19 +183,19 @@ export function SettingsPopover() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             {me && (
               <span className="min-w-0 text-body [overflow-wrap:anywhere]">
-                {me.email}
+                {userLabel(me)}
               </span>
             )}
             <Button
               variant="quiet"
               aria-label={
                 me
-                  ? t("settings.logoutHint", { email: me.email })
+                  ? t("settings.logoutHint", { name: userLabel(me) })
                   : t("settings.logoutHintNoEmail")
               }
               title={
                 me
-                  ? t("settings.logoutHint", { email: me.email })
+                  ? t("settings.logoutHint", { name: userLabel(me) })
                   : t("settings.logoutHintNoEmail")
               }
               disabled={leaving}

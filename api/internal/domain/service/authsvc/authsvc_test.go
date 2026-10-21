@@ -623,3 +623,46 @@ func TestAdoptUnownedCharacters_Step5_3_NoRootAdminChangesNothing(t *testing.T) 
 	e.dal.EXPECT().RootUser(mock.Anything).Return(nil, assert.AnError).Once()
 	require.ErrorIs(t, e.svc.AdoptUnownedCharacters(context.Background()), assert.AnError)
 }
+
+// Step 3.8: the first login stores the token's name; a later login with another
+// name refreshes it; a later login with no name keeps the stored one.
+func TestFinishLogin_Step3_8_NameStoredRefreshedAndNeverErased(t *testing.T) {
+	t.Run("first login stores it", func(t *testing.T) {
+		e := newEnv(t, true)
+		e.exchange(authsvc.Identity{Subject: "g-123", Email: "Ann@Example.com", EmailVerified: true, Name: "Ann Lovelace"})
+		inviteID := uuid.New()
+		e.dal.EXPECT().UserBySubject(mock.Anything, "g-123").Return(nil, notFound()).Once()
+		e.dal.EXPECT().UserByEmail(mock.Anything, "ann@example.com").Return(nil, notFound()).Once()
+		e.dal.EXPECT().PendingInvite(mock.Anything, "ann@example.com").Return(&authsvc.Invite{ID: inviteID, Email: "ann@example.com"}, nil).Once()
+		e.dal.EXPECT().InsertUser(mock.Anything, authsvc.User{
+			ID: newID, Email: "ann@example.com", DisplayName: "Ann Lovelace", GoogleSubject: "g-123", Role: authsvc.RolePlayer,
+			LastLogin: ptr(now), CreatedAt: now,
+		}).Return(nil).Once()
+		e.expectSession(newID, "tok-1")
+		e.dal.EXPECT().AcceptInvite(mock.Anything, inviteID, newID, now).Return(nil).Once()
+		got, err := e.svc.FinishLogin(context.Background(), callback())
+		require.NoError(t, err)
+		assert.Equal(t, "Ann Lovelace", got.User.DisplayName)
+	})
+	for _, tc := range []struct{ name, stored, claim, want string }{
+		{"a rename reaches the app", "Ann", "Ann Lovelace", "Ann Lovelace"},
+		{"the first name of a user who had none", "", "Ann", "Ann"},
+		{"an absent claim keeps the stored name", "Ann", "", "Ann"},
+		{"a blank claim keeps the stored name", "Ann", "   ", "Ann"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEnv(t, true)
+			e.exchange(authsvc.Identity{Subject: "g-123", Email: "ann@example.com", EmailVerified: true, Name: tc.claim})
+			e.dal.EXPECT().UserBySubject(mock.Anything, "g-123").Return(&authsvc.User{
+				ID: userID, Email: "ann@example.com", DisplayName: tc.stored, GoogleSubject: "g-123", Role: authsvc.RolePlayer,
+			}, nil).Once()
+			e.dal.EXPECT().UpdateUser(mock.Anything, authsvc.User{
+				ID: userID, Email: "ann@example.com", DisplayName: tc.want, GoogleSubject: "g-123", Role: authsvc.RolePlayer, LastLogin: ptr(now),
+			}).Return(nil).Once()
+			e.expectSession(userID, "tok-1")
+			got, err := e.svc.FinishLogin(context.Background(), callback())
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got.User.DisplayName)
+		})
+	}
+}

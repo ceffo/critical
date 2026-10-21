@@ -9,6 +9,7 @@ import { STEPS } from "./flow";
 import { LANGUAGES } from "@/lib/settings";
 import { navigate } from "@/lib/navigation";
 import { ROSTER_PATH } from "@/lib/session";
+import { userLabel } from "@/lib/userName";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/stores/session";
 import { useSettingsStore } from "@/stores/settings";
@@ -40,7 +41,7 @@ function Intro({ onStart }: { onStart: () => void }) {
     document.title = `${t("intro.title")} · ${APP_NAME}`;
   }, [t]);
   const logoutHint = me
-    ? t("settings.logoutHint", { email: me.email })
+    ? t("settings.logoutHint", { name: userLabel(me) })
     : t("settings.logoutHintNoEmail");
 
   return (

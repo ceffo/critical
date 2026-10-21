@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -103,7 +104,7 @@ func TestAuthURL_StateAndS256Challenge(t *testing.T) {
 	assert.Equal(t, clientID, q.Get("client_id"))
 	assert.Equal(t, "https://app.example/api/auth/google/callback", q.Get("redirect_uri"))
 	assert.Equal(t, "code", q.Get("response_type"))
-	assert.Contains(t, q.Get("scope"), "openid")
+	assert.ElementsMatch(t, []string{"openid", "email", "profile"}, strings.Fields(q.Get("scope")), "step 3.8: the profile scope brings the name")
 	assert.NotContains(t, u.String(), "the-verifier")
 }
 
@@ -115,6 +116,20 @@ func TestExchange_ValidTokenIsItsIdentity(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, authsvc.Identity{Subject: "g-123", Email: "ann@example.com", EmailVerified: true}, *id)
 	assert.Equal(t, "the-verifier", g.verifier)
+}
+
+// Step 3.8: the token's name claim is the identity's name, trimmed; no claim is no name.
+func TestExchange_Step3_8_NameClaim(t *testing.T) {
+	g := newFakeGoogle(t)
+	g.claims["name"] = "  Ann Lovelace "
+	id, err := g.provider(t).Exchange(t.Context(), "good-code", "the-verifier")
+	require.NoError(t, err)
+	assert.Equal(t, "Ann Lovelace", id.Name)
+
+	delete(g.claims, "name")
+	id, err = g.provider(t).Exchange(t.Context(), "good-code", "the-verifier")
+	require.NoError(t, err)
+	assert.Empty(t, id.Name)
 }
 
 // Step 3.1: a token for another audience, from another issuer, expired, or

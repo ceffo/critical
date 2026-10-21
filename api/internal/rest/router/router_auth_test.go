@@ -256,7 +256,7 @@ func TestGate_Step4_3_ExtendedSessionRefreshesTheCookie(t *testing.T) {
 	a := authmocks.NewMockSVC(t)
 	a.EXPECT().DevLoginEnabled().Return(true).Once()
 	a.EXPECT().Authenticate(mock.Anything, "tok").Return(&authsvc.Principal{
-		User: authsvc.User{Email: "ann@example.com", Role: authsvc.RolePlayer}, Expires: expires, Extended: true,
+		User: authsvc.User{Email: "ann@example.com", DisplayName: "Ann Lovelace", Role: authsvc.RolePlayer}, Expires: expires, Extended: true,
 	}, nil).Once()
 	a.EXPECT().FreshCurrentCharacter(mock.Anything, mock.Anything).Return(0, nil).Once()
 	h := authRouter(t, a, router.Options{})
@@ -265,7 +265,7 @@ func TestGate_Step4_3_ExtendedSessionRefreshesTheCookie(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"id":"00000000-0000-0000-0000-000000000000","email":"ann@example.com","role":"player","root":false,"currentCharacterId":null}`, rec.Body.String())
+	assert.JSONEq(t, `{"id":"00000000-0000-0000-0000-000000000000","email":"ann@example.com","displayName":"Ann Lovelace","role":"player","root":false,"currentCharacterId":null}`, rec.Body.String())
 	c := sessionCookie(t, rec)
 	assert.Equal(t, "tok", c.Value)
 	assert.Greater(t, c.MaxAge, 29*24*3600)

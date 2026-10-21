@@ -104,13 +104,14 @@ func RegisterRoutes(r Router, svc Service, opts Options) {
 type MeDTO struct {
 	ID                 string `json:"id"`
 	Email              string `json:"email"`
+	DisplayName        string `json:"displayName,omitempty"`
 	Role               string `json:"role"`
 	Root               bool   `json:"root"`
 	CurrentCharacterID *int64 `json:"currentCharacterId"`
 }
 
 func meDTO(u authsvc.User) MeDTO {
-	d := MeDTO{ID: u.ID.String(), Email: u.Email, Role: string(u.Role), Root: u.Root}
+	d := MeDTO{ID: u.ID.String(), Email: u.Email, DisplayName: u.DisplayName, Role: string(u.Role), Root: u.Root}
 	if u.CurrentCharacterID != 0 {
 		id := u.CurrentCharacterID
 		d.CurrentCharacterID = &id

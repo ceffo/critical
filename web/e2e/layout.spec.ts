@@ -2077,6 +2077,21 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
     language: "fr",
   });
 
+  // The dev login has no Google name: give two users one (a long one too) in the list, and the
+  // session's user, so the name-over-email rows are laid out as in production.
+  await page.route("**/api/admin/users", async (route) => {
+    const res = await route.fetch();
+    const body = (await res.json()) as {
+      users: { email: string; displayName?: string }[];
+    };
+    for (const u of body.users) {
+      if (u.email === "bob@example.com") u.displayName = "Bob Lamarre";
+      if (u.email.startsWith("aurelie"))
+        u.displayName =
+          "Aurélie de La Tour d'Auvergne-Lauragais de Saint-Aignan-sur-Cher";
+    }
+    await route.fulfill({ response: res, json: body });
+  });
   await page.setViewportSize({ width: 1280, height: 800 });
   await openDashboard(page);
   await chooseLanguage(page, "fr");

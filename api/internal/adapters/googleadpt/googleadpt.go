@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -67,7 +68,7 @@ func New(cfg Config) (*Provider, error) {
 				AuthURL: or(cfg.AuthURL, googleAuthURL), TokenURL: or(cfg.TokenURL, googleTokenURL),
 				AuthStyle: oauth2.AuthStyleInParams,
 			},
-			Scopes: []string{oidc.ScopeOpenID, "email"},
+			Scopes: []string{oidc.ScopeOpenID, "email", "profile"},
 		},
 		verifier: oidc.NewVerifier(issuer, oidc.NewRemoteKeySet(keyCtx, keys), &oidc.Config{ClientID: cfg.ClientID}),
 		client:   client,
@@ -108,9 +109,13 @@ func (p *Provider) Exchange(ctx context.Context, code, verifier string) (*authsv
 	var claims struct {
 		Email         string `json:"email"`
 		EmailVerified bool   `json:"email_verified"`
+		Name          string `json:"name"`
 	}
 	if err := idt.Claims(&claims); err != nil {
 		return nil, fmt.Errorf("id token claims: %w", err)
 	}
-	return &authsvc.Identity{Subject: idt.Subject, Email: claims.Email, EmailVerified: claims.EmailVerified}, nil
+	return &authsvc.Identity{
+		Subject: idt.Subject, Email: claims.Email, EmailVerified: claims.EmailVerified,
+		Name: strings.TrimSpace(claims.Name),
+	}, nil
 }

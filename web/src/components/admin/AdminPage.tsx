@@ -393,7 +393,7 @@ function UsersCard({
           <thead>
             <tr>
               <th scope="col" className={th}>
-                {t("admin.col.email")}
+                {t("admin.col.user")}
               </th>
               <th scope="col" className={th}>
                 {t("admin.col.role")}
@@ -420,12 +420,42 @@ function UsersCard({
                 data-testid="admin-user"
               >
                 <th scope="row" className={cn(td, "text-left font-normal")}>
-                  <span className="[overflow-wrap:anywhere]">{u.email}</span>
-                  {u.id === meId && (
-                    <span className="text-muted-foreground">
-                      {" "}
-                      ({t("admin.you")})
-                    </span>
+                  {u.displayName?.trim() ? (
+                    <>
+                      <span
+                        className="[overflow-wrap:anywhere]"
+                        data-testid="admin-user-name"
+                      >
+                        {u.displayName.trim()}
+                      </span>
+                      {u.id === meId && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          ({t("admin.you")})
+                        </span>
+                      )}
+                      <span
+                        className="block text-label text-muted-foreground [overflow-wrap:anywhere]"
+                        data-testid="admin-user-email"
+                      >
+                        {u.email}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span
+                        className="[overflow-wrap:anywhere]"
+                        data-testid="admin-user-email"
+                      >
+                        {u.email}
+                      </span>
+                      {u.id === meId && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          ({t("admin.you")})
+                        </span>
+                      )}
+                    </>
                   )}
                 </th>
                 <td className={td}>

@@ -42,7 +42,7 @@ func user(r queries.UserByIDRow) *authsvc.User {
 	u := &authsvc.User{
 		ID: r.ID, Email: r.Email, GoogleSubject: r.GoogleSubject.String, Role: authsvc.Role(r.Role),
 		Root: r.IsRoot, Disabled: r.Disabled, CreatedAt: r.CreatedAt,
-		CurrentCharacterID: r.CurrentCharacterID.Int64,
+		CurrentCharacterID: r.CurrentCharacterID.Int64, DisplayName: r.DisplayName.String,
 	}
 	if r.LastLogin.Valid {
 		t := r.LastLogin.Time
@@ -100,7 +100,7 @@ func (d *DAL) RootUser(ctx context.Context) (*authsvc.User, error) {
 func (d *DAL) InsertUser(ctx context.Context, u authsvc.User) error {
 	if err := d.q.InsertUser(ctx, queries.InsertUserParams{
 		ID: u.ID, Email: u.Email, GoogleSubject: nullString(u.GoogleSubject), Role: string(u.Role),
-		IsRoot: u.Root, Disabled: u.Disabled, LastLogin: nullTime(u.LastLogin), CreatedAt: u.CreatedAt,
+		IsRoot: u.Root, Disabled: u.Disabled, LastLogin: nullTime(u.LastLogin), CreatedAt: u.CreatedAt, DisplayName: nullString(u.DisplayName),
 	}); err != nil {
 		return fmt.Errorf("insert user: %w", err)
 	}
@@ -111,7 +111,7 @@ func (d *DAL) InsertUser(ctx context.Context, u authsvc.User) error {
 func (d *DAL) UpdateUser(ctx context.Context, u authsvc.User) error {
 	n, err := d.q.UpdateUser(ctx, queries.UpdateUserParams{
 		ID: u.ID, GoogleSubject: nullString(u.GoogleSubject), Role: string(u.Role),
-		IsRoot: u.Root, Disabled: u.Disabled, LastLogin: nullTime(u.LastLogin),
+		IsRoot: u.Root, Disabled: u.Disabled, LastLogin: nullTime(u.LastLogin), DisplayName: nullString(u.DisplayName),
 	})
 	if err != nil {
 		return fmt.Errorf("update user: %w", err)
@@ -246,7 +246,7 @@ func (d *DAL) ListUsers(ctx context.Context) ([]authsvc.UserSummary, error) {
 	for _, r := range rows {
 		u := user(queries.UserByIDRow{
 			ID: r.ID, Email: r.Email, GoogleSubject: r.GoogleSubject, Role: r.Role, IsRoot: r.IsRoot,
-			Disabled: r.Disabled, LastLogin: r.LastLogin, CreatedAt: r.CreatedAt,
+			Disabled: r.Disabled, LastLogin: r.LastLogin, CreatedAt: r.CreatedAt, DisplayName: r.DisplayName,
 		})
 		chars := byOwner[r.ID]
 		if chars == nil {

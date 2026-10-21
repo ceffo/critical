@@ -24,8 +24,11 @@ const (
 // have none: it is read through the user's ownership (a character they do not
 // own, or retired, is none) and never written by UpdateUser.
 type User struct {
-	ID            uuid.UUID
-	Email         string
+	ID    uuid.UUID
+	Email string
+	// DisplayName is the name Google gave at the last login that carried one (step 3.8); empty
+	// when unknown (never logged in since the name was kept, or the dev login).
+	DisplayName   string
 	GoogleSubject string
 	Role          Role
 	Root          bool
@@ -80,6 +83,8 @@ type Identity struct {
 	Subject       string
 	Email         string
 	EmailVerified bool
+	// Name is the token's name claim (profile scope); empty when absent.
+	Name string
 }
 
 // LoginStart is a started Google login: the browser goes to URL; State and

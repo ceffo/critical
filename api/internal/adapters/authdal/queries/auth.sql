@@ -2,35 +2,35 @@
 -- a character the user does not own, or retired, is no current character (NULL).
 
 -- name: UserByID :one
-SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, u.display_name, c.id AS current_character_id
 FROM users u
 LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
 WHERE u.id = $1;
 
 -- name: UserBySubject :one
-SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, u.display_name, c.id AS current_character_id
 FROM users u
 LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
 WHERE u.google_subject = $1;
 
 -- name: UserByEmail :one
-SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, u.display_name, c.id AS current_character_id
 FROM users u
 LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
 WHERE u.email = $1;
 
 -- name: RootUser :one
-SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, u.display_name, c.id AS current_character_id
 FROM users u
 LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
 WHERE u.is_root;
 
 -- name: InsertUser :exec
-INSERT INTO users (id, email, google_subject, role, is_root, disabled, last_login, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+INSERT INTO users (id, email, google_subject, role, is_root, disabled, last_login, created_at, display_name)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: UpdateUser :execrows
-UPDATE users SET google_subject = $2, role = $3, is_root = $4, disabled = $5, last_login = $6 WHERE id = $1;
+UPDATE users SET google_subject = $2, role = $3, is_root = $4, disabled = $5, last_login = $6, display_name = $7 WHERE id = $1;
 
 -- name: PendingInvite :one
 SELECT id, email, invited_by, created_at, language FROM invites
@@ -78,7 +78,7 @@ UPDATE users SET current_character_id = NULL WHERE id = $1;
 -- and the pending invites.
 
 -- name: ListUsers :many
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users
+SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at, display_name FROM users
 ORDER BY created_at, id;
 
 -- name: OwnedCharacterNames :many

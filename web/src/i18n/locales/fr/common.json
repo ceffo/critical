@@ -79,7 +79,7 @@
     },
     "account": "Compte",
     "logout": "Se déconnecter",
-    "logoutHint": "Déconnecter {{email}}",
+    "logoutHint": "Déconnecter {{name}}",
     "logoutHintNoEmail": "Déconnecter ce compte"
   },
   "login": {
@@ -2050,7 +2050,7 @@
     "cancelHint": "Annuler l'invitation de {{email}}",
     "users": "Utilisateurs",
     "col": {
-      "email": "E-mail",
+      "user": "Utilisateur",
       "role": "Rôle",
       "lastLogin": "Dernière connexion",
       "characters": "Personnages",

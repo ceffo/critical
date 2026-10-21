@@ -551,6 +551,9 @@ the admin gets `not_configured` (the server still starts). Do this once per app,
 `CRITICAL_MAIL_FROM_NAME` is optional. The mails link to `CRITICAL_PUBLIC_URL`. `CRITICAL_ENV=dev` (local
 runs, e2e) prints the mail in the server log and never sends it, even if these are set.
 
+Leave Brevo's "restrict API calls to whitelisted IPs" option **off**: fly machines have no fixed outgoing IP, a
+static egress IP costs money, and the budget is $0. The API key is the protection (it is a fly secret, never in the repo).
+
 Brevo's free tier sends a limited number of mails a day; an invite beyond it is a `failed` outcome, and the
 admin copies the address by hand.
 

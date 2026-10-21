@@ -203,8 +203,8 @@ func TestResendInvite_Step2_7(t *testing.T) {
 }
 
 // expectInvitedLogin names the storage calls of ann's first login with a
-// pending French invite of otherID.
-func expectInvitedLogin(dal *mocks.MockDAL, idp *mocks.MockIdentityProvider) {
+// pending invite of otherID in the given language.
+func expectInvitedLogin(dal *mocks.MockDAL, idp *mocks.MockIdentityProvider, lang authsvc.Language) {
 	idp.EXPECT().Exchange(mock.Anything, "code", "ver").Return(&verified, nil).Once()
 	inviteID := uuid.New()
 	dal.EXPECT().UserBySubject(mock.Anything, "g-123").Return(nil, notFound()).Once()
@@ -219,13 +219,18 @@ func expectInvitedLogin(dal *mocks.MockDAL, idp *mocks.MockIdentityProvider) {
 }
 
 // Step 2.9: the first login that consumes an invite tells the inviter, once,
-// in the invite's language; a later login sends nothing; a failing mail never
+// in French whatever the invite's language; a later login sends nothing; a failing mail never
 // stops the login.
 func TestFinishLogin_Step2_9_TellsTheInviter(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		err  error
-	}{{"mail works", nil}, {"mail fails", errors.New("provider down")}} {
+		lang authsvc.Language
+	}{
+		{"mail works, French invite", nil, authsvc.LanguageFrench},
+		{"mail works, English invite", nil, authsvc.LanguageEnglish},
+		{"mail fails", errors.New("provider down"), authsvc.LanguageEnglish},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			n := &fakeNotifier{Err: tc.err}
 			dal := mocks.NewMockDAL(t)
@@ -236,7 +241,7 @@ func TestFinishLogin_Step2_9_TellsTheInviter(t *testing.T) {
 				NewToken: func() (string, error) { return "tok", nil },
 			})
 			require.NoError(t, err)
-			expectInvitedLogin(dal, idp)
+			expectInvitedLogin(dal, idp, tc.lang)
 
 			got, err := svc.FinishLogin(context.Background(), callback())
 			require.NoError(t, err, "a mail failure never blocks the login")
@@ -281,7 +286,7 @@ func TestClose_Step2_9_DropsLateMailsAndHonoursItsContext(t *testing.T) {
 		NewToken: func() (string, error) { return "tok", nil },
 	})
 	require.NoError(t, err)
-	expectInvitedLogin(dal, idp)
+	expectInvitedLogin(dal, idp, authsvc.LanguageFrench)
 	_, err = svc.FinishLogin(context.Background(), callback())
 	require.NoError(t, err)
 
@@ -289,7 +294,7 @@ func TestClose_Step2_9_DropsLateMailsAndHonoursItsContext(t *testing.T) {
 	defer cancel()
 	assert.ErrorIs(t, svc.Close(ctx), context.DeadlineExceeded, "the hanging mail outlives the context")
 
-	expectInvitedLogin(dal, idp)
+	expectInvitedLogin(dal, idp, authsvc.LanguageFrench)
 	_, err = svc.FinishLogin(context.Background(), callback())
 	require.NoError(t, err)
 	assert.Len(t, n.notices(), 1, "a login after Close sends nothing")

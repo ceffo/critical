@@ -134,8 +134,9 @@ one item and gets a test that fails on the old code, per the house rule.
       field keeps its name). A failing or slow mailer leaves the invite created; no mail settings
       give `not_configured`. Tests: `authsvc` `TestCreateInvite_Step2_8_TheInviteSurvivesTheMail`;
       `composition` `TestAdmin_Step2_InviteMail`.
-   9. **Accepted.** The first login that consumes an invite (step 2.4) mails the inviter once, in the
-      invite's language (the inviter's own language is not stored), after the login committed and in
+   9. **Accepted.** The first login that consumes an invite (step 2.4) mails the inviter once, **always
+      in French** whatever language the invite was sent in (user ruling, 2026-10-21; the inviter's own
+      language is not stored), after the login committed and in
       the background: a failing or slow mail never blocks the login. Tests: `authsvc`
       `TestFinishLogin_Step2_9_TellsTheInviter`.
    10. **Settings.** `CRITICAL_BREVO_API_KEY` and `CRITICAL_MAIL_FROM` (the verified sender) go

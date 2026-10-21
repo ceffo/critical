@@ -2074,6 +2074,7 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
   await api("POST", "/api/admin/invites", {
     email:
       "maximilien.vandenbroucke-lefebvre@guilde-des-arcanistes.example.org",
+    language: "fr",
   });
 
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -2097,8 +2098,24 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
     await expect(users).toContainText(
       lang === "fr" ? "Administrateur principal" : "Root admin",
     );
+    // The language tag, Resend and the outcome hint are part of the card: the longest hint is the
+    // failed one (the address in it is the long one), forced here since the e2e sender succeeds.
+    await page.route("**/api/admin/invites/*/resend", async (route) => {
+      const res = await route.fetch();
+      await route.fulfill({
+        response: res,
+        json: { ...(await res.json()), mail: "failed" },
+      });
+    });
+    await invites
+      .getByRole("button", {
+        name: lang === "fr" ? /^Envoyer de nouveau/ : /again$/,
+      })
+      .click();
+    await expect(invites.getByTestId("admin-mail-hint")).toBeVisible();
     for (const vp of [
       { width: 1280, height: 800 },
+      { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
     ]) {
       await page.setViewportSize(vp);

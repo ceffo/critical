@@ -4,5 +4,5 @@
   { "id": "shortbow", "name": { "en": "Short Bow +2", "fr": "Arc court +2" }, "damage_sm": "1d6", "damage_l": "1d6", "magic_to_hit": 2, "magic_damage": 2, "kind": "missile", "two_handed": true, "ammo_kind": "arrow", "weapon_type": "short_bow" },
   { "id": "dagger", "name": { "en": "Dagger +3", "fr": "Dague +3" }, "damage_sm": "1d4", "damage_l": "1d3", "magic_to_hit": 3, "magic_damage": 3, "kind": "melee", "weapon_type": "dagger" },
   { "id": "mace", "name": { "en": "Mace +1", "fr": "Masse d'armes +1" }, "damage_sm": "1d6", "damage_l": "1d6", "magic_to_hit": 1, "magic_damage": 1, "kind": "melee", "weapon_type": "other_melee" },
-  { "id": "darts", "name": { "en": "Darts", "fr": "Fléchettes" }, "damage_sm": "1d3", "damage_l": "1d2", "kind": "missile", "weapon_type": "dart" }
+  { "id": "darts", "name": { "en": "Darts", "fr": "Dards" }, "damage_sm": "1d3", "damage_l": "1d2", "kind": "missile", "weapon_type": "dart" }
 ]

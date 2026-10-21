@@ -537,20 +537,15 @@ rollback) answers 200 instead, which it accepts.
 The server mails an invitee when an admin invites them or resends an invite, and the inviter when the invite
 is accepted. It sends through **Brevo's free tier with one verified sender address and no domain** (the apps
 live on `fly.dev`). Without these settings the apps work as before: the invite is created, nothing is sent and
-the admin gets `not_configured` (the server still starts). Do this once:
+the admin gets `not_configured` (the server still starts). Do this once per app, staging first:
 
-1. Create a free account at <https://www.brevo.com>.
-2. **Verify the sender**: "Senders, Domains & Dedicated IPs" > "Senders" > add the address the mails come from
-   (a mailbox you own) and confirm the link Brevo mails to it. No domain, no SPF/DKIM setup.
-3. Create an **API key** ("SMTP & API" > "API Keys"). Use a v3 key; Brevo shows it once.
-4. Set the secrets on staging, then on production (the key is never in `fly.toml` or the repo):
-
-```bash
-fly secrets set --app critical-hit-staging \
-  CRITICAL_BREVO_API_KEY=<the key> CRITICAL_MAIL_FROM=<the verified address> CRITICAL_MAIL_FROM_NAME="Critical Hit"
-fly secrets set --app critical-hit \
-  CRITICAL_BREVO_API_KEY=<the key> CRITICAL_MAIL_FROM=<the verified address> CRITICAL_MAIL_FROM_NAME="Critical Hit"
-```
+1. Create a free account at <https://www.brevo.com> and a **v3 API key** ("SMTP & API" > "API Keys"; Brevo shows it once).
+2. Run `just fly-brevo-secrets critical-hit-staging <the address the mails come from>` (a mailbox you own; the key
+   is typed hidden). If the address is not a Brevo sender yet, the script adds it through Brevo's API and stops:
+   click the confirmation link Brevo mails to it, then run the same command again. Once the sender is verified it
+   sets the secrets (the machines restart). No domain, no SPF/DKIM setup.
+3. Prove it: invite or resend to an address of yours from the admin screen; the outcome is `sent` and the mail arrives.
+4. Run the same recipe with `critical-hit` for production.
 
 `CRITICAL_BREVO_API_KEY` and `CRITICAL_MAIL_FROM` go together (one without the other stops the start);
 `CRITICAL_MAIL_FROM_NAME` is optional. The mails link to `CRITICAL_PUBLIC_URL`. `CRITICAL_ENV=dev` (local

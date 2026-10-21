@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-fly-open check-api check-web
+validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-fly-open test-fly-brevo-secrets check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -78,6 +78,10 @@ check-release-scripts:
 check-no-tracker-ids:
     scripts/test-check-no-tracker-ids.sh
     scripts/check-no-tracker-ids.sh
+
+# The invite mail secrets script against a fake Brevo API and a fake fly.
+test-fly-brevo-secrets:
+    scripts/test-fly-brevo-secrets.sh
 
 # The local port `just fly-open` resolves: the apps' login ports by default, an explicit port wins, a taken one is refused.
 test-fly-open:
@@ -173,6 +177,11 @@ fly-app-create env old="":
 # Google console downloads (or typed when no file is given); prints the redirect URI to authorise. docs/deploy.md ("Google login").
 fly-google-secrets app json="":
     scripts/fly-google-secrets.sh {{app}} {{json}}
+
+# Operator only. Set the invite mail's secrets (Brevo API key typed hidden, sender address, optional name) on an app, creating
+# the sender through Brevo's API if needed. E.g. `just fly-brevo-secrets critical-hit-staging you@example.com`. docs/deploy.md ("Invite emails").
+fly-brevo-secrets app from name="Critical Hit":
+    scripts/fly-brevo-secrets.sh {{app}} {{from}} "{{name}}"
 
 # Operator only. Allocate the (free) public addresses of a deployed app and prove the login gate on its public URL;
 # the addresses are released again when the gate check fails. docs/deploy.md ("Going public").

@@ -32,12 +32,31 @@ test("admin invites an email, sees it pending, cancels it", async ({
     invites.getByRole("button", { name: "Invite this email address" }),
   ).toBeDisabled();
   await email.fill("Cid@Example.com");
+  // The mail's language starts on the UI's (English); French is chosen and kept as the invite's tag.
+  const en = invites.getByRole("button", {
+    name: "Send the invite email in English",
+  });
+  await expect(en).toHaveAttribute("aria-pressed", "true");
+  await invites
+    .getByRole("button", { name: "Send the invite email in French" })
+    .click();
   await invites.getByRole("button", { name: "Invite Cid@Example.com" }).click();
   const pending = invites.getByRole("list", { name: "Pending invites" });
   await expect(pending.getByRole("listitem")).toHaveCount(1);
   await expect(pending).toContainText("cid@example.com");
+  await expect(pending).toContainText("FR");
   await expect(email).toHaveValue("");
+  // The e2e server mails nothing for real (its sender is a stub that succeeds): the hint says sent, and Resend answers the same way.
+  const hint = invites.getByTestId("admin-mail-hint");
+  await expect(hint).toHaveText("Invitation sent to cid@example.com.");
   await snap(page, "invite-pending");
+  await pending
+    .getByRole("button", {
+      name: "Send the invite email to cid@example.com again",
+    })
+    .click();
+  await expect(hint).toHaveAttribute("data-outcome", "sent");
+  await snap(page, "invite-resent");
 
   await pending
     .getByRole("button", { name: "Cancel the invite of cid@example.com" })

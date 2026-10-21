@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Copy,
   EnvelopeSimple,
+  PaperPlaneTilt,
   ShieldCheck,
   X,
 } from "@phosphor-icons/react";
@@ -14,25 +15,49 @@ import {
   createInvite,
   fetchInvites,
   fetchUsers,
+  resendInvite,
 } from "@/api/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { APP_NAME } from "@/lib/brand";
 import { formatDateTime } from "@/lib/format";
+import {
+  defaultInviteLanguage,
+  INVITE_LANGUAGES,
+  invitePayload,
+  mailHintKey,
+} from "@/lib/invites";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/stores/session";
-import type { AdminUser, Invite, UserChange } from "@/types/admin";
+import type {
+  AdminUser,
+  Invite,
+  InviteLanguage,
+  InviteSent,
+  MailOutcome,
+  UserChange,
+} from "@/types/admin";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** The app's address, the login page an invited person opens (ADR 0029 step 2.2). */
 const appLink = () => globalThis.location.origin;
 
+/** The invite as listed: the mail outcome only matters at the moment it is answered. */
+const plainInvite = (sent: InviteSent): Invite => ({
+  id: sent.id,
+  email: sent.email,
+  invitedBy: sent.invitedBy,
+  createdAt: sent.createdAt,
+  language: sent.language,
+});
+
 /**
  * The invite form and the pending invites (ADR 0029 step 2): an email the browser checks as one, the
- * Invite button, the Copy button that copies the app's link (no email is sent, step 2.2), and each
- * pending invite with who sent it and Cancel.
+ * language of its mail, the Invite button and a hint saying what became of the mail (step 2.8), the
+ * Copy button that copies the app's link (step 2.2), and each pending invite with who sent it, the
+ * language of its mails, Resend and Cancel.
  */
 function InvitesCard({
   invites,
@@ -52,6 +77,15 @@ function InvitesCard({
   const [busy, setBusy] = useState(false);
   const [copy, setCopy] = useState<"copied" | "failed" | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [resending, setResending] = useState<string | null>(null);
+  const [language, setLanguage] = useState<InviteLanguage>(() =>
+    defaultInviteLanguage(i18n.language),
+  );
+  const [sent, setSent] = useState<{
+    email: string;
+    mail: MailOutcome;
+  } | null>(null);
+  const langName = (l: InviteLanguage) => t(`admin.languageName.${l}`);
   const emailOf = (id: string) => users.find((u) => u.id === id)?.email;
 
   const submit = async (e: FormEvent) => {
@@ -63,7 +97,10 @@ function InvitesCard({
     setBusy(true);
     setError(null);
     try {
-      onInvited(await createInvite(email));
+      const p = invitePayload(email, language);
+      const made = await createInvite(p.email, p.language);
+      onInvited(plainInvite(made));
+      setSent({ email: made.email, mail: made.mail });
       setEmail("");
       setValid(false);
     } catch (err) {
@@ -82,10 +119,24 @@ function InvitesCard({
     }
   };
 
+  const resend = async (inv: Invite) => {
+    setResending(inv.id);
+    setError(null);
+    try {
+      const again = await resendInvite(inv.id);
+      setSent({ email: again.email, mail: again.mail });
+    } catch (err) {
+      setError(message(err));
+    } finally {
+      setResending(null);
+    }
+  };
+
   const cancel = async (inv: Invite) => {
     setCancelling(inv.id);
     setError(null);
     try {
+      setSent(null);
       onCancelled(await cancelInvite(inv.id));
     } catch (err) {
       setError(message(err));
@@ -156,12 +207,47 @@ function InvitesCard({
               {t("admin.invite")}
             </Button>
           </div>
+          <div
+            role="group"
+            aria-label={t("admin.language")}
+            className="flex flex-wrap items-center gap-2"
+          >
+            <span className="text-label text-muted-foreground">
+              {t("admin.language")}
+            </span>
+            {INVITE_LANGUAGES.map((l) => (
+              <Button
+                key={l}
+                type="button"
+                size="sm"
+                aria-pressed={language === l}
+                aria-label={t("admin.languageHint", { language: langName(l) })}
+                title={t("admin.languageHint", { language: langName(l) })}
+                onClick={() => setLanguage(l)}
+              >
+                {l.toUpperCase()}
+              </Button>
+            ))}
+          </div>
           {error && (
             <p role="alert" className="text-body text-danger">
               {error}
             </p>
           )}
         </form>
+        {sent && (
+          <p
+            role="status"
+            data-testid="admin-mail-hint"
+            data-outcome={sent.mail}
+            className={cn(
+              "text-body [overflow-wrap:anywhere]",
+              sent.mail === "sent" ? "text-muted-foreground" : "text-danger",
+            )}
+          >
+            {t(mailHintKey(sent.mail), { email: sent.email })}
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -200,11 +286,20 @@ function InvitesCard({
                 return (
                   <li
                     key={inv.id}
-                    className="flex items-center gap-3 rounded-md bg-raised px-3 py-2"
+                    className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md bg-raised px-3 py-2"
                   >
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="text-body [overflow-wrap:anywhere]">
-                        {inv.email}
+                    <div className="flex min-w-[10rem] flex-1 flex-col">
+                      <span className="flex flex-wrap items-center gap-x-2 text-body">
+                        <span className="min-w-0 [overflow-wrap:anywhere]">
+                          {inv.email}
+                        </span>
+                        <Badge
+                          title={t("admin.languageTag", {
+                            language: langName(inv.language),
+                          })}
+                        >
+                          {inv.language.toUpperCase()}
+                        </Badge>
                       </span>
                       <span className="text-label text-muted-foreground [overflow-wrap:anywhere]">
                         {by
@@ -212,6 +307,16 @@ function InvitesCard({
                           : t("admin.invitedOn", { date })}
                       </span>
                     </div>
+                    <Button
+                      type="button"
+                      disabled={resending === inv.id}
+                      aria-label={t("admin.resendHint", { email: inv.email })}
+                      title={t("admin.resendHint", { email: inv.email })}
+                      onClick={() => void resend(inv)}
+                    >
+                      <PaperPlaneTilt aria-hidden />
+                      {t("admin.resend")}
+                    </Button>
                     <Button
                       type="button"
                       variant="destructive"

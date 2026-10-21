@@ -1,6 +1,3 @@
-# bv (beads viewer) local config and caches
-.bv/
-
 # Go binaries
 api/critical-api
 api/*.exe
@@ -18,9 +15,6 @@ web/dist/
 # OS
 .DS_Store
 
-# ralph-tui local run state (logs, reports, session)
-.ralph-tui/
-
 # Local dev state (just dev)
 .dev/
 
@@ -35,17 +29,16 @@ web/blob-report/
 *.db-wal
 *.db-shm
 
-# agents skills 
+# Agent skills (installed locally)
 .claude/skills/
-.agents/skills 
-skills-lock.json 
-
+.agents/skills/
+skills-lock.json
 
 # Spell catalogue artifact fetched by just catalogue (ADR 0021); private book text, never committed
 .catalogue/
 api/tmp_schema.sql
 
-# local
+# Local scratch
 .local/
 
 # Database dumps (just db-backup): private book data, never committed (ADR 0024 step 7)

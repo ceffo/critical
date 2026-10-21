@@ -375,6 +375,7 @@ every open PR (yours and Dependabot's). A developer may watch its own branch's C
 replaces yours. `.claude/scripts/ci-state.sh` prints everything that isn't green; `.claude/scripts/ci-watch.sh`
 (with `run_in_background`, one at a time, a new one replaces the old) exits on red, on everything
 green, or on one of our PRs going green; pending-to-pending moves (CI -> Release) keep it waiting.
+GitHub security alerts (Dependabot, code scanning, secret scanning) come from `.claude/scripts/security-alerts.sh`, which `ci-watch.sh` runs on every poll: each new open alert is filed as an Urgent Linear item (`Security alert: <kind> #<n> …`, dedupe on that title) and reported as a `FILED` line, and a failure of the check as an `ERROR security-alerts` line; dispatch the filed item like any other urgent one.
 A `Stop` hook (`.claude/hooks/supervisor-ci-guard.sh`) **blocks the end of your turn** while CI is
 pending with no live watcher, or red and not recorded in `<wt>/supervisor/ci-red-handled`. Red →
 act in the same turn (rework brief, a fresh developer for main or a Dependabot PR, a rerun for a

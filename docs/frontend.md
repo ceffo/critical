@@ -186,6 +186,16 @@ flowchart TD
   ADR 0027 step 3.4; "Log in" and "Log out" are fixed terms, step 3.2), the invite-only note and an English /
   Français switch (the cog menu needs a session). `layout.spec` audits it for cut text in French and
   English at every layout viewport, with both buttons and the longest refusal.
+- Changelog panel ([ADR 0039](adr/0039-in-app-changelog.md) step 7, `components/shell/ChangelogPanel.tsx`): the
+  version badge's version (and env pill) is a button (`VersionBadge.tsx`; the new-version chip stays beside it)
+  opening a `ui/dialog` modal of two thirds of the viewport's width and height, so no screen's height changes.
+  Versions newest first, one raised block each: the number, then Features and Fixes (`section-label`, empty
+  groups hidden; "no user-facing changes" for a version with neither); the bullets are English as served, the
+  chrome is `changelog.*` (en + fr). It loads by infinite scroll (`api/changelog.ts`, 10 versions a page;
+  `lib/changelogPages.ts`: one request in flight, ends without a `nextCursor`, a failure shows Retry, an empty
+  answer shows the empty-state text). The endpoint needs a session, so on the login screen the badge stays
+  plain text (`CHANGELOG_WITHOUT_SESSION` in `VersionBadge.tsx`, the one switch). `e2e/changelog.spec.ts`
+  (mocked API) covers keyboard, Esc / close / outside, paging, retry and each screen at 1920 and 2560.
 - Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`), opened from the cog at the
   left of the dice footer (ADR 0022 step 2.6): language
   (English / Français), appearance (Dark / Light / System), a dark theme (Arcane, Deep, Plain) and
@@ -516,10 +526,13 @@ All API calls live in `web/src/api/`. Never call `fetch` directly from a compone
 
 ```typescript
 // web/src/api/hp.ts
-export async function appendHpEvent(delta: number, source: string): Promise<HpEvent> {
-  const res = await fetch('/api/hp/event', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+export async function appendHpEvent(
+  delta: number,
+  source: string,
+): Promise<HpEvent> {
+  const res = await fetch("/api/hp/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ delta, source }),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -559,7 +572,7 @@ export interface RollResult {
 
 ```typescript
 // stores/hp.ts
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface HpStore {
   currentHp: number | null;
@@ -573,8 +586,12 @@ export const useHpStore = create<HpStore>((set) => ({
   currentHp: null,
   maxHp: null,
   events: [],
-  fetchHp: async () => { /* call api/hp.ts */ },
-  appendEvent: async (delta, source) => { /* call api/hp.ts, then fetchHp */ },
+  fetchHp: async () => {
+    /* call api/hp.ts */
+  },
+  appendEvent: async (delta, source) => {
+    /* call api/hp.ts, then fetchHp */
+  },
 }));
 ```
 

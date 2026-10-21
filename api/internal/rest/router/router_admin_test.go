@@ -72,14 +72,14 @@ func TestAdmin_ListUsers(t *testing.T) {
 	login := time.Date(2026, 10, 17, 20, 30, 15, 500, time.UTC)
 	created := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
 	a.EXPECT().ListUsers(mock.Anything).Return([]authsvc.UserSummary{
-		{User: authsvc.User{ID: annID, Email: "ann@example.com", Role: authsvc.RoleAdmin, Root: true, LastLogin: &login, CreatedAt: created}, Characters: []string{"Kelsen"}},
+		{User: authsvc.User{ID: annID, Email: "ann@example.com", DisplayName: "Ann Lovelace", Role: authsvc.RoleAdmin, Root: true, LastLogin: &login, CreatedAt: created}, Characters: []string{"Kelsen"}},
 		{User: authsvc.User{ID: bobID, Email: "bob@example.com", Role: authsvc.RolePlayer, Disabled: true, CreatedAt: created}},
 	}, nil).Once()
 	h, _ := newRouterWith(t, a)
 	rec := as(h, "admin", "GET", "/api/admin/users", "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.JSONEq(t, `{"users":[
-		{"id":"`+annID.String()+`","email":"ann@example.com","role":"admin","root":true,"disabled":false,
+		{"id":"`+annID.String()+`","email":"ann@example.com","displayName":"Ann Lovelace","role":"admin","root":true,"disabled":false,
 		 "lastLogin":"2026-10-17T20:30:15Z","createdAt":"2026-10-01T09:00:00Z","characters":["Kelsen"]},
 		{"id":"`+bobID.String()+`","email":"bob@example.com","role":"player","root":false,"disabled":true,
 		 "lastLogin":null,"createdAt":"2026-10-01T09:00:00Z","characters":[]}]}`, rec.Body.String())

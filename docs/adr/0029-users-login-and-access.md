@@ -107,8 +107,9 @@ one item and gets a test that fails on the old code, per the house rule.
       created then, with the role `player`.
    5. **The mails (user, 2026-10-21).** Three triggers: an invite is created (to the invitee), an admin
       **resends** a pending invite (step 2.7; the same mail), and the invite is **accepted** (to the
-      inviter, step 2.9). Cancelling sends nothing. A mail carries only the inviter's email (users have
-      no display name), the invitee's address and the application's address
+      inviter, step 2.9). Cancelling sends nothing. A mail carries only the inviter's email (amended
+      2026-10-21 by step 3.8: users now have a display name, but the mails keep the email until their own
+      item), the invitee's address and the application's address
       (`CRITICAL_PUBLIC_URL`): no token, no secret. The domain says which mail, to whom, in which
       language (`authsvc.Notice`, structured data, no wording); the **mail adapter** (`mailadpt`) words
       it from template files embedded in the binary, one set per language (`en`, `fr`: subject, text,
@@ -167,6 +168,20 @@ one item and gets a test that fails on the old code, per the house rule.
       database that cannot serve the login (`database_unavailable`) and a login still running at the
       request deadline (`login_timeout`; _added 2026-10-18 by [ADR 0025](0025-postgresql-storage.md)
       step 10.1_): the browser never lands on a JSON error.
+   8. **The user's name (amended 2026-10-21, user: "since the admin is logged with google we should have
+      access to their name and we should put it there, as well as in the app in lieu of the email").**
+      Login asks for the scopes `openid email profile`; the ID token's `name` claim is read into the
+      identity. `users.display_name` (migration `032_user_display_name.sql`, nullable, additive, no
+      backfill) is set at **every** login, and when a first login consumes an invite: a rename at Google
+      reaches the app. An absent or blank claim **keeps** the stored name, never erases it; the dev
+      login has none. `GET /api/auth/me` and `GET /api/admin/users` carry `displayName` (omitted when
+      unknown); invites (no user yet) do not. The web shows `displayName`, else the email, everywhere
+      a user is named (settings popover, logout hints); the admin users list shows the name with the
+      email beneath, and the email alone for a user without a name. Existing users have no name until
+      their next login. **Privacy:** the name is personal data Google shares under the `profile` scope;
+      it is stored, shown to the admins and, in the follow-up item, sent to Brevo in mails. Users may
+      see a one-time Google consent update for the new scope. Out of scope: editing the name in the
+      app, profile pictures.
 
 ```mermaid
 sequenceDiagram

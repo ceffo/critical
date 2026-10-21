@@ -147,8 +147,8 @@ func (q *Queries) InsertSession(ctx context.Context, arg InsertSessionParams) er
 }
 
 const insertUser = `-- name: InsertUser :exec
-INSERT INTO users (id, email, google_subject, role, is_root, disabled, last_login, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO users (id, email, google_subject, role, is_root, disabled, last_login, created_at, display_name)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type InsertUserParams struct {
@@ -160,6 +160,7 @@ type InsertUserParams struct {
 	Disabled      bool
 	LastLogin     sql.NullTime
 	CreatedAt     time.Time
+	DisplayName   sql.NullString
 }
 
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
@@ -172,6 +173,7 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
 		arg.Disabled,
 		arg.LastLogin,
 		arg.CreatedAt,
+		arg.DisplayName,
 	)
 	return err
 }
@@ -252,7 +254,7 @@ func (q *Queries) ListPendingInvites(ctx context.Context) ([]ListPendingInvitesR
 
 const listUsers = `-- name: ListUsers :many
 
-SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users
+SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at, display_name FROM users
 ORDER BY created_at, id
 `
 
@@ -265,6 +267,7 @@ type ListUsersRow struct {
 	Disabled      bool
 	LastLogin     sql.NullTime
 	CreatedAt     time.Time
+	DisplayName   sql.NullString
 }
 
 // The admin section (ADR 0029 step 1.3): every user, the names of their characters (not the sheets),
@@ -287,6 +290,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 			&i.Disabled,
 			&i.LastLogin,
 			&i.CreatedAt,
+			&i.DisplayName,
 		); err != nil {
 			return nil, err
 		}
@@ -378,7 +382,7 @@ func (q *Queries) PendingInvite(ctx context.Context, email string) (PendingInvit
 }
 
 const rootUser = `-- name: RootUser :one
-SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, u.display_name, c.id AS current_character_id
 FROM users u
 LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
 WHERE u.is_root
@@ -393,6 +397,7 @@ type RootUserRow struct {
 	Disabled           bool
 	LastLogin          sql.NullTime
 	CreatedAt          time.Time
+	DisplayName        sql.NullString
 	CurrentCharacterID sql.NullInt64
 }
 
@@ -408,6 +413,7 @@ func (q *Queries) RootUser(ctx context.Context) (RootUserRow, error) {
 		&i.Disabled,
 		&i.LastLogin,
 		&i.CreatedAt,
+		&i.DisplayName,
 		&i.CurrentCharacterID,
 	)
 	return i, err
@@ -447,7 +453,7 @@ func (q *Queries) SetFirstCurrentCharacter(ctx context.Context, id uuid.UUID) er
 }
 
 const updateUser = `-- name: UpdateUser :execrows
-UPDATE users SET google_subject = $2, role = $3, is_root = $4, disabled = $5, last_login = $6 WHERE id = $1
+UPDATE users SET google_subject = $2, role = $3, is_root = $4, disabled = $5, last_login = $6, display_name = $7 WHERE id = $1
 `
 
 type UpdateUserParams struct {
@@ -457,6 +463,7 @@ type UpdateUserParams struct {
 	IsRoot        bool
 	Disabled      bool
 	LastLogin     sql.NullTime
+	DisplayName   sql.NullString
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int64, error) {
@@ -467,6 +474,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int64, 
 		arg.IsRoot,
 		arg.Disabled,
 		arg.LastLogin,
+		arg.DisplayName,
 	)
 	if err != nil {
 		return 0, err
@@ -475,7 +483,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (int64, 
 }
 
 const userByEmail = `-- name: UserByEmail :one
-SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, u.display_name, c.id AS current_character_id
 FROM users u
 LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
 WHERE u.email = $1
@@ -490,6 +498,7 @@ type UserByEmailRow struct {
 	Disabled           bool
 	LastLogin          sql.NullTime
 	CreatedAt          time.Time
+	DisplayName        sql.NullString
 	CurrentCharacterID sql.NullInt64
 }
 
@@ -505,6 +514,7 @@ func (q *Queries) UserByEmail(ctx context.Context, email string) (UserByEmailRow
 		&i.Disabled,
 		&i.LastLogin,
 		&i.CreatedAt,
+		&i.DisplayName,
 		&i.CurrentCharacterID,
 	)
 	return i, err
@@ -512,7 +522,7 @@ func (q *Queries) UserByEmail(ctx context.Context, email string) (UserByEmailRow
 
 const userByID = `-- name: UserByID :one
 
-SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, u.display_name, c.id AS current_character_id
 FROM users u
 LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
 WHERE u.id = $1
@@ -527,6 +537,7 @@ type UserByIDRow struct {
 	Disabled           bool
 	LastLogin          sql.NullTime
 	CreatedAt          time.Time
+	DisplayName        sql.NullString
 	CurrentCharacterID sql.NullInt64
 }
 
@@ -544,13 +555,14 @@ func (q *Queries) UserByID(ctx context.Context, id uuid.UUID) (UserByIDRow, erro
 		&i.Disabled,
 		&i.LastLogin,
 		&i.CreatedAt,
+		&i.DisplayName,
 		&i.CurrentCharacterID,
 	)
 	return i, err
 }
 
 const userBySubject = `-- name: UserBySubject :one
-SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, c.id AS current_character_id
+SELECT u.id, u.email, u.google_subject, u.role, u.is_root, u.disabled, u.last_login, u.created_at, u.display_name, c.id AS current_character_id
 FROM users u
 LEFT JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
 WHERE u.google_subject = $1
@@ -565,6 +577,7 @@ type UserBySubjectRow struct {
 	Disabled           bool
 	LastLogin          sql.NullTime
 	CreatedAt          time.Time
+	DisplayName        sql.NullString
 	CurrentCharacterID sql.NullInt64
 }
 
@@ -580,6 +593,7 @@ func (q *Queries) UserBySubject(ctx context.Context, googleSubject sql.NullStrin
 		&i.Disabled,
 		&i.LastLogin,
 		&i.CreatedAt,
+		&i.DisplayName,
 		&i.CurrentCharacterID,
 	)
 	return i, err

@@ -55,14 +55,15 @@ func RegisterRoutes(r Router, svc Service) {
 // UserDTO is a user in the admin section: never their sheets, only their
 // characters' names (step 1.3). LastLogin is null before the first login.
 type UserDTO struct {
-	ID         string   `json:"id"`
-	Email      string   `json:"email"`
-	Role       string   `json:"role"`
-	Root       bool     `json:"root"`
-	Disabled   bool     `json:"disabled"`
-	LastLogin  *string  `json:"lastLogin"`
-	CreatedAt  string   `json:"createdAt"`
-	Characters []string `json:"characters"`
+	ID          string   `json:"id"`
+	Email       string   `json:"email"`
+	DisplayName string   `json:"displayName,omitempty"`
+	Role        string   `json:"role"`
+	Root        bool     `json:"root"`
+	Disabled    bool     `json:"disabled"`
+	LastLogin   *string  `json:"lastLogin"`
+	CreatedAt   string   `json:"createdAt"`
+	Characters  []string `json:"characters"`
 }
 
 // UsersDTO is GET /api/admin/users.
@@ -98,7 +99,7 @@ func stamp(t time.Time) string { return t.UTC().Truncate(time.Second).Format(tim
 
 func userDTO(u authsvc.UserSummary) UserDTO {
 	d := UserDTO{
-		ID: u.ID.String(), Email: u.Email, Role: string(u.Role), Root: u.Root, Disabled: u.Disabled,
+		ID: u.ID.String(), Email: u.Email, DisplayName: u.DisplayName, Role: string(u.Role), Root: u.Root, Disabled: u.Disabled,
 		CreatedAt: stamp(u.CreatedAt), Characters: u.Characters,
 	}
 	if d.Characters == nil {

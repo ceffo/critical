@@ -4,6 +4,8 @@ import { post } from "./http";
 export interface Me {
   id: string;
   email: string;
+  /** The name Google gave at the last login; absent when unknown (step 3.8). */
+  displayName?: string;
   role: "admin" | "player";
   root: boolean;
   /** The character every per-character request acts on (ADR 0029 step 7.2); null: the user has none yet. */

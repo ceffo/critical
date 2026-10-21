@@ -79,7 +79,7 @@
     },
     "account": "Account",
     "logout": "Log out",
-    "logoutHint": "Log out of {{email}}",
+    "logoutHint": "Log out of {{name}}",
     "logoutHintNoEmail": "Log out of this account"
   },
   "login": {
@@ -2050,7 +2050,7 @@
     "cancelHint": "Cancel the invite of {{email}}",
     "users": "Users",
     "col": {
-      "email": "Email",
+      "user": "User",
       "role": "Role",
       "lastLogin": "Last login",
       "characters": "Characters",

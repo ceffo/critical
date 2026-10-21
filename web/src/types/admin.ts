@@ -2,6 +2,8 @@
 export interface AdminUser {
   id: string;
   email: string;
+  /** The name Google gave at the last login; absent when unknown (ADR 0029 step 3.8). */
+  displayName?: string;
   role: "admin" | "player";
   /** The root admin: never disabled nor demoted (step 5.2). */
   root: boolean;

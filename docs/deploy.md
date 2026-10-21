@@ -532,6 +532,37 @@ answers 401 `unauthenticated` to an unknown session cookie (the session lookup i
 and that `/` redirects a browser to `/login`, which serves the app. A release from before the gate (a
 rollback) answers 200 instead, which it accepts.
 
+## Invite emails (ADR 0029 steps 2.5 to 2.10; user, once per app)
+
+The server mails an invitee when an admin invites them or resends an invite, and the inviter when the invite
+is accepted. It sends through **Brevo's free tier with one verified sender address and no domain** (the apps
+live on `fly.dev`). Without these settings the apps work as before: the invite is created, nothing is sent and
+the admin gets `not_configured` (the server still starts). Do this once:
+
+1. Create a free account at <https://www.brevo.com>.
+2. **Verify the sender**: "Senders, Domains & Dedicated IPs" > "Senders" > add the address the mails come from
+   (a mailbox you own) and confirm the link Brevo mails to it. No domain, no SPF/DKIM setup.
+3. Create an **API key** ("SMTP & API" > "API Keys"). Use a v3 key; Brevo shows it once.
+4. Set the secrets on staging, then on production (the key is never in `fly.toml` or the repo):
+
+```bash
+fly secrets set --app critical-hit-staging \
+  CRITICAL_BREVO_API_KEY=<the key> CRITICAL_MAIL_FROM=<the verified address> CRITICAL_MAIL_FROM_NAME="Critical Hit"
+fly secrets set --app critical-hit \
+  CRITICAL_BREVO_API_KEY=<the key> CRITICAL_MAIL_FROM=<the verified address> CRITICAL_MAIL_FROM_NAME="Critical Hit"
+```
+
+`CRITICAL_BREVO_API_KEY` and `CRITICAL_MAIL_FROM` go together (one without the other stops the start);
+`CRITICAL_MAIL_FROM_NAME` is optional. The mails link to `CRITICAL_PUBLIC_URL`. `CRITICAL_ENV=dev` (local
+runs, e2e) prints the mail in the server log and never sends it, even if these are set.
+
+Brevo's free tier sends a limited number of mails a day; an invite beyond it is a `failed` outcome, and the
+admin copies the address by hand.
+
+**Privacy.** An invitee's email address, and the inviter's, go to Brevo, which sends the mail as a data
+processor on our behalf. Nothing else leaves the server: no character data, no token. Brevo keeps the usual
+delivery logs of its service.
+
 ## How a release flows
 
 ADR 0024 steps 3 and 4, driven by GitHub Actions (the PR title, a conventional-commit line, becomes the commit on `main` and drives the version):

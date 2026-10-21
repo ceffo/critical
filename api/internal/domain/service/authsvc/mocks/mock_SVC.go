@@ -285,34 +285,41 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
-// CreateInvite provides a mock function with given fields: ctx, by, email
-func (_m *MockSVC) CreateInvite(ctx context.Context, by uuid.UUID, email string) (*authsvc.Invite, error) {
-	ret := _m.Called(ctx, by, email)
+// CreateInvite provides a mock function with given fields: ctx, by, email, lang
+func (_m *MockSVC) CreateInvite(ctx context.Context, by uuid.UUID, email string, lang authsvc.Language) (*authsvc.Invite, authsvc.MailOutcome, error) {
+	ret := _m.Called(ctx, by, email, lang)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateInvite")
 	}
 
 	var r0 *authsvc.Invite
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string) (*authsvc.Invite, error)); ok {
-		return rf(ctx, by, email)
+	var r1 authsvc.MailOutcome
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, authsvc.Language) (*authsvc.Invite, authsvc.MailOutcome, error)); ok {
+		return rf(ctx, by, email, lang)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string) *authsvc.Invite); ok {
-		r0 = rf(ctx, by, email)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, authsvc.Language) *authsvc.Invite); ok {
+		r0 = rf(ctx, by, email, lang)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*authsvc.Invite)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string) error); ok {
-		r1 = rf(ctx, by, email)
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, authsvc.Language) authsvc.MailOutcome); ok {
+		r1 = rf(ctx, by, email, lang)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(authsvc.MailOutcome)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(context.Context, uuid.UUID, string, authsvc.Language) error); ok {
+		r2 = rf(ctx, by, email, lang)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // MockSVC_CreateInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateInvite'
@@ -324,23 +331,24 @@ type MockSVC_CreateInvite_Call struct {
 //   - ctx context.Context
 //   - by uuid.UUID
 //   - email string
-func (_e *MockSVC_Expecter) CreateInvite(ctx interface{}, by interface{}, email interface{}) *MockSVC_CreateInvite_Call {
-	return &MockSVC_CreateInvite_Call{Call: _e.mock.On("CreateInvite", ctx, by, email)}
+//   - lang authsvc.Language
+func (_e *MockSVC_Expecter) CreateInvite(ctx interface{}, by interface{}, email interface{}, lang interface{}) *MockSVC_CreateInvite_Call {
+	return &MockSVC_CreateInvite_Call{Call: _e.mock.On("CreateInvite", ctx, by, email, lang)}
 }
 
-func (_c *MockSVC_CreateInvite_Call) Run(run func(ctx context.Context, by uuid.UUID, email string)) *MockSVC_CreateInvite_Call {
+func (_c *MockSVC_CreateInvite_Call) Run(run func(ctx context.Context, by uuid.UUID, email string, lang authsvc.Language)) *MockSVC_CreateInvite_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(string))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(string), args[3].(authsvc.Language))
 	})
 	return _c
 }
 
-func (_c *MockSVC_CreateInvite_Call) Return(_a0 *authsvc.Invite, _a1 error) *MockSVC_CreateInvite_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *MockSVC_CreateInvite_Call) Return(_a0 *authsvc.Invite, _a1 authsvc.MailOutcome, _a2 error) *MockSVC_CreateInvite_Call {
+	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockSVC_CreateInvite_Call) RunAndReturn(run func(context.Context, uuid.UUID, string) (*authsvc.Invite, error)) *MockSVC_CreateInvite_Call {
+func (_c *MockSVC_CreateInvite_Call) RunAndReturn(run func(context.Context, uuid.UUID, string, authsvc.Language) (*authsvc.Invite, authsvc.MailOutcome, error)) *MockSVC_CreateInvite_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -848,6 +856,72 @@ func (_c *MockSVC_Module_Call) Return(_a0 domain.Module) *MockSVC_Module_Call {
 }
 
 func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_Module_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ResendInvite provides a mock function with given fields: ctx, id
+func (_m *MockSVC) ResendInvite(ctx context.Context, id uuid.UUID) (*authsvc.Invite, authsvc.MailOutcome, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResendInvite")
+	}
+
+	var r0 *authsvc.Invite
+	var r1 authsvc.MailOutcome
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*authsvc.Invite, authsvc.MailOutcome, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *authsvc.Invite); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*authsvc.Invite)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) authsvc.MailOutcome); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Get(1).(authsvc.MailOutcome)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, uuid.UUID) error); ok {
+		r2 = rf(ctx, id)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_ResendInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResendInvite'
+type MockSVC_ResendInvite_Call struct {
+	*mock.Call
+}
+
+// ResendInvite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockSVC_Expecter) ResendInvite(ctx interface{}, id interface{}) *MockSVC_ResendInvite_Call {
+	return &MockSVC_ResendInvite_Call{Call: _e.mock.On("ResendInvite", ctx, id)}
+}
+
+func (_c *MockSVC_ResendInvite_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockSVC_ResendInvite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ResendInvite_Call) Return(_a0 *authsvc.Invite, _a1 authsvc.MailOutcome, _a2 error) *MockSVC_ResendInvite_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *MockSVC_ResendInvite_Call) RunAndReturn(run func(context.Context, uuid.UUID) (*authsvc.Invite, authsvc.MailOutcome, error)) *MockSVC_ResendInvite_Call {
 	_c.Call.Return(run)
 	return _c
 }

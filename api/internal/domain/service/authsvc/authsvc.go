@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -77,10 +78,16 @@ type SVC interface {
 	// first.
 	ListInvites(ctx context.Context) ([]Invite, error)
 	// CreateInvite authorises email to log in through Google (step 2.1),
-	// invited by the user by. An email that is not one is a field error; one
-	// that has a user is ErrEmailHasUser, one with a pending invite
-	// ErrAlreadyInvited.
-	CreateInvite(ctx context.Context, by uuid.UUID, email string) (*Invite, error)
+	// invited by the user by, then mails the invitee in lang (empty:
+	// DefaultLanguage; steps 2.6, 2.8). An email that is not one, or a
+	// language that is not en or fr, is a field error; an email that has a
+	// user is ErrEmailHasUser, one with a pending invite ErrAlreadyInvited.
+	// The invite exists whatever the MailOutcome.
+	CreateInvite(ctx context.Context, by uuid.UUID, email string, lang Language) (*Invite, MailOutcome, error)
+	// ResendInvite mails the invitee of a pending invite again (step 2.7).
+	// An unknown invite is ErrInviteNotFound, a cancelled or used one
+	// ErrInviteNotPending.
+	ResendInvite(ctx context.Context, id uuid.UUID) (*Invite, MailOutcome, error)
 	// CancelInvite cancels a pending invite (step 2.3); one that is not
 	// pending (cancelled, used, unknown) is ErrInviteNotFound.
 	CancelInvite(ctx context.Context, id uuid.UUID) error
@@ -130,6 +137,8 @@ type DAL interface {
 	// PendingInvite is the invite of a lower-cased email that is neither
 	// cancelled nor accepted.
 	PendingInvite(ctx context.Context, email string) (*Invite, error)
+	// InviteByID is any invite, with Cancelled and Accepted set.
+	InviteByID(ctx context.Context, id uuid.UUID) (*Invite, error)
 	AcceptInvite(ctx context.Context, inviteID, userID uuid.UUID, at time.Time) error
 	// ListUsers is every user (CurrentCharacterID not read) with the names
 	// of their characters not retired, both in creation order.
@@ -170,21 +179,32 @@ type IdentityProvider interface {
 }
 
 // Deps are the service's collaborators. Provider nil runs the server in dev
-// login mode (step 8.1). Now, NewID and NewToken default to the clock, random
-// UUIDs and 256-bit tokens from crypto/rand.
+// login mode (step 8.1). Notifier nil sends no mail (MailNotConfigured). Now,
+// NewID and NewToken default to the clock, random UUIDs and 256-bit tokens
+// from crypto/rand.
 type Deps struct {
 	DAL      DAL
 	Tx       domain.TxRunner
 	Provider IdentityProvider
-	Now      func() time.Time
-	NewID    func() uuid.UUID
-	NewToken func() (string, error)
+	Notifier Notifier
+	// MailTimeout defaults to the MailTimeout constant.
+	MailTimeout time.Duration
+	Now         func() time.Time
+	NewID       func() uuid.UUID
+	NewToken    func() (string, error)
 }
 
 type service struct {
-	dal      DAL
-	tx       domain.TxRunner
-	idp      IdentityProvider
+	dal         DAL
+	tx          domain.TxRunner
+	idp         IdentityProvider
+	notifier    Notifier
+	mailTimeout time.Duration
+	// mails counts the background mails (step 2.9) Close waits for; closed
+	// (under mailMu) stops new ones, so Add never races Wait.
+	mailMu   sync.Mutex
+	closed   bool
+	mails    sync.WaitGroup
 	now      func() time.Time
 	newID    func() uuid.UUID
 	newToken func() (string, error)
@@ -198,8 +218,11 @@ func New(d Deps) (SVC, error) {
 		return nil, fmt.Errorf("authsvc: nil dependency")
 	}
 	s := &service{
-		dal: d.DAL, tx: d.Tx, idp: d.Provider, now: d.Now, newID: d.NewID, newToken: d.NewToken,
+		dal: d.DAL, tx: d.Tx, idp: d.Provider, notifier: d.Notifier, mailTimeout: d.MailTimeout, now: d.Now, newID: d.NewID, newToken: d.NewToken,
 		sessions: &sessionCache{},
+	}
+	if s.mailTimeout == 0 {
+		s.mailTimeout = MailTimeout
 	}
 	if s.now == nil {
 		s.now = time.Now
@@ -214,7 +237,22 @@ func New(d Deps) (SVC, error) {
 }
 
 func (s *service) Health(context.Context) error { return nil }
-func (s *service) Close(context.Context) error  { return nil }
+
+// Close waits for the mails still being sent (step 2.9), until ctx is done.
+// A mail asked for after Close is dropped.
+func (s *service) Close(ctx context.Context) error {
+	s.mailMu.Lock()
+	s.closed = true
+	s.mailMu.Unlock()
+	done := make(chan struct{})
+	go func() { s.mails.Wait(); close(done) }()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
 
 // Module declares no codec: the login is no game move.
 func (s *service) Module() domain.Module { return domain.Module{Name: "authsvc"} }

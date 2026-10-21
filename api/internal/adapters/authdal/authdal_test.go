@@ -89,7 +89,7 @@ func TestUserWrites_PassEveryField(t *testing.T) {
 func TestInvites_PendingAndAccept(t *testing.T) {
 	q := mocks.NewMockQuerier(t)
 	q.EXPECT().PendingInvite(ctx, "ann@example.com").Return(queries.PendingInviteRow{
-		ID: iid, Email: "ann@example.com", InvitedBy: uid, CreatedAt: at,
+		ID: iid, Email: "ann@example.com", InvitedBy: uid, CreatedAt: at, Language: "fr",
 	}, nil).Once()
 	q.EXPECT().PendingInvite(ctx, "bob@example.com").Return(queries.PendingInviteRow{}, sql.ErrNoRows).Once()
 	accept := queries.AcceptInviteParams{
@@ -101,7 +101,7 @@ func TestInvites_PendingAndAccept(t *testing.T) {
 
 	inv, err := d.PendingInvite(ctx, "ann@example.com")
 	require.NoError(t, err)
-	assert.Equal(t, authsvc.Invite{ID: iid, Email: "ann@example.com", InvitedBy: uid, CreatedAt: at}, *inv)
+	assert.Equal(t, authsvc.Invite{ID: iid, Email: "ann@example.com", InvitedBy: uid, CreatedAt: at, Language: authsvc.LanguageFrench}, *inv)
 	_, err = d.PendingInvite(ctx, "bob@example.com")
 	require.ErrorIs(t, err, domain.ErrNotFound)
 
@@ -188,39 +188,55 @@ func TestListUsers_JoinsTheCharacterNamesByOwner(t *testing.T) {
 func TestInvites_ListInsertCancel(t *testing.T) {
 	q := mocks.NewMockQuerier(t)
 	q.EXPECT().ListPendingInvites(ctx).Return([]queries.ListPendingInvitesRow{
-		{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at},
+		{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: "fr"},
 	}, nil).Once()
-	q.EXPECT().InsertInvite(ctx, queries.InsertInviteParams{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}).Return(nil).Once()
+	q.EXPECT().InsertInvite(ctx, queries.InsertInviteParams{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: "fr"}).Return(nil).Once()
 	q.EXPECT().CancelInvite(ctx, queries.CancelInviteParams{ID: iid, Cancelled: sql.NullTime{Time: at, Valid: true}}).Return(1, nil).Once()
 	q.EXPECT().CancelInvite(ctx, queries.CancelInviteParams{ID: uid, Cancelled: sql.NullTime{Time: at, Valid: true}}).Return(0, nil).Once()
 	d := authdal.New(q)
 
 	got, err := d.ListPendingInvites(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, []authsvc.Invite{{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}}, got)
-	require.NoError(t, d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}))
+	assert.Equal(t, []authsvc.Invite{{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: authsvc.LanguageFrench}}, got)
+	require.NoError(t, d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: authsvc.LanguageFrench}))
 	require.NoError(t, d.CancelInvite(ctx, iid, at))
 	require.ErrorIs(t, d.CancelInvite(ctx, uid, at), domain.ErrNotFound)
 }
 
+// Step 2.7: an invite is read by id with its cancelled and used flags.
+func TestInviteByID_Step2_7(t *testing.T) {
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().InviteByID(ctx, iid).Return(queries.InviteByIDRow{
+		ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: "fr", IsCancelled: true,
+	}, nil).Once()
+	q.EXPECT().InviteByID(ctx, uid).Return(queries.InviteByIDRow{}, sql.ErrNoRows).Once()
+	d := authdal.New(q)
+
+	got, err := d.InviteByID(ctx, iid)
+	require.NoError(t, err)
+	assert.Equal(t, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: authsvc.LanguageFrench, Cancelled: true}, *got)
+	_, err = d.InviteByID(ctx, uid)
+	require.ErrorIs(t, err, domain.ErrNotFound)
+}
+
 func TestInsertInvite_Step2_1_APendingInviteIndexViolationIsAlreadyInvited(t *testing.T) {
 	q := mocks.NewMockQuerier(t)
-	p := queries.InsertInviteParams{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}
+	p := queries.InsertInviteParams{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: "fr"}
 	q.EXPECT().InsertInvite(ctx, p).Return(fmt.Errorf("exec: %w", &pq.Error{Code: "23505", Constraint: "invites_pending_email"})).Once()
 	d := authdal.New(q)
 
-	err := d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at})
+	err := d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: authsvc.LanguageFrench})
 	require.ErrorIs(t, err, authsvc.ErrAlreadyInvited)
 	assert.ErrorIs(t, err, domain.ErrConflict)
 }
 
 func TestInsertInvite_Step2_1_AnotherInsertErrorIsNotAlreadyInvited(t *testing.T) {
 	q := mocks.NewMockQuerier(t)
-	p := queries.InsertInviteParams{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}
+	p := queries.InsertInviteParams{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: "fr"}
 	q.EXPECT().InsertInvite(ctx, p).Return(&pq.Error{Code: "23505", Constraint: "invites_pkey"}).Once()
 	d := authdal.New(q)
 
-	err := d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at})
+	err := d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at, Language: authsvc.LanguageFrench})
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, authsvc.ErrAlreadyInvited)
 }

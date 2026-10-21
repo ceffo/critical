@@ -46,6 +46,9 @@ var (
 	// ErrInviteNotFound: no pending invite has this id (cancelled, used or
 	// unknown).
 	ErrInviteNotFound = fmt.Errorf("pending invite: %w", domain.ErrNotFound)
+	// ErrInviteNotPending: a resend of an invite that was cancelled or
+	// used (step 2.7).
+	ErrInviteNotPending = fmt.Errorf("this invite is cancelled or used: %w", domain.ErrConflict)
 	// ErrUserNotFound: no user has this id.
 	ErrUserNotFound = fmt.Errorf("user: %w", domain.ErrNotFound)
 	// ErrRootTaken: another user already is the bound root admin (step 5.1).

@@ -199,6 +199,8 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   `api/internal/domain/` (production code): the `fmt.Sprint*`/`Fprint*` family is refused, errors
   use `fmt.Errorf` or `domain.FieldErrorf`. The action log's `summary` is only text the player typed;
   every other entry is a structured payload the UI words (its kind's view, `web/src/journal/kinds/`).
+  One exception, decided: the invite mails are worded by the mail adapter's embedded templates, not by
+  the domain ([ADR 0029](adr/0029-users-login-and-access.md) step 2.5).
 - Rules items end the report with a `RULES TRACE` block: `ADR step -> code location -> test name`.
   A step with no test is not done.
 

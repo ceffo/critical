@@ -55,7 +55,9 @@ func (s *service) FinishLogin(ctx context.Context, in FinishLogin) (*NewSession,
 	}
 
 	var out *NewSession
+	var accepted *Notice
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		accepted = nil
 		u, err := s.dal.UserBySubject(ctx, id.Subject)
 		switch {
 		case err == nil:
@@ -76,12 +78,36 @@ func (s *service) FinishLogin(ctx context.Context, in FinishLogin) (*NewSession,
 			return err
 		}
 		// Step 2.4: the first login consumes the invite.
-		return s.dal.AcceptInvite(ctx, inv.ID, u.ID, *u.LastLogin)
+		if err := s.dal.AcceptInvite(ctx, inv.ID, u.ID, *u.LastLogin); err != nil {
+			return err
+		}
+		accepted = s.acceptedNotice(ctx, inv)
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+	// Step 2.9: told once, after the commit, the invite being consumed once.
+	if accepted != nil {
+		s.notifyAccepted(*accepted)
+	}
 	return out, nil
+}
+
+// acceptedNotice is the mail to the inviter of inv (step 2.9), nil when the
+// inviter cannot be read: the login does not depend on it.
+func (s *service) acceptedNotice(ctx context.Context, inv *Invite) *Notice {
+	if s.notifier == nil {
+		return nil
+	}
+	inviter, err := s.dal.UserByID(ctx, inv.InvitedBy)
+	if err != nil {
+		return nil
+	}
+	return &Notice{
+		Kind: NoticeAccepted, To: inviter.Email, Language: inv.Language,
+		InviterEmail: inviter.Email, InviteeEmail: inv.Email,
+	}
 }
 
 // firstLogin matches an unknown subject (step 3.4): an existing user with the

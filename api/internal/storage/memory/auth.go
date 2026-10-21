@@ -143,6 +143,22 @@ func (p Auth) PendingInvite(ctx context.Context, email string) (*authsvc.Invite,
 	return out, err
 }
 
+// InviteByID implements authsvc.DAL.
+func (p Auth) InviteByID(ctx context.Context, id uuid.UUID) (*authsvc.Invite, error) {
+	var out *authsvc.Invite
+	err := p.s.read(ctx, func(t *tables) error {
+		i, ok := t.invites[id]
+		if !ok {
+			return fmt.Errorf("%w: invite %s", domain.ErrNotFound, id)
+		}
+		inv := i.invite
+		inv.Cancelled, inv.Accepted = i.cancelled, i.acceptedBy != uuid.Nil
+		out = &inv
+		return nil
+	})
+	return out, err
+}
+
 // AcceptInvite implements authsvc.DAL.
 func (p Auth) AcceptInvite(ctx context.Context, inviteID, userID uuid.UUID, _ time.Time) error {
 	return p.s.write(ctx, func(t *tables) error {
@@ -321,7 +337,7 @@ func (p Auth) InsertInvite(ctx context.Context, inv authsvc.Invite) error {
 		if _, ok := t.invites[inv.ID]; ok {
 			return fmt.Errorf("%w: invite %s exists", errConstraint, inv.ID)
 		}
-		if _, ok := t.users[inv.InvitedBy]; !ok || inv.Email == "" {
+		if _, ok := t.users[inv.InvitedBy]; !ok || inv.Email == "" || (inv.Language != authsvc.LanguageEnglish && inv.Language != authsvc.LanguageFrench) {
 			return fmt.Errorf("%w: invite %s", errConstraint, inv.ID)
 		}
 		for _, o := range t.invites {

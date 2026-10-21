@@ -17,7 +17,7 @@ func devEnv(t *testing.T) {
 // clearEnv unsets the vars for the test and restores them afterwards.
 func clearEnv(t *testing.T) {
 	t.Helper()
-	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE", "CRITICAL_WEB_DIR", "CRITICAL_STORAGE", "CRITICAL_ENV", "FLY_APP_NAME", "CRITICAL_GOOGLE_CLIENT_ID", "CRITICAL_GOOGLE_CLIENT_SECRET", "CRITICAL_PUBLIC_URL"} {
+	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE", "CRITICAL_WEB_DIR", "CRITICAL_STORAGE", "CRITICAL_ENV", "FLY_APP_NAME", "CRITICAL_GOOGLE_CLIENT_ID", "CRITICAL_GOOGLE_CLIENT_SECRET", "CRITICAL_PUBLIC_URL", "CRITICAL_BREVO_API_KEY", "CRITICAL_MAIL_FROM", "CRITICAL_MAIL_FROM_NAME"} {
 		t.Setenv(k, "") // registers restore of the original value
 		_ = os.Unsetenv(k)
 	}

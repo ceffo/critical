@@ -102,6 +102,9 @@ type Config struct {
 	// runs the dev login instead (step 8.1); cmd/api refuses nil on a hosted
 	// app (step 8.2).
 	Google *googleadpt.Config
+	// Mail sends the mails of the invites (ADR 0029 step 2.5). Nil sends
+	// none: the outcome is not_configured.
+	Mail authsvc.Notifier
 }
 
 // Dice is every dice port the services take (diceadpt satisfies it).
@@ -453,7 +456,7 @@ func registerModules(log actionlogsvc.SVC, services []domain.Service) error {
 // newAuth builds the login service over st: with Google when cfg.Google is
 // set, else in dev login mode (ADR 0029 step 8.1).
 func newAuth(st Storage, cfg Config) (authsvc.SVC, error) {
-	deps := authsvc.Deps{DAL: st.Auth, Tx: st.Store}
+	deps := authsvc.Deps{DAL: st.Auth, Tx: st.Store, Notifier: cfg.Mail}
 	if cfg.Google != nil {
 		p, err := googleadpt.New(*cfg.Google)
 		if err != nil {

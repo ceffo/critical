@@ -47,6 +47,7 @@ type Item struct {
 	SpellID     string
 }
 
+// one row per language of a text (ADR 0023): text_id is the key a name or description column holds
 type LocalizedText struct {
 	TextID int64
 	Lang   string

@@ -4449,6 +4449,113 @@ test("version badge: inside the footer or the screen's card, three environments,
   }
 });
 
+// The "update available" button beside the version badge: it shows after two consecutive health
+// answers with a newer version (the rule's cases are unit-tested; here the wiring), takes no band
+// or height, stays inside the same box as the badge, and a click reloads the page. A tab that is
+// hidden sends no heartbeat. Screenshots in French at 1920x1080 and 2560x1440.
+test("new version toast: beside the badge after two newer answers, no extra height, click reloads", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const sizes = [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ];
+  let served = "1.4.2";
+  let asked = 0;
+  await page.route("**/api/health", (r) => {
+    asked++;
+    return r.fulfill({
+      json: {
+        status: "ok",
+        commit: "abc",
+        version: served,
+        env: "production",
+        login: "google",
+      },
+    });
+  });
+  // A tab-focus heartbeat; the page ignores a second one within two seconds.
+  const focusTab = async () => {
+    await page.waitForTimeout(2100);
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  };
+  const toast = page.getByTestId("new-version");
+  const badge = page.getByTestId("version-badge");
+
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await expect(page.getByTestId("version-text")).toHaveText("1.4.2");
+  const heightBefore = (await page.getByTestId("dice-footer").boundingBox())!
+    .height;
+
+  // A hidden tab sends nothing.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "hidden",
+    });
+  });
+  served = "1.4.3";
+  const askedBefore = asked;
+  await focusTab();
+  await page.waitForTimeout(300);
+  expect(asked, "a hidden tab sends no heartbeat").toBe(askedBefore);
+  await page.evaluate(() => {
+    delete (document as unknown as { visibilityState?: string })
+      .visibilityState;
+  });
+
+  // One newer answer shows nothing; the second one shows the button.
+  await focusTab();
+  await expect.poll(() => asked).toBe(askedBefore + 1);
+  await expect(toast).toHaveCount(0);
+  await focusTab();
+  await expect(toast).toBeVisible();
+  await expect(toast).toHaveText("Recharger");
+  await expect(badge.getByTestId("version-text")).toHaveText("1.4.2");
+
+  for (const vp of sizes) {
+    await page.setViewportSize(vp);
+    await expectNoPageScroll(page);
+    await expectNoClippedText(badge, `toast ${vp.width}`);
+    const footer = (await page.getByTestId("dice-footer").boundingBox())!;
+    const t = (await toast.boundingBox())!;
+    expect(t.x).toBeGreaterThanOrEqual(footer.x);
+    expect(t.x + t.width).toBeLessThanOrEqual(footer.x + footer.width);
+    expect(t.y).toBeGreaterThanOrEqual(footer.y);
+    expect(t.y + t.height).toBeLessThanOrEqual(footer.y + footer.height);
+    expect(footer.height, "no added height").toBe(heightBefore);
+    await snap(page, `new-version-dashboard-${vp.width}x${vp.height}`);
+  }
+
+  // It follows to another screen without a reset (the roster's header card).
+  await page.setViewportSize(sizes[0]!);
+  await page.getByTestId("roster-open").click();
+  await expect(page.getByTestId("roster")).toBeVisible();
+  await expect(toast).toBeVisible();
+  const header = (await page
+    .locator("[data-screen] > header")
+    .first()
+    .boundingBox())!;
+  const tr = (await toast.boundingBox())!;
+  expect(tr.y + tr.height).toBeLessThanOrEqual(header.y + header.height);
+  await expectNoPageScroll(page);
+  await snap(page, "new-version-roster-1920x1080");
+
+  // Nothing reloaded by itself; a click reloads, and the page then runs the new version.
+  let loads = 0;
+  page.on("framenavigated", (f) => {
+    if (f === page.mainFrame()) loads++;
+  });
+  const reloaded = page.waitForEvent("load");
+  await toast.click();
+  await reloaded;
+  expect(loads).toBeGreaterThan(0);
+  await expect(page.getByTestId("version-text")).toHaveText("1.4.3");
+  await expect(toast).toHaveCount(0);
+});
+
 // ADR 0037 steps 7 to 9 and 12, ADR 0022 step 1, ADR 0027 steps 2 and 3: a fighter's weapon
 // proficiency editor (every weapon type, a specialization toggle with its cost, a plain pick, the
 // pool) and the Skills tab's block uncut, in French first and in English, 1280 to 2560; screenshots

@@ -2706,6 +2706,8 @@
     "warned": "Class warning"
   },
   "build": {
+    "update": "Reload",
+    "updateHint": "A newer version is available: click to reload the page",
     "env": {
       "dev": "dev",
       "staging": "staging"

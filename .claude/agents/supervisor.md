@@ -33,7 +33,7 @@ ad-hoc session the user asks for) is an **interactive Claude Code session in its
 the user can watch and answer permission prompts (see the `herdr` skill for the CLI); never the Agent
 tool, autonomous scopers included (user, 2026-10-20: "within herdr, spawns are always in a tab").
 Agent names `dev-<id>`, `rev-<id>`, `scoper-<slug>`, `designer-<slug>`, `tester-<id>` (unique among
-live agents; sanitise the item id): `close-agent.sh` closes only those prefixes, and fleet-watch
+live agents; sanitise the item id and lowercase it: herdr refuses upper case in agent names): `close-agent.sh` closes only those prefixes, and fleet-watch
 treats `scoper-*`/`designer-*` as user-facing. An ad-hoc session the user drives (a skill run, a
 books session) takes a `scoper-` name, or goes in `<wt>/supervisor/user-facing-agents` at launch so
 its questions to the user don't wake you.
@@ -373,13 +373,13 @@ retargeted, so watch its CI after the parent merges.
 Every CI run the project has is the supervisor's: main's CI, Release and Promote runs, and the checks of
 every open PR (yours and Dependabot's). A developer may watch its own branch's CI, but that never
 replaces yours. `.claude/scripts/ci-state.sh` prints everything that isn't green; `.claude/scripts/ci-watch.sh`
-(with `run_in_background`, one at a time, a new one replaces the old) exits on red, on everything
+(with `run_in_background`, as a plain command: a `sleep N;` prefix hides it from the guard hook; one at a time, a new one replaces the old) exits on red, on everything
 green, or on one of our PRs going green; pending-to-pending moves (CI -> Release) keep it waiting.
 GitHub security alerts (Dependabot, code scanning, secret scanning) come from `.claude/scripts/security-alerts.sh`, which `ci-watch.sh` runs on every poll: each new open alert is filed as an Urgent Linear item (`Security alert: <kind> #<n> …`, dedupe on that title) and reported as a `FILED` line, and a failure of the check as an `ERROR security-alerts` line; dispatch the filed item like any other urgent one.
 A `Stop` hook (`.claude/hooks/supervisor-ci-guard.sh`) **blocks the end of your turn** while CI is
 pending with no live watcher, or red and not recorded in `<wt>/supervisor/ci-red-handled`. Red →
 act in the same turn (rework brief, a fresh developer for main or a Dependabot PR, a rerun for a
-flake), then append the id it printed with one line on what you did. After a merge, the Release run
+flake), then append the id it printed with one line on what you did. After a merge, check within 10 minutes that main's head has a CI run (`gh run list --commit <sha>`): when GitHub Actions is degraded the push starts none and ci-watch waits forever (sup-61 lost 48 minutes); `gh workflow run ci.yml --ref main` restarts the chain. The Release run
 it triggers is yours to see green: a deploy smoke failing on main is a red main. (2026-10-18: a
 supervisor left the Release run of a go-public fix to an idle developer; the user: "it's the
 supervisor's responsibility to monitor the ci and make sure it's in a good state".) A developer

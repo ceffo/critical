@@ -848,6 +848,30 @@ const rootVar = (page: Page, name: string) =>
     name,
   );
 
+// ADR 0029 step 3.8: the settings popover names the user by the Google name, a long one wraps and
+// is never cut. The dev login has no name: /api/auth/me is answered with one here.
+test("settings popover: a long Google name is uncut at 1920 and 2560", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me", async (route) => {
+    const res = await route.fetch();
+    const body = (await res.json()) as Record<string, unknown>;
+    body.displayName =
+      "Aurélie de La Tour d'Auvergne-Lauragais de Saint-Aignan-sur-Cher";
+    await route.fulfill({ response: res, json: body });
+  });
+  await openDashboard(page);
+  for (const vp of VIEWPORTS.slice(3)) {
+    await page.setViewportSize(vp);
+    const popover = await openSettings(page);
+    await expect(popover).toContainText("Aurélie de La Tour");
+    await expectNoClippedText(popover, `settings popover name ${vp.width}`);
+    await expectWholeWords(popover, `settings popover name ${vp.width}`);
+    await snap(page, `settings-popover-name-${vp.width}x${vp.height}`);
+    await page.keyboard.press("Escape");
+  }
+});
+
 // ADR 0026 step 4: a dark and a light theme per device, the mode picks which applies, "system"
 // switches live with the OS; both choices survive a reload and the inline script paints the
 // effective one before the app runs.

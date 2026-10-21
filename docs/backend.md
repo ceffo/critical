@@ -293,6 +293,11 @@ gate `middleware.Gate`.
   service); without it the server refuses to start (step 8.2: fails closed, e.g. the image run outside
   fly). On fly.io (`FLY_APP_NAME`) `CRITICAL_ENV=dev` is refused, so the dev login cannot exist there. Runbook: docs/deploy.md, "Login on the
   hosted apps".
+- **Invite mail** (ADR 0029 steps 2.5 to 2.10): `authsvc` takes a `Notifier` port and sends structured
+  notices; `adapters/mailadpt` words them from embedded per-language templates and sends through a
+  `Mailer` (Brevo, the log in a `CRITICAL_ENV=dev` run, a recorder in tests). `CRITICAL_BREVO_API_KEY`
+  and `CRITICAL_MAIL_FROM` (+ optional `CRITICAL_MAIL_FROM_NAME`): none set sends nothing and the
+  server starts. Runbook: docs/deploy.md, "Invite emails".
 - **Root admin** (step 5): `just root-admin <email>` (`api/cmd/rootadmin`) on `CRITICAL_DSN`, unset:
   the local database `just dev` uses. The schema allows one root, and a root is an enabled admin.
 - **Admin section** (steps 1.3, 2, 5.2; `adminhdl`, mounted behind `middleware.AdminOnly`, which

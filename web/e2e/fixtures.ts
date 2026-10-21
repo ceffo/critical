@@ -234,13 +234,21 @@ async function startWebServer(): Promise<{
       req.pipe(up);
       return;
     }
-    let file = path.join(distDir, path.normalize(decodeURIComponent(urlPath)));
-    if (
-      !file.startsWith(distDir) ||
-      !existsSync(file) ||
-      !statSync(file).isFile()
-    ) {
-      file = path.join(distDir, "index.html");
+    // The request path is untrusted: resolve it and check it stays inside distDir before any
+    // file system access (a bare prefix test would also accept a sibling like `dist-evil`).
+    const root = path.resolve(distDir);
+    let file = path.join(root, "index.html");
+    try {
+      const candidate = path.resolve(root, "." + decodeURIComponent(urlPath));
+      if (
+        candidate.startsWith(root + path.sep) &&
+        existsSync(candidate) &&
+        statSync(candidate).isFile()
+      ) {
+        file = candidate;
+      }
+    } catch {
+      // Malformed percent-encoding: serve the SPA entry point.
     }
     res.writeHead(200, {
       "content-type": mime[path.extname(file)] ?? "application/octet-stream",

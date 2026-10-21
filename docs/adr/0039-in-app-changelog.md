@@ -22,7 +22,8 @@ endpoint (CRI-128) and the panel (CRI-129) follow it.
 
 1. **The source and the method are deterministic.**
    1. The source is the conventional-commit title of each squash commit on main, per version tag, read from
-      the same range (`last tag..commit`) the release uses for its bump. No LLM, no network call and no
+      the same range (`last tag..commit`) the release uses for its bump. The ranges follow the tags' version order, not
+      ancestry, which is the same thing on a linear main (as for the release bump). No LLM, no network call and no
       hand-written text takes part.
    2. The same range gives the same changelog: the generator is a committed, rerunnable script with a
       table-driven test (the "No throwaway code" rule).
@@ -33,7 +34,8 @@ endpoint (CRI-128) and the panel (CRI-129) follow it.
 3. **A title is cleaned by a fixed rule**, in this order:
    1. Drop the `type(scope)!:` prefix, the scope included.
    2. Drop every trailing parenthesised group: the ticket `(CRI-n)`, the pull request `(#n)`, and any other
-      `(...)`. The author is not in a title and nothing of an author is kept.
+      `(...)`. A ` by <author>` that directly follows such a group is dropped too (and the groups before it);
+      a `by` anywhere else (`sort by name`) is text and stays.
    3. Trim the spaces, then capitalise the first letter. Nothing else is rewritten.
    4. Example: `feat(web): added twelve new themes (CRI-1234) by ceffo` gives the Feature
       `Added twelve new themes`.
@@ -72,9 +74,18 @@ endpoint (CRI-128) and the panel (CRI-129) follow it.
 
 ## Tests
 
-Steps 1 to 4 are proved by the generator's script test, a table of titles and a fixture repository, in the
-style of `scripts/test-release-version.sh`, written by the generator's item (CRI-128); it is named here by
-file once it exists and is not a Go `Test*` name, so the ADR-test check has nothing to resolve yet. Step 6
-is proved by the CI `image` job (`scripts/image-smoke.sh` checks the baked changelog beside the version) and
-a Go test of the endpoint's handler (CRI-128); step 5's chrome strings by the web's i18n parity test; step 7
-by the panel's Playwright spec and unit tests (CRI-129).
+Steps 1 to 4 are proved by `scripts/test-changelog.sh` (part of `just check-release-scripts`): the cleaning
+rule as a table of titles, the pure render of versions (newest first, a version without `feat` or `fix`
+listed with empty lists) and a fixture repository (the ranges between tags on the first parent, no network,
+the same bytes twice whatever the locale). Step 6 is proved by the same script (the build's own version, whose
+tag does not exist yet, is listed; a later tag never; no tag gives an empty list), by the CI `image` job
+(`scripts/image-smoke.sh` checks that the baked changelog is served by the image), by the workflow check of
+`scripts/test-release-scripts.sh` (the release build makes the changelog of its version and passes it to
+`scripts/release-image.sh`) and by the Go tests `TestChangelog_Step4_PagesWalkTheVersionsNewestFirst`,
+`TestChangelog_Step4_AVersionWithoutChangesKeepsItsEmptyLists`,
+`TestChangelog_Step6_LimitDefaultsIsCappedAndAnEmptyLogIsEmpty`, `TestChangelog_Step6_RefusesBadInput`,
+`TestChangelogAdpt_Step6_NoPathIsTheEmptyChangelog`, `TestChangelogAdpt_Step6_ReadsTheGeneratorsFile`,
+`TestChangelogAdpt_Step6_RefusesAMissingOrMalformedFile`, `TestChangelogEndpoint_Step6_PaginatesNewestFirst`,
+`TestChangelogEndpoint_Step6_ADevBuildIsEmpty`, `TestChangelogEndpoint_Step6_LimitDefaultsAndIsCapped` and
+`TestChangelogEndpoint_Step6_RefusesABadLimitOrCursor`. Step 5's chrome strings are proved by the web's i18n
+parity test; step 7 by the panel's Playwright spec and unit tests (CRI-129).

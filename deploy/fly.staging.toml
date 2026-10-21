@@ -12,6 +12,7 @@ primary_region = "yyz"
   CRITICAL_ADDR = ":8080"
   CRITICAL_SEEDS_DIR = "/app/seeds"
   CRITICAL_CATALOGUE = "/app/catalogue.json"
+  CRITICAL_CHANGELOG = "/app/changelog.json"
   CRITICAL_WEB_DIR = "/app/web"
   CRITICAL_ENV = "staging"
 

@@ -120,6 +120,15 @@ done
 out="$(get /api/character -H "Cookie: $cookie")"
 [ "${out%% *}" = 200 ] || fail "/api/character with a session: $out"
 
+# The changelog baked into the image (ADR 0039 step 6): the fixture's (api/testdata/changelog.json, passed as
+# the build context `changelog`), served paginated after a login. Without a session it is refused like any route.
+out="$(get /api/changelog -H "Cookie: $cookie")"
+[ "${out%% *}" = 200 ] || fail "/api/changelog with a session: $out"
+grep -q '"version":"0.0.0"' "$body_file" && grep -q 'A fixture feature' "$body_file" ||
+    fail "/api/changelog does not serve the baked changelog: $(cat "$body_file")"
+out="$(get /api/changelog)"
+[ "${out%% *}" = 401 ] || fail "/api/changelog without a session: $out"
+
 out="$(get /api/nope -H "Cookie: $cookie")"
 [ "$out" = "404 application/json" ] || fail "/api/nope: $out"
 grep -q '"code":"not_found"' "$body_file" || fail "/api/nope body: $(cat "$body_file")"

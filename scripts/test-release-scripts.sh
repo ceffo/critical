@@ -91,6 +91,9 @@ for part in ("github.event.workflow_run.conclusion == 'success'", "contains(from
     check(part in cond, f"job condition lacks {part}")
 check("inputs.version" in job["env"]["REDEPLOY"] and "${{" not in steps[idx["version"]]["run"],
       "the version input reaches the script other than through the environment")
+build = steps[idx["Build and push the release image"]]["run"]
+check('scripts/changelog.sh gen "$COMMIT" "$VERSION"' in build and "CHANGELOG_DIR" in build,
+      "the release build does not make the changelog of its version for the image (ADR 0039 step 6)")
 if errs:
     print("\n".join("test-release-scripts: FAIL: " + e for e in errs), file=sys.stderr)
     sys.exit(1)
@@ -180,6 +183,20 @@ for v in v1.2.3 1.2 01.2.3 'x y'; do
         && fail "image: accepted VERSION '$v'"
 done
 [ ! -s "$tmp/calls" ] || fail "image: called docker or fly on a refused VERSION"
+
+# With CHANGELOG_DIR (ADR 0039 step 6): the same one build, with the changelog as a build context; a dir
+# without changelog.json is refused before docker. Without it (above), no context is passed.
+! grep -q -- '--build-context changelog' <<<"$calls" || fail "image: a changelog context without CHANGELOG_DIR: $calls"
+mkdir "$tmp/chg"
+(cd "$src" && PATH="$stubs:$PATH" FLY="$stubs/fly" VERSION=1.2.3 CHANGELOG_DIR="$tmp/chg" "$root/scripts/release-image.sh" "$tmp/cat" "$sha" app-a >/dev/null 2>&1) \
+    && fail "image: accepted a CHANGELOG_DIR without changelog.json"
+[ ! -s "$tmp/calls" ] || fail "image: called docker or fly on a refused CHANGELOG_DIR"
+echo '{"versions":[]}' > "$tmp/chg/changelog.json"
+(cd "$src" && PATH="$stubs:$PATH" FLY="$stubs/fly" VERSION=1.2.3 CHANGELOG_DIR="$tmp/chg" "$root/scripts/release-image.sh" "$tmp/cat" "$sha" app-a >/dev/null) \
+    || fail "image with CHANGELOG_DIR: exited non-zero"
+calls="$(cat "$tmp/calls")"
+[ "$(grep -c '^docker build ' <<<"$calls")" = 1 ] || fail "image with CHANGELOG_DIR: not exactly one build"
+grep -q -- "--build-context changelog=$tmp/chg " <<<"$calls" || fail "image: changelog context not passed: $calls"
 
 [ "$fails" = 0 ] || exit 1
 echo "--- Release scripts ---"

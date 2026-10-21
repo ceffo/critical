@@ -676,7 +676,11 @@ take the same number).
   `org.opencontainers.image.version=<version>` and `critical.rulebooks.revision=<rulebooks commit>`, then
   `fly auth docker` and a push to **`registry.fly.io/critical-hit-staging:<full commit sha>`** and
   **`registry.fly.io/critical-hit-staging:v<version>`**, the same build (the app name is read from
-  `deploy/fly.staging.toml`). `just release-image` sets no version (its image reports `unknown`). The staging app's repository is the one image repository of the
+  `deploy/fly.staging.toml`). The release workflow also makes the changelog of the version
+  (`scripts/changelog.sh gen <commit> <version>`, from the tags and the commit titles, ADR 0039) in the
+  full-history checkout and passes it as `CHANGELOG_DIR`, the `changelog` build context, so the image
+  carries it (`/app/changelog.json`, served by `GET /api/changelog`) and a promoted image keeps its own.
+  `just release-image` sets no version and no changelog (its image reports `unknown` and lists no version). The staging app's repository is the one image repository of the
   release flow: the staging deploy token can push only there. Production gets the same digest from it at
   promotion, copied by digest into `critical-hit`'s repository (ADR 0024, consequences, "Promotion and
   registry layout"; "Promotion" below), never by a rebuild. The run's

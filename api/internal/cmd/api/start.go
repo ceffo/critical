@@ -18,6 +18,7 @@ import (
 
 	"github.com/caarlos0/env/v11"
 
+	"github.com/ceffo/critical/api/internal/adapters/changelogadpt"
 	"github.com/ceffo/critical/api/internal/adapters/googleadpt"
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/rest/handler/webhdl"
@@ -41,6 +42,10 @@ type Config struct {
 	// step 1). Unset, as in `just dev` where Vite serves it, it serves
 	// nothing there.
 	WebDir string `env:"CRITICAL_WEB_DIR"`
+	// Changelog is the JSON file the release build baked into the image
+	// (scripts/changelog.sh, ADR 0039 step 6). Unset, as in `just dev`
+	// where there is no tag history, the changelog is empty.
+	Changelog string `env:"CRITICAL_CHANGELOG"`
 	// Storage selects where the data lives: empty, the database at DSN;
 	// StorageMemory, the in-memory storage of the e2e runs (ADR 0025 step 8),
 	// which opens no database and keeps nothing after the process exits.
@@ -260,6 +265,11 @@ func Start() error {
 	// A bad web dir stops the server before it touches the database.
 	opts := router.Options{
 		Commit: commit, Version: version, Env: cfg.reportedEnv(), Login: auth.login(), Host: auth.host, SecureCookies: auth.secure, CookieApp: auth.cookieApp,
+	}
+	// Like the web dir, a bad changelog stops the server before the database.
+	opts.Changelog, err = changelogadpt.Load(cfg.Changelog)
+	if err != nil {
+		return err
 	}
 	if cfg.WebDir != "" {
 		web, werr := webhdl.New(cfg.WebDir)

@@ -7,6 +7,10 @@
 #   docker build --build-context catalogue=api/testdata --build-arg COMMIT="$(git rev-parse HEAD)" \
 #       --build-arg VERSION=1.2.3 .
 #
+# The changelog (ADR 0039 step 6) is the optional named build context `changelog` (a directory holding
+# changelog.json, made by scripts/changelog.sh): the release build passes it, next to the version it
+# describes. Without it the image carries an empty changelog and still builds (dev, the image check).
+#
 # COMMIT and VERSION are the build identity /api/health reports (ADR 0024 step 1.4); each is `unknown` when
 # not given. The release build computes VERSION from the commits since the last version (docs/deploy.md).
 #
@@ -17,6 +21,10 @@
 FROM alpine:3.24 AS catalogue
 RUN echo "error: no spell catalogue given. Pass --build-context catalogue=<dir holding catalogue.json>" \
          "(api/testdata for the fixture, .catalogue for the real one)." >&2 && exit 1
+
+# Overridden by `--build-context changelog=<dir>`; the default is the empty changelog, not an error.
+FROM alpine:3.24 AS changelog
+RUN echo '{"versions":[]}' > changelog.json
 
 FROM node:25-alpine AS web
 WORKDIR /src/web
@@ -52,11 +60,13 @@ COPY --from=api /out/critical-rootadmin /app/critical-rootadmin
 COPY --from=web /src/web/dist /app/web
 COPY seeds/ /app/seeds/
 COPY --from=catalogue catalogue.json /app/catalogue.json
+COPY --from=changelog changelog.json /app/changelog.json
 # No CRITICAL_DSN: the database is PostgreSQL (ADR 0025 step 1), its DSN given at run time (on fly a
 # secret). The image holds no data and has no volume.
 ENV CRITICAL_ADDR=:8080 \
     CRITICAL_SEEDS_DIR=/app/seeds \
     CRITICAL_CATALOGUE=/app/catalogue.json \
+    CRITICAL_CHANGELOG=/app/changelog.json \
     CRITICAL_WEB_DIR=/app/web
 USER critical
 EXPOSE 8080

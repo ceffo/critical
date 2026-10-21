@@ -136,7 +136,13 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           dir="$RUNNER_TEMP/catalogue"
-          trap 'rm -rf "$dir"' EXIT
+          # The changelog (ADR 0039): made here, where the history and the tags are, for the versions up to
+          # this one; the release checkout below has the release commit only. Commit titles, no secret.
+          CHANGELOG_DIR="$RUNNER_TEMP/changelog"
+          export CHANGELOG_DIR
+          trap 'rm -rf "$dir" "$CHANGELOG_DIR"' EXIT
+          mkdir -p "$CHANGELOG_DIR"
+          scripts/changelog.sh gen "$COMMIT" "$VERSION" > "$CHANGELOG_DIR/changelog.json"
           rulebooks="$(scripts/release-catalogue.sh "$dir")"
           unset RULEBOOKS_DEPLOY_KEY
           app="$(sed -n 's/^app = "\(.*\)"$/\1/p' deploy/fly.staging.toml)"

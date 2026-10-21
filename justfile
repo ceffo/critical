@@ -57,10 +57,12 @@ check-ci-skip:
 # steps 3, 4, 7, 8.3 and 10.4), and the backup and restore drill's (step 9), offline: docker, fly, gh and the
 # PostgreSQL tools stubbed, a local rulebooks repo and a generated key, fixture git repos
 # (scripts/test-release-version.sh, scripts/test-release-scripts.sh, scripts/test-staging-deploy.sh,
-# scripts/test-promotion.sh, scripts/test-gate-check.sh, scripts/test-db-backup.sh, scripts/test-major.sh).
+# scripts/test-promotion.sh, scripts/test-gate-check.sh, scripts/test-db-backup.sh, scripts/test-major.sh) and the
+# changelog generator's (ADR 0039, scripts/test-changelog.sh).
 check-release-scripts:
     scripts/test-build-identity.sh
     scripts/test-release-version.sh
+    scripts/test-changelog.sh
     scripts/test-release-scripts.sh
     scripts/test-staging-deploy.sh
     scripts/test-gate-check.sh
@@ -422,7 +424,7 @@ image tag="critical:local":
     #!/usr/bin/env bash
     set -euo pipefail
     commit="$(git rev-parse HEAD)"
-    docker build -t "{{tag}}" --build-context catalogue=api/testdata --build-arg COMMIT="$commit" --build-arg VERSION=0.0.0 .
+    docker build -t "{{tag}}" --build-context catalogue=api/testdata --build-context changelog=api/testdata --build-arg COMMIT="$commit" --build-arg VERSION=0.0.0 .
     scripts/image-smoke.sh "{{tag}}" "$commit" 0.0.0
 
 # Build the design-direction pages (docs/design/ui-directions, static HTML on the real theme tokens)

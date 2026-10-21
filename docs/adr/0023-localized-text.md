@@ -112,6 +112,12 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     `TestSeed_Step10_ReconcileAddsLanguagesKeepingPlayerNamesAndRows`,
     `TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved`,
     `TestSeed_Step10_RejectsANameWithoutLanguage` (storage/postgres).
+    A seed that later *changes* a language it already offered (the darts' French name, "Fléchettes"
+    to "Dards") does not reach existing databases through this rule, which never rewrites an
+    offered language. Such a correction is a one-off migration data step (migration 030,
+    `renameDarts`): it renames that one body only while it still reads the old seed's value, so a
+    name the player changed is kept and a rerun writes nothing. Test:
+    `TestMigrate_Step10_DartsFrenchNameBecomesDards` (storage/postgres).
 11. **The editors write the player's language.** The item and weapon bodies take `name` as a language
     map. The web form shows the name in the UI language (with the client fallback) and sends that one
     language (`editLang`: the UI language without its region), only when the player changed what it

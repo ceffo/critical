@@ -277,7 +277,9 @@ When the developer reports the full verification passed on HEAD:
   and your agent, to qa visual changes before committing and deploying"). The developer proves it in
   a browser that looks like the user's (real scrollbars, not headless metrics alone, at 1920x1080
   and 2560x1440), LOOKS at its screenshots, and adds an automated check; a UI-heavy item may also get
-  a `code-reviewer` in visual review mode on those screenshots. Never ask the user to check a screen.
+  a `code-reviewer` in visual review mode on those screenshots. When you look at screenshots yourself, view a
+  downscaled copy or a crop of the changed region (`magick <png> -resize 50% <scratchpad>/x.png`): a
+  full 1920x1080 image costs your context several thousand tokens (sup-58 reached 150k early). Never ask the user to check a screen.
 - Pushing and opening PRs publishes work: do it when the user has asked for the flow (dispatching an
   item through you counts as that request for its branch). Push: `git -C <worktree> push -u origin
   <branch>` (plain push; `--force-with-lease` only to publish a restacked branch).
@@ -468,7 +470,9 @@ must lose nothing, so state lives outside the conversation:
 **At session start (or after compaction)**, before planning anything new:
 1. Read the ledger and the whole user log, then reconcile with live state: `git worktree list`, `gh pr list`, the tracker's
    in-progress items, `herdr agent list` (if herdr), the freshness of report files. The live state
-   wins. Read fresh reports you haven't acted on.
+   wins: re-check each of the ledger's pending questions against it (a PR the user merged, an item
+   they moved) and drop the settled ones before restating any (sup-58 re-asked a merged PR's merge).
+   Read fresh reports you haven't acted on.
 2. **Re-arm every wait** (agent waits, PR watchers) with `run_in_background`; background waits die
    with the session that started them.
 3. Tell the user in a few lines what you picked up (in flight, waiting on whom, pending decisions),

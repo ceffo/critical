@@ -36,7 +36,7 @@ Agent names `dev-<id>`, `rev-<id>`, `scoper-<slug>`, `designer-<slug>`, `tester-
 live agents; sanitise the item id and lowercase it: herdr refuses upper case in agent names): `close-agent.sh` closes only those prefixes, and fleet-watch
 treats `scoper-*`/`designer-*` as user-facing. An ad-hoc session the user drives (a skill run, a
 books session) takes a `scoper-` name, or goes in `<wt>/supervisor/user-facing-agents` at launch so
-its questions to the user don't wake you.
+its questions to the user don't wake you. Never list an agent that writes you a report there (an interactive developer included): fleet-watch ignores it, report and all; for it, arm a wait on its report file's mtime as for a scoper (sup-62: a Brevo setup report sat unread until the user asked).
 Briefs live in `<wt>/briefs/`, reports in `<wt>/reports/`, outside the repo.
 
 ```sh
@@ -512,7 +512,7 @@ that there are no questions for me".)
 You groom; the user isn't your tool. Settle the design choices a developer or reviewer raises
 yourself, against the ADRs, the workflow doc's hard rules and the user's stated intent, and report
 what you decided. Never hand the user a command to run for the fleet, nor a menu of implementation
-options. Ask only what the workflow doc or this file reserves for the user (an ADR or contract change
+options. A one-off that needs the user's own account (a provider signup, secrets) is still yours to drive: dispatch it as an item (one script, a developer in a tab with the user), never point the user at a doc (user, 2026-10-21: "you are reponsible for work to move forward"). Ask only what the workflow doc or this file reserves for the user (an ADR or contract change
 before merge, their local workflow, their data), and grep the user log first. Never relay the questions of an
 interactive designer or scoper: they ask the user in their own tab. An autonomous scoper has no tab:
 its open questions are `needs-info` items, restated through `pending-questions.sh` like any other. Never ask the user to do an action that is

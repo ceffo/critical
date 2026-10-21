@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { VersionBadge } from "@/components/shell/VersionBadge";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, UserPlus, X } from "@phosphor-icons/react";
 import { createCharacter, draftCharacter } from "@/api/characters";
@@ -316,7 +317,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   if (loadError || !options)
     return (
-      <main className="flex h-app items-center justify-center px-3 pt-3">
+      <main className="flex h-dvh items-center justify-center p-3">
         {loadError ? (
           <div role="alert" className="flex flex-col items-start gap-2">
             <p className="text-body text-danger">{t("details.optionsError")}</p>
@@ -372,13 +373,14 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   return (
     <div
-      className="mx-auto flex h-app max-w-[1680px] flex-col gap-3 overflow-hidden px-3 pt-3"
+      className="mx-auto flex h-dvh max-w-[1680px] flex-col gap-3 overflow-hidden p-3"
       data-screen="create-character"
     >
       <header className="zone-card flex shrink-0 items-center gap-4 px-4 py-2">
         <Wordmark />
         <span className="text-title">{t("characters.newTitle")}</span>
         <span className="flex-1" />
+        <VersionBadge />
         <Button
           variant="quiet"
           onClick={leave}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { VersionBadge } from "@/components/shell/VersionBadge";
 import { useTranslation } from "react-i18next";
 import { Code, GoogleLogo, WarningCircle } from "@phosphor-icons/react";
 import {
@@ -53,7 +54,7 @@ export function LoginPage({ error }: { error: string | null }) {
 
   return (
     <main
-      className="flex min-h-app items-center justify-center p-3"
+      className="flex min-h-dvh items-center justify-center p-3"
       data-screen="login"
     >
       <section
@@ -127,26 +128,29 @@ export function LoginPage({ error }: { error: string | null }) {
 
           <p className="text-label text-ink-muted">{t("login.inviteOnly")}</p>
 
-          <div
-            role="radiogroup"
-            aria-label={t("settings.language")}
-            className="flex gap-1 self-start"
-          >
-            {LANGUAGES.map((l) => (
-              <button
-                key={l}
-                type="button"
-                role="radio"
-                aria-checked={lang === l}
-                className={cn(
-                  "min-h-7 rounded-md px-2 py-1 text-label outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                  lang === l ? "chip-chosen" : "chip hover:bg-raised-hover",
-                )}
-                onClick={() => update({ lang: l })}
-              >
-                {t(`language.${l}`)}
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-3">
+            <div
+              role="radiogroup"
+              aria-label={t("settings.language")}
+              className="flex gap-1"
+            >
+              {LANGUAGES.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  role="radio"
+                  aria-checked={lang === l}
+                  className={cn(
+                    "min-h-7 rounded-md px-2 py-1 text-label outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    lang === l ? "chip-chosen" : "chip hover:bg-raised-hover",
+                  )}
+                  onClick={() => update({ lang: l })}
+                >
+                  {t(`language.${l}`)}
+                </button>
+              ))}
+            </div>
+            <VersionBadge />
           </div>
         </div>
       </section>

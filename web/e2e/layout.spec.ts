@@ -4292,11 +4292,12 @@ test("end effects: stop menu, notice and journal line uncut, fr and en, 1280 to 
   }
 });
 
-// The version badge (ADR 0024 step 1.4): on every screen it sits bottom right under the content, never
-// covering it, with no page scroll or cut text, at 1920x1080 and 2560x1440. The e2e API is a local
-// build, so the real answer shows the dev pill and a version with its commit; staging and production
-// are the health answers given here. Screenshots in French.
-test("version badge: bottom right on every screen, three environments, 1920 and 2560", async ({
+// The version badge (ADR 0024 step 1.4): it sits inside a box the screen already has, never in a band
+// of its own: the dashboard's dice footer (right end), a header card (roster, creation), the login
+// card. No page scroll or cut text at 1920x1080 and 2560x1440. The e2e API is a local build, so the
+// real answer shows the dev pill and a version with its commit; staging and production are the
+// health answers given here. Screenshots in French.
+test("version badge: inside the footer or the screen's card, three environments, 1920 and 2560", async ({
   page,
   context,
 }) => {
@@ -4307,27 +4308,37 @@ test("version badge: bottom right on every screen, three environments, 1920 and 
     { width: 2560, height: 1440 },
   ];
   const badge = page.getByTestId("version-badge");
-  const expectBadgeFree = async (where: string) => {
+  const expectBadgeIn = async (
+    host: Locator,
+    where: string,
+    end: "right-end" | "anywhere" = "anywhere",
+  ) => {
     await expect(badge, where).toBeVisible();
     await expectNoPageScroll(page);
     await expectNoClippedText(badge, where);
-    const box = (await badge.boundingBox())!;
+    const b = (await badge.boundingBox())!;
+    const h = (await host.boundingBox())!;
+    expect(b.x, `${where}: inside the box, left`).toBeGreaterThanOrEqual(h.x);
+    expect(b.y, `${where}: inside the box, top`).toBeGreaterThanOrEqual(h.y);
+    expect(
+      b.x + b.width,
+      `${where}: inside the box, right`,
+    ).toBeLessThanOrEqual(h.x + h.width);
+    expect(
+      b.y + b.height,
+      `${where}: inside the box, bottom`,
+    ).toBeLessThanOrEqual(h.y + h.height);
+    if (end === "right-end")
+      // Aligned with the footer's content: at its right end, centred on its line.
+      expect(
+        h.x + h.width - (b.x + b.width),
+        `${where}: at the right end`,
+      ).toBeLessThanOrEqual(16);
+    // No band under the screen: the lowest visible box ends at the window's bottom padding at most.
     const vp = page.viewportSize()!;
-    expect(box.x + box.width, `${where}: right edge`).toBeLessThanOrEqual(
-      vp.width,
-    );
-    expect(box.y + box.height, `${where}: bottom edge`).toBeLessThanOrEqual(
-      vp.height,
-    );
-    expect(box.x, `${where}: on the right half`).toBeGreaterThan(vp.width / 2);
-    expect(box.y, `${where}: on the bottom strip`).toBeGreaterThan(
-      vp.height - 40,
-    );
-    // Nothing of the screen reaches into the badge's strip.
     const lowest = await page.evaluate(() => {
       let bottom = 0;
       for (const el of document.querySelectorAll("#root *")) {
-        if (el.closest("[data-testid=version-badge]")) continue;
         const cs = getComputedStyle(el);
         if (cs.position === "fixed" || cs.display === "none") continue;
         const r = el.getBoundingClientRect();
@@ -4336,11 +4347,12 @@ test("version badge: bottom right on every screen, three environments, 1920 and 
       }
       return bottom;
     });
-    expect(
-      lowest,
-      `${where}: content ends above the badge`,
-    ).toBeLessThanOrEqual(box.y + 1);
+    expect(lowest, `${where}: nothing past the window`).toBeLessThanOrEqual(
+      vp.height,
+    );
   };
+  const footer = page.getByTestId("dice-footer");
+  const header = page.locator("[data-screen] > header").first();
 
   // The real answer of this local build: the dev pill and 0.0.0+<sha> (or the last tag).
   await openDashboard(page);
@@ -4351,7 +4363,7 @@ test("version badge: bottom right on every screen, three environments, 1920 and 
   );
   for (const vp of sizes) {
     await page.setViewportSize(vp);
-    await expectBadgeFree(`dashboard dev ${vp.width}`);
+    await expectBadgeIn(footer, `dashboard dev ${vp.width}`, "right-end");
     await snap(page, `version-dashboard-dev-${vp.width}x${vp.height}`);
   }
 
@@ -4361,14 +4373,14 @@ test("version badge: bottom right on every screen, three environments, 1920 and 
   await expect(page.getByTestId("roster")).toBeVisible();
   for (const vp of sizes) {
     await page.setViewportSize(vp);
-    await expectBadgeFree(`roster ${vp.width}`);
+    await expectBadgeIn(header, `roster ${vp.width}`);
     await snap(page, `version-roster-${vp.width}x${vp.height}`);
   }
   await page.goto("/create");
   await expect(page.getByTestId("creation-step")).toBeVisible();
   for (const vp of sizes) {
     await page.setViewportSize(vp);
-    await expectBadgeFree(`creation ${vp.width}`);
+    await expectBadgeIn(header, `creation ${vp.width}`);
     await snap(page, `version-creation-${vp.width}x${vp.height}`);
   }
 
@@ -4388,7 +4400,7 @@ test("version badge: bottom right on every screen, three environments, 1920 and 
     else await expect(page.getByTestId("version-pill")).toHaveCount(0);
     for (const vp of sizes) {
       await page.setViewportSize(vp);
-      await expectBadgeFree(`dashboard ${env} ${vp.width}`);
+      await expectBadgeIn(footer, `dashboard ${env} ${vp.width}`, "right-end");
       await snap(page, `version-dashboard-${env}-${vp.width}x${vp.height}`);
     }
     await page.unroute("**/api/health");
@@ -4424,7 +4436,8 @@ test("version badge: bottom right on every screen, three environments, 1920 and 
     await page.goto("/login");
     for (const vp of sizes) {
       await page.setViewportSize(vp);
-      await expectBadgeFree(
+      await expectBadgeIn(
+        page.getByTestId("login-card"),
         `login ${theme.darkTheme}/${theme.lightTheme} ${vp.width}`,
       );
       if (vp.width === 1920)

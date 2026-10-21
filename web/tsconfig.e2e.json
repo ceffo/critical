@@ -20,6 +20,8 @@
     "e2e",
     "ui-review",
     "playwright.config.ts",
-    "playwright.ui-review.config.ts"
+    "playwright.ui-review.config.ts",
+    "playwright.readme-shots.config.ts",
+    "readme-shots"
   ]
 }

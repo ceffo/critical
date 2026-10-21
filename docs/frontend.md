@@ -753,6 +753,22 @@ outside `ui/`).
 - **Artifacts** (gitignored, `web/e2e-results/`): `screens/<spec>/<name>.png` (1440x900),
   `artifacts/<test>/trace.zip` on failure (`npx playwright show-trace <zip>`), `report/` (HTML).
 
+## README screenshots
+
+The README's pictures are committed files in `docs/images/screenshots/` (`dashboard-dark.png`,
+`dashboard-light.png`, `spellbook.png`, `creation.png`, `changelog.png`; the names are referenced by the
+README, keep them stable). `just readme-shots` regenerates them: `web/readme-shots/readme-shots.spec.ts`
+on the e2e stack (in-memory API, the `api/testdata` fixture, so invented data only: no account, e-mail or
+avatar), headless Chromium, Arcane theme, English, 1920x1080, with its own config
+(`playwright.readme-shots.config.ts`) so it is neither in `just e2e` (5-minute budget) nor in
+`just validate`, which only lints and typechecks it. Needs `just e2e-install` once.
+
+**Refresh them** when a change visibly alters one of those screens (header, character card, Act panel,
+journal, spell lookup, creation flow, changelog panel, theme tokens) and before a release that advertises
+the redesign. Then open every PNG (downscaled is fine) and check it for clipping, empty states and leaked
+data before committing; dice results and journal times differ from run to run, so a diff alone is not a
+reason to commit them. Keep each image under about 300 KB.
+
 ## Formatting
 
 `web/` is prettier-clean: `just lint-web` (so `just validate`) runs `prettier --check .`; fix with `just fmt-web`. The one-off reformat commit is listed in `.git-blame-ignore-revs`.

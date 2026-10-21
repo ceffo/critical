@@ -17,7 +17,7 @@ version computed from the commits, baked into the image and tagged by CI once st
 (see "Amendment (promotion on demand, 2026-10-17)"): the promotion runs from main on demand, promotes the
 newest version that passed staging or the one asked, and only a repository admin may run it (steps 4 and
 10.2). Amended again 2026-10-17, **accepted, user OK 2026-10-17** (see "Amendment (a manual major,
-2026-10-17)"): `just major` makes the next staging release the next major version (step 3).
+2026-10-17)"): `just major` makes the next staging release the next major version (step 3). Amended again 2026-10-20 (see "Amendment (the build carries its changelog, 2026-10-20)", [ADR 0039](0039-in-app-changelog.md)): step 1.4's baked version is joined by the version's changelog.
 Amended again 2026-10-20 (see "Amendment (a production record and the promote picker, 2026-10-20)"): a
 promotion records the version production runs, and `just promote` offers the versions between production's and
 staging's (step 4).
@@ -704,3 +704,12 @@ runs.
 - **Tests**: `scripts/test-promotion.sh` (candidates on the fixture repository: floor, ceiling, unknown
   production, not-staged skipped, the 20 cap, failed reads; the record's API calls and their order; the picker
   with gum stubbed), `scripts/test-staging-deploy.sh` (`record-deployment.sh --production`).
+
+## Amendment (the build carries its changelog, 2026-10-20)
+
+**Accepted, user's rulings in triage 2026-10-20.** Decided by [ADR 0039](0039-in-app-changelog.md) (CRI-126).
+
+- **Step 1.4**: besides `version` and `commit`, the image carries the changelog of the versions up to its own,
+  generated at Release from the commit titles and baked in with the version (ADR 0039 step 6). Not
+  implemented yet.
+- **Tests**: the CI `image` job gains a check of the baked changelog (ADR 0039 Tests).

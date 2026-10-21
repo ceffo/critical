@@ -95,7 +95,8 @@ func (s *service) FinishLogin(ctx context.Context, in FinishLogin) (*NewSession,
 }
 
 // acceptedNotice is the mail to the inviter of inv (step 2.9), nil when the
-// inviter cannot be read: the login does not depend on it.
+// inviter cannot be read: the login does not depend on it. It is always in
+// French, whatever the invite's language (the inviter's own is not stored).
 func (s *service) acceptedNotice(ctx context.Context, inv *Invite) *Notice {
 	if s.notifier == nil {
 		return nil
@@ -105,7 +106,7 @@ func (s *service) acceptedNotice(ctx context.Context, inv *Invite) *Notice {
 		return nil
 	}
 	return &Notice{
-		Kind: NoticeAccepted, To: inviter.Email, Language: inv.Language,
+		Kind: NoticeAccepted, To: inviter.Email, Language: LanguageFrench,
 		InviterEmail: inviter.Email, InviteeEmail: inv.Email,
 	}
 }

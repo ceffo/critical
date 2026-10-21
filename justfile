@@ -277,6 +277,19 @@ ui-shots: build-api
     cd web && npx playwright test -c playwright.ui-review.config.ts screens.spec.ts contrast.spec.ts
     node web/ui-review/curate.mjs
 
+# README screenshots (docs/images/screenshots/, docs/frontend.md "README screenshots"): the dashboard (dark and
+# light Arcane), the spell lookup, the creation flow and the changelog panel, English, 1920x1080, on the
+# e2e stack (in-memory API, the api/testdata fixture; never ports 8080/5173/5432 or .dev/). Headless.
+# The raw PNGs land in the gitignored web/e2e-results/readme-shots/ and replace docs/images/screenshots/*.png.
+# Not part of `just validate` (beyond lint and typecheck) nor `just e2e`. Needs `just e2e-install` once.
+readme-shots: build-api
+    cd web && node e2e/check-browser.mjs
+    rm -rf web/e2e-results/readme-shots
+    cd web && npx playwright test -c playwright.readme-shots.config.ts
+    mkdir -p docs/images/screenshots
+    rm -f docs/images/screenshots/*.png
+    cp web/e2e-results/readme-shots/*.png docs/images/screenshots/
+
 # --- Fly.io configuration (ADR 0024 steps 2, 5, 8, 9.1) ---
 
 # Check deploy/fly.*.toml: the Go test (part of `just test-api`, so of `just validate`) parses them and

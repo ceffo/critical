@@ -14,6 +14,10 @@
 # is baked in as the build arg VERSION (reported by /api/health), recorded as the label
 # `org.opencontainers.image.version` and pushed as a second tag registry.fly.io/<app>:v<version> (the one
 # a redeploy of that version uses); unset, the image reports `unknown` and gets the sha tag only.
+# CHANGELOG_DIR (optional) holds changelog.json, made by scripts/changelog.sh for the version being built
+# (ADR 0039 step 6): it is passed as the build context `changelog` and only enters the image. The release
+# workflow makes it from the full history, which this script's checkout (the release commit alone) lacks;
+# unset (`just release-image`), the image carries an empty changelog.
 # Needs fly credentials (FLY_API_TOKEN, or `fly auth login`): `fly auth docker` logs docker in to the
 # registry. Plain `docker build`: no build cache is exported (step 7.2). Never traces the shell.
 set -euo pipefail
@@ -29,6 +33,9 @@ shift 2
 version="${VERSION:-}"
 [ -z "$version" ] || [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] \
     || { echo "release-image: VERSION must be MAJOR.MINOR.PATCH, got '$version'" >&2; exit 1; }
+changelog_dir="${CHANGELOG_DIR:-}"
+[ -z "$changelog_dir" ] || [ -s "$changelog_dir/changelog.json" ] \
+    || { echo "release-image: no changelog.json in $changelog_dir" >&2; exit 1; }
 [ -z "$(git status --porcelain)" ] || { echo "release-image: the work tree is not clean; commit first" >&2; exit 1; }
 
 fly="${FLY:-$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)}"
@@ -37,8 +44,11 @@ local_ref="critical:release-$commit"
 
 versioned=()
 [ -z "$version" ] || versioned=(--build-arg VERSION="$version" --label org.opencontainers.image.version="$version")
+with_changelog=()
+[ -z "$changelog_dir" ] || with_changelog=(--build-context changelog="$changelog_dir")
 docker build -t "$local_ref" \
     --build-context catalogue="$catalogue" \
+    "${with_changelog[@]}" \
     --build-arg COMMIT="$commit" \
     "${versioned[@]}" \
     --label org.opencontainers.image.revision="$commit" \

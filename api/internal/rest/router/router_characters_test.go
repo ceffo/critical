@@ -61,7 +61,7 @@ func as(h http.Handler, token, method, path, body string) *httptest.ResponseReco
 // the health check, the reference data no character owns (step 7.5), the
 // user's characters, the creation's rolls and the admin section (adminPrefix).
 var characterFree = map[string]bool{
-	"GET /api/health": true, "GET /api/spells/filters": true, "GET /api/spells/names": true,
+	"GET /api/health": true, "GET /api/changelog": true, "GET /api/spells/filters": true, "GET /api/spells/names": true,
 	"GET /api/crit-table": true, "PUT /api/crit-table": true, "GET /api/xp/preview": true,
 	"GET /api/characters": true, "PUT /api/characters/current": true,
 	"GET /api/characters/options": true, "POST /api/characters": true, "POST /api/characters/draft": true, "PATCH /api/characters/{id}": true,

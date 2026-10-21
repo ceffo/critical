@@ -16,6 +16,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/changelog"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/achdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/actionloghdl"
@@ -23,6 +24,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/authhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/buffhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/casthdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/changeloghdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/characterhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/combathdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/creationrollhdl"
@@ -54,6 +56,9 @@ type Options struct {
 	// Version is the release version (X.Y.Z) baked into the image, reported
 	// by /api/health (ADR 0024 step 1.4); empty is reported as "unknown".
 	Version string
+	// Changelog is the changelog baked into the build, served by GET
+	// /api/changelog (ADR 0039 step 6); nil is the empty changelog of a dev build.
+	Changelog *changelog.Log
 	// Env is the environment /api/health reports: "dev", "staging" or
 	// "production" (ADR 0024 step 1.4); empty is reported as "unknown".
 	Env string
@@ -134,6 +139,8 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	}
 
 	// Shared by every user: no character owns them (ADR 0029 step 7.5).
+	// The build's own changelog (ADR 0039): it needs a session, no current character.
+	changeloghdl.RegisterRoutes(r, opts.Changelog)
 	spellhdl.RegisterSharedRoutes(r, bs.Spells)
 	combathdl.RegisterSharedRoutes(r, bs.Combat)
 	xphdl.RegisterSharedRoutes(r, bs.XP)

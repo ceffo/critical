@@ -1,0 +1,11 @@
+-- The darts weapon's French name "Fléchettes" becomes "Dards" (ADR 0023 step 10).
+--
+-- The seed gives each language of a name once and never rewrites one it has offered, so a database
+-- seeded before the seed said "Dards" keeps "Fléchettes" for the seed character's darts. A data
+-- step run just after this file renames that one French body when it still reads "Fléchettes"
+-- (renameDarts); a name the player changed is left as it is. No schema change: this file only
+-- documents the table the step writes.
+--
+-- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): the release before this one reads the same
+-- rows and shows whichever French name they hold. Schema only (step 2.1): the data is Go.
+COMMENT ON TABLE localized_texts IS 'one row per language of a text (ADR 0023): text_id is the key a name or description column holds';

@@ -120,6 +120,7 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment) (befo
 		weaponPicksMigration:       grantOwnedWeaponTypes,
 		specializationMigration:    specializeFlaggedWeapons,
 		spellbookOriginMigration:   markLearnedSpells,
+		dardsMigration:             func(ctx context.Context, q storeq.Querier) error { return renameDarts(ctx, q, characterPath) },
 	}
 	return before, after
 }

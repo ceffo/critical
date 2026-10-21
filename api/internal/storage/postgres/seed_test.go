@@ -471,3 +471,84 @@ func TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved(t *testing.T) {
 	assert.Equal(t, texts, f.t.Texts, "the record follows the id, not the key")
 	assertTextIntegrity(t, f)
 }
+
+// ADR 0023 step 10 (one-off data step of the dards migration): a database seeded when the seed
+// said "Fléchettes" (offered, so never rewritten by the seed) gets "Dards" in French; a name the
+// player changed is left alone; the English name and every other row stay; a second run writes
+// nothing.
+func TestMigrate_Step10_DartsFrenchNameBecomesDards(t *testing.T) {
+	old := copySeeds(t, map[string]string{
+		"weapons.json": `[{"id":"darts","name":{"en":"Darts","fr":"Fléchettes"},"damage_sm":"1d3","damage_l":"1d2","kind":"missile"},` +
+			`{"id":"dagger","name":{"en":"Dagger","fr":"Dague"},"damage_sm":"1d4","damage_l":"1d3","kind":"melee"}]`,
+	})
+	run := func(f *fakeStore) {
+		t.Helper()
+		_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+		require.NoError(t, f.InTx(context.Background(), func(ctx context.Context) error {
+			return after[dardsMigration](ctx, f)
+		}))
+	}
+
+	t.Run("an old database is renamed", func(t *testing.T) {
+		f := newFakeStore()
+		require.NoError(t, seedWithoutArmourOn(f, old))
+		require.Equal(t, localized.Text{"en": "Darts", "fr": "Fléchettes"}, f.weaponNames()["darts"])
+		before := f.sheet()
+		run(f)
+		assert.Equal(t, localized.Text{"en": "Darts", "fr": "Dards"}, f.weaponNames()["darts"])
+		assert.Equal(t, localized.Text{"en": "Dagger", "fr": "Dague"}, f.weaponNames()["dagger"])
+		assert.Equal(t, before, f.sheet(), "no other field moves")
+		assertTextIntegrity(t, f)
+
+		texts := copyTables(f.t).Texts
+		run(f)
+		assert.Equal(t, texts, f.t.Texts, "a second run writes nothing")
+		require.NoError(t, seedWithoutArmourOn(f, campaignSeeds()))
+		assert.Equal(t, "Dards", f.weaponNames()["darts"]["fr"], "the next seed run keeps it")
+	})
+
+	for name, edit := range map[string]func(text localized.Text){
+		"a French name the player typed":   func(text localized.Text) { text["fr"] = "Mes fléchettes" },
+		"a French name the player removed": func(text localized.Text) { delete(text, "fr") },
+	} {
+		t.Run("player-edited: "+name, func(t *testing.T) {
+			f := newFakeStore()
+			require.NoError(t, seedWithoutArmourOn(f, old))
+			edit(f.t.Texts[f.weapon("darts").Name])
+			want := copyTables(f.t).Texts
+			run(f)
+			assert.Equal(t, want, f.t.Texts)
+		})
+	}
+
+	t.Run("a fresh database is untouched", func(t *testing.T) {
+		f := newFakeStore()
+		run(f) // no seed character yet
+		require.NoError(t, seedWithoutArmourOn(f, campaignSeeds()))
+		texts := copyTables(f.t).Texts
+		run(f)
+		assert.Equal(t, texts, f.t.Texts)
+	})
+}
+
+// The data step is reached through runMigrations from the embedded file: a typo in the step's
+// key would leave it silently never run.
+func TestMigrate_Step10_DartsStepIsWiredToTheEmbeddedFile(t *testing.T) {
+	old := copySeeds(t, map[string]string{
+		"weapons.json": `[{"id":"darts","name":{"en":"Darts","fr":"Fléchettes"},"damage_sm":"1d3","damage_l":"1d2","kind":"missile"}]`,
+	})
+	f := newFakeStore()
+	require.NoError(t, seedWithoutArmourOn(f, old))
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	run := &fakeMigrations{store: f}
+	for _, m := range embedded {
+		if m.name != dardsMigration {
+			run.recorded = append(run.recorded, m.name)
+		}
+	}
+	require.NoError(t, runMigrations(context.Background(), run, embedded, before, after))
+	assert.Contains(t, run.steps, "apply "+dardsMigration)
+	assert.Equal(t, "Dards", f.weaponNames()["darts"]["fr"])
+}

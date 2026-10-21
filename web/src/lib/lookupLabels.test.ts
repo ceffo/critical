@@ -208,10 +208,7 @@ describe("schoolLabel", () => {
     const t = await tFor("en");
     for (const raw of CATALOGUE_SCHOOLS) {
       expect(schoolLabel(t, raw), raw).toBe(
-        raw
-          .replace(/^\(/, "")
-          .replace(/,\s+/g, ", ")
-          .replace(" Enchantment/Charm", " Enchantment/Charm"),
+        raw.replace(/^\(/, "").replace(/,\s+/g, ", "),
       );
     }
   });

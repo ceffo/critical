@@ -153,6 +153,7 @@ var mappings = []mapping{
 	{target: authsvc.ErrEmailHasUser, status: http.StatusConflict, code: "email_has_user"},
 	{target: authsvc.ErrAlreadyInvited, status: http.StatusConflict, code: "already_invited"},
 	{target: authsvc.ErrInviteNotFound, status: http.StatusNotFound, code: "invite_not_found"},
+	{target: authsvc.ErrInviteNotPending, status: http.StatusConflict, code: "invite_not_pending"},
 	{target: authsvc.ErrUserNotFound, status: http.StatusNotFound, code: "user_not_found"},
 	// A user with no current character (ADR 0029 step 7.2): the web offers
 	// to create the first one.

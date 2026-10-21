@@ -21,12 +21,13 @@ func TestCreateInvite_Step2_1_AuthorisesTheEmail(t *testing.T) {
 	e := newEnv(t, true)
 	e.dal.EXPECT().UserByEmail(mock.Anything, "cid@example.com").Return(nil, notFound()).Once()
 	e.dal.EXPECT().PendingInvite(mock.Anything, "cid@example.com").Return(nil, notFound()).Once()
-	want := authsvc.Invite{ID: newID, Email: "cid@example.com", InvitedBy: otherID, CreatedAt: now}
+	want := authsvc.Invite{ID: newID, Email: "cid@example.com", InvitedBy: otherID, CreatedAt: now, Language: authsvc.LanguageEnglish}
 	e.dal.EXPECT().InsertInvite(mock.Anything, want).Return(nil).Once()
 
-	got, err := e.svc.CreateInvite(context.Background(), otherID, "  Cid@Example.COM ")
+	got, outcome, err := e.svc.CreateInvite(context.Background(), otherID, "  Cid@Example.COM ", "")
 	require.NoError(t, err)
 	assert.Equal(t, want, *got)
+	assert.Equal(t, authsvc.MailNotConfigured, outcome, "no notifier, no mail")
 	assert.Equal(t, 1, e.tx.n, "the checks and the write are one transaction")
 }
 
@@ -36,7 +37,7 @@ func TestCreateInvite_Step2_1_ExistingUserOrDuplicateRefused(t *testing.T) {
 	t.Run("an existing user", func(t *testing.T) {
 		e := newEnv(t, true)
 		e.dal.EXPECT().UserByEmail(mock.Anything, "bob@example.com").Return(&authsvc.User{ID: userID, Email: "bob@example.com"}, nil).Once()
-		_, err := e.svc.CreateInvite(context.Background(), otherID, "Bob@example.com")
+		_, _, err := e.svc.CreateInvite(context.Background(), otherID, "Bob@example.com", "")
 		require.ErrorIs(t, err, authsvc.ErrEmailHasUser)
 		require.ErrorIs(t, err, domain.ErrConflict, "a 409")
 	})
@@ -44,7 +45,7 @@ func TestCreateInvite_Step2_1_ExistingUserOrDuplicateRefused(t *testing.T) {
 		e := newEnv(t, true)
 		e.dal.EXPECT().UserByEmail(mock.Anything, "cid@example.com").Return(nil, notFound()).Once()
 		e.dal.EXPECT().PendingInvite(mock.Anything, "cid@example.com").Return(&authsvc.Invite{ID: userID, Email: "cid@example.com"}, nil).Once()
-		_, err := e.svc.CreateInvite(context.Background(), otherID, "cid@example.com")
+		_, _, err := e.svc.CreateInvite(context.Background(), otherID, "cid@example.com", "")
 		require.ErrorIs(t, err, authsvc.ErrAlreadyInvited)
 		require.ErrorIs(t, err, domain.ErrConflict, "a 409")
 	})
@@ -56,7 +57,7 @@ func TestCreateInvite_NotAnEmailRefused(t *testing.T) {
 	for _, email := range []string{"", "bob", "bob@", "@example.com", "Bob <bob@example.com>", "a b@example.com"} {
 		t.Run(email, func(t *testing.T) {
 			e := newEnv(t, true)
-			_, err := e.svc.CreateInvite(context.Background(), otherID, email)
+			_, _, err := e.svc.CreateInvite(context.Background(), otherID, email, "")
 			require.ErrorIs(t, err, domain.ErrInvalidInput)
 			var fe *domain.FieldError
 			require.ErrorAs(t, err, &fe)

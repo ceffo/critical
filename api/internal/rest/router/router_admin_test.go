@@ -57,7 +57,7 @@ func TestAdmin_Step1_3_APlayerIsRefusedEveryAdminRoute(t *testing.T) {
 		assert.JSONEq(t, `{"error":"only an admin may do this","code":"admin_only"}`, rec.Body.String(), key)
 		return nil
 	}))
-	assert.Equal(t, 6, guarded, "the walk found the admin routes")
+	assert.Equal(t, 7, guarded, "the walk found the admin routes")
 }
 
 // Without a session the gate answers first: 401, not 403.
@@ -91,13 +91,13 @@ func TestAdmin_Step2_1_CreateInvite(t *testing.T) {
 	created := time.Date(2026, 10, 18, 9, 0, 0, 0, time.UTC)
 	t.Run("201 with the invite, invited by the session's user", func(t *testing.T) {
 		a := adminAndPlayer(t)
-		a.EXPECT().CreateInvite(mock.Anything, annID, "Cid@Example.com").
-			Return(&authsvc.Invite{ID: inviteID, Email: "cid@example.com", InvitedBy: annID, CreatedAt: created}, nil).Once()
+		a.EXPECT().CreateInvite(mock.Anything, annID, "Cid@Example.com", authsvc.Language("fr")).
+			Return(&authsvc.Invite{ID: inviteID, Email: "cid@example.com", InvitedBy: annID, CreatedAt: created, Language: "fr"}, authsvc.MailSent, nil).Once()
 		h, _ := newRouterWith(t, a)
-		rec := as(h, "admin", "POST", "/api/admin/invites", `{"email":"Cid@Example.com"}`)
+		rec := as(h, "admin", "POST", "/api/admin/invites", `{"email":"Cid@Example.com","language":"fr"}`)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		assert.JSONEq(t, `{"id":"`+inviteID.String()+`","email":"cid@example.com","invitedBy":"`+annID.String()+
-			`","createdAt":"2026-10-18T09:00:00Z"}`, rec.Body.String())
+			`","createdAt":"2026-10-18T09:00:00Z","language":"fr","mail":"sent"}`, rec.Body.String())
 	})
 	for _, tc := range []struct {
 		err    error
@@ -109,9 +109,41 @@ func TestAdmin_Step2_1_CreateInvite(t *testing.T) {
 	} {
 		t.Run(tc.code, func(t *testing.T) {
 			a := adminAndPlayer(t)
-			a.EXPECT().CreateInvite(mock.Anything, annID, "bob@example.com").Return(nil, tc.err).Once()
+			a.EXPECT().CreateInvite(mock.Anything, annID, "bob@example.com", authsvc.Language("")).Return(nil, "", tc.err).Once()
 			h, _ := newRouterWith(t, a)
 			rec := as(h, "admin", "POST", "/api/admin/invites", `{"email":"bob@example.com"}`)
+			assert.Equal(t, tc.status, rec.Code)
+			assert.Contains(t, rec.Body.String(), `"code":"`+tc.code+`"`)
+		})
+	}
+}
+
+// Step 2.7: a resend answers the invite with the mail outcome; a cancelled or
+// used invite is 409 invite_not_pending, an unknown one 404.
+func TestAdmin_Step2_7_ResendInvite(t *testing.T) {
+	t.Run("200 with the outcome", func(t *testing.T) {
+		a := adminAndPlayer(t)
+		a.EXPECT().ResendInvite(mock.Anything, inviteID).
+			Return(&authsvc.Invite{ID: inviteID, Email: "cid@example.com", InvitedBy: annID, CreatedAt: time.Date(2026, 10, 18, 9, 0, 0, 0, time.UTC), Language: "en"}, authsvc.MailFailed, nil).Once()
+		h, _ := newRouterWith(t, a)
+		rec := as(h, "admin", "POST", "/api/admin/invites/"+inviteID.String()+"/resend", "")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.JSONEq(t, `{"id":"`+inviteID.String()+`","email":"cid@example.com","invitedBy":"`+annID.String()+
+			`","createdAt":"2026-10-18T09:00:00Z","language":"en","mail":"failed"}`, rec.Body.String())
+	})
+	for _, tc := range []struct {
+		err    error
+		status int
+		code   string
+	}{
+		{authsvc.ErrInviteNotPending, http.StatusConflict, "invite_not_pending"},
+		{authsvc.ErrInviteNotFound, http.StatusNotFound, "invite_not_found"},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			a := adminAndPlayer(t)
+			a.EXPECT().ResendInvite(mock.Anything, inviteID).Return(nil, "", tc.err).Once()
+			h, _ := newRouterWith(t, a)
+			rec := as(h, "admin", "POST", "/api/admin/invites/"+inviteID.String()+"/resend", "")
 			assert.Equal(t, tc.status, rec.Code)
 			assert.Contains(t, rec.Body.String(), `"code":"`+tc.code+`"`)
 		})

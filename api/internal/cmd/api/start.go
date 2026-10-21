@@ -71,6 +71,12 @@ type Config struct {
 	// Google redirect is PublicURL/api/auth/google/callback, the CSRF check
 	// compares with its host, and https makes the cookies Secure.
 	PublicURL string `env:"CRITICAL_PUBLIC_URL"`
+	// The mail of the invites (ADR 0029 step 2.10): Brevo's API key and the
+	// verified sender (address, and optionally its name). All unset, no mail
+	// is sent and the server starts; on fly they are the app's secrets.
+	BrevoAPIKey  string `env:"CRITICAL_BREVO_API_KEY"`
+	MailFrom     string `env:"CRITICAL_MAIL_FROM"`
+	MailFromName string `env:"CRITICAL_MAIL_FROM_NAME"`
 }
 
 // StorageMemory is the CRITICAL_STORAGE value of the in-memory storage.
@@ -122,6 +128,9 @@ func (c Config) Validate() error {
 		return errors.New("CRITICAL_CATALOGUE must not be empty")
 	}
 	if err := c.validateStorage(); err != nil {
+		return err
+	}
+	if err := c.validateMail(); err != nil {
 		return err
 	}
 	_, err := c.auth()
@@ -288,10 +297,14 @@ func Start() error {
 	if err != nil {
 		return fmt.Errorf("working directory: %w", err)
 	}
+	mailer, err := cfg.notifier(log)
+	if err != nil {
+		return err
+	}
 	bs, err := composition.New(ctx, composition.Config{
 		DSN: cfg.DSN, InMemory: cfg.Storage == StorageMemory,
 		SeedsDir: cfg.SeedsDir, Catalogue: resolveFromRepoRoot(cfg.Catalogue, cwd),
-		Google: auth.google,
+		Google: auth.google, Mail: mailer,
 	})
 	if err != nil {
 		return err

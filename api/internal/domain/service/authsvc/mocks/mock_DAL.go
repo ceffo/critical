@@ -455,6 +455,65 @@ func (_c *MockDAL_InsertUser_Call) RunAndReturn(run func(context.Context, authsv
 	return _c
 }
 
+// InviteByID provides a mock function with given fields: ctx, id
+func (_m *MockDAL) InviteByID(ctx context.Context, id uuid.UUID) (*authsvc.Invite, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InviteByID")
+	}
+
+	var r0 *authsvc.Invite
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (*authsvc.Invite, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) *authsvc.Invite); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*authsvc.Invite)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDAL_InviteByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InviteByID'
+type MockDAL_InviteByID_Call struct {
+	*mock.Call
+}
+
+// InviteByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockDAL_Expecter) InviteByID(ctx interface{}, id interface{}) *MockDAL_InviteByID_Call {
+	return &MockDAL_InviteByID_Call{Call: _e.mock.On("InviteByID", ctx, id)}
+}
+
+func (_c *MockDAL_InviteByID_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockDAL_InviteByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockDAL_InviteByID_Call) Return(_a0 *authsvc.Invite, _a1 error) *MockDAL_InviteByID_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDAL_InviteByID_Call) RunAndReturn(run func(context.Context, uuid.UUID) (*authsvc.Invite, error)) *MockDAL_InviteByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListPendingInvites provides a mock function with given fields: ctx
 func (_m *MockDAL) ListPendingInvites(ctx context.Context) ([]authsvc.Invite, error) {
 	ret := _m.Called(ctx)

@@ -101,7 +101,7 @@ func (q *Queries) ExtendSession(ctx context.Context, arg ExtendSessionParams) er
 }
 
 const insertInvite = `-- name: InsertInvite :exec
-INSERT INTO invites (id, email, invited_by, created_at) VALUES ($1, $2, $3, $4)
+INSERT INTO invites (id, email, invited_by, created_at, language) VALUES ($1, $2, $3, $4, $5)
 `
 
 type InsertInviteParams struct {
@@ -109,6 +109,7 @@ type InsertInviteParams struct {
 	Email     string
 	InvitedBy uuid.UUID
 	CreatedAt time.Time
+	Language  string
 }
 
 func (q *Queries) InsertInvite(ctx context.Context, arg InsertInviteParams) error {
@@ -117,6 +118,7 @@ func (q *Queries) InsertInvite(ctx context.Context, arg InsertInviteParams) erro
 		arg.Email,
 		arg.InvitedBy,
 		arg.CreatedAt,
+		arg.Language,
 	)
 	return err
 }
@@ -174,8 +176,39 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
 	return err
 }
 
+const inviteByID = `-- name: InviteByID :one
+SELECT id, email, invited_by, created_at, language, (cancelled IS NOT NULL)::boolean AS is_cancelled, (accepted_by IS NOT NULL)::boolean AS is_accepted
+FROM invites WHERE id = $1
+`
+
+type InviteByIDRow struct {
+	ID          uuid.UUID
+	Email       string
+	InvitedBy   uuid.UUID
+	CreatedAt   time.Time
+	Language    string
+	IsCancelled bool
+	IsAccepted  bool
+}
+
+// Any invite, pending or not: a resend tells a cancelled or used one from an unknown one (step 2.7).
+func (q *Queries) InviteByID(ctx context.Context, id uuid.UUID) (InviteByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, inviteByID, id)
+	var i InviteByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.InvitedBy,
+		&i.CreatedAt,
+		&i.Language,
+		&i.IsCancelled,
+		&i.IsAccepted,
+	)
+	return i, err
+}
+
 const listPendingInvites = `-- name: ListPendingInvites :many
-SELECT id, email, invited_by, created_at FROM invites
+SELECT id, email, invited_by, created_at, language FROM invites
 WHERE cancelled IS NULL AND accepted_by IS NULL
 ORDER BY created_at, id
 `
@@ -185,6 +218,7 @@ type ListPendingInvitesRow struct {
 	Email     string
 	InvitedBy uuid.UUID
 	CreatedAt time.Time
+	Language  string
 }
 
 func (q *Queries) ListPendingInvites(ctx context.Context) ([]ListPendingInvitesRow, error) {
@@ -201,6 +235,7 @@ func (q *Queries) ListPendingInvites(ctx context.Context) ([]ListPendingInvitesR
 			&i.Email,
 			&i.InvitedBy,
 			&i.CreatedAt,
+			&i.Language,
 		); err != nil {
 			return nil, err
 		}
@@ -317,7 +352,7 @@ func (q *Queries) OwnedCharacterNames(ctx context.Context) ([]OwnedCharacterName
 }
 
 const pendingInvite = `-- name: PendingInvite :one
-SELECT id, email, invited_by, created_at FROM invites
+SELECT id, email, invited_by, created_at, language FROM invites
 WHERE email = $1 AND cancelled IS NULL AND accepted_by IS NULL
 `
 
@@ -326,6 +361,7 @@ type PendingInviteRow struct {
 	Email     string
 	InvitedBy uuid.UUID
 	CreatedAt time.Time
+	Language  string
 }
 
 func (q *Queries) PendingInvite(ctx context.Context, email string) (PendingInviteRow, error) {
@@ -336,6 +372,7 @@ func (q *Queries) PendingInvite(ctx context.Context, email string) (PendingInvit
 		&i.Email,
 		&i.InvitedBy,
 		&i.CreatedAt,
+		&i.Language,
 	)
 	return i, err
 }

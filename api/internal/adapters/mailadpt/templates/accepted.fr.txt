@@ -1,0 +1,5 @@
+Bonjour,
+
+{{.Invitee}} a accepté votre invitation et s'est connecté(e) pour la première fois à Critical Hit.
+
+{{.AppURL}}

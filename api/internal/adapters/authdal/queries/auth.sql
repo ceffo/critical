@@ -33,7 +33,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 UPDATE users SET google_subject = $2, role = $3, is_root = $4, disabled = $5, last_login = $6 WHERE id = $1;
 
 -- name: PendingInvite :one
-SELECT id, email, invited_by, created_at FROM invites
+SELECT id, email, invited_by, created_at, language FROM invites
 WHERE email = $1 AND cancelled IS NULL AND accepted_by IS NULL;
 
 -- name: AcceptInvite :execrows
@@ -88,12 +88,17 @@ WHERE owner_user_id IS NOT NULL AND NOT retired
 ORDER BY id;
 
 -- name: ListPendingInvites :many
-SELECT id, email, invited_by, created_at FROM invites
+SELECT id, email, invited_by, created_at, language FROM invites
 WHERE cancelled IS NULL AND accepted_by IS NULL
 ORDER BY created_at, id;
 
 -- name: InsertInvite :exec
-INSERT INTO invites (id, email, invited_by, created_at) VALUES ($1, $2, $3, $4);
+INSERT INTO invites (id, email, invited_by, created_at, language) VALUES ($1, $2, $3, $4, $5);
+
+-- name: InviteByID :one
+-- Any invite, pending or not: a resend tells a cancelled or used one from an unknown one (step 2.7).
+SELECT id, email, invited_by, created_at, language, (cancelled IS NOT NULL)::boolean AS is_cancelled, (accepted_by IS NOT NULL)::boolean AS is_accepted
+FROM invites WHERE id = $1;
 
 -- name: CancelInvite :execrows
 -- Only a pending invite is cancelled (step 2.3): a used or cancelled one stays as it is.

@@ -128,7 +128,19 @@ func (d *DAL) PendingInvite(ctx context.Context, email string) (*authsvc.Invite,
 	if err != nil {
 		return nil, notFound(err, "pending invite")
 	}
-	return &authsvc.Invite{ID: r.ID, Email: r.Email, InvitedBy: r.InvitedBy, CreatedAt: r.CreatedAt}, nil
+	return &authsvc.Invite{ID: r.ID, Email: r.Email, InvitedBy: r.InvitedBy, CreatedAt: r.CreatedAt, Language: authsvc.Language(r.Language)}, nil
+}
+
+// InviteByID implements authsvc.DAL.
+func (d *DAL) InviteByID(ctx context.Context, id uuid.UUID) (*authsvc.Invite, error) {
+	r, err := d.q.InviteByID(ctx, id)
+	if err != nil {
+		return nil, notFound(err, "invite")
+	}
+	return &authsvc.Invite{
+		ID: r.ID, Email: r.Email, InvitedBy: r.InvitedBy, CreatedAt: r.CreatedAt, Language: authsvc.Language(r.Language),
+		Cancelled: r.IsCancelled, Accepted: r.IsAccepted,
+	}, nil
 }
 
 // AcceptInvite implements authsvc.DAL; an invite that is no longer pending is
@@ -253,7 +265,7 @@ func (d *DAL) ListPendingInvites(ctx context.Context) ([]authsvc.Invite, error) 
 	}
 	out := make([]authsvc.Invite, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, authsvc.Invite{ID: r.ID, Email: r.Email, InvitedBy: r.InvitedBy, CreatedAt: r.CreatedAt})
+		out = append(out, authsvc.Invite{ID: r.ID, Email: r.Email, InvitedBy: r.InvitedBy, CreatedAt: r.CreatedAt, Language: authsvc.Language(r.Language)})
 	}
 	return out, nil
 }
@@ -265,7 +277,7 @@ const uniqueViolation = "23505"
 // authsvc.ErrAlreadyInvited.
 func (d *DAL) InsertInvite(ctx context.Context, inv authsvc.Invite) error {
 	if err := d.q.InsertInvite(ctx, queries.InsertInviteParams{
-		ID: inv.ID, Email: inv.Email, InvitedBy: inv.InvitedBy, CreatedAt: inv.CreatedAt,
+		ID: inv.ID, Email: inv.Email, InvitedBy: inv.InvitedBy, CreatedAt: inv.CreatedAt, Language: string(inv.Language),
 	}); err != nil {
 		// Should two invites of one email race past the service's checks, the
 		// loser hits the one-pending-invite-per-email index.

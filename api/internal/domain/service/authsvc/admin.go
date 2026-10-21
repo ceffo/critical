@@ -117,17 +117,21 @@ func (s *service) ListInvites(ctx context.Context) ([]Invite, error) {
 	return s.dal.ListPendingInvites(ctx)
 }
 
-// CreateInvite implements SVC (ADR 0029 step 2.1). The checks and the
+// CreateInvite implements SVC (ADR 0029 steps 2.1, 2.6 and 2.8). The checks and the
 // insert are one write transaction (ADR 0025 step 4: its first statement takes
 // the writer lock, so two invites of one email run one after the other). The
 // one-pending-invite-per-email index is the backstop should two ever race past
 // the checks: the DAL maps its violation to ErrAlreadyInvited.
-func (s *service) CreateInvite(ctx context.Context, by uuid.UUID, email string) (*Invite, error) {
+func (s *service) CreateInvite(ctx context.Context, by uuid.UUID, email string, lang Language) (*Invite, MailOutcome, error) {
 	email, err := checkEmail(email)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	inv := Invite{ID: s.newID(), Email: email, InvitedBy: by, CreatedAt: s.now()}
+	lang, err = checkLanguage(lang)
+	if err != nil {
+		return nil, "", err
+	}
+	inv := Invite{ID: s.newID(), Email: email, InvitedBy: by, CreatedAt: s.now(), Language: lang}
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		_, err := s.dal.UserByEmail(ctx, email)
 		switch {
@@ -146,9 +150,11 @@ func (s *service) CreateInvite(ctx context.Context, by uuid.UUID, email string) 
 		return s.dal.InsertInvite(ctx, inv)
 	})
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return &inv, nil
+	// Step 2.8: the mail goes after the commit, so the invite exists whatever
+	// becomes of it.
+	return &inv, s.sendInvite(ctx, inv), nil
 }
 
 // checkEmail is email normalised (step 1.1) when it is a bare address (no

@@ -43,6 +43,11 @@ type Invite struct {
 	Email     string
 	InvitedBy uuid.UUID
 	CreatedAt time.Time
+	// Language is the language of the invite's mails (step 2.6).
+	Language Language
+	// Cancelled and Accepted are read by InviteByID only: a pending invite is
+	// neither.
+	Cancelled, Accepted bool
 }
 
 // UserSummary is a user as the admin section lists them (step 1.3): the

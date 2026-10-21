@@ -35,7 +35,8 @@ var _ Router = (*chi.Mux)(nil)
 type Service interface {
 	ListUsers(ctx context.Context) ([]authsvc.UserSummary, error)
 	ListInvites(ctx context.Context) ([]authsvc.Invite, error)
-	CreateInvite(ctx context.Context, by uuid.UUID, email string) (*authsvc.Invite, error)
+	CreateInvite(ctx context.Context, by uuid.UUID, email string, lang authsvc.Language) (*authsvc.Invite, authsvc.MailOutcome, error)
+	ResendInvite(ctx context.Context, id uuid.UUID) (*authsvc.Invite, authsvc.MailOutcome, error)
 	CancelInvite(ctx context.Context, id uuid.UUID) error
 	ChangeUser(ctx context.Context, id uuid.UUID, change authsvc.UserChange) (*authsvc.UserSummary, error)
 }
@@ -47,6 +48,7 @@ func RegisterRoutes(r Router, svc Service) {
 	r.Patch("/api/admin/users/{id}", render.Handle(ChangeUser(svc)))
 	r.Get("/api/admin/invites", render.Handle(ListInvites(svc)))
 	r.Post("/api/admin/invites", render.Handle(CreateInvite(svc)))
+	r.Post("/api/admin/invites/{id}/resend", render.Handle(ResendInvite(svc)))
 	r.Delete("/api/admin/invites/{id}", render.Handle(CancelInvite(svc)))
 }
 
@@ -68,12 +70,22 @@ type UsersDTO struct {
 	Users []UserDTO `json:"users"`
 }
 
-// InviteDTO is a pending invite: the email, who invited (a user id) and when.
+// InviteDTO is a pending invite: the email, who invited (a user id), when,
+// and the language of its mails (ADR 0029 step 2.6).
 type InviteDTO struct {
 	ID        string `json:"id"`
 	Email     string `json:"email"`
 	InvitedBy string `json:"invitedBy"`
 	CreatedAt string `json:"createdAt"`
+	Language  string `json:"language"`
+}
+
+// InviteSentDTO is the answer of creating or resending an invite: the invite,
+// and what became of its mail (step 2.8): "sent", "failed" or
+// "not_configured". The web words it.
+type InviteSentDTO struct {
+	InviteDTO
+	Mail string `json:"mail"`
 }
 
 // InvitesDTO is GET /api/admin/invites.
@@ -100,7 +112,7 @@ func userDTO(u authsvc.UserSummary) UserDTO {
 }
 
 func inviteDTO(i authsvc.Invite) InviteDTO {
-	return InviteDTO{ID: i.ID.String(), Email: i.Email, InvitedBy: i.InvitedBy.String(), CreatedAt: stamp(i.CreatedAt)}
+	return InviteDTO{ID: i.ID.String(), Email: i.Email, InvitedBy: i.InvitedBy.String(), CreatedAt: stamp(i.CreatedAt), Language: string(i.Language)}
 }
 
 // idParam is the {id} of the path, a UUID.
@@ -180,8 +192,9 @@ func ListInvites(svc Service) render.HandlerFunc {
 	}
 }
 
-// CreateInvite is POST /api/admin/invites {email}: 201 with the invite, sent
-// by the request's user.
+// CreateInvite is POST /api/admin/invites {email, language?}: 201 with the
+// invite and the outcome of its mail, invited by the request's user.
+// language is en or fr; absent, en.
 func CreateInvite(svc Service) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		p := mw.PrincipalFrom(r.Context())
@@ -189,16 +202,34 @@ func CreateInvite(svc Service) render.HandlerFunc {
 			return authsvc.ErrUnauthenticated
 		}
 		var body struct {
-			Email string `json:"email"`
+			Email    string `json:"email"`
+			Language string `json:"language"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		inv, err := svc.CreateInvite(r.Context(), p.User.ID, body.Email)
+		inv, outcome, err := svc.CreateInvite(r.Context(), p.User.ID, body.Email, authsvc.Language(body.Language))
 		if err != nil {
 			return err
 		}
-		render.JSON(r.Context(), w, http.StatusCreated, inviteDTO(*inv))
+		render.JSON(r.Context(), w, http.StatusCreated, InviteSentDTO{InviteDTO: inviteDTO(*inv), Mail: string(outcome)})
+		return nil
+	}
+}
+
+// ResendInvite is POST /api/admin/invites/{id}/resend: the invite and the
+// outcome of its mail (step 2.7). A cancelled or used invite is a 409.
+func ResendInvite(svc Service) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		id, err := idParam(r)
+		if err != nil {
+			return err
+		}
+		inv, outcome, err := svc.ResendInvite(r.Context(), id)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, InviteSentDTO{InviteDTO: inviteDTO(*inv), Mail: string(outcome)})
 		return nil
 	}
 }

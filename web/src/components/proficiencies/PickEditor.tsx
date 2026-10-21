@@ -239,7 +239,7 @@ export function PickEditor({
         />
       )}
       {!options && !loadError && (
-        <p className="text-body text-muted-foreground">{t("loading")}</p>
+        <p className="text-body text-muted-foreground">{t("app.loading")}</p>
       )}
       {hidden && shown && (
         <p role="alert" className="text-label break-words text-danger">

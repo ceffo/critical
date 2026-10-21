@@ -325,7 +325,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             </Button>
           </div>
         ) : (
-          <p className="text-body text-muted-foreground">{t("loading")}</p>
+          <p className="text-body text-muted-foreground">{t("app.loading")}</p>
         )}
       </main>
     );

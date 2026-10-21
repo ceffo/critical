@@ -167,7 +167,7 @@ export function Roster({ onBack }: { onBack?: () => void }) {
             {loadError}
           </p>
         ) : !list ? (
-          <p className="text-body text-muted-foreground">{t("loading")}</p>
+          <p className="text-body text-muted-foreground">{t("app.loading")}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {error && (

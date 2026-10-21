@@ -75,7 +75,7 @@ export function SpellDetailsDialog({ spell, onClose }: Props) {
           </DialogClose>
         </div>
         {!shown && (
-          <p className="text-body text-muted-foreground">{t("loading")}</p>
+          <p className="text-body text-muted-foreground">{t("app.loading")}</p>
         )}
         {shown && "error" in shown && (
           <p className="text-body text-danger" role="alert">

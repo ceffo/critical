@@ -2705,6 +2705,18 @@
     },
     "warned": "Avertissement de classe"
   },
+  "changelog": {
+    "title": "Journal des modifications",
+    "open": "Afficher le journal des modifications",
+    "close": "Fermer",
+    "features": "Nouveautés",
+    "fixes": "Corrections",
+    "none": "Aucun changement visible pour les joueurs",
+    "empty": "Aucun journal des modifications dans cette version",
+    "loading": "Chargement…",
+    "error": "Le journal des modifications n’a pas pu être chargé.",
+    "retry": "Réessayer"
+  },
   "build": {
     "update": "Recharger",
     "updateHint": "Une version plus récente est disponible : cliquez pour recharger la page",

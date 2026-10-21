@@ -2705,6 +2705,18 @@
     },
     "warned": "Class warning"
   },
+  "changelog": {
+    "title": "Changelog",
+    "open": "Show the changelog",
+    "close": "Close",
+    "features": "Features",
+    "fixes": "Fixes",
+    "none": "No user-facing changes",
+    "empty": "No changelog in this build",
+    "loading": "Loading…",
+    "error": "The changelog could not be loaded.",
+    "retry": "Retry"
+  },
   "build": {
     "update": "Reload",
     "updateHint": "A newer version is available: click to reload the page",

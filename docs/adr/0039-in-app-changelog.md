@@ -88,4 +88,4 @@ tag does not exist yet, is listed; a later tag never; no tag gives an empty list
 `TestChangelogAdpt_Step6_RefusesAMissingOrMalformedFile`, `TestChangelogEndpoint_Step6_PaginatesNewestFirst`,
 `TestChangelogEndpoint_Step6_ADevBuildIsEmpty`, `TestChangelogEndpoint_Step6_LimitDefaultsAndIsCapped` and
 `TestChangelogEndpoint_Step6_RefusesABadLimitOrCursor`. Step 5's chrome strings are proved by the web's i18n
-parity test; step 7 by the panel's Playwright spec and unit tests (CRI-129).
+parity test; step 7 by `web/e2e/changelog.spec.ts` (the panel's size, keyboard, closing, paging and retry on every screen) and `web/src/lib/changelogPages.test.ts` (the paging rules).

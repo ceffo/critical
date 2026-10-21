@@ -44,6 +44,7 @@ check-linear:
     scripts/test-linear.sh
     scripts/test-ship-linear.sh
     scripts/test-linear-configure.sh
+    scripts/test-security-alerts.sh
 
 # scripts/linear-ready.sh and the Linear mode of pending-questions.sh against a local stub server; no real Linear call.
 check-linear-queue:

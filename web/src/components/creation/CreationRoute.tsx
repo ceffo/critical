@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, SignOut } from "@phosphor-icons/react";
 import { logout } from "@/api/auth";
 import { Button } from "@/components/ui/button";
+import { VersionBadge } from "@/components/shell/VersionBadge";
 import { APP_NAME } from "@/lib/brand";
 import { STEPS } from "./flow";
 import { LANGUAGES } from "@/lib/settings";
@@ -44,7 +45,7 @@ function Intro({ onStart }: { onStart: () => void }) {
 
   return (
     <main
-      className="flex h-app flex-col items-center overflow-y-auto px-3 pt-3"
+      className="flex h-dvh flex-col items-center overflow-y-auto p-3"
       data-screen="intro"
     >
       <div className="my-auto flex w-full max-w-[44rem] flex-col gap-3">
@@ -110,6 +111,7 @@ function Intro({ onStart }: { onStart: () => void }) {
               {t("settings.logout")}
             </Button>
             <span className="flex-1" />
+            <VersionBadge />
             <Button
               variant="main"
               size="lg"

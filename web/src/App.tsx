@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { VersionBadge } from "@/components/shell/VersionBadge";
 import { setReload } from "@/api/http";
 import { useTranslation } from "react-i18next";
 import { Header } from "@/components/dashboard/Header";
@@ -111,7 +112,7 @@ function App() {
   }, [refresh, loadSpellNames, loadLanguages]);
 
   return (
-    <div className="flex h-app flex-col gap-3 overflow-hidden bg-background px-3 pt-3">
+    <div className="flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">
       <DatabaseBanner />
       <Header />
       <div className="flex min-h-0 flex-1 gap-3">
@@ -183,6 +184,7 @@ function App() {
       >
         <SettingsPopover />
         <DiceComposer />
+        <VersionBadge className="ml-auto" />
       </footer>
       <Notices />
     </div>

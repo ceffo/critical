@@ -5,11 +5,18 @@ import { badgeOf, type Build } from "@/lib/build";
 import { cn } from "@/lib/utils";
 
 /**
- * The running version, small and muted in the strip under every screen's bottom right corner (the
- * screens end above it: `h-app`, `min-h-app`). A "dev" or "staging" pill comes before it; production
- * shows the version alone. Read from the server once, never guessed from the host (ADR 0024 step 1.4).
+ * The running version, small and muted, placed by each screen inside a box it already has (the
+ * dashboard's dice footer, a screen's header card, the login card's language row): it takes no
+ * height of its own. A "dev" or "staging" pill comes before it; production shows the version alone.
+ * Read from the server, never guessed from the host (ADR 0024 step 1.4).
  */
-export function VersionBadge({ build }: { build?: Build | null }) {
+export function VersionBadge({
+  build,
+  className,
+}: {
+  build?: Build | null;
+  className?: string;
+}) {
   const { t } = useTranslation();
   const [read, setRead] = useState<Build | null>(null);
   useEffect(() => {
@@ -25,7 +32,10 @@ export function VersionBadge({ build }: { build?: Build | null }) {
   return (
     <div
       data-testid="version-badge"
-      className="fixed right-3 bottom-0 z-40 flex h-app-badge items-center gap-1.5 text-label leading-3 text-ink-muted"
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 text-label text-ink-muted",
+        className,
+      )}
     >
       {badge.pill && (
         <span

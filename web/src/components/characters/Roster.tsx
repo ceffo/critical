@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { VersionBadge } from "@/components/shell/VersionBadge";
 import { useTranslation } from "react-i18next";
 import {
   Archive,
@@ -139,13 +140,14 @@ export function Roster({ onBack }: { onBack?: () => void }) {
 
   return (
     <div
-      className="flex h-app flex-col gap-3 overflow-hidden px-3 pt-3"
+      className="flex h-dvh flex-col gap-3 overflow-hidden p-3"
       data-screen="roster"
     >
       <header className="zone-card flex shrink-0 items-center gap-4 px-4 py-2">
         <Wordmark />
         <span className="text-title">{t("roster.title")}</span>
         <span className="flex-1" />
+        <VersionBadge />
         {onBack && (
           <Button
             variant="quiet"

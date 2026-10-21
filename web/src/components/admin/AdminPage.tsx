@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { VersionBadge } from "@/components/shell/VersionBadge";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -443,11 +444,12 @@ export function AdminPage() {
 
   return (
     <div
-      className="mx-auto flex min-h-app w-full max-w-[120rem] flex-col gap-3 p-3"
+      className="mx-auto flex min-h-dvh w-full max-w-[120rem] flex-col gap-3 p-3"
       data-screen="admin"
     >
       <header className="zone-card flex items-center gap-3 px-4 py-2">
         <h1 className="section-label min-w-0 flex-1">{t("admin.title")}</h1>
+        <VersionBadge />
         <a
           href="/"
           className={buttonVariants({ variant: "quiet" })}

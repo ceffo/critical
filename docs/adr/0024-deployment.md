@@ -107,8 +107,11 @@ flowchart LR
       only._ _Amended 2026-10-20 (version badge): it also reports `env`, the environment from the
       runtime setting `CRITICAL_ENV`: `dev` (local runs), `staging` or `production` (each fly app's
       `[env]`, never the image, which is the same in both), `unknown` when unset or another value; the
-      web shows the version bottom right on every screen, with a "dev" or "staging" pill, none in
-      production. A local build's version is the last `v*` tag plus the short commit as build metadata
+      web shows the version on every screen, with a "dev" or "staging" pill, none in
+      production, inside a box the screen already has and never in a band of its own: at the right end
+      of the dashboard's dice footer, in the header card of the roster, creation and admin screens, in
+      the login card's language row and the intro's button bar (amended 2026-10-20; was: bottom right
+      corner, in a strip under the screen). A local build's version is the last `v*` tag plus the short commit as build metadata
       (`0.61.1+43d0ef8`, `.dirty` on uncommitted changes, `scripts/build-identity.sh`); staging and
       production keep the plain `X.Y.Z`. Only `dev` has any other effect (the dev login, ADR 0029 step 8.2)._
    5. A main commit is built once; every later deployment of that commit (staging, production,

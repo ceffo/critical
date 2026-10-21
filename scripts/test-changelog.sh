@@ -26,7 +26,7 @@ clean_case() {
 }
 T=$'\t'
 clean_case 'feat(web): added twelve new themes (ABC-1234) (#456)' "feat${T}Added twelve new themes"
-clean_case 'feat(web): added twelve new themes (CRI-1234) by ceffo' "feat${T}Added twelve new themes"
+clean_case 'feat(web): added twelve new themes (ABC-1234) by ceffo' "feat${T}Added twelve new themes"
 clean_case 'fix: a thing (ABC-1) by ceffo (#2)' "fix${T}A thing"
 clean_case 'fix: sort by name' "fix${T}Sort by name"
 clean_case 'fix: sort by name (ABC-1)' "fix${T}Sort by name"

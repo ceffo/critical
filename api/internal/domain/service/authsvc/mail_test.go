@@ -70,7 +70,7 @@ func expectNewInvite(dal *mocks.MockDAL, lang authsvc.Language) {
 }
 
 func inviter(dal *mocks.MockDAL) {
-	dal.EXPECT().UserByID(mock.Anything, otherID).Return(&authsvc.User{ID: otherID, Email: "ann@example.com"}, nil)
+	dal.EXPECT().UserByID(mock.Anything, otherID).Return(&authsvc.User{ID: otherID, Email: "ann@example.com", DisplayName: "Ann Admin"}, nil)
 }
 
 // Step 2.6: the invite stores the language the admin picked; none is English;
@@ -98,7 +98,7 @@ func TestCreateInvite_Step2_6_LanguageIsStored(t *testing.T) {
 }
 
 // Step 2.5: creating an invite sends one mail to the invitee in the invite's
-// language, naming the inviter; the outcome is sent.
+// language, naming the inviter (name and email); the outcome is sent.
 func TestCreateInvite_Step2_5_MailsTheInvitee(t *testing.T) {
 	n := &fakeNotifier{}
 	svc, dal := newMailEnv(t, n)
@@ -110,7 +110,7 @@ func TestCreateInvite_Step2_5_MailsTheInvitee(t *testing.T) {
 	assert.Equal(t, authsvc.MailSent, outcome)
 	assert.Equal(t, []authsvc.Notice{{
 		Kind: authsvc.NoticeInvite, To: "cid@example.com", Language: authsvc.LanguageFrench,
-		InviterEmail: "ann@example.com", InviteeEmail: "cid@example.com",
+		InviterEmail: "ann@example.com", InviterName: "Ann Admin", InviteeEmail: "cid@example.com",
 	}}, n.notices())
 }
 
@@ -205,7 +205,9 @@ func TestResendInvite_Step2_7(t *testing.T) {
 // expectInvitedLogin names the storage calls of ann's first login with a
 // pending invite of otherID in the given language.
 func expectInvitedLogin(dal *mocks.MockDAL, idp *mocks.MockIdentityProvider, lang authsvc.Language) {
-	idp.EXPECT().Exchange(mock.Anything, "code", "ver").Return(&verified, nil).Once()
+	named := verified
+	named.Name = "Ann Lee"
+	idp.EXPECT().Exchange(mock.Anything, "code", "ver").Return(&named, nil).Once()
 	inviteID := uuid.New()
 	dal.EXPECT().UserBySubject(mock.Anything, "g-123").Return(nil, notFound()).Once()
 	dal.EXPECT().UserByEmail(mock.Anything, "ann@example.com").Return(nil, notFound()).Once()
@@ -215,7 +217,7 @@ func expectInvitedLogin(dal *mocks.MockDAL, idp *mocks.MockIdentityProvider, lan
 	dal.EXPECT().InsertUser(mock.Anything, mock.Anything).Return(nil).Once()
 	dal.EXPECT().InsertSession(mock.Anything, mock.Anything).Return(nil).Once()
 	dal.EXPECT().AcceptInvite(mock.Anything, inviteID, newID, now).Return(nil).Once()
-	dal.EXPECT().UserByID(mock.Anything, otherID).Return(&authsvc.User{ID: otherID, Email: "root@example.com"}, nil).Once()
+	dal.EXPECT().UserByID(mock.Anything, otherID).Return(&authsvc.User{ID: otherID, Email: "root@example.com", DisplayName: "Root Admin"}, nil).Once()
 }
 
 // Step 2.9: the first login that consumes an invite tells the inviter, once,
@@ -249,7 +251,7 @@ func TestFinishLogin_Step2_9_TellsTheInviter(t *testing.T) {
 			require.NoError(t, svc.Close(context.Background())) // waits for the background mail
 			assert.Equal(t, []authsvc.Notice{{
 				Kind: authsvc.NoticeAccepted, To: "root@example.com", Language: authsvc.LanguageFrench,
-				InviterEmail: "root@example.com", InviteeEmail: "ann@example.com",
+				InviterEmail: "root@example.com", InviterName: "Root Admin", InviteeEmail: "ann@example.com", InviteeName: "Ann Lee",
 			}}, n.notices())
 		})
 	}

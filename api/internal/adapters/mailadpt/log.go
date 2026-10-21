@@ -17,6 +17,6 @@ func (m LogMailer) Send(ctx context.Context, msg Message) error {
 	if log == nil {
 		log = slog.Default()
 	}
-	log.InfoContext(ctx, "mail (not sent: local run)", "to", msg.To, "subject", msg.Subject, "body", msg.TextBody)
+	log.InfoContext(ctx, "mail (not sent: local run)", "to", msg.To, "sender_name", msg.SenderName, "subject", msg.Subject, "body", msg.TextBody)
 	return nil
 }

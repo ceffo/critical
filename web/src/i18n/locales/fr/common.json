@@ -1540,7 +1540,7 @@
       "heavy_crossbow": "Arbalète lourde",
       "hand_crossbow": "Arbalète de poing",
       "dagger": "Dague",
-      "dart": "Fléchette",
+      "dart": "Dard",
       "sling": "Fronde",
       "short_sword": "Épée courte",
       "long_sword": "Épée longue",
@@ -2199,7 +2199,7 @@
       "quarrel": "Carreau",
       "bullet": "Bille",
       "needle": "Aiguille",
-      "blowgun_dart": "Fléchette de sarbacane"
+      "blowgun_dart": "Dard de sarbacane"
     },
     "sizes": {
       "s": "Petite",

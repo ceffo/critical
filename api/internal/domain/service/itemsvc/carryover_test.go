@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -39,7 +41,7 @@ func TestCarrySkillArmour_Step14(t *testing.T) {
 		{"bard", "metal", "chain_mail", true},
 	} {
 		t.Run(tc.class+" "+tc.entered, func(t *testing.T) {
-			co, err := itemsvc.CarrySkillArmour(tc.class, tc.entered, []itemsvc.Item{gear}, carryArmours)
+			co, err := itemsvc.CarrySkillArmour(carryClass(t, tc.class), tc.entered, []itemsvc.Item{gear}, carryArmours)
 			require.NoError(t, err)
 			require.NotNil(t, co.Add)
 			p := *co.Add
@@ -54,7 +56,7 @@ func TestCarrySkillArmour_Step14(t *testing.T) {
 			if entered == "" {
 				entered = ruletablesvc.ArmorLeather
 			}
-			assert.Equal(t, entered, ruletablesvc.SkillArmorFor(tc.class, itemsvc.WornSkillColumn([]itemsvc.Item{gear, p})),
+			assert.Equal(t, entered, ruletablesvc.SkillArmorFor(carryRogue(t, tc.class), itemsvc.WornSkillColumn([]itemsvc.Item{gear, p})),
 				"every skill percentage the same before and after")
 			if tc.guessed {
 				assert.Equal(t, &itemsvc.Review{ItemID: wantID, Reason: itemsvc.ReasonArmourGuessed}, co.Review)
@@ -73,7 +75,7 @@ func TestCarrySkillArmour_Step14(t *testing.T) {
 			{"fighter", "", nil},
 			{"thief", "leather", []itemsvc.Item{wornPlate}},
 		} {
-			co, err := itemsvc.CarrySkillArmour(tc.class, tc.entered, tc.pieces, carryArmours)
+			co, err := itemsvc.CarrySkillArmour(carryClass(t, tc.class), tc.entered, tc.pieces, carryArmours)
 			require.NoError(t, err)
 			assert.Equal(t, itemsvc.CarryOver{}, co, "%s %q", tc.class, tc.entered)
 		}
@@ -83,14 +85,14 @@ func TestCarrySkillArmour_Step14(t *testing.T) {
 			{ID: "studded", Category: itemsvc.CategoryArmour, State: itemsvc.StateCarried, SkillColumn: "padded_studded"},
 			{ID: "my_chain", Category: itemsvc.CategoryArmour, State: itemsvc.StateCarried, SkillColumn: "metal"},
 		}
-		co, err := itemsvc.CarrySkillArmour("bard", "metal", pieces, carryArmours)
+		co, err := itemsvc.CarrySkillArmour(carryClass(t, "bard"), "metal", pieces, carryArmours)
 		require.NoError(t, err)
 		assert.Equal(t, itemsvc.CarryOver{Wear: "my_chain"}, co)
 	})
 	t.Run("the catalogue lacks the row", func(t *testing.T) {
-		_, err := itemsvc.CarrySkillArmour("thief", "leather", nil, nil)
+		_, err := itemsvc.CarrySkillArmour(carryClass(t, "thief"), "leather", nil, nil)
 		require.ErrorIs(t, err, itemsvc.ErrCarryOverArmourMissing)
-		_, err = itemsvc.CarrySkillArmour("thief", "plate", nil, carryArmours)
+		_, err = itemsvc.CarrySkillArmour(carryClass(t, "thief"), "plate", nil, carryArmours)
 		require.Error(t, err, "an entered value the column never held")
 	})
 }
@@ -106,4 +108,20 @@ func TestWornSkillColumn_Step14(t *testing.T) {
 	assert.Empty(t, itemsvc.WornSkillColumn(pieces))
 	pieces = append(pieces, itemsvc.Item{ID: "leather", Category: itemsvc.CategoryArmour, State: itemsvc.StateWorn, SkillColumn: "leather"})
 	assert.Equal(t, "leather", itemsvc.WornSkillColumn(pieces))
+}
+
+// carryClass is the fixture's definition of class (ADR 0040 step 5).
+func carryClass(t *testing.T, class string) classes.Class {
+	t.Helper()
+	def, ok := cataloguetest.Definitions(t).Class(class)
+	require.True(t, ok, class)
+	return def
+}
+
+// carryRogue is the fixture class's rogue_skills params.
+func carryRogue(t *testing.T, class string) *classes.RogueSkills {
+	t.Helper()
+	f, ok := carryClass(t, class).Lists(classes.KindRogueSkills)
+	require.True(t, ok, class)
+	return f.RogueSkills
 }

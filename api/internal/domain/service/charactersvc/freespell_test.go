@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -70,7 +71,7 @@ func expectMageRules(r *mocks.MockRules, level int) {
 	r.EXPECT().XPThreshold("mage", level+1).Return(20_000, nil).Once()
 	r.EXPECT().THAC0For("wizard", level).Return(20, nil).Once()
 	r.EXPECT().SavesFor("wizard", level).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
-	r.EXPECT().WizardSpellsPerDay(mock.Anything).RunAndReturn(func(l int) (map[int]int, error) {
+	r.EXPECT().SpellsPerDay(classDef("mage"), mock.Anything, mock.Anything).RunAndReturn(func(_ classes.Class, l, _ int) (map[int]int, error) {
 		return table21[l], nil
 	})
 }

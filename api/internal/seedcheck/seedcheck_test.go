@@ -70,8 +70,10 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	assert.NotEmpty(t, artifact.Catalogue.Spells)
-	_, err = ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
+	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
 	require.NoError(t, err, "the artifact's rule tables")
+	defs, err := tables.Definitions()
+	require.NoError(t, err, "the artifact's class definitions")
 
 	effects, err := spelleffectsadpt.New(seedsDir)
 	require.NoError(t, err)
@@ -79,7 +81,7 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	book, err := spellbookadpt.ReadSeed(seedsDir, cat)
 	require.NoError(t, err)
 	assert.NotEmpty(t, book)
-	_, err = spellbookadpt.ReadStartingSeed(seedsDir, cat)
+	_, err = spellbookadpt.ReadStartingSeed(seedsDir, cat, defs)
 	require.NoError(t, err, "the starting spellbook's pre-ticks are wizard spells of the catalogue")
 
 	for _, name := range []string{"character.json", "weapons.json", "items.json", "skills.json"} {

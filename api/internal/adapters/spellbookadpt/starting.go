@@ -5,12 +5,12 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"os"
 	"path/filepath"
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )

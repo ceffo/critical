@@ -2,12 +2,15 @@ package itemsvc_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
+	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
@@ -15,7 +18,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
@@ -383,8 +385,11 @@ func fighter(picks ...skills.WeaponPick) *charactersvc.Character {
 // follows it), and the edit logs no "specialized" change.
 func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 	// The character row's specialization, as charactersvc reads it.
+	// The fixture's book: whether a class specializes is its feature list (ADR 0040 step 3).
+	book, err := ruletablesadpt.ReadProficiencies(filepath.Join("..", "..", "..", "..", "testdata", "seeds"), cataloguetest.Definitions(t))
+	require.NoError(t, err)
 	specializedIn := func(c *charactersvc.Character) skills.WeaponProficiency {
-		return skills.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), c.Class, c.Proficiencies)
+		return skills.WeaponProficiencyOf(book, c.Class, c.Proficiencies)
 	}
 	spec := skills.WeaponPick{Type: "long_sword", Slots: 2}
 	plain := skills.WeaponPick{Type: "dagger", Slots: 1}

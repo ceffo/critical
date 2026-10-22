@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -63,8 +64,12 @@ func TestSpellFailureFor_Step14_LowWisdom(t *testing.T) {
 		{"mage", 3, 0},
 		{"bard", 9, 0},
 	} {
-		got, err := tbl.SpellFailureFor(tc.class, tc.wis)
-		require.NoError(t, err)
+		got := 0
+		if fixtureClass(t, tc.class).Has(classes.KindSpellFailure, 1) {
+			var err error
+			got, err = tbl.SpellFailureFor(tc.wis)
+			require.NoError(t, err)
+		}
 		assert.Equal(t, tc.want, got, "%s Wisdom %d", tc.class, tc.wis)
 	}
 }

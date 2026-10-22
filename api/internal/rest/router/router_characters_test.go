@@ -313,7 +313,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 			{"level": 10, "die": 6, "fixedGain": 0, "grants": {"weaponSlots": 0, "nonWeaponSlots": 0, "skillPoints": 15, "freeSpells": []}},
 			{"level": 11, "die": 0, "fixedGain": 2, "grants": {"weaponSlots": 1, "nonWeaponSlots": 2, "skillPoints": 0, "freeSpells": [{"level": 11, "spellLevel": 6}]}}
 		], "toSpend": {"weaponSlots": 3, "nonWeaponSlots": 1, "skillPoints": 45, "freeSpells": [{"level": 9, "spellLevel": 5}]}},
-		"specializes": false,
+		"specializes": false, "exceptionalStrength": false,
 		"spellFailure": 0,
 		"turning": null,
 		"thiefSkills": null, "bardSkills": null,
@@ -413,7 +413,7 @@ func TestCharacters_DraftNeverRefusesContent(t *testing.T) {
 		Return(&charactersvc.Draft{Missing: []string{"name", "class"}}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/draft", `{}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"derived":null,"skillPoints":null,"spellbook":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[]}`, rec.Body.String())
+	assert.JSONEq(t, `{"derived":null,"exceptionalStrength":false,"skillPoints":null,"spellbook":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[]}`, rec.Body.String())
 
 	rec = as(h, "new", "POST", "/api/characters/draft", `{"details":{"height_cm":"tall"}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

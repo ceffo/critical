@@ -10,13 +10,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"slices"
 
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"

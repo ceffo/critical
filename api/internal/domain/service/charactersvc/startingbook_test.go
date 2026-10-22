@@ -80,7 +80,7 @@ func newBookEnv(t *testing.T, intRow ruletablesvc.IntelligenceRow) *env {
 	e.rules.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 	e.rules.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
 	e.rules.EXPECT().IntelligenceFor(mock.Anything).Return(intRow, nil).Maybe()
-	e.rules.EXPECT().BardSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	e.rules.EXPECT().RogueSkills(skillSet("bard"), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 	svc, err := charactersvc.New(charactersvc.Deps{
 		Reader: e.reader, XP: e.xp, Rules: e.rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions, Armour: e.armour, HP: e.hp,
 		Spells: e.spells, Book: e.book, FreeSpells: e.free,
@@ -101,9 +101,9 @@ func expectClassAt(e *env, class string, xp, level int, slots map[int]int) {
 	e.rules.EXPECT().SavesFor(group, level).Return(ruletablesvc.SavingThrowRow{}, nil).Maybe()
 	switch class {
 	case "mage":
-		e.rules.EXPECT().WizardSpellsPerDay(level).Return(slots, nil).Maybe()
+		e.rules.EXPECT().SpellsPerDay(classDef("mage"), level, mock.Anything).Return(slots, nil).Maybe()
 	case "bard":
-		e.rules.EXPECT().BardSpellsPerDay(level).Return(slots, nil).Maybe()
+		e.rules.EXPECT().SpellsPerDay(classDef("bard"), level, mock.Anything).Return(slots, nil).Maybe()
 	}
 }
 
@@ -299,10 +299,10 @@ func TestCreate_Step20_7_RefusedForAClassWithoutASpellbook(t *testing.T) {
 		t.Run(class, func(t *testing.T) {
 			e := newBookEnv(t, int14)
 			expectClassAt(e, class, 0, 1, nil)
-			e.rules.EXPECT().PriestSpellsPerDay(mock.Anything, mock.Anything).Return(map[int]int{}, nil).Maybe()
-			e.rules.EXPECT().ThiefSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+			e.rules.EXPECT().SpellsPerDay(classDef("cleric"), mock.Anything, mock.Anything).Return(map[int]int{}, nil).Maybe()
+			e.rules.EXPECT().RogueSkills(skillSet("thief"), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 			e.rules.EXPECT().BackstabFor(mock.Anything).Return(2, nil).Maybe()
-			e.rules.EXPECT().SpellFailureFor(mock.Anything, mock.Anything).Return(0, nil).Maybe()
+			e.rules.EXPECT().SpellFailureFor(mock.Anything).Return(0, nil).Maybe()
 			e.rules.EXPECT().TurningAt(mock.Anything).Return(nil, nil).Maybe()
 			n := elminster(0, "sleep")
 			n.Class, n.Str, n.Dex, n.Wis = class, 12, 12, 12

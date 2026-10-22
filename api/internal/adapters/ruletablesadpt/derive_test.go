@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -247,7 +248,11 @@ func TestIntelligenceFor_Step20_Table4(t *testing.T) {
 // (ADR 0030 step 20.1).
 func TestSpellbookMaxLevel_Step20_1(t *testing.T) {
 	for class, want := range map[string]int{"mage": 9, "bard": 6, "fighter": 0, "cleric": 0, "thief": 0} {
-		got, ok := ruletablesvc.SpellbookMaxLevel(class)
+		f, ok := fixtureClass(t, class).Lists(classes.KindSpellbook)
+		got := 0
+		if ok {
+			got = f.Spellbook.MaxSpellLevel
+		}
 		assert.Equal(t, want, got, class)
 		assert.Equal(t, want > 0, ok, class)
 	}

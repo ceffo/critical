@@ -36,8 +36,10 @@ func TestGrantsAt_Step15_GrantsSlotsAndPoints(t *testing.T) {
 	} {
 		assert.Equal(t, tc.want, skills.GrantsAt(book, tc.class, tc.level), "%s level %d", tc.class, tc.level)
 	}
-	assert.Equal(t, skills.LevelGrants{SkillPoints: 30}, skills.GrantsAt((*ruletablesvc.Proficiencies)(nil), "thief", 4),
-		"without the catalogue's Table 34 only the points")
+	// ADR 0040 step 3: the points are the class's rogue_skills budget, read from the catalogue's
+	// definitions like Table 34: without a catalogue, nothing.
+	assert.Equal(t, skills.LevelGrants{}, skills.GrantsAt((*ruletablesvc.Proficiencies)(nil), "thief", 4),
+		"without the catalogue neither the slots nor the points")
 }
 
 // ADR 0037 step 15's reminder: what is left in each pool and of the skill points, 0 when spent

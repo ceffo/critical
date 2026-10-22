@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -17,6 +18,7 @@ import (
 // spellbook, a spell the catalogue lacks (rather than a pre-tick silently dropped), a priest spell
 // or a spell listed twice is an error.
 func TestParseStartingSeed_Step20_7_CheckedAgainstTheCatalogue(t *testing.T) {
+	defs := cataloguetest.Definitions(t)
 	for _, tc := range []struct {
 		name, seed, wantErr string
 	}{
@@ -28,7 +30,7 @@ func TestParseStartingSeed_Step20_7_CheckedAgainstTheCatalogue(t *testing.T) {
 		{"not an object", `["fireball"]`, "parse"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := spellbookadpt.ParseStartingSeed([]byte(tc.seed), cat)
+			_, err := spellbookadpt.ParseStartingSeed([]byte(tc.seed), cat, defs)
 			if tc.wantErr == "" {
 				require.NoError(t, err)
 				return
@@ -39,17 +41,19 @@ func TestParseStartingSeed_Step20_7_CheckedAgainstTheCatalogue(t *testing.T) {
 }
 
 func TestReadStartingSeed_MissingFile(t *testing.T) {
-	_, err := spellbookadpt.ReadStartingSeed(t.TempDir(), cat)
+	defs := cataloguetest.Definitions(t)
+	_, err := spellbookadpt.ReadStartingSeed(t.TempDir(), cat, defs)
 	require.Error(t, err)
 }
 
 // ADR 0030 step 20.7: the creation reads each spell through the spellbook's one catalogue mapping,
 // offers the catalogue's wizard spells by level then id, and the seed's pre-ticks in its order.
 func TestCreation_Step20_7_ReadsTheCatalogueAndTheSeed(t *testing.T) {
+	defs := cataloguetest.Definitions(t)
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, spellbookadpt.StartingFileName),
 		[]byte(`{"mage":["fireball","mirror_image"]}`), 0o600))
-	seed, err := spellbookadpt.ReadStartingSeed(dir, cat)
+	seed, err := spellbookadpt.ReadStartingSeed(dir, cat, defs)
 	require.NoError(t, err)
 	c := spellbookadpt.NewCreation(cat, seed)
 

@@ -80,10 +80,12 @@ features on a class.
 The **class registry** (`domain/classes`) holds the definitions, the groups and the races, checked
 at start-up (ADR 0040 step 8). Every class it holds is creatable, in catalogue order. The class
 list, a class's group, prime requisites (the 10% XP bonus needs 16 in every one, step 6),
-ability minimums, alignments and XP rows are read from it, and so is a group's THAC0 (Table 53).
+ability minimums, alignments, XP rows, spell progression and class features are read from it, and
+so is a group's THAC0 (Table 53). A rule asks `Class.Feature(kind, level)` (the feature at a realized
+level) or, before a level is known (creation options, entry checks), whether the class lists the kind.
 A race's **racial ability requirements** (its ability ranges) make it **restricted**: a restricted
 race has rows in every per-race table (level limits, requirements, thief skill adjustments); an
-unrestricted one (the human) may have none, and is then any class with no limit. The features, equipment, hit dice
+unrestricted one (the human) may have none, and is then any class with no limit. The equipment, hit dice
 and race traits are still read from the rule tables and Go until their readers move (step 11.3).
 A character's class is a registry id, and so is the seed's (step 9).
 

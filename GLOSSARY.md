@@ -41,7 +41,7 @@ The seed character, the table's level 15 bard, loaded from `seeds/character.json
 What a character is trained as: bard, fighter, mage, cleric, thief today. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 1 and 21, [ADR 0040](docs/adr/0040-classes-are-data.md).
 
 **Class definition** (fr: définition de classe):
-A class as catalogue data (format 11): group, prime requisites, ability minimums, alignments, XP rows, hit dice, spell progression and its class features. The app reads the group, prime requisites, minimums, alignments and XP rows so far; the rest moves with its readers. [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.
+A class as catalogue data (format 11): group, prime requisites, ability minimums, alignments, XP rows, hit dice, spell progression and its class features. The app reads the group, prime requisites, minimums, alignments, XP rows, spell progression and class features so far; the rest moves with its readers. [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.
 _Avoid_: class table (a rule table is something else).
 _Code_: Class
 
@@ -66,10 +66,11 @@ _Avoid_: serial, multi (for this).
 **Crossover** (fr: dépassement):
 The moment a dual-class character's new class level passes the frozen old class's level; from then on the old class's abilities work again without penalty. PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
 
-**Class feature** (fr: aptitude de classe) _(planned)_:
+**Class feature** (fr: aptitude de classe):
 One ability a class grants from a level, as data: a feature kind with its parameters (turning, backstab, a skill set). [ADR 0040](docs/adr/0040-classes-are-data.md) step 3. _Avoid_: power (that is a psionic word), flag.
+_Code_: Feature
 
-**Feature kind** (fr: type d'aptitude) _(planned)_:
+**Feature kind** (fr: type d'aptitude):
 The mechanic a class feature drives, one of a closed list the code implements once (`turn_undead`, `rogue_skills`, `spellbook`…); the code switches on it, never on a class id. [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.
 
 **Kit** (fr: kit) _(future)_:
@@ -267,7 +268,8 @@ A non-weapon proficiency with its ability and modifier. [ADR 0014](docs/adr/0014
 _Code_: Proficiencies, ProficiencyDescription
 
 **Bard skills**, **Thief skills** (fr: talents de barde, talents de voleur), **Skill points**:
-The rogue percentages and the points entered for them. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 17 and 18.
+The rogue percentages and the points entered for them, read through the class's `rogue_skills` feature: its skill set, budget and armour entries. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 17 and 18, [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.
+_Code_: RogueSkills, SkillBudget
 
 **Proficiency slot** (fr: emplacement de compétence):
 One unit of the proficiency budget, **weapon** or **non-weapon**; **over budget** or **to spend**.

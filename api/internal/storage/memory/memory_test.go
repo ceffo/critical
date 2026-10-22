@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -46,7 +47,7 @@ func seeded(t *testing.T) (*memory.Store, int64) {
 	require.NoError(t, err)
 	book, err := spellbookadpt.ReadSeed(seedsDir, artifact.Catalogue)
 	require.NoError(t, err)
-	require.NoError(t, s.Seed(ctx, seedsDir, book, ruletablesvc.Equipment{}))
+	require.NoError(t, s.Seed(ctx, seedsDir, book, ruletablesvc.Equipment{}, cataloguetest.Definitions(t)))
 	require.NoError(t, s.ImportCatalogue(ctx, artifact.Catalogue, nil))
 	return s, seedCharacter(t, s)
 }
@@ -626,7 +627,7 @@ func TestSeed_Step14_TheSeedBardWearsTheArmourItEntered(t *testing.T) {
 		BaseAC: 8, SkillColumn: "leather", ArmorRow: "leather",
 	}
 	s := memory.New()
-	require.NoError(t, s.Seed(ctx, seedsDir, book, ruletablesvc.Equipment{Armour: []ruletablesvc.Armour{leather}}))
+	require.NoError(t, s.Seed(ctx, seedsDir, book, ruletablesvc.Equipment{Armour: []ruletablesvc.Armour{leather}}, cataloguetest.Definitions(t)))
 	id := seedCharacter(t, s)
 	items, err := s.Items().List(ctx, id)
 	require.NoError(t, err)

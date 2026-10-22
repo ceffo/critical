@@ -64,8 +64,11 @@ type Proficiencies struct {
 }
 
 // ClassDef is class's definition (ADR 0040 step 5), false for a class the
-// catalogue does not define.
+// catalogue does not define or without a catalogue (p nil).
 func (p *Proficiencies) ClassDef(class string) (classes.Class, bool) {
+	if p == nil {
+		return classes.Class{}, false
+	}
 	return p.defs.Class(class)
 }
 

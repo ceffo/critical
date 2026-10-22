@@ -3,9 +3,9 @@ package itemsvc
 import (
 	"errors"
 	"fmt"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"strconv"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 

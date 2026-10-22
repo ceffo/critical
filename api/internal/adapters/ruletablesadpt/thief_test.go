@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -17,7 +18,7 @@ import (
 // kept, capped at 95 and floored at 0.
 func TestThiefSkills_Step17_TheTermsOfEachSkill(t *testing.T) {
 	tbl := phb(t)
-	got, err := tbl.ThiefSkills("halfling", 18, "none", map[string]int{"pick_pockets": 20, "open_locks": 30})
+	got, err := rogueSkills(t, tbl, "thief", "halfling", 18, "none", map[string]int{"pick_pockets": 20, "open_locks": 30})
 	require.NoError(t, err)
 	want := []ruletablesvc.SkillPercent{
 		{Skill: "pick_pockets", Base: 15, Points: 20, Race: 5, Dexterity: 10, Armor: 5, Raw: 55, Percent: 55},
@@ -54,7 +55,7 @@ func TestThiefSkills_Step17_CapFloorAndArmour(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tbl.ThiefSkills(tt.race, tt.dex, tt.armor, map[string]int{tt.skill: tt.points})
+			got, err := rogueSkills(t, tbl, "thief", tt.race, tt.dex, tt.armor, map[string]int{tt.skill: tt.points})
 			require.NoError(t, err)
 			for _, s := range got {
 				if s.Skill == tt.skill {
@@ -65,23 +66,24 @@ func TestThiefSkills_Step17_CapFloorAndArmour(t *testing.T) {
 			t.Fatalf("no %s", tt.skill)
 		})
 	}
-	_, err := tbl.ThiefSkills("human", 13, "plate", nil)
-	assert.Error(t, err, "an armour that is none of ThiefArmors")
+	_, err := rogueSkills(t, tbl, "thief", "human", 13, "plate", nil)
+	assert.Error(t, err, "an armour that is no entry of the thief's rogue_skills")
 }
 
 // ADR 0030 step 17: the budget of PHB p.39 is a warning per breach, on the
 // totals the realized level allows.
 func TestSkillPointBudget_Step17(t *testing.T) {
-	assert.Empty(t, ruletablesvc.SkillPointBudget(1, map[string]int{"open_locks": 30, "pick_pockets": 30}))
+	thief := rogueOf(t, "thief")
+	assert.Empty(t, ruletablesvc.SkillBudgetOf(thief, 1, map[string]int{"open_locks": 30, "pick_pockets": 30}))
 	assert.Equal(t, []ruletablesvc.BudgetWarning{
 		{Code: ruletablesvc.BudgetTotal, Points: 65, Limit: 60},
 		{Code: ruletablesvc.BudgetPerSkill, Skill: "open_locks", Points: 31, Limit: 30},
-	}, ruletablesvc.SkillPointBudget(1, map[string]int{"open_locks": 31, "pick_pockets": 30, "climb_walls": 4}))
+	}, ruletablesvc.SkillBudgetOf(thief, 1, map[string]int{"open_locks": 31, "pick_pockets": 30, "climb_walls": 4}))
 	// Level 3: 60 + 2 × 30 = 120 in all, 30 + 2 × 15 = 60 in one skill.
-	assert.Empty(t, ruletablesvc.SkillPointBudget(3, map[string]int{"open_locks": 60, "pick_pockets": 60}))
+	assert.Empty(t, ruletablesvc.SkillBudgetOf(thief, 3, map[string]int{"open_locks": 60, "pick_pockets": 60}))
 	assert.Equal(t, []ruletablesvc.BudgetWarning{
 		{Code: ruletablesvc.BudgetPerSkill, Skill: "pick_pockets", Points: 61, Limit: 60},
-	}, ruletablesvc.SkillPointBudget(3, map[string]int{"pick_pockets": 61}))
+	}, ruletablesvc.SkillBudgetOf(thief, 3, map[string]int{"pick_pockets": 61}))
 }
 
 // ADR 0030 step 19: PHB Table 30, x2 at 1-4, x3 at 5-8, x4 at 9-12, x5 from
@@ -95,10 +97,8 @@ func TestBackstabFor_Step19_Table30(t *testing.T) {
 	}
 	_, err := tbl.BackstabFor(21)
 	assert.Error(t, err)
-	assert.True(t, ruletablesvc.Backstabs("thief"))
-	assert.True(t, ruletablesvc.HasThiefSkills("thief"))
+	assert.True(t, fixtureClass(t, "thief").Has(classes.KindBackstab, 1))
 	for _, class := range []string{"bard", "fighter", "mage", "cleric"} {
-		assert.False(t, ruletablesvc.Backstabs(class), class)
-		assert.False(t, ruletablesvc.HasThiefSkills(class), class)
+		assert.False(t, fixtureClass(t, class).Has(classes.KindBackstab, 20), class)
 	}
 }

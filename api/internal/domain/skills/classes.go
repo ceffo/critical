@@ -46,8 +46,6 @@ type basis struct {
 	row                         ruletablesvc.SlotRow
 	weaponLevel, nonweaponLevel int
 	groups                      []string
-	// class is the class the weapon picks are judged by (the first one).
-	class string
 }
 
 // basis is ADR 0042 step 15 (amending ADR 0037 step 3), each column of Table 34 on its own: the
@@ -77,7 +75,7 @@ func (cls Classes) basis(book Book) (basis, bool) {
 	if !found {
 		return basis{}, false
 	}
-	b.groups, b.class = cls.groups(book), cls.first()
+	b.groups = cls.groups(book)
 	return b, true
 }
 

@@ -422,14 +422,16 @@ bard 15 never).)_
     `itemsvc.ClassWarnings` takes the `classes.Equipment` of every active entry (the AC card's
     armour warnings too; an entry whose class the catalogue does not define has no limit, so nothing
     is warned); a piece is warned only when no entry allows it, and a `blunt_only` entry judges every
-    weapon alone. Test: `Weapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion`. Each derived entry
+    weapon alone. Test: `Weapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion`. The weapon picks follow
+    the same rule (`classes.AllowedTogether`, which both read): a type is refused only when no active
+    entry's class may pick it, or when a `blunt_only` entry's may not; the specialization stays the
+    first entry's. Test (skills, with the pick check): `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks`. Each derived entry
     carries `NoArmour` (its `armour` list is only `none`; test `Derive_Step16_2_NoArmourComesFromTheEquipment`).
     A cast whose spells are such an entry's (the slot's entry, else the first active spellcasting
     entry, step 14) reads the worn pieces and answers `warnings: ["spell_in_armour"]` (never logged,
     never refusing) while body armour other than `none` is worn, except an elf (race `elf`) in the
     `elven_chain` column (still a race id in the code: the race trait is to come). Test:
-    `Cast_Step16_2_WizardSpellInArmourWarns`. Not built: 16.1's weapon picks
-    (`WeaponPick_Step16_1_…`), 16.3's thief skills in armour, ADR 0043 step 18's `power_in_armour`.)_
+    `Cast_Step16_2_WizardSpellInArmourWarns`. Not built: 16.3's thief skills in armour, ADR 0043 step 18's `power_in_armour`.)_
 
     _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 18, on implementation: an entry with the `psionics` kind warns `power_in_armour` on every power check while body armour outside its class's `armour` list is worn, as step 16.2 does for spells)_
 

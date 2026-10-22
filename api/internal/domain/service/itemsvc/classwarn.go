@@ -93,16 +93,11 @@ func anyClass(limits []classes.Equipment, allows func(classes.Equipment) bool) b
 	return len(limits) == 0 || slices.ContainsFunc(limits, allows)
 }
 
-// weaponAllowedTo is ADR 0042 step 16.1: a blunt_only class (the cleric)
-// restricts the weapon to its own list whatever the other classes; otherwise
-// the weapon is allowed when any class allows it.
+// weaponAllowedTo is ADR 0042 step 16.1 (classes.AllowedTogether): a
+// blunt_only class (the cleric) restricts the weapon to its own list whatever
+// the other classes; otherwise the weapon is allowed when any class allows it.
 func weaponAllowedTo(limits []classes.Equipment, w classes.Weapon) bool {
-	for _, e := range limits {
-		if e.BluntOnly {
-			return e.AllowsWeapon(w)
-		}
-	}
-	return anyClass(limits, func(e classes.Equipment) bool { return e.AllowsWeapon(w) })
+	return classes.AllowedTogether(limits, func(e classes.Equipment) bool { return e.AllowsWeapon(w) })
 }
 
 // SpellInArmour is ADR 0042 step 16.2: a spell of a class that allows no body

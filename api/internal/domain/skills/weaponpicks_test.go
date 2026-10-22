@@ -266,3 +266,51 @@ func TestWeaponProficiency_Step15_SmallestPenaltyOfTheActiveClasses(t *testing.T
 	mageThief := skills.WeaponProficiencyOf(book, skills.Classes{{Class: "mage", Level: 3}, {Class: "thief", Level: 3}}, picks)
 	assert.Equal(t, -3, mageThief.NonproficientPenalty("long_sword"), "the rogue's -3, not the wizard's -5")
 }
+
+// ADR 0042 step 16.1 on the weapon picks (ADR 0037 step 7): a multi-class character may pick a
+// type any of its active classes may, except that a blunt_only class restricts the picks to its
+// own list whatever the others. A fighter/cleric is refused a long sword (the fighter listed
+// first: a check of the first class alone allows it) and picks a sling; a thief/fighter picks a
+// long bow (the thief alone is refused it); a mage/thief is refused a long bow (neither class
+// lists it). The figures judge the stored picks the same way.
+func TestWeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks(t *testing.T) {
+	book := profBook(t)
+	refused := func(field string) *domain.FieldError {
+		return &domain.FieldError{Field: field, Message: "weapon_not_allowed"}
+	}
+	for _, tc := range []struct {
+		name    string
+		classes skills.Classes
+		picks   skills.Picks
+		want    *domain.FieldError
+	}{
+		{"a fighter/cleric refused a long sword", skills.Classes{{Class: "fighter", Level: 3}, {Class: "cleric", Level: 3}}, weapons("long_sword"), refused("weapon.long_sword")},
+		{"a fighter/cleric picks a sling", skills.Classes{{Class: "fighter", Level: 3}, {Class: "cleric", Level: 3}}, weapons("sling", "other_melee"), nil},
+		{"a thief/fighter picks a long bow", skills.Classes{{Class: "thief", Level: 3}, {Class: "fighter", Level: 3}}, weapons("long_bow", "long_sword"), nil},
+		{"a mage/thief picks a long sword", skills.Classes{{Class: "mage", Level: 3}, {Class: "thief", Level: 3}}, weapons("long_sword"), nil},
+		{"a mage/thief refused a long bow", skills.Classes{{Class: "mage", Level: 3}, {Class: "thief", Level: 3}}, weapons("long_bow"), refused("weapon.long_bow")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			before := skills.Sheet{Classes: tc.classes, Intelligence: 12, Picks: weapons()}
+			got, err := skills.Apply(book, nil, "human", before, skills.Edit{Picks: skills.Picks{Weapon: tc.picks.Weapon}})
+			if tc.want == nil {
+				require.NoError(t, err)
+				assert.Equal(t, tc.picks.Weapon, got.Picks.Weapon)
+				return
+			}
+			assert.Equal(t, *tc.want, fieldErr(t, err))
+		})
+	}
+	t.Run("the figures judge the stored picks together", func(t *testing.T) {
+		got, ok := skills.FiguresOf(book, skills.Classes{{Class: "fighter", Level: 3}, {Class: "cleric", Level: 3}}, 12,
+			skills.Spending{Picks: weapons("long_sword", "sling")})
+		require.True(t, ok)
+		require.Len(t, got.WeaponPicks, 2)
+		assert.False(t, got.WeaponPicks[0].Allowed, "the cleric's blunt weapons only")
+		assert.True(t, got.WeaponPicks[1].Allowed)
+		thief, ok := skills.FiguresOf(book, skills.Classes{{Class: "thief", Level: 3}, {Class: "fighter", Level: 3}}, 12,
+			skills.Spending{Picks: weapons("long_bow")})
+		require.True(t, ok)
+		assert.True(t, thief.WeaponPicks[0].Allowed, "the fighter's any weapon")
+	})
+}

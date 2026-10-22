@@ -134,3 +134,17 @@ func (e Equipment) AllowsWeapon(w Weapon) bool {
 func (e Equipment) WeaponTypeAllowed(weaponType string) bool {
 	return e.PickTypes == nil || slices.Contains(e.PickTypes, weaponType)
 }
+
+// AllowedTogether is ADR 0042 step 16.1 on the equipment of several class
+// entries judging one weapon (allows asks one class): a BluntOnly class
+// decides alone, whatever the other classes (a multi-class priest keeps his
+// weapon limits); otherwise the weapon is allowed when any class allows it.
+// No limit at all (none given) allows everything.
+func AllowedTogether(limits []Equipment, allows func(Equipment) bool) bool {
+	for _, e := range limits {
+		if e.BluntOnly {
+			return allows(e)
+		}
+	}
+	return len(limits) == 0 || slices.ContainsFunc(limits, allows)
+}

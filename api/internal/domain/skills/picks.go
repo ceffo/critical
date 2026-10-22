@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -186,12 +187,20 @@ func specializes(book Book, class string) bool {
 	return ok && ruletablesvc.Specializes(def)
 }
 
-// weaponTypeAllowed is ADR 0037 step 7: whether the class may pick a weapon proficiency in
-// weaponType, read from its definition (ADR 0040 step 1.6). A class the catalogue does not
-// define is limited by nothing.
-func weaponTypeAllowed(book Book, class, weaponType string) bool {
-	def, ok := book.ClassDef(class)
-	return !ok || def.Equipment.WeaponTypeAllowed(weaponType)
+// weaponTypeAllowed is ADR 0037 step 7 for the active class entries cls, judged together by ADR
+// 0042 step 16.1 (classes.AllowedTogether): a type any class may pick, except that a blunt_only
+// class restricts the picks to its own. A class the catalogue does not define limits nothing, so
+// nothing is judged (as itemsvc's class warnings).
+func (cls Classes) weaponTypeAllowed(book Book, weaponType string) bool {
+	limits := make([]classes.Equipment, 0, len(cls))
+	for _, c := range cls {
+		def, ok := book.ClassDef(c.Class)
+		if !ok {
+			return true
+		}
+		limits = append(limits, def.Equipment)
+	}
+	return classes.AllowedTogether(limits, func(e classes.Equipment) bool { return e.WeaponTypeAllowed(weaponType) })
 }
 
 // IsSpecialization reports whether p is a specialization pick (ADR 0037 step 9): a weapon type
@@ -280,7 +289,7 @@ func FiguresOf(book Book, cls Classes, intelligence int, spend Spending) (Profic
 	spent = 0
 	for _, p := range picks.Weapon {
 		out.WeaponPicks = append(out.WeaponPicks, WeaponPickFigures{
-			Type: p.Type, Slots: p.Slots, Allowed: weaponTypeAllowed(book, b.class, p.Type),
+			Type: p.Type, Slots: p.Slots, Allowed: cls.weaponTypeAllowed(book, p.Type),
 		})
 		spent += p.Slots
 	}
@@ -301,14 +310,13 @@ func ValidPicks(book Book, class string, picks, before Picks) (Picks, error) {
 }
 
 // validPicksOf is ValidPicks for the active class entries cls: a non-weapon pick costs Table
-// 37's slots when one of its groups is any class's (ADR 0042 step 15, Q13); the weapon picks
-// are the first class's (ADR 0042 step 16.1 is not read yet).
+// 37's slots when one of its groups is any class's (ADR 0042 step 15, Q13); a weapon pick's type
+// is judged by every class together (ADR 0042 step 16.1), the specialization by the first class.
 func validPicksOf(book Book, cls Classes, picks, before Picks) (Picks, error) {
-	class := cls.first()
 	weapon := before.Clone().Weapon
 	if picks.Weapon != nil {
 		var err error
-		if weapon, err = validWeaponPicks(book, class, picks.Weapon, before.Weapon); err != nil {
+		if weapon, err = validWeaponPicks(book, cls, picks.Weapon, before.Weapon); err != nil {
 			return Picks{}, err
 		}
 	}
@@ -350,13 +358,14 @@ func validPicksOf(book Book, cls Classes, picks, before Picks) (Picks, error) {
 // validWeaponPicks is ADR 0037 steps 7 and 9 on the weapon picks of a save: each a weapon type
 // (CodeUnknown) once (CodeDuplicate), spending WeaponPickSlots or, as the specialization (step
 // 9), its type's ruletablesvc.SpecializationSlots (any other count CodeOutOfRange), of a type the
-// class may pick (CodeWeaponNotAllowed). A specialization is a fighter's (Specializes; another
+// classes may pick (CodeWeaponNotAllowed, Classes.weaponTypeAllowed). A specialization is a fighter's (Specializes; another
 // class CodeNotAllowed), in one type at most (a second CodeNotAllowed); a type outside the class's list that before already
 // has is kept (step 16.2: the migration grants every owned type), never added. A type that is no
 // weapon type but that before already has is kept too, as the non-weapon pool keeps a stored id
 // the catalogue does not hold (step 16: older data is never dropped). A refusal is a
 // *domain.FieldError on field weapon.<type>. Never nil.
-func validWeaponPicks(book Book, class string, picks, before []WeaponPick) ([]WeaponPick, error) {
+func validWeaponPicks(book Book, cls Classes, picks, before []WeaponPick) ([]WeaponPick, error) {
+	class := cls.first()
 	specialized := false
 	had := map[string]bool{}
 	for _, p := range before {
@@ -375,7 +384,7 @@ func validWeaponPicks(book Book, class string, picks, before []WeaponPick) ([]We
 			return nil, &domain.FieldError{Field: field, Message: CodeDuplicate}
 		case p.Slots != WeaponPickSlots && !p.IsSpecialization():
 			return nil, &domain.FieldError{Field: field, Message: CodeOutOfRange}
-		case !had[p.Type] && !weaponTypeAllowed(book, class, p.Type):
+		case !had[p.Type] && !cls.weaponTypeAllowed(book, p.Type):
 			return nil, &domain.FieldError{Field: field, Message: CodeWeaponNotAllowed}
 		case p.IsSpecialization() && (!specializes(book, class) || specialized):
 			return nil, &domain.FieldError{Field: field, Message: CodeNotAllowed}

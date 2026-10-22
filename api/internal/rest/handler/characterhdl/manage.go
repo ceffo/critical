@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/render"
@@ -334,8 +335,8 @@ type CreateBody struct {
 	Wis            *int `json:"wis"`
 	Cha            *int `json:"cha"`
 	HPMax          *int `json:"hpMax"`
-	// PSPMax is the PSP maximum entered from the sheet (ADR 0043 step 4.4); absent or 0 for the
-	// rules' own.
+	// PSPMax is the PSP maximum entered from the sheet (ADR 0043 step 4.4); absent for the
+	// rules' own (1 to 999: a 0 is refused).
 	PSPMax *int `json:"pspMax"`
 	XP     *int `json:"xp"`
 	// SkillPoints are a thief's or a bard's (ADR 0030 steps 1, 17 and 18):
@@ -359,6 +360,17 @@ type CreateBody struct {
 	// and the classes a dual-class character left; they replace `class` and `xp`, which a body naming
 	// them too is refused for. A refusal names `classes` or `classes.<i>.<field>`.
 	Classes []ClassEntryBody `json:"classes"`
+	// PsionicPicks are a psionicist's known powers (ADR 0043 step 9), in PUT /api/psionics/picks'
+	// pick shape and order, checked as it checks them at the starting level; absent or empty for
+	// none. A list over the rules is that route's 409 with its code and figures; a malformed one, or
+	// one for a character with no psionics, a refusal on `psionicPicks`.
+	PsionicPicks []PsionicPickBody `json:"psionicPicks"`
+}
+
+// PsionicPickBody is one known-powers pick: `kind` discipline, power or relearn, and its id.
+type PsionicPickBody struct {
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
 }
 
 // ClassEntryBody is one class of a new character. `xp` is required for a class advanced in (a draft
@@ -441,8 +453,9 @@ func (b CreateBody) entered() (charactersvc.NewCharacter, []string, error) {
 			n.Classes = append(n.Classes, e)
 		}
 	}
-	if b.PSPMax != nil {
-		n.PSPMax = *b.PSPMax
+	n.PSPMax = b.PSPMax
+	for _, p := range b.PsionicPicks {
+		n.PsionicPicks = append(n.PsionicPicks, psionics.Pick(p))
 	}
 	var blank []string
 	for _, f := range []struct {

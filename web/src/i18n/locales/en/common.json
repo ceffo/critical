@@ -1197,6 +1197,7 @@
       "critRange": "Critical hit ({{from}}–{{to}})",
       "critPlaceholder": "Critical hit (placeholder)",
       "race": "{{race}} (race)",
+      "class": "{{class}} (class)",
       "wisdom": "Wisdom {{detail}} (magical defence)",
       "specialization": "Specialization",
       "point_blank": "Point blank",
@@ -1826,7 +1827,8 @@
       "cleric": "Cleric",
       "fighter": "Fighter",
       "mage": "Mage",
-      "thief": "Thief"
+      "thief": "Thief",
+      "psionicist": "Psionicist"
     },
     "errors": {
       "too_long": "Too long.",
@@ -2937,6 +2939,21 @@
         "spell_level_above_intelligence": "The Intelligence limits spells to level {{intMax}}.",
         "spellbook_level_full": "Already {{max}} spells of this level, the most this Intelligence allows.",
         "no_spellbook": "A {{className}} has no spellbook."
+      }
+    },
+    "psionics": {
+      "name": "Psionics",
+      "title": "Psionics",
+      "lead": "The PSP maximum and the known powers at the starting level, within Table 4's allowance. The powers may be picked later.",
+      "psp": "Psionic strength points",
+      "pspMax": "PSP maximum",
+      "computed": "Computed: {{psp}} PSPs at the starting level. Leave the box blank to keep it.",
+      "pspEditable": "Type your sheet's maximum to replace the computed one.",
+      "wait": "The PSP maximum and the allowance show once the server reads the class, race, ability scores and XP.",
+      "picksN_one": "{{count}} pick",
+      "picksN_other": "{{count}} picks",
+      "errors": {
+        "out_of_range": "This PSP maximum is refused: type a whole number, or leave the box blank for the computed one."
       }
     }
   },

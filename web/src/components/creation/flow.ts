@@ -12,6 +12,7 @@ import {
   type HpRoll,
   type NewCharacter,
   type NewClassEntry,
+  type PowerPick,
   type ScoresArrangement,
   type ScoresRoll,
 } from "@/types/character";
@@ -31,6 +32,7 @@ export const STEPS = [
   "extras",
   "proficiencies",
   "spellbook",
+  "psionics",
   "identity",
   "review",
 ] as const;
@@ -42,10 +44,21 @@ export function hasSpellbook(answer: CreationDraft | null): boolean {
   return Boolean(answer?.spellbookClass);
 }
 
+/** True when a class of the draft lists psionics (ADR 0043: the PSP maximum and the known powers
+ * are entered at creation): the draft's answer names it (`psionicsClass`). */
+export function hasPsionics(answer: CreationDraft | null): boolean {
+  return Boolean(answer?.psionicsClass);
+}
+
 /** The steps the draft goes through, in order: the spellbook step only when the draft's answer has a
- * class carrying a spellbook (ADR 0030 step 20.7); before the answer, the steps without one. */
+ * class carrying a spellbook (ADR 0030 step 20.7), the psionics step only when it has one listing
+ * psionics (ADR 0043); before the answer, the steps without them. */
 export function stepsFor(answer: CreationDraft | null): StepId[] {
-  return STEPS.filter((s) => s !== "spellbook" || hasSpellbook(answer));
+  return STEPS.filter(
+    (s) =>
+      (s !== "spellbook" || hasSpellbook(answer)) &&
+      (s !== "psionics" || hasPsionics(answer)),
+  );
 }
 
 /**
@@ -108,6 +121,7 @@ export function stepOfField(field: string): StepId {
     return "proficiencies";
   if (field === "spellbook" || field.startsWith("spellbook."))
     return "spellbook";
+  if (field === "pspMax" || field === "psionicPicks") return "psionics";
   if (field === "name" || field.startsWith("details.")) return "identity";
   return "review";
 }
@@ -343,6 +357,10 @@ export function mergeDraft(d: FlowDraft, patch: DraftPatch): FlowDraft {
   if (moved && patch.picks === undefined) next.picks = [];
   if (moved && patch.weaponPicks === undefined) next.weaponPicks = [];
   if (moved && patch.spellbook === undefined) next.spellbook = null;
+  // The known powers are counted against the class's allowance (ADR 0043 step 9), and the PSP
+  // maximum entered is a psionicist's: neither carries over to other classes.
+  if (moved && patch.psionicPicks === undefined) next.psionicPicks = [];
+  if (moved && patch.pspMax === undefined) next.pspMax = "";
   return next;
 }
 
@@ -403,6 +421,10 @@ export interface FlowDraft {
   /** The starting spellbook's spells (ADR 0030 step 20.7) as the player ticked them, in order; null
    * before he touched the list (the class's pre-ticked spells are sent, `draftSpellbook`). */
   spellbook: string[] | null;
+  /** The PSP maximum typed (ADR 0043 step 4.4); blank: the server's computed one. */
+  pspMax: string;
+  /** The known powers (ADR 0043 step 9) in the editor's order. */
+  psionicPicks: PowerPick[];
   name: string;
   details: Draft;
 }
@@ -433,6 +455,8 @@ export const EMPTY_DRAFT: FlowDraft = {
   picks: [],
   weaponPicks: [],
   spellbook: null,
+  pspMax: "",
+  psionicPicks: [],
   name: "",
   details: {
     alignment: "",
@@ -623,6 +647,12 @@ export function buildBody(
     };
   const spells = draftSpellbook(options, draft, carried);
   if (spells.length > 0) body.spellbook = spells;
+  if (draft.pspMax.trim() !== "") {
+    const v = parseWhole(draft.pspMax);
+    if (v === null || Number.isNaN(v)) fail("pspMax", "out_of_range");
+    else body.pspMax = v;
+  }
+  if (draft.psionicPicks.length > 0) body.psionicPicks = draft.psionicPicks;
   const {
     body: details,
     ageInvalid,
@@ -651,6 +681,17 @@ export function refusalError(r: DraftRefusal): FieldError {
       message:
         codeMessage(r.code, { spent: r.spent ?? 0, limit: r.limit ?? 0 }) ??
         r.code,
+    };
+  // A known-powers refusal (ADR 0043 step 9) is worded as the editor words its 409, with its figures.
+  if (r.field === "psionicPicks")
+    return {
+      field: r.field,
+      code: r.code,
+      message:
+        codeMessage(r.code, {
+          ...(r.count !== undefined && { count: r.count }),
+          ...(r.limit !== undefined && { limit: r.limit }),
+        }) ?? r.code,
     };
   return { field: r.field, code: r.code, message: r.code };
 }

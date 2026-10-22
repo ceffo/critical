@@ -427,7 +427,7 @@ func TestCharacters_DraftNeverRefusesContent(t *testing.T) {
 		Return(&charactersvc.Draft{Missing: []string{"name", "class"}}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/draft", `{}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"derived":null,"exceptionalStrength":false,"skillPoints":null,"spellbook":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[],"alignments":[],"skillsClass":"","spellbookClass":""}`, rec.Body.String())
+	assert.JSONEq(t, `{"derived":null,"exceptionalStrength":false,"skillPoints":null,"spellbook":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[],"alignments":[],"skillsClass":"","spellbookClass":"","psionicsClass":"","computedPspMax":null}`, rec.Body.String())
 
 	rec = as(h, "new", "POST", "/api/characters/draft", `{"details":{"height_cm":"tall"}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

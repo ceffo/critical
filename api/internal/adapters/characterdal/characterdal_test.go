@@ -207,7 +207,7 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 		Thac0Base: 19, Level: 3, SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12,
 		SaveBreath: 16, SaveSpell: 15, Class: "bard", RaceCode: "half_elf",
 		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true}, RealizedLevel: sql.NullInt64{Int64: 3, Valid: true},
-		SkillSets: `{}`, ProficiencyPicks: `{}`,
+		SkillSets: `{}`, ProficiencyPicks: `{}`, PsionicPicks: `[{"kind":"discipline","id":"telepathy"}]`,
 	}).Return(int64(7), nil).Once().NotBefore(lock)
 	entry := q.EXPECT().InsertClassEntry(ctx, queries.InsertClassEntryParams{
 		CharacterID: 7, Class: "bard", RealizedLevel: 3, StartingXp: 2500, State: "active",
@@ -222,7 +222,7 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 
 	id, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
 		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, PSPMax: 30, RealizedLevel: 3, XPTotal: 2500,
-		Class: "bard", Race: "half_elf",
+		Class: "bard", Race: "half_elf", PsionicPicks: []psionics.Pick{{Kind: psionics.PickDiscipline, ID: "telepathy"}},
 		Details: charactersvc.Details{Alignment: "neutral_good", Age: 23, Languages: []string{"Elfique", "Commun"}},
 		Sheet: charactersvc.Sheet{Level: 3, THAC0: 19, Saves: charactersvc.Saves{
 			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
@@ -360,7 +360,7 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	q.EXPECT().CreateCharacter(ctx, queries.CreateCharacterParams{
 		Name: "Vex", Class: "thief", RaceCode: "halfling", OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
 		RealizedLevel: sql.NullInt64{Int64: 1, Valid: true},
-		SkillSets:     `{"thief":{"open_locks":20,"pick_pockets":15}}`, ProficiencyPicks: `{}`,
+		SkillSets:     `{"thief":{"open_locks":20,"pick_pockets":15}}`, ProficiencyPicks: `{}`, PsionicPicks: `[]`,
 	}).Return(int64(8), nil).Once()
 	q.EXPECT().InsertClassEntry(ctx, queries.InsertClassEntryParams{
 		CharacterID: 8, Class: "thief", RealizedLevel: 1, State: "active",

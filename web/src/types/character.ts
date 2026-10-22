@@ -660,6 +660,12 @@ export interface DraftRefusal {
   code: string;
   spent?: number;
   limit?: number;
+  /** A known-powers refusal's figures (ADR 0043 step 9), as the editor's 409 names them: the power,
+   * the discipline, the slot kind, and the count against `limit`. */
+  power?: string;
+  discipline?: string;
+  slot?: string;
+  count?: number;
 }
 
 /**
@@ -695,6 +701,12 @@ export interface CreationDraft {
    * none): the form reads them, it does not choose. */
   skillsClass: string;
   spellbookClass: string;
+  /** The class that lists psionics ("" for none, ADR 0043): the form asks its PSP maximum and known
+   * powers. Absent from an older release. */
+  psionicsClass?: string;
+  /** ADR 0043 step 4's PSP maximum at the starting level, stored when none is entered; null with no
+   * psionics or while `derived` is. `derived.psp` is the pool the creation would store. */
+  computedPspMax?: number | null;
 }
 
 /** A level and the lowest XP that reaches it, for one class. */
@@ -818,6 +830,12 @@ export type NewCharacter = {
   /** A mage's or a bard's starting spellbook (ADR 0030 step 20.7): the catalogue ids, in order,
    * written without a roll; absent for none. A refused spell's field is `spellbook.<id>`. */
   spellbook?: string[];
+  /** A psionicist's PSP maximum entered from the sheet (ADR 0043 step 4.4); absent: the server
+   * computes it at the starting level. A refusal's field is `pspMax`. */
+  pspMax?: number;
+  /** A psionicist's known powers (ADR 0043 step 9), in `PUT /api/psionics/picks`' shape and order;
+   * absent for none. A refusal's field is `psionicPicks`. */
+  psionicPicks?: PowerPick[];
   /**
    * The class entries of a multi-class or dual-class character (ADR 0042 steps 1 and 4), which the
    * server reads in place of `class` and `xp` (sending both is refused); a refusal's field is

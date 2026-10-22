@@ -51,8 +51,8 @@ func TestOptions_Step8_EveryCatalogueClassIsCreatable(t *testing.T) {
 	for i, c := range got.Classes {
 		ids[i] = c.Class
 	}
-	assert.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard", "test_skald"}, ids, "the catalogue's classes in its order, but the psionicist: it lists kinds the code does not compute yet (step 8)")
-	opt := got.Classes[5]
+	assert.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard", "psionicist", "test_skald"}, ids, "the catalogue's classes in its order: every kind they list is computed (step 8)")
+	opt := got.Classes[6]
 	assert.Equal(t, 6, opt.HitDie, "the rogue group's die")
 	assert.Equal(t, []classes.AbilityMinimum{{Ability: "cha", Min: 14}}, opt.Minimums)
 	assert.Equal(t, []string{"chaotic_good", "chaotic_neutral"}, opt.Alignments)

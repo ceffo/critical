@@ -60,13 +60,14 @@ const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO characters (
     name, str, str_exceptional, dex, con, int, wis, cha, hp_max, psp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-    class, race_code, owner_user_id, realized_level, skill_sets, proficiency_picks
+    class, race_code, owner_user_id, realized_level, skill_sets, proficiency_picks, psionic_picks
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12, $13,
     $14, $15, $16,
     $17, $18, $19, $20,
-    $21, $22, $23, $24
+    $21, $22, $23, $24,
+    $25
 ) RETURNING id
 `
 
@@ -95,6 +96,7 @@ type CreateCharacterParams struct {
 	RealizedLevel    sql.NullInt64
 	SkillSets        string
 	ProficiencyPicks string
+	PsionicPicks     string
 }
 
 // A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
@@ -127,6 +129,7 @@ func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams
 		arg.RealizedLevel,
 		arg.SkillSets,
 		arg.ProficiencyPicks,
+		arg.PsionicPicks,
 	)
 	var id int64
 	err := row.Scan(&id)

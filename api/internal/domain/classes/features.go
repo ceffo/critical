@@ -39,14 +39,24 @@ const (
 	// KindSpellbook: a spellbook (ADR 0030 step 20). Param Spellbook.
 	KindSpellbook = "spellbook"
 	// KindPsionics: the psionicist's PSPs, picks and power checks (ADR 0043
-	// steps 2 and 4 to 12). Param Psionics. Not implemented (Implemented)
-	// until its picks and checks are built.
+	// steps 2 and 4 to 12). Param Psionics.
 	KindPsionics = "psionics"
 	// KindSaveBonus: a bonus on a save against a kind of effect (ADR 0043
-	// step 3). Its params (against, bonus) are checked by the catalogue
-	// schema and not read yet. Not implemented (Implemented).
+	// step 3). Param SaveBonus.
 	KindSaveBonus = "save_bonus"
 )
+
+// SaveAgainstMindAffecting is the one effect tag a save_bonus may name (ADR
+// 0043 step 3, Q12): a save the request flags as against magic that attacks
+// the mind (ADR 0006 step 9).
+const SaveAgainstMindAffecting = "mind_affecting"
+
+// SaveAgainst are the effect tags of a save request a save_bonus may name.
+var SaveAgainst = []string{SaveAgainstMindAffecting}
+
+// MaxSaveBonus bounds a save_bonus's bonus (1..MaxSaveBonus), as the
+// catalogue schema does.
+const MaxSaveBonus = 5
 
 // FeatureKinds is the closed list of step 3, in the ADR's order.
 var FeatureKinds = []string{
@@ -58,8 +68,9 @@ var FeatureKinds = []string{
 // notImplemented are the kinds of the closed list the code does not compute
 // yet: the catalogue may list them (a class is data), but a class that does
 // is not offered at creation until its kinds are built (ADR 0040 step 8).
-// A kind leaves this list when its reader lands.
-var notImplemented = []string{KindSaveBonus}
+// A kind leaves this list when its reader lands: every kind of the closed
+// list has one now (save_bonus was the last, ADR 0043 step 3).
+var notImplemented []string
 
 // Implemented reports whether the code computes every feature kind the class
 // lists: the creation gate of ADR 0040 step 8 ("passed the check = fully
@@ -94,6 +105,16 @@ type Feature struct {
 	Spellbook *Spellbook
 	// Psionics is psionics' params.
 	Psionics *Psionics
+	// SaveBonus is save_bonus's params.
+	SaveBonus *SaveBonus
+}
+
+// SaveBonus are the params of save_bonus (ADR 0043 step 3): Bonus is added
+// to a save whose request carries the effect tag Against (SaveAgainst), a
+// labelled modifier on the roll.
+type SaveBonus struct {
+	Against string
+	Bonus   int
 }
 
 // Psionics are the params of psionics (ADR 0043 step 2): the power
@@ -274,6 +295,10 @@ func (f Feature) clone() Feature {
 		p.PSP.ModifierAbilities = slices.Clone(p.PSP.ModifierAbilities)
 		f.Psionics = &p
 	}
+	if f.SaveBonus != nil {
+		b := *f.SaveBonus
+		f.SaveBonus = &b
+	}
 	return f
 }
 
@@ -300,11 +325,23 @@ func checkFeatures(fs []Feature) ([]Feature, error) {
 	return out, nil
 }
 
+// checkSaveBonus refuses an unknown effect tag or a bonus outside
+// 1..MaxSaveBonus.
+func checkSaveBonus(b SaveBonus) error {
+	if !slices.Contains(SaveAgainst, b.Against) {
+		return fmt.Errorf("unknown save effect tag %q", b.Against)
+	}
+	if b.Bonus < 1 || b.Bonus > MaxSaveBonus {
+		return fmt.Errorf("save bonus %d out of range 1..%d", b.Bonus, MaxSaveBonus)
+	}
+	return nil
+}
+
 // checkParams refuses a missing param of f's kind or a param of another
 // kind.
 func checkParams(f Feature) error {
 	table, ability, spheres, rogue, book := f.Table != "", f.Ability != "", f.Spheres != nil, f.RogueSkills != nil, f.Spellbook != nil
-	if f.Kind != KindPsionics && f.Psionics != nil {
+	if (f.Kind != KindPsionics && f.Psionics != nil) || (f.Kind != KindSaveBonus && f.SaveBonus != nil) {
 		return errors.New("a missing or unexpected parameter")
 	}
 	want := func(t, a, s, r, b bool) error {
@@ -314,8 +351,16 @@ func checkParams(f Feature) error {
 		return nil
 	}
 	switch f.Kind {
-	case KindExceptionalStrength, KindWeaponSpecialization, KindWisdomBonusSpells, KindSaveBonus:
+	case KindExceptionalStrength, KindWeaponSpecialization, KindWisdomBonusSpells:
 		return want(false, false, false, false, false)
+	case KindSaveBonus:
+		if err := want(false, false, false, false, false); err != nil {
+			return err
+		}
+		if f.SaveBonus == nil {
+			return errors.New("a missing or unexpected parameter")
+		}
+		return checkSaveBonus(*f.SaveBonus)
 	case KindPsionics:
 		if err := want(false, false, false, false, false); err != nil {
 			return err

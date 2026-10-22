@@ -755,6 +755,154 @@
         "Spellbook": {
           "StartingSpells": []
         }
+      },
+      {
+        "Class": "psionicist",
+        "Races": [
+          "dwarf",
+          "elf",
+          "gnome",
+          "half_elf",
+          "halfling",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "lawful_neutral",
+          "true_neutral",
+          "lawful_evil",
+          "neutral_evil"
+        ],
+        "HitDie": 6,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2200
+          },
+          {
+            "Level": 3,
+            "XP": 4400
+          },
+          {
+            "Level": 4,
+            "XP": 8800
+          },
+          {
+            "Level": 5,
+            "XP": 16500
+          },
+          {
+            "Level": 6,
+            "XP": 30000
+          },
+          {
+            "Level": 7,
+            "XP": 55000
+          },
+          {
+            "Level": 8,
+            "XP": 100000
+          },
+          {
+            "Level": 9,
+            "XP": 200000
+          },
+          {
+            "Level": 10,
+            "XP": 400000
+          },
+          {
+            "Level": 11,
+            "XP": 600000
+          },
+          {
+            "Level": 12,
+            "XP": 800000
+          },
+          {
+            "Level": 13,
+            "XP": 1000000
+          },
+          {
+            "Level": 14,
+            "XP": 1200000
+          },
+          {
+            "Level": 15,
+            "XP": 1500000
+          },
+          {
+            "Level": 16,
+            "XP": 1800000
+          },
+          {
+            "Level": 17,
+            "XP": 2100000
+          },
+          {
+            "Level": 18,
+            "XP": 2400000
+          },
+          {
+            "Level": 19,
+            "XP": 2700000
+          },
+          {
+            "Level": 20,
+            "XP": 3000000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "con",
+            "Min": 11
+          },
+          {
+            "Ability": "int",
+            "Min": 12
+          },
+          {
+            "Ability": "wis",
+            "Min": 15
+          }
+        ],
+        "WeaponTypes": [
+          {
+            "Type": "short_bow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "light_crossbow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "hand_crossbow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "short_sword",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "other_melee",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "other_thrown",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": null
       }
     ],
     "Sexes": [

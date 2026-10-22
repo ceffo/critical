@@ -22,7 +22,10 @@ const (
 	// ModWisdom is PHB Table 5's magical defence adjustment (ADR 0006 step 9.4) on a save flagged
 	// as against magic that attacks the mind; Detail is the Wisdom score.
 	ModWisdom ModifierKind = "wisdom"
-	ModCrit   ModifierKind = "crit" // house crit multiplier; the range is the roll's CritFrom..CritTo
+	// ModClass is a class's save_bonus (ADR 0043 step 3) on a save whose request carries the
+	// bonus's effect tag; Detail is the class code.
+	ModClass ModifierKind = "class"
+	ModCrit  ModifierKind = "crit" // house crit multiplier; the range is the roll's CritFrom..CritTo
 	// ModSpecialization is weapon specialization (ADR 0030 step 12): +1 to hit and +2 damage with a
 	// melee or thrown weapon, not magical; Detail is empty.
 	ModSpecialization ModifierKind = "specialization"

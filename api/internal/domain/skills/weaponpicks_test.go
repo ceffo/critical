@@ -314,3 +314,23 @@ func TestWeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks(t *testing.T) {
 		assert.True(t, thief.WeaponPicks[0].Allowed, "the fighter's any weapon")
 	})
 }
+
+// ADR 0042 as built (PHB p.52, Weapon Specialization: "multi-class characters cannot use weapon
+// specialization; it is available only to single-class fighters"): a fighter/thief, the fighter
+// first, is refused a specialization pick and a stored one specializes nothing; the fighter alone
+// takes it.
+func TestWeaponPick_Step15_OnlyASingleClassFighterSpecializes(t *testing.T) {
+	book := profBook(t)
+	spec := skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: ruletablesvc.SpecializationSlots("long_sword")}}}
+	fighterThief := skills.Classes{{Class: "fighter", Level: 3}, {Class: "thief", Level: 3}}
+
+	_, err := skills.Apply(book, nil, "human", skills.Sheet{Classes: fighterThief, Intelligence: 12, Picks: weapons()}, skills.Edit{Picks: spec})
+	assert.Equal(t, domain.FieldError{Field: "weapon.long_sword", Message: skills.CodeNotAllowed}, fieldErr(t, err))
+	assert.Empty(t, skills.WeaponProficiencyOf(book, fighterThief, spec).Specialized)
+
+	fighter := skills.One("fighter", 3)
+	got, err := skills.Apply(book, nil, "human", skills.Sheet{Classes: fighter, Intelligence: 12, Picks: weapons()}, skills.Edit{Picks: spec})
+	require.NoError(t, err)
+	assert.Equal(t, spec.Weapon, got.Picks.Weapon)
+	assert.Equal(t, "long_sword", skills.WeaponProficiencyOf(book, fighter, spec).Specialized)
+}

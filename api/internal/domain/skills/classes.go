@@ -19,9 +19,11 @@ type Classes []ClassLevel
 // One is the single class entry of class at level.
 func One(class string, level int) Classes { return Classes{{Class: class, Level: level}} }
 
-// first is the first class, "" for none.
-func (cls Classes) first() string {
-	if len(cls) == 0 {
+// specialist is the class whose weapon_specialization a specialization reads: the single active
+// class, "" for a multi-class character (ADR 0042 as built, PHB p.52: specialization is a
+// single-class fighter's only).
+func (cls Classes) specialist() string {
+	if len(cls) != 1 {
 		return ""
 	}
 	return cls[0].Class

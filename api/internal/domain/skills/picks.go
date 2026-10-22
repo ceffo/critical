@@ -166,11 +166,11 @@ func (w WeaponProficiency) NonproficientPenalty(weaponType string) int {
 }
 
 // WeaponProficiencyOf reads a character of the active class entries cls with picks: its
-// specialization (step 9, the first class's) and its weapon picks against Table 34's penalty
+// specialization (step 9, a single-class character's only: Classes.specialist) and its weapon picks against Table 34's penalty
 // from book (step 8), the smallest of the classes' (ADR 0042 step 15, Q12). The levels of cls
 // are not read.
 func WeaponProficiencyOf(book Book, cls Classes, picks Picks) WeaponProficiency {
-	out := WeaponProficiency{Specialized: SpecializedType(book, cls.first(), picks), Picked: make([]string, 0, len(picks.Weapon))}
+	out := WeaponProficiency{Specialized: SpecializedType(book, cls.specialist(), picks), Picked: make([]string, 0, len(picks.Weapon))}
 	if b, ok := cls.basis(book); ok {
 		out.Penalty = b.row.Penalty
 	}
@@ -358,14 +358,14 @@ func validPicksOf(book Book, cls Classes, picks, before Picks) (Picks, error) {
 // validWeaponPicks is ADR 0037 steps 7 and 9 on the weapon picks of a save: each a weapon type
 // (CodeUnknown) once (CodeDuplicate), spending WeaponPickSlots or, as the specialization (step
 // 9), its type's ruletablesvc.SpecializationSlots (any other count CodeOutOfRange), of a type the
-// classes may pick (CodeWeaponNotAllowed, Classes.weaponTypeAllowed). A specialization is a fighter's (Specializes; another
-// class CodeNotAllowed), in one type at most (a second CodeNotAllowed); a type outside the class's list that before already
+// classes may pick (CodeWeaponNotAllowed, Classes.weaponTypeAllowed). A specialization is a single-class fighter's (Specializes and
+// Classes.specialist; another class or a multi-class character CodeNotAllowed), in one type at most (a second CodeNotAllowed); a type outside the class's list that before already
 // has is kept (step 16.2: the migration grants every owned type), never added. A type that is no
 // weapon type but that before already has is kept too, as the non-weapon pool keeps a stored id
 // the catalogue does not hold (step 16: older data is never dropped). A refusal is a
 // *domain.FieldError on field weapon.<type>. Never nil.
 func validWeaponPicks(book Book, cls Classes, picks, before []WeaponPick) ([]WeaponPick, error) {
-	class := cls.first()
+	class := cls.specialist()
 	specialized := false
 	had := map[string]bool{}
 	for _, p := range before {

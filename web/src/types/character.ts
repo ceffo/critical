@@ -16,11 +16,12 @@ export interface SaveNumbers {
  * the class group's name level (0 above it), `fixedGain` the gain above it (0 up to it).
  */
 export interface PendingLevel {
-  /** ADR 0042 step 7: the class entry the level is taken in. */
-  class: string;
+  /** ADR 0042 step 7: the class entry the level is taken in; absent for a single-class character
+   * (the server omits it). */
+  class?: string;
   /** ADR 0042 step 10: the number of the character's classes, what the die, the fixed gain and the
-   * Constitution adjustment are divided by (1: one class). */
-  classes: number;
+   * Constitution adjustment are divided by; absent for a single-class character (one class). */
+  classes?: number;
   level: number;
   die: number;
   fixedGain: number;

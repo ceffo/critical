@@ -312,3 +312,12 @@ func TestDerive_Step12_TwoSkillGrantsKeepTheirOwnSets(t *testing.T) {
 	assert.Equal(t, [3]int{9, 300, 30}, [3]int{thief.Points.Level, thief.Points.Total, thief.Points.Spent})
 	assert.Equal(t, [3]int{4, 65, 20}, [3]int{bard.Points.Level, bard.Points.Total, bard.Points.Spent})
 }
+
+// ADR 0042 as built (PHB p.52): weapon specialization is a single-class fighter's. A fighter/thief
+// with the fighter first does not specialize; the fighter alone does.
+func TestDerive_Step12_OnlyASingleClassFighterSpecializes(t *testing.T) {
+	assert.False(t, derived(t, multi("human", entry("fighter", 5, 20_000), entry("thief", 6, 20_000))).Specializes)
+	single := multi("human", entry("fighter", 5, 20_000))
+	single.Classes = nil
+	assert.True(t, derived(t, single).Specializes)
+}

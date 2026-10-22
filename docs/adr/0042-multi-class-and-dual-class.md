@@ -3,7 +3,10 @@
 **Status**: accepted 2026-10-21 for what the user's triage decided (quoted in Context); the
 readings where the book is silent or differs from the triage's outline (Q1 to Q16) were put to the
 user and accepted as written on 2026-10-22 ("Decided with the user"). Step 1 (the class entries as the storage and wire shape, single-class
-characters only) is implemented as built (see "As built" under step 1); the other steps are not. Amends [ADR 0030](0030-classes-and-races.md)
+characters only) is implemented as built (see "As built" under step 1). The multi-class steps (5 to 10,
+12, 14 to 17) are built 2026-10-22 (CRI-169, see each step's "As built"); creation and entering a
+multi-class character (steps 2 and 4) and the dual-class steps (3, 11, 13, the dual-class slots of
+15) are not. Amends [ADR 0030](0030-classes-and-races.md)
 steps 1, 3, 5, 6, 7 and 8, [ADR 0015](0015-experience.md) steps 1 to 3,
 [ADR 0037](0037-proficiencies.md) steps 3, 7 and 8 and [ADR 0040](0040-classes-are-data.md)
 step 5, each in place (dated 2026-10-21) and each on implementation. Builds on the class
@@ -317,7 +320,20 @@ bard 15 never).)_
     `Derived.FeatureLevel` / `FeatureClass` give the granting entry's level and class to the rules that
     read one (skill points and their budget, backstab, turning, spell failure, the spellbook). A figure
     one per character takes the first entry granting it. Also tested on the sheet:
-    `Derive_Step12_FeaturesAtTheGrantingEntrysLevel` (charactersvc).)_
+    `Derive_Step12_FeaturesAtTheGrantingEntrysLevel` (charactersvc). The skill sets read every
+    `rogue_skills` grant (`Derived.SkillGrants`): a thief/bard has the thief's and the bard's sets,
+    each with its points and its budget at its own entry's level, and a spend names the set, checked
+    against the class listing it at that entry's level: `Derive_Step12_TwoSkillGrantsKeepTheirOwnSets`,
+    `SetPoints_Step12_EachGrantSpendsItsOwnSet`.)_
+    _(As built, 2026-10-22, weapon specialization, supervisor decision on the book: only a
+    single-class fighter specializes. PHB p.52 (Proficiencies, Weapon Specialization): "a fighter
+    (only)", and next to it "multi-class characters cannot use weapon specialization; it is
+    available only to single-class fighters". So `Derived.Specializes` and the specialization pick
+    need one active entry: a fighter/thief, the fighter first, does not specialize and its
+    specialization pick is refused `not_allowed` (`skills.Classes.specialist`). The book is silent
+    on a dual-class character; its one active entry is read as single-class. Tests:
+    `Derive_Step12_OnlyASingleClassFighterSpecializes`,
+    `WeaponPick_Step15_OnlyASingleClassFighterSpecializes`.)_
 
 13. **The dual-class crossover and the old class's abilities.** The **crossover** is reached when
     the active entry's realized level is above every frozen entry's `left_at_level` (PHB

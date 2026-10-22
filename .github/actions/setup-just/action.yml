@@ -1,0 +1,32 @@
+name: Setup just
+description: >-
+  Installs the pinned `just` straight from its release asset URL, checked against a SHA-256. Unlike
+  extractions/setup-just (which lists the repository's releases through the API on every run and fails with
+  "no release for just matching version specifier" when that listing comes back empty), this makes no API
+  call: a pinned tag has a fixed URL. Bump `version` and `sha256` together, in step with the just used locally.
+inputs:
+  version:
+    description: The just release tag
+    default: "1.59.0"
+  sha256:
+    description: SHA-256 of just-<version>-x86_64-unknown-linux-musl.tar.gz
+    default: "409044617b6f06517c1035e55ca38c8c856ff8b650e41bc2aa1ef82d5903a23e"
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        SHA256: ${{ inputs.sha256 }}
+      run: |
+        set -euo pipefail
+        asset="just-${VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        dir="${RUNNER_TEMP}/just"
+        mkdir -p "$dir"
+        # --retry covers a dropped connection on this fixed URL; there is nothing to look up.
+        curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+          -o "$dir/$asset" "https://github.com/casey/just/releases/download/${VERSION}/${asset}"
+        echo "${SHA256}  $dir/$asset" | sha256sum --check --strict
+        tar -xzf "$dir/$asset" -C "$dir" just
+        echo "$dir" >> "$GITHUB_PATH"
+        "$dir/just" --version

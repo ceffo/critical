@@ -261,7 +261,7 @@ func TestCreate_Options(t *testing.T) {
 	for _, c := range got.Classes {
 		order = append(order, c.Class)
 	}
-	require.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard"}, order)
+	require.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard", "psionicist"}, order)
 	fighter, mage, cleric, thief, bard := got.Classes[0], got.Classes[1], got.Classes[2], got.Classes[3], got.Classes[4]
 	assert.Equal(t, []string{"half_elf", "human"}, bard.Races)
 	assert.Empty(t, bard.ExceptionalStrength)
@@ -312,8 +312,9 @@ func TestCreate_Options_LevelXPTableHitDiceMethodsAndRaceAdjustments(t *testing.
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &got))
 	want := map[string]struct{ die, xp5 int }{
 		"bard": {6, 10_000}, "fighter": {10, 16_000}, "mage": {4, 20_000}, "cleric": {8, 13_000}, "thief": {6, 10_000},
+		"psionicist": {6, 16_500},
 	}
-	require.Len(t, got.Classes, 5)
+	require.Len(t, got.Classes, 6)
 	for _, c := range got.Classes {
 		require.Len(t, c.LevelXP, 20, c.Class)
 		assert.Equal(t, 1, c.LevelXP[0].Level, c.Class)

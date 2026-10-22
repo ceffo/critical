@@ -337,7 +337,7 @@ func TestOptions_Step20_7_ReadMagicAndDetectMagicPreTickedForAMage(t *testing.T)
 	assert.Equal(t, map[string]*charactersvc.SpellbookOption{
 		"mage":    {StartingSpells: []string{"read_magic", "detect_magic"}},
 		"bard":    {StartingSpells: []string{}},
-		"fighter": nil, "cleric": nil, "thief": nil,
+		"fighter": nil, "cleric": nil, "thief": nil, "psionicist": nil,
 	}, books)
 	assert.Equal(t, e.spells.WizardSpells(), got.WizardSpells)
 	assert.Equal(t, charactersvc.SpellOption{ID: "detect_magic", Level: 1}, got.WizardSpells[0])

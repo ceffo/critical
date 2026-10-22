@@ -139,6 +139,11 @@ type artifactDTO struct {
 	Classes json.RawMessage `json:"classes"`
 	Groups  json.RawMessage `json:"groups"`
 	Races   json.RawMessage `json:"races"`
+	// Disciplines and Powers (format 13, step 20) are the psionic catalogue
+	// the psionics item (ADR 0043) reads; they are schema-checked and not
+	// imported yet.
+	Disciplines json.RawMessage `json:"disciplines"`
+	Powers      json.RawMessage `json:"powers"`
 }
 
 type proficiencyDescriptionDTO struct {

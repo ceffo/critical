@@ -726,7 +726,7 @@ is only ever appended to by play.
     3. **Rollout, as step 18.6.** The API reads **format 12 only**: a format-11 artifact (or any older one) is refused at start as an unknown
        format, naming `this API reads format 12` and `just catalogue`. Merge order: the builder publishing format 12 first, then the API change
        immediately; a dev checkout runs `just catalogue` once after both are merged.
-    Tests: `TestSchema_Step19_OnlyFormat12IsValid` (cataloguecheck: format 12 only, the column required, an id in capitals and an id twice
+    Tests: `TestSchema_Step19_OnlyFormat12IsValid` (renamed by step 20; cataloguecheck: format 12 only, the column required, an id in capitals and an id twice
     refused), `TestParse_Step19_ReadsFormat12AndRefusesFormat11` (catalogueadpt); the rules adapter's `TestSpellImmunitiesFor_Step10_Cumulative`
     (the column read); in `critical-rulebooks`: `scripts/check`'s spot values and fault injections for the column.
 
@@ -738,8 +738,10 @@ is only ever appended to by play.
        its experience and hit dice in the class entry, its ability minimums, its features `psionics` and `save_bonus`) and `groups` gains the
        `psionicist` group with its THAC0 rows. The shared grids that have a column or a key per class or group gain the psionicist the same way:
        `saving_throws` takes five rows of the group `psionicist` (Table 8) and `race_level_limits` takes five rows of the class `psionicist` (Table 1;
-       thirty rows). The PHB grids `experience`, `hit_dice` and `thac0` stay as they are (ADR 0040 keeps those figures in the class and group
-       entries; moving the remaining grids there is a separate item). The CPsiH's proficiency slots (Table 10) are not in the catalogue: the slots are
+       thirty rows). The PHB grids `experience`, `hit_dice` and `thac0`, which the API still reads by class or group, take the psionicist too:
+       an `experience` column `psionicist` (Table 2), a `hit_dice` row of the group `psionicist` and a `thac0` column `psionicist` (Table 7), with
+       the same figures as its class and group entries (one shape for every class; moving the remaining grids into the class entries is a
+       separate item). The CPsiH's proficiency slots (Table 10) are not in the catalogue: the slots are
        an app seed today.
     2. **Three new rule tables**: `psionicist_powers` (Table 4: per level, the cumulative `disciplines`, `sciences`, `devotions`, `defence_modes`),
        `inherent_potential` (Table 5: `score`, `base`, `modifier`, the printed rows 15 to 18) and `psp_recovery` (Table 6: `activity`
@@ -760,8 +762,9 @@ is only ever appended to by play.
     6. **Rollout, as step 18.6.** The API reads **format 13 only** (a format-12 artifact is refused at start, naming `just catalogue`). Merge
        order: the builder publishing format 13 first, then the API change (the schema `schemas/catalogue.schema.json`, `catalogueadpt`, the fixture
        `testdata/catalogue.json`) immediately.
-    Tests: `Schema_Step20_OnlyFormat13IsValid` (cataloguecheck: format 13 only; a power of an unknown kind, a cost that is a word, a psionics
-    feature without its recovery table, the lost level-limit rows refused), `Parse_Step20_ReadsFormat13AndRefusesFormat12` (catalogueadpt); in
+    Tests: `TestSchema_Step20_OnlyFormat13IsValid` (cataloguecheck, was `Schema_Step19_OnlyFormat12IsValid`: format 13 only; a power of an unknown
+    kind, a cost that is a word, a psionics feature without its recovery table, the lost level-limit rows and the missing grid column or row
+    refused), `TestParse_Step20_ReadsFormat13AndRefusesFormat12` (catalogueadpt, was `Parse_Step19_ReadsFormat12AndRefusesFormat11`); in
     `critical-rulebooks`: `scripts/check`'s counts per discipline against the books' sections, Tables 1, 2 and 4 to 8, spot powers, the power-id
     ledger and fault injection.
 

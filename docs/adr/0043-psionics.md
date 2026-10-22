@@ -434,7 +434,9 @@ CRI-178 built steps 1, 2, 4, 6 and 8's data ([ADR 0021](0021-spell-catalogue.md)
   mails, so the class lists `padded_studded` only (hide is not expressible without admitting chain mail). The dirk and the throwing axe are not
   catalogue weapons.
 - **The grids**: the psionicist's saves and level limits are rows of the shared `saving_throws` and `race_level_limits` tables, its XP, hit dice and
-  THAC0 are in its class and group entries (ADR 0021 step 20.1). The proficiency slots of Table 10 are not in the catalogue.
+  THAC0 are in its class and group entries and also a column (`experience`, `thac0`) and a row (`hit_dice`) of the shared grids the API still reads
+  by class or group (ADR 0021 step 20.1). The proficiency slots of Table 10 are not in the catalogue: they are the app seed's `psionicist` slot
+  row and crossover (`seeds/proficiencies.json`).
 - **Q13** is fixed by one dated line (`catalogue-inputs/PSIONICIST_FIXES`): Spell 11 at levels 13 to 16.
 
 ## Consequences

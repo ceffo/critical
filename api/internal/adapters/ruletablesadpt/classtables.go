@@ -40,6 +40,11 @@ type classDTO struct {
 	BardSkillBase       []skillBaseDTO         `json:"bard_skill_base"`
 	Backstab            []backstabDTO          `json:"backstab"`
 	TurningUndead       []turningDTO           `json:"turning_undead"`
+	// The psionicist tables (ADR 0021 step 20, format 13) are accepted and not
+	// read yet: the psionics item (ADR 0043) reads them.
+	PsionicistPowers  json.RawMessage `json:"psionicist_powers"`
+	InherentPotential json.RawMessage `json:"inherent_potential"`
+	PSPRecovery       json.RawMessage `json:"psp_recovery"`
 }
 
 type hitDiceDTO struct {
@@ -100,6 +105,8 @@ type thac0DTO struct {
 	Priest  int `json:"priest"`
 	Rogue   int `json:"rogue"`
 	Wizard  int `json:"wizard"`
+	// Psionicist is format 13's column; the group entries carry the figures the service reads (ADR 0043).
+	Psionicist int `json:"psionicist"`
 }
 
 type savingThrowDTO struct {
@@ -241,9 +248,11 @@ func (d classDTO) classes(defs *classes.Registry) (*ruletablesvc.ClassTables, er
 		ConSaveBonus:     mapRows(d.ConSaveBonus, func(r conSaveBonusDTO) ruletablesvc.ConSaveBonusRow { return ruletablesvc.ConSaveBonusRow(r) }),
 		RaceRequirements: mapRows(d.RaceRequirements, func(r raceRequirementDTO) ruletablesvc.RaceRequirementRow { return ruletablesvc.RaceRequirementRow(r) }),
 		RaceAdjustments:  mapRows(d.RaceAdjustments, func(r raceAdjustmentDTO) ruletablesvc.RaceAdjustmentRow { return ruletablesvc.RaceAdjustmentRow(r) }),
-		THAC0:            mapRows(d.THAC0, func(r thac0DTO) ruletablesvc.THAC0Row { return ruletablesvc.THAC0Row(r) }),
-		SavingThrows:     mapRows(d.SavingThrows, func(r savingThrowDTO) ruletablesvc.SavingThrowRow { return ruletablesvc.SavingThrowRow(r) }),
-		WarriorAttacks:   mapRows(d.WarriorAttacks, func(r attackRateDTO) ruletablesvc.AttackRateRow { return ruletablesvc.AttackRateRow(r) }),
+		THAC0: mapRows(d.THAC0, func(r thac0DTO) ruletablesvc.THAC0Row {
+			return ruletablesvc.THAC0Row{Level: r.Level, Warrior: r.Warrior, Priest: r.Priest, Rogue: r.Rogue, Wizard: r.Wizard}
+		}),
+		SavingThrows:   mapRows(d.SavingThrows, func(r savingThrowDTO) ruletablesvc.SavingThrowRow { return ruletablesvc.SavingThrowRow(r) }),
+		WarriorAttacks: mapRows(d.WarriorAttacks, func(r attackRateDTO) ruletablesvc.AttackRateRow { return ruletablesvc.AttackRateRow(r) }),
 		SpecialistAttacks: mapRows(d.SpecialistAttacks, func(r specialistAttackDTO) ruletablesvc.SpecialistAttackRow {
 			return ruletablesvc.SpecialistAttackRow(r)
 		}),

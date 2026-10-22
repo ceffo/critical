@@ -530,6 +530,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		e.rules.EXPECT().RaceAllows(race, "mage").Return(race == "human" || race == "elf" || race == "half_elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "cleric").Return(race != "elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "thief").Return(true, nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "psionicist").Return(race == "human", nil).Once()
 	}
 	expectOptionTables(e)
 	got, err := e.svc.CreationOptions(context.Background())
@@ -558,6 +559,10 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 				// ADR 0032 step 2: the bard admits the five alignments with a neutral part.
 				Alignments: []string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},
 			},
+			{
+				Class: "psionicist", Races: []string{"human"}, ExceptionalStrengthRaces: []string{}, Skills: []string{},
+				Alignments: []string{"lawful_good", "neutral_good", "lawful_neutral", "true_neutral", "lawful_evil", "neutral_evil"},
+			},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
 		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40, Sexes: []string{"male", "female"},
@@ -570,7 +575,7 @@ func expectOptionTables(e *env) {
 	e.rules.EXPECT().RaceAdjustmentsFor(mock.Anything).RunAndReturn(func(race string) (map[string]int, error) {
 		return map[string]int{"str": len(race)}, nil
 	}).Maybe()
-	dice := map[string]int{"rogue": 6, "warrior": 10, "wizard": 4, "priest": 8}
+	dice := map[string]int{"rogue": 6, "warrior": 10, "wizard": 4, "priest": 8, "psionicist": 6}
 	e.rules.EXPECT().HitDiceFor(mock.Anything).RunAndReturn(func(group string) (ruletablesvc.HitDiceRow, error) {
 		return ruletablesvc.HitDiceRow{Group: group, Die: dice[group]}, nil
 	}).Maybe()
@@ -643,11 +648,12 @@ func TestCreationOptions_Table13_EachClassCarriesItsAbilityMinimums(t *testing.T
 		byClass[c.Class] = c.Minimums
 	}
 	assert.Equal(t, map[string][]ruletablesvc.AbilityMinimum{
-		"fighter": {minimum("str", 9)},
-		"mage":    {minimum("int", 9)},
-		"cleric":  {minimum("wis", 9)},
-		"thief":   {minimum("dex", 9)},
-		"bard":    {minimum("dex", 12), minimum("int", 13), minimum("cha", 15)},
+		"fighter":    {minimum("str", 9)},
+		"mage":       {minimum("int", 9)},
+		"cleric":     {minimum("wis", 9)},
+		"thief":      {minimum("dex", 9)},
+		"bard":       {minimum("dex", 12), minimum("int", 13), minimum("cha", 15)},
+		"psionicist": {minimum("con", 11), minimum("int", 12), minimum("wis", 15)},
 	}, byClass)
 }
 
@@ -671,17 +677,18 @@ func TestDraft_Table13_ScoresUnderAClassMinimumAreUnmet(t *testing.T) {
 	}, []string{"con", "hpMax", "xp"})
 	require.NoError(t, err)
 	assert.Equal(t, map[string][]string{
-		"fighter": {"str"},        // 8 < 9
-		"mage":    {},             // int 13 >= 9
-		"cleric":  {},             // wis 9 is the minimum itself
-		"thief":   {},             // dex 11 >= 9
-		"bard":    {"dex", "cha"}, // dex 11 < 12, int 13 ok, cha 14 < 15
+		"fighter":    {"str"},        // 8 < 9
+		"mage":       {},             // int 13 >= 9
+		"cleric":     {},             // wis 9 is the minimum itself
+		"thief":      {},             // dex 11 >= 9
+		"bard":       {"dex", "cha"}, // dex 11 < 12, int 13 ok, cha 14 < 15
+		"psionicist": {"wis"},        // con not scored, int 13 >= 12, wis 9 < 15
 	}, unmetOf(got))
 	assert.Nil(t, got.Character, "no race and no XP: nothing to derive")
 
 	none, err := e.svc.Draft(context.Background(), charactersvc.NewCharacter{Class: "bard"}, allNumbers)
 	require.NoError(t, err)
-	assert.Equal(t, map[string][]string{"fighter": {}, "mage": {}, "cleric": {}, "thief": {}, "bard": {}}, unmetOf(none))
+	assert.Equal(t, map[string][]string{"fighter": {}, "mage": {}, "cleric": {}, "thief": {}, "bard": {}, "psionicist": {}}, unmetOf(none))
 }
 
 // ADR 0034 amendment of 2026-10-20: an empty draft is no refusal; it lists every field the

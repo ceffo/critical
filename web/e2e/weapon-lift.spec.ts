@@ -51,6 +51,16 @@ test("French: the switch on the Ruleset screen lets a cleric/fighter pick a long
   await step.getByLabel("PV max").fill("60");
   await next();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
+  // The creation step offers the cleric's types only: the lift is off (the server's list).
+  await expect(step.getByTestId("weapon-row-sling")).toBeVisible();
+  await expect(step.getByTestId("weapon-row-long_sword")).toHaveCount(0);
+  for (const vp of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await snap(page, `creation-weapons-${vp.width}x${vp.height}`);
+  }
   await next();
   await step.getByLabel("Nom", { exact: true }).fill("Morrison");
   await step

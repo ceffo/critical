@@ -132,6 +132,15 @@ export interface Derived {
   /** ADR 0037 steps 3 to 5: the non-weapon pool and each pick's figures; null without the
    * catalogue's Table 34. */
   proficiencySlots: ProficiencySlots | null;
+  /** ADR 0043 step 5: the PSP pool of a character whose class lists psionics; null for any other. */
+  psp: PspPool | null;
+}
+
+/** A character's PSPs (ADR 0043 step 5): the current PSPs (the maximum plus the ledger) and the
+ * stored maximum. Also the answer of `POST /api/psp/event` and `/api/psp/recover`. */
+export interface PspPool {
+  current: number;
+  max: number;
 }
 
 /** ADR 0042 steps 5 and 7: one class entry's figures. `xp` is its starting XP plus its share of the

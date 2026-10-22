@@ -61,10 +61,10 @@ func TestClassCatalogue_Step1_EveryClassCarriesEveryField(t *testing.T) {
 	raw, err := os.ReadFile(cataloguetest.Path())
 	require.NoError(t, err)
 	for name, mutate := range map[string]func(c map[string]any){
-		"no prime requisites":  func(c map[string]any) { delete(c, "prime_requisites") },
-		"no experience":        func(c map[string]any) { delete(c, "experience") },
-		"a name in a language": func(c map[string]any) { c["name"] = "Guerrier" },
-		"a per-language field": func(c map[string]any) { c["name_fr"] = "Guerrier" },
+		"no prime requisites":              func(c map[string]any) { delete(c, "prime_requisites") },
+		"no experience":                    func(c map[string]any) { delete(c, "experience") },
+		"a name in a language":             func(c map[string]any) { c["name"] = "Guerrier" },
+		"a field the schema does not know": func(c map[string]any) { c["title"] = "Guerrier" },
 	} {
 		t.Run(name, func(t *testing.T) {
 			var doc map[string]any

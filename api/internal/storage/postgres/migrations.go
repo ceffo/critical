@@ -116,12 +116,14 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment, defs 
 		equipmentMigration:         func(ctx context.Context, q storeq.Querier) error { return convertEquipment(ctx, q, equipment.Weapons) },
 		snapshotEnvelopesMigration: reencodeSnapshots,
 		dropRaceMigration:          mapIdentity,
-		skillArmourMigration:       func(ctx context.Context, q storeq.Querier) error { return carrySkillArmour(ctx, q, equipment.Armour) },
+		skillArmourMigration: func(ctx context.Context, q storeq.Querier) error {
+			return carrySkillArmour(ctx, q, equipment.Armour, defs)
+		},
 		picksMigration: func(ctx context.Context, q storeq.Querier) error {
 			return pickProficienciesFrom(ctx, q, seedsDir, defs)
 		},
 		weaponPicksMigration:     grantOwnedWeaponTypes,
-		specializationMigration:  specializeFlaggedWeapons,
+		specializationMigration:  func(ctx context.Context, q storeq.Querier) error { return specializeFlaggedWeapons(ctx, q, defs) },
 		spellbookOriginMigration: markLearnedSpells,
 		dardsMigration:           func(ctx context.Context, q storeq.Querier) error { return renameDarts(ctx, q, characterPath) },
 		rulesetsMigration:        defaultRuleset,

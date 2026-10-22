@@ -67,6 +67,7 @@
       }
     },
     "specializes": false,
+    "exceptionalStrength": false,
     "spellbook": null,
     "spellFailure": 0,
     "turning": null,

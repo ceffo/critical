@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -117,12 +118,8 @@ func (f *fakeTables) skills(race string, dex int, armor string, points map[strin
 	return out
 }
 
-func (f *fakeTables) ThiefSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
-	return f.skills(race, dex, armor, points, ruletablesvc.SkillsOf("thief")), nil
-}
-
-func (f *fakeTables) BardSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
-	return f.skills(race, dex, armor, points, ruletablesvc.SkillsOf("bard")), nil
+func (f *fakeTables) RogueSkills(rs classes.RogueSkills, race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
+	return f.skills(race, dex, armor, points, ruletablesvc.SkillsOf(&rs)), nil
 }
 
 func newFixture(t *testing.T) *fixture {

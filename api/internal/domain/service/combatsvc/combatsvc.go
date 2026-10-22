@@ -105,7 +105,7 @@ type Rules interface {
 	StrengthMods(str, exceptional int) (hit, dmg int, err error)
 	DexMods(dex int) (missile, ac int, err error)
 	// AttackRateFor is ADR 0030 step 11 (ruletablesvc.Tables.AttackRateFor).
-	AttackRateFor(group string, level int, kind, weaponType string, specialized bool) (ruletablesvc.AttackRate, bool, error)
+	AttackRateFor(class string, level int, kind, weaponType string, specialized bool) (ruletablesvc.AttackRate, bool, error)
 }
 
 // Log is the slice of the action log attacks and saves are recorded into;

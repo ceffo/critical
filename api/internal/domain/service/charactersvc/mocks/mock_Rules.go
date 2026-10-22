@@ -78,125 +78,6 @@ func (_c *MockRules_BackstabFor_Call) RunAndReturn(run func(int) (int, error)) *
 	return _c
 }
 
-// BardSkills provides a mock function with given fields: race, dex, armor, points
-func (_m *MockRules) BardSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
-	ret := _m.Called(race, dex, armor, points)
-
-	if len(ret) == 0 {
-		panic("no return value specified for BardSkills")
-	}
-
-	var r0 []ruletablesvc.SkillPercent
-	var r1 error
-	if rf, ok := ret.Get(0).(func(string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)); ok {
-		return rf(race, dex, armor, points)
-	}
-	if rf, ok := ret.Get(0).(func(string, int, string, map[string]int) []ruletablesvc.SkillPercent); ok {
-		r0 = rf(race, dex, armor, points)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]ruletablesvc.SkillPercent)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(string, int, string, map[string]int) error); ok {
-		r1 = rf(race, dex, armor, points)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockRules_BardSkills_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BardSkills'
-type MockRules_BardSkills_Call struct {
-	*mock.Call
-}
-
-// BardSkills is a helper method to define mock.On call
-//   - race string
-//   - dex int
-//   - armor string
-//   - points map[string]int
-func (_e *MockRules_Expecter) BardSkills(race interface{}, dex interface{}, armor interface{}, points interface{}) *MockRules_BardSkills_Call {
-	return &MockRules_BardSkills_Call{Call: _e.mock.On("BardSkills", race, dex, armor, points)}
-}
-
-func (_c *MockRules_BardSkills_Call) Run(run func(race string, dex int, armor string, points map[string]int)) *MockRules_BardSkills_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(int), args[2].(string), args[3].(map[string]int))
-	})
-	return _c
-}
-
-func (_c *MockRules_BardSkills_Call) Return(_a0 []ruletablesvc.SkillPercent, _a1 error) *MockRules_BardSkills_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockRules_BardSkills_Call) RunAndReturn(run func(string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)) *MockRules_BardSkills_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// BardSpellsPerDay provides a mock function with given fields: level
-func (_m *MockRules) BardSpellsPerDay(level int) (map[int]int, error) {
-	ret := _m.Called(level)
-
-	if len(ret) == 0 {
-		panic("no return value specified for BardSpellsPerDay")
-	}
-
-	var r0 map[int]int
-	var r1 error
-	if rf, ok := ret.Get(0).(func(int) (map[int]int, error)); ok {
-		return rf(level)
-	}
-	if rf, ok := ret.Get(0).(func(int) map[int]int); ok {
-		r0 = rf(level)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[int]int)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(int) error); ok {
-		r1 = rf(level)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockRules_BardSpellsPerDay_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BardSpellsPerDay'
-type MockRules_BardSpellsPerDay_Call struct {
-	*mock.Call
-}
-
-// BardSpellsPerDay is a helper method to define mock.On call
-//   - level int
-func (_e *MockRules_Expecter) BardSpellsPerDay(level interface{}) *MockRules_BardSpellsPerDay_Call {
-	return &MockRules_BardSpellsPerDay_Call{Call: _e.mock.On("BardSpellsPerDay", level)}
-}
-
-func (_c *MockRules_BardSpellsPerDay_Call) Run(run func(level int)) *MockRules_BardSpellsPerDay_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
-	})
-	return _c
-}
-
-func (_c *MockRules_BardSpellsPerDay_Call) Return(_a0 map[int]int, _a1 error) *MockRules_BardSpellsPerDay_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockRules_BardSpellsPerDay_Call) RunAndReturn(run func(int) (map[int]int, error)) *MockRules_BardSpellsPerDay_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Class provides a mock function with given fields: class
 func (_m *MockRules) Class(class string) (classes.Class, error) {
 	ret := _m.Called(class)
@@ -647,65 +528,6 @@ func (_c *MockRules_MagicDefenceFor_Call) RunAndReturn(run func(int) (int, error
 	return _c
 }
 
-// PriestSpellsPerDay provides a mock function with given fields: level, wis
-func (_m *MockRules) PriestSpellsPerDay(level int, wis int) (map[int]int, error) {
-	ret := _m.Called(level, wis)
-
-	if len(ret) == 0 {
-		panic("no return value specified for PriestSpellsPerDay")
-	}
-
-	var r0 map[int]int
-	var r1 error
-	if rf, ok := ret.Get(0).(func(int, int) (map[int]int, error)); ok {
-		return rf(level, wis)
-	}
-	if rf, ok := ret.Get(0).(func(int, int) map[int]int); ok {
-		r0 = rf(level, wis)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[int]int)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(int, int) error); ok {
-		r1 = rf(level, wis)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockRules_PriestSpellsPerDay_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PriestSpellsPerDay'
-type MockRules_PriestSpellsPerDay_Call struct {
-	*mock.Call
-}
-
-// PriestSpellsPerDay is a helper method to define mock.On call
-//   - level int
-//   - wis int
-func (_e *MockRules_Expecter) PriestSpellsPerDay(level interface{}, wis interface{}) *MockRules_PriestSpellsPerDay_Call {
-	return &MockRules_PriestSpellsPerDay_Call{Call: _e.mock.On("PriestSpellsPerDay", level, wis)}
-}
-
-func (_c *MockRules_PriestSpellsPerDay_Call) Run(run func(level int, wis int)) *MockRules_PriestSpellsPerDay_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockRules_PriestSpellsPerDay_Call) Return(_a0 map[int]int, _a1 error) *MockRules_PriestSpellsPerDay_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockRules_PriestSpellsPerDay_Call) RunAndReturn(run func(int, int) (map[int]int, error)) *MockRules_PriestSpellsPerDay_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // RaceAdjustmentsFor provides a mock function with given fields: race
 func (_m *MockRules) RaceAdjustmentsFor(race string) (map[string]int, error) {
 	ret := _m.Called(race)
@@ -821,6 +643,68 @@ func (_c *MockRules_RaceAllows_Call) RunAndReturn(run func(string, string) (bool
 	return _c
 }
 
+// RogueSkills provides a mock function with given fields: rs, race, dex, armor, points
+func (_m *MockRules) RogueSkills(rs classes.RogueSkills, race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
+	ret := _m.Called(rs, race, dex, armor, points)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RogueSkills")
+	}
+
+	var r0 []ruletablesvc.SkillPercent
+	var r1 error
+	if rf, ok := ret.Get(0).(func(classes.RogueSkills, string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)); ok {
+		return rf(rs, race, dex, armor, points)
+	}
+	if rf, ok := ret.Get(0).(func(classes.RogueSkills, string, int, string, map[string]int) []ruletablesvc.SkillPercent); ok {
+		r0 = rf(rs, race, dex, armor, points)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]ruletablesvc.SkillPercent)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(classes.RogueSkills, string, int, string, map[string]int) error); ok {
+		r1 = rf(rs, race, dex, armor, points)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_RogueSkills_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RogueSkills'
+type MockRules_RogueSkills_Call struct {
+	*mock.Call
+}
+
+// RogueSkills is a helper method to define mock.On call
+//   - rs classes.RogueSkills
+//   - race string
+//   - dex int
+//   - armor string
+//   - points map[string]int
+func (_e *MockRules_Expecter) RogueSkills(rs interface{}, race interface{}, dex interface{}, armor interface{}, points interface{}) *MockRules_RogueSkills_Call {
+	return &MockRules_RogueSkills_Call{Call: _e.mock.On("RogueSkills", rs, race, dex, armor, points)}
+}
+
+func (_c *MockRules_RogueSkills_Call) Run(run func(rs classes.RogueSkills, race string, dex int, armor string, points map[string]int)) *MockRules_RogueSkills_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(classes.RogueSkills), args[1].(string), args[2].(int), args[3].(string), args[4].(map[string]int))
+	})
+	return _c
+}
+
+func (_c *MockRules_RogueSkills_Call) Return(_a0 []ruletablesvc.SkillPercent, _a1 error) *MockRules_RogueSkills_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_RogueSkills_Call) RunAndReturn(run func(classes.RogueSkills, string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)) *MockRules_RogueSkills_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SavesFor provides a mock function with given fields: group, level
 func (_m *MockRules) SavesFor(group string, level int) (ruletablesvc.SavingThrowRow, error) {
 	ret := _m.Called(group, level)
@@ -878,9 +762,9 @@ func (_c *MockRules_SavesFor_Call) RunAndReturn(run func(string, int) (ruletable
 	return _c
 }
 
-// SpellFailureFor provides a mock function with given fields: class, wis
-func (_m *MockRules) SpellFailureFor(class string, wis int) (int, error) {
-	ret := _m.Called(class, wis)
+// SpellFailureFor provides a mock function with given fields: score
+func (_m *MockRules) SpellFailureFor(score int) (int, error) {
+	ret := _m.Called(score)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SpellFailureFor")
@@ -888,17 +772,17 @@ func (_m *MockRules) SpellFailureFor(class string, wis int) (int, error) {
 
 	var r0 int
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, int) (int, error)); ok {
-		return rf(class, wis)
+	if rf, ok := ret.Get(0).(func(int) (int, error)); ok {
+		return rf(score)
 	}
-	if rf, ok := ret.Get(0).(func(string, int) int); ok {
-		r0 = rf(class, wis)
+	if rf, ok := ret.Get(0).(func(int) int); ok {
+		r0 = rf(score)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
 
-	if rf, ok := ret.Get(1).(func(string, int) error); ok {
-		r1 = rf(class, wis)
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(score)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -912,15 +796,14 @@ type MockRules_SpellFailureFor_Call struct {
 }
 
 // SpellFailureFor is a helper method to define mock.On call
-//   - class string
-//   - wis int
-func (_e *MockRules_Expecter) SpellFailureFor(class interface{}, wis interface{}) *MockRules_SpellFailureFor_Call {
-	return &MockRules_SpellFailureFor_Call{Call: _e.mock.On("SpellFailureFor", class, wis)}
+//   - score int
+func (_e *MockRules_Expecter) SpellFailureFor(score interface{}) *MockRules_SpellFailureFor_Call {
+	return &MockRules_SpellFailureFor_Call{Call: _e.mock.On("SpellFailureFor", score)}
 }
 
-func (_c *MockRules_SpellFailureFor_Call) Run(run func(class string, wis int)) *MockRules_SpellFailureFor_Call {
+func (_c *MockRules_SpellFailureFor_Call) Run(run func(score int)) *MockRules_SpellFailureFor_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(int))
+		run(args[0].(int))
 	})
 	return _c
 }
@@ -930,7 +813,7 @@ func (_c *MockRules_SpellFailureFor_Call) Return(_a0 int, _a1 error) *MockRules_
 	return _c
 }
 
-func (_c *MockRules_SpellFailureFor_Call) RunAndReturn(run func(string, int) (int, error)) *MockRules_SpellFailureFor_Call {
+func (_c *MockRules_SpellFailureFor_Call) RunAndReturn(run func(int) (int, error)) *MockRules_SpellFailureFor_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -993,6 +876,66 @@ func (_c *MockRules_SpellImmunitiesFor_Call) RunAndReturn(run func(int) ([]strin
 	return _c
 }
 
+// SpellsPerDay provides a mock function with given fields: def, level, wis
+func (_m *MockRules) SpellsPerDay(def classes.Class, level int, wis int) (map[int]int, error) {
+	ret := _m.Called(def, level, wis)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SpellsPerDay")
+	}
+
+	var r0 map[int]int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(classes.Class, int, int) (map[int]int, error)); ok {
+		return rf(def, level, wis)
+	}
+	if rf, ok := ret.Get(0).(func(classes.Class, int, int) map[int]int); ok {
+		r0 = rf(def, level, wis)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[int]int)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(classes.Class, int, int) error); ok {
+		r1 = rf(def, level, wis)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_SpellsPerDay_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SpellsPerDay'
+type MockRules_SpellsPerDay_Call struct {
+	*mock.Call
+}
+
+// SpellsPerDay is a helper method to define mock.On call
+//   - def classes.Class
+//   - level int
+//   - wis int
+func (_e *MockRules_Expecter) SpellsPerDay(def interface{}, level interface{}, wis interface{}) *MockRules_SpellsPerDay_Call {
+	return &MockRules_SpellsPerDay_Call{Call: _e.mock.On("SpellsPerDay", def, level, wis)}
+}
+
+func (_c *MockRules_SpellsPerDay_Call) Run(run func(def classes.Class, level int, wis int)) *MockRules_SpellsPerDay_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(classes.Class), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockRules_SpellsPerDay_Call) Return(_a0 map[int]int, _a1 error) *MockRules_SpellsPerDay_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_SpellsPerDay_Call) RunAndReturn(run func(classes.Class, int, int) (map[int]int, error)) *MockRules_SpellsPerDay_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // THAC0For provides a mock function with given fields: group, level
 func (_m *MockRules) THAC0For(group string, level int) (int, error) {
 	ret := _m.Called(group, level)
@@ -1046,67 +989,6 @@ func (_c *MockRules_THAC0For_Call) Return(_a0 int, _a1 error) *MockRules_THAC0Fo
 }
 
 func (_c *MockRules_THAC0For_Call) RunAndReturn(run func(string, int) (int, error)) *MockRules_THAC0For_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ThiefSkills provides a mock function with given fields: race, dex, armor, points
-func (_m *MockRules) ThiefSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
-	ret := _m.Called(race, dex, armor, points)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ThiefSkills")
-	}
-
-	var r0 []ruletablesvc.SkillPercent
-	var r1 error
-	if rf, ok := ret.Get(0).(func(string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)); ok {
-		return rf(race, dex, armor, points)
-	}
-	if rf, ok := ret.Get(0).(func(string, int, string, map[string]int) []ruletablesvc.SkillPercent); ok {
-		r0 = rf(race, dex, armor, points)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]ruletablesvc.SkillPercent)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(string, int, string, map[string]int) error); ok {
-		r1 = rf(race, dex, armor, points)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockRules_ThiefSkills_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ThiefSkills'
-type MockRules_ThiefSkills_Call struct {
-	*mock.Call
-}
-
-// ThiefSkills is a helper method to define mock.On call
-//   - race string
-//   - dex int
-//   - armor string
-//   - points map[string]int
-func (_e *MockRules_Expecter) ThiefSkills(race interface{}, dex interface{}, armor interface{}, points interface{}) *MockRules_ThiefSkills_Call {
-	return &MockRules_ThiefSkills_Call{Call: _e.mock.On("ThiefSkills", race, dex, armor, points)}
-}
-
-func (_c *MockRules_ThiefSkills_Call) Run(run func(race string, dex int, armor string, points map[string]int)) *MockRules_ThiefSkills_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(int), args[2].(string), args[3].(map[string]int))
-	})
-	return _c
-}
-
-func (_c *MockRules_ThiefSkills_Call) Return(_a0 []ruletablesvc.SkillPercent, _a1 error) *MockRules_ThiefSkills_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockRules_ThiefSkills_Call) RunAndReturn(run func(string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)) *MockRules_ThiefSkills_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1165,64 +1047,6 @@ func (_c *MockRules_TurningAt_Call) Return(_a0 []ruletablesvc.TurningTarget, _a1
 }
 
 func (_c *MockRules_TurningAt_Call) RunAndReturn(run func(int) ([]ruletablesvc.TurningTarget, error)) *MockRules_TurningAt_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// WizardSpellsPerDay provides a mock function with given fields: level
-func (_m *MockRules) WizardSpellsPerDay(level int) (map[int]int, error) {
-	ret := _m.Called(level)
-
-	if len(ret) == 0 {
-		panic("no return value specified for WizardSpellsPerDay")
-	}
-
-	var r0 map[int]int
-	var r1 error
-	if rf, ok := ret.Get(0).(func(int) (map[int]int, error)); ok {
-		return rf(level)
-	}
-	if rf, ok := ret.Get(0).(func(int) map[int]int); ok {
-		r0 = rf(level)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[int]int)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(int) error); ok {
-		r1 = rf(level)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockRules_WizardSpellsPerDay_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WizardSpellsPerDay'
-type MockRules_WizardSpellsPerDay_Call struct {
-	*mock.Call
-}
-
-// WizardSpellsPerDay is a helper method to define mock.On call
-//   - level int
-func (_e *MockRules_Expecter) WizardSpellsPerDay(level interface{}) *MockRules_WizardSpellsPerDay_Call {
-	return &MockRules_WizardSpellsPerDay_Call{Call: _e.mock.On("WizardSpellsPerDay", level)}
-}
-
-func (_c *MockRules_WizardSpellsPerDay_Call) Run(run func(level int)) *MockRules_WizardSpellsPerDay_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
-	})
-	return _c
-}
-
-func (_c *MockRules_WizardSpellsPerDay_Call) Return(_a0 map[int]int, _a1 error) *MockRules_WizardSpellsPerDay_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockRules_WizardSpellsPerDay_Call) RunAndReturn(run func(int) (map[int]int, error)) *MockRules_WizardSpellsPerDay_Call {
 	_c.Call.Return(run)
 	return _c
 }

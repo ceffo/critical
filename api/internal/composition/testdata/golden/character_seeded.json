@@ -65,6 +65,7 @@
       }
     },
     "specializes": false,
+    "exceptionalStrength": false,
     "spellbook": {
       "classMaxSpellLevel": 6,
       "intMaxSpellLevel": 7,

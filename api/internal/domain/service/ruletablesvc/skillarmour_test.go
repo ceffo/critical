@@ -27,12 +27,18 @@ func TestSkillArmorFor_Step14_TheWornArmoursColumn(t *testing.T) {
 		{"bard", "metal", "metal"},
 		{"bard", "none_allowed", "padded_studded_leather"},
 	} {
-		got := ruletablesvc.SkillArmorFor(tc.class, tc.column)
+		rs := rogue(t, tc.class)
+		got := ruletablesvc.SkillArmorFor(rs, tc.column)
 		assert.Equal(t, tc.want, got, "%s in %q", tc.class, tc.column)
-		armours := ruletablesvc.ThiefArmors
-		if tc.class == "bard" {
-			armours = ruletablesvc.BardArmors
+		var armours []string
+		for _, a := range rs.Armour {
+			armours = append(armours, ruletablesvc.SkillArmorFor(rs, a.Code))
 		}
 		assert.Contains(t, armours, got, "an armour the class's skills read")
 	}
+}
+
+// A class without rogue_skills reads no skill armour.
+func TestSkillArmorFor_NoRogueSkills(t *testing.T) {
+	assert.Empty(t, ruletablesvc.SkillArmorFor(nil, "leather"))
 }

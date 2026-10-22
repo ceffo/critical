@@ -2,12 +2,14 @@ package charactersvc_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -70,7 +72,78 @@ func expectMageRules(r *mocks.MockRules, level int) {
 	r.EXPECT().XPThreshold("mage", level+1).Return(20_000, nil).Once()
 	r.EXPECT().THAC0For("wizard", level).Return(20, nil).Once()
 	r.EXPECT().SavesFor("wizard", level).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
-	r.EXPECT().WizardSpellsPerDay(mock.Anything).RunAndReturn(func(l int) (map[int]int, error) {
+	r.EXPECT().SpellsPerDay(classDef("mage"), mock.Anything, mock.Anything).RunAndReturn(func(_ classes.Class, l, _ int) (map[int]int, error) {
 		return table21[l], nil
 	})
+}
+
+// ADR 0040 step 3: the free spells of step 20.8 are the spellbook feature's
+// free_spell_per_new_spell_level, not the class id. On the fixture's real
+// tables, a mage of Int 17 realized at 3 with the XP of level 5 (PHB Table
+// 20) whose log took level 3: Table 21 opens the 3rd spell level at 5
+// (pending) and the 2nd at 3 (owed). A mage whose spellbook has the param
+// false gets neither and pays no read; a test class with it true gets both.
+func TestGetCharacter_Step20_8_FreeSpellsFromTheSpellbookParam(t *testing.T) {
+	withFree := func(id string, free bool) func([]classes.Class) []classes.Class {
+		return func(cs []classes.Class) []classes.Class {
+			for i := range cs {
+				if cs[i].ID != id {
+					continue
+				}
+				fs := slices.Clone(cs[i].Features)
+				for j := range fs {
+					if fs[j].Kind == classes.KindSpellbook {
+						sb := *fs[j].Spellbook
+						sb.FreeSpellPerNewSpellLevel = free
+						fs[j].Spellbook = &sb
+					}
+				}
+				cs[i].Features = fs
+			}
+			return cs
+		}
+	}
+	scribe := add("test_scribe", "mage", ruletablesvc.TableWizardSpells,
+		classes.Feature{Kind: classes.KindSpellbook, Spellbook: &classes.Spellbook{MaxSpellLevel: 9, FreeSpellPerNewSpellLevel: true}})
+	for _, tc := range []struct {
+		name    string
+		edit    func([]classes.Class) []classes.Class
+		class   string
+		pending []spellbook.FreeSpell
+		owed    []spellbook.FreeSpell
+		reads   int
+	}{
+		{"the book mage gets them", keep, "mage", []spellbook.FreeSpell{{Level: 5, SpellLevel: 3}}, []spellbook.FreeSpell{{Level: 3, SpellLevel: 2}}, 1},
+		{"a mage with the param false gets none", withFree("mage", false), "mage", nil, nil, 0},
+		{"a test class with the param true gets them", scribe, "test_scribe", []spellbook.FreeSpell{{Level: 5, SpellLevel: 3}}, []spellbook.FreeSpell{{Level: 3, SpellLevel: 2}}, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEnv(t)
+			free := &freeSpells{taken: map[int64][]int{9: {3}}, claimed: map[int64][]spellbook.FreeSpell{}}
+			svc, err := charactersvc.New(charactersvc.Deps{
+				Reader: e.reader, XP: e.xp, Rules: edited(t, tc.edit), Owners: e.owners, Tx: e.tx, Sessions: e.sessions,
+				Armour: e.armour, HP: e.hp, Spells: e.spells, Book: e.book, FreeSpells: free,
+			})
+			require.NoError(t, err)
+			c := &charactersvc.Character{
+				ID: 9, Name: "Test", Class: tc.class, Race: "human", Str: 10, Dex: 12, Con: 11, Int: 17, Wis: 12, Cha: 10,
+				HPMax: 9, RealizedLevel: 3, XPTotal: 20_000,
+			}
+			e.reader.EXPECT().GetCharacter(mock.Anything, int64(9)).Return(c, nil).Once()
+			e.xp.EXPECT().EntriesTotal(mock.Anything, int64(9)).Return(0, nil).Once()
+
+			got, err := svc.GetCharacter(context.Background(), 9)
+			require.NoError(t, err)
+			pending := map[int][]spellbook.FreeSpell{}
+			var all []spellbook.FreeSpell
+			for _, p := range got.Derived.LevelUp.Pending {
+				pending[p.Level] = p.FreeSpells
+				all = append(all, p.FreeSpells...)
+			}
+			require.Contains(t, pending, 5, "level 5 is pending")
+			assert.Equal(t, tc.pending, all)
+			assert.Equal(t, tc.owed, got.Derived.LevelUp.FreeSpellsOwed)
+			assert.Equal(t, tc.reads, free.reads)
+		})
+	}
 }

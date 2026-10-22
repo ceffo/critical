@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // State keys under which buffsvc snapshots its state in the action log. Each
@@ -310,11 +309,11 @@ type BaseStrength struct {
 }
 
 // BaseStrengthOf is c's sheet Strength (ADR 0030 steps 9 and 10); the group
-// is the derived one (c as GetCharacter reads it).
+// scale is the derived exceptional_strength feature (c as GetCharacter reads it).
 func BaseStrengthOf(c *charactersvc.Character) BaseStrength {
 	return BaseStrength{
 		StrScore: StrScore{Score: c.Str, Exceptional: c.StrExceptional},
-		Warrior:  ruletablesvc.HasExceptionalStrength(c.Derived.Group),
+		Warrior:  c.Derived.ExceptionalStrength,
 	}
 }
 

@@ -344,8 +344,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    adjustments.
    As built: `characters.str_exceptional` (migration 009, 0 = none); refusals on field
    `strExceptional` with code `not_allowed` (wrong class, Strength or race) or `out_of_range`; the
-   halfling exclusion is a constant of `ruletablesvc`, not catalogue data; the creation options
-   carry each class's `exceptionalStrengthRaces`, so the form offers the field only to those. The
+   halfling exclusion is a constant of `ruletablesvc`, not catalogue data; the creation draft's
+   `exceptionalStrength` says whether the class, race and Strength entered take an 18/xx, so the
+   form offers the field only then (CRI-162; the options' `exceptionalStrengthRaces` is gone). The
    UI writes it in the
    PHB's notation (18/05, 18/50, 18/00), on the sheet and in the Strength modifier's detail; the
    API sends the score as the detail and the percentile as a number (`strExceptional` on the

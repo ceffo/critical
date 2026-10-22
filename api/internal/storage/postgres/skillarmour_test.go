@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -109,7 +110,7 @@ func TestCarrySkillArmour_Step14_EachEnteredArmourIsWorn(t *testing.T) {
 			if entered == "" {
 				entered = ruletablesvc.ArmorLeather
 			}
-			assert.Equal(t, entered, ruletablesvc.SkillArmorFor(tc.class, got.SkillColumn), "the skills read the same armour")
+			assert.Equal(t, entered, ruletablesvc.SkillArmorFor(rogueSkillsOf(t, tc.class), got.SkillColumn), "the skills read the same armour")
 			review := f.t.Reviews[fmt.Sprintf("%d|%s|%s", owner, tc.code, itemsvc.ReasonArmourGuessed)]
 			assert.Equal(t, tc.guessed, review, "a guessed armour is on the review list")
 		})
@@ -163,4 +164,14 @@ func TestCarrySkillArmour_Step14_Idempotent(t *testing.T) {
 	require.NoError(t, carry(t, f, catalogueEquipment))
 	assert.Len(t, f.t.Items, 1)
 	assert.Len(t, f.t.Reviews, 1)
+}
+
+// rogueSkillsOf is the fixture class's rogue_skills params (ADR 0040 step 3).
+func rogueSkillsOf(t *testing.T, class string) *classes.RogueSkills {
+	t.Helper()
+	def, ok := catalogueDefs.Class(class)
+	require.True(t, ok, class)
+	f, ok := def.Lists(classes.KindRogueSkills)
+	require.True(t, ok, class)
+	return f.RogueSkills
 }

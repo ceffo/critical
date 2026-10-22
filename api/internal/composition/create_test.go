@@ -248,7 +248,7 @@ func TestCreate_Options(t *testing.T) {
 		Classes []struct {
 			Class               string   `json:"class"`
 			Races               []string `json:"races"`
-			ExceptionalStrength []string `json:"exceptionalStrengthRaces"`
+			ExceptionalStrength []string `json:"exceptionalStrengthRaces"` // retired: the draft answers it (ADR 0040 step 3)
 			Skills              []string `json:"skills"`
 			SkillArmors         []string `json:"skillArmors"` // retired (ADR 0033 step 14)
 		} `json:"classes"`
@@ -264,13 +264,9 @@ func TestCreate_Options(t *testing.T) {
 	require.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard", "psionicist"}, order)
 	fighter, mage, cleric, thief, bard := got.Classes[0], got.Classes[1], got.Classes[2], got.Classes[3], got.Classes[4]
 	assert.Equal(t, []string{"half_elf", "human"}, bard.Races)
-	assert.Empty(t, bard.ExceptionalStrength)
 	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, fighter.Races)
-	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "human"}, fighter.ExceptionalStrength, "no halfling (PHB Table 7)")
 	assert.Equal(t, []string{"elf", "half_elf", "human"}, mage.Races, "DMG Table 7")
-	assert.Empty(t, mage.ExceptionalStrength)
 	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, cleric.Races, "DMG Table 7")
-	assert.Empty(t, cleric.ExceptionalStrength)
 	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, thief.Races, "DMG Table 7")
 	assert.Equal(t, []string{
 		"pick_pockets", "open_locks", "find_remove_traps", "move_silently",
@@ -279,6 +275,9 @@ func TestCreate_Options(t *testing.T) {
 	assert.Nil(t, thief.SkillArmors, "no armour is entered: the skills read the worn one (ADR 0033 step 14)")
 	assert.Equal(t, []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"}, bard.Skills, "PHB Table 33")
 	assert.Nil(t, bard.SkillArmors)
+	for _, c := range got.Classes {
+		assert.Nil(t, c.ExceptionalStrength, "%s: the 18/xx is the draft's exceptionalStrength (ADR 0040 step 3)", c.Class)
+	}
 	assert.Equal(t, struct{ Min, Max int }{1, 100}, got.StrExceptional)
 	assert.Equal(t, 3, got.Ability.Min)
 	assert.Equal(t, 19, got.Ability.Max)

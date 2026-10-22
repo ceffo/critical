@@ -93,7 +93,7 @@ func newHarness(t *testing.T) *harness {
 // owner (no root admin here: nothing to adopt).
 func (h *harness) expectStartup(seedsDir string) {
 	migrate := h.Store.EXPECT().Migrate(mock.Anything, seedsDir, mock.Anything, mock.Anything).Return(nil).Once()
-	seed := h.Store.EXPECT().Seed(mock.Anything, seedsDir, mock.Anything, mock.Anything).Return(nil).Once().NotBefore(migrate)
+	seed := h.Store.EXPECT().Seed(mock.Anything, seedsDir, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once().NotBefore(migrate)
 	imp := h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once().NotBefore(seed)
 	search := h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once().NotBefore(imp)
 	h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once().NotBefore(search)

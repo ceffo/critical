@@ -44,9 +44,6 @@ func minimumDTOs(ms []ruletablesvc.AbilityMinimum) []AbilityMinimumDTO {
 type ClassOptionDTO struct {
 	Class string   `json:"class"`
 	Races []string `json:"races"`
-	// ExceptionalStrengthRaces are the races that enter an 18/xx at
-	// Strength 18 with the class (ADR 0030 step 9).
-	ExceptionalStrengthRaces []string `json:"exceptionalStrengthRaces"`
 	// Skills are the thieving skills the class enters points in (ADR 0030
 	// steps 1 and 17); empty for a class without them.
 	Skills []string `json:"skills"`
@@ -294,7 +291,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 		}
 		for _, c := range o.Classes {
 			out.Classes = append(out.Classes, ClassOptionDTO{
-				Class: c.Class, Races: c.Races, ExceptionalStrengthRaces: c.ExceptionalStrengthRaces,
+				Class: c.Class, Races: c.Races,
 				Skills: c.Skills, Alignments: c.Alignments,
 				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
 				WeaponTypes: weaponTypeDTOs(c.WeaponTypes), Spellbook: spellbookOptionDTO(c.Spellbook),

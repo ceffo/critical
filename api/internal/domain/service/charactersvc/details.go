@@ -95,6 +95,9 @@ type ProficiencyBook interface {
 	Get(id string) (ruletablesvc.Proficiency, bool)
 	GroupsOf(class string) []string
 	SlotRowOf(class string) (ruletablesvc.SlotRow, bool)
+	// ClassDef is the class's definition (ADR 0040 step 5), for the
+	// features the picks and grants read.
+	ClassDef(class string) (classes.Class, bool)
 }
 
 // Kind is the class and race code of the character whose details are checked:

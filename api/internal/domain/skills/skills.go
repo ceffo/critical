@@ -6,7 +6,10 @@
 // previews the skills over it; charactersvc derives the sheet's figures through it.
 package skills
 
-import "github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+import (
+	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+)
 
 // Book is the non-weapon catalogue and PHB Table 34 the picks are read against (ADR 0037 steps 1
 // to 5); ruletablesvc.Proficiencies satisfies it, the empty one included.
@@ -14,6 +17,9 @@ type Book interface {
 	Get(id string) (ruletablesvc.Proficiency, bool)
 	GroupsOf(class string) []string
 	SlotRowOf(class string) (ruletablesvc.SlotRow, bool)
+	// ClassDef is the class's definition (ADR 0040 step 5: its features), false for a class the
+	// catalogue does not define.
+	ClassDef(class string) (classes.Class, bool)
 }
 
 // LanguageBook is the language catalogue the languages are checked against (ADR 0032 step 4);

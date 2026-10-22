@@ -10,8 +10,8 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
@@ -26,19 +26,19 @@ type StartingSeed map[string][]string
 
 // ReadStartingSeed reads <seedsDir>/starting_spellbook.json and checks it
 // against the catalogue (ParseStartingSeed).
-func ReadStartingSeed(seedsDir string, cat catalogue.Catalogue) (StartingSeed, error) {
+func ReadStartingSeed(seedsDir string, cat catalogue.Catalogue, defs *classes.Registry) (StartingSeed, error) {
 	raw, err := os.ReadFile(filepath.Join(filepath.Clean(seedsDir), StartingFileName)) //nolint:gosec // operator-configured seeds dir
 	if err != nil {
 		return nil, fmt.Errorf("starting spellbook: read: %w", err)
 	}
-	return ParseStartingSeed(raw, cat)
+	return ParseStartingSeed(raw, cat, defs)
 }
 
 // ParseStartingSeed maps a starting spellbook seed and checks it: each class
-// keeps a spellbook (ruletablesvc.SpellbookMaxLevel), each id is a wizard
+// lists the spellbook feature (ADR 0040 step 3), each id is a wizard
 // spell of the catalogue, once per class. A spell the catalogue lacks is a
 // start-up error rather than a pre-tick silently dropped.
-func ParseStartingSeed(raw []byte, cat catalogue.Catalogue) (StartingSeed, error) {
+func ParseStartingSeed(raw []byte, cat catalogue.Catalogue, defs *classes.Registry) (StartingSeed, error) {
 	var seed StartingSeed
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -47,7 +47,8 @@ func ParseStartingSeed(raw []byte, cat catalogue.Catalogue) (StartingSeed, error
 	}
 	spells := cat.ByID()
 	for class, ids := range seed {
-		if _, ok := ruletablesvc.SpellbookMaxLevel(class); !ok {
+		def, _ := defs.Class(class) // a class the catalogue does not define lists no feature
+		if _, ok := def.Lists(classes.KindSpellbook); !ok {
 			return nil, fmt.Errorf("starting spellbook: class %q keeps no spellbook", class)
 		}
 		seen := map[string]bool{}

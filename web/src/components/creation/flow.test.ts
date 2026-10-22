@@ -14,6 +14,7 @@ import {
   buildBody,
   draftSpellbook,
   emptyPlacement,
+  exceptionalOffered,
   initialPlacement,
   isPlaced,
   mergeDraft,
@@ -138,7 +139,6 @@ describe("buildBody", () => {
       {
         class: "bard",
         races: ["half_elf"],
-        exceptionalStrengthRaces: [],
         skills: ["climb_walls"],
         alignments: ["neutral_good"],
       },
@@ -165,6 +165,80 @@ describe("buildBody", () => {
     const out = buildBody(options, draft, "2500", "en");
     expect(out.error).toBeNull();
     expect(out.body.details?.height_cm).toBe(176.5);
+  });
+  // ADR 0030 step 9 through ADR 0040 step 3: the 18/xx is sent only when the server's last draft
+  // answer offers it (its exceptionalStrength); the client applies no Strength or class rule.
+  it("sends the 18/xx only when the draft answer offers it", () => {
+    const strong = {
+      ...draft,
+      scores: { ...draft.scores, str: "18" },
+      strExceptional: "50",
+    };
+    expect(
+      buildBody(options, strong, "2500", "en", true).body.strExceptional,
+    ).toBe(50);
+    // Not offered: the entered 18/xx is not sent (the body's 0, none).
+    expect(buildBody(options, strong, "2500", "en").body.strExceptional).toBe(
+      0,
+    );
+    expect(
+      buildBody(options, strong, "2500", "en", false).body.strExceptional,
+    ).toBe(0);
+    // A blank 18/xx is none even when offered; an unreadable one is named.
+    const blank = buildBody(
+      options,
+      { ...strong, strExceptional: " " },
+      "2500",
+      "en",
+      true,
+    );
+    expect(blank.body.strExceptional).toBe(0);
+    expect(blank.error).toBeNull();
+    const bad = buildBody(
+      options,
+      { ...strong, strExceptional: "lots" },
+      "2500",
+      "en",
+      true,
+    );
+    expect(bad.error).toEqual({
+      field: "strExceptional",
+      code: "out_of_range",
+    });
+    expect(bad.body.strExceptional).toBe(0);
+  });
+  // ADR 0030 step 9: the answer's offer counts only for the class, race and Strength it answered.
+  // A fighter at Str 18 with 18/50 entered, Strength changed to 17: before the next answer the
+  // body (a draft ask, or a Créer) carries no 18/xx, so no not_allowed refusal comes back.
+  it("sends no 18/xx on an answer about another Strength, race or class", () => {
+    const fighter: FlowDraft = {
+      ...draft,
+      cls: "fighter",
+      race: "human",
+      scores: { ...draft.scores, str: "18" },
+      strExceptional: "50",
+    };
+    const asked = { class: "fighter", raceCode: "human", str: 18 };
+    expect(exceptionalOffered(asked, true, fighter)).toBe(true);
+    expect(exceptionalOffered(asked, false, fighter)).toBe(false);
+    expect(exceptionalOffered(null, true, fighter)).toBe(false);
+    const weaker = { ...fighter, scores: { ...fighter.scores, str: "17" } };
+    expect(exceptionalOffered(asked, true, weaker)).toBe(false);
+    expect(
+      buildBody(
+        options,
+        weaker,
+        "0",
+        "fr",
+        exceptionalOffered(asked, true, weaker),
+      ).body.strExceptional,
+    ).toBe(0);
+    expect(
+      exceptionalOffered(asked, true, { ...fighter, race: "halfling" }),
+    ).toBe(false);
+    expect(exceptionalOffered(asked, true, { ...fighter, cls: "mage" })).toBe(
+      false,
+    );
   });
   it("reads the figures in the language's units", () => {
     const fr = {
@@ -240,7 +314,6 @@ describe("buildBody on a raw draft (what the class and extras steps ask the serv
       {
         class: "thief",
         races: ["elf"],
-        exceptionalStrengthRaces: [],
         skills: ["open_locks", "pick_pockets"],
       },
     ],
@@ -532,7 +605,6 @@ describe("the starting spellbook (ADR 0030 step 20.7)", () => {
   ) => ({
     class: name,
     races: [],
-    exceptionalStrengthRaces: [],
     skills: [],
     alignments: [],
     spellbook,

@@ -16,6 +16,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -240,8 +241,12 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 	}
 	// ADR 0033 step 14: a thief's or a bard's skills read the worn body
 	// armour (no other class reads it, so no other class pays the read).
+	def, err := s.rules.Class(c.Class)
+	if err != nil {
+		return nil, fmt.Errorf("character %d: %w", id, err)
+	}
 	var column string
-	if ruletablesvc.HasSkillPoints(c.Class) {
+	if _, ok := def.Lists(classes.KindRogueSkills); ok {
 		if column, err = s.armour.WornSkillColumn(ctx, id); err != nil {
 			return nil, fmt.Errorf("character %d worn armour: %w", id, err)
 		}
@@ -254,7 +259,7 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
 	s.readWarnings(c, AlignmentsOf(defs, c.Class))
-	if err := s.setFreeSpells(ctx, c); err != nil {
+	if err := s.setFreeSpells(ctx, c, def); err != nil {
 		return nil, fmt.Errorf("character %d free spells: %w", id, err)
 	}
 	return c, nil
@@ -262,15 +267,17 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 
 // setFreeSpells is ADR 0030 step 20.8 on a read of c: each pending level's
 // free spells, and the ones owed, granted by the levels taken in the app and
-// not yet claimed. Only a class whose levels grant them pays the reads.
-func (s *service) setFreeSpells(ctx context.Context, c *Character) error {
-	if !ruletablesvc.GrantsFreeSpells(c.Class) || c.Derived.Spellbook == nil {
+// not yet claimed. Only a class whose levels grant them (its spellbook
+// feature's free_spell_per_new_spell_level, ADR 0040 step 3) pays the reads.
+func (s *service) setFreeSpells(ctx context.Context, c *Character, def classes.Class) error {
+	f, ok := def.Lists(classes.KindSpellbook)
+	if !ok || !f.Spellbook.FreeSpellPerNewSpellLevel || c.Derived.Spellbook == nil {
 		return nil
 	}
 	for i := range c.Derived.LevelUp.Pending {
 		p := &c.Derived.LevelUp.Pending[i]
 		var err error
-		if p.FreeSpells, err = s.freeSpellsAt(c, p.Level); err != nil {
+		if p.FreeSpells, err = s.freeSpellsAt(c, def, p.Level); err != nil {
 			return err
 		}
 	}
@@ -284,7 +291,7 @@ func (s *service) setFreeSpells(ctx context.Context, c *Character) error {
 		if level > c.Derived.RealizedLevel {
 			continue // not realized any more: its grant went with it
 		}
-		got, err := s.freeSpellsAt(c, level)
+		got, err := s.freeSpellsAt(c, def, level)
 		if err != nil {
 			return err
 		}
@@ -301,14 +308,14 @@ func (s *service) setFreeSpells(ctx context.Context, c *Character) error {
 // freeSpellsAt are the free spells c's realized level grants (step 20.8):
 // the spell levels its slot table (step 8) opens there, up to the
 // Intelligence's maximum spell level (PHB Table 4).
-func (s *service) freeSpellsAt(c *Character, level int) ([]spellbook.FreeSpell, error) {
-	at, err := spellSlots(c, level, s.rules)
+func (s *service) freeSpellsAt(c *Character, def classes.Class, level int) ([]spellbook.FreeSpell, error) {
+	at, err := s.rules.SpellsPerDay(def, level, c.Wis)
 	if err != nil {
 		return nil, err
 	}
 	var below map[int]int
 	if level > 1 {
-		if below, err = spellSlots(c, level-1, s.rules); err != nil {
+		if below, err = s.rules.SpellsPerDay(def, level-1, c.Wis); err != nil {
 			return nil, err
 		}
 	}

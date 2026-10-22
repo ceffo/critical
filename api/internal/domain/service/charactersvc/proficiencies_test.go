@@ -21,7 +21,7 @@ func expectKelsenAt(e *env, target int) {
 	e.rules.EXPECT().XPThreshold("bard", target+1).Return(1_600_000, nil).Once()
 	e.rules.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 	e.rules.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
-	e.rules.EXPECT().BardSpellsPerDay(15).Return(level15Slots, nil).Once()
+	e.rules.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(level15Slots, nil).Once()
 	e.rules.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
 }
 

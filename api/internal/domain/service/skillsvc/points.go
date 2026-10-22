@@ -8,6 +8,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
@@ -38,6 +39,15 @@ type pointsRecord struct {
 	After  map[string]int `json:"after"`
 }
 
+// classDef is class's definition (ADR 0040 step 5: the features the points read).
+func (s *service) classDef(class string) (classes.Class, error) {
+	def, ok := s.book.ClassDef(class)
+	if !ok {
+		return classes.Class{}, fmt.Errorf("%w %q", classes.ErrUnknownClass, class)
+	}
+	return def, nil
+}
+
 func orEmpty(m map[string]int) map[string]int {
 	if m == nil {
 		return map[string]int{}
@@ -61,13 +71,17 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, points map[s
 		if err != nil {
 			return err
 		}
-		next, err := skills.ValidSkillPoints(c.Class, points)
+		def, err := s.classDef(c.Class)
+		if err != nil {
+			return err
+		}
+		next, err := skills.ValidSkillPoints(def, points)
 		if err != nil {
 			return err
 		}
 		// ADR 0037 step 10: over the budget at the realized level and
 		// spending more is refused before any write or log entry.
-		if err := skills.SkillPointsWithinBudget(c.Class, c.Derived.RealizedLevel, c.SkillPoints, next); err != nil {
+		if err := skills.SkillPointsWithinBudget(def, c.Derived.RealizedLevel, c.SkillPoints, next); err != nil {
 			return err
 		}
 		out = orEmpty(next)

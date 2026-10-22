@@ -94,6 +94,9 @@ named otherwise.
     not refilled. If either part fails nothing changes.
     Tests: `TestResetSlots`, `TestLongRest_ResetsBothInOneLoggedTransaction`,
     `TestLongRest_ItemFailureFailsTheRest`, `TestLongRest_SlotFailureSkipsItems`.
+
+    _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 7, on implementation: the transaction also ends every maintained psionic power and recovers a night's sleep of PSPs, 8 hours at the CPsiH's sleeping rate, capped at the maximum)_
+
 12. **A long rest is logged and voidable.** It is one `long_rest` entry that always snapshots the
     slot list (even when no slot was used) and every item whose count changed. Because of that
     snapshot, an older cast cannot be voided past the rest (refused, the rest is on top); voiding
@@ -101,6 +104,9 @@ named otherwise.
     Tests: `TestLongRest_ResetsBothInOneLoggedTransaction` (snapshots, payload),
     `TestUndo` (actionlogsvc: only the newest transaction is popped, so an older cast is not
     voidable past the rest).
+
+    _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 7, on implementation: the `long_rest` entry also carries the PSP delta and snapshots the maintained powers; undoing it spends them again)_
+
 13. **Damage parts with their own save.** A spell whose save negates only part of its damage
     (Mordenkainen's Force Missiles: per missile 2d4 that no save stops, plus a burst of 1 per
     level that a save vs. spell negates) writes one instance as `parts` instead of `dice` /

@@ -359,6 +359,7 @@ func (s *service) withPoints(char *charactersvc.Character, d draft) error {
 	if err != nil {
 		return err
 	}
+	char.SkillPoints = char.SkillPoints.Resolve(def)
 	next, err := skills.ValidSkillPoints(def, set, d.points)
 	if err != nil {
 		return err

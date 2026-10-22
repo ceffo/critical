@@ -6,7 +6,7 @@
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, proficiency_picks
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks
 FROM characters WHERE id = $1;
 
 -- A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
@@ -20,7 +20,7 @@ UPDATE characters SET skill_sets = sqlc.arg(skill_sets) WHERE id = sqlc.arg(id);
 
 -- A character's class and stored skill points, for the undo of a spend (no derivation).
 -- name: GetSkillSets :one
-SELECT class, skill_sets FROM characters WHERE id = sqlc.arg(id);
+SELECT class, skill_sets, skill_points FROM characters WHERE id = sqlc.arg(id);
 
 -- The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
 -- name: SetProficiencyPicks :execrows

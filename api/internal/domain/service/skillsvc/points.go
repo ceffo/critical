@@ -103,6 +103,7 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, set string, 
 		if set, err = soleSet(def, set); err != nil {
 			return err
 		}
+		c.SkillPoints = c.SkillPoints.Resolve(def)
 		next, err := skills.ValidSkillPoints(def, set, points)
 		if err != nil {
 			return err
@@ -157,7 +158,7 @@ func (s *service) Module() domain.Module {
 
 // restorePoints writes the points of a snapshot's skill set back (undo writes the save's
 // "before", redo its "after"), the other sets as they are stored; an entry from before skill sets
-// restores the character's only set.
+// restores the first set of the class (none: nothing).
 func (s *service) restorePoints(ctx context.Context, characterID int64, st pointsState) error {
 	class, stored, err := s.points.SkillPoints(ctx, characterID)
 	if err != nil {
@@ -167,11 +168,15 @@ func (s *service) restorePoints(ctx context.Context, characterID int64, st point
 	if err != nil {
 		return err
 	}
-	set, err := soleSet(def, st.Set)
-	if err != nil {
-		return fmt.Errorf("restore skill points: %w", err)
+	// An entry from before skill sets names no set: the class's first, as a creation entered them.
+	set := st.Set
+	if set == "" {
+		set = skills.FirstSet(def)
 	}
-	if err := s.points.SetSkillPoints(ctx, characterID, stored.With(set, st.Points)); err != nil {
+	if set == "" {
+		return nil
+	}
+	if err := s.points.SetSkillPoints(ctx, characterID, stored.Resolve(def).With(set, st.Points)); err != nil {
 		return fmt.Errorf("restore skill points: %w", err)
 	}
 	return nil

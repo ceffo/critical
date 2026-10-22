@@ -156,7 +156,7 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 			d.SkillColumn = ruletablesvc.ColumnNone
 		}
 	}
-	if err := d.SetSkillFigures(rules, def, c, c.SkillPoints); err != nil {
+	if err := d.SetSkillFigures(rules, def, c, c.SkillPoints.Resolve(def)); err != nil {
 		return Derived{}, err
 	}
 	if def.Has(classes.KindBackstab, realized) {

@@ -162,3 +162,29 @@ func TestSetPoints_Step3_5_UndoRestoresOneSkillSet(t *testing.T) {
 		skills.SetPoints{"thief": {"pick_pockets": 20}, "bard": {"climb_walls": 3}}).Return(nil).Once()
 	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"set":"bard","points":{"climb_walls":3}}`)))
 }
+
+// ADR 0019 on ADR 0040 step 3.5: an entry from before skill sets names no set; for a class that
+// lists two it restores the class's first, not a refusal.
+func TestSetPoints_Step3_5_ALegacyEntryRestoresTheFirstSetOfATwoSetClass(t *testing.T) {
+	f := dualFixture(t)
+	r := f.svc.Module().Restorer(skillsvc.PointsStateKey)
+	require.NotNil(t, r)
+	f.points.EXPECT().SkillPoints(mock.Anything, charID).Return(swashbuckler,
+		skills.SetPoints{"thief": {"pick_pockets": 20}, "bard": {"pick_pockets": 5}}, nil).Once()
+	f.points.EXPECT().SetSkillPoints(mock.Anything, charID,
+		skills.SetPoints{"thief": {"open_locks": 7}, "bard": {"pick_pockets": 5}}).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":7}}`)))
+}
+
+// A legacy entry whose points are still filed under no set (a release from before skill sets
+// kept writing the flat column) restores into the first set without losing them.
+func TestSetPoints_Step3_5_ALegacyEntryResolvesPointsFiledUnderNoSet(t *testing.T) {
+	f := dualFixture(t)
+	r := f.svc.Module().Restorer(skillsvc.PointsStateKey)
+	require.NotNil(t, r)
+	f.points.EXPECT().SkillPoints(mock.Anything, charID).Return(swashbuckler,
+		skills.SetPoints{skills.LegacySet: {"pick_pockets": 20}}, nil).Once()
+	f.points.EXPECT().SetSkillPoints(mock.Anything, charID,
+		skills.SetPoints{"thief": {"open_locks": 7}}).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":7}}`)))
+}

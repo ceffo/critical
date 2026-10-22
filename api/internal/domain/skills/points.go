@@ -48,6 +48,29 @@ func (p SetPoints) With(set string, points map[string]int) SetPoints {
 	return out
 }
 
+// LegacySet is the key the reader files points under when only the legacy flat
+// characters.skill_points holds them (a release from before skill sets kept writing it): they
+// belong to the class's first set, which only the class definition names (Resolve).
+const LegacySet = ""
+
+// Resolve is p with the points filed under LegacySet moved to the first skill set def lists,
+// unless that set already has points (or def lists none: they are dropped). p when it has none.
+func (p SetPoints) Resolve(def classes.Class) SetPoints {
+	legacy, ok := p[LegacySet]
+	if !ok {
+		return p
+	}
+	out := p.Clone()
+	delete(out, LegacySet)
+	if set := FirstSet(def); set != "" && len(out[set]) == 0 && len(legacy) > 0 {
+		out[set] = legacy
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // Clone is a deep copy of p.
 func (p SetPoints) Clone() SetPoints {
 	var out SetPoints

@@ -188,7 +188,7 @@ const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, proficiency_picks
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks
 FROM characters WHERE id = $1
 `
 
@@ -223,6 +223,7 @@ type GetCharacterRow struct {
 	Languages        string
 	RealizedLevel    int64
 	SkillSets        string
+	SkillPoints      string
 	ProficiencyPicks string
 }
 
@@ -264,6 +265,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.Languages,
 		&i.RealizedLevel,
 		&i.SkillSets,
+		&i.SkillPoints,
 		&i.ProficiencyPicks,
 	)
 	return i, err
@@ -306,19 +308,20 @@ func (q *Queries) GetCharacterDetails(ctx context.Context, id int64) (GetCharact
 }
 
 const getSkillSets = `-- name: GetSkillSets :one
-SELECT class, skill_sets FROM characters WHERE id = $1
+SELECT class, skill_sets, skill_points FROM characters WHERE id = $1
 `
 
 type GetSkillSetsRow struct {
-	Class     string
-	SkillSets string
+	Class       string
+	SkillSets   string
+	SkillPoints string
 }
 
 // A character's class and stored skill points, for the undo of a spend (no derivation).
 func (q *Queries) GetSkillSets(ctx context.Context, id int64) (GetSkillSetsRow, error) {
 	row := q.db.QueryRowContext(ctx, getSkillSets, id)
 	var i GetSkillSetsRow
-	err := row.Scan(&i.Class, &i.SkillSets)
+	err := row.Scan(&i.Class, &i.SkillSets, &i.SkillPoints)
 	return i, err
 }
 

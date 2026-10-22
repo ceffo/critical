@@ -34,6 +34,7 @@ import { exposureKind } from "./kinds/exposure";
 import { hpChangeKind } from "./kinds/hpChange";
 import { pspChangeKind } from "./kinds/pspChange";
 import { pspRecoveryKind } from "./kinds/pspRecovery";
+import { powerCheckKind } from "./kinds/powerCheck";
 import { initiativeCorrectKind, initiativeKind } from "./kinds/initiative";
 import {
   equipmentStateKind,
@@ -85,6 +86,7 @@ export const KIND_VIEWS: Record<LogKind, AnyKindView> = {
   proficiencies: proficienciesKind,
   skill_armor: skillArmorKind,
   psionic_pick: psionicPickKind,
+  power_check: powerCheckKind,
   ac_override: acOverrideKind,
   spell_prep: spellPrepKind,
   long_rest: longRestKind,

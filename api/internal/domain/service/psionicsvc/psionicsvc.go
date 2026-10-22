@@ -1,6 +1,6 @@
-// Package psionicsvc owns the psionicist's requests that are not a power (ADR
-// 0043): recovering PSPs over hours of an activity (step 6) and saving the
-// list of powers known (step 9). The pool itself is the action log's ledger
+// Package psionicsvc owns the psionicist's requests (ADR 0043): recovering
+// PSPs over hours of an activity (step 6), saving the list of powers known
+// (step 9) and using a power, its check and initial cost (steps 10 and 11). The pool itself is the action log's ledger
 // (step 5, actionlogsvc); this service words the recovery and leaves the
 // bounds and undo to the log. The known powers are one stored list the
 // service checks against Table 4 and logs with a snapshot.
@@ -48,6 +48,14 @@ type SVC interface {
 	// "picks" for a malformed one, ErrNotPsionicist for a character with no
 	// psionics; a refusal writes nothing.
 	SetKnownPowers(ctx context.Context, characterID int64, picks []psionics.Pick) (*charactersvc.PowerKnowledge, error)
+	// Use checks a known power (ADR 0043 steps 10 and 11): one d20, one
+	// power_check entry spending its PSPs. The refusals are Use's (use.go).
+	Use(ctx context.Context, characterID int64, powerID string, req UseRequest) (*UseResult, error)
+}
+
+// Dice rolls the power check's d20 (dicesvc).
+type Dice interface {
+	RollDie(sides int) int
 }
 
 // RecoveryRates is Table 6 (ruletablesvc.Tables).
@@ -79,6 +87,7 @@ type Deps struct {
 	Log        Log
 	Characters Characters
 	Picks      Picks
+	Dice       Dice
 	// Book is the powers catalogue the picks are checked against.
 	Book psionics.Book
 	Tx   domain.TxRunner
@@ -89,16 +98,17 @@ type service struct {
 	log   Log
 	chars Characters
 	picks Picks
+	dice  Dice
 	book  psionics.Book
 	tx    domain.TxRunner
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Rates == nil || d.Log == nil || d.Characters == nil || d.Picks == nil || d.Book == nil || d.Tx == nil {
+	if d.Rates == nil || d.Log == nil || d.Characters == nil || d.Picks == nil || d.Dice == nil || d.Book == nil || d.Tx == nil {
 		return nil, fmt.Errorf("psionicsvc: nil dependency")
 	}
-	return &service{rates: d.Rates, log: d.Log, chars: d.Characters, picks: d.Picks, book: d.Book, tx: d.Tx}, nil
+	return &service{rates: d.Rates, log: d.Log, chars: d.Characters, picks: d.Picks, dice: d.Dice, book: d.Book, tx: d.Tx}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

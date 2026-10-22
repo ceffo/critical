@@ -180,6 +180,24 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Known powers",
     fr: "Pouvoirs connus",
   },
+  power_check: {
+    e: entry(
+      "power_check",
+      {
+        power: "mind_thrust",
+        target: 14,
+        d20: 17,
+        outcome: "failure",
+        success: false,
+        cost: 7,
+        spent: 4,
+      },
+      { pspDelta: -4 },
+    ),
+    value: "17",
+    en: "Power check · failed",
+    fr: "Jet de pouvoir · échec",
+  },
   initiative: {
     e: entry("initiative", { round: 3, d10: 7 }),
     value: "7",

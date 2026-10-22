@@ -1418,7 +1418,8 @@
       "ac_override": "AC",
       "spell_add": "Spellbook",
       "psp_recovery": "PSP recovery",
-      "psionic_pick": "Known powers"
+      "psionic_pick": "Known powers",
+      "power_check": "Power check"
     },
     "status": {
       "active": "Active",
@@ -1664,7 +1665,8 @@
       "setWith": "AC overridden: {{value}} ({{label}})",
       "cleared": "AC override cleared"
     },
-    "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}"
+    "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}",
+    "powerCheck": "Power check ({{power}}): d20 {{d20}} vs {{target}}, {{verdict}}, PSPs {{spent}}"
   },
   "critTable": {
     "title": "Crit table (house rule)",
@@ -2194,6 +2196,9 @@
     "level_up_not_pending": "That level is no longer to roll: the sheet refreshes.",
     "no_spellbook": "This class has no spellbook.",
     "no_psp_pool": "This character has no PSP pool.",
+    "power_not_known": "The character does not know that power.",
+    "needs_contact": "This power needs contact, which is not available yet.",
+    "not_enough_psp": "Not enough PSPs for this power's initial cost.",
     "not_a_psionicist": "This character is not a psionicist.",
     "psionic_allowance_exceeded": "Over the allowance for this level: {{count}} picked, {{limit}} allowed.",
     "primary_discipline_exceeded": "A discipline other than the primary one must have fewer powers than the primary: {{count}} picked, {{limit}} at most.",
@@ -2233,7 +2238,9 @@
       "destroyed": "destroyed",
       "destroyedTurned": "destroyed, {{turned}} turned",
       "spellFailed": "spell failed",
-      "immune": "immune"
+      "immune": "immune",
+      "powerScore": "power score",
+      "natural20": "natural 20"
     },
     "turn": "Turning {{undead}}"
   },

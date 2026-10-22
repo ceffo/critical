@@ -1,0 +1,50 @@
+{
+  "success": {
+    "pspDelta": -7,
+    "payload": {
+      "power": "mind_thrust",
+      "ability": "int",
+      "abilityScore": 18,
+      "powerModifier": -4,
+      "relearns": 1,
+      "modifiers": [{ "value": -2, "reason": "the DM" }],
+      "target": 13,
+      "d20": 9,
+      "outcome": "success",
+      "success": true,
+      "cost": 7,
+      "spent": 7
+    },
+    "roll": true
+  },
+  "failure": {
+    "pspDelta": -4,
+    "payload": {
+      "power": "mind_thrust",
+      "ability": "int",
+      "abilityScore": 18,
+      "powerModifier": -4,
+      "target": 14,
+      "d20": 17,
+      "outcome": "failure",
+      "success": false,
+      "cost": 7,
+      "spent": 4
+    },
+    "roll": true
+  },
+  "enteredScore": {
+    "pspDelta": -12,
+    "payload": {
+      "power": "teleport",
+      "enteredScore": 11,
+      "target": 11,
+      "d20": 11,
+      "outcome": "power_score",
+      "success": true,
+      "cost": 12,
+      "spent": 12
+    },
+    "roll": true
+  }
+}

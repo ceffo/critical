@@ -1418,7 +1418,8 @@
       "ac_override": "CA",
       "spell_add": "Grimoire",
       "psp_recovery": "Récupération de PFP",
-      "psionic_pick": "Pouvoirs connus"
+      "psionic_pick": "Pouvoirs connus",
+      "power_check": "Jet de pouvoir"
     },
     "status": {
       "active": "Actif",
@@ -1664,7 +1665,8 @@
       "setWith": "CA forcée : {{value}} ({{label}})",
       "cleared": "CA forcée effacée"
     },
-    "pspRecovery": "{{hours}} h {{activity}} : PFP récupérés {{amount}}"
+    "pspRecovery": "{{hours}} h {{activity}} : PFP récupérés {{amount}}",
+    "powerCheck": "Jet de pouvoir ({{power}}) : d20 {{d20}} contre {{target}}, {{verdict}}, PFP {{spent}}"
   },
   "critTable": {
     "title": "Table des critiques (règle maison)",
@@ -2194,6 +2196,9 @@
     "level_up_not_pending": "Ce niveau n'est plus à lancer : la feuille de personnage se met à jour.",
     "no_spellbook": "Cette classe n'a pas de grimoire.",
     "no_psp_pool": "Ce personnage n’a pas de réserve de PFP.",
+    "power_not_known": "Le personnage ne connaît pas ce pouvoir.",
+    "needs_contact": "Ce pouvoir demande un contact, pas encore disponible.",
+    "not_enough_psp": "Pas assez de PFP pour le coût initial de ce pouvoir.",
     "not_a_psionicist": "Ce personnage n’est pas un psioniste.",
     "psionic_allowance_exceeded": "Au-delà de ce que ce niveau permet : {{count}} choisis, {{limit}} permis.",
     "primary_discipline_exceeded": "Une discipline autre que la principale doit avoir moins de pouvoirs que celle-ci : {{count}} choisis, {{limit}} au plus.",
@@ -2233,7 +2238,9 @@
       "destroyed": "détruits",
       "destroyedTurned": "détruits, {{turned}} repoussés",
       "spellFailed": "sort raté",
-      "immune": "immunité"
+      "immune": "immunité",
+      "powerScore": "score de pouvoir",
+      "natural20": "20 naturel"
     },
     "turn": "Renvoi {{undead}}"
   },

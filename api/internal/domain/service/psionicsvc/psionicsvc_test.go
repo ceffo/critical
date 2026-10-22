@@ -24,7 +24,7 @@ func newSvc(t *testing.T) (psionicsvc.SVC, *mocks.MockRecoveryRates, *mocks.Mock
 	t.Helper()
 	rates, log := mocks.NewMockRecoveryRates(t), mocks.NewMockLog(t)
 	svc, err := psionicsvc.New(psionicsvc.Deps{
-		Rates: rates, Log: log, Characters: mocks.NewMockCharacters(t), Picks: mocks.NewMockPicks(t),
+		Rates: rates, Log: log, Characters: mocks.NewMockCharacters(t), Picks: mocks.NewMockPicks(t), Dice: mocks.NewMockDice(t),
 		Book: psionics.NewBook(nil, nil), Tx: passTx{},
 	})
 	require.NoError(t, err)
@@ -112,7 +112,7 @@ func newKnownSvc(t *testing.T, c *charactersvc.Character) (psionicsvc.SVC, *mock
 		[]catalogue.Power{{ID: "contact", Discipline: "telepathy", Kind: catalogue.KindDevotion}},
 	)
 	svc, err := psionicsvc.New(psionicsvc.Deps{
-		Rates: mocks.NewMockRecoveryRates(t), Log: log, Characters: chars, Picks: picks, Book: book, Tx: passTx{},
+		Rates: mocks.NewMockRecoveryRates(t), Log: log, Characters: chars, Picks: picks, Dice: mocks.NewMockDice(t), Book: book, Tx: passTx{},
 	})
 	require.NoError(t, err)
 	return svc, picks, log

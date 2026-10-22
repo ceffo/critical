@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, format 10",
-  "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) the non-weapon proficiency descriptions (step 16, ADR 0037 step 19) and Table 5's magical defence adjustment on the wisdom rows (step 17, ADR 0006 step 9). The API reads format 10 only: formats 3 to 9 were each the same shape without the parts added later, and are retired (steps 16.5 and 17.3). Shape only: the schema carries no book text.",
+  "title": "Critical! catalogue, format 11",
+  "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) the non-weapon proficiency descriptions (step 16, ADR 0037 step 19) Table 5's magical defence adjustment on the wisdom rows (step 17, ADR 0006 step 9) and the class, group and race definitions with their feature and trait lists (step 18, ADR 0040 steps 1 to 4 and 7). The API reads format 11 only: formats 3 to 10 were each the same shape without the parts added later, and are retired (steps 16.5, 17.3 and 18.3). Shape only: the schema carries no book text.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,13 +12,16 @@
     "rule_tables",
     "equipment",
     "languages",
-    "proficiency_descriptions"
+    "proficiency_descriptions",
+    "classes",
+    "groups",
+    "races"
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 10 (ADR 0021 step 17: format 9 plus the magical defence adjustment of each wisdom row; format 9 was step 16's: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
+      "description": "Artifact format: 11 (ADR 0021 step 18: format 10 plus the class, group and race definitions; format 10 was step 17's: format 9 plus the magical defence adjustment of each wisdom row; format 9 was step 16's: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
       "enum": [
-        10
+        11
       ]
     },
     "version": {
@@ -44,6 +47,30 @@
     },
     "proficiency_descriptions": {
       "$ref": "#/$defs/proficiency_descriptions"
+    },
+    "classes": {
+      "description": "The class definitions (ADR 0040 step 1): one entry per class.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/class_def"
+      }
+    },
+    "groups": {
+      "description": "The class groups (ADR 0040 steps 1.2 and 7): their THAC0 rows.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/group_def"
+      }
+    },
+    "races": {
+      "description": "The race definitions (ADR 0040 step 2): one entry per race, the human included.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/race_def"
+      }
     }
   },
   "allOf": [
@@ -1981,6 +2008,1100 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 20
+        }
+      }
+    },
+    "class_code": {
+      "description": "A class id: language-neutral, the value characters.class stores.",
+      "type": "string",
+      "pattern": "^[a-z]+(_[a-z]+)*$"
+    },
+    "group_code": {
+      "description": "A class group id (ADR 0040 step 1.2): data like a class id.",
+      "type": "string",
+      "pattern": "^[a-z]+(_[a-z]+)*$"
+    },
+    "ability_code": {
+      "enum": [
+        "str",
+        "dex",
+        "con",
+        "int",
+        "wis",
+        "cha"
+      ]
+    },
+    "alignment_code": {
+      "enum": [
+        "lawful_good",
+        "neutral_good",
+        "chaotic_good",
+        "lawful_neutral",
+        "true_neutral",
+        "chaotic_neutral",
+        "lawful_evil",
+        "neutral_evil",
+        "chaotic_evil"
+      ]
+    },
+    "dice": {
+      "description": "NdM dice.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "sides"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "sides": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 100
+        }
+      }
+    },
+    "table_name": {
+      "description": "The key of a rule table of this artifact.",
+      "type": "string",
+      "pattern": "^[a-z]+(_[a-z0-9]+)*$"
+    },
+    "xp_threshold_row": {
+      "description": "The experience points a class needs to reach the level (PHB Tables 14, 20, 23, 25).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "xp"
+      ],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "xp": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "ability_minimum_row": {
+      "description": "PHB Table 13: the least score of an ability the class needs. An ability with no minimum has no row.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ability",
+        "min"
+      ],
+      "properties": {
+        "ability": {
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ]
+        },
+        "min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        }
+      }
+    },
+    "class_weapon_ref": {
+      "description": "A weapon a class may wield beyond its weapon types, by catalogue code with its weapon type.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "weapon_type"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/equipment_code"
+        },
+        "weapon_type": {
+          "type": "string",
+          "pattern": "^[a-z]+(_[a-z]+)*$"
+        }
+      }
+    },
+    "class_equipment": {
+      "description": "What the class may wear and wield: the one source of ADR 0033 step 20's warnings and of the weapon proficiency types of ADR 0037 step 7 (ADR 0040 step 1.6).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shields"
+      ],
+      "properties": {
+        "armour": {
+          "description": "The Table 29 skill columns of the body armour the class may wear (`none` = no armour worn); absent = any.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/code_text"
+          }
+        },
+        "shields": {
+          "description": "Whether the class may use a shield.",
+          "type": "boolean"
+        },
+        "weapon_types": {
+          "description": "The weapon types the class may wield; with `weapons` the whole list; absent with no `weapons` = any (ADR 0033 step 20, ADR 0037 step 7).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/code_text"
+          }
+        },
+        "weapons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/class_weapon_ref"
+          }
+        },
+        "blunt_only": {
+          "description": "The class wields bludgeoning weapons only.",
+          "type": "boolean"
+        }
+      }
+    },
+    "code_text": {
+      "type": "string",
+      "pattern": "^[a-z]+(_[a-z]+)*$"
+    },
+    "class_hit_dice": {
+      "description": "PHB Tables 14, 20, 23, 25 (Hit Dice column) and Table 3's column (ADR 0040 step 1.8).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "die",
+        "dice_levels",
+        "after",
+        "constitution"
+      ],
+      "properties": {
+        "die": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 20
+        },
+        "dice_levels": {
+          "description": "The last level that rolls the die.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "after": {
+          "description": "The fixed hit points gained per level after it.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "constitution": {
+          "description": "The PHB Table 3 column the class reads: `warrior` (the parenthesised adjustment) or `standard`.",
+          "enum": [
+            "warrior",
+            "standard"
+          ]
+        }
+      }
+    },
+    "rogue_budget": {
+      "description": "Skill points to spend: at the first level and at each level after; the most in one skill likewise (0 = no limit).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "first",
+        "per_level",
+        "per_skill_first",
+        "per_skill_per_level"
+      ],
+      "properties": {
+        "first": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "per_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "per_skill_first": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "per_skill_per_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      }
+    },
+    "rogue_armour": {
+      "description": "An armour a skill set is entered with.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "extra"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z]+(_[a-z]+)*$"
+        },
+        "column": {
+          "description": "The Table 29 column read; absent for leather, the baseline.",
+          "type": "string",
+          "pattern": "^[a-z]+(_[a-z]+)*$"
+        },
+        "extra": {
+          "description": "An additional adjustment, in percent points (the bard's penalty in non-elven chain mail).",
+          "type": "integer",
+          "minimum": -95,
+          "maximum": 0
+        }
+      }
+    },
+    "feature_params_melee_attacks_per_round": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "table"
+      ],
+      "properties": {
+        "table": {
+          "$ref": "#/$defs/table_name"
+        }
+      }
+    },
+    "feature_params_spell_failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ability"
+      ],
+      "properties": {
+        "ability": {
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ]
+        }
+      }
+    },
+    "feature_params_sphere_access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "major",
+        "minor",
+        "minor_max_level"
+      ],
+      "properties": {
+        "major": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sphere_code"
+          },
+          "minItems": 1
+        },
+        "minor": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sphere_code"
+          },
+          "minItems": 1
+        },
+        "minor_max_level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7
+        }
+      }
+    },
+    "feature_params_turn_undead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "table"
+      ],
+      "properties": {
+        "table": {
+          "$ref": "#/$defs/table_name"
+        }
+      }
+    },
+    "feature_params_rogue_skills": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "set",
+        "budget",
+        "armour",
+        "min_to_use"
+      ],
+      "properties": {
+        "set": {
+          "enum": [
+            "thief",
+            "bard"
+          ]
+        },
+        "budget": {
+          "$ref": "#/$defs/rogue_budget"
+        },
+        "armour": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rogue_armour"
+          },
+          "minItems": 1
+        },
+        "min_to_use": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 95
+        }
+      }
+    },
+    "feature_params_backstab": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "table"
+      ],
+      "properties": {
+        "table": {
+          "$ref": "#/$defs/table_name"
+        }
+      }
+    },
+    "feature_params_spellbook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_spell_level",
+        "free_spell_per_new_spell_level"
+      ],
+      "properties": {
+        "max_spell_level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9
+        },
+        "free_spell_per_new_spell_level": {
+          "type": "boolean"
+        }
+      }
+    },
+    "class_feature": {
+      "description": "A class feature (ADR 0040 step 3): a kind from the closed list with the parameters that kind takes. A new mechanic is a new kind, never a branch on a class id.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "exceptional_strength",
+            "melee_attacks_per_round",
+            "weapon_specialization",
+            "wisdom_bonus_spells",
+            "spell_failure",
+            "sphere_access",
+            "turn_undead",
+            "rogue_skills",
+            "backstab",
+            "spellbook"
+          ]
+        },
+        "from_level": {
+          "description": "The class level the feature starts at; absent = 1.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "exceptional_strength"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "melee_attacks_per_round"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/feature_params_melee_attacks_per_round"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "weapon_specialization"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "wisdom_bonus_spells"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "spell_failure"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/feature_params_spell_failure"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "sphere_access"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/feature_params_sphere_access"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "turn_undead"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/feature_params_turn_undead"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "rogue_skills"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/feature_params_rogue_skills"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "backstab"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/feature_params_backstab"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "spellbook"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/feature_params_spellbook"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "class_def": {
+      "description": "A class definition (ADR 0040 step 1, ADR 0021 step 18). Cross references (the group's rows, the tables named, a kind once per class) are checked by the builder and the importer.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "group",
+        "prime_requisites",
+        "ability_minimums",
+        "equipment",
+        "experience",
+        "hit_dice",
+        "nonweapon_groups",
+        "features"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/class_code"
+        },
+        "name": {
+          "$ref": "#/$defs/localized"
+        },
+        "group": {
+          "$ref": "#/$defs/group_code"
+        },
+        "prime_requisites": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "str",
+              "dex",
+              "con",
+              "int",
+              "wis",
+              "cha"
+            ]
+          }
+        },
+        "ability_minimums": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ability_minimum_row"
+          }
+        },
+        "alignments": {
+          "description": "The alignments the class allows; absent = any.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/alignment_code"
+          }
+        },
+        "equipment": {
+          "$ref": "#/$defs/class_equipment"
+        },
+        "experience": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/xp_threshold_row"
+          }
+        },
+        "hit_dice": {
+          "$ref": "#/$defs/class_hit_dice"
+        },
+        "spell_progression": {
+          "description": "The key of the rule table of the slots per level; absent = no spells (ADR 0040 step 1.9).",
+          "$ref": "#/$defs/table_name"
+        },
+        "nonweapon_groups": {
+          "description": "The proficiency groups the class learns at the listed cost (PHB Table 38).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+(_[a-z]+)*$"
+          }
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/class_feature"
+          }
+        }
+      }
+    },
+    "group_def": {
+      "description": "A class group (ADR 0040 steps 1.2 and 7): its THAC0 by level, PHB Table 53, as rows keyed by group.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "thac0"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/group_code"
+        },
+        "thac0": {
+          "type": "array",
+          "minItems": 20,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "level",
+              "thac0"
+            ],
+            "properties": {
+              "level": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              },
+              "thac0": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              }
+            }
+          }
+        }
+      }
+    },
+    "race_identity": {
+      "description": "PHB Tables 10 and 11 as the creation rolls of ADR 0032 step 5 read them (inches, pounds, years; the app converts).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "height",
+        "weight",
+        "start_age",
+        "max_age"
+      ],
+      "properties": {
+        "height": {
+          "description": "PHB Table 10: base height in inches by sex, and the modifier dice.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "male",
+            "female",
+            "dice"
+          ],
+          "properties": {
+            "male": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "female": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "dice": {
+              "$ref": "#/$defs/dice"
+            }
+          }
+        },
+        "weight": {
+          "description": "PHB Table 10: base weight in pounds by sex, and the modifier dice.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "male",
+            "female",
+            "dice"
+          ],
+          "properties": {
+            "male": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "female": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "dice": {
+              "$ref": "#/$defs/dice"
+            }
+          }
+        },
+        "start_age": {
+          "description": "PHB Table 11: the starting age in years.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "base",
+            "dice"
+          ],
+          "properties": {
+            "base": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "dice": {
+              "$ref": "#/$defs/dice"
+            }
+          }
+        },
+        "max_age": {
+          "description": "PHB Table 11: the maximum age range, base plus dice, in years.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "base",
+            "dice"
+          ],
+          "properties": {
+            "base": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "dice": {
+              "$ref": "#/$defs/dice"
+            }
+          }
+        }
+      }
+    },
+    "trait_params_con_save_bonus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "categories",
+        "poison"
+      ],
+      "properties": {
+        "categories": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "para_poison",
+              "rod_staff_wand",
+              "petri_poly",
+              "breath",
+              "spell"
+            ]
+          }
+        },
+        "poison": {
+          "type": "boolean"
+        }
+      }
+    },
+    "trait_params_weapon_to_hit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "weapon_types",
+        "bonus"
+      ],
+      "properties": {
+        "weapon_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+(_[a-z]+)*$"
+          }
+        },
+        "bonus": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        }
+      }
+    },
+    "race_trait": {
+      "description": "A race trait (ADR 0040 step 4): a kind from the closed list with its parameters.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "con_save_bonus",
+            "no_exceptional_strength",
+            "weapon_to_hit"
+          ]
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "con_save_bonus"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/trait_params_con_save_bonus"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "no_exceptional_strength"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "params": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "weapon_to_hit"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/trait_params_weapon_to_hit"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "race_def": {
+      "description": "A race definition (ADR 0040 step 2, ADR 0021 step 18): Table 7 requirements and Table 8 adjustments (none for the human), the identity rows, the typed traits. The thief skill adjustments, the level limits and the languages stay tables keyed by race.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "requirements",
+        "adjustments",
+        "identity",
+        "traits"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z]+(_[a-z]+)*$"
+        },
+        "name": {
+          "$ref": "#/$defs/localized"
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ability",
+              "min",
+              "max"
+            ],
+            "properties": {
+              "ability": {
+                "enum": [
+                  "str",
+                  "dex",
+                  "con",
+                  "int",
+                  "wis",
+                  "cha"
+                ]
+              },
+              "min": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 25
+              },
+              "max": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 25
+              }
+            }
+          }
+        },
+        "adjustments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ability",
+              "adjustment"
+            ],
+            "properties": {
+              "ability": {
+                "enum": [
+                  "str",
+                  "dex",
+                  "con",
+                  "int",
+                  "wis",
+                  "cha"
+                ]
+              },
+              "adjustment": {
+                "type": "integer",
+                "minimum": -5,
+                "maximum": 5
+              }
+            }
+          }
+        },
+        "identity": {
+          "$ref": "#/$defs/race_identity"
+        },
+        "traits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/race_trait"
+          }
         }
       }
     }

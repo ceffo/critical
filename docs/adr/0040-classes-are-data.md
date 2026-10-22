@@ -5,7 +5,8 @@ Context). The shape of the definitions, the closed list of feature kinds and the
 (steps 1 to 4), and the choices beyond the triage (group ids under the rule of step 10, one
 `rogue_skills` kind with a `set` parameter, the weapon proficiency types derived from the
 `equipment` list, the package `domain/classes`) were accepted in review, 2026-10-21.
-Not implemented: each step names the test its implementing item writes. Amends
+Step 11.1 is built (2026-10-22, [ADR 0021](0021-spell-catalogue.md) step 18: the catalogue publishes format 11). The rest is
+not implemented: each step names the test its implementing item writes. Amends
 [ADR 0030](0030-classes-and-races.md) steps 1, 2, 4, 9 to 20, 22 and 23 and
 [ADR 0015](0015-experience.md) step 2, each on implementation. Builds on the vocabulary of
 [ADR 0036](0036-vocabulary.md) (`GLOSSARY.md`, `docs/domain-model.md`). The house rules live in the
@@ -109,8 +110,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
       from it with the catalogue (a type is allowed when the list names it or a weapon of it; for
       `blunt_only`, when a catalogue weapon of the type deals bludgeoning damage, a launcher by its
       ammunition), which is what seedcheck proves today: the second Go list goes.
-   7. `experience`: the class's XP thresholds, rows `{class, level, xp}` (PHB Tables 14, 20, 23,
-      25), replacing the column per class.
+   7. `experience`: the class's XP thresholds, rows `{level, xp}` inside the class entry (the class is the
+      entry's; PHB Tables 14, 20, 23, 25), replacing the column per class.
    8. `hit_dice`: `{die, dice_levels, after}` and the Constitution column (`warrior` or
       `standard`, PHB Table 3): warrior d10 to level 9 then +3, wizard d4 to 10 then +1, priest d8
       to 9 then +2, rogue d6 to 10 then +2 (PHB Tables 14, 20, 23 and 25, Hit Dice column;
@@ -191,6 +192,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    `03-gnomes.md`, Gnomes and Halflings), Table 9 (`tables/phb-009-constitution-saving-throw-bonuses.md`).
    The gnome's poison save gets no Table 9 bonus in the book. The poison flag on the save request
    still waits for the user's OK (ADR 0030 step 22.1), so `poison` is carried but not read yet.
+   _(As built in format 11: the `weapon_to_hit` kind is accepted by the schema, but no race carries it; it lands with ADR 0030 step 22.3's code.)_
    Tests: `RaceTraits_Step4_ConSaveBonusFromTheTrait` (charactersvc: a race listing the trait
    gets Table 9's bonus on its categories, a race without it none, whatever its id),
    `RaceTraits_Step4_NoExceptionalStrengthFromTheTrait` (ruletablesvc).
@@ -228,6 +230,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
    becomes rows with a `class`, `group` or `race` key (XP thresholds, Table 53, Table 60, the
    slot tables, Table 34), so a new class or group is new rows, never a new field in a Go struct
    or a DTO. A **group** id is data like a class id: no `switch` on `warrior` or `rogue`.
+   _(As built in format 11, [ADR 0021](0021-spell-catalogue.md) step 18.2 and 18.4: the XP rows are in the class entries and Table 53 is the `groups` list, `{id, thac0}`;
+   the class-keyed tables of formats 3 to 10 stay beside them until their readers move, step 11.3.)_
    Tests: `RuleTables_Step7_RowsKeyedByClassAndGroup` (ruletablesadpt: the thresholds, THAC0 and
    saves of the fixture's rows equal today's per-column reads for each class and group).
 

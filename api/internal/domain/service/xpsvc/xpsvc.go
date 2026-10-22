@@ -114,11 +114,17 @@ func (s *service) Close(_ context.Context) error  { return nil }
 // the level from it (ADR 0030 step 3) without depending on this service.
 type Totals struct{ DAL DAL }
 
-// EntriesTotal is the sum of the character's entries, each with its bonus.
-func (t Totals) EntriesTotal(ctx context.Context, characterID int64) (int, error) {
+// Awards are the character's entries' amounts, each with its bonus (ADR 0015
+// step 1), newest first: a multi-class character's entries share each award
+// on its own (ADR 0042 step 5).
+func (t Totals) Awards(ctx context.Context, characterID int64) ([]int, error) {
 	entries, err := t.DAL.List(ctx, characterID)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return LedgerTotal(0, entries), nil
+	out := make([]int, len(entries))
+	for i, e := range entries {
+		out[i] = EntryAmount(e.Base, e.Bonus).Total
+	}
+	return out, nil
 }

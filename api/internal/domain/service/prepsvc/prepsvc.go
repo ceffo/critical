@@ -95,12 +95,21 @@ type SVC interface {
 	// Prepare replaces today's preparation with the given spell ids
 	// (duplicates allowed) and returns the new slot list.
 	Prepare(ctx context.Context, characterID int64, spellIDs []string) ([]spellsvc.SpellSlot, error)
+	// InfoFor and PrepareFor are Info and Prepare for the spellcasting entry
+	// of class (ADR 0042 step 14: a cleric/mage prepares cleric spells in the
+	// cleric's slots and wizard spells in the mage's); an empty class is the
+	// first active spellcasting entry, as Info and Prepare.
+	InfoFor(ctx context.Context, characterID int64, class string) (Info, error)
+	PrepareFor(ctx context.Context, characterID int64, class string, spellIDs []string) ([]spellsvc.SpellSlot, error)
 }
 
 // Spellbook is the read port over the spells a character knows, each in
 // its own spellbook, in the order of the sheet.
 type Spellbook interface {
 	All(ctx context.Context, characterID int64) ([]SpellbookEntry, error)
+	// Of is the spells the entry of class prepares from (ADR 0042 step 14);
+	// an empty class is All's.
+	Of(ctx context.Context, characterID int64, class string) ([]SpellbookEntry, error)
 }
 
 // Characters supplies the character's level and spell slot limits, both
@@ -150,28 +159,62 @@ func New(d Deps) (SVC, error) {
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
 
-func (s *service) limits(ctx context.Context, characterID int64) (map[int]int, error) {
-	_, limits, err := s.levelLimits(ctx, characterID)
-	return limits, err
+// caster is the entry a preparation is for (ADR 0042 step 14).
+type caster struct {
+	// class is the entry's class; tag the Class its slots carry, set only
+	// when the character has two spellcasting entries.
+	class, tag string
+	// level is the entry's caster level, limits its slots per day (ADR 0008
+	// step 2 as amended by ADR 0030 steps 7 and 8).
+	level  int
+	limits map[int]int
+	c      *charactersvc.Character
 }
 
-// levelLimits returns the character's realized level and its preparation
-// limits, the slots per day of that level (ADR 0008 step 2 as amended by
-// ADR 0030 steps 7 and 8).
-func (s *service) levelLimits(ctx context.Context, characterID int64) (int, map[int]int, error) {
+// casterOf resolves the spellcasting entry of class ("" the first). A
+// character without derived entries is its own caster at its realized level.
+func (s *service) casterOf(ctx context.Context, characterID int64, class string) (caster, error) {
 	c, err := s.Characters.GetCharacter(ctx, characterID)
 	if err != nil {
-		return 0, nil, fmt.Errorf("get character: %w", err)
+		return caster{}, fmt.Errorf("get character: %w", err)
 	}
-	return c.Derived.RealizedLevel, c.Derived.SpellSlots, nil
+	e, ok := c.Derived.CasterEntry(class)
+	if !ok {
+		if class != "" && class != c.Class {
+			return caster{}, fmt.Errorf("%w: %q is not a spellcasting class of the character", domain.ErrInvalidInput, class)
+		}
+		return caster{class: c.Class, level: c.Derived.CasterLevel(), limits: c.Derived.SpellSlots, c: c}, nil
+	}
+	out := caster{class: e.Class, level: e.RealizedLevel, limits: e.SpellSlots, c: c}
+	if c.Derived.Casters() > 1 {
+		out.tag = e.Class
+	}
+	return out, nil
+}
+
+// owner is the entry class a stored slot belongs to: its Class, or the
+// first spellcasting entry's for an untagged one.
+func owner(c *charactersvc.Character, slot spellsvc.SpellSlot) string {
+	if slot.Class != "" {
+		return slot.Class
+	}
+	if e, ok := c.Derived.CasterEntry(""); ok {
+		return e.Class
+	}
+	return c.Class
 }
 
 func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
-	level, limits, err := s.levelLimits(ctx, characterID)
+	return s.InfoFor(ctx, characterID, "")
+}
+
+func (s *service) InfoFor(ctx context.Context, characterID int64, class string) (Info, error) {
+	who, err := s.casterOf(ctx, characterID, class)
 	if err != nil {
 		return Info{}, err
 	}
-	book, err := s.Spellbook.All(ctx, characterID)
+	level, limits := who.level, who.limits
+	book, err := s.Spellbook.Of(ctx, characterID, who.class)
 	if err != nil {
 		return Info{}, fmt.Errorf("read spellbook: %w", err)
 	}
@@ -230,11 +273,20 @@ func (s *service) castInputs(id string) CastInputs {
 
 // Prepare applies ADR 0008 steps 1 to 5.
 func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []string) ([]spellsvc.SpellSlot, error) {
-	limits, err := s.limits(ctx, characterID)
+	return s.PrepareFor(ctx, characterID, "", spellIDs)
+}
+
+// PrepareFor is Prepare for one spellcasting entry (ADR 0042 step 14): its
+// spells, its limits; it replaces that entry's slots only, the other entry's
+// stay as they are, and the new slots carry the entry's class when the
+// character has two spellcasting entries.
+func (s *service) PrepareFor(ctx context.Context, characterID int64, class string, spellIDs []string) ([]spellsvc.SpellSlot, error) {
+	who, err := s.casterOf(ctx, characterID, class)
 	if err != nil {
 		return nil, err
 	}
-	book, err := s.Spellbook.All(ctx, characterID)
+	limits := who.limits
+	book, err := s.Spellbook.Of(ctx, characterID, who.class)
 	if err != nil {
 		return nil, fmt.Errorf("read spellbook: %w", err)
 	}
@@ -266,7 +318,7 @@ func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []str
 		if err != nil {
 			return fmt.Errorf("get slots: %w", err)
 		}
-		out = carryUsed(before, picked)
+		out = who.replace(before, picked)
 		if err := s.Slots.SaveSlots(ctx, characterID, out); err != nil {
 			return fmt.Errorf("save slots: %w", err)
 		}
@@ -274,7 +326,7 @@ func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []str
 		if err != nil {
 			return err
 		}
-		payload, err := json.Marshal(prepRecordOf(picked))
+		payload, err := json.Marshal(prepRecordOf(picked, who.tag))
 		if err != nil {
 			return fmt.Errorf("encode preparation payload: %w", err)
 		}
@@ -303,6 +355,27 @@ func (s *service) Module() domain.Module {
 			return s.Slots.SaveSlots(ctx, characterID, slots)
 		}, nil),
 	}}
+}
+
+// replace is the slot list once picked is the entry's preparation: the
+// other entries' slots kept in place, the entry's (carryUsed) after them.
+func (who caster) replace(before []spellsvc.SpellSlot, picked []SpellbookEntry) []spellsvc.SpellSlot {
+	if who.tag == "" {
+		return carryUsed(before, picked)
+	}
+	var own, out []spellsvc.SpellSlot
+	for _, sl := range before {
+		if owner(who.c, sl) == who.class {
+			own = append(own, sl)
+		} else {
+			out = append(out, sl)
+		}
+	}
+	for _, sl := range carryUsed(own, picked) {
+		sl.Class = who.tag
+		out = append(out, sl)
+	}
+	return out
 }
 
 // carryUsed builds the new slot list; a spell that was already prepared keeps
@@ -337,6 +410,9 @@ func carryUsed(before []spellsvc.SpellSlot, picked []SpellbookEntry) []spellsvc.
 // Add fields, never rename.
 type prepRecord struct {
 	Spells []prepSpell `json:"spells"`
+	// Class is the spellcasting entry prepared, for a character with two
+	// (ADR 0042 step 14).
+	Class string `json:"class,omitempty"`
 }
 
 type prepSpell struct {
@@ -345,8 +421,8 @@ type prepSpell struct {
 	Count int    `json:"count"`
 }
 
-func prepRecordOf(picked []SpellbookEntry) prepRecord {
-	rec := prepRecord{Spells: []prepSpell{}}
+func prepRecordOf(picked []SpellbookEntry, class string) prepRecord {
+	rec := prepRecord{Spells: []prepSpell{}, Class: class}
 	at := map[string]int{}
 	for _, e := range picked {
 		if i, ok := at[e.ID]; ok {
@@ -360,7 +436,7 @@ func prepRecordOf(picked []SpellbookEntry) prepRecord {
 }
 
 // slotsSnaps is the snapshotter of the slot list (ADR 0018 step 8); its state
-// is spellsvc.SpellSlot encoded without JSON tags.
+// is spellsvc.SpellSlot encoded by its field names (Class omitted when empty).
 var slotsSnaps = actionlog.NewSnapshotter[[]spellsvc.SpellSlot](StateKey)
 
 // SlotsSnapshot is the StateKey snapshot of a slot-list change, in the

@@ -42,7 +42,7 @@ func TestDerive_Step3_SlotsFollowTheRealizedLevel(t *testing.T) {
 			k := kelsen()
 			k.Proficiencies = picks(p("tumbling", 1), p("cooking", 1), p("tracking", 2), p("blind_fighting", 2), p("old_skill", 2))
 			e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(k, nil).Once()
-			e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+			e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
 			expectKelsenAt(e, tc.target)
 			got, err := e.svc.GetCharacter(context.Background(), 3)
 			require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestDerive_Step3_SlotsFollowTheRealizedLevel(t *testing.T) {
 		k := kelsen()
 		k.Int = 18 // Table 4: 7 languages
 		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(k, nil).Once()
-		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+		e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
 		expectKelsenAt(e, 15)
 		got, err := e.svc.GetCharacter(context.Background(), 3)
 		require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestDerive_Step3_SlotsFollowTheRealizedLevel(t *testing.T) {
 	t.Run("without the catalogue there is no pool", func(t *testing.T) {
 		e := newEnv(t)
 		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(kelsen(), nil).Once()
-		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+		e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
 		expectKelsenAt(e, 15)
 		got, err := e.svc.GetCharacter(context.Background(), 3)
 		require.NoError(t, err)

@@ -11,6 +11,8 @@ export interface SpellSlot {
   used: boolean;
   /** A slot granted by a spell (grant_slots): blank until cast, gone at the long rest. */
   extra?: boolean;
+  /** The class entry whose slot this is, for a character with two spellcasting classes (ADR 0042 step 14). */
+  class?: string;
 }
 
 /** Mirrors api/internal/domain/spellstats. Every typed field keeps `raw`, the PHB text. */
@@ -427,6 +429,9 @@ export interface CastResult extends CastBreakdown {
   catalogueSpell?: Spell;
   /** The slots after a cast. */
   slots?: SpellSlot[];
+  /** The cast's class warnings, never logged (ADR 0042 step 16.2: `spell_in_armour`, a spell of
+   * a class that allows no body armour cast in body armour). Absent when none. */
+  warnings?: "spell_in_armour"[];
 }
 
 /** A cast's spell failure roll (ADR 0030 step 14): failed when the d100 is at or under the chance. */

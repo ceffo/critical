@@ -53,6 +53,9 @@ type checkRecord struct {
 	// before the latest post-roll adjustment; set on adjustment amends only.
 	PreviousSuccess    *bool `json:"previousSuccess,omitempty"`
 	PreviousAdjustment *int  `json:"previousAdjustment,omitempty"`
+	// blocked: the worn armour blocks the skill (ADR 0042 step 16.3); never
+	// logged, a blocked check is not rolled.
+	blocked bool
 	// Buff is the buff the verdict in effect put on (ADR 0037 step 20.4),
 	// Renewed true when it replaced an active one (step 20.3). Absent when
 	// it put none, and in entries logged before: they read as no buff.
@@ -254,6 +257,10 @@ func (s *service) check(ctx context.Context, characterID int64, set, id string, 
 	if err := checkRange(rec.Kind, adj.Value); err != nil {
 		return checkRecord{}, err
 	}
+	// ADR 0042 step 16.3: a skill the worn armour blocks is not rolled.
+	if rec.blocked {
+		return checkRecord{}, &domain.FieldError{Field: "id", Message: CodeSkillBlockedByArmour}
+	}
 	// ADR 0030 step 17 (PHB p.39): a thieving skill under 1% cannot be used
 	// until points raise it, whatever the DM's adjustment.
 	if !SkillUsable(rec.Kind, rec.Target) {
@@ -319,7 +326,7 @@ func (s *service) find(ctx context.Context, characterID int64, set, id string) (
 		}
 		for _, sk := range ss.Skills {
 			if sk.Skill == id {
-				return checkRecord{ID: sk.Skill, Kind: kind, Die: skillDie(kind), Target: sk.Percent}, nil
+				return checkRecord{ID: sk.Skill, Kind: kind, Die: skillDie(kind), Target: sk.Percent, blocked: sk.Blocked}, nil
 			}
 		}
 	}
@@ -351,24 +358,21 @@ type draft struct {
 // ones: refused as SetPoints refuses them, then the skills' figures of the
 // draft at the realized level and the worn armour's skill armour.
 func (s *service) withPoints(char *charactersvc.Character, d draft) error {
-	def, err := s.classDef(char.Class)
+	own, err := s.ownerOf(char, d.set) // ADR 0042 step 12
 	if err != nil {
 		return err
 	}
-	set, err := soleSet(def, d.set)
+	set := own.set
+	char.SkillPoints = char.SkillPoints.Resolve(own.first)
+	next, err := skills.ValidSkillPoints(own.def, set, d.points)
 	if err != nil {
 		return err
 	}
-	char.SkillPoints = char.SkillPoints.Resolve(def)
-	next, err := skills.ValidSkillPoints(def, set, d.points)
-	if err != nil {
-		return err
-	}
-	if err := skills.SkillPointsWithinBudget(def, set, char.Derived.RealizedLevel, char.SkillPoints.Of(set), next); err != nil {
+	if err := skills.SkillPointsWithinBudget(own.def, set, own.level, char.SkillPoints.Of(set), next); err != nil {
 		return err
 	}
 	all := char.SkillPoints.With(set, next)
-	if err := char.Derived.SetSkillFigures(s.tables, def, char, all); err != nil {
+	if err := char.Derived.SetSkillFigures(s.tables, s.classDef, char, all); err != nil {
 		return fmt.Errorf("preview skill points: %w", err)
 	}
 	char.SkillPoints = all

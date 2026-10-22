@@ -12,8 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -59,19 +61,25 @@ var book = map[string]prepsvc.SpellbookEntry{
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
+	return newFixtureFor(t, &charactersvc.Character{Derived: charactersvc.Derived{RealizedLevel: 15, SpellSlots: bardTable}})
+}
+
+// newFixtureFor is a fixture whose character 1 is c.
+func newFixtureFor(t *testing.T, c *charactersvc.Character) *fixture {
+	t.Helper()
 	f := &fixture{slots: mocks.NewMockSlots(t), log: mocks.NewMockLog(t), items: mocks.NewMockItems(t), tx: &passTx{}}
 
 	b := mocks.NewMockSpellbook(t)
 	// The spellbook is the character's own: it is read for character 1, the
 	// one every test prepares for.
-	b.EXPECT().All(mock.Anything, int64(1)).RunAndReturn(func(context.Context, int64) ([]prepsvc.SpellbookEntry, error) {
+	b.EXPECT().Of(mock.Anything, int64(1), mock.Anything).RunAndReturn(func(context.Context, int64, string) ([]prepsvc.SpellbookEntry, error) {
 		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"], book["wall_of_ice"], book["cloudkill"], book["enlarge"], book["slow"], book["mirror_image"], book["magic_missile"], book["identify"]}, nil
 	}).Maybe()
 
 	// The limits are the character's derived slots (ADR 0030 step 8).
 	chars := mocks.NewMockCharacters(t)
 	chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
-		Return(&charactersvc.Character{Derived: charactersvc.Derived{RealizedLevel: 15, SpellSlots: bardTable}}, nil).Maybe()
+		Return(c, nil).Maybe()
 
 	svc, err := prepsvc.New(prepsvc.Deps{
 		Slots: f.slots, Spellbook: b, Effects: catalog(t), Items: f.items, Characters: chars, Log: f.log, Tx: f.tx,
@@ -323,10 +331,11 @@ func TestPrepare_RecordFailureFailsTheCall(t *testing.T) {
 
 func TestRestore_WritesTheSnapshotBack(t *testing.T) {
 	f := newFixture(t)
+	// ADR 0042 step 14: an undo gives back each slot's entry class.
 	f.slots.EXPECT().SaveSlots(mock.Anything, int64(1), []spellsvc.SpellSlot{
-		{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true},
+		{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true, Class: "mage"},
 	}).Return(nil)
-	raw, err := json.Marshal([]spellsvc.SpellSlot{{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true}})
+	raw, err := json.Marshal([]spellsvc.SpellSlot{{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true, Class: "mage"}})
 	require.NoError(t, err)
 	require.NoError(t, f.svc.Module().Restorer(prepsvc.StateKey).Restore(context.Background(), 1, snaptest.Env(string(raw))))
 
@@ -363,4 +372,130 @@ func TestPrepare_NothingLogsAnEmptyList(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, rec.Summary)
 	assert.JSONEq(t, `{"spells":[]}`, string(rec.Payload))
+}
+
+// ADR 0042 step 14: "a cleric/mage prepares cleric spells in the cleric's
+// slots and wizard spells in the mage's; a preparation and a cast name the
+// entry whose slot they use." A cleric 5/mage 9 (the cleric first): each
+// entry's Info has its own limits; preparing the mage's replaces only the
+// mage's slots (the cleric's untagged slot stays, the mage's old one goes,
+// its used flag carried), the new ones carry "mage" and the journal names
+// it; the cleric's single 3rd-level slot refuses two, the mage's three
+// accept them; a class that does not cast is refused.
+func TestPrepare_Step14_EachEntryPreparesInItsOwnSlots(t *testing.T) {
+	clericMage := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{
+		RealizedLevel: 5, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1},
+		Classes: []charactersvc.EntryDerived{
+			{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
+			{Class: "fighter", Group: "warrior", State: classes.EntryActive, RealizedLevel: 9},
+			{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 9, Casts: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
+		},
+	}}
+	ctx := context.Background()
+
+	t.Run("each entry's limits", func(t *testing.T) {
+		f := newFixtureFor(t, clericMage)
+		f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+		mage, err := f.svc.InfoFor(ctx, 1, "mage")
+		require.NoError(t, err)
+		assert.Equal(t, []prepsvc.LevelLimit{{1, 4}, {2, 3}, {3, 3}, {4, 2}, {5, 1}}, mage.Limits)
+	})
+
+	t.Run("the entry's slots only", func(t *testing.T) {
+		f := newFixtureFor(t, clericMage)
+		bless := spellsvc.SpellSlot{Level: 1, SpellID: "bless", PreparedSpellName: "Bless", Used: true}
+		oldMage := spellsvc.SpellSlot{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball", Used: true, Class: "mage"}
+		f.slots.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{bless, oldMage}, nil)
+		var saved []spellsvc.SpellSlot
+		f.slots.EXPECT().SaveSlots(mock.Anything, int64(1), mock.Anything).
+			Run(func(_ context.Context, _ int64, s []spellsvc.SpellSlot) { saved = s }).Return(nil)
+		var rec actionlog.NewEntry
+		f.log.EXPECT().Record(mock.Anything, mock.Anything).
+			Run(func(_ context.Context, e actionlog.NewEntry) { rec = e }).Return(int64(7), nil)
+
+		_, err := f.svc.PrepareFor(ctx, 1, "mage", []string{"fireball", "fireball"})
+		require.NoError(t, err)
+		assert.Equal(t, []spellsvc.SpellSlot{
+			bless,
+			{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball", Used: true, Class: "mage"},
+			{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball", Class: "mage"},
+		}, saved)
+		assert.JSONEq(t, `{"spells":[{"id":"fireball","name":"Fireball","count":2}],"class":"mage"}`, string(rec.Payload))
+	})
+
+	t.Run("the entry's limit", func(t *testing.T) {
+		f := newFixtureFor(t, clericMage)
+		_, err := f.svc.PrepareFor(ctx, 1, "cleric", []string{"fireball", "fireball"})
+		require.ErrorIs(t, err, prepsvc.ErrOverLimit)
+		_, err = f.svc.PrepareFor(ctx, 1, "fighter", []string{"alarm"})
+		require.ErrorIs(t, err, domain.ErrInvalidInput)
+		assert.Zero(t, f.tx.calls)
+	})
+}
+
+// ADR 0042 step 14: an entry's spells and its slots come from the same
+// entry. A mage 9/cleric 5 (the mage entered first) asked with no class is
+// its mage entry: the mage's spellbook (not the cleric's sphere spells), the
+// mage's limits, slots tagged "mage". Asked for the cleric, the cleric's.
+func TestPrepare_Step14_NoClassIsTheFirstCastingEntrysBookAndSlots(t *testing.T) {
+	mageCleric := &charactersvc.Character{Class: "mage", Derived: charactersvc.Derived{
+		RealizedLevel: 9, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1},
+		Classes: []charactersvc.EntryDerived{
+			{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 9, Casts: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
+			{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
+		},
+	}}
+	ctx := context.Background()
+	newSvc := func(t *testing.T) (prepsvc.SVC, *mocks.MockSlots, *mocks.MockLog, *mocks.MockItems) {
+		t.Helper()
+		b := mocks.NewMockSpellbook(t)
+		// The book a class reads: the mage's spellbook, the cleric's sphere
+		// spells (stood in by enlarge); "" is never asked.
+		b.EXPECT().Of(mock.Anything, int64(1), "mage").Return([]prepsvc.SpellbookEntry{book["alarm"], book["fireball"]}, nil).Maybe()
+		b.EXPECT().Of(mock.Anything, int64(1), "cleric").Return([]prepsvc.SpellbookEntry{book["enlarge"]}, nil).Maybe()
+		chars := mocks.NewMockCharacters(t)
+		chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(mageCleric, nil).Maybe()
+		slots, log, items := mocks.NewMockSlots(t), mocks.NewMockLog(t), mocks.NewMockItems(t)
+		svc, err := prepsvc.New(prepsvc.Deps{Slots: slots, Spellbook: b, Effects: catalog(t), Items: items, Characters: chars, Log: log, Tx: &passTx{}})
+		require.NoError(t, err)
+		return svc, slots, log, items
+	}
+	ids := func(info prepsvc.Info) []string {
+		var out []string
+		for _, e := range info.Spellbook {
+			out = append(out, e.ID)
+		}
+		return out
+	}
+
+	t.Run("info", func(t *testing.T) {
+		svc, _, _, items := newSvc(t)
+		items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+		for _, class := range []string{"", "mage"} {
+			info, err := svc.InfoFor(ctx, 1, class)
+			require.NoError(t, err)
+			assert.Equal(t, []string{"alarm", "fireball"}, ids(info), "class %q", class)
+			assert.Equal(t, []prepsvc.LevelLimit{{1, 4}, {2, 3}, {3, 3}, {4, 2}, {5, 1}}, info.Limits, "class %q", class)
+		}
+		info, err := svc.InfoFor(ctx, 1, "cleric")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"enlarge"}, ids(info))
+		assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 2}, {3, 1}}, info.Limits)
+	})
+
+	t.Run("prepare", func(t *testing.T) {
+		svc, slots, log, _ := newSvc(t)
+		slots.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{}, nil)
+		var saved []spellsvc.SpellSlot
+		slots.EXPECT().SaveSlots(mock.Anything, int64(1), mock.Anything).
+			Run(func(_ context.Context, _ int64, s []spellsvc.SpellSlot) { saved = s }).Return(nil)
+		log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
+
+		_, err := svc.PrepareFor(ctx, 1, "", []string{"fireball"})
+		require.NoError(t, err)
+		assert.Equal(t, []spellsvc.SpellSlot{{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball", Class: "mage"}}, saved)
+
+		_, err = svc.PrepareFor(ctx, 1, "", []string{"enlarge"})
+		require.ErrorIs(t, err, prepsvc.ErrNotInSpellbook, "the cleric's spell is not in the mage's book")
+	})
 }

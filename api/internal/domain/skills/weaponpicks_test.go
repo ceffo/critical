@@ -237,7 +237,7 @@ func TestPicksEqual_Step13_WeaponOrderDoesNotCount(t *testing.T) {
 // weapon with no type none; the specialization is step 9's.
 func TestWeaponProficiency_Step8_PenaltyFromThePicks(t *testing.T) {
 	book := profBook(t)
-	mage := skills.WeaponProficiencyOf(book, "mage", skills.Picks{Weapon: []skills.WeaponPick{
+	mage := skills.WeaponProficiencyOf(book, skills.One("mage", 1), skills.Picks{Weapon: []skills.WeaponPick{
 		{Type: "dagger", Slots: 1}, {Type: "long_sword", Slots: 1},
 	}})
 	assert.Equal(t, -5, mage.NonproficientPenalty("sling"))
@@ -246,10 +246,91 @@ func TestWeaponProficiency_Step8_PenaltyFromThePicks(t *testing.T) {
 	assert.Zero(t, mage.NonproficientPenalty(""), "a weapon with no type takes none")
 	assert.Empty(t, mage.Specialized)
 
-	fighter := skills.WeaponProficiencyOf(book, "fighter", skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_bow", Slots: 3}}})
+	fighter := skills.WeaponProficiencyOf(book, skills.One("fighter", 1), skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_bow", Slots: 3}}})
 	assert.Equal(t, "long_bow", fighter.Specialized)
 	assert.Equal(t, -2, fighter.NonproficientPenalty("dagger"))
 
-	none := skills.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), "fighter", skills.Picks{})
+	none := skills.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), skills.One("fighter", 1), skills.Picks{})
 	assert.Zero(t, none.NonproficientPenalty("dagger"), "without Table 34 no penalty")
+}
+
+// ADR 0042 step 15 (Q12) on the attack: a multi-class character's non-proficiency penalty is the
+// smallest of its active classes', whichever class comes first (a mage/fighter takes the
+// fighter's -2, not the mage's -5); the specialization stays the first class's.
+func TestWeaponProficiency_Step15_SmallestPenaltyOfTheActiveClasses(t *testing.T) {
+	book := profBook(t)
+	picks := skills.Picks{Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}}}
+	mageFighter := skills.WeaponProficiencyOf(book, skills.Classes{{Class: "mage", Level: 3}, {Class: "fighter", Level: 4}}, picks)
+	assert.Equal(t, -2, mageFighter.NonproficientPenalty("long_sword"))
+	assert.Zero(t, mageFighter.NonproficientPenalty("dagger"))
+	mageThief := skills.WeaponProficiencyOf(book, skills.Classes{{Class: "mage", Level: 3}, {Class: "thief", Level: 3}}, picks)
+	assert.Equal(t, -3, mageThief.NonproficientPenalty("long_sword"), "the rogue's -3, not the wizard's -5")
+}
+
+// ADR 0042 step 16.1 on the weapon picks (ADR 0037 step 7): a multi-class character may pick a
+// type any of its active classes may, except that a blunt_only class restricts the picks to its
+// own list whatever the others. A fighter/cleric is refused a long sword (the fighter listed
+// first: a check of the first class alone allows it) and picks a sling; a thief/fighter picks a
+// long bow (the thief alone is refused it); a mage/thief is refused a long bow (neither class
+// lists it). The figures judge the stored picks the same way.
+func TestWeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks(t *testing.T) {
+	book := profBook(t)
+	refused := func(field string) *domain.FieldError {
+		return &domain.FieldError{Field: field, Message: "weapon_not_allowed"}
+	}
+	for _, tc := range []struct {
+		name    string
+		classes skills.Classes
+		picks   skills.Picks
+		want    *domain.FieldError
+	}{
+		{"a fighter/cleric refused a long sword", skills.Classes{{Class: "fighter", Level: 3}, {Class: "cleric", Level: 3}}, weapons("long_sword"), refused("weapon.long_sword")},
+		{"a fighter/cleric picks a sling", skills.Classes{{Class: "fighter", Level: 3}, {Class: "cleric", Level: 3}}, weapons("sling", "other_melee"), nil},
+		{"a thief/fighter picks a long bow", skills.Classes{{Class: "thief", Level: 3}, {Class: "fighter", Level: 3}}, weapons("long_bow", "long_sword"), nil},
+		{"a mage/thief picks a long sword", skills.Classes{{Class: "mage", Level: 3}, {Class: "thief", Level: 3}}, weapons("long_sword"), nil},
+		{"a mage/thief refused a long bow", skills.Classes{{Class: "mage", Level: 3}, {Class: "thief", Level: 3}}, weapons("long_bow"), refused("weapon.long_bow")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			before := skills.Sheet{Classes: tc.classes, Intelligence: 12, Picks: weapons()}
+			got, err := skills.Apply(book, nil, "human", before, skills.Edit{Picks: skills.Picks{Weapon: tc.picks.Weapon}})
+			if tc.want == nil {
+				require.NoError(t, err)
+				assert.Equal(t, tc.picks.Weapon, got.Picks.Weapon)
+				return
+			}
+			assert.Equal(t, *tc.want, fieldErr(t, err))
+		})
+	}
+	t.Run("the figures judge the stored picks together", func(t *testing.T) {
+		got, ok := skills.FiguresOf(book, skills.Classes{{Class: "fighter", Level: 3}, {Class: "cleric", Level: 3}}, 12,
+			skills.Spending{Picks: weapons("long_sword", "sling")})
+		require.True(t, ok)
+		require.Len(t, got.WeaponPicks, 2)
+		assert.False(t, got.WeaponPicks[0].Allowed, "the cleric's blunt weapons only")
+		assert.True(t, got.WeaponPicks[1].Allowed)
+		thief, ok := skills.FiguresOf(book, skills.Classes{{Class: "thief", Level: 3}, {Class: "fighter", Level: 3}}, 12,
+			skills.Spending{Picks: weapons("long_bow")})
+		require.True(t, ok)
+		assert.True(t, thief.WeaponPicks[0].Allowed, "the fighter's any weapon")
+	})
+}
+
+// ADR 0042 as built (PHB p.52, Weapon Specialization: "multi-class characters cannot use weapon
+// specialization; it is available only to single-class fighters"): a fighter/thief, the fighter
+// first, is refused a specialization pick and a stored one specializes nothing; the fighter alone
+// takes it.
+func TestWeaponPick_Step15_OnlyASingleClassFighterSpecializes(t *testing.T) {
+	book := profBook(t)
+	spec := skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: ruletablesvc.SpecializationSlots("long_sword")}}}
+	fighterThief := skills.Classes{{Class: "fighter", Level: 3}, {Class: "thief", Level: 3}}
+
+	_, err := skills.Apply(book, nil, "human", skills.Sheet{Classes: fighterThief, Intelligence: 12, Picks: weapons()}, skills.Edit{Picks: spec})
+	assert.Equal(t, domain.FieldError{Field: "weapon.long_sword", Message: skills.CodeNotAllowed}, fieldErr(t, err))
+	assert.Empty(t, skills.WeaponProficiencyOf(book, fighterThief, spec).Specialized)
+
+	fighter := skills.One("fighter", 3)
+	got, err := skills.Apply(book, nil, "human", skills.Sheet{Classes: fighter, Intelligence: 12, Picks: weapons()}, skills.Edit{Picks: spec})
+	require.NoError(t, err)
+	assert.Equal(t, spec.Weapon, got.Picks.Weapon)
+	assert.Equal(t, "long_sword", skills.WeaponProficiencyOf(book, fighter, spec).Specialized)
 }

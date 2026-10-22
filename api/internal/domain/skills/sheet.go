@@ -5,13 +5,24 @@ package skills
 // known codes, the native one among them), its race's native language ("" without a catalogue)
 // and its score in an ability (ok false when not known: a creation draft).
 type Sheet struct {
-	Class        string
-	Level        int
+	Class string
+	Level int
+	// Classes are a multi-class character's active entries (ADR 0042 step 15); nil reads the
+	// one entry Class and Level state.
+	Classes      Classes
 	Intelligence int
 	Picks        Picks
 	Languages    []string
 	Native       string
 	Score        func(ability string) (int, bool)
+}
+
+// classes are the entries s reads: Classes, else Class at Level.
+func (s Sheet) classes() Classes {
+	if len(s.Classes) > 0 {
+		return s.Classes
+	}
+	return One(s.Class, s.Level)
 }
 
 // Spending is what s spends from its pools: its picks and the languages beyond the native one
@@ -27,7 +38,7 @@ func (s Sheet) Spending() Spending {
 // pick's figures and check target, and the slot warnings. nil and no warning without a Table 34
 // row for the class.
 func Read(book Book, s Sheet) (*ProficiencySlots, []Warning) {
-	f, ok := ProficiencyFigures(book, s.Class, s.Level, s.Intelligence, s.Spending())
+	f, ok := FiguresOf(book, s.classes(), s.Intelligence, s.Spending())
 	if !ok {
 		return nil, nil
 	}
@@ -51,7 +62,7 @@ type Edit struct {
 // non-weapon one. It returns the sheet after the edit, or a refusal: a *domain.FieldError or a
 // *domain.BudgetError. Nothing is written.
 func Apply(book Book, languages LanguageBook, race string, before Sheet, e Edit) (Sheet, error) {
-	picks, err := ValidPicks(book, before.Class, e.Picks, before.Picks)
+	picks, err := validPicksOf(book, before.classes(), e.Picks, before.Picks)
 	if err != nil {
 		return Sheet{}, err
 	}
@@ -62,7 +73,7 @@ func Apply(book Book, languages LanguageBook, race string, before Sheet, e Edit)
 			return Sheet{}, err
 		}
 	}
-	if err := PicksWithinBudget(book, before.Class, before.Level, before.Intelligence, before.Spending(), after.Spending()); err != nil {
+	if err := picksWithinBudgetOf(book, before.classes(), before.Intelligence, before.Spending(), after.Spending()); err != nil {
 		return Sheet{}, err
 	}
 	return after, nil

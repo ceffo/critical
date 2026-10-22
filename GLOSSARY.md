@@ -56,6 +56,7 @@ Warrior, wizard, priest or rogue: the grouping the tables are read by; a field o
 One class of a character with its own realized level and XP, **active** (it earns XP and levels) or **frozen** (a dual-class's old class, with the level it was left at); the class features are read through it. [ADR 0040](docs/adr/0040-classes-are-data.md) step 5, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md) step 1. _Avoid_: "class" for the entry.
 _Code_: Entry
 _Code_: EntryState
+_Code_: EntryDerived, ClassLevel, Classes
 
 **Multi-class** (fr: multi-classé):
 Several classes from the start (two or three active class entries), each levelling on its own, the XP split evenly between them. The user also says "dual". PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
@@ -75,6 +76,10 @@ _Code_: Feature
 **Class limits** (fr: limites de classe):
 What a class may wear and wield: the body armour columns, whether it uses a shield, the weapons it may wield (by type or catalogue code) or only blunt ones. Breaking them is a warning, never a refusal; they also give the weapon types a proficiency may be picked in. [ADR 0033](docs/adr/0033-equipment.md) step 20, [ADR 0037](docs/adr/0037-proficiencies.md) step 7, [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.6.
 _Code_: WeaponRef
+
+**Feature grant** (fr: aptitude acquise):
+A feature kind a character has through one of its class entries, read at that entry's level (a frozen entry's at the level it was left at); two entries granting the same kind each keep their own. [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md) step 12.
+_Code_: Grant, FeatureGrant
 
 **Feature kind** (fr: type d'aptitude):
 The mechanic a class feature drives, one of a closed list the code implements once (`turn_undead`, `rogue_skills`, `spellbook`…); the code switches on it, never on a class id. [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.

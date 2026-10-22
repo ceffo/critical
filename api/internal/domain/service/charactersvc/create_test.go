@@ -466,7 +466,7 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 			e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{
 				ID: 5, Class: tc.class, Race: "human", Dex: 12, RealizedLevel: 1,
 			}, nil).Once()
-			e.xp.EXPECT().EntriesTotal(mock.Anything, int64(5)).Return(0, nil).Once()
+			e.xp.EXPECT().Awards(mock.Anything, int64(5)).Return(nil, nil).Once()
 			e.rules.EXPECT().LevelFor(tc.class, 0).Return(1, nil).Once()
 			e.rules.EXPECT().XPThreshold(tc.class, 2).Return(1_250, nil).Once()
 			e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
@@ -491,7 +491,7 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 		e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{
 			ID: 5, Class: "fighter", Race: "human", Str: 12, RealizedLevel: 1,
 		}, nil).Once()
-		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(5)).Return(0, nil).Once()
+		e.xp.EXPECT().Awards(mock.Anything, int64(5)).Return(nil, nil).Once()
 		e.rules.EXPECT().LevelFor("fighter", 0).Return(1, nil).Once()
 		e.rules.EXPECT().XPThreshold("fighter", 2).Return(2_000, nil).Once()
 		e.rules.EXPECT().THAC0For("warrior", 1).Return(20, nil).Once()

@@ -235,17 +235,65 @@ func TestSetRealizedLevel_WritesTheLevelAndItsMaxHP(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
 	dal := characterdal.New(q)
+	q.EXPECT().ListClassEntries(ctx, int64(3)).Return(nil, nil).Once()
 	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
 		HpMax: 91, RealizedLevel: sql.NullInt64{Int64: 16, Valid: true}, ID: 3,
 	}).Return(1, nil).Once()
 	q.EXPECT().SetFirstActiveEntryLevel(ctx, queries.SetFirstActiveEntryLevelParams{RealizedLevel: 16, CharacterID: 3}).
 		Return(nil).Once()
-	require.NoError(t, dal.SetRealizedLevel(ctx, 3, 16, 91))
+	require.NoError(t, dal.SetRealizedLevel(ctx, 3, "", 16, 91))
+
+	q.EXPECT().ListClassEntries(ctx, int64(9)).Return(nil, nil).Once()
 
 	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
 		HpMax: 1, RealizedLevel: sql.NullInt64{Int64: 2, Valid: true}, ID: 9,
 	}).Return(0, nil).Once()
-	require.ErrorIs(t, dal.SetRealizedLevel(ctx, 9, 2, 1), domain.ErrCharacterNotFound)
+	require.ErrorIs(t, dal.SetRealizedLevel(ctx, 9, "", 2, 1), domain.ErrCharacterNotFound)
+}
+
+// ADR 0042 step 7: a level-up names its class entry. The first active
+// entry's level is the column (and that entry's row) as before; another
+// entry's level is that entry's row only, with the max HP, the column keeping
+// the first entry's level. A frozen entry (no active row of the class) or no
+// character row is ErrCharacterNotFound, which the caller's transaction rolls
+// back.
+func TestSetRealizedLevel_Step7_TheNamedEntrysLevel(t *testing.T) {
+	ctx := context.Background()
+	entries := []queries.ListClassEntriesRow{
+		{Class: "cleric", RealizedLevel: 5, State: "active"},
+		{Class: "fighter", RealizedLevel: 4, State: "active"},
+		{Class: "thief", RealizedLevel: 3, LeftAtLevel: 3, State: "frozen"},
+	}
+	t.Run("another entry: its row and the max HP, not the column", func(t *testing.T) {
+		q := mocks.NewMockQuerier(t) // SetRealizedLevel and SetFirstActiveEntryLevel not expected
+		q.EXPECT().ListClassEntries(ctx, int64(3)).Return(entries, nil).Once()
+		q.EXPECT().SetHPMax(ctx, queries.SetHPMaxParams{HpMax: 33, ID: 3}).Return(1, nil).Once()
+		q.EXPECT().SetEntryLevel(ctx, queries.SetEntryLevelParams{RealizedLevel: 5, CharacterID: 3, Class: "fighter"}).Return(1, nil).Once()
+		require.NoError(t, characterdal.New(q).SetRealizedLevel(ctx, 3, "fighter", 5, 33))
+	})
+	t.Run("the first active entry: the column and its row", func(t *testing.T) {
+		q := mocks.NewMockQuerier(t)
+		q.EXPECT().ListClassEntries(ctx, int64(3)).Return(entries, nil).Once()
+		q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
+			HpMax: 36, RealizedLevel: sql.NullInt64{Int64: 6, Valid: true}, ID: 3,
+		}).Return(1, nil).Once()
+		q.EXPECT().SetFirstActiveEntryLevel(ctx, queries.SetFirstActiveEntryLevelParams{RealizedLevel: 6, CharacterID: 3}).
+			Return(nil).Once()
+		require.NoError(t, characterdal.New(q).SetRealizedLevel(ctx, 3, "cleric", 6, 36))
+	})
+	t.Run("a frozen entry is not found", func(t *testing.T) {
+		q := mocks.NewMockQuerier(t)
+		q.EXPECT().ListClassEntries(ctx, int64(3)).Return(entries, nil).Once()
+		q.EXPECT().SetHPMax(ctx, queries.SetHPMaxParams{HpMax: 33, ID: 3}).Return(1, nil).Once()
+		q.EXPECT().SetEntryLevel(ctx, queries.SetEntryLevelParams{RealizedLevel: 4, CharacterID: 3, Class: "thief"}).Return(0, nil).Once()
+		require.ErrorIs(t, characterdal.New(q).SetRealizedLevel(ctx, 3, "thief", 4, 33), domain.ErrCharacterNotFound)
+	})
+	t.Run("no character row is not found", func(t *testing.T) {
+		q := mocks.NewMockQuerier(t)
+		q.EXPECT().ListClassEntries(ctx, int64(9)).Return(entries, nil).Once()
+		q.EXPECT().SetHPMax(ctx, queries.SetHPMaxParams{HpMax: 33, ID: 9}).Return(0, nil).Once()
+		require.ErrorIs(t, characterdal.New(q).SetRealizedLevel(ctx, 9, "fighter", 5, 33), domain.ErrCharacterNotFound)
+	})
 }
 
 // A rename or a retirement that matches no row (another user's character, a

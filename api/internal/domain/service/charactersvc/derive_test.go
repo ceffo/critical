@@ -50,6 +50,15 @@ func expectKelsenRules(r *mocks.MockRules, xp, level int) {
 func kelsenDerived() charactersvc.Derived {
 	next := 1_320_000
 	return charactersvc.Derived{
+		// His one class entry (ADR 0042 step 1) and the features it grants
+		// at 15 (ADR 0042 step 12).
+		Classes: []charactersvc.EntryDerived{{
+			Class: "bard", Group: "rogue", State: classes.EntryActive, XP: 1_293_418, TargetLevel: 15, RealizedLevel: 15,
+			NextLevelXP: &next, SpellSlots: level15Slots, Casts: true, LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+		}},
+		Features: []charactersvc.FeatureGrant{
+			{Kind: classes.KindRogueSkills, Class: "bard", Level: 15}, {Kind: classes.KindSpellbook, Class: "bard", Level: 15},
+		},
 		XPTotal: 1_293_418, Group: "rogue", TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
 		SpellSlots: level15Slots,
 		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
@@ -87,7 +96,7 @@ var rogueHitDice = ruletablesvc.HitDiceRow{Group: "rogue", Die: 6, NameLevel: 10
 func TestDerive_KelsenMatchesHisSheet(t *testing.T) {
 	r := newRules(t)
 	expectKelsenRules(r, 1_293_418, 15)
-	got, err := charactersvc.Derive(kelsen(), 0, "", r)
+	got, err := charactersvc.Derive(kelsen(), nil, "", r)
 	require.NoError(t, err)
 	assert.Equal(t, kelsenDerived(), got)
 }
@@ -106,7 +115,7 @@ func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 		r.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(map[int]int{1: 3}, nil).Once()
 		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
 
-		got, err := charactersvc.Derive(kelsen(), 26_582, "", r)
+		got, err := charactersvc.Derive(kelsen(), []int{26_582}, "", r)
 		require.NoError(t, err)
 		assert.Equal(t, 1_320_000, got.XPTotal)
 		assert.Equal(t, 16, got.TargetLevel)
@@ -123,7 +132,7 @@ func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 		r.EXPECT().SavesFor("rogue", 20).Return(rogue13to16, nil).Once()
 		r.EXPECT().SpellsPerDay(classDef("bard"), 20, mock.Anything).Return(map[int]int{1: 4}, nil).Once()
 
-		got, err := charactersvc.Derive(c, 0, "", r)
+		got, err := charactersvc.Derive(c, nil, "", r)
 		require.NoError(t, err)
 		assert.Equal(t, 20, got.TargetLevel)
 		assert.Nil(t, got.NextLevelXP, "XPThreshold is never asked for level 21")
@@ -149,14 +158,14 @@ func TestDerive_Step2_TheClassGroupPicksTheRows(t *testing.T) {
 				r.EXPECT().RogueSkills(skillSet("thief"), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Once()
 				r.EXPECT().BackstabFor(1).Return(2, nil).Once()
 			}
-			_, err := charactersvc.Derive(c, 0, "", r)
+			_, err := charactersvc.Derive(c, nil, "", r)
 			require.NoError(t, err)
 		})
 	}
 	t.Run("an unknown class is an error", func(t *testing.T) {
 		c := kelsen()
 		c.Class = "paladin"
-		_, err := charactersvc.Derive(c, 0, "", newRules(t))
+		_, err := charactersvc.Derive(c, nil, "", newRules(t))
 		require.ErrorContains(t, err, "paladin")
 	})
 }
@@ -170,7 +179,7 @@ func TestDerive_Step5_THAC0FromTable53(t *testing.T) {
 	r.EXPECT().THAC0For("rogue", 15).Return(12, nil).Once()
 	r.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
 	r.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(level15Slots, nil).Once()
-	got, err := charactersvc.Derive(kelsen(), 0, "", r)
+	got, err := charactersvc.Derive(kelsen(), nil, "", r)
 	require.NoError(t, err)
 	assert.Equal(t, 12, got.THAC0)
 }
@@ -186,7 +195,7 @@ func TestDerive_Step6_SavesFromTable60(t *testing.T) {
 	r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 	r.EXPECT().SavesFor("rogue", 15).Return(row, nil).Once()
 	r.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(level15Slots, nil).Once()
-	got, err := charactersvc.Derive(kelsen(), 0, "", r)
+	got, err := charactersvc.Derive(kelsen(), nil, "", r)
 	require.NoError(t, err)
 	assert.Equal(t, charactersvc.Saves{ParaPoison: 1, RodStaffWand: 2, PetriPoly: 3, Breath: 4, Spell: 5}, got.Saves)
 }
@@ -198,7 +207,7 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 	t.Run("bard: Table 32", func(t *testing.T) {
 		r := newRules(t)
 		expectKelsenRules(r, 1_293_418, 15)
-		got, err := charactersvc.Derive(kelsen(), 0, "", r)
+		got, err := charactersvc.Derive(kelsen(), nil, "", r)
 		require.NoError(t, err)
 		assert.Equal(t, level15Slots, got.SpellSlots)
 	})
@@ -215,7 +224,7 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 				r.EXPECT().RogueSkills(skillSet("thief"), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Once()
 				r.EXPECT().BackstabFor(14).Return(5, nil).Once()
 			}
-			got, err := charactersvc.Derive(c, 0, "", r)
+			got, err := charactersvc.Derive(c, nil, "", r)
 			require.NoError(t, err)
 			assert.Empty(t, got.SpellSlots)
 		})
@@ -229,7 +238,7 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 		r.EXPECT().THAC0For("wizard", 13).Return(16, nil).Once()
 		r.EXPECT().SavesFor("wizard", 13).Return(rogue13to16, nil).Once()
 		r.EXPECT().SpellsPerDay(classDef("mage"), 13, mock.Anything).Return(map[int]int{1: 5, 6: 2}, nil).Once()
-		got, err := charactersvc.Derive(c, 0, "", r)
+		got, err := charactersvc.Derive(c, nil, "", r)
 		require.NoError(t, err)
 		assert.Equal(t, map[int]int{1: 5, 6: 2}, got.SpellSlots)
 	})
@@ -240,7 +249,7 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 		r.EXPECT().SpellsPerDay(classDef("cleric"), 13, 16).Return(map[int]int{1: 8, 5: 2}, nil).Once()
 		r.EXPECT().SpellFailureFor(16).Return(0, nil).Once()
 		r.EXPECT().TurningAt(13).Return(nil, nil).Once()
-		got, err := charactersvc.Derive(c, 0, "", r)
+		got, err := charactersvc.Derive(c, nil, "", r)
 		require.NoError(t, err)
 		assert.Equal(t, map[int]int{1: 8, 5: 2}, got.SpellSlots)
 	})
@@ -268,7 +277,7 @@ func TestDerive_Steps13to16_TheClericsWisdomAndTurning(t *testing.T) {
 	r.EXPECT().SpellsPerDay(classDef("cleric"), 2, 9).Return(map[int]int{1: 2}, nil).Once()
 	r.EXPECT().SpellFailureFor(9).Return(20, nil).Once()
 	r.EXPECT().TurningAt(2).Return(turning, nil).Once()
-	got, err := charactersvc.Derive(c, 0, "", r)
+	got, err := charactersvc.Derive(c, nil, "", r)
 	require.NoError(t, err)
 	assert.Equal(t, 20, got.SpellFailure)
 	assert.Equal(t, turning, got.Turning)
@@ -281,7 +290,7 @@ func TestDerive_Steps13to16_TheClericsWisdomAndTurning(t *testing.T) {
 	rm.EXPECT().THAC0For("wizard", 13).Return(16, nil).Once()
 	rm.EXPECT().SavesFor("wizard", 13).Return(rogue13to16, nil).Once()
 	rm.EXPECT().SpellsPerDay(classDef("mage"), 13, mock.Anything).Return(map[int]int{1: 5}, nil).Once()
-	got, err = charactersvc.Derive(m, 0, "", rm)
+	got, err = charactersvc.Derive(m, nil, "", rm)
 	require.NoError(t, err)
 	assert.Zero(t, got.SpellFailure, "a mage has no spell failure")
 	assert.Nil(t, got.Turning, "a mage does not turn undead")
@@ -319,7 +328,7 @@ func TestDerive_Step22_1_RaceSaveBonus(t *testing.T) {
 			if tc.want != (charactersvc.Saves{}) {
 				r.EXPECT().ConSaveBonusFor(16).Return(4, nil).Once()
 			}
-			got, err := charactersvc.Derive(c, 0, "", r)
+			got, err := charactersvc.Derive(c, nil, "", r)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, got.RaceSaveBonus)
 			assert.Equal(t, kelsenSaves, got.Saves, "the bonus never moves the target")
@@ -336,7 +345,7 @@ func TestDerive_Step24_SheetIsNotCompared(t *testing.T) {
 	c.Sheet = charactersvc.Sheet{Level: 14, THAC0: 14, Saves: charactersvc.Saves{ParaPoison: 11, RodStaffWand: 8, PetriPoly: 10, Breath: 14, Spell: 10}}
 	r := newRules(t)
 	expectKelsenRules(r, 1_293_418, 15)
-	got, err := charactersvc.Derive(c, 0, "", r)
+	got, err := charactersvc.Derive(c, nil, "", r)
 	require.NoError(t, err)
 	assert.Equal(t, 15, got.TargetLevel, "the computed level is used")
 	assert.Equal(t, 13, got.THAC0, "the computed THAC0 is used")
@@ -359,10 +368,12 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 		r.EXPECT().SavesFor("rogue", 9).Return(rogue13to16, nil).Once()
 		r.EXPECT().SpellsPerDay(classDef("bard"), 9, mock.Anything).Return(map[int]int{1: 3}, nil).Once()
 		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
-		got, err := charactersvc.Derive(c, 250_000, "", r)
+		got, err := charactersvc.Derive(c, []int{250_000}, "", r)
 		require.NoError(t, err)
 		assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
-			{Level: 10, Die: 6}, {Level: 11, FixedGain: 2}, {Level: 12, FixedGain: 2},
+			{Class: "bard", Classes: 1, Level: 10, Die: 6},
+			{Class: "bard", Classes: 1, Level: 11, FixedGain: 2},
+			{Class: "bard", Classes: 1, Level: 12, FixedGain: 2},
 		}}, got.LevelUp)
 	})
 	t.Run("the warriors' row for a fighter", func(t *testing.T) {
@@ -375,14 +386,14 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 		r.EXPECT().THAC0For("warrior", 1).Return(20, nil).Once()
 		r.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
 		r.EXPECT().HitDiceFor("warrior").Return(ruletablesvc.HitDiceRow{Group: "warrior", Die: 10, NameLevel: 9, GainAfter: 3}, nil).Once()
-		got, err := charactersvc.Derive(c, 0, "", r)
+		got, err := charactersvc.Derive(c, nil, "", r)
 		require.NoError(t, err)
-		assert.Equal(t, []charactersvc.PendingLevel{{Level: 2, Die: 10}}, got.LevelUp.Pending)
+		assert.Equal(t, []charactersvc.PendingLevel{{Class: "fighter", Classes: 1, Level: 2, Die: 10}}, got.LevelUp.Pending)
 	})
 	t.Run("none at the target level, and no lookup", func(t *testing.T) {
 		r := newRules(t)
 		expectKelsenRules(r, 1_293_418, 15)
-		got, err := charactersvc.Derive(kelsen(), 0, "", r)
+		got, err := charactersvc.Derive(kelsen(), nil, "", r)
 		require.NoError(t, err)
 		assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}}, got.LevelUp)
 	})
@@ -395,7 +406,7 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 		c.RealizedLevel = 0
 		r := newRules(t)
 		expectKelsenRules(r, 1_293_418, 15)
-		got, err := charactersvc.Derive(c, 0, "", r)
+		got, err := charactersvc.Derive(c, nil, "", r)
 		require.NoError(t, err)
 		assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}}, got.LevelUp)
 	})
@@ -414,7 +425,7 @@ func TestDerive_Step7_4_ATargetUnderTheRealizedLevelIsFlagged(t *testing.T) {
 	r.EXPECT().THAC0For("rogue", 16).Return(12, nil).Once()
 	r.EXPECT().SavesFor("rogue", 16).Return(rogue13to16, nil).Once()
 	r.EXPECT().SpellsPerDay(classDef("bard"), 16, mock.Anything).Return(map[int]int{1: 4}, nil).Once()
-	got, err := charactersvc.Derive(c, 0, "", r)
+	got, err := charactersvc.Derive(c, nil, "", r)
 	require.NoError(t, err)
 	assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}, RealizedAboveTarget: true}, got.LevelUp)
 	assert.Equal(t, 15, got.TargetLevel)
@@ -428,7 +439,7 @@ func TestDerive_ATableErrorIsAnError(t *testing.T) {
 	r := newRules(t)
 	boom := errors.New("boom")
 	r.EXPECT().LevelFor("bard", 1_293_418).Return(0, boom).Once()
-	_, err := charactersvc.Derive(kelsen(), 0, "", r)
+	_, err := charactersvc.Derive(kelsen(), nil, "", r)
 	require.ErrorIs(t, err, boom)
 }
 
@@ -468,6 +479,7 @@ func withDefinitions(t *testing.T, r *mocks.MockRules) {
 	tables := cataloguetest.Tables(t)
 	r.EXPECT().Definitions().RunAndReturn(tables.Definitions).Maybe()
 	r.EXPECT().Class(mock.Anything).RunAndReturn(tables.Class).Maybe()
+	r.EXPECT().LevelLimit(mock.Anything, mock.Anything).RunAndReturn(tables.LevelLimit).Maybe()
 	r.EXPECT().ClassGroup(mock.Anything).RunAndReturn(tables.ClassGroup).Maybe()
 	// A class without a spell_progression has no slots (ADR 0040 step 1.9):
 	// the tables answer it, a test expects only the slots of a caster.
@@ -509,7 +521,7 @@ func TestDerive_Step20_1_SpellbookRules(t *testing.T) {
 			if tc.want != nil {
 				r.EXPECT().IntelligenceFor(tc.score).Return(tc.row, nil).Once()
 			}
-			got, err := charactersvc.Derive(c, 0, "", r)
+			got, err := charactersvc.Derive(c, nil, "", r)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, got.Spellbook)
 		})
@@ -545,7 +557,7 @@ func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
 			r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
 			r.EXPECT().RogueSkills(skillSet("thief"), "elf", 17, tc.asked, map[string]int{"open_locks": 70}).Return(skills, nil).Once()
 			r.EXPECT().BackstabFor(1).Return(2, nil).Once()
-			got, err := charactersvc.Derive(c, 40_000, tc.worn, r)
+			got, err := charactersvc.Derive(c, []int{40_000}, tc.worn, r)
 			require.NoError(t, err)
 			thief := skillSetOf(got, "thief")
 			require.NotNil(t, thief)
@@ -562,7 +574,7 @@ func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
 	t.Run("a bard has neither", func(t *testing.T) {
 		r := newRules(t)
 		expectKelsenRules(r, 1_293_418, 15)
-		got, err := charactersvc.Derive(kelsen(), 0, "", r)
+		got, err := charactersvc.Derive(kelsen(), nil, "", r)
 		require.NoError(t, err)
 		assert.Nil(t, skillSetOf(got, "thief"))
 		assert.Zero(t, got.Backstab)
@@ -599,7 +611,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 			r.EXPECT().SpellsPerDay(classDef("bard"), mock.Anything, mock.Anything).Return(map[int]int{}, nil)
 			r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
 			r.EXPECT().RogueSkills(skillSet("bard"), "human", 16, tc.asked, map[string]int{"climb_walls": 40}).Return(skills, nil).Once()
-			got, err := charactersvc.Derive(c, 40_000, tc.worn, r)
+			got, err := charactersvc.Derive(c, []int{40_000}, tc.worn, r)
 			require.NoError(t, err)
 			bard := skillSetOf(got, "bard")
 			require.NotNil(t, bard)
@@ -626,7 +638,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 		r.EXPECT().SavesFor("rogue", 1).Return(ruletablesvc.SavingThrowRow{}, nil)
 		r.EXPECT().RogueSkills(skillSet("thief"), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Once()
 		r.EXPECT().BackstabFor(1).Return(2, nil).Once()
-		got, err := charactersvc.Derive(c, 0, "", r)
+		got, err := charactersvc.Derive(c, nil, "", r)
 		require.NoError(t, err)
 		assert.Nil(t, skillSetOf(got, "bard"))
 	})
@@ -667,7 +679,7 @@ func TestRaceTraits_Step4_ConSaveBonusFromTheTrait(t *testing.T) {
 			if tc.want != (charactersvc.Saves{}) {
 				r.EXPECT().ConSaveBonusFor(16).Return(4, nil).Once()
 			}
-			got, err := charactersvc.Derive(c, 0, "", r)
+			got, err := charactersvc.Derive(c, nil, "", r)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, got.RaceSaveBonus)
 		})

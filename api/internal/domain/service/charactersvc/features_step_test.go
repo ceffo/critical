@@ -85,7 +85,7 @@ func runFeatureCases(t *testing.T, cases []featureCase) {
 			if tc.set != nil {
 				tc.set(c)
 			}
-			d, err := charactersvc.Derive(c, 0, "", edited(t, tc.edit))
+			d, err := charactersvc.Derive(c, nil, "", edited(t, tc.edit))
 			require.NoError(t, err)
 			tc.check(t, d)
 		})
@@ -406,5 +406,31 @@ func TestFeatures_Step3_5_ASkillSetPerRogueSkillsFeature(t *testing.T) {
 			require.Len(t, d.SkillSets, 1)
 			assert.Equal(t, "thief", d.SkillSets[0].Set)
 		}},
+	})
+}
+
+// ADR 0042 step 16.2 reads "allows no body armour" from the class's equipment
+// (ADR 0040 step 1.6), never from its id: the mage's list (only none) sets
+// NoArmour on its entry, the fighter's does not, and a mage given a leather
+// list loses it.
+func TestDerive_Step16_2_NoArmourComesFromTheEquipment(t *testing.T) {
+	leather := func(cs []classes.Class) []classes.Class {
+		for i := range cs {
+			if cs[i].ID == "mage" {
+				cs[i].Equipment.Armour = []string{"leather"}
+			}
+		}
+		return cs
+	}
+	noArmour := func(want bool) func(*testing.T, charactersvc.Derived) {
+		return func(t *testing.T, d charactersvc.Derived) {
+			require.Len(t, d.Classes, 1)
+			assert.Equal(t, want, d.Classes[0].NoArmour)
+		}
+	}
+	runFeatureCases(t, []featureCase{
+		{"the mage wears none", keep, "mage", 1, nil, noArmour(true)},
+		{"the fighter wears any", keep, "fighter", 1, nil, noArmour(false)},
+		{"a mage listing leather may wear it", leather, "mage", 1, nil, noArmour(false)},
 	})
 }

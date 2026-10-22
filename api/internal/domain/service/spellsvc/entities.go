@@ -52,4 +52,9 @@ type SpellSlot struct {
 	// effects data): blank until cast (the player picks the spell then) and
 	// gone at the next long rest.
 	Extra bool
+	// Class is the class entry whose slot this is (ADR 0042 step 14), set
+	// only for a character with two spellcasting entries; empty: the first
+	// active spellcasting entry's. The tag keeps it out of a snapshot of a
+	// single caster's slots.
+	Class string `json:",omitempty"`
 }

@@ -32,6 +32,15 @@ WHERE character_classes.character_id = sqlc.arg(character_id) AND position = (
     SELECT MIN(e.position) FROM character_classes e WHERE e.character_id = sqlc.arg(character_id) AND e.state = 'active'
 );
 
+-- A level-up roll of a multi-class character's other entry and its undo (ADR 0042 step 7): the
+-- entry's level and the max HP; the column keeps the first active entry's level.
+-- name: SetHPMax :execrows
+UPDATE characters SET hp_max = sqlc.arg(hp_max) WHERE id = sqlc.arg(id);
+
+-- name: SetEntryLevel :execrows
+UPDATE character_classes SET realized_level = sqlc.arg(realized_level)
+WHERE character_id = sqlc.arg(character_id) AND class = sqlc.arg(class) AND state = 'active';
+
 -- A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
 -- name: SetSkillPoints :execrows
 UPDATE characters SET skill_sets = sqlc.arg(skill_sets) WHERE id = sqlc.arg(id);

@@ -40,6 +40,7 @@ type jsonSlot struct {
 	PreparedSpellName string `json:"prepared_spell_name"`
 	Used              bool   `json:"used"`
 	Extra             bool   `json:"extra,omitempty"`
+	Class             string `json:"class,omitempty"`
 }
 
 // GetSlots returns the slot list. An absent row is treated as an empty list.
@@ -61,7 +62,7 @@ func (d *DAL) GetSlots(ctx context.Context, characterID int64) ([]spellsvc.Spell
 	out := make([]spellsvc.SpellSlot, 0, len(raw))
 	for _, j := range raw {
 		out = append(out, spellsvc.SpellSlot{
-			Level: j.Level, SpellID: j.PreparedSpellID, PreparedSpellName: j.PreparedSpellName, Used: j.Used, Extra: j.Extra,
+			Level: j.Level, SpellID: j.PreparedSpellID, PreparedSpellName: j.PreparedSpellName, Used: j.Used, Extra: j.Extra, Class: j.Class,
 		})
 	}
 	return out, nil
@@ -71,7 +72,7 @@ func (d *DAL) GetSlots(ctx context.Context, characterID int64) ([]spellsvc.Spell
 func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc.SpellSlot) error {
 	raw := make([]jsonSlot, 0, len(slots))
 	for _, s := range slots {
-		raw = append(raw, jsonSlot{Level: s.Level, PreparedSpellID: s.SpellID, PreparedSpellName: s.PreparedSpellName, Used: s.Used, Extra: s.Extra})
+		raw = append(raw, jsonSlot{Level: s.Level, PreparedSpellID: s.SpellID, PreparedSpellName: s.PreparedSpellName, Used: s.Used, Extra: s.Extra, Class: s.Class})
 	}
 	blob, err := json.Marshal(raw)
 	if err != nil {

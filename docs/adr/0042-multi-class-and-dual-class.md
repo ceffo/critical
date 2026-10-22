@@ -3,7 +3,10 @@
 **Status**: accepted 2026-10-21 for what the user's triage decided (quoted in Context); the
 readings where the book is silent or differs from the triage's outline (Q1 to Q16) were put to the
 user and accepted as written on 2026-10-22 ("Decided with the user"). Step 1 (the class entries as the storage and wire shape, single-class
-characters only) is implemented as built (see "As built" under step 1); the other steps are not. Amends [ADR 0030](0030-classes-and-races.md)
+characters only) is implemented as built (see "As built" under step 1). The multi-class steps (5 to 10,
+12, 14 to 17) are built 2026-10-22 (CRI-169, see each step's "As built"); creation and entering a
+multi-class character (steps 2 and 4) and the dual-class steps (3, 11, 13, the dual-class slots of
+15) are not. Amends [ADR 0030](0030-classes-and-races.md)
 steps 1, 3, 5, 6, 7 and 8, [ADR 0015](0015-experience.md) steps 1 to 3,
 [ADR 0037](0037-proficiencies.md) steps 3, 7 and 8 and [ADR 0040](0040-classes-are-data.md)
 step 5, each in place (dated 2026-10-21) and each on implementation. Builds on the class
@@ -186,6 +189,10 @@ Every warning is structured data (a code and its numbers), worded by the web.
    Tests: `EntryXP_Step5_1_EvenSharesEvenAtTheLimit` (xpsvc: a fighter/cleric's 1,001 XP award
    gives 500 each; a share still goes to an entry over its race's limit),
    `EntryXP_Step5_2_DualClassAllToTheActiveEntry` (the frozen entry's XP is unchanged).
+   _(As built, 2026-10-22: `charactersvc.EntryXP` per entry, from the awards `xpsvc.Totals.Awards` lists
+   (each with its bonus); the share is floored per award. `Derived.Classes[].XP` serves it; the character's
+   `XPTotal` and the XP ledger's total and progress are the first active entry's. Both tests are in
+   charactersvc, where the split is computed.)_
 
 6. **The XP bonus** (amends ADR 0015 step 2 as amended by ADR 0040 step 6). The book gives the 10%
    bonus to a character with 16 or more in all his prime requisites
@@ -196,6 +203,8 @@ Every warning is structured data (a code and its numbers), worded by the web.
    Test: `BonusEligible_Step6_EveryActiveClassesPrimeRequisites` (xpsvc: a fighter/mage of Str 16,
    Int 15 not eligible; of Str 16, Int 16 eligible; a dual-class mage of Int 16 whose frozen
    fighter's Str is 15 eligible).
+   _(As built, 2026-10-22: `xpsvc` Get collects the prime requisites of every active entry's class and
+   `BonusEligible` tests them all, one flag for the award.)_
 
 7. **Target level and level-ups per entry** (amends [ADR 0030](0030-classes-and-races.md) steps 3
    and 7). Each active entry has its own target level, from its XP and its class's thresholds
@@ -211,6 +220,18 @@ Every warning is structured data (a code and its numbers), worded by the web.
    a pending level and cleric none), `Roll_Step7_TheRequestNamesTheEntry` (levelupsvc: a level of
    the wrong entry or a frozen entry refused with `level_up_not_pending`),
    `Derive_Step7_LevelLimitWarnsPerEntry` (charactersvc).
+   _(As built, 2026-10-22: `Derived.Classes[]` carries each entry's target, realized level, next threshold
+   and pending levels; `Derived.LevelUp.Pending` lists them all in entry order, each `PendingLevel`
+   carrying its `class` and the number of classes. The roll's body takes `class` (empty: the first active
+   entry); a level of another entry, a frozen one or an unknown class is `level_up_not_pending`.
+   `characterdal.SetRealizedLevel` writes the first active entry's level to the column and its row, any
+   other entry's to its row only (with the max HP); the `level_up` snapshot names the class when there
+   are several. The per-entry `level_limit` warning is the character's (`charactersvc.LevelLimitWarnings`, on
+every read): code `level_limit`, field `level`, the entry's `class`, its level in `value` and the
+race's limit in `max` (the wire's warning gains an optional `class`); it reads the ruleset's one mode,
+`warn`, without asking for it. Test: `Derive_Step7_LevelLimitWarnsPerEntry` (a half-elf cleric
+13/fighter 15 warned for the fighter only; a frozen elf fighter 13 warned; a human and the half-elf
+bard 15 never).)_
 
 ### Combat values
 
@@ -224,6 +245,8 @@ Every warning is structured data (a code and its numbers), worded by the web.
    Tests: `THAC0_Step8_BestOfTheActiveEntries` (charactersvc: a fighter 6/cleric 7 uses the
    fighter's row), `THAC0_Step8_DualClassNewClassUntilTheCrossover` (a fighter 9 to mage 9 uses the
    mage's row; at mage 10, as decided in Q5).
+   _(As built, 2026-10-22, for a multi-class character: the lowest Table 53 value among the active entries
+   (`charactersvc` `bestCore`). The dual-class crossover is not built (dual-class items).)_
 
 9. **Saving throws** (amends ADR 0030 step 6). For each of the five categories, the best (lowest)
    target among the active entries at their realized levels (decided in triage; PHB multi/dual,
@@ -233,6 +256,8 @@ Every warning is structured data (a code and its numbers), worded by the web.
    then the best per category _(Q5)_. The race's bonus is unchanged (ADR 0030 step 22).
    Test: `Saves_Step9_BestPerCategory` (charactersvc: a fighter/mage at levels where the fighter is
    better on breath and the mage on spells takes each best).
+   _(As built, 2026-10-22, for a multi-class character: per category among the active entries, in the
+   same `bestCore`.)_
 
 ### Hit points
 
@@ -256,6 +281,14 @@ Every warning is structured data (a code and its numbers), worded by the web.
     dice 6, 5 and 2 give 4 before Constitution), `Roll_Step10_2_DieDividedByTheClasses` (levelupsvc:
     a d6 of 4 for a three-class character gives 1; a 1 gives 1, never 0; distinct dice through the
     dice port), `Roll_Step10_3_FixedGainAboveTheNameLevel` (as decided in Q8).
+
+    _(As built, 2026-10-22, steps 10.2 to 10.4: `ruletablesvc.SharedGain(die, conAdjustment, classes)`
+    gives the die share (at least 1), the Constitution share (floored towards minus infinity, the warrior
+    column for a warrior entry) and the gain, **at least 1 in total** (`max(1, dieShare + conShare)`), so
+    one class is exactly ADR 0030 step 7.1 and a negative share never takes hit points away (decided by
+    the supervisor on implementation, 2026-10-22). The `level_up` payload adds `class`, `classes`,
+    `dieShare` and `conShare` for a multi-class character only; a single-class one is unchanged. Step
+    10.1 (creation) is not built: it is the multi-class creation item's.)_
 
     _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 4.4, on implementation: a psionicist entry's PSP gain at its level-up is not divided by the number of classes)_
 
@@ -282,6 +315,25 @@ Every warning is structured data (a code and its numbers), worded by the web.
     and carries step 13's warning.
     Test: `Lookup_Step12_EachEntryReadsItsOwnLevel` (domain: a fighter 7/thief 9 backstabs at the
     thief's 9; a dual-class's frozen feature is granted at its `left_at_level`).
+    _(As built, 2026-10-22: `classes.Grants(entries, def, kind)` lists one grant per entry whose class has
+    the kind at the entry's `Level()` (a frozen entry's left-at level); `Derived.Features` serves them and
+    `Derived.FeatureLevel` / `FeatureClass` give the granting entry's level and class to the rules that
+    read one (skill points and their budget, backstab, turning, spell failure, the spellbook). A figure
+    one per character takes the first entry granting it. Also tested on the sheet:
+    `Derive_Step12_FeaturesAtTheGrantingEntrysLevel` (charactersvc). The skill sets read every
+    `rogue_skills` grant (`Derived.SkillGrants`): a thief/bard has the thief's and the bard's sets,
+    each with its points and its budget at its own entry's level, and a spend names the set, checked
+    against the class listing it at that entry's level: `Derive_Step12_TwoSkillGrantsKeepTheirOwnSets`,
+    `SetPoints_Step12_EachGrantSpendsItsOwnSet`.)_
+    _(As built, 2026-10-22, weapon specialization, supervisor decision on the book: only a
+    single-class fighter specializes. PHB p.52 (Proficiencies, Weapon Specialization): "a fighter
+    (only)", and next to it "multi-class characters cannot use weapon specialization; it is
+    available only to single-class fighters". So `Derived.Specializes` and the specialization pick
+    need one active entry: a fighter/thief, the fighter first, does not specialize and its
+    specialization pick is refused `not_allowed` (`skills.Classes.specialist`). The book is silent
+    on a dual-class character; its one active entry is read as single-class. Tests:
+    `Derive_Step12_OnlyASingleClassFighterSpecializes`,
+    `WeaponPick_Step15_OnlyASingleClassFighterSpecializes`.)_
 
 13. **The dual-class crossover and the old class's abilities.** The **crossover** is reached when
     the active entry's realized level is above every frozen entry's `left_at_level` (PHB
@@ -309,6 +361,31 @@ Every warning is structured data (a code and its numbers), worded by the web.
     Tests: `Derive_Step14_SlotsPerSpellcastingEntry` (charactersvc: a cleric 5/mage 6 has Table 24
     at 5 with the Wisdom bonus and Table 21 at 6), `Cast_Step14_CasterLevelIsTheEntrysLevel`
     (castsvc).
+    _(As built, 2026-10-22: `Derived.Classes[].SpellSlots` per entry; the character's `SpellSlots` and
+    `Derived.CasterLevel()` are the first active spellcasting entry's, which castsvc, prepsvc and
+    spheresvc read. A preparation and a cast name the entry: a stored slot carries `class` when the
+    character has two active spellcasting entries (no migration: the slot list is a JSON blob; an
+    untagged slot is the first entry's). `prepsvc.InfoFor` / `PrepareFor` (`GET
+    /api/spells/prepared?class=`, the PUT body's optional `class`) read that entry's spells
+    (`Spellbook.Of`: the sphere spells for a class with a sphere access within its own slots, else the
+    stored spellbook), its limits and level; the preparation replaces only that entry's slots and
+    its journal payload names the class. A cast reads its slot's entry for the caster level and
+    step 16.2's armour check; a slot a cast grants keeps the entry. Tests:
+    `Prepare_Step14_EachEntryPreparesInItsOwnSlots` (prepsvc),
+    `Spheres_Step14_EachEntryPreparesFromItsOwnSource` (spheresvc), `Cast_Step14_TheSlotNamesItsEntry`
+    (castsvc). The by-group spell effects (ADR 0030 step 2) read every active entry's group, and a
+    multi-class character takes the best die (PHB Strength: multi-class characters use the best die):
+    the highest maximum at the caster level, then minimum, then cap, with that group's cap.
+    Test: `Effects_Step14_ByGroupGainTakesTheBestDie` (castsvc). Spell failure (ADR 0030 step 14) is per
+    entry: each entry whose class grants `spell_failure` carries its chance
+    (`EntryDerived.SpellFailure`; the sheet's one figure is the first granting entry's), and a cast
+    rolls the d100 against the casting entry's chance only, so a cleric/mage's wizard spells roll
+    none. Tests: `Derive_Step14_SpellFailurePerEntry` (charactersvc),
+    `Cast_Step14_SpellFailureIsTheCastingEntrys` (castsvc). The spell lookup's "Mine" filter
+    (`spheresvc.SpellKeys`) holds the spells of every active spellcasting entry's source, each once
+    (a cleric/mage: the cleric's sphere spells within its slots and the stored spellbook). Test:
+    `Spheres_Step14_MineHoldsEveryCastingEntrysSpells` (spheresvc). The web does not yet send a class:
+    a cleric/mage prepares and casts only through the first entry from the UI.)_
 
 15. **Proficiency slots** (amends [ADR 0037](0037-proficiencies.md) step 3). The book (PHB
     multi/dual, Multi-Class Benefits and Restrictions): the **largest** initial number of slots of
@@ -328,6 +405,15 @@ Every warning is structured data (a code and its numbers), worded by the web.
     Tests: `ProficiencySlots_Step15_LargestInitialFastestRate` (ruletablesvc: the fighter/cleric
     above at levels 1, 3, 4 and 12), `ProficiencySlots_Step15_DualClassKeepsAndGains`,
     `NonproficientPenalty_Step15_SmallestOfTheGroups` (charactersvc).
+    _(As built, 2026-10-22: `skills.Classes` (the active entries at their realized levels) and
+    `skills.FiguresOf` combine Table 34 per column, `skills.GrantsOf` the slots a level of one entry
+    grants; the penalty and the in-group cost of Q12 and Q13 are on the pools. Tests in the skills package
+    with the code: `ProficiencySlots_Step15_LargestInitialFastestRate`,
+    `NonproficientPenalty_Step15_SmallestOfTheGroups`, `NonweaponCost_Step15_AnyActiveClassesGroups`,
+    `LevelGrants_Step15_TheCombinedPoolsAtTheEntrysLevel`. The attack's penalty
+    (`skills.WeaponProficiencyOf`, read from the stored row's active entries) is the same smallest
+    one: `WeaponProficiency_Step15_SmallestPenaltyOfTheActiveClasses` (a mage/fighter takes -2, a
+    mage/thief -3). The dual-class slots are not built.)_
 
 16. **Equipment limits together** (amends [ADR 0037](0037-proficiencies.md) step 7 and the warnings
     of [ADR 0033](0033-equipment.md) step 20; still warnings, never refusals, ADR 0033 step 20).
@@ -356,6 +442,31 @@ Every warning is structured data (a code and its numbers), worded by the web.
     `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks` (charactersvc),
     `Cast_Step16_2_WizardSpellInArmourWarns` (castsvc: a fighter/mage in chain warned; an elf
     fighter/mage in elven chain not), `Skills_Step16_3_ArmourBlocksAllButTwo` (skillsvc).
+    _(As built, 2026-10-22, 16.1 and 16.2, on the class definitions' `equipment` (ADR 0040 step 1.6):
+    `itemsvc.ClassWarnings` takes the `classes.Equipment` of every active entry (the AC card's
+    armour warnings too; an entry whose class the catalogue does not define has no limit, so nothing
+    is warned); a piece is warned only when no entry allows it, and a `blunt_only` entry judges every
+    weapon alone. Test: `Weapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion`. The weapon picks follow
+    the same rule (`classes.AllowedTogether`, which both read): a type is refused only when no active
+    entry's class may pick it, or when a `blunt_only` entry's may not; the specialization stays the
+    first entry's. Test (skills, with the pick check): `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks`. Each derived entry
+    carries `NoArmour` (its `armour` list is only `none`; test `Derive_Step16_2_NoArmourComesFromTheEquipment`).
+    A cast whose spells are such an entry's (the slot's entry, else the first active spellcasting
+    entry, step 14) reads the worn pieces and answers `warnings: ["spell_in_armour"]` (never logged,
+    never refusing) while body armour other than `none` is worn, except an elf (race `elf`) in the
+    `elven_chain` column (still a race id in the code: the race trait is to come). Test:
+    `Cast_Step16_2_WizardSpellInArmourWarns`. Not built: ADR 0043 step 18's `power_in_armour`.)_
+    _(As built, 2026-10-22, 16.3: "the kind's `armour` list" is read as the skill class's equipment
+    `armour` list (ADR 0040 step 1.6; the rogue_skills armour entries name a Table 29 row for every
+    column, so they list no armour out). A character of several class entries (a dual-class's frozen
+    entry counts) wearing body armour that list does not allow (`skills.PointsSheet.ArmourBlocks`)
+    reads Open Locks and Detect Noise (`ruletablesvc.ArmourFreeSkills`) at the no-armour column and
+    marks every other skill of the set `Blocked` (the skill's `blocked` on the sheet and on GET
+    /api/skills, where it is not `usable`); a roll of a blocked skill is refused before the die
+    with the field code `skill_blocked_by_armour`, as the 0% skill's `skill_unusable`. Tests:
+    `Skills_Step16_3_ArmourBlocksAllButTwo` (charactersvc, the derivation),
+    `Skills_Step16_3_ABlockedSkillIsNotRolled` (skillsvc). The web has no wording for the code
+    yet.)_
 
     _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 18, on implementation: an entry with the `psionics` kind warns `power_in_armour` on every power check while body armour outside its class's `armour` list is worn, as step 16.2 does for spells)_
 
@@ -368,6 +479,10 @@ Every warning is structured data (a code and its numbers), worded by the web.
     existing figure unchanged).
     Test: `Party_Step17_TheFourCharactersDeriveAsTheirSheets` (composition: THAC0, saves, slots,
     proficiency slots and warnings for each; the bard's equal to today's).
+    _(As built, 2026-10-22, the two multi-class characters on the fixture's real tables:
+    `Party_Step17_TheMultiClassCharacters` (charactersvc: the half-elf fighter 13/cleric 14 and the human
+    thief 15/psionicist 15, the psionicist entry its level, THAC0 and saves only); the bard's golden
+    files unchanged. The dual-class elf and the warnings come with their items.)_
 
 ## Decided with the user (2026-10-22)
 

@@ -20,6 +20,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -73,11 +74,13 @@ func (f *fakeTx) InTx(ctx context.Context, fn func(context.Context) error) error
 }
 
 type fixture struct {
-	svc     castsvc.SVC
-	slots   *mocks.MockSlots
-	texts   *mocks.MockTexts
-	buffs   *mocks.MockBuffs
-	items   *mocks.MockItems
+	svc   castsvc.SVC
+	slots *mocks.MockSlots
+	texts *mocks.MockTexts
+	buffs *mocks.MockBuffs
+	items *mocks.MockItems
+	// worn are the pieces a mage caster's cast reads (ADR 0042 step 16.2).
+	worn    []itemsvc.Item
 	attacks *mocks.MockAttacks
 	// initiative records the causes the casts corrected the initiative by
 	// (ADR 0035 item 6.2).
@@ -122,6 +125,13 @@ func newFixtureOf(t *testing.T, effects spelleffectsvc.Catalog, caster *characte
 	}
 	chars := mocks.NewMockCharacters(t)
 	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(caster, nil).Maybe()
+	if wearsNothing(caster) {
+		// ADR 0042 step 16.2: a mage's cast reads the worn armour, the
+		// fixture's worn pieces (none unless a test sets them).
+		f.items.EXPECT().List(mock.Anything, charID).RunAndReturn(func(context.Context, int64) ([]itemsvc.Item, error) {
+			return f.worn, nil
+		}).Maybe()
+	}
 	log := mocks.NewMockLog(t)
 	log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(
 		func(_ context.Context, e actionlog.NewEntry) (int64, error) {
@@ -767,4 +777,15 @@ func TestDamageAt_NoneAndBounds(t *testing.T) {
 		_, err = f.svc.ModesAt(context.Background(), "wall_of_ice", level)
 		require.ErrorIs(t, err, domain.ErrInvalidInput, "level %d", level)
 	}
+}
+
+// wearsNothing reports whether one of caster's classes allows no body armour,
+// so that a cast reads its pieces (ADR 0042 step 16.2).
+func wearsNothing(caster *charactersvc.Character) bool {
+	for _, e := range caster.Derived.Classes {
+		if e.NoArmour {
+			return true
+		}
+	}
+	return false
 }

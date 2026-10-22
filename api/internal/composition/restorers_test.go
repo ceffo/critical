@@ -69,7 +69,7 @@ func undoCases() []undoCase {
 			h.Items.EXPECT().Delete(mock.Anything, characterID, "dagger2").Return(nil).Once()
 		}},
 		{"a level-up roll's realized level", "realized_level", reencoded("realized level (levelupsvc)"), func(h *harness) {
-			h.Character.EXPECT().SetRealizedLevel(mock.Anything, characterID, 15, 85).Return(nil).Once()
+			h.Character.EXPECT().SetRealizedLevel(mock.Anything, characterID, "", 15, 85).Return(nil).Once()
 		}},
 		{"a learned spell (family spellbook) taken out", "spellbook:sleep", reencoded("spellbook (learnsvc): the spell goes to the envelope"), func(h *harness) {
 			h.Spellbook.EXPECT().RemoveEntry(mock.Anything, characterID, "sleep").Return(nil).Once()

@@ -57,7 +57,11 @@ type Querier interface {
 	SetACOverride(ctx context.Context, arg SetACOverrideParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
+	SetEntryLevel(ctx context.Context, arg SetEntryLevelParams) (int64, error)
 	SetFirstActiveEntryLevel(ctx context.Context, arg SetFirstActiveEntryLevelParams) error
+	// A level-up roll of a multi-class character's other entry and its undo (ADR 0042 step 7): the
+	// entry's level and the max HP; the column keeps the first active entry's level.
+	SetHPMax(ctx context.Context, arg SetHPMaxParams) (int64, error)
 	// The languages saved by the Skills tab's editor and their undo (ADR 0037 steps 13 and 18).
 	SetLanguages(ctx context.Context, arg SetLanguagesParams) (int64, error)
 	// The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).

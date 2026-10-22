@@ -102,3 +102,29 @@ func HitDieGain(group string, rolled int, con ConstitutionRow) (counted, conAdju
 	}
 	return counted, conAdjustment, max(1, counted+conAdjustment)
 }
+
+// SharedGain is ADR 0042 step 10.2 and 10.3 (amending ADR 0030 steps 7.1 and
+// 7.2) on a level-up of one entry of a character of classes classes: the
+// die counted (or a fixed gain, conAdjustment 0) divided by the number of
+// classes, rounded down, at least 1 (a hit die never yields less than 1); the
+// Constitution adjustment's share, the adjustment divided by the number of
+// classes, rounded down (Q7: towards minus infinity for a negative one); and
+// the gain, at least 1 as step 7.1's. One class is ADR 0030 step 7.1 and 7.2
+// unchanged: the die (or fixed gain) and the whole adjustment.
+func SharedGain(die, conAdjustment, classes int) (dieShare, conShare, gain int) {
+	if classes <= 1 {
+		return die, conAdjustment, max(1, die+conAdjustment)
+	}
+	dieShare = max(1, die/classes)
+	conShare = floorDiv(conAdjustment, classes)
+	return dieShare, conShare, max(1, dieShare+conShare)
+}
+
+// floorDiv is a / b rounded towards minus infinity (b > 0).
+func floorDiv(a, b int) int {
+	q := a / b
+	if a%b != 0 && a < 0 {
+		q--
+	}
+	return q
+}

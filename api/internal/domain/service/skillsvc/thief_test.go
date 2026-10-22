@@ -121,3 +121,22 @@ func TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie(t *testing.T) {
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, skillsvc.CodeSkillUnusable, fe.Message)
 }
+
+// ADR 0042 step 16.3: a skill the worn body armour blocks (a multi-class
+// thief in armour his class may not wear) "warns skill_blocked_by_armour and
+// is not rolled": refused before the die (the dice mock fails a roll), even
+// at a usable percentage; Open Locks, not blocked, rolls.
+func TestSkills_Step16_3_ABlockedSkillIsNotRolled(t *testing.T) {
+	f := thiefFixture(t)
+	char, err := f.chars.GetCharacter(context.Background(), charID)
+	require.NoError(t, err)
+	char.Derived.SkillSets[0].Skills[1].Blocked = true // climb walls, 55%
+	_, err = f.svc.Roll(context.Background(), charID, "climb_walls", skillsvc.Adjustment{})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, domain.FieldError{Field: "id", Message: skillsvc.CodeSkillBlockedByArmour}, *fe)
+
+	f.records()
+	f.dice.EXPECT().RollDie(skillsvc.ThiefSkillDie).Return(40).Once()
+	assert.True(t, f.roll(t, "open_locks").Success)
+}

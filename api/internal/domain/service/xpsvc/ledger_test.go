@@ -287,12 +287,13 @@ func TestPreview_IsStep1AndValidatesTheBase(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrInvalidInput)
 }
 
-// Totals is what the entries add to the starting XP (ADR 0015 step 1), each
-// with its bonus: what the character's level is derived from (ADR 0030 step 3).
-func TestTotals_EntriesTotal(t *testing.T) {
+// Totals are what the entries add to the starting XP (ADR 0015 step 1), each
+// award with its bonus: what the character's level is derived from (ADR 0030
+// step 3), award by award (ADR 0042 step 5).
+func TestTotals_Awards(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{{Base: 1000, Bonus: true}, {Base: 25}}, nil).Once()
-	got, err := xpsvc.Totals{DAL: dal}.EntriesTotal(context.Background(), 1)
+	got, err := xpsvc.Totals{DAL: dal}.Awards(context.Background(), 1)
 	require.NoError(t, err)
-	assert.Equal(t, 1100+25, got)
+	assert.Equal(t, []int{1100, 25}, got)
 }

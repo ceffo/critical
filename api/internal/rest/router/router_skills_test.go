@@ -50,6 +50,7 @@ func TestSkills_ListUsableIsTheServersCall(t *testing.T) {
 		SkillSets: []skillsvc.SkillSet{
 			{Set: "thief", Kind: skillsvc.KindThiefSkill, Skills: []skillsvc.SetSkill{{SkillPercent: ruletablesvc.SkillPercent{Skill: "climb_walls", Percent: 0}}}},
 			{Set: "bard", Kind: skillsvc.KindBardSkill, Skills: []skillsvc.SetSkill{{SkillPercent: ruletablesvc.SkillPercent{Skill: "climb_walls", Percent: 0}}}},
+			{Set: "thief", Kind: skillsvc.KindThiefSkill, Skills: []skillsvc.SetSkill{{SkillPercent: ruletablesvc.SkillPercent{Skill: "climb_walls", Percent: 60, Blocked: true}}}},
 		},
 	}, nil)
 	rec := do(h, "GET", "/api/skills", "")
@@ -57,13 +58,16 @@ func TestSkills_ListUsableIsTheServersCall(t *testing.T) {
 	var got struct {
 		SkillSets []struct {
 			Set    string
-			Skills []struct{ Usable bool }
+			Skills []struct{ Usable, Blocked bool }
 		} `json:"skillSets"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-	require.Len(t, got.SkillSets, 2, "a character with two skill sets, the same skill in both")
+	require.Len(t, got.SkillSets, 3, "a character with two skill sets, the same skill in both")
 	assert.False(t, got.SkillSets[0].Skills[0].Usable, "a thieving skill under 1% waits for points")
 	assert.True(t, got.SkillSets[1].Skills[0].Usable, "a bard skill has no minimum")
+	assert.False(t, got.SkillSets[2].Skills[0].Usable, "a skill the armour blocks (ADR 0042 step 16.3)")
+	assert.True(t, got.SkillSets[2].Skills[0].Blocked)
+	assert.False(t, got.SkillSets[0].Skills[0].Blocked)
 }
 
 func TestSkills_RollWireShape(t *testing.T) {

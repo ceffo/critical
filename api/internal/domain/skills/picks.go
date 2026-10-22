@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -164,12 +165,14 @@ func (w WeaponProficiency) NonproficientPenalty(weaponType string) int {
 	return nonproficientPenalty(w.Penalty, weaponType, func(t string) bool { return slices.Contains(w.Picked, t) })
 }
 
-// WeaponProficiencyOf reads a character of class with picks: its specialization (step 9) and
-// its weapon picks against Table 34's penalty from book (step 8).
-func WeaponProficiencyOf(book Book, class string, picks Picks) WeaponProficiency {
-	out := WeaponProficiency{Specialized: SpecializedType(book, class, picks), Picked: make([]string, 0, len(picks.Weapon))}
-	if row, ok := book.SlotRowOf(class); ok {
-		out.Penalty = row.Penalty
+// WeaponProficiencyOf reads a character of the active class entries cls with picks: its
+// specialization (step 9, a single-class character's only: Classes.specialist) and its weapon picks against Table 34's penalty
+// from book (step 8), the smallest of the classes' (ADR 0042 step 15, Q12). The levels of cls
+// are not read.
+func WeaponProficiencyOf(book Book, cls Classes, picks Picks) WeaponProficiency {
+	out := WeaponProficiency{Specialized: SpecializedType(book, cls.specialist(), picks), Picked: make([]string, 0, len(picks.Weapon))}
+	if b, ok := cls.basis(book); ok {
+		out.Penalty = b.row.Penalty
 	}
 	for _, p := range picks.Weapon {
 		out.Picked = append(out.Picked, p.Type)
@@ -184,12 +187,20 @@ func specializes(book Book, class string) bool {
 	return ok && ruletablesvc.Specializes(def)
 }
 
-// weaponTypeAllowed is ADR 0037 step 7: whether the class may pick a weapon proficiency in
-// weaponType, read from its definition (ADR 0040 step 1.6). A class the catalogue does not
-// define is limited by nothing.
-func weaponTypeAllowed(book Book, class, weaponType string) bool {
-	def, ok := book.ClassDef(class)
-	return !ok || def.Equipment.WeaponTypeAllowed(weaponType)
+// weaponTypeAllowed is ADR 0037 step 7 for the active class entries cls, judged together by ADR
+// 0042 step 16.1 (classes.AllowedTogether): a type any class may pick, except that a blunt_only
+// class restricts the picks to its own. A class the catalogue does not define limits nothing, so
+// nothing is judged (as itemsvc's class warnings).
+func (cls Classes) weaponTypeAllowed(book Book, weaponType string) bool {
+	limits := make([]classes.Equipment, 0, len(cls))
+	for _, c := range cls {
+		def, ok := book.ClassDef(c.Class)
+		if !ok {
+			return true
+		}
+		limits = append(limits, def.Equipment)
+	}
+	return classes.AllowedTogether(limits, func(e classes.Equipment) bool { return e.WeaponTypeAllowed(weaponType) })
 }
 
 // IsSpecialization reports whether p is a specialization pick (ADR 0037 step 9): a weapon type
@@ -254,30 +265,35 @@ type Spending struct {
 // one) and each pick's figures. ok is false when the catalogue has no Table 34 row for the class
 // (no catalogue, an unknown class).
 func ProficiencyFigures(book Book, class string, level, intelligence int, spend Spending) (ProficiencySlots, bool) {
+	return FiguresOf(book, One(class, level), intelligence, spend)
+}
+
+// FiguresOf is ProficiencyFigures for the active class entries cls (ADR 0042 step 15): the pools
+// read on the basis Classes.basis combines. ok is false when no class has a Table 34 row.
+func FiguresOf(book Book, cls Classes, intelligence int, spend Spending) (ProficiencySlots, bool) {
 	picks := spend.Picks
-	row, ok := book.SlotRowOf(class)
+	b, ok := cls.basis(book)
 	if !ok {
 		return ProficiencySlots{}, false
 	}
-	groups := book.GroupsOf(class)
-	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon)), Penalty: row.Penalty}
+	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon)), Penalty: b.row.Penalty}
 	spent := 0
 	for _, p := range picks.Nonweapon {
-		f := pickFigures(book, groups, p)
+		f := pickFigures(book, b.groups, p)
 		out.Picks = append(out.Picks, f)
 		spent += p.Slots
 	}
-	out.Nonweapon = ruletablesvc.NonweaponSlots(row, level, intelligence, spent+spend.Languages)
+	out.Nonweapon = ruletablesvc.NonweaponSlots(b.row, b.nonweaponLevel, intelligence, spent+spend.Languages)
 	out.Nonweapon.Languages = spend.Languages
 	out.WeaponPicks = make([]WeaponPickFigures, 0, len(picks.Weapon))
 	spent = 0
 	for _, p := range picks.Weapon {
 		out.WeaponPicks = append(out.WeaponPicks, WeaponPickFigures{
-			Type: p.Type, Slots: p.Slots, Allowed: weaponTypeAllowed(book, class, p.Type),
+			Type: p.Type, Slots: p.Slots, Allowed: cls.weaponTypeAllowed(book, p.Type),
 		})
 		spent += p.Slots
 	}
-	out.Weapon = ruletablesvc.WeaponSlots(row, level, spent)
+	out.Weapon = ruletablesvc.WeaponSlots(b.row, b.weaponLevel, spent)
 	return out, true
 }
 
@@ -290,17 +306,24 @@ func ProficiencyFigures(book Book, class string, level, intelligence int, spend 
 // *domain.FieldError on field nonweapon.<id>. Weapon picks: validWeaponPicks. The picks come
 // back in their order, never nil.
 func ValidPicks(book Book, class string, picks, before Picks) (Picks, error) {
+	return validPicksOf(book, One(class, 0), picks, before)
+}
+
+// validPicksOf is ValidPicks for the active class entries cls: a non-weapon pick costs Table
+// 37's slots when one of its groups is any class's (ADR 0042 step 15, Q13); a weapon pick's type
+// is judged by every class together (ADR 0042 step 16.1), the specialization by the first class.
+func validPicksOf(book Book, cls Classes, picks, before Picks) (Picks, error) {
 	weapon := before.Clone().Weapon
 	if picks.Weapon != nil {
 		var err error
-		if weapon, err = validWeaponPicks(book, class, picks.Weapon, before.Weapon); err != nil {
+		if weapon, err = validWeaponPicks(book, cls, picks.Weapon, before.Weapon); err != nil {
 			return Picks{}, err
 		}
 	}
 	if picks.Nonweapon == nil {
 		return Picks{Nonweapon: before.Clone().Nonweapon, Weapon: weapon}, nil
 	}
-	groups := book.GroupsOf(class)
+	groups := cls.groups(book)
 	had := map[string]bool{}
 	for _, p := range before.Nonweapon {
 		had[p.ID] = true
@@ -335,13 +358,14 @@ func ValidPicks(book Book, class string, picks, before Picks) (Picks, error) {
 // validWeaponPicks is ADR 0037 steps 7 and 9 on the weapon picks of a save: each a weapon type
 // (CodeUnknown) once (CodeDuplicate), spending WeaponPickSlots or, as the specialization (step
 // 9), its type's ruletablesvc.SpecializationSlots (any other count CodeOutOfRange), of a type the
-// class may pick (CodeWeaponNotAllowed). A specialization is a fighter's (Specializes; another
-// class CodeNotAllowed), in one type at most (a second CodeNotAllowed); a type outside the class's list that before already
+// classes may pick (CodeWeaponNotAllowed, Classes.weaponTypeAllowed). A specialization is a single-class fighter's (Specializes and
+// Classes.specialist; another class or a multi-class character CodeNotAllowed), in one type at most (a second CodeNotAllowed); a type outside the class's list that before already
 // has is kept (step 16.2: the migration grants every owned type), never added. A type that is no
 // weapon type but that before already has is kept too, as the non-weapon pool keeps a stored id
 // the catalogue does not hold (step 16: older data is never dropped). A refusal is a
 // *domain.FieldError on field weapon.<type>. Never nil.
-func validWeaponPicks(book Book, class string, picks, before []WeaponPick) ([]WeaponPick, error) {
+func validWeaponPicks(book Book, cls Classes, picks, before []WeaponPick) ([]WeaponPick, error) {
+	class := cls.specialist()
 	specialized := false
 	had := map[string]bool{}
 	for _, p := range before {
@@ -360,7 +384,7 @@ func validWeaponPicks(book Book, class string, picks, before []WeaponPick) ([]We
 			return nil, &domain.FieldError{Field: field, Message: CodeDuplicate}
 		case p.Slots != WeaponPickSlots && !p.IsSpecialization():
 			return nil, &domain.FieldError{Field: field, Message: CodeOutOfRange}
-		case !had[p.Type] && !weaponTypeAllowed(book, class, p.Type):
+		case !had[p.Type] && !cls.weaponTypeAllowed(book, p.Type):
 			return nil, &domain.FieldError{Field: field, Message: CodeWeaponNotAllowed}
 		case p.IsSpecialization() && (!specializes(book, class) || specialized):
 			return nil, &domain.FieldError{Field: field, Message: CodeNotAllowed}
@@ -381,18 +405,23 @@ func validWeaponPicks(book Book, class string, picks, before []WeaponPick) ([]We
 // a creation whose languages overspend, step 6), else nonweapon or weapon. No Table 34 row for the
 // class: no budget, nil.
 func PicksWithinBudget(book Book, class string, level, intelligence int, before, after Spending) error {
-	b, ok := ProficiencyFigures(book, class, level, intelligence, after)
+	return picksWithinBudgetOf(book, One(class, level), intelligence, before, after)
+}
+
+// picksWithinBudgetOf is PicksWithinBudget for the active class entries cls (ADR 0042 step 15).
+func picksWithinBudgetOf(book Book, cls Classes, intelligence int, before, after Spending) error {
+	b, ok := FiguresOf(book, cls, intelligence, after)
 	if !ok {
 		return nil
 	}
-	was, _ := ProficiencyFigures(book, class, level, intelligence, before)
+	was, _ := FiguresOf(book, cls, intelligence, before)
 	over := func(f ProficiencySlots) bool {
 		return f.Nonweapon.Spent > f.Nonweapon.Available && f.Nonweapon.Spent > was.Nonweapon.Spent
 	}
 	if over(b) {
 		// The languages are to blame when the picks alone, with the languages as before, pass.
 		field := FieldNonweapon
-		if picksOnly, _ := ProficiencyFigures(book, class, level, intelligence,
+		if picksOnly, _ := FiguresOf(book, cls, intelligence,
 			Spending{Picks: after.Picks, Languages: before.Languages}); !over(picksOnly) {
 			field = FieldLanguages
 		}

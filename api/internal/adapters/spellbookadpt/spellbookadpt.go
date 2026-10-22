@@ -86,6 +86,12 @@ func (b *Book) All(ctx context.Context, characterID int64) ([]prepsvc.SpellbookE
 	return out, nil
 }
 
+// Of is All: the stored spellbook is the one book a character keeps,
+// whichever spellcasting entry prepares from it (ADR 0042 step 14).
+func (b *Book) Of(ctx context.Context, characterID int64, _ string) ([]prepsvc.SpellbookEntry, error) {
+	return b.All(ctx, characterID)
+}
+
 // SpellKeys returns the catalogue keys of the character's spellbook
 // (spellsvc.Spellbook, the "Mine" filter).
 func (b *Book) SpellKeys(ctx context.Context, characterID int64) ([]string, error) {

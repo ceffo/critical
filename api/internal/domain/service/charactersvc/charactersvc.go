@@ -80,9 +80,11 @@ type Reader interface {
 }
 
 // XPLedger is what the XP ledger's entries add to the starting XP (ADR 0015
-// step 1); xpsvc.Totals implements it over the ledger's DAL.
+// step 1): each award's amount, base plus bonus, which a multi-class
+// character splits award by award (ADR 0042 step 5); xpsvc.Totals implements
+// it over the ledger's DAL.
 type XPLedger interface {
-	EntriesTotal(ctx context.Context, characterID int64) (int, error)
+	Awards(ctx context.Context, characterID int64) ([]int, error)
 }
 
 // HPLedger is the HP ledger's total, the sum of the effective HP deltas of a
@@ -135,12 +137,21 @@ type Armour interface {
 // ctx transaction.
 type FreeSpells interface {
 	// LevelsTaken are the realized levels the level-up roll reached (ADR
-	// 0030 step 7), its entries the journal has not undone; a character's
-	// starting level and the levels before the first roll are not among them.
-	LevelsTaken(ctx context.Context, characterID int64) ([]int, error)
+	// 0030 step 7), its entries the journal has not undone, each with the
+	// class entry it was taken in (ADR 0042 step 7; "" for a roll recorded
+	// before the entries, the first active one's); a character's starting
+	// level and the levels before the first roll are not among them.
+	LevelsTaken(ctx context.Context, characterID int64) ([]TakenLevel, error)
 	// Claimed are the spellbook's spellbook.OriginLevelGrant entries, each
 	// as its grant level and its spell's level.
 	Claimed(ctx context.Context, characterID int64) ([]spellbook.FreeSpell, error)
+}
+
+// TakenLevel is a level a level-up roll reached in a class entry ("" for the
+// first active one).
+type TakenLevel struct {
+	Class string
+	Level int
 }
 
 // Sessions is the login's session cache (authsvc.SVC satisfies it): a user
@@ -226,7 +237,7 @@ func (s *service) WeaponProficiency(ctx context.Context, id int64) (skills.Weapo
 	if err != nil {
 		return skills.WeaponProficiency{}, err
 	}
-	return skills.WeaponProficiencyOf(s.profs, c.Class, c.Proficiencies), nil
+	return skills.WeaponProficiencyOf(s.profs, c.ActiveClasses(), c.Proficiencies), nil
 }
 
 // read is GetCharacter: the stored character, derived and warned.
@@ -235,23 +246,27 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 	if err != nil {
 		return nil, err
 	}
-	ledger, err := s.xp.EntriesTotal(ctx, id)
+	awards, err := s.xp.Awards(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("character %d XP: %w", id, err)
 	}
 	// ADR 0033 step 14: a thief's or a bard's skills read the worn body
-	// armour (no other class reads it, so no other class pays the read).
-	def, err := s.rules.Class(c.Class)
-	if err != nil {
-		return nil, fmt.Errorf("character %d: %w", id, err)
-	}
+	// armour (no other class reads it, so no other class pays the read);
+	// any entry's class (ADR 0042 step 12).
 	var column string
-	if _, ok := def.Lists(classes.KindRogueSkills); ok {
-		if column, err = s.armour.WornSkillColumn(ctx, id); err != nil {
-			return nil, fmt.Errorf("character %d worn armour: %w", id, err)
+	for _, e := range c.Entries() {
+		def, err := s.rules.Class(e.Class)
+		if err != nil {
+			return nil, fmt.Errorf("character %d: %w", id, err)
+		}
+		if _, ok := def.Lists(classes.KindRogueSkills); ok {
+			if column, err = s.armour.WornSkillColumn(ctx, id); err != nil {
+				return nil, fmt.Errorf("character %d worn armour: %w", id, err)
+			}
+			break
 		}
 	}
-	if c.Derived, err = Derive(c, ledger, column, s.rules); err != nil {
+	if c.Derived, err = Derive(c, awards, column, s.rules); err != nil {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
 	defs, err := s.rules.Definitions()
@@ -259,7 +274,7 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
 	s.readWarnings(c, defs)
-	if err := s.setFreeSpells(ctx, c, def); err != nil {
+	if err := s.setFreeSpells(ctx, c); err != nil {
 		return nil, fmt.Errorf("character %d free spells: %w", id, err)
 	}
 	return c, nil
@@ -267,16 +282,27 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 
 // setFreeSpells is ADR 0030 step 20.8 on a read of c: each pending level's
 // free spells, and the ones owed, granted by the levels taken in the app and
-// not yet claimed. Only a class whose levels grant them (its spellbook
-// feature's free_spell_per_new_spell_level, ADR 0040 step 3) pays the reads.
-func (s *service) setFreeSpells(ctx context.Context, c *Character, def classes.Class) error {
-	f, ok := def.Lists(classes.KindSpellbook)
-	if !ok || !f.Spellbook.FreeSpellPerNewSpellLevel || c.Derived.Spellbook == nil {
+// not yet claimed. Only the entry whose class's levels grant them (its
+// spellbook feature's free_spell_per_new_spell_level, ADR 0040 step 3; ADR
+// 0042 step 12) pays the reads, and only its levels count.
+func (s *service) setFreeSpells(ctx context.Context, c *Character) error {
+	g, ok := c.Derived.Grant(classes.KindSpellbook)
+	if !ok || c.Derived.Spellbook == nil {
 		return nil
 	}
+	def, err := s.rules.Class(g.Class)
+	if err != nil {
+		return err
+	}
+	if f, _ := def.Lists(classes.KindSpellbook); !f.Spellbook.FreeSpellPerNewSpellLevel {
+		return nil
+	}
+	entry, _ := c.Derived.Entry(g.Class)
 	for i := range c.Derived.LevelUp.Pending {
 		p := &c.Derived.LevelUp.Pending[i]
-		var err error
+		if p.Class != g.Class {
+			continue
+		}
 		if p.FreeSpells, err = s.freeSpellsAt(c, def, p.Level); err != nil {
 			return err
 		}
@@ -285,10 +311,16 @@ func (s *service) setFreeSpells(ctx context.Context, c *Character, def classes.C
 	if err != nil {
 		return err
 	}
-	slices.Sort(taken)
+	var levels []int
+	for _, t := range taken {
+		if t.Class == g.Class || (t.Class == "" && g.Class == c.Class) {
+			levels = append(levels, t.Level)
+		}
+	}
+	slices.Sort(levels)
 	var granted []spellbook.FreeSpell
-	for _, level := range slices.Compact(taken) {
-		if level > c.Derived.RealizedLevel {
+	for _, level := range slices.Compact(levels) {
+		if level > entry.RealizedLevel {
 			continue // not realized any more: its grant went with it
 		}
 		got, err := s.freeSpellsAt(c, def, level)
@@ -305,8 +337,8 @@ func (s *service) setFreeSpells(ctx context.Context, c *Character, def classes.C
 	return nil
 }
 
-// freeSpellsAt are the free spells c's realized level grants (step 20.8):
-// the spell levels its slot table (step 8) opens there, up to the
+// freeSpellsAt are the free spells level of the class def grants (step
+// 20.8): the spell levels its slot table (step 8) opens there, up to the
 // Intelligence's maximum spell level (PHB Table 4).
 func (s *service) freeSpellsAt(c *Character, def classes.Class, level int) ([]spellbook.FreeSpell, error) {
 	at, err := s.rules.SpellsPerDay(def, level, c.Wis)
@@ -332,7 +364,7 @@ func (s *service) readWarnings(c *Character, defs *classes.Registry) {
 	c.Details = c.Details.WithNative(native)
 	var slotWarnings []skills.Warning
 	c.Derived.Proficiencies, slotWarnings = skills.Read(s.profs, skills.Sheet{
-		Class: c.Class, Level: c.Derived.RealizedLevel, Intelligence: c.Int,
+		Class: c.Class, Level: c.Derived.RealizedLevel, Classes: c.ProficiencyClasses(), Intelligence: c.Int,
 		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: native,
 		Score: func(a string) (int, bool) { return c.Score(Ability(a)) },
 	})
@@ -343,12 +375,34 @@ func (s *service) readWarnings(c *Character, defs *classes.Registry) {
 	}
 	c.Warnings = append(c.Warnings, c.Details.RangeWarnings(identity)...)
 	c.Warnings = append(c.Warnings, fromSkills(slotWarnings)...)
-	// ADR 0037 step 15, once the pools are known.
+	c.Warnings = append(c.Warnings, LevelLimitWarnings(c.Race, c.Derived.Classes, s.rules.LevelLimit)...)
+	// ADR 0037 step 15, once the pools are known: a level of one entry
+	// among the character's (ADR 0042 steps 7 and 15).
+	cls := c.ProficiencyClasses()
 	for i := range c.Derived.LevelUp.Pending {
 		p := &c.Derived.LevelUp.Pending[i]
-		p.Grants = skills.GrantsAt(s.profs, c.Class, p.Level)
+		p.Grants = skills.GrantsOf(s.profs, cls, p.Class, p.Level)
 	}
 	c.Derived.LevelUp.ToSpend = skills.ToSpend(c.Derived.Proficiencies, c.Derived.SkillSets)
+}
+
+// LevelLimitWarnings are ADR 0042 step 7's per-entry check of the race's
+// level limit (DMG Table 7, ADR 0041 step 5): each entry of entries, frozen
+// ones included, whose realized level is above limit's cell for the race in
+// its class warns level_limit with the class, the level (Value) and the
+// limit (Max). The ruleset's level_limits has one mode, warn, so the check
+// never refuses nor caps.
+func LevelLimitWarnings(race string, entries []EntryDerived, limit func(race, class string) (ruletablesvc.LevelLimitRow, bool)) []Warning {
+	var out []Warning
+	for _, e := range entries {
+		row, ok := limit(race, e.Class)
+		if !ok || row.Unlimited || e.RealizedLevel <= row.MaxLevel {
+			continue
+		}
+		level, limit := float64(e.RealizedLevel), float64(row.MaxLevel)
+		out = append(out, Warning{Code: CodeLevelLimit, Field: FieldLevel, Class: e.Class, Value: &level, Max: &limit})
+	}
+	return out
 }
 
 // fromSkills are the skills module's warnings (ADR 0037 step 11) as the sheet's.

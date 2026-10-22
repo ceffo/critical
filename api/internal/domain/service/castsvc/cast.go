@@ -9,7 +9,9 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -24,6 +26,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		return CastResult{}, fmt.Errorf("get character: %w", err)
 	}
 	var res CastResult
+	var warnings []string
 	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
 		before, err := s.Slots.GetSlots(ctx, characterID)
 		if err != nil {
@@ -35,6 +38,12 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		slot := before[slotIndex]
 		if slot.Used {
 			return fmt.Errorf("%w: %d", spellsvc.ErrSlotAlreadyUsed, slotIndex)
+		}
+		// ADR 0042 step 14: the slot's entry casts, at its own level.
+		who := casterOf(c, slot)
+		casterLevel := who.level
+		if warnings, err = s.castWarnings(ctx, c, who.noArmour); err != nil {
+			return err
 		}
 		after := append([]spellsvc.SpellSlot(nil), before...)
 		after[slotIndex].Used = true // ADR 0008 step 6: this slot and no other
@@ -61,10 +70,11 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		// ADR 0030 step 14: a caster with a chance of spell failure rolls one
 		// d100, after every refusal of the request (above, and checkCast for
 		// the effect's); at or under it the spell fails: the slot is spent and
-		// nothing else happens.
+		// nothing else happens. The chance is the casting entry's (ADR 0042
+		// step 14): a cleric/mage's wizard spells roll none.
 		var failure *SpellFailure
-		if chance := c.Derived.SpellFailure; chance > 0 {
-			if err := s.checkCast(ctx, characterID, id, req, c.Derived.RealizedLevel); err != nil {
+		if chance := who.failure; chance > 0 {
+			if err := s.checkCast(ctx, characterID, id, req, casterLevel); err != nil {
 				return err
 			}
 			roll := s.Dice.RollDie(100)
@@ -79,7 +89,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 				return err
 			}
 			res = CastResult{
-				Source: SourceCast, SpellID: id, Name: name, Level: slot.Level, CasterLevel: c.Derived.RealizedLevel,
+				Source: SourceCast, SpellID: id, Name: name, Level: slot.Level, CasterLevel: casterLevel,
 				SlotIndex: &slotIndex, Slots: after, Failure: failure,
 			}
 			res.EntryID, err = s.record(ctx, characterID, res, []actionlog.Snapshot{slotSnap})
@@ -87,7 +97,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 				return err
 			}
 			// A failed cast still took its casting time.
-			return s.correctInitiative(ctx, characterID, id, name, c.Derived.RealizedLevel)
+			return s.correctInitiative(ctx, characterID, id, name, casterLevel)
 		}
 		var extra []int
 		// ADR 0008 step 9: a spell that grants slots adds them, blank.
@@ -96,7 +106,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 				return err
 			}
 			for _, l := range extra {
-				after = append(after, spellsvc.SpellSlot{Level: l, Extra: true})
+				after = append(after, spellsvc.SpellSlot{Level: l, Extra: true, Class: slot.Class})
 			}
 		}
 		if err := s.Slots.SaveSlots(ctx, characterID, after); err != nil {
@@ -109,7 +119,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
-			casterLevel: c.Derived.RealizedLevel, group: c.Derived.Group, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
+			casterLevel: casterLevel, groups: c.Derived.Groups(), source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -122,12 +132,52 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		if err != nil {
 			return err
 		}
-		return s.correctInitiative(ctx, characterID, id, name, c.Derived.RealizedLevel)
+		return s.correctInitiative(ctx, characterID, id, name, casterLevel)
 	})
 	if err != nil {
 		return CastResult{}, err
 	}
+	res.Warnings = warnings
 	return res, nil
+}
+
+// caster is the spellcasting entry a cast reads (ADR 0042 step 14): its
+// realized level, whether its class allows no body armour (step 16.2) and
+// its chance of spell failure (ADR 0030 step 14 per entry).
+type caster struct {
+	level, failure int
+	noArmour       bool
+}
+
+// casterOf is ADR 0042 step 14 on a slot: the spellcasting entry it names
+// (an untagged slot: the first active one); the character's caster level and
+// spell failure, and no armour limit, when no entry is derived.
+func casterOf(c *charactersvc.Character, slot spellsvc.SpellSlot) caster {
+	if e, ok := c.Derived.CasterEntry(slot.Class); ok {
+		return caster{level: e.RealizedLevel, failure: e.SpellFailure, noArmour: e.NoArmour}
+	}
+	if e, ok := c.Derived.CasterEntry(""); ok {
+		return caster{level: e.RealizedLevel, failure: e.SpellFailure, noArmour: e.NoArmour}
+	}
+	return caster{level: c.Derived.CasterLevel(), failure: c.Derived.SpellFailure}
+}
+
+// castWarnings is ADR 0042 step 16.2 on a cast: the casting entry's class
+// (casterOf) allows no body armour, so its spells warn spell_in_armour while
+// body armour is worn, whatever the character's other classes allow. Only
+// such a class reads the pieces.
+func (s *service) castWarnings(ctx context.Context, c *charactersvc.Character, noArmour bool) ([]string, error) {
+	if !noArmour {
+		return nil, nil
+	}
+	pieces, err := s.Items.List(ctx, c.ID)
+	if err != nil {
+		return nil, fmt.Errorf("list items: %w", err)
+	}
+	if itemsvc.SpellInArmour(c.Race, pieces) {
+		return []string{itemsvc.WarnSpellInArmour}, nil
+	}
+	return nil, nil
 }
 
 // correctInitiative is ADR 0035 item 6.2 for a cast: the round's
@@ -185,7 +235,7 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: req.CasterLevel, group: c.Derived.Group, source: SourceReceived, mode: mode,
+			spellID: id, casterLevel: req.CasterLevel, groups: c.Derived.Groups(), source: SourceReceived, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -247,7 +297,7 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 	if err != nil {
 		return CastResult{}, fmt.Errorf("get character: %w", err)
 	}
-	if err := checkCasterLevel(c.Derived.RealizedLevel); err != nil {
+	if err := checkCasterLevel(c.Derived.CasterLevel()); err != nil {
 		return CastResult{}, err
 	}
 	mode, err := s.modeFor(id, "")
@@ -259,7 +309,7 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: c.Derived.RealizedLevel, group: c.Derived.Group, source: SourceEffect, mode: mode,
+			spellID: id, casterLevel: c.Derived.CasterLevel(), groups: c.Derived.Groups(), source: SourceEffect, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -294,10 +344,10 @@ type effectReq struct {
 	name        string // the slot's name, used when neither source knows the spell
 	level       int
 	casterLevel int
-	// group is the class group of the character the effect is about (the
+	// groups are the class groups of the character the effect is about (the
 	// caster of a cast, the receiver of a received spell, as derived): it
 	// picks a by-group effect (ADR 0030 step 2).
-	group      string
+	groups     []string
 	source     Source
 	onSelf     *bool
 	req        CastRequest          // the cast request (item to spend, target AC)
@@ -478,7 +528,7 @@ func (s *service) applyEffect(ctx context.Context, characterID int64, r effectRe
 		// ADR 0030 step 2: a by-group gain follows the class group of whoever
 		// receives the spell, which the caster's side does not know when the
 		// spell goes on someone else: it rolls none there.
-		buff, untracked, err := s.rollBuff(entry, r.casterLevel, r.group, !onSelf)
+		buff, untracked, err := s.rollBuff(entry, r.casterLevel, r.groups, !onSelf)
 		if err != nil {
 			return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 		}

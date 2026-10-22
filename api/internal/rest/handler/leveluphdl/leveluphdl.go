@@ -29,12 +29,14 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc levelupsvc.SVC) {
 	r.Post("/api/character/levelup/roll", render.Handle(Roll(charID, svc)))
 }
 
-// RollBody is the body of POST /api/character/levelup/roll: the level rolled
-// for (the lowest pending one, as the page read it) and, for the manual
-// entry, the die the player rolled at the table (absent: the server rolls).
+// RollBody is the body of POST /api/character/levelup/roll: the class entry
+// (absent: the first active one, ADR 0042 step 7), the level rolled for (its
+// lowest pending one, as the page read it) and, for the manual entry, the die
+// the player rolled at the table (absent: the server rolls).
 type RollBody struct {
-	Level *int `json:"level"`
-	Die   *int `json:"die"`
+	Class string `json:"class"`
+	Level *int   `json:"level"`
+	Die   *int   `json:"die"`
 }
 
 // ResultDTO is the roll's full breakdown. `hitDie` is the die's sides (0 for
@@ -42,7 +44,15 @@ type RollBody struct {
 // value after the Constitution 20+ floor (both null for a fixed gain),
 // `pending` the levels still owed, each with what it grants beyond hit
 // points (ADR 0037 step 15: the grants are read from the pending levels).
+// A multi-class character's carry `class`, the entry the level was taken in,
+// `classes`, the divisor, and `dieShare` / `conShare`, the die's (or fixed
+// gain's) and the Constitution adjustment's shares (ADR 0042 step 10.4); a
+// single-class character's have none.
 type ResultDTO struct {
+	Class         string                 `json:"class,omitempty"`
+	Classes       int                    `json:"classes,omitempty"`
+	DieShare      int                    `json:"dieShare,omitempty"`
+	ConShare      int                    `json:"conShare,omitempty"`
 	Level         int                    `json:"level"`
 	HitDie        int                    `json:"hitDie"`
 	Rolled        *int                   `json:"rolled"`
@@ -68,16 +78,20 @@ func Roll(charID CharacterIDFunc, svc roller) render.HandlerFunc {
 		if b.Level == nil {
 			return render.BadRequestError("level is required")
 		}
-		res, err := svc.Roll(r.Context(), charID(r), levelupsvc.RollInput{Level: *b.Level, Die: b.Die})
+		res, err := svc.Roll(r.Context(), charID(r), levelupsvc.RollInput{Class: b.Class, Level: *b.Level, Die: b.Die})
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, ResultDTO{
+		dto := ResultDTO{
 			Level: res.Level, HitDie: res.HitDie, Rolled: res.Rolled, Counted: res.Counted,
 			ConAdjustment: res.ConAdjustment, Gain: res.Gain, Fixed: res.Fixed, Manual: res.Manual,
 			HPMaxBefore: res.HPMaxBefore, HPMaxAfter: res.HPMaxAfter,
 			Pending: wire.PendingDTO(res.Pending),
-		})
+		}
+		if res.Classes > 1 {
+			dto.Class, dto.Classes, dto.DieShare, dto.ConShare = res.Class, res.Classes, res.DieShare, res.ConShare
+		}
+		render.OK(r.Context(), w, dto)
 		return nil
 	}
 }

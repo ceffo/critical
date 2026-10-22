@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -48,16 +49,26 @@ type SVC interface {
 
 // RollInput is one level-up roll.
 type RollInput struct {
-	// Level is the level rolled for, as the page last read it: the lowest
-	// pending one.
+	// Class is the class entry the level is taken in (ADR 0042 step 7); ""
+	// is the first active one (a single-class character's only one).
+	Class string
+	// Level is the level rolled for, as the page last read it: the entry's
+	// lowest pending one.
 	Level int
 	// Die is the die the player rolled at the table (the manual entry);
 	// nil rolls it on the server.
 	Die *int
 }
 
-// Result is the roll's full breakdown (ADR 0030 step 7.3).
+// Result is the roll's full breakdown (ADR 0030 step 7.3, ADR 0042 step
+// 10.4).
 type Result struct {
+	// Class is the class entry the level was taken in.
+	Class string
+	// Classes is the character's number of classes, the divisor of the die
+	// (or fixed gain) and of the Constitution adjustment (ADR 0042 step
+	// 10.2); 1 for a single-class character.
+	Classes int
 	// Level is the level reached.
 	Level int
 	// HitDie is the die's sides, 0 for a fixed gain.
@@ -70,6 +81,13 @@ type Result struct {
 	// ConAdjustment is PHB Table 3's hit point adjustment, 0 for a fixed
 	// gain.
 	ConAdjustment int
+	// DieShare is the die counted (or the fixed gain) divided by Classes,
+	// rounded down, at least 1 (ADR 0042 steps 10.2 and 10.3); the die
+	// counted (or the fixed gain) for one class.
+	DieShare int
+	// ConShare is ConAdjustment divided by Classes, rounded down (ADR 0042
+	// step 10.2, Q7); ConAdjustment for one class.
+	ConShare int
 	// Gain is what the max HP rises by.
 	Gain int
 	// Fixed is a level above the name level (step 7.2).
@@ -84,9 +102,10 @@ type Result struct {
 
 // DAL writes a character's realized level. It joins the ctx transaction.
 type DAL interface {
-	// SetRealizedLevel sets the realized level and the max HP that goes
-	// with it; domain.ErrCharacterNotFound for an unknown character.
-	SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpMax int) error
+	// SetRealizedLevel sets the realized level of the class entry of class
+	// ("" the first active one) and the max HP that goes with it;
+	// domain.ErrCharacterNotFound for an unknown character.
+	SetRealizedLevel(ctx context.Context, id int64, class string, realizedLevel, hpMax int) error
 }
 
 // Characters reads the character with its derived block (the pending
@@ -142,7 +161,8 @@ func (s *service) Close(_ context.Context) error  { return nil }
 
 // Roll reads the pending levels, rolls (or takes) the die and records the
 // gain, all in one transaction: two requests for the same level cannot both
-// roll it.
+// roll it. The level must be the named entry's lowest pending one (ADR 0042
+// step 7): a level of another entry, or of a frozen one, is not pending.
 func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*Result, error) {
 	var res *Result
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -150,18 +170,34 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 		if err != nil {
 			return err
 		}
-		pending := c.Derived.LevelUp.Pending
+		class := in.Class
+		if class == "" {
+			class = c.Class
+		}
+		entry, ok := c.Derived.Entry(class)
+		if !ok {
+			return ErrNotPending
+		}
+		pending := entry.LevelUp.Pending
 		if len(pending) == 0 || pending[0].Level != in.Level {
 			return ErrNotPending
 		}
-		if res, err = s.gain(c, pending[0], in.Die); err != nil {
+		if res, err = s.gain(c, entry.Group, pending[0], in.Die); err != nil {
 			return err
 		}
-		res.Pending = pending[1:]
+		res.Pending = slices.DeleteFunc(slices.Clone(c.Derived.LevelUp.Pending), func(p charactersvc.PendingLevel) bool {
+			return p.Class == class && p.Level == in.Level
+		})
 		res.HPMaxBefore, res.HPMaxAfter = c.HPMax, c.HPMax+res.Gain
-		before := realized{RealizedLevel: c.Derived.RealizedLevel, HPMax: c.HPMax}
-		after := realized{RealizedLevel: res.Level, HPMax: res.HPMaxAfter}
-		if err := s.dal.SetRealizedLevel(ctx, characterID, after.RealizedLevel, after.HPMax); err != nil {
+		// A single-class snapshot names no class (as written before the
+		// entries): the first active one.
+		snapClass := ""
+		if res.Classes > 1 {
+			snapClass = class
+		}
+		before := realized{Class: snapClass, RealizedLevel: entry.RealizedLevel, HPMax: c.HPMax}
+		after := realized{Class: snapClass, RealizedLevel: res.Level, HPMax: res.HPMaxAfter}
+		if err := s.dal.SetRealizedLevel(ctx, characterID, snapClass, after.RealizedLevel, after.HPMax); err != nil {
 			return err
 		}
 		return s.record(ctx, characterID, *res, before, after)
@@ -172,15 +208,18 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 	return res, nil
 }
 
-// gain is ADR 0030 steps 7.1 and 7.2 for the pending level p of c.
-func (s *service) gain(c *charactersvc.Character, p charactersvc.PendingLevel, entered *int) (*Result, error) {
-	res := &Result{Level: p.Level, HitDie: p.Die, Manual: entered != nil}
+// gain is ADR 0030 steps 7.1 and 7.2 for the pending level p of c's entry of
+// group, divided by the number of classes (ADR 0042 steps 10.2 and 10.3).
+func (s *service) gain(c *charactersvc.Character, group string, p charactersvc.PendingLevel, entered *int) (*Result, error) {
+	classes := max(p.Classes, 1)
+	res := &Result{Class: p.Class, Classes: classes, Level: p.Level, HitDie: p.Die, Manual: entered != nil}
 	// Step 7.2: above the name level, a fixed gain: no die, no Constitution.
 	if p.Die == 0 {
 		if entered != nil {
 			return nil, &domain.FieldError{Field: "die", Message: CodeFixedGain}
 		}
-		res.Gain, res.Fixed = p.FixedGain, true
+		res.DieShare, _, res.Gain = ruletablesvc.SharedGain(p.FixedGain, 0, classes)
+		res.Fixed = true
 		return res, nil
 	}
 	// Step 7.1: one hit die of the group, through the dice port unless the
@@ -199,10 +238,13 @@ func (s *service) gain(c *charactersvc.Character, p charactersvc.PendingLevel, e
 		return nil, fmt.Errorf("level-up: %w", err)
 	}
 	// Table 3's footnotes from Constitution 20 raise a low die (the die
-	// shown is the one rolled), warriors take the bracketed adjustment, and
-	// the gain is at least 1: the arithmetic the creation's roll shares.
-	counted, conAdj, gain := ruletablesvc.HitDieGain(c.Derived.Group, rolled, row)
+	// shown is the one rolled), warriors take the bracketed adjustment (the
+	// entry's group, ADR 0042 Q7), and the gain is at least 1: the
+	// arithmetic the creation's roll shares; then the shares of ADR 0042
+	// step 10.2.
+	counted, conAdj, _ := ruletablesvc.HitDieGain(group, rolled, row)
 	res.Rolled, res.Counted = &rolled, &counted
-	res.ConAdjustment, res.Gain = conAdj, gain
+	res.ConAdjustment = conAdj
+	res.DieShare, res.ConShare, res.Gain = ruletablesvc.SharedGain(counted, conAdj, classes)
 	return res, nil
 }

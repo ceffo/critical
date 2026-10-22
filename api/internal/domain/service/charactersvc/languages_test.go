@@ -137,7 +137,7 @@ func TestGetCharacter_Step6_TheLanguagesSpendTheNonweaponPool(t *testing.T) {
 	c.Proficiencies = picks(p("tumbling", 6))
 	e := newEnvWithLanguages(t)
 	e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(c, nil).Once()
-	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+	e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
 	expectKelsenRules(e.rules, 1_293_418, 15)
 
 	got, err := e.svc.GetCharacter(context.Background(), 3)
@@ -164,7 +164,7 @@ func TestGetCharacter_Step6_NoLanguageVerdictOnAnEmptyCatalogue(t *testing.T) {
 	c.Details = charactersvc.Details{Alignment: "neutral_good", Sex: "male", Languages: []string{"common", "elvish", "orcish", "dwarvish"}}
 	e := newEnv(t) // no language book
 	e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(c, nil).Once()
-	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+	e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
 	expectKelsenRules(e.rules, 1_293_418, 15)
 
 	got, err := e.svc.GetCharacter(context.Background(), 3)

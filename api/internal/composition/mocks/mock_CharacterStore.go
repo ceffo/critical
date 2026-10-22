@@ -768,17 +768,17 @@ func (_c *MockCharacterStore_SetProficiencyPicks_Call) RunAndReturn(run func(con
 	return _c
 }
 
-// SetRealizedLevel provides a mock function with given fields: ctx, id, realizedLevel, hpMax
-func (_m *MockCharacterStore) SetRealizedLevel(ctx context.Context, id int64, realizedLevel int, hpMax int) error {
-	ret := _m.Called(ctx, id, realizedLevel, hpMax)
+// SetRealizedLevel provides a mock function with given fields: ctx, id, class, realizedLevel, hpMax
+func (_m *MockCharacterStore) SetRealizedLevel(ctx context.Context, id int64, class string, realizedLevel int, hpMax int) error {
+	ret := _m.Called(ctx, id, class, realizedLevel, hpMax)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetRealizedLevel")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int, int) error); ok {
-		r0 = rf(ctx, id, realizedLevel, hpMax)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int, int) error); ok {
+		r0 = rf(ctx, id, class, realizedLevel, hpMax)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -794,15 +794,16 @@ type MockCharacterStore_SetRealizedLevel_Call struct {
 // SetRealizedLevel is a helper method to define mock.On call
 //   - ctx context.Context
 //   - id int64
+//   - class string
 //   - realizedLevel int
 //   - hpMax int
-func (_e *MockCharacterStore_Expecter) SetRealizedLevel(ctx interface{}, id interface{}, realizedLevel interface{}, hpMax interface{}) *MockCharacterStore_SetRealizedLevel_Call {
-	return &MockCharacterStore_SetRealizedLevel_Call{Call: _e.mock.On("SetRealizedLevel", ctx, id, realizedLevel, hpMax)}
+func (_e *MockCharacterStore_Expecter) SetRealizedLevel(ctx interface{}, id interface{}, class interface{}, realizedLevel interface{}, hpMax interface{}) *MockCharacterStore_SetRealizedLevel_Call {
+	return &MockCharacterStore_SetRealizedLevel_Call{Call: _e.mock.On("SetRealizedLevel", ctx, id, class, realizedLevel, hpMax)}
 }
 
-func (_c *MockCharacterStore_SetRealizedLevel_Call) Run(run func(ctx context.Context, id int64, realizedLevel int, hpMax int)) *MockCharacterStore_SetRealizedLevel_Call {
+func (_c *MockCharacterStore_SetRealizedLevel_Call) Run(run func(ctx context.Context, id int64, class string, realizedLevel int, hpMax int)) *MockCharacterStore_SetRealizedLevel_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(int), args[3].(int))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(int), args[4].(int))
 	})
 	return _c
 }
@@ -812,7 +813,7 @@ func (_c *MockCharacterStore_SetRealizedLevel_Call) Return(_a0 error) *MockChara
 	return _c
 }
 
-func (_c *MockCharacterStore_SetRealizedLevel_Call) RunAndReturn(run func(context.Context, int64, int, int) error) *MockCharacterStore_SetRealizedLevel_Call {
+func (_c *MockCharacterStore_SetRealizedLevel_Call) RunAndReturn(run func(context.Context, int64, string, int, int) error) *MockCharacterStore_SetRealizedLevel_Call {
 	_c.Call.Return(run)
 	return _c
 }

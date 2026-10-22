@@ -28,9 +28,19 @@ func weapon(id, code, weaponType string, types ...string) itemsvc.Item {
 
 // warned is the class warnings of the pieces under the fixture catalogue's definition of class.
 func warned(t testing.TB, class string, pieces ...itemsvc.Item) []itemsvc.Warning {
-	def, ok := cataloguetest.Definitions(t).Class(class)
-	require.True(t, ok, class)
-	return itemsvc.ClassWarnings(def.Equipment, true, pieces)
+	return multi(t, []string{class}, pieces...)
+}
+
+// multi is the class warnings of the pieces for a character of the fixture classes cls (its
+// active class entries, ADR 0042 step 16.1).
+func multi(t testing.TB, cls []string, pieces ...itemsvc.Item) []itemsvc.Warning {
+	limits := make([]classes.Equipment, 0, len(cls))
+	for _, class := range cls {
+		def, ok := cataloguetest.Definitions(t).Class(class)
+		require.True(t, ok, class)
+		limits = append(limits, def.Equipment)
+	}
+	return itemsvc.ClassWarnings(limits, pieces)
 }
 
 func w(id, code string) itemsvc.Warning { return itemsvc.Warning{ItemID: id, Code: code} }
@@ -202,7 +212,29 @@ func TestClassWarnings_Step20_ALimitComesFromTheDataOfAnyClass(t *testing.T) {
 	}
 	assert.Equal(t, []itemsvc.Warning{
 		w("b", "armour_not_allowed"), w("s", "armour_not_allowed"), w("w3", "weapon_not_allowed"),
-	}, itemsvc.ClassWarnings(skald, true, pieces))
-	assert.Empty(t, itemsvc.ClassWarnings(classes.Equipment{Shields: true}, true, pieces))
-	assert.Empty(t, itemsvc.ClassWarnings(classes.Equipment{}, false, pieces), "a class the catalogue does not define is not limited")
+	}, itemsvc.ClassWarnings([]classes.Equipment{skald}, pieces))
+	assert.Empty(t, itemsvc.ClassWarnings([]classes.Equipment{{Shields: true}}, pieces))
+	assert.Empty(t, itemsvc.ClassWarnings(nil, pieces), "a class the catalogue does not define is not limited")
+}
+
+// ADR 0042 step 16.1 and the wearing half of 16.2: a multi-class character's pieces are judged
+// on all its active classes together, whichever comes first. A piece is allowed when any class
+// allows it (a mage/fighter wears chain and a shield, a thief/fighter wields a long sword and a
+// thief/mage wears leather), except that a blunt_only class restricts every weapon to its own
+// list (a fighter/cleric is warned for a long sword, not for a mace).
+func TestWeapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion(t *testing.T) {
+	sword := weapon("l", "long_sword", "long_sword", "s")
+	mace := weapon("m", "footmans_mace", "other_melee", "b")
+	assert.Equal(t, []itemsvc.Warning{w("l", "weapon_not_allowed")}, multi(t, []string{"fighter", "cleric"}, sword))
+	assert.Equal(t, []itemsvc.Warning{w("l", "weapon_not_allowed")}, multi(t, []string{"cleric", "fighter"}, sword))
+	assert.Empty(t, multi(t, []string{"fighter", "cleric"}, mace))
+	assert.Empty(t, multi(t, []string{"thief", "fighter"}, sword, weapon("b", "battle_axe", "other_melee", "s")), "the fighter allows any weapon")
+	assert.Equal(t, []itemsvc.Warning{w("l", "weapon_not_allowed")}, multi(t, []string{"cleric", "thief"}, sword),
+		"the thief's long sword is still not blunt")
+
+	assert.Empty(t, multi(t, []string{"mage", "fighter"}, armour("p", "metal"), shield("s")))
+	assert.Empty(t, multi(t, []string{"mage", "thief"}, armour("p", "leather")), "the thief allows leather")
+	assert.Equal(t, []itemsvc.Warning{w("p", "armour_not_allowed"), w("s", "armour_not_allowed")},
+		multi(t, []string{"mage", "thief"}, armour("p", "metal"), shield("s")), "neither allows metal nor a shield")
+	assert.Empty(t, multi(t, []string{"mage", "thief"}, weapon("lb", "short_bow", "short_bow", "p")), "the thief's short bow")
 }

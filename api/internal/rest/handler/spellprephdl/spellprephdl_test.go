@@ -25,7 +25,7 @@ import (
 // as id, name and count; the handler decides none of it.
 func TestGetInfo_ServesTheSpendableItems(t *testing.T) {
 	svc := mocks.NewMockSVC(t)
-	svc.EXPECT().Info(mock.Anything, int64(1)).Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{
+	svc.EXPECT().InfoFor(mock.Anything, int64(1), "").Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{
 		{ID: "alarm", Name: "Alarm", Level: 1},
 		{
 			ID: "chromatic_orb", Name: "Chromatic Orb", Level: 1,
@@ -51,7 +51,7 @@ func TestGetInfo_ServesTheSpendableItems(t *testing.T) {
 // the damage a cast in it rolls (none for a mode without damage).
 func TestGetInfo_ServesTheModes(t *testing.T) {
 	svc := mocks.NewMockSVC(t)
-	svc.EXPECT().Info(mock.Anything, int64(1)).Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{{
+	svc.EXPECT().InfoFor(mock.Anything, int64(1), "").Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{{
 		ID: "ice_storm", Name: "Ice Storm", Level: 4,
 		Cast: prepsvc.CastInputs{Modes: []spelleffectsvc.ModeAt{
 			{Key: "hail", Damage: &spelleffectsvc.DamageAt{
@@ -84,7 +84,7 @@ func TestGetInfo_ServesTheModes(t *testing.T) {
 // none.
 func TestGetInfo_ServesTheCastTarget(t *testing.T) {
 	svc := mocks.NewMockSVC(t)
-	svc.EXPECT().Info(mock.Anything, int64(1)).Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{
+	svc.EXPECT().InfoFor(mock.Anything, int64(1), "").Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{
 		{ID: "alarm", Name: "Alarm", Level: 1},
 		{ID: "slow", Name: "Slow", Level: 3, Cast: prepsvc.CastInputs{Target: &spelleffectsvc.TargetChoice{
 			Default: spelleffectsvc.CastOnOther, Alternate: spelleffectsvc.CastOnSelf,
@@ -108,7 +108,7 @@ func TestGetInfo_ServesTheCastTarget(t *testing.T) {
 // one with its grant level; a priest's sphere spell (no origin) serves none.
 func TestGetInfo_ServesTheOrigin(t *testing.T) {
 	svc := mocks.NewMockSVC(t)
-	svc.EXPECT().Info(mock.Anything, int64(1)).Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{
+	svc.EXPECT().InfoFor(mock.Anything, int64(1), "").Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{
 		{ID: "sleep", Name: "Sleep", Level: 1, Origin: spellbook.OriginLearned},
 		{ID: "fireball", Name: "Fireball", Level: 3, Origin: spellbook.OriginLevelGrant, GrantLevel: 5},
 		{ID: "bless", Name: "Bless", Level: 1},

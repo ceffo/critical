@@ -223,12 +223,23 @@ type SkillTables interface {
 // PointsSheet is what a character's skill sets read of the character: its class, race,
 // Dexterity, realized level, the worn body armour's Table 29 column (ADR 0033 step 14: each set
 // reads it through its own armour entries, ruletablesvc.SkillArmorFor) and entered points per set.
+// MultiClass is set for a character of several class entries (ADR 0042 step 16.3).
 type PointsSheet struct {
 	Class       classes.Class
 	Race        string
 	Dex, Level  int
 	ArmorColumn string
 	Points      SetPoints
+	MultiClass  bool
+}
+
+// ArmourBlocks is ADR 0042 step 16.3: a multi-class character wearing body armour of Table 29
+// column column that its skill class's equipment (ADR 0040 step 1.6) does not allow uses only
+// ruletablesvc.ArmourFreeSkills of the set. A single-class thief or bard is unchanged (its armour
+// outside the list is ADR 0033 step 20's warning), and no body armour never blocks.
+func (s PointsSheet) ArmourBlocks() bool {
+	column := s.ArmorColumn
+	return s.MultiClass && column != "" && column != ruletablesvc.ColumnNone && !s.Class.Equipment.AllowsArmour(column)
 }
 
 // SkillSet is one skill set of a character (ADR 0040 step 3.5: one per rogue_skills feature
@@ -245,7 +256,9 @@ type SkillSet struct {
 
 // SkillSetsOf is ADR 0030 steps 17 and 18 on s: for each skill set the class grants at s.Level
 // (ADR 0040 step 3.5), the percentages from the tables, the budget and its warnings, through
-// that set's rogue_skills params. nil for a class without rogue_skills.
+// that set's rogue_skills params. nil for a class without rogue_skills. When the armour blocks
+// the set (PointsSheet.ArmourBlocks, ADR 0042 step 16.3), ruletablesvc.ArmourFreeSkills take the
+// no-armour percentage (Q16) and every other skill is Blocked.
 func SkillSetsOf(t SkillTables, s PointsSheet) ([]SkillSet, error) {
 	var out []SkillSet
 	for _, rs := range RogueSetsAt(s.Class, s.Level) {
@@ -255,6 +268,11 @@ func SkillSetsOf(t SkillTables, s PointsSheet) ([]SkillSet, error) {
 		if set.Skills, err = t.RogueSkills(rs, s.Race, s.Dex, set.Armor, points); err != nil {
 			return nil, fmt.Errorf("%s skills (%s): %w", s.Class.ID, rs.Set, err)
 		}
+		if s.ArmourBlocks() {
+			if err := blockSkills(t, s, rs, points, set.Skills); err != nil {
+				return nil, err
+			}
+		}
 		set.Budget = ruletablesvc.SkillBudgetOf(&rs, s.Level, points)
 		if b, ok := ruletablesvc.SkillPointsFigures(&rs, s.Level, points); ok {
 			set.Points = &b
@@ -262,4 +280,26 @@ func SkillSetsOf(t SkillTables, s PointsSheet) ([]SkillSet, error) {
 		out = append(out, set)
 	}
 	return out, nil
+}
+
+// blockSkills is ADR 0042 step 16.3 on the percentages skills of set rs read in armour that
+// blocks it: ruletablesvc.ArmourFreeSkills take their no-armour percentage (Q16), every other
+// skill is Blocked.
+func blockSkills(t SkillTables, s PointsSheet, rs classes.RogueSkills, points map[string]int, skills []ruletablesvc.SkillPercent) error {
+	free, err := t.RogueSkills(rs, s.Race, s.Dex, ruletablesvc.SkillArmorFor(&rs, ruletablesvc.ColumnNone), points)
+	if err != nil {
+		return fmt.Errorf("%s skills (%s) without armour: %w", s.Class.ID, rs.Set, err)
+	}
+	for i := range skills {
+		if !slices.Contains(ruletablesvc.ArmourFreeSkills, skills[i].Skill) {
+			skills[i].Blocked = true
+			continue
+		}
+		for _, f := range free {
+			if f.Skill == skills[i].Skill {
+				skills[i] = f
+			}
+		}
+	}
+	return nil
 }

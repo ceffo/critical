@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 )
@@ -62,4 +63,37 @@ func TestClassEntries_Step1_ThePrimaryIsTheFirstActiveEntry(t *testing.T) {
 	_, ok = classes.Primary([]classes.Entry{frozen("fighter", 9)})
 	assert.False(t, ok)
 	assert.Equal(t, classes.Entry{Class: "bard", RealizedLevel: 15, StartingXP: 1200, State: classes.EntryActive}, classes.SingleEntry("bard", 15, 1200))
+}
+
+// ADR 0042 step 12: "A character has feature kind K when an entry's class
+// lists K at or under that entry's realized level (a frozen entry: its
+// left_at_level); the rule reads that entry's parameters and level [...]. Two
+// entries granting the same kind each keep their own grant, read with their
+// own level." A fighter 7/thief 9 backstabs at the thief's 9, not the first
+// entry's 7; a dual-class's frozen thief at its left-at level; a thief/bard
+// keeps two rogue_skills grants, each at its own level.
+func TestLookup_Step12_EachEntryReadsItsOwnLevel(t *testing.T) {
+	def := cataloguetest.Tables(t).Class
+	for _, tc := range []struct {
+		name    string
+		entries []classes.Entry
+		kind    string
+		want    map[string]int
+	}{
+		{"a fighter 7/thief 9 backstabs at 9", []classes.Entry{active("fighter", 7), active("thief", 9)}, classes.KindBackstab, map[string]int{"thief": 9}},
+		{"a frozen thief at its left-at level", []classes.Entry{frozen("thief", 5), active("fighter", 7)}, classes.KindBackstab, map[string]int{"thief": 5}},
+		{"two entries granting the kind each keep their own", []classes.Entry{active("thief", 6), active("bard", 4)}, classes.KindRogueSkills, map[string]int{"thief": 6, "bard": 4}},
+		{"no entry granting it", []classes.Entry{active("fighter", 7), active("mage", 6)}, classes.KindBackstab, map[string]int{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			gs, err := classes.Grants(tc.entries, def, tc.kind)
+			require.NoError(t, err)
+			got := map[string]int{}
+			for _, g := range gs {
+				assert.Equal(t, tc.kind, g.Feature.Kind)
+				got[g.Class.ID] = g.Level
+			}
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }

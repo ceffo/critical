@@ -33,6 +33,10 @@ type SkillPercent struct {
 	Base, Points, Race, Dexterity, Armor int
 	Raw                                  int
 	Percent                              int
+	// Blocked: the skill is not used while the worn body armour blocks it
+	// (ADR 0042 step 16.3): its check is refused before the die. Omitted
+	// from JSON when false, so a single-class sheet reads as before.
+	Blocked bool `json:",omitempty"`
 }
 
 // rogueSkills is the sum of ADR 0030 steps 17 and 18 for each of skills, in

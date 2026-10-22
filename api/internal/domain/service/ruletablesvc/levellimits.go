@@ -64,6 +64,17 @@ func (l *LevelLimits) Limit(race, class string) (LevelLimitRow, bool) {
 	return r, ok
 }
 
+// LevelLimit is the DMG Table 7 cell for race in class (Limit), false when
+// the catalogue carries no level limits or no row for the pair: what the
+// per-entry level_limit warning reads (ADR 0041 step 5, ADR 0042 step 7).
+func (t *Tables) LevelLimit(race, class string) (LevelLimitRow, bool) {
+	l, ok := t.LevelLimits()
+	if !ok {
+		return LevelLimitRow{}, false
+	}
+	return l.Limit(race, class)
+}
+
 // RaceAllows reports whether a character of race may belong to class (DMG
 // Table 7: a dash is a race the class does not admit), the check a new
 // character's race and class pass (ADR 0030 step 21, as built for character

@@ -29,6 +29,9 @@ type SpellSlotDTO struct {
 	Used              bool   `json:"used"`
 	// Extra: a slot granted by a spell (grant_slots), blank until cast, gone at the long rest.
 	Extra bool `json:"extra,omitempty"`
+	// Class: the class entry whose slot this is, for a character with two spellcasting entries
+	// (ADR 0042 step 14); absent otherwise.
+	Class string `json:"class,omitempty"`
 }
 
 // SpellDTO is the wire shape of a spell. Every human-language text is a
@@ -84,7 +87,7 @@ type SpellDTO struct {
 func SlotsToDTO(in []spellsvc.SpellSlot) []SpellSlotDTO {
 	out := make([]SpellSlotDTO, 0, len(in))
 	for _, s := range in {
-		out = append(out, SpellSlotDTO{Level: s.Level, PreparedSpellID: s.SpellID, PreparedSpellName: s.PreparedSpellName, Used: s.Used, Extra: s.Extra})
+		out = append(out, SpellSlotDTO{Level: s.Level, PreparedSpellID: s.SpellID, PreparedSpellName: s.PreparedSpellName, Used: s.Used, Extra: s.Extra, Class: s.Class})
 	}
 	return out
 }

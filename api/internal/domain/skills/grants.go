@@ -27,6 +27,27 @@ func GrantsAt(book Book, class string, level int) LevelGrants {
 	return g
 }
 
+// GrantsOf is GrantsAt for a level of the entry of class among a character's active entries
+// cls (ADR 0042 steps 7 and 15): the slots of the combined pools at that entry's level over the
+// level below, and the skill points the level grants when class has them.
+func GrantsOf(book Book, cls Classes, class string, level int) LevelGrants {
+	var g LevelGrants
+	if level >= 2 {
+		at, ok := FiguresOf(book, cls.with(class, level), 0, Spending{})
+		below, _ := FiguresOf(book, cls.with(class, level-1), 0, Spending{})
+		if ok {
+			g.WeaponSlots = at.Weapon.Available - below.Weapon.Available
+			g.NonweaponSlots = at.Nonweapon.Available - below.Nonweapon.Available
+		}
+	}
+	if def, ok := book.ClassDef(class); ok {
+		for _, rs := range RogueSetsAt(def, level) {
+			g.SkillPoints += ruletablesvc.SkillPointsGainedAt(&rs, level)
+		}
+	}
+	return g
+}
+
 // ToSpend is what the pools f and the skill sets leave to spend at the realized level (ADR
 // 0037 step 15's reminder): the pools' left slots and the skill points left in all the sets
 // (each set's budget is its own: a set over budget leaves 0, it does not eat into another's),

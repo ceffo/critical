@@ -12,6 +12,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -64,7 +65,7 @@ func TestClassWeaponTypes_Step7_AgreesWithTheStep20Warnings(t *testing.T) {
 				if len(w.Fires) > 0 {
 					piece.Fires = w.Fires[0]
 				}
-				if !slices.ContainsFunc(ClassWarnings([]classes.Equipment{eq}, OldClasses{}, []Item{piece}), func(x Warning) bool { return x.Code == WarnWeaponNotAllowed }) {
+				if !slices.ContainsFunc(ClassWarnings([]classes.Equipment{eq}, ruleset.WeaponLift{}, OldClasses{}, []Item{piece}), func(x Warning) bool { return x.Code == WarnWeaponNotAllowed }) {
 					allowed[w.WeaponType] = true
 				}
 			}

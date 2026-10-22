@@ -169,13 +169,19 @@ A rule the table decided that differs from the books (the crit table, multi-clas
 _Avoid_: homebrew.
 
 **House rule setting** (fr: réglage de règle maison):
-One typed field of a ruleset's house rules (crit table, racial lift, level limits, success effects).
+One typed field of a ruleset's house rules (crit table, racial lift, weapon lift, level limits, success effects).
 [ADR 0041](docs/adr/0041-ruleset.md) step 2.
 
 **Racial lift** (fr: levée des restrictions raciales):
 The house rule setting that waives the race's class restriction for a multi-class or dual-class
 character (two switches, both on by default). [ADR 0041](docs/adr/0041-ruleset.md) step 2.2.
 _Code_: RacialLift
+
+**Weapon lift** (fr: levée de la limite d'armes):
+The house rule setting that lets a multi-class character's blunt-only class entry stop restricting
+every weapon to its own (one switch, off by default: the book's rule). A single-class or dual-class
+character is unchanged. [ADR 0041](docs/adr/0041-ruleset.md) step 2.5.
+_Code_: WeaponLift
 
 **Level limits mode** (fr: mode des limites de niveau):
 How the racial level limits apply; `warn` (a warning on the character, never a refusal or a cap)

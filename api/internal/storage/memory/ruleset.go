@@ -66,6 +66,17 @@ func (p Rulesets) SetRacialLift(ctx context.Context, rulesetID int64, lift rules
 	})
 }
 
+// SetWeaponLift stores the weapon lift switch.
+func (p Rulesets) SetWeaponLift(ctx context.Context, rulesetID int64, lift ruleset.WeaponLift) error {
+	return p.s.write(ctx, func(t *tables) error {
+		if err := p.own(t, rulesetID); err != nil {
+			return err
+		}
+		t.ruleset.WeaponLift = lift
+		return nil
+	})
+}
+
 // ReplaceSuccessEffects swaps the whole list of effects, sorted by proficiency; a proficiency twice is refused.
 func (p Rulesets) ReplaceSuccessEffects(ctx context.Context, rulesetID int64, effects []ruleset.SuccessEffect) error {
 	return p.s.write(ctx, func(t *tables) error {

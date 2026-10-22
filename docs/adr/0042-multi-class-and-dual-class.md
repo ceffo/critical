@@ -552,7 +552,13 @@ bard 15 never).)_
        priest keeps his weapon limits whatever his other classes (same section, Priest: a
        fighter/cleric uses blunt weapons only, with the warrior's combat value). The weapon
        proficiency types (ADR 0037 step 7) follow the same rule (decided in triage: "a cleric
-       multi-class keeps the cleric's weapon limits (warnings)").
+       multi-class keeps the cleric's weapon limits (warnings)"), **unless the ruleset lifts it**:
+       with [ADR 0041](0041-ruleset.md) step 2.5's `multiclass_any_weapon` on, the `blunt_only`
+       entry no longer judges alone, and a weapon or a weapon proficiency type is allowed when any
+       active entry's class allows it (amended 2026-10-22, user: "our DM allows our priest fighter
+       to use a long sword"). Off by default. A single-class character, a dual-class character (its
+       one active entry decides, and an old class still adds nothing to an active `blunt_only` one,
+       step 13) and the specialization (a multi-class character's stays refused) are unchanged.
     2. **Armour**: wearing it is allowed when any active entry's class allows it; what it blocks is
        each class's own: an entry whose class allows no body armour (`armour: none`) and has a
        `spell_progression` warns `spell_in_armour` on every cast of its spells while body armour is
@@ -577,7 +583,12 @@ bard 15 never).)_
     weapon alone. Test: `Weapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion`. The weapon picks follow
     the same rule (`classes.AllowedTogether`, which both read): a type is refused only when no active
     entry's class may pick it, or when a `blunt_only` entry's may not; the specialization stays the
-    first entry's. Test (skills, with the pick check): `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks`. Each derived entry
+    first entry's. Test (skills, with the pick check): `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks`. The types the picker offers are
+    the same rule's answer, not a class's list: `derived.proficiencySlots.weaponTypes`
+    (`[{type, specializationSlots}]`, additive; `skills.figuresOf` over `Classes.weaponTypeAllowed`,
+    the weapon lift included) on the sheet, the editor's preview and the creation draft, so a
+    cleric-first cleric/fighter is offered the long sword under the lift. Test:
+    `WeaponTypes_Step16_1_TheOfferedTypesFollowTheAcceptedPicks`. Each derived entry
     carries `NoArmour` (its `armour` list is only `none`; test `Derive_Step16_2_NoArmourComesFromTheEquipment`).
     A cast whose spells are such an entry's (the slot's entry, else the first active spellcasting
     entry, step 14) reads the worn pieces and answers `warnings: ["spell_in_armour"]` (never

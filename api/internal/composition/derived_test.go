@@ -62,7 +62,13 @@ func kelsenPicks(level int) *skills.ProficiencySlots {
 		pick("reading_writing", "int", 1, 15), pick("local_history", "cha", 0, 16),
 	}, WeaponPicks: []skills.WeaponPickFigures{
 		wpick("short_bow"), wpick("dagger"), wpick("dart"), wpick("long_sword"), wpick("other_melee"),
-	}}
+	}, WeaponTypes: func() (out []skills.WeaponTypeFigure) {
+		// The bard may pick every type (ADR 0042 step 16.1), none specialized.
+		for _, t := range ruletablesvc.WeaponTypes {
+			out = append(out, skills.WeaponTypeFigure{Type: t})
+		}
+		return out
+	}()}
 }
 
 // ADR 0030 steps 3, 5, 6, 7 and 8 over the fixture's tables (the books'

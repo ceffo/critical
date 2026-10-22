@@ -29,6 +29,7 @@ func picked() *skillsvc.Proficiencies {
 				{ID: "old_skill", Slots: 1, Cost: 1},
 			},
 			WeaponPicks: []skills.WeaponPickFigures{{Type: "long_sword", Slots: 1, Allowed: true}, {Type: "dagger", Slots: 1, Allowed: true}},
+			WeaponTypes: []skills.WeaponTypeFigure{{Type: "long_sword"}, {Type: "dagger", SpecializationSlots: 3}},
 		},
 		Warnings: []skills.Warning{
 			{Code: "slots_to_spend", Field: "nonweapon", Pool: "nonweapon", Left: &seven},
@@ -46,6 +47,7 @@ const pickedAnswer = `{
 		"nonWeapon":{"initial":3,"perLevels":4,"levelGained":3,"intelligence":4,"available":10,"spent":3,"left":7,"languages":0},
 		"weapon":{"initial":2,"perLevels":4,"levelGained":3,"available":5,"spent":2,"left":3},
 		"weaponPicks":[{"type":"long_sword","slots":1,"allowed":true},{"type":"dagger","slots":1,"allowed":true}],
+		"weaponTypes":[{"type":"long_sword","specializationSlots":0},{"type":"dagger","specializationSlots":3}],
 		"picks":[
 			{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"target":18},
 			{"id":"old_skill","slots":1,"cost":1,"extraSlots":0,"ability":"","modifier":0,"known":false,"target":null}

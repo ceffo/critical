@@ -1694,6 +1694,8 @@
       "liftHelp": "Lève la restriction de classe de la race pour un personnage à plusieurs classes. Un personnage à classe unique n'est pas concerné.",
       "multiclassAnyRace": "Multi-classé : toute race",
       "dualclassAnyRace": "Double-classé : toute race",
+      "weaponHelp": "Un personnage à plusieurs classes peut utiliser toute arme qu'une de ses autres classes permet, même si l'une d'elles est limitée aux armes contondantes (le clerc). Désactivé par défaut. La spécialisation d'arme n'est pas modifiée.",
+      "multiclassAnyWeapon": "Multi-classé : toute arme",
       "saved": "Enregistré.",
       "levelLimits": "Limites de niveau",
       "levelLimitsMode": {

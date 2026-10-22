@@ -334,3 +334,27 @@ func TestWeaponPick_Step15_OnlyASingleClassFighterSpecializes(t *testing.T) {
 	assert.Equal(t, spec.Weapon, got.Picks.Weapon)
 	assert.Equal(t, "long_sword", skills.WeaponProficiencyOf(book, fighter, spec).Specialized)
 }
+
+// ADR 0042 step 16.1 as built: the figures list the types the character may pick, by the rule a
+// save is judged by, so a cleric-first cleric/fighter is offered the long sword only under the
+// ruleset's weapon lift, whichever class comes first; a single-class cleric never is.
+func TestWeaponTypes_Step16_1_TheOfferedTypesFollowTheAcceptedPicks(t *testing.T) {
+	book := profBook(t)
+	offered := func(cls skills.Classes, lift bool) []string {
+		got, _ := skills.Read(book, skills.Sheet{Classes: cls, Intelligence: 12, Picks: weapons(), MulticlassAnyWeapon: lift})
+		require.NotNil(t, got)
+		var out []string
+		for _, w := range got.WeaponTypes {
+			out = append(out, w.Type)
+		}
+		return out
+	}
+	clericFighter := skills.Classes{{Class: "cleric", Level: 3}, {Class: "fighter", Level: 3}}
+	assert.Contains(t, offered(clericFighter, true), "long_sword")
+	assert.NotContains(t, offered(clericFighter, false), "long_sword")
+	assert.Contains(t, offered(clericFighter, false), "sling", "the cleric's own types stay")
+	assert.NotContains(t, offered(skills.One("cleric", 3), true), "long_sword", "the lift is for several classes")
+	_, err := skills.Apply(book, nil, "human", skills.Sheet{Classes: clericFighter, Intelligence: 12, Picks: weapons(), MulticlassAnyWeapon: true},
+		skills.Edit{Picks: weapons("long_sword")})
+	require.NoError(t, err, "what is offered is accepted")
+}

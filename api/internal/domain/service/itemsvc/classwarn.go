@@ -3,9 +3,11 @@ package itemsvc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 )
 
 // Warning codes (ADR 0033 step 20): a class wears or wields what it should
@@ -49,13 +51,14 @@ type Warning struct {
 // not define, which has no limit) warns no class limit. Several are judged
 // together (ADR 0042 step 16.1 and 16.2): a piece is allowed when any class
 // allows it, except that a blunt_only class restricts every weapon to its own
-// list. A homebrew weapon without a catalogue code is judged by its weapon type
+// list, unless lift (the ruleset's weapon lift, ADR 0041 step 2.5) is on for a
+// multi-class character. A homebrew weapon without a catalogue code is judged by its weapon type
 // and damage types; when those do not settle it (a type some listed weapon
 // shares, such as other_melee for a thief), no warning. old are a
 // dual-class's old classes (ADR 0042 steps 13 and 16): a piece limits does not
 // allow but one of them does is allowed, warned dual_class_old_ability while
 // they are dormant.
-func ClassWarnings(limits []classes.Equipment, old OldClasses, pieces []Item) []Warning {
+func ClassWarnings(limits []classes.Equipment, lift ruleset.WeaponLift, old OldClasses, pieces []Item) []Warning {
 	var out []Warning
 	var shields, twoHanded []Item
 	for _, p := range pieces {
@@ -74,7 +77,7 @@ func ClassWarnings(limits []classes.Equipment, old OldClasses, pieces []Item) []
 		case p.Category == CategoryWeapon && p.State == StateWielded:
 			w := wielded(p, pieces)
 			weapon := func(e classes.Equipment) bool { return e.AllowsWeapon(w) }
-			if code, ok := old.weapon(limits, weapon); !ok {
+			if code, ok := old.weapon(limits, lift, weapon); !ok {
 				out = append(out, Warning{p.ID, code})
 			}
 			if p.WeaponType == "" {
@@ -126,9 +129,11 @@ func (old OldClasses) judged(allowed bool, allows func(classes.Equipment) bool, 
 // weapon is a wielded weapon's verdict (ADR 0042 steps 13 and 16.1,
 // classes.AllowedWithOld): allowed by the active classes, or by an old class
 // (dual_class_old_ability before the crossover); an active blunt_only class
-// decides alone, so an old class never lifts its limit, past the crossover too.
-func (old OldClasses) weapon(limits []classes.Equipment, allows func(classes.Equipment) bool) (string, bool) {
-	allowed, byOld := classes.AllowedWithOld(limits, old.Equipment, allows)
+// decides alone, so an old class never lifts its limit, past the crossover too;
+// only the ruleset's weapon lift does, for several active classes (ADR 0041
+// step 2.5).
+func (old OldClasses) weapon(limits []classes.Equipment, lift ruleset.WeaponLift, allows func(classes.Equipment) bool) (string, bool) {
+	allowed, byOld := classes.AllowedWithOld(limits, old.Equipment, lift.MulticlassAnyWeapon, allows)
 	switch {
 	case !allowed:
 		return WarnWeaponNotAllowed, false
@@ -227,7 +232,12 @@ func (s *service) Warnings(ctx context.Context, characterID int64, items []Item)
 		return nil, err
 	}
 	old := OldClasses{Equipment: oldLimits, Dormant: !classes.Crossed(entries)}
-	return ClassWarnings(limits, old, items), nil
+	// ADR 0041 steps 2.5 and 3: the weapon lift of the character's ruleset.
+	rs, err := s.rulesets.ForCharacter(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("character %d ruleset: %w", characterID, err)
+	}
+	return ClassWarnings(limits, rs.WeaponLift, old, items), nil
 }
 
 // limitsOf is the equipment of the active classes (ADR 0040 step 1.6, ADR

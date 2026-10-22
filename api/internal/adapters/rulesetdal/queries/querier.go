@@ -21,6 +21,7 @@ type Querier interface {
 	SetRulesetCatalogueVersion(ctx context.Context, arg SetRulesetCatalogueVersionParams) error
 	SetRulesetCritPlaceholder(ctx context.Context, arg SetRulesetCritPlaceholderParams) error
 	SetRulesetRacialLift(ctx context.Context, arg SetRulesetRacialLiftParams) error
+	SetRulesetWeaponLift(ctx context.Context, arg SetRulesetWeaponLiftParams) error
 }
 
 var _ Querier = (*Queries)(nil)

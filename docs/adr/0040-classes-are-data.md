@@ -376,6 +376,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
        code.
     4. The races (steps 2 and 4), then the tables' rows (step 7).
     5. `just check-no-class-ids` joins `just validate` once no literal is left.
+       _(Built 2026-10-22: the check reads the ids from the catalogue fixture plus the psionicist,
+       skips tests, `testdata/`, comments and Go struct tags, and lets through the literals of
+       `scripts/class-ids-allowlist.txt`: the spell lists `wizard` and `priest`, the language
+       spellings of a migration, and TEMPORARY entries for the literals the other items of this step
+       still remove.)_
     6. Only then the cleric's remaining work, multi-class and dual-class (ADR 0042) and the
        psionicist (ADR 0043), each a catalogue class of known or new kinds.
 

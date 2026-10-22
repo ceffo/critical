@@ -36,7 +36,7 @@ func TestKelsen_TheSheetMatchesTheDerivedValues(t *testing.T) {
 	require.True(t, ok)
 	c := &charactersvc.Character{
 		Name: seed.Name, Str: seed.Str, Dex: seed.Dex, Con: seed.Con, Int: seed.Int, Wis: seed.Wis, Cha: seed.Cha,
-		HPMax: seed.HPMax, XPTotal: seed.XPTotal, Class: seedfile.DefaultClass, Race: seed.Race,
+		HPMax: seed.HPMax, XPTotal: seed.XPTotal, Class: seed.Class, Race: seed.Race,
 		SkillPoints: seed.SkillPoints,
 		Sheet: charactersvc.Sheet{Level: seed.Level, THAC0: seed.Thac0Base, Saves: charactersvc.Saves{
 			ParaPoison: seed.SaveParaPoison, RodStaffWand: seed.SaveRodStaffWand, PetriPoly: seed.SavePetriPoly,
@@ -81,7 +81,7 @@ func parseTables(t *testing.T, path string) *ruletablesvc.Tables {
 	t.Helper()
 	artifact, err := catalogueadpt.LoadArtifact(path)
 	require.NoError(t, err)
-	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages)
+	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
 	require.NoError(t, err)
 	_, ok := tables.Classes()
 	require.True(t, ok, "%s carries no class tables: run `just catalogue`", path)

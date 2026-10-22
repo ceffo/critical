@@ -5,7 +5,9 @@ Context). The shape of the definitions, the closed list of feature kinds and the
 (steps 1 to 4), and the choices beyond the triage (group ids under the rule of step 10, one
 `rogue_skills` kind with a `set` parameter, the weapon proficiency types derived from the
 `equipment` list, the package `domain/classes`) were accepted in review, 2026-10-21.
-Step 11.1 is built (2026-10-22, [ADR 0021](0021-spell-catalogue.md) step 18: the catalogue publishes format 11). The rest is
+Step 11.1 is built (2026-10-22, [ADR 0021](0021-spell-catalogue.md) step 18: the catalogue publishes format 11). Step 11.2
+is built for the class list, groups, races, prime requisites, ability minimums, alignments and XP rows (2026-10-22: the
+class registry, steps 5, 6, 8 and 9; see the as-built notes there). The rest is
 not implemented: each step names the test its implementing item writes. Amends
 [ADR 0030](0030-classes-and-races.md) steps 1, 2, 4, 9 to 20, 22 and 23 and
 [ADR 0015](0015-experience.md) step 2, each on implementation. Builds on the vocabulary of
@@ -217,6 +219,17 @@ writes `Test<name>` and adds the prefix here in the same PR.
    it, read with the entry's level), `Lookup_Step5_ANewClassOfKnownKindsNeedsNoCode` (domain: a
    fixture class `test_skald`, group rogue, `rogue_skills` set `bard` and `spellbook`, derives its
    skills and spellbook with no code change).
+   _(As built, 2026-10-22: `domain/classes.Registry` holds the class, group and race definitions, built by the catalogue
+   adapter and handed out by the rule tables (`Definitions`). It reads each class's group, prime requisites, ability
+   minimums, alignments and XP rows; the features, equipment and hit dice keep their readers until step 11.3, so the
+   feature lookup proper (and its `test_skald` test) comes with them. Built so far:
+   `Lookup_Step5_ANewClassOfKnownFieldsNeedsNoCode` and `Lookup_Step5_TheDefinitionsAreCopies` (domain/classes).
+   A by-group spell effect on a character with no class group is refused ("needs the character's class group"),
+   never a fallback to the default die. The THAC0 lookup, the race-and-class check and the proficiency groups
+   (PHB Table 37: `general` plus the definitions' groups) read the definitions, with no class, group or race id.
+   The id literals left in the derived character (the spell-slot table by class, the races with a Constitution
+   save bonus, the feature checks in the cleric, fighter and creation readers) are features and traits: they
+   move with the feature list and the race traits (step 11.3, 11.4), and step 11.5's check refuses them after.)_
    _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 12, on implementation: with several class entries, each entry grants its kinds at its own realized level (a frozen entry at the level it was left at) and each grant is read with its entry's parameters and level; a figure that is one per character (THAC0, saves, proficiency slots, hit points) combines by ADR 0042 steps 8 to 10 and 15, never by a class id)_
 
 6. **Prime requisites and the XP bonus.** A character is eligible for the 10% bonus of
@@ -230,6 +243,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
    Tests: `BonusEligible_Step6_EveryPrimeRequisiteAt16` (xpsvc: a fighter of Str 16 eligible, a
    mage of Int 15 not, a bard of Dex 16 and Cha 15 not), `Get_Step6_TheClassPicksThePrimeRequisites`
    (composition: a fighter of Str 17, Dex 10, Cha 10 is eligible; fails on the old code).
+   _(As built, 2026-10-22: both tests, and `Classes_Golden_FiveClassesDeriveTheBooksFigures` (composition: one human
+   of each class at level 5 with the XP of level 6 derives Table 53's THAC0, Table 60's saves, its hit die with
+   Table 3's Constitution adjustment and the XP bonus, every figure read in the PHB).)_
 
 7. **Tables keyed by class become rows.** Every rule table that has a column per class or group
    becomes rows with a `class`, `group` or `race` key (XP thresholds, Table 53, Table 60, the
@@ -249,12 +265,27 @@ writes `Test<name>` and adds the prefix here in the same PR.
    fully supported.
    Tests: `Import_Step8_RefusesAnUnknownKindOrParam`, `Import_Step8_RefusesARowForAnUnknownClass`
    (ruletablesadpt), `Options_Step8_EveryCatalogueClassIsCreatable` (charactersvc).
+   _(As built, 2026-10-22, for the fields read so far: `classes.New` refuses an unknown group or ability, a class
+   without a prime requisite, an unknown alignment, a class or race listed twice and XP rows that are not levels
+   1 to 20 from 0 and increasing (`Import_Step8_TheRegistryRefusesBrokenDefinitions`, domain/classes); the
+   adapter refuses a row keyed by an unknown class, group or race (`Import_Step8_RefusesARowForAnUnknownClass`).
+   The kinds and params come with step 11.3. `classes.New` also refuses a group without THAC0 rows for levels
+   1 to 20 (Table 53 is read from the group definitions, `RuleTables_Step7_RowsKeyedByClassAndGroup`) and a race
+   requirement on an unknown ability or with its minimum above its maximum. The per-race tables (racial level
+   limits, `race_requirements`, `thief_skill_race`): a race whose definition has ability requirements (every
+   race of the book but the human) must have a row for every key, so a race with its rows missing is refused at
+   start; a race with none (the human) may have rows or none, and with none has no level limit (it may be any
+   class) and no adjustment. The exemption is read from the data (`classes.Race.Restricted`), not an id. The creation options list the
+   classes and races in catalogue order (fighter, mage, cleric, thief, bard; human last). `CreatableClasses` is
+   gone.)_
 
 9. **The seed names its class.** `seeds/character.json` carries `class` (Kelsen: `bard`) and
    `race`; a seed without them is refused at start; `seedfile.DefaultClass` goes. The storage
    default of `characters.class` is not read as a class.
    Tests: `Seed_Step9_TheSeedNamesItsClass` (seedfile: a seed of class `fighter` loads as a
    fighter; a seed without `class` is refused).
+   _(As built, 2026-10-22: in composition, where the seed is loaded; `seedfile` also refuses a class or race the
+   catalogue does not define.)_
 
 ### The rule
 

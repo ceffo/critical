@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -19,7 +20,7 @@ import (
 // ADR 0037 step 2: seeds/proficiencies.json holds PHB Table 37 once, 65 rows, each with a known
 // ability (or none), its slots, its groups, and an en and a fr name in the web's locale files.
 func TestNonweaponCatalogue_Step2_Table37Rows(t *testing.T) {
-	p, err := ruletablesadpt.ReadProficiencies(seedsDir)
+	p, err := ruletablesadpt.ReadProficiencies(seedsDir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	rows := p.All()
 	require.Len(t, rows, 65)
@@ -69,7 +70,7 @@ var kelsenSheet = []struct {
 
 // The seed bard's eight proficiencies keep their ids, abilities and modifiers in the catalogue.
 func TestNonweaponCatalogue_Step2_SeedBardIdsKeepTheirFigures(t *testing.T) {
-	p, err := ruletablesadpt.ReadProficiencies(seedsDir)
+	p, err := ruletablesadpt.ReadProficiencies(seedsDir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	for _, s := range kelsenSheet {
 		got, ok := p.Get(s.id)
@@ -97,14 +98,14 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 	} {
 		dir := tc.dir
 		t.Run(name, func(t *testing.T) {
-			book, err := ruletablesadpt.ReadProficiencies(dir)
+			book, err := ruletablesadpt.ReadProficiencies(dir, cataloguetest.Definitions(t))
 			require.NoError(t, err)
 			c, ok, err := seedfile.ReadCharacter(filepath.Join(dir, seedfile.CharacterFile))
 			require.NoError(t, err)
 			require.True(t, ok)
 			picks := c.Picks()
 			require.Len(t, picks.Nonweapon, len(kelsenSheet))
-			_, err = skills.ValidPicks(book, seedfile.DefaultClass, picks, skills.Picks{})
+			_, err = skills.ValidPicks(book, c.Class, picks, skills.Picks{})
 			require.NoError(t, err, "the editor accepts the seed's picks")
 
 			catalogue, ok := parseTables(t, fixtureCatalogue).Languages()
@@ -113,7 +114,7 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 			assert.Equal(t, tc.langs, langs, "the campaign's Elvish, Orcish and Dwarvish; Common is a half-elf's own")
 			spend := skills.Spending{Picks: picks, Languages: langs}
 			sheet := &charactersvc.Character{Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha}
-			f, ok := skills.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, spend)
+			f, ok := skills.ProficiencyFigures(book, c.Class, c.Level, c.Int, spend)
 			require.True(t, ok)
 			f.SetTargets(func(a string) (int, bool) { return sheet.Score(charactersvc.Ability(a)) })
 			for i, s := range kelsenSheet {
@@ -129,16 +130,16 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 			w := skills.SlotWarnings(f)
 			require.NotEmpty(t, w)
 			assert.Equal(t, tc.code, w[0].Code, "a warning, never an error")
-			require.NoError(t, skills.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, spend, spend), "kept as is")
+			require.NoError(t, skills.PicksWithinBudget(book, c.Class, c.Level, c.Int, spend, spend), "kept as is")
 			fewer := skills.Spending{Picks: picks, Languages: max(langs-1, 0)}
-			require.NoError(t, skills.PicksWithinBudget(book, seedfile.DefaultClass, c.Level, c.Int, spend, fewer), "a language dropped")
+			require.NoError(t, skills.PicksWithinBudget(book, c.Class, c.Level, c.Int, spend, fewer), "a language dropped")
 		})
 	}
 }
 
 // ADR 0037 step 1: Table 38's crossovers for the five classes.
 func TestProficiencyTables_Step1_Table38Crossovers(t *testing.T) {
-	p, err := ruletablesadpt.ReadProficiencies(seedsDir)
+	p, err := ruletablesadpt.ReadProficiencies(seedsDir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	assert.Equal(t, []ruletablesvc.Crossover{
 		{Class: "fighter", Groups: []string{"warrior", "general"}},
@@ -151,7 +152,7 @@ func TestProficiencyTables_Step1_Table38Crossovers(t *testing.T) {
 
 // A name is the web's i18n key skills.names.<id>, in en and fr.
 func TestNonweaponCatalogue_Step2_EveryIdHasAnEnAndFrName(t *testing.T) {
-	p, err := ruletablesadpt.ReadProficiencies(seedsDir)
+	p, err := ruletablesadpt.ReadProficiencies(seedsDir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	for _, lang := range []string{"en", "fr"} {
 		raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "src", "i18n", "locales", lang, "common.json")) //nolint:gosec // fixed test path
@@ -170,7 +171,7 @@ func TestNonweaponCatalogue_Step2_EveryIdHasAnEnAndFrName(t *testing.T) {
 
 // ADR 0037 step 1: PHB Table 34's four rows (p.50), read from the seed file.
 func TestProficiencyTables_Step1_Table34AndTable38(t *testing.T) {
-	p, err := ruletablesadpt.ReadProficiencies(seedsDir)
+	p, err := ruletablesadpt.ReadProficiencies(seedsDir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	assert.Equal(t, []ruletablesvc.SlotRow{
 		{Group: "warrior", WeaponInitial: 4, WeaponLevels: 3, Penalty: -2, NonweaponInitial: 3, NonweaponLevels: 3},

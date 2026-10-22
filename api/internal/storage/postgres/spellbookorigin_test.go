@@ -50,7 +50,7 @@ func runOriginMigration(t *testing.T, f *fakeStore) *fakeMigrations {
 	t.Helper()
 	embedded, err := embeddedMigrations()
 	require.NoError(t, err)
-	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	run := &fakeMigrations{store: f}
 	for _, m := range embedded {
 		if m.name != spellbookOriginMigration {
@@ -85,7 +85,7 @@ func TestMigrate_Step20_5_ExistingEntriesGetTheirOrigin(t *testing.T) {
 		CharacterID: kelsen, SpellKey: "alarm", Position: 3, Origin: "given",
 	}))
 	snapshot := copyTables(f.t)
-	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	require.NoError(t, f.InTx(context.Background(), func(ctx context.Context) error {
 		return after[spellbookOriginMigration](ctx, f)
 	}))

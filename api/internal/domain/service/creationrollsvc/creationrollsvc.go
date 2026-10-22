@@ -13,6 +13,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
@@ -188,6 +189,9 @@ type HPResult struct {
 
 // Rules are the tables the rolls read.
 type Rules interface {
+	// Definitions are the catalogue's class and race definitions (ADR 0040
+	// step 5): every class it defines is creatable (step 8).
+	Definitions() (*classes.Registry, error)
 	// RaceAdjustmentsFor is PHB Table 8 for a race.
 	RaceAdjustmentsFor(race string) (map[string]int, error)
 	// LevelFor is the class's level at xp (ADR 0030 step 3).
@@ -267,7 +271,11 @@ func (s *service) methodAndRace(code, race string) (ruletablesvc.ScoreMethod, ma
 	if race == "" {
 		return m, nil, nil
 	}
-	if !slices.Contains(charactersvc.Races, race) {
+	defs, err := s.rules.Definitions()
+	if err != nil {
+		return m, nil, fmt.Errorf("score method: %w", err)
+	}
+	if !slices.Contains(defs.RaceIDs(), race) {
 		return m, nil, &domain.FieldError{Field: "race", Message: charactersvc.CodeUnknown}
 	}
 	adj, err := s.rules.RaceAdjustmentsFor(race)
@@ -358,11 +366,14 @@ func (s *service) roll(m ruletablesvc.ScoreMethod) ScoreRoll {
 // group's name level (ADR 0030 step 7.1's arithmetic, shared with the
 // level-up roll), the group's fixed gain above it (step 7.2).
 func (s *service) HP(_ context.Context, in HPInput) (*HPResult, error) {
-	if !slices.Contains(ruletablesvc.Classes, in.Class) {
-		return nil, &domain.FieldError{Field: "class", Message: charactersvc.CodeUnknown}
+	defs, err := s.rules.Definitions()
+	if err != nil {
+		return nil, fmt.Errorf("hp roll: %w", err)
 	}
-	if !slices.Contains(charactersvc.CreatableClasses, in.Class) {
-		return nil, &domain.FieldError{Field: "class", Message: charactersvc.CodeNotCreatable}
+	// ADR 0040 step 8: every class the catalogue defines is creatable.
+	class, ok := defs.Class(in.Class)
+	if !ok {
+		return nil, &domain.FieldError{Field: "class", Message: charactersvc.CodeUnknown}
 	}
 	if in.Con < charactersvc.MinAbility || in.Con > charactersvc.MaxAbility {
 		return nil, &domain.FieldError{Field: "con", Message: charactersvc.CodeOutOfRange}
@@ -370,10 +381,7 @@ func (s *service) HP(_ context.Context, in HPInput) (*HPResult, error) {
 	if in.XP < charactersvc.MinStartingXP || in.XP > charactersvc.MaxStartingXP {
 		return nil, &domain.FieldError{Field: "xp", Message: charactersvc.CodeOutOfRange}
 	}
-	group, err := ruletablesvc.ClassGroup(in.Class)
-	if err != nil {
-		return nil, fmt.Errorf("hp roll: %w", err)
-	}
+	group := class.Group
 	level, err := s.rules.LevelFor(in.Class, in.XP)
 	if err != nil {
 		return nil, fmt.Errorf("hp roll: %w", err)

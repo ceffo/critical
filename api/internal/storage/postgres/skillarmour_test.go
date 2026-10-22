@@ -47,7 +47,7 @@ func skillArmourCharacter(t *testing.T, f *fakeStore, class, skillArmor string, 
 // carry runs the data step after migration 020 on f with the catalogue's armours.
 func carry(t *testing.T, f *fakeStore, equipment ruletablesvc.Equipment) error {
 	t.Helper()
-	_, after := migrationDataSteps(repoSeeds(), equipment)
+	_, after := migrationDataSteps(repoSeeds(), equipment, catalogueDefs)
 	return f.InTx(context.Background(), func(ctx context.Context) error {
 		return after[skillArmourMigration](ctx, f)
 	})

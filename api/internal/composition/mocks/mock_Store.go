@@ -4,6 +4,7 @@ package mocks
 
 import (
 	catalogue "github.com/ceffo/critical/api/internal/domain/catalogue"
+	classes "github.com/ceffo/critical/api/internal/domain/classes"
 
 	context "context"
 
@@ -165,17 +166,17 @@ func (_c *MockStore_InTx_Call) RunAndReturn(run func(context.Context, func(conte
 	return _c
 }
 
-// Migrate provides a mock function with given fields: ctx, seedsDir, equipment
-func (_m *MockStore) Migrate(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment) error {
-	ret := _m.Called(ctx, seedsDir, equipment)
+// Migrate provides a mock function with given fields: ctx, seedsDir, equipment, defs
+func (_m *MockStore) Migrate(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment, defs *classes.Registry) error {
+	ret := _m.Called(ctx, seedsDir, equipment, defs)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Migrate")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, ruletablesvc.Equipment) error); ok {
-		r0 = rf(ctx, seedsDir, equipment)
+	if rf, ok := ret.Get(0).(func(context.Context, string, ruletablesvc.Equipment, *classes.Registry) error); ok {
+		r0 = rf(ctx, seedsDir, equipment, defs)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -192,13 +193,14 @@ type MockStore_Migrate_Call struct {
 //   - ctx context.Context
 //   - seedsDir string
 //   - equipment ruletablesvc.Equipment
-func (_e *MockStore_Expecter) Migrate(ctx interface{}, seedsDir interface{}, equipment interface{}) *MockStore_Migrate_Call {
-	return &MockStore_Migrate_Call{Call: _e.mock.On("Migrate", ctx, seedsDir, equipment)}
+//   - defs *classes.Registry
+func (_e *MockStore_Expecter) Migrate(ctx interface{}, seedsDir interface{}, equipment interface{}, defs interface{}) *MockStore_Migrate_Call {
+	return &MockStore_Migrate_Call{Call: _e.mock.On("Migrate", ctx, seedsDir, equipment, defs)}
 }
 
-func (_c *MockStore_Migrate_Call) Run(run func(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment)) *MockStore_Migrate_Call {
+func (_c *MockStore_Migrate_Call) Run(run func(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment, defs *classes.Registry)) *MockStore_Migrate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(ruletablesvc.Equipment))
+		run(args[0].(context.Context), args[1].(string), args[2].(ruletablesvc.Equipment), args[3].(*classes.Registry))
 	})
 	return _c
 }
@@ -208,7 +210,7 @@ func (_c *MockStore_Migrate_Call) Return(_a0 error) *MockStore_Migrate_Call {
 	return _c
 }
 
-func (_c *MockStore_Migrate_Call) RunAndReturn(run func(context.Context, string, ruletablesvc.Equipment) error) *MockStore_Migrate_Call {
+func (_c *MockStore_Migrate_Call) RunAndReturn(run func(context.Context, string, ruletablesvc.Equipment, *classes.Registry) error) *MockStore_Migrate_Call {
 	_c.Call.Return(run)
 	return _c
 }

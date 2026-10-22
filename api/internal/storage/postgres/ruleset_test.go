@@ -11,7 +11,7 @@ import (
 // runRulesetStep runs the data step after the rulesets migration, the way a migration run does.
 func runRulesetStep(t *testing.T, f *fakeStore) {
 	t.Helper()
-	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	require.NoError(t, f.InTx(context.Background(), func(ctx context.Context) error {
 		return after[rulesetsMigration](ctx, f)
 	}))
@@ -70,7 +70,7 @@ func TestMigrate_Step10_RulesetStepIsWiredToTheEmbeddedFile(t *testing.T) {
 	f := newFakeStore()
 	embedded, err := embeddedMigrations()
 	require.NoError(t, err)
-	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	run := &fakeMigrations{store: f}
 	for _, m := range embedded {
 		if m.name != rulesetsMigration {

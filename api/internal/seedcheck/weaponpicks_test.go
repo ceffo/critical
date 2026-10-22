@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -22,7 +23,7 @@ import (
 func TestKelsen_Step16_WeaponPicksAreHisWeaponTypes(t *testing.T) {
 	for name, dir := range map[string]string{"campaign seeds": seedsDir, "test fixture": fixtureSeedsDir} {
 		t.Run(name, func(t *testing.T) {
-			book, err := ruletablesadpt.ReadProficiencies(dir)
+			book, err := ruletablesadpt.ReadProficiencies(dir, cataloguetest.Definitions(t))
 			require.NoError(t, err)
 			c, ok, err := seedfile.ReadCharacter(filepath.Join(dir, seedfile.CharacterFile))
 			require.NoError(t, err)
@@ -43,9 +44,9 @@ func TestKelsen_Step16_WeaponPicksAreHisWeaponTypes(t *testing.T) {
 			}
 			picks := c.Picks()
 			assert.Equal(t, want, picks.Weapon)
-			_, err = skills.ValidPicks(book, seedfile.DefaultClass, picks, skills.Picks{})
+			_, err = skills.ValidPicks(book, c.Class, picks, skills.Picks{})
 			require.NoError(t, err, "the editor accepts the seed's picks")
-			f, ok := skills.ProficiencyFigures(book, seedfile.DefaultClass, c.Level, c.Int, skills.Spending{Picks: picks})
+			f, ok := skills.ProficiencyFigures(book, c.Class, c.Level, c.Int, skills.Spending{Picks: picks})
 			require.True(t, ok)
 			assert.Equal(t, ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 5, Left: 0}, f.Weapon)
 			for _, w := range skills.SlotWarnings(f) {

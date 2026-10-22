@@ -2,6 +2,7 @@ package xpsvc
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -37,10 +38,14 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 	if err != nil {
 		return nil, err
 	}
+	primes, err := s.table.PrimeRequisites(c.Class)
+	if err != nil {
+		return nil, fmt.Errorf("xp ledger: %w", err)
+	}
 	return &Ledger{
 		Opening:       c.XPTotal,
 		Total:         total,
-		BonusEligible: BonusEligible(c.Dex, c.Cha),
+		BonusEligible: BonusEligible(primes, c),
 		Progress:      progress,
 		Entries:       entries,
 	}, nil

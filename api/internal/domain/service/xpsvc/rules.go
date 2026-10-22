@@ -3,14 +3,15 @@ package xpsvc
 import (
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // BonusPercent is the prime-requisite experience bonus (ADR 0015 step 1).
 const BonusPercent = 10
 
-// BonusMinScore is the score both prime requisites need for the bonus (ADR
-// 0015 step 2).
+// BonusMinScore is the score every prime requisite needs for the bonus (ADR
+// 0040 step 6, PHB chapter 3, Prime Requisite: 16 or more).
 const BonusMinScore = 16
 
 // LevelCells is how many levels of Table 25 the ledger lists around the
@@ -39,10 +40,18 @@ func LedgerTotal(opening int, entries []Entry) int {
 	return total
 }
 
-// BonusEligible is ADR 0015 step 2: the bard's prime requisites, Dexterity
-// and Charisma, are both at least BonusMinScore on the sheet.
-func BonusEligible(dex, cha int) bool {
-	return dex >= BonusMinScore && cha >= BonusMinScore
+// BonusEligible is ADR 0040 step 6 (replacing ADR 0015 step 2's bard-only
+// test): every prime requisite of c's class (primes, ability codes, its
+// definition's) is at least BonusMinScore on the sheet. A fighter's 18/xx is
+// 18 for the test (the plain score). A class without prime requisites gets
+// none.
+func BonusEligible(primes []string, c *charactersvc.Character) bool {
+	for _, a := range primes {
+		if s, ok := c.Score(charactersvc.Ability(a)); !ok || s < BonusMinScore {
+			return false
+		}
+	}
+	return len(primes) > 0
 }
 
 // ComputeProgress is ADR 0015 step 3, read in class's experience table

@@ -271,7 +271,7 @@ export function blockedReason(step: StepId, d: StepInputs): string | null {
   }
 }
 
-/** The six races in the server's order (Table 8's list, human first), else the classes' union. */
+/** The races in the server's order (the catalogue's), else the classes' union. */
 export function allRaces(options: CreationOptions): string[] {
   const listed = options.raceAdjustments?.map((r) => r.race);
   if (listed && listed.length > 0) return listed;

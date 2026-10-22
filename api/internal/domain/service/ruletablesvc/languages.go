@@ -1,9 +1,11 @@
 package ruletablesvc
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
@@ -41,15 +43,15 @@ type Languages struct {
 	lists  map[string][]string
 }
 
-// RaceCodes are the six PHB races (ADR 0030 step 1), human first: the races a
-// race_languages table covers, and charactersvc.Races.
-var RaceCodes = append([]string{"human"}, Races...)
-
 // NewLanguages validates what the schema cannot express (ADR 0021 step 14.3):
 // a language code once and with an English name, a race's list naming only
 // catalogue languages once each, every race with exactly one native language
 // that belongs to its own list. A violation names the language or the race.
-func NewLanguages(list []Language, rows []RaceLanguageRow) (*Languages, error) {
+func NewLanguages(list []Language, rows []RaceLanguageRow, defs *classes.Registry) (*Languages, error) {
+	if defs == nil {
+		return nil, errors.New("languages: no race definitions")
+	}
+	races := defs.RaceIDs()
 	out := &Languages{
 		list: slices.Clone(list), known: make(map[string]bool, len(list)),
 		native: map[string]string{}, lists: map[string][]string{},
@@ -66,7 +68,7 @@ func NewLanguages(list []Language, rows []RaceLanguageRow) (*Languages, error) {
 	seen := map[string]bool{}
 	for _, r := range rows {
 		switch {
-		case !slices.Contains(RaceCodes, r.Race):
+		case !slices.Contains(races, r.Race):
 			return nil, fmt.Errorf("race_languages: unknown race %q", r.Race)
 		case !out.known[r.Language]:
 			return nil, fmt.Errorf("race_languages: %s names the unknown language %q", r.Race, r.Language)
@@ -82,7 +84,7 @@ func NewLanguages(list []Language, rows []RaceLanguageRow) (*Languages, error) {
 			out.native[r.Race] = r.Language
 		}
 	}
-	for _, race := range RaceCodes {
+	for _, race := range races {
 		if _, ok := out.native[race]; !ok {
 			return nil, fmt.Errorf("race_languages: %s has no native language", race)
 		}

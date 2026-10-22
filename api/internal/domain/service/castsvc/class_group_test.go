@@ -13,9 +13,13 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
+// groupOf is the group of the test catalogue's classes (Derive sets
+// Derived.Group from the class's definition, ADR 0040 step 1.2).
+var groupOf = map[string]string{"fighter": "warrior", "cleric": "priest", "mage": "wizard", "thief": "rogue", "bard": "rogue"}
+
 // casterOf is a level 15 character of class.
 func casterOf(class string) *charactersvc.Character {
-	return &charactersvc.Character{ID: charID, Class: class, Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel}}
+	return &charactersvc.Character{ID: charID, Class: class, Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel, Group: groupOf[class]}}
 }
 
 // ADR 0030 step 2: the class group of the character picks a by-group effect.
@@ -119,13 +123,15 @@ func TestEffects_Step2_ByGroupFollowsTheCharactersClass(t *testing.T) {
 	}
 }
 
-// A by-group effect on a character whose class has no group is refused
+// A by-group effect on a character whose class has no group (a class the
+// catalogue does not define: Derive refuses it, so the fixture's group is
+// empty) is refused
 // before anything is rolled or written; an effect that is the same for
 // everybody needs no group.
 func TestEffects_Step2_UnknownClassRefusesAByGroupEffect(t *testing.T) {
 	f := newFixtureOf(t, groupMight(t), casterOf("paladin"))
 	_, err := f.svc.Receive(context.Background(), charID, castsvc.ReceiveRequest{SpellID: "group_might", CasterLevel: 9})
-	require.ErrorContains(t, err, `unknown class "paladin"`)
+	require.ErrorContains(t, err, "needs the character's class group")
 	assert.Empty(t, f.dice.sides)
 	assert.Empty(t, f.added)
 	assert.Empty(t, f.entries)

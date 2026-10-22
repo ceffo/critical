@@ -29,12 +29,11 @@ func HasExceptionalStrength(group string) bool {
 	return slices.Contains(exceptionalStrengthGroups, group)
 }
 
-// ExceptionalStrengthAllowed reports whether a character of class and race
-// with Strength str may enter an exceptional strength (ADR 0030 step 9): a
-// warrior, at Strength 18, of a race that rolls it.
-func ExceptionalStrengthAllowed(class, race string, str int) bool {
-	group, err := ClassGroup(class)
-	return err == nil && HasExceptionalStrength(group) && str == 18 &&
+// ExceptionalStrengthAllowed reports whether a character of class group and
+// race with Strength str may enter an exceptional strength (ADR 0030 step 9):
+// a warrior, at Strength 18, of a race that rolls it.
+func ExceptionalStrengthAllowed(group, race string, str int) bool {
+	return HasExceptionalStrength(group) && str == 18 &&
 		!slices.Contains(noExceptionalStrengthRaces, race)
 }
 

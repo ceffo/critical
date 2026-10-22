@@ -1,17 +1,22 @@
 package ruletablesadpt
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // classDTO holds the class and race tables of the rule_tables (ADR
 // 0021 step 10). A nil slice is a table the artifact lacks.
 type classDTO struct {
-	Experience          []experienceDTO        `json:"experience"`
+	// Experience is the formats-4-to-10 class-keyed XP table the artifact
+	// still carries (ADR 0040 step 7); the thresholds are read from the class
+	// definitions, so it is accepted and not read.
+	Experience          json.RawMessage        `json:"experience"`
 	HitDice             []hitDiceDTO           `json:"hit_dice"`
 	Constitution        []constitutionDTO      `json:"constitution"`
 	Intelligence        []intelligenceDTO      `json:"intelligence"`
@@ -35,15 +40,6 @@ type classDTO struct {
 	BardSkillBase       []skillBaseDTO         `json:"bard_skill_base"`
 	Backstab            []backstabDTO          `json:"backstab"`
 	TurningUndead       []turningDTO           `json:"turning_undead"`
-}
-
-type experienceDTO struct {
-	Level   int `json:"level"`
-	Fighter int `json:"fighter"`
-	Mage    int `json:"mage"`
-	Cleric  int `json:"cleric"`
-	Thief   int `json:"thief"`
-	Bard    int `json:"bard"`
 }
 
 type hitDiceDTO struct {
@@ -212,7 +208,7 @@ func (d classDTO) missing() []string {
 
 // classes maps the DTOs to validated class tables. Every table is required
 // (a missing one names it); the rules are ruletablesvc.NewClassTables'.
-func (d classDTO) classes() (*ruletablesvc.ClassTables, error) {
+func (d classDTO) classes(defs *classes.Registry) (*ruletablesvc.ClassTables, error) {
 	if m := d.missing(); len(m) > 0 {
 		return nil, fmt.Errorf("the artifact needs the class and race tables, missing: %s", strings.Join(m, ", "))
 	}
@@ -227,7 +223,6 @@ func (d classDTO) classes() (*ruletablesvc.ClassTables, error) {
 		}
 	}
 	return ruletablesvc.NewClassTables(ruletablesvc.ClassTables{
-		Experience:   mapRows(d.Experience, func(r experienceDTO) ruletablesvc.ExperienceRow { return ruletablesvc.ExperienceRow(r) }),
 		HitDice:      mapRows(d.HitDice, func(r hitDiceDTO) ruletablesvc.HitDiceRow { return ruletablesvc.HitDiceRow(r) }),
 		Constitution: mapRows(d.Constitution, func(r constitutionDTO) ruletablesvc.ConstitutionRow { return ruletablesvc.ConstitutionRow(r) }),
 		Intelligence: mapRows(d.Intelligence, func(r intelligenceDTO) ruletablesvc.IntelligenceRow {
@@ -270,7 +265,7 @@ func (d classDTO) classes() (*ruletablesvc.ClassTables, error) {
 		BardSkillBase: mapRows(d.BardSkillBase, func(r skillBaseDTO) ruletablesvc.SkillBaseRow { return ruletablesvc.SkillBaseRow(r) }),
 		Backstab:      mapRows(d.Backstab, func(r backstabDTO) ruletablesvc.BackstabRow { return ruletablesvc.BackstabRow(r) }),
 		TurningUndead: turning,
-	})
+	}, defs)
 }
 
 func progression(r progressionDTO) ruletablesvc.SpellProgressionRow {

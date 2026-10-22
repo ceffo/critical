@@ -11,7 +11,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // AttackForm is the attack form's last choices for one character, kept on
@@ -373,9 +372,9 @@ func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo 
 // display-only: a class or level the tables cannot read is logged and shows
 // no rate rather than failing the form.
 func (s *service) attackRate(ctx context.Context, char *charactersvc.Character, weapon Weapon) (*AttackRateView, error) {
-	group, err := ruletablesvc.ClassGroup(char.Class)
-	if err != nil {
-		slog.WarnContext(ctx, "attack rate: no class group", "character", char.ID, "class", char.Class, "err", err)
+	group := char.Derived.Group
+	if group == "" {
+		slog.WarnContext(ctx, "attack rate: no class group", "character", char.ID, "class", char.Class)
 		return nil, nil
 	}
 	rate, ok, err := s.rules.AttackRateFor(group, char.Derived.RealizedLevel, string(weapon.Kind), weapon.Type, weapon.Specialized)

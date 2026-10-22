@@ -35,7 +35,7 @@ const charID = int64(1)
 func bard() *charactersvc.Character {
 	return &charactersvc.Character{
 		ID: charID, Str: 12, Dex: 17, Class: "bard", Race: "half_elf",
-		Derived: charactersvc.Derived{RealizedLevel: 15, THAC0: 13, Saves: charactersvc.Saves{
+		Derived: charactersvc.Derived{RealizedLevel: 15, Group: "rogue", THAC0: 13, Saves: charactersvc.Saves{
 			ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14,
 		}},
 	}
@@ -56,7 +56,7 @@ func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
 	artifact, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages)
+	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
 	require.NoError(t, err)
 	return tables
 }

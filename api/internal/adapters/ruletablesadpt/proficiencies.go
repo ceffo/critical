@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -47,16 +48,16 @@ type proficienciesFileDTO struct {
 
 // ReadProficiencies reads and validates seeds/proficiencies.json (the rules
 // are ruletablesvc.NewProficiencies'); the file is required.
-func ReadProficiencies(seedsDir string) (*ruletablesvc.Proficiencies, error) {
+func ReadProficiencies(seedsDir string, defs *classes.Registry) (*ruletablesvc.Proficiencies, error) {
 	raw, err := os.ReadFile(filepath.Join(filepath.Clean(seedsDir), ProficienciesFile))
 	if err != nil {
 		return nil, fmt.Errorf("proficiencies: %w", err)
 	}
-	return ParseProficiencies(raw)
+	return ParseProficiencies(raw, defs)
 }
 
 // ParseProficiencies maps the JSON of ProficienciesFile to the catalogue.
-func ParseProficiencies(raw []byte) (*ruletablesvc.Proficiencies, error) {
+func ParseProficiencies(raw []byte, defs *classes.Registry) (*ruletablesvc.Proficiencies, error) {
 	var f proficienciesFileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -75,5 +76,5 @@ func ParseProficiencies(raw []byte) (*ruletablesvc.Proficiencies, error) {
 	for i, r := range f.Slots {
 		slots[i] = ruletablesvc.SlotRow(r)
 	}
-	return ruletablesvc.NewProficiencies(list, cross, slots)
+	return ruletablesvc.NewProficiencies(list, cross, slots, defs)
 }

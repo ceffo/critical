@@ -27,7 +27,7 @@ func picksCharacter(t *testing.T, f *fakeStore, class string, ids ...string) int
 // pick runs the data step after migration 025 on f with the fixture's catalogue.
 func pick(t *testing.T, f *fakeStore) error {
 	t.Helper()
-	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	return f.InTx(context.Background(), func(ctx context.Context) error {
 		return after[picksMigration](ctx, f)
 	})
@@ -77,7 +77,7 @@ func TestMigrate_Step16_RunsOnceWithTheMigration(t *testing.T) {
 		"appraising", "singing", "reading_writing", "local_history")
 	embedded, err := embeddedMigrations()
 	require.NoError(t, err)
-	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	run := &fakeMigrations{store: f}
 	for _, m := range embedded {
 		if m.name != picksMigration {
@@ -110,7 +110,7 @@ func weaponItem(t *testing.T, f *fakeStore, id int64, item, weaponType, state st
 // grant runs the data step after migration 026 on f.
 func grant(t *testing.T, f *fakeStore) error {
 	t.Helper()
-	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	return f.InTx(context.Background(), func(ctx context.Context) error {
 		return after[weaponPicksMigration](ctx, f)
 	})
@@ -171,7 +171,7 @@ func TestMigrate_Step16_WeaponPicksRunOnceWithTheMigration(t *testing.T) {
 	}
 	embedded, err := embeddedMigrations()
 	require.NoError(t, err)
-	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	run := &fakeMigrations{store: f}
 	for _, m := range embedded {
 		if m.name != picksMigration && m.name != weaponPicksMigration {
@@ -227,7 +227,7 @@ func TestMigrate_Step16_SpecializedFlagBecomesAPick(t *testing.T) {
 
 	embedded, err := embeddedMigrations()
 	require.NoError(t, err)
-	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	run := &fakeMigrations{store: f}
 	for _, m := range embedded {
 		if m.name < weaponPicksMigration {

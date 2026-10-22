@@ -201,8 +201,7 @@ func (s *service) gain(c *charactersvc.Character, p charactersvc.PendingLevel, e
 	// Table 3's footnotes from Constitution 20 raise a low die (the die
 	// shown is the one rolled), warriors take the bracketed adjustment, and
 	// the gain is at least 1: the arithmetic the creation's roll shares.
-	group, _ := ruletablesvc.ClassGroup(c.Class)
-	counted, conAdj, gain := ruletablesvc.HitDieGain(group, rolled, row)
+	counted, conAdj, gain := ruletablesvc.HitDieGain(c.Derived.Group, rolled, row)
 	res.Rolled, res.Counted = &rolled, &counted
 	res.ConAdjustment, res.Gain = conAdj, gain
 	return res, nil

@@ -32,7 +32,7 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    scores (not the effective ones under buffs) and returned as `bonusEligible`; the client uses it
    only as the default of the add form's +10% checkbox. The flag stored on each entry is what
    counts: the server accepts it either way, so a DM ruling can be recorded.
-   Tests: `TestBonusEligible_DexAndChaBothAtLeast16`, `TestGet_NotEligibleBelow16`,
+   Tests: `TestBonusEligible_Step6_EveryPrimeRequisiteAt16` (the bard rows; [ADR 0040](0040-classes-are-data.md) step 6), `TestGet_NotEligibleBelow16`,
    `TestGet_TotalsEntriesOverTheSheetAndReportsEligibility`.
    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 6, on implementation: eligible when every prime
    requisite of the character's class is 16 or more, read from the class definition; Dexterity and

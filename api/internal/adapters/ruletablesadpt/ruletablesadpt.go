@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -81,7 +82,11 @@ type bardDTO struct {
 // two equipment tables (Table 52, Table 56) are required, as are the artifact's
 // top-level equipment object and languages list (both as written) with the
 // race_languages table.
-func Parse(raw, equipment, languages []byte) (*ruletablesvc.Tables, error) {
+func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error) {
+	reg, err := definitions(defs)
+	if err != nil {
+		return nil, err
+	}
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -117,24 +122,25 @@ func Parse(raw, equipment, languages []byte) (*ruletablesvc.Tables, error) {
 	if err != nil {
 		return nil, err
 	}
-	classes, err := f.classes()
+	tables = tables.WithDefinitions(reg)
+	classTables, err := f.classes(reg)
 	if err != nil {
 		return nil, err
 	}
-	limits, err := levelLimits(f.LevelLimits)
+	limits, err := levelLimits(f.LevelLimits, reg)
 	if err != nil {
 		return nil, err
 	}
-	access, err := sphereAccess(f.SphereAccess)
+	access, err := sphereAccess(f.SphereAccess, reg)
 	if err != nil {
 		return nil, err
 	}
-	tables = tables.WithClasses(classes).WithLevelLimits(limits).WithSphereAccess(access)
+	tables = tables.WithClasses(classTables).WithLevelLimits(limits).WithSphereAccess(access)
 	tables, err = withEquipment(tables, f, equipment)
 	if err != nil {
 		return nil, err
 	}
-	return withLanguages(tables, f, languages)
+	return withLanguages(tables, f, languages, reg)
 }
 
 // withEquipment adds the equipment data and its two tables (the rules
@@ -157,7 +163,7 @@ func withEquipment(t *ruletablesvc.Tables, f fileDTO, equipment []byte) (*ruleta
 
 // sphereAccess maps sphere_access to the validated sphere access (the rules
 // are ruletablesvc.NewSphereAccess'); the table is required.
-func sphereAccess(rows []sphereAccessDTO) (*ruletablesvc.SphereAccess, error) {
+func sphereAccess(rows []sphereAccessDTO, defs *classes.Registry) (*ruletablesvc.SphereAccess, error) {
 	if len(rows) == 0 {
 		return nil, errors.New("the artifact needs the sphere_access table")
 	}
@@ -165,7 +171,7 @@ func sphereAccess(rows []sphereAccessDTO) (*ruletablesvc.SphereAccess, error) {
 	for i, r := range rows {
 		out[i] = ruletablesvc.SphereAccessRow(r)
 	}
-	a, err := ruletablesvc.NewSphereAccess(out)
+	a, err := ruletablesvc.NewSphereAccess(out, defs)
 	if err != nil {
 		return nil, fmt.Errorf("sphere_access table: %w", err)
 	}
@@ -174,7 +180,7 @@ func sphereAccess(rows []sphereAccessDTO) (*ruletablesvc.SphereAccess, error) {
 
 // levelLimits maps race_level_limits to validated level limits (the rules
 // are ruletablesvc.NewLevelLimits'); the table is required.
-func levelLimits(rows []levelLimitDTO) (*ruletablesvc.LevelLimits, error) {
+func levelLimits(rows []levelLimitDTO, defs *classes.Registry) (*ruletablesvc.LevelLimits, error) {
 	if rows == nil {
 		return nil, errors.New("the artifact needs the race_level_limits table")
 	}
@@ -185,7 +191,7 @@ func levelLimits(rows []levelLimitDTO) (*ruletablesvc.LevelLimits, error) {
 			out[i].MaxLevel = *r.MaxLevel
 		}
 	}
-	limits, err := ruletablesvc.NewLevelLimits(out)
+	limits, err := ruletablesvc.NewLevelLimits(out, defs)
 	if err != nil {
 		return nil, fmt.Errorf("race_level_limits table: %w", err)
 	}

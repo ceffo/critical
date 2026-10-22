@@ -24,6 +24,7 @@ import (
 	"maps"
 	"sync"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -101,7 +102,9 @@ func (s *Store) write(ctx context.Context, fn func(t *tables) error) error {
 
 // Migrate does nothing: the tables are Go values, there is no schema to bring
 // up to date, and every row has its owner from the start.
-func (s *Store) Migrate(context.Context, string, ruletablesvc.Equipment) error { return nil }
+func (s *Store) Migrate(context.Context, string, ruletablesvc.Equipment, *classes.Registry) error {
+	return nil
+}
 
 // Close does nothing: the data goes with the process.
 func (s *Store) Close() error { return nil }

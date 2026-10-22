@@ -13,26 +13,27 @@ import (
 // tables. Expected rates are read from PHB Tables 15 (p.25), 35 (p.53) and
 // 45 (p.68), not from the artifact.
 
-// ADR 0030 step 9: an exceptional strength is a warrior's, at Strength 18,
-// never a halfling's.
+// ADR 0030 step 9: an exceptional strength is a warrior's (the class's
+// group, ADR 0040 step 1.2), at Strength 18, never a halfling's.
 func TestExceptionalStrengthAllowed_Step9(t *testing.T) {
 	tests := []struct {
-		name, class, race string
+		name, group, race string
 		str               int
 		want              bool
 	}{
-		{"human fighter at 18", "fighter", "human", 18, true},
-		{"dwarf fighter at 18", "fighter", "dwarf", 18, true},
-		{"fighter at 17", "fighter", "human", 17, false},
-		{"fighter at 19", "fighter", "human", 19, false},
-		{"halfling fighter", "fighter", "halfling", 18, false},
-		{"bard at 18", "bard", "human", 18, false},
-		{"mage at 18", "mage", "human", 18, false},
-		{"unknown class", "paladin", "human", 18, false},
+		{"human fighter at 18", "warrior", "human", 18, true},
+		{"dwarf fighter at 18", "warrior", "dwarf", 18, true},
+		{"fighter at 17", "warrior", "human", 17, false},
+		{"fighter at 19", "warrior", "human", 19, false},
+		{"halfling fighter", "warrior", "halfling", 18, false},
+		{"bard at 18", "rogue", "human", 18, false},
+		{"mage at 18", "wizard", "human", 18, false},
+		{"cleric at 18", "priest", "human", 18, false},
+		{"no group", "", "human", 18, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, ruletablesvc.ExceptionalStrengthAllowed(tt.class, tt.race, tt.str))
+			assert.Equal(t, tt.want, ruletablesvc.ExceptionalStrengthAllowed(tt.group, tt.race, tt.str))
 		})
 	}
 }

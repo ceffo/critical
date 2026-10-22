@@ -19,7 +19,7 @@ import (
 // clericCaster is a caster with a chance of spell failure (Wisdom 9, PHB
 // Table 5: 20%).
 func clericCaster() *charactersvc.Character {
-	return &charactersvc.Character{ID: charID, Class: "cleric", Wis: 9, Derived: charactersvc.Derived{RealizedLevel: bardLevel, SpellFailure: 20}}
+	return &charactersvc.Character{ID: charID, Class: "cleric", Wis: 9, Derived: charactersvc.Derived{RealizedLevel: bardLevel, Group: "priest", SpellFailure: 20}}
 }
 
 // ADR 0030 step 14: a caster with a chance of spell failure rolls one d100

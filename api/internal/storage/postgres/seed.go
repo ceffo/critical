@@ -227,7 +227,7 @@ func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error
 		Level: int64(c.Level), XpTotal: int64(c.XPTotal), SaveParaPoison: int64(c.SaveParaPoison),
 		SaveRodStaffWand: int64(c.SaveRodStaffWand), SavePetriPoly: int64(c.SavePetriPoly),
 		SaveBreath: int64(c.SaveBreath), SaveSpell: int64(c.SaveSpell), Languages: string(languages),
-		RaceCode: c.Race, SkillPoints: points, Alignment: c.Alignment, Sex: c.Sex, ProficiencyPicks: picks,
+		RaceCode: c.Race, SkillPoints: points, Alignment: c.Alignment, Sex: c.Sex, ProficiencyPicks: picks, Class: c.Class,
 	})
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)

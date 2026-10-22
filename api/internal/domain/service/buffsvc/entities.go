@@ -309,12 +309,12 @@ type BaseStrength struct {
 	Warrior bool
 }
 
-// BaseStrengthOf is c's sheet Strength (ADR 0030 steps 9 and 10).
+// BaseStrengthOf is c's sheet Strength (ADR 0030 steps 9 and 10); the group
+// is the derived one (c as GetCharacter reads it).
 func BaseStrengthOf(c *charactersvc.Character) BaseStrength {
-	group, err := ruletablesvc.ClassGroup(c.Class)
 	return BaseStrength{
 		StrScore: StrScore{Score: c.Str, Exceptional: c.StrExceptional},
-		Warrior:  err == nil && ruletablesvc.HasExceptionalStrength(group),
+		Warrior:  ruletablesvc.HasExceptionalStrength(c.Derived.Group),
 	}
 }
 

@@ -64,13 +64,17 @@ func ScoreMethodFor(code string) (ScoreMethod, bool) {
 
 // RaceAdjustmentsFor is PHB Table 8 for race: the adjustment of each of the
 // six abilities, 0 where the table has none (every ability of a human). An
-// error for a race that is neither human nor one of Races.
+// error for a race the catalogue does not define.
 func (t *Tables) RaceAdjustmentsFor(race string) (map[string]int, error) {
 	c, err := t.classTables()
 	if err != nil {
 		return nil, err
 	}
-	if race != "human" && !slices.Contains(Races, race) {
+	d, err := t.Definitions()
+	if err != nil {
+		return nil, err
+	}
+	if !slices.Contains(d.RaceIDs(), race) {
 		return nil, fmt.Errorf("race adjustments: unknown race %q", race)
 	}
 	out := make(map[string]int, len(Abilities))

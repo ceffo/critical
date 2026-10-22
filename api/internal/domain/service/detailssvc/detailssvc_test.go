@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -49,7 +50,7 @@ func phbLanguages(t *testing.T) *ruletablesvc.Languages {
 		{Race: "half_elf", Language: "common", Native: true},
 		{Race: "halfling", Language: "halfling", Native: true},
 	}
-	l, err := ruletablesvc.NewLanguages(list, rows)
+	l, err := ruletablesvc.NewLanguages(list, rows, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return l
 }
@@ -57,15 +58,15 @@ func phbLanguages(t *testing.T) *ruletablesvc.Languages {
 func newSvc(t *testing.T) (detailssvc.SVC, *mocks.MockDAL) {
 	t.Helper()
 	dal := mocks.NewMockDAL(t)
-	svc, err := detailssvc.New(dal, inlineTx{}, phbLanguages(t))
+	svc, err := detailssvc.New(dal, inlineTx{}, phbLanguages(t), cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return svc, dal
 }
 
 func TestNew_NilDependency(t *testing.T) {
-	_, err := detailssvc.New(nil, inlineTx{}, nil)
+	_, err := detailssvc.New(nil, inlineTx{}, nil, nil)
 	require.Error(t, err)
-	_, err = detailssvc.New(mocks.NewMockDAL(t), nil, nil)
+	_, err = detailssvc.New(mocks.NewMockDAL(t), nil, nil, nil)
 	require.Error(t, err)
 }
 

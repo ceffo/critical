@@ -347,9 +347,15 @@ bard 15 never).)_
     available only to single-class fighters". So `Derived.Specializes` and the specialization pick
     need one active entry: a fighter/thief, the fighter first, does not specialize and its
     specialization pick is refused `not_allowed` (`skills.Classes.specialist`). The book is silent
-    on a dual-class character; its one active entry is read as single-class. Tests:
-    `Derive_Step12_OnlyASingleClassFighterSpecializes`,
-    `WeaponPick_Step15_OnlyASingleClassFighterSpecializes`.)_
+    on a dual-class character; its one active entry is read as single-class: `Derived.Specializes`
+    is that entry's own grant, never a frozen fighter's (the elf's mage does not specialize), and
+    a new specialization pick is the active class's. A specialization pick kept from an old class
+    that specializes survives a save and counts past the crossover only
+    (`skills.WeaponProficiencyOf` reads the stored entries, a frozen one at its left-at level).
+    Tests: `Derive_Step12_OnlyASingleClassFighterSpecializes`,
+    `WeaponPick_Step15_OnlyASingleClassFighterSpecializes`,
+    `TestDerive_Step12_ADualClassSpecializesByItsActiveClass` (charactersvc),
+    `TestWeaponProficiency_Step13_AKeptSpecializationCountsPastTheCrossover` (skills).)_
 
 13. **The dual-class crossover and the old class's abilities.** The **crossover** is reached when
     the active entry's realized level is above every frozen entry's `left_at_level` (PHB
@@ -384,11 +390,35 @@ bard 15 never).)_
     (`itemsvc.OldClasses`): a piece the active classes do not allow but an old class does is not
     warned past the crossover and warns `dual_class_old_ability` before it (instead of
     `armour_not_allowed` / `weapon_not_allowed`; the AC card's armour warnings follow). An old class
-    only adds allowance: a frozen `blunt_only` class restricts no weapon of the active ones. The
-    item warning carries the code only (no class: the character's old classes are on its sheet).
-    Test: `TestClassWarnings_Step13_AnOldClassAllowanceWarnsBeforeTheCrossover` (itemsvc). A frozen
-    entry's other features (skills, turning, backstab) are granted with `Dormant` set, but their
-    actions do not yet warn; the thief skills already read a frozen entry for step 16.3.)_
+    only adds allowance (`classes.AllowedWithOld`): a frozen `blunt_only` class restricts no weapon
+    of the active ones, and each action follows the limits of the class using it, so an active
+    `blunt_only` class decides alone: a cleric who left the fighter at 9 is warned
+    `weapon_not_allowed` for a sword, past the crossover too (supervisor decision 2026-10-22,
+    reversing the first build's reading). The item warning carries the code only (no class: the
+    character's old classes are on its sheet). The weapon picks read the same rule: an old class
+    adds the types it may pick, before and after the crossover (a pick is not a use: the wielding
+    warns). Tests: `TestClassWarnings_Step13_AnOldClassAllowanceWarnsBeforeTheCrossover` (itemsvc),
+    `TestWeaponPick_Step16_1_TheOldClassAllowsThePicks` (skills).
+    **Feature actions** (the user's default for Q9, 2026-10-22: the old ability's use is a warning
+    only). A figure the character has without choosing to use it is the active classes' own
+    before the crossover: the attack form's rate reads `Derived.ActiveGrant`, which skips a dormant
+    grant (the elf at mage 7 has no fighter 3/2, at mage 10 it has), and a kept specialization gives
+    no bonus (above, step 12). An action that uses the old class anyway is allowed and answers and
+    logs `warnings: ["dual_class_old_ability"]` (additive fields on each payload): an attack with a
+    backstab only a dormant entry grants or with a weapon only an old class allows (itemsvc's
+    warning on the piece, read only for a character with a dormant entry), a turn whose
+    `turn_undead` grant is dormant (read at the old class's level), and a thief skill check of a
+    set whose `rogue_skills` grant is dormant (`skills.SkillSet.Dormant`, domain only). Past the
+    crossover nothing warns and the old figures count (best of both). Tests:
+    `TestGetAttackForm_Step13_NoOldAttackRateBeforeTheCrossover`,
+    `TestResolveAttack_Step13_AnOldClassBackstabWarnsBeforeTheCrossover`,
+    `TestResolveAttack_Step13_AnOldClassWeaponWarnsBeforeTheCrossover` (combatsvc),
+    `TestTurn_Step13_AnOldClassTurnWarnsBeforeTheCrossover` (turnsvc),
+    `TestThiefSkill_Step13_AnOldClassSkillWarnsBeforeTheCrossover` (skillsvc),
+    `TestDerive_Step13_TheOldClassAddsNoFigureBeforeTheCrossover`,
+    `TestDerive_Step13_TheOldClassSkillSetIsDormantUntilTheCrossover` (charactersvc), and end to
+    end `TestCast_Step13_AnOldClassCastIsWarnedAndLogged` (composition). The web has no wording
+    for these warnings yet.)_
 
 14. **Spells: one progression per spellcasting entry** (amends ADR 0030 step 8). Each entry whose
     class has a `spell_progression` has its own slots (its table at its realized level, plus the
@@ -422,9 +452,10 @@ bard 15 never).)_
     rolls the d100 against the casting entry's chance only, so a cleric/mage's wizard spells roll
     none. Tests: `Derive_Step14_SpellFailurePerEntry` (charactersvc),
     `Cast_Step14_SpellFailureIsTheCastingEntrys` (castsvc). The spell lookup's "Mine" filter
-    (`spheresvc.SpellKeys`) holds the spells of every active spellcasting entry's source, each once
-    (a cleric/mage: the cleric's sphere spells within its slots and the stored spellbook). Test:
-    `Spheres_Step14_MineHoldsEveryCastingEntrysSpells` (spheresvc). The web does not yet send a class:
+    (`spheresvc.SpellKeys`) holds the spells of every spellcasting entry's source, a dual-class's
+    frozen one too, each once (a cleric/mage: the cleric's sphere spells within its slots and the
+    stored spellbook). Tests: `Spheres_Step14_MineHoldsEveryCastingEntrysSpells`,
+    `TestSpheres_Step14_MineHoldsTheOldClassSpells` (spheresvc). The web does not yet send a class:
     a cleric/mage prepares and casts only through the first entry from the UI.)_
 
 15. **Proficiency slots** (amends [ADR 0037](0037-proficiencies.md) step 3). The book (PHB

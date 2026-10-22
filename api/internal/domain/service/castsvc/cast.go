@@ -40,8 +40,9 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 			return fmt.Errorf("%w: %d", spellsvc.ErrSlotAlreadyUsed, slotIndex)
 		}
 		// ADR 0042 step 14: the slot's entry casts, at its own level.
-		casterLevel, noArmour := casterOf(c, slot)
-		if warnings, err = s.castWarnings(ctx, c, noArmour); err != nil {
+		who := casterOf(c, slot)
+		casterLevel := who.level
+		if warnings, err = s.castWarnings(ctx, c, who.noArmour); err != nil {
 			return err
 		}
 		after := append([]spellsvc.SpellSlot(nil), before...)
@@ -69,9 +70,10 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		// ADR 0030 step 14: a caster with a chance of spell failure rolls one
 		// d100, after every refusal of the request (above, and checkCast for
 		// the effect's); at or under it the spell fails: the slot is spent and
-		// nothing else happens.
+		// nothing else happens. The chance is the casting entry's (ADR 0042
+		// step 14): a cleric/mage's wizard spells roll none.
 		var failure *SpellFailure
-		if chance := c.Derived.SpellFailure; chance > 0 {
+		if chance := who.failure; chance > 0 {
 			if err := s.checkCast(ctx, characterID, id, req, casterLevel); err != nil {
 				return err
 			}
@@ -139,19 +141,25 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 	return res, nil
 }
 
-// casterOf is ADR 0042 step 14 on a slot: the realized level of the
-// spellcasting entry it names (an untagged slot: the first active one), and
-// whether that entry's class allows no body armour (EntryDerived.NoArmour);
-// the character's caster level, and no armour limit, when no entry is
-// derived.
-func casterOf(c *charactersvc.Character, slot spellsvc.SpellSlot) (level int, noArmour bool) {
+// caster is the spellcasting entry a cast reads (ADR 0042 step 14): its
+// realized level, whether its class allows no body armour (step 16.2) and
+// its chance of spell failure (ADR 0030 step 14 per entry).
+type caster struct {
+	level, failure int
+	noArmour       bool
+}
+
+// casterOf is ADR 0042 step 14 on a slot: the spellcasting entry it names
+// (an untagged slot: the first active one); the character's caster level and
+// spell failure, and no armour limit, when no entry is derived.
+func casterOf(c *charactersvc.Character, slot spellsvc.SpellSlot) caster {
 	if e, ok := c.Derived.CasterEntry(slot.Class); ok {
-		return e.RealizedLevel, e.NoArmour
+		return caster{level: e.RealizedLevel, failure: e.SpellFailure, noArmour: e.NoArmour}
 	}
 	if e, ok := c.Derived.CasterEntry(""); ok {
-		return e.RealizedLevel, e.NoArmour
+		return caster{level: e.RealizedLevel, failure: e.SpellFailure, noArmour: e.NoArmour}
 	}
-	return c.Derived.CasterLevel(), false
+	return caster{level: c.Derived.CasterLevel(), failure: c.Derived.SpellFailure}
 }
 
 // castWarnings is ADR 0042 step 16.2 on a cast: the casting entry's class

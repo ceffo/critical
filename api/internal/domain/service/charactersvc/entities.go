@@ -292,6 +292,10 @@ type EntryDerived struct {
 	// armour list is only none, ADR 0040 step 1.6): its spells warn
 	// spell_in_armour while body armour is worn (ADR 0042 step 16.2).
 	NoArmour bool
+	// SpellFailure is the chance (percent) that a spell of this entry's slots
+	// fails (ADR 0030 step 14 per entry, ADR 0042 step 14): its class's
+	// spell_failure at the feature's ability score; 0 without the feature.
+	SpellFailure int
 	// LevelUp are the entry's pending levels (ADR 0042 step 7).
 	LevelUp LevelUp
 }

@@ -127,3 +127,37 @@ func TestCast_Step14_TheSlotNamesItsEntry(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0042 step 14 on ADR 0030 step 14: spell failure is the casting entry's.
+// A cleric/mage at Wisdom 9 (Table 5: 20%, the cleric's spell_failure) rolls
+// the d100 on a cast from the cleric's slot, and none from the mage's: the
+// character's one chance (the sheet's, Derived.SpellFailure) is not read.
+func TestCast_Step14_SpellFailureIsTheCastingEntrys(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		class string
+		dice  []int
+		sides []int
+		want  *castsvc.SpellFailure
+	}{
+		{"the cleric's slot rolls the d100", "cleric", []int{21, 4}, []int{100, 4}, &castsvc.SpellFailure{Roll: 21, Chance: 20}},
+		{"the mage's slot rolls none", "mage", []int{4}, []int{4}, nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cleric := active("cleric", "priest", 5, true)
+			cleric.SpellFailure = 20
+			c := multiOf(cleric, active("mage", "wizard", 9, true))
+			c.Wis, c.Derived.SpellFailure = 9, 20
+			f := newFixtureOf(t, catalog(t), c, tt.dice...)
+			s := slot("stoneskin", "Stoneskin", 4)
+			s.Class = tt.class
+			f.prepared(s)
+
+			r, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, r.Failure)
+			assert.Equal(t, tt.sides, f.dice.sides)
+			assert.Empty(t, f.dice.vals, "every queued die is rolled")
+		})
+	}
+}

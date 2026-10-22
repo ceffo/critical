@@ -278,3 +278,16 @@ func TestSkills_Step16_3_ArmourBlocksAllButTwo(t *testing.T) {
 		assert.False(t, sk.Blocked, "leather is on the thief's list: %s", skill)
 	}
 }
+
+// ADR 0042 steps 12 and 14 on ADR 0030 step 14: spell failure is per entry.
+// A mage/cleric at Wisdom 9 (Table 5: 20%) has the chance on the cleric's
+// entry, whose class grants spell_failure, and none on the mage's; the
+// sheet's one figure is the granting entry's.
+func TestDerive_Step14_SpellFailurePerEntry(t *testing.T) {
+	c := multi("human", entry("mage", 5, 20_000), entry("cleric", 5, 20_000))
+	c.Wis = 9
+	d := derived(t, c)
+	assert.Equal(t, 20, entryOf(t, d, "cleric").SpellFailure)
+	assert.Zero(t, entryOf(t, d, "mage").SpellFailure)
+	assert.Equal(t, 20, d.SpellFailure)
+}

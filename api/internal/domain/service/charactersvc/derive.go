@@ -177,11 +177,8 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 	}
 	var err error
 	_, d.ExceptionalStrength = grant(classes.KindExceptionalStrength)
-	if g, ok := grant(classes.KindSpellFailure); ok {
-		score, _ := c.Score(Ability(g.Feature.Ability)) // classes.New checked the ability code
-		if d.SpellFailure, err = rules.SpellFailureFor(score); err != nil {
-			return fmt.Errorf("derive %s spell failure: %w", g.Class.ID, err)
-		}
+	if err := d.setSpellFailure(c, es, def, rules); err != nil {
+		return err
 	}
 	if g, ok := grant(classes.KindTurnUndead); ok {
 		if d.Turning, err = rules.TurningAt(g.Level); err != nil {
@@ -474,5 +471,33 @@ func (d *Derived) SetSkillFigures(t skills.SkillTables, def classes.Class, c *Ch
 		return fmt.Errorf("skill figures: %w", err)
 	}
 	d.SkillSets = sets
+	return nil
+}
+
+// setSpellFailure is ADR 0030 step 14 through the entries (ADR 0042 steps 12
+// and 14): each entry whose class grants spell_failure has the chance of the
+// feature's ability score (EntryDerived.SpellFailure), which only the spells
+// of that entry's slots roll; d.SpellFailure, one per character on the sheet,
+// is the first granting entry's.
+func (d *Derived) setSpellFailure(c *Character, es []classes.Entry, def func(string) (classes.Class, error), rules Rules) error {
+	gs, err := classes.Grants(es, def, classes.KindSpellFailure)
+	if err != nil {
+		return fmt.Errorf("derive spell failure: %w", err)
+	}
+	for i, g := range gs {
+		score, _ := c.Score(Ability(g.Feature.Ability)) // classes.New checked the ability code
+		chance, err := rules.SpellFailureFor(score)
+		if err != nil {
+			return fmt.Errorf("derive %s spell failure: %w", g.Class.ID, err)
+		}
+		if i == 0 {
+			d.SpellFailure = chance
+		}
+		for j := range d.Classes {
+			if d.Classes[j].Class == g.Class.ID {
+				d.Classes[j].SpellFailure = chance
+			}
+		}
+	}
 	return nil
 }

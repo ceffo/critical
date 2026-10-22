@@ -360,7 +360,12 @@ bard 15 never).)_
     (castsvc). The by-group spell effects (ADR 0030 step 2) read every active entry's group, and a
     multi-class character takes the best die (PHB Strength: multi-class characters use the best die):
     the highest maximum at the caster level, then minimum, then cap, with that group's cap.
-    Test: `Effects_Step14_ByGroupGainTakesTheBestDie` (castsvc). The web does not yet send a class:
+    Test: `Effects_Step14_ByGroupGainTakesTheBestDie` (castsvc). Spell failure (ADR 0030 step 14) is per
+    entry: each entry whose class grants `spell_failure` carries its chance
+    (`EntryDerived.SpellFailure`; the sheet's one figure is the first granting entry's), and a cast
+    rolls the d100 against the casting entry's chance only, so a cleric/mage's wizard spells roll
+    none. Tests: `Derive_Step14_SpellFailurePerEntry` (charactersvc),
+    `Cast_Step14_SpellFailureIsTheCastingEntrys` (castsvc). The web does not yet send a class:
     a cleric/mage prepares and casts only through the first entry from the UI.)_
 
 15. **Proficiency slots** (amends [ADR 0037](0037-proficiencies.md) step 3). The book (PHB

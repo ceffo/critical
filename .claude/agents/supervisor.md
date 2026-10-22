@@ -54,7 +54,7 @@ herdr agent wait dev-<id> --until done --until idle --until blocked
 If `HERDR_ENV` isn't `1`, use the Agent tool (`subagent_type: developer` / `code-reviewer`) with the
 same brief files and `SendMessage` for later rounds, and tell the user.
 
-When the wait returns (after reading a report you act on later, e.g. a developer held until a merge, `touch <wt>/supervisor/.prompt-<item>` so fleet-watch stops re-reporting it):
+When the wait returns (after reading a report you act on later, e.g. a developer held until a merge, `touch <wt>/supervisor/.prompt-<item>` so fleet-watch stops re-reporting it; `<item>` in upper case as the tracker writes it, a lower-case marker is ignored, sup-71):
 - `done` / `idle` → read the report file (overwritten every round; check its mtime is after your
   prompt). Missing or stale → `herdr agent read dev-<id> --source recent-unwrapped --lines 60`: the
   agent stopped early, likely with a question. (herdr reports `done` while an agent waits on a
@@ -349,6 +349,7 @@ branches checked out in other worktrees in place.
   parent tip's sha into the brief as `BASE: <sha>` and keep it in your ledger (manual fallback). The
   developer works as usual, merging nothing from `<db>` until the parent is merged. Anything ordered
   (migrations, generated output) must stay after the parent's.
+- A GitHub native stack is a straight line: `gh stack link` with a second child of the same parent re-bases that child onto the first one. A sibling child stays out of the stack (plain `--base <parent-branch>`) and is restacked by hand after the parent merges (sup-71).
 - Publish: open the child's PR with `gh pr create --base <parent-branch> --body-file …` (keeps your
   own body; say "stacked on #<parent>"), then `gh stack link <parent-pr> <child-pr>` to make it a
   stack on GitHub.

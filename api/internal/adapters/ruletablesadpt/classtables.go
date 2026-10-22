@@ -41,11 +41,19 @@ type classDTO struct {
 	Backstab            []backstabDTO          `json:"backstab"`
 	TurningUndead       []turningDTO           `json:"turning_undead"`
 	// The psionicist tables (ADR 0021 step 20, format 13): Table 5 is read
-	// (ADR 0043 step 4), Table 6 too (steps 6 and 7); the power progression is
-	// accepted and not read yet.
-	PsionicistPowers  json.RawMessage        `json:"psionicist_powers"`
+	// (ADR 0043 step 4), Table 6 too (steps 6 and 7), Table 4 the powers known
+	// (step 9).
+	PsionicistPowers  []powerProgressionDTO  `json:"psionicist_powers"`
 	InherentPotential []inherentPotentialDTO `json:"inherent_potential"`
 	PSPRecovery       []pspRecoveryDTO       `json:"psp_recovery"`
+}
+
+type powerProgressionDTO struct {
+	Level        int `json:"level"`
+	Disciplines  int `json:"disciplines"`
+	Sciences     int `json:"sciences"`
+	Devotions    int `json:"devotions"`
+	DefenceModes int `json:"defence_modes"`
 }
 
 type pspRecoveryDTO struct {
@@ -288,6 +296,9 @@ func (d classDTO) classes(defs *classes.Registry) (*ruletablesvc.ClassTables, er
 		TurningUndead: turning,
 		InherentPotential: mapRows(d.InherentPotential, func(r inherentPotentialDTO) ruletablesvc.InherentPotentialRow {
 			return ruletablesvc.InherentPotentialRow(r)
+		}),
+		PowerProgression: mapRows(d.PsionicistPowers, func(r powerProgressionDTO) ruletablesvc.PowerProgressionRow {
+			return ruletablesvc.PowerProgressionRow(r)
 		}),
 		PSPRecovery: mapRows(d.PSPRecovery, func(r pspRecoveryDTO) ruletablesvc.PSPRecoveryRow { return ruletablesvc.PSPRecoveryRow(r) }),
 	}, defs)

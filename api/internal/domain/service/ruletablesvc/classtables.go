@@ -249,6 +249,9 @@ type ClassTables struct {
 	// PSPRecovery is CPsiH Table 6 (ADR 0043 steps 6 and 7), empty in a
 	// catalogue without the psionicist.
 	PSPRecovery []PSPRecoveryRow
+	// PowerProgression is CPsiH Table 4 (ADR 0043 step 9), empty in a
+	// catalogue without the psionicist.
+	PowerProgression []PowerProgressionRow
 }
 
 // MaxWizardSpellLevel and MaxPriestSpellLevel are the widths of PHB Tables
@@ -301,6 +304,7 @@ func NewClassTables(c ClassTables, defs *classes.Registry) (*ClassTables, error)
 		{"turning_undead", checkTurning(c.TurningUndead)},
 		{"inherent_potential", checkInherentPotential(c.InherentPotential, defs)},
 		{"psp_recovery", checkPSPRecovery(c.PSPRecovery, defs)},
+		{"psionicist_powers", checkPowerProgression(c.PowerProgression, defs)},
 	}
 	for _, ch := range checks {
 		if ch.err != nil {

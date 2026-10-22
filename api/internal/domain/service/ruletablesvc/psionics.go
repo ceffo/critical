@@ -148,3 +148,62 @@ func (t *Tables) PSPRecoveryRate(activity string) (int, error) {
 	}
 	return 0, fmt.Errorf("psp recovery: no Table 6 row for %q", activity)
 }
+
+// PowerProgressionRow is CPsiH Table 4 at a level (ADR 0043 step 9): the
+// disciplines, sciences, devotions and defence modes known, cumulative.
+type PowerProgressionRow struct {
+	Level        int
+	Disciplines  int
+	Sciences     int
+	Devotions    int
+	DefenceModes int
+}
+
+// checkPowerProgression: levels from 1, ascending and contiguous, no count
+// falling from one level to the next, and rows present when a class lists
+// psionics (ADR 0040 step 8).
+func checkPowerProgression(rows []PowerProgressionRow, defs *classes.Registry) error {
+	if len(rows) == 0 {
+		return readByPsionics(defs)
+	}
+	if rows[0].Level != 1 {
+		return fmt.Errorf("first row is level %d, not 1", rows[0].Level)
+	}
+	for i, r := range rows {
+		if r.Disciplines < 0 || r.Sciences < 0 || r.Devotions < 0 || r.DefenceModes < 0 {
+			return fmt.Errorf("row %d: a negative count", i)
+		}
+		if i == 0 {
+			continue
+		}
+		p := rows[i-1]
+		if r.Level != p.Level+1 {
+			return fmt.Errorf("row %d: level %d after %d", i, r.Level, p.Level)
+		}
+		if r.Disciplines < p.Disciplines || r.Sciences < p.Sciences || r.Devotions < p.Devotions || r.DefenceModes < p.DefenceModes {
+			return fmt.Errorf("row %d: level %d knows fewer than level %d", i, r.Level, p.Level)
+		}
+	}
+	return nil
+}
+
+// PowerAllowanceFor is Table 4 at level (ADR 0043 step 9.1): the powers a
+// psionics entry of that realized level may know. Past the table's last
+// level the last row holds (the book's table stops there).
+func (t *Tables) PowerAllowanceFor(level int) (PowerProgressionRow, error) {
+	if level < 1 {
+		return PowerProgressionRow{}, fmt.Errorf("power allowance: level %d under 1", level)
+	}
+	c, err := t.classTables()
+	if err != nil {
+		return PowerProgressionRow{}, err
+	}
+	rows := c.PowerProgression
+	if len(rows) == 0 {
+		return PowerProgressionRow{}, errors.New("power allowance: no Table 4")
+	}
+	if level > len(rows) {
+		return rows[len(rows)-1], nil
+	}
+	return rows[level-1], nil
+}

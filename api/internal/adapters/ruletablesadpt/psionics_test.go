@@ -95,3 +95,27 @@ func TestPSPRecoveryRate_Step6_Table6AsData(t *testing.T) {
 	_, err := phb(t).PSPRecoveryRate("meditating")
 	require.Error(t, err)
 }
+
+// Step 9.1: Table 4 as data, read at the entry's realized level. The book's
+// level 1 psionicist has 1 discipline, 1 science, 3 devotions and 1 defence
+// mode; level 3 has 2, 2, 7 and 2.
+func TestPowerAllowance_Step9_1_Table4AsData(t *testing.T) {
+	for _, tc := range []struct {
+		level int
+		want  ruletablesvc.PowerProgressionRow
+	}{
+		{1, ruletablesvc.PowerProgressionRow{Level: 1, Disciplines: 1, Sciences: 1, Devotions: 3, DefenceModes: 1}},
+		{3, ruletablesvc.PowerProgressionRow{Level: 3, Disciplines: 2, Sciences: 2, Devotions: 7, DefenceModes: 2}},
+	} {
+		got, err := phb(t).PowerAllowanceFor(tc.level)
+		require.NoError(t, err)
+		assert.Equal(t, tc.want, got, "level %d", tc.level)
+	}
+	last, err := phb(t).PowerAllowanceFor(20)
+	require.NoError(t, err)
+	past, err := phb(t).PowerAllowanceFor(25)
+	require.NoError(t, err)
+	assert.Equal(t, last, past, "past the table's last level the last row holds")
+	_, err = phb(t).PowerAllowanceFor(0)
+	assert.Error(t, err)
+}

@@ -31,6 +31,15 @@ func skald() classes.Class {
 	}
 }
 
+// identity is a race's Tables 10 and 11 rows, the figures this package's tests do not read.
+func identity() classes.Identity {
+	d := classes.Dice{Count: 1, Sides: 6}
+	return classes.Identity{
+		HeightMale: 60, HeightFemale: 59, HeightDice: d, WeightMale: 140, WeightFemale: 100, WeightDice: d,
+		StartAge: 15, StartAgeDice: d, MaxAge: 90, MaxAgeDice: d,
+	}
+}
+
 // groups are class groups with a flat THAC0 table, the figures this
 // package's tests do not read.
 func groups(ids ...string) []classes.Group {
@@ -43,7 +52,7 @@ func groups(ids ...string) []classes.Group {
 
 func registry(t *testing.T, cls ...classes.Class) *classes.Registry {
 	t.Helper()
-	r, err := classes.New(cls, groups("warrior", "rogue"), []classes.Race{{ID: "human", Name: localized.Text{"en": "Human"}}})
+	r, err := classes.New(cls, groups("warrior", "rogue"), []classes.Race{{ID: "human", Identity: identity(), Name: localized.Text{"en": "Human"}}})
 	require.NoError(t, err)
 	return r
 }
@@ -130,25 +139,25 @@ func TestImport_Step8_TheRegistryRefusesBrokenDefinitions(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := classes.New(tc.cls, groups("warrior", "rogue"), []classes.Race{{ID: "human"}})
+			_, err := classes.New(tc.cls, groups("warrior", "rogue"), []classes.Race{{ID: "human", Identity: identity()}})
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
-	_, err := classes.New(nil, groups("rogue"), []classes.Race{{ID: "human"}})
+	_, err := classes.New(nil, groups("rogue"), []classes.Race{{ID: "human", Identity: identity()}})
 	require.ErrorContains(t, err, "needs classes, groups and races")
-	_, err = classes.New([]classes.Class{skald()}, groups("rogue"), []classes.Race{{ID: "elf"}, {ID: "elf"}})
+	_, err = classes.New([]classes.Class{skald()}, groups("rogue"), []classes.Race{{ID: "elf", Identity: identity()}, {ID: "elf", Identity: identity()}})
 	require.ErrorContains(t, err, `races: "elf" twice`)
 
 	// A group with no THAC0 rows (a new catalogue group without its Table 53
 	// column) is refused here, at start-up, not at the first Derive.
-	_, err = classes.New([]classes.Class{skald()}, []classes.Group{{ID: "rogue"}}, []classes.Race{{ID: "human"}})
+	_, err = classes.New([]classes.Class{skald()}, []classes.Group{{ID: "rogue"}}, []classes.Race{{ID: "human", Identity: identity()}})
 	require.ErrorContains(t, err, `group "rogue": THAC0 needs levels 1..20, got 0 rows`)
 
 	for name, req := range map[string]classes.AbilityRange{
 		`requirements: unknown ability "luck"`:             {Ability: "luck", Min: 3, Max: 18},
 		"requirements: str minimum 18 above its maximum 3": {Ability: "str", Min: 18, Max: 3},
 	} {
-		_, err = classes.New([]classes.Class{skald()}, groups("rogue"), []classes.Race{{ID: "elf", Requirements: []classes.AbilityRange{req}}})
+		_, err = classes.New([]classes.Class{skald()}, groups("rogue"), []classes.Race{{ID: "elf", Identity: identity(), Requirements: []classes.AbilityRange{req}}})
 		require.ErrorContains(t, err, `race "elf": `+name)
 	}
 }
@@ -162,7 +171,7 @@ func TestLookup_Step7_THAC0AndRacesComeFromTheDefinitions(t *testing.T) {
 		thac0[i] = 21 - i
 	}
 	r, err := classes.New([]classes.Class{skald()}, []classes.Group{{ID: "rogue", THAC0: thac0}},
-		[]classes.Race{{ID: "test_dwarf", Requirements: []classes.AbilityRange{{Ability: "con", Min: 11, Max: 18}}}, {ID: "test_human"}})
+		[]classes.Race{{ID: "test_dwarf", Identity: identity(), Requirements: []classes.AbilityRange{{Ability: "con", Min: 11, Max: 18}}}, {ID: "test_human", Identity: identity()}})
 	require.NoError(t, err)
 
 	got, err := r.THAC0("rogue", 5)
@@ -181,4 +190,56 @@ func TestLookup_Step7_THAC0AndRacesComeFromTheDefinitions(t *testing.T) {
 	assert.False(t, human.Restricted())
 	_, ok = r.Race("orc")
 	assert.False(t, ok)
+}
+
+// ADR 0040 step 1.6: the equipment of a class the code has never seen answers the limits.
+func TestEquipment_Step1_6_TheListsAnswerTheLimits(t *testing.T) {
+	none := classes.Equipment{Armour: []string{classes.ArmourNone}}
+	assert.True(t, none.NoArmour())
+	assert.False(t, none.AllowsArmour("leather"))
+	assert.False(t, none.AllowsArmour("none"), "no armour at all, even a worn piece of the none column")
+	some := classes.Equipment{Armour: []string{"none", "leather"}}
+	assert.False(t, some.NoArmour())
+	assert.True(t, some.AllowsArmour("leather"))
+	assert.False(t, some.AllowsArmour("metal"))
+	assert.True(t, classes.Equipment{}.AllowsArmour("metal"), "absent: any armour")
+
+	blunt := classes.Equipment{BluntOnly: true}
+	assert.True(t, blunt.AllowsWeapon(classes.Weapon{CatalogueCode: "mace", WeaponType: "other_melee", DamageTypes: []string{"b", "p"}}))
+	assert.False(t, blunt.AllowsWeapon(classes.Weapon{CatalogueCode: "bow", WeaponType: "long_bow", DamageTypes: []string{"p"}}))
+	assert.True(t, blunt.AllowsWeapon(classes.Weapon{WeaponType: "other_melee"}), "a bare homebrew melee weapon is not settled")
+	assert.False(t, blunt.AllowsWeapon(classes.Weapon{WeaponType: "long_bow"}))
+	assert.False(t, blunt.AllowsWeapon(classes.Weapon{CatalogueCode: "club", WeaponType: "other_melee"}), "a catalogue row without a damage type")
+	assert.True(t, blunt.Limited())
+	assert.False(t, classes.Equipment{Shields: true}.Limited())
+
+	assert.True(t, classes.Equipment{PickTypes: []string{"dagger"}}.WeaponTypeAllowed("dagger"))
+	assert.False(t, classes.Equipment{PickTypes: []string{"dagger"}}.WeaponTypeAllowed("sling"))
+	assert.True(t, classes.Equipment{}.WeaponTypeAllowed("sling"), "no derived list: any type")
+}
+
+// ADR 0040 step 8: a broken equipment list or race trait is refused at start.
+func TestImport_Step8_TheRegistryRefusesBrokenEquipmentAndTraits(t *testing.T) {
+	withEquipment := func(e classes.Equipment) error {
+		c := skald()
+		c.Equipment = e
+		_, err := classes.New([]classes.Class{c}, groups("rogue"), []classes.Race{{ID: "human", Identity: identity()}})
+		return err
+	}
+	require.ErrorContains(t, withEquipment(classes.Equipment{Armour: []string{"leather", "leather"}}), "armour")
+	require.ErrorContains(t, withEquipment(classes.Equipment{Weapons: []classes.WeaponRef{{Code: "spear"}}}), "a weapon without a type")
+	require.ErrorContains(t, withEquipment(classes.Equipment{BluntOnly: true, WeaponTypes: []string{"dagger"}}), "blunt_only")
+	require.NoError(t, withEquipment(classes.Equipment{Shields: true}))
+
+	withTrait := func(tr classes.Trait) error {
+		_, err := classes.New([]classes.Class{skald()}, groups("rogue"), []classes.Race{{ID: "human", Identity: identity(), Traits: []classes.Trait{tr}}})
+		return err
+	}
+	require.ErrorContains(t, withTrait(classes.Trait{Kind: "flies"}), `unknown trait kind "flies"`)
+	require.ErrorContains(t, withTrait(classes.Trait{Kind: classes.TraitConSaveBonus}), "missing")
+	require.ErrorContains(t, withTrait(classes.Trait{Kind: classes.TraitConSaveBonus, Categories: []string{"luck"}}), "unknown save category")
+	require.ErrorContains(t, withTrait(classes.Trait{Kind: classes.TraitNoExceptionalStrength, Poison: true}), "unexpected")
+	require.NoError(t, withTrait(classes.Trait{Kind: classes.TraitConSaveBonus, Categories: []string{"spell"}}))
+	_, err := classes.New([]classes.Class{skald()}, groups("rogue"), []classes.Race{{ID: "human"}})
+	require.ErrorContains(t, err, "identity")
 }

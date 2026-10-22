@@ -2,7 +2,10 @@ package itemsvc
 
 import (
 	"context"
+	"errors"
 	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // Warning codes (ADR 0033 step 20): a class wears or wields what it should
@@ -34,80 +37,33 @@ type Warning struct {
 	Code   string
 }
 
-// weaponRef is a PHB weapon the class lists, by catalogue code and the
-// weapon type the catalogue gives it.
-type weaponRef struct{ code, weaponType string }
-
-// classRule is what a class may wear and wield (ADR 0033 step 20), data the
-// checks read; a class with no rule (the fighter) is never warned.
-type classRule struct {
-	// noArmour: any worn body armour is warned; noShield: any worn shield.
-	noArmour, noShield bool
-	// armourColumns are the Table 29 columns of the body armour the class
-	// may wear; empty: any.
-	armourColumns []string
-	// weaponTypes and weapons list the weapons the class may wield, by
-	// weapon type or by catalogue code; both empty: any weapon.
-	weaponTypes []string
-	weapons     []weaponRef
-	// bluntOnly: only a weapon with a bludgeoning (b) damage type.
-	bluntOnly bool
-}
-
-// classRules are PHB p.39's lists (the mage's, the cleric's blunt weapons,
-// the thief's and the bard's armour). The bard's weapons are unrestricted.
-var classRules = map[string]classRule{
-	"mage": {
-		noArmour: true, noShield: true,
-		weaponTypes: []string{"dagger", "dart", "sling"},
-		weapons:     []weaponRef{{"knife", "other_melee"}, {"quarterstaff", "other_melee"}},
-	},
-	"cleric": {bluntOnly: true},
-	"thief": {
-		noShield:      true,
-		armourColumns: []string{"none", "leather", "padded_studded", "elven_chain"},
-		weaponTypes:   []string{"dagger", "dart", "hand_crossbow", "short_bow", "sling", "short_sword", "long_sword"},
-		weapons: []weaponRef{
-			{"club", "other_melee"},
-			{"knife", "other_melee"},
-			{"lasso", "other_thrown"},
-			{"broad_sword", "other_melee"},
-			{"quarterstaff", "other_melee"},
-		},
-	},
-	"bard": {
-		noShield:      true,
-		armourColumns: []string{"none", "leather", "padded_studded", "elven_chain", "metal"},
-	},
-}
-
 // ClassWarnings is the class warnings of the pieces worn or wielded, in list
 // order (ADR 0033 step 20), and a wielded weapon's missing type (ADR 0037
-// step 8): computed on every read, never stored. A homebrew
-// weapon without a catalogue code is judged by its weapon type and damage
-// types; when those do not settle it (a type some listed weapon shares, such
-// as other_melee for a thief), no warning.
-//
-// classes are the character's active class entries (one for a single-class
-// character). Several are judged together (ADR 0042 step 16.1 and 16.2): a
-// piece is allowed when any class allows it, except that a blunt_only class
-// restricts every weapon to its own list.
-func ClassWarnings(classes []string, pieces []Item) []Warning {
+// step 8): computed on every read, never stored. limits are the equipment of
+// the character's active class entries (ADR 0040 step 1.6), one for a
+// single-class character; none (no entry, or one whose class the catalogue does
+// not define, which has no limit) warns no class limit. Several are judged
+// together (ADR 0042 step 16.1 and 16.2): a piece is allowed when any class
+// allows it, except that a blunt_only class restricts every weapon to its own
+// list. A homebrew weapon without a catalogue code is judged by its weapon type
+// and damage types; when those do not settle it (a type some listed weapon
+// shares, such as other_melee for a thief), no warning.
+func ClassWarnings(limits []classes.Equipment, pieces []Item) []Warning {
 	var out []Warning
 	var shields, twoHanded []Item
 	for _, p := range pieces {
 		switch {
 		case p.Category == CategoryShield && p.State == StateWorn:
 			shields = append(shields, p)
-			if !anyClass(classes, func(r classRule) bool { return !r.noShield }) {
+			if !anyClass(limits, func(e classes.Equipment) bool { return e.Shields }) {
 				out = append(out, Warning{p.ID, WarnArmourNotAllowed})
 			}
 		case p.Category == CategoryArmour && p.State == StateWorn:
-			if !anyClass(classes, func(r classRule) bool { return !r.noArmour && armourAllowed(r, p) }) {
+			if !anyClass(limits, func(e classes.Equipment) bool { return e.AllowsArmour(p.SkillColumn) }) {
 				out = append(out, Warning{p.ID, WarnArmourNotAllowed})
 			}
 		case p.Category == CategoryWeapon && p.State == StateWielded:
-			if !weaponAllowedTo(classes, p, pieces) {
+			if !weaponAllowedTo(limits, wielded(p, pieces)) {
 				out = append(out, Warning{p.ID, WarnWeaponNotAllowed})
 			}
 			if p.WeaponType == "" {
@@ -131,50 +87,32 @@ func ClassWarnings(classes []string, pieces []Item) []Warning {
 	return out
 }
 
-// anyClass reports whether one of classes allows what allows judges; a class
-// with no rule (the fighter) allows everything, and no class at all is not
-// judged (nothing warned).
-func anyClass(classes []string, allows func(classRule) bool) bool {
-	if len(classes) == 0 {
-		return true
-	}
-	for _, c := range classes {
-		rule, ruled := classRules[c]
-		if !ruled || allows(rule) {
-			return true
-		}
-	}
-	return false
+// anyClass reports whether one of limits allows what allows judges; no limit
+// at all is not judged (nothing warned).
+func anyClass(limits []classes.Equipment, allows func(classes.Equipment) bool) bool {
+	return len(limits) == 0 || slices.ContainsFunc(limits, allows)
 }
 
 // weaponAllowedTo is ADR 0042 step 16.1: a blunt_only class (the cleric)
 // restricts the weapon to its own list whatever the other classes; otherwise
 // the weapon is allowed when any class allows it.
-func weaponAllowedTo(classes []string, p Item, pieces []Item) bool {
-	for _, c := range classes {
-		if rule, ruled := classRules[c]; ruled && rule.bluntOnly {
-			return weaponAllowed(rule, p, pieces)
+func weaponAllowedTo(limits []classes.Equipment, w classes.Weapon) bool {
+	for _, e := range limits {
+		if e.BluntOnly {
+			return e.AllowsWeapon(w)
 		}
 	}
-	return anyClass(classes, func(r classRule) bool { return weaponAllowed(r, p, pieces) })
+	return anyClass(limits, func(e classes.Equipment) bool { return e.AllowsWeapon(w) })
 }
 
-// ForbidsArmour reports whether class allows no body armour (the mage): the
-// classes whose spells ADR 0042 step 16.2 judges against the worn armour.
-func ForbidsArmour(class string) bool {
-	return classRules[class].noArmour
-}
-
-// SpellInArmour is ADR 0042 step 16.2: a spell of class cast by a character of
-// race wearing pieces warns spell_in_armour when the class allows no body
-// armour and body armour is worn, except an elf in elven chain (PHB
-// multi/dual, Wizard). Whatever the character's other classes allow.
-func SpellInArmour(class, race string, pieces []Item) bool {
-	if !ForbidsArmour(class) {
-		return false
-	}
+// SpellInArmour is ADR 0042 step 16.2: a spell of a class that allows no body
+// armour (classes.Equipment.NoArmour, which the caller judges) cast by a
+// character of race wearing pieces warns spell_in_armour when body armour is
+// worn, except an elf in elven chain (PHB multi/dual, Wizard). Whatever the
+// character's other classes allow.
+func SpellInArmour(race string, pieces []Item) bool {
 	for _, p := range pieces {
-		if p.Category != CategoryArmour || p.State != StateWorn || p.SkillColumn == "none" {
+		if p.Category != CategoryArmour || p.State != StateWorn || p.SkillColumn == classes.ArmourNone {
 			continue
 		}
 		if race == "elf" && p.SkillColumn == "elven_chain" {
@@ -183,10 +121,6 @@ func SpellInArmour(class, race string, pieces []Item) bool {
 		return true
 	}
 	return false
-}
-
-func armourAllowed(r classRule, p Item) bool {
-	return len(r.armourColumns) == 0 || slices.Contains(r.armourColumns, p.SkillColumn)
 }
 
 // ammoDamageTypes are the damage types of an ammunition kind when no piece of that kind says
@@ -211,33 +145,15 @@ func launcherDamageTypes(p Item, pieces []Item) []string {
 	return []string{"p"}
 }
 
-func weaponAllowed(r classRule, p Item, pieces []Item) bool {
-	if r.bluntOnly {
-		types := p.DamageTypes
-		if p.FiresAmmo() {
-			// PHB p.33 (only blunt, bludgeoning weapons): a launcher is judged by the
-			// ammunition it fires, so a sling is allowed and a bow is not.
-			types = launcherDamageTypes(p, pieces)
-		}
-		if len(types) > 0 {
-			return slices.Contains(types, "b")
-		}
-		// No damage type: a catalogue row or a specific type (a bow) says
-		// it does no bludgeoning; a bare homebrew weapon is not settled.
-		return p.CatalogueCode == "" && (p.WeaponType == "" || p.WeaponType == "other_melee" ||
-			p.WeaponType == "other_thrown" || p.WeaponType == "other_missile")
+// wielded is the piece as the class limits judge it: a launcher by its
+// ammunition's damage types (PHB p.33: a sling is blunt by its bullets, a bow
+// is not), any other weapon by its own.
+func wielded(p Item, pieces []Item) classes.Weapon {
+	types := p.DamageTypes
+	if p.FiresAmmo() {
+		types = launcherDamageTypes(p, pieces)
 	}
-	if len(r.weaponTypes) == 0 && len(r.weapons) == 0 {
-		return true
-	}
-	if slices.Contains(r.weaponTypes, p.WeaponType) {
-		return true
-	}
-	if p.CatalogueCode != "" {
-		return slices.ContainsFunc(r.weapons, func(w weaponRef) bool { return w.code == p.CatalogueCode })
-	}
-	// Homebrew: unsettled when the type is one a listed weapon has.
-	return p.WeaponType == "" || slices.ContainsFunc(r.weapons, func(w weaponRef) bool { return w.weaponType == p.WeaponType })
+	return classes.Weapon{CatalogueCode: p.CatalogueCode, WeaponType: p.WeaponType, DamageTypes: types}
 }
 
 // Warnings is the character's class warnings (ADR 0033 step 20), read from
@@ -253,5 +169,27 @@ func (s *service) Warnings(ctx context.Context, characterID int64, items []Item)
 			return nil, err
 		}
 	}
-	return ClassWarnings(c.ActiveClassIDs(), items), nil
+	limits, err := s.limitsOf(c.ActiveClassIDs())
+	if err != nil {
+		return nil, err
+	}
+	return ClassWarnings(limits, items), nil
+}
+
+// limitsOf is the equipment of the active classes (ADR 0040 step 1.6, ADR
+// 0042 step 16.1); nil when one of them is a class the definitions do not
+// know, which has no class limit and so allows every piece.
+func (s *service) limitsOf(active []string) ([]classes.Equipment, error) {
+	limits := make([]classes.Equipment, 0, len(active))
+	for _, class := range active {
+		def, err := s.classes.Class(class)
+		if errors.Is(err, classes.ErrUnknownClass) {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		limits = append(limits, def.Equipment)
+	}
+	return limits, nil
 }

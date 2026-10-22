@@ -8,7 +8,7 @@ Context). The shape of the definitions, the closed list of feature kinds and the
 Step 11.1 is built (2026-10-22, [ADR 0021](0021-spell-catalogue.md) step 18: the catalogue publishes format 11). Step 11.2
 is built for the class list, groups, races, prime requisites, ability minimums, alignments and XP rows (2026-10-22: the
 class registry, steps 5, 6, 8 and 9; see the as-built notes there). Step 11.3 is built for the class
-features and the spell progression (2026-10-22: every kind of step 3 but `sphere_access` is read through the
+features and the spell progression (2026-10-22: every kind of step 3 is read through the
 lookup of step 5, the Go lists are gone; see the as-built notes of steps 3, 5, 8 and 11). The rest is
 not implemented: each step names the test its implementing item writes. Amends
 [ADR 0030](0030-classes-and-races.md) steps 1, 2, 4, 9 to 20, 22 and 23 and
@@ -114,7 +114,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
       from it with the catalogue (a type is allowed when the list names it or a weapon of it; for
       `blunt_only`, when a catalogue weapon of the type deals bludgeoning damage, a launcher by its
       ammunition), which is what seedcheck proves today: the second Go list goes.
-   _(As built in format 11, class equipment names catalogue weapons only: the importer checks that every `weapons` code is in the equipment's weapons with the same `weapon_type`, and every `weapon_types` entry is a type of some weapon. The thief's lasso is in no catalogue weapon, so it is dropped from the class data; Go's classwarn list keeps it until step 11.2 moves that reader.)_
+   _(As built in format 11, class equipment names catalogue weapons only: the importer checks that every `weapons` code is in the equipment's weapons with the same `weapon_type`, and every `weapon_types` entry is a type of some weapon. The thief's lasso is in no catalogue weapon, so it is dropped from the class data; Go's classwarn list kept it until the equipment limits moved onto the data (step 11, as built), which loses it.)_
    7. `experience`: the class's XP thresholds, rows `{level, xp}` inside the class entry (the class is the
       entry's; PHB Tables 14, 20, 23, 25), replacing the column per class.
    8. `hit_dice`: `{die, dice_levels, after}` and the Constitution column (`warrior` or
@@ -163,7 +163,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    | `weapon_specialization` | none (the cost is ADR 0037 step 9's) | ADR 0030 steps 11 and 12, ADR 0037 step 9 (Table 35) | fighter |
    | `wisdom_bonus_spells` | none | ADR 0030 step 13 (Table 5) | cleric |
    | `spell_failure` | `ability` (`wis`) | ADR 0030 step 14 (Table 5) | cleric |
-   | `sphere_access` | `major`, `minor` (sphere codes), `minor_max_level` (3) | ADR 0030 step 15 (format 6's access rows, moved here) | cleric |
+   | `sphere_access` | `major`, `minor` (sphere codes), `minor_max_level` (3) | ADR 0030 step 15 (format 6's access rows, moved here; read by `spheresvc`) | cleric |
    | `turn_undead` | `table` (Table 61) | ADR 0030 step 16 | cleric |
    | `rogue_skills` | `set` (`thief` or `bard`: the skill list and base rows, Table 26 or 33), `budget` `{first, per_level, per_skill_first, per_skill_per_level}`, `armour` `[{code, column, extra}]` | ADR 0030 steps 17 and 18, ADR 0037 steps 10, 11 and 15 | thief (set `thief`, budget 60/30/30/15, one entry per armour `skill_column`); bard (set `bard`, budget 20/15/0/0, the same entries, `metal` on the elven chain column with an extra -5) |
    | `backstab` | `table` (Table 30) | ADR 0030 step 19 | thief |
@@ -218,8 +218,10 @@ writes `Test<name>` and adds the prefix here in the same PR.
    a race without `no_exceptional_strength`): the web has no `str === 18` rule of its own
    (`TestDraft_Step9_TheServerOffersExceptionalStrength`). The `rogue_skills` set codes `thief` and `bard` pick
    the skill list, base rows and check kind (3.2) in `ruletablesvc`; they are skill-set codes, not class ids, and
-   step 10's check lists them as such. **`sphere_access` is parsed and checked but not read**: the cleric's
-   spheres still come from format 6's access rows keyed by class, until a reader moves to the params.)_
+   step 10's check lists them as such. **`sphere_access` is read** (2026-10-22): `spheresvc` takes a priest's open
+   spheres and the minor cap from the class's feature params (`classes.SphereAccess.Opens`), so
+   `ruletablesvc.MinorSphereMaxLevel` and the class-keyed rows' reader are gone; the artifact still carries
+   the rows until the next format drops them (step 11.4).)_
 
    _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) steps 2 and 3, on implementation: two new kinds, `psionics` (params `progression`, `psp`, `recovery`; the PSPs, picks and power checks of ADR 0043 steps 4 to 12) and `save_bonus` (params `against`, `bonus`; ADR 0043 step 3); the psionicist lists both. As built, 2026-10-22: both are in `classes.FeatureKinds` with no params read (the schema checks them) and are **not implemented**: `classes.Class.Implemented` is false for a class listing one, which step 8's creation gate reads.)_
 
@@ -391,9 +393,34 @@ writes `Test<name>` and adds the prefix here in the same PR.
     failure, turning, skills with their armour and budget, backstab, specialization, the spellbook's maximum
     level and the attacks per round, for the five classes at levels 1, 7 and 13, unarmoured and in chain mail).
     The derived block's new `exceptionalStrength` is the one addition. Left for the next items of step 11: the
-    equipment limits (`itemsvc.classRules`, `classWeaponTypes`), the hit dice, the race traits (Table 9's
-    races, `noExceptionalStrengthRaces`, Tables 10 and 11), the reader of `sphere_access`, then step 11.5's
-    `just check-no-class-ids`.)_
+    hit dice, then step 11.5's `just check-no-class-ids`.)_
+
+    _(As built for the equipment limits and the race traits, steps 11.3 and 11.4, 2026-10-22: `itemsvc.classRules`,
+    `ruletablesvc.classWeaponTypes`, `charactersvc.conSaveRaces`, `noExceptionalStrengthRaces` and the Tables 10 and 11
+    literal are deleted. `classes.Class.Equipment` is the class's limits (`AllowsArmour`, `AllowsWeapon`): `armour`
+    `["none"]` alone means no body armour at all (a piece of the none column is warned too), the class warnings of
+    ADR 0033 step 20 are `itemsvc.ClassWarnings(equipment, ...)`, and the weapon types of ADR 0037 step 7 are
+    `Equipment.PickTypes`, derived once at import by `ruletablesvc.WeaponPickTypes` from the list and the weapon
+    catalogue (a launcher judged by the damage types of the ammunition kind it fires) and set with
+    `Registry.WithPickTypes`; absent for a class with no weapon limit. `classes.Race.Traits` and `Race.Identity` carry
+    the traits (`con_save_bonus` adds Table 9's bonus to the saves of its `categories`; `no_exceptional_strength`
+    bars the 18/xx) and Tables 10 and 11; `ruletablesvc.IdentityFor(defs, race)` builds the row the creation rolls
+    and the ranges read. The existing step tests are unchanged but for their call shapes. The regression proof is
+    `TestRacesAndEquipment_Golden_DeriveWhatTheGoTablesDid` (composition): its golden file was written by the same
+    test on the code before the move (the class warnings of three sets of pieces for the five classes, the saves and
+    race save bonus of every class and race, the creation options with every weapon type list and identity range)
+    and passes with one change: **the thief's weapon types lose `other_thrown`**, which only the lasso gave it (PHB
+    p.39), and the lasso is in no catalogue weapon (step 1.6). A thief's proficiency in the lasso, and a homebrew
+    thrown weapon without a catalogue code judged by that type, need the lasso as a catalogue weapon (a
+    catalogue change, not a code one). `weapon_to_hit` is parsed and checked, and no race carries it. Tests:
+    `TestEquipment_Step1_6_TheListsAnswerTheLimits` (domain/classes),
+    `TestClassWarnings_Step20_ALimitComesFromTheDataOfAnyClass` (itemsvc),
+    `TestWeaponPick_Step7_ClassLimitsRefuseThePick` and
+    `TestWeaponPickTypes_Step7_AnyClassFromItsEquipment` (skills, ruletablesvc),
+    `TestRaceTraits_Step4_ConSaveBonusFromTheTrait` (charactersvc),
+    `TestRaceTraits_Step4_NoExceptionalStrengthFromTheTrait` (ruletablesvc),
+    `TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows` (ruletablesadpt),
+    `TestIdentity_Step2_TablesTenAndElevenFromTheCatalogue` (ruletablesvc).)_
 
 ## Consequences
 

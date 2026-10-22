@@ -24,7 +24,9 @@ type fileDTO struct {
 	classDTO
 	// LevelLimits is DMG Table 7 (ADR 0021 step 11).
 	LevelLimits []levelLimitDTO `json:"race_level_limits"`
-	// SphereAccess is the classes' sphere access (ADR 0021 step 12).
+	// SphereAccess is the artifact's class-keyed sphere rows (ADR 0021 step
+	// 12). Not read: a priest's spheres are its sphere_access feature (ADR
+	// 0040 step 3); the field only lets the strict decoder accept them.
 	SphereAccess []sphereAccessDTO `json:"sphere_access"`
 	// WeaponVsArmor is PHB Table 52 and InitiativeItem Table 56 (ADR 0021
 	// step 13).
@@ -125,6 +127,15 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 	if err != nil {
 		return nil, err
 	}
+	eq, err := parseEquipment(equipment)
+	if err != nil {
+		return nil, err
+	}
+	// ADR 0037 step 7: the weapon types a class may pick, derived once from
+	// its equipment list and the weapon catalogue.
+	if reg, err = reg.WithPickTypes(ruletablesvc.WeaponPickTypes(reg, eq)); err != nil {
+		return nil, fmt.Errorf("definitions: %w", err)
+	}
 	tables = tables.WithDefinitions(reg)
 	classTables, err := f.classes(reg)
 	if err != nil {
@@ -134,12 +145,8 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 	if err != nil {
 		return nil, err
 	}
-	access, err := sphereAccess(f.SphereAccess, reg)
-	if err != nil {
-		return nil, err
-	}
-	tables = tables.WithClasses(classTables).WithLevelLimits(limits).WithSphereAccess(access)
-	tables, err = withEquipment(tables, f, equipment)
+	tables = tables.WithClasses(classTables).WithLevelLimits(limits)
+	tables, err = withEquipment(tables, f, eq)
 	if err != nil {
 		return nil, err
 	}
@@ -148,11 +155,7 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 
 // withEquipment adds the equipment data and its two tables (the rules
 // are ruletablesvc's); all three are required.
-func withEquipment(t *ruletablesvc.Tables, f fileDTO, equipment []byte) (*ruletablesvc.Tables, error) {
-	e, err := parseEquipment(equipment)
-	if err != nil {
-		return nil, err
-	}
+func withEquipment(t *ruletablesvc.Tables, f fileDTO, e *ruletablesvc.Equipment) (*ruletablesvc.Tables, error) {
 	w, err := weaponVsArmor(f.WeaponVsArmor)
 	if err != nil {
 		return nil, err
@@ -162,23 +165,6 @@ func withEquipment(t *ruletablesvc.Tables, f fileDTO, equipment []byte) (*ruleta
 		return nil, err
 	}
 	return t.WithEquipment(e, w, i), nil
-}
-
-// sphereAccess maps sphere_access to the validated sphere access (the rules
-// are ruletablesvc.NewSphereAccess'); the table is required.
-func sphereAccess(rows []sphereAccessDTO, defs *classes.Registry) (*ruletablesvc.SphereAccess, error) {
-	if len(rows) == 0 {
-		return nil, errors.New("the artifact needs the sphere_access table")
-	}
-	out := make([]ruletablesvc.SphereAccessRow, len(rows))
-	for i, r := range rows {
-		out[i] = ruletablesvc.SphereAccessRow(r)
-	}
-	a, err := ruletablesvc.NewSphereAccess(out, defs)
-	if err != nil {
-		return nil, fmt.Errorf("sphere_access table: %w", err)
-	}
-	return a, nil
 }
 
 // levelLimits maps race_level_limits to validated level limits (the rules

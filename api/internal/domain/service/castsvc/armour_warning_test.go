@@ -25,7 +25,7 @@ func TestCast_Step16_2_WizardSpellInArmourWarns(t *testing.T) {
 			RealizedLevel: 7, Group: "warrior",
 			Classes: []charactersvc.EntryDerived{
 				{Class: "fighter", Group: "warrior", State: classes.EntryActive, RealizedLevel: 7},
-				{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 6, Casts: true},
+				{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 6, Casts: true, NoArmour: true},
 			},
 		}}
 	}

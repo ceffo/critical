@@ -40,8 +40,8 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 			return fmt.Errorf("%w: %d", spellsvc.ErrSlotAlreadyUsed, slotIndex)
 		}
 		// ADR 0042 step 14: the slot's entry casts, at its own level.
-		class, casterLevel := casterOf(c, slot)
-		if warnings, err = s.castWarnings(ctx, c, class); err != nil {
+		casterLevel, noArmour := casterOf(c, slot)
+		if warnings, err = s.castWarnings(ctx, c, noArmour); err != nil {
 			return err
 		}
 		after := append([]spellsvc.SpellSlot(nil), before...)
@@ -139,32 +139,34 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 	return res, nil
 }
 
-// casterOf is ADR 0042 step 14 on a slot: the spellcasting entry it names
-// (an untagged slot: the first active one) and that entry's realized level;
-// the character's class and caster level when no entry is derived.
-func casterOf(c *charactersvc.Character, slot spellsvc.SpellSlot) (string, int) {
+// casterOf is ADR 0042 step 14 on a slot: the realized level of the
+// spellcasting entry it names (an untagged slot: the first active one), and
+// whether that entry's class allows no body armour (EntryDerived.NoArmour);
+// the character's caster level, and no armour limit, when no entry is
+// derived.
+func casterOf(c *charactersvc.Character, slot spellsvc.SpellSlot) (level int, noArmour bool) {
 	if e, ok := c.Derived.CasterEntry(slot.Class); ok {
-		return e.Class, e.RealizedLevel
+		return e.RealizedLevel, e.NoArmour
 	}
 	if e, ok := c.Derived.CasterEntry(""); ok {
-		return e.Class, e.RealizedLevel
+		return e.RealizedLevel, e.NoArmour
 	}
-	return c.Class, c.Derived.CasterLevel()
+	return c.Derived.CasterLevel(), false
 }
 
-// castWarnings is ADR 0042 step 16.2 on a cast: the spells are the casting
-// entry's class (casterOf), and a class that allows no body armour warns
-// spell_in_armour while body armour is worn, whatever the character's other
-// classes allow. Only such a class reads the pieces.
-func (s *service) castWarnings(ctx context.Context, c *charactersvc.Character, class string) ([]string, error) {
-	if !itemsvc.ForbidsArmour(class) {
+// castWarnings is ADR 0042 step 16.2 on a cast: the casting entry's class
+// (casterOf) allows no body armour, so its spells warn spell_in_armour while
+// body armour is worn, whatever the character's other classes allow. Only
+// such a class reads the pieces.
+func (s *service) castWarnings(ctx context.Context, c *charactersvc.Character, noArmour bool) ([]string, error) {
+	if !noArmour {
 		return nil, nil
 	}
 	pieces, err := s.Items.List(ctx, c.ID)
 	if err != nil {
 		return nil, fmt.Errorf("list items: %w", err)
 	}
-	if itemsvc.SpellInArmour(class, c.Race, pieces) {
+	if itemsvc.SpellInArmour(c.Race, pieces) {
 		return []string{itemsvc.WarnSpellInArmour}, nil
 	}
 	return nil, nil

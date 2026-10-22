@@ -288,6 +288,10 @@ type EntryDerived struct {
 	SpellSlots map[int]int
 	// Casts is a class with a spell progression (ADR 0040 step 1.9).
 	Casts bool
+	// NoArmour is a class that allows no body armour (its equipment's
+	// armour list is only none, ADR 0040 step 1.6): its spells warn
+	// spell_in_armour while body armour is worn (ADR 0042 step 16.2).
+	NoArmour bool
 	// LevelUp are the entry's pending levels (ADR 0042 step 7).
 	LevelUp LevelUp
 }

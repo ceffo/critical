@@ -35,7 +35,7 @@ func TestWeaponPick_Step7_ClassLimitsRefuseThePick(t *testing.T) {
 		{"a cleric: sling, other_melee, other_missile", "cleric", weapons("sling", "other_melee", "other_missile"), weapons(), nil},
 		{"a cleric refused an edged weapon", "cleric", weapons("short_sword"), weapons(), refused("weapon.short_sword", "weapon_not_allowed")},
 		{"a cleric refused a bow", "cleric", weapons("long_bow"), weapons(), refused("weapon.long_bow", "weapon_not_allowed")},
-		{"a thief: its list", "thief", weapons("short_bow", "hand_crossbow", "long_sword", "other_thrown"), weapons(), nil},
+		{"a thief: its list", "thief", weapons("short_bow", "hand_crossbow", "long_sword", "other_melee"), weapons(), nil},
 		{"a thief refused a type outside its list", "thief", weapons("long_bow"), weapons(), refused("weapon.long_bow", "weapon_not_allowed")},
 		{"a thief refused a heavy crossbow", "thief", weapons("heavy_crossbow"), weapons(), refused("weapon.heavy_crossbow", "weapon_not_allowed")},
 		{"a fighter: any type", "fighter", weapons(allWeaponTypes...), weapons(), nil},

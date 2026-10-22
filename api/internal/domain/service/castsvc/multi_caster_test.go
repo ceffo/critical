@@ -22,8 +22,12 @@ func multiOf(entries ...charactersvc.EntryDerived) *charactersvc.Character {
 	}}
 }
 
+// active is an active entry as Derive gives it; a wizard wears no body armour
+// (the fixture's mage equipment, EntryDerived.NoArmour).
 func active(class, group string, level int, casts bool) charactersvc.EntryDerived {
-	return charactersvc.EntryDerived{Class: class, Group: group, State: classes.EntryActive, RealizedLevel: level, Casts: casts}
+	return charactersvc.EntryDerived{
+		Class: class, Group: group, State: classes.EntryActive, RealizedLevel: level, Casts: casts, NoArmour: group == "wizard",
+	}
 }
 
 // ADR 0042 step 14 (by-group effects): a by-group gain reads every active

@@ -2,7 +2,6 @@ package charactersvc
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -67,13 +66,6 @@ type Rules interface {
 	// BackstabFor is PHB Table 30 at a level (step 19).
 	BackstabFor(level int) (int, error)
 }
-
-// conSaveRaces are the races that add their PHB Table 9 bonus to the saves
-// against Rod/Staff/Wand and Spells (ADR 0030 step 22.1). Their bonus against
-// poison (dwarves and halflings) waits for the save request's "poison" flag
-// (step 22.1, proposed): the Paralyze/Poison category also covers paralysis
-// and death magic.
-var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 
 // Derive computes the derived block of c (ADR 0030 steps 3 to 8, 17, 19,
 // 22.1, and the pending level-ups of step 7) through its class entries (ADR
@@ -257,7 +249,7 @@ func deriveEntries(c *Character, awards []int, rules Rules) ([]entryCalc, error)
 		}
 		ed := EntryDerived{
 			Class: e.Class, Group: def.Group, State: e.State, XP: EntryXP(e, awards, shares),
-			Casts: def.SpellProgression != "",
+			Casts: def.SpellProgression != "", NoArmour: def.Equipment.NoArmour(),
 		}
 		if e.State == classes.EntryFrozen {
 			// A dual-class's old class: no XP, no target, nothing pending
@@ -417,18 +409,55 @@ func coreAt(class, group string, level int, rules Rules) (core, error) {
 	}}, nil
 }
 
-// raceSaveBonus is step 22.1: dwarves, gnomes and halflings add their PHB
-// Table 9 bonus (from the sheet's Constitution) to the saves against
-// Rod/Staff/Wand and Spells. Every other race (and none) adds nothing.
+// raceSaveBonus is step 22.1 through the race's con_save_bonus trait (ADR
+// 0040 step 4): the race adds PHB Table 9's bonus (from the sheet's
+// Constitution) to the saves of the trait's categories. A race without the
+// trait (or a race the catalogue does not define) adds nothing. The trait's
+// poison flag waits for the save request's "poison" flag (step 22.1,
+// proposed): the Paralyze/Poison category also covers paralysis and death
+// magic, so the data does not list it among the categories.
 func raceSaveBonus(c *Character, rules Rules) (Saves, error) {
-	if !slices.Contains(conSaveRaces, c.Race) {
+	defs, err := rules.Definitions()
+	if err != nil {
+		return Saves{}, fmt.Errorf("derive %s save bonus: %w", c.Race, err)
+	}
+	race, ok := defs.Race(c.Race)
+	if !ok {
+		return Saves{}, nil
+	}
+	trait, ok := race.Trait(classes.TraitConSaveBonus)
+	if !ok {
 		return Saves{}, nil
 	}
 	b, err := rules.ConSaveBonusFor(c.Con)
 	if err != nil {
 		return Saves{}, fmt.Errorf("derive %s save bonus: %w", c.Race, err)
 	}
-	return Saves{RodStaffWand: b, Spell: b}, nil
+	var out Saves
+	for _, cat := range trait.Categories {
+		if p := saveField(&out, cat); p != nil {
+			*p = b
+		}
+	}
+	return out, nil
+}
+
+// saveField is the field of s for a save category code (classes.SaveCategories),
+// nil for a code that is none.
+func saveField(s *Saves, cat string) *int {
+	switch cat {
+	case classes.SaveCategories[0]:
+		return &s.ParaPoison
+	case classes.SaveCategories[1]:
+		return &s.RodStaffWand
+	case classes.SaveCategories[2]:
+		return &s.PetriPoly
+	case classes.SaveCategories[3]:
+		return &s.Breath
+	case classes.SaveCategories[4]:
+		return &s.Spell
+	}
+	return nil
 }
 
 // SetSkillFigures sets d's skill sets (percentages, armour, budget and points of each) from

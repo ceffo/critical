@@ -60,6 +60,8 @@ type Class struct {
 	// Features are the class's feature list (steps 1.11 and 3), in catalogue
 	// order; read through Feature (step 5).
 	Features []Feature
+	// Equipment is what the class may wear and wield (step 1.6).
+	Equipment Equipment
 }
 
 // Group is one class group definition (ADR 0040 steps 1.2 and 7).
@@ -77,6 +79,10 @@ type Race struct {
 	// Requirements are the race's ability ranges (PHB Table 7), none for a
 	// race that has none (the human).
 	Requirements []AbilityRange
+	// Identity is the race's rows of PHB Tables 10 and 11 (step 2).
+	Identity Identity
+	// Traits are the race's typed traits (step 4), read through Trait.
+	Traits []Trait
 }
 
 // AbilityRange is a race's lowest and highest score in one ability.
@@ -160,6 +166,12 @@ func unique[T any](items []T, id func(T) string) error {
 }
 
 func checkRace(r Race) error {
+	if err := checkIdentity(r.Identity); err != nil {
+		return err
+	}
+	if _, err := checkTraits(r.Traits); err != nil {
+		return err
+	}
 	if err := unique(r.Requirements, func(a AbilityRange) string { return a.Ability }); err != nil {
 		return fmt.Errorf("requirements: %w", err)
 	}
@@ -230,11 +242,14 @@ func checkClass(c Class, groups []string) (Class, error) {
 	if err != nil {
 		return Class{}, err
 	}
+	if err := checkEquipment(c.Equipment); err != nil {
+		return Class{}, err
+	}
 	return Class{
 		ID: c.ID, Name: c.Name.Clean(), Group: c.Group,
 		PrimeRequisites: slices.Clone(c.PrimeRequisites), AbilityMinimums: mins,
 		Alignments: aligns, Experience: slices.Clone(c.Experience),
-		SpellProgression: c.SpellProgression, Features: features,
+		SpellProgression: c.SpellProgression, Features: features, Equipment: c.Equipment.clone(),
 	}, nil
 }
 
@@ -341,6 +356,11 @@ func (r *Registry) Race(id string) (Race, bool) {
 func (x Race) clone() Race {
 	x.Name = x.Name.Clean()
 	x.Requirements = slices.Clone(x.Requirements)
+	ts := make([]Trait, len(x.Traits))
+	for i, t := range x.Traits {
+		ts[i] = t.clone()
+	}
+	x.Traits = ts
 	return x
 }
 
@@ -364,6 +384,7 @@ func (c Class) clone() Class {
 		fs[i] = f.clone()
 	}
 	c.Features = fs
+	c.Equipment = c.Equipment.clone()
 	return c
 }
 
@@ -403,4 +424,25 @@ func (c Class) UnmetMinimums(scores map[string]int) []string {
 // AlignmentAllowed reports whether the class admits alignment.
 func (c Class) AlignmentAllowed(alignment string) bool {
 	return slices.Contains(c.Alignments, alignment)
+}
+
+// WithPickTypes returns a copy of the registry whose classes carry the
+// weapon types a proficiency may be picked in (Equipment.PickTypes), keyed by
+// class id; a class absent from the map may pick any type. A key naming no
+// class is refused.
+func (r *Registry) WithPickTypes(types map[string][]string) (*Registry, error) {
+	out := &Registry{classes: make([]Class, len(r.classes)), groups: r.groups, races: r.races}
+	seen := 0
+	for i, c := range r.classes {
+		c = c.clone()
+		if t, ok := types[c.ID]; ok {
+			c.Equipment.PickTypes = slices.Clone(t)
+			seen++
+		}
+		out.classes[i] = c
+	}
+	if seen != len(types) {
+		return nil, errors.New("pick types: a key naming no class")
+	}
+	return out, nil
 }

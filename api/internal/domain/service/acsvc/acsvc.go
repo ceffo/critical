@@ -33,6 +33,8 @@ type SVC interface {
 // Items reads the character's pieces (itemsvc).
 type Items interface {
 	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
+	// Warnings are the class warnings of the pieces held (ADR 0033 step 20).
+	Warnings(ctx context.Context, characterID int64, items []itemsvc.Item) ([]itemsvc.Warning, error)
 }
 
 // Effects reads the buffs with whether each applies, and the powers that are
@@ -130,19 +132,23 @@ func (s *service) Get(ctx context.Context, characterID int64) (*AC, error) {
 	}
 	ac := Derive(Inputs{Items: items, Buffs: buffs, Powers: powers, Dexterity: c.Dex, DexAdjust: dexAdj})
 	ac.Override = o
-	ac.Warnings = armourWarnings(c.ActiveClassIDs(), items)
+	warnings, err := s.items.Warnings(ctx, characterID, items)
+	if err != nil {
+		return nil, fmt.Errorf("class warnings: %w", err)
+	}
+	ac.Warnings = armourWarnings(warnings, items)
 	return &ac, nil
 }
 
 // armourWarnings are the class warnings (ADR 0033 step 20) of the worn body
 // armour and shield: what the AC card shows beside the breakdown.
-func armourWarnings(classes []string, items []itemsvc.Item) []itemsvc.Warning {
+func armourWarnings(warnings []itemsvc.Warning, items []itemsvc.Item) []itemsvc.Warning {
 	worn := make(map[string]bool, len(items))
 	for _, it := range items {
 		worn[it.ID] = it.Category == itemsvc.CategoryArmour || it.Category == itemsvc.CategoryShield
 	}
 	var out []itemsvc.Warning
-	for _, w := range itemsvc.ClassWarnings(classes, items) {
+	for _, w := range warnings {
 		if worn[w.ItemID] {
 			out = append(out, w)
 		}

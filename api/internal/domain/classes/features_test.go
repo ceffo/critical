@@ -82,7 +82,7 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 	}
 	for _, tc := range refused {
 		t.Run("refused: "+tc.name, func(t *testing.T) {
-			_, err := classes.New([]classes.Class{withFeatures(tc.fs...)}, groups("warrior"), []classes.Race{{ID: "human", Name: localized.Text{"en": "Human"}}})
+			_, err := classes.New([]classes.Class{withFeatures(tc.fs...)}, groups("warrior"), []classes.Race{{ID: "human", Identity: identity(), Name: localized.Text{"en": "Human"}}})
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "test_class", "names the class")
 		})
@@ -121,6 +121,19 @@ func TestLookup_Step5_AFeatureThroughTheClassEntry(t *testing.T) {
 	require.NoError(t, err)
 	got, _ := again.Lists(classes.KindRogueSkills)
 	assert.Equal(t, rogueSkills(), got.RogueSkills, "the registry's params are untouched")
+}
+
+// ADR 0030 step 15.2: a major sphere opens every spell level, a minor one
+// only up to minor_max_level, any other sphere is closed; one open sphere
+// among several opens the spell.
+func TestSphereAccess_Step15_Opens(t *testing.T) {
+	a := classes.SphereAccess{Major: []string{"combat"}, Minor: []string{"fire"}, MinorMaxLevel: 2}
+	assert.True(t, a.Opens(7, []string{"combat"}), "major at 7th")
+	assert.True(t, a.Opens(2, []string{"fire"}), "minor at the cap")
+	assert.False(t, a.Opens(3, []string{"fire"}), "minor over the cap")
+	assert.False(t, a.Opens(1, []string{"water"}), "closed")
+	assert.True(t, a.Opens(5, []string{"fire", "combat"}), "open through the major one")
+	assert.Equal(t, []string{"combat", "fire"}, a.Codes())
 }
 
 // ADR 0040 step 3.5: rogue_skills is listed once per skill set, so a class may grant two sets;

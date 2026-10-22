@@ -186,6 +186,14 @@ func specializes(book Book, class string) bool {
 	return ok && ruletablesvc.Specializes(def)
 }
 
+// weaponTypeAllowed is ADR 0037 step 7: whether the class may pick a weapon proficiency in
+// weaponType, read from its definition (ADR 0040 step 1.6). A class the catalogue does not
+// define is limited by nothing.
+func weaponTypeAllowed(book Book, class, weaponType string) bool {
+	def, ok := book.ClassDef(class)
+	return !ok || def.Equipment.WeaponTypeAllowed(weaponType)
+}
+
 // IsSpecialization reports whether p is a specialization pick (ADR 0037 step 9): a weapon type
 // with the slots its specialization costs. A plain pick spends WeaponPickSlots.
 func (p WeaponPick) IsSpecialization() bool {
@@ -272,7 +280,7 @@ func FiguresOf(book Book, cls Classes, intelligence int, spend Spending) (Profic
 	spent = 0
 	for _, p := range picks.Weapon {
 		out.WeaponPicks = append(out.WeaponPicks, WeaponPickFigures{
-			Type: p.Type, Slots: p.Slots, Allowed: ruletablesvc.WeaponTypeAllowed(b.class, p.Type),
+			Type: p.Type, Slots: p.Slots, Allowed: weaponTypeAllowed(book, b.class, p.Type),
 		})
 		spent += p.Slots
 	}
@@ -367,7 +375,7 @@ func validWeaponPicks(book Book, class string, picks, before []WeaponPick) ([]We
 			return nil, &domain.FieldError{Field: field, Message: CodeDuplicate}
 		case p.Slots != WeaponPickSlots && !p.IsSpecialization():
 			return nil, &domain.FieldError{Field: field, Message: CodeOutOfRange}
-		case !had[p.Type] && !ruletablesvc.WeaponTypeAllowed(class, p.Type):
+		case !had[p.Type] && !weaponTypeAllowed(book, class, p.Type):
 			return nil, &domain.FieldError{Field: field, Message: CodeWeaponNotAllowed}
 		case p.IsSpecialization() && (!specializes(book, class) || specialized):
 			return nil, &domain.FieldError{Field: field, Message: CodeNotAllowed}

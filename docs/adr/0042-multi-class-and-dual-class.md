@@ -418,14 +418,16 @@ bard 15 never).)_
     `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks` (charactersvc),
     `Cast_Step16_2_WizardSpellInArmourWarns` (castsvc: a fighter/mage in chain warned; an elf
     fighter/mage in elven chain not), `Skills_Step16_3_ArmourBlocksAllButTwo` (skillsvc).
-    _(As built, 2026-10-22, 16.1 and 16.2: the limits are still `itemsvc`'s class rules by class id
-    (the catalogue's `equipment` is not read yet, ADR 0040 step 11.3), now judged on every active
-    entry: `itemsvc.ClassWarnings` takes the active classes (the AC card's armour warnings too); a
-    piece is warned only when no class allows it, and a `blunt_only` class judges every weapon
-    alone. Test: `Weapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion`. A cast whose spells are a class
-    allowing no body armour (the first active spellcasting entry, step 14) reads the worn pieces and
-    answers `warnings: ["spell_in_armour"]` (never logged, never refusing) while body armour other
-    than `none` is worn, except an elf (race `elf`) in the `elven_chain` column. Test:
+    _(As built, 2026-10-22, 16.1 and 16.2, on the class definitions' `equipment` (ADR 0040 step 1.6):
+    `itemsvc.ClassWarnings` takes the `classes.Equipment` of every active entry (the AC card's
+    armour warnings too; an entry whose class the catalogue does not define has no limit, so nothing
+    is warned); a piece is warned only when no entry allows it, and a `blunt_only` entry judges every
+    weapon alone. Test: `Weapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion`. Each derived entry
+    carries `NoArmour` (its `armour` list is only `none`; test `Derive_Step16_2_NoArmourComesFromTheEquipment`).
+    A cast whose spells are such an entry's (the slot's entry, else the first active spellcasting
+    entry, step 14) reads the worn pieces and answers `warnings: ["spell_in_armour"]` (never logged,
+    never refusing) while body armour other than `none` is worn, except an elf (race `elf`) in the
+    `elven_chain` column (still a race id in the code: the race trait is to come). Test:
     `Cast_Step16_2_WizardSpellInArmourWarns`. Not built: 16.1's weapon picks
     (`WeaponPick_Step16_1_…`), 16.3's thief skills in armour, ADR 0043 step 18's `power_in_armour`.)_
 

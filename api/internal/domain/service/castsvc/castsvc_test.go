@@ -782,11 +782,8 @@ func TestDamageAt_NoneAndBounds(t *testing.T) {
 // wearsNothing reports whether one of caster's classes allows no body armour,
 // so that a cast reads its pieces (ADR 0042 step 16.2).
 func wearsNothing(caster *charactersvc.Character) bool {
-	if itemsvc.ForbidsArmour(caster.Class) {
-		return true
-	}
 	for _, e := range caster.Derived.Classes {
-		if itemsvc.ForbidsArmour(e.Class) {
+		if e.NoArmour {
 			return true
 		}
 	}

@@ -1,5 +1,5 @@
 {
-  "format": 13,
+  "format": 14,
   "version": "1970-01-01",
   "spells": [
     {
@@ -1302,24 +1302,6 @@
       {"race": "halfling", "class": "thief", "max_level": 15},
       {"race": "halfling", "class": "bard", "max_level": 0},
       {"race": "halfling", "class": "psionicist", "max_level": 10}
-    ],
-    "sphere_access": [
-      {"class": "cleric", "sphere": "all", "access": "major"},
-      {"class": "cleric", "sphere": "astral", "access": "major"},
-      {"class": "cleric", "sphere": "charm", "access": "major"},
-      {"class": "cleric", "sphere": "combat", "access": "major"},
-      {"class": "cleric", "sphere": "creation", "access": "major"},
-      {"class": "cleric", "sphere": "divination", "access": "major"},
-      {"class": "cleric", "sphere": "guardian", "access": "major"},
-      {"class": "cleric", "sphere": "healing", "access": "major"},
-      {"class": "cleric", "sphere": "necromantic", "access": "major"},
-      {"class": "cleric", "sphere": "protection", "access": "major"},
-      {"class": "cleric", "sphere": "summoning", "access": "major"},
-      {"class": "cleric", "sphere": "sun", "access": "major"},
-      {"class": "cleric", "sphere": "elemental_air", "access": "minor"},
-      {"class": "cleric", "sphere": "elemental_earth", "access": "minor"},
-      {"class": "cleric", "sphere": "elemental_fire", "access": "minor"},
-      {"class": "cleric", "sphere": "elemental_water", "access": "minor"}
     ],
     "weapon_vs_armor": [
       {"armor_row": "banded", "s": 2, "p": 0, "b": 1},

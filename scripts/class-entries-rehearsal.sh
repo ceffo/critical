@@ -33,7 +33,7 @@ ok() { echo "class-entries-rehearsal: ok: $*"; }
 
 mig=api/internal/storage/postgres/migrations/035_character_classes.sql
 # default: the commit before the one that added the migration (the release before, on this branch's base)
-# (the migration was first numbered 034, before CRI-166's skill sets took that number: both names count)
+# (the migration was first numbered 034, before the skill sets migration took that number: both names count)
 mig034="${mig/035_/034_}"
 # The release before is origin/main while it lacks the migration (it carries whatever else changed
 # the wire meanwhile); once it holds it, the commit before the one that added it.

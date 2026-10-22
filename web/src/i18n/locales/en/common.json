@@ -1859,6 +1859,16 @@
     "languageSlots_one": "{{count}} proficiency slot",
     "languageSlots_other": "{{count}} proficiency slots"
   },
+  "takeClass": {
+    "open": "Take a new class",
+    "title": "Take a new class",
+    "pick": "New class",
+    "placeholder": "Pick a class",
+    "next": "Next",
+    "back": "Back",
+    "take": "Take {{class}}",
+    "confirm": "{{from}} is frozen at level {{level}} and keeps what it has: no more XP and no new level. From now on all XP goes to {{to}}, which starts at level 1. You can undo this from the journal."
+  },
   "xp": {
     "heading": "Experience · level {{level}}",
     "unit": "XP",

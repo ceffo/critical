@@ -494,6 +494,11 @@ flowchart TD
   casting entries (slots carry `class`) picks the entry in the preparation editor (`?class=`, `class`)
   and each slot row shows its class. Nothing is computed in the client. A thief skill the armour blocks
   (`blocked`) shows its tag, a cast's `spell_in_armour` warning shows on its card.
+- Taking a new class ([ADR 0042](adr/0042-multi-class-and-dual-class.md) step 3): the character details popover's
+  "Take a new class" opens `TakeClassDialog` (the classes of the creation options the page already holds, minus
+  the character's own), a confirmation says what changes (old class frozen at its level, XP from now on to the
+  new class), then `POST /api/character/dual-class` as an action on the stack (Undo in the journal takes it
+  back). A refusal shows in the dialog in its `apiError.<code>` wording; who may switch is the server's.
 - Saves (`Saves.tsx`, character card): a save is logged (kind `save`, rendered from `effectivePayload` by
   `journal/kinds/save.tsx`). The save card (`SaveCard` in that file) has an "Adjust after the roll" fold
   (shared with the skill check, `AdjustCheck`): − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →

@@ -33,6 +33,7 @@ import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
 import type { Character } from "@/types/character";
 import { primaryClass } from "@/lib/classEntries";
+import { TakeClassDialog } from "@/components/dashboard/TakeClassDialog";
 
 /**
  * The character's name, opening a popover with the details: the name first (Rename lives here too,
@@ -47,43 +48,64 @@ export function CharacterDetails({
 }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [taking, setTaking] = useState(false);
   const name = character?.name || t("app.loading");
 
   return (
-    <Popover onOpenChange={(open) => !open && setEditing(false)}>
-      <PopoverTrigger
-        disabled={!character}
-        title={t("details.open")}
-        data-testid="details-trigger"
-        className="block max-w-full break-words rounded-sm text-left text-key outline-none hover:text-amb-300 focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:text-amb-300"
+    <>
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setEditing(false);
+        }}
       >
-        {name}
-      </PopoverTrigger>
-      {character && (
-        <PopoverContent
-          side="right"
-          align="start"
-          className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3"
-          aria-label={t("details.title")}
-          data-testid="details-popover"
+        <PopoverTrigger
+          disabled={!character}
+          title={t("details.open")}
+          data-testid="details-trigger"
+          className="block max-w-full break-words rounded-sm text-left text-key outline-none hover:text-amb-300 focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:text-amb-300"
         >
-          <PopoverTitle className="section-label">
-            {t("details.title")}
-          </PopoverTitle>
-          {editing ? (
-            <DetailsForm
-              character={character}
-              onDone={() => setEditing(false)}
-            />
-          ) : (
-            <DetailsView
-              character={character}
-              onEdit={() => setEditing(true)}
-            />
-          )}
-        </PopoverContent>
+          {name}
+        </PopoverTrigger>
+        {character && (
+          <PopoverContent
+            side="right"
+            align="start"
+            className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3"
+            aria-label={t("details.title")}
+            data-testid="details-popover"
+          >
+            <PopoverTitle className="section-label">
+              {t("details.title")}
+            </PopoverTitle>
+            {editing ? (
+              <DetailsForm
+                character={character}
+                onDone={() => setEditing(false)}
+              />
+            ) : (
+              <DetailsView
+                character={character}
+                onEdit={() => setEditing(true)}
+                onTakeClass={() => {
+                  setOpen(false);
+                  setTaking(true);
+                }}
+              />
+            )}
+          </PopoverContent>
+        )}
+      </Popover>
+      {character && (
+        <TakeClassDialog
+          character={character}
+          open={taking}
+          onOpenChange={setTaking}
+        />
       )}
-    </Popover>
+    </>
   );
 }
 
@@ -99,9 +121,11 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 function DetailsView({
   character: c,
   onEdit,
+  onTakeClass,
 }: {
   character: Character;
   onEdit: () => void;
+  onTakeClass: () => void;
 }) {
   const { t, i18n } = useTranslation();
   // The language catalogue, for the names (ADR 0032 step 4): tolerant of a release that predates
@@ -222,9 +246,19 @@ function DetailsView({
           )}
         </Row>
       </dl>
-      <Button type="button" className="self-end" onClick={onEdit}>
-        {t("details.edit")}
-      </Button>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onTakeClass}
+          data-testid="take-class-open"
+        >
+          {t("takeClass.open")}
+        </Button>
+        <Button type="button" onClick={onEdit}>
+          {t("details.edit")}
+        </Button>
+      </div>
     </>
   );
 }

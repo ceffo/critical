@@ -1859,6 +1859,16 @@
     "languageSlots_one": "{{count}} emplacement de compétence",
     "languageSlots_other": "{{count}} emplacements de compétence"
   },
+  "takeClass": {
+    "open": "Prendre une nouvelle classe",
+    "title": "Prendre une nouvelle classe",
+    "pick": "Nouvelle classe",
+    "placeholder": "Choisir une classe",
+    "next": "Suivant",
+    "back": "Retour",
+    "take": "Prendre {{class}}",
+    "confirm": "{{from}} est figée au niveau {{level}} et garde ce qu’elle a : plus de PX ni de nouveau niveau. À partir de maintenant, tous les PX vont à {{to}}, qui commence au niveau 1. Vous pouvez annuler depuis le journal."
+  },
   "xp": {
     "heading": "Expérience · niveau {{level}}",
     "unit": "XP",

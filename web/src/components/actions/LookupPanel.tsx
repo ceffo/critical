@@ -16,16 +16,11 @@ import { LearnSpell } from "@/components/actions/LearnSpell";
 import { PowerLookup } from "@/components/actions/PowerLookup";
 import { usePowerStore } from "@/stores/powers";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
-import type { SpellClass } from "@/api/spells_db";
+import { useCharacterStore } from "@/stores/character";
+import { effectiveClass, lookupClasses } from "./lookupClasses";
 import { localized } from "@/i18n/localized";
 import { classLabel, sphereLabel, schoolLabel } from "@/lib/lookupLabels";
 
-const CLASSES: { value: SpellClass; key: string }[] = [
-  { value: "mine", key: "classMine" },
-  { value: "wizard", key: "classWizard" },
-  { value: "priest", key: "classPriest" },
-  { value: "all", key: "classAll" },
-];
 /** Load the next page when the list is this close (px) to its bottom. */
 const LOAD_MORE_MARGIN = 400;
 
@@ -51,8 +46,18 @@ export function LookupPanel() {
   const powersActive = usePowerStore((s) => s.active);
   const setPowersActive = usePowerStore((s) => s.setActive);
   const listRef = useRef<HTMLDivElement>(null);
+  // "Mine" is the spellbook: only a class that has one is offered it (the server's derived block).
+  const character = useCharacterStore((s) => s.character);
+  const rules = character?.derived.spellbook ?? null;
+  const classes = lookupClasses(rules);
   const priest = query.cls === "priest";
   const selected = items.find((s) => s.id === selectedId) ?? null;
+
+  // A "Mine" left over from a character with a spellbook falls back to the default (Wizard).
+  const cls = character ? effectiveClass(query.cls, rules) : query.cls;
+  useEffect(() => {
+    if (cls !== query.cls) setQuery({ cls });
+  }, [cls, query.cls, setQuery]);
 
   useEffect(() => {
     void loadOptions();
@@ -202,7 +207,7 @@ export function LookupPanel() {
       aria-label={t("lookup.classLabel")}
       className="flex flex-wrap self-start rounded-lg bg-raised p-0.5"
     >
-      {CLASSES.map(({ value, key }) => (
+      {classes.map(({ value, key }) => (
         <button
           key={value}
           type="button"

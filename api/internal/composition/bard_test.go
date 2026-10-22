@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -70,9 +71,9 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 		t.Helper()
 		skills, err := bs.Skills.List(ctx, id)
 		require.NoError(t, err)
-		assert.Empty(t, skills.ThiefSkills)
+		assert.Nil(t, tabSet(skills, "thief"))
 		out := map[string]int{}
-		for _, b := range skills.BardSkills {
+		for _, b := range tabSet(skills, "bard").Skills {
 			out[b.Skill] = b.Percent
 		}
 		return out
@@ -80,7 +81,7 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 	assert.Equal(t, map[string]int{"climb_walls": 40, "detect_noise": 15, "pick_pockets": 0, "read_languages": 0}, percents())
 	c, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
-	assert.Empty(t, c.Derived.SkillBudget, "20 points: the bard's budget at 1st")
+	assert.Empty(t, derivedSet(c.Derived, "bard").Budget, "20 points: the bard's budget at 1st")
 
 	check, err := bs.Skills.Roll(ctx, id, "climb_walls", skillsvc.Adjustment{})
 	require.NoError(t, err)
@@ -94,16 +95,16 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 
 	// ADR 0037 step 10: 30 points over the 20 of the 1st level is refused,
 	// nothing stored or logged.
-	_, err = bs.Skills.SetPoints(ctx, id, map[string]int{"climb_walls": 15, "detect_noise": 5, "read_languages": 10})
+	_, err = bs.Skills.SetPoints(ctx, id, "", map[string]int{"climb_walls": 15, "detect_noise": 5, "read_languages": 10})
 	require.ErrorIs(t, err, domain.ErrOverBudget)
 	spend := map[string]int{"climb_walls": 10, "read_languages": 10}
-	got, err := bs.Skills.SetPoints(ctx, id, spend)
+	got, err := bs.Skills.SetPoints(ctx, id, "", spend)
 	require.NoError(t, err)
 	assert.Equal(t, spend, got)
 	assert.Equal(t, 10, percents()["read_languages"])
 	c, err = bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
-	assert.Empty(t, c.Derived.SkillBudget, "the 20 points moved: within the budget")
+	assert.Empty(t, derivedSet(c.Derived, "bard").Budget, "the 20 points moved: within the budget")
 
 	entries, err := bs.Log.List(ctx, id, 10)
 	require.NoError(t, err)
@@ -118,8 +119,8 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 	assert.Equal(t, 0, percents()["read_languages"], "the undo gives the points back")
 	c, err = bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]int{"climb_walls": 15, "detect_noise": 5}, c.SkillPoints)
-	assert.Empty(t, c.Derived.SkillBudget)
+	assert.Equal(t, skills.SetPoints{"bard": {"climb_walls": 15, "detect_noise": 5}}, c.SkillPoints)
+	assert.Empty(t, derivedSet(c.Derived, "bard").Budget)
 
 	wear("Leather armor", "leather", "leather")
 	assert.Equal(t, 65, percents()["climb_walls"], "50 + 15 in leather")
@@ -138,8 +139,8 @@ func TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages(t *testing.T) {
 	id := rootCharacter(t, bs)
 	skills, err := bs.Skills.List(ctx, id)
 	require.NoError(t, err)
-	got := make([]ruletablesvc.SkillPercent, len(skills.BardSkills))
-	for i, b := range skills.BardSkills {
+	got := make([]ruletablesvc.SkillPercent, len(tabSet(skills, "bard").Skills))
+	for i, b := range tabSet(skills, "bard").Skills {
 		got[i] = b.SkillPercent
 	}
 	assert.Equal(t, kelsenBardSkills, got)

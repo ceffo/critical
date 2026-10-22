@@ -94,11 +94,12 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
 		// His seeded points give his sheet's 85 / 90 / 50 / 75 (ADR 0030
 		// step 18), within the budget at any of these levels.
-		BardSkills:  kelsenBardSkills,
-		SkillBudget: []ruletablesvc.BudgetWarning{},
-		SkillPoints: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Spent: 200, Left: 30},
 		// The seed bard wears the Leather armour none entered gave (ADR 0033 step 14).
-		SkillArmor:    ruletablesvc.ArmorLeather,
+		SkillColumn: ruletablesvc.ColumnLeather,
+		SkillSets: []skills.SkillSet{{
+			Set: "bard", Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
+			Points: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Spent: 200, Left: 30},
+		}},
 		Proficiencies: kelsenPicks(15),
 	}
 	limits15 := []prepsvc.LevelLimit{{Level: 1, Max: 3}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 3}, {Level: 5, Max: 2}}
@@ -135,9 +136,12 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 			Pending: []charactersvc.PendingLevel{},
 			ToSpend: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 60},
 		},
-		Spellbook: at15.Spellbook, BardSkills: kelsenBardSkills, SkillBudget: []ruletablesvc.BudgetWarning{},
-		SkillPoints:   &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
-		SkillArmor:    ruletablesvc.ArmorLeather,
+		Spellbook:   at15.Spellbook,
+		SkillColumn: ruletablesvc.ColumnLeather,
+		SkillSets: []skills.SkillSet{{
+			Set: "bard", Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
+			Points: &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
+		}},
 		Proficiencies: kelsenPicks(17),
 	}, d)
 	assert.Equal(t, 17, ledgerLevel)

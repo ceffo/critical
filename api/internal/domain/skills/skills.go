@@ -71,6 +71,9 @@ const (
 	// FieldSkillPoints is a thief's or a bard's skill points; one skill's field is
 	// FieldSkillPoints + "." + skill.
 	FieldSkillPoints = "skillPoints"
+	// FieldSet is the skill set a spend of skill points addresses, refused as empty when the
+	// class has several (ADR 0040 step 3.5).
+	FieldSet = "set"
 )
 
 // Warning is a skills rule the stored character breaks without being refused (ADR 0037 step

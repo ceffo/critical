@@ -11,29 +11,34 @@ export function fetchSkills(): Promise<Skills> {
   return request<Skills>("/api/skills");
 }
 
-/** Sets a thief's total points per skill (ADR 0030 step 17); logged (skill_points), so it is
- * undone like any move. Answers the skills. */
+/** Sets the total points per skill of the skill set `set` (ADR 0030 step 17, ADR 0040 step 3.5);
+ * logged (skill_points), so it is undone like any move. Answers the skills. */
 export function setSkillPoints(
+  set: string,
   points: Record<string, number>,
 ): Promise<Skills> {
-  return put<Skills>("/api/skills/points", { points });
+  return put<Skills>("/api/skills/points", { set, points });
 }
 
 /** The skills and budget the points would give, as the server derives them; writes and logs
  * nothing (ADR 0030 steps 17 and 18). */
 export function previewSkillPoints(
+  set: string,
   points: Record<string, number>,
 ): Promise<Skills> {
-  return post<Skills>("/api/skills/points/preview", { points });
+  return post<Skills>("/api/skills/points/preview", { set, points });
 }
 
-/** Rolls one check of the skill on the server; it is logged (skill_check). An adjustment moves its target. */
+/** Rolls one check of the skill on the server; it is logged (skill_check). An adjustment moves its
+ * target. `set` names the skill set when the character has two that share the skill. */
 export function rollSkill(
   id: string,
   adjustment?: SkillAdjustment,
+  set?: string,
 ): Promise<SkillCheck> {
+  const query = set ? `?set=${encodeURIComponent(set)}` : "";
   return post<SkillCheck>(
-    `/api/roll/skill/${encodeURIComponent(id)}`,
+    `/api/roll/skill/${encodeURIComponent(id)}${query}`,
     adjustment,
   );
 }

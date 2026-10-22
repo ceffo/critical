@@ -70,16 +70,32 @@ func (c Characters) SetRealizedLevel(ctx context.Context, id int64, realizedLeve
 
 // SetSkillPoints implements skillsvc.Points (ADR 0030 step 17), or returns
 // domain.ErrCharacterNotFound. It stores a copy of points.
-func (c Characters) SetSkillPoints(ctx context.Context, id int64, points map[string]int) error {
+func (c Characters) SetSkillPoints(ctx context.Context, id int64, points skills.SetPoints) error {
 	return c.s.write(ctx, func(t *tables) error {
 		ch, ok := t.characters[id]
 		if !ok {
 			return domain.ErrCharacterNotFound
 		}
-		ch.SkillPoints = maps.Clone(points)
+		ch.SkillPoints = points.Clone()
 		t.characters[id] = ch
 		return nil
 	})
+}
+
+// SkillPoints implements skillsvc.Points: the class and a copy of the points of every skill set,
+// or domain.ErrCharacterNotFound.
+func (c Characters) SkillPoints(ctx context.Context, id int64) (string, skills.SetPoints, error) {
+	var class string
+	var points skills.SetPoints
+	err := c.s.read(ctx, func(t *tables) error {
+		ch, ok := t.characters[id]
+		if !ok {
+			return domain.ErrCharacterNotFound
+		}
+		class, points = ch.Class, ch.SkillPoints.Clone()
+		return nil
+	})
+	return class, points, err
 }
 
 // SetProficiencyPicks implements skillsvc.Picks (ADR 0037 step 12), or

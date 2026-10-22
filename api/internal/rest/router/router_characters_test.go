@@ -316,8 +316,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"specializes": false, "exceptionalStrength": false,
 		"spellFailure": 0,
 		"turning": null,
-		"thiefSkills": null, "bardSkills": null,
-		"skillArmor": "", "skillBudget": [], "skillPoints": null,
+		"skillSets": [],
 		"backstab": 0,
 		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false}
 	}`, string(derived))
@@ -340,10 +339,10 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 	}), []string{"hpMax"}).Return(&charactersvc.Draft{
 		Character: &charactersvc.Character{Derived: charactersvc.Derived{
 			TargetLevel: 2, RealizedLevel: 2,
-			SkillPoints: &ruletablesvc.SkillPointsBudget{
+			SkillSets: []skills.SkillSet{{Set: "thief", Armor: "none", Points: &ruletablesvc.SkillPointsBudget{
 				Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
 				PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
-			},
+			}}},
 		}, Details: charactersvc.Details{Languages: []string{"elvish", "orcish"}}},
 		Refusals: []error{
 			&domain.FieldError{Field: "dex", Message: charactersvc.CodeOutOfRange},
@@ -370,9 +369,20 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 	assert.JSONEq(t, `[]`, string(got["warnings"]))
 	var derived map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(got["derived"], &derived))
+	var sets []struct {
+		Set        string
+		SkillArmor string
+		Warnings   []any
+		Budget     json.RawMessage
+	}
+	require.NoError(t, json.Unmarshal(derived["skillSets"], &sets))
+	require.Len(t, sets, 1)
+	assert.Equal(t, "thief", sets[0].Set)
+	assert.Equal(t, "none", sets[0].SkillArmor)
+	assert.Empty(t, sets[0].Warnings)
 	assert.JSONEq(t, `{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45}`,
-		string(derived["skillPoints"]))
-	assert.JSONEq(t, string(derived["skillPoints"]), string(got["skillPoints"]), "the draft's own budget, in the derived block's shape")
+		string(sets[0].Budget))
+	assert.JSONEq(t, string(sets[0].Budget), string(got["skillPoints"]), "the draft's own budget, in the derived set's shape")
 	assert.JSONEq(t, `2`, string(derived["targetLevel"]))
 }
 

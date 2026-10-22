@@ -196,5 +196,5 @@ func TestMigrate_Step8_TheSeedCharacterGetsAnAlignmentAndSexThatPassTheCheck(t *
 
 // insertParams are the minimal row of a stored character.
 func insertParams(name, race string) storeq.InsertCharacterParams {
-	return storeq.InsertCharacterParams{Name: name, RaceCode: race, Languages: "[]", SkillPoints: "{}"}
+	return storeq.InsertCharacterParams{Name: name, RaceCode: race, Languages: "[]", SkillSets: "{}"}
 }

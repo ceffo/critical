@@ -282,6 +282,10 @@ _Code_: Proficiencies, ProficiencyDescription
 The rogue percentages and the points entered for them, read through the class's `rogue_skills` feature: its skill set, budget and armour entries. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 17 and 18, [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.
 _Code_: RogueSkills, SkillBudget
 
+**Skill set** (fr: jeu de talents):
+One `rogue_skills` feature a class grants and what comes of it on a character: its skill list, its own budget, skill armour and stored points, apart from any other set the character has (a thief/bard has two, and both list pick pockets). The client renders the list of sets, never a class. [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.5.
+_Code_: SkillSet, SetPoints, SetSkill
+
 **Proficiency slot** (fr: emplacement de compétence):
 One unit of the proficiency budget, **weapon** or **non-weapon**; **over budget** or **to spend**.
 [ADR 0037](docs/adr/0037-proficiencies.md) steps 3, 10 and 11.

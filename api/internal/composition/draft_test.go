@@ -16,6 +16,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// firstBudget is the budget of the first skill set of a derived block (a draft enters its points in
+// the class's first set), nil when the class has none.
+func firstBudget(derived map[string]any) any {
+	sets, _ := derived["skillSets"].([]any)
+	if len(sets) == 0 {
+		return nil
+	}
+	set, _ := sets[0].(map[string]any)
+	return set["budget"]
+}
+
 // draftView is a draft's answer; Derived carries the part a created character's read carries
 // too.
 type draftView struct {
@@ -98,10 +109,10 @@ func TestDraft_IsWhatTheCreatedCharacterReads(t *testing.T) {
 			var read readView
 			require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &read))
 			assert.Equal(t, read.Derived, d.Derived)
-			if read.Derived["skillPoints"] == nil {
+			if firstBudget(read.Derived) == nil {
 				assert.Nil(t, d.SkillPoints, "no budget for a class without skill points")
 			} else {
-				assert.Equal(t, read.Derived["skillPoints"], d.SkillPoints, "the draft's budget is the read's")
+				assert.Equal(t, firstBudget(read.Derived), d.SkillPoints, "the draft's budget is the read's first skill set's")
 			}
 			assert.Equal(t, read.Warnings, d.Warnings)
 			assert.Equal(t, read.Languages, d.Languages)
@@ -252,12 +263,12 @@ func TestDraft_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			d := tb.draft(t, bob, tc.body)
 			require.NotNil(t, d.Derived)
-			raw, err := json.Marshal(d.Derived["skillPoints"])
+			raw, err := json.Marshal(firstBudget(d.Derived))
 			require.NoError(t, err)
 			var got budget
 			require.NoError(t, json.Unmarshal(raw, &got))
 			assert.Equal(t, tc.want, got)
-			assert.Equal(t, d.Derived["skillPoints"], d.SkillPoints, "the draft's budget is the derived block's")
+			assert.Equal(t, firstBudget(d.Derived), d.SkillPoints, "the draft's budget is the derived first skill set's")
 			if tc.refusals == nil {
 				tc.refusals = []refusalView{}
 			}

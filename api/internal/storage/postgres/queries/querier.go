@@ -73,6 +73,9 @@ type Querier interface {
 	// The languages migration (014): every character's stored language list, to map to codes.
 	ListCharacterLanguages(ctx context.Context) ([]ListCharacterLanguagesRow, error)
 	ListLegacyItems(ctx context.Context, characterID int64) ([]ListLegacyItemsRow, error)
+	// The skill sets migration (034): every character's legacy flat skill points, to copy under the
+	// skill set its class grants. Only the characters that have points and no skill sets yet.
+	ListLegacySkillPoints(ctx context.Context) ([]ListLegacySkillPointsRow, error)
 	ListLegacyWeapons(ctx context.Context, characterID int64) ([]ListLegacyWeaponsRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
 	// rollback releases it. One fixed key for the whole database.
@@ -107,6 +110,8 @@ type Querier interface {
 	// The skill points of a character stored before bards entered them (migration 012): only while it
 	// has none, so a rerun changes nothing and points spent since are kept.
 	SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsIfUnsetParams) error
+	// The skill points of a character per skill set (a JSON object from set code to points).
+	SetSkillSets(ctx context.Context, arg SetSkillSetsParams) error
 	SetSnapshotEnvelopes(ctx context.Context, arg SetSnapshotEnvelopesParams) error
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error

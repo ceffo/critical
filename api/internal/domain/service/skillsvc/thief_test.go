@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // A thief whose character service derived two thieving skills (ADR 0030
@@ -29,10 +30,10 @@ func thiefFixture(t *testing.T) *fixture {
 	require.NoError(t, err)
 	f.svc = svc
 	thief := &charactersvc.Character{ID: charID, Class: "thief", Dex: 17}
-	thief.Derived.ThiefSkills = []ruletablesvc.SkillPercent{
+	thief.Derived.SkillSets = []skills.SkillSet{{Set: "thief", Skills: []ruletablesvc.SkillPercent{
 		{Skill: "open_locks", Base: 10, Points: 20, Dexterity: 10, Percent: 40},
 		{Skill: "climb_walls", Base: 60, Race: -15, Armor: 10, Percent: 55},
-	}
+	}}}
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(thief, nil).Maybe()
 	return f
 }
@@ -87,13 +88,15 @@ func TestThiefSkill_ListedWithTheirTermsAndLastCheck(t *testing.T) {
 	}, nil)
 	got, err := f.svc.List(context.Background(), charID)
 	require.NoError(t, err)
-	assert.Equal(t, []skillsvc.ThiefSkill{
+	require.Len(t, got.SkillSets, 1)
+	assert.Equal(t, skillsvc.KindThiefSkill, got.SkillSets[0].Kind)
+	assert.Equal(t, []skillsvc.SetSkill{
 		{SkillPercent: ruletablesvc.SkillPercent{Skill: "open_locks", Base: 10, Points: 20, Dexterity: 10, Percent: 40}},
 		{
 			SkillPercent: ruletablesvc.SkillPercent{Skill: "climb_walls", Base: 60, Race: -15, Armor: 10, Percent: 55},
 			Last:         &skillsvc.LastCheck{EntryID: 5, Roll: 30, Target: 55, AdjustedTarget: 55, Success: true},
 		},
-	}, got.ThiefSkills)
+	}, got.SkillSets[0].Skills)
 
 	f = thiefFixture(t)
 	_, err = f.svc.Roll(context.Background(), charID, "read_languages", skillsvc.Adjustment{})
@@ -111,7 +114,7 @@ func TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie(t *testing.T) {
 	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	thief := &charactersvc.Character{ID: charID, Class: "thief"}
-	thief.Derived.ThiefSkills = []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 60, Race: -15, Armor: -50, Percent: 0}}
+	thief.Derived.SkillSets = []skills.SkillSet{{Set: "thief", Skills: []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 60, Race: -15, Armor: -50, Percent: 0}}}}
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(thief, nil)
 	_, err = svc.Roll(context.Background(), charID, "climb_walls", skillsvc.Adjustment{Value: 30, Reason: "rope"})
 	var fe *domain.FieldError

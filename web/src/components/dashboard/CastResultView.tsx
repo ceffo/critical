@@ -12,6 +12,7 @@ import type {
 import { spellTexts, useSpellName } from "@/i18n/spellName";
 import { SpellDescription } from "./SpellDescription";
 import { formatSigned } from "@/lib/format";
+import { classLabel } from "@/lib/lookupLabels";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
@@ -187,7 +188,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           className="text-label text-muted-foreground"
           data-testid="cast-spell-ident"
         >
-          {catalogue.class} ·{" "}
+          {classLabel(t, catalogue.class)} ·{" "}
           {t("lookup.levelShort", { level: catalogue.level })}
         </div>
       )}

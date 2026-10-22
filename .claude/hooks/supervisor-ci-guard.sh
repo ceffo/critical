@@ -33,5 +33,17 @@ if [ -n "$agents" ] && ! { [ -n "$fpid" ] && kill -0 "$fpid" 2>/dev/null; }; the
 
 }Live agents ($agents) and no fleet watcher: start .claude/scripts/fleet-watch.sh with run_in_background before ending the turn. An agent waiting on you must never sit idle."
 fi
+# Ready work never waits on the supervisor: a Todo item with every blocker Done (READY), or blocked only
+# by open PRs (STACK), or an In Progress / In Review item nobody works on (STALLED) blocks the turn's end
+# (sup-70: two ready items sat 10 hours behind a stale ledger list). Hold one only as a question to the
+# user, listed in supervisor/held.
+queue=$(timeout 60 "$CLAUDE_PROJECT_DIR/.claude/scripts/ready-queue.sh" 2>&1); qrc=$?
+if [ $qrc = 3 ]; then
+  reason="${reason:+$reason
+
+}Work is waiting on you (.claude/scripts/ready-queue.sh):
+$queue
+Dispatch every READY item and stack every STACK item now (one lane each, per Parallelism); work or flag every STALLED one to the user. An item you can't start is a question to the user: add it to $W/held (\"<id> <reason>\") and to the ledger's pending questions."
+fi
 [ -z "$reason" ] && exit 0
 jq -n --arg r "$reason" '{decision:"block",reason:$r}'

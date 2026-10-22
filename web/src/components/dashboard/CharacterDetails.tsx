@@ -173,7 +173,9 @@ function DetailsView({
                   data-testid="details-alignment-warning"
                 >
                   {t("details.warnings.alignment_not_allowed", {
-                    className: i18n.exists(classKey) ? t(classKey) : primaryClass(c.classes),
+                    className: i18n.exists(classKey)
+                      ? t(classKey)
+                      : primaryClass(c.classes),
                   })}
                 </span>
               )}
@@ -248,7 +250,8 @@ function DetailsForm({
   // admitted alignments and the sexes.
   const { options, failed: optionsFailed, retry } = useCreationOptions(true);
   const alignments =
-    options?.classes.find((c) => c.class === primaryClass(character.classes))?.alignments ?? [];
+    options?.classes.find((c) => c.class === primaryClass(character.classes))
+      ?.alignments ?? [];
   const sexes = options?.sexes ?? [];
   const set = (k: Exclude<keyof Draft, "languages">) => (v: string) =>
     setDraft((d) => ({ ...d, [k]: v }));

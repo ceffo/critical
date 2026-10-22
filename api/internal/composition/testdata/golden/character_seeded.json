@@ -10,7 +10,15 @@
   "cha": 16,
   "hpMax": 85,
   "xpTotal": 1293418,
-  "class": "bard",
+  "classes": [
+    {
+      "class": "bard",
+      "level": 15,
+      "startingXp": 1293418,
+      "state": "active",
+      "leftAtLevel": 0
+    }
+  ],
   "raceCode": "half_elf",
   "derived": {
     "xpTotal": 1293418,

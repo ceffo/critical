@@ -26,9 +26,12 @@ func bardWith(details string) string { return bardStart + `,"details":` + detail
 var newBard = bardWith(`{"alignment":"neutral_good","sex":"male"}`)
 
 type createdSheet struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	Class    string `json:"class"`
+	ID      int64  `json:"id"`
+	Name    string `json:"name"`
+	Classes []struct {
+		Class string `json:"class"`
+		Level int    `json:"level"`
+	} `json:"classes"`
 	RaceCode string `json:"raceCode"`
 	HPMax    int    `json:"hpMax"`
 	Derived  struct {
@@ -58,7 +61,9 @@ func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 	var got createdSheet
 	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "GET", "/api/character", "", &got))
 	assert.Equal(t, "Lyra", got.Name)
-	assert.Equal(t, "bard", got.Class)
+	require.Len(t, got.Classes, 1)
+	assert.Equal(t, "bard", got.Classes[0].Class)
+	assert.Equal(t, 3, got.Classes[0].Level)
 	assert.Equal(t, "half_elf", got.RaceCode)
 	assert.Equal(t, 6, got.HPMax)
 	assert.Equal(t, 3, got.Derived.TargetLevel, "PHB Table 25: 2,500 XP is level 3")

@@ -217,6 +217,13 @@ func (f *fakeStore) InsertCharacter(_ context.Context, arg storeq.InsertCharacte
 	return id, nil
 }
 
+// FillClassEntries: the fake keeps no class entries, so there is nothing to give.
+func (f *fakeStore) FillClassEntries(context.Context) error { return nil }
+
+func (f *fakeStore) InsertClassEntry(context.Context, storeq.InsertClassEntryParams) error {
+	return nil
+}
+
 func (f *fakeStore) ListCharacterLanguages(context.Context) ([]storeq.ListCharacterLanguagesRow, error) {
 	rows := []storeq.ListCharacterLanguagesRow{}
 	for _, id := range f.t.Characters {

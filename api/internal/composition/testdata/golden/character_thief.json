@@ -10,7 +10,15 @@
   "cha": 11,
   "hpMax": 6,
   "xpTotal": 2600,
-  "class": "thief",
+  "classes": [
+    {
+      "class": "thief",
+      "level": 1,
+      "startingXp": 2600,
+      "state": "active",
+      "leftAtLevel": 0
+    }
+  ],
   "raceCode": "elf",
   "derived": {
     "xpTotal": 2600,

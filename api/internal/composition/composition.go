@@ -29,6 +29,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/creationrollsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/dualclasssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
@@ -72,7 +73,9 @@ type BackingServices struct {
 	Rest     restsvc.SVC
 	XP       xpsvc.SVC
 	LevelUp  levelupsvc.SVC
-	Rolls    creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
+	// DualClass takes a new class for a character in play (ADR 0042 step 3).
+	DualClass dualclasssvc.SVC
+	Rolls     creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
 	// Powers serves the psionic powers catalogue from memory (ADR 0043 step 8).
 	Powers powersvc.SVC
 	// Psionics recovers PSPs over hours of an activity (ADR 0043 step 6).
@@ -305,6 +308,16 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// what the XP ledger's entries add.
 	// The language catalogue (ADR 0032 step 4) is the artifact's: nil before
 	// format 8, which knows no language.
+	// The ruleset (ADR 0041): the default one, read by the rules services
+	// through its resolver. The catalogue version this server loaded is
+	// recorded on it.
+	bs.Rulesets, err = rulesetsvc.New(rulesetsvc.Deps{DAL: st.Rulesets, Proficiencies: proficiencyIDs{proficiencies}, Tx: tx})
+	if err := bs.add(bs.Rulesets, err); err != nil {
+		return nil, err
+	}
+	if err := bs.Rulesets.RecordCatalogueVersion(ctx, cat.Version); err != nil {
+		return nil, fmt.Errorf("record the catalogue version on the ruleset: %w", err)
+	}
 	languages, _ := ruleTables.Languages()
 	bs.Character, err = charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
@@ -312,7 +325,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		// A new mage's or bard's starting spellbook (ADR 0030 step 20.7) reads
 		// the catalogue and is written in the creation's transaction.
 		Spells: spellbookadpt.NewCreation(cat, startingSeed), Book: st.Spellbook,
-		FreeSpells: freeSpells{log: logSvc, book: spellbook},
+		FreeSpells: freeSpells{log: logSvc, book: spellbook}, Rulesets: bs.Rulesets,
 	})
 	if err := bs.add(bs.Character, err); err != nil {
 		return nil, err
@@ -357,16 +370,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := bs.add(bs.Prep, err); err != nil {
 		return nil, err
 	}
-	// The ruleset (ADR 0041): the default one, read by the rules services
-	// through its resolver. The catalogue version this server loaded is
-	// recorded on it.
-	bs.Rulesets, err = rulesetsvc.New(rulesetsvc.Deps{DAL: st.Rulesets, Proficiencies: proficiencyIDs{proficiencies}, Tx: tx})
-	if err := bs.add(bs.Rulesets, err); err != nil {
-		return nil, err
-	}
-	if err := bs.Rulesets.RecordCatalogueVersion(ctx, cat.Version); err != nil {
-		return nil, fmt.Errorf("record the catalogue version on the ruleset: %w", err)
-	}
 	bs.Combat, err = combatsvc.New(combatsvc.Deps{
 		Chars: charSvc, Buffs: bs.Buffs, Dice: dice, Weapons: weapons, Rulesets: bs.Rulesets,
 		Items: bs.Items, Forms: st.Forms, Rules: ruleTables, Log: logSvc, Tx: tx,
@@ -406,6 +409,15 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		DAL: characterDAL, Characters: charSvc, Rules: ruleTables, Dice: dice, Log: logSvc, Tx: tx,
 	})
 	if err := bs.add(bs.LevelUp, err); err != nil {
+		return nil, err
+	}
+	// Taking a new class (ADR 0042 step 3) freezes the active entry and
+	// starts the new one; its undo writes the entries back.
+	bs.DualClass, err = dualclasssvc.New(dualclasssvc.Deps{
+		DAL: characterDAL, Characters: charSvc, Ledger: xpsvc.Totals{DAL: st.XP}, Catalogue: defs,
+		Rulesets: bs.Rulesets, Log: logSvc, Tx: tx,
+	})
+	if err := bs.add(bs.DualClass, err); err != nil {
 		return nil, err
 	}
 	// The creation's rolls (ADR 0032 steps 6 and 7) read the rule tables and

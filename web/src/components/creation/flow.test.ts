@@ -133,6 +133,10 @@ describe("mergeDraft (a late reply never rebuilds the details from an older copy
   });
 });
 
+// The draft answer that names the thief as the class carrying the skill points.
+const THIEF = { skillsClass: "thief" } as CreationDraft;
+const BARD = { skillsClass: "bard" } as CreationDraft;
+
 describe("buildBody", () => {
   const options = {
     classes: [
@@ -162,7 +166,7 @@ describe("buildBody", () => {
     },
   };
   it("sends a rolled height as rolled, not as its rounded display", () => {
-    const out = buildBody(options, draft, "2500", "en");
+    const out = buildBody(options, draft, "2500", "en", false, BARD);
     expect(out.error).toBeNull();
     expect(out.body.details?.height_cm).toBe(176.5);
   });
@@ -250,7 +254,7 @@ describe("buildBody", () => {
     expect(out.body.details?.weight_kg).toBe(70.5);
   });
   it("leaves a blank alignment out and carries the entered values", () => {
-    const out = buildBody(options, draft, "2500", "en");
+    const out = buildBody(options, draft, "2500", "en", false, BARD);
     expect(out.body.details).not.toHaveProperty("alignment");
     expect(out.body).toMatchObject({
       name: "Lyra",
@@ -264,7 +268,14 @@ describe("buildBody", () => {
     expect(out.body).not.toHaveProperty("skillArmor");
   });
   it("names the field of an unreadable value and leaves it out of the body", () => {
-    const six = buildBody(options, { ...draft, hpMax: "six" }, "2500", "fr");
+    const six = buildBody(
+      options,
+      { ...draft, hpMax: "six" },
+      "2500",
+      "fr",
+      false,
+      BARD,
+    );
     expect(six.error).toEqual({ field: "hpMax", code: "out_of_range" });
     // The draft is still asked, the value left out: the server lists it missing.
     expect(six.body.hpMax).toBeNull();
@@ -287,6 +298,8 @@ describe("buildBody", () => {
       },
       "2500",
       "en",
+      false,
+      BARD,
     );
     expect(two.error).toEqual({ field: "str", code: "out_of_range" });
     expect(two.body.str).toBeNull();
@@ -328,7 +341,14 @@ describe("buildBody on a raw draft (what the class and extras steps ask the serv
       race: "elf",
       details: { ...EMPTY_DRAFT.details, languages: ["elvish", "orcish"] },
     };
-    const { body, error } = buildBody(options, draft, "1250", "fr");
+    const { body, error } = buildBody(
+      options,
+      draft,
+      "1250",
+      "fr",
+      false,
+      THIEF,
+    );
     expect(error).toBeNull();
     expect(body).toMatchObject({
       class: "thief",
@@ -524,9 +544,52 @@ describe("place (the player's arrangement, ADR 0032 step 6)", () => {
   });
 });
 
+describe("mergeDraft with several classes (the picks follow the whole set of classes)", () => {
+  const picked: FlowDraft = {
+    ...EMPTY_DRAFT,
+    cls: "fighter",
+    kind: "multi",
+    others: [
+      { cls: "cleric", xp: "9000", level: "" },
+      { cls: "thief", xp: "9000", level: "" },
+    ],
+    picks: [{ slot: "x" }] as unknown as FlowDraft["picks"],
+    weaponPicks: [{ type: "x" }] as unknown as FlowDraft["weaponPicks"],
+    spellbook: { startingSpells: [] } as unknown as FlowDraft["spellbook"],
+  };
+  it("a class removed or swapped clears the picks, the weapon picks and the spellbook", () => {
+    for (const others of [
+      [{ cls: "cleric", xp: "9000", level: "" }],
+      [
+        { cls: "cleric", xp: "9000", level: "" },
+        { cls: "mage", xp: "9000", level: "" },
+      ],
+    ]) {
+      const d = mergeDraft(picked, { others });
+      expect(d.picks).toEqual([]);
+      expect(d.weaponPicks).toEqual([]);
+      expect(d.spellbook).toBeNull();
+    }
+  });
+  it("an XP or a level typed keeps them", () => {
+    const d = mergeDraft(picked, {
+      others: [
+        { cls: "cleric", xp: "12000", level: "5" },
+        { cls: "thief", xp: "9000", level: "" },
+      ],
+    });
+    expect(d.picks).toEqual(picked.picks);
+    expect(d.weaponPicks).toEqual(picked.weaponPicks);
+    expect(d.spellbook).toEqual(picked.spellbook);
+  });
+});
+
 describe("blockedReason", () => {
   const ok: StepInputs = {
     cls: "bard",
+    kind: "single",
+    others: [],
+    leftAt: "",
     race: "half_elf",
     xp: "10000",
     scores: {
@@ -628,7 +691,9 @@ describe("the starting spellbook (ADR 0030 step 20.7)", () => {
       },
     }) as unknown as CreationDraft;
 
-  it("shows the spellbook step for a mage or a bard only, by the server's options", () => {
+  const carrying = (spellbookClass: string) =>
+    ({ spellbookClass }) as CreationDraft;
+  it("shows the spellbook step when the draft's answer names a class carrying one", () => {
     const withBook = [
       "class",
       "race",
@@ -639,10 +704,10 @@ describe("the starting spellbook (ADR 0030 step 20.7)", () => {
       "identity",
       "review",
     ];
-    expect(stepsFor(options, "mage")).toEqual(withBook);
-    expect(stepsFor(options, "bard")).toEqual(withBook);
-    for (const cls of ["fighter", "thief", ""])
-      expect(stepsFor(options, cls)).not.toContain("spellbook");
+    expect(stepsFor(carrying("mage"))).toEqual(withBook);
+    expect(stepsFor(carrying("bard"))).toEqual(withBook);
+    for (const answer of [carrying(""), null])
+      expect(stepsFor(answer)).not.toContain("spellbook");
   });
 
   it("says by the draft's answer whether the starting level has a spell level (a bard at level 1 has none)", () => {
@@ -653,31 +718,162 @@ describe("the starting spellbook (ADR 0030 step 20.7)", () => {
   });
 
   it("sends a mage's pre-ticked spells until the player changes the list, a bard's none", () => {
-    expect(draftSpellbook(options, { cls: "mage", spellbook: null })).toEqual([
-      "read_magic",
-      "detect_magic",
-    ]);
-    expect(draftSpellbook(options, { cls: "mage", spellbook: [] })).toEqual([]);
-    expect(draftSpellbook(options, { cls: "bard", spellbook: null })).toEqual(
-      [],
-    );
     expect(
-      draftSpellbook(options, { cls: "fighter", spellbook: ["sleep"] }),
+      draftSpellbook(options, { spellbook: null }, carrying("mage")),
+    ).toEqual(["read_magic", "detect_magic"]);
+    expect(
+      draftSpellbook(options, { spellbook: [] }, carrying("mage")),
     ).toEqual([]);
+    expect(
+      draftSpellbook(options, { spellbook: null }, carrying("bard")),
+    ).toEqual([]);
+    // No class carries one (or no answer yet): nothing is sent, whatever was ticked.
+    expect(
+      draftSpellbook(options, { spellbook: ["sleep"] }, carrying("")),
+    ).toEqual([]);
+    expect(draftSpellbook(options, { spellbook: ["sleep"] }, null)).toEqual([]);
   });
 
   it("carries the spellbook in the body only when it has spells, and resets it on another class", () => {
     const mage = { ...EMPTY_DRAFT, cls: "mage" };
-    expect(buildBody(options, mage, "0", "fr").body.spellbook).toEqual([
-      "read_magic",
-      "detect_magic",
-    ]);
+    const book = (d: FlowDraft, cls: string) =>
+      buildBody(options, d, "0", "fr", false, carrying(cls)).body.spellbook;
+    expect(book(mage, "mage")).toEqual(["read_magic", "detect_magic"]);
+    expect(book(mage, "")).toBe(undefined);
     const unticked = mergeDraft(mage, { spellbook: [] });
-    expect(buildBody(options, unticked, "0", "fr").body.spellbook).toBe(
-      undefined,
-    );
+    expect(book(unticked, "mage")).toBe(undefined);
     const bard = mergeDraft({ ...mage, spellbook: ["sleep"] }, { cls: "bard" });
     expect(bard.spellbook).toBe(null);
-    expect(buildBody(options, bard, "0", "fr").body.spellbook).toBe(undefined);
+    expect(book(bard, "bard")).toBe(undefined);
+  });
+});
+
+describe("several classes", () => {
+  const options = {
+    classes: [
+      {
+        class: "fighter",
+        races: [],
+        skills: [],
+        alignments: ["lawful_good", "neutral_good"],
+      },
+      {
+        class: "mage",
+        races: [],
+        skills: [],
+        alignments: ["neutral_good"],
+        spellbook: { startingSpells: [] },
+      },
+    ],
+  } as unknown as CreationOptions;
+  const dual: FlowDraft = {
+    ...EMPTY_DRAFT,
+    cls: "fighter",
+    kind: "dual",
+    leftAt: "9",
+    xp: "",
+    others: [{ cls: "mage", xp: "20000", level: "" }],
+  };
+  it("sends the entries in place of class and xp, the class left with its level", () => {
+    const { body, error } = buildBody(options, dual, "", "en");
+    expect(error).toBeNull();
+    expect(body.class).toBeUndefined();
+    expect(body.xp).toBeUndefined();
+    expect(body.classes).toEqual([
+      { class: "fighter", xp: 0, leftAtLevel: 9 },
+      { class: "mage", xp: 20000 },
+    ]);
+  });
+  it("names an unreadable XP at its entry", () => {
+    const d = { ...dual, others: [{ cls: "mage", xp: "x", level: "" }] };
+    expect(buildBody(options, d, "", "en").error).toEqual({
+      field: "classes.1.xp",
+      code: "out_of_range",
+    });
+  });
+  it("blocks Suivant until every class, XP and the left-at level is entered", () => {
+    const inputs = (d: FlowDraft): StepInputs => ({
+      cls: d.cls,
+      kind: d.kind,
+      others: d.others,
+      leftAt: d.leftAt,
+      race: "",
+      xp: d.xp,
+      scores: { str: "", dex: "", con: "", int: "", wis: "", cha: "" },
+      hpMax: "",
+      name: "",
+      alignment: "",
+      sex: "",
+      alignments: null,
+    });
+    expect(blockedReason("class", inputs(dual))).toBeNull();
+    expect(blockedReason("class", inputs({ ...dual, leftAt: "" }))).toBe(
+      "leftAt",
+    );
+    expect(
+      blockedReason(
+        "class",
+        inputs({ ...dual, others: [{ cls: "", xp: "1", level: "" }] }),
+      ),
+    ).toBe("class");
+    const multi = { ...dual, kind: "multi" as const, xp: "4500" };
+    expect(
+      blockedReason(
+        "class",
+        inputs({ ...multi, others: [{ cls: "mage", xp: "", level: "" }] }),
+      ),
+    ).toBe("xp");
+  });
+  it("sends an entered level per active class, none when blank, and names an unreadable one", () => {
+    const multi: FlowDraft = {
+      ...dual,
+      kind: "multi",
+      xp: "4500",
+      firstLevel: "5",
+      others: [{ cls: "mage", xp: "20000", level: "" }],
+    };
+    expect(buildBody(options, multi, "4500", "en").body.classes).toEqual([
+      { class: "fighter", xp: 4500, level: 5 },
+      { class: "mage", xp: 20000 },
+    ]);
+    const second = {
+      ...multi,
+      firstLevel: "",
+      others: [{ ...multi.others[0]!, level: "x" }],
+    };
+    expect(buildBody(options, second, "4500", "en").error).toEqual({
+      field: "classes.1.level",
+      code: "out_of_range",
+    });
+    // The class a dual-class character left has no level to enter: its level is the left-at one.
+    expect(
+      buildBody(options, { ...dual, firstLevel: "7" }, "", "en").body
+        .classes?.[0],
+    ).toEqual({ class: "fighter", xp: 0, leftAtLevel: 9 });
+  });
+  it("blocks the identity step on an alignment the answer leaves out, only once it answered", () => {
+    const at = (alignments: string[] | null): StepInputs => ({
+      cls: "fighter",
+      kind: "single",
+      others: [],
+      leftAt: "",
+      race: "",
+      xp: "0",
+      scores: { str: "", dex: "", con: "", int: "", wis: "", cha: "" },
+      hpMax: "",
+      name: "Aldo",
+      alignment: "lawful_good",
+      sex: "male",
+      alignments,
+    });
+    expect(blockedReason("identity", at(null))).toBeNull();
+    expect(blockedReason("identity", at(["lawful_good"]))).toBeNull();
+    expect(blockedReason("identity", at(["neutral_good"]))).toBe(
+      "alignmentAllowed",
+    );
+  });
+  it("opens the class step on a refusal of an entry", () => {
+    expect(stepOfField("classes.1.leftAtLevel")).toBe("class");
+    expect(stepOfField("classes")).toBe("class");
   });
 });

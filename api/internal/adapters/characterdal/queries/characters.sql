@@ -11,13 +11,22 @@ FROM characters WHERE id = $1;
 
 -- A character's class entries in the order the classes were taken (ADR 0042 step 1).
 -- name: ListClassEntries :many
-SELECT class, realized_level, starting_xp, state, left_at_level
+SELECT class, realized_level, starting_xp, state, left_at_level, ignored_awards_through
 FROM character_classes WHERE character_id = $1 ORDER BY position;
 
 -- name: InsertClassEntry :exec
-INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level, ignored_awards_through)
 VALUES (sqlc.arg(character_id), sqlc.arg(position), sqlc.arg(class), sqlc.arg(realized_level),
-        sqlc.arg(starting_xp), sqlc.arg(state), sqlc.arg(left_at_level));
+        sqlc.arg(starting_xp), sqlc.arg(state), sqlc.arg(left_at_level), sqlc.arg(ignored_awards_through));
+
+-- Taking a new class and its undo (ADR 0042 step 3): the entries are replaced whole, in one transaction.
+-- name: DeleteClassEntries :exec
+DELETE FROM character_classes WHERE character_id = sqlc.arg(character_id);
+
+-- The first active entry's class, level and XP are the characters columns' too (migration 035).
+-- name: SetClassColumns :execrows
+UPDATE characters SET class = sqlc.arg(class), realized_level = sqlc.arg(realized_level), xp_total = sqlc.arg(xp_total)
+WHERE id = sqlc.arg(id);
 
 -- A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP. The level
 -- is the character's first active entry's, written to its column too (the release before the

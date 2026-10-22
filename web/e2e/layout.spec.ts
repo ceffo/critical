@@ -2806,6 +2806,134 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
   }
 });
 
+// The class step's multi-class and dual-class rows (ADR 0042 steps 1 and 4): three classes with a
+// long XP, and a dual-class character refused at Créer (Intelligence 14 is under the 17 the new
+// class needs), whose refusal opens the class step; never cut, French first, 1280 to 2560.
+test("creation route: multi-class rows and a class refusal uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  page.on("dialog", (d) => void d.accept());
+  await openDashboard(page);
+  const sizes = [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ];
+  for (const lang of ["fr", "en"] as const) {
+    await page.setViewportSize(sizes[0]!);
+    await page.goto("/");
+    await chooseLanguage(page, lang);
+    await page.goto("/create");
+    const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
+    const step = page.getByTestId("creation-step");
+    const next = step.getByRole("button", {
+      name: tr("Passer à l'étape suivante", "Go to the next step"),
+    });
+    const audit = async (name: string) => {
+      for (const vp of sizes) {
+        await page.setViewportSize(vp);
+        const where = `${name}, ${lang}, ${vp.width}x${vp.height}`;
+        await expectNoClippedText(page.locator("body"), `creation ${where}`);
+        await expectNoPageScroll(page);
+        await snap(page, `creation-${name}-${lang}-${vp.width}x${vp.height}`);
+      }
+      await page.setViewportSize(sizes[0]!);
+    };
+    const kind = step.getByRole("radiogroup", {
+      name: tr("Type de personnage", "Kind of character"),
+    });
+    const pick = async (
+      row: number,
+      label: string,
+      cls: string,
+      xp: string,
+    ) => {
+      const r = step.getByTestId(`class-row-${row}`);
+      await r.getByLabel(label).selectOption(cls);
+      await r.getByLabel(tr("XP", "XP"), { exact: true }).fill(xp);
+    };
+    await kind
+      .getByRole("radio", { name: tr("Multiclassé", "Multi-class") })
+      .click();
+    await step.getByRole("button", { name: tr("Ajouter", "Add") }).click();
+    await pick(0, tr("Classe 1", "Class 1"), "fighter", "1250000");
+    await pick(1, tr("Classe 2", "Class 2"), "cleric", "1250000");
+    await pick(2, tr("Classe 3", "Class 3"), "thief", "1250000");
+    await audit("classes-multi");
+
+    // Dual-class with Intelligence 14: refused at Créer, the refusal on the class step.
+    await kind
+      .getByRole("radio", { name: tr("Double classé", "Dual-class") })
+      .click();
+    await step
+      .getByTestId("class-row-0")
+      .getByLabel(tr("Classe quittée", "Class left"))
+      .selectOption("fighter");
+    await step
+      .getByTestId("class-row-0")
+      .getByLabel(tr("Quittée au niveau", "Left at level"))
+      .fill("9");
+    await step
+      .getByTestId("class-row-1")
+      .getByLabel(tr("Nouvelle classe", "New class"))
+      .selectOption("mage");
+    await step
+      .getByTestId("class-row-1")
+      .getByLabel("XP", { exact: true })
+      .fill("20000");
+    await next.click();
+    await step
+      .getByRole("radio", { name: tr("Elfe", "Elf"), exact: true })
+      .click();
+    await next.click();
+    await step.getByRole("radio", { name: tr("Saisir", "Type") }).click();
+    for (const [fr, en, score] of [
+      ["FOR", "STR", "17"],
+      ["DEX", "DEX", "16"],
+      ["CON", "CON", "15"],
+      ["INT", "INT", "14"],
+      ["SAG", "WIS", "16"],
+      ["CHA", "CHA", "10"],
+    ])
+      await step.getByLabel(tr(fr!, en!), { exact: true }).fill(score!);
+    await next.click();
+    await step.getByLabel(tr("PV max", "Max HP")).fill("60");
+    await next.click();
+    await expect(step).toHaveAttribute("data-step", "proficiencies");
+    // The spellbook step appears once the draft names the class that carries it.
+    await expect(
+      page.getByRole("navigation", { name: tr("Étapes", "Steps") }),
+    ).toContainText(tr("Grimoire", "Spellbook"));
+    await next.click();
+    await expect(step).toHaveAttribute("data-step", "spellbook");
+    await next.click();
+    await step.getByLabel(tr("Nom", "Name"), { exact: true }).fill("Vael");
+    await step
+      .getByTestId("alignment-grid")
+      .getByRole("radio", { name: /^[^:]+$/ })
+      .first()
+      .click();
+    await step
+      .getByRole("radiogroup", { name: tr("Sexe", "Sex") })
+      .getByRole("radio")
+      .first()
+      .click();
+    await next.click();
+    await step
+      .getByRole("button", {
+        name: tr(
+          "Créer ce personnage et le jouer",
+          "Create this character and play it",
+        ),
+      })
+      .click();
+    await expect(step).toHaveAttribute("data-step", "class");
+    await expect(step.getByTestId("field-error").first()).toBeVisible();
+    await audit("classes-dual-refused");
+  }
+});
+
 // ADR 0032 step 4, ADR 0037 step 18 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the
 // languages pool of the Skills tab's editor (the catalogue's checkboxes, the race's list first, the
 // refusal over the non-weapon slots of ADR 0037 step 6, the slots they spend) and the details

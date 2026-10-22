@@ -168,6 +168,16 @@ func (q *Queries) CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, er
 	return id_2, err
 }
 
+const deleteClassEntries = `-- name: DeleteClassEntries :exec
+DELETE FROM character_classes WHERE character_id = $1
+`
+
+// Taking a new class and its undo (ADR 0042 step 3): the entries are replaced whole, in one transaction.
+func (q *Queries) DeleteClassEntries(ctx context.Context, characterID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteClassEntries, characterID)
+	return err
+}
+
 const getACOverride = `-- name: GetACOverride :one
 SELECT ac_override, ac_override_label FROM characters WHERE id = $1
 `
@@ -335,19 +345,20 @@ func (q *Queries) GetSkillSets(ctx context.Context, id int64) (GetSkillSetsRow, 
 }
 
 const insertClassEntry = `-- name: InsertClassEntry :exec
-INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level, ignored_awards_through)
 VALUES ($1, $2, $3, $4,
-        $5, $6, $7)
+        $5, $6, $7, $8)
 `
 
 type InsertClassEntryParams struct {
-	CharacterID   int64
-	Position      int64
-	Class         string
-	RealizedLevel int64
-	StartingXp    int64
-	State         string
-	LeftAtLevel   int64
+	CharacterID          int64
+	Position             int64
+	Class                string
+	RealizedLevel        int64
+	StartingXp           int64
+	State                string
+	LeftAtLevel          int64
+	IgnoredAwardsThrough int64
 }
 
 func (q *Queries) InsertClassEntry(ctx context.Context, arg InsertClassEntryParams) error {
@@ -359,21 +370,23 @@ func (q *Queries) InsertClassEntry(ctx context.Context, arg InsertClassEntryPara
 		arg.StartingXp,
 		arg.State,
 		arg.LeftAtLevel,
+		arg.IgnoredAwardsThrough,
 	)
 	return err
 }
 
 const listClassEntries = `-- name: ListClassEntries :many
-SELECT class, realized_level, starting_xp, state, left_at_level
+SELECT class, realized_level, starting_xp, state, left_at_level, ignored_awards_through
 FROM character_classes WHERE character_id = $1 ORDER BY position
 `
 
 type ListClassEntriesRow struct {
-	Class         string
-	RealizedLevel int64
-	StartingXp    int64
-	State         string
-	LeftAtLevel   int64
+	Class                string
+	RealizedLevel        int64
+	StartingXp           int64
+	State                string
+	LeftAtLevel          int64
+	IgnoredAwardsThrough int64
 }
 
 // A character's class entries in the order the classes were taken (ADR 0042 step 1).
@@ -392,6 +405,7 @@ func (q *Queries) ListClassEntries(ctx context.Context, characterID int64) ([]Li
 			&i.StartingXp,
 			&i.State,
 			&i.LeftAtLevel,
+			&i.IgnoredAwardsThrough,
 		); err != nil {
 			return nil, err
 		}
@@ -507,6 +521,32 @@ type SetACOverrideParams struct {
 // Setting, clearing (NULL and an empty label) and the undo of either.
 func (q *Queries) SetACOverride(ctx context.Context, arg SetACOverrideParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setACOverride, arg.AcOverride, arg.AcOverrideLabel, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setClassColumns = `-- name: SetClassColumns :execrows
+UPDATE characters SET class = $1, realized_level = $2, xp_total = $3
+WHERE id = $4
+`
+
+type SetClassColumnsParams struct {
+	Class         string
+	RealizedLevel sql.NullInt64
+	XpTotal       int64
+	ID            int64
+}
+
+// The first active entry's class, level and XP are the characters columns' too (migration 035).
+func (q *Queries) SetClassColumns(ctx context.Context, arg SetClassColumnsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setClassColumns,
+		arg.Class,
+		arg.RealizedLevel,
+		arg.XpTotal,
+		arg.ID,
+	)
 	if err != nil {
 		return 0, err
 	}

@@ -72,6 +72,8 @@ const FIXED_TERMS = new Set([
   // "Log in" / "Log out" (the user's caption for the cog menu's entry): no single word names them.
   "login.action",
   "settings.logout",
+  // The details popover's action: "Take" alone does not say what is taken.
+  "takeClass.open",
 ]);
 
 /** The i18n keys a button shows as its caption: `t("…")` calls among its children. */

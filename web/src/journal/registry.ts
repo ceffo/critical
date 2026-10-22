@@ -14,6 +14,7 @@ import {
 import { castKind } from "./kinds/cast";
 import {
   acOverrideKind,
+  classSwitchKind,
   levelUpKind,
   longRestKind,
   skillArmorKind,
@@ -75,6 +76,7 @@ export const KIND_VIEWS: Record<LogKind, AnyKindView> = {
   xp_edit: xpEditKind,
   xp_remove: xpRemoveKind,
   level_up: levelUpKind,
+  class_switch: classSwitchKind,
   spell_learn: spellLearnKind,
   spell_add: spellAddKind,
   turn_undead: turnUndeadKind,

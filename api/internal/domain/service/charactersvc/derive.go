@@ -86,7 +86,7 @@ type Rules interface {
 // level; the target only drives the pending level-ups and the XP progress.
 // Nothing derived is read from c.Sheet. A single-class character is the
 // one-entry case and derives as before.
-func Derive(c *Character, awards []int, armour string, rules Rules) (Derived, error) {
+func Derive(c *Character, awards []Award, armour string, rules Rules) (Derived, error) {
 	entries, err := deriveEntries(c, awards, rules)
 	if err != nil {
 		return Derived{}, err
@@ -246,7 +246,7 @@ func firstActive(entries []entryCalc) entryCalc {
 // deriveEntries is each entry's block: its XP (ADR 0042 step 5), target and
 // realized level (ADR 0030 step 3, ADR 0042 step 7), next threshold, slots
 // (ADR 0042 step 14) and pending levels (step 7).
-func deriveEntries(c *Character, awards []int, rules Rules) ([]entryCalc, error) {
+func deriveEntries(c *Character, awards []Award, rules Rules) ([]entryCalc, error) {
 	entries := c.Entries()
 	shares := len(classes.Active(entries))
 	out := make([]entryCalc, 0, len(entries))
@@ -305,19 +305,29 @@ func (ed *EntryDerived) setLevels(e classes.Entry, shares, leftAt int, rules Rul
 	return err
 }
 
+// Award is one XP ledger entry's amount (base plus bonus) with the entry's
+// id, which an entry's cut-off compares (classes.Entry.IgnoredAwardsThrough).
+type Award struct {
+	ID     int64
+	Amount int
+}
+
 // EntryXP is ADR 0042 step 5: an entry's XP is its starting XP plus its share
-// of each award. A multi-class character's active entries each take
+// of each award it does not ignore (an award whose id is at or under the
+// entry's IgnoredAwardsThrough: a class taken later starts at 0 XP). A multi-class character's active entries each take
 // floor(amount / shares) of every award, the remainder lost (Q3), even an
 // entry over its race's level limit (step 5.1); shares is the number of
 // active entries. A frozen entry's XP never changes (step 5.2). One active
 // entry takes every award whole (ADR 0015 step 1).
-func EntryXP(e classes.Entry, awards []int, shares int) int {
+func EntryXP(e classes.Entry, awards []Award, shares int) int {
 	xp := e.StartingXP
 	if e.State != classes.EntryActive || shares < 1 {
 		return xp
 	}
 	for _, a := range awards {
-		xp += Share(a, shares)
+		if a.ID > e.IgnoredAwardsThrough {
+			xp += Share(a.Amount, shares)
+		}
 	}
 	return xp
 }

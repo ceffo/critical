@@ -358,6 +358,17 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Armour",
     fr: "Armure",
   },
+  class_switch: {
+    e: entry("class_switch", {
+      from: "fighter",
+      to: "mage",
+      leftAtLevel: 6,
+      xp: 21000,
+    }),
+    value: null,
+    en: "Class",
+    fr: "Classe",
+  },
   ac_override: {
     e: entry("ac_override", { before: null, after: { value: 4 } }),
     value: null,

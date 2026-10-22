@@ -35,7 +35,7 @@ export function SpellbookStep(props: StepProps) {
   const shown = answer.current ?? settled;
   const book = shown?.spellbook ?? null;
   const state = spellbookState(shown);
-  const spells = draftSpellbook(options, draft);
+  const spells = draftSpellbook(options, draft, answer.latest);
   const levelOf = new Map(
     (options.wizardSpells ?? []).map((s) => [s.id, s.level]),
   );

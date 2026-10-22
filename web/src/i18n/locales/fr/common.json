@@ -1377,6 +1377,7 @@
       "xp_edit": "XP",
       "xp_remove": "XP",
       "level_up": "Niveau",
+      "class_switch": "Classe",
       "spell_learn": "Apprentissage",
       "turn_undead": "Renvoi",
       "skill_points": "Talents",
@@ -1618,6 +1619,9 @@
       "equipped": "Équipé : {{name}}",
       "unequipped": "Retiré : {{name}}",
       "swapped": "Équipé : {{name}} (à la place de {{off}})"
+    },
+    "classSwitch": {
+      "text": "Nouvelle classe : {{to}} (ancienne classe : {{from}}, quittée au niveau {{level}} avec {{xp, number}} PX)"
     },
     "acOverride": {
       "set": "CA forcée : {{value}}",
@@ -1884,6 +1888,16 @@
     "languageSlots_one": "{{count}} emplacement de compétence",
     "languageSlots_other": "{{count}} emplacements de compétence"
   },
+  "takeClass": {
+    "open": "Prendre une nouvelle classe",
+    "title": "Prendre une nouvelle classe",
+    "pick": "Nouvelle classe",
+    "placeholder": "Choisir une classe",
+    "next": "Suivant",
+    "back": "Retour",
+    "take": "Prendre {{class}}",
+    "confirm": "La classe {{from}} est figée au niveau {{level}} et garde ce qu’elle a : plus de PX ni de nouveau niveau. À partir de maintenant, tous les PX vont à {{to}}, qui commence au niveau 1. Vous pouvez annuler depuis le journal."
+  },
   "xp": {
     "heading": "Expérience · niveau {{level}}",
     "unit": "XP",
@@ -2134,6 +2148,13 @@
     "invite_not_found": "Cette invitation n'est plus en attente.",
     "invite_not_pending": "Cette invitation a été annulée ou déjà utilisée : elle ne peut plus être renvoyée.",
     "user_not_found": "Cet utilisateur n'existe pas.",
+    "dualclass_not_allowed": "Ce personnage ne peut pas devenir double-classé (multiclassé, ou d'une race qui ne le peut pas).",
+    "prime_requisite_too_low": "Une caractéristique principale est trop basse : 15 dans la classe actuelle, 17 dans la nouvelle.",
+    "level_too_low": "La classe actuelle est d'un niveau trop bas pour la quitter.",
+    "class_already_left": "Cette classe a déjà été quittée : on ne peut pas la reprendre.",
+    "dualclass_same_class": "Le personnage est déjà dans cette classe.",
+    "dualclass_minimums_not_met": "Le personnage n'atteint pas les minimums de caractéristiques de cette classe.",
+    "dualclass_alignment_not_allowed": "Cette classe n'admet pas l'alignement du personnage.",
     "level_up_not_pending": "Ce niveau n'est plus à lancer : la feuille de personnage se met à jour.",
     "no_spellbook": "Cette classe n'a pas de grimoire.",
     "no_psp_pool": "Ce personnage n’a pas de réserve de PFP.",
@@ -2622,6 +2643,7 @@
     "nextHint": "Passer à l'étape suivante",
     "reroll": "Relancer",
     "blocked": {
+      "answering": "Vérification des classes par le serveur…",
       "class": "Choisissez une classe.",
       "xp": "Saisissez les XP de départ.",
       "race": "Choisissez une race.",
@@ -2631,6 +2653,7 @@
       "alignment": "Choisissez un alignement.",
       "alignmentAllowed": "Choisissez un alignement permis pour continuer.",
       "sex": "Choisissez un sexe.",
+      "leftAt": "Saisissez le niveau où la première classe a été quittée.",
       "unreadable": "Corrigez la valeur illisible pour continuer."
     },
     "class": {
@@ -2645,6 +2668,45 @@
       "allRaces": "Toutes",
       "minimums": "Minimums",
       "minimumUnmet": "Score sous le minimum"
+    },
+    "classes": {
+      "kind": "Type de personnage",
+      "choose": "Choisir une classe",
+      "nth": "Classe {{n}}",
+      "left": "Classe quittée",
+      "new": "Nouvelle classe",
+      "leftAt": "Quittée au niveau",
+      "xpLeft": "XP (vide : seuil du niveau)",
+      "level": "Niveau",
+      "levelFromXp": "selon l'XP",
+      "add": "Ajouter",
+      "remove": "Retirer cette classe",
+      "title": "Classes et XP",
+      "dualTitle": "Classe quittée et nouvelle classe",
+      "lead": "Deux ou trois classes dès le départ. Saisissez les XP de chaque classe : son niveau en découle, sauf si vous donnez le niveau.",
+      "dualLead": "La première classe est figée au niveau où elle a été quittée ({{min}} au moins) ; la nouvelle est celle où le personnage progresse. Caractéristiques principales : {{prime}} dans la classe quittée, {{primeNew}} dans la nouvelle.",
+      "leftAtN": "{{className}} (classe quittée au niveau {{level}})",
+      "kinds": {
+        "single": "Une classe",
+        "multi": "Multiclassé",
+        "dual": "Double classé"
+      },
+      "errors": {
+        "multiclass_not_allowed": "Cette race ne peut pas être multiclassée avec ce jeu de règles.",
+        "dualclass_not_allowed": "Cette race ne peut pas être double classée avec ce jeu de règles.",
+        "prime_requisite_too_low": "Un personnage double classé a besoin de {{old}} dans la caractéristique principale de la classe quittée et de {{new}} dans la nouvelle.",
+        "level_too_low": "Une classe se quitte au niveau {{min}} ou plus.",
+        "class_already_left": "Cette classe a déjà été quittée : un personnage double classé n'y revient pas.",
+        "duplicate_class": "Cette classe est déjà dans la liste.",
+        "too_many_classes": "{{max}} classes au plus.",
+        "multi_and_dual_class": "Un personnage est multiclassé ou double classé, pas les deux.",
+        "no_active_class": "Choisissez une classe où le personnage progresse.",
+        "not_creatable": "Cette classe ne peut pas encore être créée.",
+        "out_of_range": "Saisissez un nombre entier de {{min}} à {{max}}.",
+        "empty": "À renseigner.",
+        "missing": "À renseigner.",
+        "unknown": "Choisissez une des classes."
+      }
     },
     "level": {
       "title": "Niveau de départ",
@@ -2661,6 +2723,7 @@
     "race": {
       "name": "Race",
       "title": "Choisissez une race",
+      "leadSeveral": "Toutes les races sont proposées : le serveur vérifie l'accord des classes et de la race.",
       "lead": "Seules les races permises au {{className}} sont proposées ; les autres restent visibles.",
       "refused": "Pas {{className}}",
       "refusedHint": "{{name}} : pas permis au {{className}}",

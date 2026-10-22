@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -68,6 +69,23 @@ func (c Characters) SetRealizedLevel(ctx context.Context, id int64, class string
 			return domain.ErrCharacterNotFound
 		}
 		ch.HPMax = hpMax
+		t.characters[id] = ch
+		return nil
+	})
+}
+
+// ReplaceClassEntries implements dualclasssvc.DAL (ADR 0042 step 3): the class entries are
+// replaced whole, or domain.ErrCharacterNotFound.
+func (c Characters) ReplaceClassEntries(ctx context.Context, id int64, entries []classes.Entry) error {
+	if err := classes.ValidateEntries(entries); err != nil {
+		return err
+	}
+	return c.s.write(ctx, func(t *tables) error {
+		ch, ok := t.characters[id]
+		if !ok {
+			return domain.ErrCharacterNotFound
+		}
+		ch.SetClasses(slices.Clone(entries))
 		t.characters[id] = ch
 		return nil
 	})

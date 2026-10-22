@@ -1377,6 +1377,7 @@
       "xp_edit": "XP",
       "xp_remove": "XP",
       "level_up": "Level",
+      "class_switch": "Class",
       "spell_learn": "Learn",
       "turn_undead": "Turning",
       "skill_points": "Skills",
@@ -1618,6 +1619,9 @@
       "equipped": "Equipped: {{name}}",
       "unequipped": "Unequipped: {{name}}",
       "swapped": "Equipped: {{name}} (in place of {{off}})"
+    },
+    "classSwitch": {
+      "text": "Took a new class: {{to}} (left {{from}} at level {{level}} with {{xp, number}} XP)"
     },
     "acOverride": {
       "set": "AC overridden: {{value}}",
@@ -1884,6 +1888,16 @@
     "languageSlots_one": "{{count}} proficiency slot",
     "languageSlots_other": "{{count}} proficiency slots"
   },
+  "takeClass": {
+    "open": "Take a new class",
+    "title": "Take a new class",
+    "pick": "New class",
+    "placeholder": "Pick a class",
+    "next": "Next",
+    "back": "Back",
+    "take": "Take {{class}}",
+    "confirm": "{{from}} is frozen at level {{level}} and keeps what it has: no more XP and no new level. From now on all XP goes to {{to}}, which starts at level 1. You can undo this from the journal."
+  },
   "xp": {
     "heading": "Experience · level {{level}}",
     "unit": "XP",
@@ -2134,6 +2148,13 @@
     "invite_not_found": "This invite is no longer pending.",
     "invite_not_pending": "This invite was cancelled or already used, so it cannot be sent again.",
     "user_not_found": "This user does not exist.",
+    "dualclass_not_allowed": "This character cannot become dual-class (multi-class, or a race that may not).",
+    "prime_requisite_too_low": "A prime requisite is too low: 15 in the current class, 17 in the new one.",
+    "level_too_low": "The current class is too low a level to leave.",
+    "class_already_left": "This class was already left: it cannot be taken again.",
+    "dualclass_same_class": "The character is already in that class.",
+    "dualclass_minimums_not_met": "The character does not meet the ability minimums of that class.",
+    "dualclass_alignment_not_allowed": "That class does not admit the character's alignment.",
     "level_up_not_pending": "That level is no longer to roll: the sheet refreshes.",
     "no_spellbook": "This class has no spellbook.",
     "no_psp_pool": "This character has no PSP pool.",
@@ -2622,6 +2643,7 @@
     "nextHint": "Go to the next step",
     "reroll": "Reroll",
     "blocked": {
+      "answering": "Checking the classes with the server…",
       "class": "Choose a class.",
       "xp": "Type the starting XP.",
       "race": "Choose a race.",
@@ -2631,6 +2653,7 @@
       "alignment": "Pick an alignment.",
       "alignmentAllowed": "Pick an allowed alignment to go on.",
       "sex": "Pick a sex.",
+      "leftAt": "Type the level the first class was left at.",
       "unreadable": "Fix the unreadable value to continue."
     },
     "class": {
@@ -2645,6 +2668,45 @@
       "allRaces": "All",
       "minimums": "Minimums",
       "minimumUnmet": "Score under the minimum"
+    },
+    "classes": {
+      "kind": "Kind of character",
+      "choose": "Choose a class",
+      "nth": "Class {{n}}",
+      "left": "Class left",
+      "new": "New class",
+      "leftAt": "Left at level",
+      "xpLeft": "XP (blank: that level's XP)",
+      "level": "Level",
+      "levelFromXp": "from XP",
+      "add": "Add",
+      "remove": "Remove this class",
+      "title": "Classes and XP",
+      "dualTitle": "Class left and new class",
+      "lead": "Two or three classes from the start. Type the XP of each class: its level follows from it, unless you enter the level.",
+      "dualLead": "The first class is frozen at the level it was left at (at least {{min}}); the new class is the one the character advances in. Prime requisites: {{prime}} in the class left, {{primeNew}} in the new one.",
+      "leftAtN": "{{className}} (class left at level {{level}})",
+      "kinds": {
+        "single": "One class",
+        "multi": "Multi-class",
+        "dual": "Dual-class"
+      },
+      "errors": {
+        "multiclass_not_allowed": "This race cannot be multi-class under the ruleset.",
+        "dualclass_not_allowed": "This race cannot be dual-class under the ruleset.",
+        "prime_requisite_too_low": "A dual-class character needs {{old}} in the prime requisite of the class left and {{new}} in the new class.",
+        "level_too_low": "A class can be left at level {{min}} or more.",
+        "class_already_left": "This class was already left: a dual-class character cannot return to it.",
+        "duplicate_class": "This class is already listed.",
+        "too_many_classes": "At most {{max}} classes.",
+        "multi_and_dual_class": "A character is multi-class or dual-class, not both.",
+        "no_active_class": "Pick a class the character advances in.",
+        "not_creatable": "This class cannot be created yet.",
+        "out_of_range": "Enter a whole number from {{min}} to {{max}}.",
+        "empty": "Required.",
+        "missing": "Required.",
+        "unknown": "Pick one of the classes."
+      }
     },
     "level": {
       "title": "Starting level",
@@ -2661,6 +2723,7 @@
     "race": {
       "name": "Race",
       "title": "Choose a race",
+      "leadSeveral": "Every race can be picked: the combination of the classes and the race is checked by the server.",
       "lead": "Only the races a {{className}} allows can be picked; the others stay visible.",
       "refused": "No {{className}}",
       "refusedHint": "{{name}}: not allowed for a {{className}}",

@@ -50,6 +50,13 @@ type DraftDTO struct {
 	// ExceptionalStrength: the class lists exceptional_strength, the Strength entered is 18 and
 	// the race rolls it.
 	ExceptionalStrength bool `json:"exceptionalStrength"`
+	// Alignments are the alignments every active class admits (a class left admits none of its
+	// own); the form lists them and checks nothing itself.
+	Alignments []string `json:"alignments"`
+	// SkillsClass carries the skill points and SpellbookClass the starting spellbook: a class id,
+	// "" for none.
+	SkillsClass    string `json:"skillsClass"`
+	SpellbookClass string `json:"spellbookClass"`
 }
 
 // StartingSpellbookDTO is a draft's starting spellbook (ADR 0030 step 20.7): the limits of step
@@ -104,7 +111,8 @@ func draftDTO(d *charactersvc.Draft) (DraftDTO, error) {
 		Warnings: []WarningDTO{}, Languages: []string{}, Refusals: make([]RefusalDTO, 0, len(d.Refusals)),
 		Missing: append([]string{}, d.Missing...), UnmetMinimums: make([]ClassUnmetDTO, 0, len(d.UnmetMinimums)),
 		SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints), Spellbook: startingSpellbookDTO(d.Spellbook),
-		ExceptionalStrength: d.ExceptionalStrength,
+		ExceptionalStrength: d.ExceptionalStrength, Alignments: append([]string{}, d.Alignments...),
+		SkillsClass: d.SkillsClass, SpellbookClass: d.SpellbookClass,
 	}
 	if c := d.Character; c != nil {
 		derived := derivedDTO(c.Derived)

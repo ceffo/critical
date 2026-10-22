@@ -11,7 +11,7 @@ import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { ALIGNMENT_CODES } from "@/lib/characterDetails";
-import { classOf, hasSpellbook, type StepId, type StepProps } from "./flow";
+import { hasSpellbook, type StepId, type StepProps } from "./flow";
 import { useSpellName } from "@/i18n/spellName";
 import { heightField, unitsFor, weightField } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
@@ -69,10 +69,10 @@ function rangeOf(
  * the server's: the class's list from the options, the warnings from the draft's answer.
  */
 export function IdentityStep(props: StepProps) {
-  const { options, draft, update, errorFor } = props;
+  const { options, draft, update, errorFor, answer } = props;
   const { t } = useTranslation();
-  const cls = classOf(options, draft.cls);
-  const allowed = cls?.alignments ?? [];
+  // The alignments the server's answer allows; before it, every one is offered and none refused.
+  const allowed = answer.latest?.alignments ?? ALIGNMENT_CODES;
   const className = t(`details.classes.${draft.cls}`, {
     defaultValue: draft.cls,
   }).toLocaleLowerCase();
@@ -665,7 +665,7 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
             ]}
           />
         </ReviewBlock>
-        {hasSpellbook(options, draft.cls) && (
+        {hasSpellbook(answer.latest) && (
           <ReviewBlock
             title={t("creation.spellbook.name")}
             step="spellbook"

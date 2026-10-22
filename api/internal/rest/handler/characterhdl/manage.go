@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -111,6 +112,18 @@ type OptionsDTO struct {
 	// SkillPoints is the range of a thief's points in one skill.
 	SkillPoints RangeDTO `json:"skillPoints"`
 	MaxNameLen  int      `json:"maxNameLength"`
+	// MaxClasses is the most active classes of a multi-class character and MinLeftAtLevel the lowest
+	// level a class can be left at (ADR 0042 step 1). The racial lift (ADR 0041 step 2.2) lets any
+	// race be multi-class (`multiclassAnyRace`) or dual-class (`dualclassAnyRace`); with it off the
+	// multi-class races are the `restrictedRaces`. A dual-class character needs `dualClassOldPrime` in
+	// every prime requisite of a class it left and `dualClassNewPrime` in its new class's. Additive.
+	MaxClasses        int      `json:"maxClasses"`
+	MinLeftAtLevel    int      `json:"minLeftAtLevel"`
+	MulticlassAnyRace bool     `json:"multiclassAnyRace"`
+	DualclassAnyRace  bool     `json:"dualclassAnyRace"`
+	RestrictedRaces   []string `json:"restrictedRaces"`
+	DualClassOldPrime int      `json:"dualClassOldPrime"`
+	DualClassNewPrime int      `json:"dualClassNewPrime"`
 	// Sexes are the sex codes (ADR 0032 step 3).
 	Sexes []string `json:"sexes"`
 	// Languages is the language catalogue with its names by language (ADR
@@ -239,13 +252,16 @@ func Options(svc optionsReader) render.HandlerFunc {
 			return err
 		}
 		out := OptionsDTO{
-			Classes:           make([]ClassOptionDTO, 0, len(o.Classes)),
-			Ability:           RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
-			HPMax:             RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
-			XP:                RangeDTO{Min: o.MinXP, Max: o.MaxXP},
-			StrExceptional:    RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
-			SkillPoints:       RangeDTO{Min: 0, Max: o.MaxSkillPoints},
-			MaxNameLen:        o.MaxNameLen,
+			Classes:        make([]ClassOptionDTO, 0, len(o.Classes)),
+			Ability:        RangeDTO{Min: o.MinAbility, Max: o.MaxAbility},
+			HPMax:          RangeDTO{Min: o.MinHPMax, Max: o.MaxHPMax},
+			XP:             RangeDTO{Min: o.MinXP, Max: o.MaxXP},
+			StrExceptional: RangeDTO{Min: o.MinStrExceptional, Max: o.MaxStrExceptional},
+			SkillPoints:    RangeDTO{Min: 0, Max: o.MaxSkillPoints},
+			MaxNameLen:     o.MaxNameLen,
+			MaxClasses:     o.MaxClasses, MinLeftAtLevel: o.MinLeftAtLevel, MulticlassAnyRace: o.MulticlassAnyRace,
+			DualclassAnyRace: o.DualclassAnyRace, RestrictedRaces: o.RestrictedRaces,
+			DualClassOldPrime: o.DualClassOldPrime, DualClassNewPrime: o.DualClassNewPrime,
 			Sexes:             o.Sexes,
 			Languages:         make([]LanguageDTO, 0, len(o.Languages)),
 			RaceLanguages:     make([]RaceLanguagesDTO, 0, len(o.RaceLanguages)),
@@ -336,6 +352,21 @@ type CreateBody struct {
 	// roll; absent or empty for none. A refused spell names its field
 	// "spellbook.<id>"; a spellbook for another class, "spellbook".
 	Spellbook []string `json:"spellbook"`
+	// Classes are the class entries (ADR 0042 steps 1 and 4), one to three active ones, or active ones
+	// and the classes a dual-class character left; they replace `class` and `xp`, which a body naming
+	// them too is refused for. A refusal names `classes` or `classes.<i>.<field>`.
+	Classes []ClassEntryBody `json:"classes"`
+}
+
+// ClassEntryBody is one class of a new character. `xp` is required for a class advanced in (a draft
+// lists `classes.<i>.xp` as missing), optional for a class left; `level` is the level taken, absent
+// for the level the XP reaches; `leftAtLevel` is set for a class left (2 to 20) and absent for a
+// class advanced in.
+type ClassEntryBody struct {
+	Class       string `json:"class"`
+	XP          *int   `json:"xp"`
+	Level       int    `json:"level"`
+	LeftAtLevel int    `json:"leftAtLevel"`
 }
 
 // detailsPatch is the details as the patch a new character applies: every text
@@ -394,6 +425,19 @@ func (b CreateBody) entered() (charactersvc.NewCharacter, []string, error) {
 	if b.Details != nil {
 		n.Languages = b.Details.Languages
 	}
+	if len(b.Classes) > 0 {
+		if b.Class != "" || b.XP != nil {
+			return charactersvc.NewCharacter{}, nil, render.BadRequestError("send class and xp or classes, not both")
+		}
+		n.Class = ""
+		for _, c := range b.Classes {
+			e := charactersvc.NewClass{Class: c.Class, Level: c.Level, LeftAtLevel: c.LeftAtLevel}
+			if c.XP != nil {
+				e.XP = *c.XP
+			}
+			n.Classes = append(n.Classes, e)
+		}
+	}
 	var blank []string
 	for _, f := range []struct {
 		field string
@@ -409,11 +453,19 @@ func (b CreateBody) entered() (charactersvc.NewCharacter, []string, error) {
 		{"hpMax", &n.HPMax, b.HPMax},
 		{"xp", &n.XP, b.XP},
 	} {
+		if f.v == nil && f.field == "xp" && len(b.Classes) > 0 {
+			continue
+		}
 		if f.v == nil {
 			blank = append(blank, f.field)
 			continue
 		}
 		*f.dst = *f.v
+	}
+	for i, c := range b.Classes {
+		if c.XP == nil && c.LeftAtLevel == 0 {
+			blank = append(blank, fmt.Sprintf("%s.%d.xp", charactersvc.FieldClasses, i))
+		}
 	}
 	return n, blank, nil
 }

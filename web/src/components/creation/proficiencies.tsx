@@ -18,7 +18,9 @@ export function ProficienciesStep(props: StepProps) {
   const { options, draft, update, errorFor, answer } = props;
   const { t } = useTranslation();
   const figures = answer.latest?.derived?.proficiencySlots ?? null;
-  const types = options.classes.find((c) => c.class === draft.cls)?.weaponTypes;
+  const types = [draft.cls, ...draft.others.map((o) => o.cls)]
+    .map((c) => options.classes.find((k) => k.class === c)?.weaponTypes)
+    .find(Boolean);
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {/* The weapons first: a short list, where the non-weapon catalogue is long. */}

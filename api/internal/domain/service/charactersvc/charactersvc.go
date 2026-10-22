@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -92,7 +93,7 @@ type Reader interface {
 // character splits award by award (ADR 0042 step 5); xpsvc.Totals implements
 // it over the ledger's DAL.
 type XPLedger interface {
-	Awards(ctx context.Context, characterID int64) ([]int, error)
+	Awards(ctx context.Context, characterID int64) ([]Award, error)
 }
 
 // HPLedger is the action log's HP and PSP totals: the sums of the effective
@@ -196,6 +197,16 @@ type Deps struct {
 	// FreeSpells are the levels taken and the free spells claimed (ADR 0030
 	// step 20.8).
 	FreeSpells FreeSpells
+	// Rulesets gives the ruleset a new character is created under (ADR 0041 step 3): its racial
+	// lift (ADR 0042 step 2). nil is the default ruleset.
+	Rulesets ruleset.Resolver
+}
+
+// defaultRulesets resolves every character to the default ruleset.
+type defaultRulesets struct{}
+
+func (defaultRulesets) ForCharacter(context.Context, int64) (ruleset.Ruleset, error) {
+	return ruleset.Default(), nil
 }
 
 type service struct {
@@ -213,6 +224,7 @@ type service struct {
 	spells    SpellCatalogue
 	book      StartingBook
 	free      FreeSpells
+	rulesets  ruleset.Resolver
 }
 
 // New constructs the service.
@@ -227,8 +239,11 @@ func New(d Deps) (SVC, error) {
 	if d.Proficiencies == nil {
 		d.Proficiencies = (*ruletablesvc.Proficiencies)(nil)
 	}
+	if d.Rulesets == nil {
+		d.Rulesets = defaultRulesets{}
+	}
 	return &service{
-		reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour,
+		rulesets: d.Rulesets, reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour,
 		languages: d.Languages, profs: d.Proficiencies, hp: d.HP, spells: d.Spells, book: d.Book, free: d.FreeSpells,
 	}, nil
 }
@@ -389,7 +404,7 @@ func (s *service) readWarnings(c *Character, defs *classes.Registry) {
 		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: native,
 		Score: func(a string) (int, bool) { return c.Score(Ability(a)) },
 	})
-	c.Warnings = c.Details.Warnings(AlignmentsOf(defs, c.Class))
+	c.Warnings = c.Details.Warnings(alignmentsOfEntries(defs, c.Entries()))
 	var identity *ruletablesvc.IdentityRow
 	if row, ok := ruletablesvc.IdentityFor(defs, c.Race); ok {
 		identity = &row

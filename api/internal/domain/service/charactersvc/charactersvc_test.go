@@ -143,7 +143,7 @@ func TestList_IsTheOwnersCharactersAtTheirRealizedLevel(t *testing.T) {
 	e.owners.EXPECT().CharactersOf(mock.Anything, owner).
 		Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen"}}, nil).Once()
 	e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(kelsen(), nil).Once()
-	e.xp.EXPECT().Awards(mock.Anything, int64(1)).Return([]int{26_582}, nil).Once()
+	e.xp.EXPECT().Awards(mock.Anything, int64(1)).Return(awardsOf(26_582), nil).Once()
 	e.rules.EXPECT().LevelFor("bard", 1_320_000).Return(16, nil).Once()
 	e.rules.EXPECT().XPThreshold("bard", 17).Return(1_540_000, nil).Once()
 	e.rules.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
@@ -186,7 +186,7 @@ func TestList_CarriesTheIdentityAndTheHP(t *testing.T) {
 			e.owners.EXPECT().CharactersOf(mock.Anything, owner).
 				Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen"}}, nil).Once()
 			e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(k, nil).Once()
-			e.xp.EXPECT().Awards(mock.Anything, int64(1)).Return([]int{26_582}, nil).Once()
+			e.xp.EXPECT().Awards(mock.Anything, int64(1)).Return(awardsOf(26_582), nil).Once()
 			e.rules.EXPECT().LevelFor("bard", 1_320_000).Return(16, nil).Once()
 			e.rules.EXPECT().XPThreshold("bard", 17).Return(1_540_000, nil).Once()
 			e.rules.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()

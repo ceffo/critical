@@ -447,7 +447,7 @@ CRI-178 built steps 1, 2, 4, 6 and 8's data ([ADR 0021](0021-spell-catalogue.md)
 - **Variable costs**: `initial_cost` is `variable` where the printed cost is "3+" or "varies" (Telekinesis, Empower...) and `maintenance.cost` is
   `variable` ("1+/round", "up to 20/round"); the amount comes from the power's text. A cost of `contact` is for layer 2.
 - **The ten modes' kind** is `defence_mode` or `attack_mode`, not `devotion` (and not `science`: Psionic Blast is a science by the book, so its pick
-  takes a science slot, the other attack modes a devotion slot). Table 4's defence modes are counted apart (step 9.1).
+  takes a science slot, the other attack modes a devotion slot; the power's optional `slot` says it, format 16). Table 4's defence modes are counted apart (step 9.1).
 - **The equipment list** (step 1.6): ADR 0040's `armour` names the skill columns of Table 29, and hide shares the `metal` column with the chain
   mails, so the class lists `padded_studded` only (hide is not expressible without admitting chain mail). The dirk and the throwing axe are not
   catalogue weapons.
@@ -493,7 +493,7 @@ Step 9's backend: the rules, the store, the save with its undo and the route. Th
   Order of the checks: shape, discipline and prerequisites in list order, then Table 4's counts, then per discipline (ids sorted) the
   twice rule and the primary's.
 - **Two readings of the book** the code fixes: a defence mode needs no picked discipline and counts in none (it has its own slot kind);
-  every attack mode counts as a devotion, Psionic Blast included, until the catalogue can mark it a science (step 8's note above).
+  an attack mode takes a devotion's slot unless the catalogue names the power's `slot` (Psionic Blast: `science`, catalogue format 16, ADR 0021 step 23).
 - **Table 4 is rule data** (`PowerAllowanceFor(level)`, cumulative) read at the psionics entry's realized level, not the character's total
   level. The read serves it as `knownPowers {allowance, used, primary, picks}` beside `psp` in the derived character.
 - **Storage**: one list per character (`psionic_picks`, migration 038), set whole by `SetPsionicPicks`. A multi-class psionicist keeps one list.

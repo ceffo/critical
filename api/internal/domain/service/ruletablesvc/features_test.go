@@ -181,9 +181,20 @@ func TestFeatures_Step3_TheCreationGatesReadTheKind(t *testing.T) {
 		return strikeKind("fighter", classes.KindWeaponSpecialization)(cs)
 	})
 	strong, fighter := classOf(t, reg, "test_strong"), classOf(t, reg, "fighter")
-	assert.True(t, ruletablesvc.ExceptionalStrengthAllowed(strong, "human", 18))
-	assert.False(t, ruletablesvc.ExceptionalStrengthAllowed(strong, "human", 17), "only at 18")
-	assert.False(t, ruletablesvc.ExceptionalStrengthAllowed(fighter, "human", 18), "a fighter without the kind")
+	human := classes.Race{ID: "human"}
+	assert.True(t, ruletablesvc.ExceptionalStrengthAllowed(strong, human, 18))
+	assert.False(t, ruletablesvc.ExceptionalStrengthAllowed(strong, human, 17), "only at 18")
+	assert.False(t, ruletablesvc.ExceptionalStrengthAllowed(fighter, human, 18), "a fighter without the kind")
 	assert.True(t, ruletablesvc.Specializes(strong))
 	assert.False(t, ruletablesvc.Specializes(fighter), "a fighter without the kind")
+}
+
+// ADR 0040 step 4: a race that lists no_exceptional_strength never rolls an exceptional
+// Strength, whatever its id; one that does not, does.
+func TestRaceTraits_Step4_NoExceptionalStrengthFromTheTrait(t *testing.T) {
+	fighter := classOf(t, cataloguetest.Definitions(t), "fighter")
+	barred := classes.Race{ID: "test_barred", Traits: []classes.Trait{{Kind: classes.TraitNoExceptionalStrength}}}
+	free := classes.Race{ID: "halfling"}
+	assert.False(t, ruletablesvc.ExceptionalStrengthAllowed(fighter, barred, 18))
+	assert.True(t, ruletablesvc.ExceptionalStrengthAllowed(fighter, free, 18), "the id decides nothing, the trait does")
 }

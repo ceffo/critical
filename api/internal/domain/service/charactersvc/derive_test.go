@@ -611,3 +611,45 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 		assert.Nil(t, got.BardSkills)
 	})
 }
+
+// ADR 0040 step 4: the save bonus of Table 9 goes to the saves a race's con_save_bonus trait
+// names, whatever the race's id: a test race listing the trait for Breath alone gets it there
+// and nowhere else, and the book's dwarf with the trait struck gets none.
+func TestRaceTraits_Step4_ConSaveBonusFromTheTrait(t *testing.T) {
+	book := cataloguetest.Definitions(t)
+	var races []classes.Race
+	for _, r := range book.Races() {
+		if r.ID == "dwarf" {
+			r.Traits = nil
+		}
+		races = append(races, r)
+	}
+	giant := book.Races()[0]
+	giant.ID, giant.Traits = "test_giant", []classes.Trait{{Kind: classes.TraitConSaveBonus, Categories: []string{"breath"}}}
+	defs, err := classes.New(book.Classes(), book.GroupDefs(), append(races, giant))
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		race string
+		want charactersvc.Saves
+	}{
+		{"test_giant", charactersvc.Saves{Breath: 4}},
+		{"dwarf", charactersvc.Saves{}},
+		{"halfling", charactersvc.Saves{RodStaffWand: 4, Spell: 4}},
+	} {
+		t.Run(tc.race, func(t *testing.T) {
+			c := kelsen()
+			c.Race = tc.race
+			r := newRules(t)
+			r.EXPECT().Definitions().Unset()
+			r.EXPECT().Definitions().Return(defs, nil).Maybe()
+			expectKelsenRules(r, 1_293_418, 15)
+			if tc.want != (charactersvc.Saves{}) {
+				r.EXPECT().ConSaveBonusFor(16).Return(4, nil).Once()
+			}
+			got, err := charactersvc.Derive(c, 0, "", r)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got.RaceSaveBonus)
+		})
+	}
+}

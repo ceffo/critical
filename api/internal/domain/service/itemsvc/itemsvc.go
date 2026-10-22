@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -141,6 +142,9 @@ type Deps struct {
 	Tx        domain.TxRunner
 	Chars     Characters
 	Equipment *ruletablesvc.Equipment
+	// Classes reads a class's definition for its equipment limits (ADR 0033
+	// step 20, ADR 0040 step 1.6). Nil: no class is limited.
+	Classes ClassLookup
 	// Initiative corrects the round's initiative when a magic item is used
 	// (ADR 0035 item 6.2); InitiativeItems is PHB Table 56, the modifier of
 	// each magic kind (nil before catalogue format 7: a use corrects
@@ -152,6 +156,11 @@ type Deps struct {
 	// item 6.2). Nil: no spell is known (naming one is refused, a named
 	// scroll's casting time reads as special).
 	Spells Spells
+}
+
+// ClassLookup is the class definitions (ruletablesvc.Tables.Class).
+type ClassLookup interface {
+	Class(class string) (classes.Class, error)
 }
 
 // Spells looks a spell up in the catalogue (spelldal's catalogue, as
@@ -175,6 +184,7 @@ type service struct {
 	chars     Characters
 	catalogue []ruletablesvc.Weapon
 	equipment *ruletablesvc.Equipment
+	classes   ClassLookup
 	// initiative and initiativeItems: ADR 0035 item 6.2 (Deps).
 	initiative      Initiative
 	initiativeItems *ruletablesvc.InitiativeItems
@@ -187,7 +197,7 @@ func New(dal DAL, d Deps) (SVC, error) {
 		return nil, fmt.Errorf("itemsvc: nil dependency")
 	}
 	s := &service{
-		dal: specializedDAL{DAL: dal, chars: d.Chars}, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment,
+		dal: specializedDAL{DAL: dal, chars: d.Chars}, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment, classes: d.Classes,
 		initiative: d.Initiative, initiativeItems: d.InitiativeItems, spells: d.Spells,
 	}
 	if d.Equipment != nil {

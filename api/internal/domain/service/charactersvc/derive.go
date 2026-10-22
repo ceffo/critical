@@ -2,7 +2,6 @@ package charactersvc
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -63,13 +62,6 @@ type Rules interface {
 	// BackstabFor is PHB Table 30 at a level (step 19).
 	BackstabFor(level int) (int, error)
 }
-
-// conSaveRaces are the races that add their PHB Table 9 bonus to the saves
-// against Rod/Staff/Wand and Spells (ADR 0030 step 22.1). Their bonus against
-// poison (dwarves and halflings) waits for the save request's "poison" flag
-// (step 22.1, proposed): the Paralyze/Poison category also covers paralysis
-// and death magic.
-var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 
 // Derive computes the derived block of c (ADR 0030 steps 3 to 8, 17, 19,
 // 22.1, and the pending level-ups of step 7). armour is the Table 29 column of
@@ -246,18 +238,46 @@ func coreAt(c *Character, group string, level int, rules Rules) (core, error) {
 	}}, nil
 }
 
-// raceSaveBonus is step 22.1: dwarves, gnomes and halflings add their PHB
-// Table 9 bonus (from the sheet's Constitution) to the saves against
-// Rod/Staff/Wand and Spells. Every other race (and none) adds nothing.
+// raceSaveBonus is step 22.1 through the race's con_save_bonus trait (ADR
+// 0040 step 4): the race adds PHB Table 9's bonus (from the sheet's
+// Constitution) to the saves of the trait's categories. A race without the
+// trait (or a race the catalogue does not define) adds nothing. The trait's
+// poison flag waits for the save request's "poison" flag (step 22.1,
+// proposed): the Paralyze/Poison category also covers paralysis and death
+// magic, so the data does not list it among the categories.
 func raceSaveBonus(c *Character, rules Rules) (Saves, error) {
-	if !slices.Contains(conSaveRaces, c.Race) {
+	defs, err := rules.Definitions()
+	if err != nil {
+		return Saves{}, fmt.Errorf("derive %s save bonus: %w", c.Race, err)
+	}
+	race, ok := defs.Race(c.Race)
+	if !ok {
+		return Saves{}, nil
+	}
+	trait, ok := race.Trait(classes.TraitConSaveBonus)
+	if !ok {
 		return Saves{}, nil
 	}
 	b, err := rules.ConSaveBonusFor(c.Con)
 	if err != nil {
 		return Saves{}, fmt.Errorf("derive %s save bonus: %w", c.Race, err)
 	}
-	return Saves{RodStaffWand: b, Spell: b}, nil
+	var out Saves
+	for _, cat := range trait.Categories {
+		switch cat {
+		case "para_poison":
+			out.ParaPoison = b
+		case "rod_staff_wand":
+			out.RodStaffWand = b
+		case "petri_poly":
+			out.PetriPoly = b
+		case "breath":
+			out.Breath = b
+		case "spell":
+			out.Spell = b
+		}
+	}
+	return out, nil
 }
 
 // SetSkillFigures sets d's skill percentages, budget and points from points

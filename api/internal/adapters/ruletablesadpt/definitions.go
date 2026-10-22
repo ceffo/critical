@@ -11,8 +11,8 @@ import (
 // definitionsDTO is the format-11 artifact's classes, groups and races (ADR
 // 0021 step 18, ADR 0040 steps 1, 2 and 7), as catalogueadpt passes them.
 // The schema has already checked every field; only the ones the registry
-// reads so far are mapped (the equipment and traits move with their readers,
-// ADR 0040 step 11.3).
+// reads are mapped (ADR 0040 steps 1, 2 and 4; the hit dice and the
+// non-weapon groups keep their own readers).
 type definitionsDTO struct {
 	Classes []classDefDTO `json:"classes"`
 	Groups  []groupDefDTO `json:"groups"`
@@ -28,8 +28,20 @@ type classDefDTO struct {
 	Alignments      []string             `json:"alignments"`
 	Experience      []classExperienceDTO `json:"experience"`
 	// SpellProgression names a slot table (ADR 0040 step 1.9), absent for none.
-	SpellProgression string       `json:"spell_progression"`
-	Features         []featureDTO `json:"features"`
+	SpellProgression string            `json:"spell_progression"`
+	Features         []featureDTO      `json:"features"`
+	Equipment        classEquipmentDTO `json:"equipment"`
+}
+
+type classEquipmentDTO struct {
+	Armour      []string `json:"armour"`
+	Shields     bool     `json:"shields"`
+	WeaponTypes []string `json:"weapon_types"`
+	Weapons     []struct {
+		Code       string `json:"code"`
+		WeaponType string `json:"weapon_type"`
+	} `json:"weapons"`
+	BluntOnly bool `json:"blunt_only"`
 }
 
 // featureDTO is a class feature (ADR 0040 step 3); params is read by kind.
@@ -123,6 +135,41 @@ type raceDefDTO struct {
 	ID           string               `json:"id"`
 	Name         localized.Text       `json:"name"`
 	Requirements []raceDefRequirement `json:"requirements"`
+	Identity     raceIdentityDTO      `json:"identity"`
+	Traits       []raceTraitDTO       `json:"traits"`
+}
+
+type diceDTO struct {
+	Count int `json:"count"`
+	Sides int `json:"sides"`
+}
+
+type sexFigureDTO struct {
+	Male   int     `json:"male"`
+	Female int     `json:"female"`
+	Dice   diceDTO `json:"dice"`
+}
+
+type ageFigureDTO struct {
+	Base int     `json:"base"`
+	Dice diceDTO `json:"dice"`
+}
+
+type raceIdentityDTO struct {
+	Height   sexFigureDTO `json:"height"`
+	Weight   sexFigureDTO `json:"weight"`
+	StartAge ageFigureDTO `json:"start_age"`
+	MaxAge   ageFigureDTO `json:"max_age"`
+}
+
+type raceTraitDTO struct {
+	Kind   string `json:"kind"`
+	Params struct {
+		Categories  []string `json:"categories"`
+		Poison      bool     `json:"poison"`
+		WeaponTypes []string `json:"weapon_types"`
+		Bonus       int      `json:"bonus"`
+	} `json:"params"`
 }
 
 type raceDefRequirement struct {
@@ -163,7 +210,7 @@ func definitions(raw []byte) (*classes.Registry, error) {
 		cls[i] = classes.Class{
 			ID: c.ID, Name: c.Name, Group: c.Group, PrimeRequisites: c.PrimeRequisites,
 			AbilityMinimums: mins, Alignments: c.Alignments, Experience: xp,
-			SpellProgression: c.SpellProgression, Features: features,
+			SpellProgression: c.SpellProgression, Features: features, Equipment: c.Equipment.equipment(),
 		}
 	}
 	groups := make([]classes.Group, len(d.Groups))
@@ -183,7 +230,32 @@ func definitions(raw []byte) (*classes.Registry, error) {
 		for j, a := range r.Requirements {
 			reqs[j] = classes.AbilityRange(a)
 		}
-		races[i] = classes.Race{ID: r.ID, Name: r.Name, Requirements: reqs}
+		traits := make([]classes.Trait, len(r.Traits))
+		for j, t := range r.Traits {
+			traits[j] = classes.Trait{
+				Kind: t.Kind, Categories: t.Params.Categories, Poison: t.Params.Poison,
+				WeaponTypes: t.Params.WeaponTypes, Bonus: t.Params.Bonus,
+			}
+		}
+		races[i] = classes.Race{ID: r.ID, Name: r.Name, Requirements: reqs, Identity: r.Identity.identity(), Traits: traits}
 	}
 	return classes.New(cls, groups, races)
+}
+
+func (e classEquipmentDTO) equipment() classes.Equipment {
+	out := classes.Equipment{Armour: e.Armour, Shields: e.Shields, WeaponTypes: e.WeaponTypes, BluntOnly: e.BluntOnly}
+	for _, w := range e.Weapons {
+		out.Weapons = append(out.Weapons, classes.WeaponRef{Code: w.Code, WeaponType: w.WeaponType})
+	}
+	return out
+}
+
+func (i raceIdentityDTO) identity() classes.Identity {
+	dice := func(d diceDTO) classes.Dice { return classes.Dice(d) }
+	return classes.Identity{
+		HeightMale: i.Height.Male, HeightFemale: i.Height.Female, HeightDice: dice(i.Height.Dice),
+		WeightMale: i.Weight.Male, WeightFemale: i.Weight.Female, WeightDice: dice(i.Weight.Dice),
+		StartAge: i.StartAge.Base, StartAgeDice: dice(i.StartAge.Dice),
+		MaxAge: i.MaxAge.Base, MaxAgeDice: dice(i.MaxAge.Dice),
+	}
 }

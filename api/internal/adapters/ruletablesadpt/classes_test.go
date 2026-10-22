@@ -118,3 +118,60 @@ func TestImport_Step8_RefusesARowForAnUnknownClass(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0040 step 1.6: the equipment lists map as the PHB gives them (mage p.30, cleric p.33, thief
+// p.39, bard p.41; the fighter p.26 wears and wields anything) and the pick types derive from them
+// and the weapon catalogue (ADR 0037 step 7).
+func TestDefinitions_Step1_6_TheEquipmentListsMap(t *testing.T) {
+	defs, err := phb(t).Definitions()
+	require.NoError(t, err)
+	eq := func(id string) classes.Equipment {
+		c, err := defs.Get(id)
+		require.NoError(t, err)
+		return c.Equipment
+	}
+	assert.Equal(t, classes.Equipment{Shields: true}, eq("fighter"))
+	assert.Equal(t, classes.Equipment{
+		Armour: []string{"none"}, WeaponTypes: []string{"dagger", "dart", "sling"},
+		Weapons:   []classes.WeaponRef{{Code: "knife", WeaponType: "other_melee"}, {Code: "quarterstaff", WeaponType: "other_melee"}},
+		PickTypes: []string{"dagger", "dart", "sling", "other_melee"},
+	}, eq("mage"))
+	assert.Equal(t, classes.Equipment{Shields: true, BluntOnly: true, PickTypes: []string{"sling", "other_melee", "other_missile"}}, eq("cleric"))
+	thief := eq("thief")
+	assert.Equal(t, []string{"none", "leather", "padded_studded", "elven_chain"}, thief.Armour)
+	assert.False(t, thief.Shields)
+	assert.Equal(t, []string{"dagger", "dart", "hand_crossbow", "short_bow", "sling", "short_sword", "long_sword"}, thief.WeaponTypes)
+	assert.Equal(t, []string{"none", "leather", "padded_studded", "elven_chain", "metal"}, eq("bard").Armour)
+	assert.Nil(t, eq("bard").PickTypes, "the bard picks any weapon type")
+}
+
+// ADR 0040 steps 2 and 4: the six races carry their traits and PHB Tables 10 and 11 rows. Expected
+// values are the book's: the dwarf's, gnome's and halfling's Constitution saves (Table 9, PHB
+// chapter 2) and the halfling's lack of an exceptional Strength (Table 7 note); the human has no
+// trait.
+func TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows(t *testing.T) {
+	defs, err := phb(t).Definitions()
+	require.NoError(t, err)
+	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, defs.RaceIDs())
+	kinds := map[string][]string{}
+	for _, r := range defs.Races() {
+		for _, tr := range r.Traits {
+			kinds[r.ID] = append(kinds[r.ID], tr.Kind)
+		}
+	}
+	assert.Equal(t, map[string][]string{
+		"dwarf": {classes.TraitConSaveBonus}, "gnome": {classes.TraitConSaveBonus},
+		"halfling": {classes.TraitConSaveBonus, classes.TraitNoExceptionalStrength},
+	}, kinds)
+	gnome, _ := defs.Race("gnome")
+	tr, ok := gnome.Trait(classes.TraitConSaveBonus)
+	require.True(t, ok)
+	assert.Equal(t, []string{"rod_staff_wand", "spell"}, tr.Categories)
+	assert.False(t, tr.Poison, "the gnome's poison save gets no Table 9 bonus")
+	dwarf, _ := defs.Race("dwarf")
+	assert.Equal(t, classes.Identity{
+		HeightMale: 43, HeightFemale: 41, HeightDice: classes.Dice{Count: 1, Sides: 10},
+		WeightMale: 130, WeightFemale: 105, WeightDice: classes.Dice{Count: 4, Sides: 10},
+		StartAge: 40, StartAgeDice: classes.Dice{Count: 5, Sides: 6}, MaxAge: 250, MaxAgeDice: classes.Dice{Count: 2, Sides: 100},
+	}, dwarf.Identity)
+}

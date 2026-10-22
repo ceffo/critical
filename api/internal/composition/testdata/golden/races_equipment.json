@@ -1,0 +1,3088 @@
+{
+  "options": {
+    "Classes": [
+      {
+        "Class": "fighter",
+        "Races": [
+          "dwarf",
+          "elf",
+          "gnome",
+          "half_elf",
+          "halfling",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 10,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2000
+          },
+          {
+            "Level": 3,
+            "XP": 4000
+          },
+          {
+            "Level": 4,
+            "XP": 8000
+          },
+          {
+            "Level": 5,
+            "XP": 16000
+          },
+          {
+            "Level": 6,
+            "XP": 32000
+          },
+          {
+            "Level": 7,
+            "XP": 64000
+          },
+          {
+            "Level": 8,
+            "XP": 125000
+          },
+          {
+            "Level": 9,
+            "XP": 250000
+          },
+          {
+            "Level": 10,
+            "XP": 500000
+          },
+          {
+            "Level": 11,
+            "XP": 750000
+          },
+          {
+            "Level": 12,
+            "XP": 1000000
+          },
+          {
+            "Level": 13,
+            "XP": 1250000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1750000
+          },
+          {
+            "Level": 16,
+            "XP": 2000000
+          },
+          {
+            "Level": 17,
+            "XP": 2250000
+          },
+          {
+            "Level": 18,
+            "XP": 2500000
+          },
+          {
+            "Level": 19,
+            "XP": 2750000
+          },
+          {
+            "Level": 20,
+            "XP": 3000000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "str",
+            "Min": 9
+          }
+        ],
+        "WeaponTypes": [
+          {
+            "Type": "long_bow",
+            "SpecializationSlots": 3
+          },
+          {
+            "Type": "short_bow",
+            "SpecializationSlots": 3
+          },
+          {
+            "Type": "light_crossbow",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "heavy_crossbow",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "hand_crossbow",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "dagger",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "dart",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "sling",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "short_sword",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "long_sword",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "other_melee",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "other_thrown",
+            "SpecializationSlots": 2
+          },
+          {
+            "Type": "other_missile",
+            "SpecializationSlots": 2
+          }
+        ],
+        "Spellbook": null
+      },
+      {
+        "Class": "mage",
+        "Races": [
+          "elf",
+          "half_elf",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 4,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2500
+          },
+          {
+            "Level": 3,
+            "XP": 5000
+          },
+          {
+            "Level": 4,
+            "XP": 10000
+          },
+          {
+            "Level": 5,
+            "XP": 20000
+          },
+          {
+            "Level": 6,
+            "XP": 40000
+          },
+          {
+            "Level": 7,
+            "XP": 60000
+          },
+          {
+            "Level": 8,
+            "XP": 90000
+          },
+          {
+            "Level": 9,
+            "XP": 135000
+          },
+          {
+            "Level": 10,
+            "XP": 250000
+          },
+          {
+            "Level": 11,
+            "XP": 375000
+          },
+          {
+            "Level": 12,
+            "XP": 750000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1875000
+          },
+          {
+            "Level": 16,
+            "XP": 2250000
+          },
+          {
+            "Level": 17,
+            "XP": 2625000
+          },
+          {
+            "Level": 18,
+            "XP": 3000000
+          },
+          {
+            "Level": 19,
+            "XP": 3375000
+          },
+          {
+            "Level": 20,
+            "XP": 3750000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "int",
+            "Min": 9
+          }
+        ],
+        "WeaponTypes": [
+          {
+            "Type": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "other_melee",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": [
+            "detect_magic"
+          ]
+        }
+      },
+      {
+        "Class": "cleric",
+        "Races": [
+          "dwarf",
+          "elf",
+          "gnome",
+          "half_elf",
+          "halfling",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 8,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 1500
+          },
+          {
+            "Level": 3,
+            "XP": 3000
+          },
+          {
+            "Level": 4,
+            "XP": 6000
+          },
+          {
+            "Level": 5,
+            "XP": 13000
+          },
+          {
+            "Level": 6,
+            "XP": 27500
+          },
+          {
+            "Level": 7,
+            "XP": 55000
+          },
+          {
+            "Level": 8,
+            "XP": 110000
+          },
+          {
+            "Level": 9,
+            "XP": 225000
+          },
+          {
+            "Level": 10,
+            "XP": 450000
+          },
+          {
+            "Level": 11,
+            "XP": 675000
+          },
+          {
+            "Level": 12,
+            "XP": 900000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1350000
+          },
+          {
+            "Level": 15,
+            "XP": 1575000
+          },
+          {
+            "Level": 16,
+            "XP": 1800000
+          },
+          {
+            "Level": 17,
+            "XP": 2025000
+          },
+          {
+            "Level": 18,
+            "XP": 2250000
+          },
+          {
+            "Level": 19,
+            "XP": 2475000
+          },
+          {
+            "Level": 20,
+            "XP": 2700000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "wis",
+            "Min": 9
+          }
+        ],
+        "WeaponTypes": [
+          {
+            "Type": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "other_melee",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "other_missile",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": null
+      },
+      {
+        "Class": "thief",
+        "Races": [
+          "dwarf",
+          "elf",
+          "gnome",
+          "half_elf",
+          "halfling",
+          "human"
+        ],
+        "Skills": [
+          "pick_pockets",
+          "open_locks",
+          "find_remove_traps",
+          "move_silently",
+          "hide_in_shadows",
+          "detect_noise",
+          "climb_walls",
+          "read_languages"
+        ],
+        "Alignments": [
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 6,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 1250
+          },
+          {
+            "Level": 3,
+            "XP": 2500
+          },
+          {
+            "Level": 4,
+            "XP": 5000
+          },
+          {
+            "Level": 5,
+            "XP": 10000
+          },
+          {
+            "Level": 6,
+            "XP": 20000
+          },
+          {
+            "Level": 7,
+            "XP": 40000
+          },
+          {
+            "Level": 8,
+            "XP": 70000
+          },
+          {
+            "Level": 9,
+            "XP": 110000
+          },
+          {
+            "Level": 10,
+            "XP": 160000
+          },
+          {
+            "Level": 11,
+            "XP": 220000
+          },
+          {
+            "Level": 12,
+            "XP": 440000
+          },
+          {
+            "Level": 13,
+            "XP": 660000
+          },
+          {
+            "Level": 14,
+            "XP": 880000
+          },
+          {
+            "Level": 15,
+            "XP": 1100000
+          },
+          {
+            "Level": 16,
+            "XP": 1320000
+          },
+          {
+            "Level": 17,
+            "XP": 1540000
+          },
+          {
+            "Level": 18,
+            "XP": 1760000
+          },
+          {
+            "Level": 19,
+            "XP": 1980000
+          },
+          {
+            "Level": 20,
+            "XP": 2200000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "dex",
+            "Min": 9
+          }
+        ],
+        "WeaponTypes": [
+          {
+            "Type": "short_bow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "hand_crossbow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "short_sword",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "long_sword",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "other_melee",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": null
+      },
+      {
+        "Class": "bard",
+        "Races": [
+          "half_elf",
+          "human"
+        ],
+        "Skills": [
+          "climb_walls",
+          "detect_noise",
+          "pick_pockets",
+          "read_languages"
+        ],
+        "Alignments": [
+          "neutral_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "neutral_evil"
+        ],
+        "HitDie": 6,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 1250
+          },
+          {
+            "Level": 3,
+            "XP": 2500
+          },
+          {
+            "Level": 4,
+            "XP": 5000
+          },
+          {
+            "Level": 5,
+            "XP": 10000
+          },
+          {
+            "Level": 6,
+            "XP": 20000
+          },
+          {
+            "Level": 7,
+            "XP": 40000
+          },
+          {
+            "Level": 8,
+            "XP": 70000
+          },
+          {
+            "Level": 9,
+            "XP": 110000
+          },
+          {
+            "Level": 10,
+            "XP": 160000
+          },
+          {
+            "Level": 11,
+            "XP": 220000
+          },
+          {
+            "Level": 12,
+            "XP": 440000
+          },
+          {
+            "Level": 13,
+            "XP": 660000
+          },
+          {
+            "Level": 14,
+            "XP": 880000
+          },
+          {
+            "Level": 15,
+            "XP": 1100000
+          },
+          {
+            "Level": 16,
+            "XP": 1320000
+          },
+          {
+            "Level": 17,
+            "XP": 1540000
+          },
+          {
+            "Level": 18,
+            "XP": 1760000
+          },
+          {
+            "Level": 19,
+            "XP": 1980000
+          },
+          {
+            "Level": 20,
+            "XP": 2200000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "dex",
+            "Min": 12
+          },
+          {
+            "Ability": "int",
+            "Min": 13
+          },
+          {
+            "Ability": "cha",
+            "Min": 15
+          }
+        ],
+        "WeaponTypes": [
+          {
+            "Type": "long_bow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "short_bow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "light_crossbow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "heavy_crossbow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "hand_crossbow",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "short_sword",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "long_sword",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "other_melee",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "other_thrown",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "other_missile",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": []
+        }
+      }
+    ],
+    "Sexes": [
+      "male",
+      "female"
+    ],
+    "Languages": [
+      {
+        "Code": "common",
+        "Name": {
+          "en": "Common",
+          "fr": "Commun"
+        }
+      },
+      {
+        "Code": "dwarvish",
+        "Name": {
+          "en": "Dwarvish",
+          "fr": "Nain"
+        }
+      },
+      {
+        "Code": "elvish",
+        "Name": {
+          "en": "Elvish",
+          "fr": "Elfe"
+        }
+      },
+      {
+        "Code": "gnomish",
+        "Name": {
+          "en": "Gnomish",
+          "fr": "Gnome"
+        }
+      },
+      {
+        "Code": "halfling",
+        "Name": {
+          "en": "Halfling",
+          "fr": "Petites-gens"
+        }
+      },
+      {
+        "Code": "goblin",
+        "Name": {
+          "en": "Goblin",
+          "fr": "Gobelin"
+        }
+      },
+      {
+        "Code": "hobgoblin",
+        "Name": {
+          "en": "Hobgoblin",
+          "fr": "Hobgobelin"
+        }
+      },
+      {
+        "Code": "kobold",
+        "Name": {
+          "en": "Kobold",
+          "fr": "Kobold"
+        }
+      },
+      {
+        "Code": "orcish",
+        "Name": {
+          "en": "Orcish",
+          "fr": "Orque"
+        }
+      },
+      {
+        "Code": "gnoll",
+        "Name": {
+          "en": "Gnoll",
+          "fr": "Gnoll"
+        }
+      },
+      {
+        "Code": "burrowers",
+        "Name": {
+          "en": "Burrowers' speech",
+          "fr": "Langue des fouisseurs"
+        }
+      }
+    ],
+    "RaceLanguages": [
+      {
+        "Race": "dwarf",
+        "Native": "dwarvish",
+        "List": [
+          "common",
+          "dwarvish",
+          "gnomish",
+          "goblin",
+          "kobold",
+          "orcish"
+        ]
+      },
+      {
+        "Race": "elf",
+        "Native": "elvish",
+        "List": [
+          "common",
+          "elvish",
+          "gnomish",
+          "halfling",
+          "goblin",
+          "hobgoblin",
+          "orcish",
+          "gnoll"
+        ]
+      },
+      {
+        "Race": "gnome",
+        "Native": "gnomish",
+        "List": [
+          "common",
+          "dwarvish",
+          "gnomish",
+          "halfling",
+          "goblin",
+          "kobold",
+          "burrowers"
+        ]
+      },
+      {
+        "Race": "half_elf",
+        "Native": "common",
+        "List": [
+          "common",
+          "elvish",
+          "gnomish",
+          "halfling",
+          "goblin",
+          "hobgoblin",
+          "orcish",
+          "gnoll"
+        ]
+      },
+      {
+        "Race": "halfling",
+        "Native": "halfling",
+        "List": [
+          "common",
+          "halfling",
+          "dwarvish",
+          "elvish",
+          "gnomish",
+          "goblin",
+          "orcish"
+        ]
+      },
+      {
+        "Race": "human",
+        "Native": "common",
+        "List": [
+          "common"
+        ]
+      }
+    ],
+    "Proficiencies": [
+      {
+        "ID": "agriculture",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "animal_handling",
+        "Ability": "wis",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "animal_training",
+        "Ability": "wis",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "artistic_ability",
+        "Ability": "wis",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "blacksmithing",
+        "Ability": "str",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "brewing",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "carpentry",
+        "Ability": "str",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "cobbling",
+        "Ability": "dex",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "cooking",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "dancing",
+        "Ability": "dex",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "direction_sense",
+        "Ability": "wis",
+        "Modifier": 1,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "etiquette",
+        "Ability": "cha",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "fire_building",
+        "Ability": "wis",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "fishing",
+        "Ability": "wis",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "heraldry",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "languages_modern",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "leatherworking",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "mining",
+        "Ability": "wis",
+        "Modifier": -3,
+        "Slots": 2,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "pottery",
+        "Ability": "dex",
+        "Modifier": -2,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "riding_airborne",
+        "Ability": "wis",
+        "Modifier": -2,
+        "Slots": 2,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "riding_land",
+        "Ability": "wis",
+        "Modifier": 3,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "rope_use",
+        "Ability": "dex",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "seamanship",
+        "Ability": "dex",
+        "Modifier": 1,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "seamstress_tailor",
+        "Ability": "dex",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "singing",
+        "Ability": "cha",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "stonemasonry",
+        "Ability": "str",
+        "Modifier": -2,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "swimming",
+        "Ability": "str",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "weather_sense",
+        "Ability": "wis",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "weaving",
+        "Ability": "int",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "general"
+        ]
+      },
+      {
+        "ID": "ancient_history",
+        "Ability": "int",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "priest",
+          "rogue",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "astrology",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 2,
+        "Groups": [
+          "priest",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "engineering",
+        "Ability": "int",
+        "Modifier": -3,
+        "Slots": 2,
+        "Groups": [
+          "priest",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "healing",
+        "Ability": "wis",
+        "Modifier": -2,
+        "Slots": 2,
+        "Groups": [
+          "priest"
+        ]
+      },
+      {
+        "ID": "herbalism",
+        "Ability": "int",
+        "Modifier": -2,
+        "Slots": 2,
+        "Groups": [
+          "priest",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "languages_ancient",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "priest",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "local_history",
+        "Ability": "cha",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "priest",
+          "rogue"
+        ]
+      },
+      {
+        "ID": "musical_instrument",
+        "Ability": "dex",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "priest",
+          "rogue"
+        ]
+      },
+      {
+        "ID": "navigation",
+        "Ability": "int",
+        "Modifier": -2,
+        "Slots": 1,
+        "Groups": [
+          "priest",
+          "warrior",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "reading_writing",
+        "Ability": "int",
+        "Modifier": 1,
+        "Slots": 1,
+        "Groups": [
+          "priest",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "religion",
+        "Ability": "wis",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "priest",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "spellcraft",
+        "Ability": "int",
+        "Modifier": -2,
+        "Slots": 1,
+        "Groups": [
+          "priest",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "appraising",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "rogue"
+        ]
+      },
+      {
+        "ID": "blind_fighting",
+        "Ability": "",
+        "Modifier": 0,
+        "Slots": 2,
+        "Groups": [
+          "rogue",
+          "warrior"
+        ]
+      },
+      {
+        "ID": "disguise",
+        "Ability": "cha",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "rogue"
+        ]
+      },
+      {
+        "ID": "forgery",
+        "Ability": "dex",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "rogue"
+        ]
+      },
+      {
+        "ID": "gaming",
+        "Ability": "cha",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "rogue",
+          "warrior"
+        ]
+      },
+      {
+        "ID": "gem_cutting",
+        "Ability": "dex",
+        "Modifier": -2,
+        "Slots": 2,
+        "Groups": [
+          "rogue",
+          "wizard"
+        ]
+      },
+      {
+        "ID": "juggling",
+        "Ability": "dex",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "rogue"
+        ]
+      },
+      {
+        "ID": "jumping",
+        "Ability": "str",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "rogue"
+        ]
+      },
+      {
+        "ID": "reading_lips",
+        "Ability": "int",
+        "Modifier": -2,
+        "Slots": 2,
+        "Groups": [
+          "rogue"
+        ]
+      },
+      {
+        "ID": "set_snares",
+        "Ability": "dex",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "rogue",
+          "warrior"
+        ]
+      },
+      {
+        "ID": "tightrope_walking",
+        "Ability": "dex",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "rogue"
+        ]
+      },
+      {
+        "ID": "tumbling",
+        "Ability": "dex",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "rogue"
+        ]
+      },
+      {
+        "ID": "ventriloquism",
+        "Ability": "int",
+        "Modifier": -2,
+        "Slots": 1,
+        "Groups": [
+          "rogue"
+        ]
+      },
+      {
+        "ID": "animal_lore",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "armorer",
+        "Ability": "int",
+        "Modifier": -2,
+        "Slots": 2,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "bowyer_fletcher",
+        "Ability": "dex",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "charioteering",
+        "Ability": "dex",
+        "Modifier": 2,
+        "Slots": 1,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "endurance",
+        "Ability": "con",
+        "Modifier": 0,
+        "Slots": 2,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "hunting",
+        "Ability": "wis",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "mountaineering",
+        "Ability": "",
+        "Modifier": 0,
+        "Slots": 1,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "running",
+        "Ability": "con",
+        "Modifier": -6,
+        "Slots": 1,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "survival",
+        "Ability": "int",
+        "Modifier": 0,
+        "Slots": 2,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "tracking",
+        "Ability": "wis",
+        "Modifier": 0,
+        "Slots": 2,
+        "Groups": [
+          "warrior"
+        ]
+      },
+      {
+        "ID": "weaponsmithing",
+        "Ability": "int",
+        "Modifier": -3,
+        "Slots": 3,
+        "Groups": [
+          "warrior"
+        ]
+      }
+    ],
+    "ProficiencyGroups": {
+      "bard": [
+        "rogue",
+        "warrior",
+        "wizard",
+        "general"
+      ],
+      "cleric": [
+        "priest",
+        "general"
+      ],
+      "fighter": [
+        "warrior",
+        "general"
+      ],
+      "mage": [
+        "wizard",
+        "general"
+      ],
+      "thief": [
+        "rogue",
+        "general"
+      ]
+    },
+    "ProficiencyCosts": {
+      "bard": {
+        "agriculture": 1,
+        "ancient_history": 1,
+        "animal_handling": 1,
+        "animal_lore": 1,
+        "animal_training": 1,
+        "appraising": 1,
+        "armorer": 2,
+        "artistic_ability": 1,
+        "astrology": 2,
+        "blacksmithing": 1,
+        "blind_fighting": 2,
+        "bowyer_fletcher": 1,
+        "brewing": 1,
+        "carpentry": 1,
+        "charioteering": 1,
+        "cobbling": 1,
+        "cooking": 1,
+        "dancing": 1,
+        "direction_sense": 1,
+        "disguise": 1,
+        "endurance": 2,
+        "engineering": 2,
+        "etiquette": 1,
+        "fire_building": 1,
+        "fishing": 1,
+        "forgery": 1,
+        "gaming": 1,
+        "gem_cutting": 2,
+        "healing": 3,
+        "heraldry": 1,
+        "herbalism": 2,
+        "hunting": 1,
+        "juggling": 1,
+        "jumping": 1,
+        "languages_ancient": 1,
+        "leatherworking": 1,
+        "local_history": 1,
+        "mining": 2,
+        "mountaineering": 1,
+        "musical_instrument": 1,
+        "navigation": 1,
+        "pottery": 1,
+        "reading_lips": 2,
+        "reading_writing": 1,
+        "religion": 1,
+        "riding_airborne": 2,
+        "riding_land": 1,
+        "rope_use": 1,
+        "running": 1,
+        "seamanship": 1,
+        "seamstress_tailor": 1,
+        "set_snares": 1,
+        "singing": 1,
+        "spellcraft": 1,
+        "stonemasonry": 1,
+        "survival": 2,
+        "swimming": 1,
+        "tightrope_walking": 1,
+        "tracking": 2,
+        "tumbling": 1,
+        "ventriloquism": 1,
+        "weaponsmithing": 3,
+        "weather_sense": 1,
+        "weaving": 1
+      },
+      "cleric": {
+        "agriculture": 1,
+        "ancient_history": 1,
+        "animal_handling": 1,
+        "animal_lore": 2,
+        "animal_training": 1,
+        "appraising": 2,
+        "armorer": 3,
+        "artistic_ability": 1,
+        "astrology": 2,
+        "blacksmithing": 1,
+        "blind_fighting": 3,
+        "bowyer_fletcher": 2,
+        "brewing": 1,
+        "carpentry": 1,
+        "charioteering": 2,
+        "cobbling": 1,
+        "cooking": 1,
+        "dancing": 1,
+        "direction_sense": 1,
+        "disguise": 2,
+        "endurance": 3,
+        "engineering": 2,
+        "etiquette": 1,
+        "fire_building": 1,
+        "fishing": 1,
+        "forgery": 2,
+        "gaming": 2,
+        "gem_cutting": 3,
+        "healing": 2,
+        "heraldry": 1,
+        "herbalism": 2,
+        "hunting": 2,
+        "juggling": 2,
+        "jumping": 2,
+        "languages_ancient": 1,
+        "leatherworking": 1,
+        "local_history": 1,
+        "mining": 2,
+        "mountaineering": 2,
+        "musical_instrument": 1,
+        "navigation": 1,
+        "pottery": 1,
+        "reading_lips": 3,
+        "reading_writing": 1,
+        "religion": 1,
+        "riding_airborne": 2,
+        "riding_land": 1,
+        "rope_use": 1,
+        "running": 2,
+        "seamanship": 1,
+        "seamstress_tailor": 1,
+        "set_snares": 2,
+        "singing": 1,
+        "spellcraft": 1,
+        "stonemasonry": 1,
+        "survival": 3,
+        "swimming": 1,
+        "tightrope_walking": 2,
+        "tracking": 3,
+        "tumbling": 2,
+        "ventriloquism": 2,
+        "weaponsmithing": 4,
+        "weather_sense": 1,
+        "weaving": 1
+      },
+      "fighter": {
+        "agriculture": 1,
+        "ancient_history": 2,
+        "animal_handling": 1,
+        "animal_lore": 1,
+        "animal_training": 1,
+        "appraising": 2,
+        "armorer": 2,
+        "artistic_ability": 1,
+        "astrology": 3,
+        "blacksmithing": 1,
+        "blind_fighting": 2,
+        "bowyer_fletcher": 1,
+        "brewing": 1,
+        "carpentry": 1,
+        "charioteering": 1,
+        "cobbling": 1,
+        "cooking": 1,
+        "dancing": 1,
+        "direction_sense": 1,
+        "disguise": 2,
+        "endurance": 2,
+        "engineering": 3,
+        "etiquette": 1,
+        "fire_building": 1,
+        "fishing": 1,
+        "forgery": 2,
+        "gaming": 1,
+        "gem_cutting": 3,
+        "healing": 3,
+        "heraldry": 1,
+        "herbalism": 3,
+        "hunting": 1,
+        "juggling": 2,
+        "jumping": 2,
+        "languages_ancient": 2,
+        "leatherworking": 1,
+        "local_history": 2,
+        "mining": 2,
+        "mountaineering": 1,
+        "musical_instrument": 2,
+        "navigation": 1,
+        "pottery": 1,
+        "reading_lips": 3,
+        "reading_writing": 2,
+        "religion": 2,
+        "riding_airborne": 2,
+        "riding_land": 1,
+        "rope_use": 1,
+        "running": 1,
+        "seamanship": 1,
+        "seamstress_tailor": 1,
+        "set_snares": 1,
+        "singing": 1,
+        "spellcraft": 2,
+        "stonemasonry": 1,
+        "survival": 2,
+        "swimming": 1,
+        "tightrope_walking": 2,
+        "tracking": 2,
+        "tumbling": 2,
+        "ventriloquism": 2,
+        "weaponsmithing": 3,
+        "weather_sense": 1,
+        "weaving": 1
+      },
+      "mage": {
+        "agriculture": 1,
+        "ancient_history": 1,
+        "animal_handling": 1,
+        "animal_lore": 2,
+        "animal_training": 1,
+        "appraising": 2,
+        "armorer": 3,
+        "artistic_ability": 1,
+        "astrology": 2,
+        "blacksmithing": 1,
+        "blind_fighting": 3,
+        "bowyer_fletcher": 2,
+        "brewing": 1,
+        "carpentry": 1,
+        "charioteering": 2,
+        "cobbling": 1,
+        "cooking": 1,
+        "dancing": 1,
+        "direction_sense": 1,
+        "disguise": 2,
+        "endurance": 3,
+        "engineering": 2,
+        "etiquette": 1,
+        "fire_building": 1,
+        "fishing": 1,
+        "forgery": 2,
+        "gaming": 2,
+        "gem_cutting": 2,
+        "healing": 3,
+        "heraldry": 1,
+        "herbalism": 2,
+        "hunting": 2,
+        "juggling": 2,
+        "jumping": 2,
+        "languages_ancient": 1,
+        "leatherworking": 1,
+        "local_history": 2,
+        "mining": 2,
+        "mountaineering": 2,
+        "musical_instrument": 2,
+        "navigation": 1,
+        "pottery": 1,
+        "reading_lips": 3,
+        "reading_writing": 1,
+        "religion": 1,
+        "riding_airborne": 2,
+        "riding_land": 1,
+        "rope_use": 1,
+        "running": 2,
+        "seamanship": 1,
+        "seamstress_tailor": 1,
+        "set_snares": 2,
+        "singing": 1,
+        "spellcraft": 1,
+        "stonemasonry": 1,
+        "survival": 3,
+        "swimming": 1,
+        "tightrope_walking": 2,
+        "tracking": 3,
+        "tumbling": 2,
+        "ventriloquism": 2,
+        "weaponsmithing": 4,
+        "weather_sense": 1,
+        "weaving": 1
+      },
+      "thief": {
+        "agriculture": 1,
+        "ancient_history": 1,
+        "animal_handling": 1,
+        "animal_lore": 2,
+        "animal_training": 1,
+        "appraising": 1,
+        "armorer": 3,
+        "artistic_ability": 1,
+        "astrology": 3,
+        "blacksmithing": 1,
+        "blind_fighting": 2,
+        "bowyer_fletcher": 2,
+        "brewing": 1,
+        "carpentry": 1,
+        "charioteering": 2,
+        "cobbling": 1,
+        "cooking": 1,
+        "dancing": 1,
+        "direction_sense": 1,
+        "disguise": 1,
+        "endurance": 3,
+        "engineering": 3,
+        "etiquette": 1,
+        "fire_building": 1,
+        "fishing": 1,
+        "forgery": 1,
+        "gaming": 1,
+        "gem_cutting": 2,
+        "healing": 3,
+        "heraldry": 1,
+        "herbalism": 3,
+        "hunting": 2,
+        "juggling": 1,
+        "jumping": 1,
+        "languages_ancient": 2,
+        "leatherworking": 1,
+        "local_history": 1,
+        "mining": 2,
+        "mountaineering": 2,
+        "musical_instrument": 1,
+        "navigation": 2,
+        "pottery": 1,
+        "reading_lips": 2,
+        "reading_writing": 2,
+        "religion": 2,
+        "riding_airborne": 2,
+        "riding_land": 1,
+        "rope_use": 1,
+        "running": 2,
+        "seamanship": 1,
+        "seamstress_tailor": 1,
+        "set_snares": 1,
+        "singing": 1,
+        "spellcraft": 2,
+        "stonemasonry": 1,
+        "survival": 3,
+        "swimming": 1,
+        "tightrope_walking": 1,
+        "tracking": 3,
+        "tumbling": 1,
+        "ventriloquism": 1,
+        "weaponsmithing": 4,
+        "weather_sense": 1,
+        "weaving": 1
+      }
+    },
+    "ScoreMethods": [
+      {
+        "Code": "I",
+        "Rolls": 6,
+        "Dice": 3,
+        "DropLowest": false,
+        "Assign": "in_order",
+        "Keep": 6,
+        "Base": 0,
+        "Max": 0
+      },
+      {
+        "Code": "II",
+        "Rolls": 12,
+        "Dice": 3,
+        "DropLowest": false,
+        "Assign": "keep_per_ability",
+        "Keep": 6,
+        "Base": 0,
+        "Max": 0
+      },
+      {
+        "Code": "III",
+        "Rolls": 6,
+        "Dice": 3,
+        "DropLowest": false,
+        "Assign": "arrange",
+        "Keep": 6,
+        "Base": 0,
+        "Max": 0
+      },
+      {
+        "Code": "IV",
+        "Rolls": 12,
+        "Dice": 3,
+        "DropLowest": false,
+        "Assign": "arrange",
+        "Keep": 6,
+        "Base": 0,
+        "Max": 0
+      },
+      {
+        "Code": "V",
+        "Rolls": 6,
+        "Dice": 4,
+        "DropLowest": true,
+        "Assign": "arrange",
+        "Keep": 6,
+        "Base": 0,
+        "Max": 0
+      },
+      {
+        "Code": "VI",
+        "Rolls": 7,
+        "Dice": 1,
+        "DropLowest": false,
+        "Assign": "add_to_base",
+        "Keep": 7,
+        "Base": 8,
+        "Max": 18
+      }
+    ],
+    "RaceAdjustments": [
+      {
+        "Race": "dwarf",
+        "Adjustments": {
+          "cha": -1,
+          "con": 1,
+          "dex": 0,
+          "int": 0,
+          "str": 0,
+          "wis": 0
+        }
+      },
+      {
+        "Race": "elf",
+        "Adjustments": {
+          "cha": 0,
+          "con": -1,
+          "dex": 1,
+          "int": 0,
+          "str": 0,
+          "wis": 0
+        }
+      },
+      {
+        "Race": "gnome",
+        "Adjustments": {
+          "cha": 0,
+          "con": 0,
+          "dex": 0,
+          "int": 1,
+          "str": 0,
+          "wis": -1
+        }
+      },
+      {
+        "Race": "half_elf",
+        "Adjustments": {
+          "cha": 0,
+          "con": 0,
+          "dex": 0,
+          "int": 0,
+          "str": 0,
+          "wis": 0
+        }
+      },
+      {
+        "Race": "halfling",
+        "Adjustments": {
+          "cha": 0,
+          "con": 0,
+          "dex": 1,
+          "int": 0,
+          "str": -1,
+          "wis": 0
+        }
+      },
+      {
+        "Race": "human",
+        "Adjustments": {
+          "cha": 0,
+          "con": 0,
+          "dex": 0,
+          "int": 0,
+          "str": 0,
+          "wis": 0
+        }
+      }
+    ],
+    "RaceIdentity": [
+      {
+        "Race": "dwarf",
+        "Height": [
+          {
+            "Sex": "male",
+            "Count": 1,
+            "Sides": 10,
+            "Range": {
+              "Min": 111.7,
+              "Max": 134.7
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 1,
+            "Sides": 10,
+            "Range": {
+              "Min": 106.6,
+              "Max": 129.6
+            }
+          }
+        ],
+        "Weight": [
+          {
+            "Sex": "male",
+            "Count": 4,
+            "Sides": 10,
+            "Range": {
+              "Min": 60.7,
+              "Max": 77.2
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 4,
+            "Sides": 10,
+            "Range": {
+              "Min": 49.4,
+              "Max": 65.8
+            }
+          }
+        ],
+        "Age": {
+          "Sex": "",
+          "Count": 5,
+          "Sides": 6,
+          "Range": {
+            "Min": 45,
+            "Max": 450
+          }
+        },
+        "StartAge": {
+          "Min": 45,
+          "Max": 70
+        }
+      },
+      {
+        "Race": "elf",
+        "Height": [
+          {
+            "Sex": "male",
+            "Count": 1,
+            "Sides": 10,
+            "Range": {
+              "Min": 142.2,
+              "Max": 165.1
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 1,
+            "Sides": 10,
+            "Range": {
+              "Min": 129.5,
+              "Max": 152.4
+            }
+          }
+        ],
+        "Weight": [
+          {
+            "Sex": "male",
+            "Count": 3,
+            "Sides": 10,
+            "Range": {
+              "Min": 42.1,
+              "Max": 54.5
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 3,
+            "Sides": 10,
+            "Range": {
+              "Min": 33.1,
+              "Max": 45.4
+            }
+          }
+        ],
+        "Age": {
+          "Sex": "",
+          "Count": 5,
+          "Sides": 6,
+          "Range": {
+            "Min": 105,
+            "Max": 750
+          }
+        },
+        "StartAge": {
+          "Min": 105,
+          "Max": 130
+        }
+      },
+      {
+        "Race": "gnome",
+        "Height": [
+          {
+            "Sex": "male",
+            "Count": 1,
+            "Sides": 6,
+            "Range": {
+              "Min": 99,
+              "Max": 111.8
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 1,
+            "Sides": 6,
+            "Range": {
+              "Min": 93.9,
+              "Max": 106.7
+            }
+          }
+        ],
+        "Weight": [
+          {
+            "Sex": "male",
+            "Count": 5,
+            "Sides": 4,
+            "Range": {
+              "Min": 34.9,
+              "Max": 41.8
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 5,
+            "Sides": 4,
+            "Range": {
+              "Min": 33.1,
+              "Max": 40
+            }
+          }
+        ],
+        "Age": {
+          "Sex": "",
+          "Count": 3,
+          "Sides": 12,
+          "Range": {
+            "Min": 63,
+            "Max": 500
+          }
+        },
+        "StartAge": {
+          "Min": 63,
+          "Max": 96
+        }
+      },
+      {
+        "Race": "half_elf",
+        "Height": [
+          {
+            "Sex": "male",
+            "Count": 2,
+            "Sides": 6,
+            "Range": {
+              "Min": 157.4,
+              "Max": 182.9
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 2,
+            "Sides": 6,
+            "Range": {
+              "Min": 152.4,
+              "Max": 177.8
+            }
+          }
+        ],
+        "Weight": [
+          {
+            "Sex": "male",
+            "Count": 3,
+            "Sides": 12,
+            "Range": {
+              "Min": 51.2,
+              "Max": 66.3
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 3,
+            "Sides": 12,
+            "Range": {
+              "Min": 39.9,
+              "Max": 54.9
+            }
+          }
+        ],
+        "Age": {
+          "Sex": "",
+          "Count": 1,
+          "Sides": 6,
+          "Range": {
+            "Min": 16,
+            "Max": 185
+          }
+        },
+        "StartAge": {
+          "Min": 16,
+          "Max": 21
+        }
+      },
+      {
+        "Race": "halfling",
+        "Height": [
+          {
+            "Sex": "male",
+            "Count": 2,
+            "Sides": 8,
+            "Range": {
+              "Min": 86.3,
+              "Max": 122
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 2,
+            "Sides": 8,
+            "Range": {
+              "Min": 81.2,
+              "Max": 116.9
+            }
+          }
+        ],
+        "Weight": [
+          {
+            "Sex": "male",
+            "Count": 5,
+            "Sides": 4,
+            "Range": {
+              "Min": 25.8,
+              "Max": 32.7
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 5,
+            "Sides": 4,
+            "Range": {
+              "Min": 24,
+              "Max": 30.9
+            }
+          }
+        ],
+        "Age": {
+          "Sex": "",
+          "Count": 3,
+          "Sides": 4,
+          "Range": {
+            "Min": 23,
+            "Max": 200
+          }
+        },
+        "StartAge": {
+          "Min": 23,
+          "Max": 32
+        }
+      },
+      {
+        "Race": "human",
+        "Height": [
+          {
+            "Sex": "male",
+            "Count": 2,
+            "Sides": 10,
+            "Range": {
+              "Min": 157.4,
+              "Max": 203.2
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 2,
+            "Sides": 10,
+            "Range": {
+              "Min": 154.9,
+              "Max": 200.7
+            }
+          }
+        ],
+        "Weight": [
+          {
+            "Sex": "male",
+            "Count": 6,
+            "Sides": 10,
+            "Range": {
+              "Min": 66.2,
+              "Max": 90.8
+            }
+          },
+          {
+            "Sex": "female",
+            "Count": 6,
+            "Sides": 10,
+            "Range": {
+              "Min": 48,
+              "Max": 72.6
+            }
+          }
+        ],
+        "Age": {
+          "Sex": "",
+          "Count": 1,
+          "Sides": 4,
+          "Range": {
+            "Min": 16,
+            "Max": 130
+          }
+        },
+        "StartAge": {
+          "Min": 16,
+          "Max": 19
+        }
+      }
+    ],
+    "WizardSpells": [
+      {
+        "ID": "alarm",
+        "Level": 1
+      },
+      {
+        "ID": "armor",
+        "Level": 1
+      },
+      {
+        "ID": "burning_hands",
+        "Level": 1
+      },
+      {
+        "ID": "chromatic_orb",
+        "Level": 1
+      },
+      {
+        "ID": "detect_magic",
+        "Level": 1
+      },
+      {
+        "ID": "enlarge",
+        "Level": 1
+      },
+      {
+        "ID": "fist_of_stone",
+        "Level": 1
+      },
+      {
+        "ID": "identify",
+        "Level": 1
+      },
+      {
+        "ID": "light",
+        "Level": 1
+      },
+      {
+        "ID": "magic_missile",
+        "Level": 1
+      },
+      {
+        "ID": "sleep",
+        "Level": 1
+      },
+      {
+        "ID": "melfs_acid_arrow",
+        "Level": 2
+      },
+      {
+        "ID": "mirror_image",
+        "Level": 2
+      },
+      {
+        "ID": "strength",
+        "Level": 2
+      },
+      {
+        "ID": "tashas_uncontrollable_hideous_laughter",
+        "Level": 2
+      },
+      {
+        "ID": "dispel_magic",
+        "Level": 3
+      },
+      {
+        "ID": "fireball",
+        "Level": 3
+      },
+      {
+        "ID": "haste",
+        "Level": 3
+      },
+      {
+        "ID": "lightning_bolt",
+        "Level": 3
+      },
+      {
+        "ID": "slow",
+        "Level": 3
+      },
+      {
+        "ID": "ice_storm",
+        "Level": 4
+      },
+      {
+        "ID": "improved_strength",
+        "Level": 4
+      },
+      {
+        "ID": "mordenkainens_force_missiles",
+        "Level": 4
+      },
+      {
+        "ID": "polymorph_self",
+        "Level": 4
+      },
+      {
+        "ID": "rarys_mnemonic_enhancer",
+        "Level": 4
+      },
+      {
+        "ID": "stoneskin",
+        "Level": 4
+      },
+      {
+        "ID": "vitriolic_sphere",
+        "Level": 4
+      },
+      {
+        "ID": "wall_of_fire",
+        "Level": 4
+      },
+      {
+        "ID": "wall_of_ice",
+        "Level": 4
+      },
+      {
+        "ID": "cloudkill",
+        "Level": 5
+      },
+      {
+        "ID": "magic_jar",
+        "Level": 5
+      },
+      {
+        "ID": "chain_lightning",
+        "Level": 6
+      },
+      {
+        "ID": "death_fog",
+        "Level": 6
+      },
+      {
+        "ID": "incendiary_cloud",
+        "Level": 8
+      },
+      {
+        "ID": "meteor_swarm",
+        "Level": 9
+      }
+    ],
+    "MinAbility": 3,
+    "MaxAbility": 19,
+    "MinHPMax": 1,
+    "MaxHPMax": 999,
+    "MinXP": 0,
+    "MaxXP": 100000000,
+    "MinStrExceptional": 1,
+    "MaxStrExceptional": 100,
+    "MaxSkillPoints": 95,
+    "MaxNameLen": 40
+  },
+  "saves bard dwarf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves bard elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves bard gnome": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves bard half_elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves bard halfling": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves bard human": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves cleric dwarf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 10,
+      "RodStaffWand": 14,
+      "PetriPoly": 13,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves cleric elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 10,
+      "RodStaffWand": 14,
+      "PetriPoly": 13,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves cleric gnome": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 10,
+      "RodStaffWand": 14,
+      "PetriPoly": 13,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves cleric half_elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 10,
+      "RodStaffWand": 14,
+      "PetriPoly": 13,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves cleric halfling": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 10,
+      "RodStaffWand": 14,
+      "PetriPoly": 13,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves cleric human": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 10,
+      "RodStaffWand": 14,
+      "PetriPoly": 13,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves fighter dwarf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 15,
+      "PetriPoly": 14,
+      "Breath": 16,
+      "Spell": 16
+    }
+  },
+  "saves fighter elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 15,
+      "PetriPoly": 14,
+      "Breath": 16,
+      "Spell": 16
+    }
+  },
+  "saves fighter gnome": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 15,
+      "PetriPoly": 14,
+      "Breath": 16,
+      "Spell": 16
+    }
+  },
+  "saves fighter half_elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 15,
+      "PetriPoly": 14,
+      "Breath": 16,
+      "Spell": 16
+    }
+  },
+  "saves fighter halfling": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 15,
+      "PetriPoly": 14,
+      "Breath": 16,
+      "Spell": 16
+    }
+  },
+  "saves fighter human": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 15,
+      "PetriPoly": 14,
+      "Breath": 16,
+      "Spell": 16
+    }
+  },
+  "saves mage dwarf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 11,
+      "PetriPoly": 13,
+      "Breath": 15,
+      "Spell": 12
+    }
+  },
+  "saves mage elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 11,
+      "PetriPoly": 13,
+      "Breath": 15,
+      "Spell": 12
+    }
+  },
+  "saves mage gnome": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 11,
+      "PetriPoly": 13,
+      "Breath": 15,
+      "Spell": 12
+    }
+  },
+  "saves mage half_elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 11,
+      "PetriPoly": 13,
+      "Breath": 15,
+      "Spell": 12
+    }
+  },
+  "saves mage halfling": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 11,
+      "PetriPoly": 13,
+      "Breath": 15,
+      "Spell": 12
+    }
+  },
+  "saves mage human": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 11,
+      "PetriPoly": 13,
+      "Breath": 15,
+      "Spell": 12
+    }
+  },
+  "saves thief dwarf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves thief elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves thief gnome": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves thief half_elf": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves thief halfling": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "saves thief human": {
+    "raceSaveBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "saves": {
+      "ParaPoison": 13,
+      "RodStaffWand": 14,
+      "PetriPoly": 12,
+      "Breath": 16,
+      "Spell": 15
+    }
+  },
+  "warnings bard elven chain, staff": null,
+  "warnings bard leather and blunt": null,
+  "warnings bard mail and sword": [
+    {
+      "ItemID": "fixture_medium_shield",
+      "Code": "armour_not_allowed"
+    }
+  ],
+  "warnings cleric elven chain, staff": [
+    {
+      "ItemID": "fixture_short_sword",
+      "Code": "weapon_not_allowed"
+    },
+    {
+      "ItemID": "fixture_javelin",
+      "Code": "weapon_not_allowed"
+    }
+  ],
+  "warnings cleric leather and blunt": [
+    {
+      "ItemID": "fixture_dagger",
+      "Code": "weapon_not_allowed"
+    },
+    {
+      "ItemID": "fixture_long_bow",
+      "Code": "weapon_not_allowed"
+    }
+  ],
+  "warnings cleric mail and sword": [
+    {
+      "ItemID": "fixture_long_sword",
+      "Code": "weapon_not_allowed"
+    }
+  ],
+  "warnings fighter elven chain, staff": null,
+  "warnings fighter leather and blunt": null,
+  "warnings fighter mail and sword": null,
+  "warnings mage elven chain, staff": [
+    {
+      "ItemID": "fixture_elven_chain_mail",
+      "Code": "armour_not_allowed"
+    },
+    {
+      "ItemID": "fixture_short_sword",
+      "Code": "weapon_not_allowed"
+    },
+    {
+      "ItemID": "fixture_javelin",
+      "Code": "weapon_not_allowed"
+    },
+    {
+      "ItemID": "fixture_footmans_mace",
+      "Code": "weapon_not_allowed"
+    }
+  ],
+  "warnings mage leather and blunt": [
+    {
+      "ItemID": "fixture_leather",
+      "Code": "armour_not_allowed"
+    },
+    {
+      "ItemID": "fixture_club",
+      "Code": "weapon_not_allowed"
+    },
+    {
+      "ItemID": "fixture_long_bow",
+      "Code": "weapon_not_allowed"
+    }
+  ],
+  "warnings mage mail and sword": [
+    {
+      "ItemID": "fixture_chain_mail",
+      "Code": "armour_not_allowed"
+    },
+    {
+      "ItemID": "fixture_medium_shield",
+      "Code": "armour_not_allowed"
+    },
+    {
+      "ItemID": "fixture_long_sword",
+      "Code": "weapon_not_allowed"
+    }
+  ],
+  "warnings thief elven chain, staff": [
+    {
+      "ItemID": "fixture_javelin",
+      "Code": "weapon_not_allowed"
+    },
+    {
+      "ItemID": "fixture_footmans_mace",
+      "Code": "weapon_not_allowed"
+    }
+  ],
+  "warnings thief leather and blunt": [
+    {
+      "ItemID": "fixture_long_bow",
+      "Code": "weapon_not_allowed"
+    }
+  ],
+  "warnings thief mail and sword": [
+    {
+      "ItemID": "fixture_chain_mail",
+      "Code": "armour_not_allowed"
+    },
+    {
+      "ItemID": "fixture_medium_shield",
+      "Code": "armour_not_allowed"
+    }
+  ]
+}

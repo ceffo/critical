@@ -180,6 +180,13 @@ func fixtureClass(t *testing.T, class string) classes.Class {
 	return def
 }
 
+func fixtureRace(t *testing.T, race string) classes.Race {
+	t.Helper()
+	def, ok := cataloguetest.Definitions(t).Race(race)
+	require.True(t, ok, race)
+	return def
+}
+
 // rogueSkills is tbl's RogueSkills with the fixture class's rogue_skills.
 func rogueSkills(t *testing.T, tbl *ruletablesvc.Tables, class, race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
 	t.Helper()

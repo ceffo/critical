@@ -2,7 +2,7 @@
 
 **Status**: accepted 2026-10-21 (the user's triage of 2026-10-21; the details beyond the triage
 accepted 2026-10-21 by the supervisor and the user). The backend is built (steps 1 to 4, 6, 7, the
-API of step 8 and the migration of step 10); the Ruleset screen (step 8) is a later item. The level-limit
+API of step 8 and the migration of step 10); the Ruleset screen (step 8) is built for admins (house rules, crit table, success-effect values; read-only for players, the audit list and adding or removing a success effect are later). The level-limit
 warning of step 5 is deferred to the multi-class items: [ADR 0042](0042-multi-class-and-dual-class.md)
 checks the race's level limit per class entry (`level_limit`), so it is built there, see "As built". Amends
 [ADR 0001](0001-critical-hits.md) step 4, [ADR 0030](0030-classes-and-races.md) step 21 and

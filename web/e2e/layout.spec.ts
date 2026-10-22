@@ -1171,9 +1171,9 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
     expect(
       Math.abs(icon.x + icon.width / 2 - (btn.x + 22)),
     ).toBeLessThanOrEqual(1);
-    // No empty band: the act panel ends under its content (the crit table line) plus its padding,
+    // No empty band: the act panel ends under its content (the attack form) plus its padding,
     // unless the result panel beside it is taller.
-    const content = (await page.getByTestId("crit-table").boundingBox())!;
+    const content = (await attackForm(page).boundingBox())!;
     const box = (await actions.boundingBox())!;
     const result = (await page
       .getByRole("region", { name: "Detail", exact: true })
@@ -2164,6 +2164,61 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
       // The admin page may scroll as a page (a long user list), but nothing escapes its scrollers.
       expect(await escapedAbsolutes(page), `admin, ${where}`).toEqual([]);
       await snap(page, `admin-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+});
+
+// The Ruleset screen (ADR 0041 step 8), French first: the crit table with a long error from the
+// server, the house-rule switches with the level limits mode and the success effects are never
+// cut, fr and en, 1280x800 to 2560x1440. The page may scroll as a page, but nothing escapes its
+// scrollers.
+test("ruleset screen: crit table, house rules and success effects uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.goto("/ruleset");
+  const crit = page.getByTestId("crit-table");
+  const rules = page.getByTestId("ruleset-house-rules");
+  const effects = page.getByTestId("ruleset-success-effects");
+  await expect(crit.getByRole("group", { name: /^Plage 1$/ })).toBeVisible();
+  await expect(effects).toContainText("Acrobatie");
+
+  for (const lang of ["fr", "en"] as const) {
+    if (lang === "en") {
+      await page.goto("/");
+      await chooseLanguage(page, "en");
+      await page.goto("/ruleset");
+      await expect(effects).toContainText("Tumbling");
+    }
+    // The longest message there is: the server's refusal of the table, shown under the rows.
+    await crit
+      .getByLabel(lang === "fr" ? "À" : "To")
+      .first()
+      .fill("40");
+    await crit
+      .getByRole("button", {
+        name: lang === "fr" ? "Enregistrer la table" : "Save table",
+      })
+      .click();
+    await expect(crit.getByRole("alert")).toBeVisible();
+    await rules.getByRole("checkbox").first().click();
+    await expect(rules.getByRole("status")).toBeVisible();
+    await rules.getByRole("checkbox").first().click();
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(crit, `ruleset crit table, ${where}`);
+      await expectNoClippedText(rules, `ruleset house rules, ${where}`);
+      await expectNoClippedText(effects, `ruleset success effects, ${where}`);
+      expect(await escapedAbsolutes(page), `ruleset, ${where}`).toEqual([]);
+      await snap(page, `ruleset-${lang}-${vp.width}x${vp.height}`);
     }
   }
 });

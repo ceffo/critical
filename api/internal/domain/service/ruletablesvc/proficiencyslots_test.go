@@ -4,7 +4,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -159,19 +162,55 @@ func TestWeaponSlots_Step3_ByGroupAndLevel(t *testing.T) {
 	assert.Equal(t, 0, ruletablesvc.WeaponSlots(table34["warrior"], 0, 0).LevelGained, "no level yet gains nothing")
 }
 
-// ADR 0037 step 7: the weapon types each class may pick, from its PHB list (mage p.30, cleric
-// p.33, thief p.39); the fighter and the bard pick any type.
-func TestClassWeaponTypes_Step7_PhbLists(t *testing.T) {
-	assert.Equal(t, []string{"dagger", "dart", "sling", "other_melee"}, ruletablesvc.ClassWeaponTypes("mage"))
-	assert.Equal(t, []string{"sling", "other_melee", "other_missile"}, ruletablesvc.ClassWeaponTypes("cleric"))
+// ADR 0037 step 7 (ADR 0040 step 1.6): the weapon types each class may pick are derived from its
+// equipment list and the weapon catalogue, with no Go list of them: the mage's p.30, the
+// cleric's p.33 (blunt weapons, a launcher by its bullets) and the thief's p.39 lists. The
+// fighter and the bard pick any type. The thief's lasso is in no catalogue weapon, so its
+// other_thrown type is not derived.
+func TestClassWeaponTypes_Step7_DerivedFromTheEquipmentList(t *testing.T) {
+	defs := cataloguetest.Definitions(t)
+	pick := func(class string) classes.Equipment {
+		c, ok := defs.Class(class)
+		require.True(t, ok, class)
+		return c.Equipment
+	}
+	assert.Equal(t, []string{"dagger", "dart", "sling", "other_melee"}, pick("mage").PickTypes)
+	assert.Equal(t, []string{"sling", "other_melee", "other_missile"}, pick("cleric").PickTypes)
 	assert.Equal(t, []string{
-		"short_bow", "hand_crossbow", "dagger", "dart", "sling", "short_sword", "long_sword", "other_melee", "other_thrown",
-	}, ruletablesvc.ClassWeaponTypes("thief"))
-	assert.Nil(t, ruletablesvc.ClassWeaponTypes("fighter"))
-	assert.Nil(t, ruletablesvc.ClassWeaponTypes("bard"))
-	assert.False(t, ruletablesvc.WeaponTypeAllowed("mage", "long_sword"))
-	assert.False(t, ruletablesvc.WeaponTypeAllowed("cleric", "short_sword"))
-	assert.False(t, ruletablesvc.WeaponTypeAllowed("thief", "long_bow"))
-	assert.True(t, ruletablesvc.WeaponTypeAllowed("fighter", "long_bow"))
-	assert.True(t, ruletablesvc.WeaponTypeAllowed("bard", "heavy_crossbow"))
+		"short_bow", "hand_crossbow", "dagger", "dart", "sling", "short_sword", "long_sword", "other_melee",
+	}, pick("thief").PickTypes)
+	assert.Nil(t, pick("fighter").PickTypes)
+	assert.Nil(t, pick("bard").PickTypes)
+	assert.False(t, pick("mage").WeaponTypeAllowed("long_sword"))
+	assert.False(t, pick("cleric").WeaponTypeAllowed("short_sword"))
+	assert.False(t, pick("thief").WeaponTypeAllowed("long_bow"))
+	assert.True(t, pick("fighter").WeaponTypeAllowed("long_bow"))
+	assert.True(t, pick("bard").WeaponTypeAllowed("heavy_crossbow"))
+}
+
+// ADR 0037 step 7: the pick types of a class the code has never seen come out of its list and the
+// catalogue with no code change: a test class listing the dagger type and the spear by code gets
+// both types; a blunt-only one gets the types of the blunt catalogue weapons, a launcher by its
+// ammunition; a class with no weapon limit is absent from the map.
+func TestWeaponPickTypes_Step7_AnyClassFromItsEquipment(t *testing.T) {
+	defs := cataloguetest.Definitions(t)
+	mk := func(id string, e classes.Equipment) classes.Class {
+		c, _ := defs.Class("fighter")
+		c.ID, c.Equipment = id, e
+		return c
+	}
+	reg, err := classes.New([]classes.Class{
+		mk("test_lister", classes.Equipment{WeaponTypes: []string{"dagger"}, Weapons: []classes.WeaponRef{{Code: "spear", WeaponType: "other_melee"}}}),
+		mk("test_blunt", classes.Equipment{BluntOnly: true}),
+		mk("test_free", classes.Equipment{Shields: true}),
+	}, defs.GroupDefs(), defs.Races())
+	require.NoError(t, err)
+	eq, ok := cataloguetest.Tables(t).Equipment()
+	require.True(t, ok)
+
+	got := ruletablesvc.WeaponPickTypes(reg, eq)
+	assert.Equal(t, map[string][]string{
+		"test_lister": {"dagger", "other_melee"},
+		"test_blunt":  {"sling", "other_melee", "other_missile"},
+	}, got)
 }

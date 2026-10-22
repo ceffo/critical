@@ -187,10 +187,13 @@ func (d Details) WithNative(native string) Details {
 // RangeWarnings are ADR 0032 step 5.2: the height, weight and age of a
 // character of race and the details' sex that lie outside the table range, one
 // warning each, never a refusal. A number not set is not checked, a race
-// that is none of the six checks nothing, and a missing sex checks against the
+// the catalogue does not define (row nil) checks nothing, and a missing sex checks against the
 // union of the two (step 5.1).
-func (d Details) RangeWarnings(race string) []Warning {
+func (d Details) RangeWarnings(row *ruletablesvc.IdentityRow) []Warning {
 	d = d.Coded()
+	if row == nil {
+		return nil
+	}
 	var out []Warning
 	check := func(code, field string, v float64, r ruletablesvc.Range, ok bool) {
 		if v == 0 || !ok || (v >= r.Min && v <= r.Max) {
@@ -198,12 +201,9 @@ func (d Details) RangeWarnings(race string) []Warning {
 		}
 		out = append(out, Warning{Code: code, Field: field, Value: &v, Min: &r.Min, Max: &r.Max})
 	}
-	r, ok := ruletablesvc.HeightRange(race, d.Sex)
-	check(CodeHeightOutsideRange, FieldHeight, d.Height, r, ok)
-	r, ok = ruletablesvc.WeightRange(race, d.Sex)
-	check(CodeWeightOutsideRange, FieldWeight, d.Weight, r, ok)
-	r, ok = ruletablesvc.AgeRange(race)
-	check(CodeAgeOutsideRange, FieldAge, float64(d.Age), r, ok)
+	check(CodeHeightOutsideRange, FieldHeight, d.Height, row.HeightRange(d.Sex), true)
+	check(CodeWeightOutsideRange, FieldWeight, d.Weight, row.WeightRange(d.Sex), true)
+	check(CodeAgeOutsideRange, FieldAge, float64(d.Age), row.AgeRange(), true)
 	return out
 }
 

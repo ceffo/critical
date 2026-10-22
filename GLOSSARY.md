@@ -72,6 +72,10 @@ The moment a dual-class character's new class level passes the frozen old class'
 One ability a class grants from a level, as data: a feature kind with its parameters (turning, backstab, a skill set). [ADR 0040](docs/adr/0040-classes-are-data.md) step 3. _Avoid_: power (that is a psionic word), flag.
 _Code_: Feature
 
+**Class limits** (fr: limites de classe):
+What a class may wear and wield: the body armour columns, whether it uses a shield, the weapons it may wield (by type or catalogue code) or only blunt ones. Breaking them is a warning, never a refusal; they also give the weapon types a proficiency may be picked in. [ADR 0033](docs/adr/0033-equipment.md) step 20, [ADR 0037](docs/adr/0037-proficiencies.md) step 7, [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.6.
+_Code_: WeaponRef
+
 **Feature kind** (fr: type d'aptitude):
 The mechanic a class feature drives, one of a closed list the code implements once (`turn_undead`, `rogue_skills`, `spellbook`…); the code switches on it, never on a class id. [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.
 
@@ -90,6 +94,7 @@ _Code_: AbilityRange
 
 **Race trait** (fr: trait racial):
 What a race brings; a computed one is typed, a trait kind with parameters (`con_save_bonus`, `no_exceptional_strength`), the others are text. [ADR 0040](docs/adr/0040-classes-are-data.md) step 4.
+_Code_: Trait
 
 **Ability score** (fr: caractéristique):
 One of the six scores; the **score in effect** has the app's effects applied.

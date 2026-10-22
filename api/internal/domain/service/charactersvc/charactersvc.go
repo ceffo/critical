@@ -258,7 +258,7 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 	if err != nil {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
-	s.readWarnings(c, AlignmentsOf(defs, c.Class))
+	s.readWarnings(c, defs)
 	if err := s.setFreeSpells(ctx, c, def); err != nil {
 		return nil, fmt.Errorf("character %d free spells: %w", id, err)
 	}
@@ -326,7 +326,7 @@ func (s *service) freeSpellsAt(c *Character, def classes.Class, level int) ([]sp
 // native language is always among the languages (ADR 0032 step 4.1), a character stored before
 // it was added included; the warnings follow what is read (steps 4.2, 5.2 and 8.4). The pools,
 // their warnings and the level grants are the skills module's (ADR 0037 step 17).
-func (s *service) readWarnings(c *Character, alignments []string) {
+func (s *service) readWarnings(c *Character, defs *classes.Registry) {
 	native := s.languages.Native(c.Race)
 	c.Details.Languages = skills.KnownLanguages(s.languages, c.Details.Languages)
 	c.Details = c.Details.WithNative(native)
@@ -336,8 +336,12 @@ func (s *service) readWarnings(c *Character, alignments []string) {
 		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: native,
 		Score: func(a string) (int, bool) { return c.Score(Ability(a)) },
 	})
-	c.Warnings = c.Details.Warnings(alignments)
-	c.Warnings = append(c.Warnings, c.Details.RangeWarnings(c.Race)...)
+	c.Warnings = c.Details.Warnings(AlignmentsOf(defs, c.Class))
+	var identity *ruletablesvc.IdentityRow
+	if row, ok := ruletablesvc.IdentityFor(defs, c.Race); ok {
+		identity = &row
+	}
+	c.Warnings = append(c.Warnings, c.Details.RangeWarnings(identity)...)
 	c.Warnings = append(c.Warnings, fromSkills(slotWarnings)...)
 	// ADR 0037 step 15, once the pools are known.
 	for i := range c.Derived.LevelUp.Pending {

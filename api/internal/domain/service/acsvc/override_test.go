@@ -62,6 +62,7 @@ func (f *fixture) reads() {
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Dex: 17}, nil).Once()
 	f.tables.EXPECT().DexMods(17).Return(2, -3, nil).Once()
 	f.items.EXPECT().List(mock.Anything, charID).Return([]itemsvc.Item{armour("chain", 5, itemsvc.StateWorn)}, nil).Once()
+	f.items.EXPECT().Warnings(mock.Anything, charID, mock.Anything).Return(nil, nil).Once()
 	f.effects.EXPECT().ListStatus(mock.Anything, charID).Return([]buffsvc.BuffStatus{acBuff("Protection from Evil", -2, true)}, nil).Once()
 	f.effects.EXPECT().ListPowers(mock.Anything, charID).Return([]buffsvc.ItemPower{}, nil).Once()
 }
@@ -181,4 +182,24 @@ func TestAC_Step13_RestorerWritesTheSnapshotBack(t *testing.T) {
 
 	f.overrides.EXPECT().SetACOverride(mock.Anything, charID, mock.Anything).Return(errors.New("boom")).Once()
 	require.Error(t, r.Restore(ctx, charID, snaptest.Env(`{"override":null}`)))
+}
+
+// ADR 0033 step 20: the AC card shows the class warnings of the worn body armour and shield only,
+// as the item service computes them from the class's equipment (ADR 0040 step 1.6).
+func TestAC_Step20_TheCardCarriesTheWornArmourWarningsOnly(t *testing.T) {
+	f := newFixture(t)
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Dex: 17}, nil).Once()
+	f.tables.EXPECT().DexMods(17).Return(2, -3, nil).Once()
+	items := []itemsvc.Item{armour("chain", 5, itemsvc.StateWorn), {ID: "sword", Category: itemsvc.CategoryWeapon, State: itemsvc.StateWielded}}
+	f.items.EXPECT().List(mock.Anything, charID).Return(items, nil).Once()
+	f.items.EXPECT().Warnings(mock.Anything, charID, items).Return([]itemsvc.Warning{
+		{ItemID: "chain", Code: itemsvc.WarnArmourNotAllowed}, {ItemID: "sword", Code: itemsvc.WarnWeaponNotAllowed},
+	}, nil).Once()
+	f.effects.EXPECT().ListStatus(mock.Anything, charID).Return(nil, nil).Once()
+	f.effects.EXPECT().ListPowers(mock.Anything, charID).Return(nil, nil).Once()
+	f.overrides.EXPECT().GetACOverride(mock.Anything, charID).Return(nil, nil).Once()
+
+	ac, err := f.svc.Get(context.Background(), charID)
+	require.NoError(t, err)
+	assert.Equal(t, []itemsvc.Warning{{ItemID: "chain", Code: itemsvc.WarnArmourNotAllowed}}, ac.Warnings)
 }

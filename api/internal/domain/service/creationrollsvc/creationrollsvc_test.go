@@ -489,7 +489,7 @@ func TestArrange_Step6_RefusesWhatTheMethodCannotMake(t *testing.T) {
 // value and the exact number of dice asserted; each total is the row's base
 // (for the sex) plus its dice, and the stored value the conversion of it.
 func TestIdentity_Step5_3_EachRowRollsItsOwnBaseAndDice(t *testing.T) {
-	for _, row := range ruletablesvc.IdentityRows() {
+	for _, row := range ruletablesvc.IdentityRows(cataloguetest.Definitions(t)) {
 		for _, sex := range []string{"male", "female"} {
 			t.Run(row.Race+" "+sex, func(t *testing.T) {
 				f := newFixture(t)

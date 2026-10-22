@@ -33,7 +33,7 @@ func TestExceptionalStrengthAllowed_Step9(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, ruletablesvc.ExceptionalStrengthAllowed(fixtureClass(t, tt.class), tt.race, tt.str))
+			assert.Equal(t, tt.want, ruletablesvc.ExceptionalStrengthAllowed(fixtureClass(t, tt.class), fixtureRace(t, tt.race), tt.str))
 		})
 	}
 }

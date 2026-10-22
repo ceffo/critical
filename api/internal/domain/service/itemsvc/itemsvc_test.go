@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
@@ -209,10 +210,17 @@ type noTx struct{}
 
 func (noTx) InTx(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
 
+// noClasses knows no class: nothing is limited.
+type noClasses struct{}
+
+func (noClasses) Class(string) (classes.Class, error) {
+	return classes.Class{}, classes.ErrUnknownClass
+}
+
 func deps(t *testing.T) fixture {
 	dice, log, chars, initiative := mocks.NewMockDice(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t), mocks.NewMockInitiative(t)
 	return fixture{
-		Deps: itemsvc.Deps{Dice: dice, Log: log, Tx: noTx{}, Chars: chars, Initiative: initiative},
+		Deps: itemsvc.Deps{Dice: dice, Log: log, Tx: noTx{}, Chars: chars, Classes: noClasses{}, Initiative: initiative},
 		dice: dice, log: log, chars: chars, initiative: initiative,
 	}
 }
@@ -399,4 +407,12 @@ func TestItem_Step1_1_Spendable(t *testing.T) {
 			assert.Equal(t, tt.want, it.Spendable("gem"))
 		})
 	}
+}
+
+// A composition without class definitions is refused: it would drop every class warning.
+func TestNew_RequiresClasses(t *testing.T) {
+	f := deps(t)
+	f.Classes = nil
+	_, err := itemsvc.New(mocks.NewMockDAL(t), f.Deps)
+	require.Error(t, err)
 }

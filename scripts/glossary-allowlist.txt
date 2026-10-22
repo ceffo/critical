@@ -26,6 +26,7 @@ Snapshotter  # Technical: port, service or wiring type (clean architecture plumb
 Notifier  # Technical: port, service or wiring type (clean architecture plumbing)
 Lookup  # Technical: port, service or wiring type (clean architecture plumbing)
 ItemLister  # Technical: port, service or wiring type (clean architecture plumbing)
+ClassLookup  # Technical: port, service or wiring type (clean architecture plumbing)
 FormStore  # Technical: port, service or wiring type (clean architecture plumbing)
 IdentityProvider  # Technical: port, service or wiring type (clean architecture plumbing)
 AmendFunc  # Technical: port, service or wiring type (clean architecture plumbing)

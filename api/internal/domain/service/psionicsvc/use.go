@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
@@ -71,6 +72,10 @@ type UseResult struct {
 // Entries already in the log must stay decodable: add fields, never rename.
 type CheckRecord struct {
 	Power string `json:"power"`
+	// Name is the power's catalogue name at write time, in every language
+	// the catalogue has (ADR 0023: names recorded in payloads stay as
+	// written), so the journal words it with no catalogue read.
+	Name localized.Text `json:"name,omitempty"`
 	// Ability, AbilityScore and PowerModifier are the catalogue score's
 	// parts; EnteredScore replaces them for a power with no score.
 	Ability       string `json:"ability,omitempty"`
@@ -156,7 +161,7 @@ func (s *service) Use(ctx context.Context, characterID int64, powerID string, re
 // checkOf is the check's breakdown before the roll: the target (step 10) and
 // the initial cost (step 11) of power p for character c.
 func checkOf(c *charactersvc.Character, p catalogue.Power, req UseRequest, mods []Modifier) (CheckRecord, error) {
-	rec := CheckRecord{Power: p.ID, Relearns: psionics.Relearns(c.PsionicPicks, p.ID), Modifiers: mods}
+	rec := CheckRecord{Power: p.ID, Name: p.Name, Relearns: psionics.Relearns(c.PsionicPicks, p.ID), Modifiers: mods}
 	switch p.InitialCost.Kind {
 	case catalogue.CostContact:
 		return CheckRecord{}, ErrNeedsContact

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { localized } from "@/i18n/localized";
+import { FALLBACK_LANG, localized } from "@/i18n/localized";
 import { useLanguagesStore } from "@/stores/languages";
 import { useItemsStore } from "@/stores/items";
 import type { LocalizedText } from "@/types/localized";
@@ -14,6 +14,8 @@ export interface InventoryNamer {
   weapon: (id: string | undefined, recorded: string) => string;
   /** A language by its catalogue code; the code itself when the catalogue does not know it. */
   language: (code: string) => string;
+  /** A name recorded as a language map in a payload, in the UI language; `recorded` when it has none. */
+  text: (text: LocalizedText | undefined, recorded: string) => string;
 }
 
 /** What the namer reads of an item or a weapon. */
@@ -39,6 +41,7 @@ export function inventoryNamer(
     weapon: named(weapons),
     language: (code) =>
       localized(lang, languages.find((l) => l.code === code)?.name) || code,
+    text: (text, recorded) => localized(lang, text) || recorded,
   };
 }
 
@@ -47,6 +50,7 @@ export const recordedNames: InventoryNamer = {
   item: (_, recorded) => recorded,
   weapon: (_, recorded) => recorded,
   language: (code) => code,
+  text: (text, recorded) => localized(FALLBACK_LANG, text) || recorded,
 };
 
 /** The namer for the current language and lists; re-renders when either changes. */

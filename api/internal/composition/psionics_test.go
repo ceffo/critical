@@ -31,9 +31,18 @@ func thiefPsionicist(t *testing.T) (*composition.BackingServices, int64) {
 // thiefPsionicistKnowing is thiefPsionicist with the given known powers.
 func thiefPsionicistKnowing(t *testing.T, picks []psionics.Pick) (*composition.BackingServices, int64) {
 	t.Helper()
+	return thiefPsionicistRolling(t, picks, nil)
+}
+
+// thiefPsionicistRolling is thiefPsionicistKnowing with known dice (nil: the
+// crypto dice).
+func thiefPsionicistRolling(t *testing.T, picks []psionics.Pick, dice composition.Dice) (*composition.BackingServices, int64) {
+	t.Helper()
 	ctx := context.Background()
 	m := memory.New()
-	bs, err := composition.Build(ctx, composition.MemoryStorage(m), fixtureConfig())
+	cfg := fixtureConfig()
+	cfg.Dice = dice
+	bs, err := composition.Build(ctx, composition.MemoryStorage(m), cfg)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	id, err := m.AddCharacter(ctx, charactersvc.Character{
@@ -302,4 +311,41 @@ func TestPicks_Step9_UndoRemovesThePick(t *testing.T) {
 	c, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, first, c.Derived.Powers.Picks)
+}
+
+// Step 11: a power's use spends its PSPs in its power_check entry, so one
+// undo gives them back and a redo spends them again. Psionic blast costs 10
+// against Wisdom 17 - 5 = 12: a 5 succeeds and spends 10, a 15 fails and
+// spends half, 5. The entry records the power's catalogue name.
+func TestActivate_Step11_UndoGivesThePSPBack(t *testing.T) {
+	ctx := context.Background()
+	dice := &attackDice{t: t, dies: []int{5, 15}, calls: map[string]int{}}
+	bs, id := thiefPsionicistRolling(t, []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "telepathy"}, {Kind: psionics.PickPower, ID: "psionic_blast"},
+	}, dice)
+
+	res, err := bs.Psionics.Use(ctx, id, "psionic_blast", psionicsvc.UseRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, 12, res.Check.Target)
+	assert.Equal(t, "Souffle psionique", res.Check.Name["fr"], "the name is recorded in every language")
+	assert.Equal(t, psionics.OutcomeSuccess, res.Check.Outcome)
+	assert.Equal(t, actionlog.PSPState{Current: 171, Max: 181}, res.PSP)
+	assert.Equal(t, 171, currentPSP(t, bs, id), "the answer is the pool as read")
+	top, ok, err := bs.Log.TopID(ctx, id)
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, res.LogEntryID, top)
+
+	undoTop(t, bs, id)
+	assert.Equal(t, 181, currentPSP(t, bs, id), "the undo gives the 10 back")
+	redoTop(t, bs, id)
+	assert.Equal(t, 171, currentPSP(t, bs, id), "the redo spends them again, no die rolled")
+
+	res, err = bs.Psionics.Use(ctx, id, "psionic_blast", psionicsvc.UseRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, psionics.OutcomeFailure, res.Check.Outcome)
+	assert.Equal(t, 166, currentPSP(t, bs, id), "a failure spends half")
+	undoTop(t, bs, id)
+	assert.Equal(t, 171, currentPSP(t, bs, id))
+	assert.Equal(t, 2, dice.calls["die"], "one d20 per use, none on undo or redo")
 }

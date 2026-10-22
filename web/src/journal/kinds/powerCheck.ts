@@ -1,15 +1,18 @@
 // A psionicist's power check (psionicsvc, ADR 0043 steps 10 and 11): the d20 against the power's
-// target and the PSPs it spent, as the entry's PSP delta. A minimal view: the power is named by its
-// id until the journal gets the powers' names.
+// target and the PSPs it spent, as the entry's PSP delta. The power is named by the name the entry
+// recorded, in the player's language (its id for an entry with none).
 import { Brain } from "@phosphor-icons/react";
 import type { TFunction } from "i18next";
 import { formatSigned } from "@/lib/format";
+import type { LocalizedText } from "@/types/localized";
 import type { LogEntry } from "@/types/log";
 import type { KindView, ShortVerdict } from "../kindView";
 
 /** The check's breakdown and outcome, as logged (psionicsvc CheckRecord). */
 export interface PowerCheckPayload {
   power: string;
+  /** The power's catalogue name when logged, in every language. */
+  name?: LocalizedText;
   ability?: string;
   abilityScore?: number;
   powerModifier?: number;
@@ -50,10 +53,10 @@ export const powerCheckKind: KindView<PowerCheckPayload> = {
       : null;
   },
   icon: Brain,
-  // "Power check (mind_thrust): d20 9 vs 13, success, PSPs -7".
-  text: (p, { t }, e) =>
+  // "Power check (Mind Thrust): d20 9 vs 13, success, PSPs -7".
+  text: (p, { t, names }, e) =>
     t("log.powerCheck", {
-      power: p.power,
+      power: names.text(p.name, p.power),
       d20: p.d20,
       target: p.target,
       verdict: verdict(p, t).text,

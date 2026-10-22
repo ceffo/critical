@@ -141,8 +141,8 @@ export function PickEditor({
   const shown = error ?? previewError;
   const errorFor = (field: string) =>
     shown && shown.field === field ? wording(shown) : null;
-  const types =
-    options?.classes.find((c) => c.class === cls)?.weaponTypes ?? [];
+  // The server says which types the character may pick (all its classes judged together).
+  const types = figures.weaponTypes ?? slots.weaponTypes ?? [];
 
   // A refusal of a field the picker does not show (a pick no longer listed).
   const hidden =

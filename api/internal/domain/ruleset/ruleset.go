@@ -61,6 +61,16 @@ type RacialLift struct {
 	DualclassAnyRace  bool
 }
 
+// WeaponLift says whether a multi-class character's blunt_only class entry
+// no longer judges every weapon alone (ADR 0041 step 2.5, ADR 0042 step
+// 16.1): with MulticlassAnyWeapon on, a weapon or a weapon proficiency type
+// any active entry's class allows is allowed. It changes neither a
+// single-class nor a dual-class character, nor a multi-class character's
+// refused specialization. Off is the book's rule.
+type WeaponLift struct {
+	MulticlassAnyWeapon bool
+}
+
 // LevelLimitsMode is how the racial level limits apply (ADR 0041 step 2.3).
 type LevelLimitsMode string
 
@@ -89,6 +99,7 @@ type Ruleset struct {
 
 	Crit        CritTable
 	RacialLift  RacialLift
+	WeaponLift  WeaponLift
 	LevelLimits LevelLimitsMode
 	// SuccessEffects are keyed by proficiency id, sorted by it.
 	SuccessEffects []SuccessEffect
@@ -110,7 +121,8 @@ func DefaultCritRows() []CritRow { return []CritRow{{From: 1, To: 100, Multiplie
 
 // Default is the content of the default ruleset a database starts with (ADR
 // 0041 step 10): the placeholder crit table, both racial lifts on (user,
-// 2026-10-21), level limits as warnings, and the Tumbling success effect (AC
+// 2026-10-21), the weapon lift off (the book's rule, ADR 0041 step 2.5),
+// level limits as warnings, and the Tumbling success effect (AC
 // -4 for the round; user, triage of 2026-10-20). The ID is the storage's.
 func Default() Ruleset {
 	return Ruleset{
@@ -204,6 +216,7 @@ type Change struct {
 const (
 	RuleCritTable      = "crit_table"
 	RuleRacialLift     = "racial_lift"
+	RuleWeaponLift     = "weapon_lift"
 	RuleSuccessEffects = "success_effects"
 )
 

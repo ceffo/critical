@@ -27,7 +27,7 @@ func TestDefault_MapsTheRowAndItsChildren(t *testing.T) {
 	q := mocks.NewMockQuerier(t)
 	q.EXPECT().RulesetByName(ctx, "default").Return(queries.Ruleset{
 		ID: 3, Name: "default", CatalogueVersion: "v1", CritPlaceholder: true,
-		MulticlassAnyRace: true, DualclassAnyRace: false, LevelLimits: "warn",
+		MulticlassAnyRace: true, DualclassAnyRace: false, LevelLimits: "warn", MulticlassAnyWeapon: true,
 	}, nil).Once()
 	q.EXPECT().ListRulesetCritRows(ctx, int64(3)).Return([]queries.ListRulesetCritRowsRow{
 		{RollFrom: 1, RollTo: 50, Multiplier: 1.5}, {RollFrom: 51, RollTo: 100, Multiplier: 2.25},
@@ -42,6 +42,7 @@ func TestDefault_MapsTheRowAndItsChildren(t *testing.T) {
 		ID: 3, Name: "default", CatalogueVersion: "v1",
 		Crit:           ruleset.CritTable{Placeholder: true, Rows: []ruleset.CritRow{{From: 1, To: 50, Multiplier: 1.5}, {From: 51, To: 100, Multiplier: 2.25}}},
 		RacialLift:     ruleset.RacialLift{MulticlassAnyRace: true, DualclassAnyRace: false},
+		WeaponLift:     ruleset.WeaponLift{MulticlassAnyWeapon: true},
 		LevelLimits:    ruleset.LevelLimitsWarn,
 		SuccessEffects: []ruleset.SuccessEffect{{ProficiencyID: "tumbling", AC: -4, Rounds: 1}},
 	}, got)

@@ -165,7 +165,8 @@ is the ruleset's ([ADR 0041](adr/0041-ruleset.md) steps 2.2, 2.3 and 5).
 A **ruleset** is the set of rules a game plays by: the books' rules plus the table's **house
 rules**. Each house rule is a typed **house rule setting** of the ruleset
 ([ADR 0041](adr/0041-ruleset.md) step 2): the crit table ([ADR 0001](adr/0001-critical-hits.md)),
-the racial lift for multi-class and dual-class, the level limits mode (`warn`) and the success
+the racial lift for multi-class and dual-class, the weapon lift for a multi-class character's
+blunt-only entry (ADR 0042 step 16.1), the level limits mode (`warn`) and the success
 effects of proficiencies (Tumbling). They belong to the ruleset (stored since the ruleset
 backend; the Ruleset screen is built for admins; the multi-class rules that read the lift are later), and a
 character reads them through a resolver (character to ruleset). One default ruleset exists, used

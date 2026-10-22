@@ -253,6 +253,8 @@ export interface ProficiencySlots {
   /** Absent from a release before the weapon pool. */
   weapon?: WeaponPool;
   weaponPicks?: WeaponPickFigures[];
+  /** The weapon types the character may pick now, the server's rule (ADR 0042 step 16.1). */
+  weaponTypes?: WeaponTypeOption[];
 }
 
 /** One weapon pick as sent: the weapon type and its slots. */
@@ -541,6 +543,9 @@ export interface CreationOptions {
   multiclassAnyRace?: boolean;
   dualclassAnyRace?: boolean;
   restrictedRaces?: string[];
+  /** The classes never part of a multi-class character (ADR 0042 step 2.1): the form leaves them
+   * out of a second or third class. Absent from a release that predates it. */
+  noMultiClass?: string[];
   /** The prime requisite score a dual-class character needs in a class it left, and in its new
    * class (ADR 0042 step 2.2). */
   dualClassOldPrime?: number;

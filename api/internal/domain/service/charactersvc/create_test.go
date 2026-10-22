@@ -567,7 +567,9 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 			},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
-		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40, MaxClasses: 3, MinLeftAtLevel: 2, MulticlassAnyRace: true, DualclassAnyRace: true, RestrictedRaces: []string{"dwarf", "elf", "gnome", "half_elf", "halfling"}, DualClassOldPrime: 15, DualClassNewPrime: 17, Sexes: []string{"male", "female"},
+		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40, MaxClasses: 3, MinLeftAtLevel: 2, MulticlassAnyRace: true, DualclassAnyRace: true, RestrictedRaces: []string{"dwarf", "elf", "gnome", "half_elf", "halfling"},
+		// ADR 0042 step 2.1: the classes the catalogue marks `multiclass: false`.
+		NoMultiClass: []string{"bard"}, DualClassOldPrime: 15, DualClassNewPrime: 17, Sexes: []string{"male", "female"},
 	}, got)
 }
 

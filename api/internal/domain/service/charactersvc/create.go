@@ -75,6 +75,9 @@ const (
 	// book's limit for, CodeDualClassNotAllowed a dual-class one.
 	CodeMultiClassNotAllowed = "multiclass_not_allowed"
 	CodeDualClassNotAllowed  = "dualclass_not_allowed"
+	// CodeMultiClassClassNotAllowed is a class of a multi-class character that the catalogue marks as
+	// never part of one (`multiclass: false`, the bard).
+	CodeMultiClassClassNotAllowed = "multiclass_class_not_allowed"
 	// CodePrimeRequisiteTooLow is a dual-class character with a prime requisite under 15 in a class
 	// it left or under 17 in its new class.
 	CodePrimeRequisiteTooLow = "prime_requisite_too_low"
@@ -283,6 +286,31 @@ func classShape(n NewCharacter) []error {
 	return out
 }
 
+// multiClassClassRefusals are ADR 0042 step 2.1's refusal of a class the catalogue marks as never
+// one of a multi-class character's classes (`multiclass: false`): each such active entry of a
+// character with more than one active entry. A class left (dual-class) is not concerned.
+func multiClassClassRefusals(n NewCharacter, defs *classes.Registry) []error {
+	active := 0
+	for _, e := range n.Classes {
+		if !e.frozen() {
+			active++
+		}
+	}
+	if active < 2 {
+		return nil
+	}
+	var out []error
+	for i, e := range n.Classes {
+		if e.frozen() {
+			continue
+		}
+		if def, ok := defs.Class(e.Class); ok && def.NoMultiClass {
+			out = append(out, &domain.FieldError{Field: n.field(i, "class"), Message: CodeMultiClassClassNotAllowed})
+		}
+	}
+	return out
+}
+
 // racesRefusals are ADR 0042 step 2's refusals of the race for the entries: the book's limit on a
 // multi-class or a dual-class race (waived by the ruleset's racial lift, ADR 0041 step 2.2, which
 // also waives DMG Table 7's dash for these characters) and the dash otherwise. The book's
@@ -440,6 +468,11 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 			refuse(err)
 			classOK = false
 		}
+		// ADR 0042 step 2.1: a class the catalogue marks as never part of a multi-class.
+		for _, err := range multiClassClassRefusals(n, defs) {
+			refuse(err)
+			classOK = false
+		}
 	}
 	switch {
 	case skillFound:
@@ -585,9 +618,13 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 // skillsAt is the skills module's verdict on a new character at its starting level (ADR 0037
 // steps 6, 10, 14 and 18, skills.Apply with nothing picked before): its picks and its languages
 // checked as the editor checks them, then the non-weapon pool. A refusal on the languages names
-// the creation form's field, DetailsField + FieldLanguages.
-func (s *service) skillsAt(c Character, n NewCharacter) (skills.Sheet, error) {
-	before := skills.Sheet{Class: c.Class, Level: c.RealizedLevel, Intelligence: c.Int, Native: s.languages.Native(c.Race)}
+// the creation form's field, DetailsField + FieldLanguages. The picks are checked under the
+// ruleset's weapon lift (ADR 0041 step 2.5).
+func (s *service) skillsAt(c Character, n NewCharacter, lift ruleset.WeaponLift) (skills.Sheet, error) {
+	before := skills.Sheet{
+		Class: c.Class, Level: c.RealizedLevel, Intelligence: c.Int, Native: s.languages.Native(c.Race),
+		MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
+	}
 	if len(c.Classes) > 0 {
 		// ADR 0042 step 15: the pools of every entry, a class left at its left-at level.
 		before.Classes = c.StoredClasses()
@@ -678,7 +715,11 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	// ADR 0037 steps 6, 10, 14 and 18: nor with picks or languages the
 	// editor refuses, nor over its non-weapon slots.
-	sheet, err := s.skillsAt(c, n)
+	rs, err := s.ruleset(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("new character: %w", err)
+	}
+	sheet, err := s.skillsAt(c, n, rs.WeaponLift)
 	if err != nil {
 		return 0, err
 	}
@@ -846,7 +887,11 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 		return nil, err
 	}
 	out.SkillPoints = budgetAt(out, k.def, entryLevel(&c, k.def.ID), c.SkillPoints)
-	if sheet, err := s.skillsAt(c, n); err != nil {
+	rs, err := s.ruleset(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("draft: %w", err)
+	}
+	if sheet, err := s.skillsAt(c, n, rs.WeaponLift); err != nil {
 		out.Refusals = append(out.Refusals, err)
 		// Refused picks are read as entered, so the step shows their figures beside the refusal.
 		c.Proficiencies, c.Details.Languages = n.Proficiencies, n.Languages
@@ -869,7 +914,7 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	if err := draftPSP(out, &c, n.PSPMax, s.rules); err != nil {
 		return nil, err
 	}
-	s.readWarnings(&c, k.defs)
+	s.readWarnings(&c, k.defs, rs.WeaponLift)
 	// ADR 0030 step 20.7: the starting spellbook's limits and refusals.
 	book, _, refusals := s.startingBook(&c, n.Spellbook)
 	out.Spellbook = book
@@ -1183,6 +1228,10 @@ type CreationOptions struct {
 	// the only multi-class ones with the lift off.
 	MulticlassAnyRace, DualclassAnyRace bool
 	RestrictedRaces                     []string
+	// NoMultiClass are the classes never part of a multi-class character (ADR 0042 step 2.1, the
+	// catalogue's `multiclass: false`), in catalogue order: the form leaves them out of a second or
+	// third class.
+	NoMultiClass []string
 	// DualClassOldPrime and DualClassNewPrime are the prime requisite scores of a dual-class
 	// character in the class it left and in its new class (step 2.2).
 	DualClassOldPrime, DualClassNewPrime int
@@ -1246,12 +1295,17 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 	out := CreationOptions{
 		MaxClasses: classes.MaxMultiClasses, MinLeftAtLevel: classes.MinLeftAtLevel,
 		MulticlassAnyRace: rs.RacialLift.MulticlassAnyRace, DualclassAnyRace: rs.RacialLift.DualclassAnyRace,
-		RestrictedRaces: []string{}, DualClassOldPrime: DualClassOldPrime, DualClassNewPrime: DualClassNewPrime,
+		RestrictedRaces: []string{}, NoMultiClass: []string{}, DualClassOldPrime: DualClassOldPrime, DualClassNewPrime: DualClassNewPrime,
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
 		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Sexes: slices.Clone(Sexes), Classes: make([]ClassOption, 0, len(defs.Classes())),
 		ScoreMethods: slices.Clone(ruletablesvc.ScoreMethods), RaceAdjustments: make([]RaceAdjustmentOption, 0, len(races)),
+	}
+	for _, def := range defs.Classes() {
+		if def.NoMultiClass {
+			out.NoMultiClass = append(out.NoMultiClass, def.ID)
+		}
 	}
 	for _, race := range races {
 		if raceOf(defs, race).Restricted() {

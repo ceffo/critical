@@ -65,6 +65,10 @@ type Class struct {
 	// BracketedConstitution is whether the class takes the parenthesised hit
 	// point adjustment of PHB Table 3's Constitution column (step 1.8).
 	BracketedConstitution bool
+	// NoMultiClass is the catalogue's `multiclass: false` (ADR 0042 step 2.1,
+	// ADR 0021 step 24): the class is never one of a multi-class character's
+	// classes. The zero value lets it be one, as an absent flag does.
+	NoMultiClass bool
 }
 
 // Group is one class group definition (ADR 0040 steps 1.2 and 7).
@@ -253,7 +257,7 @@ func checkClass(c Class, groups []string) (Class, error) {
 		PrimeRequisites: slices.Clone(c.PrimeRequisites), AbilityMinimums: mins,
 		Alignments: aligns, Experience: slices.Clone(c.Experience),
 		SpellProgression: c.SpellProgression, Features: features, Equipment: c.Equipment.clone(),
-		BracketedConstitution: c.BracketedConstitution,
+		BracketedConstitution: c.BracketedConstitution, NoMultiClass: c.NoMultiClass,
 	}, nil
 }
 

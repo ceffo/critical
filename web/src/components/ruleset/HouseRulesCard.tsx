@@ -1,25 +1,31 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { saveRacialLift } from "@/api/ruleset";
-import type { RacialLift, Ruleset } from "@/types/ruleset";
+import { saveRacialLift, saveWeaponLift } from "@/api/ruleset";
+import type { RacialLift, Ruleset, WeaponLift } from "@/types/ruleset";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /**
  * The house rules that are switches (ADR 0041 step 2): the racial lift for multi-class and
  * dual-class characters, saved as each box is ticked, and the level limits mode, shown read-only
- * while it has one value (step 8). What the lift changes for a character is for a later item; this
- * only stores the switches.
+ * while it has one value (step 8), and the weapon lift for a multi-class character (step 2.5). An
+ * admin ticks the boxes; anyone else sees the state of each in words (`editable` false). What a lift
+ * changes for a character is the server's; this only stores the switches.
  */
 export function HouseRulesCard({
   initial,
+  weaponLift,
   levelLimits,
+  editable = true,
 }: {
   initial: RacialLift;
+  weaponLift: WeaponLift;
   levelLimits: Ruleset["levelLimits"];
+  editable?: boolean;
 }) {
   const { t } = useTranslation();
   const [lift, setLift] = useState<RacialLift>(initial);
+  const [weapon, setWeapon] = useState<WeaponLift>(weaponLift);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -30,6 +36,20 @@ export function HouseRulesCard({
     setSaved(false);
     try {
       setLift(await saveRacialLift({ ...lift, [field]: value }));
+      setSaved(true);
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleWeapon(value: boolean) {
+    setBusy(true);
+    setError("");
+    setSaved(false);
+    try {
+      setWeapon(await saveWeaponLift({ multiclassAnyWeapon: value }));
       setSaved(true);
     } catch (e) {
       setError(message(e));
@@ -59,12 +79,26 @@ export function HouseRulesCard({
               type="checkbox"
               className="size-4"
               checked={lift[f]}
-              disabled={busy}
+              disabled={busy || !editable}
               onChange={(e) => void toggle(f, e.target.checked)}
             />
             {t(`ruleset.houseRules.${f}`)}
           </label>
         ))}
+        <p className="text-body text-muted-foreground">
+          {t("ruleset.houseRules.weaponHelp")}
+        </p>
+        <label className="flex w-fit items-center gap-2 text-body">
+          <input
+            type="checkbox"
+            className="size-4"
+            data-testid="ruleset-weapon-lift"
+            checked={weapon.multiclassAnyWeapon}
+            disabled={busy || !editable}
+            onChange={(e) => void toggleWeapon(e.target.checked)}
+          />
+          {t("ruleset.houseRules.multiclassAnyWeapon")}
+        </label>
         {error && (
           <p role="alert" className="text-body text-danger">
             {error}

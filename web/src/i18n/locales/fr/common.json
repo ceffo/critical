@@ -1744,6 +1744,8 @@
       "liftHelp": "Lève la restriction de classe de la race pour un personnage à plusieurs classes. Un personnage à classe unique n'est pas concerné.",
       "multiclassAnyRace": "Multi-classé : toute race",
       "dualclassAnyRace": "Double-classé : toute race",
+      "weaponHelp": "Un personnage à plusieurs classes peut utiliser toute arme qu'une de ses autres classes permet, même si l'une d'elles est limitée aux armes contondantes (le clerc). Désactivé par défaut. La spécialisation d'arme n'est pas modifiée.",
+      "multiclassAnyWeapon": "Multi-classé : toute arme",
       "saved": "Enregistré.",
       "levelLimits": "Limites de niveau",
       "levelLimitsMode": {
@@ -2794,6 +2796,7 @@
       },
       "errors": {
         "multiclass_not_allowed": "Cette race ne peut pas être multiclassée avec ce jeu de règles.",
+        "multiclass_class_not_allowed": "Cette classe ne fait jamais partie d'un personnage multiclassé.",
         "dualclass_not_allowed": "Cette race ne peut pas être double classée avec ce jeu de règles.",
         "prime_requisite_too_low": "Un personnage double classé a besoin de {{old}} dans la caractéristique principale de la classe quittée et de {{new}} dans la nouvelle.",
         "level_too_low": "Une classe se quitte au niveau {{min}} ou plus.",

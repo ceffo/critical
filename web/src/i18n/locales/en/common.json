@@ -1744,6 +1744,8 @@
       "liftHelp": "Waive the race's class restriction for a character with several classes. A single-class character is not affected.",
       "multiclassAnyRace": "Multi-class: any race",
       "dualclassAnyRace": "Dual-class: any race",
+      "weaponHelp": "Let a character with several classes use any weapon its other classes allow, even if one of them is limited to blunt weapons (the cleric). Off by default. Weapon specialization is not changed.",
+      "multiclassAnyWeapon": "Multi-class: any weapon",
       "saved": "Saved.",
       "levelLimits": "Level limits",
       "levelLimitsMode": {
@@ -2794,6 +2796,7 @@
       },
       "errors": {
         "multiclass_not_allowed": "This race cannot be multi-class under the ruleset.",
+        "multiclass_class_not_allowed": "This class is never part of a multi-class character.",
         "dualclass_not_allowed": "This race cannot be dual-class under the ruleset.",
         "prime_requisite_too_low": "A dual-class character needs {{old}} in the prime requisite of the class left and {{new}} in the new class.",
         "level_too_low": "A class can be left at level {{min}} or more.",

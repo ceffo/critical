@@ -12,6 +12,7 @@ import {
   allRaces,
   blockedReason,
   buildBody,
+  classesFor,
   draftSpellbook,
   emptyPlacement,
   exceptionalOffered,
@@ -950,5 +951,25 @@ describe("the psionics step (ADR 0043)", () => {
     const kept = mergeDraft(d, { name: "Aria" });
     expect(kept.pspMax).toBe("40");
     expect(kept.psionicPicks).toEqual(picks);
+  });
+});
+
+describe("classesFor", () => {
+  const options = {
+    classes: [{ class: "fighter" }, { class: "bard" }, { class: "mage" }],
+    noMultiClass: ["bard"],
+  } as unknown as CreationOptions;
+  const ids = (kind: "single" | "multi" | "dual") =>
+    classesFor(options, kind).map((c) => c.class);
+
+  it("leaves the barred classes out of a multi-class row only", () => {
+    expect(ids("multi")).toEqual(["fighter", "mage"]);
+    expect(ids("single")).toEqual(["fighter", "bard", "mage"]);
+    expect(ids("dual")).toEqual(["fighter", "bard", "mage"]);
+  });
+
+  it("offers every class when the server names none (an older server)", () => {
+    const old = { classes: options.classes } as unknown as CreationOptions;
+    expect(classesFor(old, "multi")).toHaveLength(3);
   });
 });

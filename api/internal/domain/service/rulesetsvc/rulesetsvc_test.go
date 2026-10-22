@@ -125,6 +125,24 @@ func TestSetRacialLift_Step7_WritesOneChange(t *testing.T) {
 	assert.Equal(t, lift, got)
 }
 
+// ADR 0041 steps 2.5 and 7: the weapon lift is off by default (the book's rule); switching it on
+// stores it and audits the change with the switch before and after.
+func TestSetWeaponLift_Steps2_5And7_WritesOneChange(t *testing.T) {
+	assert.False(t, ruleset.Default().WeaponLift.MulticlassAnyWeapon, "off by default")
+	f := newFixture(t)
+	f.loads()
+	lift := ruleset.WeaponLift{MulticlassAnyWeapon: true}
+	f.dal.EXPECT().SetWeaponLift(mock.Anything, int64(4), lift).Return(nil).Once()
+	f.dal.EXPECT().AddChange(mock.Anything, ruleset.Change{
+		RulesetID: 4, By: admin, Rule: ruleset.RuleWeaponLift,
+		Before: `{"multiclassAnyWeapon":false}`,
+		After:  `{"multiclassAnyWeapon":true}`,
+	}).Return(nil).Once()
+	got, err := f.svc.SetWeaponLift(context.Background(), admin, lift)
+	require.NoError(t, err)
+	assert.Equal(t, lift, got)
+}
+
 // ADR 0041 steps 2.4 and 7: the success effects are checked against the book's proficiencies; a
 // valid edit audits the change, an unknown proficiency or zero rounds writes nothing.
 func TestSetSuccessEffects_Steps2And7(t *testing.T) {

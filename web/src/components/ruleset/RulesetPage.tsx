@@ -61,6 +61,7 @@ export function RulesetPage() {
           <div className="flex min-w-0 flex-col gap-3">
             <HouseRulesCard
               initial={ruleset.racialLift}
+              weaponLift={ruleset.weaponLift}
               levelLimits={ruleset.levelLimits}
             />
             <SuccessEffectsCard initial={ruleset.successEffects} />

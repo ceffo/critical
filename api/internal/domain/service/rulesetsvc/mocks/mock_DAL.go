@@ -376,6 +376,54 @@ func (_c *MockDAL_SetRacialLift_Call) RunAndReturn(run func(context.Context, int
 	return _c
 }
 
+// SetWeaponLift provides a mock function with given fields: ctx, rulesetID, lift
+func (_m *MockDAL) SetWeaponLift(ctx context.Context, rulesetID int64, lift ruleset.WeaponLift) error {
+	ret := _m.Called(ctx, rulesetID, lift)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetWeaponLift")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, ruleset.WeaponLift) error); ok {
+		r0 = rf(ctx, rulesetID, lift)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_SetWeaponLift_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetWeaponLift'
+type MockDAL_SetWeaponLift_Call struct {
+	*mock.Call
+}
+
+// SetWeaponLift is a helper method to define mock.On call
+//   - ctx context.Context
+//   - rulesetID int64
+//   - lift ruleset.WeaponLift
+func (_e *MockDAL_Expecter) SetWeaponLift(ctx interface{}, rulesetID interface{}, lift interface{}) *MockDAL_SetWeaponLift_Call {
+	return &MockDAL_SetWeaponLift_Call{Call: _e.mock.On("SetWeaponLift", ctx, rulesetID, lift)}
+}
+
+func (_c *MockDAL_SetWeaponLift_Call) Run(run func(ctx context.Context, rulesetID int64, lift ruleset.WeaponLift)) *MockDAL_SetWeaponLift_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(ruleset.WeaponLift))
+	})
+	return _c
+}
+
+func (_c *MockDAL_SetWeaponLift_Call) Return(_a0 error) *MockDAL_SetWeaponLift_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_SetWeaponLift_Call) RunAndReturn(run func(context.Context, int64, ruleset.WeaponLift) error) *MockDAL_SetWeaponLift_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockDAL creates a new instance of MockDAL. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockDAL(t interface {

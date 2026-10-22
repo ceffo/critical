@@ -5,6 +5,7 @@ import fr from "./locales/fr/common.json";
 // The refusal codes of the class entries (the server's, charactersvc create.go) each have wording.
 const CODES = [
   "multiclass_not_allowed",
+  "multiclass_class_not_allowed",
   "dualclass_not_allowed",
   "prime_requisite_too_low",
   "level_too_low",

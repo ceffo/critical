@@ -35,6 +35,7 @@ type rulesetSvc interface {
 	Changes(ctx context.Context) ([]ruleset.Change, error)
 	SetCritTable(ctx context.Context, by uuid.UUID, rows []ruleset.CritRow) (ruleset.CritTable, error)
 	SetRacialLift(ctx context.Context, by uuid.UUID, lift ruleset.RacialLift) (ruleset.RacialLift, error)
+	SetWeaponLift(ctx context.Context, by uuid.UUID, lift ruleset.WeaponLift) (ruleset.WeaponLift, error)
 	SetSuccessEffects(ctx context.Context, by uuid.UUID, effects []ruleset.SuccessEffect) ([]ruleset.SuccessEffect, error)
 }
 
@@ -51,6 +52,7 @@ func RegisterSharedRoutes(r Router, svc rulesetSvc) {
 func RegisterAdminRoutes(r Router, svc rulesetSvc) {
 	r.Put("/api/ruleset/crit-table", render.Handle(PutCritTable(svc)))
 	r.Put("/api/ruleset/racial-lift", render.Handle(PutRacialLift(svc)))
+	r.Put("/api/ruleset/weapon-lift", render.Handle(PutWeaponLift(svc)))
 	r.Put("/api/ruleset/success-effects", render.Handle(PutSuccessEffects(svc)))
 }
 
@@ -74,6 +76,11 @@ type RacialLiftDTO struct {
 	DualclassAnyRace  bool `json:"dualclassAnyRace"`
 }
 
+// WeaponLiftDTO is the multi-class weapon lift switch (ADR 0041 step 2.5).
+type WeaponLiftDTO struct {
+	MulticlassAnyWeapon bool `json:"multiclassAnyWeapon"`
+}
+
 // SuccessEffectDTO is the buff a successful check of a proficiency puts on:
 // the AC change (descending AC) and the rounds it lasts. The UI words the
 // proficiency from its id.
@@ -90,6 +97,7 @@ type RulesetDTO struct {
 	CatalogueVersion string             `json:"catalogueVersion"`
 	CritTable        CritTableDTO       `json:"critTable"`
 	RacialLift       RacialLiftDTO      `json:"racialLift"`
+	WeaponLift       WeaponLiftDTO      `json:"weaponLift"`
 	LevelLimits      string             `json:"levelLimits"`
 	SuccessEffects   []SuccessEffectDTO `json:"successEffects"`
 }
@@ -137,6 +145,7 @@ func Get(svc rulesetSvc) render.HandlerFunc {
 			ID: rs.ID, Name: rs.Name, CatalogueVersion: rs.CatalogueVersion,
 			CritTable:      toCritTableDTO(rs.Crit),
 			RacialLift:     RacialLiftDTO{MulticlassAnyRace: rs.RacialLift.MulticlassAnyRace, DualclassAnyRace: rs.RacialLift.DualclassAnyRace},
+			WeaponLift:     WeaponLiftDTO{MulticlassAnyWeapon: rs.WeaponLift.MulticlassAnyWeapon},
 			LevelLimits:    string(rs.LevelLimits),
 			SuccessEffects: toEffectDTOs(rs.SuccessEffects),
 		})
@@ -242,6 +251,31 @@ func PutRacialLift(svc rulesetSvc) render.HandlerFunc {
 			return err
 		}
 		render.OK(r.Context(), w, RacialLiftDTO{MulticlassAnyRace: lift.MulticlassAnyRace, DualclassAnyRace: lift.DualclassAnyRace})
+		return nil
+	}
+}
+
+// PutWeaponLift stores the multi-class weapon lift switch; it is required.
+func PutWeaponLift(svc rulesetSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		by, err := editor(r)
+		if err != nil {
+			return err
+		}
+		var req struct {
+			MulticlassAnyWeapon *bool `json:"multiclassAnyWeapon"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		if req.MulticlassAnyWeapon == nil {
+			return render.BadRequestError("multiclassAnyWeapon is required")
+		}
+		lift, err := svc.SetWeaponLift(r.Context(), by, ruleset.WeaponLift{MulticlassAnyWeapon: *req.MulticlassAnyWeapon})
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, WeaponLiftDTO{MulticlassAnyWeapon: lift.MulticlassAnyWeapon})
 		return nil
 	}
 }

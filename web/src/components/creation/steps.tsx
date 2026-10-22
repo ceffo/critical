@@ -22,6 +22,7 @@ import {
   alignmentLimit,
   allRaces,
   classOf,
+  classesFor,
   initialPlacement,
   KINDS,
   skillsOf,
@@ -100,10 +101,15 @@ export function ClassStep(props: StepProps) {
   // character starts with one more class to pick (ADR 0042 step 1).
   const pickKind = (kind: ClassKind) => {
     if (kind === draft.kind) return;
-    const more =
-      draft.others.length > 0 ? draft.others : [{ cls: "", xp: "", level: "" }];
+    // A class a multi-class character cannot have (the server's `noMultiClass`) is cleared.
+    const offered = classesFor(options, kind).map((c) => c.class);
+    const keep = (cls: string) => (offered.includes(cls) ? cls : "");
+    const more = (
+      draft.others.length > 0 ? draft.others : [{ cls: "", xp: "", level: "" }]
+    ).map((o) => ({ ...o, cls: keep(o.cls) }));
     update({
       kind,
+      ...(draft.cls && { cls: keep(draft.cls) }),
       others:
         kind === "single" ? [] : kind === "dual" ? more.slice(0, 1) : more,
       leftAt: kind === "dual" ? draft.leftAt : "",

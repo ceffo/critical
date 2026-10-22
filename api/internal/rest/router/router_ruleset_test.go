@@ -26,7 +26,7 @@ func TestRuleset_Get(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"id":1,"name":"default","catalogueVersion":"v3",
 		"critTable":{"rows":[{"from":1,"to":100,"multiplier":2}],"placeholder":true},
-		"racialLift":{"multiclassAnyRace":true,"dualclassAnyRace":true},
+		"racialLift":{"multiclassAnyRace":true,"dualclassAnyRace":true},"weaponLift":{"multiclassAnyWeapon":false},
 		"levelLimits":"warn",
 		"successEffects":[{"proficiencyId":"tumbling","ac":-4,"rounds":1}]}`, rec.Body.String())
 }

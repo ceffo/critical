@@ -240,6 +240,40 @@
           "slots": 1,
           "allowed": true
         }
+      ],
+      "weaponTypes": [
+        {
+          "type": "short_bow",
+          "specializationSlots": 0
+        },
+        {
+          "type": "hand_crossbow",
+          "specializationSlots": 0
+        },
+        {
+          "type": "dagger",
+          "specializationSlots": 0
+        },
+        {
+          "type": "dart",
+          "specializationSlots": 0
+        },
+        {
+          "type": "sling",
+          "specializationSlots": 0
+        },
+        {
+          "type": "short_sword",
+          "specializationSlots": 0
+        },
+        {
+          "type": "long_sword",
+          "specializationSlots": 0
+        },
+        {
+          "type": "other_melee",
+          "specializationSlots": 0
+        }
       ]
     }
   },

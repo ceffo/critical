@@ -762,11 +762,26 @@ is only ever appended to by play.
     6. **Rollout, as step 18.6.** The API reads **format 13 only** (a format-12 artifact is refused at start, naming `just catalogue`). Merge
        order: the builder publishing format 13 first, then the API change (the schema `schemas/catalogue.schema.json`, `catalogueadpt`, the fixture
        `testdata/catalogue.json`) immediately.
-    Tests: `TestSchema_Step20_OnlyFormat13IsValid` (cataloguecheck, was `Schema_Step19_OnlyFormat12IsValid`: format 13 only; a power of an unknown
+    Tests: `Schema_Step20_OnlyFormat13IsValid` (cataloguecheck, renamed `TestSchema_Step21_OnlyFormat14IsValid` by step 21; was `Schema_Step19_OnlyFormat12IsValid`: format 13 only; a power of an unknown
     kind, a cost that is a word, a psionics feature without its recovery table, the lost level-limit rows and the missing grid column or row
-    refused), `TestParse_Step20_ReadsFormat13AndRefusesFormat12` (catalogueadpt, was `Parse_Step19_ReadsFormat12AndRefusesFormat11`); in
+    refused), `TestParse_Step20_ReadsPsionicsAndRefusesFormat12` (catalogueadpt, was `Parse_Step19_ReadsFormat12AndRefusesFormat11`); in
     `critical-rulebooks`: `scripts/check`'s counts per discipline against the books' sections, Tables 1, 2 and 4 to 8, spot powers, the power-id
     ledger and fault injection.
+
+21. **Format 14: the unread per-class sphere table is dropped** (**decided as built** 2026-10-22). Since [ADR 0040](0040-classes-are-data.md) step 3 a
+    class's spheres are its `sphere_access` feature (`major`, `minor`, `minor_max_level`), and nothing reads the class-keyed `rule_tables.sphere_access`
+    rows of step 12.2 any more ([ADR 0030](0030-classes-and-races.md) step 15). This is step 18.4's "dropped by a later format, when the last reader
+    moved", for that one table; the other repeated tables stay until their readers move.
+    1. **`rule_tables.sphere_access` is gone** from the artifact and the schema (its row definition too): format 14 is format 13 without it, nothing
+       else changes, and a `sphere_access` table in a format-14 artifact is refused by the schema. The builder keeps the cleric's sphere vocabulary
+       (`scripts/spheres.py`) to check that each sphere a feature names is carried by a spell, and the cleric's `sphere_access` feature still
+       names its spheres; the check no longer reads a table.
+    2. **Rollout, as step 18.6.** The API reads **format 14 only** (a format-13 artifact is refused at start, naming `just catalogue`). Merge order:
+       the builder publishing format 14 first, then the API change (the schema `schemas/catalogue.schema.json`, `catalogueadpt`, the fixture
+       `testdata/catalogue.json`) immediately.
+    Tests: `TestSchema_Step21_OnlyFormat14IsValid` (cataloguecheck: format 14 only, a `sphere_access` table refused),
+    `TestParse_Step21_ReadsFormat14AndRefusesFormat13` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s format-14 schema rules and the
+    cleric's feature against the sphere vocabulary.
 
 ## Consequences
 

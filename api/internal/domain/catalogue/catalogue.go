@@ -29,14 +29,19 @@ const FormatClassDefinitions = 11
 // format 11 plus Table 5's spell immunities on each wisdom row.
 const FormatSpellImmunities = 12
 
-// FormatPsionics is format 13 (ADR 0021 step 20, ADR 0043): format 12 plus the
-// psionicist's rows, the psionic tables, the disciplines and the powers. It is
-// the only format the API reads (step 20.6): the formats 1 to 12 are refused
-// like any unknown format, with the advice to run `just catalogue`.
+// FormatPsionics was format 13 (ADR 0021 step 20, ADR 0043): format 12 plus the
+// psionicist's rows, the psionic tables, the disciplines and the powers.
 const FormatPsionics = 13
 
-// Formats lists the formats this API reads: format 13 only (step 20.6).
-var Formats = []int{FormatPsionics}
+// FormatNoSphereTable is format 14 (ADR 0021 step 21): format 13 without the
+// per-class sphere_access rule table, which nothing read since a class's
+// spheres became its sphere_access feature. It is the only format the API
+// reads (step 21.2): the formats 1 to 13 are refused like any unknown format,
+// with the advice to run `just catalogue`.
+const FormatNoSphereTable = 14
+
+// Formats lists the formats this API reads: format 14 only (step 21.2).
+var Formats = []int{FormatNoSphereTable}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

@@ -24,22 +24,12 @@ type fileDTO struct {
 	classDTO
 	// LevelLimits is DMG Table 7 (ADR 0021 step 11).
 	LevelLimits []levelLimitDTO `json:"race_level_limits"`
-	// SphereAccess is the artifact's class-keyed sphere rows (ADR 0021 step
-	// 12). Not read: a priest's spheres are its sphere_access feature (ADR
-	// 0040 step 3); the field only lets the strict decoder accept them.
-	SphereAccess []sphereAccessDTO `json:"sphere_access"`
 	// WeaponVsArmor is PHB Table 52 and InitiativeItem Table 56 (ADR 0021
 	// step 13).
 	WeaponVsArmor  []weaponVsArmorDTO  `json:"weapon_vs_armor"`
 	InitiativeItem []initiativeItemDTO `json:"initiative_item"`
 	// RaceLanguages is each race's language list (ADR 0021 step 14).
 	RaceLanguages []raceLanguageDTO `json:"race_languages"`
-}
-
-type sphereAccessDTO struct {
-	Class  string `json:"class"`
-	Sphere string `json:"sphere"`
-	Access string `json:"access"`
 }
 
 // levelLimitDTO is a race_level_limits row: MaxLevel absent is the book's U

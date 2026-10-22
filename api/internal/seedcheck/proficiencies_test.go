@@ -137,7 +137,7 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 	}
 }
 
-// ADR 0037 step 1: Table 38's crossovers for the five classes.
+// ADR 0037 step 1: Table 38's crossovers for the five classes and the Complete Psionics Handbook's psionicist.
 func TestProficiencyTables_Step1_Table38Crossovers(t *testing.T) {
 	p, err := ruletablesadpt.ReadProficiencies(seedsDir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
@@ -147,6 +147,7 @@ func TestProficiencyTables_Step1_Table38Crossovers(t *testing.T) {
 		{Class: "cleric", Groups: []string{"priest", "general"}},
 		{Class: "thief", Groups: []string{"rogue", "general"}},
 		{Class: "bard", Groups: []string{"rogue", "warrior", "wizard", "general"}},
+		{Class: "psionicist", Groups: []string{"psionicist", "general"}},
 	}, p.Crossovers())
 }
 
@@ -178,8 +179,9 @@ func TestProficiencyTables_Step1_Table34AndTable38(t *testing.T) {
 		{Group: "wizard", WeaponInitial: 1, WeaponLevels: 6, Penalty: -5, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "priest", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "rogue", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4},
+		{Group: "psionicist", WeaponInitial: 2, WeaponLevels: 5, Penalty: -4, NonweaponInitial: 3, NonweaponLevels: 3},
 	}, p.SlotRows())
-	for class, group := range map[string]string{"fighter": "warrior", "mage": "wizard", "cleric": "priest", "thief": "rogue", "bard": "rogue"} {
+	for class, group := range map[string]string{"fighter": "warrior", "mage": "wizard", "cleric": "priest", "thief": "rogue", "bard": "rogue", "psionicist": "psionicist"} {
 		row, ok := p.SlotRowOf(class)
 		require.True(t, ok, class)
 		assert.Equal(t, group, row.Group, class)

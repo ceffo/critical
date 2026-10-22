@@ -581,3 +581,67 @@ func TestFeatures_Step3_TheFiveClassesGrantTodaysMechanics(t *testing.T) {
 		assert.Equal(t, f.Features, r.Features, id)
 	}
 }
+
+// ADR 0021 step 20.1 on the real artifact: the psionicist's column of the
+// experience and THAC0 grids equals its class entry and its group entry (the
+// ones the app reads); the grid copy has no reader of its own.
+func TestRealCatalogue_Step20_PsionicistGridsEqualItsClassAndGroupEntries(t *testing.T) {
+	realCatalogue(t)
+	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
+	require.NoError(t, err)
+	defs, err := tables.Definitions()
+	require.NoError(t, err)
+	class, ok := defs.Class("psionicist")
+	require.True(t, ok)
+	var grids struct {
+		Experience []struct{ Level, Psionicist int } `json:"experience"`
+		THAC0      []struct{ Level, Psionicist int } `json:"thac0"`
+	}
+	require.NoError(t, json.Unmarshal(artifact.RuleTables, &grids))
+	require.Len(t, grids.Experience, len(class.Experience))
+	for i, r := range grids.Experience {
+		assert.Equal(t, class.Experience[i], r.Psionicist, "experience at level %d", i+1)
+	}
+	for i, r := range grids.THAC0 {
+		got, err := defs.THAC0(class.Group, i+1)
+		require.NoError(t, err)
+		assert.Equal(t, got, r.Psionicist, "THAC0 at level %d", i+1)
+	}
+}
+
+// The psionicist's figures the character service reads, from the real
+// artifact through the server's adapters: the hit die and the grids by group
+// or class (ADR 0021 step 20.1, ADR 0030 step 7). The values are the ones the
+// builder traced to the CPsiH's psionicist tables (its own checks hold the page
+// references); the creation gate keeps the class off the API until its kinds
+// are built, so this is the only place the real figures are read through the
+// services.
+func TestRealCatalogue_Step20_ThePsionicistsFiguresReadFromTheRealArtifact(t *testing.T) {
+	realCatalogue(t)
+	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
+	require.NoError(t, err)
+	defs, err := tables.Definitions()
+	require.NoError(t, err)
+	class, ok := defs.Class("psionicist")
+	require.True(t, ok)
+
+	hd, err := tables.HitDiceFor(class.Group)
+	require.NoError(t, err)
+	assert.Equal(t, ruletablesvc.HitDiceRow{Group: class.Group, Die: 6, NameLevel: 9, GainAfter: 2}, hd)
+	xp, err := tables.XPThreshold(class.ID, 5)
+	require.NoError(t, err)
+	assert.Equal(t, 16_500, xp)
+	thac0, err := tables.THAC0For(class.Group, 1)
+	require.NoError(t, err)
+	assert.Equal(t, 20, thac0)
+	saves, err := tables.SavesFor(class.Group, 1)
+	require.NoError(t, err)
+	assert.Equal(t, [5]int{13, 15, 10, 16, 15}, [5]int{saves.ParaPoison, saves.RodStaffWand, saves.PetriPoly, saves.Breath, saves.Spell})
+	saves, err = tables.SavesFor(class.Group, 17)
+	require.NoError(t, err)
+	assert.Equal(t, [5]int{9, 7, 6, 11, 9}, [5]int{saves.ParaPoison, saves.RodStaffWand, saves.PetriPoly, saves.Breath, saves.Spell})
+}

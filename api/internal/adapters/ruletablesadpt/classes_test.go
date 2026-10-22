@@ -43,8 +43,16 @@ func TestClassCatalogue_Step1_EveryClassCarriesEveryField(t *testing.T) {
 			[]string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},
 			10_000, 20_000,
 		},
+		// The Complete Psionics Handbook: Tables 2 (XP, minimums) and ch. 1 (alignments, any but chaotic).
+		"psionicist": {
+			"psionicist",
+			[]string{"con", "wis"},
+			[]classes.AbilityMinimum{am("con", 11), am("int", 12), am("wis", 15)},
+			[]string{"lawful_good", "neutral_good", "lawful_neutral", "true_neutral", "lawful_evil", "neutral_evil"},
+			16_500, 30_000,
+		},
 	}
-	assert.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard"}, defs.ClassIDs())
+	assert.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard", "psionicist"}, defs.ClassIDs())
 	for id, w := range page {
 		c, err := defs.Get(id)
 		require.NoError(t, err)
@@ -90,8 +98,8 @@ func TestImport_Step8_RefusesARowForAnUnknownClass(t *testing.T) {
 		{"a sphere row of an unknown class", func(d map[string]any) { classRow(d, "sphere_access", 0)["class"] = "paladin" }, "paladin"},
 		{"a level limit of an unknown class", func(d map[string]any) { classRow(d, levelLimits, 0)["class"] = "paladin" }, `unknown "paladin"`},
 		{"a level limit of an unknown race", func(d map[string]any) { classRow(d, levelLimits, 0)["race"] = "orc" }, `unknown race "orc"`},
-		{"a hit dice row of an unknown group", func(d map[string]any) { classRow(d, "hit_dice", 0)["group"] = "psionicist" }, "psionicist"},
-		{"a save row of an unknown group", func(d map[string]any) { classRow(d, "saving_throws", 0)["group"] = "psionicist" }, "psionicist"},
+		{"a hit dice row of an unknown group", func(d map[string]any) { classRow(d, "hit_dice", 0)["group"] = "monk" }, "monk"},
+		{"a save row of an unknown group", func(d map[string]any) { classRow(d, "saving_throws", 0)["group"] = "monk" }, "monk"},
 	}
 	for _, tc := range tables {
 		t.Run(tc.name, func(t *testing.T) {
@@ -105,8 +113,8 @@ func TestImport_Step8_RefusesARowForAnUnknownClass(t *testing.T) {
 		want   string
 	}{
 		{"a class of an unknown group", func(d map[string]any) {
-			d["classes"].([]any)[0].(map[string]any)["group"] = "psionicist"
-		}, `class "fighter": unknown group "psionicist"`},
+			d["classes"].([]any)[0].(map[string]any)["group"] = "monk"
+		}, `class "fighter": unknown group "monk"`},
 		{"a class twice", func(d map[string]any) {
 			d["classes"] = append(d["classes"].([]any), d["classes"].([]any)[0])
 		}, `"fighter" twice`},
@@ -116,5 +124,42 @@ func TestImport_Step8_RefusesARowForAnUnknownClass(t *testing.T) {
 			_, err := definitionsOf(t, tc.mutate)
 			require.ErrorContains(t, err, tc.want)
 		})
+	}
+}
+
+// psionicistGrids reads the psionicist's column of the experience and THAC0
+// grids (ADR 0021 step 20.1), by level.
+func psionicistGrids(t *testing.T, ruleTables []byte) (xp, thac0 []int) {
+	t.Helper()
+	var tables struct {
+		Experience []struct{ Level, Psionicist int } `json:"experience"`
+		THAC0      []struct{ Level, Psionicist int } `json:"thac0"`
+	}
+	require.NoError(t, json.Unmarshal(ruleTables, &tables))
+	for _, r := range tables.Experience {
+		xp = append(xp, r.Psionicist)
+	}
+	for _, r := range tables.THAC0 {
+		thac0 = append(thac0, r.Psionicist)
+	}
+	return xp, thac0
+}
+
+// ADR 0021 step 20.1: the psionicist's column of the experience and THAC0 grids
+// is the same figures as its class entry and its group entry, which are what the
+// app reads (ADR 0040 steps 1 and 7); the grid copy has no reader of its own, so
+// this test is what keeps it from drifting.
+func TestClassCatalogue_Step20_PsionicistGridsEqualItsClassAndGroupEntries(t *testing.T) {
+	defs, err := phb(t).Definitions()
+	require.NoError(t, err)
+	class, ok := defs.Class("psionicist")
+	require.True(t, ok)
+	xp, thac0 := psionicistGrids(t, fixtureRuleTables(t))
+	assert.Equal(t, class.Experience, xp, "the experience column equals the class's rows")
+	require.Len(t, thac0, classes.MaxLevel)
+	for level, want := range thac0 {
+		got, err := defs.THAC0(class.Group, level+1)
+		require.NoError(t, err)
+		assert.Equal(t, want, got, "THAC0 at level %d: the grid column equals the group's row", level+1)
 	}
 }

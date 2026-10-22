@@ -40,6 +40,7 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 	assert.Equal(t, map[string][]string{
 		"fighter": {"warrior", "general"}, "mage": {"wizard", "general"}, "cleric": {"priest", "general"},
 		"thief": {"rogue", "general"}, "bard": {"rogue", "warrior", "wizard", "general"},
+		"psionicist": {"psionicist", "general"},
 	}, groups)
 
 	// Step 4: each proficiency's cost by class, the crossover's +1 included.
@@ -52,7 +53,7 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 		assert.Len(t, byID, 64, "every pickable catalogue proficiency has a cost for %s", class)
 		assert.NotContains(t, byID, "languages_modern", "step 6: a language is no pick of its own, so %s gets no cost for it", class)
 	}
-	assert.Len(t, costs, 5)
+	assert.Len(t, costs, 6)
 }
 
 // ADR 0037 steps 7 and 9: each class option carries the weapon types the class

@@ -30,11 +30,13 @@ func profBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{Class: "cleric", Groups: []string{"priest", "general"}},
 		{Class: "thief", Groups: []string{"rogue", "general"}},
 		{Class: "bard", Groups: []string{"rogue", "warrior", "wizard", "general"}},
+		{Class: "psionicist", Groups: []string{"psionicist", "general"}},
 	}, []ruletablesvc.SlotRow{
 		{Group: "warrior", WeaponInitial: 4, WeaponLevels: 3, Penalty: -2, NonweaponInitial: 3, NonweaponLevels: 3},
 		{Group: "wizard", WeaponInitial: 1, WeaponLevels: 6, Penalty: -5, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "priest", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "rogue", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4},
+		{Group: "psionicist", WeaponInitial: 2, WeaponLevels: 5, Penalty: -4, NonweaponInitial: 3, NonweaponLevels: 3},
 	}, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return b

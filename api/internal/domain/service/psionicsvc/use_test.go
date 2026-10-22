@@ -299,15 +299,22 @@ func TestActivate_Step12_ASecondPowerInTheRoundWarns(t *testing.T) {
 		round  int
 		checks []actionlog.Entry
 		warns  bool
+		set    []actionlog.Entry // the newest Set round, if any
 	}{
-		{"a second power in the round warns", "thrust", 3, []actionlog.Entry{check(9, 3, "lift")}, true},
-		{"the first power of the round does not", "thrust", 3, nil, false},
-		{"a check before the round's Next Round does not count", "thrust", 3, []actionlog.Entry{check(4, 2, "lift")}, false},
-		{"a check stamped with another round does not count", "thrust", 3, []actionlog.Entry{check(9, 1, "lift")}, false},
-		{"a defence mode before it does not count", "thrust", 3, []actionlog.Entry{check(9, 3, "mind_blank"), check(4, 2, "lift")}, false},
-		{"a defence mode after a power counts the power", "thrust", 3, []actionlog.Entry{check(9, 3, "mind_blank"), check(8, 3, "lift")}, true},
-		{"a defence mode itself does not warn", "mind_blank", 3, []actionlog.Entry{check(9, 3, "lift")}, false},
-		{"out of combat nothing warns", "thrust", 0, []actionlog.Entry{check(9, 0, "lift")}, false},
+		{"a second power in the round warns", "thrust", 3, []actionlog.Entry{check(9, 3, "lift")}, true, nil},
+		{"the first power of the round does not", "thrust", 3, nil, false, nil},
+		{"a check before the round's Next Round does not count", "thrust", 3, []actionlog.Entry{check(4, 2, "lift")}, false, nil},
+		{"a check stamped with another round does not count", "thrust", 3, []actionlog.Entry{check(9, 1, "lift")}, false, nil},
+		{"a defence mode before it does not count", "thrust", 3, []actionlog.Entry{check(9, 3, "mind_blank"), check(4, 2, "lift")}, false, nil},
+		{"a defence mode after a power counts the power", "thrust", 3, []actionlog.Entry{check(9, 3, "mind_blank"), check(8, 3, "lift")}, true, nil},
+		{"a defence mode itself does not warn", "mind_blank", 3, []actionlog.Entry{check(9, 3, "lift")}, false, nil},
+		{"out of combat nothing warns", "thrust", 0, []actionlog.Entry{check(9, 0, "lift")}, false, nil},
+		{
+			"a check before a Set round back to its round does not count", "thrust", 3,
+			[]actionlog.Entry{check(9, 3, "lift")},
+			false,
+			[]actionlog.Entry{{ID: 11, Round: 0, Kind: actionlog.KindRoundSet}},
+		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			chars, dice, log, buffs := mocks.NewMockCharacters(t), mocks.NewMockDice(t), mocks.NewMockLog(t), mocks.NewMockBuffs(t)
@@ -315,6 +322,9 @@ func TestActivate_Step12_ASecondPowerInTheRoundWarns(t *testing.T) {
 			buffs.EXPECT().GetRound(mock.Anything, int64(7)).Return(c.round, nil).Maybe()
 			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPowerCheck, mock.Anything).Return(c.checks, nil).Maybe()
 			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundAdvance, 1).Return(advance, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundSet, 1).Return(c.set, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundReset, 1).Return(nil, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindTimePassed, 1).Return(nil, nil).Maybe()
 			dice.EXPECT().RollDie(20).Return(1).Once()
 			var got actionlog.NewEntry
 			expectRecord(log, &got)

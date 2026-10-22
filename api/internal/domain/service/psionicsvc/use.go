@@ -340,10 +340,16 @@ func (s *service) Stop(ctx context.Context, characterID int64, powerID string) (
 // warning reads: defence modes do not count, so it looks past a few.
 const powerCheckLookback = 20
 
+// roundMoves are the entry kinds that move the round counter (step 12).
+var roundMoves = []actionlog.Kind{
+	actionlog.KindRoundAdvance, actionlog.KindRoundReset, actionlog.KindRoundSet, actionlog.KindTimePassed,
+}
+
 // secondPowerThisRound is step 12: in combat (the round counter above 0) a
 // power that is not a defence mode is the round's second when a power check
 // of one that is not a defence mode is logged in the same round, after the
-// round's Next Round. Out of combat it is never.
+// round's start (its Next Round, or the End combat, Set round or passing
+// time that last moved the counter). Out of combat it is never.
 func (s *service) secondPowerThisRound(ctx context.Context, characterID int64, p catalogue.Power) (bool, error) {
 	if p.Kind == catalogue.KindDefenceMode {
 		return false, nil
@@ -359,13 +365,17 @@ func (s *service) secondPowerThisRound(ctx context.Context, characterID int64, p
 	if err != nil {
 		return false, fmt.Errorf("power checks: %w", err)
 	}
-	advances, err := s.log.ActiveEntries(ctx, characterID, actionlog.KindRoundAdvance, 1)
-	if err != nil {
-		return false, fmt.Errorf("round advances: %w", err)
-	}
+	// The round starts at the newest entry that moved the counter: a Next
+	// Round, or End combat, a Set round or passing time.
 	var since int64
-	if len(advances) > 0 {
-		since = advances[0].ID
+	for _, kind := range roundMoves {
+		moves, err := s.log.ActiveEntries(ctx, characterID, kind, 1)
+		if err != nil {
+			return false, fmt.Errorf("round moves: %w", err)
+		}
+		if len(moves) > 0 {
+			since = max(since, moves[0].ID)
+		}
 	}
 	for _, e := range checks {
 		if e.ID <= since || e.Round != round {

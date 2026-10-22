@@ -5,10 +5,10 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"sort"
 	"strings"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"

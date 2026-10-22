@@ -2,7 +2,6 @@ package composition
 
 import (
 	"context"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
 	logq "github.com/ceffo/critical/api/internal/adapters/actionlogdal/queries"
@@ -33,6 +32,7 @@ import (
 	xpq "github.com/ceffo/critical/api/internal/adapters/xpdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"

@@ -3,12 +3,12 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"log/slog"
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"

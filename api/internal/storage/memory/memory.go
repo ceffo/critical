@@ -21,10 +21,10 @@ package memory
 
 import (
 	"context"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"maps"
 	"sync"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 

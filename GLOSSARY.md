@@ -43,6 +43,7 @@ What a character is trained as: bard, fighter, mage, cleric, thief today. [ADR 0
 **Class definition** (fr: définition de classe) _(planned)_:
 A class as catalogue data: group, prime requisites, limits, XP table, hit dice, spell progression and its class features. [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.
 _Avoid_: class table (a rule table is something else).
+_Code_: Registry
 
 **Class group** (fr: groupe de classes):
 Warrior, wizard, priest or rogue: the grouping the tables are read by; a field of the class definition. [ADR 0030](docs/adr/0030-classes-and-races.md) step 2, [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.2.

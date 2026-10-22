@@ -2,7 +2,6 @@ package ruletablesadpt_test
 
 import (
 	"encoding/json"
-	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/pkg/must"

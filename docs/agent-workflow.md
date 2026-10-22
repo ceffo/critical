@@ -189,6 +189,16 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
 - **No special case per spell, item or buff.** Model the mechanic generically and drive it from the
   data (`seeds/spell_effects.json`, item behaviour): no `if id == "<some_spell>"` branches and no
   per-entity constants in services. If a mechanic is missing, add it as a general effect kind.
+- **No special case per class, race or kit.** No class, class group, race or kit id literal in
+  production code (`api/internal/` outside tests and `testdata/`, `web/src` outside tests): no
+  `if class == "thief"`, no `switch` on a group, no Go list of the classes that have a mechanic.
+  Classes and races are catalogue data with typed features and traits; the code switches on the
+  **feature kind** and reads a feature through the character's class entries. A new mechanic is a
+  new feature kind (an amendment of [ADR 0040](adr/0040-classes-are-data.md) step 3), never a
+  branch on an id; ids live only in catalogue data, seeds, tests and fixtures. House rules are
+  Ruleset settings, not edits of book data. (User rule, 2026-10-21.) Enforced by
+  `just check-no-class-ids` (part of `just validate` once the five classes are data, ADR 0040
+  step 11).
 - **No per-language columns or fields.** A text in a human language is a key into the generic
   `localized_texts` table (one row per language); never a `name_fr`-style column, DTO field, TS property
   or catalogue key. The API serves a language map. [ADR 0023](adr/0023-localized-text.md); enforced by
@@ -232,7 +242,7 @@ Reviewer checklist, in priority order:
    **e2e budget**: a new or extended Playwright spec is one happy path per flow, justified in the
    report; rules, edge cases and API-only checks are in Go/unit tests, not e2e (suite < 5 min on CI).
 9. **Hard rules for implementers** above, incl. no tracker ids in code, no per-entity special
-   cases, and no presentation text in the backend: the API carries structured data only; display
+   cases (per spell, item or buff, and per class, class group, race or kit: [ADR 0040](adr/0040-classes-are-data.md) step 10), and no presentation text in the backend: the API carries structured data only; display
    text is never built by the backend, and a text in a human language is never a per-language column
    or field (one `localized_texts` row per language, [ADR 0023](adr/0023-localized-text.md)). Challenge the item's or brief's own design against these rules. Each violation is at least medium; design is not style.
 10. **No cut text** ([ADR 0022](adr/0022-activity-focus-layout.md) step 1): at the layout viewports

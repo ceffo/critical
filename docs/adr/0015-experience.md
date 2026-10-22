@@ -33,6 +33,9 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    counts: the server accepts it either way, so a DM ruling can be recorded.
    Tests: `TestBonusEligible_DexAndChaBothAtLeast16`, `TestGet_NotEligibleBelow16`,
    `TestGet_TotalsEntriesOverTheSheetAndReportsEligibility`.
+   _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 6, on implementation: eligible when every prime
+   requisite of the character's class is 16 or more, read from the class definition; Dexterity and
+   Charisma are the bard's, not every class's.)_
 3. **Progress to the next level from PHB Table 25.** The thresholds are rules data in the
    catalogue artifact's `rule_tables` ([ADR 0021](0021-spell-catalogue.md) step 9;
    `bard_experience`, levels 1 to 20, validated at startup: from 0, strictly increasing). With

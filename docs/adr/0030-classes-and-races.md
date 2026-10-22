@@ -20,6 +20,8 @@ _Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on i
 
 _Amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-20), on implementation: step 12 (specialization becomes a fighter's weapon pick at the PHB cost, the weapon's flag derived from it, ADR 0037 step 9), steps 17 and 18 (the skill-point budget refuses a save that leaves the points over budget and spends more, the thief's per-skill cap included; otherwise a warning, and leftovers a reminder, ADR 0037 steps 10 and 11) and the Consequences' "proficiency slots" (covered by ADR 0037)._
 
+_Amended by [ADR 0040](0040-classes-are-data.md) (classes and races are data, accepted 2026-10-21), on implementation: the classes, groups and races, their features and traits are catalogue data (format 11) read through the class entries; no class, group or race id in the code. Steps 1, 2, 3, 4, 8 to 20, 22 and 23 are amended in place; the rules they compute do not change for the five classes._
+
 ## Context
 
 Until now the app manages one level 15 half-elf Bard and stores what the sheet says: level, THAC0
@@ -153,6 +155,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    details is dropped (the rules race is the only race); and rolling is offered for the scores, the max HP
    and the identity numbers (typing stays possible). Step 7.5's "Level 1 hit points are entered, never
    rolled here" no longer holds for a created character: ADR 0032 step 7 rolls them.
+   _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 1, 8 and 9, on implementation: the class and race lists are the catalogue's definitions, not Go lists; every class the catalogue defines is creatable (`CreatableClasses` goes); the seed names its class (`seedfile.DefaultClass` goes))_
 2. **Class groups.** Fighter is a warrior, mage a wizard, cleric a priest, thief and bard rogues.
    The group picks the THAC0 row (step 5), the saving throw rows (step 6), the hit dice (step 7) and
    the Constitution hit point bonus (warriors get the higher one, step 7). It also picks a spell
@@ -172,6 +175,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    `TestEffects_Step2_ByGroupFollowsTheCharactersClass`,
    `TestEffects_Step2_UnknownClassRefusesAByGroupEffect`,
    `TestCast_Step2_StrengthOnAnotherRollsNoGainOnTheCastersSide` (castsvc).
+   _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 1.2 and 7, on implementation: the group is a field of the class definition, not the `classGroups` map, and a group id is data too: Table 53 and 60 are rows keyed by group, no `switch` on a group code)_
 3. **Level from XP.** The target level (step 7) is the highest level `L` from 1 to 20 whose
    threshold `T(L)` in the
    class's experience table is at or under the XP total ([ADR 0015](0015-experience.md) step 1):
@@ -190,11 +194,13 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP` (composition: an award crossing a
    threshold raises the target level only; THAC0, saves and slots change with the level-up rolls,
    and the undo brings them back).
+   _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 7, on implementation: the thresholds are rows keyed by class, not a column per class (`experienceColumns` goes))_
 4. **XP bonus by prime requisites.** A character earns the 10% bonus of [ADR 0015](0015-experience.md)
    step 1 when every prime requisite of the class is 16 or more (PHB chapter 3, each class's
    description): fighter Strength (18/xx counts as 18), mage Intelligence, cleric Wisdom, thief
    Dexterity, bard Dexterity and Charisma. Read from the sheet's scores, as ADR 0015 step 2, which
    this generalises (it was the Bard's rule alone).
+   _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 6, on implementation: the prime requisites are the class definition's `prime_requisites`; this step is built there, replacing the bard-only test of ADR 0015 step 2)_
 5. **THAC0.** The THAC0 is the PHB Table 53 (Calculated THAC0s) value for the class group at the
    realized level (step 7): warriors improve 1 point a level, priests 2 every 3 levels, rogues 1
    every 2, wizards 1
@@ -319,6 +325,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    `TestDerive_Step8_SpellSlotsByClass` (charactersvc), `TestInfo` (prepsvc: the limits are the
    derived slots).
 
+   _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 1.9, on implementation: the slot table is the class's `spell_progression` reference; fighters and thieves have none; no `switch` on the class)_
+
 ### Fighter
 
 9. **Exceptional strength.** A fighter with Strength 18 enters a percentile 01 to 100 (100 =
@@ -337,6 +345,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    Tests: `TestCreate_Step9_ExceptionalStrength` (charactersvc), `TestExceptionalStrengthAllowed_Step9`
    (ruletablesadpt), `TestResolveAttack_Step12_SpecializedMeleeAnd18_50` (combatsvc: Table 1 at
    18/50), `TestRollSpellToHit_Step9_Reads18xx` (combatsvc: a spell's to-hit at 18/91).
+   _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 3 and 4, on implementation: the fighter has it by its `exceptional_strength` feature and the halfling is excluded by its `no_exceptional_strength` trait, not by `exceptionalStrengthGroups` and the `noExceptionalStrengthRaces` constant)_
 10. **Strength spells and 18/xx (warriors only).** The book: past 18, a warrior's Strength spell
     adds tenths of a point, 10% a point, and cannot reach 19 (PHB, *Strength*, Wizard 2). The
     project keeps its stacking and gates (ADR 0004 steps 7 to 10) and only adds the warrior's scale
@@ -355,6 +364,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `baseExceptional` and `effectiveExceptional`.
     Tests: `TestAggregate_Step10_StrengthSpellsAnd18xx`, `TestAggregate_Step10_4_GatesRead18xxAs18`,
     `TestGetEffectiveStr_Step10_TheFightersPercentile` (buffsvc).
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the warrior's scale over 18 is the `exceptional_strength` feature's, not a test of the group)_
 11. **Attacks per round.** Read from the weapon's type (step 23), shown on the attack card as a
     rate; the app does not limit the attack requests.
     1. **Melee weapon**: PHB Table 15 by the fighter's level (1 per round at 1 to 6, 3 per 2 rounds
@@ -378,6 +388,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     Tests: `TestAttackRateFor_Step11`, `TestAttackRateInRound_Step11_4` (ruletablesadpt),
     `TestGetAttackForm_Step11_AttackRateAndPointBlank` (combatsvc; a level the tables cannot read
     is logged and shows no rate, the form still loads).
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the rate is the `melee_attacks_per_round` feature's (Table 15 by reference), not `AttackRateFor`'s `group != "warrior"` test; Table 35 is read with `weapon_specialization`)_
 12. **Weapon specialization.** A per-weapon flag, fighters only (refused for another class). A
     specialized weapon adds +1 to hit and +2 to damage, each a named modifier, not magical (it does
     not count as a "+N" of ADR 0002 step 6). _(proposed: a bow or crossbow instead gets +2 to hit at
@@ -414,6 +425,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     (sling with and without an ammo kind, darts, long sword),
     `TestResolveAttack_Step12_SpecializedThrownGetsNoBonus` (combatsvc).
 
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the fighter specializes by its `weapon_specialization` feature, not the `specializingClasses` list)_
+
 ### Cleric
 
 13. **Wisdom bonus spells.** PHB Table 5's bonus spells are cumulative from Wisdom 13 up to the
@@ -421,10 +434,12 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     when Table 24 gives the cleric at least one slot of that level. Sixth-level spells need Wisdom
     17 and seventh-level spells Wisdom 18 (Table 24's notes): below it the row's slots of that
     level are 0. Sheet's Wisdom.
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `wisdom_bonus_spells` feature, not `UsesWisdomSpells`)_
 14. **Spell failure.** A cleric whose Wisdom has a chance of spell failure (PHB Table 5, Wisdom 12
     and below) rolls one d100 on the server at each cast; at or under the chance, the spell fails:
     the slot is spent, no effect is applied, and the cast entry ([ADR 0008](0008-spell-slots-and-long-rest.md)
     step 7) records the d100, the chance and the failure. Wisdom 13 and up: no die.
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `spell_failure` feature (`ability` `wis`), not the `wisdomFailureClasses` list)_
 15. **Spheres.** A cleric prepares from the priest spells of the catalogue his sphere access opens;
     there is no spellbook. Amends ADR 0008 step 3 for clerics.
     1. **The closed list** (PHB p.33-34, Cleric): major access to exactly twelve spheres, All,
@@ -441,6 +456,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        Elemental (Fire) spell of level 4 is refused and one of level 3 is allowed; a spell of
        Elemental (Fire) and Combat is open at any level through Combat.
     4. The rule reads each spell's sphere **codes** (step 23), never its localized sphere name.
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the access is the `sphere_access` feature's params (`major`, `minor`, `minor_max_level`), moved from format 6's access rows keyed by class)_
 16. **Turning undead.** `POST` with an undead type (a PHB Table 61 row, by type or Hit Dice) reads
     the cell for the cleric's level (columns 1 to 9, 10-11, 12-13, 14 and up):
     1. A number: one d20 through the dice port; success at or above the number.
@@ -477,6 +493,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     (castsvc), `TestTurn_Step16_TheCellDecidesTheDice`, `TestTurn_Step16_3_RefusalsRollNothing`
     (turnsvc), `TestCleric_Steps13to16_PrepareCastAndTurn`,
     `TestCleric_Steps13_15_AThirdLevelClericOfWisdom15` (composition).
+
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: steps 13 to 16 read the cleric's features through the lookup (step 5); `TurnsUndead` becomes the `turn_undead` feature)_
 
 ### Thief and bard skills
 
@@ -530,6 +548,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestSetPoints_Step17_WritesAndLogsTheSpend`, `TestSetPoints_Step17_RefusalsAndNoChange`,
     `TestSetPoints_Step17_RestorerWritesThePointsBack`, `TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie`
     (skillsvc), `TestThief_Step17_SpendPointsAfterALevelUpAndUndo` (composition).
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `rogue_skills` feature (set `thief`, its budget, armours and `min_to_use` 1 as params) replaces `thiefSkillClasses`, the budget constants and `ThiefArmors`)_
 18. **Bard skills.** The four bard skills (Climb Walls, Detect Noise, Pick Pockets, Read
     Languages) are: base (PHB Table 33) + the entered points + race (Table 27) + Dexterity (Table
     28: Pick Pockets only) + armour (Table 29 on the body armour worn, ADR 0033 step 14; metal armour up to chain mail is the elven chain column plus the extra -5%
@@ -563,6 +582,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestBardSkill_Step18_ListedWithTheirTermsAndLastCheck`, `TestSetPoints_Step18_ABardSpendsItsPoints`
     (skillsvc), `TestBard_Step18_CreateRollSpendAndUndo`,
     `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the same `rogue_skills` kind with set `bard`, budget 20/15 and no per-skill limit, `metal` on the elven chain column with an extra -5 and `min_to_use` 0, replacing `bardSkillClasses`, `BardArmors` and the bard constants; the check kind follows the set)_
 19. **Backstab.** A thief's attack has a backstab option (not a bard's): +4 to hit (a named
     modifier), and the weapon's damage dice multiplied by PHB Table 30 for the level (×2 at 1-4, ×3
     at 5-8, ×4 at 9-12, ×5 from 13): the weapon's standard damage, before Strength and magic, as
@@ -597,6 +617,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `unknown`; `not_allowed` for a class without thieving skills, which rolls the whole change
     back); the skills are derived on read, so they follow. The Skills tab's thief block holds the
     selector.
+
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `backstab` feature (Table 30 by reference), not the `backstabClasses` list)_
 
 ### Spellbook
 
@@ -819,6 +841,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestLearn_Step20_LearnFailUndoAndPrepareAMage`,
     `TestLearn_Step20_4_TheSeedSpellbookComesInWithoutRolls` (composition).
 
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `spellbook` feature's `max_spell_level` (mage 9, bard 6) and `free_spell_per_new_spell_level` (mage) replace `spellbookMaxLevels` and `freeSpellClasses`; the starting spellbook stays a seed keyed by class)_
+
 ### Races
 
 21. **The six races.** Human, dwarf, elf, gnome, half-elf, halfling (PHB chapter 2). The race card
@@ -857,6 +881,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        and gnomes, magic item malfunction, surprise) is shown on the race card as localized
        catalogue text (step 23), not computed.
 
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 2 and 4, on implementation: the Table 9 bonus is the race's `con_save_bonus` trait (categories and poison as params), not `conSaveRaces`; 22.3, once accepted, is the `weapon_to_hit` trait; a human is a race with no traits, not a `race == "human"` test)_
+
 ### Rules data and the sheet
 
 23. **Tables the catalogue carries** (input for the catalogue item; each new table is a new
@@ -894,6 +920,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
       from a fixed list, at least long bow, short bow (composite ones included), light crossbow,
       heavy crossbow, hand crossbow, dagger, dart, sling, short sword, long sword, other melee,
       other thrown, other missile. Steps 11, 12 and 22.3 read it; no rule matches a weapon name.
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 1, 2 and 7, on implementation: format 11 adds the class and race definitions; every table with a column per class or group becomes rows keyed by class, group or race; Tables 10 and 11 move from a Go literal into the race definitions)_
 24. **The sheet comparison (retired).** _Retired by the user's ruling, 2026-10-19: "retire"
     (Kelsen's import is reconciled; the comparison was a one-off)._ It compared the figures of a
     character imported from a sheet (Kelsen's seed: level, THAC0, five save targets, bard skill

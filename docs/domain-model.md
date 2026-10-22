@@ -45,8 +45,10 @@ A player character, owned by one user ([ADR 0029](adr/0029-users-login-and-acces
 holds the inputs, and every figure is derived from them, never entered
 ([ADR 0030](adr/0030-classes-and-races.md)):
 
-- **Class entries** (planned): each with a class, a realized level and its XP. Today a character
-  has exactly one class, level and XP total, which is the one-entry case of the same shape.
+- **Class entries** (planned): one to three, each with a class, a realized level, its XP and a
+  state (active, or frozen with the level it was left at; [ADR 0042](adr/0042-multi-class-and-dual-class.md)
+  step 1). Today a character has exactly one class, level and XP total, which is the one-entry
+  case of the same shape.
 - **Race**, with its traits.
 - **Ability scores**: six stored scores; the **score in effect** adds the app's effects
   ([ADR 0004](adr/0004-buffs.md) steps 7 to 10).
@@ -103,13 +105,15 @@ stateDiagram-v2
     DualClass --> DualClass: old class frozen, new one levelled
 ```
 
-- **Multi-class**: several class entries from the start, each with its own level; the XP earned is
-  divided among them.
-- **Dual-class**: one entry is left (frozen) and a new one begun; the old class's abilities are
-  used again once the new class passes it.
+- **Multi-class**: two or three active class entries from the start, each levelling on its own;
+  each XP award is split evenly among them. One figure per character (THAC0, each save) is the
+  best of the entries; hit points per level are the entry's die divided by the number of classes.
+- **Dual-class**: the active entry is frozen at the level it is left at and a new one begun at
+  level 1; the old class's abilities are used again without penalty, and hit points gained again,
+  once the new class's level passes every frozen one (the crossover).
 - A class entry is the unit both share: a character is a list of class entries, and the two
-  differ in how they are created and how their XP is spent. The decisions and the numbers are for
-  the ADR that implements them; the book is PHB p.43 onwards.
+  differ in how they are created and how their XP is spent. The rules are
+  [ADR 0042](adr/0042-multi-class-and-dual-class.md) (PHB p.43 onwards).
 - The table lifted the racial restriction on both (user, 2026-10-21), so the allowed
   combinations come from the ruleset, not from the race.
 
@@ -180,8 +184,9 @@ _to confirm_.
 
 | Figure | Inputs | Where |
 |---|---|---|
-| Level, target level | class entry, XP | [ADR 0015](adr/0015-experience.md), [ADR 0030](adr/0030-classes-and-races.md) steps 3 and 7 |
-| THAC0, saves | class group, level | [ADR 0002](adr/0002-attack-resolution.md), [ADR 0006](adr/0006-saving-throws.md) |
+| Level, target level | class entry, its XP share | [ADR 0015](adr/0015-experience.md), [ADR 0030](adr/0030-classes-and-races.md) steps 3 and 7, [ADR 0042](adr/0042-multi-class-and-dual-class.md) steps 5 and 7 |
+| THAC0, saves | class group, level; the best of the class entries | [ADR 0002](adr/0002-attack-resolution.md), [ADR 0006](adr/0006-saving-throws.md), [ADR 0042](adr/0042-multi-class-and-dual-class.md) steps 8 and 9 |
+| Magical defence adjustment (a mind-affecting save's `wisdom` modifier) | Wisdom, any class | [ADR 0006](adr/0006-saving-throws.md) step 9 |
 | Spell slots | class, level, Wisdom or Intelligence | [ADR 0008](adr/0008-spell-slots-and-long-rest.md) |
 | Proficiency budget | class group, level, Intelligence | [ADR 0037](adr/0037-proficiencies.md) |
 | Rogue skill percentages | skill points, race, Dexterity, skill armour | [ADR 0014](adr/0014-skill-checks.md), [ADR 0030](adr/0030-classes-and-races.md) |

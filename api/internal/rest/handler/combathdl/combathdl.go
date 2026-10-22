@@ -31,7 +31,7 @@ type CharacterIDFunc func(r *http.Request) int64
 
 type combatSvc interface {
 	ResolveAttack(ctx context.Context, characterID int64, req combatsvc.AttackRequest) (*combatsvc.RollResult, error)
-	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.SaveBreakdown, error)
+	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory, opts combatsvc.SaveOptions) (*combatsvc.SaveBreakdown, error)
 	AdjustSave(ctx context.Context, characterID, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.SaveBreakdown, error)
 	AdjustAttackAC(ctx context.Context, characterID, entryID int64, targetAC int) (*combatsvc.RollResult, error)
 	SetAttackVerdict(ctx context.Context, characterID, entryID int64, hit bool) (*combatsvc.RollResult, error)
@@ -141,9 +141,11 @@ type SituationalDTO struct {
 	Label string `json:"label"`
 }
 
-// SaveRequestDTO matches the previous request shape.
+// SaveRequestDTO is the body of POST /api/roll/save. MindAffecting is
+// optional (default false): the magic attacks the mind (ADR 0006 step 9.3).
 type SaveRequestDTO struct {
-	Category combatsvc.SaveCategory `json:"category"`
+	Category      combatsvc.SaveCategory `json:"category"`
+	MindAffecting bool                   `json:"mindAffecting"`
 }
 
 // ResolveAttack runs an attack and returns its breakdown, the payload of its
@@ -179,7 +181,7 @@ func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		res, err := svc.ResolveSavingThrow(r.Context(), charID(r), req.Category)
+		res, err := svc.ResolveSavingThrow(r.Context(), charID(r), req.Category, combatsvc.SaveOptions{MindAffecting: req.MindAffecting})
 		if err != nil {
 			return err
 		}

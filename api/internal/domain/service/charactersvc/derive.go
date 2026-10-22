@@ -42,6 +42,9 @@ type Rules interface {
 	PriestSpellsPerDay(level, wis int) (map[int]int, error)
 	// SpellFailureFor is PHB Table 5's chance of spell failure (step 14).
 	SpellFailureFor(class string, wis int) (int, error)
+	// MagicDefenceFor is PHB Table 5's magical defence adjustment (ADR 0006
+	// step 9.1), for every class.
+	MagicDefenceFor(wis int) (int, error)
 	// TurningAt is PHB Table 61 at a priest level (step 16).
 	TurningAt(level int) ([]ruletablesvc.TurningTarget, error)
 	// ThiefSkills is PHB Tables 26 to 29 on the entered points (step 17).
@@ -104,6 +107,11 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 	}
 	if d.SpellSlots, err = spellSlots(c, realized, rules); err != nil {
 		return Derived{}, err
+	}
+	// ADR 0006 step 9: Table 5's magical defence adjustment at the sheet's
+	// Wisdom, an ability rule every class and race gets (step 9.2).
+	if d.MagicDefence, err = rules.MagicDefenceFor(c.Wis); err != nil {
+		return Derived{}, fmt.Errorf("derive magic defence: %w", err)
 	}
 	if ruletablesvc.UsesWisdomSpells(c.Class) {
 		if d.SpellFailure, err = rules.SpellFailureFor(c.Class, c.Wis); err != nil {

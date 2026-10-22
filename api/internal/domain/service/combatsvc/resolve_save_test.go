@@ -32,7 +32,7 @@ func rollSave(t *testing.T, f *fixture, d20, saveBonus int) *actionlog.Entry {
 	}
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, buffsvc.WeaponNone).Return(mods, nil)
 	f.records()
-	_, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+	_, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell, combatsvc.SaveOptions{})
 	require.NoError(t, err)
 	require.Len(t, f.entries, 1)
 	n := f.entries[0]
@@ -68,8 +68,9 @@ func TestResolveSavingThrow_LogPayload(t *testing.T) {
 	assert.Empty(t, e.Summary, "the UI words the save from its payload")
 	assert.Equal(t, map[string]any{
 		"category": "spell", "d20Roll": 12.0, "target": 14.0,
-		"modifiers":    []any{map[string]any{"kind": "buff", "detail": "Luck", "value": 1.0}},
-		"rolledPassed": false, "adjustment": 0.0, "rollTotal": 13.0, "adjustedTarget": 14.0,
+		"modifiers":     []any{map[string]any{"kind": "buff", "detail": "Luck", "value": 1.0}},
+		"mindAffecting": false,
+		"rolledPassed":  false, "adjustment": 0.0, "rollTotal": 13.0, "adjustedTarget": 14.0,
 		"total": 13.0, "passed": false, "margin": -1.0,
 	}, payloadOf(t, e.Payload))
 }
@@ -220,7 +221,7 @@ func TestResolveSavingThrow_OneModifierPerBuff(t *testing.T) {
 	mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Gaia", Value: 4}, {Buff: "Curse", Value: -1}}
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, buffsvc.WeaponNone).Return(mods, nil)
 	f.records()
-	res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+	res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell, combatsvc.SaveOptions{})
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.BreakdownModifier{
 		{Kind: string(combatsvc.ModBuff), Detail: "Gaia", Value: 4},

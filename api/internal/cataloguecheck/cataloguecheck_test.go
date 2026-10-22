@@ -52,7 +52,7 @@ func fixtureDoc(t *testing.T) map[string]any {
 	return a
 }
 
-// artifact is a valid format 9 document around the given spells: the fixture's other parts stand in
+// artifact is a valid current-format document around the given spells: the fixture's other parts stand in
 // for the required ones.
 func artifact(t *testing.T, spells ...any) map[string]any {
 	t.Helper()
@@ -197,12 +197,13 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 	}
 }
 
-// TestSchema_Step16_OnlyFormat9IsValid (ADR 0021 step 16.5): the schema accepts format 9 only; every
-// earlier format, retired, is refused whatever it carries (the API refuses it as an unknown format).
-func TestSchema_Step16_OnlyFormat9IsValid(t *testing.T) {
+// TestSchema_Step17_OnlyFormat10IsValid (ADR 0021 steps 16.5 and 17.3): the schema accepts format 10
+// only; every earlier format, retired, is refused whatever it carries (the API refuses it as an
+// unknown format), and so is a wisdom row without the magical defence adjustment.
+func TestSchema_Step17_OnlyFormat10IsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 9")
-	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 10} {
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 10")
+	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 11} {
 		a := fixtureDoc(t)
 		a["format"] = f
 		assert.Error(t, sch.Validate(a), "format %d", f)
@@ -210,8 +211,11 @@ func TestSchema_Step16_OnlyFormat9IsValid(t *testing.T) {
 	for _, part := range []string{"equipment", "languages", "proficiency_descriptions", "rule_tables"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 9 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 10 requires %s", part)
 	}
+	a := fixtureDoc(t)
+	delete(row(tables(a), "wisdom", 7), "magic_defence")
+	assert.Error(t, sch.Validate(a), "format 10 requires the magical defence adjustment")
 }
 
 // TestSchema_Step9_RuleTables (ADR 0021 steps 9.1 to 9.3): the four PHB rule tables are numbers
@@ -250,16 +254,18 @@ func TestSchema_Step9_RuleTables(t *testing.T) {
 // numbers and language-neutral codes only.
 func TestSchema_Step10_ClassTables(t *testing.T) {
 	refuseEach(t, map[string]func(map[string]any){
-		"a missing table":       func(a map[string]any) { delete(tables(a), "thac0") },
-		"an unknown class code": func(a map[string]any) { row(tables(a), "hit_dice", 0)["group"] = "paladin" },
-		"a race name in French": func(a map[string]any) { row(tables(a), "race_requirements", 0)["race"] = "nain" },
-		"an unknown skill":      func(a map[string]any) { row(tables(a), "thief_skill_base", 0)["skill"] = "Pick Pockets" },
-		"a text value":          func(a map[string]any) { row(tables(a), "thac0", 0)["rogue"] = "20" },
-		"a missing row field":   func(a map[string]any) { delete(row(tables(a), "saving_throws", 0), "breath") },
-		"an unknown row field":  func(a map[string]any) { row(tables(a), "backstab", 0)["note"] = "x" },
-		"a level over 20":       func(a map[string]any) { row(tables(a), "backstab", 3)["level_max"] = 21 },
-		"a chance over 100":     func(a map[string]any) { row(tables(a), "wisdom", 0)["spell_failure"] = 101 },
-		"19 THAC0 levels":       func(a map[string]any) { tables(a)["thac0"] = tables(a)["thac0"].([]any)[:19] },
+		"a missing table":          func(a map[string]any) { delete(tables(a), "thac0") },
+		"an unknown class code":    func(a map[string]any) { row(tables(a), "hit_dice", 0)["group"] = "paladin" },
+		"a race name in French":    func(a map[string]any) { row(tables(a), "race_requirements", 0)["race"] = "nain" },
+		"an unknown skill":         func(a map[string]any) { row(tables(a), "thief_skill_base", 0)["skill"] = "Pick Pockets" },
+		"a text value":             func(a map[string]any) { row(tables(a), "thac0", 0)["rogue"] = "20" },
+		"a missing row field":      func(a map[string]any) { delete(row(tables(a), "saving_throws", 0), "breath") },
+		"an unknown row field":     func(a map[string]any) { row(tables(a), "backstab", 0)["note"] = "x" },
+		"a level over 20":          func(a map[string]any) { row(tables(a), "backstab", 3)["level_max"] = 21 },
+		"a chance over 100":        func(a map[string]any) { row(tables(a), "wisdom", 0)["spell_failure"] = 101 },
+		"a magic defence below -6": func(a map[string]any) { row(tables(a), "wisdom", 0)["magic_defence"] = -7 },
+		"a magic defence above +4": func(a map[string]any) { row(tables(a), "wisdom", 24)["magic_defence"] = 5 },
+		"19 THAC0 levels":          func(a map[string]any) { tables(a)["thac0"] = tables(a)["thac0"].([]any)[:19] },
 		"8 wizard spell levels": func(a map[string]any) {
 			row(tables(a), "wizard_spells", 0)["per_spell_level"] = []any{1, 0, 0, 0, 0, 0, 0, 0}
 		},
@@ -404,7 +410,7 @@ func TestSchema_Step14_Languages(t *testing.T) {
 
 // TestSchema_Step16_Format9ProficiencyDescriptions (ADR 0021 steps 16.1 and 16.4): the 65 rows, each
 // {id, description} with both languages in step 1's subset, and nothing else; an earlier format may
-// not carry the list (TestSchema_Step16_OnlyFormat9IsValid).
+// not carry the list (TestSchema_Step17_OnlyFormat10IsValid).
 func TestSchema_Step16_Format9ProficiencyDescriptions(t *testing.T) {
 	descs := func(a map[string]any) []any { return a["proficiency_descriptions"].([]any) }
 	desc := func(a map[string]any, i int) map[string]any {

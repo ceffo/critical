@@ -2,12 +2,14 @@ import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
   addBuff,
+  apiCall,
   chooseLanguage,
   currentHp,
   logEntry,
   openDashboard,
   recordHp,
   openFold,
+  reloadSettled,
 } from "./helpers";
 
 /** "+2", "−2" (U+2212) or "0" as a number. */
@@ -251,4 +253,59 @@ test("a save-bonus buff is labelled by its name on the save card (en and fr)", a
     frCard.getByTestId("save-modifiers").getByRole("listitem").first(),
   ).toHaveText(/^e2e Gaia ward\s*\+2$/);
   await snap(page, "save-buff-fr");
+});
+
+// ADR 0006 step 9 in the browser: the "Against the mind" box reaches the save request, the card
+// words the server's Wisdom modifier (en and fr), and the box clears for the next save. The values
+// (Table 5, which saves, every class) are Go tests (combatsvc, ruletablesadpt, router).
+test("a save against the mind carries the Wisdom modifier on its card (en and fr)", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "POST", "/api/characters", {
+      name: "Wren",
+      class: "fighter",
+      raceCode: "human",
+      details: { alignment: "neutral_good", sex: "female" },
+      str: 12,
+      dex: 12,
+      con: 12,
+      int: 10,
+      wis: 17,
+      cha: 10,
+      hpMax: 10,
+      xp: 0,
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  const mind = page.getByTestId("save-mind-affecting");
+  await mind.check();
+  const rolled = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/roll/save") && r.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Roll save vs Spells" }).click();
+  const res = await rolled;
+  expect(res.request().postDataJSON()).toEqual({
+    category: "spell",
+    mindAffecting: true,
+  });
+  expect((await res.json()).mindAffecting).toBe(true);
+  const mods = saveCard(page).getByTestId("save-modifiers");
+  await expect(mods.getByRole("listitem")).toHaveCount(1);
+  await expect(mods.getByRole("listitem").first()).toHaveText(
+    /^Wisdom 17 \(magical defence\)\s*\+3$/,
+  );
+  await expect(mind).not.toBeChecked();
+
+  await chooseLanguage(page, "fr");
+  const frCard = page
+    .getByRole("region", { name: "Détail", exact: true })
+    .getByTestId("save-result");
+  await expect(
+    frCard.getByTestId("save-modifiers").getByRole("listitem").first(),
+  ).toHaveText(/^Sagesse 17 \(défense contre la magie\)\s*\+3$/);
+  await expect(page.getByText("Contre l’esprit")).toBeVisible();
+  await snap(page, "save-mind-fr");
 });

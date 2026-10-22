@@ -109,6 +109,17 @@ func priestLevelAllowed(c *ClassTables, spellLevel, wis int) bool {
 	return true
 }
 
+// MagicDefenceFor is ADR 0006 step 9.1: PHB Table 5's magical defence
+// adjustment at Wisdom wis, for a character of any class (step 9.2). A score
+// outside the table is an error.
+func (t *Tables) MagicDefenceFor(wis int) (int, error) {
+	r, err := t.WisdomFor(wis)
+	if err != nil {
+		return 0, err
+	}
+	return r.MagicDefence, nil
+}
+
 // SpellFailureFor is ADR 0030 step 14: the chance (percent) that a spell of
 // a character of class with Wisdom wis fails; 0 for a class without it or a
 // Wisdom of 13 and up (no die is rolled).

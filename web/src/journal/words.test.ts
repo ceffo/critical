@@ -179,6 +179,16 @@ describe("modLabel", () => {
     expect(modLabel(await makeT("fr"), race)).toBe("Petite-gens (race)");
   });
 
+  it("names the Wisdom of a mind-affecting save's magical defence (ADR 0006 step 9.4)", async () => {
+    const wisdom = { kind: "wisdom", detail: "17", value: 3 };
+    expect(modLabel(await makeT("en"), wisdom)).toBe(
+      "Wisdom 17 (magical defence)",
+    );
+    expect(modLabel(await makeT("fr"), wisdom)).toBe(
+      "Sagesse 17 (défense contre la magie)",
+    );
+  });
+
   it("names the weapon type of the non-proficiency penalty (ADR 0037 step 8)", async () => {
     const mod = { kind: "nonproficient", detail: "long_sword", value: -3 };
     expect(modLabel(await makeT("en"), mod)).toBe(

@@ -19,7 +19,10 @@ const (
 	ModBuff        ModifierKind = "buff"         // a buff's or item power's to-hit/damage/save bonus, Detail = buff (or item) name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
 	ModRace        ModifierKind = "race"         // the race's save bonus (ADR 0030 step 22.1), Detail = the race code
-	ModCrit        ModifierKind = "crit"         // house crit multiplier; the range is the roll's CritFrom..CritTo
+	// ModWisdom is PHB Table 5's magical defence adjustment (ADR 0006 step 9.4) on a save flagged
+	// as against magic that attacks the mind; Detail is the Wisdom score.
+	ModWisdom ModifierKind = "wisdom"
+	ModCrit   ModifierKind = "crit" // house crit multiplier; the range is the roll's CritFrom..CritTo
 	// ModSpecialization is weapon specialization (ADR 0030 step 12): +1 to hit and +2 damage with a
 	// melee or thrown weapon, not magical; Detail is empty.
 	ModSpecialization ModifierKind = "specialization"

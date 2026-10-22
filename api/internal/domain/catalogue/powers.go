@@ -59,10 +59,14 @@ type Maintenance struct {
 // ADR 0043 step 8). Every human-language text is a language map (ADR 0023);
 // an absent language has no entry, and the reader falls back to English.
 type Power struct {
-	ID          string
-	Name        localized.Text
-	Discipline  string
-	Kind        string
+	ID         string
+	Name       localized.Text
+	Discipline string
+	Kind       string
+	// Slot is the slot kind the pick takes where Kind does not say it (an
+	// attack mode takes a devotion's slot unless the catalogue says science);
+	// empty when the kind says it (ADR 0021 step 23).
+	Slot        string
 	Score       *PowerScore
 	InitialCost Cost
 	Maintenance *Maintenance
@@ -101,6 +105,9 @@ func CheckPowers(disciplines []Discipline, powers []Power) error {
 	for _, p := range powers {
 		if !known[p.Discipline] {
 			problems = append(problems, fmt.Errorf("power %s: unknown discipline %q", p.ID, p.Discipline))
+		}
+		if p.Slot != "" && p.Slot != KindScience && p.Slot != KindDevotion {
+			problems = append(problems, fmt.Errorf("power %s: unknown slot %q", p.ID, p.Slot))
 		}
 		if !slices.Contains(PowerKinds, p.Kind) {
 			problems = append(problems, fmt.Errorf("power %s: unknown kind %q", p.ID, p.Kind))

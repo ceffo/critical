@@ -94,9 +94,13 @@ To Hit Armour Class 0; the armour class, descending. [ADR 0002](docs/adr/0002-at
 A d20 at or above the target of one of the five categories. [ADR 0006](docs/adr/0006-saving-throws.md).
 _Avoid_: jet de protection.
 
-**Mind-affecting** (fr: _to be decided_) _(planned)_:
+**Mind-affecting** (fr: contre l'esprit):
 A flag on a saving-throw request: the save is against mind-affecting magic, so Wisdom's magical
 defence adjustment applies. [ADR 0006](docs/adr/0006-saving-throws.md) step 9.
+
+**Magical defence adjustment** (fr: ajustement défensif contre la magie):
+PHB Table 5's signed bonus by Wisdom (-6 to +4) on a mind-affecting save, one `wisdom` modifier on
+the roll. [ADR 0006](docs/adr/0006-saving-throws.md) step 9.
 
 ### Rules and the table
 

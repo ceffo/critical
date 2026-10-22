@@ -101,8 +101,11 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		rec := SaveBreakdown{Category: string(category), Target: target, Modifiers: []BreakdownModifier{}, MindAffecting: opts.MindAffecting, SpellID: opts.SpellID}
 		// ADR 0006 step 10.2: against a spell the character is immune to,
 		// nothing is rolled; the save passes and the breakdown names why.
+		// The adjusted target is the target (nothing adjusts it); the roll
+		// side (RollTotal, Total, Margin) stays 0: there is no roll.
 		if rec.Immunity = ImmunityTo(char, opts.SpellID); rec.Immunity != nil {
 			rec.Passed, rec.RolledPassed = true, true
+			rec.AdjustedTarget = rec.Target
 			return s.recordSave(ctx, characterID, rec, &res)
 		}
 		rec.D20Roll = s.dice.RollD20()
@@ -216,7 +219,8 @@ type SaveBreakdown struct {
 	// none named).
 	SpellID string `json:"spellId,omitempty"`
 	// Immunity is set when the character was immune to that spell (step
-	// 10.2): no d20 (0), no modifiers, passed, nothing to adjust.
+	// 10.2): no d20 (0), no modifiers, passed, nothing to adjust;
+	// AdjustedTarget is Target and RollTotal, Total and Margin are 0.
 	Immunity *Immunity `json:"immunity,omitempty"`
 	// Target is the category's derived target (ADR 0030 step 6), never adjusted.
 	Target int `json:"target"`

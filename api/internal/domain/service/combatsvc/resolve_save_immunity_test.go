@@ -71,6 +71,13 @@ func TestResolveSavingThrow_Step10_WisdomSpellImmunity(t *testing.T) {
 			assert.Equal(t, c.spell, res.SpellID)
 			assert.Equal(t, map[string]any{"source": "wisdom", "score": float64(c.char.Wis)}, p["immunity"])
 			assert.Equal(t, c.spell, p["spellId"])
+			// No roll, so no roll side; the adjusted target is the target.
+			require.NotZero(t, res.Target, "the fixture has a target")
+			assert.Equal(t, res.Target, res.AdjustedTarget)
+			assert.Equal(t, float64(res.Target), p["adjustedTarget"])
+			assert.Zero(t, res.RollTotal)
+			assert.Zero(t, res.Total)
+			assert.Zero(t, res.Margin)
 		})
 	}
 }

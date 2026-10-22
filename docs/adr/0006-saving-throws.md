@@ -154,6 +154,9 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
       score}` and `spellId`; it is logged as a `save` entry like any save (step 4). Nothing to adjust: an adjustment of that entry is
       refused (409 `save_immune`). A spell the character is not immune to, or no spell named, rolls as before (steps 1 to 9; the
       `spellId` is logged with the roll). The spell is the player's choice; whether it is mind-affecting stays step 9.3's flag.
+      The immune save's numbers: `adjustedTarget` is the `target` (nothing adjusts it); `d20Roll`, `rollTotal`, `total` and `margin`
+      are 0 (there is no roll). The save does not check `spellId` against the catalogue: the picker sends catalogue ids, and an
+      unknown id is logged as sent and matches no immunity (it rolls).
    3. **A spell cast on the character.** A spell received (cast on the character by someone else, `POST /api/spells/receive`) that the
       character is immune to applies nothing and rolls nothing (no buff, no damage, no duration roll): one cast entry with `textOnly: "immune"`
       and the same `immunity`, no snapshot.

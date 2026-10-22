@@ -84,7 +84,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.skip_slow != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7

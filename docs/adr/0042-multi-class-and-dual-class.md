@@ -1,9 +1,8 @@
 # ADR 0042: Multi-class and dual-class characters: class entries and how they combine
 
-**Status**: accepted 2026-10-21 for what the user's triage decided (quoted in Context); the steps
-or parts marked _(question Qn)_ are readings where the book is silent or differs from the triage's
-outline: each carries a stated default that is **not decided** until the user answers the
-"Questions for the user" section. Not implemented. Amends [ADR 0030](0030-classes-and-races.md)
+**Status**: accepted 2026-10-21 for what the user's triage decided (quoted in Context); the
+readings where the book is silent or differs from the triage's outline (Q1 to Q16) were put to the
+user and accepted as written on 2026-10-22 ("Decided with the user"). Not implemented. Amends [ADR 0030](0030-classes-and-races.md)
 steps 1, 3, 5, 6, 7 and 8, [ADR 0015](0015-experience.md) steps 1 to 3,
 [ADR 0037](0037-proficiencies.md) steps 3, 7 and 8 and [ADR 0040](0040-classes-are-data.md)
 step 5, each in place (dated 2026-10-21) and each on implementation. Builds on the class
@@ -98,7 +97,7 @@ Every warning is structured data (a code and its numbers), worded by the web.
    (field errors): no active entry, a class listed twice, a frozen entry without `left_at_level`
    or with one under 2 (the book requires at least 2nd level before switching), a multi-class with
    more than three classes (the book's combinations have at most three, PHB multi/dual,
-   Multi-Class Combinations), a character both multi-class and dual-class _(question Q1)_.
+   Multi-Class Combinations), a character both multi-class and dual-class _(Q1)_.
    Today's columns become the one-entry case: `class`, `COALESCE(realized_level, level)` and
    `xp_total` give one active entry, with no change of behaviour (the implementing item's data
    migration; the storage shape is its).
@@ -111,7 +110,7 @@ Every warning is structured data (a code and its numbers), worded by the web.
       multi/dual, Multi-Class Combinations; `phb/ch02-player-character-races/`, each race). With
       the ruleset's `multiclass_any_race` true (the default, ADR 0041 step 2.2) any race may be
       multi-class, in any combination of two or three classes the catalogue defines
-      _(question Q2)_; with it false, the race's book combinations only (catalogue data, rows keyed
+      _(Q2)_; with it false, the race's book combinations only (catalogue data, rows keyed
       by race, beside the level limits of ADR 0040 step 2). Each class's ability minimums and
       alignments apply (ADR 0040 step 1.4 and 1.5), and Table 7's dash is waived by the lift
       (ADR 0041 step 5).
@@ -156,7 +155,7 @@ Every warning is structured data (a code and its numbers), worded by the web.
    1. for a multi-class character, **in equal shares to every active entry**, even when an entry
       has reached its race's level limit (decided in triage; PHB multi/dual, first paragraph: the
       experience is divided equally between the classes). The share of an award is
-      `floor(amount / n)` for `n` active entries, the remainder lost _(question Q3)_;
+      `floor(amount / n)` for `n` active entries, the remainder lost _(Q3)_;
    2. for a dual-class character, wholly to the active entry; a frozen entry's XP never changes
       (PHB multi/dual, Dual-Class: no more XP in the previous class).
    An entry's XP is its `starting_xp` plus its shares, derived on read, never stored. The ledger's
@@ -168,7 +167,7 @@ Every warning is structured data (a code and its numbers), worded by the web.
 6. **The XP bonus** (amends ADR 0015 step 2 as amended by ADR 0040 step 6). The book gives the 10%
    bonus to a character with 16 or more in all his prime requisites
    (`phb/ch03-player-character-classes/02-class-descriptions.md`, Prime Requisites). Eligible when
-   every prime requisite of **every active entry's class** is 16 or more _(question Q4)_; a frozen
+   every prime requisite of **every active entry's class** is 16 or more _(Q4)_; a frozen
    entry's class does not count (it earns nothing). The flag stored on each award still counts
    (ADR 0015 step 2).
    Test: `BonusEligible_Step6_EveryActiveClassesPrimeRequisites` (xpsvc: a fighter/mage of Str 16,
@@ -198,17 +197,17 @@ Every warning is structured data (a code and its numbers), worded by the web.
    character uses the active entry's value while its realized level is not above every frozen
    entry's `left_at_level` (the **crossover** of step 13; PHB multi/dual, Dual-Class: the new
    class's combat and saving throw tables, the old numbers penalised). After the crossover, the
-   best of the active entry and each frozen entry at its `left_at_level` _(question Q5)_.
+   best of the active entry and each frozen entry at its `left_at_level` _(Q5)_.
    Tests: `THAC0_Step8_BestOfTheActiveEntries` (charactersvc: a fighter 6/cleric 7 uses the
    fighter's row), `THAC0_Step8_DualClassNewClassUntilTheCrossover` (a fighter 9 to mage 9 uses the
-   mage's row; at mage 10, the default of Q5).
+   mage's row; at mage 10, as decided in Q5).
 
 9. **Saving throws** (amends ADR 0030 step 6). For each of the five categories, the best (lowest)
    target among the active entries at their realized levels (decided in triage; PHB multi/dual,
    Multi-Class Benefits and Restrictions; `dmg/ch09-combat/14-breath-weapons.md`, saving throws:
    the most advantageous roll), category by category, so two classes' rows may mix
-   _(question Q6)_. A dual-class character as step 8: the active entry's rows until the crossover,
-   then the best per category _(question Q5)_. The race's bonus is unchanged (ADR 0030 step 22).
+   _(Q6)_. A dual-class character as step 8: the active entry's rows until the crossover,
+   then the best per category _(Q5)_. The race's bonus is unchanged (ADR 0030 step 22).
    Test: `Saves_Step9_BestPerCategory` (charactersvc: a fighter/mage at levels where the fighter is
    better on breath and the mage on spells takes each best).
 
@@ -223,17 +222,17 @@ Every warning is structured data (a code and its numbers), worded by the web.
     2. **A level-up of one entry**: that class's hit die (with Table 3's raised low dice, ADR 0030
        step 7.1) divided by the number of the character's classes, rounded down, at least 1 (same
        section: a hit die never yields less than 1); plus that class's share of the Constitution
-       adjustment, the adjustment divided by the number of classes _(question Q7: the rounding of
-       the share, and whether a warrior class's share uses the warrior column)_.
+       adjustment, the adjustment divided by the number of classes _(Q7: the share rounded down,
+       a warrior class's share using the warrior column)_.
     3. **Above the entry's name level** (ADR 0030 step 7.2): the class's fixed gain, divided by
-       the number of classes like a die _(question Q8)_, no Constitution share.
+       the number of classes like a die _(Q8)_, no Constitution share.
     4. Recorded as ADR 0030 step 7.3's one `level_up` transaction, carrying the entry's class, the
        die, the divisor, the share of the adjustment and the gain.
     Max HP entered for an existing character is kept as entered (step 4).
     Tests: `CreationHP_Step10_1_AverageOfTheDicePlusConstitution` (creationrollsvc: Morrison's
     dice 6, 5 and 2 give 4 before Constitution), `Roll_Step10_2_DieDividedByTheClasses` (levelupsvc:
     a d6 of 4 for a three-class character gives 1; a 1 gives 1, never 0; distinct dice through the
-    dice port), `Roll_Step10_3_FixedGainAboveTheNameLevel` (the default of Q8).
+    dice port), `Roll_Step10_3_FixedGainAboveTheNameLevel` (as decided in Q8).
 
 11. **Dual-class hit points** (amends ADR 0030 step 7). Taking a new class keeps the hit points
     (step 3). While the active entry's level is not above every frozen entry's `left_at_level`, a
@@ -268,7 +267,7 @@ Every warning is structured data (a code and its numbers), worded by the web.
     frozen entry's feature, spell progression or equipment allowance before the crossover is
     allowed and carries the warning `dual_class_old_ability` (with the class), shown on the action
     and in its journal entry; the XP award is entered as the DM gives it, the app computes no
-    halving _(question Q9)_. After the crossover nothing is warned, but each action still follows
+    halving _(Q9)_. After the crossover nothing is warned, but each action still follows
     the limits of the class it uses (same section: a dual-class fighter/mage casts no spell in
     armour; step 16).
     Tests: `DualClass_Step13_CrossoverAboveEveryLeftAtLevel` (domain: mage 9 after fighter 9 is
@@ -291,16 +290,16 @@ Every warning is structured data (a code and its numbers), worded by the web.
     the classes, then new slots at the **fastest** rate. Read per pool, each column of Table 34 on
     its own, so the initial count and the rate may come from two groups (a fighter/cleric: weapon
     4 initial every 3 levels from the warrior row; non-weapon 4 initial from the priest row, every
-    3) _(question Q10: the triage said "best line")_. The levels gained are counted on the level
+    3) _(Q10: the book's, not the triage's "best line")_. The levels gained are counted on the level
     of the entry whose rate is used (the highest such level when several share it)
-    _(question Q11)_. The weapon picks are one pool for the character (decided in triage).
+    _(Q11)_. The weapon picks are one pool for the character (decided in triage).
     The non-proficiency penalty (ADR 0037 step 8) is the smallest among the active entries'
-    groups _(question Q12)_. A non-weapon proficiency costs Table 37's slots when one of its
-    groups is among any active entry's Table 38 groups (ADR 0037 step 4) _(question Q13)_.
+    groups _(Q12)_. A non-weapon proficiency costs Table 37's slots when one of its
+    groups is among any active entry's Table 38 groups (ADR 0037 step 4) _(Q13)_.
     A dual-class character keeps every pick of the old class (PHB multi/dual, Dual-Class: the old
     class's proficiencies are kept); its slots are the frozen entries' available at their
     `left_at_level` plus the new class's gained slots (`floor(L / #Levels)`, no second initial
-    count) _(question Q14)_.
+    count) _(Q14)_.
     Tests: `ProficiencySlots_Step15_LargestInitialFastestRate` (ruletablesvc: the fighter/cleric
     above at levels 1, 3, 4 and 12), `ProficiencySlots_Step15_DualClassKeepsAndGains`,
     `NonproficientPenalty_Step15_SmallestOfTheGroups` (charactersvc).
@@ -319,13 +318,13 @@ Every warning is structured data (a code and its numbers), worded by the web.
        each class's own: an entry whose class allows no body armour (`armour: none`) and has a
        `spell_progression` warns `spell_in_armour` on every cast of its spells while body armour is
        worn, except an elf in elven chain (same section, Wizard: elves in elven chain cast in
-       armour; elven chain is a catalogue item, the elf a race trait) _(question Q15: a warning, as
-       the rest of the class limits, or a refusal)_.
+       armour; elven chain is a catalogue item, the elf a race trait) _(Q15: a warning, as
+       the rest of the class limits)_.
     3. **Thief skills**: an entry with `rogue_skills` whose character wears body armour outside
        the kind's `armour` list can use only Open Locks and Detect Noise; every other skill of the
        set warns `skill_blocked_by_armour` and is not rolled (same section, Thief: only those two,
-       the gauntlets off for the first and the helmet for the second) _(question Q16: what
-       percentage those two take in such armour)_. A single-class thief or bard is unchanged (its
+       the gauntlets off for the first and the helmet for the second) _(Q16: they take the
+       no-armour percentage)_. A single-class thief or bard is unchanged (its
        armour outside the list is already ADR 0033 step 20's warning).
     Tests: `Weapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion` (itemsvc: a fighter/cleric warned for
     a long sword, not for a mace; a fighter/thief not warned for a long sword),
@@ -343,55 +342,55 @@ Every warning is structured data (a code and its numbers), worded by the web.
     Test: `Party_Step17_TheFourCharactersDeriveAsTheirSheets` (composition: THAC0, saves, slots,
     proficiency slots and warnings for each; the bard's equal to today's).
 
-## Questions for the user
+## Decided with the user (2026-10-22)
 
-Each question holds its default (the step as written) until answered; the implementing item for a
-step waits for its answer or builds the default, as the supervisor rules.
+The user answered "1-16 defaults ok" (2026-10-22): each point below is the rule as decided, which
+is the step as written. The other readings noted were considered and not taken.
 
 1. **Q1, multi-class and dual-class at once.** The book makes them exclusive (multi-class is
-   demihuman, dual-class human); with both lifts, could a fighter/thief take a new class? Default:
+   demihuman, dual-class human); with both lifts, could a fighter/thief take a new class? Decided:
    refused.
 2. **Q2, combinations under the lift.** The lift lets any race be multi-class; does it also allow
    any combination of classes (a half-elf fighter/bard, three classes for a gnome, whom the book
-   limits to two), or only the book's combinations for some race? Default: any two or three
+   limits to two), or only the book's combinations for some race? Decided: any two or three
    catalogue classes.
 3. **Q3, the split's remainder.** The book divides the XP equally and says nothing of the odd
-   point. Default: each award's share rounded down per award, the remainder lost (as the book
+   point. Decided: each award's share rounded down per award, the remainder lost (as the book
    rounds hit points down).
 4. **Q4, the bonus for several classes.** The book says "all his prime requisites" without the
-   multi-class case. Default: every prime requisite of every active class at 16 or more (one flag
-   for the award); a dual-class's frozen class does not count. The other reading: a bonus per
+   multi-class case. Decided: every prime requisite of every active class at 16 or more (one flag
+   for the award); a dual-class's frozen class does not count. Not taken: a bonus per
    class, on that class's share.
 5. **Q5, a dual-class past the crossover: THAC0 and saves.** The book says the restriction on the
-   old numbers ends, not which numbers apply. Default: the best of the new class and the old ones
-   at their left-at levels. The other reading: the new class's only.
+   old numbers ends, not which numbers apply. Decided: the best of the new class and the old ones
+   at their left-at levels. Not taken: the new class's only.
 6. **Q6, best saves per category.** The outline's "best saves" and the book's "best saving throw"
-   read as category by category (rows may mix). Default: per category. The other reading: the one
+   read as category by category (rows may mix). Decided: per category. Not taken: the one
    class whose row is best overall.
 7. **Q7, the Constitution share at a level-up.** The book splits the adjustment between the
-   classes but gives no rounding, and says the warrior's +3/+4 only for the first level. Default:
+   classes but gives no rounding, and says the warrior's +3/+4 only for the first level. Decided:
    the share rounded down, and the warrior column for the share of a class that takes it.
 8. **Q8, above the name level.** The book divides a hit die by the number of classes but is silent
-   on the fixed gain after name level (+3, +2, +1). Default: divided the same way, at least 1.
+   on the fixed gain after name level (+3, +2, +1). Decided: divided the same way, at least 1.
 9. **Q9, the dual-class XP penalty.** The book's penalty is per encounter and adventure, which the
-   app does not track. Default: a warning on the action and its journal entry; the DM's award is
-   entered as given. The other reading: the app halves the next award.
+   app does not track. Decided: a warning on the action and its journal entry; the DM's award is
+   entered as given. Not taken: the app halves the next award.
 10. **Q10, "best Table 34 line" against the book.** The triage said the best line; the book says the
     largest initial count and the fastest rate, which can come from two rows (and per pool).
-    Default: the book's, per column.
+    Decided: the book's, per column.
 11. **Q11, which level counts for the slot rate.** The book gives the fastest rate, not whose level
-    it applies to. Default: the level of the entry whose rate is used.
-12. **Q12, the non-proficiency penalty.** The book does not say which class's. Default: the
+    it applies to. Decided: the level of the entry whose rate is used.
+12. **Q12, the non-proficiency penalty.** The book does not say which class's. Decided: the
     smallest (a fighter/mage takes -2).
-13. **Q13, the non-weapon crossover cost.** Not stated for several classes. Default: a proficiency
+13. **Q13, the non-weapon crossover cost.** Not stated for several classes. Decided: a proficiency
     is in-group when it is in any active class's groups.
 14. **Q14, a dual-class's slots.** The book keeps the old proficiencies and is silent on the new
-    class's slots. Default: the old class's slots at its left-at level plus the new class's gains,
+    class's slots. Decided: the old class's slots at its left-at level plus the new class's gains,
     no second initial count.
 15. **Q15, wizard spells in armour.** The triage says "not cast in armour"; every other class
-    limit is a warning. Default: a warning on the cast.
+    limit is a warning. Decided: a warning on the cast.
 16. **Q16, Open Locks and Detect Noise in forbidden armour.** The book allows them (gauntlets or
-    helmet off) without saying the percentage. Default: the no-armour column.
+    helmet off) without saying the percentage. Decided: the no-armour column.
 
 ## Consequences
 

@@ -39,7 +39,7 @@ func TestDerive_Step9_MagicDefenceForEveryClass(t *testing.T) {
 func TestDerive_Step10_SpellImmunitiesForEveryClass(t *testing.T) {
 	artifact, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages)
+	tables, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
 	require.NoError(t, err)
 	for _, class := range []string{"fighter", "mage", "cleric", "thief", "bard"} {
 		derive := func(wis int) []string {

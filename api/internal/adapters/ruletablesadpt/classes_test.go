@@ -73,8 +73,7 @@ func TestClassCatalogue_Step1_EveryClassCarriesEveryField(t *testing.T) {
 			out, err := json.Marshal(doc)
 			require.NoError(t, err)
 			_, err = catalogueadpt.ParseArtifact(out)
-			require.ErrorContains(t, err, "format 11 schema")
-			require.ErrorContains(t, err, "classes/0")
+			require.ErrorContains(t, err, "schema: at '/classes/0")
 		})
 	}
 }

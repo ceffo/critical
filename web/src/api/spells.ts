@@ -63,16 +63,24 @@ export function resetSpellSlots(): Promise<SpellSlot[]> {
   return post<SpellSlot[]>("/api/spells/reset");
 }
 
-export function fetchPreparationInfo(): Promise<PreparationInfo> {
-  return request<PreparationInfo>("/api/spells/preparation");
+/** The spellbook and limits of the spellcasting entry `cls` (ADR 0042 step 14; absent: the first). */
+export function fetchPreparationInfo(cls?: string): Promise<PreparationInfo> {
+  return request<PreparationInfo>(
+    cls
+      ? `/api/spells/preparation?class=${encodeURIComponent(cls)}`
+      : "/api/spells/preparation",
+  );
 }
 
-/** Replace today's preparation with these spell ids (duplicates allowed). */
-export function prepareSpells(spells: string[]): Promise<SpellSlot[]> {
+/** Replace today's preparation of the entry `cls` with these spell ids (duplicates allowed). */
+export function prepareSpells(
+  spells: string[],
+  cls?: string,
+): Promise<SpellSlot[]> {
   return request<SpellSlot[]>("/api/spells/prepared", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ spells }),
+    body: JSON.stringify(cls ? { spells, class: cls } : { spells }),
   });
 }
 

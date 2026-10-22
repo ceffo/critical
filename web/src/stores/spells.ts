@@ -8,9 +8,14 @@ interface SpellStore {
   info: PreparationInfo;
   /** Whether a panel has read the spellbook (the action module reads it again only then). */
   infoLoaded: boolean;
+  /** The spellcasting entry the spellbook and the preparation are of (ADR 0042 step 14); "" for
+   * the first one. Only a character with two casting classes picks. */
+  entry: string;
   loading: boolean;
   fetchSlots: () => Promise<void>;
   fetchInfo: () => Promise<void>;
+  /** Picks the entry and reads its spellbook. */
+  pickEntry: (cls: string) => Promise<void>;
   /** Mutations throw on failure; call them through useTableStore.run to surface errors. */
   /** Cast from slot `index`; the result goes to the result card. */
   castSpell: (index: number, opts?: api.CastOptions) => Promise<void>;
@@ -26,10 +31,11 @@ interface SpellStore {
   prepare: (spells: string[]) => Promise<void>;
 }
 
-export const useSpellStore = create<SpellStore>((set) => ({
+export const useSpellStore = create<SpellStore>((set, get) => ({
   slots: [],
   info: { spellbook: [], limits: [] },
   infoLoaded: false,
+  entry: "",
   loading: false,
   fetchSlots: async () => {
     set({ loading: true });
@@ -40,7 +46,15 @@ export const useSpellStore = create<SpellStore>((set) => ({
     }
   },
   fetchInfo: async () => {
-    set({ info: await api.fetchPreparationInfo(), infoLoaded: true });
+    set({
+      info: await api.fetchPreparationInfo(get().entry || undefined),
+      infoLoaded: true,
+    });
+  },
+  pickEntry: async (cls) => {
+    // The entry and its spellbook change together, so the editor never shows one with the other's.
+    const info = await api.fetchPreparationInfo(cls);
+    set({ entry: cls, info, infoLoaded: true });
   },
   castSpell: async (index, opts) => {
     const result = await api.castSpell(index, opts);
@@ -59,6 +73,8 @@ export const useSpellStore = create<SpellStore>((set) => ({
     set({ slots: (await api.resetSpellSlots()) ?? [] });
   },
   prepare: async (spells) => {
-    set({ slots: (await api.prepareSpells(spells)) ?? [] });
+    set({
+      slots: (await api.prepareSpells(spells, get().entry || undefined)) ?? [],
+    });
   },
 }));

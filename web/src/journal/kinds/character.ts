@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import type { TFunction } from "i18next";
 import { formatAc, formatSigned } from "@/lib/format";
+import { splitParts } from "@/lib/xpSplit";
 import type { XpChangeRecord, XpEntry } from "@/types/xp";
 import type { LearnResult, LevelUpRecord, SpellAdded } from "@/types/character";
 import type { LogEntry } from "@/types/log";
@@ -38,22 +39,32 @@ export const xpAddKind: KindView<XpPayload> = {
   decode: decodeXp,
   icon: TrendUp,
   text: ({ entry }, { t }) =>
-    t("log.xp.added", { total: entry.total, reason: reason(t, entry) }),
+    entry.split
+      ? t("log.xp.addedSplit", {
+          total: entry.total,
+          reason: reason(t, entry),
+          parts: splitParts(t, entry.split),
+        })
+      : t("log.xp.added", { total: entry.total, reason: reason(t, entry) }),
 };
 
 export const xpEditKind: KindView<XpPayload> = {
   decode: decodeXp,
   icon: TrendUp,
   text({ entry, before }, { t }) {
+    // ADR 0042 step 5.1: a multi-class award's shares follow the total.
+    const parts = entry.split ? splitParts(t, entry.split) : "";
     if (!before || before.total === entry.total)
-      return t("log.xp.editedSame", {
+      return t(parts ? "log.xp.editedSameSplit" : "log.xp.editedSame", {
         total: entry.total,
         reason: reason(t, entry),
+        parts,
       });
-    return t("log.xp.edited", {
+    return t(parts ? "log.xp.editedSplit" : "log.xp.edited", {
       from: before.total,
       to: entry.total,
       reason: reason(t, entry),
+      parts,
     });
   },
 };
@@ -62,7 +73,13 @@ export const xpRemoveKind: KindView<XpPayload> = {
   decode: decodeXp,
   icon: TrendUp,
   text: ({ entry }, { t }) =>
-    t("log.xp.removed", { total: entry.total, reason: reason(t, entry) }),
+    entry.split
+      ? t("log.xp.removedSplit", {
+          total: entry.total,
+          reason: reason(t, entry),
+          parts: splitParts(t, entry.split),
+        })
+      : t("log.xp.removed", { total: entry.total, reason: reason(t, entry) }),
 };
 
 /** The payload of a level_up entry (levelupsvc record, ADR 0030 step 7.3), or null. */
@@ -82,7 +99,15 @@ function levelUpText(p: LevelUpRecord, t: TFunction): string {
     from: p.hpMaxBefore,
     to: p.hpMaxAfter,
   };
-  if (p.fixed || p.rolled === null) return t("log.levelUp.fixed", hp);
+  // ADR 0042 step 10.4: a multi-class level-up names its class entry.
+  const cls = p.class
+    ? t(`details.classes.${p.class}`, { defaultValue: p.class })
+    : "";
+  if (p.fixed || p.rolled === null)
+    return t(cls ? "log.levelUp.fixedClass" : "log.levelUp.fixed", {
+      ...hp,
+      class: cls,
+    });
   const die =
     p.counted !== null && p.counted !== p.rolled
       ? t("log.levelUp.dieRaised", {
@@ -91,11 +116,20 @@ function levelUpText(p: LevelUpRecord, t: TFunction): string {
           counted: p.counted,
         })
       : t("log.levelUp.die", { die: p.hitDie, rolled: p.rolled });
+  const shared = p.classes
+    ? t("log.levelUp.shared", { classes: p.classes })
+    : "";
   const con = p.conAdjustment
     ? t("log.levelUp.con", { adjustment: formatSigned(p.conAdjustment) })
     : "";
   const manual = p.manual ? t("log.levelUp.manual") : "";
-  return t("log.levelUp.rolled", { ...hp, die, con, manual });
+  return t(cls ? "log.levelUp.rolledClass" : "log.levelUp.rolled", {
+    ...hp,
+    class: cls,
+    die: die + shared,
+    con,
+    manual,
+  });
 }
 
 export const levelUpKind: KindView<LevelUpRecord> = {

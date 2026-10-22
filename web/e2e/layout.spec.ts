@@ -23,6 +23,7 @@ import {
   logEntry,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
+import { asMultiClass } from "./multiclass";
 import {
   brokenWords,
   clippedText,
@@ -708,6 +709,84 @@ test("saves label line with a spell set: heading one line, tag uncut, 1440 to 25
 
 // ADR 0016 step 13: magic armour worn has no row on the effects timeline (it is always on); French
 // first (ADR 0027 step 2). Screens at 1920x1080 and 2560x1440.
+// ADR 0042 steps 5 and 7 on the dashboard: the character card's class lines (a long class name, the
+// level-limit warning, a pending level per class, a frozen old class) and the Experience activity's
+// class standings and split preview, in French first then English (ADR 0027 step 2), 1280 to 2560.
+// Screenshots at 1920x1080 and 2560x1440 (visual QA).
+for (const mode of ["multi", "dual"] as const) {
+  test(`class lines (${mode}-class): uncut in French and English, 1280 to 2560`, async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await asMultiClass(
+      page,
+      mode === "multi"
+        ? {
+            pending: true,
+            longClass: "Warden of the Northern Marches and Sunken Citadels",
+          }
+        : { dual: true },
+    );
+    await openDashboard(page);
+    for (const lang of ["fr", "en"] as const) {
+      await chooseLanguage(page, lang);
+      await page.keyboard.press("Escape");
+      const character = page.getByRole("complementary", {
+        name: lang === "fr" ? "Personnage" : "Character",
+      });
+      await expect(character.getByTestId("class-entries")).toBeVisible();
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize(vp);
+        const where = `${mode}, ${lang}, ${vp.width}x${vp.height}`;
+        await expectNoClippedText(character, `class lines, ${where}`);
+        await expectWholeWords(character, `class lines, ${where}`);
+        await expectNoPageScroll(page);
+        if (mode === "multi")
+          await expectNoClippedText(
+            page.getByTestId("level-up").first(),
+            `level-up prompt, ${where}`,
+          );
+        if (vp.width >= 1920 && lang === "fr")
+          await snap(page, `${mode}-card-${vp.width}x${vp.height}`);
+      }
+      // The Experience activity: the standings (and, for a multi-class, the split preview).
+      await page
+        .getByRole("navigation", {
+          name: lang === "fr" ? "Activités" : "Activities",
+        })
+        .getByRole("button", {
+          name: lang === "fr" ? "Expérience" : "Experience",
+          exact: true,
+        })
+        .click();
+      const xp = page.getByTestId("xp-top");
+      if (mode === "multi") await xp.getByRole("textbox").first().fill("1001");
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize(vp);
+        const where = `${mode}, ${lang}, ${vp.width}x${vp.height}`;
+        if (mode === "multi")
+          await expect(xp.getByTestId("xp-split")).toBeVisible();
+        await expectNoClippedText(xp, `experience classes, ${where}`);
+        await expectNoClippedText(
+          page.getByTestId("xp-ledger"),
+          `ledger, ${where}`,
+        );
+        if (vp.width >= 1920 && lang === "fr")
+          await snap(page, `${mode}-xp-${vp.width}x${vp.height}`);
+      }
+      await page
+        .getByRole("navigation", {
+          name: lang === "fr" ? "Activités" : "Activities",
+        })
+        .getByRole("button", {
+          name: lang === "fr" ? "Agir" : "Act",
+          exact: true,
+        })
+        .click();
+    }
+  });
+}
+
 test("effects timeline with magic armour worn: no row for it, 1920 to 2560", async ({
   page,
 }) => {

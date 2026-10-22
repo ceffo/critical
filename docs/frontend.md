@@ -485,6 +485,15 @@ flowchart TD
   at 1280), target (the sheet's), the newest logged roll in that category
   (server verdict ✓ / ✗ and the d20), a click rolls it. The card has the full height (ADR 0022
   step 2.3), so on a tall screen the space under the saves stays empty.
+- Multi-class and dual-class ([ADR 0042](adr/0042-multi-class-and-dual-class.md) steps 5, 7, 14): when the
+  server's `derived.classes` lists several entries, the character card shows one line per class
+  (`ClassEntries.tsx`: class, level, XP over the next threshold, a frozen tag, the `level_limit`
+  warning) in place of the single class and level; the Experience activity adds a "By class" list and
+  words the server's `split` of an award (the preview, each ledger row, the journal's xp kinds); the
+  level-up prompt is one per class owing levels and sends `class` with the level; a character with two
+  casting entries (slots carry `class`) picks the entry in the preparation editor (`?class=`, `class`)
+  and each slot row shows its class. Nothing is computed in the client. A thief skill the armour blocks
+  (`blocked`) shows its tag, a cast's `spell_in_armour` warning shows on its card.
 - Saves (`Saves.tsx`, character card): a save is logged (kind `save`, rendered from `effectivePayload` by
   `journal/kinds/save.tsx`). The save card (`SaveCard` in that file) has an "Adjust after the roll" fold
   (shared with the skill check, `AdjustCheck`): − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →

@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSpellStore } from "@/stores/spells";
+import { useClassName } from "@/lib/useClassName";
 import { useTableStore } from "@/stores/table";
 import { spellId, useSpellName } from "@/i18n/spellName";
 import type { CastTarget, SpellSlot } from "@/types/spells";
@@ -48,7 +49,8 @@ function groupSlots(
       rows.push({ slot, blank, name: blankName, remaining: slot.used ? 0 : 1 });
       continue;
     }
-    const key = slot.prepared_spell_id || slot.prepared_spell_name;
+    // Two spellcasting entries keep their own rows even for the same spell (ADR 0042 step 14).
+    const key = `${slot.class ?? ""}|${slot.prepared_spell_id || slot.prepared_spell_name}`;
     const row = byKey.get(key);
     if (!row) {
       const r = {
@@ -173,8 +175,11 @@ export function SpellsPanel() {
     castSpell,
     resetSlots,
     prepare,
+    pickEntry,
+    entry,
     loading,
   } = useSpellStore();
+  const className = useClassName();
   const [editing, setEditing] = useState(false);
   // The spell whose details popup is open.
   const [details, setDetails] = useState<{
@@ -214,15 +219,27 @@ export function SpellsPanel() {
   const maxOf = (level: number) =>
     info.limits.find((l) => l.level === level)?.max;
   const levels = [...byLevel.keys()].sort((a, b) => a - b);
+  // ADR 0042 step 14: the slots carry their class entry when the character has two spellcasting
+  // classes; the editor then prepares one entry at a time.
+  const entries = [
+    ...new Set(slots.flatMap((s) => (s.class ? [s.class] : []))),
+  ];
+  const current = entry || entries[0] || "";
 
   // "Préparer" turns the tab into the editor, in the same space (ADR 0027 step 11.1).
   if (editing)
     return (
       <PrepareEditor
+        key={current}
         spellbook={info.spellbook}
         limits={info.limits}
+        entries={entries.length > 1 ? entries : undefined}
+        entry={current}
+        onEntry={(cls) => void run(() => pickEntry(cls), { quiet: true })}
         initial={slots
-          .filter((s) => !s.extra)
+          .filter(
+            (s) => !s.extra && (entries.length < 2 || s.class === current),
+          )
           .map((s) => s.prepared_spell_id || spellId(s.prepared_spell_name))}
         busy={busy}
         onCancel={() => setEditing(false)}
@@ -386,6 +403,14 @@ export function SpellsPanel() {
                               </option>
                             ))}
                           </select>
+                        )}
+                        {entries.length > 1 && slot.class && (
+                          <span
+                            className="chip px-1.5 text-label text-muted-foreground"
+                            data-testid="slot-class"
+                          >
+                            {className(slot.class)}
+                          </span>
                         )}
                         {/* The cast inputs stay with the cast button: they wrap under the name together. */}
                         <span className="ml-auto flex flex-wrap items-center justify-end gap-2">

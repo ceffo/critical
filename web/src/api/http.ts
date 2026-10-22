@@ -60,7 +60,11 @@ async function errorBody(
     if (typeof body.error === "string" && body.error) {
       const code = typeof body.code === "string" ? body.code : undefined;
       return {
-        message: codeMessage(code, figuresOf(body)) ?? body.error,
+        // A field error's text can itself be a code the web words (`skill_blocked_by_armour`).
+        message:
+          codeMessage(code, figuresOf(body)) ??
+          (typeof body.field === "string" ? codeMessage(body.error) : null) ??
+          body.error,
         field: typeof body.field === "string" ? body.field : undefined,
         code,
       };

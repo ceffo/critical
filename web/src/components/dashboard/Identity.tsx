@@ -19,6 +19,7 @@ import { useSkillsEditor, type SkillsEditor } from "@/stores/skillsEditor";
 import type { FreeSpell } from "@/types/character";
 import { useXpStore } from "@/stores/xp";
 import { CharacterDetails } from "./CharacterDetails";
+import { ClassEntries } from "./ClassEntries";
 import { LevelUpPrompt } from "./LevelUpPrompt";
 import { ToSpendTag } from "./ToSpendTag";
 
@@ -53,6 +54,9 @@ export function Identity({
   const xp = useXpStore((s) => s.ledger);
   const character = useCharacterStore((s) => s.character);
   const strength = useBuffsStore((s) => s.strength);
+  // A multi-class or dual-class character (ADR 0042): one line per class entry in place of the
+  // single class and level.
+  const entries = (character?.derived.classes?.length ?? 0) > 1;
   const strBuffed =
     strength !== null &&
     (strength.effective !== strength.base ||
@@ -95,18 +99,20 @@ export function Identity({
           </h1>
           {character && (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <p
-                className="text-body text-muted-foreground"
-                data-testid="class"
-              >
-                {character.classes
-                  .map((e) =>
-                    i18n.exists(`details.classes.${e.class}`)
-                      ? t(`details.classes.${e.class}`)
-                      : e.class,
-                  )
-                  .join(" / ")}
-              </p>
+              {!entries && (
+                <p
+                  className="text-body text-muted-foreground"
+                  data-testid="class"
+                >
+                  {character.classes
+                    .map((e) =>
+                      i18n.exists(`details.classes.${e.class}`)
+                        ? t(`details.classes.${e.class}`)
+                        : e.class,
+                    )
+                    .join(" / ")}
+                </p>
+              )}
               <ToSpendTag
                 toSpend={character.derived.levelUp.toSpend}
                 onOpenEditor={openSkillsEditor}
@@ -117,34 +123,40 @@ export function Identity({
         </div>
         {character && (
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenXp}
-              title={
-                xp?.nextLevel
-                  ? t("xp.levelLinkTitle", {
-                      xp: new Intl.NumberFormat(i18n.language).format(xp.total),
-                      percent: xp.progressPercent,
-                      level: xp.nextLevel,
-                    })
-                  : undefined
-              }
-              className="relative shrink-0 pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              {t("app.levelValue", { level: character.derived.realizedLevel })}
-              {xp && (
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-input"
-                >
+            {!entries && (
+              <button
+                type="button"
+                onClick={onOpenXp}
+                title={
+                  xp?.nextLevel
+                    ? t("xp.levelLinkTitle", {
+                        xp: new Intl.NumberFormat(i18n.language).format(
+                          xp.total,
+                        ),
+                        percent: xp.progressPercent,
+                        level: xp.nextLevel,
+                      })
+                    : undefined
+                }
+                className="relative shrink-0 pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {t("app.levelValue", {
+                  level: character.derived.realizedLevel,
+                })}
+                {xp && (
                   <span
-                    className="absolute inset-y-0 left-0 rounded-full bg-tint"
-                    style={{ width: `${xp.progress * 100}%` }}
-                    data-testid="level-progress"
-                  />
-                </span>
-              )}
-            </button>
+                    aria-hidden
+                    className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-input"
+                  >
+                    <span
+                      className="absolute inset-y-0 left-0 rounded-full bg-tint"
+                      style={{ width: `${xp.progress * 100}%` }}
+                      data-testid="level-progress"
+                    />
+                  </span>
+                )}
+              </button>
+            )}
             <Button
               variant="ghost"
               size="icon-sm"
@@ -159,6 +171,9 @@ export function Identity({
           </div>
         )}
       </div>
+      {character && entries && (
+        <ClassEntries character={character} onOpenXp={onOpenXp} />
+      )}
       {character && (
         <div
           role="group"

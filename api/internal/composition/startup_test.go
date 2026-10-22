@@ -400,18 +400,6 @@ func TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits(t *testing.T) {
 	}
 }
 
-// ADR 0021 step 12.3: an artifact with a broken sphere access (a sphere twice)
-// refuses the start, naming the table.
-func TestStartup_Step12_RefusesABrokenSphereAccess(t *testing.T) {
-	artifact := writeArtifact(t, func(d map[string]any) {
-		rows := d["rule_tables"].(map[string]any)["sphere_access"].([]any)
-		d["rule_tables"].(map[string]any)["sphere_access"] = append(rows, rows[0])
-	})
-	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
-	require.ErrorContains(t, err, "rule_tables: sphere_access table: cleric all twice")
-	require.ErrorContains(t, err, "spell catalogue "+artifact)
-}
-
 // ADR 0021 step 13.3: an artifact with a broken equipment table or row refuses
 // the start, naming it.
 func TestStartup_Step13_RefusesBrokenEquipment(t *testing.T) {

@@ -131,25 +131,31 @@ func TestTurningAt_Step16_Table61(t *testing.T) {
 // twelve major spheres open every level, Elemental (each subsphere) levels 1
 // to 3 only, every other sphere is closed.
 func TestSphereAccess_Step15_TheClericsSpheres(t *testing.T) {
-	access, err := phb(t).SphereAccess()
+	defs, err := phb(t).Definitions()
 	require.NoError(t, err)
-	assert.True(t, access.HasSpheres("cleric"))
-	assert.False(t, access.HasSpheres("mage"))
+	cleric, ok := defs.Class("cleric")
+	require.True(t, ok)
+	feature, ok := cleric.Lists(classes.KindSphereAccess)
+	require.True(t, ok)
+	access := feature.Spheres
+	mage, ok := defs.Class("mage")
+	require.True(t, ok)
+	_, has := mage.Lists(classes.KindSphereAccess)
+	assert.False(t, has)
 	for _, s := range []string{
 		"all", "astral", "charm", "combat", "creation", "divination", "guardian", "healing",
 		"necromantic", "protection", "summoning", "sun",
 	} {
-		assert.True(t, access.Opens("cleric", 7, []string{s}), "major %s at 7th", s)
+		assert.True(t, access.Opens(7, []string{s}), "major %s at 7th", s)
 	}
 	for _, s := range []string{"elemental_air", "elemental_earth", "elemental_fire", "elemental_water"} {
-		assert.True(t, access.Opens("cleric", 3, []string{s}), "minor %s at 3rd", s)
-		assert.False(t, access.Opens("cleric", 4, []string{s}), "minor %s at 4th", s)
+		assert.True(t, access.Opens(3, []string{s}), "minor %s at 3rd", s)
+		assert.False(t, access.Opens(4, []string{s}), "minor %s at 4th", s)
 	}
 	for _, s := range []string{"animal", "plant", "weather", "thought", "chaos", "law", "numbers", "time", "travelers", "war", "wards"} {
-		assert.False(t, access.Opens("cleric", 1, []string{s}), "closed %s", s)
+		assert.False(t, access.Opens(1, []string{s}), "closed %s", s)
 	}
-	assert.True(t, access.Opens("cleric", 5, []string{"elemental_fire", "combat"}), "Elemental (Fire) and Combat: open through Combat")
-	assert.False(t, access.Opens("mage", 1, []string{"all"}), "no access, no spell")
+	assert.True(t, access.Opens(5, []string{"elemental_fire", "combat"}), "Elemental (Fire) and Combat: open through Combat")
 }
 
 // ADR 0006 step 10.1: Table 5's spell immunities, cumulative from the lowest

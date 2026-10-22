@@ -123,6 +123,19 @@ func TestLookup_Step5_AFeatureThroughTheClassEntry(t *testing.T) {
 	assert.Equal(t, rogueSkills(), got.RogueSkills, "the registry's params are untouched")
 }
 
+// ADR 0030 step 15.2: a major sphere opens every spell level, a minor one
+// only up to minor_max_level, any other sphere is closed; one open sphere
+// among several opens the spell.
+func TestSphereAccess_Step15_Opens(t *testing.T) {
+	a := classes.SphereAccess{Major: []string{"combat"}, Minor: []string{"fire"}, MinorMaxLevel: 2}
+	assert.True(t, a.Opens(7, []string{"combat"}), "major at 7th")
+	assert.True(t, a.Opens(2, []string{"fire"}), "minor at the cap")
+	assert.False(t, a.Opens(3, []string{"fire"}), "minor over the cap")
+	assert.False(t, a.Opens(1, []string{"water"}), "closed")
+	assert.True(t, a.Opens(5, []string{"fire", "combat"}), "open through the major one")
+	assert.Equal(t, []string{"combat", "fire"}, a.Codes())
+}
+
 // ADR 0040 step 3.5: rogue_skills is listed once per skill set, so a class may grant two sets;
 // the same set twice is refused. FeaturesAt answers every set granted at a level, in the class's
 // order, ListsAll every set listed.

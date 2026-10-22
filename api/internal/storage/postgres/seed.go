@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
@@ -172,7 +174,13 @@ func pointSeedCharacter(ctx context.Context, q storeq.Querier, characterPath str
 	if err != nil || !ok {
 		return err
 	}
-	points, err := skillPointsJSON(c.SkillPoints)
+	// The step runs before the skill sets column exists: it writes the legacy flat column, the one
+	// the carry-over of skillSetsMigration reads (a seed has one skill set).
+	flat := map[string]int{}
+	for _, points := range c.SkillPoints {
+		maps.Copy(flat, points)
+	}
+	points, err := skillPointsJSON(flat)
 	if err != nil {
 		return err
 	}
@@ -182,7 +190,7 @@ func pointSeedCharacter(ctx context.Context, q storeq.Querier, characterPath str
 	return nil
 }
 
-// skillPointsJSON is points as characters.skill_points stores them ("{}" for none).
+// skillPointsJSON is points as the legacy characters.skill_points stores them ("{}" for none).
 func skillPointsJSON(points map[string]int) (string, error) {
 	if len(points) == 0 {
 		return "{}", nil
@@ -190,6 +198,18 @@ func skillPointsJSON(points map[string]int) (string, error) {
 	b, err := json.Marshal(points)
 	if err != nil {
 		return "", fmt.Errorf("marshal skill points: %w", err)
+	}
+	return string(b), nil
+}
+
+// skillSetsJSON is points as characters.skill_sets stores them ("{}" for none).
+func skillSetsJSON(points skills.SetPoints) (string, error) {
+	if len(points) == 0 {
+		return "{}", nil
+	}
+	b, err := json.Marshal(points)
+	if err != nil {
+		return "", fmt.Errorf("marshal skill sets: %w", err)
 	}
 	return string(b), nil
 }
@@ -212,7 +232,7 @@ func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error
 	if err != nil {
 		return fmt.Errorf("marshal languages: %w", err)
 	}
-	points, err := skillPointsJSON(c.SkillPoints)
+	points, err := skillSetsJSON(c.SkillPoints)
 	if err != nil {
 		return err
 	}
@@ -228,10 +248,18 @@ func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error
 		Level: int64(c.Level), XpTotal: int64(c.XPTotal), SaveParaPoison: int64(c.SaveParaPoison),
 		SaveRodStaffWand: int64(c.SaveRodStaffWand), SavePetriPoly: int64(c.SavePetriPoly),
 		SaveBreath: int64(c.SaveBreath), SaveSpell: int64(c.SaveSpell), Languages: string(languages),
-		RaceCode: c.Race, SkillPoints: points, Alignment: c.Alignment, Sex: c.Sex, ProficiencyPicks: picks, Class: c.Class,
+		RaceCode: c.Race, SkillSets: points, Alignment: c.Alignment, Sex: c.Sex, ProficiencyPicks: picks, Class: c.Class,
 	})
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)
+	}
+	// ADR 0042 step 1: the seed's class, realized at its sheet level (step 7.5), its XP as the
+	// entry's starting XP.
+	if err := q.InsertClassEntry(ctx, storeq.InsertClassEntryParams{
+		CharacterID: charID, Position: 0, Class: c.Class, RealizedLevel: int64(c.Level),
+		StartingXp: int64(c.XPTotal), State: string(classes.EntryActive),
+	}); err != nil {
+		return fmt.Errorf("insert class entry: %w", err)
 	}
 	slotsJSON, err := c.SlotsJSON()
 	if err != nil {

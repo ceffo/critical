@@ -18,34 +18,130 @@ import (
 // not a bound.
 const MaxSkillPoints = ruletablesvc.MaxSkillPercent
 
-// RogueSkillsAt is ADR 0040 step 5 for rogue_skills: the params the class grants at level, nil
-// when it grants none there.
+// SetPoints are a character's entered skill points per skill set: the set code (the
+// rogue_skills `set` param of the feature that grants it, ADR 0040 step 3.5) to the points of
+// each of its skills. Each set has its own budget, so the points of two sets that share a skill
+// (a thief's and a bard's pick pockets) never mix.
+type SetPoints map[string]map[string]int
+
+// Of are the points of a set, nil for none.
+func (p SetPoints) Of(set string) map[string]int { return p[set] }
+
+// With is p with the points of set replaced by points (nil or empty: none), without mutating p.
+// nil when no set holds a point.
+func (p SetPoints) With(set string, points map[string]int) SetPoints {
+	var out SetPoints
+	for k, v := range p {
+		if k != set && len(v) > 0 {
+			if out == nil {
+				out = SetPoints{}
+			}
+			out[k] = maps.Clone(v)
+		}
+	}
+	if len(points) > 0 {
+		if out == nil {
+			out = SetPoints{}
+		}
+		out[set] = maps.Clone(points)
+	}
+	return out
+}
+
+// LegacySet is the key the reader files points under when only the legacy flat
+// characters.skill_points holds them (a release from before skill sets kept writing it): they
+// belong to the class's first set, which only the class definition names (Resolve).
+const LegacySet = ""
+
+// Resolve is p with the points filed under LegacySet moved to the first skill set def lists,
+// unless that set already has points (or def lists none: they are dropped). p when it has none.
+func (p SetPoints) Resolve(def classes.Class) SetPoints {
+	legacy, ok := p[LegacySet]
+	if !ok {
+		return p
+	}
+	out := p.Clone()
+	delete(out, LegacySet)
+	if set := FirstSet(def); set != "" && len(out[set]) == 0 && len(legacy) > 0 {
+		out[set] = legacy
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// Clone is a deep copy of p.
+func (p SetPoints) Clone() SetPoints {
+	var out SetPoints
+	for k, v := range p {
+		if out == nil {
+			out = SetPoints{}
+		}
+		out[k] = maps.Clone(v)
+	}
+	return out
+}
+
+// RogueSkillsAt is ADR 0040 step 5 for rogue_skills: the params of the first skill set the
+// class grants at level, nil when it grants none there. A class that grants several is read
+// with RogueSetsAt.
 func RogueSkillsAt(def classes.Class, level int) *classes.RogueSkills {
-	f, ok := def.Feature(classes.KindRogueSkills, level)
-	if !ok {
-		return nil
+	if sets := RogueSetsAt(def, level); len(sets) > 0 {
+		return &sets[0]
 	}
-	return f.RogueSkills
+	return nil
 }
 
-// rogueSkillsListed are the rogue_skills params the class lists at any level, nil for none: what an
-// entry of points is checked against before the level is read.
-func rogueSkillsListed(def classes.Class) *classes.RogueSkills {
-	f, ok := def.Lists(classes.KindRogueSkills)
-	if !ok {
-		return nil
+// RogueSetsAt is ADR 0040 steps 3.5 and 5 for rogue_skills: the params of every skill set the
+// class grants at level, in the class's order (one per rogue_skills feature); nil for none.
+func RogueSetsAt(def classes.Class, level int) []classes.RogueSkills {
+	var out []classes.RogueSkills
+	for _, f := range def.FeaturesAt(classes.KindRogueSkills, level) {
+		out = append(out, *f.RogueSkills)
 	}
-	return f.RogueSkills
+	return out
 }
 
-// ValidSkillPoints is ADR 0030 steps 17 and 18's entry check on a thief's or a bard's points, at
-// creation and when the player spends them later: each skill of the class's rogue_skills set
+// FirstSet is the code of the first skill set the class lists at any level, "" for a class
+// without one: the set a creation enters its points in.
+func FirstSet(def classes.Class) string {
+	if f, ok := def.Lists(classes.KindRogueSkills); ok {
+		return f.RogueSkills.Set
+	}
+	return ""
+}
+
+// rogueSkillsListed are the rogue_skills params of set that the class lists at any level, nil
+// for none: what an entry of points is checked against before the level is read.
+func rogueSkillsListed(def classes.Class, set string) *classes.RogueSkills {
+	for _, f := range def.ListsAll(classes.KindRogueSkills) {
+		if f.RogueSkills.Set == set {
+			return f.RogueSkills
+		}
+	}
+	return nil
+}
+
+// rogueSkillsAtFor are the params of set the class grants at level, nil for none.
+func rogueSkillsAtFor(def classes.Class, set string, level int) *classes.RogueSkills {
+	for _, rs := range RogueSetsAt(def, level) {
+		if rs.Set == set {
+			return &rs
+		}
+	}
+	return nil
+}
+
+// ValidSkillPoints is ADR 0030 steps 17 and 18's entry check on the points of one skill set of
+// a thief, a bard or any class with rogue_skills, at creation and when the player spends them
+// later: each skill of the class's rogue_skills feature of that set
 // (ADR 0040 step 3) from 0 to MaxSkillPoints. The budget is checked apart, at the realized level
 // (SkillPointsWithinBudget). The points come back without the zeros, nil for none. A class
-// without skill points enters none: any point is refused with field skillPoints; another
+// without that set enters none: any point is refused with field skillPoints; another
 // refusal names the field skillPoints.<skill>.
-func ValidSkillPoints(def classes.Class, points map[string]int) (map[string]int, error) {
-	rs := rogueSkillsListed(def)
+func ValidSkillPoints(def classes.Class, set string, points map[string]int) (map[string]int, error) {
+	rs := rogueSkillsListed(def, set)
 	if rs == nil {
 		if len(points) > 0 {
 			return nil, &domain.FieldError{Field: FieldSkillPoints, Message: CodeNotAllowed}
@@ -83,12 +179,12 @@ func ValidSkillPoints(def classes.Class, points map[string]int) (map[string]int,
 // listed rogue_skills, ADR 0040 step 3): below its from_level the class has the skills but no
 // points to spend yet (the derive shows none), so the budget is 0 and any spend above before
 // is refused.
-func SkillPointsWithinBudget(def classes.Class, level int, before, after map[string]int) error {
-	listed := rogueSkillsListed(def)
+func SkillPointsWithinBudget(def classes.Class, set string, level int, before, after map[string]int) error {
+	listed := rogueSkillsListed(def, set)
 	if listed == nil || level < 1 {
 		return nil
 	}
-	rs := RogueSkillsAt(def, level)
+	rs := rogueSkillsAtFor(def, set, level)
 	if rs == nil {
 		spent, was := 0, 0
 		for _, skill := range ruletablesvc.SkillsOf(listed) {
@@ -124,49 +220,46 @@ type SkillTables interface {
 	RogueSkills(rs classes.RogueSkills, race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
 }
 
-// PointsSheet is what a thief's or a bard's skills read of the character: its class, race,
-// Dexterity, realized level, skill armour (ruletablesvc.SkillArmorFor the worn body armour, ADR
-// 0033 step 14) and entered points.
+// PointsSheet is what a character's skill sets read of the character: its class, race,
+// Dexterity, realized level, the worn body armour's Table 29 column (ADR 0033 step 14: each set
+// reads it through its own armour entries, ruletablesvc.SkillArmorFor) and entered points per set.
 type PointsSheet struct {
-	Class      classes.Class
-	Race       string
-	Dex, Level int
-	Armor      string
-	Points     map[string]int
+	Class       classes.Class
+	Race        string
+	Dex, Level  int
+	ArmorColumn string
+	Points      SetPoints
 }
 
-// PointsFigures are the skills a thief's or a bard's points give (ADR 0030 steps 17 and 18):
-// each skill's percentage with its terms (Thief or Bard), the budget's warnings and the budget
-// as figures at the realized level.
-type PointsFigures struct {
-	Thief, Bard []ruletablesvc.SkillPercent
-	Budget      []ruletablesvc.BudgetWarning
-	Points      *ruletablesvc.SkillPointsBudget
+// SkillSet is one skill set of a character (ADR 0040 step 3.5: one per rogue_skills feature
+// its classes grant, ADR 0030 steps 17 and 18): the set code, each skill's percentage with its
+// terms, the skill armour the set reads, the budget's warnings and the budget as figures at the
+// realized level. Each set has its own budget.
+type SkillSet struct {
+	Set    string
+	Skills []ruletablesvc.SkillPercent
+	Armor  string
+	Budget []ruletablesvc.BudgetWarning
+	Points *ruletablesvc.SkillPointsBudget
 }
 
-// PointsFiguresOf is ADR 0030 steps 17 and 18 on s: the percentages from the tables, the budget
-// and its warnings, through the rogue_skills params the class grants at s.Level (ADR 0040 step
-// 3); the set picks the field the percentages fill (Thief or Bard, the derived block's). The zero
-// figures for a class without rogue_skills.
-func PointsFiguresOf(t SkillTables, s PointsSheet) (PointsFigures, error) {
-	var out PointsFigures
-	rs := RogueSkillsAt(s.Class, s.Level)
-	if rs == nil {
-		return out, nil
-	}
-	percents, err := t.RogueSkills(*rs, s.Race, s.Dex, s.Armor, s.Points)
-	if err != nil {
-		return PointsFigures{}, fmt.Errorf("%s skills: %w", s.Class.ID, err)
-	}
-	switch rs.Set {
-	case ruletablesvc.SkillSetThief:
-		out.Thief = percents
-	case ruletablesvc.SkillSetBard:
-		out.Bard = percents
-	}
-	out.Budget = ruletablesvc.SkillBudgetOf(rs, s.Level, s.Points)
-	if b, ok := ruletablesvc.SkillPointsFigures(rs, s.Level, s.Points); ok {
-		out.Points = &b
+// SkillSetsOf is ADR 0030 steps 17 and 18 on s: for each skill set the class grants at s.Level
+// (ADR 0040 step 3.5), the percentages from the tables, the budget and its warnings, through
+// that set's rogue_skills params. nil for a class without rogue_skills.
+func SkillSetsOf(t SkillTables, s PointsSheet) ([]SkillSet, error) {
+	var out []SkillSet
+	for _, rs := range RogueSetsAt(s.Class, s.Level) {
+		set := SkillSet{Set: rs.Set, Armor: ruletablesvc.SkillArmorFor(&rs, s.ArmorColumn)}
+		points := s.Points.Of(rs.Set)
+		var err error
+		if set.Skills, err = t.RogueSkills(rs, s.Race, s.Dex, set.Armor, points); err != nil {
+			return nil, fmt.Errorf("%s skills (%s): %w", s.Class.ID, rs.Set, err)
+		}
+		set.Budget = ruletablesvc.SkillBudgetOf(&rs, s.Level, points)
+		if b, ok := ruletablesvc.SkillPointsFigures(&rs, s.Level, points); ok {
+			set.Points = &b
+		}
+		out = append(out, set)
 	}
 	return out, nil
 }

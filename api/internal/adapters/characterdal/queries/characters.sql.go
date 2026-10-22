@@ -13,15 +13,14 @@ import (
 )
 
 const charactersOf = `-- name: CharactersOf :many
-SELECT id, name, class FROM characters
+SELECT id, name FROM characters
 WHERE owner_user_id = $1 AND NOT retired
 ORDER BY id
 `
 
 type CharactersOfRow struct {
-	ID    int64
-	Name  string
-	Class string
+	ID   int64
+	Name string
 }
 
 // The owner's characters they have not retired, in creation order (the service derives each level).
@@ -34,7 +33,7 @@ func (q *Queries) CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) (
 	items := []CharactersOfRow{}
 	for rows.Next() {
 		var i CharactersOfRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Class); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -61,7 +60,7 @@ const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO characters (
     name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
-    class, race_code, owner_user_id, realized_level, skill_points, proficiency_picks
+    class, race_code, owner_user_id, realized_level, skill_sets, proficiency_picks
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12,
@@ -93,7 +92,7 @@ type CreateCharacterParams struct {
 	RaceCode         string
 	OwnerUserID      uuid.NullUUID
 	RealizedLevel    sql.NullInt64
-	SkillPoints      string
+	SkillSets        string
 	ProficiencyPicks string
 }
 
@@ -124,7 +123,7 @@ func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams
 		arg.RaceCode,
 		arg.OwnerUserID,
 		arg.RealizedLevel,
-		arg.SkillPoints,
+		arg.SkillSets,
 		arg.ProficiencyPicks,
 	)
 	var id int64
@@ -188,7 +187,7 @@ const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_points, proficiency_picks
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks
 FROM characters WHERE id = $1
 `
 
@@ -222,6 +221,7 @@ type GetCharacterRow struct {
 	Eyes             string
 	Languages        string
 	RealizedLevel    int64
+	SkillSets        string
 	SkillPoints      string
 	ProficiencyPicks string
 }
@@ -263,6 +263,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.Eyes,
 		&i.Languages,
 		&i.RealizedLevel,
+		&i.SkillSets,
 		&i.SkillPoints,
 		&i.ProficiencyPicks,
 	)
@@ -270,7 +271,9 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 }
 
 const getCharacterDetails = `-- name: GetCharacterDetails :one
-SELECT class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages
+SELECT COALESCE((SELECT e.class FROM character_classes e
+                 WHERE e.character_id = characters.id AND e.state = 'active' ORDER BY e.position LIMIT 1), class)::TEXT AS class,
+       race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages
 FROM characters WHERE id = $1
 `
 
@@ -303,6 +306,100 @@ func (q *Queries) GetCharacterDetails(ctx context.Context, id int64) (GetCharact
 		&i.Languages,
 	)
 	return i, err
+}
+
+const getSkillSets = `-- name: GetSkillSets :one
+SELECT COALESCE((SELECT e.class FROM character_classes e
+                 WHERE e.character_id = characters.id AND e.state = 'active' ORDER BY e.position LIMIT 1), class)::TEXT AS class,
+       skill_sets, skill_points
+FROM characters WHERE id = $1
+`
+
+type GetSkillSetsRow struct {
+	Class       string
+	SkillSets   string
+	SkillPoints string
+}
+
+// A character's class (its first active entry's, ADR 0042 step 1; the column for a character with no
+// entry) and stored skill points, for the undo of a spend (no derivation).
+func (q *Queries) GetSkillSets(ctx context.Context, id int64) (GetSkillSetsRow, error) {
+	row := q.db.QueryRowContext(ctx, getSkillSets, id)
+	var i GetSkillSetsRow
+	err := row.Scan(&i.Class, &i.SkillSets, &i.SkillPoints)
+	return i, err
+}
+
+const insertClassEntry = `-- name: InsertClassEntry :exec
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
+VALUES ($1, $2, $3, $4,
+        $5, $6, $7)
+`
+
+type InsertClassEntryParams struct {
+	CharacterID   int64
+	Position      int64
+	Class         string
+	RealizedLevel int64
+	StartingXp    int64
+	State         string
+	LeftAtLevel   int64
+}
+
+func (q *Queries) InsertClassEntry(ctx context.Context, arg InsertClassEntryParams) error {
+	_, err := q.db.ExecContext(ctx, insertClassEntry,
+		arg.CharacterID,
+		arg.Position,
+		arg.Class,
+		arg.RealizedLevel,
+		arg.StartingXp,
+		arg.State,
+		arg.LeftAtLevel,
+	)
+	return err
+}
+
+const listClassEntries = `-- name: ListClassEntries :many
+SELECT class, realized_level, starting_xp, state, left_at_level
+FROM character_classes WHERE character_id = $1 ORDER BY position
+`
+
+type ListClassEntriesRow struct {
+	Class         string
+	RealizedLevel int64
+	StartingXp    int64
+	State         string
+	LeftAtLevel   int64
+}
+
+// A character's class entries in the order the classes were taken (ADR 0042 step 1).
+func (q *Queries) ListClassEntries(ctx context.Context, characterID int64) ([]ListClassEntriesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listClassEntries, characterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListClassEntriesRow{}
+	for rows.Next() {
+		var i ListClassEntriesRow
+		if err := rows.Scan(
+			&i.Class,
+			&i.RealizedLevel,
+			&i.StartingXp,
+			&i.State,
+			&i.LeftAtLevel,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const lockUser = `-- name: LockUser :one
@@ -434,6 +531,23 @@ func (q *Queries) SetCurrentCharacter(ctx context.Context, arg SetCurrentCharact
 	return result.RowsAffected()
 }
 
+const setFirstActiveEntryLevel = `-- name: SetFirstActiveEntryLevel :exec
+UPDATE character_classes SET realized_level = $1
+WHERE character_classes.character_id = $2 AND position = (
+    SELECT MIN(e.position) FROM character_classes e WHERE e.character_id = $2 AND e.state = 'active'
+)
+`
+
+type SetFirstActiveEntryLevelParams struct {
+	RealizedLevel int64
+	CharacterID   int64
+}
+
+func (q *Queries) SetFirstActiveEntryLevel(ctx context.Context, arg SetFirstActiveEntryLevelParams) error {
+	_, err := q.db.ExecContext(ctx, setFirstActiveEntryLevel, arg.RealizedLevel, arg.CharacterID)
+	return err
+}
+
 const setLanguages = `-- name: SetLanguages :execrows
 UPDATE characters SET languages = $1 WHERE id = $2
 `
@@ -481,7 +595,9 @@ type SetRealizedLevelParams struct {
 	ID            int64
 }
 
-// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
+// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP. The level
+// is the character's first active entry's, written to its column too (the release before the
+// class entries reads it, migration 035).
 func (q *Queries) SetRealizedLevel(ctx context.Context, arg SetRealizedLevelParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setRealizedLevel, arg.RealizedLevel, arg.HpMax, arg.ID)
 	if err != nil {
@@ -491,17 +607,17 @@ func (q *Queries) SetRealizedLevel(ctx context.Context, arg SetRealizedLevelPara
 }
 
 const setSkillPoints = `-- name: SetSkillPoints :execrows
-UPDATE characters SET skill_points = $1 WHERE id = $2
+UPDATE characters SET skill_sets = $1 WHERE id = $2
 `
 
 type SetSkillPointsParams struct {
-	SkillPoints string
-	ID          int64
+	SkillSets string
+	ID        int64
 }
 
 // A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
 func (q *Queries) SetSkillPoints(ctx context.Context, arg SetSkillPointsParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, setSkillPoints, arg.SkillPoints, arg.ID)
+	result, err := q.db.ExecContext(ctx, setSkillPoints, arg.SkillSets, arg.ID)
 	if err != nil {
 		return 0, err
 	}

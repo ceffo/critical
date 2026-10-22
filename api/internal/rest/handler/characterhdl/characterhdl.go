@@ -12,9 +12,10 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/render"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 	"github.com/ceffo/critical/api/internal/rest/wire"
@@ -60,12 +61,34 @@ type currentSetter interface {
 	SetCurrent(ctx context.Context, owner uuid.UUID, id int64) error
 }
 
+// ClassEntryDTO is one class of a character (ADR 0042 step 1): the class
+// code, the level taken in it, the XP entered for it, whether it is active or
+// frozen and, for a frozen one, the level it was left at (0 otherwise).
+type ClassEntryDTO struct {
+	Class       string `json:"class"`
+	Level       int    `json:"level"`
+	StartingXP  int    `json:"startingXp"`
+	State       string `json:"state"`
+	LeftAtLevel int    `json:"leftAtLevel"`
+}
+
+func classEntriesDTO(entries []classes.Entry) []ClassEntryDTO {
+	out := make([]ClassEntryDTO, len(entries))
+	for i, e := range entries {
+		out[i] = ClassEntryDTO{
+			Class: e.Class, Level: e.RealizedLevel, StartingXP: e.StartingXP, State: string(e.State), LeftAtLevel: e.LeftAtLevel,
+		}
+	}
+	return out
+}
+
 // SummaryDTO is a character in its owner's list.
 type SummaryDTO struct {
-	ID    int64  `json:"id"`
-	Name  string `json:"name"`
-	Class string `json:"class"`
-	Level int    `json:"level"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	// Classes are the class entries in the order the classes were taken, each
+	// with its realized level (ADR 0042 step 1, ADR 0030 step 3).
+	Classes []ClassEntryDTO `json:"classes"`
 	// Race is the race code ("" when none); Alignment and Sex are codes, ""
 	// while still to choose, and Missing names those fields (the card's tag).
 	Race      string   `json:"race"`
@@ -106,7 +129,7 @@ func renderCharactersStatus(w http.ResponseWriter, r *http.Request, svc ownedLis
 	out := CharactersDTO{Characters: make([]SummaryDTO, 0, len(list))}
 	for _, c := range list {
 		out.Characters = append(out.Characters, SummaryDTO{
-			ID: c.ID, Name: c.Name, Class: c.Class, Level: c.Level, Race: c.Race, Alignment: c.Alignment,
+			ID: c.ID, Name: c.Name, Classes: classEntriesDTO(c.Classes), Race: c.Race, Alignment: c.Alignment,
 			Sex: c.Sex, Missing: c.Missing, CurrentHP: c.CurrentHP, MaxHP: c.MaxHP,
 		})
 		if c.ID == current {
@@ -181,17 +204,17 @@ type CharacterDTO struct {
 	Str  int    `json:"str"`
 	// StrExceptional is a fighter's 18/xx percentile (ADR 0030 step 9), 0
 	// for none.
-	StrExceptional int        `json:"strExceptional"`
-	Dex            int        `json:"dex"`
-	Con            int        `json:"con"`
-	Int            int        `json:"int"`
-	Wis            int        `json:"wis"`
-	Cha            int        `json:"cha"`
-	HPMax          int        `json:"hpMax"`
-	XPTotal        int        `json:"xpTotal"`
-	Class          string     `json:"class"`
-	RaceCode       string     `json:"raceCode"`
-	Derived        DerivedDTO `json:"derived"`
+	StrExceptional int             `json:"strExceptional"`
+	Dex            int             `json:"dex"`
+	Con            int             `json:"con"`
+	Int            int             `json:"int"`
+	Wis            int             `json:"wis"`
+	Cha            int             `json:"cha"`
+	HPMax          int             `json:"hpMax"`
+	XPTotal        int             `json:"xpTotal"`
+	Classes        []ClassEntryDTO `json:"classes"`
+	RaceCode       string          `json:"raceCode"`
+	Derived        DerivedDTO      `json:"derived"`
 	// Missing lists the required fields the character lacks (ADR 0032 step
 	// 8.2: "alignment", "sex"); the card asks the player to pick them.
 	Missing []string `json:"missing"`
@@ -250,23 +273,10 @@ type DerivedDTO struct {
 	// Turning is ADR 0030 step 16: PHB Table 61 at the realized level, the
 	// book's rows in order; null for a class that does not turn undead.
 	Turning []TurningTargetDTO `json:"turning"`
-	// ThiefSkills is ADR 0030 step 17: each thieving skill with its terms
-	// and percentage; null for a class without them.
-	ThiefSkills []ThiefSkillDTO `json:"thiefSkills"`
-	// BardSkills is ADR 0030 step 18: each bard skill with its terms and
-	// percentage; null for a class without them.
-	BardSkills []ThiefSkillDTO `json:"bardSkills"`
-	// SkillArmor is the skill armour the thief's or the bard's skills read
-	// (ADR 0033 step 14: from the worn body armour's Table 29 column; none,
-	// leather, padded_studded_leather, elven_chain or metal), "" for a class
-	// without them.
-	SkillArmor string `json:"skillArmor"`
-	// SkillBudget is step 17's or 18's warnings on the entered points,
-	// never null.
-	SkillBudget []BudgetWarningDTO `json:"skillBudget"`
-	// SkillPoints is step 17's or 18's budget with the terms of its formula
-	// (GET /api/skills' `budget`), null for a class without skill points.
-	SkillPoints *wire.SkillPointsBudgetDTO `json:"skillPoints"`
+	// SkillSets is ADR 0030 steps 17 and 18 (ADR 0040 step 3.5): one set
+	// per rogue_skills feature the class grants at the realized level, each
+	// with its own budget; empty for a class without skill sets.
+	SkillSets []SkillSetDTO `json:"skillSets"`
 	// Backstab is ADR 0030 step 19: PHB Table 30's damage multiplier at the
 	// realized level, 0 for a class without the backstab option.
 	Backstab int `json:"backstab"`
@@ -276,22 +286,42 @@ type DerivedDTO struct {
 	ProficiencySlots *wire.ProficiencySlotsDTO `json:"proficiencySlots"`
 }
 
-// skillDTOs maps a class's skills; nil stays nil (no such skills).
-func skillDTOs(skills []ruletablesvc.SkillPercent) []ThiefSkillDTO {
-	if skills == nil {
-		return nil
-	}
-	out := make([]ThiefSkillDTO, len(skills))
-	for i, s := range skills {
-		out[i] = ThiefSkillDTO(s)
+// SkillSetDTO is one skill set of the sheet (ADR 0040 step 3.5): set the rogue_skills set code,
+// skillArmor the skill armour it reads (ADR 0033 step 14: from the worn body armour's Table 29
+// column; none, leather, padded_studded_leather, elven_chain or metal), skills each of its skills
+// with its terms and percentage, warnings the entered points' breach of its budget (never null) and
+// budget the budget with the terms of its formula (GET /api/skills' set `budget`), null before
+// the level its points start.
+type SkillSetDTO struct {
+	Set        string                     `json:"set"`
+	SkillArmor string                     `json:"skillArmor"`
+	Skills     []SkillTermsDTO            `json:"skills"`
+	Warnings   []BudgetWarningDTO         `json:"warnings"`
+	Budget     *wire.SkillPointsBudgetDTO `json:"budget"`
+}
+
+// skillSetDTOs maps a character's skill sets; none is an empty list.
+func skillSetDTOs(sets []skills.SkillSet) []SkillSetDTO {
+	out := make([]SkillSetDTO, 0, len(sets))
+	for _, set := range sets {
+		dto := SkillSetDTO{
+			Set: set.Set, SkillArmor: set.Armor, Budget: wire.SkillPointsBudgetToDTO(set.Points),
+			Skills: make([]SkillTermsDTO, len(set.Skills)), Warnings: make([]BudgetWarningDTO, len(set.Budget)),
+		}
+		for i, sk := range set.Skills {
+			dto.Skills[i] = SkillTermsDTO(sk)
+		}
+		for i, w := range set.Budget {
+			dto.Warnings[i] = BudgetWarningDTO(w)
+		}
+		out = append(out, dto)
 	}
 	return out
 }
 
-// ThiefSkillDTO is one thieving skill (ADR 0030 step 17) or bard skill (step
-// 18): percent = base + points + race + dexterity + armor, capped at 95 and
+// SkillTermsDTO is one skill of a skill set (ADR 0030 steps 17 and 18): percent = base + points + race + dexterity + armor, capped at 95 and
 // floored at 0.
-type ThiefSkillDTO struct {
+type SkillTermsDTO struct {
 	Skill     string `json:"skill"`
 	Base      int    `json:"base"`
 	Points    int    `json:"points"`
@@ -363,12 +393,8 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 			ToSpend: wire.GrantsDTO(d.LevelUp.ToSpend, d.LevelUp.FreeSpellsOwed),
 		},
 		Specializes: d.Specializes, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure,
-		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab, SkillArmor: d.SkillArmor,
-		ProficiencySlots: wire.ProficiencySlotsToDTO(d.Proficiencies), SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints),
-	}
-	out.ThiefSkills, out.BardSkills = skillDTOs(d.ThiefSkills), skillDTOs(d.BardSkills)
-	for _, w := range d.SkillBudget {
-		out.SkillBudget = append(out.SkillBudget, BudgetWarningDTO(w))
+		SkillSets: skillSetDTOs(d.SkillSets), Backstab: d.Backstab,
+		ProficiencySlots: wire.ProficiencySlotsToDTO(d.Proficiencies),
 	}
 	if d.Turning != nil {
 		out.Turning = make([]TurningTargetDTO, len(d.Turning))
@@ -397,7 +423,7 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 	return CharacterDTO{
 		ID: c.ID, Name: c.Name,
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
-		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race,
+		HPMax: c.HPMax, XPTotal: c.XPTotal, Classes: classEntriesDTO(c.Entries()), RaceCode: c.Race,
 		Derived: derivedDTO(c.Derived), DetailsDTO: wire.DetailsToDTO(c.Details),
 		Missing: c.Details.Missing(), Warnings: warningsDTO(c.Warnings),
 	}

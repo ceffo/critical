@@ -3535,8 +3535,8 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     if (route.request().method() !== "GET") return route.fallback();
     const res = await route.fetch();
     const body = await res.json();
-    if (body.class === "thief")
-      body.derived.skillBudget = [
+    if (body.classes?.[0]?.class === "thief")
+      body.derived.skillSets[0].warnings = [
         { code: "skill_points_total", points: 70, limit: 60 },
         {
           code: "skill_points_per_skill",
@@ -3551,7 +3551,8 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     if (route.request().method() !== "GET") return route.fallback();
     const res = await route.fetch();
     const body = await res.json();
-    if (body.budget) Object.assign(body.budget, { spent: 70, left: -10 });
+    for (const set of body.skillSets)
+      if (set.budget) Object.assign(set.budget, { spent: 70, left: -10 });
     await route.fulfill({ response: res, json: body });
   });
   // The skills read the armour worn (ADR 0033 step 14): a studded leather, the longest column name.
@@ -3644,11 +3645,12 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await page.route("**/api/skills/points/preview", async (route) => {
     const res = await route.fetch({
       postData: JSON.stringify({
+        set: "thief",
         points: { find_remove_traps: 30, hide_in_shadows: 30 },
       }),
     });
     const body = await res.json();
-    for (const sk of body.thiefSkills)
+    for (const sk of body.skillSets[0].skills)
       if (sk.id === "open_locks")
         Object.assign(sk, { points: 6, rawPercent: 112, percent: 95 });
     await route.fulfill({ response: res, json: body });

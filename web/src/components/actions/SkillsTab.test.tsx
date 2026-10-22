@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import i18next from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { resources } from "@/i18n";
-import type { RogueSkill, Skills } from "@/types/skills";
+import type { RogueSkill, SkillSet, Skills } from "@/types/skills";
 import { SkillsTab } from "./SkillsTab";
 
 // Server rendering reads a zustand store's initial state, so the skills store is replaced by one
@@ -40,11 +40,24 @@ const base: Skills = {
       last: null,
     },
   ],
-  bardSkills: [],
-  thiefSkills: [],
-  skillArmor: "",
-  budget: null,
+  skillSets: [],
 };
+
+/** A skill set of the answer, as the server serves it: the thief's or the bard's. */
+function skillSet(
+  kind: SkillSet["kind"],
+  skills: RogueSkill[],
+  over: Partial<SkillSet> = {},
+): SkillSet {
+  return {
+    set: kind === "thiefSkill" ? "thief" : "bard",
+    kind,
+    skillArmor: "",
+    budget: null,
+    skills,
+    ...over,
+  };
+}
 
 async function render(skills: Skills) {
   current = skills;
@@ -75,7 +88,10 @@ describe("SkillsTab class skills section", () => {
   });
 
   it("shows the bard skills for a bard", async () => {
-    const html = await render({ ...base, bardSkills: [rogueSkill] });
+    const html = await render({
+      ...base,
+      skillSets: [skillSet("bardSkill", [rogueSkill])],
+    });
     expect(html).toContain("Bard skills");
     expect(html).not.toContain("Thief skills");
     expect(html).toContain("thief-points-edit");
@@ -84,12 +100,47 @@ describe("SkillsTab class skills section", () => {
   it("shows the thief skills for a thief", async () => {
     const html = await render({
       ...base,
-      thiefSkills: [rogueSkill],
-      skillArmor: "leather",
+      skillSets: [
+        skillSet("thiefSkill", [rogueSkill], { skillArmor: "leather" }),
+      ],
     });
     expect(html).toContain("Thief skills");
     expect(html).not.toContain("Bard skills");
     expect(html).toContain("skill-armor");
+  });
+});
+
+// ADR 0040 step 3.5: a character whose classes grant two skill sets gets two sections, each with
+// its own budget and its own Spend button, rendered from the list (no class name in the client).
+describe("SkillsTab with two skill sets", () => {
+  it("shows each set with its own budget and spend button", async () => {
+    const budget = (available: number, spent: number) => ({
+      level: 3,
+      first: 20,
+      perLevel: 15,
+      available,
+      spent,
+      left: available - spent,
+      perSkillFirst: 0,
+      perSkillPerLevel: 0,
+      perSkillCap: 0,
+    });
+    const html = await render({
+      ...base,
+      skillSets: [
+        skillSet("thiefSkill", [rogueSkill], { budget: budget(150, 10) }),
+        skillSet("bardSkill", [{ ...rogueSkill, percent: 7 }], {
+          budget: budget(50, 20),
+        }),
+      ],
+    });
+    expect(html).toContain("Thief skills");
+    expect(html).toContain("Bard skills");
+    expect(html).toContain('data-testid="skill-set-thief"');
+    expect(html).toContain('data-testid="skill-set-bard"');
+    expect(html).toContain("Spent 10, left 140");
+    expect(html).toContain("Spent 20, left 30");
+    expect(html.match(/data-testid="thief-points-edit"/g)).toHaveLength(2);
   });
 });
 
@@ -110,8 +161,9 @@ describe("SkillsTab budget and terms", () => {
   it("shows the available points with their formula, spent, left and the thief's cap", async () => {
     const html = await render({
       ...base,
-      thiefSkills: [rogueSkill],
-      budget: thiefBudget,
+      skillSets: [
+        skillSet("thiefSkill", [rogueSkill], { budget: thiefBudget }),
+      ],
     });
     expect(html).toContain("Available: 60 + 30 × 1 = 90 (level 2)");
     expect(html).toContain("Spent 5, left 85");
@@ -122,17 +174,20 @@ describe("SkillsTab budget and terms", () => {
   it("shows a bard's budget without a per-skill cap", async () => {
     const html = await render({
       ...base,
-      bardSkills: [rogueSkill],
-      budget: {
-        ...thiefBudget,
-        first: 20,
-        perLevel: 15,
-        available: 35,
-        left: 30,
-        perSkillFirst: 0,
-        perSkillPerLevel: 0,
-        perSkillCap: 0,
-      },
+      skillSets: [
+        skillSet("bardSkill", [rogueSkill], {
+          budget: {
+            ...thiefBudget,
+            first: 20,
+            perLevel: 15,
+            available: 35,
+            left: 30,
+            perSkillFirst: 0,
+            perSkillPerLevel: 0,
+            perSkillCap: 0,
+          },
+        }),
+      ],
     });
     expect(html).toContain("Available: 20 + 15 × 1 = 35 (level 2)");
     expect(html).not.toContain("per skill");
@@ -141,10 +196,12 @@ describe("SkillsTab budget and terms", () => {
   it("writes each skill's terms, and says when the cap or the floor applied", async () => {
     const html = await render({
       ...base,
-      thiefSkills: [
-        { ...rogueSkill, race: 5, dexterity: -5, armor: 0 },
-        { ...rogueSkill, id: "climb_walls", rawPercent: 112, percent: 95 },
-        { ...rogueSkill, id: "read_languages", rawPercent: -5, percent: 0 },
+      skillSets: [
+        skillSet("thiefSkill", [
+          { ...rogueSkill, race: 5, dexterity: -5, armor: 0 },
+          { ...rogueSkill, id: "climb_walls", rawPercent: 112, percent: 95 },
+          { ...rogueSkill, id: "read_languages", rawPercent: -5, percent: 0 },
+        ]),
       ],
     });
     expect(html).toContain(
@@ -161,7 +218,7 @@ describe("SkillsTab proficiency row", () => {
   it("has a name button and a roll button side by side", async () => {
     const html = await render({
       ...base,
-      bardSkills: [rogueSkill],
+      skillSets: [skillSet("bardSkill", [rogueSkill])],
     });
     const row = /data-testid="skill-row-swimming">(.*?)<\/li>/.exec(html)?.[1];
     expect(row).toBeDefined();

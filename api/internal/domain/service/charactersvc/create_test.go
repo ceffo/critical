@@ -266,7 +266,7 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 		e.rules.EXPECT().RogueSkills(skillSet("thief"), "halfling", 17, "none", want).Return(nil, nil).Once()
 		e.rules.EXPECT().BackstabFor(1).Return(2, nil).Once()
 		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
-			return c.Class == "thief" && assert.ObjectsAreEqual(want, c.SkillPoints)
+			return c.Class == "thief" && assert.ObjectsAreEqual(skills.SetPoints{"thief": want}, c.SkillPoints)
 		})).Return(6, nil).Once()
 		e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(6)).Return(nil).Once()
 		e.sessions.EXPECT().ForgetUser(ownerID).Once()
@@ -317,7 +317,7 @@ func TestCreate_Step18_BardSkillPointsAndArmour(t *testing.T) {
 		// refuses more: Create_Step10_OverBudgetRefused).
 		want := map[string]int{"climb_walls": 10, "pick_pockets": 10}
 		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
-			return c.Class == "bard" && assert.ObjectsAreEqual(want, c.SkillPoints)
+			return c.Class == "bard" && assert.ObjectsAreEqual(skills.SetPoints{"bard": want}, c.SkillPoints)
 		})).Return(7, nil).Once()
 		e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(7)).Return(nil).Once()
 		e.sessions.EXPECT().ForgetUser(ownerID).Once()
@@ -481,7 +481,8 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 			}
 			got, err := e.svc.GetCharacter(context.Background(), 5)
 			require.NoError(t, err)
-			assert.Equal(t, tc.asked, got.Derived.SkillArmor)
+			require.Len(t, got.Derived.SkillSets, 1)
+			assert.Equal(t, tc.asked, got.Derived.SkillSets[0].Armor)
 			assert.Equal(t, 1, e.armour.reads)
 		})
 	}
@@ -497,7 +498,7 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 		e.rules.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
 		got, err := e.svc.GetCharacter(context.Background(), 5)
 		require.NoError(t, err)
-		assert.Empty(t, got.Derived.SkillArmor)
+		assert.Empty(t, got.Derived.SkillSets)
 		assert.Zero(t, e.armour.reads)
 	})
 }

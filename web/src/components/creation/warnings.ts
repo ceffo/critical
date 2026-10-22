@@ -70,7 +70,7 @@ export function useReviewWarnings(props: StepProps): string[] {
         }),
       );
   }
-  for (const b of read.derived.skillBudget)
+  for (const b of read.derived.skillSets.flatMap((s) => s.warnings))
     out.push(
       t(`skills.budget.${b.code}`, {
         name: b.skill ? skillName(t, b.skill) : "",

@@ -31,8 +31,15 @@ describe("roster card identity", () => {
     const old: CharacterSummary = {
       id: 1,
       name: "Aria",
-      class: "bard",
-      level: 3,
+      classes: [
+        {
+          class: "bard",
+          level: 3,
+          startingXp: 0,
+          state: "active",
+          leftAtLevel: 0,
+        },
+      ],
     };
     expect(identityLine(old, word)).toBe("");
     expect(toPickKey(undefined)).toBeNull();

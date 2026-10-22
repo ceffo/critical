@@ -52,6 +52,17 @@ hp_max, thac0_base, level, xp_total, class, race_code
 --  level, thac0_base and save_* columns are the figures the imported sheet stated, kept as
 --  imported and compared with nothing (step 24, retired), never inputs)
 
+-- character_classes: a character's class entries (ADR 0042 step 1, migration 035), one row each,
+-- in the order the classes were taken
+character_id, position, class, realized_level, starting_xp, state ('active'|'frozen'), left_at_level
+-- (primary key (character_id, position), unique (character_id, class). Data step fillClassEntries
+--  gave each stored character one active entry from class, COALESCE(realized_level, level) and
+--  xp_total. Additive: those characters columns stay, written for the first active entry, for the
+--  release before during a rolling deploy; a character that release creates has no entry and the
+--  reader gives it the one its columns state. REST: classes[] {class, level, startingXp, state,
+--  leftAtLevel} replaces class/level in the character and its summary; create and change still
+--  send class)
+
 -- action_log: THE append-only log of table actions (HP ledger + combat log)
 id, character_id, round, kind TEXT, summary TEXT, hp_delta INTEGER, payload JSON, created_at,
 transaction_id
@@ -186,7 +197,8 @@ executes on its transaction just before that migration, only when the migration 
 (`migrationDataSteps`; today the owners before migration 004, "Per-character data"; after a migration,
 the seeded weapons' types after 005, the seed character's race code after 007 and the action log
 snapshots re-encoded into the codec's envelopes after 019, ADR 0018 step 9, and the proficiencies
-rows turned into picks after 025, ADR 0037 step 16). Its rules,
+rows turned into picks after 025, ADR 0037 step 16, and each character's class entry after 035,
+ADR 0042 step 1; `just class-entries-rehearsal` proves it on a throwaway PostgreSQL). Its rules,
 including when a step and its queries may be deleted, are [ADR 0025](adr/0025-postgresql-storage.md)
 step 2.1.1.
 

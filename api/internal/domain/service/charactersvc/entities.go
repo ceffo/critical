@@ -1,6 +1,9 @@
 package charactersvc
 
 import (
+	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -25,6 +28,13 @@ type Character struct {
 	Wis            int
 	Cha            int
 	HPMax          int
+	// Classes are the character's class entries (ADR 0042 step 1): the stored
+	// truth of its class, level and starting XP. Set them with SetClasses;
+	// Class, RealizedLevel and XPTotal below mirror the first active entry, the
+	// one the single-class rules read until the multi-class math reads the
+	// entries (ADR 0042 steps 7 to 15). Empty for a character built from the
+	// mirror alone (Entries gives its one entry).
+	Classes []classes.Entry
 	// RealizedLevel is the level the character has taken (ADR 0030 step 7):
 	// its benefits (max HP, THAC0, saves, slots) are this level's. It starts
 	// at the level the entered max HP is for (step 7.5: an imported sheet's
@@ -39,10 +49,10 @@ type Character struct {
 	Class string
 	// Race is the race code (one of Races), "" when none is set.
 	Race string
-	// SkillPoints are a thief's or a bard's entered skill points (ADR 0030
-	// steps 1, 17 and 18), by skill code (ruletablesvc.SkillsOf the class);
-	// nil or absent skills have 0.
-	SkillPoints map[string]int
+	// SkillPoints are the entered skill points (ADR 0030 steps 1, 17 and
+	// 18) of each skill set the class lists (ADR 0040 step 3.5), by skill
+	// code (ruletablesvc.SkillsOf the set); nil or absent skills have 0.
+	SkillPoints skills.SetPoints
 	// Proficiencies are the proficiency picks (ADR 0037 step 12): catalogue
 	// id and slots spent, in the player's order.
 	Proficiencies skills.Picks
@@ -59,6 +69,38 @@ type Character struct {
 	// Warnings are the rules the stored character breaks without being
 	// refused (ADR 0032 steps 4.2 and 8.4); set by the service.
 	Warnings []Warning
+}
+
+// SetClasses sets the class entries and the mirror of the first active entry
+// (Class, RealizedLevel, XPTotal) from them.
+func (c *Character) SetClasses(entries []classes.Entry) {
+	c.Classes = entries
+	if first, ok := classes.Primary(entries); ok {
+		c.Class, c.RealizedLevel, c.XPTotal = first.Class, first.RealizedLevel, first.StartingXP
+	}
+}
+
+// SetPrimaryLevel moves the realized level of the first active entry and the
+// mirror (a level-up, ADR 0030 step 7.3, and its undo).
+func (c *Character) SetPrimaryLevel(level int) {
+	c.RealizedLevel = level
+	for i := range c.Classes {
+		if c.Classes[i].State == classes.EntryActive {
+			c.Classes = slices.Clone(c.Classes)
+			c.Classes[i].RealizedLevel = level
+			return
+		}
+	}
+}
+
+// Entries are the class entries: Classes, or the one active entry the mirror
+// states for a character built without them (ADR 0042 step 1: today's columns
+// are the one-entry case).
+func (c *Character) Entries() []classes.Entry {
+	if len(c.Classes) > 0 {
+		return c.Classes
+	}
+	return []classes.Entry{classes.SingleEntry(c.Class, c.RealizedLevel, c.XPTotal)}
 }
 
 // Saves are the five saving throw numbers, one per category of ADR 0006 step
@@ -137,24 +179,16 @@ type Derived struct {
 	// Turning is step 16: PHB Table 61 at the realized level, the book's
 	// rows in order; nil for a class that does not turn undead.
 	Turning []ruletablesvc.TurningTarget
-	// ThiefSkills is step 17: each thieving skill with its terms and
-	// percentage; nil for a class without them.
-	ThiefSkills []ruletablesvc.SkillPercent
-	// BardSkills is step 18: each bard skill with its terms and
-	// percentage; nil for a class without them.
-	BardSkills []ruletablesvc.SkillPercent
-	// SkillArmor is the skill armour the thief's or the bard's skills read
-	// (ADR 0033 step 14: ruletablesvc.SkillArmorFor the worn body armour's
-	// Table 29 column; "none" when it wears none), "" for another class.
-	SkillArmor string
-	// SkillBudget is step 17's (a thief's) or step 18's (a bard's)
-	// warnings: the entered points against the class's budget at the
-	// realized level; empty when none.
-	SkillBudget []ruletablesvc.BudgetWarning
-	// SkillPoints is the same budget as figures at the realized level, with
-	// the terms of its formula: available, spent, left and the per-skill cap
-	// (steps 17 and 18); nil for a class without skill points.
-	SkillPoints *ruletablesvc.SkillPointsBudget
+	// SkillColumn is the worn body armour's Table 29 column (ADR 0033 step
+	// 14: "none" when it wears none), the one every skill set reads through
+	// its own armour entries; "" for a class without skill sets.
+	SkillColumn string
+	// SkillSets is steps 17 and 18 (ADR 0040 step 3.5): one set per
+	// rogue_skills feature the class grants at the realized level, each with
+	// its skills' percentages and terms, the skill armour it reads (ADR 0033
+	// step 14), its budget's warnings and its budget as figures; nil for a
+	// class without skill sets.
+	SkillSets []skills.SkillSet
 	// Backstab is step 19: PHB Table 30's damage multiplier at the realized
 	// level; 0 for a class without the backstab option.
 	Backstab int
@@ -220,12 +254,13 @@ type LevelUp struct {
 
 // Summary is a character in its owner's list (ADR 0029 step 7.2).
 type Summary struct {
-	ID    int64
-	Name  string
-	Class string
-	// Level is the realized level (ADR 0030 step 3): stored, advanced only by the
-	// manual level-up step, not the target level derived from XP. Set by the service.
-	Level int
+	ID   int64
+	Name string
+	// Classes are the character's class entries (ADR 0042 step 1), each with
+	// its realized level (ADR 0030 step 3): stored, advanced only by the
+	// manual level-up step, not the target level derived from XP. Set by the
+	// service.
+	Classes []classes.Entry
 	// Race is the race code, "" when none is set.
 	Race string
 	// Alignment and Sex are codes; "" when still to choose (a value that is no

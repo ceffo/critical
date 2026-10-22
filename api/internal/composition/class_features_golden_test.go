@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -50,7 +51,7 @@ func TestClasses_Golden_FeaturesDeriveWhatTheGoListsDid(t *testing.T) {
 				}
 				id, err := m.AddCharacter(ctx, charactersvc.Character{
 					Name: "Golden", Class: class, Race: "human", Str: 18, Dex: 17, Con: 14, Int: 17, Wis: wis, Cha: 16,
-					HPMax: 20, RealizedLevel: level, SkillPoints: points[class],
+					HPMax: 20, RealizedLevel: level, SkillPoints: skills.SetPoints(nil).With(class, points[class]),
 				})
 				require.NoError(t, err)
 				_, err = bs.Items.Create(ctx, id, itemsvc.ItemInput{CatalogueCode: "long_sword", Equip: true})

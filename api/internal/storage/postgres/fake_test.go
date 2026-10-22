@@ -27,6 +27,13 @@ type fakeStore struct {
 	t tables
 }
 
+// legacyColumns are the columns the class entries replace as the one source (ADR 0042 step 1).
+type legacyColumns struct {
+	Level, XPTotal int64
+	// Realized is realized_level, 0 for NULL (no level taken in the app).
+	Realized int64
+}
+
 // tables is the fake's state; JSON copies it for InTx's rollback.
 type tables struct {
 	Characters []int64
@@ -35,11 +42,17 @@ type tables struct {
 	Races map[int64]string
 	// SkillPoints are characters.skill_points ('{}' none, the column's default).
 	SkillPoints map[int64]string
+	// SkillSets are characters.skill_sets ('{}' none, the column's default).
+	SkillSets map[int64]string
 	// Picks are characters.proficiency_picks (absent: '{}', the column's default).
 	Picks map[int64]string
 	// Classes are characters.class (absent: 'bard', the column's default); SkillArmors
 	// characters.skill_armor (absent: '', the column's default).
 	Classes, SkillArmors map[int64]string
+	// Columns are characters.level, realized_level and xp_total (absent: level 1, no realized
+	// level, no XP); Entries are character_classes, by character in position order.
+	Columns map[int64]legacyColumns
+	Entries map[int64][]storeq.InsertClassEntryParams
 	// Alignments and Sexes are characters.alignment and characters.sex ('' missing).
 	Alignments, Sexes map[int64]string
 	// Languages are characters.languages, a JSON list.
@@ -139,7 +152,7 @@ func newFakeStore() *fakeStore {
 		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{}, ProfDescs: map[string]int64{},
-		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, SkillPoints: map[int64]string{}, Picks: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, SkillPoints: map[int64]string{}, SkillSets: map[int64]string{}, Picks: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -210,11 +223,52 @@ func (f *fakeStore) InsertCharacter(_ context.Context, arg storeq.InsertCharacte
 	f.t.Characters = append(f.t.Characters, id)
 	f.t.Names[id] = arg.Name
 	f.t.Races[id] = arg.RaceCode
-	f.t.SkillPoints[id] = arg.SkillPoints
+	f.t.SkillPoints[id] = "{}"
+	f.t.SkillSets[id] = arg.SkillSets
 	f.t.Picks[id] = arg.ProficiencyPicks
 	f.t.Alignments[id], f.t.Sexes[id] = arg.Alignment, arg.Sex
 	f.t.Languages[id] = arg.Languages
 	return id, nil
+}
+
+// FillClassEntries gives every character without an entry its one active entry, as the SQL does:
+// its class (the column's default 'bard'), COALESCE(realized_level, level) and xp_total.
+func (f *fakeStore) FillClassEntries(context.Context) error {
+	for _, id := range f.t.Characters {
+		if len(f.t.Entries[id]) > 0 {
+			continue
+		}
+		col := f.t.Columns[id]
+		if col.Level == 0 {
+			col.Level = 1
+		}
+		class := f.t.Classes[id]
+		if class == "" {
+			class = "bard"
+		}
+		level := col.Level
+		if col.Realized != 0 {
+			level = col.Realized
+		}
+		if f.t.Entries == nil {
+			f.t.Entries = map[int64][]storeq.InsertClassEntryParams{}
+		}
+		f.t.Entries[id] = []storeq.InsertClassEntryParams{{
+			CharacterID: id, Position: 0, Class: class, RealizedLevel: level, StartingXp: col.XPTotal, State: "active",
+		}}
+	}
+	return nil
+}
+
+func (f *fakeStore) InsertClassEntry(_ context.Context, arg storeq.InsertClassEntryParams) error {
+	if err := f.hasCharacter(arg.CharacterID); err != nil {
+		return err
+	}
+	if f.t.Entries == nil {
+		f.t.Entries = map[int64][]storeq.InsertClassEntryParams{}
+	}
+	f.t.Entries[arg.CharacterID] = append(f.t.Entries[arg.CharacterID], arg)
+	return nil
 }
 
 func (f *fakeStore) ListCharacterLanguages(context.Context) ([]storeq.ListCharacterLanguagesRow, error) {
@@ -259,6 +313,21 @@ func (f *fakeStore) SetIdentityIfUnset(_ context.Context, arg storeq.SetIdentity
 	if f.t.Sexes[arg.ID] == "" {
 		f.t.Sexes[arg.ID] = arg.Sex
 	}
+	return nil
+}
+
+func (f *fakeStore) ListLegacySkillPoints(context.Context) ([]storeq.ListLegacySkillPointsRow, error) {
+	rows := []storeq.ListLegacySkillPointsRow{}
+	for _, id := range f.t.Characters {
+		if f.t.SkillPoints[id] != "" && f.t.SkillPoints[id] != "{}" && (f.t.SkillSets[id] == "" || f.t.SkillSets[id] == "{}") {
+			rows = append(rows, storeq.ListLegacySkillPointsRow{ID: id, Class: f.class(id), SkillPoints: f.t.SkillPoints[id]})
+		}
+	}
+	return rows, nil
+}
+
+func (f *fakeStore) SetSkillSets(_ context.Context, arg storeq.SetSkillSetsParams) error {
+	f.t.SkillSets[arg.ID] = arg.SkillSets
 	return nil
 }
 

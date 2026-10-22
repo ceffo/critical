@@ -298,11 +298,16 @@ func (s *service) skillsAt(c Character, n NewCharacter) (skills.Sheet, error) {
 	return after, err
 }
 
-// validSkills is ADR 0030 steps 1, 17 and 18: a thief or a bard enters its
-// points (skills.ValidSkillPoints); any other class enters none. The armour is
-// no entry (ADR 0033 step 14).
-func validSkills(n NewCharacter, def classes.Class) (map[string]int, error) {
-	return skills.ValidSkillPoints(def, n.SkillPoints)
+// validSkills is ADR 0030 steps 1, 17 and 18: a class with skill sets enters
+// its points in its first set (skills.ValidSkillPoints, skills.FirstSet); any
+// other class enters none. The armour is no entry (ADR 0033 step 14).
+func validSkills(n NewCharacter, def classes.Class) (skills.SetPoints, error) {
+	set := skills.FirstSet(def)
+	points, err := skills.ValidSkillPoints(def, set, n.SkillPoints)
+	if err != nil {
+		return nil, err
+	}
+	return skills.SetPoints(nil).With(set, points), nil
 }
 
 // validExceptional is ADR 0030 step 9: an exceptional strength is optional,
@@ -342,7 +347,7 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	// ADR 0037 step 10: nothing was spent before, so a new character is
 	// never created over its skill point budget.
-	if err := skills.SkillPointsWithinBudget(k.def, c.RealizedLevel, nil, c.SkillPoints); err != nil {
+	if err := skills.SkillPointsWithinBudget(k.def, skills.FirstSet(k.def), c.RealizedLevel, nil, c.SkillPoints.Of(skills.FirstSet(k.def))); err != nil {
 		return 0, err
 	}
 	// ADR 0037 steps 6, 10, 14 and 18: nor with picks or languages the
@@ -459,11 +464,13 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	return out, nil
 }
 
-// budgetAt is a draft's skill point budget at level (ADR 0030 steps 17 and 18), nil for a class
+// budgetAt is a draft's skill point budget (of the first skill set) at level (ADR 0030 steps 17 and 18), nil for a class
 // without skill points, and adds to out the creation's refusal of points over it (ADR 0037 step
 // 10: nothing was spent before).
-func budgetAt(out *Draft, def classes.Class, level int, points map[string]int) *ruletablesvc.SkillPointsBudget {
-	if err := skills.SkillPointsWithinBudget(def, level, nil, points); err != nil {
+func budgetAt(out *Draft, def classes.Class, level int, all skills.SetPoints) *ruletablesvc.SkillPointsBudget {
+	set := skills.FirstSet(def)
+	points := all.Of(set)
+	if err := skills.SkillPointsWithinBudget(def, set, level, nil, points); err != nil {
 		out.Refusals = append(out.Refusals, err)
 	}
 	if b, ok := ruletablesvc.SkillPointsFigures(skills.RogueSkillsAt(def, level), level, points); ok {

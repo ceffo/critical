@@ -104,19 +104,9 @@ export interface Derived {
   /** Step 16: PHB Table 61 at the realized level, in the book's order; null for a class that does
    * not turn undead. */
   turning: TurningTarget[] | null;
-  /** Step 17: each thieving skill with its terms; null for a class without them. */
-  thiefSkills: ThiefSkillTerms[] | null;
-  /** Step 18: each bard skill with its terms; null for a class without them. */
-  bardSkills: ThiefSkillTerms[] | null;
-  /** ADR 0033 step 14: the skill armour the thief's or bard's skills read, from the worn body
-   * armour (none, leather, padded_studded_leather, elven_chain, metal); "" for another class. */
-  skillArmor: string;
-  /** Steps 17 and 18: the entered points against the class's budget at the realized level
-   * (warnings; a bard's has no per-skill limit). */
-  skillBudget: SkillBudgetWarning[];
-  /** Steps 17 and 18: the budget with the terms of its formula (GET /api/skills' `budget`); null for
-   * a class without skill points. */
-  skillPoints: SkillBudget | null;
+  /** Steps 17 and 18 (ADR 0040 step 3.5): one set per skill set the class grants at the realized
+   * level, each with its own budget; empty for a class without. */
+  skillSets: DerivedSkillSet[];
   /** Step 19: PHB Table 30's damage multiplier at the realized level; 0 without the backstab. */
   backstab: number;
   /** ADR 0037 steps 3 to 5: the non-weapon pool and each pick's figures; null without the
@@ -211,6 +201,18 @@ export interface ProficienciesInput extends PicksInput {
 export interface ProficienciesAnswer {
   proficiencySlots: ProficiencySlots | null;
   warnings: Character["warnings"];
+}
+
+/** One skill set of the sheet (ADR 0040 step 3.5): its `set` code, the skill armour it reads (ADR
+ * 0033 step 14), each skill with its terms, the entered points against its budget at the realized
+ * level (`warnings`; a bard's has no per-skill limit) and the budget with the terms of its formula
+ * (GET /api/skills' set `budget`; null before the level its points start). */
+export interface DerivedSkillSet {
+  set: string;
+  skillArmor: string;
+  skills: ThiefSkillTerms[];
+  warnings: SkillBudgetWarning[];
+  budget: SkillBudget | null;
 }
 
 /** ADR 0030 steps 17 and 18: percent = base + points + race + dexterity + armor, capped at 95,
@@ -324,8 +326,8 @@ export interface Character {
   /** The sheet's starting XP (the ledger adds to it: derived.xpTotal). */
   xpTotal: number;
 
-  /** Class key (e.g. "bard"), read-only. */
-  class: string;
+  /** The class entries, in the order the classes were taken (ADR 0042 step 1). */
+  classes: ClassEntry[];
   /** The PHB race the rules read ("half_elf"…), "" when none is set. */
   raceCode: string;
   derived: Derived;
@@ -383,14 +385,25 @@ export type CharacterDetails = Pick<
 
 // Mirrors api/internal/rest/handler/characterhdl (SummaryDTO, CharactersDTO, OptionsDTO, CreateBody).
 
+/** One class of a character (ADR 0042 step 1): active earns XP and levels, frozen is a dual-class's old class. */
+export interface ClassEntry {
+  /** The class code, worded by `details.classes.<code>`. */
+  class: string;
+  /** The level taken in the class (ADR 0030 step 7). */
+  level: number;
+  /** The XP entered for the class. */
+  startingXp: number;
+  state: "active" | "frozen";
+  /** The level a frozen entry was left at; 0 for an active one. */
+  leftAtLevel: number;
+}
+
 /** A character in its owner's list (ADR 0029 step 7.2). */
 export interface CharacterSummary {
   id: number;
   name: string;
-  /** The class code, worded by `details.classes.<code>`. */
-  class: string;
-  /** The level the rules derive (ADR 0030 step 3). */
-  level: number;
+  /** The class entries, each with its class code (worded by `details.classes.<code>`) and its level (ADR 0030 step 3). */
+  classes: ClassEntry[];
   /** The race code, worded by `details.races.<code>`; "" when none. */
   race?: string;
   /** The alignment and sex codes (`details.alignments.*`, `details.sexes.*`); "" while still to choose. */

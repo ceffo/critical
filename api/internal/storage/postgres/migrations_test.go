@@ -200,6 +200,7 @@ func TestMigrationDataSteps_NameEmbeddedMigrations(t *testing.T) {
 	require.Contains(t, before, ownerKeysMigration)
 	require.Contains(t, after, snapshotEnvelopesMigration)
 	require.Contains(t, after, weaponTypeMigration)
+	require.Contains(t, after, classEntriesMigration)
 	require.Contains(t, after, raceMigration)
 	for _, steps := range []map[string]dataStep{before, after} {
 		for name := range steps {
@@ -340,8 +341,8 @@ func TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration(t
 	store := newFakeStore()
 	require.NoError(t, seedOn(store, repoSeeds()))
 	kelsen := store.t.Characters[0]
-	assert.JSONEq(t, `{"climb_walls":35,"detect_noise":70,"pick_pockets":25,"read_languages":70}`, store.t.SkillPoints[kelsen],
-		"a new database seeds the points with the character")
+	assert.JSONEq(t, `{"bard":{"climb_walls":35,"detect_noise":70,"pick_pockets":25,"read_languages":70}}`, store.t.SkillSets[kelsen],
+		"a new database seeds the points, per skill set, with the character")
 	other := int64(99)
 	store.t.Characters = append(store.t.Characters, other)
 	store.t.SkillPoints[kelsen], store.t.SkillPoints[other] = "{}", "{}" // as the column's default left them
@@ -373,4 +374,104 @@ func TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration(t
 	store.t.SkillPoints[kelsen] = "{}"
 	run(append(recorded, bardSkillsMigration))
 	assert.Equal(t, "{}", store.t.SkillPoints[kelsen], "an applied migration runs no step")
+}
+
+// ADR 0042 step 1, existing data: right after migration 035 every stored character becomes one
+// active entry with its class (the column's default bard when none was set), its realized level
+// (the sheet's level when none was taken in the app, ADR 0030 step 7.5) and its starting XP; a
+// character with an entry already is left as it is, and a rerun (the migration applied) runs no
+// step.
+func TestMigrate_Step1_ACharacterBecomesOneActiveEntry(t *testing.T) {
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	store := newFakeStore()
+	store.t.Characters = []int64{1, 2, 3, 4}
+	store.t.Classes = map[int64]string{2: "thief", 3: "mage"} // 1: the default
+	store.t.Columns = map[int64]legacyColumns{
+		1: {Level: 15, Realized: 15, XPTotal: 1200000},
+		2: {Level: 3, XPTotal: 2600},           // no level taken in the app: the sheet's
+		3: {Level: 1, Realized: 4, XPTotal: 0}, // a level taken in the app
+		4: {Level: 2, XPTotal: 1500},
+	}
+	store.t.Entries = map[int64][]storeq.InsertClassEntryParams{
+		4: {{CharacterID: 4, Position: 0, Class: "fighter", RealizedLevel: 2, StartingXp: 1500, State: "active"}},
+	}
+	var recorded []string
+	for _, m := range embedded {
+		if m.name != classEntriesMigration {
+			recorded = append(recorded, m.name)
+		}
+	}
+	run := func(recorded []string) {
+		f := &fakeMigrations{recorded: recorded, store: store}
+		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
+			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
+			return runMigrations(ctx, f, embedded, before, after)
+		}))
+	}
+
+	run(recorded)
+	one := func(id int64, class string, level, xp int64) {
+		assert.Equal(t, []storeq.InsertClassEntryParams{
+			{CharacterID: id, Position: 0, Class: class, RealizedLevel: level, StartingXp: xp, State: "active"},
+		}, store.t.Entries[id], "character %d", id)
+	}
+	one(1, "bard", 15, 1200000)
+	one(2, "thief", 3, 2600)
+	one(3, "mage", 4, 0)
+	one(4, "fighter", 2, 1500)
+
+	// An applied migration runs no step: a character without an entry stays so.
+	store.t.Characters = append(store.t.Characters, 5)
+	run(append(recorded, classEntriesMigration))
+	assert.Empty(t, store.t.Entries[5])
+	// The step itself, rerun, changes nothing for the others.
+	require.NoError(t, fillClassEntries(context.Background(), store))
+	one(1, "bard", 15, 1200000)
+	assert.Len(t, store.t.Entries[5], 1, "the rerun gives the new character its entry")
+}
+
+// Existing data (ADR 0040 step 3.5, the skill sets): the flat skill points stored before a
+// character could have several skill sets are copied under the first set its class lists right
+// after migration 034; a character with no points, a class without a skill set and a character that
+// already has skill sets are left as they are, and a rerun (the migration applied) runs no step.
+func TestMigrate_TheSkillPointsMoveToTheirSkillSet(t *testing.T) {
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	store := newFakeStore()
+	bard, thief, fighter, empty, kept := int64(1), int64(2), int64(3), int64(4), int64(5)
+	store.t.Characters = []int64{bard, thief, fighter, empty, kept}
+	store.t.Classes = map[int64]string{bard: "bard", thief: "thief", fighter: "fighter", empty: "thief", kept: "thief"}
+	for _, id := range store.t.Characters {
+		store.t.SkillPoints[id], store.t.SkillSets[id] = "{}", "{}"
+	}
+	store.t.SkillPoints[bard] = `{"climb_walls":35,"pick_pockets":25}`
+	store.t.SkillPoints[thief] = `{"open_locks":20}`
+	store.t.SkillPoints[fighter] = `{"open_locks":20}`
+	store.t.SkillPoints[kept], store.t.SkillSets[kept] = `{"open_locks":20}`, `{"thief":{"open_locks":30}}`
+	var recorded []string
+	for _, m := range embedded {
+		if m.name != skillSetsMigration {
+			recorded = append(recorded, m.name)
+		}
+	}
+	run := func(recorded []string) {
+		f := &fakeMigrations{recorded: recorded, store: store}
+		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
+			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
+			return runMigrations(ctx, f, embedded, before, after)
+		}))
+	}
+
+	run(recorded)
+	assert.JSONEq(t, `{"bard":{"climb_walls":35,"pick_pockets":25}}`, store.t.SkillSets[bard], "under the bard's set")
+	assert.JSONEq(t, `{"thief":{"open_locks":20}}`, store.t.SkillSets[thief], "under the thief's set")
+	assert.Equal(t, "{}", store.t.SkillSets[fighter], "a class without a skill set carries nothing")
+	assert.Equal(t, "{}", store.t.SkillSets[empty], "no points, no set")
+	assert.JSONEq(t, `{"thief":{"open_locks":30}}`, store.t.SkillSets[kept], "skill sets already stored are kept")
+	assert.JSONEq(t, `{"open_locks":20}`, store.t.SkillPoints[thief], "the legacy column is left as it is")
+
+	store.t.SkillSets[thief] = "{}"
+	run(append(recorded, skillSetsMigration))
+	assert.Equal(t, "{}", store.t.SkillSets[thief], "an applied migration runs no step")
 }

@@ -203,7 +203,7 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 	h.expectStartup(cfg.SeedsDir)
 	h.Store.EXPECT().Close().Return(nil).Once()
 	h.Character.EXPECT().GetCharacter(mock.Anything, characterID).Return(&charactersvc.Character{
-		ID: characterID, Class: "bard", XPTotal: 1_293_418, Dex: 10, Int: 14, Cha: 10,
+		ID: characterID, Class: "bard", XPTotal: 1_293_418, Dex: 10, Int: 14, Wis: 10, Cha: 10,
 	}, nil).Once()
 	// Read twice: by the character's derivation (ADR 0030 step 3), then by the ledger.
 	h.XP.EXPECT().List(mock.Anything, characterID).Return(nil, nil).Twice()
@@ -264,7 +264,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 9")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 10")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -448,13 +448,13 @@ func TestStartup_Step14_RefusesAnUnknownLanguage(t *testing.T) {
 // ADR 0021 step 16.5: a format-8 artifact (or any earlier one) is refused at start as an unknown
 // format that names the one this API reads and `just catalogue`; nothing is seeded or imported.
 func TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue(t *testing.T) {
-	for _, format := range []int{3, 4, 5, 6, 7, 8} {
+	for _, format := range []int{3, 4, 5, 6, 7, 8, 9} {
 		artifact := writeArtifact(t, func(d map[string]any) {
 			d["format"] = format
 			delete(d, "proficiency_descriptions")
 		})
 		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
-		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 9", artifact, format))
+		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 10", artifact, format))
 		require.ErrorContains(t, err, "run `just catalogue`")
 	}
 }

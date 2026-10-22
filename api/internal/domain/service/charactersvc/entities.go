@@ -105,6 +105,10 @@ type Derived struct {
 	// RaceSaveBonus is step 22.1: the race's bonus per category, a named
 	// modifier on the roll (0: none), never a change of the target.
 	RaceSaveBonus Saves
+	// MagicDefence is ADR 0006 step 9.1: PHB Table 5's magical defence
+	// adjustment at the sheet's Wisdom (any class), a named modifier on a
+	// save the player flags as against magic that attacks the mind (0: none).
+	MagicDefence int
 	// SpellSlots is step 8 at the realized level: the slots per day by
 	// spell level, levels with no slot absent.
 	SpellSlots map[int]int

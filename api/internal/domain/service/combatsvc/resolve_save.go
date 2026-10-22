@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -30,6 +31,14 @@ type SaveAdjustment struct {
 	Reason string
 }
 
+// SaveOptions are the save request's flags, set by the player before the
+// roll.
+type SaveOptions struct {
+	// MindAffecting marks a save against magic that attacks the mind (ADR
+	// 0006 step 9.3, the DM's call): the roll gets the Wisdom modifier.
+	MindAffecting bool
+}
+
 // saveCategories are the categories a save can be rolled in; the UI names
 // them.
 var saveCategories = []SaveCategory{SaveParaPoison, SaveRodStaffWand, SavePetriPoly, SaveBreath, SaveSpell}
@@ -46,10 +55,11 @@ func savesByCategory(s charactersvc.Saves) map[SaveCategory]int {
 }
 
 // ResolveSavingThrow rolls a D20 against the character's per-category target,
-// applying the race's bonus and buff SaveBonus modifiers, and records the save in the action log
+// applying the race's bonus, the Wisdom magical defence adjustment on a
+// mind-affecting save (ADR 0006 step 9) and buff SaveBonus modifiers, and records the save in the action log
 // (kind save, no snapshots: it changes no state). A natural 1 or 20 is plain
 // arithmetic.
-func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory) (*SaveBreakdown, error) {
+func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory, opts SaveOptions) (*SaveBreakdown, error) {
 	if !slices.Contains(saveCategories, category) {
 		return nil, fmt.Errorf("%w: unknown save category %q", domain.ErrInvalidInput, category)
 	}
@@ -63,7 +73,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		// step 1): PHB Table 60 for the class group and level.
 		target := savesByCategory(char.Derived.Saves)[category]
 
-		rec := SaveBreakdown{Category: string(category), Target: target, Modifiers: []BreakdownModifier{}}
+		rec := SaveBreakdown{Category: string(category), Target: target, Modifiers: []BreakdownModifier{}, MindAffecting: opts.MindAffecting}
 		rec.D20Roll = s.dice.RollD20()
 		mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponNone)
 		if err != nil {
@@ -73,6 +83,12 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		// roll, like a buff's: it moves the roll, never the target.
 		if b := savesByCategory(char.Derived.RaceSaveBonus)[category]; b != 0 {
 			rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: string(ModRace), Detail: char.Race, Value: b})
+		}
+		// ADR 0006 step 9.4: on a save the player flags as against magic that
+		// attacks the mind, Table 5's adjustment at the sheet's Wisdom is one
+		// named modifier on the roll (never the target), in any category.
+		if b := char.Derived.MagicDefence; opts.MindAffecting && b != 0 {
+			rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: string(ModWisdom), Detail: strconv.Itoa(char.Wis), Value: b})
 		}
 		// One modifier per buff, named like attack buff modifiers (Detail =
 		// buff name), so the card labels each one.
@@ -152,9 +168,12 @@ func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, ad
 type SaveBreakdown struct {
 	Category string `json:"category"`
 	D20Roll  int    `json:"d20Roll"`
-	// Modifiers are the ones applied when rolling (the race's bonus, buffs),
-	// not the adjustment.
+	// Modifiers are the ones applied when rolling (the race's bonus, the
+	// Wisdom adjustment, buffs), not the adjustment.
 	Modifiers []BreakdownModifier `json:"modifiers"`
+	// MindAffecting is the request's flag (ADR 0006 step 9.5), fixed at the
+	// roll; an entry logged without it reads as false.
+	MindAffecting bool `json:"mindAffecting"`
 	// Target is the category's derived target (ADR 0030 step 6), never adjusted.
 	Target int `json:"target"`
 	// RolledPassed is the verdict as rolled, before any adjustment.

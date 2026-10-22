@@ -314,14 +314,10 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		return nil, err
 	}
 	charSvc := bs.Character
-	// What a character prepares from: a cleric's sphere-open priest spells
-	// (ADR 0030 step 15; no sphere access before catalogue format 6), every
-	// other class's spellbook.
-	sphereAccess, err := ruleTables.SphereAccess()
-	if err != nil && !errors.Is(err, ruletablesvc.ErrNoSphereAccess) {
-		return nil, err
-	}
-	prepSource, err := spheresvc.New(spheresvc.Deps{Book: spellbook, Characters: charSvc, Access: sphereAccess, Catalogue: cat})
+	// What a character prepares from: the sphere-open priest spells of a class
+	// with the sphere_access feature (ADR 0030 step 15, ADR 0040 step 3),
+	// every other class's spellbook.
+	prepSource, err := spheresvc.New(spheresvc.Deps{Book: spellbook, Characters: charSvc, Classes: defs, Catalogue: cat})
 	if err != nil {
 		return nil, err
 	}

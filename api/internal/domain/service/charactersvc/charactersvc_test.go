@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -133,7 +134,7 @@ var owner = uuid.MustParse("11111111-1111-1111-1111-111111111111")
 func TestList_IsTheOwnersCharactersAtTheirRealizedLevel(t *testing.T) {
 	e := newEnv(t)
 	e.owners.EXPECT().CharactersOf(mock.Anything, owner).
-		Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen", Class: "bard"}}, nil).Once()
+		Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen"}}, nil).Once()
 	e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(kelsen(), nil).Once()
 	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(1)).Return(26_582, nil).Once()
 	e.rules.EXPECT().LevelFor("bard", 1_320_000).Return(16, nil).Once()
@@ -145,7 +146,7 @@ func TestList_IsTheOwnersCharactersAtTheirRealizedLevel(t *testing.T) {
 	got, err := e.svc.List(context.Background(), owner)
 	require.NoError(t, err)
 	assert.Equal(t, []charactersvc.Summary{{
-		ID: 1, Name: "Kelsen", Class: "bard", Level: 15, Race: "half_elf",
+		ID: 1, Name: "Kelsen", Classes: []classes.Entry{classes.SingleEntry("bard", 15, 1_293_418)}, Race: "half_elf",
 		Missing: []string{"alignment", "sex"}, MaxHP: 85, CurrentHP: 85,
 	}}, got)
 }
@@ -176,7 +177,7 @@ func TestList_CarriesTheIdentityAndTheHP(t *testing.T) {
 			k.Details.Alignment, k.Details.Sex = tc.alignment, tc.sex
 			e.hp[1] = tc.total
 			e.owners.EXPECT().CharactersOf(mock.Anything, owner).
-				Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen", Class: "bard"}}, nil).Once()
+				Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen"}}, nil).Once()
 			e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(k, nil).Once()
 			e.xp.EXPECT().EntriesTotal(mock.Anything, int64(1)).Return(26_582, nil).Once()
 			e.rules.EXPECT().LevelFor("bard", 1_320_000).Return(16, nil).Once()

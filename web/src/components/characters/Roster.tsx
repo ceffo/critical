@@ -261,12 +261,16 @@ function RosterCard({
           )}
         </div>
         <span className="text-body">
-          {t("characters.classLevel", {
-            className: t(`details.classes.${c.class}`, {
-              defaultValue: c.class,
-            }),
-            level: c.level,
-          })}
+          {c.classes
+            .map((e) =>
+              t("characters.classLevel", {
+                className: t(`details.classes.${e.class}`, {
+                  defaultValue: e.class,
+                }),
+                level: e.level,
+              }),
+            )
+            .join(" / ")}
         </span>
         {identity && (
           <span

@@ -8,12 +8,13 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
@@ -28,12 +29,13 @@ type Book interface {
 	spellsvc.Spellbook
 }
 
-// Deps are the collaborators. Book and Characters are required; Access is
-// nil when the catalogue carries no sphere access (format 5).
+// Deps are the collaborators. All but Catalogue are required: Classes holds
+// the class definitions whose sphere_access feature says what a class
+// prepares from.
 type Deps struct {
 	Book       Book
 	Characters Characters
-	Access     *ruletablesvc.SphereAccess
+	Classes    *classes.Registry
 	Catalogue  catalogue.Catalogue
 }
 
@@ -41,13 +43,13 @@ type Deps struct {
 // spellsvc.Spellbook): for a class with a sphere access (a cleric, ADR 0030
 // step 15) the catalogue's priest spells its spheres open at the spell
 // levels it has slots of (a ruling: a level without a slot offers nothing),
-// in level then id order; for any other class its stored spellbook. Without
-// a sphere access (a format-5 catalogue) a cleric has no stored spellbook,
-// so it prepares nothing.
+// in level then id order; for any other class its stored spellbook. A class
+// has a sphere access when it is granted the sphere_access feature at its
+// realized level (ADR 0040 step 3), read from its definition: no class id.
 type Spheres struct {
 	book   Book
 	chars  Characters
-	access *ruletablesvc.SphereAccess
+	defs   *classes.Registry
 	priest []catalogue.Spell
 }
 
@@ -58,10 +60,10 @@ var (
 
 // New returns the spell source.
 func New(d Deps) (*Spheres, error) {
-	if d.Book == nil || d.Characters == nil {
-		return nil, errors.New("spheresvc: a book and the characters are required")
+	if d.Book == nil || d.Characters == nil || d.Classes == nil {
+		return nil, errors.New("spheresvc: a book, the characters and the class definitions are required")
 	}
-	book, chars, access, cat := d.Book, d.Characters, d.Access, d.Catalogue
+	book, chars, defs, cat := d.Book, d.Characters, d.Classes, d.Catalogue
 	var priest []catalogue.Spell
 	var codes []string
 	for _, s := range cat.Spells {
@@ -70,13 +72,23 @@ func New(d Deps) (*Spheres, error) {
 			priest = append(priest, s)
 		}
 	}
-	if err := access.CheckSpheres(codes); err != nil {
-		return nil, err
+	// A sphere code on no spell (a typo) would silently close the sphere.
+	for _, id := range defs.ClassIDs() {
+		def, _ := defs.Class(id)
+		f, ok := def.Lists(classes.KindSphereAccess)
+		if !ok {
+			continue
+		}
+		for _, sphere := range f.Spheres.Codes() {
+			if !slices.Contains(codes, sphere) {
+				return nil, fmt.Errorf("sphere_access: %s sphere %q is on no spell of the catalogue", id, sphere)
+			}
+		}
 	}
 	slices.SortStableFunc(priest, func(a, b catalogue.Spell) int {
 		return cmp.Or(cmp.Compare(a.Level, b.Level), cmp.Compare(a.ID, b.ID))
 	})
-	return &Spheres{book: book, chars: chars, access: access, priest: priest}, nil
+	return &Spheres{book: book, chars: chars, defs: defs, priest: priest}, nil
 }
 
 // open returns the spells the character's spheres open within its slots,
@@ -86,12 +98,17 @@ func (s *Spheres) open(ctx context.Context, characterID int64) ([]catalogue.Spel
 	if err != nil {
 		return nil, false, err
 	}
-	if !s.access.HasSpheres(c.Class) {
+	def, found := s.defs.Class(c.Class)
+	if !found {
+		return nil, false, nil
+	}
+	f, ok := def.Feature(classes.KindSphereAccess, c.Derived.RealizedLevel)
+	if !ok {
 		return nil, false, nil
 	}
 	out := []catalogue.Spell{}
 	for _, sp := range s.priest {
-		if c.Derived.SpellSlots[sp.Level] > 0 && s.access.Opens(c.Class, sp.Level, sp.Spheres) {
+		if c.Derived.SpellSlots[sp.Level] > 0 && f.Spheres.Opens(sp.Level, sp.Spheres) {
 			out = append(out, sp)
 		}
 	}

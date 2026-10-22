@@ -446,6 +446,23 @@ CRI-178 built steps 1, 2, 4, 6 and 8's data ([ADR 0021](0021-spell-catalogue.md)
   text does (ADR 0023 step 3): `TestParse_Step20_APowerWithoutFrenchTextFallsBackToEnglish`.
 - **Q13** is fixed by one dated line (`catalogue-inputs/PSIONICIST_FIXES`): Spell 11 at levels 13 to 16.
 
+## As built: the powers lookup (2026-10-22)
+
+Step 8's catalogue is served; knowing and using powers are later items.
+
+- **Read at start, never imported.** The disciplines and powers are read from the artifact beside the rule tables (ADR 0021 step 9.4's
+  rule), held in memory by `powersvc`, and need no table, migration or import: a power has no state of its own. The artifact's parse refuses
+  a repeated id, an unknown discipline, an unknown kind and an unknown prerequisite (`catalogue.CheckPowers`).
+- **`GET /api/powers`** (`q`, `discipline`, `kind`, `page`, `page_size`), **`/api/powers/{id}`** and **`/api/powers/filters`**: a session, no
+  current character. `q` matches the name in every language, case and accents ignored, ranked exact, prefix, substring, the book order
+  within a rank (the spells' rule, ADR 0023 step 7). Texts are language maps; a cost is a number or the word `variable` or `contact`.
+- **The lookup** gains a Powers entry beside the spell classes; the list is searched and filtered by discipline and kind.
+- **The psionicist stays out of creation** until the implementing items: reading the catalogue of its powers does not make the class
+  playable, since its `psionics` and `save_bonus` kinds have no reader (the gate of the section above). It leaves `classes.notImplemented`
+  with the PSP items, not with this one: a psionicist character today would have neither PSPs nor the +2 save.
+- Tests: `PowerCatalogue_Step8_EveryPowerParses` (catalogueadpt), `Search_Step8_*`, `Get_Step8_*`, `New_Step8_*` (powersvc),
+  `Powers_Step8_ServedFromTheCatalogueAsLanguageMaps` (router).
+
 ## Consequences
 
 - A new class of data (the psionicist and its group rows), two new feature kinds (`psionics`,

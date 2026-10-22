@@ -806,6 +806,55 @@ test("lookup: gameplay values are highlighted in one style in the text and the t
   }
 });
 
+// ADR 0043 step 8: the lookup lists the psionic powers beside the spells. Only a browser proves the
+// Powers entry of the list switch, the search over both languages and the detail in the player's
+// language; the ranking, the filters' rules and the costs are the API's Go tests.
+test("lookup powers: a power is found by its English or French name and its detail follows the language", async ({
+  page,
+}) => {
+  await openLookup(page);
+  await classButton(page, "Powers").click();
+  const powerRows = page.getByTestId("power-row");
+  await expect(powerRows).toHaveCount(9);
+  await expect(page.getByTestId("lookup-count")).toHaveText("9 powers");
+
+  await page
+    .getByRole("combobox", { name: "Search powers..." })
+    .fill("aura sight");
+  await expect(powerRows).toHaveCount(1);
+  const detail = page.getByTestId("power-detail");
+  await expect(detail.getByRole("heading")).toHaveText("Aura Sight");
+  await expect(detail.getByTestId("power-meta")).toHaveText(
+    "Clairsentience · Science",
+  );
+  await expect(detail.getByTestId("power-stat-initialCost")).toContainText(
+    "9 PSP",
+  );
+  await expect(detail.getByTestId("power-stat-score")).toContainText("WIS −5");
+  await expect(detail.getByTestId("power-description-text")).toContainText(
+    "A creature's aura reflects",
+  );
+  await snap(page, "power-detail");
+
+  // A discipline narrows the list; the French name finds the power in French.
+  await chooseLanguage(page, "fr");
+  await page
+    .getByRole("combobox", { name: "Rechercher des pouvoirs..." })
+    .fill("vision");
+  await expect(powerRows).toHaveCount(1);
+  await expect(detail.getByRole("heading")).toHaveText("Vision de l'Aura");
+  await expect(detail.getByTestId("power-meta")).toHaveText(
+    "Clairsentience · Science",
+  );
+  await expect(detail.getByTestId("power-stat-initialCost")).toContainText(
+    "9 PFP",
+  );
+  await expect(detail.getByTestId("power-description-text")).toContainText(
+    "Une aura est un halo brillant",
+  );
+  await snap(page, "power-detail-fr");
+});
+
 // "Mine" is the spellbook: only a class that has one is offered it (the unit test lookupClasses holds
 // the rule; this proves the wiring on the server's derived block, and the toggle uncut).
 for (const [cls, hasMine] of [

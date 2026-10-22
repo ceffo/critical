@@ -1,6 +1,7 @@
 // Package psphdl exposes the PSP pool's hand edit (ADR 0043 step 5), as hphdl
 // does for HP, the recovery over hours of an activity (step 6) and the known
-// powers (step 9) and a power's use (steps 10 and 11) over HTTP. The handler depends on a narrow interface
+// powers (step 9), a power's use (steps 10, 11 and 13) and the stop of a
+// maintained power (step 16) over HTTP. The handler depends on a narrow interface
 // (clean_architecture.md §7.3) and translates between the HTTP DTOs and the
 // domain types.
 package psphdl
@@ -14,6 +15,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/render"
@@ -41,9 +43,10 @@ type knownSetter interface {
 	SetKnownPowers(ctx context.Context, characterID int64, picks []psionics.Pick) (*charactersvc.PowerKnowledge, error)
 }
 
-// user is a power's use's one method; psionicsvc.SVC satisfies it.
+// user is a power's use and stop; psionicsvc.SVC satisfies it.
 type user interface {
 	Use(ctx context.Context, characterID int64, powerID string, req psionicsvc.UseRequest) (*psionicsvc.UseResult, error)
+	Stop(ctx context.Context, characterID int64, powerID string) ([]buffsvc.BuffEffect, error)
 }
 
 // CharacterIDFunc resolves the active character ID from the request context.
@@ -55,20 +58,27 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender, rec re
 	r.Post("/api/psp/recover", render.Handle(Recover(charID, rec)))
 	r.Put("/api/psionics/picks", render.Handle(SetKnownPowers(charID, known)))
 	r.Post("/api/psionics/powers/{id}/use", render.Handle(Use(charID, use)))
+	r.Post("/api/psionics/powers/{id}/stop", render.Handle(Stop(charID, use)))
 }
 
 type useBody struct {
 	Modifiers []psionicsvc.Modifier `json:"modifiers"`
 	Cost      *int                  `json:"cost"`
 	Score     *int                  `json:"score"`
+	// MaintenanceCost is the maintenance of a power whose maintenance cost
+	// is variable, and only then.
+	MaintenanceCost *int `json:"maintenanceCost"`
 }
 
 // UseDTO is a power's use as logged: the check's breakdown (the power_check
-// entry's payload), the pool after the spend and the entry's id.
+// entry's payload), the pool after the spend and the entry's id. BuffID is
+// the buff row a success of a power with maintenance put on (step 13),
+// omitted otherwise.
 type UseDTO struct {
 	Check      psionicsvc.CheckRecord `json:"check"`
 	PSP        StateDTO               `json:"psp"`
 	LogEntryID int64                  `json:"logEntryId"`
+	BuffID     string                 `json:"buffId,omitempty"`
 }
 
 // Use checks the known power {id} and spends its initial cost (ADR 0043
@@ -81,14 +91,34 @@ func Use(charID CharacterIDFunc, svc user) render.HandlerFunc {
 			return render.BadRequestError("invalid request body")
 		}
 		res, err := svc.Use(r.Context(), charID(r), chi.URLParam(r, "id"), psionicsvc.UseRequest{
-			Modifiers: body.Modifiers, Cost: body.Cost, Score: body.Score,
+			Modifiers: body.Modifiers, Cost: body.Cost, Score: body.Score, MaintenanceCost: body.MaintenanceCost,
 		})
 		if err != nil {
 			return err
 		}
 		render.OK(r.Context(), w, UseDTO{
-			Check: res.Check, PSP: StateDTO{Current: res.PSP.Current, Max: res.PSP.Max}, LogEntryID: res.LogEntryID,
+			Check: res.Check, PSP: StateDTO{Current: res.PSP.Current, Max: res.PSP.Max}, LogEntryID: res.LogEntryID, BuffID: res.BuffID,
 		})
+		return nil
+	}
+}
+
+// StopDTO names the power whose maintenance stopped; the buff list and the
+// journal are read again by the client.
+type StopDTO struct {
+	PowerID string `json:"powerId"`
+}
+
+// Stop ends the maintained power {id} (ADR 0043 step 16): its buff row is
+// dismissed, free and undoable. 409 power_not_maintained when no row keeps
+// it up.
+func Stop(charID CharacterIDFunc, svc user) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		id := chi.URLParam(r, "id")
+		if _, err := svc.Stop(r.Context(), charID(r), id); err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, StopDTO{PowerID: id})
 		return nil
 	}
 }

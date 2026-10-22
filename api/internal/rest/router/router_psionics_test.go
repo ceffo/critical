@@ -121,3 +121,16 @@ func TestUse_Step11_PostRefusals(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Contains(t, rec.Body.String(), `cost`)
 }
+
+func TestStop_Step16_Post(t *testing.T) {
+	h, m := newRouter(t)
+	m.psionics.EXPECT().Stop(mock.Anything, int64(1), "lift").Return(nil, nil).Once()
+	rec := do(h, "POST", "/api/psionics/powers/lift/stop", ``)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"powerId":"lift"}`, rec.Body.String())
+
+	m.psionics.EXPECT().Stop(mock.Anything, int64(1), "lift").Return(nil, psionicsvc.ErrPowerNotMaintained).Once()
+	rec = do(h, "POST", "/api/psionics/powers/lift/stop", ``)
+	require.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"power_not_maintained"`)
+}

@@ -241,6 +241,30 @@ type BuffEffect struct {
 	// it never renews nor is renewed by another buff. Stamped by the spell
 	// cast only; false for everything else.
 	OnOther bool
+	// PowerID is the catalogue id of the psionic power whose successful
+	// check put the row on (ADR 0043 step 13), stamped by the power's use
+	// only; empty for every other buff. MaintenanceCost and
+	// MaintenancePeriod are the power's maintenance: Next Round charges the
+	// cost every period rounds since StartRound (step 14), and the row ends
+	// when the PSPs cannot pay it. A row with a cost is untimed: it lasts
+	// until stopped (step 16) or unpaid.
+	PowerID           string
+	MaintenanceCost   int
+	MaintenancePeriod int
+}
+
+// Maintained reports whether Next Round charges maintenance for the row.
+func (b BuffEffect) Maintained() bool { return b.PowerID != "" && b.MaintenanceCost > 0 }
+
+// MaintenanceDue reports whether the Next Round that ends round from
+// charges the row's maintenance (ADR 0043 step 14, Q10): every period
+// rounds since its start round, and never in the round it started.
+func (b BuffEffect) MaintenanceDue(from int) bool {
+	if !b.Maintained() || from <= b.StartRound {
+		return false
+	}
+	period := max(b.MaintenancePeriod, 1)
+	return (from-b.StartRound)%period == 0
 }
 
 // Timed reports whether Next Round counts this buff down.

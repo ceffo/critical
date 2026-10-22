@@ -236,8 +236,8 @@ The PSPs a power costs when it is used; half on a failed check, rounded up. The 
 _Code_: Cost
 
 **Maintenance cost** (fr: coût de maintien):
-The PSPs a maintained power costs each round (or its period) to keep it working, charged on Next Round (planned); the catalogue holds the cost and the period. [ADR 0043](docs/adr/0043-psionics.md) steps 13 to 16.
-_Code_: Maintenance
+The PSPs a maintained power costs each round (or its period) to keep it working. A successful check puts the power on the buff list as an untimed row with its cost and period; Next Round charges it (never in the round it started), and the row ends when the PSPs left cannot pay; stopping it is dismissing the row. The catalogue holds the cost (or `variable`, entered with the use) and the period. [ADR 0043](docs/adr/0043-psionics.md) steps 13 to 16.
+_Code_: Maintenance, BuffEffect.MaintenanceCost
 
 **Defence mode** (fr: mode de défense) _(future)_:
 A telepathic power that defends against an attack mode in psionic combat. [ADR 0043](docs/adr/0043-psionics.md) step 20.

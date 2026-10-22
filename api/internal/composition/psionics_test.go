@@ -349,3 +349,43 @@ func TestActivate_Step11_UndoGivesThePSPBack(t *testing.T) {
 	assert.Equal(t, 171, currentPSP(t, bs, id))
 	assert.Equal(t, 2, dice.calls["die"], "one d20 per use, none on undo or redo")
 }
+
+// ADR 0043 steps 13 and 14 end to end: Aura Sight (9 PSPs, 9 a round, Wis 17
+// - 5 = 12) succeeds at round 0 and puts its row on; the Next Round of its
+// start round charges nothing, the next one charges 9; undoing that Next
+// Round gives the PSPs back and leaves the row on, undoing the check takes
+// the row off.
+func TestAdvanceRound_Step14_UndoRestoresPSPAndRows(t *testing.T) {
+	ctx := context.Background()
+	dice := &attackDice{t: t, dies: []int{5, 3, 4}, calls: map[string]int{}}
+	bs, id := thiefPsionicistRolling(t, []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "clairsentience"}, {Kind: psionics.PickPower, ID: "aura_sight"},
+	}, dice)
+	rows := func() int {
+		b, err := bs.Buffs.ListActive(ctx, id)
+		require.NoError(t, err)
+		return len(b)
+	}
+
+	res, err := bs.Psionics.Use(ctx, id, "aura_sight", psionicsvc.UseRequest{})
+	require.NoError(t, err)
+	require.True(t, res.Check.Success)
+	require.NotEmpty(t, res.BuffID)
+	assert.Equal(t, 172, currentPSP(t, bs, id))
+	assert.Equal(t, 1, rows())
+
+	_, _, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 172, currentPSP(t, bs, id), "the start round's Next Round charges nothing")
+	_, _, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 163, currentPSP(t, bs, id), "9 to keep it from round 1")
+
+	undoTop(t, bs, id)
+	assert.Equal(t, 172, currentPSP(t, bs, id), "the undo gives the 9 back")
+	assert.Equal(t, 1, rows())
+	undoTop(t, bs, id)
+	undoTop(t, bs, id)
+	assert.Equal(t, 181, currentPSP(t, bs, id))
+	assert.Equal(t, 0, rows(), "the check's undo takes the row off")
+}

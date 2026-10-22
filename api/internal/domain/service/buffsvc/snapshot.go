@@ -34,6 +34,12 @@ type snapBuff struct {
 	// OnOther is absent from entries recorded before it existed and for a
 	// buff on the character (ADR 0004 step 20.5): they restore it false.
 	OnOther bool `json:"on_other,omitempty"`
+	// PowerID, MaintenanceCost and MaintenancePeriod are absent from entries
+	// recorded before they existed and for a row not from a maintained
+	// power: they restore empty (ADR 0043 step 13).
+	PowerID           string `json:"power_id,omitempty"`
+	MaintenanceCost   int    `json:"maintenance_cost,omitempty"`
+	MaintenancePeriod int    `json:"maintenance_period,omitempty"`
 }
 
 type snapEffects struct {
@@ -81,6 +87,7 @@ func toSnapBuffs(buffs []BuffEffect) []snapBuff {
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: snapEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
+			PowerID: b.PowerID, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod,
 		}
 	}
 	return out
@@ -93,6 +100,7 @@ func fromSnapBuffs(in []snapBuff) []BuffEffect {
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: BuffEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
+			PowerID: b.PowerID, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod,
 		}
 	}
 	return out

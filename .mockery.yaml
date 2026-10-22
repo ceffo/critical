@@ -167,6 +167,7 @@ packages:
       Characters:
       Picks:
       Dice:
+      Buffs:
   github.com/ceffo/critical/api/internal/domain/service/prepsvc:
     config:
       dir: "internal/domain/service/prepsvc/mocks"

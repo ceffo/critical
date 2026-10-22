@@ -236,6 +236,7 @@ var mappings = []mapping{
 	{target: psionicsvc.ErrPowerNotKnown, status: http.StatusConflict, code: "power_not_known"},
 	{target: psionicsvc.ErrNeedsContact, status: http.StatusConflict, code: "needs_contact"},
 	{target: psionicsvc.ErrNotEnoughPSP, status: http.StatusConflict, code: "not_enough_psp"},
+	{target: psionicsvc.ErrPowerNotMaintained, status: http.StatusConflict, code: "power_not_maintained"},
 	// ADR 0043 step 5: a PSP change for a character with no PSP maximum.
 	{target: actionlogsvc.ErrNoPSPPool, status: http.StatusBadRequest, code: "no_psp_pool"},
 }

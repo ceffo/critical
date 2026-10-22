@@ -46,7 +46,9 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 	// and is never renewed (two Webs on two areas are two rows).
 	stacks := isStrengthBonus(buff.Effects) || buff.OnOther
 	for _, b := range before {
-		if stacks || b.OnOther || !strings.EqualFold(b.Name, buff.Name) {
+		// ADR 0043 step 13: a power activated again renews its row.
+		samePower := buff.PowerID != "" && b.PowerID == buff.PowerID
+		if !samePower && (stacks || b.OnOther || !strings.EqualFold(b.Name, buff.Name)) {
 			after = append(after, b)
 		}
 	}

@@ -2199,6 +2199,7 @@
     "power_not_known": "Le personnage ne connaît pas ce pouvoir.",
     "needs_contact": "Ce pouvoir demande un contact, pas encore disponible.",
     "not_enough_psp": "Pas assez de PFP pour le coût initial de ce pouvoir.",
+    "power_not_maintained": "Ce pouvoir n’est pas maintenu.",
     "not_a_psionicist": "Ce personnage n’est pas un psioniste.",
     "psionic_allowance_exceeded": "Au-delà de ce que ce niveau permet : {{count}} choisis, {{limit}} permis.",
     "primary_discipline_exceeded": "Une discipline autre que la principale doit avoir moins de pouvoirs que celle-ci : {{count}} choisis, {{limit}} au plus.",

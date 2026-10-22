@@ -35,6 +35,16 @@ func useBook() psionics.Book {
 			Score: &catalogue.PowerScore{Ability: "wis", Modifier: 0}, InitialCost: catalogue.Cost{Kind: catalogue.CostContact},
 		},
 		{
+			ID: "lift", Discipline: "telepathy", Kind: catalogue.KindDevotion, Name: map[string]string{"en": "Lift", "fr": "Soulever"},
+			Score: &catalogue.PowerScore{Ability: "int", Modifier: -3}, InitialCost: catalogue.Cost{Amount: 5},
+			Maintenance: &catalogue.Maintenance{Cost: catalogue.Cost{Amount: 3}, Period: 1},
+		},
+		{
+			ID: "push", Discipline: "telepathy", Kind: catalogue.KindDevotion,
+			Score: &catalogue.PowerScore{Ability: "int"}, InitialCost: catalogue.Cost{Amount: 2},
+			Maintenance: &catalogue.Maintenance{Cost: catalogue.Cost{Kind: catalogue.CostVariable}, Period: 1},
+		},
+		{
 			ID: "unknown", Discipline: "telepathy", Kind: catalogue.KindDevotion,
 			Score: &catalogue.PowerScore{Ability: "int"}, InitialCost: catalogue.Cost{Amount: 1},
 		},
@@ -49,6 +59,8 @@ func user(current int, relearn bool) *charactersvc.Character {
 		{Kind: psionics.PickPower, ID: "thrust"},
 		{Kind: psionics.PickPower, ID: "leap"},
 		{Kind: psionics.PickPower, ID: "touch"},
+		{Kind: psionics.PickPower, ID: "lift"},
+		{Kind: psionics.PickPower, ID: "push"},
 	}
 	if relearn {
 		picks = append(picks, psionics.Pick{Kind: psionics.PickRelearn, ID: "thrust"})
@@ -61,14 +73,20 @@ func user(current int, relearn bool) *charactersvc.Character {
 
 func newUseSvc(t *testing.T, c *charactersvc.Character) (psionicsvc.SVC, *mocks.MockDice, *mocks.MockLog) {
 	t.Helper()
-	chars, dice, log := mocks.NewMockCharacters(t), mocks.NewMockDice(t), mocks.NewMockLog(t)
+	svc, dice, log, _ := newUseSvcWithBuffs(t, c)
+	return svc, dice, log
+}
+
+func newUseSvcWithBuffs(t *testing.T, c *charactersvc.Character) (psionicsvc.SVC, *mocks.MockDice, *mocks.MockLog, *mocks.MockBuffs) {
+	t.Helper()
+	chars, dice, log, buffs := mocks.NewMockCharacters(t), mocks.NewMockDice(t), mocks.NewMockLog(t), mocks.NewMockBuffs(t)
 	chars.EXPECT().GetCharacter(mock.Anything, int64(7)).Return(c, nil).Maybe()
 	svc, err := psionicsvc.New(psionicsvc.Deps{
 		Rates: mocks.NewMockRecoveryRates(t), Log: log, Characters: chars, Picks: mocks.NewMockPicks(t),
-		Dice: dice, Book: useBook(), Tx: passTx{},
+		Dice: dice, Buffs: buffs, Book: useBook(), Tx: passTx{},
 	})
 	require.NoError(t, err)
-	return svc, dice, log
+	return svc, dice, log, buffs
 }
 
 // expectRecord captures the one entry Use logs.

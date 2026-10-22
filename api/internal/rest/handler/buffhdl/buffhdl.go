@@ -398,8 +398,14 @@ type BuffEffectDTO struct {
 	// OnOther marks a row for a spell cast on someone else or on an area
 	// (ADR 0004 step 20.5): it only counts down and never applies. Omitted
 	// for a buff on the character. Response only, like spellId.
-	OnOther bool  `json:"onOther,omitempty"`
-	Applies *bool `json:"applies,omitempty"`
+	OnOther bool `json:"onOther,omitempty"`
+	// PowerID is the psionic power the row keeps up (ADR 0043 step 13),
+	// with the maintenance Next Round charges every maintenancePeriod
+	// rounds; omitted for any other buff. Response only, like spellId.
+	PowerID           string `json:"powerId,omitempty"`
+	MaintenanceCost   int    `json:"maintenanceCost,omitempty"`
+	MaintenancePeriod int    `json:"maintenancePeriod,omitempty"`
+	Applies           *bool  `json:"applies,omitempty"`
 	// AsksEndCause: the row's spell has end effects, so stopping it sends
 	// a cause (ADR 0004 step 21). Omitted otherwise. Response only.
 	AsksEndCause bool `json:"asksEndCause,omitempty"`
@@ -504,6 +510,7 @@ func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 		Effects: wire.BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
+		PowerID: b.PowerID, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod,
 	}
 }
 

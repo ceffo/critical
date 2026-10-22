@@ -17,8 +17,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 // KnownPowersStateKey is the action-log state key of a character's known
@@ -51,6 +53,20 @@ type SVC interface {
 	// Use checks a known power (ADR 0043 steps 10 and 11): one d20, one
 	// power_check entry spending its PSPs. The refusals are Use's (use.go).
 	Use(ctx context.Context, characterID int64, powerID string, req UseRequest) (*UseResult, error)
+	// Stop ends a maintained power (ADR 0043 step 16): the dismiss of its
+	// buff row, free, logged and undoable. ErrNotPsionicist,
+	// ErrPowerNotMaintained when no row keeps the power up.
+	Stop(ctx context.Context, characterID int64, powerID string) ([]buffsvc.BuffEffect, error)
+}
+
+// Buffs is the buff list a maintained power's row lives on (buffsvc, ADR
+// 0043 step 13).
+type Buffs interface {
+	// Add puts the row on inside the ctx transaction, without recording:
+	// the power check's entry records the snapshot.
+	Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
+	ListActive(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, error)
+	Dismiss(ctx context.Context, characterID int64, buffID string, cause spelleffectsvc.EndCause) ([]buffsvc.BuffEffect, buffsvc.EndResult, error)
 }
 
 // Dice rolls the power check's d20 (dicesvc).
@@ -88,6 +104,7 @@ type Deps struct {
 	Characters Characters
 	Picks      Picks
 	Dice       Dice
+	Buffs      Buffs
 	// Book is the powers catalogue the picks are checked against.
 	Book psionics.Book
 	Tx   domain.TxRunner
@@ -99,16 +116,17 @@ type service struct {
 	chars Characters
 	picks Picks
 	dice  Dice
+	buffs Buffs
 	book  psionics.Book
 	tx    domain.TxRunner
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Rates == nil || d.Log == nil || d.Characters == nil || d.Picks == nil || d.Dice == nil || d.Book == nil || d.Tx == nil {
+	if d.Rates == nil || d.Log == nil || d.Characters == nil || d.Picks == nil || d.Dice == nil || d.Buffs == nil || d.Book == nil || d.Tx == nil {
 		return nil, fmt.Errorf("psionicsvc: nil dependency")
 	}
-	return &service{rates: d.Rates, log: d.Log, chars: d.Characters, picks: d.Picks, dice: d.Dice, book: d.Book, tx: d.Tx}, nil
+	return &service{rates: d.Rates, log: d.Log, chars: d.Characters, picks: d.Picks, dice: d.Dice, buffs: d.Buffs, book: d.Book, tx: d.Tx}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

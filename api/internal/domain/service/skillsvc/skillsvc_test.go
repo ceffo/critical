@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -70,12 +72,12 @@ var catalog = []skills.PickFigures{
 func testBook(t *testing.T) *ruletablesvc.Proficiencies {
 	t.Helper()
 	var cross []ruletablesvc.Crossover
-	for _, c := range ruletablesvc.Classes {
+	for _, c := range cataloguetest.Definitions(t).ClassIDs() {
 		cross = append(cross, ruletablesvc.Crossover{Class: c, Groups: []string{"general"}})
 	}
-	cross[4] = ruletablesvc.Crossover{Class: "bard", Groups: []string{"rogue", "warrior", "wizard", "general"}}
+	cross[slices.Index(cataloguetest.Definitions(t).ClassIDs(), "bard")] = ruletablesvc.Crossover{Class: "bard", Groups: []string{"rogue", "warrior", "wizard", "general"}}
 	var slots []ruletablesvc.SlotRow
-	for _, g := range ruletablesvc.Groups {
+	for _, g := range cataloguetest.Definitions(t).Groups() {
 		slots = append(slots, ruletablesvc.SlotRow{Group: g, WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4})
 	}
 	b, err := ruletablesvc.NewProficiencies([]ruletablesvc.Proficiency{
@@ -83,7 +85,7 @@ func testBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{ID: "tracking", Ability: "wis", Slots: 2, Groups: []string{"warrior"}},
 		{ID: "healing", Ability: "wis", Modifier: -2, Slots: 2, Groups: []string{"priest"}},
 		{ID: "languages_modern", Ability: "int", Slots: 1, Groups: []string{"general"}},
-	}, cross, slots)
+	}, cross, slots, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return b
 }

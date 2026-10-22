@@ -91,7 +91,7 @@ func newBookEnv(t *testing.T, intRow ruletablesvc.IntelligenceRow) *env {
 // expectClassAt answers the derivation of class at xp, as often as asked: the level, and the
 // class's spell slots there (PHB Table 21 for a mage, Table 32 for a bard).
 func expectClassAt(e *env, class string, xp, level int, slots map[int]int) {
-	group, _ := ruletablesvc.ClassGroup(class)
+	group, _ := e.rules.ClassGroup(class) // the fixture's definitions (newRules)
 	e.rules.EXPECT().RaceAllows(mock.Anything, class).Return(true, nil).Maybe()
 	e.rules.EXPECT().LevelFor(class, xp).Return(level, nil).Maybe()
 	e.rules.EXPECT().XPThreshold(class, level+1).Return(xp+1, nil).Maybe()

@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"sort"
 	"strings"
 
@@ -57,13 +58,13 @@ const ownerKeysMigration = "004_per_character_keys.sql"
 // ownerKeysMigration. equipment is the catalogue's equipment: its weapons, which the equipment
 // conversion matches (ADR 0033 step 26.4), and its body armours, which the skill armour carry-over
 // gives (step 14); none before catalogue format 7.
-func (d *DB) Migrate(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment) error {
+func (d *DB) Migrate(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment, defs *classes.Registry) error {
 	embedded, err := embeddedMigrations()
 	if err != nil {
 		return err
 	}
 	return d.migrations(ctx, func(tx migrationTx) error {
-		before, after := migrationDataSteps(seedsDir, equipment)
+		before, after := migrationDataSteps(seedsDir, equipment, defs)
 		return runMigrations(ctx, tx, embedded, before, after)
 	})
 }
@@ -95,7 +96,7 @@ const dropRaceMigration = "023_drop_character_race.sql"
 
 // migrationDataSteps are the data steps run just before the named migrations, then those run just
 // after the named migrations.
-func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment) (before, after map[string]dataStep) {
+func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment, defs *classes.Registry) (before, after map[string]dataStep) {
 	characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
 	weaponsPath := seedfile.Path(seedsDir, seedfile.WeaponsFile)
 	before = map[string]dataStep{
@@ -116,11 +117,13 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment) (befo
 		snapshotEnvelopesMigration: reencodeSnapshots,
 		dropRaceMigration:          mapIdentity,
 		skillArmourMigration:       func(ctx context.Context, q storeq.Querier) error { return carrySkillArmour(ctx, q, equipment.Armour) },
-		picksMigration:             func(ctx context.Context, q storeq.Querier) error { return pickProficienciesFrom(ctx, q, seedsDir) },
-		weaponPicksMigration:       grantOwnedWeaponTypes,
-		specializationMigration:    specializeFlaggedWeapons,
-		spellbookOriginMigration:   markLearnedSpells,
-		dardsMigration:             func(ctx context.Context, q storeq.Querier) error { return renameDarts(ctx, q, characterPath) },
+		picksMigration: func(ctx context.Context, q storeq.Querier) error {
+			return pickProficienciesFrom(ctx, q, seedsDir, defs)
+		},
+		weaponPicksMigration:     grantOwnedWeaponTypes,
+		specializationMigration:  specializeFlaggedWeapons,
+		spellbookOriginMigration: markLearnedSpells,
+		dardsMigration:           func(ctx context.Context, q storeq.Querier) error { return renameDarts(ctx, q, characterPath) },
 	}
 	return before, after
 }

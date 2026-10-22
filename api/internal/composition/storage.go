@@ -2,6 +2,7 @@ package composition
 
 import (
 	"context"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
 	logq "github.com/ceffo/critical/api/internal/adapters/actionlogdal/queries"
@@ -63,7 +64,7 @@ type Store interface {
 	// equipment is the catalogue's: the weapons the equipment conversion
 	// matches (ADR 0033 step 26.4) and the body armours the skill armour
 	// carry-over gives (step 14); none before catalogue format 7.
-	Migrate(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment) error
+	Migrate(ctx context.Context, seedsDir string, equipment ruletablesvc.Equipment, defs *classes.Registry) error
 	// Seed loads the seed files of seedsDir; spellbook is the spellbook
 	// seed's catalogue keys, checked against the catalogue; equipment the
 	// catalogue's weapons the seeded weapons are matched to and the body

@@ -1,6 +1,7 @@
 package skills_test
 
 import (
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,12 +33,12 @@ func phbLanguages(t *testing.T) *ruletablesvc.Languages {
 		"human": "common", "dwarf": "dwarvish", "elf": "elvish", "gnome": "gnomish", "half_elf": "common", "halfling": "halfling",
 	}
 	var rows []ruletablesvc.RaceLanguageRow
-	for _, race := range ruletablesvc.RaceCodes {
+	for _, race := range cataloguetest.Definitions(t).RaceIDs() {
 		for _, l := range lists[race] {
 			rows = append(rows, ruletablesvc.RaceLanguageRow{Race: race, Language: l, Native: l == native[race]})
 		}
 	}
-	l, err := ruletablesvc.NewLanguages(list, rows)
+	l, err := ruletablesvc.NewLanguages(list, rows, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return l
 }

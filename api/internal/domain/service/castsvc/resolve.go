@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/pkg/formula"
 )
@@ -158,11 +157,11 @@ func (s *service) rollDamageParts(e spelleffectsvc.Entry, d *spelleffectsvc.Dama
 var trackedCharges = map[string]bool{"attacks": true, "images": true}
 
 // rollBuff turns a buff entry into a buff on the character at the caster
-// level, plus the effects the engine does not track. class is the
-// character's: its group picks a by-group ability gain (ADR 0030 step 2).
+// level, plus the effects the engine does not track. group is the
+// character's class group: it picks a by-group ability gain (ADR 0030 step 2).
 // onOther is a buff the character casts on someone else: a by-group gain is
 // not rolled then, since the group is the receiver's.
-func (s *service) rollBuff(e spelleffectsvc.Entry, level int, class string, onOther bool) (*AppliedBuff, []Untracked, error) {
+func (s *service) rollBuff(e spelleffectsvc.Entry, level int, group string, onOther bool) (*AppliedBuff, []Untracked, error) {
 	// ADR 0004 step 17: the buff carries the spell's catalogue id so the
 	// client names it in the player's language.
 	out := &AppliedBuff{Buff: buffsvc.BuffEffect{Name: e.Name, SpellID: e.ID}}
@@ -214,10 +213,6 @@ func (s *service) rollBuff(e spelleffectsvc.Entry, level int, class string, onOt
 		if onOther && (len(g.ByGroup) > 0 || len(g.MaxByGroup) > 0) {
 			continue
 		}
-		group, err := gainGroup(g, class)
-		if err != nil {
-			return nil, nil, err
-		}
 		f := g.Gain
 		if gf, ok := g.ByGroup[group]; ok {
 			f = gf
@@ -254,16 +249,6 @@ func (s *service) rollBuff(e spelleffectsvc.Entry, level int, class string, onOt
 		untracked = append(untracked, Untracked{Key: ability + "_set", Value: score})
 	}
 	return out, untracked, nil
-}
-
-// gainGroup is the class group of class (ADR 0030 step 2) when g picks its
-// die or its cap by group; empty when g is the same for everybody, so a gain
-// that does not depend on the group never needs the class.
-func gainGroup(g spelleffectsvc.AbilityGain, class string) (string, error) {
-	if len(g.ByGroup) == 0 && len(g.MaxByGroup) == 0 {
-		return "", nil
-	}
-	return ruletablesvc.ClassGroup(class)
 }
 
 // applyModifier maps a seed modifier onto the buff effects the engine

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,8 +41,8 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 	// seed match (ADR 0033 step 26.4), its armours the ones the skill armour
 	// carry-over gives (step 14).
 	var migrated, seeded ruletablesvc.Equipment
-	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything).
-		RunAndReturn(func(_ context.Context, _ string, w ruletablesvc.Equipment) error {
+	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, _ string, w ruletablesvc.Equipment, _ *classes.Registry) error {
 			migrated = w
 			return nil
 		}).Once()
@@ -100,14 +101,14 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 		want    string
 	}{
 		{"migrate (the unknown-migration guard's refusal travels this way)", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "migrate: boom"},
 		{"seed", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "seed: boom"},
 		{"adopting the characters without an owner", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once()
@@ -115,13 +116,13 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 			h.Auth.EXPECT().RootUser(mock.Anything).Return(nil, boom).Once()
 		}, "give the characters without an owner to the root admin: boom"},
 		{"spell catalogue read", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, boom).Once()
 		}, "load the spell catalogue: boom"},
 		{"catalogue import", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "boom"},
@@ -168,7 +169,7 @@ func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, raw, 0o600))
 
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once() // no Seed or ImportCatalogue expectation: a call fails the test
 
 	_, err = h.build(t, composition.Config{SeedsDir: seeds, Catalogue: fixtureCatalogue})
@@ -226,7 +227,7 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 func refusedStart(t *testing.T, cfg composition.Config) error {
 	t.Helper()
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 	h.Store.EXPECT().Close().Return(nil).Once()
 	_, err := h.build(t, cfg)
 	require.Error(t, err)
@@ -511,7 +512,7 @@ func TestBuild_ASpellbookSeedTheCatalogueRefusesIsRefusedBeforeTheSeed(t *testin
 		[]byte(`[{"id":"magic_rocket","name":"Magic Rocket","level":1}]`), 0o600))
 
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once()
 	cfg := fixtureConfig()
 	cfg.SeedsDir = seeds
@@ -524,7 +525,7 @@ func TestBuild_ASpellbookSeedTheCatalogueRefusesIsRefusedBeforeTheSeed(t *testin
 // requests ask (the mock refuses a second Search or Details).
 func TestBuild_SpellCatalogueReadOnceAtStartup(t *testing.T) {
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	fire := spellsvc.Spell{ID: "fireball", Class: "Wizard", Level: 3}

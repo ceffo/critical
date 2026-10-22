@@ -56,7 +56,7 @@ func newWire(t *testing.T, kind actionlog.Kind, logged json.RawMessage) *wire {
 	t.Helper()
 	artifact, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	rules, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages)
+	rules, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
 	require.NoError(t, err)
 
 	w := &wire{

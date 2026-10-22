@@ -61,9 +61,6 @@ type Character struct {
 	Warnings []Warning
 }
 
-// Races are the race codes of the six PHB races (ADR 0030 step 1).
-var Races = ruletablesvc.RaceCodes
-
 // Saves are the five saving throw numbers, one per category of ADR 0006 step
 // 1 (targets, or a bonus per category).
 type Saves struct {
@@ -88,6 +85,10 @@ type Sheet struct {
 type Derived struct {
 	// XPTotal is the starting XP plus every ledger entry (ADR 0015 step 1).
 	XPTotal int
+	// Group is the class's group (ADR 0040 step 1.2, its definition's): the
+	// readers of a group's rule (the warrior's exceptional strength, ADR 0030
+	// step 10) take it from here, not from a class id.
+	Group string
 	// TargetLevel is ADR 0030 step 3: the class's experience table at
 	// XPTotal. Never stored; it drives the pending level-ups (step 7) and the
 	// XP progress, no benefit.

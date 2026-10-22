@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"log/slog"
 	"slices"
 
@@ -68,9 +69,10 @@ func pickProficiencies(ctx context.Context, q storeq.Querier, book *ruletablesvc
 	return nil
 }
 
-// pickProficienciesFrom reads the catalogue of seedsDir, then runs pickProficiencies.
-func pickProficienciesFrom(ctx context.Context, q storeq.Querier, seedsDir string) error {
-	book, err := ruletablesadpt.ReadProficiencies(seedsDir)
+// pickProficienciesFrom reads the catalogue of seedsDir (its classes checked against defs), then
+// runs pickProficiencies.
+func pickProficienciesFrom(ctx context.Context, q storeq.Querier, seedsDir string, defs *classes.Registry) error {
+	book, err := ruletablesadpt.ReadProficiencies(seedsDir, defs)
 	if err != nil {
 		return err
 	}

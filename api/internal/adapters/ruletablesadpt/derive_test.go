@@ -18,11 +18,11 @@ func TestClassGroup_Step2(t *testing.T) {
 	for class, want := range map[string]string{
 		"fighter": "warrior", "mage": "wizard", "cleric": "priest", "thief": "rogue", "bard": "rogue",
 	} {
-		got, err := ruletablesvc.ClassGroup(class)
+		got, err := phb(t).ClassGroup(class)
 		require.NoError(t, err)
 		assert.Equal(t, want, got, class)
 	}
-	_, err := ruletablesvc.ClassGroup("paladin")
+	_, err := phb(t).ClassGroup("paladin")
 	require.Error(t, err)
 }
 

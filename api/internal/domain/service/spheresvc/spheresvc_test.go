@@ -2,6 +2,7 @@ package spheresvc_test
 
 import (
 	"context"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"slices"
 	"testing"
 
@@ -44,7 +45,7 @@ var cat = catalogue.Catalogue{Spells: []catalogue.Spell{
 
 func access(t *testing.T, rows ...ruletablesvc.SphereAccessRow) *ruletablesvc.SphereAccess {
 	t.Helper()
-	a, err := ruletablesvc.NewSphereAccess(rows)
+	a, err := ruletablesvc.NewSphereAccess(rows, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return a
 }

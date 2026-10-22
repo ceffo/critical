@@ -1,13 +1,13 @@
 package charactersvc_test
 
 import (
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -37,7 +37,7 @@ func profBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{Group: "wizard", WeaponInitial: 1, WeaponLevels: 6, Penalty: -5, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "priest", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "rogue", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4},
-	})
+	}, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return b
 }
@@ -87,12 +87,12 @@ func phbLanguages(t *testing.T) *ruletablesvc.Languages {
 		"human": "common", "dwarf": "dwarvish", "elf": "elvish", "gnome": "gnomish", "half_elf": "common", "halfling": "halfling",
 	}
 	var rows []ruletablesvc.RaceLanguageRow
-	for _, race := range charactersvc.Races {
+	for _, race := range cataloguetest.Definitions(t).RaceIDs() {
 		for _, l := range lists[race] {
 			rows = append(rows, ruletablesvc.RaceLanguageRow{Race: race, Language: l, Native: l == native[race]})
 		}
 	}
-	l, err := ruletablesvc.NewLanguages(list, rows)
+	l, err := ruletablesvc.NewLanguages(list, rows, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return l
 }

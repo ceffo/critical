@@ -2,6 +2,7 @@ package skillsvc_test
 
 import (
 	"context"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func phbLanguages(t *testing.T) *ruletablesvc.Languages {
 		{Race: "gnome", Language: "gnomish", Native: true},
 		{Race: "half_elf", Language: "common", Native: true},
 		{Race: "halfling", Language: "halfling", Native: true},
-	})
+	}, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return l
 }

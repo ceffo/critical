@@ -17,6 +17,64 @@ func (_m *MockThresholds) EXPECT() *MockThresholds_Expecter {
 	return &MockThresholds_Expecter{mock: &_m.Mock}
 }
 
+// PrimeRequisites provides a mock function with given fields: class
+func (_m *MockThresholds) PrimeRequisites(class string) ([]string, error) {
+	ret := _m.Called(class)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PrimeRequisites")
+	}
+
+	var r0 []string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) ([]string, error)); ok {
+		return rf(class)
+	}
+	if rf, ok := ret.Get(0).(func(string) []string); ok {
+		r0 = rf(class)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(class)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockThresholds_PrimeRequisites_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrimeRequisites'
+type MockThresholds_PrimeRequisites_Call struct {
+	*mock.Call
+}
+
+// PrimeRequisites is a helper method to define mock.On call
+//   - class string
+func (_e *MockThresholds_Expecter) PrimeRequisites(class interface{}) *MockThresholds_PrimeRequisites_Call {
+	return &MockThresholds_PrimeRequisites_Call{Call: _e.mock.On("PrimeRequisites", class)}
+}
+
+func (_c *MockThresholds_PrimeRequisites_Call) Run(run func(class string)) *MockThresholds_PrimeRequisites_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockThresholds_PrimeRequisites_Call) Return(_a0 []string, _a1 error) *MockThresholds_PrimeRequisites_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockThresholds_PrimeRequisites_Call) RunAndReturn(run func(string) ([]string, error)) *MockThresholds_PrimeRequisites_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // XPThreshold provides a mock function with given fields: class, level
 func (_m *MockThresholds) XPThreshold(class string, level int) (int, error) {
 	ret := _m.Called(class, level)

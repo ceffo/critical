@@ -1,6 +1,7 @@
 package combatsvc_test
 
 import (
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"path/filepath"
 	"testing"
 
@@ -44,7 +45,7 @@ var (
 // derived from the fixture catalogue (STR 12: no Strength adjustment; DEX 17: +2 missile).
 func profChar(t *testing.T, class string, picks ...string) *charactersvc.Character {
 	t.Helper()
-	book, err := ruletablesadpt.ReadProficiencies(filepath.Join("..", "..", "..", "..", "testdata", "seeds"))
+	book, err := ruletablesadpt.ReadProficiencies(filepath.Join("..", "..", "..", "..", "testdata", "seeds"), cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	weapon := make([]skills.WeaponPick, 0, len(picks))
 	for _, p := range picks {

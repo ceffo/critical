@@ -108,7 +108,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
-			casterLevel: c.Derived.RealizedLevel, class: c.Class, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
+			casterLevel: c.Derived.RealizedLevel, group: c.Derived.Group, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -174,7 +174,7 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: req.CasterLevel, class: c.Class, source: SourceReceived, mode: mode,
+			spellID: id, casterLevel: req.CasterLevel, group: c.Derived.Group, source: SourceReceived, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -227,7 +227,7 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: c.Derived.RealizedLevel, class: c.Class, source: SourceEffect, mode: mode,
+			spellID: id, casterLevel: c.Derived.RealizedLevel, group: c.Derived.Group, source: SourceEffect, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -262,10 +262,10 @@ type effectReq struct {
 	name        string // the slot's name, used when neither source knows the spell
 	level       int
 	casterLevel int
-	// class is the class of the character the effect is about (the caster
-	// of a cast, the receiver of a received spell): its group picks a
-	// by-group effect (ADR 0030 step 2).
-	class      string
+	// group is the class group of the character the effect is about (the
+	// caster of a cast, the receiver of a received spell, as derived): it
+	// picks a by-group effect (ADR 0030 step 2).
+	group      string
 	source     Source
 	onSelf     *bool
 	req        CastRequest          // the cast request (item to spend, target AC)
@@ -446,7 +446,7 @@ func (s *service) applyEffect(ctx context.Context, characterID int64, r effectRe
 		// ADR 0030 step 2: a by-group gain follows the class group of whoever
 		// receives the spell, which the caster's side does not know when the
 		// spell goes on someone else: it rolls none there.
-		buff, untracked, err := s.rollBuff(entry, r.casterLevel, r.class, !onSelf)
+		buff, untracked, err := s.rollBuff(entry, r.casterLevel, r.group, !onSelf)
 		if err != nil {
 			return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 		}

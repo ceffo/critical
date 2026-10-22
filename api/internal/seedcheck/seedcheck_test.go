@@ -70,7 +70,7 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	assert.NotEmpty(t, artifact.Catalogue.Spells)
-	_, err = ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages)
+	_, err = ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
 	require.NoError(t, err, "the artifact's rule tables")
 
 	effects, err := spelleffectsadpt.New(seedsDir)
@@ -99,9 +99,9 @@ func TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables(t *testin
 	require.NoError(t, err)
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages, real.Definitions)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages, fixture.Definitions)
 	require.NoError(t, err)
 	// Compared by lookup, not row by row: the builder may group equal rows
 	// differently (one row per book line) for the same numbers.
@@ -146,9 +146,9 @@ func TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables(t *
 	require.NoError(t, err)
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages, real.Definitions)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages, fixture.Definitions)
 	require.NoError(t, err)
 	rc, ok := fromReal.Classes()
 	require.True(t, ok)
@@ -166,19 +166,21 @@ func TestRealCatalogue_Step11_5_TheFixtureCarriesTheRealArtifactsLevelLimits(t *
 	require.NoError(t, err)
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages, real.Definitions)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages, fixture.Definitions)
 	require.NoError(t, err)
 	rl, ok := fromReal.LevelLimits()
 	require.True(t, ok)
 	fl, ok := fromFixture.LevelLimits()
 	require.True(t, ok)
-	for _, race := range ruletablesvc.Races {
-		for _, class := range ruletablesvc.Classes {
+	defs, err := fromReal.Definitions()
+	require.NoError(t, err)
+	for _, race := range defs.RaceIDs() {
+		for _, class := range defs.ClassIDs() {
 			r, rok := rl.Limit(race, class)
 			f, fok := fl.Limit(race, class)
-			require.True(t, rok && fok, "%s %s", race, class)
+			require.Equal(t, rok, fok, "%s %s", race, class)
 			assert.Equal(t, r, f, "%s %s", race, class)
 		}
 	}
@@ -194,9 +196,9 @@ func TestRealCatalogue_Step13_5_TheFixtureCarriesTheRealArtifactsEquipment(t *te
 	require.NoError(t, err)
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages, real.Definitions)
 	require.NoError(t, err)
-	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages, fixture.Definitions)
 	require.NoError(t, err)
 	re, ok := fromReal.Equipment()
 	require.True(t, ok)

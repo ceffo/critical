@@ -26,7 +26,7 @@ func equipmentOf(t *testing.T, mutate func(rules, equipment map[string]any)) (*r
 		rawEquipment, err = json.Marshal(equipment)
 		require.NoError(t, err)
 	}
-	return ruletablesadpt.Parse(rawRules, rawEquipment, fixtureLanguages(t))
+	return ruletablesadpt.Parse(rawRules, rawEquipment, fixtureLanguages(t), fixtureDefinitions(t))
 }
 
 func list(d map[string]any, key string) []any { return d[key].([]any) }
@@ -124,7 +124,7 @@ func TestParse_Step13_2_EquipmentIsRequired(t *testing.T) {
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
-	_, err := ruletablesadpt.Parse(fixtureRuleTables(t), nil, fixtureLanguages(t))
+	_, err := ruletablesadpt.Parse(fixtureRuleTables(t), nil, fixtureLanguages(t), fixtureDefinitions(t))
 	require.ErrorContains(t, err, "the artifact needs the equipment object")
 }
 

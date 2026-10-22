@@ -2,6 +2,7 @@ package ruletablesadpt_test
 
 import (
 	"encoding/json"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -34,6 +35,13 @@ func fixtureRuleTables(t *testing.T) []byte {
 }
 
 // fixtureLanguages is the fixture's top-level languages list (format 8).
+// fixtureDefinitions is the fixture's class, group and race definitions
+// (format 11).
+func fixtureDefinitions(t *testing.T) []byte {
+	t.Helper()
+	return cataloguetest.Artifact(t).Definitions
+}
+
 func fixtureLanguages(t *testing.T) []byte {
 	t.Helper()
 	raw, err := os.ReadFile(fixture) //nolint:gosec // test path
@@ -63,7 +71,7 @@ func fixtureEquipment(t *testing.T) []byte {
 // does for the artifact's.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	return must.Do(ruletablesadpt.Parse(fixtureRuleTables(t), fixtureEquipment(t), fixtureLanguages(t)))
+	return must.Do(ruletablesadpt.Parse(fixtureRuleTables(t), fixtureEquipment(t), fixtureLanguages(t), fixtureDefinitions(t)))
 }
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
@@ -218,11 +226,11 @@ func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Contains(t, string(good), tt.from)
-			_, err := ruletablesadpt.Parse([]byte(strings.Replace(string(good), tt.from, tt.to, 1)), fixtureEquipment(t), fixtureLanguages(t))
+			_, err := ruletablesadpt.Parse([]byte(strings.Replace(string(good), tt.from, tt.to, 1)), fixtureEquipment(t), fixtureLanguages(t), fixtureDefinitions(t))
 			require.ErrorContains(t, err, tt.table)
 		})
 	}
-	_, err := ruletablesadpt.Parse(good, fixtureEquipment(t), fixtureLanguages(t))
+	_, err := ruletablesadpt.Parse(good, fixtureEquipment(t), fixtureLanguages(t), fixtureDefinitions(t))
 	require.NoError(t, err)
 }
 
@@ -235,7 +243,7 @@ func classTablesOf(t *testing.T, mutate func(map[string]any)) (*ruletablesvc.Tab
 	mutate(doc)
 	raw, err := json.Marshal(doc)
 	require.NoError(t, err)
-	return ruletablesadpt.Parse(raw, fixtureEquipment(t), fixtureLanguages(t))
+	return ruletablesadpt.Parse(raw, fixtureEquipment(t), fixtureLanguages(t), fixtureDefinitions(t))
 }
 
 func classRows(d map[string]any, table string) []any { return d[table].([]any) }
@@ -251,8 +259,9 @@ func classRow(d map[string]any, table string, i int) map[string]any {
 func TestParse_Step10_1_ReadsTheClassTables(t *testing.T) {
 	c, ok := phb(t).Classes()
 	require.True(t, ok, "the artifact carries the class tables")
-	assert.Equal(t, 3000000, c.Experience[19].Fighter, "fighter, level 20")
-	assert.Equal(t, 1100000, c.Experience[14].Bard, "bard, level 15")
+	// The thresholds are the class definitions' (ADR 0040 step 1.7).
+	assert.Equal(t, 3000000, must.Do(phb(t).XPThreshold("fighter", 20)), "fighter, level 20")
+	assert.Equal(t, 1100000, must.Do(phb(t).XPThreshold("bard", 15)), "bard, level 15")
 	assert.Equal(t, 13, c.THAC0[14].Rogue, "rogue THAC0, level 15")
 	assert.Equal(t, 1, c.THAC0[19].Warrior, "warrior THAC0, level 20")
 	var rogue ruletablesvc.SavingThrowRow

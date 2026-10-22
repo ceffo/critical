@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"strings"
 	"testing"
 
@@ -521,7 +522,7 @@ func TestChange_AnotherUsersCharacterIsNotFound(t *testing.T) {
 // admits, in the six races' order, and the ranges Create checks.
 func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	e := newEnv(t)
-	for _, race := range charactersvc.Races {
+	for _, race := range cataloguetest.Definitions(t).RaceIDs() {
 		e.rules.EXPECT().RaceAllows(race, "bard").Return(race == "human" || race == "half_elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "fighter").Return(race != "elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "mage").Return(race == "human" || race == "elf" || race == "half_elf", nil).Once()
@@ -538,20 +539,22 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	}
 	got.ScoreMethods, got.RaceAdjustments, got.RaceIdentity, got.WizardSpells = nil, nil, nil, nil
 	assert.Equal(t, charactersvc.CreationOptions{
+		// ADR 0040 step 8: every class of the catalogue, in its order, with its races in the
+		// catalogue's race order.
 		Classes: []charactersvc.ClassOption{
+			{Class: "fighter", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, ExceptionalStrengthRaces: []string{"dwarf", "gnome", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "mage", Races: []string{"elf", "half_elf", "human"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
 			{
-				Class: "bard", Races: []string{"human", "half_elf"}, ExceptionalStrengthRaces: []string{},
+				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(), ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills,
+				Alignments: []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"},
+			},
+			{
+				Class: "bard", Races: []string{"half_elf", "human"}, ExceptionalStrengthRaces: []string{},
 				Skills: []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 				// ADR 0032 step 2: the bard admits the five alignments with a neutral part.
 				Alignments: []string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},
-			},
-			{Class: "fighter", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{"human", "dwarf", "gnome", "half_elf"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "mage", Races: []string{"human", "elf", "half_elf"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "cleric", Races: []string{"human", "dwarf", "gnome", "half_elf", "halfling"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
-			{
-				Class: "thief", Races: charactersvc.Races, ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills,
-				Alignments: []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"},
 			},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
@@ -607,9 +610,10 @@ func TestCreationOptions_CarryTheScoreMethodsAndTheRaceAdjustments(t *testing.T)
 	got, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, ruletablesvc.ScoreMethods, got.ScoreMethods)
-	require.Len(t, got.RaceAdjustments, len(charactersvc.Races))
+	races := cataloguetest.Definitions(t).RaceIDs()
+	require.Len(t, got.RaceAdjustments, len(races))
 	for i, r := range got.RaceAdjustments {
-		assert.Equal(t, charactersvc.Races[i], r.Race)
+		assert.Equal(t, races[i], r.Race)
 		assert.Equal(t, map[string]int{"str": len(r.Race)}, r.Adjustments)
 	}
 }

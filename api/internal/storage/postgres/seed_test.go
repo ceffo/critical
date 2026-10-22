@@ -483,7 +483,7 @@ func TestMigrate_Step10_DartsFrenchNameBecomesDards(t *testing.T) {
 	})
 	run := func(f *fakeStore) {
 		t.Helper()
-		_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+		_, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 		require.NoError(t, f.InTx(context.Background(), func(ctx context.Context) error {
 			return after[dardsMigration](ctx, f)
 		}))
@@ -541,7 +541,7 @@ func TestMigrate_Step10_DartsStepIsWiredToTheEmbeddedFile(t *testing.T) {
 	require.NoError(t, seedWithoutArmourOn(f, old))
 	embedded, err := embeddedMigrations()
 	require.NoError(t, err)
-	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	run := &fakeMigrations{store: f}
 	for _, m := range embedded {
 		if m.name != dardsMigration {

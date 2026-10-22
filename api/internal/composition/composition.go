@@ -43,6 +43,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 	"github.com/ceffo/critical/api/internal/storage/postgres"
+	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
 // BackingServices holds every business service plus the storage handle.
@@ -166,11 +167,24 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// The catalogue's equipment (format 7), none before; equipment is nil
 	// then (itemsvc picks from it).
 	var catalogueEquipment ruletablesvc.Equipment
+	defs, err := ruleTables.Definitions()
+	if err != nil {
+		return nil, err
+	}
+	// ADR 0040 step 9: the seed character names a class and a race the
+	// catalogue defines, refused at start otherwise.
+	if seed, ok, err := seedfile.ReadCharacter(seedfile.Path(cfg.SeedsDir, seedfile.CharacterFile)); err != nil {
+		return nil, err
+	} else if ok {
+		if err := seed.CheckDefinitions(defs); err != nil {
+			return nil, err
+		}
+	}
 	equipment, hasEquipment := ruleTables.Equipment()
 	if hasEquipment {
 		catalogueEquipment = *equipment
 	}
-	if err := db.Migrate(ctx, cfg.SeedsDir, catalogueEquipment); err != nil {
+	if err := db.Migrate(ctx, cfg.SeedsDir, catalogueEquipment, defs); err != nil {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 	characterDAL, hpDAL, logDAL, buffDAL, spellDAL := st.Character, st.HP, st.Log, st.Buff, st.Spell
@@ -205,7 +219,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	}
 	// The non-weapon catalogue is a seed file (ADR 0037 steps 1 and 2). Its ids and the
 	// catalogue's descriptions must agree (ADR 0021 step 16.3), before anything is written.
-	proficiencies, err := ruletablesadpt.ReadProficiencies(cfg.SeedsDir)
+	proficiencies, err := ruletablesadpt.ReadProficiencies(cfg.SeedsDir, defs)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +361,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := bs.add(bs.Rest, err); err != nil {
 		return nil, err
 	}
-	bs.Details, err = detailssvc.New(characterDAL, tx, languages)
+	bs.Details, err = detailssvc.New(characterDAL, tx, languages, defs)
 	if err := bs.add(bs.Details, err); err != nil {
 		return nil, err
 	}
@@ -588,9 +602,14 @@ func (a wornArmour) WornSkillColumn(ctx context.Context, characterID int64) (str
 // database recorded (step 9.5).
 // The seeds hold no rule tables (step 9.6.3).
 func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.Tables, error) {
-	t, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages)
+	t, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
 	if err != nil {
 		return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
+	}
+	// The class, group and race definitions (ADR 0040 step 8): every class is
+	// read from them, so an artifact without them cannot serve a character.
+	if _, err := t.Definitions(); err != nil {
+		return nil, fmt.Errorf("spell catalogue %s: %w", cfg.Catalogue, err)
 	}
 	// Every character's level, THAC0 and saves come from the class tables
 	// (ADR 0030 steps 3 to 6): an artifact without them cannot serve one.

@@ -68,7 +68,7 @@ func TestMigrate_SnapshotsAreReencodedRightAfterTheEnvelopesAreAdded(t *testing.
 	}
 	run := func() error {
 		return store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 			return runMigrations(ctx, f, embedded, before, after)
 		})
 	}

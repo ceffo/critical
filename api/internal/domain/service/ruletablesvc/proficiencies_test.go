@@ -1,6 +1,7 @@
 package ruletablesvc_test
 
 import (
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,9 +10,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
-func okCrossovers() []ruletablesvc.Crossover {
+func okCrossovers(t *testing.T) []ruletablesvc.Crossover {
+	t.Helper()
 	var out []ruletablesvc.Crossover
-	for _, c := range ruletablesvc.Classes {
+	for _, c := range cataloguetest.Definitions(t).ClassIDs() {
 		out = append(out, ruletablesvc.Crossover{Class: c, Groups: []string{"general"}})
 	}
 	return out
@@ -37,27 +39,27 @@ func TestNewProficiencies_RefusesWhatTheSchemaCannotSay(t *testing.T) {
 		"unknown group":     {row(func(p *ruletablesvc.Proficiency) { p.Groups = []string{"druid"} }), nil, nil, "unknown group"},
 		"group twice":       {row(func(p *ruletablesvc.Proficiency) { p.Groups = []string{"general", "general"} }), nil, nil, "twice"},
 		"unknown class":     {nil, []ruletablesvc.Crossover{{Class: "paladin", Groups: []string{"general"}}}, nil, "unknown class"},
-		"class missing":     {nil, okCrossovers()[:4], nil, "missing"},
+		"class missing":     {nil, okCrossovers(t)[:4], nil, "missing"},
 		"slot group":        {nil, nil, []ruletablesvc.SlotRow{{Group: "druid", WeaponLevels: 1, NonweaponLevels: 1}}, "unknown group"},
 		"slot levels":       {nil, nil, []ruletablesvc.SlotRow{{Group: "rogue", WeaponLevels: 1}}, "#Levels"},
 		"slot group gone":   {nil, nil, []ruletablesvc.SlotRow{{Group: "rogue", WeaponLevels: 4, NonweaponLevels: 4}}, "missing"},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := ruletablesvc.NewProficiencies(c.list, c.cross, c.slots)
+			_, err := ruletablesvc.NewProficiencies(c.list, c.cross, c.slots, cataloguetest.Definitions(t))
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), c.want)
 		})
 	}
 	dup := append(row(func(*ruletablesvc.Proficiency) {}), row(func(*ruletablesvc.Proficiency) {})...)
-	_, err := ruletablesvc.NewProficiencies(dup, okCrossovers(), nil)
+	_, err := ruletablesvc.NewProficiencies(dup, okCrossovers(t), nil, cataloguetest.Definitions(t))
 	require.ErrorContains(t, err, "twice")
 }
 
 func TestProficiencies_NoCheckRowAndEmptyCatalogue(t *testing.T) {
 	p, err := ruletablesvc.NewProficiencies([]ruletablesvc.Proficiency{
 		{ID: "blind_fighting", Slots: 2, Groups: []string{"rogue", "warrior"}},
-	}, okCrossovers(), nil)
+	}, okCrossovers(t), nil, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	assert.Equal(t, "blind_fighting", p.All()[0].ID)
 	assert.Len(t, p.Crossovers(), 5)

@@ -1,6 +1,7 @@
 package seedcheck_test
 
 import (
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,7 +17,7 @@ import (
 
 func proficiencyIDs(t *testing.T, dir string) []string {
 	t.Helper()
-	book, err := ruletablesadpt.ReadProficiencies(dir)
+	book, err := ruletablesadpt.ReadProficiencies(dir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	var ids []string
 	for _, p := range book.All() {

@@ -1,6 +1,6 @@
 // Package classes holds the class, group and race definitions of the
 // catalogue (format 11, ADR 0040 steps 1, 2 and 5) and the lookups that
-// read them: a class's group, prime requisites, ability minimums, allowed
+// read them: a class's group, prime requisites (the XP bonus reads them, xpsvc), ability minimums, allowed
 // alignments and experience thresholds. It is pure: the catalogue adapter
 // builds a Registry with New and the composition root hands it to the
 // readers. No class, group or race id is written here (ADR 0040 step 10):
@@ -18,10 +18,6 @@ import (
 // MaxLevel is the last level a class's experience table covers (ADR 0030
 // step 3).
 const MaxLevel = 20
-
-// BonusMinScore is the score every prime requisite needs for the 10% XP
-// bonus (ADR 0040 step 6, PHB chapter 3, Prime Requisite).
-const BonusMinScore = 16
 
 // Abilities are the six ability score codes, in the sheet's order.
 var Abilities = []string{"str", "dex", "con", "int", "wis", "cha"}
@@ -272,19 +268,6 @@ func (c Class) LevelFor(xp int) int {
 		}
 	}
 	return level
-}
-
-// BonusEligible is ADR 0040 step 6: every prime requisite of the class is
-// at least BonusMinScore in scores (by ability code; an ability absent is
-// not met). A fighter's 18/xx is 18 for the test: scores carry the plain
-// score.
-func (c Class) BonusEligible(scores map[string]int) bool {
-	for _, a := range c.PrimeRequisites {
-		if s, ok := scores[a]; !ok || s < BonusMinScore {
-			return false
-		}
-	}
-	return len(c.PrimeRequisites) > 0
 }
 
 // UnmetMinimums are the abilities whose score in scores (by ability code; an

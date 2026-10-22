@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -40,19 +41,21 @@ type service struct {
 	dal       DAL
 	tx        domain.TxRunner
 	languages charactersvc.LanguageBook
+	defs      *classes.Registry
 }
 
 // New constructs the service. languages is the language catalogue (ADR 0032
 // step 4), for the languages the answer shows; nil is the empty one of a
-// catalogue before format 8.
-func New(dal DAL, tx domain.TxRunner, languages charactersvc.LanguageBook) (SVC, error) {
-	if dal == nil || tx == nil {
+// catalogue before format 8. defs are the class definitions, for the
+// alignments a class admits (ADR 0040 step 1.5).
+func New(dal DAL, tx domain.TxRunner, languages charactersvc.LanguageBook, defs *classes.Registry) (SVC, error) {
+	if dal == nil || tx == nil || defs == nil {
 		return nil, fmt.Errorf("detailssvc: nil dependency")
 	}
 	if languages == nil {
 		languages = (*ruletablesvc.Languages)(nil)
 	}
-	return &service{dal: dal, tx: tx, languages: languages}, nil
+	return &service{dal: dal, tx: tx, languages: languages, defs: defs}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }
@@ -68,7 +71,7 @@ func (s *service) Update(ctx context.Context, id int64, p Patch) (charactersvc.D
 		if err != nil {
 			return err
 		}
-		next, err := cur.Apply(kind, p)
+		next, err := cur.Apply(charactersvc.AlignmentsOf(s.defs, kind.Class), p)
 		if err != nil {
 			return err
 		}

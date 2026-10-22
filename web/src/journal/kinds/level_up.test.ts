@@ -16,6 +16,18 @@ describeKind("level_up", fixtures, {
     },
     rolled: false,
   },
+  psionicist: {
+    en: {
+      text: "psionicist level 5: d6 5 ÷ 2, max HP +2 (30 → 32); max PSP +12 (181 → 193)",
+    },
+    fr: {
+      text: "psionicist niveau 5 : d6 5 ÷ 2, PV max +2 (30 → 32) ; PFP max +12 (181 → 193)",
+    },
+    value: {
+      text: "+2",
+      tone: "heal",
+    },
+  },
   fixed: {
     en: {
       text: "Level 16: max HP +2, fixed gain (85 → 87)",

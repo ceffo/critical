@@ -582,6 +582,65 @@ func (_c *MockQuerier_ListHPDeltas_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
+// ListPSPDeltas provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ListPSPDeltas(ctx context.Context, characterID int64) ([]queries.ListPSPDeltasRow, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPSPDeltas")
+	}
+
+	var r0 []queries.ListPSPDeltasRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListPSPDeltasRow, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListPSPDeltasRow); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.ListPSPDeltasRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_ListPSPDeltas_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPSPDeltas'
+type MockQuerier_ListPSPDeltas_Call struct {
+	*mock.Call
+}
+
+// ListPSPDeltas is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ListPSPDeltas(ctx interface{}, characterID interface{}) *MockQuerier_ListPSPDeltas_Call {
+	return &MockQuerier_ListPSPDeltas_Call{Call: _e.mock.On("ListPSPDeltas", ctx, characterID)}
+}
+
+func (_c *MockQuerier_ListPSPDeltas_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ListPSPDeltas_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_ListPSPDeltas_Call) Return(_a0 []queries.ListPSPDeltasRow, _a1 error) *MockQuerier_ListPSPDeltas_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_ListPSPDeltas_Call) RunAndReturn(run func(context.Context, int64) ([]queries.ListPSPDeltasRow, error)) *MockQuerier_ListPSPDeltas_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListPopCorrections provides a mock function with given fields: ctx, characterID
 func (_m *MockQuerier) ListPopCorrections(ctx context.Context, characterID int64) ([]queries.ListPopCorrectionsRow, error) {
 	ret := _m.Called(ctx, characterID)

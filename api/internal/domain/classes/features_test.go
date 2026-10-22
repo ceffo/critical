@@ -37,7 +37,7 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 		classes.KindRogueSkills:          {Kind: classes.KindRogueSkills, RogueSkills: rogueSkills()},
 		classes.KindBackstab:             {Kind: classes.KindBackstab, Table: "any_table"},
 		classes.KindSpellbook:            {Kind: classes.KindSpellbook, Spellbook: book},
-		classes.KindPsionics:             {Kind: classes.KindPsionics},
+		classes.KindPsionics:             {Kind: classes.KindPsionics, Psionics: psionics()},
 		classes.KindSaveBonus:            {Kind: classes.KindSaveBonus},
 	}
 	require.Len(t, valid, len(classes.FeatureKinds), "one case per kind of the closed list")
@@ -74,7 +74,8 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 		{"rogue_skills with a negative budget", []classes.Feature{{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{Set: "s", Budget: classes.SkillBudget{PerLevel: -1}, Armour: rogueSkills().Armour}}}},
 		{"rogue_skills without armour", []classes.Feature{{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{Set: "s"}}}},
 		{"rogue_skills with an armour twice", []classes.Feature{{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{Set: "s", Armour: []classes.SkillArmour{{Code: "none"}, {Code: "none"}}}}}},
-		{"psionics with a param of another kind", []classes.Feature{{Kind: classes.KindPsionics, Table: "t"}}},
+		{"psionics with a param of another kind", []classes.Feature{{Kind: classes.KindPsionics, Psionics: psionics(), Table: "t"}}},
+		{"psionics' params on another kind", []classes.Feature{{Kind: classes.KindExceptionalStrength, Psionics: psionics()}}},
 		{"save_bonus with a param of another kind", []classes.Feature{{Kind: classes.KindSaveBonus, Ability: "wis"}}},
 		{"spellbook without params", []classes.Feature{{Kind: classes.KindSpellbook}}},
 		{"spellbook above 9th level", []classes.Feature{{Kind: classes.KindSpellbook, Spellbook: &classes.Spellbook{MaxSpellLevel: 10}}}},
@@ -166,9 +167,9 @@ func TestFeatures_Step3_5_ARogueSkillsPerSkillSet(t *testing.T) {
 }
 
 // ADR 0040 step 8, the creation gate: a class is implemented only when every
-// kind it lists is computed. The kinds the code does not compute yet are
-// psionics and save_bonus; a class listing one of them, with others or alone,
-// is not. The gate reads kinds, never class ids.
+// kind it lists is computed. The kind the code does not compute yet is
+// save_bonus (psionics left the list with its reader, ADR 0043 step 5); a class
+// listing it, with others or alone, is not. The gate reads kinds, never class ids.
 func TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -177,9 +178,10 @@ func TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs(t *testing.T) {
 	}{
 		{"no feature", nil, true},
 		{"only computed kinds", []classes.Feature{{Kind: classes.KindExceptionalStrength}, {Kind: classes.KindBackstab, Table: "t"}}, true},
-		{"psionics", []classes.Feature{{Kind: classes.KindPsionics}}, false},
+		{"psionics", []classes.Feature{{Kind: classes.KindPsionics, Psionics: psionics()}}, true},
 		{"save_bonus", []classes.Feature{{Kind: classes.KindSaveBonus}}, false},
-		{"a computed kind and psionics", []classes.Feature{{Kind: classes.KindBackstab, Table: "t"}, {Kind: classes.KindPsionics}}, false},
+		{"a computed kind and psionics", []classes.Feature{{Kind: classes.KindBackstab, Table: "t"}, {Kind: classes.KindPsionics, Psionics: psionics()}}, true},
+		{"psionics and save_bonus", []classes.Feature{{Kind: classes.KindPsionics, Psionics: psionics()}, {Kind: classes.KindSaveBonus}}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c, ok := registry(t, withFeatures(tc.fs...)).Class("test_class")
@@ -187,4 +189,48 @@ func TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs(t *testing.T) {
 			assert.Equal(t, tc.want, c.Implemented())
 		})
 	}
+}
+
+// psionics are valid psionics params (ADR 0043 step 2).
+func psionics() *classes.Psionics {
+	return &classes.Psionics{
+		Progression: "test_powers",
+		PSP: classes.PSPRule{
+			BaseAbility: "wis", ModifierAbilities: []string{"int", "con"},
+			PerLevel: classes.PSPPerLevel{Ability: "wis", Plus: 10}, Table: "test_potential",
+		},
+		Recovery: "test_recovery",
+	}
+}
+
+// ADR 0043 step 2: the kind psionics carries its three params (the power
+// progression table, the PSP rule, the recovery table); one missing, a table
+// not named or an unknown ability is refused when the definitions load (ADR
+// 0040 step 8).
+func TestFeatures_Step2_PsionicsParsesItsParams(t *testing.T) {
+	c, ok := registry(t, withFeatures(classes.Feature{Kind: classes.KindPsionics, Psionics: psionics()})).Class("test_class")
+	require.True(t, ok)
+	got, ok := c.Feature(classes.KindPsionics, 1)
+	require.True(t, ok)
+	assert.Equal(t, psionics(), got.Psionics)
+
+	for name, change := range map[string]func(*classes.Psionics){
+		"no progression table":         func(p *classes.Psionics) { p.Progression = "" },
+		"no recovery table":            func(p *classes.Psionics) { p.Recovery = "" },
+		"no inherent potential table":  func(p *classes.Psionics) { p.PSP.Table = "" },
+		"an unknown base ability":      func(p *classes.Psionics) { p.PSP.BaseAbility = "luck" },
+		"an unknown modifier ability":  func(p *classes.Psionics) { p.PSP.ModifierAbilities = []string{"int", "luck"} },
+		"an unknown per-level ability": func(p *classes.Psionics) { p.PSP.PerLevel.Ability = "" },
+	} {
+		t.Run("refused: "+name, func(t *testing.T) {
+			p := psionics()
+			change(p)
+			_, err := classes.New([]classes.Class{withFeatures(classes.Feature{Kind: classes.KindPsionics, Psionics: p})}, groups("warrior"),
+				[]classes.Race{{ID: "human", Identity: identity(), Name: localized.Text{"en": "Human"}}})
+			require.Error(t, err)
+		})
+	}
+	_, err := classes.New([]classes.Class{withFeatures(classes.Feature{Kind: classes.KindPsionics})}, groups("warrior"),
+		[]classes.Race{{ID: "human", Identity: identity(), Name: localized.Text{"en": "Human"}}})
+	require.Error(t, err, "psionics without params")
 }

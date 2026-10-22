@@ -47,6 +47,10 @@ type SVC interface {
 	// derivation, XP ledger or armour read: what the XP award's split reads
 	// (ADR 0042 step 5.1).
 	ClassEntries(ctx context.Context, id int64) ([]classes.Entry, error)
+	// NightsPSPRecovery is the PSPs a night's sleep recovers for character
+	// id (ADR 0043 step 7), before the cap at the maximum: 0 for a character
+	// with no psionics entry. No XP ledger or armour read.
+	NightsPSPRecovery(ctx context.Context, id int64) (int, error)
 	// List is the owner's characters they have not retired, in creation
 	// order (ADR 0029 steps 7.1 and 7.3).
 	List(ctx context.Context, owner uuid.UUID) ([]Summary, error)
@@ -92,10 +96,12 @@ type XPLedger interface {
 	Awards(ctx context.Context, characterID int64) ([]Award, error)
 }
 
-// HPLedger is the HP ledger's total, the sum of the effective HP deltas of a
-// character's entries (actionlogsvc.SVC implements it).
+// HPLedger is the action log's HP and PSP totals: the sums of the effective
+// HP and PSP deltas of a character's entries (ADR 0007 step 2, ADR 0043 step
+// 5; actionlogsvc.SVC implements it).
 type HPLedger interface {
 	HPTotal(ctx context.Context, characterID int64) (int, error)
+	PSPTotal(ctx context.Context, characterID int64) (int, error)
 }
 
 // Owners is the driven port over who owns and plays which character.
@@ -301,6 +307,9 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
 	s.readWarnings(c, defs)
+	if err := s.setPSP(ctx, c); err != nil {
+		return nil, fmt.Errorf("character %d PSPs: %w", id, err)
+	}
 	if err := s.setFreeSpells(ctx, c); err != nil {
 		return nil, fmt.Errorf("character %d free spells: %w", id, err)
 	}

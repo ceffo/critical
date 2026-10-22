@@ -43,6 +43,8 @@ type hpLedger map[int64]int
 
 func (h hpLedger) HPTotal(_ context.Context, id int64) (int, error) { return h[id], nil }
 
+func (h hpLedger) PSPTotal(context.Context, int64) (int, error) { return 0, nil }
+
 // freeSpells answers the levels each character took in the app and the free
 // spells its spellbook holds (ADR 0030 step 20.8), and counts the reads.
 type freeSpells struct {

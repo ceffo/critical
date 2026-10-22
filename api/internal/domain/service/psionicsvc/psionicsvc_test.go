@@ -1,0 +1,93 @@
+package psionicsvc_test
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc/mocks"
+)
+
+func newSvc(t *testing.T) (psionicsvc.SVC, *mocks.MockRecoveryRates, *mocks.MockLog) {
+	t.Helper()
+	rates, log := mocks.NewMockRecoveryRates(t), mocks.NewMockLog(t)
+	svc, err := psionicsvc.New(rates, log)
+	require.NoError(t, err)
+	return svc, rates, log
+}
+
+// ADR 0043 step 6: hours of an activity recover hours × Table 6's hourly
+// rate, as one psp_recovery entry the log bounds (the cap is step 5's, in
+// the recording path: TestRecover_Step6_CappedAndUndone in composition).
+func TestRecover_Step6_HoursTimesTheActivityRate(t *testing.T) {
+	for _, c := range []struct {
+		name     string
+		hours    float64
+		activity string
+		rate     int
+		delta    int
+	}{
+		{"3 h resting gives 18", 3, "resting", 6, 18},
+		{"8 h sleeping gives 96", 8, "sleeping", 12, 96},
+		{"1.5 h walking gives 4 (rounded down)", 1.5, "walking", 3, 4},
+		{"exertion logs the hours with no PSP", 2, "exertion", 0, 0},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			svc, rates, log := newSvc(t)
+			rates.EXPECT().PSPRecoveryRate(c.activity).Return(c.rate, nil).Once()
+			var got actionlog.NewEntry
+			log.EXPECT().AppendPSP(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).
+				Return(actionlog.PSPState{Current: 20, Max: 25}, nil).Once()
+
+			state, err := svc.Recover(context.Background(), 7, c.hours, c.activity)
+			require.NoError(t, err)
+			assert.Equal(t, actionlog.PSPState{Current: 20, Max: 25}, state)
+			assert.Equal(t, int64(7), got.CharacterID)
+			assert.Equal(t, actionlog.KindPSPRecovery, got.Kind)
+			assert.Equal(t, c.delta, got.PSPDelta)
+			assert.Empty(t, got.Summary)
+			var rec map[string]any
+			require.NoError(t, json.Unmarshal(got.Payload, &rec))
+			assert.Equal(t, map[string]any{"hours": c.hours, "activity": c.activity, "perHour": float64(c.rate)}, rec)
+		})
+	}
+}
+
+// Invalid hours or an activity outside Table 6 are refused before Table 6 or
+// the log is read; the log's own refusal (no pool) comes back as is.
+func TestRecover_Step6_Refusals(t *testing.T) {
+	for _, c := range []struct {
+		name, activity, field string
+		hours                 float64
+	}{
+		{"no hours", "resting", "hours", 0},
+		{"negative hours", "resting", "hours", -1},
+		{"over the cap", "resting", "hours", psionicsvc.MaxRecoveryHours + 1},
+		{"unknown activity", "meditating", "activity", 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			svc, _, _ := newSvc(t)
+			_, err := svc.Recover(context.Background(), 7, c.hours, c.activity)
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, c.field, fe.Field)
+		})
+	}
+	t.Run("no pool", func(t *testing.T) {
+		svc, rates, log := newSvc(t)
+		rates.EXPECT().PSPRecoveryRate("resting").Return(6, nil).Once()
+		log.EXPECT().AppendPSP(mock.Anything, mock.Anything).Return(actionlog.PSPState{}, actionlogsvc.ErrNoPSPPool).Once()
+		_, err := svc.Recover(context.Background(), 7, 1, "resting")
+		assert.True(t, errors.Is(err, actionlogsvc.ErrNoPSPPool))
+	})
+}

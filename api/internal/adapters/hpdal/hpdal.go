@@ -1,6 +1,6 @@
-// Package hpdal is the storage adapter for the HP read model
-// (actionlogsvc.MaxHP). HP changes live in the
-// action log (actionlogdal); this adapter only reads the character's maximum.
+// Package hpdal is the storage adapter for the HP and PSP read model
+// (actionlogsvc.Maxima). HP and PSP changes live in the action log
+// (actionlogdal); this adapter only reads the character's maxima.
 package hpdal
 
 import (
@@ -13,7 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 )
 
-// DAL is the implementation of actionlogsvc.MaxHP over the sqlc-generated queries.
+// DAL is the implementation of actionlogsvc.Maxima over the sqlc-generated queries.
 type DAL struct {
 	q queries.Querier
 }
@@ -33,4 +33,18 @@ func (d *DAL) GetMaxHP(ctx context.Context, characterID int64) (int, error) {
 		return 0, fmt.Errorf("get hp_max: %w", err)
 	}
 	return int(maxHP), nil
+}
+
+// GetMaxPSP fetches psp_max from the character row (ADR 0043 step 4.4; 0 for
+// a character with no PSPs). Maps sql.ErrNoRows to
+// domain.ErrCharacterNotFound.
+func (d *DAL) GetMaxPSP(ctx context.Context, characterID int64) (int, error) {
+	maxPSP, err := d.q.GetCharacterMaxPSP(ctx, characterID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, domain.ErrCharacterNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("get psp_max: %w", err)
+	}
+	return int(maxPSP), nil
 }

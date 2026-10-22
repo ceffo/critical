@@ -104,8 +104,25 @@ type Result struct {
 	Manual bool
 	// HPMaxBefore and HPMaxAfter are the max HP around the roll.
 	HPMaxBefore, HPMaxAfter int
+	// PSP is a psionicist level's PSP gain (ADR 0043 step 4.2), nil for a level of a class with no
+	// psionics.
+	PSP *PSPGain
 	// Pending are the levels still owed after this one.
 	Pending []charactersvc.PendingLevel
+}
+
+// PSPGain is ADR 0043 step 4.2's gain of a psionicist level with its terms: Table 5's modifier at
+// the rule's ability plus the rule's constant, no die, never divided by the classes (Q2); the PSP
+// maximum rises by Gain.
+type PSPGain struct {
+	// Ability is the ability whose Table 5 modifier counts (wis) and Score the sheet's score in it.
+	Ability  string
+	Score    int
+	Modifier int
+	Plus     int
+	Gain     int
+	// MaxBefore and MaxAfter are the PSP maximum around the level.
+	MaxBefore, MaxAfter int
 }
 
 // DAL writes a character's realized level. It joins the ctx transaction.
@@ -114,6 +131,9 @@ type DAL interface {
 	// ("" the first active one) and the max HP that goes with it;
 	// domain.ErrCharacterNotFound for an unknown character.
 	SetRealizedLevel(ctx context.Context, id int64, class string, realizedLevel, hpMax int) error
+	// SetPSPMax sets the character's PSP maximum (ADR 0043 step 4.4);
+	// domain.ErrCharacterNotFound for an unknown character.
+	SetPSPMax(ctx context.Context, id int64, pspMax int) error
 }
 
 // Characters reads the character with its derived block (the pending
@@ -127,6 +147,8 @@ type Rules interface {
 	// Definitions are the catalogue's class definitions (ADR 0040 step 5).
 	Definitions() (*classes.Registry, error)
 	ConstitutionFor(con int) (ruletablesvc.ConstitutionRow, error)
+	// PSPMaxFor is ADR 0043 step 4: a psionics entry's PSP maximum and its terms.
+	PSPMaxFor(rule classes.PSPRule, score func(ability string) int, level int) (ruletablesvc.PSPMax, error)
 }
 
 // Dice is the dice port.
@@ -199,6 +221,9 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 			return p.Class == class && p.Level == in.Level
 		})
 		res.HPMaxBefore, res.HPMaxAfter = c.HPMax, c.HPMax+res.Gain
+		if res.PSP, err = s.pspGain(c, class); err != nil {
+			return err
+		}
 		// A single-class snapshot names no class (as written before the
 		// entries): the first active one.
 		snapClass := ""
@@ -209,6 +234,12 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 		after := realized{Class: snapClass, RealizedLevel: res.Level, HPMax: res.HPMaxAfter}
 		if err := s.dal.SetRealizedLevel(ctx, characterID, snapClass, after.RealizedLevel, after.HPMax); err != nil {
 			return err
+		}
+		if res.PSP != nil {
+			before.PSPMax, after.PSPMax = &res.PSP.MaxBefore, &res.PSP.MaxAfter
+			if err := s.dal.SetPSPMax(ctx, characterID, res.PSP.MaxAfter); err != nil {
+				return err
+			}
 		}
 		return s.record(ctx, characterID, *res, before, after)
 	})
@@ -275,4 +306,38 @@ func (s *service) gain(c *charactersvc.Character, p charactersvc.PendingLevel, e
 	res.ConAdjustment = conAdj
 	res.DieShare, res.ConShare, res.Gain = ruletablesvc.SharedGain(counted, conAdj, count)
 	return res, nil
+}
+
+// pspGain is ADR 0043 step 4.2 for a level of c's entry of class: Table 5's modifier at the psionics
+// rule's per-level ability plus its constant, the PSP maximum rising by it (the stored maximum,
+// step 4.4); nil for a class with no psionics. A dual-class's level before the crossover gains it
+// too (step 18.2: the PSPs are the psionicist entry's, at its level), and a multi-class
+// character's is not divided (Q2).
+func (s *service) pspGain(c *charactersvc.Character, class string) (*PSPGain, error) {
+	defs, err := s.rules.Definitions()
+	if err != nil {
+		return nil, fmt.Errorf("level-up: %w", err)
+	}
+	def, ok := defs.Class(class)
+	if !ok {
+		return nil, fmt.Errorf("level-up: %w", classes.ErrUnknownClass)
+	}
+	f, ok := def.Lists(classes.KindPsionics)
+	if !ok {
+		return nil, nil //nolint:nilnil // no psionics, no gain
+	}
+	rule := f.Psionics.PSP
+	score := func(a string) int {
+		v, _ := c.Score(charactersvc.Ability(a))
+		return v
+	}
+	// Level 2's maximum carries the per-level gain and its terms.
+	m, err := s.rules.PSPMaxFor(rule, score, 2)
+	if err != nil {
+		return nil, fmt.Errorf("level-up: %w", err)
+	}
+	return &PSPGain{
+		Ability: rule.PerLevel.Ability, Score: score(rule.PerLevel.Ability), Modifier: m.PerLevelModifier,
+		Plus: rule.PerLevel.Plus, Gain: m.PerLevel, MaxBefore: c.PSPMax, MaxAfter: c.PSPMax + m.PerLevel,
+	}, nil
 }

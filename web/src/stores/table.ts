@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { appendHpEvent } from "@/api/hp";
+import { appendPspEvent, recoverPsp, type PspActivity } from "@/api/psp";
+import type { PspPool } from "@/types/character";
 import { ApiError, UNAVAILABLE } from "@/api/http";
 import { redoLogEntry, undoLogEntry } from "@/api/log";
 import { SLICES, slicesFor, takeChanges, type Slice } from "@/lib/stateKeys";
@@ -67,6 +69,10 @@ interface TableStore {
     opts?: ActionOptions,
   ) => Promise<ApiError | null>;
   recordHp: (delta: number, source: string) => Promise<boolean>;
+  /** A PSP change by hand (ADR 0043 step 5); the answer is the pool, set on the character. */
+  recordPsp: (delta: number, source: string) => Promise<boolean>;
+  /** PSPs recovered over hours of an activity (ADR 0043 step 6). */
+  recoverPsp: (hours: number, activity: PspActivity) => Promise<boolean>;
   /** Pop the top of the action stack, any kind, as last read (ADR 0010). False when the server
    * refused (another action landed first) or there was nothing to pop. */
   undo: () => Promise<boolean>;
@@ -138,6 +144,16 @@ function endedNotice(
 
 function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/** Sets the pool a PSP write answered on the loaded character: the derived block's `psp`, so the
+ * write reads nothing more (its "psp" key maps to the whole character). */
+function setPsp(pool: PspPool) {
+  const c = useCharacterStore.getState().character;
+  if (c?.derived)
+    useCharacterStore.setState({
+      character: { ...c, derived: { ...c.derived, psp: pool } },
+    });
 }
 
 let refreshQueue: Promise<void> = Promise.resolve();
@@ -226,6 +242,14 @@ export const useTableStore = create<TableStore>((set, get) => {
           useHpStore.getState().setHp(await appendHpEvent(delta, source)),
         { fresh: ["hp"] },
       ),
+    recordPsp: (delta, source) =>
+      get().run(async () => setPsp(await appendPspEvent(delta, source)), {
+        fresh: ["character"],
+      }),
+    recoverPsp: (hours, activity) =>
+      get().run(async () => setPsp(await recoverPsp(hours, activity)), {
+        fresh: ["character"],
+      }),
     // One undo system (ADR 0018 step 3), the journal's Undo button and Ctrl+Z: the global undo
     // with the top this client last read, so a stale top (another client acted since) is refused
     // and nothing changes. A pop can bring expired buffs back (an "ended" notice would now be

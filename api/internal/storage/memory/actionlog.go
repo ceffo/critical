@@ -42,7 +42,7 @@ func (l ActionLog) InsertEntry(ctx context.Context, e actionlog.NewEntry, transa
 		}
 		t.log = append(t.log, actionlog.Entry{
 			ID: id, TransactionID: transactionID, CharacterID: e.CharacterID, Round: e.Round, Kind: e.Kind,
-			Summary: e.Summary, HPDelta: e.HPDelta, Payload: payload, Snapshots: clone(e.Snapshots),
+			Summary: e.Summary, HPDelta: e.HPDelta, PSPDelta: e.PSPDelta, Payload: payload, Snapshots: clone(e.Snapshots),
 			CreatedAt: now(),
 		})
 		return nil
@@ -192,6 +192,23 @@ func (l ActionLog) HPTotal(ctx context.Context, characterID int64) (int, error) 
 			}
 		}
 		total = actionlog.HPTotal(t.withCorrections(characterID, entries))
+		return nil
+	})
+	return total, err
+}
+
+// PSPTotal is the sum of the effective PSP deltas of the character's entries
+// (actionlog.PSPTotal, ADR 0043 step 5); 0 when the log is empty.
+func (l ActionLog) PSPTotal(ctx context.Context, characterID int64) (int, error) {
+	var total int
+	err := l.s.read(ctx, func(t *tables) error {
+		var entries []actionlog.Entry
+		for _, e := range t.log {
+			if e.CharacterID == characterID {
+				entries = append(entries, actionlog.Entry{ID: e.ID, CharacterID: characterID, PSPDelta: e.PSPDelta})
+			}
+		}
+		total = actionlog.PSPTotal(t.withCorrections(characterID, entries))
 		return nil
 	})
 	return total, err

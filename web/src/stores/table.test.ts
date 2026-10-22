@@ -119,6 +119,7 @@ function everyPanelShown() {
 const expected: Record<(typeof STATE_FAMILIES)[number], Slice[]> = {
   log: ["log"],
   hp: ["hp"],
+  psp: ["character"],
   ac_override: ["ac"],
   buffs: ["ac", "buffs", "skills", "strength"],
   initiative: ["round"],

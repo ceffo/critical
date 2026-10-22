@@ -39,7 +39,7 @@ type harness struct {
 
 	Store     *compmocks.MockStore
 	Character *compmocks.MockCharacterStore
-	HP        *actionlogmocks.MockMaxHP
+	HP        *actionlogmocks.MockMaxima
 	Log       *actionlogmocks.MockDAL
 	Buff      *compmocks.MockBuffStore
 	Spell     *compmocks.MockSpellStore
@@ -57,7 +57,7 @@ func newHarness(t *testing.T) *harness {
 	h := &harness{
 		Store:     compmocks.NewMockStore(t),
 		Character: compmocks.NewMockCharacterStore(t),
-		HP:        actionlogmocks.NewMockMaxHP(t),
+		HP:        actionlogmocks.NewMockMaxima(t),
 		Log:       actionlogmocks.NewMockDAL(t),
 		Buff:      compmocks.NewMockBuffStore(t),
 		Spell:     compmocks.NewMockSpellStore(t),

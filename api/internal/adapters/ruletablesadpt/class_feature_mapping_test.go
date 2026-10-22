@@ -71,7 +71,13 @@ func TestDefinitions_Step3_TheFeatureListsMapWithTheirParams(t *testing.T) {
 			{Kind: classes.KindSpellbook, FromLevel: 1, Spellbook: &classes.Spellbook{MaxSpellLevel: 6}},
 		}},
 		"psionicist": {"", []classes.Feature{
-			{Kind: classes.KindPsionics, FromLevel: 1},
+			{Kind: classes.KindPsionics, FromLevel: 1, Psionics: &classes.Psionics{
+				Progression: "psionicist_powers", Recovery: "psp_recovery",
+				PSP: classes.PSPRule{
+					BaseAbility: "wis", ModifierAbilities: []string{"int", "con"},
+					PerLevel: classes.PSPPerLevel{Ability: "wis", Plus: 10}, Table: "inherent_potential",
+				},
+			}},
 			{Kind: classes.KindSaveBonus, FromLevel: 1},
 		}},
 	}

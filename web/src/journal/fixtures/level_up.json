@@ -26,5 +26,31 @@
       "hpMaxBefore": 30,
       "hpMaxAfter": 35
     }
+  },
+  "psionicist": {
+    "payload": {
+      "class": "psionicist",
+      "classes": 2,
+      "dieShare": 2,
+      "level": 5,
+      "hitDie": 6,
+      "rolled": 5,
+      "counted": 5,
+      "conAdjustment": 0,
+      "gain": 2,
+      "fixed": false,
+      "manual": false,
+      "hpMaxBefore": 30,
+      "hpMaxAfter": 32,
+      "psp": {
+        "ability": "wis",
+        "score": 17,
+        "modifier": 2,
+        "plus": 10,
+        "gain": 12,
+        "maxBefore": 181,
+        "maxAfter": 193
+      }
+    }
   }
 }

@@ -152,3 +152,37 @@ func TestDraft_NamesTheAlignmentsAndTheCarriers(t *testing.T) {
 	assert.Equal(t, "", d.SkillsClass)
 	assert.Equal(t, "mage", d.SpellbookClass)
 }
+
+// ADR 0043 step 4.4 through Create: a fighter is stored with no PSP maximum; a maximum entered for
+// a character with no psionics entry, or out of range, is refused. (The psionicist itself is not
+// creatable yet, ADR 0040 step 8: TestCreate_Step4_4_PSPMaxEnteredIsKept proves its maximum.)
+func TestCreate_Step4_4_NoPsionicsNoPSPMax(t *testing.T) {
+	fighter := entered("human")
+	fighter.Class, fighter.Classes = "fighter", nil
+	t.Run("stored with none", func(t *testing.T) {
+		e := classesEnv(t, ruleset.RacialLift{})
+		var stored charactersvc.Character
+		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.Anything).
+			Run(func(_ context.Context, _ uuid.UUID, c charactersvc.Character) { stored = c }).Return(5, nil).Once()
+		e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(5)).Return(nil).Once()
+		e.sessions.EXPECT().ForgetUser(ownerID).Once()
+		_, err := e.svc.Create(context.Background(), ownerID, fighter)
+		require.NoError(t, err)
+		assert.Equal(t, 0, stored.PSPMax)
+	})
+	t.Run("entered, refused", func(t *testing.T) {
+		e := classesEnv(t, ruleset.RacialLift{})
+		n := fighter
+		n.PSPMax = 30
+		_, err := e.svc.Create(context.Background(), ownerID, n)
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, charactersvc.FieldPSPMax+": "+charactersvc.CodeOutOfRange, fe.Field+": "+fe.Message)
+	})
+	t.Run("out of range, refused", func(t *testing.T) {
+		e := classesEnv(t, ruleset.RacialLift{})
+		n := fighter
+		n.PSPMax = charactersvc.MaxPSPMax + 1
+		assert.Equal(t, []string{charactersvc.FieldPSPMax + ": " + charactersvc.CodeOutOfRange}, refused(t, e, n))
+	})
+}

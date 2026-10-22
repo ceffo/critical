@@ -84,6 +84,16 @@ export interface LevelUpRecord {
   hpMaxAfter: number;
   /** ADR 0042 step 11: why the gain is 0 (`dual_class_no_hit_points`); absent otherwise. */
   reason?: "dual_class_no_hit_points";
+  /** A psionicist level's PSP gain with its terms (ADR 0043 step 4.2); absent otherwise. */
+  psp?: {
+    ability: string;
+    score: number;
+    modifier: number;
+    plus: number;
+    gain: number;
+    maxBefore: number;
+    maxAfter: number;
+  };
 }
 
 export interface LevelUpResult extends LevelUpRecord {
@@ -132,6 +142,15 @@ export interface Derived {
   /** ADR 0037 steps 3 to 5: the non-weapon pool and each pick's figures; null without the
    * catalogue's Table 34. */
   proficiencySlots: ProficiencySlots | null;
+  /** ADR 0043 step 5: the PSP pool of a character whose class lists psionics; null for any other. */
+  psp: PspPool | null;
+}
+
+/** A character's PSPs (ADR 0043 step 5): the current PSPs (the maximum plus the ledger) and the
+ * stored maximum. Also the answer of `POST /api/psp/event` and `/api/psp/recover`. */
+export interface PspPool {
+  current: number;
+  max: number;
 }
 
 /** ADR 0042 steps 5 and 7: one class entry's figures. `xp` is its starting XP plus its share of the

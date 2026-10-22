@@ -193,7 +193,7 @@ unrelated and keeps the word.
 The action log ([ADR 0007](adr/0007-hp-ledger.md)) belongs to a character today; whether a game
 log sits above it is open.
 
-## Psionics (planned)
+## Psionics
 
 ```mermaid
 erDiagram

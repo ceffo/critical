@@ -68,6 +68,8 @@ type Querier interface {
 	SetHPMax(ctx context.Context, arg SetHPMaxParams) (int64, error)
 	// The languages saved by the Skills tab's editor and their undo (ADR 0037 steps 13 and 18).
 	SetLanguages(ctx context.Context, arg SetLanguagesParams) (int64, error)
+	// A psionicist level-up and its undo (ADR 0043 step 4.2): the PSP maximum.
+	SetPSPMax(ctx context.Context, arg SetPSPMaxParams) (int64, error)
 	// The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
 	SetProficiencyPicks(ctx context.Context, arg SetProficiencyPicksParams) (int64, error)
 	// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP. The level

@@ -208,6 +208,10 @@ type EntryDTO struct {
 	Summary          string `json:"summary"`
 	HPDelta          int    `json:"hpDelta"`
 	EffectiveHPDelta int    `json:"effectiveHpDelta"`
+	// PSPDelta is the entry's PSP delta as recorded (ADR 0043 step 5): any
+	// entry may carry one, bounded when written and never amended, so it is
+	// also the effective one until the entry is popped.
+	PSPDelta         int    `json:"pspDelta"`
 	EffectiveSummary string `json:"effectiveSummary"`
 	// Note is the latest note amend's note ("" when none).
 	Note    string          `json:"note"`
@@ -259,7 +263,7 @@ func toDTO(e actionlog.Entry) EntryDTO {
 	out := EntryDTO{
 		ID: e.ID, TransactionID: e.TransactionID, CharacterID: e.CharacterID, Round: e.Round, Kind: string(e.Kind),
 		Roll: actionlog.IsRoll(e.Kind), Summary: e.Summary, HPDelta: e.HPDelta,
-		EffectiveHPDelta: e.EffectiveHPDelta(), EffectiveSummary: e.EffectiveSummary(), Note: e.Note(),
+		EffectiveHPDelta: e.EffectiveHPDelta(), PSPDelta: e.PSPDelta, EffectiveSummary: e.EffectiveSummary(), Note: e.Note(),
 		Status: string(e.Status()), Payload: payload, EffectivePayload: effective, CreatedAt: e.CreatedAt,
 		Snapshots:   make([]SnapshotDTO, 0, len(e.Snapshots)),
 		Corrections: make([]CorrectionDTO, 0, len(e.Corrections)),

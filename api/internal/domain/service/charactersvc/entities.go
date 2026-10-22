@@ -28,6 +28,9 @@ type Character struct {
 	Wis            int
 	Cha            int
 	HPMax          int
+	// PSPMax is the stored PSP maximum (ADR 0043 step 4.4, like HPMax): 0 for
+	// a character with no psionics entry.
+	PSPMax int
 	// Classes are the character's class entries (ADR 0042 step 1): the stored
 	// truth of its class, level and starting XP. Set them with SetClasses;
 	// Class, RealizedLevel and XPTotal below mirror the first active entry, the
@@ -235,6 +238,10 @@ type Derived struct {
 	// 19). A save against one of them, or one cast on the character, rolls
 	// nothing (steps 10.2 and 10.3).
 	SpellImmunities []string
+	// PSP is ADR 0043 step 5: the PSP pool of a character with an entry whose
+	// class lists psionics, nil for any other. Set by the service (it reads
+	// the ledger), not by Derive.
+	PSP *PSPPool
 	// SpellSlots is step 8 at the realized level: the slots per day by
 	// spell level, levels with no slot absent. A multi-class character's
 	// are the first active spellcasting entry's (ADR 0042 step 14; each
@@ -526,6 +533,14 @@ type LevelUp struct {
 	// and the spellbook does not hold yet (ADR 0030 step 20.8), part of the
 	// same reminder. Set by the service; nil for none.
 	FreeSpellsOwed []spellbook.FreeSpell
+}
+
+// PSPPool is a character's PSPs (ADR 0043 step 5): Max is the stored
+// maximum (step 4.4), Current the maximum plus the ledger total, shown within
+// 0..Max.
+type PSPPool struct {
+	Current int
+	Max     int
 }
 
 // Summary is a character in its owner's list (ADR 0029 step 7.2).

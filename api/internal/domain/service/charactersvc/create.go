@@ -36,6 +36,8 @@ const (
 	// MinHPMax and MaxHPMax bound the max HP entered.
 	MinHPMax = 1
 	MaxHPMax = 999
+	// MaxPSPMax bounds the PSP maximum entered (ADR 0043 step 4.4); 0 enters none.
+	MaxPSPMax = 999
 	// MinStartingXP and MaxStartingXP bound the starting XP entered (the
 	// highest is more than any class's level 20 threshold).
 	MinStartingXP = 0
@@ -126,7 +128,10 @@ type NewCharacter struct {
 	// StrExceptional is a fighter's 18/xx percentile (step 9), 0 for none.
 	StrExceptional int
 	HPMax          int
-	XP             int
+	// PSPMax is the PSP maximum entered from the sheet (ADR 0043 step 4.4), kept as entered; 0
+	// enters none and the rules compute it. Only a character with a psionics entry has one.
+	PSPMax int
+	XP     int
 	// SkillPoints are a thief's or a bard's (steps 1, 17 and 18): the points
 	// by skill code (0 to MaxSkillPoints each, absent is 0). Empty for the
 	// other classes. The armour the skills read is the worn one (ADR 0033
@@ -520,6 +525,9 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 	case n.HPMax < MinHPMax || n.HPMax > MaxHPMax:
 		refuse(&domain.FieldError{Field: "hpMax", Message: CodeOutOfRange})
 	}
+	if n.PSPMax < 0 || n.PSPMax > MaxPSPMax {
+		refuse(&domain.FieldError{Field: FieldPSPMax, Message: CodeOutOfRange})
+	}
 	if stop() {
 		return out, nil
 	}
@@ -648,6 +656,9 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	if err != nil {
 		return 0, err
 	}
+	if c.PSPMax, err = startingPSPMax(&c, n.PSPMax, s.rules); err != nil {
+		return 0, err
+	}
 	// ADR 0037 step 10: nothing was spent before, so a new character is
 	// never created over its skill point budget.
 	if err := skills.SkillPointsWithinBudget(k.def, skills.FirstSet(k.def), entryLevel(&c, k.def.ID), nil, c.SkillPoints.Of(skills.FirstSet(k.def))); err != nil {
@@ -721,6 +732,29 @@ func started(c *Character, rules Rules) (Derived, error) {
 	}
 	c.SetClasses(entries)
 	return d, nil
+}
+
+// FieldPSPMax is the creation form's field of the PSP maximum entered.
+const FieldPSPMax = "pspMax"
+
+// startingPSPMax is ADR 0043 step 4.4: the PSP maximum a new character is stored with, the one
+// entered from the sheet when there is one, else step 4's maximum at its psionics entry's starting
+// level (a multi-class character's from the psionicist entry alone, its gain not divided, Q2). A
+// character with no psionics entry has none, and a maximum entered for it is refused. c is started
+// (its entries at their starting levels).
+func startingPSPMax(c *Character, entered int, rules Rules) (int, error) {
+	m, ok, err := PSPMaxOf(c, rules)
+	switch {
+	case err != nil:
+		return 0, fmt.Errorf("new character: %w", err)
+	case !ok && entered > 0:
+		return 0, &domain.FieldError{Field: FieldPSPMax, Message: CodeOutOfRange}
+	case !ok:
+		return 0, nil
+	case entered > 0:
+		return entered, nil
+	}
+	return m.Max, nil
 }
 
 // entryLevel is the level of c's entry of class (the realized level, or the left-at level of a

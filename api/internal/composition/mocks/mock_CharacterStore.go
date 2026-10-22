@@ -770,6 +770,54 @@ func (_c *MockCharacterStore_SetLanguages_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// SetPSPMax provides a mock function with given fields: ctx, id, pspMax
+func (_m *MockCharacterStore) SetPSPMax(ctx context.Context, id int64, pspMax int) error {
+	ret := _m.Called(ctx, id, pspMax)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetPSPMax")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int) error); ok {
+		r0 = rf(ctx, id, pspMax)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_SetPSPMax_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetPSPMax'
+type MockCharacterStore_SetPSPMax_Call struct {
+	*mock.Call
+}
+
+// SetPSPMax is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - pspMax int
+func (_e *MockCharacterStore_Expecter) SetPSPMax(ctx interface{}, id interface{}, pspMax interface{}) *MockCharacterStore_SetPSPMax_Call {
+	return &MockCharacterStore_SetPSPMax_Call{Call: _e.mock.On("SetPSPMax", ctx, id, pspMax)}
+}
+
+func (_c *MockCharacterStore_SetPSPMax_Call) Run(run func(ctx context.Context, id int64, pspMax int)) *MockCharacterStore_SetPSPMax_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_SetPSPMax_Call) Return(_a0 error) *MockCharacterStore_SetPSPMax_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_SetPSPMax_Call) RunAndReturn(run func(context.Context, int64, int) error) *MockCharacterStore_SetPSPMax_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetProficiencyPicks provides a mock function with given fields: ctx, characterID, picks
 func (_m *MockCharacterStore) SetProficiencyPicks(ctx context.Context, characterID int64, picks skills.Picks) error {
 	ret := _m.Called(ctx, characterID, picks)

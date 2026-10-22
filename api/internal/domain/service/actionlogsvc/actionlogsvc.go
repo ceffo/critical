@@ -42,6 +42,9 @@ type SVC interface {
 	TopID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
 	// HPTotal is the SUM of effective HP deltas (actionlog.HPTotal over the log).
 	HPTotal(ctx context.Context, characterID int64) (int, error)
+	// PSPTotal is the SUM of effective PSP deltas (actionlog.PSPTotal over
+	// the log, ADR 0043 step 5).
+	PSPTotal(ctx context.Context, characterID int64) (int, error)
 	// ActiveEntries returns the newest non-voided entries of kind.
 	ActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
 	// GetHPState is the HP read model: max HP, current HP (max plus the log's
@@ -51,6 +54,16 @@ type SVC interface {
 	// AppendHPEvent logs an hp_change entry (delta signed, source optional)
 	// and returns the new HP state. The cap and floor apply as in Record.
 	AppendHPEvent(ctx context.Context, characterID int64, delta int, source string) (*actionlog.HPState, error)
+	// AppendPSPChange logs a psp_change entry (delta signed and not 0,
+	// source optional) and returns the pool after it (ADR 0043 step 5). The
+	// bounds apply as in Record; a character with no PSP maximum has no pool
+	// and is refused.
+	AppendPSPChange(ctx context.Context, characterID int64, delta int, source string) (actionlog.PSPState, error)
+	// AppendPSP records an entry whose point is its PSP delta (a recovery,
+	// ADR 0043 step 6) in its own transaction, bounded as in Record, and
+	// returns the pool after it; ErrNoPSPPool for a character with no PSP
+	// maximum.
+	AppendPSP(ctx context.Context, e actionlog.NewEntry) (actionlog.PSPState, error)
 
 	// Register binds a service's module: its codecs, so voiding an entry
 	// with a snapshot under one of their families writes the "before" state
@@ -89,6 +102,9 @@ type DAL interface {
 	// HPTotal returns the sum of the effective HP deltas of every entry, by
 	// the domain rule actionlog.HPTotal over the entries and their corrections.
 	HPTotal(ctx context.Context, characterID int64) (int, error)
+	// PSPTotal returns the sum of the effective PSP deltas of every entry,
+	// by the domain rule actionlog.PSPTotal (ADR 0043 step 5).
+	PSPTotal(ctx context.Context, characterID int64) (int, error)
 }
 
 // Rounds supplies the current round number used to stamp new entries. It is
@@ -97,10 +113,12 @@ type Rounds interface {
 	GetRound(ctx context.Context, characterID int64) (int, error)
 }
 
-// MaxHP supplies a character's max HP, which the HP floor needs (current HP is
-// max HP plus the ledger total). Read inside the recording transaction.
-type MaxHP interface {
+// Maxima supplies a character's stored maxima, read inside the recording
+// transaction: max HP, which the HP floor needs (current HP is max HP plus the
+// ledger total), and max PSP, which the PSP floor needs (ADR 0043 step 5).
+type Maxima interface {
 	GetMaxHP(ctx context.Context, characterID int64) (int, error)
+	GetMaxPSP(ctx context.Context, characterID int64) (int, error)
 }
 
 // Amendment is the only thing an amend may change: the entry's note (any
@@ -114,7 +132,7 @@ type service struct {
 	dal    DAL
 	tx     domain.TxRunner
 	rounds Rounds
-	maxHP  MaxHP
+	maxima Maxima
 	mu     sync.RWMutex
 	// restorers are the registered codecs by family, owners the module that
 	// claimed each family and each kind's view.
@@ -130,16 +148,16 @@ type service struct {
 // New constructs the service from environment-driven config. The payload
 // views registered modules declare (Register) are applied to every entry the
 // service returns, so no reader serves an entry in the shape it was logged in.
-func New(dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
+func New(dal DAL, tx domain.TxRunner, rounds Rounds, maxima Maxima) (SVC, error) {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: parse env: %w", err)
 	}
-	return NewWithConfig(cfg, dal, tx, rounds, maxHP)
+	return NewWithConfig(cfg, dal, tx, rounds, maxima)
 }
 
 // NewWithConfig is the test-friendly constructor.
-func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxima Maxima) (SVC, error) {
 	switch {
 	case cfg == nil:
 		return nil, fmt.Errorf("actionlogsvc: nil config")
@@ -149,14 +167,14 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxH
 		return nil, fmt.Errorf("actionlogsvc: nil tx runner")
 	case rounds == nil:
 		return nil, fmt.Errorf("actionlogsvc: nil rounds")
-	case maxHP == nil:
-		return nil, fmt.Errorf("actionlogsvc: nil max hp")
+	case maxima == nil:
+		return nil, fmt.Errorf("actionlogsvc: nil maxima")
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: invalid config: %w", err)
 	}
 	return &service{
-		cfg: cfg, dal: dal, tx: Transactions(tx), rounds: rounds, maxHP: maxHP,
+		cfg: cfg, dal: dal, tx: Transactions(tx), rounds: rounds, maxima: maxima,
 		restorers: map[string]actionlog.Restorer{}, owners: map[string]string{},
 		views: actionlog.PayloadViews{}, viewOwner: map[actionlog.Kind]string{},
 	}, nil

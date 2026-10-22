@@ -94,6 +94,19 @@ export function decodeLevelUp(e: LogEntry): LevelUpRecord | null {
 /** A level-up roll: the die (and the value it counts as from Constitution 20), the Constitution
  * adjustment and the gain the server computed, or the fixed gain above the name level. */
 function levelUpText(p: LevelUpRecord, t: TFunction): string {
+  // ADR 0043 step 4.2: a psionicist level raises the PSP maximum too.
+  const psp = p.psp
+    ? t("log.levelUp.psp", {
+        gain: p.psp.gain,
+        from: p.psp.maxBefore,
+        to: p.psp.maxAfter,
+      })
+    : "";
+  return hpText(p, t) + psp;
+}
+
+/** The hit points of a level-up roll. */
+function hpText(p: LevelUpRecord, t: TFunction): string {
   const hp = {
     level: p.level,
     gain: p.gain,

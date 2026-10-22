@@ -20,7 +20,7 @@ func newScopedSvc(t *testing.T) (actionlogsvc.SVC, *mocks.MockDAL) {
 	t.Helper()
 	dal := mocks.NewMockDAL(t)
 	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal,
-		actionlogsvc.Transactions(&passTx{}), mocks.NewMockRounds(t), mocks.NewMockMaxHP(t))
+		actionlogsvc.Transactions(&passTx{}), mocks.NewMockRounds(t), mocks.NewMockMaxima(t))
 	require.NoError(t, err)
 	return svc, dal
 }

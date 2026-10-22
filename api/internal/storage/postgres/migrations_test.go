@@ -475,3 +475,16 @@ func TestMigrate_TheSkillPointsMoveToTheirSkillSet(t *testing.T) {
 	run(append(recorded, skillSetsMigration))
 	assert.Equal(t, "{}", store.t.SkillSets[thief], "an applied migration runs no step")
 }
+
+// pspLedgerMigration adds the PSP pool's columns; schema only, it has no data step.
+const pspLedgerMigration = "037_psp_ledger.sql"
+
+// Existing data (ADR 0043 steps 4 and 5): the PSP migration only adds two columns that every
+// existing row reads as 0 (no PSP maximum, no PSP change), so an existing character, psionic or
+// not, has no PSP row to fix and the release before keeps writing rows that read the same. No
+// statement touches a row and no data step runs with it.
+func TestMigrate_ThePSPColumnsRunNoDataStep(t *testing.T) {
+	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
+	assert.NotContains(t, before, pspLedgerMigration, "no data step before it")
+	assert.NotContains(t, after, pspLedgerMigration, "no data step after it")
+}

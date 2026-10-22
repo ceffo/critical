@@ -585,6 +585,120 @@ func (_c *MockRules_MagicDefenceFor_Call) RunAndReturn(run func(int) (int, error
 	return _c
 }
 
+// PSPMaxFor provides a mock function with given fields: rule, score, level
+func (_m *MockRules) PSPMaxFor(rule classes.PSPRule, score func(string) int, level int) (ruletablesvc.PSPMax, error) {
+	ret := _m.Called(rule, score, level)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PSPMaxFor")
+	}
+
+	var r0 ruletablesvc.PSPMax
+	var r1 error
+	if rf, ok := ret.Get(0).(func(classes.PSPRule, func(string) int, int) (ruletablesvc.PSPMax, error)); ok {
+		return rf(rule, score, level)
+	}
+	if rf, ok := ret.Get(0).(func(classes.PSPRule, func(string) int, int) ruletablesvc.PSPMax); ok {
+		r0 = rf(rule, score, level)
+	} else {
+		r0 = ret.Get(0).(ruletablesvc.PSPMax)
+	}
+
+	if rf, ok := ret.Get(1).(func(classes.PSPRule, func(string) int, int) error); ok {
+		r1 = rf(rule, score, level)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_PSPMaxFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PSPMaxFor'
+type MockRules_PSPMaxFor_Call struct {
+	*mock.Call
+}
+
+// PSPMaxFor is a helper method to define mock.On call
+//   - rule classes.PSPRule
+//   - score func(string) int
+//   - level int
+func (_e *MockRules_Expecter) PSPMaxFor(rule interface{}, score interface{}, level interface{}) *MockRules_PSPMaxFor_Call {
+	return &MockRules_PSPMaxFor_Call{Call: _e.mock.On("PSPMaxFor", rule, score, level)}
+}
+
+func (_c *MockRules_PSPMaxFor_Call) Run(run func(rule classes.PSPRule, score func(string) int, level int)) *MockRules_PSPMaxFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(classes.PSPRule), args[1].(func(string) int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockRules_PSPMaxFor_Call) Return(_a0 ruletablesvc.PSPMax, _a1 error) *MockRules_PSPMaxFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_PSPMaxFor_Call) RunAndReturn(run func(classes.PSPRule, func(string) int, int) (ruletablesvc.PSPMax, error)) *MockRules_PSPMaxFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PSPRecoveryRate provides a mock function with given fields: activity
+func (_m *MockRules) PSPRecoveryRate(activity string) (int, error) {
+	ret := _m.Called(activity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PSPRecoveryRate")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (int, error)); ok {
+		return rf(activity)
+	}
+	if rf, ok := ret.Get(0).(func(string) int); ok {
+		r0 = rf(activity)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(activity)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_PSPRecoveryRate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PSPRecoveryRate'
+type MockRules_PSPRecoveryRate_Call struct {
+	*mock.Call
+}
+
+// PSPRecoveryRate is a helper method to define mock.On call
+//   - activity string
+func (_e *MockRules_Expecter) PSPRecoveryRate(activity interface{}) *MockRules_PSPRecoveryRate_Call {
+	return &MockRules_PSPRecoveryRate_Call{Call: _e.mock.On("PSPRecoveryRate", activity)}
+}
+
+func (_c *MockRules_PSPRecoveryRate_Call) Run(run func(activity string)) *MockRules_PSPRecoveryRate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *MockRules_PSPRecoveryRate_Call) Return(_a0 int, _a1 error) *MockRules_PSPRecoveryRate_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_PSPRecoveryRate_Call) RunAndReturn(run func(string) (int, error)) *MockRules_PSPRecoveryRate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RaceAdjustmentsFor provides a mock function with given fields: race
 func (_m *MockRules) RaceAdjustmentsFor(race string) (map[string]int, error) {
 	ret := _m.Called(race)

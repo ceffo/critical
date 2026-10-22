@@ -16,6 +16,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	acmocks "github.com/ceffo/critical/api/internal/domain/service/acsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	logmocks "github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
@@ -36,6 +37,7 @@ import (
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	levelupmocks "github.com/ceffo/critical/api/internal/domain/service/levelupsvc/mocks"
+	psionicmocks "github.com/ceffo/critical/api/internal/domain/service/psionicsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	restmocks "github.com/ceffo/critical/api/internal/domain/service/restsvc/mocks"
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/service/rulesetsvc/mocks"
@@ -82,6 +84,7 @@ type mocksSet struct {
 	dice     *dicemocks.MockSVC
 	levelUp  *levelupmocks.MockSVC
 	ac       *acmocks.MockSVC
+	psionics *psionicmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -114,10 +117,11 @@ func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handl
 		dice:     dicemocks.NewMockSVC(t),
 		levelUp:  levelupmocks.NewMockSVC(t),
 		ac:       acmocks.NewMockSVC(t),
+		psionics: psionicmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		Character: m.char, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Rulesets: m.rulesets, Log: m.log, Items: m.items, Rest: m.rest,
-		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, AC: m.ac, Auth: a,
+		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, AC: m.ac, Psionics: m.psionics, Auth: a,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs, opts), m
@@ -200,6 +204,9 @@ var endpoints = []endpoint{
 	}},
 	{"POST hp/event", "POST", "/api/hp/event", `{"delta":-1,"source":"x"}`, func(m *mocksSet, err error) {
 		m.log.On("AppendHPEvent", anyArgs(4)...).Return(nil, err)
+	}},
+	{"POST psp/event", "POST", "/api/psp/event", `{"delta":-1,"source":"x"}`, func(m *mocksSet, err error) {
+		m.log.On("AppendPSPChange", anyArgs(4)...).Return(actionlog.PSPState{}, err)
 	}},
 	{"GET log", "GET", "/api/log?limit=10", "", func(m *mocksSet, err error) {
 		m.log.On("List", anyArgs(3)...).Return(nil, err)
@@ -366,6 +373,7 @@ func TestSpecialSentinels(t *testing.T) {
 		{"undo empty log", "POST log/undo", fmt.Errorf("%w: expected #4 on top", actionlogsvc.ErrNothingToUndo), 409, `{"code":"nothing_to_undo","error":"nothing to undo: expected #4 on top"}`},
 		{"redo stale target", "POST log/redo", fmt.Errorf("%w: the transaction to redo is #5 (attack, round 2), not #4", actionlogsvc.ErrRedoChanged), 409, `{"code":"log_redo_changed","error":"the transaction to redo changed: the transaction to redo is #5 (attack, round 2), not #4"}`},
 		{"nothing to redo", "POST log/redo", fmt.Errorf("%w: expected #4", actionlogsvc.ErrNothingToRedo), 409, `{"code":"nothing_to_redo","error":"nothing to redo: expected #4"}`},
+		{"no psp pool", "POST psp/event", actionlogsvc.ErrNoPSPPool, 400, `{"code":"no_psp_pool","error":"the character has no PSP pool"}`},
 		{"snapshot not re-encoded", "POST log/undo", fmt.Errorf("%w: entry #4, state \"round\"", actionlogsvc.ErrSnapshotNotReencoded), 409, `{"code":"snapshot_not_reencoded","error":"snapshot recorded by the previous release, not re-encoded yet: entry #4, state \"round\""}`},
 		{"amend already undone", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #4"}`},
 		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, undo this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, undo this save and roll again"}`},
@@ -415,6 +423,7 @@ func TestRequestParsingErrors(t *testing.T) {
 		body400                  string
 	}{
 		{"hp/event bad json", "POST", "/api/hp/event", "{", "invalid request body"},
+		{"psp/event bad json", "POST", "/api/psp/event", "{", "invalid request body"},
 		{"buffs bad json", "POST", "/api/buffs", "{", "invalid request body"},
 		{"buff edit bad json", "PATCH", "/api/buffs/b1", "{", "invalid request body"},
 		{"attack bad json", "POST", "/api/roll/attack", "nope", "invalid request body"},

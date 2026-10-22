@@ -43,3 +43,24 @@ func TestGetMaxHP_StorageErrorIsWrapped(t *testing.T) {
 	require.ErrorIs(t, err, boom)
 	assert.NotErrorIs(t, err, domain.ErrCharacterNotFound)
 }
+
+// The PSP maximum (ADR 0043 step 4.4) is read like max HP: the row's
+// psp_max, no row is ErrCharacterNotFound, a storage error is wrapped.
+func TestGetMaxPSP(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().GetCharacterMaxPSP(ctx, int64(7)).Return(25, nil).Once()
+	maxPSP, err := hpdal.New(q).GetMaxPSP(ctx, 7)
+	require.NoError(t, err)
+	assert.Equal(t, 25, maxPSP)
+
+	q.EXPECT().GetCharacterMaxPSP(ctx, int64(999)).Return(0, sql.ErrNoRows).Once()
+	_, err = hpdal.New(q).GetMaxPSP(ctx, 999)
+	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
+
+	boom := errors.New("boom")
+	q.EXPECT().GetCharacterMaxPSP(ctx, int64(8)).Return(0, boom).Once()
+	_, err = hpdal.New(q).GetMaxPSP(ctx, 8)
+	require.ErrorIs(t, err, boom)
+	assert.NotErrorIs(t, err, domain.ErrCharacterNotFound)
+}

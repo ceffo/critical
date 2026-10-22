@@ -32,7 +32,7 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"topId":4,"redo":null,"entries":[{
 		"id":4,"transactionId":3,"characterId":1,"round":2,"kind":"hp_change","roll":false,"summary":"orc","hpDelta":-8,
-		"effectiveHpDelta":-12,"effectiveSummary":"orc axe","note":"","status":"amended","payload":{},"effectivePayload":{},
+		"effectiveHpDelta":-12,"pspDelta":0,"effectiveSummary":"orc axe","note":"","status":"amended","payload":{},"effectivePayload":{},
 		"snapshots":[],
 		"corrections":[{"id":1,"kind":"amend","hpDelta":-12,"source":"orc axe","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
@@ -49,7 +49,7 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
 		"id":5,"transactionId":5,"characterId":1,"round":2,"kind":"buff_change","roll":false,"summary":"Activated Haste","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"Activated Haste","note":"DM: axe, not club","status":"active",
+		"effectiveHpDelta":0,"pspDelta":0,"effectiveSummary":"Activated Haste","note":"DM: axe, not club","status":"active",
 		"payload":{},"effectivePayload":{},"snapshots":[],
 		"corrections":[{"id":3,"kind":"amend","note":"DM: axe, not club","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
@@ -109,7 +109,7 @@ func TestLogUndo_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
 		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"attack","roll":true,"summary":"","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"voided","payload":{"hit":true},"effectivePayload":{"hit":true},
+		"effectiveHpDelta":0,"pspDelta":0,"effectiveSummary":"","note":"","status":"voided","payload":{"hit":true},"effectivePayload":{"hit":true},
 		"snapshots":[{"key":"items:arrows_plus3","before":{"count":20},"after":{"count":19}}],
 		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
@@ -132,7 +132,7 @@ func TestLogRedo_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"topId":8,"entries":[],"redo":{
 		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"round_advance","roll":false,"summary":"","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"voided",
+		"effectiveHpDelta":0,"pspDelta":0,"effectiveSummary":"","note":"","status":"voided",
 		"payload":{"fromRound":3,"toRound":4},"effectivePayload":{"fromRound":3,"toRound":4},"snapshots":[],
 		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}}`, rec.Body.String())
@@ -145,7 +145,7 @@ func TestLogRedo_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
 		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"round_advance","roll":false,"summary":"","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"active",
+		"effectiveHpDelta":0,"pspDelta":0,"effectiveSummary":"","note":"","status":"active",
 		"payload":{"fromRound":3,"toRound":4},"effectivePayload":{"fromRound":3,"toRound":4},"snapshots":[],
 		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"},{"id":3,"kind":"redo","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
@@ -189,7 +189,7 @@ func TestLogEndpoints_AdjustedSaveShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"topId":null,"redo":null,"entries":[{
 		"id":7,"transactionId":7,"characterId":1,"round":1,"kind":"save","roll":true,"summary":"Save vs Spells: d20 12 vs 14, FAILED","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
+		"effectiveHpDelta":0,"pspDelta":0,"effectiveSummary":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
 		"note":"","status":"amended","payload":{"passed":false},"effectivePayload":{"passed":true},
 		"snapshots":[],
 		"corrections":[{"id":3,"kind":"amend","source":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
@@ -222,16 +222,53 @@ func TestLogEndpoints_CorrectionStepShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"topId":9,"redo":null,"entries":[{
 		"id":9,"transactionId":9,"characterId":1,"round":1,"kind":"correction","roll":false,"summary":"","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"active",
+		"effectiveHpDelta":0,"pspDelta":0,"effectiveSummary":"","note":"","status":"active",
 		"payload":{"entryId":7,"entryKind":"attack","field":"targetAc","from":5,"to":2},
 		"effectivePayload":{"entryId":7,"entryKind":"attack","field":"targetAc","from":5,"to":2},
 		"snapshots":[],"corrections":[],"createdAt":"2026-10-17T20:00:00Z"
 	},{
 		"id":7,"transactionId":7,"characterId":1,"round":1,"kind":"attack","roll":true,"summary":"","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"amended",
+		"effectiveHpDelta":0,"pspDelta":0,"effectiveSummary":"","note":"","status":"amended",
 		"payload":{"targetAc":5},"effectivePayload":{"targetAc":2},"snapshots":[],
 		"corrections":[
 			{"id":3,"kind":"amend","payload":{"targetAc":7},"stepId":8,"undone":true,"createdAt":"2026-10-17T20:00:00Z"},
 			{"id":5,"kind":"amend","payload":{"targetAc":2},"stepId":9,"createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
+}
+
+// POST /api/psp/event, the PSP pool's hand edit (ADR 0043 step 5): the delta
+// and source reach the service as sent, the pool after it is the answer, and
+// a logged entry serves its PSP delta.
+func TestPSPEvent_Step5_WireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.log.EXPECT().AppendPSPChange(mock.Anything, int64(1), 50, "rest").
+		Return(actionlog.PSPState{Current: 181, Max: 181}, nil).Once()
+	rec := do(h, "POST", "/api/psp/event", `{"delta":50,"source":"rest"}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"current":181,"max":181}`, rec.Body.String())
+
+	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{{
+		ID: 5, TransactionID: 5, CharacterID: 1, Kind: actionlog.KindPSPChange, PSPDelta: 30,
+		Payload: []byte(`{"pspRequested":50,"pspApplied":30}`), CreatedAt: at,
+	}}, nil)
+	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(5, true, nil)
+	m.log.EXPECT().RedoTarget(mock.Anything, int64(1)).Return(nil, nil)
+	rec = do(h, "GET", "/api/log", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"kind":"psp_change"`)
+	assert.Contains(t, rec.Body.String(), `"pspDelta":30`)
+}
+
+// POST /api/psp/recover, hours of an activity (ADR 0043 step 6): the hours and
+// the activity go to the service as sent, the answer is the pool after it.
+func TestPSPRecover_Step6_WireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.psionics.EXPECT().Recover(mock.Anything, int64(1), 1.5, "resting").
+		Return(actionlog.PSPState{Current: 30, Max: 181}, nil).Once()
+	rec := do(h, "POST", "/api/psp/recover", `{"hours":1.5,"activity":"resting"}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"current":30,"max":181}`, rec.Body.String())
+
+	rec = do(h, "POST", "/api/psp/recover", `{"hours":`)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }

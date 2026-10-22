@@ -37,6 +37,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/leveluphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/powerhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/profdeschdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/psphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/resthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/rulesethdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/skillhdl"
@@ -178,6 +179,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 
 		characterhdl.RegisterRoutes(r, charID, bs.Character)
 		hphdl.RegisterRoutes(r, charID, bs.Log)
+		psphdl.RegisterRoutes(r, charID, bs.Log, bs.Psionics)
 		actionloghdl.RegisterRoutes(r, charID, bs.Log)
 		buffhdl.RegisterRoutes(r, charID, bs.Buffs)
 		spellhdl.RegisterRoutes(r, charID, bs.Spells, bs.Character, bs.Cast)

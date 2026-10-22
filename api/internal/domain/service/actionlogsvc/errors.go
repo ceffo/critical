@@ -25,4 +25,7 @@ var (
 	// during a rolling deploy and the data step has not re-encoded it yet.
 	// Nothing is written.
 	ErrSnapshotNotReencoded = errors.New("snapshot recorded by the previous release, not re-encoded yet")
+	// ErrNoPSPPool: a PSP change for a character with no PSP maximum (ADR
+	// 0043 step 5): it has no pool to change. Nothing is written.
+	ErrNoPSPPool = errors.New("the character has no PSP pool")
 )

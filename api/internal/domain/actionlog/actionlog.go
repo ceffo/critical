@@ -23,7 +23,15 @@ type Kind string
 // are recorded today; the others are reserved for the services that plug
 // into the log.
 const (
-	KindHPChange     Kind = "hp_change"
+	KindHPChange Kind = "hp_change"
+	// KindPSPChange is a PSP change entered by hand (actionlogsvc, ADR 0043
+	// step 5), like hp_change for HP: its PSP delta is bounded by the pool and
+	// popping it gives the PSPs back.
+	KindPSPChange Kind = "psp_change"
+	// KindPSPRecovery is the PSPs recovered over hours of an activity
+	// (psionicsvc, ADR 0043 step 6): hours times Table 6's hourly rate, as the
+	// entry's PSP delta, capped like any gain.
+	KindPSPRecovery  Kind = "psp_recovery"
 	KindCast         Kind = "cast"
 	KindBuffChange   Kind = "buff_change"
 	KindRoundAdvance Kind = "round_advance"
@@ -288,6 +296,8 @@ type Snapshot struct {
 
 // NewEntry is what a service records. Round 0 means "stamp the current round".
 // HPDelta is the entry's contribution to current HP (0 for most kinds).
+// PSPDelta is its contribution to current PSPs (ADR 0043 step 5: any kind may
+// carry one; 0 for every kind that is not psionic).
 // Payload is the structured record of what happened (for example a full
 // attack breakdown); the UI words it in the player's language. Summary is
 // only free text the player typed (an HP change's source): the backend never
@@ -298,6 +308,7 @@ type NewEntry struct {
 	Kind        Kind
 	Summary     string
 	HPDelta     int
+	PSPDelta    int
 	Payload     json.RawMessage
 	Snapshots   []Snapshot
 }
@@ -441,6 +452,7 @@ type Entry struct {
 	Kind          Kind
 	Summary       string
 	HPDelta       int
+	PSPDelta      int
 	Payload       json.RawMessage
 	Snapshots     []Snapshot
 	CreatedAt     time.Time

@@ -162,6 +162,14 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    Tests: `PSPMax_Step4_1_InherentPotential` (domain: the book's example, Wis 17 Con 16 gives 25),
    `Roll_Step4_2_ALevelUpAddsWisdomModifierPlusTen` (levelupsvc: +12 at Wis 17, in the `level_up`
    entry, undone with it), `Create_Step4_4_PSPMaxEnteredIsKept` (charactersvc).
+   As built (2026-10-22): a psionicist level writes `psp_max` in the `level_up` transaction; the
+   entry's payload carries `psp {ability, score, modifier, plus, gain, maxBefore, maxAfter}` and its
+   `realized_level` snapshot the `pspMax` before and after, which the undo writes back (a level of
+   another class carries neither and leaves the maximum). A dual-class's psionicist level before
+   the crossover gains it too (step 18.2). Creation takes an optional `pspMax` (1 to 999; refused
+   `out_of_range` for a character with no psionics entry); without one the maximum is computed
+   at the psionicist entry's starting level. The psionicist stays not creatable until every kind
+   it lists is computed (ADR 0040 step 8), so the creation test reads the started character.
 
 5. **The PSP ledger.** Like HP (ADR 0007 step 2, ADR 0018 step 4): **any** action-log entry may
    carry a signed `psp_delta`; current PSPs are `psp_max` plus the sum of every entry's effective
@@ -171,8 +179,10 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    entry carries `pspRequested` and `pspApplied`. Entries are never edited; undo pops the
    transaction and its PSPs (ADR 0018 step 2). An entry of a kind that is not psionic carries no
    delta. The derived character serves `psp` `{current, max}` for a character with the kind.
+   The manual adjust is a `psp_change` entry (`POST /api/psp/event`, like HP's `hp_change`): a
+   signed delta bounded as above, refused with delta 0 or with no PSP maximum (`no_psp_pool`).
    Tests: `PSPTotal_Step5_EveryKindCounts` (domain/actionlog), `Record_Step5_CapsAGainAtTheMax`
-   and `Record_Step5_NeverUnderZero` (actionlogsvc).
+   and `Record_Step5_NeverUnderZero` (actionlogsvc), `PSPChange_Step5_UndoRedoExact` (composition).
 
 6. **Recovering PSPs** (ch. 1, `08-psionic-strength-points-psps.md`, Recovering Psionic Strength
    Points; Table 6). A `psp_recovery` request names the hours (ADR 0005 step 5's validation) and
@@ -180,8 +190,14 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    3, 6 and 12 as data). One transaction, one `psp_recovery` entry whose delta is hours × rate,
    capped (step 5). Refused (`psp_recovery_while_maintaining`) while a power is maintained: the
    book recovers only in hours with no PSP spent. The per-turn optional rates are not taken.
-   Tests: `Recover_Step6_HoursTimesTheActivityRate` (a new `psionicsvc`: 3 h resting gives 18,
-   capped at the max), `Recover_Step6_RefusedWhileMaintaining`.
+   As built (2026-10-22): `POST /api/psp/recover` `{hours, activity}` answers the pool
+   `{current, max}`; the hours are refused as passing time's are (more than 0, at most 720); the
+   delta is rounded down to whole PSPs (1.5 h walking gives 4); exertion logs the hours with a
+   delta of 0; the payload carries `hours`, `activity` and `perHour`. The refusal while
+   maintaining is built with maintenance (steps 13 to 16): until then nothing can be maintained.
+   Tests: `TestRecover_Step6_HoursTimesTheActivityRate` (the new `psionicsvc`: 3 h resting gives
+   18), `TestRecover_Step6_CappedAndUndone` (composition: capped at the max, undone exactly),
+   `Recover_Step6_RefusedWhileMaintaining` (with maintenance).
 
 7. **The long rest recovers PSPs** (amends [ADR 0008](0008-spell-slots-and-long-rest.md) steps 11
    and 12; the triage's "refilled by rest"). The long rest's one transaction also ends every
@@ -189,8 +205,10 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    `10-special-abilities.md`) and recovers a night's sleep, 8 hours at Table 6's sleeping rate
    (96), capped at the maximum _(Q3: the book has no full refill)_; the `long_rest` entry carries
    the delta and snapshots the maintained powers. Undoing the rest spends them again.
-   Tests: `LongRest_Step7_RecoversANightsSleepAndEndsMaintenance` (restsvc),
-   `LongRest_Step7_UndoRestoresPSPAndTheMaintainedPowers` (composition).
+   As built (2026-10-22): the night's sleep is recovered and undone; ending the maintained powers
+   is built with maintenance (steps 13 to 16): until then nothing can be maintained.
+   Tests: `TestLongRest_Step7_RecoversANightsSleep` (restsvc),
+   `TestLongRest_Step7_UndoRestoresPSP` (composition).
 
 ### Powers
 
@@ -437,9 +455,10 @@ CRI-178 built steps 1, 2, 4, 6 and 8's data ([ADR 0021](0021-spell-catalogue.md)
   THAC0 are in its class and group entries and also a column (`experience`, `thac0`) and a row (`hit_dice`) of the shared grids the API still reads
   by class or group (ADR 0021 step 20.1). The proficiency slots of Table 10 are not in the catalogue: they are the app seed's `psionicist` slot
   row and crossover (`seeds/proficiencies.json`).
-- **The creation gate** (ADR 0040 step 8, amended): the catalogue lists the psionicist now, but its two kinds are not computed yet, so the
-  class is **not offered at creation and refused** (`not_creatable`) until the implementing items land; each kind leaves
-  `classes.notImplemented` when its reader does (`Class.Implemented`, a test on kinds, never an id). The kinds are in the Go closed list
+- **The creation gate** (ADR 0040 step 8, amended): the catalogue lists the psionicist now, but one of its two kinds is not computed yet, so the
+  class is **not offered at creation and refused** (`not_creatable`) until `save_bonus` has a reader. As built: `psionics` left
+  `classes.notImplemented` with its reader (the PSP pool, steps 4 to 7: `TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs`), `save_bonus`
+  stays; each kind leaves `classes.notImplemented` when its reader does (`Class.Implemented`, a test on kinds, never an id). The kinds are in the Go closed list
   (`KindPsionics`, `KindSaveBonus`: parsed with no params, which the schema checks; nothing reads them).
 - **French is optional on a power's text** (the localized schema type: English required, an absent language omitted). 21 of the 152
   descriptions have no French body in the artifact (OCR); a reader serves the English one for a language a text lacks, as every localized

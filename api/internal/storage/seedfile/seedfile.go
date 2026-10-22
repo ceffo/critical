@@ -41,28 +41,31 @@ func Path(seedsDir, file string) string {
 // against them by CheckDefinitions); Alignment and Sex are codes
 // (ruletablesvc.Alignments, charactersvc.Sexes).
 type Character struct {
-	Name             string   `json:"name"`
-	Class            string   `json:"class"`
-	Race             string   `json:"race"`
-	Alignment        string   `json:"alignment"`
-	Sex              string   `json:"sex"`
-	Str              int      `json:"str"`
-	Dex              int      `json:"dex"`
-	Con              int      `json:"con"`
-	Int              int      `json:"int"`
-	Wis              int      `json:"wis"`
-	Cha              int      `json:"cha"`
-	HPMax            int      `json:"hp_max"`
-	Thac0Base        int      `json:"thac0_base"`
-	Level            int      `json:"level"`
-	XPTotal          int      `json:"xp_total"`
-	SaveParaPoison   int      `json:"save_para_poison"`
-	SaveRodStaffWand int      `json:"save_rod_staff_wand"`
-	SavePetriPoly    int      `json:"save_petri_poly"`
-	SaveBreath       int      `json:"save_breath"`
-	SaveSpell        int      `json:"save_spell"`
-	Slots            []any    `json:"slots"`
-	Languages        []string `json:"languages"`
+	Name             string `json:"name"`
+	Class            string `json:"class"`
+	Race             string `json:"race"`
+	Alignment        string `json:"alignment"`
+	Sex              string `json:"sex"`
+	Str              int    `json:"str"`
+	Dex              int    `json:"dex"`
+	Con              int    `json:"con"`
+	Int              int    `json:"int"`
+	Wis              int    `json:"wis"`
+	Cha              int    `json:"cha"`
+	HPMax            int    `json:"hp_max"`
+	Thac0Base        int    `json:"thac0_base"`
+	Level            int    `json:"level"`
+	XPTotal          int    `json:"xp_total"`
+	SaveParaPoison   int    `json:"save_para_poison"`
+	SaveRodStaffWand int    `json:"save_rod_staff_wand"`
+	SavePetriPoly    int    `json:"save_petri_poly"`
+	SaveBreath       int    `json:"save_breath"`
+	SaveSpell        int    `json:"save_spell"`
+	Slots            []any  `json:"slots"`
+	// PSPMax is the seed character's psionic strength point maximum (ADR 0043 step 4): read by the in-memory store of
+	// the e2e mode, so a spec can seed a psionicist (the class is not creatable yet); the database's seed leaves it.
+	PSPMax    int      `json:"psp_max"`
+	Languages []string `json:"languages"`
 	// SkillPoints are the imported character's skill points per skill set (ADR 0030 steps 17 and 18, ADR 0040 step 3.5),
 	// by skill code: the points that give the sheet's percentages (step
 	// 24), checked as a bard's entered points are.

@@ -84,7 +84,7 @@ func TestStateKeys_TheWebMapsEveryFamily(t *testing.T) {
 	bs, err := h.build(t, fixtureConfig())
 	require.NoError(t, err)
 
-	server := []string{actionlog.FamilyLog, actionlog.FamilyHP}
+	server := []string{actionlog.FamilyLog, actionlog.FamilyHP, actionlog.FamilyPSP}
 	for _, svc := range composition.Services(bs) {
 		for _, c := range svc.Module().Codecs {
 			server = append(server, c.Family())

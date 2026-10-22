@@ -40,11 +40,23 @@ type classDTO struct {
 	BardSkillBase       []skillBaseDTO         `json:"bard_skill_base"`
 	Backstab            []backstabDTO          `json:"backstab"`
 	TurningUndead       []turningDTO           `json:"turning_undead"`
-	// The psionicist tables (ADR 0021 step 20, format 13) are accepted and not
-	// read yet: the psionics item (ADR 0043) reads them.
-	PsionicistPowers  json.RawMessage `json:"psionicist_powers"`
-	InherentPotential json.RawMessage `json:"inherent_potential"`
-	PSPRecovery       json.RawMessage `json:"psp_recovery"`
+	// The psionicist tables (ADR 0021 step 20, format 13): Table 5 is read
+	// (ADR 0043 step 4), Table 6 too (steps 6 and 7); the power progression is
+	// accepted and not read yet.
+	PsionicistPowers  json.RawMessage        `json:"psionicist_powers"`
+	InherentPotential []inherentPotentialDTO `json:"inherent_potential"`
+	PSPRecovery       []pspRecoveryDTO       `json:"psp_recovery"`
+}
+
+type pspRecoveryDTO struct {
+	Activity string `json:"activity"`
+	PerHour  int    `json:"per_hour"`
+}
+
+type inherentPotentialDTO struct {
+	Score    int `json:"score"`
+	Base     int `json:"base"`
+	Modifier int `json:"modifier"`
 }
 
 type hitDiceDTO struct {
@@ -274,6 +286,10 @@ func (d classDTO) classes(defs *classes.Registry) (*ruletablesvc.ClassTables, er
 		BardSkillBase: mapRows(d.BardSkillBase, func(r skillBaseDTO) ruletablesvc.SkillBaseRow { return ruletablesvc.SkillBaseRow(r) }),
 		Backstab:      mapRows(d.Backstab, func(r backstabDTO) ruletablesvc.BackstabRow { return ruletablesvc.BackstabRow(r) }),
 		TurningUndead: turning,
+		InherentPotential: mapRows(d.InherentPotential, func(r inherentPotentialDTO) ruletablesvc.InherentPotentialRow {
+			return ruletablesvc.InherentPotentialRow(r)
+		}),
+		PSPRecovery: mapRows(d.PSPRecovery, func(r pspRecoveryDTO) ruletablesvc.PSPRecoveryRow { return ruletablesvc.PSPRecoveryRow(r) }),
 	}, defs)
 }
 

@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	GetCharacterMaxHP(ctx context.Context, id int64) (int64, error)
+	GetCharacterMaxPSP(ctx context.Context, id int64) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

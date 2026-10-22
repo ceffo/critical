@@ -1,0 +1,22 @@
+{
+  "spent": {
+    "summary": "mind thrust",
+    "effectiveSummary": "mind thrust",
+    "pspDelta": -7,
+    "payload": {}
+  },
+  "cappedGain": {
+    "pspDelta": 30,
+    "payload": {
+      "pspRequested": 50,
+      "pspApplied": 30
+    }
+  },
+  "flooredLoss": {
+    "pspDelta": -4,
+    "payload": {
+      "pspRequested": -9,
+      "pspApplied": -4
+    }
+  }
+}

@@ -87,7 +87,7 @@ func TestRedo_ReplaysTheNewestPoppedTransaction(t *testing.T) {
 	t.Run("restorer fails mid-replay: no partial state", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		tx := &errTx{}
-		svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t))
+		svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, mocks.NewMockRounds(t), mocks.NewMockMaxima(t))
 		require.NoError(t, err)
 		var calls []string
 		register(svc, dal, &calls, "initiative")
@@ -108,7 +108,7 @@ func TestRedo_ReplaysTheNewestPoppedTransaction(t *testing.T) {
 	t.Run("a snapshot not re-encoded yet is refused", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		tx := &errTx{}
-		svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t))
+		svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, mocks.NewMockRounds(t), mocks.NewMockMaxima(t))
 		require.NoError(t, err)
 		var calls []string
 		register(svc, dal, &calls, "")

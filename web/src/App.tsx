@@ -10,6 +10,7 @@ import { ChargeCards } from "@/components/dashboard/ChargeCards";
 import { Saves } from "@/components/dashboard/Saves";
 import { AcShield } from "@/components/ac/AcShield";
 import { HpBar } from "@/components/dashboard/HpBar";
+import { PspPanel } from "@/components/dashboard/PspPanel";
 import { Identity } from "@/components/dashboard/Identity";
 import { Notices } from "@/components/dashboard/Notices";
 import { DiceComposer } from "@/components/dashboard/DiceComposer";
@@ -132,6 +133,7 @@ function App() {
               aside={<AcShield onOpenInventory={() => focus("inventory")} />}
             />
             <QuickHp />
+            <PspPanel />
             <ChargeCards />
           </div>
           <Saves />

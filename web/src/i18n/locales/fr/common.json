@@ -187,6 +187,29 @@
     "dyingZone": "Agonie, jusqu’à {{floor}}",
     "lastExposure": "{{delta}} {{spell}}"
   },
+  "psp": {
+    "title": "PFP",
+    "amountPlaceholder": "PFP",
+    "amount": "Nombre de PFP",
+    "spend": "Dépenser",
+    "recover": "Ajouter",
+    "recoverHours": "Récupérer",
+    "spendHint": "Dépenser ces PFP (Entrée)",
+    "recoverHint": "Ajouter ces PFP (Maj+Entrée)",
+    "keysHint": "Entrée : dépenser · Maj+Entrée : ajouter",
+    "source": "Source",
+    "sourcePlaceholder": "Source (facultatif) : pouvoir, potion...",
+    "recovery": "Récupération",
+    "hours": "Heures",
+    "activityLabel": "Activité",
+    "recoverOver": "Récupérer avec le temps",
+    "activity": {
+      "exertion": "effort",
+      "walking": "marche",
+      "resting": "repos",
+      "sleeping": "sommeil"
+    }
+  },
   "round": {
     "title": "Tour",
     "next": "Tour suivant",
@@ -1316,6 +1339,8 @@
     "current": "en cours",
     "hpDamage": "Dégâts {{amount}}",
     "hpHeal": "Soins {{amount}}",
+    "pspSpent": "PFP dépensés {{amount}}",
+    "pspRecovered": "PFP récupérés {{amount}}",
     "nothingThisRound": "Rien d'enregistré ce tour.",
     "exposure": {
       "onMe": "{{spell}}, exposition au tour {{round}} : {{total}} dégâts ({{type}}) sur moi",
@@ -1323,6 +1348,7 @@
     },
     "kinds": {
       "hp_change": "PV",
+      "psp_change": "PFP",
       "cast": "Sort",
       "buff_change": "Effet",
       "round_advance": "Tour",
@@ -1360,7 +1386,8 @@
       "skill_armor": "Armure",
       "equipment_state": "Équipement",
       "ac_override": "CA",
-      "spell_add": "Grimoire"
+      "spell_add": "Grimoire",
+      "psp_recovery": "Récupération de PFP"
     },
     "status": {
       "active": "Actif",
@@ -1370,6 +1397,8 @@
     "was": "était {{delta}}",
     "capped": "{{requested}} demandés, plafonnés aux PV max",
     "floored": "{{requested}} demandés, arrêtés au plancher de PV",
+    "pspCapped": "{{requested}} demandés, plafonnés aux PFP max",
+    "pspFloored": "{{requested}} demandés, arrêtés à 0 PFP",
     "buff": {
       "activate": "Effet activé : {{buff}} ({{counters}})",
       "edit": "{{buff}} : {{from}} → {{to}}",
@@ -1554,7 +1583,8 @@
       "manual": ", dé saisi",
       "rolledClass": "{{class}} niveau {{level}} : {{die}}{{con}}, PV max +{{gain}} ({{from}} → {{to}}){{manual}}",
       "fixedClass": "{{class}} niveau {{level}} : PV max +{{gain}}, gain fixe ({{from}} → {{to}})",
-      "shared": " ÷ {{classes}}"
+      "shared": " ÷ {{classes}}",
+      "psp": " ; PFP max +{{gain}} ({{from}} → {{to}})"
     },
     "learn": {
       "learned": "Appris : {{spell}} (d100 {{roll}} ≤ {{chance}} %)",
@@ -1599,7 +1629,8 @@
       "set": "CA forcée : {{value}}",
       "setWith": "CA forcée : {{value}} ({{label}})",
       "cleared": "CA forcée effacée"
-    }
+    },
+    "pspRecovery": "{{hours}} h {{activity}} : PFP récupérés {{amount}}"
   },
   "critTable": {
     "title": "Table des critiques (règle maison)",
@@ -2128,6 +2159,7 @@
     "dualclass_alignment_not_allowed": "Cette classe n'admet pas l'alignement du personnage.",
     "level_up_not_pending": "Ce niveau n'est plus à lancer : la feuille de personnage se met à jour.",
     "no_spellbook": "Cette classe n'a pas de grimoire.",
+    "no_psp_pool": "Ce personnage n’a pas de réserve de PFP.",
     "not_a_wizard_spell": "Seul un sort de magicien s'inscrit au grimoire.",
     "already_in_spellbook": "Ce sort est déjà dans le grimoire.",
     "spell_level_above_intelligence": "Niveau de sort trop élevé pour l'Intelligence du personnage.",
@@ -2146,6 +2178,8 @@
     "save": "Sauvegarde {{name}}",
     "damage": "Dégâts",
     "heal": "Soins",
+    "pspSpent": "PFP dépensés",
+    "pspRecovered": "PFP récupérés",
     "initiative": "Initiative",
     "verdict": {
       "hit": "touché",

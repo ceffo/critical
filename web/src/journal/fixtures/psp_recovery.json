@@ -1,0 +1,28 @@
+{
+  "resting": {
+    "pspDelta": 18,
+    "payload": {
+      "hours": 3,
+      "activity": "resting",
+      "perHour": 6
+    }
+  },
+  "cappedSleep": {
+    "pspDelta": 10,
+    "payload": {
+      "hours": 8,
+      "activity": "sleeping",
+      "perHour": 12,
+      "pspRequested": 96,
+      "pspApplied": 10
+    }
+  },
+  "exertion": {
+    "pspDelta": 0,
+    "payload": {
+      "hours": 2,
+      "activity": "exertion",
+      "perHour": 0
+    }
+  }
+}

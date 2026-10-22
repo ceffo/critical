@@ -243,6 +243,12 @@ type ClassTables struct {
 	BardSkillBase       []SkillBaseRow
 	Backstab            []BackstabRow
 	TurningUndead       []TurningRow
+	// InherentPotential is CPsiH Table 5 (ADR 0043 step 4), empty in a
+	// catalogue without the psionicist.
+	InherentPotential []InherentPotentialRow
+	// PSPRecovery is CPsiH Table 6 (ADR 0043 steps 6 and 7), empty in a
+	// catalogue without the psionicist.
+	PSPRecovery []PSPRecoveryRow
 }
 
 // MaxWizardSpellLevel and MaxPriestSpellLevel are the widths of PHB Tables
@@ -293,6 +299,8 @@ func NewClassTables(c ClassTables, defs *classes.Registry) (*ClassTables, error)
 		{"bard_skill_base", once(c.BardSkillBase, func(r SkillBaseRow) string { return r.Skill }, BardSkills)},
 		{"backstab", checkBands(c.Backstab, func(r BackstabRow) (int, int) { return r.LevelMin, r.LevelMax })},
 		{"turning_undead", checkTurning(c.TurningUndead)},
+		{"inherent_potential", checkInherentPotential(c.InherentPotential, defs)},
+		{"psp_recovery", checkPSPRecovery(c.PSPRecovery, defs)},
 	}
 	for _, ch := range checks {
 		if ch.err != nil {

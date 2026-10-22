@@ -58,15 +58,15 @@ func (q *Queries) CreateActiveBuffs(ctx context.Context, characterID int64) erro
 
 const createCharacter = `-- name: CreateCharacter :one
 INSERT INTO characters (
-    name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
+    name, str, str_exceptional, dex, con, int, wis, cha, hp_max, psp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
     class, race_code, owner_user_id, realized_level, skill_sets, proficiency_picks
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12,
-    $13, $14, $15,
-    $16, $17, $18, $19,
-    $20, $21, $22, $23
+    $8, $9, $10, $11, $12, $13,
+    $14, $15, $16,
+    $17, $18, $19, $20,
+    $21, $22, $23, $24
 ) RETURNING id
 `
 
@@ -80,6 +80,7 @@ type CreateCharacterParams struct {
 	Wis              int64
 	Cha              int64
 	HpMax            int64
+	PspMax           int64
 	Thac0Base        int64
 	Level            int64
 	XpTotal          int64
@@ -111,6 +112,7 @@ func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams
 		arg.Wis,
 		arg.Cha,
 		arg.HpMax,
+		arg.PspMax,
 		arg.Thac0Base,
 		arg.Level,
 		arg.XpTotal,
@@ -194,7 +196,7 @@ func (q *Queries) GetACOverride(ctx context.Context, id int64) (GetACOverrideRow
 }
 
 const getCharacter = `-- name: GetCharacter :one
-SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
+SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, psp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
        COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks
@@ -212,6 +214,7 @@ type GetCharacterRow struct {
 	Wis              int64
 	Cha              int64
 	HpMax            int64
+	PspMax           int64
 	Thac0Base        int64
 	Level            int64
 	XpTotal          int64
@@ -254,6 +257,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.Wis,
 		&i.Cha,
 		&i.HpMax,
+		&i.PspMax,
 		&i.Thac0Base,
 		&i.Level,
 		&i.XpTotal,
@@ -638,6 +642,24 @@ type SetLanguagesParams struct {
 // The languages saved by the Skills tab's editor and their undo (ADR 0037 steps 13 and 18).
 func (q *Queries) SetLanguages(ctx context.Context, arg SetLanguagesParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setLanguages, arg.Languages, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setPSPMax = `-- name: SetPSPMax :execrows
+UPDATE characters SET psp_max = $1 WHERE id = $2
+`
+
+type SetPSPMaxParams struct {
+	PspMax int64
+	ID     int64
+}
+
+// A psionicist level-up and its undo (ADR 0043 step 4.2): the PSP maximum.
+func (q *Queries) SetPSPMax(ctx context.Context, arg SetPSPMaxParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setPSPMax, arg.PspMax, arg.ID)
 	if err != nil {
 		return 0, err
 	}

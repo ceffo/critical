@@ -190,17 +190,20 @@ export function DieChip({
 }
 
 /**
- * An entry without a layout of its own: its journal text and, for an HP change, its value (red for
- * damage, green for healing) and what was asked for when the server cut it.
+ * An entry without a layout of its own: its journal text and, for an HP or PSP change, its value (red
+ * for damage or PSPs spent, green for healing or PSPs recovered) and what was asked for when the server
+ * cut it (an HP change's `capped`, any other kind's worded `note`).
  */
 export function InfoBody({
   text,
   value,
   capped,
+  note,
 }: {
   text: string;
   value?: { amount: number; tone: "damage" | "heal" } | null;
   capped?: HpBreakdown | null;
+  note?: string | null;
 }) {
   const { t } = useTranslation();
   return (
@@ -217,6 +220,7 @@ export function InfoBody({
             })}
           </p>
         )}
+        {note && <p className="text-label text-muted-foreground">{note}</p>}
       </div>
       {value && (
         <span

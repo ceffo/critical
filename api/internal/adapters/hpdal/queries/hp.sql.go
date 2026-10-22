@@ -19,3 +19,14 @@ func (q *Queries) GetCharacterMaxHP(ctx context.Context, id int64) (int64, error
 	err := row.Scan(&hp_max)
 	return hp_max, err
 }
+
+const getCharacterMaxPSP = `-- name: GetCharacterMaxPSP :one
+SELECT psp_max FROM characters WHERE id = $1
+`
+
+func (q *Queries) GetCharacterMaxPSP(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getCharacterMaxPSP, id)
+	var psp_max int64
+	err := row.Scan(&psp_max)
+	return psp_max, err
+}

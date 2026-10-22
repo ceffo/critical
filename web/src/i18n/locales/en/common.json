@@ -187,6 +187,29 @@
     "dyingZone": "Dying, down to {{floor}}",
     "lastExposure": "{{delta}} {{spell}}"
   },
+  "psp": {
+    "title": "PSPs",
+    "amountPlaceholder": "PSP",
+    "amount": "PSP amount",
+    "spend": "Spend",
+    "recover": "Add",
+    "recoverHours": "Recover",
+    "spendHint": "Spend these PSPs (Enter)",
+    "recoverHint": "Add these PSPs (Shift+Enter)",
+    "keysHint": "Enter: spend · Shift+Enter: add",
+    "source": "Source",
+    "sourcePlaceholder": "Source (optional): power, potion...",
+    "recovery": "Recovery",
+    "hours": "Hours",
+    "activityLabel": "Activity",
+    "recoverOver": "Recover over time",
+    "activity": {
+      "exertion": "exertion",
+      "walking": "walking",
+      "resting": "resting",
+      "sleeping": "sleeping"
+    }
+  },
   "round": {
     "title": "Round",
     "next": "Next round",
@@ -1316,6 +1339,8 @@
     "current": "current",
     "hpDamage": "Damage {{amount}}",
     "hpHeal": "Healing {{amount}}",
+    "pspSpent": "PSPs spent {{amount}}",
+    "pspRecovered": "PSPs recovered {{amount}}",
     "nothingThisRound": "Nothing recorded this round yet.",
     "exposure": {
       "onMe": "{{spell}} exposure, round {{round}}: {{total}} {{type}} damage to me",
@@ -1323,6 +1348,7 @@
     },
     "kinds": {
       "hp_change": "HP",
+      "psp_change": "PSPs",
       "cast": "Cast",
       "buff_change": "Effect",
       "round_advance": "Round",
@@ -1360,7 +1386,8 @@
       "skill_armor": "Armour",
       "equipment_state": "Equipment",
       "ac_override": "AC",
-      "spell_add": "Spellbook"
+      "spell_add": "Spellbook",
+      "psp_recovery": "PSP recovery"
     },
     "status": {
       "active": "Active",
@@ -1370,6 +1397,8 @@
     "was": "was {{delta}}",
     "capped": "{{requested}} requested, capped at max HP",
     "floored": "{{requested}} requested, stopped at the HP floor",
+    "pspCapped": "{{requested}} requested, capped at max PSPs",
+    "pspFloored": "{{requested}} requested, stopped at 0 PSPs",
     "buff": {
       "activate": "Activated {{buff}} ({{counters}})",
       "edit": "{{buff}}: {{from}} → {{to}}",
@@ -1554,7 +1583,8 @@
       "manual": ", die entered",
       "rolledClass": "{{class}} level {{level}}: {{die}}{{con}}, max HP +{{gain}} ({{from}} → {{to}}){{manual}}",
       "fixedClass": "{{class}} level {{level}}: max HP +{{gain}}, fixed gain ({{from}} → {{to}})",
-      "shared": " ÷ {{classes}}"
+      "shared": " ÷ {{classes}}",
+      "psp": "; max PSP +{{gain}} ({{from}} → {{to}})"
     },
     "learn": {
       "learned": "Learned: {{spell}} (d100 {{roll}} ≤ {{chance}}%)",
@@ -1599,7 +1629,8 @@
       "set": "AC overridden: {{value}}",
       "setWith": "AC overridden: {{value}} ({{label}})",
       "cleared": "AC override cleared"
-    }
+    },
+    "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}"
   },
   "critTable": {
     "title": "Crit table (house rule)",
@@ -2128,6 +2159,7 @@
     "dualclass_alignment_not_allowed": "That class does not admit the character's alignment.",
     "level_up_not_pending": "That level is no longer to roll: the sheet refreshes.",
     "no_spellbook": "This class has no spellbook.",
+    "no_psp_pool": "This character has no PSP pool.",
     "not_a_wizard_spell": "Only a wizard spell goes in the spellbook.",
     "already_in_spellbook": "That spell is already in the spellbook.",
     "spell_level_above_intelligence": "Spell level too high for the character's Intelligence.",
@@ -2146,6 +2178,8 @@
     "save": "{{name}} save",
     "damage": "Damage",
     "heal": "Healing",
+    "pspSpent": "PSPs spent",
+    "pspRecovered": "PSPs recovered",
     "initiative": "Initiative",
     "verdict": {
       "hit": "hit",

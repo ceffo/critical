@@ -21,6 +21,54 @@ func (_m *MockDAL) EXPECT() *MockDAL_Expecter {
 	return &MockDAL_Expecter{mock: &_m.Mock}
 }
 
+// SetPSPMax provides a mock function with given fields: ctx, id, pspMax
+func (_m *MockDAL) SetPSPMax(ctx context.Context, id int64, pspMax int) error {
+	ret := _m.Called(ctx, id, pspMax)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetPSPMax")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int) error); ok {
+		r0 = rf(ctx, id, pspMax)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_SetPSPMax_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetPSPMax'
+type MockDAL_SetPSPMax_Call struct {
+	*mock.Call
+}
+
+// SetPSPMax is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - pspMax int
+func (_e *MockDAL_Expecter) SetPSPMax(ctx interface{}, id interface{}, pspMax interface{}) *MockDAL_SetPSPMax_Call {
+	return &MockDAL_SetPSPMax_Call{Call: _e.mock.On("SetPSPMax", ctx, id, pspMax)}
+}
+
+func (_c *MockDAL_SetPSPMax_Call) Run(run func(ctx context.Context, id int64, pspMax int)) *MockDAL_SetPSPMax_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockDAL_SetPSPMax_Call) Return(_a0 error) *MockDAL_SetPSPMax_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_SetPSPMax_Call) RunAndReturn(run func(context.Context, int64, int) error) *MockDAL_SetPSPMax_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetRealizedLevel provides a mock function with given fields: ctx, id, class, realizedLevel, hpMax
 func (_m *MockDAL) SetRealizedLevel(ctx context.Context, id int64, class string, realizedLevel int, hpMax int) error {
 	ret := _m.Called(ctx, id, class, realizedLevel, hpMax)

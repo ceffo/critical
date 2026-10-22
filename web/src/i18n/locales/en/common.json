@@ -513,6 +513,15 @@
       "within_10_ft": "Within 10 ft",
       "within_20_ft": "Within 20 ft",
       "passing_through": "Passing through"
+    },
+    "wall_of_fire_priest": {
+      "within_10_ft": "Within 10 ft",
+      "within_20_ft": "Within 20 ft",
+      "passing_through": "Passing through"
+    },
+    "fire_seeds": {
+      "acorns": "Acorns (hurled)",
+      "berries": "Holly berries (set off)"
     }
   },
   "spellDice": {

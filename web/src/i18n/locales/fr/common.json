@@ -513,6 +513,15 @@
       "within_10_ft": "À 10 pi ou moins",
       "within_20_ft": "À 20 pi ou moins",
       "passing_through": "En la traversant"
+    },
+    "wall_of_fire_priest": {
+      "within_10_ft": "À 10 pi ou moins",
+      "within_20_ft": "À 20 pi ou moins",
+      "passing_through": "En la traversant"
+    },
+    "fire_seeds": {
+      "acorns": "Glands (lancés)",
+      "berries": "Baies de houx (déclenchées)"
     }
   },
   "spellDice": {

@@ -38,17 +38,31 @@ func TestRepoSeeds_EveryBuffDefaultTargetAndChoice(t *testing.T) {
 		"improved_strength":     {true, onMe},
 		"stoneskin":             {true, onMe},
 		"dragon_scales":         {true, onMe},
+		// Touch, defensive, on the party's priests: on the cleric, the arrow offers an ally.
+		"protection_from_evil_priest": {true, onMe},
+		"protection_from_chaos":       {true, onMe},
+		"barkskin":                    {true, onMe},
+		"aid":                         {true, onMe},
 		// Friendly areas: on the Bard, the arrow offers not on him.
-		"haste":                          {true, onMe},
-		"protection_from_evil_10_radius": {true, onMe},
+		"haste":                                 {true, onMe},
+		"protection_from_evil_10_radius":        {true, onMe},
+		"protection_from_evil_10_radius_priest": {true, onMe},
+		"bless":                                 {true, onMe},
+		"prayer":                                {true, onMe},
+		"chant":                                 {true, onMe},
+		"recitation":                            {true, onMe},
+		"righteous_wrath_of_the_faithful":       {true, onMe},
 		// Other, defensive: on an ally, the arrow offers the Bard.
 		"enchanted_weapon": {false, onAlly},
+		"remove_fear":      {false, onAlly},
 		// Hostile: not on the Bard, no arrow.
 		"blindness":       {false, nil},
 		"pain_touch":      {false, nil},
 		"slow":            {false, nil},
 		"minor_malison":   {false, nil},
 		"greater_malison": {false, nil},
+		"faerie_fire":     {false, nil},
+		"hesitation":      {false, nil},
 		// Self-only: always on the Bard, no arrow.
 		"expeditious_retreat":    {true, nil},
 		"fist_of_stone":          {true, nil},
@@ -60,6 +74,9 @@ func TestRepoSeeds_EveryBuffDefaultTargetAndChoice(t *testing.T) {
 		"psychic_protection":     {true, nil},
 		"tensers_transformation": {true, nil},
 		"trollish_fortitude":     {true, nil},
+		"magical_vestment":       {true, nil},
+		"unfailing_premonition":  {true, nil},
+		"ebony_hand":             {true, nil},
 	}
 
 	const level = 15

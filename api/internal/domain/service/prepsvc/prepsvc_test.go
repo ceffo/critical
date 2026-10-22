@@ -431,3 +431,70 @@ func TestPrepare_Step14_EachEntryPreparesInItsOwnSlots(t *testing.T) {
 		assert.Zero(t, f.tx.calls)
 	})
 }
+
+// ADR 0042 step 14: an entry's spells and its slots come from the same
+// entry. A mage 9/cleric 5 (the mage entered first) asked with no class is
+// its mage entry: the mage's spellbook (not the cleric's sphere spells), the
+// mage's limits, slots tagged "mage". Asked for the cleric, the cleric's.
+func TestPrepare_Step14_NoClassIsTheFirstCastingEntrysBookAndSlots(t *testing.T) {
+	mageCleric := &charactersvc.Character{Class: "mage", Derived: charactersvc.Derived{
+		RealizedLevel: 9, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1},
+		Classes: []charactersvc.EntryDerived{
+			{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 9, Casts: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
+			{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
+		},
+	}}
+	ctx := context.Background()
+	newSvc := func(t *testing.T) (prepsvc.SVC, *mocks.MockSlots, *mocks.MockLog, *mocks.MockItems) {
+		t.Helper()
+		b := mocks.NewMockSpellbook(t)
+		// The book a class reads: the mage's spellbook, the cleric's sphere
+		// spells (stood in by enlarge); "" is never asked.
+		b.EXPECT().Of(mock.Anything, int64(1), "mage").Return([]prepsvc.SpellbookEntry{book["alarm"], book["fireball"]}, nil).Maybe()
+		b.EXPECT().Of(mock.Anything, int64(1), "cleric").Return([]prepsvc.SpellbookEntry{book["enlarge"]}, nil).Maybe()
+		chars := mocks.NewMockCharacters(t)
+		chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(mageCleric, nil).Maybe()
+		slots, log, items := mocks.NewMockSlots(t), mocks.NewMockLog(t), mocks.NewMockItems(t)
+		svc, err := prepsvc.New(prepsvc.Deps{Slots: slots, Spellbook: b, Effects: catalog(t), Items: items, Characters: chars, Log: log, Tx: &passTx{}})
+		require.NoError(t, err)
+		return svc, slots, log, items
+	}
+	ids := func(info prepsvc.Info) []string {
+		var out []string
+		for _, e := range info.Spellbook {
+			out = append(out, e.ID)
+		}
+		return out
+	}
+
+	t.Run("info", func(t *testing.T) {
+		svc, _, _, items := newSvc(t)
+		items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+		for _, class := range []string{"", "mage"} {
+			info, err := svc.InfoFor(ctx, 1, class)
+			require.NoError(t, err)
+			assert.Equal(t, []string{"alarm", "fireball"}, ids(info), "class %q", class)
+			assert.Equal(t, []prepsvc.LevelLimit{{1, 4}, {2, 3}, {3, 3}, {4, 2}, {5, 1}}, info.Limits, "class %q", class)
+		}
+		info, err := svc.InfoFor(ctx, 1, "cleric")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"enlarge"}, ids(info))
+		assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 2}, {3, 1}}, info.Limits)
+	})
+
+	t.Run("prepare", func(t *testing.T) {
+		svc, slots, log, _ := newSvc(t)
+		slots.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{}, nil)
+		var saved []spellsvc.SpellSlot
+		slots.EXPECT().SaveSlots(mock.Anything, int64(1), mock.Anything).
+			Run(func(_ context.Context, _ int64, s []spellsvc.SpellSlot) { saved = s }).Return(nil)
+		log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
+
+		_, err := svc.PrepareFor(ctx, 1, "", []string{"fireball"})
+		require.NoError(t, err)
+		assert.Equal(t, []spellsvc.SpellSlot{{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball", Class: "mage"}}, saved)
+
+		_, err = svc.PrepareFor(ctx, 1, "", []string{"enlarge"})
+		require.ErrorIs(t, err, prepsvc.ErrNotInSpellbook, "the cleric's spell is not in the mage's book")
+	})
+}

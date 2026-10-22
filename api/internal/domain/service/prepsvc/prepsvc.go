@@ -214,7 +214,7 @@ func (s *service) InfoFor(ctx context.Context, characterID int64, class string) 
 		return Info{}, err
 	}
 	level, limits := who.level, who.limits
-	book, err := s.Spellbook.Of(ctx, characterID, class)
+	book, err := s.Spellbook.Of(ctx, characterID, who.class)
 	if err != nil {
 		return Info{}, fmt.Errorf("read spellbook: %w", err)
 	}
@@ -286,7 +286,7 @@ func (s *service) PrepareFor(ctx context.Context, characterID int64, class strin
 		return nil, err
 	}
 	limits := who.limits
-	book, err := s.Spellbook.Of(ctx, characterID, class)
+	book, err := s.Spellbook.Of(ctx, characterID, who.class)
 	if err != nil {
 		return nil, fmt.Errorf("read spellbook: %w", err)
 	}

@@ -1,0 +1,3863 @@
+{
+  "bard level 1 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": [
+        {
+          "Armor": -25,
+          "Base": 50,
+          "Dexterity": 0,
+          "Percent": 35,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 35,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": -10,
+          "Base": 20,
+          "Dexterity": 0,
+          "Percent": 20,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 20,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": -25,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -10,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": -5,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 0,
+          "Skill": "read_languages"
+        }
+      ],
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 9,
+          "SkillPoints": 0,
+          "WeaponSlots": 2
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 9,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 9,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 2,
+          "Initial": 2,
+          "Left": 2,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 16,
+        "ParaPoison": 13,
+        "PetriPoly": 12,
+        "RodStaffWand": 14,
+        "Spell": 15
+      },
+      "SkillArmor": "metal",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 20,
+        "Left": 0,
+        "Level": 1,
+        "PerLevel": 15,
+        "PerSkill": 0,
+        "PerSkillFirst": 0,
+        "PerSkillPerLevel": 0,
+        "Spent": 20,
+        "Total": 20
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": {
+        "ClassMaxSpellLevel": 6,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "bard level 1 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": [
+        {
+          "Armor": 10,
+          "Base": 50,
+          "Dexterity": 0,
+          "Percent": 70,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 70,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": 0,
+          "Base": 20,
+          "Dexterity": 0,
+          "Percent": 30,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 30,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": 5,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 20,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 20,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": 0,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 5,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 5,
+          "Skill": "read_languages"
+        }
+      ],
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 9,
+          "SkillPoints": 0,
+          "WeaponSlots": 2
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 9,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 9,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 2,
+          "Initial": 2,
+          "Left": 2,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 16,
+        "ParaPoison": 13,
+        "PetriPoly": 12,
+        "RodStaffWand": 14,
+        "Spell": 15
+      },
+      "SkillArmor": "none",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 20,
+        "Left": 0,
+        "Level": 1,
+        "PerLevel": 15,
+        "PerSkill": 0,
+        "PerSkillFirst": 0,
+        "PerSkillPerLevel": 0,
+        "Spent": 20,
+        "Total": 20
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": {
+        "ClassMaxSpellLevel": 6,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "bard level 13 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": [
+        {
+          "Armor": -25,
+          "Base": 50,
+          "Dexterity": 0,
+          "Percent": 35,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 35,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": -10,
+          "Base": 20,
+          "Dexterity": 0,
+          "Percent": 20,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 20,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": -25,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -10,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": -5,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 0,
+          "Skill": "read_languages"
+        }
+      ],
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 12,
+          "SkillPoints": 180,
+          "WeaponSlots": 5
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 12,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 12,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 5,
+          "Initial": 2,
+          "Left": 5,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 13,
+        "ParaPoison": 10,
+        "PetriPoly": 9,
+        "RodStaffWand": 8,
+        "Spell": 9
+      },
+      "SkillArmor": "metal",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 20,
+        "Left": 180,
+        "Level": 13,
+        "PerLevel": 15,
+        "PerSkill": 0,
+        "PerSkillFirst": 0,
+        "PerSkillPerLevel": 0,
+        "Spent": 20,
+        "Total": 200
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 3,
+        "2": 3,
+        "3": 3,
+        "4": 2,
+        "5": 1
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 6,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 14,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "bard level 13 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": [
+        {
+          "Armor": 10,
+          "Base": 50,
+          "Dexterity": 0,
+          "Percent": 70,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 70,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": 0,
+          "Base": 20,
+          "Dexterity": 0,
+          "Percent": 30,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 30,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": 5,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 20,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 20,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": 0,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 5,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 5,
+          "Skill": "read_languages"
+        }
+      ],
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 12,
+          "SkillPoints": 180,
+          "WeaponSlots": 5
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 12,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 12,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 5,
+          "Initial": 2,
+          "Left": 5,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 13,
+        "ParaPoison": 10,
+        "PetriPoly": 9,
+        "RodStaffWand": 8,
+        "Spell": 9
+      },
+      "SkillArmor": "none",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 20,
+        "Left": 180,
+        "Level": 13,
+        "PerLevel": 15,
+        "PerSkill": 0,
+        "PerSkillFirst": 0,
+        "PerSkillPerLevel": 0,
+        "Spent": 20,
+        "Total": 200
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 3,
+        "2": 3,
+        "3": 3,
+        "4": 2,
+        "5": 1
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 6,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 14,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "bard level 7 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": [
+        {
+          "Armor": -25,
+          "Base": 50,
+          "Dexterity": 0,
+          "Percent": 35,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 35,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": -10,
+          "Base": 20,
+          "Dexterity": 0,
+          "Percent": 20,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 20,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": -25,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -10,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": -5,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 0,
+          "Skill": "read_languages"
+        }
+      ],
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 10,
+          "SkillPoints": 90,
+          "WeaponSlots": 3
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 10,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 10,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 3,
+          "Initial": 2,
+          "Left": 3,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 15,
+        "ParaPoison": 12,
+        "PetriPoly": 11,
+        "RodStaffWand": 12,
+        "Spell": 13
+      },
+      "SkillArmor": "metal",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 20,
+        "Left": 90,
+        "Level": 7,
+        "PerLevel": 15,
+        "PerSkill": 0,
+        "PerSkillFirst": 0,
+        "PerSkillPerLevel": 0,
+        "Spent": 20,
+        "Total": 110
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 3,
+        "2": 2,
+        "3": 1
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 6,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 17,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "bard level 7 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": [
+        {
+          "Armor": 10,
+          "Base": 50,
+          "Dexterity": 0,
+          "Percent": 70,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 70,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": 0,
+          "Base": 20,
+          "Dexterity": 0,
+          "Percent": 30,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 30,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": 5,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 20,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 20,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": 0,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 5,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 5,
+          "Skill": "read_languages"
+        }
+      ],
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 10,
+          "SkillPoints": 90,
+          "WeaponSlots": 3
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 10,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 10,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 3,
+          "Initial": 2,
+          "Left": 3,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 15,
+        "ParaPoison": 12,
+        "PetriPoly": 11,
+        "RodStaffWand": 12,
+        "Spell": 13
+      },
+      "SkillArmor": "none",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 20,
+        "Left": 90,
+        "Level": 7,
+        "PerLevel": 15,
+        "PerSkill": 0,
+        "PerSkillFirst": 0,
+        "PerSkillPerLevel": 0,
+        "Spent": 20,
+        "Total": 110
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 3,
+        "2": 2,
+        "3": 1
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 6,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 17,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "cleric level 1 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "priest",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 10,
+          "SkillPoints": 0,
+          "WeaponSlots": 2
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 1500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 10,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 10,
+          "LevelGained": 0,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 2,
+          "Initial": 2,
+          "Left": 2,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 16,
+        "ParaPoison": 10,
+        "PetriPoly": 13,
+        "RodStaffWand": 14,
+        "Spell": 15
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 15,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 1
+      },
+      "Spellbook": null,
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": [
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 10
+          },
+          "HDMax": 1,
+          "HDMin": 1,
+          "Undead": "skeleton"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 13
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "zombie"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 16
+          },
+          "HDMax": 2,
+          "HDMin": 2,
+          "Undead": "ghoul"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 19
+          },
+          "HDMax": 4,
+          "HDMin": 3,
+          "Undead": "shadow"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 20
+          },
+          "HDMax": 5,
+          "HDMin": 5,
+          "Undead": "wight"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "ghast"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 6,
+          "HDMin": 6,
+          "Undead": "wraith"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 7,
+          "HDMin": 7,
+          "Undead": "mummy"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 8,
+          "HDMin": 8,
+          "Undead": "spectre"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 9,
+          "HDMin": 9,
+          "Undead": "vampire"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 10,
+          "HDMin": 10,
+          "Undead": "ghost"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 11,
+          "Undead": "lich"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "special"
+        }
+      ],
+      "XPTotal": 0
+    }
+  },
+  "cleric level 1 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "priest",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 10,
+          "SkillPoints": 0,
+          "WeaponSlots": 2
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 1500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 10,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 10,
+          "LevelGained": 0,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 2,
+          "Initial": 2,
+          "Left": 2,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 16,
+        "ParaPoison": 10,
+        "PetriPoly": 13,
+        "RodStaffWand": 14,
+        "Spell": 15
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 3
+      },
+      "Spellbook": null,
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": [
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 10
+          },
+          "HDMax": 1,
+          "HDMin": 1,
+          "Undead": "skeleton"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 13
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "zombie"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 16
+          },
+          "HDMax": 2,
+          "HDMin": 2,
+          "Undead": "ghoul"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 19
+          },
+          "HDMax": 4,
+          "HDMin": 3,
+          "Undead": "shadow"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 20
+          },
+          "HDMax": 5,
+          "HDMin": 5,
+          "Undead": "wight"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "ghast"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 6,
+          "HDMin": 6,
+          "Undead": "wraith"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 7,
+          "HDMin": 7,
+          "Undead": "mummy"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 8,
+          "HDMin": 8,
+          "Undead": "spectre"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 9,
+          "HDMin": 9,
+          "Undead": "vampire"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 10,
+          "HDMin": 10,
+          "Undead": "ghost"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 11,
+          "Undead": "lich"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "special"
+        }
+      ],
+      "XPTotal": 0
+    }
+  },
+  "cleric level 13 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "priest",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 14,
+          "SkillPoints": 0,
+          "WeaponSlots": 5
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 1500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 14,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 14,
+          "LevelGained": 4,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 5,
+          "Initial": 2,
+          "Left": 5,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 11,
+        "ParaPoison": 5,
+        "PetriPoly": 8,
+        "RodStaffWand": 9,
+        "Spell": 10
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 15,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 6,
+        "2": 6,
+        "3": 6,
+        "4": 4,
+        "5": 2
+      },
+      "Spellbook": null,
+      "THAC0": 12,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": [
+        {
+          "Cell": {
+            "Outcome": "destroy_more",
+            "Roll": 0
+          },
+          "HDMax": 1,
+          "HDMin": 1,
+          "Undead": "skeleton"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy_more",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "zombie"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy_more",
+            "Roll": 0
+          },
+          "HDMax": 2,
+          "HDMin": 2,
+          "Undead": "ghoul"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy_more",
+            "Roll": 0
+          },
+          "HDMax": 4,
+          "HDMin": 3,
+          "Undead": "shadow"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy",
+            "Roll": 0
+          },
+          "HDMax": 5,
+          "HDMin": 5,
+          "Undead": "wight"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "ghast"
+        },
+        {
+          "Cell": {
+            "Outcome": "turn",
+            "Roll": 0
+          },
+          "HDMax": 6,
+          "HDMin": 6,
+          "Undead": "wraith"
+        },
+        {
+          "Cell": {
+            "Outcome": "turn",
+            "Roll": 0
+          },
+          "HDMax": 7,
+          "HDMin": 7,
+          "Undead": "mummy"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 4
+          },
+          "HDMax": 8,
+          "HDMin": 8,
+          "Undead": "spectre"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 7
+          },
+          "HDMax": 9,
+          "HDMin": 9,
+          "Undead": "vampire"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 10
+          },
+          "HDMax": 10,
+          "HDMin": 10,
+          "Undead": "ghost"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 13
+          },
+          "HDMax": 0,
+          "HDMin": 11,
+          "Undead": "lich"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 16
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "special"
+        }
+      ],
+      "XPTotal": 0
+    }
+  },
+  "cleric level 13 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "priest",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 14,
+          "SkillPoints": 0,
+          "WeaponSlots": 5
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 1500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 14,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 14,
+          "LevelGained": 4,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 5,
+          "Initial": 2,
+          "Left": 5,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 11,
+        "ParaPoison": 5,
+        "PetriPoly": 8,
+        "RodStaffWand": 9,
+        "Spell": 10
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 8,
+        "2": 8,
+        "3": 7,
+        "4": 4,
+        "5": 2,
+        "6": 2
+      },
+      "Spellbook": null,
+      "THAC0": 12,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": [
+        {
+          "Cell": {
+            "Outcome": "destroy_more",
+            "Roll": 0
+          },
+          "HDMax": 1,
+          "HDMin": 1,
+          "Undead": "skeleton"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy_more",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "zombie"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy_more",
+            "Roll": 0
+          },
+          "HDMax": 2,
+          "HDMin": 2,
+          "Undead": "ghoul"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy_more",
+            "Roll": 0
+          },
+          "HDMax": 4,
+          "HDMin": 3,
+          "Undead": "shadow"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy",
+            "Roll": 0
+          },
+          "HDMax": 5,
+          "HDMin": 5,
+          "Undead": "wight"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "ghast"
+        },
+        {
+          "Cell": {
+            "Outcome": "turn",
+            "Roll": 0
+          },
+          "HDMax": 6,
+          "HDMin": 6,
+          "Undead": "wraith"
+        },
+        {
+          "Cell": {
+            "Outcome": "turn",
+            "Roll": 0
+          },
+          "HDMax": 7,
+          "HDMin": 7,
+          "Undead": "mummy"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 4
+          },
+          "HDMax": 8,
+          "HDMin": 8,
+          "Undead": "spectre"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 7
+          },
+          "HDMax": 9,
+          "HDMin": 9,
+          "Undead": "vampire"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 10
+          },
+          "HDMax": 10,
+          "HDMin": 10,
+          "Undead": "ghost"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 13
+          },
+          "HDMax": 0,
+          "HDMin": 11,
+          "Undead": "lich"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 16
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "special"
+        }
+      ],
+      "XPTotal": 0
+    }
+  },
+  "cleric level 7 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "priest",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 12,
+          "SkillPoints": 0,
+          "WeaponSlots": 3
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 1500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 12,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 12,
+          "LevelGained": 2,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 3,
+          "Initial": 2,
+          "Left": 3,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 13,
+        "ParaPoison": 7,
+        "PetriPoly": 10,
+        "RodStaffWand": 11,
+        "Spell": 12
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 15,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 3,
+        "2": 3,
+        "3": 2,
+        "4": 1
+      },
+      "Spellbook": null,
+      "THAC0": 16,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": [
+        {
+          "Cell": {
+            "Outcome": "destroy",
+            "Roll": 0
+          },
+          "HDMax": 1,
+          "HDMin": 1,
+          "Undead": "skeleton"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "zombie"
+        },
+        {
+          "Cell": {
+            "Outcome": "turn",
+            "Roll": 0
+          },
+          "HDMax": 2,
+          "HDMin": 2,
+          "Undead": "ghoul"
+        },
+        {
+          "Cell": {
+            "Outcome": "turn",
+            "Roll": 0
+          },
+          "HDMax": 4,
+          "HDMin": 3,
+          "Undead": "shadow"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 4
+          },
+          "HDMax": 5,
+          "HDMin": 5,
+          "Undead": "wight"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 7
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "ghast"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 10
+          },
+          "HDMax": 6,
+          "HDMin": 6,
+          "Undead": "wraith"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 13
+          },
+          "HDMax": 7,
+          "HDMin": 7,
+          "Undead": "mummy"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 16
+          },
+          "HDMax": 8,
+          "HDMin": 8,
+          "Undead": "spectre"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 19
+          },
+          "HDMax": 9,
+          "HDMin": 9,
+          "Undead": "vampire"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 20
+          },
+          "HDMax": 10,
+          "HDMin": 10,
+          "Undead": "ghost"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 11,
+          "Undead": "lich"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "special"
+        }
+      ],
+      "XPTotal": 0
+    }
+  },
+  "cleric level 7 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "priest",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 12,
+          "SkillPoints": 0,
+          "WeaponSlots": 3
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 1500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 12,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 12,
+          "LevelGained": 2,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 3,
+          "Initial": 2,
+          "Left": 3,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 13,
+        "ParaPoison": 7,
+        "PetriPoly": 10,
+        "RodStaffWand": 11,
+        "Spell": 12
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 5,
+        "2": 5,
+        "3": 3,
+        "4": 1
+      },
+      "Spellbook": null,
+      "THAC0": 16,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": [
+        {
+          "Cell": {
+            "Outcome": "destroy",
+            "Roll": 0
+          },
+          "HDMax": 1,
+          "HDMin": 1,
+          "Undead": "skeleton"
+        },
+        {
+          "Cell": {
+            "Outcome": "destroy",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "zombie"
+        },
+        {
+          "Cell": {
+            "Outcome": "turn",
+            "Roll": 0
+          },
+          "HDMax": 2,
+          "HDMin": 2,
+          "Undead": "ghoul"
+        },
+        {
+          "Cell": {
+            "Outcome": "turn",
+            "Roll": 0
+          },
+          "HDMax": 4,
+          "HDMin": 3,
+          "Undead": "shadow"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 4
+          },
+          "HDMax": 5,
+          "HDMin": 5,
+          "Undead": "wight"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 7
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "ghast"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 10
+          },
+          "HDMax": 6,
+          "HDMin": 6,
+          "Undead": "wraith"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 13
+          },
+          "HDMax": 7,
+          "HDMin": 7,
+          "Undead": "mummy"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 16
+          },
+          "HDMax": 8,
+          "HDMin": 8,
+          "Undead": "spectre"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 19
+          },
+          "HDMax": 9,
+          "HDMin": 9,
+          "Undead": "vampire"
+        },
+        {
+          "Cell": {
+            "Outcome": "",
+            "Roll": 20
+          },
+          "HDMax": 10,
+          "HDMin": 10,
+          "Undead": "ghost"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 11,
+          "Undead": "lich"
+        },
+        {
+          "Cell": {
+            "Outcome": "cannot",
+            "Roll": 0
+          },
+          "HDMax": 0,
+          "HDMin": 0,
+          "Undead": "special"
+        }
+      ],
+      "XPTotal": 0
+    }
+  },
+  "fighter level 1 chain_mail wis 10": {
+    "attackRate": {
+      "Attacks": 1,
+      "Rounds": 1,
+      "ThisRound": 0
+    },
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "warrior",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 9,
+          "SkillPoints": 0,
+          "WeaponSlots": 4
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 2000,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 9,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 9,
+          "LevelGained": 0,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -2,
+        "Picks": [],
+        "Weapon": {
+          "Available": 4,
+          "Initial": 4,
+          "Left": 4,
+          "LevelGained": 0,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 17,
+        "ParaPoison": 14,
+        "PetriPoly": 15,
+        "RodStaffWand": 16,
+        "Spell": 17
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": true,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "fighter level 1 unarmoured wis 17": {
+    "attackRate": {
+      "Attacks": 1,
+      "Rounds": 1,
+      "ThisRound": 0
+    },
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "warrior",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 9,
+          "SkillPoints": 0,
+          "WeaponSlots": 4
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 2000,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 9,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 9,
+          "LevelGained": 0,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -2,
+        "Picks": [],
+        "Weapon": {
+          "Available": 4,
+          "Initial": 4,
+          "Left": 4,
+          "LevelGained": 0,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 17,
+        "ParaPoison": 14,
+        "PetriPoly": 15,
+        "RodStaffWand": 16,
+        "Spell": 17
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": true,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "fighter level 13 chain_mail wis 10": {
+    "attackRate": {
+      "Attacks": 2,
+      "Rounds": 1,
+      "ThisRound": 0
+    },
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "warrior",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 13,
+          "SkillPoints": 0,
+          "WeaponSlots": 8
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 2000,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 13,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 13,
+          "LevelGained": 4,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -2,
+        "Picks": [],
+        "Weapon": {
+          "Available": 8,
+          "Initial": 4,
+          "Left": 8,
+          "LevelGained": 4,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 5,
+        "ParaPoison": 5,
+        "PetriPoly": 6,
+        "RodStaffWand": 7,
+        "Spell": 8
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": true,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 8,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "fighter level 13 unarmoured wis 17": {
+    "attackRate": {
+      "Attacks": 2,
+      "Rounds": 1,
+      "ThisRound": 0
+    },
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "warrior",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 13,
+          "SkillPoints": 0,
+          "WeaponSlots": 8
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 2000,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 13,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 13,
+          "LevelGained": 4,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -2,
+        "Picks": [],
+        "Weapon": {
+          "Available": 8,
+          "Initial": 4,
+          "Left": 8,
+          "LevelGained": 4,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 5,
+        "ParaPoison": 5,
+        "PetriPoly": 6,
+        "RodStaffWand": 7,
+        "Spell": 8
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": true,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 8,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "fighter level 7 chain_mail wis 10": {
+    "attackRate": {
+      "Attacks": 3,
+      "Rounds": 2,
+      "ThisRound": 0
+    },
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "warrior",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 11,
+          "SkillPoints": 0,
+          "WeaponSlots": 6
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 2000,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 11,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 11,
+          "LevelGained": 2,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -2,
+        "Picks": [],
+        "Weapon": {
+          "Available": 6,
+          "Initial": 4,
+          "Left": 6,
+          "LevelGained": 2,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 12,
+        "ParaPoison": 10,
+        "PetriPoly": 11,
+        "RodStaffWand": 12,
+        "Spell": 13
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": true,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 14,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "fighter level 7 unarmoured wis 17": {
+    "attackRate": {
+      "Attacks": 3,
+      "Rounds": 2,
+      "ThisRound": 0
+    },
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "warrior",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 11,
+          "SkillPoints": 0,
+          "WeaponSlots": 6
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 2000,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 11,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 11,
+          "LevelGained": 2,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -2,
+        "Picks": [],
+        "Weapon": {
+          "Available": 6,
+          "Initial": 4,
+          "Left": 6,
+          "LevelGained": 2,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 12,
+        "ParaPoison": 10,
+        "PetriPoly": 11,
+        "RodStaffWand": 12,
+        "Spell": 13
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": true,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 14,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "mage level 1 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "wizard",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 10,
+          "SkillPoints": 0,
+          "WeaponSlots": 1
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 2500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 10,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 10,
+          "LevelGained": 0,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -5,
+        "Picks": [],
+        "Weapon": {
+          "Available": 1,
+          "Initial": 1,
+          "Left": 1,
+          "LevelGained": 0,
+          "PerLevels": 6,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 15,
+        "ParaPoison": 14,
+        "PetriPoly": 13,
+        "RodStaffWand": 11,
+        "Spell": 12
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 1
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 9,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "mage level 1 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "wizard",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 10,
+          "SkillPoints": 0,
+          "WeaponSlots": 1
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 2500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 10,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 10,
+          "LevelGained": 0,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -5,
+        "Picks": [],
+        "Weapon": {
+          "Available": 1,
+          "Initial": 1,
+          "Left": 1,
+          "LevelGained": 0,
+          "PerLevels": 6,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 15,
+        "ParaPoison": 14,
+        "PetriPoly": 13,
+        "RodStaffWand": 11,
+        "Spell": 12
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 1
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 9,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "mage level 13 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "wizard",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 14,
+          "SkillPoints": 0,
+          "WeaponSlots": 3
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 2500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 14,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 14,
+          "LevelGained": 4,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -5,
+        "Picks": [],
+        "Weapon": {
+          "Available": 3,
+          "Initial": 1,
+          "Left": 3,
+          "LevelGained": 2,
+          "PerLevels": 6,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 11,
+        "ParaPoison": 11,
+        "PetriPoly": 9,
+        "RodStaffWand": 7,
+        "Spell": 8
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 5,
+        "2": 5,
+        "3": 5,
+        "4": 4,
+        "5": 4,
+        "6": 2
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 9,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 16,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "mage level 13 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "wizard",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 14,
+          "SkillPoints": 0,
+          "WeaponSlots": 3
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 2500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 14,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 14,
+          "LevelGained": 4,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -5,
+        "Picks": [],
+        "Weapon": {
+          "Available": 3,
+          "Initial": 1,
+          "Left": 3,
+          "LevelGained": 2,
+          "PerLevels": 6,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 11,
+        "ParaPoison": 11,
+        "PetriPoly": 9,
+        "RodStaffWand": 7,
+        "Spell": 8
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 5,
+        "2": 5,
+        "3": 5,
+        "4": 4,
+        "5": 4,
+        "6": 2
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 9,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 16,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "mage level 7 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "wizard",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 12,
+          "SkillPoints": 0,
+          "WeaponSlots": 2
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 2500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 12,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 12,
+          "LevelGained": 2,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -5,
+        "Picks": [],
+        "Weapon": {
+          "Available": 2,
+          "Initial": 1,
+          "Left": 2,
+          "LevelGained": 1,
+          "PerLevels": 6,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 13,
+        "ParaPoison": 13,
+        "PetriPoly": 11,
+        "RodStaffWand": 9,
+        "Spell": 10
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 4,
+        "2": 3,
+        "3": 2,
+        "4": 1
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 9,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 18,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "mage level 7 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 0,
+      "BardSkills": null,
+      "Group": "wizard",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 12,
+          "SkillPoints": 0,
+          "WeaponSlots": 2
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 2500,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 12,
+          "Initial": 4,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 12,
+          "LevelGained": 2,
+          "PerLevels": 3,
+          "Spent": 0
+        },
+        "Penalty": -5,
+        "Picks": [],
+        "Weapon": {
+          "Available": 2,
+          "Initial": 1,
+          "Left": 2,
+          "LevelGained": 1,
+          "PerLevels": 6,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 13,
+        "ParaPoison": 13,
+        "PetriPoly": 11,
+        "RodStaffWand": 9,
+        "Spell": 10
+      },
+      "SkillArmor": "",
+      "SkillBudget": null,
+      "SkillPoints": null,
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {
+        "1": 4,
+        "2": 3,
+        "3": 2,
+        "4": 1
+      },
+      "Spellbook": {
+        "ClassMaxSpellLevel": 9,
+        "IntMaxSpellLevel": 8,
+        "LearnChance": 75,
+        "MaxSpellsPerLevel": 14,
+        "NoMaximum": false
+      },
+      "THAC0": 18,
+      "TargetLevel": 1,
+      "ThiefSkills": null,
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "thief level 1 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 2,
+      "BardSkills": null,
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 9,
+          "SkillPoints": 0,
+          "WeaponSlots": 2
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 9,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 9,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 2,
+          "Initial": 2,
+          "Left": 2,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 16,
+        "ParaPoison": 13,
+        "PetriPoly": 12,
+        "RodStaffWand": 14,
+        "Spell": 15
+      },
+      "SkillArmor": "padded_studded_leather",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 60,
+        "Left": 0,
+        "Level": 1,
+        "PerLevel": 30,
+        "PerSkill": 30,
+        "PerSkillFirst": 30,
+        "PerSkillPerLevel": 15,
+        "Spent": 60,
+        "Total": 60
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": [
+        {
+          "Armor": -30,
+          "Base": 15,
+          "Dexterity": 5,
+          "Percent": 20,
+          "Points": 30,
+          "Race": 0,
+          "Raw": 20,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": -10,
+          "Base": 10,
+          "Dexterity": 10,
+          "Percent": 30,
+          "Points": 20,
+          "Race": 0,
+          "Raw": 30,
+          "Skill": "open_locks"
+        },
+        {
+          "Armor": -10,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -5,
+          "Skill": "find_remove_traps"
+        },
+        {
+          "Armor": -20,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -5,
+          "Skill": "move_silently"
+        },
+        {
+          "Armor": -20,
+          "Base": 5,
+          "Dexterity": 5,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -10,
+          "Skill": "hide_in_shadows"
+        },
+        {
+          "Armor": -10,
+          "Base": 15,
+          "Dexterity": 0,
+          "Percent": 5,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 5,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": -30,
+          "Base": 60,
+          "Dexterity": 0,
+          "Percent": 40,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 40,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": 0,
+          "Base": 0,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 0,
+          "Skill": "read_languages"
+        }
+      ],
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "thief level 1 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 2,
+      "BardSkills": null,
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": false,
+        "ToSpend": {
+          "NonweaponSlots": 9,
+          "SkillPoints": 0,
+          "WeaponSlots": 2
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 9,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 9,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 2,
+          "Initial": 2,
+          "Left": 2,
+          "LevelGained": 0,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 1,
+      "Saves": {
+        "Breath": 16,
+        "ParaPoison": 13,
+        "PetriPoly": 12,
+        "RodStaffWand": 14,
+        "Spell": 15
+      },
+      "SkillArmor": "none",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 60,
+        "Left": 0,
+        "Level": 1,
+        "PerLevel": 30,
+        "PerSkill": 30,
+        "PerSkillFirst": 30,
+        "PerSkillPerLevel": 15,
+        "Spent": 60,
+        "Total": 60
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 20,
+      "TargetLevel": 1,
+      "ThiefSkills": [
+        {
+          "Armor": 5,
+          "Base": 15,
+          "Dexterity": 5,
+          "Percent": 55,
+          "Points": 30,
+          "Race": 0,
+          "Raw": 55,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": 0,
+          "Base": 10,
+          "Dexterity": 10,
+          "Percent": 40,
+          "Points": 20,
+          "Race": 0,
+          "Raw": 40,
+          "Skill": "open_locks"
+        },
+        {
+          "Armor": 0,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 5,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 5,
+          "Skill": "find_remove_traps"
+        },
+        {
+          "Armor": 10,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 25,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 25,
+          "Skill": "move_silently"
+        },
+        {
+          "Armor": 5,
+          "Base": 5,
+          "Dexterity": 5,
+          "Percent": 15,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 15,
+          "Skill": "hide_in_shadows"
+        },
+        {
+          "Armor": 0,
+          "Base": 15,
+          "Dexterity": 0,
+          "Percent": 15,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 15,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": 10,
+          "Base": 60,
+          "Dexterity": 0,
+          "Percent": 80,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 80,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": 0,
+          "Base": 0,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 0,
+          "Skill": "read_languages"
+        }
+      ],
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "thief level 13 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 5,
+      "BardSkills": null,
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 12,
+          "SkillPoints": 360,
+          "WeaponSlots": 5
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 12,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 12,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 5,
+          "Initial": 2,
+          "Left": 5,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 13,
+        "ParaPoison": 10,
+        "PetriPoly": 9,
+        "RodStaffWand": 8,
+        "Spell": 9
+      },
+      "SkillArmor": "padded_studded_leather",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 60,
+        "Left": 360,
+        "Level": 13,
+        "PerLevel": 30,
+        "PerSkill": 210,
+        "PerSkillFirst": 30,
+        "PerSkillPerLevel": 15,
+        "Spent": 60,
+        "Total": 420
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 14,
+      "TargetLevel": 1,
+      "ThiefSkills": [
+        {
+          "Armor": -30,
+          "Base": 15,
+          "Dexterity": 5,
+          "Percent": 20,
+          "Points": 30,
+          "Race": 0,
+          "Raw": 20,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": -10,
+          "Base": 10,
+          "Dexterity": 10,
+          "Percent": 30,
+          "Points": 20,
+          "Race": 0,
+          "Raw": 30,
+          "Skill": "open_locks"
+        },
+        {
+          "Armor": -10,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -5,
+          "Skill": "find_remove_traps"
+        },
+        {
+          "Armor": -20,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -5,
+          "Skill": "move_silently"
+        },
+        {
+          "Armor": -20,
+          "Base": 5,
+          "Dexterity": 5,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -10,
+          "Skill": "hide_in_shadows"
+        },
+        {
+          "Armor": -10,
+          "Base": 15,
+          "Dexterity": 0,
+          "Percent": 5,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 5,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": -30,
+          "Base": 60,
+          "Dexterity": 0,
+          "Percent": 40,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 40,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": 0,
+          "Base": 0,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 0,
+          "Skill": "read_languages"
+        }
+      ],
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "thief level 13 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 5,
+      "BardSkills": null,
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 12,
+          "SkillPoints": 360,
+          "WeaponSlots": 5
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 12,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 12,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 5,
+          "Initial": 2,
+          "Left": 5,
+          "LevelGained": 3,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 13,
+      "Saves": {
+        "Breath": 13,
+        "ParaPoison": 10,
+        "PetriPoly": 9,
+        "RodStaffWand": 8,
+        "Spell": 9
+      },
+      "SkillArmor": "none",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 60,
+        "Left": 360,
+        "Level": 13,
+        "PerLevel": 30,
+        "PerSkill": 210,
+        "PerSkillFirst": 30,
+        "PerSkillPerLevel": 15,
+        "Spent": 60,
+        "Total": 420
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 14,
+      "TargetLevel": 1,
+      "ThiefSkills": [
+        {
+          "Armor": 5,
+          "Base": 15,
+          "Dexterity": 5,
+          "Percent": 55,
+          "Points": 30,
+          "Race": 0,
+          "Raw": 55,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": 0,
+          "Base": 10,
+          "Dexterity": 10,
+          "Percent": 40,
+          "Points": 20,
+          "Race": 0,
+          "Raw": 40,
+          "Skill": "open_locks"
+        },
+        {
+          "Armor": 0,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 5,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 5,
+          "Skill": "find_remove_traps"
+        },
+        {
+          "Armor": 10,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 25,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 25,
+          "Skill": "move_silently"
+        },
+        {
+          "Armor": 5,
+          "Base": 5,
+          "Dexterity": 5,
+          "Percent": 15,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 15,
+          "Skill": "hide_in_shadows"
+        },
+        {
+          "Armor": 0,
+          "Base": 15,
+          "Dexterity": 0,
+          "Percent": 15,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 15,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": 10,
+          "Base": 60,
+          "Dexterity": 0,
+          "Percent": 80,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 80,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": 0,
+          "Base": 0,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 0,
+          "Skill": "read_languages"
+        }
+      ],
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "thief level 7 chain_mail wis 10": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 3,
+      "BardSkills": null,
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 10,
+          "SkillPoints": 180,
+          "WeaponSlots": 3
+        }
+      },
+      "MagicDefence": 0,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 10,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 10,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 3,
+          "Initial": 2,
+          "Left": 3,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 15,
+        "ParaPoison": 12,
+        "PetriPoly": 11,
+        "RodStaffWand": 12,
+        "Spell": 13
+      },
+      "SkillArmor": "padded_studded_leather",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 60,
+        "Left": 180,
+        "Level": 7,
+        "PerLevel": 30,
+        "PerSkill": 120,
+        "PerSkillFirst": 30,
+        "PerSkillPerLevel": 15,
+        "Spent": 60,
+        "Total": 240
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 17,
+      "TargetLevel": 1,
+      "ThiefSkills": [
+        {
+          "Armor": -30,
+          "Base": 15,
+          "Dexterity": 5,
+          "Percent": 20,
+          "Points": 30,
+          "Race": 0,
+          "Raw": 20,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": -10,
+          "Base": 10,
+          "Dexterity": 10,
+          "Percent": 30,
+          "Points": 20,
+          "Race": 0,
+          "Raw": 30,
+          "Skill": "open_locks"
+        },
+        {
+          "Armor": -10,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -5,
+          "Skill": "find_remove_traps"
+        },
+        {
+          "Armor": -20,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -5,
+          "Skill": "move_silently"
+        },
+        {
+          "Armor": -20,
+          "Base": 5,
+          "Dexterity": 5,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": -10,
+          "Skill": "hide_in_shadows"
+        },
+        {
+          "Armor": -10,
+          "Base": 15,
+          "Dexterity": 0,
+          "Percent": 5,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 5,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": -30,
+          "Base": 60,
+          "Dexterity": 0,
+          "Percent": 40,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 40,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": 0,
+          "Base": 0,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 0,
+          "Skill": "read_languages"
+        }
+      ],
+      "Turning": null,
+      "XPTotal": 0
+    }
+  },
+  "thief level 7 unarmoured wis 17": {
+    "attackRate": null,
+    "derived": {
+      "Backstab": 3,
+      "BardSkills": null,
+      "Group": "rogue",
+      "LevelUp": {
+        "FreeSpellsOwed": null,
+        "Pending": [],
+        "RealizedAboveTarget": true,
+        "ToSpend": {
+          "NonweaponSlots": 10,
+          "SkillPoints": 180,
+          "WeaponSlots": 3
+        }
+      },
+      "MagicDefence": 3,
+      "NextLevelXP": 1250,
+      "Proficiencies": {
+        "Nonweapon": {
+          "Available": 10,
+          "Initial": 3,
+          "Intelligence": 6,
+          "Languages": 0,
+          "Left": 10,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "Penalty": -3,
+        "Picks": [],
+        "Weapon": {
+          "Available": 3,
+          "Initial": 2,
+          "Left": 3,
+          "LevelGained": 1,
+          "PerLevels": 4,
+          "Spent": 0
+        },
+        "WeaponPicks": []
+      },
+      "RaceSaveBonus": {
+        "Breath": 0,
+        "ParaPoison": 0,
+        "PetriPoly": 0,
+        "RodStaffWand": 0,
+        "Spell": 0
+      },
+      "RealizedLevel": 7,
+      "Saves": {
+        "Breath": 15,
+        "ParaPoison": 12,
+        "PetriPoly": 11,
+        "RodStaffWand": 12,
+        "Spell": 13
+      },
+      "SkillArmor": "none",
+      "SkillBudget": [],
+      "SkillPoints": {
+        "First": 60,
+        "Left": 180,
+        "Level": 7,
+        "PerLevel": 30,
+        "PerSkill": 120,
+        "PerSkillFirst": 30,
+        "PerSkillPerLevel": 15,
+        "Spent": 60,
+        "Total": 240
+      },
+      "Specializes": false,
+      "SpellFailure": 0,
+      "SpellImmunities": null,
+      "SpellSlots": {},
+      "Spellbook": null,
+      "THAC0": 17,
+      "TargetLevel": 1,
+      "ThiefSkills": [
+        {
+          "Armor": 5,
+          "Base": 15,
+          "Dexterity": 5,
+          "Percent": 55,
+          "Points": 30,
+          "Race": 0,
+          "Raw": 55,
+          "Skill": "pick_pockets"
+        },
+        {
+          "Armor": 0,
+          "Base": 10,
+          "Dexterity": 10,
+          "Percent": 40,
+          "Points": 20,
+          "Race": 0,
+          "Raw": 40,
+          "Skill": "open_locks"
+        },
+        {
+          "Armor": 0,
+          "Base": 5,
+          "Dexterity": 0,
+          "Percent": 5,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 5,
+          "Skill": "find_remove_traps"
+        },
+        {
+          "Armor": 10,
+          "Base": 10,
+          "Dexterity": 5,
+          "Percent": 25,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 25,
+          "Skill": "move_silently"
+        },
+        {
+          "Armor": 5,
+          "Base": 5,
+          "Dexterity": 5,
+          "Percent": 15,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 15,
+          "Skill": "hide_in_shadows"
+        },
+        {
+          "Armor": 0,
+          "Base": 15,
+          "Dexterity": 0,
+          "Percent": 15,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 15,
+          "Skill": "detect_noise"
+        },
+        {
+          "Armor": 10,
+          "Base": 60,
+          "Dexterity": 0,
+          "Percent": 80,
+          "Points": 10,
+          "Race": 0,
+          "Raw": 80,
+          "Skill": "climb_walls"
+        },
+        {
+          "Armor": 0,
+          "Base": 0,
+          "Dexterity": 0,
+          "Percent": 0,
+          "Points": 0,
+          "Race": 0,
+          "Raw": 0,
+          "Skill": "read_languages"
+        }
+      ],
+      "Turning": null,
+      "XPTotal": 0
+    }
+  }
+}

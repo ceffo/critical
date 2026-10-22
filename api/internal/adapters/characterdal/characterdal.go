@@ -99,6 +99,7 @@ func (d *DAL) classEntries(ctx context.Context, row queries.GetCharacterRow) ([]
 		out[i] = classes.Entry{
 			Class: r.Class, RealizedLevel: int(r.RealizedLevel), StartingXP: int(r.StartingXp),
 			State: classes.EntryState(r.State), LeftAtLevel: int(r.LeftAtLevel),
+			IgnoredAwardsThrough: r.IgnoredAwardsThrough,
 		}
 	}
 	return out, nil
@@ -340,6 +341,7 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		if err := d.q.InsertClassEntry(ctx, queries.InsertClassEntryParams{
 			CharacterID: id, Position: int64(i), Class: e.Class, RealizedLevel: int64(e.RealizedLevel),
 			StartingXp: int64(e.StartingXP), State: string(e.State), LeftAtLevel: int64(e.LeftAtLevel),
+			IgnoredAwardsThrough: e.IgnoredAwardsThrough,
 		}); err != nil {
 			return 0, fmt.Errorf("create character %d class entry %d: %w", id, i, err)
 		}

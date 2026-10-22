@@ -115,7 +115,7 @@ func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 		r.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(map[int]int{1: 3}, nil).Once()
 		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
 
-		got, err := charactersvc.Derive(kelsen(), []int{26_582}, "", r)
+		got, err := charactersvc.Derive(kelsen(), awardsOf(26_582), "", r)
 		require.NoError(t, err)
 		assert.Equal(t, 1_320_000, got.XPTotal)
 		assert.Equal(t, 16, got.TargetLevel)
@@ -368,7 +368,7 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 		r.EXPECT().SavesFor("rogue", 9).Return(rogue13to16, nil).Once()
 		r.EXPECT().SpellsPerDay(classDef("bard"), 9, mock.Anything).Return(map[int]int{1: 3}, nil).Once()
 		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
-		got, err := charactersvc.Derive(c, []int{250_000}, "", r)
+		got, err := charactersvc.Derive(c, awardsOf(250_000), "", r)
 		require.NoError(t, err)
 		assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
 			{Class: "bard", Classes: 1, Level: 10, Die: 6},
@@ -557,7 +557,7 @@ func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
 			r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
 			r.EXPECT().RogueSkills(skillSet("thief"), "elf", 17, tc.asked, map[string]int{"open_locks": 70}).Return(skills, nil).Once()
 			r.EXPECT().BackstabFor(1).Return(2, nil).Once()
-			got, err := charactersvc.Derive(c, []int{40_000}, tc.worn, r)
+			got, err := charactersvc.Derive(c, awardsOf(40_000), tc.worn, r)
 			require.NoError(t, err)
 			thief := skillSetOf(got, "thief")
 			require.NotNil(t, thief)
@@ -611,7 +611,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 			r.EXPECT().SpellsPerDay(classDef("bard"), mock.Anything, mock.Anything).Return(map[int]int{}, nil)
 			r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
 			r.EXPECT().RogueSkills(skillSet("bard"), "human", 16, tc.asked, map[string]int{"climb_walls": 40}).Return(skills, nil).Once()
-			got, err := charactersvc.Derive(c, []int{40_000}, tc.worn, r)
+			got, err := charactersvc.Derive(c, awardsOf(40_000), tc.worn, r)
 			require.NoError(t, err)
 			bard := skillSetOf(got, "bard")
 			require.NotNil(t, bard)

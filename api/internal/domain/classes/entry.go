@@ -40,6 +40,11 @@ type Entry struct {
 	// LeftAtLevel is a frozen entry's level when it was left (equal to its
 	// RealizedLevel); 0 for an active one.
 	LeftAtLevel int
+	// IgnoredAwardsThrough is the id of the last XP ledger entry the class
+	// entry ignores: it earns its share of the awards with a greater id only
+	// (ADR 0042 steps 1 and 5). 0 ignores none. A class taken by a character
+	// in play sets it at the ledger's last entry, so the entry starts at 0 XP.
+	IgnoredAwardsThrough int64
 }
 
 // SingleEntry is the one active entry of a single-class character.

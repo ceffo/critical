@@ -12,6 +12,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
+	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
@@ -41,7 +43,10 @@ func newSheetFixture(t *testing.T, c *charactersvc.Character, languages skills.L
 	f := &picksFixture{fixture: &fixture{
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
+		rulesets: rulesetmocks.NewMockResolver(t), rs: ruleset.Default(),
 	}, picks: mocks.NewMockPicks(t)}
+	f.rulesets.EXPECT().ForCharacter(mock.Anything, mock.Anything).RunAndReturn(
+		func(context.Context, int64) (ruleset.Ruleset, error) { return f.rs, nil }).Maybe()
 	svc, err := skillsvc.New(skillsvc.Deps{
 		Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: f.picks, Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets,
 		Book: testBook(t), Languages: languages, Tables: &fakeTables{}, Tx: f.tx,

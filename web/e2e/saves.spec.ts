@@ -332,16 +332,35 @@ async function wiseFighter(page: Page) {
 }
 
 // ADR 0006 step 10.2 in the browser: the saves' Spell picker (shown once "Against the mind" is
-// ticked) reaches the save request, the card
-// and the last-roll column word the server's immunity (en and fr), and the tag clears for the next
-// save. The rule (which scores, which spells, the refused adjustment) is Go tests (ruletablesadpt,
+// ticked) reaches the save request, the card and the last-roll column word the server's immunity
+// (en and fr), and unticking the box or rolling clears the tag for the next save (vitest here has no
+// DOM to click the box). The rule (which scores, which spells, the refused adjustment) is Go tests (ruletablesadpt,
 // combatsvc, router).
 test("a save against a spell the Wisdom makes the character immune to rolls nothing (en and fr)", async ({
   page,
 }) => {
   await openDashboard(page);
   await wiseFighter(page);
+  // Unticking "Against the mind" clears a chosen spell: the next save names none.
   await page.getByTestId("save-mind-affecting").check();
+  await page.getByTestId("save-spell").click();
+  await page.getByTestId("save-spell-search").fill("comma");
+  await page.getByRole("button", { name: "Save against Command" }).click();
+  await expect(page.getByTestId("save-spell-tag")).toHaveText("vs Command");
+  await page.getByTestId("save-mind-affecting").uncheck();
+  await expect(page.getByTestId("save-spell-tag")).toHaveCount(0);
+  const plain = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/roll/save") && r.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Roll save vs Spells" }).click();
+  expect((await plain).request().postDataJSON()).toEqual({
+    category: "spell",
+    mindAffecting: false,
+  });
+  await page.getByTestId("save-mind-affecting").check();
+  await expect(page.getByTestId("save-spell-tag")).toHaveCount(0);
+
   await page.getByTestId("save-spell").click();
   await page.getByTestId("save-spell-search").fill("comma");
   await page.getByRole("button", { name: "Save against Command" }).click();

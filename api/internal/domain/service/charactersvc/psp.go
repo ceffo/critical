@@ -61,3 +61,30 @@ func (s *service) setPSP(ctx context.Context, c *Character) error {
 	c.Derived.PSP = &PSPPool{Current: actionlog.CurrentPSP(c.PSPMax, total), Max: c.PSPMax}
 	return nil
 }
+
+// A night's sleep (ADR 0043 step 7, Q3): 8 hours at Table 6's sleeping rate,
+// the book's constants for every psionic class.
+const (
+	nightHours    = 8
+	sleepActivity = "sleeping"
+)
+
+// NightsPSPRecovery is ADR 0043 step 7: a night's sleep, nightHours at Table
+// 6's sleeping rate (96 at the book's 12 an hour), for a character with a
+// psionics entry; 0 for any other. The long rest's entry carries it and the
+// recording path caps it at the PSPs spent (step 5).
+func (s *service) NightsPSPRecovery(ctx context.Context, id int64) (int, error) {
+	c, err := s.reader.GetCharacter(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+	_, _, ok, err := psionicsEntry(c, s.rules)
+	if err != nil || !ok {
+		return 0, err
+	}
+	rate, err := s.rules.PSPRecoveryRate(sleepActivity)
+	if err != nil {
+		return 0, err
+	}
+	return nightHours * rate, nil
+}

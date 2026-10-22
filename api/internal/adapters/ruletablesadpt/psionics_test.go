@@ -83,3 +83,15 @@ func TestPSPMax_Step4_3_ScoresOutsideTable5(t *testing.T) {
 	_, err = phb(t).PSPMaxFor(pspRule(t), scores(14, 15, 16), 1)
 	require.Error(t, err, "a base ability under Table 5 has no base")
 }
+
+// Step 6: Table 6's hourly rates read from the fixture as data (exertion 0,
+// walking 3, resting 6, sleeping 12); an activity the table lacks is an error.
+func TestPSPRecoveryRate_Step6_Table6AsData(t *testing.T) {
+	for activity, want := range map[string]int{"exertion": 0, "walking": 3, "resting": 6, "sleeping": 12} {
+		got, err := phb(t).PSPRecoveryRate(activity)
+		require.NoError(t, err)
+		assert.Equal(t, want, got, activity)
+	}
+	_, err := phb(t).PSPRecoveryRate("meditating")
+	require.Error(t, err)
+}

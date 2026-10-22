@@ -577,6 +577,63 @@ func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_M
 	return _c
 }
 
+// NightsPSPRecovery provides a mock function with given fields: ctx, id
+func (_m *MockSVC) NightsPSPRecovery(ctx context.Context, id int64) (int, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for NightsPSPRecovery")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (int, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) int); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_NightsPSPRecovery_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'NightsPSPRecovery'
+type MockSVC_NightsPSPRecovery_Call struct {
+	*mock.Call
+}
+
+// NightsPSPRecovery is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockSVC_Expecter) NightsPSPRecovery(ctx interface{}, id interface{}) *MockSVC_NightsPSPRecovery_Call {
+	return &MockSVC_NightsPSPRecovery_Call{Call: _e.mock.On("NightsPSPRecovery", ctx, id)}
+}
+
+func (_c *MockSVC_NightsPSPRecovery_Call) Run(run func(ctx context.Context, id int64)) *MockSVC_NightsPSPRecovery_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_NightsPSPRecovery_Call) Return(_a0 int, _a1 error) *MockSVC_NightsPSPRecovery_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_NightsPSPRecovery_Call) RunAndReturn(run func(context.Context, int64) (int, error)) *MockSVC_NightsPSPRecovery_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetCurrent provides a mock function with given fields: ctx, owner, id
 func (_m *MockSVC) SetCurrent(ctx context.Context, owner uuid.UUID, id int64) error {
 	ret := _m.Called(ctx, owner, id)

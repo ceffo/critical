@@ -1,6 +1,8 @@
 // Package restsvc owns the long rest: one operation that refills everything
 // that resets overnight (spell slots and per-day items) in a single
-// transaction, so a failure in one leaves the other untouched. The rest is
+// transaction, so a failure in one leaves the other untouched. A psionic
+// character also recovers a night's sleep of PSPs (ADR 0043 step 7), carried
+// as the entry's PSP delta. The rest is
 // one action-log entry with the slot list and every refilled item count as
 // snapshots, so it blocks voiding an older cast or item use (whose "before"
 // would undo the rest) and can itself be voided.
@@ -47,6 +49,13 @@ type Items interface {
 	Warnings(ctx context.Context, characterID int64, items []itemsvc.Item) ([]itemsvc.Warning, error)
 }
 
+// PSP is the narrow port to the PSP pool (charactersvc).
+type PSP interface {
+	// NightsPSPRecovery is the PSPs a night's sleep recovers, before the
+	// cap at the maximum; 0 for a character with no psionics.
+	NightsPSPRecovery(ctx context.Context, characterID int64) (int, error)
+}
+
 // Log records the rest (actionlogsvc).
 type Log interface {
 	actionlog.Recorder
@@ -55,16 +64,17 @@ type Log interface {
 type service struct {
 	spells Spells
 	items  Items
+	psp    PSP
 	log    Log
 	tx     domain.TxRunner
 }
 
 // New constructs the service.
-func New(spells Spells, items Items, log Log, tx domain.TxRunner) (SVC, error) {
-	if spells == nil || items == nil || log == nil || tx == nil {
+func New(spells Spells, items Items, psp PSP, log Log, tx domain.TxRunner) (SVC, error) {
+	if spells == nil || items == nil || psp == nil || log == nil || tx == nil {
 		return nil, fmt.Errorf("restsvc: nil dependency")
 	}
-	return &service{spells: spells, items: items, log: log, tx: tx}, nil
+	return &service{spells: spells, items: items, psp: psp, log: log, tx: tx}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }
@@ -81,7 +91,9 @@ type restRecord struct {
 }
 
 // LongRest resets spell slots and per-day items atomically and logs it (ADR
-// 0008 steps 11 and 12).
+// 0008 steps 11 and 12). The entry's PSP delta is a night's sleep (ADR 0043
+// step 7); the recording path caps it at the PSPs spent (step 5), so undoing
+// the rest takes back what was applied.
 func (s *service) LongRest(ctx context.Context, characterID int64) (Result, error) {
 	var res Result
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -109,11 +121,16 @@ func (s *service) LongRest(ctx context.Context, characterID int64) (Result, erro
 		if err != nil {
 			return fmt.Errorf("encode long rest payload: %w", err)
 		}
+		psp, err := s.psp.NightsPSPRecovery(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("psp recovery: %w", err)
+		}
 		id, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        actionlog.KindLongRest,
 			Payload:     payload,
 			Snapshots:   snaps,
+			PSPDelta:    psp,
 		})
 		if err != nil {
 			return fmt.Errorf("record long rest: %w", err)

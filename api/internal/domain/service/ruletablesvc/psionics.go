@@ -27,6 +27,12 @@ func checkInherentPotential(rows []InherentPotentialRow, defs *classes.Registry)
 	if len(rows) > 0 {
 		return nil
 	}
+	return readByPsionics(defs)
+}
+
+// readByPsionics is the error for a psionicist table with no rows when a
+// class lists psionics, nil when none does.
+func readByPsionics(defs *classes.Registry) error {
 	for _, c := range defs.Classes() {
 		if _, ok := c.Lists(classes.KindPsionics); ok {
 			return fmt.Errorf("no rows, read by class %s", c.ID)
@@ -101,4 +107,42 @@ func (t *Tables) PSPMaxFor(rule classes.PSPRule, score func(ability string) int,
 	}
 	gain := per.Modifier + rule.PerLevel.Plus
 	return PSPMax{InherentPotential: inherent, PerLevel: gain, Max: inherent + (level-1)*gain}, nil
+}
+
+// PSPRecoveryRow is CPsiH Table 6 for an activity (ADR 0043 step 6): the PSPs
+// an hour of it recovers.
+type PSPRecoveryRow struct {
+	Activity string
+	PerHour  int
+}
+
+// PSPActivities are Table 6's activities (ADR 0043 step 6), each once.
+var PSPActivities = []string{"exertion", "walking", "resting", "sleeping"}
+
+// checkPSPRecovery: each activity once with a rate of 0 or more, and rows
+// present when a class lists psionics (ADR 0040 step 8).
+func checkPSPRecovery(rows []PSPRecoveryRow, defs *classes.Registry) error {
+	if len(rows) == 0 {
+		return readByPsionics(defs)
+	}
+	for _, r := range rows {
+		if r.PerHour < 0 {
+			return fmt.Errorf("%s: %d PSPs an hour", r.Activity, r.PerHour)
+		}
+	}
+	return once(rows, func(r PSPRecoveryRow) string { return r.Activity }, PSPActivities)
+}
+
+// PSPRecoveryRate is Table 6's hourly rate for activity (ADR 0043 step 6).
+func (t *Tables) PSPRecoveryRate(activity string) (int, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return 0, err
+	}
+	for _, r := range c.PSPRecovery {
+		if r.Activity == activity {
+			return r.PerHour, nil
+		}
+	}
+	return 0, fmt.Errorf("psp recovery: no Table 6 row for %q", activity)
 }

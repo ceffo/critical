@@ -46,6 +46,10 @@ type SVC interface {
 	// derivation, XP ledger or armour read: what the XP award's split reads
 	// (ADR 0042 step 5.1).
 	ClassEntries(ctx context.Context, id int64) ([]classes.Entry, error)
+	// NightsPSPRecovery is the PSPs a night's sleep recovers for character
+	// id (ADR 0043 step 7), before the cap at the maximum: 0 for a character
+	// with no psionics entry. No XP ledger or armour read.
+	NightsPSPRecovery(ctx context.Context, id int64) (int, error)
 	// List is the owner's characters they have not retired, in creation
 	// order (ADR 0029 steps 7.1 and 7.3).
 	List(ctx context.Context, owner uuid.UUID) ([]Summary, error)

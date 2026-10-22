@@ -107,3 +107,25 @@ func TestPSPMaxOf_Step4_MultiClassReadsThePsionicistEntry(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, ok, "no psionics entry, no maximum")
 }
+
+// Step 7: a night's sleep is 8 hours at Table 6's sleeping rate (12 an hour:
+// 96), whatever the level or the maximum, for a character with a psionics
+// entry; a character with none recovers nothing. The cap at the PSPs spent is
+// the recording path's (step 5).
+func TestNightsPSPRecovery_Step7_EightHoursAtTheSleepingRate(t *testing.T) {
+	recovery := func(c *charactersvc.Character) int {
+		t.Helper()
+		e := newEnv(t)
+		svc, err := charactersvc.New(charactersvc.Deps{
+			Reader: e.reader, XP: e.xp, Rules: cataloguetest.Tables(t), Owners: e.owners, Tx: e.tx, Sessions: e.sessions,
+			Armour: e.armour, HP: &pspLedger{}, Spells: e.spells, Book: e.book, FreeSpells: e.free,
+		})
+		require.NoError(t, err)
+		e.reader.EXPECT().GetCharacter(mock.Anything, c.ID).Return(c, nil).Once()
+		got, err := svc.NightsPSPRecovery(context.Background(), c.ID)
+		require.NoError(t, err)
+		return got
+	}
+	assert.Equal(t, 96, recovery(thiefPsionicist(181)))
+	assert.Zero(t, recovery(multi("human", entry("fighter", 5, 0), entry("thief", 5, 0))))
+}

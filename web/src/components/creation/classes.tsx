@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { draftClasses, type StepProps } from "./flow";
+import type { StepProps } from "./flow";
 import { Group } from "./kit";
 
 /** A refusal under a field, worded; same look as the class step's. */
@@ -35,17 +35,22 @@ export function ClassRows({
 }: StepProps) {
   const { t } = useTranslation();
   const dual = draft.kind === "dual";
-  const max = options.maxClasses ?? 3;
-  const used = draftClasses(draft);
+  // The limit is the server's; a class entered twice or one too many is its refusal, shown at the
+  // field it names.
+  const max = options.maxClasses;
   const rows = [
-    { cls: draft.cls, xp: draft.xp },
-    ...draft.others.map((o) => ({ cls: o.cls, xp: o.xp })),
+    { cls: draft.cls, xp: draft.xp, level: draft.firstLevel },
+    ...draft.others,
   ];
-  const setRow = (i: number, patch: Partial<{ cls: string; xp: string }>) => {
+  const setRow = (
+    i: number,
+    patch: Partial<{ cls: string; xp: string; level: string }>,
+  ) => {
     if (i === 0) {
       update({
         ...(patch.cls !== undefined && { cls: patch.cls }),
         ...(patch.xp !== undefined && { xp: patch.xp }),
+        ...(patch.level !== undefined && { firstLevel: patch.level }),
       });
       return;
     }
@@ -76,6 +81,7 @@ export function ClassRows({
           const classError = errorFor(field("class"));
           const xpError = errorFor(field("xp"));
           const leftError = errorFor(field("leftAtLevel"));
+          const levelError = errorFor(field("level"));
           const unmet =
             answer.latest?.unmetMinimums.find((u) => u.class === r.cls)
               ?.abilities ?? [];
@@ -108,11 +114,7 @@ export function ClassRows({
                 >
                   <option value="">{t("creation.classes.choose")}</option>
                   {options.classes.map((c) => (
-                    <option
-                      key={c.class}
-                      value={c.class}
-                      disabled={c.class !== r.cls && used.includes(c.class)}
-                    >
+                    <option key={c.class} value={c.class}>
                       {t(`details.classes.${c.class}`, {
                         defaultValue: c.class,
                       })}
@@ -160,6 +162,30 @@ export function ClassRows({
                 />
                 <Refusal id={id("xp")} text={xpError} />
               </div>
+              {!left && (
+                <div className="flex w-32 min-w-0 flex-col gap-1">
+                  <label htmlFor={id("level")} className={labelClass}>
+                    {t("creation.classes.level")}
+                  </label>
+                  <input
+                    id={id("level")}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={r.level}
+                    placeholder={t("creation.classes.levelFromXp")}
+                    aria-invalid={levelError ? true : undefined}
+                    aria-describedby={
+                      levelError ? `${id("level")}-error` : undefined
+                    }
+                    className={cn(
+                      fieldClass,
+                      levelError && "border-destructive",
+                    )}
+                    onChange={(e) => setRow(i, { level: e.target.value })}
+                  />
+                  <Refusal id={id("level")} text={levelError} />
+                </div>
+              )}
               {unmet.length > 0 && (
                 <p
                   className="text-label text-danger"
@@ -189,13 +215,15 @@ export function ClassRows({
           );
         })}
       </div>
-      {!dual && rows.length < max && (
+      {!dual && (max === undefined || rows.length < max) && (
         <div>
           <Button
             variant="quiet"
             size="sm"
             onClick={() =>
-              update({ others: [...draft.others, { cls: "", xp: "" }] })
+              update({
+                others: [...draft.others, { cls: "", xp: "", level: "" }],
+              })
             }
           >
             <Plus aria-hidden />

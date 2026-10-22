@@ -24,7 +24,7 @@ import {
   classOf,
   initialPlacement,
   KINDS,
-  skillClass,
+  skillsOf,
   isPlaced,
   place,
   signed,
@@ -100,7 +100,8 @@ export function ClassStep(props: StepProps) {
   // character starts with one more class to pick (ADR 0042 step 1).
   const pickKind = (kind: ClassKind) => {
     if (kind === draft.kind) return;
-    const more = draft.others.length > 0 ? draft.others : [{ cls: "", xp: "" }];
+    const more =
+      draft.others.length > 0 ? draft.others : [{ cls: "", xp: "", level: "" }];
     update({
       kind,
       others:
@@ -792,7 +793,7 @@ export function ExtrasStep({
   const budget = answer.latest?.skillPoints ?? null;
   const [busy, setBusy] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
-  const skills = skillClass(options, draft)?.skills ?? [];
+  const skills = skillsOf(options, answer.latest);
   // The hit points roll of ADR 0032 step 7 is for one class: the entries of several are typed.
   const several = draft.kind !== "single";
   // The server says whether the entries allow an 18/xx (ADR 0030 step 9 through the class's

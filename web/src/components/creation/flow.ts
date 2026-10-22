@@ -36,22 +36,16 @@ export const STEPS = [
 ] as const;
 export type StepId = (typeof STEPS)[number];
 
-/** True when the class enters a starting spellbook (ADR 0030 step 20.7: a mage or a bard), as the
- * server's options say (the class's `spellbook`). */
-export function hasSpellbook(
-  options: CreationOptions | null,
-  cls: string | string[],
-): boolean {
-  return [cls].flat().some((c) => Boolean(classOf(options, c)?.spellbook));
+/** True when a class of the draft carries a starting spellbook (ADR 0030 step 20.7: a mage or a
+ * bard): the draft's answer names it (`spellbookClass`). */
+export function hasSpellbook(answer: CreationDraft | null): boolean {
+  return Boolean(answer?.spellbookClass);
 }
 
-/** The steps the class goes through, in order: the spellbook step only for a class with a
- * spellbook (ADR 0030 step 20.7); before a class is chosen, the steps of a class without one. */
-export function stepsFor(
-  options: CreationOptions | null,
-  cls: string | string[],
-): StepId[] {
-  return STEPS.filter((s) => s !== "spellbook" || hasSpellbook(options, cls));
+/** The steps the draft goes through, in order: the spellbook step only when the draft's answer has a
+ * class carrying a spellbook (ADR 0030 step 20.7); before the answer, the steps without one. */
+export function stepsFor(answer: CreationDraft | null): StepId[] {
+  return STEPS.filter((s) => s !== "spellbook" || hasSpellbook(answer));
 }
 
 /**
@@ -61,11 +55,10 @@ export function stepsFor(
  */
 export function draftSpellbook(
   options: CreationOptions | null,
-  d: Pick<FlowDraft, "cls" | "others" | "spellbook">,
+  d: Pick<FlowDraft, "spellbook">,
+  answer: CreationDraft | null,
 ): string[] {
-  const book = draftClasses(d)
-    .map((c) => classOf(options, c)?.spellbook)
-    .find(Boolean);
+  const book = classOf(options, answer?.spellbookClass ?? "")?.spellbook;
   if (!book) return [];
   return d.spellbook ?? book.startingSpells;
 }
@@ -138,26 +131,13 @@ export function bodyClasses(
   return b.classes ? b.classes.map((c) => c.class) : b.class ? [b.class] : [];
 }
 
-/** The alignments every class of the draft admits (the server's lists, intersected). */
-export function draftAlignments(
+/** The skills the draft's skill points go to: those of the class its answer names (`skillsClass`),
+ * none before the answer or for a draft without one. */
+export function skillsOf(
   options: CreationOptions | null,
-  d: Pick<FlowDraft, "cls" | "others">,
+  answer: CreationDraft | null,
 ): string[] {
-  const lists = draftClasses(d).map(
-    (c) => classOf(options, c)?.alignments ?? [],
-  );
-  const [first, ...rest] = lists;
-  return (first ?? []).filter((a) => rest.every((l) => l.includes(a)));
-}
-
-/** The class that sets the skill points: the first of the draft's that has skills. */
-export function skillClass(
-  options: CreationOptions | null,
-  d: Pick<FlowDraft, "cls" | "others">,
-) {
-  return draftClasses(d)
-    .map((c) => classOf(options, c))
-    .find((c) => c && c.skills.length > 0);
+  return classOf(options, answer?.skillsClass ?? "")?.skills ?? [];
 }
 
 /** The class's options entry, or undefined. */
@@ -284,8 +264,8 @@ export interface StepInputs {
   name: string;
   alignment: string;
   sex: string;
-  /** The alignments the class admits, from the server's options. */
-  alignments: string[];
+  /** The alignments the draft's answer allows; null before it (nothing is known to refuse). */
+  alignments: string[] | null;
 }
 
 /** A number typed in a field: a whole number, not blank. */
@@ -319,7 +299,8 @@ export function blockedReason(step: StepId, d: StepInputs): string | null {
       if (d.name.trim() === "") return "name";
       if (d.alignment === "") return "alignment";
       // The class's limit is a refusal (ADR 0034 step 6): the server's list, not a rule of the web.
-      if (!d.alignments.includes(d.alignment)) return "alignmentAllowed";
+      if (d.alignments && !d.alignments.includes(d.alignment))
+        return "alignmentAllowed";
       return d.sex === "" ? "sex" : null;
     default:
       return null;
@@ -372,10 +353,12 @@ export type ClassKind = "single" | "multi" | "dual";
 /** The kinds of character the class step offers, in order. */
 export const KINDS: ClassKind[] = ["single", "multi", "dual"];
 
-/** A class after the first, with the XP typed for it. */
+/** A class after the first, with the XP typed for it and, optionally, its level (blank: the level
+ * its XP reaches). */
 export interface ClassRow {
   cls: string;
   xp: string;
+  level: string;
 }
 
 export interface FlowDraft {
@@ -387,6 +370,9 @@ export interface FlowDraft {
   others: ClassRow[];
   /** A dual-class character: the level the first class was left at, as typed. */
   leftAt: string;
+  /** The first class's level of a multi-class character, as typed; blank is the level its XP
+   * reaches. */
+  firstLevel: string;
   race: string;
   /** ADR 0034 step 4: a level (sent as the class's lowest XP for it) or the exact XP. */
   levelMode: "level" | "xp";
@@ -426,6 +412,7 @@ export const EMPTY_DRAFT: FlowDraft = {
   kind: "single",
   others: [],
   leftAt: "",
+  firstLevel: "",
   race: "",
   levelMode: "level",
   level: 1,
@@ -538,6 +525,7 @@ export function buildBody(
   xp: string,
   language: string,
   offersExceptional = false,
+  carried: CreationDraft | null = null,
 ): { body: NewCharacter; error: FieldError | null } {
   let error: FieldError | null = null;
   const fail = (field: string, code: string) => {
@@ -589,6 +577,16 @@ export function buildBody(
           class: c,
           xp: v !== null && Number.isNaN(v) ? null : v,
         };
+        // The level taken, typed for an active class; blank is the level its XP reaches.
+        const typedLevel = (
+          i === 0 ? draft.firstLevel : (draft.others[i - 1]?.level ?? "")
+        ).trim();
+        if (!(dual && i === 0) && typedLevel !== "") {
+          const lv = parseWhole(typedLevel);
+          if (lv === null || Number.isNaN(lv))
+            fail(`classes.${i}.level`, "out_of_range");
+          else entry.level = lv;
+        }
         if (dual && i === 0) {
           const left = parseWhole(draft.leftAt);
           if (left !== null && Number.isNaN(left))
@@ -601,15 +599,15 @@ export function buildBody(
       },
     );
   }
-  const cls = skillClass(options, draft);
+  const skills = skillsOf(options, carried);
   if (offersExceptional && draft.strExceptional.trim() !== "") {
     const v = parseWhole(draft.strExceptional);
     if (v === null || Number.isNaN(v)) fail("strExceptional", "out_of_range");
     else body.strExceptional = v;
   }
-  if (cls && cls.skills.length > 0) {
+  if (skills.length > 0) {
     body.skillPoints = {};
-    for (const skill of cls.skills) {
+    for (const skill of skills) {
       const raw = draft.skillPoints[skill] ?? "";
       if (raw.trim() === "") continue;
       const v = parseWhole(raw);
@@ -623,7 +621,7 @@ export function buildBody(
       ...(draft.picks.length > 0 && { nonweapon: draft.picks }),
       ...(draft.weaponPicks.length > 0 && { weapon: draft.weaponPicks }),
     };
-  const spells = draftSpellbook(options, draft);
+  const spells = draftSpellbook(options, draft, carried);
   if (spells.length > 0) body.spellbook = spells;
   const {
     body: details,

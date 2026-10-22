@@ -196,6 +196,8 @@ type checked struct {
 	// exceptional: an active entry's class lists exceptional_strength, the Strength entered is 18
 	// and the race rolls it.
 	exceptional bool
+	// alignments are the alignments every active entry's class admits (alignmentsOfEntries).
+	alignments []string
 }
 
 // entries are the class entries n enters: Classes, else the one active entry Class and XP state.
@@ -546,7 +548,8 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 		}
 		entries = append(entries, entry)
 	}
-	details, missing, err := newDetails(alignmentsOfEntries(defs, entries), n.Details, !draft)
+	out.alignments = alignmentsOfEntries(defs, entries)
+	details, missing, err := newDetails(out.alignments, n.Details, !draft)
 	if err != nil {
 		refuse(err)
 	}
@@ -750,6 +753,8 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	// form offers the 18/xx field when the server says so, never by a rule
 	// of its own.
 	out.ExceptionalStrength = k.exceptional
+	out.Alignments = k.alignments
+	out.SkillsClass, out.SpellbookClass = carriers(k.active)
 	if !k.derivable {
 		if k.levelled {
 			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
@@ -784,6 +789,21 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	out.Refusals = append(out.Refusals, refusals...)
 	out.Character = &c
 	return out, nil
+}
+
+// carriers are the classes that carry the character's skill points (ADR 0030 steps 17 and 18) and
+// its starting spellbook (step 20.7): the first active class listing rogue skills, the first
+// listing a spellbook, "" for none. The form reads them here instead of choosing.
+func carriers(active []classes.Class) (skills, book string) {
+	for _, def := range active {
+		if _, ok := def.Lists(classes.KindRogueSkills); ok && skills == "" {
+			skills = def.ID
+		}
+		if _, ok := def.Lists(classes.KindSpellbook); ok && book == "" {
+			book = def.ID
+		}
+	}
+	return skills, book
 }
 
 // skillsLevel is the level the skill point budget reads before a character derives: the skills
@@ -1230,6 +1250,13 @@ type Draft struct {
 	// (ADR 0040 step 3), the Strength entered is 18 and the race rolls it. The form offers the
 	// 18/xx field on it, and sends one only then.
 	ExceptionalStrength bool
+	// Alignments are the alignments every active entry's class admits (ADR 0042 step 2), in the
+	// first class's order: every one of the nine before a class is entered. The class left by a
+	// dual-class character does not limit them.
+	Alignments []string
+	// SkillsClass is the active class that carries the skill points (the first listing rogue
+	// skills), SpellbookClass the one that carries the starting spellbook; "" for none.
+	SkillsClass, SpellbookClass string
 }
 
 // ClassUnmet is a class and the abilities under its minimum.

@@ -641,6 +641,13 @@ export interface CreationDraft {
    * Strength entered is 18 and the race rolls it. The form offers the 18/xx field on it (no rule
    * of its own). */
   exceptionalStrength: boolean;
+  /** The alignments every active class admits (a class left does not limit them): the form lists
+   * them and checks none itself. */
+  alignments: string[];
+  /** The class that carries the skill points and the one that carries the starting spellbook ("" for
+   * none): the form reads them, it does not choose. */
+  skillsClass: string;
+  spellbookClass: string;
 }
 
 /** A level and the lowest XP that reaches it, for one class. */

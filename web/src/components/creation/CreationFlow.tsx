@@ -28,8 +28,6 @@ import {
   buildBody,
   bodyClasses,
   classKey,
-  draftAlignments,
-  draftClasses,
   draftSpellbook,
   draftXp,
   exceptionalOffered,
@@ -162,17 +160,28 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     answered?.data?.exceptionalStrength === true,
     draft,
   );
+  // The last answer for the draft's classes: it says which class carries the skill points and the
+  // spellbook and which alignments are allowed (the form chooses none of them).
+  const latestAnswer = answered?.cls === classKey(draft) ? answered.data : null;
   const built = options
-    ? buildBody(options, draft, xp, i18n.language, offersExceptional)
+    ? buildBody(
+        options,
+        draft,
+        xp,
+        i18n.language,
+        offersExceptional,
+        latestAnswer,
+      )
     : null;
   const body = built && !built.error ? built.body : null;
   // An alignment the class's list leaves out is already shown refused (from the options); the
   // draft is asked without it, so the step still gets the server's other warnings meanwhile.
-  const allowedAlignments = draftAlignments(options, draft);
+  const allowedAlignments = latestAnswer?.alignments ?? null;
   const asked = built?.body;
   const draftKey = asked
     ? JSON.stringify(
         asked.details?.alignment !== undefined &&
+          allowedAlignments &&
           !allowedAlignments.includes(asked.details.alignment)
           ? { ...asked, details: { ...asked.details, alignment: undefined } }
           : asked,
@@ -215,7 +224,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   const fresh = answered !== null && answered.key === draftKey;
   const answer: DraftAnswer = {
     current: fresh ? answered.data : null,
-    latest: answered?.cls === classKey(draft) ? answered.data : null,
+    latest: latestAnswer,
     failed: fresh ? answered.failed : null,
   };
   // The refusals the creation would meet are shown as the former preview showed them (ADR 0034 step
@@ -317,7 +326,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   // The class's steps (the spellbook step for a mage or a bard only); `reached` counts in STEPS,
   // so a class picked again keeps what was reached.
-  const steps = stepsFor(options, draftClasses(draft));
+  const steps = stepsFor(answer.latest);
   const index = steps.indexOf(step);
   const go = (to: StepId) => {
     setStep(to);
@@ -399,7 +408,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       name: draft.name,
       alignment: draft.details.alignment,
       sex: draft.details.sex,
-      alignments: draftAlignments(options, draft),
+      alignments: answer.latest?.alignments ?? null,
     }) ?? (unreadable ? "unreadable" : null);
   const last = index === steps.length - 1;
   const lead =
@@ -440,6 +449,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
           current={step}
           reached={reached}
           draft={draft}
+          answer={answer.latest}
           onGo={go}
         />
         <main
@@ -564,6 +574,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 function useStepChoice(
   draft: FlowDraft,
   options: CreationOptions,
+  answer: CreationDraft | null,
 ): (step: StepId) => string | null {
   const { t } = useTranslation();
   return (step) => {
@@ -592,7 +603,7 @@ function useStepChoice(
         return parts.length > 0 ? parts.join(" · ") : null;
       }
       case "spellbook": {
-        const n = draftSpellbook(options, draft).length;
+        const n = draftSpellbook(options, draft, answer).length;
         return n > 0 ? t("creation.spellbook.spellsN", { count: n }) : null;
       }
       case "identity":
@@ -645,6 +656,7 @@ function StepList({
   current,
   reached,
   draft,
+  answer,
   onGo,
 }: {
   options: CreationOptions;
@@ -652,10 +664,11 @@ function StepList({
   current: StepId;
   reached: number;
   draft: FlowDraft;
+  answer: CreationDraft | null;
   onGo: (s: StepId) => void;
 }) {
   const { t } = useTranslation();
-  const choice = useStepChoice(draft, options);
+  const choice = useStepChoice(draft, options, answer);
   return (
     <nav
       className="zone-card flex w-[clamp(14rem,15vw,16rem)] shrink-0 flex-col"
@@ -736,7 +749,7 @@ function ReviewFoot({
 function Building({ options, draft, xp, answer, body, language }: StepProps) {
   const { t } = useTranslation();
   const spellName = useSpellName();
-  const spells = draftSpellbook(options, draft);
+  const spells = draftSpellbook(options, draft, answer.latest);
   const languageName = useLanguageNames(options);
   const units = unitsFor(language);
   const dash = <span className="text-ink-muted">—</span>;
@@ -835,7 +848,7 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
               ? draft.picks.map((p) => skillName(t, p.id)).join(", ")
               : dash}
           </dd>
-          {hasSpellbook(options, draftClasses(draft)) && (
+          {hasSpellbook(answer.latest) && (
             <>
               <dt className="text-ink-muted">{t("creation.spellbook.name")}</dt>
               <dd className="break-words" data-testid="building-spellbook">

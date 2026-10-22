@@ -338,6 +338,53 @@ func (_c *MockQuerier_CurrentCharacter_Call) RunAndReturn(run func(context.Conte
 	return _c
 }
 
+// DeleteClassEntries provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) DeleteClassEntries(ctx context.Context, characterID int64) error {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteClassEntries")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_DeleteClassEntries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteClassEntries'
+type MockQuerier_DeleteClassEntries_Call struct {
+	*mock.Call
+}
+
+// DeleteClassEntries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockQuerier_Expecter) DeleteClassEntries(ctx interface{}, characterID interface{}) *MockQuerier_DeleteClassEntries_Call {
+	return &MockQuerier_DeleteClassEntries_Call{Call: _e.mock.On("DeleteClassEntries", ctx, characterID)}
+}
+
+func (_c *MockQuerier_DeleteClassEntries_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_DeleteClassEntries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_DeleteClassEntries_Call) Return(_a0 error) *MockQuerier_DeleteClassEntries_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_DeleteClassEntries_Call) RunAndReturn(run func(context.Context, int64) error) *MockQuerier_DeleteClassEntries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetACOverride provides a mock function with given fields: ctx, id
 func (_m *MockQuerier) GetACOverride(ctx context.Context, id int64) (queries.GetACOverrideRow, error) {
 	ret := _m.Called(ctx, id)
@@ -1002,6 +1049,63 @@ func (_c *MockQuerier_SetACOverride_Call) Return(_a0 int64, _a1 error) *MockQuer
 }
 
 func (_c *MockQuerier_SetACOverride_Call) RunAndReturn(run func(context.Context, queries.SetACOverrideParams) (int64, error)) *MockQuerier_SetACOverride_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetClassColumns provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) SetClassColumns(ctx context.Context, arg queries.SetClassColumnsParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetClassColumns")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetClassColumnsParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetClassColumnsParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.SetClassColumnsParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_SetClassColumns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetClassColumns'
+type MockQuerier_SetClassColumns_Call struct {
+	*mock.Call
+}
+
+// SetClassColumns is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.SetClassColumnsParams
+func (_e *MockQuerier_Expecter) SetClassColumns(ctx interface{}, arg interface{}) *MockQuerier_SetClassColumns_Call {
+	return &MockQuerier_SetClassColumns_Call{Call: _e.mock.On("SetClassColumns", ctx, arg)}
+}
+
+func (_c *MockQuerier_SetClassColumns_Call) Run(run func(ctx context.Context, arg queries.SetClassColumnsParams)) *MockQuerier_SetClassColumns_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.SetClassColumnsParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_SetClassColumns_Call) Return(_a0 int64, _a1 error) *MockQuerier_SetClassColumns_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_SetClassColumns_Call) RunAndReturn(run func(context.Context, queries.SetClassColumnsParams) (int64, error)) *MockQuerier_SetClassColumns_Call {
 	_c.Call.Return(run)
 	return _c
 }

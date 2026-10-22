@@ -6,6 +6,8 @@ import (
 	acsvc "github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	charactersvc "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 
+	classes "github.com/ceffo/critical/api/internal/domain/classes"
+
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
@@ -476,6 +478,54 @@ func (_c *MockCharacterStore_RepairCurrentCharacter_Call) Return(_a0 error) *Moc
 }
 
 func (_c *MockCharacterStore_RepairCurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockCharacterStore_RepairCurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReplaceClassEntries provides a mock function with given fields: ctx, id, entries
+func (_m *MockCharacterStore) ReplaceClassEntries(ctx context.Context, id int64, entries []classes.Entry) error {
+	ret := _m.Called(ctx, id, entries)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReplaceClassEntries")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, []classes.Entry) error); ok {
+		r0 = rf(ctx, id, entries)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_ReplaceClassEntries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReplaceClassEntries'
+type MockCharacterStore_ReplaceClassEntries_Call struct {
+	*mock.Call
+}
+
+// ReplaceClassEntries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+//   - entries []classes.Entry
+func (_e *MockCharacterStore_Expecter) ReplaceClassEntries(ctx interface{}, id interface{}, entries interface{}) *MockCharacterStore_ReplaceClassEntries_Call {
+	return &MockCharacterStore_ReplaceClassEntries_Call{Call: _e.mock.On("ReplaceClassEntries", ctx, id, entries)}
+}
+
+func (_c *MockCharacterStore_ReplaceClassEntries_Call) Run(run func(ctx context.Context, id int64, entries []classes.Entry)) *MockCharacterStore_ReplaceClassEntries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].([]classes.Entry))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_ReplaceClassEntries_Call) Return(_a0 error) *MockCharacterStore_ReplaceClassEntries_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_ReplaceClassEntries_Call) RunAndReturn(run func(context.Context, int64, []classes.Entry) error) *MockCharacterStore_ReplaceClassEntries_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -99,6 +99,7 @@ func (d *DAL) classEntries(ctx context.Context, row queries.GetCharacterRow) ([]
 		out[i] = classes.Entry{
 			Class: r.Class, RealizedLevel: int(r.RealizedLevel), StartingXP: int(r.StartingXp),
 			State: classes.EntryState(r.State), LeftAtLevel: int(r.LeftAtLevel),
+			IgnoredAwardsThrough: r.IgnoredAwardsThrough,
 		}
 	}
 	return out, nil
@@ -131,6 +132,40 @@ func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, class string, real
 		RealizedLevel: int64(realizedLevel), CharacterID: id,
 	}); err != nil {
 		return fmt.Errorf("set realized level of the class entry: %w", err)
+	}
+	return nil
+}
+
+// ReplaceClassEntries implements dualclasssvc.DAL: the character's class entries are replaced
+// whole (ADR 0042 step 3, and the undo and redo of taking a class). The characters columns keep
+// the first active entry's class, level and starting XP (migration 035). Refused as
+// classes.ValidateEntries does; domain.ErrCharacterNotFound for an unknown character.
+func (d *DAL) ReplaceClassEntries(ctx context.Context, id int64, entries []classes.Entry) error {
+	if err := classes.ValidateEntries(entries); err != nil {
+		return err
+	}
+	first, _ := classes.Primary(entries) // ValidateEntries refused a character with no active entry
+	n, err := d.q.SetClassColumns(ctx, queries.SetClassColumnsParams{
+		Class: first.Class, RealizedLevel: sql.NullInt64{Int64: int64(first.RealizedLevel), Valid: true},
+		XpTotal: int64(first.StartingXP), ID: id,
+	})
+	if err != nil {
+		return fmt.Errorf("set class columns: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	if err := d.q.DeleteClassEntries(ctx, id); err != nil {
+		return fmt.Errorf("delete class entries of character %d: %w", id, err)
+	}
+	for i, e := range entries {
+		if err := d.q.InsertClassEntry(ctx, queries.InsertClassEntryParams{
+			CharacterID: id, Position: int64(i), Class: e.Class, RealizedLevel: int64(e.RealizedLevel),
+			StartingXp: int64(e.StartingXP), State: string(e.State), LeftAtLevel: int64(e.LeftAtLevel),
+			IgnoredAwardsThrough: e.IgnoredAwardsThrough,
+		}); err != nil {
+			return fmt.Errorf("insert class entry %d of character %d: %w", i, id, err)
+		}
 	}
 	return nil
 }
@@ -340,6 +375,7 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		if err := d.q.InsertClassEntry(ctx, queries.InsertClassEntryParams{
 			CharacterID: id, Position: int64(i), Class: e.Class, RealizedLevel: int64(e.RealizedLevel),
 			StartingXp: int64(e.StartingXP), State: string(e.State), LeftAtLevel: int64(e.LeftAtLevel),
+			IgnoredAwardsThrough: e.IgnoredAwardsThrough,
 		}); err != nil {
 			return 0, fmt.Errorf("create character %d class entry %d: %w", id, i, err)
 		}

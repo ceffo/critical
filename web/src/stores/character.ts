@@ -4,6 +4,7 @@ import {
   fetchCharacter,
   patchCharacterDetails,
   rollLevelUp,
+  takeNewClass,
 } from "@/api/character";
 import { renameCharacter } from "@/api/characters";
 import { ApiError } from "@/api/http";
@@ -33,12 +34,33 @@ interface CharacterStore {
     die?: number,
     cls?: string,
   ) => Promise<ApiError | null>;
+  /** The character takes `cls` as a new class (ADR 0042 step 3), a transaction on the action stack
+   * run by the action module, which reads again what it names (the sheet, the XP, the journal).
+   * Null on success; a refusal is returned as its ApiError (the dialog words it), anything else goes
+   * to the action module's error notice. */
+  takeNewClass: (cls: string) => Promise<ApiError | null>;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
   character: null,
   rollLevelUp: (level, die, cls) =>
     useTableStore.getState().submit(() => rollLevelUp(level, die, cls)),
+  takeNewClass: async (cls) => {
+    let refused: ApiError | null = null;
+    await useTableStore.getState().submit(async () => {
+      try {
+        await takeNewClass(cls);
+      } catch (e) {
+        // A refusal (409 with a code) is the dialog's to word; nothing changed, nothing to read.
+        if (e instanceof ApiError && e.status < 500) {
+          refused = e;
+          return;
+        }
+        throw e;
+      }
+    });
+    return refused;
+  },
   loading: false,
   error: null,
   loadCharacter: async () => {

@@ -26,6 +26,8 @@ type Querier interface {
 	// The user's current character, read through the ownership: no row when it is none, retired or
 	// not theirs.
 	CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, error)
+	// Taking a new class and its undo (ADR 0042 step 3): the entries are replaced whole, in one transaction.
+	DeleteClassEntries(ctx context.Context, characterID int64) error
 	// The AC override (ADR 0033 step 13), NULL for none.
 	GetACOverride(ctx context.Context, id int64) (GetACOverrideRow, error)
 	// level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
@@ -55,6 +57,8 @@ type Querier interface {
 	RetireCharacter(ctx context.Context, arg RetireCharacterParams) (int64, error)
 	// Setting, clearing (NULL and an empty label) and the undo of either.
 	SetACOverride(ctx context.Context, arg SetACOverrideParams) (int64, error)
+	// The first active entry's class, level and XP are the characters columns' too (migration 035).
+	SetClassColumns(ctx context.Context, arg SetClassColumnsParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
 	SetEntryLevel(ctx context.Context, arg SetEntryLevelParams) (int64, error)

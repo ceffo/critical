@@ -124,6 +124,7 @@ const expected: Record<(typeof STATE_FAMILIES)[number], Slice[]> = {
   initiative: ["round"],
   items: ["ac", "buffs", "items", "skills", "spellInfo", "strength", "weapons"],
   proficiencies: ["character", "items", "skills", "weapons"],
+  class_entries: ["character", "hp", "skills", "slots", "spellInfo", "xp"],
   realized_level: ["character", "hp", "skills", "slots", "spellInfo"],
   round: ["round"],
   saved_buffs: ["savedBuffs"],

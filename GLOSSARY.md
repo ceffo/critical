@@ -121,8 +121,8 @@ The level taken, and the one the XP total gives; "level" alone is the realized o
 Taking one pending level. [ADR 0030](docs/adr/0030-classes-and-races.md) step 7.
 
 **XP** and the **XP ledger** (fr: XP, registre):
-Experience points, and the entries that add to the starting XP. [ADR 0015](docs/adr/0015-experience.md).
-_Code_: XPLedger, LevelXP
+Experience points, and the entries that add to the starting XP (an **award** is one entry’s amount, base plus bonus; a class entry taken later ignores the awards up to its cut-off). [ADR 0015](docs/adr/0015-experience.md).
+_Code_: XPLedger, LevelXP, Award
 
 **Hit points** (fr: points de vie):
 **Max HP**, **current HP**, the **condition** (ok, badly wounded, unconscious, dead) and the HP

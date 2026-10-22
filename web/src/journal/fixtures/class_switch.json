@@ -1,0 +1,10 @@
+{
+  "switch": {
+    "payload": {
+      "from": "fighter",
+      "to": "mage",
+      "leftAtLevel": 6,
+      "xp": 21000
+    }
+  }
+}

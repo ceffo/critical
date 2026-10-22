@@ -39,3 +39,18 @@ export function rollLevelUp(
 export function turnUndead(undead: string): Promise<TurnResult> {
   return post<TurnResult>("/api/character/turn-undead", { undead });
 }
+
+/** What a class switch did (ADR 0042 step 3): the class left, frozen at `leftAtLevel` with `xp`, and
+ * the class taken, at level 1. */
+export interface DualClassResult {
+  from: string;
+  to: string;
+  leftAtLevel: number;
+  xp: number;
+}
+
+/** The character takes `cls` as a new class and its old one is frozen (ADR 0042 step 3). A refusal
+ * is an ApiError whose message is the code's wording. */
+export function takeNewClass(cls: string): Promise<DualClassResult> {
+  return post<DualClassResult>("/api/character/dual-class", { class: cls });
+}

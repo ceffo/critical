@@ -19,6 +19,7 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -70,6 +71,11 @@ func undoCases() []undoCase {
 		}},
 		{"a level-up roll's realized level", "realized_level", reencoded("realized level (levelupsvc)"), func(h *harness) {
 			h.Character.EXPECT().SetRealizedLevel(mock.Anything, characterID, "", 15, 85).Return(nil).Once()
+		}},
+		{"the class entries (a class switch undone)", "class_entries", `{"state":{"entries":[{"class":"fighter","realizedLevel":9,"startingXp":0,"state":"active","leftAtLevel":0,"ignoredAwardsThrough":0}]}}`, func(h *harness) {
+			h.Character.EXPECT().ReplaceClassEntries(mock.Anything, characterID, []classes.Entry{
+				{Class: "fighter", RealizedLevel: 9, State: classes.EntryActive},
+			}).Return(nil).Once()
 		}},
 		{"a learned spell (family spellbook) taken out", "spellbook:sleep", reencoded("spellbook (learnsvc): the spell goes to the envelope"), func(h *harness) {
 			h.Spellbook.EXPECT().RemoveEntry(mock.Anything, characterID, "sleep").Return(nil).Once()

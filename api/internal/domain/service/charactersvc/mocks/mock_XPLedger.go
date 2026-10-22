@@ -5,6 +5,8 @@ package mocks
 import (
 	context "context"
 
+	charactersvc "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -22,23 +24,23 @@ func (_m *MockXPLedger) EXPECT() *MockXPLedger_Expecter {
 }
 
 // Awards provides a mock function with given fields: ctx, characterID
-func (_m *MockXPLedger) Awards(ctx context.Context, characterID int64) ([]int, error) {
+func (_m *MockXPLedger) Awards(ctx context.Context, characterID int64) ([]charactersvc.Award, error) {
 	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Awards")
 	}
 
-	var r0 []int
+	var r0 []charactersvc.Award
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]int, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]charactersvc.Award, error)); ok {
 		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) []int); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []charactersvc.Award); ok {
 		r0 = rf(ctx, characterID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]int)
+			r0 = ret.Get(0).([]charactersvc.Award)
 		}
 	}
 
@@ -70,12 +72,12 @@ func (_c *MockXPLedger_Awards_Call) Run(run func(ctx context.Context, characterI
 	return _c
 }
 
-func (_c *MockXPLedger_Awards_Call) Return(_a0 []int, _a1 error) *MockXPLedger_Awards_Call {
+func (_c *MockXPLedger_Awards_Call) Return(_a0 []charactersvc.Award, _a1 error) *MockXPLedger_Awards_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockXPLedger_Awards_Call) RunAndReturn(run func(context.Context, int64) ([]int, error)) *MockXPLedger_Awards_Call {
+func (_c *MockXPLedger_Awards_Call) RunAndReturn(run func(context.Context, int64) ([]charactersvc.Award, error)) *MockXPLedger_Awards_Call {
 	_c.Call.Return(run)
 	return _c
 }

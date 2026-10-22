@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/dualclasssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
@@ -177,6 +178,14 @@ var mappings = []mapping{
 	{target: ruletablesvc.ErrCannotTurn, status: http.StatusBadRequest, code: "cannot_turn_undead"},
 	{target: turnsvc.ErrClassCannotTurn, status: http.StatusBadRequest, code: "class_cannot_turn"},
 	{target: levelupsvc.ErrNotPending, status: http.StatusConflict, code: "level_up_not_pending"},
+	// Taking a new class (ADR 0042 steps 2.2 and 3): refused before anything is written.
+	{target: dualclasssvc.ErrNotAllowed, status: http.StatusConflict, code: "dualclass_not_allowed"},
+	{target: dualclasssvc.ErrPrimeRequisiteTooLow, status: http.StatusConflict, code: "prime_requisite_too_low"},
+	{target: dualclasssvc.ErrLevelTooLow, status: http.StatusConflict, code: "level_too_low"},
+	{target: dualclasssvc.ErrClassAlreadyLeft, status: http.StatusConflict, code: "class_already_left"},
+	{target: dualclasssvc.ErrSameClass, status: http.StatusConflict, code: "dualclass_same_class"},
+	{target: dualclasssvc.ErrMinimumsNotMet, status: http.StatusConflict, code: "dualclass_minimums_not_met"},
+	{target: dualclasssvc.ErrAlignmentNotAllowed, status: http.StatusConflict, code: "dualclass_alignment_not_allowed"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},
 	{target: spelleffectsvc.ErrUnknownMode, status: http.StatusBadRequest, code: "unknown_spell_mode"},
 	{target: spelleffectsvc.ErrNoExposure, status: http.StatusBadRequest, code: "no_exposure"},

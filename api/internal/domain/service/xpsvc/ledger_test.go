@@ -305,8 +305,8 @@ func TestPreview_IsStep1AndValidatesTheBase(t *testing.T) {
 // step 3), award by award (ADR 0042 step 5).
 func TestTotals_Awards(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
-	dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{{Base: 1000, Bonus: true}, {Base: 25}}, nil).Once()
+	dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{{ID: 7, Base: 1000, Bonus: true}, {ID: 5, Base: 25}}, nil).Once()
 	got, err := xpsvc.Totals{DAL: dal}.Awards(context.Background(), 1)
 	require.NoError(t, err)
-	assert.Equal(t, []int{1100, 25}, got)
+	assert.Equal(t, []charactersvc.Award{{ID: 7, Amount: 1100}, {ID: 5, Amount: 25}}, got)
 }

@@ -206,7 +206,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    `ruletablesvc.MinorSphereMaxLevel` and the class-keyed rows' reader are gone; the artifact still carries
    the rows until the next format drops them (step 11.4).)_
 
-   _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) steps 2 and 3, on implementation: two new kinds, `psionics` (params `progression`, `psp`, `recovery`; the PSPs, picks and power checks of ADR 0043 steps 4 to 12) and `save_bonus` (params `against`, `bonus`; ADR 0043 step 3); the psionicist lists both)_
+   _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) steps 2 and 3, on implementation: two new kinds, `psionics` (params `progression`, `psp`, `recovery`; the PSPs, picks and power checks of ADR 0043 steps 4 to 12) and `save_bonus` (params `against`, `bonus`; ADR 0043 step 3); the psionicist lists both. As built, 2026-10-22: both are in `classes.FeatureKinds` with no params read (the schema checks them) and are **not implemented**: `classes.Class.Implemented` is false for a class listing one, which step 8's creation gate reads.)_
 
 4. **The closed list of race trait kinds:**
 
@@ -290,10 +290,16 @@ writes `Test<name>` and adds the prefix here in the same PR.
    missing parameter, a kind listed twice on a class, a class whose group has no THAC0, save,
    hit dice or slot rows, a `spell_progression` or `table` naming no table, a race or class key in
    a table that names no definition, and a level-limit row for an unknown class. Every class the
-   catalogue defines is **creatable** (`CreatableClasses` goes): a class that passed the check is
-   fully supported.
+   catalogue defines is **creatable** (`CreatableClasses` goes) when every feature kind it lists is
+   implemented: a class that passed the check is fully supported, except a class listing a kind of
+   step 3 that the code does not compute yet (`psionics`, `save_bonus`, until ADR 0043's items land),
+   which the catalogue may define but creation neither offers nor accepts. The gate reads kinds,
+   never class ids.
    Tests: `Import_Step8_RefusesAnUnknownKindOrParam`, `Import_Step8_RefusesARowForAnUnknownClass`
-   (ruletablesadpt), `Options_Step8_EveryCatalogueClassIsCreatable` (charactersvc).
+   (ruletablesadpt), `Options_Step8_EveryCatalogueClassIsCreatable` (charactersvc: every class but the one
+   listing an unimplemented kind), `Create_RefusesInvalidInputWithFieldErrors` (the psionicist: `not_creatable`),
+   `Features_Step8_AClassIsImplementedWhenEveryKindIs` (domain/classes), `Create_Options` (composition: the five
+   book classes, unchanged).
    _(As built, 2026-10-22, for the fields read so far: `classes.New` refuses an unknown group or ability, a class
    without a prime requisite, an unknown alignment, a class or race listed twice and XP rows that are not levels
    1 to 20 from 0 and increasing (`Import_Step8_TheRegistryRefusesBrokenDefinitions`, domain/classes); the

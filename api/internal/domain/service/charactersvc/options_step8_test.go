@@ -14,8 +14,8 @@ import (
 )
 
 // ADR 0040 step 8: every class the catalogue defines is creatable, with no Go
-// list of the creatable classes. A catalogue with a sixth class, a rogue the
-// code has never seen, offers it after the five, with its group's hit die,
+// list of the creatable classes. A catalogue with a seventh class, a rogue the
+// code has never seen, offers it after the six, with its group's hit die,
 // its minimums, its alignments and the races the level limits admit.
 func TestOptions_Step8_EveryCatalogueClassIsCreatable(t *testing.T) {
 	fixture := cataloguetest.Definitions(t)
@@ -51,7 +51,7 @@ func TestOptions_Step8_EveryCatalogueClassIsCreatable(t *testing.T) {
 	for i, c := range got.Classes {
 		ids[i] = c.Class
 	}
-	assert.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard", "test_skald"}, ids, "the catalogue's classes, in its order")
+	assert.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard", "test_skald"}, ids, "the catalogue's classes in its order, but the psionicist: it lists kinds the code does not compute yet (step 8)")
 	opt := got.Classes[5]
 	assert.Equal(t, 6, opt.HitDie, "the rogue group's die")
 	assert.Equal(t, []classes.AbilityMinimum{{Ability: "cha", Min: 14}}, opt.Minimums)

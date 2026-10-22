@@ -345,6 +345,10 @@ test("a save against a spell the Wisdom makes the character immune to rolls noth
   await page.getByTestId("save-mind-affecting").check();
   await page.getByTestId("save-spell").click();
   await page.getByTestId("save-spell-search").fill("comma");
+  // The picker words the class, never the catalogue code.
+  const option = page.getByTestId("save-spell-option").first();
+  await expect(option).toContainText("Priest");
+  await expect(option).not.toContainText("priest");
   await page.getByRole("button", { name: "Save against Command" }).click();
   await expect(page.getByTestId("save-spell-tag")).toHaveText("vs Command");
   await page.getByTestId("save-mind-affecting").uncheck();
@@ -399,4 +403,17 @@ test("a save against a spell the Wisdom makes the character immune to rolls noth
       .getByTestId("save-immunity"),
   ).toHaveText(/^Sagesse 19 : immunité contre .+, aucun jet$/);
   await snap(page, "save-immune-fr");
+
+  // The picker words the class in French too.
+  await page.getByTestId("save-mind-affecting").check();
+  await page.getByTestId("save-spell").click();
+  await page.getByTestId("save-spell-search").fill("comma");
+  await expect(page.getByTestId("save-spell-option").first()).toContainText(
+    "Prêtre",
+  );
+  await expect(page.getByTestId("save-spell-option").first()).not.toContainText(
+    "priest",
+  );
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await snap(page, "save-spell-picker-fr");
 });

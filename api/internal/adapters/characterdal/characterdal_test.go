@@ -35,7 +35,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
 		Class: "bard", RaceCode: "half_elf", Alignment: "chaotic_good", Age: 31, Sex: "male",
 		HeightCm: 177.8, WeightKg: 72.6, Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
-		SkillPoints: `{}`, ProficiencyPicks: `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"singing","slots":1}]}`,
+		SkillSets: `{}`, ProficiencyPicks: `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"singing","slots":1}]}`,
 	}, nil).Once()
 	q.EXPECT().ListClassEntries(ctx, int64(3)).Return([]queries.ListClassEntriesRow{
 		{Class: "bard", RealizedLevel: 6, StartingXp: 1200, State: "active"},
@@ -204,7 +204,7 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 		Thac0Base: 19, Level: 3, SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12,
 		SaveBreath: 16, SaveSpell: 15, Class: "bard", RaceCode: "half_elf",
 		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true}, RealizedLevel: sql.NullInt64{Int64: 3, Valid: true},
-		SkillPoints: `{}`, ProficiencyPicks: `{}`,
+		SkillSets: `{}`, ProficiencyPicks: `{}`,
 	}).Return(int64(7), nil).Once().NotBefore(lock)
 	entry := q.EXPECT().InsertClassEntry(ctx, queries.InsertClassEntryParams{
 		CharacterID: 7, Class: "bard", RealizedLevel: 3, StartingXp: 2500, State: "active",
@@ -302,7 +302,7 @@ func TestLockUser_UnknownUserIsNotAnError(t *testing.T) {
 }
 
 // A thief's skill points (ADR 0030 step 1) are stored as a JSON object by
-// skill code and read back as the same map. No armour is entered or read: the
+// skill set, then skill code, and read back as the same map. No armour is entered or read: the
 // skills read the worn one (ADR 0033 step 14).
 func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	ctx := context.Background()
@@ -312,7 +312,7 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	q.EXPECT().CreateCharacter(ctx, queries.CreateCharacterParams{
 		Name: "Vex", Class: "thief", RaceCode: "halfling", OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
 		RealizedLevel: sql.NullInt64{Int64: 1, Valid: true},
-		SkillPoints:   `{"open_locks":20,"pick_pockets":15}`, ProficiencyPicks: `{}`,
+		SkillSets:     `{"thief":{"open_locks":20,"pick_pockets":15}}`, ProficiencyPicks: `{}`,
 	}).Return(int64(8), nil).Once()
 	q.EXPECT().InsertClassEntry(ctx, queries.InsertClassEntryParams{
 		CharacterID: 8, Class: "thief", RealizedLevel: 1, State: "active",
@@ -322,14 +322,14 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	q.EXPECT().CreateRoundState(ctx, int64(8)).Return(nil).Once()
 	q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{ID: 8}).Return(1, nil).Once()
 	q.EXPECT().SetLanguages(ctx, queries.SetLanguagesParams{Languages: `[]`, ID: 8}).Return(1, nil).Once()
-	points := map[string]int{"pick_pockets": 15, "open_locks": 20}
+	points := skills.SetPoints{"thief": {"pick_pockets": 15, "open_locks": 20}}
 	_, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
 		Name: "Vex", Class: "thief", Race: "halfling", RealizedLevel: 1, SkillPoints: points,
 	})
 	require.NoError(t, err)
 
 	q.EXPECT().GetCharacter(ctx, int64(8)).Return(queries.GetCharacterRow{
-		ID: 8, Class: "thief", Languages: `[]`, SkillPoints: `{"open_locks":20,"pick_pockets":15}`, ProficiencyPicks: `{}`,
+		ID: 8, Class: "thief", Languages: `[]`, SkillSets: `{"thief":{"open_locks":20,"pick_pockets":15}}`, ProficiencyPicks: `{}`,
 	}, nil).Once()
 	q.EXPECT().ListClassEntries(ctx, int64(8)).Return(nil, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 8)
@@ -405,4 +405,35 @@ func TestProficiencyPicks_StoredAsJSONAndReadBack(t *testing.T) {
 	old, err := characterdal.DecodePicks(`{"nonweapon":[{"id":"tumbling","slots":2}]}`)
 	require.NoError(t, err)
 	assert.Empty(t, old.Weapon)
+}
+
+// The undo of a spend reads the class and the points of every skill set without deriving the
+// sheet; a missing row is ErrCharacterNotFound.
+func TestSkillPoints_ReadsTheClassAndEverySkillSet(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().GetSkillSets(ctx, int64(8)).Return(queries.GetSkillSetsRow{Class: "thief", SkillSets: `{"thief":{"open_locks":20},"bard":{"climb_walls":5}}`}, nil).Once()
+	q.EXPECT().GetSkillSets(ctx, int64(9)).Return(queries.GetSkillSetsRow{}, sql.ErrNoRows).Once()
+	class, points, err := characterdal.New(q).SkillPoints(ctx, 8)
+	require.NoError(t, err)
+	assert.Equal(t, "thief", class)
+	assert.Equal(t, skills.SetPoints{"thief": {"open_locks": 20}, "bard": {"climb_walls": 5}}, points)
+	_, _, err = characterdal.New(q).SkillPoints(ctx, 9)
+	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
+}
+
+// The release from before skill sets keeps writing characters.skill_points during a rolling
+// deploy: while skill_sets is empty the reader still serves those points, filed under no set for
+// the services to give the class's first set (skills.SetPoints.Resolve).
+func TestSkillPoints_FallsBackToTheLegacyColumnWhileNoSetIsStored(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().GetSkillSets(ctx, int64(8)).Return(queries.GetSkillSetsRow{Class: "thief", SkillSets: `{}`, SkillPoints: `{"open_locks":20}`}, nil).Once()
+	q.EXPECT().GetSkillSets(ctx, int64(9)).Return(queries.GetSkillSetsRow{Class: "thief", SkillSets: `{"thief":{"climb_walls":5}}`, SkillPoints: `{"open_locks":20}`}, nil).Once()
+	_, points, err := characterdal.New(q).SkillPoints(ctx, 8)
+	require.NoError(t, err)
+	assert.Equal(t, skills.SetPoints{skills.LegacySet: {"open_locks": 20}}, points)
+	_, points, err = characterdal.New(q).SkillPoints(ctx, 9)
+	require.NoError(t, err)
+	assert.Equal(t, skills.SetPoints{"thief": {"climb_walls": 5}}, points, "the stored sets win once there are some")
 }

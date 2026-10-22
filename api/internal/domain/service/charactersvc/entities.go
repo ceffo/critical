@@ -49,10 +49,10 @@ type Character struct {
 	Class string
 	// Race is the race code (one of Races), "" when none is set.
 	Race string
-	// SkillPoints are a thief's or a bard's entered skill points (ADR 0030
-	// steps 1, 17 and 18), by skill code (ruletablesvc.SkillsOf the class);
-	// nil or absent skills have 0.
-	SkillPoints map[string]int
+	// SkillPoints are the entered skill points (ADR 0030 steps 1, 17 and
+	// 18) of each skill set the class lists (ADR 0040 step 3.5), by skill
+	// code (ruletablesvc.SkillsOf the set); nil or absent skills have 0.
+	SkillPoints skills.SetPoints
 	// Proficiencies are the proficiency picks (ADR 0037 step 12): catalogue
 	// id and slots spent, in the player's order.
 	Proficiencies skills.Picks
@@ -221,24 +221,16 @@ type Derived struct {
 	// Turning is step 16: PHB Table 61 at the realized level, the book's
 	// rows in order; nil for a class that does not turn undead.
 	Turning []ruletablesvc.TurningTarget
-	// ThiefSkills is step 17: each thieving skill with its terms and
-	// percentage; nil for a class without them.
-	ThiefSkills []ruletablesvc.SkillPercent
-	// BardSkills is step 18: each bard skill with its terms and
-	// percentage; nil for a class without them.
-	BardSkills []ruletablesvc.SkillPercent
-	// SkillArmor is the skill armour the thief's or the bard's skills read
-	// (ADR 0033 step 14: ruletablesvc.SkillArmorFor the worn body armour's
-	// Table 29 column; "none" when it wears none), "" for another class.
-	SkillArmor string
-	// SkillBudget is step 17's (a thief's) or step 18's (a bard's)
-	// warnings: the entered points against the class's budget at the
-	// realized level; empty when none.
-	SkillBudget []ruletablesvc.BudgetWarning
-	// SkillPoints is the same budget as figures at the realized level, with
-	// the terms of its formula: available, spent, left and the per-skill cap
-	// (steps 17 and 18); nil for a class without skill points.
-	SkillPoints *ruletablesvc.SkillPointsBudget
+	// SkillColumn is the worn body armour's Table 29 column (ADR 0033 step
+	// 14: "none" when it wears none), the one every skill set reads through
+	// its own armour entries; "" for a class without skill sets.
+	SkillColumn string
+	// SkillSets is steps 17 and 18 (ADR 0040 step 3.5): one set per
+	// rogue_skills feature the class grants at the realized level, each with
+	// its skills' percentages and terms, the skill armour it reads (ADR 0033
+	// step 14), its budget's warnings and its budget as figures; nil for a
+	// class without skill sets.
+	SkillSets []skills.SkillSet
 	// Backstab is step 19: PHB Table 30's damage multiplier at the realized
 	// level; 0 for a class without the backstab option.
 	Backstab int

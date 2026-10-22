@@ -466,7 +466,7 @@ FROM characters c
 WHERE NOT EXISTS (SELECT 1 FROM character_classes e WHERE e.character_id = c.id)
 `
 
-// The class-entries migration (034): every character without an entry gets its one active entry
+// The class-entries migration (035): every character without an entry gets its one active entry
 // from its columns (class, COALESCE(realized_level, level), xp_total; ADR 0042 step 1). A rerun
 // changes nothing. A negative level or XP (no path of the app writes one; the columns have no CHECK)
 // is raised to 0, which the entry's CHECKs accept, so the migration never aborts the boot.
@@ -488,7 +488,7 @@ const insertCharacter = `-- name: InsertCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code,
-    skill_points, alignment, sex, proficiency_picks, class
+    skill_sets, alignment, sex, proficiency_picks, class
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
 RETURNING id
 `
@@ -512,7 +512,7 @@ type InsertCharacterParams struct {
 	SaveSpell        int64
 	Languages        string
 	RaceCode         string
-	SkillPoints      string
+	SkillSets        string
 	Alignment        string
 	Sex              string
 	ProficiencyPicks string
@@ -541,7 +541,7 @@ func (q *Queries) InsertCharacter(ctx context.Context, arg InsertCharacterParams
 		arg.SaveSpell,
 		arg.Languages,
 		arg.RaceCode,
-		arg.SkillPoints,
+		arg.SkillSets,
 		arg.Alignment,
 		arg.Sex,
 		arg.ProficiencyPicks,
@@ -1047,6 +1047,41 @@ func (q *Queries) ListLegacyItems(ctx context.Context, characterID int64) ([]Lis
 	return items, nil
 }
 
+const listLegacySkillPoints = `-- name: ListLegacySkillPoints :many
+SELECT id, class, skill_points FROM characters WHERE skill_points <> '{}' AND skill_sets = '{}' ORDER BY id
+`
+
+type ListLegacySkillPointsRow struct {
+	ID          int64
+	Class       string
+	SkillPoints string
+}
+
+// The skill sets migration (034): every character's legacy flat skill points, to copy under the
+// skill set its class grants. Only the characters that have points and no skill sets yet.
+func (q *Queries) ListLegacySkillPoints(ctx context.Context) ([]ListLegacySkillPointsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listLegacySkillPoints)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListLegacySkillPointsRow{}
+	for rows.Next() {
+		var i ListLegacySkillPointsRow
+		if err := rows.Scan(&i.ID, &i.Class, &i.SkillPoints); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLegacyWeapons = `-- name: ListLegacyWeapons :many
 SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind,
        weapon_type, specialized
@@ -1425,6 +1460,21 @@ type SetSkillPointsIfUnsetParams struct {
 // has none, so a rerun changes nothing and points spent since are kept.
 func (q *Queries) SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsIfUnsetParams) error {
 	_, err := q.db.ExecContext(ctx, setSkillPointsIfUnset, arg.SkillPoints, arg.ID)
+	return err
+}
+
+const setSkillSets = `-- name: SetSkillSets :exec
+UPDATE characters SET skill_sets = $1 WHERE id = $2
+`
+
+type SetSkillSetsParams struct {
+	SkillSets string
+	ID        int64
+}
+
+// The skill points of a character per skill set (a JSON object from set code to points).
+func (q *Queries) SetSkillSets(ctx context.Context, arg SetSkillSetsParams) error {
+	_, err := q.db.ExecContext(ctx, setSkillSets, arg.SkillSets, arg.ID)
 	return err
 }
 

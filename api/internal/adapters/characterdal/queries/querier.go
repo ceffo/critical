@@ -34,6 +34,9 @@ type Querier interface {
 	// (step 7.5), which stays the imported figure step 24 compares.
 	GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error)
 	GetCharacterDetails(ctx context.Context, id int64) (GetCharacterDetailsRow, error)
+	// A character's class (its first active entry's, ADR 0042 step 1; the column for a character with no
+	// entry) and stored skill points, for the undo of a spend (no derivation).
+	GetSkillSets(ctx context.Context, id int64) (GetSkillSetsRow, error)
 	InsertClassEntry(ctx context.Context, arg InsertClassEntryParams) error
 	// A character's class entries in the order the classes were taken (ADR 0042 step 1).
 	ListClassEntries(ctx context.Context, characterID int64) ([]ListClassEntriesRow, error)
@@ -65,7 +68,7 @@ type Querier interface {
 	SetProficiencyPicks(ctx context.Context, arg SetProficiencyPicksParams) (int64, error)
 	// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP. The level
 	// is the character's first active entry's, written to its column too (the release before the
-	// class entries reads it, migration 034).
+	// class entries reads it, migration 035).
 	SetRealizedLevel(ctx context.Context, arg SetRealizedLevelParams) (int64, error)
 	// A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
 	SetSkillPoints(ctx context.Context, arg SetSkillPointsParams) (int64, error)

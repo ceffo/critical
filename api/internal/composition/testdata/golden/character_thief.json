@@ -79,108 +79,112 @@
     "spellbook": null,
     "spellFailure": 0,
     "turning": null,
-    "thiefSkills": [
+    "skillSets": [
       {
-        "skill": "pick_pockets",
-        "base": 15,
-        "points": 30,
-        "race": 5,
-        "dexterity": 5,
-        "armor": 5,
-        "rawPercent": 60,
-        "percent": 60
-      },
-      {
-        "skill": "open_locks",
-        "base": 10,
-        "points": 20,
-        "race": -5,
-        "dexterity": 10,
-        "armor": 0,
-        "rawPercent": 35,
-        "percent": 35
-      },
-      {
-        "skill": "find_remove_traps",
-        "base": 5,
-        "points": 0,
-        "race": 0,
-        "dexterity": 0,
-        "armor": 0,
-        "rawPercent": 5,
-        "percent": 5
-      },
-      {
-        "skill": "move_silently",
-        "base": 10,
-        "points": 0,
-        "race": 5,
-        "dexterity": 5,
-        "armor": 10,
-        "rawPercent": 30,
-        "percent": 30
-      },
-      {
-        "skill": "hide_in_shadows",
-        "base": 5,
-        "points": 0,
-        "race": 10,
-        "dexterity": 5,
-        "armor": 5,
-        "rawPercent": 25,
-        "percent": 25
-      },
-      {
-        "skill": "detect_noise",
-        "base": 15,
-        "points": 0,
-        "race": 5,
-        "dexterity": 0,
-        "armor": 0,
-        "rawPercent": 20,
-        "percent": 20
-      },
-      {
-        "skill": "climb_walls",
-        "base": 60,
-        "points": 15,
-        "race": 0,
-        "dexterity": 0,
-        "armor": 10,
-        "rawPercent": 85,
-        "percent": 85
-      },
-      {
-        "skill": "read_languages",
-        "base": 0,
-        "points": 0,
-        "race": 0,
-        "dexterity": 0,
-        "armor": 0,
-        "rawPercent": 0,
-        "percent": 0
+        "set": "thief",
+        "skillArmor": "none",
+        "skills": [
+          {
+            "skill": "pick_pockets",
+            "base": 15,
+            "points": 30,
+            "race": 5,
+            "dexterity": 5,
+            "armor": 5,
+            "rawPercent": 60,
+            "percent": 60
+          },
+          {
+            "skill": "open_locks",
+            "base": 10,
+            "points": 20,
+            "race": -5,
+            "dexterity": 10,
+            "armor": 0,
+            "rawPercent": 35,
+            "percent": 35
+          },
+          {
+            "skill": "find_remove_traps",
+            "base": 5,
+            "points": 0,
+            "race": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "rawPercent": 5,
+            "percent": 5
+          },
+          {
+            "skill": "move_silently",
+            "base": 10,
+            "points": 0,
+            "race": 5,
+            "dexterity": 5,
+            "armor": 10,
+            "rawPercent": 30,
+            "percent": 30
+          },
+          {
+            "skill": "hide_in_shadows",
+            "base": 5,
+            "points": 0,
+            "race": 10,
+            "dexterity": 5,
+            "armor": 5,
+            "rawPercent": 25,
+            "percent": 25
+          },
+          {
+            "skill": "detect_noise",
+            "base": 15,
+            "points": 0,
+            "race": 5,
+            "dexterity": 0,
+            "armor": 0,
+            "rawPercent": 20,
+            "percent": 20
+          },
+          {
+            "skill": "climb_walls",
+            "base": 60,
+            "points": 15,
+            "race": 0,
+            "dexterity": 0,
+            "armor": 10,
+            "rawPercent": 85,
+            "percent": 85
+          },
+          {
+            "skill": "read_languages",
+            "base": 0,
+            "points": 0,
+            "race": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "rawPercent": 0,
+            "percent": 0
+          }
+        ],
+        "warnings": [
+          {
+            "code": "skill_points_total",
+            "points": 65,
+            "limit": 60
+          }
+        ],
+        "budget": {
+          "level": 1,
+          "first": 60,
+          "perLevel": 30,
+          "available": 60,
+          "spent": 65,
+          "left": -5,
+          "perSkillFirst": 30,
+          "perSkillPerLevel": 15,
+          "perSkillCap": 30
+        }
       }
     ],
-    "bardSkills": null,
-    "skillArmor": "none",
-    "skillBudget": [
-      {
-        "code": "skill_points_total",
-        "points": 65,
-        "limit": 60
-      }
-    ],
-    "skillPoints": {
-      "level": 1,
-      "first": 60,
-      "perLevel": 30,
-      "available": 60,
-      "spent": 65,
-      "left": -5,
-      "perSkillFirst": 30,
-      "perSkillPerLevel": 15,
-      "perSkillCap": 30
-    },
     "backstab": 2,
     "proficiencySlots": {
       "nonWeapon": {

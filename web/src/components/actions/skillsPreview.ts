@@ -1,7 +1,7 @@
 import { ApiError } from "@/api/http";
 import { previewSkillPoints } from "@/api/skills";
 import { parseWhole } from "@/lib/wholeNumber";
-import type { RogueSkill, Skills } from "@/types/skills";
+import type { RogueSkill, SkillSet, Skills } from "@/types/skills";
 
 /** The points typed in the editor as the server takes them (zeros left out); null while a field is
  * not a whole number. Parsing only: the server checks the ranges. */
@@ -18,9 +18,9 @@ export function typedPoints(
   return points;
 }
 
-/** The class skills of an answer, a thief's or a bard's. */
-export function classSkillsOf(s: Skills): RogueSkill[] {
-  return s.thiefSkills.length > 0 ? s.thiefSkills : s.bardSkills;
+/** The skill set `set` of an answer, undefined when the character has none by that code. */
+export function skillSetOf(s: Skills, set: string): SkillSet | undefined {
+  return s.skillSets.find((x) => x.set === set);
 }
 
 /** The answer of a preview: the derived skills, or why none came (a refused field of the typed
@@ -36,6 +36,7 @@ export type PreviewResult =
  * shows as out of date.
  */
 export async function previewDraft(
+  set: string,
   values: Record<string, string>,
   skills: RogueSkill[],
   fetchPreview: typeof previewSkillPoints = previewSkillPoints,
@@ -43,7 +44,7 @@ export async function previewDraft(
   const points = typedPoints(values, skills);
   if (!points) return { ok: false };
   try {
-    return { ok: true, skills: await fetchPreview(points) };
+    return { ok: true, skills: await fetchPreview(set, points) };
   } catch (e) {
     return e instanceof ApiError
       ? { ok: false, field: e.field, message: e.message, code: e.code }

@@ -378,7 +378,7 @@ func (s *service) readWarnings(c *Character, alignments []string) {
 		p := &c.Derived.LevelUp.Pending[i]
 		p.Grants = skills.GrantsOf(s.profs, cls, p.Class, p.Level)
 	}
-	c.Derived.LevelUp.ToSpend = skills.ToSpend(c.Derived.Proficiencies, c.Derived.SkillPoints)
+	c.Derived.LevelUp.ToSpend = skills.ToSpend(c.Derived.Proficiencies, c.Derived.SkillSets)
 }
 
 // fromSkills are the skills module's warnings (ADR 0037 step 11) as the sheet's.

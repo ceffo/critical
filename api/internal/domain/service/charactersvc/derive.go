@@ -195,10 +195,14 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 	if g, ok := grant(classes.KindRogueSkills); ok {
 		// Steps 17 and 18: the sheet's Dexterity, the entered points and
 		// the worn body armour's Table 29 column (ADR 0033 step 14: none
-		// worn is the none column); the budget at the entry's level. The
-		// figures are the skills module's (ADR 0037 step 17).
-		d.SkillArmor = ruletablesvc.SkillArmorFor(g.Feature.RogueSkills, armour)
-		if err := d.SetSkillFigures(rules, g.Class, c, c.SkillPoints); err != nil {
+		// worn is the none column) for each skill set the class grants (ADR
+		// 0040 step 3.4); the budget at the entry's level. The figures are
+		// the skills module's (ADR 0037 step 17).
+		d.SkillColumn = armour
+		if d.SkillColumn == "" {
+			d.SkillColumn = ruletablesvc.ColumnNone
+		}
+		if err := d.SetSkillFigures(rules, g.Class, c, c.SkillPoints.Resolve(g.Class)); err != nil {
 			return err
 		}
 	}
@@ -423,19 +427,18 @@ func raceSaveBonus(c *Character, rules Rules) (Saves, error) {
 	return Saves{RodStaffWand: b, Spell: b}, nil
 }
 
-// SetSkillFigures sets d's skill percentages, budget and points from points
-// entered on c, at the level of the entry granting the skills (ADR 0042 step
-// 12; d's Features must be set, else d's realized level) and worn skill armour (SkillArmor must
-// be set): the one place those four fields are filled, for the derivation and
-// for a draft of the points (ADR 0030 steps 17 and 18; the figures are the
-// skills module's, ADR 0037 step 17).
-func (d *Derived) SetSkillFigures(t skills.SkillTables, def classes.Class, c *Character, points map[string]int) error {
-	f, err := skills.PointsFiguresOf(t, skills.PointsSheet{
-		Class: def, Race: c.Race, Dex: c.Dex, Level: d.FeatureLevel(classes.KindRogueSkills), Armor: d.SkillArmor, Points: points,
+// SetSkillFigures sets d's skill sets (percentages, armour, budget and points of each) from
+// points entered on c, at the level of the entry granting the skills (ADR 0042 step 12; d's
+// Features must be set, else d's realized level) and worn body armour's Table 29 column
+// (SkillColumn must be set): the one place they are filled, for the derivation and for a draft of
+// the points (ADR 0030 steps 17 and 18; the figures are the skills module's, ADR 0037 step 17).
+func (d *Derived) SetSkillFigures(t skills.SkillTables, def classes.Class, c *Character, points skills.SetPoints) error {
+	sets, err := skills.SkillSetsOf(t, skills.PointsSheet{
+		Class: def, Race: c.Race, Dex: c.Dex, Level: d.FeatureLevel(classes.KindRogueSkills), ArmorColumn: d.SkillColumn, Points: points,
 	})
 	if err != nil {
 		return fmt.Errorf("skill figures: %w", err)
 	}
-	d.ThiefSkills, d.BardSkills, d.SkillBudget, d.SkillPoints = f.Thief, f.Bard, f.Budget, f.Points
+	d.SkillSets = sets
 	return nil
 }

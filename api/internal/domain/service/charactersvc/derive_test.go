@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	domainskills "github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // kelsen is the seed's half-elf bard as the reader returns it: the entered
@@ -61,11 +62,24 @@ func kelsenDerived() charactersvc.Derived {
 		XPTotal: 1_293_418, Group: "rogue", TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
 		SpellSlots: level15Slots,
 		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
-		Spellbook:  &kelsenSpellbook, SkillBudget: []ruletablesvc.BudgetWarning{},
-		SkillPoints: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Left: 230},
+		Spellbook:  &kelsenSpellbook,
 		// Nothing worn in these tests: the none column (ADR 0033 step 14).
-		SkillArmor: "none",
+		SkillColumn: "none",
+		SkillSets: []domainskills.SkillSet{{
+			Set: "bard", Armor: "none", Budget: []ruletablesvc.BudgetWarning{},
+			Points: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Left: 230},
+		}},
 	}
+}
+
+// skillSetOf is the derived skill set with code set, nil when the character has none.
+func skillSetOf(d charactersvc.Derived, set string) *domainskills.SkillSet {
+	for i := range d.SkillSets {
+		if d.SkillSets[i].Set == set {
+			return &d.SkillSets[i]
+		}
+	}
+	return nil
 }
 
 // kelsenSpellbook is a bard's spellbook rules at Intelligence 14 (step 20.1).
@@ -529,7 +543,7 @@ func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			c := kelsen()
 			c.Class, c.Race, c.Dex, c.XPTotal, c.RealizedLevel = "thief", "elf", 17, 0, 1
-			c.SkillPoints = map[string]int{"open_locks": 70}
+			c.SkillPoints = domainskills.SetPoints{"thief": {"open_locks": 70}}
 			c.Sheet = charactersvc.Sheet{}
 			r := newRules(t)
 			// 40,000 XP is level 8 in Table 25: two levels pending; the
@@ -544,13 +558,16 @@ func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
 			r.EXPECT().BackstabFor(1).Return(2, nil).Once()
 			got, err := charactersvc.Derive(c, []int{40_000}, tc.worn, r)
 			require.NoError(t, err)
-			assert.Equal(t, skills, got.ThiefSkills)
-			assert.Equal(t, tc.asked, got.SkillArmor)
+			thief := skillSetOf(got, "thief")
+			require.NotNil(t, thief)
+			assert.Len(t, got.SkillSets, 1)
+			assert.Equal(t, skills, thief.Skills)
+			assert.Equal(t, tc.asked, thief.Armor)
 			assert.Equal(t, 2, got.Backstab)
 			assert.Equal(t, []ruletablesvc.BudgetWarning{
 				{Code: ruletablesvc.BudgetTotal, Points: 70, Limit: 60},
 				{Code: ruletablesvc.BudgetPerSkill, Skill: "open_locks", Points: 70, Limit: 30},
-			}, got.SkillBudget, "the budget of level 1, not of level 8")
+			}, thief.Budget, "the budget of level 1, not of level 8")
 		})
 	}
 	t.Run("a bard has neither", func(t *testing.T) {
@@ -558,7 +575,7 @@ func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
 		expectKelsenRules(r, 1_293_418, 15)
 		got, err := charactersvc.Derive(kelsen(), nil, "", r)
 		require.NoError(t, err)
-		assert.Nil(t, got.ThiefSkills)
+		assert.Nil(t, skillSetOf(got, "thief"))
 		assert.Zero(t, got.Backstab)
 	})
 }
@@ -577,7 +594,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			c := kelsen()
 			c.Race, c.Dex, c.XPTotal, c.RealizedLevel = "human", 16, 0, 2
-			c.SkillPoints = map[string]int{"climb_walls": 40}
+			c.SkillPoints = domainskills.SetPoints{"bard": {"climb_walls": 40}}
 			c.Sheet = charactersvc.Sheet{}
 			r := mocks.NewMockRules(t)
 			withDefinitions(t, r)
@@ -595,13 +612,16 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 			r.EXPECT().RogueSkills(skillSet("bard"), "human", 16, tc.asked, map[string]int{"climb_walls": 40}).Return(skills, nil).Once()
 			got, err := charactersvc.Derive(c, []int{40_000}, tc.worn, r)
 			require.NoError(t, err)
-			assert.Equal(t, skills, got.BardSkills)
-			assert.Equal(t, tc.asked, got.SkillArmor)
-			assert.Nil(t, got.ThiefSkills)
+			bard := skillSetOf(got, "bard")
+			require.NotNil(t, bard)
+			assert.Len(t, got.SkillSets, 1)
+			assert.Equal(t, skills, bard.Skills)
+			assert.Equal(t, tc.asked, bard.Armor)
+			assert.Nil(t, skillSetOf(got, "thief"))
 			assert.Zero(t, got.Backstab)
 			assert.Equal(t, []ruletablesvc.BudgetWarning{
 				{Code: ruletablesvc.BudgetTotal, Points: 40, Limit: 35},
-			}, got.SkillBudget, "the bard's budget at level 2, not at level 7, and no per-skill warning")
+			}, bard.Budget, "the bard's budget at level 2, not at level 7, and no per-skill warning")
 		})
 	}
 	t.Run("a thief has no bard skills", func(t *testing.T) {
@@ -619,6 +639,6 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 		r.EXPECT().BackstabFor(1).Return(2, nil).Once()
 		got, err := charactersvc.Derive(c, nil, "", r)
 		require.NoError(t, err)
-		assert.Nil(t, got.BardSkills)
+		assert.Nil(t, skillSetOf(got, "bard"))
 	})
 }

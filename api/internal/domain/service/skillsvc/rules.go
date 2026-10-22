@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // abilityScore is the sheet's score for an ability key.
@@ -50,6 +51,19 @@ func SkillUsable(kind Kind, percent int) bool {
 // under MinThiefSkillPercent. The web owns the wording.
 const CodeSkillUnusable = "skill_unusable"
 
+// KindOfSet is the check kind a skill set logs (ADR 0040 step 3.2, ADR 0014 step 3): the set
+// code is a rogue_skills param, not a class id. ok is false for a set this package does not
+// know (ruletablesvc.CheckSkillSet refuses it at start).
+func KindOfSet(set string) (Kind, bool) {
+	switch set {
+	case ruletablesvc.SkillSetThief:
+		return KindThiefSkill, true
+	case ruletablesvc.SkillSetBard:
+		return KindBardSkill, true
+	}
+	return "", false
+}
+
 // percentKind reports a check on a d100 against a percentage: a bard skill
 // (ADR 0014 step 3) or a thieving skill (ADR 0030 step 17).
 func percentKind(k Kind) bool { return k == KindBardSkill || k == KindThiefSkill }
@@ -78,4 +92,12 @@ func Success(k Kind, roll, target int) bool {
 		return BardSkillSuccess(roll, target)
 	}
 	return ProficiencySuccess(roll, target)
+}
+
+// skillDie is the die of a skill set's check of kind (ADR 0014 step 3).
+func skillDie(k Kind) int {
+	if k == KindThiefSkill {
+		return ThiefSkillDie
+	}
+	return BardSkillDie
 }

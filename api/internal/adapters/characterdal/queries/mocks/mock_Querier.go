@@ -509,6 +509,63 @@ func (_c *MockQuerier_GetCharacterDetails_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// GetSkillSets provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) GetSkillSets(ctx context.Context, id int64) (queries.GetSkillSetsRow, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSkillSets")
+	}
+
+	var r0 queries.GetSkillSetsRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.GetSkillSetsRow, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.GetSkillSetsRow); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(queries.GetSkillSetsRow)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_GetSkillSets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSkillSets'
+type MockQuerier_GetSkillSets_Call struct {
+	*mock.Call
+}
+
+// GetSkillSets is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockQuerier_Expecter) GetSkillSets(ctx interface{}, id interface{}) *MockQuerier_GetSkillSets_Call {
+	return &MockQuerier_GetSkillSets_Call{Call: _e.mock.On("GetSkillSets", ctx, id)}
+}
+
+func (_c *MockQuerier_GetSkillSets_Call) Run(run func(ctx context.Context, id int64)) *MockQuerier_GetSkillSets_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_GetSkillSets_Call) Return(_a0 queries.GetSkillSetsRow, _a1 error) *MockQuerier_GetSkillSets_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_GetSkillSets_Call) RunAndReturn(run func(context.Context, int64) (queries.GetSkillSetsRow, error)) *MockQuerier_GetSkillSets_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InsertClassEntry provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) InsertClassEntry(ctx context.Context, arg queries.InsertClassEntryParams) error {
 	ret := _m.Called(ctx, arg)

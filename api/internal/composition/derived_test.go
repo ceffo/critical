@@ -83,7 +83,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 
 	next := 1_320_000
 	at15 := charactersvc.Derived{
-		XPTotal: 1_293_418, TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13,
+		XPTotal: 1_293_418, Group: "rogue", TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13,
 		Saves:      charactersvc.Saves{ParaPoison: 10, RodStaffWand: 8, PetriPoly: 9, Breath: 13, Spell: 9},
 		SpellSlots: map[int]int{1: 3, 2: 3, 3: 3, 4: 3, 5: 2},
 		LevelUp: charactersvc.LevelUp{
@@ -128,7 +128,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	}
 	d, ledgerLevel, limits = derivedOf(t, bs, id)
 	assert.Equal(t, charactersvc.Derived{
-		XPTotal: 1_540_000, TargetLevel: 17, RealizedLevel: 17, NextLevelXP: &next17, THAC0: 12,
+		XPTotal: 1_540_000, Group: "rogue", TargetLevel: 17, RealizedLevel: 17, NextLevelXP: &next17, THAC0: 12,
 		Saves:      charactersvc.Saves{ParaPoison: 9, RodStaffWand: 6, PetriPoly: 8, Breath: 12, Spell: 7},
 		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1},
 		LevelUp: charactersvc.LevelUp{

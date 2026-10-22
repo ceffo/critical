@@ -256,28 +256,29 @@ func TestCreate_Options(t *testing.T) {
 		StrExceptional struct{ Min, Max int } `json:"strExceptional"`
 	}
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &got))
-	require.Len(t, got.Classes, 5)
-	assert.Equal(t, "bard", got.Classes[0].Class)
-	assert.Equal(t, []string{"human", "half_elf"}, got.Classes[0].Races)
-	assert.Empty(t, got.Classes[0].ExceptionalStrength)
-	assert.Equal(t, "fighter", got.Classes[1].Class)
-	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}, got.Classes[1].Races)
-	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf"}, got.Classes[1].ExceptionalStrength, "no halfling (PHB Table 7)")
-	assert.Equal(t, "mage", got.Classes[2].Class)
-	assert.Equal(t, []string{"human", "elf", "half_elf"}, got.Classes[2].Races, "DMG Table 7")
-	assert.Empty(t, got.Classes[2].ExceptionalStrength)
-	assert.Equal(t, "cleric", got.Classes[3].Class)
-	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}, got.Classes[3].Races, "DMG Table 7")
-	assert.Empty(t, got.Classes[3].ExceptionalStrength)
-	assert.Equal(t, "thief", got.Classes[4].Class)
-	assert.Equal(t, []string{"human", "dwarf", "elf", "gnome", "half_elf", "halfling"}, got.Classes[4].Races, "DMG Table 7")
+	// ADR 0040 step 8: the classes and races in the catalogue's order.
+	order := make([]string, 0, len(got.Classes))
+	for _, c := range got.Classes {
+		order = append(order, c.Class)
+	}
+	require.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard"}, order)
+	fighter, mage, cleric, thief, bard := got.Classes[0], got.Classes[1], got.Classes[2], got.Classes[3], got.Classes[4]
+	assert.Equal(t, []string{"half_elf", "human"}, bard.Races)
+	assert.Empty(t, bard.ExceptionalStrength)
+	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, fighter.Races)
+	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "human"}, fighter.ExceptionalStrength, "no halfling (PHB Table 7)")
+	assert.Equal(t, []string{"elf", "half_elf", "human"}, mage.Races, "DMG Table 7")
+	assert.Empty(t, mage.ExceptionalStrength)
+	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, cleric.Races, "DMG Table 7")
+	assert.Empty(t, cleric.ExceptionalStrength)
+	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, thief.Races, "DMG Table 7")
 	assert.Equal(t, []string{
 		"pick_pockets", "open_locks", "find_remove_traps", "move_silently",
 		"hide_in_shadows", "detect_noise", "climb_walls", "read_languages",
-	}, got.Classes[4].Skills, "PHB Table 26")
-	assert.Nil(t, got.Classes[4].SkillArmors, "no armour is entered: the skills read the worn one (ADR 0033 step 14)")
-	assert.Equal(t, []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"}, got.Classes[0].Skills, "PHB Table 33")
-	assert.Nil(t, got.Classes[0].SkillArmors)
+	}, thief.Skills, "PHB Table 26")
+	assert.Nil(t, thief.SkillArmors, "no armour is entered: the skills read the worn one (ADR 0033 step 14)")
+	assert.Equal(t, []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"}, bard.Skills, "PHB Table 33")
+	assert.Nil(t, bard.SkillArmors)
 	assert.Equal(t, struct{ Min, Max int }{1, 100}, got.StrExceptional)
 	assert.Equal(t, 3, got.Ability.Min)
 	assert.Equal(t, 19, got.Ability.Max)
@@ -328,7 +329,7 @@ func TestCreate_Options_LevelXPTableHitDiceMethodsAndRaceAdjustments(t *testing.
 	assert.Equal(t, []string{"I", "II", "III", "IV", "V", "VI"}, codes)
 	assert.Equal(t, "add_to_base", got.ScoreMethods[5].Assign)
 	require.Len(t, got.RaceAdjustments, 6)
-	assert.Equal(t, "human", got.RaceAdjustments[0].Race)
+	assert.Equal(t, "dwarf", got.RaceAdjustments[0].Race, "the catalogue's race order (ADR 0040 step 8)")
 	for _, r := range got.RaceAdjustments {
 		if r.Race == "elf" {
 			assert.Equal(t, 1, r.Adjustments["dex"], "PHB Table 8")

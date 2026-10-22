@@ -184,15 +184,23 @@ func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 // threshold, which shows which rule tables a start took.
 const level16XP = 1320000
 
-// setLevel16XP sets the bard level-16 XP of the artifact's class experience
-// table (rule_tables.experience), the one the ledger and the level read.
-func setLevel16XP(tables map[string]any, xp int) {
-	rows := tables["experience"].([]any)
-	row := rows[15].(map[string]any)
-	if row["level"] != float64(16) {
-		panic("experience row 15 is not level 16")
+// setLevel16XP sets the level-16 XP of the artifact's bard definition
+// (classes[].experience, ADR 0040 step 1.7), the one the ledger and the level
+// read.
+func setLevel16XP(doc map[string]any, xp int) {
+	for _, c := range doc["classes"].([]any) {
+		class := c.(map[string]any)
+		if class["id"] != "bard" {
+			continue
+		}
+		row := class["experience"].([]any)[15].(map[string]any)
+		if row["level"] != float64(16) {
+			panic("experience row 15 is not level 16")
+		}
+		row["xp"] = xp
+		return
 	}
-	row["bard"] = xp
+	panic("no bard in the artifact")
 }
 
 // nextThreshold starts the root on the artifact at cfg.Catalogue and reads the
@@ -244,7 +252,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		require.NoError(t, os.CopyFS(broken, os.DirFS(fixtureSeeds)))
 		require.NoError(t, os.WriteFile(filepath.Join(broken, "rule_tables.json"), []byte("not json"), 0o600))
 		artifact := writeArtifact(t, func(d map[string]any) {
-			setLevel16XP(d["rule_tables"].(map[string]any), level16XP+3)
+			setLevel16XP(d, level16XP+3)
 		})
 		assert.Equal(t, level16XP+3, nextThreshold(t, composition.Config{SeedsDir: broken, Catalogue: artifact}))
 	})
@@ -279,14 +287,14 @@ func TestStartup_Step9_5_TheTablesAreReadAtEveryStart(t *testing.T) {
 	assert.Equal(t, level16XP, nextThreshold(t, cfg))
 
 	cfg.Catalogue = writeArtifact(t, func(d map[string]any) {
-		setLevel16XP(d["rule_tables"].(map[string]any), level16XP+7)
+		setLevel16XP(d, level16XP+7)
 	})
 	assert.Equal(t, level16XP+7, nextThreshold(t, cfg), "same version, corrected table")
 
 	cfg.Catalogue = writeArtifact(t, func(d map[string]any) {
-		setLevel16XP(d["rule_tables"].(map[string]any), 1)
+		setLevel16XP(d, 1)
 	})
-	require.ErrorContains(t, refusedStart(t, cfg), "rule_tables: experience table")
+	require.ErrorContains(t, refusedStart(t, cfg), `class "bard": experience: level 16`)
 }
 
 // ADR 0021 step 9.3: what the schema cannot check in a format-3 artifact's
@@ -345,8 +353,13 @@ func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
 			tables(d)["constitution"] = append(rows[:9:9], rows[10:]...)
 		}, "rule_tables: constitution table: row 9: score 10 expected, got 11"},
 		{"XP not increasing", func(d map[string]any) {
-			row(d, "experience", 9)["mage"] = 2500
-		}, "rule_tables: experience table: mage level 10"},
+			// The thresholds are the class definitions' (ADR 0040 step 1.7).
+			for _, c := range d["classes"].([]any) {
+				if class := c.(map[string]any); class["id"] == "mage" {
+					class["experience"].([]any)[9].(map[string]any)["xp"] = 2500
+				}
+			}
+		}, `rule_tables: class "mage": experience: level 10`},
 		{"a specialist band missing", func(d map[string]any) {
 			rows := tables(d)["specialist_attacks"].([]any)
 			tables(d)["specialist_attacks"] = rows[1:]

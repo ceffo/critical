@@ -68,7 +68,10 @@ characters)." And: "we lifted racial restriction for multi and dual class in our
 5. **Level limits warn.** Amends [ADR 0030](0030-classes-and-races.md) step 21 (2026-10-21): "shown,
    not enforced" becomes "the ruleset's `level_limits` is `warn`: shown as a warning, never a
    refusal". The creation refusal of a class the race does not admit stays for a single-class
-   character; step 2.2 lifts it for multi-class and dual-class. Test needed: with `warn`, a
+   character; step 2.2 lifts it for multi-class and dual-class. The limits and the dashes themselves
+   are book data, rows keyed by race and class beside the race definitions of
+   [ADR 0040](0040-classes-are-data.md) step 2 (cross-reference added 2026-10-21); the ruleset only
+   says how they apply. Test needed: with `warn`, a
    level-up past the race's limit succeeds and the character's warnings list the limit.
 6. **Success effects leave the code.** Amends [ADR 0037](0037-proficiencies.md) step 20.6
    (2026-10-21): the "committed rules data (`ruletablesvc`)" is the ruleset's success effects. The
@@ -112,6 +115,9 @@ characters)." And: "we lifted racial restriction for multi and dual class in our
   the app)" reads "the row of the ruleset's crit table (ADR 0041 step 2.1)". Amended in place,
   2026-10-21.
 - [ADR 0030](0030-classes-and-races.md) step 21: amended in place, 2026-10-21 (step 5 above).
+- [ADR 0040](0040-classes-are-data.md) (classes and races as catalogue data) is the book data a
+  ruleset reads: a house rule is a setting here, never an edit of a class or race definition
+  (ADR 0040 step 10).
 - [ADR 0037](0037-proficiencies.md) step 20.6: amended in place, 2026-10-21 (step 6 above).
 - The glossary has **Ruleset**, **house rule** and **house rule setting**; `docs/domain-model.md`
   draws the ruleset with its settings.

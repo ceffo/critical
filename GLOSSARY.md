@@ -9,6 +9,10 @@ and the rules only in the ADRs ([index](docs/adr/README.md)). A PR that adds a c
 both files. The spelling is British in prose, UI and new identifiers
 ([ADR 0036](docs/adr/0036-vocabulary.md)).
 
+A `_Code_:` line lists the exported Go domain types that are this concept's parts (`just check-glossary`
+requires every exported domain type to be a term, listed on such a line, or allowlisted with a reason in
+`scripts/glossary-allowlist.txt`).
+
 Marks: _(future)_ a concept the project will model but has not yet; _(planned)_ decided and
 scheduled. A French word marked _(to confirm)_ comes from a book that is not in the rulebooks
 clone.
@@ -34,40 +38,51 @@ The Dungeon Master, whose rulings the player enters. _Avoid_: GM, MD.
 The seed character, the table's level 15 bard, loaded from `seeds/character.json`.
 
 **Class** (fr: classe):
-What a character is trained as: bard, fighter, mage, cleric, thief today. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 1 and 21.
+What a character is trained as: bard, fighter, mage, cleric, thief today. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 1 and 21, [ADR 0040](docs/adr/0040-classes-are-data.md).
+
+**Class definition** (fr: définition de classe) _(planned)_:
+A class as catalogue data: group, prime requisites, limits, XP table, hit dice, spell progression and its class features. [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.
+_Avoid_: class table (a rule table is something else).
 
 **Class group** (fr: groupe de classes):
-Warrior, wizard, priest or rogue: the grouping the tables are read by. [ADR 0030](docs/adr/0030-classes-and-races.md) step 21.
+Warrior, wizard, priest or rogue: the grouping the tables are read by; a field of the class definition. [ADR 0030](docs/adr/0030-classes-and-races.md) step 2, [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.2.
 
 **Class entry** (fr: classe du personnage) _(planned)_:
-One class of a character with its own level and XP. _Avoid_: "class" for the entry.
+One class of a character with its own realized level and XP, **active** (it earns XP and levels) or **frozen** (a dual-class's old class, with the level it was left at); the class features are read through it. [ADR 0040](docs/adr/0040-classes-are-data.md) step 5, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md) step 1. _Avoid_: "class" for the entry.
 
 **Multi-class** (fr: multi-classé):
-Several classes from the start, levelled together, the XP split between them. The user also says "dual". PHB p.43.
+Several classes from the start (two or three active class entries), each levelling on its own, the XP split evenly between them. The user also says "dual". PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
 _Avoid_: dual (for this).
 
 **Dual-class** (fr: classes successives):
-Leaving one class for a new one, the old one frozen. The user also says "serial". PHB p.43.
+Leaving one class for a new one, the old one frozen; its abilities are used without penalty again once the new class's level passes it (the **crossover**). The user also says "serial". PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
 _Avoid_: serial, multi (for this).
 
+**Crossover** (fr: dépassement):
+The moment a dual-class character's new class level passes the frozen old class's level; from then on the old class's abilities work again without penalty. PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
+
 **Class feature** (fr: aptitude de classe) _(planned)_:
-One ability a class grants at a level (turning, backstab, a skill set). _Avoid_: power (that is a psionic word).
+One ability a class grants from a level, as data: a feature kind with its parameters (turning, backstab, a skill set). [ADR 0040](docs/adr/0040-classes-are-data.md) step 3. _Avoid_: power (that is a psionic word), flag.
 
 **Feature kind** (fr: type d'aptitude) _(planned)_:
-The mechanic a class feature drives, so a feature is data and not a branch in the code.
+The mechanic a class feature drives, one of a closed list the code implements once (`turn_undead`, `rogue_skills`, `spellbook`…); the code switches on it, never on a class id. [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.
 
 **Kit** (fr: kit) _(future)_:
 An optional specialisation of a class from the supplements; none is modelled.
 
 **Prime requisite** (fr: caractéristique principale):
-The ability a class is built on; a high enough score gives an XP bonus.
+The ability a class is built on; 16 or more in every one gives the 10% XP bonus. [ADR 0040](docs/adr/0040-classes-are-data.md) step 6.
 
 **Race** (fr: race):
-One of the six PHB races. [ADR 0030](docs/adr/0030-classes-and-races.md) step 2.
+One of the six PHB races, catalogue data like a class. [ADR 0030](docs/adr/0030-classes-and-races.md) step 21, [ADR 0040](docs/adr/0040-classes-are-data.md) step 2.
+
+**Race trait** (fr: trait racial):
+What a race brings; a computed one is typed, a trait kind with parameters (`con_save_bonus`, `no_exceptional_strength`), the others are text. [ADR 0040](docs/adr/0040-classes-are-data.md) step 4.
 
 **Ability score** (fr: caractéristique):
 One of the six scores; the **score in effect** has the app's effects applied.
 [ADR 0004](docs/adr/0004-buffs.md) steps 7 to 10, [ADR 0028](docs/adr/0028-ability-checks.md) step 2.
+_Code_: Ability, Abilities, AbilityMinimum
 
 **Realized level** (fr: niveau acquis) and **Target level** (fr: niveau donné par l'XP):
 The level taken, and the one the XP total gives; "level" alone is the realized one; the gap is the
@@ -78,10 +93,12 @@ Taking one pending level. [ADR 0030](docs/adr/0030-classes-and-races.md) step 7.
 
 **XP** and the **XP ledger** (fr: XP, registre):
 Experience points, and the entries that add to the starting XP. [ADR 0015](docs/adr/0015-experience.md).
+_Code_: XPLedger, LevelXP
 
 **Hit points** (fr: points de vie):
 **Max HP**, **current HP**, the **condition** (ok, badly wounded, unconscious, dead) and the HP
 **floor**. [ADR 0007](docs/adr/0007-hp-ledger.md), [ADR 0011](docs/adr/0011-hp-below-zero.md).
+_Code_: HPBreakdown, HPEvent, HPInput, HPLevel, HPResult, HPState
 
 **HP ledger**:
 Current HP derived from the action log, not stored. [ADR 0007](docs/adr/0007-hp-ledger.md) step 2.
@@ -93,10 +110,15 @@ To Hit Armour Class 0; the armour class, descending. [ADR 0002](docs/adr/0002-at
 **Saving throw** (fr: jet de sauvegarde), or **save**:
 A d20 at or above the target of one of the five categories. [ADR 0006](docs/adr/0006-saving-throws.md).
 _Avoid_: jet de protection.
+_Code_: Save, SaveAdjustment, SaveBreakdown, SaveCategory, SaveEffect, SaveOptions, Saves, SaveType
 
-**Mind-affecting** (fr: _to be decided_) _(planned)_:
+**Mind-affecting** (fr: contre l'esprit):
 A flag on a saving-throw request: the save is against mind-affecting magic, so Wisdom's magical
 defence adjustment applies. [ADR 0006](docs/adr/0006-saving-throws.md) step 9.
+
+**Magical defence adjustment** (fr: ajustement défensif contre la magie):
+PHB Table 5's signed bonus by Wisdom (-6 to +4) on a mind-affecting save, one `wisdom` modifier on
+the roll. [ADR 0006](docs/adr/0006-saving-throws.md) step 9.
 
 ### Rules and the table
 
@@ -150,6 +172,7 @@ _Avoid_: turn (in English a turn is ten rounds, and "turn" means turning undead 
 
 **Initiative** (fr: initiative):
 The round's d10, lowest first; display only. [ADR 0013](docs/adr/0013-initiative.md), [ADR 0035](docs/adr/0035-equipment-screens.md) item 6.
+_Code_: InitiativeItems, InitiativeModifier, InitiativeSource
 
 **Pass time** (fr: heures écoulées):
 Jumping ahead by hours outside combat. [ADR 0005](docs/adr/0005-rounds-and-time.md) steps 5 to 8.
@@ -161,10 +184,12 @@ The night's rest: slots unused again, daily items refilled. [ADR 0008](docs/adr/
 
 **Breakdown**:
 The complete explanation a roll answers with: dice, every named **modifier**, target, verdict.
+_Code_: BreakdownAmmo, BreakdownDie, BreakdownModifier, BreakdownRolled, BreakdownTerm
 
 **Attack** (fr: attaque):
 The weapon attack: to-hit, **critical hit**, damage. [ADR 0002](docs/adr/0002-attack-resolution.md), [ADR 0012](docs/adr/0012-attack-against-unknown-ac.md),
 [ADR 0001](docs/adr/0001-critical-hits.md), [ADR 0003](docs/adr/0003-damage.md).
+_Code_: AttackBreakdown, AttackForm, AttackFormPatch, AttackFormView, AttackPreview, AttackRate, AttackRateView, AttackRequest, Attacks
 
 **Target AC**, **Unknown AC**:
 The AC the DM gives for the target, or none yet, settled by the **DM's verdict**.
@@ -175,6 +200,7 @@ The house table a critical hit is read on. [ADR 0001](docs/adr/0001-critical-hit
 
 **Weapon in hand** (fr: arme en main):
 The weapon the attack form attacks with. [ADR 0033](docs/adr/0033-equipment.md) step 8.
+_Code_: HeldWeapon
 
 **Verdict** (fr: verdict):
 Hit or miss.
@@ -182,6 +208,7 @@ Hit or miss.
 **Check** (fr: jet):
 A roll judged at or under a target: **proficiency check**, **bard skill**, **thief skill**,
 **ability check**. [ADR 0014](docs/adr/0014-skill-checks.md), [ADR 0028](docs/adr/0028-ability-checks.md). _Avoid_: test (fr).
+_Code_: AbilityCheckResult, CheckResult
 
 **Skills** (fr: compétences):
 Umbrella for what a character knows how to do, owned by one module. [ADR 0037](docs/adr/0037-proficiencies.md) amendment of 2026-10-20.
@@ -189,6 +216,7 @@ _Avoid_: spends.
 
 **Proficiency** (fr: compétence diverse):
 A non-weapon proficiency with its ability and modifier. [ADR 0014](docs/adr/0014-skill-checks.md). _Avoid_: RogueSkill.
+_Code_: Proficiencies, ProficiencyDescription
 
 **Bard skills**, **Thief skills** (fr: talents de barde, talents de voleur), **Skill points**:
 The rogue percentages and the points entered for them. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 17 and 18.
@@ -196,9 +224,11 @@ The rogue percentages and the points entered for them. [ADR 0030](docs/adr/0030-
 **Proficiency slot** (fr: emplacement de compétence):
 One unit of the proficiency budget, **weapon** or **non-weapon**; **over budget** or **to spend**.
 [ADR 0037](docs/adr/0037-proficiencies.md) steps 3, 10 and 11.
+_Code_: ProficiencySlots
 
 **Pick** (fr: choix):
 One proficiency the character has, with the slots spent on it. [ADR 0037](docs/adr/0037-proficiencies.md) steps 2, 6, 7 and 12.
+_Code_: Picks, PickFigures
 
 **Weapon proficiency** (fr: compétence martiale):
 A pick of a weapon type, with the **non-proficiency penalty** (fr: malus de non-maîtrise) otherwise;
@@ -215,6 +245,7 @@ The free roll of the dice footer, its `NdM±K` formula and the saved formulas.
 **Buff** (UI: Effect, fr: effet):
 An active effect on the character, **timed**, **charged**, both, or **until dismissed**. [ADR 0004](docs/adr/0004-buffs.md).
 _Avoid_: bonus, buff (in the UI); effect (in prose, for a buff).
+_Code_: AppliedBuff, BuffEdit, BuffEffect, BuffEffects, BuffModifiers, Buffs, BuffStatus, CastBuff, SuccessBuff
 
 **Saved buff** (UI: Saved effect, fr: effet enregistré):
 A buff kept as a template.
@@ -236,10 +267,12 @@ _Avoid_: "effect" alone.
 
 **Spell** (fr: sort):
 A catalogue spell. [ADR 0021](docs/adr/0021-spell-catalogue.md).
+_Code_: Spells, SpellCatalogue, SpellFailure, SpellLevelCount, SpellName, SpellOption
 
 **Spellbook** (fr: grimoire):
 The spells a character knows. [ADR 0008](docs/adr/0008-spell-slots-and-long-rest.md) step 3, [ADR 0030](docs/adr/0030-classes-and-races.md) step 20.
 _Avoid_: livre de sorts.
+_Code_: SpellbookEntry, SpellbookOption, SpellbookRules, StartingBook, StartingSpellbook
 
 **Learn** (fr: apprendre) / **Add** (fr: ajouter):
 Write a spell into the spellbook with the Intelligence roll, or with none; each entry keeps its
@@ -249,25 +282,31 @@ Write a spell into the spellbook with the Intelligence roll, or with none; each 
 One prepared spell, cast once until the next long rest; the **preparation** (fr: préparation) is
 the slot list, the **slot allotment** the class's number per level, an **extra slot** a granted one.
 [ADR 0008](docs/adr/0008-spell-slots-and-long-rest.md) steps 1, 2 and 9.
+_Code_: Slots, GrantSlots
 
 **Cast** (fr: lancer):
 Spending a slot; **spell failure** is the low-Wisdom d100. [ADR 0008](docs/adr/0008-spell-slots-and-long-rest.md) steps 6 to 16,
 [ADR 0030](docs/adr/0030-classes-and-races.md) step 14.
+_Code_: CastAttack, CastBreakdown, CastDamage, CastDamagePart, CastFailure, CastInputs, CastItem, CastOn, CastRequest, CastResult, CastSave, CastTiming, CastUntracked, CastingTime
 
 **Exposure** (fr: exposition):
 One round of damage to whoever stands in a spell's area. [ADR 0008](docs/adr/0008-spell-slots-and-long-rest.md) step 16.
+_Code_: ExposureAt, ExposureAtWire, ExposureBreakdown, ExposureRequest, ExposureResult
 
 **Turn undead** (fr: renvoi des morts-vivants):
 A cleric's turning roll against an undead type. [ADR 0030](docs/adr/0030-classes-and-races.md) step 16. _Avoid_: turn (alone).
+_Code_: TurningTarget
 
 **Sphere** (fr: sphère), **School** (fr: école):
 A priest spell's sphere of access; a wizard spell's school. [ADR 0030](docs/adr/0030-classes-and-races.md) step 15.
+_Code_: SphereAccess, Spheres
 
 ### Possessions
 
 **Item** (fr: objet):
 One possession of any kind. [ADR 0016](docs/adr/0016-inventory.md), [ADR 0033](docs/adr/0033-equipment.md).
 _Avoid_: piece, possession, equipment (for one item), combat item.
+_Code_: Items, ItemInput, ItemPatch, ConsumedItem, ConsumeItem
 
 **Inventory** (fr: inventaire):
 The character's list of items, and its screen. [ADR 0016](docs/adr/0016-inventory.md), [ADR 0035](docs/adr/0035-equipment-screens.md) items 2 and 7.
@@ -277,10 +316,12 @@ How an item's count moves: `stock`, `charges`, `daily`; **use** and **restock**.
 
 **Ammunition** (fr: munition):
 An item a launcher fires, by **ammo kind**. [ADR 0016](docs/adr/0016-inventory.md) step 6.
+_Code_: AmmoChoice, AmmoUse
 
 **Weapon** (fr: arme):
 A possession that attacks, by **weapon kind** (melee or missile; fr: mêlée / tir) and **weapon
 type**. [ADR 0030](docs/adr/0030-classes-and-races.md) step 23, [ADR 0037](docs/adr/0037-proficiencies.md) step 9.
+_Code_: Weapons, WeaponKind, WeaponPool, WeaponTypeOption
 
 **Equipment** (fr: équipement):
 The topic of [ADR 0033](docs/adr/0033-equipment.md) and the catalogue's reference data for gear. Not a synonym of inventory or item.
@@ -290,6 +331,7 @@ The UI's word for a worn or wielded item. [ADR 0033](docs/adr/0033-equipment.md)
 
 **Skill armour** (fr: armure des talents):
 The Table 29 column of the body armour worn. [ADR 0030](docs/adr/0030-classes-and-races.md) step 17, [ADR 0033](docs/adr/0033-equipment.md) step 14.
+_Code_: SkillArmorRow
 
 ### The action log
 
@@ -328,6 +370,7 @@ The JSON files under `seeds/` that fill an empty database. [ADR 0021](docs/adr/0
 
 **Rule table** (fr: table):
 A PHB or DMG table carried by the catalogue. [ADR 0021](docs/adr/0021-spell-catalogue.md) steps 9 to 11.
+_Code_: ClassTables, SkillTables, Tables
 
 **Localized text** (fr: texte localisé):
 A text in a human language, served as a language map. [ADR 0023](docs/adr/0023-localized-text.md).

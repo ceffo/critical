@@ -45,8 +45,10 @@ A player character, owned by one user ([ADR 0029](adr/0029-users-login-and-acces
 holds the inputs, and every figure is derived from them, never entered
 ([ADR 0030](adr/0030-classes-and-races.md)):
 
-- **Class entries** (planned): each with a class, a realized level and its XP. Today a character
-  has exactly one class, level and XP total, which is the one-entry case of the same shape.
+- **Class entries** (planned): one to three, each with a class, a realized level, its XP and a
+  state (active, or frozen with the level it was left at; [ADR 0042](adr/0042-multi-class-and-dual-class.md)
+  step 1). Today a character has exactly one class, level and XP total, which is the one-entry
+  case of the same shape.
 - **Race**, with its traits.
 - **Ability scores**: six stored scores; the **score in effect** adds the app's effects
   ([ADR 0004](adr/0004-buffs.md) steps 7 to 10).
@@ -62,18 +64,35 @@ Invariants:
 - Nothing a rule derives (THAC0, saves, slots, skill percentages) is stored on the character.
 - Every change goes through the action log, so it can be undone ([ADR 0018](adr/0018-transactions-and-undo.md)).
 
-## Class (built as five fixed classes, planned as data)
+## Class (built as five fixed classes, decided as data)
 
-A class belongs to one **class group** (warrior, wizard, priest, rogue); the tables are read by
-group ([ADR 0030](adr/0030-classes-and-races.md) steps 1 and 21). Today the five classes are
-code and tables; the plan is that a class is data in the catalogue and grants **class
-features** (planned): a feature is a row with a **feature kind**, the mechanic it drives, so a
-new class adds no branch to the code, as spell effects already work
-([ADR 0008](adr/0008-spell-slots-and-long-rest.md) step 8). A **kit** (future) would be an
-optional layer over a class.
+A class belongs to one **class group** (warrior, wizard, priest, rogue); the THAC0, saves,
+proficiency slots and by-group spell effects are read by group
+([ADR 0030](adr/0030-classes-and-races.md) step 2). Today the five classes are code and tables;
+[ADR 0040](adr/0040-classes-are-data.md) makes each a **class definition** in the catalogue (format 11): group, prime requisites,
+ability minimums, alignments, equipment limits, XP rows, hit dice, a spell progression by
+reference, and a list of **class features**. A feature is `{kind, from_level, params}`: its
+**feature kind** is one of a closed list the code implements once, so a new class of known kinds
+adds no code, as spell effects already work ([ADR 0008](adr/0008-spell-slots-and-long-rest.md)
+step 8). A new mechanic is a new kind. A **kit** (future) would be data adding or removing
+features on a class.
 
-The **prime requisite** of a class is the ability it is built on; the XP bonus it gives is read in
-[ADR 0015](adr/0015-experience.md) steps 2 and 3.
+```mermaid
+erDiagram
+    CLASS_ENTRY }o--|| CLASS : "is a"
+    CLASS ||--o{ CLASS_FEATURE : lists
+    CLASS_FEATURE }o--|| FEATURE_KIND : "is of"
+    RACE ||--o{ RACE_TRAIT : lists
+    RACE_TRAIT }o--o| TRAIT_KIND : "is of (computed traits)"
+```
+
+- A character has a feature kind when one of its class entries' classes lists it at or under that
+  entry's realized level; the rule reads that entry's parameters and level ([ADR 0040](adr/0040-classes-are-data.md) step 5).
+- No class, group, race or kit id appears in the code: ids live in the catalogue, seeds and tests
+  ([ADR 0040](adr/0040-classes-are-data.md) step 10).
+
+The **prime requisites** of a class are the abilities it is built on; 16 or more in every one
+gives the 10% XP bonus ([ADR 0015](adr/0015-experience.md), [ADR 0040](adr/0040-classes-are-data.md) step 6).
 
 ## Multi-class and dual-class (planned)
 
@@ -86,13 +105,15 @@ stateDiagram-v2
     DualClass --> DualClass: old class frozen, new one levelled
 ```
 
-- **Multi-class**: several class entries from the start, each with its own level; the XP earned is
-  divided among them.
-- **Dual-class**: one entry is left (frozen) and a new one begun; the old class's abilities are
-  used again once the new class passes it.
+- **Multi-class**: two or three active class entries from the start, each levelling on its own;
+  each XP award is split evenly among them. One figure per character (THAC0, each save) is the
+  best of the entries; hit points per level are the entry's die divided by the number of classes.
+- **Dual-class**: the active entry is frozen at the level it is left at and a new one begun at
+  level 1; the old class's abilities are used again without penalty, and hit points gained again,
+  once the new class's level passes every frozen one (the crossover).
 - A class entry is the unit both share: a character is a list of class entries, and the two
-  differ in how they are created and how their XP is spent. The decisions and the numbers are for
-  the ADR that implements them; the book is PHB p.43 onwards.
+  differ in how they are created and how their XP is spent. The rules are
+  [ADR 0042](adr/0042-multi-class-and-dual-class.md) (PHB p.43 onwards).
 - The table lifted the racial restriction on both (user, 2026-10-21), so the allowed
   combinations come from the ruleset, not from the race.
 
@@ -100,7 +121,11 @@ stateDiagram-v2
 
 One of the six PHB races. A race has **traits**: ability adjustments, level limits per class,
 the languages, and the percentage adjustments of the thief skills
-([ADR 0030](adr/0030-classes-and-races.md) steps 2, 17 and 22). Traits are data in the catalogue.
+([ADR 0030](adr/0030-classes-and-races.md) steps 17, 21 and 22). Traits are data in the catalogue
+([ADR 0040](adr/0040-classes-are-data.md) steps 2 and 4): the computed ones are typed (`con_save_bonus`, `no_exceptional_strength`),
+the others text; a human is a race with no traits. The level limits and the classes a race
+admits are book data; how they apply (they warn; the racial lift for multi-class and dual-class)
+is the ruleset's ([ADR 0041](adr/0041-ruleset.md) steps 2.2, 2.3 and 5).
 
 ## Ruleset and house rules (planned)
 
@@ -159,8 +184,9 @@ _to confirm_.
 
 | Figure | Inputs | Where |
 |---|---|---|
-| Level, target level | class entry, XP | [ADR 0015](adr/0015-experience.md), [ADR 0030](adr/0030-classes-and-races.md) steps 3 and 7 |
-| THAC0, saves | class group, level | [ADR 0002](adr/0002-attack-resolution.md), [ADR 0006](adr/0006-saving-throws.md) |
+| Level, target level | class entry, its XP share | [ADR 0015](adr/0015-experience.md), [ADR 0030](adr/0030-classes-and-races.md) steps 3 and 7, [ADR 0042](adr/0042-multi-class-and-dual-class.md) steps 5 and 7 |
+| THAC0, saves | class group, level; the best of the class entries | [ADR 0002](adr/0002-attack-resolution.md), [ADR 0006](adr/0006-saving-throws.md), [ADR 0042](adr/0042-multi-class-and-dual-class.md) steps 8 and 9 |
+| Magical defence adjustment (a mind-affecting save's `wisdom` modifier) | Wisdom, any class | [ADR 0006](adr/0006-saving-throws.md) step 9 |
 | Spell slots | class, level, Wisdom or Intelligence | [ADR 0008](adr/0008-spell-slots-and-long-rest.md) |
 | Proficiency budget | class group, level, Intelligence | [ADR 0037](adr/0037-proficiencies.md) |
 | Rogue skill percentages | skill points, race, Dexterity, skill armour | [ADR 0014](adr/0014-skill-checks.md), [ADR 0030](adr/0030-classes-and-races.md) |

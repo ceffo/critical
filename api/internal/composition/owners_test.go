@@ -216,9 +216,9 @@ func TestOwners_Step7_1_AnotherUsersCharacterIsNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, tb.call(bob, "GET", "/api/character", "", &refused))
 	assert.Equal(t, "no_character", refused["code"], "nothing changed")
 
-	bram, err := m.AddCharacterOf(ctx, bobID, charactersvc.Character{Name: "Bram", Class: "fighter", HPMax: 30})
+	bram, err := m.AddCharacterOf(ctx, bobID, charactersvc.Character{Name: "Bram", Class: "fighter", Wis: 10, HPMax: 30})
 	require.NoError(t, err)
-	old, err := m.AddCharacterOf(ctx, bobID, charactersvc.Character{Name: "Old", Class: "thief", HPMax: 6})
+	old, err := m.AddCharacterOf(ctx, bobID, charactersvc.Character{Name: "Old", Class: "thief", Wis: 10, HPMax: 6})
 	require.NoError(t, err)
 	require.NoError(t, m.RetireCharacter(ctx, old))
 	var bobList listView

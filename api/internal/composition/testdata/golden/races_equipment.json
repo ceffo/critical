@@ -2564,7 +2564,20 @@
     "MinStrExceptional": 1,
     "MaxStrExceptional": 100,
     "MaxSkillPoints": 95,
-    "MaxNameLen": 40
+    "MaxNameLen": 40,
+    "MaxClasses": 3,
+    "MinLeftAtLevel": 2,
+    "MulticlassAnyRace": true,
+    "DualclassAnyRace": true,
+    "RestrictedRaces": [
+      "dwarf",
+      "elf",
+      "gnome",
+      "half_elf",
+      "halfling"
+    ],
+    "DualClassOldPrime": 15,
+    "DualClassNewPrime": 17
   },
   "saves bard dwarf": {
     "raceSaveBonus": {

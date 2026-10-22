@@ -302,6 +302,16 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// what the XP ledger's entries add.
 	// The language catalogue (ADR 0032 step 4) is the artifact's: nil before
 	// format 8, which knows no language.
+	// The ruleset (ADR 0041): the default one, read by the rules services
+	// through its resolver. The catalogue version this server loaded is
+	// recorded on it.
+	bs.Rulesets, err = rulesetsvc.New(rulesetsvc.Deps{DAL: st.Rulesets, Proficiencies: proficiencyIDs{proficiencies}, Tx: tx})
+	if err := bs.add(bs.Rulesets, err); err != nil {
+		return nil, err
+	}
+	if err := bs.Rulesets.RecordCatalogueVersion(ctx, cat.Version); err != nil {
+		return nil, fmt.Errorf("record the catalogue version on the ruleset: %w", err)
+	}
 	languages, _ := ruleTables.Languages()
 	bs.Character, err = charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
@@ -309,7 +319,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		// A new mage's or bard's starting spellbook (ADR 0030 step 20.7) reads
 		// the catalogue and is written in the creation's transaction.
 		Spells: spellbookadpt.NewCreation(cat, startingSeed), Book: st.Spellbook,
-		FreeSpells: freeSpells{log: logSvc, book: spellbook},
+		FreeSpells: freeSpells{log: logSvc, book: spellbook}, Rulesets: bs.Rulesets,
 	})
 	if err := bs.add(bs.Character, err); err != nil {
 		return nil, err
@@ -353,16 +363,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	})
 	if err := bs.add(bs.Prep, err); err != nil {
 		return nil, err
-	}
-	// The ruleset (ADR 0041): the default one, read by the rules services
-	// through its resolver. The catalogue version this server loaded is
-	// recorded on it.
-	bs.Rulesets, err = rulesetsvc.New(rulesetsvc.Deps{DAL: st.Rulesets, Proficiencies: proficiencyIDs{proficiencies}, Tx: tx})
-	if err := bs.add(bs.Rulesets, err); err != nil {
-		return nil, err
-	}
-	if err := bs.Rulesets.RecordCatalogueVersion(ctx, cat.Version); err != nil {
-		return nil, fmt.Errorf("record the catalogue version on the ruleset: %w", err)
 	}
 	bs.Combat, err = combatsvc.New(combatsvc.Deps{
 		Chars: charSvc, Buffs: bs.Buffs, Dice: dice, Weapons: weapons, Rulesets: bs.Rulesets,

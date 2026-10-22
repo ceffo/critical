@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -187,13 +188,183 @@ type checked struct {
 	def classes.Class
 	// strOK: the Strength is entered and in range.
 	strOK bool
+	// ents are the class entries read (the one-class case's too); active are the definitions of the
+	// active ones, in order.
+	ents   []NewClass
+	active []classes.Class
+	// exceptional: an active entry's class lists exceptional_strength, the Strength entered is 18
+	// and the race rolls it.
+	exceptional bool
+}
+
+// entries are the class entries n enters: Classes, else the one active entry Class and XP state.
+func (n NewCharacter) entries() []NewClass {
+	if len(n.Classes) > 0 {
+		return n.Classes
+	}
+	return []NewClass{{Class: n.Class, XP: n.XP}}
+}
+
+// field is the name of an entry's field in a refusal: the one-class case keeps the flat names.
+func (n NewCharacter) field(i int, name string) string {
+	if len(n.Classes) == 0 {
+		return name
+	}
+	return fmt.Sprintf("%s.%d.%s", FieldClasses, i, name)
+}
+
+// frozen reports whether the entry is a class left (a dual-class's old one).
+func (e NewClass) frozen() bool { return e.LeftAtLevel != 0 }
+
+// classShape is ADR 0042 step 1's refusals of the entries as a whole (the book's limits on the
+// classes of a character), in the order of the entries.
+func classShape(n NewCharacter) []error {
+	if len(n.Classes) == 0 {
+		return nil
+	}
+	var out []error
+	refuse := func(field, code string) { out = append(out, &domain.FieldError{Field: field, Message: code}) }
+	active, frozen := 0, 0
+	for i, e := range n.Classes {
+		if e.frozen() {
+			frozen++
+		} else {
+			active++
+		}
+		for j := range i {
+			if n.Classes[j].Class != e.Class {
+				continue
+			}
+			if n.Classes[j].frozen() != e.frozen() {
+				// The class listed twice is one left and one advanced in: the new class is one already left.
+				if !e.frozen() {
+					refuse(n.field(i, "class"), CodeClassAlreadyLeft)
+				} else {
+					refuse(n.field(j, "class"), CodeClassAlreadyLeft)
+				}
+			} else {
+				refuse(n.field(i, "class"), CodeDuplicateClass)
+			}
+			break
+		}
+		switch {
+		case e.LeftAtLevel < 0 || e.LeftAtLevel > classes.MaxLevel:
+			refuse(n.field(i, "leftAtLevel"), CodeOutOfRange)
+		case e.frozen() && e.LeftAtLevel < classes.MinLeftAtLevel:
+			refuse(n.field(i, "leftAtLevel"), CodeLevelTooLow)
+		}
+		if e.Level < 0 || e.Level > classes.MaxLevel || (e.frozen() && e.Level != 0 && e.Level != e.LeftAtLevel) {
+			refuse(n.field(i, "level"), CodeOutOfRange)
+		}
+	}
+	switch {
+	case active == 0:
+		refuse(FieldClasses, CodeNoActiveClass)
+	case active > classes.MaxMultiClasses:
+		refuse(FieldClasses, CodeTooManyClasses)
+	case active > 1 && frozen > 0:
+		refuse(FieldClasses, CodeMultiAndDualClass)
+	}
+	return out
+}
+
+// racesRefusals are ADR 0042 step 2's refusals of the race for the entries: the book's limit on a
+// multi-class or a dual-class race (waived by the ruleset's racial lift, ADR 0041 step 2.2, which
+// also waives DMG Table 7's dash for these characters) and the dash otherwise. The book's
+// combinations per race are not enforced: the catalogue has no rows for them, so with the lift off
+// a multi-class character needs a restricted race and no more.
+func (s *service) raceRefusals(rs ruleset.Ruleset, defs *classes.Registry, n NewCharacter) ([]error, error) {
+	race := raceOf(defs, n.Race)
+	active, frozen := 0, 0
+	for _, e := range n.entries() {
+		if e.frozen() {
+			frozen++
+		} else {
+			active++
+		}
+	}
+	multi, dual := active > 1, frozen > 0
+	switch {
+	case dual && !rs.RacialLift.DualclassAnyRace && race.Restricted():
+		return []error{&domain.FieldError{Field: FieldClasses, Message: CodeDualClassNotAllowed}}, nil
+	case multi && !rs.RacialLift.MulticlassAnyRace && !race.Restricted():
+		return []error{&domain.FieldError{Field: FieldClasses, Message: CodeMultiClassNotAllowed}}, nil
+	case (dual && rs.RacialLift.DualclassAnyRace) || (multi && rs.RacialLift.MulticlassAnyRace):
+		return nil, nil // the lift waives the dash
+	}
+	for _, e := range n.entries() {
+		allowed, err := s.rules.RaceAllows(n.Race, e.Class)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			return []error{&domain.FieldError{Field: "race", Message: CodeRaceNotAllowed}}, nil
+		}
+	}
+	return nil, nil
+}
+
+// primeRefusals are ADR 0042 step 2.2's prime requisites of a dual-class character: 15 in every one
+// of a class it left, 17 in every one of its new class.
+func primeRefusals(n NewCharacter, defs *classes.Registry, scores map[string]int) []error {
+	var out []error
+	if len(n.Classes) == 0 {
+		return nil
+	}
+	dual := false
+	for _, e := range n.Classes {
+		dual = dual || e.frozen()
+	}
+	if !dual {
+		return nil
+	}
+	for i, e := range n.Classes {
+		def, ok := defs.Class(e.Class)
+		if !ok {
+			continue
+		}
+		min := DualClassNewPrime
+		if e.frozen() {
+			min = DualClassOldPrime
+		}
+		for _, a := range def.PrimeRequisites {
+			if v, ok := scores[a]; ok && v < min {
+				out = append(out, &domain.FieldError{Field: n.field(i, "class"), Message: CodePrimeRequisiteTooLow})
+				break
+			}
+		}
+	}
+	return out
+}
+
+// alignmentsOfEntries are the alignments every active entry's class admits (ADR 0042 step 2: each
+// class's alignments apply), in the first class's order; every one of the nine before a class is
+// chosen.
+func alignmentsOfEntries(defs *classes.Registry, entries []classes.Entry) []string {
+	var out []string
+	first := true
+	for _, e := range entries {
+		if e.State != classes.EntryActive {
+			continue
+		}
+		a := AlignmentsOf(defs, e.Class)
+		if first {
+			out, first = slices.Clone(a), false
+			continue
+		}
+		out = slices.DeleteFunc(out, func(x string) bool { return !slices.Contains(a, x) })
+	}
+	if first {
+		return slices.Clone(classes.Alignments)
+	}
+	return out
 }
 
 // check reads n field by field, in the form's order. The creation (draft false) stops at the
 // first refusal. A draft lists a blank name, class, race, alignment or sex and the numbers named
 // in blank as missing instead of refusing them, and goes on past a refusal so that every field's
 // verdict is read; every refusal it gives is the creation's, field and code alike.
-func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, error) {
+func (s *service) check(ctx context.Context, n NewCharacter, blank []string, draft bool) (checked, error) {
 	var out checked
 	defs, err := s.rules.Definitions()
 	if err != nil {
@@ -220,17 +391,46 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 	if stop() {
 		return out, nil
 	}
-	class, classOK := defs.Class(n.Class)
-	// ADR 0040 step 8: a class listing a kind the code does not compute yet
-	// is not creatable.
-	classOK = classOK && class.Implemented()
-	out.def = class
+	ents := n.entries()
+	out.ents = ents
+	classOK := true
+	var skillDef classes.Class
+	skillFound := false
+	for i, e := range ents {
+		class, ok := defs.Class(e.Class)
+		// ADR 0040 step 8: a class listing a kind the code does not compute yet
+		// is not creatable.
+		ok = ok && class.Implemented()
+		switch {
+		case ok:
+			if e.frozen() {
+				continue
+			}
+			out.active = append(out.active, class)
+			// Skill points go to the first entry whose class lists rogue skills (ADR 0030 steps 17 and 18).
+			if _, rogue := class.Lists(classes.KindRogueSkills); rogue && !skillFound {
+				skillDef, skillFound = class, true
+			}
+		case draft && e.Class == "":
+			empty(n.field(i, "class"))
+			classOK = false
+		default:
+			refuse(&domain.FieldError{Field: n.field(i, "class"), Message: CodeNotCreatable})
+			classOK = false
+		}
+	}
+	if classOK {
+		// ADR 0042 step 1: the entries as a whole.
+		for _, err := range classShape(n) {
+			refuse(err)
+			classOK = false
+		}
+	}
 	switch {
-	case classOK:
-	case draft && n.Class == "":
-		empty("class")
-	default:
-		refuse(&domain.FieldError{Field: "class", Message: CodeNotCreatable})
+	case skillFound:
+		out.def = skillDef
+	case len(out.active) > 0:
+		out.def = out.active[0]
 	}
 	if stop() {
 		return out, nil
@@ -242,14 +442,18 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 	case !slices.Contains(defs.RaceIDs(), n.Race):
 		refuse(&domain.FieldError{Field: "race", Message: CodeUnknown})
 	case classOK:
-		allowed, err := s.rules.RaceAllows(n.Race, n.Class)
+		rs, err := s.ruleset(ctx)
 		if err != nil {
 			return checked{}, fmt.Errorf("new character: %w", err)
 		}
-		if !allowed {
-			refuse(&domain.FieldError{Field: "race", Message: CodeRaceNotAllowed})
+		refusals, err := s.raceRefusals(rs, defs, n)
+		if err != nil {
+			return checked{}, fmt.Errorf("new character: %w", err)
 		}
-		raceOK = allowed
+		for _, r := range refusals {
+			refuse(r)
+		}
+		raceOK = len(refusals) == 0
 	}
 	if stop() {
 		return out, nil
@@ -279,13 +483,27 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 			return out, nil
 		}
 	}
-	if err := validExceptional(n, class, raceOf(defs, n.Race)); err != nil {
+	if scoresOK && classOK {
+		for _, err := range primeRefusals(n, defs, map[string]int{
+			"str": n.Str, "dex": n.Dex, "con": n.Con, "int": n.Int, "wis": n.Wis, "cha": n.Cha,
+		}) {
+			refuse(err)
+		}
+		if stop() {
+			return out, nil
+		}
+	}
+	race := raceOf(defs, n.Race)
+	if err := validExceptional(n, out.active, race); err != nil {
 		refuse(err)
+	}
+	for _, def := range out.active {
+		out.exceptional = out.exceptional || (out.strOK && ruletablesvc.ExceptionalStrengthAllowed(def, race, n.Str))
 	}
 	if stop() {
 		return out, nil
 	}
-	points, err := validSkills(n, class)
+	points, err := validSkills(n, out.def)
 	pointsOK := err == nil
 	if err != nil {
 		refuse(err)
@@ -303,14 +521,31 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 		return out, nil
 	}
 	xpOK := true
-	switch {
-	case slices.Contains(blank, "xp"):
-		out.missing, xpOK = append(out.missing, "xp"), false
-	case n.XP < MinStartingXP || n.XP > MaxStartingXP:
-		refuse(&domain.FieldError{Field: "xp", Message: CodeOutOfRange})
-		xpOK = false
+	entries := make([]classes.Entry, 0, len(ents))
+	for i, e := range ents {
+		f := n.field(i, "xp")
+		switch {
+		case e.frozen():
+		case slices.Contains(blank, f):
+			out.missing, xpOK = append(out.missing, f), false
+		}
+		if e.XP < MinStartingXP || e.XP > MaxStartingXP {
+			refuse(&domain.FieldError{Field: f, Message: CodeOutOfRange})
+			xpOK = false
+		}
+		entry := classes.Entry{Class: e.Class, RealizedLevel: e.Level, StartingXP: e.XP, State: classes.EntryActive}
+		if e.frozen() {
+			entry.State, entry.RealizedLevel, entry.LeftAtLevel = classes.EntryFrozen, e.LeftAtLevel, e.LeftAtLevel
+			if e.XP == 0 && classOK && e.LeftAtLevel >= 1 && e.LeftAtLevel <= classes.MaxLevel {
+				// A class left keeps the XP that reaches its left-at level when none is entered.
+				if entry.StartingXP, err = s.rules.XPThreshold(e.Class, e.LeftAtLevel); err != nil {
+					return checked{}, fmt.Errorf("new character: %w", err)
+				}
+			}
+		}
+		entries = append(entries, entry)
 	}
-	details, missing, err := newDetails(AlignmentsOf(defs, n.Class), n.Details, !draft)
+	details, missing, err := newDetails(alignmentsOfEntries(defs, entries), n.Details, !draft)
 	if err != nil {
 		refuse(err)
 	}
@@ -318,9 +553,12 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 	out.levelled = classOK && xpOK
 	out.derivable = out.levelled && raceOK && scoresOK && pointsOK
 	out.c = Character{
-		Name: name, Class: n.Class, Race: n.Race,
+		Name: name, Class: ents[0].Class, Race: n.Race,
 		Str: n.Str, StrExceptional: n.StrExceptional, Dex: n.Dex, Con: n.Con, Int: n.Int, Wis: n.Wis, Cha: n.Cha,
 		HPMax: n.HPMax, XPTotal: n.XP, Details: details, SkillPoints: points,
+	}
+	if len(n.Classes) > 0 {
+		out.c.SetClasses(entries)
 	}
 	return out, nil
 }
@@ -331,6 +569,10 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 // the creation form's field, DetailsField + FieldLanguages.
 func (s *service) skillsAt(c Character, n NewCharacter) (skills.Sheet, error) {
 	before := skills.Sheet{Class: c.Class, Level: c.RealizedLevel, Intelligence: c.Int, Native: s.languages.Native(c.Race)}
+	if len(c.Classes) > 0 {
+		// ADR 0042 step 15: the pools of every entry, a class left at its left-at level.
+		before.Classes = c.StoredClasses()
+	}
 	languages := n.Languages
 	if languages == nil {
 		languages = []string{}
@@ -358,18 +600,28 @@ func validSkills(n NewCharacter, def classes.Class) (skills.SetPoints, error) {
 }
 
 // validExceptional is ADR 0030 step 9: an exceptional strength is optional,
-// 1 to 100, and only with Strength 18 for a class with exceptional_strength
-// (ADR 0040 step 3) of a race that rolls it.
-func validExceptional(n NewCharacter, def classes.Class, race classes.Race) error {
+// 1 to 100, and only with Strength 18 for a character one of whose active
+// classes has exceptional_strength (ADR 0040 step 3, ADR 0042 step 12) of a
+// race that rolls it.
+func validExceptional(n NewCharacter, active []classes.Class, race classes.Race) error {
 	switch {
 	case n.StrExceptional == 0:
 		return nil
 	case n.StrExceptional < MinStrExceptional || n.StrExceptional > MaxStrExceptional:
 		return &domain.FieldError{Field: "strExceptional", Message: CodeOutOfRange}
-	case !ruletablesvc.ExceptionalStrengthAllowed(def, race, n.Str):
-		return &domain.FieldError{Field: "strExceptional", Message: CodeNotAllowed}
 	}
-	return nil
+	for _, def := range active {
+		if ruletablesvc.ExceptionalStrengthAllowed(def, race, n.Str) {
+			return nil
+		}
+	}
+	return &domain.FieldError{Field: "strExceptional", Message: CodeNotAllowed}
+}
+
+// ruleset is the ruleset a new character is created under: the resolver's for no character yet
+// (the default until games exist, ADR 0041 step 9).
+func (s *service) ruleset(ctx context.Context) (ruleset.Ruleset, error) {
+	return s.rulesets.ForCharacter(ctx, 0)
 }
 
 // Create validates n, derives its level, THAC0 and saves at the starting XP
@@ -380,7 +632,7 @@ func validExceptional(n NewCharacter, def classes.Class, race classes.Race) erro
 // character is no move of the game and is not undone). This server forgets
 // the owner's sessions once it committed (ADR 0029 step 4.7).
 func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (int64, error) {
-	k, err := s.check(n, nil, false)
+	k, err := s.check(ctx, n, nil, false)
 	if err != nil {
 		return 0, err
 	}
@@ -394,7 +646,7 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	// ADR 0037 step 10: nothing was spent before, so a new character is
 	// never created over its skill point budget.
-	if err := skills.SkillPointsWithinBudget(k.def, skills.FirstSet(k.def), c.RealizedLevel, nil, c.SkillPoints.Of(skills.FirstSet(k.def))); err != nil {
+	if err := skills.SkillPointsWithinBudget(k.def, skills.FirstSet(k.def), entryLevel(&c, k.def.ID), nil, c.SkillPoints.Of(skills.FirstSet(k.def))); err != nil {
 		return 0, err
 	}
 	// ADR 0037 steps 6, 10, 14 and 18: nor with picks or languages the
@@ -452,8 +704,30 @@ func started(c *Character, rules Rules) (Derived, error) {
 		return Derived{}, fmt.Errorf("new character: %w", err)
 	}
 	c.Sheet = Sheet{Level: d.TargetLevel, THAC0: d.THAC0, Saves: d.Saves}
-	c.RealizedLevel = d.TargetLevel
+	if len(c.Classes) == 0 {
+		c.RealizedLevel = d.TargetLevel
+		return d, nil
+	}
+	// ADR 0042 step 4: each active entry starts at the level entered for it, else at its target.
+	entries := slices.Clone(c.Classes)
+	for i := range entries {
+		if entries[i].State == classes.EntryActive && entries[i].RealizedLevel == 0 {
+			entries[i].RealizedLevel = d.Classes[i].TargetLevel
+		}
+	}
+	c.SetClasses(entries)
 	return d, nil
+}
+
+// entryLevel is the level of c's entry of class (the realized level, or the left-at level of a
+// class left); c's realized level for a class it has none of.
+func entryLevel(c *Character, class string) int {
+	for _, e := range c.Entries() {
+		if e.Class == class {
+			return e.Level()
+		}
+	}
+	return c.RealizedLevel
 }
 
 // Draft is a creation draft as far as it is entered (ADR 0034, amendment of 2026-10-20: one
@@ -465,8 +739,8 @@ func started(c *Character, rules Rules) (Derived, error) {
 // its field and code, the fields still blank and the class minimums the entered scores miss. blank
 // names the numbers not entered. Nothing is refused (a refusal is an answer here) and nothing is
 // stored.
-func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Draft, error) {
-	k, err := s.check(n, blank, true)
+func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*Draft, error) {
+	k, err := s.check(ctx, n, blank, true)
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +748,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	// ADR 0030 step 9 through the class's features (ADR 0040 step 3): the
 	// form offers the 18/xx field when the server says so, never by a rule
 	// of its own.
-	out.ExceptionalStrength = k.strOK && ruletablesvc.ExceptionalStrengthAllowed(k.def, raceOf(k.defs, n.Race), n.Str)
+	out.ExceptionalStrength = k.exceptional
 	if !k.derivable {
 		if k.levelled {
 			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
@@ -490,7 +764,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	if _, err := started(&c, s.rules); err != nil {
 		return nil, err
 	}
-	out.SkillPoints = budgetAt(out, k.def, c.RealizedLevel, c.SkillPoints)
+	out.SkillPoints = budgetAt(out, k.def, entryLevel(&c, k.def.ID), c.SkillPoints)
 	if sheet, err := s.skillsAt(c, n); err != nil {
 		out.Refusals = append(out.Refusals, err)
 		// Refused picks are read as entered, so the step shows their figures beside the refusal.
@@ -509,6 +783,21 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	out.Refusals = append(out.Refusals, refusals...)
 	out.Character = &c
 	return out, nil
+}
+
+// skillsLevel is the level the skill point budget reads before a character derives: the skills
+// entry's entered level, else the level its XP reaches (ADR 0030 step 3, step 7.5).
+func (s *service) skillsLevel(k checked) (int, error) {
+	for _, e := range k.ents {
+		if e.Class != k.def.ID || e.frozen() {
+			continue
+		}
+		if e.Level > 0 {
+			return e.Level, nil
+		}
+		return s.rules.LevelFor(e.Class, e.XP)
+	}
+	return 0, nil
 }
 
 // budgetAt is a draft's skill point budget (of the first skill set) at level (ADR 0030 steps 17 and 18), nil for a class
@@ -745,6 +1034,18 @@ type CreationOptions struct {
 	MaxStrExceptional      int
 	MaxSkillPoints         int
 	MaxNameLen             int
+	// MaxClasses is the most active classes of a multi-class character and MinLeftAtLevel the lowest
+	// level a class can be left at (ADR 0042 step 1).
+	MaxClasses, MinLeftAtLevel int
+	// MulticlassAnyRace and DualclassAnyRace are the ruleset's racial lift (ADR 0041 step 2.2, ADR
+	// 0042 step 2): any race may be multi-class or dual-class, so the form offers every race for such a
+	// character instead of the class's own. RestrictedRaces are the races with ability requirements,
+	// the only multi-class ones with the lift off.
+	MulticlassAnyRace, DualclassAnyRace bool
+	RestrictedRaces                     []string
+	// DualClassOldPrime and DualClassNewPrime are the prime requisite scores of a dual-class
+	// character in the class it left and in its new class (step 2.2).
+	DualClassOldPrime, DualClassNewPrime int
 }
 
 // FigureOption is one identity figure's roll dice (Count dice of Sides) and
@@ -792,13 +1093,20 @@ type RaceLanguageOption struct {
 }
 
 // CreationOptions reads the races of each creatable class from the rules.
-func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
+func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) {
 	defs, err := s.rules.Definitions()
 	if err != nil {
 		return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 	}
 	races := defs.RaceIDs()
+	rs, err := s.ruleset(ctx)
+	if err != nil {
+		return CreationOptions{}, fmt.Errorf("creation options: %w", err)
+	}
 	out := CreationOptions{
+		MaxClasses: classes.MaxMultiClasses, MinLeftAtLevel: classes.MinLeftAtLevel,
+		MulticlassAnyRace: rs.RacialLift.MulticlassAnyRace, DualclassAnyRace: rs.RacialLift.DualclassAnyRace,
+		RestrictedRaces: []string{}, DualClassOldPrime: DualClassOldPrime, DualClassNewPrime: DualClassNewPrime,
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
@@ -806,6 +1114,9 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		ScoreMethods: slices.Clone(ruletablesvc.ScoreMethods), RaceAdjustments: make([]RaceAdjustmentOption, 0, len(races)),
 	}
 	for _, race := range races {
+		if raceOf(defs, race).Restricted() {
+			out.RestrictedRaces = append(out.RestrictedRaces, race)
+		}
 		adj, err := s.rules.RaceAdjustmentsFor(race)
 		if err != nil {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)

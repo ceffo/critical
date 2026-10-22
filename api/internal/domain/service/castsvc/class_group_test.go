@@ -123,8 +123,9 @@ func TestEffects_Step2_ByGroupFollowsTheCharactersClass(t *testing.T) {
 	}
 }
 
-// A by-group effect on a character whose class has no group (Derive sets
-// none for a class the catalogue does not define) is refused
+// A by-group effect on a character whose class has no group (a class the
+// catalogue does not define: Derive refuses it, so the fixture's group is
+// empty) is refused
 // before anything is rolled or written; an effect that is the same for
 // everybody needs no group.
 func TestEffects_Step2_UnknownClassRefusesAByGroupEffect(t *testing.T) {

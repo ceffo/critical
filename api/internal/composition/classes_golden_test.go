@@ -26,6 +26,9 @@ import (
 //     16,000 / 32,000, mage 20,000 / 40,000, cleric 13,000 / 27,500, thief and bard
 //     10,000 / 20,000; the level-6 hit die d10, d4, d8, d6, d6 (chapter 3).
 //   - Constitution 17, Table 3 (p.15): +2 hit points a die, +3 for warriors.
+//   - Spell slots at level 5: mage Table 21 (p.30) 4 2 1; cleric Table 24 (p.33)
+//     3 3 1 plus Wisdom 16's cumulative bonus spells, Table 5 (p.17), two 1st and
+//     two 2nd: 5 5 1; bard Table 32 (p.42) 3 1; fighter and thief none.
 //   - The 10% XP bonus, chapter 3 "Prime Requisite": 16 or more in all the
 //     class's prime requisites (fighter Str, mage Int, cleric Wis, thief Dex,
 //     bard Dex and Cha).
@@ -37,6 +40,7 @@ func TestClasses_Golden_FiveClassesDeriveTheBooksFigures(t *testing.T) {
 		die   int
 		gain  int // a rolled 3 with Constitution 17
 		bonus bool
+		slots map[int]int
 	}
 	tests := []struct {
 		name string
@@ -46,27 +50,27 @@ func TestClasses_Golden_FiveClassesDeriveTheBooksFigures(t *testing.T) {
 		{
 			"a fighter of Str 16",
 			charactersvc.Character{Class: "fighter", Str: 16, Dex: 10, Con: 17, Int: 10, Wis: 10, Cha: 10},
-			figures{16, charactersvc.Saves{ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 13, Spell: 14}, 32_000, 10, 3 + 3, true},
+			figures{16, charactersvc.Saves{ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 13, Spell: 14}, 32_000, 10, 3 + 3, true, map[int]int{}},
 		},
 		{
 			"a mage of Int 15",
 			charactersvc.Character{Class: "mage", Str: 10, Dex: 10, Con: 17, Int: 15, Wis: 10, Cha: 10},
-			figures{19, charactersvc.Saves{ParaPoison: 14, RodStaffWand: 11, PetriPoly: 13, Breath: 15, Spell: 12}, 40_000, 4, 3 + 2, false},
+			figures{19, charactersvc.Saves{ParaPoison: 14, RodStaffWand: 11, PetriPoly: 13, Breath: 15, Spell: 12}, 40_000, 4, 3 + 2, false, map[int]int{1: 4, 2: 2, 3: 1}},
 		},
 		{
 			"a cleric of Wis 16",
 			charactersvc.Character{Class: "cleric", Str: 10, Dex: 10, Con: 17, Int: 10, Wis: 16, Cha: 10},
-			figures{18, charactersvc.Saves{ParaPoison: 9, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14}, 27_500, 8, 3 + 2, true},
+			figures{18, charactersvc.Saves{ParaPoison: 9, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14}, 27_500, 8, 3 + 2, true, map[int]int{1: 5, 2: 5, 3: 1}},
 		},
 		{
 			"a thief of Dex 16",
 			charactersvc.Character{Class: "thief", Str: 10, Dex: 16, Con: 17, Int: 10, Wis: 10, Cha: 10},
-			figures{18, charactersvc.Saves{ParaPoison: 12, RodStaffWand: 12, PetriPoly: 11, Breath: 15, Spell: 13}, 20_000, 6, 3 + 2, true},
+			figures{18, charactersvc.Saves{ParaPoison: 12, RodStaffWand: 12, PetriPoly: 11, Breath: 15, Spell: 13}, 20_000, 6, 3 + 2, true, map[int]int{}},
 		},
 		{
 			"a bard of Dex 16 and Cha 15",
 			charactersvc.Character{Class: "bard", Str: 10, Dex: 16, Con: 17, Int: 13, Wis: 10, Cha: 15},
-			figures{18, charactersvc.Saves{ParaPoison: 12, RodStaffWand: 12, PetriPoly: 11, Breath: 15, Spell: 13}, 20_000, 6, 3 + 2, false},
+			figures{18, charactersvc.Saves{ParaPoison: 12, RodStaffWand: 12, PetriPoly: 11, Breath: 15, Spell: 13}, 20_000, 6, 3 + 2, false, map[int]int{1: 3, 2: 1}},
 		},
 	}
 	ctx := context.Background()
@@ -98,6 +102,7 @@ func TestClasses_Golden_FiveClassesDeriveTheBooksFigures(t *testing.T) {
 			assert.Equal(t, 6, d.TargetLevel, "the XP of level 6 reaches it")
 			assert.Equal(t, tc.want.thac0, d.THAC0, "Table 53")
 			assert.Equal(t, tc.want.saves, d.Saves, "Table 60")
+			assert.Equal(t, tc.want.slots, d.SpellSlots, "Tables 21, 24 with Table 5, 32")
 			l, err := bs.XP.Get(ctx, id)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want.bonus, l.BonusEligible, "every prime requisite at 16")

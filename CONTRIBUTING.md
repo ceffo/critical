@@ -43,7 +43,8 @@ how to run the app for checks are described in
 - [docs/adr/README.md](docs/adr/README.md): index of the decisions and house rules.
 - [docs/all.md](docs/all.md), [docs/backend.md](docs/backend.md), [docs/frontend.md](docs/frontend.md):
   scope, backend and frontend guides.
-- [GLOSSARY.md](GLOSSARY.md): the project vocabulary.
+- [GLOSSARY.md](GLOSSARY.md): the project vocabulary (terms only).
+- [docs/domain-model.md](docs/domain-model.md): the entities, their relations and invariants.
 
 Generated code (database access, mocks) is committed and never edited by hand; how to regenerate it
 is in [docs/backend.md](docs/backend.md).

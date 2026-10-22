@@ -41,7 +41,8 @@ critical/
 ## Key Domain Vocabulary
 
 The vocabulary lives in [`GLOSSARY.md`](../GLOSSARY.md) (English term, French UI word, the ADR
-that holds the rules; [ADR 0036](adr/0036-vocabulary.md)). Read it before naming anything. Two
+that holds the rules; [ADR 0036](adr/0036-vocabulary.md)). Read it before naming anything; how the terms
+relate is in [`docs/domain-model.md`](domain-model.md). Two
 process words that are not domain:
 
 - **Vertical Slice**: one Linear issue covers schema + Go engine + REST endpoint + React panel for one feature

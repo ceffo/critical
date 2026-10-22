@@ -96,7 +96,8 @@ export const INVALIDATES = {
   proficiencies: ["skills", "character", "items", "weapons"],
   // The level and its max HP (ADR 0030 step 7.3).
   // The class entries: a class taken or left again reshapes the whole sheet (ADR 0042 step 3).
-  class_entries: [...LEVEL_SLICES, "hp"],
+  // The XP ledger's total and progress belong to the first active entry, so they change too.
+  class_entries: [...LEVEL_SLICES, "hp", "xp"],
   realized_level: [...LEVEL_SLICES, "hp"],
   round: ["round"],
   saved_buffs: ["savedBuffs"],

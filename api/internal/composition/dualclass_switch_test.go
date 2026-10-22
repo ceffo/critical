@@ -33,7 +33,7 @@ func fighterInPlay(t *testing.T, race string, str, intelligence, level int, entr
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	c := charactersvc.Character{
 		Name: "Brenn", Race: race, Class: "fighter", RealizedLevel: level, XPTotal: 20_000,
-		Str: str, Dex: 12, Con: 14, Int: intelligence, Wis: 10, Cha: 10, HPMax: 60,
+		Str: str, Dex: 12, Con: 14, Int: intelligence, Wis: 17, Cha: 10, HPMax: 60,
 		Details: charactersvc.Details{Alignment: "true_neutral"},
 	}
 	if entries != nil {
@@ -216,4 +216,55 @@ func TestTakeClass_Step2_2_EachRefusalWritesNothing(t *testing.T) {
 			assert.Empty(t, entries)
 		})
 	}
+}
+
+// Step 2.2: a race the books restrict is accepted while the table's racial lift is on
+// (it is by default), so an elf fighter takes the mage class.
+func TestTakeClass_Step2_2_ARestrictedRaceIsAcceptedWithTheLift(t *testing.T) {
+	ctx := context.Background()
+	bs, id := fighterInPlay(t, "elf", 17, 17, 6, nil)
+	_, err := bs.DualClass.Switch(ctx, id, "mage")
+	require.NoError(t, err)
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, "mage", c.Class)
+	assert.Equal(t, classes.EntryFrozen, entryOf(t, c, "fighter").State)
+}
+
+// Step 3: a second switch (mage to cleric) on a dual-classed character freezes the mage too, keeps
+// the fighter frozen, cuts the cleric off at the latest award, and one Undo gives the previous two
+// entries back.
+func TestTakeClass_Step3_ASecondSwitchFreezesBothAndUndoRestoresThem(t *testing.T) {
+	ctx := context.Background()
+	entries := []classes.Entry{
+		{Class: "fighter", RealizedLevel: 6, StartingXP: 20_000, State: classes.EntryFrozen, LeftAtLevel: 6},
+		classes.SingleEntry("mage", 3, 2_500),
+	}
+	bs, id := fighterInPlay(t, "human", 17, 17, 6, entries)
+	award, err := bs.XP.Add(ctx, id, xpsvc.EntryInput{Base: 700, Reason: "the lich"})
+	require.NoError(t, err)
+	latest := award.Entries[0].ID
+	before, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+
+	_, err = bs.DualClass.Switch(ctx, id, "cleric")
+	require.NoError(t, err)
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, c.Classes, 3)
+	assert.Equal(t, classes.EntryFrozen, entryOf(t, c, "fighter").State)
+	assert.Equal(t, entries[0], entryOf(t, c, "fighter"), "the fighter is untouched")
+	mage := entryOf(t, c, "mage")
+	assert.Equal(t, classes.EntryFrozen, mage.State)
+	assert.Equal(t, 3, mage.LeftAtLevel)
+	cleric := entryOf(t, c, "cleric")
+	assert.Equal(t, classes.EntryActive, cleric.State)
+	assert.Equal(t, 1, cleric.RealizedLevel)
+	assert.Equal(t, latest, cleric.IgnoredAwardsThrough)
+	assert.Equal(t, "cleric", c.Class)
+
+	undoTop(t, bs, id)
+	c, err = bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, before.Entries(), c.Entries())
 }

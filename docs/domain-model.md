@@ -138,8 +138,10 @@ stateDiagram-v2
   once the new class's level passes every frozen one (the crossover). Before it the frozen entry
   is **dormant**: its features, spells and equipment are usable but each use warns
   `dual_class_old_ability`, its THAC0 and saves do not count, and the new class's levels gain no
-  hit points. The computation is built (`classes.Crossed`, `classes.Dormant`); taking a new class
-  and creating a dual-class character are not yet.
+  hit points. The computation is built (`classes.Crossed`, `classes.Dormant`), and taking a new
+  class is an undoable action; creating a dual-class character is not yet. The new entry carries a
+  cut-off (`ignored_awards_through`, the latest XP award at the switch): earlier awards, edited or
+  removed later, never move its XP, so only awards recorded after the switch count.
 - A class entry is the unit both share: a character is a list of class entries, and the two
   differ in how they are created and how their XP is spent. The rules are
   [ADR 0042](adr/0042-multi-class-and-dual-class.md) (PHB p.43 onwards).

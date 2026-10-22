@@ -654,7 +654,7 @@ is only ever appended to by play.
        clone's `dist/catalogue.json` at `CATALOGUE_REF` (default the checked-out branch), so nothing in this repo is pinned: once the
        builder's format 9 artifact is on the rulebooks default branch, `just catalogue` then `just dev` import the descriptions (the recorded
        format and version differ, so the import runs). A format-8 `.catalogue/catalogue.json` is refused at start with the `just catalogue` advice.
-    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (replaced by step 17, then by step 18: `TestSchema_Step18_OnlyFormat11IsValid`) and
+    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (replaced by step 17, then by step 18 and step 19: `TestSchema_Step19_OnlyFormat12IsValid`) and
     `TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId` (cataloguecheck: the 65 rows, both languages, the lint, no other format),
     `TestParse_Step16_ReadsTheProficiencyDescriptions`, `TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt),
     `TestImportCatalogue_Step16_DescriptionsInLocalizedTexts`, `TestImportCatalogue_Step16_ReimportChangesNothing`,
@@ -673,8 +673,8 @@ is only ever appended to by play.
        `critical-rulebooks`), then the API change; a dev checkout runs `just catalogue` once after both are merged.
     4. **Read as rules data** (ADR 0006 step 9.1): `ruletablesvc.Tables.MagicDefenceFor`, derived for every character as
        `charactersvc.Derived.MagicDefence`.
-    Tests: `TestParse_Step17_ReadsFormat11WithTheMagicDefence`, `TestParse_Step17_RefusesFormat9WithTheCatalogueAdvice` (catalogueadpt),
-    `TestSchema_Step18_OnlyFormat11IsValid` (cataloguecheck, step 17.3 renamed by step 18), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
+    Tests: `TestParse_Step17_ReadsTheMagicDefence`, `TestParse_Step17_RefusesFormat9WithTheCatalogueAdvice` (catalogueadpt),
+    `TestSchema_Step19_OnlyFormat12IsValid` (cataloguecheck, step 17.3 renamed by steps 18 and 19), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
     the rules adapter's `TestWisdomFor_Step9_MagicDefence` (ADR 0006 step 9); in `critical-rulebooks`: `scripts/check`'s Table 5 spot checks.
 
 18. **The class, group and race definitions, format 11** (**decided as built** 2026-10-22; [ADR 0040](0040-classes-are-data.md) steps 1, 2, 4 and 7
@@ -709,9 +709,26 @@ is only ever appended to by play.
        neither imports nor reads the definitions yet (ADR 0040 step 11.2 does). Merge order: the builder publishing format 11 first (its own PR in
        `critical-rulebooks`), then the API change immediately, with no other main merge between (Release pairs main's API with the rulebooks
        catalogue); a dev checkout runs `just catalogue` once after both are merged.
-    Tests: `TestSchema_Step18_OnlyFormat11IsValid`, `TestSchema_Step18_ClassGroupAndRaceDefinitions` (cataloguecheck),
-    `TestParse_Step18_ReadsFormat11AndRefusesFormat10` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s `check_class_defs` (the definitions equal
+    Tests: `TestSchema_Step19_OnlyFormat12IsValid` (was `Schema_Step18_OnlyFormat11IsValid`), `TestSchema_Step18_ClassGroupAndRaceDefinitions` (cataloguecheck),
+    `TestParse_Step18_ReadsTheDefinitionsAndRefusesFormat10` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s `check_class_defs` (the definitions equal
     the tables of formats 3 to 10 they repeat, spot values from the PHB, fault injection for each refusal of step 18.5).
+
+19. **The spell immunities, format 12** (**decided as built** 2026-10-22; [ADR 0006](0006-saving-throws.md) step 10 decided the column).
+    1. **The column.** Every `wisdom` row of `rule_tables` gains `spell_immunities`, required: the catalogue ids of the spells that row of PHB
+       Table 5 adds (an array of distinct ids, lower case and underscores; empty below Wisdom 19). A row lists only what it adds: the reader adds
+       up every row from the lowest to the score (ADR 0006 step 10.1). The builder maps each Table 5 name to ids from a hand-edited input
+       (`catalogue-inputs/WISDOM_IMMUNITIES` in `critical-rulebooks`): a name the wizard and the priest lists share (Hold person, Confusion) maps to
+       both spells; a name that is no catalogue spell is left out with its reason in the input (Rod of rulership, a magic item; Cause fear, which
+       the catalogue has only as the reverse of Remove fear: mapping it to `remove_fear` would make the character immune to a helpful spell).
+    2. **Checked by the builder**: every id names a spell of the artifact, and the spot values of `scripts/check` hold (none at 1 to 18, the
+       four spells at 19, the rows at 20 to 25). The importer does not check the ids again (the builder does); the schema refuses a row without the
+       column, an id that is not lower case, and an id twice on a row.
+    3. **Rollout, as step 18.6.** The API reads **format 12 only**: a format-11 artifact (or any older one) is refused at start as an unknown
+       format, naming `this API reads format 12` and `just catalogue`. Merge order: the builder publishing format 12 first, then the API change
+       immediately; a dev checkout runs `just catalogue` once after both are merged.
+    Tests: `TestSchema_Step19_OnlyFormat12IsValid` (cataloguecheck: format 12 only, the column required, an id in capitals and an id twice
+    refused), `TestParse_Step19_ReadsFormat12AndRefusesFormat11` (catalogueadpt); the rules adapter's `TestSpellImmunitiesFor_Step10_Cumulative`
+    (the column read); in `critical-rulebooks`: `scripts/check`'s spot values and fault injections for the column.
 
 ## Consequences
 

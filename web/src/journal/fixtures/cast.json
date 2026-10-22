@@ -131,5 +131,21 @@
       "untracked": []
     },
     "roll": true
+  },
+  "immune": {
+    "payload": {
+      "action": "received",
+      "spellId": "charm_person",
+      "spell": "Charm Person",
+      "casterLevel": 5,
+      "immunity": {
+        "source": "wisdom",
+        "score": 19
+      },
+      "level": 1,
+      "textOnly": "immune",
+      "untracked": []
+    },
+    "roll": true
   }
 }

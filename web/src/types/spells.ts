@@ -1,5 +1,5 @@
 import type { LocalizedText } from "@/types/localized";
-import type { Modifier } from "@/types/combat";
+import type { Immunity, Modifier } from "@/types/combat";
 import type { MarkedTexts } from "@/lib/valueMarks";
 import type { SpellbookOrigin } from "@/types/character";
 
@@ -366,7 +366,13 @@ export interface CastUntracked {
 }
 
 export type CastTextOnly =
-  "no_effect" | "low_confidence" | "utility" | "not_on_self" | "by_hand";
+  | "no_effect"
+  | "low_confidence"
+  | "utility"
+  | "not_on_self"
+  | "by_hand"
+  /** Received by a character immune to it (ADR 0006 step 10.3): `immunity` says why. */
+  | "immune";
 
 /**
  * Mirrors castsvc.CastBreakdown: what a cast, a received spell or an added effect did. It is both
@@ -396,6 +402,9 @@ export interface CastBreakdown {
   failure?: SpellFailure;
   /** The exposure damage at casterLevel, to roll each round of exposure from; absent: none. */
   exposure?: SpellExposure;
+  /** Set on a spell received by a character immune to it (ADR 0006 step 10.3): nothing applied
+   * or rolled, textOnly "immune". */
+  immunity?: Immunity;
   /** The spell's level (older casts: absent). */
   level?: number;
   /** The slot spent (a cast only). */

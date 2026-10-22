@@ -109,6 +109,11 @@ type Derived struct {
 	// adjustment at the sheet's Wisdom (any class), a named modifier on a
 	// save the player flags as against magic that attacks the mind (0: none).
 	MagicDefence int
+	// SpellImmunities is ADR 0006 step 10.1: the catalogue ids of the spells
+	// PHB Table 5 makes the sheet's Wisdom immune to (cumulative; empty below
+	// 19). A save against one of them, or one cast on the character, rolls
+	// nothing (steps 10.2 and 10.3).
+	SpellImmunities []string
 	// SpellSlots is step 8 at the realized level: the slots per day by
 	// spell level, levels with no slot absent.
 	SpellSlots map[int]int

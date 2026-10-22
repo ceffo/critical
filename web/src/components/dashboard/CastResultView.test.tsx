@@ -87,3 +87,24 @@ describe("CastResultView spell failure", () => {
     expect(html).toContain("Bless");
   });
 });
+
+// ADR 0006 step 10.3: a spell received by a character immune to it says why, nothing applied.
+describe("CastResultView immunity", () => {
+  it("words the Wisdom immunity of a spell received", async () => {
+    const html = await render({
+      logEntryId: 3,
+      action: "received",
+      spellId: "charm_person",
+      spell: "Charm Person",
+      level: 1,
+      casterLevel: 5,
+      untracked: [],
+      textOnly: "immune",
+      immunity: { source: "wisdom", score: 19 },
+    });
+    expect(html).toContain('data-testid="cast-text-only"');
+    expect(html).toContain(
+      "Votre Sagesse (19) vous immunise contre ce sort : rien n’est appliqué.",
+    );
+  });
+});

@@ -120,6 +120,27 @@ func (t *Tables) MagicDefenceFor(wis int) (int, error) {
 	return r.MagicDefence, nil
 }
 
+// SpellImmunitiesFor is ADR 0006 step 10.1: PHB Table 5's spell immunities
+// at Wisdom wis, cumulative (every row from the lowest up to wis), as
+// catalogue spell ids in table order; none below 19. An error for a score
+// outside the table.
+func (t *Tables) SpellImmunitiesFor(wis int) ([]string, error) {
+	if _, err := t.WisdomFor(wis); err != nil {
+		return nil, err
+	}
+	c, err := t.classTables()
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, r := range c.Wisdom {
+		if r.WisMin <= wis {
+			out = append(out, r.SpellImmunities...)
+		}
+	}
+	return out, nil
+}
+
 // SpellFailureFor is ADR 0030 step 14: the chance (percent) that a spell of
 // a character of class with Wisdom wis fails; 0 for a class without it or a
 // Wisdom of 13 and up (no die is rolled).

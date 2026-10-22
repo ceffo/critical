@@ -45,6 +45,9 @@ type Rules interface {
 	// MagicDefenceFor is PHB Table 5's magical defence adjustment (ADR 0006
 	// step 9.1), for every class.
 	MagicDefenceFor(wis int) (int, error)
+	// SpellImmunitiesFor is PHB Table 5's spell immunities, cumulative
+	// (ADR 0006 step 10.1), for every class.
+	SpellImmunitiesFor(wis int) ([]string, error)
 	// TurningAt is PHB Table 61 at a priest level (step 16).
 	TurningAt(level int) ([]ruletablesvc.TurningTarget, error)
 	// ThiefSkills is PHB Tables 26 to 29 on the entered points (step 17).
@@ -112,6 +115,11 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 	// Wisdom, an ability rule every class and race gets (step 9.2).
 	if d.MagicDefence, err = rules.MagicDefenceFor(c.Wis); err != nil {
 		return Derived{}, fmt.Errorf("derive magic defence: %w", err)
+	}
+	// ADR 0006 step 10.1: the spells Table 5 makes the sheet's Wisdom immune
+	// to, for every class and race like the adjustment.
+	if d.SpellImmunities, err = rules.SpellImmunitiesFor(c.Wis); err != nil {
+		return Derived{}, fmt.Errorf("derive spell immunities: %w", err)
 	}
 	if ruletablesvc.UsesWisdomSpells(c.Class) {
 		if d.SpellFailure, err = rules.SpellFailureFor(c.Class, c.Wis); err != nil {

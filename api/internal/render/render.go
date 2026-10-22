@@ -190,6 +190,8 @@ var mappings = []mapping{
 	// Also the row of authsvc.ErrDevLoginDisabled and ErrGoogleLoginDisabled, which wrap it: a login
 	// route that does not exist on this server answers 404, not 500.
 	{target: domain.ErrNotFound, status: http.StatusNotFound, code: "not_found"},
+	// ADR 0006 step 10.2: a save the character was immune to has no roll to adjust.
+	{target: combatsvc.ErrSaveImmune, status: http.StatusConflict, code: "save_immune"},
 	{target: combatsvc.ErrWeaponNotFound, status: http.StatusNotFound, code: "weapon_not_found", message: fixed("weapon not found")},
 	{target: itemsvc.ErrItemNotFound, status: http.StatusNotFound, code: "item_not_found"},
 	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict, code: "item_empty"},

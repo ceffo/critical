@@ -36,11 +36,17 @@ export function attackVerdict(
 
 /**
  * Rolls a save. mindAffecting marks magic that attacks the mind (ADR 0006 step 9.3): the server
- * adds the Wisdom modifier.
+ * adds the Wisdom modifier. spellId names the spell the save is against (ADR 0006 step 10.2): one
+ * the character is immune to rolls nothing, and the answer says why.
  */
 export function rollSavingThrow(
   category: SaveCategory,
   mindAffecting = false,
+  spellId?: string,
 ): Promise<SaveBreakdown> {
-  return post<SaveBreakdown>("/api/roll/save", { category, mindAffecting });
+  return post<SaveBreakdown>("/api/roll/save", {
+    category,
+    mindAffecting,
+    ...(spellId ? { spellId } : {}),
+  });
 }

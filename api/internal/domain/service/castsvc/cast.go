@@ -9,6 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -171,6 +172,16 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 	}
 	var res CastResult
 	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
+		// ADR 0006 step 10.3: a spell the character is immune to lands on
+		// nothing: no effect, no roll, one entry naming the immunity.
+		if imm := combatsvc.ImmunityTo(c, id); imm != nil {
+			var err error
+			if res, err = s.immune(ctx, id, req.CasterLevel, mode, imm); err != nil {
+				return err
+			}
+			res.EntryID, err = s.record(ctx, characterID, res, nil)
+			return err
+		}
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
@@ -184,6 +195,27 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 	})
 	if err != nil {
 		return CastResult{}, err
+	}
+	return res, nil
+}
+
+// immune is the result of a spell received by a character immune to it (ADR
+// 0006 step 10.3): the spell named, nothing applied or rolled.
+func (s *service) immune(ctx context.Context, id string, casterLevel int, mode *spelleffectsvc.Mode, imm *combatsvc.Immunity) (CastResult, error) {
+	spell, found, err := s.Texts.Describe(ctx, id)
+	if err != nil {
+		return CastResult{}, fmt.Errorf("describe %s: %w", id, err)
+	}
+	entry, hasEffect := s.Effects.Get(id)
+	if !found && !hasEffect {
+		return CastResult{}, fmt.Errorf("%w: spell %q", domain.ErrNotFound, id)
+	}
+	res := CastResult{
+		Source: SourceReceived, SpellID: id, CasterLevel: casterLevel, Name: firstNonEmpty(entry.Name, spell.Name.Default()),
+		Level: max(entry.Level, spell.Level), Spell: spell, TextOnly: TextOnlyImmune, Immunity: imm,
+	}
+	if mode != nil {
+		res.Mode = mode.Key
 	}
 	return res, nil
 }

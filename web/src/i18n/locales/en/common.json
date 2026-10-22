@@ -394,7 +394,13 @@
     },
     "target": "{{value}}+",
     "mindAffecting": "Against the mind",
-    "mindAffectingHint": "Magic that attacks the mind (charm, fear, illusion, suggestion…): the next save adds your Wisdom’s magical defence adjustment"
+    "mindAffectingHint": "Magic that attacks the mind (charm, fear, illusion, suggestion…): the next save adds your Wisdom’s magical defence adjustment",
+    "spell": "Spell",
+    "spellHint": "The spell the next save is against: one your Wisdom makes you immune to rolls nothing",
+    "spellSearchLabel": "Spell the save is against",
+    "spellPick": "Save against {{name}}",
+    "spellTag": "vs {{name}}",
+    "spellClear": "Clear {{name}}"
   },
   "items": {
     "title": "Inventory",
@@ -1043,6 +1049,9 @@
     "empty": "Roll an attack or a save, or cast a spell: the full breakdown shows here.",
     "attackHeading": "{{weapon}} vs AC {{ac}}",
     "saveHeading": "Save vs {{name}}",
+    "saveAgainst": "Save vs {{name}} · {{spell}}",
+    "immune": "Immune",
+    "immunity": "Wisdom {{score}}: immune to {{spell}}, nothing to roll",
     "hit": "Hit",
     "miss": "Miss",
     "crit": "Crit check {{check}} · multiplier {{roll}} → ×{{mult, number}} ({{from}}–{{to}})",
@@ -1130,7 +1139,8 @@
         "low_confidence": "The effect is not reliable: read the text and add an effect by hand.",
         "utility": "No numeric effect to track.",
         "not_on_self": "Cast on someone else: nothing applied to you.",
-        "by_hand": "Only part of you is affected: apply it by hand."
+        "by_hand": "Only part of you is affected: apply it by hand.",
+        "immune": "Your Wisdom ({{score}}) makes you immune to this spell: nothing applied."
       },
       "byHand": "Apply by hand",
       "tracked": "Tracked effects",
@@ -1359,7 +1369,8 @@
       "attackMiss": "missed (d20 {{d20}} vs AC {{ac}})",
       "spellFailed": "spell failed (d100 {{roll}} ≤ {{chance}}%)",
       "spellHeld": "no spell failure (d100 {{roll}} > {{chance}}%)",
-      "onOther": "{{counters}}, not on you"
+      "onOther": "{{counters}}, not on you",
+      "immune": "immune (Wisdom {{score}})"
     },
     "item": {
       "rolled": "Used {{name}}: {{dice}} = {{total}} ({{left}} left)",
@@ -1419,7 +1430,8 @@
     "saveThrow": {
       "rolled": "Save vs {{name}}: {{roll}} vs {{target}}, {{verdict}}",
       "adjusted": "Save vs {{name}}: {{roll}} vs {{adjustedTarget}} (target {{target}}, adjusted {{adjustment}}{{reason}}): {{from}} → {{to}}",
-      "removed": "Save vs {{name}}: {{roll}} vs {{target}}, adjustment removed: {{from}} → {{to}}"
+      "removed": "Save vs {{name}}: {{roll}} vs {{target}}, adjustment removed: {{from}} → {{to}}",
+      "immune": "Save vs {{name}} against {{spell}}: immune (Wisdom {{score}}), {{verdict}}"
     },
     "weapon": {
       "added": "Added weapon {{name}}",
@@ -1974,6 +1986,7 @@
     "forDm": "For the DM: your HP is unchanged"
   },
   "apiError": {
+    "save_immune": "You were immune to that spell: there is no roll to adjust.",
     "over_budget": "Over budget: {{spent}} for {{limit}} available.",
     "character_not_found": "This character no longer exists.",
     "no_character": "You have no character yet: create your first one.",
@@ -2047,7 +2060,8 @@
       "turned": "turned",
       "destroyed": "destroyed",
       "destroyedTurned": "destroyed, {{turned}} turned",
-      "spellFailed": "spell failed"
+      "spellFailed": "spell failed",
+      "immune": "immune"
     },
     "turn": "Turning {{undead}}"
   },

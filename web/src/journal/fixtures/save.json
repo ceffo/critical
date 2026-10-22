@@ -68,5 +68,27 @@
       "margin": -1
     },
     "roll": true
+  },
+  "immune": {
+    "payload": {
+      "category": "spell",
+      "d20Roll": 0,
+      "modifiers": [],
+      "mindAffecting": true,
+      "spellId": "charm_person",
+      "immunity": {
+        "source": "wisdom",
+        "score": 19
+      },
+      "target": 14,
+      "rolledPassed": true,
+      "adjustment": 0,
+      "rollTotal": 0,
+      "adjustedTarget": 14,
+      "total": 0,
+      "passed": true,
+      "margin": 0
+    },
+    "roll": true
   }
 }

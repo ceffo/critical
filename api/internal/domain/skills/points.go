@@ -79,9 +79,26 @@ func ValidSkillPoints(def classes.Class, points map[string]int) (map[string]int,
 // are never refused. At creation before is nil (0 spent). The refusal is a *domain.BudgetError
 // (field skillPoints for the total, skillPoints.<skill> for one skill), the total first, then
 // the skills in SkillsOf order. A class without skill points, or a level under 1, has no
-// budget: nil.
+// budget: nil. The budget reads the grant ValidSkillPoints checked the entry against (the
+// listed rogue_skills, ADR 0040 step 3): below its from_level the class has the skills but no
+// points to spend yet (the derive shows none), so the budget is 0 and any spend above before
+// is refused.
 func SkillPointsWithinBudget(def classes.Class, level int, before, after map[string]int) error {
+	listed := rogueSkillsListed(def)
+	if listed == nil || level < 1 {
+		return nil
+	}
 	rs := RogueSkillsAt(def, level)
+	if rs == nil {
+		spent, was := 0, 0
+		for _, skill := range ruletablesvc.SkillsOf(listed) {
+			spent, was = spent+after[skill], was+before[skill]
+		}
+		if spent > 0 && spent > was {
+			return &domain.BudgetError{Field: FieldSkillPoints, Spent: spent, Limit: 0}
+		}
+		return nil
+	}
 	b, ok := ruletablesvc.SkillPointsFigures(rs, level, after)
 	if !ok {
 		return nil

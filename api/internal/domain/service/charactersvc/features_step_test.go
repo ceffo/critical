@@ -1,6 +1,8 @@
 package charactersvc_test
 
 import (
+	"context"
+	"errors"
 	"slices"
 	"testing"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -241,7 +244,73 @@ func TestFeatures_Step3_RogueSkillsFromTheKind(t *testing.T) {
 			assert.Equal(t, 60, d.SkillPoints.Total)
 			assert.Equal(t, 30, d.SkillPoints.PerSkill)
 		}},
+		{"from_level: no skills nor budget below it", lateSkills(thiefSkills), "test_latescout", 2, nil, func(t *testing.T, d charactersvc.Derived) {
+			assert.Nil(t, d.ThiefSkills)
+			assert.Nil(t, d.SkillPoints)
+		}},
+		{"from_level: skills and the level's budget from it", lateSkills(thiefSkills), "test_latescout", 3, nil, func(t *testing.T, d charactersvc.Derived) {
+			assert.NotEmpty(t, d.ThiefSkills)
+			require.NotNil(t, d.SkillPoints)
+			assert.Equal(t, 60+2*30, d.SkillPoints.Total)
+		}},
 	})
+}
+
+// lateSkills adds test_latescout, a warrior granting rs from level 3.
+func lateSkills(rs classes.Feature) func([]classes.Class) []classes.Class {
+	rs.FromLevel = 3
+	return add("test_latescout", "fighter", "", rs)
+}
+
+// ADR 0037 step 10 on a rogue_skills from_level (ADR 0040 step 3): the entry
+// and the budget read the same grant. test_latescout, created at level 1 (0
+// XP) with points, is refused on skillPoints with a budget of 0, as its
+// derive shows no skills there; created at level 3 the points are in its
+// budget.
+func TestDraft_Step10_SkillPointsBelowTheFromLevelAreRefused(t *testing.T) {
+	def, ok := cataloguetest.Definitions(t).Class("thief")
+	require.True(t, ok)
+	thiefSkills, ok := def.Lists(classes.KindRogueSkills)
+	require.True(t, ok)
+	rules := edited(t, lateSkills(thiefSkills))
+	threshold, err := rules.XPThreshold("test_latescout", 3)
+	require.NoError(t, err)
+	for _, tc := range []struct {
+		name   string
+		xp     int
+		refuse bool
+	}{
+		{"at level 1", 0, true},
+		{"at level 3", threshold, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEnv(t)
+			svc, err := charactersvc.New(charactersvc.Deps{
+				Reader: e.reader, XP: e.xp, Rules: rules, Owners: e.owners, Tx: e.tx, Sessions: e.sessions,
+				Armour: e.armour, HP: e.hp, Spells: e.spells, Book: e.book, FreeSpells: e.free,
+			})
+			require.NoError(t, err)
+			got, err := svc.Draft(context.Background(), charactersvc.NewCharacter{
+				Details: identity(), Name: "Vex", Class: "test_latescout", Race: "human",
+				Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 10, XP: tc.xp,
+				SkillPoints: map[string]int{"open_locks": 10},
+			}, nil)
+			require.NoError(t, err)
+			var budget *domain.BudgetError
+			for _, r := range got.Refusals {
+				if be, ok := errors.AsType[*domain.BudgetError](r); ok && be.Field == "skillPoints" {
+					budget = be
+				}
+			}
+			if !tc.refuse {
+				assert.Nil(t, budget)
+				return
+			}
+			require.NotNil(t, budget, "refusals: %v", got.Refusals)
+			assert.Equal(t, 10, budget.Spent)
+			assert.Zero(t, budget.Limit)
+		})
+	}
 }
 
 // ADR 0040 step 5: a class made of known kinds needs no code. test_skald,

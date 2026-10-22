@@ -266,7 +266,7 @@ func TestCreate_Options(t *testing.T) {
 	for _, c := range got.Classes {
 		order = append(order, c.Class)
 	}
-	require.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard"}, order)
+	require.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard"}, order, "the psionicist lists kinds the code does not compute yet: not offered")
 	fighter, mage, cleric, thief, bard := got.Classes[0], got.Classes[1], got.Classes[2], got.Classes[3], got.Classes[4]
 	assert.Equal(t, []string{"half_elf", "human"}, bard.Races)
 	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, fighter.Races)

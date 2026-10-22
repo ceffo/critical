@@ -571,7 +571,11 @@ ADR 0024 steps 3 and 4, driven by GitHub Actions (the PR title, a conventional-c
    deployed or tagged. Otherwise it builds the image with the real catalogue and the version baked in, pushes
    it tagged with the commit sha and `v<version>` ("Release build"), deploys it to staging and smoke-checks it
    (health reports the commit and the version, "Staging deploy"), and **then** tags the commit `vX.Y.Z`. A
-   failed staging deploy takes no version: the next release computes the same number again.
+   failed staging deploy takes no version: the next release computes the same number again. Because
+   two commits can therefore compute one version (also when only the tag step failed), staging always
+   deploys the image of **its own commit** (`:<sha>`), never `:v<version>`, and the smoke check
+   wants the commit and the version in `/api/health`; `:v<version>` is a name for a tagged release
+   (what a redeploy and the promotion read).
 2. Promoting is a deliberate act, on demand: `just promote` (or Actions > Promote > Run workflow, from
    `main`, version empty) promotes the **newest version that passed staging**; `just promote 1.2.3` promotes
    that version (also the rollback). It takes a restore point of `critical_prod`, a `pg_dump` kept encrypted as an
@@ -584,7 +588,7 @@ flowchart LR
     M["merge to main, CI green"] --> V{"version from the commits since the last v* tag"}
     V -->|"docs/test/chore only, or no-release label"| N["notice; nothing built"]
     V -->|"X.Y.Z"| B["build with VERSION, push :sha and :vX.Y.Z"]
-    B --> S["staging deploy + smoke (commit and version)"]
+    B --> S["staging deploy of :sha + smoke (commit and version)"]
     S -->|passed| T["tag vX.Y.Z (workflow token)"]
     S -->|failed| F["no tag; the next release recomputes X.Y.Z"]
     T -.->|"on demand: just promote [version]"| P["production"]
@@ -620,7 +624,9 @@ the conventional commits, 2026-10-17)"), run first by the release job:
   one; or a tag made off main, which an admin deletes); a GitHub API failure reading the labels.
 - **Tag**: `scripts/version-tag.sh` creates the annotated tag `vX.Y.Z` on the commit through the GitHub API
   with the workflow's token (tagger `github-actions[bot]`, message naming the staging digest), only after the
-  staging deploy and smoke check passed (the job stops at a failed one). An existing tag is never moved.
+  staging deploy and smoke check passed (the job stops at a failed one). An existing tag is never moved. A
+  transient GitHub API error (502, a 403) is retried (5 attempts, 5 s then doubling) and the step is safe to
+  repeat: a tag already on this commit counts as made, one on another commit fails the run.
 - **The tag starts no workflow.** GitHub: "When you use the repository's `GITHUB_TOKEN` to perform tasks,
   events triggered by the `GITHUB_TOKEN`, with the exception of `workflow_dispatch` and
   `repository_dispatch`, will not create a new workflow run"
@@ -749,9 +755,16 @@ read an empty token), and a calling job cannot have an environment. The job pass
      public address must have its Flycast one; an app with a public address must pass the gate check on its
      public URL ("Going public"), or the job fails before deploying (after it, once the new release runs, the
      deploy is reported failed). The former `PUBLIC_ACCESS_OPTION` variable is gone.
-  2. `fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-hit-staging:v<version>` (the build
-     of that version; `:<sha>` when the script is given no version); the machine is started if it was
-     stopped.
+     One exception, **before** the deploy only (`UNSERVED_OK=1`): an app with a public address that serves
+     nothing at all (`scripts/gate-check.sh` exits 3: `/api/health` never answered 200 and the last answer
+     was no response or a 5xx, as with a crash-looping release) passes, since it exposes no content and
+     the deploy that replaces it must be able to run. An app that answers without the gate is still refused,
+     and the check after the deploy has no exception.
+  2. `fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-hit-staging:<sha>` (always the
+     commit's own build, with or without a version: runs of different commits can compute one version, and
+     `:v<version>` then names whichever pushed last); the machine is started if it was stopped. The image
+     the machines ran before is read first; when the deploy or the smoke check fails, it is deployed again
+     so staging is not left crash-looping (best effort; the job still fails).
   3. The smoke check through `fly proxy`: on every machine, `/api/health` is 200 with
      `status` ok, `commit == <sha>` and `version == <version>`, `/api/character` is 200 (a read through the database) and `/` is
      the web app. A cold start of the machine or of the shared database is waited for (up to 90 s per

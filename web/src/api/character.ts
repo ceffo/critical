@@ -18,17 +18,20 @@ export function patchCharacterDetails(
 }
 
 /**
- * Roll the hit points of `level`, the lowest pending one (ADR 0030 step 7), on the server; `die` is
- * the manual entry, the die rolled at the table.
+ * Roll the hit points of `level`, the lowest pending one of the class entry `cls` (ADR 0030 step 7,
+ * ADR 0042 step 7; absent: the first active entry), on the server; `die` is the manual entry, the die
+ * rolled at the table.
  */
 export function rollLevelUp(
   level: number,
   die?: number,
+  cls?: string,
 ): Promise<LevelUpResult> {
-  return post<LevelUpResult>(
-    "/api/character/levelup/roll",
-    die === undefined ? { level } : { level, die },
-  );
+  return post<LevelUpResult>("/api/character/levelup/roll", {
+    level,
+    ...(die === undefined ? {} : { die }),
+    ...(cls ? { class: cls } : {}),
+  });
 }
 
 /** Turn the undead of a PHB Table 61 row (ADR 0030 step 16): the server reads the cell at the

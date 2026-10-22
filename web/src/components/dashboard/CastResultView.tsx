@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Warning } from "@phosphor-icons/react";
 import { useInventoryName } from "@/i18n/inventoryName";
 import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
@@ -178,6 +179,20 @@ export function CastResultView({ result: r }: { result: CastResult }) {
     <div className="flex flex-col gap-3" data-testid="cast-result">
       <div className="text-body text-muted-foreground">{heading}</div>
       {r.failure && <SpellFailureLine failure={r.failure} />}
+      {/* ADR 0042 step 16.2: the cast's class warnings, worded here, never logged. */}
+      {r.warnings?.map((w) => (
+        <p
+          key={w}
+          className="flex items-center gap-1 text-body text-warning"
+          data-testid="cast-warning"
+          data-code={w}
+        >
+          <Warning aria-hidden className="size-4 shrink-0" />
+          <span className="min-w-0 break-words">
+            {t("spellSlots.inArmour")}
+          </span>
+        </p>
+      ))}
       {r.mode && (
         <p className="text-body" data-testid="cast-mode">
           {t("result.cast.mode", { mode: modeName(t, r.spellId, r.mode) })}

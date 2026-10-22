@@ -51,7 +51,21 @@
         "out_of_range": "Enter a die from 1 to {{die}}.",
         "fixed_gain": "This level has a fixed gain, no die.",
         "dual_class_no_hit_points": "This level gains no hit points until the new class passes the old one."
-      }
+      },
+      "titleClass": "{{class}}: level {{level}} reached",
+      "sharedHint": "Hit die d{{die}}, divided between {{classes}} classes, plus its share of the CON adjustment",
+      "sharedFixedHint": "Past the name level: fixed gain of {{gain}}, divided between {{classes}} classes, no die",
+      "rollTitleClass": "Roll the hit die of {{class}} level {{level}} (d{{die}})",
+      "applyTitleClass": "Add the fixed gain of {{class}} level {{level}} ({{gain}})"
+    },
+    "classEntry": {
+      "list": "Classes",
+      "xp": "{{xp}} / {{next}} XP",
+      "xpMax": "{{xp}} XP (highest level)",
+      "frozen": "Frozen",
+      "frozenTitle": "{{class}} left at level {{level}}: no XP and no new level while it is frozen",
+      "open": "{{class}}, level {{level}}: open the experience",
+      "limit": "Above the race’s level limit ({{max}})"
     }
   },
   "language": {
@@ -500,7 +514,9 @@
     "receive": "Apply",
     "receiveLabel": "Apply {{name}}",
     "receiveHint": "Type part of a spell name (English or French).",
-    "receiveMore": "{{count}} more, refine your search"
+    "receiveMore": "{{count}} more, refine your search",
+    "entry": "Spellcasting class",
+    "inArmour": "Body armour worn: this class does not cast in armour."
   },
   "spellMode": {
     "withDamage": "{{mode}}: {{damage}}",
@@ -1522,7 +1538,11 @@
       "added": "XP +{{total, number}}: {{reason}}",
       "removed": "XP removed: {{reason}} ({{total, number}} XP)",
       "edited": "XP edited: {{reason}}, {{from, number}} → {{to, number}} XP",
-      "editedSame": "XP edited: {{reason}} ({{total, number}} XP)"
+      "editedSame": "XP edited: {{reason}} ({{total, number}} XP)",
+      "addedSplit": "XP +{{total, number}} ({{parts}}): {{reason}}",
+      "removedSplit": "XP removed: {{reason}} ({{total, number}} XP, {{parts}})",
+      "editedSplit": "XP edited: {{reason}}, {{from, number}} → {{to, number}} XP ({{parts}})",
+      "editedSameSplit": "XP edited: {{reason}} ({{total, number}} XP, {{parts}})"
     },
     "levelUp": {
       "rolled": "Level {{level}}: {{die}}{{con}}, max HP +{{gain}} ({{from}} → {{to}}){{manual}}",
@@ -1530,7 +1550,10 @@
       "die": "d{{die}} {{rolled}}",
       "dieRaised": "d{{die}} {{rolled}} (counts as {{counted}})",
       "con": ", CON {{adjustment}}",
-      "manual": ", die entered"
+      "manual": ", die entered",
+      "rolledClass": "{{class}} level {{level}}: {{die}}{{con}}, max HP +{{gain}} ({{from}} → {{to}}){{manual}}",
+      "fixedClass": "{{class}} level {{level}}: max HP +{{gain}}, fixed gain ({{from}} → {{to}})",
+      "shared": " ÷ {{classes}}"
     },
     "learn": {
       "learned": "Learned: {{spell}} (d100 {{roll}} ≤ {{chance}}%)",
@@ -1873,7 +1896,19 @@
       "opening": "Starting XP (character sheet)",
       "confirm": "Confirm",
       "confirmDelete": "Confirm deleting {{reason}}"
-    }
+    },
+    "classes": {
+      "title": "By class",
+      "toNext": "{{xp}} XP before level {{level}}",
+      "maxLevel": "Highest level of the table",
+      "frozen": "Left at level {{level}}: earns no XP while frozen",
+      "level": "{{class}} · level {{level}}"
+    },
+    "split": {
+      "preview": "Split: {{parts}}",
+      "part": "{{class}} {{amount, number}}"
+    },
+    "headingClass": "Experience · {{class}} · level {{level}}"
   },
   "skills": {
     "proficiencies": "Proficiencies",
@@ -1982,7 +2017,9 @@
     "pointsOutOfRange": "Enter a whole number from {{min}} to {{max}}.",
     "previewStale": "These figures are for the last points the server could read.",
     "pointsRefused": "These points were refused.",
-    "unusable": "{{name}}: spend points to raise it before you can use it"
+    "unusable": "{{name}}: spend points to raise it before you can use it",
+    "blocked": "{{name}}: blocked by the worn armour",
+    "blockedTag": "Blocked"
   },
   "dice": {
     "title": "Dice",
@@ -2080,7 +2117,8 @@
     "free_spell_wrong_level": "That level's free spell is of another spell level.",
     "cannot_turn_undead": "This priest cannot turn that undead yet.",
     "class_cannot_turn": "This class does not turn undead.",
-    "end_cause_required": "This spell does something when it ends: say whether you ended it or it was dispelled."
+    "end_cause_required": "This spell does something when it ends: say whether you ended it or it was dispelled.",
+    "skill_blocked_by_armour": "Your body armour blocks that skill."
   },
   "lastShort": {
     "attack": "Attack",

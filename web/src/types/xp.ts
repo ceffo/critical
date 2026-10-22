@@ -10,6 +10,14 @@ export interface XpEntry {
   bonus: boolean;
   bonusAmount: number;
   total: number;
+  /** ADR 0042 step 5.1: the total shared between a multi-class character's classes; absent for one. */
+  split?: ClassAmount[];
+}
+
+/** One class entry's share of an award. */
+export interface ClassAmount {
+  class: string;
+  amount: number;
 }
 
 export type XpLevelStatus = "past" | "current" | "next" | "ahead";
@@ -45,6 +53,8 @@ export interface XpAmount {
   base: number;
   bonusAmount: number;
   total: number;
+  /** ADR 0042 step 5.1: the total shared between the classes; absent for one class. */
+  split?: ClassAmount[];
 }
 
 /** POST /api/xp body; on PATCH only the fields present change. */

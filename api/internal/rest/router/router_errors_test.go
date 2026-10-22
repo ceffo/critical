@@ -178,7 +178,7 @@ var endpoints = []endpoint{
 		m.xp.On("Get", anyArgs(2)...).Return(nil, err)
 	}},
 	{"GET xp/preview", "GET", "/api/xp/preview?base=10&bonus=true", "", func(m *mocksSet, err error) {
-		m.xp.On("Preview", anyArgs(2)...).Return(xpsvc.Amount{}, err)
+		m.xp.On("Preview", anyArgs(4)...).Return(xpsvc.Amount{}, err)
 	}},
 	{"POST character/levelup/roll", "POST", "/api/character/levelup/roll", `{"level":16}`, func(m *mocksSet, err error) {
 		m.levelUp.On("Roll", anyArgs(3)...).Return(nil, err)

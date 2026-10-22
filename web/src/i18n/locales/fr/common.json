@@ -51,7 +51,21 @@
         "out_of_range": "Saisissez un dé de 1 à {{die}}.",
         "fixed_gain": "Ce niveau a un gain fixe, sans dé.",
         "dual_class_no_hit_points": "Ce niveau ne donne aucun point de vie tant que la nouvelle classe ne dépasse pas l'ancienne."
-      }
+      },
+      "titleClass": "{{class}} : niveau {{level}} atteint",
+      "sharedHint": "Dé de vie d{{die}}, divisé entre {{classes}} classes, plus sa part de l’ajustement de CON",
+      "sharedFixedHint": "Au-delà du niveau de nom : gain fixe de {{gain}}, divisé entre {{classes}} classes, sans dé",
+      "rollTitleClass": "Lancer le dé de vie du niveau {{level}} de {{class}} (d{{die}})",
+      "applyTitleClass": "Ajouter le gain fixe du niveau {{level}} de {{class}} ({{gain}})"
+    },
+    "classEntry": {
+      "list": "Classes",
+      "xp": "{{xp}} / {{next}} XP",
+      "xpMax": "{{xp}} XP (niveau maximum)",
+      "frozen": "Figée",
+      "frozenTitle": "{{class}} quittée au niveau {{level}} : ni XP ni nouveau niveau tant qu’elle est figée",
+      "open": "{{class}}, niveau {{level}} : ouvrir l’expérience",
+      "limit": "Au-dessus de la limite de niveau de la race ({{max}})"
     }
   },
   "language": {
@@ -500,7 +514,9 @@
     "receive": "Appliquer",
     "receiveLabel": "Appliquer {{name}}",
     "receiveHint": "Tapez une partie du nom du sort (anglais ou français).",
-    "receiveMore": "{{count}} de plus, affinez la recherche"
+    "receiveMore": "{{count}} de plus, affinez la recherche",
+    "entry": "Classe lanceuse de sorts",
+    "inArmour": "Armure de corps portée : cette classe ne lance pas de sorts en armure."
   },
   "spellMode": {
     "withDamage": "{{mode}} : {{damage}}",
@@ -1522,7 +1538,11 @@
       "added": "XP +{{total, number}} : {{reason}}",
       "removed": "XP retirés : {{reason}} ({{total, number}} XP)",
       "edited": "XP modifiés : {{reason}}, {{from, number}} → {{to, number}} XP",
-      "editedSame": "XP modifiés : {{reason}} ({{total, number}} XP)"
+      "editedSame": "XP modifiés : {{reason}} ({{total, number}} XP)",
+      "addedSplit": "XP +{{total, number}} ({{parts}}) : {{reason}}",
+      "removedSplit": "XP retirée : {{reason}} ({{total, number}} XP, {{parts}})",
+      "editedSplit": "XP modifiée : {{reason}}, {{from, number}} → {{to, number}} XP ({{parts}})",
+      "editedSameSplit": "XP modifiée : {{reason}} ({{total, number}} XP, {{parts}})"
     },
     "levelUp": {
       "rolled": "Niveau {{level}} : {{die}}{{con}}, PV max +{{gain}} ({{from}} → {{to}}){{manual}}",
@@ -1530,7 +1550,10 @@
       "die": "d{{die}} {{rolled}}",
       "dieRaised": "d{{die}} {{rolled}} (compté {{counted}})",
       "con": ", CON {{adjustment}}",
-      "manual": ", dé saisi"
+      "manual": ", dé saisi",
+      "rolledClass": "{{class}} niveau {{level}} : {{die}}{{con}}, PV max +{{gain}} ({{from}} → {{to}}){{manual}}",
+      "fixedClass": "{{class}} niveau {{level}} : PV max +{{gain}}, gain fixe ({{from}} → {{to}})",
+      "shared": " ÷ {{classes}}"
     },
     "learn": {
       "learned": "Appris : {{spell}} (d100 {{roll}} ≤ {{chance}} %)",
@@ -1873,7 +1896,19 @@
       "opening": "XP de départ (feuille de personnage)",
       "confirm": "Confirmer",
       "confirmDelete": "Confirmer la suppression de {{reason}}"
-    }
+    },
+    "classes": {
+      "title": "Par classe",
+      "toNext": "{{xp}} XP avant le niveau {{level}}",
+      "maxLevel": "Niveau maximum de la table",
+      "frozen": "Quittée au niveau {{level}} : ne gagne pas d’XP tant qu’elle est figée",
+      "level": "{{class}} · niveau {{level}}"
+    },
+    "split": {
+      "preview": "Partage : {{parts}}",
+      "part": "{{class}} {{amount, number}}"
+    },
+    "headingClass": "Expérience · {{class}} · niveau {{level}}"
   },
   "skills": {
     "proficiencies": "Compétences diverses",
@@ -1982,7 +2017,9 @@
     "pointsOutOfRange": "Entrez un nombre entier de {{min}} à {{max}}.",
     "previewStale": "Ces chiffres sont ceux des derniers points que le serveur a pu lire.",
     "pointsRefused": "Ces points ont été refusés.",
-    "unusable": "{{name}} : dépensez des points pour l’augmenter avant de pouvoir l’utiliser"
+    "unusable": "{{name}} : dépensez des points pour l’augmenter avant de pouvoir l’utiliser",
+    "blocked": "{{name}} : bloquée par l’armure portée",
+    "blockedTag": "Bloquée"
   },
   "dice": {
     "title": "Dés",
@@ -2080,7 +2117,8 @@
     "free_spell_wrong_level": "Le sort gratuit de ce niveau est d'un autre niveau de sort.",
     "cannot_turn_undead": "Ce prêtre ne peut pas encore repousser ce mort-vivant.",
     "class_cannot_turn": "Cette classe ne repousse pas les morts-vivants.",
-    "end_cause_required": "Ce sort agit quand il prend fin : dites si vous l'avez terminé ou s'il a été dissipé."
+    "end_cause_required": "Ce sort agit quand il prend fin : dites si vous l'avez terminé ou s'il a été dissipé.",
+    "skill_blocked_by_armour": "Votre armure de corps bloque cette compétence."
   },
   "lastShort": {
     "attack": "Attaque",

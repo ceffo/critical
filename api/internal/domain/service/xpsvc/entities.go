@@ -1,5 +1,12 @@
 package xpsvc
 
+// ClassAmount is one active class entry's share of an award (ADR 0042 step
+// 5.1).
+type ClassAmount struct {
+	Class  string
+	Amount int
+}
+
 // Entry is one award in the ledger. Date is the day it was recorded
 // (YYYY-MM-DD, server local time). BonusAmount and Total are computed (ADR
 // 0015 step 1), never stored.
@@ -12,6 +19,9 @@ type Entry struct {
 	Bonus       bool
 	BonusAmount int
 	Total       int
+	// Split is the award's total shared between the active class entries of
+	// a multi-class character (computed; nil for one class).
+	Split []ClassAmount
 }
 
 // EntryInput is a new award.
@@ -35,6 +45,9 @@ type Amount struct {
 	Base        int
 	BonusAmount int
 	Total       int
+	// Split is Total shared between the active class entries of a
+	// multi-class character (ADR 0042 step 5.1); nil for one class.
+	Split []ClassAmount
 }
 
 // CellStatus places a level cell against the sheet's level.

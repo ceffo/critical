@@ -3,9 +3,10 @@
 package mocks
 
 import (
-	context "context"
-
+	classes "github.com/ceffo/critical/api/internal/domain/classes"
 	charactersvc "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+
+	context "context"
 
 	domain "github.com/ceffo/critical/api/internal/domain"
 
@@ -84,6 +85,65 @@ func (_c *MockSVC_Change_Call) Return(current int64, err error) *MockSVC_Change_
 }
 
 func (_c *MockSVC_Change_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64, charactersvc.Change) (int64, error)) *MockSVC_Change_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ClassEntries provides a mock function with given fields: ctx, id
+func (_m *MockSVC) ClassEntries(ctx context.Context, id int64) ([]classes.Entry, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClassEntries")
+	}
+
+	var r0 []classes.Entry
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]classes.Entry, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []classes.Entry); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]classes.Entry)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ClassEntries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClassEntries'
+type MockSVC_ClassEntries_Call struct {
+	*mock.Call
+}
+
+// ClassEntries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockSVC_Expecter) ClassEntries(ctx interface{}, id interface{}) *MockSVC_ClassEntries_Call {
+	return &MockSVC_ClassEntries_Call{Call: _e.mock.On("ClassEntries", ctx, id)}
+}
+
+func (_c *MockSVC_ClassEntries_Call) Run(run func(ctx context.Context, id int64)) *MockSVC_ClassEntries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ClassEntries_Call) Return(_a0 []classes.Entry, _a1 error) *MockSVC_ClassEntries_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ClassEntries_Call) RunAndReturn(run func(context.Context, int64) ([]classes.Entry, error)) *MockSVC_ClassEntries_Call {
 	_c.Call.Return(run)
 	return _c
 }

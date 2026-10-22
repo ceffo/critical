@@ -258,6 +258,10 @@ type DerivedDTO struct {
 	RaceSaveBonus SavesDTO       `json:"raceSaveBonus"`
 	SpellSlots    []SlotCountDTO `json:"spellSlots"`
 	LevelUp       LevelUpDTO     `json:"levelUp"`
+	// Classes are the class entries' own figures (ADR 0042 steps 5 and 7), in
+	// the order of the character's `classes`; absent for a single-class
+	// character, whose figures are the ones above.
+	Classes []EntryDerivedDTO `json:"classes,omitempty"`
 	// Specializes is ADR 0030 step 12: the class may specialize in a weapon.
 	Specializes bool `json:"specializes"`
 	// ExceptionalStrength is ADR 0030 steps 9 and 10: the class enters an
@@ -284,6 +288,19 @@ type DerivedDTO struct {
 	// weapon pool with their terms and each pick's figures; null without the
 	// catalogue's Table 34.
 	ProficiencySlots *wire.ProficiencySlotsDTO `json:"proficiencySlots"`
+}
+
+// EntryDerivedDTO is one class entry's figures: `xp` its starting XP plus its
+// share of the ledger, `targetLevel` the level that XP gives and `nextLevelXp`
+// the XP that reaches the next one (0 and null for a frozen entry), `level`
+// the level taken.
+type EntryDerivedDTO struct {
+	Class       string `json:"class"`
+	State       string `json:"state"`
+	XP          int    `json:"xp"`
+	TargetLevel int    `json:"targetLevel"`
+	Level       int    `json:"level"`
+	NextLevelXP *int   `json:"nextLevelXp"`
 }
 
 // SkillSetDTO is one skill set of the sheet (ADR 0040 step 3.5): set the rogue_skills set code,
@@ -398,6 +415,15 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		Specializes: d.Specializes, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure,
 		SkillSets: skillSetDTOs(d.SkillSets), Backstab: d.Backstab,
 		ProficiencySlots: wire.ProficiencySlotsToDTO(d.Proficiencies),
+	}
+	for _, e := range d.Classes {
+		if len(d.Classes) < 2 {
+			break
+		}
+		out.Classes = append(out.Classes, EntryDerivedDTO{
+			Class: e.Class, State: string(e.State), XP: e.XP, TargetLevel: e.TargetLevel,
+			Level: e.RealizedLevel, NextLevelXP: e.NextLevelXP,
+		})
 	}
 	if d.Turning != nil {
 		out.Turning = make([]TurningTargetDTO, len(d.Turning))

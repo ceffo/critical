@@ -12,6 +12,7 @@ import type { ApiError } from "@/api/http";
 import type { FreeSpell, LevelUp, PendingLevel } from "@/types/character";
 import type { SkillsEditor } from "@/stores/skillsEditor";
 import { hasGrants } from "@/lib/grants";
+import { useClassName } from "@/lib/useClassName";
 import { LevelUpGrants } from "./LevelUpGrants";
 
 /**
@@ -42,19 +43,28 @@ export function LevelUpPrompt({
   /** The level the XP gives (step 3), for the step 7.4 warning. */
   targetLevel: number;
   busy: boolean;
-  onRoll: (level: number, die?: number) => Promise<ApiError | null>;
+  /** Rolls `level` of the class entry `cls` (absent for a single-class character). */
+  onRoll: (
+    level: number,
+    die?: number,
+    cls?: string,
+  ) => Promise<ApiError | null>;
   /** Opens a Skills tab editor (ADR 0037 step 15's links). */
   onOpenEditor: (editor: SkillsEditor) => void;
   /** Opens the spell lookup on a level's free spell (ADR 0030 step 20.8). */
   onOpenFreeSpell: (fs: FreeSpell) => void;
 }) {
   const { t } = useTranslation();
-  const [entering, setEntering] = useState(false);
-  const [die, setDie] = useState("");
-  const [error, setError] = useState<string | null>(null);
   // The level whose hit points this prompt last took, with its grants (step 15).
   const [taken, setTaken] = useState<PendingLevel | null>(null);
-  const next = levelUp.pending[0];
+  // ADR 0042 step 7: a prompt per class entry owing levels, each lowest level first (the server
+  // lists the entries in order, each entry's levels lowest first).
+  const groups: PendingLevel[][] = [];
+  for (const p of levelUp.pending) {
+    const group = groups.find((g) => g[0].class === p.class);
+    if (group) group.push(p);
+    else groups.push([p]);
+  }
 
   // Step 15: the level just taken says what it grants while it is still realized (an undo takes
   // it back). The grants are the pending level's, as the server sent them (the roll's answer
@@ -71,7 +81,7 @@ export function LevelUpPrompt({
       />
     );
 
-  if (!next) {
+  if (groups.length === 0) {
     if (!levelUp.realizedAboveTarget) return summary || null;
     return (
       <>
@@ -94,12 +104,89 @@ export function LevelUpPrompt({
       </>
     );
   }
+  return (
+    <>
+      {groups.map((g) => (
+        <ClassLevelUp
+          key={g[0].class ?? ""}
+          pending={g}
+          busy={busy}
+          onRoll={onRoll}
+          onTaken={setTaken}
+        />
+      ))}
+      {summary}
+    </>
+  );
+}
+
+/** The prompt of one class entry: its lowest pending level, the rest counted. */
+function ClassLevelUp({
+  pending,
+  busy,
+  onRoll,
+  onTaken,
+}: {
+  pending: PendingLevel[];
+  busy: boolean;
+  onRoll: (
+    level: number,
+    die?: number,
+    cls?: string,
+  ) => Promise<ApiError | null>;
+  onTaken: (p: PendingLevel) => void;
+}) {
+  const { t } = useTranslation();
+  const className = useClassName();
+  const [entering, setEntering] = useState(false);
+  const [die, setDie] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const next = pending[0];
+  const cls = next.class;
+  const shared = next.classes ?? 1;
+  const name = cls ? className(cls) : "";
 
   const fixed = next.die === 0;
-  const more = levelUp.pending.length - 1;
+  // ADR 0042 step 10: a multi-class character's die (or fixed gain) is divided between its classes;
+  // the figures are the server's, the hint words them.
+  const title =
+    shared > 1
+      ? t("app.levelUp.titleClass", { class: name, level: next.level })
+      : t("app.levelUp.title", { level: next.level });
+  const hint =
+    shared > 1
+      ? fixed
+        ? t("app.levelUp.sharedFixedHint", {
+            gain: next.fixedGain,
+            classes: shared,
+          })
+        : t("app.levelUp.sharedHint", { die: next.die, classes: shared })
+      : fixed
+        ? t("app.levelUp.fixedHint", { gain: next.fixedGain })
+        : t("app.levelUp.rollHint", { die: next.die });
+  const rollTitle =
+    shared > 1
+      ? fixed
+        ? t("app.levelUp.applyTitleClass", {
+            class: name,
+            gain: next.fixedGain,
+            level: next.level,
+          })
+        : t("app.levelUp.rollTitleClass", {
+            class: name,
+            die: next.die,
+            level: next.level,
+          })
+      : fixed
+        ? t("app.levelUp.applyTitle", {
+            gain: next.fixedGain,
+            level: next.level,
+          })
+        : t("app.levelUp.rollTitle", { die: next.die, level: next.level });
+  const more = pending.length - 1;
   const roll = async (entered?: number) => {
     setError(null);
-    const rejected = await onRoll(next.level, entered);
+    const rejected = await onRoll(next.level, entered, cls);
     if (rejected) {
       setError(
         t(`app.levelUp.dieErrors.${rejected.message}`, {
@@ -109,7 +196,7 @@ export function LevelUpPrompt({
       );
       return;
     }
-    setTaken(next);
+    onTaken(next);
     setEntering(false);
     setDie("");
   };
@@ -121,155 +208,125 @@ export function LevelUpPrompt({
     enteredDie <= next.die;
 
   return (
-    <>
-      <div
-        role="group"
-        aria-label={t("app.levelUp.title", { level: next.level })}
-        data-testid="level-up"
-        className="flex flex-col gap-1.5 rounded-md bg-raised px-2.5 py-2 text-body"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-          <div className="flex min-w-0 items-start gap-2">
-            <ArrowFatLinesUp
-              aria-hidden
-              weight="fill"
-              className="mt-0.5 size-4 shrink-0 text-tint"
-            />
-            <div className="flex min-w-0 flex-col">
-              <p className="font-semibold" data-testid="level-up-title">
-                {t("app.levelUp.title", { level: next.level })}
+    <div
+      role="group"
+      aria-label={title}
+      data-testid="level-up"
+      className="flex flex-col gap-1.5 rounded-md bg-raised px-2.5 py-2 text-body"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <div className="flex min-w-0 items-start gap-2">
+          <ArrowFatLinesUp
+            aria-hidden
+            weight="fill"
+            className="mt-0.5 size-4 shrink-0 text-tint"
+          />
+          <div className="flex min-w-0 flex-col">
+            <p className="font-semibold" data-testid="level-up-title">
+              {title}
+            </p>
+            <p className="text-muted-foreground">{hint}</p>
+            {more > 0 && (
+              <p className="text-muted-foreground" data-testid="level-up-more">
+                {t("app.levelUp.more", { count: more })}
               </p>
-              <p className="text-muted-foreground">
-                {fixed
-                  ? t("app.levelUp.fixedHint", { gain: next.fixedGain })
-                  : t("app.levelUp.rollHint", { die: next.die })}
-              </p>
-              {more > 0 && (
-                <p
-                  className="text-muted-foreground"
-                  data-testid="level-up-more"
-                >
-                  {t("app.levelUp.more", { count: more })}
-                </p>
-              )}
-            </div>
+            )}
           </div>
-          {!entering && (
-            <div className="flex shrink-0 items-center gap-1.5">
-              {!fixed && (
-                <Tooltip>
-                  <TooltipTrigger
-                    delay={400}
-                    render={
-                      <Button
-                        variant="quiet"
-                        size="sm"
-                        disabled={busy}
-                        aria-label={t("app.levelUp.enterTitle")}
-                        onClick={() => setEntering(true)}
-                      />
-                    }
-                  >
-                    {t("app.levelUp.enter")}
-                  </TooltipTrigger>
-                  <TooltipContent>{t("app.levelUp.enterTitle")}</TooltipContent>
-                </Tooltip>
-              )}
+        </div>
+        {!entering && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            {!fixed && (
               <Tooltip>
                 <TooltipTrigger
                   delay={400}
                   render={
                     <Button
-                      variant="main"
+                      variant="quiet"
                       size="sm"
                       disabled={busy}
-                      data-testid="level-up-roll"
-                      aria-label={
-                        fixed
-                          ? t("app.levelUp.applyTitle", {
-                              gain: next.fixedGain,
-                              level: next.level,
-                            })
-                          : t("app.levelUp.rollTitle", {
-                              die: next.die,
-                              level: next.level,
-                            })
-                      }
-                      onClick={() => void roll()}
+                      aria-label={t("app.levelUp.enterTitle")}
+                      onClick={() => setEntering(true)}
                     />
                   }
                 >
-                  {fixed ? t("app.levelUp.apply") : t("app.levelUp.roll")}
+                  {t("app.levelUp.enter")}
                 </TooltipTrigger>
-                <TooltipContent>
-                  {fixed
-                    ? t("app.levelUp.applyTitle", {
-                        gain: next.fixedGain,
-                        level: next.level,
-                      })
-                    : t("app.levelUp.rollTitle", {
-                        die: next.die,
-                        level: next.level,
-                      })}
-                </TooltipContent>
+                <TooltipContent>{t("app.levelUp.enterTitle")}</TooltipContent>
               </Tooltip>
-            </div>
-          )}
-        </div>
-        {entering && (
-          <form
-            className="flex flex-wrap items-center gap-1.5"
-            onSubmit={(ev) => {
-              ev.preventDefault();
-              if (dieValid) void roll(enteredDie);
-            }}
-          >
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={next.die}
-              value={die}
-              autoFocus
-              aria-label={t("app.levelUp.dieLabel", { die: next.die })}
-              placeholder={`1–${next.die}`}
-              aria-invalid={error ? true : undefined}
-              onChange={(ev) => setDie(ev.target.value)}
-              className="w-20"
-              data-testid="level-up-die"
-            />
-            <Button
-              type="submit"
-              variant="main"
-              size="sm"
-              disabled={busy || !dieValid}
-            >
-              {t("app.levelUp.confirm")}
-            </Button>
-            <Button
-              type="button"
-              variant="quiet"
-              size="sm"
-              onClick={() => {
-                setEntering(false);
-                setDie("");
-                setError(null);
-              }}
-            >
-              {t("app.levelUp.cancel")}
-            </Button>
-            <span className="text-muted-foreground">
-              {t("app.levelUp.dieLabel", { die: next.die })}
-            </span>
-          </form>
-        )}
-        {error && (
-          <p role="alert" className="text-danger">
-            {error}
-          </p>
+            )}
+            <Tooltip>
+              <TooltipTrigger
+                delay={400}
+                render={
+                  <Button
+                    variant="main"
+                    size="sm"
+                    disabled={busy}
+                    data-testid="level-up-roll"
+                    aria-label={rollTitle}
+                    onClick={() => void roll()}
+                  />
+                }
+              >
+                {fixed ? t("app.levelUp.apply") : t("app.levelUp.roll")}
+              </TooltipTrigger>
+              <TooltipContent>{rollTitle}</TooltipContent>
+            </Tooltip>
+          </div>
         )}
       </div>
-      {summary}
-    </>
+      {entering && (
+        <form
+          className="flex flex-wrap items-center gap-1.5"
+          onSubmit={(ev) => {
+            ev.preventDefault();
+            if (dieValid) void roll(enteredDie);
+          }}
+        >
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={next.die}
+            value={die}
+            autoFocus
+            aria-label={t("app.levelUp.dieLabel", { die: next.die })}
+            placeholder={`1–${next.die}`}
+            aria-invalid={error ? true : undefined}
+            onChange={(ev) => setDie(ev.target.value)}
+            className="w-20"
+            data-testid="level-up-die"
+          />
+          <Button
+            type="submit"
+            variant="main"
+            size="sm"
+            disabled={busy || !dieValid}
+          >
+            {t("app.levelUp.confirm")}
+          </Button>
+          <Button
+            type="button"
+            variant="quiet"
+            size="sm"
+            onClick={() => {
+              setEntering(false);
+              setDie("");
+              setError(null);
+            }}
+          >
+            {t("app.levelUp.cancel")}
+          </Button>
+          <span className="text-muted-foreground">
+            {t("app.levelUp.dieLabel", { die: next.die })}
+          </span>
+        </form>
+      )}
+      {error && (
+        <p role="alert" className="text-danger">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

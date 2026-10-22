@@ -285,30 +285,66 @@ done
 cd "$root"
 
 # --- version-tag.sh, gh stubbed ---
+# The stub answers by endpoint: the tag lookup (404 unless $tmp/tag-on holds the commit it points at), the tag
+# object and the ref creation; $tmp/fail-first N makes the first N calls to the tag-object endpoint answer 502.
 cat > "$stubs/gh" <<STUB
 #!/usr/bin/env bash
+path=""; for a in "\$@"; do case "\$a" in repos/*) path="\$a" ;; esac; done
 echo "gh \$*" >> "$tmp/gh-calls"
-cat >> "$tmp/gh-stdin"; echo >> "$tmp/gh-stdin"
-case "\$4" in
-    repos/o/r/git/tags) echo "$(printf 'f%.0s' {1..40})" ;;
-    repos/o/r/git/refs) [ ! -f "$tmp/ref-exists" ] ;;
+case "\$path" in
+    repos/o/r/git/ref/tags/*)
+        [ -s "$tmp/tag-on" ] || { echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
+        echo '{"object":{"type":"commit","sha":"'"\$(cat "$tmp/tag-on")"'"}}' ;;
+    repos/o/r/git/tags)
+        cat >> "$tmp/gh-stdin"; echo >> "$tmp/gh-stdin"
+        n=\$(cat "$tmp/fail-first" 2>/dev/null || echo 0)
+        if [ "\$n" -gt 0 ]; then echo \$((n - 1)) > "$tmp/fail-first"; echo "gh: Bad Gateway (HTTP 502)" >&2; exit 1; fi
+        echo "$(printf 'f%.0s' {1..40})" ;;
+    repos/o/r/git/refs)
+        cat >> "$tmp/gh-stdin"; echo >> "$tmp/gh-stdin"
+        [ ! -f "$tmp/ref-exists" ] ;;
     *) exit 1 ;;
 esac
 STUB
 sha="$(printf 'a%.0s' {1..40})"
+other="$(printf 'c%.0s' {1..40})"
 digest="sha256:$(printf 'b%.0s' {1..64})"
 tagrun() { : > "$tmp/gh-calls"; : > "$tmp/gh-stdin"; status=0
-    out="$(PATH="$stubs:$PATH" GITHUB_REPOSITORY=o/r "$root/scripts/version-tag.sh" "$@" 2>&1)" || status=$?; }
+    out="$(PATH="$stubs:$PATH" TAG_DELAY=0 GITHUB_REPOSITORY=o/r "$root/scripts/version-tag.sh" "$@" 2>&1)" || status=$?; }
+: > "$tmp/tag-on"; echo 0 > "$tmp/fail-first"
 
 tagrun 1.2.3 "$sha" "$digest"
 [ "$status" = 0 ] || fail "version-tag: exit $status: $out"
-[ "$(cat "$tmp/gh-calls")" = "$(printf 'gh api -X POST repos/o/r/git/tags --input - --jq .sha\ngh api -X POST repos/o/r/git/refs --input -')" ] \
+[ "$(grep -c 'repos/o/r/git/tags ' "$tmp/gh-calls")" = 1 ] && [ "$(grep -c 'repos/o/r/git/refs ' "$tmp/gh-calls")" = 1 ] \
     || fail "version-tag: calls $(cat "$tmp/gh-calls")"
 jq -s -e --arg sha "$sha" --arg d "$digest" --arg obj "$(printf 'f%.0s' {1..40})" '
     .[0].tag == "v1.2.3" and .[0].object == $sha and .[0].type == "commit" and (.[0].message | contains($d))
     and .[0].tagger.name == "github-actions[bot]" and .[1] == {ref: "refs/tags/v1.2.3", sha: $obj}' "$tmp/gh-stdin" >/dev/null \
     || fail "version-tag: bodies $(cat "$tmp/gh-stdin")"
 [[ "$out" == *"::notice title=Version::v1.2.3 tagged on $sha"* ]] || fail "version-tag: no notice: $out"
+
+# A transient API error (502) at the tag step is retried and the tag is made.
+echo 2 > "$tmp/fail-first"
+tagrun 1.2.3 "$sha" "$digest"
+[ "$status" = 0 ] || fail "version-tag: two 502s were not survived: $out"
+[ "$(grep -c 'repos/o/r/git/tags ' "$tmp/gh-calls")" = 3 ] || fail "version-tag: 502 retries: $(cat "$tmp/gh-calls")"
+
+# A persistent error fails after the bounded attempts.
+echo 99 > "$tmp/fail-first"
+tagrun 1.2.3 "$sha" "$digest"
+[ "$status" != 0 ] && [[ "$out" == *"refused to create v1.2.3 after 5 attempts"* ]] || fail "version-tag: a persistent 502 did not fail: $out"
+[ "$(grep -c 'repos/o/r/git/tags ' "$tmp/gh-calls")" = 5 ] || fail "version-tag: attempts not bounded: $(cat "$tmp/gh-calls")"
+echo 0 > "$tmp/fail-first"
+
+# A tag that already points at this commit (a retry whose first try reached GitHub) is a success and makes
+# nothing; one on another commit is a failure and is never moved.
+echo "$sha" > "$tmp/tag-on"
+tagrun 1.2.3 "$sha" "$digest"
+[ "$status" = 0 ] && ! grep -q 'POST' "$tmp/gh-calls" || fail "version-tag: an existing tag on this commit: $status $out"
+echo "$other" > "$tmp/tag-on"
+tagrun 1.2.3 "$sha" "$digest"
+[ "$status" != 0 ] && [[ "$out" == *"exists already on $other"* ]] && ! grep -q 'POST' "$tmp/gh-calls" || fail "version-tag: a tag on another commit: $status $out"
+: > "$tmp/tag-on"
 
 touch "$tmp/ref-exists"
 tagrun 1.2.3 "$sha" "$digest"

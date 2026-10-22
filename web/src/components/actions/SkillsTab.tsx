@@ -85,6 +85,8 @@ export function SkillsTab() {
       value: ReactNode;
       terms?: ReactNode;
       unusable?: boolean;
+      /** The worn body armour blocks the skill (ADR 0042 step 16.3). */
+      blocked?: boolean;
       /** A proficiency: its name opens the description, apart from the roll. */
       facts?: ProficiencyFacts;
     }[],
@@ -98,12 +100,14 @@ export function SkillsTab() {
           {label}
         </h3>
         <ul aria-label={label} className="flex flex-col gap-1">
-          {list.map(({ id: skill, value, terms, unusable, facts }) => {
+          {list.map(({ id: skill, value, terms, unusable, blocked, facts }) => {
             const name = skillName(t, skill);
             // ADR 0030 step 17 (PHB p.39): a thieving skill under 1% waits for points.
-            const label = unusable
-              ? t("skills.unusable", { name })
-              : t("skills.rollLabel", { name });
+            const label = blocked
+              ? t("skills.blocked", { name })
+              : unusable
+                ? t("skills.unusable", { name })
+                : t("skills.rollLabel", { name });
             if (facts)
               return (
                 <li key={skill}>
@@ -146,6 +150,14 @@ export function SkillsTab() {
                   <span className="flex min-w-0 flex-col">
                     <span className="break-words">{name}</span>
                     {terms}
+                    {blocked && (
+                      <span
+                        className="text-label text-warning"
+                        data-testid={`skill-blocked-${skill}`}
+                      >
+                        {t("skills.blockedTag")}
+                      </span>
+                    )}
                   </span>
                   {value}
                 </button>
@@ -253,6 +265,7 @@ export function SkillsTab() {
               skillSet.skills.map((s) => ({
                 id: s.id,
                 unusable: !s.usable,
+                blocked: s.blocked,
                 terms: (
                   <SkillTerms skill={s} cap={skillSet.budget?.perSkillCap} />
                 ),

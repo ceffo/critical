@@ -6,6 +6,10 @@ import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
 import { parseXpAmount } from "@/lib/xpForm";
 import { useXpStore } from "@/stores/xp";
+import { useCharacterStore } from "@/stores/character";
+import { useClassName } from "@/lib/useClassName";
+import { splitParts } from "@/lib/xpSplit";
+import type { DerivedClass } from "@/types/character";
 import { useTableStore } from "@/stores/table";
 import type { XpEntry, XpLedger, XpLevel } from "@/types/xp";
 import type { ApiError } from "@/api/http";
@@ -56,6 +60,12 @@ export function XpPanel() {
   const { t } = useTranslation();
   const ledger = useXpStore((s) => s.ledger);
   const refresh = useTableStore((s) => s.refresh);
+  const className = useClassName();
+  // ADR 0042: a multi-class or dual-class character has one standing per class entry; the ledger's
+  // total, level and progress are the first active entry's.
+  const entries = useCharacterStore((s) => s.character?.derived.classes);
+  const multi = (entries?.length ?? 0) > 1;
+  const first = entries?.find((e) => e.state === "active");
   useEffect(() => {
     void refresh(["xp"]);
   }, [refresh]);
@@ -77,11 +87,16 @@ export function XpPanel() {
       >
         <div className={cn(XP_COLS, "card-band bleed-x-4 col-span-2 py-2")}>
           <h2 className="section-label">
-            {t("xp.heading", { level: ledger.level })}
+            {multi && first
+              ? t("xp.headingClass", {
+                  class: className(first.class),
+                  level: ledger.level,
+                })
+              : t("xp.heading", { level: ledger.level })}
           </h2>
           <h2 className="section-label">{t("xp.add.title")}</h2>
         </div>
-        <Progress ledger={ledger} />
+        <Progress ledger={ledger} entries={multi ? entries : undefined} />
         <AddForm bonusDefault={ledger.bonusEligible} />
       </div>
       <Ledger ledger={ledger} />
@@ -89,7 +104,67 @@ export function XpPanel() {
   );
 }
 
-function Progress({ ledger: l }: { ledger: XpLedger }) {
+/**
+ * The class entries' standings (ADR 0042 steps 5 and 7), one line each: the class and its level, its
+ * XP and the XP before its next level, all the server's. A frozen entry says it earns nothing.
+ */
+function ClassStandings({ entries }: { entries: DerivedClass[] }) {
+  const { t } = useTranslation();
+  const f = useFormats();
+  const className = useClassName();
+  return (
+    <section
+      aria-label={t("xp.classes.title")}
+      className="flex min-w-0 flex-col gap-1"
+      data-testid="xp-classes"
+    >
+      <h3 className="section-label">{t("xp.classes.title")}</h3>
+      <ul className="flex flex-col gap-1">
+        {entries.map((e) => (
+          <li
+            key={e.class}
+            data-testid={`xp-class-${e.class}`}
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 rounded-md bg-raised px-2.5 py-1 text-body tabular-nums"
+          >
+            <span className="min-w-0 font-medium break-words">
+              {t("xp.classes.level", {
+                class: className(e.class),
+                level: e.level,
+              })}
+            </span>
+            {e.state === "frozen" ? (
+              <span className="text-label text-muted-foreground">
+                {t("xp.classes.frozen", { level: e.level })}
+              </span>
+            ) : (
+              <span className="text-right">
+                <span data-testid={`xp-class-xp-${e.class}`}>
+                  {f.n(e.xp)} {t("xp.unit")}
+                </span>
+                <span className="block text-label text-muted-foreground">
+                  {e.nextLevelXp === null
+                    ? t("xp.classes.maxLevel")
+                    : t("xp.classes.toNext", {
+                        xp: f.n(Math.max(0, e.nextLevelXp - e.xp)),
+                        level: e.targetLevel + 1,
+                      })}
+                </span>
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function Progress({
+  ledger: l,
+  entries,
+}: {
+  ledger: XpLedger;
+  entries?: DerivedClass[];
+}) {
   const { t } = useTranslation();
   const f = useFormats();
   const headline =
@@ -162,6 +237,7 @@ function Progress({ ledger: l }: { ledger: XpLedger }) {
           <LevelCell key={c.level} cell={c} />
         ))}
       </ol>
+      {entries && <ClassStandings entries={entries} />}
     </section>
   );
 }
@@ -306,6 +382,15 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
           </span>
         </Button>
       </div>
+      {/* ADR 0042 step 5.1: a multi-class character's award shared between its classes. */}
+      {preview?.split && (
+        <p
+          className="text-body text-muted-foreground tabular-nums"
+          data-testid="xp-split"
+        >
+          {t("xp.split.preview", { parts: splitParts(t, preview.split) })}
+        </p>
+      )}
       {/* The bonus rule in full, without a hover (ADR 0022 step 1.2). */}
       <p className="text-body text-muted-foreground">{t("xp.bonusHint")}</p>
     </section>
@@ -400,6 +485,14 @@ function Row({
       <span className="flex min-w-0 flex-col break-words">
         <span>{reason}</span>
         <span className="text-label text-muted-foreground">{meta}</span>
+        {e.split && (
+          <span
+            className="text-label text-muted-foreground"
+            data-testid="xp-row-split"
+          >
+            {splitParts(t, e.split)}
+          </span>
+        )}
       </span>
       <span className="text-right">{f.n(e.base)}</span>
       <span

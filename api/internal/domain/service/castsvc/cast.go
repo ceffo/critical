@@ -108,7 +108,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
-			casterLevel: c.Derived.RealizedLevel, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
+			casterLevel: c.Derived.RealizedLevel, class: c.Class, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -163,12 +163,18 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 	if err != nil {
 		return CastResult{}, err
 	}
+	// The spell lands on the character: his class group picks a by-group
+	// effect (ADR 0030 step 2), whoever cast it.
+	c, err := s.Characters.GetCharacter(ctx, characterID)
+	if err != nil {
+		return CastResult{}, fmt.Errorf("get character: %w", err)
+	}
 	var res CastResult
 	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: req.CasterLevel, source: SourceReceived, mode: mode,
+			spellID: id, casterLevel: req.CasterLevel, class: c.Class, source: SourceReceived, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -221,7 +227,7 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: c.Derived.RealizedLevel, source: SourceEffect, mode: mode,
+			spellID: id, casterLevel: c.Derived.RealizedLevel, class: c.Class, source: SourceEffect, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -256,11 +262,15 @@ type effectReq struct {
 	name        string // the slot's name, used when neither source knows the spell
 	level       int
 	casterLevel int
-	source      Source
-	onSelf      *bool
-	req         CastRequest          // the cast request (item to spend, target AC)
-	extraSlots  []int                // the extra slots this cast granted
-	mode        *spelleffectsvc.Mode // the cast-time mode picked (nil: the spell has none)
+	// class is the class of the character the effect is about (the caster
+	// of a cast, the receiver of a received spell): its group picks a
+	// by-group effect (ADR 0030 step 2).
+	class      string
+	source     Source
+	onSelf     *bool
+	req        CastRequest          // the cast request (item to spend, target AC)
+	extraSlots []int                // the extra slots this cast granted
+	mode       *spelleffectsvc.Mode // the cast-time mode picked (nil: the spell has none)
 }
 
 // modeFor resolves the cast-time mode a cast of spell id names (ADR 0008
@@ -425,7 +435,7 @@ func (s *service) applyEffect(ctx context.Context, characterID int64, r effectRe
 		}
 		return res, snaps, nil
 	case spelleffectsvc.KindBuff:
-		buff, untracked, err := s.rollBuff(entry, r.casterLevel)
+		buff, untracked, err := s.rollBuff(entry, r.casterLevel, r.class)
 		if err != nil {
 			return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 		}

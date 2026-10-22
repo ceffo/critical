@@ -200,9 +200,16 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 	}
 	// ADR 0042 as built (PHB p.52): specialization is a single-class
 	// fighter's; a multi-class character never specializes, whichever entry
-	// grants it. A dual-class's one active entry may.
-	_, d.Specializes = grant(classes.KindWeaponSpecialization)
-	d.Specializes = d.Specializes && len(classes.Active(es)) == 1
+	// grants it. A dual-class's one active entry is read as single-class:
+	// its own grant, never its old class's (a kept specialization pick is
+	// skills.WeaponProficiencyOf's).
+	if act := classes.Active(es); len(act) == 1 {
+		gs, err := classes.Grants(act, def, classes.KindWeaponSpecialization)
+		if err != nil {
+			return fmt.Errorf("derive %s: %w", classes.KindWeaponSpecialization, err)
+		}
+		d.Specializes = len(gs) > 0
+	}
 	if g, ok := grant(classes.KindSpellbook); ok {
 		if d.Spellbook, err = spellbookRules(c, g, rules); err != nil {
 			return err

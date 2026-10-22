@@ -132,6 +132,18 @@ func (c *Character) ActiveClasses() skills.Classes {
 	return out
 }
 
+// StoredClasses are every entry of the stored row as the weapon picks read
+// them (no derived figure): the active ones at their realized level, a
+// dual-class's frozen ones at their left-at level (ADR 0042 steps 13 and
+// 15), so a kept specialization counts past the crossover.
+func (c *Character) StoredClasses() skills.Classes {
+	var out skills.Classes
+	for _, e := range c.Entries() {
+		out = append(out, skills.ClassLevel{Class: e.Class, Level: e.Level(), Frozen: e.State == classes.EntryFrozen})
+	}
+	return out
+}
+
 // ActiveClassIDs are the classes of the active entries of the stored row, in
 // order: what the class equipment warnings judge together (ADR 0042 step 16).
 func (c *Character) ActiveClassIDs() []string {
@@ -331,6 +343,25 @@ type FeatureGrant struct {
 func (d *Derived) Grant(kind string) (FeatureGrant, bool) {
 	for _, g := range d.Features {
 		if g.Kind == kind {
+			return g, true
+		}
+	}
+	return FeatureGrant{}, false
+}
+
+// HasDormant reports a dual-class before the crossover (ADR 0042 step 13):
+// an entry whose features, spells and equipment warn when used.
+func (d *Derived) HasDormant() bool {
+	return slices.ContainsFunc(d.Classes, func(e EntryDerived) bool { return e.Dormant })
+}
+
+// ActiveGrant is the first grant of kind that is not Dormant (ADR 0042 step
+// 13): a figure the character has without choosing to use it (the attacks
+// per round) is the active classes' own before the crossover, so a
+// dual-class's old class adds none until then. False when none grants it.
+func (d *Derived) ActiveGrant(kind string) (FeatureGrant, bool) {
+	for _, g := range d.Features {
+		if g.Kind == kind && !g.Dormant {
 			return g, true
 		}
 	}

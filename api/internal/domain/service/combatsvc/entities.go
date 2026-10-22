@@ -245,6 +245,9 @@ type RollResult struct {
 	RolledTargetAC *int
 	RolledHit      *bool
 	RolledCrit     *bool
+	// Warnings are the attack's class warnings (ADR 0042 step 13), logged
+	// with it; never a refusal.
+	Warnings []string
 	// LogEntryID is the action-log entry recording the attack.
 	LogEntryID int64
 }

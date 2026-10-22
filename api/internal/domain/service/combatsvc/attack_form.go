@@ -374,9 +374,12 @@ func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo 
 // no rate rather than failing the form.
 func (s *service) attackRate(ctx context.Context, char *charactersvc.Character, weapon Weapon) (*AttackRateView, error) {
 	// ADR 0042 step 12: the entry granting the attacks per round, at its
-	// level.
-	class := char.Derived.FeatureClass(classes.KindMeleeAttacksPerRound, char.Class)
-	level := char.Derived.FeatureLevel(classes.KindMeleeAttacksPerRound)
+	// level. Step 13: before the crossover a dual-class's old class adds no
+	// rate (ActiveGrant); the active class's own applies.
+	class, level := char.Class, char.Derived.RealizedLevel
+	if g, ok := char.Derived.ActiveGrant(classes.KindMeleeAttacksPerRound); ok {
+		class, level = g.Class, g.Level
+	}
 	rate, ok, err := s.rules.AttackRateFor(class, level, string(weapon.Kind), weapon.Type, weapon.Specialized)
 	if err != nil {
 		slog.WarnContext(ctx, "attack rate: rule tables", "character", char.ID, "level", level, "weapon", weapon.ID, "err", err)

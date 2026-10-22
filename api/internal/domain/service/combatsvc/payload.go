@@ -73,6 +73,10 @@ type AttackBreakdown struct {
 	RolledTargetAC *int  `json:"rolledTargetAc,omitempty"`
 	RolledHit      *bool `json:"rolledHit,omitempty"`
 	RolledCrit     *bool `json:"rolledCrit,omitempty"`
+	// Warnings are the attack's class warnings, served and logged, never a
+	// refusal (ADR 0042 step 13: dual_class_old_ability, a dual-class's old
+	// class's backstab or weapon before the crossover). Absent when none.
+	Warnings []string `json:"warnings,omitempty"`
 	// LogEntryID is the entry recording the attack: set on the endpoints'
 	// answer, never in the payload (the entry carries its own id). Last, so
 	// an answer is its entry's payload plus this one key.
@@ -209,7 +213,7 @@ func toBreakdown(r *RollResult) AttackBreakdown {
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, DiceModifier: r.DiceModifier, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, BackstabMultiplier: r.BackstabMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,
 		DamageTerms: terms, DamageRolls: toBreakdownDice(r.DamageRolls), TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
-		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize),
+		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize), Warnings: r.Warnings,
 		ACKnown: &r.ACKnown, RolledACUnknown: r.RolledACUnknown, Verdict: string(r.Verdict),
 	}
 	possible := r.CritPossible()
@@ -251,7 +255,7 @@ func (a AttackBreakdown) result(entryID int64) *RollResult {
 		BaseDamage: a.BaseDamage, DamageDice: a.DamageDice, DiceModifier: a.DiceModifier, SpellsBuff: a.SpellsBuff, WeaponBuff: a.WeaponBuff,
 		Multipliers: a.Multipliers, DiceMultiplier: a.DiceMultiplier, BackstabMultiplier: a.BackstabMultiplier, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
 		DamageTerms: fromBreakdownTerms(a.DamageTerms), DamageRolls: fromBreakdownDice(a.DamageRolls), TotalDamage: a.TotalDamage, UnroundedDamage: a.UnroundedDamage,
-		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetSize: TargetSize(a.TargetSize),
+		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetSize: TargetSize(a.TargetSize), Warnings: a.Warnings,
 		ACKnown: a.ACKnown == nil || *a.ACKnown, RolledACUnknown: a.RolledACUnknown, Verdict: Verdict(a.Verdict),
 		RolledTargetAC: a.RolledTargetAC, RolledHit: a.RolledHit, RolledCrit: a.RolledCrit,
 		LogEntryID: entryID,

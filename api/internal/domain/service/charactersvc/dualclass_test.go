@@ -129,3 +129,28 @@ func TestProficiencyClasses_Step15_TheOldClassKeptAtItsLeftAtLevel(t *testing.T)
 		{Class: "mage", Level: 7},
 	}, c.ProficiencyClasses())
 }
+
+// ADR 0042 step 12 as built: a dual-class's one active entry is read as
+// single-class, so Specializes is its own grant: the elf's mage never
+// specializes, before or after the crossover (the code before read the
+// frozen fighter's grant), while a mage who became a fighter does.
+func TestDerive_Step12_ADualClassSpecializesByItsActiveClass(t *testing.T) {
+	assert.False(t, derived(t, elf(7, 60_000)).Specializes, "mage 7, the fighter dormant")
+	assert.False(t, derived(t, elf(10, 250_000)).Specializes, "mage 10, past the crossover")
+	c := multi("human", frozen("mage", 5, 40_000), entry("fighter", 3, 5_000))
+	c.Class, c.RealizedLevel, c.XPTotal = "fighter", 3, 5_000
+	assert.True(t, derived(t, c).Specializes, "the active fighter's own")
+}
+
+// ADR 0042 step 13: a figure the character has without choosing to use it
+// (the attacks per round) is the active classes' own before the crossover:
+// ActiveGrant skips the dormant fighter's, then serves it at 9 once crossed.
+func TestDerive_Step13_TheOldClassAddsNoFigureBeforeTheCrossover(t *testing.T) {
+	before := derived(t, elf(7, 60_000))
+	_, ok := before.ActiveGrant(classes.KindMeleeAttacksPerRound)
+	assert.False(t, ok, "mage 7: the dormant fighter's rate is not the character's")
+	after := derived(t, elf(10, 250_000))
+	g, ok := after.ActiveGrant(classes.KindMeleeAttacksPerRound)
+	assert.True(t, ok)
+	assert.Equal(t, charactersvc.FeatureGrant{Kind: classes.KindMeleeAttacksPerRound, Class: "fighter", Level: 9}, g)
+}

@@ -85,12 +85,14 @@ type Weapons interface {
 
 // Items is the character's equipment (itemsvc, ADR 0033): Use spends
 // ammunition, List lists the pieces the attack form offers as ammunition,
-// Wield wields the weapon the form picks (step 8). Use and Wield join the
-// ctx transaction.
+// Wield wields the weapon the form picks (step 8), Warnings are the class
+// warnings of the pieces (step 20; an attack reads them for a dual-class's
+// old class only, ADR 0042 step 13). Use and Wield join the ctx transaction.
 type Items interface {
 	Use(ctx context.Context, characterID int64, itemID string) (itemsvc.Item, error)
 	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
 	Wield(ctx context.Context, characterID int64, itemID string) (*itemsvc.StateResult, error)
+	Warnings(ctx context.Context, characterID int64, items []itemsvc.Item) ([]itemsvc.Warning, error)
 }
 
 // FormStore keeps the attack form of each character. Get's ok is false when

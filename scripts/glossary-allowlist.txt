@@ -213,4 +213,3 @@ Favourite  # Needs a term: spell, target and area concepts
 TurningCell  # Needs a term: turning table cell
 ModeAt  # Technical: generic helper or envelope with no domain meaning of its own
 Added  # Technical: generic helper or envelope with no domain meaning of its own
-SaveOptions  # Technical: the options of a saving throw request (the mind-affecting flag); no term of its own

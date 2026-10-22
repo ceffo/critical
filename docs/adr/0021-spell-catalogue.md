@@ -730,6 +730,41 @@ is only ever appended to by play.
     refused), `TestParse_Step19_ReadsFormat12AndRefusesFormat11` (catalogueadpt); the rules adapter's `TestSpellImmunitiesFor_Step10_Cumulative`
     (the column read); in `critical-rulebooks`: `scripts/check`'s spot values and fault injections for the column.
 
+20. **The psionicist and the psionic powers, format 13** (**decided as built** 2026-10-22; [ADR 0043](0043-psionics.md) steps 1, 2, 4, 6 and 8 decided the data).
+    The sources are the Complete Psionics Handbook's section and table files in `critical-rulebooks` (`cpsh/`, English; `cpsh-fr/`, the French
+    names and descriptions); the builders are `scripts/psionicist.py` (the class data and the three tables) and `scripts/psionic_powers.py` (the
+    powers).
+    1. **The class has the shape every class has** (ADR 0040 step 1), with no side structure: `classes` gains `psionicist` (group `psionicist`,
+       its experience and hit dice in the class entry, its ability minimums, its features `psionics` and `save_bonus`) and `groups` gains the
+       `psionicist` group with its THAC0 rows. The shared grids that have a column or a key per class or group gain the psionicist the same way:
+       `saving_throws` takes five rows of the group `psionicist` (Table 8) and `race_level_limits` takes five rows of the class `psionicist` (Table 1;
+       thirty rows). The PHB grids `experience`, `hit_dice` and `thac0` stay as they are (ADR 0040 keeps those figures in the class and group
+       entries; moving the remaining grids there is a separate item). The CPsiH's proficiency slots (Table 10) are not in the catalogue: the slots are
+       an app seed today.
+    2. **Three new rule tables**: `psionicist_powers` (Table 4: per level, the cumulative `disciplines`, `sciences`, `devotions`, `defence_modes`),
+       `inherent_potential` (Table 5: `score`, `base`, `modifier`, the printed rows 15 to 18) and `psp_recovery` (Table 6: `activity`
+       `exertion`, `walking`, `resting`, `sleeping` and `per_hour`).
+    3. **`disciplines` and `powers`** (new top-level arrays): six disciplines `{id, name}`; 152 powers, each `{id, name, discipline, kind, [score,]
+       initial_cost, [maintenance,] prerequisites, [min_level,] range, preparation_time, area, description, [power_score_result,]
+       [natural_20_result]}`, ids the English name's slug with underscores, kept by a ledger (`catalogue-inputs/power_ids.json`: a published id is
+       never dropped or reused). `kind` is `science`, `devotion`, `defence_mode` or `attack_mode`: the five modes of each of the two kinds
+       (`cpsh/ch02-psionic-combat/07-` and `08-`) are telepathy powers whose kind is the mode (Psionic Blast takes a science slot, the other
+       attack modes a devotion slot; the book says so in the same file). The stat blocks are OCR: 26 values are fixed by hand in
+       `catalogue-inputs/POWER_STATS`, each with its reason, and the build fails when a line is stale. A French text is kept only where the French
+       stat block repeats the English costs (13 powers lose their French text: the OCR mixed two blocks) and where it passes the description
+       subset (one flattened table is dropped); the English text always stays.
+    4. **The Q13 cell**: Table 8's Spell column at levels 13 to 16 reads 7 in the English OCR and 11 in the French book
+       (`catalogue-inputs/PSIONICIST_FIXES`, one dated line with its reason, stale when the table stops printing 7).
+    5. **The feature kinds** `psionics` (`progression`, `psp`, `recovery`) and `save_bonus` (`against`, `bonus`) join ADR 0040 step 3's closed list;
+       the builder checks their tables exist; `against` is `mind_affecting` (ADR 0043 Q12).
+    6. **Rollout, as step 18.6.** The API reads **format 13 only** (a format-12 artifact is refused at start, naming `just catalogue`). Merge
+       order: the builder publishing format 13 first, then the API change (the schema `schemas/catalogue.schema.json`, `catalogueadpt`, the fixture
+       `testdata/catalogue.json`) immediately.
+    Tests: `Schema_Step20_OnlyFormat13IsValid` (cataloguecheck: format 13 only; a power of an unknown kind, a cost that is a word, a psionics
+    feature without its recovery table, the lost level-limit rows refused), `Parse_Step20_ReadsFormat13AndRefusesFormat12` (catalogueadpt); in
+    `critical-rulebooks`: `scripts/check`'s counts per discipline against the books' sections, Tables 1, 2 and 4 to 8, spot powers, the power-id
+    ledger and fault injection.
+
 ## Consequences
 
 - The builder item and the importer item can proceed in parallel against this ADR and the schema:

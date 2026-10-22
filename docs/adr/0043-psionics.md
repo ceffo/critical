@@ -418,6 +418,25 @@ written with the proposed default.
 14. **Q14, the XP bonus** (step 1.3). The CPsiH states none; the PHB's rule gives 10% at 16 in all
     prime requisites. Proposed: the PHB's rule (Con and Wis 16). Other reading: no bonus.
 
+## As built: the catalogue data (format 13, 2026-10-22)
+
+CRI-178 built steps 1, 2, 4, 6 and 8's data ([ADR 0021](0021-spell-catalogue.md) step 20). Where the books or the schema forced a reading:
+
+- **Power ids** are the English name's slug with underscores (`mind_thrust`, the catalogue's id pattern), not the hyphen slugs of `cpsh-fr/POWERS`.
+- **`min_level`** (step 8 names power ids only): a prerequisite such as "3rd level" is the power's `min_level`, beside its `prerequisites`.
+- **`score`** is absent for Intensify and Splice (the book gives a formula in the text, not an ability and a number); the check of step 10 reads
+  it from the power's rules, not from a score.
+- **Variable costs**: `initial_cost` is `variable` where the printed cost is "3+" or "varies" (Telekinesis, Empower...) and `maintenance.cost` is
+  `variable` ("1+/round", "up to 20/round"); the amount comes from the power's text. A cost of `contact` is for layer 2.
+- **The ten modes' kind** is `defence_mode` or `attack_mode`, not `devotion` (and not `science`: Psionic Blast is a science by the book, so its pick
+  takes a science slot, the other attack modes a devotion slot). Table 4's defence modes are counted apart (step 9.1).
+- **The equipment list** (step 1.6): ADR 0040's `armour` names the skill columns of Table 29, and hide shares the `metal` column with the chain
+  mails, so the class lists `padded_studded` only (hide is not expressible without admitting chain mail). The dirk and the throwing axe are not
+  catalogue weapons.
+- **The grids**: the psionicist's saves and level limits are rows of the shared `saving_throws` and `race_level_limits` tables, its XP, hit dice and
+  THAC0 are in its class and group entries (ADR 0021 step 20.1). The proficiency slots of Table 10 are not in the catalogue.
+- **Q13** is fixed by one dated line (`catalogue-inputs/PSIONICIST_FIXES`): Spell 11 at levels 13 to 16.
+
 ## Consequences
 
 - A new class of data (the psionicist and its group rows), two new feature kinds (`psionics`,
